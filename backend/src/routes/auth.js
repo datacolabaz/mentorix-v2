@@ -7,4 +7,7 @@ router.post('/otp/send', sendOtp);
 router.post('/otp/verify', verifyOtp);
 router.post('/register', authenticate, authorize('admin', 'instructor'), register);
 router.get('/me', authenticate, me);
-rout
+router.post('/pin/set', authenticate, setPin);
+router.post('/pin/login', loginWithPin);
+
+module.exports = router;
