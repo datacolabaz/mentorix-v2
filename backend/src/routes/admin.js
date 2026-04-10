@@ -45,8 +45,15 @@ router.patch('/instructors/:id/profile', authenticate, authorize('admin'), async
 router.delete('/instructors/:id', authenticate, authorize('admin'), async (req, res) => {
   try {
     const db = require('../utils/db');
-    await db.query('DELETE FROM instructor_profiles WHERE user_id = $1', [req.params.id]);
-    await db.query('DELETE FROM users WHERE id = $1', [req.params.id]);
+    const id = req.params.id;
+    await db.query('DELETE FROM attendance WHERE enrollment_id IN (SELECT id FROM enrollments WHERE instructor_id = $1)', [id]);
+    await db.query('DELETE FROM exam_assignments WHERE exam_id IN (SELECT id FROM exams WHERE instructor_id = $1)', [id]);
+    await db.query('DELETE FROM exam_results WHERE exam_id IN (SELECT id FROM exams WHERE instructor_id = $1)', [id]);
+    await db.query('DELETE FROM exam_questions WHERE exam_id IN (SELECT id FROM exams WHERE instructor_id = $1)', [id]);
+    await db.query('DELETE FROM exams WHERE instructor_id = $1', [id]);
+    await db.query('DELETE FROM enrollments WHERE instructor_id = $1', [id]);
+    await db.query('DELETE FROM instructor_profiles WHERE user_id = $1', [id]);
+    await db.query('DELETE FROM users WHERE id = $1', [id]);
     res.json({ success: true });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
