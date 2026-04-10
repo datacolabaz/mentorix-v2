@@ -12,7 +12,7 @@ const getInstructors = async (req, res) => {
        FROM users u
        LEFT JOIN instructor_profiles ip ON ip.user_id = u.id
        LEFT JOIN enrollments e ON e.instructor_id = u.id AND e.status = 'active'
-       WHERE u.role = 'instructor'
+       WHERE u.role = 'instructor' AND u.is_active = TRUE
        GROUP BY u.id, ip.id
        ORDER BY u.full_name`
     );
