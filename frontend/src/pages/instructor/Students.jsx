@@ -165,15 +165,4 @@ export default function InstructorStudents() {
                 value={parent.full_name} onChange={e => setParent(p => ({ ...p, full_name: e.target.value }))} />
               <input placeholder="+994501234567" className="bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500"
                 value={parent.phone} onChange={e => setParent(p => ({ ...p, phone: e.target.value }))} />
-            </div>
-          </div>
-
-          <div className="flex gap-3 pt-2">
-            <Button onClick={addStudent} loading={loading} className="flex-1 justify-center">Əlavə Et</Button>
-            <Button variant="secondary" onClick={() => setAddModal(false)} className="flex-1 justify-center">Ləğv et</Button>
-          </div>
-        </div>
-      </Modal>
-    </div>
-  )
-}
+       

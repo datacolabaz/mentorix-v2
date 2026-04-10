@@ -169,6 +169,19 @@ export default function AdminInstructors() {
             <Button onClick={saveEdit} className="flex-1 justify-center">Yadda Saxla</Button>
             <Button variant="secondary" onClick={() => setEditModal(false)} className="flex-1 justify-center">Legv et</Button>
           </div>
+          <div className="pt-2 border-t border-red-500/20 mt-2">
+            <Button variant="danger" className="w-full justify-center" onClick={async () => {
+              if (!window.confirm(selected.full_name + " silinsin?")) return
+              try {
+                await api.patch("/admin/instructors/" + selected.id + "/toggle", { is_active: false })
+                await api.delete("/admin/instructors/" + selected.id)
+                setEditModal(false)
+                load()
+              } catch(e) {
+                toast("Xeta: " + e.message, "error")
+              }
+            }}>Muellimi Sil</Button>
+          </div>
         </div>
       </Modal>
 

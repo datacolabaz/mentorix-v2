@@ -41,4 +41,13 @@ router.patch('/instructors/:id/profile', authenticate, authorize('admin'), async
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
 
+
+router.delete('/instructors/:id', authenticate, authorize('admin'), async (req, res) => {
+  try {
+    const db = require('../utils/db');
+    await db.query('UPDATE users SET is_active = FALSE WHERE id = $1', [req.params.id]);
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+});
+
 module.exports = router;

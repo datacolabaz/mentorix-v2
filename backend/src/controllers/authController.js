@@ -136,39 +136,4 @@ const me = async (req, res) => {
 };
 
 
-// PIN teyin et (OTP-den sonra)
-const setPin = async (req, res) => {
-  try {
-    const { pin } = req.body;
-    if (!pin || pin.length !== 6 || isNaN(pin))
-      return res.status(400).json({ success: false, message: '6 reqemli PIN daxil edin' });
-    const hash = await bcrypt.hash(pin, 12);
-    await db.query('UPDATE users SET pin_hash = $1 WHERE id = $2', [hash, req.user.id]);
-    res.json({ success: true, message: 'PIN teyın edildi' });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-};
-
-// PIN ile giris
-const loginWithPin = async (req, res) => {
-  try {
-    const { phone, pin } = req.body;
-    const clean = phone.replace(/\D/g, '');
-    const { rows } = await db.query(
-      "SELECT * FROM users WHERE REPLACE(REPLACE(phone,'+',''),'-','') = $1 AND is_active = TRUE",
-      [clean]
-    );
-    const user = rows[0];
-    if (!user) return res.status(404).json({ success: false, message: 'Istifadeci tapilmadi' });
-    if (!user.pin_hash) return res.status(400).json({ success: false, needsOtp: true, message: 'Ilk giris ucun OTP teleb olunur' });
-    const valid = await bcrypt.compare(pin, user.pin_hash);
-    if (!valid) return res.status(401).json({ success: false, message: 'PIN yanlisdir' });
-    const token = signOTP({ id: user.id, role: user.role });
-    res.json({ success: true, token, user: { id: user.id, full_name: user.full_name, role: user.role, phone: user.phone } });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-};
-
-module.exports = { login, sendOtp, verifyOtp, register, me, setPin, loginWithPin };
+// PIN teyin et (OTP-d
