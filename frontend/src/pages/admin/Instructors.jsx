@@ -22,15 +22,13 @@ export default function AdminInstructors() {
     setLoading(true)
     try {
       await api.post('/auth/register', { ...form, role: 'instructor' })
-      toast('✓ Müəllim əlavə edildi!')
+      toast('Muellim elave edildi!')
       setAddModal(false)
       setForm({ full_name: '', email: '', phone: '', password: 'Pass@123', subject: '', billing_type: '8_lessons' })
       load()
     } catch (err) {
-      toast(err.message || 'Xəta baş verdi', 'error')
-    } finally {
-      setLoading(false)
-    }
+      toast(err.message || 'Xeta', 'error')
+    } finally { setLoading(false) }
   }
 
   const openLimits = (i) => {
@@ -41,7 +39,7 @@ export default function AdminInstructors() {
 
   const saveLimits = async () => {
     await api.patch(`/admin/instructors/${selected.id}/limits`, limits)
-    toast('Limitlər yadda saxlandı!')
+    toast('Limitler yadda saxlandi!')
     setLimitsModal(false)
     load()
   }
@@ -55,15 +53,15 @@ export default function AdminInstructors() {
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="font-display font-bold text-2xl">Müəllimlər</h1>
-        <Button onClick={() => setAddModal(true)}>+ Müəllim Əlavə Et</Button>
+        <h1 className="font-display font-bold text-2xl">Muellimler</h1>
+        <Button onClick={() => setAddModal(true)}>+ Muellim Elave Et</Button>
       </div>
 
       <Card className="overflow-hidden">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-indigo-500/20 text-gray-400 text-xs uppercase">
-              {['Ad', 'Fənn', 'Tələbə', 'SMS', 'Storage', 'Status', 'Əməliyyat'].map(h => (
+              {['Ad', 'Fenn', 'Telebe', 'SMS', 'Storage', 'Status', 'Emeliyyat'].map(h => (
                 <th key={h} className="py-3 px-4 text-left font-semibold tracking-wider">{h}</th>
               ))}
             </tr>
@@ -75,7 +73,7 @@ export default function AdminInstructors() {
                   <div className="font-semibold text-white">{i.full_name}</div>
                   <div className="text-xs text-gray-400">{i.email}</div>
                 </td>
-                <td className="py-3 px-4 text-gray-300">{i.subject || '—'}</td>
+                <td className="py-3 px-4 text-gray-300">{i.subject || '-'}</td>
                 <td className="py-3 px-4 text-gray-300">{i.student_count || 0}</td>
                 <td className="py-3 px-4 text-xs">
                   <span className="text-blue-400 font-semibold">{i.sms_used || 0}</span>
@@ -89,7 +87,7 @@ export default function AdminInstructors() {
                 </td>
                 <td className="py-3 px-4">
                   <div className="flex gap-2">
-                    <Button size="sm" variant="secondary" onClick={() => openLimits(i)}>⚙️ Limitlər</Button>
+                    <Button size="sm" variant="secondary" onClick={() => openLimits(i)}>Limitler</Button>
                     <Button size="sm" variant={i.is_active ? 'danger' : 'ghost'} onClick={() => toggle(i)}>
                       {i.is_active ? 'Deaktiv' : 'Aktiv'}
                     </Button>
@@ -99,18 +97,57 @@ export default function AdminInstructors() {
             ))}
           </tbody>
         </table>
-        {!instructors.length && <div className="text-center py-12 text-gray-500">Müəllim tapılmadı</div>}
+        {!instructors.length && <div className="text-center py-12 text-gray-500">Muellim tapilmadi</div>}
       </Card>
 
-      {/* Add Modal */}
-      <Modal open={addModal} onClose={() => setAddModal(false)} title="Yeni Müəllim Əlavə Et">
+      <Modal open={addModal} onClose={() => setAddModal(false)} title="Yeni Muellim">
         <div className="space-y-4">
           {[
-            { key: 'full_name', label: 'Ad Soyad', placeholder: 'Əli Hüseynov' },
-            { key: 'email', label: 'E-poçt', placeholder: 'muellim@email.com', type: 'email' },
+            { key: 'full_name', label: 'Ad Soyad', placeholder: 'Ali Huseynov' },
+            { key: 'email', label: 'E-poct', placeholder: 'muellim@email.com', type: 'email' },
             { key: 'phone', label: 'Telefon', placeholder: '+994501234567' },
-            { key: 'subject', label: 'Fənn', placeholder: 'Riyaziyyat' },
-            { key: 'password', label: 'Şifrə', placeholder: 'Pass@123', type: 'password' },
+            { key: 'subject', label: 'Fenn', placeholder: 'Riyaziyyat' },
+            { key: 'password', label: 'Sifre', placeholder: 'Pass@123', type: 'password' },
           ].map(({ key, label, placeholder, type = 'text' }) => (
             <div key={key}>
-              <label className="block text-xs
+              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">{label}</label>
+              <input type={type} placeholder={placeholder} className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500" value={form[key]} onChange={e => setForm(p => ({ ...p, [key]: e.target.value }))} />
+            </div>
+          ))}
+          <div>
+            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Billing Novu</label>
+            <select className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500" value={form.billing_type} onChange={e => setForm(p => ({ ...p, billing_type: e.target.value }))}>
+              <option value="8_lessons">8 Ders</option>
+              <option value="12_lessons">12 Ders</option>
+              <option value="monthly">Ayliq</option>
+            </select>
+          </div>
+          <div className="flex gap-3 pt-2">
+            <Button onClick={addInstructor} loading={loading} className="flex-1 justify-center">Elave Et</Button>
+            <Button variant="secondary" onClick={() => setAddModal(false)} className="flex-1 justify-center">Legv et</Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal open={limitsModal} onClose={() => setLimitsModal(false)} title={`${selected?.full_name} - Limitler`}>
+        <div className="space-y-4">
+          {[
+            { key: 'sms_limit', label: 'Ayliq SMS Limiti' },
+            { key: 'storage_limit_mb', label: 'Storage Limiti (MB)' },
+            { key: 'ram_limit_mb', label: 'RAM Limiti (MB)' },
+            { key: 'max_concurrent_students', label: 'Maks. Eyni Vaxt Telebe' },
+          ].map(({ key, label }) => (
+            <div key={key}>
+              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">{label}</label>
+              <input type="number" className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500" value={limits[key] || ''} onChange={e => setLimits(p => ({ ...p, [key]: parseInt(e.target.value) }))} />
+            </div>
+          ))}
+          <div className="flex gap-3 pt-2">
+            <Button onClick={saveLimits} className="flex-1 justify-center">Yadda Saxla</Button>
+            <Button variant="secondary" onClick={() => setLimitsModal(false)} className="flex-1 justify-center">Legv et</Button>
+          </div>
+        </div>
+      </Modal>
+    </div>
+  )
+}
