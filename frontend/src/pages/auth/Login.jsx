@@ -5,9 +5,9 @@ import Button from '../../components/common/Button'
 import { useToast } from '../../components/common/Toast'
 
 const ROLES = [
-  { key: 'instructor', label: 'Muellim', emoji: 'X' },
-  { key: 'student', label: 'Telebe', emoji: 'Y' },
-  { key: 'parent', label: 'Valideyn', emoji: 'Z' },
+  { key: 'instructor', label: 'Muellim', emoji: '\U0001f468\u200d\U0001f3eb' },
+  { key: 'student', label: 'Telebe', emoji: '\U0001f393' },
+  { key: 'parent', label: 'Valideyn', emoji: '\U0001f46a' },
 ]
 
 export default function Login() {
