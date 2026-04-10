@@ -45,7 +45,8 @@ router.patch('/instructors/:id/profile', authenticate, authorize('admin'), async
 router.delete('/instructors/:id', authenticate, authorize('admin'), async (req, res) => {
   try {
     const db = require('../utils/db');
-    await db.query('UPDATE users SET is_active = FALSE WHERE id = $1', [req.params.id]);
+    await db.query('DELETE FROM instructor_profiles WHERE user_id = $1', [req.params.id]);
+    await db.query('DELETE FROM users WHERE id = $1', [req.params.id]);
     res.json({ success: true });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
