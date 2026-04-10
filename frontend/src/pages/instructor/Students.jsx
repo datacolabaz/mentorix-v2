@@ -109,6 +109,13 @@ export default function InstructorStudents() {
                   </td>
                   <td className="py-3 px-4">
                     <Button size="sm" variant="secondary">Profil</Button>
+                  <Button size="sm" variant="danger" onClick={async () => {
+                    if (!confirm(s.full_name + ' silinsin?')) return
+                    try {
+                      await api.delete('/students/enrollment/' + s.enrollment_id)
+                      load()
+                    } catch(e) { alert('Xeta: ' + e.message) }
+                  }}>Sil</Button>
                   </td>
                 </tr>
               )
