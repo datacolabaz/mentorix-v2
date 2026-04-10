@@ -11,7 +11,7 @@ export default function AdminInstructors() {
   const [limitsModal, setLimitsModal] = useState(false)
   const [selected, setSelected] = useState(null)
   const [loading, setLoading] = useState(false)
-  const [form, setForm] = useState({ full_name: '', email: '', phone: '', password: 'Pass@123', subject: '', billing_type: '8_lessons' })
+  const [form, setForm] = useState({ full_name: '', phone: '', subject: '', billing_type: '8_lessons' })
   const [limits, setLimits] = useState({})
   const toast = useToast()
 
@@ -19,12 +19,13 @@ export default function AdminInstructors() {
   useEffect(() => { load() }, [])
 
   const addInstructor = async () => {
+    if (!form.full_name || !form.phone) { toast('Ad ve telefon teleb olunur', 'error'); return }
     setLoading(true)
     try {
-      await api.post('/auth/register', { ...form, role: 'instructor' })
+      await api.post('/auth/register', { ...form, role: 'instructor', password: Math.random().toString(36).slice(-10) })
       toast('Muellim elave edildi!')
       setAddModal(false)
-      setForm({ full_name: '', email: '', phone: '', password: 'Pass@123', subject: '', billing_type: '8_lessons' })
+      setForm({ full_name: '', phone: '', subject: '', billing_type: '8_lessons' })
       load()
     } catch (err) {
       toast(err.message || 'Xeta', 'error')
@@ -61,7 +62,7 @@ export default function AdminInstructors() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-indigo-500/20 text-gray-400 text-xs uppercase">
-              {['Ad', 'Fenn', 'Telebe', 'SMS', 'Storage', 'Status', 'Emeliyyat'].map(h => (
+              {['Ad', 'Fenn', 'Telefon', 'Telebe', 'SMS', 'Status', 'Emeliyyat'].map(h => (
                 <th key={h} className="py-3 px-4 text-left font-semibold tracking-wider">{h}</th>
               ))}
             </tr>
@@ -71,15 +72,14 @@ export default function AdminInstructors() {
               <tr key={i.id} className="border-b border-indigo-500/10 hover:bg-indigo-500/5 transition-colors">
                 <td className="py-3 px-4">
                   <div className="font-semibold text-white">{i.full_name}</div>
-                  <div className="text-xs text-gray-400">{i.email}</div>
                 </td>
                 <td className="py-3 px-4 text-gray-300">{i.subject || '-'}</td>
+                <td className="py-3 px-4 text-gray-300 text-xs">{i.phone || '-'}</td>
                 <td className="py-3 px-4 text-gray-300">{i.student_count || 0}</td>
                 <td className="py-3 px-4 text-xs">
                   <span className="text-blue-400 font-semibold">{i.sms_used || 0}</span>
                   <span className="text-gray-500">/{i.sms_limit || 100}</span>
                 </td>
-                <td className="py-3 px-4 text-xs text-gray-400">{i.storage_limit_mb || 1024}MB</td>
                 <td className="py-3 px-4">
                   <span className={`px-2 py-1 rounded-lg text-xs font-semibold ${i.is_active ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>
                     {i.is_active ? 'Aktiv' : 'Deaktiv'}
@@ -100,23 +100,27 @@ export default function AdminInstructors() {
         {!instructors.length && <div className="text-center py-12 text-gray-500">Muellim tapilmadi</div>}
       </Card>
 
-      <Modal open={addModal} onClose={() => setAddModal(false)} title="Yeni Muellim">
+      <Modal open={addModal} onClose={() => setAddModal(false)} title="Yeni Muellim Elave Et">
         <div className="space-y-4">
-          {[
-            { key: 'full_name', label: 'Ad Soyad', placeholder: 'Ali Huseynov' },
-            { key: 'email', label: 'E-poct', placeholder: 'muellim@email.com', type: 'email' },
-            { key: 'phone', label: 'Telefon', placeholder: '+994501234567' },
-            { key: 'subject', label: 'Fenn', placeholder: 'Riyaziyyat' },
-            { key: 'password', label: 'Sifre', placeholder: 'Pass@123', type: 'password' },
-          ].map(({ key, label, placeholder, type = 'text' }) => (
-            <div key={key}>
-              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">{label}</label>
-              <input type={type} placeholder={placeholder} className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500" value={form[key]} onChange={e => setForm(p => ({ ...p, [key]: e.target.value }))} />
-            </div>
-          ))}
+          <div>
+            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Ad Soyad *</label>
+            <input placeholder="Ali Huseynov" className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500"
+              value={form.full_name} onChange={e => setForm(p => ({ ...p, full_name: e.target.value }))} />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Telefon * (OTP ile giris ucun)</label>
+            <input placeholder="+994501234567" className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500"
+              value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Fenn</label>
+            <input placeholder="Riyaziyyat" className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500"
+              value={form.subject} onChange={e => setForm(p => ({ ...p, subject: e.target.value }))} />
+          </div>
           <div>
             <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Billing Novu</label>
-            <select className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500" value={form.billing_type} onChange={e => setForm(p => ({ ...p, billing_type: e.target.value }))}>
+            <select className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500"
+              value={form.billing_type} onChange={e => setForm(p => ({ ...p, billing_type: e.target.value }))}>
               <option value="8_lessons">8 Ders</option>
               <option value="12_lessons">12 Ders</option>
               <option value="monthly">Ayliq</option>
@@ -129,7 +133,7 @@ export default function AdminInstructors() {
         </div>
       </Modal>
 
-      <Modal open={limitsModal} onClose={() => setLimitsModal(false)} title={`${selected?.full_name} - Limitler`}>
+      <Modal open={limitsModal} onClose={() => setLimitsModal(false)} title="Limitler">
         <div className="space-y-4">
           {[
             { key: 'sms_limit', label: 'Ayliq SMS Limiti' },
@@ -139,7 +143,8 @@ export default function AdminInstructors() {
           ].map(({ key, label }) => (
             <div key={key}>
               <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">{label}</label>
-              <input type="number" className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500" value={limits[key] || ''} onChange={e => setLimits(p => ({ ...p, [key]: parseInt(e.target.value) }))} />
+              <input type="number" className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500"
+                value={limits[key] || ''} onChange={e => setLimits(p => ({ ...p, [key]: parseInt(e.target.value) }))} />
             </div>
           ))}
           <div className="flex gap-3 pt-2">

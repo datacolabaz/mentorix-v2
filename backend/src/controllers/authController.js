@@ -135,4 +135,4 @@ const me = async (req, res) => {
   }
 };
 
-module.exports = { login, sendOtp, verifyOtp, register, me };
+module.exports = { logi
