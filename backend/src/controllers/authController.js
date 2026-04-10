@@ -3,7 +3,7 @@ const db = require('../utils/db');
 const { sign, signOTP, verify } = require('../utils/jwt');
 const { sendOtpSms } = require('../services/smsService');
 
-// Email + Sifre ile giris (Admin, Instructor)
+// Admin login - email + sifre
 const login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -11,36 +11,27 @@ const login = async (req, res) => {
       'SELECT * FROM users WHERE email = $1 AND is_active = TRUE',
       [email.toLowerCase()]
     );
-
     const user = rows[0];
     if (!user || !(await bcrypt.compare(password, user.password_hash)))
       return res.status(401).json({ success: false, message: 'Email və ya şifrə yanlışdır' });
-
-    if (user.role === 'student' || user.role === 'parent')
-      return res.status(403).json({
-        success: false,
-        message: 'Tələbə və valideynlər OTP ilə daxil olmalıdır',
-      });
-
+    if (user.role !== 'admin')
+      return res.status(403).json({ success: false, message: 'Yalnız admin email ilə daxil ola bilər' });
     const token = sign({ id: user.id, role: user.role });
-    res.json({
-      success: true,
-      token,
-      user: { id: user.id, full_name: user.full_name, role: user.role, email: user.email },
-    });
+    res.json({ success: true, token, user: { id: user.id, full_name: user.full_name, role: user.role, email: user.email } });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
 };
 
-// OTP gonder
+// OTP gonder - muellim, telebe, valideyn
 const sendOtp = async (req, res) => {
   try {
     const { phone } = req.body;
-    const clean = phone.replace(/\D/g, '');
+    if (!phone) return res.status(400).json({ success: false, message: 'Telefon nömrəsi tələb olunur' });
 
+    const clean = phone.replace(/\D/g, '');
     const { rows } = await db.query(
-      "SELECT * FROM users WHERE REPLACE(phone,'+','') = $1 AND is_active = TRUE",
+      "SELECT * FROM users WHERE REPLACE(REPLACE(phone,'+',''),'-','') = $1 AND is_active = TRUE",
       [clean]
     );
 
@@ -80,7 +71,7 @@ const verifyOtp = async (req, res) => {
     await db.query('UPDATE otp_codes SET is_used = TRUE WHERE id = $1', [rows[0].id]);
 
     const { rows: users } = await db.query(
-      "SELECT * FROM users WHERE REPLACE(phone,'+','') = $1 AND is_active = TRUE",
+      "SELECT * FROM users WHERE REPLACE(REPLACE(phone,'+',''),'-','') = $1 AND is_active = TRUE",
       [clean]
     );
 
@@ -97,21 +88,18 @@ const verifyOtp = async (req, res) => {
   }
 };
 
-// Qeydiyyat (Admin terefinden)
+// Qeydiyyat
 const register = async (req, res) => {
   try {
     const { full_name, email, phone, password, role, subject, billing_type, parent_id } = req.body;
-
     const hash = await bcrypt.hash(password || 'Pass@123', 12);
 
     const result = await db.transaction(async (client) => {
       const { rows } = await client.query(
         'INSERT INTO users (full_name, email, phone, password_hash, role) VALUES ($1, $2, $3, $4, $5) RETURNING id, full_name, email, role, phone',
-        [full_name, email?.toLowerCase(), phone, hash, role]
+        [full_name, email?.toLowerCase() || null, phone, hash, role]
       );
-
       const user = rows[0];
-
       if (role === 'instructor') {
         await client.query(
           'INSERT INTO instructor_profiles (user_id, subject, billing_type) VALUES ($1, $2, $3)',
@@ -123,7 +111,6 @@ const register = async (req, res) => {
           [user.id, parent_id || null]
         );
       }
-
       return user;
     });
 
@@ -139,7 +126,7 @@ const register = async (req, res) => {
 const me = async (req, res) => {
   try {
     const { rows } = await db.query(
-      'SELECT id, full_name, email, phone, role, is_active FROM users WHERE id = $1',
+      'SELECT id, full_name, email, phone, role FROM users WHERE id = $1',
       [req.user.id]
     );
     res.json({ success: true, user: rows[0] });
