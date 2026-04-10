@@ -46,7 +46,7 @@ const verifyOtp = async (req, res) => {
       "SELECT * FROM users WHERE REPLACE(REPLACE(phone,'+',''),'-','') = $1 AND is_active = TRUE", [clean]);
     const user = users[0];
     const token = signOTP({ id: user.id, role: user.role });
-    res.json({ success: true, token, user: { id: user.id, full_name: user.full_name, role: user.role, phone: user.phone } });
+    res.json({ success: true, token, user: { id: user.id, full_name: user.full_name, role: user.role, phone: user.phone, has_pin: !!user.pin_hash } });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 };
 

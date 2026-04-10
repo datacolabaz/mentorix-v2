@@ -53,9 +53,13 @@ export default function Login() {
     setLoading(true)
     try {
       const user = await verifyOtp(phone, code)
-      navigate(roleMap[user.role])
+      if (!user.has_pin) {
+        setStep('setpin')
+      } else {
+        navigate(roleMap[user.role])
+      }
     } catch (err) {
-      toast(err.message || "Kod yanlisd ir", "error")
+      toast(err.message || "Kod yanlisdir", "error")
     } finally { setLoading(false) }
   }
 
