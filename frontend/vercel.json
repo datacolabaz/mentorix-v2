@@ -5,3 +5,8 @@
       "destination": "https://mentorix-v2-production.up.railway.app/api/:path*"
     },
     {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
