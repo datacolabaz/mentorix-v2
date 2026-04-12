@@ -3,6 +3,36 @@ const db = require('../utils/db');
 const listStudents = async (req, res) => {
   try {
     const isAdmin = req.user.role === 'admin';
+
+    if (!isAdmin) {
+      const { rows } = await db.query(
+        `SELECT u.id, u.full_name, u.email, u.phone,
+                sp.parent_id, sp.grade,
+                COALESCE(NULLIF(TRIM(sp.parent_name), ''), pu.full_name) AS parent_name,
+                COALESCE(NULLIF(TRIM(sp.parent_phone), ''), pu.phone) AS parent_phone,
+                e.id AS enrollment_id, e.billing_type, e.lesson_count,
+                e.status AS enrollment_status, e.referral_notes,
+                e.instructor_id, iu.full_name AS instructor_name,
+                rs.name AS referral_source,
+                ROUND(AVG(a.session_score)) AS avg_score
+         FROM enrollments e
+         JOIN users u ON u.id = e.student_id AND u.role = 'student' AND u.is_active = TRUE
+         LEFT JOIN student_profiles sp ON sp.user_id = u.id
+         LEFT JOIN users pu ON pu.id = sp.parent_id
+         JOIN users iu ON iu.id = e.instructor_id
+         LEFT JOIN referral_sources rs ON rs.id = e.referral_source_id
+         LEFT JOIN attendance a ON a.enrollment_id = e.id AND a.attended = TRUE
+         WHERE e.instructor_id = $1
+         GROUP BY u.id, u.full_name, u.email, u.phone, sp.parent_id, sp.grade,
+                  sp.parent_name, sp.parent_phone, pu.full_name, pu.phone,
+                  e.id, e.billing_type, e.lesson_count, e.status,
+                  e.referral_notes, e.instructor_id, iu.full_name, rs.name
+         ORDER BY u.full_name`,
+        [req.user.id]
+      );
+      return res.json({ success: true, students: rows });
+    }
+
     const { rows } = await db.query(
       `SELECT u.id, u.full_name, u.email, u.phone,
               sp.parent_id, sp.grade,
@@ -21,13 +51,11 @@ const listStudents = async (req, res) => {
        LEFT JOIN referral_sources rs ON rs.id = e.referral_source_id
        LEFT JOIN attendance a ON a.enrollment_id = e.id AND a.attended = TRUE
        WHERE u.role = 'student' AND u.is_active = TRUE
-         AND ($1 OR e.instructor_id = $2)
        GROUP BY u.id, u.full_name, u.email, u.phone, sp.parent_id, sp.grade,
                 sp.parent_name, sp.parent_phone, pu.full_name, pu.phone,
                 e.id, e.billing_type, e.lesson_count, e.status,
                 e.referral_notes, e.instructor_id, iu.full_name, rs.name
-       ORDER BY u.full_name`,
-      [isAdmin, req.user.id]
+       ORDER BY u.full_name`
     );
     res.json({ success: true, students: rows });
   } catch (err) {

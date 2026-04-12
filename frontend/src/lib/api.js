@@ -1,8 +1,10 @@
 import axios from 'axios'
 
+const parsedTimeout = Number(import.meta.env.VITE_API_TIMEOUT_MS)
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || '/api',
-  timeout: 15000,
+  // Railway/soyuq başlanğıc + DB bəzən 15s-dən çox çəkir
+  timeout: Number.isFinite(parsedTimeout) && parsedTimeout > 0 ? parsedTimeout : 60000,
 })
 
 api.interceptors.request.use((config) => {

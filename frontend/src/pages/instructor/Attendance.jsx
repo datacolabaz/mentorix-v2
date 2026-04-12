@@ -11,7 +11,10 @@ export default function InstructorAttendance() {
   const toast = useToast()
 
   useEffect(() => {
-    api.get('/students').then(d => setStudents(d.students || []))
+    api
+      .get('/students')
+      .then((d) => setStudents(d.students || []))
+      .catch(() => setStudents([]))
   }, [])
 
   const submit = async () => {

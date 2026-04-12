@@ -276,7 +276,7 @@ export default function InstructorStudents() {
             </div>
           </Card>
         ))}
-        {!listLoading && !students.length && (
+        {!listLoading && !listError && !students.length && (
           <div className="text-center py-16 text-gray-500">
             <p className="text-lg mb-2">Telebe yoxdur</p>
             <p className="text-sm">Yuxaridan telebe elave edin</p>

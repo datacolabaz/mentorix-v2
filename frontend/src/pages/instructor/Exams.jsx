@@ -16,20 +16,29 @@ export default function InstructorExams() {
   const [editExam, setEditExam] = useState(null)
   const [loading, setLoading] = useState(false)
   const [examsLoading, setExamsLoading] = useState(true)
+  const [examsError, setExamsError] = useState(null)
   const toast = useToast()
 
   const loadExams = async () => {
+    setExamsError(null)
+    setExamsLoading(true)
     try {
       const d = await api.get('/exams')
       setExams(d.exams || [])
+    } catch (err) {
+      setExamsError(err?.message || 'İmtahanlar yüklənmədi')
+      setExams([])
     } finally {
       setExamsLoading(false)
     }
   }
 
   useEffect(() => {
-    loadExams()
-    api.get('/students').then((d) => setStudents(d.students || []))
+    void loadExams()
+    api
+      .get('/students')
+      .then((d) => setStudents(d.students || []))
+      .catch(() => setStudents([]))
   }, [])
  
   const statusBadge = (e) => {
@@ -77,7 +86,16 @@ export default function InstructorExams() {
  
       <div className="space-y-4">
         {examsLoading && <ListSkeleton message="İmtahanlar yüklənir…" />}
-        {!examsLoading &&
+        {!examsLoading && examsError && (
+          <Card className="p-6 text-center border border-amber-500/30 bg-amber-500/5">
+            <p className="text-amber-200/90 text-sm mb-3">{examsError}</p>
+            <p className="text-gray-500 text-xs mb-4">Şəbəkə və ya server gecikməsi ola bilər.</p>
+            <Button type="button" variant="secondary" onClick={() => void loadExams()}>
+              Yenidən yüklə
+            </Button>
+          </Card>
+        )}
+        {!examsLoading && !examsError &&
           exams.map((exam) => {
           const { label, cls } = statusBadge(exam)
           return (
@@ -101,7 +119,7 @@ export default function InstructorExams() {
             </Card>
           )
         })}
-        {!examsLoading && !exams.length && (
+        {!examsLoading && !examsError && !exams.length && (
           <div className="text-center py-16 text-gray-500">Hele imtahan yoxdur</div>
         )}
       </div>

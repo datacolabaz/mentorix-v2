@@ -22,7 +22,10 @@ export default function InstructorDashboard() {
   const [examStats, setExamStats] = useState([])
 
   useEffect(() => {
-    api.get('/students').then(d => setStudents(d.students || []))
+    api
+      .get('/students')
+      .then((d) => setStudents(d.students || []))
+      .catch(() => setStudents([]))
     api.get('/exams/student-progress').then(d => setExamStats(d.stats || [])).catch(() => setExamStats([]))
   }, [])
 

@@ -9,7 +9,10 @@ export default function InstructorAnalytics() {
   const [students, setStudents] = useState([])
 
   useEffect(() => {
-    api.get('/students').then(d => setStudents(d.students || []))
+    api
+      .get('/students')
+      .then((d) => setStudents(d.students || []))
+      .catch(() => setStudents([]))
   }, [])
 
   const referralData = students.reduce((acc, s) => {
