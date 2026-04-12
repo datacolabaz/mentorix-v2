@@ -76,7 +76,7 @@ export default function InstructorExams() {
       </div>
  
       <div className="space-y-4">
-        {examsLoading && <ListSkeleton rows={4} className="h-28" />}
+        {examsLoading && <ListSkeleton message="İmtahanlar yüklənir…" />}
         {!examsLoading &&
           exams.map((exam) => {
           const { label, cls } = statusBadge(exam)

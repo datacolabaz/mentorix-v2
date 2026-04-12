@@ -236,7 +236,7 @@ export default function InstructorStudents() {
       </div>
 
       <div className="space-y-3">
-        {listLoading && <ListSkeleton rows={5} />}
+        {listLoading && <ListSkeleton message="Tələbələr yüklənir…" />}
         {!listLoading &&
           students.map((s) => (
           <Card key={s.enrollment_id} className="p-4">

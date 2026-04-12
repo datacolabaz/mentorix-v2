@@ -1,13 +1,19 @@
-/** Siyahı API-dən gələnə qədər boş vəziyyət flaşını əngəlləmək üçün */
-export default function ListSkeleton({ rows = 4, className = 'h-20' }) {
+/**
+ * Siyahı yüklənərkən boş ekran / “yoxdur” flaşını əvəz edir.
+ * Saxta kartlar əvəzinə yüngül spinner — daha az diqqət çəkir.
+ */
+export default function ListSkeleton({ message = 'Yüklənir…' }) {
   return (
-    <div className="space-y-3 animate-pulse" aria-busy="true" aria-label="Yüklənir">
-      {Array.from({ length: rows }, (_, i) => (
-        <div
-          key={i}
-          className={`rounded-xl border border-indigo-500/20 bg-[#13112e]/90 ${className}`}
-        />
-      ))}
+    <div
+      className="flex flex-col items-center justify-center py-20 gap-4 text-gray-400"
+      aria-busy="true"
+      aria-live="polite"
+    >
+      <div
+        className="h-9 w-9 rounded-full border-2 border-indigo-500/25 border-t-blue-400 animate-spin shrink-0"
+        aria-hidden
+      />
+      <p className="text-sm">{message}</p>
     </div>
   )
 }
