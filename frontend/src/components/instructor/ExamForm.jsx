@@ -483,6 +483,10 @@ export default function ExamForm({ students, studentsLoading = false, onCreated 
               {meta.student_ids.length === students.length ? 'Hamisini sil' : 'Hamisini sec'}
             </button>
           </div>
+          <p className="text-xs text-amber-200/85 leading-relaxed">
+            Heç kim seçilməsə, imtahan saxlananda server avtomatik olaraq sizin <strong className="text-amber-100">bütün aktiv qeydiyyatlı</strong> tələbələrinizi təyin edir.
+            Yenə də &quot;Hamısını seç&quot; etmək daha aydındır.
+          </p>
  
           <div className="max-h-64 overflow-y-auto space-y-1 bg-[#13112e] rounded-xl p-3 border border-indigo-500/20">
             {studentsLoading ? (

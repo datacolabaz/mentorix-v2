@@ -99,13 +99,27 @@ const createExam = async (req, res) => {
         }
       }
 
-      if (student_ids?.length) {
-        for (const sid of student_ids) {
-          await client.query(
-            'INSERT INTO exam_assignments (exam_id, student_id) VALUES ($1,$2)',
-            [exam.id, sid]
+      let assignIds = Array.isArray(student_ids)
+        ? [...new Set(student_ids.filter((x) => x != null && String(x).trim() !== ''))]
+        : [];
+      /** Addım 3 atlananda boş array gəlirdi — heç bir təyinat olmur, İmtahanlarım boş qalırdı */
+      if (assignIds.length === 0 && req.user.role === 'instructor') {
+        const instHex = normStudentHex(req.user.id);
+        if (instHex) {
+          const { rows: enrolled } = await client.query(
+            `SELECT DISTINCT e.student_id AS id FROM enrollments e
+             WHERE e.status = 'active'
+               AND REPLACE(LOWER(TRIM(e.instructor_id::text)), '-', '') = $1`,
+            [instHex]
           );
+          assignIds = enrolled.map((r) => r.id).filter(Boolean);
         }
+      }
+      for (const sid of assignIds) {
+        await client.query(
+          'INSERT INTO exam_assignments (exam_id, student_id) VALUES ($1,$2)',
+          [exam.id, sid]
+        );
       }
 
       return exam;
