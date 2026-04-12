@@ -11,7 +11,7 @@ const TYPES = {
   open: 'Aciq',
 }
  
-export default function ExamForm({ students, onCreated }) {
+export default function ExamForm({ students, studentsLoading = false, onCreated }) {
   const [step, setStep] = useState(1)
   const [loading, setLoading] = useState(false)
   const [pdfBusy, setPdfBusy] = useState(false)
@@ -485,21 +485,38 @@ export default function ExamForm({ students, onCreated }) {
           </div>
  
           <div className="max-h-64 overflow-y-auto space-y-1 bg-[#13112e] rounded-xl p-3 border border-indigo-500/20">
-            {students.map(s => (
-              <label key={s.id} className="flex items-center gap-3 cursor-pointer hover:bg-white/5 rounded-lg p-2">
-                <input type="checkbox" className="accent-blue-500"
-                  checked={meta.student_ids.includes(s.id)}
-                  onChange={e => setMeta(p => ({
-                    ...p, student_ids: e.target.checked
-                      ? [...p.student_ids, s.id]
-                      : p.student_ids.filter(id => id !== s.id)
-                  }))} />
-                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-xs font-bold">
-                  {s.full_name?.split(' ').map(n => n[0]).join('').slice(0, 2)}
-                </div>
-                <span className="text-sm">{s.full_name}</span>
-              </label>
-            ))}
+            {studentsLoading ? (
+              <p className="text-gray-500 text-sm text-center py-8">Tələbələr yüklənir…</p>
+            ) : !students.length ? (
+              <p className="text-amber-200/80 text-sm text-center py-6 px-2">
+                Hələ tələbə yoxdur — əvvəl &quot;Tələbələrim&quot; bölməsindən əlavə edin.
+              </p>
+            ) : (
+              students.map((s) => (
+                <label key={s.id} className="flex items-center gap-3 cursor-pointer hover:bg-white/5 rounded-lg p-2">
+                  <input
+                    type="checkbox"
+                    className="accent-blue-500"
+                    checked={meta.student_ids.includes(s.id)}
+                    onChange={(e) =>
+                      setMeta((p) => ({
+                        ...p,
+                        student_ids: e.target.checked
+                          ? [...p.student_ids, s.id]
+                          : p.student_ids.filter((id) => id !== s.id),
+                      }))
+                    }
+                  />
+                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-xs font-bold">
+                    {s.full_name?.split(' ')
+                      .map((n) => n[0])
+                      .join('')
+                      .slice(0, 2)}
+                  </div>
+                  <span className="text-sm">{s.full_name}</span>
+                </label>
+              ))
+            )}
           </div>
  
           <p className="text-xs text-gray-500">{meta.student_ids.length} telebe · {questions.length} sual</p>

@@ -7,6 +7,7 @@ const {
   listExams,
   instructorStudentExamProgress,
   studentExams,
+  getStudentExamReview,
   getExamQuestions,
   submitExam,
   getResults,
@@ -55,6 +56,7 @@ router.post('/', authenticate, authorize('instructor', 'admin'), createExam);
 router.get('/', authenticate, authorize('instructor', 'admin'), listExams);
 router.get('/student-progress', authenticate, authorize('instructor', 'admin'), instructorStudentExamProgress);
 router.get('/my', authenticate, authorize('student'), studentExams);
+router.get('/:id/review', authenticate, getStudentExamReview);
 router.get('/:id/questions', authenticate, getExamQuestions);
 router.post('/submit', authenticate, authorize('student'), submitExam);
 router.get('/:id/results', authenticate, getResults);

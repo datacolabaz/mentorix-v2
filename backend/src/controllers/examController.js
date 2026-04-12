@@ -183,6 +183,64 @@ const studentExams = async (req, res) => {
   }
 };
 
+/** Tələbə: təqdim etdikdən sonra öz nəticəsinə və sual üzrə xülasəyə baxış */
+const getStudentExamReview = async (req, res) => {
+  try {
+    if (req.user.role !== 'student') {
+      return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
+    }
+    const examId = req.params.id;
+    const studentId = req.user.id;
+
+    const { rows: assignRows } = await db.query(
+      'SELECT 1 FROM exam_assignments WHERE exam_id = $1 AND student_id = $2',
+      [examId, studentId]
+    );
+    if (!assignRows.length) {
+      return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
+    }
+
+    const { rows: resultRows } = await db.query(
+      'SELECT score, answers, submitted_at FROM exam_results WHERE exam_id = $1 AND student_id = $2',
+      [examId, studentId]
+    );
+    const result = resultRows[0];
+    if (!result || !result.submitted_at) {
+      return res.status(404).json({ success: false, message: 'Hələ təqdim olunmayıb' });
+    }
+
+    const { rows: [exam] } = await db.query('SELECT * FROM exams WHERE id = $1', [examId]);
+    if (!exam) return res.status(404).json({ success: false, message: 'Tapılmadı' });
+
+    const { rows: questions } = await db.query(
+      'SELECT * FROM exam_questions WHERE exam_id = $1 ORDER BY order_num',
+      [examId]
+    );
+
+    let answers = result.answers;
+    if (typeof answers === 'string') {
+      try {
+        answers = JSON.parse(answers);
+      } catch {
+        answers = {};
+      }
+    }
+    if (!answers || typeof answers !== 'object') answers = {};
+
+    const breakdown = buildExamResultBreakdown(questions, answers);
+
+    res.json({
+      success: true,
+      exam,
+      score: result.score,
+      submitted_at: result.submitted_at,
+      breakdown,
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 // Imtahan suallarini al
 const getExamQuestions = async (req, res) => {
   try {
@@ -270,6 +328,7 @@ module.exports = {
   listExams,
   instructorStudentExamProgress,
   studentExams,
+  getStudentExamReview,
   getExamQuestions,
   submitExam,
   getResults,

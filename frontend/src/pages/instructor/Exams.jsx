@@ -11,6 +11,7 @@ import { localDatetimeInputToUtcIso, utcInstantToDatetimeLocalValue } from '../.
 export default function InstructorExams() {
   const [exams, setExams] = useState([])
   const [students, setStudents] = useState([])
+  const [studentsLoading, setStudentsLoading] = useState(true)
   const [addModal, setAddModal] = useState(false)
   const [editModal, setEditModal] = useState(false)
   const [editExam, setEditExam] = useState(null)
@@ -35,10 +36,12 @@ export default function InstructorExams() {
 
   useEffect(() => {
     void loadExams()
+    setStudentsLoading(true)
     api
       .get('/students')
       .then((d) => setStudents(d.students || []))
       .catch(() => setStudents([]))
+      .finally(() => setStudentsLoading(false))
   }, [])
  
   const statusBadge = (e) => {
@@ -125,7 +128,14 @@ export default function InstructorExams() {
       </div>
  
       <Modal open={addModal} onClose={() => setAddModal(false)} title="Yeni Imtahan Yarat" size="lg">
-        <ExamForm students={students} onCreated={() => { setAddModal(false); loadExams() }} />
+        <ExamForm
+          students={students}
+          studentsLoading={studentsLoading}
+          onCreated={() => {
+            setAddModal(false)
+            loadExams()
+          }}
+        />
       </Modal>
  
       {editExam && (

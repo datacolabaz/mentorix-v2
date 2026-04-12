@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import api from '../../lib/api'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
+import Modal from '../../components/common/Modal'
 import Countdown from '../../components/exam/Countdown'
 import { useToast } from '../../components/common/Toast'
 
@@ -78,6 +79,7 @@ function formatScorePct(v) {
 
 export default function StudentExams() {
   const [exams, setExams] = useState([])
+  const [listLoading, setListLoading] = useState(true)
   const [activeExam, setActiveExam] = useState(null)
   const [questions, setQuestions] = useState([])
   const [answers, setAnswers] = useState({})
@@ -90,10 +92,24 @@ export default function StudentExams() {
   activeExamRef.current = !!activeExam
   const toast = useToast()
 
-  const loadExams = useCallback(() => api.get('/exams/my').then((d) => setExams(d.exams || [])), [])
+  /** quiet: arxa plan yeniləməsində tam səhifə “yüklənir” göstərmə */
+  const loadExams = useCallback((quiet = false) => {
+    if (!quiet) setListLoading(true)
+    return api
+      .get('/exams/my')
+      .then((d) => setExams(d.exams || []))
+      .catch(() => {
+        if (!quiet) setExams([])
+      })
+      .finally(() => {
+        if (!quiet) setListLoading(false)
+      })
+  }, [])
+
+  const [reviewModal, setReviewModal] = useState(null)
 
   useEffect(() => {
-    loadExams()
+    loadExams(false)
   }, [loadExams])
 
   // Gözləyərkən səhifə yeniləmədən "Başla" görünsün (vaxt keçəndə re-render)
@@ -106,17 +122,48 @@ export default function StudentExams() {
   // Siyahını serverdən ara-sıra yenilə (təyinat və s.)
   useEffect(() => {
     if (activeExam) return undefined
-    const id = setInterval(loadExams, 45000)
+    const id = setInterval(() => loadExams(true), 45000)
     return () => clearInterval(id)
   }, [activeExam, loadExams])
 
   useEffect(() => {
     const onVis = () => {
-      if (document.visibilityState === 'visible' && !activeExamRef.current) loadExams()
+      if (document.visibilityState === 'visible' && !activeExamRef.current) loadExams(true)
     }
     document.addEventListener('visibilitychange', onVis)
     return () => document.removeEventListener('visibilitychange', onVis)
-  }, [])
+  }, [loadExams])
+
+  const openPastReview = async (exam) => {
+    setReviewModal({
+      title: exam.title,
+      loading: true,
+      breakdown: null,
+      score: null,
+      submitted_at: null,
+      error: null,
+    })
+    try {
+      const d = await api.get(`/exams/${exam.id}/review`)
+      setReviewModal({
+        title: exam.title,
+        loading: false,
+        breakdown: Array.isArray(d.breakdown) ? d.breakdown : [],
+        score: d.score,
+        submitted_at: d.submitted_at,
+        error: null,
+      })
+    } catch (err) {
+      setReviewModal({
+        title: exam.title,
+        loading: false,
+        breakdown: [],
+        score: null,
+        submitted_at: null,
+        error: err?.message || 'Yüklənmədi',
+      })
+    }
+  }
 
   const startExam = async (exam) => {
     try {
@@ -144,7 +191,7 @@ export default function StudentExams() {
       setResultBreakdown(Array.isArray(data.breakdown) ? data.breakdown : null)
       setActiveExam(null)
       toast(`✓ İmtahan tamamlandı! Bal: ${formatScorePct(data.score)}`)
-      api.get('/exams/my').then(d => setExams(d.exams || []))
+      loadExams(true)
     } catch (err) {
       toast(err.message || 'Xəta', 'error')
     }
@@ -394,6 +441,9 @@ export default function StudentExams() {
         </Card>
       )}
 
+      {listLoading ? (
+        <div className="text-center py-16 text-gray-500">İmtahanlar yüklənir…</div>
+      ) : (
       <div className="space-y-4">
         {exams.map(exam => {
           const now = new Date()
@@ -418,9 +468,13 @@ export default function StudentExams() {
                   )}
                 </div>
                 <div className="shrink-0 self-start sm:self-center">
-                  {isActive && !isDone ? (
+                  {isDone ? (
+                    <Button variant="secondary" size="sm" onClick={() => openPastReview(exam)}>
+                      📋 Nəticəyə bax
+                    </Button>
+                  ) : isActive ? (
                     <Button onClick={() => startExam(exam)}>🚀 Başla</Button>
-                  ) : !isActive && now < start ? (
+                  ) : now < start ? (
                     <span className="text-xs text-gray-500 bg-[#13112e] px-3 py-2 rounded-xl inline-block">⏳ Gözlənilir</span>
                   ) : (
                     <span className="text-xs text-gray-500 bg-[#13112e] px-3 py-2 rounded-xl inline-block">Bitib</span>
@@ -434,6 +488,82 @@ export default function StudentExams() {
           <div className="text-center py-16 text-gray-500">Sizin üçün imtahan yoxdur</div>
         )}
       </div>
+      )}
+
+      <Modal
+        open={!!reviewModal}
+        onClose={() => setReviewModal(null)}
+        title={reviewModal?.title || 'İmtahan nəticəsi'}
+        size="lg"
+      >
+        {reviewModal?.loading ? (
+          <p className="text-gray-500 text-center py-10">Yüklənir…</p>
+        ) : reviewModal?.error ? (
+          <p className="text-red-400 text-sm text-center py-6">{reviewModal.error}</p>
+        ) : (
+          <>
+            <div className="text-center mb-6">
+              <div className="font-display font-extrabold text-3xl bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
+                {formatScorePct(reviewModal.score)}
+              </div>
+              {reviewModal.submitted_at && (
+                <p className="text-xs text-gray-500 mt-2">
+                  Təqdim: {new Date(reviewModal.submitted_at).toLocaleString('az-AZ')}
+                </p>
+              )}
+            </div>
+            {reviewModal.breakdown?.length > 0 && (
+              <div className="space-y-3 max-h-[min(60vh,480px)] overflow-y-auto pr-1">
+                <h3 className="text-sm font-bold text-white mb-2">Suallar üzrə</h3>
+                {reviewModal.breakdown.map((row) => (
+                  <div
+                    key={row.question_id || row.order}
+                    className="rounded-xl border border-indigo-500/20 bg-[#13112e]/80 p-4 text-left"
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
+                      <span className="text-sm font-bold text-indigo-300">Sual {row.order}</span>
+                      <span className="text-[11px] uppercase tracking-wide text-gray-500">
+                        {questionTypeLabelAz(row.question_type)}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-300 mb-3 leading-snug">{row.question_text}</p>
+                    <div className="grid gap-2 text-sm sm:grid-cols-2">
+                      <div>
+                        <span className="text-xs text-gray-500 block mb-0.5">Sizin cavabınız</span>
+                        <code className="block text-amber-200/90 font-mono text-xs break-all bg-black/25 rounded-lg px-2 py-1.5">
+                          {row.student_answer}
+                        </code>
+                      </div>
+                      <div>
+                        <span className="text-xs text-gray-500 block mb-0.5">Düzgün şablon / gözlənti</span>
+                        <code className="block text-emerald-200/90 font-mono text-xs break-all bg-black/25 rounded-lg px-2 py-1.5">
+                          {row.correct_display}
+                        </code>
+                      </div>
+                    </div>
+                    <div className="mt-3">
+                      <span
+                        className={
+                          'inline-flex text-xs font-bold px-2.5 py-1 rounded-lg ' +
+                          (row.status_label === 'Düzgün'
+                            ? 'bg-emerald-500/20 text-emerald-300'
+                            : row.status_label === 'Səhv'
+                              ? 'bg-red-500/15 text-red-300'
+                              : row.status_label === 'Cavabsız'
+                                ? 'bg-amber-500/15 text-amber-200'
+                                : 'bg-gray-500/15 text-gray-400')
+                        }
+                      >
+                        {row.status_label}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </Modal>
     </div>
   )
 }

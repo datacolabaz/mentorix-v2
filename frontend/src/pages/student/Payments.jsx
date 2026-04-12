@@ -18,7 +18,7 @@ export default function StudentPayments() {
   const [loading, setLoading] = useState(true)
   const [payments, setPayments] = useState([])
   const [enrollment, setEnrollment] = useState(null)
-  const [infoOpen, setInfoOpen] = useState(true)
+  const [historyOpen, setHistoryOpen] = useState(false)
 
   const load = useCallback(() => {
     setLoading(true)
@@ -37,7 +37,6 @@ export default function StudentPayments() {
 
   useEffect(() => {
     load()
-    setInfoOpen(true)
   }, [load])
 
   const limit = enrollment ? billingLimit(enrollment.billing_type) : null
@@ -60,10 +59,11 @@ export default function StudentPayments() {
             <h2 className="font-semibold text-white">Cari paket</h2>
             <button
               type="button"
-              onClick={() => setInfoOpen(true)}
+              onClick={() => setHistoryOpen((v) => !v)}
               className="text-sm font-semibold text-blue-400 border border-blue-500/30 rounded-xl px-3 py-1.5 hover:bg-blue-500/10"
+              aria-expanded={historyOpen}
             >
-              Ödəniş tarixçəsi
+              {historyOpen ? 'Tarixçəni gizlət' : 'Ödəniş tarixçəsi'}
             </button>
           </div>
           {enrollment ? (
@@ -88,102 +88,64 @@ export default function StudentPayments() {
         </Card>
       )}
 
-      {infoOpen && (
-        <div
-          className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="pay-history-title"
-          onClick={() => setInfoOpen(false)}
-        >
-          <div
-            className="bg-[#13112e] border border-indigo-500/30 rounded-t-2xl sm:rounded-2xl w-full max-w-lg max-h-[85vh] overflow-hidden flex flex-col shadow-xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between gap-3 p-4 border-b border-indigo-500/20 shrink-0">
-              <h2 id="pay-history-title" className="font-display font-bold text-lg text-white">
-                Ödəniş tarixçəsi
-              </h2>
-              <button
-                type="button"
-                onClick={() => setInfoOpen(false)}
-                className="text-gray-400 hover:text-white text-2xl leading-none px-2"
-                aria-label="Bağla"
-              >
-                ×
-              </button>
+      {!loading && historyOpen && (
+        <Card className="p-5 mt-4 border-indigo-500/25">
+          <h2 className="font-display font-bold text-lg text-white mb-4">Ödəniş tarixçəsi</h2>
+          {enrollment && (
+            <div className="rounded-xl bg-[#1a1740] border border-indigo-500/20 p-3 text-sm text-gray-300 mb-4">
+              <p>
+                <span className="text-gray-500">Paket (müəllim seçimi):</span>{' '}
+                <span className="text-white font-medium">
+                  {BILLING[enrollment.billing_type] || enrollment.billing_type || '—'}
+                </span>
+              </p>
+              <p className="mt-1">
+                <span className="text-gray-500">Qeydə alınmış ödəniş cəmi:</span>{' '}
+                <span className="text-emerald-300 font-mono">
+                  {Number.isFinite(totalPaid) ? totalPaid.toFixed(2) : '0.00'} ₼
+                </span>
+              </p>
             </div>
-            <div className="p-4 overflow-y-auto flex-1 min-h-0 space-y-4">
-              {enrollment && (
-                <div className="rounded-xl bg-[#1a1740] border border-indigo-500/20 p-3 text-sm text-gray-300">
-                  <p>
-                    <span className="text-gray-500">Paket (müəllim seçimi):</span>{' '}
-                    <span className="text-white font-medium">
-                      {BILLING[enrollment.billing_type] || enrollment.billing_type || '—'}
-                    </span>
-                  </p>
-                  <p className="mt-1">
-                    <span className="text-gray-500">Qeydə alınmış ödəniş cəmi:</span>{' '}
-                    <span className="text-emerald-300 font-mono">
-                      {Number.isFinite(totalPaid) ? totalPaid.toFixed(2) : '0.00'} ₼
-                    </span>
-                  </p>
-                </div>
-              )}
+          )}
 
-              {!payments.length ? (
-                <p className="text-gray-500 text-sm text-center py-6">
-                  Hələ ödəniş qeydi yoxdur. Müəlliminiz ödəniş əlavə edəndə burada görünəcək.
-                </p>
-              ) : (
-                <ul className="space-y-2">
-                  {payments.map((p) => (
-                    <li
-                      key={p.id}
-                      className="rounded-xl border border-indigo-500/20 bg-[#0f0c29]/80 p-3 text-sm"
+          {!payments.length ? (
+            <p className="text-gray-500 text-sm py-2">
+              Hələ ödəniş qeydi yoxdur. Müəlliminiz ödəniş əlavə edəndə burada görünəcək.
+            </p>
+          ) : (
+            <ul className="space-y-2">
+              {payments.map((p) => (
+                <li
+                  key={p.id}
+                  className="rounded-xl border border-indigo-500/20 bg-[#0f0c29]/80 p-3 text-sm"
+                >
+                  <div className="flex justify-between gap-2 flex-wrap">
+                    <span className="font-mono text-emerald-300">
+                      {p.amount != null ? Number(p.amount).toFixed(2) : '—'} {p.currency || 'AZN'}
+                    </span>
+                    <span
+                      className={
+                        p.status === 'completed'
+                          ? 'text-emerald-400 text-xs font-semibold'
+                          : 'text-amber-400 text-xs'
+                      }
                     >
-                      <div className="flex justify-between gap-2 flex-wrap">
-                        <span className="font-mono text-emerald-300">
-                          {p.amount != null ? Number(p.amount).toFixed(2) : '—'} {p.currency || 'AZN'}
-                        </span>
-                        <span
-                          className={
-                            p.status === 'completed'
-                              ? 'text-emerald-400 text-xs font-semibold'
-                              : 'text-amber-400 text-xs'
-                          }
-                        >
-                          {p.status || '—'}
-                        </span>
-                      </div>
-                      {p.period && (
-                        <p className="text-xs text-gray-500 mt-1">Dövr: {p.period}</p>
-                      )}
-                      {p.payment_method && (
-                        <p className="text-xs text-gray-500">Üsul: {p.payment_method}</p>
-                      )}
-                      {p.paid_at && (
-                        <p className="text-xs text-gray-500 mt-1">
-                          {new Date(p.paid_at).toLocaleString('az-AZ')}
-                        </p>
-                      )}
-                      {p.notes && <p className="text-xs text-gray-400 mt-1">{p.notes}</p>}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-            <div className="p-4 border-t border-indigo-500/20 shrink-0">
-              <button
-                type="button"
-                onClick={() => setInfoOpen(false)}
-                className="w-full py-2.5 rounded-xl bg-blue-500/20 text-blue-300 font-semibold text-sm hover:bg-blue-500/30"
-              >
-                Bağla
-              </button>
-            </div>
-          </div>
-        </div>
+                      {p.status || '—'}
+                    </span>
+                  </div>
+                  {p.period && <p className="text-xs text-gray-500 mt-1">Dövr: {p.period}</p>}
+                  {p.payment_method && <p className="text-xs text-gray-500">Üsul: {p.payment_method}</p>}
+                  {p.paid_at && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      {new Date(p.paid_at).toLocaleString('az-AZ')}
+                    </p>
+                  )}
+                  {p.notes && <p className="text-xs text-gray-400 mt-1">{p.notes}</p>}
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
       )}
     </div>
   )
