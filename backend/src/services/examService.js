@@ -259,11 +259,11 @@ const notifyParentExamResultAfterSubmit = async (examId, studentId, score) => {
   const clean = String(row.notify_phone).replace(/\D/g, '');
   if (clean.length < 9) return;
 
-  const name = row.student_name || 'Telebe';
-  const msg =
-    row.show_results === true
-      ? `Mentorix: ${name} — "${row.title}" imtahanini bitirdi. Bal: ${score}%`
-      : `Mentorix: ${name} — "${row.title}" imtahanini bitirdi.`;
+  const name = row.student_name || 'Tələbə';
+  const pct = Math.round(Number(score));
+  const safePct = Number.isFinite(pct) ? pct : 0;
+  const title = String(row.title || 'İmtahan').trim();
+  const msg = `Mentorix: Salam, ${name}! "${title}" imtahanında ${safePct}% toplayıb.`;
 
   const r = await sendSms({
     instructorId: row.instructor_id,
