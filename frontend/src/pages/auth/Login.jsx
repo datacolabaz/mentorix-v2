@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import useAuthStore from '../../hooks/useAuth'
 import Button from '../../components/common/Button'
@@ -28,6 +28,8 @@ export default function Login() {
   const [flow, setFlow] = useState('phone')
   const [otpSent, setOtpSent] = useState(false)
   const [forgotPin, setForgotPin] = useState(false)
+  /** PIN unut → OTP axını; state bəzən gecikə bilər, ref serverə düzgün flag göndərir */
+  const otpAfterForgotRef = useRef(false)
   /** true = SMS kodu PIN kimi saxlanılmasın, əl ilə PIN ekranı göstər */
   const [useSeparatePin, setUseSeparatePin] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -63,6 +65,7 @@ export default function Login() {
         setFlow('pin')
         setOtpSent(false)
         setForgotPin(false)
+        otpAfterForgotRef.current = false
         setOtpCode('')
         setPinInput('')
         toast(data.message || 'PIN ilə daxil olun', 'success')
@@ -99,14 +102,19 @@ export default function Login() {
     if (!role) return
     setLoading(true)
     try {
-      const data = await verifyOtp(phone, otpCode, role, useSeparatePin ? { saveOtpAsPin: false } : {})
-      if (data.needs_pin_setup || forgotPin) {
+      const fromForgot = otpAfterForgotRef.current
+      const data = await verifyOtp(phone, otpCode, role, {
+        ...(useSeparatePin ? { saveOtpAsPin: false } : {}),
+        ...(fromForgot ? { forgotPinReset: true } : {}),
+      })
+      otpAfterForgotRef.current = false
+      if (data.needs_pin_setup || data.pin_was_reset) {
         setFlow('setpin')
         setNewPin('')
         setNewPin2('')
         toast(
-          forgotPin
-            ? 'Yeni 6 rəqəmli PIN təyin edin'
+          data.pin_was_reset || fromForgot
+            ? 'Təsdiq olundu. İndi yeni 6 rəqəmli PIN təyin edin'
             : 'Növbəti girişlər üçün özünüzə 6 rəqəmli PIN təyin edin',
           'success'
         )
@@ -165,6 +173,7 @@ export default function Login() {
     setOtpCode('')
     setPinInput('')
     setForgotPin(false)
+    otpAfterForgotRef.current = false
     setUseSeparatePin(false)
   }
 
@@ -267,6 +276,12 @@ export default function Login() {
                 <div className="space-y-4">
                   {!otpSent ? (
                     <>
+                      {otpAfterForgotRef.current && (
+                        <p className="text-xs text-center text-amber-200/90 p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                          OTP ilə təsdiqləyəndən sonra <strong>yeni PIN</strong> təyin edəcəksiniz. SMS kodunu PIN
+                          sahəsinə yazmayın.
+                        </p>
+                      )}
                       <p className="text-xs text-gray-400 text-center">
                         Təhlükəsizlik üçün SMS OTP göndərilir (müəllim kotasından).
                       </p>
@@ -333,9 +348,11 @@ export default function Login() {
                   <div className="text-center text-xs text-gray-500">{phone}</div>
                   <input
                     className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-4 text-white text-2xl font-bold text-center tracking-widest outline-none focus:border-blue-500"
-                    placeholder="6 rəqəmli PIN"
+                    placeholder=""
+                    aria-label="Giriş PIN-i, 6 rəqəm"
                     maxLength={6}
                     inputMode="numeric"
+                    autoComplete="one-time-code"
                     value={pinInput}
                     onChange={(e) => setPinInput(e.target.value.replace(/\D/g, ''))}
                     required
@@ -347,6 +364,7 @@ export default function Login() {
                     type="button"
                     onClick={() => {
                       setForgotPin(true)
+                      otpAfterForgotRef.current = true
                       setFlow('otp')
                       setOtpSent(false)
                       setOtpCode('')

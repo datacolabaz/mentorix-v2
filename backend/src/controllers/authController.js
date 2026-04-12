@@ -144,7 +144,7 @@ const sendOtp = async (req, res) => {
 
 const verifyOtp = async (req, res) => {
   try {
-    const { phone, code, role, save_otp_as_pin } = req.body;
+    const { phone, code, role, save_otp_as_pin, forgot_pin_reset } = req.body;
     const clean = normalizePhone(phone);
     const codeStr = String(code ?? '').trim();
     if (!clean || !codeStr) {
@@ -166,12 +166,19 @@ const verifyOtp = async (req, res) => {
 
     await db.query('UPDATE users SET phone_verified = TRUE WHERE id = $1', [user.id]);
 
+    const isForgotReset =
+      forgot_pin_reset === true || forgot_pin_reset === 'true' || forgot_pin_reset === 1;
+    if (isForgotReset) {
+      await db.query('UPDATE users SET pin_hash = NULL WHERE id = $1', [user.id]);
+    }
+
     const { rows: fresh } = await db.query('SELECT pin_hash FROM users WHERE id = $1', [user.id]);
     let hasPin = hasStoredPin(fresh[0]?.pin_hash);
 
     const declineOtpAsPin =
       save_otp_as_pin === false || save_otp_as_pin === 'false' || save_otp_as_pin === 0;
-    const shouldSaveOtpAsPin = !hasPin && /^\d{6}$/.test(codeStr) && !declineOtpAsPin;
+    const shouldSaveOtpAsPin =
+      !hasPin && /^\d{6}$/.test(codeStr) && !declineOtpAsPin && !isForgotReset;
 
     if (shouldSaveOtpAsPin) {
       const hash = await bcrypt.hash(codeStr, 12);
@@ -187,6 +194,7 @@ const verifyOtp = async (req, res) => {
       token,
       user: { id: user.id, full_name: user.full_name, role: user.role, phone: user.phone },
       needs_pin_setup: !pinReady,
+      pin_was_reset: isForgotReset,
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -259,8 +267,8 @@ const loginWithPin = async (req, res) => {
     if (!clean || !role || !LOGIN_ROLES.has(role)) {
       return res.status(400).json({ success: false, message: 'Telefon, rol və PIN tələb olunur' });
     }
-    if (!/^\d{4,6}$/.test(p)) {
-      return res.status(400).json({ success: false, message: 'PIN daxil edin' });
+    if (!/^\d{6}$/.test(p)) {
+      return res.status(400).json({ success: false, message: '6 rəqəmli PIN daxil edin' });
     }
     const user = await findUserByPhoneAndRole(clean, role);
     if (!user) return res.status(404).json({ success: false, message: 'İstifadəçi tapılmadı' });
