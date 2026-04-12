@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import useAuthStore from '../../hooks/useAuth'
 import Button from '../../components/common/Button'
@@ -10,7 +10,7 @@ const ROLES = [
   { key: 'parent', label: 'Valideyn', emoji: '👪' },
 ]
 
-/** OTP / PIN / admin girişi */
+/** PIN + admin email girişi (OTP yox — daimi PIN bir dəfə SMS) */
 export default function Login() {
   const [searchParams] = useSearchParams()
   const isAdmin = searchParams.get('admin') === 'true'
@@ -19,22 +19,12 @@ export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [phone, setPhone] = useState('')
-  const [otpCode, setOtpCode] = useState('')
   const [pinInput, setPinInput] = useState('')
-  const [newPin, setNewPin] = useState('')
-  const [newPin2, setNewPin2] = useState('')
 
-  /** phone | otp | pin | setpin */
   const [flow, setFlow] = useState('phone')
-  const [otpSent, setOtpSent] = useState(false)
-  const [forgotPin, setForgotPin] = useState(false)
-  /** PIN unut → OTP axını; state bəzən gecikə bilər, ref serverə düzgün flag göndərir */
-  const otpAfterForgotRef = useRef(false)
-  /** true = SMS kodu PIN kimi saxlanılmasın, əl ilə PIN ekranı göstər */
-  const [useSeparatePin, setUseSeparatePin] = useState(false)
   const [loading, setLoading] = useState(false)
 
-  const { login, phoneNextStep, sendOtp, verifyOtp, pinLogin, setPin } = useAuthStore()
+  const { login, phoneNextStep, forgotPinSms, pinLogin } = useAuthStore()
   const navigate = useNavigate()
   const toast = useToast()
   const roleMap = { admin: '/admin', instructor: '/instructor', student: '/student', parent: '/parent' }
@@ -54,7 +44,6 @@ export default function Login() {
     }
   }
 
-  /** Rol + telefon → server deyir: OTP və ya PIN */
   const handlePhoneContinue = async (e) => {
     e.preventDefault()
     if (!role) return
@@ -63,67 +52,17 @@ export default function Login() {
       const data = await phoneNextStep(phone, role)
       if (data.next === 'pin') {
         setFlow('pin')
-        setOtpSent(false)
-        setForgotPin(false)
-        otpAfterForgotRef.current = false
-        setOtpCode('')
         setPinInput('')
-        toast(data.message || 'PIN ilə daxil olun', 'success')
+        if (data.pin_sms_sent) {
+          toast(data.message || 'Nömrənizə daimi PIN SMS ilə göndərildi', 'success')
+        } else {
+          toast(data.message || 'PIN kodunuzu daxil edin', 'success')
+        }
       } else {
-        setFlow('otp')
-        setOtpSent(false)
-        setOtpCode('')
-        toast(data.message || 'OTP göndərin', 'success')
+        toast('Gözlənilməz cavab. Səhifəni yeniləyib yenidən cəhd edin.', 'error')
       }
     } catch (err) {
       toast(err.message || 'Xəta', 'error')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleSendOtp = async (e) => {
-    e?.preventDefault()
-    if (!role) return
-    setLoading(true)
-    try {
-      await sendOtp(phone, role)
-      setOtpSent(true)
-      toast('OTP SMS ilə göndərildi')
-    } catch (err) {
-      toast(err.message || 'OTP göndərilmədi', 'error')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleVerifyOtp = async (e) => {
-    e.preventDefault()
-    if (!role) return
-    setLoading(true)
-    try {
-      const fromForgot = otpAfterForgotRef.current
-      const data = await verifyOtp(phone, otpCode, role, {
-        ...(useSeparatePin ? { saveOtpAsPin: false } : {}),
-        ...(fromForgot ? { forgotPinReset: true } : {}),
-      })
-      otpAfterForgotRef.current = false
-      if (data.needs_pin_setup || data.pin_was_reset) {
-        setFlow('setpin')
-        setNewPin('')
-        setNewPin2('')
-        toast(
-          data.pin_was_reset || fromForgot
-            ? 'Təsdiq olundu. İndi yeni 6 rəqəmli PIN təyin edin'
-            : 'Növbəti girişlər üçün özünüzə 6 rəqəmli PIN təyin edin',
-          'success'
-        )
-        setForgotPin(false)
-      } else {
-        goDashboard(data.user.role)
-      }
-    } catch (err) {
-      toast(err.message || 'Kod yanlışdır', 'error')
     } finally {
       setLoading(false)
     }
@@ -137,31 +76,22 @@ export default function Login() {
       const user = await pinLogin(phone, pinInput, role)
       goDashboard(user.role)
     } catch (err) {
-      if (err.needs_otp) toast(err.message || 'Əvvəlcə OTP', 'error')
+      if (err.needs_setup) toast(err.message || 'Əvvəlcə "Davam et" basın', 'error')
       else toast(err.message || 'PIN yanlışdır', 'error')
     } finally {
       setLoading(false)
     }
   }
 
-  const handleSetPin = async (e) => {
-    e.preventDefault()
-    if (newPin !== newPin2) {
-      toast('PIN-lər eyni deyil', 'error')
-      return
-    }
-    if (!/^\d{6}$/.test(newPin)) {
-      toast('Tam 6 rəqəm', 'error')
-      return
-    }
+  const handleForgotPinSms = async () => {
+    if (!role) return
     setLoading(true)
     try {
-      await setPin(newPin)
-      const { user } = useAuthStore.getState()
-      toast('PIN saxlanıldı')
-      if (user?.role) goDashboard(user.role)
+      const data = await forgotPinSms(phone, role)
+      setPinInput('')
+      toast(data.message || 'Yeni PIN SMS ilə göndərildi', 'success')
     } catch (err) {
-      toast(err.message || 'Xəta', 'error')
+      toast(err.message || 'SMS göndərilmədi', 'error')
     } finally {
       setLoading(false)
     }
@@ -169,12 +99,7 @@ export default function Login() {
 
   const resetFlow = () => {
     setFlow('phone')
-    setOtpSent(false)
-    setOtpCode('')
     setPinInput('')
-    setForgotPin(false)
-    otpAfterForgotRef.current = false
-    setUseSeparatePin(false)
   }
 
   return (
@@ -251,8 +176,9 @@ export default function Login() {
               {role && flow === 'phone' && (
                 <form onSubmit={handlePhoneContinue} className="space-y-4">
                   <p className="text-xs text-gray-500 leading-relaxed">
-                    İlk giriş və ya admin tərəfindən əlavə olunmuş hesab üçün nömrəni təsdiqləmək OTP lazımdır.
-                    PIN təyin etdikdən sonra növbəti girişlər pulsuzdur (SMS yox).
+                    <strong className="text-gray-300">OTP yoxdur.</strong> PIN yoxdursa, &quot;Davam et&quot; ilə bir dəfə
+                    SMS göndərilir — gələn <strong className="text-gray-300">6 rəqəm</strong> daimi giriş PIN-inizdir.
+                    Sonrakı girişlərdə yalnız həmin PIN (əlavə SMS yox).
                   </p>
                   <div>
                     <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
@@ -272,78 +198,11 @@ export default function Login() {
                 </form>
               )}
 
-              {role && flow === 'otp' && (
-                <div className="space-y-4">
-                  {!otpSent ? (
-                    <>
-                      {otpAfterForgotRef.current && (
-                        <p className="text-xs text-center text-amber-200/90 p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
-                          OTP ilə təsdiqləyəndən sonra <strong>yeni PIN</strong> təyin edəcəksiniz. SMS kodunu PIN
-                          sahəsinə yazmayın.
-                        </p>
-                      )}
-                      <p className="text-xs text-gray-400 text-center">
-                        Təhlükəsizlik üçün SMS OTP göndərilir (müəllim kotasından).
-                      </p>
-                      <Button
-                        type="button"
-                        loading={loading}
-                        onClick={handleSendOtp}
-                        className="w-full justify-center py-3"
-                      >
-                        OTP göndər
-                      </Button>
-                    </>
-                  ) : (
-                    <form onSubmit={handleVerifyOtp} className="space-y-4">
-                      <div className="text-xs text-amber-200/90 leading-relaxed p-3 rounded-xl bg-amber-500/10 border border-amber-500/25">
-                        <strong className="text-amber-100">Necə işləyir:</strong> 6 rəqəmli kod təsdiqlənəndə o, avtomatik
-                        olaraq <strong>növbəti girişləriniz üçün PIN</strong> kimi də saxlanılır — əlavə PIN ekranı
-                        çıxmayacaq. Yalnız özünüz başqa PIN istəyirsinizsə, aşağıdakı qutu işarələyin.
-                      </div>
-                      <div className="text-center text-xs text-gray-400 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
-                        {phone} nömrəsinə kod göndərildi
-                      </div>
-                      <input
-                        className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-4 text-white text-2xl font-bold text-center tracking-widest outline-none focus:border-blue-500"
-                        placeholder="000000"
-                        maxLength={6}
-                        inputMode="numeric"
-                        value={otpCode}
-                        onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
-                        required
-                      />
-                      <label className="flex items-start gap-3 text-xs text-gray-300 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          className="mt-0.5 rounded border-indigo-500/40"
-                          checked={useSeparatePin}
-                          onChange={(e) => setUseSeparatePin(e.target.checked)}
-                        />
-                        <span>
-                          Özüm <strong>ayrıca</strong> 6 rəqəmli PIN təyin edəcəyəm (SMS kodu daimi PIN olmasın)
-                        </span>
-                      </label>
-                      <Button type="submit" loading={loading} className="w-full justify-center py-3">
-                        Təsdiqlə
-                      </Button>
-                    </form>
-                  )}
-                  <button
-                    type="button"
-                    onClick={resetFlow}
-                    className="w-full text-center text-xs text-gray-500 hover:text-white"
-                  >
-                    ← Geri
-                  </button>
-                </div>
-              )}
-
               {role && flow === 'pin' && (
                 <form onSubmit={handlePinLogin} className="space-y-4">
                   <p className="text-xs text-gray-400 text-center leading-relaxed">
-                    Buraya <strong className="text-gray-200">SMS OTP kodunu yox</strong> — öz təyin etdiyiniz giriş
-                    PIN-inizi yazın. OTP yalnız bir dəfəlik təsdiq üçündür.
+                    SMS ilə gələn və ya əvvəl saxladığınız <strong className="text-gray-200">daimi 6 rəqəmli PIN</strong>{' '}
+                    daxil edin. Bu, OTP deyil — hər girişdə eyni PIN.
                   </p>
                   <div className="text-center text-xs text-gray-500">{phone}</div>
                   <input
@@ -362,16 +221,11 @@ export default function Login() {
                   </Button>
                   <button
                     type="button"
-                    onClick={() => {
-                      setForgotPin(true)
-                      otpAfterForgotRef.current = true
-                      setFlow('otp')
-                      setOtpSent(false)
-                      setOtpCode('')
-                    }}
-                    className="w-full text-center text-xs text-amber-400/90 hover:text-amber-300"
+                    onClick={handleForgotPinSms}
+                    disabled={loading}
+                    className="w-full text-center text-xs text-amber-400/90 hover:text-amber-300 disabled:opacity-50"
                   >
-                    Şifrəni unutmuşam — OTP göndər
+                    PIN-i unutdum — yeni PIN SMS (bir dəfə)
                   </button>
                   <button
                     type="button"
@@ -380,48 +234,6 @@ export default function Login() {
                   >
                     ← Geri
                   </button>
-                </form>
-              )}
-
-              {role && flow === 'setpin' && (
-                <form onSubmit={handleSetPin} className="space-y-4">
-                  <p className="text-xs text-gray-400 text-center leading-relaxed">
-                    Özünüzə <strong className="text-gray-300">6 rəqəmli PIN</strong> seçin və iki dəfə daxil edin.
-                  </p>
-                  {otpCode.length === 6 && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setNewPin(otpCode)
-                        setNewPin2(otpCode)
-                        toast('Sahələr SMS kodu ilə dolduruldu — təsdiq üçün "PIN saxla" basın', 'success')
-                      }}
-                      className="w-full text-xs py-2.5 px-3 rounded-xl border border-indigo-500/30 text-indigo-200 hover:bg-indigo-500/10"
-                    >
-                      SMS OTP kodunu bu PIN kimi istifadə et (6 rəqəm)
-                    </button>
-                  )}
-                  <input
-                    className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-3 text-white text-lg text-center tracking-widest outline-none focus:border-blue-500"
-                    placeholder="PIN (6 rəqəm)"
-                    maxLength={6}
-                    inputMode="numeric"
-                    value={newPin}
-                    onChange={(e) => setNewPin(e.target.value.replace(/\D/g, ''))}
-                    required
-                  />
-                  <input
-                    className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-3 text-white text-lg text-center tracking-widest outline-none focus:border-blue-500"
-                    placeholder="PIN təkrar"
-                    maxLength={6}
-                    inputMode="numeric"
-                    value={newPin2}
-                    onChange={(e) => setNewPin2(e.target.value.replace(/\D/g, ''))}
-                    required
-                  />
-                  <Button type="submit" loading={loading} className="w-full justify-center py-3">
-                    PIN saxla və daxil ol
-                  </Button>
                 </form>
               )}
             </>

@@ -15,6 +15,8 @@ const useAuthStore = create((set) => ({
 
   phoneNextStep: async (phone, role) => api.post('/auth/phone/next-step', { phone, role }),
 
+  forgotPinSms: async (phone, role) => api.post('/auth/pin/forgot-sms', { phone, role }),
+
   sendOtp: async (phone, role) => api.post('/auth/otp/send', { phone, role }),
 
   verifyOtp: async (phone, code, role, opts = {}) => {

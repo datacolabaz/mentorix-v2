@@ -2,6 +2,7 @@ const router = require('express').Router();
 const {
   login,
   phoneNextStep,
+  forgotPinSms,
   sendOtp,
   verifyOtp,
   register,
@@ -13,6 +14,7 @@ const { authenticate, authorize } = require('../middleware/auth');
 
 router.post('/login', login);
 router.post('/phone/next-step', phoneNextStep);
+router.post('/pin/forgot-sms', forgotPinSms);
 router.post('/otp/send', sendOtp);
 router.post('/otp/verify', verifyOtp);
 router.post('/register', authenticate, authorize('admin', 'instructor'), register);

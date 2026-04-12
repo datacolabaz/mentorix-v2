@@ -1,7 +1,7 @@
 const bcrypt = require('bcryptjs');
 const db = require('../utils/db');
 const { sign, signOTP } = require('../utils/jwt');
-const { sendOtpSms } = require('../services/smsService');
+const { sendSms, sendOtpSms } = require('../services/smsService');
 const { checkSmsQuota } = require('../services/smsQuotaService');
 
 const PHONE_NORM = "regexp_replace(COALESCE(phone::text, ''), '[^0-9]', '', 'g')";
@@ -13,6 +13,79 @@ function normalizePhone(phone) {
 
 function hasStoredPin(pinHash) {
   return pinHash != null && String(pinHash).trim().length > 0;
+}
+
+function generateLoginPin() {
+  let p = '';
+  for (let i = 0; i < 6; i++) p += String(Math.floor(Math.random() * 10));
+  if (/^0+$/.test(p)) return generateLoginPin();
+  return p;
+}
+
+async function assertSmsOk(billingId) {
+  const quota = await checkSmsQuota(billingId, { requireProfile: false });
+  if (!quota.ok) {
+    const err = new Error('SMS_LIMIT');
+    err.statusCode = quota.statusCode;
+    err.body = quota.body;
+    throw err;
+  }
+}
+
+/**
+ * Daimi giriş PIN-i: düz mətn SMS (bir dəfə), DB-də bcrypt hash.
+ * @param {{ force?: boolean }} opts force=true → köhnə PIN əvəzlənir (unutdum)
+ */
+async function deliverPermanentPinSms(user, cleanPhone, opts = {}) {
+  const force = opts.force === true;
+  const billingId = await resolveSmsBillingInstructorId(user);
+  await assertSmsOk(billingId);
+
+  if (!force && hasStoredPin(user.pin_hash)) {
+    return { alreadyHadPin: true };
+  }
+
+  const plain = generateLoginPin();
+  const hash = await bcrypt.hash(plain, 12);
+
+  if (!force) {
+    const { rowCount } = await db.query(
+      `UPDATE users SET pin_hash = $1 WHERE id = $2
+       AND (pin_hash IS NULL OR TRIM(COALESCE(pin_hash::text, '')) = '')`,
+      [hash, user.id]
+    );
+    if (rowCount === 0) {
+      const u2 = await findUserByPhoneAndRole(cleanPhone, user.role);
+      if (u2 && hasStoredPin(u2.pin_hash)) return { alreadyHadPin: true };
+      const err = new Error('PIN_RETRY');
+      err.statusCode = 409;
+      err.body = { success: false, message: '"Davam et" ilə bir daha cəhd edin.' };
+      throw err;
+    }
+  } else {
+    await db.query('UPDATE users SET pin_hash = $1 WHERE id = $2', [hash, user.id]);
+  }
+
+  const message = `Mentorix: Sizin daimi Mentorix giris PIN-iniz: ${plain}. Novbeti girislerde yalniz bu 6 reqemi daxil edin (OTP yox). Kodu hec kese demeyin.`;
+  const smsRes = await sendSms({
+    instructorId: billingId || null,
+    phone: cleanPhone,
+    message,
+  });
+
+  if (!smsRes.success) {
+    await db.query('UPDATE users SET pin_hash = NULL WHERE id = $1', [user.id]).catch(() => {});
+    const err = new Error('SMS_FAIL');
+    err.statusCode = 502;
+    err.body = {
+      success: false,
+      message: smsRes.error || 'SMS göndərilə bilmədi. Bir az sonra yenidən cəhd edin.',
+    };
+    throw err;
+  }
+
+  await db.query('UPDATE users SET phone_verified = TRUE WHERE id = $1', [user.id]);
+  return { pinSmsSent: true };
 }
 
 async function findUserByPhoneAndRole(cleanPhone, role) {
@@ -49,7 +122,10 @@ async function resolveSmsBillingInstructorId(user) {
   return null;
 }
 
-/** PIN təyin olunub → növbəti girişdə SMS yox; yoxdursa OTP */
+/**
+ * PIN yoxdursa: bir dəfə 6 rəqəm yaradılır, SMS göndərilir, hash saxlanılır.
+ * PIN varsa: birbaşa PIN ekranı (SMS yox).
+ */
 const phoneNextStep = async (req, res) => {
   try {
     const { phone, role } = req.body;
@@ -70,18 +146,61 @@ const phoneNextStep = async (req, res) => {
               : 'Bu nömrə ilə valideyn tapılmadı.',
       });
     }
+
     if (!hasStoredPin(user.pin_hash)) {
-      return res.json({
-        success: true,
-        next: 'otp',
-        message: 'İlk giriş: nömrənizi SMS OTP ilə təsdiqləyin.',
-      });
+      try {
+        const r = await deliverPermanentPinSms(user, clean, { force: false });
+        if (r.alreadyHadPin) {
+          return res.json({
+            success: true,
+            next: 'pin',
+            message: 'PIN kodunuzu daxil edin.',
+          });
+        }
+        return res.json({
+          success: true,
+          next: 'pin',
+          pin_sms_sent: true,
+          message:
+            'Nömrənizə daimi 6 rəqəmli PIN SMS ilə göndərildi. Gələn kodu aşağıya daxil edin (OTP yox).',
+        });
+      } catch (e) {
+        if (e.statusCode && e.body) return res.status(e.statusCode).json(e.body);
+        throw e;
+      }
     }
+
     return res.json({
       success: true,
       next: 'pin',
-      message: 'PIN kodunuzu daxil edin (SMS göndərilmir).',
+      message: 'PIN kodunuzu daxil edin (əlavə SMS göndərilmir).',
     });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/** PIN unutdum: yeni daimi PIN bir SMS (OTP yox) */
+const forgotPinSms = async (req, res) => {
+  try {
+    const { phone, role } = req.body;
+    const clean = normalizePhone(phone);
+    if (!clean) return res.status(400).json({ success: false, message: 'Telefon nömrəsi tələb olunur' });
+    if (!role || !LOGIN_ROLES.has(role)) {
+      return res.status(400).json({ success: false, message: 'Rol seçilməlidir' });
+    }
+    const user = await findUserByPhoneAndRole(clean, role);
+    if (!user) return res.status(404).json({ success: false, message: 'İstifadəçi tapılmadı' });
+    try {
+      await deliverPermanentPinSms(user, clean, { force: true });
+      return res.json({
+        success: true,
+        message: 'Yeni daimi PIN nömrənizə SMS ilə göndərildi. OTP tələb olunmur.',
+      });
+    } catch (e) {
+      if (e.statusCode && e.body) return res.status(e.statusCode).json(e.body);
+      throw e;
+    }
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -275,8 +394,9 @@ const loginWithPin = async (req, res) => {
     if (!hasStoredPin(user.pin_hash)) {
       return res.status(400).json({
         success: false,
-        needs_otp: true,
-        message: 'Əvvəlcə OTP ilə təsdiq və PIN təyini lazımdır',
+        needs_setup: true,
+        message:
+          'Əvvəlcə "Davam et" basın — nömrənizə daimi 6 rəqəmli PIN bir dəfə SMS ilə göndəriləcək. OTP tələb olunmur.',
       });
     }
     const valid = await bcrypt.compare(p, user.pin_hash);
@@ -296,6 +416,7 @@ const loginWithPin = async (req, res) => {
 module.exports = {
   login,
   phoneNextStep,
+  forgotPinSms,
   sendOtp,
   verifyOtp,
   register,
