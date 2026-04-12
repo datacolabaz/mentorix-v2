@@ -19,28 +19,41 @@ const StatCard = ({ label, value, icon, color }) => (
 export default function InstructorDashboard() {
   const { user } = useAuthStore()
   const [students, setStudents] = useState([])
+  const [examStats, setExamStats] = useState([])
 
   useEffect(() => {
     api.get('/students').then(d => setStudents(d.students || []))
+    api.get('/exams/student-progress').then(d => setExamStats(d.stats || [])).catch(() => setExamStats([]))
   }, [])
+
+  const examById = Object.fromEntries(
+    examStats.map((r) => [String(r.student_id), r])
+  )
 
   const hrs = new Date().getHours()
   const greeting = hrs < 12 ? 'Sabahınız xeyir' : hrs < 18 ? 'Günortanız xeyir' : 'Axşamınız xeyir'
 
-  const avgScore = students.length
-    ? Math.round(students.filter(s => s.avg_score).reduce((a, s) => a + parseFloat(s.avg_score || 0), 0) / students.filter(s => s.avg_score).length) || 0
+  const rosterWithExam = students.filter((s) => examById[String(s.id)]?.exam_avg_score != null)
+  const avgScore = rosterWithExam.length
+    ? Math.round(
+        rosterWithExam.reduce((a, s) => a + Number(examById[String(s.id)].exam_avg_score), 0) /
+          rosterWithExam.length
+      )
     : 0
 
   const chartRows = students.slice(0, 10).map((s) => {
     const first = s.full_name?.split(' ')?.[0] || '—'
-    const bal = s.avg_score != null && s.avg_score !== '' ? Number(s.avg_score) : 0
+    const row = examById[String(s.id)]
+    const bal = row?.exam_avg_score != null ? Number(row.exam_avg_score) : 0
     return { name: first.length > 12 ? `${first.slice(0, 11)}…` : first, bal }
   })
 
   const topSorted = [...students].sort((a, b) => {
-    const sa = a.avg_score != null && a.avg_score !== '' ? Number(a.avg_score) : -1
-    const sb = b.avg_score != null && b.avg_score !== '' ? Number(b.avg_score) : -1
-    return sb - sa
+    const sa = examById[String(a.id)]?.exam_avg_score
+    const sb = examById[String(b.id)]?.exam_avg_score
+    const na = sa != null ? Number(sa) : -1
+    const nb = sb != null ? Number(sb) : -1
+    return nb - na
   })
 
   return (
@@ -54,7 +67,7 @@ export default function InstructorDashboard() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4 mb-6">
         <StatCard label="Tələbə" value={students.length} icon="🎓" color="text-blue-400" />
-        <StatCard label="Orta Bal" value={`${avgScore}%`} icon="📊" color="text-emerald-400" />
+        <StatCard label="Orta imtahan balı" value={`${avgScore}%`} icon="📊" color="text-emerald-400" />
         <StatCard label="Bu ay dərs" value="—" icon="✅" color="text-yellow-400" />
         <StatCard label="Gəlir" value="₼0" icon="💰" color="text-cyan-400" />
       </div>
@@ -62,7 +75,7 @@ export default function InstructorDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 min-w-0">
         <div className="lg:col-span-2 min-w-0">
           <Card className="p-4 sm:p-5 min-w-0 overflow-hidden">
-            <h2 className="font-display font-bold text-base mb-4">Tələbə Proqresi</h2>
+            <h2 className="font-display font-bold text-base mb-4">Tələbə Proqresi (imtahan)</h2>
             {students.length ? (
               <div className="w-full h-[220px] min-h-[200px]">
                 <ResponsiveContainer width="100%" height="100%">
@@ -77,20 +90,21 @@ export default function InstructorDashboard() {
             ) : (
               <div className="h-52 flex items-center justify-center text-gray-500">Hələ məlumat yoxdur</div>
             )}
-            {students.length > 0 && !students.some((s) => s.avg_score != null && s.avg_score !== '') && (
+            {students.length > 0 && !rosterWithExam.length && (
               <p className="text-gray-500 text-xs mt-2">
-                Dərs balı qeyd edildikcə xətt yenilənəcək (Davamiyyət → Bal).
+                Hələ təqdim olunmuş imtahan nəticəsi yoxdur — tələbə imtahanı bitirənə qədər orta bal 0 göstərilir.
               </p>
             )}
           </Card>
         </div>
 
         <Card className="p-4 sm:p-5 min-w-0">
-          <h2 className="font-display font-bold text-base mb-4">Top Tələbələr</h2>
+          <h2 className="font-display font-bold text-base mb-4">Top Tələbələr (imtahan)</h2>
           <div className="space-y-3">
             {topSorted.slice(0, 5).map((s, i) => {
-              const hasScore = s.avg_score != null && s.avg_score !== ''
-              const pct = hasScore ? Number(s.avg_score) : 0
+              const ex = examById[String(s.id)]
+              const hasScore = ex?.exam_avg_score != null
+              const pct = hasScore ? Number(ex.exam_avg_score) : 0
               return (
                 <div key={s.enrollment_id || s.id} className="flex items-center gap-2 sm:gap-3 min-w-0">
                   <span className="text-sm font-bold text-gray-500 w-5 shrink-0">{i + 1}</span>
