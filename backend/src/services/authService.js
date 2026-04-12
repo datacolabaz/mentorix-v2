@@ -327,4 +327,37 @@ async function unifiedLoginWithPinBody(phone, pin) {
       },
     };
   }
-  if (pi
+  if (pin == null || String(pin).trim() === '') {
+    return { status: 400, body: { success: false, message: 'PIN daxil edin' } };
+  }
+  const valid = await bcrypt.compare(String(pin).trim(), user.pin_hash);
+  if (!valid) {
+    return { status: 401, body: { success: false, message: 'PIN yanlisdir' } };
+  }
+  await db.query('UPDATE users SET phone_verified = TRUE WHERE id = $1', [user.id]);
+  return {
+    status: 200,
+    body: {
+      success: true,
+      user: {
+        id: user.id,
+        full_name: user.full_name,
+        role: user.role,
+        phone: user.phone,
+        phone_verified: true,
+      },
+    },
+  };
+}
+
+module.exports = {
+  normalizePhone,
+  generatePhonePin,
+  PHONE_PIN_ROLES,
+  notFoundByRole,
+  inferLoginRoleFromPhone,
+  unifiedPhoneStep,
+  unifiedPhoneVerify,
+  unifiedForgotPin,
+  unifiedLoginWithPinBody,
+};

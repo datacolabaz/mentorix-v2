@@ -13,20 +13,31 @@ const useAuthStore = create((set) => ({
     return data.user
   },
 
-  sendOtp: async (phone) => {
-    return api.post('/auth/otp/send', { phone })
+  phoneNextStep: async (phone, role) => api.post('/auth/phone/next-step', { phone, role }),
+
+  sendOtp: async (phone, role) => api.post('/auth/otp/send', { phone, role }),
+
+  verifyOtp: async (phone, code, role) => {
+    const data = await api.post('/auth/otp/verify', { phone, code, role })
+    localStorage.setItem('mx_token', data.token)
+    localStorage.setItem('mx_user', JSON.stringify(data.user))
+    set({ user: data.user, token: data.token })
+    return data
   },
 
-  verifyOtp: async (phone, code) => {
-    const data = await api.post('/auth/otp/verify', { phone, code })
+  pinLogin: async (phone, pin, role) => {
+    const data = await api.post('/auth/pin/login', { phone, pin, role })
     localStorage.setItem('mx_token', data.token)
     localStorage.setItem('mx_user', JSON.stringify(data.user))
     set({ user: data.user, token: data.token })
     return data.user
   },
 
+  setPin: async (pin) => api.post('/auth/pin/set', { pin }),
+
   logout: () => {
-    localStorage.clear()
+    localStorage.removeItem('mx_token')
+    localStorage.removeItem('mx_user')
     set({ user: null, token: null })
   },
 }))

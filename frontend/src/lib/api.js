@@ -11,14 +11,29 @@ api.interceptors.request.use((config) => {
   return config
 })
 
+function isAuthAttemptUrl(url) {
+  if (!url || typeof url !== 'string') return false
+  return (
+    url.includes('/auth/login') ||
+    url.includes('/auth/otp/') ||
+    url.includes('/auth/pin/') ||
+    url.includes('/auth/phone/')
+  )
+}
+
 api.interceptors.response.use(
   (res) => res.data,
   (err) => {
-    if (err.response?.status === 401) {
-      localStorage.clear()
+    const url = err.config?.url || ''
+    if (err.response?.status === 401 && !isAuthAttemptUrl(url)) {
+      localStorage.removeItem('mx_token')
+      localStorage.removeItem('mx_user')
       window.location.href = '/login'
     }
-    return Promise.reject(err.response?.data || err)
+    const data = err.response?.data
+    const msg = data?.message || err.message || 'Xəta'
+    const wrapped = data && typeof data === 'object' ? { ...data, message: msg } : { message: msg }
+    return Promise.reject(wrapped)
   }
 )
 
