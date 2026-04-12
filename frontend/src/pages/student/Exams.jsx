@@ -30,6 +30,37 @@ function resolveMaterialUrl(rel) {
   return origin ? `${origin}${p}` : p
 }
 
+/** exam_files JSONB / string + köhnə pdf_url — vahid siyahı */
+function normalizeExamFiles(exam) {
+  if (!exam) return []
+  let raw = exam.exam_files
+  if (typeof raw === 'string') {
+    try {
+      raw = JSON.parse(raw)
+    } catch {
+      raw = []
+    }
+  }
+  if (!Array.isArray(raw)) raw = []
+  const list = raw
+    .filter((x) => x && typeof x === 'object' && x.url)
+    .map((x, i) => ({
+      id: `${String(x.url)}-${i}`,
+      name: x.name || `Fayl ${i + 1}`,
+      url: x.url,
+    }))
+  const seen = new Set(list.map((x) => x.url))
+  if (exam.pdf_url && typeof exam.pdf_url === 'string' && !seen.has(exam.pdf_url)) {
+    return [{ id: exam.pdf_url, name: 'Material', url: exam.pdf_url }, ...list]
+  }
+  return list
+}
+
+function isMaterialImage(pathOrName) {
+  const s = String(pathOrName || '')
+  return /\.(jpe?g|png|gif|webp)$/i.test(s)
+}
+
 export default function StudentExams() {
   const [exams, setExams] = useState([])
   const [activeExam, setActiveExam] = useState(null)
@@ -75,17 +106,12 @@ export default function StudentExams() {
   // Active exam UI
   if (activeExam) {
     const endTime = new Date(new Date(activeExam.start_time).getTime() + activeExam.duration_minutes * 60000)
-    const materialPath =
-      activeExam.pdf_url ||
-      (Array.isArray(activeExam.exam_files) && activeExam.exam_files[0]?.url) ||
-      ''
-    const materialUrl = resolveMaterialUrl(materialPath)
-    const isImage = /\.(jpe?g|png)$/i.test(materialPath)
+    const materials = normalizeExamFiles(activeExam)
 
     return (
-      <div className="flex flex-col h-screen">
+      <div className="flex flex-col h-screen min-h-0">
         {/* Header */}
-        <div className="bg-[#13112e] border-b border-indigo-500/20 px-6 py-4 flex items-center justify-between sticky top-0 z-30">
+        <div className="bg-[#13112e] border-b border-indigo-500/20 px-6 py-4 flex items-center justify-between shrink-0 z-30">
           <div>
             <div className="font-display font-bold text-lg">{activeExam.title}</div>
             <div className="text-xs text-gray-400">{questions.length} sual</div>
@@ -98,29 +124,48 @@ export default function StudentExams() {
           </div>
         </div>
 
-        {materialUrl && (
-          <div className="border-b border-indigo-500/20 bg-[#0f0c29]/80 px-6 py-4">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Suallar (PDF / şəkil)</p>
-            <a
-              href={materialUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="text-sm text-blue-400 hover:text-blue-300 mb-3 inline-block"
-            >
-              Tam ekranda aç →
-            </a>
-            <div className="rounded-xl border border-indigo-500/20 overflow-hidden bg-black/20">
-              {isImage ? (
-                <img src={materialUrl} alt="İmtahan materialları" className="max-h-[min(55vh,480px)] w-full object-contain" />
-              ) : (
-                <iframe title="İmtahan PDF" src={materialUrl} className="w-full h-[min(55vh,480px)] bg-white/5" />
-              )}
-            </div>
-          </div>
-        )}
+        <div className="flex flex-1 min-h-0 flex-col lg:flex-row">
+          {materials.length > 0 && (
+            <aside className="shrink-0 border-b lg:border-b-0 lg:border-r border-indigo-500/20 bg-[#0f0c29]/80 flex flex-col min-h-0 max-h-[42vh] lg:max-h-none lg:w-[min(48%,560px)] lg:min-w-[280px]">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-4 pt-3 pb-2 shrink-0">
+                Suallar (PDF / şəkil) — {materials.length} fayl
+              </p>
+              <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-4 space-y-4">
+                {materials.map((m) => {
+                  const materialUrl = resolveMaterialUrl(m.url)
+                  const img = isMaterialImage(m.url) || isMaterialImage(m.name)
+                  return (
+                    <div
+                      key={m.id}
+                      className="rounded-xl border border-indigo-500/20 overflow-hidden bg-black/20 flex flex-col"
+                    >
+                      <p className="text-xs text-gray-500 px-2 py-1.5 truncate border-b border-indigo-500/10" title={m.name}>
+                        {m.name}
+                      </p>
+                      <div className="min-h-[200px] lg:min-h-[280px] max-h-[min(38vh,420px)] lg:max-h-[calc(100vh-220px)]">
+                        {img ? (
+                          <img
+                            src={materialUrl}
+                            alt={m.name}
+                            className="w-full h-full max-h-[min(38vh,420px)] lg:max-h-[calc(100vh-240px)] object-contain object-top bg-black/30"
+                          />
+                        ) : (
+                          <iframe
+                            title={m.name}
+                            src={materialUrl}
+                            className="w-full h-full min-h-[200px] lg:min-h-[300px] bg-white/5 border-0"
+                          />
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </aside>
+          )}
 
-        {/* Questions */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          <div className="flex-1 flex flex-col min-h-0 min-w-0">
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
           {questions.map((q, i) => (
             <Card key={q.id} className="p-6">
               <div className="flex gap-4 mb-4">
@@ -153,10 +198,12 @@ export default function StudentExams() {
               )}
             </Card>
           ))}
+            </div>
+          </div>
         </div>
 
         {/* Submit bar */}
-        <div className="bg-[#13112e] border-t border-indigo-500/20 px-6 py-4 flex items-center justify-between">
+        <div className="bg-[#13112e] border-t border-indigo-500/20 px-6 py-4 flex items-center justify-between shrink-0">
           <span className="text-sm text-gray-400">{Object.keys(answers).length} cavablandı</span>
           <Button onClick={submitExam} className="px-8">İmtahanı Bitir →</Button>
         </div>

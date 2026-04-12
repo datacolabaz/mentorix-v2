@@ -26,9 +26,10 @@ export default function ExamForm({ students, onCreated }) {
     notify_students: false,
     show_results: true,
     student_ids: [],
-    pdf_name: '',
-    pdf_url: '',
   })
+
+  /** { id, name, url }[] — bir neçə PDF/şəkil */
+  const [materialFiles, setMaterialFiles] = useState([])
  
   const [questions, setQuestions] = useState([])
  
@@ -62,19 +63,30 @@ export default function ExamForm({ students, onCreated }) {
       return { ...q, options: opts }
     }))
  
-  const handlePdfChange = async (e) => {
-    const f = e.target.files?.[0]
-    if (!f) return
+  const removeMaterial = (id) => {
+    setMaterialFiles((prev) => prev.filter((x) => x.id !== id))
+  }
+
+  const handleMaterialsChange = async (e) => {
+    const files = Array.from(e.target.files || [])
+    if (!files.length) return
     setPdfBusy(true)
-    setMeta((p) => ({ ...p, pdf_name: f.name }))
     try {
-      const fd = new FormData()
-      fd.append('file', f)
-      const data = await api.post('/exams/upload', fd)
-      setMeta((p) => ({ ...p, pdf_url: data.url, pdf_name: data.filename || f.name }))
-      toast('Fayl serverə yükləndi')
+      const results = await Promise.all(
+        files.map(async (f) => {
+          const fd = new FormData()
+          fd.append('file', f)
+          const data = await api.post('/exams/upload', fd)
+          return {
+            id: `${data.url}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            name: data.filename || f.name,
+            url: data.url,
+          }
+        })
+      )
+      setMaterialFiles((prev) => [...prev, ...results])
+      toast(`${results.length} fayl serverə yükləndi`)
     } catch (err) {
-      setMeta((p) => ({ ...p, pdf_url: '', pdf_name: '' }))
       toast(err.message || 'Fayl yüklənmədi (yalnız PDF, JPG, PNG)', 'error')
     } finally {
       setPdfBusy(false)
@@ -86,7 +98,7 @@ export default function ExamForm({ students, onCreated }) {
     if (!meta.title || !meta.start_time) { toast('Ad ve vaxt teleb olunur', 'error'); return }
     setLoading(true)
     try {
-      const exam_files = meta.pdf_url ? [{ name: meta.pdf_name || 'material', url: meta.pdf_url }] : []
+      const exam_files = materialFiles.map(({ name, url }) => ({ name, url }))
       await api.post('/exams', {
         title: meta.title,
         subject: meta.subject,
@@ -95,7 +107,7 @@ export default function ExamForm({ students, onCreated }) {
         student_ids: meta.student_ids,
         notify_students: meta.notify_students,
         show_results: meta.show_results,
-        pdf_url: meta.pdf_url || null,
+        pdf_url: exam_files[0]?.url || null,
         exam_files,
         start_time: localDatetimeInputToUtcIso(meta.start_time),
         questions: questions.map((q, i) => ({
@@ -171,15 +183,39 @@ export default function ExamForm({ students, onCreated }) {
             </div>
           </div>
  
-          <div className="p-4 bg-[#13112e] rounded-xl border border-indigo-500/20">
-            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">PDF / şəkil (suallar faylı)</label>
-            <input type="file" accept=".pdf,.jpg,.jpeg,.png"
+          <div className="p-4 bg-[#13112e] rounded-xl border border-indigo-500/20 space-y-3">
+            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider">
+              PDF / şəkil — bir və ya bir neçə fayl (Ctrl/Cmd ilə seç)
+            </label>
+            <input
+              type="file"
+              multiple
+              accept=".pdf,.jpg,.jpeg,.png"
               disabled={pdfBusy}
               className="w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-blue-500/20 file:text-blue-400 hover:file:bg-blue-500/30 cursor-pointer disabled:opacity-50"
-              onChange={handlePdfChange} />
-            {pdfBusy && <p className="text-xs text-amber-400 mt-2">Yüklənir…</p>}
-            {!pdfBusy && meta.pdf_url && meta.pdf_name && (
-              <p className="text-xs text-emerald-400 mt-2">✓ {meta.pdf_name} — tələbə imtahanda görəcək</p>
+              onChange={handleMaterialsChange}
+            />
+            {pdfBusy && <p className="text-xs text-amber-400">Yüklənir…</p>}
+            {materialFiles.length > 0 && (
+              <ul className="space-y-2 mt-2">
+                {materialFiles.map((f) => (
+                  <li
+                    key={f.id}
+                    className="flex items-center justify-between gap-2 text-xs bg-[#1a1740] rounded-lg px-3 py-2 border border-indigo-500/20"
+                  >
+                    <span className="text-emerald-400 truncate" title={f.name}>
+                      ✓ {f.name}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => removeMaterial(f.id)}
+                      className="text-red-400 hover:text-red-300 shrink-0 px-2"
+                    >
+                      Sil
+                    </button>
+                  </li>
+                ))}
+              </ul>
             )}
           </div>
  
