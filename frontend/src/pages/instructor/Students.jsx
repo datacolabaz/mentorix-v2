@@ -22,9 +22,32 @@ const emptyForm = {
   referral_notes: '',
   monthly_fee: '',
   payment_start_date: '',
+  lesson_weekdays: [],
   teacher_schedule_id: '',
   parent_name: '',
   parent_phone: '',
+}
+
+function normalizeWeekdays(raw) {
+  if (raw == null || raw === '') return []
+  if (Array.isArray(raw)) {
+    const nums = raw.map((x) => parseInt(String(x), 10)).filter((n) => n >= 1 && n <= 7)
+    return [...new Set(nums)].sort((a, b) => a - b)
+  }
+  if (typeof raw === 'string') {
+    try {
+      return normalizeWeekdays(JSON.parse(raw))
+    } catch {
+      return []
+    }
+  }
+  return []
+}
+
+function lessonDaysShort(raw) {
+  const ids = normalizeWeekdays(raw)
+  if (!ids.length) return null
+  return ids.map((v) => WEEKDAYS.find((d) => d.v === v)?.short || v).join(' · ')
 }
 
 function fmtSlotTime(t) {
@@ -120,9 +143,41 @@ function StudentFormFields({ data, setData, scheduleMeta, mode }) {
           )}
         </div>
       </div>
+      <div className="rounded-xl border border-indigo-500/20 bg-[#0f0c29]/60 p-3 space-y-2">
+        <p className="text-xs font-semibold text-indigo-200/90 uppercase tracking-wider">Həftənin dərs günləri *</p>
+        <p className="text-[10px] text-gray-500 leading-relaxed">
+          Tələbənin həftədə hansı günlər dərs alacağını qeyd edin (ödəniş başlanğıcı ilə birlikdə qeydiyyat üçün).
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {WEEKDAYS.map((d) => {
+            const active = Array.isArray(data.lesson_weekdays) && data.lesson_weekdays.includes(d.v)
+            return (
+              <button
+                key={d.v}
+                type="button"
+                onClick={() =>
+                  setData((p) => {
+                    const cur = new Set(Array.isArray(p.lesson_weekdays) ? p.lesson_weekdays : [])
+                    if (cur.has(d.v)) cur.delete(d.v)
+                    else cur.add(d.v)
+                    return { ...p, lesson_weekdays: [...cur].sort((a, b) => a - b) }
+                  })
+                }
+                className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                  active
+                    ? 'bg-indigo-600/45 border-indigo-400/55 text-white'
+                    : 'bg-[#13112e] border-indigo-500/20 text-gray-500 hover:border-indigo-500/35'
+                }`}
+              >
+                {d.short}
+              </button>
+            )
+          })}
+        </div>
+      </div>
       {mode === 'add' && scheduleMeta && (
         <div className="rounded-xl border border-indigo-500/20 bg-[#0f0c29]/60 p-3 space-y-2">
-          <p className="text-xs font-semibold text-indigo-200/90 uppercase tracking-wider">Dərs vaxtı</p>
+          <p className="text-xs font-semibold text-indigo-200/90 uppercase tracking-wider">Dərs vaxtı (slot)</p>
           {scheduleMeta.loading && <p className="text-xs text-gray-500">Boş slotlar yüklənir…</p>}
           {!scheduleMeta.loading && scheduleMeta.requiresScheduleSlot && !scheduleMeta.availableSlots?.length && (
             <p className="text-xs text-amber-200/90">
@@ -260,6 +315,10 @@ export default function InstructorStudents() {
       toast('Ad ve telefon teleb olunur', 'error')
       return
     }
+    if (!form.lesson_weekdays?.length) {
+      toast('Ən azı bir dərs günü seçin', 'error')
+      return
+    }
     if (enrollMeta.requiresScheduleSlot) {
       if (!enrollMeta.availableSlots?.length) {
         toast('Boş dərs slotu yoxdur — əvvəlcə «Cədvəlim»də slot yaradın', 'error')
@@ -287,6 +346,7 @@ export default function InstructorStudents() {
         referral_notes: form.referral_notes,
         monthly_fee: form.monthly_fee,
         payment_start_date: form.payment_start_date || null,
+        lesson_weekdays: form.lesson_weekdays,
         teacher_schedule_id: form.teacher_schedule_id || undefined,
         parent_name: form.parent_name,
         parent_phone: form.parent_phone,
@@ -316,6 +376,7 @@ export default function InstructorStudents() {
           ? String(s.payment_start_date).slice(0, 10)
           : '',
       teacher_schedule_id: '',
+      lesson_weekdays: normalizeWeekdays(s.lesson_weekdays),
       parent_name: s.parent_name || '',
       parent_phone: s.parent_phone || '',
     })
@@ -331,6 +392,10 @@ export default function InstructorStudents() {
       toast('Ad və telefon mütləqdir', 'error')
       return
     }
+    if (!editForm.lesson_weekdays?.length) {
+      toast('Ən azı bir dərs günü seçin', 'error')
+      return
+    }
     setLoading(true)
     try {
       await api.patch('/students/enrollment/' + encodeURIComponent(editId), {
@@ -341,6 +406,7 @@ export default function InstructorStudents() {
         referral_notes: editForm.referral_notes,
         monthly_fee: editForm.monthly_fee,
         payment_start_date: editForm.payment_start_date,
+        lesson_weekdays: editForm.lesson_weekdays,
         parent_name: editForm.parent_name,
         parent_phone: editForm.parent_phone,
       })
@@ -417,6 +483,11 @@ export default function InstructorStudents() {
                   <div className="text-xs text-gray-400 flex flex-wrap gap-x-3 gap-y-1 mt-0.5">
                     {s.phone && <span className="break-all">{s.phone}</span>}
                     {s.email && <span className="break-all">{s.email}</span>}
+                    {lessonDaysShort(s.lesson_weekdays) && (
+                      <span className="text-indigo-300/90 w-full sm:w-auto">
+                        Dərslər: {lessonDaysShort(s.lesson_weekdays)}
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>

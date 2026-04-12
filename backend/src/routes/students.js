@@ -29,6 +29,26 @@ function parsePaymentStartDate(v) {
   return s;
 }
 
+/** 1–7 unikal, sıralı (B.e. … Bazar) */
+function parseLessonWeekdays(raw) {
+  if (raw == null) return [];
+  let arr = raw;
+  if (typeof raw === 'string') {
+    try {
+      arr = JSON.parse(raw);
+    } catch {
+      return [];
+    }
+  }
+  if (!Array.isArray(arr)) return [];
+  const set = new Set();
+  for (const x of arr) {
+    const d = parseInt(String(x), 10);
+    if (Number.isFinite(d) && d >= 1 && d <= 7) set.add(d);
+  }
+  return [...set].sort((a, b) => a - b);
+}
+
 router.get('/', authenticate, authorize('admin', 'instructor'), listStudents);
 
 router.delete('/enrollment/:enrollmentId', authenticate, authorize('admin', 'instructor'), deleteStudent);
@@ -45,9 +65,15 @@ router.post('/enroll', authenticate, authorize('instructor', 'admin'), async (re
       monthly_fee,
       payment_start_date,
       teacher_schedule_id,
+      lesson_weekdays,
     } = req.body;
     const instructor_id = req.user.role === 'admin' ? req.body.instructor_id : req.user.id;
     const ni = normUuid(instructor_id);
+
+    const lwd = parseLessonWeekdays(lesson_weekdays);
+    if (lwd.length === 0) {
+      return res.status(400).json({ success: false, message: 'Ən azı bir dərs günü seçin' });
+    }
 
     const { rows: cnt } = await db.query(
       `SELECT COUNT(*)::int AS n FROM teacher_schedules
@@ -63,8 +89,16 @@ router.post('/enroll', authenticate, authorize('instructor', 'admin'), async (re
 
     const enrollment = await db.transaction(async (client) => {
       const { rows } = await client.query(
-        'INSERT INTO enrollments (instructor_id, student_id, billing_type, referral_notes, referral_source_id) VALUES ($1,$2,$3,$4,$5) RETURNING *',
-        [instructor_id, student_id, billing_type || '8_lessons', referral_notes, referral_source_id || null]
+        `INSERT INTO enrollments (instructor_id, student_id, billing_type, referral_notes, referral_source_id, lesson_weekdays)
+         VALUES ($1,$2,$3,$4,$5,$6::jsonb) RETURNING *`,
+        [
+          instructor_id,
+          student_id,
+          billing_type || '8_lessons',
+          referral_notes,
+          referral_source_id || null,
+          JSON.stringify(lwd),
+        ]
       );
       const enr = rows[0];
 
@@ -129,6 +163,7 @@ router.patch('/enrollment/:enrollmentId', authenticate, authorize('admin', 'inst
       parent_phone,
       monthly_fee,
       payment_start_date,
+      lesson_weekdays,
     } = req.body;
     const { enrollmentId } = req.params;
 
@@ -148,10 +183,22 @@ router.patch('/enrollment/:enrollmentId', authenticate, authorize('admin', 'inst
       [full_name, email || null, phone, studentId]
     );
 
-    await db.query(
-      'UPDATE enrollments SET billing_type = $1, referral_notes = $2 WHERE id = $3',
-      [billing_type, referral_notes || null, enrollmentId]
-    );
+    const hasLwd = Object.prototype.hasOwnProperty.call(req.body, 'lesson_weekdays');
+    if (hasLwd) {
+      const lwd = parseLessonWeekdays(lesson_weekdays);
+      if (lwd.length === 0) {
+        return res.status(400).json({ success: false, message: 'Ən azı bir dərs günü seçin' });
+      }
+      await db.query(
+        'UPDATE enrollments SET billing_type = $1, referral_notes = $2, lesson_weekdays = $3::jsonb WHERE id = $4',
+        [billing_type, referral_notes || null, JSON.stringify(lwd), enrollmentId]
+      );
+    } else {
+      await db.query(
+        'UPDATE enrollments SET billing_type = $1, referral_notes = $2 WHERE id = $3',
+        [billing_type, referral_notes || null, enrollmentId]
+      );
+    }
 
     const pName = parent_name != null ? String(parent_name).trim() : '';
     const pPhone = parent_phone != null ? String(parent_phone).trim() : '';

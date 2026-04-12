@@ -72,7 +72,8 @@ CREATE TABLE enrollments (
   status VARCHAR(20) DEFAULT 'active',
   referral_source_id UUID REFERENCES referral_sources(id),
   referral_notes TEXT,
-  enrolled_at TIMESTAMP DEFAULT NOW()
+  enrolled_at TIMESTAMP DEFAULT NOW(),
+  lesson_weekdays JSONB DEFAULT '[]'::jsonb
 );
 
 CREATE TABLE attendance (
