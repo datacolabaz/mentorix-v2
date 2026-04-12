@@ -4,13 +4,13 @@ import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
 import { useToast } from '../../components/common/Toast'
- 
+
 const BILLING_OPTS = [
   { value: '8_lessons', label: '8 Ders' },
   { value: '12_lessons', label: '12 Ders' },
   { value: 'monthly', label: 'Ayliq' },
 ]
- 
+
 const emptyForm = {
   full_name: '',
   email: '',
@@ -20,7 +20,89 @@ const emptyForm = {
   parent_name: '',
   parent_phone: '',
 }
- 
+
+const inp =
+  'w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500'
+
+/** Komponent fayl səviyyəsində olmalıdır — parent içində təyin etsək hər render yeni tip olur və input fokusunu itirir */
+function StudentFormFields({ data, setData }) {
+  return (
+    <div className="space-y-3">
+      <div>
+        <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Ad Soyad *</label>
+        <input
+          className={inp}
+          placeholder="Eli Huseynov"
+          value={data.full_name}
+          onChange={(e) => setData((p) => ({ ...p, full_name: e.target.value }))}
+        />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Telefon *</label>
+          <input
+            className={inp}
+            placeholder="+994XXXXXXXXX"
+            value={data.phone}
+            onChange={(e) => setData((p) => ({ ...p, phone: e.target.value }))}
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Email</label>
+          <input
+            className={inp}
+            placeholder="email@mail.com"
+            value={data.email}
+            onChange={(e) => setData((p) => ({ ...p, email: e.target.value }))}
+          />
+        </div>
+      </div>
+      <div>
+        <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Billing Novu</label>
+        <select className={inp} value={data.billing_type} onChange={(e) => setData((p) => ({ ...p, billing_type: e.target.value }))}>
+          {BILLING_OPTS.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div>
+        <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Menbe (ixtiyari)</label>
+        <input
+          className={inp}
+          placeholder="Instagram, tovsiye..."
+          value={data.referral_notes}
+          onChange={(e) => setData((p) => ({ ...p, referral_notes: e.target.value }))}
+        />
+      </div>
+      <div className="pt-2 border-t border-indigo-500/20">
+        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Valideyn (ixtiyari)</p>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Ad Soyad</label>
+            <input
+              className={inp}
+              placeholder="Valideyn adi"
+              value={data.parent_name}
+              onChange={(e) => setData((p) => ({ ...p, parent_name: e.target.value }))}
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Telefon</label>
+            <input
+              className={inp}
+              placeholder="+994XXXXXXXXX"
+              value={data.parent_phone}
+              onChange={(e) => setData((p) => ({ ...p, parent_phone: e.target.value }))}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function InstructorStudents() {
   const [students, setStudents] = useState([])
   const [addModal, setAddModal] = useState(false)
@@ -30,12 +112,17 @@ export default function InstructorStudents() {
   const [editId, setEditId] = useState(null)
   const [loading, setLoading] = useState(false)
   const toast = useToast()
- 
-  const load = () => api.get('/students').then(d => setStudents(d.students || []))
-  useEffect(() => { load() }, [])
- 
+
+  const load = () => api.get('/students').then((d) => setStudents(d.students || []))
+  useEffect(() => {
+    load()
+  }, [])
+
   const addStudent = async () => {
-    if (!form.full_name || !form.phone) { toast('Ad ve telefon teleb olunur', 'error'); return }
+    if (!form.full_name || !form.phone) {
+      toast('Ad ve telefon teleb olunur', 'error')
+      return
+    }
     setLoading(true)
     try {
       const reg = await api.post('/auth/register', {
@@ -58,10 +145,13 @@ export default function InstructorStudents() {
       setAddModal(false)
       setForm(emptyForm)
       load()
-    } catch (err) { toast(err.message || 'Xeta', 'error') }
-    finally { setLoading(false) }
+    } catch (err) {
+      toast(err.message || 'Xeta', 'error')
+    } finally {
+      setLoading(false)
+    }
   }
- 
+
   const openEdit = (s) => {
     setEditId(s.enrollment_id)
     setEditForm({
@@ -75,7 +165,7 @@ export default function InstructorStudents() {
     })
     setEditModal(true)
   }
- 
+
   const saveEdit = async () => {
     if (!editId) {
       toast('Qeydiyyat tapılmadı — səhifəni yeniləyin', 'error')
@@ -99,63 +189,24 @@ export default function InstructorStudents() {
       toast('Melumatlari yenilendi!')
       setEditModal(false)
       load()
-    } catch (err) { toast(err.message || 'Xeta', 'error') }
-    finally { setLoading(false) }
+    } catch (err) {
+      toast(err.message || 'Xeta', 'error')
+    } finally {
+      setLoading(false)
+    }
   }
- 
+
   const deleteStudent = async (enrollmentId, name) => {
     if (!window.confirm(name + ' silinsin?')) return
     try {
       await api.delete('/students/enrollment/' + enrollmentId)
       toast('Telebe silindi')
       load()
-    } catch (err) { toast(err.message || 'Xeta', 'error') }
+    } catch (err) {
+      toast(err.message || 'Xeta', 'error')
+    }
   }
- 
-  const inp = 'w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500'
- 
-  const FormFields = ({ data, setData }) => (
-    <div className="space-y-3">
-      <div>
-        <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Ad Soyad *</label>
-        <input className={inp} placeholder="Eli Huseynov" value={data.full_name} onChange={e => setData(p => ({ ...p, full_name: e.target.value }))} />
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Telefon *</label>
-          <input className={inp} placeholder="+994XXXXXXXXX" value={data.phone} onChange={e => setData(p => ({ ...p, phone: e.target.value }))} />
-        </div>
-        <div>
-          <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Email</label>
-          <input className={inp} placeholder="email@mail.com" value={data.email} onChange={e => setData(p => ({ ...p, email: e.target.value }))} />
-        </div>
-      </div>
-      <div>
-        <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Billing Novu</label>
-        <select className={inp} value={data.billing_type} onChange={e => setData(p => ({ ...p, billing_type: e.target.value }))}>
-          {BILLING_OPTS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-        </select>
-      </div>
-      <div>
-        <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Menbe (ixtiyari)</label>
-        <input className={inp} placeholder="Instagram, tovsiye..." value={data.referral_notes} onChange={e => setData(p => ({ ...p, referral_notes: e.target.value }))} />
-      </div>
-      <div className="pt-2 border-t border-indigo-500/20">
-        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Valideyn (ixtiyari)</p>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs text-gray-500 mb-1">Ad Soyad</label>
-            <input className={inp} placeholder="Valideyn adi" value={data.parent_name} onChange={e => setData(p => ({ ...p, parent_name: e.target.value }))} />
-          </div>
-          <div>
-            <label className="block text-xs text-gray-500 mb-1">Telefon</label>
-            <input className={inp} placeholder="+994XXXXXXXXX" value={data.parent_phone} onChange={e => setData(p => ({ ...p, parent_phone: e.target.value }))} />
-          </div>
-        </div>
-      </div>
-    </div>
-  )
- 
+
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
@@ -163,16 +214,26 @@ export default function InstructorStudents() {
           <h1 className="font-display font-bold text-2xl">Telebeleim</h1>
           <p className="text-gray-500 text-sm mt-1">{students.length} telebe</p>
         </div>
-        <Button onClick={() => { setForm(emptyForm); setAddModal(true) }}>+ Telebe Elave Et</Button>
+        <Button
+          onClick={() => {
+            setForm(emptyForm)
+            setAddModal(true)
+          }}
+        >
+          + Telebe Elave Et
+        </Button>
       </div>
- 
+
       <div className="space-y-3">
-        {students.map(s => (
+        {students.map((s) => (
           <Card key={s.enrollment_id} className="p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-sm font-bold flex-shrink-0">
-                  {s.full_name?.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                  {s.full_name?.split(' ')
+                    .map((n) => n[0])
+                    .join('')
+                    .slice(0, 2)}
                 </div>
                 <div>
                   <div className="font-semibold text-white">{s.full_name}</div>
@@ -185,13 +246,17 @@ export default function InstructorStudents() {
               <div className="flex items-center gap-3">
                 <div className="text-right">
                   <span className="text-xs bg-blue-500/20 text-blue-300 px-2 py-1 rounded-lg font-semibold">
-                    {s.lesson_count || 0}/{BILLING_OPTS.find(o => o.value === s.billing_type)?.label || s.billing_type}
+                    {s.lesson_count || 0}/{BILLING_OPTS.find((o) => o.value === s.billing_type)?.label || s.billing_type}
                   </span>
                   {s.avg_score && <div className="text-xs text-gray-400 mt-1">Orta: {s.avg_score}%</div>}
                 </div>
                 <div className="flex gap-2">
-                  <Button size="sm" variant="secondary" onClick={() => openEdit(s)}>Redakte</Button>
-                  <Button size="sm" variant="danger" onClick={() => deleteStudent(s.enrollment_id, s.full_name)}>Sil</Button>
+                  <Button size="sm" variant="secondary" onClick={() => openEdit(s)}>
+                    Redakte
+                  </Button>
+                  <Button size="sm" variant="danger" onClick={() => deleteStudent(s.enrollment_id, s.full_name)}>
+                    Sil
+                  </Button>
                 </div>
               </div>
             </div>
@@ -204,23 +269,30 @@ export default function InstructorStudents() {
           </div>
         )}
       </div>
- 
+
       <Modal open={addModal} onClose={() => setAddModal(false)} title="Yeni Telebe Elave Et">
-        <FormFields data={form} setData={setForm} />
+        <StudentFormFields data={form} setData={setForm} />
         <div className="flex gap-3 mt-4">
-          <Button onClick={addStudent} loading={loading} className="flex-1 justify-center">Elave Et</Button>
-          <Button variant="secondary" onClick={() => setAddModal(false)} className="flex-1 justify-center">Legv et</Button>
+          <Button onClick={addStudent} loading={loading} className="flex-1 justify-center">
+            Elave Et
+          </Button>
+          <Button variant="secondary" onClick={() => setAddModal(false)} className="flex-1 justify-center">
+            Legv et
+          </Button>
         </div>
       </Modal>
- 
+
       <Modal open={editModal} onClose={() => setEditModal(false)} title="Telebeyi Redakte Et">
-        <FormFields data={editForm} setData={setEditForm} />
+        <StudentFormFields data={editForm} setData={setEditForm} />
         <div className="flex gap-3 mt-4">
-          <Button onClick={saveEdit} loading={loading} className="flex-1 justify-center">Yadda Saxla</Button>
-          <Button variant="secondary" onClick={() => setEditModal(false)} className="flex-1 justify-center">Legv et</Button>
+          <Button onClick={saveEdit} loading={loading} className="flex-1 justify-center">
+            Yadda Saxla
+          </Button>
+          <Button variant="secondary" onClick={() => setEditModal(false)} className="flex-1 justify-center">
+            Legv et
+          </Button>
         </div>
       </Modal>
     </div>
   )
 }
- 
