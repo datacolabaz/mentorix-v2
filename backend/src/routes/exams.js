@@ -9,6 +9,7 @@ const {
 const { authenticate, authorize } = require('../middleware/auth');
 const db = require('../utils/db');
 const { normalizeExamStartTime } = require('../utils/examTime');
+const { syncExamReminderJob } = require('../services/examService');
 
 const uploadsExamsDir = path.join(__dirname, '../../uploads/exams');
 const storage = multer.diskStorage({
@@ -57,6 +58,7 @@ router.patch('/:id', authenticate, authorize('instructor', 'admin'), async (req,
   try {
     const { title, subject, topic, start_time, duration_minutes, notify_students, show_results } = req.body;
     const startNorm = start_time != null && start_time !== '' ? normalizeExamStartTime(start_time) : null;
+    const ns = notify_students !== undefined && notify_students !== '' ? notify_students : null;
     const { rows } = await db.query(
       `UPDATE exams SET
         title = COALESCE($1, title),
@@ -65,14 +67,20 @@ router.patch('/:id', authenticate, authorize('instructor', 'admin'), async (req,
         start_time = COALESCE($4, start_time),
         duration_minutes = COALESCE($5, duration_minutes),
         notify_students = COALESCE($6, notify_students),
+        notify_enabled = CASE WHEN $6::text IS NOT NULL THEN $6::boolean ELSE notify_enabled END,
         show_results = COALESCE($7, show_results),
         updated_at = NOW()
       WHERE id = $8 AND instructor_id = $9
       RETURNING *`,
-      [title, subject, topic, startNorm, duration_minutes, notify_students, show_results, req.params.id, req.user.id]
+      [title, subject, topic, startNorm, duration_minutes, ns, show_results, req.params.id, req.user.id]
     );
     if (!rows[0]) return res.status(404).json({ success: false, message: 'Imtahan tapilmadi' });
     res.json({ success: true, exam: rows[0] });
+    if (ns !== null || startNorm != null) {
+      setImmediate(() => {
+        syncExamReminderJob(req.params.id).catch((e) => console.error('syncExamReminderJob', e.message));
+      });
+    }
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

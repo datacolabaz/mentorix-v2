@@ -223,7 +223,9 @@ export default function ExamForm({ students, onCreated }) {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-semibold">SMS bildirisi</p>
-                <p className="text-xs text-gray-500">Imtahana 5 deq qalmis telebelere SMS geder</p>
+                <p className="text-xs text-gray-500">
+                  Başlamadan 5 dəq əvvəl SMS (əvvəl tələbə nömrəsi, yoxdursa valideyn). İmtahan bitəndə nəticə valideynə SMS.
+                </p>
               </div>
               <input type="checkbox" checked={meta.notify_students}
                 onChange={e => setMeta(p => ({ ...p, notify_students: e.target.checked }))}

@@ -1,6 +1,11 @@
 const db = require('../utils/db');
 const { normalizeExamStartTime } = require('../utils/examTime');
-const { calculateScore, rankResults } = require('../services/examService');
+const {
+  calculateScore,
+  rankResults,
+  syncExamReminderJob,
+  notifyParentExamResultAfterSubmit,
+} = require('../services/examService');
 
 // Imtahan yarat
 const createExam = async (req, res) => {
@@ -91,6 +96,9 @@ const createExam = async (req, res) => {
     });
 
     res.status(201).json({ success: true, exam: result });
+    setImmediate(() => {
+      syncExamReminderJob(result.id).catch((e) => console.error('syncExamReminderJob', e.message));
+    });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -197,6 +205,12 @@ const submitExam = async (req, res) => {
        VALUES ($1,$2,$3,$4,$5,$6,$7)`,
       [exam_id, student_id, score, JSON.stringify(answers), started_at, now, duration]
     );
+
+    setImmediate(() => {
+      notifyParentExamResultAfterSubmit(exam_id, student_id, score).catch((e) =>
+        console.error('notifyParentExamResultAfterSubmit', e.message)
+      );
+    });
 
     res.json({ success: true, score });
   } catch (err) {

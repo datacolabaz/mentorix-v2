@@ -1,9 +1,11 @@
 require('dotenv').config();
 const path = require('path');
 const fs = require('fs');
+const cron = require('node-cron');
 const express = require('express');
 const cors = require('cors');
 const errorHandler = require('./middleware/errorHandler');
+const { processExamNotificationJobs } = require('./services/examService');
 
 const uploadsExamsDir = path.join(__dirname, '../uploads/exams');
 fs.mkdirSync(uploadsExamsDir, { recursive: true });
@@ -29,6 +31,13 @@ app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`🚀 Mentorix API running on port ${PORT}`));
+app.listen(PORT, () => {
+  console.log(`🚀 Mentorix API running on port ${PORT}`);
+  processExamNotificationJobs().catch((e) => console.error('exam notification jobs (startup)', e.message));
+});
+
+cron.schedule('* * * * *', () => {
+  processExamNotificationJobs().catch((e) => console.error('exam notification cron', e.message));
+});
 
 module.exports = app;
