@@ -1,29 +1,42 @@
 const db = require('../utils/db');
 
-// Imtahan neticelerini hesabla
+function closedWrongPenalty(q) {
+  if (q.question_type !== 'closed') return 0;
+  const n = q.negative_marking;
+  if (n === null || n === undefined || n === '') return -0.25;
+  const v = Number(n);
+  if (Number.isNaN(v)) return -0.25;
+  if (v === 0) return 0;
+  return v;
+}
+
+/**
+ * Qapalı: düzgün → +points; səhv cavab (boş deyil) → negative_marking (adətən -0.25; 0 = cərimə yox).
+ * Cavabsız → 0 (nə bal, nə cərimə).
+ */
 const calculateScore = (questions, answers) => {
-  let score = 0;
-  let wrongClosed = 0;
-  let totalPoints = questions.reduce((s, q) => s + q.points, 0);
+  let earned = 0;
+  const totalPoints = questions.reduce((s, q) => s + Number(q.points || 0), 0);
+  if (totalPoints <= 0) return 0;
 
   for (const q of questions) {
     const ans = answers[q.id];
     if (q.question_type === 'closed') {
-      if (ans === q.correct_answer) {
-        score += q.points;
-      } else if (ans) {
-        wrongClosed++;
+      const correct = String(q.correct_answer ?? '').trim();
+      const given = ans != null && ans !== '' ? String(ans).trim() : '';
+      const pen = closedWrongPenalty(q);
+      if (given) {
+        if (given === correct) {
+          earned += Number(q.points || 0);
+        } else {
+          earned += pen;
+        }
       }
-    } else {
-      // Aciq sual - muellim qiymetlendirir, hazirda 0
     }
   }
 
-  // Her 4 sehv 1 dogrunun balini aparir
-  const penalty = Math.floor(wrongClosed / 4) * (totalPoints / questions.filter(q => q.question_type === 'closed').length || 1);
-  score = Math.max(0, score - penalty);
-
-  return Math.round((score / totalPoints) * 100);
+  earned = Math.max(0, earned);
+  return Math.round((earned / totalPoints) * 100);
 };
 
 // Neticeleri sirala

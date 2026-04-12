@@ -14,8 +14,9 @@ const TYPES = {
 export default function ExamForm({ students, onCreated }) {
   const [step, setStep] = useState(1)
   const [loading, setLoading] = useState(false)
+  const [pdfBusy, setPdfBusy] = useState(false)
   const toast = useToast()
- 
+
   const [meta, setMeta] = useState({
     title: '',
     subject: '',
@@ -26,6 +27,7 @@ export default function ExamForm({ students, onCreated }) {
     show_results: true,
     student_ids: [],
     pdf_name: '',
+    pdf_url: '',
   })
  
   const [questions, setQuestions] = useState([])
@@ -60,20 +62,53 @@ export default function ExamForm({ students, onCreated }) {
       return { ...q, options: opts }
     }))
  
+  const handlePdfChange = async (e) => {
+    const f = e.target.files?.[0]
+    if (!f) return
+    setPdfBusy(true)
+    setMeta((p) => ({ ...p, pdf_name: f.name }))
+    try {
+      const fd = new FormData()
+      fd.append('file', f)
+      const data = await api.post('/exams/upload', fd)
+      setMeta((p) => ({ ...p, pdf_url: data.url, pdf_name: data.filename || f.name }))
+      toast('Fayl serverə yükləndi')
+    } catch (err) {
+      setMeta((p) => ({ ...p, pdf_url: '', pdf_name: '' }))
+      toast(err.message || 'Fayl yüklənmədi (yalnız PDF, JPG, PNG)', 'error')
+    } finally {
+      setPdfBusy(false)
+      e.target.value = ''
+    }
+  }
+
   const submit = async () => {
     if (!meta.title || !meta.start_time) { toast('Ad ve vaxt teleb olunur', 'error'); return }
     setLoading(true)
     try {
+      const exam_files = meta.pdf_url ? [{ name: meta.pdf_name || 'material', url: meta.pdf_url }] : []
       await api.post('/exams', {
-        ...meta,
+        title: meta.title,
+        subject: meta.subject,
+        topic: meta.topic,
+        duration_minutes: meta.duration_minutes,
+        student_ids: meta.student_ids,
+        notify_students: meta.notify_students,
+        show_results: meta.show_results,
+        pdf_url: meta.pdf_url || null,
+        exam_files,
         start_time: localDatetimeInputToUtcIso(meta.start_time),
-        questions: questions.map(q => ({
+        questions: questions.map((q, i) => ({
+          question_text: `Sual ${i + 1}`,
           question_type: q.question_type,
           points: q.points,
           order_num: q.order_num,
           negative_marking: q.question_type === 'closed' ? -0.25 : 0,
           options: q.question_type === 'closed' || q.question_type === 'multiple'
-            ? q.options.map((o, i) => ({ key: String.fromCharCode(65 + i), text: o }))
+            ? q.options.map((o, j) => ({
+                key: String.fromCharCode(65 + j),
+                text: typeof o === 'string' ? o : (o?.text ?? ''),
+              }))
             : q.options,
           correct_answer: q.correct_answer,
           correct_answers: q.correct_answers,
@@ -137,11 +172,15 @@ export default function ExamForm({ students, onCreated }) {
           </div>
  
           <div className="p-4 bg-[#13112e] rounded-xl border border-indigo-500/20">
-            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">PDF Fayl (imtahan sualları)</label>
+            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">PDF / şəkil (suallar faylı)</label>
             <input type="file" accept=".pdf,.jpg,.jpeg,.png"
-              className="w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-blue-500/20 file:text-blue-400 hover:file:bg-blue-500/30 cursor-pointer"
-              onChange={e => { const f = e.target.files[0]; if (f) setMeta(p => ({ ...p, pdf_name: f.name })) }} />
-            {meta.pdf_name && <p className="text-xs text-emerald-400 mt-2">✓ {meta.pdf_name}</p>}
+              disabled={pdfBusy}
+              className="w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-blue-500/20 file:text-blue-400 hover:file:bg-blue-500/30 cursor-pointer disabled:opacity-50"
+              onChange={handlePdfChange} />
+            {pdfBusy && <p className="text-xs text-amber-400 mt-2">Yüklənir…</p>}
+            {!pdfBusy && meta.pdf_url && meta.pdf_name && (
+              <p className="text-xs text-emerald-400 mt-2">✓ {meta.pdf_name} — tələbə imtahanda görəcək</p>
+            )}
           </div>
  
           <div className="p-4 bg-[#13112e] rounded-xl border border-indigo-500/20 space-y-3">

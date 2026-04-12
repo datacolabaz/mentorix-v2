@@ -20,6 +20,16 @@ function optionDisplayLabel(opt) {
   return '—'
 }
 
+/** Serverdən gələn /api/uploads/... üçün tam URL (VITE_API_URL=https://host/api) */
+function resolveMaterialUrl(rel) {
+  if (!rel || typeof rel !== 'string') return ''
+  if (rel.startsWith('http')) return rel
+  const base = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
+  const origin = base.replace(/\/api\/?$/, '') || (typeof window !== 'undefined' ? window.location.origin : '')
+  const p = rel.startsWith('/') ? rel : `/${rel}`
+  return origin ? `${origin}${p}` : p
+}
+
 export default function StudentExams() {
   const [exams, setExams] = useState([])
   const [activeExam, setActiveExam] = useState(null)
@@ -65,6 +75,12 @@ export default function StudentExams() {
   // Active exam UI
   if (activeExam) {
     const endTime = new Date(new Date(activeExam.start_time).getTime() + activeExam.duration_minutes * 60000)
+    const materialPath =
+      activeExam.pdf_url ||
+      (Array.isArray(activeExam.exam_files) && activeExam.exam_files[0]?.url) ||
+      ''
+    const materialUrl = resolveMaterialUrl(materialPath)
+    const isImage = /\.(jpe?g|png)$/i.test(materialPath)
 
     return (
       <div className="flex flex-col h-screen">
@@ -81,6 +97,27 @@ export default function StudentExams() {
             </div>
           </div>
         </div>
+
+        {materialUrl && (
+          <div className="border-b border-indigo-500/20 bg-[#0f0c29]/80 px-6 py-4">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Suallar (PDF / şəkil)</p>
+            <a
+              href={materialUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="text-sm text-blue-400 hover:text-blue-300 mb-3 inline-block"
+            >
+              Tam ekranda aç →
+            </a>
+            <div className="rounded-xl border border-indigo-500/20 overflow-hidden bg-black/20">
+              {isImage ? (
+                <img src={materialUrl} alt="İmtahan materialları" className="max-h-[min(55vh,480px)] w-full object-contain" />
+              ) : (
+                <iframe title="İmtahan PDF" src={materialUrl} className="w-full h-[min(55vh,480px)] bg-white/5" />
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Questions */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">

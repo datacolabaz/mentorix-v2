@@ -1,12 +1,19 @@
 require('dotenv').config();
+const path = require('path');
+const fs = require('fs');
 const express = require('express');
 const cors = require('cors');
 const errorHandler = require('./middleware/errorHandler');
+
+const uploadsExamsDir = path.join(__dirname, '../uploads/exams');
+fs.mkdirSync(uploadsExamsDir, { recursive: true });
 
 const app = express();
 
 app.use(cors({ origin: process.env.FRONTEND_URL || '*' }));
 app.use(express.json());
+
+app.use('/api/uploads/exams', express.static(uploadsExamsDir));
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));

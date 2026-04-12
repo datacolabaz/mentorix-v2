@@ -6,20 +6,47 @@ const { calculateScore, rankResults } = require('../services/examService');
 const createExam = async (req, res) => {
   try {
     const {
-      title, pdf_url, duration_minutes, start_time,
-      notify_enabled, notify_before_hours, show_results,
-      questions, student_ids,
+      title,
+      subject,
+      topic,
+      pdf_url,
+      exam_files,
+      duration_minutes,
+      start_time,
+      notify_enabled,
+      notify_before_hours,
+      notify_students,
+      show_results,
+      questions,
+      student_ids,
     } = req.body;
 
     const startNorm = normalizeExamStartTime(start_time);
+    const notifyOn = notify_students === true || notify_students === 'true' || notify_enabled === true;
+    const notifyHours =
+      notify_before_hours != null && notify_before_hours !== ''
+        ? Number(notify_before_hours)
+        : 1;
 
     const result = await db.transaction(async (client) => {
       const { rows } = await client.query(
-        `INSERT INTO exams (instructor_id, title, pdf_url, duration_minutes, start_time,
-          notify_enabled, notify_before_hours, show_results, status)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'scheduled') RETURNING *`,
-        [req.user.id, title, pdf_url, duration_minutes, startNorm,
-          notify_enabled, notify_before_hours, show_results]
+        `INSERT INTO exams (instructor_id, title, subject, topic, pdf_url, exam_files, duration_minutes, start_time,
+          notify_enabled, notify_students, notify_before_hours, show_results, status)
+         VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7,$8,$9,$10,$11,$12,'scheduled') RETURNING *`,
+        [
+          req.user.id,
+          title,
+          subject || null,
+          topic || null,
+          pdf_url || null,
+          JSON.stringify(Array.isArray(exam_files) ? exam_files : []),
+          duration_minutes,
+          startNorm,
+          notifyOn,
+          notifyOn,
+          notifyHours,
+          show_results !== false,
+        ]
       );
 
       const exam = rows[0];
@@ -27,11 +54,26 @@ const createExam = async (req, res) => {
       if (questions?.length) {
         for (let i = 0; i < questions.length; i++) {
           const q = questions[i];
+          const neg =
+            q.negative_marking != null && q.negative_marking !== ''
+              ? Number(q.negative_marking)
+              : q.question_type === 'closed'
+                ? -0.25
+                : 0;
+          const qText = (q.question_text && String(q.question_text).trim()) || `Sual ${i + 1}`;
           await client.query(
-            `INSERT INTO exam_questions (exam_id, question_text, question_type, options, correct_answer, points, order_num)
-             VALUES ($1,$2,$3,$4,$5,$6,$7)`,
-            [exam.id, q.question_text, q.question_type, JSON.stringify(q.options || null),
-              q.correct_answer, q.points, i + 1]
+            `INSERT INTO exam_questions (exam_id, question_text, question_type, options, correct_answer, points, order_num, negative_marking)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+            [
+              exam.id,
+              qText,
+              q.question_type,
+              JSON.stringify(q.options || null),
+              q.correct_answer,
+              q.points,
+              i + 1,
+              neg,
+            ]
           );
         }
       }

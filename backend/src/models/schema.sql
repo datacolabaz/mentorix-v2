@@ -83,12 +83,15 @@ CREATE TABLE exams (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   instructor_id UUID REFERENCES users(id),
   title VARCHAR(255) NOT NULL,
+  subject VARCHAR(255),
   pdf_url VARCHAR(500),
+  exam_files JSONB DEFAULT '[]'::jsonb,
   duration_minutes INTEGER DEFAULT 60,
   start_time TIMESTAMP,
   status VARCHAR(20) DEFAULT 'draft',
   notify_before_hours INTEGER,
   notify_enabled BOOLEAN DEFAULT FALSE,
+  notify_students BOOLEAN DEFAULT FALSE,
   show_results BOOLEAN DEFAULT TRUE,
   created_at TIMESTAMP DEFAULT NOW()
 );
@@ -101,7 +104,8 @@ CREATE TABLE exam_questions (
   options JSONB,
   correct_answer VARCHAR(5),
   points INTEGER DEFAULT 10,
-  order_num INTEGER
+  order_num INTEGER,
+  negative_marking NUMERIC(6,3) DEFAULT 0
 );
 
 CREATE TABLE exam_assignments (
