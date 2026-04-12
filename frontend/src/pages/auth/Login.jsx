@@ -28,6 +28,8 @@ export default function Login() {
   const [flow, setFlow] = useState('phone')
   const [otpSent, setOtpSent] = useState(false)
   const [forgotPin, setForgotPin] = useState(false)
+  /** OTP təsdiqlənəndə eyni 6 rəqəmi daimi giriş PIN-i kimi saxla (istəsən söndür) */
+  const [saveOtpAsPin, setSaveOtpAsPin] = useState(true)
   const [loading, setLoading] = useState(false)
 
   const { login, phoneNextStep, sendOtp, verifyOtp, pinLogin, setPin } = useAuthStore()
@@ -97,7 +99,7 @@ export default function Login() {
     if (!role) return
     setLoading(true)
     try {
-      const data = await verifyOtp(phone, otpCode, role)
+      const data = await verifyOtp(phone, otpCode, role, { saveOtpAsPin })
       if (data.needs_pin_setup || forgotPin) {
         setFlow('setpin')
         setNewPin('')
@@ -278,6 +280,11 @@ export default function Login() {
                     </>
                   ) : (
                     <form onSubmit={handleVerifyOtp} className="space-y-4">
+                      <div className="text-xs text-amber-200/90 leading-relaxed p-3 rounded-xl bg-amber-500/10 border border-amber-500/25">
+                        <strong className="text-amber-100">Vacib:</strong> SMS-dəki kod <strong>təsdiq</strong> üçündür.
+                        Giriş PIN-i ayrıca təyin olunur. Aşağıdakı qutu işarəlidirsə, bu 6 rəqəm həm də növbəti
+                        girişlərdə PIN kimi saxlanılacaq.
+                      </div>
                       <div className="text-center text-xs text-gray-400 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
                         {phone} nömrəsinə kod göndərildi
                       </div>
@@ -290,6 +297,18 @@ export default function Login() {
                         onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
                         required
                       />
+                      <label className="flex items-start gap-3 text-xs text-gray-300 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          className="mt-0.5 rounded border-indigo-500/40"
+                          checked={saveOtpAsPin}
+                          onChange={(e) => setSaveOtpAsPin(e.target.checked)}
+                        />
+                        <span>
+                          Bu SMS kodunu (6 rəqəm) <strong>giriş PIN-i</strong> kimi də saxla — çıxışdan sonra həmin
+                          rəqəmlə PIN ekranından daxil olum.
+                        </span>
+                      </label>
                       <Button type="submit" loading={loading} className="w-full justify-center py-3">
                         Təsdiqlə
                       </Button>
@@ -307,13 +326,14 @@ export default function Login() {
 
               {role && flow === 'pin' && (
                 <form onSubmit={handlePinLogin} className="space-y-4">
-                  <p className="text-xs text-gray-400 text-center">
-                    Şifrə ilə gir — SMS göndərilmir.
+                  <p className="text-xs text-gray-400 text-center leading-relaxed">
+                    Buraya <strong className="text-gray-200">SMS OTP kodunu yox</strong> — öz təyin etdiyiniz giriş
+                    PIN-inizi yazın. OTP yalnız bir dəfəlik təsdiq üçündür.
                   </p>
                   <div className="text-center text-xs text-gray-500">{phone}</div>
                   <input
                     className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-4 text-white text-2xl font-bold text-center tracking-widest outline-none focus:border-blue-500"
-                    placeholder="6 rəqəmli PIN"
+                    placeholder="PIN (4–6 rəqəm)"
                     maxLength={6}
                     inputMode="numeric"
                     value={pinInput}
@@ -348,9 +368,22 @@ export default function Login() {
               {role && flow === 'setpin' && (
                 <form onSubmit={handleSetPin} className="space-y-4">
                   <p className="text-xs text-gray-400 text-center leading-relaxed">
-                    Növbəti girişlər üçün özünüzə <strong className="text-gray-300">6 rəqəmli PIN</strong> təyin
-                    edin.
+                    Növbəti girişlər üçün <strong className="text-gray-300">6 rəqəmli PIN</strong> təyin edin (SMS
+                    OTP kodu avtomatik PIN deyil).
                   </p>
+                  {otpCode.length === 6 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNewPin(otpCode)
+                        setNewPin2(otpCode)
+                        toast('Sahələr SMS kodu ilə dolduruldu — təsdiq üçün "PIN saxla" basın', 'success')
+                      }}
+                      className="w-full text-xs py-2.5 px-3 rounded-xl border border-indigo-500/30 text-indigo-200 hover:bg-indigo-500/10"
+                    >
+                      SMS OTP kodunu bu PIN kimi istifadə et (6 rəqəm)
+                    </button>
+                  )}
                   <input
                     className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-3 text-white text-lg text-center tracking-widest outline-none focus:border-blue-500"
                     placeholder="PIN (6 rəqəm)"
