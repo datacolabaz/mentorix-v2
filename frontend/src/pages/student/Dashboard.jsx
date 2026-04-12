@@ -38,7 +38,10 @@ export default function StudentDashboard() {
     api.get('/students/' + user.id).then((d) => setData(d.student))
     api
       .get('/exams/my')
-      .then((d) => setExams(d.exams || []))
+      .then((d) => {
+        const raw = d?.exams
+        setExams(Array.isArray(raw) ? raw.filter((x) => x != null && x.id != null) : [])
+      })
       .catch(() => setExams([]))
   }, [user?.id])
 
@@ -46,7 +49,9 @@ export default function StudentDashboard() {
   const limit = data?.billing_type === '8_lessons' ? 8 : data?.billing_type === '12_lessons' ? 12 : null
 
   const pieData = useMemo(() => {
-    const done = (exams || []).filter((e) => e.submitted_at && e.score != null && e.score !== '')
+    const done = (exams || []).filter(
+      (e) => e && e.submitted_at && e.score != null && e.score !== ''
+    )
     return done
       .map((e) => {
         const v = Number(e.score)
@@ -134,10 +139,10 @@ export default function StudentDashboard() {
                     borderRadius: 8,
                     fontSize: 12,
                   }}
-                  formatter={(val, _name, props) => [
-                    `${props.payload.fullTitle}: ${Math.round(Number(val))}%`,
-                    'Bal',
-                  ]}
+                  formatter={(val, _name, props) => {
+                    const title = props?.payload?.fullTitle ?? 'İmtahan'
+                    return [`${title}: ${Math.round(Number(val))}%`, 'Bal']
+                  }}
                 />
                 <Legend
                   wrapperStyle={{ fontSize: 11 }}

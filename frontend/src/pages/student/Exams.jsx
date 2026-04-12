@@ -106,7 +106,10 @@ export default function StudentExams() {
       .get('/exams/my')
       .then((d) => {
         setListError(null)
-        setExams(d.exams || [])
+        const raw = d?.exams
+        setExams(
+          Array.isArray(raw) ? raw.filter((x) => x != null && x.id != null) : []
+        )
       })
       .catch((err) => {
         if (!quiet) {
@@ -202,10 +205,10 @@ export default function StudentExams() {
         answers,
         started_at: startedAt,
       })
-      setResult(data.score)
-      setResultBreakdown(Array.isArray(data.breakdown) ? data.breakdown : null)
+      setResult(data?.score ?? null)
+      setResultBreakdown(Array.isArray(data?.breakdown) ? data.breakdown : null)
       setActiveExam(null)
-      toast(`✓ İmtahan tamamlandı! Bal: ${formatScorePct(data.score)}`)
+      toast(`✓ İmtahan tamamlandı! Bal: ${formatScorePct(data?.score)}`)
       loadExams(true)
     } catch (err) {
       toast(err.message || 'Xəta', 'error')
@@ -427,7 +430,7 @@ export default function StudentExams() {
           <h2 className="font-display font-bold text-lg text-white mb-1">Suallar üzrə nəticə</h2>
           <p className="text-xs text-gray-500 mb-4">Şablon (düzgün) və yazdığınız cavab müqayisəsi</p>
           <div className="space-y-3 max-h-[min(70vh,520px)] overflow-y-auto pr-1">
-            {resultBreakdown.map((row) => (
+            {resultBreakdown.filter(Boolean).map((row) => (
               <div
                 key={row.question_id || row.order}
                 className="rounded-xl border border-indigo-500/20 bg-[#13112e]/80 p-4 text-left"
@@ -480,6 +483,7 @@ export default function StudentExams() {
       ) : (
       <div className="space-y-4">
         {exams.map((exam) => {
+          if (!exam?.id) return null
           const now = new Date()
           const start = parseExamStart(exam)
           const dur = Number(exam.duration_minutes) || 0
@@ -502,7 +506,7 @@ export default function StudentExams() {
                   </div>
                   {isDone && (
                     <div className="mt-2 px-3 py-1 bg-emerald-500/20 text-emerald-400 rounded-lg text-sm font-semibold inline-block max-w-full break-words">
-                      ✓ Tamamlandı — {formatScorePct(exam.score)}
+                      ✓ Tamamlandı — {formatScorePct(exam?.score)}
                     </div>
                   )}
                 </div>
@@ -533,15 +537,18 @@ export default function StudentExams() {
       </div>
       )}
 
+      {/* Modal open=false olanda belə React children-ı hesablayır; reviewModal null ikən
+          reviewModal?.loading hər ikisi falsedur və üçüncü budaq null.score ilə çökürdü */}
+      {reviewModal != null && (
       <Modal
-        open={!!reviewModal}
+        open
         onClose={() => setReviewModal(null)}
-        title={reviewModal?.title || 'İmtahan nəticəsi'}
+        title={reviewModal.title || 'İmtahan nəticəsi'}
         size="lg"
       >
-        {reviewModal?.loading ? (
+        {reviewModal.loading ? (
           <p className="text-gray-500 text-center py-10">Yüklənir…</p>
-        ) : reviewModal?.error ? (
+        ) : reviewModal.error ? (
           <p className="text-red-400 text-sm text-center py-6">{reviewModal.error}</p>
         ) : (
           <>
@@ -558,7 +565,7 @@ export default function StudentExams() {
             {reviewModal.breakdown?.length > 0 && (
               <div className="space-y-3 max-h-[min(60vh,480px)] overflow-y-auto pr-1">
                 <h3 className="text-sm font-bold text-white mb-2">Suallar üzrə</h3>
-                {reviewModal.breakdown.map((row) => (
+                {reviewModal.breakdown.filter(Boolean).map((row) => (
                   <div
                     key={row.question_id || row.order}
                     className="rounded-xl border border-indigo-500/20 bg-[#13112e]/80 p-4 text-left"
@@ -607,6 +614,7 @@ export default function StudentExams() {
           </>
         )}
       </Modal>
+      )}
     </div>
   )
 }
