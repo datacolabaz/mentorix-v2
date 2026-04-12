@@ -113,18 +113,24 @@ export default function InstructorStudents() {
   const [editId, setEditId] = useState(null)
   const [loading, setLoading] = useState(false)
   const [listLoading, setListLoading] = useState(true)
+  const [listError, setListError] = useState(null)
   const toast = useToast()
 
   const load = async () => {
+    setListError(null)
+    setListLoading(true)
     try {
       const d = await api.get('/students')
       setStudents(d.students || [])
+    } catch (err) {
+      setListError(err?.message || 'Siyahı yüklənmədi')
+      setStudents([])
     } finally {
       setListLoading(false)
     }
   }
   useEffect(() => {
-    load()
+    void load()
   }, [])
 
   const addStudent = async () => {
@@ -238,7 +244,16 @@ export default function InstructorStudents() {
 
       <div className="space-y-3">
         {listLoading && <ListSkeleton message="Tələbələr yüklənir…" />}
-        {!listLoading &&
+        {!listLoading && listError && (
+          <Card className="p-6 text-center border border-amber-500/30 bg-amber-500/5">
+            <p className="text-amber-200/90 text-sm mb-3">{listError}</p>
+            <p className="text-gray-500 text-xs mb-4">Şəbəkə və ya server gecikməsi ola bilər.</p>
+            <Button type="button" variant="secondary" onClick={() => void load()}>
+              Yenidən yüklə
+            </Button>
+          </Card>
+        )}
+        {!listLoading && !listError &&
           students.map((s) => (
           <Card key={s.enrollment_id} className="p-4 min-w-0 overflow-hidden">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between min-w-0">
