@@ -5,6 +5,21 @@ import Button from '../../components/common/Button'
 import Countdown from '../../components/exam/Countdown'
 import { useToast } from '../../components/common/Toast'
 
+/** API JSON: { key, text } və ya string; boş text olanda `opt.text || opt` obyekti render edirdi (React #31) */
+function optionDisplayLabel(opt) {
+  if (typeof opt === 'string') return opt || '—'
+  if (opt && typeof opt === 'object') {
+    const t = opt.text != null ? String(opt.text).trim() : ''
+    if (t) return t
+    if (opt.left != null || opt.right != null) {
+      const pair = [opt.left, opt.right].filter((x) => x != null && String(x).trim() !== '').join(' → ')
+      if (pair) return pair
+    }
+    if (opt.key != null) return String(opt.key)
+  }
+  return '—'
+}
+
 export default function StudentExams() {
   const [exams, setExams] = useState([])
   const [activeExam, setActiveExam] = useState(null)
@@ -73,7 +88,7 @@ export default function StudentExams() {
             <Card key={q.id} className="p-6">
               <div className="flex gap-4 mb-4">
                 <span className="bg-blue-500/20 text-blue-300 rounded-lg px-3 py-1 text-sm font-bold flex-shrink-0">{i + 1}</span>
-                <p className="text-white font-medium leading-relaxed">{q.question_text}</p>
+                <p className="text-white font-medium leading-relaxed">{q.question_text ?? `Sual ${i + 1}`}</p>
                 <span className="text-gray-500 text-xs ml-auto flex-shrink-0">{q.points} bal</span>
               </div>
 
@@ -88,7 +103,7 @@ export default function StudentExams() {
                         <span className={`w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs font-bold flex-shrink-0 ${selected ? 'border-blue-500 bg-blue-500 text-white' : 'border-gray-600'}`}>
                           {key}
                         </span>
-                        {typeof opt === 'string' ? opt : opt.text || opt}
+                        {optionDisplayLabel(opt)}
                       </button>
                     )
                   })}
