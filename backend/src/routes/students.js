@@ -8,6 +8,10 @@ function sameUuid(a, b) {
   return String(a).replace(/-/g, '').toLowerCase() === String(b).replace(/-/g, '').toLowerCase();
 }
 
+function normUuid(id) {
+  return String(id).trim().toLowerCase().replace(/-/g, '');
+}
+
 function parseMonthlyFee(v) {
   if (v === undefined || v === null || v === '') return null;
   const n = Number(v);
@@ -15,11 +19,14 @@ function parseMonthlyFee(v) {
   return n;
 }
 
-function parsePaymentDay(v) {
+function parsePaymentStartDate(v) {
   if (v === undefined || v === null || v === '') return null;
-  const d = parseInt(String(v), 10);
-  if (!Number.isFinite(d) || d < 1 || d > 31) return null;
-  return d;
+  const s = String(v).trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;
+  const [y, mo, d] = s.split('-').map(Number);
+  const dt = new Date(Date.UTC(y, mo - 1, d));
+  if (dt.getUTCFullYear() !== y || dt.getUTCMonth() !== mo - 1 || dt.getUTCDate() !== d) return null;
+  return s;
 }
 
 router.get('/', authenticate, authorize('admin', 'instructor'), listStudents);
@@ -36,35 +43,77 @@ router.post('/enroll', authenticate, authorize('instructor', 'admin'), async (re
       parent_name,
       parent_phone,
       monthly_fee,
-      payment_day,
+      payment_start_date,
+      teacher_schedule_id,
     } = req.body;
     const instructor_id = req.user.role === 'admin' ? req.body.instructor_id : req.user.id;
-    const { rows } = await db.query(
-      'INSERT INTO enrollments (instructor_id, student_id, billing_type, referral_notes, referral_source_id) VALUES ($1,$2,$3,$4,$5) RETURNING *',
-      [instructor_id, student_id, billing_type || '8_lessons', referral_notes, referral_source_id || null]
+    const ni = normUuid(instructor_id);
+
+    const { rows: cnt } = await db.query(
+      `SELECT COUNT(*)::int AS n FROM teacher_schedules
+       WHERE REPLACE(LOWER(TRIM(instructor_id::text)), '-', '') = $1`,
+      [ni]
     );
-    const pn = parent_name != null ? String(parent_name).trim() : '';
-    const pp = parent_phone != null ? String(parent_phone).trim() : '';
-    const mf = parseMonthlyFee(monthly_fee);
-    const pd = parsePaymentDay(payment_day);
-    const pr = await db.query(
-      `UPDATE student_profiles SET
-        parent_name = COALESCE(NULLIF($1, ''), parent_name),
-        parent_phone = COALESCE(NULLIF($2, ''), parent_phone),
-        monthly_fee = $3,
-        payment_day = $4
-       WHERE user_id = $5`,
-      [pn, pp, mf, pd, student_id]
-    );
-    if (pr.rowCount === 0) {
-      await db.query(
-        `INSERT INTO student_profiles (user_id, parent_name, parent_phone, monthly_fee, payment_day)
-         VALUES ($1, NULLIF($2, ''), NULLIF($3, ''), $4, $5)`,
-        [student_id, pn, pp, mf, pd]
-      );
+    if ((cnt[0]?.n || 0) > 0 && !teacher_schedule_id) {
+      return res.status(400).json({ success: false, message: 'Dərs vaxtı (boş slot) seçin' });
     }
-    res.json({ success: true, enrollment: rows[0] });
-  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+
+    const mf = parseMonthlyFee(monthly_fee);
+    const psd = parsePaymentStartDate(payment_start_date);
+
+    const enrollment = await db.transaction(async (client) => {
+      const { rows } = await client.query(
+        'INSERT INTO enrollments (instructor_id, student_id, billing_type, referral_notes, referral_source_id) VALUES ($1,$2,$3,$4,$5) RETURNING *',
+        [instructor_id, student_id, billing_type || '8_lessons', referral_notes, referral_source_id || null]
+      );
+      const enr = rows[0];
+
+      if (teacher_schedule_id) {
+        const up = await client.query(
+          `UPDATE teacher_schedules
+           SET is_occupied = TRUE, enrollment_id = $1, student_id = $2
+           WHERE id = $3
+             AND REPLACE(LOWER(TRIM(instructor_id::text)), '-', '') = $4
+             AND is_occupied = FALSE
+           RETURNING id`,
+          [enr.id, student_id, teacher_schedule_id, ni]
+        );
+        if (up.rowCount === 0) {
+          throw Object.assign(new Error('SLOT_UNAVAILABLE'), { code: 'SLOT' });
+        }
+      }
+
+      const pn = parent_name != null ? String(parent_name).trim() : '';
+      const pp = parent_phone != null ? String(parent_phone).trim() : '';
+      const pr = await client.query(
+        `UPDATE student_profiles SET
+          parent_name = COALESCE(NULLIF($1, ''), parent_name),
+          parent_phone = COALESCE(NULLIF($2, ''), parent_phone),
+          monthly_fee = $3,
+          payment_start_date = $4
+         WHERE user_id = $5`,
+        [pn, pp, mf, psd, student_id]
+      );
+      if (pr.rowCount === 0) {
+        await client.query(
+          `INSERT INTO student_profiles (user_id, parent_name, parent_phone, monthly_fee, payment_start_date)
+           VALUES ($1, NULLIF($2, ''), NULLIF($3, ''), $4, $5)`,
+          [student_id, pn, pp, mf, psd]
+        );
+      }
+      return enr;
+    });
+
+    res.json({ success: true, enrollment });
+  } catch (err) {
+    if (err.code === 'SLOT') {
+      return res.status(409).json({
+        success: false,
+        message: 'Seçilmiş slot artıq mövcud deyil və ya məşğuldur',
+      });
+    }
+    res.status(500).json({ success: false, message: err.message });
+  }
 });
 
 // Telebe ve enrollment redakte et
@@ -79,7 +128,7 @@ router.patch('/enrollment/:enrollmentId', authenticate, authorize('admin', 'inst
       parent_name,
       parent_phone,
       monthly_fee,
-      payment_day,
+      payment_start_date,
     } = req.body;
     const { enrollmentId } = req.params;
 
@@ -107,23 +156,23 @@ router.patch('/enrollment/:enrollmentId', authenticate, authorize('admin', 'inst
     const pName = parent_name != null ? String(parent_name).trim() : '';
     const pPhone = parent_phone != null ? String(parent_phone).trim() : '';
     const hasMf = Object.prototype.hasOwnProperty.call(req.body, 'monthly_fee');
-    const hasPd = Object.prototype.hasOwnProperty.call(req.body, 'payment_day');
+    const hasPsd = Object.prototype.hasOwnProperty.call(req.body, 'payment_start_date');
     const mf = hasMf ? parseMonthlyFee(monthly_fee) : null;
-    const pd = hasPd ? parsePaymentDay(payment_day) : null;
+    const psd = hasPsd ? parsePaymentStartDate(payment_start_date) : null;
     const profUp = await db.query(
       `UPDATE student_profiles SET
         parent_name = NULLIF($1, ''),
         parent_phone = NULLIF($2, ''),
         monthly_fee = CASE WHEN $6 THEN $3::numeric ELSE monthly_fee END,
-        payment_day = CASE WHEN $7 THEN $4::integer ELSE payment_day END
+        payment_start_date = CASE WHEN $7 THEN $4::date ELSE payment_start_date END
        WHERE user_id = $5`,
-      [pName, pPhone, mf, pd, studentId, hasMf, hasPd]
+      [pName, pPhone, mf, psd, studentId, hasMf, hasPsd]
     );
     if (profUp.rowCount === 0) {
       await db.query(
-        `INSERT INTO student_profiles (user_id, parent_name, parent_phone, monthly_fee, payment_day)
+        `INSERT INTO student_profiles (user_id, parent_name, parent_phone, monthly_fee, payment_start_date)
          VALUES ($1, NULLIF($2, ''), NULLIF($3, ''), $4, $5)`,
-        [studentId, pName, pPhone, hasMf ? mf : null, hasPd ? pd : null]
+        [studentId, pName, pPhone, hasMf ? mf : null, hasPsd ? psd : null]
       );
     }
 

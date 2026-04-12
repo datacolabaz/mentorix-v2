@@ -5,6 +5,7 @@ import useAuthStore from '../hooks/useAuth'
 const NAV = [
   { to: '/instructor', label: 'Dashboard', icon: '📊', end: true },
   { to: '/instructor/students', label: 'Tələbələrim', icon: '🎓' },
+  { to: '/instructor/schedule', label: 'Cədvəlim', icon: '📅' },
   { to: '/instructor/attendance', label: 'Davamiyyət', icon: '✅' },
   { to: '/instructor/exams', label: 'İmtahanlar', icon: '📝' },
   { to: '/instructor/tasks', label: 'Tapşırıqlar', icon: '📋' },

@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
+import { format, isValid, parseISO } from 'date-fns'
 import api from '../../lib/api'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
 import ListSkeleton from '../../components/common/ListSkeleton'
 import { useToast } from '../../components/common/Toast'
+import { WEEKDAYS } from './Schedule'
 
 const BILLING_OPTS = [
   { value: '8_lessons', label: '8 Ders' },
@@ -19,16 +21,34 @@ const emptyForm = {
   billing_type: '8_lessons',
   referral_notes: '',
   monthly_fee: '',
-  payment_day: '',
+  payment_start_date: '',
+  teacher_schedule_id: '',
   parent_name: '',
   parent_phone: '',
+}
+
+function fmtSlotTime(t) {
+  if (t == null) return ''
+  const s = typeof t === 'string' ? t : String(t)
+  return s.slice(0, 5)
+}
+
+function paymentDateHint(ymd) {
+  if (!ymd || !/^\d{4}-\d{2}-\d{2}$/.test(ymd)) return null
+  try {
+    const d = parseISO(ymd)
+    return isValid(d) ? format(d, 'dd.MM.yyyy') : null
+  } catch {
+    return null
+  }
 }
 
 const inp =
   'w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500'
 
 /** Komponent fayl səviyyəsində olmalıdır — parent içində təyin etsək hər render yeni tip olur və input fokusunu itirir */
-function StudentFormFields({ data, setData }) {
+function StudentFormFields({ data, setData, scheduleMeta, mode }) {
+  const hint = paymentDateHint(data.payment_start_date)
   return (
     <div className="space-y-3">
       <div>
@@ -84,18 +104,70 @@ function StudentFormFields({ data, setData }) {
           />
         </div>
         <div>
-          <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Ödəniş günü (1–31)</label>
+          <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+            Ödəniş başlanğıcı (gün.ay.il)
+          </label>
           <input
             className={inp}
-            type="number"
-            min={1}
-            max={31}
-            placeholder="Məs. 5"
-            value={data.payment_day}
-            onChange={(e) => setData((p) => ({ ...p, payment_day: e.target.value }))}
+            type="date"
+            value={data.payment_start_date}
+            onChange={(e) => setData((p) => ({ ...p, payment_start_date: e.target.value }))}
           />
+          {hint && (
+            <p className="text-[11px] text-indigo-300/80 mt-1.5 tabular-nums">
+              Seçilmiş tarix: <span className="text-white font-medium">{hint}</span>
+            </p>
+          )}
         </div>
       </div>
+      {mode === 'add' && scheduleMeta && (
+        <div className="rounded-xl border border-indigo-500/20 bg-[#0f0c29]/60 p-3 space-y-2">
+          <p className="text-xs font-semibold text-indigo-200/90 uppercase tracking-wider">Dərs vaxtı</p>
+          {scheduleMeta.loading && <p className="text-xs text-gray-500">Boş slotlar yüklənir…</p>}
+          {!scheduleMeta.loading && scheduleMeta.requiresScheduleSlot && !scheduleMeta.availableSlots?.length && (
+            <p className="text-xs text-amber-200/90">
+              Boş slot yoxdur. Əvvəlcə «Cədvəlim» səhifəsində iş saatları yaradın.
+            </p>
+          )}
+          {!scheduleMeta.loading && scheduleMeta.availableSlots?.length > 0 && (
+            <div className="space-y-3 max-h-48 overflow-y-auto pr-1">
+              <p className="text-[10px] text-gray-500">Yalnız boş slotlar göstərilir.</p>
+              {WEEKDAYS.map((d) => {
+                const list = scheduleMeta.availableSlots.filter((s) => s.day_of_week === d.v)
+                if (!list.length) return null
+                return (
+                  <div key={d.v}>
+                    <p className="text-[10px] font-semibold text-gray-500 mb-1.5">{d.full}</p>
+                    <div className="flex flex-wrap gap-2">
+                      {list.map((s) => (
+                        <label
+                          key={s.id}
+                          className={`inline-flex items-center gap-2 cursor-pointer rounded-lg border px-2.5 py-1.5 text-xs transition-colors ${
+                            data.teacher_schedule_id === s.id
+                              ? 'border-indigo-400 bg-indigo-600/25 text-white'
+                              : 'border-indigo-500/20 bg-[#13112e] text-gray-300 hover:border-indigo-500/40'
+                          }`}
+                        >
+                          <input
+                            type="radio"
+                            name="teacher_schedule_slot"
+                            className="accent-indigo-500"
+                            checked={data.teacher_schedule_id === s.id}
+                            onChange={() => setData((p) => ({ ...p, teacher_schedule_id: s.id }))}
+                          />
+                          <span className="font-mono tabular-nums">
+                            {fmtSlotTime(s.start_time)}–{fmtSlotTime(s.end_time)}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
       <div>
         <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Menbe (ixtiyari)</label>
         <input
@@ -142,7 +214,29 @@ export default function InstructorStudents() {
   const [loading, setLoading] = useState(false)
   const [listLoading, setListLoading] = useState(true)
   const [listError, setListError] = useState(null)
+  const [enrollMeta, setEnrollMeta] = useState({
+    loading: false,
+    requiresScheduleSlot: false,
+    availableSlots: [],
+  })
   const toast = useToast()
+
+  useEffect(() => {
+    if (!addModal) return
+    setEnrollMeta((m) => ({ ...m, loading: true }))
+    api
+      .get('/teacher-schedules/for-enrollment')
+      .then((d) => {
+        setEnrollMeta({
+          loading: false,
+          requiresScheduleSlot: !!d.requiresScheduleSlot,
+          availableSlots: d.availableSlots || [],
+        })
+      })
+      .catch(() => {
+        setEnrollMeta({ loading: false, requiresScheduleSlot: false, availableSlots: [] })
+      })
+  }, [addModal])
 
   const load = async () => {
     setListError(null)
@@ -166,6 +260,16 @@ export default function InstructorStudents() {
       toast('Ad ve telefon teleb olunur', 'error')
       return
     }
+    if (enrollMeta.requiresScheduleSlot) {
+      if (!enrollMeta.availableSlots?.length) {
+        toast('Boş dərs slotu yoxdur — əvvəlcə «Cədvəlim»də slot yaradın', 'error')
+        return
+      }
+      if (!form.teacher_schedule_id) {
+        toast('Dərs vaxtı (boş slot) seçin', 'error')
+        return
+      }
+    }
     setLoading(true)
     try {
       const reg = await api.post('/auth/register', {
@@ -182,7 +286,8 @@ export default function InstructorStudents() {
         billing_type: form.billing_type,
         referral_notes: form.referral_notes,
         monthly_fee: form.monthly_fee,
-        payment_day: form.payment_day,
+        payment_start_date: form.payment_start_date || null,
+        teacher_schedule_id: form.teacher_schedule_id || undefined,
         parent_name: form.parent_name,
         parent_phone: form.parent_phone,
       })
@@ -206,7 +311,11 @@ export default function InstructorStudents() {
       billing_type: s.billing_type || '8_lessons',
       referral_notes: s.referral_notes || '',
       monthly_fee: s.monthly_fee != null && s.monthly_fee !== '' ? String(s.monthly_fee) : '',
-      payment_day: s.payment_day != null && s.payment_day !== '' ? String(s.payment_day) : '',
+      payment_start_date:
+        s.payment_start_date != null && s.payment_start_date !== ''
+          ? String(s.payment_start_date).slice(0, 10)
+          : '',
+      teacher_schedule_id: '',
       parent_name: s.parent_name || '',
       parent_phone: s.parent_phone || '',
     })
@@ -231,7 +340,7 @@ export default function InstructorStudents() {
         billing_type: editForm.billing_type,
         referral_notes: editForm.referral_notes,
         monthly_fee: editForm.monthly_fee,
-        payment_day: editForm.payment_day,
+        payment_start_date: editForm.payment_start_date,
         parent_name: editForm.parent_name,
         parent_phone: editForm.parent_phone,
       })
@@ -334,7 +443,7 @@ export default function InstructorStudents() {
       </div>
 
       <Modal open={addModal} onClose={() => setAddModal(false)} title="Yeni Telebe Elave Et">
-        <StudentFormFields data={form} setData={setForm} />
+        <StudentFormFields data={form} setData={setForm} scheduleMeta={enrollMeta} mode="add" />
         <div className="flex gap-3 mt-4">
           <Button onClick={addStudent} loading={loading} className="flex-1 justify-center">
             Elave Et
@@ -346,7 +455,7 @@ export default function InstructorStudents() {
       </Modal>
 
       <Modal open={editModal} onClose={() => setEditModal(false)} title="Telebeyi Redakte Et">
-        <StudentFormFields data={editForm} setData={setEditForm} />
+        <StudentFormFields data={editForm} setData={setEditForm} mode="edit" />
         <div className="flex gap-3 mt-4">
           <Button onClick={saveEdit} loading={loading} className="flex-1 justify-center">
             Yadda Saxla

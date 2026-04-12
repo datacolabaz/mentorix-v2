@@ -35,7 +35,21 @@ CREATE TABLE student_profiles (
   date_of_birth DATE,
   notes TEXT,
   monthly_fee NUMERIC(10,2),
-  payment_day INTEGER
+  payment_start_date DATE
+);
+
+CREATE TABLE teacher_schedules (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  instructor_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  day_of_week SMALLINT NOT NULL CHECK (day_of_week >= 1 AND day_of_week <= 7),
+  start_time TIME NOT NULL,
+  end_time TIME NOT NULL,
+  is_occupied BOOLEAN NOT NULL DEFAULT FALSE,
+  enrollment_id UUID,
+  student_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  CONSTRAINT teacher_schedules_time_order CHECK (start_time < end_time),
+  CONSTRAINT teacher_schedules_unique_slot UNIQUE (instructor_id, day_of_week, start_time, end_time)
 );
 
 CREATE TABLE referral_sources (

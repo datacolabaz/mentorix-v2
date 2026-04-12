@@ -92,7 +92,7 @@ const getInstructorPaymentBoard = async (req, res) => {
 
     const { rows } = await db.query(
       `SELECT e.id AS enrollment_id, u.id AS student_id, u.full_name, u.phone,
-              sp.monthly_fee, sp.payment_day,
+              sp.monthly_fee, sp.payment_start_date,
               EXISTS (
                 SELECT 1 FROM payments p2
                 WHERE p2.enrollment_id = e.id
@@ -135,7 +135,7 @@ const getInstructorPaymentBoard = async (req, res) => {
         last_name: lastName,
         phone: r.phone,
         monthly_fee: r.monthly_fee,
-        payment_day: r.payment_day,
+        payment_start_date: r.payment_start_date,
         payment_status: paymentStatus,
       };
     });

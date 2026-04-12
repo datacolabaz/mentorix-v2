@@ -23,6 +23,7 @@ app.use('/api/students', require('./routes/students'));
 app.use('/api/attendance', require('./routes/attendance'));
 app.use('/api/exams', require('./routes/exams'));
 app.use('/api/payments', require('./routes/payments'));
+app.use('/api/teacher-schedules', require('./routes/teacherSchedules'));
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/admin', require('./routes/admin'));
 

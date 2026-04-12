@@ -15,6 +15,7 @@ import AdminSettings from './pages/admin/Settings'
 
 import InstructorDashboard from './pages/instructor/Dashboard'
 import InstructorStudents from './pages/instructor/Students'
+import InstructorSchedule from './pages/instructor/Schedule'
 import InstructorExams from './pages/instructor/Exams'
 import InstructorAttendance from './pages/instructor/Attendance'
 import InstructorAnalytics from './pages/instructor/Analytics'
@@ -60,6 +61,7 @@ export default function App() {
       <Route path="/instructor" element={<ProtectedRoute roles={['instructor']}><InstructorLayout /></ProtectedRoute>}>
         <Route index element={<InstructorDashboard />} />
         <Route path="students" element={<InstructorStudents />} />
+        <Route path="schedule" element={<InstructorSchedule />} />
         <Route path="exams" element={<InstructorExams />} />
         <Route path="attendance" element={<InstructorAttendance />} />
         <Route path="analytics" element={<InstructorAnalytics />} />

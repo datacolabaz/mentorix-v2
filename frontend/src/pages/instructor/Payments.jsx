@@ -11,6 +11,14 @@ function formatAzn(n) {
   return `${x.toLocaleString('az-AZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₼`
 }
 
+function formatDdMmYyyy(val) {
+  if (val == null || val === '') return '—'
+  const d = String(val).slice(0, 10)
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return '—'
+  const [y, m, day] = d.split('-')
+  return `${day}.${m}.${y}`
+}
+
 const statusLabel = {
   gözlənilir: 'Gözlənilir',
   ödənilib: 'Ödənilib',
@@ -125,12 +133,13 @@ export default function InstructorPayments() {
 
         {!loading && !err && (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[640px]">
+            <table className="w-full text-sm min-w-[800px]">
               <thead>
                 <tr className="border-b border-indigo-500/25 text-left text-[11px] uppercase tracking-wider text-indigo-300/70 bg-[#0f0c29]/90">
                   <th className="py-3.5 px-4 font-semibold">Ad</th>
                   <th className="py-3.5 px-4 font-semibold">Soyad</th>
                   <th className="py-3.5 px-4 font-semibold">Nömrə</th>
+                  <th className="py-3.5 px-4 font-semibold whitespace-nowrap">Ödəniş başlanğıcı</th>
                   <th className="py-3.5 px-4 font-semibold">Ödəniş statusu</th>
                   <th className="py-3.5 px-4 font-semibold w-[1%] whitespace-nowrap text-right">Əməl</th>
                 </tr>
@@ -147,6 +156,9 @@ export default function InstructorPayments() {
                       <td className="py-3.5 px-4 font-medium text-white">{s.first_name}</td>
                       <td className="py-3.5 px-4">{s.last_name}</td>
                       <td className="py-3.5 px-4 font-mono text-xs text-gray-400 tabular-nums">{s.phone || '—'}</td>
+                      <td className="py-3.5 px-4 font-mono text-xs text-gray-300 tabular-nums whitespace-nowrap">
+                        {formatDdMmYyyy(s.payment_start_date)}
+                      </td>
                       <td className="py-3.5 px-4">
                         <span
                           className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold border ${statusPill[st] || statusPill.təyin_edilməyib}`}
@@ -156,7 +168,6 @@ export default function InstructorPayments() {
                         {s.monthly_fee != null && Number(s.monthly_fee) > 0 && (
                           <span className="block text-[11px] text-gray-500 mt-1 tabular-nums">
                             Aylıq: {formatAzn(s.monthly_fee)}
-                            {s.payment_day != null ? ` · gün ${s.payment_day}` : ''}
                           </span>
                         )}
                       </td>
