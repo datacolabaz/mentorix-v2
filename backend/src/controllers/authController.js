@@ -2,7 +2,7 @@ const bcrypt = require('bcryptjs');
 const db = require('../utils/db');
 const { sign, signOTP } = require('../utils/jwt');
 const { sendOtpSms } = require('../services/smsService');
-
+ 
 const login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -16,24 +16,23 @@ const login = async (req, res) => {
     res.json({ success: true, token, user: { id: user.id, full_name: user.full_name, role: user.role, email: user.email } });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 };
-
+ 
 const sendOtp = async (req, res) => {
   try {
     const { phone } = req.body;
-    if (!phone) return res.status(400).json({ success: false, message: 'Telefon nomresi teleb olunur' });
     const clean = phone.replace(/\D/g, '');
     const { rows } = await db.query(
       "SELECT * FROM users WHERE REPLACE(REPLACE(phone,'+',''),'-','') = $1 AND is_active = TRUE", [clean]);
-    if (!rows[0]) return res.status(404).json({ success: false, message: 'Bu nomre ile istifadeci tapilmadi' });
+    if (!rows[0]) return res.status(404).json({ success: false, message: 'Bu nomre sistemde yoxdur' });
     const code = Math.floor(1000 + Math.random() * 9000).toString();
     const expiresAt = new Date(Date.now() + 5 * 60000);
     await db.query('DELETE FROM otp_codes WHERE phone = $1', [clean]);
     await db.query('INSERT INTO otp_codes (phone, code, expires_at) VALUES ($1, $2, $3)', [clean, code, expiresAt]);
     await sendOtpSms(clean, code);
-    res.json({ success: true, message: 'OTP gonderildi' });
+    res.json({ success: true });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 };
-
+ 
 const verifyOtp = async (req, res) => {
   try {
     const { phone, code } = req.body;
@@ -46,10 +45,10 @@ const verifyOtp = async (req, res) => {
       "SELECT * FROM users WHERE REPLACE(REPLACE(phone,'+',''),'-','') = $1 AND is_active = TRUE", [clean]);
     const user = users[0];
     const token = signOTP({ id: user.id, role: user.role });
-    res.json({ success: true, token, user: { id: user.id, full_name: user.full_name, role: user.role, phone: user.phone, has_pin: !!user.pin_hash } });
+    res.json({ success: true, token, user: { id: user.id, full_name: user.full_name, role: user.role, phone: user.phone } });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 };
-
+ 
 const register = async (req, res) => {
   try {
     const { full_name, email, phone, password, role, subject, billing_type, parent_id } = req.body;
@@ -69,29 +68,28 @@ const register = async (req, res) => {
     });
     res.status(201).json({ success: true, user: result });
   } catch (err) {
-    if (err.code === '23505') return res.status(409).json({ success: false, message: 'Bu email ve ya telefon artiq movcuddur' });
+    if (err.code === '23505') return res.status(409).json({ success: false, message: 'Bu nomre artiq movcuddur' });
     res.status(500).json({ success: false, message: err.message });
   }
 };
-
+ 
 const me = async (req, res) => {
   try {
     const { rows } = await db.query('SELECT id, full_name, email, phone, role FROM users WHERE id = $1', [req.user.id]);
     res.json({ success: true, user: rows[0] });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 };
-
+ 
 const setPin = async (req, res) => {
   try {
     const { pin } = req.body;
-    if (!pin || pin.length !== 6 || isNaN(pin))
-      return res.status(400).json({ success: false, message: '6 reqemli PIN daxil edin' });
+    if (!pin || pin.length !== 6) return res.status(400).json({ success: false, message: '6 reqemli PIN daxil edin' });
     const hash = await bcrypt.hash(pin, 12);
     await db.query('UPDATE users SET pin_hash = $1 WHERE id = $2', [hash, req.user.id]);
     res.json({ success: true });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 };
-
+ 
 const loginWithPin = async (req, res) => {
   try {
     const { phone, pin } = req.body;
@@ -100,12 +98,12 @@ const loginWithPin = async (req, res) => {
       "SELECT * FROM users WHERE REPLACE(REPLACE(phone,'+',''),'-','') = $1 AND is_active = TRUE", [clean]);
     const user = rows[0];
     if (!user) return res.status(404).json({ success: false, message: 'Istifadeci tapilmadi' });
-    if (!user.pin_hash) return res.status(400).json({ success: false, needsOtp: true, message: 'Ilk giris ucun OTP teleb olunur' });
+    if (!user.pin_hash) return res.status(400).json({ success: false, needsOtp: true, message: 'OTP teleb olunur' });
     const valid = await bcrypt.compare(pin, user.pin_hash);
     if (!valid) return res.status(401).json({ success: false, message: 'PIN yanlisdir' });
     const token = signOTP({ id: user.id, role: user.role });
     res.json({ success: true, token, user: { id: user.id, full_name: user.full_name, role: user.role, phone: user.phone } });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 };
-
+ 
 module.exports = { login, sendOtp, verifyOtp, register, me, setPin, loginWithPin };
