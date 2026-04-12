@@ -54,7 +54,7 @@ export default function InstructorSchedule() {
   const [saving, setSaving] = useState(false)
   const toast = useToast()
 
-  const [genDays, setGenDays] = useState([1, 2, 3, 4, 5])
+  const [genDays, setGenDays] = useState([])
   const [genStart, setGenStart] = useState('09:00')
   const [genEnd, setGenEnd] = useState('20:00')
   const [genStep, setGenStep] = useState(60)
@@ -180,13 +180,36 @@ export default function InstructorSchedule() {
   }
 
   const resetFormSelections = () => {
-    setGenDays([1, 2, 3, 4, 5])
+    setGenDays([])
     setGenStart('09:00')
     setGenEnd('20:00')
     setGenStep(60)
     setOneDay(1)
     setOneStart('10:00')
     setOneEnd('11:00')
+    toast('Şablon seçimləri təmizləndi (günlər seçilməyib)', 'info')
+  }
+
+  const clearUnassignedSlots = async () => {
+    const ok = window.confirm(
+      'Bütün boş və əl ilə bloklanmış (tələbəsiz) slotlar silinəcək.\n\n' +
+        'Tələbəyə bağlı dərs saatları toxunulmayacaq.\n\nDavam edilsin?'
+    )
+    if (!ok) return
+    setSaving(true)
+    try {
+      const d = await api.post('/teacher-schedules/clear-unassigned', {})
+      const delc = d.deletedCount ?? 0
+      const kept = d.keptWithStudent ?? 0
+      let msg = `${delc} slot silindi`
+      if (kept > 0) msg += ` · ${kept} tələbə slotu saxlanıldı`
+      toast(msg, 'success')
+      await load()
+    } catch (e) {
+      toast(e?.message || 'Xəta', 'error')
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -212,6 +235,16 @@ export default function InstructorSchedule() {
           <Button type="button" variant="ghost" size="sm" onClick={resetFormSelections}>
             Form sıfırla
           </Button>
+          <Button
+            type="button"
+            variant="danger"
+            size="sm"
+            onClick={() => void clearUnassignedSlots()}
+            disabled={loading || saving}
+            title="Yalnız tələbəyə bağlı olmayan slotlar silinir"
+          >
+            Tələbəsiz slotları sil
+          </Button>
         </div>
       </div>
 
@@ -230,11 +263,17 @@ export default function InstructorSchedule() {
           <li>
             <strong className="text-gray-300">«Cədvəli yenilə»</strong> — aşağıdakı şəbəkəni serverdən təzə
             oxuyur; yuxarıdakı form seçimlərinizi sıfırlamır. Seçimləri ilkin halına qaytarmaq üçün{' '}
-            <strong className="text-gray-300">«Form sıfırla»</strong> istifadə edin.
+            <strong className="text-gray-300">«Form sıfırla»</strong> — şablondakı bütün günlərin seçimini
+            təmizləyir və tək slot formunu ilkin dəyərlərə qaytarır (cədvəldəki yadda saxlanmış slotlara toxunmur).
           </li>
           <li>
             Yaranmış slotu ləğv etmək üçün cədvəldə boş slotda <strong className="text-gray-300">Sil</strong> (və ya
             blokdan <strong className="text-gray-300">Boşalt</strong>) istifadə edin.
+          </li>
+          <li>
+            <strong className="text-gray-300">«Tələbəsiz slotları sil»</strong> — bütün boş və blok (tələbəsiz)
+            slotları bir dəfəyə silir; <strong className="text-gray-300">tələbəyə yazılmış</strong> saatlar
+            saxlanılır.
           </li>
         </ul>
       </div>

@@ -354,6 +354,11 @@ export default function InstructorStudents() {
     }
   }
 
+  const closeAddModal = () => {
+    setAddModal(false)
+    setForm(emptyForm)
+  }
+
   const deleteStudent = async (enrollmentId, name) => {
     if (!window.confirm(name + ' silinsin?')) return
     try {
@@ -442,13 +447,13 @@ export default function InstructorStudents() {
         )}
       </div>
 
-      <Modal open={addModal} onClose={() => setAddModal(false)} title="Yeni Telebe Elave Et">
+      <Modal open={addModal} onClose={closeAddModal} title="Yeni Telebe Elave Et">
         <StudentFormFields data={form} setData={setForm} scheduleMeta={enrollMeta} mode="add" />
         <div className="flex gap-3 mt-4">
           <Button onClick={addStudent} loading={loading} className="flex-1 justify-center">
             Elave Et
           </Button>
-          <Button variant="secondary" onClick={() => setAddModal(false)} className="flex-1 justify-center">
+          <Button variant="secondary" onClick={closeAddModal} className="flex-1 justify-center">
             Legv et
           </Button>
         </div>

@@ -251,6 +251,40 @@ const unblockSlot = async (req, res) => {
   }
 };
 
+/** Boş və blok (tələbəsiz) slotları sil; tələbəyə bağlı slotlar saxlanılır */
+const clearUnassignedSlots = async (req, res) => {
+  try {
+    const instructor_id = req.user.role === 'admin' ? req.body.instructor_id : req.user.id;
+    if (!instructor_id) {
+      return res.status(400).json({ success: false, message: 'instructor_id tələb olunur' });
+    }
+    const ni = normInst(instructor_id);
+
+    const { rows: kept } = await db.query(
+      `SELECT COUNT(*)::int AS n FROM teacher_schedules
+       WHERE REPLACE(LOWER(TRIM(instructor_id::text)), '-', '') = $1
+         AND enrollment_id IS NOT NULL`,
+      [ni]
+    );
+
+    const { rows } = await db.query(
+      `DELETE FROM teacher_schedules
+       WHERE REPLACE(LOWER(TRIM(instructor_id::text)), '-', '') = $1
+         AND enrollment_id IS NULL
+       RETURNING id`,
+      [ni]
+    );
+
+    res.json({
+      success: true,
+      deletedCount: rows.length,
+      keptWithStudent: kept[0]?.n || 0,
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 module.exports = {
   listMine,
   forEnrollment,
@@ -259,4 +293,5 @@ module.exports = {
   deleteSlot,
   blockSlot,
   unblockSlot,
+  clearUnassignedSlots,
 };
