@@ -4,9 +4,10 @@ import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
 import ExamForm from '../../components/instructor/ExamForm'
+import ListSkeleton from '../../components/common/ListSkeleton'
 import { useToast } from '../../components/common/Toast'
 import { localDatetimeInputToUtcIso, utcInstantToDatetimeLocalValue } from '../../lib/examDatetime'
- 
+
 export default function InstructorExams() {
   const [exams, setExams] = useState([])
   const [students, setStudents] = useState([])
@@ -14,13 +15,21 @@ export default function InstructorExams() {
   const [editModal, setEditModal] = useState(false)
   const [editExam, setEditExam] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [examsLoading, setExamsLoading] = useState(true)
   const toast = useToast()
- 
-  const load = () => api.get('/exams').then(d => setExams(d.exams || []))
- 
+
+  const loadExams = async () => {
+    try {
+      const d = await api.get('/exams')
+      setExams(d.exams || [])
+    } finally {
+      setExamsLoading(false)
+    }
+  }
+
   useEffect(() => {
-    load()
-    api.get('/students').then(d => setStudents(d.students || []))
+    loadExams()
+    api.get('/students').then((d) => setStudents(d.students || []))
   }, [])
  
   const statusBadge = (e) => {
@@ -33,9 +42,7 @@ export default function InstructorExams() {
   }
  
   const openEdit = (exam) => {
-    const dt = new Date(exam.start_time)
-    const local = new Date(dt.getTime() - dt.getTimezoneOffset() * 60000).toISOString().slice(0, 16)
-    setEditExam({ ...exam, start_time: local })
+    setEditExam({ ...exam, start_time: utcInstantToDatetimeLocalValue(exam.start_time) })
     setEditModal(true)
   }
  
@@ -53,7 +60,7 @@ export default function InstructorExams() {
       })
       toast('Imtahan yenilendi!')
       setEditModal(false)
-      load()
+      loadExams()
     } catch (err) {
       toast(err.message || 'Xeta', 'error')
     } finally { setLoading(false) }
@@ -69,7 +76,9 @@ export default function InstructorExams() {
       </div>
  
       <div className="space-y-4">
-        {exams.map(exam => {
+        {examsLoading && <ListSkeleton rows={4} className="h-28" />}
+        {!examsLoading &&
+          exams.map((exam) => {
           const { label, cls } = statusBadge(exam)
           return (
             <Card key={exam.id} className="p-5">
@@ -92,11 +101,13 @@ export default function InstructorExams() {
             </Card>
           )
         })}
-        {!exams.length && <div className="text-center py-16 text-gray-500">Hele imtahan yoxdur</div>}
+        {!examsLoading && !exams.length && (
+          <div className="text-center py-16 text-gray-500">Hele imtahan yoxdur</div>
+        )}
       </div>
  
       <Modal open={addModal} onClose={() => setAddModal(false)} title="Yeni Imtahan Yarat" size="lg">
-        <ExamForm students={students} onCreated={() => { setAddModal(false); load() }} />
+        <ExamForm students={students} onCreated={() => { setAddModal(false); loadExams() }} />
       </Modal>
  
       {editExam && (

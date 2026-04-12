@@ -3,6 +3,7 @@ import api from '../../lib/api'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
+import ListSkeleton from '../../components/common/ListSkeleton'
 import { useToast } from '../../components/common/Toast'
 
 const BILLING_OPTS = [
@@ -111,9 +112,17 @@ export default function InstructorStudents() {
   const [editForm, setEditForm] = useState(emptyForm)
   const [editId, setEditId] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [listLoading, setListLoading] = useState(true)
   const toast = useToast()
 
-  const load = () => api.get('/students').then((d) => setStudents(d.students || []))
+  const load = async () => {
+    try {
+      const d = await api.get('/students')
+      setStudents(d.students || [])
+    } finally {
+      setListLoading(false)
+    }
+  }
   useEffect(() => {
     load()
   }, [])
@@ -212,7 +221,9 @@ export default function InstructorStudents() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="font-display font-bold text-2xl">Telebeleim</h1>
-          <p className="text-gray-500 text-sm mt-1">{students.length} telebe</p>
+          <p className="text-gray-500 text-sm mt-1">
+            {listLoading ? '…' : `${students.length} telebe`}
+          </p>
         </div>
         <Button
           onClick={() => {
@@ -225,7 +236,9 @@ export default function InstructorStudents() {
       </div>
 
       <div className="space-y-3">
-        {students.map((s) => (
+        {listLoading && <ListSkeleton rows={5} />}
+        {!listLoading &&
+          students.map((s) => (
           <Card key={s.enrollment_id} className="p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -262,7 +275,7 @@ export default function InstructorStudents() {
             </div>
           </Card>
         ))}
-        {!students.length && (
+        {!listLoading && !students.length && (
           <div className="text-center py-16 text-gray-500">
             <p className="text-lg mb-2">Telebe yoxdur</p>
             <p className="text-sm">Yuxaridan telebe elave edin</p>
