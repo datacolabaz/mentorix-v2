@@ -172,17 +172,33 @@ const studentExams = async (req, res) => {
     if (!sidHex) {
       return res.status(400).json({ success: false, message: 'İstifadəçi identifikatoru yoxdur' });
     }
+    /** Təyinat + nəticə: yalnız exam_assignments istifadə etsək, nəticəsi olan amma təyinatı
+     *  silinmiş/köhnə DB-də olmayan tələbələr üçün siyahı boş qalır; müəllim statistikası isə
+     *  exam_results-dan görünür. */
     const { rows } = await db.query(
-      `SELECT e.*, er.score, er.submitted_at,
-        eq_count.question_count
-       FROM exam_assignments ea
-       JOIN exams e ON e.id = ea.exam_id
-       LEFT JOIN exam_results er ON er.exam_id = e.id
-         AND REPLACE(LOWER(TRIM(er.student_id::text)), '-', '') = $1
+      `WITH my_exam_ids AS (
+         SELECT DISTINCT ea.exam_id AS exam_id
+         FROM exam_assignments ea
+         WHERE REPLACE(LOWER(TRIM(ea.student_id::text)), '-', '') = $1
+         UNION
+         SELECT DISTINCT er.exam_id AS exam_id
+         FROM exam_results er
+         WHERE REPLACE(LOWER(TRIM(er.student_id::text)), '-', '') = $1
+       )
+       SELECT e.*, er.score, er.submitted_at,
+         eq_count.question_count
+       FROM my_exam_ids mei
+       JOIN exams e ON e.id = mei.exam_id
+       LEFT JOIN LATERAL (
+         SELECT score, submitted_at FROM exam_results er0
+         WHERE er0.exam_id = e.id
+           AND REPLACE(LOWER(TRIM(er0.student_id::text)), '-', '') = $1
+         ORDER BY er0.submitted_at DESC NULLS LAST
+         LIMIT 1
+       ) er ON TRUE
        LEFT JOIN (
          SELECT exam_id, COUNT(*) AS question_count FROM exam_questions GROUP BY exam_id
        ) eq_count ON eq_count.exam_id = e.id
-       WHERE REPLACE(LOWER(TRIM(ea.student_id::text)), '-', '') = $1
        ORDER BY e.start_time DESC NULLS LAST`,
       [sidHex]
     );
@@ -204,16 +220,6 @@ const getStudentExamReview = async (req, res) => {
       return res.status(400).json({ success: false, message: 'İstifadəçi identifikatoru yoxdur' });
     }
 
-    const { rows: assignRows } = await db.query(
-      `SELECT 1 FROM exam_assignments
-       WHERE exam_id = $1
-         AND REPLACE(LOWER(TRIM(student_id::text)), '-', '') = $2`,
-      [examId, sidHex]
-    );
-    if (!assignRows.length) {
-      return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
-    }
-
     const { rows: resultRows } = await db.query(
       `SELECT score, answers, submitted_at FROM exam_results
        WHERE exam_id = $1
@@ -221,7 +227,18 @@ const getStudentExamReview = async (req, res) => {
       [examId, sidHex]
     );
     const result = resultRows[0];
-    if (!result || !result.submitted_at) {
+    if (result?.submitted_at) {
+      /* təqdim olunub — review (təyinatsız köhnə nəticələr də daxil) */
+    } else {
+      const { rows: assignRows } = await db.query(
+        `SELECT 1 FROM exam_assignments
+         WHERE exam_id = $1
+           AND REPLACE(LOWER(TRIM(student_id::text)), '-', '') = $2`,
+        [examId, sidHex]
+      );
+      if (!assignRows.length) {
+        return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
+      }
       return res.status(404).json({ success: false, message: 'Hələ təqdim olunmayıb' });
     }
 
