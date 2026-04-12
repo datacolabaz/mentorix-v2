@@ -18,12 +18,9 @@ const useAuthStore = create((set) => ({
   sendOtp: async (phone, role) => api.post('/auth/otp/send', { phone, role }),
 
   verifyOtp: async (phone, code, role, opts = {}) => {
-    const data = await api.post('/auth/otp/verify', {
-      phone,
-      code,
-      role,
-      save_otp_as_pin: opts.saveOtpAsPin === true,
-    })
+    const body = { phone, code, role }
+    if (opts.saveOtpAsPin === false) body.save_otp_as_pin = false
+    const data = await api.post('/auth/otp/verify', body)
     localStorage.setItem('mx_token', data.token)
     localStorage.setItem('mx_user', JSON.stringify(data.user))
     set({ user: data.user, token: data.token })
