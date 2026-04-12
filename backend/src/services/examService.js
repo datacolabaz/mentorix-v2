@@ -73,7 +73,8 @@ const notifyStudents = async (exam) => {
   const { sendSms } = require('./smsService');
   const { rows: assignments } = await db.query(
     `SELECT ea.student_id, u.phone, u.full_name,
-            sp.parent_id, pu.phone AS parent_phone
+            sp.parent_id,
+            COALESCE(NULLIF(TRIM(sp.parent_phone), ''), pu.phone) AS parent_phone
      FROM exam_assignments ea
      JOIN users u ON u.id = ea.student_id
      LEFT JOIN student_profiles sp ON sp.user_id = ea.student_id

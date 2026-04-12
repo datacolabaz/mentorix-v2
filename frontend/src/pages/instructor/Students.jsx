@@ -38,17 +38,21 @@ export default function InstructorStudents() {
     if (!form.full_name || !form.phone) { toast('Ad ve telefon teleb olunur', 'error'); return }
     setLoading(true)
     try {
-      const { data: user } = await api.post('/auth/register', {
+      const reg = await api.post('/auth/register', {
         full_name: form.full_name,
         email: form.email || null,
         phone: form.phone,
         role: 'student',
         password: Math.random().toString(36).slice(-8),
       })
+      const newUserId = reg.user?.id
+      if (!newUserId) throw new Error('Qeydiyyat cavabı gözlənilən deyil')
       await api.post('/students/enroll', {
-        student_id: user.id,
+        student_id: newUserId,
         billing_type: form.billing_type,
         referral_notes: form.referral_notes,
+        parent_name: form.parent_name,
+        parent_phone: form.parent_phone,
       })
       toast('Telebe elave edildi!')
       setAddModal(false)
@@ -73,9 +77,17 @@ export default function InstructorStudents() {
   }
  
   const saveEdit = async () => {
+    if (!editId) {
+      toast('Qeydiyyat tapılmadı — səhifəni yeniləyin', 'error')
+      return
+    }
+    if (!editForm.full_name?.trim() || !editForm.phone?.trim()) {
+      toast('Ad və telefon mütləqdir', 'error')
+      return
+    }
     setLoading(true)
     try {
-      await api.patch('/students/enrollment/' + editId, {
+      await api.patch('/students/enrollment/' + encodeURIComponent(editId), {
         full_name: editForm.full_name,
         email: editForm.email,
         phone: editForm.phone,

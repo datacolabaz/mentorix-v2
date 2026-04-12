@@ -8,7 +8,8 @@ const markAttendance = async (req, res) => {
     const { rows: [enrollment] } = await db.query(
       `SELECT e.*, ip.alert_lessons_before, ip.billing_type AS instr_billing,
               u.full_name AS student_name, u.phone AS student_phone,
-              sp.parent_id, pu.phone AS parent_phone
+              sp.parent_id,
+              COALESCE(NULLIF(TRIM(sp.parent_phone), ''), pu.phone) AS parent_phone
        FROM enrollments e
        JOIN instructor_profiles ip ON ip.user_id = e.instructor_id
        JOIN users u ON u.id = e.student_id

@@ -29,6 +29,8 @@ CREATE TABLE student_profiles (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID REFERENCES users(id) ON DELETE CASCADE,
   parent_id UUID REFERENCES users(id),
+  parent_name VARCHAR(255),
+  parent_phone VARCHAR(50),
   grade VARCHAR(50),
   date_of_birth DATE,
   notes TEXT

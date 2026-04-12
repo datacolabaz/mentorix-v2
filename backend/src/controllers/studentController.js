@@ -6,7 +6,8 @@ const listStudents = async (req, res) => {
     const { rows } = await db.query(
       `SELECT u.id, u.full_name, u.email, u.phone,
               sp.parent_id, sp.grade,
-              pu.full_name AS parent_name, pu.phone AS parent_phone,
+              COALESCE(NULLIF(TRIM(sp.parent_name), ''), pu.full_name) AS parent_name,
+              COALESCE(NULLIF(TRIM(sp.parent_phone), ''), pu.phone) AS parent_phone,
               e.id AS enrollment_id, e.billing_type, e.lesson_count,
               e.status AS enrollment_status, e.referral_notes,
               e.instructor_id, iu.full_name AS instructor_name,
@@ -21,7 +22,8 @@ const listStudents = async (req, res) => {
        LEFT JOIN attendance a ON a.enrollment_id = e.id AND a.attended = TRUE
        WHERE u.role = 'student' AND u.is_active = TRUE
          AND ($1 OR e.instructor_id = $2)
-       GROUP BY u.id, sp.parent_id, sp.grade, pu.full_name, pu.phone,
+       GROUP BY u.id, u.full_name, u.email, u.phone, sp.parent_id, sp.grade,
+                sp.parent_name, sp.parent_phone, pu.full_name, pu.phone,
                 e.id, e.billing_type, e.lesson_count, e.status,
                 e.referral_notes, e.instructor_id, iu.full_name, rs.name
        ORDER BY u.full_name`,
