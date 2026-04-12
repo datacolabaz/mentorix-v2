@@ -2,6 +2,7 @@ const db = require('../utils/db');
 const { normalizeExamStartTime } = require('../utils/examTime');
 const {
   calculateScore,
+  buildExamResultBreakdown,
   rankResults,
   syncExamReminderJob,
   notifyParentExamResultAfterSubmit,
@@ -66,18 +67,29 @@ const createExam = async (req, res) => {
                 ? -0.25
                 : 0;
           const qText = (q.question_text && String(q.question_text).trim()) || `Sual ${i + 1}`;
+          const correctAns =
+            q.question_type === 'matching'
+              ? String(q.correct_answer || q.template_hint || '').trim() || null
+              : q.correct_answer != null && q.correct_answer !== ''
+                ? q.correct_answer
+                : null;
+          const templateHint =
+            q.template_hint != null && String(q.template_hint).trim() !== ''
+              ? String(q.template_hint).trim()
+              : null;
           await client.query(
-            `INSERT INTO exam_questions (exam_id, question_text, question_type, options, correct_answer, points, order_num, negative_marking)
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+            `INSERT INTO exam_questions (exam_id, question_text, question_type, options, correct_answer, points, order_num, negative_marking, template_hint)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
             [
               exam.id,
               qText,
               q.question_type,
               JSON.stringify(q.options || null),
-              q.correct_answer,
+              correctAns,
               q.points,
               i + 1,
               neg,
+              templateHint,
             ]
           );
         }
@@ -197,6 +209,7 @@ const submitExam = async (req, res) => {
     );
 
     const score = calculateScore(questions, answers);
+    const breakdown = buildExamResultBreakdown(questions, answers);
     const now = new Date();
     const duration = Math.floor((now - new Date(started_at)) / 1000);
 
@@ -212,7 +225,7 @@ const submitExam = async (req, res) => {
       );
     });
 
-    res.json({ success: true, score });
+    res.json({ success: true, score, breakdown });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

@@ -10,36 +10,105 @@ function closedWrongPenalty(q) {
   return v;
 }
 
+/** Çoxseçimli: yalnız rəqəmlər, ardıcıllıqdan asılı olmayaraq (23 = 32) */
+function normDigits(str) {
+  return String(str ?? '')
+    .replace(/\D/g, '')
+    .split('')
+    .filter(Boolean)
+    .sort()
+    .join('');
+}
+
+function normMatchStr(str) {
+  return String(str ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '');
+}
+
 /**
- * Avtomatik bal: yalnız QAPALI suallar.
- * — Düzgün → +həmin sualın points-i
- * — Səhv (cavab verilib) → negative_marking (adətən -0.25; 0 = cərimə yox)
- * — Boş → 0 (nə bal, nə cərimə)
- * Faiz = earned / (yalnız qapalı sualların points cəmi) × 100.
- * Açıq / çoxseçimli / uyğunluq: avtomatik hesabda nə cərimə, nə müsbət bal (müəllim/manual üçün).
+ * Avtomatik bal: qapalı (mənfi bal ola bilər), çoxseçimli, uyğunluq.
+ * Açıq: avtomatik bala daxil deyil.
+ * Faiz = earned / (bu tiplərin points cəmi) × 100.
  */
 const calculateScore = (questions, answers) => {
   let earned = 0;
-  const closedQs = questions.filter((q) => q.question_type === 'closed');
-  const totalPoints = closedQs.reduce((s, q) => s + Number(q.points || 0), 0);
+  const scored = questions.filter((q) =>
+    ['closed', 'multiple', 'matching'].includes(q.question_type)
+  );
+  const totalPoints = scored.reduce((s, q) => s + Number(q.points || 0), 0);
   if (totalPoints <= 0) return 0;
 
-  for (const q of closedQs) {
-    const ans = answers[q.id];
-    const correct = String(q.correct_answer ?? '').trim();
-    const given = ans != null && ans !== '' ? String(ans).trim() : '';
-    const pen = closedWrongPenalty(q);
-    if (given) {
-      if (given === correct) {
+  for (const q of scored) {
+    const given =
+      answers[q.id] != null && answers[q.id] !== '' ? String(answers[q.id]).trim() : '';
+    if (!given) continue;
+
+    if (q.question_type === 'closed') {
+      const correct = String(q.correct_answer ?? '').trim();
+      const pen = closedWrongPenalty(q);
+      if (given === correct) earned += Number(q.points || 0);
+      else earned += pen;
+    } else if (q.question_type === 'multiple') {
+      if (normDigits(given) === normDigits(q.correct_answer)) earned += Number(q.points || 0);
+    } else if (q.question_type === 'matching') {
+      if (normMatchStr(given) === normMatchStr(q.correct_answer))
         earned += Number(q.points || 0);
-      } else {
-        earned += pen;
-      }
     }
   }
 
   earned = Math.max(0, earned);
   return Math.round((earned / totalPoints) * 100);
+};
+
+/**
+ * Tələbə UI: təqdimetmədən sonra hər sual üçün şablon vs yazılan cavab.
+ */
+const buildExamResultBreakdown = (questions, answers) => {
+  const order = [...questions].sort((a, b) => (a.order_num || 0) - (b.order_num || 0));
+  return order.map((q, idx) => {
+    const raw = answers[q.id];
+    const given = raw == null || raw === '' ? '' : String(raw).trim();
+    const type = q.question_type;
+    let correctDisplay = '';
+    let isCorrect = null;
+
+    if (type === 'closed') {
+      correctDisplay = String(q.correct_answer ?? '').trim() || '—';
+      if (!given) isCorrect = null;
+      else isCorrect = given === String(q.correct_answer ?? '').trim();
+    } else if (type === 'multiple') {
+      correctDisplay = String(q.correct_answer ?? '').trim() || '—';
+      if (!given) isCorrect = null;
+      else isCorrect = normDigits(given) === normDigits(q.correct_answer);
+    } else if (type === 'matching') {
+      correctDisplay = String(q.correct_answer ?? '').trim() || '—';
+      if (!given) isCorrect = null;
+      else isCorrect = normMatchStr(given) === normMatchStr(q.correct_answer);
+    } else if (type === 'open') {
+      const hint = String(q.template_hint || '').trim();
+      correctDisplay = hint ? `Nümunə / gözlənti: ${hint}` : 'Müəllim qiymətləndirir';
+      isCorrect = null;
+    }
+
+    let statusLabel = 'Manual qiymətləndirmə';
+    if (type === 'open') statusLabel = 'Manual qiymətləndirmə';
+    else if (!given) statusLabel = 'Cavabsız';
+    else if (isCorrect === true) statusLabel = 'Düzgün';
+    else if (isCorrect === false) statusLabel = 'Səhv';
+
+    return {
+      order: idx + 1,
+      question_id: q.id,
+      question_type: type,
+      question_text: q.question_text || `Sual ${idx + 1}`,
+      student_answer: given || '—',
+      correct_display: correctDisplay,
+      is_correct: isCorrect,
+      status_label: statusLabel,
+    };
+  });
 };
 
 // Neticeleri sirala
@@ -206,6 +275,7 @@ const notifyParentExamResultAfterSubmit = async (examId, studentId, score) => {
 
 module.exports = {
   calculateScore,
+  buildExamResultBreakdown,
   rankResults,
   isExamActive,
   processExamNotificationJobs,

@@ -39,7 +39,6 @@ export default function ExamForm({ students, onCreated }) {
     points: 10,
     order_num: prev.length + 1,
     correct_answer: '',
-    correct_answers: [],
     options: type === 'closed' ? ['', '', '', '', ''] :
               type === 'multiple' ? ['', '', '', ''] :
               type === 'matching' ? [{ left: '', right: '' }, { left: '', right: '' }] : [],
@@ -62,6 +61,21 @@ export default function ExamForm({ students, onCreated }) {
       const opts = [...q.options]; opts[optIdx] = { ...opts[optIdx], [side]: value }
       return { ...q, options: opts }
     }))
+
+  /** Çoxseçimli: tək rəqəm (1–9) düzgün cavaba əlavə/sil, bitişik saxlanır */
+  const toggleMultipleDigit = (qIdx, digit) => {
+    if (!/^[1-9]$/.test(digit)) return
+    setQuestions((prev) =>
+      prev.map((q, i) => {
+        if (i !== qIdx || q.question_type !== 'multiple') return q
+        const set = new Set(String(q.correct_answer || '').replace(/\D/g, '').split(''))
+        if (set.has(digit)) set.delete(digit)
+        else set.add(digit)
+        const next = [...set].sort().join('')
+        return { ...q, correct_answer: next }
+      })
+    )
+  }
  
   const removeMaterial = (id) => {
     setMaterialFiles((prev) => prev.filter((x) => x.id !== id))
@@ -116,14 +130,26 @@ export default function ExamForm({ students, onCreated }) {
           points: q.points,
           order_num: q.order_num,
           negative_marking: q.question_type === 'closed' ? -0.25 : 0,
-          options: q.question_type === 'closed' || q.question_type === 'multiple'
+          options: q.question_type === 'closed'
             ? q.options.map((o, j) => ({
                 key: String.fromCharCode(65 + j),
                 text: typeof o === 'string' ? o : (o?.text ?? ''),
               }))
-            : q.options,
-          correct_answer: q.correct_answer,
-          correct_answers: q.correct_answers,
+            : q.question_type === 'multiple'
+              ? q.options.map((o, j) => ({
+                  key: String(j + 1),
+                  text: typeof o === 'string' ? o : (o?.text ?? ''),
+                }))
+              : q.options,
+          correct_answer:
+            q.question_type === 'multiple'
+              ? String(q.correct_answer || '')
+                  .replace(/\D/g, '')
+                  .split('')
+                  .filter((c, idx, arr) => arr.indexOf(c) === idx)
+                  .sort()
+                  .join('')
+              : q.correct_answer,
           template_hint: q.template_hint,
         })),
       })
@@ -307,31 +333,76 @@ export default function ExamForm({ students, onCreated }) {
                   </div>
                 )}
  
-                {/* COXSECIMLI */}
+                {/* COXSECIMLI — ifadələr 1,2,3…; düzgün cavab bitişik rəqəmlər (məs. 23) */}
                 {q.question_type === 'multiple' && (
-                  <div className="space-y-2">
+                  <div className="space-y-3">
+                    <p className="text-xs text-gray-500">
+                      Hər sətirdə ifadə yazın. Düzgün olanların nömrəsinə toxunun və ya aşağıda bitişik rəqəm yazın (işarə yoxdur).
+                    </p>
                     {q.options.map((opt, oi) => {
-                      const key = String.fromCharCode(65 + oi)
+                      const num = String(oi + 1)
+                      const picked = new Set(String(q.correct_answer || '').replace(/\D/g, '').split('')).has(num)
+                      const canToggle = oi < 9
                       return (
                         <div key={oi} className="flex items-center gap-2">
-                          <input type="checkbox" className="accent-emerald-500"
-                            checked={q.correct_answers?.includes(key)}
-                            onChange={e => upd(idx, 'correct_answers', e.target.checked
-                              ? [...(q.correct_answers || []), key]
-                              : (q.correct_answers || []).filter(k => k !== key))} />
-                          <span className="w-5 text-xs text-gray-400">{key}</span>
-                          <input className="flex-1 bg-[#1a1740] border border-indigo-500/20 rounded-lg px-3 py-1.5 text-white text-xs outline-none focus:border-blue-500"
-                            placeholder={key + ' varianti'} value={opt}
-                            onChange={e => updOpt(idx, oi, e.target.value)} />
+                          {canToggle ? (
+                            <button
+                              type="button"
+                              onClick={() => toggleMultipleDigit(idx, num)}
+                              className={
+                                'w-8 h-8 rounded-lg text-xs font-bold shrink-0 border transition-colors ' +
+                                (picked
+                                  ? 'bg-emerald-500/30 border-emerald-500 text-emerald-200'
+                                  : 'bg-[#1a1740] border-indigo-500/30 text-gray-400 hover:border-indigo-500/50')
+                              }
+                            >
+                              {num}
+                            </button>
+                          ) : (
+                            <span className="w-8 text-center text-xs text-gray-500 shrink-0">{num}</span>
+                          )}
+                          <input
+                            className="flex-1 bg-[#1a1740] border border-indigo-500/20 rounded-lg px-3 py-1.5 text-white text-xs outline-none focus:border-blue-500"
+                            placeholder={`${num} — ifadə mətni`}
+                            value={typeof opt === 'string' ? opt : (opt?.text ?? '')}
+                            onChange={(e) => updOpt(idx, oi, e.target.value)}
+                          />
                         </div>
                       )
                     })}
-                    <button onClick={() => upd(idx, 'options', [...q.options, ''])}
-                      className="text-xs text-indigo-400">+ Variant elave et</button>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Telebe sablon: <span className="font-mono text-indigo-300">{q.template_hint}</span>
-                      <span className="ml-1">(dogru secimler bitisik yazilir)</span>
-                    </p>
+                    <button
+                      type="button"
+                      onClick={() => upd(idx, 'options', [...q.options, ''])}
+                      className="text-xs text-indigo-400"
+                    >
+                      + İfadə əlavə et
+                    </button>
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">Düzgün cavab (bitişik rəqəmlər)</label>
+                      <input
+                        className="w-full bg-[#1a1740] border border-indigo-500/20 rounded-lg px-3 py-1.5 text-white text-xs font-mono outline-none focus:border-blue-500"
+                        placeholder="23"
+                        value={q.correct_answer || ''}
+                        onChange={(e) => {
+                          const next = e.target.value
+                            .replace(/\D/g, '')
+                            .split('')
+                            .filter((c, i, a) => a.indexOf(c) === i)
+                            .sort()
+                            .join('')
+                          upd(idx, 'correct_answer', next)
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">Tələbəyə nümunə (placeholder)</label>
+                      <input
+                        className="w-full bg-[#1a1740] border border-indigo-500/20 rounded-lg px-3 py-1.5 text-white text-xs font-mono outline-none focus:border-blue-500"
+                        placeholder="23"
+                        value={q.template_hint || ''}
+                        onChange={(e) => upd(idx, 'template_hint', e.target.value)}
+                      />
+                    </div>
                   </div>
                 )}
  

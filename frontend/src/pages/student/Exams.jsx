@@ -61,6 +61,16 @@ function isMaterialImage(pathOrName) {
   return /\.(jpe?g|png|gif|webp)$/i.test(s)
 }
 
+function questionTypeLabelAz(t) {
+  const m = {
+    closed: 'Qapalı',
+    multiple: 'Çoxseçimli (şablon)',
+    matching: 'Uyğunluq',
+    open: 'Açıq',
+  }
+  return m[t] || t
+}
+
 export default function StudentExams() {
   const [exams, setExams] = useState([])
   const [activeExam, setActiveExam] = useState(null)
@@ -68,6 +78,7 @@ export default function StudentExams() {
   const [answers, setAnswers] = useState({})
   const [startedAt, setStartedAt] = useState(null)
   const [result, setResult] = useState(null)
+  const [resultBreakdown, setResultBreakdown] = useState(null)
   const [materialsOpen, setMaterialsOpen] = useState(true)
   const [, bumpListUi] = useState(0)
   const activeExamRef = useRef(false)
@@ -110,6 +121,7 @@ export default function StudentExams() {
       setAnswers({})
       setStartedAt(new Date().toISOString())
       setResult(null)
+      setResultBreakdown(null)
       setMaterialsOpen(true)
     } catch (err) {
       toast(err.message || 'Xəta', 'error')
@@ -124,6 +136,7 @@ export default function StudentExams() {
         started_at: startedAt,
       })
       setResult(data.score)
+      setResultBreakdown(Array.isArray(data.breakdown) ? data.breakdown : null)
       setActiveExam(null)
       toast(`✓ İmtahan tamamlandı! Bal: ${data.score}%`)
       api.get('/exams/my').then(d => setExams(d.exams || []))
@@ -259,6 +272,35 @@ export default function StudentExams() {
                     )
                   })}
                 </div>
+              ) : q.question_type === 'multiple' ? (
+                <div className="ml-10 space-y-3">
+                  <ol className="list-decimal list-inside space-y-2 text-sm text-gray-200">
+                    {q.options?.map((opt, oi) => (
+                      <li key={oi} className="pl-1 marker:text-indigo-400">
+                        {optionDisplayLabel(opt)}
+                      </li>
+                    ))}
+                  </ol>
+                  <p className="text-xs text-gray-500">
+                    Düzgün cavabları aralarında boşluq və işarə olmadan yalnız bitişik rəqəmlərlə yazın
+                    {q.template_hint ? (
+                      <span className="block mt-1">
+                        Nümunə: <span className="font-mono text-indigo-300">{q.template_hint}</span>
+                      </span>
+                    ) : null}
+                  </p>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="off"
+                    className="w-full max-w-xs bg-[#13112e] border border-indigo-500/20 rounded-xl px-3 py-2.5 text-white text-sm font-mono outline-none focus:border-blue-500"
+                    placeholder={q.template_hint ? `məs. ${q.template_hint}` : 'məs. 23'}
+                    value={answers[q.id] || ''}
+                    onChange={(e) =>
+                      setAnswers((p) => ({ ...p, [q.id]: e.target.value.replace(/\D/g, '') }))
+                    }
+                  />
+                </div>
               ) : (
                 <textarea className="w-full ml-10 bg-[#13112e] border border-indigo-500/20 rounded-xl p-3 text-white text-sm resize-none outline-none focus:border-blue-500 transition-colors"
                   rows={4} placeholder="Cavabınızı yazın..."
@@ -289,6 +331,59 @@ export default function StudentExams() {
           <div className="text-5xl mb-3">{result >= 75 ? '🏆' : result >= 60 ? '🥈' : '📚'}</div>
           <div className="font-display font-extrabold text-4xl bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">{result}%</div>
           <div className="text-gray-400 mt-2">Son imtahan nəticəniz</div>
+        </Card>
+      )}
+
+      {resultBreakdown?.length > 0 && (
+        <Card className="p-6 mb-6 border-indigo-500/30">
+          <h2 className="font-display font-bold text-lg text-white mb-1">Suallar üzrə nəticə</h2>
+          <p className="text-xs text-gray-500 mb-4">Şablon (düzgün) və yazdığınız cavab müqayisəsi</p>
+          <div className="space-y-3 max-h-[min(70vh,520px)] overflow-y-auto pr-1">
+            {resultBreakdown.map((row) => (
+              <div
+                key={row.question_id || row.order}
+                className="rounded-xl border border-indigo-500/20 bg-[#13112e]/80 p-4 text-left"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
+                  <span className="text-sm font-bold text-indigo-300">Sual {row.order}</span>
+                  <span className="text-[11px] uppercase tracking-wide text-gray-500">
+                    {questionTypeLabelAz(row.question_type)}
+                  </span>
+                </div>
+                <p className="text-sm text-gray-300 mb-3 leading-snug">{row.question_text}</p>
+                <div className="grid gap-2 text-sm sm:grid-cols-2">
+                  <div>
+                    <span className="text-xs text-gray-500 block mb-0.5">Sizin cavabınız</span>
+                    <code className="block text-amber-200/90 font-mono text-xs break-all bg-black/25 rounded-lg px-2 py-1.5">
+                      {row.student_answer}
+                    </code>
+                  </div>
+                  <div>
+                    <span className="text-xs text-gray-500 block mb-0.5">Düzgün şablon / gözlənti</span>
+                    <code className="block text-emerald-200/90 font-mono text-xs break-all bg-black/25 rounded-lg px-2 py-1.5">
+                      {row.correct_display}
+                    </code>
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <span
+                    className={
+                      'inline-flex text-xs font-bold px-2.5 py-1 rounded-lg ' +
+                      (row.status_label === 'Düzgün'
+                        ? 'bg-emerald-500/20 text-emerald-300'
+                        : row.status_label === 'Səhv'
+                          ? 'bg-red-500/15 text-red-300'
+                          : row.status_label === 'Cavabsız'
+                            ? 'bg-amber-500/15 text-amber-200'
+                            : 'bg-gray-500/15 text-gray-400')
+                    }
+                  >
+                    {row.status_label}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
         </Card>
       )}
 
