@@ -11,26 +11,29 @@ function closedWrongPenalty(q) {
 }
 
 /**
- * Qapalı: düzgün → +points; səhv cavab (boş deyil) → negative_marking (adətən -0.25; 0 = cərimə yox).
- * Cavabsız → 0 (nə bal, nə cərimə).
+ * Avtomatik bal: yalnız QAPALI suallar.
+ * — Düzgün → +həmin sualın points-i
+ * — Səhv (cavab verilib) → negative_marking (adətən -0.25; 0 = cərimə yox)
+ * — Boş → 0 (nə bal, nə cərimə)
+ * Faiz = earned / (yalnız qapalı sualların points cəmi) × 100.
+ * Açıq / çoxseçimli / uyğunluq: avtomatik hesabda nə cərimə, nə müsbət bal (müəllim/manual üçün).
  */
 const calculateScore = (questions, answers) => {
   let earned = 0;
-  const totalPoints = questions.reduce((s, q) => s + Number(q.points || 0), 0);
+  const closedQs = questions.filter((q) => q.question_type === 'closed');
+  const totalPoints = closedQs.reduce((s, q) => s + Number(q.points || 0), 0);
   if (totalPoints <= 0) return 0;
 
-  for (const q of questions) {
+  for (const q of closedQs) {
     const ans = answers[q.id];
-    if (q.question_type === 'closed') {
-      const correct = String(q.correct_answer ?? '').trim();
-      const given = ans != null && ans !== '' ? String(ans).trim() : '';
-      const pen = closedWrongPenalty(q);
-      if (given) {
-        if (given === correct) {
-          earned += Number(q.points || 0);
-        } else {
-          earned += pen;
-        }
+    const correct = String(q.correct_answer ?? '').trim();
+    const given = ans != null && ans !== '' ? String(ans).trim() : '';
+    const pen = closedWrongPenalty(q);
+    if (given) {
+      if (given === correct) {
+        earned += Number(q.points || 0);
+      } else {
+        earned += pen;
       }
     }
   }

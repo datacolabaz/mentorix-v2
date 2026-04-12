@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import api from '../../lib/api'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
@@ -68,10 +68,37 @@ export default function StudentExams() {
   const [answers, setAnswers] = useState({})
   const [startedAt, setStartedAt] = useState(null)
   const [result, setResult] = useState(null)
+  const [, bumpListUi] = useState(0)
+  const activeExamRef = useRef(false)
+  activeExamRef.current = !!activeExam
   const toast = useToast()
 
+  const loadExams = useCallback(() => api.get('/exams/my').then((d) => setExams(d.exams || [])), [])
+
   useEffect(() => {
-    api.get('/exams/my').then(d => setExams(d.exams || []))
+    loadExams()
+  }, [loadExams])
+
+  // Gözləyərkən səhifə yeniləmədən "Başla" görünsün (vaxt keçəndə re-render)
+  useEffect(() => {
+    if (activeExam) return undefined
+    const id = setInterval(() => bumpListUi((n) => n + 1), 5000)
+    return () => clearInterval(id)
+  }, [activeExam])
+
+  // Siyahını serverdən ara-sıra yenilə (təyinat və s.)
+  useEffect(() => {
+    if (activeExam) return undefined
+    const id = setInterval(loadExams, 45000)
+    return () => clearInterval(id)
+  }, [activeExam, loadExams])
+
+  useEffect(() => {
+    const onVis = () => {
+      if (document.visibilityState === 'visible' && !activeExamRef.current) loadExams()
+    }
+    document.addEventListener('visibilitychange', onVis)
+    return () => document.removeEventListener('visibilitychange', onVis)
   }, [])
 
   const startExam = async (exam) => {
