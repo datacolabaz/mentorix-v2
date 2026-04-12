@@ -5,6 +5,19 @@ const markAttendance = async (req, res) => {
   try {
     const { enrollment_id, date, attended, session_score, notes } = req.body;
 
+    if (enrollment_id === '' || enrollment_id == null) {
+      return res.status(400).json({ success: false, message: 'Tələbə (qeydiyyat) seçilməlidir' });
+    }
+
+    let sessionScoreSql = null;
+    if (session_score !== '' && session_score !== undefined && session_score !== null) {
+      const n = Number(session_score);
+      if (Number.isNaN(n) || n < 0 || n > 100) {
+        return res.status(400).json({ success: false, message: 'Bal 0–100 arası olmalıdır' });
+      }
+      sessionScoreSql = Math.round(n);
+    }
+
     const { rows: [enrollment] } = await db.query(
       `SELECT e.*, ip.alert_lessons_before, ip.billing_type AS instr_billing,
               u.full_name AS student_name, u.phone AS student_phone,
@@ -27,7 +40,7 @@ const markAttendance = async (req, res) => {
     await db.query(
       `INSERT INTO attendance (enrollment_id, lesson_number, date, attended, session_score, notes)
        VALUES ($1,$2,$3,$4,$5,$6)`,
-      [enrollment_id, lessonNum, date, attended, session_score, notes]
+      [enrollment_id, lessonNum, date, Boolean(attended), sessionScoreSql, notes || null]
     );
 
     if (attended) {

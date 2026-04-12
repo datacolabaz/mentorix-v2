@@ -18,6 +18,8 @@ import InstructorStudents from './pages/instructor/Students'
 import InstructorExams from './pages/instructor/Exams'
 import InstructorAttendance from './pages/instructor/Attendance'
 import InstructorAnalytics from './pages/instructor/Analytics'
+import InstructorNotifications from './pages/instructor/Notifications'
+import ParentNotifications from './pages/parent/Notifications'
 
 import StudentDashboard from './pages/student/Dashboard'
 import StudentExams from './pages/student/Exams'
@@ -25,8 +27,8 @@ import StudentPayments from './pages/student/Payments'
 import ParentDashboard from './pages/parent/Dashboard'
 
 const Placeholder = ({ title }) => (
-  <div className="p-6">
-    <h1 className="font-display font-bold text-2xl text-white">{title}</h1>
+  <div className="p-4 sm:p-6 min-w-0">
+    <h1 className="font-display font-bold text-xl sm:text-2xl text-white break-words">{title}</h1>
     <p className="text-gray-400 mt-2">Tezliklə əlavə olunacaq</p>
   </div>
 )
@@ -62,7 +64,7 @@ export default function App() {
         <Route path="analytics" element={<InstructorAnalytics />} />
         <Route path="tasks" element={<Placeholder title="Tapşırıqlar" />} />
         <Route path="payments" element={<Placeholder title="Ödənişlər" />} />
-        <Route path="notifications" element={<AdminNotifications />} />
+        <Route path="notifications" element={<InstructorNotifications />} />
         <Route path="settings" element={<Placeholder title="Tənzimləmələr" />} />
       </Route>
 
@@ -75,7 +77,7 @@ export default function App() {
       <Route path="/parent" element={<ProtectedRoute roles={['parent']}><ParentLayout /></ProtectedRoute>}>
         <Route index element={<ParentDashboard />} />
         <Route path="payments" element={<Placeholder title="Ödəniş" />} />
-        <Route path="notifications" element={<AdminNotifications />} />
+        <Route path="notifications" element={<ParentNotifications />} />
       </Route>
 
       <Route path="*" element={<Placeholder title="404 — Tapılmadı" />} />

@@ -69,10 +69,10 @@ export default function InstructorExams() {
   const inp = 'w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500'
  
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="font-display font-bold text-2xl">Imtahanlar</h1>
-        <Button onClick={() => setAddModal(true)}>+ Yeni Imtahan</Button>
+    <div className="p-4 sm:p-6 min-w-0">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <h1 className="font-display font-bold text-xl sm:text-2xl">Imtahanlar</h1>
+        <Button onClick={() => setAddModal(true)} className="w-full sm:w-auto shrink-0 justify-center">+ Yeni Imtahan</Button>
       </div>
  
       <div className="space-y-4">
@@ -81,14 +81,14 @@ export default function InstructorExams() {
           exams.map((exam) => {
           const { label, cls } = statusBadge(exam)
           return (
-            <Card key={exam.id} className="p-5">
-              <div className="flex items-start justify-between">
-                <div>
-                  <div className="flex items-center gap-3 mb-2">
-                    <h3 className="font-display font-bold text-lg">{exam.title}</h3>
-                    <span className={`px-2 py-0.5 rounded-lg text-xs font-semibold ${cls}`}>{label}</span>
+            <Card key={exam.id} className="p-4 sm:p-5 min-w-0 overflow-hidden">
+              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 min-w-0">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2">
+                    <h3 className="font-display font-bold text-base sm:text-lg break-words">{exam.title}</h3>
+                    <span className={`px-2 py-0.5 rounded-lg text-xs font-semibold shrink-0 ${cls}`}>{label}</span>
                   </div>
-                  <div className="flex gap-4 text-sm text-gray-400">
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-400">
                     <span>{new Date(exam.start_time).toLocaleString('az-AZ')}</span>
                     <span>{exam.duration_minutes} deq</span>
                     <span>{exam.student_count || 0} telebe</span>
@@ -96,7 +96,7 @@ export default function InstructorExams() {
                     {exam.topic && <span>· {exam.topic}</span>}
                   </div>
                 </div>
-                <Button size="sm" variant="secondary" onClick={() => openEdit(exam)}>Redakte</Button>
+                <Button size="sm" variant="secondary" onClick={() => openEdit(exam)} className="self-start sm:self-auto shrink-0">Redakte</Button>
               </div>
             </Card>
           )

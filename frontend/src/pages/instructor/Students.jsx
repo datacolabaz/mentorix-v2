@@ -217,15 +217,16 @@ export default function InstructorStudents() {
   }
 
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="font-display font-bold text-2xl">Telebeleim</h1>
+    <div className="p-4 sm:p-6 min-w-0">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <div className="min-w-0">
+          <h1 className="font-display font-bold text-xl sm:text-2xl break-words">Tələbələrim</h1>
           <p className="text-gray-500 text-sm mt-1">
             {listLoading ? '…' : `${students.length} telebe`}
           </p>
         </div>
         <Button
+          className="w-full sm:w-auto shrink-0 justify-center"
           onClick={() => {
             setForm(emptyForm)
             setAddModal(true)
@@ -239,31 +240,31 @@ export default function InstructorStudents() {
         {listLoading && <ListSkeleton message="Tələbələr yüklənir…" />}
         {!listLoading &&
           students.map((s) => (
-          <Card key={s.enrollment_id} className="p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
+          <Card key={s.enrollment_id} className="p-4 min-w-0 overflow-hidden">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between min-w-0">
+              <div className="flex items-center gap-3 min-w-0">
                 <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-sm font-bold flex-shrink-0">
                   {s.full_name?.split(' ')
                     .map((n) => n[0])
                     .join('')
                     .slice(0, 2)}
                 </div>
-                <div>
-                  <div className="font-semibold text-white">{s.full_name}</div>
-                  <div className="text-xs text-gray-400 flex gap-3 mt-0.5">
-                    {s.phone && <span>{s.phone}</span>}
-                    {s.email && <span>{s.email}</span>}
+                <div className="min-w-0">
+                  <div className="font-semibold text-white truncate">{s.full_name}</div>
+                  <div className="text-xs text-gray-400 flex flex-wrap gap-x-3 gap-y-1 mt-0.5">
+                    {s.phone && <span className="break-all">{s.phone}</span>}
+                    {s.email && <span className="break-all">{s.email}</span>}
                   </div>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                <div className="text-right">
-                  <span className="text-xs bg-blue-500/20 text-blue-300 px-2 py-1 rounded-lg font-semibold">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
+                <div className="text-left sm:text-right">
+                  <span className="text-xs bg-blue-500/20 text-blue-300 px-2 py-1 rounded-lg font-semibold inline-block">
                     {s.lesson_count || 0}/{BILLING_OPTS.find((o) => o.value === s.billing_type)?.label || s.billing_type}
                   </span>
                   {s.avg_score && <div className="text-xs text-gray-400 mt-1">Orta: {s.avg_score}%</div>}
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
                   <Button size="sm" variant="secondary" onClick={() => openEdit(s)}>
                     Redakte
                   </Button>
