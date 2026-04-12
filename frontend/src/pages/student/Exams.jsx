@@ -77,9 +77,16 @@ function formatScorePct(v) {
   return Number.isFinite(n) ? `${Math.round(n)}%` : '—'
 }
 
+function parseExamStart(exam) {
+  if (!exam?.start_time) return null
+  const d = new Date(exam.start_time)
+  return Number.isNaN(d.getTime()) ? null : d
+}
+
 export default function StudentExams() {
   const [exams, setExams] = useState([])
   const [listLoading, setListLoading] = useState(true)
+  const [listError, setListError] = useState(null)
   const [activeExam, setActiveExam] = useState(null)
   const [questions, setQuestions] = useState([])
   const [answers, setAnswers] = useState({})
@@ -97,9 +104,17 @@ export default function StudentExams() {
     if (!quiet) setListLoading(true)
     return api
       .get('/exams/my')
-      .then((d) => setExams(d.exams || []))
-      .catch(() => {
-        if (!quiet) setExams([])
+      .then((d) => {
+        setListError(null)
+        setExams(d.exams || [])
+      })
+      .catch((err) => {
+        if (!quiet) {
+          setExams([])
+          const msg = err?.message || 'İmtahanlar yüklənmədi'
+          setListError(msg)
+          toast(msg, 'error')
+        }
       })
       .finally(() => {
         if (!quiet) setListLoading(false)
@@ -199,7 +214,10 @@ export default function StudentExams() {
 
   // Active exam UI
   if (activeExam) {
-    const endTime = new Date(new Date(activeExam.start_time).getTime() + activeExam.duration_minutes * 60000)
+    const startActive = parseExamStart(activeExam)
+    const durActive = Number(activeExam.duration_minutes) || 0
+    const endTime =
+      startActive != null ? new Date(startActive.getTime() + durActive * 60000) : new Date(NaN)
     const materials = normalizeExamFiles(activeExam)
 
     return (
@@ -378,6 +396,22 @@ export default function StudentExams() {
     <div className="p-4 sm:p-6 w-full min-w-0 max-w-3xl mx-auto">
       <h1 className="font-display font-bold text-2xl mb-6 break-words">İmtahanlarım</h1>
 
+      {listError && !listLoading && (
+        <Card className="p-4 sm:p-5 mb-6 border-red-500/35 bg-red-500/5">
+          <p className="text-red-300 text-sm mb-4">{listError}</p>
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => {
+              setListError(null)
+              loadExams(false)
+            }}
+          >
+            Yenidən yüklə
+          </Button>
+        </Card>
+      )}
+
       {result !== null && (
         <Card className="p-6 mb-6 text-center border-blue-500/40">
           <div className="text-5xl mb-3">{result >= 75 ? '🏆' : result >= 60 ? '🥈' : '📚'}</div>
@@ -445,11 +479,12 @@ export default function StudentExams() {
         <div className="text-center py-16 text-gray-500">İmtahanlar yüklənir…</div>
       ) : (
       <div className="space-y-4">
-        {exams.map(exam => {
+        {exams.map((exam) => {
           const now = new Date()
-          const start = new Date(exam.start_time)
-          const end = new Date(start.getTime() + exam.duration_minutes * 60000)
-          const isActive = now >= start && now <= end
+          const start = parseExamStart(exam)
+          const dur = Number(exam.duration_minutes) || 0
+          const end = start ? new Date(start.getTime() + dur * 60000) : null
+          const isActive = !!(start && end && now >= start && now <= end)
           const isDone = !!exam.submitted_at
 
           return (
@@ -458,8 +493,12 @@ export default function StudentExams() {
                 <div className="min-w-0 flex-1">
                   <h3 className="font-display font-bold text-lg mb-2 break-words">{exam.title}</h3>
                   <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-4 text-sm text-gray-400">
-                    <span className="break-all">📅 {new Date(exam.start_time).toLocaleString('az-AZ')}</span>
-                    <span>⏱ {exam.duration_minutes} dəq</span>
+                    {start ? (
+                      <span className="break-all">📅 {start.toLocaleString('az-AZ')}</span>
+                    ) : (
+                      <span className="text-amber-400/90">📅 Vaxt təyin olunmayıb</span>
+                    )}
+                    <span>⏱ {exam.duration_minutes ?? '—'} dəq</span>
                   </div>
                   {isDone && (
                     <div className="mt-2 px-3 py-1 bg-emerald-500/20 text-emerald-400 rounded-lg text-sm font-semibold inline-block max-w-full break-words">
@@ -472,6 +511,10 @@ export default function StudentExams() {
                     <Button variant="secondary" size="sm" onClick={() => openPastReview(exam)}>
                       📋 Nəticəyə bax
                     </Button>
+                  ) : !start ? (
+                    <span className="text-xs text-amber-400/90 bg-[#13112e] px-3 py-2 rounded-xl inline-block">
+                      Müəllim vaxt təyin etməlidir
+                    </span>
                   ) : isActive ? (
                     <Button onClick={() => startExam(exam)}>🚀 Başla</Button>
                   ) : now < start ? (

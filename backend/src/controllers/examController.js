@@ -1,5 +1,9 @@
 const db = require('../utils/db');
 const { normalizeExamStartTime } = require('../utils/examTime');
+
+/** JWT / DB UUID format fərqi olanda exam_assignments uyğunlaşması */
+const normStudentHex = (id) =>
+  id == null ? '' : String(id).trim().toLowerCase().replace(/-/g, '');
 const {
   calculateScore,
   buildExamResultBreakdown,
@@ -164,18 +168,23 @@ const instructorStudentExamProgress = async (req, res) => {
 // Telebe ucun imtahanlar
 const studentExams = async (req, res) => {
   try {
+    const sidHex = normStudentHex(req.user.id);
+    if (!sidHex) {
+      return res.status(400).json({ success: false, message: 'İstifadəçi identifikatoru yoxdur' });
+    }
     const { rows } = await db.query(
       `SELECT e.*, er.score, er.submitted_at,
         eq_count.question_count
        FROM exam_assignments ea
        JOIN exams e ON e.id = ea.exam_id
-       LEFT JOIN exam_results er ON er.exam_id = e.id AND er.student_id = $1
+       LEFT JOIN exam_results er ON er.exam_id = e.id
+         AND REPLACE(LOWER(TRIM(er.student_id::text)), '-', '') = $1
        LEFT JOIN (
          SELECT exam_id, COUNT(*) AS question_count FROM exam_questions GROUP BY exam_id
        ) eq_count ON eq_count.exam_id = e.id
-       WHERE ea.student_id = $1
-       ORDER BY e.start_time DESC`,
-      [req.user.id]
+       WHERE REPLACE(LOWER(TRIM(ea.student_id::text)), '-', '') = $1
+       ORDER BY e.start_time DESC NULLS LAST`,
+      [sidHex]
     );
     res.json({ success: true, exams: rows });
   } catch (err) {
@@ -190,19 +199,26 @@ const getStudentExamReview = async (req, res) => {
       return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
     }
     const examId = req.params.id;
-    const studentId = req.user.id;
+    const sidHex = normStudentHex(req.user.id);
+    if (!sidHex) {
+      return res.status(400).json({ success: false, message: 'İstifadəçi identifikatoru yoxdur' });
+    }
 
     const { rows: assignRows } = await db.query(
-      'SELECT 1 FROM exam_assignments WHERE exam_id = $1 AND student_id = $2',
-      [examId, studentId]
+      `SELECT 1 FROM exam_assignments
+       WHERE exam_id = $1
+         AND REPLACE(LOWER(TRIM(student_id::text)), '-', '') = $2`,
+      [examId, sidHex]
     );
     if (!assignRows.length) {
       return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
     }
 
     const { rows: resultRows } = await db.query(
-      'SELECT score, answers, submitted_at FROM exam_results WHERE exam_id = $1 AND student_id = $2',
-      [examId, studentId]
+      `SELECT score, answers, submitted_at FROM exam_results
+       WHERE exam_id = $1
+         AND REPLACE(LOWER(TRIM(student_id::text)), '-', '') = $2`,
+      [examId, sidHex]
     );
     const result = resultRows[0];
     if (!result || !result.submitted_at) {
@@ -249,9 +265,34 @@ const getExamQuestions = async (req, res) => {
     const { rows: [exam] } = await db.query('SELECT * FROM exams WHERE id = $1', [id]);
     if (!exam) return res.status(404).json({ success: false, message: 'Tapılmadı' });
 
+    if (req.user.role === 'student') {
+      const sidHex = normStudentHex(req.user.id);
+      if (!sidHex) {
+        return res.status(400).json({ success: false, message: 'İstifadəçi identifikatoru yoxdur' });
+      }
+      const { rows: assigned } = await db.query(
+        `SELECT 1 FROM exam_assignments WHERE exam_id = $1
+         AND REPLACE(LOWER(TRIM(student_id::text)), '-', '') = $2`,
+        [id, sidHex]
+      );
+      if (!assigned.length) {
+        return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
+      }
+    } else if (req.user.role === 'instructor') {
+      if (normStudentHex(exam.instructor_id) !== normStudentHex(req.user.id)) {
+        return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
+      }
+    } else if (req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
+    }
+
     const now = new Date();
-    const start = new Date(exam.start_time);
-    const end = new Date(start.getTime() + exam.duration_minutes * 60000);
+    const start = exam.start_time ? new Date(exam.start_time) : null;
+    if (!start || Number.isNaN(start.getTime())) {
+      return res.status(400).json({ success: false, message: 'İmtahan vaxtı təyin olunmayıb' });
+    }
+    const dur = Number(exam.duration_minutes) || 0;
+    const end = new Date(start.getTime() + dur * 60000);
 
     if (now < start)
       return res.status(400).json({ success: false, message: 'İmtahan hələ başlamayıb' });
@@ -278,9 +319,24 @@ const submitExam = async (req, res) => {
     const { exam_id, answers, started_at } = req.body;
     const student_id = req.user.id;
 
+    const sidHex = normStudentHex(student_id);
+    if (!sidHex) {
+      return res.status(400).json({ success: false, message: 'İstifadəçi identifikatoru yoxdur' });
+    }
+
+    const { rows: assignSubmit } = await db.query(
+      `SELECT 1 FROM exam_assignments WHERE exam_id = $1
+       AND REPLACE(LOWER(TRIM(student_id::text)), '-', '') = $2`,
+      [exam_id, sidHex]
+    );
+    if (!assignSubmit.length) {
+      return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
+    }
+
     const already = await db.query(
-      'SELECT id FROM exam_results WHERE exam_id=$1 AND student_id=$2',
-      [exam_id, student_id]
+      `SELECT id FROM exam_results WHERE exam_id=$1
+       AND REPLACE(LOWER(TRIM(student_id::text)), '-', '') = $2`,
+      [exam_id, sidHex]
     );
     if (already.rows[0])
       return res.status(400).json({ success: false, message: 'Artıq təqdim edilib' });
