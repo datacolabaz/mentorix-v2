@@ -138,8 +138,19 @@ export default function InstructorExams() {
               </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Muddet (deq)</label>
-                <input type="number" className={inp} value={editExam.duration_minutes}
-                  onChange={e => setEditExam(p => ({ ...p, duration_minutes: parseInt(e.target.value) }))} />
+                <input
+                  type="number"
+                  min={1}
+                  className={inp}
+                  value={Number.isFinite(Number(editExam.duration_minutes)) ? editExam.duration_minutes : ''}
+                  onChange={(e) => {
+                    const v = parseInt(e.target.value, 10)
+                    setEditExam((p) => ({
+                      ...p,
+                      duration_minutes: Number.isFinite(v) ? v : p.duration_minutes,
+                    }))
+                  }}
+                />
               </div>
             </div>
             <div className="p-4 bg-[#13112e] rounded-xl border border-indigo-500/20 space-y-3">

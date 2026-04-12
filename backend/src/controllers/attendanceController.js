@@ -64,6 +64,22 @@ const markAttendance = async (req, res) => {
 const getAttendance = async (req, res) => {
   try {
     const { enrollment_id } = req.params;
+    const { rows: enRows } = await db.query(
+      'SELECT student_id, instructor_id FROM enrollments WHERE id = $1',
+      [enrollment_id]
+    );
+    if (!enRows[0]) return res.status(404).json({ success: false, message: 'Tapılmadı' });
+    const { student_id: enStudent, instructor_id: enInstr } = enRows[0];
+    if (req.user.role === 'student' && String(enStudent) !== String(req.user.id)) {
+      return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
+    }
+    if (
+      req.user.role === 'instructor' &&
+      String(enInstr).replace(/-/g, '').toLowerCase() !== String(req.user.id).replace(/-/g, '').toLowerCase()
+    ) {
+      return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
+    }
+
     const { rows } = await db.query(
       'SELECT * FROM attendance WHERE enrollment_id=$1 ORDER BY lesson_number',
       [enrollment_id]

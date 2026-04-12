@@ -71,6 +71,11 @@ function questionTypeLabelAz(t) {
   return m[t] || t
 }
 
+function formatScorePct(v) {
+  const n = Number(v)
+  return Number.isFinite(n) ? `${Math.round(n)}%` : '—'
+}
+
 export default function StudentExams() {
   const [exams, setExams] = useState([])
   const [activeExam, setActiveExam] = useState(null)
@@ -138,7 +143,7 @@ export default function StudentExams() {
       setResult(data.score)
       setResultBreakdown(Array.isArray(data.breakdown) ? data.breakdown : null)
       setActiveExam(null)
-      toast(`✓ İmtahan tamamlandı! Bal: ${data.score}%`)
+      toast(`✓ İmtahan tamamlandı! Bal: ${formatScorePct(data.score)}`)
       api.get('/exams/my').then(d => setExams(d.exams || []))
     } catch (err) {
       toast(err.message || 'Xəta', 'error')
@@ -323,13 +328,15 @@ export default function StudentExams() {
   }
 
   return (
-    <div className="p-6">
-      <h1 className="font-display font-bold text-2xl mb-6">İmtahanlarım</h1>
+    <div className="p-4 sm:p-6 w-full min-w-0 max-w-3xl mx-auto">
+      <h1 className="font-display font-bold text-2xl mb-6 break-words">İmtahanlarım</h1>
 
       {result !== null && (
         <Card className="p-6 mb-6 text-center border-blue-500/40">
           <div className="text-5xl mb-3">{result >= 75 ? '🏆' : result >= 60 ? '🥈' : '📚'}</div>
-          <div className="font-display font-extrabold text-4xl bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">{result}%</div>
+          <div className="font-display font-extrabold text-4xl bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
+            {formatScorePct(result)}
+          </div>
           <div className="text-gray-400 mt-2">Son imtahan nəticəniz</div>
         </Card>
       )}
@@ -396,27 +403,27 @@ export default function StudentExams() {
           const isDone = !!exam.submitted_at
 
           return (
-            <Card key={exam.id} className="p-5">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="font-display font-bold text-lg mb-2">{exam.title}</h3>
-                  <div className="flex gap-4 text-sm text-gray-400">
-                    <span>📅 {new Date(exam.start_time).toLocaleString('az-AZ')}</span>
+            <Card key={exam.id} className="p-4 sm:p-5 min-w-0 overflow-hidden">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div className="min-w-0 flex-1">
+                  <h3 className="font-display font-bold text-lg mb-2 break-words">{exam.title}</h3>
+                  <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-4 text-sm text-gray-400">
+                    <span className="break-all">📅 {new Date(exam.start_time).toLocaleString('az-AZ')}</span>
                     <span>⏱ {exam.duration_minutes} dəq</span>
                   </div>
                   {isDone && (
-                    <div className="mt-2 px-3 py-1 bg-emerald-500/20 text-emerald-400 rounded-lg text-sm font-semibold inline-block">
-                      ✓ Tamamlandı — {exam.score}%
+                    <div className="mt-2 px-3 py-1 bg-emerald-500/20 text-emerald-400 rounded-lg text-sm font-semibold inline-block max-w-full break-words">
+                      ✓ Tamamlandı — {formatScorePct(exam.score)}
                     </div>
                   )}
                 </div>
-                <div>
+                <div className="shrink-0 self-start sm:self-center">
                   {isActive && !isDone ? (
                     <Button onClick={() => startExam(exam)}>🚀 Başla</Button>
                   ) : !isActive && now < start ? (
-                    <span className="text-xs text-gray-500 bg-[#13112e] px-3 py-2 rounded-xl">⏳ Gözlənilir</span>
+                    <span className="text-xs text-gray-500 bg-[#13112e] px-3 py-2 rounded-xl inline-block">⏳ Gözlənilir</span>
                   ) : (
-                    <span className="text-xs text-gray-500 bg-[#13112e] px-3 py-2 rounded-xl">Bitib</span>
+                    <span className="text-xs text-gray-500 bg-[#13112e] px-3 py-2 rounded-xl inline-block">Bitib</span>
                   )}
                 </div>
               </div>

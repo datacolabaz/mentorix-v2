@@ -204,8 +204,19 @@ export default function ExamForm({ students, onCreated }) {
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Muddet (deq)</label>
-              <input type="number" className={inp}
-                value={meta.duration_minutes} onChange={e => setMeta(p => ({ ...p, duration_minutes: parseInt(e.target.value) }))} />
+              <input
+                type="number"
+                min={1}
+                className={inp}
+                value={Number.isFinite(Number(meta.duration_minutes)) ? meta.duration_minutes : ''}
+                onChange={(e) => {
+                  const v = parseInt(e.target.value, 10)
+                  setMeta((p) => ({
+                    ...p,
+                    duration_minutes: Number.isFinite(v) ? v : p.duration_minutes,
+                  }))
+                }}
+              />
             </div>
           </div>
  
@@ -302,8 +313,15 @@ export default function ExamForm({ students, onCreated }) {
                     )}
                   </div>
                   <div className="flex items-center gap-2">
-                    <input type="number" min="1" max="100" value={q.points}
-                      onChange={e => upd(idx, 'points', parseInt(e.target.value))}
+                    <input
+                      type="number"
+                      min="1"
+                      max="100"
+                      value={Number.isFinite(Number(q.points)) ? q.points : ''}
+                      onChange={(e) => {
+                        const v = parseInt(e.target.value, 10)
+                        upd(idx, 'points', Number.isFinite(v) ? v : q.points)
+                      }}
                       className="w-14 bg-[#1a1740] border border-indigo-500/20 rounded-lg px-2 py-1 text-white text-xs text-center outline-none" />
                     <span className="text-xs text-gray-500">bal</span>
                     <button onClick={() => setQuestions(prev => prev.filter((_, i) => i !== idx))}

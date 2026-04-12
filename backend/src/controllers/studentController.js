@@ -37,12 +37,26 @@ const listStudents = async (req, res) => {
 
 const getStudent = async (req, res) => {
   try {
+    if (req.user.role === 'student' && String(req.params.id) !== String(req.user.id)) {
+      return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
+    }
+
     const { rows } = await db.query(
       `SELECT u.*, sp.parent_id, sp.grade, sp.notes,
-              pu.full_name AS parent_name, pu.phone AS parent_phone
+              pu.full_name AS parent_name, pu.phone AS parent_phone,
+              e.id AS enrollment_id, e.billing_type, e.lesson_count,
+              e.status AS enrollment_status, e.enrolled_at AS enrollment_started_at,
+              iu.full_name AS instructor_name
        FROM users u
        LEFT JOIN student_profiles sp ON sp.user_id = u.id
        LEFT JOIN users pu ON pu.id = sp.parent_id
+       LEFT JOIN LATERAL (
+         SELECT e2.* FROM enrollments e2
+         WHERE e2.student_id = u.id AND e2.status = 'active'
+         ORDER BY e2.enrolled_at DESC NULLS LAST
+         LIMIT 1
+       ) e ON TRUE
+       LEFT JOIN users iu ON iu.id = e.instructor_id
        WHERE u.id = $1`,
       [req.params.id]
     );

@@ -21,6 +21,7 @@ import InstructorAnalytics from './pages/instructor/Analytics'
 
 import StudentDashboard from './pages/student/Dashboard'
 import StudentExams from './pages/student/Exams'
+import StudentPayments from './pages/student/Payments'
 import ParentDashboard from './pages/parent/Dashboard'
 
 const Placeholder = ({ title }) => (
@@ -68,8 +69,7 @@ export default function App() {
       <Route path="/student" element={<ProtectedRoute roles={['student']}><StudentLayout /></ProtectedRoute>}>
         <Route index element={<StudentDashboard />} />
         <Route path="exams" element={<StudentExams />} />
-        <Route path="payments" element={<Placeholder title="Ödəniş" />} />
-        <Route path="notifications" element={<AdminNotifications />} />
+        <Route path="payments" element={<StudentPayments />} />
       </Route>
 
       <Route path="/parent" element={<ProtectedRoute roles={['parent']}><ParentLayout /></ProtectedRoute>}>
