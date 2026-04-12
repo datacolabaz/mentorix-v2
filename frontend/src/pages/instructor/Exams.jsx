@@ -5,6 +5,7 @@ import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
 import ExamForm from '../../components/instructor/ExamForm'
 import { useToast } from '../../components/common/Toast'
+import { localDatetimeInputToUtcIso, utcInstantToDatetimeLocalValue } from '../../lib/examDatetime'
  
 export default function InstructorExams() {
   const [exams, setExams] = useState([])
@@ -45,7 +46,7 @@ export default function InstructorExams() {
         title: editExam.title,
         subject: editExam.subject,
         topic: editExam.topic,
-        start_time: editExam.start_time,
+        start_time: localDatetimeInputToUtcIso(editExam.start_time),
         duration_minutes: editExam.duration_minutes,
         notify_students: editExam.notify_students,
         show_results: editExam.show_results,

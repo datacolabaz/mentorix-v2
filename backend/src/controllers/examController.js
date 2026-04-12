@@ -1,4 +1,5 @@
 const db = require('../utils/db');
+const { normalizeExamStartTime } = require('../utils/examTime');
 const { calculateScore, rankResults } = require('../services/examService');
 
 // Imtahan yarat
@@ -10,12 +11,14 @@ const createExam = async (req, res) => {
       questions, student_ids,
     } = req.body;
 
+    const startNorm = normalizeExamStartTime(start_time);
+
     const result = await db.transaction(async (client) => {
       const { rows } = await client.query(
         `INSERT INTO exams (instructor_id, title, pdf_url, duration_minutes, start_time,
           notify_enabled, notify_before_hours, show_results, status)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'scheduled') RETURNING *`,
-        [req.user.id, title, pdf_url, duration_minutes, start_time,
+        [req.user.id, title, pdf_url, duration_minutes, startNorm,
           notify_enabled, notify_before_hours, show_results]
       );
 

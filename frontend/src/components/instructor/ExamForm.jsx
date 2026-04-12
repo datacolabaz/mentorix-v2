@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import api from '../../lib/api'
+import { localDatetimeInputToUtcIso } from '../../lib/examDatetime'
 import Button from '../common/Button'
 import { useToast } from '../common/Toast'
  
@@ -65,6 +66,7 @@ export default function ExamForm({ students, onCreated }) {
     try {
       await api.post('/exams', {
         ...meta,
+        start_time: localDatetimeInputToUtcIso(meta.start_time),
         questions: questions.map(q => ({
           question_type: q.question_type,
           points: q.points,
