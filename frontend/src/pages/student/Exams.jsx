@@ -68,6 +68,7 @@ export default function StudentExams() {
   const [answers, setAnswers] = useState({})
   const [startedAt, setStartedAt] = useState(null)
   const [result, setResult] = useState(null)
+  const [materialsOpen, setMaterialsOpen] = useState(true)
   const [, bumpListUi] = useState(0)
   const activeExamRef = useRef(false)
   activeExamRef.current = !!activeExam
@@ -109,6 +110,7 @@ export default function StudentExams() {
       setAnswers({})
       setStartedAt(new Date().toISOString())
       setResult(null)
+      setMaterialsOpen(true)
     } catch (err) {
       toast(err.message || 'Xəta', 'error')
     }
@@ -138,25 +140,53 @@ export default function StudentExams() {
     return (
       <div className="flex flex-col h-screen min-h-0">
         {/* Header */}
-        <div className="bg-[#13112e] border-b border-indigo-500/20 px-6 py-4 flex items-center justify-between shrink-0 z-30">
-          <div>
-            <div className="font-display font-bold text-lg">{activeExam.title}</div>
-            <div className="text-xs text-gray-400">{questions.length} sual</div>
+        <div className="bg-[#13112e] border-b border-indigo-500/20 px-4 sm:px-6 py-3 sm:py-4 flex flex-wrap items-center gap-3 justify-between shrink-0 z-30">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            <div className="min-w-0">
+              <div className="font-display font-bold text-lg truncate">{activeExam.title}</div>
+              <div className="text-xs text-gray-400">{questions.length} sual</div>
+            </div>
+            {materials.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setMaterialsOpen((v) => !v)}
+                className="lg:hidden shrink-0 text-xs font-semibold text-blue-400 border border-indigo-500/30 rounded-lg px-3 py-1.5 hover:bg-white/5"
+              >
+                {materialsOpen ? 'PDF gizlət' : 'PDF / şəkil'}
+              </button>
+            )}
           </div>
           <Countdown endTime={endTime} onExpire={submitExam} />
-          <div className="text-right">
+          <div className="text-right shrink-0">
             <div className="text-sm text-gray-400">
               {Object.keys(answers).length}/{questions.length} cavablandı
             </div>
           </div>
         </div>
 
-        <div className="flex flex-1 min-h-0 flex-col lg:flex-row">
+        <div className="flex flex-1 min-h-0 min-w-0 flex-col lg:flex-row">
           {materials.length > 0 && (
-            <aside className="shrink-0 border-b lg:border-b-0 lg:border-r border-indigo-500/20 bg-[#0f0c29]/80 flex flex-col min-h-0 max-h-[42vh] lg:max-h-none lg:w-[min(48%,560px)] lg:min-w-[280px]">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-4 pt-3 pb-2 shrink-0">
-                Suallar (PDF / şəkil) — {materials.length} fayl
-              </p>
+            <aside
+              className={
+                'shrink-0 bg-[#0f0c29]/80 flex flex-col min-h-0 min-w-0 border-indigo-500/20 transition-[max-height,width,opacity,padding] duration-300 ease-in-out ' +
+                (materialsOpen
+                  ? 'max-h-[42vh] lg:max-h-none w-full lg:w-[min(48%,560px)] lg:min-w-[280px] lg:max-w-[min(48%,560px)] border-b lg:border-b-0 lg:border-r opacity-100'
+                  : 'max-h-0 lg:max-h-none w-full lg:w-0 lg:min-w-0 lg:max-w-0 border-0 opacity-0 overflow-hidden pointer-events-none lg:py-0')
+              }
+              aria-hidden={!materialsOpen}
+            >
+              <div className="flex items-center justify-between gap-2 px-4 pt-3 pb-2 shrink-0 border-b border-indigo-500/15">
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider truncate">
+                  Suallar (PDF / şəkil) — {materials.length} fayl
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setMaterialsOpen(false)}
+                  className="hidden lg:inline-flex shrink-0 text-xs font-semibold text-blue-400 hover:text-blue-300 px-2 py-1 rounded-lg border border-indigo-500/30 hover:bg-white/5"
+                >
+                  ← Gizlət
+                </button>
+              </div>
               <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-4 space-y-4">
                 {materials.map((m) => {
                   const materialUrl = resolveMaterialUrl(m.url)
@@ -189,6 +219,18 @@ export default function StudentExams() {
                 })}
               </div>
             </aside>
+          )}
+
+          {materials.length > 0 && !materialsOpen && (
+            <button
+              type="button"
+              aria-label="Materialları aç"
+              onClick={() => setMaterialsOpen(true)}
+              className="hidden lg:flex shrink-0 w-11 flex-col items-center justify-center gap-1 border-r border-indigo-500/20 bg-[#13112e] hover:bg-[#1a1740] text-blue-400 text-[11px] font-bold py-6 transition-colors"
+            >
+              <span className="text-base leading-none" aria-hidden>▶</span>
+              <span className="[writing-mode:vertical-rl] rotate-180 uppercase tracking-widest">PDF</span>
+            </button>
           )}
 
           <div className="flex-1 flex flex-col min-h-0 min-w-0">
