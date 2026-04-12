@@ -40,3 +40,42 @@ router.patch('/:id', authenticate, authorize('instructor', 'admin'), async (req,
  
 module.exports = router;
  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
