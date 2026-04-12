@@ -179,25 +179,72 @@ export default function InstructorSchedule() {
     return 'bg-gray-600/20 border-gray-500/30 text-gray-300'
   }
 
+  const resetFormSelections = () => {
+    setGenDays([1, 2, 3, 4, 5])
+    setGenStart('09:00')
+    setGenEnd('20:00')
+    setGenStep(60)
+    setOneDay(1)
+    setOneStart('10:00')
+    setOneEnd('11:00')
+  }
+
   return (
     <div className="p-4 sm:p-6 min-w-0 max-w-[1200px] mx-auto w-full">
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-4">
         <div>
           <h1 className="font-display font-bold text-xl sm:text-2xl text-white tracking-tight">Cədvəlim</h1>
           <p className="text-gray-500 text-sm mt-1">
             Həftəlik boş və məşğul dərs saatları. Tələbə əlavə edərkən yalnız boş slotlar seçilə bilər.
           </p>
         </div>
-        <Button type="button" variant="secondary" size="sm" onClick={() => void load()} disabled={loading}>
-          Yenilə
-        </Button>
+        <div className="flex flex-wrap gap-2 shrink-0">
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => void load()}
+            disabled={loading}
+            title="Yalnız aşağıdakı cədvəli verilənlər bazasından yenidən yükləyir"
+          >
+            Cədvəli yenilə
+          </Button>
+          <Button type="button" variant="ghost" size="sm" onClick={resetFormSelections}>
+            Form sıfırla
+          </Button>
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-indigo-500/25 bg-[#13112e]/80 p-3 sm:p-4 text-xs text-gray-400 space-y-2 mb-6">
+        <p className="text-indigo-200/95 font-semibold text-sm">Bu səhifə necə işləyir?</p>
+        <ul className="list-disc list-inside space-y-1.5 leading-relaxed">
+          <li>
+            <strong className="text-gray-300">Slot</strong> — həftənin bir günü üçün konkret dərs vaxtı (məs. B.e.
+            10:00–11:00). Slotlar yalnız <strong className="text-gray-300">«Slotlar yarat»</strong> və ya{' '}
+            <strong className="text-gray-300">«Slot əlavə et»</strong> düyməsinə basanda verilənlər bazasına yazılır.
+          </li>
+          <li>
+            Yuxarıdakı <strong className="text-gray-300">gün düymələri və saatlar</strong> yalnız yeni slot
+            yaratmaq üçündür; onların seçilməsi özü-özlüyündə heç nə saxlamır.
+          </li>
+          <li>
+            <strong className="text-gray-300">«Cədvəli yenilə»</strong> — aşağıdakı şəbəkəni serverdən təzə
+            oxuyur; yuxarıdakı form seçimlərinizi sıfırlamır. Seçimləri ilkin halına qaytarmaq üçün{' '}
+            <strong className="text-gray-300">«Form sıfırla»</strong> istifadə edin.
+          </li>
+          <li>
+            Yaranmış slotu ləğv etmək üçün cədvəldə boş slotda <strong className="text-gray-300">Sil</strong> (və ya
+            blokdan <strong className="text-gray-300">Boşalt</strong>) istifadə edin.
+          </li>
+        </ul>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
         <Card className="p-4 border border-indigo-500/20">
           <h2 className="text-sm font-bold text-white mb-3 tracking-wide">Şablon: iş saatları</h2>
           <p className="text-xs text-gray-500 mb-3">
-            Seçilmiş günlər üçün müəyyən addımlarla slotlar yaradılır (məs: 09:00–20:00, 60 dəq).
+            Günləri seçin, saat aralığını və addımı qeyd edin, sonra <strong className="text-gray-400">Slotlar yarat</strong>{' '}
+            ilə bir dəfəyə çoxlu slot əlavə edin (məs: 09:00–20:00, 60 dəq).
           </p>
           <div className="flex flex-wrap gap-2 mb-3">
             {WEEKDAYS.map((d) => (
