@@ -8,6 +8,7 @@ const listStudents = async (req, res) => {
 
     const select = `SELECT u.id, u.full_name, u.email, u.phone,
               sp.parent_id, sp.grade,
+              sp.monthly_fee, sp.payment_day,
               COALESCE(NULLIF(TRIM(sp.parent_name), ''), pu.full_name) AS parent_name,
               COALESCE(NULLIF(TRIM(sp.parent_phone), ''), pu.phone) AS parent_phone,
               e.id AS enrollment_id, e.billing_type, e.lesson_count,
@@ -25,6 +26,7 @@ const listStudents = async (req, res) => {
        LEFT JOIN attendance a ON a.enrollment_id = e.id AND a.attended = TRUE`;
 
     const group = `GROUP BY u.id, u.full_name, u.email, u.phone, sp.parent_id, sp.grade,
+                sp.monthly_fee, sp.payment_day,
                 sp.parent_name, sp.parent_phone, pu.full_name, pu.phone,
                 e.id, e.billing_type, e.lesson_count, e.status,
                 e.referral_notes, e.instructor_id, iu.full_name, rs.name
@@ -66,6 +68,7 @@ const getStudent = async (req, res) => {
 
     const { rows } = await db.query(
       `SELECT u.*, sp.parent_id, sp.grade, sp.notes,
+              sp.monthly_fee, sp.payment_day,
               pu.full_name AS parent_name, pu.phone AS parent_phone,
               e.id AS enrollment_id, e.billing_type, e.lesson_count,
               e.status AS enrollment_status, e.enrolled_at AS enrollment_started_at,

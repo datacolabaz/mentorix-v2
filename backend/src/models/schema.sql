@@ -33,7 +33,9 @@ CREATE TABLE student_profiles (
   parent_phone VARCHAR(50),
   grade VARCHAR(50),
   date_of_birth DATE,
-  notes TEXT
+  notes TEXT,
+  monthly_fee NUMERIC(10,2),
+  payment_day INTEGER
 );
 
 CREATE TABLE referral_sources (
@@ -128,13 +130,15 @@ CREATE TABLE exam_results (
 CREATE TABLE payments (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   enrollment_id UUID REFERENCES enrollments(id),
+  student_id UUID REFERENCES users(id),
   amount NUMERIC(10,2),
   currency VARCHAR(5) DEFAULT 'AZN',
   payment_method VARCHAR(50),
   status VARCHAR(20) DEFAULT 'pending',
   period VARCHAR(50),
   notes TEXT,
-  paid_at TIMESTAMP DEFAULT NOW()
+  paid_at TIMESTAMP DEFAULT NOW(),
+  payment_date DATE
 );
 
 CREATE TABLE notifications (

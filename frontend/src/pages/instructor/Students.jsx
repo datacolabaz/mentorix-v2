@@ -18,6 +18,8 @@ const emptyForm = {
   phone: '',
   billing_type: '8_lessons',
   referral_notes: '',
+  monthly_fee: '',
+  payment_day: '',
   parent_name: '',
   parent_phone: '',
 }
@@ -67,6 +69,32 @@ function StudentFormFields({ data, setData }) {
             </option>
           ))}
         </select>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Aylıq ödəniş (₼)</label>
+          <input
+            className={inp}
+            type="number"
+            min={0}
+            step={0.01}
+            placeholder="0"
+            value={data.monthly_fee}
+            onChange={(e) => setData((p) => ({ ...p, monthly_fee: e.target.value }))}
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Ödəniş günü (1–31)</label>
+          <input
+            className={inp}
+            type="number"
+            min={1}
+            max={31}
+            placeholder="Məs. 5"
+            value={data.payment_day}
+            onChange={(e) => setData((p) => ({ ...p, payment_day: e.target.value }))}
+          />
+        </div>
       </div>
       <div>
         <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Menbe (ixtiyari)</label>
@@ -153,6 +181,8 @@ export default function InstructorStudents() {
         student_id: newUserId,
         billing_type: form.billing_type,
         referral_notes: form.referral_notes,
+        monthly_fee: form.monthly_fee,
+        payment_day: form.payment_day,
         parent_name: form.parent_name,
         parent_phone: form.parent_phone,
       })
@@ -175,6 +205,8 @@ export default function InstructorStudents() {
       phone: s.phone || '',
       billing_type: s.billing_type || '8_lessons',
       referral_notes: s.referral_notes || '',
+      monthly_fee: s.monthly_fee != null && s.monthly_fee !== '' ? String(s.monthly_fee) : '',
+      payment_day: s.payment_day != null && s.payment_day !== '' ? String(s.payment_day) : '',
       parent_name: s.parent_name || '',
       parent_phone: s.parent_phone || '',
     })
@@ -198,6 +230,8 @@ export default function InstructorStudents() {
         phone: editForm.phone,
         billing_type: editForm.billing_type,
         referral_notes: editForm.referral_notes,
+        monthly_fee: editForm.monthly_fee,
+        payment_day: editForm.payment_day,
         parent_name: editForm.parent_name,
         parent_phone: editForm.parent_phone,
       })

@@ -18,6 +18,7 @@ import InstructorStudents from './pages/instructor/Students'
 import InstructorExams from './pages/instructor/Exams'
 import InstructorAttendance from './pages/instructor/Attendance'
 import InstructorAnalytics from './pages/instructor/Analytics'
+import InstructorPayments from './pages/instructor/Payments'
 import InstructorNotifications from './pages/instructor/Notifications'
 import ParentNotifications from './pages/parent/Notifications'
 
@@ -63,7 +64,7 @@ export default function App() {
         <Route path="attendance" element={<InstructorAttendance />} />
         <Route path="analytics" element={<InstructorAnalytics />} />
         <Route path="tasks" element={<Placeholder title="Tapşırıqlar" />} />
-        <Route path="payments" element={<Placeholder title="Ödənişlər" />} />
+        <Route path="payments" element={<InstructorPayments />} />
         <Route path="notifications" element={<InstructorNotifications />} />
         <Route path="settings" element={<Placeholder title="Tənzimləmələr" />} />
       </Route>
