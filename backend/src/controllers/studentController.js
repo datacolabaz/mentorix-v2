@@ -3,9 +3,10 @@ const db = require('../utils/db');
 const listStudents = async (req, res) => {
   try {
     const isAdmin = req.user.role === 'admin';
-    /** Köhnə “enrollments-dan başla” variantı bəzi mühitlərdə tələbələri süzürdü; vahid sorğu əvvəlki kimi qalır (indekslər sürəti saxlayır). */
-    const { rows } = await db.query(
-      `SELECT u.id, u.full_name, u.email, u.phone,
+    const instructorId =
+      req.user.id != null ? String(req.user.id).trim().toLowerCase().replace(/-/g, '') : '';
+
+    const select = `SELECT u.id, u.full_name, u.email, u.phone,
               sp.parent_id, sp.grade,
               COALESCE(NULLIF(TRIM(sp.parent_name), ''), pu.full_name) AS parent_name,
               COALESCE(NULLIF(TRIM(sp.parent_phone), ''), pu.phone) AS parent_phone,
@@ -13,22 +14,43 @@ const listStudents = async (req, res) => {
               e.status AS enrollment_status, e.referral_notes,
               e.instructor_id, iu.full_name AS instructor_name,
               rs.name AS referral_source,
-              ROUND(AVG(a.session_score)) AS avg_score
-       FROM users u
+              ROUND(AVG(a.session_score)) AS avg_score`;
+
+    const joins = `FROM users u
        LEFT JOIN student_profiles sp ON sp.user_id = u.id
        LEFT JOIN users pu ON pu.id = sp.parent_id
        LEFT JOIN enrollments e ON e.student_id = u.id
        LEFT JOIN users iu ON iu.id = e.instructor_id
        LEFT JOIN referral_sources rs ON rs.id = e.referral_source_id
-       LEFT JOIN attendance a ON a.enrollment_id = e.id AND a.attended = TRUE
-       WHERE u.role = 'student' AND u.is_active = TRUE
-         AND ($1 OR LOWER(REPLACE(e.instructor_id::text, '-', '')) = LOWER(REPLACE($2::text, '-', '')))
-       GROUP BY u.id, u.full_name, u.email, u.phone, sp.parent_id, sp.grade,
+       LEFT JOIN attendance a ON a.enrollment_id = e.id AND a.attended = TRUE`;
+
+    const group = `GROUP BY u.id, u.full_name, u.email, u.phone, sp.parent_id, sp.grade,
                 sp.parent_name, sp.parent_phone, pu.full_name, pu.phone,
                 e.id, e.billing_type, e.lesson_count, e.status,
                 e.referral_notes, e.instructor_id, iu.full_name, rs.name
-       ORDER BY u.full_name`,
-      [isAdmin, req.user.id]
+       ORDER BY u.full_name`;
+
+    if (!isAdmin) {
+      if (!instructorId) {
+        return res.status(400).json({ success: false, message: 'İstifadəçi identifikatoru yoxdur' });
+      }
+      const { rows } = await db.query(
+        `${select}
+         ${joins}
+         WHERE u.role = 'student' AND u.is_active = TRUE
+           AND e.id IS NOT NULL
+           AND REPLACE(LOWER(TRIM(e.instructor_id::text)), '-', '') = $1
+         ${group}`,
+        [instructorId]
+      );
+      return res.json({ success: true, students: rows });
+    }
+
+    const { rows } = await db.query(
+      `${select}
+       ${joins}
+       WHERE u.role = 'student' AND u.is_active = TRUE
+       ${group}`
     );
     res.json({ success: true, students: rows });
   } catch (err) {
