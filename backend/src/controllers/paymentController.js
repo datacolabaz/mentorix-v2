@@ -32,9 +32,12 @@ const listMyPayments = async (req, res) => {
     );
 
     const { rows: enRows } = await db.query(
-      `SELECT e.*, iu.full_name AS instructor_name
+      `SELECT e.*,
+              iu.full_name AS instructor_name,
+              sp.payment_start_date AS student_payment_start_date
        FROM enrollments e
        LEFT JOIN users iu ON iu.id = e.instructor_id
+       LEFT JOIN student_profiles sp ON sp.user_id = e.student_id
        WHERE e.student_id = $1 AND e.status = 'active'
        ORDER BY e.enrolled_at DESC NULLS LAST
        LIMIT 1`,
@@ -42,27 +45,58 @@ const listMyPayments = async (req, res) => {
     );
 
     const enrollment = enRows[0] || null;
+    let enrollmentOut = null;
+    let paymentStartForDisplay = null;
+    if (enrollment) {
+      const { student_payment_start_date, ...rest } = enrollment;
+      paymentStartForDisplay = student_payment_start_date || null;
+      enrollmentOut = rest;
+    }
     const limit = enrollment ? billingLimit(enrollment.billing_type) : null;
     const remaining_lessons =
       enrollment && limit != null ? Math.max(0, Number(limit) - Number(enrollment.lesson_count || 0)) : null;
 
     let nextLesson = null;
+    let planned_lessons_in_cycle = null;
     if (enrollment && limit != null) {
+      const cycle = enrollment.billing_cycle || 1;
       const { rows: nl } = await db.query(
-        `SELECT starts_at
-         FROM enrollment_lessons
-         WHERE enrollment_id = $1 AND billing_cycle = $2 AND status = 'planned'
-         ORDER BY starts_at
+        `SELECT lesson_date
+         FROM lessons
+         WHERE student_id = $1
+           AND enrollment_id = $2
+           AND billing_cycle = $3
+           AND status = 'pending'
+         ORDER BY lesson_date
          LIMIT 1`,
-        [enrollment.id, enrollment.billing_cycle || 1]
+        [studentId, enrollment.id, cycle]
       );
-      nextLesson = nl[0]?.starts_at || null;
+      nextLesson = nl[0]?.lesson_date || null;
+
+      const { rows: c } = await db.query(
+        `SELECT COUNT(*)::int AS n
+         FROM lessons
+         WHERE student_id = $1
+           AND enrollment_id = $2
+           AND billing_cycle = $3`,
+        [studentId, enrollment.id, cycle]
+      );
+      planned_lessons_in_cycle = c[0]?.n ?? null;
     }
 
     res.json({
       success: true,
       payments,
-      enrollment: enrollment ? { ...enrollment, lesson_limit: limit, remaining_lessons, next_lesson_at: nextLesson } : null,
+      enrollment: enrollmentOut
+        ? {
+            ...enrollmentOut,
+            lesson_limit: limit,
+            remaining_lessons,
+            next_lesson_at: nextLesson,
+            planned_lessons_in_cycle: planned_lessons_in_cycle,
+            payment_start_date_for_display: paymentStartForDisplay,
+          }
+        : null,
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

@@ -386,33 +386,32 @@ export default function StudentSchedule() {
       </Card>
 
       <Card className="p-5 mt-4">
-        <p className="text-sm font-semibold mb-3">Dərs saatım (slot)</p>
+        <p className="text-sm font-semibold mb-3">Dərs cədvəlim (tarixlər)</p>
         {loading ? (
           <p className="text-sm text-gray-500">Yüklənir…</p>
-        ) : enrollments.length === 0 ? (
-          <p className="text-sm text-gray-500">Aktiv qeydiyyat tapılmadı.</p>
+        ) : lessons.length === 0 ? (
+          <p className="text-sm text-gray-500">Hələ tarixli dərs qeydi yoxdur.</p>
         ) : (
-          <div className="space-y-3">
-            {enrollments.map((e) => (
-              <div
-                key={e.enrollment_id}
-                className="p-3 rounded-xl bg-[#13112e] border border-indigo-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-2"
-              >
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold truncate">{e.instructor_name}</p>
-                  <p className="text-xs text-gray-500">Müəllim</p>
+          <div className="space-y-2">
+            {[...lessons]
+              .sort((a, b) => String(a.lesson_date).localeCompare(String(b.lesson_date)))
+              .map((l) => (
+                <div key={l.id} className="p-3 rounded-xl bg-[#13112e] border border-indigo-500/20">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold truncate">
+                        {l.instructor_name ? `Dərs · ${l.instructor_name}` : 'Dərs'}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        #{l.lesson_number} · Dövr #{l.billing_cycle || 1} · {l.status || '—'}
+                      </p>
+                    </div>
+                    <div className="text-sm font-mono text-gray-200 shrink-0">
+                      {l.lesson_date ? new Date(l.lesson_date).toLocaleString('az-AZ') : '—'}
+                    </div>
+                  </div>
                 </div>
-                <div className="text-sm font-mono text-gray-200">
-                  {e.slot_id ? (
-                    <>
-                      {WEEKDAYS.find((x) => x.v === e.slot_day_of_week)?.short || e.slot_day_of_week} · {fmtTime(e.slot_start_time)}–{fmtTime(e.slot_end_time)}
-                    </>
-                  ) : (
-                    <span className="text-gray-500">Slot təyin olunmayıb</span>
-                  )}
-                </div>
-              </div>
-            ))}
+              ))}
           </div>
         )}
       </Card>

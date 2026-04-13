@@ -14,6 +14,47 @@ function billingLimit(type) {
   return null
 }
 
+const WEEKDAYS = [
+  { v: 1, short: 'B.e.' },
+  { v: 2, short: 'Ç.a.' },
+  { v: 3, short: 'Çər.' },
+  { v: 4, short: 'C.a.' },
+  { v: 5, short: 'Cümə' },
+  { v: 6, short: 'Şən.' },
+  { v: 7, short: 'Baz.' },
+]
+
+function normalizeWeekdays(raw) {
+  let arr = raw
+  if (typeof raw === 'string') {
+    try {
+      arr = JSON.parse(raw)
+    } catch {
+      arr = []
+    }
+  }
+  if (!Array.isArray(arr)) return []
+  const set = new Set()
+  for (const x of arr) {
+    const d = parseInt(String(x), 10)
+    if (Number.isFinite(d) && d >= 1 && d <= 7) set.add(d)
+  }
+  return [...set].sort((a, b) => a - b)
+}
+
+function parseLessonTimes(raw) {
+  let obj = raw
+  if (typeof raw === 'string') {
+    try {
+      obj = JSON.parse(raw)
+    } catch {
+      obj = {}
+    }
+  }
+  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return {}
+  return obj
+}
+
 export default function StudentPayments() {
   const [loading, setLoading] = useState(true)
   const [payments, setPayments] = useState([])
@@ -50,6 +91,19 @@ export default function StudentPayments() {
     .filter((p) => p.status === 'completed')
     .reduce((s, p) => s + Number(p.amount || 0), 0)
 
+  const lwd = enrollment ? normalizeWeekdays(enrollment.lesson_weekdays) : []
+  const lt = enrollment ? parseLessonTimes(enrollment.lesson_times) : {}
+  const weekdayLine =
+    lwd.length > 0
+      ? lwd
+          .map((d) => {
+            const t = lt?.[String(d)] ?? lt?.[d]
+            const short = WEEKDAYS.find((w) => w.v === d)?.short || d
+            return t ? `${short}: ${String(t).slice(0, 5)}` : `${short}: —`
+          })
+          .join(' · ')
+      : null
+
   return (
     <div className="p-4 sm:p-6 max-w-3xl mx-auto w-full min-w-0">
       <h1 className="font-display font-bold text-2xl text-white mb-2">Ödəniş</h1>
@@ -82,6 +136,34 @@ export default function StudentPayments() {
                 <span className="text-gray-500">Paket: </span>
                 {BILLING[enrollment.billing_type] || enrollment.billing_type || '—'}
               </li>
+              {enrollment.payment_start_date_for_display && (
+                <li>
+                  <span className="text-gray-500">Ödəniş başlanğıcı: </span>
+                  <span className="font-mono text-white/90">{String(enrollment.payment_start_date_for_display).slice(0, 10)}</span>
+                </li>
+              )}
+              {weekdayLine && (
+                <li>
+                  <span className="text-gray-500">Həftəlik dərs günləri/saatları: </span>
+                  <span className="text-white/90">{weekdayLine}</span>
+                </li>
+              )}
+              {enrollment.planned_lessons_in_cycle != null && limit != null && (
+                <li>
+                  <span className="text-gray-500">Cədvəldəki dərs sayı (cari dövr): </span>
+                  <span className="font-mono text-white/90">
+                    {Number(enrollment.planned_lessons_in_cycle || 0)} / {limit}
+                  </span>
+                </li>
+              )}
+              {enrollment.next_lesson_at && (
+                <li>
+                  <span className="text-gray-500">Növbəti dərs: </span>
+                  <span className="font-mono text-indigo-200">
+                    {new Date(enrollment.next_lesson_at).toLocaleString('az-AZ')}
+                  </span>
+                </li>
+              )}
               <li>
                 <span className="text-gray-500">Keçilmiş dərs sayı: </span>
                 {enrollment.lesson_count ?? 0}
