@@ -39,7 +39,13 @@ export default function StudentPayments() {
     load()
   }, [load])
 
-  const limit = enrollment ? billingLimit(enrollment.billing_type) : null
+  const limit = enrollment ? (enrollment.lesson_limit ?? billingLimit(enrollment.billing_type)) : null
+  const remaining =
+    enrollment && enrollment.remaining_lessons != null
+      ? Number(enrollment.remaining_lessons)
+      : enrollment && limit != null
+        ? Math.max(0, Number(limit) - Number(enrollment.lesson_count || 0))
+        : null
   const totalPaid = payments
     .filter((p) => p.status === 'completed')
     .reduce((s, p) => s + Number(p.amount || 0), 0)
@@ -81,6 +87,12 @@ export default function StudentPayments() {
                 {enrollment.lesson_count ?? 0}
                 {limit != null ? ` / ${limit} (Dövr #${enrollment.billing_cycle || 1})` : ''}
               </li>
+              {remaining != null && (
+                <li>
+                  <span className="text-gray-500">Qalan dərs sayı: </span>
+                  <span className="text-emerald-300 font-mono">{remaining}</span>
+                </li>
+              )}
             </ul>
           ) : (
             <p className="text-gray-500 text-sm">Aktiv qeydiyyat tapılmadı.</p>
