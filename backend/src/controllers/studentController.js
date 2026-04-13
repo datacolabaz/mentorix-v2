@@ -102,36 +102,43 @@ const deleteStudent = async (req, res) => {
     const studentId = enr[0].student_id;
 
     await db.transaction(async (client) => {
-      await client.query(
-        `UPDATE teacher_schedules
-         SET is_occupied = FALSE, student_id = NULL, enrollment_id = NULL
-         WHERE enrollment_id = $1`,
-        [enrId]
-      );
-
-      // Delete enrollment-related records
-      await client.query('DELETE FROM attendance WHERE enrollment_id = $1', [enrId]);
-      await client.query('DELETE FROM payments WHERE enrollment_id = $1', [enrId]);
-      await client.query('DELETE FROM enrollment_lessons WHERE enrollment_id = $1', [enrId]);
-      await client.query('DELETE FROM enrollments WHERE id = $1', [enrId]);
-
-      // If student has no more enrollments, delete the whole student account
-      const { rows: left } = await client.query(
-        'SELECT COUNT(*)::int AS n FROM enrollments WHERE student_id = $1',
+      // Domain rule: tələbə silinirsə, hesab da silinsin (yenidən eyni nömrə ilə qeydiyyat mümkün olsun)
+      // 1) tələbəyə bağlı bütün enrollment-ları tap
+      const { rows: enrRows } = await client.query(
+        'SELECT id FROM enrollments WHERE student_id = $1',
         [studentId]
       );
-      const remaining = left[0]?.n || 0;
-      if (remaining === 0) {
-        // Cleanup user-referenced tables to satisfy FK constraints
-        await client.query('DELETE FROM exam_results WHERE student_id = $1', [studentId]);
-        await client.query('DELETE FROM exam_assignments WHERE student_id = $1', [studentId]);
-        await client.query('DELETE FROM payments WHERE student_id = $1', [studentId]);
-        await client.query('DELETE FROM notifications WHERE user_id = $1', [studentId]);
-        await client.query('DELETE FROM task_assignments WHERE student_id = $1', [studentId]);
-        await client.query('DELETE FROM student_prep_slots WHERE student_id = $1', [studentId]);
-        await client.query('DELETE FROM student_profiles WHERE user_id = $1', [studentId]);
-        await client.query('DELETE FROM users WHERE id = $1', [studentId]);
+      const enrollmentIds = enrRows.map((r) => r.id).filter(Boolean);
+
+      // 2) schedule slotları boşalt (bütün enrollment-lar üçün)
+      if (enrollmentIds.length) {
+        await client.query(
+          `UPDATE teacher_schedules
+           SET is_occupied = FALSE, student_id = NULL, enrollment_id = NULL
+           WHERE enrollment_id = ANY($1::uuid[])`,
+          [enrollmentIds]
+        );
       }
+
+      // 3) enrollment-a bağlı cədvəllər
+      if (enrollmentIds.length) {
+        await client.query('DELETE FROM attendance WHERE enrollment_id = ANY($1::uuid[])', [enrollmentIds]);
+        await client.query('DELETE FROM payments WHERE enrollment_id = ANY($1::uuid[])', [enrollmentIds]);
+        await client.query('DELETE FROM enrollment_lessons WHERE enrollment_id = ANY($1::uuid[])', [enrollmentIds]);
+        await client.query('DELETE FROM enrollments WHERE id = ANY($1::uuid[])', [enrollmentIds]);
+      }
+
+      // 4) user-a bağlı cədvəllər (FK-ları təmizlə)
+      await client.query('DELETE FROM exam_results WHERE student_id = $1', [studentId]);
+      await client.query('DELETE FROM exam_assignments WHERE student_id = $1', [studentId]);
+      await client.query('DELETE FROM payments WHERE student_id = $1', [studentId]);
+      await client.query('DELETE FROM notifications WHERE user_id = $1', [studentId]);
+      await client.query('DELETE FROM task_assignments WHERE student_id = $1', [studentId]);
+      await client.query('DELETE FROM student_prep_slots WHERE student_id = $1', [studentId]);
+
+      // 5) profil + user
+      await client.query('DELETE FROM student_profiles WHERE user_id = $1', [studentId]);
+      await client.query('DELETE FROM users WHERE id = $1', [studentId]);
     });
 
     res.json({ success: true });
