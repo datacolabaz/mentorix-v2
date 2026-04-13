@@ -102,6 +102,19 @@ const deleteStudent = async (req, res) => {
     const studentId = enr[0].student_id;
 
     await db.transaction(async (client) => {
+      // Safety: even if hard delete fails due to unexpected FK, disable login and free unique phone/email immediately
+      await client.query(
+        `UPDATE users
+         SET is_active = FALSE,
+             phone = NULL,
+             email = NULL,
+             password_hash = NULL,
+             pin_hash = NULL,
+             phone_verified = FALSE
+         WHERE id = $1`,
+        [studentId]
+      );
+
       // Domain rule: tələbə silinirsə, hesab da silinsin (yenidən eyni nömrə ilə qeydiyyat mümkün olsun)
       // 1) tələbəyə bağlı bütün enrollment-ları tap
       const { rows: enrRows } = await client.query(
