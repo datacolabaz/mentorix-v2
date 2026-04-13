@@ -180,6 +180,13 @@ const upsertAttendanceLesson = async (req, res) => {
 
     const d = date || new Date().toISOString().slice(0, 10);
 
+    // count before (to avoid resending alerts on edits)
+    const { rows: beforeRows } = await db.query(
+      `SELECT COUNT(*)::int AS n FROM attendance WHERE enrollment_id = $1 AND billing_cycle = $2`,
+      [enrollment_id, cycle]
+    );
+    const beforeN = beforeRows[0]?.n || 0;
+
     await db.query(
       `INSERT INTO attendance (enrollment_id, billing_cycle, lesson_number, date, attended, notes)
        VALUES ($1,$2,$3,$4,$5,$6)
@@ -195,6 +202,28 @@ const upsertAttendanceLesson = async (req, res) => {
     );
     const n = c[0]?.n || 0;
     await db.query('UPDATE enrollments SET lesson_count = $2 WHERE id = $1', [enrollment_id, n]);
+
+    // Qalan 1 dərs qalanda xəbərdarlıq (hər dövr üçün bir dəfə)
+    if (limit && n === limit - 1 && beforeN !== n) {
+      const { rows: [info] } = await db.query(
+        `SELECT e.instructor_id, u.full_name AS student_name, u.phone AS student_phone,
+                COALESCE(NULLIF(TRIM(sp.parent_phone), ''), pu.phone) AS parent_phone
+         FROM enrollments e
+         JOIN users u ON u.id = e.student_id
+         LEFT JOIN student_profiles sp ON sp.user_id = e.student_id
+         LEFT JOIN users pu ON pu.id = sp.parent_id
+         WHERE e.id = $1`,
+        [enrollment_id]
+      );
+      const targetPhone = info?.parent_phone || info?.student_phone;
+      if (targetPhone) {
+        await sendSms({
+          instructorId: info.instructor_id,
+          phone: targetPhone,
+          message: `Mentorix: ${info.student_name} üçün növbəti dərs bu paketdə sonuncu dərsdir. Zəhmət olmasa növbəti ödənişi öncədən edin.`,
+        });
+      }
+    }
 
     // paket dolubsa növbəti cycle aç
     if (limit && n >= limit) {

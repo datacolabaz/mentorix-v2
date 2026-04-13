@@ -181,6 +181,15 @@ function StudentFormFields({ data, setData, scheduleMeta, mode }) {
       {mode === 'add' && scheduleMeta && (
         <div className="rounded-xl border border-indigo-500/20 bg-[#0f0c29]/60 p-3 space-y-2">
           <p className="text-xs font-semibold text-indigo-200/90 uppercase tracking-wider">Dərs vaxtı (slot)</p>
+          {data.billing_type === '8_lessons' && (
+            <p className="text-[10px] text-gray-500">Paket: 8 dərs (qeydiyyatdan sonra sayğac 8-dən geri sayacaq)</p>
+          )}
+          {data.billing_type === '12_lessons' && (
+            <p className="text-[10px] text-gray-500">Paket: 12 dərs (qeydiyyatdan sonra sayğac 12-dən geri sayacaq)</p>
+          )}
+          {data.billing_type === 'monthly' && (
+            <p className="text-[10px] text-gray-500">Paket: aylıq (sayğac aylıq ödənişə görə izlənir)</p>
+          )}
           {scheduleMeta.loading && <p className="text-xs text-gray-500">Boş slotlar yüklənir…</p>}
           {!scheduleMeta.loading && scheduleMeta.requiresScheduleSlot && !scheduleMeta.availableSlots?.length && (
             <p className="text-xs text-amber-200/90">
