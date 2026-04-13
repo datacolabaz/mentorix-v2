@@ -340,64 +340,25 @@ const register = async (req, res) => {
 
     const user = await db.transaction(async (client) => {
       let created = null;
-      try {
-        const { rows } = await client.query(
-          'INSERT INTO users (full_name, email, phone, password_hash, role) VALUES ($1, $2, $3, $4, $5) RETURNING id, full_name, email, role, phone',
-          [full_name, emailCanon, phoneCanon, hash, role],
+
+      const cleanPhone = normalizePhone(phoneCanon);
+
+      // Instructor add-student flow should not create duplicate users for the same phone.
+      if (role === 'student') {
+        const { rows: activeByPhone } = await client.query(
+          `SELECT id, full_name, email, role, phone, is_active
+           FROM users
+           WHERE role = 'student'
+             AND is_active = TRUE
+             AND ${PHONE_NORM} = $1
+           LIMIT 1`,
+          [cleanPhone]
         );
-        created = rows[0];
-      } catch (e) {
-        // If an old inactive student row still holds UNIQUE email/phone, revive it instead of failing.
-        if (e?.code === '23505' && role === 'student') {
-          const clean = normalizePhone(phoneCanon);
-          const { rows: candidates } = await client.query(
-            `SELECT id, full_name, email, role, phone, is_active
-             FROM users
-             WHERE role = 'student'
-               AND is_active = FALSE
-               AND (
-                 (${PHONE_NORM} = $1)
-                 OR ($2::text IS NOT NULL AND LOWER(TRIM(email)) = LOWER(TRIM($2::text))))
-             ORDER BY
-               CASE WHEN ($2::text IS NOT NULL AND LOWER(TRIM(email)) = LOWER(TRIM($2::text))) THEN 0 ELSE 1 END,
-               created_at NULLS LAST
-             LIMIT 5`,
-            [clean, emailCanon]
-          );
-
-          const pick =
-            candidates.find((r) => emailCanon && String(r.email || '').toLowerCase() === String(emailCanon).toLowerCase()) ||
-            candidates.find((r) => normalizePhone(r.phone) === clean) ||
-            candidates[0] ||
-            null;
-
-          if (!pick) throw e;
-
-          // Free UNIQUE collisions caused by other inactive "ghost" rows still holding the same email/phone.
-          await client.query(
-            `UPDATE users
-             SET email = NULL
-             WHERE role = 'student'
-               AND is_active = FALSE
-               AND id <> $1
-               AND $2::text IS NOT NULL
-               AND LOWER(TRIM(email)) = LOWER(TRIM($2::text))`,
-            [pick.id, emailCanon]
-          );
-          await client.query(
-            `UPDATE users
-             SET phone = NULL
-             WHERE role = 'student'
-               AND is_active = FALSE
-               AND id <> $1
-               AND ${PHONE_NORM} = $2`,
-            [pick.id, clean]
-          );
-
+        if (activeByPhone[0]) {
           const { rows: up } = await client.query(
             `UPDATE users
              SET full_name = $2,
-                 email = $3,
+                 email = COALESCE($3, email),
                  phone = $4,
                  password_hash = $5,
                  role = 'student',
@@ -405,11 +366,84 @@ const register = async (req, res) => {
                  phone_verified = FALSE
              WHERE id = $1
              RETURNING id, full_name, email, role, phone`,
-            [pick.id, full_name, emailCanon, phoneCanon, hash]
+            [activeByPhone[0].id, full_name, emailCanon, phoneCanon, hash]
           );
           created = up[0];
-        } else {
-          throw e;
+        }
+      }
+
+      if (!created) {
+        try {
+          const { rows } = await client.query(
+            'INSERT INTO users (full_name, email, phone, password_hash, role) VALUES ($1, $2, $3, $4, $5) RETURNING id, full_name, email, role, phone',
+            [full_name, emailCanon, phoneCanon, hash, role],
+          );
+          created = rows[0];
+        } catch (e) {
+          // If an old inactive student row still holds UNIQUE email/phone, revive it instead of failing.
+          if (e?.code === '23505' && role === 'student') {
+            const clean = normalizePhone(phoneCanon);
+            const { rows: candidates } = await client.query(
+              `SELECT id, full_name, email, role, phone, is_active
+               FROM users
+               WHERE role = 'student'
+                 AND is_active = FALSE
+                 AND (
+                   (${PHONE_NORM} = $1)
+                   OR ($2::text IS NOT NULL AND LOWER(TRIM(email)) = LOWER(TRIM($2::text))))
+               ORDER BY
+                 CASE WHEN ($2::text IS NOT NULL AND LOWER(TRIM(email)) = LOWER(TRIM($2::text))) THEN 0 ELSE 1 END,
+                 created_at NULLS LAST
+               LIMIT 5`,
+              [clean, emailCanon]
+            );
+
+            const pick =
+              candidates.find((r) => emailCanon && String(r.email || '').toLowerCase() === String(emailCanon).toLowerCase()) ||
+              candidates.find((r) => normalizePhone(r.phone) === clean) ||
+              candidates[0] ||
+              null;
+
+            if (!pick) throw e;
+
+            // Free UNIQUE collisions caused by other inactive "ghost" rows still holding the same email/phone.
+            await client.query(
+              `UPDATE users
+               SET email = NULL
+               WHERE role = 'student'
+                 AND is_active = FALSE
+                 AND id <> $1
+                 AND $2::text IS NOT NULL
+                 AND LOWER(TRIM(email)) = LOWER(TRIM($2::text))`,
+              [pick.id, emailCanon]
+            );
+            await client.query(
+              `UPDATE users
+               SET phone = NULL
+               WHERE role = 'student'
+                 AND is_active = FALSE
+                 AND id <> $1
+                 AND ${PHONE_NORM} = $2`,
+              [pick.id, clean]
+            );
+
+            const { rows: up } = await client.query(
+              `UPDATE users
+               SET full_name = $2,
+                   email = $3,
+                   phone = $4,
+                   password_hash = $5,
+                   role = 'student',
+                   is_active = TRUE,
+                   phone_verified = FALSE
+               WHERE id = $1
+               RETURNING id, full_name, email, role, phone`,
+              [pick.id, full_name, emailCanon, phoneCanon, hash]
+            );
+            created = up[0];
+          } else {
+            throw e;
+          }
         }
       }
 
