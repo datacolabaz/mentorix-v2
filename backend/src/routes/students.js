@@ -87,6 +87,14 @@ function billingLimit(type) {
   return null;
 }
 
+function weekdayFromYmd(ymd) {
+  if (!ymd || !/^\d{4}-\d{2}-\d{2}$/.test(String(ymd))) return null;
+  const [y, mo, d] = String(ymd).split('-').map(Number);
+  const dt = new Date(Date.UTC(y, mo - 1, d));
+  if (dt.getUTCFullYear() !== y || dt.getUTCMonth() !== mo - 1 || dt.getUTCDate() !== d) return null;
+  return ((dt.getUTCDay() + 6) % 7) + 1; // Mon=1..Sun=7
+}
+
 function nextDateForWeekday(afterYmd, weekday /*1-7*/, ymdInclusive) {
   // use UTC dates to avoid TZ drift; store as YYYY-MM-DD
   const [y, mo, d] = afterYmd.split('-').map(Number);
@@ -102,7 +110,7 @@ function nextDateForWeekday(afterYmd, weekday /*1-7*/, ymdInclusive) {
 }
 
 function generateLessonStarts({ startYmd, lessonWeekdays, lessonTimes, count }) {
-  // start searching strictly after startYmd (exclusive) to match expectation (first lesson after registration date)
+  // include startYmd: the first lesson can be on this exact date
   let cursor = startYmd;
   const out = [];
   for (let i = 0; i < count; i++) {
@@ -110,13 +118,21 @@ function generateLessonStarts({ startYmd, lessonWeekdays, lessonTimes, count }) 
     for (const wd of lessonWeekdays) {
       const t = lessonTimes[String(wd)];
       if (!t) continue;
-      const nextYmd = nextDateForWeekday(cursor, wd, false);
+      const nextYmd = nextDateForWeekday(cursor, wd, true);
       const ts = `${nextYmd} ${t}:00`;
       if (!best || ts < best) best = ts;
     }
     if (!best) break;
     out.push(best);
-    cursor = best.slice(0, 10); // next search after this date
+    // next search strictly after this lesson date
+    cursor = best.slice(0, 10);
+    // move cursor forward one day to avoid repeating same day when multiple weekdays include it
+    const [yy, mm, dd] = cursor.split('-').map(Number);
+    const dt = new Date(Date.UTC(yy, mm - 1, dd));
+    const next = new Date(dt.getTime() + 86400000);
+    cursor = `${next.getUTCFullYear()}-${String(next.getUTCMonth() + 1).padStart(2, '0')}-${String(
+      next.getUTCDate()
+    ).padStart(2, '0')}`;
   }
   return out;
 }
@@ -136,6 +152,7 @@ router.post('/enroll', authenticate, authorize('instructor', 'admin'), async (re
       parent_phone,
       monthly_fee,
       payment_start_date,
+      first_lesson_date,
       teacher_schedule_id,
       lesson_weekdays,
       lesson_times,
@@ -152,14 +169,27 @@ router.post('/enroll', authenticate, authorize('instructor', 'admin'), async (re
       return res.status(400).json({ success: false, message: 'Dərs günlərinə uyğun saatları qeyd edin' });
     }
 
+    const limitForValidation = billingLimit(billing_type || '8_lessons');
+    const firstYmd = parsePaymentStartDate(first_lesson_date);
+    if (limitForValidation && !firstYmd) {
+      return res.status(400).json({ success: false, message: 'İlk dərs tarixi seçilməlidir' });
+    }
+    if (limitForValidation && firstYmd) {
+      const wd = weekdayFromYmd(firstYmd);
+      if (!wd || !lwd.includes(wd) || !lt[String(wd)]) {
+        return res.status(400).json({
+          success: false,
+          message: 'İlk dərs tarixi seçdiyiniz dərs günləri/saatları ilə uyğun deyil',
+        });
+      }
+    }
+
     const { rows: cnt } = await db.query(
       `SELECT COUNT(*)::int AS n FROM teacher_schedules
        WHERE REPLACE(LOWER(TRIM(instructor_id::text)), '-', '') = $1`,
       [ni]
     );
-    if ((cnt[0]?.n || 0) > 0 && !teacher_schedule_id) {
-      return res.status(400).json({ success: false, message: 'Dərs vaxtı (boş slot) seçin' });
-    }
+    // artıq tələb olunmur: dərs vaxtı həftəlik gün/saat + ilk dərs tarixi ilə generasiya olunur
 
     const mf = parseMonthlyFee(monthly_fee);
     const psd = parsePaymentStartDate(payment_start_date);
@@ -180,20 +210,7 @@ router.post('/enroll', authenticate, authorize('instructor', 'admin'), async (re
       );
       const enr = rows[0];
 
-      if (teacher_schedule_id) {
-        const up = await client.query(
-          `UPDATE teacher_schedules
-           SET is_occupied = TRUE, enrollment_id = $1, student_id = $2
-           WHERE id = $3
-             AND REPLACE(LOWER(TRIM(instructor_id::text)), '-', '') = $4
-             AND is_occupied = FALSE
-           RETURNING id`,
-          [enr.id, student_id, teacher_schedule_id, ni]
-        );
-        if (up.rowCount === 0) {
-          throw Object.assign(new Error('SLOT_UNAVAILABLE'), { code: 'SLOT' });
-        }
-      }
+      // teacher_schedules ilə bağlama artıq istifadə olunmur (dərslər dated lessons kimi saxlanır)
 
       const pn = parent_name != null ? String(parent_name).trim() : '';
       const pp = parent_phone != null ? String(parent_phone).trim() : '';
@@ -216,7 +233,7 @@ router.post('/enroll', authenticate, authorize('instructor', 'admin'), async (re
 
       // generate enrollment_lessons for first billing cycle (8/12). Monthly: skip for now.
       const limit = billingLimit(enr.billing_type);
-      const startYmd = psd || new Date().toISOString().slice(0, 10);
+      const startYmd = firstYmd || psd || new Date().toISOString().slice(0, 10);
       if (limit) {
         const starts = generateLessonStarts({
           startYmd,
@@ -224,12 +241,54 @@ router.post('/enroll', authenticate, authorize('instructor', 'admin'), async (re
           lessonTimes: lt,
           count: limit,
         });
+
+        // conflict check: existing lessons for instructor + occupied weekly slots
+        for (let i = 0; i < starts.length; i++) {
+          const ymd = starts[i].slice(0, 10);
+          const time = starts[i].slice(11, 16);
+          const w = weekdayFromYmd(ymd);
+          const occupied = await client.query(
+            `SELECT id FROM teacher_schedules
+             WHERE REPLACE(LOWER(TRIM(instructor_id::text)), '-', '') = $1
+               AND is_occupied = TRUE
+               AND day_of_week = $2
+               AND start_time = $3::time
+             LIMIT 1`,
+            [ni, w, time]
+          );
+          if (occupied.rowCount > 0) {
+            throw Object.assign(new Error('LESSON_CONFLICT'), {
+              code: 'LESSON_CONFLICT',
+              at: `${ymd} ${time}`,
+            });
+          }
+
+          const exists = await client.query(
+            `SELECT id FROM lessons
+             WHERE instructor_id = $1 AND lesson_date = ($2::timestamp)::timestamptz
+             LIMIT 1`,
+            [instructor_id, starts[i]]
+          );
+          if (exists.rowCount > 0) {
+            throw Object.assign(new Error('LESSON_CONFLICT'), {
+              code: 'LESSON_CONFLICT',
+              at: `${ymd} ${time}`,
+            });
+          }
+        }
+
         for (let i = 0; i < starts.length; i++) {
           await client.query(
             `INSERT INTO enrollment_lessons (enrollment_id, billing_cycle, lesson_number, starts_at)
              VALUES ($1, 1, $2, $3::timestamp)
              ON CONFLICT (enrollment_id, billing_cycle, lesson_number) DO NOTHING`,
             [enr.id, i + 1, starts[i]]
+          );
+          await client.query(
+            `INSERT INTO lessons (enrollment_id, student_id, instructor_id, lesson_date, status, lesson_number, billing_cycle)
+             VALUES ($1,$2,$3,($4::timestamp)::timestamptz,'pending',$5,1)
+             ON CONFLICT (enrollment_id, billing_cycle, lesson_number) DO NOTHING`,
+            [enr.id, student_id, instructor_id, starts[i], i + 1]
           );
         }
       }
@@ -238,10 +297,10 @@ router.post('/enroll', authenticate, authorize('instructor', 'admin'), async (re
 
     res.json({ success: true, enrollment });
   } catch (err) {
-    if (err.code === 'SLOT') {
+    if (err.code === 'LESSON_CONFLICT') {
       return res.status(409).json({
         success: false,
-        message: 'Seçilmiş slot artıq mövcud deyil və ya məşğuldur',
+        message: `Dərs cədvəlində uyğun olmayan vaxt var: ${err.at || ''}`.trim(),
       });
     }
     res.status(500).json({ success: false, message: err.message });
@@ -323,6 +382,33 @@ router.patch('/enrollment/:enrollmentId', authenticate, authorize('admin', 'inst
 
     res.json({ success: true });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+});
+
+// Müəllim/Admin: enrollment üzrə dərs cədvəli (dated lessons)
+router.get('/enrollment/:enrollmentId/lessons', authenticate, authorize('admin', 'instructor'), async (req, res) => {
+  try {
+    const { enrollmentId } = req.params;
+    const { rows: enr } = await db.query(
+      'SELECT id, instructor_id, student_id FROM enrollments WHERE id = $1',
+      [enrollmentId]
+    );
+    if (!enr[0]) return res.status(404).json({ success: false, message: 'Enrollment tapılmadı' });
+
+    if (req.user.role === 'instructor' && !sameUuid(enr[0].instructor_id, req.user.id)) {
+      return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
+    }
+
+    const { rows: lessons } = await db.query(
+      `SELECT id, lesson_date, status, lesson_number, billing_cycle
+       FROM lessons
+       WHERE enrollment_id = $1
+       ORDER BY billing_cycle, lesson_number`,
+      [enrollmentId]
+    );
+    res.json({ success: true, lessons });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
 });
 
 router.patch('/:id/phone', authenticate, authorize('admin', 'instructor'), async (req, res) => {

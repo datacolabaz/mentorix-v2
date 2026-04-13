@@ -131,6 +131,25 @@ CREATE TABLE enrollment_lessons (
 CREATE INDEX IF NOT EXISTS idx_enrollment_lessons_enrollment ON enrollment_lessons (enrollment_id);
 CREATE INDEX IF NOT EXISTS idx_enrollment_lessons_starts_at ON enrollment_lessons (starts_at);
 
+CREATE TABLE lessons (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  enrollment_id UUID NOT NULL REFERENCES enrollments(id) ON DELETE CASCADE,
+  student_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  instructor_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  lesson_date TIMESTAMPTZ NOT NULL,
+  status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','done','absent','cancelled')),
+  lesson_number INTEGER NOT NULL,
+  billing_cycle INTEGER NOT NULL DEFAULT 1,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  CONSTRAINT lessons_unique_enrollment_cycle_number UNIQUE (enrollment_id, billing_cycle, lesson_number),
+  CONSTRAINT lessons_unique_instructor_time UNIQUE (instructor_id, lesson_date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_lessons_student ON lessons (student_id);
+CREATE INDEX IF NOT EXISTS idx_lessons_instructor ON lessons (instructor_id);
+CREATE INDEX IF NOT EXISTS idx_lessons_lesson_date ON lessons (lesson_date);
+CREATE INDEX IF NOT EXISTS idx_lessons_enrollment ON lessons (enrollment_id);
+
 CREATE TABLE attendance (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   enrollment_id UUID REFERENCES enrollments(id),

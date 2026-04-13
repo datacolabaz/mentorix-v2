@@ -195,23 +195,16 @@ const getMySchedule = async (req, res) => {
        ORDER BY day_of_week, start_time`,
       [studentId]
     );
-    const { rows } = await db.query(
-      `SELECT e.id AS enrollment_id,
-              e.instructor_id,
-              iu.full_name AS instructor_name,
-              e.lesson_weekdays,
-              ts.id AS slot_id,
-              ts.day_of_week AS slot_day_of_week,
-              ts.start_time AS slot_start_time,
-              ts.end_time AS slot_end_time
-       FROM enrollments e
-       JOIN users iu ON iu.id = e.instructor_id
-       LEFT JOIN teacher_schedules ts ON ts.enrollment_id = e.id AND ts.student_id = $1
-       WHERE e.student_id = $1 AND e.status = 'active'
-       ORDER BY e.enrolled_at DESC NULLS LAST`,
+    const { rows: lessons } = await db.query(
+      `SELECT l.id, l.enrollment_id, l.instructor_id, iu.full_name AS instructor_name,
+              l.lesson_date, l.status, l.lesson_number, l.billing_cycle
+       FROM lessons l
+       JOIN users iu ON iu.id = l.instructor_id
+       WHERE l.student_id = $1
+       ORDER BY l.lesson_date ASC`,
       [studentId]
     );
-    res.json({ success: true, enrollments: rows, prepSlots });
+    res.json({ success: true, lessons, prepSlots });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

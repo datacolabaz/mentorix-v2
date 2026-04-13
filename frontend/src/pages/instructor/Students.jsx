@@ -22,6 +22,7 @@ const emptyForm = {
   referral_notes: '',
   monthly_fee: '',
   payment_start_date: '',
+  first_lesson_date: '',
   lesson_weekdays: [],
   lesson_times: {},
   teacher_schedule_id: '',
@@ -133,6 +134,26 @@ function StudentFormFields({ data, setData, scheduleMeta, mode, onRefreshSlots, 
             </p>
           )}
         </div>
+      </div>
+      <div>
+        <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">İlk dərs tarixi *</label>
+        <p className="text-[10px] text-gray-500 mb-2">
+          Seçilən tarix mütləq seçdiyiniz dərs günlərindən birinə düşməlidir. Sistem bu tarixdən başlayaraq paketə uyğun (8/12) dərsləri avtomatik yaradacaq.
+        </p>
+        <input
+          className={inp}
+          type="date"
+          value={data.first_lesson_date}
+          onChange={(e) => {
+            const v = e.target.value
+            setData((p) => ({
+              ...p,
+              first_lesson_date: v,
+              // default: ödəniş başlanğıcı verilməyibsə, ilk dərs tarixinə bağla
+              payment_start_date: p.payment_start_date || v,
+            }))
+          }}
+        />
       </div>
       <div className="rounded-xl border border-indigo-500/20 bg-[#0f0c29]/60 p-3 space-y-2">
         <p className="text-xs font-semibold text-indigo-200/90 uppercase tracking-wider">Həftənin dərs günləri *</p>
@@ -293,6 +314,10 @@ export default function InstructorStudents() {
       toast('Ən azı bir dərs günü seçin', 'error')
       return
     }
+    if ((form.billing_type === '8_lessons' || form.billing_type === '12_lessons') && !form.first_lesson_date) {
+      toast('İlk dərs tarixini seçin', 'error')
+      return
+    }
     // Slot seçimi tələb olunmur: dərslər lesson_times + start_date ilə avtomatik generasiya olunur
     setLoading(true)
     try {
@@ -311,6 +336,7 @@ export default function InstructorStudents() {
         referral_notes: form.referral_notes,
         monthly_fee: form.monthly_fee,
         payment_start_date: form.payment_start_date || null,
+        first_lesson_date: form.first_lesson_date || null,
         lesson_weekdays: form.lesson_weekdays,
         lesson_times: form.lesson_times || {},
         parent_name: form.parent_name,

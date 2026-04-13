@@ -62,7 +62,7 @@ const ROW_COUNT = GRID_END - GRID_START
 
 export default function StudentSchedule() {
   const [loading, setLoading] = useState(true)
-  const [enrollments, setEnrollments] = useState([])
+  const [lessons, setLessons] = useState([])
   const [prepSlots, setPrepSlots] = useState([])
   const [err, setErr] = useState(null)
   const [saving, setSaving] = useState(false)
@@ -78,11 +78,11 @@ export default function StudentSchedule() {
     setErr(null)
     try {
       const d = await api.get('/students/my/schedule')
-      setEnrollments(Array.isArray(d.enrollments) ? d.enrollments : [])
+      setLessons(Array.isArray(d.lessons) ? d.lessons : [])
       setPrepSlots(Array.isArray(d.prepSlots) ? d.prepSlots : [])
     } catch (e) {
       setErr(e?.message || 'Yüklənmədi')
-      setEnrollments([])
+      setLessons([])
       setPrepSlots([])
     } finally {
       setLoading(false)
@@ -95,29 +95,41 @@ export default function StudentSchedule() {
 
   const lessonDays = useMemo(() => {
     const set = new Set()
-    for (const e of enrollments) {
-      for (const d of normalizeWeekdays(e.lesson_weekdays)) set.add(d)
+    for (const l of lessons) {
+      if (!l?.lesson_date) continue
+      const dt = new Date(l.lesson_date)
+      if (Number.isNaN(dt.getTime())) continue
+      const dow = ((dt.getDay() + 6) % 7) + 1 // Mon=1..Sun=7
+      set.add(dow)
     }
     return [...set].sort((a, b) => a - b)
-  }, [enrollments])
+  }, [lessons])
 
   const scheduleSlotsByDay = useMemo(() => {
     const m = new Map()
     for (let d = 1; d <= 7; d++) m.set(d, [])
 
-    // Dərs slotları (müəllim tərəfindən təyin olunmuş)
-    for (const e of enrollments) {
-      if (!e?.slot_id) continue
-      const day = Number(e.slot_day_of_week)
-      if (!Number.isFinite(day)) continue
+    // Dərs slotları (dated lessons). End_time: default 60 dəq.
+    for (const l of lessons) {
+      if (!l?.lesson_date) continue
+      const dt = new Date(l.lesson_date)
+      if (Number.isNaN(dt.getTime())) continue
+      const day = ((dt.getDay() + 6) % 7) + 1
+      const hh = String(dt.getHours()).padStart(2, '0')
+      const mm = String(dt.getMinutes()).padStart(2, '0')
+      const start = `${hh}:${mm}`
+      const dtEnd = new Date(dt.getTime() + 60 * 60000)
+      const eh = String(dtEnd.getHours()).padStart(2, '0')
+      const em = String(dtEnd.getMinutes()).padStart(2, '0')
+      const end = `${eh}:${em}`
       const list = m.get(day) || []
       list.push({
-        id: `lesson-${e.slot_id}`,
+        id: `lesson-${l.id}`,
         kind: 'lesson',
         day_of_week: day,
-        start_time: e.slot_start_time,
-        end_time: e.slot_end_time,
-        title: e.instructor_name ? `Dərs · ${e.instructor_name}` : 'Dərs',
+        start_time: start,
+        end_time: end,
+        title: l.instructor_name ? `Dərs · ${l.instructor_name}` : 'Dərs',
       })
       m.set(day, list)
     }
@@ -142,7 +154,7 @@ export default function StudentSchedule() {
       m.get(d).sort((a, b) => parseToMinutes(a.start_time) - parseToMinutes(b.start_time))
     }
     return m
-  }, [enrollments, prepSlots])
+  }, [lessons, prepSlots])
 
   const freeDays = useMemo(() => {
     const l = new Set(lessonDays)
