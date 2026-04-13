@@ -11,6 +11,15 @@ function normalizePhone(phone) {
   return (phone || '').replace(/\D/g, '');
 }
 
+function canonicalPhone(phone) {
+  const clean = normalizePhone(phone);
+  if (!clean) return null;
+  // project convention: keep +994... for display + consistent uniqueness
+  if (clean.startsWith('994')) return `+${clean}`;
+  // fallback: still return digits (better than random formatting)
+  return clean;
+}
+
 function hasStoredPin(pinHash) {
   return pinHash != null && String(pinHash).trim().length > 0;
 }
@@ -324,28 +333,77 @@ const register = async (req, res) => {
   try {
     const { full_name, email, phone, password, role, subject, billing_type, parent_id } = req.body;
     const hash = await bcrypt.hash(password || 'Pass@123', 12);
+    const phoneCanon = canonicalPhone(phone);
+    if (!phoneCanon) return res.status(400).json({ success: false, message: 'Telefon tələb olunur' });
+    const emailCanon = email?.toLowerCase() || null;
     const result = await db.transaction(async (client) => {
-      const { rows } = await client.query(
-        'INSERT INTO users (full_name, email, phone, password_hash, role) VALUES ($1, $2, $3, $4, $5) RETURNING id, full_name, email, role, phone',
-        [full_name, email?.toLowerCase() || null, phone, hash, role],
-      );
-      const user = rows[0];
+      let user = null;
+      try {
+        const { rows } = await client.query(
+          'INSERT INTO users (full_name, email, phone, password_hash, role) VALUES ($1, $2, $3, $4, $5) RETURNING id, full_name, email, role, phone',
+          [full_name, emailCanon, phoneCanon, hash, role],
+        );
+        user = rows[0];
+      } catch (e) {
+        // Allow re-using a phone if an old (inactive) student record still exists.
+        // This matches the product expectation: deleted user should free phone; if not, safely "revive".
+        if (e?.code === '23505' && role === 'student') {
+          const clean = normalizePhone(phoneCanon);
+          const { rows: found } = await client.query(
+            `SELECT id, full_name, email, role, phone, is_active
+             FROM users
+             WHERE ${PHONE_NORM} = $1
+             LIMIT 1`,
+            [clean]
+          );
+          const existing = found[0] || null;
+          if (existing && existing.role === 'student' && existing.is_active === false) {
+            const { rows: up } = await client.query(
+              `UPDATE users
+               SET full_name = $2,
+                   email = $3,
+                   phone = $4,
+                   password_hash = $5,
+                   role = 'student',
+                   is_active = TRUE,
+                   phone_verified = FALSE
+               WHERE id = $1
+               RETURNING id, full_name, email, role, phone`,
+              [existing.id, full_name, emailCanon, phoneCanon, hash]
+            );
+            user = up[0];
+          } else {
+            throw e;
+          }
+        } else {
+          throw e;
+        }
+      }
+
       if (role === 'instructor') {
         await client.query(
           'INSERT INTO instructor_profiles (user_id, subject, billing_type) VALUES ($1, $2, $3)',
           [user.id, subject || null, billing_type || '8_lessons'],
         );
       } else if (role === 'student') {
-        await client.query('INSERT INTO student_profiles (user_id, parent_id) VALUES ($1, $2)', [
-          user.id,
-          parent_id || null,
-        ]);
+        await client.query(
+          `INSERT INTO student_profiles (user_id, parent_id)
+           VALUES ($1, $2)
+           ON CONFLICT (user_id) DO UPDATE SET parent_id = EXCLUDED.parent_id`,
+          [user.id, parent_id || null]
+        );
       }
       return user;
     });
     res.status(201).json({ success: true, user: result });
   } catch (err) {
-    if (err.code === '23505') return res.status(409).json({ success: false, message: 'Bu nömrə artıq mövcuddur' });
+    if (err.code === '23505') {
+      const c = String(err.constraint || '');
+      if (c.includes('users_email')) {
+        return res.status(409).json({ success: false, message: 'Bu email artıq mövcuddur' });
+      }
+      return res.status(409).json({ success: false, message: 'Bu nömrə artıq mövcuddur' });
+    }
     res.status(500).json({ success: false, message: err.message });
   }
 };
