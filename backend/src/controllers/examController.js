@@ -88,7 +88,7 @@ const createExam = async (req, res) => {
           const neg =
             q.negative_marking != null && q.negative_marking !== ''
               ? Number(q.negative_marking)
-              : q.question_type === 'closed' || q.question_type === 'matching'
+              : q.question_type === 'closed'
                 ? -0.25
                 : 0;
           const qText = (q.question_text && String(q.question_text).trim()) || `Sual ${i + 1}`;

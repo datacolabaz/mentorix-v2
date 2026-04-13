@@ -1,8 +1,8 @@
 const db = require('../utils/db');
 
-/** Qapalı və uyğunluq: səhv cavaba tətbiq olunan mənfi (default -0.25) */
+/** Yalnız qapalı: səhv cavaba tətbiq olunan mənfi (default -0.25) */
 function autoWrongPenalty(q) {
-  if (q.question_type !== 'closed' && q.question_type !== 'matching') return 0;
+  if (q.question_type !== 'closed') return 0;
   const n = q.negative_marking;
   if (n === null || n === undefined || n === '') return -0.25;
   const v = Number(n);
@@ -101,11 +101,9 @@ const calculateScore = (questions, answers) => {
     } else if (q.question_type === 'matching') {
       const keyStored = String(q.correct_answer ?? '').trim();
       if (!keyStored) continue;
-      const pen = autoWrongPenalty(q);
       const cg = normMatchCanonical(given);
       const ck = normMatchCanonical(keyStored);
       if (cg === ck) earned += Number(q.points || 0);
-      else earned += pen;
     } else if (q.question_type === 'open') {
       const key = openAutoKey(q);
       if (key == null) continue;
