@@ -21,11 +21,14 @@ import InstructorAttendance from './pages/instructor/Attendance'
 import InstructorAnalytics from './pages/instructor/Analytics'
 import InstructorPayments from './pages/instructor/Payments'
 import InstructorNotifications from './pages/instructor/Notifications'
+import InstructorTasks from './pages/instructor/Tasks'
 import ParentNotifications from './pages/parent/Notifications'
 
 import StudentDashboard from './pages/student/Dashboard'
 import StudentExams from './pages/student/Exams'
 import StudentPayments from './pages/student/Payments'
+import StudentSchedule from './pages/student/Schedule'
+import StudentTasks from './pages/student/Tasks'
 import ParentDashboard from './pages/parent/Dashboard'
 
 const Placeholder = ({ title }) => (
@@ -65,7 +68,7 @@ export default function App() {
         <Route path="exams" element={<InstructorExams />} />
         <Route path="attendance" element={<InstructorAttendance />} />
         <Route path="analytics" element={<InstructorAnalytics />} />
-        <Route path="tasks" element={<Placeholder title="Tapşırıqlar" />} />
+        <Route path="tasks" element={<InstructorTasks />} />
         <Route path="payments" element={<InstructorPayments />} />
         <Route path="notifications" element={<InstructorNotifications />} />
         <Route path="settings" element={<Placeholder title="Tənzimləmələr" />} />
@@ -73,7 +76,9 @@ export default function App() {
 
       <Route path="/student" element={<ProtectedRoute roles={['student']}><StudentLayout /></ProtectedRoute>}>
         <Route index element={<StudentDashboard />} />
+        <Route path="schedule" element={<StudentSchedule />} />
         <Route path="exams" element={<StudentExams />} />
+        <Route path="tasks" element={<StudentTasks />} />
         <Route path="payments" element={<StudentPayments />} />
       </Route>
 

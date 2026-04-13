@@ -1,5 +1,5 @@
 const router = require('express').Router();
-const { listStudents, getStudent, deleteStudent } = require('../controllers/studentController');
+const { listStudents, getStudent, deleteStudent, getMySchedule } = require('../controllers/studentController');
 const { authenticate, authorize } = require('../middleware/auth');
 const db = require('../utils/db');
 
@@ -234,6 +234,8 @@ router.patch('/:id/phone', authenticate, authorize('admin', 'instructor'), async
     res.json({ success: true });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
+
+router.get('/my/schedule', authenticate, authorize('student'), getMySchedule);
 
 router.get('/:id', authenticate, getStudent);
 

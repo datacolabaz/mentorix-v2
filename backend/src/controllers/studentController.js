@@ -110,4 +110,30 @@ const deleteStudent = async (req, res) => {
   }
 };
 
-module.exports = { listStudents, getStudent, deleteStudent };
+/** Tələbə profili: həftəlik dərs günləri + slot məlumatı (boş günləri UI çıxarır) */
+const getMySchedule = async (req, res) => {
+  try {
+    const studentId = req.user.id;
+    const { rows } = await db.query(
+      `SELECT e.id AS enrollment_id,
+              e.instructor_id,
+              iu.full_name AS instructor_name,
+              e.lesson_weekdays,
+              ts.id AS slot_id,
+              ts.day_of_week AS slot_day_of_week,
+              ts.start_time AS slot_start_time,
+              ts.end_time AS slot_end_time
+       FROM enrollments e
+       JOIN users iu ON iu.id = e.instructor_id
+       LEFT JOIN teacher_schedules ts ON ts.enrollment_id = e.id AND ts.student_id = $1
+       WHERE e.student_id = $1 AND e.status = 'active'
+       ORDER BY e.enrolled_at DESC NULLS LAST`,
+      [studentId]
+    );
+    res.json({ success: true, enrollments: rows });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+module.exports = { listStudents, getStudent, deleteStudent, getMySchedule };
