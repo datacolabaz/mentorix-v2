@@ -3,6 +3,7 @@ import api from '../../lib/api'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
 import ListSkeleton from '../../components/common/ListSkeleton'
+import Modal from '../../components/common/Modal'
 import { useToast } from '../../components/common/Toast'
 import {
   fmtTime,
@@ -46,6 +47,9 @@ export default function InstructorSchedule() {
   const [oneStart, setOneStart] = useState('10:00')
   const [oneEnd, setOneEnd] = useState('11:00')
 
+  /** { title, subtitle, names: string[] } | null */
+  const [studentListModal, setStudentListModal] = useState(null)
+
   const load = useCallback(async () => {
     setErr(null)
     setLoading(true)
@@ -83,28 +87,40 @@ export default function InstructorSchedule() {
     return m
   }, [slots])
 
+  /** Eyni gün + eyni başlanğıc/bitmə: tələbələri bir xanada topla (minimal görünüş). */
   const datedSlotsByDay = useMemo(() => {
     const m = new Map()
-    for (let d = 1; d <= 7; d++) m.set(d, [])
+    for (let d = 1; d <= 7; d++) m.set(d, new Map())
+
     for (const l of datedLessons) {
       const slot = slotTimesForLesson(l)
       if (!slot) continue
       const { day, start, end } = slot
-      const list = m.get(day) || []
-      list.push({
-        id: `lesson-${l.id}`,
-        kind: 'lesson',
-        day_of_week: day,
-        start_time: start,
-        end_time: end,
-        title: l.student_name ? `Dərs · ${l.student_name}` : 'Dərs',
-      })
-      m.set(day, list)
+      const name = (l.student_name || '').trim() || 'Tələbə'
+      const key = `${start}|${end}`
+      const dayMap = m.get(day)
+      if (!dayMap.has(key)) {
+        dayMap.set(key, {
+          id: `lesgrp-${day}-${key}`,
+          kind: 'lesson',
+          day_of_week: day,
+          start_time: start,
+          end_time: end,
+          studentNames: [],
+        })
+      }
+      const g = dayMap.get(key)
+      if (!g.studentNames.includes(name)) g.studentNames.push(name)
     }
-    for (const d of m.keys()) {
-      m.get(d).sort((a, b) => parseToMinutes(a.start_time) - parseToMinutes(b.start_time))
+
+    const out = new Map()
+    for (let d = 1; d <= 7; d++) {
+      const arr = [...(m.get(d) || new Map()).values()].sort(
+        (a, b) => parseToMinutes(a.start_time) - parseToMinutes(b.start_time)
+      )
+      out.set(d, arr)
     }
-    return m
+    return out
   }, [datedLessons])
 
   const toggleGenDay = (v) => {
@@ -353,6 +369,27 @@ export default function InstructorSchedule() {
                     const spanHours = primary
                       ? Math.max(1, Math.ceil(parseToMinutes(primary.end_time) / 60) - slotFirstHour(primary))
                       : 1
+                    const occupiedNames = [
+                      ...new Set(
+                        hourSlots
+                          .filter((s) => s.is_occupied && s.student_name)
+                          .map((s) => String(s.student_name).trim())
+                          .filter(Boolean)
+                      ),
+                    ]
+                    const openTeacherNamesModal = () => {
+                      const names =
+                        occupiedNames.length > 0
+                          ? occupiedNames
+                          : primary.student_name
+                            ? [String(primary.student_name).trim()]
+                            : ['Tələbə']
+                      setStudentListModal({
+                        title: 'Məşğul slot',
+                        subtitle: `${d.full} · ${fmtTime(primary.start_time)}–${fmtTime(primary.end_time)}`,
+                        names,
+                      })
+                    }
                     return (
                       <div
                         key={`${d.v}-${hour}`}
@@ -397,7 +434,27 @@ export default function InstructorSchedule() {
                               </button>
                             )}
                             {primary.is_occupied && primary.enrollment_id && (
-                              <div className="text-[9px] opacity-90 truncate mt-0.5">{primary.student_name || 'Tələbə'}</div>
+                              <div className="mt-1 space-y-1">
+                                <button
+                                  type="button"
+                                  className="w-full rounded-md bg-black/20 px-1 py-1 text-center text-[9px] font-semibold text-indigo-100 hover:bg-black/30 active:scale-[0.99] transition-transform"
+                                  onClick={openTeacherNamesModal}
+                                >
+                                  {occupiedNames.length >= 2
+                                    ? `${occupiedNames.length} tələbə`
+                                    : '1 tələbə'}
+                                </button>
+                                <button
+                                  type="button"
+                                  className="text-[9px] underline text-gray-200 w-full text-left"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    void unblockSlot(primary.id)
+                                  }}
+                                >
+                                  Boşalt
+                                </button>
+                              </div>
                             )}
                           </div>
                         )}
@@ -414,8 +471,7 @@ export default function InstructorSchedule() {
       <Card className="mt-6 border border-indigo-500/20 p-4 sm:p-5">
         <h2 className="text-sm font-bold text-white mb-1">Tələbə dərsləri (həftəlik)</h2>
         <p className="text-xs text-gray-500 mb-4 leading-relaxed">
-          Tələbə əlavə etdikdə sistem yaradılan tarixli dərslər burada tələbənin «Cədvəlim» bölməsi ilə eyni günlər və saatlarda
-          göstərilir.
+          Xanalarda yalnız vaxt və tələbə sayı göstərilir; adları görmək üçün həmin xanaya toxunun və ya klikləyin.
         </p>
         {loading ? (
           <p className="text-sm text-gray-500 py-4">Yüklənir…</p>
@@ -466,25 +522,34 @@ export default function InstructorSchedule() {
                       const blockStyle = primary
                         ? 'bg-indigo-600/25 border-indigo-400/45 text-indigo-100'
                         : ''
+                      const n = primary?.studentNames?.length || 0
+                      const countLabel = n <= 1 ? '1 tələbə' : `${n} tələbə`
                       return (
                         <div
                           key={`dl-${d.v}-${hour}`}
                           className="bg-[#0f0c29]/95 border-l border-t border-indigo-500/10 relative min-h-[2.25rem]"
                         >
                           {isFirstHour && primary && (
-                            <div
-                              className={`absolute left-0.5 right-0.5 rounded-md border px-1 py-0.5 text-[10px] leading-tight z-10 shadow-sm ${blockStyle}`}
+                            <button
+                              type="button"
+                              className={`absolute left-0.5 right-0.5 rounded-md border px-1 py-1 text-[10px] leading-tight z-10 shadow-sm text-left ${blockStyle} cursor-pointer hover:brightness-110 active:scale-[0.99] transition-transform min-h-[2rem]`}
                               style={{
                                 top: '2px',
                                 minHeight: `${spanHours * 2.25 - 0.35}rem`,
                               }}
-                              title={primary.title}
+                              onClick={() =>
+                                setStudentListModal({
+                                  title: 'Tarixli dərs',
+                                  subtitle: `${d.full} · ${fmtTime(primary.start_time)}–${fmtTime(primary.end_time)}`,
+                                  names: primary.studentNames?.length ? [...primary.studentNames] : ['Tələbə'],
+                                })
+                              }
                             >
                               <div className="font-semibold truncate">
                                 {fmtTime(primary.start_time)}–{fmtTime(primary.end_time)}
                               </div>
-                              <div className="text-[9px] opacity-95 truncate mt-0.5">{primary.title}</div>
-                            </div>
+                              <div className="text-[9px] font-semibold tabular-nums mt-0.5 opacity-95">{countLabel}</div>
+                            </button>
                           )}
                         </div>
                       )
@@ -513,6 +578,30 @@ export default function InstructorSchedule() {
           </>
         )}
       </Card>
+
+      <Modal
+        open={Boolean(studentListModal)}
+        onClose={() => setStudentListModal(null)}
+        title={studentListModal?.title || ''}
+        size="sm"
+      >
+        {studentListModal?.subtitle ? (
+          <p className="text-xs text-gray-400 mb-3 font-mono tabular-nums">{studentListModal.subtitle}</p>
+        ) : null}
+        <ul className="space-y-2 max-h-[50vh] overflow-y-auto">
+          {(studentListModal?.names || []).map((name, i) => (
+            <li
+              key={`${i}-${name}`}
+              className="text-sm text-white/95 py-2 border-b border-indigo-500/15 last:border-0"
+            >
+              {name}
+            </li>
+          ))}
+        </ul>
+        <Button type="button" variant="secondary" className="w-full mt-5 justify-center" onClick={() => setStudentListModal(null)}>
+          Bağla
+        </Button>
+      </Modal>
     </div>
   )
 }
