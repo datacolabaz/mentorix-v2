@@ -332,38 +332,117 @@ const verifyOtp = async (req, res) => {
 
 const register = async (req, res) => {
   try {
-    const { full_name, email, phone, password, role, subject, billing_type } = req.body;
-    if (!phone) return res.status(400).json({ success: false, message: 'Telefon teleb olunur' });
-    const hash = await bcrypt.hash(password || 'Pass@123', 12);
+    const { full_name, email, phone, password, role, subject, billing_type, parent_id } = req.body;
     const phoneCanon = canonicalPhone(phone);
+    if (!phoneCanon) return res.status(400).json({ success: false, message: 'Telefon tələb olunur' });
+    const hash = await bcrypt.hash(password || 'Pass@123', 12);
     const emailCanon = email?.toLowerCase() || null;
 
-    const { rows } = await db.query(
-      'INSERT INTO users (full_name, email, phone, password_hash, role) VALUES ($1, $2, $3, $4, $5) RETURNING id, full_name, email, role, phone',
-      [full_name, emailCanon, phoneCanon, hash, role]
-    );
-    const user = rows[0];
+    const user = await db.transaction(async (client) => {
+      let created = null;
+      try {
+        const { rows } = await client.query(
+          'INSERT INTO users (full_name, email, phone, password_hash, role) VALUES ($1, $2, $3, $4, $5) RETURNING id, full_name, email, role, phone',
+          [full_name, emailCanon, phoneCanon, hash, role],
+        );
+        created = rows[0];
+      } catch (e) {
+        // If an old inactive student row still holds UNIQUE email/phone, revive it instead of failing.
+        if (e?.code === '23505' && role === 'student') {
+          const clean = normalizePhone(phoneCanon);
+          const { rows: candidates } = await client.query(
+            `SELECT id, full_name, email, role, phone, is_active
+             FROM users
+             WHERE role = 'student'
+               AND is_active = FALSE
+               AND (
+                 (${PHONE_NORM} = $1)
+                 OR ($2::text IS NOT NULL AND LOWER(TRIM(email)) = LOWER(TRIM($2::text))))
+             ORDER BY
+               CASE WHEN ($2::text IS NOT NULL AND LOWER(TRIM(email)) = LOWER(TRIM($2::text))) THEN 0 ELSE 1 END,
+               created_at NULLS LAST
+             LIMIT 5`,
+            [clean, emailCanon]
+          );
 
-    if (role === 'instructor') {
-      await db.query(
-        'INSERT INTO instructor_profiles (user_id, subject, billing_type) VALUES ($1, $2, $3)',
-        [user.id, subject || null, billing_type || '8_lessons']
-      );
-    } else if (role === 'student') {
-      await db.query(
-        'INSERT INTO student_profiles (user_id) VALUES ($1) ON CONFLICT (user_id) DO NOTHING',
-        [user.id]
-      );
-    }
+          const pick =
+            candidates.find((r) => emailCanon && String(r.email || '').toLowerCase() === String(emailCanon).toLowerCase()) ||
+            candidates.find((r) => normalizePhone(r.phone) === clean) ||
+            candidates[0] ||
+            null;
+
+          if (!pick) throw e;
+
+          // Free UNIQUE collisions caused by other inactive "ghost" rows still holding the same email/phone.
+          await client.query(
+            `UPDATE users
+             SET email = NULL
+             WHERE role = 'student'
+               AND is_active = FALSE
+               AND id <> $1
+               AND $2::text IS NOT NULL
+               AND LOWER(TRIM(email)) = LOWER(TRIM($2::text))`,
+            [pick.id, emailCanon]
+          );
+          await client.query(
+            `UPDATE users
+             SET phone = NULL
+             WHERE role = 'student'
+               AND is_active = FALSE
+               AND id <> $1
+               AND ${PHONE_NORM} = $2`,
+            [pick.id, clean]
+          );
+
+          const { rows: up } = await client.query(
+            `UPDATE users
+             SET full_name = $2,
+                 email = $3,
+                 phone = $4,
+                 password_hash = $5,
+                 role = 'student',
+                 is_active = TRUE,
+                 phone_verified = FALSE
+             WHERE id = $1
+             RETURNING id, full_name, email, role, phone`,
+            [pick.id, full_name, emailCanon, phoneCanon, hash]
+          );
+          created = up[0];
+        } else {
+          throw e;
+        }
+      }
+
+      if (role === 'instructor') {
+        await client.query(
+          'INSERT INTO instructor_profiles (user_id, subject, billing_type) VALUES ($1, $2, $3)',
+          [created.id, subject || null, billing_type || '8_lessons'],
+        );
+      } else if (role === 'student') {
+        // Avoid requiring a UNIQUE constraint on student_profiles.user_id for older DBs.
+        const up = await client.query('UPDATE student_profiles SET parent_id = $2 WHERE user_id = $1', [
+          created.id,
+          parent_id || null,
+        ]);
+        if (up.rowCount === 0) {
+          await client.query('INSERT INTO student_profiles (user_id, parent_id) VALUES ($1, $2)', [
+            created.id,
+            parent_id || null,
+          ]);
+        }
+      }
+
+      return created;
+    });
 
     res.status(201).json({ success: true, user });
   } catch (err) {
     if (err.code === '23505') {
       const c = String(err.constraint || '');
       if (c.includes('users_email')) {
-        return res.status(409).json({ success: false, message: 'Bu email artiq movcuddur' });
+        return res.status(409).json({ success: false, message: 'Bu email artıq mövcuddur' });
       }
-      return res.status(409).json({ success: false, message: 'Bu nomre artiq movcuddur' });
+      return res.status(409).json({ success: false, message: 'Bu nömrə artıq mövcuddur' });
     }
     res.status(500).json({ success: false, message: err.message });
   }
