@@ -46,10 +46,23 @@ const listMyPayments = async (req, res) => {
     const remaining_lessons =
       enrollment && limit != null ? Math.max(0, Number(limit) - Number(enrollment.lesson_count || 0)) : null;
 
+    let nextLesson = null;
+    if (enrollment && limit != null) {
+      const { rows: nl } = await db.query(
+        `SELECT starts_at
+         FROM enrollment_lessons
+         WHERE enrollment_id = $1 AND billing_cycle = $2 AND status = 'planned'
+         ORDER BY starts_at
+         LIMIT 1`,
+        [enrollment.id, enrollment.billing_cycle || 1]
+      );
+      nextLesson = nl[0]?.starts_at || null;
+    }
+
     res.json({
       success: true,
       payments,
-      enrollment: enrollment ? { ...enrollment, lesson_limit: limit, remaining_lessons } : null,
+      enrollment: enrollment ? { ...enrollment, lesson_limit: limit, remaining_lessons, next_lesson_at: nextLesson } : null,
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

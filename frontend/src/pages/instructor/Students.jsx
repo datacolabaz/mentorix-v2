@@ -23,6 +23,7 @@ const emptyForm = {
   monthly_fee: '',
   payment_start_date: '',
   lesson_weekdays: [],
+  lesson_times: {},
   teacher_schedule_id: '',
   parent_name: '',
   parent_phone: '',
@@ -190,114 +191,30 @@ function StudentFormFields({ data, setData, scheduleMeta, mode, onRefreshSlots, 
           {data.billing_type === 'monthly' && (
             <p className="text-[10px] text-gray-500">Paket: aylıq (sayğac aylıq ödənişə görə izlənir)</p>
           )}
-          {scheduleMeta.loading && <p className="text-xs text-gray-500">Boş slotlar yüklənir…</p>}
-          {!scheduleMeta.loading && scheduleMeta.requiresScheduleSlot && !scheduleMeta.availableSlots?.length && (
-            <p className="text-xs text-amber-200/90">
-              Bu günlər üçün boş slot yoxdur. Aşağıdan bu tələbə üçün slot yaradın.
-            </p>
-          )}
-          {!scheduleMeta.loading && (
-            <div className="rounded-xl border border-indigo-500/15 bg-[#13112e]/60 p-3 space-y-2">
-              <p className="text-[10px] text-gray-500">
-                Slot yarat (gün + saat). Yaratdıqdan sonra aşağıdakı siyahıda seçə biləcəksiniz.
-              </p>
-              <div className="grid grid-cols-3 gap-2">
-                <div className="col-span-3 sm:col-span-1">
-                  <label className="text-[10px] uppercase text-gray-500 font-semibold">Gün</label>
-                  <select
-                    className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-3 py-2 text-white text-sm outline-none focus:border-indigo-400"
-                    value={data._slot_day || (Array.isArray(data.lesson_weekdays) && data.lesson_weekdays[0]) || 1}
-                    onChange={(e) => setData((p) => ({ ...p, _slot_day: Number(e.target.value) }))}
-                  >
-                    {WEEKDAYS.filter((d) => (data.lesson_weekdays?.length ? data.lesson_weekdays.includes(d.v) : true)).map((d) => (
-                      <option key={d.v} value={d.v}>{d.full}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-[10px] uppercase text-gray-500 font-semibold">Başla</label>
-                  <input
-                    type="time"
-                    className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-3 py-2 text-white text-sm outline-none focus:border-indigo-400"
-                    value={data._slot_start || '10:00'}
-                    onChange={(e) => setData((p) => ({ ...p, _slot_start: e.target.value }))}
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] uppercase text-gray-500 font-semibold">Bitir</label>
-                  <input
-                    type="time"
-                    className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-3 py-2 text-white text-sm outline-none focus:border-indigo-400"
-                    value={data._slot_end || '11:00'}
-                    onChange={(e) => setData((p) => ({ ...p, _slot_end: e.target.value }))}
-                  />
-                </div>
-              </div>
-              <Button
-                type="button"
-                size="sm"
-                onClick={async () => {
-                  if (!onRefreshSlots) return
-                  const day = Number(data._slot_day || (data.lesson_weekdays?.[0] || 1))
-                  const start_time = data._slot_start || '10:00'
-                  const end_time = data._slot_end || '11:00'
-                  try {
-                    await api.post('/teacher-schedules', { day_of_week: day, start_time, end_time })
-                    await onRefreshSlots()
-                    // auto-select created slot if present
-                    const match = (scheduleMeta.availableSlots || []).find(
-                      (s) => Number(s.day_of_week) === day && fmtSlotTime(s.start_time) === start_time && fmtSlotTime(s.end_time) === end_time
-                    )
-                    if (match) setData((p) => ({ ...p, teacher_schedule_id: match.id }))
-                  } catch (e) {
-                    toast?.(e?.message || 'Slot yaradılmadı', 'error')
+          <p className="text-[10px] text-gray-500">
+            Seçilmiş dərs günləri üçün saatları qeyd edin. Qeydiyyat anında paketə uyğun (8/12) dərslər avtomatik tarixlərlə yaradılacaq.
+          </p>
+          <div className="space-y-2">
+            {WEEKDAYS.filter((d) => (data.lesson_weekdays?.length ? data.lesson_weekdays.includes(d.v) : false)).map((d) => (
+              <div key={d.v} className="flex items-center justify-between gap-3 rounded-xl border border-indigo-500/15 bg-[#13112e]/60 px-3 py-2">
+                <div className="text-xs text-gray-300 font-semibold">{d.full}</div>
+                <input
+                  type="time"
+                  className="bg-[#13112e] border border-indigo-500/20 rounded-xl px-3 py-2 text-white text-sm outline-none focus:border-indigo-400"
+                  value={(data.lesson_times && (data.lesson_times[d.v] || data.lesson_times[String(d.v)])) || ''}
+                  onChange={(e) =>
+                    setData((p) => ({
+                      ...p,
+                      lesson_times: { ...(p.lesson_times || {}), [String(d.v)]: e.target.value },
+                    }))
                   }
-                }}
-                className="w-full justify-center"
-              >
-                Slot yarat
-              </Button>
-            </div>
-          )}
-          {!scheduleMeta.loading && scheduleMeta.availableSlots?.length > 0 && (
-            <div className="space-y-3 max-h-48 overflow-y-auto pr-1">
-              <p className="text-[10px] text-gray-500">Tələbənin dərs günlərinə uyğun boş slotu seçin.</p>
-              {WEEKDAYS.map((d) => {
-                const selectedDays = Array.isArray(data.lesson_weekdays) ? data.lesson_weekdays : []
-                if (selectedDays.length && !selectedDays.includes(d.v)) return null
-                const list = scheduleMeta.availableSlots.filter((s) => s.day_of_week === d.v)
-                if (!list.length) return null
-                return (
-                  <div key={d.v}>
-                    <p className="text-[10px] font-semibold text-gray-500 mb-1.5">{d.full}</p>
-                    <div className="flex flex-wrap gap-2">
-                      {list.map((s) => (
-                        <label
-                          key={s.id}
-                          className={`inline-flex items-center gap-2 cursor-pointer rounded-lg border px-2.5 py-1.5 text-xs transition-colors ${
-                            data.teacher_schedule_id === s.id
-                              ? 'border-indigo-400 bg-indigo-600/25 text-white'
-                              : 'border-indigo-500/20 bg-[#13112e] text-gray-300 hover:border-indigo-500/40'
-                          }`}
-                        >
-                          <input
-                            type="radio"
-                            name="teacher_schedule_slot"
-                            className="accent-indigo-500"
-                            checked={data.teacher_schedule_id === s.id}
-                            onChange={() => setData((p) => ({ ...p, teacher_schedule_id: s.id }))}
-                          />
-                          <span className="font-mono tabular-nums">
-                            {d.short} · {fmtSlotTime(s.start_time)}–{fmtSlotTime(s.end_time)}
-                          </span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          )}
+                />
+              </div>
+            ))}
+            {!data.lesson_weekdays?.length && (
+              <p className="text-xs text-gray-500">Əvvəlcə dərs günlərini seçin.</p>
+            )}
+          </div>
         </div>
       )}
       <div>
@@ -346,31 +263,9 @@ export default function InstructorStudents() {
   const [loading, setLoading] = useState(false)
   const [listLoading, setListLoading] = useState(true)
   const [listError, setListError] = useState(null)
-  const [enrollMeta, setEnrollMeta] = useState({
-    loading: false,
-    requiresScheduleSlot: false,
-    availableSlots: [],
-  })
+  // Slot cədvəli tələbə qeydiyyatı üçün artıq tələb olunmur (dərslər tarixlərlə avtomatik yaradılır)
+  const [enrollMeta] = useState({ loading: false, requiresScheduleSlot: false, availableSlots: [] })
   const toast = useToast()
-
-  useEffect(() => {
-    if (!addModal) return
-    void refreshSlots()
-  }, [addModal])
-
-  const refreshSlots = async () => {
-    setEnrollMeta((m) => ({ ...m, loading: true }))
-    try {
-      const d = await api.get('/teacher-schedules/for-enrollment')
-      setEnrollMeta({
-        loading: false,
-        requiresScheduleSlot: !!d.requiresScheduleSlot,
-        availableSlots: d.availableSlots || [],
-      })
-    } catch {
-      setEnrollMeta({ loading: false, requiresScheduleSlot: false, availableSlots: [] })
-    }
-  }
 
   const load = async () => {
     setListError(null)
@@ -398,16 +293,7 @@ export default function InstructorStudents() {
       toast('Ən azı bir dərs günü seçin', 'error')
       return
     }
-    if (enrollMeta.requiresScheduleSlot) {
-      if (!enrollMeta.availableSlots?.length) {
-        toast('Boş dərs slotu yoxdur — əvvəlcə «Cədvəlim»də slot yaradın', 'error')
-        return
-      }
-      if (!form.teacher_schedule_id) {
-        toast('Dərs vaxtı (boş slot) seçin', 'error')
-        return
-      }
-    }
+    // Slot seçimi tələb olunmur: dərslər lesson_times + start_date ilə avtomatik generasiya olunur
     setLoading(true)
     try {
       const reg = await api.post('/auth/register', {
@@ -426,7 +312,7 @@ export default function InstructorStudents() {
         monthly_fee: form.monthly_fee,
         payment_start_date: form.payment_start_date || null,
         lesson_weekdays: form.lesson_weekdays,
-        teacher_schedule_id: form.teacher_schedule_id || undefined,
+        lesson_times: form.lesson_times || {},
         parent_name: form.parent_name,
         parent_phone: form.parent_phone,
       })
@@ -598,7 +484,7 @@ export default function InstructorStudents() {
       </div>
 
       <Modal open={addModal} onClose={closeAddModal} title="Yeni Telebe Elave Et">
-        <StudentFormFields data={form} setData={setForm} scheduleMeta={enrollMeta} mode="add" onRefreshSlots={refreshSlots} toast={toast} />
+        <StudentFormFields data={form} setData={setForm} scheduleMeta={enrollMeta} mode="add" onRefreshSlots={null} toast={toast} />
         <div className="flex gap-3 mt-4">
           <Button onClick={addStudent} loading={loading} className="flex-1 justify-center">
             Elave Et

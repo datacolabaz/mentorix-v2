@@ -203,6 +203,14 @@ const upsertAttendanceLesson = async (req, res) => {
     const n = c[0]?.n || 0;
     await db.query('UPDATE enrollments SET lesson_count = $2 WHERE id = $1', [enrollment_id, n]);
 
+    // match lesson record (if generated)
+    await db.query(
+      `UPDATE enrollment_lessons
+       SET status = $4, marked_at = NOW()
+       WHERE enrollment_id = $1 AND billing_cycle = $2 AND lesson_number = $3`,
+      [enrollment_id, cycle, ln, Boolean(attended) ? 'done' : 'absent']
+    );
+
     // Qalan 1 dərs qalanda xəbərdarlıq (hər dövr üçün bir dəfə)
     if (limit && n === limit - 1 && beforeN !== n) {
       const { rows: [info] } = await db.query(

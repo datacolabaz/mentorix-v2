@@ -56,6 +56,71 @@ function parseLessonWeekdays(raw) {
   return [...set].sort((a, b) => a - b);
 }
 
+function parseLessonTimes(raw, lessonWeekdays) {
+  if (raw == null) return {};
+  let obj = raw;
+  if (typeof raw === 'string') {
+    try {
+      obj = JSON.parse(raw);
+    } catch {
+      obj = {};
+    }
+  }
+  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return {};
+  const out = {};
+  const days = Array.isArray(lessonWeekdays) ? lessonWeekdays : [];
+  for (const d of days) {
+    const v = obj[d] ?? obj[String(d)];
+    if (v == null || v === '') continue;
+    const s = String(v).trim();
+    if (!/^\d{1,2}:\d{2}$/.test(s)) continue;
+    const [h, m] = s.split(':').map(Number);
+    if (h < 0 || h > 23 || m < 0 || m > 59) continue;
+    out[String(d)] = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+  }
+  return out;
+}
+
+function billingLimit(type) {
+  if (type === '8_lessons') return 8;
+  if (type === '12_lessons') return 12;
+  return null;
+}
+
+function nextDateForWeekday(afterYmd, weekday /*1-7*/, ymdInclusive) {
+  // use UTC dates to avoid TZ drift; store as YYYY-MM-DD
+  const [y, mo, d] = afterYmd.split('-').map(Number);
+  const base = new Date(Date.UTC(y, mo - 1, d));
+  const baseDow = ((base.getUTCDay() + 6) % 7) + 1; // Mon=1..Sun=7
+  let delta = (weekday - baseDow + 7) % 7;
+  if (delta === 0 && !ymdInclusive) delta = 7;
+  const dt = new Date(base.getTime() + delta * 86400000);
+  const yy = dt.getUTCFullYear();
+  const mm = String(dt.getUTCMonth() + 1).padStart(2, '0');
+  const dd = String(dt.getUTCDate()).padStart(2, '0');
+  return `${yy}-${mm}-${dd}`;
+}
+
+function generateLessonStarts({ startYmd, lessonWeekdays, lessonTimes, count }) {
+  // start searching strictly after startYmd (exclusive) to match expectation (first lesson after registration date)
+  let cursor = startYmd;
+  const out = [];
+  for (let i = 0; i < count; i++) {
+    let best = null;
+    for (const wd of lessonWeekdays) {
+      const t = lessonTimes[String(wd)];
+      if (!t) continue;
+      const nextYmd = nextDateForWeekday(cursor, wd, false);
+      const ts = `${nextYmd} ${t}:00`;
+      if (!best || ts < best) best = ts;
+    }
+    if (!best) break;
+    out.push(best);
+    cursor = best.slice(0, 10); // next search after this date
+  }
+  return out;
+}
+
 router.get('/', authenticate, authorize('admin', 'instructor'), listStudents);
 
 router.delete('/enrollment/:enrollmentId', authenticate, authorize('admin', 'instructor'), deleteStudent);
@@ -73,6 +138,7 @@ router.post('/enroll', authenticate, authorize('instructor', 'admin'), async (re
       payment_start_date,
       teacher_schedule_id,
       lesson_weekdays,
+      lesson_times,
     } = req.body;
     const instructor_id = req.user.role === 'admin' ? req.body.instructor_id : req.user.id;
     const ni = normUuid(instructor_id);
@@ -80,6 +146,10 @@ router.post('/enroll', authenticate, authorize('instructor', 'admin'), async (re
     const lwd = parseLessonWeekdays(lesson_weekdays);
     if (lwd.length === 0) {
       return res.status(400).json({ success: false, message: 'Ən azı bir dərs günü seçin' });
+    }
+    const lt = parseLessonTimes(lesson_times, lwd);
+    if (Object.keys(lt).length === 0) {
+      return res.status(400).json({ success: false, message: 'Dərs günlərinə uyğun saatları qeyd edin' });
     }
 
     const { rows: cnt } = await db.query(
@@ -96,8 +166,8 @@ router.post('/enroll', authenticate, authorize('instructor', 'admin'), async (re
 
     const enrollment = await db.transaction(async (client) => {
       const { rows } = await client.query(
-        `INSERT INTO enrollments (instructor_id, student_id, billing_type, referral_notes, referral_source_id, lesson_weekdays)
-         VALUES ($1,$2,$3,$4,$5,$6::jsonb) RETURNING *`,
+        `INSERT INTO enrollments (instructor_id, student_id, billing_type, referral_notes, referral_source_id, lesson_weekdays, lesson_times)
+         VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb) RETURNING *`,
         [
           instructor_id,
           student_id,
@@ -105,6 +175,7 @@ router.post('/enroll', authenticate, authorize('instructor', 'admin'), async (re
           referral_notes,
           referral_source_id || null,
           JSON.stringify(lwd),
+          JSON.stringify(lt),
         ]
       );
       const enr = rows[0];
@@ -141,6 +212,26 @@ router.post('/enroll', authenticate, authorize('instructor', 'admin'), async (re
            VALUES ($1, NULLIF($2, ''), NULLIF($3, ''), $4, $5)`,
           [student_id, pn, pp, mf, psd]
         );
+      }
+
+      // generate enrollment_lessons for first billing cycle (8/12). Monthly: skip for now.
+      const limit = billingLimit(enr.billing_type);
+      const startYmd = psd || new Date().toISOString().slice(0, 10);
+      if (limit) {
+        const starts = generateLessonStarts({
+          startYmd,
+          lessonWeekdays: lwd,
+          lessonTimes: lt,
+          count: limit,
+        });
+        for (let i = 0; i < starts.length; i++) {
+          await client.query(
+            `INSERT INTO enrollment_lessons (enrollment_id, billing_cycle, lesson_number, starts_at)
+             VALUES ($1, 1, $2, $3::timestamp)
+             ON CONFLICT (enrollment_id, billing_cycle, lesson_number) DO NOTHING`,
+            [enr.id, i + 1, starts[i]]
+          );
+        }
       }
       return enr;
     });
