@@ -97,13 +97,38 @@ const getStudent = async (req, res) => {
 const deleteStudent = async (req, res) => {
   try {
     const enrId = req.params.enrollmentId;
-    await db.query(
-      `UPDATE teacher_schedules
-       SET is_occupied = FALSE, student_id = NULL, enrollment_id = NULL
-       WHERE enrollment_id = $1`,
-      [enrId]
-    );
-    await db.query('DELETE FROM enrollments WHERE id=$1', [enrId]);
+    const { rows: enr } = await db.query('SELECT id, student_id FROM enrollments WHERE id = $1', [enrId]);
+    if (!enr[0]) return res.status(404).json({ success: false, message: 'Enrollment tapılmadı' });
+    const studentId = enr[0].student_id;
+
+    await db.transaction(async (client) => {
+      await client.query(
+        `UPDATE teacher_schedules
+         SET is_occupied = FALSE, student_id = NULL, enrollment_id = NULL
+         WHERE enrollment_id = $1`,
+        [enrId]
+      );
+
+      // Delete enrollment-related records
+      await client.query('DELETE FROM attendance WHERE enrollment_id = $1', [enrId]);
+      await client.query('DELETE FROM payments WHERE enrollment_id = $1', [enrId]);
+      await client.query('DELETE FROM enrollment_lessons WHERE enrollment_id = $1', [enrId]);
+      await client.query('DELETE FROM enrollments WHERE id = $1', [enrId]);
+
+      // If student has no more enrollments, delete the whole student account
+      const { rows: left } = await client.query(
+        'SELECT COUNT(*)::int AS n FROM enrollments WHERE student_id = $1',
+        [studentId]
+      );
+      const remaining = left[0]?.n || 0;
+      if (remaining === 0) {
+        await client.query('DELETE FROM task_assignments WHERE student_id = $1', [studentId]);
+        await client.query('DELETE FROM student_prep_slots WHERE student_id = $1', [studentId]);
+        await client.query('DELETE FROM student_profiles WHERE user_id = $1', [studentId]);
+        await client.query('DELETE FROM users WHERE id = $1', [studentId]);
+      }
+    });
+
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
