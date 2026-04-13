@@ -386,12 +386,17 @@ const register = async (req, res) => {
           [user.id, subject || null, billing_type || '8_lessons'],
         );
       } else if (role === 'student') {
-        await client.query(
-          `INSERT INTO student_profiles (user_id, parent_id)
-           VALUES ($1, $2)
-           ON CONFLICT (user_id) DO UPDATE SET parent_id = EXCLUDED.parent_id`,
-          [user.id, parent_id || null]
-        );
+        // Avoid requiring a UNIQUE constraint on student_profiles.user_id for older DBs.
+        const up = await client.query('UPDATE student_profiles SET parent_id = $2 WHERE user_id = $1', [
+          user.id,
+          parent_id || null,
+        ]);
+        if (up.rowCount === 0) {
+          await client.query('INSERT INTO student_profiles (user_id, parent_id) VALUES ($1, $2)', [
+            user.id,
+            parent_id || null,
+          ]);
+        }
       }
       return user;
     });
