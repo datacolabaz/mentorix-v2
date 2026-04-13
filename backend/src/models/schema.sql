@@ -107,6 +107,7 @@ CREATE TABLE enrollments (
   student_id UUID REFERENCES users(id),
   billing_type VARCHAR(20) DEFAULT '8_lessons',
   lesson_count INTEGER DEFAULT 0,
+  billing_cycle INTEGER NOT NULL DEFAULT 1,
   status VARCHAR(20) DEFAULT 'active',
   referral_source_id UUID REFERENCES referral_sources(id),
   referral_notes TEXT,
@@ -117,6 +118,7 @@ CREATE TABLE enrollments (
 CREATE TABLE attendance (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   enrollment_id UUID REFERENCES enrollments(id),
+  billing_cycle INTEGER NOT NULL DEFAULT 1,
   lesson_number INTEGER,
   date DATE DEFAULT CURRENT_DATE,
   attended BOOLEAN DEFAULT TRUE,

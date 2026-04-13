@@ -103,16 +103,6 @@ function StudentFormFields({ data, setData, scheduleMeta, mode }) {
           />
         </div>
       </div>
-      <div>
-        <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Billing Novu</label>
-        <select className={inp} value={data.billing_type} onChange={(e) => setData((p) => ({ ...p, billing_type: e.target.value }))}>
-          {BILLING_OPTS.map((o) => (
-            <option key={o.value} value={o.value}>
-              {o.label}
-            </option>
-          ))}
-        </select>
-      </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Aylıq ödəniş (₼)</label>
@@ -174,6 +164,19 @@ function StudentFormFields({ data, setData, scheduleMeta, mode }) {
             )
           })}
         </div>
+      </div>
+      <div>
+        <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Billing Novu</label>
+        <p className="text-[10px] text-gray-500 mb-2">
+          Dərs günlərini seçdikdən dərhal sonra billing seçin: 8 dərs, 12 dərs və ya aylıq.
+        </p>
+        <select className={inp} value={data.billing_type} onChange={(e) => setData((p) => ({ ...p, billing_type: e.target.value }))}>
+          {BILLING_OPTS.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
       </div>
       {mode === 'add' && scheduleMeta && (
         <div className="rounded-xl border border-indigo-500/20 bg-[#0f0c29]/60 p-3 space-y-2">

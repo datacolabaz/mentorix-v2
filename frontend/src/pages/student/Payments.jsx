@@ -79,7 +79,7 @@ export default function StudentPayments() {
               <li>
                 <span className="text-gray-500">Keçilmiş dərs sayı: </span>
                 {enrollment.lesson_count ?? 0}
-                {limit != null ? ` / ${limit}` : ''}
+                {limit != null ? ` / ${limit} (Dövr #${enrollment.billing_cycle || 1})` : ''}
               </li>
             </ul>
           ) : (

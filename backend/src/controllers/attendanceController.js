@@ -1,6 +1,12 @@
 const db = require('../utils/db');
 const { sendSms } = require('../services/smsService');
 
+function billingLimit(billingType) {
+  if (billingType === '8_lessons') return 8;
+  if (billingType === '12_lessons') return 12;
+  return null;
+}
+
 const markAttendance = async (req, res) => {
   try {
     const { enrollment_id, date, attended, session_score, notes } = req.body;
@@ -38,28 +44,28 @@ const markAttendance = async (req, res) => {
     const lessonNum = enrollment.lesson_count + 1;
 
     await db.query(
-      `INSERT INTO attendance (enrollment_id, lesson_number, date, attended, session_score, notes)
-       VALUES ($1,$2,$3,$4,$5,$6)`,
-      [enrollment_id, lessonNum, date, Boolean(attended), sessionScoreSql, notes || null]
+      `INSERT INTO attendance (enrollment_id, billing_cycle, lesson_number, date, attended, session_score, notes)
+       VALUES ($1,$2,$3,$4,$5,$6,$7)
+       ON CONFLICT (enrollment_id, billing_cycle, lesson_number)
+       DO UPDATE SET attended = EXCLUDED.attended, date = EXCLUDED.date, session_score = EXCLUDED.session_score, notes = EXCLUDED.notes`,
+      [enrollment_id, enrollment.billing_cycle || 1, lessonNum, date, Boolean(attended), sessionScoreSql, notes || null]
     );
 
-    if (attended) {
-      await db.query(
-        'UPDATE enrollments SET lesson_count = lesson_count + 1 WHERE id = $1',
-        [enrollment_id]
-      );
-    }
+    // Hər dərs qeydi lesson_count-u artırır (iştirak etdi / etmədi fərq etmir)
+    await db.query(
+      'UPDATE enrollments SET lesson_count = lesson_count + 1 WHERE id = $1',
+      [enrollment_id]
+    );
 
-    const billingLimit = enrollment.billing_type === '8_lessons' ? 8
-      : enrollment.billing_type === '12_lessons' ? 12 : null;
+    const limit = billingLimit(enrollment.billing_type);
 
-    const alertAt = billingLimit
-      ? billingLimit - enrollment.alert_lessons_before
+    const alertAt = limit
+      ? limit - enrollment.alert_lessons_before
       : null;
 
     if (attended && alertAt && lessonNum === alertAt) {
       const targetPhone = enrollment.parent_phone || enrollment.student_phone;
-      const remaining = billingLimit - lessonNum;
+      const remaining = limit - lessonNum;
 
       await sendSms({
         instructorId: enrollment.instructor_id,
@@ -68,7 +74,140 @@ const markAttendance = async (req, res) => {
       });
     }
 
+    // 8/12 paketi bitəndə növbəti billing period açılsın
+    if (limit && lessonNum >= limit) {
+      await db.query(
+        `UPDATE enrollments
+         SET billing_cycle = billing_cycle + 1,
+             lesson_count = 0
+         WHERE id = $1`,
+        [enrollment_id]
+      );
+    }
+
     res.json({ success: true, lesson_number: lessonNum });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/** Müəllim UI: cari billing cycle üçün 1..limit dərs siyahısı + mövcud qeydlər */
+const getAttendancePeriod = async (req, res) => {
+  try {
+    const { enrollment_id } = req.params;
+    const { rows: enRows } = await db.query(
+      `SELECT e.id, e.student_id, e.instructor_id, e.billing_type, e.lesson_count, e.billing_cycle,
+              u.full_name AS student_name
+       FROM enrollments e
+       JOIN users u ON u.id = e.student_id
+       WHERE e.id = $1`,
+      [enrollment_id]
+    );
+    const enrollment = enRows[0];
+    if (!enrollment) return res.status(404).json({ success: false, message: 'Tapılmadı' });
+
+    const enStudent = enrollment.student_id;
+    const enInstr = enrollment.instructor_id;
+    if (req.user.role === 'student' && String(enStudent) !== String(req.user.id)) {
+      return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
+    }
+    if (
+      req.user.role === 'instructor' &&
+      String(enInstr).replace(/-/g, '').toLowerCase() !== String(req.user.id).replace(/-/g, '').toLowerCase()
+    ) {
+      return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
+    }
+
+    const cycle = Number(enrollment.billing_cycle) || 1;
+    const limit = billingLimit(enrollment.billing_type);
+
+    const { rows: attendance } = await db.query(
+      `SELECT id, billing_cycle, lesson_number, date, attended, notes, created_at
+       FROM attendance
+       WHERE enrollment_id = $1 AND billing_cycle = $2
+       ORDER BY lesson_number`,
+      [enrollment_id, cycle]
+    );
+
+    res.json({
+      success: true,
+      enrollment: {
+        id: enrollment.id,
+        student_name: enrollment.student_name,
+        billing_type: enrollment.billing_type,
+        billing_cycle: cycle,
+        lesson_count: enrollment.lesson_count || 0,
+        lesson_limit: limit,
+      },
+      attendance,
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/** Müəllim UI: bir dərsi attended/not-attended olaraq upsert et */
+const upsertAttendanceLesson = async (req, res) => {
+  try {
+    const { enrollment_id } = req.params;
+    const { lesson_number, attended, date, notes } = req.body;
+
+    const ln = parseInt(String(lesson_number), 10);
+    if (!Number.isFinite(ln) || ln < 1 || ln > 999) {
+      return res.status(400).json({ success: false, message: 'lesson_number yanlışdır' });
+    }
+
+    const { rows: enRows } = await db.query(
+      `SELECT e.id, e.student_id, e.instructor_id, e.billing_type, e.billing_cycle
+       FROM enrollments e WHERE e.id = $1`,
+      [enrollment_id]
+    );
+    const enrollment = enRows[0];
+    if (!enrollment) return res.status(404).json({ success: false, message: 'Tapılmadı' });
+
+    if (
+      req.user.role === 'instructor' &&
+      String(enrollment.instructor_id).replace(/-/g, '').toLowerCase() !== String(req.user.id).replace(/-/g, '').toLowerCase()
+    ) {
+      return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
+    }
+
+    const cycle = Number(enrollment.billing_cycle) || 1;
+    const limit = billingLimit(enrollment.billing_type);
+    if (limit && ln > limit) {
+      return res.status(400).json({ success: false, message: `Bu paket üçün maksimum ${limit} dərs var` });
+    }
+
+    const d = date || new Date().toISOString().slice(0, 10);
+
+    await db.query(
+      `INSERT INTO attendance (enrollment_id, billing_cycle, lesson_number, date, attended, notes)
+       VALUES ($1,$2,$3,$4,$5,$6)
+       ON CONFLICT (enrollment_id, billing_cycle, lesson_number)
+       DO UPDATE SET attended = EXCLUDED.attended, date = EXCLUDED.date, notes = EXCLUDED.notes`,
+      [enrollment_id, cycle, ln, d, Boolean(attended), notes || null]
+    );
+
+    // lesson_count = bu cycle-da neçə dərs qeyd olunub
+    const { rows: c } = await db.query(
+      `SELECT COUNT(*)::int AS n FROM attendance WHERE enrollment_id = $1 AND billing_cycle = $2`,
+      [enrollment_id, cycle]
+    );
+    const n = c[0]?.n || 0;
+    await db.query('UPDATE enrollments SET lesson_count = $2 WHERE id = $1', [enrollment_id, n]);
+
+    // paket dolubsa növbəti cycle aç
+    if (limit && n >= limit) {
+      await db.query(
+        `UPDATE enrollments
+         SET billing_cycle = billing_cycle + 1,
+             lesson_count = 0
+         WHERE id = $1`,
+        [enrollment_id]
+      );
+    }
+
+    res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -94,7 +233,7 @@ const getAttendance = async (req, res) => {
     }
 
     const { rows } = await db.query(
-      'SELECT * FROM attendance WHERE enrollment_id=$1 ORDER BY lesson_number',
+      'SELECT * FROM attendance WHERE enrollment_id=$1 ORDER BY billing_cycle, lesson_number',
       [enrollment_id]
     );
     res.json({ success: true, attendance: rows });
@@ -103,4 +242,4 @@ const getAttendance = async (req, res) => {
   }
 };
 
-module.exports = { markAttendance, getAttendance };
+module.exports = { markAttendance, getAttendance, getAttendancePeriod, upsertAttendanceLesson };
