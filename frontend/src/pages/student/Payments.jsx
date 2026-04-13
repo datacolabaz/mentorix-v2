@@ -55,6 +55,16 @@ function parseLessonTimes(raw) {
   return obj
 }
 
+function fmtAzFromDb(dt) {
+  if (!dt) return '—'
+  const s = String(dt)
+  // If backend returns a timestamp without timezone, treat it as Asia/Baku wall time.
+  const iso = /([zZ]|[+-]\d{2}:?\d{2})$/.test(s) ? s : `${s.replace(' ', 'T')}+04:00`
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return s
+  return d.toLocaleString('az-AZ', { timeZone: 'Asia/Baku' })
+}
+
 export default function StudentPayments() {
   const [loading, setLoading] = useState(true)
   const [payments, setPayments] = useState([])
@@ -104,6 +114,11 @@ export default function StudentPayments() {
           .join(' · ')
       : null
 
+  const lc = enrollment ? Number(enrollment.lesson_count) : NaN
+  const lessonCount = Number.isFinite(lc) ? lc : 0
+  const progressPct =
+    enrollment && limit && limit > 0 ? Math.min(100, Math.max(0, (lessonCount / limit) * 100)) : 0
+
   return (
     <div className="p-4 sm:p-6 max-w-3xl mx-auto w-full min-w-0">
       <h1 className="font-display font-bold text-2xl text-white mb-2">Ödəniş</h1>
@@ -114,72 +129,102 @@ export default function StudentPayments() {
       {loading ? (
         <div className="text-gray-500 text-center py-12">Yüklənir…</div>
       ) : (
-        <Card className="p-5">
-          <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-            <h2 className="font-semibold text-white">Cari paket</h2>
-            <button
-              type="button"
-              onClick={() => setHistoryOpen((v) => !v)}
-              className="text-sm font-semibold text-blue-400 border border-blue-500/30 rounded-xl px-3 py-1.5 hover:bg-blue-500/10"
-              aria-expanded={historyOpen}
-            >
-              {historyOpen ? 'Tarixçəni gizlət' : 'Ödəniş tarixçəsi'}
-            </button>
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+            <Card className="p-5">
+              <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Tamamlanan Dərs</div>
+              <div className="font-display font-extrabold text-3xl text-blue-400">
+                {lessonCount}
+                {limit ? `/${limit}` : ''}
+              </div>
+              {limit ? (
+                <div className="mt-3">
+                  <div className="h-2 bg-[#13112e] rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-blue-500 rounded-full transition-all max-w-full"
+                      style={{ width: `${progressPct}%` }}
+                    />
+                  </div>
+                </div>
+              ) : null}
+            </Card>
+            <Card className="p-5">
+              <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Billing</div>
+              <div className="font-display font-bold text-xl text-emerald-400">
+                {BILLING[enrollment?.billing_type] || enrollment?.billing_type || '—'}
+              </div>
+            </Card>
+            <Card className="p-5">
+              <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Müəllim</div>
+              <div className="font-display font-bold text-xl text-yellow-400">{enrollment?.instructor_name || '—'}</div>
+            </Card>
           </div>
-          {enrollment ? (
-            <ul className="text-sm text-gray-300 space-y-2">
-              <li>
-                <span className="text-gray-500">Müəllim: </span>
-                {enrollment.instructor_name || '—'}
-              </li>
-              <li>
-                <span className="text-gray-500">Paket: </span>
-                {BILLING[enrollment.billing_type] || enrollment.billing_type || '—'}
-              </li>
-              {enrollment.payment_start_date_for_display && (
+
+          <Card className="p-5">
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+              <h2 className="font-semibold text-white">Cari paket</h2>
+              <button
+                type="button"
+                onClick={() => setHistoryOpen((v) => !v)}
+                className="text-sm font-semibold text-blue-400 border border-blue-500/30 rounded-xl px-3 py-1.5 hover:bg-blue-500/10"
+                aria-expanded={historyOpen}
+              >
+                {historyOpen ? 'Tarixçəni gizlət' : 'Ödəniş tarixçəsi'}
+              </button>
+            </div>
+            {enrollment ? (
+              <ul className="text-sm text-gray-300 space-y-2">
                 <li>
-                  <span className="text-gray-500">Ödəniş başlanğıcı: </span>
-                  <span className="font-mono text-white/90">{String(enrollment.payment_start_date_for_display).slice(0, 10)}</span>
+                  <span className="text-gray-500">Müəllim: </span>
+                  {enrollment.instructor_name || '—'}
                 </li>
-              )}
-              {weekdayLine && (
                 <li>
-                  <span className="text-gray-500">Həftəlik dərs günləri/saatları: </span>
-                  <span className="text-white/90">{weekdayLine}</span>
+                  <span className="text-gray-500">Paket: </span>
+                  {BILLING[enrollment.billing_type] || enrollment.billing_type || '—'}
                 </li>
-              )}
-              {enrollment.planned_lessons_in_cycle != null && limit != null && (
+                {enrollment.payment_start_date_for_display && (
+                  <li>
+                    <span className="text-gray-500">Ödəniş başlanğıcı: </span>
+                    <span className="font-mono text-white/90">{String(enrollment.payment_start_date_for_display).slice(0, 10)}</span>
+                  </li>
+                )}
+                {weekdayLine && (
+                  <li>
+                    <span className="text-gray-500">Həftəlik dərs günləri/saatları: </span>
+                    <span className="text-white/90">{weekdayLine}</span>
+                  </li>
+                )}
+                {enrollment.planned_lessons_in_cycle != null && limit != null && (
+                  <li>
+                    <span className="text-gray-500">Cədvəldəki dərs sayı (cari dövr): </span>
+                    <span className="font-mono text-white/90">
+                      {Number(enrollment.planned_lessons_in_cycle || 0)} / {limit}
+                    </span>
+                  </li>
+                )}
+                {enrollment.next_lesson_at && (
+                  <li>
+                    <span className="text-gray-500">Növbəti dərs: </span>
+                    <span className="font-mono text-indigo-200">{fmtAzFromDb(enrollment.next_lesson_at)}</span>
+                  </li>
+                )}
                 <li>
-                  <span className="text-gray-500">Cədvəldəki dərs sayı (cari dövr): </span>
-                  <span className="font-mono text-white/90">
-                    {Number(enrollment.planned_lessons_in_cycle || 0)} / {limit}
-                  </span>
+                  <span className="text-gray-500">Keçilmiş dərs sayı: </span>
+                  {enrollment.lesson_count ?? 0}
+                  {limit != null ? ` / ${limit} (Dövr #${enrollment.billing_cycle || 1})` : ''}
                 </li>
-              )}
-              {enrollment.next_lesson_at && (
-                <li>
-                  <span className="text-gray-500">Növbəti dərs: </span>
-                  <span className="font-mono text-indigo-200">
-                    {new Date(enrollment.next_lesson_at).toLocaleString('az-AZ')}
-                  </span>
-                </li>
-              )}
-              <li>
-                <span className="text-gray-500">Keçilmiş dərs sayı: </span>
-                {enrollment.lesson_count ?? 0}
-                {limit != null ? ` / ${limit} (Dövr #${enrollment.billing_cycle || 1})` : ''}
-              </li>
-              {remaining != null && (
-                <li>
-                  <span className="text-gray-500">Qalan dərs sayı: </span>
-                  <span className="text-emerald-300 font-mono">{remaining}</span>
-                </li>
-              )}
-            </ul>
-          ) : (
-            <p className="text-gray-500 text-sm">Aktiv qeydiyyat tapılmadı.</p>
-          )}
-        </Card>
+                {remaining != null && (
+                  <li>
+                    <span className="text-gray-500">Qalan dərs sayı: </span>
+                    <span className="text-emerald-300 font-mono">{remaining}</span>
+                  </li>
+                )}
+              </ul>
+            ) : (
+              <p className="text-gray-500 text-sm">Aktiv qeydiyyat tapılmadı.</p>
+            )}
+          </Card>
+        </>
       )}
 
       {!loading && historyOpen && (

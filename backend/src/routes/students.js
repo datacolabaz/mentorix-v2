@@ -267,7 +267,7 @@ router.post('/enroll', authenticate, authorize('instructor', 'admin'), async (re
             `SELECT id FROM lessons
              WHERE instructor_id = $1
                AND student_id <> $3
-               AND lesson_date = ($2::timestamp)::timestamptz
+               AND lesson_date = ($2::timestamp AT TIME ZONE 'Asia/Baku')
              LIMIT 1`,
             [instructor_id, starts[i], student_id]
           );
@@ -288,7 +288,7 @@ router.post('/enroll', authenticate, authorize('instructor', 'admin'), async (re
           );
           await client.query(
             `INSERT INTO lessons (enrollment_id, student_id, instructor_id, lesson_date, status, lesson_number, billing_cycle)
-             VALUES ($1,$2,$3,($4::timestamp)::timestamptz,'pending',$5,1)
+             VALUES ($1,$2,$3,($4::timestamp AT TIME ZONE 'Asia/Baku'),'pending',$5,1)
              ON CONFLICT (enrollment_id, billing_cycle, lesson_number) DO NOTHING`,
             [enr.id, student_id, instructor_id, starts[i], i + 1]
           );

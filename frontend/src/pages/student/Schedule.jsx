@@ -38,6 +38,62 @@ function fmtTime(t) {
   return s.slice(0, 5)
 }
 
+const EN_SHORT_DOW = { Sun: 7, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 }
+
+/** Backend sometimes returns timestamp strings without timezone; treat those as Asia/Baku wall time. */
+function parseLessonInstant(dt) {
+  if (!dt) return null
+  const s = String(dt).trim()
+  const hasTz = /([zZ]|[+-]\d{2}:?\d{2})$/.test(s)
+  if (hasTz) {
+    const d = new Date(s.includes('T') ? s : s.replace(' ', 'T'))
+    return Number.isNaN(d.getTime()) ? null : d
+  }
+  const m = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?/.exec(s)
+  if (!m) {
+    const d = new Date(s)
+    return Number.isNaN(d.getTime()) ? null : d
+  }
+  const y = Number(m[1])
+  const mo = Number(m[2])
+  const d = Number(m[3])
+  const hh = Number(m[4])
+  const mm = Number(m[5])
+  const ss = m[6] != null ? Number(m[6]) : 0
+  const ms = Date.UTC(y, mo - 1, d, hh - 4, mm, ss)
+  const out = new Date(ms)
+  return Number.isNaN(out.getTime()) ? null : out
+}
+
+function bakuPartsFromInstant(inst) {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Baku',
+    weekday: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(inst)
+  const get = (t) => parts.find((p) => p.type === t)?.value
+  const wd = EN_SHORT_DOW[get('weekday')] || null
+  const hour = parseInt(get('hour') || '0', 10)
+  const minute = parseInt(get('minute') || '0', 10)
+  return { dow: wd, hour: Number.isFinite(hour) ? hour : 0, minute: Number.isFinite(minute) ? minute : 0 }
+}
+
+function fmtAzBakuFromLessonDate(dt) {
+  const inst = parseLessonInstant(dt)
+  if (!inst) return '—'
+  try {
+    return new Intl.DateTimeFormat('az-AZ', {
+      timeZone: 'Asia/Baku',
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    }).format(inst)
+  } catch {
+    return '—'
+  }
+}
+
 function parseToMinutes(t) {
   const s = fmtTime(t)
   const [h, m] = s.split(':').map((x) => parseInt(x, 10))
@@ -97,10 +153,10 @@ export default function StudentSchedule() {
     const set = new Set()
     for (const l of lessons) {
       if (!l?.lesson_date) continue
-      const dt = new Date(l.lesson_date)
-      if (Number.isNaN(dt.getTime())) continue
-      const dow = ((dt.getDay() + 6) % 7) + 1 // Mon=1..Sun=7
-      set.add(dow)
+      const inst = parseLessonInstant(l.lesson_date)
+      if (!inst) continue
+      const { dow } = bakuPartsFromInstant(inst)
+      if (dow) set.add(dow)
     }
     return [...set].sort((a, b) => a - b)
   }, [lessons])
@@ -112,15 +168,17 @@ export default function StudentSchedule() {
     // Dərs slotları (dated lessons). End_time: default 60 dəq.
     for (const l of lessons) {
       if (!l?.lesson_date) continue
-      const dt = new Date(l.lesson_date)
-      if (Number.isNaN(dt.getTime())) continue
-      const day = ((dt.getDay() + 6) % 7) + 1
-      const hh = String(dt.getHours()).padStart(2, '0')
-      const mm = String(dt.getMinutes()).padStart(2, '0')
+      const inst = parseLessonInstant(l.lesson_date)
+      if (!inst) continue
+      const { dow: day, hour: sh, minute: sm } = bakuPartsFromInstant(inst)
+      if (!day) continue
+      const startMin = sh * 60 + sm
+      const endMin = startMin + 60
+      const eh = String(Math.floor(endMin / 60) % 24).padStart(2, '0')
+      const em = String(endMin % 60).padStart(2, '0')
+      const hh = String(sh).padStart(2, '0')
+      const mm = String(sm).padStart(2, '0')
       const start = `${hh}:${mm}`
-      const dtEnd = new Date(dt.getTime() + 60 * 60000)
-      const eh = String(dtEnd.getHours()).padStart(2, '0')
-      const em = String(dtEnd.getMinutes()).padStart(2, '0')
       const end = `${eh}:${em}`
       const list = m.get(day) || []
       list.push({
@@ -407,7 +465,7 @@ export default function StudentSchedule() {
                       </p>
                     </div>
                     <div className="text-sm font-mono text-gray-200 shrink-0">
-                      {l.lesson_date ? new Date(l.lesson_date).toLocaleString('az-AZ') : '—'}
+                      {l.lesson_date ? fmtAzBakuFromLessonDate(l.lesson_date) : '—'}
                     </div>
                   </div>
                 </div>
