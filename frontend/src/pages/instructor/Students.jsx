@@ -7,6 +7,7 @@ import Modal from '../../components/common/Modal'
 import ListSkeleton from '../../components/common/ListSkeleton'
 import { useToast } from '../../components/common/Toast'
 import { WEEKDAYS } from './Schedule'
+import { fmtAzBakuLessonRow } from '../../lib/lessonWeekGrid'
 
 const BILLING_OPTS = [
   { value: '8_lessons', label: '8 Ders' },
@@ -296,6 +297,7 @@ export default function InstructorStudents() {
   const [loading, setLoading] = useState(false)
   const [listLoading, setListLoading] = useState(true)
   const [listError, setListError] = useState(null)
+  const [lessonsModal, setLessonsModal] = useState(null)
   // Slot cədvəli tələbə qeydiyyatı üçün artıq tələb olunmur (dərslər tarixlərlə avtomatik yaradılır)
   const [enrollMeta] = useState({ loading: false, requiresScheduleSlot: false, availableSlots: [] })
   const toast = useToast()
@@ -428,6 +430,28 @@ export default function InstructorStudents() {
     setForm(emptyForm)
   }
 
+  const openLessonsModal = (s) => {
+    const eid = s.enrollment_id
+    const name = s.full_name || 'Tələbə'
+    setLessonsModal({ studentName: name, enrollmentId: eid, lessons: [], loading: true, error: null })
+    void (async () => {
+      try {
+        const d = await api.get(`/students/enrollment/${encodeURIComponent(eid)}/lessons`)
+        setLessonsModal((prev) =>
+          prev?.enrollmentId === eid
+            ? { ...prev, lessons: Array.isArray(d.lessons) ? d.lessons : [], loading: false, error: null }
+            : prev
+        )
+      } catch (err) {
+        setLessonsModal((prev) =>
+          prev?.enrollmentId === eid
+            ? { ...prev, lessons: [], loading: false, error: err?.message || 'Yüklənmədi' }
+            : prev
+        )
+      }
+    })()
+  }
+
   const deleteStudent = async (enrollmentId, name) => {
     if (!window.confirm(name + ' silinsin?')) return
     try {
@@ -501,6 +525,9 @@ export default function InstructorStudents() {
                   {s.avg_score && <div className="text-xs text-gray-400 mt-1">Orta: {s.avg_score}%</div>}
                 </div>
                 <div className="flex gap-2 flex-wrap">
+                  <Button size="sm" variant="secondary" onClick={() => openLessonsModal(s)}>
+                    Dərslər
+                  </Button>
                   <Button size="sm" variant="secondary" onClick={() => openEdit(s)}>
                     Redakte
                   </Button>
@@ -542,6 +569,45 @@ export default function InstructorStudents() {
             Legv et
           </Button>
         </div>
+      </Modal>
+
+      <Modal
+        open={Boolean(lessonsModal)}
+        onClose={() => setLessonsModal(null)}
+        title={lessonsModal ? `${lessonsModal.studentName} — tarixlər üzrə` : 'Dərslər'}
+        size="sm"
+      >
+        {lessonsModal?.loading ? (
+          <ListSkeleton message="Dərslər yüklənir…" />
+        ) : lessonsModal?.error ? (
+          <p className="text-sm text-amber-200/90">{lessonsModal.error}</p>
+        ) : !lessonsModal?.lessons?.length ? (
+          <p className="text-sm text-gray-500">Hələ tarixli dərs qeydi yoxdur.</p>
+        ) : (
+          <>
+            <p className="text-xs text-gray-500 mb-3">
+              Cəmi <span className="text-indigo-200 font-semibold">{lessonsModal.lessons.length}</span> dərs
+            </p>
+            <ul className="space-y-2 max-h-[50vh] overflow-y-auto">
+              {lessonsModal.lessons.map((l) => (
+                <li
+                  key={l.id}
+                  className="rounded-xl border border-indigo-500/15 bg-[#0f0c29]/80 px-3 py-2 text-sm text-gray-200 font-mono"
+                >
+                  {fmtAzBakuLessonRow(l)}
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+        <Button
+          type="button"
+          variant="secondary"
+          className="w-full mt-5 justify-center"
+          onClick={() => setLessonsModal(null)}
+        >
+          Bağla
+        </Button>
       </Modal>
     </div>
   )

@@ -418,10 +418,12 @@ router.get('/enrollment/:enrollmentId/lessons', authenticate, authorize('admin',
     }
 
     const { rows: lessons } = await db.query(
-      `SELECT id, lesson_date, status, lesson_number, billing_cycle
-       FROM lessons
-       WHERE enrollment_id = $1
-       ORDER BY billing_cycle, lesson_number`,
+      `SELECT l.id, l.lesson_date, l.status, l.lesson_number, l.billing_cycle,
+              e.lesson_times AS enrollment_lesson_times
+       FROM lessons l
+       JOIN enrollments e ON e.id = l.enrollment_id
+       WHERE l.enrollment_id = $1
+       ORDER BY l.lesson_date ASC`,
       [enrollmentId]
     );
     res.json({ success: true, lessons });
