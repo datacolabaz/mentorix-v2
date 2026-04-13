@@ -10,6 +10,24 @@ const TYPES = {
   multiple: 'Coxsecimli',
   open: 'Aciq',
 }
+
+/** Uyğunluq: sol sətirdəki rəqəm + sağdakı hərflər → bitişik açar (server ilə eyni məntiq) */
+function deriveMatchingKey(options) {
+  if (!Array.isArray(options)) return ''
+  let key = ''
+  for (let i = 0; i < options.length; i++) {
+    const row = options[i]
+    if (!row || typeof row !== 'object') continue
+    const L = String(row.left ?? '').trim()
+    const R = String(row.right ?? '').trim()
+    const num = (L.match(/\d+/) || [])[0] || String(i + 1)
+    const letters = R.replace(/[^a-z]/gi, '').toLowerCase()
+    for (const ch of letters) {
+      if (/[a-z]/.test(ch)) key += num + ch
+    }
+  }
+  return key
+}
  
 export default function ExamForm({ students, studentsLoading = false, onCreated }) {
   const [step, setStep] = useState(1)
@@ -42,7 +60,7 @@ export default function ExamForm({ students, studentsLoading = false, onCreated 
     options: type === 'closed' ? ['', '', '', '', ''] :
               type === 'multiple' ? ['', '', '', ''] :
               type === 'matching' ? [{ left: '', right: '' }, { left: '', right: '' }] : [],
-    template_hint: type === 'open' ? '3.5' : type === 'matching' ? '1b2c3a' : type === 'multiple' ? '23' : '',
+    template_hint: type === 'open' ? '3.5' : type === 'matching' ? '' : type === 'multiple' ? '23' : '',
   }])
  
   const upd = (idx, field, value) =>
@@ -129,7 +147,7 @@ export default function ExamForm({ students, studentsLoading = false, onCreated 
           question_type: q.question_type,
           points: q.points,
           order_num: q.order_num,
-          negative_marking: q.question_type === 'closed' ? -0.25 : 0,
+          negative_marking: q.question_type === 'closed' || q.question_type === 'matching' ? -0.25 : 0,
           options: q.question_type === 'closed'
             ? q.options.map((o, j) => ({
                 key: String.fromCharCode(65 + j),
@@ -149,7 +167,9 @@ export default function ExamForm({ students, studentsLoading = false, onCreated 
                   .filter((c, idx, arr) => arr.indexOf(c) === idx)
                   .sort()
                   .join('')
-              : q.correct_answer,
+              : q.question_type === 'matching'
+                ? String(q.correct_answer || '').trim() || deriveMatchingKey(q.options)
+                : q.correct_answer,
           template_hint: q.template_hint,
         })),
       })
@@ -308,7 +328,7 @@ export default function ExamForm({ students, studentsLoading = false, onCreated 
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-bold text-indigo-300">{idx + 1}. {TYPES[q.question_type]}</span>
-                    {q.question_type === 'closed' && (
+                    {(q.question_type === 'closed' || q.question_type === 'matching') && (
                       <span className="text-xs text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded-lg">-0.25 menfi</span>
                     )}
                   </div>
@@ -443,9 +463,29 @@ export default function ExamForm({ students, studentsLoading = false, onCreated 
                     ))}
                     <button onClick={() => upd(idx, 'options', [...q.options, { left: '', right: '' }])}
                       className="text-xs text-indigo-400">+ Cut elave et</button>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Telebe sablon: <span className="font-mono text-indigo-300">{q.template_hint}</span>
-                    </p>
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">Düzgün uyğunluq açarı (rəqəm+hərf, məs. 1a2b və ya 1ab2cd)</label>
+                      <input
+                        className="w-full bg-[#1a1740] border border-indigo-500/20 rounded-lg px-3 py-1.5 text-white text-xs font-mono outline-none focus:border-blue-500"
+                        placeholder={deriveMatchingKey(q.options) || '1a2b3c'}
+                        value={q.correct_answer || ''}
+                        onChange={(e) =>
+                          upd(idx, 'correct_answer', e.target.value.toLowerCase().replace(/[^0-9a-z]/g, ''))
+                        }
+                      />
+                      <p className="text-[11px] text-gray-500 mt-1">
+                        Boş saxlasanız, soldakı nömrə və sağdakı hərflərdən avtomatik yığılır. Şablon yalnız tələbəyə nümunə üçündür, düzgün cavab deyil.
+                      </p>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">Tələbəyə nümunə format (placeholder)</label>
+                      <input
+                        className="w-full bg-[#1a1740] border border-indigo-500/20 rounded-lg px-3 py-1.5 text-white text-xs font-mono outline-none focus:border-blue-500"
+                        placeholder="məs. 1a2b"
+                        value={q.template_hint || ''}
+                        onChange={(e) => upd(idx, 'template_hint', e.target.value)}
+                      />
+                    </div>
                   </div>
                 )}
  

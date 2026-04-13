@@ -374,6 +374,40 @@ export default function StudentExams() {
                     }
                   />
                 </div>
+              ) : q.question_type === 'matching' ? (
+                <div className="ml-10 space-y-3">
+                  {q.options?.length ? (
+                    <ol className="list-decimal list-inside space-y-2 text-sm text-gray-200">
+                      {q.options.map((opt, oi) => (
+                        <li key={oi} className="pl-1 marker:text-indigo-400">
+                          {optionDisplayLabel(opt)}
+                        </li>
+                      ))}
+                    </ol>
+                  ) : null}
+                  <p className="text-xs text-gray-500">
+                    Cavabınızı rəqəm+hərf cütləri ilə bitişik yazın (boşluq yoxdur; ardıcıllıq fərqi etmir).
+                    {q.template_hint ? (
+                      <span className="block mt-1">
+                        Nümunə: <span className="font-mono text-indigo-300">{q.template_hint}</span>
+                      </span>
+                    ) : null}
+                  </p>
+                  <input
+                    type="text"
+                    inputMode="text"
+                    autoComplete="off"
+                    className="w-full max-w-md bg-[#13112e] border border-indigo-500/20 rounded-xl px-3 py-2.5 text-white text-sm font-mono outline-none focus:border-blue-500"
+                    placeholder={q.template_hint ? `məs. ${q.template_hint}` : 'məs. 1a2b3c'}
+                    value={answers[q.id] || ''}
+                    onChange={(e) =>
+                      setAnswers((p) => ({
+                        ...p,
+                        [q.id]: e.target.value.toLowerCase().replace(/[^0-9a-z]/g, ''),
+                      }))
+                    }
+                  />
+                </div>
               ) : (
                 <textarea className="w-full ml-10 bg-[#13112e] border border-indigo-500/20 rounded-xl p-3 text-white text-sm resize-none outline-none focus:border-blue-500 transition-colors"
                   rows={4} placeholder="Cavabınızı yazın..."

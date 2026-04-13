@@ -4,6 +4,27 @@ const { normalizeExamStartTime } = require('../utils/examTime');
 /** JWT / DB UUID format fərqi olanda exam_assignments uyğunlaşması */
 const normStudentHex = (id) =>
   id == null ? '' : String(id).trim().toLowerCase().replace(/-/g, '');
+
+/** Uyğunluq: explicit `correct_answer` və ya sol/sağ cütlərdən açar; `template_hint` heç vaxt düzgün cavab sayılmır */
+function buildMatchingCorrectFromPayload(q) {
+  const explicit = String(q.correct_answer ?? '').trim();
+  if (explicit) return explicit;
+  const opts = q.options;
+  if (!Array.isArray(opts)) return null;
+  let key = '';
+  for (let i = 0; i < opts.length; i++) {
+    const row = opts[i];
+    if (!row || typeof row !== 'object') continue;
+    const L = String(row.left ?? '').trim();
+    const R = String(row.right ?? '').trim();
+    const num = (L.match(/\d+/) || [])[0] || String(i + 1);
+    const letters = R.replace(/[^a-z]/gi, '').toLowerCase();
+    for (const ch of letters) {
+      if (/[a-z]/.test(ch)) key += num + ch;
+    }
+  }
+  return key || null;
+}
 const {
   calculateScore,
   buildExamResultBreakdown,
@@ -67,13 +88,13 @@ const createExam = async (req, res) => {
           const neg =
             q.negative_marking != null && q.negative_marking !== ''
               ? Number(q.negative_marking)
-              : q.question_type === 'closed'
+              : q.question_type === 'closed' || q.question_type === 'matching'
                 ? -0.25
                 : 0;
           const qText = (q.question_text && String(q.question_text).trim()) || `Sual ${i + 1}`;
           const correctAns =
             q.question_type === 'matching'
-              ? String(q.correct_answer || q.template_hint || '').trim() || null
+              ? buildMatchingCorrectFromPayload(q)
               : q.correct_answer != null && q.correct_answer !== ''
                 ? q.correct_answer
                 : null;

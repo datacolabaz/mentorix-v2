@@ -1,7 +1,8 @@
 const db = require('../utils/db');
 
-function closedWrongPenalty(q) {
-  if (q.question_type !== 'closed') return 0;
+/** Qapalı və uyğunluq: səhv cavaba tətbiq olunan mənfi (default -0.25) */
+function autoWrongPenalty(q) {
+  if (q.question_type !== 'closed' && q.question_type !== 'matching') return 0;
   const n = q.negative_marking;
   if (n === null || n === undefined || n === '') return -0.25;
   const v = Number(n);
@@ -20,24 +21,69 @@ function normDigits(str) {
     .join('');
 }
 
-function normMatchStr(str) {
-  return String(str ?? '')
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, '');
+function parseAzNumber(str) {
+  const s = String(str ?? '').trim();
+  if (!s) return null;
+  const normalized = s.replace(',', '.').replace(/\s+/g, '');
+  const n = Number(normalized);
+  return Number.isFinite(n) ? n : null;
+}
+
+function openAutoKey(q) {
+  if (q.question_type !== 'open') return null;
+  const hint = q.template_hint != null ? String(q.template_hint).trim() : '';
+  const hn = parseAzNumber(hint);
+  return hn == null ? null : hn;
 }
 
 /**
- * Avtomatik bal: qapalı (mənfi bal ola bilər), çoxseçimli, uyğunluq.
- * Açıq: avtomatik bala daxil deyil.
- * Faiz = earned / (bu tiplərin points cəmi) × 100.
+ * Uyğunluq açarını müqayisə üçün kanonik forma salır.
+ * Format sərbəstdir: "1b2cd3a", "1acd2be", "3a2cd1b" — sətirdə 1,2,3 ardıcıllığı vacib deyil.
+ * Qayda: ardıcıl rəqəmlər sətir nömrəsi, dərhal sonra gələn hər hərf həmin sətirə uyğunluqdur
+ * ("1ab" → 1a+1b; "12ab" sətir 12 üçün a və b).
+ * Bütün (sətir,hərf) cütləri ədədi sətir, sonra hərf üzrə sıralanır və müqayisə olunur.
+ */
+function normMatchCanonical(str) {
+  const s = String(str ?? '')
+    .toLowerCase()
+    .replace(/\s+/g, '')
+    .replace(/[^0-9a-z]/g, '');
+  const pairs = [];
+  let i = 0;
+  while (i < s.length) {
+    if (/\d/.test(s[i])) {
+      let j = i;
+      while (j < s.length && /\d/.test(s[j])) j++;
+      const row = parseInt(s.slice(i, j), 10);
+      if (Number.isNaN(row)) {
+        i++;
+        continue;
+      }
+      i = j;
+      while (i < s.length && /[a-z]/.test(s[i])) {
+        pairs.push({ row, letter: s[i] });
+        i += 1;
+      }
+    } else {
+      i += 1;
+    }
+  }
+  pairs.sort((a, b) => a.row - b.row || a.letter.localeCompare(b.letter));
+  return pairs.map((p) => `${String(p.row).padStart(4, '0')}${p.letter}`).join('');
+}
+
+/**
+ * Avtomatik bal: qapalı (mənfi bal ola bilər), çoxseçimli, uyğunluq (mənfi bal ola bilər).
+ * Açıq sual: `template_hint` rəqəmdirsə avtomatik yoxlanır (məs. "4.8"); yoxsa manual qalır.
+ * Payda — bütün sualların ballarının cəmi — imtahanın tam çəkisi ilə uyğun olsun deyə daxildir.
+ * Faiz = earned / (bütün sualların points cəmi) × 100, 0–100 aralığında yuvarlaq.
  */
 const calculateScore = (questions, answers) => {
   let earned = 0;
   const scored = questions.filter((q) =>
-    ['closed', 'multiple', 'matching'].includes(q.question_type)
+    ['closed', 'multiple', 'matching', 'open'].includes(q.question_type)
   );
-  const totalPoints = scored.reduce((s, q) => s + Number(q.points || 0), 0);
+  const totalPoints = questions.reduce((s, q) => s + Number(q.points || 0), 0);
   if (totalPoints <= 0) return 0;
 
   for (const q of scored) {
@@ -47,14 +93,26 @@ const calculateScore = (questions, answers) => {
 
     if (q.question_type === 'closed') {
       const correct = String(q.correct_answer ?? '').trim();
-      const pen = closedWrongPenalty(q);
+      const pen = autoWrongPenalty(q);
       if (given === correct) earned += Number(q.points || 0);
       else earned += pen;
     } else if (q.question_type === 'multiple') {
       if (normDigits(given) === normDigits(q.correct_answer)) earned += Number(q.points || 0);
     } else if (q.question_type === 'matching') {
-      if (normMatchStr(given) === normMatchStr(q.correct_answer))
-        earned += Number(q.points || 0);
+      const keyStored = String(q.correct_answer ?? '').trim();
+      if (!keyStored) continue;
+      const pen = autoWrongPenalty(q);
+      const cg = normMatchCanonical(given);
+      const ck = normMatchCanonical(keyStored);
+      if (cg === ck) earned += Number(q.points || 0);
+      else earned += pen;
+    } else if (q.question_type === 'open') {
+      const key = openAutoKey(q);
+      if (key == null) continue;
+      const gn = parseAzNumber(given);
+      if (gn == null) continue;
+      const ok = Math.abs(gn - key) < 1e-9;
+      if (ok) earned += Number(q.points || 0);
     }
   }
 
@@ -85,15 +143,27 @@ const buildExamResultBreakdown = (questions, answers) => {
     } else if (type === 'matching') {
       correctDisplay = String(q.correct_answer ?? '').trim() || '—';
       if (!given) isCorrect = null;
-      else isCorrect = normMatchStr(given) === normMatchStr(q.correct_answer);
+      else if (!String(q.correct_answer ?? '').trim()) isCorrect = null;
+      else isCorrect = normMatchCanonical(given) === normMatchCanonical(q.correct_answer);
     } else if (type === 'open') {
       const hint = String(q.template_hint || '').trim();
       correctDisplay = hint ? `Nümunə / gözlənti: ${hint}` : 'Müəllim qiymətləndirir';
-      isCorrect = null;
+      const key = openAutoKey(q);
+      if (!given) isCorrect = null;
+      else if (key == null) isCorrect = null;
+      else {
+        const gn = parseAzNumber(given);
+        isCorrect = gn == null ? false : Math.abs(gn - key) < 1e-9;
+      }
     }
 
     let statusLabel = 'Manual qiymətləndirmə';
-    if (type === 'open') statusLabel = 'Manual qiymətləndirmə';
+    if (type === 'open') {
+      if (!given) statusLabel = 'Cavabsız';
+      else if (isCorrect === true) statusLabel = 'Düzgün';
+      else if (isCorrect === false) statusLabel = openAutoKey(q) == null ? 'Manual qiymətləndirmə' : 'Səhv';
+      else statusLabel = 'Manual qiymətləndirmə';
+    }
     else if (!given) statusLabel = 'Cavabsız';
     else if (isCorrect === true) statusLabel = 'Düzgün';
     else if (isCorrect === false) statusLabel = 'Səhv';
