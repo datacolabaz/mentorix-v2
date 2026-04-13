@@ -217,20 +217,35 @@ const forgotPinSms = async (req, res) => {
 
 const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
-    const { rows } = await db.query('SELECT * FROM users WHERE email = $1 AND is_active = TRUE', [
-      email.toLowerCase(),
-    ]);
+    const { email, phone, identifier } = req.body;
+    const raw = identifier != null && String(identifier).trim() !== '' ? identifier : email != null ? email : phone;
+    const s = raw != null ? String(raw).trim() : '';
+    if (!s) return res.status(400).json({ success: false, message: 'Telefon və ya email tələb olunur' });
+
+    const clean = normalizePhone(s);
+    const looksPhone = Boolean(clean) && clean.length >= 9;
+
+    const { rows } = looksPhone
+      ? await db.query(
+          `SELECT *
+           FROM users
+           WHERE is_active = TRUE
+             AND ${PHONE_NORM} = $1
+           LIMIT 1`,
+          [clean]
+        )
+      : await db.query('SELECT * FROM users WHERE is_active = TRUE AND lower(trim(email)) = lower(trim($1)) LIMIT 1', [s]);
+
     const user = rows[0];
-    if (!user || !(await bcrypt.compare(password, user.password_hash)))
-      return res.status(401).json({ success: false, message: 'Email və ya şifrə yanlışdır' });
+    if (!user || !user.password_hash || !(await bcrypt.compare(password, user.password_hash)))
+      return res.status(401).json({ success: false, message: 'Giriş məlumatları yanlışdır' });
     if (user.role !== 'admin')
-      return res.status(403).json({ success: false, message: 'Yalnız admin email ilə daxil ola bilər' });
+      return res.status(403).json({ success: false, message: 'Yalnız admin bu girişlə daxil ola bilər' });
     const token = sign({ id: user.id, role: user.role });
     res.json({
       success: true,
       token,
-      user: { id: user.id, full_name: user.full_name, role: user.role, email: user.email },
+      user: { id: user.id, full_name: user.full_name, role: user.role, email: user.email, phone: user.phone },
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -336,7 +351,8 @@ const register = async (req, res) => {
     const phoneCanon = canonicalPhone(phone);
     if (!phoneCanon) return res.status(400).json({ success: false, message: 'Telefon tələb olunur' });
     const hash = await bcrypt.hash(password || 'Pass@123', 12);
-    const emailCanon = email?.toLowerCase() || null;
+    // Students are phone/PIN-first; ignore email on registration unless explicitly non-empty.
+    const emailCanon = role === 'student' ? null : email?.toLowerCase() || null;
 
     const user = await db.transaction(async (client) => {
       let created = null;

@@ -16,7 +16,7 @@ export default function Login() {
   const isAdmin = searchParams.get('admin') === 'true'
 
   const [role, setRole] = useState(null)
-  const [email, setEmail] = useState('')
+  const [adminIdentifier, setAdminIdentifier] = useState('')
   const [password, setPassword] = useState('')
   const [phone, setPhone] = useState('')
   const [pinInput, setPinInput] = useState('')
@@ -35,7 +35,7 @@ export default function Login() {
     e.preventDefault()
     setLoading(true)
     try {
-      const user = await login(email, password)
+      const user = await login(adminIdentifier, password)
       goDashboard(user.role)
     } catch (err) {
       toast(err.message || 'Giriş xətası', 'error')
@@ -120,14 +120,14 @@ export default function Login() {
               </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
-                  E-poçt
+                  Telefon və ya email
                 </label>
                 <input
                   className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-blue-500"
-                  type="email"
-                  placeholder="admin@mentorix.biz"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  type="text"
+                  placeholder="+994XXXXXXXXX və ya admin@mentorix.biz"
+                  value={adminIdentifier}
+                  onChange={(e) => setAdminIdentifier(e.target.value)}
                   required
                 />
               </div>

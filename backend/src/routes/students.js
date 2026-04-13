@@ -314,7 +314,6 @@ router.patch('/enrollment/:enrollmentId', authenticate, authorize('admin', 'inst
   try {
     const {
       full_name,
-      email,
       phone,
       billing_type,
       referral_notes,
@@ -337,10 +336,7 @@ router.patch('/enrollment/:enrollmentId', authenticate, authorize('admin', 'inst
       return res.status(403).json({ success: false, message: 'Bu qeydiyyata icazəniz yoxdur' });
     }
 
-    await db.query(
-      'UPDATE users SET full_name = $1, email = $2, phone = $3 WHERE id = $4',
-      [full_name, email || null, phone, studentId]
-    );
+    await db.query('UPDATE users SET full_name = $1, phone = $2 WHERE id = $3', [full_name, phone, studentId]);
 
     const hasLwd = Object.prototype.hasOwnProperty.call(req.body, 'lesson_weekdays');
     if (hasLwd) {

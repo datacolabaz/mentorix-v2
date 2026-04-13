@@ -16,7 +16,6 @@ const BILLING_OPTS = [
 
 const emptyForm = {
   full_name: '',
-  email: '',
   phone: '',
   billing_type: '8_lessons',
   referral_notes: '',
@@ -85,25 +84,15 @@ function StudentFormFields({ data, setData, scheduleMeta, mode, onRefreshSlots, 
           onChange={(e) => setData((p) => ({ ...p, full_name: e.target.value }))}
         />
       </div>
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Telefon *</label>
-          <input
-            className={inp}
-            placeholder="+994XXXXXXXXX"
-            value={data.phone}
-            onChange={(e) => setData((p) => ({ ...p, phone: e.target.value }))}
-          />
-        </div>
-        <div>
-          <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Email</label>
-          <input
-            className={inp}
-            placeholder="email@mail.com"
-            value={data.email}
-            onChange={(e) => setData((p) => ({ ...p, email: e.target.value }))}
-          />
-        </div>
+      <div>
+        <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Telefon *</label>
+        <input
+          className={inp}
+          placeholder="+994XXXXXXXXX"
+          value={data.phone}
+          onChange={(e) => setData((p) => ({ ...p, phone: e.target.value }))}
+        />
+        <p className="text-[10px] text-gray-500 mt-1.5">Giriş üçün əsas identifikator telefon nömrəsidir (PIN ilə).</p>
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
@@ -323,7 +312,6 @@ export default function InstructorStudents() {
     try {
       const reg = await api.post('/auth/register', {
         full_name: form.full_name,
-        email: form.email || null,
         phone: form.phone,
         role: 'student',
         password: Math.random().toString(36).slice(-8),
@@ -357,7 +345,6 @@ export default function InstructorStudents() {
     setEditId(s.enrollment_id)
     setEditForm({
       full_name: s.full_name || '',
-      email: s.email || '',
       phone: s.phone || '',
       billing_type: s.billing_type || '8_lessons',
       referral_notes: s.referral_notes || '',
@@ -391,7 +378,6 @@ export default function InstructorStudents() {
     try {
       await api.patch('/students/enrollment/' + encodeURIComponent(editId), {
         full_name: editForm.full_name,
-        email: editForm.email,
         phone: editForm.phone,
         billing_type: editForm.billing_type,
         referral_notes: editForm.referral_notes,
@@ -473,7 +459,6 @@ export default function InstructorStudents() {
                   <div className="font-semibold text-white truncate">{s.full_name}</div>
                   <div className="text-xs text-gray-400 flex flex-wrap gap-x-3 gap-y-1 mt-0.5">
                     {s.phone && <span className="break-all">{s.phone}</span>}
-                    {s.email && <span className="break-all">{s.email}</span>}
                     {lessonDaysShort(s.lesson_weekdays) && (
                       <span className="text-indigo-300/90 w-full sm:w-auto">
                         Dərslər: {lessonDaysShort(s.lesson_weekdays)}

@@ -5,8 +5,8 @@ const useAuthStore = create((set) => ({
   user: JSON.parse(localStorage.getItem('mx_user') || 'null'),
   token: localStorage.getItem('mx_token'),
 
-  login: async (email, password) => {
-    const data = await api.post('/auth/login', { email, password })
+  login: async (identifier, password) => {
+    const data = await api.post('/auth/login', { identifier, password })
     localStorage.setItem('mx_token', data.token)
     localStorage.setItem('mx_user', JSON.stringify(data.user))
     set({ user: data.user, token: data.token })
