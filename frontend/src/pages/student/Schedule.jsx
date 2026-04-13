@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
 import api from '../../lib/api'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
@@ -37,6 +37,28 @@ function fmtTime(t) {
   const s = typeof t === 'string' ? t : String(t)
   return s.slice(0, 5)
 }
+
+function parseToMinutes(t) {
+  const s = fmtTime(t)
+  const [h, m] = s.split(':').map((x) => parseInt(x, 10))
+  return (Number.isFinite(h) ? h : 0) * 60 + (Number.isFinite(m) ? m : 0)
+}
+
+function slotCoversHour(slot, hour) {
+  const sm = parseToMinutes(slot.start_time)
+  const em = parseToMinutes(slot.end_time)
+  const rowStart = hour * 60
+  const rowEnd = (hour + 1) * 60
+  return sm < rowEnd && em > rowStart
+}
+
+function slotFirstHour(slot) {
+  return Math.floor(parseToMinutes(slot.start_time) / 60)
+}
+
+const GRID_START = 8
+const GRID_END = 20
+const ROW_COUNT = GRID_END - GRID_START
 
 export default function StudentSchedule() {
   const [loading, setLoading] = useState(true)
@@ -78,6 +100,49 @@ export default function StudentSchedule() {
     }
     return [...set].sort((a, b) => a - b)
   }, [enrollments])
+
+  const scheduleSlotsByDay = useMemo(() => {
+    const m = new Map()
+    for (let d = 1; d <= 7; d++) m.set(d, [])
+
+    // Dərs slotları (müəllim tərəfindən təyin olunmuş)
+    for (const e of enrollments) {
+      if (!e?.slot_id) continue
+      const day = Number(e.slot_day_of_week)
+      if (!Number.isFinite(day)) continue
+      const list = m.get(day) || []
+      list.push({
+        id: `lesson-${e.slot_id}`,
+        kind: 'lesson',
+        day_of_week: day,
+        start_time: e.slot_start_time,
+        end_time: e.slot_end_time,
+        title: e.instructor_name ? `Dərs · ${e.instructor_name}` : 'Dərs',
+      })
+      m.set(day, list)
+    }
+
+    // Hazırlıq slotları (tələbənin özü)
+    for (const s of prepSlots) {
+      const day = Number(s.day_of_week)
+      if (!Number.isFinite(day)) continue
+      const list = m.get(day) || []
+      list.push({
+        id: `prep-${s.id}`,
+        kind: 'prep',
+        day_of_week: day,
+        start_time: s.start_time,
+        end_time: s.end_time,
+        title: 'Hazırlıq',
+      })
+      m.set(day, list)
+    }
+
+    for (const d of m.keys()) {
+      m.get(d).sort((a, b) => parseToMinutes(a.start_time) - parseToMinutes(b.start_time))
+    }
+    return m
+  }, [enrollments, prepSlots])
 
   const freeDays = useMemo(() => {
     const l = new Set(lessonDays)
@@ -141,34 +206,6 @@ export default function StudentSchedule() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card className="p-5">
-          <p className="text-sm font-semibold mb-3">Dərs günlərim</p>
-          {loading ? (
-            <p className="text-sm text-gray-500">Yüklənir…</p>
-          ) : lessonDays.length === 0 ? (
-            <p className="text-sm text-gray-500">Aktiv dərs gününüz tapılmadı.</p>
-          ) : (
-            <div className="flex flex-wrap gap-2">
-              {WEEKDAYS.map((d) => {
-                const active = lessonDays.includes(d.v)
-                return (
-                  <span
-                    key={d.v}
-                    className={[
-                      'px-3 py-1.5 rounded-xl text-xs font-semibold border',
-                      active
-                        ? 'bg-indigo-500/20 border-indigo-400/40 text-indigo-200'
-                        : 'bg-[#13112e] border-indigo-500/20 text-gray-500',
-                    ].join(' ')}
-                  >
-                    {d.full}
-                  </span>
-                )
-              })}
-            </div>
-          )}
-        </Card>
-
-        <Card className="p-5">
           <p className="text-sm font-semibold mb-1">Hazırlıq üçün slot yarat</p>
           <p className="text-xs text-gray-500 mb-3">
             Boş günləri seçin və saat aralığı verin (məs. 1–4-cü günlər 18:00–19:00).
@@ -225,6 +262,90 @@ export default function StudentSchedule() {
             <Button onClick={() => void addSlots()} loading={saving} className="w-full justify-center">
               Slot əlavə et
             </Button>
+          </div>
+        </Card>
+
+        <Card className="p-5">
+          <p className="text-sm font-semibold mb-1">Həftəlik cədvəl</p>
+          <div className="flex flex-wrap gap-4 text-xs text-gray-500 mt-2 mb-3">
+            <span className="flex items-center gap-2">
+              <span className="w-3 h-3 rounded bg-indigo-600/35 border border-indigo-400/45" /> Dərs
+            </span>
+            <span className="flex items-center gap-2">
+              <span className="w-3 h-3 rounded bg-emerald-500/25 border border-emerald-400/40" /> Hazırlıq
+            </span>
+            <span className="flex items-center gap-2">
+              <span className="w-3 h-3 rounded bg-[#0f0c29] border border-indigo-500/15" /> Boş
+            </span>
+          </div>
+
+          <div className="overflow-x-auto">
+            <div
+              className="grid gap-px bg-indigo-500/20 rounded-xl overflow-hidden border border-indigo-500/25 min-w-[680px]"
+              style={{
+                gridTemplateColumns: `3.5rem repeat(7, minmax(0,1fr))`,
+                gridTemplateRows: `auto repeat(${ROW_COUNT}, minmax(2rem, 2.25rem))`,
+              }}
+            >
+              <div className="bg-[#13112e] p-2 text-[10px] font-semibold text-gray-500 uppercase tracking-wider" />
+              {WEEKDAYS.map((d) => (
+                <div
+                  key={d.v}
+                  className="bg-[#13112e] p-2 text-center text-[11px] font-bold text-indigo-200/90 border-l border-indigo-500/15"
+                >
+                  {d.short}
+                </div>
+              ))}
+
+              {Array.from({ length: ROW_COUNT }, (_, i) => GRID_START + i).map((hour) => (
+                <Fragment key={hour}>
+                  <div className="bg-[#0f0c29] text-[10px] text-gray-500 font-mono tabular-nums flex items-center justify-end pr-2 border-t border-indigo-500/10">
+                    {String(hour).padStart(2, '0')}:00
+                  </div>
+                  {WEEKDAYS.map((d) => {
+                    const dayList = scheduleSlotsByDay.get(d.v) || []
+                    const hourSlots = dayList.filter((s) => slotCoversHour(s, hour))
+                    const primary = hourSlots.sort(
+                      (a, b) => parseToMinutes(a.start_time) - parseToMinutes(b.start_time)
+                    )[0]
+                    const isFirstHour = primary && slotFirstHour(primary) === hour
+                    const spanHours = primary
+                      ? Math.max(1, Math.ceil(parseToMinutes(primary.end_time) / 60) - slotFirstHour(primary))
+                      : 1
+
+                    const blockStyle =
+                      primary?.kind === 'lesson'
+                        ? 'bg-indigo-600/25 border-indigo-400/45 text-indigo-100'
+                        : primary?.kind === 'prep'
+                          ? 'bg-emerald-500/15 border-emerald-400/35 text-emerald-100'
+                          : ''
+
+                    return (
+                      <div
+                        key={`${d.v}-${hour}`}
+                        className="bg-[#0f0c29]/95 border-l border-t border-indigo-500/10 relative min-h-[2.25rem]"
+                      >
+                        {isFirstHour && primary && (
+                          <div
+                            className={`absolute left-0.5 right-0.5 rounded-md border px-1 py-0.5 text-[10px] leading-tight z-10 shadow-sm ${blockStyle}`}
+                            style={{
+                              top: '2px',
+                              minHeight: `${spanHours * 2.25 - 0.35}rem`,
+                            }}
+                            title={primary.title}
+                          >
+                            <div className="font-semibold truncate">
+                              {fmtTime(primary.start_time)}–{fmtTime(primary.end_time)}
+                            </div>
+                            <div className="text-[9px] opacity-95 truncate mt-0.5">{primary.title}</div>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </Fragment>
+              ))}
+            </div>
           </div>
         </Card>
       </div>
