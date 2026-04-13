@@ -141,8 +141,7 @@ CREATE TABLE lessons (
   lesson_number INTEGER NOT NULL,
   billing_cycle INTEGER NOT NULL DEFAULT 1,
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  CONSTRAINT lessons_unique_enrollment_cycle_number UNIQUE (enrollment_id, billing_cycle, lesson_number),
-  CONSTRAINT lessons_unique_instructor_time UNIQUE (instructor_id, lesson_date)
+  CONSTRAINT lessons_unique_enrollment_cycle_number UNIQUE (enrollment_id, billing_cycle, lesson_number)
 );
 
 CREATE INDEX IF NOT EXISTS idx_lessons_student ON lessons (student_id);

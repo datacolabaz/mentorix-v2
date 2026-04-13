@@ -265,9 +265,11 @@ router.post('/enroll', authenticate, authorize('instructor', 'admin'), async (re
 
           const exists = await client.query(
             `SELECT id FROM lessons
-             WHERE instructor_id = $1 AND lesson_date = ($2::timestamp)::timestamptz
+             WHERE instructor_id = $1
+               AND student_id <> $3
+               AND lesson_date = ($2::timestamp)::timestamptz
              LIMIT 1`,
-            [instructor_id, starts[i]]
+            [instructor_id, starts[i], student_id]
           );
           if (exists.rowCount > 0) {
             throw Object.assign(new Error('LESSON_CONFLICT'), {
