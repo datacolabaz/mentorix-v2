@@ -269,10 +269,7 @@ export default function StudentSchedule() {
           <p className="text-sm font-semibold mb-1">Həftəlik cədvəl</p>
           <div className="flex flex-wrap gap-4 text-xs text-gray-500 mt-2 mb-3">
             <span className="flex items-center gap-2">
-              <span className="w-3 h-3 rounded bg-indigo-600/35 border border-indigo-400/45" /> Dərs
-            </span>
-            <span className="flex items-center gap-2">
-              <span className="w-3 h-3 rounded bg-emerald-500/25 border border-emerald-400/40" /> Hazırlıq
+              <span className="w-3 h-3 rounded bg-indigo-600/35 border border-indigo-400/45" /> Məşğul
             </span>
             <span className="flex items-center gap-2">
               <span className="w-3 h-3 rounded bg-[#0f0c29] border border-indigo-500/15" /> Boş
@@ -313,12 +310,9 @@ export default function StudentSchedule() {
                       ? Math.max(1, Math.ceil(parseToMinutes(primary.end_time) / 60) - slotFirstHour(primary))
                       : 1
 
-                    const blockStyle =
-                      primary?.kind === 'lesson'
-                        ? 'bg-indigo-600/25 border-indigo-400/45 text-indigo-100'
-                        : primary?.kind === 'prep'
-                          ? 'bg-emerald-500/15 border-emerald-400/35 text-emerald-100'
-                          : ''
+                    const blockStyle = primary
+                      ? 'bg-indigo-600/25 border-indigo-400/45 text-indigo-100'
+                      : ''
 
                     return (
                       <div

@@ -173,10 +173,8 @@ export default function InstructorSchedule() {
     if (!s.is_occupied) {
       return 'bg-emerald-500/15 border-emerald-500/35 text-emerald-100'
     }
-    if (s.enrollment_id) {
-      return 'bg-indigo-600/25 border-indigo-400/40 text-indigo-100'
-    }
-    return 'bg-gray-600/20 border-gray-500/30 text-gray-300'
+    // Məşğul = tələbə slotu və ya blok slotu (hər ikisi eyni rəngdə)
+    return 'bg-indigo-600/25 border-indigo-400/40 text-indigo-100'
   }
 
   const resetFormSelections = () => {
@@ -359,10 +357,7 @@ export default function InstructorSchedule() {
           <span className="w-3 h-3 rounded bg-emerald-500/30 border border-emerald-500/40" /> Boş
         </span>
         <span className="flex items-center gap-2">
-          <span className="w-3 h-3 rounded bg-indigo-600/40 border border-indigo-400/50" /> Tələbə
-        </span>
-        <span className="flex items-center gap-2">
-          <span className="w-3 h-3 rounded bg-gray-600/30 border border-gray-500/40" /> Blok
+          <span className="w-3 h-3 rounded bg-indigo-600/40 border border-indigo-400/50" /> Məşğul
         </span>
       </div>
 
