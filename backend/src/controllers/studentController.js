@@ -122,6 +122,11 @@ const deleteStudent = async (req, res) => {
       );
       const remaining = left[0]?.n || 0;
       if (remaining === 0) {
+        // Cleanup user-referenced tables to satisfy FK constraints
+        await client.query('DELETE FROM exam_results WHERE student_id = $1', [studentId]);
+        await client.query('DELETE FROM exam_assignments WHERE student_id = $1', [studentId]);
+        await client.query('DELETE FROM payments WHERE student_id = $1', [studentId]);
+        await client.query('DELETE FROM notifications WHERE user_id = $1', [studentId]);
         await client.query('DELETE FROM task_assignments WHERE student_id = $1', [studentId]);
         await client.query('DELETE FROM student_prep_slots WHERE student_id = $1', [studentId]);
         await client.query('DELETE FROM student_profiles WHERE user_id = $1', [studentId]);
