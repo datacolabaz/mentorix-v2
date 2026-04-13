@@ -3,6 +3,19 @@ import api from '../../lib/api'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
 import { useToast } from '../../components/common/Toast'
+import {
+  fmtTime,
+  parseLessonInstant,
+  bakuPartsFromInstant,
+  slotTimesForLesson,
+  fmtAzBakuLessonRow,
+  parseToMinutes,
+  slotCoversHour,
+  slotFirstHour,
+  GRID_START,
+  GRID_END,
+  GRID_ROW_COUNT,
+} from '../../lib/lessonWeekGrid'
 
 const WEEKDAYS = [
   { v: 1, short: 'B.e.', full: 'Bazar ertəsi' },
@@ -31,141 +44,6 @@ function normalizeWeekdays(raw) {
   }
   return [...set].sort((a, b) => a - b)
 }
-
-function fmtTime(t) {
-  if (!t) return ''
-  const s = typeof t === 'string' ? t : String(t)
-  return s.slice(0, 5)
-}
-
-const EN_SHORT_DOW = { Sun: 7, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 }
-
-/** Backend sometimes returns timestamp strings without timezone; treat those as Asia/Baku wall time. */
-function parseLessonInstant(dt) {
-  if (!dt) return null
-  const s = String(dt).trim()
-  const hasTz = /([zZ]|[+-]\d{2}:?\d{2})$/.test(s)
-  if (hasTz) {
-    const d = new Date(s.includes('T') ? s : s.replace(' ', 'T'))
-    return Number.isNaN(d.getTime()) ? null : d
-  }
-  const m = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?/.exec(s)
-  if (!m) {
-    const d = new Date(s)
-    return Number.isNaN(d.getTime()) ? null : d
-  }
-  const y = Number(m[1])
-  const mo = Number(m[2])
-  const d = Number(m[3])
-  const hh = Number(m[4])
-  const mm = Number(m[5])
-  const ss = m[6] != null ? Number(m[6]) : 0
-  const ms = Date.UTC(y, mo - 1, d, hh - 4, mm, ss)
-  const out = new Date(ms)
-  return Number.isNaN(out.getTime()) ? null : out
-}
-
-function bakuPartsFromInstant(inst) {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'Asia/Baku',
-    weekday: 'short',
-    hour: '2-digit',
-    minute: '2-digit',
-    hourCycle: 'h23',
-  }).formatToParts(inst)
-  const get = (t) => parts.find((p) => p.type === t)?.value
-  const wd = EN_SHORT_DOW[get('weekday')] || null
-  const hour = parseInt(get('hour') || '0', 10)
-  const minute = parseInt(get('minute') || '0', 10)
-  return { dow: wd, hour: Number.isFinite(hour) ? hour : 0, minute: Number.isFinite(minute) ? minute : 0 }
-}
-
-function parseEnrollmentLessonTimes(raw) {
-  if (raw == null || raw === '') return {}
-  let o = raw
-  if (typeof raw === 'string') {
-    try {
-      o = JSON.parse(raw)
-    } catch {
-      return {}
-    }
-  }
-  if (!o || typeof o !== 'object' || Array.isArray(o)) return {}
-  return o
-}
-
-/** Cədvəl üçün: dərs günü Baku təqvimindən; saat müəllimin qeyd etdiyi lesson_times-dan (lesson_date UTC sürüşməsinə qarşı). */
-function slotTimesForLesson(l) {
-  if (!l?.lesson_date) return null
-  const inst = parseLessonInstant(l.lesson_date)
-  if (!inst) return null
-  const { dow: day, hour: sh, minute: sm } = bakuPartsFromInstant(inst)
-  if (!day) return null
-  const lt = parseEnrollmentLessonTimes(l.enrollment_lesson_times)
-  const wall = lt[String(day)] ?? lt[day]
-  let hh = sh
-  let mm = sm
-  const wt = wall != null && wall !== '' ? fmtTime(wall) : ''
-  if (wt) {
-    const [h, m] = wt.split(':').map((x) => parseInt(x, 10))
-    if (Number.isFinite(h) && Number.isFinite(m)) {
-      hh = h
-      mm = m
-    }
-  }
-  const startMin = hh * 60 + mm
-  const endMin = startMin + 60
-  const eh = String(Math.floor(endMin / 60) % 24).padStart(2, '0')
-  const em = String(endMin % 60).padStart(2, '0')
-  const start = `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`
-  const end = `${eh}:${em}`
-  return { day, start, end }
-}
-
-function fmtAzBakuLessonRow(l) {
-  const inst = parseLessonInstant(l?.lesson_date)
-  if (!inst) return '—'
-  const dateStr = new Intl.DateTimeFormat('az-AZ', {
-    timeZone: 'Asia/Baku',
-    dateStyle: 'medium',
-  }).format(inst)
-  const { dow } = bakuPartsFromInstant(inst)
-  const lt = parseEnrollmentLessonTimes(l.enrollment_lesson_times)
-  const wall = dow != null ? lt[String(dow)] ?? lt[dow] : null
-  const t = wall != null && wall !== '' ? fmtTime(wall) : ''
-  if (t) return `${dateStr}, ${t}`
-  try {
-    return new Intl.DateTimeFormat('az-AZ', {
-      timeZone: 'Asia/Baku',
-      dateStyle: 'medium',
-      timeStyle: 'short',
-    }).format(inst)
-  } catch {
-    return dateStr
-  }
-}
-
-function parseToMinutes(t) {
-  const s = fmtTime(t)
-  const [h, m] = s.split(':').map((x) => parseInt(x, 10))
-  return (Number.isFinite(h) ? h : 0) * 60 + (Number.isFinite(m) ? m : 0)
-}
-
-function slotCoversHour(slot, hour) {
-  const sm = parseToMinutes(slot.start_time)
-  const em = parseToMinutes(slot.end_time)
-  const rowStart = hour * 60
-  const rowEnd = (hour + 1) * 60
-  return sm < rowEnd && em > rowStart
-}
-
-function slotFirstHour(slot) {
-  return Math.floor(parseToMinutes(slot.start_time) / 60)
-}
-
-const GRID_START = 8
-const GRID_END = 20
-const ROW_COUNT = GRID_END - GRID_START
 
 export default function StudentSchedule() {
   const [loading, setLoading] = useState(true)
@@ -392,7 +270,7 @@ export default function StudentSchedule() {
               className="grid gap-px bg-indigo-500/20 rounded-xl overflow-hidden border border-indigo-500/25 min-w-[680px]"
               style={{
                 gridTemplateColumns: `3.5rem repeat(7, minmax(0,1fr))`,
-                gridTemplateRows: `auto repeat(${ROW_COUNT}, minmax(2rem, 2.25rem))`,
+                gridTemplateRows: `auto repeat(${GRID_ROW_COUNT}, minmax(2rem, 2.25rem))`,
               }}
             >
               <div className="bg-[#13112e] p-2 text-[10px] font-semibold text-gray-500 uppercase tracking-wider" />
@@ -405,7 +283,7 @@ export default function StudentSchedule() {
                 </div>
               ))}
 
-              {Array.from({ length: ROW_COUNT }, (_, i) => GRID_START + i).map((hour) => (
+              {Array.from({ length: GRID_ROW_COUNT }, (_, i) => GRID_START + i).map((hour) => (
                 <Fragment key={hour}>
                   <div className="bg-[#0f0c29] text-[10px] text-gray-500 font-mono tabular-nums flex items-center justify-end pr-2 border-t border-indigo-500/10">
                     {String(hour).padStart(2, '0')}:00

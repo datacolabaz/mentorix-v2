@@ -4,6 +4,7 @@ const {
   getStudent,
   deleteStudent,
   getMySchedule,
+  getInstructorMyLessonsCalendar,
   addMyPrepSlots,
   deleteMyPrepSlot,
 } = require('../controllers/studentController');
@@ -440,6 +441,13 @@ router.patch('/:id/phone', authenticate, authorize('admin', 'instructor'), async
 router.get('/my/schedule', authenticate, authorize('student'), getMySchedule);
 router.post('/my/prep-slots', authenticate, authorize('student'), addMyPrepSlots);
 router.delete('/my/prep-slots/:id', authenticate, authorize('student'), deleteMyPrepSlot);
+
+router.get(
+  '/instructor/my-lessons',
+  authenticate,
+  authorize('instructor', 'admin'),
+  getInstructorMyLessonsCalendar
+);
 
 router.get('/:id', authenticate, getStudent);
 

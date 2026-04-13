@@ -4,6 +4,16 @@ import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
 import ListSkeleton from '../../components/common/ListSkeleton'
 import { useToast } from '../../components/common/Toast'
+import {
+  fmtTime,
+  slotTimesForLesson,
+  fmtAzBakuLessonRow,
+  parseToMinutes,
+  slotCoversHour,
+  slotFirstHour,
+  GRID_START,
+  GRID_ROW_COUNT,
+} from '../../lib/lessonWeekGrid'
 
 /** 1 = Bazar ertəsi … 7 = Bazar */
 export const WEEKDAYS = [
@@ -19,37 +29,10 @@ export const WEEKDAYS = [
 const inp =
   'w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-3 py-2 text-white text-sm outline-none focus:border-indigo-400'
 
-function fmtTime(t) {
-  if (t == null) return ''
-  const s = typeof t === 'string' ? t : String(t)
-  return s.slice(0, 5)
-}
-
-function parseToMinutes(t) {
-  const s = fmtTime(t)
-  const [h, m] = s.split(':').map((x) => parseInt(x, 10))
-  return (Number.isFinite(h) ? h : 0) * 60 + (Number.isFinite(m) ? m : 0)
-}
-
-function slotCoversHour(slot, hour) {
-  const sm = parseToMinutes(slot.start_time)
-  const em = parseToMinutes(slot.end_time)
-  const rowStart = hour * 60
-  const rowEnd = (hour + 1) * 60
-  return sm < rowEnd && em > rowStart
-}
-
-function slotFirstHour(slot) {
-  return Math.floor(parseToMinutes(slot.start_time) / 60)
-}
-
-const GRID_START = 8
-const GRID_END = 20
-const ROW_COUNT = GRID_END - GRID_START
-
 export default function InstructorSchedule() {
   const [loading, setLoading] = useState(true)
   const [slots, setSlots] = useState([])
+  const [datedLessons, setDatedLessons] = useState([])
   const [err, setErr] = useState(null)
   const [saving, setSaving] = useState(false)
   const toast = useToast()
@@ -67,11 +50,16 @@ export default function InstructorSchedule() {
     setErr(null)
     setLoading(true)
     try {
-      const d = await api.get('/teacher-schedules')
+      const [d, dated] = await Promise.all([
+        api.get('/teacher-schedules'),
+        api.get('/students/instructor/my-lessons').catch(() => ({ lessons: [] })),
+      ])
       setSlots(d.slots || [])
+      setDatedLessons(Array.isArray(dated.lessons) ? dated.lessons : [])
     } catch (e) {
       setErr(e?.message || 'Yüklənmədi')
       setSlots([])
+      setDatedLessons([])
     } finally {
       setLoading(false)
     }
@@ -94,6 +82,30 @@ export default function InstructorSchedule() {
     }
     return m
   }, [slots])
+
+  const datedSlotsByDay = useMemo(() => {
+    const m = new Map()
+    for (let d = 1; d <= 7; d++) m.set(d, [])
+    for (const l of datedLessons) {
+      const slot = slotTimesForLesson(l)
+      if (!slot) continue
+      const { day, start, end } = slot
+      const list = m.get(day) || []
+      list.push({
+        id: `lesson-${l.id}`,
+        kind: 'lesson',
+        day_of_week: day,
+        start_time: start,
+        end_time: end,
+        title: l.student_name ? `Dərs · ${l.student_name}` : 'Dərs',
+      })
+      m.set(day, list)
+    }
+    for (const d of m.keys()) {
+      m.get(d).sort((a, b) => parseToMinutes(a.start_time) - parseToMinutes(b.start_time))
+    }
+    return m
+  }, [datedLessons])
 
   const toggleGenDay = (v) => {
     setGenDays((prev) => (prev.includes(v) ? prev.filter((x) => x !== v) : [...prev, v].sort((a, b) => a - b)))
@@ -183,7 +195,7 @@ export default function InstructorSchedule() {
         <div>
           <h1 className="font-display font-bold text-xl sm:text-2xl text-white tracking-tight">Cədvəlim</h1>
           <p className="text-gray-500 text-sm mt-1">
-            Həftəlik boş və məşğul dərs saatları. Tələbə əlavə edərkən yalnız boş slotlar seçilə bilər.
+            Aşağıda tələbələrinizin tarixli dərsləri avtomatik göstərilir; yuxarıdakı slotlar isə boş/məşğul şablon üçündür.
           </p>
         </div>
       </div>
@@ -314,7 +326,7 @@ export default function InstructorSchedule() {
               className="grid gap-px bg-indigo-500/20 rounded-xl overflow-hidden border border-indigo-500/25"
               style={{
                 gridTemplateColumns: `3.5rem repeat(7, minmax(0,1fr))`,
-                gridTemplateRows: `auto repeat(${ROW_COUNT}, minmax(2rem, 2.25rem))`,
+                gridTemplateRows: `auto repeat(${GRID_ROW_COUNT}, minmax(2rem, 2.25rem))`,
               }}
             >
               <div className="bg-[#13112e] p-2 text-[10px] font-semibold text-gray-500 uppercase tracking-wider" />
@@ -326,7 +338,7 @@ export default function InstructorSchedule() {
                   {d.short}
                 </div>
               ))}
-              {Array.from({ length: ROW_COUNT }, (_, i) => GRID_START + i).map((hour) => (
+              {Array.from({ length: GRID_ROW_COUNT }, (_, i) => GRID_START + i).map((hour) => (
                 <Fragment key={hour}>
                   <div className="bg-[#0f0c29] text-[10px] text-gray-500 font-mono tabular-nums flex items-center justify-end pr-2 border-t border-indigo-500/10">
                     {String(hour).padStart(2, '0')}:00
@@ -396,6 +408,109 @@ export default function InstructorSchedule() {
               ))}
             </div>
           </div>
+        )}
+      </Card>
+
+      <Card className="mt-6 border border-indigo-500/20 p-4 sm:p-5">
+        <h2 className="text-sm font-bold text-white mb-1">Tələbə dərsləri (həftəlik)</h2>
+        <p className="text-xs text-gray-500 mb-4 leading-relaxed">
+          Tələbə əlavə etdikdə sistem yaradılan tarixli dərslər burada tələbənin «Cədvəlim» bölməsi ilə eyni günlər və saatlarda
+          göstərilir.
+        </p>
+        {loading ? (
+          <p className="text-sm text-gray-500 py-4">Yüklənir…</p>
+        ) : datedLessons.length === 0 ? (
+          <p className="text-sm text-gray-500 py-4">Hələ tarixli dərs qeydi yoxdur.</p>
+        ) : (
+          <>
+            <div className="flex flex-wrap gap-4 text-xs text-gray-500 mb-3">
+              <span className="flex items-center gap-2">
+                <span className="w-3 h-3 rounded bg-indigo-600/35 border border-indigo-400/45" /> Dərs
+              </span>
+              <span className="flex items-center gap-2">
+                <span className="w-3 h-3 rounded bg-[#0f0c29] border border-indigo-500/15" /> Boş
+              </span>
+            </div>
+            <div className="overflow-x-auto">
+              <div
+                className="grid gap-px bg-indigo-500/20 rounded-xl overflow-hidden border border-indigo-500/25 min-w-[680px]"
+                style={{
+                  gridTemplateColumns: `3.5rem repeat(7, minmax(0,1fr))`,
+                  gridTemplateRows: `auto repeat(${GRID_ROW_COUNT}, minmax(2rem, 2.25rem))`,
+                }}
+              >
+                <div className="bg-[#13112e] p-2 text-[10px] font-semibold text-gray-500 uppercase tracking-wider" />
+                {WEEKDAYS.map((d) => (
+                  <div
+                    key={d.v}
+                    className="bg-[#13112e] p-2 text-center text-[11px] font-bold text-indigo-200/90 border-l border-indigo-500/15"
+                  >
+                    {d.short}
+                  </div>
+                ))}
+                {Array.from({ length: GRID_ROW_COUNT }, (_, i) => GRID_START + i).map((hour) => (
+                  <Fragment key={`d-${hour}`}>
+                    <div className="bg-[#0f0c29] text-[10px] text-gray-500 font-mono tabular-nums flex items-center justify-end pr-2 border-t border-indigo-500/10">
+                      {String(hour).padStart(2, '0')}:00
+                    </div>
+                    {WEEKDAYS.map((d) => {
+                      const dayList = datedSlotsByDay.get(d.v) || []
+                      const hourSlots = dayList.filter((s) => slotCoversHour(s, hour))
+                      const primary = hourSlots.sort(
+                        (a, b) => parseToMinutes(a.start_time) - parseToMinutes(b.start_time)
+                      )[0]
+                      const isFirstHour = primary && slotFirstHour(primary) === hour
+                      const spanHours = primary
+                        ? Math.max(1, Math.ceil(parseToMinutes(primary.end_time) / 60) - slotFirstHour(primary))
+                        : 1
+                      const blockStyle = primary
+                        ? 'bg-indigo-600/25 border-indigo-400/45 text-indigo-100'
+                        : ''
+                      return (
+                        <div
+                          key={`dl-${d.v}-${hour}`}
+                          className="bg-[#0f0c29]/95 border-l border-t border-indigo-500/10 relative min-h-[2.25rem]"
+                        >
+                          {isFirstHour && primary && (
+                            <div
+                              className={`absolute left-0.5 right-0.5 rounded-md border px-1 py-0.5 text-[10px] leading-tight z-10 shadow-sm ${blockStyle}`}
+                              style={{
+                                top: '2px',
+                                minHeight: `${spanHours * 2.25 - 0.35}rem`,
+                              }}
+                              title={primary.title}
+                            >
+                              <div className="font-semibold truncate">
+                                {fmtTime(primary.start_time)}–{fmtTime(primary.end_time)}
+                              </div>
+                              <div className="text-[9px] opacity-95 truncate mt-0.5">{primary.title}</div>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </Fragment>
+                ))}
+              </div>
+            </div>
+            <div className="mt-4">
+              <p className="text-xs font-semibold text-gray-400 mb-2">Tarixlər üzrə</p>
+              <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                {[...datedLessons]
+                  .sort((a, b) => String(a.lesson_date).localeCompare(String(b.lesson_date)))
+                  .slice(0, 40)
+                  .map((l) => (
+                    <div
+                      key={l.id}
+                      className="p-2.5 rounded-xl bg-[#13112e] border border-indigo-500/15 text-xs flex flex-wrap justify-between gap-2"
+                    >
+                      <span className="text-gray-300 truncate">{l.student_name || 'Tələbə'}</span>
+                      <span className="font-mono text-indigo-200/90 shrink-0">{fmtAzBakuLessonRow(l)}</span>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          </>
         )}
       </Card>
     </div>

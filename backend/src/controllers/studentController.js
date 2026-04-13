@@ -187,6 +187,32 @@ function toMinutes(t) {
 }
 
 /** Tələbə profili: həftəlik dərs günləri + slot məlumatı (boş günləri UI çıxarır) */
+/** Müəllim: bütün tələbələrin tarixli dərsləri (tələbə cədvəli ilə eyni mənbə — lessons + enrollment lesson_times). */
+const getInstructorMyLessonsCalendar = async (req, res) => {
+  try {
+    const iid =
+      req.user.id != null ? String(req.user.id).trim().toLowerCase().replace(/-/g, '') : '';
+    if (!iid) {
+      return res.status(400).json({ success: false, message: 'İstifadəçi identifikatoru yoxdur' });
+    }
+    const { rows: lessons } = await db.query(
+      `SELECT l.id, l.lesson_date, l.status, l.lesson_number, l.billing_cycle,
+              u.full_name AS student_name,
+              e.lesson_times AS enrollment_lesson_times
+       FROM lessons l
+       JOIN users u ON u.id = l.student_id
+       JOIN enrollments e ON e.id = l.enrollment_id
+       WHERE REPLACE(LOWER(TRIM(l.instructor_id::text)), '-', '') = $1
+         AND u.is_active = TRUE
+       ORDER BY l.lesson_date ASC`,
+      [iid]
+    );
+    res.json({ success: true, lessons });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 const getMySchedule = async (req, res) => {
   try {
     const studentId = req.user.id;
@@ -261,6 +287,7 @@ module.exports = {
   getStudent,
   deleteStudent,
   getMySchedule,
+  getInstructorMyLessonsCalendar,
   addMyPrepSlots,
   deleteMyPrepSlot,
 };
