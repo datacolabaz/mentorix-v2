@@ -41,9 +41,14 @@ function fmtTime(t) {
 export default function StudentSchedule() {
   const [loading, setLoading] = useState(true)
   const [enrollments, setEnrollments] = useState([])
+  const [prepSlots, setPrepSlots] = useState([])
   const [err, setErr] = useState(null)
-  const [prepDays, setPrepDays] = useState([])
+  const [saving, setSaving] = useState(false)
   const toast = useToast()
+
+  const [newSlotDays, setNewSlotDays] = useState([1, 2, 3, 4])
+  const [newStart, setNewStart] = useState('18:00')
+  const [newEnd, setNewEnd] = useState('19:00')
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -51,9 +56,11 @@ export default function StudentSchedule() {
     try {
       const d = await api.get('/students/my/schedule')
       setEnrollments(Array.isArray(d.enrollments) ? d.enrollments : [])
+      setPrepSlots(Array.isArray(d.prepSlots) ? d.prepSlots : [])
     } catch (e) {
       setErr(e?.message || 'Yüklənmədi')
       setEnrollments([])
+      setPrepSlots([])
     } finally {
       setLoading(false)
     }
@@ -76,8 +83,41 @@ export default function StudentSchedule() {
     return WEEKDAYS.map((d) => d.v).filter((x) => !l.has(x))
   }, [lessonDays])
 
-  const togglePrepDay = (v) => {
-    setPrepDays((prev) => (prev.includes(v) ? prev.filter((x) => x !== v) : [...prev, v].sort((a, b) => a - b)))
+  const toggleNewDay = (v) => {
+    setNewSlotDays((prev) => (prev.includes(v) ? prev.filter((x) => x !== v) : [...prev, v].sort((a, b) => a - b)))
+  }
+
+  const addSlots = async () => {
+    const days = newSlotDays.filter((d) => freeDays.includes(d))
+    if (!days.length) {
+      toast('Boş günlərdən ən azı birini seçin', 'error')
+      return
+    }
+    setSaving(true)
+    try {
+      await api.post('/students/my/prep-slots', {
+        days,
+        start_time: newStart,
+        end_time: newEnd,
+      })
+      toast('Hazırlıq slotları əlavə olundu', 'success')
+      await load()
+    } catch (e) {
+      toast(e?.message || 'Xəta', 'error')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const delSlot = async (id) => {
+    if (!window.confirm('Bu slot silinsin?')) return
+    try {
+      await api.delete('/students/my/prep-slots/' + encodeURIComponent(id))
+      toast('Silindi', 'success')
+      await load()
+    } catch (e) {
+      toast(e?.message || 'Xəta', 'error')
+    }
   }
 
   return (
@@ -128,19 +168,21 @@ export default function StudentSchedule() {
         </Card>
 
         <Card className="p-5">
-          <p className="text-sm font-semibold mb-1">Boş günlər (hazırlıq üçün)</p>
-          <p className="text-xs text-gray-500 mb-3">İstədiyiniz günləri seçin (yalnız sizdə görünür).</p>
+          <p className="text-sm font-semibold mb-1">Hazırlıq üçün slot yarat</p>
+          <p className="text-xs text-gray-500 mb-3">
+            Boş günləri seçin və saat aralığı verin (məs. 1–4-cü günlər 18:00–19:00).
+          </p>
 
           <div className="flex flex-wrap gap-2">
             {WEEKDAYS.map((d) => {
               const isFree = freeDays.includes(d.v)
-              const selected = prepDays.includes(d.v)
+              const selected = newSlotDays.includes(d.v)
               return (
                 <button
                   type="button"
                   key={d.v}
                   disabled={!isFree}
-                  onClick={() => togglePrepDay(d.v)}
+                  onClick={() => toggleNewDay(d.v)}
                   className={[
                     'px-3 py-2 rounded-xl text-xs font-semibold border transition-colors',
                     isFree
@@ -156,8 +198,64 @@ export default function StudentSchedule() {
               )
             })}
           </div>
+
+          <div className="grid grid-cols-2 gap-3 mt-3">
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Başla</label>
+              <input
+                type="time"
+                value={newStart}
+                onChange={(e) => setNewStart(e.target.value)}
+                className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-3 py-2 text-white text-sm outline-none focus:border-indigo-400"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Bitir</label>
+              <input
+                type="time"
+                value={newEnd}
+                onChange={(e) => setNewEnd(e.target.value)}
+                className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-3 py-2 text-white text-sm outline-none focus:border-indigo-400"
+              />
+            </div>
+          </div>
+
+          <div className="mt-3">
+            <Button onClick={() => void addSlots()} loading={saving} className="w-full justify-center">
+              Slot əlavə et
+            </Button>
+          </div>
         </Card>
       </div>
+
+      <Card className="p-5 mt-4">
+        <p className="text-sm font-semibold mb-3">Hazırlıq slotlarım</p>
+        {loading ? (
+          <p className="text-sm text-gray-500">Yüklənir…</p>
+        ) : prepSlots.length === 0 ? (
+          <p className="text-sm text-gray-500">Hələ slot əlavə etməmisiniz.</p>
+        ) : (
+          <div className="space-y-2">
+            {prepSlots.map((s) => (
+              <div
+                key={s.id}
+                className="p-3 rounded-xl bg-[#13112e] border border-indigo-500/20 flex items-center justify-between gap-2"
+              >
+                <div className="text-sm font-mono text-gray-200">
+                  {WEEKDAYS.find((x) => x.v === s.day_of_week)?.short || s.day_of_week} · {fmtTime(s.start_time)}–{fmtTime(s.end_time)}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => void delSlot(s.id)}
+                  className="text-xs text-red-400 hover:text-red-300 px-2 py-1"
+                >
+                  Sil
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
 
       <Card className="p-5 mt-4">
         <p className="text-sm font-semibold mb-3">Dərs saatım (slot)</p>

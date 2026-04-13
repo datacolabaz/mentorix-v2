@@ -1,5 +1,12 @@
 const router = require('express').Router();
-const { listStudents, getStudent, deleteStudent, getMySchedule } = require('../controllers/studentController');
+const {
+  listStudents,
+  getStudent,
+  deleteStudent,
+  getMySchedule,
+  addMyPrepSlots,
+  deleteMyPrepSlot,
+} = require('../controllers/studentController');
 const { authenticate, authorize } = require('../middleware/auth');
 const db = require('../utils/db');
 
@@ -236,6 +243,8 @@ router.patch('/:id/phone', authenticate, authorize('admin', 'instructor'), async
 });
 
 router.get('/my/schedule', authenticate, authorize('student'), getMySchedule);
+router.post('/my/prep-slots', authenticate, authorize('student'), addMyPrepSlots);
+router.delete('/my/prep-slots/:id', authenticate, authorize('student'), deleteMyPrepSlot);
 
 router.get('/:id', authenticate, getStudent);
 

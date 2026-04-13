@@ -110,10 +110,41 @@ const deleteStudent = async (req, res) => {
   }
 };
 
+function parseDay(v) {
+  const d = parseInt(String(v), 10);
+  if (!Number.isFinite(d) || d < 1 || d > 7) return null;
+  return d;
+}
+
+/** HH:MM və ya HH:MM:SS */
+function parseTime(v) {
+  if (v == null || v === '') return null;
+  const s = String(v).trim();
+  const m = s.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+  if (!m) return null;
+  const h = parseInt(m[1], 10);
+  const min = parseInt(m[2], 10);
+  const sec = m[3] != null ? parseInt(m[3], 10) : 0;
+  if (h < 0 || h > 23 || min < 0 || min > 59 || sec < 0 || sec > 59) return null;
+  return `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+}
+
+function toMinutes(t) {
+  const [h, m] = t.split(':').map((x) => parseInt(x, 10));
+  return h * 60 + m;
+}
+
 /** Tələbə profili: həftəlik dərs günləri + slot məlumatı (boş günləri UI çıxarır) */
 const getMySchedule = async (req, res) => {
   try {
     const studentId = req.user.id;
+    const { rows: prepSlots } = await db.query(
+      `SELECT id, day_of_week, start_time, end_time, created_at
+       FROM student_prep_slots
+       WHERE student_id = $1
+       ORDER BY day_of_week, start_time`,
+      [studentId]
+    );
     const { rows } = await db.query(
       `SELECT e.id AS enrollment_id,
               e.instructor_id,
@@ -130,10 +161,59 @@ const getMySchedule = async (req, res) => {
        ORDER BY e.enrolled_at DESC NULLS LAST`,
       [studentId]
     );
-    res.json({ success: true, enrollments: rows });
+    res.json({ success: true, enrollments: rows, prepSlots });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
 };
 
-module.exports = { listStudents, getStudent, deleteStudent, getMySchedule };
+const addMyPrepSlots = async (req, res) => {
+  try {
+    const studentId = req.user.id;
+    const days = Array.isArray(req.body.days) ? req.body.days : [];
+    const start = parseTime(req.body.start_time);
+    const end = parseTime(req.body.end_time);
+    if (!start || !end || toMinutes(start) >= toMinutes(end)) {
+      return res.status(400).json({ success: false, message: 'Saat aralığı yanlışdır' });
+    }
+    const uniq = [...new Set(days.map(parseDay).filter(Boolean))].sort((a, b) => a - b);
+    if (!uniq.length) {
+      return res.status(400).json({ success: false, message: 'Ən azı bir gün seçin' });
+    }
+
+    const { rows } = await db.query(
+      `INSERT INTO student_prep_slots (student_id, day_of_week, start_time, end_time)
+       SELECT $1::uuid, d::smallint, $2::time, $3::time
+       FROM UNNEST($4::int[]) AS d
+       RETURNING id, day_of_week, start_time, end_time, created_at`,
+      [studentId, start, end, uniq]
+    );
+    res.status(201).json({ success: true, slots: rows });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+const deleteMyPrepSlot = async (req, res) => {
+  try {
+    const studentId = req.user.id;
+    const { id } = req.params;
+    const { rowCount } = await db.query(
+      `DELETE FROM student_prep_slots WHERE id = $1 AND student_id = $2`,
+      [id, studentId]
+    );
+    if (rowCount === 0) return res.status(404).json({ success: false, message: 'Tapılmadı' });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+module.exports = {
+  listStudents,
+  getStudent,
+  deleteStudent,
+  getMySchedule,
+  addMyPrepSlots,
+  deleteMyPrepSlot,
+};
