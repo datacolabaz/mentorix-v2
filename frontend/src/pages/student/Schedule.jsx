@@ -46,7 +46,8 @@ export default function StudentSchedule() {
   const [saving, setSaving] = useState(false)
   const toast = useToast()
 
-  const [newSlotDays, setNewSlotDays] = useState([1, 2, 3, 4])
+  // Default: heç bir gün seçilməsin (qarışdırmasın)
+  const [newSlotDays, setNewSlotDays] = useState([])
   const [newStart, setNewStart] = useState('18:00')
   const [newEnd, setNewEnd] = useState('19:00')
 
