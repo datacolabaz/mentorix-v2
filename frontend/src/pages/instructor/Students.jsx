@@ -51,6 +51,27 @@ function lessonDaysShort(raw) {
   return ids.map((v) => WEEKDAYS.find((d) => d.v === v)?.short || v).join(' · ')
 }
 
+/** API JSONB / string → { "1": "11:00", ... } */
+function normalizeLessonTimes(raw) {
+  if (raw == null || raw === '') return {}
+  let o = raw
+  if (typeof raw === 'string') {
+    try {
+      o = JSON.parse(raw)
+    } catch {
+      return {}
+    }
+  }
+  if (!o || typeof o !== 'object' || Array.isArray(o)) return {}
+  const out = {}
+  for (const [k, v] of Object.entries(o)) {
+    if (v == null || v === '') continue
+    const t = fmtSlotTime(v)
+    if (t) out[String(k)] = t.length === 5 ? t : t.slice(0, 5)
+  }
+  return out
+}
+
 function fmtSlotTime(t) {
   if (t == null) return ''
   const s = typeof t === 'string' ? t : String(t)
@@ -124,26 +145,28 @@ function StudentFormFields({ data, setData, scheduleMeta, mode, onRefreshSlots, 
           )}
         </div>
       </div>
-      <div>
-        <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">İlk dərs tarixi *</label>
-        <p className="text-[10px] text-gray-500 mb-2">
-          Seçilən tarix mütləq seçdiyiniz dərs günlərindən birinə düşməlidir. Sistem bu tarixdən başlayaraq paketə uyğun (8/12) dərsləri avtomatik yaradacaq.
-        </p>
-        <input
-          className={inp}
-          type="date"
-          value={data.first_lesson_date}
-          onChange={(e) => {
-            const v = e.target.value
-            setData((p) => ({
-              ...p,
-              first_lesson_date: v,
-              // default: ödəniş başlanğıcı verilməyibsə, ilk dərs tarixinə bağla
-              payment_start_date: p.payment_start_date || v,
-            }))
-          }}
-        />
-      </div>
+      {mode === 'add' && (
+        <div>
+          <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">İlk dərs tarixi *</label>
+          <p className="text-[10px] text-gray-500 mb-2">
+            Seçilən tarix mütləq seçdiyiniz dərs günlərindən birinə düşməlidir. Sistem bu tarixdən başlayaraq paketə uyğun (8/12) dərsləri avtomatik yaradacaq.
+          </p>
+          <input
+            className={inp}
+            type="date"
+            value={data.first_lesson_date}
+            onChange={(e) => {
+              const v = e.target.value
+              setData((p) => ({
+                ...p,
+                first_lesson_date: v,
+                // default: ödəniş başlanğıcı verilməyibsə, ilk dərs tarixinə bağla
+                payment_start_date: p.payment_start_date || v,
+              }))
+            }}
+          />
+        </div>
+      )}
       <div className="rounded-xl border border-indigo-500/20 bg-[#0f0c29]/60 p-3 space-y-2">
         <p className="text-xs font-semibold text-indigo-200/90 uppercase tracking-wider">Həftənin dərs günləri *</p>
         <p className="text-[10px] text-gray-500 leading-relaxed">
@@ -189,7 +212,7 @@ function StudentFormFields({ data, setData, scheduleMeta, mode, onRefreshSlots, 
           ))}
         </select>
       </div>
-      {mode === 'add' && scheduleMeta && (
+      {(mode === 'add' || mode === 'edit') && (
         <div className="rounded-xl border border-indigo-500/20 bg-[#0f0c29]/60 p-3 space-y-2">
           <p className="text-xs font-semibold text-indigo-200/90 uppercase tracking-wider">Dərs vaxtı (slot)</p>
           {data.billing_type === '8_lessons' && (
@@ -353,8 +376,10 @@ export default function InstructorStudents() {
         s.payment_start_date != null && s.payment_start_date !== ''
           ? String(s.payment_start_date).slice(0, 10)
           : '',
+      first_lesson_date: '',
       teacher_schedule_id: '',
       lesson_weekdays: normalizeWeekdays(s.lesson_weekdays),
+      lesson_times: normalizeLessonTimes(s.lesson_times),
       parent_name: s.parent_name || '',
       parent_phone: s.parent_phone || '',
     })
@@ -384,6 +409,7 @@ export default function InstructorStudents() {
         monthly_fee: editForm.monthly_fee,
         payment_start_date: editForm.payment_start_date,
         lesson_weekdays: editForm.lesson_weekdays,
+        lesson_times: editForm.lesson_times || {},
         parent_name: editForm.parent_name,
         parent_phone: editForm.parent_phone,
       })
@@ -507,7 +533,7 @@ export default function InstructorStudents() {
       </Modal>
 
       <Modal open={editModal} onClose={() => setEditModal(false)} title="Telebeyi Redakte Et">
-        <StudentFormFields data={editForm} setData={setEditForm} mode="edit" />
+        <StudentFormFields data={editForm} setData={setEditForm} mode="edit" toast={toast} />
         <div className="flex gap-3 mt-4">
           <Button onClick={saveEdit} loading={loading} className="flex-1 justify-center">
             Yadda Saxla

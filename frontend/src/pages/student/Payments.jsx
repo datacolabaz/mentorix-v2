@@ -71,6 +71,7 @@ function enrollmentFromStudentProfile(s) {
   const lim = billingLimit(s.billing_type)
   const lc = Number(s.lesson_count)
   const lessonCount = Number.isFinite(lc) ? lc : 0
+  const mf = s.monthly_fee != null && s.monthly_fee !== '' ? Number(s.monthly_fee) : null
   return {
     id: s.enrollment_id,
     billing_type: s.billing_type,
@@ -80,6 +81,7 @@ function enrollmentFromStudentProfile(s) {
     lesson_times: s.lesson_times,
     instructor_name: s.instructor_name,
     payment_start_date_for_display: s.payment_start_date ?? null,
+    monthly_fee: Number.isFinite(mf) ? mf : null,
     lesson_limit: lim,
     remaining_lessons: lim != null ? Math.max(0, lim - lessonCount) : null,
     next_lesson_at: null,
@@ -166,6 +168,12 @@ export default function StudentPayments() {
   const progressPct =
     enrollment && limit && limit > 0 ? Math.min(100, Math.max(0, (lessonCount / limit) * 100)) : 0
 
+  const monthlyFeeNum =
+    enrollment?.monthly_fee != null && enrollment.monthly_fee !== ''
+      ? Number(enrollment.monthly_fee)
+      : NaN
+  const hasMonthlyFee = Number.isFinite(monthlyFeeNum) && monthlyFeeNum > 0
+
   return (
     <div className="p-4 sm:p-6 max-w-3xl mx-auto w-full min-w-0">
       <h1 className="font-display font-bold text-2xl text-white mb-2">Ödəniş</h1>
@@ -205,8 +213,13 @@ export default function StudentPayments() {
             <Card className="p-5">
               <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Billing</div>
               <div className="font-display font-bold text-xl text-emerald-400">
-                {BILLING[enrollment?.billing_type] || enrollment?.billing_type || '—'}
+                {enrollment?.billing_type === 'monthly' && hasMonthlyFee
+                  ? `${monthlyFeeNum.toFixed(2)} ₼ / ay`
+                  : BILLING[enrollment?.billing_type] || enrollment?.billing_type || '—'}
               </div>
+              {enrollment?.billing_type === 'monthly' && hasMonthlyFee && (
+                <p className="text-[11px] text-gray-500 mt-2 leading-snug">Müəllimin qeyd etdiyi aylıq ödəniş məbləği</p>
+              )}
             </Card>
             <Card className="p-5">
               <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Müəllim</div>
@@ -236,6 +249,12 @@ export default function StudentPayments() {
                   <span className="text-gray-500">Paket: </span>
                   {BILLING[enrollment.billing_type] || enrollment.billing_type || '—'}
                 </li>
+                {enrollment.billing_type === 'monthly' && hasMonthlyFee && (
+                  <li>
+                    <span className="text-gray-500">Aylıq məbləğ: </span>
+                    <span className="text-emerald-300 font-mono tabular-nums">{monthlyFeeNum.toFixed(2)} ₼</span>
+                  </li>
+                )}
                 {enrollment.payment_start_date_for_display && (
                   <li>
                     <span className="text-gray-500">Ödəniş başlanğıcı: </span>

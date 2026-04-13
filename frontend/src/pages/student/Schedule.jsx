@@ -80,9 +80,60 @@ function bakuPartsFromInstant(inst) {
   return { dow: wd, hour: Number.isFinite(hour) ? hour : 0, minute: Number.isFinite(minute) ? minute : 0 }
 }
 
-function fmtAzBakuFromLessonDate(dt) {
-  const inst = parseLessonInstant(dt)
+function parseEnrollmentLessonTimes(raw) {
+  if (raw == null || raw === '') return {}
+  let o = raw
+  if (typeof raw === 'string') {
+    try {
+      o = JSON.parse(raw)
+    } catch {
+      return {}
+    }
+  }
+  if (!o || typeof o !== 'object' || Array.isArray(o)) return {}
+  return o
+}
+
+/** Cədvəl üçün: dərs günü Baku təqvimindən; saat müəllimin qeyd etdiyi lesson_times-dan (lesson_date UTC sürüşməsinə qarşı). */
+function slotTimesForLesson(l) {
+  if (!l?.lesson_date) return null
+  const inst = parseLessonInstant(l.lesson_date)
+  if (!inst) return null
+  const { dow: day, hour: sh, minute: sm } = bakuPartsFromInstant(inst)
+  if (!day) return null
+  const lt = parseEnrollmentLessonTimes(l.enrollment_lesson_times)
+  const wall = lt[String(day)] ?? lt[day]
+  let hh = sh
+  let mm = sm
+  const wt = wall != null && wall !== '' ? fmtTime(wall) : ''
+  if (wt) {
+    const [h, m] = wt.split(':').map((x) => parseInt(x, 10))
+    if (Number.isFinite(h) && Number.isFinite(m)) {
+      hh = h
+      mm = m
+    }
+  }
+  const startMin = hh * 60 + mm
+  const endMin = startMin + 60
+  const eh = String(Math.floor(endMin / 60) % 24).padStart(2, '0')
+  const em = String(endMin % 60).padStart(2, '0')
+  const start = `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`
+  const end = `${eh}:${em}`
+  return { day, start, end }
+}
+
+function fmtAzBakuLessonRow(l) {
+  const inst = parseLessonInstant(l?.lesson_date)
   if (!inst) return '—'
+  const dateStr = new Intl.DateTimeFormat('az-AZ', {
+    timeZone: 'Asia/Baku',
+    dateStyle: 'medium',
+  }).format(inst)
+  const { dow } = bakuPartsFromInstant(inst)
+  const lt = parseEnrollmentLessonTimes(l.enrollment_lesson_times)
+  const wall = dow != null ? lt[String(dow)] ?? lt[dow] : null
+  const t = wall != null && wall !== '' ? fmtTime(wall) : ''
+  if (t) return `${dateStr}, ${t}`
   try {
     return new Intl.DateTimeFormat('az-AZ', {
       timeZone: 'Asia/Baku',
@@ -90,7 +141,7 @@ function fmtAzBakuFromLessonDate(dt) {
       timeStyle: 'short',
     }).format(inst)
   } catch {
-    return '—'
+    return dateStr
   }
 }
 
@@ -167,19 +218,9 @@ export default function StudentSchedule() {
 
     // Dərs slotları (dated lessons). End_time: default 60 dəq.
     for (const l of lessons) {
-      if (!l?.lesson_date) continue
-      const inst = parseLessonInstant(l.lesson_date)
-      if (!inst) continue
-      const { dow: day, hour: sh, minute: sm } = bakuPartsFromInstant(inst)
-      if (!day) continue
-      const startMin = sh * 60 + sm
-      const endMin = startMin + 60
-      const eh = String(Math.floor(endMin / 60) % 24).padStart(2, '0')
-      const em = String(endMin % 60).padStart(2, '0')
-      const hh = String(sh).padStart(2, '0')
-      const mm = String(sm).padStart(2, '0')
-      const start = `${hh}:${mm}`
-      const end = `${eh}:${em}`
+      const slot = slotTimesForLesson(l)
+      if (!slot) continue
+      const { day, start, end } = slot
       const list = m.get(day) || []
       list.push({
         id: `lesson-${l.id}`,
@@ -465,7 +506,7 @@ export default function StudentSchedule() {
                       </p>
                     </div>
                     <div className="text-sm font-mono text-gray-200 shrink-0">
-                      {l.lesson_date ? fmtAzBakuFromLessonDate(l.lesson_date) : '—'}
+                      {l.lesson_date ? fmtAzBakuLessonRow(l) : '—'}
                     </div>
                   </div>
                 </div>

@@ -45,7 +45,8 @@ const listMyPayments = async (req, res) => {
     const { rows: enRows } = await db.query(
       `SELECT e.*,
               iu.full_name AS instructor_name,
-              sp.payment_start_date AS student_payment_start_date
+              sp.payment_start_date AS student_payment_start_date,
+              sp.monthly_fee AS student_monthly_fee
        FROM enrollments e
        LEFT JOIN users iu ON iu.id = e.instructor_id
        LEFT JOIN student_profiles sp ON sp.user_id = e.student_id
@@ -64,7 +65,8 @@ const listMyPayments = async (req, res) => {
       const { rows: anyRows } = await db.query(
         `SELECT e.*,
                 iu.full_name AS instructor_name,
-                sp.payment_start_date AS student_payment_start_date
+                sp.payment_start_date AS student_payment_start_date,
+                sp.monthly_fee AS student_monthly_fee
          FROM enrollments e
          LEFT JOIN users iu ON iu.id = e.instructor_id
          LEFT JOIN student_profiles sp ON sp.user_id = e.student_id
@@ -78,9 +80,13 @@ const listMyPayments = async (req, res) => {
     let enrollmentOut = null;
     let paymentStartForDisplay = null;
     if (enrollment) {
-      const { student_payment_start_date, ...rest } = enrollment;
+      const { student_payment_start_date, student_monthly_fee, ...rest } = enrollment;
       paymentStartForDisplay = student_payment_start_date || null;
-      enrollmentOut = rest;
+      const mfNum = student_monthly_fee != null ? Number(student_monthly_fee) : NaN;
+      enrollmentOut = {
+        ...rest,
+        monthly_fee: Number.isFinite(mfNum) ? mfNum : null,
+      };
     }
     const limit = enrollment ? billingLimit(enrollment.billing_type) : null;
     const remaining_lessons =

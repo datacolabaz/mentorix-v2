@@ -322,6 +322,7 @@ router.patch('/enrollment/:enrollmentId', authenticate, authorize('admin', 'inst
       monthly_fee,
       payment_start_date,
       lesson_weekdays,
+      lesson_times,
     } = req.body;
     const { enrollmentId } = req.params;
 
@@ -339,14 +340,33 @@ router.patch('/enrollment/:enrollmentId', authenticate, authorize('admin', 'inst
     await db.query('UPDATE users SET full_name = $1, phone = $2 WHERE id = $3', [full_name, phone, studentId]);
 
     const hasLwd = Object.prototype.hasOwnProperty.call(req.body, 'lesson_weekdays');
-    if (hasLwd) {
-      const lwd = parseLessonWeekdays(lesson_weekdays);
-      if (lwd.length === 0) {
-        return res.status(400).json({ success: false, message: 'Ən azı bir dərs günü seçin' });
-      }
+    const hasLt = Object.prototype.hasOwnProperty.call(req.body, 'lesson_times');
+    const { rows: curEnrRows } = await db.query(
+      'SELECT lesson_weekdays, lesson_times FROM enrollments WHERE id = $1',
+      [enrollmentId]
+    );
+    const curEnr = curEnrRows[0] || {};
+
+    const lwd = hasLwd ? parseLessonWeekdays(lesson_weekdays) : parseLessonWeekdays(curEnr.lesson_weekdays);
+    if ((hasLwd || hasLt) && lwd.length === 0) {
+      return res.status(400).json({ success: false, message: 'Ən azı bir dərs günü seçin' });
+    }
+    const lt = hasLt
+      ? parseLessonTimes(lesson_times, lwd)
+      : parseLessonTimes(curEnr.lesson_times, lwd);
+    if ((hasLwd || hasLt) && lwd.length > 0 && Object.keys(lt).length === 0) {
+      return res.status(400).json({ success: false, message: 'Dərs günlərinə uyğun saatları qeyd edin' });
+    }
+
+    if (hasLwd || hasLt) {
       await db.query(
-        'UPDATE enrollments SET billing_type = $1, referral_notes = $2, lesson_weekdays = $3::jsonb WHERE id = $4',
-        [billing_type, referral_notes || null, JSON.stringify(lwd), enrollmentId]
+        `UPDATE enrollments
+         SET billing_type = $1,
+             referral_notes = $2,
+             lesson_weekdays = $3::jsonb,
+             lesson_times = $4::jsonb
+         WHERE id = $5`,
+        [billing_type, referral_notes || null, JSON.stringify(lwd), JSON.stringify(lt), enrollmentId]
       );
     } else {
       await db.query(
