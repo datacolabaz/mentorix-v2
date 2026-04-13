@@ -72,6 +72,7 @@ const getStudent = async (req, res) => {
               sp.monthly_fee, sp.payment_start_date,
               pu.full_name AS parent_name, pu.phone AS parent_phone,
               e.id AS enrollment_id, e.billing_type, e.lesson_count,
+              e.lesson_weekdays, e.lesson_times, e.billing_cycle,
               e.status AS enrollment_status, e.enrolled_at AS enrollment_started_at,
               iu.full_name AS instructor_name
        FROM users u
@@ -79,8 +80,8 @@ const getStudent = async (req, res) => {
        LEFT JOIN users pu ON pu.id = sp.parent_id
        LEFT JOIN LATERAL (
          SELECT e2.* FROM enrollments e2
-         WHERE e2.student_id = u.id AND e2.status = 'active'
-         ORDER BY e2.enrolled_at DESC NULLS LAST
+         WHERE e2.student_id = u.id
+         ORDER BY e2.enrolled_at DESC NULLS LAST, e2.id DESC
          LIMIT 1
        ) e ON TRUE
        LEFT JOIN users iu ON iu.id = e.instructor_id

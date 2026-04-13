@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import api from '../../lib/api'
 import Card from '../../components/common/Card'
+import useAuthStore from '../../hooks/useAuth'
 
 const BILLING = {
   '8_lessons': '8 dərs paketi',
@@ -65,26 +66,72 @@ function fmtAzFromDb(dt) {
   return d.toLocaleString('az-AZ', { timeZone: 'Asia/Baku' })
 }
 
+function enrollmentFromStudentProfile(s) {
+  if (!s?.enrollment_id) return null
+  const lim = billingLimit(s.billing_type)
+  const lc = Number(s.lesson_count)
+  const lessonCount = Number.isFinite(lc) ? lc : 0
+  return {
+    id: s.enrollment_id,
+    billing_type: s.billing_type,
+    lesson_count: lessonCount,
+    billing_cycle: s.billing_cycle,
+    lesson_weekdays: s.lesson_weekdays,
+    lesson_times: s.lesson_times,
+    instructor_name: s.instructor_name,
+    payment_start_date_for_display: s.payment_start_date ?? null,
+    lesson_limit: lim,
+    remaining_lessons: lim != null ? Math.max(0, lim - lessonCount) : null,
+    next_lesson_at: null,
+    planned_lessons_in_cycle: null,
+  }
+}
+
 export default function StudentPayments() {
+  const { user } = useAuthStore()
   const [loading, setLoading] = useState(true)
   const [payments, setPayments] = useState([])
   const [enrollment, setEnrollment] = useState(null)
   const [historyOpen, setHistoryOpen] = useState(false)
+  const [loadError, setLoadError] = useState(null)
 
   const load = useCallback(() => {
     setLoading(true)
+    setLoadError(null)
     api
       .get('/payments/my')
-      .then((d) => {
+      .then(async (d) => {
         setPayments(d.payments || [])
-        setEnrollment(d.enrollment || null)
+        let en = d.enrollment || null
+        if (!en && user?.id) {
+          try {
+            const sres = await api.get('/students/' + user.id)
+            en = enrollmentFromStudentProfile(sres.student)
+          } catch {
+            // ignore — tələbənin profilində enrollment yoxdursa boş qalır
+          }
+        }
+        setEnrollment(en)
       })
-      .catch(() => {
+      .catch(async (e) => {
         setPayments([])
         setEnrollment(null)
+        setLoadError(e?.message || 'Yüklənmədi')
+        if (user?.id) {
+          try {
+            const sres = await api.get('/students/' + user.id)
+            const en = enrollmentFromStudentProfile(sres.student)
+            if (en) {
+              setEnrollment(en)
+              setLoadError(null)
+            }
+          } catch {
+            // ignore
+          }
+        }
       })
       .finally(() => setLoading(false))
-  }, [])
+  }, [user?.id])
 
   useEffect(() => {
     load()
@@ -125,6 +172,13 @@ export default function StudentPayments() {
       <p className="text-gray-400 text-sm mb-6">
         Müəlliminiz sizi sistemə əlavə edərkən seçdiyi paket və qeydə alınmış ödənişlər.
       </p>
+
+      {!loading && loadError && (
+        <Card className="p-4 mb-4 border border-amber-500/30 bg-amber-500/10 text-amber-100 text-sm">
+          Ödənişlər siyahısı yüklənmədi: {loadError}
+          {enrollment ? ' Paket məlumatı profildən göstərilir.' : ''}
+        </Card>
+      )}
 
       {loading ? (
         <div className="text-gray-500 text-center py-12">Yüklənir…</div>

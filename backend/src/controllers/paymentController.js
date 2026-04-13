@@ -19,17 +19,28 @@ function billingLimit(type) {
 const listMyPayments = async (req, res) => {
   try {
     const studentId = req.user.id;
-    const { rows: payments } = await db.query(
-      `SELECT p.id, p.amount, p.currency, p.payment_method, p.status, p.period, p.notes, p.paid_at, p.payment_date,
-              p.billing_cycle,
-              e.billing_type, e.lesson_count AS enrollment_lesson_count, e.billing_cycle AS enrollment_billing_cycle,
-              iu.full_name AS instructor_name
-       FROM payments p
-       INNER JOIN enrollments e ON e.id = p.enrollment_id AND e.student_id = $1
-       LEFT JOIN users iu ON iu.id = e.instructor_id
-       ORDER BY p.paid_at DESC NULLS LAST`,
-      [studentId]
-    );
+    if (!studentId) {
+      return res.status(401).json({ success: false, message: 'İstifadəçi tapılmadı' });
+    }
+
+    let payments = [];
+    try {
+      const { rows } = await db.query(
+        `SELECT p.id, p.amount, p.currency, p.payment_method, p.status, p.period, p.notes, p.paid_at, p.payment_date,
+                p.billing_cycle,
+                e.billing_type, e.lesson_count AS enrollment_lesson_count, e.billing_cycle AS enrollment_billing_cycle,
+                iu.full_name AS instructor_name
+         FROM payments p
+         INNER JOIN enrollments e ON e.id = p.enrollment_id AND e.student_id = $1
+         LEFT JOIN users iu ON iu.id = e.instructor_id
+         ORDER BY p.paid_at DESC NULLS LAST`,
+        [studentId]
+      );
+      payments = rows;
+    } catch (payErr) {
+      console.error('listMyPayments: payments query failed', payErr);
+      payments = [];
+    }
 
     const { rows: enRows } = await db.query(
       `SELECT e.*,
@@ -38,13 +49,32 @@ const listMyPayments = async (req, res) => {
        FROM enrollments e
        LEFT JOIN users iu ON iu.id = e.instructor_id
        LEFT JOIN student_profiles sp ON sp.user_id = e.student_id
-       WHERE e.student_id = $1 AND e.status = 'active'
-       ORDER BY e.enrolled_at DESC NULLS LAST
+       WHERE e.student_id = $1
+         AND (
+           NULLIF(TRIM(COALESCE(e.status, '')), '') IS NULL
+           OR LOWER(TRIM(e.status)) = 'active'
+         )
+       ORDER BY e.enrolled_at DESC NULLS LAST, e.id DESC
        LIMIT 1`,
       [studentId]
     );
 
-    const enrollment = enRows[0] || null;
+    let enrollment = enRows[0] || null;
+    if (!enrollment) {
+      const { rows: anyRows } = await db.query(
+        `SELECT e.*,
+                iu.full_name AS instructor_name,
+                sp.payment_start_date AS student_payment_start_date
+         FROM enrollments e
+         LEFT JOIN users iu ON iu.id = e.instructor_id
+         LEFT JOIN student_profiles sp ON sp.user_id = e.student_id
+         WHERE e.student_id = $1
+         ORDER BY e.enrolled_at DESC NULLS LAST, e.id DESC
+         LIMIT 1`,
+        [studentId]
+      );
+      enrollment = anyRows[0] || null;
+    }
     let enrollmentOut = null;
     let paymentStartForDisplay = null;
     if (enrollment) {
