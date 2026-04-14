@@ -75,16 +75,15 @@ function normMatchCanonical(str) {
 /**
  * Avtomatik bal: qapalı (mənfi bal ola bilər), çoxseçimli, uyğunluq (mənfi bal ola bilər).
  * Açıq sual: `template_hint` rəqəmdirsə avtomatik yoxlanır (məs. "4.8"); yoxsa manual qalır.
- * Payda — bütün sualların ballarının cəmi — imtahanın tam çəkisi ilə uyğun olsun deyə daxildir.
- * Faiz = earned / (bütün sualların points cəmi) × 100, 0–100 aralığında yuvarlaq.
+ * Qeyd: score artıq FAİZ deyil — xam baldır (points).
+ * Cərimə yalnız qapalı suallara tətbiq olunur:
+ * wrongPenalty = negative_marking (məs. -0.25) × points.
  */
 const calculateScore = (questions, answers) => {
   let earned = 0;
   const scored = questions.filter((q) =>
     ['closed', 'multiple', 'matching', 'open'].includes(q.question_type)
   );
-  const totalPoints = questions.reduce((s, q) => s + Number(q.points || 0), 0);
-  if (totalPoints <= 0) return 0;
 
   for (const q of scored) {
     const given =
@@ -94,8 +93,9 @@ const calculateScore = (questions, answers) => {
     if (q.question_type === 'closed') {
       const correct = String(q.correct_answer ?? '').trim();
       const pen = autoWrongPenalty(q);
-      if (given === correct) earned += Number(q.points || 0);
-      else earned += pen;
+      const pts = Number(q.points || 0);
+      if (given === correct) earned += pts;
+      else earned += pen * pts;
     } else if (q.question_type === 'multiple') {
       if (normDigits(given) === normDigits(q.correct_answer)) earned += Number(q.points || 0);
     } else if (q.question_type === 'matching') {
@@ -115,7 +115,7 @@ const calculateScore = (questions, answers) => {
   }
 
   earned = Math.max(0, earned);
-  return Math.round((earned / totalPoints) * 100);
+  return Math.round(earned * 100) / 100;
 };
 
 /**
@@ -328,10 +328,10 @@ const notifyParentExamResultAfterSubmit = async (examId, studentId, score) => {
   if (clean.length < 9) return;
 
   const name = row.student_name || 'Tələbə';
-  const pct = Math.round(Number(score));
-  const safePct = Number.isFinite(pct) ? pct : 0;
+  const pts = Math.round(Number(score) * 100) / 100;
+  const safePts = Number.isFinite(pts) ? pts : 0;
   const title = String(row.title || 'İmtahan').trim();
-  const msg = `Mentorix: Salam, ${name}! "${title}" imtahanında ${safePct}% toplayıb.`;
+  const msg = `Mentorix: Salam, ${name}! "${title}" imtahanında ${safePts} bal toplayıb.`;
 
   const r = await sendSms({
     instructorId: row.instructor_id,

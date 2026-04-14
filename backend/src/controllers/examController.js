@@ -102,6 +102,12 @@ const createExam = async (req, res) => {
             q.template_hint != null && String(q.template_hint).trim() !== ''
               ? String(q.template_hint).trim()
               : null;
+          const safeTemplateHint =
+            q.question_type === 'matching'
+              ? '1a2b3c'
+              : q.question_type === 'multiple'
+                ? '13'
+                : templateHint;
           await client.query(
             `INSERT INTO exam_questions (exam_id, question_text, question_type, options, correct_answer, points, order_num, negative_marking, template_hint)
              VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
@@ -114,7 +120,7 @@ const createExam = async (req, res) => {
               q.points,
               i + 1,
               neg,
-              templateHint,
+              safeTemplateHint,
             ]
           );
         }
@@ -183,7 +189,7 @@ const instructorStudentExamProgress = async (req, res) => {
     const { rows } = await db.query(
       `SELECT er.student_id,
               u.full_name,
-              ROUND(AVG(er.score))::int AS exam_avg_score,
+              ROUND(AVG(er.score), 2) AS exam_avg_score,
               COUNT(er.id)::int AS exams_taken
        FROM exam_results er
        JOIN exams e ON e.id = er.exam_id
@@ -383,8 +389,14 @@ const getExamQuestions = async (req, res) => {
       [id]
     );
 
-    // Closed suallar ucun correct_answer-i gizlet
-    const safe = questions.map(({ correct_answer, ...rest }) => rest);
+    // Tələbəyə correct_answer heç vaxt getməsin; template_hint də yalnız neytral format olsun
+    const safe = questions.map(({ correct_answer, template_hint, ...rest }) => {
+      if (req.user.role === 'student') {
+        if (rest.question_type === 'matching') return { ...rest, template_hint: '1a2b3c' };
+        if (rest.question_type === 'multiple') return { ...rest, template_hint: '13' };
+      }
+      return { ...rest, template_hint };
+    });
 
     res.json({ success: true, exam, questions: safe });
   } catch (err) {

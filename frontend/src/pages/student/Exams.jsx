@@ -74,9 +74,11 @@ function questionTypeLabelAz(t) {
   return m[t] || t
 }
 
-function formatScorePct(v) {
+function formatScoreBal(v) {
   const n = Number(v)
-  return Number.isFinite(n) ? `${Math.round(n)}%` : '—'
+  if (!Number.isFinite(n)) return '—'
+  const rounded = Math.round(n * 100) / 100
+  return `${rounded} bal`
 }
 
 function parseExamStart(exam) {
@@ -237,7 +239,7 @@ export default function StudentExams() {
       setResultBreakdown(Array.isArray(data?.breakdown) ? data.breakdown : null)
       setActiveExam(null)
       setFocusMode(false)
-      toast(`✓ İmtahan tamamlandı! Bal: ${formatScorePct(data?.score)}`)
+      toast(`✓ İmtahan tamamlandı! Bal: ${formatScoreBal(data?.score)}`)
       loadExams(true)
     } catch (err) {
       toast(err.message || 'Xəta', 'error')
@@ -389,18 +391,16 @@ export default function StudentExams() {
                   </ol>
                   <p className="text-xs text-gray-500">
                     Düzgün cavabları aralarında boşluq və işarə olmadan yalnız bitişik rəqəmlərlə yazın
-                    {q.template_hint ? (
-                      <span className="block mt-1">
-                        Nümunə: <span className="font-mono text-indigo-300">{q.template_hint}</span>
-                      </span>
-                    ) : null}
+                    <span className="block mt-1">
+                      Nümunə: <span className="font-mono text-indigo-300">13</span>
+                    </span>
                   </p>
                   <input
                     type="text"
                     inputMode="numeric"
                     autoComplete="off"
                     className="w-full max-w-xs bg-[#13112e] border border-indigo-500/20 rounded-xl px-3 py-2.5 text-white text-sm font-mono outline-none focus:border-blue-500"
-                    placeholder={q.template_hint ? `məs. ${q.template_hint}` : 'məs. 23'}
+                    placeholder="məs. 134"
                     value={answers[q.id] || ''}
                     onChange={(e) =>
                       setAnswers((p) => ({ ...p, [q.id]: e.target.value.replace(/\D/g, '') }))
@@ -420,18 +420,16 @@ export default function StudentExams() {
                   ) : null}
                   <p className="text-xs text-gray-500">
                     Cavabınızı rəqəm+hərf cütləri ilə bitişik yazın (boşluq yoxdur; ardıcıllıq fərqi etmir).
-                    {q.template_hint ? (
-                      <span className="block mt-1">
-                        Nümunə: <span className="font-mono text-indigo-300">{q.template_hint}</span>
-                      </span>
-                    ) : null}
+                    <span className="block mt-1">
+                      Nümunə: <span className="font-mono text-indigo-300">1a2b3c</span>
+                    </span>
                   </p>
                   <input
                     type="text"
                     inputMode="text"
                     autoComplete="off"
                     className="w-full max-w-md bg-[#13112e] border border-indigo-500/20 rounded-xl px-3 py-2.5 text-white text-sm font-mono outline-none focus:border-blue-500"
-                    placeholder={q.template_hint ? `məs. ${q.template_hint}` : 'məs. 1a2b3c'}
+                    placeholder="məs. 1a2b3c"
                     value={answers[q.id] || ''}
                     onChange={(e) =>
                       setAnswers((p) => ({
@@ -486,7 +484,7 @@ export default function StudentExams() {
         <Card className="p-6 mb-6 text-center border-blue-500/40">
           <div className="text-5xl mb-3">{result >= 75 ? '🏆' : result >= 60 ? '🥈' : '📚'}</div>
           <div className="font-display font-extrabold text-4xl bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
-            {formatScorePct(result)}
+            {formatScoreBal(result)}
           </div>
           <div className="text-gray-400 mt-2">Son imtahan nəticəniz</div>
         </Card>
@@ -574,7 +572,7 @@ export default function StudentExams() {
                   {isDone && (
                     <div className="mt-2 flex flex-wrap items-center gap-2">
                       <div className="px-3 py-1 bg-emerald-500/20 text-emerald-400 rounded-lg text-sm font-semibold inline-block max-w-full break-words">
-                        ✓ Tamamlandı — {formatScorePct(exam?.score)}
+                      ✓ Tamamlandı — {formatScoreBal(exam?.score)}
                       </div>
                       {exam.rank_in_group ? (
                         <div className="px-3 py-1 bg-indigo-500/15 text-indigo-200 border border-indigo-400/25 rounded-lg text-xs font-bold inline-block">
@@ -633,7 +631,7 @@ export default function StudentExams() {
           <>
             <div className="text-center mb-6">
               <div className="font-display font-extrabold text-3xl bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
-                {formatScorePct(reviewModal.score)}
+                {formatScoreBal(reviewModal.score)}
               </div>
               {reviewModal.submitted_at && (
                 <p className="text-xs text-gray-500 mt-2">
@@ -738,7 +736,7 @@ export default function StudentExams() {
                         </p>
                       </div>
                       <div className="text-right shrink-0">
-                        <div className="text-sm font-extrabold text-white">{formatScorePct(r.score)}</div>
+                        <div className="text-sm font-extrabold text-white">{formatScoreBal(r.score)}</div>
                       </div>
                     </div>
                   )
