@@ -216,7 +216,12 @@ export default function StudentExams() {
     try {
       const data = await api.get(`/exams/${exam.id}/questions`)
       setActiveExam(data.exam)
-      setQuestions(data.questions)
+      // Defense-in-depth: tələbə payload-da correct_answer olsa belə UI-a buraxmırıq
+      setQuestions(
+        Array.isArray(data.questions)
+          ? data.questions.map(({ correct_answer, ...rest }) => rest)
+          : []
+      )
       setAnswers({})
       setStartedAt(new Date().toISOString())
       setResult(null)
