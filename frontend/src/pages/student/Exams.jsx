@@ -382,13 +382,6 @@ export default function StudentExams() {
                 </div>
               ) : q.question_type === 'multiple' ? (
                 <div className="ml-10 space-y-3">
-                  <ol className="list-decimal list-inside space-y-2 text-sm text-gray-200">
-                    {q.options?.map((opt, oi) => (
-                      <li key={oi} className="pl-1 marker:text-indigo-400">
-                        {optionDisplayLabel(opt)}
-                      </li>
-                    ))}
-                  </ol>
                   <p className="text-xs text-gray-500">
                     Düzgün cavabları aralarında boşluq və işarə olmadan yalnız bitişik rəqəmlərlə yazın
                     <span className="block mt-1">
@@ -409,15 +402,6 @@ export default function StudentExams() {
                 </div>
               ) : q.question_type === 'matching' ? (
                 <div className="ml-10 space-y-3">
-                  {q.options?.length ? (
-                    <ol className="list-decimal list-inside space-y-2 text-sm text-gray-200">
-                      {q.options.map((opt, oi) => (
-                        <li key={oi} className="pl-1 marker:text-indigo-400">
-                          {optionDisplayLabel(opt)}
-                        </li>
-                      ))}
-                    </ol>
-                  ) : null}
                   <p className="text-xs text-gray-500">
                     Cavabınızı rəqəm+hərf cütləri ilə bitişik yazın (boşluq yoxdur; ardıcıllıq fərqi etmir).
                     <span className="block mt-1">
@@ -493,7 +477,7 @@ export default function StudentExams() {
       {resultBreakdown?.length > 0 && (
         <Card className="p-6 mb-6 border-indigo-500/30">
           <h2 className="font-display font-bold text-lg text-white mb-1">Suallar üzrə nəticə</h2>
-          <p className="text-xs text-gray-500 mb-4">Şablon (düzgün) və yazdığınız cavab müqayisəsi</p>
+          <p className="text-xs text-gray-500 mb-4">Yazdığınız cavabların xülasəsi.</p>
           <div className="space-y-3 max-h-[min(70vh,520px)] overflow-y-auto pr-1">
             {resultBreakdown.filter(Boolean).map((row) => (
               <div
@@ -507,17 +491,11 @@ export default function StudentExams() {
                   </span>
                 </div>
                 <p className="text-sm text-gray-300 mb-3 leading-snug">{row.question_text}</p>
-                <div className="grid gap-2 text-sm sm:grid-cols-2">
+                <div className="grid gap-2 text-sm">
                   <div>
                     <span className="text-xs text-gray-500 block mb-0.5">Sizin cavabınız</span>
                     <code className="block text-amber-200/90 font-mono text-xs break-all bg-black/25 rounded-lg px-2 py-1.5">
                       {row.student_answer}
-                    </code>
-                  </div>
-                  <div>
-                    <span className="text-xs text-gray-500 block mb-0.5">Düzgün şablon / gözlənti</span>
-                    <code className="block text-emerald-200/90 font-mono text-xs break-all bg-black/25 rounded-lg px-2 py-1.5">
-                      {row.correct_display}
                     </code>
                   </div>
                 </div>
@@ -534,7 +512,7 @@ export default function StudentExams() {
                             : 'bg-gray-500/15 text-gray-400')
                     }
                   >
-                    {row.status_label}
+                    {row.status_label === 'Manual qiymətləndirmə' ? 'Yoxlanılır' : row.status_label}
                   </span>
                 </div>
               </div>
@@ -654,17 +632,11 @@ export default function StudentExams() {
                       </span>
                     </div>
                     <p className="text-sm text-gray-300 mb-3 leading-snug">{row.question_text}</p>
-                    <div className="grid gap-2 text-sm sm:grid-cols-2">
+                    <div className="grid gap-2 text-sm">
                       <div>
                         <span className="text-xs text-gray-500 block mb-0.5">Sizin cavabınız</span>
                         <code className="block text-amber-200/90 font-mono text-xs break-all bg-black/25 rounded-lg px-2 py-1.5">
                           {row.student_answer}
-                        </code>
-                      </div>
-                      <div>
-                        <span className="text-xs text-gray-500 block mb-0.5">Düzgün şablon / gözlənti</span>
-                        <code className="block text-emerald-200/90 font-mono text-xs break-all bg-black/25 rounded-lg px-2 py-1.5">
-                          {row.correct_display}
                         </code>
                       </div>
                     </div>
@@ -681,7 +653,7 @@ export default function StudentExams() {
                                 : 'bg-gray-500/15 text-gray-400')
                         }
                       >
-                        {row.status_label}
+                        {row.status_label === 'Manual qiymətləndirmə' ? 'Yoxlanılır' : row.status_label}
                       </span>
                     </div>
                   </div>

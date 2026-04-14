@@ -312,7 +312,7 @@ const syncExamReminderJob = async (examId) => {
 const notifyParentExamResultAfterSubmit = async (examId, studentId, score) => {
   const { sendSms } = require('./smsService');
   const { rows: [row] } = await db.query(
-    `SELECT e.title, e.show_results, e.instructor_id, u.full_name AS student_name,
+    `SELECT e.title, e.show_results, e.notify_students, e.notify_enabled, e.instructor_id, u.full_name AS student_name,
             COALESCE(NULLIF(TRIM(sp.parent_phone), ''), pu.phone, u.phone) AS notify_phone
      FROM exams e
      JOIN exam_assignments ea ON ea.exam_id = e.id AND ea.student_id = $2
@@ -322,6 +322,7 @@ const notifyParentExamResultAfterSubmit = async (examId, studentId, score) => {
      WHERE e.id = $1`,
     [examId, studentId]
   );
+  if (!row?.notify_students || !row?.notify_enabled) return;
   if (!row?.notify_phone) return;
 
   const clean = String(row.notify_phone).replace(/\D/g, '');
