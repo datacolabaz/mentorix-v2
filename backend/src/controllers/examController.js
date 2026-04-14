@@ -236,6 +236,7 @@ const hardDeleteExam = async (req, res) => {
     }
 
     await db.transaction(async (client) => {
+      // FK-lar ON DELETE CASCADE olanda bu 3 sətir redundantdır, amma köhnə DB-lərdə təhlükəsizdir
       await client.query('DELETE FROM exam_results WHERE exam_id = $1', [examId]);
       await client.query('DELETE FROM exam_questions WHERE exam_id = $1', [examId]);
       await client.query('DELETE FROM exam_assignments WHERE exam_id = $1', [examId]);
@@ -243,6 +244,48 @@ const hardDeleteExam = async (req, res) => {
     });
 
     res.json({ success: true, exam_id: examId, deleted: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// Bulk hard delete exams by IDs (results + questions + assignments + exams)
+const bulkHardDeleteExams = async (req, res) => {
+  try {
+    const isAdmin = req.user.role === 'admin';
+    if (!isAdmin && req.user.role !== 'instructor') {
+      return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
+    }
+
+    const idsRaw = req.body?.exam_ids;
+    const examIds = Array.isArray(idsRaw)
+      ? [...new Set(idsRaw.map((x) => String(x || '').trim()).filter(Boolean))]
+      : [];
+    if (examIds.length === 0) {
+      return res.status(400).json({ success: false, message: 'exam_ids tələb olunur' });
+    }
+
+    const { rows: exams } = await db.query(
+      `SELECT id, instructor_id FROM exams WHERE id = ANY($1::uuid[])`,
+      [examIds]
+    );
+    if (exams.length !== examIds.length) {
+      return res.status(404).json({ success: false, message: 'Bəzi imtahanlar tapılmadı' });
+    }
+    if (!isAdmin) {
+      const myHex = normStudentHex(req.user.id);
+      const forbidden = exams.some((e) => normStudentHex(e.instructor_id) !== myHex);
+      if (forbidden) return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
+    }
+
+    await db.transaction(async (client) => {
+      await client.query('DELETE FROM exam_results WHERE exam_id = ANY($1::uuid[])', [examIds]);
+      await client.query('DELETE FROM exam_questions WHERE exam_id = ANY($1::uuid[])', [examIds]);
+      await client.query('DELETE FROM exam_assignments WHERE exam_id = ANY($1::uuid[])', [examIds]);
+      await client.query('DELETE FROM exams WHERE id = ANY($1::uuid[])', [examIds]);
+    });
+
+    res.json({ success: true, deleted: examIds.length, exam_ids: examIds });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -754,6 +797,7 @@ module.exports = {
   listExams,
   softDeleteExam,
   hardDeleteExam,
+  bulkHardDeleteExams,
   instructorStudentExamProgress,
   studentExams,
   getStudentExamReview,

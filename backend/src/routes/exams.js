@@ -7,6 +7,7 @@ const {
   listExams,
   softDeleteExam,
   hardDeleteExam,
+  bulkHardDeleteExams,
   instructorStudentExamProgress,
   studentExams,
   getStudentExamReview,
@@ -61,6 +62,7 @@ router.post('/', authenticate, authorize('instructor', 'admin'), createExam);
 router.get('/', authenticate, authorize('instructor', 'admin'), listExams);
 router.get('/student-progress', authenticate, authorize('instructor', 'admin'), instructorStudentExamProgress);
 router.get('/my', authenticate, authorize('student'), studentExams);
+router.post('/bulk-delete', authenticate, authorize('instructor', 'admin'), bulkHardDeleteExams);
 router.get('/:id/review', authenticate, getStudentExamReview);
 router.get('/:id/questions', authenticate, getExamQuestions);
 router.post('/submit', authenticate, authorize('student'), submitExam);
@@ -68,8 +70,9 @@ router.get('/:id/results', authenticate, getResults);
 router.get('/:id/groups', authenticate, authorize('instructor', 'admin'), getExamGroups);
 router.get('/:id/top10', authenticate, authorize('instructor', 'admin'), getExamTop10);
 router.post('/:id/regrade', authenticate, authorize('instructor', 'admin'), regradeExamResults);
-router.delete('/:id', authenticate, authorize('instructor', 'admin'), softDeleteExam);
-router.delete('/:id/hard', authenticate, authorize('instructor', 'admin'), hardDeleteExam);
+// DELETE default: hard delete (full cleanup). Soft delete is available separately.
+router.delete('/:id', authenticate, authorize('instructor', 'admin'), hardDeleteExam);
+router.delete('/:id/soft', authenticate, authorize('instructor', 'admin'), softDeleteExam);
  
 // Imtahani edit et
 router.patch('/:id', authenticate, authorize('instructor', 'admin'), async (req, res) => {
