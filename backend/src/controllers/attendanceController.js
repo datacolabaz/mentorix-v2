@@ -280,4 +280,12 @@ const getAttendance = async (req, res) => {
 
     const { rows } = await db.query(
       'SELECT * FROM attendance WHERE enrollment_id=$1 ORDER BY billing_cycle, lesson_number',
-      [e
+      [enrollment_id]
+    );
+    res.json({ success: true, attendance: rows });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+module.exports = { markAttendance, getAttendance, getAttendancePeriod, upsertAttendanceLesson };

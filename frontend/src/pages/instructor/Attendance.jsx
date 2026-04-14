@@ -181,4 +181,72 @@ export default function InstructorAttendance() {
             <div className="space-y-2">
               {Array.from({ length: period.enrollment.lesson_limit }, (_, i) => i + 1).map((n) => {
                 const row = (period.attendance || []).find((a) => Number(a.lesson_number) === n)
- 
+                const status = row ? (row.attended ? 'attended' : 'absent') : 'empty'
+                const planned = (period.lessons || []).find((l) => Number(l.lesson_number) === n)
+                const plannedStr = planned?.starts_at ? fmtAzBakuDateTime(planned.starts_at) : '—'
+                const isPast = n < currentLessonNumber
+                const isCurrent = n === currentLessonNumber
+                const isFuture = n > currentLessonNumber
+                const disabled = saving || isFuture
+
+                const containerCls = [
+                  'flex items-center justify-between gap-2 rounded-xl px-3 py-2 border',
+                  isCurrent
+                    ? 'bg-[#13112e] border-indigo-400/60 ring-2 ring-indigo-500/25'
+                    : isPast
+                      ? 'bg-[#0f0c29]/80 border-indigo-500/10 opacity-95'
+                      : 'bg-[#13112e] border-indigo-500/10 opacity-60',
+                ].join(' ')
+
+                return (
+                  <div
+                    key={n}
+                    className={containerCls}
+                  >
+                    <div className="text-sm text-gray-200 min-w-0">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-gray-400 shrink-0">Dərs {n}</span>
+                        {isCurrent && <span className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-indigo-500/15 border border-indigo-400/35 text-indigo-200 shrink-0">Cari</span>}
+                        {status === 'attended' && <span className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-emerald-500/15 border border-emerald-400/35 text-emerald-200 shrink-0">Gəldi</span>}
+                        {status === 'absent' && <span className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-red-500/10 border border-red-400/30 text-red-200 shrink-0">Gəlmədi</span>}
+                        {isFuture && <span className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-gray-500/10 border border-white/10 text-gray-300 shrink-0">Növbəti</span>}
+                      </div>
+                      <div className="text-xs text-gray-500 font-mono tabular-nums mt-1 truncate">
+                        {plannedStr}
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant={status === 'attended' ? 'primary' : 'secondary'}
+                        onClick={() => void setLesson(n, true)}
+                        loading={saving}
+                        disabled={disabled}
+                      >
+                        ✓ Gəldi
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant={status === 'absent' ? 'danger' : 'secondary'}
+                        onClick={() => void setLesson(n, false)}
+                        loading={saving}
+                        disabled={disabled}
+                      >
+                        ✗ Gəlmədi
+                      </Button>
+                    </div>
+                  </div>
+                )
+              })}
+              <p className="text-[11px] text-gray-500">
+                Hər dərs üçün “Gəldi/Gəlmədi” seçə bilərsiniz. Paket (8/12) tamamlananda sistem avtomatik növbəti dövrü açır.
+              </p>
+            </div>
+          ) : enrollmentId ? (
+            <p className="text-xs text-gray-500">Aylıq billing üçün bu bölmə sadələşdirilib.</p>
+          ) : null}
+        </Card>
+      </div>
+    </div>
+  )
+}
