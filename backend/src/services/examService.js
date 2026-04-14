@@ -37,39 +37,13 @@ function openAutoKey(q) {
 }
 
 /**
- * Uyğunluq açarını müqayisə üçün kanonik forma salır.
- * Format sərbəstdir: "1b2cd3a", "1acd2be", "3a2cd1b" — sətirdə 1,2,3 ardıcıllığı vacib deyil.
- * Qayda: ardıcıl rəqəmlər sətir nömrəsi, dərhal sonra gələn hər hərf həmin sətirə uyğunluqdur
- * ("1ab" → 1a+1b; "12ab" sətir 12 üçün a və b).
- * Bütün (sətir,hərf) cütləri ədədi sətir, sonra hərf üzrə sıralanır və müqayisə olunur.
+ * Uyğunluq cavabı üçün strict müqayisə:
+ * - whitespace nəzərə alınmır
+ * - böyük/kiçik hərf nəzərə alınmır
+ * - qalan bütün simvollar simvol-simvol müqayisə olunur (order-sensitive)
  */
-function normMatchCanonical(str) {
-  const s = String(str ?? '')
-    .toLowerCase()
-    .replace(/\s+/g, '')
-    .replace(/[^0-9a-z]/g, '');
-  const pairs = [];
-  let i = 0;
-  while (i < s.length) {
-    if (/\d/.test(s[i])) {
-      let j = i;
-      while (j < s.length && /\d/.test(s[j])) j++;
-      const row = parseInt(s.slice(i, j), 10);
-      if (Number.isNaN(row)) {
-        i++;
-        continue;
-      }
-      i = j;
-      while (i < s.length && /[a-z]/.test(s[i])) {
-        pairs.push({ row, letter: s[i] });
-        i += 1;
-      }
-    } else {
-      i += 1;
-    }
-  }
-  pairs.sort((a, b) => a.row - b.row || a.letter.localeCompare(b.letter));
-  return pairs.map((p) => `${String(p.row).padStart(4, '0')}${p.letter}`).join('');
+function normMatchStrict(str) {
+  return String(str ?? '').trim().toLowerCase().replace(/\s+/g, '');
 }
 
 /**
@@ -101,8 +75,8 @@ const calculateScore = (questions, answers) => {
     } else if (q.question_type === 'matching') {
       const keyStored = String(q.correct_answer ?? '').trim();
       if (!keyStored) continue;
-      const cg = normMatchCanonical(given);
-      const ck = normMatchCanonical(keyStored);
+      const cg = normMatchStrict(given);
+      const ck = normMatchStrict(keyStored);
       if (cg === ck) earned += Number(q.points || 0);
     } else if (q.question_type === 'open') {
       const key = openAutoKey(q);
@@ -142,7 +116,7 @@ const buildExamResultBreakdown = (questions, answers) => {
       correctDisplay = String(q.correct_answer ?? '').trim() || '—';
       if (!given) isCorrect = null;
       else if (!String(q.correct_answer ?? '').trim()) isCorrect = null;
-      else isCorrect = normMatchCanonical(given) === normMatchCanonical(q.correct_answer);
+      else isCorrect = normMatchStrict(given) === normMatchStrict(q.correct_answer);
     } else if (type === 'open') {
       const hint = String(q.template_hint || '').trim();
       correctDisplay = hint ? `Nümunə / gözlənti: ${hint}` : 'Müəllim qiymətləndirir';
@@ -163,7 +137,7 @@ const buildExamResultBreakdown = (questions, answers) => {
       else statusLabel = 'Manual qiymətləndirmə';
     }
     else if (!given) statusLabel = 'Cavabsız';
-    else if (isCorrect === true) statusLabel = 'Düzgün';
+    else if (isCorrect === true) statusLabel = type === 'matching' ? 'Doğru' : 'Düzgün';
     else if (isCorrect === false) statusLabel = 'Səhv';
 
     return {

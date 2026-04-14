@@ -508,7 +508,7 @@ export default function StudentExams() {
                   <span
                     className={
                       'inline-flex text-xs font-bold px-2.5 py-1 rounded-lg ' +
-                      (row.status_label === 'Düzgün'
+                      (row.status_label === 'Düzgün' || row.status_label === 'Doğru'
                         ? 'bg-emerald-500/20 text-emerald-300'
                         : row.status_label === 'Səhv'
                           ? 'bg-red-500/15 text-red-300'
@@ -649,7 +649,7 @@ export default function StudentExams() {
                       <span
                         className={
                           'inline-flex text-xs font-bold px-2.5 py-1 rounded-lg ' +
-                          (row.status_label === 'Düzgün'
+                          (row.status_label === 'Düzgün' || row.status_label === 'Doğru'
                             ? 'bg-emerald-500/20 text-emerald-300'
                             : row.status_label === 'Səhv'
                               ? 'bg-red-500/15 text-red-300'
