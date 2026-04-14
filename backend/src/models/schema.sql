@@ -56,30 +56,31 @@ CREATE TABLE teacher_schedules (
   CONSTRAINT teacher_schedules_unique_slot UNIQUE (instructor_id, day_of_week, start_time, end_time)
 );
 
-CREATE TABLE instructor_tasks (
+CREATE TABLE assignments (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   instructor_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   title TEXT NOT NULL,
+  topic TEXT,
   description TEXT,
   due_date DATE,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX IF NOT EXISTS idx_instructor_tasks_instructor ON instructor_tasks (instructor_id);
+CREATE INDEX IF NOT EXISTS idx_assignments_instructor ON assignments (instructor_id);
 
-CREATE TABLE task_assignments (
+CREATE TABLE student_assignments (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  task_id UUID NOT NULL REFERENCES instructor_tasks(id) ON DELETE CASCADE,
+  assignment_id UUID NOT NULL REFERENCES assignments(id) ON DELETE CASCADE,
   student_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  status VARCHAR(20) NOT NULL DEFAULT 'assigned' CHECK (status IN ('assigned','done')),
+  status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'completed')),
   done_at TIMESTAMPTZ,
   seen_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  CONSTRAINT task_assignments_unique UNIQUE (task_id, student_id)
+  CONSTRAINT student_assignments_unique UNIQUE (assignment_id, student_id)
 );
 
-CREATE INDEX IF NOT EXISTS idx_task_assignments_student ON task_assignments (student_id);
-CREATE INDEX IF NOT EXISTS idx_task_assignments_task ON task_assignments (task_id);
+CREATE INDEX IF NOT EXISTS idx_student_assignments_student ON student_assignments (student_id);
+CREATE INDEX IF NOT EXISTS idx_student_assignments_assignment ON student_assignments (assignment_id);
 
 CREATE TABLE student_prep_slots (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

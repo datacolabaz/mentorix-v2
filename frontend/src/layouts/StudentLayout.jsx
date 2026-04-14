@@ -6,7 +6,7 @@ const NAV = [
   { to: '/student', label: 'Proqresim', icon: '📈', end: true },
   { to: '/student/schedule', label: 'Cədvəlim', icon: '📅' },
   { to: '/student/exams', label: 'İmtahanlarım', icon: '📝' },
-  { to: '/student/tasks', label: 'Tapşırıqlar', icon: '📋' },
+  { to: '/student/assignments', label: 'Tapşırıqlarım', icon: '📋' },
   { to: '/student/payments', label: 'Ödəniş', icon: '💳' },
 ]
 

@@ -78,7 +78,8 @@ export default function App() {
         <Route index element={<StudentDashboard />} />
         <Route path="schedule" element={<StudentSchedule />} />
         <Route path="exams" element={<StudentExams />} />
-        <Route path="tasks" element={<StudentTasks />} />
+        <Route path="assignments" element={<StudentTasks />} />
+        <Route path="tasks" element={<Navigate to="/student/assignments" replace />} />
         <Route path="payments" element={<StudentPayments />} />
       </Route>
 

@@ -148,7 +148,7 @@ const deleteStudent = async (req, res) => {
       await client.query('DELETE FROM payments WHERE student_id = $1', [studentId]);
       await client.query('DELETE FROM lessons WHERE student_id = $1', [studentId]);
       await client.query('DELETE FROM notifications WHERE user_id = $1', [studentId]);
-      await client.query('DELETE FROM task_assignments WHERE student_id = $1', [studentId]);
+      await client.query('DELETE FROM student_assignments WHERE student_id = $1', [studentId]);
       await client.query('DELETE FROM student_prep_slots WHERE student_id = $1', [studentId]);
 
       // 5) profil + user

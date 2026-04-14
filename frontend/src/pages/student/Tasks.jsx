@@ -6,11 +6,18 @@ import { useToast } from '../../components/common/Toast'
 
 function fmtDue(d) {
   if (!d) return ''
-  const s = String(d).slice(0, 10)
-  return s
+  return String(d).slice(0, 10)
 }
 
-export default function StudentTasks() {
+function fmtCreated(iso) {
+  if (!iso) return ''
+  const s = String(iso)
+  const d = s.slice(0, 10)
+  const t = s.slice(11, 16)
+  return t ? `${d} ${t}` : d
+}
+
+export default function StudentAssignments() {
   const [loading, setLoading] = useState(true)
   const [tasks, setTasks] = useState([])
   const [err, setErr] = useState(null)
@@ -39,7 +46,7 @@ export default function StudentTasks() {
     setBusyId(assignmentId)
     try {
       await api.patch('/tasks/assignments/' + encodeURIComponent(assignmentId) + '/done', {})
-      toast('Tapşırıq tamamlandı', 'success')
+      toast('Tapşırıq bitirildi', 'success')
       await load()
     } catch (e) {
       toast(e?.message || 'Xəta', 'error')
@@ -52,8 +59,8 @@ export default function StudentTasks() {
     <div className="p-4 sm:p-6 w-full min-w-0 max-w-4xl mx-auto">
       <div className="flex items-end justify-between gap-3 mb-4">
         <div>
-          <h1 className="font-display font-bold text-xl sm:text-2xl text-white">Tapşırıqlar</h1>
-          <p className="text-gray-500 text-sm mt-1">Müəllimin göndərdiyi tapşırıqlar.</p>
+          <h1 className="font-display font-bold text-xl sm:text-2xl text-white">Tapşırıqlarım</h1>
+          <p className="text-gray-500 text-sm mt-1">Müəllimin sizə göndərdiyi tapşırıqlar.</p>
         </div>
         <Button variant="secondary" size="sm" onClick={() => void load()} disabled={loading}>
           Yenilə
@@ -73,14 +80,24 @@ export default function StudentTasks() {
       ) : (
         <div className="space-y-3">
           {tasks.map((t) => {
-            const done = t.status === 'done'
+            const done = t.status === 'completed'
             return (
               <Card key={t.assignment_id} className="p-5">
                 <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <p className="text-white font-semibold break-words">{t.title}</p>
+                    {t.topic ? (
+                      <p className="text-sm text-indigo-200/90 mt-1 break-words">Mövzu: {t.topic}</p>
+                    ) : null}
                     <p className="text-xs text-gray-500 mt-1">
                       Müəllim: <span className="text-gray-300">{t.instructor_name}</span>
+                      {t.assignment_created_at ? (
+                        <>
+                          {' '}
+                          · Yaradılıb:{' '}
+                          <span className="text-gray-300 font-mono">{fmtCreated(t.assignment_created_at)}</span>
+                        </>
+                      ) : null}
                       {t.due_date ? (
                         <>
                           {' '}
@@ -98,7 +115,7 @@ export default function StudentTasks() {
                           : 'bg-indigo-500/15 border-indigo-400/35 text-indigo-200',
                       ].join(' ')}
                     >
-                      {done ? 'Tamamlandı' : 'Gözləyir'}
+                      {done ? 'Bitirdi' : 'Gözləyir'}
                     </span>
                     {!done && (
                       <Button
@@ -106,14 +123,15 @@ export default function StudentTasks() {
                         onClick={() => void markDone(t.assignment_id)}
                         loading={busyId === t.assignment_id}
                       >
-                        Tamamla
+                        Bitirdim
                       </Button>
                     )}
                   </div>
                 </div>
                 {t.description ? (
-                  <div className="mt-3 text-sm text-gray-200 whitespace-pre-wrap leading-relaxed">
-                    {t.description}
+                  <div className="mt-3 text-sm text-gray-200 whitespace-pre-wrap leading-relaxed border-t border-indigo-500/15 pt-3">
+                    <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Müəllim qeydi</span>
+                    <div className="mt-1">{t.description}</div>
                   </div>
                 ) : null}
               </Card>
@@ -124,4 +142,3 @@ export default function StudentTasks() {
     </div>
   )
 }
-

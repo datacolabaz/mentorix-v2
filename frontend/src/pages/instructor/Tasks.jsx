@@ -10,18 +10,31 @@ function fmtDue(d) {
   return String(d).slice(0, 10)
 }
 
+function fmtCreated(iso) {
+  if (!iso) return ''
+  const s = String(iso)
+  const d = s.slice(0, 10)
+  const t = s.slice(11, 16)
+  return t ? `${d} ${t}` : d
+}
+
 export default function InstructorTasks() {
   const [loading, setLoading] = useState(true)
+  const [studentsLoading, setStudentsLoading] = useState(true)
   const [tasks, setTasks] = useState([])
+  const [students, setStudents] = useState([])
   const [err, setErr] = useState(null)
   const [open, setOpen] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [deletingId, setDeletingId] = useState(null)
   const toast = useToast()
 
   const [form, setForm] = useState({
     title: '',
+    topic: '',
     description: '',
     due_date: '',
+    selectedStudentIds: [],
   })
 
   const load = useCallback(async () => {
@@ -38,9 +51,22 @@ export default function InstructorTasks() {
     }
   }, [])
 
+  const loadStudents = useCallback(async () => {
+    setStudentsLoading(true)
+    try {
+      const d = await api.get('/students')
+      setStudents(Array.isArray(d.students) ? d.students : [])
+    } catch {
+      setStudents([])
+    } finally {
+      setStudentsLoading(false)
+    }
+  }, [])
+
   useEffect(() => {
     void load()
-  }, [load])
+    void loadStudents()
+  }, [load, loadStudents])
 
   const stats = useMemo(() => {
     const total = tasks.reduce((s, t) => s + (t.assigned_count || 0), 0)
@@ -48,22 +74,37 @@ export default function InstructorTasks() {
     return { total, done }
   }, [tasks])
 
+  const toggleStudent = (studentId) => {
+    setForm((p) => {
+      const set = new Set(p.selectedStudentIds)
+      if (set.has(studentId)) set.delete(studentId)
+      else set.add(studentId)
+      return { ...p, selectedStudentIds: [...set] }
+    })
+  }
+
   const submit = async () => {
     const title = String(form.title || '').trim()
     if (!title) {
-      toast('Başlıq tələb olunur', 'error')
+      toast('Tapşırığın adı tələb olunur', 'error')
+      return
+    }
+    if (!form.selectedStudentIds.length) {
+      toast('Ən azı bir tələbə seçin', 'error')
       return
     }
     setSaving(true)
     try {
       const d = await api.post('/tasks', {
         title,
-        description: form.description,
+        topic: form.topic || null,
+        description: form.description || null,
         due_date: form.due_date || null,
+        student_ids: form.selectedStudentIds,
       })
-      toast(`Tapşırıq əlavə olundu (${d.assignedCount || 0} tələbəyə)`, 'success')
+      toast(`Göndərildi (${d.assignedCount || 0} tələbə)`, 'success')
       setOpen(false)
-      setForm({ title: '', description: '', due_date: '' })
+      setForm({ title: '', topic: '', description: '', due_date: '', selectedStudentIds: [] })
       await load()
     } catch (e) {
       toast(e?.message || 'Xəta', 'error')
@@ -72,13 +113,41 @@ export default function InstructorTasks() {
     }
   }
 
+  const removeTask = async (id, title) => {
+    if (!window.confirm(`«${title}» silinsin? Tələbə siyahısından da silinəcək.`)) return
+    setDeletingId(id)
+    try {
+      await api.delete('/tasks/' + encodeURIComponent(id))
+      toast('Silindi', 'success')
+      await load()
+    } catch (e) {
+      toast(e?.message || 'Xəta', 'error')
+    } finally {
+      setDeletingId(null)
+    }
+  }
+
+  const parseRecipients = (t) => {
+    const r = t.recipients
+    if (Array.isArray(r)) return r
+    if (r && typeof r === 'string') {
+      try {
+        const j = JSON.parse(r)
+        return Array.isArray(j) ? j : []
+      } catch {
+        return []
+      }
+    }
+    return []
+  }
+
   return (
     <div className="p-4 sm:p-6 w-full min-w-0 max-w-5xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-4">
         <div className="min-w-0">
           <h1 className="font-display font-bold text-xl sm:text-2xl text-white">Tapşırıqlar</h1>
           <p className="text-gray-500 text-sm mt-1">
-            Tapşırıq əlavə etdikdə bütün aktiv tələbələrinizin profilində görünəcək.
+            Tələbələrinizi seçib göndərin — yalnız seçilənlər «Tapşırıqlarım»da görəcək.
           </p>
         </div>
         <div className="flex gap-2 shrink-0">
@@ -86,7 +155,7 @@ export default function InstructorTasks() {
             Yenilə
           </Button>
           <Button size="sm" onClick={() => setOpen(true)}>
-            + Tapşırıq əlavə et
+            + Yeni tapşırıq
           </Button>
         </div>
       </div>
@@ -118,54 +187,104 @@ export default function InstructorTasks() {
         <Card className="p-5 text-sm text-gray-500">Hələ tapşırıq yoxdur.</Card>
       ) : (
         <div className="space-y-3">
-          {tasks.map((t) => (
-            <Card key={t.id} className="p-5">
-              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-white font-semibold break-words">{t.title}</p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    {t.due_date ? (
-                      <>
-                        Son tarix: <span className="text-gray-300 font-mono">{fmtDue(t.due_date)}</span> ·{' '}
-                      </>
+          {tasks.map((t) => {
+            const recipients = parseRecipients(t)
+            return (
+              <Card key={t.id} className="p-5">
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-white font-semibold break-words">{t.title}</p>
+                    {t.topic ? (
+                      <p className="text-sm text-indigo-200/90 mt-1 break-words">Mövzu: {t.topic}</p>
                     ) : null}
-                    {t.assigned_count || 0} tələbəyə · {t.done_count || 0} tamamlandı
-                  </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Yaradılıb: <span className="text-gray-300 font-mono">{fmtCreated(t.created_at)}</span>
+                      {t.due_date ? (
+                        <>
+                          {' '}
+                          · Son tarix: <span className="text-gray-300 font-mono">{fmtDue(t.due_date)}</span>
+                        </>
+                      ) : null}
+                      <span className="block sm:inline sm:ml-1 mt-0.5 sm:mt-0">
+                        · {t.assigned_count || 0} tələbə · {t.done_count || 0} bitirdi
+                      </span>
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="danger"
+                    loading={deletingId === t.id}
+                    onClick={() => void removeTask(t.id, t.title)}
+                    className="shrink-0"
+                  >
+                    Sil
+                  </Button>
                 </div>
-              </div>
-              {t.description ? (
-                <div className="mt-3 text-sm text-gray-200 whitespace-pre-wrap leading-relaxed">
-                  {t.description}
-                </div>
-              ) : null}
-            </Card>
-          ))}
+                {t.description ? (
+                  <div className="mt-3 text-sm text-gray-200 whitespace-pre-wrap leading-relaxed border-t border-indigo-500/15 pt-3">
+                    <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Müəllim qeydi</span>
+                    <div className="mt-1">{t.description}</div>
+                  </div>
+                ) : null}
+                {recipients.length > 0 ? (
+                  <div className="mt-3 rounded-xl border border-indigo-500/15 bg-[#0f0c29]/50 p-3">
+                    <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-2">Tələbələr və status</p>
+                    <ul className="space-y-1.5">
+                      {recipients.map((r) => (
+                        <li key={r.student_id} className="flex items-center justify-between gap-2 text-sm min-w-0">
+                          <span className="text-gray-200 truncate">{r.full_name || 'Tələbə'}</span>
+                          <span
+                            className={
+                              r.status === 'completed'
+                                ? 'text-[10px] font-bold px-2 py-0.5 rounded-lg bg-emerald-500/15 border border-emerald-400/35 text-emerald-200 shrink-0'
+                                : 'text-[10px] font-bold px-2 py-0.5 rounded-lg bg-amber-500/10 border border-amber-400/30 text-amber-100 shrink-0'
+                            }
+                          >
+                            {r.status === 'completed' ? 'Bitirdi' : 'Gözləyir'}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+              </Card>
+            )
+          })}
         </div>
       )}
 
-      <Modal open={open} onClose={() => (saving ? null : setOpen(false))} title="Tapşırıq əlavə et">
-        <div className="space-y-3">
+      <Modal open={open} onClose={() => (saving ? null : setOpen(false))} title="Yeni tapşırıq" size="lg">
+        <div className="space-y-4 max-h-[min(70vh,32rem)] overflow-y-auto pr-1">
           <div>
-            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Başlıq *</label>
+            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Ad (başlıq) *</label>
             <input
               className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500"
               value={form.title}
               onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))}
-              placeholder="Məsələn: Dairə - 20 məsələ"
+              placeholder="Məsələn: Ev tapşırığı — trigonometriya"
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Mətn</label>
+            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Mövzu</label>
+            <input
+              className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500"
+              value={form.topic}
+              onChange={(e) => setForm((p) => ({ ...p, topic: e.target.value }))}
+              placeholder="Məsələn: Dairə və çevrə"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Müəllim qeydi</label>
             <textarea
-              rows={5}
+              rows={4}
               className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-blue-500 resize-none"
               value={form.description}
               onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
-              placeholder="Tapşırığın izahı…"
+              placeholder="Tapşırıq haqqında qeyd…"
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Son tarix (opsional)</label>
+            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Son tarix (ixtiyari)</label>
             <input
               type="date"
               className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500"
@@ -173,12 +292,47 @@ export default function InstructorTasks() {
               onChange={(e) => setForm((p) => ({ ...p, due_date: e.target.value }))}
             />
           </div>
-          <div className="flex gap-2 justify-end pt-2">
+          <div className="border-t border-indigo-500/20 pt-3">
+            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+              Tələbələr * (bir və ya bir neçə)
+            </label>
+            {studentsLoading ? (
+              <p className="text-sm text-gray-500">Tələbələr yüklənir…</p>
+            ) : !students.length ? (
+              <p className="text-sm text-amber-200/90">Aktiv tələbə yoxdur — əvvəlcə «Tələbələrim»dən əlavə edin.</p>
+            ) : !students.filter((s) => (s.enrollment_status || 'active') === 'active').length ? (
+              <p className="text-sm text-amber-200/90">Aktiv qeydiyyatlı tələbə yoxdur.</p>
+            ) : (
+              <ul className="max-h-48 overflow-y-auto space-y-2 rounded-xl border border-indigo-500/15 p-2 bg-[#0f0c29]/40">
+                {students
+                  .filter((s) => (s.enrollment_status || 'active') === 'active')
+                  .map((s) => {
+                  const sid = s.id
+                  const checked = sid && form.selectedStudentIds.includes(sid)
+                  return (
+                    <li key={s.enrollment_id || sid}>
+                      <label className="flex items-center gap-3 cursor-pointer px-2 py-1.5 rounded-lg hover:bg-white/5">
+                        <input
+                          type="checkbox"
+                          className="rounded border-indigo-500/40 text-blue-500 focus:ring-blue-500/30"
+                          checked={!!checked}
+                          onChange={() => sid && toggleStudent(sid)}
+                          disabled={!sid}
+                        />
+                        <span className="text-sm text-white truncate">{s.full_name}</span>
+                      </label>
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
+          </div>
+          <div className="flex gap-2 justify-end pt-2 sticky bottom-0 bg-[#1a1740] pb-1 -mb-1">
             <Button variant="secondary" onClick={() => setOpen(false)} disabled={saving}>
               Ləğv et
             </Button>
             <Button onClick={() => void submit()} loading={saving}>
-              Yadda saxla
+              Göndər
             </Button>
           </div>
         </div>
@@ -186,4 +340,3 @@ export default function InstructorTasks() {
     </div>
   )
 }
-
