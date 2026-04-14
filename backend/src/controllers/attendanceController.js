@@ -129,6 +129,14 @@ const getAttendancePeriod = async (req, res) => {
       [enrollment_id, cycle]
     );
 
+    const { rows: lessons } = await db.query(
+      `SELECT lesson_number, starts_at, status
+       FROM enrollment_lessons
+       WHERE enrollment_id = $1 AND billing_cycle = $2
+       ORDER BY lesson_number`,
+      [enrollment_id, cycle]
+    );
+
     res.json({
       success: true,
       enrollment: {
@@ -140,6 +148,7 @@ const getAttendancePeriod = async (req, res) => {
         lesson_limit: limit,
       },
       attendance,
+      lessons,
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -271,12 +280,4 @@ const getAttendance = async (req, res) => {
 
     const { rows } = await db.query(
       'SELECT * FROM attendance WHERE enrollment_id=$1 ORDER BY billing_cycle, lesson_number',
-      [enrollment_id]
-    );
-    res.json({ success: true, attendance: rows });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-};
-
-module.exports = { markAttendance, getAttendance, getAttendancePeriod, upsertAttendanceLesson };
+      [e
