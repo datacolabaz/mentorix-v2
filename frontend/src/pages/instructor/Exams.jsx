@@ -16,6 +16,7 @@ export default function InstructorExams() {
   const [editModal, setEditModal] = useState(false)
   const [editExam, setEditExam] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [deletingId, setDeletingId] = useState(null)
   const [examsLoading, setExamsLoading] = useState(true)
   const [examsError, setExamsError] = useState(null)
   const toast = useToast()
@@ -77,6 +78,21 @@ export default function InstructorExams() {
       toast(err.message || 'Xeta', 'error')
     } finally { setLoading(false) }
   }
+
+  const deleteExam = async (exam) => {
+    const ok = window.confirm(`"${exam?.title || 'İmtahan'}" silinsin? Bu əməliyyat geri qaytarılmır.`)
+    if (!ok) return
+    setDeletingId(exam.id)
+    try {
+      await api.delete('/exams/' + exam.id)
+      toast('İmtahan silindi')
+      await loadExams()
+    } catch (err) {
+      toast(err?.message || 'Silinmədi', 'error')
+    } finally {
+      setDeletingId(null)
+    }
+  }
  
   const inp = 'w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500'
  
@@ -117,7 +133,20 @@ export default function InstructorExams() {
                     {exam.topic && <span>· {exam.topic}</span>}
                   </div>
                 </div>
-                <Button size="sm" variant="secondary" onClick={() => openEdit(exam)} className="self-start sm:self-auto shrink-0">Redakte</Button>
+                <div className="flex gap-2 flex-wrap self-start sm:self-auto shrink-0">
+                  <Button size="sm" variant="secondary" onClick={() => openEdit(exam)}>
+                    Redakte
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="border-red-500/30 text-red-300 hover:text-red-200 hover:border-red-500/50"
+                    loading={deletingId === exam.id}
+                    onClick={() => deleteExam(exam)}
+                  >
+                    Sil
+                  </Button>
+                </div>
               </div>
             </Card>
           )
