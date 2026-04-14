@@ -13,6 +13,7 @@ const {
   getResults,
   getExamGroups,
   getExamTop10,
+  regradeExamResults,
 } = require('../controllers/examController');
 const { authenticate, authorize } = require('../middleware/auth');
 const db = require('../utils/db');
@@ -64,6 +65,7 @@ router.post('/submit', authenticate, authorize('student'), submitExam);
 router.get('/:id/results', authenticate, getResults);
 router.get('/:id/groups', authenticate, authorize('instructor', 'admin'), getExamGroups);
 router.get('/:id/top10', authenticate, authorize('instructor', 'admin'), getExamTop10);
+router.post('/:id/regrade', authenticate, authorize('instructor', 'admin'), regradeExamResults);
  
 // Imtahani edit et
 router.patch('/:id', authenticate, authorize('instructor', 'admin'), async (req, res) => {

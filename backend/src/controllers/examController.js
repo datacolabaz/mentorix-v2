@@ -594,6 +594,89 @@ const getExamTop10 = async (req, res) => {
   }
 };
 
+/**
+ * Instructor/Admin: regrade (yenidən qiymətləndir) əvvəl təqdim olunmuş nəticələri.
+ * - score yenilənir
+ * - grading JSONB yenilənir (matching və digər auto suallar üçün)
+ * - status completed olaraq sabitlənir
+ *
+ * Body (optional):
+ * - student_id: yalnız bir tələbənin nəticəsini yenilə
+ */
+const regradeExamResults = async (req, res) => {
+  try {
+    const examId = req.params.id;
+    const isAdmin = req.user.role === 'admin';
+    if (!isAdmin && req.user.role !== 'instructor') {
+      return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
+    }
+
+    const { rows: [exam] } = await db.query('SELECT id, instructor_id FROM exams WHERE id = $1', [examId]);
+    if (!exam) return res.status(404).json({ success: false, message: 'Tapılmadı' });
+    if (!isAdmin && normStudentHex(exam.instructor_id) !== normStudentHex(req.user.id)) {
+      return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
+    }
+
+    const studentId = req.body?.student_id != null && String(req.body.student_id).trim() !== ''
+      ? String(req.body.student_id).trim()
+      : null;
+
+    const { rows: questions } = await db.query(
+      'SELECT * FROM exam_questions WHERE exam_id = $1 ORDER BY order_num',
+      [examId]
+    );
+
+    const { rows: results } = await db.query(
+      `SELECT id, student_id, answers, submitted_at
+       FROM exam_results
+       WHERE exam_id = $1
+         AND submitted_at IS NOT NULL
+         AND ($2::uuid IS NULL OR student_id = $2::uuid)
+       ORDER BY submitted_at DESC`,
+      [examId, studentId]
+    );
+
+    let updated = 0;
+    const sample = [];
+
+    await db.transaction(async (client) => {
+      for (const r of results) {
+        let answers = r.answers;
+        if (typeof answers === 'string') {
+          try {
+            answers = JSON.parse(answers);
+          } catch {
+            answers = {};
+          }
+        }
+        if (!answers || typeof answers !== 'object') answers = {};
+
+        const score = calculateScore(questions, answers);
+        const grading = buildAutoGradingMap(questions, answers);
+
+        await client.query(
+          `UPDATE exam_results
+           SET score = $1,
+               grading = $2::jsonb,
+               status = 'completed'
+           WHERE id = $3`,
+          [score, JSON.stringify(grading), r.id]
+        );
+        updated += 1;
+
+        if (sample.length < 3) {
+          const breakdown = buildExamResultBreakdown(questions, answers);
+          sample.push({ result_id: r.id, student_id: r.student_id, score, breakdown: breakdown.slice(0, 5) });
+        }
+      }
+    });
+
+    res.json({ success: true, exam_id: examId, updated, sample });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 module.exports = {
   createExam,
   listExams,
@@ -605,4 +688,5 @@ module.exports = {
   getResults,
   getExamGroups,
   getExamTop10,
+  regradeExamResults,
 };
