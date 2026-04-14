@@ -445,8 +445,8 @@ const submitExam = async (req, res) => {
     const duration = Math.floor((now - new Date(started_at)) / 1000);
 
     await db.query(
-      `INSERT INTO exam_results (exam_id, student_id, score, answers, grading, started_at, submitted_at, duration_seconds)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+      `INSERT INTO exam_results (exam_id, student_id, score, answers, grading, status, started_at, submitted_at, duration_seconds)
+       VALUES ($1,$2,$3,$4,$5,'completed',$6,$7,$8)`,
       [exam_id, student_id, score, JSON.stringify(answers), JSON.stringify(grading), started_at, now, duration]
     );
 

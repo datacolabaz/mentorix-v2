@@ -46,9 +46,27 @@ function normMatchStrict(str) {
   return String(str ?? '').trim().toLowerCase().replace(/\s+/g, '');
 }
 
-function gradeMatching(given, correct) {
+function deriveMatchingKeyFromOptions(options) {
+  if (!Array.isArray(options)) return '';
+  let key = '';
+  for (let i = 0; i < options.length; i++) {
+    const row = options[i];
+    if (!row || typeof row !== 'object') continue;
+    const L = String(row.left ?? '').trim();
+    const R = String(row.right ?? '').trim();
+    const num = (L.match(/\d+/) || [])[0] || String(i + 1);
+    const letters = R.replace(/[^a-z]/gi, '').toLowerCase();
+    for (const ch of letters) {
+      if (/[a-z]/.test(ch)) key += num + ch;
+    }
+  }
+  return key;
+}
+
+function gradeMatching(given, correct, optionsForFallback) {
   const g = normMatchStrict(given);
-  const c = normMatchStrict(correct);
+  const fallback = !String(correct ?? '').trim() ? deriveMatchingKeyFromOptions(optionsForFallback) : '';
+  const c = normMatchStrict(String(correct ?? '').trim() ? correct : fallback);
   if (!g) return { status: 'pending', isCorrect: null };
   if (!c) return { status: 'pending', isCorrect: null };
   const ok = g === c;
@@ -69,7 +87,7 @@ function buildAutoGradingMap(questions, answers) {
 
     if (q.question_type === 'matching') {
       const correct = String(q.correct_answer ?? '');
-      const g = gradeMatching(given, correct);
+      const g = gradeMatching(given, correct, q.options);
       const pts = Number(q.points || 0);
       out[id] = {
         type: 'matching',
@@ -109,8 +127,7 @@ const calculateScore = (questions, answers) => {
       if (normDigits(given) === normDigits(q.correct_answer)) earned += Number(q.points || 0);
     } else if (q.question_type === 'matching') {
       const keyStored = String(q.correct_answer ?? '').trim();
-      if (!keyStored) continue;
-      const g = gradeMatching(given, keyStored);
+      const g = gradeMatching(given, keyStored, q.options);
       if (g.status === 'correct') earned += Number(q.points || 0);
     } else if (q.question_type === 'open') {
       const key = openAutoKey(q);
@@ -149,8 +166,7 @@ const buildExamResultBreakdown = (questions, answers) => {
     } else if (type === 'matching') {
       correctDisplay = String(q.correct_answer ?? '').trim() || '—';
       if (!given) isCorrect = null;
-      else if (!String(q.correct_answer ?? '').trim()) isCorrect = null;
-      else isCorrect = gradeMatching(given, q.correct_answer).isCorrect;
+      else isCorrect = gradeMatching(given, q.correct_answer, q.options).isCorrect;
     } else if (type === 'open') {
       const hint = String(q.template_hint || '').trim();
       correctDisplay = hint ? `Nümunə / gözlənti: ${hint}` : 'Müəllim qiymətləndirir';
