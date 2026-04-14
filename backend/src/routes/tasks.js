@@ -70,5 +70,43 @@ router.post(
   }
 );
 
+// Instructor question file upload
+const uploadInstructorQuestionFile = multer({
+  storage,
+  limits: { fileSize: 20 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const ok = [
+      'application/pdf',
+      'image/png',
+      'image/jpeg',
+      'image/jpg',
+      'text/csv',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    ].includes(file.mimetype);
+    if (!ok) return cb(new Error('Yalnız PDF, şəkil, CSV, Word və ya Excel faylı qəbul edilir'));
+    cb(null, true);
+  },
+});
+
+router.post(
+  '/instructor/upload',
+  authenticate,
+  authorize('instructor'),
+  (req, res, next) => {
+    uploadInstructorQuestionFile.single('file')(req, res, (err) => {
+      if (err) return res.status(400).json({ success: false, message: err.message || 'Fayl qəbul edilmədi' });
+      next();
+    });
+  },
+  (req, res) => {
+    if (!req.file) return res.status(400).json({ success: false, message: 'Fayl tələb olunur' });
+    const rel = `/api/uploads/assignments/${req.file.filename}`;
+    res.json({ success: true, url: rel, filename: req.file.originalname });
+  }
+);
+
 module.exports = router;
 

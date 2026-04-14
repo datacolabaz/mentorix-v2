@@ -7,6 +7,7 @@ import { useToast } from '../../components/common/Toast'
 import ReactQuill from 'react-quill'
 import 'react-quill/dist/quill.snow.css'
 import 'katex/dist/katex.min.css'
+import useUiStore from '../../hooks/useUi'
 
 function fmtDue(d) {
   if (!d) return ''
@@ -34,6 +35,11 @@ export default function StudentAssignments() {
   const [detail, setDetail] = useState(null)
   const [editorHtml, setEditorHtml] = useState('')
   const [attachments, setAttachments] = useState([])
+  const { setFocusMode } = useUiStore()
+
+  useEffect(() => {
+    return () => setFocusMode(false)
+  }, [setFocusMode])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -70,6 +76,7 @@ export default function StudentAssignments() {
 
   const openWorkspace = async (assignmentId) => {
     setOpenId(assignmentId)
+    setFocusMode(true)
     setDetail(null)
     setEditorHtml('')
     setAttachments([])
@@ -233,7 +240,11 @@ export default function StudentAssignments() {
 
       <Modal
         open={Boolean(openId)}
-        onClose={() => (busyId ? null : setOpenId(null))}
+        onClose={() => {
+          if (busyId) return null
+          setOpenId(null)
+          setFocusMode(false)
+        }}
         title={detail?.title ? `Tapşırıq — ${detail.title}` : 'Tapşırıq'}
         size="xl"
       >
@@ -246,6 +257,14 @@ export default function StudentAssignments() {
             <div className="rounded-xl border border-indigo-500/15 bg-[#0f0c29]/50 p-3">
               <p className="text-sm text-white font-semibold break-words">{detail.title}</p>
               {detail.topic ? <p className="text-sm text-indigo-200/90 mt-1">Mövzu: {detail.topic}</p> : null}
+              {detail.question_file_url ? (
+                <p className="text-xs text-gray-500 mt-1 break-all">
+                  Tapşırıq faylı:{' '}
+                  <a className="text-blue-300 hover:text-blue-200" href={detail.question_file_url} target="_blank" rel="noreferrer">
+                    {detail.question_file_url}
+                  </a>
+                </p>
+              ) : null}
               <p className="text-xs text-gray-500 mt-1">
                 Müəllim: <span className="text-gray-300">{detail.instructor_name}</span>
                 {detail.assignment_created_at ? (
@@ -275,6 +294,16 @@ export default function StudentAssignments() {
               ) : null}
             </div>
 
+            {detail.question_file_url && isPreviewable(detail.question_file_url) && (
+              <div className="rounded-xl border border-indigo-500/15 bg-[#0f0c29]/40 p-3">
+                <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-2">Tapşırıq faylı — ön baxış</p>
+                <a className="text-xs text-blue-300 break-all" href={detail.question_file_url} target="_blank" rel="noreferrer">
+                  {detail.question_file_url}
+                </a>
+                <div className="mt-2">{renderPreview(detail.question_file_url)}</div>
+              </div>
+            )}
+
             <div>
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Cavab</p>
               <div className={locked ? 'opacity-95 pointer-events-none' : ''}>
@@ -285,7 +314,18 @@ export default function StudentAssignments() {
               ) : null}
             </div>
 
-            <div className="rounded-xl border border-indigo-500/15 bg-[#0f0c29]/40 p-3">
+            <div
+              className="rounded-xl border border-indigo-500/15 bg-[#0f0c29]/40 p-3"
+              onDragOver={(e) => {
+                if (locked) return
+                e.preventDefault()
+              }}
+              onDrop={(e) => {
+                if (locked) return
+                e.preventDefault()
+                void uploadFiles(e.dataTransfer.files)
+              }}
+            >
               <div className="flex items-center justify-between gap-2 mb-2">
                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Fayllar</p>
                 {!locked && (
@@ -301,6 +341,11 @@ export default function StudentAssignments() {
                   </label>
                 )}
               </div>
+              {!locked && (
+                <p className="text-[11px] text-gray-500 mb-2">
+                  Buraya sürüşdürüb-buraxın (drag & drop) və ya yuxarıdan seçin.
+                </p>
+              )}
               {!attachments.length ? (
                 <p className="text-sm text-gray-500">Fayl yoxdur.</p>
               ) : (
@@ -331,7 +376,14 @@ export default function StudentAssignments() {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-2 sm:justify-end">
-              <Button variant="secondary" onClick={() => setOpenId(null)} disabled={Boolean(busyId)}>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setOpenId(null)
+                  setFocusMode(false)
+                }}
+                disabled={Boolean(busyId)}
+              >
                 Bağla
               </Button>
               <Button

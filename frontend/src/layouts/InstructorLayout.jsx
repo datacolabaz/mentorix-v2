@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
 import useAuthStore from '../hooks/useAuth'
+import useUiStore from '../hooks/useUi'
 
 const NAV = [
   { to: '/instructor', label: 'Dashboard', icon: '📊', end: true },
@@ -20,13 +21,28 @@ export default function InstructorLayout() {
   const navigate = useNavigate()
   const location = useLocation()
   const [navOpen, setNavOpen] = useState(false)
+  const { focusMode, setFocusMode } = useUiStore()
 
   useEffect(() => {
     setNavOpen(false)
   }, [location.pathname])
 
+  useEffect(() => {
+    if (focusMode) setNavOpen(false)
+  }, [focusMode])
+
   return (
     <div className="flex h-screen bg-[#0f0c29] text-white overflow-hidden">
+      {focusMode && (
+        <button
+          type="button"
+          aria-label="Menyunu aç"
+          className="fixed top-3 left-3 z-[260] w-11 h-11 rounded-xl bg-[#13112e] border border-indigo-500/30 text-lg flex items-center justify-center shadow-lg"
+          onClick={() => setNavOpen(true)}
+        >
+          ☰
+        </button>
+      )}
       <header className="lg:hidden fixed top-0 left-0 right-0 z-[60] flex items-center justify-between gap-2 px-3 py-3 bg-[#13112e] border-b border-indigo-500/20">
         <button
           type="button"
@@ -56,6 +72,7 @@ export default function InstructorLayout() {
           'w-[min(17rem,88vw)] max-w-[280px] bg-[#13112e] border-r border-indigo-500/20 flex flex-col flex-shrink-0',
           'fixed lg:static inset-y-0 left-0 z-[80] transition-transform duration-200 ease-out',
           navOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
+          focusMode ? 'lg:-translate-x-full' : '',
         ].join(' ')}
       >
         <div className="p-5 border-b border-indigo-500/20 hidden lg:block">
@@ -108,6 +125,7 @@ export default function InstructorLayout() {
         <div className="p-4 border-t border-indigo-500/20">
           <button
             onClick={() => {
+              setFocusMode(false)
               logout()
               navigate('/login')
             }}

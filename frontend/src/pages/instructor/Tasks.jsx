@@ -4,6 +4,7 @@ import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
 import { useToast } from '../../components/common/Toast'
+import useUiStore from '../../hooks/useUi'
 
 function fmtDue(d) {
   if (!d) return ''
@@ -16,6 +17,22 @@ function fmtCreated(iso) {
   const d = s.slice(0, 10)
   const t = s.slice(11, 16)
   return t ? `${d} ${t}` : d
+}
+
+function isPreviewable(url) {
+  const s = String(url || '').toLowerCase()
+  return s.endsWith('.png') || s.endsWith('.jpg') || s.endsWith('.jpeg') || s.endsWith('.webp') || s.endsWith('.gif') || s.endsWith('.pdf')
+}
+
+function renderPreview(url) {
+  const s = String(url || '').toLowerCase()
+  if (s.endsWith('.pdf')) {
+    return <iframe title="pdf" src={url} className="w-full h-[60vh] rounded-xl border border-indigo-500/15" />
+  }
+  if (s.endsWith('.png') || s.endsWith('.jpg') || s.endsWith('.jpeg') || s.endsWith('.webp') || s.endsWith('.gif')) {
+    return <img src={url} alt="preview" className="w-full max-h-[60vh] object-contain rounded-xl border border-indigo-500/15 bg-black/20" />
+  }
+  return null
 }
 
 export default function InstructorTasks() {
@@ -32,10 +49,12 @@ export default function InstructorTasks() {
   const [reviewErr, setReviewErr] = useState(null)
   const [review, setReview] = useState(null)
   const toast = useToast()
+  const { setFocusMode } = useUiStore()
 
   const [form, setForm] = useState({
     title: '',
     topic: '',
+    question_file_url: '',
     description: '',
     due_date: '',
     selectedStudentIds: [],
@@ -102,16 +121,35 @@ export default function InstructorTasks() {
       const d = await api.post('/tasks', {
         title,
         topic: form.topic || null,
+        question_file_url: form.question_file_url || null,
         description: form.description || null,
         due_date: form.due_date || null,
         student_ids: form.selectedStudentIds,
       })
       toast(`Göndərildi (${d.assignedCount || 0} tələbə)`, 'success')
       setOpen(false)
-      setForm({ title: '', topic: '', description: '', due_date: '', selectedStudentIds: [] })
+      setForm({ title: '', topic: '', question_file_url: '', description: '', due_date: '', selectedStudentIds: [] })
       await load()
     } catch (e) {
       toast(e?.message || 'Xəta', 'error')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const uploadQuestionFile = async (file) => {
+    if (!file) return
+    setSaving(true)
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      const r = await api.post('/tasks/instructor/upload', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+      if (r?.url) {
+        setForm((p) => ({ ...p, question_file_url: r.url }))
+        toast('Fayl yükləndi', 'success')
+      }
+    } catch (e) {
+      toast(e?.message || 'Fayl yüklənmədi', 'error')
     } finally {
       setSaving(false)
     }
@@ -147,6 +185,7 @@ export default function InstructorTasks() {
 
   const openReview = async (studentAssignmentId) => {
     setReviewOpen(true)
+    setFocusMode(true)
     setReviewLoading(true)
     setReviewErr(null)
     setReview(null)
@@ -309,6 +348,27 @@ export default function InstructorTasks() {
               placeholder="Tapşırıq haqqında qeyd…"
             />
           </div>
+          <div className="rounded-xl border border-indigo-500/15 bg-[#0f0c29]/40 p-3">
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Tapşırıq faylı (PDF/Word/Excel/CSV/Şəkil)</p>
+              <label className="text-xs font-semibold text-blue-400 hover:text-blue-300 cursor-pointer">
+                + Yüklə
+                <input
+                  type="file"
+                  className="hidden"
+                  accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xlsx,.xls,.csv,application/pdf,image/png,image/jpeg,text/csv,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                  onChange={(e) => void uploadQuestionFile(e.target.files?.[0])}
+                />
+              </label>
+            </div>
+            {form.question_file_url ? (
+              <a className="text-sm text-blue-300 hover:text-blue-200 break-all" href={form.question_file_url} target="_blank" rel="noreferrer">
+                {form.question_file_url}
+              </a>
+            ) : (
+              <p className="text-sm text-gray-500">Fayl yoxdur.</p>
+            )}
+          </div>
           <div>
             <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Son tarix (ixtiyari)</label>
             <input
@@ -366,7 +426,11 @@ export default function InstructorTasks() {
 
       <Modal
         open={reviewOpen}
-        onClose={() => (reviewLoading ? null : setReviewOpen(false))}
+        onClose={() => {
+          if (reviewLoading) return null
+          setReviewOpen(false)
+          setFocusMode(false)
+        }}
         title={review?.student_name ? `Yoxla — ${review.student_name}` : 'Yoxla'}
         size="xl"
       >
@@ -379,6 +443,14 @@ export default function InstructorTasks() {
             <div className="rounded-xl border border-indigo-500/15 bg-[#0f0c29]/50 p-3">
               <p className="text-sm text-white font-semibold break-words">{review.title}</p>
               {review.topic ? <p className="text-sm text-indigo-200/90 mt-1">Mövzu: {review.topic}</p> : null}
+              {review.question_file_url ? (
+                <p className="text-xs text-gray-500 mt-1 break-all">
+                  Tapşırıq faylı:{' '}
+                  <a className="text-blue-300 hover:text-blue-200" href={review.question_file_url} target="_blank" rel="noreferrer">
+                    {review.question_file_url}
+                  </a>
+                </p>
+              ) : null}
               <p className="text-xs text-gray-500 mt-1 font-mono tabular-nums">
                 {review.submitted_at ? `Təslim: ${fmtCreated(review.submitted_at)}` : 'Təslim edilməyib'}
               </p>
@@ -413,7 +485,44 @@ export default function InstructorTasks() {
               )}
             </div>
 
-            <Button variant="secondary" className="w-full justify-center" onClick={() => setReviewOpen(false)}>
+            {Array.isArray(review.attachment_urls) && review.attachment_urls.some(isPreviewable) && (
+              <div className="rounded-xl border border-indigo-500/15 bg-[#0f0c29]/40 p-3">
+                <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-2">Ön baxış (PDF / şəkil)</p>
+                <div className="space-y-4">
+                  {review.attachment_urls
+                    .filter((u) => isPreviewable(u))
+                    .map((u) => (
+                      <div key={`pv-${u}`} className="space-y-2">
+                        <a className="text-xs text-blue-300 break-all" href={u} target="_blank" rel="noreferrer">
+                          {u}
+                        </a>
+                        {renderPreview(u)}
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
+
+            {review.question_file_url && isPreviewable(review.question_file_url) && (
+              <div className="rounded-xl border border-indigo-500/15 bg-[#0f0c29]/40 p-3">
+                <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                  Tapşırıq faylı — ön baxış
+                </p>
+                <a className="text-xs text-blue-300 break-all" href={review.question_file_url} target="_blank" rel="noreferrer">
+                  {review.question_file_url}
+                </a>
+                <div className="mt-2">{renderPreview(review.question_file_url)}</div>
+              </div>
+            )}
+
+            <Button
+              variant="secondary"
+              className="w-full justify-center"
+              onClick={() => {
+                setReviewOpen(false)
+                setFocusMode(false)
+              }}
+            >
               Bağla
             </Button>
           </div>

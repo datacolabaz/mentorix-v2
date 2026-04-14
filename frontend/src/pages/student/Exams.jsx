@@ -5,6 +5,7 @@ import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
 import Countdown from '../../components/exam/Countdown'
 import { useToast } from '../../components/common/Toast'
+import useUiStore from '../../hooks/useUi'
 
 /** API JSON: { key, text } və ya string; boş text olanda `opt.text || opt` obyekti render edirdi (React #31) */
 function optionDisplayLabel(opt) {
@@ -98,6 +99,7 @@ export default function StudentExams() {
   const activeExamRef = useRef(false)
   activeExamRef.current = !!activeExam
   const toast = useToast()
+  const { setFocusMode } = useUiStore()
 
   /** quiet: arxa plan yeniləməsində tam səhifə “yüklənir” göstərmə */
   const loadExams = useCallback((quiet = false) => {
@@ -193,6 +195,7 @@ export default function StudentExams() {
       setResult(null)
       setResultBreakdown(null)
       setMaterialsOpen(true)
+      setFocusMode(true)
     } catch (err) {
       toast(err.message || 'Xəta', 'error')
     }
@@ -208,12 +211,17 @@ export default function StudentExams() {
       setResult(data?.score ?? null)
       setResultBreakdown(Array.isArray(data?.breakdown) ? data.breakdown : null)
       setActiveExam(null)
+      setFocusMode(false)
       toast(`✓ İmtahan tamamlandı! Bal: ${formatScorePct(data?.score)}`)
       loadExams(true)
     } catch (err) {
       toast(err.message || 'Xəta', 'error')
     }
   }
+
+  useEffect(() => {
+    return () => setFocusMode(false)
+  }, [setFocusMode])
 
   // Active exam UI
   if (activeExam) {

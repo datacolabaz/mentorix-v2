@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import useAuthStore from '../hooks/useAuth'
+import useUiStore from '../hooks/useUi'
 
 const NAV = [
   { to: '/student', label: 'Proqresim', icon: '📈', end: true },
@@ -14,8 +15,13 @@ export default function StudentLayout() {
   const { user, logout } = useAuthStore()
   const navigate = useNavigate()
   const [navOpen, setNavOpen] = useState(false)
+  const { focusMode, setFocusMode } = useUiStore()
 
   const closeNav = () => setNavOpen(false)
+
+  useEffect(() => {
+    if (focusMode) setNavOpen(false)
+  }, [focusMode])
 
   return (
     <div className="flex h-screen bg-[#0f0c29] text-white overflow-hidden">
@@ -27,6 +33,17 @@ export default function StudentLayout() {
       >
         ☰
       </button>
+
+      {focusMode && (
+        <button
+          type="button"
+          onClick={() => setNavOpen(true)}
+          className="hidden md:flex fixed top-3 left-3 z-[260] w-11 h-11 rounded-xl bg-[#13112e] border border-indigo-500/30 text-lg items-center justify-center shadow-lg"
+          aria-label="Menyunu aç"
+        >
+          ☰
+        </button>
+      )}
 
       {navOpen && (
         <button
@@ -41,7 +58,8 @@ export default function StudentLayout() {
         className={
           'w-64 max-w-[85vw] bg-[#13112e] border-r border-indigo-500/20 flex flex-col flex-shrink-0 z-40 h-full ' +
           'fixed md:static inset-y-0 left-0 transform transition-transform duration-200 ease-out ' +
-          (navOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0')
+          (navOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0') +
+          (focusMode ? ' md:-translate-x-full' : '')
         }
       >
         <div className="p-5 border-b border-indigo-500/20 pt-14 md:pt-5">
@@ -79,6 +97,7 @@ export default function StudentLayout() {
         <div className="p-4 border-t border-indigo-500/20">
           <button
             onClick={() => {
+              setFocusMode(false)
               logout()
               navigate('/login')
             }}

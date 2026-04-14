@@ -13,7 +13,7 @@ export default function Modal({ open, onClose, title, children, size = 'md' }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+      className="fixed inset-0 z-[250] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div className={`bg-[#1a1740] border border-indigo-500/20 rounded-2xl w-full ${sizes[size]} max-h-[90vh] overflow-y-auto`}>

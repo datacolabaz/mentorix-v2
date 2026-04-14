@@ -61,6 +61,7 @@ CREATE TABLE assignments (
   instructor_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   title TEXT NOT NULL,
   topic TEXT,
+  question_file_url TEXT,
   description TEXT,
   due_date DATE,
   created_at TIMESTAMPTZ DEFAULT NOW()

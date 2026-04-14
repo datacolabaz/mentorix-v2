@@ -51,11 +51,26 @@ const listInstructorTasks = async (req, res) => {
   }
 };
 
+const normalizeUrl = (u) => {
+  if (!u) return null;
+  const s = String(u).trim();
+  if (!s) return null;
+  if (s.startsWith('/api/uploads/')) return s;
+  try {
+    const p = new URL(s);
+    if (p.protocol === 'http:' || p.protocol === 'https:') return s;
+  } catch {
+    // ignore
+  }
+  return null;
+};
+
 const createInstructorTask = async (req, res) => {
   try {
     const instructorId = req.user.id;
     const title = String(req.body.title || '').trim();
     const topic = req.body.topic != null ? String(req.body.topic).trim() : '';
+    const question_file_url = normalizeUrl(req.body.question_file_url);
     const description = req.body.description != null ? String(req.body.description).trim() : '';
     const due_date = parseDate(req.body.due_date);
     const student_ids = Array.isArray(req.body.student_ids)
@@ -69,9 +84,9 @@ const createInstructorTask = async (req, res) => {
 
     const out = await db.transaction(async (client) => {
       const { rows: trows } = await client.query(
-        `INSERT INTO assignments (instructor_id, title, topic, description, due_date)
-         VALUES ($1,$2,NULLIF($3,''),NULLIF($4,''),$5) RETURNING *`,
-        [instructorId, title, topic || null, description || null, due_date]
+        `INSERT INTO assignments (instructor_id, title, topic, question_file_url, description, due_date)
+         VALUES ($1,$2,NULLIF($3,''),NULLIF($4,''),NULLIF($5,''),$6) RETURNING *`,
+        [instructorId, title, topic || null, question_file_url, description || null, due_date]
       );
       const task = trows[0];
 
@@ -182,7 +197,7 @@ module.exports = {
       const id = req.params.id;
       const { rows } = await db.query(
         `SELECT a.id AS assignment_id, a.status, a.answer_text, a.attachment_urls, a.submitted_at,
-                t.title, t.topic, t.description, t.due_date, t.created_at AS assignment_created_at,
+                t.title, t.topic, t.question_file_url, t.description, t.due_date, t.created_at AS assignment_created_at,
                 u.full_name AS instructor_name
          FROM student_assignments a
          JOIN assignments t ON t.id = a.assignment_id
@@ -204,7 +219,7 @@ module.exports = {
       const id = req.params.id;
       const answer_text = req.body.answer_text != null ? String(req.body.answer_text) : null;
       const attachment_urls = Array.isArray(req.body.attachment_urls)
-        ? req.body.attachment_urls.filter((x) => x != null && String(x).trim() !== '').map(String)
+        ? req.body.attachment_urls.map(normalizeUrl).filter(Boolean)
         : null;
 
       const { rows: cur } = await db.query(
@@ -236,7 +251,7 @@ module.exports = {
       const id = req.params.id;
       const answer_text = req.body.answer_text != null ? String(req.body.answer_text) : null;
       const attachment_urls = Array.isArray(req.body.attachment_urls)
-        ? req.body.attachment_urls.filter((x) => x != null && String(x).trim() !== '').map(String)
+        ? req.body.attachment_urls.map(normalizeUrl).filter(Boolean)
         : null;
 
       const { rows: cur } = await db.query(
@@ -270,7 +285,7 @@ module.exports = {
       const { rows } = await db.query(
         `SELECT a.id AS student_assignment_id, a.status, a.answer_text, a.attachment_urls, a.submitted_at,
                 s.full_name AS student_name, s.id AS student_id,
-                t.id AS assignment_id, t.title, t.topic, t.description, t.due_date, t.created_at AS assignment_created_at
+                t.id AS assignment_id, t.title, t.topic, t.question_file_url, t.description, t.due_date, t.created_at AS assignment_created_at
          FROM student_assignments a
          JOIN assignments t ON t.id = a.assignment_id
          JOIN users s ON s.id = a.student_id
