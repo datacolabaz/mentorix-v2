@@ -183,6 +183,41 @@ const listExams = async (req, res) => {
   }
 };
 
+// Soft delete exam (flag only)
+const softDeleteExam = async (req, res) => {
+  try {
+    const examId = req.params.id;
+    const isAdmin = req.user.role === 'admin';
+
+    const { rows: [exam] } = await db.query('SELECT id, instructor_id, is_deleted FROM exams WHERE id = $1', [examId]);
+    if (!exam) return res.status(404).json({ success: false, message: 'Tapılmadı' });
+
+    if (!isAdmin && req.user.role === 'instructor') {
+      if (normStudentHex(exam.instructor_id) !== normStudentHex(req.user.id)) {
+        return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
+      }
+    } else if (!isAdmin) {
+      return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
+    }
+
+    if (exam.is_deleted === true) {
+      return res.json({ success: true, exam_id: examId, is_deleted: true });
+    }
+
+    const { rows: [updated] } = await db.query(
+      `UPDATE exams
+       SET is_deleted = TRUE,
+           updated_at = NOW()
+       WHERE id = $1
+       RETURNING id, is_deleted`,
+      [examId]
+    );
+    res.json({ success: true, exam: updated });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 /** Müəllim paneli: hər tələbə üçün bu müəllimin imtahanlarında orta bal (təqdim olunmuş nəticələr) */
 const instructorStudentExamProgress = async (req, res) => {
   try {
@@ -268,6 +303,7 @@ const studentExams = async (req, res) => {
        LEFT JOIN (
          SELECT exam_id, COUNT(*) AS question_count FROM exam_questions GROUP BY exam_id
        ) eq_count ON eq_count.exam_id = e.id
+       WHERE COALESCE(e.is_deleted, FALSE) = FALSE
        ORDER BY e.start_time DESC NULLS LAST`,
       [sidHex]
     );
@@ -350,6 +386,7 @@ const getExamQuestions = async (req, res) => {
 
     const { rows: [exam] } = await db.query('SELECT * FROM exams WHERE id = $1', [id]);
     if (!exam) return res.status(404).json({ success: false, message: 'Tapılmadı' });
+    if (exam.is_deleted === true) return res.status(404).json({ success: false, message: 'Tapılmadı' });
 
     if (req.user.role === 'student') {
       const sidHex = normStudentHex(req.user.id);
@@ -437,6 +474,10 @@ const submitExam = async (req, res) => {
       'SELECT * FROM exam_questions WHERE exam_id=$1',
       [exam_id]
     );
+    const { rows: [exam] } = await db.query('SELECT id, is_deleted FROM exams WHERE id = $1', [exam_id]);
+    if (!exam || exam.is_deleted === true) {
+      return res.status(404).json({ success: false, message: 'Tapılmadı' });
+    }
 
     const score = calculateScore(questions, answers);
     const breakdown = buildExamResultBreakdown(questions, answers);
@@ -680,6 +721,7 @@ const regradeExamResults = async (req, res) => {
 module.exports = {
   createExam,
   listExams,
+  softDeleteExam,
   instructorStudentExamProgress,
   studentExams,
   getStudentExamReview,

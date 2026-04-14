@@ -5,6 +5,7 @@ const router = require('express').Router();
 const {
   createExam,
   listExams,
+  softDeleteExam,
   instructorStudentExamProgress,
   studentExams,
   getStudentExamReview,
@@ -66,6 +67,7 @@ router.get('/:id/results', authenticate, getResults);
 router.get('/:id/groups', authenticate, authorize('instructor', 'admin'), getExamGroups);
 router.get('/:id/top10', authenticate, authorize('instructor', 'admin'), getExamTop10);
 router.post('/:id/regrade', authenticate, authorize('instructor', 'admin'), regradeExamResults);
+router.delete('/:id', authenticate, authorize('instructor', 'admin'), softDeleteExam);
  
 // Imtahani edit et
 router.patch('/:id', authenticate, authorize('instructor', 'admin'), async (req, res) => {
