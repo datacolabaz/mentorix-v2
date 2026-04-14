@@ -2,7 +2,7 @@ const db = require('../utils/db');
 
 /** Yalnız qapalı: səhv cavaba tətbiq olunan mənfi (default -0.25) */
 function autoWrongPenalty(q) {
-  if (q.question_type !== 'closed') return 0;
+  if (String(q.question_type || '').trim().toLowerCase() !== 'closed') return 0;
   const n = q.negative_marking;
   if (n === null || n === undefined || n === '') return -0.25;
   const v = Number(n);
@@ -30,7 +30,7 @@ function parseAzNumber(str) {
 }
 
 function openAutoKey(q) {
-  if (q.question_type !== 'open') return null;
+  if (String(q.question_type || '').trim().toLowerCase() !== 'open') return null;
   const hint = q.template_hint != null ? String(q.template_hint).trim() : '';
   const hn = parseAzNumber(hint);
   return hn == null ? null : hn;
@@ -81,11 +81,12 @@ function buildAutoGradingMap(questions, answers) {
   const out = {};
   for (const q of questions || []) {
     if (!q?.id) continue;
+    const type = String(q.question_type || '').trim().toLowerCase();
     const id = q.id;
     const raw = answers?.[id];
     const given = raw == null || raw === '' ? '' : String(raw);
 
-    if (q.question_type === 'matching') {
+    if (type === 'matching') {
       const correct = String(q.correct_answer ?? '');
       const g = gradeMatching(given, correct, q.options);
       const pts = Number(q.points || 0);
@@ -108,28 +109,29 @@ function buildAutoGradingMap(questions, answers) {
  */
 const calculateScore = (questions, answers) => {
   let earned = 0;
-  const scored = questions.filter((q) =>
-    ['closed', 'multiple', 'matching', 'open'].includes(q.question_type)
+  const scored = (questions || []).filter((q) =>
+    ['closed', 'multiple', 'matching', 'open'].includes(String(q?.question_type || '').trim().toLowerCase())
   );
 
   for (const q of scored) {
+    const type = String(q.question_type || '').trim().toLowerCase();
     const given =
       answers[q.id] != null && answers[q.id] !== '' ? String(answers[q.id]).trim() : '';
     if (!given) continue;
 
-    if (q.question_type === 'closed') {
+    if (type === 'closed') {
       const correct = String(q.correct_answer ?? '').trim();
       const pen = autoWrongPenalty(q);
       const pts = Number(q.points || 0);
       if (given === correct) earned += pts;
       else earned += pen * pts;
-    } else if (q.question_type === 'multiple') {
+    } else if (type === 'multiple') {
       if (normDigits(given) === normDigits(q.correct_answer)) earned += Number(q.points || 0);
-    } else if (q.question_type === 'matching') {
+    } else if (type === 'matching') {
       const keyStored = String(q.correct_answer ?? '').trim();
       const g = gradeMatching(given, keyStored, q.options);
       if (g.status === 'correct') earned += Number(q.points || 0);
-    } else if (q.question_type === 'open') {
+    } else if (type === 'open') {
       const key = openAutoKey(q);
       if (key == null) continue;
       const gn = parseAzNumber(given);
@@ -151,20 +153,22 @@ const buildExamResultBreakdown = (questions, answers) => {
   return order.map((q, idx) => {
     const raw = answers[q.id];
     const given = raw == null || raw === '' ? '' : String(raw).trim();
-    const type = q.question_type;
+    const type = String(q.question_type || '').trim().toLowerCase();
     let correctDisplay = '';
     let isCorrect = null;
 
     if (type === 'closed') {
-      correctDisplay = String(q.correct_answer ?? '').trim() || '—';
+      correctDisplay = ''; // tələbəyə düzgün cavabı göstərmirik
       if (!given) isCorrect = null;
       else isCorrect = given === String(q.correct_answer ?? '').trim();
     } else if (type === 'multiple') {
-      correctDisplay = String(q.correct_answer ?? '').trim() || '—';
+      const hint = String(q.template_hint || '').trim();
+      correctDisplay = hint ? `Nümunə: ${hint}` : 'Nümunə: 13';
       if (!given) isCorrect = null;
       else isCorrect = normDigits(given) === normDigits(q.correct_answer);
     } else if (type === 'matching') {
-      correctDisplay = String(q.correct_answer ?? '').trim() || '—';
+      const hint = String(q.template_hint || '').trim();
+      correctDisplay = hint ? `Nümunə: ${hint}` : 'Nümunə: 1a2b3c';
       if (!given) isCorrect = null;
       else isCorrect = gradeMatching(given, q.correct_answer, q.options).isCorrect;
     } else if (type === 'open') {

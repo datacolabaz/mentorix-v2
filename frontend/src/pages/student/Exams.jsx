@@ -397,7 +397,7 @@ export default function StudentExams() {
                     type="text"
                     inputMode="numeric"
                     autoComplete="off"
-                    className="w-full max-w-xs bg-[#13112e] border border-indigo-500/20 rounded-xl px-3 py-2.5 text-white text-sm font-mono outline-none focus:border-blue-500"
+                    className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-3 py-2.5 text-white text-sm font-mono outline-none focus:border-blue-500"
                     placeholder="məs. 134"
                     value={answers[q.id] || ''}
                     onChange={(e) =>
@@ -417,7 +417,7 @@ export default function StudentExams() {
                     type="text"
                     inputMode="text"
                     autoComplete="off"
-                    className="w-full max-w-md bg-[#13112e] border border-indigo-500/20 rounded-xl px-3 py-2.5 text-white text-sm font-mono outline-none focus:border-blue-500"
+                    className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-3 py-2.5 text-white text-sm font-mono outline-none focus:border-blue-500"
                     placeholder="məs. 1a2b3c"
                     value={answers[q.id] || ''}
                     onChange={(e) =>
@@ -503,6 +503,14 @@ export default function StudentExams() {
                       {row.student_answer}
                     </code>
                   </div>
+                  {row.correct_display ? (
+                    <div>
+                      <span className="text-xs text-gray-500 block mb-0.5">Şablon / nümunə</span>
+                      <code className="block text-indigo-200/90 font-mono text-xs break-all bg-black/20 rounded-lg px-2 py-1.5">
+                        {row.correct_display}
+                      </code>
+                    </div>
+                  ) : null}
                 </div>
                 <div className="mt-3">
                   <span
@@ -644,6 +652,14 @@ export default function StudentExams() {
                           {row.student_answer}
                         </code>
                       </div>
+                      {row.correct_display ? (
+                        <div>
+                          <span className="text-xs text-gray-500 block mb-0.5">Şablon / nümunə</span>
+                          <code className="block text-indigo-200/90 font-mono text-xs break-all bg-black/20 rounded-lg px-2 py-1.5">
+                            {row.correct_display}
+                          </code>
+                        </div>
+                      ) : null}
                     </div>
                     <div className="mt-3">
                       <span
