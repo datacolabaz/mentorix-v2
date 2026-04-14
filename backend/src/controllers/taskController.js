@@ -128,7 +128,7 @@ const listMyTasks = async (req, res) => {
   try {
     const studentId = req.user.id;
     const { rows } = await db.query(
-      `SELECT a.id AS assignment_id, a.status, a.done_at, a.seen_at, a.created_at AS assigned_at,
+      `SELECT a.id AS assignment_id, a.status, a.done_at, a.submitted_at, a.seen_at, a.created_at AS assigned_at,
               t.id AS task_id, t.title, t.topic, t.description, t.due_date, t.created_at AS assignment_created_at,
               t.instructor_id, u.full_name AS instructor_name
        FROM student_assignments a
@@ -176,6 +176,114 @@ module.exports = {
   listInstructorTasks,
   createInstructorTask,
   deleteInstructorAssignment,
+  getMyAssignment: async (req, res) => {
+    try {
+      const studentId = req.user.id;
+      const id = req.params.id;
+      const { rows } = await db.query(
+        `SELECT a.id AS assignment_id, a.status, a.answer_text, a.attachment_urls, a.submitted_at,
+                t.title, t.topic, t.description, t.due_date, t.created_at AS assignment_created_at,
+                u.full_name AS instructor_name
+         FROM student_assignments a
+         JOIN assignments t ON t.id = a.assignment_id
+         JOIN users u ON u.id = t.instructor_id
+         WHERE a.id = $1 AND a.student_id = $2
+         LIMIT 1`,
+        [id, studentId]
+      );
+      if (!rows[0]) return res.status(404).json({ success: false, message: 'Tapılmadı' });
+      res.json({ success: true, assignment: rows[0] });
+    } catch (err) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  },
+
+  saveMyAssignmentDraft: async (req, res) => {
+    try {
+      const studentId = req.user.id;
+      const id = req.params.id;
+      const answer_text = req.body.answer_text != null ? String(req.body.answer_text) : null;
+      const attachment_urls = Array.isArray(req.body.attachment_urls)
+        ? req.body.attachment_urls.filter((x) => x != null && String(x).trim() !== '').map(String)
+        : null;
+
+      const { rows: cur } = await db.query(
+        `SELECT status, submitted_at FROM student_assignments WHERE id = $1 AND student_id = $2 LIMIT 1`,
+        [id, studentId]
+      );
+      if (!cur[0]) return res.status(404).json({ success: false, message: 'Tapılmadı' });
+      if (cur[0].status === 'completed' || cur[0].submitted_at) {
+        return res.status(409).json({ success: false, message: 'Bu tapşırıq artıq təslim edilib və dəyişilə bilməz' });
+      }
+
+      const { rows } = await db.query(
+        `UPDATE student_assignments
+         SET answer_text = COALESCE($1, answer_text),
+             attachment_urls = COALESCE($2, attachment_urls)
+         WHERE id = $3 AND student_id = $4
+         RETURNING id AS assignment_id, status, submitted_at, answer_text, attachment_urls`,
+        [answer_text, attachment_urls, id, studentId]
+      );
+      res.json({ success: true, assignment: rows[0] });
+    } catch (err) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  },
+
+  submitMyAssignment: async (req, res) => {
+    try {
+      const studentId = req.user.id;
+      const id = req.params.id;
+      const answer_text = req.body.answer_text != null ? String(req.body.answer_text) : null;
+      const attachment_urls = Array.isArray(req.body.attachment_urls)
+        ? req.body.attachment_urls.filter((x) => x != null && String(x).trim() !== '').map(String)
+        : null;
+
+      const { rows: cur } = await db.query(
+        `SELECT status, submitted_at FROM student_assignments WHERE id = $1 AND student_id = $2 LIMIT 1`,
+        [id, studentId]
+      );
+      if (!cur[0]) return res.status(404).json({ success: false, message: 'Tapılmadı' });
+      if (cur[0].status === 'completed' || cur[0].submitted_at) return res.json({ success: true, already: true });
+
+      const { rows } = await db.query(
+        `UPDATE student_assignments
+         SET answer_text = COALESCE($1, answer_text),
+             attachment_urls = COALESCE($2, attachment_urls),
+             status = 'completed',
+             done_at = COALESCE(done_at, NOW()),
+             submitted_at = NOW()
+         WHERE id = $3 AND student_id = $4
+         RETURNING id AS assignment_id, status, submitted_at`,
+        [answer_text, attachment_urls, id, studentId]
+      );
+      res.json({ success: true, assignment: rows[0] });
+    } catch (err) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  },
+
+  getInstructorStudentAssignment: async (req, res) => {
+    try {
+      const instructorId = req.user.id;
+      const id = req.params.id; // student_assignments.id
+      const { rows } = await db.query(
+        `SELECT a.id AS student_assignment_id, a.status, a.answer_text, a.attachment_urls, a.submitted_at,
+                s.full_name AS student_name, s.id AS student_id,
+                t.id AS assignment_id, t.title, t.topic, t.description, t.due_date, t.created_at AS assignment_created_at
+         FROM student_assignments a
+         JOIN assignments t ON t.id = a.assignment_id
+         JOIN users s ON s.id = a.student_id
+         WHERE a.id = $1 AND t.instructor_id = $2
+         LIMIT 1`,
+        [id, instructorId]
+      );
+      if (!rows[0]) return res.status(404).json({ success: false, message: 'Tapılmadı' });
+      res.json({ success: true, review: rows[0] });
+    } catch (err) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  },
   listMyTasks,
   markMyTaskDone,
 };

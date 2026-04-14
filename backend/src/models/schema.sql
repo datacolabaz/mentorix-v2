@@ -73,7 +73,10 @@ CREATE TABLE student_assignments (
   assignment_id UUID NOT NULL REFERENCES assignments(id) ON DELETE CASCADE,
   student_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'completed')),
+  answer_text TEXT,
+  attachment_urls TEXT[] NOT NULL DEFAULT '{}'::text[],
   done_at TIMESTAMPTZ,
+  submitted_at TIMESTAMPTZ,
   seen_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   CONSTRAINT student_assignments_unique UNIQUE (assignment_id, student_id)
@@ -81,6 +84,7 @@ CREATE TABLE student_assignments (
 
 CREATE INDEX IF NOT EXISTS idx_student_assignments_student ON student_assignments (student_id);
 CREATE INDEX IF NOT EXISTS idx_student_assignments_assignment ON student_assignments (assignment_id);
+CREATE INDEX IF NOT EXISTS idx_student_assignments_submitted_at ON student_assignments (submitted_at);
 
 CREATE TABLE student_prep_slots (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

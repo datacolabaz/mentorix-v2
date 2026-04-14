@@ -9,6 +9,8 @@ const { processExamNotificationJobs } = require('./services/examService');
 
 const uploadsExamsDir = path.join(__dirname, '../uploads/exams');
 fs.mkdirSync(uploadsExamsDir, { recursive: true });
+const uploadsAssignmentsDir = path.join(__dirname, '../uploads/assignments');
+fs.mkdirSync(uploadsAssignmentsDir, { recursive: true });
 
 const app = express();
 
@@ -16,6 +18,7 @@ app.use(cors({ origin: process.env.FRONTEND_URL || '*' }));
 app.use(express.json());
 
 app.use('/api/uploads/exams', express.static(uploadsExamsDir));
+app.use('/api/uploads/assignments', express.static(uploadsAssignmentsDir));
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));

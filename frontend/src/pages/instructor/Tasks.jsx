@@ -27,6 +27,10 @@ export default function InstructorTasks() {
   const [open, setOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [deletingId, setDeletingId] = useState(null)
+  const [reviewOpen, setReviewOpen] = useState(false)
+  const [reviewLoading, setReviewLoading] = useState(false)
+  const [reviewErr, setReviewErr] = useState(null)
+  const [review, setReview] = useState(null)
   const toast = useToast()
 
   const [form, setForm] = useState({
@@ -141,6 +145,21 @@ export default function InstructorTasks() {
     return []
   }
 
+  const openReview = async (studentAssignmentId) => {
+    setReviewOpen(true)
+    setReviewLoading(true)
+    setReviewErr(null)
+    setReview(null)
+    try {
+      const d = await api.get('/tasks/instructor/review/' + encodeURIComponent(studentAssignmentId))
+      setReview(d.review || null)
+    } catch (e) {
+      setReviewErr(e?.message || 'Yüklənmədi')
+    } finally {
+      setReviewLoading(false)
+    }
+  }
+
   return (
     <div className="p-4 sm:p-6 w-full min-w-0 max-w-5xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-4">
@@ -233,15 +252,22 @@ export default function InstructorTasks() {
                       {recipients.map((r) => (
                         <li key={r.student_id} className="flex items-center justify-between gap-2 text-sm min-w-0">
                           <span className="text-gray-200 truncate">{r.full_name || 'Tələbə'}</span>
-                          <span
-                            className={
-                              r.status === 'completed'
-                                ? 'text-[10px] font-bold px-2 py-0.5 rounded-lg bg-emerald-500/15 border border-emerald-400/35 text-emerald-200 shrink-0'
-                                : 'text-[10px] font-bold px-2 py-0.5 rounded-lg bg-amber-500/10 border border-amber-400/30 text-amber-100 shrink-0'
-                            }
-                          >
-                            {r.status === 'completed' ? 'Bitirdi' : 'Gözləyir'}
-                          </span>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span
+                              className={
+                                r.status === 'completed'
+                                  ? 'text-[10px] font-bold px-2 py-0.5 rounded-lg bg-emerald-500/15 border border-emerald-400/35 text-emerald-200'
+                                  : 'text-[10px] font-bold px-2 py-0.5 rounded-lg bg-amber-500/10 border border-amber-400/30 text-amber-100'
+                              }
+                            >
+                              {r.status === 'completed' ? 'Bitirdi' : 'Gözləyir'}
+                            </span>
+                            {r.status === 'completed' ? (
+                              <Button size="sm" variant="secondary" onClick={() => void openReview(r.student_assignment_id)}>
+                                Yoxla
+                              </Button>
+                            ) : null}
+                          </div>
                         </li>
                       ))}
                     </ul>
@@ -336,6 +362,62 @@ export default function InstructorTasks() {
             </Button>
           </div>
         </div>
+      </Modal>
+
+      <Modal
+        open={reviewOpen}
+        onClose={() => (reviewLoading ? null : setReviewOpen(false))}
+        title={review?.student_name ? `Yoxla — ${review.student_name}` : 'Yoxla'}
+        size="xl"
+      >
+        {reviewLoading ? (
+          <p className="text-sm text-gray-500">Yüklənir…</p>
+        ) : reviewErr ? (
+          <p className="text-sm text-amber-200/90">{reviewErr}</p>
+        ) : review ? (
+          <div className="space-y-4">
+            <div className="rounded-xl border border-indigo-500/15 bg-[#0f0c29]/50 p-3">
+              <p className="text-sm text-white font-semibold break-words">{review.title}</p>
+              {review.topic ? <p className="text-sm text-indigo-200/90 mt-1">Mövzu: {review.topic}</p> : null}
+              <p className="text-xs text-gray-500 mt-1 font-mono tabular-nums">
+                {review.submitted_at ? `Təslim: ${fmtCreated(review.submitted_at)}` : 'Təslim edilməyib'}
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-indigo-500/15 bg-[#0f0c29]/40 p-3">
+              <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-2">Tələbənin cavabı</p>
+              {review.answer_text ? (
+                <div
+                  className="prose prose-invert max-w-none text-sm"
+                  dangerouslySetInnerHTML={{ __html: review.answer_text }}
+                />
+              ) : (
+                <p className="text-sm text-gray-500">Cavab yoxdur.</p>
+              )}
+            </div>
+
+            <div className="rounded-xl border border-indigo-500/15 bg-[#0f0c29]/40 p-3">
+              <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-2">Fayllar</p>
+              {Array.isArray(review.attachment_urls) && review.attachment_urls.length ? (
+                <ul className="space-y-2">
+                  {review.attachment_urls.map((u) => (
+                    <li key={u}>
+                      <a className="text-sm text-blue-300 hover:text-blue-200 break-all" href={u} target="_blank" rel="noreferrer">
+                        {u}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-gray-500">Fayl yoxdur.</p>
+              )}
+            </div>
+
+            <Button variant="secondary" className="w-full justify-center" onClick={() => setReviewOpen(false)}>
+              Bağla
+            </Button>
+          </div>
+        ) : null}
       </Modal>
     </div>
   )
