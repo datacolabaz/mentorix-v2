@@ -6,7 +6,14 @@ function inferQuestionType(q) {
   const t = normType(q?.question_type);
   if (['closed', 'multiple', 'matching', 'open'].includes(t)) return t;
   // Legacy / inconsistent DB rows: infer from options shape
-  const opts = q?.options;
+  let opts = q?.options;
+  if (typeof opts === 'string') {
+    try {
+      opts = JSON.parse(opts);
+    } catch {
+      opts = null;
+    }
+  }
   if (Array.isArray(opts) && opts.some((r) => r && typeof r === 'object' && ('left' in r || 'right' in r))) {
     return 'matching';
   }
@@ -60,10 +67,18 @@ function normMatchStrict(str) {
 }
 
 function deriveMatchingKeyFromOptions(options) {
-  if (!Array.isArray(options)) return '';
+  let opts = options;
+  if (typeof opts === 'string') {
+    try {
+      opts = JSON.parse(opts);
+    } catch {
+      opts = null;
+    }
+  }
+  if (!Array.isArray(opts)) return '';
   let key = '';
-  for (let i = 0; i < options.length; i++) {
-    const row = options[i];
+  for (let i = 0; i < opts.length; i++) {
+    const row = opts[i];
     if (!row || typeof row !== 'object') continue;
     const L = String(row.left ?? '').trim();
     const R = String(row.right ?? '').trim();
@@ -81,7 +96,8 @@ function gradeMatching(given, correct, optionsForFallback) {
   const fallback = !String(correct ?? '').trim() ? deriveMatchingKeyFromOptions(optionsForFallback) : '';
   const c = normMatchStrict(String(correct ?? '').trim() ? correct : fallback);
   if (!g) return { status: 'pending', isCorrect: null };
-  if (!c) return { status: 'pending', isCorrect: null };
+  // tələbə cavabı var, amma açar tapılmadısa pending saxlamırıq (UI-da "Yoxlanılır" qalmasın)
+  if (!c) return { status: 'incorrect', isCorrect: false };
   const ok = g === c;
   return { status: ok ? 'correct' : 'incorrect', isCorrect: ok };
 }
