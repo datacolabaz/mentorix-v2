@@ -1,12 +1,21 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 import api from '../../lib/api'
 import Card from '../../components/common/Card'
+import Button from '../../components/common/Button'
 
 const COLORS = ['#e1306c', '#1877f2', '#000', '#3b82f6', '#6366f1']
 
 export default function InstructorAnalytics() {
   const [students, setStudents] = useState([])
+  const [exams, setExams] = useState([])
+  const [examId, setExamId] = useState('')
+  const [groups, setGroups] = useState([])
+  const [selectedGrade, setSelectedGrade] = useState('')
+  const [groupResults, setGroupResults] = useState([])
+  const [top10, setTop10] = useState([])
+  const [examLoading, setExamLoading] = useState(false)
+  const [examErr, setExamErr] = useState(null)
 
   useEffect(() => {
     api
@@ -14,6 +23,37 @@ export default function InstructorAnalytics() {
       .then((d) => setStudents(d.students || []))
       .catch(() => setStudents([]))
   }, [])
+
+  useEffect(() => {
+    api
+      .get('/exams')
+      .then((d) => setExams(Array.isArray(d.exams) ? d.exams : []))
+      .catch(() => setExams([]))
+  }, [])
+
+  const loadExamAnalytics = async (id, grade = null) => {
+    if (!id) return
+    setExamErr(null)
+    setExamLoading(true)
+    try {
+      const [g, t, r] = await Promise.all([
+        api.get(`/exams/${encodeURIComponent(id)}/groups`),
+        api.get(`/exams/${encodeURIComponent(id)}/top10`),
+        api.get(`/exams/${encodeURIComponent(id)}/results${grade ? `?grade=${encodeURIComponent(grade)}` : ''}`),
+      ])
+      const gr = Array.isArray(g.groups) ? g.groups : []
+      setGroups(gr)
+      setTop10(Array.isArray(t.top10) ? t.top10 : [])
+      setGroupResults(Array.isArray(r.results) ? r.results : [])
+    } catch (e) {
+      setExamErr(e?.message || 'Yüklənmədi')
+      setGroups([])
+      setTop10([])
+      setGroupResults([])
+    } finally {
+      setExamLoading(false)
+    }
+  }
 
   const referralData = students.reduce((acc, s) => {
     const src = s.referral_source || 'Digər'
@@ -30,6 +70,11 @@ export default function InstructorAnalytics() {
     bal: parseFloat(s.avg_score || 0),
     ders: s.lesson_count || 0,
   }))
+
+  const gradeOptions = useMemo(() => {
+    const arr = groups.map((g) => g.grade).filter(Boolean)
+    return arr
+  }, [groups])
 
   return (
     <div className="p-4 sm:p-6 min-w-0">
@@ -91,6 +136,132 @@ export default function InstructorAnalytics() {
             </BarChart>
           </ResponsiveContainer>
         </div>
+      </Card>
+
+      <div className="mt-4" />
+
+      <Card className="p-4 sm:p-5 min-w-0 overflow-hidden">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-4">
+          <div className="min-w-0">
+            <h2 className="font-display font-bold text-base text-white">İmtahan nəticələri</h2>
+            <p className="text-xs text-gray-500 mt-1">Qruplara görə baxış və ümumi Top 10.</p>
+          </div>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => void loadExamAnalytics(examId, selectedGrade || null)}
+            disabled={!examId || examLoading}
+          >
+            Yenilə
+          </Button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">İmtahan</label>
+            <select
+              className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500"
+              value={examId}
+              onChange={async (e) => {
+                const id = e.target.value
+                setExamId(id)
+                setSelectedGrade('')
+                setGroups([])
+                setGroupResults([])
+                setTop10([])
+                if (id) await loadExamAnalytics(id, null)
+              }}
+            >
+              <option value="">— İmtahan seçin —</option>
+              {exams.map((ex) => (
+                <option key={ex.id} value={ex.id}>
+                  {ex.title || 'İmtahan'}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Qrup</label>
+            <select
+              className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500"
+              value={selectedGrade}
+              onChange={async (e) => {
+                const g = e.target.value
+                setSelectedGrade(g)
+                if (examId) await loadExamAnalytics(examId, g || null)
+              }}
+              disabled={!examId || examLoading}
+            >
+              <option value="">Ümumi (hamısı)</option>
+              {gradeOptions.map((g) => (
+                <option key={g} value={g}>
+                  {g}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {examErr && <p className="text-sm text-amber-200/90 mt-3">{examErr}</p>}
+        {examLoading && <p className="text-xs text-gray-500 mt-3">Yüklənir…</p>}
+
+        {examId && !examLoading && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
+            <div className="rounded-xl border border-indigo-500/15 bg-[#0f0c29]/40 p-4">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+                Ümumi Top 10
+              </p>
+              {!top10.length ? (
+                <p className="text-sm text-gray-500">Nəticə yoxdur.</p>
+              ) : (
+                <div className="space-y-2">
+                  {top10.map((r) => (
+                    <div key={r.student_id} className="flex items-center justify-between gap-3 px-3 py-2 rounded-xl border border-indigo-500/10 bg-[#13112e]/60">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-white truncate">
+                          {r.rank === 1 ? '🥇 ' : r.rank === 2 ? '🥈 ' : r.rank === 3 ? '🥉 ' : ''}
+                          {r.rank}. {r.full_name}
+                        </p>
+                        <p className="text-[11px] text-gray-500">{r.grade || '—'}</p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className="text-sm font-extrabold text-white">{Math.round(Number(r.score) || 0)}%</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="rounded-xl border border-indigo-500/15 bg-[#0f0c29]/40 p-4">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+                {selectedGrade ? `${selectedGrade} qrupu nəticələri` : 'Nəticələr (hamısı)'}
+              </p>
+              {!groupResults.length ? (
+                <p className="text-sm text-gray-500">Nəticə yoxdur.</p>
+              ) : (
+                <div className="space-y-2 max-h-[420px] overflow-y-auto pr-1">
+                  {groupResults.map((r) => (
+                    <div key={r.student_id} className="flex items-center justify-between gap-3 px-3 py-2 rounded-xl border border-indigo-500/10 bg-[#13112e]/60">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-white truncate">
+                          {r.rank === 1 ? '🥇 ' : r.rank === 2 ? '🥈 ' : r.rank === 3 ? '🥉 ' : ''}
+                          {r.rank}. {r.full_name}
+                        </p>
+                        <p className="text-[11px] text-gray-500 font-mono tabular-nums">
+                          {Number.isFinite(Number(r.duration_seconds)) ? `${Math.round(Number(r.duration_seconds))}s` : '—'}
+                        </p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className="text-sm font-extrabold text-white">{Math.round(Number(r.score) || 0)}%</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </Card>
     </div>
   )

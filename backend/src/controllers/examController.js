@@ -211,7 +211,14 @@ const studentExams = async (req, res) => {
      *  silinmiş/köhnə DB-də olmayan tələbələr üçün siyahı boş qalır; müəllim statistikası isə
      *  exam_results-dan görünür. */
     const { rows } = await db.query(
-      `WITH my_exam_ids AS (
+      `WITH me AS (
+         SELECT u.id AS student_id, sp.grade AS grade
+         FROM users u
+         LEFT JOIN student_profiles sp ON sp.user_id = u.id
+         WHERE REPLACE(LOWER(TRIM(u.id::text)), '-', '') = $1
+         LIMIT 1
+       ),
+       my_exam_ids AS (
          SELECT DISTINCT ea.exam_id AS exam_id
          FROM exam_assignments ea
          WHERE REPLACE(LOWER(TRIM(ea.student_id::text)), '-', '') = $1
@@ -219,11 +226,27 @@ const studentExams = async (req, res) => {
          SELECT DISTINCT er.exam_id AS exam_id
          FROM exam_results er
          WHERE REPLACE(LOWER(TRIM(er.student_id::text)), '-', '') = $1
+       ),
+       leaderboard AS (
+         SELECT er.exam_id,
+                er.student_id,
+                COALESCE(sp.grade, '—') AS grade,
+                RANK() OVER (
+                  PARTITION BY er.exam_id, COALESCE(sp.grade, '—')
+                  ORDER BY er.score DESC, er.duration_seconds ASC
+                )::int AS rank_in_group
+         FROM exam_results er
+         JOIN users u ON u.id = er.student_id
+         LEFT JOIN student_profiles sp ON sp.user_id = u.id
+         WHERE er.submitted_at IS NOT NULL
        )
        SELECT e.*, er.score, er.submitted_at,
+         COALESCE(me.grade, '—') AS my_group,
+         lb.rank_in_group,
          eq_count.question_count
        FROM my_exam_ids mei
        JOIN exams e ON e.id = mei.exam_id
+       CROSS JOIN me
        LEFT JOIN LATERAL (
          SELECT score, submitted_at FROM exam_results er0
          WHERE er0.exam_id = e.id
@@ -231,6 +254,10 @@ const studentExams = async (req, res) => {
          ORDER BY er0.submitted_at DESC NULLS LAST
          LIMIT 1
        ) er ON TRUE
+       LEFT JOIN leaderboard lb
+         ON lb.exam_id = e.id
+        AND REPLACE(LOWER(TRIM(lb.student_id::text)), '-', '') = $1
+        AND lb.grade = COALESCE(me.grade, '—')
        LEFT JOIN (
          SELECT exam_id, COUNT(*) AS question_count FROM exam_questions GROUP BY exam_id
        ) eq_count ON eq_count.exam_id = e.id
@@ -424,8 +451,130 @@ const submitExam = async (req, res) => {
 // Neticeleri al (sirali)
 const getResults = async (req, res) => {
   try {
-    const rows = await rankResults(req.params.id);
-    res.json({ success: true, results: rows });
+    const examId = req.params.id;
+    const { rows: [exam] } = await db.query('SELECT id, instructor_id FROM exams WHERE id = $1', [examId]);
+    if (!exam) return res.status(404).json({ success: false, message: 'Tapılmadı' });
+
+    // Instructor/Admin: all results (optionally filter by grade)
+    if (req.user.role === 'admin' || req.user.role === 'instructor') {
+      if (req.user.role === 'instructor' && normStudentHex(exam.instructor_id) !== normStudentHex(req.user.id)) {
+        return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
+      }
+      const grade = req.query.grade != null && String(req.query.grade).trim() !== '' ? String(req.query.grade).trim() : null;
+      const { rows } = await db.query(
+        `SELECT er.id, er.exam_id, er.student_id, u.full_name,
+                COALESCE(sp.grade, '—') AS grade,
+                er.score, er.duration_seconds, er.submitted_at,
+                RANK() OVER (
+                  PARTITION BY CASE WHEN $2::text IS NULL THEN 'ALL' ELSE COALESCE(sp.grade, '—') END
+                  ORDER BY er.score DESC, er.duration_seconds ASC
+                )::int AS rank
+         FROM exam_results er
+         JOIN users u ON u.id = er.student_id
+         LEFT JOIN student_profiles sp ON sp.user_id = u.id
+         WHERE er.exam_id = $1
+           AND er.submitted_at IS NOT NULL
+           AND ($2::text IS NULL OR COALESCE(sp.grade, '—') = $2::text)
+         ORDER BY er.score DESC, er.duration_seconds ASC`,
+        [examId, grade]
+      );
+      return res.json({ success: true, results: rows, grade: grade || 'ALL' });
+    }
+
+    // Student: only their group
+    if (req.user.role === 'student') {
+      const sidHex = normStudentHex(req.user.id);
+      const { rows: assigned } = await db.query(
+        `SELECT 1 FROM exam_assignments WHERE exam_id = $1
+         AND REPLACE(LOWER(TRIM(student_id::text)), '-', '') = $2`,
+        [examId, sidHex]
+      );
+      if (!assigned.length) return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
+      const { rows: [me] } = await db.query(
+        `SELECT COALESCE(sp.grade, '—') AS grade
+         FROM student_profiles sp
+         WHERE REPLACE(LOWER(TRIM(sp.user_id::text)), '-', '') = $1
+         LIMIT 1`,
+        [sidHex]
+      );
+      const grade = me?.grade || '—';
+      const { rows } = await db.query(
+        `SELECT er.student_id, u.full_name, COALESCE(sp.grade, '—') AS grade,
+                er.score, er.duration_seconds, er.submitted_at,
+                RANK() OVER (ORDER BY er.score DESC, er.duration_seconds ASC)::int AS rank
+         FROM exam_results er
+         JOIN users u ON u.id = er.student_id
+         LEFT JOIN student_profiles sp ON sp.user_id = u.id
+         WHERE er.exam_id = $1
+           AND er.submitted_at IS NOT NULL
+           AND COALESCE(sp.grade, '—') = $2
+         ORDER BY er.score DESC, er.duration_seconds ASC`,
+        [examId, grade]
+      );
+      return res.json({ success: true, results: rows, grade });
+    }
+
+    return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/** Müəllim/Admin: bu imtahanda mövcud qrupların siyahısı (grade-lər) */
+const getExamGroups = async (req, res) => {
+  try {
+    const examId = req.params.id;
+    const { rows: [exam] } = await db.query('SELECT id, instructor_id FROM exams WHERE id = $1', [examId]);
+    if (!exam) return res.status(404).json({ success: false, message: 'Tapılmadı' });
+    if (req.user.role === 'instructor' && normStudentHex(exam.instructor_id) !== normStudentHex(req.user.id)) {
+      return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
+    }
+    if (req.user.role !== 'admin' && req.user.role !== 'instructor') {
+      return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
+    }
+
+    const { rows } = await db.query(
+      `SELECT COALESCE(sp.grade, '—') AS grade, COUNT(DISTINCT er.student_id)::int AS taken
+       FROM exam_results er
+       JOIN users u ON u.id = er.student_id
+       LEFT JOIN student_profiles sp ON sp.user_id = u.id
+       WHERE er.exam_id = $1 AND er.submitted_at IS NOT NULL
+       GROUP BY COALESCE(sp.grade, '—')
+       ORDER BY COALESCE(sp.grade, '—')`,
+      [examId]
+    );
+    res.json({ success: true, groups: rows });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/** Müəllim/Admin: bütün qruplar üzrə ümumi top 10 (score desc, duration asc) */
+const getExamTop10 = async (req, res) => {
+  try {
+    const examId = req.params.id;
+    const { rows: [exam] } = await db.query('SELECT id, instructor_id FROM exams WHERE id = $1', [examId]);
+    if (!exam) return res.status(404).json({ success: false, message: 'Tapılmadı' });
+    if (req.user.role === 'instructor' && normStudentHex(exam.instructor_id) !== normStudentHex(req.user.id)) {
+      return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
+    }
+    if (req.user.role !== 'admin' && req.user.role !== 'instructor') {
+      return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
+    }
+
+    const { rows } = await db.query(
+      `SELECT er.student_id, u.full_name, COALESCE(sp.grade, '—') AS grade,
+              er.score, er.duration_seconds, er.submitted_at,
+              RANK() OVER (ORDER BY er.score DESC, er.duration_seconds ASC)::int AS rank
+       FROM exam_results er
+       JOIN users u ON u.id = er.student_id
+       LEFT JOIN student_profiles sp ON sp.user_id = u.id
+       WHERE er.exam_id = $1 AND er.submitted_at IS NOT NULL
+       ORDER BY er.score DESC, er.duration_seconds ASC
+       LIMIT 10`,
+      [examId]
+    );
+    res.json({ success: true, top10: rows });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -440,4 +589,6 @@ module.exports = {
   getExamQuestions,
   submitExam,
   getResults,
+  getExamGroups,
+  getExamTop10,
 };

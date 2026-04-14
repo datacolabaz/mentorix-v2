@@ -6,6 +6,7 @@ import Modal from '../../components/common/Modal'
 import Countdown from '../../components/exam/Countdown'
 import { useToast } from '../../components/common/Toast'
 import useUiStore from '../../hooks/useUi'
+import useAuthStore from '../../hooks/useAuth'
 
 /** API JSON: { key, text } və ya string; boş text olanda `opt.text || opt` obyekti render edirdi (React #31) */
 function optionDisplayLabel(opt) {
@@ -100,6 +101,7 @@ export default function StudentExams() {
   activeExamRef.current = !!activeExam
   const toast = useToast()
   const { setFocusMode } = useUiStore()
+  const { user } = useAuthStore()
 
   /** quiet: arxa plan yeniləməsində tam səhifə “yüklənir” göstərmə */
   const loadExams = useCallback((quiet = false) => {
@@ -127,6 +129,7 @@ export default function StudentExams() {
   }, [])
 
   const [reviewModal, setReviewModal] = useState(null)
+  const [leaderModal, setLeaderModal] = useState(null)
 
   useEffect(() => {
     loadExams(false)
@@ -181,6 +184,28 @@ export default function StudentExams() {
         score: null,
         submitted_at: null,
         error: err?.message || 'Yüklənmədi',
+      })
+    }
+  }
+
+  const openLeaderboard = async (exam) => {
+    setLeaderModal({ title: exam?.title || 'Reytinq', loading: true, error: null, grade: null, results: [] })
+    try {
+      const d = await api.get(`/exams/${exam.id}/results`)
+      setLeaderModal({
+        title: exam?.title || 'Reytinq',
+        loading: false,
+        error: null,
+        grade: d.grade || null,
+        results: Array.isArray(d.results) ? d.results : [],
+      })
+    } catch (err) {
+      setLeaderModal({
+        title: exam?.title || 'Reytinq',
+        loading: false,
+        error: err?.message || 'Yüklənmədi',
+        grade: null,
+        results: [],
       })
     }
   }
@@ -547,16 +572,28 @@ export default function StudentExams() {
                     <span>⏱ {exam.duration_minutes ?? '—'} dəq</span>
                   </div>
                   {isDone && (
-                    <div className="mt-2 px-3 py-1 bg-emerald-500/20 text-emerald-400 rounded-lg text-sm font-semibold inline-block max-w-full break-words">
-                      ✓ Tamamlandı — {formatScorePct(exam?.score)}
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <div className="px-3 py-1 bg-emerald-500/20 text-emerald-400 rounded-lg text-sm font-semibold inline-block max-w-full break-words">
+                        ✓ Tamamlandı — {formatScorePct(exam?.score)}
+                      </div>
+                      {exam.rank_in_group ? (
+                        <div className="px-3 py-1 bg-indigo-500/15 text-indigo-200 border border-indigo-400/25 rounded-lg text-xs font-bold inline-block">
+                          Qrupda {exam.rank_in_group}-ci yer{exam.my_group ? ` (${exam.my_group})` : ''}
+                        </div>
+                      ) : null}
                     </div>
                   )}
                 </div>
                 <div className="shrink-0 self-start sm:self-center">
                   {isDone ? (
-                    <Button variant="secondary" size="sm" onClick={() => openPastReview(exam)}>
-                      📋 Nəticəyə bax
-                    </Button>
+                    <div className="flex gap-2 flex-wrap justify-start sm:justify-end">
+                      <Button variant="secondary" size="sm" onClick={() => openPastReview(exam)}>
+                        📋 Nəticəyə bax
+                      </Button>
+                      <Button variant="secondary" size="sm" onClick={() => void openLeaderboard(exam)}>
+                        🏆 Reytinq
+                      </Button>
+                    </div>
                   ) : !start ? (
                     <span className="text-xs text-amber-400/90 bg-[#13112e] px-3 py-2 rounded-xl inline-block">
                       Müəllim vaxt təyin etməlidir
@@ -654,6 +691,61 @@ export default function StudentExams() {
               </div>
             )}
           </>
+        )}
+      </Modal>
+      )}
+
+      {leaderModal != null && (
+      <Modal
+        open
+        onClose={() => setLeaderModal(null)}
+        title={leaderModal.title ? `Reytinq — ${leaderModal.title}` : 'Reytinq'}
+        size="lg"
+      >
+        {leaderModal.loading ? (
+          <p className="text-gray-500 text-center py-10">Yüklənir…</p>
+        ) : leaderModal.error ? (
+          <p className="text-red-400 text-sm text-center py-6">{leaderModal.error}</p>
+        ) : (
+          <div className="space-y-3">
+            {leaderModal.grade ? (
+              <p className="text-xs text-gray-500">
+                Qrup: <span className="text-gray-200 font-semibold">{leaderModal.grade}</span>
+              </p>
+            ) : null}
+            {leaderModal.results.length === 0 ? (
+              <p className="text-sm text-gray-500">Nəticə yoxdur.</p>
+            ) : (
+              <div className="space-y-2 max-h-[min(65vh,520px)] overflow-y-auto pr-1">
+                {leaderModal.results.map((r) => {
+                  const rank = r.rank || 0
+                  const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : null
+                  const mine = user?.id && r.student_id && String(r.student_id) === String(user.id)
+                  return (
+                    <div
+                      key={r.student_id}
+                      className={[
+                        'rounded-xl border px-4 py-3 flex items-center justify-between gap-3',
+                        mine ? 'border-indigo-400/60 bg-indigo-500/10' : 'border-indigo-500/15 bg-[#13112e]/70',
+                      ].join(' ')}
+                    >
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-white truncate">
+                          {medal ? `${medal} ` : ''}{rank ? `${rank}. ` : ''}{r.full_name || '—'}
+                        </p>
+                        <p className="text-[11px] text-gray-500 font-mono tabular-nums mt-1">
+                          {Number.isFinite(Number(r.duration_seconds)) ? `${Math.round(Number(r.duration_seconds))}s` : '—'}
+                        </p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <div className="text-sm font-extrabold text-white">{formatScorePct(r.score)}</div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
         )}
       </Modal>
       )}
