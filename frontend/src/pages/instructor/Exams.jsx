@@ -17,6 +17,8 @@ export default function InstructorExams() {
   const [editExam, setEditExam] = useState(null)
   const [loading, setLoading] = useState(false)
   const [deletingId, setDeletingId] = useState(null)
+  const [bulkDeleting, setBulkDeleting] = useState(false)
+  const [selectedIds, setSelectedIds] = useState(() => new Set())
   const [examsLoading, setExamsLoading] = useState(true)
   const [examsError, setExamsError] = useState(null)
   const toast = useToast()
@@ -86,11 +88,50 @@ export default function InstructorExams() {
     try {
       await api.delete('/exams/' + exam.id)
       toast('İmtahan silindi')
+      setSelectedIds((prev) => {
+        const next = new Set(prev)
+        next.delete(exam.id)
+        return next
+      })
       await loadExams()
     } catch (err) {
       toast(err?.message || 'Silinmədi', 'error')
     } finally {
       setDeletingId(null)
+    }
+  }
+
+  const allIds = exams.map((e) => e?.id).filter(Boolean)
+  const allSelected = allIds.length > 0 && allIds.every((id) => selectedIds.has(id))
+
+  const toggleAll = (checked) => {
+    setSelectedIds(() => (checked ? new Set(allIds) : new Set()))
+  }
+
+  const toggleOne = (id, checked) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (checked) next.add(id)
+      else next.delete(id)
+      return next
+    })
+  }
+
+  const bulkDelete = async () => {
+    const ids = [...selectedIds]
+    if (ids.length === 0) return
+    const ok = window.confirm(`${ids.length} imtahan birdən silinsin? Bu əməliyyat geri qaytarılmır.`)
+    if (!ok) return
+    setBulkDeleting(true)
+    try {
+      await api.post('/exams/bulk-delete', { exam_ids: ids })
+      toast(`${ids.length} imtahan silindi`)
+      setSelectedIds(new Set())
+      await loadExams()
+    } catch (err) {
+      toast(err?.message || 'Toplu silinmədi', 'error')
+    } finally {
+      setBulkDeleting(false)
     }
   }
  
@@ -100,7 +141,32 @@ export default function InstructorExams() {
     <div className="p-4 sm:p-6 min-w-0">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <h1 className="font-display font-bold text-xl sm:text-2xl">Imtahanlar</h1>
-        <Button onClick={() => setAddModal(true)} className="w-full sm:w-auto shrink-0 justify-center">+ Yeni Imtahan</Button>
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <div className="flex items-center justify-between sm:justify-start gap-3 bg-[#13112e] border border-indigo-500/20 rounded-xl px-3 py-2">
+            <label className="flex items-center gap-2 text-xs font-semibold text-gray-300 select-none">
+              <input
+                type="checkbox"
+                className="w-4 h-4 accent-blue-500"
+                checked={allSelected}
+                onChange={(e) => toggleAll(e.target.checked)}
+              />
+              Hamısını seç
+            </label>
+            <span className="text-[11px] text-gray-500">{selectedIds.size} seçildi</span>
+          </div>
+          <Button
+            variant="secondary"
+            onClick={bulkDelete}
+            loading={bulkDeleting}
+            disabled={selectedIds.size === 0}
+            className="w-full sm:w-auto justify-center border-red-500/30 text-red-300 hover:text-red-200 hover:border-red-500/50 disabled:opacity-50"
+          >
+            Seçilənləri sil
+          </Button>
+          <Button onClick={() => setAddModal(true)} className="w-full sm:w-auto shrink-0 justify-center">
+            + Yeni Imtahan
+          </Button>
+        </div>
       </div>
  
       <div className="space-y-4">
@@ -117,10 +183,18 @@ export default function InstructorExams() {
         {!examsLoading && !examsError &&
           exams.map((exam) => {
           const { label, cls } = statusBadge(exam)
+          const checked = !!exam?.id && selectedIds.has(exam.id)
           return (
             <Card key={exam.id} className="p-4 sm:p-5 min-w-0 overflow-hidden">
               <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 min-w-0">
-                <div className="min-w-0">
+                <div className="min-w-0 flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    className="mt-1 w-4 h-4 accent-blue-500"
+                    checked={checked}
+                    onChange={(e) => toggleOne(exam.id, e.target.checked)}
+                  />
+                  <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2">
                     <h3 className="font-display font-bold text-base sm:text-lg break-words">{exam.title}</h3>
                     <span className={`px-2 py-0.5 rounded-lg text-xs font-semibold shrink-0 ${cls}`}>{label}</span>
@@ -131,6 +205,7 @@ export default function InstructorExams() {
                     <span>{exam.student_count || 0} telebe</span>
                     {exam.subject && <span>{exam.subject}</span>}
                     {exam.topic && <span>· {exam.topic}</span>}
+                  </div>
                   </div>
                 </div>
                 <div className="flex gap-2 flex-wrap self-start sm:self-auto shrink-0">
