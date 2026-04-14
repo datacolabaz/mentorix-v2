@@ -6,6 +6,7 @@ const {
   createExam,
   listExams,
   softDeleteExam,
+  hardDeleteExam,
   instructorStudentExamProgress,
   studentExams,
   getStudentExamReview,
@@ -68,6 +69,7 @@ router.get('/:id/groups', authenticate, authorize('instructor', 'admin'), getExa
 router.get('/:id/top10', authenticate, authorize('instructor', 'admin'), getExamTop10);
 router.post('/:id/regrade', authenticate, authorize('instructor', 'admin'), regradeExamResults);
 router.delete('/:id', authenticate, authorize('instructor', 'admin'), softDeleteExam);
+router.delete('/:id/hard', authenticate, authorize('instructor', 'admin'), hardDeleteExam);
  
 // Imtahani edit et
 router.patch('/:id', authenticate, authorize('instructor', 'admin'), async (req, res) => {

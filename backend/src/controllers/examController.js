@@ -218,6 +218,36 @@ const softDeleteExam = async (req, res) => {
   }
 };
 
+// Hard delete exam + dependent rows (results + questions + assignments)
+const hardDeleteExam = async (req, res) => {
+  try {
+    const examId = req.params.id;
+    const isAdmin = req.user.role === 'admin';
+
+    const { rows: [exam] } = await db.query('SELECT id, instructor_id FROM exams WHERE id = $1', [examId]);
+    if (!exam) return res.status(404).json({ success: false, message: 'Tapılmadı' });
+
+    if (!isAdmin && req.user.role === 'instructor') {
+      if (normStudentHex(exam.instructor_id) !== normStudentHex(req.user.id)) {
+        return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
+      }
+    } else if (!isAdmin) {
+      return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
+    }
+
+    await db.transaction(async (client) => {
+      await client.query('DELETE FROM exam_results WHERE exam_id = $1', [examId]);
+      await client.query('DELETE FROM exam_questions WHERE exam_id = $1', [examId]);
+      await client.query('DELETE FROM exam_assignments WHERE exam_id = $1', [examId]);
+      await client.query('DELETE FROM exams WHERE id = $1', [examId]);
+    });
+
+    res.json({ success: true, exam_id: examId, deleted: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 /** Müəllim paneli: hər tələbə üçün bu müəllimin imtahanlarında orta bal (təqdim olunmuş nəticələr) */
 const instructorStudentExamProgress = async (req, res) => {
   try {
@@ -231,6 +261,7 @@ const instructorStudentExamProgress = async (req, res) => {
        JOIN exams e ON e.id = er.exam_id
        JOIN users u ON u.id = er.student_id
        WHERE er.submitted_at IS NOT NULL
+         AND COALESCE(e.is_deleted, FALSE) = FALSE
          AND ($1::boolean OR e.instructor_id = $2::uuid)
        GROUP BY er.student_id, u.full_name
        ORDER BY u.full_name`,
@@ -722,6 +753,7 @@ module.exports = {
   createExam,
   listExams,
   softDeleteExam,
+  hardDeleteExam,
   instructorStudentExamProgress,
   studentExams,
   getStudentExamReview,
