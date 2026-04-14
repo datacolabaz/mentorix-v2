@@ -1,8 +1,21 @@
 const db = require('../utils/db');
 
+const normType = (t) => String(t ?? '').trim().toLowerCase();
+
+function inferQuestionType(q) {
+  const t = normType(q?.question_type);
+  if (['closed', 'multiple', 'matching', 'open'].includes(t)) return t;
+  // Legacy / inconsistent DB rows: infer from options shape
+  const opts = q?.options;
+  if (Array.isArray(opts) && opts.some((r) => r && typeof r === 'object' && ('left' in r || 'right' in r))) {
+    return 'matching';
+  }
+  return t || 'open';
+}
+
 /** Yalnız qapalı: səhv cavaba tətbiq olunan mənfi (default -0.25) */
 function autoWrongPenalty(q) {
-  if (String(q.question_type || '').trim().toLowerCase() !== 'closed') return 0;
+  if (inferQuestionType(q) !== 'closed') return 0;
   const n = q.negative_marking;
   if (n === null || n === undefined || n === '') return -0.25;
   const v = Number(n);
@@ -30,7 +43,7 @@ function parseAzNumber(str) {
 }
 
 function openAutoKey(q) {
-  if (String(q.question_type || '').trim().toLowerCase() !== 'open') return null;
+  if (inferQuestionType(q) !== 'open') return null;
   const hint = q.template_hint != null ? String(q.template_hint).trim() : '';
   const hn = parseAzNumber(hint);
   return hn == null ? null : hn;
@@ -81,7 +94,7 @@ function buildAutoGradingMap(questions, answers) {
   const out = {};
   for (const q of questions || []) {
     if (!q?.id) continue;
-    const type = String(q.question_type || '').trim().toLowerCase();
+    const type = inferQuestionType(q);
     const id = q.id;
     const raw = answers?.[id];
     const given = raw == null || raw === '' ? '' : String(raw);
@@ -110,11 +123,11 @@ function buildAutoGradingMap(questions, answers) {
 const calculateScore = (questions, answers) => {
   let earned = 0;
   const scored = (questions || []).filter((q) =>
-    ['closed', 'multiple', 'matching', 'open'].includes(String(q?.question_type || '').trim().toLowerCase())
+    ['closed', 'multiple', 'matching', 'open'].includes(inferQuestionType(q))
   );
 
   for (const q of scored) {
-    const type = String(q.question_type || '').trim().toLowerCase();
+    const type = inferQuestionType(q);
     const given =
       answers[q.id] != null && answers[q.id] !== '' ? String(answers[q.id]).trim() : '';
     if (!given) continue;
@@ -153,7 +166,7 @@ const buildExamResultBreakdown = (questions, answers) => {
   return order.map((q, idx) => {
     const raw = answers[q.id];
     const given = raw == null || raw === '' ? '' : String(raw).trim();
-    const type = String(q.question_type || '').trim().toLowerCase();
+    const type = inferQuestionType(q);
     let correctDisplay = '';
     let isCorrect = null;
 
