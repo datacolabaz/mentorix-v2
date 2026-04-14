@@ -28,6 +28,7 @@ function buildMatchingCorrectFromPayload(q) {
 const {
   calculateScore,
   buildExamResultBreakdown,
+  buildAutoGradingMap,
   rankResults,
   syncExamReminderJob,
   notifyParentExamResultAfterSubmit,
@@ -439,13 +440,14 @@ const submitExam = async (req, res) => {
 
     const score = calculateScore(questions, answers);
     const breakdown = buildExamResultBreakdown(questions, answers);
+    const grading = buildAutoGradingMap(questions, answers);
     const now = new Date();
     const duration = Math.floor((now - new Date(started_at)) / 1000);
 
     await db.query(
-      `INSERT INTO exam_results (exam_id, student_id, score, answers, started_at, submitted_at, duration_seconds)
-       VALUES ($1,$2,$3,$4,$5,$6,$7)`,
-      [exam_id, student_id, score, JSON.stringify(answers), started_at, now, duration]
+      `INSERT INTO exam_results (exam_id, student_id, score, answers, grading, started_at, submitted_at, duration_seconds)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+      [exam_id, student_id, score, JSON.stringify(answers), JSON.stringify(grading), started_at, now, duration]
     );
 
     setImmediate(() => {

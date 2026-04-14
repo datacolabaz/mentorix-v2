@@ -46,6 +46,41 @@ function normMatchStrict(str) {
   return String(str ?? '').trim().toLowerCase().replace(/\s+/g, '');
 }
 
+function gradeMatching(given, correct) {
+  const g = normMatchStrict(given);
+  const c = normMatchStrict(correct);
+  if (!g) return { status: 'pending', isCorrect: null };
+  if (!c) return { status: 'pending', isCorrect: null };
+  const ok = g === c;
+  return { status: ok ? 'correct' : 'incorrect', isCorrect: ok };
+}
+
+/**
+ * Submit-time auto-grading snapshot (DB üçün).
+ * Hazırda ən kritik hissə: matching suallar dərhal correct/incorrect olsun.
+ */
+function buildAutoGradingMap(questions, answers) {
+  const out = {};
+  for (const q of questions || []) {
+    if (!q?.id) continue;
+    const id = q.id;
+    const raw = answers?.[id];
+    const given = raw == null || raw === '' ? '' : String(raw);
+
+    if (q.question_type === 'matching') {
+      const correct = String(q.correct_answer ?? '');
+      const g = gradeMatching(given, correct);
+      const pts = Number(q.points || 0);
+      out[id] = {
+        type: 'matching',
+        status: g.status,
+        earned_points: g.status === 'correct' ? pts : 0,
+      };
+    }
+  }
+  return out;
+}
+
 /**
  * Avtomatik bal: qapalı (mənfi bal ola bilər), çoxseçimli, uyğunluq (mənfi bal ola bilər).
  * Açıq sual: `template_hint` rəqəmdirsə avtomatik yoxlanır (məs. "4.8"); yoxsa manual qalır.
@@ -75,9 +110,8 @@ const calculateScore = (questions, answers) => {
     } else if (q.question_type === 'matching') {
       const keyStored = String(q.correct_answer ?? '').trim();
       if (!keyStored) continue;
-      const cg = normMatchStrict(given);
-      const ck = normMatchStrict(keyStored);
-      if (cg === ck) earned += Number(q.points || 0);
+      const g = gradeMatching(given, keyStored);
+      if (g.status === 'correct') earned += Number(q.points || 0);
     } else if (q.question_type === 'open') {
       const key = openAutoKey(q);
       if (key == null) continue;
@@ -116,7 +150,7 @@ const buildExamResultBreakdown = (questions, answers) => {
       correctDisplay = String(q.correct_answer ?? '').trim() || '—';
       if (!given) isCorrect = null;
       else if (!String(q.correct_answer ?? '').trim()) isCorrect = null;
-      else isCorrect = normMatchStrict(given) === normMatchStrict(q.correct_answer);
+      else isCorrect = gradeMatching(given, q.correct_answer).isCorrect;
     } else if (type === 'open') {
       const hint = String(q.template_hint || '').trim();
       correctDisplay = hint ? `Nümunə / gözlənti: ${hint}` : 'Müəllim qiymətləndirir';
@@ -319,6 +353,7 @@ const notifyParentExamResultAfterSubmit = async (examId, studentId, score) => {
 module.exports = {
   calculateScore,
   buildExamResultBreakdown,
+  buildAutoGradingMap,
   rankResults,
   isExamActive,
   processExamNotificationJobs,
