@@ -1,16 +1,18 @@
 require('dotenv').config();
-const path = require('path');
-const fs = require('fs');
+
+const cors = require('cors');
 const cron = require('node-cron');
 const express = require('express');
-const cors = require('cors');
+const fs = require('fs');
+const path = require('path');
+
 const errorHandler = require('./middleware/errorHandler');
 const { processExamNotificationJobs } = require('./services/examService');
 const { recomputeAllInstructorsUsage } = require('./services/resourceUsageService');
 
 const uploadsExamsDir = path.join(__dirname, '../uploads/exams');
-fs.mkdirSync(uploadsExamsDir, { recursive: true });
 const uploadsAssignmentsDir = path.join(__dirname, '../uploads/assignments');
+fs.mkdirSync(uploadsExamsDir, { recursive: true });
 fs.mkdirSync(uploadsAssignmentsDir, { recursive: true });
 
 const app = express();
@@ -21,7 +23,6 @@ app.use(express.json());
 app.use('/api/uploads/exams', express.static(uploadsExamsDir));
 app.use('/api/uploads/assignments', express.static(uploadsAssignmentsDir));
 
-// Routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/students', require('./routes/students'));
 app.use('/api/attendance', require('./routes/attendance'));
@@ -38,6 +39,17 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Mentorix API running on port ${PORT}`);
-  processExamNotificationJobs().catch((e) => console.error("exam notification jobs (startup)", e.message));
-  recomputeAllInstructorsUsage().catch((e) => console.error("usage sync (startup)", e
+  console.log('Mentorix API running on port', PORT);
+  processExamNotificationJobs().catch((e) => console.error('exam notification jobs startup', e.message));
+  recomputeAllInstructorsUsage().catch((e) => console.error('usage sync startup', e.message));
+});
+
+cron.schedule('* * * * *', () => {
+  processExamNotificationJobs().catch((e) => console.error('exam notification cron', e.message));
+});
+
+cron.schedule('*/10 * * * *', () => {
+  recomputeAllInstructorsUsage().catch((e) => console.error('usage sync cron', e.message));
+});
+
+module.exports = app;
