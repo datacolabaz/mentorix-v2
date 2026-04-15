@@ -36,7 +36,7 @@ const uploadExamFile = multer({
   limits: { fileSize: 20 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const ok = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'].includes(file.mimetype);
-    if (!ok) return cb(new Error('Yalnız PDF, JPG və ya PNG faylı qəbul edilir'));
+    if (!ok) return cb(new Error('Yalniz PDF, JPG ve ya PNG fayli qebul edilir'));
     cb(null, true);
   },
 });
@@ -47,13 +47,13 @@ router.post(
   authorize('instructor', 'admin'),
   (req, res, next) => {
     uploadExamFile.single('file')(req, res, (err) => {
-      if (err) return res.status(400).json({ success: false, message: err.message || 'Fayl qəbul edilmədi' });
+      if (err) return res.status(400).json({ success: false, message: err.message || 'Fayl qebul edilmedi' });
       next();
     });
   },
   enforceStorageLimitAfterUpload,
   (req, res) => {
-    if (!req.file) return res.status(400).json({ success: false, message: 'Fayl tələb olunur' });
+    if (!req.file) return res.status(400).json({ success: false, message: 'Fayl teleb olunur' });
     const rel = `/api/uploads/exams/${req.file.filename}`;
     res.json({ success: true, url: rel, filename: req.file.originalname });
   }
@@ -76,4 +76,46 @@ router.post('/:id/regrade', authenticate, authorize('instructor', 'admin'), regr
 router.delete('/:id', authenticate, authorize('instructor', 'admin'), hardDeleteExam);
 router.delete('/:id/soft', authenticate, authorize('instructor', 'admin'), softDeleteExam);
 
-router.patch('/:id', authenticat
+router.patch('/:id', authenticate, authorize('instructor', 'admin'), patchExam);
+
+module.exports = router;
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
