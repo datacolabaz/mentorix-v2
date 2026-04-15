@@ -1,9 +1,41 @@
+const fs = require('fs');
+const path = require('path');
 const db = require('../utils/db');
 const { normalizeExamStartTime } = require('../utils/examTime');
 
 /** JWT / DB UUID format fərqi olanda exam_assignments uyğunlaşması */
 const normStudentHex = (id) =>
   id == null ? '' : String(id).trim().toLowerCase().replace(/-/g, '');
+
+function uploadsExamAbsPathFromPublicUrl(url) {
+  const rel = String(url || '');
+  const m = rel.match(/\/api\/uploads\/exams\/([^/?#]+)$/);
+  if (!m) return null;
+  return path.join(__dirname, '../../uploads/exams', m[1]);
+}
+
+function safeUnlinkUpload(url) {
+  const abs = uploadsExamAbsPathFromPublicUrl(url);
+  if (!abs) return;
+  try {
+    if (fs.existsSync(abs)) fs.unlinkSync(abs);
+  } catch {
+    // ignore
+  }
+}
+
+function parseJsonMaybe(value, fallback) {
+  if (value == null) return fallback;
+  if (typeof value === 'object') return value;
+  if (typeof value === 'string') {
+    try {
+      return JSON.parse(value);
+    } catch {
+      return fallback;
+    }
+  }
+  return fallback;
+}
 
 /** Uyğunluq: explicit `correct_answer` və ya sol/sağ cütlərdən açar; `template_hint` heç vaxt düzgün cavab sayılmır */
 function buildMatchingCorrectFromPayload(q) {
@@ -145,7 +177,8 @@ const createExam = async (req, res) => {
       }
       for (const sid of assignIds) {
         await client.query(
-          'INSERT INTO exam_assignments (exam_id, student_id) VALUES ($1,$2)',
+          `INSERT INTO exam_assignments (exam_id, student_id) VALUES ($1,$2)
+           ON CONFLICT DO NOTHING`,
           [exam.id, sid]
         );
       }
@@ -792,12 +825,243 @@ const regradeExamResults = async (req, res) => {
   }
 };
 
+/** Müəllim/Admin: imtahan təyinatları (student_id siyahısı) */
+const getExamAssignments = async (req, res) => {
+  try {
+    const examId = req.params.id;
+    const isAdmin = req.user.role === 'admin';
+    const { rows: [exam] } = await db.query('SELECT id, instructor_id FROM exams WHERE id = $1', [examId]);
+    if (!exam) return res.status(404).json({ success: false, message: 'Tapılmadı' });
+    if (!isAdmin && req.user.role === 'instructor') {
+      if (normStudentHex(exam.instructor_id) !== normStudentHex(req.user.id)) {
+        return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
+      }
+    } else if (!isAdmin) {
+      return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
+    }
+
+    const { rows } = await db.query(
+      `SELECT student_id FROM exam_assignments WHERE exam_id = $1 ORDER BY student_id`,
+      [examId]
+    );
+    res.json({ success: true, student_ids: rows.map((r) => r.student_id) });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/**
+ * Müəllim/Admin: imtahanı redaktə et (meta + exam_files/pdf_url + təyinatlar).
+ * Body:
+ * - title, subject, topic, start_time, duration_minutes, notify_students, show_results
+ * - exam_files: [{name,url}] (JSON array)
+ * - pdf_url: string|null
+ * - student_ids: string[] (təyinatların son vəziyyəti)
+ */
+const patchExam = async (req, res) => {
+  try {
+    const examId = req.params.id;
+    const isAdmin = req.user.role === 'admin';
+
+    const {
+      title,
+      subject,
+      topic,
+      start_time,
+      duration_minutes,
+      notify_students,
+      show_results,
+      exam_files,
+      pdf_url,
+      student_ids,
+    } = req.body || {};
+
+    const startNorm = start_time != null && start_time !== '' ? normalizeExamStartTime(start_time) : null;
+    const notifyProvided = Object.prototype.hasOwnProperty.call(req.body || {}, 'notify_students');
+    const notifyOn = notifyProvided
+      ? notify_students === true ||
+        notify_students === 'true' ||
+        notify_students === 1 ||
+        notify_students === '1'
+      : undefined;
+
+    const { rows: [before] } = await db.query(
+      'SELECT id, instructor_id, pdf_url, exam_files FROM exams WHERE id = $1',
+      [examId]
+    );
+    if (!before) return res.status(404).json({ success: false, message: 'Imtahan tapilmadi' });
+    if (!isAdmin && req.user.role === 'instructor') {
+      if (normStudentHex(before.instructor_id) !== normStudentHex(req.user.id)) {
+        return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
+      }
+    } else if (!isAdmin) {
+      return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
+    }
+
+    const filesProvided = exam_files !== undefined;
+    const pdfProvided = pdf_url !== undefined;
+    const studentsProvided = student_ids !== undefined;
+
+    let nextFilesJson = null;
+    if (filesProvided) {
+      const arr = Array.isArray(exam_files) ? exam_files : parseJsonMaybe(exam_files, []);
+      const cleaned = (Array.isArray(arr) ? arr : [])
+        .filter((x) => x && typeof x === 'object' && x.url)
+        .map((x, i) => ({
+          name: x.name || `Fayl ${i + 1}`,
+          url: x.url,
+        }));
+      nextFilesJson = JSON.stringify(cleaned);
+    }
+
+    const nextPdf = pdfProvided ? (pdf_url || null) : undefined;
+
+    let updatedExam = null;
+    let assignmentSummary = null;
+
+    await db.transaction(async (client) => {
+      let idx = 1;
+      const sets = [];
+      const vals = [];
+
+      const add = (frag, v) => {
+        sets.push(frag.replaceAll('__IDX__', String(idx)));
+        vals.push(v);
+        idx += 1;
+      };
+
+      add('title = COALESCE(__IDX__, title)', title);
+      add('subject = COALESCE(__IDX__, subject)', subject);
+      add('topic = COALESCE(__IDX__, topic)', topic);
+      add('start_time = COALESCE(__IDX__, start_time)', startNorm);
+      add('duration_minutes = COALESCE(__IDX__, duration_minutes)', duration_minutes);
+      if (notifyProvided) {
+        add('notify_enabled = __IDX__::boolean', notifyOn);
+        add('notify_students = __IDX__::boolean', notifyOn);
+      }
+      add('show_results = COALESCE(__IDX__, show_results)', show_results);
+      add(
+        'exam_files = CASE WHEN __IDX__::text IS NULL THEN exam_files ELSE __IDX__::jsonb END',
+        filesProvided ? nextFilesJson : null
+      );
+      add('pdf_url = CASE WHEN __IDX__::text IS NULL THEN pdf_url ELSE __IDX__ END', pdfProvided ? nextPdf : null);
+
+      vals.push(examId);
+      const examIdParam = idx;
+
+      const { rows } = await client.query(
+        `UPDATE exams SET
+          ${sets.join(',\n          ')},
+          updated_at = NOW()
+        WHERE id = $${examIdParam}
+        RETURNING *`,
+        vals
+      );
+      updatedExam = rows[0];
+      if (!updatedExam) {
+        const err = new Error('Imtahan tapilmadi');
+        err.code = 'EXAM_NOT_FOUND';
+        throw err;
+      }
+
+      if (studentsProvided) {
+        const raw = Array.isArray(student_ids) ? student_ids : parseJsonMaybe(student_ids, []);
+        const wanted = [
+          ...new Set(
+            (Array.isArray(raw) ? raw : [])
+              .map((x) => String(x || '').trim())
+              .filter(Boolean)
+          ),
+        ];
+
+        const { rows: currentRows } = await client.query(
+          `SELECT student_id FROM exam_assignments WHERE exam_id = $1`,
+          [examId]
+        );
+        const current = new Set(currentRows.map((r) => String(r.student_id)));
+        const wantedSet = new Set(wanted);
+
+        const toRemove = [...current].filter((sid) => !wantedSet.has(sid));
+        if (toRemove.length) {
+          await client.query(
+            `DELETE FROM exam_assignments ea
+             WHERE ea.exam_id = $1
+               AND ea.student_id = ANY($2::uuid[])
+               AND NOT EXISTS (
+                 SELECT 1 FROM exam_results er
+                 WHERE er.exam_id = ea.exam_id
+                   AND er.student_id = ea.student_id
+                   AND er.submitted_at IS NOT NULL
+               )`,
+            [examId, toRemove]
+          );
+        }
+
+        const toAdd = wanted.filter((sid) => !current.has(sid));
+        for (const sid of toAdd) {
+          await client.query(
+            `INSERT INTO exam_assignments (exam_id, student_id) VALUES ($1, $2)
+             ON CONFLICT DO NOTHING`,
+            [examId, sid]
+          );
+        }
+
+        const { rows: afterRows } = await client.query(
+          `SELECT student_id FROM exam_assignments WHERE exam_id = $1`,
+          [examId]
+        );
+        assignmentSummary = { wanted: wanted.length, assigned: afterRows.length };
+      }
+    });
+
+    if (filesProvided || pdfProvided) {
+      const oldFiles = parseJsonMaybe(before.exam_files, []);
+      const oldUrls = new Set(
+        (Array.isArray(oldFiles) ? oldFiles : [])
+          .map((x) => x?.url)
+          .filter(Boolean)
+          .map(String)
+      );
+      if (before.pdf_url) oldUrls.add(String(before.pdf_url));
+
+      const newFiles = parseJsonMaybe(updatedExam.exam_files, []);
+      const newUrls = new Set(
+        (Array.isArray(newFiles) ? newFiles : [])
+          .map((x) => x?.url)
+          .filter(Boolean)
+          .map(String)
+      );
+      if (updatedExam.pdf_url) newUrls.add(String(updatedExam.pdf_url));
+
+      for (const u of oldUrls) {
+        if (!newUrls.has(u)) safeUnlinkUpload(u);
+      }
+    }
+
+    res.json({ success: true, exam: updatedExam, assignments: assignmentSummary });
+
+    if (notifyProvided || startNorm != null) {
+      setImmediate(() => {
+        syncExamReminderJob(examId).catch((e) => console.error('syncExamReminderJob', e.message));
+      });
+    }
+  } catch (err) {
+    if (res.headersSent) return;
+    if (err && err.code === 'EXAM_NOT_FOUND') {
+      return res.status(404).json({ success: false, message: 'Imtahan tapilmadi' });
+    }
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 module.exports = {
   createExam,
   listExams,
   softDeleteExam,
   hardDeleteExam,
   bulkHardDeleteExams,
+  getExamAssignments,
+  patchExam,
   instructorStudentExamProgress,
   studentExams,
   getStudentExamReview,

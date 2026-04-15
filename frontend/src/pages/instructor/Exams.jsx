@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import api from '../../lib/api'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
@@ -15,6 +15,14 @@ export default function InstructorExams() {
   const [addModal, setAddModal] = useState(false)
   const [editModal, setEditModal] = useState(false)
   const [editExam, setEditExam] = useState(null)
+  const [editMaterialFiles, setEditMaterialFiles] = useState([])
+  const [editMaterialBusy, setEditMaterialBusy] = useState(false)
+  const [editStudentIds, setEditStudentIds] = useState([])
+  const [editBaselineAssigned, setEditBaselineAssigned] = useState(() => new Set())
+  const [editAssignmentsLoading, setEditAssignmentsLoading] = useState(false)
+  const [studentPickerQuery, setStudentPickerQuery] = useState('')
+  const [showAllStudentsInPicker, setShowAllStudentsInPicker] = useState(false)
+  const editMaterialsInputRef = useRef(null)
   const [loading, setLoading] = useState(false)
   const [deletingId, setDeletingId] = useState(null)
   const [bulkDeleting, setBulkDeleting] = useState(false)
@@ -56,14 +64,55 @@ export default function InstructorExams() {
     return { label: 'Gozlenilir', cls: 'bg-blue-500/20 text-blue-400' }
   }
  
-  const openEdit = (exam) => {
-    setEditExam({ ...exam, start_time: utcInstantToDatetimeLocalValue(exam.start_time) })
+  const normalizeExamFiles = (exam) => {
+    let raw = exam?.exam_files
+    if (typeof raw === 'string') {
+      try {
+        raw = JSON.parse(raw)
+      } catch {
+        raw = []
+      }
+    }
+    const arr = Array.isArray(raw) ? raw : []
+    const mapped = arr
+      .filter((x) => x && typeof x === 'object' && x.url)
+      .map((x, i) => ({
+        id: `${x.url}-${i}`,
+        name: x.name || `Fayl ${i + 1}`,
+        url: x.url,
+      }))
+    if (mapped.length === 0 && exam?.pdf_url) {
+      return [{ id: `${exam.pdf_url}-0`, name: 'PDF', url: exam.pdf_url }]
+    }
+    return mapped
+  }
+
+  const openEdit = async (exam) => {
     setEditModal(true)
+    setEditExam({ ...exam, start_time: utcInstantToDatetimeLocalValue(exam.start_time) })
+    setEditMaterialFiles(normalizeExamFiles(exam))
+    setEditStudentIds([])
+    setEditBaselineAssigned(new Set())
+    setStudentPickerQuery('')
+    setShowAllStudentsInPicker(false)
+    setEditAssignmentsLoading(true)
+    try {
+      const d = await api.get(`/exams/${exam.id}/assignments`)
+      const ids = Array.isArray(d.student_ids) ? d.student_ids : []
+      setEditStudentIds(ids)
+      setEditBaselineAssigned(new Set(ids.map(String)))
+    } catch {
+      setEditStudentIds([])
+      setEditBaselineAssigned(new Set())
+    } finally {
+      setEditAssignmentsLoading(false)
+    }
   }
  
   const saveEdit = async () => {
     setLoading(true)
     try {
+      const exam_files = editMaterialFiles.map(({ name, url }) => ({ name, url }))
       await api.patch('/exams/' + editExam.id, {
         title: editExam.title,
         subject: editExam.subject,
@@ -72,6 +121,9 @@ export default function InstructorExams() {
         duration_minutes: editExam.duration_minutes,
         notify_students: editExam.notify_students,
         show_results: editExam.show_results,
+        pdf_url: exam_files[0]?.url || null,
+        exam_files,
+        student_ids: editStudentIds,
       })
       toast('Imtahan yenilendi!')
       setEditModal(false)
@@ -136,6 +188,82 @@ export default function InstructorExams() {
   }
  
   const inp = 'w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500'
+
+  const removeEditMaterial = (id) => {
+    setEditMaterialFiles((prev) => prev.filter((x) => x.id !== id))
+  }
+
+  const handleEditMaterialsChange = async (e) => {
+    const files = Array.from(e.target.files || [])
+    if (!files.length) return
+    setEditMaterialBusy(true)
+    try {
+      const results = await Promise.all(
+        files.map(async (f) => {
+          const fd = new FormData()
+          fd.append('file', f)
+          const data = await api.post('/exams/upload', fd)
+          return {
+            id: `${data.url}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            name: data.filename || f.name,
+            url: data.url,
+          }
+        })
+      )
+      setEditMaterialFiles((prev) => [...prev, ...results])
+      toast(`${results.length} fayl serverə yükləndi`)
+    } catch (err) {
+      toast(err.message || 'Fayl yüklənmədi (yalnız PDF, JPG, PNG)', 'error')
+    } finally {
+      setEditMaterialBusy(false)
+      e.target.value = ''
+    }
+  }
+
+  const assignedIdSet = useMemo(() => new Set(editStudentIds.map(String)), [editStudentIds])
+  const baselineAssignedSet = editBaselineAssigned
+
+  const pickerStudents = useMemo(() => {
+    const q = studentPickerQuery.trim().toLowerCase()
+    return (students || [])
+      .filter((s) => s && s.id)
+      .filter((s) => showAllStudentsInPicker || !baselineAssignedSet.has(String(s.id)))
+      .filter((s) => {
+        if (!q) return true
+        const name = String(s.full_name || '').toLowerCase()
+        const phone = String(s.phone || '').toLowerCase()
+        return name.includes(q) || phone.includes(q)
+      })
+      .sort((a, b) => String(a.full_name || '').localeCompare(String(b.full_name || ''), 'az'))
+  }, [students, studentPickerQuery, showAllStudentsInPicker, baselineAssignedSet])
+
+  const toggleStudent = (id, checked) => {
+    const sid = String(id)
+    setEditStudentIds((prev) => {
+      const set = new Set(prev.map(String))
+      if (checked) set.add(sid)
+      else set.delete(sid)
+      return [...set]
+    })
+  }
+
+  const eligibleNewInPicker = useMemo(
+    () => pickerStudents.filter((s) => s?.id && !baselineAssignedSet.has(String(s.id))),
+    [pickerStudents, baselineAssignedSet]
+  )
+
+  const toggleSelectAllPicker = (checked) => {
+    setEditStudentIds((prev) => {
+      const set = new Set(prev.map(String))
+      const pickIds = eligibleNewInPicker.map((s) => String(s.id))
+      if (checked) pickIds.forEach((id) => set.add(id))
+      else pickIds.forEach((id) => set.delete(id))
+      return [...set]
+    })
+  }
+
+  const allPickerSelected =
+    eligibleNewInPicker.length > 0 && eligibleNewInPicker.every((s) => assignedIdSet.has(String(s.id)))
  
   return (
     <div className="p-4 sm:p-6 min-w-0">
@@ -243,7 +371,7 @@ export default function InstructorExams() {
       </Modal>
  
       {editExam && (
-        <Modal open={editModal} onClose={() => setEditModal(false)} title="Imtahani Redakte Et" size="md">
+        <Modal open={editModal} onClose={() => setEditModal(false)} title="Imtahani Redakte Et" size="xl">
           <div className="space-y-4">
             <div>
               <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Imtahan Adi</label>
@@ -299,6 +427,133 @@ export default function InstructorExams() {
                   className="w-4 h-4 accent-blue-500" />
               </div>
             </div>
+
+            <div className="p-4 bg-[#13112e] rounded-xl border border-indigo-500/20 space-y-3">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="text-sm font-semibold">Material fayllar</div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    PDF/JPG/PNG əlavə edin və ya mövcud faylı silin. Yadda saxlayanda köhnə fayllar avtomatik silinəcək.
+                  </div>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  loading={editMaterialBusy}
+                  onClick={() => editMaterialsInputRef.current?.click()}
+                >
+                  Faylı yenilə
+                </Button>
+              </div>
+              <input
+                ref={editMaterialsInputRef}
+                type="file"
+                multiple
+                accept="application/pdf,image/png,image/jpeg,.pdf,.png,.jpg,.jpeg"
+                className="hidden"
+                onChange={handleEditMaterialsChange}
+              />
+              {editMaterialFiles.length === 0 ? (
+                <div className="text-xs text-gray-500">Hələ material seçilməyib.</div>
+              ) : (
+                <div className="space-y-2">
+                  {editMaterialFiles.map((f) => (
+                    <div
+                      key={f.id}
+                      className="flex items-center justify-between gap-3 rounded-lg border border-indigo-500/15 bg-[#0f0e24] px-3 py-2"
+                    >
+                      <div className="min-w-0">
+                        <div className="text-sm text-white truncate">{f.name}</div>
+                        <div className="text-[11px] text-gray-500 truncate">{f.url}</div>
+                      </div>
+                      <Button type="button" size="sm" variant="secondary" onClick={() => removeEditMaterial(f.id)}>
+                        Sil
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="p-4 bg-[#13112e] rounded-xl border border-indigo-500/20 space-y-3">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="text-sm font-semibold">Tələbələri seç</div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    Defolt olaraq yalnız bu imtahana hələ təyin olunmamış tələbələr göstərilir. Mövcud təyinləri
+                    çıxarmaq üçün “Bütün tələbələri göstər”i açın.
+                  </div>
+                </div>
+                <div className="text-xs text-gray-500 whitespace-nowrap">
+                  {editAssignmentsLoading ? 'Yüklənir…' : `${editStudentIds.length} seçildi`}
+                </div>
+              </div>
+
+              <input
+                className={inp}
+                placeholder="Ad və ya telefon ilə axtar…"
+                value={studentPickerQuery}
+                onChange={(e) => setStudentPickerQuery(e.target.value)}
+              />
+
+              <label className="flex items-center gap-2 text-xs font-semibold text-gray-300 select-none">
+                <input
+                  type="checkbox"
+                  className="w-4 h-4 accent-blue-500"
+                  checked={showAllStudentsInPicker}
+                  onChange={(e) => setShowAllStudentsInPicker(e.target.checked)}
+                />
+                Bütün tələbələri göstər (mövcud təyinlər daxil)
+              </label>
+
+              <label className="flex items-center gap-2 text-xs font-semibold text-gray-300 select-none">
+                <input
+                  type="checkbox"
+                  className="w-4 h-4 accent-blue-500"
+                  checked={allPickerSelected}
+                  onChange={(e) => toggleSelectAllPicker(e.target.checked)}
+                />
+                Hamısını seç (yeni təyinlər üçün)
+              </label>
+
+              <div className="max-h-56 overflow-auto rounded-lg border border-indigo-500/15">
+                {pickerStudents.length === 0 ? (
+                  <div className="p-3 text-xs text-gray-500">Tələbə tapılmadı.</div>
+                ) : (
+                  pickerStudents.map((s) => {
+                    const sid = String(s.id)
+                    const checked = assignedIdSet.has(sid)
+                    const wasAssigned = baselineAssignedSet.has(sid)
+                    return (
+                      <label
+                        key={sid}
+                        className="flex items-center justify-between gap-3 px-3 py-2 border-b border-indigo-500/10 last:border-b-0 cursor-pointer hover:bg-[#0f0e24]"
+                      >
+                        <div className="min-w-0">
+                          <div className="text-sm text-white truncate">{s.full_name || 'Telebe'}</div>
+                          <div className="text-[11px] text-gray-500 truncate">{s.phone || ''}</div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          {wasAssigned ? (
+                            <span className="text-[10px] text-gray-400">Təyin</span>
+                          ) : (
+                            <span className="text-[10px] text-emerald-300">Yeni</span>
+                          )}
+                          <input
+                            type="checkbox"
+                            className="w-4 h-4 accent-blue-500"
+                            checked={checked}
+                            onChange={(e) => toggleStudent(sid, e.target.checked)}
+                          />
+                        </div>
+                      </label>
+                    )
+                  })
+                )}
+              </div>
+            </div>
+
             <div className="flex gap-3">
               <Button onClick={saveEdit} loading={loading} className="flex-1 justify-center">Yadda Saxla</Button>
               <Button variant="secondary" onClick={() => setEditModal(false)} className="flex-1 justify-center">Legv et</Button>

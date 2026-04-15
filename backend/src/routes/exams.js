@@ -8,6 +8,8 @@ const {
   softDeleteExam,
   hardDeleteExam,
   bulkHardDeleteExams,
+  getExamAssignments,
+  patchExam,
   instructorStudentExamProgress,
   studentExams,
   getStudentExamReview,
@@ -19,9 +21,6 @@ const {
   regradeExamResults,
 } = require('../controllers/examController');
 const { authenticate, authorize } = require('../middleware/auth');
-const db = require('../utils/db');
-const { normalizeExamStartTime } = require('../utils/examTime');
-const { syncExamReminderJob } = require('../services/examService');
 
 const uploadsExamsDir = path.join(__dirname, '../../uploads/exams');
 const storage = multer.diskStorage({
@@ -63,6 +62,7 @@ router.get('/', authenticate, authorize('instructor', 'admin'), listExams);
 router.get('/student-progress', authenticate, authorize('instructor', 'admin'), instructorStudentExamProgress);
 router.get('/my', authenticate, authorize('student'), studentExams);
 router.post('/bulk-delete', authenticate, authorize('instructor', 'admin'), bulkHardDeleteExams);
+router.get('/:id/assignments', authenticate, authorize('instructor', 'admin'), getExamAssignments);
 router.get('/:id/review', authenticate, getStudentExamReview);
 router.get('/:id/questions', authenticate, getExamQuestions);
 router.post('/submit', authenticate, authorize('student'), submitExam);
@@ -73,40 +73,9 @@ router.post('/:id/regrade', authenticate, authorize('instructor', 'admin'), regr
 // DELETE default: hard delete (full cleanup). Soft delete is available separately.
 router.delete('/:id', authenticate, authorize('instructor', 'admin'), hardDeleteExam);
 router.delete('/:id/soft', authenticate, authorize('instructor', 'admin'), softDeleteExam);
- 
-// Imtahani edit et
-router.patch('/:id', authenticate, authorize('instructor', 'admin'), async (req, res) => {
-  try {
-    const { title, subject, topic, start_time, duration_minutes, notify_students, show_results } = req.body;
-    const startNorm = start_time != null && start_time !== '' ? normalizeExamStartTime(start_time) : null;
-    const ns = notify_students !== undefined && notify_students !== '' ? notify_students : null;
-    const { rows } = await db.query(
-      `UPDATE exams SET
-        title = COALESCE($1, title),
-        subject = COALESCE($2, subject),
-        topic = COALESCE($3, topic),
-        start_time = COALESCE($4, start_time),
-        duration_minutes = COALESCE($5, duration_minutes),
-        notify_students = COALESCE($6, notify_students),
-        notify_enabled = CASE WHEN $6::text IS NOT NULL THEN $6::boolean ELSE notify_enabled END,
-        show_results = COALESCE($7, show_results),
-        updated_at = NOW()
-      WHERE id = $8 AND instructor_id = $9
-      RETURNING *`,
-      [title, subject, topic, startNorm, duration_minutes, ns, show_results, req.params.id, req.user.id]
-    );
-    if (!rows[0]) return res.status(404).json({ success: false, message: 'Imtahan tapilmadi' });
-    res.json({ success: true, exam: rows[0] });
-    if (ns !== null || startNorm != null) {
-      setImmediate(() => {
-        syncExamReminderJob(req.params.id).catch((e) => console.error('syncExamReminderJob', e.message));
-      });
-    }
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-});
- 
+
+router.patch('/:id', authenticate, authorize('instructor', 'admin'), patchExam);
+
 module.exports = router;
  
 
