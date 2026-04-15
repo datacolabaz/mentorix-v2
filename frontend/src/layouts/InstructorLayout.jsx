@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
 import useAuthStore from '../hooks/useAuth'
 import useUiStore from '../hooks/useUi'
+import api from '../lib/api'
 
 const NAV = [
   { to: '/instructor', label: 'Dashboard', icon: '📊', end: true },
@@ -22,6 +23,7 @@ export default function InstructorLayout() {
   const location = useLocation()
   const [navOpen, setNavOpen] = useState(false)
   const { focusMode, setFocusMode } = useUiStore()
+  const [limitStatus, setLimitStatus] = useState({ level: null, message: null })
 
   useEffect(() => {
     setNavOpen(false)
@@ -30,6 +32,27 @@ export default function InstructorLayout() {
   useEffect(() => {
     if (focusMode) setNavOpen(false)
   }, [focusMode])
+
+  useEffect(() => {
+    let cancelled = false
+    api
+      .get('/notifications/instructor')
+      .then((d) => {
+        if (cancelled) return
+        const alerts = d.alerts || []
+        const critical = alerts.find((a) => a.level === 'critical')
+        const warning = alerts.find((a) => a.level === 'warning')
+        if (critical) setLimitStatus({ level: 'critical', message: critical.message })
+        else if (warning) setLimitStatus({ level: 'warning', message: warning.message })
+        else setLimitStatus({ level: null, message: null })
+      })
+      .catch(() => {
+        if (!cancelled) setLimitStatus({ level: null, message: null })
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   return (
     <div className="flex h-screen bg-[#0f0c29] text-white overflow-hidden">
@@ -116,7 +139,16 @@ export default function InstructorLayout() {
                     : 'text-gray-400 hover:bg-white/5 hover:text-white'
                 }`}
             >
-              <span className="shrink-0">{item.icon}</span>
+              <span className="shrink-0 relative">
+                {item.icon}
+                {item.to === '/instructor/notifications' && limitStatus.level ? (
+                  <span
+                    className={`absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full ${
+                      limitStatus.level === 'critical' ? 'bg-red-500' : 'bg-yellow-500'
+                    }`}
+                  />
+                ) : null}
+              </span>
               <span className="truncate">{item.label}</span>
             </NavLink>
           ))}
@@ -137,6 +169,31 @@ export default function InstructorLayout() {
       </aside>
 
       <main className="flex-1 overflow-y-auto min-w-0 pt-[52px] lg:pt-0">
+        {limitStatus.level ? (
+          <div
+            className={`mx-4 sm:mx-6 mt-4 rounded-2xl border px-4 py-3 text-sm ${
+              limitStatus.level === 'critical'
+                ? 'border-red-500/40 bg-red-500/10 text-red-200'
+                : 'border-yellow-500/40 bg-yellow-500/10 text-yellow-200'
+            }`}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="font-semibold">
+                  {limitStatus.level === 'critical' ? 'Limit dolub' : 'Diqqət'}
+                </div>
+                <div className="text-white/80 break-words">{limitStatus.message}</div>
+              </div>
+              <button
+                onClick={() => setLimitStatus({ level: null, message: null })}
+                className="shrink-0 text-white/70 hover:text-white transition-colors"
+                aria-label="Bağla"
+              >
+                ×
+              </button>
+            </div>
+          </div>
+        ) : null}
         <Outlet />
       </main>
     </div>

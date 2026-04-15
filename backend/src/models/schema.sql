@@ -25,6 +25,8 @@ CREATE TABLE instructor_profiles (
   storage_limit_mb INTEGER DEFAULT 1024,
   storage_used_mb INTEGER DEFAULT 0,
   ram_limit_mb INTEGER DEFAULT 512,
+  ram_used_mb INTEGER DEFAULT 0,
+  usage_synced_at TIMESTAMPTZ,
   max_concurrent_students INTEGER DEFAULT 30,
   alert_lessons_before INTEGER DEFAULT 2
 );

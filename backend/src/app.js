@@ -6,6 +6,7 @@ const express = require('express');
 const cors = require('cors');
 const errorHandler = require('./middleware/errorHandler');
 const { processExamNotificationJobs } = require('./services/examService');
+const { recomputeAllInstructorsUsage } = require('./services/resourceUsageService');
 
 const uploadsExamsDir = path.join(__dirname, '../uploads/exams');
 fs.mkdirSync(uploadsExamsDir, { recursive: true });
@@ -39,10 +40,16 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 Mentorix API running on port ${PORT}`);
   processExamNotificationJobs().catch((e) => console.error('exam notification jobs (startup)', e.message));
+  recomputeAllInstructorsUsage().catch((e) => console.error('usage sync (startup)', e.message));
 });
 
 cron.schedule('* * * * *', () => {
   processExamNotificationJobs().catch((e) => console.error('exam notification cron', e.message));
+});
+
+// Recompute instructor usage periodically (storage_used_mb + usage_synced_at)
+cron.schedule('*/10 * * * *', () => {
+  recomputeAllInstructorsUsage().catch((e) => console.error('usage sync cron', e.message));
 });
 
 module.exports = app;

@@ -9,6 +9,7 @@ const LEVEL = {
 
 export default function InstructorNotifications() {
   const [alerts, setAlerts] = useState([])
+  const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -16,10 +17,16 @@ export default function InstructorNotifications() {
     api
       .get('/notifications/instructor')
       .then((d) => {
-        if (!cancelled) setAlerts(d.alerts || [])
+        if (!cancelled) {
+          setAlerts(d.alerts || [])
+          setProfile(d.profile || null)
+        }
       })
       .catch(() => {
-        if (!cancelled) setAlerts([])
+        if (!cancelled) {
+          setAlerts([])
+          setProfile(null)
+        }
       })
       .finally(() => {
         if (!cancelled) setLoading(false)
@@ -47,6 +54,51 @@ export default function InstructorNotifications() {
           <p className="text-gray-400 text-sm mt-2 px-2">
             Limitləriniz 80%-dən çox dolmayıb
           </p>
+          {profile ? (
+            <div className="mt-6 text-left space-y-5">
+              <div>
+                <div className="flex items-center justify-between text-sm text-gray-300">
+                  <span>SMS</span>
+                  <span className="text-gray-400">{profile.sms_used}/{profile.sms_limit}</span>
+                </div>
+                <div className="h-2.5 rounded-full bg-white/10 overflow-hidden mt-2">
+                  <div
+                    className={`h-full ${profile.sms_percent >= 100 ? 'bg-red-500' : profile.sms_percent >= 80 ? 'bg-yellow-500' : 'bg-emerald-500'}`}
+                    style={{ width: `${Math.min(100, Number(profile.sms_percent || 0))}%` }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between text-sm text-gray-300">
+                  <span>Storage</span>
+                  <span className="text-gray-400">{profile.storage_used_mb}/{profile.storage_limit_mb} MB</span>
+                </div>
+                <div className="h-2.5 rounded-full bg-white/10 overflow-hidden mt-2">
+                  <div
+                    className={`h-full ${profile.storage_percent >= 100 ? 'bg-red-500' : profile.storage_percent >= 80 ? 'bg-yellow-500' : 'bg-emerald-500'}`}
+                    style={{ width: `${Math.min(100, Number(profile.storage_percent || 0))}%` }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between text-sm text-gray-300">
+                  <span>RAM</span>
+                  <span className="text-gray-400">{profile.ram_used_mb}/{profile.ram_limit_mb} MB</span>
+                </div>
+                <div className="h-2.5 rounded-full bg-white/10 overflow-hidden mt-2">
+                  <div
+                    className={`h-full ${profile.ram_percent >= 100 ? 'bg-red-500' : profile.ram_percent >= 80 ? 'bg-yellow-500' : 'bg-emerald-500'}`}
+                    style={{ width: `${Math.min(100, Number(profile.ram_percent || 0))}%` }}
+                  />
+                </div>
+                <div className="text-xs text-gray-500 mt-2">
+                  Son yenilənmə: {profile.usage_synced_at ? new Date(profile.usage_synced_at).toLocaleString() : '—'}
+                </div>
+              </div>
+            </div>
+          ) : null}
         </Card>
       ) : (
         <div className="space-y-4 max-w-2xl">
@@ -59,7 +111,9 @@ export default function InstructorNotifications() {
                     {alert.level === 'critical' ? 'Kritik' : 'Xəbərdarlıq'}
                   </span>
                   <p className="text-gray-300 text-sm break-words">{alert.message}</p>
-                  <p className="text-gray-500 text-xs mt-1">{alert.type === 'sms' ? '📱 SMS' : '💾 Storage'}</p>
+                  <p className="text-gray-500 text-xs mt-1">
+                    {alert.type === 'sms' ? '📱 SMS' : alert.type === 'ram' ? '🧠 RAM' : '💾 Storage'}
+                  </p>
                 </div>
               </div>
             </div>

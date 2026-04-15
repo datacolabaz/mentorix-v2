@@ -21,6 +21,7 @@ const {
   regradeExamResults,
 } = require('../controllers/examController');
 const { authenticate, authorize } = require('../middleware/auth');
+const { enforceStorageLimitAfterUpload } = require('../middleware/storageLimit');
 
 const uploadsExamsDir = path.join(__dirname, '../../uploads/exams');
 const storage = multer.diskStorage({
@@ -50,6 +51,7 @@ router.post(
       next();
     });
   },
+  enforceStorageLimitAfterUpload,
   (req, res) => {
     if (!req.file) return res.status(400).json({ success: false, message: 'Fayl tələb olunur' });
     const rel = `/api/uploads/exams/${req.file.filename}`;

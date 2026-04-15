@@ -3,6 +3,7 @@ const path = require('path');
 const crypto = require('crypto');
 const multer = require('multer');
 const { authenticate, authorize } = require('../middleware/auth');
+const { enforceStorageLimitAfterUpload } = require('../middleware/storageLimit');
 const {
   listInstructorTasks,
   createInstructorTask,
@@ -101,6 +102,7 @@ router.post(
       next();
     });
   },
+  enforceStorageLimitAfterUpload,
   (req, res) => {
     if (!req.file) return res.status(400).json({ success: false, message: 'Fayl tələb olunur' });
     const rel = `/api/uploads/assignments/${req.file.filename}`;
