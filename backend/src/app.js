@@ -40,16 +40,4 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 Mentorix API running on port ${PORT}`);
   processExamNotificationJobs().catch((e) => console.error('exam notification jobs (startup)', e.message));
-  recomputeAllInstructorsUsage().catch((e) => console.error('usage sync (startup)', e.message));
-});
-
-cron.schedule('* * * * *', () => {
-  processExamNotificationJobs().catch((e) => console.error('exam notification cron', e.message));
-});
-
-// Recompute instructor usage periodically (storage_used_mb + usage_synced_at)
-cron.schedule('*/10 * * * *', () => {
-  recomputeAllInstructorsUsage().catch((e) => console.error('usage sync cron', e.message));
-});
-
-module.exports = app;
+  recomputeAllInstructorsUsage().catch((e) => console.error('usage sync (startup

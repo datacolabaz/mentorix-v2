@@ -105,10 +105,4 @@ router.post(
   enforceStorageLimitAfterUpload,
   (req, res) => {
     if (!req.file) return res.status(400).json({ success: false, message: 'Fayl tələb olunur' });
-    const rel = `/api/uploads/assignments/${req.file.filename}`;
-    res.json({ success: true, url: rel, filename: req.file.originalname });
-  }
-);
-
-module.exports = router;
-
+    const rel = `/api/uploads/assignments/${req.file.filena

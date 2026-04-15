@@ -76,46 +76,4 @@ router.post('/:id/regrade', authenticate, authorize('instructor', 'admin'), regr
 router.delete('/:id', authenticate, authorize('instructor', 'admin'), hardDeleteExam);
 router.delete('/:id/soft', authenticate, authorize('instructor', 'admin'), softDeleteExam);
 
-router.patch('/:id', authenticate, authorize('instructor', 'admin'), patchExam);
-
-module.exports = router;
- 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+router.patch('/:id', authenticat

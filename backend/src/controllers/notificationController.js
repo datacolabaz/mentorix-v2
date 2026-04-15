@@ -1,4 +1,5 @@
 const db = require('../utils/db');
+const { recomputeInstructorUsage } = require('../services/resourceUsageService');
 
 const getAdminNotifications = async (req, res) => {
   try {
@@ -49,12 +50,16 @@ const getAdminNotifications = async (req, res) => {
 
 const getInstructorNotifications = async (req, res) => {
   try {
+    // Sync usage on each refresh for real-time display.
+    await recomputeInstructorUsage(req.user.id, { persist: true });
+
     const { rows } = await db.query(
-      `SELECT ip.sms_limit, ip.sms_used, ip.storage_limit_mb, ip.storage_used_mb,
+      `SELECT ip.sms_limit, ip.sms_used,
+              ip.storage_limit_mb, ip.storage_used_mb, COALESCE(ip.storage_used_bytes,0) AS storage_used_bytes,
               ip.ram_limit_mb, COALESCE(ip.ram_used_mb, 0) AS ram_used_mb,
               ip.usage_synced_at,
               ROUND((ip.sms_used::float / NULLIF(ip.sms_limit,0)) * 100) AS sms_percent,
-              ROUND((ip.storage_used_mb::float / NULLIF(ip.storage_limit_mb,0)) * 100) AS storage_percent,
+              ROUND(((COALESCE(ip.storage_used_bytes,0)::numeric / NULLIF(ip.storage_limit_mb,0)) / 1048576) * 100, 1) AS storage_percent,
               ROUND((COALESCE(ip.ram_used_mb,0)::float / NULLIF(ip.ram_limit_mb,0)) * 100) AS ram_percent
        FROM instructor_profiles ip WHERE ip.user_id = $1`,
       [req.user.id]

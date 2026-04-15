@@ -7,10 +7,20 @@ const LEVEL = {
   warning: { cls: 'border-yellow-500/40 bg-yellow-500/10', badge: 'bg-yellow-500/20 text-yellow-400', icon: '🟡' },
 }
 
+function formatStorageUsed(usedBytes) {
+  const b = Number(usedBytes) || 0
+  if (b <= 0) return '0 KB'
+  const kb = b / 1024
+  if (kb < 1024) return `${Math.round(kb)} KB`
+  const mb = b / (1024 * 1024)
+  return `${mb.toFixed(1)} MB`
+}
+
 export default function InstructorNotifications() {
   const [alerts, setAlerts] = useState([])
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [fetchedAt, setFetchedAt] = useState(null)
 
   useEffect(() => {
     let cancelled = false
@@ -20,12 +30,14 @@ export default function InstructorNotifications() {
         if (!cancelled) {
           setAlerts(d.alerts || [])
           setProfile(d.profile || null)
+          setFetchedAt(new Date())
         }
       })
       .catch(() => {
         if (!cancelled) {
           setAlerts([])
           setProfile(null)
+          setFetchedAt(new Date())
         }
       })
       .finally(() => {
@@ -72,7 +84,9 @@ export default function InstructorNotifications() {
               <div>
                 <div className="flex items-center justify-between text-sm text-gray-300">
                   <span>Storage</span>
-                  <span className="text-gray-400">{profile.storage_used_mb}/{profile.storage_limit_mb} MB</span>
+                  <span className="text-gray-400">
+                    {formatStorageUsed(profile.storage_used_bytes)} / {profile.storage_limit_mb} MB
+                  </span>
                 </div>
                 <div className="h-2.5 rounded-full bg-white/10 overflow-hidden mt-2">
                   <div
@@ -94,7 +108,8 @@ export default function InstructorNotifications() {
                   />
                 </div>
                 <div className="text-xs text-gray-500 mt-2">
-                  Son yenilənmə: {profile.usage_synced_at ? new Date(profile.usage_synced_at).toLocaleString() : '—'}
+                  Son sync: {profile.usage_synced_at ? new Date(profile.usage_synced_at).toLocaleString() : '—'}
+                  {fetchedAt ? ` · Səhifə: ${fetchedAt.toLocaleString()}` : ''}
                 </div>
               </div>
             </div>

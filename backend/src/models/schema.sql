@@ -24,6 +24,7 @@ CREATE TABLE instructor_profiles (
   sms_used INTEGER DEFAULT 0,
   storage_limit_mb INTEGER DEFAULT 1024,
   storage_used_mb INTEGER DEFAULT 0,
+  storage_used_bytes BIGINT DEFAULT 0,
   ram_limit_mb INTEGER DEFAULT 512,
   ram_used_mb INTEGER DEFAULT 0,
   usage_synced_at TIMESTAMPTZ,

@@ -24,6 +24,7 @@ async function enforceStorageLimitAfterUpload(req, res, next) {
     const limitMb = Number(p.storage_limit_mb) || 0;
     const usedMb = Number(p.storage_used_mb) || 0;
     const addMb = bytesToMbInt(req.file.size || 0);
+    const addBytes = Number(req.file.size) || 0;
 
     // If limit is 0 or null-ish, treat as unlimited (safety default).
     if (limitMb > 0 && usedMb + addMb > limitMb) {
@@ -39,9 +40,10 @@ async function enforceStorageLimitAfterUpload(req, res, next) {
       await db.query(
         `UPDATE instructor_profiles
          SET storage_used_mb = storage_used_mb + $2,
+             storage_used_bytes = COALESCE(storage_used_bytes,0) + $3,
              usage_synced_at = NOW()
          WHERE user_id = $1`,
-        [req.user.id, addMb],
+        [req.user.id, addMb, addBytes],
       );
     }
 

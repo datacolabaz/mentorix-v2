@@ -7,6 +7,11 @@ function bytesToMbInt(bytes) {
   return Math.max(0, Math.round(bytes / (1024 * 1024)));
 }
 
+function clampInt(n, min, max) {
+  const x = Number.isFinite(n) ? Math.round(n) : 0;
+  return Math.max(min, Math.min(max, x));
+}
+
 function safeStatSize(absPath) {
   try {
     const st = fs.statSync(absPath);
@@ -40,7 +45,7 @@ function sumUrlsBytes(urls) {
  */
 async function recomputeInstructorStorageUsageMb(instructorId, opts = {}) {
   const { persist = true } = opts;
-  if (!instructorId) return { storage_used_mb: 0 };
+  if (!instructorId) return { storage_used_mb: 0, storage_used_bytes: 0 };
 
   // Exams (pdf_url + exam_files jsonb)
   const { rows: examRows } = await db.query(
@@ -78,20 +83,83 @@ async function recomputeInstructorStorageUsageMb(instructorId, opts = {}) {
     await db.query(
       `UPDATE instructor_profiles
        SET storage_used_mb = $2,
+           storage_used_bytes = $3,
            usage_synced_at = NOW()
        WHERE user_id = $1`,
-      [instructorId, storage_used_mb],
+      [instructorId, storage_used_mb, totalBytes],
     );
   }
 
-  return { storage_used_mb };
+  return { storage_used_mb, storage_used_bytes: totalBytes };
+}
+
+async function recomputeInstructorRamUsedMb(instructorId, opts = {}) {
+  const { persist = true } = opts;
+  if (!instructorId) return { ram_used_mb: 0 };
+
+  // Simulated model:
+  // - base: 80MB
+  // - +10MB per currently running exam (now between start_time and end_time)
+  // - +5MB per active student session (exam_results started within last 30 minutes and not submitted)
+  const { rows } = await db.query(
+    `SELECT
+        COALESCE(ip.ram_limit_mb, 512) AS ram_limit_mb,
+        (
+          SELECT COUNT(*)::int
+          FROM exams e
+          WHERE e.instructor_id = ip.user_id
+            AND e.start_time IS NOT NULL
+            AND NOW() >= e.start_time
+            AND NOW() < (e.start_time + (e.duration_minutes || ' minutes')::interval)
+        ) AS open_exams,
+        (
+          SELECT COUNT(DISTINCT er.student_id)::int
+          FROM exam_results er
+          JOIN exams e2 ON e2.id = er.exam_id
+          WHERE e2.instructor_id = ip.user_id
+            AND er.started_at IS NOT NULL
+            AND er.submitted_at IS NULL
+            AND er.started_at > (NOW() - interval '30 minutes')
+        ) AS active_sessions
+     FROM instructor_profiles ip
+     WHERE ip.user_id = $1`,
+    [instructorId],
+  );
+
+  const r = rows[0];
+  if (!r) return { ram_used_mb: 0 };
+  const base = 80;
+  const openExams = Number(r.open_exams) || 0;
+  const activeSessions = Number(r.active_sessions) || 0;
+  const limit = Number(r.ram_limit_mb) || 512;
+
+  const raw = base + openExams * 10 + activeSessions * 5;
+  const ram_used_mb = clampInt(raw, 0, Math.max(0, limit));
+
+  if (persist) {
+    await db.query(
+      `UPDATE instructor_profiles
+       SET ram_used_mb = $2,
+           usage_synced_at = NOW()
+       WHERE user_id = $1`,
+      [instructorId, ram_used_mb],
+    );
+  }
+
+  return { ram_used_mb };
+}
+
+async function recomputeInstructorUsage(instructorId, opts = {}) {
+  const storage = await recomputeInstructorStorageUsageMb(instructorId, opts);
+  const ram = await recomputeInstructorRamUsedMb(instructorId, opts);
+  return { ...storage, ...ram };
 }
 
 async function recomputeAllInstructorsUsage(opts = {}) {
   const { rows } = await db.query('SELECT user_id FROM instructor_profiles');
   const out = { updated: 0 };
   for (const r of rows) {
-    await recomputeInstructorStorageUsageMb(r.user_id, opts);
+    await recomputeInstructorUsage(r.user_id, opts);
     out.updated += 1;
   }
   return out;
@@ -100,6 +168,8 @@ async function recomputeAllInstructorsUsage(opts = {}) {
 module.exports = {
   bytesToMbInt,
   recomputeInstructorStorageUsageMb,
+  recomputeInstructorRamUsedMb,
+  recomputeInstructorUsage,
   recomputeAllInstructorsUsage,
 };
 
