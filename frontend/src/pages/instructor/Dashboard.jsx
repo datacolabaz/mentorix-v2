@@ -2,7 +2,10 @@ import { useEffect, useState } from 'react'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import api from '../../lib/api'
 import Card from '../../components/common/Card'
+import Modal from '../../components/common/Modal'
+import Button from '../../components/common/Button'
 import useAuthStore from '../../hooks/useAuth'
+import { useToast } from '../../components/common/Toast'
 
 const StatCard = ({ label, value, icon, color }) => (
   <Card className="p-5">
@@ -22,6 +25,16 @@ export default function InstructorDashboard() {
   const [examStats, setExamStats] = useState([])
   const [dash, setDash] = useState({ lessons_this_month: 0, income_this_month: 0 })
   const [loading, setLoading] = useState(true)
+  const toast = useToast()
+
+  // Quick notification module
+  const [quickOpen, setQuickOpen] = useState(false)
+  const [quickMessage, setQuickMessage] = useState('')
+  const [quickSelectedIds, setQuickSelectedIds] = useState([])
+  const [quickMethod, setQuickMethod] = useState('internal') // internal | sms
+  const [quickBusy, setQuickBusy] = useState(false)
+  const [smsProfile, setSmsProfile] = useState(null)
+  const [smsProfileLoading, setSmsProfileLoading] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -44,6 +57,70 @@ export default function InstructorDashboard() {
       cancelled = true
     }
   }, [])
+
+  useEffect(() => {
+    if (!quickOpen) return
+    if (smsProfileLoading) return
+    if (smsProfile) return
+
+    setSmsProfileLoading(true)
+    api
+      .get('/notifications/instructor')
+      .then((d) => setSmsProfile(d.profile || null))
+      .catch(() => setSmsProfile(null))
+      .finally(() => setSmsProfileLoading(false))
+  }, [quickOpen, smsProfile, smsProfileLoading])
+
+  const smsLimit = Number(smsProfile?.sms_limit ?? 0)
+  const smsUsed = Number(smsProfile?.sms_used ?? 0)
+  const smsDisabled = smsLimit <= 0 || smsUsed >= smsLimit
+
+  function toggleSelected(id) {
+    setQuickSelectedIds((prev) => {
+      const s = new Set(prev)
+      const key = String(id)
+      if (s.has(key)) s.delete(key)
+      else s.add(key)
+      return [...s]
+    })
+  }
+
+  function openQuick() {
+    setQuickOpen(true)
+    setQuickMessage('')
+    setQuickSelectedIds([])
+    setQuickMethod('internal')
+    // smsProfile is fetched by effect (only once)
+  }
+
+  async function submitQuickNotification() {
+    const msg = String(quickMessage ?? '').trim()
+    if (!msg) return toast('Mesaj tələb olunur', 'error')
+    if (!quickSelectedIds.length) return toast('Tələbələr seçilməlidir', 'error')
+
+    if (quickMethod === 'sms' && smsDisabled) {
+      return toast('Limitiniz bitib, artırmaq üçün adminlə əlaqə saxlayın', 'error')
+    }
+
+    setQuickBusy(true)
+    try {
+      const payload = {
+        message: msg,
+        student_ids: quickSelectedIds,
+        method: quickMethod,
+      }
+      await api.post('/notifications/quick', payload)
+      toast('Bildiriş göndərildi', 'success')
+      setQuickOpen(false)
+      setQuickMessage('')
+      setQuickSelectedIds([])
+      // keep smsProfile; next opening will use same cached value
+    } catch (err) {
+      toast(err?.message || 'Göndərilmədi', 'error')
+    } finally {
+      setQuickBusy(false)
+    }
+  }
 
   const examById = Object.fromEntries(
     examStats.map((r) => [String(r.student_id), r])
@@ -80,10 +157,20 @@ export default function InstructorDashboard() {
   return (
     <div className="p-4 sm:p-6 min-w-0">
       <div className="mb-6">
-        <h1 className="font-display font-bold text-xl sm:text-2xl break-words">
-          {greeting}, {user?.full_name?.split(' ')[0]}! 👋
-        </h1>
-        <p className="text-gray-400 text-sm mt-1">Bugünün xülasəsi</p>
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+          <div>
+            <h1 className="font-display font-bold text-xl sm:text-2xl break-words">
+              {greeting}, {user?.full_name?.split(' ')[0]}! 👋
+            </h1>
+            <p className="text-gray-400 text-sm mt-1">Bugünün xülasəsi</p>
+          </div>
+
+          <div className="sm:shrink-0">
+            <Button variant="secondary" size="sm" onClick={openQuick}>
+              Sürətli Bildiriş
+            </Button>
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4 mb-6">
@@ -147,6 +234,113 @@ export default function InstructorDashboard() {
           </div>
         </Card>
       </div>
+
+      <Modal open={quickOpen} onClose={() => setQuickOpen(false)} title="Sürətli Bildiriş" size="xl">
+        <div className="space-y-5">
+          <div>
+            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+              Mesaj
+            </label>
+            <textarea
+              value={quickMessage}
+              onChange={(e) => setQuickMessage(e.target.value)}
+              rows={3}
+              className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-blue-500"
+              placeholder="Dərs saatı 15:00-a dəyişdirildi"
+            />
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between gap-2">
+              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                Tələbələr
+              </label>
+              <div className="text-xs text-gray-500">
+                Seçilən: <span className="text-white/80 font-semibold">{quickSelectedIds.length}</span>
+              </div>
+            </div>
+
+            <div className="max-h-56 overflow-y-auto pr-2">
+              {students.length ? (
+                <div className="space-y-2">
+                  {students.map((s) => (
+                    <label
+                      key={s.id}
+                      className="flex items-center gap-3 px-3 py-2 rounded-xl border border-indigo-500/10 hover:border-indigo-500/20 transition-all"
+                    >
+                      <input type="checkbox" checked={quickSelectedIds.includes(String(s.id))} onChange={() => toggleSelected(s.id)} />
+                      <div className="min-w-0">
+                        <div className="text-sm font-semibold truncate">{s.full_name}</div>
+                        <div className="text-xs text-gray-500">{s.grade ? `Sinif: ${s.grade}` : '—'}</div>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center text-gray-500 py-6">Tələbələr yüklənməyib</div>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Göndərmə metodu</div>
+
+            <div className="space-y-3">
+              <label className="flex items-center justify-between gap-3 px-3 py-2 rounded-xl border border-indigo-500/10 bg-white/0">
+                <div className="flex items-center gap-3 min-w-0">
+                  <input
+                    type="radio"
+                    value="internal"
+                    checked={quickMethod === 'internal'}
+                    onChange={() => setQuickMethod('internal')}
+                  />
+                  <div className="min-w-0">
+                    <div className="text-sm font-semibold text-white/90">Yalnız Panel Daxili</div>
+                    <div className="text-xs text-gray-500">Pulsuz</div>
+                  </div>
+                </div>
+              </label>
+
+              <label
+                className={`flex items-center justify-between gap-3 px-3 py-2 rounded-xl border border-indigo-500/10 ${
+                  smsDisabled ? 'opacity-60' : ''
+                }`}
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <input
+                    type="radio"
+                    value="sms"
+                    checked={quickMethod === 'sms'}
+                    disabled={smsDisabled}
+                    onChange={() => setQuickMethod('sms')}
+                  />
+                  <div className="min-w-0">
+                    <div className="text-sm font-semibold text-white/90">SMS olaraq göndər</div>
+                    {smsDisabled ? (
+                      <div className="text-xs text-amber-300">
+                        Limitiniz bitib, artırmaq üçün adminlə əlaqə saxlayın
+                      </div>
+                    ) : (
+                      <div className="text-xs text-gray-500">
+                        Qalıq: <span className="text-white/80 font-semibold">{Math.max(0, smsLimit - smsUsed)}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-3 pt-2">
+            <Button variant="ghost" onClick={() => setQuickOpen(false)} disabled={quickBusy}>
+              Ləğv et
+            </Button>
+            <Button variant="primary" loading={quickBusy} disabled={quickSelectedIds.length === 0 || !quickMessage.trim()}>
+              Göndər
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }

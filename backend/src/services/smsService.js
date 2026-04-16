@@ -81,4 +81,4 @@ const sendOtpSms = async (phone, code) => {
   return sendRaw(phone, message);
 };
 
-module.exports = { sendSms, sendOtpSms };
+module.exports = { sendSms, sendOtpSms, sendRawSms: sendRaw };

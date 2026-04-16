@@ -10,6 +10,7 @@ const NAV = [
   { to: '/student/exams', label: 'İmtahanlarım', icon: '📝' },
   { to: '/student/assignments', label: 'Tapşırıqlarım', icon: '📋' },
   { to: '/student/payments', label: 'Ödəniş', icon: '💳' },
+  { to: '/student/notifications', label: 'Bildirişlər', icon: '🔔' },
 ]
 
 export default function StudentLayout() {

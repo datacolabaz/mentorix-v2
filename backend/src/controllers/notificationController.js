@@ -1,5 +1,6 @@
 const db = require('../utils/db');
 const { recomputeInstructorUsage } = require('../services/resourceUsageService');
+const { sendRawSms } = require('../services/smsService');
 
 const getAdminNotifications = async (req, res) => {
   try {
@@ -91,4 +92,148 @@ const getInstructorNotifications = async (req, res) => {
   }
 };
 
-module.exports = { getAdminNotifications, getInstructorNotifications };
+const getStudentNotifications = async (req, res) => {
+  try {
+    const { rows } = await db.query(
+      `SELECT id, title, body, type, is_read, created_at
+       FROM notifications
+       WHERE user_id = $1
+       ORDER BY created_at DESC
+       LIMIT 50`,
+      [req.user.id],
+    );
+    res.json({ success: true, notifications: rows });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+function normalizeIds(arr) {
+  const out = new Set();
+  if (!Array.isArray(arr)) return [];
+  for (const x of arr) {
+    const s = String(x ?? '').trim();
+    if (s) out.add(s);
+  }
+  return [...out];
+}
+
+const quickInstructorNotification = async (req, res) => {
+  try {
+    const instructorId = req.user.id;
+    const { message, student_ids, method } = req.body || {};
+
+    const msg = String(message ?? '').trim();
+    if (!msg) return res.status(400).json({ success: false, message: 'Mesaj tələb olunur' });
+
+    const ids = normalizeIds(student_ids);
+    if (!ids.length) return res.status(400).json({ success: false, message: 'Tələbələr seçilməlidir' });
+
+    const allowedStudentsRes = await db.query(
+      `SELECT u.id, u.phone
+       FROM users u
+       JOIN enrollments e ON e.student_id = u.id
+       WHERE e.instructor_id = $1
+         AND e.status = 'active'
+         AND u.role = 'student'
+         AND u.is_active = TRUE
+         AND u.id = ANY($2::uuid[])`,
+      [instructorId, ids],
+    );
+    const allowedStudents = allowedStudentsRes.rows || [];
+    const allowedIds = allowedStudents.map((r) => r.id);
+
+    if (allowedIds.length !== ids.length) {
+      return res.status(400).json({
+        success: false,
+        message: 'Bəzi tələbələr seçdiyiniz siyahıda yoxdur və ya icazəniz yoxdur',
+      });
+    }
+
+    const safeMethod = method === 'sms' ? 'sms' : 'internal';
+    const title = 'Sürətli Bildiriş';
+
+    if (safeMethod === 'internal') {
+      await db.query(
+        `INSERT INTO notifications (user_id, title, body, type, is_read)
+         SELECT unnest($1::uuid[]), $2, $3, $4, FALSE`,
+        [allowedIds, title, msg, 'instructor_panel'],
+      );
+      return res.json({ success: true, method: 'internal', sent: allowedIds.length });
+    }
+
+    // SMS method
+    const { rows: profRows } = await db.query(
+      `SELECT sms_limit, sms_used
+       FROM instructor_profiles
+       WHERE user_id = $1`,
+      [instructorId],
+    );
+    const prof = profRows[0];
+    const smsLimit = Number(prof?.sms_limit ?? 0);
+    const smsUsed = Number(prof?.sms_used ?? 0);
+
+    if (!smsLimit || smsUsed >= smsLimit) {
+      return res.status(429).json({
+        success: false,
+        code: 'SMS_LIMIT_EXCEEDED',
+        message: 'Limitiniz bitib, artırmaq üçün adminlə əlaqə saxlayın',
+      });
+    }
+
+    const studentsWithPhones = allowedStudents.filter((s) => {
+      const p = String(s.phone ?? '').trim();
+      return !!p;
+    });
+    if (studentsWithPhones.length !== allowedStudents.length) {
+      return res.status(400).json({
+        success: false,
+        message: 'Bəzi tələbələr üçün telefon nömrəsi tapılmadı',
+      });
+    }
+
+    const count = studentsWithPhones.length;
+
+    // Reserve quota atomically to never exceed sms_limit in concurrent requests.
+    const { rows: updRows } = await db.query(
+      `UPDATE instructor_profiles
+       SET sms_used = sms_used + $2
+       WHERE user_id = $1
+         AND sms_used + $2 <= sms_limit
+       RETURNING sms_used`,
+      [instructorId, count],
+    );
+
+    if (!updRows.length) {
+      return res.status(429).json({
+        success: false,
+        code: 'SMS_LIMIT_EXCEEDED',
+        message: 'Limitiniz bitib, artırmaq üçün adminlə əlaqə saxlayın',
+      });
+    }
+
+    // Send SMS and write logs. sms_used is already reserved above.
+    for (const s of studentsWithPhones) {
+      const raw = await sendRawSms(s.phone, msg);
+      const statusRaw = raw?.json?.response?.status ?? raw?.json?.status ?? null;
+      const status = statusRaw != null ? String(statusRaw) : raw?.ok ? 'sent' : 'failed';
+
+      await db.query(
+        `INSERT INTO sms_logs (instructor_id, phone, message, status)
+         VALUES ($1, $2, $3, $4)`,
+        [instructorId, s.phone, msg, status || (raw?.ok ? 'sent' : 'failed')],
+      );
+    }
+
+    return res.json({ success: true, method: 'sms', sent: count });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+module.exports = {
+  getAdminNotifications,
+  getInstructorNotifications,
+  getStudentNotifications,
+  quickInstructorNotification,
+};
