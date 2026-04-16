@@ -70,7 +70,7 @@ const markAttendance = async (req, res) => {
       await sendSms({
         instructorId: enrollment.instructor_id,
         phone: targetPhone,
-        message: `Mentorix: ${enrollment.student_name} ucun ${remaining} ders qalir. Odenis etmeyi unutmayin!`,
+        message: `Edupanel: ${enrollment.student_name} ucun ${remaining} ders qalir. Odenis etmeyi unutmayin!`,
       });
     }
 
@@ -237,7 +237,7 @@ const upsertAttendanceLesson = async (req, res) => {
         await sendSms({
           instructorId: info.instructor_id,
           phone: targetPhone,
-          message: `Mentorix: ${info.student_name} üçün növbəti dərs bu paketdə sonuncu dərsdir. Zəhmət olmasa növbəti ödənişi öncədən edin.`,
+          message: `Edupanel: ${info.student_name} üçün növbəti dərs bu paketdə sonuncu dərsdir. Zəhmət olmasa növbəti ödənişi öncədən edin.`,
         });
       }
     }

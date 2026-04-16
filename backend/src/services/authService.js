@@ -106,7 +106,7 @@ async function assertSmsQuotaAllowsSend(billingInstructorId) {
 }
 
 async function deliverPinSms(cleanPhone, plainPin, billingInstructorId) {
-  const message = `Mentorix: Giris PIN kodunuz: ${plainPin}. Bu kodu hec kese demeyin.`;
+  const message = `Edupanel: Giris PIN kodunuz: ${plainPin}. Bu kodu hec kese demeyin.`;
   const result = await sendSms({
     instructorId: billingInstructorId || null,
     phone: cleanPhone,

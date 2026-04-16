@@ -1,5 +1,5 @@
 {
-  "name": "mentorix-backend",
+  "name": "edupanel-backend",
   "version": "2.0.0",
   "main": "src/app.js",
   "scripts": {

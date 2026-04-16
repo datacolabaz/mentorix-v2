@@ -3,7 +3,7 @@ const db = require('../utils/db');
 const SMS_API = 'https://sendsms.az/smxml/api';
 const SMS_LOGIN = process.env.SMS_LOGIN;
 const SMS_PASSWORD = process.env.SMS_PASSWORD;
-const SMS_TITLE = process.env.SMS_TITLE || 'Mentorix';
+const SMS_TITLE = process.env.SMS_TITLE || 'Edupanel';
 
 const normalizePhone = (phone) => String(phone ?? '').replace(/\D/g, '');
 
@@ -77,7 +77,7 @@ const sendSms = async ({ instructorId, phone, message }) => {
 };
 
 const sendOtpSms = async (phone, code) => {
-  const message = `Mentorix: ${code} kodunuz. 5 deqiqe erzinde daxil edin.`;
+  const message = `Edupanel: ${code} kodunuz. 5 deqiqe erzinde daxil edin.`;
   return sendRaw(phone, message);
 };
 

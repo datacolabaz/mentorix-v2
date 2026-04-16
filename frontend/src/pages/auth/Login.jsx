@@ -108,7 +108,7 @@ export default function Login() {
         <div className="bg-[#1a1740] border border-indigo-500/20 rounded-2xl p-8">
           <div className="text-center mb-8">
             <div className="font-display font-extrabold text-4xl bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
-              mentorix
+              Edupanel
             </div>
             <div className="text-gray-400 text-sm mt-2">Hesabınıza daxil olun</div>
           </div>
@@ -125,7 +125,7 @@ export default function Login() {
                 <input
                   className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-blue-500"
                   type="text"
-                  placeholder="+994XXXXXXXXX və ya admin@mentorix.biz"
+                  placeholder="+994XXXXXXXXX və ya admin@edupanel.co"
                   value={adminIdentifier}
                   onChange={(e) => setAdminIdentifier(e.target.value)}
                   required

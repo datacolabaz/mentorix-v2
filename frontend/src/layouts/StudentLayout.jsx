@@ -64,7 +64,7 @@ export default function StudentLayout() {
       >
         <div className="p-5 border-b border-indigo-500/20 pt-14 md:pt-5">
           <div className="font-display font-extrabold text-xl bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
-            mentorix <span className="text-gray-500 text-xs font-normal">.biz</span>
+            edupanel <span className="text-gray-500 text-xs font-normal">.co</span>
           </div>
           <div className="mt-3 p-3 bg-[#1a1740] rounded-xl border border-indigo-500/20">
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-cyan-600 flex items-center justify-center text-sm font-bold mb-2">
