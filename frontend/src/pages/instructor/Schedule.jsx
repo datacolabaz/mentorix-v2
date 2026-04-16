@@ -14,6 +14,7 @@ import {
   GRID_START,
   GRID_ROW_COUNT,
 } from '../../lib/lessonWeekGrid'
+import { readCache, writeCache } from '../../lib/cache'
 
 /** 1 = Bazar ertəsi … 7 = Bazar */
 export const WEEKDAYS = [
@@ -39,22 +40,34 @@ export default function InstructorSchedule() {
   /** @type {[PickState | LessonsState | null, (v: PickState | LessonsState | null) => void]} */
   const [cellModal, setCellModal] = useState(null)
 
-  const load = useCallback(async () => {
+  const CACHE_KEY = 'instructor_schedule_lessons_v1'
+  const CACHE_TTL_MS = 60000
+
+  const load = useCallback(async (quiet = false) => {
     setErr(null)
-    setLoading(true)
+    if (!quiet) setLoading(true)
     try {
       const dated = await api.get('/students/instructor/my-lessons')
-      setDatedLessons(Array.isArray(dated.lessons) ? dated.lessons : [])
+      const next = Array.isArray(dated.lessons) ? dated.lessons : []
+      setDatedLessons(next)
+      writeCache(CACHE_KEY, { lessons: next })
     } catch (e) {
-      setErr(e?.message || 'Yüklənmədi')
-      setDatedLessons([])
+      if (!quiet) {
+        setErr(e?.message || 'Yüklənmədi')
+        setDatedLessons([])
+      }
     } finally {
-      setLoading(false)
+      if (!quiet) setLoading(false)
     }
   }, [])
 
   useEffect(() => {
-    void load()
+    const cached = readCache(CACHE_KEY, CACHE_TTL_MS)
+    if (cached && Array.isArray(cached.lessons)) {
+      setDatedLessons(cached.lessons)
+      setLoading(false)
+    }
+    void load(true)
   }, [load])
 
   /** Eyni gün + eyni başlanğıc/bitmə: tələbələri bir xanada topla. */

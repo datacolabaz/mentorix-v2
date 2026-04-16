@@ -6,6 +6,7 @@ import Modal from '../../components/common/Modal'
 import Button from '../../components/common/Button'
 import useAuthStore from '../../hooks/useAuth'
 import { useToast } from '../../components/common/Toast'
+import { writeCache } from '../../lib/cache'
 
 const StatCard = ({ label, value, icon, color }) => (
   <Card className="p-5">
@@ -43,12 +44,18 @@ export default function InstructorDashboard() {
       api.get('/students').catch(() => ({ students: [] })),
       api.get('/exams/student-progress').catch(() => ({ stats: [] })),
       api.get('/teacher/dashboard-stats').catch(() => ({ stats: { lessons_this_month: 0, income_this_month: 0 } })),
+      api.get('/students/instructor/my-lessons').catch(() => ({ lessons: [] })),
     ])
-      .then(([studentsRes, examsRes, dashRes]) => {
+      .then(([studentsRes, examsRes, dashRes, lessonsRes]) => {
         if (cancelled) return
-        setStudents(studentsRes.students || [])
+        const nextStudents = studentsRes.students || []
+        setStudents(nextStudents)
         setExamStats(examsRes.stats || [])
         setDash(dashRes.stats || { lessons_this_month: 0, income_this_month: 0 })
+        // Pre-fetch: tələbələr və cədvəl keşi (60s TTL üçün yazılır)
+        writeCache('instructor_students_v1', { students: nextStudents })
+        const nextLessons = Array.isArray(lessonsRes.lessons) ? lessonsRes.lessons : []
+        writeCache('instructor_schedule_lessons_v1', { lessons: nextLessons })
       })
       .finally(() => {
         if (!cancelled) setLoading(false)

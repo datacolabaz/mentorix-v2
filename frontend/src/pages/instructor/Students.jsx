@@ -8,6 +8,7 @@ import ListSkeleton from '../../components/common/ListSkeleton'
 import { useToast } from '../../components/common/Toast'
 import { WEEKDAYS } from './Schedule'
 import { fmtAzBakuLessonRow } from '../../lib/lessonWeekGrid'
+import { readCache, writeCache } from '../../lib/cache'
 
 const BILLING_OPTS = [
   { value: '8_lessons', label: '8 Ders' },
@@ -302,21 +303,35 @@ export default function InstructorStudents() {
   const [enrollMeta] = useState({ loading: false, requiresScheduleSlot: false, availableSlots: [] })
   const toast = useToast()
 
-  const load = async () => {
+  const CACHE_KEY = 'instructor_students_v1'
+  const CACHE_TTL_MS = 60000
+
+  const load = async (quiet = false) => {
     setListError(null)
-    setListLoading(true)
+    if (!quiet) setListLoading(true)
     try {
       const d = await api.get('/students')
-      setStudents(d.students || [])
+      const next = d.students || []
+      setStudents(next)
+      writeCache(CACHE_KEY, { students: next })
     } catch (err) {
-      setListError(err?.message || 'Siyahı yüklənmədi')
-      setStudents([])
+      if (!quiet) {
+        setListError(err?.message || 'Siyahı yüklənmədi')
+        setStudents([])
+      }
     } finally {
-      setListLoading(false)
+      if (!quiet) setListLoading(false)
     }
   }
   useEffect(() => {
-    void load()
+    // 1) Keş varsa dərhal göstər (optimistic UI)
+    const cached = readCache(CACHE_KEY, CACHE_TTL_MS)
+    if (cached && Array.isArray(cached.students)) {
+      setStudents(cached.students)
+      setListLoading(false)
+    }
+    // 2) Arxa planda real datanı yenilə
+    void load(true)
   }, [])
 
   const addStudent = async () => {
