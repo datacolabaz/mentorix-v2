@@ -20,13 +20,29 @@ export default function InstructorDashboard() {
   const { user } = useAuthStore()
   const [students, setStudents] = useState([])
   const [examStats, setExamStats] = useState([])
+  const [dash, setDash] = useState({ lessons_this_month: 0, income_this_month: 0 })
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    api
-      .get('/students')
-      .then((d) => setStudents(d.students || []))
-      .catch(() => setStudents([]))
-    api.get('/exams/student-progress').then(d => setExamStats(d.stats || [])).catch(() => setExamStats([]))
+    let cancelled = false
+    setLoading(true)
+    Promise.all([
+      api.get('/students').catch(() => ({ students: [] })),
+      api.get('/exams/student-progress').catch(() => ({ stats: [] })),
+      api.get('/teacher/dashboard-stats').catch(() => ({ stats: { lessons_this_month: 0, income_this_month: 0 } })),
+    ])
+      .then(([studentsRes, examsRes, dashRes]) => {
+        if (cancelled) return
+        setStudents(studentsRes.students || [])
+        setExamStats(examsRes.stats || [])
+        setDash(dashRes.stats || { lessons_this_month: 0, income_this_month: 0 })
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   const examById = Object.fromEntries(
@@ -35,6 +51,8 @@ export default function InstructorDashboard() {
 
   const hrs = new Date().getHours()
   const greeting = hrs < 12 ? 'Sabahınız xeyir' : hrs < 18 ? 'Günortanız xeyir' : 'Axşamınız xeyir'
+  const moneyFmt = new Intl.NumberFormat('en-US')
+  const incomeAz = `₼ ${moneyFmt.format(Math.round(Number(dash.income_this_month || 0)))}`
 
   const rosterWithExam = students.filter((s) => examById[String(s.id)]?.exam_avg_score != null)
   const avgScore = rosterWithExam.length
@@ -69,10 +87,10 @@ export default function InstructorDashboard() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4 mb-6">
-        <StatCard label="Tələbə" value={students.length} icon="🎓" color="text-blue-400" />
-        <StatCard label="Orta imtahan balı" value={`${avgScore}%`} icon="📊" color="text-emerald-400" />
-        <StatCard label="Bu ay dərs" value="—" icon="✅" color="text-yellow-400" />
-        <StatCard label="Gəlir" value="₼0" icon="💰" color="text-cyan-400" />
+        <StatCard label="Tələbə" value={loading ? '—' : students.length} icon="🎓" color="text-blue-400" />
+        <StatCard label="Orta imtahan balı" value={loading ? '—' : `${avgScore}%`} icon="📊" color="text-emerald-400" />
+        <StatCard label="Bu ay dərs" value={loading ? '—' : Number(dash.lessons_this_month || 0)} icon="✅" color="text-yellow-400" />
+        <StatCard label="Gəlir" value={loading ? '—' : incomeAz} icon="💰" color="text-cyan-400" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 min-w-0">
