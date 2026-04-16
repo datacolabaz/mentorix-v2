@@ -349,7 +349,12 @@ export default function InstructorDashboard() {
             <Button variant="ghost" onClick={() => setQuickOpen(false)} disabled={quickBusy}>
               Ləğv et
             </Button>
-            <Button variant="primary" loading={quickBusy} disabled={quickSelectedIds.length === 0 || !quickMessage.trim()}>
+            <Button
+              variant="primary"
+              loading={quickBusy}
+              onClick={submitQuickNotification}
+              disabled={quickSelectedIds.length === 0 || !quickMessage.trim()}
+            >
               Göndər
             </Button>
           </div>
