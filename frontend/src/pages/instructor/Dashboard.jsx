@@ -109,12 +109,26 @@ export default function InstructorDashboard() {
         student_ids: quickSelectedIds,
         method: quickMethod,
       }
-      await api.post('/notifications/quick', payload)
-      toast('Bildiriş göndərildi', 'success')
+      const sentCount = quickSelectedIds.length
+      const d = await api.post('/notifications/quick', payload)
+
+      if (quickMethod === 'sms') {
+        // Optimistic UI update, then refresh from backend for consistency.
+        setSmsProfile((prev) => {
+          if (!prev) return prev
+          return { ...prev, sms_used: Number(prev.sms_used || 0) + sentCount }
+        })
+        api
+          .get('/notifications/instructor')
+          .then((x) => setSmsProfile(x.profile || null))
+          .catch(() => {})
+      }
+
+      toast(quickMethod === 'sms' ? 'SMS göndərildi' : 'Bildiriş göndərildi', 'success')
       setQuickOpen(false)
       setQuickMessage('')
       setQuickSelectedIds([])
-      // keep smsProfile; next opening will use same cached value
+      // Keep smsProfile; next opening will use same cached value
     } catch (err) {
       toast(err?.message || 'Göndərilmədi', 'error')
     } finally {
