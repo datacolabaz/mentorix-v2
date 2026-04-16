@@ -81,10 +81,23 @@ function formatScoreBal(v) {
   return `${rounded} bal`
 }
 
-function parseExamStart(exam) {
-  if (!exam?.start_time) return null
-  const d = new Date(exam.start_time)
-  return Number.isNaN(d.getTime()) ? null : d
+function parseExamWindow(exam) {
+  const fromRaw = exam?.available_from || exam?.start_time
+  const untilRaw = exam?.available_until
+  const from = fromRaw ? new Date(fromRaw) : null
+  const until = untilRaw ? new Date(untilRaw) : null
+  return {
+    from: from && !Number.isNaN(from.getTime()) ? from : null,
+    until: until && !Number.isNaN(until.getTime()) ? until : null,
+  }
+}
+
+function formatAzDateTime(d) {
+  try {
+    return d ? d.toLocaleString('az-AZ') : '—'
+  } catch {
+    return '—'
+  }
 }
 
 export default function StudentExams() {
@@ -223,7 +236,7 @@ export default function StudentExams() {
           : []
       )
       setAnswers({})
-      setStartedAt(new Date().toISOString())
+      setStartedAt(data?.started_at || new Date().toISOString())
       setResult(null)
       setResultBreakdown(null)
       setMaterialsOpen(true)
@@ -238,7 +251,6 @@ export default function StudentExams() {
       const data = await api.post('/exams/submit', {
         exam_id: activeExam.id,
         answers,
-        started_at: startedAt,
       })
       setResult(data?.score ?? null)
       setResultBreakdown(Array.isArray(data?.breakdown) ? data.breakdown : null)
@@ -257,11 +269,14 @@ export default function StudentExams() {
 
   // Active exam UI
   if (activeExam) {
-    const startActive = parseExamStart(activeExam)
+    const startActive = startedAt ? new Date(startedAt) : null
     const durActive = Number(activeExam.duration_minutes) || 0
     const endTime =
-      startActive != null ? new Date(startActive.getTime() + durActive * 60000) : new Date(NaN)
+      startActive != null && !Number.isNaN(startActive.getTime())
+        ? new Date(startActive.getTime() + durActive * 60000)
+        : new Date(NaN)
     const materials = normalizeExamFiles(activeExam)
+    const w = parseExamWindow(activeExam)
 
     return (
       <div className="flex flex-col h-screen min-h-0">
@@ -271,6 +286,11 @@ export default function StudentExams() {
             <div className="min-w-0">
               <div className="font-display font-bold text-lg truncate">{activeExam.title}</div>
               <div className="text-xs text-gray-400">{questions.length} sual</div>
+              {w?.until && (
+                <div className="text-[11px] text-gray-400 mt-1">
+                  İmtahan {formatAzDateTime(w.until)}-a qədər aktivdir. Daxil olduğunuz andan etibarən {durActive} dəqiqə vaxtınız var. İnternetinizin sabit olduğundan əmin olun.
+                </div>
+              )}
             </div>
             {materials.length > 0 && (
               <button
@@ -541,10 +561,17 @@ export default function StudentExams() {
         {exams.map((exam) => {
           if (!exam?.id) return null
           const now = new Date()
-          const start = parseExamStart(exam)
+          const w = parseExamWindow(exam)
+          const start = w.from
+          const until = w.until
           const dur = Number(exam.duration_minutes) || 0
-          const end = start ? new Date(start.getTime() + dur * 60000) : null
-          const isActive = !!(start && end && now >= start && now <= end)
+          const personalStart = exam.started_at ? new Date(exam.started_at) : null
+          const personalEnd =
+            personalStart && !Number.isNaN(personalStart.getTime())
+              ? new Date(personalStart.getTime() + dur * 60000)
+              : null
+          const canResume = !!(personalStart && personalEnd && now <= personalEnd)
+          const canStart = !!(start && until && now >= start && now <= until)
           const isDone = !!exam.submitted_at
 
           return (
@@ -553,8 +580,8 @@ export default function StudentExams() {
                 <div className="min-w-0 flex-1">
                   <h3 className="font-display font-bold text-lg mb-2 break-words">{exam.title}</h3>
                   <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-4 text-sm text-gray-400">
-                    {start ? (
-                      <span className="break-all">📅 {start.toLocaleString('az-AZ')}</span>
+                    {until ? (
+                      <span className="break-all">🕘 Aktiv: {formatAzDateTime(until)}-a qədər</span>
                     ) : (
                       <span className="text-amber-400/90">📅 Vaxt təyin olunmayıb</span>
                     )}
@@ -583,19 +610,24 @@ export default function StudentExams() {
                         🏆 Reytinq
                       </Button>
                     </div>
-                  ) : !start ? (
+                  ) : !until ? (
                     <span className="text-xs text-amber-400/90 bg-[#13112e] px-3 py-2 rounded-xl inline-block">
                       Müəllim vaxt təyin etməlidir
                     </span>
-                  ) : isActive ? (
+                  ) : canResume ? (
+                    <Button onClick={() => startExam(exam)}>↩️ Davam et</Button>
+                  ) : canStart ? (
                     <Button onClick={() => startExam(exam)}>🚀 Başla</Button>
-                  ) : now < start ? (
-                    <span className="text-xs text-gray-500 bg-[#13112e] px-3 py-2 rounded-xl inline-block">⏳ Gözlənilir</span>
                   ) : (
-                    <span className="text-xs text-gray-500 bg-[#13112e] px-3 py-2 rounded-xl inline-block">Bitib</span>
+                    <span className="text-xs text-gray-500 bg-[#13112e] px-3 py-2 rounded-xl inline-block">⛔ Aktiv deyil</span>
                   )}
                 </div>
               </div>
+              {!isDone && until && (
+                <div className="mt-3 text-[12px] text-gray-400">
+                  İmtahan {formatAzDateTime(until)}-a qədər aktivdir. Daxil olduğunuz andan etibarən {dur} dəqiqə vaxtınız olacaq. İnternetinizin sabit olduğundan əmin olun.
+                </div>
+              )}
             </Card>
           )
         })}

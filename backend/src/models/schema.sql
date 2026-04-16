@@ -188,10 +188,14 @@ CREATE TABLE exams (
   instructor_id UUID REFERENCES users(id),
   title VARCHAR(255) NOT NULL,
   subject VARCHAR(255),
+  topic VARCHAR(255),
   pdf_url VARCHAR(500),
   exam_files JSONB DEFAULT '[]'::jsonb,
   duration_minutes INTEGER DEFAULT 60,
   start_time TIMESTAMP,
+  available_from TIMESTAMPTZ,
+  available_until TIMESTAMPTZ,
+  allow_finish_after_until BOOLEAN DEFAULT TRUE,
   status VARCHAR(20) DEFAULT 'draft',
   notify_before_hours INTEGER,
   notify_enabled BOOLEAN DEFAULT FALSE,
@@ -215,7 +219,8 @@ CREATE TABLE exam_questions (
 CREATE TABLE exam_assignments (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   exam_id UUID REFERENCES exams(id),
-  student_id UUID REFERENCES users(id)
+  student_id UUID REFERENCES users(id),
+  late_access_until TIMESTAMPTZ
 );
 
 CREATE TABLE exam_results (

@@ -66,6 +66,21 @@ const {
   notifyParentExamResultAfterSubmit,
 } = require('../services/examService');
 
+function parseDateOrNull(v) {
+  if (!v) return null;
+  const d = new Date(v);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function examWindowOrLegacy(exam) {
+  const from = parseDateOrNull(exam.available_from) || parseDateOrNull(exam.start_time);
+  const until =
+    parseDateOrNull(exam.available_until) ||
+    (from ? new Date(from.getTime() + (Number(exam.duration_minutes) || 0) * 60000) : null);
+  const allowFinish = exam.allow_finish_after_until !== false;
+  return { from, until, allowFinish };
+}
+
 // Imtahan yarat
 const createExam = async (req, res) => {
   try {
@@ -77,6 +92,9 @@ const createExam = async (req, res) => {
       exam_files,
       duration_minutes,
       start_time,
+      available_from,
+      available_until,
+      allow_finish_after_until,
       notify_enabled,
       notify_before_hours,
       notify_students,
@@ -86,6 +104,8 @@ const createExam = async (req, res) => {
     } = req.body;
 
     const startNorm = normalizeExamStartTime(start_time);
+    const fromNorm = normalizeExamStartTime(available_from || start_time);
+    const untilNorm = normalizeExamStartTime(available_until);
     const notifyOn = notify_students === true || notify_students === 'true' || notify_enabled === true;
     const notifyHours =
       notify_before_hours != null && notify_before_hours !== ''
@@ -95,8 +115,9 @@ const createExam = async (req, res) => {
     const result = await db.transaction(async (client) => {
       const { rows } = await client.query(
         `INSERT INTO exams (instructor_id, title, subject, topic, pdf_url, exam_files, duration_minutes, start_time,
+          available_from, available_until, allow_finish_after_until,
           notify_enabled, notify_students, notify_before_hours, show_results, status)
-         VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7,$8,$9,$10,$11,$12,'scheduled') RETURNING *`,
+         VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7,$8,$9,$10,$11,$12,$13,$14,$15,'scheduled') RETURNING *`,
         [
           req.user.id,
           title,
@@ -106,6 +127,9 @@ const createExam = async (req, res) => {
           JSON.stringify(Array.isArray(exam_files) ? exam_files : []),
           duration_minutes,
           startNorm,
+          fromNorm,
+          untilNorm,
+          allow_finish_after_until !== false,
           notifyOn,
           notifyOn,
           notifyHours,
@@ -207,7 +231,7 @@ const listExams = async (req, res) => {
        LEFT JOIN exam_assignments ea ON ea.exam_id = e.id
        WHERE ($1 OR e.instructor_id = $2)
        GROUP BY e.id, u.full_name
-       ORDER BY e.start_time DESC`,
+       ORDER BY COALESCE(e.available_from, e.start_time) DESC NULLS LAST`,
       [isAdmin, req.user.id]
     );
     res.json({ success: true, exams: rows });
@@ -389,7 +413,7 @@ const studentExams = async (req, res) => {
          LEFT JOIN student_profiles sp ON sp.user_id = u.id
          WHERE er.submitted_at IS NOT NULL
        )
-       SELECT e.*, er.score, er.submitted_at,
+       SELECT e.*, er.score, er.submitted_at, er.started_at,
          COALESCE(me.grade, '—') AS my_group,
          lb.rank_in_group,
          eq_count.question_count
@@ -397,10 +421,10 @@ const studentExams = async (req, res) => {
        JOIN exams e ON e.id = mei.exam_id
        CROSS JOIN me
        LEFT JOIN LATERAL (
-         SELECT score, submitted_at FROM exam_results er0
+         SELECT score, submitted_at, started_at FROM exam_results er0
          WHERE er0.exam_id = e.id
            AND REPLACE(LOWER(TRIM(er0.student_id::text)), '-', '') = $1
-         ORDER BY er0.submitted_at DESC NULLS LAST
+         ORDER BY er0.submitted_at DESC NULLS LAST, er0.started_at DESC NULLS LAST
          LIMIT 1
        ) er ON TRUE
        LEFT JOIN leaderboard lb
@@ -411,7 +435,7 @@ const studentExams = async (req, res) => {
          SELECT exam_id, COUNT(*) AS question_count FROM exam_questions GROUP BY exam_id
        ) eq_count ON eq_count.exam_id = e.id
        WHERE COALESCE(e.is_deleted, FALSE) = FALSE
-       ORDER BY e.start_time DESC NULLS LAST`,
+       ORDER BY COALESCE(e.available_from, e.start_time) DESC NULLS LAST`,
       [sidHex]
     );
     res.json({ success: true, exams: rows });
@@ -517,17 +541,62 @@ const getExamQuestions = async (req, res) => {
     }
 
     const now = new Date();
-    const start = exam.start_time ? new Date(exam.start_time) : null;
-    if (!start || Number.isNaN(start.getTime())) {
+    const dur = Number(exam.duration_minutes) || 0;
+    const { from, until, allowFinish } = examWindowOrLegacy(exam);
+    if (!from || !until) {
       return res.status(400).json({ success: false, message: 'İmtahan vaxtı təyin olunmayıb' });
     }
-    const dur = Number(exam.duration_minutes) || 0;
-    const end = new Date(start.getTime() + dur * 60000);
 
-    if (now < start)
-      return res.status(400).json({ success: false, message: 'İmtahan hələ başlamayıb' });
-    if (now > end)
-      return res.status(400).json({ success: false, message: 'İmtahan bitmişdir' });
+    let startedAtForStudent = null;
+    if (req.user.role === 'student') {
+      const sidHex = normStudentHex(req.user.id);
+      const { rows: rRows } = await db.query(
+        `SELECT id, started_at, submitted_at
+         FROM exam_results
+         WHERE exam_id = $1
+           AND REPLACE(LOWER(TRIM(student_id::text)), '-', '') = $2
+         ORDER BY submitted_at DESC NULLS LAST, started_at DESC NULLS LAST
+         LIMIT 1`,
+        [id, sidHex]
+      );
+      const attempt = rRows[0] || null;
+
+      if (attempt?.submitted_at) {
+        return res.status(400).json({ success: false, message: 'Artıq təqdim edilib' });
+      }
+
+      if (attempt?.started_at) {
+        const s = new Date(attempt.started_at);
+        const personalEnd = new Date(s.getTime() + dur * 60000);
+        if (now > personalEnd) return res.status(400).json({ success: false, message: 'Vaxtınız bitib' });
+        startedAtForStudent = attempt.started_at;
+      } else {
+        const { rows: lateRows } = await db.query(
+          `SELECT late_access_until
+           FROM exam_assignments
+           WHERE exam_id = $1
+             AND REPLACE(LOWER(TRIM(student_id::text)), '-', '') = $2
+           LIMIT 1`,
+          [id, sidHex]
+        );
+        const lateUntil = lateRows[0]?.late_access_until ? new Date(lateRows[0].late_access_until) : null;
+        const canStart =
+          (now >= from && now <= until) || (lateUntil && !Number.isNaN(lateUntil.getTime()) && now <= lateUntil);
+        if (!canStart) return res.status(400).json({ success: false, message: 'İmtahan aktiv deyil' });
+
+        const { rows: inserted } = await db.query(
+          `INSERT INTO exam_results (exam_id, student_id, status, started_at)
+           VALUES ($1,$2,'in_progress', NOW())
+           RETURNING started_at`,
+          [id, req.user.id]
+        );
+        startedAtForStudent = inserted[0]?.started_at || null;
+      }
+
+      if (!allowFinish && now > until) {
+        return res.status(400).json({ success: false, message: 'İmtahanın giriş müddəti bitib' });
+      }
+    }
 
     const { rows: questions } = await db.query(
       'SELECT * FROM exam_questions WHERE exam_id = $1 ORDER BY order_num',
@@ -543,7 +612,7 @@ const getExamQuestions = async (req, res) => {
       return { ...rest, template_hint };
     });
 
-    res.json({ success: true, exam, questions: safe });
+    res.json({ success: true, exam, questions: safe, started_at: startedAtForStudent });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -552,7 +621,7 @@ const getExamQuestions = async (req, res) => {
 // Imtahan cavablarini gondor
 const submitExam = async (req, res) => {
   try {
-    const { exam_id, answers, started_at } = req.body;
+    const { exam_id, answers } = req.body;
     const student_id = req.user.id;
 
     const sidHex = normStudentHex(student_id);
@@ -570,18 +639,22 @@ const submitExam = async (req, res) => {
     }
 
     const already = await db.query(
-      `SELECT id FROM exam_results WHERE exam_id=$1
-       AND REPLACE(LOWER(TRIM(student_id::text)), '-', '') = $2`,
+      `SELECT id, started_at, submitted_at
+       FROM exam_results
+       WHERE exam_id=$1
+         AND REPLACE(LOWER(TRIM(student_id::text)), '-', '') = $2
+       ORDER BY submitted_at DESC NULLS LAST, started_at DESC NULLS LAST
+       LIMIT 1`,
       [exam_id, sidHex]
     );
-    if (already.rows[0])
-      return res.status(400).json({ success: false, message: 'Artıq təqdim edilib' });
+    const attempt = already.rows[0] || null;
+    if (attempt?.submitted_at) return res.status(400).json({ success: false, message: 'Artıq təqdim edilib' });
 
     const { rows: questions } = await db.query(
       'SELECT * FROM exam_questions WHERE exam_id=$1',
       [exam_id]
     );
-    const { rows: [exam] } = await db.query('SELECT id, is_deleted FROM exams WHERE id = $1', [exam_id]);
+    const { rows: [exam] } = await db.query('SELECT id, is_deleted, duration_minutes FROM exams WHERE id = $1', [exam_id]);
     if (!exam || exam.is_deleted === true) {
       return res.status(404).json({ success: false, message: 'Tapılmadı' });
     }
@@ -590,13 +663,36 @@ const submitExam = async (req, res) => {
     const breakdown = buildExamResultBreakdown(questions, answers);
     const grading = buildAutoGradingMap(questions, answers);
     const now = new Date();
-    const duration = Math.floor((now - new Date(started_at)) / 1000);
+    const startedAt = attempt?.started_at ? new Date(attempt.started_at) : now;
+    const durMin = Number(exam.duration_minutes) || 0;
+    if (attempt?.started_at && durMin > 0) {
+      const personalEnd = new Date(startedAt.getTime() + durMin * 60000);
+      if (now > personalEnd) {
+        return res.status(400).json({ success: false, message: 'Vaxtınız bitib' });
+      }
+    }
+    const duration = Math.floor((now - startedAt) / 1000);
 
-    await db.query(
-      `INSERT INTO exam_results (exam_id, student_id, score, answers, grading, status, started_at, submitted_at, duration_seconds)
-       VALUES ($1,$2,$3,$4,$5,'completed',$6,$7,$8)`,
-      [exam_id, student_id, score, JSON.stringify(answers), JSON.stringify(grading), started_at, now, duration]
-    );
+    if (attempt?.id) {
+      await db.query(
+        `UPDATE exam_results
+         SET score = $3,
+             answers = $4,
+             grading = $5,
+             status = 'completed',
+             started_at = COALESCE(started_at, $6),
+             submitted_at = $7,
+             duration_seconds = $8
+         WHERE id = $1 AND exam_id = $2`,
+        [attempt.id, exam_id, score, JSON.stringify(answers), JSON.stringify(grading), startedAt, now, duration]
+      );
+    } else {
+      await db.query(
+        `INSERT INTO exam_results (exam_id, student_id, score, answers, grading, status, started_at, submitted_at, duration_seconds)
+         VALUES ($1,$2,$3,$4,$5,'completed',$6,$7,$8)`,
+        [exam_id, student_id, score, JSON.stringify(answers), JSON.stringify(grading), startedAt, now, duration]
+      );
+    }
 
     setImmediate(() => {
       notifyParentExamResultAfterSubmit(exam_id, student_id, score).catch((e) =>
@@ -850,10 +946,62 @@ const getExamAssignments = async (req, res) => {
   }
 };
 
+/** Müəllim/Admin: gecikən tələbəyə fərdi giriş icazəsi ver */
+const grantLateAccess = async (req, res) => {
+  try {
+    const examId = req.params.id;
+    const studentId = req.params.studentId;
+    const isAdmin = req.user.role === 'admin';
+
+    const { rows: [exam] } = await db.query('SELECT id, instructor_id FROM exams WHERE id = $1', [examId]);
+    if (!exam) return res.status(404).json({ success: false, message: 'Tapılmadı' });
+    if (!isAdmin && req.user.role === 'instructor') {
+      if (normStudentHex(exam.instructor_id) !== normStudentHex(req.user.id)) {
+        return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
+      }
+    } else if (!isAdmin) {
+      return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
+    }
+
+    const body = req.body || {};
+    const untilRaw = body.until;
+    const minutesRaw = body.minutes;
+
+    let until = null;
+    if (untilRaw != null && String(untilRaw).trim() !== '') {
+      until = normalizeExamStartTime(untilRaw);
+    } else if (minutesRaw != null && String(minutesRaw).trim() !== '') {
+      const m = Number(minutesRaw);
+      if (Number.isFinite(m) && m > 0) {
+        const d = new Date(Date.now() + Math.floor(m) * 60000);
+        until = d.toISOString();
+      }
+    } else {
+      const d = new Date(Date.now() + 2 * 60 * 60000);
+      until = d.toISOString();
+    }
+
+    const { rows } = await db.query(
+      `UPDATE exam_assignments
+       SET late_access_until = $3::timestamptz
+       WHERE exam_id = $1 AND student_id = $2
+       RETURNING exam_id, student_id, late_access_until`,
+      [examId, studentId, until]
+    );
+    if (!rows.length) {
+      return res.status(404).json({ success: false, message: 'Təyinat tapılmadı' });
+    }
+    res.json({ success: true, late_access: rows[0] });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 /**
  * Müəllim/Admin: imtahanı redaktə et (meta + exam_files/pdf_url + təyinatlar).
  * Body:
  * - title, subject, topic, start_time, duration_minutes, notify_students, show_results
+ * - available_from, available_until, allow_finish_after_until
  * - exam_files: [{name,url}] (JSON array)
  * - pdf_url: string|null
  * - student_ids: string[] (təyinatların son vəziyyəti)
@@ -868,6 +1016,9 @@ const patchExam = async (req, res) => {
       subject,
       topic,
       start_time,
+      available_from,
+      available_until,
+      allow_finish_after_until,
       duration_minutes,
       notify_students,
       show_results,
@@ -877,6 +1028,16 @@ const patchExam = async (req, res) => {
     } = req.body || {};
 
     const startNorm = start_time != null && start_time !== '' ? normalizeExamStartTime(start_time) : null;
+    const fromNorm =
+      available_from != null && available_from !== ''
+        ? normalizeExamStartTime(available_from)
+        : undefined;
+    const untilNorm =
+      available_until != null && available_until !== ''
+        ? normalizeExamStartTime(available_until)
+        : undefined;
+    const allowFinishProvided = Object.prototype.hasOwnProperty.call(req.body || {}, 'allow_finish_after_until');
+    const allowFinishNext = allowFinishProvided ? allow_finish_after_until !== false : undefined;
     const notifyProvided = Object.prototype.hasOwnProperty.call(req.body || {}, 'notify_students');
     const notifyOn = notifyProvided
       ? notify_students === true ||
@@ -934,6 +1095,17 @@ const patchExam = async (req, res) => {
       add('subject = COALESCE(__IDX__, subject)', subject);
       add('topic = COALESCE(__IDX__, topic)', topic);
       add('start_time = COALESCE(__IDX__, start_time)', startNorm);
+      add(
+        'available_from = CASE WHEN __IDX__::timestamptz IS NULL THEN available_from ELSE __IDX__::timestamptz END',
+        fromNorm !== undefined ? fromNorm : null
+      );
+      add(
+        'available_until = CASE WHEN __IDX__::timestamptz IS NULL THEN available_until ELSE __IDX__::timestamptz END',
+        untilNorm !== undefined ? untilNorm : null
+      );
+      if (allowFinishProvided) {
+        add('allow_finish_after_until = __IDX__::boolean', allowFinishNext);
+      }
       add('duration_minutes = COALESCE(__IDX__, duration_minutes)', duration_minutes);
       if (notifyProvided) {
         add('notify_enabled = __IDX__::boolean', notifyOn);
@@ -1061,6 +1233,7 @@ module.exports = {
   hardDeleteExam,
   bulkHardDeleteExams,
   getExamAssignments,
+  grantLateAccess,
   patchExam,
   instructorStudentExamProgress,
   studentExams,

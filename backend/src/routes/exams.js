@@ -9,6 +9,7 @@ const {
   hardDeleteExam,
   bulkHardDeleteExams,
   getExamAssignments,
+  grantLateAccess,
   patchExam,
   instructorStudentExamProgress,
   studentExams,
@@ -65,6 +66,7 @@ router.get('/student-progress', authenticate, authorize('instructor', 'admin'), 
 router.get('/my', authenticate, authorize('student'), studentExams);
 router.post('/bulk-delete', authenticate, authorize('instructor', 'admin'), bulkHardDeleteExams);
 router.get('/:id/assignments', authenticate, authorize('instructor', 'admin'), getExamAssignments);
+router.post('/:id/late-access/:studentId', authenticate, authorize('instructor', 'admin'), grantLateAccess);
 router.get('/:id/review', authenticate, getStudentExamReview);
 router.get('/:id/questions', authenticate, getExamQuestions);
 router.post('/submit', authenticate, authorize('student'), submitExam);

@@ -20,6 +20,9 @@ export default function InstructorExams() {
   const [editStudentIds, setEditStudentIds] = useState([])
   const [editBaselineAssigned, setEditBaselineAssigned] = useState(() => new Set())
   const [editAssignmentsLoading, setEditAssignmentsLoading] = useState(false)
+  const [lateBusyStudentId, setLateBusyStudentId] = useState(null)
+  const [lateAccessPreset, setLateAccessPreset] = useState('120')
+  const [lateAccessCustomUntil, setLateAccessCustomUntil] = useState('')
   const [studentPickerQuery, setStudentPickerQuery] = useState('')
   const [showAllStudentsInPicker, setShowAllStudentsInPicker] = useState(false)
   const editMaterialsInputRef = useRef(null)
@@ -57,10 +60,15 @@ export default function InstructorExams() {
  
   const statusBadge = (e) => {
     const now = new Date()
-    const start = new Date(e.start_time)
-    const end = new Date(start.getTime() + e.duration_minutes * 60000)
-    if (now > end) return { label: 'Bitib', cls: 'bg-gray-500/20 text-gray-400' }
-    if (now >= start) return { label: 'Aktiv', cls: 'bg-emerald-500/20 text-emerald-400' }
+    const fromRaw = e?.available_from || e?.start_time
+    const untilRaw = e?.available_until
+    const from = fromRaw ? new Date(fromRaw) : null
+    const until = untilRaw ? new Date(untilRaw) : null
+    const okFrom = from && !Number.isNaN(from.getTime()) ? from : null
+    const okUntil = until && !Number.isNaN(until.getTime()) ? until : null
+    if (!okFrom || !okUntil) return { label: 'Vaxt yoxdur', cls: 'bg-amber-500/15 text-amber-300' }
+    if (now > okUntil) return { label: 'Baglidir', cls: 'bg-gray-500/20 text-gray-400' }
+    if (now >= okFrom) return { label: 'Aktiv', cls: 'bg-emerald-500/20 text-emerald-400' }
     return { label: 'Gozlenilir', cls: 'bg-blue-500/20 text-blue-400' }
   }
  
@@ -89,7 +97,15 @@ export default function InstructorExams() {
 
   const openEdit = async (exam) => {
     setEditModal(true)
-    setEditExam({ ...exam, start_time: utcInstantToDatetimeLocalValue(exam.start_time) })
+    setEditExam({
+      ...exam,
+      available_from: utcInstantToDatetimeLocalValue(exam.available_from || exam.start_time),
+      available_until: utcInstantToDatetimeLocalValue(exam.available_until),
+      // keep for legacy UI pieces
+      start_time: utcInstantToDatetimeLocalValue(exam.available_from || exam.start_time),
+    })
+    setLateAccessPreset('120')
+    setLateAccessCustomUntil('')
     setEditMaterialFiles(normalizeExamFiles(exam))
     setEditStudentIds([])
     setEditBaselineAssigned(new Set())
@@ -117,7 +133,10 @@ export default function InstructorExams() {
         title: editExam.title,
         subject: editExam.subject,
         topic: editExam.topic,
-        start_time: localDatetimeInputToUtcIso(editExam.start_time),
+        allow_finish_after_until: editExam.allow_finish_after_until !== false,
+        start_time: localDatetimeInputToUtcIso(editExam.available_from || editExam.start_time),
+        available_from: localDatetimeInputToUtcIso(editExam.available_from || editExam.start_time),
+        available_until: localDatetimeInputToUtcIso(editExam.available_until),
         duration_minutes: editExam.duration_minutes,
         notify_students: editExam.notify_students,
         show_results: editExam.show_results,
@@ -131,6 +150,24 @@ export default function InstructorExams() {
     } catch (err) {
       toast(err.message || 'Xeta', 'error')
     } finally { setLoading(false) }
+  }
+
+  const grantLateAccess = async (studentId) => {
+    if (!editExam?.id || !studentId) return
+    setLateBusyStudentId(String(studentId))
+    try {
+      const preset = String(lateAccessPreset || '120')
+      const payload =
+        preset === 'custom'
+          ? { until: localDatetimeInputToUtcIso(lateAccessCustomUntil) }
+          : { minutes: Number(preset) || 120 }
+      await api.post(`/exams/${editExam.id}/late-access/${studentId}`, payload)
+      toast(preset === 'custom' ? 'Giris icazesi verildi (custom)' : `Giris icazesi verildi (${payload.minutes} deq)`)
+    } catch (err) {
+      toast(err?.message || 'Xeta', 'error')
+    } finally {
+      setLateBusyStudentId(null)
+    }
   }
 
   const deleteExam = async (exam) => {
@@ -328,7 +365,10 @@ export default function InstructorExams() {
                     <span className={`px-2 py-0.5 rounded-lg text-xs font-semibold shrink-0 ${cls}`}>{label}</span>
                   </div>
                   <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-400">
-                    <span>{new Date(exam.start_time).toLocaleString('az-AZ')}</span>
+                    <span>
+                      {new Date(exam.available_from || exam.start_time).toLocaleString('az-AZ')}
+                      {exam.available_until ? ` → ${new Date(exam.available_until).toLocaleString('az-AZ')}` : ''}
+                    </span>
                     <span>{exam.duration_minutes} deq</span>
                     <span>{exam.student_count || 0} telebe</span>
                     {exam.subject && <span>{exam.subject}</span>}
@@ -392,10 +432,39 @@ export default function InstructorExams() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Baslama Vaxti</label>
-                <input type="datetime-local" className={inp} value={editExam.start_time}
-                  onChange={e => setEditExam(p => ({ ...p, start_time: e.target.value }))} />
+                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Aktivlik baslangici</label>
+                <input
+                  type="datetime-local"
+                  className={inp}
+                  value={editExam.available_from || ''}
+                  onChange={e => setEditExam(p => ({ ...p, available_from: e.target.value }))}
+                />
               </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Son giris vaxti</label>
+                <input
+                  type="datetime-local"
+                  className={inp}
+                  value={editExam.available_until || ''}
+                  onChange={e => setEditExam(p => ({ ...p, available_until: e.target.value }))}
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <input
+                id="edit_allow_finish_after_until"
+                type="checkbox"
+                className="w-4 h-4 accent-blue-500"
+                checked={editExam.allow_finish_after_until !== false}
+                onChange={(e) => setEditExam((p) => ({ ...p, allow_finish_after_until: e.target.checked }))}
+              />
+              <label htmlFor="edit_allow_finish_after_until" className="text-sm text-gray-300">
+                Son giriş vaxtı bitəndə yeni giriş bağlansın, amma daxil olan tələbə müddətini tamamlaya bilsin
+              </label>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Muddet (deq)</label>
                 <input
@@ -412,6 +481,7 @@ export default function InstructorExams() {
                   }}
                 />
               </div>
+              <div />
             </div>
             <div className="p-4 bg-[#13112e] rounded-xl border border-indigo-500/20 space-y-3">
               <div className="flex items-center justify-between">
@@ -490,6 +560,36 @@ export default function InstructorExams() {
                 </div>
               </div>
 
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="sm:col-span-1">
+                  <label className="block text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                    Gecikən giriş icazəsi
+                  </label>
+                  <select
+                    className={inp}
+                    value={lateAccessPreset}
+                    onChange={(e) => setLateAccessPreset(e.target.value)}
+                  >
+                    <option value="30">30 dəq</option>
+                    <option value="60">60 dəq</option>
+                    <option value="120">120 dəq</option>
+                    <option value="custom">Custom (tarix-saat)</option>
+                  </select>
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="block text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                    Custom bitmə vaxtı
+                  </label>
+                  <input
+                    type="datetime-local"
+                    className={inp}
+                    value={lateAccessCustomUntil}
+                    onChange={(e) => setLateAccessCustomUntil(e.target.value)}
+                    disabled={lateAccessPreset !== 'custom'}
+                  />
+                </div>
+              </div>
+
               <input
                 className={inp}
                 placeholder="Ad və ya telefon ilə axtar…"
@@ -525,6 +625,9 @@ export default function InstructorExams() {
                     const sid = String(s.id)
                     const checked = assignedIdSet.has(sid)
                     const wasAssigned = baselineAssignedSet.has(sid)
+                    const untilRaw = editExam?.available_until
+                    const until = untilRaw ? new Date(untilRaw) : null
+                    const windowClosed = !!(until && !Number.isNaN(until.getTime()) && new Date() > until)
                     return (
                       <label
                         key={sid}
@@ -539,6 +642,21 @@ export default function InstructorExams() {
                             <span className="text-[10px] text-gray-400">Təyin</span>
                           ) : (
                             <span className="text-[10px] text-emerald-300">Yeni</span>
+                          )}
+                          {wasAssigned && checked && windowClosed && (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="secondary"
+                              loading={lateBusyStudentId === sid}
+                              onClick={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                grantLateAccess(sid)
+                              }}
+                            >
+                              Giris icazesi ver
+                            </Button>
                           )}
                           <input
                             type="checkbox"

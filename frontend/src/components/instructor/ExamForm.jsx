@@ -40,7 +40,9 @@ export default function ExamForm({ students, studentsLoading = false, onCreated 
     subject: '',
     topic: '',
     duration_minutes: 60,
-    start_time: '',
+    available_from: '',
+    available_until: '',
+    allow_finish_after_until: true,
     notify_students: false,
     show_results: true,
     student_ids: [],
@@ -127,7 +129,10 @@ export default function ExamForm({ students, studentsLoading = false, onCreated 
   }
 
   const submit = async () => {
-    if (!meta.title || !meta.start_time) { toast('Ad ve vaxt teleb olunur', 'error'); return }
+    if (!meta.title || !meta.available_from || !meta.available_until) {
+      toast('Ad və aktivlik vaxtları tələb olunur', 'error')
+      return
+    }
     setLoading(true)
     try {
       const exam_files = materialFiles.map(({ name, url }) => ({ name, url }))
@@ -139,9 +144,13 @@ export default function ExamForm({ students, studentsLoading = false, onCreated 
         student_ids: meta.student_ids,
         notify_students: meta.notify_students,
         show_results: meta.show_results,
+        allow_finish_after_until: meta.allow_finish_after_until,
         pdf_url: exam_files[0]?.url || null,
         exam_files,
-        start_time: localDatetimeInputToUtcIso(meta.start_time),
+        // Backward-compat: keep start_time aligned with available_from
+        start_time: localDatetimeInputToUtcIso(meta.available_from),
+        available_from: localDatetimeInputToUtcIso(meta.available_from),
+        available_until: localDatetimeInputToUtcIso(meta.available_until),
         questions: questions.map((q, i) => ({
           question_text: `Sual ${i + 1}`,
           question_type: q.question_type,
@@ -218,10 +227,39 @@ export default function ExamForm({ students, studentsLoading = false, onCreated 
  
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Baslama Vaxti *</label>
-              <input type="datetime-local" className={inp}
-                value={meta.start_time} onChange={e => setMeta(p => ({ ...p, start_time: e.target.value }))} />
+              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Aktivlik baslangici *</label>
+              <input
+                type="datetime-local"
+                className={inp}
+                value={meta.available_from}
+                onChange={e => setMeta(p => ({ ...p, available_from: e.target.value }))}
+              />
             </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Son giris vaxti *</label>
+              <input
+                type="datetime-local"
+                className={inp}
+                value={meta.available_until}
+                onChange={e => setMeta(p => ({ ...p, available_until: e.target.value }))}
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <input
+              id="allow_finish_after_until"
+              type="checkbox"
+              className="h-4 w-4 rounded border-indigo-500/30 bg-[#13112e]"
+              checked={meta.allow_finish_after_until !== false}
+              onChange={(e) => setMeta((p) => ({ ...p, allow_finish_after_until: e.target.checked }))}
+            />
+            <label htmlFor="allow_finish_after_until" className="text-sm text-gray-300">
+              Son giriş vaxtı bitəndə yeni giriş bağlansın, amma daxil olan tələbə müddətini tamamlaya bilsin
+            </label>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Muddet (deq)</label>
               <input
@@ -238,6 +276,7 @@ export default function ExamForm({ students, studentsLoading = false, onCreated 
                 }}
               />
             </div>
+            <div />
           </div>
  
           <div className="p-4 bg-[#13112e] rounded-xl border border-indigo-500/20 space-y-3">
