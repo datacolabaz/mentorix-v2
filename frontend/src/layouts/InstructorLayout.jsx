@@ -3,6 +3,7 @@ import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
 import useAuthStore from '../hooks/useAuth'
 import useUiStore from '../hooks/useUi'
 import api from '../lib/api'
+import Footer from '../components/common/Footer'
 
 const NAV = [
   { to: '/instructor', label: 'Dashboard', icon: '📊', end: true },
@@ -169,32 +170,39 @@ export default function InstructorLayout() {
       </aside>
 
       <main className="flex-1 overflow-y-auto min-w-0 pt-[52px] lg:pt-0">
-        {limitStatus.level ? (
-          <div
-            className={`mx-4 sm:mx-6 mt-4 rounded-2xl border px-4 py-3 text-sm ${
-              limitStatus.level === 'critical'
-                ? 'border-red-500/40 bg-red-500/10 text-red-200'
-                : 'border-yellow-500/40 bg-yellow-500/10 text-yellow-200'
-            }`}
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <div className="font-semibold">
-                  {limitStatus.level === 'critical' ? 'Limit dolub' : 'Diqqət'}
+        <div className="min-h-full flex flex-col">
+          {limitStatus.level ? (
+            <div
+              className={`mx-4 sm:mx-6 mt-4 rounded-2xl border px-4 py-3 text-sm ${
+                limitStatus.level === 'critical'
+                  ? 'border-red-500/40 bg-red-500/10 text-red-200'
+                  : 'border-yellow-500/40 bg-yellow-500/10 text-yellow-200'
+              }`}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="font-semibold">
+                    {limitStatus.level === 'critical' ? 'Limit dolub' : 'Diqqət'}
+                  </div>
+                  <div className="text-white/80 break-words">{limitStatus.message}</div>
                 </div>
-                <div className="text-white/80 break-words">{limitStatus.message}</div>
+                <button
+                  onClick={() => setLimitStatus({ level: null, message: null })}
+                  className="shrink-0 text-white/70 hover:text-white transition-colors"
+                  aria-label="Bağla"
+                >
+                  ×
+                </button>
               </div>
-              <button
-                onClick={() => setLimitStatus({ level: null, message: null })}
-                className="shrink-0 text-white/70 hover:text-white transition-colors"
-                aria-label="Bağla"
-              >
-                ×
-              </button>
             </div>
+          ) : null}
+
+          <div className="flex-1 min-h-0">
+            <Outlet />
           </div>
-        ) : null}
-        <Outlet />
+
+          <Footer />
+        </div>
       </main>
     </div>
   )

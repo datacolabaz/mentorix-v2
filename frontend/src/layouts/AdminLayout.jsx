@@ -1,5 +1,6 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import useAuthStore from '../hooks/useAuth'
+import Footer from '../components/common/Footer'
 
 const NAV = [
   { to: '/admin', label: 'Dashboard', icon: '📊', end: true },
@@ -51,7 +52,12 @@ export default function AdminLayout() {
       </aside>
 
       <main className="flex-1 overflow-y-auto bg-[#0f0c29]">
-        <Outlet />
+        <div className="min-h-full flex flex-col">
+          <div className="flex-1 min-h-0">
+            <Outlet />
+          </div>
+          <Footer />
+        </div>
       </main>
     </div>
   )

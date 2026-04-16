@@ -1,5 +1,6 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import useAuthStore from '../hooks/useAuth'
+import Footer from '../components/common/Footer'
 
 const NAV = [
   { to: '/parent', label: 'Uşaqlarım', icon: '👶', end: true },
@@ -45,7 +46,14 @@ export default function ParentLayout() {
           </button>
         </div>
       </aside>
-      <main className="flex-1 overflow-y-auto"><Outlet /></main>
+      <main className="flex-1 overflow-y-auto">
+        <div className="min-h-full flex flex-col">
+          <div className="flex-1 min-h-0">
+            <Outlet />
+          </div>
+          <Footer />
+        </div>
+      </main>
     </div>
   )
 }

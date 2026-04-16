@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import useAuthStore from '../hooks/useAuth'
 import useUiStore from '../hooks/useUi'
+import Footer from '../components/common/Footer'
 
 const NAV = [
   { to: '/student', label: 'Proqresim', icon: '📈', end: true },
@@ -109,7 +110,12 @@ export default function StudentLayout() {
       </aside>
 
       <main className="flex-1 overflow-y-auto overflow-x-hidden min-w-0 w-full pt-14 md:pt-0">
-        <Outlet />
+        <div className="min-h-full flex flex-col">
+          <div className="flex-1 min-h-0">
+            <Outlet />
+          </div>
+          <Footer />
+        </div>
       </main>
     </div>
   )
