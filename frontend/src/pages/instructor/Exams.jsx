@@ -260,8 +260,11 @@ export default function InstructorExams() {
   const assignedIdSet = useMemo(() => new Set(editStudentIds.map(String)), [editStudentIds])
   const baselineAssignedSet = editBaselineAssigned
 
+  const normDigits = (v) => String(v || '').replace(/\D/g, '')
+
   const pickerStudents = useMemo(() => {
     const q = studentPickerQuery.trim().toLowerCase()
+    const qDigits = normDigits(q)
     return (students || [])
       .filter((s) => s && s.id)
       .filter((s) => showAllStudentsInPicker || !baselineAssignedSet.has(String(s.id)))
@@ -269,7 +272,15 @@ export default function InstructorExams() {
         if (!q) return true
         const name = String(s.full_name || '').toLowerCase()
         const phone = String(s.phone || '').toLowerCase()
-        return name.includes(q) || phone.includes(q)
+        if (name.includes(q) || phone.includes(q)) return true
+        if (!qDigits) return false
+        const phoneDigits = normDigits(phone)
+        // allow searching "050..." against "+99450..." etc
+        return (
+          phoneDigits.includes(qDigits) ||
+          (qDigits.length >= 7 && phoneDigits.endsWith(qDigits)) ||
+          (qDigits.startsWith('0') && phoneDigits.endsWith(qDigits.slice(1)))
+        )
       })
       .sort((a, b) => String(a.full_name || '').localeCompare(String(b.full_name || ''), 'az'))
   }, [students, studentPickerQuery, showAllStudentsInPicker, baselineAssignedSet])
