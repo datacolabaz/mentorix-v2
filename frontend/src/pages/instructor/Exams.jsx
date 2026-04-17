@@ -265,9 +265,12 @@ export default function InstructorExams() {
   const pickerStudents = useMemo(() => {
     const q = studentPickerQuery.trim().toLowerCase()
     const qDigits = normDigits(q)
+    const searching = Boolean(studentPickerQuery.trim())
     return (students || [])
       .filter((s) => s && s.id)
-      .filter((s) => showAllStudentsInPicker || !baselineAssignedSet.has(String(s.id)))
+      // Default: hide already-assigned students to reduce noise.
+      // While searching: include everyone so "Ad/telefon" search works for assigned students too.
+      .filter((s) => searching || showAllStudentsInPicker || !baselineAssignedSet.has(String(s.id)))
       .filter((s) => {
         if (!q) return true
         const name = String(s.full_name || '').toLowerCase()
