@@ -217,10 +217,12 @@ const forgotPinSms = async (req, res) => {
 
 const login = async (req, res) => {
   try {
-    const { email, phone, identifier } = req.body;
+    const { email, phone, identifier, password } = req.body;
     const raw = identifier != null && String(identifier).trim() !== '' ? identifier : email != null ? email : phone;
     const s = raw != null ? String(raw).trim() : '';
     if (!s) return res.status(400).json({ success: false, message: 'Telefon və ya email tələb olunur' });
+    const pass = password != null ? String(password) : '';
+    if (!pass) return res.status(400).json({ success: false, message: 'Şifrə tələb olunur' });
 
     const clean = normalizePhone(s);
     const looksPhone = Boolean(clean) && clean.length >= 9;
@@ -237,7 +239,7 @@ const login = async (req, res) => {
       : await db.query('SELECT * FROM users WHERE is_active = TRUE AND lower(trim(email)) = lower(trim($1)) LIMIT 1', [s]);
 
     const user = rows[0];
-    if (!user || !user.password_hash || !(await bcrypt.compare(password, user.password_hash)))
+    if (!user || !user.password_hash || !(await bcrypt.compare(pass, user.password_hash)))
       return res.status(401).json({ success: false, message: 'Giriş məlumatları yanlışdır' });
     if (user.role !== 'admin')
       return res.status(403).json({ success: false, message: 'Yalnız admin bu girişlə daxil ola bilər' });
