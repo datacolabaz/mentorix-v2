@@ -14,22 +14,16 @@ function formatAzn(n) {
 
 function formatDdMmYyyy(val) {
   if (val == null || val === '') return '—'
+  if (val instanceof Date && !Number.isNaN(val.getTime())) {
+    const y = val.getUTCFullYear()
+    const m = String(val.getUTCMonth() + 1).padStart(2, '0')
+    const day = String(val.getUTCDate()).padStart(2, '0')
+    return `${day}.${m}.${y}`
+  }
   const d = String(val).slice(0, 10)
   if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return '—'
   const [y, m, day] = d.split('-')
   return `${day}.${m}.${y}`
-}
-
-const statusLabel = {
-  gözlənilir: 'Gözlənilir',
-  ödənilib: 'Ödənilib',
-  təyin_edilməyib: '—',
-}
-
-const statusPill = {
-  gözlənilir: 'bg-amber-500/15 text-amber-200 border-amber-500/25',
-  ödənilib: 'bg-emerald-500/15 text-emerald-200 border-emerald-500/25',
-  təyin_edilməyib: 'bg-[#1a1740] text-gray-500 border-indigo-500/15',
 }
 
 export default function InstructorPayments() {
@@ -171,8 +165,8 @@ export default function InstructorPayments() {
       <div className="mb-6">
         <h1 className="font-display font-bold text-xl sm:text-2xl text-white tracking-tight">Ödənişlər</h1>
         <p className="text-gray-500 text-sm mt-1">
-          Aylıq ankor: yalnız «dərslərə başlama» tarixinin günü. Sonradan (postpaid): keçmiş ay × aylıq − ödənişlər. Əvvəlcədən
-          (prepaid): ödənişlər − (iştirak slotları × aylıq÷8).
+          Cədvəldə hər aylıq tələbə üçün üç rəqəm: cəmi borc, tarixçədəki tamamlanmış ödənişlərin cəmi və qalıq borc (eyni
+          verilənlər «Tarixçə» modalı ilə uyğunlaşır). Ankor: dərslərə başlama tarixinin təqvim günü.
         </p>
       </div>
 
@@ -226,16 +220,15 @@ export default function InstructorPayments() {
 
         {!loading && !err && (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[920px]">
+            <table className="w-full text-sm min-w-[800px]">
               <thead>
                 <tr className="border-b border-indigo-500/25 text-left text-[11px] uppercase tracking-wider text-indigo-300/70 bg-[#0f0c29]/90">
                   <th className="py-3.5 px-4 font-semibold">Ad</th>
                   <th className="py-3.5 px-4 font-semibold">Soyad</th>
                   <th className="py-3.5 px-4 font-semibold">Nömrə</th>
-                  <th className="py-3.5 px-4 font-semibold whitespace-nowrap">Dərslərə başlama</th>
-                  <th className="py-3.5 px-4 font-semibold">Ödəniş statusu</th>
-                  <th className="py-3.5 px-4 font-semibold whitespace-nowrap">Abunə / borc</th>
-                  <th className="py-3.5 px-4 font-semibold whitespace-nowrap">Keçmiş</th>
+                  <th className="py-3.5 px-4 font-semibold whitespace-nowrap">Başlama</th>
+                  <th className="py-3.5 px-4 font-semibold whitespace-nowrap">Aylıq</th>
+                  <th className="py-3.5 px-4 font-semibold whitespace-nowrap">Borc balansı</th>
                   <th className="py-3.5 px-4 font-semibold w-[1%] whitespace-nowrap text-right">Əməl</th>
                 </tr>
               </thead>
@@ -243,6 +236,8 @@ export default function InstructorPayments() {
                 {students.map((s) => {
                   const st = s.payment_status || 'təyin_edilməyib'
                   const isMonthly = s.billing_type === 'monthly' && s.monthly_fee != null && Number(s.monthly_fee) > 0
+                  const qaliq = Number(s.balance_remaining)
+                  const showPendingBadge = isMonthly && Number.isFinite(qaliq) && qaliq > 0.005
                   return (
                     <tr
                       key={s.enrollment_id}
@@ -251,95 +246,57 @@ export default function InstructorPayments() {
                       <td className="py-3.5 px-4 font-medium text-white">{s.first_name}</td>
                       <td className="py-3.5 px-4">{s.last_name}</td>
                       <td className="py-3.5 px-4 font-mono text-xs text-gray-400 tabular-nums">{s.phone || '—'}</td>
-                      <td className="py-3.5 px-4 font-mono text-xs text-gray-300 tabular-nums whitespace-nowrap">
-                        {formatDdMmYyyy(s.lesson_start_date || s.payment_start_date)}
-                      </td>
-                      <td className="py-3.5 px-4">
-                        <span
-                          className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold border ${statusPill[st] || statusPill.təyin_edilməyib}`}
-                        >
-                          {statusLabel[st] || '—'}
+                      <td className="py-3.5 px-4 text-xs text-gray-300 leading-snug">
+                        <span className="font-mono tabular-nums text-white/90">
+                          Başlama: {formatDdMmYyyy(s.lesson_start_date || s.payment_start_date)}
                         </span>
-                        {s.monthly_fee != null && Number(s.monthly_fee) > 0 && (
-                          <span className="block text-[11px] text-gray-500 mt-1 tabular-nums">
-                            Aylıq: {formatAzn(s.monthly_fee)}
-                            {s.billing_type === 'monthly' ? (
-                              <span className="block text-[10px] text-indigo-400/90 mt-0.5">
-                                {s.billing_timing === 'prepaid' ? 'Əvvəlcədən' : 'Sonradan'}
-                              </span>
-                            ) : null}
-                          </span>
-                        )}
+                        {s.pre_system_enrollment ? (
+                          <span className="block text-[10px] text-sky-300/90 mt-1">Köhnə qeydiyyat</span>
+                        ) : null}
                       </td>
-                      <td className="py-3.5 px-4 align-top text-[11px] leading-relaxed tabular-nums text-gray-300">
+                      <td className="py-3.5 px-4 align-top text-xs text-gray-300">
                         {isMonthly ? (
-                          s.billing_model === 'prepaid' ? (
-                            <div className="space-y-0.5">
-                              <div>
-                                1 dərs vahidi:{' '}
-                                <span className="text-white font-medium">{formatAzn(s.lesson_unit_price)}</span>
-                              </div>
-                              <div>
-                                İştirak (slot):{' '}
-                                <span className="text-white font-medium">{s.charged_lesson_count ?? 0}</span> ·{' '}
-                                {formatAzn(s.consumed_amount)}
-                              </div>
-                              <div>
-                                Balans:{' '}
-                                <span
-                                  className={
-                                    (s.wallet_balance ?? 0) < 0
-                                      ? 'text-rose-300 font-semibold'
-                                      : 'text-emerald-300 font-semibold'
-                                  }
-                                >
-                                  {formatAzn(s.wallet_balance)}
-                                </span>
-                              </div>
-                              <div>
-                                Qalıq borc:{' '}
-                                <span className="text-amber-200/95 font-medium">{formatAzn(s.pending_debt)}</span>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="space-y-0.5">
-                              <div>
-                                Keçmiş ay (ankor):{' '}
-                                <span className="text-white font-medium">{s.subscription_months ?? '—'}</span>
-                              </div>
-                              <div>
-                                Cəmi tələb:{' '}
-                                <span className="text-white font-medium">{formatAzn(s.subscription_due_total)}</span>
-                              </div>
-                              <div>
-                                Ödənilib:{' '}
-                                <span className="text-emerald-200/95 font-medium">
-                                  {formatAzn(s.subscription_total_paid)}
-                                </span>
-                              </div>
-                              <div>
-                                Qalıq borc:{' '}
-                                <span className="text-amber-200/95 font-medium">{formatAzn(s.pending_debt)}</span>
-                              </div>
-                              {(s.subscription_prepaid ?? 0) > 0.005 ? (
-                                <div>
-                                  Əvvəlcədən ödənilib:{' '}
-                                  <span className="text-sky-200/95 font-medium">{formatAzn(s.subscription_prepaid)}</span>
-                                </div>
-                              ) : null}
-                            </div>
-                          )
+                          <div>
+                            <span className="tabular-nums text-gray-200">{formatAzn(s.monthly_fee)}</span>
+                            <span className="block text-[10px] text-gray-500 mt-1">
+                              {st === 'gözlənilir'
+                                ? 'Gözlənilən ödəniş var'
+                                : st === 'ödənilib'
+                                  ? 'Cari dövr üzrə borc yoxdur'
+                                  : '—'}
+                            </span>
+                          </div>
                         ) : (
                           <span className="text-gray-600">—</span>
                         )}
                       </td>
-                      <td className="py-3.5 px-4 align-top">
-                        {s.pre_system_enrollment ? (
-                          <span className="inline-flex text-[10px] font-semibold px-2 py-1 rounded-lg bg-sky-500/15 border border-sky-400/30 text-sky-200">
-                            Sistemdən əvvəl
-                          </span>
+                      <td className="py-3.5 px-4 align-top text-[12px] leading-relaxed tabular-nums text-gray-300">
+                        {isMonthly ? (
+                          <div className="space-y-1.5 max-w-[240px]">
+                            <div className="flex justify-between gap-4">
+                              <span className="text-gray-500 shrink-0">Cəmi borc</span>
+                              <span className="text-white font-medium text-right">{formatAzn(s.balance_total_demand)}</span>
+                            </div>
+                            <div className="flex justify-between gap-4">
+                              <span className="text-gray-500 shrink-0">Ödənilən</span>
+                              <span className="text-emerald-200/95 font-medium text-right">
+                                {formatAzn(s.balance_total_paid)}
+                              </span>
+                            </div>
+                            <div className="flex justify-between gap-4 items-baseline">
+                              <span className="text-gray-500 shrink-0">Qalıq borc</span>
+                              <span className="text-right flex flex-wrap items-center justify-end gap-1.5">
+                                <span className="text-amber-200 font-semibold">{formatAzn(s.balance_remaining)}</span>
+                                {showPendingBadge ? (
+                                  <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md border border-amber-500/35 bg-amber-500/15 text-amber-100 whitespace-nowrap">
+                                    Gözlənilir
+                                  </span>
+                                ) : null}
+                              </span>
+                            </div>
+                          </div>
                         ) : (
-                          <span className="text-gray-600 text-xs">—</span>
+                          <span className="text-gray-600">—</span>
                         )}
                       </td>
                       <td className="py-3.5 px-4 text-right">

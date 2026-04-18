@@ -15,6 +15,9 @@ function pad2(n) {
 
 function toYmd(v) {
   if (v == null) return null;
+  if (v instanceof Date && !Number.isNaN(v.getTime())) {
+    return v.toISOString().slice(0, 10);
+  }
   const s = String(v);
   const m = s.match(/^(\d{4}-\d{2}-\d{2})/);
   return m ? m[1] : null;
@@ -162,7 +165,7 @@ async function loadInstructorMonthlySubscriptionFinancials(db, instructorNormId)
   const { rows } = await db.query(
     `SELECT e.id AS enrollment_id,
             sp.monthly_fee,
-            e.enrollment_start_date::date AS anchor_raw
+            to_char(e.enrollment_start_date::date, 'YYYY-MM-DD') AS anchor_raw
      FROM enrollments e
      INNER JOIN users u ON u.id = e.student_id
      LEFT JOIN student_profiles sp ON sp.user_id = u.id
