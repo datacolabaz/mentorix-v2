@@ -286,6 +286,7 @@ const getInstructorPaymentBoard = async (req, res) => {
     const { rows } = await db.query(
       `SELECT e.id AS enrollment_id, u.id AS student_id, u.full_name, u.phone,
               e.billing_type AS enrollment_billing_type,
+              COALESCE(e.payment_plan, 'full') AS payment_plan,
               sp.monthly_fee,
               to_char(e.enrollment_start_date::date, 'YYYY-MM-DD') AS lesson_start_date
        FROM enrollments e
@@ -297,7 +298,7 @@ const getInstructorPaymentBoard = async (req, res) => {
       [iid]
     );
 
-    const { byEnrollment: balMap, pendingSum } = await loadInstructorMonthlyBalanceRows(db, iid);
+    const { byEnrollment: balMap, pendingSum, todayBaku } = await loadInstructorMonthlyBalanceRows(db, iid);
     const pendingAmount = roundMoney(pendingSum);
 
     let pendingCount = 0;
@@ -325,6 +326,7 @@ const getInstructorPaymentBoard = async (req, res) => {
         last_name: lastName,
         phone: r.phone,
         billing_type: r.enrollment_billing_type,
+        payment_plan: r.payment_plan || 'full',
         monthly_fee: r.monthly_fee,
         lesson_start_date: r.lesson_start_date,
         payment_start_date: r.lesson_start_date,
@@ -342,6 +344,7 @@ const getInstructorPaymentBoard = async (req, res) => {
       totalEarnings: Number(sumRows[0].total) || 0,
       pendingCount,
       pendingAmount,
+      today_baku: todayBaku || null,
       students,
     });
   } catch (err) {
@@ -349,10 +352,20 @@ const getInstructorPaymentBoard = async (req, res) => {
   }
 };
 
-/** Aylıq ödəniş qeydi (defolt: aylıq məbləğ) */
+function parseOptionalPaymentDateYmd(v) {
+  if (v === undefined || v === null || v === '') return null;
+  const s = String(v).trim().slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;
+  const [y, mo, d] = s.split('-').map(Number);
+  const dt = new Date(Date.UTC(y, mo - 1, d));
+  if (dt.getUTCFullYear() !== y || dt.getUTCMonth() !== mo - 1 || dt.getUTCDate() !== d) return null;
+  return s;
+}
+
+/** Aylıq ödəniş qeydi (defolt: aylıq məbləğ, tarix Bakı bu gün) */
 const markMonthlyPaid = async (req, res) => {
   try {
-    const { enrollment_id, amount: amountRaw } = req.body;
+    const { enrollment_id, amount: amountRaw, payment_date: paymentDateRaw, notes: notesRaw } = req.body;
     if (!enrollment_id) {
       return res.status(400).json({ success: false, message: 'enrollment_id tələb olunur' });
     }
@@ -381,15 +394,82 @@ const markMonthlyPaid = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Məbləğ müsbət rəqəm olmalıdır' });
     }
 
+    const payYmd = parseOptionalPaymentDateYmd(paymentDateRaw);
+    const notesBase =
+      notesRaw != null && String(notesRaw).trim() !== '' ? String(notesRaw).trim() : 'Aylıq abunə ödənişi';
+
     const { rows: ins } = await db.query(
       `INSERT INTO payments (enrollment_id, student_id, amount, currency, payment_method, status, paid_at, payment_date, notes)
        VALUES ($1, $2, $3, 'AZN', 'cash', 'completed', NOW(),
-               (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Baku')::date,
-               $4)
+               COALESCE($4::date, (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Baku')::date),
+               $5)
        RETURNING *`,
-      [enrollment_id, en[0].student_id, amount, 'Aylıq abunə ödənişi']
+      [enrollment_id, en[0].student_id, amount, payYmd, notesBase]
     );
     res.json({ success: true, payment: ins[0] });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/** Bir pəncərədə çox aylıq ödəniş sətiri (tək tranzaksiya) */
+const markMonthlyPaidBatch = async (req, res) => {
+  try {
+    const { enrollment_id, payments: payRows } = req.body;
+    if (!enrollment_id) {
+      return res.status(400).json({ success: false, message: 'enrollment_id tələb olunur' });
+    }
+    if (!Array.isArray(payRows) || payRows.length === 0) {
+      return res.status(400).json({ success: false, message: 'Ən azı bir ödəniş sətiri göndərin' });
+    }
+    if (payRows.length > 40) {
+      return res.status(400).json({ success: false, message: 'Bir dəfədə ən çox 40 sətir' });
+    }
+
+    const { rows: en } = await db.query(
+      `SELECT e.id, e.student_id, e.instructor_id, e.billing_type
+       FROM enrollments e
+       WHERE e.id = $1`,
+      [enrollment_id]
+    );
+    if (!en[0]) return res.status(404).json({ success: false, message: 'Qeydiyyat tapılmadı' });
+    if (req.user.role === 'instructor' && !sameUuid(en[0].instructor_id, req.user.id)) {
+      return res.status(403).json({ success: false, message: 'Bu qeydiyyata icazəniz yoxdur' });
+    }
+    if (en[0].billing_type !== 'monthly') {
+      return res.status(400).json({ success: false, message: 'Bu əməliyyat yalnız aylıq paket üçün keçərlidir' });
+    }
+
+    const normalized = [];
+    for (let i = 0; i < payRows.length; i++) {
+      const r = payRows[i] || {};
+      const amt = Number(r.amount);
+      if (!Number.isFinite(amt) || amt <= 0) {
+        return res.status(400).json({ success: false, message: `${i + 1}-ci sətirdə məbləğ düzgün deyil` });
+      }
+      const ymd = parseOptionalPaymentDateYmd(r.payment_date);
+      const note =
+        r.notes != null && String(r.notes).trim() !== '' ? String(r.notes).trim() : 'Aylıq abunə ödənişi';
+      normalized.push({ amount: amt, payment_date: ymd, notes: note });
+    }
+
+    const inserted = await db.transaction(async (client) => {
+      const out = [];
+      for (const row of normalized) {
+        const { rows: ins } = await client.query(
+          `INSERT INTO payments (enrollment_id, student_id, amount, currency, payment_method, status, paid_at, payment_date, notes)
+           VALUES ($1, $2, $3, 'AZN', 'cash', 'completed', NOW(),
+                   COALESCE($4::date, (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Baku')::date),
+                   $5)
+           RETURNING id, amount, payment_date, notes`,
+          [enrollment_id, en[0].student_id, row.amount, row.payment_date, row.notes]
+        );
+        out.push(ins[0]);
+      }
+      return out;
+    });
+
+    res.json({ success: true, payments: inserted, count: inserted.length });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -469,5 +549,6 @@ module.exports = {
   listMyPayments,
   getInstructorPaymentBoard,
   markMonthlyPaid,
+  markMonthlyPaidBatch,
   getEnrollmentPaymentHistory,
 };
