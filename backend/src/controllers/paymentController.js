@@ -9,6 +9,17 @@ function sameUuid(a, b) {
   return normUuid(a) === normUuid(b);
 }
 
+/** DATE / timestamptz → YYYY-MM-DD (UTC tarix hissəsi; DATE artıq gün kimi gəlir) */
+function toYmd(v) {
+  if (v == null) return null;
+  const s = String(v);
+  const m = s.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (m) return m[1];
+  const d = new Date(s);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toISOString().slice(0, 10);
+}
+
 /** Aylıq ödəniş dövrü: təqvim ayı yox, müəllimin təyin etdiyi "gün" ankoru (enrollment_start_date / payment_start_date).
  *  PostgreSQL-də `AND (SELECT 1 ...)` səhvdir (integer → boolean); ona görə EXISTS ilə boolean konteksti. */
 const MONTHLY_BILLING_PERIOD_MATCHES_P2 = `
@@ -144,11 +155,16 @@ const listMyPayments = async (req, res) => {
       const { student_payment_start_date, student_monthly_fee, ...rest } = enrollment;
       paymentStartForDisplay = rest.enrollment_start_date || student_payment_start_date || null;
       const mfNum = student_monthly_fee != null ? Number(student_monthly_fee) : NaN;
+      const startYmd = toYmd(rest.enrollment_start_date);
+      const enrolledYmd = toYmd(rest.enrolled_at);
+      const preSystemEnrollment =
+        Boolean(startYmd && enrolledYmd && startYmd < enrolledYmd);
       enrollmentOut = {
         ...rest,
         monthly_fee: Number.isFinite(mfNum) ? mfNum : null,
         // Helpful for student UI: distinguish "enrolled into system" vs billing anchor date
         enrolled_at: rest.enrolled_at || null,
+        pre_system_enrollment: preSystemEnrollment,
       };
     }
     const limit = enrollment ? billingLimit(enrollment.billing_type) : null;
@@ -223,21 +239,48 @@ const listPayments = async (req, res) => {
 
 const addPayment = async (req, res) => {
   try {
-    const { enrollment_id, amount, payment_method, period, notes, status, payment_date } = req.body;
+    const { enrollment_id, amount, payment_method, period, notes, status, payment_date, legacy_kind } = req.body;
+    if (!enrollment_id) {
+      return res.status(400).json({ success: false, message: 'enrollment_id tələb olunur' });
+    }
     const { rows: en } = await db.query(
-      'SELECT student_id, billing_type, billing_cycle FROM enrollments WHERE id = $1',
+      'SELECT student_id, billing_type, billing_cycle, instructor_id FROM enrollments WHERE id = $1',
       [enrollment_id]
     );
+    if (!en[0]) return res.status(404).json({ success: false, message: 'Qeydiyyat tapılmadı' });
+    if (req.user.role === 'instructor' && !sameUuid(en[0].instructor_id, req.user.id)) {
+      return res.status(403).json({ success: false, message: 'Bu qeydiyyata ödəniş əlavə etmək üçün icazəniz yoxdur' });
+    }
+    const amt = Number(amount);
+    if (!Number.isFinite(amt) || amt <= 0) {
+      return res.status(400).json({ success: false, message: 'Məbləğ müsbət rəqəm olmalıdır' });
+    }
     const studentId = en[0]?.student_id || null;
     const cycle = en[0]?.billing_cycle != null ? Number(en[0].billing_cycle) : null;
     const bt = en[0]?.billing_type || null;
     const payDate = payment_date || null;
     const derivedPeriod =
       !period && (bt === '8_lessons' || bt === '12_lessons') && cycle != null ? `Dövr #${cycle}` : period;
+    let notesOut = notes != null && String(notes).trim() !== '' ? String(notes).trim() : null;
+    if (legacy_kind === 'initial_balance') {
+      notesOut = `[Başlanğıc balansı]${notesOut ? ` ${notesOut}` : ''}`;
+    } else if (legacy_kind === 'past_payment') {
+      notesOut = `[Keçmiş ödəniş qeydi]${notesOut ? ` ${notesOut}` : ''}`;
+    }
     const { rows } = await db.query(
       `INSERT INTO payments (enrollment_id, student_id, amount, payment_method, period, billing_cycle, notes, status, payment_date)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
-      [enrollment_id, studentId, amount, payment_method, derivedPeriod, cycle, notes, status || 'completed', payDate]
+      [
+        enrollment_id,
+        studentId,
+        amt,
+        payment_method || 'manual',
+        derivedPeriod,
+        cycle,
+        notesOut,
+        status || 'completed',
+        payDate,
+      ]
     );
     res.json({ success: true, payment: rows[0] });
   } catch (err) {
@@ -263,6 +306,9 @@ const getInstructorPaymentBoard = async (req, res) => {
       `SELECT e.id AS enrollment_id, u.id AS student_id, u.full_name, u.phone,
               sp.monthly_fee,
               COALESCE(e.enrollment_start_date, sp.payment_start_date::date) AS payment_start_date,
+              (e.enrollment_start_date IS NOT NULL
+                AND e.enrolled_at IS NOT NULL
+                AND e.enrollment_start_date < (e.enrolled_at::date)) AS pre_system_enrollment,
               EXISTS (
                 SELECT 1 FROM payments p2
                 WHERE p2.enrollment_id = e.id
@@ -306,6 +352,7 @@ const getInstructorPaymentBoard = async (req, res) => {
         monthly_fee: r.monthly_fee,
         payment_start_date: r.payment_start_date,
         payment_status: paymentStatus,
+        pre_system_enrollment: Boolean(r.pre_system_enrollment),
       };
     });
 

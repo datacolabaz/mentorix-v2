@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import api from '../../lib/api'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
+import Modal from '../../components/common/Modal'
 import { useToast } from '../../components/common/Toast'
 
 function billingLabel(t) {
@@ -42,6 +43,11 @@ export default function InstructorAttendance() {
   const [period, setPeriod] = useState(null)
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [bulkOpen, setBulkOpen] = useState(false)
+  const [bulkFrom, setBulkFrom] = useState('')
+  const [bulkTo, setBulkTo] = useState('')
+  const [bulkNotes, setBulkNotes] = useState('')
+  const [bulkSaving, setBulkSaving] = useState(false)
   const toast = useToast()
 
   useEffect(() => {
@@ -72,6 +78,37 @@ export default function InstructorAttendance() {
     if (!limit) return n
     return Math.min(n, limit)
   }, [period])
+
+  const submitBulk = async () => {
+    if (!enrollmentId) return
+    if (!bulkFrom || !bulkTo) {
+      toast('Tarix aralığını seçin', 'error')
+      return
+    }
+    if (bulkFrom > bulkTo) {
+      toast('Başlanğıc tarixi bitirmə tarixindən sonra ola bilməz', 'error')
+      return
+    }
+    setBulkSaving(true)
+    try {
+      const d = await api.post('/attendance/period/bulk-fill', {
+        enrollment_id: enrollmentId,
+        date_from: bulkFrom,
+        date_to: bulkTo,
+        attended: true,
+        notes: bulkNotes.trim() || undefined,
+      })
+      const n = d?.updated ?? 0
+      toast(n ? `${n} dərs üçün qeyd yaradıldı` : d?.message || 'Dərs tapılmadı', n ? 'success' : 'info')
+      setBulkOpen(false)
+      setBulkNotes('')
+      await loadPeriod(enrollmentId)
+    } catch (err) {
+      toast(err?.message || 'Xəta', 'error')
+    } finally {
+      setBulkSaving(false)
+    }
+  }
 
   const setLesson = async (lessonNumber, attended) => {
     if (!enrollmentId) return
@@ -179,6 +216,15 @@ export default function InstructorAttendance() {
 
           {period?.enrollment?.lesson_limit != null ? (
             <div className="space-y-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-[11px] text-gray-500 leading-snug">
+                  Keçmiş tarixlər üçün planlaşdırılmış dərsləri bir dəfədə &quot;Gəldi&quot; kimi qeyd edin (cari dövr,
+                  dərs günləri cədvəldəki tarixlər əsasında).
+                </p>
+                <Button type="button" size="sm" variant="secondary" disabled={!enrollmentId} onClick={() => setBulkOpen(true)}>
+                  Toplu qeyd
+                </Button>
+              </div>
               {Array.from({ length: period.enrollment.lesson_limit }, (_, i) => i + 1).map((n) => {
                 const row = (period.attendance || []).find((a) => Number(a.lesson_number) === n)
                 const status = row ? (row.attended ? 'attended' : 'absent') : 'empty'
@@ -247,6 +293,60 @@ export default function InstructorAttendance() {
           ) : null}
         </Card>
       </div>
+
+      <Modal
+        open={bulkOpen}
+        onClose={() => !bulkSaving && setBulkOpen(false)}
+        title="Toplu davamiyyət (Gəldi)"
+        size="md"
+      >
+        <div className="space-y-4 text-sm">
+          <p className="text-xs text-gray-400 leading-relaxed">
+            Seçilmiş tarix aralığında cədvəldə olan hər dərs üçün (cari dövr) davamiyyət &quot;Gəldi&quot; kimi yazılır.
+            Yalnız bu dövrə aid planlaşdırılmış tarixlər nəzərə alınır.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Başlanğıc</label>
+              <input
+                type="date"
+                className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white outline-none focus:border-blue-500"
+                value={bulkFrom}
+                onChange={(e) => setBulkFrom(e.target.value)}
+                disabled={bulkSaving}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Son</label>
+              <input
+                type="date"
+                className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white outline-none focus:border-blue-500"
+                value={bulkTo}
+                onChange={(e) => setBulkTo(e.target.value)}
+                disabled={bulkSaving}
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Qeyd (istəyə bağlı)</label>
+            <input
+              className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white outline-none focus:border-blue-500"
+              placeholder="Məs: köhnə dövr köçürməsi"
+              value={bulkNotes}
+              onChange={(e) => setBulkNotes(e.target.value)}
+              disabled={bulkSaving}
+            />
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button type="button" variant="secondary" disabled={bulkSaving} onClick={() => setBulkOpen(false)}>
+              Ləğv
+            </Button>
+            <Button type="button" loading={bulkSaving} onClick={() => void submitBulk()}>
+              Tətbiq et
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }

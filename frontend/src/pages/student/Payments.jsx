@@ -113,6 +113,11 @@ function enrollmentFromStudentProfile(s) {
     instructor_name: s.instructor_name,
     enrolled_at: s.enrolled_at || s.enrollment_started_at || null,
     payment_start_date_for_display: s.enrollment_start_date || s.payment_start_date || null,
+    pre_system_enrollment: Boolean(
+      s.enrollment_start_date &&
+        s.enrollment_started_at &&
+        String(s.enrollment_start_date).slice(0, 10) < String(s.enrollment_started_at).slice(0, 10)
+    ),
     monthly_fee: Number.isFinite(mf) ? mf : null,
     lesson_limit: lim,
     remaining_lessons: lim != null ? Math.max(0, lim - lessonCount) : null,
@@ -360,6 +365,12 @@ export default function StudentPayments() {
       {!loading && historyOpen && (
         <Card className="p-5 mt-4 border-indigo-500/25">
           <h2 className="font-display font-bold text-lg text-white mb-4">Ödəniş tarixçəsi</h2>
+          {enrollment?.pre_system_enrollment && (
+            <div className="rounded-xl border border-sky-500/30 bg-sky-500/10 text-sky-100 text-sm px-4 py-3 mb-4 leading-relaxed">
+              Bu tələbə sistemin aktivləşdirilməsindən öncə qeydiyyatdan keçmişdir. Ödəniş tarixçəsi sistemdə qeydə
+              alınan əməliyyatları göstərir; keçmiş dövr üçün müəlliminiz əlavə qeyd edə bilər.
+            </div>
+          )}
           {enrollment && (
             <div className="rounded-xl bg-[#1a1740] border border-indigo-500/20 p-3 text-sm text-gray-300 mb-4">
               <p>
