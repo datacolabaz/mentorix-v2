@@ -1,9 +1,10 @@
 const db = require('../utils/db');
 const {
-  computeVirtualFromParts,
-  loadInstructorMonthlyVirtualBaseRows,
-  sumPendingDebtFromRows,
-} = require('../services/monthlyVirtualBalance');
+  computeSubscriptionState,
+  getTodayBakuYmd,
+  loadInstructorMonthlySubscriptionFinancials,
+  toYmd: anchorToYmd,
+} = require('../services/subscriptionBilling');
 
 function normUuid(id) {
   return String(id).trim().toLowerCase().replace(/-/g, '');
@@ -110,6 +111,20 @@ const listMyPayments = async (req, res) => {
         enrolled_at: rest.enrolled_at || null,
         pre_system_enrollment: preSystemEnrollment,
       };
+      if (rest.billing_type === 'monthly' && Number.isFinite(mfNum) && mfNum > 0 && enrollmentOut.id) {
+        const anchorYmd = anchorToYmd(paymentStartForDisplay);
+        if (anchorYmd) {
+          const todayBaku = await getTodayBakuYmd(db);
+          const { rows: pr } = await db.query(
+            `SELECT COALESCE(SUM(amount), 0)::numeric AS t
+             FROM payments
+             WHERE enrollment_id = $1 AND status = 'completed'`,
+            [enrollmentOut.id]
+          );
+          const paid = Number(pr[0]?.t) || 0;
+          enrollmentOut.subscription = computeSubscriptionState(anchorYmd, todayBaku, mfNum, paid);
+        }
+      }
     }
     const limit = enrollment ? billingLimit(enrollment.billing_type) : null;
     const remaining_lessons =
@@ -263,9 +278,8 @@ const getInstructorPaymentBoard = async (req, res) => {
       [iid]
     );
 
-    const { rows: vrows } = await loadInstructorMonthlyVirtualBaseRows(db, iid);
-    const vmap = new Map(vrows.map((x) => [String(x.enrollment_id), x]));
-    const pendingAmount = sumPendingDebtFromRows(vrows);
+    const { byEnrollment: subMap, pendingSum } = await loadInstructorMonthlySubscriptionFinancials(db, iid);
+    const pendingAmount = pendingSum;
 
     let pendingCount = 0;
     const students = rows.map((r) => {
@@ -277,13 +291,20 @@ const getInstructorPaymentBoard = async (req, res) => {
       const firstName = parts[0] || '—';
       const lastName = parts.length > 1 ? parts.slice(1).join(' ') : '—';
       let paymentStatus = 'təyin_edilməyib';
-      let virtual = null;
-      if (r.enrollment_billing_type === 'monthly' && hasFee) {
-        const vb = vmap.get(String(r.enrollment_id));
+      let sub = null;
+      const anchorYmd = anchorToYmd(r.payment_start_date);
+      if (r.enrollment_billing_type === 'monthly' && hasFee && anchorYmd) {
+        const vb = subMap.get(String(r.enrollment_id));
         if (vb) {
-          virtual = computeVirtualFromParts(vb.monthly_fee, vb.charged_lessons, vb.total_paid);
-          if (virtual.pending_debt > 0.005) pendingCount += 1;
-          paymentStatus = virtual.pending_debt > 0.005 ? 'gözlənilir' : 'ödənilib';
+          sub = {
+            subscription_months: vb.subscription_months,
+            subscription_due_total: vb.subscription_due_total,
+            subscription_total_paid: vb.subscription_total_paid,
+            pending_debt: vb.pending_debt,
+            subscription_prepaid: vb.subscription_prepaid,
+          };
+          if (sub.pending_debt > 0.005) pendingCount += 1;
+          paymentStatus = sub.pending_debt > 0.005 ? 'gözlənilir' : 'ödənilib';
         }
       }
       return {
@@ -297,12 +318,11 @@ const getInstructorPaymentBoard = async (req, res) => {
         payment_start_date: r.payment_start_date,
         payment_status: paymentStatus,
         pre_system_enrollment: Boolean(r.pre_system_enrollment),
-        lesson_unit_price: virtual?.lesson_unit_price ?? null,
-        charged_lesson_count: virtual?.charged_lesson_count ?? null,
-        consumed_amount: virtual?.consumed_amount ?? null,
-        total_paid_virtual: virtual?.total_paid ?? null,
-        virtual_balance: virtual?.virtual_balance ?? null,
-        pending_debt: virtual?.pending_debt ?? null,
+        subscription_months: sub?.subscription_months ?? null,
+        subscription_due_total: sub?.subscription_due_total ?? null,
+        subscription_total_paid: sub?.subscription_total_paid ?? null,
+        pending_debt: sub?.pending_debt ?? null,
+        subscription_prepaid: sub?.subscription_prepaid ?? null,
       };
     });
 
@@ -356,7 +376,7 @@ const markMonthlyPaid = async (req, res) => {
                (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Baku')::date,
                $4)
        RETURNING *`,
-      [enrollment_id, en[0].student_id, amount, 'Virtual balans ödənişi']
+        [enrollment_id, en[0].student_id, amount, 'Aylıq abunə ödənişi']
     );
     res.json({ success: true, payment: ins[0] });
   } catch (err) {

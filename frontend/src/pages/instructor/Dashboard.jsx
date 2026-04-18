@@ -223,7 +223,8 @@ export default function InstructorDashboard() {
           color="text-yellow-400"
         />
         <p className="text-xs text-gray-500 self-center sm:col-span-1">
-          Gözlənən: keçilmiş dərslərin məbləği (aylıq÷8) minus ödənişlər — yalnız bu günə qədər slotlar.
+          Gözlənən: aylıq abunə — ödəniş ankorundan bu günə qədər hesablanan ay sayı × aylıq məbləğdən çıxılmış
+          tamamlanmış ödənişlər (dərs sayı daxil deyil).
         </p>
       </div>
 

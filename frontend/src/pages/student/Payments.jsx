@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { addMonths, format, isValid, parseISO, setDate } from 'date-fns'
+import { format, isValid, parseISO } from 'date-fns'
 import api from '../../lib/api'
 import Card from '../../components/common/Card'
 import useAuthStore from '../../hooks/useAuth'
@@ -80,23 +80,6 @@ function fmtDdMmYyyy(d) {
   return format(d, 'dd.MM.yyyy')
 }
 
-function monthlyBillingDayLine(ymd) {
-  const d = parseYmdLocal(ymd)
-  if (!d) return null
-  const day = d.getDate()
-  return `Hər ayın ${day}-də (təkrarlanan)`
-}
-
-function nextMonthlyBillingDateText(ymd) {
-  const anchor = parseYmdLocal(ymd)
-  if (!anchor) return null
-  const day = anchor.getDate()
-  const today = new Date()
-  let candidate = setDate(today, day)
-  if (candidate < today) candidate = setDate(addMonths(today, 1), day)
-  return fmtDdMmYyyy(candidate)
-}
-
 function enrollmentFromStudentProfile(s) {
   if (!s?.enrollment_id) return null
   const lim = billingLimit(s.billing_type)
@@ -133,6 +116,7 @@ export default function StudentPayments() {
   const [enrollment, setEnrollment] = useState(null)
   const [historyOpen, setHistoryOpen] = useState(false)
   const [loadError, setLoadError] = useState(null)
+  const [partialInfoOpen, setPartialInfoOpen] = useState(false)
 
   const load = useCallback(() => {
     setLoading(true)
@@ -201,9 +185,6 @@ export default function StudentPayments() {
       : null
 
   const enrolledAtText = enrollment?.enrolled_at ? fmtAzFromDb(enrollment.enrolled_at) : null
-  const paymentAnchorLine = enrollment?.billing_type === 'monthly' ? monthlyBillingDayLine(enrollment.payment_start_date_for_display) : null
-  const nextMonthlyPaymentText =
-    enrollment?.billing_type === 'monthly' ? nextMonthlyBillingDateText(enrollment.payment_start_date_for_display) : null
 
   const lc = enrollment ? Number(enrollment.lesson_count) : NaN
   const lessonCount = Number.isFinite(lc) ? lc : 0
@@ -215,6 +196,13 @@ export default function StudentPayments() {
       ? Number(enrollment.monthly_fee)
       : NaN
   const hasMonthlyFee = Number.isFinite(monthlyFeeNum) && monthlyFeeNum > 0
+  const isMonthlySub = enrollment?.billing_type === 'monthly' && hasMonthlyFee
+  const sub = enrollment?.subscription
+  const anchorDdMmYyyy = enrollment?.payment_start_date_for_display
+    ? fmtDdMmYyyy(parseYmdLocal(String(enrollment.payment_start_date_for_display).slice(0, 10)))
+    : null
+  const monthlyDebtNum =
+    sub != null && Number.isFinite(Number(sub.pending_debt)) ? Number(sub.pending_debt) : null
 
   return (
     <div className="p-4 sm:p-6 max-w-3xl mx-auto w-full min-w-0">
@@ -234,131 +222,144 @@ export default function StudentPayments() {
         <div className="text-gray-500 text-center py-12">Yüklənir…</div>
       ) : (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-            <Card className="p-5">
-              <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Tamamlanan Dərs</div>
-              <div className="font-display font-extrabold text-3xl text-blue-400">
-                {lessonCount}
-                {limit ? `/${limit}` : ''}
+          {isMonthlySub ? (
+            <Card className="p-5 mb-4 border border-indigo-500/20">
+              <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
+                <h2 className="font-semibold text-white">Aylıq abunə</h2>
+                <button
+                  type="button"
+                  onClick={() => setHistoryOpen((v) => !v)}
+                  className="text-sm font-semibold text-blue-400 border border-blue-500/30 rounded-xl px-3 py-1.5 hover:bg-blue-500/10 shrink-0"
+                  aria-expanded={historyOpen}
+                >
+                  {historyOpen ? 'Tarixçəni gizlət' : 'Ödəniş tarixçəsi'}
+                </button>
               </div>
-              {limit ? (
-                <div className="mt-3">
-                  <div className="h-2 bg-[#13112e] rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-blue-500 rounded-full transition-all max-w-full"
-                      style={{ width: `${progressPct}%` }}
-                    />
-                  </div>
-                </div>
-              ) : null}
-            </Card>
-            <Card className="p-5">
-              <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Billing</div>
-              <div className="font-display font-bold text-xl text-emerald-400">
-                {enrollment?.billing_type === 'monthly' && hasMonthlyFee
-                  ? `${monthlyFeeNum.toFixed(2)} ₼ / ay`
-                  : BILLING[enrollment?.billing_type] || enrollment?.billing_type || '—'}
-              </div>
-              {enrollment?.billing_type === 'monthly' && hasMonthlyFee && (
-                <p className="text-[11px] text-gray-500 mt-2 leading-snug">Müəllimin qeyd etdiyi aylıq ödəniş məbləği</p>
-              )}
-            </Card>
-            <Card className="p-5">
-              <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Müəllim</div>
-              <div className="font-display font-bold text-xl text-yellow-400">{enrollment?.instructor_name || '—'}</div>
-            </Card>
-          </div>
-
-          <Card className="p-5">
-            <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-              <h2 className="font-semibold text-white">Cari paket</h2>
+              <p className="text-sm text-gray-200 mb-3">
+                Status: Davam edir
+                {anchorDdMmYyyy ? (
+                  <span className="text-gray-400"> ({anchorDdMmYyyy} tarixindən bəri)</span>
+                ) : null}
+              </p>
+              <p className="text-sm text-gray-200 mb-4">
+                Ümumi aylıq borc:{' '}
+                <span className="text-amber-200 font-mono tabular-nums font-semibold">
+                  {monthlyDebtNum != null ? `${monthlyDebtNum.toFixed(2)} ₼` : '—'}
+                </span>
+              </p>
+              <p className="text-xs text-gray-500 mb-3">Müəllim: {enrollment?.instructor_name || '—'}</p>
               <button
                 type="button"
-                onClick={() => setHistoryOpen((v) => !v)}
-                className="text-sm font-semibold text-blue-400 border border-blue-500/30 rounded-xl px-3 py-1.5 hover:bg-blue-500/10"
-                aria-expanded={historyOpen}
+                onClick={() => setPartialInfoOpen((v) => !v)}
+                className="w-full sm:w-auto text-sm font-semibold rounded-xl px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white border-0"
               >
-                {historyOpen ? 'Tarixçəni gizlət' : 'Ödəniş tarixçəsi'}
+                Hissəli ödəniş et
               </button>
-            </div>
-            {enrollment ? (
-              <ul className="text-sm text-gray-300 space-y-2">
-                <li>
-                  <span className="text-gray-500">Müəllim: </span>
-                  {enrollment.instructor_name || '—'}
-                </li>
-                <li>
-                  <span className="text-gray-500">Paket: </span>
-                  {BILLING[enrollment.billing_type] || enrollment.billing_type || '—'}
-                </li>
-                {enrollment.billing_type === 'monthly' && hasMonthlyFee && (
-                  <li>
-                    <span className="text-gray-500">Aylıq məbləğ: </span>
-                    <span className="text-emerald-300 font-mono tabular-nums">{monthlyFeeNum.toFixed(2)} ₼</span>
-                  </li>
+              {partialInfoOpen ? (
+                <p className="text-xs text-gray-400 mt-3 leading-relaxed border border-indigo-500/20 rounded-xl p-3 bg-[#13112e]/80">
+                  Hissəli ödənişi müəlliminiz qeydə alır. Ödəmək istədiyiniz məbləği müəlliminizə bildirin; o, sistemə
+                  daxil edəndə borc avtomatik yenilənəcək.
+                </p>
+              ) : null}
+            </Card>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                <Card className="p-5">
+                  <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Tamamlanan Dərs</div>
+                  <div className="font-display font-extrabold text-3xl text-blue-400">
+                    {lessonCount}
+                    {limit ? `/${limit}` : ''}
+                  </div>
+                  {limit ? (
+                    <div className="mt-3">
+                      <div className="h-2 bg-[#13112e] rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-blue-500 rounded-full transition-all max-w-full"
+                          style={{ width: `${progressPct}%` }}
+                        />
+                      </div>
+                    </div>
+                  ) : null}
+                </Card>
+                <Card className="p-5">
+                  <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Billing</div>
+                  <div className="font-display font-bold text-xl text-emerald-400">
+                    {BILLING[enrollment?.billing_type] || enrollment?.billing_type || '—'}
+                  </div>
+                </Card>
+                <Card className="p-5">
+                  <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Müəllim</div>
+                  <div className="font-display font-bold text-xl text-yellow-400">{enrollment?.instructor_name || '—'}</div>
+                </Card>
+              </div>
+
+              <Card className="p-5">
+                <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                  <h2 className="font-semibold text-white">Cari paket</h2>
+                  <button
+                    type="button"
+                    onClick={() => setHistoryOpen((v) => !v)}
+                    className="text-sm font-semibold text-blue-400 border border-blue-500/30 rounded-xl px-3 py-1.5 hover:bg-blue-500/10"
+                    aria-expanded={historyOpen}
+                  >
+                    {historyOpen ? 'Tarixçəni gizlət' : 'Ödəniş tarixçəsi'}
+                  </button>
+                </div>
+                {enrollment ? (
+                  <ul className="text-sm text-gray-300 space-y-2">
+                    <li>
+                      <span className="text-gray-500">Müəllim: </span>
+                      {enrollment.instructor_name || '—'}
+                    </li>
+                    <li>
+                      <span className="text-gray-500">Paket: </span>
+                      {BILLING[enrollment.billing_type] || enrollment.billing_type || '—'}
+                    </li>
+                    {enrolledAtText && (
+                      <li>
+                        <span className="text-gray-500">Sistemə qeydiyyat: </span>
+                        <span className="font-mono text-white/90">{enrolledAtText}</span>
+                      </li>
+                    )}
+                    {weekdayLine && (
+                      <li>
+                        <span className="text-gray-500">Həftəlik dərs günləri/saatları: </span>
+                        <span className="text-white/90">{weekdayLine}</span>
+                      </li>
+                    )}
+                    {enrollment.planned_lessons_in_cycle != null && limit != null && (
+                      <li>
+                        <span className="text-gray-500">Cədvəldəki dərs sayı (cari dövr): </span>
+                        <span className="font-mono text-white/90">
+                          {Number(enrollment.planned_lessons_in_cycle || 0)} / {limit}
+                        </span>
+                      </li>
+                    )}
+                    {enrollment.next_lesson_at && (
+                      <li>
+                        <span className="text-gray-500">Növbəti dərs: </span>
+                        <span className="font-mono text-indigo-200">{fmtAzFromDb(enrollment.next_lesson_at)}</span>
+                      </li>
+                    )}
+                    <li>
+                      <span className="text-gray-500">Keçilmiş dərs sayı: </span>
+                      {enrollment.lesson_count ?? 0}
+                      {limit != null ? ` / ${limit} (Dövr #${enrollment.billing_cycle || 1})` : ''}
+                    </li>
+                    {remaining != null && (
+                      <li>
+                        <span className="text-gray-500">Qalan dərs sayı: </span>
+                        <span className="text-emerald-300 font-mono">{remaining}</span>
+                      </li>
+                    )}
+                  </ul>
+                ) : (
+                  <p className="text-gray-500 text-sm">Aktiv qeydiyyat tapılmadı.</p>
                 )}
-                {enrollment.payment_start_date_for_display && (
-                  <li>
-                    <span className="text-gray-500">Ödəniş başlanğıcı (tarix): </span>
-                    <span className="font-mono text-white/90">
-                      {fmtDdMmYyyy(parseYmdLocal(String(enrollment.payment_start_date_for_display).slice(0, 10)))}
-                    </span>
-                  </li>
-                )}
-                {enrollment.billing_type === 'monthly' && paymentAnchorLine && (
-                  <li>
-                    <span className="text-gray-500">Aylıq ödəniş qaydası: </span>
-                    <span className="text-white/90">{paymentAnchorLine}</span>
-                  </li>
-                )}
-                {enrollment.billing_type === 'monthly' && nextMonthlyPaymentText && (
-                  <li>
-                    <span className="text-gray-500">Növbəti ödəniş tarixi (təxmini): </span>
-                    <span className="font-mono text-emerald-200">{nextMonthlyPaymentText}</span>
-                  </li>
-                )}
-                {enrolledAtText && (
-                  <li>
-                    <span className="text-gray-500">Sistemə qeydiyyat: </span>
-                    <span className="font-mono text-white/90">{enrolledAtText}</span>
-                  </li>
-                )}
-                {weekdayLine && (
-                  <li>
-                    <span className="text-gray-500">Həftəlik dərs günləri/saatları: </span>
-                    <span className="text-white/90">{weekdayLine}</span>
-                  </li>
-                )}
-                {enrollment.planned_lessons_in_cycle != null && limit != null && (
-                  <li>
-                    <span className="text-gray-500">Cədvəldəki dərs sayı (cari dövr): </span>
-                    <span className="font-mono text-white/90">
-                      {Number(enrollment.planned_lessons_in_cycle || 0)} / {limit}
-                    </span>
-                  </li>
-                )}
-                {enrollment.next_lesson_at && (
-                  <li>
-                    <span className="text-gray-500">Növbəti dərs: </span>
-                    <span className="font-mono text-indigo-200">{fmtAzFromDb(enrollment.next_lesson_at)}</span>
-                  </li>
-                )}
-                <li>
-                  <span className="text-gray-500">Keçilmiş dərs sayı: </span>
-                  {enrollment.lesson_count ?? 0}
-                  {limit != null ? ` / ${limit} (Dövr #${enrollment.billing_cycle || 1})` : ''}
-                </li>
-                {remaining != null && (
-                  <li>
-                    <span className="text-gray-500">Qalan dərs sayı: </span>
-                    <span className="text-emerald-300 font-mono">{remaining}</span>
-                  </li>
-                )}
-              </ul>
-            ) : (
-              <p className="text-gray-500 text-sm">Aktiv qeydiyyat tapılmadı.</p>
-            )}
-          </Card>
+              </Card>
+            </>
+          )}
         </>
       )}
 
