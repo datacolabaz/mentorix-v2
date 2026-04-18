@@ -280,7 +280,14 @@ const sendOtp = async (req, res) => {
       code,
       expiresAt,
     ]);
-    await sendOtpSms(clean, code);
+    const sms = await sendOtpSms(clean, code);
+    if (!sms?.success) {
+      await db.query('DELETE FROM otp_codes WHERE phone = $1 AND code = $2', [clean, code]);
+      return res.status(502).json({
+        success: false,
+        message: sms?.error || 'OTP SMS göndərilə bilmədi. SMS provayder cavabını yoxlayın və ya bir az sonra yenidən cəhd edin.',
+      });
+    }
     res.json({ success: true, message: 'OTP göndərildi' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
