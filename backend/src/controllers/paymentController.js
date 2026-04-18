@@ -1,4 +1,5 @@
 const db = require('../utils/db');
+const { countUnpaidBillingPeriods, earliestUnpaidBillingDue } = require('../utils/monthlyBillingPeriods');
 
 function normUuid(id) {
   return String(id).trim().toLowerCase().replace(/-/g, '');
@@ -19,67 +20,6 @@ function toYmd(v) {
   if (Number.isNaN(d.getTime())) return null;
   return d.toISOString().slice(0, 10);
 }
-
-/** Aylıq ödəniş dövrü: təqvim ayı yox, müəllimin təyin etdiyi "gün" ankoru (enrollment_start_date / payment_start_date).
- *  PostgreSQL-də `AND (SELECT 1 ...)` səhvdir (integer → boolean); ona görə EXISTS ilə boolean konteksti. */
-const MONTHLY_BILLING_PERIOD_MATCHES_P2 = `
-EXISTS (
-  WITH enr AS (
-    SELECT
-      e.id AS enrollment_id,
-      COALESCE(e.enrollment_start_date, sp.payment_start_date::date) AS anchor
-    FROM enrollments e
-    LEFT JOIN student_profiles sp ON sp.user_id = e.student_id
-    WHERE e.id = p2.enrollment_id
-  ),
-  bounds AS (
-    SELECT
-      enrollment_id,
-      CASE
-        WHEN anchor IS NULL THEN date_trunc('month', CURRENT_DATE::timestamp)::date
-        ELSE (
-          date_trunc('month', CURRENT_DATE::timestamp)
-          + (
-              LEAST(
-                EXTRACT(DAY FROM anchor)::int,
-                EXTRACT(
-                  DAY FROM (
-                    (date_trunc('month', CURRENT_DATE::timestamp) + INTERVAL '1 month' - INTERVAL '1 day')
-                  )::timestamp
-                )::int
-              )
-              - 1
-            ) * INTERVAL '1 day'
-        )::date
-      END AS period_start,
-      CASE
-        WHEN anchor IS NULL THEN (date_trunc('month', CURRENT_DATE::timestamp) + INTERVAL '1 month' - INTERVAL '1 day')::date
-        ELSE (
-          (
-            date_trunc('month', CURRENT_DATE::timestamp)
-            + (
-                LEAST(
-                  EXTRACT(DAY FROM anchor)::int,
-                  EXTRACT(
-                    DAY FROM (
-                      (date_trunc('month', CURRENT_DATE::timestamp) + INTERVAL '1 month' - INTERVAL '1 day')
-                    )::timestamp
-                  )::int
-                )
-                - 1
-              ) * INTERVAL '1 day'
-          )::date
-          + INTERVAL '1 month'
-          - INTERVAL '1 day'
-        )::date
-      END AS period_end
-    FROM enr
-  )
-  SELECT 1
-  FROM bounds b
-  WHERE b.enrollment_id = p2.enrollment_id
-    AND COALESCE(p2.payment_date, p2.paid_at::date) BETWEEN b.period_start AND b.period_end
-)`;
 
 function billingLimit(type) {
   if (type === '8_lessons') return 8;
@@ -302,6 +242,11 @@ const getInstructorPaymentBoard = async (req, res) => {
       [iid]
     );
 
+    const { rows: todayRows } = await db.query(
+      `SELECT to_char((CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Baku')::date, 'YYYY-MM-DD') AS ymd`
+    );
+    const todayBaku = todayRows[0]?.ymd || new Date().toISOString().slice(0, 10);
+
     const { rows } = await db.query(
       `SELECT e.id AS enrollment_id, u.id AS student_id, u.full_name, u.phone,
               e.billing_type AS enrollment_billing_type,
@@ -309,14 +254,7 @@ const getInstructorPaymentBoard = async (req, res) => {
               COALESCE(e.enrollment_start_date, sp.payment_start_date::date) AS payment_start_date,
               (e.enrollment_start_date IS NOT NULL
                 AND e.enrolled_at IS NOT NULL
-                AND e.enrollment_start_date < (e.enrolled_at::date)) AS pre_system_enrollment,
-              (e.billing_type = 'monthly' AND EXISTS (
-                SELECT 1 FROM payments p2
-                WHERE p2.enrollment_id = e.id
-                  AND p2.status = 'completed'
-                  AND (p2.notes IS NULL OR p2.notes NOT LIKE '[Başlanğıc balansı]%')
-                  AND ${MONTHLY_BILLING_PERIOD_MATCHES_P2}
-              )) AS paid_this_month
+                AND e.enrollment_start_date < (e.enrolled_at::date)) AS pre_system_enrollment
        FROM enrollments e
        INNER JOIN users u ON u.id = e.student_id
        LEFT JOIN student_profiles sp ON sp.user_id = u.id
@@ -326,16 +264,38 @@ const getInstructorPaymentBoard = async (req, res) => {
       [iid]
     );
 
+    const monthlyIds = rows.filter((r) => r.enrollment_billing_type === 'monthly').map((r) => r.enrollment_id);
+    const payByEnr = new Map();
+    if (monthlyIds.length) {
+      const { rows: payRows } = await db.query(
+        `SELECT p.enrollment_id, p.payment_date, p.paid_at, p.period, p.notes, p.status
+         FROM payments p
+         WHERE p.enrollment_id = ANY($1::uuid[])
+           AND p.status = 'completed'`,
+        [monthlyIds]
+      );
+      for (const p of payRows) {
+        const k = p.enrollment_id;
+        if (!payByEnr.has(k)) payByEnr.set(k, []);
+        payByEnr.get(k).push(p);
+      }
+    }
+
     let pendingCount = 0;
     let pendingAmount = 0;
     const students = rows.map((r) => {
       const feeNum = r.monthly_fee != null ? Number(r.monthly_fee) : NaN;
       const hasFee = Number.isFinite(feeNum) && feeNum > 0;
-      const paidThisPeriod = Boolean(r.paid_this_month);
-      const pending = hasFee && !paidThisPeriod;
-      if (pending) {
+      const anchor = toYmd(r.payment_start_date);
+      let unpaidMonths = 0;
+      if (r.enrollment_billing_type === 'monthly' && hasFee && anchor) {
+        const pays = payByEnr.get(r.enrollment_id) || [];
+        unpaidMonths = countUnpaidBillingPeriods(anchor, todayBaku, pays);
+      }
+      const pendingStudent = hasFee && r.enrollment_billing_type === 'monthly' && unpaidMonths > 0;
+      if (pendingStudent) {
         pendingCount += 1;
-        pendingAmount += feeNum;
+        pendingAmount += unpaidMonths * feeNum;
       }
       const parts = String(r.full_name || '')
         .trim()
@@ -343,8 +303,9 @@ const getInstructorPaymentBoard = async (req, res) => {
       const firstName = parts[0] || '—';
       const lastName = parts.length > 1 ? parts.slice(1).join(' ') : '—';
       let paymentStatus = 'təyin_edilməyib';
-      if (hasFee) {
-        paymentStatus = paidThisPeriod ? 'ödənilib' : 'gözlənilir';
+      if (hasFee && r.enrollment_billing_type === 'monthly') {
+        if (!anchor) paymentStatus = 'təyin_edilməyib';
+        else paymentStatus = unpaidMonths === 0 ? 'ödənilib' : 'gözlənilir';
       }
       return {
         enrollment_id: r.enrollment_id,
@@ -357,6 +318,9 @@ const getInstructorPaymentBoard = async (req, res) => {
         payment_start_date: r.payment_start_date,
         payment_status: paymentStatus,
         pre_system_enrollment: Boolean(r.pre_system_enrollment),
+        unpaid_monthly_periods: r.enrollment_billing_type === 'monthly' ? unpaidMonths : 0,
+        pending_monthly_amount:
+          r.enrollment_billing_type === 'monthly' && hasFee ? Math.round(unpaidMonths * feeNum * 100) / 100 : 0,
       };
     });
 
@@ -380,7 +344,8 @@ const markMonthlyPaid = async (req, res) => {
     }
 
     const { rows: en } = await db.query(
-      `SELECT e.id, e.student_id, e.instructor_id, e.billing_type, sp.monthly_fee
+      `SELECT e.id, e.student_id, e.instructor_id, e.billing_type, sp.monthly_fee,
+              COALESCE(e.enrollment_start_date, sp.payment_start_date::date) AS billing_anchor
        FROM enrollments e
        LEFT JOIN student_profiles sp ON sp.user_id = e.student_id
        WHERE e.id = $1`,
@@ -401,25 +366,34 @@ const markMonthlyPaid = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Aylıq məbləğ təyin edilməyib' });
     }
 
-    const { rows: dup } = await db.query(
-      `SELECT p2.id
-       FROM payments p2
-       WHERE p2.enrollment_id = $1
-         AND p2.status = 'completed'
-         AND (p2.notes IS NULL OR p2.notes NOT LIKE '[Başlanğıc balansı]%')
-         AND ${MONTHLY_BILLING_PERIOD_MATCHES_P2}
-       LIMIT 1`,
+    const { rows: todayRows } = await db.query(
+      `SELECT to_char((CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Baku')::date, 'YYYY-MM-DD') AS ymd`
+    );
+    const todayBaku = todayRows[0]?.ymd || new Date().toISOString().slice(0, 10);
+    const anchor = toYmd(en[0].billing_anchor);
+    if (!anchor) {
+      return res.status(400).json({ success: false, message: 'Ödəniş başlanğıcı (tarix) təyin edilməyib' });
+    }
+
+    const { rows: payList } = await db.query(
+      `SELECT payment_date, paid_at, period, notes, status
+       FROM payments
+       WHERE enrollment_id = $1 AND status = 'completed'`,
       [enrollment_id]
     );
-    if (dup[0]) {
-      return res.json({ success: true, alreadyPaid: true, message: 'Bu ay üçün ödəniş artıq qeydə alınıb' });
+
+    const due = earliestUnpaidBillingDue(anchor, todayBaku, payList);
+    if (!due) {
+      return res.json({ success: true, alreadyPaid: true, message: 'Bütün aylıq dövrlər üçün ödəniş qeydə alınıb' });
     }
 
     const { rows: ins } = await db.query(
-      `INSERT INTO payments (enrollment_id, student_id, amount, currency, status, paid_at, payment_date, notes)
-       VALUES ($1, $2, $3, 'AZN', 'completed', NOW(), CURRENT_DATE, $4)
+      `INSERT INTO payments (enrollment_id, student_id, amount, currency, status, paid_at, payment_date, period, notes)
+       VALUES ($1, $2, $3, 'AZN', 'completed', NOW(),
+               (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Baku')::date,
+               $4, $5)
        RETURNING *`,
-      [enrollment_id, en[0].student_id, amount, 'Aylıq ödəniş']
+      [enrollment_id, en[0].student_id, amount, due, `Aylıq ödəniş (dövr ${due})`]
     );
     res.json({ success: true, payment: ins[0] });
   } catch (err) {

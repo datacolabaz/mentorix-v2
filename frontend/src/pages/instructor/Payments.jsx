@@ -149,7 +149,9 @@ export default function InstructorPayments() {
             {loading ? '…' : formatAzn(pendingAmount)}
           </div>
           <p className="text-xs text-gray-500 mt-2">
-            {loading ? '…' : `${pendingCount} tələbə · cari ay üçün gözlənilir`}
+            {loading
+              ? '…'
+              : `${pendingCount} tələbə · ödənilməmiş aylıq dövrlərin cəmi (dərs sayı ilə hesablanmır)`}
           </p>
         </Card>
       </div>
@@ -179,7 +181,7 @@ export default function InstructorPayments() {
 
         {!loading && !err && (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[800px]">
+            <table className="w-full text-sm min-w-[920px]">
               <thead>
                 <tr className="border-b border-indigo-500/25 text-left text-[11px] uppercase tracking-wider text-indigo-300/70 bg-[#0f0c29]/90">
                   <th className="py-3.5 px-4 font-semibold">Ad</th>
@@ -187,6 +189,7 @@ export default function InstructorPayments() {
                   <th className="py-3.5 px-4 font-semibold">Nömrə</th>
                   <th className="py-3.5 px-4 font-semibold whitespace-nowrap">Ödəniş başlanğıcı</th>
                   <th className="py-3.5 px-4 font-semibold">Ödəniş statusu</th>
+                  <th className="py-3.5 px-4 font-semibold whitespace-nowrap">Aylıq borc</th>
                   <th className="py-3.5 px-4 font-semibold whitespace-nowrap">Keçmiş</th>
                   <th className="py-3.5 px-4 font-semibold w-[1%] whitespace-nowrap text-right">Əməl</th>
                 </tr>
@@ -216,6 +219,17 @@ export default function InstructorPayments() {
                           <span className="block text-[11px] text-gray-500 mt-1 tabular-nums">
                             Aylıq: {formatAzn(s.monthly_fee)}
                           </span>
+                        )}
+                      </td>
+                      <td className="py-3.5 px-4 align-top text-xs tabular-nums">
+                        {s.billing_type === 'monthly' && Number(s.unpaid_monthly_periods) > 0 ? (
+                          <span className="text-amber-200/95">
+                            {s.unpaid_monthly_periods} ay · {formatAzn(s.pending_monthly_amount)}
+                          </span>
+                        ) : s.billing_type === 'monthly' ? (
+                          <span className="text-gray-500">0</span>
+                        ) : (
+                          <span className="text-gray-600">—</span>
                         )}
                       </td>
                       <td className="py-3.5 px-4 align-top">

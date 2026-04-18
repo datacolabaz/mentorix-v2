@@ -70,6 +70,13 @@ const markAttendance = async (req, res) => {
     if (!enrollment)
       return res.status(404).json({ success: false, message: 'Qeydiyyat tapılmadı' });
 
+    if (enrollment.billing_type === 'monthly') {
+      return res.status(400).json({
+        success: false,
+        message: 'Aylıq paket üçün davamiyyəti “Davamiyyət” səhifəsindəki aylıq cədvəldən qeyd edin.',
+      });
+    }
+
     const lessonNum = enrollment.lesson_count + 1;
 
     await db.query(

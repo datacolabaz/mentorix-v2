@@ -654,10 +654,19 @@ export default function InstructorAttendance() {
                         </td>
                       </tr>
                     )}
-                    {monthlyRows.map((row) => (
+                    {monthlyRows.map((row) => {
+                      const clipToday = monthlyMeta.today || ymdTodayBaku()
+                      const isFutureRow = row.lesson_date > clipToday
+                      const rowActionsDisabled = monthlyFetching || isFutureRow
+                      return (
                       <tr key={row.lesson_date} className="border-t border-indigo-500/10">
                         <td className="px-3 py-2 font-mono text-white whitespace-nowrap">
                           {fmtDdMmFromYmd(row.lesson_date)}
+                          {isFutureRow && (
+                            <span className="block text-[10px] text-gray-500 font-sans normal-case mt-0.5">
+                              gələcək
+                            </span>
+                          )}
                         </td>
                         <td className="px-3 py-2 text-gray-300 capitalize">{row.status || 'pending'}</td>
                         <td className="px-3 py-2 text-right whitespace-nowrap">
@@ -665,7 +674,7 @@ export default function InstructorAttendance() {
                             <Button
                               type="button"
                               size="sm"
-                              disabled={monthlyFetching}
+                              disabled={rowActionsDisabled}
                               onClick={() => void putMonthlySlot(row.lesson_date, 'attended')}
                             >
                               Gəldi
@@ -674,7 +683,7 @@ export default function InstructorAttendance() {
                               type="button"
                               variant="secondary"
                               size="sm"
-                              disabled={monthlyFetching}
+                              disabled={rowActionsDisabled}
                               onClick={() => void putMonthlySlot(row.lesson_date, 'absent')}
                             >
                               Gəlmədi
@@ -683,7 +692,7 @@ export default function InstructorAttendance() {
                               type="button"
                               variant="secondary"
                               size="sm"
-                              disabled={monthlyFetching}
+                              disabled={rowActionsDisabled}
                               onClick={() => void putMonthlySlot(row.lesson_date, 'archived')}
                             >
                               Arxiv
@@ -691,7 +700,8 @@ export default function InstructorAttendance() {
                           </div>
                         </td>
                       </tr>
-                    ))}
+                      )
+                    })}
                   </tbody>
                 </table>
               </div>

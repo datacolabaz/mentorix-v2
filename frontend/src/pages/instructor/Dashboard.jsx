@@ -24,7 +24,11 @@ export default function InstructorDashboard() {
   const { user } = useAuthStore()
   const [students, setStudents] = useState([])
   const [examStats, setExamStats] = useState([])
-  const [dash, setDash] = useState({ lessons_this_month: 0, income_this_month: 0 })
+  const [dash, setDash] = useState({
+    income_this_month: 0,
+    total_earnings_all: 0,
+    pending_monthly_total: 0,
+  })
   const [loading, setLoading] = useState(true)
   const toast = useToast()
 
@@ -43,7 +47,9 @@ export default function InstructorDashboard() {
     Promise.all([
       api.get('/students').catch(() => ({ students: [] })),
       api.get('/exams/student-progress').catch(() => ({ stats: [] })),
-      api.get('/teacher/dashboard-stats').catch(() => ({ stats: { lessons_this_month: 0, income_this_month: 0 } })),
+      api
+        .get('/teacher/dashboard-stats')
+        .catch(() => ({ stats: { income_this_month: 0, total_earnings_all: 0, pending_monthly_total: 0 } })),
       api.get('/students/instructor/my-lessons').catch(() => ({ lessons: [] })),
     ])
       .then(([studentsRes, examsRes, dashRes, lessonsRes]) => {
@@ -51,7 +57,9 @@ export default function InstructorDashboard() {
         const nextStudents = studentsRes.students || []
         setStudents(nextStudents)
         setExamStats(examsRes.stats || [])
-        setDash(dashRes.stats || { lessons_this_month: 0, income_this_month: 0 })
+        setDash(
+          dashRes.stats || { income_this_month: 0, total_earnings_all: 0, pending_monthly_total: 0 }
+        )
         // Pre-fetch: tələbələr və cədvəl keşi (60s TTL üçün yazılır)
         writeCache('instructor_students_v1', { students: nextStudents })
         const nextLessons = Array.isArray(lessonsRes.lessons) ? lessonsRes.lessons : []
@@ -150,7 +158,9 @@ export default function InstructorDashboard() {
   const hrs = new Date().getHours()
   const greeting = hrs < 12 ? 'Sabahınız xeyir' : hrs < 18 ? 'Günortanız xeyir' : 'Axşamınız xeyir'
   const moneyFmt = new Intl.NumberFormat('en-US')
-  const incomeAz = `₼ ${moneyFmt.format(Math.round(Number(dash.income_this_month || 0)))}`
+  const incomeThisMonthAz = `₼ ${moneyFmt.format(Math.round(Number(dash.income_this_month || 0)))}`
+  const totalEarningsAz = `₼ ${moneyFmt.format(Math.round(Number(dash.total_earnings_all || 0)))}`
+  const pendingMonthlyAz = `₼ ${moneyFmt.format(Math.round(Number(dash.pending_monthly_total || 0)))}`
 
   const rosterWithExam = students.filter((s) => examById[String(s.id)]?.exam_avg_score != null)
   const avgScore = rosterWithExam.length
@@ -197,8 +207,24 @@ export default function InstructorDashboard() {
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4 mb-6">
         <StatCard label="Tələbə" value={loading ? '—' : students.length} icon="🎓" color="text-blue-400" />
         <StatCard label="Orta imtahan balı" value={loading ? '—' : `${avgScore}%`} icon="📊" color="text-emerald-400" />
-        <StatCard label="Bu ay dərs" value={loading ? '—' : Number(dash.lessons_this_month || 0)} icon="✅" color="text-yellow-400" />
-        <StatCard label="Gəlir" value={loading ? '—' : incomeAz} icon="💰" color="text-cyan-400" />
+        <StatCard
+          label="Gözlənən (aylıq)"
+          value={loading ? '—' : pendingMonthlyAz}
+          icon="⏳"
+          color="text-amber-300"
+        />
+        <StatCard label="Ümumi gəlir" value={loading ? '—' : totalEarningsAz} icon="💰" color="text-cyan-400" />
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-6">
+        <StatCard
+          label="Bu ay ödəniş (nağd)"
+          value={loading ? '—' : incomeThisMonthAz}
+          icon="📅"
+          color="text-yellow-400"
+        />
+        <p className="text-xs text-gray-500 self-center sm:col-span-1">
+          Gözlənən məbləğ: ödəniş ankoruna görə tamamlanmamış aylıq dövrlərin cəmi (dərs sayı ilə deyil).
+        </p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 min-w-0">
