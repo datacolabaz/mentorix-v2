@@ -86,6 +86,8 @@ const listMyPayments = async (req, res) => {
       enrollmentOut = {
         ...rest,
         monthly_fee: Number.isFinite(mfNum) ? mfNum : null,
+        // Helpful for student UI: distinguish "enrolled into system" vs billing anchor date
+        enrolled_at: rest.enrolled_at || null,
       };
     }
     const limit = enrollment ? billingLimit(enrollment.billing_type) : null;

@@ -3,6 +3,7 @@ import api from '../../lib/api'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
 import { useToast } from '../../components/common/Toast'
+import useAuthStore from '../../hooks/useAuth'
 import {
   fmtTime,
   parseLessonInstant,
@@ -45,10 +46,39 @@ function normalizeWeekdays(raw) {
   return [...set].sort((a, b) => a - b)
 }
 
+function parseLessonTimesMap(raw) {
+  let obj = raw
+  if (typeof raw === 'string') {
+    try {
+      obj = JSON.parse(raw)
+    } catch {
+      obj = {}
+    }
+  }
+  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return {}
+  return obj
+}
+
+function weeklySlotFromEnrollment(day, wallTimeRaw) {
+  const wt = wallTimeRaw != null && wallTimeRaw !== '' ? fmtTime(wallTimeRaw) : ''
+  if (!wt) return null
+  const [h, m] = wt.split(':').map((x) => parseInt(x, 10))
+  if (!Number.isFinite(h) || !Number.isFinite(m)) return null
+  const startMin = h * 60 + m
+  const endMin = startMin + 60
+  const eh = String(Math.floor(endMin / 60) % 24).padStart(2, '0')
+  const em = String(endMin % 60).padStart(2, '0')
+  const start = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+  const end = `${eh}:${em}`
+  return { day, start, end }
+}
+
 export default function StudentSchedule() {
+  const { user } = useAuthStore()
   const [loading, setLoading] = useState(true)
   const [lessons, setLessons] = useState([])
   const [prepSlots, setPrepSlots] = useState([])
+  const [weeklyPattern, setWeeklyPattern] = useState(null) // { lesson_weekdays, lesson_times }
   const [err, setErr] = useState(null)
   const [saving, setSaving] = useState(false)
   const toast = useToast()
@@ -62,17 +92,28 @@ export default function StudentSchedule() {
     setLoading(true)
     setErr(null)
     try {
-      const d = await api.get('/students/my/schedule')
+      const [d, pay] = await Promise.all([
+        api.get('/students/my/schedule'),
+        user?.id ? api.get('/payments/my').catch(() => null) : Promise.resolve(null),
+      ])
       setLessons(Array.isArray(d.lessons) ? d.lessons : [])
       setPrepSlots(Array.isArray(d.prepSlots) ? d.prepSlots : [])
+
+      const en = pay?.enrollment || null
+      if (en && (en.lesson_weekdays || en.lesson_times)) {
+        setWeeklyPattern({ lesson_weekdays: en.lesson_weekdays, lesson_times: en.lesson_times })
+      } else {
+        setWeeklyPattern(null)
+      }
     } catch (e) {
       setErr(e?.message || 'Yüklənmədi')
       setLessons([])
       setPrepSlots([])
+      setWeeklyPattern(null)
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [user?.id])
 
   useEffect(() => {
     void load()
@@ -89,6 +130,16 @@ export default function StudentSchedule() {
     }
     return [...set].sort((a, b) => a - b)
   }, [lessons])
+
+  const patternDays = useMemo(() => {
+    if (!weeklyPattern) return []
+    const wd = normalizeWeekdays(weeklyPattern.lesson_weekdays)
+    const lt = parseLessonTimesMap(weeklyPattern.lesson_times)
+    return wd.filter((d) => {
+      const t = lt?.[String(d)] ?? lt?.[d]
+      return !!t
+    })
+  }, [weeklyPattern])
 
   const scheduleSlotsByDay = useMemo(() => {
     const m = new Map()
@@ -127,16 +178,39 @@ export default function StudentSchedule() {
       m.set(day, list)
     }
 
+    // Müəllimin təyin etdiyi həftəlik paket saatları (tarixsiz) — real `lessons` yoxdursa belə görünsün.
+    if (weeklyPattern) {
+      const wd = normalizeWeekdays(weeklyPattern.lesson_weekdays)
+      const lt = parseLessonTimesMap(weeklyPattern.lesson_times)
+      for (const day of wd) {
+        const wall = lt?.[String(day)] ?? lt?.[day]
+        const slot = weeklySlotFromEnrollment(day, wall)
+        if (!slot) continue
+        const list = m.get(day) || []
+        const hasLesson = list.some((x) => x.kind === 'lesson')
+        if (hasLesson) continue
+        list.push({
+          id: `weekly-${day}`,
+          kind: 'weekly',
+          day_of_week: day,
+          start_time: slot.start,
+          end_time: slot.end,
+          title: 'Paket (həftəlik)',
+        })
+        m.set(day, list)
+      }
+    }
+
     for (const d of m.keys()) {
       m.get(d).sort((a, b) => parseToMinutes(a.start_time) - parseToMinutes(b.start_time))
     }
     return m
-  }, [lessons, prepSlots])
+  }, [lessons, prepSlots, weeklyPattern])
 
   const freeDays = useMemo(() => {
-    const l = new Set(lessonDays)
-    return WEEKDAYS.map((d) => d.v).filter((x) => !l.has(x))
-  }, [lessonDays])
+    const busy = new Set([...lessonDays, ...patternDays])
+    return WEEKDAYS.map((d) => d.v).filter((x) => !busy.has(x))
+  }, [lessonDays, patternDays])
 
   const toggleNewDay = (v) => {
     setNewSlotDays((prev) => (prev.includes(v) ? prev.filter((x) => x !== v) : [...prev, v].sort((a, b) => a - b)))
