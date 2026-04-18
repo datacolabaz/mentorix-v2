@@ -1,8 +1,12 @@
 const db = require('../utils/db');
 const {
   computeSubscriptionState,
+  computePrepaidWallet,
   getTodayBakuYmd,
   loadInstructorMonthlySubscriptionFinancials,
+  loadInstructorMonthlyPrepaidFinancials,
+  roundMoney,
+  timingIsPrepaid,
   toYmd: anchorToYmd,
 } = require('../services/subscriptionBilling');
 
@@ -72,7 +76,6 @@ const listMyPayments = async (req, res) => {
     const { rows: enRows } = await db.query(
       `SELECT e.*,
               iu.full_name AS instructor_name,
-              sp.payment_start_date AS student_payment_start_date,
               sp.monthly_fee AS student_monthly_fee
        FROM enrollments e
        LEFT JOIN users iu ON iu.id = e.instructor_id
@@ -92,7 +95,6 @@ const listMyPayments = async (req, res) => {
       const { rows: anyRows } = await db.query(
         `SELECT e.*,
                 iu.full_name AS instructor_name,
-                sp.payment_start_date AS student_payment_start_date,
                 sp.monthly_fee AS student_monthly_fee
          FROM enrollments e
          LEFT JOIN users iu ON iu.id = e.instructor_id
@@ -105,10 +107,10 @@ const listMyPayments = async (req, res) => {
       enrollment = anyRows[0] || null;
     }
     let enrollmentOut = null;
-    let paymentStartForDisplay = null;
+    let lessonStartForDisplay = null;
     if (enrollment) {
-      const { student_payment_start_date, student_monthly_fee, ...rest } = enrollment;
-      paymentStartForDisplay = rest.enrollment_start_date || student_payment_start_date || null;
+      const { student_monthly_fee, ...rest } = enrollment;
+      lessonStartForDisplay = rest.enrollment_start_date || null;
       const mfNum = student_monthly_fee != null ? Number(student_monthly_fee) : NaN;
       const startYmd = toYmd(rest.enrollment_start_date);
       const enrolledYmd = toYmd(rest.enrolled_at);
@@ -117,12 +119,11 @@ const listMyPayments = async (req, res) => {
       enrollmentOut = {
         ...rest,
         monthly_fee: Number.isFinite(mfNum) ? mfNum : null,
-        // Helpful for student UI: distinguish "enrolled into system" vs billing anchor date
         enrolled_at: rest.enrolled_at || null,
         pre_system_enrollment: preSystemEnrollment,
       };
       if (rest.billing_type === 'monthly' && Number.isFinite(mfNum) && mfNum > 0 && enrollmentOut.id) {
-        const anchorYmd = anchorToYmd(paymentStartForDisplay);
+        const anchorYmd = anchorToYmd(lessonStartForDisplay);
         if (anchorYmd) {
           const todayBaku = await getTodayBakuYmd(db);
           const { rows: pr } = await db.query(
@@ -132,7 +133,20 @@ const listMyPayments = async (req, res) => {
             [enrollmentOut.id]
           );
           const paid = Number(pr[0]?.t) || 0;
-          enrollmentOut.subscription = computeSubscriptionState(anchorYmd, todayBaku, mfNum, paid);
+          if (timingIsPrepaid(rest.billing_timing)) {
+            const { rows: sl } = await db.query(
+              `SELECT COUNT(*)::int AS n
+               FROM monthly_attendance_slots
+               WHERE enrollment_id = $1
+                 AND lesson_date <= $2::date
+                 AND charges_virtual_balance = TRUE`,
+              [enrollmentOut.id, todayBaku]
+            );
+            const charged = Number(sl[0]?.n) || 0;
+            enrollmentOut.subscription = computePrepaidWallet(mfNum, charged, paid);
+          } else {
+            enrollmentOut.subscription = computeSubscriptionState(anchorYmd, todayBaku, mfNum, paid);
+          }
         }
       }
     }
@@ -178,7 +192,8 @@ const listMyPayments = async (req, res) => {
             remaining_lessons,
             next_lesson_at: nextLesson,
             planned_lessons_in_cycle: planned_lessons_in_cycle,
-            payment_start_date_for_display: paymentStartForDisplay,
+            lesson_start_date_for_display: lessonStartForDisplay,
+            payment_start_date_for_display: lessonStartForDisplay,
           }
         : null,
     });
@@ -274,11 +289,12 @@ const getInstructorPaymentBoard = async (req, res) => {
     const { rows } = await db.query(
       `SELECT e.id AS enrollment_id, u.id AS student_id, u.full_name, u.phone,
               e.billing_type AS enrollment_billing_type,
+              e.billing_timing,
               sp.monthly_fee,
-              COALESCE(e.enrollment_start_date, sp.payment_start_date::date) AS payment_start_date,
+              e.enrollment_start_date::date AS lesson_start_date,
               (e.enrollment_start_date IS NOT NULL
                 AND e.enrolled_at IS NOT NULL
-                AND e.enrollment_start_date < (e.enrolled_at::date)) AS pre_system_enrollment
+                AND e.enrollment_start_date::date < (e.enrolled_at::date)) AS pre_system_enrollment
        FROM enrollments e
        INNER JOIN users u ON u.id = e.student_id
        LEFT JOIN student_profiles sp ON sp.user_id = u.id
@@ -288,8 +304,10 @@ const getInstructorPaymentBoard = async (req, res) => {
       [iid]
     );
 
-    const { byEnrollment: subMap, pendingSum } = await loadInstructorMonthlySubscriptionFinancials(db, iid);
-    const pendingAmount = pendingSum;
+    const { byEnrollment: subMap, pendingSum: postpaidPending } =
+      await loadInstructorMonthlySubscriptionFinancials(db, iid);
+    const { byEnrollment: preMap, pendingSum: prepaidPending } = await loadInstructorMonthlyPrepaidFinancials(db, iid);
+    const pendingAmount = roundMoney(postpaidPending + prepaidPending);
 
     let pendingCount = 0;
     const students = rows.map((r) => {
@@ -302,20 +320,43 @@ const getInstructorPaymentBoard = async (req, res) => {
       const lastName = parts.length > 1 ? parts.slice(1).join(' ') : '—';
       let paymentStatus = 'təyin_edilməyib';
       let sub = null;
-      const anchorYmd = anchorToYmd(r.payment_start_date);
+      let prepaidExtras = null;
+      const anchorYmd = anchorToYmd(r.lesson_start_date);
+      const isPrepaid = timingIsPrepaid(r.billing_timing);
       if (r.enrollment_billing_type === 'monthly' && hasFee && anchorYmd) {
-        const vb = subMap.get(String(r.enrollment_id));
-        if (vb) {
-          sub = {
-            subscription_months: vb.subscription_months,
-            subscription_due_total: vb.subscription_due_total,
-            subscription_total_paid: vb.subscription_total_paid,
-            pending_debt: vb.pending_debt,
-            subscription_prepaid: vb.subscription_prepaid,
-          };
-          if (sub.pending_debt > 0.005) pendingCount += 1;
-          paymentStatus = sub.pending_debt > 0.005 ? 'gözlənilir' : 'ödənilib';
+        if (isPrepaid) {
+          const pv = preMap.get(String(r.enrollment_id));
+          if (pv) {
+            sub = {
+              billing_model: 'prepaid',
+              subscription_months: pv.subscription_months,
+              subscription_due_total: pv.subscription_due_total,
+              subscription_total_paid: pv.subscription_total_paid,
+              pending_debt: pv.pending_debt,
+              subscription_prepaid: pv.subscription_prepaid,
+            };
+            prepaidExtras = {
+              lesson_unit_price: pv.lesson_unit_price,
+              charged_lesson_count: pv.charged_lesson_count,
+              consumed_amount: pv.consumed_amount,
+              wallet_balance: pv.wallet_balance,
+            };
+          }
+        } else {
+          const vb = subMap.get(String(r.enrollment_id));
+          if (vb) {
+            sub = {
+              billing_model: 'postpaid',
+              subscription_months: vb.subscription_months,
+              subscription_due_total: vb.subscription_due_total,
+              subscription_total_paid: vb.subscription_total_paid,
+              pending_debt: vb.pending_debt,
+              subscription_prepaid: vb.subscription_prepaid,
+            };
+          }
         }
+        if (sub && sub.pending_debt > 0.005) pendingCount += 1;
+        if (sub) paymentStatus = sub.pending_debt > 0.005 ? 'gözlənilir' : 'ödənilib';
       }
       return {
         enrollment_id: r.enrollment_id,
@@ -324,8 +365,10 @@ const getInstructorPaymentBoard = async (req, res) => {
         last_name: lastName,
         phone: r.phone,
         billing_type: r.enrollment_billing_type,
+        billing_timing: r.billing_timing || 'postpaid',
         monthly_fee: r.monthly_fee,
-        payment_start_date: r.payment_start_date,
+        lesson_start_date: r.lesson_start_date,
+        payment_start_date: r.lesson_start_date,
         payment_status: paymentStatus,
         pre_system_enrollment: Boolean(r.pre_system_enrollment),
         subscription_months: sub?.subscription_months ?? null,
@@ -333,6 +376,11 @@ const getInstructorPaymentBoard = async (req, res) => {
         subscription_total_paid: sub?.subscription_total_paid ?? null,
         pending_debt: sub?.pending_debt ?? null,
         subscription_prepaid: sub?.subscription_prepaid ?? null,
+        billing_model: sub?.billing_model ?? null,
+        lesson_unit_price: prepaidExtras?.lesson_unit_price ?? null,
+        charged_lesson_count: prepaidExtras?.charged_lesson_count ?? null,
+        consumed_amount: prepaidExtras?.consumed_amount ?? null,
+        wallet_balance: prepaidExtras?.wallet_balance ?? null,
       };
     });
 

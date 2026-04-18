@@ -95,7 +95,9 @@ function enrollmentFromStudentProfile(s) {
     lesson_times: s.lesson_times,
     instructor_name: s.instructor_name,
     enrolled_at: s.enrolled_at || s.enrollment_started_at || null,
-    payment_start_date_for_display: s.enrollment_start_date || s.payment_start_date || null,
+    payment_start_date_for_display: s.enrollment_start_date || null,
+    lesson_start_date_for_display: s.enrollment_start_date || null,
+    billing_timing: s.billing_timing === 'prepaid' ? 'prepaid' : 'postpaid',
     pre_system_enrollment: Boolean(
       s.enrollment_start_date &&
         s.enrollment_started_at &&
@@ -198,8 +200,12 @@ export default function StudentPayments() {
   const hasMonthlyFee = Number.isFinite(monthlyFeeNum) && monthlyFeeNum > 0
   const isMonthlySub = enrollment?.billing_type === 'monthly' && hasMonthlyFee
   const sub = enrollment?.subscription
-  const anchorDdMmYyyy = enrollment?.payment_start_date_for_display
-    ? fmtDdMmYyyy(parseYmdLocal(String(enrollment.payment_start_date_for_display).slice(0, 10)))
+  const anchorRaw =
+    enrollment?.lesson_start_date_for_display ||
+    enrollment?.payment_start_date_for_display ||
+    null
+  const anchorDdMmYyyy = anchorRaw
+    ? fmtDdMmYyyy(parseYmdLocal(String(anchorRaw).slice(0, 10)))
     : null
   const monthlyDebtNum =
     sub != null && Number.isFinite(Number(sub.pending_debt)) ? Number(sub.pending_debt) : null
@@ -241,11 +247,36 @@ export default function StudentPayments() {
                   <span className="text-gray-400"> ({anchorDdMmYyyy} tarixindən bəri)</span>
                 ) : null}
               </p>
+              <p className="text-xs text-gray-500 mb-2">
+                Növ:{' '}
+                {enrollment?.billing_timing === 'prepaid'
+                  ? 'Əvvəlcədən — dərsə görə balans (aylıq÷8)'
+                  : 'Sonradan — ayın ankor günü üzrə dövr borcu'}
+              </p>
               <p className="text-sm text-gray-200 mb-4">
-                Ümumi aylıq borc:{' '}
-                <span className="text-amber-200 font-mono tabular-nums font-semibold">
-                  {monthlyDebtNum != null ? `${monthlyDebtNum.toFixed(2)} ₼` : '—'}
-                </span>
+                {enrollment?.billing_timing === 'prepaid' ? (
+                  <>
+                    Qalıq borc:{' '}
+                    <span className="text-amber-200 font-mono tabular-nums font-semibold">
+                      {monthlyDebtNum != null ? `${monthlyDebtNum.toFixed(2)} ₼` : '—'}
+                    </span>
+                    {sub != null && Number.isFinite(Number(sub.wallet_balance)) ? (
+                      <span className="block mt-2 text-xs text-gray-400">
+                        Cari balans:{' '}
+                        <span className="text-emerald-300 font-mono tabular-nums font-semibold">
+                          {Number(sub.wallet_balance).toFixed(2)} ₼
+                        </span>
+                      </span>
+                    ) : null}
+                  </>
+                ) : (
+                  <>
+                    Ümumi aylıq borc:{' '}
+                    <span className="text-amber-200 font-mono tabular-nums font-semibold">
+                      {monthlyDebtNum != null ? `${monthlyDebtNum.toFixed(2)} ₼` : '—'}
+                    </span>
+                  </>
+                )}
               </p>
               <p className="text-xs text-gray-500 mb-3">Müəllim: {enrollment?.instructor_name || '—'}</p>
               <button

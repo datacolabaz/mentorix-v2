@@ -23,7 +23,7 @@ const emptyForm = {
   referral_notes: '',
   monthly_fee: '',
   enrollment_date: '',
-  payment_start_date: '',
+  billing_timing: 'postpaid',
   first_lesson_date: '',
   lesson_weekdays: [],
   lesson_times: {},
@@ -133,10 +133,10 @@ function StudentFormFields({ data, setData, scheduleMeta, mode, onRefreshSlots, 
         </div>
         <div>
           <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
-            Dərslərə başlama — ödəniş başlanğıcı *
+            Dərslərə başlama tarixi *
           </label>
           <p className="text-[10px] text-gray-500 mb-2">
-            Bu tarix tələbənin dərslərə həqiqətən başladığı gündür (keçmiş tarix ola bilər). Aylıq ödənişlər bu tarixə görə təkrarlanan dövrə bağlanır.
+            Bu tarix həm dərs cədvəlinin, həm də aylıq ödəniş ankorunun (hər ayın həmin günü) əsasını təşkil edir. Keçmiş tarix ola bilər.
           </p>
           <input
             className={inp}
@@ -216,6 +216,23 @@ function StudentFormFields({ data, setData, scheduleMeta, mode, onRefreshSlots, 
           ))}
         </select>
       </div>
+      {data.billing_type === 'monthly' && (
+        <div>
+          <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Aylıq ödəniş növü</label>
+          <p className="text-[10px] text-gray-500 mb-2">
+            <strong className="text-gray-400">Sonradan:</strong> hər ayın ankor günü üzrə dövr borcu (ödənişlər çıxılır).
+            <strong className="text-gray-400 ml-1">Əvvəlcədən:</strong> ödənişlər − dərs vahidi (aylıq÷8) ilə balans.
+          </p>
+          <select
+            className={inp}
+            value={data.billing_timing || 'postpaid'}
+            onChange={(e) => setData((p) => ({ ...p, billing_timing: e.target.value }))}
+          >
+            <option value="postpaid">Sonradan (postpaid)</option>
+            <option value="prepaid">Əvvəlcədən (prepaid)</option>
+          </select>
+        </div>
+      )}
       {(mode === 'add' || mode === 'edit') && (
         <div className="rounded-xl border border-indigo-500/20 bg-[#0f0c29]/60 p-3 space-y-2">
           <p className="text-xs font-semibold text-indigo-200/90 uppercase tracking-wider">Dərs vaxtı (slot)</p>
@@ -346,7 +363,7 @@ export default function InstructorStudents() {
       return
     }
     if (!form.enrollment_date) {
-      toast('Dərslərə başlama (ödəniş başlanğıcı) tarixini seçin', 'error')
+      toast('Dərslərə başlama tarixini seçin', 'error')
       return
     }
     if ((form.billing_type === '8_lessons' || form.billing_type === '12_lessons') && !form.first_lesson_date) {
@@ -379,6 +396,7 @@ export default function InstructorStudents() {
         referral_notes: form.referral_notes,
         monthly_fee: form.monthly_fee,
         enrollment_date: form.enrollment_date || null,
+        ...(form.billing_type === 'monthly' ? { billing_timing: form.billing_timing || 'postpaid' } : {}),
         first_lesson_date: form.first_lesson_date || null,
         lesson_weekdays: form.lesson_weekdays,
         lesson_times: form.lesson_times || {},
@@ -414,14 +432,10 @@ export default function InstructorStudents() {
       referral_notes: s.referral_notes || '',
       monthly_fee: s.monthly_fee != null && s.monthly_fee !== '' ? String(s.monthly_fee) : '',
       enrollment_date:
-        (s.enrollment_start_date != null && s.enrollment_start_date !== ''
+        s.enrollment_start_date != null && s.enrollment_start_date !== ''
           ? String(s.enrollment_start_date).slice(0, 10)
-          : null) ||
-        (s.payment_start_date != null && s.payment_start_date !== '' ? String(s.payment_start_date).slice(0, 10) : ''),
-      payment_start_date:
-        s.payment_start_date != null && s.payment_start_date !== ''
-          ? String(s.payment_start_date).slice(0, 10)
           : '',
+      billing_timing: s.billing_timing === 'prepaid' ? 'prepaid' : 'postpaid',
       first_lesson_date: '',
       teacher_schedule_id: '',
       lesson_weekdays: normalizeWeekdays(s.lesson_weekdays),
@@ -446,7 +460,7 @@ export default function InstructorStudents() {
       return
     }
     if (!editForm.enrollment_date) {
-      toast('Dərslərə başlama (ödəniş başlanğıcı) tarixini seçin', 'error')
+      toast('Dərslərə başlama tarixini seçin', 'error')
       return
     }
     setLoading(true)
@@ -458,7 +472,7 @@ export default function InstructorStudents() {
         referral_notes: editForm.referral_notes,
         monthly_fee: editForm.monthly_fee,
         enrollment_date: editForm.enrollment_date,
-        payment_start_date: editForm.payment_start_date,
+        ...(editForm.billing_type === 'monthly' ? { billing_timing: editForm.billing_timing || 'postpaid' } : {}),
         lesson_weekdays: editForm.lesson_weekdays,
         lesson_times: editForm.lesson_times || {},
         parent_name: editForm.parent_name,

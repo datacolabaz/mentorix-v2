@@ -171,7 +171,8 @@ export default function InstructorPayments() {
       <div className="mb-6">
         <h1 className="font-display font-bold text-xl sm:text-2xl text-white tracking-tight">Ödənişlər</h1>
         <p className="text-gray-500 text-sm mt-1">
-          Aylıq abunə: ödəniş ankorundan bu günə qədər keçmiş ay sayı × aylıq məbləğ − qeydə alınmış ödənişlər. Dərs sayı borca daxil deyil.
+          Aylıq ankor: yalnız «dərslərə başlama» tarixinin günü. Sonradan (postpaid): keçmiş ay × aylıq − ödənişlər. Əvvəlcədən
+          (prepaid): ödənişlər − (iştirak slotları × aylıq÷8).
         </p>
       </div>
 
@@ -195,7 +196,7 @@ export default function InstructorPayments() {
           <p className="text-xs text-gray-500 mt-2">
             {loading
               ? '…'
-              : `${pendingCount} tələbə · abunə üzrə ümumi gözlənilən məbləğ (aylar × aylıq − ödənişlər)`}
+              : `${pendingCount} tələbə · postpaid (aylıq dövr) + prepaid (balans kəsiri) cəmi`}
           </p>
         </Card>
       </div>
@@ -231,7 +232,7 @@ export default function InstructorPayments() {
                   <th className="py-3.5 px-4 font-semibold">Ad</th>
                   <th className="py-3.5 px-4 font-semibold">Soyad</th>
                   <th className="py-3.5 px-4 font-semibold">Nömrə</th>
-                  <th className="py-3.5 px-4 font-semibold whitespace-nowrap">Ödəniş başlanğıcı</th>
+                  <th className="py-3.5 px-4 font-semibold whitespace-nowrap">Dərslərə başlama</th>
                   <th className="py-3.5 px-4 font-semibold">Ödəniş statusu</th>
                   <th className="py-3.5 px-4 font-semibold whitespace-nowrap">Abunə / borc</th>
                   <th className="py-3.5 px-4 font-semibold whitespace-nowrap">Keçmiş</th>
@@ -251,7 +252,7 @@ export default function InstructorPayments() {
                       <td className="py-3.5 px-4">{s.last_name}</td>
                       <td className="py-3.5 px-4 font-mono text-xs text-gray-400 tabular-nums">{s.phone || '—'}</td>
                       <td className="py-3.5 px-4 font-mono text-xs text-gray-300 tabular-nums whitespace-nowrap">
-                        {formatDdMmYyyy(s.payment_start_date)}
+                        {formatDdMmYyyy(s.lesson_start_date || s.payment_start_date)}
                       </td>
                       <td className="py-3.5 px-4">
                         <span
@@ -262,37 +263,72 @@ export default function InstructorPayments() {
                         {s.monthly_fee != null && Number(s.monthly_fee) > 0 && (
                           <span className="block text-[11px] text-gray-500 mt-1 tabular-nums">
                             Aylıq: {formatAzn(s.monthly_fee)}
+                            {s.billing_type === 'monthly' ? (
+                              <span className="block text-[10px] text-indigo-400/90 mt-0.5">
+                                {s.billing_timing === 'prepaid' ? 'Əvvəlcədən' : 'Sonradan'}
+                              </span>
+                            ) : null}
                           </span>
                         )}
                       </td>
                       <td className="py-3.5 px-4 align-top text-[11px] leading-relaxed tabular-nums text-gray-300">
                         {isMonthly ? (
-                          <div className="space-y-0.5">
-                            <div>
-                              Keçmiş ay (ankor):{' '}
-                              <span className="text-white font-medium">{s.subscription_months ?? '—'}</span>
-                            </div>
-                            <div>
-                              Cəmi tələb:{' '}
-                              <span className="text-white font-medium">{formatAzn(s.subscription_due_total)}</span>
-                            </div>
-                            <div>
-                              Ödənilib:{' '}
-                              <span className="text-emerald-200/95 font-medium">
-                                {formatAzn(s.subscription_total_paid)}
-                              </span>
-                            </div>
-                            <div>
-                              Qalıq borc:{' '}
-                              <span className="text-amber-200/95 font-medium">{formatAzn(s.pending_debt)}</span>
-                            </div>
-                            {(s.subscription_prepaid ?? 0) > 0.005 ? (
+                          s.billing_model === 'prepaid' ? (
+                            <div className="space-y-0.5">
                               <div>
-                                Əvvəlcədən ödənilib:{' '}
-                                <span className="text-sky-200/95 font-medium">{formatAzn(s.subscription_prepaid)}</span>
+                                1 dərs vahidi:{' '}
+                                <span className="text-white font-medium">{formatAzn(s.lesson_unit_price)}</span>
                               </div>
-                            ) : null}
-                          </div>
+                              <div>
+                                İştirak (slot):{' '}
+                                <span className="text-white font-medium">{s.charged_lesson_count ?? 0}</span> ·{' '}
+                                {formatAzn(s.consumed_amount)}
+                              </div>
+                              <div>
+                                Balans:{' '}
+                                <span
+                                  className={
+                                    (s.wallet_balance ?? 0) < 0
+                                      ? 'text-rose-300 font-semibold'
+                                      : 'text-emerald-300 font-semibold'
+                                  }
+                                >
+                                  {formatAzn(s.wallet_balance)}
+                                </span>
+                              </div>
+                              <div>
+                                Qalıq borc:{' '}
+                                <span className="text-amber-200/95 font-medium">{formatAzn(s.pending_debt)}</span>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="space-y-0.5">
+                              <div>
+                                Keçmiş ay (ankor):{' '}
+                                <span className="text-white font-medium">{s.subscription_months ?? '—'}</span>
+                              </div>
+                              <div>
+                                Cəmi tələb:{' '}
+                                <span className="text-white font-medium">{formatAzn(s.subscription_due_total)}</span>
+                              </div>
+                              <div>
+                                Ödənilib:{' '}
+                                <span className="text-emerald-200/95 font-medium">
+                                  {formatAzn(s.subscription_total_paid)}
+                                </span>
+                              </div>
+                              <div>
+                                Qalıq borc:{' '}
+                                <span className="text-amber-200/95 font-medium">{formatAzn(s.pending_debt)}</span>
+                              </div>
+                              {(s.subscription_prepaid ?? 0) > 0.005 ? (
+                                <div>
+                                  Əvvəlcədən ödənilib:{' '}
+                                  <span className="text-sky-200/95 font-medium">{formatAzn(s.subscription_prepaid)}</span>
+                                </div>
+                              ) : null}
+                            </div>
+                          )
                         ) : (
                           <span className="text-gray-600">—</span>
                         )}

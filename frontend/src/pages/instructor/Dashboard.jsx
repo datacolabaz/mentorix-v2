@@ -223,8 +223,8 @@ export default function InstructorDashboard() {
           color="text-yellow-400"
         />
         <p className="text-xs text-gray-500 self-center sm:col-span-1">
-          Gözlənən: aylıq abunə — ödəniş ankorundan bu günə qədər hesablanan ay sayı × aylıq məbləğdən çıxılmış
-          tamamlanmış ödənişlər (dərs sayı daxil deyil).
+          Gözlənən: aylıq «sonradan» dövr borcu + «əvvəlcədən» balans kəsiri (ankor yalnız dərslərə başlama tarixinin
+          günü).
         </p>
       </div>
 
