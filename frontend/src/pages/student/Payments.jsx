@@ -112,7 +112,7 @@ function enrollmentFromStudentProfile(s) {
     lesson_times: s.lesson_times,
     instructor_name: s.instructor_name,
     enrolled_at: s.enrolled_at || s.enrollment_started_at || null,
-    payment_start_date_for_display: s.payment_start_date ?? null,
+    payment_start_date_for_display: s.enrollment_start_date || s.payment_start_date || null,
     monthly_fee: Number.isFinite(mf) ? mf : null,
     lesson_limit: lim,
     remaining_lessons: lim != null ? Math.max(0, lim - lessonCount) : null,

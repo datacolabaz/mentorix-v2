@@ -9,6 +9,65 @@ function sameUuid(a, b) {
   return normUuid(a) === normUuid(b);
 }
 
+/** Aylıq ödəniş dövrü: təqvim ayı yox, müəllimin təyin etdiyi "gün" ankoru (enrollment_start_date / payment_start_date) */
+const MONTHLY_BILLING_PERIOD_PREDICATE = `(
+  WITH enr AS (
+    SELECT
+      e.id AS enrollment_id,
+      COALESCE(e.enrollment_start_date, sp.payment_start_date::date) AS anchor
+    FROM enrollments e
+    LEFT JOIN student_profiles sp ON sp.user_id = e.student_id
+    WHERE e.id = p2.enrollment_id
+  ),
+  bounds AS (
+    SELECT
+      enrollment_id,
+      CASE
+        WHEN anchor IS NULL THEN date_trunc('month', CURRENT_DATE::timestamp)::date
+        ELSE (
+          date_trunc('month', CURRENT_DATE::timestamp)
+          + (
+              LEAST(
+                EXTRACT(DAY FROM anchor)::int,
+                EXTRACT(
+                  DAY FROM (
+                    (date_trunc('month', CURRENT_DATE::timestamp) + INTERVAL '1 month' - INTERVAL '1 day')
+                  )::timestamp
+                )::int
+              )
+              - 1
+            ) * INTERVAL '1 day'
+        )::date
+      END AS period_start,
+      CASE
+        WHEN anchor IS NULL THEN (date_trunc('month', CURRENT_DATE::timestamp) + INTERVAL '1 month' - INTERVAL '1 day')::date
+        ELSE (
+          (
+            date_trunc('month', CURRENT_DATE::timestamp)
+            + (
+                LEAST(
+                  EXTRACT(DAY FROM anchor)::int,
+                  EXTRACT(
+                    DAY FROM (
+                      (date_trunc('month', CURRENT_DATE::timestamp) + INTERVAL '1 month' - INTERVAL '1 day')
+                    )::timestamp
+                  )::int
+                )
+                - 1
+              ) * INTERVAL '1 day'
+          )::date
+          + INTERVAL '1 month'
+          - INTERVAL '1 day'
+        )::date
+      END AS period_end
+    FROM enr
+  )
+  SELECT 1
+  FROM bounds b
+  WHERE b.enrollment_id = p2.enrollment_id
+    AND COALESCE(p2.payment_date, p2.paid_at::date) BETWEEN b.period_start AND b.period_end
+)`;
+
 function billingLimit(type) {
   if (type === '8_lessons') return 8;
   if (type === '12_lessons') return 12;
@@ -81,7 +140,7 @@ const listMyPayments = async (req, res) => {
     let paymentStartForDisplay = null;
     if (enrollment) {
       const { student_payment_start_date, student_monthly_fee, ...rest } = enrollment;
-      paymentStartForDisplay = student_payment_start_date || null;
+      paymentStartForDisplay = rest.enrollment_start_date || student_payment_start_date || null;
       const mfNum = student_monthly_fee != null ? Number(student_monthly_fee) : NaN;
       enrollmentOut = {
         ...rest,
@@ -200,13 +259,13 @@ const getInstructorPaymentBoard = async (req, res) => {
 
     const { rows } = await db.query(
       `SELECT e.id AS enrollment_id, u.id AS student_id, u.full_name, u.phone,
-              sp.monthly_fee, sp.payment_start_date,
+              sp.monthly_fee,
+              COALESCE(e.enrollment_start_date, sp.payment_start_date::date) AS payment_start_date,
               EXISTS (
                 SELECT 1 FROM payments p2
                 WHERE p2.enrollment_id = e.id
                   AND p2.status = 'completed'
-                  AND date_trunc('month', COALESCE(p2.payment_date, p2.paid_at::date)::timestamp)
-                    = date_trunc('month', CURRENT_DATE::timestamp)
+                  AND ${MONTHLY_BILLING_PERIOD_PREDICATE}
               ) AS paid_this_month
        FROM enrollments e
        INNER JOIN users u ON u.id = e.student_id
@@ -286,10 +345,11 @@ const markMonthlyPaid = async (req, res) => {
     }
 
     const { rows: dup } = await db.query(
-      `SELECT id FROM payments
-       WHERE enrollment_id = $1 AND status = 'completed'
-         AND date_trunc('month', COALESCE(payment_date, paid_at::date)::timestamp)
-           = date_trunc('month', CURRENT_DATE::timestamp)
+      `SELECT p2.id
+       FROM payments p2
+       WHERE p2.enrollment_id = $1
+         AND p2.status = 'completed'
+         AND ${MONTHLY_BILLING_PERIOD_PREDICATE}
        LIMIT 1`,
       [enrollment_id]
     );
