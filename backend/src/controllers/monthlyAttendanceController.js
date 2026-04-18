@@ -230,8 +230,8 @@ const generateMonthlySlots = async (req, res) => {
     }
 
     const { rowCount } = await db.query(
-      `INSERT INTO monthly_attendance_slots (enrollment_id, lesson_date, status)
-       SELECT $1::uuid, d::date, 'pending'
+      `INSERT INTO monthly_attendance_slots (enrollment_id, lesson_date, status, charges_virtual_balance)
+       SELECT $1::uuid, d::date, 'pending', FALSE
        FROM unnest($2::date[]) AS d
        ON CONFLICT (enrollment_id, lesson_date) DO NOTHING`,
       [enrollment_id, dates]
@@ -284,11 +284,16 @@ const bulkMonthlySlots = async (req, res) => {
           : `[Toplu Gəlmədi ${df}–${dt}]`;
 
     const { rowCount } = await db.query(
-      `INSERT INTO monthly_attendance_slots (enrollment_id, lesson_date, status, notes)
-       SELECT $1::uuid, d::date, $3, $4
+      `INSERT INTO monthly_attendance_slots (enrollment_id, lesson_date, status, notes, charges_virtual_balance)
+       SELECT $1::uuid, d::date, $3, $4,
+              CASE WHEN $3 = 'attended' THEN TRUE ELSE FALSE END
        FROM unnest($2::date[]) AS d
        ON CONFLICT (enrollment_id, lesson_date)
-       DO UPDATE SET status = EXCLUDED.status, notes = COALESCE(EXCLUDED.notes, monthly_attendance_slots.notes), updated_at = NOW()`,
+       DO UPDATE SET
+         status = EXCLUDED.status,
+         notes = COALESCE(EXCLUDED.notes, monthly_attendance_slots.notes),
+         charges_virtual_balance = CASE EXCLUDED.status WHEN 'attended' THEN TRUE ELSE FALSE END,
+         updated_at = NOW()`,
       [enrollment_id, dates, action, note.slice(0, 500)]
     );
 
@@ -326,13 +331,22 @@ const putMonthlyDay = async (req, res) => {
       });
     }
 
+    const chargeAbsence = req.body.charge_absence === true || req.body.charge_absence === 'true';
+    let chargesVirtual = false;
+    if (status === 'attended') chargesVirtual = true;
+    else if (status === 'absent' && chargeAbsence) chargesVirtual = true;
+
     const { rows } = await db.query(
-      `INSERT INTO monthly_attendance_slots (enrollment_id, lesson_date, status, notes)
-       VALUES ($1, $2::date, $3, $4)
+      `INSERT INTO monthly_attendance_slots (enrollment_id, lesson_date, status, notes, charges_virtual_balance)
+       VALUES ($1, $2::date, $3, $4, $5)
        ON CONFLICT (enrollment_id, lesson_date)
-       DO UPDATE SET status = EXCLUDED.status, notes = COALESCE(EXCLUDED.notes, monthly_attendance_slots.notes), updated_at = NOW()
+       DO UPDATE SET
+         status = EXCLUDED.status,
+         notes = COALESCE(EXCLUDED.notes, monthly_attendance_slots.notes),
+         charges_virtual_balance = EXCLUDED.charges_virtual_balance,
+         updated_at = NOW()
        RETURNING *`,
-      [enrollment_id, ld, status, notes || null]
+      [enrollment_id, ld, status, notes || null, chargesVirtual]
     );
 
     res.json({ success: true, slot: rows[0] });

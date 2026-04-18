@@ -40,6 +40,13 @@ export default function InstructorPayments() {
   const [pendingAmount, setPendingAmount] = useState(0)
   const [students, setStudents] = useState([])
   const [markingId, setMarkingId] = useState(null)
+  const [quickOpen, setQuickOpen] = useState(false)
+  const [quickRow, setQuickRow] = useState(null)
+  const [quickAmount, setQuickAmount] = useState('')
+  const [historyOpen, setHistoryOpen] = useState(false)
+  const [historyRow, setHistoryRow] = useState(null)
+  const [historyPayments, setHistoryPayments] = useState([])
+  const [historyLoading, setHistoryLoading] = useState(false)
   const [legacyOpen, setLegacyOpen] = useState(false)
   const [legacyRow, setLegacyRow] = useState(null)
   const [legacyAmount, setLegacyAmount] = useState('')
@@ -108,12 +115,29 @@ export default function InstructorPayments() {
     }
   }
 
-  const markPaid = async (enrollmentId) => {
-    setMarkingId(enrollmentId)
+  const openQuickPay = (row) => {
+    setQuickRow(row)
+    const mf = row.monthly_fee != null ? String(row.monthly_fee) : ''
+    setQuickAmount(mf)
+    setQuickOpen(true)
+  }
+
+  const submitQuickPay = async () => {
+    if (!quickRow?.enrollment_id) return
+    const amt = Number(quickAmount)
+    if (!Number.isFinite(amt) || amt <= 0) {
+      toast('Məbləği düzgün daxil edin', 'error')
+      return
+    }
+    setMarkingId(quickRow.enrollment_id)
     try {
-      const d = await api.post('/payments/mark-monthly-paid', { enrollment_id: enrollmentId })
-      if (d.alreadyPaid) toast(d.message || 'Bu ay üçün artıq qeyd var', 'info')
-      else toast('Ödəniş qeydə alındı')
+      await api.post('/payments/mark-monthly-paid', {
+        enrollment_id: quickRow.enrollment_id,
+        amount: amt,
+      })
+      toast('Ödəniş qeydə alındı')
+      setQuickOpen(false)
+      setQuickRow(null)
       await load()
     } catch (e) {
       toast(e?.message || 'Xəta', 'error')
@@ -122,12 +146,28 @@ export default function InstructorPayments() {
     }
   }
 
+  const openHistory = async (row) => {
+    if (!row?.enrollment_id) return
+    setHistoryRow(row)
+    setHistoryOpen(true)
+    setHistoryLoading(true)
+    setHistoryPayments([])
+    try {
+      const d = await api.get('/payments/enrollment/' + encodeURIComponent(row.enrollment_id) + '/history')
+      setHistoryPayments(Array.isArray(d.payments) ? d.payments : [])
+    } catch (e) {
+      toast(e?.message || 'Tarixçə yüklənmədi', 'error')
+    } finally {
+      setHistoryLoading(false)
+    }
+  }
+
   return (
     <div className="p-4 sm:p-6 min-w-0 max-w-6xl mx-auto w-full">
       <div className="mb-6">
         <h1 className="font-display font-bold text-xl sm:text-2xl text-white tracking-tight">Ödənişlər</h1>
         <p className="text-gray-500 text-sm mt-1">
-          Aylıq ödənişlər, cari ay üzrə gözlənilənlər və ümumi gəlir.
+          Virtual balans: ödənişlər − (keçmiş dərs × aylıq/8). Gözlənən = yalnız keçmiş dərs borcu.
         </p>
       </div>
 
@@ -151,7 +191,7 @@ export default function InstructorPayments() {
           <p className="text-xs text-gray-500 mt-2">
             {loading
               ? '…'
-              : `${pendingCount} tələbə · ödənilməmiş aylıq dövrlərin cəmi (dərs sayı ilə hesablanmır)`}
+              : `${pendingCount} tələbə · bu günə qədər keçilmiş, ödənişi örtülməmiş dərslərin məbləği (aylıq÷8)`}
           </p>
         </Card>
       </div>
@@ -181,7 +221,7 @@ export default function InstructorPayments() {
 
         {!loading && !err && (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[920px]">
+            <table className="w-full text-sm min-w-[1080px]">
               <thead>
                 <tr className="border-b border-indigo-500/25 text-left text-[11px] uppercase tracking-wider text-indigo-300/70 bg-[#0f0c29]/90">
                   <th className="py-3.5 px-4 font-semibold">Ad</th>
@@ -189,7 +229,7 @@ export default function InstructorPayments() {
                   <th className="py-3.5 px-4 font-semibold">Nömrə</th>
                   <th className="py-3.5 px-4 font-semibold whitespace-nowrap">Ödəniş başlanğıcı</th>
                   <th className="py-3.5 px-4 font-semibold">Ödəniş statusu</th>
-                  <th className="py-3.5 px-4 font-semibold whitespace-nowrap">Aylıq borc</th>
+                  <th className="py-3.5 px-4 font-semibold whitespace-nowrap">Virtual balans</th>
                   <th className="py-3.5 px-4 font-semibold whitespace-nowrap">Keçmiş</th>
                   <th className="py-3.5 px-4 font-semibold w-[1%] whitespace-nowrap text-right">Əməl</th>
                 </tr>
@@ -197,7 +237,7 @@ export default function InstructorPayments() {
               <tbody className="text-gray-200">
                 {students.map((s) => {
                   const st = s.payment_status || 'təyin_edilməyib'
-                  const showPay = st === 'gözlənilir'
+                  const isMonthly = s.billing_type === 'monthly' && s.monthly_fee != null && Number(s.monthly_fee) > 0
                   return (
                     <tr
                       key={s.enrollment_id}
@@ -221,13 +261,37 @@ export default function InstructorPayments() {
                           </span>
                         )}
                       </td>
-                      <td className="py-3.5 px-4 align-top text-xs tabular-nums">
-                        {s.billing_type === 'monthly' && Number(s.unpaid_monthly_periods) > 0 ? (
-                          <span className="text-amber-200/95">
-                            {s.unpaid_monthly_periods} ay · {formatAzn(s.pending_monthly_amount)}
-                          </span>
-                        ) : s.billing_type === 'monthly' ? (
-                          <span className="text-gray-500">0</span>
+                      <td className="py-3.5 px-4 align-top text-[11px] leading-relaxed tabular-nums text-gray-300">
+                        {isMonthly ? (
+                          <div className="space-y-0.5">
+                            <div>
+                              1 dərs:{' '}
+                              <span className="text-white font-medium">{formatAzn(s.lesson_unit_price)}</span>
+                            </div>
+                            <div>
+                              Keçilmiş (borc):{' '}
+                              <span className="text-white font-medium">{s.charged_lesson_count ?? 0}</span> dərs ·{' '}
+                              {formatAzn(s.consumed_amount)}
+                            </div>
+                            <div>
+                              Cari balans:{' '}
+                              <span
+                                className={
+                                  (s.virtual_balance ?? 0) < 0
+                                    ? 'text-rose-300 font-semibold'
+                                    : (s.virtual_balance ?? 0) > 0
+                                      ? 'text-emerald-300 font-semibold'
+                                      : 'text-white font-medium'
+                                }
+                              >
+                                {formatAzn(s.virtual_balance)}
+                              </span>
+                            </div>
+                            <div>
+                              Qalıq borc:{' '}
+                              <span className="text-amber-200/95 font-medium">{formatAzn(s.pending_debt)}</span>
+                            </div>
+                          </div>
                         ) : (
                           <span className="text-gray-600">—</span>
                         )}
@@ -246,16 +310,21 @@ export default function InstructorPayments() {
                           <Button type="button" size="sm" variant="secondary" onClick={() => openLegacy(s)}>
                             Keçmiş qeyd
                           </Button>
-                          {showPay ? (
-                            <Button
-                              type="button"
-                              size="sm"
-                              loading={markingId === s.enrollment_id}
-                              onClick={() => void markPaid(s.enrollment_id)}
-                              className="!bg-indigo-600 hover:!bg-indigo-500 !text-white border-0"
-                            >
-                              Ödənildi
-                            </Button>
+                          {isMonthly ? (
+                            <>
+                              <Button
+                                type="button"
+                                size="sm"
+                                loading={markingId === s.enrollment_id}
+                                onClick={() => openQuickPay(s)}
+                                className="!bg-indigo-600 hover:!bg-indigo-500 !text-white border-0"
+                              >
+                                Ödəniş
+                              </Button>
+                              <Button type="button" size="sm" variant="secondary" onClick={() => void openHistory(s)}>
+                                Tarixçə
+                              </Button>
+                            </>
                           ) : null}
                         </div>
                       </td>
@@ -349,6 +418,76 @@ export default function InstructorPayments() {
                 Qeydə al
               </Button>
             </div>
+          </div>
+        )}
+      </Modal>
+
+      <Modal open={quickOpen} onClose={() => !markingId && setQuickOpen(false)} title="Ödəniş (virtual balans)" size="md">
+        {quickRow && (
+          <div className="space-y-4 text-sm">
+            <p className="text-gray-400">
+              Tələbə:{' '}
+              <span className="text-white font-medium">
+                {quickRow.first_name} {quickRow.last_name}
+              </span>
+            </p>
+            <p className="text-xs text-gray-500">
+              İstənilən məbləği daxil edin (məs. 30, 85, 100 ₼). Balans = ödənişlər cəmi − keçmiş dərslər × (aylıq÷8).
+            </p>
+            <div>
+              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Məbləğ (₼)</label>
+              <input
+                type="number"
+                min={0.01}
+                step={0.01}
+                className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white outline-none focus:border-blue-500"
+                value={quickAmount}
+                onChange={(e) => setQuickAmount(e.target.value)}
+                disabled={!!markingId}
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button type="button" variant="secondary" disabled={!!markingId} onClick={() => setQuickOpen(false)}>
+                Ləğv
+              </Button>
+              <Button type="button" loading={!!markingId} onClick={() => void submitQuickPay()}>
+                Qeydə al
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      <Modal
+        open={historyOpen}
+        onClose={() => !historyLoading && setHistoryOpen(false)}
+        title="Ödəniş tarixçəsi"
+        size="md"
+      >
+        {historyRow && (
+          <div className="space-y-3 text-sm">
+            <p className="text-gray-400">
+              {historyRow.first_name} {historyRow.last_name}
+            </p>
+            {historyLoading && <p className="text-gray-500 text-xs">Yüklənir…</p>}
+            {!historyLoading && !historyPayments.length && (
+              <p className="text-gray-500 text-xs">Hələ ödəniş qeydi yoxdur.</p>
+            )}
+            {!historyLoading && historyPayments.length > 0 && (
+              <ul className="space-y-2 max-h-72 overflow-y-auto">
+                {historyPayments.map((p) => (
+                  <li
+                    key={p.id}
+                    className="flex justify-between gap-3 border border-indigo-500/15 rounded-lg px-3 py-2 bg-[#13112e]/60"
+                  >
+                    <span className="text-gray-400 text-xs whitespace-nowrap">
+                      {formatDdMmYyyy(p.payment_date || p.paid_at)}
+                    </span>
+                    <span className="text-white font-mono tabular-nums">{formatAzn(p.amount)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         )}
       </Modal>

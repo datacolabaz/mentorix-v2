@@ -180,6 +180,7 @@ CREATE TABLE monthly_attendance_slots (
   enrollment_id UUID NOT NULL REFERENCES enrollments(id) ON DELETE CASCADE,
   lesson_date DATE NOT NULL,
   status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'attended', 'absent', 'archived')),
+  charges_virtual_balance BOOLEAN NOT NULL DEFAULT FALSE,
   notes TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),

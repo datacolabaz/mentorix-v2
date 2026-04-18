@@ -43,8 +43,8 @@ async function extendMonthlyAttendanceSlots() {
     if (!dates.length) continue;
 
     const ins = await db.query(
-      `INSERT INTO monthly_attendance_slots (enrollment_id, lesson_date, status)
-       SELECT $1::uuid, d::date, 'pending'
+      `INSERT INTO monthly_attendance_slots (enrollment_id, lesson_date, status, charges_virtual_balance)
+       SELECT $1::uuid, d::date, 'pending', FALSE
        FROM unnest($2::date[]) AS d
        ON CONFLICT (enrollment_id, lesson_date) DO NOTHING`,
       [r.id, dates]
