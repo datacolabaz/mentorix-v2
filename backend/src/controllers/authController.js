@@ -94,7 +94,16 @@ async function deliverPermanentPinSms(user, cleanPhone, opts = {}) {
   }
 
   await db.query('UPDATE users SET phone_verified = TRUE WHERE id = $1', [user.id]);
-  return { pinSmsSent: true };
+  return {
+    pinSmsSent: true,
+    sms: {
+      httpStatus: smsRes.httpStatus,
+      status: smsRes.status,
+      logStatus: smsRes.logStatus,
+      msisdn: smsRes.msisdn,
+      result: smsRes.result,
+    },
+  };
 }
 
 async function findUserByPhoneAndRole(cleanPhone, role) {
@@ -172,6 +181,7 @@ const phoneNextStep = async (req, res) => {
           pin_sms_sent: true,
           message:
             'Nömrənizə daimi 6 rəqəmli PIN SMS ilə göndərildi. Gələn kodu aşağıya daxil edin (OTP yox).',
+          sms_debug: r?.sms || null,
         });
       } catch (e) {
         if (e.statusCode && e.body) return res.status(e.statusCode).json(e.body);
@@ -201,10 +211,11 @@ const forgotPinSms = async (req, res) => {
     const user = await findUserByPhoneAndRole(clean, role);
     if (!user) return res.status(404).json({ success: false, message: 'İstifadəçi tapılmadı' });
     try {
-      await deliverPermanentPinSms(user, clean, { force: true });
+      const r = await deliverPermanentPinSms(user, clean, { force: true });
       return res.json({
         success: true,
         message: 'Yeni daimi PIN nömrənizə SMS ilə göndərildi. OTP tələb olunmur.',
+        sms_debug: r?.sms || null,
       });
     } catch (e) {
       if (e.statusCode && e.body) return res.status(e.statusCode).json(e.body);

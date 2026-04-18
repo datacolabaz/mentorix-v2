@@ -264,7 +264,10 @@ CREATE TABLE sms_logs (
   instructor_id UUID REFERENCES users(id),
   phone VARCHAR(20),
   message TEXT,
-  status VARCHAR(20),
+  status TEXT,
+  http_status INTEGER,
+  msisdn TEXT,
+  provider JSONB,
   sent_at TIMESTAMP DEFAULT NOW()
 );
 

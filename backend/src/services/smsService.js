@@ -56,14 +56,33 @@ function interpretSmxmlSuccess(raw) {
   return { success: true, reason: null };
 }
 
+async function insertSmsLog({ instructorId, phone, message, status, httpStatus, msisdn, provider }) {
+  const safeStatus = String(status || 'unknown').slice(0, 20);
+  try {
+    await db.query(
+      `INSERT INTO sms_logs (instructor_id, phone, message, status, http_status, msisdn, provider)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [instructorId, phone, message, status, httpStatus ?? null, msisdn ?? null, provider ?? null]
+    );
+  } catch {
+    // Backward compatible if migration 036 hasn't been applied yet.
+    await db.query('INSERT INTO sms_logs (instructor_id, phone, message, status) VALUES ($1, $2, $3, $4)', [
+      instructorId,
+      phone,
+      message,
+      safeStatus,
+    ]);
+  }
+}
+
 const sendRaw = async (phone, message) => {
   const clean = normalizePhone(phone);
   const msisdn = toSendSmsMsisdn(clean);
   if (!msisdn || msisdn.length < 11 || msisdn.length > 15) {
-    return { ok: false, httpStatus: 0, json: null, error: 'Invalid phone number' };
+    return { ok: false, httpStatus: 0, json: null, error: 'Invalid phone number', msisdn: null };
   }
   if (!SMS_LOGIN || !SMS_PASSWORD) {
-    return { ok: false, httpStatus: 0, json: null, error: 'SMS provider credentials are missing' };
+    return { ok: false, httpStatus: 0, json: null, error: 'SMS provider credentials are missing', msisdn };
   }
 
   const res = await fetch(SMS_API, {
@@ -88,9 +107,9 @@ const sendRaw = async (phone, message) => {
   try {
     json = await res.json();
   } catch (e) {
-    return { ok: false, httpStatus: res.status, json: null, error: 'Invalid JSON response from SMS provider' };
+    return { ok: false, httpStatus: res.status, json: null, error: 'Invalid JSON response from SMS provider', msisdn };
   }
-  return { ok: res.ok, httpStatus: res.status, json, error: null };
+  return { ok: res.ok, httpStatus: res.status, json, error: null, msisdn };
 };
 
 const sendSms = async ({ instructorId, phone, message }) => {
@@ -98,25 +117,20 @@ const sendSms = async ({ instructorId, phone, message }) => {
     const raw = await sendRaw(phone, message);
     const interpreted = interpretSmxmlSuccess(raw);
     const statusRaw = raw?.json?.response?.status ?? raw?.json?.status ?? null;
-    const status =
-      interpreted.success
-        ? String(statusRaw ?? 'sent')
-        : `failed:${interpreted.reason || 'unknown'}`;
+    const logStatus = interpreted.success ? String(statusRaw ?? 'sent') : `failed:${interpreted.reason || 'unknown'}`;
 
-    if (interpreted.success) {
-      await db.query(
-        'INSERT INTO sms_logs (instructor_id, phone, message, status) VALUES ($1, $2, $3, $4)',
-        [instructorId, phone, message, status || 'sent']
-      );
+    await insertSmsLog({
+      instructorId,
+      phone,
+      message,
+      status: logStatus,
+      httpStatus: raw?.httpStatus,
+      msisdn: raw?.msisdn,
+      provider: raw?.json ?? null,
+    });
 
-      if (instructorId) {
-        await db.query('UPDATE instructor_profiles SET sms_used = sms_used + 1 WHERE user_id = $1', [instructorId]);
-      }
-    } else {
-      await db.query(
-        'INSERT INTO sms_logs (instructor_id, phone, message, status) VALUES ($1, $2, $3, $4)',
-        [instructorId, phone, message, status]
-      );
+    if (interpreted.success && instructorId) {
+      await db.query('UPDATE instructor_profiles SET sms_used = sms_used + 1 WHERE user_id = $1', [instructorId]);
     }
 
     return {
@@ -124,7 +138,9 @@ const sendSms = async ({ instructorId, phone, message }) => {
       error: interpreted.success ? null : interpreted.reason,
       result: raw?.json,
       httpStatus: raw?.httpStatus,
-      status,
+      status: interpreted.success ? 'sent' : 'failed',
+      logStatus,
+      msisdn: raw?.msisdn,
     };
   } catch (err) {
     return { success: false, error: err.message };
