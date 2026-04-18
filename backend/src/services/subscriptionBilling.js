@@ -1,10 +1,11 @@
 'use strict';
 
 /**
- * Aylıq postpaid: ankor = yalnız enrollment_start_date (dərslərə başlama günü).
- * Hər ayın həmin günü yeni dövr; cəmi tələb = ay_sayı × aylıq − ödənişlər.
+ * Aylıq ödəniş növü (enrollments.billing_timing):
+ * - prepaid (Əvvəlcədən): yaranan borc = ankor ayları × aylıq (başlama gününün təqvim günü).
+ * - postpaid (Sonradan): yaranan borc = keçmişdə iştirak olunmuş dərs slotları × (aylıq÷8).
  *
- * Prepaid: ödənişlər − (iştirak slotları × aylıq/8), charges_virtual_balance = TRUE slotlar.
+ * Cari balans = tamamlanmış ödənişlərin cəmi − yaranan borc (müsbət = artıq ödəniş).
  */
 
 const LESSON_UNITS_PER_MONTH = 8;
@@ -84,65 +85,71 @@ function countSubscriptionBillingMonths(anchorYmd, untilYmd) {
   return listBillingDueDatesUpTo(anchorYmd, untilYmd).length;
 }
 
-function computeSubscriptionState(anchorYmd, untilYmd, monthlyFee, totalPaid) {
-  const fee = Number(monthlyFee);
-  const paid = Number(totalPaid) || 0;
-  if (!anchorYmd || !Number.isFinite(fee) || fee <= 0) {
-    return {
-      billing_model: 'postpaid',
-      subscription_months: 0,
-      subscription_due_total: 0,
-      subscription_total_paid: roundMoney(paid),
-      pending_debt: 0,
-      subscription_prepaid: roundMoney(paid),
-    };
-  }
-  const n = countSubscriptionBillingMonths(anchorYmd, untilYmd);
-  const dueTotal = roundMoney(n * fee);
-  const outstanding = roundMoney(Math.max(0, dueTotal - paid));
-  const prepaid = roundMoney(Math.max(0, paid - dueTotal));
-  return {
-    billing_model: 'postpaid',
-    subscription_months: n,
-    subscription_due_total: dueTotal,
-    subscription_total_paid: roundMoney(paid),
-    pending_debt: outstanding,
-    subscription_prepaid: prepaid,
-  };
+function timingIsPrepaid(raw) {
+  return String(raw || '').trim().toLowerCase() === 'prepaid';
 }
 
-function computePrepaidWallet(monthlyFee, chargedLessons, totalPaid) {
-  const fee = Number(monthlyFee);
-  const paid = Number(totalPaid) || 0;
-  const n = Math.max(0, Number(chargedLessons) || 0);
-  if (!Number.isFinite(fee) || fee <= 0) {
-    return {
-      billing_model: 'prepaid',
-      lesson_unit_price: 0,
-      charged_lesson_count: n,
-      consumed_amount: 0,
-      wallet_balance: roundMoney(paid),
-      pending_debt: 0,
-      subscription_total_paid: roundMoney(paid),
-      subscription_prepaid: roundMoney(paid),
-      subscription_months: null,
-      subscription_due_total: null,
-    };
+/**
+ * @param {object} p
+ * @param {string} p.billing_timing
+ * @param {number|string} p.monthly_fee
+ * @param {string|null} p.anchor_ymd
+ * @param {string|null} p.today_ymd
+ * @param {number} p.attended_lessons
+ * @param {number|string} p.total_paid
+ */
+function computeMonthlyBalanceState({
+  billing_timing,
+  monthly_fee,
+  anchor_ymd,
+  today_ymd,
+  attended_lessons,
+  total_paid,
+}) {
+  const fee = Number(monthly_fee);
+  const paid = roundMoney(Number(total_paid) || 0);
+  const attended = Math.max(0, Number(attended_lessons) || 0);
+  const anchorYmd = anchor_ymd ? String(anchor_ymd).slice(0, 10) : null;
+  const todayYmd = today_ymd ? String(today_ymd).slice(0, 10) : null;
+  const prepaid = timingIsPrepaid(billing_timing);
+
+  let accrued = 0;
+  let monthsCount = 0;
+  if (prepaid) {
+    if (anchorYmd && Number.isFinite(fee) && fee > 0 && todayYmd) {
+      monthsCount = countSubscriptionBillingMonths(anchorYmd, todayYmd);
+      accrued = roundMoney(monthsCount * fee);
+    }
+  } else {
+    const unit = lessonUnitPrice(fee);
+    accrued = roundMoney(attended * unit);
   }
+
+  const netBalance = roundMoney(paid - accrued);
+  const owe = roundMoney(Math.max(0, accrued - paid));
   const unit = lessonUnitPrice(fee);
-  const consumed = roundMoney(n * unit);
-  const wallet = roundMoney(paid - consumed);
+
+  const eps = 0.005;
+  let payment_status = 'ödənilib';
+  if (owe > eps) {
+    payment_status = paid > eps ? 'gözlənilir' : 'borclu';
+  }
+
   return {
-    billing_model: 'prepaid',
-    lesson_unit_price: unit,
-    charged_lesson_count: n,
-    consumed_amount: consumed,
-    wallet_balance: wallet,
-    pending_debt: roundMoney(Math.max(0, -wallet)),
-    subscription_total_paid: roundMoney(paid),
-    subscription_prepaid: Math.max(0, wallet),
-    subscription_months: null,
-    subscription_due_total: null,
+    accrued_total: accrued,
+    total_payments: paid,
+    net_balance: netBalance,
+    pending_debt: owe,
+    wallet_balance: roundMoney(Math.max(0, netBalance)),
+    subscription_due_total: accrued,
+    subscription_total_paid: paid,
+    subscription_prepaid: roundMoney(Math.max(0, netBalance)),
+    subscription_months: prepaid ? monthsCount : null,
+    charged_lesson_count: prepaid ? null : attended,
+    lesson_unit_price: prepaid ? null : unit,
+    consumed_amount: prepaid ? null : accrued,
+    billing_model: prepaid ? 'prepaid' : 'postpaid',
+    payment_status,
   };
 }
 
@@ -153,75 +160,15 @@ async function getTodayBakuYmd(db) {
   return rows[0]?.ymd || new Date().toISOString().slice(0, 10);
 }
 
-function timingIsPrepaid(raw) {
-  return String(raw || '').trim().toLowerCase() === 'prepaid';
-}
-
-/**
- * Postpaid aylıq: yalnız enrollment_start_date ankoru.
- */
-async function loadInstructorMonthlySubscriptionFinancials(db, instructorNormId) {
+/** Bütün aylıq tələbələr üçün vahid sorğu + balans (müəllim paneli, dashboard). */
+async function loadInstructorMonthlyBalanceRows(db, instructorNormId) {
   const todayBaku = await getTodayBakuYmd(db);
   const { rows } = await db.query(
-    `SELECT e.id AS enrollment_id,
-            sp.monthly_fee,
-            to_char(e.enrollment_start_date::date, 'YYYY-MM-DD') AS anchor_raw
-     FROM enrollments e
-     INNER JOIN users u ON u.id = e.student_id
-     LEFT JOIN student_profiles sp ON sp.user_id = u.id
-     WHERE u.role = 'student'
-       AND u.is_active = TRUE
-       AND e.billing_type = 'monthly'
-       AND LOWER(TRIM(COALESCE(e.billing_timing, 'postpaid'))) <> 'prepaid'
-       AND REPLACE(LOWER(TRIM(e.instructor_id::text)), '-', '') = $1`,
-    [instructorNormId]
-  );
-
-  const ids = rows.map((r) => r.enrollment_id);
-  const payMap = new Map();
-  if (ids.length) {
-    const { rows: pays } = await db.query(
-      `SELECT enrollment_id, COALESCE(SUM(amount), 0)::numeric AS t
-       FROM payments
-       WHERE status = 'completed'
-         AND enrollment_id = ANY($1::uuid[])
-       GROUP BY enrollment_id`,
-      [ids]
-    );
-    for (const p of pays) payMap.set(String(p.enrollment_id), Number(p.t));
-  }
-
-  const byEnrollment = new Map();
-  let pendingSum = 0;
-  for (const r of rows) {
-    const anchorYmd = toYmd(r.anchor_raw);
-    const fee = r.monthly_fee != null ? Number(r.monthly_fee) : NaN;
-    const paid = payMap.get(String(r.enrollment_id)) || 0;
-    const state = computeSubscriptionState(anchorYmd, todayBaku, fee, paid);
-    pendingSum += state.pending_debt;
-    byEnrollment.set(String(r.enrollment_id), {
-      enrollment_id: r.enrollment_id,
-      monthly_fee: r.monthly_fee,
-      anchor_ymd: anchorYmd,
-      total_paid: paid,
-      ...state,
-    });
-  }
-
-  return { todayBaku, byEnrollment, pendingSum: roundMoney(pendingSum) };
-}
-
-/**
- * Prepaid aylıq: slot borclandırması (charges_virtual_balance).
- */
-async function loadInstructorMonthlyPrepaidFinancials(db, instructorNormId) {
-  const todayBaku = await getTodayBakuYmd(db);
-  const { rows } = await db.query(
-    `WITH slots AS (
+    `WITH attended AS (
        SELECT enrollment_id, COUNT(*)::int AS n
        FROM monthly_attendance_slots
        WHERE lesson_date <= $2::date
-         AND charges_virtual_balance = TRUE
+         AND status = 'attended'
        GROUP BY enrollment_id
      ),
      pays AS (
@@ -232,17 +179,18 @@ async function loadInstructorMonthlyPrepaidFinancials(db, instructorNormId) {
      )
      SELECT e.id AS enrollment_id,
             sp.monthly_fee,
-            COALESCE(sl.n, 0)::int AS charged_lessons,
-            COALESCE(py.t, 0)::numeric AS total_paid
+            to_char(e.enrollment_start_date::date, 'YYYY-MM-DD') AS anchor_raw,
+            LOWER(TRIM(COALESCE(e.billing_timing, 'postpaid'))) AS billing_timing,
+            COALESCE(a.n, 0)::int AS attended_lessons,
+            COALESCE(p.t, 0)::numeric AS total_paid
      FROM enrollments e
      INNER JOIN users u ON u.id = e.student_id
      LEFT JOIN student_profiles sp ON sp.user_id = u.id
-     LEFT JOIN slots sl ON sl.enrollment_id = e.id
-     LEFT JOIN pays py ON py.enrollment_id = e.id
+     LEFT JOIN attended a ON a.enrollment_id = e.id
+     LEFT JOIN pays p ON p.enrollment_id = e.id
      WHERE u.role = 'student'
        AND u.is_active = TRUE
        AND e.billing_type = 'monthly'
-       AND LOWER(TRIM(COALESCE(e.billing_timing, 'postpaid'))) = 'prepaid'
        AND REPLACE(LOWER(TRIM(e.instructor_id::text)), '-', '') = $1`,
     [instructorNormId, todayBaku]
   );
@@ -250,16 +198,22 @@ async function loadInstructorMonthlyPrepaidFinancials(db, instructorNormId) {
   const byEnrollment = new Map();
   let pendingSum = 0;
   for (const r of rows) {
-    const fee = r.monthly_fee != null ? Number(r.monthly_fee) : NaN;
-    const paid = Number(r.total_paid) || 0;
-    const charged = Number(r.charged_lessons) || 0;
-    const state = computePrepaidWallet(fee, charged, paid);
+    const anchorYmd = toYmd(r.anchor_raw);
+    const state = computeMonthlyBalanceState({
+      billing_timing: r.billing_timing,
+      monthly_fee: r.monthly_fee,
+      anchor_ymd: anchorYmd,
+      today_ymd: todayBaku,
+      attended_lessons: r.attended_lessons,
+      total_paid: r.total_paid,
+    });
     pendingSum += state.pending_debt;
     byEnrollment.set(String(r.enrollment_id), {
       enrollment_id: r.enrollment_id,
       monthly_fee: r.monthly_fee,
-      total_paid: paid,
-      charged_lessons: charged,
+      anchor_ymd: anchorYmd,
+      billing_timing: r.billing_timing,
+      attended_lessons: r.attended_lessons,
       ...state,
     });
   }
@@ -274,10 +228,8 @@ module.exports = {
   roundMoney,
   listBillingDueDatesUpTo,
   countSubscriptionBillingMonths,
-  computeSubscriptionState,
-  computePrepaidWallet,
+  computeMonthlyBalanceState,
   getTodayBakuYmd,
   timingIsPrepaid,
-  loadInstructorMonthlySubscriptionFinancials,
-  loadInstructorMonthlyPrepaidFinancials,
+  loadInstructorMonthlyBalanceRows,
 };
