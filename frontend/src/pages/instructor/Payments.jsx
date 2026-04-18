@@ -45,6 +45,7 @@ export default function InstructorPayments() {
   const [historyPayments, setHistoryPayments] = useState([])
   const [historySummary, setHistorySummary] = useState(null)
   const [historyLoading, setHistoryLoading] = useState(false)
+  const [deletingPaymentId, setDeletingPaymentId] = useState(null)
   const [adjustOpen, setAdjustOpen] = useState(false)
   const [adjustRow, setAdjustRow] = useState(null)
   const [adjustAmount, setAdjustAmount] = useState('')
@@ -199,21 +200,47 @@ export default function InstructorPayments() {
     }
   }
 
-  const openHistory = async (row) => {
-    if (!row?.enrollment_id) return
-    setHistoryRow(row)
-    setHistoryOpen(true)
+  const fetchHistoryForEnrollment = async (enrollmentId) => {
     setHistoryLoading(true)
-    setHistoryPayments([])
-    setHistorySummary(null)
     try {
-      const d = await api.get('/payments/enrollment/' + encodeURIComponent(row.enrollment_id) + '/history')
+      const d = await api.get('/payments/enrollment/' + encodeURIComponent(enrollmentId) + '/history')
       setHistoryPayments(Array.isArray(d.payments) ? d.payments : [])
       setHistorySummary(d.balance_summary ?? null)
     } catch (e) {
       toast(e?.message || 'Tarixçə yüklənmədi', 'error')
     } finally {
       setHistoryLoading(false)
+    }
+  }
+
+  const openHistory = async (row) => {
+    if (!row?.enrollment_id) return
+    setHistoryRow(row)
+    setHistoryOpen(true)
+    setHistoryPayments([])
+    setHistorySummary(null)
+    await fetchHistoryForEnrollment(row.enrollment_id)
+  }
+
+  const deleteHistoryPayment = async (paymentId) => {
+    if (
+      !window.confirm(
+        'Bu ödəniş qeydini silmək istəyirsiniz? «Cəmi ödənilən» və borc bütün səhifələrdə (cədvəl, dashboard) yenidən hesablanacaq.'
+      )
+    )
+      return
+    const eid = historyRow?.enrollment_id
+    if (!eid) return
+    setDeletingPaymentId(paymentId)
+    try {
+      await api.delete('/payments/' + encodeURIComponent(paymentId))
+      toast('Ödəniş silindi')
+      await fetchHistoryForEnrollment(eid)
+      await load()
+    } catch (e) {
+      toast(e?.message || 'Silinmədi', 'error')
+    } finally {
+      setDeletingPaymentId(null)
     }
   }
 
@@ -607,9 +634,10 @@ export default function InstructorPayments() {
       <Modal
         open={historyOpen}
         onClose={() => {
-          if (!historyLoading) {
+          if (!historyLoading && !deletingPaymentId) {
             setHistoryOpen(false)
             setHistorySummary(null)
+            setDeletingPaymentId(null)
           }
         }}
         title="Ödəniş tarixçəsi"
@@ -669,8 +697,11 @@ export default function InstructorPayments() {
             )}
             {!historyLoading && historyPayments.length > 0 && (
               <div>
-                <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-2">Əməliyyatlar</p>
-                <ul className="space-y-2 max-h-56 overflow-y-auto">
+                <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">Əməliyyatlar</p>
+                <p className="text-[10px] text-gray-600 mb-2 leading-snug">
+                  Təkrarlanan və ya səhv qeydi silin — cəm avtomatik yenilənir (ümumi gəlir də SQL üzrə düzəlir).
+                </p>
+                <ul className="space-y-2 max-h-56 overflow-y-auto pr-0.5">
                   {historyPayments.map((p) => {
                     const mf = historySummary?.monthly_fee != null ? Number(historySummary.monthly_fee) : NaN
                     const partial = historySummary?.payment_plan === 'partial'
@@ -682,23 +713,42 @@ export default function InstructorPayments() {
                       Number.isFinite(amt) &&
                       amt > 0 &&
                       amt + 0.005 < mf
+                    const busy = !!deletingPaymentId || historyLoading
                     return (
                       <li
                         key={p.id}
-                        className={`flex justify-between gap-3 border rounded-lg px-3 py-2 bg-[#13112e]/60 ${
+                        className={`flex items-center justify-between gap-2 border rounded-lg px-2 py-2 sm:px-3 bg-[#13112e]/60 ${
                           under ? 'border-rose-500/40 bg-rose-950/20' : 'border-indigo-500/15'
                         }`}
                       >
-                        <span className={`text-xs whitespace-nowrap ${under ? 'text-rose-200/95' : 'text-gray-400'}`}>
+                        <span className={`text-xs whitespace-nowrap shrink-0 ${under ? 'text-rose-200/95' : 'text-gray-400'}`}>
                           {formatDdMmYyyy(p.payment_date || p.paid_at)}
                         </span>
                         <span
-                          className={`font-mono tabular-nums font-medium ${
+                          className={`font-mono tabular-nums text-sm font-medium shrink-0 ${
                             under ? 'text-rose-200' : 'text-white'
                           }`}
                         >
                           {formatAzn(p.amount)}
                         </span>
+                        <button
+                          type="button"
+                          title="Ödənişi sil"
+                          disabled={busy}
+                          onClick={() => void deleteHistoryPayment(p.id)}
+                          className="ml-auto p-1.5 rounded-lg text-gray-500 hover:text-rose-300 hover:bg-rose-500/15 disabled:opacity-40 shrink-0 transition-colors"
+                        >
+                          {deletingPaymentId === p.id ? (
+                            <span className="text-[10px] text-gray-400 tabular-nums">…</span>
+                          ) : (
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+                              <path
+                                d="M9 3h6l1 2h5v2H3V5h5l1-2zm0 5h2v9H9V8zm4 0h2v9h-2V8zM5 8h2v10a2 2 0 002 2h8a2 2 0 002-2V8h2v10a4 4 0 01-4 4H9a4 4 0 01-4-4V8z"
+                                fill="currentColor"
+                              />
+                            </svg>
+                          )}
+                        </button>
                       </li>
                     )
                   })}
