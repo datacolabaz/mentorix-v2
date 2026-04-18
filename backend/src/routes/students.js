@@ -444,14 +444,23 @@ router.patch('/enrollment/:enrollmentId', authenticate, authorize('admin', 'inst
     }
     const shouldSetPsd = Boolean((hasEnr && enrYmd) || (hasPsd && psd));
     const profilePsd = enrYmd || psd || null;
+    const setParts = [`parent_name = NULLIF($1, '')`, `parent_phone = NULLIF($2, '')`];
+    const vals = [pName, pPhone];
+    let idx = 3;
+    if (hasMf) {
+      setParts.push(`monthly_fee = $${idx}::numeric`);
+      vals.push(mf);
+      idx += 1;
+    }
+    if (shouldSetPsd && profilePsd) {
+      setParts.push(`payment_start_date = $${idx}::date`);
+      vals.push(profilePsd);
+      idx += 1;
+    }
+    vals.push(studentId);
     const profUp = await db.query(
-      `UPDATE student_profiles SET
-        parent_name = NULLIF($1, ''),
-        parent_phone = NULLIF($2, ''),
-        monthly_fee = CASE WHEN $6 THEN $3::numeric ELSE monthly_fee END,
-        payment_start_date = CASE WHEN $7 THEN $4::date ELSE payment_start_date END
-       WHERE user_id = $5`,
-      [pName, pPhone, mf, profilePsd, studentId, hasMf, shouldSetPsd]
+      `UPDATE student_profiles SET ${setParts.join(', ')} WHERE user_id = $${idx}`,
+      vals
     );
     if (profUp.rowCount === 0) {
       await db.query(

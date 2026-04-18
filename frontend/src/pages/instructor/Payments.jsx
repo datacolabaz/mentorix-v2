@@ -117,8 +117,12 @@ export default function InstructorPayments() {
 
   const openQuickPay = (row) => {
     setQuickRow(row)
+    const deficit =
+      row.pending_debt != null && Number.isFinite(Number(row.pending_debt)) && Number(row.pending_debt) > 0
+        ? String(Number(row.pending_debt))
+        : ''
     const mf = row.monthly_fee != null ? String(row.monthly_fee) : ''
-    setQuickAmount(mf)
+    setQuickAmount(deficit || mf)
     setQuickOpen(true)
   }
 
@@ -167,7 +171,7 @@ export default function InstructorPayments() {
       <div className="mb-6">
         <h1 className="font-display font-bold text-xl sm:text-2xl text-white tracking-tight">Ödənişlər</h1>
         <p className="text-gray-500 text-sm mt-1">
-          Virtual balans: ödənişlər − (keçmiş dərs × aylıq/8). Gözlənən = yalnız keçmiş dərs borcu.
+          Aylıq abunə: ödəniş ankorundan bu günə qədər keçmiş ay sayı × aylıq məbləğ − qeydə alınmış ödənişlər. Dərs sayı borca daxil deyil.
         </p>
       </div>
 
@@ -191,7 +195,7 @@ export default function InstructorPayments() {
           <p className="text-xs text-gray-500 mt-2">
             {loading
               ? '…'
-              : `${pendingCount} tələbə · bu günə qədər keçilmiş, ödənişi örtülməmiş dərslərin məbləği (aylıq÷8)`}
+              : `${pendingCount} tələbə · abunə üzrə ümumi gözlənilən məbləğ (aylar × aylıq − ödənişlər)`}
           </p>
         </Card>
       </div>
@@ -221,7 +225,7 @@ export default function InstructorPayments() {
 
         {!loading && !err && (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[1080px]">
+            <table className="w-full text-sm min-w-[920px]">
               <thead>
                 <tr className="border-b border-indigo-500/25 text-left text-[11px] uppercase tracking-wider text-indigo-300/70 bg-[#0f0c29]/90">
                   <th className="py-3.5 px-4 font-semibold">Ad</th>
@@ -229,7 +233,7 @@ export default function InstructorPayments() {
                   <th className="py-3.5 px-4 font-semibold">Nömrə</th>
                   <th className="py-3.5 px-4 font-semibold whitespace-nowrap">Ödəniş başlanğıcı</th>
                   <th className="py-3.5 px-4 font-semibold">Ödəniş statusu</th>
-                  <th className="py-3.5 px-4 font-semibold whitespace-nowrap">Virtual balans</th>
+                  <th className="py-3.5 px-4 font-semibold whitespace-nowrap">Abunə / borc</th>
                   <th className="py-3.5 px-4 font-semibold whitespace-nowrap">Keçmiş</th>
                   <th className="py-3.5 px-4 font-semibold w-[1%] whitespace-nowrap text-right">Əməl</th>
                 </tr>
@@ -265,32 +269,29 @@ export default function InstructorPayments() {
                         {isMonthly ? (
                           <div className="space-y-0.5">
                             <div>
-                              1 dərs:{' '}
-                              <span className="text-white font-medium">{formatAzn(s.lesson_unit_price)}</span>
+                              Keçmiş ay (ankor):{' '}
+                              <span className="text-white font-medium">{s.subscription_months ?? '—'}</span>
                             </div>
                             <div>
-                              Keçilmiş (borc):{' '}
-                              <span className="text-white font-medium">{s.charged_lesson_count ?? 0}</span> dərs ·{' '}
-                              {formatAzn(s.consumed_amount)}
+                              Cəmi tələb:{' '}
+                              <span className="text-white font-medium">{formatAzn(s.subscription_due_total)}</span>
                             </div>
                             <div>
-                              Cari balans:{' '}
-                              <span
-                                className={
-                                  (s.virtual_balance ?? 0) < 0
-                                    ? 'text-rose-300 font-semibold'
-                                    : (s.virtual_balance ?? 0) > 0
-                                      ? 'text-emerald-300 font-semibold'
-                                      : 'text-white font-medium'
-                                }
-                              >
-                                {formatAzn(s.virtual_balance)}
+                              Ödənilib:{' '}
+                              <span className="text-emerald-200/95 font-medium">
+                                {formatAzn(s.subscription_total_paid)}
                               </span>
                             </div>
                             <div>
                               Qalıq borc:{' '}
                               <span className="text-amber-200/95 font-medium">{formatAzn(s.pending_debt)}</span>
                             </div>
+                            {(s.subscription_prepaid ?? 0) > 0.005 ? (
+                              <div>
+                                Əvvəlcədən ödənilib:{' '}
+                                <span className="text-sky-200/95 font-medium">{formatAzn(s.subscription_prepaid)}</span>
+                              </div>
+                            ) : null}
                           </div>
                         ) : (
                           <span className="text-gray-600">—</span>
@@ -422,7 +423,7 @@ export default function InstructorPayments() {
         )}
       </Modal>
 
-      <Modal open={quickOpen} onClose={() => !markingId && setQuickOpen(false)} title="Ödəniş (virtual balans)" size="md">
+      <Modal open={quickOpen} onClose={() => !markingId && setQuickOpen(false)} title="Ödəniş (aylıq abunə)" size="md">
         {quickRow && (
           <div className="space-y-4 text-sm">
             <p className="text-gray-400">
@@ -432,7 +433,8 @@ export default function InstructorPayments() {
               </span>
             </p>
             <p className="text-xs text-gray-500">
-              İstənilən məbləği daxil edin (məs. 30, 85, 100 ₼). Balans = ödənişlər cəmi − keçmiş dərslər × (aylıq÷8).
+              Hissəli və ya tam ödəniş: istənilən məbləği daxil edin (məs. 30, 85, 100 ₼). Borc = keçmiş ay sayı ×
+              aylıq − bu vaxta qədər qeydə alınan ödənişlər.
             </p>
             <div>
               <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Məbləğ (₼)</label>
