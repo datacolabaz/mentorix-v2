@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { addMonths, format, isValid, parseISO, setDate } from 'date-fns'
 import api from '../../lib/api'
 import Card from '../../components/common/Card'
 import useAuthStore from '../../hooks/useAuth'
@@ -66,6 +67,36 @@ function fmtAzFromDb(dt) {
   return d.toLocaleString('az-AZ', { timeZone: 'Asia/Baku' })
 }
 
+function parseYmdLocal(ymd) {
+  if (!ymd) return null
+  const s = String(ymd).trim()
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return null
+  const d = parseISO(s)
+  return isValid(d) ? d : null
+}
+
+function fmtDdMmYyyy(d) {
+  if (!d || !isValid(d)) return '—'
+  return format(d, 'dd.MM.yyyy')
+}
+
+function monthlyBillingDayLine(ymd) {
+  const d = parseYmdLocal(ymd)
+  if (!d) return null
+  const day = d.getDate()
+  return `Hər ayın ${day}-də (təkrarlanan)`
+}
+
+function nextMonthlyBillingDateText(ymd) {
+  const anchor = parseYmdLocal(ymd)
+  if (!anchor) return null
+  const day = anchor.getDate()
+  const today = new Date()
+  let candidate = setDate(today, day)
+  if (candidate < today) candidate = setDate(addMonths(today, 1), day)
+  return fmtDdMmYyyy(candidate)
+}
+
 function enrollmentFromStudentProfile(s) {
   if (!s?.enrollment_id) return null
   const lim = billingLimit(s.billing_type)
@@ -80,6 +111,7 @@ function enrollmentFromStudentProfile(s) {
     lesson_weekdays: s.lesson_weekdays,
     lesson_times: s.lesson_times,
     instructor_name: s.instructor_name,
+    enrolled_at: s.enrolled_at || s.enrollment_started_at || null,
     payment_start_date_for_display: s.payment_start_date ?? null,
     monthly_fee: Number.isFinite(mf) ? mf : null,
     lesson_limit: lim,
@@ -162,6 +194,11 @@ export default function StudentPayments() {
           })
           .join(' · ')
       : null
+
+  const enrolledAtText = enrollment?.enrolled_at ? fmtAzFromDb(enrollment.enrolled_at) : null
+  const paymentAnchorLine = enrollment?.billing_type === 'monthly' ? monthlyBillingDayLine(enrollment.payment_start_date_for_display) : null
+  const nextMonthlyPaymentText =
+    enrollment?.billing_type === 'monthly' ? nextMonthlyBillingDateText(enrollment.payment_start_date_for_display) : null
 
   const lc = enrollment ? Number(enrollment.lesson_count) : NaN
   const lessonCount = Number.isFinite(lc) ? lc : 0
@@ -257,8 +294,28 @@ export default function StudentPayments() {
                 )}
                 {enrollment.payment_start_date_for_display && (
                   <li>
-                    <span className="text-gray-500">Ödəniş başlanğıcı: </span>
-                    <span className="font-mono text-white/90">{String(enrollment.payment_start_date_for_display).slice(0, 10)}</span>
+                    <span className="text-gray-500">Ödəniş başlanğıcı (tarix): </span>
+                    <span className="font-mono text-white/90">
+                      {fmtDdMmYyyy(parseYmdLocal(String(enrollment.payment_start_date_for_display).slice(0, 10)))}
+                    </span>
+                  </li>
+                )}
+                {enrollment.billing_type === 'monthly' && paymentAnchorLine && (
+                  <li>
+                    <span className="text-gray-500">Aylıq ödəniş qaydası: </span>
+                    <span className="text-white/90">{paymentAnchorLine}</span>
+                  </li>
+                )}
+                {enrollment.billing_type === 'monthly' && nextMonthlyPaymentText && (
+                  <li>
+                    <span className="text-gray-500">Növbəti ödəniş tarixi (təxmini): </span>
+                    <span className="font-mono text-emerald-200">{nextMonthlyPaymentText}</span>
+                  </li>
+                )}
+                {enrolledAtText && (
+                  <li>
+                    <span className="text-gray-500">Sistemə qeydiyyat: </span>
+                    <span className="font-mono text-white/90">{enrolledAtText}</span>
                   </li>
                 )}
                 {weekdayLine && (

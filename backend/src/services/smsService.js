@@ -25,11 +25,38 @@ function toSendSmsMsisdn(digits) {
   return null;
 }
 
+function readSmxmlResponseCode(json) {
+  const j = json;
+  const candidates = [
+    j?.response?.head?.responsecode,
+    j?.response?.head?.responseCode,
+    j?.response?.responsecode,
+    j?.response?.responseCode,
+    j?.responsecode,
+    j?.responseCode,
+  ];
+  for (const c of candidates) {
+    if (c === undefined || c === null || c === '') continue;
+    const n = typeof c === 'number' ? c : parseInt(String(c).trim(), 10);
+    if (Number.isFinite(n)) return n;
+  }
+  return null;
+}
+
 function interpretSmxmlSuccess(raw) {
   if (!raw || raw.ok !== true) return { success: false, reason: raw?.error || 'HTTP request failed' };
 
   const j = raw.json;
   if (!j) return { success: false, reason: 'Empty provider JSON' };
+
+  const rc = readSmxmlResponseCode(j);
+  if (rc != null) {
+    // sendsms.az uses numeric response codes in `response.head.responsecode`.
+    // Observed: 235 while HTTP is still 200 — treat non-zero as failure unless explicitly whitelisted.
+    if (rc !== 0 && rc !== 200) {
+      return { success: false, reason: `SMS provider responsecode: ${rc}` };
+    }
+  }
 
   // sendsms.az responses are inconsistent; prefer explicit status codes when present,
   // but don't fail-closed if the payload is clearly a success-shaped JSON without `status`.
