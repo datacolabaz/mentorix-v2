@@ -65,7 +65,7 @@ const listMyPayments = async (req, res) => {
          FROM payments p
          INNER JOIN enrollments e ON e.id = p.enrollment_id AND e.student_id = $1
          LEFT JOIN users iu ON iu.id = e.instructor_id
-         ORDER BY p.paid_at DESC NULLS LAST`,
+         ORDER BY COALESCE(p.paid_at, p.payment_date::timestamptz) DESC NULLS LAST, p.id DESC`,
         [studentId]
       );
       payments = rows;

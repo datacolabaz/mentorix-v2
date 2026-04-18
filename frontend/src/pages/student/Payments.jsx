@@ -80,6 +80,21 @@ function fmtDdMmYyyy(d) {
   return format(d, 'dd.MM.yyyy')
 }
 
+/** Müəllimin qeyd etdiyi ödəniş tarixi (tarixçə ilə eyni); yoxdursa qəbul vaxtı */
+function primaryPaymentDateLabel(p) {
+  const ymd = p.payment_date != null ? String(p.payment_date).slice(0, 10) : ''
+  if (/^\d{4}-\d{2}-\d{2}$/.test(ymd)) {
+    return fmtDdMmYyyy(parseYmdLocal(ymd))
+  }
+  if (p.paid_at) return fmtAzFromDb(p.paid_at)
+  return '—'
+}
+
+function hasSeparatePaymentDate(p) {
+  const ymd = p.payment_date != null ? String(p.payment_date).slice(0, 10) : ''
+  return /^\d{4}-\d{2}-\d{2}$/.test(ymd) && Boolean(p.paid_at)
+}
+
 function enrollmentFromStudentProfile(s) {
   if (!s?.enrollment_id) return null
   const lim = billingLimit(s.billing_type)
@@ -418,28 +433,36 @@ export default function StudentPayments() {
                   key={p.id}
                   className="rounded-xl border border-indigo-500/20 bg-[#0f0c29]/80 p-3 text-sm"
                 >
-                  <div className="flex justify-between gap-2 flex-wrap">
-                    <span className="font-mono text-emerald-300">
-                      {p.amount != null ? Number(p.amount).toFixed(2) : '—'} {p.currency || 'AZN'}
-                    </span>
-                    <span
-                      className={
-                        p.status === 'completed'
-                          ? 'text-emerald-400 text-xs font-semibold'
-                          : 'text-amber-400 text-xs'
-                      }
-                    >
-                      {p.status || '—'}
-                    </span>
+                  <div className="flex justify-between gap-3 flex-wrap items-start">
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Ödəniş tarixi</p>
+                      <p className="text-white font-mono tabular-nums text-sm font-medium mt-0.5">
+                        {primaryPaymentDateLabel(p)}
+                      </p>
+                      {hasSeparatePaymentDate(p) ? (
+                        <p className="text-[10px] text-gray-600 mt-1">
+                          Sistemə qeyd: <span className="font-mono text-gray-500">{fmtAzFromDb(p.paid_at)}</span>
+                        </p>
+                      ) : null}
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="font-mono text-emerald-300 font-semibold tabular-nums">
+                        {p.amount != null ? Number(p.amount).toFixed(2) : '—'} {p.currency || 'AZN'}
+                      </p>
+                      <p
+                        className={
+                          p.status === 'completed'
+                            ? 'text-emerald-400/90 text-xs font-semibold mt-0.5'
+                            : 'text-amber-400 text-xs mt-0.5'
+                        }
+                      >
+                        {p.status || '—'}
+                      </p>
+                    </div>
                   </div>
-                  {p.period && <p className="text-xs text-gray-500 mt-1">Dövr: {p.period}</p>}
+                  {p.period && <p className="text-xs text-gray-500 mt-2">Dövr: {p.period}</p>}
                   {p.payment_method && <p className="text-xs text-gray-500">Üsul: {p.payment_method}</p>}
-                  {p.paid_at && (
-                    <p className="text-xs text-gray-500 mt-1">
-                      {new Date(p.paid_at).toLocaleString('az-AZ')}
-                    </p>
-                  )}
-                  {p.notes && <p className="text-xs text-gray-400 mt-1">{p.notes}</p>}
+                  {p.notes && <p className="text-xs text-gray-400 mt-2 leading-relaxed">{p.notes}</p>}
                 </li>
               ))}
             </ul>
