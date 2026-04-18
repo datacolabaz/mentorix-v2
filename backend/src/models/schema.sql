@@ -127,6 +127,7 @@ CREATE TABLE enrollments (
   enrolled_at TIMESTAMP DEFAULT NOW(),
   enrollment_start_date DATE,
   billing_timing VARCHAR(20) NOT NULL DEFAULT 'postpaid',
+  payment_plan VARCHAR(20) NOT NULL DEFAULT 'full',
   lesson_weekdays JSONB DEFAULT '[]'::jsonb,
   lesson_times JSONB DEFAULT '{}'::jsonb
 );

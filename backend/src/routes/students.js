@@ -48,6 +48,10 @@ function parseBillingTiming(v) {
   return 'postpaid';
 }
 
+function parsePaymentPlan(v) {
+  return String(v || '').trim().toLowerCase() === 'partial' ? 'partial' : 'full';
+}
+
 /** 1–7 unikal, sıralı (B.e. … Bazar) */
 function parseLessonWeekdays(raw) {
   if (raw == null) return [];
@@ -165,6 +169,7 @@ router.post('/enroll', authenticate, authorize('instructor', 'admin'), async (re
       monthly_fee,
       enrollment_date,
       billing_timing,
+      payment_plan,
       first_lesson_date,
       teacher_schedule_id,
       lesson_weekdays,
@@ -216,11 +221,12 @@ router.post('/enroll', authenticate, authorize('instructor', 'admin'), async (re
       return res.status(400).json({ success: false, message: 'Dərslərə başlama tarixi seçilməlidir' });
     }
     const bt = (billing_type || '8_lessons') === 'monthly' ? parseBillingTiming(billing_timing) : 'postpaid';
+    const payPlan = (billing_type || '8_lessons') === 'monthly' ? parsePaymentPlan(payment_plan) : 'full';
 
     const enrollment = await db.transaction(async (client) => {
       const { rows } = await client.query(
-        `INSERT INTO enrollments (instructor_id, student_id, billing_type, referral_notes, referral_source_id, lesson_weekdays, lesson_times, enrollment_start_date, billing_timing)
-         VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb,$8::date,$9) RETURNING *`,
+        `INSERT INTO enrollments (instructor_id, student_id, billing_type, referral_notes, referral_source_id, lesson_weekdays, lesson_times, enrollment_start_date, billing_timing, payment_plan)
+         VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb,$8::date,$9,$10) RETURNING *`,
         [
           instructor_id,
           student_id,
@@ -231,6 +237,7 @@ router.post('/enroll', authenticate, authorize('instructor', 'admin'), async (re
           JSON.stringify(lt),
           enrollmentYmd,
           bt,
+          payPlan,
         ]
       );
       const enr = rows[0];
@@ -380,6 +387,7 @@ router.patch('/enrollment/:enrollmentId', authenticate, authorize('admin', 'inst
       monthly_fee,
       enrollment_date,
       billing_timing,
+      payment_plan,
       lesson_weekdays,
       lesson_times,
     } = req.body;
@@ -474,6 +482,17 @@ router.patch('/enrollment/:enrollmentId', authenticate, authorize('admin', 'inst
       if (enBt[0]?.billing_type === 'monthly') {
         await db.query(`UPDATE enrollments SET billing_timing = $1::text WHERE id = $2`, [
           parseBillingTiming(billing_timing),
+          enrollmentId,
+        ]);
+      }
+    }
+
+    const hasPp = Object.prototype.hasOwnProperty.call(req.body, 'payment_plan');
+    if (hasPp) {
+      const { rows: enPp } = await db.query('SELECT billing_type FROM enrollments WHERE id = $1', [enrollmentId]);
+      if (enPp[0]?.billing_type === 'monthly') {
+        await db.query(`UPDATE enrollments SET payment_plan = $1::text WHERE id = $2`, [
+          parsePaymentPlan(payment_plan),
           enrollmentId,
         ]);
       }

@@ -40,6 +40,7 @@ export default function InstructorPayments() {
   const [historyOpen, setHistoryOpen] = useState(false)
   const [historyRow, setHistoryRow] = useState(null)
   const [historyPayments, setHistoryPayments] = useState([])
+  const [historySummary, setHistorySummary] = useState(null)
   const [historyLoading, setHistoryLoading] = useState(false)
   const [legacyOpen, setLegacyOpen] = useState(false)
   const [legacyRow, setLegacyRow] = useState(null)
@@ -193,9 +194,11 @@ export default function InstructorPayments() {
     setHistoryOpen(true)
     setHistoryLoading(true)
     setHistoryPayments([])
+    setHistorySummary(null)
     try {
       const d = await api.get('/payments/enrollment/' + encodeURIComponent(row.enrollment_id) + '/history')
       setHistoryPayments(Array.isArray(d.payments) ? d.payments : [])
+      setHistorySummary(d.balance_summary ?? null)
     } catch (e) {
       toast(e?.message || 'Tarixçə yüklənmədi', 'error')
     } finally {
@@ -208,9 +211,9 @@ export default function InstructorPayments() {
       <div className="mb-6">
         <h1 className="font-display font-bold text-xl sm:text-2xl text-white tracking-tight">Ödənişlər</h1>
         <p className="text-gray-500 text-sm mt-1">
-          Aylıq paketdə borc yalnız təqvim ankoruna görədir: başlama tarixindən hər ayın eyni günü bir dövr, məbləğ
-          sabitdir; davamiyyət maliyyəyə təsir etmir. «Balans düzəlişi» ay ortasında dərsi kəsən tələbələr üçün borcu
-          əllə azaltmaq üçündür (ümumi gəlirə daxil edilmir).
+          Cədvəldə yalnız aylıq məbləğ və ödənilənlər göstərilir. Qalıq borc və balans yalnız{' '}
+          <span className="text-indigo-300">Tarixçə</span> pəncərəsində hesablanır. Davamiyyət ödənişdən tam ayrıdır.
+          «Balans düzəlişi» ümumi gəlirə daxil edilmir.
         </p>
       </div>
 
@@ -264,64 +267,64 @@ export default function InstructorPayments() {
 
         {!loading && !err && (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[880px]">
+            <table className="w-full text-sm min-w-[720px] table-fixed">
+              <colgroup>
+                <col className="w-[28%]" />
+                <col className="w-[14%]" />
+                <col className="w-[12%]" />
+                <col className="w-[12%]" />
+                <col className="w-[34%]" />
+              </colgroup>
               <thead>
                 <tr className="border-b border-indigo-500/25 text-left text-[11px] uppercase tracking-wider text-indigo-300/70 bg-[#0f0c29]/90">
-                  <th className="py-3.5 px-4 font-semibold">Ad</th>
-                  <th className="py-3.5 px-4 font-semibold">Soyad</th>
-                  <th className="py-3.5 px-4 font-semibold">Nömrə</th>
-                  <th className="py-3.5 px-4 font-semibold whitespace-nowrap">Başlama (ankor)</th>
-                  <th className="py-3.5 px-4 font-semibold whitespace-nowrap">Aylıq ödəniş</th>
-                  <th className="py-3.5 px-4 font-semibold whitespace-nowrap">Cəmi ödənilən</th>
-                  <th className="py-3.5 px-4 font-semibold whitespace-nowrap">Qalıq borc / balans</th>
-                  <th className="py-3.5 px-4 font-semibold w-[1%] whitespace-nowrap text-right">Əməl</th>
+                  <th className="py-3 px-3 font-semibold">Tələbə</th>
+                  <th className="py-3 px-3 font-semibold whitespace-nowrap">Başlama</th>
+                  <th className="py-3 px-3 font-semibold text-right whitespace-nowrap">Aylıq</th>
+                  <th className="py-3 px-3 font-semibold text-right whitespace-nowrap">Cəmi ödənilən</th>
+                  <th className="py-3 px-3 font-semibold text-right whitespace-nowrap">Əməllər</th>
                 </tr>
               </thead>
               <tbody className="text-gray-200">
                 {students.map((s) => {
                   const isMonthly = s.billing_type === 'monthly' && s.monthly_fee != null && Number(s.monthly_fee) > 0
-                  const owe = Number(s.pending_debt)
-                  const net = Number(s.net_balance)
-                  const hasDebt = isMonthly && Number.isFinite(owe) && owe > 0.005
-                  const hasCredit = isMonthly && Number.isFinite(net) && net > 0.005
                   return (
                     <tr
                       key={s.enrollment_id}
-                      className="border-b border-indigo-500/10 hover:bg-indigo-500/[0.06] transition-colors"
+                      className="border-b border-indigo-500/10 hover:bg-indigo-500/[0.06] transition-colors align-top"
                     >
-                      <td className="py-3.5 px-4 font-medium text-white">{s.first_name}</td>
-                      <td className="py-3.5 px-4">{s.last_name}</td>
-                      <td className="py-3.5 px-4 font-mono text-xs text-gray-400 tabular-nums">{s.phone || '—'}</td>
-                      <td className="py-3.5 px-4 text-xs text-gray-300">
+                      <td className="py-3 px-3 min-w-0">
+                        <div className="font-medium text-white truncate" title={`${s.first_name} ${s.last_name}`}>
+                          {s.first_name} {s.last_name}
+                        </div>
+                        <div className="font-mono text-[11px] text-gray-500 tabular-nums truncate mt-0.5">
+                          {s.phone || '—'}
+                        </div>
+                      </td>
+                      <td className="py-3 px-3 text-xs text-gray-300 whitespace-nowrap">
                         <span className="font-mono tabular-nums text-white/90">
                           {formatDdMmYyyy(s.lesson_start_date || s.payment_start_date)}
                         </span>
                       </td>
-                      <td className="py-3.5 px-4 align-top text-[12px] tabular-nums text-gray-200">
-                        {isMonthly ? <span className="text-white font-medium">{formatAzn(s.monthly_fee)}</span> : '—'}
+                      <td className="py-3 px-3 text-right tabular-nums text-white font-medium whitespace-nowrap">
+                        {isMonthly ? formatAzn(s.monthly_fee) : '—'}
                       </td>
-                      <td className="py-3.5 px-4 align-top text-[12px] tabular-nums text-gray-200">
-                        {isMonthly ? <span className="text-white font-medium">{formatAzn(s.total_payments)}</span> : '—'}
+                      <td className="py-3 px-3 text-right tabular-nums text-white font-medium whitespace-nowrap">
+                        {isMonthly ? formatAzn(s.total_payments) : '—'}
                       </td>
-                      <td className="py-3.5 px-4 align-top text-[12px] tabular-nums">
-                        {!isMonthly ? (
-                          <span className="text-gray-600">—</span>
-                        ) : hasDebt ? (
-                          <span className="text-rose-200 font-semibold">Borc: {formatAzn(owe)}</span>
-                        ) : hasCredit ? (
-                          <span className="text-emerald-200/95 font-semibold">Balans: {formatAzn(net)}</span>
-                        ) : (
-                          <span className="text-gray-400 tabular-nums">{formatAzn(0)}</span>
-                        )}
-                      </td>
-                      <td className="py-3.5 px-4 text-right">
-                        <div className="flex flex-wrap gap-2 justify-end">
-                          <Button type="button" size="sm" variant="secondary" onClick={() => openLegacy(s)}>
+                      <td className="py-3 px-3 text-right">
+                        <div className="inline-flex flex-col gap-1.5 items-end w-full max-w-[11rem] ml-auto">
+                          <Button type="button" size="sm" variant="secondary" className="w-full justify-center" onClick={() => openLegacy(s)}>
                             Keçmiş qeyd
                           </Button>
                           {isMonthly ? (
                             <>
-                              <Button type="button" size="sm" variant="secondary" onClick={() => openAdjust(s)}>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="secondary"
+                                className="w-full justify-center"
+                                onClick={() => openAdjust(s)}
+                              >
                                 Balans düzəlişi
                               </Button>
                               <Button
@@ -329,11 +332,17 @@ export default function InstructorPayments() {
                                 size="sm"
                                 loading={markingId === s.enrollment_id}
                                 onClick={() => openQuickPay(s)}
-                                className="!bg-indigo-600 hover:!bg-indigo-500 !text-white border-0"
+                                className="w-full justify-center !bg-indigo-600 hover:!bg-indigo-500 !text-white border-0"
                               >
                                 Ödəniş
                               </Button>
-                              <Button type="button" size="sm" variant="secondary" onClick={() => void openHistory(s)}>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="secondary"
+                                className="w-full justify-center"
+                                onClick={() => void openHistory(s)}
+                              >
                                 Tarixçə
                               </Button>
                             </>
@@ -539,7 +548,12 @@ export default function InstructorPayments() {
 
       <Modal
         open={historyOpen}
-        onClose={() => !historyLoading && setHistoryOpen(false)}
+        onClose={() => {
+          if (!historyLoading) {
+            setHistoryOpen(false)
+            setHistorySummary(null)
+          }
+        }}
         title="Ödəniş tarixçəsi"
         size="md"
       >
@@ -548,24 +562,70 @@ export default function InstructorPayments() {
             <p className="text-gray-400">
               {historyRow.first_name} {historyRow.last_name}
             </p>
+            {!historyLoading && historySummary && (
+              <div className="rounded-xl border border-indigo-500/20 bg-[#13112e]/70 p-3 space-y-2 text-xs">
+                {historySummary.billing_anchor_future ? (
+                  <p className="text-sky-200/90 leading-relaxed">
+                    Ankor başlama tarixi bu gündən sonradır — dövr borcu hələ sıfır sayılır; ödənişlər növbəti
+                    dövrlərə düşəcək.
+                  </p>
+                ) : null}
+                {historySummary.payment_plan === 'partial' ? (
+                  <p className="text-amber-200/90 font-semibold">Ödəniş planı: hissəli</p>
+                ) : null}
+                <p className="text-gray-500">
+                  Ödəniş növü (qeydiyyat):{' '}
+                  <span className="text-gray-300">
+                    {historySummary.billing_timing === 'prepaid' ? 'əvvəlcədən' : 'sonradan'}
+                  </span>
+                </p>
+                <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 tabular-nums pt-1 border-t border-indigo-500/15">
+                  <span className="text-gray-500">Ankor dövr sayı</span>
+                  <span className="text-right text-white font-medium">{historySummary.subscription_months ?? 0}</span>
+                  <span className="text-gray-500">Yaranan borc</span>
+                  <span className="text-right text-white">{formatAzn(historySummary.accrued_total)}</span>
+                  <span className="text-gray-500">Cəmi ödənilən</span>
+                  <span className="text-right text-emerald-200/95">{formatAzn(historySummary.total_payments)}</span>
+                  <span className="text-gray-500">Qalıq borc</span>
+                  <span
+                    className={`text-right font-semibold ${
+                      Number(historySummary.pending_debt) > 0.005 ? 'text-rose-200' : 'text-gray-400'
+                    }`}
+                  >
+                    {formatAzn(historySummary.pending_debt)}
+                  </span>
+                  {Number(historySummary.net_balance) > 0.005 && !historySummary.billing_anchor_future ? (
+                    <>
+                      <span className="text-gray-500">Artıq balans</span>
+                      <span className="text-right text-emerald-200 font-medium">
+                        {formatAzn(historySummary.net_balance)}
+                      </span>
+                    </>
+                  ) : null}
+                </div>
+              </div>
+            )}
             {historyLoading && <p className="text-gray-500 text-xs">Yüklənir…</p>}
             {!historyLoading && !historyPayments.length && (
               <p className="text-gray-500 text-xs">Hələ ödəniş qeydi yoxdur.</p>
             )}
             {!historyLoading && historyPayments.length > 0 && (
-              <ul className="space-y-2 max-h-72 overflow-y-auto">
-                {historyPayments.map((p) => (
-                  <li
-                    key={p.id}
-                    className="flex justify-between gap-3 border border-indigo-500/15 rounded-lg px-3 py-2 bg-[#13112e]/60"
-                  >
-                    <span className="text-gray-400 text-xs whitespace-nowrap">
-                      {formatDdMmYyyy(p.payment_date || p.paid_at)}
-                    </span>
-                    <span className="text-white font-mono tabular-nums">{formatAzn(p.amount)}</span>
-                  </li>
-                ))}
-              </ul>
+              <div>
+                <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-2">Əməliyyatlar</p>
+                <ul className="space-y-2 max-h-56 overflow-y-auto">
+                  {historyPayments.map((p) => (
+                    <li
+                      key={p.id}
+                      className="flex justify-between gap-3 border border-indigo-500/15 rounded-lg px-3 py-2 bg-[#13112e]/60"
+                    >
+                      <span className="text-gray-400 text-xs whitespace-nowrap">
+                        {formatDdMmYyyy(p.payment_date || p.paid_at)}
+                      </span>
+                      <span className="text-white font-mono tabular-nums">{formatAzn(p.amount)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             )}
           </div>
         )}

@@ -15,6 +15,7 @@ const listStudents = async (req, res) => {
               e.lesson_weekdays, e.lesson_times,
               e.enrollment_start_date,
               e.billing_timing,
+              COALESCE(e.payment_plan, 'full') AS payment_plan,
               e.status AS enrollment_status, e.referral_notes,
               e.instructor_id, iu.full_name AS instructor_name,
               rs.name AS referral_source,
@@ -31,7 +32,7 @@ const listStudents = async (req, res) => {
     const group = `GROUP BY u.id, u.full_name, u.email, u.phone, sp.parent_id, sp.grade,
                 sp.monthly_fee,
                 sp.parent_name, sp.parent_phone, pu.full_name, pu.phone,
-                e.id, e.billing_type, e.lesson_count, e.lesson_weekdays, e.lesson_times, e.enrollment_start_date, e.billing_timing, e.status,
+                e.id, e.billing_type, e.lesson_count, e.lesson_weekdays, e.lesson_times, e.enrollment_start_date, e.billing_timing, e.payment_plan, e.status,
                 e.referral_notes, e.instructor_id, iu.full_name, rs.name
        ORDER BY u.full_name`;
 

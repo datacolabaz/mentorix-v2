@@ -399,7 +399,12 @@ const getEnrollmentPaymentHistory = async (req, res) => {
   try {
     const { enrollment_id } = req.params;
     const { rows: en } = await db.query(
-      `SELECT e.instructor_id, e.student_id FROM enrollments e WHERE e.id = $1`,
+      `SELECT e.instructor_id, e.student_id, e.billing_type, e.enrollment_start_date,
+              e.billing_timing, COALESCE(e.payment_plan, 'full') AS payment_plan,
+              sp.monthly_fee
+       FROM enrollments e
+       LEFT JOIN student_profiles sp ON sp.user_id = e.student_id
+       WHERE e.id = $1`,
       [enrollment_id]
     );
     if (!en[0]) return res.status(404).json({ success: false, message: 'Tapılmadı' });
@@ -420,7 +425,39 @@ const getEnrollmentPaymentHistory = async (req, res) => {
        ORDER BY COALESCE(paid_at, payment_date::timestamptz) DESC NULLS LAST, id DESC`,
       [enrollment_id]
     );
-    res.json({ success: true, payments: rows });
+
+    let balance_summary = null;
+    const mf = en[0].monthly_fee != null ? Number(en[0].monthly_fee) : NaN;
+    if (en[0].billing_type === 'monthly' && Number.isFinite(mf) && mf > 0) {
+      const todayBaku = await getTodayBakuYmd(db);
+      const { rows: pr } = await db.query(
+        `SELECT COALESCE(SUM(amount), 0)::numeric AS t
+         FROM payments WHERE enrollment_id = $1 AND status = 'completed'`,
+        [enrollment_id]
+      );
+      const paid = Number(pr[0]?.t) || 0;
+      const anchorYmd = anchorToYmd(en[0].enrollment_start_date);
+      const st = computeMonthlyBalanceState({
+        monthly_fee: mf,
+        anchor_ymd: anchorYmd,
+        today_ymd: todayBaku,
+        total_paid: paid,
+      });
+      balance_summary = {
+        monthly_fee: mf,
+        billing_timing: en[0].billing_timing || 'postpaid',
+        payment_plan: en[0].payment_plan || 'full',
+        anchor_ymd: anchorYmd,
+        accrued_total: st.accrued_total,
+        total_payments: st.total_payments,
+        pending_debt: st.pending_debt,
+        net_balance: st.net_balance,
+        subscription_months: st.subscription_months,
+        billing_anchor_future: Boolean(st.billing_anchor_future),
+      };
+    }
+
+    res.json({ success: true, payments: rows, balance_summary: balance_summary });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
