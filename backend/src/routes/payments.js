@@ -7,6 +7,7 @@ const {
   markMonthlyPaid,
   markMonthlyPaidBatch,
   getEnrollmentPaymentHistory,
+  deletePayment,
 } = require('../controllers/paymentController');
 const { authenticate, authorize } = require('../middleware/auth');
 
@@ -22,5 +23,6 @@ router.post('/mark-monthly-paid', authenticate, authorize('admin', 'instructor')
 router.post('/mark-monthly-paid-batch', authenticate, authorize('admin', 'instructor'), markMonthlyPaidBatch);
 router.get('/', authenticate, authorize('admin', 'instructor'), listPayments);
 router.post('/', authenticate, authorize('admin', 'instructor'), addPayment);
+router.delete('/:payment_id', authenticate, authorize('admin', 'instructor'), deletePayment);
 
 module.exports = router;
