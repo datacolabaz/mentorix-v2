@@ -125,6 +125,7 @@ CREATE TABLE enrollments (
   referral_source_id UUID REFERENCES referral_sources(id),
   referral_notes TEXT,
   enrolled_at TIMESTAMP DEFAULT NOW(),
+  enrollment_start_date DATE,
   lesson_weekdays JSONB DEFAULT '[]'::jsonb,
   lesson_times JSONB DEFAULT '{}'::jsonb
 );
