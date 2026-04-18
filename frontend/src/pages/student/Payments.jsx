@@ -95,6 +95,16 @@ function hasSeparatePaymentDate(p) {
   return /^\d{4}-\d{2}-\d{2}$/.test(ymd) && Boolean(p.paid_at)
 }
 
+/** Bu qeyd növləri tələbə üçün göstərilmir (yalnız müəllim/admin tərəfi) */
+function displayNotesForStudent(raw) {
+  if (raw == null || String(raw).trim() === '') return ''
+  const s = String(raw).trim()
+  if (/^\[Başlanğıc balansı\]/i.test(s)) return ''
+  if (/^\[Keçmiş ödəniş qeydi\]/i.test(s)) return ''
+  if (/^\[Balans düzəlişi\]/i.test(s)) return ''
+  return s
+}
+
 function enrollmentFromStudentProfile(s) {
   if (!s?.enrollment_id) return null
   const lim = billingLimit(s.billing_type)
@@ -224,6 +234,7 @@ export default function StudentPayments() {
     : null
   const monthlyDebtNum =
     sub != null && Number.isFinite(Number(sub.pending_debt)) ? Number(sub.pending_debt) : null
+  const isPrepaidMonthly = isMonthlySub && enrollment?.billing_timing === 'prepaid'
 
   return (
     <div className="p-4 sm:p-6 max-w-3xl mx-auto w-full min-w-0">
@@ -262,6 +273,9 @@ export default function StudentPayments() {
                   <span className="text-gray-400"> ({anchorDdMmYyyy} tarixindən bəri)</span>
                 ) : null}
               </p>
+              {isPrepaidMonthly ? (
+                <p className="text-xs text-indigo-200/90 mb-2">Qeydiyyat: ay məbləği əvvəlcədən ödənilir (müəllim tərəfindən).</p>
+              ) : null}
               <p className="text-xs text-gray-500 mb-2">
                 Borc hər ayın eyni təqvim günündə (başlama tarixinə görə) sabit aylıq məbləğ ilə yaranır; dərs sayı və
                 davamiyyət bu məbləğə təsir etmir.
@@ -281,19 +295,31 @@ export default function StudentPayments() {
                 ) : null}
               </p>
               <p className="text-xs text-gray-500 mb-3">Müəllim: {enrollment?.instructor_name || '—'}</p>
-              <button
-                type="button"
-                onClick={() => setPartialInfoOpen((v) => !v)}
-                className="w-full sm:w-auto text-sm font-semibold rounded-xl px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white border-0"
-              >
-                Hissəli ödəniş et
-              </button>
-              {partialInfoOpen ? (
-                <p className="text-xs text-gray-400 mt-3 leading-relaxed border border-indigo-500/20 rounded-xl p-3 bg-[#13112e]/80">
-                  Hissəli ödənişi müəlliminiz qeydə alır. Ödəmək istədiyiniz məbləği müəlliminizə bildirin; o, sistemə
-                  daxil edəndə borc avtomatik yenilənəcək.
-                </p>
-              ) : null}
+              {isPrepaidMonthly ? (
+                <button
+                  type="button"
+                  disabled
+                  className="w-full sm:w-auto text-sm font-semibold rounded-xl px-4 py-2.5 bg-indigo-600/35 text-indigo-100/90 border border-indigo-500/25 cursor-not-allowed opacity-90"
+                >
+                  Öncədən ödəniş
+                </button>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setPartialInfoOpen((v) => !v)}
+                    className="w-full sm:w-auto text-sm font-semibold rounded-xl px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white border-0"
+                  >
+                    Hissəli ödəniş et
+                  </button>
+                  {partialInfoOpen ? (
+                    <p className="text-xs text-gray-400 mt-3 leading-relaxed border border-indigo-500/20 rounded-xl p-3 bg-[#13112e]/80">
+                      Hissəli ödənişi müəlliminiz qeydə alır. Ödəmək istədiyiniz məbləği müəlliminizə bildirin; o, sistemə
+                      daxil edəndə borc avtomatik yenilənəcək.
+                    </p>
+                  ) : null}
+                </>
+              )}
             </Card>
           ) : (
             <>
@@ -428,7 +454,9 @@ export default function StudentPayments() {
             </p>
           ) : (
             <ul className="space-y-2">
-              {payments.map((p) => (
+              {payments.map((p) => {
+                const noteForStudent = displayNotesForStudent(p.notes)
+                return (
                 <li
                   key={p.id}
                   className="rounded-xl border border-indigo-500/20 bg-[#0f0c29]/80 p-3 text-sm"
@@ -462,9 +490,12 @@ export default function StudentPayments() {
                   </div>
                   {p.period && <p className="text-xs text-gray-500 mt-2">Dövr: {p.period}</p>}
                   {p.payment_method && <p className="text-xs text-gray-500">Üsul: {p.payment_method}</p>}
-                  {p.notes && <p className="text-xs text-gray-400 mt-2 leading-relaxed">{p.notes}</p>}
+                  {noteForStudent ? (
+                    <p className="text-xs text-gray-400 mt-2 leading-relaxed">{noteForStudent}</p>
+                  ) : null}
                 </li>
-              ))}
+                )
+              })}
             </ul>
           )}
         </Card>
