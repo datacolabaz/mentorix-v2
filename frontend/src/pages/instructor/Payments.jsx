@@ -48,6 +48,12 @@ export default function InstructorPayments() {
   const [legacyKind, setLegacyKind] = useState('past_payment')
   const [legacyNotes, setLegacyNotes] = useState('')
   const [legacySaving, setLegacySaving] = useState(false)
+  const [adjustOpen, setAdjustOpen] = useState(false)
+  const [adjustRow, setAdjustRow] = useState(null)
+  const [adjustAmount, setAdjustAmount] = useState('')
+  const [adjustDate, setAdjustDate] = useState(() => new Date().toISOString().split('T')[0])
+  const [adjustNotes, setAdjustNotes] = useState('')
+  const [adjustSaving, setAdjustSaving] = useState(false)
   const toast = useToast()
 
   const load = useCallback(async () => {
@@ -109,6 +115,43 @@ export default function InstructorPayments() {
     }
   }
 
+  const openAdjust = (row) => {
+    setAdjustRow(row)
+    setAdjustAmount('')
+    setAdjustDate(new Date().toISOString().split('T')[0])
+    setAdjustNotes('')
+    setAdjustOpen(true)
+  }
+
+  const submitAdjust = async () => {
+    if (!adjustRow?.enrollment_id) return
+    const amt = Number(adjustAmount)
+    if (!Number.isFinite(amt) || amt <= 0) {
+      toast('Məbləği düzgün daxil edin', 'error')
+      return
+    }
+    setAdjustSaving(true)
+    try {
+      await api.post('/payments', {
+        enrollment_id: adjustRow.enrollment_id,
+        amount: amt,
+        payment_method: 'cash',
+        payment_date: adjustDate || null,
+        status: 'completed',
+        legacy_kind: 'balance_adjustment',
+        notes: adjustNotes.trim() || undefined,
+      })
+      toast('Balans düzəlişi qeydə alındı')
+      setAdjustOpen(false)
+      setAdjustRow(null)
+      await load()
+    } catch (e) {
+      toast(e?.message || 'Xəta', 'error')
+    } finally {
+      setAdjustSaving(false)
+    }
+  }
+
   const openQuickPay = (row) => {
     setQuickRow(row)
     const deficit =
@@ -165,8 +208,9 @@ export default function InstructorPayments() {
       <div className="mb-6">
         <h1 className="font-display font-bold text-xl sm:text-2xl text-white tracking-tight">Ödənişlər</h1>
         <p className="text-gray-500 text-sm mt-1">
-          Ümumi ödəniş — tarixçədəki tamamlanmış ödənişlərin cəmi. Cari balans — ödənişlər minus yaranan borc (sonradan:
-          iştirak olunmuş dərs sayı × aylıq÷8; əvvəlcədən: ankor ayları × aylıq). Status borc qalığına görə.
+          Aylıq paketdə borc yalnız təqvim ankoruna görədir: başlama tarixindən hər ayın eyni günü bir dövr, məbləğ
+          sabitdir; davamiyyət maliyyəyə təsir etmir. «Balans düzəlişi» ay ortasında dərsi kəsən tələbələr üçün borcu
+          əllə azaltmaq üçündür (ümumi gəlirə daxil edilmir).
         </p>
       </div>
 
@@ -220,25 +264,26 @@ export default function InstructorPayments() {
 
         {!loading && !err && (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[920px]">
+            <table className="w-full text-sm min-w-[880px]">
               <thead>
                 <tr className="border-b border-indigo-500/25 text-left text-[11px] uppercase tracking-wider text-indigo-300/70 bg-[#0f0c29]/90">
                   <th className="py-3.5 px-4 font-semibold">Ad</th>
                   <th className="py-3.5 px-4 font-semibold">Soyad</th>
                   <th className="py-3.5 px-4 font-semibold">Nömrə</th>
-                  <th className="py-3.5 px-4 font-semibold whitespace-nowrap">Başlama</th>
-                  <th className="py-3.5 px-4 font-semibold whitespace-nowrap">Ümumi ödəniş</th>
-                  <th className="py-3.5 px-4 font-semibold whitespace-nowrap">Cari balans</th>
-                  <th className="py-3.5 px-4 font-semibold whitespace-nowrap">Status</th>
+                  <th className="py-3.5 px-4 font-semibold whitespace-nowrap">Başlama (ankor)</th>
+                  <th className="py-3.5 px-4 font-semibold whitespace-nowrap">Aylıq ödəniş</th>
+                  <th className="py-3.5 px-4 font-semibold whitespace-nowrap">Cəmi ödənilən</th>
+                  <th className="py-3.5 px-4 font-semibold whitespace-nowrap">Qalıq borc / balans</th>
                   <th className="py-3.5 px-4 font-semibold w-[1%] whitespace-nowrap text-right">Əməl</th>
                 </tr>
               </thead>
               <tbody className="text-gray-200">
                 {students.map((s) => {
-                  const st = s.payment_status || 'təyin_edilməyib'
                   const isMonthly = s.billing_type === 'monthly' && s.monthly_fee != null && Number(s.monthly_fee) > 0
                   const owe = Number(s.pending_debt)
-                  const showDebt = isMonthly && Number.isFinite(owe) && owe > 0.005
+                  const net = Number(s.net_balance)
+                  const hasDebt = isMonthly && Number.isFinite(owe) && owe > 0.005
+                  const hasCredit = isMonthly && Number.isFinite(net) && net > 0.005
                   return (
                     <tr
                       key={s.enrollment_id}
@@ -247,72 +292,27 @@ export default function InstructorPayments() {
                       <td className="py-3.5 px-4 font-medium text-white">{s.first_name}</td>
                       <td className="py-3.5 px-4">{s.last_name}</td>
                       <td className="py-3.5 px-4 font-mono text-xs text-gray-400 tabular-nums">{s.phone || '—'}</td>
-                      <td className="py-3.5 px-4 text-xs text-gray-300 leading-snug">
+                      <td className="py-3.5 px-4 text-xs text-gray-300">
                         <span className="font-mono tabular-nums text-white/90">
-                          Başlama: {formatDdMmYyyy(s.lesson_start_date || s.payment_start_date)}
+                          {formatDdMmYyyy(s.lesson_start_date || s.payment_start_date)}
                         </span>
-                        {isMonthly ? (
-                          <span className="block text-[10px] text-gray-500 mt-1 tabular-nums">
-                            Aylıq: {formatAzn(s.monthly_fee)}
-                          </span>
-                        ) : null}
-                        {s.pre_system_enrollment ? (
-                          <span className="block text-[10px] text-sky-300/90 mt-1">Köhnə qeydiyyat</span>
-                        ) : null}
                       </td>
                       <td className="py-3.5 px-4 align-top text-[12px] tabular-nums text-gray-200">
-                        {isMonthly ? (
-                          <span className="text-white font-medium">{formatAzn(s.total_payments)}</span>
-                        ) : (
-                          <span className="text-gray-600">—</span>
-                        )}
+                        {isMonthly ? <span className="text-white font-medium">{formatAzn(s.monthly_fee)}</span> : '—'}
+                      </td>
+                      <td className="py-3.5 px-4 align-top text-[12px] tabular-nums text-gray-200">
+                        {isMonthly ? <span className="text-white font-medium">{formatAzn(s.total_payments)}</span> : '—'}
                       </td>
                       <td className="py-3.5 px-4 align-top text-[12px] tabular-nums">
-                        {isMonthly && s.board_balance_kind ? (
-                          s.board_balance_kind === 'borc' ? (
-                            <span className="text-rose-200 font-semibold">
-                              Borc: {formatAzn(s.board_balance_amount)}
-                            </span>
-                          ) : (
-                            <span className="text-emerald-200/95 font-semibold">
-                              Balans: {formatAzn(s.board_balance_amount ?? 0)}
-                            </span>
-                          )
-                        ) : isMonthly ? (
+                        {!isMonthly ? (
                           <span className="text-gray-600">—</span>
+                        ) : hasDebt ? (
+                          <span className="text-rose-200 font-semibold">Borc: {formatAzn(owe)}</span>
+                        ) : hasCredit ? (
+                          <span className="text-emerald-200/95 font-semibold">Balans: {formatAzn(net)}</span>
                         ) : (
-                          <span className="text-gray-600">—</span>
+                          <span className="text-gray-400 tabular-nums">{formatAzn(0)}</span>
                         )}
-                      </td>
-                      <td className="py-3.5 px-4 align-top">
-                        {isMonthly ? (
-                          <span
-                            className={`inline-flex text-[11px] font-semibold px-2 py-1 rounded-md border whitespace-nowrap ${
-                              st === 'ödənilib'
-                                ? 'border-emerald-500/35 bg-emerald-500/10 text-emerald-100'
-                                : st === 'borclu'
-                                  ? 'border-rose-500/35 bg-rose-500/10 text-rose-100'
-                                  : st === 'gözlənilir'
-                                    ? 'border-amber-500/35 bg-amber-500/15 text-amber-100'
-                                    : 'border-indigo-500/20 text-gray-400'
-                            }`}
-                          >
-                            {st === 'ödənilib'
-                              ? 'Ödənilib'
-                              : st === 'borclu'
-                                ? 'Borclu'
-                                : st === 'gözlənilir'
-                                  ? 'Gözlənilir'
-                                  : st}
-                          </span>
-                        ) : (
-                          <span className="text-gray-600 text-xs">—</span>
-                        )}
-                        {showDebt ? (
-                          <span className="block text-[10px] text-gray-500 mt-1 tabular-nums">
-                            Qalıq: {formatAzn(s.pending_debt)}
-                          </span>
-                        ) : null}
                       </td>
                       <td className="py-3.5 px-4 text-right">
                         <div className="flex flex-wrap gap-2 justify-end">
@@ -321,6 +321,9 @@ export default function InstructorPayments() {
                           </Button>
                           {isMonthly ? (
                             <>
+                              <Button type="button" size="sm" variant="secondary" onClick={() => openAdjust(s)}>
+                                Balans düzəlişi
+                              </Button>
                               <Button
                                 type="button"
                                 size="sm"
@@ -357,12 +360,6 @@ export default function InstructorPayments() {
       >
         {legacyRow && (
           <div className="space-y-4 text-sm">
-            {legacyRow.pre_system_enrollment && (
-              <p className="text-sky-200/95 text-xs leading-relaxed border border-sky-500/25 rounded-xl px-3 py-2 bg-sky-500/10">
-                Bu tələbə sistemin aktivləşdirilməsindən öncə qeydiyyatdan keçmişdir. Aşağıdakı qeyd ümumi gəlir
-                statistikasına daxil ediləcək.
-              </p>
-            )}
             <p className="text-xs text-gray-500 leading-relaxed border border-indigo-500/15 rounded-xl px-3 py-2 bg-[#0f0c29]/80">
               <span className="font-semibold text-gray-400">Nə üçündür?</span> Edupanelə düşməmiş real ödənişləri və ya
               başlanğıcda artıq ödənilmiş məbləği burada qeyd edirsiniz; bunlar tamamlanmış ödəniş kimi saxlanılır və
@@ -437,6 +434,72 @@ export default function InstructorPayments() {
         )}
       </Modal>
 
+      <Modal
+        open={adjustOpen}
+        onClose={() => !adjustSaving && setAdjustOpen(false)}
+        title="Balans düzəlişi"
+        size="md"
+      >
+        {adjustRow && (
+          <div className="space-y-4 text-sm">
+            <p className="text-xs text-gray-500 leading-relaxed border border-indigo-500/15 rounded-xl px-3 py-2 bg-[#0f0c29]/80">
+              Ay ortasında dərsi kəsən və ya borcu azaltmaq lazım olan hallarda müsbət məbləğ daxil edin. Bu qeyd
+              borc–balans hesabına daxil olunur, amma ümumi gəlir rəqəminə <span className="text-indigo-300">daxil edilmir</span>.
+            </p>
+            <p className="text-gray-400">
+              Tələbə:{' '}
+              <span className="text-white font-medium">
+                {adjustRow.first_name} {adjustRow.last_name}
+              </span>
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                  Məbləğ (₼) *
+                </label>
+                <input
+                  type="number"
+                  min={0.01}
+                  step={0.01}
+                  className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white outline-none focus:border-blue-500"
+                  value={adjustAmount}
+                  onChange={(e) => setAdjustAmount(e.target.value)}
+                  disabled={adjustSaving}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Tarix</label>
+                <input
+                  type="date"
+                  className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white outline-none focus:border-blue-500"
+                  value={adjustDate}
+                  onChange={(e) => setAdjustDate(e.target.value)}
+                  disabled={adjustSaving}
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Qeyd</label>
+              <input
+                className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white outline-none focus:border-blue-500"
+                placeholder="İstəyə bağlı"
+                value={adjustNotes}
+                onChange={(e) => setAdjustNotes(e.target.value)}
+                disabled={adjustSaving}
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button type="button" variant="secondary" disabled={adjustSaving} onClick={() => setAdjustOpen(false)}>
+                Ləğv
+              </Button>
+              <Button type="button" loading={adjustSaving} onClick={() => void submitAdjust()}>
+                Qeydə al
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
       <Modal open={quickOpen} onClose={() => !markingId && setQuickOpen(false)} title="Ödəniş (aylıq abunə)" size="md">
         {quickRow && (
           <div className="space-y-4 text-sm">
@@ -447,8 +510,8 @@ export default function InstructorPayments() {
               </span>
             </p>
             <p className="text-xs text-gray-500">
-              Hissəli və ya tam ödəniş: istənilən məbləği daxil edin. Borc, ödəniş növünə görə avtomatik hesablanır
-              (əvvəlcədən: ankor ayları; sonradan: iştirak olunmuş dərs sayı).
+              Hissəli və ya tam ödəniş: istənilən məbləği daxil edin. Borc təqvim ankoruna görə (keçmiş dövr sayı ×
+              aylıq) avtomatik yenilənir.
             </p>
             <div>
               <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Məbləğ (₼)</label>

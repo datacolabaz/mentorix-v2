@@ -520,10 +520,9 @@ export default function InstructorAttendance() {
           ) : enrollmentId && period?.enrollment?.billing_type === 'monthly' ? (
             <div className="rounded-xl border border-indigo-500/20 bg-[#0f0c29]/60 p-4 space-y-4">
               <p className="text-xs text-gray-300 leading-relaxed">
-                <span className="font-semibold text-indigo-200">Aylıq paket:</span> hər keçmiş dərs üçün virtual
-                balansda borc (aylıq məbləğ ÷ 8) yazılır: <strong>Gəldi</strong> həmişə sayılır;{' '}
-                <strong>Gəlmədi</strong> ödənişsiz qayıb kimi sayılmır; <strong>Ödənişli qayıb</strong> dərs qiyməti
-                tutulur. Gələcək tarixlər üçün düymələr deaktivdir.
+                <span className="font-semibold text-indigo-200">Aylıq paket:</span> davamiyyət yalnız izləmə və
+                hesabat üçündür; <strong>ödəniş borcu</strong> yalnız Ödənişlər bölməsində təqvim ankoruna görə
+                hesablanır (dərs sayından asılı deyil). Gələcək tarixlər üçün düymələr deaktivdir.
               </p>
               {monthlyMeta.next && (
                 <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-100">
@@ -688,16 +687,6 @@ export default function InstructorAttendance() {
                               onClick={() => void putMonthlySlot(row.lesson_date, 'absent')}
                             >
                               Gəlmədi
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="secondary"
-                              size="sm"
-                              disabled={rowActionsDisabled}
-                              onClick={() => void putMonthlySlot(row.lesson_date, 'absent', { chargeAbsence: true })}
-                              title="Dərs ödənişli sayılır (virtual balans)"
-                            >
-                              Ödənişli qayıb
                             </Button>
                             <Button
                               type="button"

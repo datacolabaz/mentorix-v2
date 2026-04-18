@@ -47,7 +47,11 @@ const getDashboardStats = async (req, res) => {
     const [instructors, students, payments] = await Promise.all([
       db.query("SELECT COUNT(*) FROM users WHERE role='instructor' AND is_active=TRUE"),
       db.query("SELECT COUNT(*) FROM users WHERE role='student' AND is_active=TRUE"),
-      db.query("SELECT COALESCE(SUM(amount),0) AS total FROM payments WHERE status='completed'"),
+      db.query(
+        `SELECT COALESCE(SUM(amount),0) AS total FROM payments
+         WHERE status='completed'
+           AND (notes IS NULL OR TRIM(notes) NOT LIKE '[Balans düzəlişi]%')`
+      ),
     ]);
 
     res.json({
