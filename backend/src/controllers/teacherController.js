@@ -1,9 +1,5 @@
 const db = require('../utils/db');
-const {
-  loadInstructorMonthlySubscriptionFinancials,
-  loadInstructorMonthlyPrepaidFinancials,
-  roundMoney,
-} = require('../services/subscriptionBilling');
+const { loadInstructorMonthlyBalanceRows, roundMoney } = require('../services/subscriptionBilling');
 
 function normUuid(id) {
   return String(id).trim().toLowerCase().replace(/-/g, '');
@@ -37,9 +33,8 @@ const getTeacherDashboardStats = async (req, res) => {
 
     const [{ rows: incomeRows }, { rows: totalRows }] = await Promise.all([incomeQ, totalQ]);
 
-    const { pendingSum: p1 } = await loadInstructorMonthlySubscriptionFinancials(db, iid);
-    const { pendingSum: p2 } = await loadInstructorMonthlyPrepaidFinancials(db, iid);
-    const pendingMonthlyTotal = roundMoney(p1 + p2);
+    const { pendingSum } = await loadInstructorMonthlyBalanceRows(db, iid);
+    const pendingMonthlyTotal = roundMoney(pendingSum);
 
     res.json({
       success: true,

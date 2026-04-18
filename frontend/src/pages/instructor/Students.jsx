@@ -218,19 +218,40 @@ function StudentFormFields({ data, setData, scheduleMeta, mode, onRefreshSlots, 
       </div>
       {data.billing_type === 'monthly' && (
         <div>
-          <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Aylıq ödəniş növü</label>
-          <p className="text-[10px] text-gray-500 mb-2">
-            <strong className="text-gray-400">Sonradan:</strong> hər ayın ankor günü üzrə dövr borcu (ödənişlər çıxılır).
-            <strong className="text-gray-400 ml-1">Əvvəlcədən:</strong> ödənişlər − dərs vahidi (aylıq÷8) ilə balans.
+          <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Ödəniş növü</label>
+          <p className="text-[10px] text-gray-500 mb-3 leading-relaxed">
+            <strong className="text-gray-400">Əvvəlcədən ödəniş:</strong> hər ayın ankor günündə (başlama tarixinin günü)
+            aylıq borc yaranır. <strong className="text-gray-400">Sonradan ödəniş:</strong> yalnız keçmişdə «gəldi» kimi
+            qeyd olunan dərs slotları üzrə borc (aylıq÷8).
           </p>
-          <select
-            className={inp}
-            value={data.billing_timing || 'postpaid'}
-            onChange={(e) => setData((p) => ({ ...p, billing_timing: e.target.value }))}
-          >
-            <option value="postpaid">Sonradan (postpaid)</option>
-            <option value="prepaid">Əvvəlcədən (prepaid)</option>
-          </select>
+          <div className="space-y-2">
+            <label className="flex items-start gap-3 cursor-pointer rounded-xl border border-indigo-500/20 bg-[#13112e]/80 px-3 py-2.5">
+              <input
+                type="radio"
+                name={`billing_timing_${mode}`}
+                className="mt-1"
+                checked={(data.billing_timing || 'postpaid') === 'prepaid'}
+                onChange={() => setData((p) => ({ ...p, billing_timing: 'prepaid' }))}
+              />
+              <span className="text-sm text-gray-200">
+                <span className="font-semibold text-white">Əvvəlcədən ödəniş</span>
+                <span className="block text-[10px] text-gray-500 mt-0.5">Dərslər başlamazdan əvvəl ödəniş modeli (ankor ayları).</span>
+              </span>
+            </label>
+            <label className="flex items-start gap-3 cursor-pointer rounded-xl border border-indigo-500/20 bg-[#13112e]/80 px-3 py-2.5">
+              <input
+                type="radio"
+                name={`billing_timing_${mode}`}
+                className="mt-1"
+                checked={(data.billing_timing || 'postpaid') === 'postpaid'}
+                onChange={() => setData((p) => ({ ...p, billing_timing: 'postpaid' }))}
+              />
+              <span className="text-sm text-gray-200">
+                <span className="font-semibold text-white">Sonradan ödəniş</span>
+                <span className="block text-[10px] text-gray-500 mt-0.5">Dərslərə qatıldıqca iştirak əsasında borclanma.</span>
+              </span>
+            </label>
+          </div>
         </div>
       )}
       {(mode === 'add' || mode === 'edit') && (

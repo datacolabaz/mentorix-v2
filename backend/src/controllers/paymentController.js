@@ -1,12 +1,9 @@
 const db = require('../utils/db');
 const {
-  computeSubscriptionState,
-  computePrepaidWallet,
+  computeMonthlyBalanceState,
   getTodayBakuYmd,
-  loadInstructorMonthlySubscriptionFinancials,
-  loadInstructorMonthlyPrepaidFinancials,
+  loadInstructorMonthlyBalanceRows,
   roundMoney,
-  timingIsPrepaid,
   toYmd: anchorToYmd,
 } = require('../services/subscriptionBilling');
 
@@ -124,30 +121,31 @@ const listMyPayments = async (req, res) => {
       };
       if (rest.billing_type === 'monthly' && Number.isFinite(mfNum) && mfNum > 0 && enrollmentOut.id) {
         const anchorYmd = anchorToYmd(lessonStartForDisplay);
-        if (anchorYmd) {
-          const todayBaku = await getTodayBakuYmd(db);
-          const { rows: pr } = await db.query(
-            `SELECT COALESCE(SUM(amount), 0)::numeric AS t
-             FROM payments
-             WHERE enrollment_id = $1 AND status = 'completed'`,
-            [enrollmentOut.id]
-          );
-          const paid = Number(pr[0]?.t) || 0;
-          if (timingIsPrepaid(rest.billing_timing)) {
-            const { rows: sl } = await db.query(
-              `SELECT COUNT(*)::int AS n
-               FROM monthly_attendance_slots
-               WHERE enrollment_id = $1
-                 AND lesson_date <= $2::date
-                 AND charges_virtual_balance = TRUE`,
-              [enrollmentOut.id, todayBaku]
-            );
-            const charged = Number(sl[0]?.n) || 0;
-            enrollmentOut.subscription = computePrepaidWallet(mfNum, charged, paid);
-          } else {
-            enrollmentOut.subscription = computeSubscriptionState(anchorYmd, todayBaku, mfNum, paid);
-          }
-        }
+        const todayBaku = await getTodayBakuYmd(db);
+        const { rows: pr } = await db.query(
+          `SELECT COALESCE(SUM(amount), 0)::numeric AS t
+           FROM payments
+           WHERE enrollment_id = $1 AND status = 'completed'`,
+          [enrollmentOut.id]
+        );
+        const paid = Number(pr[0]?.t) || 0;
+        const { rows: sl } = await db.query(
+          `SELECT COUNT(*)::int AS n
+           FROM monthly_attendance_slots
+           WHERE enrollment_id = $1
+             AND lesson_date <= $2::date
+             AND status = 'attended'`,
+          [enrollmentOut.id, todayBaku]
+        );
+        const attended = Number(sl[0]?.n) || 0;
+        enrollmentOut.subscription = computeMonthlyBalanceState({
+          billing_timing: rest.billing_timing,
+          monthly_fee: mfNum,
+          anchor_ymd: anchorYmd,
+          today_ymd: todayBaku,
+          attended_lessons: attended,
+          total_paid: paid,
+        });
       }
     }
     const limit = enrollment ? billingLimit(enrollment.billing_type) : null;
@@ -304,10 +302,8 @@ const getInstructorPaymentBoard = async (req, res) => {
       [iid]
     );
 
-    const { byEnrollment: subMap, pendingSum: postpaidPending } =
-      await loadInstructorMonthlySubscriptionFinancials(db, iid);
-    const { byEnrollment: preMap, pendingSum: prepaidPending } = await loadInstructorMonthlyPrepaidFinancials(db, iid);
-    const pendingAmount = roundMoney(postpaidPending + prepaidPending);
+    const { byEnrollment: balMap, pendingSum } = await loadInstructorMonthlyBalanceRows(db, iid);
+    const pendingAmount = roundMoney(pendingSum);
 
     let pendingCount = 0;
     const students = rows.map((r) => {
@@ -319,53 +315,27 @@ const getInstructorPaymentBoard = async (req, res) => {
       const firstName = parts[0] || '—';
       const lastName = parts.length > 1 ? parts.slice(1).join(' ') : '—';
       let paymentStatus = 'təyin_edilməyib';
-      let sub = null;
-      let prepaidExtras = null;
-      const anchorYmd = anchorToYmd(r.lesson_start_date);
-      const isPrepaid = timingIsPrepaid(r.billing_timing);
-      if (r.enrollment_billing_type === 'monthly' && hasFee && anchorYmd) {
-        if (isPrepaid) {
-          const pv = preMap.get(String(r.enrollment_id));
-          if (pv) {
-            sub = {
-              billing_model: 'prepaid',
-              subscription_months: pv.subscription_months,
-              subscription_due_total: pv.subscription_due_total,
-              subscription_total_paid: pv.subscription_total_paid,
-              pending_debt: pv.pending_debt,
-              subscription_prepaid: pv.subscription_prepaid,
-            };
-            prepaidExtras = {
-              lesson_unit_price: pv.lesson_unit_price,
-              charged_lesson_count: pv.charged_lesson_count,
-              consumed_amount: pv.consumed_amount,
-              wallet_balance: pv.wallet_balance,
-            };
-          }
-        } else {
-          const vb = subMap.get(String(r.enrollment_id));
-          if (vb) {
-            sub = {
-              billing_model: 'postpaid',
-              subscription_months: vb.subscription_months,
-              subscription_due_total: vb.subscription_due_total,
-              subscription_total_paid: vb.subscription_total_paid,
-              pending_debt: vb.pending_debt,
-              subscription_prepaid: vb.subscription_prepaid,
-            };
-          }
+      let b = null;
+      if (r.enrollment_billing_type === 'monthly' && hasFee) {
+        b = balMap.get(String(r.enrollment_id)) || null;
+        if (b) {
+          paymentStatus = b.payment_status;
+          if (b.pending_debt > 0.005) pendingCount += 1;
         }
-        if (sub && sub.pending_debt > 0.005) pendingCount += 1;
-        if (sub) paymentStatus = sub.pending_debt > 0.005 ? 'gözlənilir' : 'ödənilib';
       }
-      const balanceTotalDemand =
-        sub?.billing_model === 'prepaid'
-          ? prepaidExtras?.consumed_amount ?? null
-          : sub?.billing_model === 'postpaid'
-            ? sub?.subscription_due_total ?? null
-            : null;
-      const balanceTotalPaid = sub?.subscription_total_paid ?? null;
-      const balanceRemaining = sub?.pending_debt ?? null;
+      const eps = 0.005;
+      const net = b != null ? Number(b.net_balance) : null;
+      let board_balance_kind = null;
+      let board_balance_amount = null;
+      if (b != null && net != null && Number.isFinite(net)) {
+        if (net >= -eps) {
+          board_balance_kind = 'balans';
+          board_balance_amount = roundMoney(Math.max(0, net));
+        } else {
+          board_balance_kind = 'borc';
+          board_balance_amount = b.pending_debt;
+        }
+      }
       return {
         enrollment_id: r.enrollment_id,
         student_id: r.student_id,
@@ -379,19 +349,21 @@ const getInstructorPaymentBoard = async (req, res) => {
         payment_start_date: r.lesson_start_date,
         payment_status: paymentStatus,
         pre_system_enrollment: Boolean(r.pre_system_enrollment),
-        subscription_months: sub?.subscription_months ?? null,
-        subscription_due_total: sub?.subscription_due_total ?? null,
-        subscription_total_paid: sub?.subscription_total_paid ?? null,
-        pending_debt: sub?.pending_debt ?? null,
-        subscription_prepaid: sub?.subscription_prepaid ?? null,
-        billing_model: sub?.billing_model ?? null,
-        lesson_unit_price: prepaidExtras?.lesson_unit_price ?? null,
-        charged_lesson_count: prepaidExtras?.charged_lesson_count ?? null,
-        consumed_amount: prepaidExtras?.consumed_amount ?? null,
-        wallet_balance: prepaidExtras?.wallet_balance ?? null,
-        balance_total_demand: balanceTotalDemand,
-        balance_total_paid: balanceTotalPaid,
-        balance_remaining: balanceRemaining,
+        total_payments: b?.total_payments ?? null,
+        accrued_total: b?.accrued_total ?? null,
+        net_balance: b?.net_balance ?? null,
+        board_balance_kind,
+        board_balance_amount,
+        pending_debt: b?.pending_debt ?? null,
+        subscription_months: b?.subscription_months ?? null,
+        subscription_due_total: b?.subscription_due_total ?? null,
+        subscription_total_paid: b?.subscription_total_paid ?? null,
+        subscription_prepaid: b?.subscription_prepaid ?? null,
+        billing_model: b?.billing_model ?? null,
+        lesson_unit_price: b?.lesson_unit_price ?? null,
+        charged_lesson_count: b?.charged_lesson_count ?? null,
+        consumed_amount: b?.consumed_amount ?? null,
+        wallet_balance: b?.wallet_balance ?? null,
       };
     });
 

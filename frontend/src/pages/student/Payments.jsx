@@ -250,33 +250,22 @@ export default function StudentPayments() {
               <p className="text-xs text-gray-500 mb-2">
                 Növ:{' '}
                 {enrollment?.billing_timing === 'prepaid'
-                  ? 'Əvvəlcədən — dərsə görə balans (aylıq÷8)'
-                  : 'Sonradan — ayın ankor günü üzrə dövr borcu'}
+                  ? 'Əvvəlcədən — hər ayın ankor günü üzrə yaranan borc (ödənişlər çıxılır)'
+                  : 'Sonradan — iştirak olunmuş dərs slotları × (aylıq÷8) üzrə borc'}
               </p>
               <p className="text-sm text-gray-200 mb-4">
-                {enrollment?.billing_timing === 'prepaid' ? (
-                  <>
-                    Qalıq borc:{' '}
-                    <span className="text-amber-200 font-mono tabular-nums font-semibold">
-                      {monthlyDebtNum != null ? `${monthlyDebtNum.toFixed(2)} ₼` : '—'}
+                Qalıq borc:{' '}
+                <span className="text-amber-200 font-mono tabular-nums font-semibold">
+                  {monthlyDebtNum != null ? `${monthlyDebtNum.toFixed(2)} ₼` : '—'}
+                </span>
+                {sub != null && Number.isFinite(Number(sub.wallet_balance)) && Number(sub.wallet_balance) > 0.005 ? (
+                  <span className="block mt-2 text-xs text-gray-400">
+                    Artıq ödəniş (balans):{' '}
+                    <span className="text-emerald-300 font-mono tabular-nums font-semibold">
+                      {Number(sub.wallet_balance).toFixed(2)} ₼
                     </span>
-                    {sub != null && Number.isFinite(Number(sub.wallet_balance)) ? (
-                      <span className="block mt-2 text-xs text-gray-400">
-                        Cari balans:{' '}
-                        <span className="text-emerald-300 font-mono tabular-nums font-semibold">
-                          {Number(sub.wallet_balance).toFixed(2)} ₼
-                        </span>
-                      </span>
-                    ) : null}
-                  </>
-                ) : (
-                  <>
-                    Ümumi aylıq borc:{' '}
-                    <span className="text-amber-200 font-mono tabular-nums font-semibold">
-                      {monthlyDebtNum != null ? `${monthlyDebtNum.toFixed(2)} ₼` : '—'}
-                    </span>
-                  </>
-                )}
+                  </span>
+                ) : null}
               </p>
               <p className="text-xs text-gray-500 mb-3">Müəllim: {enrollment?.instructor_name || '—'}</p>
               <button

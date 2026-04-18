@@ -285,8 +285,8 @@ const bulkMonthlySlots = async (req, res) => {
 
     const { rowCount } = await db.query(
       `INSERT INTO monthly_attendance_slots (enrollment_id, lesson_date, status, notes, charges_virtual_balance)
-       SELECT $1::uuid, d::date, $3, $4,
-              CASE WHEN $3 = 'attended' THEN TRUE ELSE FALSE END
+       SELECT $1::uuid, d::date, $3::text, $4,
+              CASE WHEN $3::text = 'attended' THEN TRUE ELSE FALSE END
        FROM unnest($2::date[]) AS d
        ON CONFLICT (enrollment_id, lesson_date)
        DO UPDATE SET
