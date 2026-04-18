@@ -92,6 +92,19 @@ function paymentDateHint(ymd) {
   }
 }
 
+/** Aylıq: UI sxemi → billing_timing + payment_plan */
+function monthlySchemeFromForm(data) {
+  if (data.payment_plan === 'partial') return 'installment'
+  if ((data.billing_timing || 'postpaid') === 'prepaid') return 'full_prepaid'
+  return 'postpaid_full'
+}
+
+function applyMonthlyScheme(prev, scheme) {
+  if (scheme === 'full_prepaid') return { ...prev, billing_timing: 'prepaid', payment_plan: 'full' }
+  if (scheme === 'installment') return { ...prev, billing_timing: 'postpaid', payment_plan: 'partial' }
+  return { ...prev, billing_timing: 'postpaid', payment_plan: 'full' }
+}
+
 const inp =
   'w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500'
 
@@ -219,51 +232,23 @@ function StudentFormFields({ data, setData, scheduleMeta, mode, onRefreshSlots, 
       </div>
       {data.billing_type === 'monthly' && (
         <div className="rounded-xl border border-indigo-500/20 bg-[#0f0c29]/60 p-3 space-y-3">
-          <p className="text-xs font-semibold text-indigo-200/90 uppercase tracking-wider">Aylıq ödəniş seçimləri</p>
+          <p className="text-xs font-semibold text-indigo-200/90 uppercase tracking-wider">Ödəniş sxemi</p>
           <div>
-            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Ödəniş növü</label>
-            <div className="space-y-2">
-              <label className="flex items-start gap-3 cursor-pointer rounded-xl border border-indigo-500/20 bg-[#13112e]/80 px-3 py-2.5">
-                <input
-                  type="radio"
-                  name={`billing_timing_${mode}`}
-                  className="mt-1"
-                  checked={(data.billing_timing || 'postpaid') === 'prepaid'}
-                  onChange={() => setData((p) => ({ ...p, billing_timing: 'prepaid' }))}
-                />
-                <span className="text-sm text-gray-200">
-                  <span className="font-semibold text-white">Əvvəlcədən ödəniş</span>
-                  <span className="block text-[10px] text-gray-500 mt-0.5">Ay üzrə ödəniş adətən dövr əvvəlində.</span>
-                </span>
-              </label>
-              <label className="flex items-start gap-3 cursor-pointer rounded-xl border border-indigo-500/20 bg-[#13112e]/80 px-3 py-2.5">
-                <input
-                  type="radio"
-                  name={`billing_timing_${mode}`}
-                  className="mt-1"
-                  checked={(data.billing_timing || 'postpaid') === 'postpaid'}
-                  onChange={() => setData((p) => ({ ...p, billing_timing: 'postpaid' }))}
-                />
-                <span className="text-sm text-gray-200">
-                  <span className="font-semibold text-white">Sonradan ödəniş</span>
-                  <span className="block text-[10px] text-gray-500 mt-0.5">Dövr sonrası və ya müəllim qeyd etdikcə.</span>
-                </span>
-              </label>
-            </div>
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Ödəniş planı</label>
+            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+              Tələbənin ay üzrə ödəniş modeli *
+            </label>
             <select
               className={inp}
-              value={data.payment_plan || 'full'}
-              onChange={(e) => setData((p) => ({ ...p, payment_plan: e.target.value }))}
+              value={monthlySchemeFromForm(data)}
+              onChange={(e) => setData((p) => applyMonthlyScheme(p, e.target.value))}
             >
-              <option value="full">Tam ödəniş</option>
-              <option value="partial">Hissəli ödəniş</option>
+              <option value="full_prepaid">Öncədən tam (Full prepaid) — ayın məbləği dərslər başlamazdan əvvəl tam</option>
+              <option value="installment">Hissəli (Installment) — ay içində hissələr; qalıq borc avtomatik</option>
+              <option value="postpaid_full">Ay sonu tam — dövr sonunda bir dəfəyə tam ay məbləği</option>
             </select>
-            <p className="text-[10px] text-gray-500 mt-1.5 leading-relaxed">
-              Borc məbləği təqvim ankoruna görə sabit qalır; hissəli planda qalıqlar üçün «Ödənişlər → Tarixçə»dən
-              istifadə edin.
+            <p className="text-[10px] text-gray-500 mt-2 leading-relaxed">
+              <span className="text-rose-200/90 font-medium">Hissəli</span> seçildikdə ödənilən məbləğ aylıq
+              borcdan az olanda qalıq «Ödənişlər» cədvəlində və tarixçədə qırmızı ilə göstərilir.
             </p>
           </div>
         </div>

@@ -5,6 +5,7 @@ const {
   listMyPayments,
   getInstructorPaymentBoard,
   markMonthlyPaid,
+  markMonthlyPaidBatch,
   getEnrollmentPaymentHistory,
 } = require('../controllers/paymentController');
 const { authenticate, authorize } = require('../middleware/auth');
@@ -18,6 +19,7 @@ router.get(
   getEnrollmentPaymentHistory
 );
 router.post('/mark-monthly-paid', authenticate, authorize('admin', 'instructor'), markMonthlyPaid);
+router.post('/mark-monthly-paid-batch', authenticate, authorize('admin', 'instructor'), markMonthlyPaidBatch);
 router.get('/', authenticate, authorize('admin', 'instructor'), listPayments);
 router.post('/', authenticate, authorize('admin', 'instructor'), addPayment);
 

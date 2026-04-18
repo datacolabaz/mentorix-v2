@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { anchorToYmd, computeMonthlyBalanceState } from '../../lib/subscriptionBillingPreview'
 import api from '../../lib/api'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
@@ -36,7 +37,9 @@ export default function InstructorPayments() {
   const [markingId, setMarkingId] = useState(null)
   const [quickOpen, setQuickOpen] = useState(false)
   const [quickRow, setQuickRow] = useState(null)
-  const [quickAmount, setQuickAmount] = useState('')
+  /** { id, payment_date, amount, notes }[] */
+  const [quickLines, setQuickLines] = useState([])
+  const [todayBaku, setTodayBaku] = useState(() => new Date().toISOString().slice(0, 10))
   const [historyOpen, setHistoryOpen] = useState(false)
   const [historyRow, setHistoryRow] = useState(null)
   const [historyPayments, setHistoryPayments] = useState([])
@@ -65,6 +68,9 @@ export default function InstructorPayments() {
       setTotalEarnings(d.totalEarnings ?? 0)
       setPendingCount(d.pendingCount ?? 0)
       setPendingAmount(d.pendingAmount ?? 0)
+      if (d.today_baku && /^\d{4}-\d{2}-\d{2}$/.test(String(d.today_baku))) {
+        setTodayBaku(String(d.today_baku).slice(0, 10))
+      }
       setStudents(d.students || [])
     } catch (e) {
       setErr(e?.message || 'Məlumat yüklənmədi')
@@ -153,33 +159,83 @@ export default function InstructorPayments() {
     }
   }
 
+  const newQuickLine = useCallback(
+    (defaults = {}) => ({
+      id: globalThis.crypto?.randomUUID?.() || `l_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+      payment_date: defaults.payment_date ?? todayBaku,
+      amount: defaults.amount != null ? String(defaults.amount) : '',
+      notes: defaults.notes != null ? String(defaults.notes) : '',
+    }),
+    [todayBaku]
+  )
+
   const openQuickPay = (row) => {
     setQuickRow(row)
     const deficit =
       row.pending_debt != null && Number.isFinite(Number(row.pending_debt)) && Number(row.pending_debt) > 0
-        ? String(Number(row.pending_debt))
-        : ''
-    const mf = row.monthly_fee != null ? String(row.monthly_fee) : ''
-    setQuickAmount(deficit || mf)
+        ? Number(row.pending_debt)
+        : null
+    const mf = row.monthly_fee != null && Number.isFinite(Number(row.monthly_fee)) ? Number(row.monthly_fee) : null
+    const firstAmt = deficit != null && deficit > 0 ? deficit : mf != null && mf > 0 ? mf : ''
+    setQuickLines([newQuickLine({ amount: firstAmt === '' ? '' : String(firstAmt) })])
     setQuickOpen(true)
   }
 
+  const quickPreview = useMemo(() => {
+    if (!quickRow || quickRow.billing_type !== 'monthly') return null
+    const mf = Number(quickRow.monthly_fee)
+    if (!Number.isFinite(mf) || mf <= 0) return null
+    const anchor = anchorToYmd(quickRow.lesson_start_date || quickRow.payment_start_date)
+    if (!anchor) return null
+    const basePaid = Number(quickRow.total_payments) || 0
+    let add = 0
+    for (const ln of quickLines) {
+      const a = Number(ln.amount)
+      if (Number.isFinite(a) && a > 0) add += a
+    }
+    return computeMonthlyBalanceState({
+      monthly_fee: mf,
+      anchor_ymd: anchor,
+      today_ymd: todayBaku,
+      total_paid: basePaid + add,
+    })
+  }, [quickRow, quickLines, todayBaku])
+
   const submitQuickPay = async () => {
     if (!quickRow?.enrollment_id) return
-    const amt = Number(quickAmount)
-    if (!Number.isFinite(amt) || amt <= 0) {
-      toast('Məbləği düzgün daxil edin', 'error')
+    const payload = []
+    for (const ln of quickLines) {
+      const amt = Number(ln.amount)
+      if (!Number.isFinite(amt) || amt <= 0) continue
+      payload.push({
+        amount: amt,
+        payment_date: ln.payment_date && /^\d{4}-\d{2}-\d{2}$/.test(ln.payment_date) ? ln.payment_date : undefined,
+        notes: ln.notes?.trim() || undefined,
+      })
+    }
+    if (payload.length === 0) {
+      toast('Ən azı bir sətirdə məbləğ daxil edin', 'error')
       return
     }
     setMarkingId(quickRow.enrollment_id)
     try {
-      await api.post('/payments/mark-monthly-paid', {
-        enrollment_id: quickRow.enrollment_id,
-        amount: amt,
-      })
-      toast('Ödəniş qeydə alındı')
+      if (payload.length === 1) {
+        await api.post('/payments/mark-monthly-paid', {
+          enrollment_id: quickRow.enrollment_id,
+          amount: payload[0].amount,
+          payment_date: payload[0].payment_date,
+          notes: payload[0].notes,
+        })
+      } else {
+        await api.post('/payments/mark-monthly-paid-batch', {
+          enrollment_id: quickRow.enrollment_id,
+          payments: payload,
+        })
+      }
+      toast(payload.length > 1 ? `${payload.length} ödəniş qeydə alındı` : 'Ödəniş qeydə alındı')
       setQuickOpen(false)
       setQuickRow(null)
+      setQuickLines([])
       await load()
     } catch (e) {
       toast(e?.message || 'Xəta', 'error')
@@ -267,26 +323,34 @@ export default function InstructorPayments() {
 
         {!loading && !err && (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[720px] table-fixed">
+            <table className="w-full text-sm min-w-[900px] table-fixed">
               <colgroup>
-                <col className="w-[28%]" />
-                <col className="w-[14%]" />
-                <col className="w-[12%]" />
-                <col className="w-[12%]" />
-                <col className="w-[34%]" />
+                <col className="w-[22%]" />
+                <col className="w-[11%]" />
+                <col className="w-[9%]" />
+                <col className="w-[10%]" />
+                <col className="w-[11%]" />
+                <col className="w-[11%]" />
+                <col className="w-[26%]" />
               </colgroup>
               <thead>
                 <tr className="border-b border-indigo-500/25 text-left text-[11px] uppercase tracking-wider text-indigo-300/70 bg-[#0f0c29]/90">
                   <th className="py-3 px-3 font-semibold">Tələbə</th>
                   <th className="py-3 px-3 font-semibold whitespace-nowrap">Başlama</th>
+                  <th className="py-3 px-3 font-semibold whitespace-nowrap">Sxem</th>
                   <th className="py-3 px-3 font-semibold text-right whitespace-nowrap">Aylıq</th>
                   <th className="py-3 px-3 font-semibold text-right whitespace-nowrap">Cəmi ödənilən</th>
+                  <th className="py-3 px-3 font-semibold text-right whitespace-nowrap">Qalıq borc</th>
                   <th className="py-3 px-3 font-semibold text-right whitespace-nowrap">Əməllər</th>
                 </tr>
               </thead>
               <tbody className="text-gray-200">
                 {students.map((s) => {
                   const isMonthly = s.billing_type === 'monthly' && s.monthly_fee != null && Number(s.monthly_fee) > 0
+                  const isPartial = s.payment_plan === 'partial'
+                  const debt = s.pending_debt != null ? Number(s.pending_debt) : 0
+                  const showDebtRed = isMonthly && isPartial && Number.isFinite(debt) && debt > 0.005
+                  const showDebt = isMonthly && Number.isFinite(debt) && debt > 0.005
                   return (
                     <tr
                       key={s.enrollment_id}
@@ -305,11 +369,33 @@ export default function InstructorPayments() {
                           {formatDdMmYyyy(s.lesson_start_date || s.payment_start_date)}
                         </span>
                       </td>
+                      <td className="py-3 px-3 text-xs whitespace-nowrap">
+                        {isMonthly ? (
+                          isPartial ? (
+                            <span className="inline-flex rounded-md bg-rose-500/15 text-rose-200 px-2 py-0.5 font-semibold">
+                              Hissəli
+                            </span>
+                          ) : (
+                            <span className="inline-flex rounded-md bg-emerald-500/10 text-emerald-200/90 px-2 py-0.5 font-medium">
+                              Tam
+                            </span>
+                          )
+                        ) : (
+                          '—'
+                        )}
+                      </td>
                       <td className="py-3 px-3 text-right tabular-nums text-white font-medium whitespace-nowrap">
                         {isMonthly ? formatAzn(s.monthly_fee) : '—'}
                       </td>
                       <td className="py-3 px-3 text-right tabular-nums text-white font-medium whitespace-nowrap">
                         {isMonthly ? formatAzn(s.total_payments) : '—'}
+                      </td>
+                      <td
+                        className={`py-3 px-3 text-right tabular-nums font-semibold whitespace-nowrap ${
+                          showDebtRed ? 'text-rose-300' : showDebt ? 'text-amber-200/90' : 'text-gray-500'
+                        }`}
+                      >
+                        {isMonthly ? formatAzn(s.pending_debt) : '—'}
                       </td>
                       <td className="py-3 px-3 text-right">
                         <div className="inline-flex flex-col gap-1.5 items-end w-full max-w-[11rem] ml-auto">
@@ -509,7 +595,18 @@ export default function InstructorPayments() {
         )}
       </Modal>
 
-      <Modal open={quickOpen} onClose={() => !markingId && setQuickOpen(false)} title="Ödəniş (aylıq abunə)" size="md">
+      <Modal
+        open={quickOpen}
+        onClose={() => {
+          if (!markingId) {
+            setQuickOpen(false)
+            setQuickRow(null)
+            setQuickLines([])
+          }
+        }}
+        title="Ödənişlər (aylıq abunə)"
+        size="lg"
+      >
         {quickRow && (
           <div className="space-y-4 text-sm">
             <p className="text-gray-400">
@@ -518,28 +615,118 @@ export default function InstructorPayments() {
                 {quickRow.first_name} {quickRow.last_name}
               </span>
             </p>
-            <p className="text-xs text-gray-500">
-              Hissəli və ya tam ödəniş: istənilən məbləği daxil edin. Borc təqvim ankoruna görə (keçmiş dövr sayı ×
-              aylıq) avtomatik yenilənir.
+            <p className="text-xs text-gray-500 leading-relaxed">
+              Bir neçə ay üçün sətir əlavə edin; hər sətirdə ödəniş tarixi, məbləğ və istəyə bağlı qeyd. Borc Bakı
+              təqvimi üzrə ankorla hesablanır — aşağıda önizləmə canlı yenilənir.
             </p>
-            <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Məbləğ (₼)</label>
-              <input
-                type="number"
-                min={0.01}
-                step={0.01}
-                className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white outline-none focus:border-blue-500"
-                value={quickAmount}
-                onChange={(e) => setQuickAmount(e.target.value)}
-                disabled={!!markingId}
-              />
+
+            {quickPreview && (
+              <div className="rounded-xl border border-indigo-500/25 bg-[#0f0c29]/80 px-3 py-2.5 grid grid-cols-2 gap-x-3 gap-y-1 text-xs tabular-nums">
+                <span className="text-gray-500">Cari balans (ödənişdən sonra)</span>
+                <span
+                  className={`text-right font-semibold ${
+                    quickPreview.net_balance > 0.005 ? 'text-emerald-200' : 'text-gray-400'
+                  }`}
+                >
+                  {formatAzn(quickPreview.net_balance)}
+                </span>
+                <span className="text-gray-500">Qalıq borc</span>
+                <span
+                  className={`text-right font-semibold ${
+                    quickPreview.pending_debt > 0.005 ? 'text-rose-300' : 'text-gray-400'
+                  }`}
+                >
+                  {formatAzn(quickPreview.pending_debt)}
+                </span>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <div className="hidden sm:grid grid-cols-[1fr_7rem_7rem_2.25rem] gap-2 text-[10px] font-semibold text-gray-500 uppercase tracking-wider px-1">
+                <span>Tarix</span>
+                <span className="text-right">Məbləğ ₼</span>
+                <span>Qeyd</span>
+                <span />
+              </div>
+              {quickLines.map((ln, idx) => (
+                <div
+                  key={ln.id}
+                  className="grid grid-cols-1 sm:grid-cols-[1fr_7rem_1fr_2.25rem] gap-2 items-center rounded-xl border border-indigo-500/15 bg-[#13112e]/50 p-2"
+                >
+                  <input
+                    type="date"
+                    className="w-full bg-[#13112e] border border-indigo-500/20 rounded-lg px-2 py-2 text-white text-xs outline-none focus:border-blue-500"
+                    value={ln.payment_date}
+                    onChange={(e) =>
+                      setQuickLines((rows) =>
+                        rows.map((r) => (r.id === ln.id ? { ...r, payment_date: e.target.value } : r))
+                      )
+                    }
+                    disabled={!!markingId}
+                  />
+                  <input
+                    type="number"
+                    min={0.01}
+                    step={0.01}
+                    placeholder="0"
+                    className="w-full bg-[#13112e] border border-indigo-500/20 rounded-lg px-2 py-2 text-white text-xs outline-none focus:border-blue-500 tabular-nums text-right"
+                    value={ln.amount}
+                    onChange={(e) =>
+                      setQuickLines((rows) =>
+                        rows.map((r) => (r.id === ln.id ? { ...r, amount: e.target.value } : r))
+                      )
+                    }
+                    disabled={!!markingId}
+                  />
+                  <input
+                    className="w-full bg-[#13112e] border border-indigo-500/20 rounded-lg px-2 py-2 text-white text-xs outline-none focus:border-blue-500"
+                    placeholder="Qeyd (ixt.)"
+                    value={ln.notes}
+                    onChange={(e) =>
+                      setQuickLines((rows) =>
+                        rows.map((r) => (r.id === ln.id ? { ...r, notes: e.target.value } : r))
+                      )
+                    }
+                    disabled={!!markingId}
+                  />
+                  <div className="flex justify-end sm:justify-center">
+                    <button
+                      type="button"
+                      title="Sətiri sil"
+                      disabled={!!markingId || quickLines.length <= 1}
+                      onClick={() => setQuickLines((rows) => (rows.length <= 1 ? rows : rows.filter((r) => r.id !== ln.id)))}
+                      className="p-2 rounded-lg text-gray-500 hover:text-rose-300 hover:bg-rose-500/10 disabled:opacity-30 disabled:hover:text-gray-500 disabled:hover:bg-transparent transition-colors"
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+                        <path
+                          d="M9 3h6l1 2h5v2H3V5h5l1-2zm0 5h2v9H9V8zm4 0h2v9h-2V8zM5 8h2v10a2 2 0 002 2h8a2 2 0 002-2V8h2v10a4 4 0 01-4 4H9a4 4 0 01-4-4V8z"
+                          fill="currentColor"
+                        />
+                      </svg>
+                    </button>
+                  </div>
+                  <div className="sm:col-span-4 text-[10px] text-gray-600 sm:hidden">Sətir {idx + 1}</div>
+                </div>
+              ))}
             </div>
-            <div className="flex justify-end gap-2 pt-2">
+
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              className="w-full justify-center border-dashed border-indigo-500/35"
+              disabled={!!markingId}
+              onClick={() => setQuickLines((rows) => [...rows, newQuickLine()])}
+            >
+              + Daha bir ödəniş əlavə et
+            </Button>
+
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-2">
               <Button type="button" variant="secondary" disabled={!!markingId} onClick={() => setQuickOpen(false)}>
                 Ləğv
               </Button>
               <Button type="button" loading={!!markingId} onClick={() => void submitQuickPay()}>
-                Qeydə al
+                Hamısını yadda saxla
               </Button>
             </div>
           </div>
@@ -613,17 +800,37 @@ export default function InstructorPayments() {
               <div>
                 <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-2">Əməliyyatlar</p>
                 <ul className="space-y-2 max-h-56 overflow-y-auto">
-                  {historyPayments.map((p) => (
-                    <li
-                      key={p.id}
-                      className="flex justify-between gap-3 border border-indigo-500/15 rounded-lg px-3 py-2 bg-[#13112e]/60"
-                    >
-                      <span className="text-gray-400 text-xs whitespace-nowrap">
-                        {formatDdMmYyyy(p.payment_date || p.paid_at)}
-                      </span>
-                      <span className="text-white font-mono tabular-nums">{formatAzn(p.amount)}</span>
-                    </li>
-                  ))}
+                  {historyPayments.map((p) => {
+                    const mf = historySummary?.monthly_fee != null ? Number(historySummary.monthly_fee) : NaN
+                    const partial = historySummary?.payment_plan === 'partial'
+                    const amt = Number(p.amount)
+                    const under =
+                      partial &&
+                      Number.isFinite(mf) &&
+                      mf > 0 &&
+                      Number.isFinite(amt) &&
+                      amt > 0 &&
+                      amt + 0.005 < mf
+                    return (
+                      <li
+                        key={p.id}
+                        className={`flex justify-between gap-3 border rounded-lg px-3 py-2 bg-[#13112e]/60 ${
+                          under ? 'border-rose-500/40 bg-rose-950/20' : 'border-indigo-500/15'
+                        }`}
+                      >
+                        <span className={`text-xs whitespace-nowrap ${under ? 'text-rose-200/95' : 'text-gray-400'}`}>
+                          {formatDdMmYyyy(p.payment_date || p.paid_at)}
+                        </span>
+                        <span
+                          className={`font-mono tabular-nums font-medium ${
+                            under ? 'text-rose-200' : 'text-white'
+                          }`}
+                        >
+                          {formatAzn(p.amount)}
+                        </span>
+                      </li>
+                    )
+                  })}
                 </ul>
               </div>
             )}
