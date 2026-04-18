@@ -15,6 +15,16 @@ function sameUuid(a, b) {
   return normUuid(a) === normUuid(b);
 }
 
+/**
+ * Köhnə DB CHECK-ləri çox vaxt 'manual' qəbul etmir; nağd kimi saxlanır (detal notes-da).
+ */
+function paymentMethodForDb(raw) {
+  if (raw == null || String(raw).trim() === '') return 'cash';
+  const m = String(raw).trim().toLowerCase();
+  if (m === 'manual') return 'cash';
+  return m.length <= 50 ? m : m.slice(0, 50);
+}
+
 /** DATE / timestamptz → YYYY-MM-DD (UTC tarix hissəsi; DATE artıq gün kimi gəlir) */
 function toYmd(v) {
   if (v == null) return null;
@@ -233,7 +243,7 @@ const addPayment = async (req, res) => {
         enrollment_id,
         studentId,
         amt,
-        payment_method || 'manual',
+        paymentMethodForDb(payment_method),
         derivedPeriod,
         cycle,
         notesOut,
@@ -371,12 +381,12 @@ const markMonthlyPaid = async (req, res) => {
     }
 
     const { rows: ins } = await db.query(
-      `INSERT INTO payments (enrollment_id, student_id, amount, currency, status, paid_at, payment_date, notes)
-       VALUES ($1, $2, $3, 'AZN', 'completed', NOW(),
+      `INSERT INTO payments (enrollment_id, student_id, amount, currency, payment_method, status, paid_at, payment_date, notes)
+       VALUES ($1, $2, $3, 'AZN', 'cash', 'completed', NOW(),
                (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Baku')::date,
                $4)
        RETURNING *`,
-        [enrollment_id, en[0].student_id, amount, 'Aylıq abunə ödənişi']
+      [enrollment_id, en[0].student_id, amount, 'Aylıq abunə ödənişi']
     );
     res.json({ success: true, payment: ins[0] });
   } catch (err) {
