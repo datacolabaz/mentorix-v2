@@ -90,6 +90,24 @@ function computeMonthlyBalanceState({ monthly_fee, anchor_ymd, today_ymd, total_
   const anchorYmd = anchor_ymd ? String(anchor_ymd).slice(0, 10) : null;
   const todayYmd = today_ymd ? String(today_ymd).slice(0, 10) : null;
 
+  /** Ankor tarixi bu gündən sonradırsa — heç bir dövr borcu yaranmayıb; öncədən ödənilənlər "artıq balans" sayılmır */
+  if (anchorYmd && todayYmd && compareYmd(anchorYmd, todayYmd) > 0) {
+    return {
+      accrued_total: 0,
+      total_payments: paid,
+      net_balance: 0,
+      pending_debt: 0,
+      wallet_balance: 0,
+      subscription_due_total: 0,
+      subscription_total_paid: paid,
+      subscription_prepaid: 0,
+      subscription_months: 0,
+      billing_model: 'monthly_anchor',
+      payment_status: 'ödənilib',
+      billing_anchor_future: true,
+    };
+  }
+
   let monthsCount = 0;
   let accrued = 0;
   if (anchorYmd && Number.isFinite(fee) && fee > 0 && todayYmd) {
@@ -118,6 +136,7 @@ function computeMonthlyBalanceState({ monthly_fee, anchor_ymd, today_ymd, total_
     subscription_months: monthsCount,
     billing_model: 'monthly_anchor',
     payment_status,
+    billing_anchor_future: false,
   };
 }
 
@@ -178,6 +197,7 @@ async function loadInstructorMonthlyBalanceRows(db, instructorNormId) {
 module.exports = {
   toYmd,
   roundMoney,
+  compareYmd,
   listBillingDueDatesUpTo,
   countSubscriptionBillingMonths,
   computeMonthlyBalanceState,
