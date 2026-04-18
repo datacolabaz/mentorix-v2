@@ -7,6 +7,24 @@ const SMS_TITLE = process.env.SMS_TITLE || 'Edupanel';
 
 const normalizePhone = (phone) => String(phone ?? '').replace(/\D/g, '');
 
+/**
+ * sendsms.az expects `msisdn` as digits (no '+').
+ * Our DB often stores Azerbaijani numbers as `+994XXXXXXXXX` which normalizes to `994...` (12 digits).
+ * Some clients still enter `0XXXXXXXXX` which normalizes to a 10-digit local form — convert to `994...`.
+ */
+function toSendSmsMsisdn(digits) {
+  const d = String(digits || '').replace(/\D/g, '');
+  if (!d) return null;
+
+  if (d.startsWith('994') && d.length >= 12) return d;
+  if (d.startsWith('0') && d.length === 10) return `994${d.slice(1)}`;
+  if (!d.startsWith('0') && d.length === 9) return `994${d}`;
+
+  // Fallback: if it's already long enough, pass through
+  if (d.length >= 10) return d;
+  return null;
+}
+
 function interpretSmxmlSuccess(raw) {
   if (!raw || raw.ok !== true) return { success: false, reason: raw?.error || 'HTTP request failed' };
 
@@ -40,7 +58,8 @@ function interpretSmxmlSuccess(raw) {
 
 const sendRaw = async (phone, message) => {
   const clean = normalizePhone(phone);
-  if (!clean || clean.length < 9) {
+  const msisdn = toSendSmsMsisdn(clean);
+  if (!msisdn || msisdn.length < 11 || msisdn.length > 15) {
     return { ok: false, httpStatus: 0, json: null, error: 'Invalid phone number' };
   }
   if (!SMS_LOGIN || !SMS_PASSWORD) {
@@ -61,7 +80,7 @@ const sendRaw = async (phone, message) => {
           scheduled: 'NOW',
           isbulk: false,
         },
-        body: [{ msisdn: clean, message }],
+        body: [{ msisdn, message }],
       },
     }),
   });
