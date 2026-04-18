@@ -3,6 +3,7 @@ import api from '../../lib/api'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
 import ListSkeleton from '../../components/common/ListSkeleton'
+import Modal from '../../components/common/Modal'
 import { useToast } from '../../components/common/Toast'
 
 function formatAzn(n) {
@@ -39,6 +40,13 @@ export default function InstructorPayments() {
   const [pendingAmount, setPendingAmount] = useState(0)
   const [students, setStudents] = useState([])
   const [markingId, setMarkingId] = useState(null)
+  const [legacyOpen, setLegacyOpen] = useState(false)
+  const [legacyRow, setLegacyRow] = useState(null)
+  const [legacyAmount, setLegacyAmount] = useState('')
+  const [legacyDate, setLegacyDate] = useState(() => new Date().toISOString().split('T')[0])
+  const [legacyKind, setLegacyKind] = useState('past_payment')
+  const [legacyNotes, setLegacyNotes] = useState('')
+  const [legacySaving, setLegacySaving] = useState(false)
   const toast = useToast()
 
   const load = useCallback(async () => {
@@ -61,6 +69,44 @@ export default function InstructorPayments() {
   useEffect(() => {
     void load()
   }, [load])
+
+  const openLegacy = (row) => {
+    setLegacyRow(row)
+    setLegacyAmount('')
+    setLegacyDate(new Date().toISOString().split('T')[0])
+    setLegacyKind('past_payment')
+    setLegacyNotes('')
+    setLegacyOpen(true)
+  }
+
+  const submitLegacy = async () => {
+    if (!legacyRow?.enrollment_id) return
+    const amt = Number(legacyAmount)
+    if (!Number.isFinite(amt) || amt <= 0) {
+      toast('Məbləği düzgün daxil edin', 'error')
+      return
+    }
+    setLegacySaving(true)
+    try {
+      await api.post('/payments', {
+        enrollment_id: legacyRow.enrollment_id,
+        amount: amt,
+        payment_method: 'manual',
+        payment_date: legacyDate || null,
+        status: 'completed',
+        legacy_kind: legacyKind,
+        notes: legacyNotes.trim() || undefined,
+      })
+      toast('Qeyd əlavə olundu')
+      setLegacyOpen(false)
+      setLegacyRow(null)
+      await load()
+    } catch (e) {
+      toast(e?.message || 'Xəta', 'error')
+    } finally {
+      setLegacySaving(false)
+    }
+  }
 
   const markPaid = async (enrollmentId) => {
     setMarkingId(enrollmentId)
@@ -141,6 +187,7 @@ export default function InstructorPayments() {
                   <th className="py-3.5 px-4 font-semibold">Nömrə</th>
                   <th className="py-3.5 px-4 font-semibold whitespace-nowrap">Ödəniş başlanğıcı</th>
                   <th className="py-3.5 px-4 font-semibold">Ödəniş statusu</th>
+                  <th className="py-3.5 px-4 font-semibold whitespace-nowrap">Keçmiş</th>
                   <th className="py-3.5 px-4 font-semibold w-[1%] whitespace-nowrap text-right">Əməl</th>
                 </tr>
               </thead>
@@ -159,6 +206,15 @@ export default function InstructorPayments() {
                       <td className="py-3.5 px-4 font-mono text-xs text-gray-300 tabular-nums whitespace-nowrap">
                         {formatDdMmYyyy(s.payment_start_date)}
                       </td>
+                      <td className="py-3.5 px-4 align-top">
+                        {s.pre_system_enrollment ? (
+                          <span className="inline-flex text-[10px] font-semibold px-2 py-1 rounded-lg bg-sky-500/15 border border-sky-400/30 text-sky-200">
+                            Sistemdən əvvəl
+                          </span>
+                        ) : (
+                          <span className="text-gray-600 text-xs">—</span>
+                        )}
+                      </td>
                       <td className="py-3.5 px-4">
                         <span
                           className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold border ${statusPill[st] || statusPill.təyin_edilməyib}`}
@@ -172,19 +228,22 @@ export default function InstructorPayments() {
                         )}
                       </td>
                       <td className="py-3.5 px-4 text-right">
-                        {showPay ? (
-                          <Button
-                            type="button"
-                            size="sm"
-                            loading={markingId === s.enrollment_id}
-                            onClick={() => void markPaid(s.enrollment_id)}
-                            className="!bg-indigo-600 hover:!bg-indigo-500 !text-white border-0"
-                          >
-                            Ödənildi
+                        <div className="flex flex-wrap gap-2 justify-end">
+                          <Button type="button" size="sm" variant="secondary" onClick={() => openLegacy(s)}>
+                            Keçmiş qeyd
                           </Button>
-                        ) : (
-                          <span className="text-gray-600 text-xs">—</span>
-                        )}
+                          {showPay ? (
+                            <Button
+                              type="button"
+                              size="sm"
+                              loading={markingId === s.enrollment_id}
+                              onClick={() => void markPaid(s.enrollment_id)}
+                              className="!bg-indigo-600 hover:!bg-indigo-500 !text-white border-0"
+                            >
+                              Ödənildi
+                            </Button>
+                          ) : null}
+                        </div>
                       </td>
                     </tr>
                   )
@@ -197,6 +256,88 @@ export default function InstructorPayments() {
           </div>
         )}
       </Card>
+
+      <Modal
+        open={legacyOpen}
+        onClose={() => !legacySaving && setLegacyOpen(false)}
+        title="Keçmiş ödəniş / başlanğıc balansı"
+        size="md"
+      >
+        {legacyRow && (
+          <div className="space-y-4 text-sm">
+            {legacyRow.pre_system_enrollment && (
+              <p className="text-sky-200/95 text-xs leading-relaxed border border-sky-500/25 rounded-xl px-3 py-2 bg-sky-500/10">
+                Bu tələbə sistemin aktivləşdirilməsindən öncə qeydiyyatdan keçmişdir. Aşağıdakı qeyd ümumi gəlir
+                statistikasına daxil ediləcək.
+              </p>
+            )}
+            <p className="text-gray-400">
+              Tələbə:{' '}
+              <span className="text-white font-medium">
+                {legacyRow.first_name} {legacyRow.last_name}
+              </span>
+            </p>
+            <div>
+              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Növ</label>
+              <select
+                className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white outline-none focus:border-blue-500"
+                value={legacyKind}
+                onChange={(e) => setLegacyKind(e.target.value)}
+                disabled={legacySaving}
+              >
+                <option value="past_payment">Keçmiş ödəniş qeydi</option>
+                <option value="initial_balance">Başlanğıc balansı</option>
+              </select>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                  Məbləğ (₼) *
+                </label>
+                <input
+                  type="number"
+                  min={0.01}
+                  step={0.01}
+                  className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white outline-none focus:border-blue-500"
+                  value={legacyAmount}
+                  onChange={(e) => setLegacyAmount(e.target.value)}
+                  disabled={legacySaving}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                  Ödəniş tarixi
+                </label>
+                <input
+                  type="date"
+                  className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white outline-none focus:border-blue-500"
+                  value={legacyDate}
+                  onChange={(e) => setLegacyDate(e.target.value)}
+                  disabled={legacySaving}
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Qeyd</label>
+              <input
+                className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white outline-none focus:border-blue-500"
+                placeholder="İstəyə bağlı"
+                value={legacyNotes}
+                onChange={(e) => setLegacyNotes(e.target.value)}
+                disabled={legacySaving}
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button type="button" variant="secondary" disabled={legacySaving} onClick={() => setLegacyOpen(false)}>
+                Ləğv
+              </Button>
+              <Button type="button" loading={legacySaving} onClick={() => void submitLegacy()}>
+                Qeydə al
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   )
 }

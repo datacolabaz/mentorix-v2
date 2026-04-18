@@ -1,6 +1,35 @@
 const db = require('../utils/db');
 const { sendSms } = require('../services/smsService');
 
+function normUuid(id) {
+  return String(id || '').trim().toLowerCase().replace(/-/g, '');
+}
+
+function sameUuid(a, b) {
+  if (a == null || b == null) return false;
+  return normUuid(a) === normUuid(b);
+}
+
+/** enrollment_lessons.starts_at → YYYY-MM-DD (Asia/Baku), UI ilə uyğun */
+function lessonYmdBaku(startsAt) {
+  if (!startsAt) return null;
+  const d = new Date(startsAt);
+  if (Number.isNaN(d.getTime())) return null;
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Baku',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(d);
+}
+
+function parseYmd(v) {
+  if (v === undefined || v === null || v === '') return null;
+  const s = String(v).trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;
+  return s;
+}
+
 function billingLimit(billingType) {
   if (billingType === '8_lessons') return 8;
   if (billingType === '12_lessons') return 12;
@@ -259,6 +288,116 @@ const upsertAttendanceLesson = async (req, res) => {
   }
 };
 
+/** Müəllim: tarix aralığında planlaşdırılmış dərsləri toplu "Gəldi/Gəlmədi" qeyd edir (8/12 paket, cari dövr) */
+const bulkFillAttendancePeriod = async (req, res) => {
+  try {
+    const { enrollment_id, date_from, date_to, notes } = req.body;
+    const attended = req.body.attended !== false;
+
+    const df = parseYmd(date_from);
+    const dt = parseYmd(date_to);
+    if (!enrollment_id || !df || !dt || df > dt) {
+      return res.status(400).json({
+        success: false,
+        message: 'enrollment_id, date_from və date_to (YYYY-MM-DD) düzgün göndərilməlidir',
+      });
+    }
+    const spanDays = Math.ceil(
+      (new Date(`${dt}T12:00:00Z`).getTime() - new Date(`${df}T12:00:00Z`).getTime()) / 86400000
+    );
+    if (spanDays > 620) {
+      return res.status(400).json({ success: false, message: 'Tarix aralığı çox uzundur (maks. ~20 ay)' });
+    }
+
+    const { rows: enRows } = await db.query(
+      `SELECT e.id, e.student_id, e.instructor_id, e.billing_type, e.billing_cycle
+       FROM enrollments e WHERE e.id = $1`,
+      [enrollment_id]
+    );
+    const enrollment = enRows[0];
+    if (!enrollment) return res.status(404).json({ success: false, message: 'Tapılmadı' });
+    if (req.user.role === 'instructor' && !sameUuid(enrollment.instructor_id, req.user.id)) {
+      return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
+    }
+
+    const limit = billingLimit(enrollment.billing_type);
+    if (!limit) {
+      return res.status(400).json({
+        success: false,
+        message: 'Toplu davamiyyət yalnız 8 və ya 12 dərs paketi üçün mövcuddur',
+      });
+    }
+
+    const cycle = Number(enrollment.billing_cycle) || 1;
+    const { rows: planned } = await db.query(
+      `SELECT lesson_number, starts_at
+       FROM enrollment_lessons
+       WHERE enrollment_id = $1 AND billing_cycle = $2
+       ORDER BY lesson_number`,
+      [enrollment_id, cycle]
+    );
+
+    const noteBase = notes != null && String(notes).trim() !== '' ? String(notes).trim() : 'Toplu qeyd';
+    const rowNote = `[Toplu davamiyyət ${df}–${dt}] ${noteBase}`.slice(0, 500);
+
+    const toUpsert = [];
+    for (const row of planned) {
+      const y = lessonYmdBaku(row.starts_at);
+      if (!y) continue;
+      if (y >= df && y <= dt) {
+        toUpsert.push({ lesson_number: Number(row.lesson_number), date: y });
+      }
+    }
+
+    if (toUpsert.length === 0) {
+      return res.json({
+        success: true,
+        updated: 0,
+        message: 'Seçilmiş tarix aralığında planlaşdırılmış dərs tapılmadı',
+      });
+    }
+
+    await db.transaction(async (client) => {
+      for (const u of toUpsert) {
+        await client.query(
+          `INSERT INTO attendance (enrollment_id, billing_cycle, lesson_number, date, attended, notes)
+           VALUES ($1,$2,$3,$4,$5,$6)
+           ON CONFLICT (enrollment_id, billing_cycle, lesson_number)
+           DO UPDATE SET attended = EXCLUDED.attended, date = EXCLUDED.date, notes = EXCLUDED.notes`,
+          [enrollment_id, cycle, u.lesson_number, u.date, Boolean(attended), rowNote]
+        );
+        await client.query(
+          `UPDATE enrollment_lessons
+           SET status = $4, marked_at = NOW()
+           WHERE enrollment_id = $1 AND billing_cycle = $2 AND lesson_number = $3`,
+          [enrollment_id, cycle, u.lesson_number, Boolean(attended) ? 'done' : 'absent']
+        );
+      }
+
+      const { rows: c } = await client.query(
+        `SELECT COUNT(*)::int AS n FROM attendance WHERE enrollment_id = $1 AND billing_cycle = $2`,
+        [enrollment_id, cycle]
+      );
+      const n = c[0]?.n || 0;
+      await client.query('UPDATE enrollments SET lesson_count = $2 WHERE id = $1', [enrollment_id, n]);
+
+      if (limit && n >= limit) {
+        await client.query(
+          `UPDATE enrollments
+           SET billing_cycle = billing_cycle + 1,
+               lesson_count = 0
+           WHERE id = $1`,
+          [enrollment_id]
+        );
+      }
+    });
+
+    res.json({ success: true, updated: toUpsert.length });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 const getAttendance = async (req, res) => {
   try {
     const { enrollment_id } = req.params;
@@ -288,4 +427,10 @@ const getAttendance = async (req, res) => {
   }
 };
 
-module.exports = { markAttendance, getAttendance, getAttendancePeriod, upsertAttendanceLesson };
+module.exports = {
+  markAttendance,
+  getAttendance,
+  getAttendancePeriod,
+  upsertAttendanceLesson,
+  bulkFillAttendancePeriod,
+};
