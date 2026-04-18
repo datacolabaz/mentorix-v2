@@ -304,17 +304,19 @@ const getInstructorPaymentBoard = async (req, res) => {
 
     const { rows } = await db.query(
       `SELECT e.id AS enrollment_id, u.id AS student_id, u.full_name, u.phone,
+              e.billing_type AS enrollment_billing_type,
               sp.monthly_fee,
               COALESCE(e.enrollment_start_date, sp.payment_start_date::date) AS payment_start_date,
               (e.enrollment_start_date IS NOT NULL
                 AND e.enrolled_at IS NOT NULL
                 AND e.enrollment_start_date < (e.enrolled_at::date)) AS pre_system_enrollment,
-              EXISTS (
+              (e.billing_type = 'monthly' AND EXISTS (
                 SELECT 1 FROM payments p2
                 WHERE p2.enrollment_id = e.id
                   AND p2.status = 'completed'
+                  AND (p2.notes IS NULL OR p2.notes NOT LIKE '[Başlanğıc balansı]%')
                   AND ${MONTHLY_BILLING_PERIOD_MATCHES_P2}
-              ) AS paid_this_month
+              )) AS paid_this_month
        FROM enrollments e
        INNER JOIN users u ON u.id = e.student_id
        LEFT JOIN student_profiles sp ON sp.user_id = u.id
@@ -329,7 +331,8 @@ const getInstructorPaymentBoard = async (req, res) => {
     const students = rows.map((r) => {
       const feeNum = r.monthly_fee != null ? Number(r.monthly_fee) : NaN;
       const hasFee = Number.isFinite(feeNum) && feeNum > 0;
-      const pending = hasFee && !r.paid_this_month;
+      const paidThisPeriod = Boolean(r.paid_this_month);
+      const pending = hasFee && !paidThisPeriod;
       if (pending) {
         pendingCount += 1;
         pendingAmount += feeNum;
@@ -341,7 +344,7 @@ const getInstructorPaymentBoard = async (req, res) => {
       const lastName = parts.length > 1 ? parts.slice(1).join(' ') : '—';
       let paymentStatus = 'təyin_edilməyib';
       if (hasFee) {
-        paymentStatus = r.paid_this_month ? 'ödənilib' : 'gözlənilir';
+        paymentStatus = paidThisPeriod ? 'ödənilib' : 'gözlənilir';
       }
       return {
         enrollment_id: r.enrollment_id,
@@ -349,6 +352,7 @@ const getInstructorPaymentBoard = async (req, res) => {
         first_name: firstName,
         last_name: lastName,
         phone: r.phone,
+        billing_type: r.enrollment_billing_type,
         monthly_fee: r.monthly_fee,
         payment_start_date: r.payment_start_date,
         payment_status: paymentStatus,
@@ -376,7 +380,7 @@ const markMonthlyPaid = async (req, res) => {
     }
 
     const { rows: en } = await db.query(
-      `SELECT e.id, e.student_id, e.instructor_id, sp.monthly_fee
+      `SELECT e.id, e.student_id, e.instructor_id, e.billing_type, sp.monthly_fee
        FROM enrollments e
        LEFT JOIN student_profiles sp ON sp.user_id = e.student_id
        WHERE e.id = $1`,
@@ -386,6 +390,10 @@ const markMonthlyPaid = async (req, res) => {
 
     if (req.user.role === 'instructor' && !sameUuid(en[0].instructor_id, req.user.id)) {
       return res.status(403).json({ success: false, message: 'Bu qeydiyyata icazəniz yoxdur' });
+    }
+
+    if (en[0].billing_type !== 'monthly') {
+      return res.status(400).json({ success: false, message: 'Bu əməliyyat yalnız aylıq paket üçün keçərlidir' });
     }
 
     const amount = Number(en[0].monthly_fee);
@@ -398,6 +406,7 @@ const markMonthlyPaid = async (req, res) => {
        FROM payments p2
        WHERE p2.enrollment_id = $1
          AND p2.status = 'completed'
+         AND (p2.notes IS NULL OR p2.notes NOT LIKE '[Başlanğıc balansı]%')
          AND ${MONTHLY_BILLING_PERIOD_MATCHES_P2}
        LIMIT 1`,
       [enrollment_id]
