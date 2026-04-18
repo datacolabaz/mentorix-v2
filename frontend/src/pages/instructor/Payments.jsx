@@ -206,15 +206,6 @@ export default function InstructorPayments() {
                       <td className="py-3.5 px-4 font-mono text-xs text-gray-300 tabular-nums whitespace-nowrap">
                         {formatDdMmYyyy(s.payment_start_date)}
                       </td>
-                      <td className="py-3.5 px-4 align-top">
-                        {s.pre_system_enrollment ? (
-                          <span className="inline-flex text-[10px] font-semibold px-2 py-1 rounded-lg bg-sky-500/15 border border-sky-400/30 text-sky-200">
-                            Sistemdən əvvəl
-                          </span>
-                        ) : (
-                          <span className="text-gray-600 text-xs">—</span>
-                        )}
-                      </td>
                       <td className="py-3.5 px-4">
                         <span
                           className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold border ${statusPill[st] || statusPill.təyin_edilməyib}`}
@@ -225,6 +216,15 @@ export default function InstructorPayments() {
                           <span className="block text-[11px] text-gray-500 mt-1 tabular-nums">
                             Aylıq: {formatAzn(s.monthly_fee)}
                           </span>
+                        )}
+                      </td>
+                      <td className="py-3.5 px-4 align-top">
+                        {s.pre_system_enrollment ? (
+                          <span className="inline-flex text-[10px] font-semibold px-2 py-1 rounded-lg bg-sky-500/15 border border-sky-400/30 text-sky-200">
+                            Sistemdən əvvəl
+                          </span>
+                        ) : (
+                          <span className="text-gray-600 text-xs">—</span>
                         )}
                       </td>
                       <td className="py-3.5 px-4 text-right">

@@ -126,6 +126,7 @@ const getAttendancePeriod = async (req, res) => {
     const { enrollment_id } = req.params;
     const { rows: enRows } = await db.query(
       `SELECT e.id, e.student_id, e.instructor_id, e.billing_type, e.lesson_count, e.billing_cycle,
+              e.lesson_weekdays, e.lesson_times, e.enrollment_start_date, e.enrolled_at,
               u.full_name AS student_name
        FROM enrollments e
        JOIN users u ON u.id = e.student_id
@@ -175,6 +176,10 @@ const getAttendancePeriod = async (req, res) => {
         billing_cycle: cycle,
         lesson_count: enrollment.lesson_count || 0,
         lesson_limit: limit,
+        lesson_weekdays: enrollment.lesson_weekdays,
+        lesson_times: enrollment.lesson_times,
+        enrollment_start_date: enrollment.enrollment_start_date,
+        enrolled_at: enrollment.enrolled_at,
       },
       attendance,
       lessons,
@@ -310,7 +315,7 @@ const bulkFillAttendancePeriod = async (req, res) => {
     }
 
     const { rows: enRows } = await db.query(
-      `SELECT e.id, e.student_id, e.instructor_id, e.billing_type, e.billing_cycle
+      `SELECT e.id, e.student_id, e.instructor_id, e.billing_type, e.billing_cycle, e.enrollment_start_date
        FROM enrollments e WHERE e.id = $1`,
       [enrollment_id]
     );
@@ -328,6 +333,17 @@ const bulkFillAttendancePeriod = async (req, res) => {
       });
     }
 
+    const anchorYmd = parseYmd(enrollment.enrollment_start_date);
+    let effFrom = df;
+    if (anchorYmd && effFrom < anchorYmd) effFrom = anchorYmd;
+    if (effFrom > dt) {
+      return res.json({
+        success: true,
+        updated: 0,
+        message: 'Seçilmiş aralıq ödəniş başlanğıcından əvvəldir — dərs yoxdur',
+      });
+    }
+
     const cycle = Number(enrollment.billing_cycle) || 1;
     const { rows: planned } = await db.query(
       `SELECT lesson_number, starts_at
@@ -338,13 +354,13 @@ const bulkFillAttendancePeriod = async (req, res) => {
     );
 
     const noteBase = notes != null && String(notes).trim() !== '' ? String(notes).trim() : 'Toplu qeyd';
-    const rowNote = `[Toplu davamiyyət ${df}–${dt}] ${noteBase}`.slice(0, 500);
+    const rowNote = `[Toplu davamiyyət ${effFrom}–${dt}] ${noteBase}`.slice(0, 500);
 
     const toUpsert = [];
     for (const row of planned) {
       const y = lessonYmdBaku(row.starts_at);
       if (!y) continue;
-      if (y >= df && y <= dt) {
+      if (y >= effFrom && y <= dt) {
         toUpsert.push({ lesson_number: Number(row.lesson_number), date: y });
       }
     }

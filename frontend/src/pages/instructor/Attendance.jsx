@@ -35,6 +35,68 @@ function fmtAzBakuDateTime(dt) {
   return `${dd}.${mm}.${yyyy} - ${hh || '00'}:${mi || '00'}`
 }
 
+function ymdTodayBaku() {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Baku',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date())
+}
+
+function sliceYmd(v) {
+  if (v == null || v === '') return null
+  const s = String(v)
+  const m = s.match(/^(\d{4}-\d{2}-\d{2})/)
+  return m ? m[1] : null
+}
+
+function normalizeWeekdays(raw) {
+  if (raw == null || raw === '') return []
+  let arr = raw
+  if (typeof raw === 'string') {
+    try {
+      arr = JSON.parse(raw)
+    } catch {
+      return []
+    }
+  }
+  if (!Array.isArray(arr)) return []
+  const set = new Set()
+  for (const x of arr) {
+    const d = parseInt(String(x), 10)
+    if (Number.isFinite(d) && d >= 1 && d <= 7) set.add(d)
+  }
+  return [...set].sort((a, b) => a - b)
+}
+
+/** UTC gün @ noon — YYYY-MM-DD müqayisəsi üçün */
+function parseYmdUtcNoon(ymd) {
+  if (!ymd || !/^\d{4}-\d{2}-\d{2}$/.test(ymd)) return null
+  const [y, m, d] = ymd.split('-').map(Number)
+  return new Date(Date.UTC(y, m - 1, d, 12, 0, 0))
+}
+
+/** getUTCDay(): Bazar=0 → bizim B.e.=1 modeli */
+function isoDowMon1(d) {
+  const w = d.getUTCDay()
+  return w === 0 ? 7 : w
+}
+
+function countLessonDaysBetween(startYmd, endYmd, weekdayIds) {
+  const days = normalizeWeekdays(weekdayIds)
+  if (!days.length || !startYmd || !endYmd || startYmd > endYmd) return 0
+  let cur = parseYmdUtcNoon(startYmd)
+  const end = parseYmdUtcNoon(endYmd)
+  if (!cur || !end) return 0
+  let n = 0
+  while (cur <= end) {
+    if (days.includes(isoDowMon1(cur))) n += 1
+    cur = new Date(cur.getTime() + 86400000)
+  }
+  return n
+}
+
 export default function InstructorAttendance() {
   const [students, setStudents] = useState([])
   const [enrollmentId, setEnrollmentId] = useState('')
@@ -57,6 +119,10 @@ export default function InstructorAttendance() {
       .catch(() => setStudents([]))
   }, [])
 
+  useEffect(() => {
+    setMonthlyRangeEnd(ymdTodayBaku())
+  }, [enrollmentId])
+
   const loadPeriod = async (id) => {
     if (!id) return
     setLoading(true)
@@ -78,6 +144,19 @@ export default function InstructorAttendance() {
     if (!limit) return n
     return Math.min(n, limit)
   }, [period])
+
+  const [monthlyRangeEnd, setMonthlyRangeEnd] = useState(() => ymdTodayBaku())
+
+  const monthlyLessonStats = useMemo(() => {
+    const en = period?.enrollment
+    if (!en || en.billing_type !== 'monthly') return null
+    const anchor = sliceYmd(en.enrollment_start_date) || sliceYmd(en.enrolled_at)
+    const end = monthlyRangeEnd || ymdTodayBaku()
+    if (!anchor) return null
+    const safeEnd = end < anchor ? anchor : end
+    const n = countLessonDaysBetween(anchor, safeEnd, en.lesson_weekdays)
+    return { anchor, end: safeEnd, count: n }
+  }, [period, monthlyRangeEnd])
 
   const submitBulk = async () => {
     if (!enrollmentId) return
@@ -288,8 +367,44 @@ export default function InstructorAttendance() {
                 Hər dərs üçün “Gəldi/Gəlmədi” seçə bilərsiniz. Paket (8/12) tamamlananda sistem avtomatik növbəti dövrü açır.
               </p>
             </div>
+          ) : enrollmentId && period?.enrollment?.billing_type === 'monthly' ? (
+            <div className="rounded-xl border border-indigo-500/20 bg-[#0f0c29]/60 p-4 space-y-3">
+              <p className="text-xs text-gray-300 leading-relaxed">
+                <span className="font-semibold text-indigo-200">Aylıq paket:</span> bu bölmədə paket üzrə dərs
+                siyahısı yoxdur; bazada boş davamiyyət sətirləri yaradılmır. Ödəniş başlanğıcından seçdiyiniz tarixə
+                qədər gözlənilən dərs günlərinin sayını aşağıdan izləyə bilərsiniz.
+              </p>
+              {monthlyLessonStats && (
+                <>
+                  <div className="flex flex-col sm:flex-row sm:items-end gap-3">
+                    <div className="flex-1 min-w-0">
+                      <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                        Hesab intervalının sonu (Bakı tarixi)
+                      </label>
+                      <input
+                        type="date"
+                        className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-3 py-2 text-white text-sm outline-none focus:border-blue-500"
+                        value={monthlyRangeEnd}
+                        min={monthlyLessonStats.anchor}
+                        max={ymdTodayBaku()}
+                        onChange={(e) => setMonthlyRangeEnd(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-400">
+                    Ödəniş başlanğıcı:{' '}
+                    <span className="font-mono text-white">{monthlyLessonStats.anchor}</span>
+                    {' → '}
+                    <span className="font-mono text-white">{monthlyLessonStats.end}</span>
+                    {' · '}
+                    <span className="text-emerald-300 font-semibold">{monthlyLessonStats.count}</span> dərs günü
+                    (seçilmiş həftəlik cədvələ uyğun)
+                  </p>
+                </>
+              )}
+            </div>
           ) : enrollmentId ? (
-            <p className="text-xs text-gray-500">Aylıq billing üçün bu bölmə sadələşdirilib.</p>
+            <p className="text-xs text-gray-500">Bu paket üçün məlumat yüklənmədi.</p>
           ) : null}
         </Card>
       </div>
