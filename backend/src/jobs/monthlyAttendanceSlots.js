@@ -13,7 +13,7 @@ const {
  */
 async function extendMonthlyAttendanceSlots() {
   const today = await bakuTodayYmd();
-  const horizon = ymdFromUtcDate(new Date(parseYmdUtcNoon(today).getTime() + 90 * 86400000));
+  const horizon = ymdFromUtcDate(new Date(parseYmdUtcNoon(today).getTime() + 180 * 86400000));
 
   const { rows } = await db.query(
     `SELECT e.id, e.lesson_weekdays, e.enrollment_start_date,
@@ -28,15 +28,14 @@ async function extendMonthlyAttendanceSlots() {
     const wdays = parseLessonWeekdaysJson(r.lesson_weekdays);
     if (!wdays.length) continue;
 
+    const anchor = parseYmd(r.enrollment_start_date);
     let start;
     if (r.max_d) {
       const md = typeof r.max_d === 'string' ? r.max_d.slice(0, 10) : ymdFromUtcDate(new Date(r.max_d));
       start = ymdFromUtcDate(new Date(parseYmdUtcNoon(md).getTime() + 86400000));
     } else {
-      start = today;
+      start = anchor || today;
     }
-    if (start < today) start = today;
-    const anchor = parseYmd(r.enrollment_start_date);
     if (anchor && start < anchor) start = anchor;
     if (start > horizon) continue;
 

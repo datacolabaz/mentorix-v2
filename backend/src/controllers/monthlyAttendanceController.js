@@ -123,7 +123,7 @@ const listMonthlySlots = async (req, res) => {
     const anchor = parseYmd(en.enrollment_start_date) || (await bakuTodayYmd());
     const today = await bakuTodayYmd();
     const from = fromQ || anchor;
-    const to = toQ || addDaysYmd(today, 120) || today;
+    const to = toQ || addDaysYmd(today, 180) || today;
     if (from > to) {
       return res.status(400).json({ success: false, message: 'from/to tarix aralığı yanlışdır' });
     }
@@ -141,10 +141,10 @@ const listMonthlySlots = async (req, res) => {
     }
 
     const dates = enumerateLessonYmds(from, to, wdays);
-    if (dates.length > 240) {
+    if (dates.length > 520) {
       return res.status(400).json({
         success: false,
-        message: 'Çox uzun aralıq — from/to tarixlərini daraldın (maks. ~240 dərs günü göstərilir)',
+        message: 'Çox uzun aralıq — from/to tarixlərini daraldın (maks. ~520 dərs günü göstərilir)',
       });
     }
     const { rows: slots } = await db.query(
@@ -213,17 +213,17 @@ const generateMonthlySlots = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Dərs günləri boşdur' });
     }
 
-    const start = df || today;
-    let end = dt || addDaysYmd(start, 120) || start;
-    const maxEnd = addDaysYmd(start, 400) || end;
-    if (end > maxEnd) end = maxEnd;
+    const start = df || anchor;
+    let end = dt || addDaysYmd(today, 180) || today;
+    const maxCalEnd = addDaysYmd(anchor, 950) || end;
+    if (end > maxCalEnd) end = maxCalEnd;
     if (start > end) {
       return res.status(400).json({ success: false, message: 'Tarix aralığı yanlışdır' });
     }
 
     const dates = enumerateLessonYmds(start, end, wdays);
-    if (dates.length > 260) {
-      return res.status(400).json({ success: false, message: 'Çox uzun aralıq (maks. ~260 dərs günü)' });
+    if (dates.length > 550) {
+      return res.status(400).json({ success: false, message: 'Çox uzun aralıq (maks. ~550 dərs günü)' });
     }
     if (!dates.length) {
       return res.json({ success: true, inserted: 0 });
@@ -262,12 +262,18 @@ const bulkMonthlySlots = async (req, res) => {
     if (chk.error) return res.status(chk.error.status).json({ success: false, message: chk.error.message });
 
     const wdays = parseLessonWeekdaysJson(en.lesson_weekdays);
-    const dates = enumerateLessonYmds(df, dt, wdays);
-    if (dates.length > 400) {
-      return res.status(400).json({ success: false, message: 'Çox uzun aralıq (maks. ~400 dərs günü)' });
+    const today = await bakuTodayYmd();
+    let dates = enumerateLessonYmds(df, dt, wdays);
+    if (dates.length > 520) {
+      return res.status(400).json({ success: false, message: 'Çox uzun aralıq (maks. ~520 dərs günü)' });
     }
     if (!dates.length) {
       return res.json({ success: true, updated: 0 });
+    }
+
+    dates = dates.filter((d) => d <= today);
+    if (!dates.length) {
+      return res.json({ success: true, updated: 0, message: 'Seçilmiş aralıqda bu günə qədər dərs günü yoxdur' });
     }
 
     const note =
@@ -310,6 +316,14 @@ const putMonthlyDay = async (req, res) => {
     const wdays = parseLessonWeekdaysJson(en.lesson_weekdays);
     if (!wdays.includes(isoDowMon1(parseYmdUtcNoon(ld)))) {
       return res.status(400).json({ success: false, message: 'Bu tarix seçilmiş dərs günlərinə düşmür' });
+    }
+
+    const today = await bakuTodayYmd();
+    if (ld > today && (status === 'attended' || status === 'absent' || status === 'archived')) {
+      return res.status(400).json({
+        success: false,
+        message: 'Gələcək dərs tarixi üçün davamiyyət qeydi yazıla bilməz',
+      });
     }
 
     const { rows } = await db.query(

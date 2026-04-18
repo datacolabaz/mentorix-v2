@@ -569,7 +569,9 @@ export default function InstructorStudents() {
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
                 <div className="text-left sm:text-right">
                   <span className="text-xs bg-blue-500/20 text-blue-300 px-2 py-1 rounded-lg font-semibold inline-block">
-                    {s.lesson_count || 0}/{BILLING_OPTS.find((o) => o.value === s.billing_type)?.label || s.billing_type}
+                    {s.billing_type === 'monthly'
+                      ? 'Davamlı (aylıq)'
+                      : `${s.lesson_count || 0}/${BILLING_OPTS.find((o) => o.value === s.billing_type)?.label || s.billing_type}`}
                   </span>
                   {s.avg_score && <div className="text-xs text-gray-400 mt-1">Orta: {s.avg_score}%</div>}
                 </div>
