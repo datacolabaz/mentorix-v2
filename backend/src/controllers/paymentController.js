@@ -9,8 +9,10 @@ function sameUuid(a, b) {
   return normUuid(a) === normUuid(b);
 }
 
-/** Aylıq ödəniş dövrü: təqvim ayı yox, müəllimin təyin etdiyi "gün" ankoru (enrollment_start_date / payment_start_date) */
-const MONTHLY_BILLING_PERIOD_PREDICATE = `(
+/** Aylıq ödəniş dövrü: təqvim ayı yox, müəllimin təyin etdiyi "gün" ankoru (enrollment_start_date / payment_start_date).
+ *  PostgreSQL-də `AND (SELECT 1 ...)` səhvdir (integer → boolean); ona görə EXISTS ilə boolean konteksti. */
+const MONTHLY_BILLING_PERIOD_MATCHES_P2 = `
+EXISTS (
   WITH enr AS (
     SELECT
       e.id AS enrollment_id,
@@ -265,7 +267,7 @@ const getInstructorPaymentBoard = async (req, res) => {
                 SELECT 1 FROM payments p2
                 WHERE p2.enrollment_id = e.id
                   AND p2.status = 'completed'
-                  AND ${MONTHLY_BILLING_PERIOD_PREDICATE}
+                  AND ${MONTHLY_BILLING_PERIOD_MATCHES_P2}
               ) AS paid_this_month
        FROM enrollments e
        INNER JOIN users u ON u.id = e.student_id
@@ -349,7 +351,7 @@ const markMonthlyPaid = async (req, res) => {
        FROM payments p2
        WHERE p2.enrollment_id = $1
          AND p2.status = 'completed'
-         AND ${MONTHLY_BILLING_PERIOD_PREDICATE}
+         AND ${MONTHLY_BILLING_PERIOD_MATCHES_P2}
        LIMIT 1`,
       [enrollment_id]
     );
