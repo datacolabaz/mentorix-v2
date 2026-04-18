@@ -10,6 +10,11 @@ const {
 } = require('../controllers/studentController');
 const { authenticate, authorize } = require('../middleware/auth');
 const db = require('../utils/db');
+const { deliverPermanentPinSms } = require('../controllers/authController');
+
+function normalizePhoneDigits(phone) {
+  return String(phone || '').replace(/\D/g, '');
+}
 
 function sameUuid(a, b) {
   if (a == null || b == null) return false;
@@ -298,7 +303,41 @@ router.post('/enroll', authenticate, authorize('instructor', 'admin'), async (re
       return enr;
     });
 
-    res.json({ success: true, enrollment });
+    let pin_sms = { attempted: false, sent: false, skipped: false, message: '' };
+    try {
+      const { rows: urows } = await db.query(
+        `SELECT id, role, phone, pin_hash
+         FROM users
+         WHERE id = $1 AND is_active = TRUE`,
+        [student_id]
+      );
+      const u = urows[0];
+      if (u && u.role === 'student') {
+        const clean = normalizePhoneDigits(u.phone);
+        pin_sms.attempted = true;
+        if (!clean) {
+          pin_sms.skipped = true;
+          pin_sms.message = 'Telefon yoxdur — PIN SMS göndərilmədi.';
+        } else {
+          const r = await deliverPermanentPinSms(u, clean, { force: false });
+          if (r.alreadyHadPin) {
+            pin_sms.skipped = true;
+            pin_sms.message = 'PIN artıq mövcuddur — əlavə SMS göndərilmədi.';
+          } else if (r.pinSmsSent) {
+            pin_sms.sent = true;
+            pin_sms.message = 'Tələbənin nömrəsinə daimi 6 rəqəmli PIN SMS göndərildi.';
+          }
+        }
+      }
+    } catch (e) {
+      pin_sms.attempted = true;
+      pin_sms.sent = false;
+      pin_sms.skipped = false;
+      pin_sms.message = e?.body?.message || e?.message || 'PIN SMS göndərilə bilmədi';
+      pin_sms.error = true;
+    }
+
+    res.json({ success: true, enrollment, pin_sms });
   } catch (err) {
     if (err.code === 'LESSON_CONFLICT') {
       return res.status(409).json({

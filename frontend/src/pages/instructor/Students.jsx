@@ -358,7 +358,7 @@ export default function InstructorStudents() {
       })
       const newUserId = reg.user?.id
       if (!newUserId) throw new Error('Qeydiyyat cavabı gözlənilən deyil')
-      await api.post('/students/enroll', {
+      const enrRes = await api.post('/students/enroll', {
         student_id: newUserId,
         billing_type: form.billing_type,
         referral_notes: form.referral_notes,
@@ -370,7 +370,16 @@ export default function InstructorStudents() {
         parent_name: form.parent_name,
         parent_phone: form.parent_phone,
       })
-      toast('Telebe elave edildi!')
+      const ps = enrRes?.pin_sms
+      if (ps?.error) {
+        toast('Telebe elave edildi, amma PIN SMS gonderile bilmedi. Bir az sonra yeniden cehd edin ve ya telebenin giris ekraninda “Davam et” ile PIN isteyin.', 'error')
+      } else if (ps?.sent) {
+        toast('Telebe elave edildi. PIN SMS telebeye gonderildi.')
+      } else if (ps?.skipped && ps?.message) {
+        toast(`Telebe elave edildi. ${ps.message}`)
+      } else {
+        toast('Telebe elave edildi!')
+      }
       setAddModal(false)
       setForm(emptyForm)
       load()

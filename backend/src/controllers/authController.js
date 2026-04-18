@@ -575,4 +575,5 @@ module.exports = {
   me,
   setPin,
   loginWithPin,
+  deliverPermanentPinSms,
 };
