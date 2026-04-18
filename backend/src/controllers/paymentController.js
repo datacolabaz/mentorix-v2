@@ -291,7 +291,7 @@ const getInstructorPaymentBoard = async (req, res) => {
               e.billing_type AS enrollment_billing_type,
               e.billing_timing,
               sp.monthly_fee,
-              e.enrollment_start_date::date AS lesson_start_date,
+              to_char(e.enrollment_start_date::date, 'YYYY-MM-DD') AS lesson_start_date,
               (e.enrollment_start_date IS NOT NULL
                 AND e.enrolled_at IS NOT NULL
                 AND e.enrollment_start_date::date < (e.enrolled_at::date)) AS pre_system_enrollment
@@ -358,6 +358,14 @@ const getInstructorPaymentBoard = async (req, res) => {
         if (sub && sub.pending_debt > 0.005) pendingCount += 1;
         if (sub) paymentStatus = sub.pending_debt > 0.005 ? 'gözlənilir' : 'ödənilib';
       }
+      const balanceTotalDemand =
+        sub?.billing_model === 'prepaid'
+          ? prepaidExtras?.consumed_amount ?? null
+          : sub?.billing_model === 'postpaid'
+            ? sub?.subscription_due_total ?? null
+            : null;
+      const balanceTotalPaid = sub?.subscription_total_paid ?? null;
+      const balanceRemaining = sub?.pending_debt ?? null;
       return {
         enrollment_id: r.enrollment_id,
         student_id: r.student_id,
@@ -381,6 +389,9 @@ const getInstructorPaymentBoard = async (req, res) => {
         charged_lesson_count: prepaidExtras?.charged_lesson_count ?? null,
         consumed_amount: prepaidExtras?.consumed_amount ?? null,
         wallet_balance: prepaidExtras?.wallet_balance ?? null,
+        balance_total_demand: balanceTotalDemand,
+        balance_total_paid: balanceTotalPaid,
+        balance_remaining: balanceRemaining,
       };
     });
 
