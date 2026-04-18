@@ -285,14 +285,13 @@ const bulkMonthlySlots = async (req, res) => {
 
     const { rowCount } = await db.query(
       `INSERT INTO monthly_attendance_slots (enrollment_id, lesson_date, status, notes, charges_virtual_balance)
-       SELECT $1::uuid, d::date, $3::text, $4,
-              CASE WHEN $3::text = 'attended' THEN TRUE ELSE FALSE END
+       SELECT $1::uuid, d::date, $3::text, $4, FALSE
        FROM unnest($2::date[]) AS d
        ON CONFLICT (enrollment_id, lesson_date)
        DO UPDATE SET
          status = EXCLUDED.status,
          notes = COALESCE(EXCLUDED.notes, monthly_attendance_slots.notes),
-         charges_virtual_balance = CASE EXCLUDED.status WHEN 'attended' THEN TRUE ELSE FALSE END,
+         charges_virtual_balance = FALSE,
          updated_at = NOW()`,
       [enrollment_id, dates, action, note.slice(0, 500)]
     );
@@ -331,10 +330,7 @@ const putMonthlyDay = async (req, res) => {
       });
     }
 
-    const chargeAbsence = req.body.charge_absence === true || req.body.charge_absence === 'true';
-    let chargesVirtual = false;
-    if (status === 'attended') chargesVirtual = true;
-    else if (status === 'absent' && chargeAbsence) chargesVirtual = true;
+    const chargesVirtual = false;
 
     const { rows } = await db.query(
       `INSERT INTO monthly_attendance_slots (enrollment_id, lesson_date, status, notes, charges_virtual_balance)

@@ -23,7 +23,6 @@ const emptyForm = {
   referral_notes: '',
   monthly_fee: '',
   enrollment_date: '',
-  billing_timing: 'postpaid',
   first_lesson_date: '',
   lesson_weekdays: [],
   lesson_times: {},
@@ -216,44 +215,6 @@ function StudentFormFields({ data, setData, scheduleMeta, mode, onRefreshSlots, 
           ))}
         </select>
       </div>
-      {data.billing_type === 'monthly' && (
-        <div>
-          <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Ödəniş növü</label>
-          <p className="text-[10px] text-gray-500 mb-3 leading-relaxed">
-            <strong className="text-gray-400">Əvvəlcədən ödəniş:</strong> hər ayın ankor günündə (başlama tarixinin günü)
-            aylıq borc yaranır. <strong className="text-gray-400">Sonradan ödəniş:</strong> yalnız keçmişdə «gəldi» kimi
-            qeyd olunan dərs slotları üzrə borc (aylıq÷8).
-          </p>
-          <div className="space-y-2">
-            <label className="flex items-start gap-3 cursor-pointer rounded-xl border border-indigo-500/20 bg-[#13112e]/80 px-3 py-2.5">
-              <input
-                type="radio"
-                name={`billing_timing_${mode}`}
-                className="mt-1"
-                checked={(data.billing_timing || 'postpaid') === 'prepaid'}
-                onChange={() => setData((p) => ({ ...p, billing_timing: 'prepaid' }))}
-              />
-              <span className="text-sm text-gray-200">
-                <span className="font-semibold text-white">Əvvəlcədən ödəniş</span>
-                <span className="block text-[10px] text-gray-500 mt-0.5">Dərslər başlamazdan əvvəl ödəniş modeli (ankor ayları).</span>
-              </span>
-            </label>
-            <label className="flex items-start gap-3 cursor-pointer rounded-xl border border-indigo-500/20 bg-[#13112e]/80 px-3 py-2.5">
-              <input
-                type="radio"
-                name={`billing_timing_${mode}`}
-                className="mt-1"
-                checked={(data.billing_timing || 'postpaid') === 'postpaid'}
-                onChange={() => setData((p) => ({ ...p, billing_timing: 'postpaid' }))}
-              />
-              <span className="text-sm text-gray-200">
-                <span className="font-semibold text-white">Sonradan ödəniş</span>
-                <span className="block text-[10px] text-gray-500 mt-0.5">Dərslərə qatıldıqca iştirak əsasında borclanma.</span>
-              </span>
-            </label>
-          </div>
-        </div>
-      )}
       {(mode === 'add' || mode === 'edit') && (
         <div className="rounded-xl border border-indigo-500/20 bg-[#0f0c29]/60 p-3 space-y-2">
           <p className="text-xs font-semibold text-indigo-200/90 uppercase tracking-wider">Dərs vaxtı (slot)</p>
@@ -264,7 +225,9 @@ function StudentFormFields({ data, setData, scheduleMeta, mode, onRefreshSlots, 
             <p className="text-[10px] text-gray-500">Paket: 12 dərs (qeydiyyatdan sonra sayğac 12-dən geri sayacaq)</p>
           )}
           {data.billing_type === 'monthly' && (
-            <p className="text-[10px] text-gray-500">Paket: aylıq (sayğac aylıq ödənişə görə izlənir)</p>
+            <p className="text-[10px] text-gray-500">
+              Paket: aylıq — borc hər ayın başlama tarixinin təqvim günü üzrə sabit məbləğdir; davamiyyət yalnız izləmə üçündür.
+            </p>
           )}
           <p className="text-[10px] text-gray-500">
             Seçilmiş dərs günləri üçün saatları qeyd edin. Qeydiyyat anında paketə uyğun (8/12) dərslər avtomatik tarixlərlə yaradılacaq.
@@ -417,7 +380,6 @@ export default function InstructorStudents() {
         referral_notes: form.referral_notes,
         monthly_fee: form.monthly_fee,
         enrollment_date: form.enrollment_date || null,
-        ...(form.billing_type === 'monthly' ? { billing_timing: form.billing_timing || 'postpaid' } : {}),
         first_lesson_date: form.first_lesson_date || null,
         lesson_weekdays: form.lesson_weekdays,
         lesson_times: form.lesson_times || {},
@@ -456,7 +418,6 @@ export default function InstructorStudents() {
         s.enrollment_start_date != null && s.enrollment_start_date !== ''
           ? String(s.enrollment_start_date).slice(0, 10)
           : '',
-      billing_timing: s.billing_timing === 'prepaid' ? 'prepaid' : 'postpaid',
       first_lesson_date: '',
       teacher_schedule_id: '',
       lesson_weekdays: normalizeWeekdays(s.lesson_weekdays),
@@ -493,7 +454,6 @@ export default function InstructorStudents() {
         referral_notes: editForm.referral_notes,
         monthly_fee: editForm.monthly_fee,
         enrollment_date: editForm.enrollment_date,
-        ...(editForm.billing_type === 'monthly' ? { billing_timing: editForm.billing_timing || 'postpaid' } : {}),
         lesson_weekdays: editForm.lesson_weekdays,
         lesson_times: editForm.lesson_times || {},
         parent_name: editForm.parent_name,

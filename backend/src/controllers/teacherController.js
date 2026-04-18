@@ -18,6 +18,7 @@ const getTeacherDashboardStats = async (req, res) => {
        JOIN enrollments e ON e.id = p.enrollment_id
        WHERE REPLACE(LOWER(TRIM(e.instructor_id::text)), '-', '') = $1
          AND p.status = 'completed'
+         AND (p.notes IS NULL OR TRIM(p.notes) NOT LIKE '[Balans düzəlişi]%')
          AND COALESCE(p.payment_date::timestamptz, p.paid_at, NOW()) >= ${monthStartSql}`,
       [iid],
     );
@@ -27,7 +28,8 @@ const getTeacherDashboardStats = async (req, res) => {
        FROM payments p
        JOIN enrollments e ON e.id = p.enrollment_id
        WHERE REPLACE(LOWER(TRIM(e.instructor_id::text)), '-', '') = $1
-         AND p.status = 'completed'`,
+         AND p.status = 'completed'
+         AND (p.notes IS NULL OR TRIM(p.notes) NOT LIKE '[Balans düzəlişi]%')`,
       [iid],
     );
 

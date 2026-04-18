@@ -248,10 +248,8 @@ export default function StudentPayments() {
                 ) : null}
               </p>
               <p className="text-xs text-gray-500 mb-2">
-                Növ:{' '}
-                {enrollment?.billing_timing === 'prepaid'
-                  ? 'Əvvəlcədən — hər ayın ankor günü üzrə yaranan borc (ödənişlər çıxılır)'
-                  : 'Sonradan — iştirak olunmuş dərs slotları × (aylıq÷8) üzrə borc'}
+                Borc hər ayın eyni təqvim günündə (başlama tarixinə görə) sabit aylıq məbləğ ilə yaranır; dərs sayı və
+                davamiyyət bu məbləğə təsir etmir.
               </p>
               <p className="text-sm text-gray-200 mb-4">
                 Qalıq borc:{' '}

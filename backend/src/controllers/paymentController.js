@@ -7,6 +7,10 @@ const {
   toYmd: anchorToYmd,
 } = require('../services/subscriptionBilling');
 
+/** Bu qeydlər balansı azaldır; ümumi gəlir statistikasına daxil edilmir */
+const SQL_EXCLUDE_BALANCE_ADJUSTMENT =
+  "AND (p.notes IS NULL OR TRIM(p.notes) NOT LIKE '[Balans düzəlişi]%')";
+
 function normUuid(id) {
   return String(id).trim().toLowerCase().replace(/-/g, '');
 }
@@ -129,21 +133,10 @@ const listMyPayments = async (req, res) => {
           [enrollmentOut.id]
         );
         const paid = Number(pr[0]?.t) || 0;
-        const { rows: sl } = await db.query(
-          `SELECT COUNT(*)::int AS n
-           FROM monthly_attendance_slots
-           WHERE enrollment_id = $1
-             AND lesson_date <= $2::date
-             AND status = 'attended'`,
-          [enrollmentOut.id, todayBaku]
-        );
-        const attended = Number(sl[0]?.n) || 0;
         enrollmentOut.subscription = computeMonthlyBalanceState({
-          billing_timing: rest.billing_timing,
           monthly_fee: mfNum,
           anchor_ymd: anchorYmd,
           today_ymd: todayBaku,
-          attended_lessons: attended,
           total_paid: paid,
         });
       }
@@ -233,6 +226,9 @@ const addPayment = async (req, res) => {
     if (req.user.role === 'instructor' && !sameUuid(en[0].instructor_id, req.user.id)) {
       return res.status(403).json({ success: false, message: 'Bu qeydiyyata ödəniş əlavə etmək üçün icazəniz yoxdur' });
     }
+    if (legacy_kind === 'balance_adjustment' && en[0].billing_type !== 'monthly') {
+      return res.status(400).json({ success: false, message: 'Balans düzəlişi yalnız aylıq paket üçün mümkündür' });
+    }
     const amt = Number(amount);
     if (!Number.isFinite(amt) || amt <= 0) {
       return res.status(400).json({ success: false, message: 'Məbləğ müsbət rəqəm olmalıdır' });
@@ -248,6 +244,8 @@ const addPayment = async (req, res) => {
       notesOut = `[Başlanğıc balansı]${notesOut ? ` ${notesOut}` : ''}`;
     } else if (legacy_kind === 'past_payment') {
       notesOut = `[Keçmiş ödəniş qeydi]${notesOut ? ` ${notesOut}` : ''}`;
+    } else if (legacy_kind === 'balance_adjustment') {
+      notesOut = `[Balans düzəlişi]${notesOut ? ` ${notesOut}` : ''}`;
     }
     const { rows } = await db.query(
       `INSERT INTO payments (enrollment_id, student_id, amount, payment_method, period, billing_cycle, notes, status, payment_date)
@@ -280,19 +278,16 @@ const getInstructorPaymentBoard = async (req, res) => {
        FROM payments p
        INNER JOIN enrollments e ON e.id = p.enrollment_id
        WHERE p.status = 'completed'
-         AND REPLACE(LOWER(TRIM(e.instructor_id::text)), '-', '') = $1`,
+         AND REPLACE(LOWER(TRIM(e.instructor_id::text)), '-', '') = $1
+         ${SQL_EXCLUDE_BALANCE_ADJUSTMENT}`,
       [iid]
     );
 
     const { rows } = await db.query(
       `SELECT e.id AS enrollment_id, u.id AS student_id, u.full_name, u.phone,
               e.billing_type AS enrollment_billing_type,
-              e.billing_timing,
               sp.monthly_fee,
-              to_char(e.enrollment_start_date::date, 'YYYY-MM-DD') AS lesson_start_date,
-              (e.enrollment_start_date IS NOT NULL
-                AND e.enrolled_at IS NOT NULL
-                AND e.enrollment_start_date::date < (e.enrolled_at::date)) AS pre_system_enrollment
+              to_char(e.enrollment_start_date::date, 'YYYY-MM-DD') AS lesson_start_date
        FROM enrollments e
        INNER JOIN users u ON u.id = e.student_id
        LEFT JOIN student_profiles sp ON sp.user_id = u.id
@@ -323,19 +318,6 @@ const getInstructorPaymentBoard = async (req, res) => {
           if (b.pending_debt > 0.005) pendingCount += 1;
         }
       }
-      const eps = 0.005;
-      const net = b != null ? Number(b.net_balance) : null;
-      let board_balance_kind = null;
-      let board_balance_amount = null;
-      if (b != null && net != null && Number.isFinite(net)) {
-        if (net >= -eps) {
-          board_balance_kind = 'balans';
-          board_balance_amount = roundMoney(Math.max(0, net));
-        } else {
-          board_balance_kind = 'borc';
-          board_balance_amount = b.pending_debt;
-        }
-      }
       return {
         enrollment_id: r.enrollment_id,
         student_id: r.student_id,
@@ -343,27 +325,15 @@ const getInstructorPaymentBoard = async (req, res) => {
         last_name: lastName,
         phone: r.phone,
         billing_type: r.enrollment_billing_type,
-        billing_timing: r.billing_timing || 'postpaid',
         monthly_fee: r.monthly_fee,
         lesson_start_date: r.lesson_start_date,
         payment_start_date: r.lesson_start_date,
         payment_status: paymentStatus,
-        pre_system_enrollment: Boolean(r.pre_system_enrollment),
         total_payments: b?.total_payments ?? null,
         accrued_total: b?.accrued_total ?? null,
         net_balance: b?.net_balance ?? null,
-        board_balance_kind,
-        board_balance_amount,
         pending_debt: b?.pending_debt ?? null,
         subscription_months: b?.subscription_months ?? null,
-        subscription_due_total: b?.subscription_due_total ?? null,
-        subscription_total_paid: b?.subscription_total_paid ?? null,
-        subscription_prepaid: b?.subscription_prepaid ?? null,
-        billing_model: b?.billing_model ?? null,
-        lesson_unit_price: b?.lesson_unit_price ?? null,
-        charged_lesson_count: b?.charged_lesson_count ?? null,
-        consumed_amount: b?.consumed_amount ?? null,
-        wallet_balance: b?.wallet_balance ?? null,
       };
     });
 
@@ -379,7 +349,7 @@ const getInstructorPaymentBoard = async (req, res) => {
   }
 };
 
-/** Aylıq virtual balans: istənilən məbləğ (defolt: aylıq məbləğ) */
+/** Aylıq ödəniş qeydi (defolt: aylıq məbləğ) */
 const markMonthlyPaid = async (req, res) => {
   try {
     const { enrollment_id, amount: amountRaw } = req.body;
