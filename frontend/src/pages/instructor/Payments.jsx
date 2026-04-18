@@ -98,7 +98,7 @@ export default function InstructorPayments() {
       await api.post('/payments', {
         enrollment_id: legacyRow.enrollment_id,
         amount: amt,
-        payment_method: 'manual',
+        payment_method: 'cash',
         payment_date: legacyDate || null,
         status: 'completed',
         legacy_kind: legacyKind,
@@ -355,6 +355,12 @@ export default function InstructorPayments() {
                 statistikasına daxil ediləcək.
               </p>
             )}
+            <p className="text-xs text-gray-500 leading-relaxed border border-indigo-500/15 rounded-xl px-3 py-2 bg-[#0f0c29]/80">
+              <span className="font-semibold text-gray-400">Nə üçündür?</span> Edupanelə düşməmiş real ödənişləri və ya
+              başlanğıcda artıq ödənilmiş məbləği burada qeyd edirsiniz; bunlar tamamlanmış ödəniş kimi saxlanılır və
+              aylıq abunə borcunun hesablanmasına daxil olunur. Yeni ödəniş üçün siyahıdakı{' '}
+              <span className="text-indigo-300 font-medium">Ödəniş</span> düyməsindən istifadə edin.
+            </p>
             <p className="text-gray-400">
               Tələbə:{' '}
               <span className="text-white font-medium">
