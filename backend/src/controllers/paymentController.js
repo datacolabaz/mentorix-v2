@@ -1,5 +1,9 @@
 const db = require('../utils/db');
-const { countUnpaidBillingPeriods, earliestUnpaidBillingDue } = require('../utils/monthlyBillingPeriods');
+const {
+  computeVirtualFromParts,
+  loadInstructorMonthlyVirtualBaseRows,
+  sumPendingDebtFromRows,
+} = require('../services/monthlyVirtualBalance');
 
 function normUuid(id) {
   return String(id).trim().toLowerCase().replace(/-/g, '');
@@ -242,11 +246,6 @@ const getInstructorPaymentBoard = async (req, res) => {
       [iid]
     );
 
-    const { rows: todayRows } = await db.query(
-      `SELECT to_char((CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Baku')::date, 'YYYY-MM-DD') AS ymd`
-    );
-    const todayBaku = todayRows[0]?.ymd || new Date().toISOString().slice(0, 10);
-
     const { rows } = await db.query(
       `SELECT e.id AS enrollment_id, u.id AS student_id, u.full_name, u.phone,
               e.billing_type AS enrollment_billing_type,
@@ -264,48 +263,28 @@ const getInstructorPaymentBoard = async (req, res) => {
       [iid]
     );
 
-    const monthlyIds = rows.filter((r) => r.enrollment_billing_type === 'monthly').map((r) => r.enrollment_id);
-    const payByEnr = new Map();
-    if (monthlyIds.length) {
-      const { rows: payRows } = await db.query(
-        `SELECT p.enrollment_id, p.payment_date, p.paid_at, p.period, p.notes, p.status
-         FROM payments p
-         WHERE p.enrollment_id = ANY($1::uuid[])
-           AND p.status = 'completed'`,
-        [monthlyIds]
-      );
-      for (const p of payRows) {
-        const k = p.enrollment_id;
-        if (!payByEnr.has(k)) payByEnr.set(k, []);
-        payByEnr.get(k).push(p);
-      }
-    }
+    const { rows: vrows } = await loadInstructorMonthlyVirtualBaseRows(db, iid);
+    const vmap = new Map(vrows.map((x) => [String(x.enrollment_id), x]));
+    const pendingAmount = sumPendingDebtFromRows(vrows);
 
     let pendingCount = 0;
-    let pendingAmount = 0;
     const students = rows.map((r) => {
       const feeNum = r.monthly_fee != null ? Number(r.monthly_fee) : NaN;
       const hasFee = Number.isFinite(feeNum) && feeNum > 0;
-      const anchor = toYmd(r.payment_start_date);
-      let unpaidMonths = 0;
-      if (r.enrollment_billing_type === 'monthly' && hasFee && anchor) {
-        const pays = payByEnr.get(r.enrollment_id) || [];
-        unpaidMonths = countUnpaidBillingPeriods(anchor, todayBaku, pays);
-      }
-      const pendingStudent = hasFee && r.enrollment_billing_type === 'monthly' && unpaidMonths > 0;
-      if (pendingStudent) {
-        pendingCount += 1;
-        pendingAmount += unpaidMonths * feeNum;
-      }
       const parts = String(r.full_name || '')
         .trim()
         .split(/\s+/);
       const firstName = parts[0] || '—';
       const lastName = parts.length > 1 ? parts.slice(1).join(' ') : '—';
       let paymentStatus = 'təyin_edilməyib';
-      if (hasFee && r.enrollment_billing_type === 'monthly') {
-        if (!anchor) paymentStatus = 'təyin_edilməyib';
-        else paymentStatus = unpaidMonths === 0 ? 'ödənilib' : 'gözlənilir';
+      let virtual = null;
+      if (r.enrollment_billing_type === 'monthly' && hasFee) {
+        const vb = vmap.get(String(r.enrollment_id));
+        if (vb) {
+          virtual = computeVirtualFromParts(vb.monthly_fee, vb.charged_lessons, vb.total_paid);
+          if (virtual.pending_debt > 0.005) pendingCount += 1;
+          paymentStatus = virtual.pending_debt > 0.005 ? 'gözlənilir' : 'ödənilib';
+        }
       }
       return {
         enrollment_id: r.enrollment_id,
@@ -318,9 +297,12 @@ const getInstructorPaymentBoard = async (req, res) => {
         payment_start_date: r.payment_start_date,
         payment_status: paymentStatus,
         pre_system_enrollment: Boolean(r.pre_system_enrollment),
-        unpaid_monthly_periods: r.enrollment_billing_type === 'monthly' ? unpaidMonths : 0,
-        pending_monthly_amount:
-          r.enrollment_billing_type === 'monthly' && hasFee ? Math.round(unpaidMonths * feeNum * 100) / 100 : 0,
+        lesson_unit_price: virtual?.lesson_unit_price ?? null,
+        charged_lesson_count: virtual?.charged_lesson_count ?? null,
+        consumed_amount: virtual?.consumed_amount ?? null,
+        total_paid_virtual: virtual?.total_paid ?? null,
+        virtual_balance: virtual?.virtual_balance ?? null,
+        pending_debt: virtual?.pending_debt ?? null,
       };
     });
 
@@ -336,16 +318,16 @@ const getInstructorPaymentBoard = async (req, res) => {
   }
 };
 
+/** Aylıq virtual balans: istənilən məbləğ (defolt: aylıq məbləğ) */
 const markMonthlyPaid = async (req, res) => {
   try {
-    const { enrollment_id } = req.body;
+    const { enrollment_id, amount: amountRaw } = req.body;
     if (!enrollment_id) {
       return res.status(400).json({ success: false, message: 'enrollment_id tələb olunur' });
     }
 
     const { rows: en } = await db.query(
-      `SELECT e.id, e.student_id, e.instructor_id, e.billing_type, sp.monthly_fee,
-              COALESCE(e.enrollment_start_date, sp.payment_start_date::date) AS billing_anchor
+      `SELECT e.id, e.student_id, e.instructor_id, e.billing_type, sp.monthly_fee
        FROM enrollments e
        LEFT JOIN student_profiles sp ON sp.user_id = e.student_id
        WHERE e.id = $1`,
@@ -361,41 +343,53 @@ const markMonthlyPaid = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Bu əməliyyat yalnız aylıq paket üçün keçərlidir' });
     }
 
-    const amount = Number(en[0].monthly_fee);
+    const defaultFee = Number(en[0].monthly_fee);
+    const parsed = amountRaw !== undefined && amountRaw !== '' && amountRaw != null ? Number(amountRaw) : NaN;
+    const amount = Number.isFinite(parsed) && parsed > 0 ? parsed : defaultFee;
     if (!Number.isFinite(amount) || amount <= 0) {
-      return res.status(400).json({ success: false, message: 'Aylıq məbləğ təyin edilməyib' });
-    }
-
-    const { rows: todayRows } = await db.query(
-      `SELECT to_char((CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Baku')::date, 'YYYY-MM-DD') AS ymd`
-    );
-    const todayBaku = todayRows[0]?.ymd || new Date().toISOString().slice(0, 10);
-    const anchor = toYmd(en[0].billing_anchor);
-    if (!anchor) {
-      return res.status(400).json({ success: false, message: 'Ödəniş başlanğıcı (tarix) təyin edilməyib' });
-    }
-
-    const { rows: payList } = await db.query(
-      `SELECT payment_date, paid_at, period, notes, status
-       FROM payments
-       WHERE enrollment_id = $1 AND status = 'completed'`,
-      [enrollment_id]
-    );
-
-    const due = earliestUnpaidBillingDue(anchor, todayBaku, payList);
-    if (!due) {
-      return res.json({ success: true, alreadyPaid: true, message: 'Bütün aylıq dövrlər üçün ödəniş qeydə alınıb' });
+      return res.status(400).json({ success: false, message: 'Məbləğ müsbət rəqəm olmalıdır' });
     }
 
     const { rows: ins } = await db.query(
-      `INSERT INTO payments (enrollment_id, student_id, amount, currency, status, paid_at, payment_date, period, notes)
+      `INSERT INTO payments (enrollment_id, student_id, amount, currency, status, paid_at, payment_date, notes)
        VALUES ($1, $2, $3, 'AZN', 'completed', NOW(),
                (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Baku')::date,
-               $4, $5)
+               $4)
        RETURNING *`,
-      [enrollment_id, en[0].student_id, amount, due, `Aylıq ödəniş (dövr ${due})`]
+      [enrollment_id, en[0].student_id, amount, 'Virtual balans ödənişi']
     );
     res.json({ success: true, payment: ins[0] });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+const getEnrollmentPaymentHistory = async (req, res) => {
+  try {
+    const { enrollment_id } = req.params;
+    const { rows: en } = await db.query(
+      `SELECT e.instructor_id, e.student_id FROM enrollments e WHERE e.id = $1`,
+      [enrollment_id]
+    );
+    if (!en[0]) return res.status(404).json({ success: false, message: 'Tapılmadı' });
+    if (req.user.role === 'instructor' && !sameUuid(en[0].instructor_id, req.user.id)) {
+      return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
+    }
+    if (req.user.role === 'student' && !sameUuid(en[0].student_id, req.user.id)) {
+      return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
+    }
+    if (req.user.role !== 'instructor' && req.user.role !== 'admin' && req.user.role !== 'student') {
+      return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
+    }
+
+    const { rows } = await db.query(
+      `SELECT id, amount, currency, payment_method, status, payment_date, paid_at, notes, period
+       FROM payments
+       WHERE enrollment_id = $1
+       ORDER BY COALESCE(paid_at, payment_date::timestamptz) DESC NULLS LAST, id DESC`,
+      [enrollment_id]
+    );
+    res.json({ success: true, payments: rows });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -407,4 +401,5 @@ module.exports = {
   listMyPayments,
   getInstructorPaymentBoard,
   markMonthlyPaid,
+  getEnrollmentPaymentHistory,
 };
