@@ -97,6 +97,20 @@ function countLessonDaysBetween(startYmd, endYmd, weekdayIds) {
   return n
 }
 
+function addDaysToYmd(ymd, deltaDays) {
+  if (!ymd || !/^\d{4}-\d{2}-\d{2}$/.test(ymd)) return null
+  const [y, m, d] = ymd.split('-').map(Number)
+  const dt = new Date(Date.UTC(y, m - 1, d, 12, 0, 0))
+  dt.setUTCDate(dt.getUTCDate() + Number(deltaDays))
+  return dt.toISOString().slice(0, 10)
+}
+
+function fmtDdMmFromYmd(ymd) {
+  if (!ymd) return '—'
+  const [a, b, c] = ymd.split('-')
+  return `${c}.${b}.${a}`
+}
+
 export default function InstructorAttendance() {
   const [students, setStudents] = useState([])
   const [enrollmentId, setEnrollmentId] = useState('')
@@ -110,6 +124,17 @@ export default function InstructorAttendance() {
   const [bulkTo, setBulkTo] = useState('')
   const [bulkNotes, setBulkNotes] = useState('')
   const [bulkSaving, setBulkSaving] = useState(false)
+  const [monthlyRows, setMonthlyRows] = useState([])
+  const [monthlyMeta, setMonthlyMeta] = useState({
+    next: null,
+    next_status: null,
+    anchor: null,
+    today: null,
+  })
+  const [monthlyFetching, setMonthlyFetching] = useState(false)
+  const [monthlyActFrom, setMonthlyActFrom] = useState('')
+  const [monthlyActTo, setMonthlyActTo] = useState('')
+  const [monthlyRangeEnd, setMonthlyRangeEnd] = useState(() => ymdTodayBaku())
   const toast = useToast()
 
   useEffect(() => {
@@ -121,7 +146,37 @@ export default function InstructorAttendance() {
 
   useEffect(() => {
     setMonthlyRangeEnd(ymdTodayBaku())
+    setMonthlyRows([])
+    setMonthlyActFrom('')
+    setMonthlyActTo('')
   }, [enrollmentId])
+
+  const loadMonthlySlots = async (id) => {
+    if (!id) return
+    setMonthlyFetching(true)
+    try {
+      const d = await api.get('/attendance/monthly/' + encodeURIComponent(id))
+      setMonthlyRows(Array.isArray(d.slots) ? d.slots : [])
+      const nl = d.next_lesson
+      const nextDate =
+        nl && typeof nl === 'object' && nl.lesson_date
+          ? nl.lesson_date
+          : typeof nl === 'string'
+            ? nl
+            : null
+      setMonthlyMeta({
+        next: nextDate,
+        next_status: nl && typeof nl === 'object' ? nl.status || null : null,
+        anchor: d.anchor_date || null,
+        today: d.today_baku || null,
+      })
+    } catch (err) {
+      setMonthlyRows([])
+      toast(err.message || 'Aylıq davamiyyət yüklənmədi', 'error')
+    } finally {
+      setMonthlyFetching(false)
+    }
+  }
 
   const loadPeriod = async (id) => {
     if (!id) return
@@ -129,8 +184,14 @@ export default function InstructorAttendance() {
     try {
       const d = await api.get('/attendance/period/' + encodeURIComponent(id))
       setPeriod(d)
+      if (d?.enrollment?.billing_type === 'monthly') {
+        await loadMonthlySlots(id)
+      } else {
+        setMonthlyRows([])
+      }
     } catch (err) {
       setPeriod(null)
+      setMonthlyRows([])
       toast(err.message || 'Yüklənmədi', 'error')
     } finally {
       setLoading(false)
@@ -145,8 +206,6 @@ export default function InstructorAttendance() {
     return Math.min(n, limit)
   }, [period])
 
-  const [monthlyRangeEnd, setMonthlyRangeEnd] = useState(() => ymdTodayBaku())
-
   const monthlyLessonStats = useMemo(() => {
     const en = period?.enrollment
     if (!en || en.billing_type !== 'monthly') return null
@@ -157,6 +216,13 @@ export default function InstructorAttendance() {
     const n = countLessonDaysBetween(anchor, safeEnd, en.lesson_weekdays)
     return { anchor, end: safeEnd, count: n }
   }, [period, monthlyRangeEnd])
+
+  useEffect(() => {
+    if (monthlyLessonStats?.anchor) {
+      setMonthlyActFrom(monthlyLessonStats.anchor)
+      setMonthlyActTo(monthlyLessonStats.end)
+    }
+  }, [monthlyLessonStats?.anchor, monthlyLessonStats?.end])
 
   const submitBulk = async () => {
     if (!enrollmentId) return
@@ -230,11 +296,94 @@ export default function InstructorAttendance() {
     }
   }
 
+  const monthlyGenerateFuture = async () => {
+    if (!enrollmentId) return
+    setMonthlyFetching(true)
+    try {
+      await api.post('/attendance/monthly/' + encodeURIComponent(enrollmentId) + '/generate', {})
+      toast('Gələcək dərs günləri üçün slotlar yeniləndi')
+      await loadMonthlySlots(enrollmentId)
+    } catch (e) {
+      toast(e?.message || 'Xəta', 'error')
+    } finally {
+      setMonthlyFetching(false)
+    }
+  }
+
+  const monthlyBulkAction = async (action) => {
+    if (!enrollmentId || !monthlyActFrom || !monthlyActTo) {
+      toast('Aralıq tarixləri seçin', 'error')
+      return
+    }
+    if (monthlyActFrom > monthlyActTo) {
+      toast('Tarix aralığı yanlışdır', 'error')
+      return
+    }
+    setMonthlyFetching(true)
+    try {
+      const d = await api.post('/attendance/monthly/' + encodeURIComponent(enrollmentId) + '/bulk', {
+        date_from: monthlyActFrom,
+        date_to: monthlyActTo,
+        action,
+      })
+      toast(`${d?.updated ?? 0} gün yeniləndi`, 'success')
+      await loadMonthlySlots(enrollmentId)
+    } catch (e) {
+      toast(e?.message || 'Xəta', 'error')
+    } finally {
+      setMonthlyFetching(false)
+    }
+  }
+
+  const monthlyArchiveAllPast = async () => {
+    if (!enrollmentId) return
+    const anchor = monthlyMeta.anchor || monthlyLessonStats?.anchor
+    const today = monthlyMeta.today || ymdTodayBaku()
+    if (!anchor) return
+    const yest = addDaysToYmd(today, -1)
+    if (!yest || yest < anchor) {
+      toast('Arxivlənəcək keçmiş tarix yoxdur', 'info')
+      return
+    }
+    if (!window.confirm(`${anchor} – ${yest} aralığındakı bütün dərs günlərini arxivləmək?`)) return
+    setMonthlyFetching(true)
+    try {
+      await api.post('/attendance/monthly/' + encodeURIComponent(enrollmentId) + '/bulk', {
+        date_from: anchor,
+        date_to: yest,
+        action: 'archived',
+      })
+      toast('Keçmiş tarixlər arxivləndi')
+      await loadMonthlySlots(enrollmentId)
+    } catch (e) {
+      toast(e?.message || 'Xəta', 'error')
+    } finally {
+      setMonthlyFetching(false)
+    }
+  }
+
+  const putMonthlySlot = async (lessonDate, status) => {
+    if (!enrollmentId) return
+    setMonthlyFetching(true)
+    try {
+      await api.put('/attendance/monthly/' + encodeURIComponent(enrollmentId) + '/day', {
+        lesson_date: lessonDate,
+        status,
+      })
+      await loadMonthlySlots(enrollmentId)
+      toast('Yadda saxlandı', 'success')
+    } catch (e) {
+      toast(e?.message || 'Xəta', 'error')
+    } finally {
+      setMonthlyFetching(false)
+    }
+  }
+
   return (
     <div className="p-4 sm:p-6 min-w-0">
       <h1 className="font-display font-bold text-xl sm:text-2xl mb-6 break-words">Davamiyyət Qeydi</h1>
 
-      <div className="max-w-lg w-full min-w-0">
+      <div className="max-w-4xl w-full min-w-0">
         <Card className="p-4 sm:p-6 space-y-4 min-w-0 overflow-hidden">
           <div className="min-w-0">
             <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Tələbə</label>
@@ -368,12 +517,42 @@ export default function InstructorAttendance() {
               </p>
             </div>
           ) : enrollmentId && period?.enrollment?.billing_type === 'monthly' ? (
-            <div className="rounded-xl border border-indigo-500/20 bg-[#0f0c29]/60 p-4 space-y-3">
+            <div className="rounded-xl border border-indigo-500/20 bg-[#0f0c29]/60 p-4 space-y-4">
               <p className="text-xs text-gray-300 leading-relaxed">
-                <span className="font-semibold text-indigo-200">Aylıq paket:</span> bu bölmədə paket üzrə dərs
-                siyahısı yoxdur; bazada boş davamiyyət sətirləri yaradılmır. Ödəniş başlanğıcından seçdiyiniz tarixə
-                qədər gözlənilən dərs günlərinin sayını aşağıdan izləyə bilərsiniz.
+                <span className="font-semibold text-indigo-200">Aylıq paket:</span> həftəlik cədvələ uyğun dərs
+                günləri üçün bazada slotlar saxlanılır. Aşağıdan aralıq seçib toplu &quot;Gəldi&quot; və ya
+                &quot;Arxiv&quot; tətbiq edə, tək günlər üçün Gəldi/Gəlmədi seçə bilərsiniz. Gələcək günlər üçün
+                slotları yeniləmək üçün düymədən istifadə edin (server hər bir neçə saatda da avtomatik uzadır).
               </p>
+              {monthlyMeta.next && (
+                <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-100">
+                  <span className="font-semibold">Növbəti dərs:</span>{' '}
+                  <span className="font-mono">{fmtDdMmFromYmd(monthlyMeta.next)}</span>
+                  {monthlyMeta.next_status && monthlyMeta.next_status !== 'pending' && (
+                    <span className="text-emerald-200/80"> ({monthlyMeta.next_status})</span>
+                  )}
+                </div>
+              )}
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  loading={monthlyFetching}
+                  onClick={() => void monthlyGenerateFuture()}
+                >
+                  Slotları yenilə (gələcək)
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  disabled={monthlyFetching}
+                  onClick={() => void monthlyArchiveAllPast()}
+                >
+                  Bütün keçmişi arxivlə
+                </Button>
+              </div>
               {monthlyLessonStats && (
                 <>
                   <div className="flex flex-col sm:flex-row sm:items-end gap-3">
@@ -402,6 +581,120 @@ export default function InstructorAttendance() {
                   </p>
                 </>
               )}
+              <div className="rounded-lg border border-indigo-500/15 bg-[#13112e]/40 p-3 space-y-3">
+                <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Toplu əməliyyat aralığı</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[10px] text-gray-500 mb-1">Başlanğıc</label>
+                    <input
+                      type="date"
+                      className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-3 py-2 text-white text-sm outline-none focus:border-blue-500"
+                      value={monthlyActFrom}
+                      min={monthlyLessonStats?.anchor}
+                      max={monthlyActTo || undefined}
+                      onChange={(e) => setMonthlyActFrom(e.target.value)}
+                      disabled={monthlyFetching}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] text-gray-500 mb-1">Son</label>
+                    <input
+                      type="date"
+                      className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-3 py-2 text-white text-sm outline-none focus:border-blue-500"
+                      value={monthlyActTo}
+                      min={monthlyActFrom || monthlyLessonStats?.anchor}
+                      onChange={(e) => setMonthlyActTo(e.target.value)}
+                      disabled={monthlyFetching}
+                    />
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    loading={monthlyFetching}
+                    onClick={() => void monthlyBulkAction('attended')}
+                  >
+                    Aralığı &quot;Gəldi&quot; et
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    loading={monthlyFetching}
+                    onClick={() => void monthlyBulkAction('absent')}
+                  >
+                    Aralığı &quot;Gəlmədi&quot; et
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    loading={monthlyFetching}
+                    onClick={() => void monthlyBulkAction('archived')}
+                  >
+                    Aralığı arxivlə
+                  </Button>
+                </div>
+              </div>
+              <div className="overflow-x-auto rounded-lg border border-indigo-500/15">
+                <table className="min-w-full text-xs">
+                  <thead className="bg-[#13112e]/80 text-gray-400">
+                    <tr>
+                      <th className="text-left px-3 py-2 font-semibold">Tarix</th>
+                      <th className="text-left px-3 py-2 font-semibold">Status</th>
+                      <th className="text-right px-3 py-2 font-semibold">Əməliyyat</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {monthlyRows.length === 0 && !monthlyFetching && (
+                      <tr>
+                        <td colSpan={3} className="px-3 py-4 text-gray-500 text-center">
+                          Slot yoxdur. &quot;Slotları yenilə&quot; düyməsini sıxın.
+                        </td>
+                      </tr>
+                    )}
+                    {monthlyRows.map((row) => (
+                      <tr key={row.lesson_date} className="border-t border-indigo-500/10">
+                        <td className="px-3 py-2 font-mono text-white whitespace-nowrap">
+                          {fmtDdMmFromYmd(row.lesson_date)}
+                        </td>
+                        <td className="px-3 py-2 text-gray-300 capitalize">{row.status || 'pending'}</td>
+                        <td className="px-3 py-2 text-right whitespace-nowrap">
+                          <div className="inline-flex flex-wrap justify-end gap-1">
+                            <Button
+                              type="button"
+                              size="sm"
+                              disabled={monthlyFetching}
+                              onClick={() => void putMonthlySlot(row.lesson_date, 'attended')}
+                            >
+                              Gəldi
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              size="sm"
+                              disabled={monthlyFetching}
+                              onClick={() => void putMonthlySlot(row.lesson_date, 'absent')}
+                            >
+                              Gəlmədi
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              size="sm"
+                              disabled={monthlyFetching}
+                              onClick={() => void putMonthlySlot(row.lesson_date, 'archived')}
+                            >
+                              Arxiv
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           ) : enrollmentId ? (
             <p className="text-xs text-gray-500">Bu paket üçün məlumat yüklənmədi.</p>

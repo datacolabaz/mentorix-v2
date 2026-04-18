@@ -9,6 +9,7 @@ const path = require('path');
 const errorHandler = require('./middleware/errorHandler');
 const { processExamNotificationJobs } = require('./services/examService');
 const { recomputeAllInstructorsUsage } = require('./services/resourceUsageService');
+const { extendMonthlyAttendanceSlots } = require('./jobs/monthlyAttendanceSlots');
 
 const uploadsExamsDir = path.join(__dirname, '../uploads/exams');
 const uploadsAssignmentsDir = path.join(__dirname, '../uploads/assignments');
@@ -43,6 +44,9 @@ app.listen(PORT, () => {
   console.log('Edupanel API running on port', PORT);
   processExamNotificationJobs().catch((e) => console.error('exam notification jobs startup', e.message));
   recomputeAllInstructorsUsage().catch((e) => console.error('usage sync startup', e.message));
+  setTimeout(() => {
+    extendMonthlyAttendanceSlots().catch((e) => console.error('monthly attendance slots startup', e.message));
+  }, 15000);
 });
 
 cron.schedule('* * * * *', () => {
@@ -51,6 +55,10 @@ cron.schedule('* * * * *', () => {
 
 cron.schedule('*/10 * * * *', () => {
   recomputeAllInstructorsUsage().catch((e) => console.error('usage sync cron', e.message));
+});
+
+cron.schedule('25 */6 * * *', () => {
+  extendMonthlyAttendanceSlots().catch((e) => console.error('monthly attendance slots cron', e.message));
 });
 
 module.exports = app;
