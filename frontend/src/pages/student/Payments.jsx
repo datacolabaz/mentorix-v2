@@ -234,7 +234,8 @@ export default function StudentPayments() {
     : null
   const monthlyDebtNum =
     sub != null && Number.isFinite(Number(sub.pending_debt)) ? Number(sub.pending_debt) : null
-  const isPrepaidMonthly = isMonthlySub && enrollment?.billing_timing === 'prepaid'
+  const billingTimingNorm = String(enrollment?.billing_timing || '').toLowerCase().trim()
+  const isPrepaidMonthly = isMonthlySub && billingTimingNorm === 'prepaid'
 
   return (
     <div className="p-4 sm:p-6 max-w-3xl mx-auto w-full min-w-0">

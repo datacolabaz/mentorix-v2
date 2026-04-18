@@ -77,6 +77,8 @@ const getStudent = async (req, res) => {
               e.id AS enrollment_id, e.billing_type, e.lesson_count,
               e.lesson_weekdays, e.lesson_times, e.billing_cycle,
               e.enrollment_start_date,
+              e.billing_timing,
+              COALESCE(e.payment_plan, 'full') AS payment_plan,
               e.status AS enrollment_status, e.enrolled_at AS enrollment_started_at,
               iu.full_name AS instructor_name
        FROM users u
