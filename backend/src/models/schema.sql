@@ -126,6 +126,7 @@ CREATE TABLE enrollments (
   referral_notes TEXT,
   enrolled_at TIMESTAMP DEFAULT NOW(),
   enrollment_start_date DATE,
+  billing_timing VARCHAR(20) NOT NULL DEFAULT 'postpaid',
   lesson_weekdays JSONB DEFAULT '[]'::jsonb,
   lesson_times JSONB DEFAULT '{}'::jsonb
 );

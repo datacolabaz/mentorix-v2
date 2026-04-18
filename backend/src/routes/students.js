@@ -42,6 +42,12 @@ function parsePaymentStartDate(v) {
   return s;
 }
 
+/** Aylıq: postpaid (aylıq dövr borcu) / prepaid (dərs balansı) */
+function parseBillingTiming(v) {
+  if (String(v || '').trim().toLowerCase() === 'prepaid') return 'prepaid';
+  return 'postpaid';
+}
+
 /** 1–7 unikal, sıralı (B.e. … Bazar) */
 function parseLessonWeekdays(raw) {
   if (raw == null) return [];
@@ -157,8 +163,8 @@ router.post('/enroll', authenticate, authorize('instructor', 'admin'), async (re
       parent_name,
       parent_phone,
       monthly_fee,
-      payment_start_date,
       enrollment_date,
+      billing_timing,
       first_lesson_date,
       teacher_schedule_id,
       lesson_weekdays,
@@ -205,16 +211,16 @@ router.post('/enroll', authenticate, authorize('instructor', 'admin'), async (re
     // artıq tələb olunmur: dərs vaxtı həftəlik gün/saat + ilk dərs tarixi ilə generasiya olunur
 
     const mf = parseMonthlyFee(monthly_fee);
-    const psdLegacy = parsePaymentStartDate(payment_start_date);
-    const enrollmentYmd = parsePaymentStartDate(enrollment_date) || psdLegacy;
+    const enrollmentYmd = parsePaymentStartDate(enrollment_date);
     if (!enrollmentYmd) {
-      return res.status(400).json({ success: false, message: 'Dərslərə başlama (ödəniş başlanğıcı) tarixi seçilməlidir' });
+      return res.status(400).json({ success: false, message: 'Dərslərə başlama tarixi seçilməlidir' });
     }
+    const bt = (billing_type || '8_lessons') === 'monthly' ? parseBillingTiming(billing_timing) : 'postpaid';
 
     const enrollment = await db.transaction(async (client) => {
       const { rows } = await client.query(
-        `INSERT INTO enrollments (instructor_id, student_id, billing_type, referral_notes, referral_source_id, lesson_weekdays, lesson_times, enrollment_start_date)
-         VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb,$8::date) RETURNING *`,
+        `INSERT INTO enrollments (instructor_id, student_id, billing_type, referral_notes, referral_source_id, lesson_weekdays, lesson_times, enrollment_start_date, billing_timing)
+         VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb,$8::date,$9) RETURNING *`,
         [
           instructor_id,
           student_id,
@@ -224,6 +230,7 @@ router.post('/enroll', authenticate, authorize('instructor', 'admin'), async (re
           JSON.stringify(lwd),
           JSON.stringify(lt),
           enrollmentYmd,
+          bt,
         ]
       );
       const enr = rows[0];
@@ -236,16 +243,15 @@ router.post('/enroll', authenticate, authorize('instructor', 'admin'), async (re
         `UPDATE student_profiles SET
           parent_name = COALESCE(NULLIF($1, ''), parent_name),
           parent_phone = COALESCE(NULLIF($2, ''), parent_phone),
-          monthly_fee = $3,
-          payment_start_date = $4
-         WHERE user_id = $5`,
-        [pn, pp, mf, enrollmentYmd, student_id]
+          monthly_fee = $3
+         WHERE user_id = $4`,
+        [pn, pp, mf, student_id]
       );
       if (pr.rowCount === 0) {
         await client.query(
-          `INSERT INTO student_profiles (user_id, parent_name, parent_phone, monthly_fee, payment_start_date)
-           VALUES ($1, NULLIF($2, ''), NULLIF($3, ''), $4, $5)`,
-          [student_id, pn, pp, mf, enrollmentYmd]
+          `INSERT INTO student_profiles (user_id, parent_name, parent_phone, monthly_fee)
+           VALUES ($1, NULLIF($2, ''), NULLIF($3, ''), $4)`,
+          [student_id, pn, pp, mf]
         );
       }
 
@@ -372,8 +378,8 @@ router.patch('/enrollment/:enrollmentId', authenticate, authorize('admin', 'inst
       parent_name,
       parent_phone,
       monthly_fee,
-      payment_start_date,
       enrollment_date,
+      billing_timing,
       lesson_weekdays,
       lesson_times,
     } = req.body;
@@ -431,30 +437,19 @@ router.patch('/enrollment/:enrollmentId', authenticate, authorize('admin', 'inst
     const pName = parent_name != null ? String(parent_name).trim() : '';
     const pPhone = parent_phone != null ? String(parent_phone).trim() : '';
     const hasMf = Object.prototype.hasOwnProperty.call(req.body, 'monthly_fee');
-    const hasPsd = Object.prototype.hasOwnProperty.call(req.body, 'payment_start_date');
     const hasEnr = Object.prototype.hasOwnProperty.call(req.body, 'enrollment_date');
+    const hasBt = Object.prototype.hasOwnProperty.call(req.body, 'billing_timing');
     const mf = hasMf ? parseMonthlyFee(monthly_fee) : null;
-    const psd = hasPsd ? parsePaymentStartDate(payment_start_date) : null;
     const enrYmd = hasEnr ? parsePaymentStartDate(enrollment_date) : null;
     if (hasEnr && !enrYmd) {
       return res.status(400).json({ success: false, message: 'Dərslərə başlama tarixi düzgün deyil (YYYY-MM-DD)' });
     }
-    if (hasPsd && !psd) {
-      return res.status(400).json({ success: false, message: 'Ödəniş başlanğıcı tarixi düzgün deyil (YYYY-MM-DD)' });
-    }
-    const shouldSetPsd = Boolean((hasEnr && enrYmd) || (hasPsd && psd));
-    const profilePsd = enrYmd || psd || null;
     const setParts = [`parent_name = NULLIF($1, '')`, `parent_phone = NULLIF($2, '')`];
     const vals = [pName, pPhone];
     let idx = 3;
     if (hasMf) {
       setParts.push(`monthly_fee = $${idx}::numeric`);
       vals.push(mf);
-      idx += 1;
-    }
-    if (shouldSetPsd && profilePsd) {
-      setParts.push(`payment_start_date = $${idx}::date`);
-      vals.push(profilePsd);
       idx += 1;
     }
     vals.push(studentId);
@@ -464,14 +459,24 @@ router.patch('/enrollment/:enrollmentId', authenticate, authorize('admin', 'inst
     );
     if (profUp.rowCount === 0) {
       await db.query(
-        `INSERT INTO student_profiles (user_id, parent_name, parent_phone, monthly_fee, payment_start_date)
-         VALUES ($1, NULLIF($2, ''), NULLIF($3, ''), $4, $5)`,
-        [studentId, pName, pPhone, hasMf ? mf : null, shouldSetPsd ? profilePsd : null]
+        `INSERT INTO student_profiles (user_id, parent_name, parent_phone, monthly_fee)
+         VALUES ($1, NULLIF($2, ''), NULLIF($3, ''), $4)`,
+        [studentId, pName, pPhone, hasMf ? mf : null]
       );
     }
 
-    if (shouldSetPsd && profilePsd) {
-      await db.query('UPDATE enrollments SET enrollment_start_date = $1::date WHERE id = $2', [profilePsd, enrollmentId]);
+    if (hasEnr && enrYmd) {
+      await db.query('UPDATE enrollments SET enrollment_start_date = $1::date WHERE id = $2', [enrYmd, enrollmentId]);
+    }
+
+    if (hasBt) {
+      const { rows: enBt } = await db.query('SELECT billing_type FROM enrollments WHERE id = $1', [enrollmentId]);
+      if (enBt[0]?.billing_type === 'monthly') {
+        await db.query(`UPDATE enrollments SET billing_timing = $1::text WHERE id = $2`, [
+          parseBillingTiming(billing_timing),
+          enrollmentId,
+        ]);
+      }
     }
 
     res.json({ success: true });
