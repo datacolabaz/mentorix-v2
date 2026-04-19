@@ -21,17 +21,30 @@ function inferQuestionType(q) {
 }
 
 /**
- * Yalnız `closed`: hər səhv cavab üçün çıxılan sabit cərimə məbləği (default 0.25).
- * Sualın `points` dəyəri ilə vurulmur — ümumi bal = qapalı düzgün balların cəmi − cərimə + digər tiplər.
+ * Qapalı və çoxseçimli: hər səhv seçim/cavab üçün çıxılan sabit cərimə (default 0.25).
+ * `exams.wrong_penalty_enabled === false` olanda 0; `negative_marking === 0` olan sualda 0.
  */
-function closedWrongFlatPenaltyMagnitude(q) {
-  if (inferQuestionType(q) !== 'closed') return 0;
+function wrongSelectionPenaltyMagnitude(q, wrongPenaltyEnabled) {
+  if (!wrongPenaltyEnabled) return 0;
+  const t = inferQuestionType(q);
+  if (t !== 'closed' && t !== 'multiple') return 0;
   const n = q.negative_marking;
   if (n === null || n === undefined || n === '') return 0.25;
   const v = Number(n);
   if (Number.isNaN(v)) return 0.25;
   if (v === 0) return 0;
   return Math.abs(v);
+}
+
+/** Çoxseçimli: tələbənin seçdiyi və düzgün cavabda olmayan variantların sayı (hər rəqəm bir dəfə). */
+function countWrongMultipleSelections(givenRaw, correctRaw) {
+  const cSet = new Set(String(correctRaw ?? '').replace(/\D/g, '').split('').filter(Boolean));
+  const sSet = new Set(String(givenRaw ?? '').replace(/\D/g, '').split('').filter(Boolean));
+  let n = 0;
+  for (const d of sSet) {
+    if (!cSet.has(d)) n += 1;
+  }
+  return n;
 }
 
 /** Çoxseçimli: yalnız rəqəmlər, ardıcıllıqdan asılı olmayaraq (23 = 32) */
@@ -132,47 +145,108 @@ function buildAutoGradingMap(questions, answers) {
   return out;
 }
 
+const TYPE_KEYS = ['closed', 'multiple', 'matching', 'open'];
+
+function emptyTypeAgg() {
+  return { correct: 0, wrong: 0, unanswered: 0, pending: 0, points: 0 };
+}
+
 /**
- * Avtomatik bal: qapalı (səhvə sabit cərimə, yalnız closed), çoxseçimli, uyğunluq, açıq.
- * Açıq sual: `template_hint` rəqəmdirsə avtomatik yoxlanır (məs. "4.8"); yoxsa manual qalır.
- * Qeyd: score FAİZ deyil — xam baldır (points).
- * Cərimə yalnız `question_type === 'closed'` üçün; açıq / uyğunluq / çoxseçimli səhvə cərimə yoxdur.
+ * Hər sual üçün avtomatik bal hissəsi + xülasə üçün nəticə növü.
+ * `wrongPenaltyEnabled` — `exams.wrong_penalty_enabled` (müəllim seçimi).
  */
-const calculateScore = (questions, answers) => {
+function scoreQuestionForAuto(q, answers, wrongPenaltyEnabled) {
+  const type = inferQuestionType(q);
+  const given =
+    answers[q.id] != null && answers[q.id] !== '' ? String(answers[q.id]).trim() : '';
+  const pts = Number(q.points || 0);
+  const pen = wrongSelectionPenaltyMagnitude(q, wrongPenaltyEnabled);
+
+  if (!given) {
+    return { type, delta: 0, outcome: 'unanswered' };
+  }
+
+  if (type === 'closed') {
+    const correct = String(q.correct_answer ?? '').trim();
+    if (given === correct) return { type, delta: pts, outcome: 'correct' };
+    return { type, delta: -pen, outcome: 'wrong' };
+  }
+
+  if (type === 'multiple') {
+    const ca = q.correct_answer;
+    if (normDigits(given) === normDigits(ca)) return { type, delta: pts, outcome: 'correct' };
+    const wrongPicks = countWrongMultipleSelections(given, ca);
+    return { type, delta: -(wrongPicks * pen), outcome: 'wrong' };
+  }
+
+  if (type === 'matching') {
+    const keyStored = String(q.correct_answer ?? '').trim();
+    const g = gradeMatching(given, keyStored, q.options);
+    if (g.status === 'correct') return { type, delta: pts, outcome: 'correct' };
+    if (g.status === 'incorrect') return { type, delta: 0, outcome: 'wrong' };
+    return { type, delta: 0, outcome: 'pending' };
+  }
+
+  if (type === 'open') {
+    const key = openAutoKey(q);
+    if (key == null) return { type, delta: 0, outcome: given ? 'pending' : 'unanswered' };
+    const gn = parseAzNumber(given);
+    if (gn == null) return { type, delta: 0, outcome: 'wrong' };
+    const ok = Math.abs(gn - key) < 1e-9;
+    if (ok) return { type, delta: pts, outcome: 'correct' };
+    return { type, delta: 0, outcome: 'wrong' };
+  }
+
+  return { type, delta: 0, outcome: 'unanswered' };
+}
+
+/**
+ * Avtomatik bal: qapalı + çoxseçimli (səhvə cərimə, imtahan bayrağına görə), uyğunluq, açıq.
+ */
+const calculateScore = (questions, answers, opts = {}) => {
+  const wrongPenaltyEnabled = opts.wrongPenaltyEnabled !== false;
   let earned = 0;
-  const scored = (questions || []).filter((q) =>
-    ['closed', 'multiple', 'matching', 'open'].includes(inferQuestionType(q))
-  );
+  const scored = (questions || []).filter((q) => TYPE_KEYS.includes(inferQuestionType(q)));
 
   for (const q of scored) {
-    const type = inferQuestionType(q);
-    const given =
-      answers[q.id] != null && answers[q.id] !== '' ? String(answers[q.id]).trim() : '';
-    if (!given) continue;
-
-    if (type === 'closed') {
-      const correct = String(q.correct_answer ?? '').trim();
-      const pts = Number(q.points || 0);
-      if (given === correct) earned += pts;
-      else earned -= closedWrongFlatPenaltyMagnitude(q);
-    } else if (type === 'multiple') {
-      if (normDigits(given) === normDigits(q.correct_answer)) earned += Number(q.points || 0);
-    } else if (type === 'matching') {
-      const keyStored = String(q.correct_answer ?? '').trim();
-      const g = gradeMatching(given, keyStored, q.options);
-      if (g.status === 'correct') earned += Number(q.points || 0);
-    } else if (type === 'open') {
-      const key = openAutoKey(q);
-      if (key == null) continue;
-      const gn = parseAzNumber(given);
-      if (gn == null) continue;
-      const ok = Math.abs(gn - key) < 1e-9;
-      if (ok) earned += Number(q.points || 0);
-    }
+    const r = scoreQuestionForAuto(q, answers, wrongPenaltyEnabled);
+    earned += r.delta;
   }
 
   earned = Math.max(0, earned);
   return Math.round(earned * 100) / 100;
+};
+
+/**
+ * Sual tipinə görə düzgün/səhv/cavabsız/yoxlanılır sayları və həmin tiplərdən toplanan avtomatik bal.
+ */
+const buildExamTypeSummary = (questions, answers, opts = {}) => {
+  const wrongPenaltyEnabled = opts.wrongPenaltyEnabled !== false;
+  const byType = Object.fromEntries(TYPE_KEYS.map((k) => [k, emptyTypeAgg()]));
+  const scored = (questions || []).filter((q) => TYPE_KEYS.includes(inferQuestionType(q)));
+
+  let rawSum = 0;
+  for (const q of scored) {
+    const r = scoreQuestionForAuto(q, answers, wrongPenaltyEnabled);
+    rawSum += r.delta;
+    const bucket = byType[r.type];
+    if (r.outcome === 'correct') bucket.correct += 1;
+    else if (r.outcome === 'wrong') bucket.wrong += 1;
+    else if (r.outcome === 'pending') bucket.pending += 1;
+    else bucket.unanswered += 1;
+    bucket.points += r.delta;
+  }
+
+  const total = Math.max(0, Math.round(rawSum * 100) / 100);
+  for (const k of TYPE_KEYS) {
+    byType[k].points = Math.round(byType[k].points * 100) / 100;
+  }
+
+  return {
+    by_type: byType,
+    score: total,
+    raw_sum: Math.round(rawSum * 100) / 100,
+  };
 };
 
 /**
@@ -402,6 +476,7 @@ const notifyParentExamResultAfterSubmit = async (examId, studentId, score) => {
 
 module.exports = {
   calculateScore,
+  buildExamTypeSummary,
   buildExamResultBreakdown,
   buildAutoGradingMap,
   rankResults,

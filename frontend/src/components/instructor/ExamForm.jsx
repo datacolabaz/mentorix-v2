@@ -45,6 +45,8 @@ export default function ExamForm({ students, studentsLoading = false, onCreated 
     allow_finish_after_until: true,
     notify_students: false,
     show_results: true,
+    /** Qapalı + çoxseçimli üçün -0.25 cərimə (imtahan səviyyəsi) */
+    wrong_penalty_enabled: true,
     student_ids: [],
   })
 
@@ -144,6 +146,7 @@ export default function ExamForm({ students, studentsLoading = false, onCreated 
         student_ids: meta.student_ids,
         notify_students: meta.notify_students,
         show_results: meta.show_results,
+        wrong_penalty_enabled: meta.wrong_penalty_enabled !== false,
         allow_finish_after_until: meta.allow_finish_after_until,
         pdf_url: exam_files[0]?.url || null,
         exam_files,
@@ -156,7 +159,12 @@ export default function ExamForm({ students, studentsLoading = false, onCreated 
           question_type: q.question_type,
           points: q.points,
           order_num: q.order_num,
-          negative_marking: q.question_type === 'closed' ? -0.25 : 0,
+          negative_marking:
+            q.question_type === 'closed' || q.question_type === 'multiple'
+              ? meta.wrong_penalty_enabled !== false
+                ? -0.25
+                : 0
+              : 0,
           options: q.question_type === 'closed'
             ? q.options.map((o, j) => ({
                 key: String.fromCharCode(65 + j),
@@ -333,6 +341,20 @@ export default function ExamForm({ students, studentsLoading = false, onCreated 
                 onChange={e => setMeta(p => ({ ...p, show_results: e.target.checked }))}
                 className="w-4 h-4 accent-blue-500" />
             </div>
+            <div className="flex items-start justify-between gap-3 pt-2 border-t border-indigo-500/15">
+              <div>
+                <p className="text-sm font-semibold">Səhv düzü aparsın (0.25 cərimə)</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Qapalı və çoxseçimli suallarda səhvə görə bal çıxılır. Söndürsəniz, imtahan cəriməsiz olacaq.
+                </p>
+              </div>
+              <input
+                type="checkbox"
+                checked={meta.wrong_penalty_enabled !== false}
+                onChange={(e) => setMeta((p) => ({ ...p, wrong_penalty_enabled: e.target.checked }))}
+                className="w-4 h-4 accent-blue-500 shrink-0 mt-1"
+              />
+            </div>
           </div>
  
           <Button onClick={() => setStep(2)} className="w-full justify-center">Novbeti → Suallar</Button>
@@ -367,8 +389,11 @@ export default function ExamForm({ students, studentsLoading = false, onCreated 
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-bold text-indigo-300">{idx + 1}. {TYPES[q.question_type]}</span>
-                    {q.question_type === 'closed' && (
-                      <span className="text-xs text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded-lg">-0.25 menfi</span>
+                    {(q.question_type === 'closed' || q.question_type === 'multiple') &&
+                      meta.wrong_penalty_enabled !== false && (
+                      <span className="text-xs text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded-lg">
+                        0.25 cərimə
+                      </span>
                     )}
                   </div>
                   <div className="flex items-center gap-2">

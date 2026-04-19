@@ -140,6 +140,7 @@ export default function InstructorExams() {
         duration_minutes: editExam.duration_minutes,
         notify_students: editExam.notify_students,
         show_results: editExam.show_results,
+        wrong_penalty_enabled: editExam.wrong_penalty_enabled !== false,
         pdf_url: exam_files[0]?.url || null,
         exam_files,
         student_ids: editStudentIds,
@@ -509,6 +510,20 @@ export default function InstructorExams() {
                 <input type="checkbox" checked={editExam.show_results || false}
                   onChange={e => setEditExam(p => ({ ...p, show_results: e.target.checked }))}
                   className="w-4 h-4 accent-blue-500" />
+              </div>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <span className="text-sm font-semibold">Səhv düzü aparsın (0.25 cərimə)</span>
+                  <p className="text-xs text-gray-500 mt-1 max-w-[min(100%,280px)]">
+                    Qapalı və çoxseçimli suallar üçün cərimə. Söndürsəniz, bu imtahan üçün cərimə hesablanmır.
+                  </p>
+                </div>
+                <input
+                  type="checkbox"
+                  className="w-4 h-4 accent-blue-500 shrink-0 mt-1"
+                  checked={editExam.wrong_penalty_enabled !== false}
+                  onChange={(e) => setEditExam((p) => ({ ...p, wrong_penalty_enabled: e.target.checked }))}
+                />
               </div>
             </div>
 
