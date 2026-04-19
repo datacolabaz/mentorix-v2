@@ -127,6 +127,13 @@ export default function StudentExams() {
   const { setFocusMode } = useUiStore()
   const { user } = useAuthStore()
 
+  /** Davam / yenidən yükləmə: materiallar paneli açılsın (sıfır enində PNG iframe/img sıradan çıxmasın) */
+  useEffect(() => {
+    if (activeExam && normalizeExamFiles(activeExam).length > 0) {
+      setMaterialsOpen(true)
+    }
+  }, [activeExam?.id, startedAt])
+
   /** quiet: arxa plan yeniləməsində tam səhifə “yüklənir” göstərmə */
   const loadExams = useCallback((quiet = false) => {
     if (!quiet) setListLoading(true)
@@ -323,12 +330,12 @@ export default function StudentExams() {
           {materials.length > 0 && (
             <aside
               className={
-                'shrink-0 bg-[#0f0c29]/80 flex flex-col min-h-0 min-w-0 border-indigo-500/20 transition-[max-height,width,opacity,padding] duration-300 ease-in-out ' +
+                'shrink-0 bg-[#0f0c29]/80 min-h-0 min-w-0 border-indigo-500/20 transition-[max-height,opacity] duration-300 ease-in-out ' +
                 (materialsOpen
-                  ? 'max-h-[42vh] lg:max-h-none w-full lg:w-[min(48%,560px)] lg:min-w-[280px] lg:max-w-[min(48%,560px)] border-b lg:border-b-0 lg:border-r opacity-100'
-                  : 'max-h-0 lg:max-h-none w-full lg:w-0 lg:min-w-0 lg:max-w-0 border-0 opacity-0 overflow-hidden pointer-events-none lg:py-0')
+                  ? 'flex flex-col max-h-[42vh] lg:max-h-none w-full lg:w-[min(48%,560px)] lg:min-w-[280px] lg:max-w-[min(48%,560px)] border-b lg:border-b-0 lg:border-r border-indigo-500/20 overflow-hidden'
+                  : 'hidden lg:flex lg:flex-col lg:max-h-none w-full lg:w-[min(48%,560px)] lg:min-w-[280px] lg:max-w-[min(48%,560px)] lg:border-r border-indigo-500/20 overflow-hidden')
               }
-              aria-hidden={!materialsOpen}
+              aria-hidden={false}
             >
               <div className="flex items-center justify-between gap-2 px-4 pt-3 pb-2 shrink-0 border-b border-indigo-500/15">
                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider truncate">
@@ -337,7 +344,7 @@ export default function StudentExams() {
                 <button
                   type="button"
                   onClick={() => setMaterialsOpen(false)}
-                  className="hidden lg:inline-flex shrink-0 text-xs font-semibold text-blue-400 hover:text-blue-300 px-2 py-1 rounded-lg border border-indigo-500/30 hover:bg-white/5"
+                  className="inline-flex lg:hidden shrink-0 text-xs font-semibold text-blue-400 hover:text-blue-300 px-2 py-1 rounded-lg border border-indigo-500/30 hover:bg-white/5"
                 >
                   ← Gizlət
                 </button>
@@ -364,9 +371,13 @@ export default function StudentExams() {
                           />
                         ) : (
                           <img
+                            key={`${m.id}-${startedAt || ''}`}
                             src={materialUrl}
                             alt={m.name}
-                            className="w-full h-full max-h-[min(38vh,420px)] lg:max-h-[calc(100vh-240px)] object-contain object-top bg-black/30"
+                            loading="eager"
+                            decoding="async"
+                            referrerPolicy="no-referrer"
+                            className="w-full h-full max-h-[min(38vh,420px)] lg:max-h-[calc(100vh-240px)] object-contain object-top bg-black/30 min-w-[120px] min-h-[120px]"
                           />
                         )}
                       </div>
@@ -382,7 +393,7 @@ export default function StudentExams() {
               type="button"
               aria-label="Materialları aç"
               onClick={() => setMaterialsOpen(true)}
-              className="hidden lg:flex shrink-0 w-11 flex-col items-center justify-center gap-1 border-r border-indigo-500/20 bg-[#13112e] hover:bg-[#1a1740] text-blue-400 text-[11px] font-bold py-6 transition-colors"
+              className="flex lg:hidden shrink-0 w-11 flex-col items-center justify-center gap-1 border-r border-indigo-500/20 bg-[#13112e] hover:bg-[#1a1740] text-blue-400 text-[11px] font-bold py-6 transition-colors"
             >
               <span className="text-base leading-none" aria-hidden>▶</span>
               <span className="[writing-mode:vertical-rl] rotate-180 uppercase tracking-widest">PDF</span>
