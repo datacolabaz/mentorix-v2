@@ -37,6 +37,28 @@ function parseJsonMaybe(value, fallback) {
   return fallback;
 }
 
+/** patchExam COALESCE: boş sətir / səhv tip PG int–varchar xətası verməsin */
+function patchCoalesceStr(v, maxLen) {
+  if (v == null) return null;
+  const s = String(v).trim();
+  if (!s) return null;
+  return s.slice(0, maxLen);
+}
+
+function patchCoalesceInt(v) {
+  if (v == null || v === '') return null;
+  const n = parseInt(String(v), 10);
+  return Number.isFinite(n) ? n : null;
+}
+
+function patchCoalesceBool(v) {
+  if (v == null || v === '') return null;
+  if (typeof v === 'boolean') return v;
+  if (v === 1 || v === '1' || v === 'true' || v === 'TRUE') return true;
+  if (v === 0 || v === '0' || v === 'false' || v === 'FALSE') return false;
+  return null;
+}
+
 /** Uyğunluq: explicit `correct_answer` və ya sol/sağ cütlərdən açar; `template_hint` heç vaxt düzgün cavab sayılmır */
 function buildMatchingCorrectFromPayload(q) {
   const explicit = String(q.correct_answer ?? '').trim();
@@ -1046,6 +1068,12 @@ const patchExam = async (req, res) => {
         notify_students === '1'
       : undefined;
 
+    const titleNorm = patchCoalesceStr(title, 255);
+    const subjectNorm = patchCoalesceStr(subject, 255);
+    const topicNorm = patchCoalesceStr(topic, 255);
+    const durationNorm = patchCoalesceInt(duration_minutes);
+    const showResultsNorm = patchCoalesceBool(show_results);
+
     const { rows: [before] } = await db.query(
       'SELECT id, instructor_id, pdf_url, exam_files FROM exams WHERE id = $1',
       [examId]
@@ -1091,9 +1119,9 @@ const patchExam = async (req, res) => {
         idx += 1;
       };
 
-      add('title = COALESCE(__IDX__, title)', title);
-      add('subject = COALESCE(__IDX__, subject)', subject);
-      add('topic = COALESCE(__IDX__, topic)', topic);
+      add('title = COALESCE(__IDX__, title)', titleNorm);
+      add('subject = COALESCE(__IDX__, subject)', subjectNorm);
+      add('topic = COALESCE(__IDX__, topic)', topicNorm);
       add('start_time = COALESCE(__IDX__, start_time)', startNorm);
       add(
         'available_from = CASE WHEN __IDX__::timestamptz IS NULL THEN available_from ELSE __IDX__::timestamptz END',
@@ -1106,12 +1134,12 @@ const patchExam = async (req, res) => {
       if (allowFinishProvided) {
         add('allow_finish_after_until = __IDX__::boolean', allowFinishNext);
       }
-      add('duration_minutes = COALESCE(__IDX__, duration_minutes)', duration_minutes);
+      add('duration_minutes = COALESCE(__IDX__, duration_minutes)', durationNorm);
       if (notifyProvided) {
         add('notify_enabled = __IDX__::boolean', notifyOn);
         add('notify_students = __IDX__::boolean', notifyOn);
       }
-      add('show_results = COALESCE(__IDX__, show_results)', show_results);
+      add('show_results = COALESCE(__IDX__, show_results)', showResultsNorm);
       add(
         'exam_files = CASE WHEN __IDX__::text IS NULL THEN exam_files ELSE __IDX__::jsonb END',
         filesProvided ? nextFilesJson : null
