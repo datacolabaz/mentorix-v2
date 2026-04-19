@@ -92,17 +92,20 @@ function serializeEditQuestion(eq) {
       .join('')
   }
   if (type === 'closed' && correct) correct = correct.toUpperCase().slice(0, 1)
-  return {
+
+  const base = {
     id: eq.id,
     question_text: String(eq.question_text ?? '').trim() || 'Sual',
     question_type: type,
     points: eq.points,
     options,
-    correct_answer: correct || null,
     template_hint: eq.template_hint,
     negative_marking: eq.negative_marking,
     order_num: eq.order_num,
   }
+  /** Boşdursa açarı göndərmə — PATCH köhnə `correct_answer`-ı saxlasın (təsadüfi silinməsin). */
+  if (correct) base.correct_answer = correct
+  return base
 }
 
 const EDIT_TYPE_AZ = {
@@ -751,17 +754,31 @@ export default function InstructorExams() {
                         {t === 'closed' && (
                           <div className="space-y-1.5">
                             <label className="text-[11px] text-gray-500">Düzgün cavab (A–E)</label>
-                            <input
-                              className={inp}
-                              maxLength={1}
-                              value={String(q.correct_answer ?? '').toUpperCase().slice(0, 1)}
+                            <select
+                              className={inp + ' cursor-pointer'}
+                              value={(() => {
+                                const c = String(q.correct_answer ?? '')
+                                  .toUpperCase()
+                                  .replace(/[^A-E]/g, '')
+                                  .slice(0, 1)
+                                return ['A', 'B', 'C', 'D', 'E'].includes(c) ? c : ''
+                              })()}
                               onChange={(e) =>
                                 patchEditQuestion(idx, {
-                                  correct_answer: e.target.value.toUpperCase().replace(/[^A-E]/g, '').slice(0, 1),
+                                  correct_answer: e.target.value || '',
                                 })
                               }
-                              placeholder="A"
-                            />
+                            >
+                              <option value="">— Seçilməyib (dəyişməz / təyin et) —</option>
+                              {['A', 'B', 'C', 'D', 'E'].map((letter) => (
+                                <option key={letter} value={letter}>
+                                  {letter}
+                                </option>
+                              ))}
+                            </select>
+                            <p className="text-[10px] text-gray-600 leading-snug">
+                              Yalnız hərf seçəndə serverə düzgün cavab yazılır; boş saxlasanız əvvəlki dəyər silinmir.
+                            </p>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                               {(q._closedTexts || ['', '', '', '', '']).map((txt, oi) => (
                                 <label key={oi} className="block text-[11px] text-gray-500">
