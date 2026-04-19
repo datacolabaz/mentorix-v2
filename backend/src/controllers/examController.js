@@ -952,7 +952,7 @@ const getResults = async (req, res) => {
            SELECT en.group_id
            FROM enrollments en
            WHERE en.student_id = er.student_id AND en.instructor_id = e.instructor_id
-           ORDER BY en.id DESC
+           ORDER BY (en.group_id IS NOT NULL) DESC, en.id DESC
            LIMIT 1
          ) en ON true
          LEFT JOIN instructor_groups ig ON ig.id = en.group_id
@@ -1039,23 +1039,57 @@ const getExamGroups = async (req, res) => {
     }
 
     const { rows } = await db.query(
-      `SELECT COALESCE(ig.name, NULLIF(TRIM(sp.grade), ''), '—') AS grade,
-              COUNT(DISTINCT er.student_id)::int AS taken
-       FROM exam_results er
-       JOIN exams e ON e.id = er.exam_id
-       JOIN users u ON u.id = er.student_id
-       LEFT JOIN student_profiles sp ON sp.user_id = u.id
-       LEFT JOIN LATERAL (
-         SELECT en.group_id
-         FROM enrollments en
-         WHERE en.student_id = er.student_id AND en.instructor_id = e.instructor_id
-         ORDER BY en.id DESC
-         LIMIT 1
-       ) en ON true
-       LEFT JOIN instructor_groups ig ON ig.id = en.group_id
-       WHERE er.exam_id = $1 AND er.submitted_at IS NOT NULL
-       GROUP BY COALESCE(ig.name, NULLIF(TRIM(sp.grade), ''), '—')
-       ORDER BY 1`,
+      `WITH em AS (
+         SELECT id AS exam_id, instructor_id FROM exams WHERE id = $1::uuid
+       ),
+       stu AS (
+         SELECT DISTINCT student_id FROM exam_assignments WHERE exam_id = $1::uuid
+         UNION
+         SELECT DISTINCT student_id FROM exam_results
+         WHERE exam_id = $1::uuid AND submitted_at IS NOT NULL
+       ),
+       labeled AS (
+         SELECT s.student_id,
+                COALESCE(ig.name, NULLIF(TRIM(sp.grade), ''), '—') AS grade
+         FROM stu s
+         CROSS JOIN em
+         LEFT JOIN student_profiles sp ON sp.user_id = s.student_id
+         LEFT JOIN LATERAL (
+           SELECT en.group_id
+           FROM enrollments en
+           WHERE en.student_id = s.student_id AND en.instructor_id = em.instructor_id
+           ORDER BY (en.group_id IS NOT NULL) DESC, en.id DESC
+           LIMIT 1
+         ) en ON true
+         LEFT JOIN instructor_groups ig ON ig.id = en.group_id
+       ),
+       subm AS (
+         SELECT DISTINCT student_id FROM exam_results
+         WHERE exam_id = $1::uuid AND submitted_at IS NOT NULL
+       ),
+       agg AS (
+         SELECT l.grade,
+                COUNT(DISTINCT CASE WHEN l.student_id IN (SELECT student_id FROM subm) THEN l.student_id END)::int AS taken
+         FROM labeled l
+         GROUP BY l.grade
+       ),
+       extras AS (
+         SELECT ig.name AS grade, 0 AS taken
+         FROM em
+         JOIN exams e ON e.id = em.exam_id
+         JOIN instructor_subjects ist ON ist.instructor_id = e.instructor_id
+           AND TRIM(COALESCE(e.subject, '')) <> ''
+           AND LOWER(TRIM(ist.name)) = LOWER(TRIM(e.subject))
+         JOIN instructor_groups ig ON ig.subject_id = ist.id
+       )
+       SELECT x.grade, SUM(x.taken)::int AS taken
+       FROM (
+         SELECT * FROM agg
+         UNION ALL
+         SELECT * FROM extras
+       ) x
+       GROUP BY x.grade
+       ORDER BY x.grade`,
       [examId]
     );
     res.json({ success: true, groups: rows });
@@ -1098,7 +1132,7 @@ const getExamTop10 = async (req, res) => {
          SELECT en.group_id
          FROM enrollments en
          WHERE en.student_id = er.student_id AND en.instructor_id = e.instructor_id
-         ORDER BY en.id DESC
+         ORDER BY (en.group_id IS NOT NULL) DESC, en.id DESC
          LIMIT 1
        ) en ON true
        LEFT JOIN instructor_groups ig ON ig.id = en.group_id
