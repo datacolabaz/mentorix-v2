@@ -7,6 +7,18 @@ const { checkSmsQuota } = require('../services/smsQuotaService');
 const PHONE_NORM = "regexp_replace(COALESCE(phone::text, ''), '[^0-9]', '', 'g')";
 const LOGIN_ROLES = new Set(['instructor', 'student', 'parent']);
 
+async function attachInstructorPublicLabel(userLite) {
+  if (!userLite || userLite.role !== 'instructor') return userLite;
+  const { rows } = await db.query(
+    `SELECT COALESCE(NULLIF(TRIM(public_label), ''), 'instructor') AS public_label
+     FROM instructor_profiles WHERE user_id = $1`,
+    [userLite.id]
+  );
+  const raw = String(rows[0]?.public_label || 'instructor').toLowerCase();
+  const public_label = raw === 'trainer' ? 'trainer' : 'instructor';
+  return { ...userLite, public_label };
+}
+
 function normalizePhone(phone) {
   return (phone || '').replace(/\D/g, '');
 }
@@ -352,10 +364,12 @@ const verifyOtp = async (req, res) => {
     const pinReady = hasStoredPin(afterPin[0]?.pin_hash);
 
     const token = signOTP({ id: user.id, role: user.role });
+    const baseUser = { id: user.id, full_name: user.full_name, role: user.role, phone: user.phone };
+    const userOut = user.role === 'instructor' ? await attachInstructorPublicLabel(baseUser) : baseUser;
     res.json({
       success: true,
       token,
-      user: { id: user.id, full_name: user.full_name, role: user.role, phone: user.phone },
+      user: userOut,
       needs_pin_setup: !pinReady,
       pin_was_reset: isForgotReset,
     });
@@ -525,7 +539,10 @@ const me = async (req, res) => {
     const { rows } = await db.query('SELECT id, full_name, email, phone, role FROM users WHERE id = $1', [
       req.user.id,
     ]);
-    res.json({ success: true, user: rows[0] });
+    const u = rows[0];
+    if (!u) return res.status(404).json({ success: false, message: 'Tapılmadı' });
+    const userOut = u.role === 'instructor' ? await attachInstructorPublicLabel(u) : u;
+    res.json({ success: true, user: userOut });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -573,10 +590,12 @@ const loginWithPin = async (req, res) => {
     if (!valid) return res.status(401).json({ success: false, message: 'PIN yanlışdır' });
     await db.query('UPDATE users SET phone_verified = TRUE WHERE id = $1', [user.id]);
     const token = signOTP({ id: user.id, role: user.role });
+    const baseUser = { id: user.id, full_name: user.full_name, role: user.role, phone: user.phone };
+    const userOut = user.role === 'instructor' ? await attachInstructorPublicLabel(baseUser) : baseUser;
     res.json({
       success: true,
       token,
-      user: { id: user.id, full_name: user.full_name, role: user.role, phone: user.phone },
+      user: userOut,
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

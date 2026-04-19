@@ -3,6 +3,7 @@ import { format, isValid, parseISO } from 'date-fns'
 import api from '../../lib/api'
 import Card from '../../components/common/Card'
 import useAuthStore from '../../hooks/useAuth'
+import { instructorRoleAz, instructorYourForm } from '../../lib/instructorLabel'
 
 const BILLING = {
   '8_lessons': '8 dərs paketi',
@@ -119,6 +120,7 @@ function enrollmentFromStudentProfile(s) {
     lesson_weekdays: s.lesson_weekdays,
     lesson_times: s.lesson_times,
     instructor_name: s.instructor_name,
+    instructor_public_label: s.instructor_public_label === 'trainer' ? 'trainer' : 'instructor',
     enrolled_at: s.enrolled_at || s.enrollment_started_at || null,
     payment_start_date_for_display: s.enrollment_start_date || null,
     lesson_start_date_for_display: s.enrollment_start_date || null,
@@ -236,12 +238,14 @@ export default function StudentPayments() {
     sub != null && Number.isFinite(Number(sub.pending_debt)) ? Number(sub.pending_debt) : null
   const billingTimingNorm = String(enrollment?.billing_timing || '').toLowerCase().trim()
   const isPrepaidMonthly = isMonthlySub && billingTimingNorm === 'prepaid'
+  const roleNoun = instructorRoleAz(enrollment?.instructor_public_label)
+  const roleYour = instructorYourForm(enrollment?.instructor_public_label)
 
   return (
     <div className="p-4 sm:p-6 max-w-3xl mx-auto w-full min-w-0">
       <h1 className="font-display font-bold text-2xl text-white mb-2">Ödəniş</h1>
       <p className="text-gray-400 text-sm mb-6">
-        Müəlliminiz sizi sistemə əlavə edərkən seçdiyi paket və qeydə alınmış ödənişlər.
+        {roleYour} sizi sistemə əlavə edərkən seçdiyi paket və qeydə alınmış ödənişlər.
       </p>
 
       {!loading && loadError && (
@@ -275,7 +279,7 @@ export default function StudentPayments() {
                 ) : null}
               </p>
               {isPrepaidMonthly ? (
-                <p className="text-xs text-indigo-200/90 mb-2">Qeydiyyat: ay məbləği əvvəlcədən ödənilir (müəllim tərəfindən).</p>
+                <p className="text-xs text-indigo-200/90 mb-2">Qeydiyyat: ay məbləği əvvəlcədən ödənilir.</p>
               ) : null}
               <p className="text-xs text-gray-500 mb-2">
                 Borc hər ayın eyni təqvim günündə (başlama tarixinə görə) sabit aylıq məbləğ ilə yaranır; dərs sayı və
@@ -295,7 +299,9 @@ export default function StudentPayments() {
                   </span>
                 ) : null}
               </p>
-              <p className="text-xs text-gray-500 mb-3">Müəllim: {enrollment?.instructor_name || '—'}</p>
+              <p className="text-xs text-gray-500 mb-3">
+                {roleNoun}: {enrollment?.instructor_name || '—'}
+              </p>
               {isPrepaidMonthly ? (
                 <button
                   type="button"
@@ -349,7 +355,7 @@ export default function StudentPayments() {
                   </div>
                 </Card>
                 <Card className="p-5">
-                  <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Müəllim</div>
+                  <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">{roleNoun}</div>
                   <div className="font-display font-bold text-xl text-yellow-400">{enrollment?.instructor_name || '—'}</div>
                 </Card>
               </div>
@@ -369,7 +375,7 @@ export default function StudentPayments() {
                 {enrollment ? (
                   <ul className="text-sm text-gray-300 space-y-2">
                     <li>
-                      <span className="text-gray-500">Müəllim: </span>
+                      <span className="text-gray-500">{roleNoun}: </span>
                       {enrollment.instructor_name || '—'}
                     </li>
                     <li>
@@ -429,13 +435,13 @@ export default function StudentPayments() {
           {enrollment?.pre_system_enrollment && (
             <div className="rounded-xl border border-sky-500/30 bg-sky-500/10 text-sky-100 text-sm px-4 py-3 mb-4 leading-relaxed">
               Bu tələbə sistemin aktivləşdirilməsindən öncə qeydiyyatdan keçmişdir. Ödəniş tarixçəsi sistemdə qeydə
-              alınan əməliyyatları göstərir; keçmiş dövr üçün müəlliminiz əlavə qeyd edə bilər.
+              alınan əməliyyatları göstərir; keçmiş dövr üçün {roleYour.toLowerCase()} əlavə qeyd edə bilər.
             </div>
           )}
           {enrollment && (
             <div className="rounded-xl bg-[#1a1740] border border-indigo-500/20 p-3 text-sm text-gray-300 mb-4">
               <p>
-                <span className="text-gray-500">Paket (müəllim seçimi):</span>{' '}
+                <span className="text-gray-500">Paket ({roleNoun.toLowerCase()} seçimi):</span>{' '}
                 <span className="text-white font-medium">
                   {BILLING[enrollment.billing_type] || enrollment.billing_type || '—'}
                 </span>
@@ -451,7 +457,7 @@ export default function StudentPayments() {
 
           {!payments.length ? (
             <p className="text-gray-500 text-sm py-2">
-              Hələ ödəniş qeydi yoxdur. Müəlliminiz ödəniş əlavə edəndə burada görünəcək.
+              Hələ ödəniş qeydi yoxdur. {roleYour} ödəniş əlavə edəndə burada görünəcək.
             </p>
           ) : (
             <ul className="space-y-2">

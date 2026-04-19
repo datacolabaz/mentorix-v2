@@ -137,6 +137,16 @@ export default function InstructorPayments() {
     setQuickOpen(true)
   }
 
+  const quickPartialUnderpay = useMemo(() => {
+    if (!quickRow || quickRow.billing_type !== 'monthly' || quickRow.payment_plan !== 'partial') return false
+    const mf = Number(quickRow.monthly_fee)
+    if (!Number.isFinite(mf) || mf <= 0) return false
+    return quickLines.some((ln) => {
+      const a = Number(ln.amount)
+      return Number.isFinite(a) && a > 0 && a + 0.005 < mf
+    })
+  }, [quickRow, quickLines])
+
   const quickPreview = useMemo(() => {
     if (!quickRow || quickRow.billing_type !== 'monthly') return null
     const mf = Number(quickRow.monthly_fee)
@@ -157,7 +167,7 @@ export default function InstructorPayments() {
     })
   }, [quickRow, quickLines, todayBaku])
 
-  const submitQuickPay = async () => {
+  const submitQuickPay = async (keepOpen = false) => {
     if (!quickRow?.enrollment_id) return
     const payload = []
     for (const ln of quickLines) {
@@ -189,9 +199,13 @@ export default function InstructorPayments() {
         })
       }
       toast(payload.length > 1 ? `${payload.length} ödəniş qeydə alındı` : 'Ödəniş qeydə alındı')
-      setQuickOpen(false)
-      setQuickRow(null)
-      setQuickLines([])
+      if (!keepOpen) {
+        setQuickOpen(false)
+        setQuickRow(null)
+        setQuickLines([])
+      } else {
+        setQuickLines([newQuickLine()])
+      }
       await load()
     } catch (e) {
       toast(e?.message || 'Xəta', 'error')
@@ -306,19 +320,21 @@ export default function InstructorPayments() {
 
         {!loading && !err && (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[900px] table-fixed">
+            <table className="w-full text-sm min-w-[1020px] table-fixed">
               <colgroup>
-                <col className="w-[22%]" />
-                <col className="w-[11%]" />
+                <col className="w-[18%]" />
+                <col className="w-[14%]" />
+                <col className="w-[10%]" />
+                <col className="w-[8%]" />
                 <col className="w-[9%]" />
                 <col className="w-[10%]" />
-                <col className="w-[11%]" />
-                <col className="w-[11%]" />
-                <col className="w-[26%]" />
+                <col className="w-[10%]" />
+                <col className="w-[21%]" />
               </colgroup>
               <thead>
                 <tr className="border-b border-indigo-500/25 text-left text-[11px] uppercase tracking-wider text-indigo-300/70 bg-[#0f0c29]/90">
                   <th className="py-3 px-3 font-semibold">Tələbə</th>
+                  <th className="py-3 px-3 font-semibold whitespace-nowrap">Sahə</th>
                   <th className="py-3 px-3 font-semibold whitespace-nowrap">Başlama</th>
                   <th className="py-3 px-3 font-semibold whitespace-nowrap">Sxem</th>
                   <th className="py-3 px-3 font-semibold text-right whitespace-nowrap">Aylıq</th>
@@ -346,6 +362,14 @@ export default function InstructorPayments() {
                         <div className="font-mono text-[11px] text-gray-500 tabular-nums truncate mt-0.5">
                           {s.phone || '—'}
                         </div>
+                      </td>
+                      <td className="py-3 px-3 text-xs text-gray-300 min-w-0">
+                        <div className="text-white/90 truncate" title={s.track_subject_name || ''}>
+                          {s.track_subject_name || '—'}
+                        </div>
+                        {s.track_group_name ? (
+                          <div className="text-[10px] text-gray-500 truncate mt-0.5">{s.track_group_name}</div>
+                        ) : null}
                       </td>
                       <td className="py-3 px-3 text-xs text-gray-300 whitespace-nowrap">
                         <span className="font-mono tabular-nums text-white/90">
@@ -518,6 +542,13 @@ export default function InstructorPayments() {
               təqvimi üzrə ankorla hesablanır — aşağıda önizləmə canlı yenilənir.
             </p>
 
+            {quickPartialUnderpay && quickPreview ? (
+              <p className="text-xs text-rose-200/95 font-medium rounded-xl border border-rose-500/30 bg-rose-950/25 px-3 py-2">
+                Hissəli ödəniş planı: bəzi sətirlərdə məbləğ aylıq məbləğdən azdır — qalıq borc aşağıda qırmızı ilə
+                göstərilir; tam ödənişədək ödənişlər əlavə edin.
+              </p>
+            ) : null}
+
             {quickPreview && (
               <div className="rounded-xl border border-indigo-500/25 bg-[#0f0c29]/80 px-3 py-2.5 grid grid-cols-2 gap-x-3 gap-y-1 text-xs tabular-nums">
                 <span className="text-gray-500">Cari balans (ödənişdən sonra)</span>
@@ -616,14 +647,23 @@ export default function InstructorPayments() {
               disabled={!!markingId}
               onClick={() => setQuickLines((rows) => [...rows, newQuickLine()])}
             >
-              + Daha bir ödəniş əlavə et
+              + Daha bir sətir əlavə et
             </Button>
 
-            <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-2">
+            <div className="flex flex-col-reverse sm:flex-row flex-wrap justify-end gap-2 pt-2">
               <Button type="button" variant="secondary" disabled={!!markingId} onClick={() => setQuickOpen(false)}>
                 Ləğv
               </Button>
-              <Button type="button" loading={!!markingId} onClick={() => void submitQuickPay()}>
+              <Button
+                type="button"
+                variant="secondary"
+                loading={!!markingId}
+                disabled={!!markingId}
+                onClick={() => void submitQuickPay(true)}
+              >
+                Yadda saxla və davam et
+              </Button>
+              <Button type="button" loading={!!markingId} onClick={() => void submitQuickPay(false)}>
                 Hamısını yadda saxla
               </Button>
             </div>

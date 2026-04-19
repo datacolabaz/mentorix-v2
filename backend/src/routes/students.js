@@ -25,6 +25,53 @@ function normUuid(id) {
   return String(id).trim().toLowerCase().replace(/-/g, '');
 }
 
+function looksTrackUuid(s) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(s || '').trim());
+}
+
+/** Sahə/qrup FK-ləri yalnız həmin müəllimə aid sətirlərə bağlansın */
+async function resolveEnrollmentTrack(dbConn, instructorId, subjectIdRaw, groupIdRaw) {
+  const ni = normUuid(instructorId);
+  const sidOk = looksTrackUuid(subjectIdRaw);
+  const gidOk = looksTrackUuid(groupIdRaw);
+  if (!sidOk && !gidOk) return { subject_id: null, group_id: null };
+
+  if (gidOk) {
+    const { rows } = await dbConn.query(
+      `SELECT id, subject_id FROM instructor_groups
+       WHERE id = $1 AND REPLACE(LOWER(TRIM(instructor_id::text)), '-', '') = $2`,
+      [groupIdRaw, ni]
+    );
+    if (!rows[0]) {
+      const err = new Error('Qrup tapılmadı və ya sizə aid deyil');
+      err.statusCode = 400;
+      throw err;
+    }
+    const subjectFromGroup = rows[0].subject_id;
+    if (sidOk && normUuid(String(subjectIdRaw)) !== normUuid(String(subjectFromGroup))) {
+      const err = new Error('Qrup seçilmiş sahəyə uyğun deyil');
+      err.statusCode = 400;
+      throw err;
+    }
+    return { subject_id: subjectFromGroup, group_id: rows[0].id };
+  }
+
+  if (sidOk) {
+    const { rows } = await dbConn.query(
+      `SELECT id FROM instructor_subjects
+       WHERE id = $1 AND REPLACE(LOWER(TRIM(instructor_id::text)), '-', '') = $2`,
+      [subjectIdRaw, ni]
+    );
+    if (!rows[0]) {
+      const err = new Error('Sahə tapılmadı və ya sizə aid deyil');
+      err.statusCode = 400;
+      throw err;
+    }
+    return { subject_id: rows[0].id, group_id: null };
+  }
+  return { subject_id: null, group_id: null };
+}
+
 function parseMonthlyFee(v) {
   if (v === undefined || v === null || v === '') return null;
   const n = Number(v);
@@ -174,6 +221,8 @@ router.post('/enroll', authenticate, authorize('instructor', 'admin'), async (re
       teacher_schedule_id,
       lesson_weekdays,
       lesson_times,
+      subject_id,
+      group_id,
     } = req.body;
     const instructor_id = req.user.role === 'admin' ? req.body.instructor_id : req.user.id;
     const ni = normUuid(instructor_id);
@@ -224,10 +273,17 @@ router.post('/enroll', authenticate, authorize('instructor', 'admin'), async (re
     const bt = parseBillingTiming(billing_timing);
     const payPlan = parsePaymentPlan(payment_plan);
 
+    let trackIds = { subject_id: null, group_id: null };
+    try {
+      trackIds = await resolveEnrollmentTrack(db, instructor_id, subject_id, group_id);
+    } catch (e) {
+      return res.status(e.statusCode || 400).json({ success: false, message: e.message });
+    }
+
     const enrollment = await db.transaction(async (client) => {
       const { rows } = await client.query(
-        `INSERT INTO enrollments (instructor_id, student_id, billing_type, referral_notes, referral_source_id, lesson_weekdays, lesson_times, enrollment_start_date, billing_timing, payment_plan)
-         VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb,$8::date,$9,$10) RETURNING *`,
+        `INSERT INTO enrollments (instructor_id, student_id, billing_type, referral_notes, referral_source_id, lesson_weekdays, lesson_times, enrollment_start_date, billing_timing, payment_plan, subject_id, group_id)
+         VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb,$8::date,$9,$10,$11,$12) RETURNING *`,
         [
           instructor_id,
           student_id,
@@ -239,6 +295,8 @@ router.post('/enroll', authenticate, authorize('instructor', 'admin'), async (re
           enrollmentYmd,
           bt,
           payPlan,
+          trackIds.subject_id,
+          trackIds.group_id,
         ]
       );
       const enr = rows[0];
@@ -391,6 +449,8 @@ router.patch('/enrollment/:enrollmentId', authenticate, authorize('admin', 'inst
       payment_plan,
       lesson_weekdays,
       lesson_times,
+      subject_id,
+      group_id,
     } = req.body;
     const { enrollmentId } = req.params;
 
@@ -491,6 +551,28 @@ router.patch('/enrollment/:enrollmentId', authenticate, authorize('admin', 'inst
         parsePaymentPlan(payment_plan),
         enrollmentId,
       ]);
+    }
+
+    const hasTrackSub = Object.prototype.hasOwnProperty.call(req.body, 'subject_id');
+    const hasTrackGrp = Object.prototype.hasOwnProperty.call(req.body, 'group_id');
+    if (hasTrackSub || hasTrackGrp) {
+      const { rows: curTrack } = await db.query(
+        'SELECT subject_id, group_id, instructor_id FROM enrollments WHERE id = $1',
+        [enrollmentId]
+      );
+      const cur = curTrack[0] || {};
+      const effSub = hasTrackSub ? (subject_id === '' || subject_id == null ? null : subject_id) : cur.subject_id;
+      const effGrp = hasTrackGrp ? (group_id === '' || group_id == null ? null : group_id) : cur.group_id;
+      try {
+        const track = await resolveEnrollmentTrack(db, cur.instructor_id, effSub, effGrp);
+        await db.query('UPDATE enrollments SET subject_id = $1, group_id = $2 WHERE id = $3', [
+          track.subject_id,
+          track.group_id,
+          enrollmentId,
+        ]);
+      } catch (e) {
+        return res.status(e.statusCode || 400).json({ success: false, message: e.message });
+      }
     }
 
     res.json({ success: true });

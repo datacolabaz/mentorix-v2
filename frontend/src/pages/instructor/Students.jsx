@@ -31,6 +31,8 @@ const emptyForm = {
   teacher_schedule_id: '',
   parent_name: '',
   parent_phone: '',
+  subject_id: '',
+  group_id: '',
 }
 
 function normalizeWeekdays(raw) {
@@ -109,7 +111,7 @@ const inp =
   'w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500'
 
 /** Komponent fayl səviyyəsində olmalıdır — parent içində təyin etsək hər render yeni tip olur və input fokusunu itirir */
-function StudentFormFields({ data, setData, scheduleMeta, mode, onRefreshSlots, toast }) {
+function StudentFormFields({ data, setData, scheduleMeta, mode, onRefreshSlots, toast, teachingSubjects = [] }) {
   const hint = paymentDateHint(data.enrollment_date)
   return (
     <div className="space-y-3">
@@ -247,10 +249,53 @@ function StudentFormFields({ data, setData, scheduleMeta, mode, onRefreshSlots, 
           </select>
           <p className="text-[10px] text-gray-500 mt-2 leading-relaxed">
             <span className="text-rose-200/90 font-medium">Hissəli</span> seçildikdə ödənilən məbləğ borcdan az olanda qalıq «Ödənişlər»
-            və tarixçədə qırmızı ilə göstərilir.
+            və tarixçədə qırmızı ilə göstərilir. Aylıq məsələn <span className="text-white/90">85 ₼</span>dirsə, tam öncədən ödənişdə 85 ₼
+            gözlənilir; hissəlidə isə hər ödəniş ayrıca qeyd olunur və qalıq borc dərhal hesablanır.
           </p>
         </div>
       </div>
+      {Array.isArray(teachingSubjects) && teachingSubjects.length > 0 && (
+        <div className="rounded-xl border border-indigo-500/20 bg-[#0f0c29]/60 p-3 space-y-3">
+          <p className="text-xs font-semibold text-indigo-200/90 uppercase tracking-wider">Sahə və qrup</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Tədris sahəsi</label>
+              <select
+                className={inp}
+                value={data.subject_id || ''}
+                onChange={(e) => {
+                  const v = e.target.value
+                  setData((p) => ({ ...p, subject_id: v, group_id: '' }))
+                }}
+              >
+                <option value="">— Seçilməyib —</option>
+                {teachingSubjects.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Qrup</label>
+              <select
+                className={inp}
+                value={data.group_id || ''}
+                disabled={!data.subject_id}
+                onChange={(e) => setData((p) => ({ ...p, group_id: e.target.value }))}
+              >
+                <option value="">— Seçilməyib —</option>
+                {(teachingSubjects.find((x) => String(x.id) === String(data.subject_id))?.groups || []).map((g) => (
+                  <option key={g.id} value={g.id}>
+                    {g.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <p className="text-[10px] text-gray-500">Siyahı «Tənzimləmələr» səhifəsindən idarə olunur.</p>
+        </div>
+      )}
       {(mode === 'add' || mode === 'edit') && (
         <div className="rounded-xl border border-indigo-500/20 bg-[#0f0c29]/60 p-3 space-y-2">
           <p className="text-xs font-semibold text-indigo-200/90 uppercase tracking-wider">Dərs vaxtı (slot)</p>
@@ -340,6 +385,7 @@ export default function InstructorStudents() {
   const [lessonsModal, setLessonsModal] = useState(null)
   // Slot cədvəli tələbə qeydiyyatı üçün artıq tələb olunmur (dərslər tarixlərlə avtomatik yaradılır)
   const [enrollMeta] = useState({ loading: false, requiresScheduleSlot: false, availableSlots: [] })
+  const [teachingSubjects, setTeachingSubjects] = useState([])
   const toast = useToast()
 
   const CACHE_KEY = 'instructor_students_v1'
@@ -362,6 +408,13 @@ export default function InstructorStudents() {
       if (!quiet) setListLoading(false)
     }
   }
+  useEffect(() => {
+    void api
+      .get('/instructor/teaching')
+      .then((d) => setTeachingSubjects(Array.isArray(d.subjects) ? d.subjects : []))
+      .catch(() => setTeachingSubjects([]))
+  }, [])
+
   useEffect(() => {
     // 1) Keş varsa dərhal göstər (optimistic UI)
     const cached = readCache(CACHE_KEY, CACHE_TTL_MS)
@@ -419,6 +472,8 @@ export default function InstructorStudents() {
         first_lesson_date: form.first_lesson_date || null,
         billing_timing: form.billing_timing || 'postpaid',
         payment_plan: form.payment_plan || 'full',
+        subject_id: form.subject_id || undefined,
+        group_id: form.group_id || undefined,
         lesson_weekdays: form.lesson_weekdays,
         lesson_times: form.lesson_times || {},
         parent_name: form.parent_name,
@@ -458,6 +513,8 @@ export default function InstructorStudents() {
           : '',
       billing_timing: s.billing_timing === 'prepaid' ? 'prepaid' : 'postpaid',
       payment_plan: s.payment_plan === 'partial' ? 'partial' : 'full',
+      subject_id: s.subject_id ? String(s.subject_id) : '',
+      group_id: s.group_id ? String(s.group_id) : '',
       first_lesson_date: '',
       teacher_schedule_id: '',
       lesson_weekdays: normalizeWeekdays(s.lesson_weekdays),
@@ -496,6 +553,8 @@ export default function InstructorStudents() {
         enrollment_date: editForm.enrollment_date,
         billing_timing: editForm.billing_timing || 'postpaid',
         payment_plan: editForm.payment_plan || 'full',
+        subject_id: editForm.subject_id || null,
+        group_id: editForm.group_id || null,
         lesson_weekdays: editForm.lesson_weekdays,
         lesson_times: editForm.lesson_times || {},
         parent_name: editForm.parent_name,
@@ -601,6 +660,14 @@ export default function InstructorStudents() {
                       </span>
                     )}
                   </div>
+                  {s.track_subject_name ? (
+                    <div className="text-[11px] text-gray-500 mt-1 truncate" title={s.track_group_name || ''}>
+                      Sahə: <span className="text-gray-300">{s.track_subject_name}</span>
+                      {s.track_group_name ? (
+                        <span className="text-gray-500"> · {s.track_group_name}</span>
+                      ) : null}
+                    </div>
+                  ) : null}
                 </div>
               </div>
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
@@ -636,7 +703,15 @@ export default function InstructorStudents() {
       </div>
 
       <Modal open={addModal} onClose={closeAddModal} title="Yeni Telebe Elave Et">
-        <StudentFormFields data={form} setData={setForm} scheduleMeta={enrollMeta} mode="add" onRefreshSlots={null} toast={toast} />
+        <StudentFormFields
+          data={form}
+          setData={setForm}
+          scheduleMeta={enrollMeta}
+          mode="add"
+          onRefreshSlots={null}
+          toast={toast}
+          teachingSubjects={teachingSubjects}
+        />
         <div className="flex gap-3 mt-4">
           <Button onClick={addStudent} loading={loading} className="flex-1 justify-center">
             Elave Et
@@ -648,7 +723,7 @@ export default function InstructorStudents() {
       </Modal>
 
       <Modal open={editModal} onClose={() => setEditModal(false)} title="Telebeyi Redakte Et">
-        <StudentFormFields data={editForm} setData={setEditForm} mode="edit" toast={toast} />
+        <StudentFormFields data={editForm} setData={setEditForm} mode="edit" toast={toast} teachingSubjects={teachingSubjects} />
         <div className="flex gap-3 mt-4">
           <Button onClick={saveEdit} loading={loading} className="flex-1 justify-center">
             Yadda Saxla
