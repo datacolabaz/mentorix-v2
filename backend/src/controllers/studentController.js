@@ -16,6 +16,9 @@ const listStudents = async (req, res) => {
               e.enrollment_start_date,
               e.billing_timing,
               COALESCE(e.payment_plan, 'full') AS payment_plan,
+              e.subject_id, e.group_id,
+              ist.name AS track_subject_name,
+              ig.name AS track_group_name,
               e.status AS enrollment_status, e.referral_notes,
               e.instructor_id, iu.full_name AS instructor_name,
               rs.name AS referral_source,
@@ -26,6 +29,8 @@ const listStudents = async (req, res) => {
        LEFT JOIN users pu ON pu.id = sp.parent_id
        LEFT JOIN enrollments e ON e.student_id = u.id
        LEFT JOIN users iu ON iu.id = e.instructor_id
+       LEFT JOIN instructor_subjects ist ON ist.id = e.subject_id
+       LEFT JOIN instructor_groups ig ON ig.id = e.group_id
        LEFT JOIN referral_sources rs ON rs.id = e.referral_source_id
        LEFT JOIN attendance a ON a.enrollment_id = e.id AND a.attended = TRUE`;
 
@@ -33,7 +38,7 @@ const listStudents = async (req, res) => {
                 sp.monthly_fee,
                 sp.parent_name, sp.parent_phone, pu.full_name, pu.phone,
                 e.id, e.billing_type, e.lesson_count, e.lesson_weekdays, e.lesson_times, e.enrollment_start_date, e.billing_timing, e.payment_plan, e.status,
-                e.referral_notes, e.instructor_id, iu.full_name, rs.name
+                e.referral_notes, e.instructor_id, e.subject_id, e.group_id, ist.name, ig.name, iu.full_name, rs.name
        ORDER BY u.full_name`;
 
     if (!isAdmin) {
@@ -79,8 +84,12 @@ const getStudent = async (req, res) => {
               e.enrollment_start_date,
               e.billing_timing,
               COALESCE(e.payment_plan, 'full') AS payment_plan,
+              e.subject_id, e.group_id,
+              subj.name AS track_subject_name,
+              grp.name AS track_group_name,
               e.status AS enrollment_status, e.enrolled_at AS enrollment_started_at,
-              iu.full_name AS instructor_name
+              iu.full_name AS instructor_name,
+              COALESCE(NULLIF(TRIM(iprof.public_label), ''), 'instructor') AS instructor_public_label
        FROM users u
        LEFT JOIN student_profiles sp ON sp.user_id = u.id
        LEFT JOIN users pu ON pu.id = sp.parent_id
@@ -91,6 +100,9 @@ const getStudent = async (req, res) => {
          LIMIT 1
        ) e ON TRUE
        LEFT JOIN users iu ON iu.id = e.instructor_id
+       LEFT JOIN instructor_subjects subj ON subj.id = e.subject_id
+       LEFT JOIN instructor_groups grp ON grp.id = e.group_id
+       LEFT JOIN instructor_profiles iprof ON iprof.user_id = e.instructor_id
        WHERE u.id = $1`,
       [req.params.id]
     );

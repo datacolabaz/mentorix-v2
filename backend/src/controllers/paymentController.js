@@ -77,9 +77,11 @@ const listMyPayments = async (req, res) => {
     const { rows: enRows } = await db.query(
       `SELECT e.*,
               iu.full_name AS instructor_name,
-              sp.monthly_fee AS student_monthly_fee
+              sp.monthly_fee AS student_monthly_fee,
+              COALESCE(NULLIF(TRIM(ip.public_label), ''), 'instructor') AS instructor_public_label
        FROM enrollments e
        LEFT JOIN users iu ON iu.id = e.instructor_id
+       LEFT JOIN instructor_profiles ip ON ip.user_id = e.instructor_id
        LEFT JOIN student_profiles sp ON sp.user_id = e.student_id
        WHERE e.student_id = $1
          AND (
@@ -96,9 +98,11 @@ const listMyPayments = async (req, res) => {
       const { rows: anyRows } = await db.query(
         `SELECT e.*,
                 iu.full_name AS instructor_name,
-                sp.monthly_fee AS student_monthly_fee
+                sp.monthly_fee AS student_monthly_fee,
+                COALESCE(NULLIF(TRIM(ip.public_label), ''), 'instructor') AS instructor_public_label
          FROM enrollments e
          LEFT JOIN users iu ON iu.id = e.instructor_id
+         LEFT JOIN instructor_profiles ip ON ip.user_id = e.instructor_id
          LEFT JOIN student_profiles sp ON sp.user_id = e.student_id
          WHERE e.student_id = $1
          ORDER BY e.enrolled_at DESC NULLS LAST, e.id DESC
@@ -288,10 +292,14 @@ const getInstructorPaymentBoard = async (req, res) => {
               e.billing_type AS enrollment_billing_type,
               COALESCE(e.payment_plan, 'full') AS payment_plan,
               sp.monthly_fee,
-              to_char(e.enrollment_start_date::date, 'YYYY-MM-DD') AS lesson_start_date
+              to_char(e.enrollment_start_date::date, 'YYYY-MM-DD') AS lesson_start_date,
+              ist.name AS track_subject_name,
+              ig.name AS track_group_name
        FROM enrollments e
        INNER JOIN users u ON u.id = e.student_id
        LEFT JOIN student_profiles sp ON sp.user_id = u.id
+       LEFT JOIN instructor_subjects ist ON ist.id = e.subject_id
+       LEFT JOIN instructor_groups ig ON ig.id = e.group_id
        WHERE u.role = 'student' AND u.is_active = TRUE
          AND REPLACE(LOWER(TRIM(e.instructor_id::text)), '-', '') = $1
        ORDER BY u.full_name`,
@@ -330,6 +338,8 @@ const getInstructorPaymentBoard = async (req, res) => {
         monthly_fee: r.monthly_fee,
         lesson_start_date: r.lesson_start_date,
         payment_start_date: r.lesson_start_date,
+        track_subject_name: r.track_subject_name || null,
+        track_group_name: r.track_group_name || null,
         payment_status: paymentStatus,
         total_payments: b?.total_payments ?? null,
         accrued_total: b?.accrued_total ?? null,
@@ -454,19 +464,18 @@ const markMonthlyPaidBatch = async (req, res) => {
     }
 
     const inserted = await db.transaction(async (client) => {
-      const out = [];
-      for (const row of normalized) {
-        const { rows: ins } = await client.query(
-          `INSERT INTO payments (enrollment_id, student_id, amount, currency, payment_method, status, paid_at, payment_date, notes)
-           VALUES ($1, $2, $3, 'AZN', 'cash', 'completed', NOW(),
-                   COALESCE($4::date, (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Baku')::date),
-                   $5)
-           RETURNING id, amount, payment_date, notes`,
-          [enrollment_id, en[0].student_id, row.amount, row.payment_date, row.notes]
-        );
-        out.push(ins[0]);
-      }
-      return out;
+      const amounts = normalized.map((r) => r.amount);
+      const dates = normalized.map((r) => r.payment_date);
+      const notes = normalized.map((r) => r.notes);
+      const { rows: ins } = await client.query(
+        `INSERT INTO payments (enrollment_id, student_id, amount, currency, payment_method, status, paid_at, payment_date, notes)
+         SELECT $1::uuid, $2::uuid, t.amt, 'AZN', 'cash', 'completed', NOW(),
+                COALESCE(t.pd::date, (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Baku')::date), t.nt
+         FROM unnest($3::numeric[], $4::date[], $5::text[]) AS t(amt, pd, nt)
+         RETURNING id, amount, payment_date, notes`,
+        [enrollment_id, en[0].student_id, amounts, dates, notes]
+      );
+      return ins;
     });
 
     res.json({ success: true, payments: inserted, count: inserted.length });

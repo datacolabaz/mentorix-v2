@@ -45,6 +45,14 @@ const useAuthStore = create((set) => ({
     localStorage.removeItem('mx_user')
     set({ user: null, token: null })
   },
+
+  updateUser: (patch) =>
+    set((state) => {
+      if (!state.user || !patch || typeof patch !== 'object') return state
+      const user = { ...state.user, ...patch }
+      localStorage.setItem('mx_user', JSON.stringify(user))
+      return { user }
+    }),
 }))
 
 export default useAuthStore

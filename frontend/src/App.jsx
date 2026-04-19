@@ -21,6 +21,7 @@ import InstructorAttendance from './pages/instructor/Attendance'
 import InstructorAnalytics from './pages/instructor/Analytics'
 import InstructorPayments from './pages/instructor/Payments'
 import InstructorNotifications from './pages/instructor/Notifications'
+import InstructorSettings from './pages/instructor/Settings'
 import InstructorTasks from './pages/instructor/Tasks'
 import ParentNotifications from './pages/parent/Notifications'
 
@@ -72,7 +73,7 @@ export default function App() {
         <Route path="tasks" element={<InstructorTasks />} />
         <Route path="payments" element={<InstructorPayments />} />
         <Route path="notifications" element={<InstructorNotifications />} />
-        <Route path="settings" element={<Placeholder title="Tənzimləmələr" />} />
+        <Route path="settings" element={<InstructorSettings />} />
       </Route>
 
       <Route path="/student" element={<ProtectedRoute roles={['student']}><StudentLayout /></ProtectedRoute>}>
