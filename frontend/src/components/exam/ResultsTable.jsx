@@ -1,12 +1,20 @@
 import * as XLSX from 'xlsx'
 import { jsPDF } from 'jspdf'
 
+function rowPct(r) {
+  if (r.score_pct != null && Number.isFinite(Number(r.score_pct))) {
+    return Math.min(100, Math.max(0, Math.round(Number(r.score_pct))))
+  }
+  return Math.min(100, Math.round(Number(r.score) || 0))
+}
+
 export default function ResultsTable({ results, examTitle }) {
   const exportExcel = () => {
     const data = results.map((r, i) => ({
       Yer: i + 1,
       Ad: r.full_name,
-      Bal: r.score,
+      'Xal (toplam)': r.score,
+      'Faiz (%)': rowPct(r),
       Müddət: `${Math.floor(r.duration_seconds / 60)} dəq ${r.duration_seconds % 60} san`,
       Tarix: new Date(r.submitted_at).toLocaleString('az-AZ'),
     }))
@@ -29,7 +37,7 @@ export default function ResultsTable({ results, examTitle }) {
     results.forEach((r, i) => {
       const y = 35 + i * 10
       doc.text(`${i + 1}. ${r.full_name}`, 14, y)
-      doc.text(`${r.score}%`, 130, y)
+      doc.text(`${rowPct(r)}%`, 130, y)
       const dur = `${Math.floor(r.duration_seconds / 60)}:${String(r.duration_seconds % 60).padStart(2, '0')}`
       doc.text(dur, 160, y)
     })
@@ -60,7 +68,7 @@ export default function ResultsTable({ results, examTitle }) {
             <tr className="border-b border-indigo-500/20 text-gray-400 text-xs uppercase">
               <th className="py-3 px-4 text-left">Yer</th>
               <th className="py-3 px-4 text-left">Ad Soyad</th>
-              <th className="py-3 px-4 text-left">Bal</th>
+              <th className="py-3 px-4 text-left">Faiz</th>
               <th className="py-3 px-4 text-left">Müddət</th>
               <th className="py-3 px-4 text-left">Tarix</th>
             </tr>
@@ -75,8 +83,12 @@ export default function ResultsTable({ results, examTitle }) {
                 </td>
                 <td className="py-3 px-4 font-medium text-white">{r.full_name}</td>
                 <td className="py-3 px-4">
-                  <span className={`font-display font-bold text-lg ${r.score >= 80 ? 'text-emerald-400' : r.score >= 60 ? 'text-yellow-400' : 'text-red-400'}`}>
-                    {r.score}%
+                  <span
+                    className={`font-display font-bold text-lg ${
+                      rowPct(r) >= 80 ? 'text-emerald-400' : rowPct(r) >= 60 ? 'text-yellow-400' : 'text-red-400'
+                    }`}
+                  >
+                    {rowPct(r)}%
                   </span>
                 </td>
                 <td className="py-3 px-4 text-gray-400">

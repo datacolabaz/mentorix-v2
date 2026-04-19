@@ -225,7 +225,12 @@ export default function InstructorAnalytics() {
                         <p className="text-[11px] text-gray-500">{r.grade || '—'}</p>
                       </div>
                       <div className="text-right shrink-0">
-                        <p className="text-sm font-extrabold text-white">{Math.round(Number(r.score) || 0)}%</p>
+                        <p className="text-sm font-extrabold text-white">
+                          {Math.round(
+                            Math.min(100, Math.max(0, Number(r.score_pct ?? r.score) || 0))
+                          )}
+                          %
+                        </p>
                       </div>
                     </div>
                   ))}
@@ -253,7 +258,12 @@ export default function InstructorAnalytics() {
                         </p>
                       </div>
                       <div className="text-right shrink-0">
-                        <p className="text-sm font-extrabold text-white">{Math.round(Number(r.score) || 0)}%</p>
+                        <p className="text-sm font-extrabold text-white">
+                          {Math.round(
+                            Math.min(100, Math.max(0, Number(r.score_pct ?? r.score) || 0))
+                          )}
+                          %
+                        </p>
                       </div>
                     </div>
                   ))}

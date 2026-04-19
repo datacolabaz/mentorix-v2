@@ -164,16 +164,22 @@ export default function InstructorDashboard() {
 
   const rosterWithExam = students.filter((s) => examById[String(s.id)]?.exam_avg_score != null)
   const avgScore = rosterWithExam.length
-    ? Math.round(
-        rosterWithExam.reduce((a, s) => a + Number(examById[String(s.id)].exam_avg_score), 0) /
-          rosterWithExam.length
+    ? Math.min(
+        100,
+        Math.round(
+          rosterWithExam.reduce((a, s) => a + Number(examById[String(s.id)].exam_avg_score), 0) /
+            rosterWithExam.length
+        )
       )
     : 0
 
   const chartRows = students.slice(0, 10).map((s) => {
     const first = s.full_name?.split(' ')?.[0] || '—'
     const row = examById[String(s.id)]
-    const bal = row?.exam_avg_score != null ? Number(row.exam_avg_score) : 0
+    const bal =
+      row?.exam_avg_score != null
+        ? Math.min(100, Math.max(0, Number(row.exam_avg_score)))
+        : 0
     return { name: first.length > 12 ? `${first.slice(0, 11)}…` : first, bal }
   })
 
@@ -206,7 +212,12 @@ export default function InstructorDashboard() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4 mb-6">
         <StatCard label="Tələbə" value={loading ? '—' : students.length} icon="🎓" color="text-blue-400" />
-        <StatCard label="Orta imtahan balı" value={loading ? '—' : `${avgScore}%`} icon="📊" color="text-emerald-400" />
+        <StatCard
+          label="Orta nəticə (faiz)"
+          value={loading ? '—' : `${Math.min(100, Math.max(0, avgScore))}%`}
+          icon="📊"
+          color="text-emerald-400"
+        />
         <StatCard
           label="Gözlənən (aylıq)"
           value={loading ? '—' : pendingMonthlyAz}
@@ -260,18 +271,21 @@ export default function InstructorDashboard() {
             {topSorted.slice(0, 5).map((s, i) => {
               const ex = examById[String(s.id)]
               const hasScore = ex?.exam_avg_score != null
-              const pct = hasScore ? Number(ex.exam_avg_score) : 0
+              const pct = hasScore ? Math.min(100, Math.max(0, Number(ex.exam_avg_score))) : 0
               return (
                 <div key={s.enrollment_id || s.id} className="flex items-center gap-2 sm:gap-3 min-w-0">
                   <span className="text-sm font-bold text-gray-500 w-5 shrink-0">{i + 1}</span>
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium truncate">{s.full_name}</div>
                     <div className="h-1.5 bg-[#13112e] rounded-full mt-1">
-                      <div className="h-full bg-blue-500 rounded-full transition-all" style={{ width: hasScore ? `${pct}%` : '0%' }} />
+                      <div
+                        className="h-full bg-blue-500 rounded-full transition-all"
+                        style={{ width: hasScore ? `${pct}%` : '0%' }}
+                      />
                     </div>
                   </div>
                   <span className="text-sm font-bold text-blue-400 shrink-0 tabular-nums">
-                    {hasScore ? `${pct}%` : '—'}
+                    {hasScore ? `${Math.round(pct)}%` : '—'}
                   </span>
                 </div>
               )
