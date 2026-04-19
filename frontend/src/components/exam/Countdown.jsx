@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import useCountdown from '../../hooks/useCountdown'
 
-export default function Countdown({ endTime, onExpire }) {
+export default function Countdown({ endTime, onExpire, className = '' }) {
   const [showWarning, setShowWarning] = useState(false)
 
   const { formatted, isWarning } = useCountdown(
@@ -12,15 +12,15 @@ export default function Countdown({ endTime, onExpire }) {
 
   return (
     <>
-      <div className={`text-center ${isWarning ? 'animate-pulse' : ''}`}>
+      <div className={`text-center shrink-0 ${isWarning ? 'animate-pulse' : ''} ${className}`}>
         <div
-          className={`font-display font-extrabold text-4xl tabular-nums ${
+          className={`font-display font-extrabold text-2xl sm:text-3xl md:text-4xl tabular-nums leading-none ${
             isWarning ? 'text-red-400' : 'text-cyan-400'
           }`}
         >
           {formatted}
         </div>
-        <div className="text-xs text-gray-500 mt-1">qalıb</div>
+        <div className="text-[10px] sm:text-xs text-gray-500 mt-1">qalıb</div>
       </div>
 
       {showWarning && (
