@@ -92,14 +92,14 @@ function paymentDateHint(ymd) {
   }
 }
 
-/** Aylıq: UI sxemi → billing_timing + payment_plan */
-function monthlySchemeFromForm(data) {
+/** UI ödəniş sxemi → billing_timing + payment_plan (8/12/aylıq) */
+function paymentSchemeFromForm(data) {
   if (data.payment_plan === 'partial') return 'installment'
   if ((data.billing_timing || 'postpaid') === 'prepaid') return 'full_prepaid'
   return 'postpaid_full'
 }
 
-function applyMonthlyScheme(prev, scheme) {
+function applyPaymentScheme(prev, scheme) {
   if (scheme === 'full_prepaid') return { ...prev, billing_timing: 'prepaid', payment_plan: 'full' }
   if (scheme === 'installment') return { ...prev, billing_timing: 'postpaid', payment_plan: 'partial' }
   return { ...prev, billing_timing: 'postpaid', payment_plan: 'full' }
@@ -230,29 +230,27 @@ function StudentFormFields({ data, setData, scheduleMeta, mode, onRefreshSlots, 
           ))}
         </select>
       </div>
-      {data.billing_type === 'monthly' && (
-        <div className="rounded-xl border border-indigo-500/20 bg-[#0f0c29]/60 p-3 space-y-3">
-          <p className="text-xs font-semibold text-indigo-200/90 uppercase tracking-wider">Ödəniş sxemi</p>
-          <div>
-            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
-              Tələbənin ay üzrə ödəniş modeli *
-            </label>
-            <select
-              className={inp}
-              value={monthlySchemeFromForm(data)}
-              onChange={(e) => setData((p) => applyMonthlyScheme(p, e.target.value))}
-            >
-              <option value="full_prepaid">Öncədən tam (Full prepaid) — ayın məbləği dərslər başlamazdan əvvəl tam</option>
-              <option value="installment">Hissəli (Installment) — ay içində hissələr; qalıq borc avtomatik</option>
-              <option value="postpaid_full">Ay sonu tam — dövr sonunda bir dəfəyə tam ay məbləği</option>
-            </select>
-            <p className="text-[10px] text-gray-500 mt-2 leading-relaxed">
-              <span className="text-rose-200/90 font-medium">Hissəli</span> seçildikdə ödənilən məbləğ aylıq
-              borcdan az olanda qalıq «Ödənişlər» cədvəlində və tarixçədə qırmızı ilə göstərilir.
-            </p>
-          </div>
+      <div className="rounded-xl border border-indigo-500/20 bg-[#0f0c29]/60 p-3 space-y-3">
+        <p className="text-xs font-semibold text-indigo-200/90 uppercase tracking-wider">Ödəniş sxemi</p>
+        <div>
+          <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+            Ödəniş modeli (8 dərs / 12 dərs / aylıq üçün eyni) *
+          </label>
+          <select
+            className={inp}
+            value={paymentSchemeFromForm(data)}
+            onChange={(e) => setData((p) => applyPaymentScheme(p, e.target.value))}
+          >
+            <option value="full_prepaid">Öncədən tam — məbləğ paket və ya ay başlamazdan əvvəl tam ödənilir</option>
+            <option value="installment">Hissəli — hissə-hissə ödəniş; qalıq borc avtomatik izlənir</option>
+            <option value="postpaid_full">Sonradan tam — dövr/paket üzrə sonradan bir dəfəyə tam məbləğ</option>
+          </select>
+          <p className="text-[10px] text-gray-500 mt-2 leading-relaxed">
+            <span className="text-rose-200/90 font-medium">Hissəli</span> seçildikdə ödənilən məbləğ borcdan az olanda qalıq «Ödənişlər»
+            və tarixçədə qırmızı ilə göstərilir.
+          </p>
         </div>
-      )}
+      </div>
       {(mode === 'add' || mode === 'edit') && (
         <div className="rounded-xl border border-indigo-500/20 bg-[#0f0c29]/60 p-3 space-y-2">
           <p className="text-xs font-semibold text-indigo-200/90 uppercase tracking-wider">Dərs vaxtı (slot)</p>
@@ -419,9 +417,8 @@ export default function InstructorStudents() {
         monthly_fee: form.monthly_fee,
         enrollment_date: form.enrollment_date || null,
         first_lesson_date: form.first_lesson_date || null,
-        ...(form.billing_type === 'monthly'
-          ? { billing_timing: form.billing_timing || 'postpaid', payment_plan: form.payment_plan || 'full' }
-          : {}),
+        billing_timing: form.billing_timing || 'postpaid',
+        payment_plan: form.payment_plan || 'full',
         lesson_weekdays: form.lesson_weekdays,
         lesson_times: form.lesson_times || {},
         parent_name: form.parent_name,
@@ -497,9 +494,8 @@ export default function InstructorStudents() {
         referral_notes: editForm.referral_notes,
         monthly_fee: editForm.monthly_fee,
         enrollment_date: editForm.enrollment_date,
-        ...(editForm.billing_type === 'monthly'
-          ? { billing_timing: editForm.billing_timing || 'postpaid', payment_plan: editForm.payment_plan || 'full' }
-          : {}),
+        billing_timing: editForm.billing_timing || 'postpaid',
+        payment_plan: editForm.payment_plan || 'full',
         lesson_weekdays: editForm.lesson_weekdays,
         lesson_times: editForm.lesson_times || {},
         parent_name: editForm.parent_name,
