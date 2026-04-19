@@ -11,7 +11,7 @@ const listStudents = async (req, res) => {
               sp.monthly_fee,
               COALESCE(NULLIF(TRIM(sp.parent_name), ''), pu.full_name) AS parent_name,
               COALESCE(NULLIF(TRIM(sp.parent_phone), ''), pu.phone) AS parent_phone,
-              e.id AS enrollment_id, e.billing_type, e.lesson_count,
+              e.id AS enrollment_id, e.billing_type, e.lesson_count, e.billing_cycle,
               e.lesson_weekdays, e.lesson_times,
               e.enrollment_start_date,
               e.billing_timing,
@@ -19,6 +19,15 @@ const listStudents = async (req, res) => {
               e.subject_id, e.group_id,
               ist.name AS track_subject_name,
               ig.name AS track_group_name,
+              CASE
+                WHEN e.billing_type = 'monthly' THEN to_char(e.enrollment_start_date::date, 'YYYY-MM-DD')
+                ELSE COALESCE(
+                  (SELECT to_char((MIN(l.lesson_date) AT TIME ZONE 'Asia/Baku')::date, 'YYYY-MM-DD')
+                   FROM lessons l
+                   WHERE l.enrollment_id = e.id AND l.billing_cycle = e.billing_cycle),
+                  to_char(e.enrollment_start_date::date, 'YYYY-MM-DD')
+                )
+              END AS first_lesson_date,
               e.status AS enrollment_status, e.referral_notes,
               e.instructor_id, iu.full_name AS instructor_name,
               rs.name AS referral_source,
@@ -37,7 +46,7 @@ const listStudents = async (req, res) => {
     const group = `GROUP BY u.id, u.full_name, u.email, u.phone, sp.parent_id, sp.grade,
                 sp.monthly_fee,
                 sp.parent_name, sp.parent_phone, pu.full_name, pu.phone,
-                e.id, e.billing_type, e.lesson_count, e.lesson_weekdays, e.lesson_times, e.enrollment_start_date, e.billing_timing, e.payment_plan, e.status,
+                e.id, e.billing_type, e.lesson_count, e.billing_cycle, e.lesson_weekdays, e.lesson_times, e.enrollment_start_date, e.billing_timing, e.payment_plan, e.status,
                 e.referral_notes, e.instructor_id, e.subject_id, e.group_id, ist.name, ig.name, iu.full_name, rs.name
        ORDER BY u.full_name`;
 
