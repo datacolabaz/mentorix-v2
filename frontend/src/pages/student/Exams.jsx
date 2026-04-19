@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import api from '../../lib/api'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
@@ -51,6 +51,35 @@ function resolveMaterialUrl(rel) {
   }
   if (!origin && typeof window !== 'undefined') origin = window.location.origin
   return origin ? `${origin}${p}` : p
+}
+
+/** Diskdə /api/uploads/exams/uuid.ext — bəzi hostlarda statik proxysiz; API ilə Bearer göndərilir */
+function examUploadsStoredFilename(url) {
+  const m = String(url || '').match(/\/api\/uploads\/exams\/([^/?#]+)$/i)
+  return m ? decodeURIComponent(m[1]) : null
+}
+
+function materialFileApiPath(url) {
+  const fn = examUploadsStoredFilename(url)
+  if (!fn) return null
+  return `/exams/material-file/${encodeURIComponent(fn)}`
+}
+
+/** Yeni pəncərə: img Authorization göndərmir → qısa müddətli token URL */
+function materialOpenInNewTabUrl(rel) {
+  const fn = examUploadsStoredFilename(rel)
+  if (!fn) return resolveMaterialUrl(rel)
+  const token = typeof localStorage !== 'undefined' ? localStorage.getItem('mx_token') : ''
+  if (!token) return resolveMaterialUrl(rel)
+  const raw = (import.meta.env.VITE_API_URL || '/api').trim().replace(/\/$/, '')
+  const path = `/exams/material-file/${encodeURIComponent(fn)}?token=${encodeURIComponent(token)}`
+  if (raw.startsWith('http')) {
+    const root = raw.endsWith('/api') ? raw : raw.includes('/api') ? raw : `${raw}/api`
+    return `${root.replace(/\/$/, '')}${path}`
+  }
+  if (typeof window === 'undefined') return path
+  const prefix = raw.startsWith('/') ? raw : `/${raw || 'api'}`
+  return `${window.location.origin}${prefix}${path}`
 }
 
 /** exam_files JSONB / string + köhnə pdf_url — vahid siyahı */
@@ -192,12 +221,57 @@ export default function StudentExams() {
   const [result, setResult] = useState(null)
   const [resultBreakdown, setResultBreakdown] = useState(null)
   const [materialsOpen, setMaterialsOpen] = useState(true)
+  /** /api/uploads/exams/... üçün blob URL (JWT ilə GET /exams/material-file/...) */
+  const [materialBlobById, setMaterialBlobById] = useState({})
   const [, bumpListUi] = useState(0)
   const activeExamRef = useRef(false)
   activeExamRef.current = !!activeExam
   const toast = useToast()
   const { setFocusMode } = useUiStore()
   const { user } = useAuthStore()
+
+  const materialBlobLoadKey = useMemo(() => {
+    if (!activeExam) return ''
+    const files = normalizeExamFiles(activeExam)
+    return `${activeExam.id}\0${startedAt || ''}\0${files.map((f) => f.url).join('\0')}`
+  }, [activeExam, startedAt])
+
+  useEffect(() => {
+    if (!materialBlobLoadKey || !activeExam) {
+      setMaterialBlobById({})
+      return undefined
+    }
+    const files = normalizeExamFiles(activeExam)
+    const ac = new AbortController()
+    const toRevoke = []
+
+    ;(async () => {
+      const next = {}
+      for (const m of files) {
+        const apiPath = materialFileApiPath(m.url)
+        if (!apiPath) {
+          next[m.id] = null
+          continue
+        }
+        try {
+          const blob = await api.get(apiPath, { responseType: 'blob', signal: ac.signal })
+          const u = URL.createObjectURL(blob)
+          toRevoke.push(u)
+          next[m.id] = u
+        } catch (e) {
+          if (e?.name === 'CanceledError' || e?.code === 'ERR_CANCELED') return
+          next[m.id] = null
+        }
+      }
+      if (!ac.signal.aborted) setMaterialBlobById(next)
+    })()
+
+    return () => {
+      ac.abort()
+      toRevoke.forEach((u) => URL.revokeObjectURL(u))
+      setMaterialBlobById({})
+    }
+  }, [materialBlobLoadKey, activeExam])
 
   /** Davam / yenidən yükləmə: materiallar paneli açılsın (sıfır enində PNG iframe/img sıradan çıxmasın) */
   useEffect(() => {
@@ -431,7 +505,16 @@ export default function StudentExams() {
               </div>
               <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-4 space-y-4">
                 {materials.map((m) => {
-                  const materialUrl = resolveMaterialUrl(m.url)
+                  const materialUrlDirect = resolveMaterialUrl(m.url)
+                  const needsProtectedFetch = Boolean(materialFileApiPath(m.url))
+                  const blobEntry = materialBlobById[m.id]
+                  const mediaSrc = needsProtectedFetch
+                    ? blobEntry === undefined
+                      ? undefined
+                      : blobEntry === null
+                        ? materialUrlDirect
+                        : blobEntry
+                    : materialUrlDirect
                   const showPdfFrame = shouldUsePdfIframe(m)
                   const mediaBoxClass = showPdfFrame
                     ? 'min-h-[200px] lg:min-h-[280px] max-h-[min(38vh,420px)] lg:max-h-[calc(100vh-220px)]'
@@ -447,25 +530,25 @@ export default function StudentExams() {
                       <div className={mediaBoxClass}>
                         {showPdfFrame ? (
                           <iframe
-                            key={`pdf-${m.id}-${startedAt || ''}`}
+                            key={`pdf-${m.id}-${startedAt || ''}-${blobEntry || ''}`}
                             title={m.name}
-                            src={materialUrl}
+                            src={mediaSrc || undefined}
                             className="w-full h-full min-h-[200px] lg:min-h-[300px] bg-white/5 border-0"
                           />
                         ) : (
                           <div className="flex min-h-0 flex-1 flex-col gap-2 min-w-0">
                             <img
-                              key={`img-${m.id}-${startedAt || ''}`}
-                              src={materialUrl}
+                              key={`img-${m.id}-${startedAt || ''}-${blobEntry || ''}`}
+                              src={mediaSrc || undefined}
                               alt={m.name}
                               loading="eager"
                               decoding="async"
                               sizes="(max-width: 1024px) 100vw, min(560px, 50vw)"
                               className="h-auto w-full max-h-full min-h-[96px] flex-1 object-contain object-top bg-black/30"
                             />
-                            {materialUrl ? (
+                            {materialUrlDirect ? (
                               <a
-                                href={materialUrl}
+                                href={materialOpenInNewTabUrl(m.url)}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-center text-xs font-semibold text-blue-400 hover:text-blue-300 py-1"

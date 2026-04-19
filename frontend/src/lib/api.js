@@ -63,7 +63,8 @@ function isAuthAttemptConfig(config) {
     path.includes('/auth/otp/') ||
     path.includes('/auth/pin/') ||
     path.includes('/auth/phone/') ||
-    path.includes('/auth/me')
+    path.includes('/auth/me') ||
+    path.includes('/exams/material-file')
   )
 }
 
