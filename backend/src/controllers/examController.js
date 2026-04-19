@@ -1388,7 +1388,7 @@ const grantLateAccess = async (req, res) => {
  * - exam_files: [{name,url}] (JSON array)
  * - pdf_url: string|null
  * - student_ids: string[] (təyinatların son vəziyyəti)
- * - questions (optional): [{ id, question_text, points, options, correct_answer, template_hint, negative_marking, order_num }] — mövcud sualları yeniləyir
+ * - questions (optional): [{ id, question_text, points, options, correct_answer, template_hint, negative_marking, order_num }] — mövcud sualları yeniləyir; təqdim olunmuş exam_results üçün bal avtomatik yenidən hesablanır
  */
 const patchExam = async (req, res) => {
   try {
@@ -1650,6 +1650,41 @@ const patchExam = async (req, res) => {
               q.id,
               examId,
             ]
+          );
+        }
+      }
+
+      /** Suallar (xüsusən `points` / cavab açarı) dəyişəndə artıq təqdim olunmuş nəticələrin balını yenilə */
+      if (questionsProvided && Array.isArray(questions) && questions.length > 0) {
+        const { rows: questionsFresh } = await client.query(
+          'SELECT * FROM exam_questions WHERE exam_id = $1 ORDER BY order_num',
+          [examId]
+        );
+        const wrongPenaltyEnabled = finalWrongPen !== false;
+        const { rows: resultRows } = await client.query(
+          `SELECT id, answers FROM exam_results
+           WHERE exam_id = $1 AND submitted_at IS NOT NULL`,
+          [examId]
+        );
+        for (const r of resultRows) {
+          let answers = r.answers;
+          if (typeof answers === 'string') {
+            try {
+              answers = JSON.parse(answers);
+            } catch {
+              answers = {};
+            }
+          }
+          if (!answers || typeof answers !== 'object') answers = {};
+          const score = calculateScore(questionsFresh, answers, { wrongPenaltyEnabled });
+          const grading = buildAutoGradingMap(questionsFresh, answers);
+          await client.query(
+            `UPDATE exam_results
+             SET score = $1,
+                 grading = $2::jsonb,
+                 status = 'completed'
+             WHERE id = $3`,
+            [score, JSON.stringify(grading), r.id]
           );
         }
       }
