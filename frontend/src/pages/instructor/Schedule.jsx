@@ -40,7 +40,7 @@ export default function InstructorSchedule() {
   /** @type {[PickState | LessonsState | null, (v: PickState | LessonsState | null) => void]} */
   const [cellModal, setCellModal] = useState(null)
 
-  const CACHE_KEY = 'instructor_schedule_lessons_v1'
+  const CACHE_KEY = 'instructor_schedule_lessons_v2'
   const CACHE_TTL_MS = 60000
 
   const load = useCallback(async (quiet = false) => {
@@ -133,8 +133,8 @@ export default function InstructorSchedule() {
         <div>
           <h1 className="font-display font-bold text-xl sm:text-2xl text-white tracking-tight">Cədvəlim</h1>
           <p className="text-gray-500 text-sm mt-1">
-            Tarixli dərslər həftəlik şəbəkədə göstərilir. Xanada vaxt və tələbə sayı var; toxunanda əvvəl tələbə seçin, sonra
-            həmin tələbənin bütün dərs tarixlərini görün.
+            Paket tələbələri üçün tarixli dərslər, aylıq tələbələr üçün isə həftəlik dərs günləri + saat əsasında növbəti təqvim nöqtələri şəbəkədə göstərilir. Xanada vaxt və tələbə sayı var;
+            toxunanda əvvəl tələbə seçin, sonra həmin tələbənin tarixlərini görün.
           </p>
         </div>
         <Button type="button" variant="secondary" size="sm" onClick={() => void load()} disabled={loading}>
