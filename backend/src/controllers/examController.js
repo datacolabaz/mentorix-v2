@@ -1407,24 +1407,40 @@ const serveExamMaterialFile = async (req, res) => {
 
   const role = req.user.role;
   const userId = req.user.id;
+  const sidHex = normStudentHex(userId);
+  const instHex = role === 'instructor' ? normStudentHex(userId) : '';
   const needle = `%${filename}%`;
 
+  /** getExamQuestions ilə eyni: tələbə təyinat və ya açıq cəhd (submitted_at NULL) */
   const r = await db.query(
     `SELECT e.id FROM exams e
      WHERE (e.exam_files::text ILIKE $1 OR COALESCE(e.pdf_url::text, '') ILIKE $1)
        AND (
          $2::text = 'admin'
-         OR ($2::text = 'instructor' AND e.instructor_id = $3::uuid)
+         OR (
+           $2::text = 'instructor'
+           AND REPLACE(LOWER(TRIM(e.instructor_id::text)), '-', '') = $4
+         )
          OR (
            $2::text = 'student'
-           AND EXISTS (
-             SELECT 1 FROM exam_assignments ea
-             WHERE ea.exam_id = e.id AND ea.student_id = $3::uuid
+           AND $3::text <> ''
+           AND (
+             EXISTS (
+               SELECT 1 FROM exam_assignments ea
+               WHERE ea.exam_id = e.id
+                 AND REPLACE(LOWER(TRIM(ea.student_id::text)), '-', '') = $3
+             )
+             OR EXISTS (
+               SELECT 1 FROM exam_results er
+               WHERE er.exam_id = e.id
+                 AND REPLACE(LOWER(TRIM(er.student_id::text)), '-', '') = $3
+                 AND er.submitted_at IS NULL
+             )
            )
          )
        )
      LIMIT 1`,
-    [needle, role, userId]
+    [needle, role, sidHex, instHex]
   );
 
   if (r.rows.length === 0) {
