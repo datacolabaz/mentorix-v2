@@ -42,7 +42,7 @@ function parsePaymentStartDate(v) {
   return s;
 }
 
-/** Aylıq: postpaid (aylıq dövr borcu) / prepaid (dərs balansı) */
+/** Qeydiyyat: postpaid / prepaid (8/12/aylıq üçün eyni sahələr) */
 function parseBillingTiming(v) {
   if (String(v || '').trim().toLowerCase() === 'prepaid') return 'prepaid';
   return 'postpaid';
@@ -187,6 +187,11 @@ router.post('/enroll', authenticate, authorize('instructor', 'admin'), async (re
       return res.status(400).json({ success: false, message: 'Dərs günlərinə uyğun saatları qeyd edin' });
     }
 
+    const enrollmentYmd = parsePaymentStartDate(enrollment_date);
+    if (!enrollmentYmd) {
+      return res.status(400).json({ success: false, message: 'Dərslərə başlama tarixi seçilməlidir' });
+    }
+
     const limitForValidation = billingLimit(billing_type || '8_lessons');
     const firstYmd = parsePaymentStartDate(first_lesson_date);
     if (limitForValidation && !firstYmd) {
@@ -216,12 +221,8 @@ router.post('/enroll', authenticate, authorize('instructor', 'admin'), async (re
     // artıq tələb olunmur: dərs vaxtı həftəlik gün/saat + ilk dərs tarixi ilə generasiya olunur
 
     const mf = parseMonthlyFee(monthly_fee);
-    const enrollmentYmd = parsePaymentStartDate(enrollment_date);
-    if (!enrollmentYmd) {
-      return res.status(400).json({ success: false, message: 'Dərslərə başlama tarixi seçilməlidir' });
-    }
-    const bt = (billing_type || '8_lessons') === 'monthly' ? parseBillingTiming(billing_timing) : 'postpaid';
-    const payPlan = (billing_type || '8_lessons') === 'monthly' ? parsePaymentPlan(payment_plan) : 'full';
+    const bt = parseBillingTiming(billing_timing);
+    const payPlan = parsePaymentPlan(payment_plan);
 
     const enrollment = await db.transaction(async (client) => {
       const { rows } = await client.query(
@@ -478,24 +479,18 @@ router.patch('/enrollment/:enrollmentId', authenticate, authorize('admin', 'inst
     }
 
     if (hasBt) {
-      const { rows: enBt } = await db.query('SELECT billing_type FROM enrollments WHERE id = $1', [enrollmentId]);
-      if (enBt[0]?.billing_type === 'monthly') {
-        await db.query(`UPDATE enrollments SET billing_timing = $1::text WHERE id = $2`, [
-          parseBillingTiming(billing_timing),
-          enrollmentId,
-        ]);
-      }
+      await db.query(`UPDATE enrollments SET billing_timing = $1::text WHERE id = $2`, [
+        parseBillingTiming(billing_timing),
+        enrollmentId,
+      ]);
     }
 
     const hasPp = Object.prototype.hasOwnProperty.call(req.body, 'payment_plan');
     if (hasPp) {
-      const { rows: enPp } = await db.query('SELECT billing_type FROM enrollments WHERE id = $1', [enrollmentId]);
-      if (enPp[0]?.billing_type === 'monthly') {
-        await db.query(`UPDATE enrollments SET payment_plan = $1::text WHERE id = $2`, [
-          parsePaymentPlan(payment_plan),
-          enrollmentId,
-        ]);
-      }
+      await db.query(`UPDATE enrollments SET payment_plan = $1::text WHERE id = $2`, [
+        parsePaymentPlan(payment_plan),
+        enrollmentId,
+      ]);
     }
 
     res.json({ success: true });
