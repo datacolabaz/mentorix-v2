@@ -28,8 +28,9 @@ export const WEEKDAYS = [
 ]
 
 /**
- * @typedef {{ phase: 'pickStudent', slotSubtitle: string, studentNames: string[] }} PickState
- * @typedef {{ phase: 'lessons', slotSubtitle: string, studentNames: string[], studentName: string, lessons: object[] }} LessonsState
+ * @typedef {{ day_of_week: number, start_time: string, end_time: string }} SlotFilter
+ * @typedef {{ phase: 'pickStudent', slotSubtitle: string, studentNames: string[], slotFilter: SlotFilter }} PickState
+ * @typedef {{ phase: 'lessons', slotSubtitle: string, studentNames: string[], slotFilter: SlotFilter, studentName: string, lessons: object[] }} LessonsState
  */
 
 export default function InstructorSchedule() {
@@ -110,18 +111,34 @@ export default function InstructorSchedule() {
       phase: 'pickStudent',
       slotSubtitle: `${dayFull} · ${fmtTime(primary.start_time)}–${fmtTime(primary.end_time)}`,
       studentNames: primary.studentNames?.length ? [...primary.studentNames] : ['Tələbə'],
+      slotFilter: {
+        day_of_week: primary.day_of_week,
+        start_time: primary.start_time,
+        end_time: primary.end_time,
+      },
     })
   }
 
-  const pickStudent = (name, slotSubtitle, studentNames) => {
+  const pickStudent = (name, slotSubtitle, studentNames, slotFilter) => {
     const n = (name || '').trim()
-    const lessons = datedLessons
-      .filter((l) => (l.student_name || '').trim() === n)
-      .sort((a, b) => String(a.lesson_date).localeCompare(String(b.lesson_date)))
+    let lessons = datedLessons.filter((l) => (l.student_name || '').trim() === n)
+    if (slotFilter?.day_of_week) {
+      lessons = lessons.filter((l) => {
+        const slot = slotTimesForLesson(l)
+        if (!slot) return false
+        return (
+          slot.day === slotFilter.day_of_week &&
+          slot.start === slotFilter.start_time &&
+          slot.end === slotFilter.end_time
+        )
+      })
+    }
+    lessons.sort((a, b) => String(a.lesson_date).localeCompare(String(b.lesson_date)))
     setCellModal({
       phase: 'lessons',
       slotSubtitle,
       studentNames,
+      slotFilter,
       studentName: n,
       lessons,
     })
@@ -134,7 +151,7 @@ export default function InstructorSchedule() {
           <h1 className="font-display font-bold text-xl sm:text-2xl text-white tracking-tight">Cədvəlim</h1>
           <p className="text-gray-500 text-sm mt-1">
             Paket tələbələri üçün tarixli dərslər, aylıq tələbələr üçün isə həftəlik dərs günləri + saat əsasında növbəti təqvim nöqtələri şəbəkədə göstərilir. Xanada vaxt və tələbə sayı var;
-            toxunanda əvvəl tələbə seçin, sonra həmin tələbənin tarixlərini görün.
+            toxunanda tələbəni seçəndə aşağıda yalnız <span className="text-gray-300">həmin gün və saat</span> üzrə tarixlər göstərilir (bütün həftə yox).
           </p>
         </div>
         <Button type="button" variant="secondary" size="sm" onClick={() => void load()} disabled={loading}>
@@ -246,7 +263,9 @@ export default function InstructorSchedule() {
 
         {cellModal?.phase === 'pickStudent' && (
           <>
-            <p className="text-xs text-gray-500 mb-3">Tələbəni seçin — dərs tarixlərini aşağıda görəcəksiniz.</p>
+            <p className="text-xs text-gray-500 mb-3">
+              Tələbəni seçin — aşağıda yalnız yuxarıdakı gün və saat aralığına düşən dərs tarixləri göstərilir.
+            </p>
             <ul className="space-y-2">
               {cellModal.studentNames.map((name) => (
                 <li key={name}>
@@ -254,7 +273,7 @@ export default function InstructorSchedule() {
                     type="button"
                     className="w-full text-left rounded-xl border border-indigo-500/25 bg-[#13112e] px-3 py-2.5 text-sm text-white hover:border-indigo-400/50 hover:bg-[#1a1740] transition-colors"
                     onClick={() =>
-                      pickStudent(name, cellModal.slotSubtitle, [...cellModal.studentNames])
+                      pickStudent(name, cellModal.slotSubtitle, [...cellModal.studentNames], cellModal.slotFilter)
                     }
                   >
                     {name}
@@ -279,6 +298,7 @@ export default function InstructorSchedule() {
                     phase: 'pickStudent',
                     slotSubtitle: cellModal.slotSubtitle,
                     studentNames: cellModal.studentNames,
+                    slotFilter: cellModal.slotFilter,
                   })
                 }
               >
