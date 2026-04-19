@@ -20,15 +20,18 @@ function inferQuestionType(q) {
   return t || 'open';
 }
 
-/** Yalnız qapalı: səhv cavaba tətbiq olunan mənfi (default -0.25) */
-function autoWrongPenalty(q) {
+/**
+ * Yalnız `closed`: hər səhv cavab üçün çıxılan sabit cərimə məbləği (default 0.25).
+ * Sualın `points` dəyəri ilə vurulmur — ümumi bal = qapalı düzgün balların cəmi − cərimə + digər tiplər.
+ */
+function closedWrongFlatPenaltyMagnitude(q) {
   if (inferQuestionType(q) !== 'closed') return 0;
   const n = q.negative_marking;
-  if (n === null || n === undefined || n === '') return -0.25;
+  if (n === null || n === undefined || n === '') return 0.25;
   const v = Number(n);
-  if (Number.isNaN(v)) return -0.25;
+  if (Number.isNaN(v)) return 0.25;
   if (v === 0) return 0;
-  return v;
+  return Math.abs(v);
 }
 
 /** Çoxseçimli: yalnız rəqəmlər, ardıcıllıqdan asılı olmayaraq (23 = 32) */
@@ -130,11 +133,10 @@ function buildAutoGradingMap(questions, answers) {
 }
 
 /**
- * Avtomatik bal: qapalı (mənfi bal ola bilər), çoxseçimli, uyğunluq (mənfi bal ola bilər).
+ * Avtomatik bal: qapalı (səhvə sabit cərimə, yalnız closed), çoxseçimli, uyğunluq, açıq.
  * Açıq sual: `template_hint` rəqəmdirsə avtomatik yoxlanır (məs. "4.8"); yoxsa manual qalır.
- * Qeyd: score artıq FAİZ deyil — xam baldır (points).
- * Cərimə yalnız qapalı suallara tətbiq olunur:
- * wrongPenalty = negative_marking (məs. -0.25) × points.
+ * Qeyd: score FAİZ deyil — xam baldır (points).
+ * Cərimə yalnız `question_type === 'closed'` üçün; açıq / uyğunluq / çoxseçimli səhvə cərimə yoxdur.
  */
 const calculateScore = (questions, answers) => {
   let earned = 0;
@@ -150,10 +152,9 @@ const calculateScore = (questions, answers) => {
 
     if (type === 'closed') {
       const correct = String(q.correct_answer ?? '').trim();
-      const pen = autoWrongPenalty(q);
       const pts = Number(q.points || 0);
       if (given === correct) earned += pts;
-      else earned += pen * pts;
+      else earned -= closedWrongFlatPenaltyMagnitude(q);
     } else if (type === 'multiple') {
       if (normDigits(given) === normDigits(q.correct_answer)) earned += Number(q.points || 0);
     } else if (type === 'matching') {
