@@ -7,9 +7,34 @@ const api = axios.create({
   timeout: Number.isFinite(parsedTimeout) && parsedTimeout > 0 ? parsedTimeout : 60000,
 })
 
+function requestPath(url) {
+  if (!url || typeof url !== 'string') return ''
+  if (url.includes('://')) {
+    try {
+      return new URL(url).pathname
+    } catch {
+      return url
+    }
+  }
+  return url
+}
+
+/** Giriş cəhdində köhnə Bearer token göndərmə (bəzi proxy/middleware qarışıqlığı) */
+function isPublicAuthPath(url) {
+  const path = requestPath(url)
+  return (
+    path.includes('/auth/login') ||
+    path.includes('/auth/register') ||
+    path.includes('/auth/otp/') ||
+    path.includes('/auth/pin/') ||
+    path.includes('/auth/phone/')
+  )
+}
+
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('mx_token')
+  const token = isPublicAuthPath(config.url || '') ? null : localStorage.getItem('mx_token')
   if (token) config.headers.Authorization = `Bearer ${token}`
+  else delete config.headers.Authorization
   return config
 })
 
@@ -19,7 +44,8 @@ function isAuthAttemptUrl(url) {
     url.includes('/auth/login') ||
     url.includes('/auth/otp/') ||
     url.includes('/auth/pin/') ||
-    url.includes('/auth/phone/')
+    url.includes('/auth/phone/') ||
+    url.includes('/auth/me')
   )
 }
 
