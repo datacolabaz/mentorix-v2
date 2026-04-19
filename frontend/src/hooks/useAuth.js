@@ -5,6 +5,29 @@ const useAuthStore = create((set) => ({
   user: JSON.parse(localStorage.getItem('mx_user') || 'null'),
   token: localStorage.getItem('mx_token'),
 
+  /** Səhifə açılanda: token varsa /auth/me ilə təsdiq; uğursuzdursa yaddaşı təmizlə (köhnə token “firlanma” döngüsü) */
+  bootstrapSession: async () => {
+    const token = localStorage.getItem('mx_token')
+    if (!token) {
+      localStorage.removeItem('mx_user')
+      set({ user: null, token: null })
+      return
+    }
+    try {
+      const data = await api.get('/auth/me')
+      if (data?.user) {
+        localStorage.setItem('mx_user', JSON.stringify(data.user))
+        set({ user: data.user, token })
+      } else {
+        throw new Error('no user')
+      }
+    } catch {
+      localStorage.removeItem('mx_token')
+      localStorage.removeItem('mx_user')
+      set({ user: null, token: null })
+    }
+  },
+
   login: async (identifier, password) => {
     const data = await api.post('/auth/login', { identifier, password })
     localStorage.setItem('mx_token', data.token)
