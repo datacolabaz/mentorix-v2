@@ -834,14 +834,16 @@ const getExamQuestions = async (req, res) => {
       [id]
     );
 
-    // Tələbəyə correct_answer heç vaxt getməsin; template_hint də yalnız neytral format olsun
-    const safe = questions.map(({ correct_answer, template_hint, ...rest }) => {
-      if (req.user.role === 'student') {
-        if (rest.question_type === 'matching') return { ...rest, template_hint: '1a2b3c' };
-        if (rest.question_type === 'multiple') return { ...rest, template_hint: '13' };
-      }
-      return { ...rest, template_hint };
-    });
+    // Tələbəyə correct_answer heç vaxt getməsin; matching/multiple üçün şablon maskalanır.
+    // Müəllim/admin redaktədə hər sualın real düzgün cavabını və şablonunu görməlidir.
+    const safe =
+      req.user.role === 'student'
+        ? questions.map(({ correct_answer, template_hint, ...rest }) => {
+            if (rest.question_type === 'matching') return { ...rest, template_hint: '1a2b3c' };
+            if (rest.question_type === 'multiple') return { ...rest, template_hint: '13' };
+            return { ...rest, template_hint };
+          })
+        : questions.map((q) => ({ ...q }));
 
     res.json({ success: true, exam, questions: safe, started_at: startedAtForStudent });
   } catch (err) {
