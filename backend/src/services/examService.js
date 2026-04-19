@@ -2,6 +2,26 @@ const db = require('../utils/db');
 
 const normType = (t) => String(t ?? '').trim().toLowerCase();
 
+/** exam_results.answers obyektində sual id bəzən defisli/defissiz və ya tip fərqi ilə saxlanılır */
+function normQuestionKey(id) {
+  if (id == null) return '';
+  return String(id).trim().toLowerCase().replace(/-/g, '');
+}
+
+function getAnswerRaw(answers, questionId) {
+  if (!answers || typeof answers !== 'object') return undefined;
+  if (questionId == null) return undefined;
+  const idStr = String(questionId);
+  if (Object.prototype.hasOwnProperty.call(answers, idStr)) return answers[idStr];
+  if (answers[questionId] !== undefined) return answers[questionId];
+  const want = normQuestionKey(questionId);
+  if (!want) return undefined;
+  for (const k of Object.keys(answers)) {
+    if (normQuestionKey(k) === want) return answers[k];
+  }
+  return undefined;
+}
+
 function inferQuestionType(q) {
   const t = normType(q?.question_type);
   if (['closed', 'multiple', 'matching', 'open'].includes(t)) return t;
@@ -128,7 +148,7 @@ function buildAutoGradingMap(questions, answers) {
     if (!q?.id) continue;
     const type = inferQuestionType(q);
     const id = q.id;
-    const raw = answers?.[id];
+    const raw = getAnswerRaw(answers, id);
     const given = raw == null || raw === '' ? '' : String(raw);
 
     if (type === 'matching') {
@@ -157,8 +177,8 @@ function emptyTypeAgg() {
  */
 function scoreQuestionForAuto(q, answers, wrongPenaltyEnabled) {
   const type = inferQuestionType(q);
-  const given =
-    answers[q.id] != null && answers[q.id] !== '' ? String(answers[q.id]).trim() : '';
+  const rawAns = getAnswerRaw(answers, q.id);
+  const given = rawAns != null && rawAns !== '' ? String(rawAns).trim() : '';
   const pts = Number(q.points || 0);
   const pen = wrongSelectionPenaltyMagnitude(q, wrongPenaltyEnabled);
 
@@ -168,13 +188,17 @@ function scoreQuestionForAuto(q, answers, wrongPenaltyEnabled) {
 
   if (type === 'closed') {
     const correct = String(q.correct_answer ?? '').trim();
-    if (given === correct) return { type, delta: pts, outcome: 'correct' };
+    if (!correct) return { type, delta: 0, outcome: 'pending' };
+    const ok = given.toUpperCase() === correct.toUpperCase();
+    if (ok) return { type, delta: pts, outcome: 'correct' };
     return { type, delta: -pen, outcome: 'wrong' };
   }
 
   if (type === 'multiple') {
     const ca = q.correct_answer;
-    if (normDigits(given) === normDigits(ca)) return { type, delta: pts, outcome: 'correct' };
+    const caNorm = normDigits(ca);
+    if (!caNorm) return { type, delta: 0, outcome: 'pending' };
+    if (normDigits(given) === caNorm) return { type, delta: pts, outcome: 'correct' };
     const wrongPicks = countWrongMultipleSelections(given, ca);
     return { type, delta: -(wrongPicks * pen), outcome: 'wrong' };
   }
@@ -255,7 +279,7 @@ const buildExamTypeSummary = (questions, answers, opts = {}) => {
 const buildExamResultBreakdown = (questions, answers) => {
   const order = [...questions].sort((a, b) => (a.order_num || 0) - (b.order_num || 0));
   return order.map((q, idx) => {
-    const raw = answers[q.id];
+    const raw = getAnswerRaw(answers, q.id);
     const given = raw == null || raw === '' ? '' : String(raw).trim();
     const type = inferQuestionType(q);
     let correctDisplay = '';
@@ -264,12 +288,18 @@ const buildExamResultBreakdown = (questions, answers) => {
     if (type === 'closed') {
       correctDisplay = ''; // tələbəyə düzgün cavabı göstərmirik
       if (!given) isCorrect = null;
-      else isCorrect = given === String(q.correct_answer ?? '').trim();
+      else {
+        const c = String(q.correct_answer ?? '').trim();
+        isCorrect = c ? given.toUpperCase() === c.toUpperCase() : null;
+      }
     } else if (type === 'multiple') {
       const hint = String(q.template_hint || '').trim();
       correctDisplay = hint ? `Nümunə: ${hint}` : 'Nümunə: 13';
       if (!given) isCorrect = null;
-      else isCorrect = normDigits(given) === normDigits(q.correct_answer);
+      else {
+        const caN = normDigits(q.correct_answer);
+        isCorrect = caN ? normDigits(given) === caN : null;
+      }
     } else if (type === 'matching') {
       const hint = String(q.template_hint || '').trim();
       correctDisplay = hint ? `Nümunə: ${hint}` : 'Nümunə: 1a2b3c';
