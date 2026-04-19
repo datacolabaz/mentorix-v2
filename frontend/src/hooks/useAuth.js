@@ -5,7 +5,7 @@ const useAuthStore = create((set) => ({
   user: JSON.parse(localStorage.getItem('mx_user') || 'null'),
   token: localStorage.getItem('mx_token'),
 
-  /** Səhifə açılanda: token varsa /auth/me ilə təsdiq; uğursuzdursa yaddaşı təmizlə (köhnə token “firlanma” döngüsü) */
+  /** Token varsa /auth/me ilə təsdiq; yalnız 401/403-da yaddaşı təmizlə (şəbəkə xətasında girişi sındırma) */
   bootstrapSession: async () => {
     const token = localStorage.getItem('mx_token')
     if (!token) {
@@ -21,15 +21,21 @@ const useAuthStore = create((set) => ({
       } else {
         throw new Error('no user')
       }
-    } catch {
-      localStorage.removeItem('mx_token')
-      localStorage.removeItem('mx_user')
-      set({ user: null, token: null })
+    } catch (e) {
+      const st = e?.status ?? e?.response?.status
+      if (st === 401 || st === 403) {
+        localStorage.removeItem('mx_token')
+        localStorage.removeItem('mx_user')
+        set({ user: null, token: null })
+      }
     }
   },
 
   login: async (identifier, password) => {
     const data = await api.post('/auth/login', { identifier, password })
+    if (!data?.token || !data?.user) {
+      throw new Error(data?.message || 'Server cavabı etibarsızdır')
+    }
     localStorage.setItem('mx_token', data.token)
     localStorage.setItem('mx_user', JSON.stringify(data.user))
     set({ user: data.user, token: data.token })
@@ -55,6 +61,11 @@ const useAuthStore = create((set) => ({
 
   pinLogin: async (phone, pin, role) => {
     const data = await api.post('/auth/pin/login', { phone, pin, role })
+    if (!data?.token || !data?.user) {
+      throw Object.assign(new Error(data?.message || 'Server cavabı etibarsızdır'), {
+        needs_setup: data?.needs_setup,
+      })
+    }
     localStorage.setItem('mx_token', data.token)
     localStorage.setItem('mx_user', JSON.stringify(data.user))
     set({ user: data.user, token: data.token })
