@@ -738,12 +738,12 @@ const getExamQuestions = async (req, res) => {
     const now = new Date();
     const dur = Number(exam.duration_minutes) || 0;
     const { from, until, allowFinish } = examWindowOrLegacy(exam);
-    if (!from || !until) {
-      return res.status(400).json({ success: false, message: 'İmtahan vaxtı təyin olunmayıb' });
-    }
 
     let startedAtForStudent = null;
     if (req.user.role === 'student') {
+      if (!from || !until) {
+        return res.status(400).json({ success: false, message: 'İmtahan vaxtı təyin olunmayıb' });
+      }
       const sidHex = normStudentHex(req.user.id);
       const { rows: lateRowsEarly } = await db.query(
         `SELECT late_access_until
@@ -1388,6 +1388,7 @@ const grantLateAccess = async (req, res) => {
  * - exam_files: [{name,url}] (JSON array)
  * - pdf_url: string|null
  * - student_ids: string[] (təyinatların son vəziyyəti)
+ * - questions (optional): [{ id, question_text, points, options, correct_answer, template_hint, negative_marking, order_num }] — mövcud sualları yeniləyir
  */
 const patchExam = async (req, res) => {
   try {
@@ -1409,6 +1410,7 @@ const patchExam = async (req, res) => {
       exam_files,
       pdf_url,
       student_ids,
+      questions,
     } = req.body || {};
 
     const startNorm = start_time != null && start_time !== '' ? normalizeExamStartTime(start_time) : null;
@@ -1442,6 +1444,7 @@ const patchExam = async (req, res) => {
     const filesProvided = exam_files !== undefined;
     const pdfProvided = pdf_url !== undefined;
     const studentsProvided = student_ids !== undefined;
+    const questionsProvided = Array.isArray(questions);
 
     let nextFilesJson = null;
     if (filesProvided) {
@@ -1561,6 +1564,94 @@ const patchExam = async (req, res) => {
         const err = new Error('Imtahan tapilmadi');
         err.code = 'EXAM_NOT_FOUND';
         throw err;
+      }
+
+      if (questionsProvided) {
+        for (const q of questions) {
+          if (!q || q.id == null || String(q.id).trim() === '') continue;
+          const { rows: qrows } = await client.query(
+            `SELECT id, question_type, order_num FROM exam_questions WHERE id = $1::uuid AND exam_id = $2::uuid`,
+            [q.id, examId]
+          );
+          const row = qrows[0];
+          if (!row) continue;
+
+          const qText = (q.question_text != null && String(q.question_text).trim()) || 'Sual';
+          const ptsRaw = parseInt(String(q.points != null ? q.points : '10'), 10);
+          const pts = Number.isFinite(ptsRaw) ? Math.min(1000, Math.max(1, ptsRaw)) : 10;
+
+          let opts = q.options;
+          if (typeof opts === 'string') {
+            try {
+              opts = JSON.parse(opts);
+            } catch {
+              opts = [];
+            }
+          }
+          if (!Array.isArray(opts)) opts = [];
+
+          let correctAns =
+            q.correct_answer != null && String(q.correct_answer).trim() !== ''
+              ? String(q.correct_answer).trim()
+              : null;
+          if (row.question_type === 'closed' && correctAns) {
+            correctAns = correctAns.toUpperCase().slice(0, 1);
+          }
+          if (row.question_type === 'multiple' && correctAns != null) {
+            correctAns = correctAns
+              .replace(/\D/g, '')
+              .split('')
+              .filter((c, idx, arr) => arr.indexOf(c) === idx)
+              .sort()
+              .join('');
+          }
+          if (row.question_type === 'matching') {
+            const derived = buildMatchingCorrectFromPayload({
+              ...q,
+              question_type: 'matching',
+              correct_answer: correctAns,
+              options: opts,
+            });
+            if (derived) correctAns = derived;
+          }
+
+          const hintRaw = q.template_hint != null ? String(q.template_hint).trim() : '';
+          const templateHint =
+            row.question_type === 'matching'
+              ? '1a2b3c'
+              : row.question_type === 'multiple'
+                ? '13'
+                : hintRaw || null;
+
+          const negRaw = q.negative_marking != null && q.negative_marking !== '' ? Number(q.negative_marking) : 0;
+          const negMark = Number.isFinite(negRaw) ? negRaw : 0;
+
+          const ordRaw = parseInt(String(q.order_num != null ? q.order_num : row.order_num), 10);
+          const orderNum = Number.isFinite(ordRaw) ? Math.max(1, ordRaw) : Math.max(1, Number(row.order_num) || 1);
+
+          await client.query(
+            `UPDATE exam_questions SET
+              question_text = $1,
+              points = $2,
+              options = $3::jsonb,
+              correct_answer = $4,
+              template_hint = $5,
+              negative_marking = $6::numeric,
+              order_num = $7
+             WHERE id = $8::uuid AND exam_id = $9::uuid`,
+            [
+              qText,
+              pts,
+              JSON.stringify(opts),
+              correctAns,
+              templateHint,
+              negMark,
+              orderNum,
+              q.id,
+              examId,
+            ]
+          );
+        }
       }
 
       if (studentsProvided) {

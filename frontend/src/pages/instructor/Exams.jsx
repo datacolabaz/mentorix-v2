@@ -8,6 +8,110 @@ import ListSkeleton from '../../components/common/ListSkeleton'
 import { useToast } from '../../components/common/Toast'
 import { localDatetimeInputToUtcIso, utcInstantToDatetimeLocalValue } from '../../lib/examDatetime'
 
+function initEditQuestion(q) {
+  const type = String(q.question_type || '').trim()
+  let opts = q.options
+  if (typeof opts === 'string') {
+    try {
+      opts = JSON.parse(opts)
+    } catch {
+      opts = []
+    }
+  }
+  if (!Array.isArray(opts)) opts = []
+  const closedTexts = ['', '', '', '', '']
+  if (type === 'closed') {
+    for (let i = 0; i < 5; i++) {
+      const o = opts[i]
+      closedTexts[i] = typeof o === 'string' ? o : o && typeof o === 'object' ? String(o.text ?? '') : ''
+    }
+  }
+  const multTexts = ['', '', '', '']
+  if (type === 'multiple') {
+    for (let i = 0; i < 4; i++) {
+      const o = opts[i]
+      multTexts[i] = typeof o === 'string' ? o : o && typeof o === 'object' ? String(o.text ?? '') : ''
+    }
+  }
+  const matchRows =
+    type === 'matching'
+      ? opts.length
+        ? opts.map((r) => ({
+            left: r && typeof r === 'object' ? String(r.left ?? '') : '',
+            right: r && typeof r === 'object' ? String(r.right ?? '') : '',
+          }))
+        : [
+            { left: '', right: '' },
+            { left: '', right: '' },
+          ]
+      : []
+  return {
+    ...q,
+    _closedTexts: closedTexts,
+    _multTexts: multTexts,
+    _matchRows: matchRows,
+  }
+}
+
+function serializeEditQuestion(eq) {
+  const type = String(eq.question_type || '').trim()
+  let options = []
+  if (type === 'closed') {
+    options = (eq._closedTexts || ['', '', '', '', '']).map((text, j) => ({
+      key: String.fromCharCode(65 + j),
+      text: String(text || '').trim(),
+    }))
+  } else if (type === 'multiple') {
+    options = (eq._multTexts || ['', '', '', '']).map((text, j) => ({
+      key: String(j + 1),
+      text: String(text || '').trim(),
+    }))
+  } else if (type === 'matching') {
+    options = (eq._matchRows || []).map((r) => ({
+      left: String(r.left ?? '').trim(),
+      right: String(r.right ?? '').trim(),
+    }))
+  } else {
+    let o = eq.options
+    if (typeof o === 'string') {
+      try {
+        o = JSON.parse(o)
+      } catch {
+        o = []
+      }
+    }
+    options = Array.isArray(o) ? o : []
+  }
+  let correct = String(eq.correct_answer ?? '').trim()
+  if (type === 'multiple') {
+    correct = correct
+      .replace(/\D/g, '')
+      .split('')
+      .filter((c, i, a) => a.indexOf(c) === i)
+      .sort()
+      .join('')
+  }
+  if (type === 'closed' && correct) correct = correct.toUpperCase().slice(0, 1)
+  return {
+    id: eq.id,
+    question_text: String(eq.question_text ?? '').trim() || 'Sual',
+    question_type: type,
+    points: eq.points,
+    options,
+    correct_answer: correct || null,
+    template_hint: eq.template_hint,
+    negative_marking: eq.negative_marking,
+    order_num: eq.order_num,
+  }
+}
+
+const EDIT_TYPE_AZ = {
+  closed: 'Qapalı',
+  multiple: 'Çoxseçimli',
+  matching: 'Uyğunluq',
+  open: 'Açıq',
+}
+
 export default function InstructorExams() {
   const [exams, setExams] = useState([])
   const [students, setStudents] = useState([])
@@ -20,6 +124,8 @@ export default function InstructorExams() {
   const [editStudentIds, setEditStudentIds] = useState([])
   const [editBaselineAssigned, setEditBaselineAssigned] = useState(() => new Set())
   const [editAssignmentsLoading, setEditAssignmentsLoading] = useState(false)
+  const [editQuestions, setEditQuestions] = useState([])
+  const [editQuestionsLoading, setEditQuestionsLoading] = useState(false)
   const [lateBusyStudentId, setLateBusyStudentId] = useState(null)
   const [lateAccessPreset, setLateAccessPreset] = useState('120')
   const [lateAccessCustomUntil, setLateAccessCustomUntil] = useState('')
@@ -111,17 +217,26 @@ export default function InstructorExams() {
     setEditBaselineAssigned(new Set())
     setStudentPickerQuery('')
     setShowAllStudentsInPicker(false)
+    setEditQuestions([])
     setEditAssignmentsLoading(true)
+    setEditQuestionsLoading(true)
     try {
-      const d = await api.get(`/exams/${exam.id}/assignments`)
-      const ids = Array.isArray(d.student_ids) ? d.student_ids : []
+      const [dAssign, dQs] = await Promise.all([
+        api.get(`/exams/${exam.id}/assignments`),
+        api.get(`/exams/${exam.id}/questions`),
+      ])
+      const ids = Array.isArray(dAssign.student_ids) ? dAssign.student_ids : []
       setEditStudentIds(ids)
       setEditBaselineAssigned(new Set(ids.map(String)))
+      const qs = Array.isArray(dQs?.questions) ? dQs.questions : []
+      setEditQuestions(qs.map(initEditQuestion))
     } catch {
       setEditStudentIds([])
       setEditBaselineAssigned(new Set())
+      setEditQuestions([])
     } finally {
       setEditAssignmentsLoading(false)
+      setEditQuestionsLoading(false)
     }
   }
  
@@ -129,7 +244,7 @@ export default function InstructorExams() {
     setLoading(true)
     try {
       const exam_files = editMaterialFiles.map(({ name, url }) => ({ name, url }))
-      await api.patch('/exams/' + editExam.id, {
+      const payload = {
         title: editExam.title,
         subject: editExam.subject,
         topic: editExam.topic,
@@ -144,7 +259,11 @@ export default function InstructorExams() {
         pdf_url: exam_files[0]?.url || null,
         exam_files,
         student_ids: editStudentIds,
-      })
+      }
+      if (editQuestions.length) {
+        payload.questions = editQuestions.map(serializeEditQuestion)
+      }
+      await api.patch('/exams/' + editExam.id, payload)
       toast('Imtahan yenilendi!')
       setEditModal(false)
       loadExams()
@@ -226,6 +345,40 @@ export default function InstructorExams() {
   }
  
   const inp = 'w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500'
+
+  const patchEditQuestion = (idx, partial) => {
+    setEditQuestions((prev) => prev.map((q, i) => (i === idx ? { ...q, ...partial } : q)))
+  }
+  const setClosedOpt = (qIdx, optIdx, val) => {
+    setEditQuestions((prev) =>
+      prev.map((q, i) => {
+        if (i !== qIdx) return q
+        const next = [...(q._closedTexts || ['', '', '', '', ''])]
+        next[optIdx] = val
+        return { ...q, _closedTexts: next }
+      })
+    )
+  }
+  const setMultOpt = (qIdx, optIdx, val) => {
+    setEditQuestions((prev) =>
+      prev.map((q, i) => {
+        if (i !== qIdx) return q
+        const next = [...(q._multTexts || ['', '', '', ''])]
+        next[optIdx] = val
+        return { ...q, _multTexts: next }
+      })
+    )
+  }
+  const setMatchCell = (qIdx, rowIdx, side, val) => {
+    setEditQuestions((prev) =>
+      prev.map((q, i) => {
+        if (i !== qIdx) return q
+        const rows = [...(q._matchRows || [])]
+        rows[rowIdx] = { ...rows[rowIdx], [side]: val }
+        return { ...q, _matchRows: rows }
+      })
+    )
+  }
 
   const removeEditMaterial = (id) => {
     setEditMaterialFiles((prev) => prev.filter((x) => x.id !== id))
@@ -525,6 +678,178 @@ export default function InstructorExams() {
                   onChange={(e) => setEditExam((p) => ({ ...p, wrong_penalty_enabled: e.target.checked }))}
                 />
               </div>
+            </div>
+
+            <div className="p-4 bg-[#13112e] rounded-xl border border-indigo-500/20 space-y-3">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="text-sm font-semibold">Suallar və ballar</div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    Sual mətni, bal, düzgün cavab və variantları düzəldə bilərsiniz (PDF-də səhv olanları buradan düzəltmək üçün).
+                  </div>
+                </div>
+                <div className="text-xs text-gray-500 whitespace-nowrap">
+                  {editQuestionsLoading ? 'Yüklənir…' : `${editQuestions.length} sual`}
+                </div>
+              </div>
+              {editQuestionsLoading ? (
+                <p className="text-xs text-gray-500 py-2">Suallar yüklənir…</p>
+              ) : editQuestions.length === 0 ? (
+                <p className="text-xs text-gray-500 py-2">Sual tapılmadı.</p>
+              ) : (
+                <div className="space-y-3 max-h-[min(55vh,420px)] overflow-y-auto pr-1">
+                  {editQuestions.map((q, idx) => {
+                    const t = String(q.question_type || '').trim()
+                    return (
+                      <div
+                        key={q.id || idx}
+                        className="rounded-lg border border-indigo-500/15 bg-[#0f0e24] p-3 space-y-2 text-left"
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <span className="text-xs font-bold text-indigo-300">
+                            Sual {q.order_num ?? idx + 1} · {EDIT_TYPE_AZ[t] || t}
+                          </span>
+                          <label className="flex items-center gap-1.5 text-[11px] text-gray-400">
+                            Bal
+                            <input
+                              type="number"
+                              min={1}
+                              max={1000}
+                              className="w-16 bg-[#13112e] border border-indigo-500/25 rounded-lg px-2 py-1 text-white text-xs text-center"
+                              value={Number.isFinite(Number(q.points)) ? q.points : ''}
+                              onChange={(e) => {
+                                const v = parseInt(e.target.value, 10)
+                                patchEditQuestion(idx, { points: Number.isFinite(v) ? v : q.points })
+                              }}
+                            />
+                          </label>
+                        </div>
+                        <textarea
+                          className={inp + ' resize-none'}
+                          rows={2}
+                          value={String(q.question_text ?? '')}
+                          onChange={(e) => patchEditQuestion(idx, { question_text: e.target.value })}
+                          placeholder="Sual mətni"
+                        />
+                        {(t === 'closed' || t === 'multiple') && (
+                          <label className="block text-[11px] text-gray-500">
+                            Mənfi bal (cərimə əmsalı, məs. -0.25)
+                            <input
+                              type="number"
+                              step="0.01"
+                              className={inp + ' mt-1'}
+                              value={q.negative_marking != null ? String(q.negative_marking) : ''}
+                              onChange={(e) => {
+                                const n = Number(e.target.value)
+                                patchEditQuestion(idx, {
+                                  negative_marking: e.target.value === '' || Number.isNaN(n) ? 0 : n,
+                                })
+                              }}
+                            />
+                          </label>
+                        )}
+                        {t === 'closed' && (
+                          <div className="space-y-1.5">
+                            <label className="text-[11px] text-gray-500">Düzgün cavab (A–E)</label>
+                            <input
+                              className={inp}
+                              maxLength={1}
+                              value={String(q.correct_answer ?? '').toUpperCase().slice(0, 1)}
+                              onChange={(e) =>
+                                patchEditQuestion(idx, {
+                                  correct_answer: e.target.value.toUpperCase().replace(/[^A-E]/g, '').slice(0, 1),
+                                })
+                              }
+                              placeholder="A"
+                            />
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              {(q._closedTexts || ['', '', '', '', '']).map((txt, oi) => (
+                                <label key={oi} className="block text-[11px] text-gray-500">
+                                  Variant {String.fromCharCode(65 + oi)}
+                                  <input
+                                    className={inp + ' mt-0.5'}
+                                    value={txt}
+                                    onChange={(e) => setClosedOpt(idx, oi, e.target.value)}
+                                  />
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {t === 'multiple' && (
+                          <div className="space-y-1.5">
+                            <label className="text-[11px] text-gray-500">Düzgün variantlar (rəqəmlər, məs. 13)</label>
+                            <input
+                              className={inp}
+                              value={String(q.correct_answer ?? '').replace(/\D/g, '')}
+                              onChange={(e) =>
+                                patchEditQuestion(idx, {
+                                  correct_answer: e.target.value.replace(/\D/g, '').slice(0, 9),
+                                })
+                              }
+                              placeholder="13"
+                            />
+                            <div className="grid grid-cols-2 gap-2">
+                              {(q._multTexts || ['', '', '', '']).map((txt, oi) => (
+                                <label key={oi} className="block text-[11px] text-gray-500">
+                                  Variant {oi + 1}
+                                  <input
+                                    className={inp + ' mt-0.5'}
+                                    value={txt}
+                                    onChange={(e) => setMultOpt(idx, oi, e.target.value)}
+                                  />
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {t === 'matching' && (
+                          <div className="space-y-2">
+                            <label className="text-[11px] text-gray-500">Düzgün açar (məs. 1a2b3c)</label>
+                            <input
+                              className={inp + ' font-mono text-xs'}
+                              value={String(q.correct_answer ?? '')}
+                              onChange={(e) =>
+                                patchEditQuestion(idx, {
+                                  correct_answer: e.target.value.toLowerCase().replace(/[^0-9a-z]/g, ''),
+                                })
+                              }
+                              placeholder="1a2b3c"
+                            />
+                            {(q._matchRows || []).map((row, ri) => (
+                              <div key={ri} className="grid grid-cols-2 gap-2">
+                                <input
+                                  className={inp}
+                                  placeholder="Sol"
+                                  value={row.left}
+                                  onChange={(e) => setMatchCell(idx, ri, 'left', e.target.value)}
+                                />
+                                <input
+                                  className={inp}
+                                  placeholder="Sağ"
+                                  value={row.right}
+                                  onChange={(e) => setMatchCell(idx, ri, 'right', e.target.value)}
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {t === 'open' && (
+                          <div className="space-y-1.5">
+                            <label className="text-[11px] text-gray-500">Şablon / gözlənti (avtomatik yoxlama üçün)</label>
+                            <input
+                              className={inp}
+                              value={String(q.template_hint ?? '')}
+                              onChange={(e) => patchEditQuestion(idx, { template_hint: e.target.value })}
+                              placeholder="məs. 4.5"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
             </div>
 
             <div className="p-4 bg-[#13112e] rounded-xl border border-indigo-500/20 space-y-3">
