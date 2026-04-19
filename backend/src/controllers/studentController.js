@@ -1,4 +1,10 @@
 const db = require('../utils/db');
+const {
+  bakuTodayYmd,
+  parseLessonWeekdaysJson,
+  parseYmdUtcNoon,
+  ymdFromUtcDate,
+} = require('./monthlyAttendanceController');
 
 const listStudents = async (req, res) => {
   try {
@@ -213,8 +219,48 @@ function toMinutes(t) {
   return h * 60 + m;
 }
 
+/** ISO həftə günü: Bazar=7, B.e.=1 (UTC təqvim günü ilə) */
+function isoDowMon1FromUtcDate(d) {
+  if (!d) return null;
+  const w = d.getUTCDay();
+  return w === 0 ? 7 : w;
+}
+
+function padHHMM(t) {
+  const m = String(t || '').trim().match(/^(\d{1,2}):(\d{2})$/);
+  if (!m) return null;
+  const h = Math.min(23, Math.max(0, parseInt(m[1], 10)));
+  const mi = Math.min(59, Math.max(0, parseInt(m[2], 10)));
+  if (!Number.isFinite(h) || !Number.isFinite(mi)) return null;
+  return `${String(h).padStart(2, '0')}:${String(mi).padStart(2, '0')}`;
+}
+
+function timeOnWeekday(lt, weekday) {
+  if (!lt || typeof lt !== 'object') return null;
+  const v = lt[String(weekday)] ?? lt[weekday];
+  return padHHMM(v);
+}
+
+function nextYmdOnOrAfterWeekday(startYmd, weekday) {
+  if (!startYmd || !weekday || weekday < 1 || weekday > 7) return null;
+  const start = parseYmdUtcNoon(startYmd);
+  if (!start) return null;
+  for (let i = 0; i < 370; i += 1) {
+    const d = new Date(start.getTime() + i * 86400000);
+    if (isoDowMon1FromUtcDate(d) === weekday) return ymdFromUtcDate(d);
+  }
+  return null;
+}
+
+function bakuInstantIsoFromYmdAndHm(ymd, hhmm) {
+  const hm = padHHMM(hhmm);
+  if (!hm || !ymd) return null;
+  const [H, M] = hm.split(':').map((x) => parseInt(x, 10));
+  return `${ymd}T${String(H).padStart(2, '0')}:${String(M).padStart(2, '0')}:00+04:00`;
+}
+
 /** Tələbə profili: həftəlik dərs günləri + slot məlumatı (boş günləri UI çıxarır) */
-/** Müəllim: bütün tələbələrin tarixli dərsləri (tələbə cədvəli ilə eyni mənbə — lessons + enrollment lesson_times). */
+/** Müəllim: paket üçün lessons; aylıq üçün lesson_times + həftə günlərindən növbəti təqvim nöqtələri (lessons olmadan da cədvəl dolur). */
 const getInstructorMyLessonsCalendar = async (req, res) => {
   try {
     const iid =
@@ -234,7 +280,63 @@ const getInstructorMyLessonsCalendar = async (req, res) => {
        ORDER BY l.lesson_date ASC`,
       [iid]
     );
-    res.json({ success: true, lessons });
+
+    const today = await bakuTodayYmd();
+    const { rows: monthlyRows } = await db.query(
+      `SELECT e.id AS enrollment_id, e.lesson_weekdays, e.lesson_times,
+              e.enrollment_start_date,
+              u.full_name AS student_name
+       FROM enrollments e
+       JOIN users u ON u.id = e.student_id
+       WHERE REPLACE(LOWER(TRIM(e.instructor_id::text)), '-', '') = $1
+         AND e.billing_type = 'monthly'
+         AND u.is_active = TRUE
+         AND (e.status IS NULL OR LOWER(TRIM(e.status)) = 'active')`,
+      [iid]
+    );
+
+    const synthetic = [];
+    for (const row of monthlyRows) {
+      let lt = row.lesson_times;
+      if (lt != null && typeof lt === 'string') {
+        try {
+          lt = JSON.parse(lt);
+        } catch {
+          lt = {};
+        }
+      }
+      if (!lt || typeof lt !== 'object') lt = {};
+
+      const wdays = parseLessonWeekdaysJson(row.lesson_weekdays);
+      const anchorRaw = row.enrollment_start_date;
+      const anchorYmd = anchorRaw ? String(anchorRaw).slice(0, 10) : null;
+      const anchorOk = anchorYmd && /^\d{4}-\d{2}-\d{2}$/.test(anchorYmd) ? anchorYmd : null;
+      let startBase = today;
+      if (anchorOk && anchorOk > startBase) startBase = anchorOk;
+
+      for (const wd of wdays) {
+        const hm = timeOnWeekday(lt, wd);
+        if (!hm) continue;
+        const ymd = nextYmdOnOrAfterWeekday(startBase, wd);
+        if (!ymd) continue;
+        const lessonDateIso = bakuInstantIsoFromYmdAndHm(ymd, hm);
+        if (!lessonDateIso) continue;
+        synthetic.push({
+          id: `m:${row.enrollment_id}:${wd}`,
+          lesson_date: lessonDateIso,
+          status: 'monthly_grid',
+          lesson_number: null,
+          billing_cycle: null,
+          student_name: row.student_name,
+          enrollment_lesson_times: row.lesson_times,
+        });
+      }
+    }
+
+    const merged = [...lessons, ...synthetic].sort((a, b) =>
+      String(a.lesson_date).localeCompare(String(b.lesson_date))
+    );
+    res.json({ success: true, lessons: merged });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

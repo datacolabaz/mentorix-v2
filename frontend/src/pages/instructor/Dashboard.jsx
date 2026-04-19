@@ -63,7 +63,7 @@ export default function InstructorDashboard() {
         // Pre-fetch: tələbələr və cədvəl keşi (60s TTL üçün yazılır)
         writeCache('instructor_students_v1', { students: nextStudents })
         const nextLessons = Array.isArray(lessonsRes.lessons) ? lessonsRes.lessons : []
-        writeCache('instructor_schedule_lessons_v1', { lessons: nextLessons })
+        writeCache('instructor_schedule_lessons_v2', { lessons: nextLessons })
       })
       .finally(() => {
         if (!cancelled) setLoading(false)
