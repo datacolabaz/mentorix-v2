@@ -200,6 +200,78 @@ function generateLessonStarts({ startYmd, lessonWeekdays, lessonTimes, count }) 
   return out;
 }
 
+/** 8/12: 1-ci dövrün planlı dərslərini silib yenidən yaradır (client = tranzaksiya client-i) */
+async function replaceCycleOneScheduledLessons(client, params) {
+  const { enrollmentId, studentId, instructor_id, ni, lwd, lt, firstYmd, limit } = params;
+  if (!limit || !firstYmd) return;
+  const starts = generateLessonStarts({
+    startYmd: firstYmd,
+    lessonWeekdays: lwd,
+    lessonTimes: lt,
+    count: limit,
+  });
+  if (starts.length < limit) {
+    const err = new Error('Seçilmiş tarix və dərs günləri/saatları ilə kifayət qədər dərs yaradılmır');
+    err.statusCode = 400;
+    throw err;
+  }
+  for (let i = 0; i < starts.length; i++) {
+    const ymd = starts[i].slice(0, 10);
+    const time = starts[i].slice(11, 16);
+    const w = weekdayFromYmd(ymd);
+    const occupied = await client.query(
+      `SELECT id FROM teacher_schedules
+       WHERE REPLACE(LOWER(TRIM(instructor_id::text)), '-', '') = $1
+         AND is_occupied = TRUE
+         AND day_of_week = $2
+         AND start_time = $3::time
+       LIMIT 1`,
+      [ni, w, time]
+    );
+    if (occupied.rowCount > 0) {
+      throw Object.assign(new Error('LESSON_CONFLICT'), {
+        code: 'LESSON_CONFLICT',
+        at: `${ymd} ${time}`,
+      });
+    }
+    const exists = await client.query(
+      `SELECT id FROM lessons
+       WHERE instructor_id = $1
+         AND student_id <> $3
+         AND lesson_date = ($2::timestamp AT TIME ZONE 'Asia/Baku')
+         AND NOT (enrollment_id = $4::uuid AND billing_cycle = 1)
+       LIMIT 1`,
+      [instructor_id, starts[i], studentId, enrollmentId]
+    );
+    if (exists.rowCount > 0) {
+      throw Object.assign(new Error('LESSON_CONFLICT'), {
+        code: 'LESSON_CONFLICT',
+        at: `${ymd} ${time}`,
+      });
+    }
+  }
+
+  await client.query(`DELETE FROM attendance WHERE enrollment_id = $1 AND billing_cycle = 1`, [enrollmentId]);
+  await client.query(`UPDATE enrollments SET lesson_count = 0 WHERE id = $1`, [enrollmentId]);
+  await client.query(`DELETE FROM lessons WHERE enrollment_id = $1 AND billing_cycle = 1`, [enrollmentId]);
+  await client.query(`DELETE FROM enrollment_lessons WHERE enrollment_id = $1 AND billing_cycle = 1`, [enrollmentId]);
+
+  for (let i = 0; i < starts.length; i++) {
+    await client.query(
+      `INSERT INTO enrollment_lessons (enrollment_id, billing_cycle, lesson_number, starts_at)
+       VALUES ($1, 1, $2, $3::timestamp)
+       ON CONFLICT (enrollment_id, billing_cycle, lesson_number) DO NOTHING`,
+      [enrollmentId, i + 1, starts[i]]
+    );
+    await client.query(
+      `INSERT INTO lessons (enrollment_id, student_id, instructor_id, lesson_date, status, lesson_number, billing_cycle)
+       VALUES ($1,$2,$3,($4::timestamp AT TIME ZONE 'Asia/Baku'),'pending',$5,1)
+       ON CONFLICT (enrollment_id, billing_cycle, lesson_number) DO NOTHING`,
+      [enrollmentId, student_id, instructor_id, starts[i], i + 1]
+    );
+  }
+}
+
 router.get('/', authenticate, authorize('admin', 'instructor'), listStudents);
 
 router.delete('/enrollment/:enrollmentId', authenticate, authorize('admin', 'instructor'), deleteStudent);
@@ -451,6 +523,7 @@ router.patch('/enrollment/:enrollmentId', authenticate, authorize('admin', 'inst
       lesson_times,
       subject_id,
       group_id,
+      first_lesson_date,
     } = req.body;
     const { enrollmentId } = req.params;
 
@@ -572,6 +645,94 @@ router.patch('/enrollment/:enrollmentId', authenticate, authorize('admin', 'inst
         ]);
       } catch (e) {
         return res.status(e.statusCode || 400).json({ success: false, message: e.message });
+      }
+    }
+
+    const hasFirstLesson = Object.prototype.hasOwnProperty.call(req.body, 'first_lesson_date');
+    if (hasFirstLesson) {
+      const { rows: enFresh } = await db.query(
+        `SELECT e.id, e.student_id, e.instructor_id, e.billing_type, e.billing_cycle, e.lesson_count,
+                e.lesson_weekdays, e.lesson_times, e.enrollment_start_date
+         FROM enrollments e WHERE e.id = $1`,
+        [enrollmentId]
+      );
+      const ent = enFresh[0];
+      if (!ent) {
+        return res.status(404).json({ success: false, message: 'Enrollment tapılmadı' });
+      }
+      const lim = billingLimit(ent.billing_type);
+      const flRaw = first_lesson_date;
+      const wantsChange = flRaw != null && String(flRaw).trim() !== '';
+      if (!lim) {
+        if (wantsChange) {
+          const anchorYmd = parsePaymentStartDate(flRaw);
+          if (!anchorYmd) {
+            return res.status(400).json({ success: false, message: 'Ankor / ilk dərs tarixi düzgün deyil' });
+          }
+          await db.query(`UPDATE enrollments SET enrollment_start_date = $1::date WHERE id = $2`, [
+            anchorYmd,
+            enrollmentId,
+          ]);
+        }
+      } else if (wantsChange) {
+        const firstYmd = parsePaymentStartDate(flRaw);
+        const enrSlice =
+          ent.enrollment_start_date != null ? String(ent.enrollment_start_date).slice(0, 10) : '';
+        const enrollmentYmd = parsePaymentStartDate(enrSlice);
+        if (!firstYmd) {
+          return res.status(400).json({ success: false, message: 'İlk dərs tarixi düzgün deyil' });
+        }
+        if (!enrollmentYmd) {
+          return res.status(400).json({
+            success: false,
+            message: 'Dərslərə başlama tarixi əvvəlcə düzgün saxlanılmalıdır',
+          });
+        }
+        if (firstYmd < enrollmentYmd) {
+          return res.status(400).json({
+            success: false,
+            message: 'İlk dərs tarixi, dərslərə başlama tarixindən əvvəl ola bilməz',
+          });
+        }
+        if (Number(ent.billing_cycle ?? 1) !== 1) {
+          return res.status(400).json({
+            success: false,
+            message: 'İlk dərs tarixini yalnız birinci dövr üzrə dəyişmək mümkündür (növbəti paketə keçilib).',
+          });
+        }
+        const wd = weekdayFromYmd(firstYmd);
+        const lwdNow = parseLessonWeekdays(ent.lesson_weekdays);
+        const ltNow = parseLessonTimes(ent.lesson_times, lwdNow);
+        if (!wd || !lwdNow.includes(wd) || !ltNow[String(wd)]) {
+          return res.status(400).json({
+            success: false,
+            message: 'İlk dərs tarixi dərs günləri və saatları ilə uyğun deyil',
+          });
+        }
+        const niFresh = normUuid(ent.instructor_id);
+        try {
+          await db.transaction(async (client) => {
+            await replaceCycleOneScheduledLessons(client, {
+              enrollmentId,
+              studentId: ent.student_id,
+              instructor_id: ent.instructor_id,
+              ni: niFresh,
+              lwd: lwdNow,
+              lt: ltNow,
+              firstYmd,
+              limit: lim,
+            });
+          });
+        } catch (e) {
+          if (e.code === 'LESSON_CONFLICT') {
+            return res.status(409).json({
+              success: false,
+              message: `Dərs cədvəlində uyğun olmayan vaxt var: ${e.at || ''}`.trim(),
+            });
+          }
+          if (e.statusCode) return res.status(e.statusCode).json({ success: false, message: e.message });
+          throw e;
+        }
       }
     }
 
