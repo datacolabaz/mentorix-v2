@@ -97,6 +97,44 @@ function shouldUsePdfIframe(m) {
   return false
 }
 
+/** UI mətnləri: yalnız şəkil, yalnız PDF və ya qarışıq */
+function materialsKinds(materials) {
+  const list = Array.isArray(materials) ? materials : []
+  let anyPdf = false
+  let anyRaster = false
+  for (const m of list) {
+    if (shouldUsePdfIframe(m)) anyPdf = true
+    if (looksRaster(m.url) || looksRaster(m.name)) anyRaster = true
+  }
+  return { anyPdf, anyRaster }
+}
+
+function toggleMaterialsButtonLabel(open, { anyPdf, anyRaster }) {
+  if (open) {
+    if (anyPdf && anyRaster) return 'Faylları gizlət'
+    if (anyPdf) return 'PDF gizlət'
+    if (anyRaster) return 'Şəkli gizlət'
+    return 'Gizlət'
+  }
+  if (anyPdf && anyRaster) return 'PDF / şəkil'
+  if (anyPdf) return 'PDF göstər'
+  if (anyRaster) return 'Şəkil göstər'
+  return 'Materiallar'
+}
+
+function materialsAsideTitle(count, { anyPdf, anyRaster }) {
+  if (anyPdf && anyRaster) return `Suallar (PDF / şəkil) — ${count} fayl`
+  if (anyPdf) return `Suallar (PDF) — ${count} fayl`
+  if (anyRaster) return `Suallar (şəkil) — ${count} fayl`
+  return `Suallar — ${count} fayl`
+}
+
+function railMaterialsCaption({ anyPdf, anyRaster }) {
+  if (anyPdf && !anyRaster) return 'PDF'
+  if (anyRaster && !anyPdf) return 'Şəkil'
+  return 'Fayl'
+}
+
 function questionTypeLabelAz(t) {
   const m = {
     closed: 'Qapalı',
@@ -326,54 +364,62 @@ export default function StudentExams() {
         ? new Date(startActive.getTime() + durActive * 60000)
         : new Date(NaN)
     const materials = normalizeExamFiles(activeExam)
+    const materialKinds = materialsKinds(materials)
     const w = parseExamWindow(activeExam)
 
     return (
-      <div className="flex flex-col h-screen min-h-0">
-        {/* Header */}
-        <div className="bg-[#13112e] border-b border-indigo-500/20 px-4 sm:px-6 py-3 sm:py-4 flex flex-wrap items-center gap-3 justify-between shrink-0 z-30">
-          <div className="flex items-center gap-3 min-w-0 flex-1">
-            <div className="min-w-0">
-              <div className="font-display font-bold text-lg truncate">{activeExam.title}</div>
-              <div className="text-xs text-gray-400">{questions.length} sual</div>
-              {w?.until && (
-                <div className="text-[11px] text-gray-400 mt-1">
-                  İmtahan {formatAzDateTime(w.until)}-a qədər aktivdir. Daxil olduğunuz andan etibarən {durActive} dəqiqə vaxtınız var. İnternetinizin sabit olduğundan əmin olun.
+      <div className="flex flex-col flex-1 min-h-0 h-full max-h-full overflow-hidden w-full min-w-0">
+        {/* Mobil: mətn + taymer bir sırada daralır; sütun düzümü üst-üstə düşməni aradan qaldırır */}
+        <div className="bg-[#13112e] border-b border-indigo-500/20 px-3 sm:px-6 py-3 sm:py-4 shrink-0 z-30">
+          <div className="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-center lg:justify-between lg:gap-4">
+            <div className="w-full min-w-0 lg:flex-1 lg:min-w-0 flex flex-col gap-2 sm:flex-row sm:items-start sm:gap-3">
+              <div className="min-w-0 flex-1">
+                <div className="font-display font-bold text-base sm:text-lg text-white break-words">
+                  {activeExam.title}
                 </div>
+                <div className="text-xs text-gray-400">{questions.length} sual</div>
+                {w?.until && (
+                  <p className="text-[11px] text-gray-400 mt-1.5 leading-snug break-words hyphens-auto">
+                    İmtahan {formatAzDateTime(w.until)}-a qədər aktivdir. Daxil olduğunuz andan etibarən {durActive}{' '}
+                    dəqiqə vaxtınız var. İnternetinizin sabit olduğundan əmin olun.
+                  </p>
+                )}
+              </div>
+              {materials.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setMaterialsOpen((v) => !v)}
+                  className="self-start shrink-0 text-xs font-semibold text-blue-400 border border-indigo-500/30 rounded-lg px-3 py-1.5 hover:bg-white/5 lg:hidden"
+                >
+                  {toggleMaterialsButtonLabel(materialsOpen, materialKinds)}
+                </button>
               )}
             </div>
-            {materials.length > 0 && (
-              <button
-                type="button"
-                onClick={() => setMaterialsOpen((v) => !v)}
-                className="lg:hidden shrink-0 text-xs font-semibold text-blue-400 border border-indigo-500/30 rounded-lg px-3 py-1.5 hover:bg-white/5"
-              >
-                {materialsOpen ? 'PDF gizlət' : 'PDF / şəkil'}
-              </button>
-            )}
-          </div>
-          <Countdown endTime={endTime} onExpire={submitExam} />
-          <div className="text-right shrink-0">
-            <div className="text-sm text-gray-400">
-              {Object.keys(answers).length}/{questions.length} cavablandı
+            <div className="flex flex-row items-center justify-between gap-3 w-full min-w-0 sm:w-auto lg:justify-end lg:gap-6 shrink-0 border-t border-indigo-500/15 pt-3 lg:border-t-0 lg:pt-0">
+              <Countdown endTime={endTime} onExpire={submitExam} />
+              <div className="text-right shrink-0 pl-2">
+                <div className="text-xs sm:text-sm text-gray-400 whitespace-nowrap">
+                  {Object.keys(answers).length}/{questions.length} cavablandı
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="flex flex-1 min-h-0 min-w-0 flex-col lg:flex-row">
+        <div className="flex flex-1 min-h-0 min-w-0 flex-col lg:flex-row overflow-hidden">
           {materials.length > 0 && (
             <aside
               className={
                 'shrink-0 bg-[#0f0c29]/80 min-h-0 min-w-0 border-indigo-500/20 transition-[max-height,opacity] duration-300 ease-in-out ' +
                 (materialsOpen
-                  ? 'flex flex-col max-h-[42vh] lg:max-h-none w-full lg:w-[min(48%,560px)] lg:min-w-[280px] lg:max-w-[min(48%,560px)] border-b lg:border-b-0 lg:border-r border-indigo-500/20 overflow-hidden'
+                  ? 'flex flex-col max-h-[min(38svh,320px)] sm:max-h-[42vh] lg:max-h-none w-full lg:w-[min(48%,560px)] lg:min-w-[280px] lg:max-w-[min(48%,560px)] border-b lg:border-b-0 lg:border-r border-indigo-500/20 overflow-hidden'
                   : 'hidden lg:flex lg:flex-col lg:max-h-none w-full lg:w-[min(48%,560px)] lg:min-w-[280px] lg:max-w-[min(48%,560px)] lg:border-r border-indigo-500/20 overflow-hidden')
               }
               aria-hidden={false}
             >
               <div className="flex items-center justify-between gap-2 px-4 pt-3 pb-2 shrink-0 border-b border-indigo-500/15">
                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider truncate">
-                  Suallar (PDF / şəkil) — {materials.length} fayl
+                  {materialsAsideTitle(materials.length, materialKinds)}
                 </p>
                 <button
                   type="button"
@@ -387,6 +433,9 @@ export default function StudentExams() {
                 {materials.map((m) => {
                   const materialUrl = resolveMaterialUrl(m.url)
                   const showPdfFrame = shouldUsePdfIframe(m)
+                  const mediaBoxClass = showPdfFrame
+                    ? 'min-h-[200px] lg:min-h-[280px] max-h-[min(38vh,420px)] lg:max-h-[calc(100vh-220px)]'
+                    : 'flex flex-col min-h-[120px] sm:min-h-[180px] lg:min-h-[260px] max-h-[min(34svh,360px)] sm:max-h-[min(38vh,420px)] lg:max-h-[calc(100vh-220px)] min-w-0'
                   return (
                     <div
                       key={m.id}
@@ -395,7 +444,7 @@ export default function StudentExams() {
                       <p className="text-xs text-gray-500 px-2 py-1.5 truncate border-b border-indigo-500/10" title={m.name}>
                         {m.name}
                       </p>
-                      <div className="min-h-[200px] lg:min-h-[280px] max-h-[min(38vh,420px)] lg:max-h-[calc(100vh-220px)]">
+                      <div className={mediaBoxClass}>
                         {showPdfFrame ? (
                           <iframe
                             key={`pdf-${m.id}-${startedAt || ''}`}
@@ -404,14 +453,15 @@ export default function StudentExams() {
                             className="w-full h-full min-h-[200px] lg:min-h-[300px] bg-white/5 border-0"
                           />
                         ) : (
-                          <div className="flex flex-col gap-2 min-h-[inherit]">
+                          <div className="flex min-h-0 flex-1 flex-col gap-2 min-w-0">
                             <img
                               key={`img-${m.id}-${startedAt || ''}`}
                               src={materialUrl}
                               alt={m.name}
                               loading="eager"
                               decoding="async"
-                              className="w-full flex-1 max-h-[min(38vh,420px)] lg:max-h-[calc(100vh-260px)] object-contain object-top bg-black/30 min-w-[120px] min-h-[120px]"
+                              sizes="(max-width: 1024px) 100vw, min(560px, 50vw)"
+                              className="h-auto w-full max-h-full min-h-[96px] flex-1 object-contain object-top bg-black/30"
                             />
                             {materialUrl ? (
                               <a
@@ -440,39 +490,61 @@ export default function StudentExams() {
               onClick={() => setMaterialsOpen(true)}
               className="flex lg:hidden shrink-0 w-11 flex-col items-center justify-center gap-1 border-r border-indigo-500/20 bg-[#13112e] hover:bg-[#1a1740] text-blue-400 text-[11px] font-bold py-6 transition-colors"
             >
-              <span className="text-base leading-none" aria-hidden>▶</span>
-              <span className="[writing-mode:vertical-rl] rotate-180 uppercase tracking-widest">PDF</span>
+              <span className="text-base leading-none" aria-hidden>
+                ▶
+              </span>
+              <span className="[writing-mode:vertical-rl] rotate-180 uppercase tracking-widest max-h-[72px] overflow-hidden">
+                {railMaterialsCaption(materialKinds)}
+              </span>
             </button>
           )}
 
-          <div className="flex-1 flex flex-col min-h-0 min-w-0">
-            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          <div className="flex-1 flex flex-col min-h-0 min-w-0 basis-0">
+            <div className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-6 space-y-4 sm:space-y-6 touch-pan-y">
           {questions.map((q, i) => (
-            <Card key={q.id} className="p-6">
-              <div className="flex gap-4 mb-4">
-                <span className="bg-blue-500/20 text-blue-300 rounded-lg px-3 py-1 text-sm font-bold flex-shrink-0">{i + 1}</span>
-                <p className="text-white font-medium leading-relaxed">{q.question_text ?? `Sual ${i + 1}`}</p>
-                <span className="text-gray-500 text-xs ml-auto flex-shrink-0">{q.points} bal</span>
+            <Card key={q.id} className="p-4 sm:p-6">
+              <div className="flex flex-wrap gap-2 sm:gap-4 mb-3 sm:mb-4 items-start">
+                <span className="bg-blue-500/20 text-blue-300 rounded-lg px-2.5 sm:px-3 py-1 text-xs sm:text-sm font-bold flex-shrink-0">
+                  {i + 1}
+                </span>
+                <p className="text-white font-medium leading-relaxed min-w-0 flex-1 text-sm sm:text-base">
+                  {q.question_text ?? `Sual ${i + 1}`}
+                </p>
+                <span className="text-gray-500 text-xs flex-shrink-0 w-full sm:w-auto sm:ml-auto text-left sm:text-right">
+                  {q.points} bal
+                </span>
               </div>
 
               {q.question_type === 'closed' ? (
-                <div className="space-y-2 ml-10">
+                <div className="space-y-2 ml-0 sm:ml-8 lg:ml-10">
                   {q.options?.map((opt, oi) => {
                     const key = String.fromCharCode(65 + oi)
                     const selected = answers[q.id] === key
                     return (
-                      <button key={oi} onClick={() => setAnswers(p => ({ ...p, [q.id]: key }))}
-                        className={`w-full flex items-center gap-3 p-3 rounded-xl border text-left transition-all ${selected ? 'border-blue-500 bg-blue-500/15 text-white' : 'border-indigo-500/20 text-gray-300 hover:border-indigo-500/40'}`}>
-                        <span className={`w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs font-bold flex-shrink-0 ${selected ? 'border-blue-500 bg-blue-500 text-white' : 'border-gray-600'}`}>
+                      <button
+                        key={oi}
+                        type="button"
+                        onClick={() => setAnswers((p) => ({ ...p, [q.id]: key }))}
+                        className={`w-full min-w-0 flex items-start gap-2.5 sm:gap-3 p-2.5 sm:p-3 rounded-xl border text-left text-sm sm:text-base transition-all touch-manipulation ${
+                          selected
+                            ? 'border-blue-500 bg-blue-500/15 text-white'
+                            : 'border-indigo-500/20 text-gray-300 hover:border-indigo-500/40 active:bg-white/5'
+                        }`}
+                      >
+                        <span
+                          className={`w-7 h-7 sm:w-6 sm:h-6 shrink-0 rounded-full border-2 flex items-center justify-center text-xs font-bold ${
+                            selected ? 'border-blue-500 bg-blue-500 text-white' : 'border-gray-600'
+                          }`}
+                        >
                           {key}
                         </span>
-                        {optionDisplayLabel(opt)}
+                        <span className="min-w-0 break-words leading-snug">{optionDisplayLabel(opt)}</span>
                       </button>
                     )
                   })}
                 </div>
               ) : q.question_type === 'multiple' ? (
-                <div className="ml-10 space-y-3">
+                <div className="ml-0 sm:ml-8 lg:ml-10 space-y-3">
                   <p className="text-xs text-gray-500">
                     Düzgün cavabları aralarında boşluq və işarə olmadan yalnız bitişik rəqəmlərlə yazın
                     <span className="block mt-1">
@@ -492,7 +564,7 @@ export default function StudentExams() {
                   />
                 </div>
               ) : q.question_type === 'matching' ? (
-                <div className="ml-10 space-y-3">
+                <div className="ml-0 sm:ml-8 lg:ml-10 space-y-3">
                   <p className="text-xs text-gray-500">
                     Cavabınızı rəqəm+hərf cütləri ilə bitişik yazın (boşluq yoxdur; ardıcıllıq fərqi etmir).
                     <span className="block mt-1">
@@ -515,7 +587,7 @@ export default function StudentExams() {
                   />
                 </div>
               ) : (
-                <textarea className="w-full ml-10 bg-[#13112e] border border-indigo-500/20 rounded-xl p-3 text-white text-sm resize-none outline-none focus:border-blue-500 transition-colors"
+                <textarea className="w-full ml-0 sm:ml-8 lg:ml-10 bg-[#13112e] border border-indigo-500/20 rounded-xl p-3 text-white text-sm resize-none outline-none focus:border-blue-500 transition-colors"
                   rows={4} placeholder="Cavabınızı yazın..."
                   value={answers[q.id] || ''}
                   onChange={e => setAnswers(p => ({ ...p, [q.id]: e.target.value }))} />
@@ -527,9 +599,13 @@ export default function StudentExams() {
         </div>
 
         {/* Submit bar */}
-        <div className="bg-[#13112e] border-t border-indigo-500/20 px-6 py-4 flex items-center justify-between shrink-0">
-          <span className="text-sm text-gray-400">{Object.keys(answers).length} cavablandı</span>
-          <Button onClick={submitExam} className="px-8">İmtahanı Bitir →</Button>
+        <div className="bg-[#13112e] border-t border-indigo-500/20 px-3 sm:px-6 py-3 sm:py-4 flex flex-wrap items-center justify-between gap-3 shrink-0 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+          <span className="text-xs sm:text-sm text-gray-400 min-w-0">
+            {Object.keys(answers).length} cavablandı
+          </span>
+          <Button onClick={submitExam} className="px-5 sm:px-8 shrink-0">
+            İmtahanı Bitir →
+          </Button>
         </div>
       </div>
     )
