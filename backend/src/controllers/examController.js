@@ -1572,7 +1572,8 @@ const patchExam = async (req, res) => {
         for (const q of questions) {
           if (!q || q.id == null || String(q.id).trim() === '') continue;
           const { rows: qrows } = await client.query(
-            `SELECT id, question_type, order_num FROM exam_questions WHERE id = $1::uuid AND exam_id = $2::uuid`,
+            `SELECT id, question_type, order_num, correct_answer AS stored_correct_answer
+             FROM exam_questions WHERE id = $1::uuid AND exam_id = $2::uuid`,
             [q.id, examId]
           );
           const row = qrows[0];
@@ -1592,9 +1593,14 @@ const patchExam = async (req, res) => {
           }
           if (!Array.isArray(opts)) opts = [];
 
-          let correctAns =
-            q.correct_answer != null && String(q.correct_answer).trim() !== ''
+          /** JSON-da `correct_answer` açarı yoxdursa — köhnə dəyəri saxla (boş forma ilə təsadüfi silinməsin). Açar var və boşdursa — NULL. */
+          const sentCorrectKey = Object.prototype.hasOwnProperty.call(q, 'correct_answer');
+          let correctAns = sentCorrectKey
+            ? q.correct_answer != null && String(q.correct_answer).trim() !== ''
               ? String(q.correct_answer).trim()
+              : null
+            : row.stored_correct_answer != null && String(row.stored_correct_answer).trim() !== ''
+              ? String(row.stored_correct_answer).trim()
               : null;
           if (row.question_type === 'closed' && correctAns) {
             correctAns = correctAns.toUpperCase().slice(0, 1);
