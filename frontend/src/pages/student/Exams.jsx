@@ -55,24 +55,27 @@ function resolveMaterialUrl(rel) {
 
 /** Diskdə /api/uploads/exams/uuid.ext — bəzi hostlarda statik proxysiz; API ilə Bearer göndərilir */
 function examUploadsStoredFilename(url) {
-  const m = String(url || '').match(/\/api\/uploads\/exams\/([^/?#]+)$/i)
+  const s = String(url || '')
+  let m = s.match(/\/api\/uploads\/exams\/([^/?#]+)$/i)
+  if (m) return decodeURIComponent(m[1])
+  m = s.match(/uploads\/exams\/([^/?#]+)$/i)
   return m ? decodeURIComponent(m[1]) : null
 }
 
-function materialFileApiPath(url) {
+function materialFileApiPath(url, examId) {
   const fn = examUploadsStoredFilename(url)
-  if (!fn) return null
-  return `/exams/material-file/${encodeURIComponent(fn)}`
+  if (!fn || !examId) return null
+  return `/exams/by-exam/${encodeURIComponent(examId)}/attachment/${encodeURIComponent(fn)}`
 }
 
 /** Yeni pəncərə: img Authorization göndərmir → qısa müddətli token URL */
-function materialOpenInNewTabUrl(rel) {
+function materialOpenInNewTabUrl(rel, examId) {
   const fn = examUploadsStoredFilename(rel)
-  if (!fn) return resolveMaterialUrl(rel)
+  if (!fn || !examId) return resolveMaterialUrl(rel)
   const token = typeof localStorage !== 'undefined' ? localStorage.getItem('mx_token') : ''
   if (!token) return resolveMaterialUrl(rel)
   const raw = (import.meta.env.VITE_API_URL || '/api').trim().replace(/\/$/, '')
-  const path = `/exams/material-file/${encodeURIComponent(fn)}?token=${encodeURIComponent(token)}`
+  const path = `/exams/by-exam/${encodeURIComponent(examId)}/attachment/${encodeURIComponent(fn)}?token=${encodeURIComponent(token)}`
   if (raw.startsWith('http')) {
     const root = raw.endsWith('/api') ? raw : raw.includes('/api') ? raw : `${raw}/api`
     return `${root.replace(/\/$/, '')}${path}`
@@ -248,7 +251,7 @@ export default function StudentExams() {
     ;(async () => {
       const next = {}
       for (const m of files) {
-        const apiPath = materialFileApiPath(m.url)
+        const apiPath = materialFileApiPath(m.url, activeExam.id)
         if (!apiPath) {
           next[m.id] = null
           continue
@@ -506,7 +509,7 @@ export default function StudentExams() {
               <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-4 space-y-4">
                 {materials.map((m) => {
                   const materialUrlDirect = resolveMaterialUrl(m.url)
-                  const needsProtectedFetch = Boolean(materialFileApiPath(m.url))
+                  const needsProtectedFetch = Boolean(materialFileApiPath(m.url, activeExam.id))
                   const blobEntry = materialBlobById[m.id]
                   const mediaSrc = needsProtectedFetch
                     ? blobEntry === undefined
@@ -548,7 +551,7 @@ export default function StudentExams() {
                             />
                             {materialUrlDirect ? (
                               <a
-                                href={materialOpenInNewTabUrl(m.url)}
+                                href={materialOpenInNewTabUrl(m.url, activeExam.id)}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-center text-xs font-semibold text-blue-400 hover:text-blue-300 py-1"

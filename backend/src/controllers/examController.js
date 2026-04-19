@@ -1463,6 +1463,102 @@ const serveExamMaterialFile = async (req, res) => {
   return res.sendFile(abs);
 };
 
+/**
+ * İmtahan ID + fayl adı: faylın həmin imtahanın exam_files/pdf_url-da olması JSON ilə yoxlanır
+ * (material-file ILIKE bəzən uğursuz olur). Dizayn dəyişmir — yalnız etibarlı çatdırılma.
+ */
+const serveExamAttachmentByExam = async (req, res) => {
+  const examId = String(req.params.examId || '').trim();
+  const filename = path.basename(String(req.params.filename || ''));
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(examId)) {
+    return res.status(400).json({ success: false, message: 'Yanlış imtahan identifikatoru' });
+  }
+  if (!/^[a-f0-9-]{36}\.(pdf|png|jpe?g|jpeg)$/i.test(filename)) {
+    return res.status(400).json({ success: false, message: 'Yanlış fayl adı' });
+  }
+
+  const { rows: examRows } = await db.query(
+    `SELECT id, instructor_id, pdf_url, exam_files
+     FROM exams WHERE id = $1::uuid AND COALESCE(is_deleted, FALSE) = FALSE`,
+    [examId]
+  );
+  const exam = examRows[0];
+  if (!exam) return res.status(404).json({ success: false, message: 'İmtahan tapılmadı' });
+
+  const fileList = parseJsonMaybe(exam.exam_files, []);
+  const urls = [];
+  if (Array.isArray(fileList)) {
+    for (const x of fileList) {
+      if (x && typeof x === 'object' && x.url) urls.push(String(x.url));
+    }
+  }
+  if (exam.pdf_url) urls.push(String(exam.pdf_url));
+
+  const basenameOk = (u) => {
+    const m = String(u).match(/\/([^/?#]+)$/);
+    return m && m[1] === filename;
+  };
+  if (!urls.some(basenameOk)) {
+    return res.status(404).json({ success: false, message: 'Fayl bu imtahana aid deyil' });
+  }
+
+  const role = req.user.role;
+  if (role === 'admin') {
+    /* ok */
+  } else if (role === 'instructor') {
+    if (normStudentHex(exam.instructor_id) !== normStudentHex(req.user.id)) {
+      return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
+    }
+  } else if (role === 'student') {
+    const sidHex = normStudentHex(req.user.id);
+    if (!sidHex) return res.status(400).json({ success: false, message: 'İstifadəçi identifikatoru yoxdur' });
+    const { rows: accessRows } = await db.query(
+      `SELECT 1 FROM exam_assignments WHERE exam_id = $1::uuid
+         AND REPLACE(LOWER(TRIM(student_id::text)), '-', '') = $2
+       UNION ALL
+       SELECT 1 FROM exam_results er
+       WHERE er.exam_id = $1::uuid
+         AND REPLACE(LOWER(TRIM(er.student_id::text)), '-', '') = $2
+         AND er.submitted_at IS NULL
+       LIMIT 1`,
+      [examId, sidHex]
+    );
+    if (!accessRows.length) {
+      return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
+    }
+  } else {
+    return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
+  }
+
+  const examsDir = path.join(__dirname, '../../uploads/exams');
+  const abs = path.join(examsDir, filename);
+  if (!abs.startsWith(examsDir)) {
+    return res.status(400).json({ success: false, message: 'Yanlış yol' });
+  }
+  try {
+    if (!fs.existsSync(abs)) {
+      return res.status(404).json({ success: false, message: 'Fayl diskdə yoxdur (server yenidən yüklənibsə yenidən yükləyin)' });
+    }
+  } catch (e) {
+    return res.status(500).json({ success: false, message: e.message });
+  }
+
+  const ext = path.extname(filename).toLowerCase();
+  const ct =
+    ext === '.pdf'
+      ? 'application/pdf'
+      : ext === '.png'
+        ? 'image/png'
+        : ext === '.jpg' || ext === '.jpeg'
+          ? 'image/jpeg'
+          : 'application/octet-stream';
+  res.setHeader('Content-Type', ct);
+  res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+  res.setHeader('Cache-Control', 'private, max-age=300');
+  res.setHeader('Referrer-Policy', 'no-referrer');
+  return res.sendFile(abs);
+};
+
 module.exports = {
   createExam,
   listExams,
@@ -1482,4 +1578,5 @@ module.exports = {
   getExamTop10,
   regradeExamResults,
   serveExamMaterialFile,
+  serveExamAttachmentByExam,
 };

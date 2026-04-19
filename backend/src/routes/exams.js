@@ -22,6 +22,7 @@ const {
   getExamTop10,
   regradeExamResults,
   serveExamMaterialFile,
+  serveExamAttachmentByExam,
 } = require('../controllers/examController');
 const { authenticate, authorize } = require('../middleware/auth');
 const { enforceStorageLimitAfterUpload } = require('../middleware/storageLimit');
@@ -84,6 +85,11 @@ function authenticateMaterialFile(req, res, next) {
 }
 
 router.get('/material-file/:filename', authenticateMaterialFile, serveExamMaterialFile);
+router.get(
+  '/by-exam/:examId/attachment/:filename',
+  authenticateMaterialFile,
+  serveExamAttachmentByExam
+);
 
 router.post('/', authenticate, authorize('instructor', 'admin'), createExam);
 router.get('/', authenticate, authorize('instructor', 'admin'), listExams);
