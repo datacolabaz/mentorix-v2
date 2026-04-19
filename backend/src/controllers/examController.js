@@ -560,24 +560,38 @@ const studentExams = async (req, res) => {
        leaderboard AS (
          SELECT er.exam_id,
                 er.student_id,
-                COALESCE(sp.grade, '—') AS grade,
+                en.group_id,
                 RANK() OVER (
-                  PARTITION BY er.exam_id, COALESCE(sp.grade, '—')
+                  PARTITION BY er.exam_id, en.group_id
                   ORDER BY er.score DESC, er.duration_seconds ASC
                 )::int AS rank_in_group
          FROM exam_results er
-         JOIN users u ON u.id = er.student_id
-         LEFT JOIN student_profiles sp ON sp.user_id = u.id
+         JOIN exams ex ON ex.id = er.exam_id
+         LEFT JOIN LATERAL (
+           SELECT en.group_id
+           FROM enrollments en
+           WHERE en.student_id = er.student_id AND en.instructor_id = ex.instructor_id
+           ORDER BY (en.group_id IS NOT NULL) DESC, en.id DESC
+           LIMIT 1
+         ) en ON true
          WHERE er.submitted_at IS NOT NULL
        )
        SELECT e.*, er.score, er.submitted_at, er.started_at,
-         COALESCE(me.grade, '—') AS my_group,
+         COALESCE(ig_my.name, NULLIF(TRIM(me.grade), ''), '—') AS my_group,
          lb.rank_in_group,
          eq_count.question_count,
          ea_assign.late_access_until
        FROM my_exam_ids mei
        JOIN exams e ON e.id = mei.exam_id
        CROSS JOIN me
+       LEFT JOIN LATERAL (
+         SELECT en.group_id
+         FROM enrollments en
+         WHERE en.student_id = me.student_id AND en.instructor_id = e.instructor_id
+         ORDER BY (en.group_id IS NOT NULL) DESC, en.id DESC
+         LIMIT 1
+       ) my_en ON TRUE
+       LEFT JOIN instructor_groups ig_my ON ig_my.id = my_en.group_id
        LEFT JOIN LATERAL (
          SELECT late_access_until
          FROM exam_assignments ea3
@@ -597,7 +611,7 @@ const studentExams = async (req, res) => {
        LEFT JOIN leaderboard lb
          ON lb.exam_id = e.id
         AND REPLACE(LOWER(TRIM(lb.student_id::text)), '-', '') = $1
-        AND lb.grade = COALESCE(me.grade, '—')
+        AND lb.group_id IS NOT DISTINCT FROM my_en.group_id
        LEFT JOIN (
          SELECT exam_id, COUNT(*) AS question_count FROM exam_questions GROUP BY exam_id
        ) eq_count ON eq_count.exam_id = e.id
@@ -977,7 +991,7 @@ const getResults = async (req, res) => {
       return res.json({ success: true, results: rows, grade: grade || 'ALL' });
     }
 
-    // Student: only their group
+    // Student: yalnız öz enrollment qrupundakı (instructor_groups) yoldaşlarının reytinqi
     if (req.user.role === 'student') {
       const sidHex = normStudentHex(req.user.id);
       const { rows: assigned } = await db.query(
@@ -986,36 +1000,75 @@ const getResults = async (req, res) => {
         [examId, sidHex]
       );
       if (!assigned.length) return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
-      const { rows: [me] } = await db.query(
-        `SELECT COALESCE(sp.grade, '—') AS grade
-         FROM student_profiles sp
-         WHERE REPLACE(LOWER(TRIM(sp.user_id::text)), '-', '') = $1
-         LIMIT 1`,
-        [sidHex]
-      );
-      const grade = me?.grade || '—';
       const { rows } = await db.query(
         `WITH emax AS (
            SELECT COALESCE(SUM(eq.points::numeric), 0) AS max_pts FROM exam_questions eq WHERE eq.exam_id = $1
+         ),
+         exam_i AS (
+           SELECT id, instructor_id FROM exams WHERE id = $1
+         ),
+         my_en AS (
+           SELECT en.group_id
+           FROM enrollments en
+           CROSS JOIN exam_i ei
+           WHERE REPLACE(LOWER(TRIM(en.student_id::text)), '-', '') = $2
+             AND en.instructor_id = ei.instructor_id
+           ORDER BY (en.group_id IS NOT NULL) DESC, en.id DESC
+           LIMIT 1
+         ),
+         r AS (
+           SELECT er.student_id, u.full_name,
+                  COALESCE(ig.name, NULLIF(TRIM(sp.grade), ''), '—') AS grade,
+                  er.score, er.duration_seconds, er.submitted_at
+           FROM exam_results er
+           CROSS JOIN exam_i ex
+           JOIN users u ON u.id = er.student_id
+           LEFT JOIN student_profiles sp ON sp.user_id = u.id
+           LEFT JOIN LATERAL (
+             SELECT en.group_id
+             FROM enrollments en
+             WHERE en.student_id = er.student_id AND en.instructor_id = ex.instructor_id
+             ORDER BY (en.group_id IS NOT NULL) DESC, en.id DESC
+             LIMIT 1
+           ) peer ON true
+           LEFT JOIN instructor_groups ig ON ig.id = peer.group_id
+           WHERE er.exam_id = $1
+             AND er.submitted_at IS NOT NULL
+             AND peer.group_id IS NOT DISTINCT FROM (SELECT group_id FROM my_en)
          )
-         SELECT er.student_id, u.full_name, COALESCE(sp.grade, '—') AS grade,
-                er.score,
+         SELECT r.student_id, r.full_name, r.grade, r.score,
                 CASE
-                  WHEN em.max_pts > 0 THEN LEAST(100, GREATEST(0, (er.score::numeric / em.max_pts) * 100))
+                  WHEN em.max_pts > 0 THEN LEAST(100, GREATEST(0, (r.score::numeric / em.max_pts) * 100))
                   ELSE 0::numeric
                 END AS score_pct,
-                er.duration_seconds, er.submitted_at,
-                RANK() OVER (ORDER BY er.score DESC, er.duration_seconds ASC)::int AS rank
-         FROM exam_results er
-         JOIN users u ON u.id = er.student_id
-         LEFT JOIN student_profiles sp ON sp.user_id = u.id
+                r.duration_seconds, r.submitted_at,
+                RANK() OVER (ORDER BY r.score DESC, r.duration_seconds ASC)::int AS rank
+         FROM r
          CROSS JOIN emax em
-         WHERE er.exam_id = $1
-           AND er.submitted_at IS NOT NULL
-           AND COALESCE(sp.grade, '—') = $2
-         ORDER BY er.score DESC, er.duration_seconds ASC`,
-        [examId, grade]
+         ORDER BY r.score DESC, r.duration_seconds ASC`,
+        [examId, sidHex]
       );
+      const self = rows.find((row) => normStudentHex(row.student_id) === sidHex);
+      let grade = self?.grade ?? '—';
+      if (!self) {
+        const { rows: [gl] } = await db.query(
+          `SELECT COALESCE(ig.name, NULLIF(TRIM(sp.grade), ''), '—') AS grade
+           FROM exams e
+           JOIN users u ON REPLACE(LOWER(TRIM(u.id::text)), '-', '') = $2
+           LEFT JOIN student_profiles sp ON sp.user_id = u.id
+           LEFT JOIN LATERAL (
+             SELECT en.group_id
+             FROM enrollments en
+             WHERE en.student_id = u.id AND en.instructor_id = e.instructor_id
+             ORDER BY (en.group_id IS NOT NULL) DESC, en.id DESC
+             LIMIT 1
+           ) en ON true
+           LEFT JOIN instructor_groups ig ON ig.id = en.group_id
+           WHERE e.id = $1`,
+          [examId, sidHex]
+        );
+        grade = gl?.grade ?? '—';
+      }
       return res.json({ success: true, results: rows, grade });
     }
 
