@@ -177,6 +177,66 @@ function questionTypeLabelAz(t) {
   return m[t] || t
 }
 
+const SUMMARY_TYPE_KEYS = ['closed', 'multiple', 'matching', 'open']
+
+/** Backend `buildExamTypeSummary` cavabı */
+function ExamTypeSummaryPanel({ summary }) {
+  const bt = summary?.by_type
+  if (!bt || typeof bt !== 'object') return null
+  const rows = SUMMARY_TYPE_KEYS.map((k) => {
+    const r = bt[k] || {}
+    const c = Number(r.correct) || 0
+    const w = Number(r.wrong) || 0
+    const u = Number(r.unanswered) || 0
+    const p = Number(r.pending) || 0
+    const pts = Number(r.points)
+    const total = c + w + u + p
+    return { k, c, w, u, p, pts, total }
+  }).filter((row) => row.total > 0 || Number.isFinite(row.pts))
+  if (!rows.length) return null
+  return (
+    <div className="rounded-xl border border-cyan-500/25 bg-cyan-950/15 p-4 mb-4 text-left">
+      <h3 className="text-sm font-bold text-cyan-100 mb-3">Sual tipinə görə xülasə</h3>
+      <p className="text-xs text-gray-500 mb-3">
+        Hər tipdə neçə sual düzgün / səhv / cavabsız (və lazım olsa müəllim yoxlaması) və bu tiplərdən toplanan avtomatik bal.
+      </p>
+      <div className="overflow-x-auto rounded-lg border border-indigo-500/20">
+        <table className="w-full text-xs text-left">
+          <thead>
+            <tr className="bg-[#0f0e24] text-gray-400">
+              <th className="px-3 py-2 font-semibold">Tip</th>
+              <th className="px-2 py-2 font-semibold text-center">Düzgün</th>
+              <th className="px-2 py-2 font-semibold text-center">Səhv</th>
+              <th className="px-2 py-2 font-semibold text-center">Cavabsız</th>
+              <th className="px-2 py-2 font-semibold text-center">Yoxlanılır</th>
+              <th className="px-3 py-2 font-semibold text-right">Bal (tip)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={row.k} className="border-t border-indigo-500/15 text-gray-200">
+                <td className="px-3 py-2 font-medium text-white">{questionTypeLabelAz(row.k)}</td>
+                <td className="px-2 py-2 text-center tabular-nums">{row.c}</td>
+                <td className="px-2 py-2 text-center tabular-nums">{row.w}</td>
+                <td className="px-2 py-2 text-center tabular-nums">{row.u}</td>
+                <td className="px-2 py-2 text-center tabular-nums">{row.p}</td>
+                <td className="px-3 py-2 text-right font-mono tabular-nums text-cyan-200/95">
+                  {Number.isFinite(row.pts) ? `${row.pts}` : '—'}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {summary?.raw_sum != null && summary?.score != null && Number(summary.raw_sum) !== Number(summary.score) ? (
+        <p className="text-[11px] text-amber-400/90 mt-2">
+          Mənfi cərimədən sonra ümumi bal sıfırdan aşağı düşməyəcək şəkildə yuvarlanıb (xam cəmi: {summary.raw_sum}).
+        </p>
+      ) : null}
+    </div>
+  )
+}
+
 function formatScoreBal(v) {
   const n = Number(v)
   if (!Number.isFinite(n)) return '—'
@@ -223,6 +283,7 @@ export default function StudentExams() {
   const [startedAt, setStartedAt] = useState(null)
   const [result, setResult] = useState(null)
   const [resultBreakdown, setResultBreakdown] = useState(null)
+  const [resultTypeSummary, setResultTypeSummary] = useState(null)
   const [materialsOpen, setMaterialsOpen] = useState(true)
   /** /api/uploads/exams/... üçün blob URL (JWT ilə GET /exams/material-file/...) */
   const [materialBlobById, setMaterialBlobById] = useState({})
@@ -342,6 +403,7 @@ export default function StudentExams() {
       title: exam.title,
       loading: true,
       breakdown: null,
+      type_summary: null,
       score: null,
       submitted_at: null,
       error: null,
@@ -352,6 +414,7 @@ export default function StudentExams() {
         title: exam.title,
         loading: false,
         breakdown: Array.isArray(d.breakdown) ? d.breakdown : [],
+        type_summary: d.type_summary || null,
         score: d.score,
         submitted_at: d.submitted_at,
         error: null,
@@ -361,6 +424,7 @@ export default function StudentExams() {
         title: exam.title,
         loading: false,
         breakdown: [],
+        type_summary: null,
         score: null,
         submitted_at: null,
         error: err?.message || 'Yüklənmədi',
@@ -404,6 +468,7 @@ export default function StudentExams() {
       setStartedAt(data?.started_at || new Date().toISOString())
       setResult(null)
       setResultBreakdown(null)
+      setResultTypeSummary(null)
       setMaterialsOpen(true)
       setFocusMode(true)
     } catch (err) {
@@ -419,6 +484,7 @@ export default function StudentExams() {
       })
       setResult(data?.score ?? null)
       setResultBreakdown(Array.isArray(data?.breakdown) ? data.breakdown : null)
+      setResultTypeSummary(data?.type_summary ?? null)
       setActiveExam(null)
       setFocusMode(false)
       toast(`✓ İmtahan tamamlandı! Bal: ${formatScoreBal(data?.score)}`)
@@ -727,6 +793,8 @@ export default function StudentExams() {
         </Card>
       )}
 
+      <ExamTypeSummaryPanel summary={resultTypeSummary} />
+
       {resultBreakdown?.length > 0 && (
         <Card className="p-6 mb-6 border-indigo-500/30">
           <h2 className="font-display font-bold text-lg text-white mb-1">Suallar üzrə nəticə</h2>
@@ -910,6 +978,7 @@ export default function StudentExams() {
                 </p>
               )}
             </div>
+            <ExamTypeSummaryPanel summary={reviewModal.type_summary} />
             {reviewModal.breakdown?.length > 0 && (
               <div className="space-y-3 max-h-[min(60vh,480px)] overflow-y-auto pr-1">
                 <h3 className="text-sm font-bold text-white mb-2">Suallar üzrə</h3>
@@ -979,11 +1048,15 @@ export default function StudentExams() {
           <p className="text-red-400 text-sm text-center py-6">{leaderModal.error}</p>
         ) : (
           <div className="space-y-3">
-            {leaderModal.grade ? (
-              <p className="text-xs text-gray-500">
-                Qrup: <span className="text-gray-200 font-semibold">{leaderModal.grade}</span>
+            <div className="rounded-xl border border-indigo-400/35 bg-indigo-500/10 px-4 py-3">
+              <p className="text-sm text-indigo-50">
+                <span className="font-bold text-white">Sizin Qrupunuz:</span>{' '}
+                <span className="text-cyan-200 font-semibold">{leaderModal.grade || '—'}</span>
               </p>
-            ) : null}
+              <p className="text-[11px] text-gray-400 mt-1.5 leading-snug">
+                Bu siyahı yalnız öz qrupunuzdakı tələbələrin nəticələridir; digər qruplar göstərilmir.
+              </p>
+            </div>
             {leaderModal.results.length === 0 ? (
               <p className="text-sm text-gray-500">Nəticə yoxdur.</p>
             ) : (

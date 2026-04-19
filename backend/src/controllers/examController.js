@@ -146,6 +146,7 @@ function buildMatchingCorrectFromPayload(q) {
 }
 const {
   calculateScore,
+  buildExamTypeSummary,
   buildExamResultBreakdown,
   buildAutoGradingMap,
   rankResults,
@@ -186,9 +187,12 @@ const createExam = async (req, res) => {
       notify_before_hours,
       notify_students,
       show_results,
+      wrong_penalty_enabled,
       questions,
       student_ids,
     } = req.body;
+
+    const wrongPenaltyOn = wrong_penalty_enabled !== false && wrong_penalty_enabled !== 'false' && wrong_penalty_enabled !== 0;
 
     const startNorm = normalizeExamStartTime(start_time);
     const fromNorm = normalizeExamStartTime(available_from || start_time);
@@ -203,8 +207,8 @@ const createExam = async (req, res) => {
       const { rows } = await client.query(
         `INSERT INTO exams (instructor_id, title, subject, topic, pdf_url, exam_files, duration_minutes, start_time,
           available_from, available_until, allow_finish_after_until,
-          notify_enabled, notify_students, notify_before_hours, show_results, status)
-         VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7,$8,$9,$10,$11,$12,$13,$14,$15,'scheduled') RETURNING *`,
+          notify_enabled, notify_students, notify_before_hours, show_results, wrong_penalty_enabled, status)
+         VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,'scheduled') RETURNING *`,
         [
           req.user.id,
           title,
@@ -221,6 +225,7 @@ const createExam = async (req, res) => {
           notifyOn,
           notifyHours,
           show_results !== false,
+          wrongPenaltyOn,
         ]
       );
 
@@ -229,12 +234,12 @@ const createExam = async (req, res) => {
       if (questions?.length) {
         for (let i = 0; i < questions.length; i++) {
           const q = questions[i];
-          const neg =
-            q.negative_marking != null && q.negative_marking !== ''
-              ? Number(q.negative_marking)
-              : q.question_type === 'closed'
-                ? -0.25
-                : 0;
+          let neg = 0;
+          if (q.question_type === 'closed' || q.question_type === 'multiple') {
+            if (!wrongPenaltyOn) neg = 0;
+            else if (q.negative_marking != null && q.negative_marking !== '') neg = Number(q.negative_marking);
+            else neg = -0.25;
+          }
           const qText = (q.question_text && String(q.question_text).trim()) || `Sual ${i + 1}`;
           const correctAns =
             q.question_type === 'matching'
@@ -678,6 +683,8 @@ const getStudentExamReview = async (req, res) => {
     if (!answers || typeof answers !== 'object') answers = {};
 
     const breakdown = buildExamResultBreakdown(questions, answers);
+    const wrongPen = exam.wrong_penalty_enabled !== false;
+    const typeSummary = buildExamTypeSummary(questions, answers, { wrongPenaltyEnabled: wrongPen });
 
     res.json({
       success: true,
@@ -685,6 +692,7 @@ const getStudentExamReview = async (req, res) => {
       score: result.score,
       submitted_at: result.submitted_at,
       breakdown,
+      type_summary: typeSummary,
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -885,12 +893,18 @@ const submitExam = async (req, res) => {
       'SELECT * FROM exam_questions WHERE exam_id=$1',
       [exam_id]
     );
-    const { rows: [exam] } = await db.query('SELECT id, is_deleted, duration_minutes FROM exams WHERE id = $1', [exam_id]);
+    const { rows: [exam] } = await db.query(
+      `SELECT id, is_deleted, duration_minutes, COALESCE(wrong_penalty_enabled, TRUE) AS wrong_penalty_enabled
+       FROM exams WHERE id = $1`,
+      [exam_id]
+    );
     if (!exam || exam.is_deleted === true) {
       return res.status(404).json({ success: false, message: 'Tapılmadı' });
     }
 
-    const score = calculateScore(questions, answers);
+    const wrongPen = exam.wrong_penalty_enabled !== false;
+    const score = calculateScore(questions, answers, { wrongPenaltyEnabled: wrongPen });
+    const typeSummary = buildExamTypeSummary(questions, answers, { wrongPenaltyEnabled: wrongPen });
     const breakdown = buildExamResultBreakdown(questions, answers);
     const grading = buildAutoGradingMap(questions, answers);
     const now = new Date();
@@ -931,7 +945,7 @@ const submitExam = async (req, res) => {
       );
     });
 
-    res.json({ success: true, score, breakdown });
+    res.json({ success: true, score, breakdown, type_summary: typeSummary });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -1218,11 +1232,17 @@ const regradeExamResults = async (req, res) => {
       return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
     }
 
-    const { rows: [exam] } = await db.query('SELECT id, instructor_id FROM exams WHERE id = $1', [examId]);
+    const { rows: [exam] } = await db.query(
+      `SELECT id, instructor_id, COALESCE(wrong_penalty_enabled, TRUE) AS wrong_penalty_enabled
+       FROM exams WHERE id = $1`,
+      [examId]
+    );
     if (!exam) return res.status(404).json({ success: false, message: 'Tapılmadı' });
     if (!isAdmin && normStudentHex(exam.instructor_id) !== normStudentHex(req.user.id)) {
       return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
     }
+
+    const wrongPen = exam.wrong_penalty_enabled !== false;
 
     const studentId = req.body?.student_id != null && String(req.body.student_id).trim() !== ''
       ? String(req.body.student_id).trim()
@@ -1258,7 +1278,7 @@ const regradeExamResults = async (req, res) => {
         }
         if (!answers || typeof answers !== 'object') answers = {};
 
-        const score = calculateScore(questions, answers);
+        const score = calculateScore(questions, answers, { wrongPenaltyEnabled: wrongPen });
         const grading = buildAutoGradingMap(questions, answers);
 
         await client.query(
@@ -1385,6 +1405,7 @@ const patchExam = async (req, res) => {
       duration_minutes,
       notify_students,
       show_results,
+      wrong_penalty_enabled,
       exam_files,
       pdf_url,
       student_ids,
@@ -1406,6 +1427,7 @@ const patchExam = async (req, res) => {
     const topicNorm = patchCoalesceStr(topic, 255);
     const durationNorm = patchCoalesceInt(duration_minutes);
     const showResultsNorm = patchCoalesceBool(show_results);
+    const wrongPenProvided = Object.prototype.hasOwnProperty.call(req.body || {}, 'wrong_penalty_enabled');
 
     const { rows: [before] } = await db.query('SELECT * FROM exams WHERE id = $1', [examId]);
     if (!before) return res.status(404).json({ success: false, message: 'Imtahan tapilmadi' });
@@ -1476,6 +1498,13 @@ const patchExam = async (req, res) => {
       const finalShow =
         showResultsNorm !== null && showResultsNorm !== undefined ? !!showResultsNorm : before.show_results;
 
+      const wrongPenNorm = patchCoalesceBool(wrong_penalty_enabled);
+      const finalWrongPen = wrongPenProvided
+        ? wrongPenNorm === null || wrongPenNorm === undefined
+          ? before.wrong_penalty_enabled !== false
+          : !!wrongPenNorm
+        : before.wrong_penalty_enabled !== false;
+
       let finalExamFiles = before.exam_files;
       if (filesProvided && nextFilesJson != null) {
         try {
@@ -1503,10 +1532,11 @@ const patchExam = async (req, res) => {
           notify_enabled = $9::boolean,
           notify_students = $10::boolean,
           show_results = $11::boolean,
-          exam_files = $12::jsonb,
-          pdf_url = $13::varchar(500),
+          wrong_penalty_enabled = $12::boolean,
+          exam_files = $13::jsonb,
+          pdf_url = $14::varchar(500),
           updated_at = NOW()
-        WHERE id = $14
+        WHERE id = $15
         RETURNING *`,
         [
           finalTitle,
@@ -1520,6 +1550,7 @@ const patchExam = async (req, res) => {
           finalNotifyEn,
           finalNotifySt,
           finalShow,
+          finalWrongPen,
           JSON.stringify(Array.isArray(examFilesArr) ? examFilesArr : []),
           finalPdfUrl,
           examId,
