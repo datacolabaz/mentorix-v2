@@ -34,7 +34,22 @@ const uploadsAssignmentsDir = path.join(__dirname, '../../uploads/assignments');
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, uploadsAssignmentsDir),
   filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname || '').toLowerCase() || '.bin';
+    let ext = path.extname(file.originalname || '').toLowerCase();
+    if (!ext || ext === '.bin') {
+      const mt = String(file.mimetype || '').toLowerCase();
+      const map = {
+        'image/png': '.png',
+        'image/jpeg': '.jpg',
+        'image/jpg': '.jpg',
+        'application/pdf': '.pdf',
+        'text/csv': '.csv',
+        'application/vnd.ms-excel': '.xls',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': '.xlsx',
+        'application/msword': '.doc',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '.docx',
+      };
+      ext = map[mt] || '.bin';
+    }
     cb(null, `${crypto.randomUUID()}${ext}`);
   },
 });
