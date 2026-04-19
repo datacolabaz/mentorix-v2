@@ -1050,14 +1050,6 @@ const patchExam = async (req, res) => {
     } = req.body || {};
 
     const startNorm = start_time != null && start_time !== '' ? normalizeExamStartTime(start_time) : null;
-    const fromNorm =
-      available_from != null && available_from !== ''
-        ? normalizeExamStartTime(available_from)
-        : undefined;
-    const untilNorm =
-      available_until != null && available_until !== ''
-        ? normalizeExamStartTime(available_until)
-        : undefined;
     const allowFinishProvided = Object.prototype.hasOwnProperty.call(req.body || {}, 'allow_finish_after_until');
     const allowFinishNext = allowFinishProvided ? allow_finish_after_until !== false : undefined;
     const notifyProvided = Object.prototype.hasOwnProperty.call(req.body || {}, 'notify_students');
@@ -1074,10 +1066,7 @@ const patchExam = async (req, res) => {
     const durationNorm = patchCoalesceInt(duration_minutes);
     const showResultsNorm = patchCoalesceBool(show_results);
 
-    const { rows: [before] } = await db.query(
-      'SELECT id, instructor_id, pdf_url, exam_files FROM exams WHERE id = $1',
-      [examId]
-    );
+    const { rows: [before] } = await db.query('SELECT * FROM exams WHERE id = $1', [examId]);
     if (!before) return res.status(404).json({ success: false, message: 'Imtahan tapilmadi' });
     if (!isAdmin && req.user.role === 'instructor') {
       if (normStudentHex(before.instructor_id) !== normStudentHex(req.user.id)) {
@@ -1103,59 +1092,97 @@ const patchExam = async (req, res) => {
       nextFilesJson = JSON.stringify(cleaned);
     }
 
-    const nextPdf = pdfProvided ? (pdf_url || null) : undefined;
+    const nextPdf =
+      pdfProvided && pdf_url != null && String(pdf_url).trim() !== '' ? String(pdf_url).trim().slice(0, 500) : null;
 
     let updatedExam = null;
     let assignmentSummary = null;
 
     await db.transaction(async (client) => {
-      let idx = 1;
-      const sets = [];
-      const vals = [];
+      const finalTitle = titleNorm ?? before.title;
+      const finalSubject = subjectNorm ?? before.subject;
+      const finalTopic = topicNorm ?? before.topic;
 
-      const add = (frag, v) => {
-        sets.push(frag.replaceAll('__IDX__', String(idx)));
-        vals.push(v);
-        idx += 1;
-      };
+      const startCandidate =
+        start_time != null && start_time !== '' ? normalizeExamStartTime(start_time) : null;
+      const finalStart = startCandidate || before.start_time;
 
-      add('title = COALESCE(__IDX__, title)', titleNorm);
-      add('subject = COALESCE(__IDX__, subject)', subjectNorm);
-      add('topic = COALESCE(__IDX__, topic)', topicNorm);
-      add('start_time = COALESCE(__IDX__, start_time)', startNorm);
-      add(
-        'available_from = CASE WHEN __IDX__::timestamptz IS NULL THEN available_from ELSE __IDX__::timestamptz END',
-        fromNorm !== undefined ? fromNorm : null
-      );
-      add(
-        'available_until = CASE WHEN __IDX__::timestamptz IS NULL THEN available_until ELSE __IDX__::timestamptz END',
-        untilNorm !== undefined ? untilNorm : null
-      );
-      if (allowFinishProvided) {
-        add('allow_finish_after_until = __IDX__::boolean', allowFinishNext);
+      let finalAvailFrom = before.available_from;
+      if (available_from != null && available_from !== '') {
+        const n = normalizeExamStartTime(available_from);
+        if (n) finalAvailFrom = n;
       }
-      add('duration_minutes = COALESCE(__IDX__, duration_minutes)', durationNorm);
-      if (notifyProvided) {
-        add('notify_enabled = __IDX__::boolean', notifyOn);
-        add('notify_students = __IDX__::boolean', notifyOn);
-      }
-      add('show_results = COALESCE(__IDX__, show_results)', showResultsNorm);
-      add(
-        'exam_files = CASE WHEN __IDX__::text IS NULL THEN exam_files ELSE __IDX__::jsonb END',
-        filesProvided ? nextFilesJson : null
-      );
-      add('pdf_url = CASE WHEN __IDX__::text IS NULL THEN pdf_url ELSE __IDX__ END', pdfProvided ? nextPdf : null);
 
-      vals.push(examId);
-      const examIdParam = idx;
+      let finalAvailUntil = before.available_until;
+      if (available_until != null && available_until !== '') {
+        const n = normalizeExamStartTime(available_until);
+        if (n) finalAvailUntil = n;
+      }
+
+      const finalAllowFinish = allowFinishProvided ? allowFinishNext !== false : before.allow_finish_after_until;
+
+      const durParsed = durationNorm;
+      const finalDuration =
+        durParsed != null && Number.isFinite(durParsed)
+          ? durParsed
+          : Number.isFinite(Number(before.duration_minutes))
+            ? Number(before.duration_minutes)
+            : 60;
+
+      const finalNotifyEn = notifyProvided ? !!notifyOn : before.notify_enabled;
+      const finalNotifySt = notifyProvided ? !!notifyOn : before.notify_students;
+
+      const finalShow =
+        showResultsNorm !== null && showResultsNorm !== undefined ? !!showResultsNorm : before.show_results;
+
+      let finalExamFiles = before.exam_files;
+      if (filesProvided && nextFilesJson != null) {
+        try {
+          finalExamFiles = JSON.parse(nextFilesJson);
+        } catch {
+          finalExamFiles = [];
+        }
+      }
+      const examFilesArr = Array.isArray(finalExamFiles)
+        ? finalExamFiles
+        : parseJsonMaybe(finalExamFiles, []);
+
+      const finalPdfUrl = pdfProvided ? nextPdf : before.pdf_url;
 
       const { rows } = await client.query(
         `UPDATE exams SET
-          ${sets.join(',\n          ')},
+          title = $1::varchar(255),
+          subject = $2::varchar(255),
+          topic = $3::varchar(255),
+          start_time = $4::timestamp,
+          available_from = $5::timestamptz,
+          available_until = $6::timestamptz,
+          allow_finish_after_until = $7::boolean,
+          duration_minutes = $8::integer,
+          notify_enabled = $9::boolean,
+          notify_students = $10::boolean,
+          show_results = $11::boolean,
+          exam_files = $12::jsonb,
+          pdf_url = $13::varchar(500),
           updated_at = NOW()
-        WHERE id = $${examIdParam}
+        WHERE id = $14
         RETURNING *`,
-        vals
+        [
+          finalTitle,
+          finalSubject,
+          finalTopic,
+          finalStart,
+          finalAvailFrom,
+          finalAvailUntil,
+          finalAllowFinish,
+          finalDuration,
+          finalNotifyEn,
+          finalNotifySt,
+          finalShow,
+          JSON.stringify(Array.isArray(examFilesArr) ? examFilesArr : []),
+          finalPdfUrl,
+          examId,
+        ]
       );
       updatedExam = rows[0];
       if (!updatedExam) {
