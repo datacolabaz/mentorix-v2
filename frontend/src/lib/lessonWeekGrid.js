@@ -89,27 +89,46 @@ export function slotTimesForLesson(l) {
   return { day, start, end }
 }
 
+/** Bakı təqvimi: DD.MM.YYYY — `az-AZ` + dateStyle bəzi brauzerlərdə «M04» kimi səhv ay göstərir. */
+export function fmtAzBakuDate(inst) {
+  if (!inst || Number.isNaN(inst.getTime())) return ''
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Baku',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(inst)
+  const pick = (t) => parts.find((p) => p.type === t)?.value
+  const y = pick('year')
+  const mo = pick('month')
+  const d = pick('day')
+  if (y && mo && d) return `${String(d).padStart(2, '0')}.${String(mo).padStart(2, '0')}.${y}`
+  return '—'
+}
+
+function fmtAzBakuClockHm(inst) {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Baku',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(inst)
+  const pick = (t) => parts.find((p) => p.type === t)?.value
+  const h = pick('hour') ?? '00'
+  const m = pick('minute') ?? '00'
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+}
+
 export function fmtAzBakuLessonRow(l) {
   const inst = parseLessonInstant(l?.lesson_date)
   if (!inst) return '—'
-  const dateStr = new Intl.DateTimeFormat('az-AZ', {
-    timeZone: 'Asia/Baku',
-    dateStyle: 'medium',
-  }).format(inst)
+  const dateStr = fmtAzBakuDate(inst)
   const { dow } = bakuPartsFromInstant(inst)
   const lt = parseEnrollmentLessonTimes(l.enrollment_lesson_times)
   const wall = dow != null ? lt[String(dow)] ?? lt[dow] : null
   const t = wall != null && wall !== '' ? fmtTime(wall) : ''
   if (t) return `${dateStr}, ${t}`
-  try {
-    return new Intl.DateTimeFormat('az-AZ', {
-      timeZone: 'Asia/Baku',
-      dateStyle: 'medium',
-      timeStyle: 'short',
-    }).format(inst)
-  } catch {
-    return dateStr
-  }
+  return `${dateStr}, ${fmtAzBakuClockHm(inst)}`
 }
 
 export function parseToMinutes(t) {

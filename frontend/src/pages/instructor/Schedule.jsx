@@ -150,8 +150,9 @@ export default function InstructorSchedule() {
         <div>
           <h1 className="font-display font-bold text-xl sm:text-2xl text-white tracking-tight">Cədvəlim</h1>
           <p className="text-gray-500 text-sm mt-1">
-            Paket tələbələri üçün tarixli dərslər, aylıq tələbələr üçün isə həftəlik dərs günləri + saat əsasında növbəti təqvim nöqtələri şəbəkədə göstərilir. Xanada vaxt və tələbə sayı var;
-            toxunanda tələbəni seçəndə aşağıda yalnız <span className="text-gray-300">həmin gün və saat</span> üzrə tarixlər göstərilir (bütün həftə yox).
+            Bu səhifə <span className="text-gray-300">həftəlik cədvəl xəritəsi</span>dir: hər xana «həftənin bu günü, bu saatda kimdə dərs var»ı göstərir, bütün tarixlər üzrə ardıcıllıq deyil. Paket (8/12) üçün real tarixli
+            dərslər, aylıq üçün isə həmin gün+saat üçün <span className="text-gray-300">növbəti yaxın bir təqvim tarixi</span> nümunə kimi əlavə olunur — tələbə sentyabrdan hazırlığa gəlirsə belə, burada «cəmi 1
+            tarix» görmək o demək deyil ki, o yalnız bir dəfə gəlib; o, yalnız bu xananı təqvimdə harada «taxlamaq» lazım olduğunu göstərir.
           </p>
         </div>
         <Button type="button" variant="secondary" size="sm" onClick={() => void load()} disabled={loading}>
@@ -264,7 +265,7 @@ export default function InstructorSchedule() {
         {cellModal?.phase === 'pickStudent' && (
           <>
             <p className="text-xs text-gray-500 mb-3">
-              Tələbəni seçin — aşağıda yalnız yuxarıdakı gün və saat aralığına düşən dərs tarixləri göstərilir.
+              Tələbəni seçin — aşağıda bu xananın günü və saatına uyğun qeydlər (paket tarixləri və ya aylıq üçün növbəti nümunə tarix) göstərilir.
             </p>
             <ul className="space-y-2">
               {cellModal.studentNames.map((name) => (
@@ -286,9 +287,28 @@ export default function InstructorSchedule() {
 
         {cellModal?.phase === 'lessons' && (
           <>
+            {cellModal.lessons.some((l) => l.status === 'monthly_grid') ? (
+              <p className="text-[10px] text-gray-500 leading-relaxed mb-2 rounded-lg border border-indigo-500/20 bg-[#13112e]/80 px-2 py-1.5">
+                <span className="text-indigo-200/95 font-semibold">Aylıq cədvəl nümunəsi:</span> aşağıdakı tarix bu gün və saat üçün sistemdə növbəti yaxın uyğun gündür. Davamiyyət tarixçəsi, bütün keçmiş
+                dərslər və ya «neçənci dərs» burada göstərilmir — yalnız həftəlik şəbəkədə bu xananı təsdiqləmək üçündür.
+              </p>
+            ) : (
+              <p className="text-[10px] text-gray-500 leading-relaxed mb-2">
+                Aşağıda yalnız <span className="text-gray-300">bu xanaya düşən</span> tarixli dərs qeydləri var (paket üzrə planlaşdırılmış tarixlər).
+              </p>
+            )}
             <div className="flex items-center justify-between gap-2 mb-3">
               <p className="text-xs text-gray-500">
-                Cəmi <span className="text-indigo-200 font-semibold">{cellModal.lessons.length}</span> dərs
+                {cellModal.lessons.some((l) => l.status === 'monthly_grid') ? (
+                  <>
+                    Bu xana üçün nümunə:{' '}
+                    <span className="text-indigo-200 font-semibold">{cellModal.lessons.length}</span> tarix
+                  </>
+                ) : (
+                  <>
+                    Cəmi <span className="text-indigo-200 font-semibold">{cellModal.lessons.length}</span> tarix
+                  </>
+                )}
               </p>
               <button
                 type="button"
