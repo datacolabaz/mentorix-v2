@@ -3,9 +3,9 @@
  * Frontend artıq yerli vaxtı ISO-ya çevirir; burada təkrar parse təhlükəsizdir.
  */
 function normalizeExamStartTime(input) {
-  if (input == null || input === '') return input;
+  if (input == null || input === '') return null;
   const d = new Date(input);
-  if (Number.isNaN(d.getTime())) return input;
+  if (Number.isNaN(d.getTime())) return null;
   return d.toISOString();
 }
 
