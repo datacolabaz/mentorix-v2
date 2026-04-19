@@ -438,10 +438,18 @@ const studentExams = async (req, res) => {
        SELECT e.*, er.score, er.submitted_at, er.started_at,
          COALESCE(me.grade, '—') AS my_group,
          lb.rank_in_group,
-         eq_count.question_count
+         eq_count.question_count,
+         ea_assign.late_access_until
        FROM my_exam_ids mei
        JOIN exams e ON e.id = mei.exam_id
        CROSS JOIN me
+       LEFT JOIN LATERAL (
+         SELECT late_access_until
+         FROM exam_assignments ea3
+         WHERE ea3.exam_id = e.id
+           AND REPLACE(LOWER(TRIM(ea3.student_id::text)), '-', '') = $1
+         LIMIT 1
+       ) ea_assign ON TRUE
        LEFT JOIN LATERAL (
          SELECT score, submitted_at, started_at FROM exam_results er0
          WHERE er0.exam_id = e.id
@@ -546,12 +554,18 @@ const getExamQuestions = async (req, res) => {
       if (!sidHex) {
         return res.status(400).json({ success: false, message: 'İstifadəçi identifikatoru yoxdur' });
       }
-      const { rows: assigned } = await db.query(
+      const { rows: accessRows } = await db.query(
         `SELECT 1 FROM exam_assignments WHERE exam_id = $1
-         AND REPLACE(LOWER(TRIM(student_id::text)), '-', '') = $2`,
+         AND REPLACE(LOWER(TRIM(student_id::text)), '-', '') = $2
+         UNION ALL
+         SELECT 1 FROM exam_results er
+         WHERE er.exam_id = $1
+           AND REPLACE(LOWER(TRIM(er.student_id::text)), '-', '') = $2
+           AND er.submitted_at IS NULL
+         LIMIT 1`,
         [id, sidHex]
       );
-      if (!assigned.length) {
+      if (!accessRows.length) {
         return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
       }
     } else if (req.user.role === 'instructor') {
@@ -582,6 +596,8 @@ const getExamQuestions = async (req, res) => {
         [id, sidHex]
       );
       const attempt = rRows[0] || null;
+      /** Davam: şəxsi müddət bitməyibsə, qlobal pəncərə bitəndən sonra belə bloklamırıq */
+      const inProgressResume = !!(attempt?.started_at && !attempt?.submitted_at);
 
       if (attempt?.submitted_at) {
         return res.status(400).json({ success: false, message: 'Artıq təqdim edilib' });
@@ -615,7 +631,7 @@ const getExamQuestions = async (req, res) => {
         startedAtForStudent = inserted[0]?.started_at || null;
       }
 
-      if (!allowFinish && now > until) {
+      if (!allowFinish && now > until && !inProgressResume) {
         return res.status(400).json({ success: false, message: 'İmtahanın giriş müddəti bitib' });
       }
     }
@@ -653,7 +669,13 @@ const submitExam = async (req, res) => {
 
     const { rows: assignSubmit } = await db.query(
       `SELECT 1 FROM exam_assignments WHERE exam_id = $1
-       AND REPLACE(LOWER(TRIM(student_id::text)), '-', '') = $2`,
+       AND REPLACE(LOWER(TRIM(student_id::text)), '-', '') = $2
+       UNION ALL
+       SELECT 1 FROM exam_results er
+       WHERE er.exam_id = $1
+         AND REPLACE(LOWER(TRIM(er.student_id::text)), '-', '') = $2
+         AND er.submitted_at IS NULL
+       LIMIT 1`,
       [exam_id, sidHex]
     );
     if (!assignSubmit.length) {

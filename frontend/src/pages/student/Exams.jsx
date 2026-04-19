@@ -80,14 +80,24 @@ function formatScoreBal(v) {
   return `${rounded} bal`
 }
 
+/** Backend `examWindowOrLegacy` ilə eyni: until boşdursa from + duration */
+function parseDateOrNull(v) {
+  if (v == null || v === '') return null
+  const d = new Date(v)
+  return Number.isNaN(d.getTime()) ? null : d
+}
+
 function parseExamWindow(exam) {
-  const fromRaw = exam?.available_from || exam?.start_time
-  const untilRaw = exam?.available_until
-  const from = fromRaw ? new Date(fromRaw) : null
-  const until = untilRaw ? new Date(untilRaw) : null
+  const from = parseDateOrNull(exam?.available_from) || parseDateOrNull(exam?.start_time)
+  const untilExplicit = parseDateOrNull(exam?.available_until)
+  const until =
+    untilExplicit ||
+    (from ? new Date(from.getTime() + (Number(exam.duration_minutes) || 0) * 60000) : null)
+  const allowFinish = exam?.allow_finish_after_until !== false
   return {
-    from: from && !Number.isNaN(from.getTime()) ? from : null,
-    until: until && !Number.isNaN(until.getTime()) ? until : null,
+    from,
+    until,
+    allowFinish,
   }
 }
 
@@ -571,7 +581,15 @@ export default function StudentExams() {
               ? new Date(personalStart.getTime() + dur * 60000)
               : null
           const canResume = !!(personalStart && personalEnd && now <= personalEnd)
-          const canStart = !!(start && until && now >= start && now <= until)
+          const lateUntil = exam.late_access_until ? new Date(exam.late_access_until) : null
+          const inLateWindow =
+            !!(
+              lateUntil &&
+              !Number.isNaN(lateUntil.getTime()) &&
+              now <= lateUntil
+            )
+          const inGlobalWindow = !!(start && until && now >= start && now <= until)
+          const canStart = !!(start && until && (inGlobalWindow || inLateWindow))
           const isDone = !!exam.submitted_at
 
           return (
@@ -581,7 +599,12 @@ export default function StudentExams() {
                   <h3 className="font-display font-bold text-lg mb-2 break-words">{exam.title}</h3>
                   <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-4 text-sm text-gray-400">
                     {until ? (
-                      <span className="break-all">🕘 Aktiv: {formatAzDateTime(until)}-a qədər</span>
+                      <span className="break-all">
+                        🕘{' '}
+                        {start
+                          ? `${formatAzDateTime(start)} – ${formatAzDateTime(until)}`
+                          : `${formatAzDateTime(until)}-a qədər`}
+                      </span>
                     ) : (
                       <span className="text-amber-400/90">📅 Vaxt təyin olunmayıb</span>
                     )}
@@ -625,7 +648,10 @@ export default function StudentExams() {
               </div>
               {!isDone && until && (
                 <div className="mt-3 text-[12px] text-gray-400">
-                  İmtahan {formatAzDateTime(until)}-a qədər aktivdir. Daxil olduğunuz andan etibarən {dur} dəqiqə vaxtınız olacaq. İnternetinizin sabit olduğundan əmin olun.
+                  {start
+                    ? `İmtahan ${formatAzDateTime(start)} – ${formatAzDateTime(until)} aralığında aktivdir.`
+                    : `İmtahan ${formatAzDateTime(until)}-a qədər aktivdir.`}{' '}
+                  Daxil olduğunuz andan etibarən {dur} dəqiqə vaxtınız olacaq. İnternetinizin sabit olduğundan əmin olun.
                 </div>
               )}
             </Card>
