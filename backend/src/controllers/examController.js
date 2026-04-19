@@ -454,7 +454,9 @@ const studentExams = async (req, res) => {
          SELECT score, submitted_at, started_at FROM exam_results er0
          WHERE er0.exam_id = e.id
            AND REPLACE(LOWER(TRIM(er0.student_id::text)), '-', '') = $1
-         ORDER BY er0.submitted_at DESC NULLS LAST, er0.started_at DESC NULLS LAST
+         ORDER BY CASE WHEN er0.submitted_at IS NULL THEN 1 ELSE 0 END DESC,
+                  er0.submitted_at DESC NULLS LAST,
+                  er0.started_at DESC NULLS LAST
          LIMIT 1
        ) er ON TRUE
        LEFT JOIN leaderboard lb
@@ -586,12 +588,30 @@ const getExamQuestions = async (req, res) => {
     let startedAtForStudent = null;
     if (req.user.role === 'student') {
       const sidHex = normStudentHex(req.user.id);
+      const { rows: lateRowsEarly } = await db.query(
+        `SELECT late_access_until
+         FROM exam_assignments
+         WHERE exam_id = $1
+           AND REPLACE(LOWER(TRIM(student_id::text)), '-', '') = $2
+         LIMIT 1`,
+        [id, sidHex]
+      );
+      const lateUntilEarly = lateRowsEarly[0]?.late_access_until
+        ? new Date(lateRowsEarly[0].late_access_until)
+        : null;
+      const inLateWindow = () =>
+        !!(lateUntilEarly && !Number.isNaN(lateUntilEarly.getTime()) && now <= lateUntilEarly);
+      const inGlobalWindow = () => now >= from && now <= until;
+      const canEnterExamWindow = () => inGlobalWindow() || inLateWindow();
+
       const { rows: rRows } = await db.query(
         `SELECT id, started_at, submitted_at
          FROM exam_results
          WHERE exam_id = $1
            AND REPLACE(LOWER(TRIM(student_id::text)), '-', '') = $2
-         ORDER BY submitted_at DESC NULLS LAST, started_at DESC NULLS LAST
+         ORDER BY CASE WHEN submitted_at IS NULL THEN 1 ELSE 0 END DESC,
+                  submitted_at DESC NULLS LAST,
+                  started_at DESC NULLS LAST
          LIMIT 1`,
         [id, sidHex]
       );
@@ -605,22 +625,38 @@ const getExamQuestions = async (req, res) => {
 
       if (attempt?.started_at) {
         const s = new Date(attempt.started_at);
-        const personalEnd = new Date(s.getTime() + dur * 60000);
-        if (now > personalEnd) return res.status(400).json({ success: false, message: 'Vaxtınız bitib' });
-        startedAtForStudent = attempt.started_at;
+        const durMin = Math.max(Number(dur) || 0, 1);
+        const personalEnd = new Date(s.getTime() + durMin * 60000);
+        if (now > personalEnd) {
+          /** Köhnə in_progress: şəxsi müddət bitib, amma müəllimin pəncərəsindədirsə — yeni şəxsi müddət */
+          if (canEnterExamWindow()) {
+            const { rows: up } = await db.query(
+              `UPDATE exam_results
+               SET started_at = NOW(),
+                   answers = NULL,
+                   grading = NULL,
+                   status = 'in_progress',
+                   score = NULL,
+                   duration_seconds = NULL,
+                   submitted_at = NULL
+               WHERE id = $1 AND exam_id = $2 AND submitted_at IS NULL
+               RETURNING started_at`,
+              [attempt.id, id]
+            );
+            if (!up.length) {
+              return res.status(400).json({ success: false, message: 'Vaxtınız bitib' });
+            }
+            startedAtForStudent = up[0].started_at || null;
+          } else {
+            return res.status(400).json({ success: false, message: 'Vaxtınız bitib' });
+          }
+        } else {
+          startedAtForStudent = attempt.started_at;
+        }
       } else {
-        const { rows: lateRows } = await db.query(
-          `SELECT late_access_until
-           FROM exam_assignments
-           WHERE exam_id = $1
-             AND REPLACE(LOWER(TRIM(student_id::text)), '-', '') = $2
-           LIMIT 1`,
-          [id, sidHex]
-        );
-        const lateUntil = lateRows[0]?.late_access_until ? new Date(lateRows[0].late_access_until) : null;
-        const canStart =
-          (now >= from && now <= until) || (lateUntil && !Number.isNaN(lateUntil.getTime()) && now <= lateUntil);
-        if (!canStart) return res.status(400).json({ success: false, message: 'İmtahan aktiv deyil' });
+        if (!canEnterExamWindow()) {
+          return res.status(400).json({ success: false, message: 'İmtahan aktiv deyil' });
+        }
 
         const { rows: inserted } = await db.query(
           `INSERT INTO exam_results (exam_id, student_id, status, started_at)
@@ -631,7 +667,7 @@ const getExamQuestions = async (req, res) => {
         startedAtForStudent = inserted[0]?.started_at || null;
       }
 
-      if (!allowFinish && now > until && !inProgressResume) {
+      if (!allowFinish && now > until && !inLateWindow() && !inProgressResume) {
         return res.status(400).json({ success: false, message: 'İmtahanın giriş müddəti bitib' });
       }
     }
@@ -687,7 +723,9 @@ const submitExam = async (req, res) => {
        FROM exam_results
        WHERE exam_id=$1
          AND REPLACE(LOWER(TRIM(student_id::text)), '-', '') = $2
-       ORDER BY submitted_at DESC NULLS LAST, started_at DESC NULLS LAST
+       ORDER BY CASE WHEN submitted_at IS NULL THEN 1 ELSE 0 END DESC,
+                submitted_at DESC NULLS LAST,
+                started_at DESC NULLS LAST
        LIMIT 1`,
       [exam_id, sidHex]
     );
