@@ -1386,6 +1386,67 @@ const patchExam = async (req, res) => {
   }
 };
 
+/** Vercel/Rewrite: /api/uploads bəzən proxysiz qalır; JWT ilə /api/exams/material-file/... */
+const serveExamMaterialFile = async (req, res) => {
+  const filename = path.basename(String(req.params.filename || ''));
+  if (!/^[a-f0-9-]{36}\.(pdf|png|jpe?g|jpeg)$/i.test(filename)) {
+    return res.status(400).json({ success: false, message: 'Yanlış fayl adı' });
+  }
+  const examsDir = path.join(__dirname, '../../uploads/exams');
+  const abs = path.join(examsDir, filename);
+  if (!abs.startsWith(examsDir)) {
+    return res.status(400).json({ success: false, message: 'Yanlış yol' });
+  }
+  try {
+    if (!fs.existsSync(abs)) {
+      return res.status(404).json({ success: false, message: 'Fayl tapılmadı' });
+    }
+  } catch (e) {
+    return res.status(500).json({ success: false, message: e.message });
+  }
+
+  const role = req.user.role;
+  const userId = req.user.id;
+  const needle = `%${filename}%`;
+
+  const r = await db.query(
+    `SELECT e.id FROM exams e
+     WHERE (e.exam_files::text ILIKE $1 OR COALESCE(e.pdf_url::text, '') ILIKE $1)
+       AND (
+         $2::text = 'admin'
+         OR ($2::text = 'instructor' AND e.instructor_id = $3::uuid)
+         OR (
+           $2::text = 'student'
+           AND EXISTS (
+             SELECT 1 FROM exam_assignments ea
+             WHERE ea.exam_id = e.id AND ea.student_id = $3::uuid
+           )
+         )
+       )
+     LIMIT 1`,
+    [needle, role, userId]
+  );
+
+  if (r.rows.length === 0) {
+    return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
+  }
+
+  const ext = path.extname(filename).toLowerCase();
+  const ct =
+    ext === '.pdf'
+      ? 'application/pdf'
+      : ext === '.png'
+        ? 'image/png'
+        : ext === '.jpg' || ext === '.jpeg'
+          ? 'image/jpeg'
+          : 'application/octet-stream';
+  res.setHeader('Content-Type', ct);
+  res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+  res.setHeader('Cache-Control', 'private, max-age=300');
+  res.setHeader('Referrer-Policy', 'no-referrer');
+  return res.sendFile(abs);
+};
+
 module.exports = {
   createExam,
   listExams,
@@ -1404,4 +1465,5 @@ module.exports = {
   getExamGroups,
   getExamTop10,
   regradeExamResults,
+  serveExamMaterialFile,
 };
