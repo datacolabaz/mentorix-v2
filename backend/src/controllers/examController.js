@@ -939,27 +939,39 @@ const getResults = async (req, res) => {
     const { rows } = await db.query(
       `WITH emax AS (
          SELECT COALESCE(SUM(eq.points::numeric), 0) AS max_pts FROM exam_questions eq WHERE eq.exam_id = $1
-       )
-       SELECT er.id, er.exam_id, er.student_id, u.full_name,
-                COALESCE(sp.grade, '—') AS grade,
-                er.score,
-                CASE
-                  WHEN em.max_pts > 0 THEN LEAST(100, GREATEST(0, (er.score::numeric / em.max_pts) * 100))
-                  ELSE 0::numeric
-                END AS score_pct,
-                er.duration_seconds, er.submitted_at,
-                RANK() OVER (
-                  PARTITION BY CASE WHEN $2::text IS NULL THEN 'ALL' ELSE COALESCE(sp.grade, '—') END
-                  ORDER BY er.score DESC, er.duration_seconds ASC
-                )::int AS rank
+       ),
+       r AS (
+         SELECT er.id, er.exam_id, er.student_id, u.full_name,
+                COALESCE(ig.name, NULLIF(TRIM(sp.grade), ''), '—') AS grade,
+                er.score, er.duration_seconds, er.submitted_at
          FROM exam_results er
+         JOIN exams e ON e.id = er.exam_id
          JOIN users u ON u.id = er.student_id
          LEFT JOIN student_profiles sp ON sp.user_id = u.id
-         CROSS JOIN emax em
-         WHERE er.exam_id = $1
-           AND er.submitted_at IS NOT NULL
-           AND ($2::text IS NULL OR COALESCE(sp.grade, '—') = $2::text)
-         ORDER BY er.score DESC, er.duration_seconds ASC`,
+         LEFT JOIN LATERAL (
+           SELECT en.group_id
+           FROM enrollments en
+           WHERE en.student_id = er.student_id AND en.instructor_id = e.instructor_id
+           ORDER BY en.id DESC
+           LIMIT 1
+         ) en ON true
+         LEFT JOIN instructor_groups ig ON ig.id = en.group_id
+         WHERE er.exam_id = $1 AND er.submitted_at IS NOT NULL
+       )
+       SELECT r.id, r.exam_id, r.student_id, r.full_name, r.grade, r.score,
+              CASE
+                WHEN em.max_pts > 0 THEN LEAST(100, GREATEST(0, (r.score::numeric / em.max_pts) * 100))
+                ELSE 0::numeric
+              END AS score_pct,
+              r.duration_seconds, r.submitted_at,
+              RANK() OVER (
+                PARTITION BY CASE WHEN $2::text IS NULL THEN 'ALL' ELSE r.grade END
+                ORDER BY r.score DESC, r.duration_seconds ASC
+              )::int AS rank
+       FROM r
+       CROSS JOIN emax em
+       WHERE $2::text IS NULL OR r.grade = $2::text
+       ORDER BY r.score DESC, r.duration_seconds ASC`,
         [examId, grade]
       );
       return res.json({ success: true, results: rows, grade: grade || 'ALL' });
@@ -1027,13 +1039,23 @@ const getExamGroups = async (req, res) => {
     }
 
     const { rows } = await db.query(
-      `SELECT COALESCE(sp.grade, '—') AS grade, COUNT(DISTINCT er.student_id)::int AS taken
+      `SELECT COALESCE(ig.name, NULLIF(TRIM(sp.grade), ''), '—') AS grade,
+              COUNT(DISTINCT er.student_id)::int AS taken
        FROM exam_results er
+       JOIN exams e ON e.id = er.exam_id
        JOIN users u ON u.id = er.student_id
        LEFT JOIN student_profiles sp ON sp.user_id = u.id
+       LEFT JOIN LATERAL (
+         SELECT en.group_id
+         FROM enrollments en
+         WHERE en.student_id = er.student_id AND en.instructor_id = e.instructor_id
+         ORDER BY en.id DESC
+         LIMIT 1
+       ) en ON true
+       LEFT JOIN instructor_groups ig ON ig.id = en.group_id
        WHERE er.exam_id = $1 AND er.submitted_at IS NOT NULL
-       GROUP BY COALESCE(sp.grade, '—')
-       ORDER BY COALESCE(sp.grade, '—')`,
+       GROUP BY COALESCE(ig.name, NULLIF(TRIM(sp.grade), ''), '—')
+       ORDER BY 1`,
       [examId]
     );
     res.json({ success: true, groups: rows });
@@ -1059,7 +1081,8 @@ const getExamTop10 = async (req, res) => {
       `WITH emax AS (
          SELECT COALESCE(SUM(eq.points::numeric), 0) AS max_pts FROM exam_questions eq WHERE eq.exam_id = $1
        )
-       SELECT er.student_id, u.full_name, COALESCE(sp.grade, '—') AS grade,
+       SELECT er.student_id, u.full_name,
+              COALESCE(ig.name, NULLIF(TRIM(sp.grade), ''), '—') AS grade,
               er.score,
               CASE
                 WHEN em.max_pts > 0 THEN LEAST(100, GREATEST(0, (er.score::numeric / em.max_pts) * 100))
@@ -1068,8 +1091,17 @@ const getExamTop10 = async (req, res) => {
               er.duration_seconds, er.submitted_at,
               RANK() OVER (ORDER BY er.score DESC, er.duration_seconds ASC)::int AS rank
        FROM exam_results er
+       JOIN exams e ON e.id = er.exam_id
        JOIN users u ON u.id = er.student_id
        LEFT JOIN student_profiles sp ON sp.user_id = u.id
+       LEFT JOIN LATERAL (
+         SELECT en.group_id
+         FROM enrollments en
+         WHERE en.student_id = er.student_id AND en.instructor_id = e.instructor_id
+         ORDER BY en.id DESC
+         LIMIT 1
+       ) en ON true
+       LEFT JOIN instructor_groups ig ON ig.id = en.group_id
        CROSS JOIN emax em
        WHERE er.exam_id = $1 AND er.submitted_at IS NOT NULL
        ORDER BY er.score DESC, er.duration_seconds ASC
