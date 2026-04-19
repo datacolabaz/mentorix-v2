@@ -59,9 +59,8 @@ function normalizeExamFiles(exam) {
   return list
 }
 
-function isMaterialImage(pathOrName) {
-  const s = String(pathOrName || '')
-  return /\.(jpe?g|png|gif|webp)$/i.test(s)
+function isMaterialPdf(pathOrName) {
+  return /\.pdf(\?|#|$)/i.test(String(pathOrName || ''))
 }
 
 function questionTypeLabelAz(t) {
@@ -336,7 +335,8 @@ export default function StudentExams() {
               <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-4 space-y-4">
                 {materials.map((m) => {
                   const materialUrl = resolveMaterialUrl(m.url)
-                  const img = isMaterialImage(m.url) || isMaterialImage(m.name)
+                  // PDF iframe ilə; digər qəbul olunan fayllar (PNG/JPG) <img> — iframe PNG/JPEG göstərmir. Köhnə upload .bin uzantılı olsa belə şəkil kimi yoxlanır.
+                  const showPdfFrame = isMaterialPdf(m.url) || isMaterialPdf(m.name)
                   return (
                     <div
                       key={m.id}
@@ -346,17 +346,17 @@ export default function StudentExams() {
                         {m.name}
                       </p>
                       <div className="min-h-[200px] lg:min-h-[280px] max-h-[min(38vh,420px)] lg:max-h-[calc(100vh-220px)]">
-                        {img ? (
-                          <img
-                            src={materialUrl}
-                            alt={m.name}
-                            className="w-full h-full max-h-[min(38vh,420px)] lg:max-h-[calc(100vh-240px)] object-contain object-top bg-black/30"
-                          />
-                        ) : (
+                        {showPdfFrame ? (
                           <iframe
                             title={m.name}
                             src={materialUrl}
                             className="w-full h-full min-h-[200px] lg:min-h-[300px] bg-white/5 border-0"
+                          />
+                        ) : (
+                          <img
+                            src={materialUrl}
+                            alt={m.name}
+                            className="w-full h-full max-h-[min(38vh,420px)] lg:max-h-[calc(100vh-240px)] object-contain object-top bg-black/30"
                           />
                         )}
                       </div>

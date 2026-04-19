@@ -28,7 +28,14 @@ const uploadsExamsDir = path.join(__dirname, '../../uploads/exams');
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, uploadsExamsDir),
   filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname || '').toLowerCase() || '.bin';
+    let ext = path.extname(file.originalname || '').toLowerCase();
+    if (!ext || ext === '.bin') {
+      const mt = String(file.mimetype || '').toLowerCase();
+      if (mt === 'image/png') ext = '.png';
+      else if (mt === 'image/jpeg' || mt === 'image/jpg') ext = '.jpg';
+      else if (mt === 'application/pdf') ext = '.pdf';
+      else ext = '.bin';
+    }
     cb(null, `${crypto.randomUUID()}${ext}`);
   },
 });
