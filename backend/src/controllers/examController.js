@@ -1215,4 +1215,193 @@ const patchExam = async (req, res) => {
       let finalAvailFrom = before.available_from;
       if (available_from != null && available_from !== '') {
         const n = normalizeExamStartTime(available_from);
-        if (n) finalAvailFrom =
+        if (n) finalAvailFrom = n;
+      }
+
+      let finalAvailUntil = before.available_until;
+      if (available_until != null && available_until !== '') {
+        const n = normalizeExamStartTime(available_until);
+        if (n) finalAvailUntil = n;
+      }
+
+      const finalAllowFinish = allowFinishProvided ? allowFinishNext !== false : before.allow_finish_after_until;
+
+      const durParsed = durationNorm;
+      const finalDuration =
+        durParsed != null && Number.isFinite(durParsed)
+          ? durParsed
+          : Number.isFinite(Number(before.duration_minutes))
+            ? Number(before.duration_minutes)
+            : 60;
+
+      const finalNotifyEn = notifyProvided ? !!notifyOn : before.notify_enabled;
+      const finalNotifySt = notifyProvided ? !!notifyOn : before.notify_students;
+
+      const finalShow =
+        showResultsNorm !== null && showResultsNorm !== undefined ? !!showResultsNorm : before.show_results;
+
+      let finalExamFiles = before.exam_files;
+      if (filesProvided && nextFilesJson != null) {
+        try {
+          finalExamFiles = JSON.parse(nextFilesJson);
+        } catch {
+          finalExamFiles = [];
+        }
+      }
+      const examFilesArr = Array.isArray(finalExamFiles)
+        ? finalExamFiles
+        : parseJsonMaybe(finalExamFiles, []);
+
+      const finalPdfUrl = pdfProvided ? nextPdf : before.pdf_url;
+
+      const { rows } = await client.query(
+        `UPDATE exams SET
+          title = $1::varchar(255),
+          subject = $2::varchar(255),
+          topic = $3::varchar(255),
+          start_time = $4::timestamp,
+          available_from = $5::timestamptz,
+          available_until = $6::timestamptz,
+          allow_finish_after_until = $7::boolean,
+          duration_minutes = $8::integer,
+          notify_enabled = $9::boolean,
+          notify_students = $10::boolean,
+          show_results = $11::boolean,
+          exam_files = $12::jsonb,
+          pdf_url = $13::varchar(500),
+          updated_at = NOW()
+        WHERE id = $14
+        RETURNING *`,
+        [
+          finalTitle,
+          finalSubject,
+          finalTopic,
+          finalStart,
+          finalAvailFrom,
+          finalAvailUntil,
+          finalAllowFinish,
+          finalDuration,
+          finalNotifyEn,
+          finalNotifySt,
+          finalShow,
+          JSON.stringify(Array.isArray(examFilesArr) ? examFilesArr : []),
+          finalPdfUrl,
+          examId,
+        ]
+      );
+      updatedExam = rows[0];
+      if (!updatedExam) {
+        const err = new Error('Imtahan tapilmadi');
+        err.code = 'EXAM_NOT_FOUND';
+        throw err;
+      }
+
+      if (studentsProvided) {
+        const raw = Array.isArray(student_ids) ? student_ids : parseJsonMaybe(student_ids, []);
+        const wanted = [
+          ...new Set(
+            (Array.isArray(raw) ? raw : [])
+              .map((x) => String(x || '').trim())
+              .filter(Boolean)
+          ),
+        ];
+
+        const { rows: currentRows } = await client.query(
+          `SELECT student_id FROM exam_assignments WHERE exam_id = $1`,
+          [examId]
+        );
+        const current = new Set(currentRows.map((r) => String(r.student_id)));
+        const wantedSet = new Set(wanted);
+
+        const toRemove = [...current].filter((sid) => !wantedSet.has(sid));
+        if (toRemove.length) {
+          await client.query(
+            `DELETE FROM exam_assignments ea
+             WHERE ea.exam_id = $1
+               AND ea.student_id = ANY($2::uuid[])
+               AND NOT EXISTS (
+                 SELECT 1 FROM exam_results er
+                 WHERE er.exam_id = ea.exam_id
+                   AND er.student_id = ea.student_id
+                   AND er.submitted_at IS NOT NULL
+               )`,
+            [examId, toRemove]
+          );
+        }
+
+        const toAdd = wanted.filter((sid) => !current.has(sid));
+        for (const sid of toAdd) {
+          await client.query(
+            `INSERT INTO exam_assignments (exam_id, student_id) VALUES ($1, $2)
+             ON CONFLICT DO NOTHING`,
+            [examId, sid]
+          );
+        }
+
+        const { rows: afterRows } = await client.query(
+          `SELECT student_id FROM exam_assignments WHERE exam_id = $1`,
+          [examId]
+        );
+        assignmentSummary = { wanted: wanted.length, assigned: afterRows.length };
+      }
+    });
+
+    if (filesProvided || pdfProvided) {
+      const oldFiles = parseJsonMaybe(before.exam_files, []);
+      const oldUrls = new Set(
+        (Array.isArray(oldFiles) ? oldFiles : [])
+          .map((x) => x?.url)
+          .filter(Boolean)
+          .map(String)
+      );
+      if (before.pdf_url) oldUrls.add(String(before.pdf_url));
+
+      const newFiles = parseJsonMaybe(updatedExam.exam_files, []);
+      const newUrls = new Set(
+        (Array.isArray(newFiles) ? newFiles : [])
+          .map((x) => x?.url)
+          .filter(Boolean)
+          .map(String)
+      );
+      if (updatedExam.pdf_url) newUrls.add(String(updatedExam.pdf_url));
+
+      for (const u of oldUrls) {
+        if (!newUrls.has(u)) safeUnlinkUpload(u);
+      }
+    }
+
+    res.json({ success: true, exam: updatedExam, assignments: assignmentSummary });
+
+    if (notifyProvided || startNorm != null) {
+      setImmediate(() => {
+        syncExamReminderJob(examId).catch((e) => console.error('syncExamReminderJob', e.message));
+      });
+    }
+  } catch (err) {
+    if (res.headersSent) return;
+    if (err && err.code === 'EXAM_NOT_FOUND') {
+      return res.status(404).json({ success: false, message: 'Imtahan tapilmadi' });
+    }
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+module.exports = {
+  createExam,
+  listExams,
+  softDeleteExam,
+  hardDeleteExam,
+  bulkHardDeleteExams,
+  getExamAssignments,
+  grantLateAccess,
+  patchExam,
+  instructorStudentExamProgress,
+  studentExams,
+  getStudentExamReview,
+  getExamQuestions,
+  submitExam,
+  getResults,
+  getExamGroups,
+  getExamTop10,
+  regradeExamResults,
+};

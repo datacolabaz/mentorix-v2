@@ -19,9 +19,25 @@ function requestPath(url) {
   return url
 }
 
+/** baseURL + url (məs. /api + auth/login) → tam pathname; axios bəzən url-də / olmur */
+function combinedPath(config) {
+  const url = config?.url || ''
+  const base = (config?.baseURL || '').replace(/\/+$/, '')
+  if (url.includes('://')) {
+    try {
+      return new URL(url).pathname
+    } catch {
+      return url
+    }
+  }
+  const rel = String(url).replace(/^\/+/, '')
+  const merged = base ? `${base}/${rel}` : `/${rel}`
+  return merged.replace(/\/+/g, '/')
+}
+
 /** Giriş cəhdində köhnə Bearer token göndərmə (bəzi proxy/middleware qarışıqlığı) */
-function isPublicAuthPath(url) {
-  const path = requestPath(url)
+function isPublicAuthPath(config) {
+  const path = combinedPath(config)
   return (
     path.includes('/auth/login') ||
     path.includes('/auth/register') ||
@@ -32,35 +48,40 @@ function isPublicAuthPath(url) {
 }
 
 api.interceptors.request.use((config) => {
-  const token = isPublicAuthPath(config.url || '') ? null : localStorage.getItem('mx_token')
+  const token = isPublicAuthPath(config) ? null : localStorage.getItem('mx_token')
   if (token) config.headers.Authorization = `Bearer ${token}`
   else delete config.headers.Authorization
   return config
 })
 
-function isAuthAttemptUrl(url) {
-  if (!url || typeof url !== 'string') return false
+function isAuthAttemptConfig(config) {
+  if (!config) return false
+  const path = combinedPath(config)
   return (
-    url.includes('/auth/login') ||
-    url.includes('/auth/otp/') ||
-    url.includes('/auth/pin/') ||
-    url.includes('/auth/phone/') ||
-    url.includes('/auth/me')
+    path.includes('/auth/login') ||
+    path.includes('/auth/register') ||
+    path.includes('/auth/otp/') ||
+    path.includes('/auth/pin/') ||
+    path.includes('/auth/phone/') ||
+    path.includes('/auth/me')
   )
 }
 
 api.interceptors.response.use(
   (res) => res.data,
   (err) => {
-    const url = err.config?.url || ''
-    if (err.response?.status === 401 && !isAuthAttemptUrl(url)) {
+    if (err.response?.status === 401 && !isAuthAttemptConfig(err.config)) {
       localStorage.removeItem('mx_token')
       localStorage.removeItem('mx_user')
       window.location.href = '/login'
     }
     const data = err.response?.data
+    const status = err.response?.status
     const msg = data?.message || err.message || 'Xəta'
-    const wrapped = data && typeof data === 'object' ? { ...data, message: msg } : { message: msg }
+    const wrapped =
+      data && typeof data === 'object'
+        ? { ...data, message: msg, status }
+        : { message: msg, status }
     return Promise.reject(wrapped)
   }
 )

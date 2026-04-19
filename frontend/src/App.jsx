@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import useAuthStore from './hooks/useAuth'
 
@@ -50,28 +50,11 @@ const ProtectedRoute = ({ children, roles }) => {
 
 export default function App() {
   const { user } = useAuthStore()
-  const [sessionReady, setSessionReady] = useState(false)
 
+  /** Bloklamadan: /auth/me ilə sessiyanı təsdiqlə; qapı gözləməsi sonsuz “Yüklənir”ə səbəb ola bilərdi */
   useEffect(() => {
-    let cancelled = false
-    useAuthStore
-      .getState()
-      .bootstrapSession()
-      .finally(() => {
-        if (!cancelled) setSessionReady(true)
-      })
-    return () => {
-      cancelled = true
-    }
+    void useAuthStore.getState().bootstrapSession()
   }, [])
-
-  if (!sessionReady) {
-    return (
-      <div className="min-h-screen bg-[#0f0c29] flex items-center justify-center text-gray-400 text-sm">
-        Yüklənir…
-      </div>
-    )
-  }
 
   return (
     <Routes>
