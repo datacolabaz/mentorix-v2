@@ -23,13 +23,33 @@ function optionDisplayLabel(opt) {
   return '—'
 }
 
-/** Serverdən gələn /api/uploads/... üçün tam URL (VITE_API_URL=https://host/api) */
+/** Serverdən gələn /api/uploads/... üçün tam URL (VITE_API_URL=https://host/api və ya /api) */
 function resolveMaterialUrl(rel) {
   if (!rel || typeof rel !== 'string') return ''
-  if (rel.startsWith('http')) return rel
-  const base = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
-  const origin = base.replace(/\/api\/?$/, '') || (typeof window !== 'undefined' ? window.location.origin : '')
-  const p = rel.startsWith('/') ? rel : `/${rel}`
+  let r = String(rel).trim()
+  if (r.startsWith('//') && typeof window !== 'undefined') {
+    r = `${window.location.protocol}${r}`
+  }
+  if (r.startsWith('http')) {
+    if (typeof window !== 'undefined' && window.location.protocol === 'https:' && r.startsWith('http:')) {
+      r = `https:${r.slice('http:'.length)}`
+    }
+    return r
+  }
+  const p = r.startsWith('/') ? r : `/${r}`
+  const rawBase = (import.meta.env.VITE_API_URL || '').trim().replace(/\/$/, '')
+  let origin = ''
+  if (rawBase) {
+    if (rawBase.startsWith('/')) {
+      const stripped = rawBase.replace(/\/api\/?$/, '')
+      origin = (typeof window !== 'undefined' ? window.location.origin : '') + stripped
+    } else {
+      origin = rawBase.replace(/\/api\/?$/, '') || (typeof window !== 'undefined' ? window.location.origin : '')
+    }
+  } else if (typeof window !== 'undefined') {
+    origin = window.location.origin
+  }
+  if (!origin && typeof window !== 'undefined') origin = window.location.origin
   return origin ? `${origin}${p}` : p
 }
 
@@ -61,6 +81,20 @@ function normalizeExamFiles(exam) {
 
 function isMaterialPdf(pathOrName) {
   return /\.pdf(\?|#|$)/i.test(String(pathOrName || ''))
+}
+
+/** Şəkil uzantısı URL və ya adda varsa — iframe istifadə etmə (iframe PNG/JPEG göstərmir) */
+function looksRaster(pathOrName) {
+  return /\.(png|jpe?g|gif|webp|bmp|svg)(\?|#|$)/i.test(String(pathOrName || ''))
+}
+
+/** PDF yalnız həqiqətən pdf faylıdırsa; ad .pdf yazılıb URL .png olanda img */
+function shouldUsePdfIframe(m) {
+  if (!m) return false
+  if (looksRaster(m.url) || looksRaster(m.name)) return false
+  if (isMaterialPdf(m.url)) return true
+  if (isMaterialPdf(m.name) && !looksRaster(m.url)) return true
+  return false
 }
 
 function questionTypeLabelAz(t) {
@@ -352,8 +386,7 @@ export default function StudentExams() {
               <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-4 space-y-4">
                 {materials.map((m) => {
                   const materialUrl = resolveMaterialUrl(m.url)
-                  // PDF iframe ilə; digər qəbul olunan fayllar (PNG/JPG) <img> — iframe PNG/JPEG göstərmir. Köhnə upload .bin uzantılı olsa belə şəkil kimi yoxlanır.
-                  const showPdfFrame = isMaterialPdf(m.url) || isMaterialPdf(m.name)
+                  const showPdfFrame = shouldUsePdfIframe(m)
                   return (
                     <div
                       key={m.id}
@@ -365,20 +398,32 @@ export default function StudentExams() {
                       <div className="min-h-[200px] lg:min-h-[280px] max-h-[min(38vh,420px)] lg:max-h-[calc(100vh-220px)]">
                         {showPdfFrame ? (
                           <iframe
+                            key={`pdf-${m.id}-${startedAt || ''}`}
                             title={m.name}
                             src={materialUrl}
                             className="w-full h-full min-h-[200px] lg:min-h-[300px] bg-white/5 border-0"
                           />
                         ) : (
-                          <img
-                            key={`${m.id}-${startedAt || ''}`}
-                            src={materialUrl}
-                            alt={m.name}
-                            loading="eager"
-                            decoding="async"
-                            referrerPolicy="no-referrer"
-                            className="w-full h-full max-h-[min(38vh,420px)] lg:max-h-[calc(100vh-240px)] object-contain object-top bg-black/30 min-w-[120px] min-h-[120px]"
-                          />
+                          <div className="flex flex-col gap-2 min-h-[inherit]">
+                            <img
+                              key={`img-${m.id}-${startedAt || ''}`}
+                              src={materialUrl}
+                              alt={m.name}
+                              loading="eager"
+                              decoding="async"
+                              className="w-full flex-1 max-h-[min(38vh,420px)] lg:max-h-[calc(100vh-260px)] object-contain object-top bg-black/30 min-w-[120px] min-h-[120px]"
+                            />
+                            {materialUrl ? (
+                              <a
+                                href={materialUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-center text-xs font-semibold text-blue-400 hover:text-blue-300 py-1"
+                              >
+                                Yeni pəncərədə aç
+                              </a>
+                            ) : null}
+                          </div>
                         )}
                       </div>
                     </div>
