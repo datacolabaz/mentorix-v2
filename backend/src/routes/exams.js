@@ -1,6 +1,8 @@
+const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const multer = require('multer');
+const db = require('../utils/db');
 const router = require('express').Router();
 const { verify } = require('../utils/jwt');
 const {
@@ -63,8 +65,35 @@ router.post(
     });
   },
   enforceStorageLimitAfterUpload,
-  (req, res) => {
+  async (req, res) => {
     if (!req.file) return res.status(400).json({ success: false, message: 'Fayl teleb olunur' });
+    try {
+      const buf = fs.readFileSync(req.file.path);
+      const ct = req.file.mimetype || 'application/octet-stream';
+      await db.query(
+        `INSERT INTO exam_material_blobs (filename, content_type, data, byte_size)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (filename) DO UPDATE SET
+           content_type = EXCLUDED.content_type,
+           data = EXCLUDED.data,
+           byte_size = EXCLUDED.byte_size,
+           created_at = NOW()`,
+        [req.file.filename, ct, buf, buf.length]
+      );
+      try {
+        fs.unlinkSync(req.file.path);
+      } catch (unlinkErr) {
+        console.error('exam upload tmp unlink', unlinkErr.message);
+      }
+    } catch (e) {
+      console.error('exam material blob persist', e);
+      try {
+        fs.unlinkSync(req.file.path);
+      } catch (_) {
+        /* ignore */
+      }
+      return res.status(500).json({ success: false, message: 'Fayl saxlanılmadı' });
+    }
     const rel = `/api/uploads/exams/${req.file.filename}`;
     res.json({ success: true, url: rel, filename: req.file.originalname });
   }

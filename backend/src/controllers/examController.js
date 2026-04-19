@@ -24,6 +24,71 @@ function safeUnlinkUpload(url) {
   }
 }
 
+function examUploadFilenameFromPublicUrl(url) {
+  const m = String(url || '').match(/\/api\/uploads\/exams\/([^/?#]+)$/i);
+  return m ? m[1] : null;
+}
+
+async function deleteExamMaterialBlobByUrl(url) {
+  const fn = examUploadFilenameFromPublicUrl(url);
+  if (!fn) return;
+  try {
+    await db.query('DELETE FROM exam_material_blobs WHERE filename = $1', [fn]);
+  } catch (e) {
+    console.error('deleteExamMaterialBlobByUrl', e.message);
+  }
+}
+
+/** Disk (köhnə) və ya DB (Railway-də davamlı) */
+async function sendExamMaterialFromDiskOrDb(res, filename) {
+  const examsDir = path.join(__dirname, '../../uploads/exams');
+  const abs = path.join(examsDir, filename);
+  if (!abs.startsWith(examsDir)) {
+    return res.status(400).json({ success: false, message: 'Yanlış yol' });
+  }
+  const ext = path.extname(filename).toLowerCase();
+  const ctByExt =
+    ext === '.pdf'
+      ? 'application/pdf'
+      : ext === '.png'
+        ? 'image/png'
+        : ext === '.jpg' || ext === '.jpeg'
+          ? 'image/jpeg'
+          : 'application/octet-stream';
+
+  try {
+    if (fs.existsSync(abs)) {
+      res.setHeader('Content-Type', ctByExt);
+      res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+      res.setHeader('Cache-Control', 'private, max-age=300');
+      res.setHeader('Referrer-Policy', 'no-referrer');
+      return res.sendFile(abs);
+    }
+  } catch (e) {
+    return res.status(500).json({ success: false, message: e.message });
+  }
+
+  const { rows } = await db.query(
+    'SELECT data, content_type FROM exam_material_blobs WHERE filename = $1',
+    [filename]
+  );
+  const row = rows[0];
+  if (row?.data) {
+    const ct = row.content_type || ctByExt;
+    res.setHeader('Content-Type', ct);
+    res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+    res.setHeader('Cache-Control', 'private, max-age=300');
+    res.setHeader('Referrer-Policy', 'no-referrer');
+    const buf = Buffer.isBuffer(row.data) ? row.data : Buffer.from(row.data);
+    return res.send(buf);
+  }
+
+  return res.status(404).json({
+    success: false,
+    message: 'Fayl tapılmadı. Müəllimdən materialı yenidən yükləməsini xahiş edin.',
+  });
+}
+
 function parseJsonMaybe(value, fallback) {
   if (value == null) return fallback;
   if (typeof value === 'object') return value;
@@ -314,7 +379,33 @@ const hardDeleteExam = async (req, res) => {
       return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
     }
 
+    const { rows: [examMedia] } = await db.query(
+      'SELECT exam_files, pdf_url FROM exams WHERE id = $1',
+      [examId]
+    );
+    const blobNames = new Set();
+    if (examMedia) {
+      const arr = parseJsonMaybe(examMedia.exam_files, []);
+      if (Array.isArray(arr)) {
+        for (const x of arr) {
+          if (x && typeof x === 'object' && x.url) {
+            const fn = examUploadFilenameFromPublicUrl(x.url);
+            if (fn) blobNames.add(fn);
+          }
+        }
+      }
+      if (examMedia.pdf_url) {
+        const fn = examUploadFilenameFromPublicUrl(examMedia.pdf_url);
+        if (fn) blobNames.add(fn);
+      }
+    }
+
     await db.transaction(async (client) => {
+      if (blobNames.size > 0) {
+        await client.query('DELETE FROM exam_material_blobs WHERE filename = ANY($1::text[])', [
+          [...blobNames],
+        ]);
+      }
       // FK-lar ON DELETE CASCADE olanda bu 3 sətir redundantdır, amma köhnə DB-lərdə təhlükəsizdir
       await client.query('DELETE FROM exam_results WHERE exam_id = $1', [examId]);
       await client.query('DELETE FROM exam_questions WHERE exam_id = $1', [examId]);
@@ -357,7 +448,33 @@ const bulkHardDeleteExams = async (req, res) => {
       if (forbidden) return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
     }
 
+    const { rows: mediaRows } = await db.query(
+      'SELECT exam_files, pdf_url FROM exams WHERE id = ANY($1::uuid[])',
+      [examIds]
+    );
+    const blobNames = new Set();
+    for (const row of mediaRows) {
+      const arr = parseJsonMaybe(row.exam_files, []);
+      if (Array.isArray(arr)) {
+        for (const x of arr) {
+          if (x && typeof x === 'object' && x.url) {
+            const fn = examUploadFilenameFromPublicUrl(x.url);
+            if (fn) blobNames.add(fn);
+          }
+        }
+      }
+      if (row.pdf_url) {
+        const fn = examUploadFilenameFromPublicUrl(row.pdf_url);
+        if (fn) blobNames.add(fn);
+      }
+    }
+
     await db.transaction(async (client) => {
+      if (blobNames.size > 0) {
+        await client.query('DELETE FROM exam_material_blobs WHERE filename = ANY($1::text[])', [
+          [...blobNames],
+        ]);
+      }
       await client.query('DELETE FROM exam_results WHERE exam_id = ANY($1::uuid[])', [examIds]);
       await client.query('DELETE FROM exam_questions WHERE exam_id = ANY($1::uuid[])', [examIds]);
       await client.query('DELETE FROM exam_assignments WHERE exam_id = ANY($1::uuid[])', [examIds]);
@@ -1366,7 +1483,10 @@ const patchExam = async (req, res) => {
       if (updatedExam.pdf_url) newUrls.add(String(updatedExam.pdf_url));
 
       for (const u of oldUrls) {
-        if (!newUrls.has(u)) safeUnlinkUpload(u);
+        if (!newUrls.has(u)) {
+          safeUnlinkUpload(u);
+          await deleteExamMaterialBlobByUrl(u);
+        }
       }
     }
 
@@ -1391,18 +1511,6 @@ const serveExamMaterialFile = async (req, res) => {
   const filename = path.basename(String(req.params.filename || ''));
   if (!/^[a-f0-9-]{36}\.(pdf|png|jpe?g|jpeg)$/i.test(filename)) {
     return res.status(400).json({ success: false, message: 'Yanlış fayl adı' });
-  }
-  const examsDir = path.join(__dirname, '../../uploads/exams');
-  const abs = path.join(examsDir, filename);
-  if (!abs.startsWith(examsDir)) {
-    return res.status(400).json({ success: false, message: 'Yanlış yol' });
-  }
-  try {
-    if (!fs.existsSync(abs)) {
-      return res.status(404).json({ success: false, message: 'Fayl tapılmadı' });
-    }
-  } catch (e) {
-    return res.status(500).json({ success: false, message: e.message });
   }
 
   const role = req.user.role;
@@ -1447,20 +1555,7 @@ const serveExamMaterialFile = async (req, res) => {
     return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
   }
 
-  const ext = path.extname(filename).toLowerCase();
-  const ct =
-    ext === '.pdf'
-      ? 'application/pdf'
-      : ext === '.png'
-        ? 'image/png'
-        : ext === '.jpg' || ext === '.jpeg'
-          ? 'image/jpeg'
-          : 'application/octet-stream';
-  res.setHeader('Content-Type', ct);
-  res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
-  res.setHeader('Cache-Control', 'private, max-age=300');
-  res.setHeader('Referrer-Policy', 'no-referrer');
-  return res.sendFile(abs);
+  return sendExamMaterialFromDiskOrDb(res, filename);
 };
 
 /**
@@ -1530,33 +1625,7 @@ const serveExamAttachmentByExam = async (req, res) => {
     return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
   }
 
-  const examsDir = path.join(__dirname, '../../uploads/exams');
-  const abs = path.join(examsDir, filename);
-  if (!abs.startsWith(examsDir)) {
-    return res.status(400).json({ success: false, message: 'Yanlış yol' });
-  }
-  try {
-    if (!fs.existsSync(abs)) {
-      return res.status(404).json({ success: false, message: 'Fayl diskdə yoxdur (server yenidən yüklənibsə yenidən yükləyin)' });
-    }
-  } catch (e) {
-    return res.status(500).json({ success: false, message: e.message });
-  }
-
-  const ext = path.extname(filename).toLowerCase();
-  const ct =
-    ext === '.pdf'
-      ? 'application/pdf'
-      : ext === '.png'
-        ? 'image/png'
-        : ext === '.jpg' || ext === '.jpeg'
-          ? 'image/jpeg'
-          : 'application/octet-stream';
-  res.setHeader('Content-Type', ct);
-  res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
-  res.setHeader('Cache-Control', 'private, max-age=300');
-  res.setHeader('Referrer-Policy', 'no-referrer');
-  return res.sendFile(abs);
+  return sendExamMaterialFromDiskOrDb(res, filename);
 };
 
 module.exports = {

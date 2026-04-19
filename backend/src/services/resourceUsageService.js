@@ -39,6 +39,31 @@ function sumUrlsBytes(urls) {
   return total;
 }
 
+function examBlobFilenameFromUrl(url) {
+  const m = String(url || '').match(/\/api\/uploads\/exams\/([^/?#]+)$/i);
+  return m ? m[1] : null;
+}
+
+async function byteSizeForExamUploadUrl(url) {
+  const abs = tryAbsFromPublicUrl(url);
+  if (abs && String(abs).includes(`${path.sep}exams${path.sep}`)) {
+    const disk = safeStatSize(abs);
+    if (disk > 0) return disk;
+  }
+  const fn = examBlobFilenameFromUrl(url);
+  if (!fn) return 0;
+  const { rows } = await db.query('SELECT byte_size FROM exam_material_blobs WHERE filename = $1', [fn]);
+  return Number(rows[0]?.byte_size) || 0;
+}
+
+async function sumExamMaterialUrlsBytes(urls) {
+  let total = 0;
+  for (const u of urls || []) {
+    total += await byteSizeForExamUploadUrl(u);
+  }
+  return total;
+}
+
 /**
  * Recompute storage_used_mb from DB URLs (exams + assignments).
  * Uses best-effort filesystem stat; missing files count as 0.
@@ -76,7 +101,9 @@ async function recomputeInstructorStorageUsageMb(instructorId, opts = {}) {
   );
   const assignmentUrls = assRows.map((r) => r.question_file_url).filter(Boolean);
 
-  const totalBytes = sumUrlsBytes(examUrls) + sumUrlsBytes(assignmentUrls);
+  const examBytes = await sumExamMaterialUrlsBytes(examUrls);
+  const assignmentBytes = sumUrlsBytes(assignmentUrls);
+  const totalBytes = examBytes + assignmentBytes;
   const storage_used_mb = bytesToMbInt(totalBytes);
 
   if (persist) {
