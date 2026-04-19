@@ -589,7 +589,11 @@ export default function StudentExams() {
               now <= lateUntil
             )
           const inGlobalWindow = !!(start && until && now >= start && now <= until)
-          const canStart = !!(start && until && (inGlobalWindow || inLateWindow))
+          const inExamWindow = !!(start && until && (inGlobalWindow || inLateWindow))
+          const hasOpenAttempt = !!(exam.started_at && !exam.submitted_at)
+          /** Təqdim olunmayan cəhd varsa və müəllimin pəncərəsindədirsə — "Davam et" (köhnə şəxsi müddət bitibsə server yeniləyir) */
+          const showContinue = hasOpenAttempt && inExamWindow
+          const canStartFresh = !hasOpenAttempt && inExamWindow
           const isDone = !!exam.submitted_at
 
           return (
@@ -637,9 +641,9 @@ export default function StudentExams() {
                     <span className="text-xs text-amber-400/90 bg-[#13112e] px-3 py-2 rounded-xl inline-block">
                       Müəllim vaxt təyin etməlidir
                     </span>
-                  ) : canResume ? (
+                  ) : showContinue ? (
                     <Button onClick={() => startExam(exam)}>↩️ Davam et</Button>
-                  ) : canStart ? (
+                  ) : canStartFresh ? (
                     <Button onClick={() => startExam(exam)}>🚀 Başla</Button>
                   ) : (
                     <span className="text-xs text-gray-500 bg-[#13112e] px-3 py-2 rounded-xl inline-block">⛔ Aktiv deyil</span>
