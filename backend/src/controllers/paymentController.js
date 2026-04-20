@@ -171,12 +171,41 @@ const listMyPayments = async (req, res) => {
     let calendar_remaining_lessons = null;
     if (enrollment && limit != null) {
       const cycle = enrollment.billing_cycle || 1;
+      /**
+       * Calendar countdown must follow schedule “wall time” (lesson_times) not stored timestamptz hour.
+       * We derive a scheduled_ts per lesson: (lesson_date's Baku YMD + lesson_times for that weekday) in Asia/Baku.
+       */
       const { rows: agg } = await db.query(
-        `SELECT
+        `WITH enr AS (
+           SELECT id, lesson_times
+           FROM enrollments
+           WHERE id = $1
+         ),
+         l AS (
+           SELECT
+             lesson_date,
+             to_char((lesson_date AT TIME ZONE 'Asia/Baku')::date, 'YYYY-MM-DD') AS ymd,
+             EXTRACT(ISODOW FROM (lesson_date AT TIME ZONE 'Asia/Baku'))::int AS dow
+           FROM lessons
+           WHERE enrollment_id = $1 AND billing_cycle = $2
+         ),
+         sched AS (
+           SELECT
+             (
+               (l.ymd || ' ' ||
+                 COALESCE(
+                   NULLIF(LEFT((enr.lesson_times ->> l.dow::text), 5), ''),
+                   to_char((l.lesson_date AT TIME ZONE 'Asia/Baku')::time, 'HH24:MI')
+                 ) || ':00'
+               )::timestamp AT TIME ZONE 'Asia/Baku'
+             ) AS scheduled_ts
+           FROM l
+           CROSS JOIN enr
+         )
+         SELECT
            COUNT(*)::int AS total,
-           COUNT(*) FILTER (WHERE lesson_date <= NOW())::int AS used
-         FROM lessons
-         WHERE enrollment_id = $1 AND billing_cycle = $2`,
+           COUNT(*) FILTER (WHERE scheduled_ts <= NOW())::int AS used
+         FROM sched`,
         [enrollment.id, cycle]
       );
       const total = agg[0]?.total ?? 0;
@@ -191,39 +220,52 @@ const listMyPayments = async (req, res) => {
     let planned_lessons_in_cycle = null;
     if (enrollment && limit != null) {
       const cycle = enrollment.billing_cycle || 1;
+      // Select next lesson by derived scheduled_ts (schedule wall time), not raw lesson_date timestamp hour.
       const { rows: nl } = await db.query(
-        `SELECT lesson_date
-         FROM lessons
-         WHERE student_id = $1
-           AND enrollment_id = $2
-           AND billing_cycle = $3
-           AND status = 'pending'
-           AND lesson_date > NOW()
-         ORDER BY lesson_date
+        `WITH enr AS (
+           SELECT id, lesson_times
+           FROM enrollments
+           WHERE id = $2
+         ),
+         l AS (
+           SELECT
+             lesson_date,
+             to_char((lesson_date AT TIME ZONE 'Asia/Baku')::date, 'YYYY-MM-DD') AS ymd,
+             EXTRACT(ISODOW FROM (lesson_date AT TIME ZONE 'Asia/Baku'))::int AS dow
+           FROM lessons
+           WHERE student_id = $1
+             AND enrollment_id = $2
+             AND billing_cycle = $3
+             AND status = 'pending'
+         ),
+         sched AS (
+           SELECT
+             l.lesson_date,
+             l.ymd,
+             l.dow,
+             (
+               (l.ymd || ' ' ||
+                 COALESCE(
+                   NULLIF(LEFT((enr.lesson_times ->> l.dow::text), 5), ''),
+                   to_char((l.lesson_date AT TIME ZONE 'Asia/Baku')::time, 'HH24:MI')
+                 ) || ':00'
+               )::timestamp AT TIME ZONE 'Asia/Baku'
+             ) AS scheduled_ts,
+             COALESCE(NULLIF(LEFT((enr.lesson_times ->> l.dow::text), 5), ''), NULL) AS wall_hm
+           FROM l
+           CROSS JOIN enr
+         )
+         SELECT lesson_date, ymd, scheduled_ts, wall_hm
+         FROM sched
+         WHERE scheduled_ts > NOW()
+         ORDER BY scheduled_ts
          LIMIT 1`,
         [studentId, enrollment.id, cycle]
       );
-      nextLesson = nl[0]?.lesson_date || null;
-
-      /** UI üçün schedule-a bağlı “divar saatı” göstər: lesson_times JSONB + Bakı isodow */
-      if (nextLesson) {
-        const { rows: dl } = await db.query(
-          `SELECT
-             to_char(( $1::timestamptz AT TIME ZONE 'Asia/Baku')::date, 'YYYY-MM-DD') AS ymd,
-             EXTRACT(ISODOW FROM ($1::timestamptz AT TIME ZONE 'Asia/Baku'))::int AS isodow,
-             e.lesson_times AS lesson_times
-           FROM enrollments e
-           WHERE e.id = $2`,
-          [nextLesson, enrollment.id]
-        );
-        const row = dl[0] || null;
-        const ymd = row?.ymd || null;
-        const dow = row?.isodow != null ? String(row.isodow) : null;
-        const lt = row?.lesson_times && typeof row.lesson_times === 'object' ? row.lesson_times : null;
-        const wall = lt && dow ? (lt[dow] || lt[String(dow)]) : null;
-        const hm = wall != null ? String(wall).slice(0, 5) : null;
-        if (ymd && hm) nextLessonDisplay = `${ymd} ${hm}:00`;
-        else if (ymd) nextLessonDisplay = `${ymd}`;
+      nextLesson = nl[0]?.scheduled_ts || null;
+      if (nl[0]?.ymd) {
+        const hm = nl[0]?.wall_hm != null ? String(nl[0].wall_hm).slice(0, 5) : null;
+        nextLessonDisplay = hm ? `${nl[0].ymd} ${hm}:00` : `${nl[0].ymd}`;
       }
 
       const { rows: c } = await db.query(
