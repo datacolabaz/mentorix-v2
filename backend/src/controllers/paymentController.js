@@ -197,6 +197,7 @@ const listMyPayments = async (req, res) => {
            AND enrollment_id = $2
            AND billing_cycle = $3
            AND status = 'pending'
+           AND lesson_date > NOW()
          ORDER BY lesson_date
          LIMIT 1`,
         [studentId, enrollment.id, cycle]
