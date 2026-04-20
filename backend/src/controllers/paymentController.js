@@ -187,6 +187,7 @@ const listMyPayments = async (req, res) => {
     }
 
     let nextLesson = null;
+    let nextLessonDisplay = null;
     let planned_lessons_in_cycle = null;
     if (enrollment && limit != null) {
       const cycle = enrollment.billing_cycle || 1;
@@ -203,6 +204,27 @@ const listMyPayments = async (req, res) => {
         [studentId, enrollment.id, cycle]
       );
       nextLesson = nl[0]?.lesson_date || null;
+
+      /** UI üçün schedule-a bağlı “divar saatı” göstər: lesson_times JSONB + Bakı isodow */
+      if (nextLesson) {
+        const { rows: dl } = await db.query(
+          `SELECT
+             to_char(( $1::timestamptz AT TIME ZONE 'Asia/Baku')::date, 'YYYY-MM-DD') AS ymd,
+             EXTRACT(ISODOW FROM ($1::timestamptz AT TIME ZONE 'Asia/Baku'))::int AS isodow,
+             e.lesson_times AS lesson_times
+           FROM enrollments e
+           WHERE e.id = $2`,
+          [nextLesson, enrollment.id]
+        );
+        const row = dl[0] || null;
+        const ymd = row?.ymd || null;
+        const dow = row?.isodow != null ? String(row.isodow) : null;
+        const lt = row?.lesson_times && typeof row.lesson_times === 'object' ? row.lesson_times : null;
+        const wall = lt && dow ? (lt[dow] || lt[String(dow)]) : null;
+        const hm = wall != null ? String(wall).slice(0, 5) : null;
+        if (ymd && hm) nextLessonDisplay = `${ymd} ${hm}:00`;
+        else if (ymd) nextLessonDisplay = `${ymd}`;
+      }
 
       const { rows: c } = await db.query(
         `SELECT COUNT(*)::int AS n
@@ -250,6 +272,7 @@ const listMyPayments = async (req, res) => {
             calendar_total_lessons,
             remaining_lessons: calendar_remaining_lessons,
             next_lesson_at: nextLesson,
+            next_lesson_display: nextLessonDisplay,
             planned_lessons_in_cycle: planned_lessons_in_cycle,
             lesson_start_date_for_display: lessonStartForDisplay,
             payment_start_date_for_display: lessonStartForDisplay,
