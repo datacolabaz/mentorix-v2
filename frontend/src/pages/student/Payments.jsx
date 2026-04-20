@@ -60,11 +60,33 @@ function parseLessonTimes(raw) {
 
 function fmtAzFromDb(dt) {
   if (!dt) return '—'
-  const s = String(dt)
-  // If backend returns a timestamp without timezone, treat it as Asia/Baku wall time.
-  const iso = /([zZ]|[+-]\d{2}:?\d{2})$/.test(s) ? s : `${s.replace(' ', 'T')}+04:00`
+  // 1) Native Date object (Axios/JSON rarely, but keep safe)
+  if (dt instanceof Date) {
+    return Number.isNaN(dt.getTime()) ? '—' : dt.toLocaleString('az-AZ', { timeZone: 'Asia/Baku' })
+  }
+
+  const raw = String(dt).trim()
+  if (!raw) return '—'
+
+  // 2) Normalize common DB timestamp strings to valid ISO8601
+  // Examples we may receive:
+  // - "2026-04-20T07:00:00.000Z"
+  // - "2026-04-20 07:00:00"
+  // - "2026-04-20 07:00:00+00"
+  // - "2026-04-20 07:00:00+0000"
+  // - "2026-04-20 07:00:00+00:00"
+  let s = raw.replace(' ', 'T')
+
+  // Convert "+0000" → "+00:00"
+  s = s.replace(/([+-]\d{2})(\d{2})$/, '$1:$2')
+  // Convert "+00" → "+00:00"
+  s = s.replace(/([+-]\d{2})$/, '$1:00')
+
+  const hasTz = /([zZ]|[+-]\d{2}:\d{2})$/.test(s)
+  const iso = hasTz ? s : `${s}+04:00` // treat TZ-less timestamps as Asia/Baku wall time
+
   const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return s
+  if (Number.isNaN(d.getTime())) return raw
   return d.toLocaleString('az-AZ', { timeZone: 'Asia/Baku' })
 }
 
