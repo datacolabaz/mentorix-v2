@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import useAuthStore from '../../hooks/useAuth'
 import Button from '../../components/common/Button'
 import { useToast } from '../../components/common/Toast'
+import PhoneInput from '../../components/auth/PhoneInput'
 
 const ROLES = [
   { key: 'instructor', label: 'Müəllim', emoji: '👨‍🏫' },
@@ -184,13 +185,7 @@ export default function Login() {
                     <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
                       Telefon nömrəsi
                     </label>
-                    <input
-                      className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-blue-500"
-                      placeholder="+994XXXXXXXXX"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      required
-                    />
+                    <PhoneInput value={phone} onChange={setPhone} required />
                   </div>
                   <Button type="submit" loading={loading} className="w-full justify-center py-3">
                     Davam et
