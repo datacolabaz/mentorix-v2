@@ -111,6 +111,9 @@ function enrollmentFromStudentProfile(s) {
   const lim = billingLimit(s.billing_type)
   const lc = Number(s.lesson_count)
   const lessonCount = Number.isFinite(lc) ? lc : 0
+  const calUsed = s.calendar_used_lessons != null ? Number(s.calendar_used_lessons) : NaN
+  const calTotal = s.calendar_total_lessons != null ? Number(s.calendar_total_lessons) : NaN
+  const hasCal = Number.isFinite(calUsed) && Number.isFinite(calTotal)
   const mf = s.monthly_fee != null && s.monthly_fee !== '' ? Number(s.monthly_fee) : null
   return {
     id: s.enrollment_id,
@@ -132,7 +135,11 @@ function enrollmentFromStudentProfile(s) {
     ),
     monthly_fee: Number.isFinite(mf) ? mf : null,
     lesson_limit: lim,
-    remaining_lessons: lim != null ? Math.max(0, lim - lessonCount) : null,
+    countdown_model: hasCal ? 'calendar' : null,
+    calendar_used_lessons: hasCal ? calUsed : null,
+    calendar_total_lessons: hasCal ? calTotal : null,
+    remaining_lessons:
+      hasCal ? Math.max(0, calTotal - calUsed) : lim != null ? Math.max(0, lim - lessonCount) : null,
     next_lesson_at: null,
     planned_lessons_in_cycle: null,
   }
@@ -215,10 +222,16 @@ export default function StudentPayments() {
 
   const enrolledAtText = enrollment?.enrolled_at ? fmtAzFromDb(enrollment.enrolled_at) : null
 
-  const lc = enrollment ? Number(enrollment.lesson_count) : NaN
-  const lessonCount = Number.isFinite(lc) ? lc : 0
+  const usedLessons =
+    enrollment?.countdown_model === 'calendar' && enrollment?.calendar_used_lessons != null
+      ? Number(enrollment.calendar_used_lessons)
+      : Number(enrollment?.lesson_count || 0)
+  const totalLessons =
+    enrollment?.countdown_model === 'calendar' && enrollment?.calendar_total_lessons != null
+      ? Number(enrollment.calendar_total_lessons)
+      : Number(limit || 0)
   const progressPct =
-    enrollment && limit && limit > 0 ? Math.min(100, Math.max(0, (lessonCount / limit) * 100)) : 0
+    enrollment && totalLessons > 0 ? Math.min(100, Math.max(0, (usedLessons / totalLessons) * 100)) : 0
 
   const monthlyFeeNum =
     enrollment?.monthly_fee != null && enrollment.monthly_fee !== ''

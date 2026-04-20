@@ -26,6 +26,25 @@ const listStudents = async (req, res) => {
               ist.name AS track_subject_name,
               ig.name AS track_group_name,
               CASE
+                WHEN e.billing_type IN ('8_lessons','12_lessons') THEN (
+                  SELECT COUNT(*)::int
+                  FROM lessons l
+                  WHERE l.enrollment_id = e.id
+                    AND l.billing_cycle = e.billing_cycle
+                    AND l.lesson_date <= NOW()
+                )
+                ELSE NULL
+              END AS calendar_used_lessons,
+              CASE
+                WHEN e.billing_type IN ('8_lessons','12_lessons') THEN (
+                  SELECT COUNT(*)::int
+                  FROM lessons l
+                  WHERE l.enrollment_id = e.id
+                    AND l.billing_cycle = e.billing_cycle
+                )
+                ELSE NULL
+              END AS calendar_total_lessons,
+              CASE
                 WHEN e.billing_type = 'monthly' THEN to_char(e.enrollment_start_date::date, 'YYYY-MM-DD')
                 ELSE COALESCE(
                   (SELECT to_char((MIN(l.lesson_date) AT TIME ZONE 'Asia/Baku')::date, 'YYYY-MM-DD')
