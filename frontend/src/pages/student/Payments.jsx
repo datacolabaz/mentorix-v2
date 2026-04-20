@@ -347,10 +347,10 @@ export default function StudentPayments() {
                 <Card className="p-5">
                   <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Tamamlanan Dərs</div>
                   <div className="font-display font-extrabold text-3xl text-blue-400">
-                    {lessonCount}
-                    {limit ? `/${limit}` : ''}
+                    {Number.isFinite(usedLessons) ? usedLessons : 0}
+                    {Number.isFinite(totalLessons) && totalLessons > 0 ? `/${totalLessons}` : ''}
                   </div>
-                  {limit ? (
+                  {Number.isFinite(totalLessons) && totalLessons > 0 ? (
                     <div className="mt-3">
                       <div className="h-2 bg-[#13112e] rounded-full overflow-hidden">
                         <div
