@@ -437,10 +437,14 @@ export default function StudentPayments() {
                         </span>
                       </li>
                     )}
-                    {enrollment.next_lesson_at && (
+                    {(enrollment.next_lesson_display || enrollment.next_lesson_at) && (
                       <li>
                         <span className="text-gray-500">Növbəti dərs: </span>
-                        <span className="font-mono text-indigo-200">{fmtAzFromDb(enrollment.next_lesson_at)}</span>
+                        <span className="font-mono text-indigo-200">
+                          {enrollment.next_lesson_display
+                            ? fmtAzFromDb(enrollment.next_lesson_display)
+                            : fmtAzFromDb(enrollment.next_lesson_at)}
+                        </span>
                       </li>
                     )}
                     <li>
