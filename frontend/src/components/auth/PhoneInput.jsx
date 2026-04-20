@@ -244,10 +244,6 @@ export default function PhoneInput({
           </div>
         </div>
       )}
-
-      <div className="mt-1 text-[10px] text-gray-500">
-        Düz format serverə belə gedir: <span className="font-mono text-gray-400">{full || '—'}</span>
-      </div>
     </div>
   )
 }
