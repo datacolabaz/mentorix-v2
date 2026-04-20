@@ -40,7 +40,6 @@ function isPublicAuthPath(config) {
   const path = combinedPath(config)
   return (
     path.includes('/auth/login') ||
-    path.includes('/auth/register') ||
     path.includes('/auth/otp/') ||
     path.includes('/auth/pin/') ||
     path.includes('/auth/phone/')
@@ -59,7 +58,6 @@ function isAuthAttemptConfig(config) {
   const path = combinedPath(config)
   return (
     path.includes('/auth/login') ||
-    path.includes('/auth/register') ||
     path.includes('/auth/otp/') ||
     path.includes('/auth/pin/') ||
     path.includes('/auth/phone/') ||
