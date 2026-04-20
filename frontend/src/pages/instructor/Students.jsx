@@ -741,7 +741,13 @@ export default function InstructorStudents() {
                   <span className="text-xs bg-blue-500/20 text-blue-300 px-2 py-1 rounded-lg font-semibold inline-block">
                     {s.billing_type === 'monthly'
                       ? 'Davamlı (aylıq)'
-                      : `${s.lesson_count || 0}/${BILLING_OPTS.find((o) => o.value === s.billing_type)?.label || s.billing_type}`}
+                      : (() => {
+                          const used = s.calendar_used_lessons ?? s.lesson_count ?? 0
+                          const total =
+                            s.calendar_total_lessons ??
+                            (BILLING_OPTS.find((o) => o.value === s.billing_type)?.label || s.billing_type)
+                          return `${used}/${total}`
+                        })()}
                   </span>
                   {s.avg_score && <div className="text-xs text-gray-400 mt-1">Orta: {s.avg_score}%</div>}
                 </div>

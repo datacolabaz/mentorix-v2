@@ -47,6 +47,26 @@ function billingLimit(type) {
   return null;
 }
 
+async function ensureNotificationOnce({ user_id, type, title, body }) {
+  // Dedupe: same user+type+body in last 45 days
+  const { rows } = await db.query(
+    `SELECT 1 FROM notifications
+     WHERE user_id = $1
+       AND type = $2
+       AND body = $3
+       AND created_at > NOW() - INTERVAL '45 days'
+     LIMIT 1`,
+    [user_id, type, body]
+  );
+  if (rows.length) return false;
+  await db.query(
+    `INSERT INTO notifications (user_id, title, body, type, is_read)
+     VALUES ($1,$2,$3,$4,FALSE)`,
+    [user_id, title, body, type]
+  );
+  return true;
+}
+
 /** Tələbə: öz enrollment ödənişləri + aktiv paket məlumatı */
 const listMyPayments = async (req, res) => {
   try {
@@ -146,8 +166,25 @@ const listMyPayments = async (req, res) => {
       }
     }
     const limit = enrollment ? billingLimit(enrollment.billing_type) : null;
-    const remaining_lessons =
-      enrollment && limit != null ? Math.max(0, Number(limit) - Number(enrollment.lesson_count || 0)) : null;
+    let calendar_used_lessons = null;
+    let calendar_total_lessons = null;
+    let calendar_remaining_lessons = null;
+    if (enrollment && limit != null) {
+      const cycle = enrollment.billing_cycle || 1;
+      const { rows: agg } = await db.query(
+        `SELECT
+           COUNT(*)::int AS total,
+           COUNT(*) FILTER (WHERE lesson_date <= NOW())::int AS used
+         FROM lessons
+         WHERE enrollment_id = $1 AND billing_cycle = $2`,
+        [enrollment.id, cycle]
+      );
+      const total = agg[0]?.total ?? 0;
+      const used = agg[0]?.used ?? 0;
+      calendar_total_lessons = Number(total) || 0;
+      calendar_used_lessons = Math.min(calendar_total_lessons, Math.max(0, Number(used) || 0));
+      calendar_remaining_lessons = Math.max(0, calendar_total_lessons - calendar_used_lessons);
+    }
 
     let nextLesson = null;
     let planned_lessons_in_cycle = null;
@@ -177,6 +214,29 @@ const listMyPayments = async (req, res) => {
       planned_lessons_in_cycle = c[0]?.n ?? null;
     }
 
+    // Last-lesson notification (package): 1 dərs qalmış
+    if (enrollment && limit != null && calendar_remaining_lessons === 1) {
+      const studentName = enrollment?.full_name || enrollment?.student_name || 'Tələbə';
+      const instId = enrollment?.instructor_id || null;
+      const cycle = enrollment.billing_cycle || 1;
+      const studentBody = `Növbəti dərs bu paket üçün sonuncu dərsinizdir. (Dövr #${cycle})`;
+      await ensureNotificationOnce({
+        user_id: enrollment.student_id,
+        type: 'billing_pkg_last_lesson_student',
+        title: 'Paket bitir',
+        body: studentBody,
+      });
+      if (instId) {
+        const instBody = `${studentName} -nın paketində növbəti dərs sonuncudur. Ödənişi yeniləməyi xatırladın. (Dövr #${cycle})`;
+        await ensureNotificationOnce({
+          user_id: instId,
+          type: 'billing_pkg_last_lesson_instructor',
+          title: 'Paket bitir',
+          body: instBody,
+        });
+      }
+    }
+
     res.json({
       success: true,
       payments,
@@ -184,7 +244,10 @@ const listMyPayments = async (req, res) => {
         ? {
             ...enrollmentOut,
             lesson_limit: limit,
-            remaining_lessons,
+            countdown_model: limit != null ? 'calendar' : null,
+            calendar_used_lessons,
+            calendar_total_lessons,
+            remaining_lessons: calendar_remaining_lessons,
             next_lesson_at: nextLesson,
             planned_lessons_in_cycle: planned_lessons_in_cycle,
             lesson_start_date_for_display: lessonStartForDisplay,
