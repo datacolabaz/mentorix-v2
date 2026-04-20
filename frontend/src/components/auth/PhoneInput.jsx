@@ -4,7 +4,8 @@ const STORAGE_COUNTRY = 'mx_login_country'
 const STORAGE_PHONE = 'mx_login_phone'
 
 const COUNTRIES = [
-  { id: 'AZ', name: 'Azərbaycan', dial: '994', flag: '🇦🇿', mask: 'XX XXX XX XX', max: 9 },
+  // AZ mobil: 9 rəqəm (50/51/70/77 və s.) — maskada ilk rəqəmi “məcburi 5” kimi göstərməyək
+  { id: 'AZ', name: 'Azərbaycan', dial: '994', flag: '🇦🇿', mask: 'XX XX XX XX', max: 9 },
   { id: 'TR', name: 'Türkiyə', dial: '90', flag: '🇹🇷', mask: 'XXX XXX XX XX', max: 10 },
   { id: 'US', name: 'ABŞ', dial: '1', flag: '🇺🇸', mask: 'XXX XXX XXXX', max: 10 },
   { id: 'RU', name: 'Rusiya', dial: '7', flag: '🇷🇺', mask: 'XXX XXX XX XX', max: 10 },
@@ -34,22 +35,24 @@ function normalizeNationalDigits(countryId, digits) {
   return d.slice(0, max)
 }
 
-function formatMasked(country, nationalDigits) {
+function formatNationalDisplay(countryId, nationalDigits) {
   const n = onlyDigits(nationalDigits)
-  const mask = String(country?.mask || '').trim()
-  if (!mask) return n
-  let i = 0
-  let out = ''
-  for (const ch of mask) {
-    if (ch === 'X') {
-      if (i >= n.length) break
-      out += n[i++]
-    } else {
-      if (i >= n.length) break
-      out += ch
-    }
+  if (!n) return ''
+  if (countryId === 'AZ') {
+    // 2 + 3 + 2 + 2 = 9
+    const a = n.slice(0, 2)
+    const b = n.slice(2, 5)
+    const c = n.slice(5, 7)
+    const d = n.slice(7, 9)
+    return [a, b, c, d].filter(Boolean).join(' ')
   }
-  return out.trim()
+  // digər ölkələr üçün sadə qrup (3-3-4 və ya ümumi)
+  const meta = COUNTRIES.find((c) => c.id === countryId)
+  const max = meta?.max ?? 15
+  const x = n.slice(0, max)
+  if (x.length <= 3) return x
+  if (x.length <= 6) return `${x.slice(0, 3)} ${x.slice(3)}`
+  return `${x.slice(0, 3)} ${x.slice(3, 6)} ${x.slice(6)}`
 }
 
 function e164(country, nationalDigits) {
@@ -79,17 +82,15 @@ export default function PhoneInput({
 
   const [country, setCountry] = useState(initialCountry)
   const [national, setNational] = useState('')
+  const prevPropValue = useRef(undefined)
+  const didHydrateFromStorage = useRef(false)
 
-  // Hydrate from incoming value (E.164) or storage
+  // İlk yükləmə: parent boşdursa, saxlanmış nömrəni bir dəfə göstər
   useEffect(() => {
+    if (didHydrateFromStorage.current) return
     const incoming = String(value || '').trim()
     if (incoming) {
-      const d = onlyDigits(incoming)
-      const found = pickCountryByDial(d)
-      if (found) {
-        setCountry(found)
-        setNational(normalizeNationalDigits(found.id, d.slice(found.dial.length)))
-      }
+      didHydrateFromStorage.current = true
       return
     }
     const savedPhone = typeof localStorage !== 'undefined' ? localStorage.getItem(STORAGE_PHONE) : null
@@ -101,6 +102,28 @@ export default function PhoneInput({
         setNational(normalizeNationalDigits(found.id, d.slice(found.dial.length)))
       }
     }
+    didHydrateFromStorage.current = true
+  }, [value])
+
+  // Parent-dan gələn value dəyişəndə sinxronla (typing echo loop olmasın)
+  useEffect(() => {
+    const incoming = String(value || '').trim()
+    if (prevPropValue.current === incoming) return
+    const prev = prevPropValue.current
+    prevPropValue.current = incoming
+
+    if (incoming) {
+      const d = onlyDigits(incoming)
+      const found = pickCountryByDial(d)
+      if (found) {
+        setCountry(found)
+        setNational(normalizeNationalDigits(found.id, d.slice(found.dial.length)))
+      }
+      return
+    }
+    // İlk mount: parent boş ola bilər; localStorage yükləməsini sıfırlamayaq
+    if (prev === undefined) return
+    setNational('')
   }, [value])
 
   // Close dropdown on outside click / Esc
@@ -128,7 +151,7 @@ export default function PhoneInput({
     )
   }, [query])
 
-  const masked = useMemo(() => formatMasked(country, national), [country, national])
+  const masked = useMemo(() => formatNationalDisplay(country.id, national), [country.id, national])
   const full = useMemo(() => e164(country, national), [country, national])
 
   // Propagate + persist
@@ -137,6 +160,7 @@ export default function PhoneInput({
     try {
       localStorage.setItem(STORAGE_COUNTRY, country?.id || 'AZ')
       if (full) localStorage.setItem(STORAGE_PHONE, full)
+      else localStorage.removeItem(STORAGE_PHONE)
     } catch {
       // ignore
     }
@@ -176,7 +200,7 @@ export default function PhoneInput({
           autoFocus={autoFocus}
           required={required}
           className="flex-1 min-w-0 bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-blue-500"
-          placeholder={placeholder || `${country.mask ? `${country.mask}` : 'Telefon'}`}
+          placeholder={placeholder || (country.id === 'AZ' ? '50 123 45 67' : 'Telefon')}
           value={masked}
           onChange={(e) => setFromRawInput(e.target.value)}
         />
