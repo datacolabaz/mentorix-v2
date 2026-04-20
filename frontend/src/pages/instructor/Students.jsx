@@ -94,6 +94,13 @@ function paymentDateHint(ymd) {
   }
 }
 
+function normName(s) {
+  return String(s || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+}
+
 /** UI ödəniş sxemi → billing_timing + payment_plan (8/12/aylıq) */
 function paymentSchemeFromForm(data) {
   if (data.payment_plan === 'partial') return 'installment'
@@ -111,7 +118,61 @@ const inp =
   'w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500'
 
 /** Komponent fayl səviyyəsində olmalıdır — parent içində təyin etsək hər render yeni tip olur və input fokusunu itirir */
-function StudentFormFields({ data, setData, scheduleMeta, mode, onRefreshSlots, toast, teachingSubjects = [] }) {
+function StudentFormFields({
+  data,
+  setData,
+  scheduleMeta,
+  mode,
+  onRefreshSlots,
+  toast,
+  teachingSubjects = [],
+  onCreateSubject,
+  onCreateGroup,
+}) {
+  const [subjectDraft, setSubjectDraft] = useState('')
+  const [groupDraft, setGroupDraft] = useState('')
+  const [createOpen, setCreateOpen] = useState(null) // 'subject' | 'group' | null
+  const [createName, setCreateName] = useState('')
+
+  const selectedSubject = useMemo(
+    () => teachingSubjects.find((s) => String(s.id) === String(data.subject_id || '')) || null,
+    [teachingSubjects, data.subject_id]
+  )
+
+  const subjectNames = useMemo(() => teachingSubjects.map((s) => String(s.name || '').trim()).filter(Boolean), [teachingSubjects])
+  const groupNames = useMemo(() => (selectedSubject?.groups || []).map((g) => String(g.name || '').trim()).filter(Boolean), [selectedSubject?.groups])
+
+  const openCreate = (kind, preset) => {
+    setCreateOpen(kind)
+    setCreateName(String(preset || '').trim())
+  }
+
+  const saveCreate = async () => {
+    const name = String(createName || '').trim()
+    if (!name) return toast('Ad boş ola bilməz', 'error')
+    try {
+      if (createOpen === 'subject') {
+        if (typeof onCreateSubject !== 'function') throw new Error('create subject handler yoxdur')
+        const created = await onCreateSubject(name)
+        setData((p) => ({ ...p, subject_id: created?.id || '', group_id: '' }))
+        setSubjectDraft('')
+        setGroupDraft('')
+        toast('Yeni sahə əlavə edildi')
+      } else if (createOpen === 'group') {
+        if (!data.subject_id) return toast('Əvvəl sahə seçin', 'error')
+        if (typeof onCreateGroup !== 'function') throw new Error('create group handler yoxdur')
+        const created = await onCreateGroup(data.subject_id, name)
+        setData((p) => ({ ...p, group_id: created?.id || '' }))
+        setGroupDraft('')
+        toast('Yeni qrup əlavə edildi')
+      }
+      setCreateOpen(null)
+      setCreateName('')
+    } catch (e) {
+      toast(e?.message || 'Yaradılmadı', 'error')
+    }
+  }
+
   return (
     <div className="space-y-3">
       <div>
@@ -306,42 +367,138 @@ function StudentFormFields({ data, setData, scheduleMeta, mode, onRefreshSlots, 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Tədris sahəsi</label>
-              <select
-                className={inp}
-                value={data.subject_id || ''}
-                onChange={(e) => {
-                  const v = e.target.value
-                  setData((p) => ({ ...p, subject_id: v, group_id: '' }))
-                }}
-              >
-                <option value="">— Seçilməyib —</option>
-                {teachingSubjects.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
+              <div className="flex gap-2">
+                <div className="flex-1 min-w-0">
+                  <input
+                    className={inp}
+                    list="mx_subjects"
+                    value={
+                      subjectDraft ||
+                      (selectedSubject ? String(selectedSubject.name || '') : '')
+                    }
+                    onChange={(e) => {
+                      const v = e.target.value
+                      setSubjectDraft(v)
+                      const match = teachingSubjects.find((s) => normName(s.name) === normName(v))
+                      if (match) setData((p) => ({ ...p, subject_id: match.id, group_id: '' }))
+                      else setData((p) => ({ ...p, subject_id: '', group_id: '' }))
+                    }}
+                    placeholder="Yazın və ya seçin…"
+                  />
+                  <datalist id="mx_subjects">
+                    {subjectNames.map((n) => (
+                      <option key={n} value={n} />
+                    ))}
+                  </datalist>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => openCreate('subject', subjectDraft)}
+                  className="shrink-0"
+                >
+                  + Yeni
+                </Button>
+              </div>
+              {subjectDraft && !data.subject_id && (
+                <button
+                  type="button"
+                  onClick={() => openCreate('subject', subjectDraft)}
+                  className="mt-2 text-[11px] text-blue-300 hover:text-blue-200 underline"
+                >
+                  “{subjectDraft.trim()}” üçün yeni sahə yarat
+                </button>
+              )}
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Qrup</label>
-              <select
-                className={inp}
-                value={data.group_id || ''}
-                disabled={!data.subject_id}
-                onChange={(e) => setData((p) => ({ ...p, group_id: e.target.value }))}
-              >
-                <option value="">— Seçilməyib —</option>
-                {(teachingSubjects.find((x) => String(x.id) === String(data.subject_id))?.groups || []).map((g) => (
-                  <option key={g.id} value={g.id}>
-                    {g.name}
-                  </option>
-                ))}
-              </select>
+              <div className="flex gap-2">
+                <div className="flex-1 min-w-0">
+                  <input
+                    className={inp}
+                    list="mx_groups"
+                    disabled={!data.subject_id}
+                    value={
+                      groupDraft ||
+                      (data.group_id
+                        ? String((selectedSubject?.groups || []).find((g) => String(g.id) === String(data.group_id))?.name || '')
+                        : '')
+                    }
+                    onChange={(e) => {
+                      const v = e.target.value
+                      setGroupDraft(v)
+                      const groups = selectedSubject?.groups || []
+                      const match = groups.find((g) => normName(g.name) === normName(v))
+                      if (match) setData((p) => ({ ...p, group_id: match.id }))
+                      else setData((p) => ({ ...p, group_id: '' }))
+                    }}
+                    placeholder={data.subject_id ? 'Yazın və ya seçin…' : 'Əvvəl sahə seçin'}
+                  />
+                  <datalist id="mx_groups">
+                    {groupNames.map((n) => (
+                      <option key={n} value={n} />
+                    ))}
+                  </datalist>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  disabled={!data.subject_id}
+                  onClick={() => openCreate('group', groupDraft)}
+                  className="shrink-0"
+                >
+                  + Yeni
+                </Button>
+              </div>
+              {data.subject_id && groupDraft && !data.group_id && (
+                <button
+                  type="button"
+                  onClick={() => openCreate('group', groupDraft)}
+                  className="mt-2 text-[11px] text-blue-300 hover:text-blue-200 underline"
+                >
+                  “{groupDraft.trim()}” üçün yeni qrup yarat
+                </button>
+              )}
             </div>
           </div>
           <p className="text-[10px] text-gray-500">Siyahı «Tənzimləmələr» səhifəsindən idarə olunur.</p>
         </div>
       )}
+
+      <Modal
+        open={createOpen === 'subject' || createOpen === 'group'}
+        onClose={() => {
+          setCreateOpen(null)
+          setCreateName('')
+        }}
+        title={createOpen === 'group' ? 'Yeni qrup əlavə et' : 'Yeni tədris sahəsi əlavə et'}
+        size="sm"
+      >
+        <div className="space-y-3">
+          <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider">
+            Ad
+          </label>
+          <input className={inp} value={createName} onChange={(e) => setCreateName(e.target.value)} placeholder="məs. Cyber Security" />
+          <div className="flex gap-2 pt-2">
+            <Button type="button" onClick={saveCreate} className="flex-1 justify-center">
+              Yadda saxla
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                setCreateOpen(null)
+                setCreateName('')
+              }}
+              className="flex-1 justify-center"
+            >
+              Ləğv et
+            </Button>
+          </div>
+        </div>
+      </Modal>
       {(mode === 'add' || mode === 'edit') && (
         <div className="rounded-xl border border-indigo-500/20 bg-[#0f0c29]/60 p-3 space-y-2">
           <p className="text-xs font-semibold text-indigo-200/90 uppercase tracking-wider">Dərs vaxtı (slot)</p>
@@ -466,6 +623,28 @@ export default function InstructorStudents() {
       .then((d) => setTeachingSubjects(Array.isArray(d.subjects) ? d.subjects : []))
       .catch(() => setTeachingSubjects([]))
   }, [])
+
+  const createTeachingSubject = async (name) => {
+    const d = await api.post('/instructor/teaching/subjects', { name })
+    const s = d?.subject
+    if (!s?.id) throw new Error(d?.message || 'Sahə yaradılmadı')
+    setTeachingSubjects((prev) => [...(Array.isArray(prev) ? prev : []), { ...s, groups: [] }])
+    return s
+  }
+
+  const createTeachingGroup = async (subjectId, name) => {
+    const d = await api.post('/instructor/teaching/groups', { subject_id: subjectId, name })
+    const g = d?.group
+    if (!g?.id) throw new Error(d?.message || 'Qrup yaradılmadı')
+    setTeachingSubjects((prev) =>
+      (Array.isArray(prev) ? prev : []).map((s) => {
+        if (String(s.id) !== String(subjectId)) return s
+        const groups = Array.isArray(s.groups) ? s.groups : []
+        return { ...s, groups: [...groups, g] }
+      })
+    )
+    return g
+  }
 
   useEffect(() => {
     // 1) Keş varsa dərhal göstər (optimistic UI)
@@ -783,6 +962,8 @@ export default function InstructorStudents() {
           onRefreshSlots={null}
           toast={toast}
           teachingSubjects={teachingSubjects}
+          onCreateSubject={createTeachingSubject}
+          onCreateGroup={createTeachingGroup}
         />
         <div className="flex gap-3 mt-4">
           <Button onClick={addStudent} loading={loading} className="flex-1 justify-center">
@@ -805,6 +986,8 @@ export default function InstructorStudents() {
           mode="edit"
           toast={toast}
           teachingSubjects={teachingSubjects}
+          onCreateSubject={createTeachingSubject}
+          onCreateGroup={createTeachingGroup}
         />
         <div className="flex gap-3 mt-4">
           <Button onClick={saveEdit} loading={loading} className="flex-1 justify-center">
