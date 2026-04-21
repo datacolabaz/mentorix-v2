@@ -104,10 +104,10 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0f0c29] flex items-center justify-center p-4">
+    <div className="min-h-[100svh] bg-[#0f0c29] flex items-start sm:items-center justify-center p-4 pt-8 sm:pt-4">
       <div className="w-full max-w-sm">
-        <div className="bg-[#1a1740] border border-indigo-500/20 rounded-2xl p-8">
-          <div className="text-center mb-8">
+        <div className="bg-[#1a1740] border border-indigo-500/20 rounded-2xl p-6 sm:p-8">
+          <div className="text-center mb-6 sm:mb-8">
             <div className="font-display font-extrabold text-4xl bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
               Edupanel
             </div>
