@@ -6,10 +6,67 @@ import { useToast } from '../../components/common/Toast'
 import PhoneInput from '../../components/auth/PhoneInput'
 import Brand from '../../components/common/Brand'
 
+function RoleIcon({ role }) {
+  const base = 'h-7 w-7 text-primary'
+  if (role === 'instructor') {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" className={base} aria-hidden>
+        <path
+          d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4Zm-7 9a7 7 0 0 1 14 0"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+        />
+        <path
+          d="M17.5 3.5h4v4"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    )
+  }
+  if (role === 'student') {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" className={base} aria-hidden>
+        <path
+          d="M12 3 2 8l10 5 10-5-10-5Z"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M6 10.5V16c0 1.5 3 3 6 3s6-1.5 6-3v-5.5"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+        />
+      </svg>
+    )
+  }
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={base} aria-hidden>
+      <path
+        d="M8 11a3 3 0 1 0-3-3 3 3 0 0 0 3 3Zm8 0a3 3 0 1 0-3-3 3 3 0 0 0 3 3Z"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+      <path
+        d="M2.5 21a5.5 5.5 0 0 1 11 0m-1.5 0a5.5 5.5 0 0 1 11 0"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
+  )
+}
+
 const ROLES = [
-  { key: 'instructor', label: 'Müəllim', emoji: '👨‍🏫' },
-  { key: 'student', label: 'Tələbə', emoji: '🎓' },
-  { key: 'parent', label: 'Valideyn', emoji: '👪' },
+  { key: 'instructor', label: 'Müəllim' },
+  { key: 'student', label: 'Tələbə' },
+  { key: 'parent', label: 'Valideyn' },
 ]
 
 /** PIN + admin email girişi (OTP yox — daimi PIN bir dəfə SMS) */
@@ -110,7 +167,9 @@ export default function Login() {
         <div className="bg-surface-2 border border-white/10 rounded-2xl p-6 sm:p-8">
           <div className="text-center mb-6 sm:mb-8">
             <div className="flex justify-center">
-              <Brand imgClassName="h-10" />
+              <div className="px-4 py-4 rounded-2xl bg-[#1a1a1a] border border-white/10">
+                <Brand imgClassName="h-[120px] w-auto drop-shadow-[0_10px_25px_rgba(0,0,0,0.6)]" />
+              </div>
             </div>
             <div className="text-gray-400 text-sm mt-2">Hesabınıza daxil olun</div>
           </div>
@@ -169,7 +228,7 @@ export default function Login() {
                         : 'border-white/10 text-gray-400 hover:border-white/20'
                     }`}
                   >
-                    <span className="text-xl">{r.emoji}</span>
+                    <RoleIcon role={r.key} />
                     <span className="text-xs">{r.label}</span>
                   </button>
                 ))}
@@ -239,7 +298,7 @@ export default function Login() {
             href="https://wa.me/994503066626"
             target="_blank"
             rel="noreferrer"
-            className="flex items-center justify-center gap-2 mt-6 py-2.5 px-4 rounded-xl bg-green-500/10 border border-green-500/30 text-green-400 text-sm font-semibold"
+            className="flex items-center justify-center gap-2 mt-6 py-3 px-4 rounded-xl bg-primary text-black text-sm font-semibold hover:brightness-95 transition-all shadow-lg shadow-primary/15"
           >
             Bizimlə əlaqə
           </a>
