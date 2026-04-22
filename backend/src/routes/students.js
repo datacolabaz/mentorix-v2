@@ -296,7 +296,7 @@ async function replaceCycleOneScheduledLessons(client, params) {
       if (group_id && otherGroup && normUuid(otherGroup) === normUuid(group_id)) {
         // occupied by the same group -> allow
       } else {
-        throw Object.assign(new Error('LESSON_CONFLICT'), {
+        throw Object.assign(new Error(`Toqquşma: ${ymd} ${time} — həmin saat artıq tutulub. Digər saat seçin.`), {
           code: 'LESSON_CONFLICT',
           kind: 'occupied',
           at: `${ymd} ${time}`,
@@ -330,12 +330,17 @@ async function replaceCycleOneScheduledLessons(client, params) {
       const subj = String(r.subject_name || '').trim();
       const grp = String(r.group_name || '').trim();
       const withLabel = [subj, grp].filter(Boolean).join(' — ');
-      throw Object.assign(new Error('LESSON_CONFLICT'), {
+      throw Object.assign(
+        new Error(
+          `Toqquşma: ${ymd} ${time} — həmin saatda başqa dərs var (${who || 'Tələbə'}${withLabel ? ` — ${withLabel}` : ''}). Digər saat seçin.`
+        ),
+        {
         code: 'LESSON_CONFLICT',
         kind: 'existing_lesson',
         at: `${ymd} ${time}`,
         conflict_with: `${who || 'Tələbə'}${withLabel ? ` (${withLabel})` : ''}`,
-      });
+        }
+      );
     }
   }
 
@@ -531,11 +536,14 @@ router.post('/enroll', authenticate, authorize('instructor', 'admin'), async (re
             if (trackIds.group_id && otherGroup && normUuid(otherGroup) === normUuid(trackIds.group_id)) {
               // occupied by the same group -> allow
             } else {
-            throw Object.assign(new Error('LESSON_CONFLICT'), {
-              code: 'LESSON_CONFLICT',
-              kind: 'occupied',
-              at: `${ymd} ${time}`,
-            });
+              throw Object.assign(
+                new Error(`Toqquşma: ${ymd} ${time} — həmin saat artıq tutulub. Digər saat seçin.`),
+                {
+                  code: 'LESSON_CONFLICT',
+                  kind: 'occupied',
+                  at: `${ymd} ${time}`,
+                }
+              );
             }
           }
 
@@ -565,12 +573,17 @@ router.post('/enroll', authenticate, authorize('instructor', 'admin'), async (re
             const subj = String(r.subject_name || '').trim();
             const grp = String(r.group_name || '').trim();
             const withLabel = [subj, grp].filter(Boolean).join(' — ');
-            throw Object.assign(new Error('LESSON_CONFLICT'), {
-              code: 'LESSON_CONFLICT',
-              kind: 'existing_lesson',
-              at: `${ymd} ${time}`,
-              conflict_with: `${who || 'Tələbə'}${withLabel ? ` (${withLabel})` : ''}`,
-            });
+            throw Object.assign(
+              new Error(
+                `Toqquşma: ${ymd} ${time} — həmin saatda başqa dərs var (${who || 'Tələbə'}${withLabel ? ` — ${withLabel}` : ''}). Digər saat seçin.`
+              ),
+              {
+                code: 'LESSON_CONFLICT',
+                kind: 'existing_lesson',
+                at: `${ymd} ${time}`,
+                conflict_with: `${who || 'Tələbə'}${withLabel ? ` (${withLabel})` : ''}`,
+              }
+            );
           }
         }
 
