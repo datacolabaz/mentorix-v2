@@ -77,22 +77,24 @@ export default function InstructorLayout() {
         <button
           type="button"
           aria-label="Menyunu aç"
-          className="fixed top-3 left-3 z-[260] w-11 h-11 rounded-xl bg-surface-2 border border-white/10 text-lg flex items-center justify-center shadow-lg"
+          className="fixed top-4 left-4 z-[260] w-12 h-12 rounded-2xl bg-surface-2 border border-white/10 text-xl flex items-center justify-center shadow-lg"
           onClick={() => setNavOpen(true)}
         >
           ☰
         </button>
       )}
-      <header className="lg:hidden fixed top-0 left-0 right-0 z-[60] flex items-center justify-between gap-2 px-3 py-3 bg-surface-2 border-b border-white/10">
+      <header className="lg:hidden fixed top-0 left-0 right-0 z-[60] flex items-center justify-between gap-3 px-4 py-4 bg-surface-2/95 border-b border-white/10 backdrop-blur">
         <button
           type="button"
           aria-label="Menyu"
-          className="p-2 rounded-xl text-white bg-white/10 hover:bg-white/15 shrink-0"
+          className="w-12 h-12 rounded-2xl text-white bg-white/10 hover:bg-white/15 shrink-0 flex items-center justify-center text-xl"
           onClick={() => setNavOpen(true)}
         >
           ☰
         </button>
-        <Brand imgClassName="h-7" />
+        <div className="flex-1 flex justify-center min-w-0">
+          <Brand size="sidebar" imgClassName="scale-[1.05]" />
+        </div>
         <div className="w-10 shrink-0" />
       </header>
 
@@ -186,7 +188,7 @@ export default function InstructorLayout() {
         </div>
       </aside>
 
-      <main className="flex-1 overflow-y-auto min-w-0 pt-[52px] lg:pt-0">
+      <main className="flex-1 overflow-y-auto min-w-0 pt-[80px] lg:pt-0">
         <div className="min-h-full flex flex-col">
           {limitStatus.level ? (
             <div
