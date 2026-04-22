@@ -262,6 +262,7 @@ export default function StudentPayments() {
   const hasMonthlyFee = Number.isFinite(monthlyFeeNum) && monthlyFeeNum > 0
   const isMonthlySub = enrollment?.billing_type === 'monthly' && hasMonthlyFee
   const sub = enrollment?.subscription
+  const mp = enrollment?.monthly_progress || null
   const anchorRaw =
     enrollment?.lesson_start_date_for_display ||
     enrollment?.payment_start_date_for_display ||
@@ -295,74 +296,115 @@ export default function StudentPayments() {
       ) : (
         <>
           {isMonthlySub ? (
-            <Card className="p-5 mb-4 border border-indigo-500/20">
-              <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
-                <h2 className="font-semibold text-white">Aylıq abunə</h2>
-                <button
-                  type="button"
-                  onClick={() => setHistoryOpen((v) => !v)}
-                  className="text-sm font-semibold text-blue-400 border border-blue-500/30 rounded-xl px-3 py-1.5 hover:bg-blue-500/10 shrink-0"
-                  aria-expanded={historyOpen}
-                >
-                  {historyOpen ? 'Tarixçəni gizlət' : 'Ödəniş tarixçəsi'}
-                </button>
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                <Card className="p-5">
+                  <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Tamamlanan Gün</div>
+                  <div className="font-display font-extrabold text-3xl text-blue-400">
+                    {mp?.days_elapsed != null ? Number(mp.days_elapsed) : 0}
+                    {mp?.days_total != null ? `/${Number(mp.days_total)}` : ''}
+                  </div>
+                  {mp?.days_total != null && Number(mp.days_total) > 0 ? (
+                    <div className="mt-3">
+                      <div className="h-2 bg-[#13112e] rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-blue-500 rounded-full transition-all max-w-full"
+                          style={{
+                            width: `${Math.min(
+                              100,
+                              Math.max(0, (Number(mp.days_elapsed || 0) / Number(mp.days_total || 1)) * 100)
+                            )}%`,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  ) : null}
+                </Card>
+                <Card className="p-5">
+                  <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Billing</div>
+                  <div className="font-display font-bold text-xl text-emerald-400">Aylıq paket</div>
+                </Card>
+                <Card className="p-5">
+                  <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">{roleNoun}</div>
+                  <div className="font-display font-bold text-xl text-yellow-400">{enrollment?.instructor_name || '—'}</div>
+                </Card>
               </div>
-              <p className="text-sm text-gray-200 mb-3">
-                Status: Davam edir
-                {anchorDdMmYyyy ? (
-                  <span className="text-gray-400"> ({anchorDdMmYyyy} tarixindən bəri)</span>
-                ) : null}
-              </p>
-              {isPrepaidMonthly ? (
-                <p className="text-xs text-indigo-200/90 mb-2">Qeydiyyat: ay məbləği əvvəlcədən ödənilir.</p>
-              ) : null}
-              <p className="text-xs text-gray-500 mb-2">
-                Borc hər ayın eyni təqvim günündə (başlama tarixinə görə) sabit aylıq məbləğ ilə yaranır; dərs sayı və
-                davamiyyət bu məbləğə təsir etmir.
-              </p>
-              <p className="text-sm text-gray-200 mb-4">
-                Qalıq borc:{' '}
-                <span className="text-amber-200 font-mono tabular-nums font-semibold">
-                  {monthlyDebtNum != null ? `${monthlyDebtNum.toFixed(2)} ₼` : '—'}
-                </span>
-                {sub != null && Number.isFinite(Number(sub.wallet_balance)) && Number(sub.wallet_balance) > 0.005 ? (
-                  <span className="block mt-2 text-xs text-gray-400">
-                    Artıq ödəniş (balans):{' '}
-                    <span className="text-emerald-300 font-mono tabular-nums font-semibold">
-                      {Number(sub.wallet_balance).toFixed(2)} ₼
-                    </span>
-                  </span>
-                ) : null}
-              </p>
-              <p className="text-xs text-gray-500 mb-3">
-                {roleNoun}: {enrollment?.instructor_name || '—'}
-              </p>
-              {isPrepaidMonthly ? (
-                <button
-                  type="button"
-                  disabled
-                  className="w-full sm:w-auto text-sm font-semibold rounded-xl px-4 py-2.5 bg-indigo-600/35 text-indigo-100/90 border border-indigo-500/25 cursor-not-allowed opacity-90"
-                >
-                  Öncədən ödəniş
-                </button>
-              ) : (
-                <>
+
+              <Card className="p-5 mb-4 border border-indigo-500/20">
+                <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
+                  <h2 className="font-semibold text-white">Aylıq abunə</h2>
                   <button
                     type="button"
-                    onClick={() => setPartialInfoOpen((v) => !v)}
-                    className="w-full sm:w-auto text-sm font-semibold rounded-xl px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white border-0"
+                    onClick={() => setHistoryOpen((v) => !v)}
+                    className="text-sm font-semibold text-blue-400 border border-blue-500/30 rounded-xl px-3 py-1.5 hover:bg-blue-500/10 shrink-0"
+                    aria-expanded={historyOpen}
                   >
-                    Hissəli ödəniş et
+                    {historyOpen ? 'Tarixçəni gizlət' : 'Ödəniş tarixçəsi'}
                   </button>
-                  {partialInfoOpen ? (
-                    <p className="text-xs text-gray-400 mt-3 leading-relaxed border border-indigo-500/20 rounded-xl p-3 bg-[#13112e]/80">
-                      Hissəli ödənişi müəlliminiz qeydə alır. Ödəmək istədiyiniz məbləği müəlliminizə bildirin; o, sistemə
-                      daxil edəndə borc avtomatik yenilənəcək.
-                    </p>
+                </div>
+
+                <p className="text-sm text-gray-200 mb-2">
+                  Status: Davam edir
+                  {anchorDdMmYyyy ? <span className="text-gray-400"> ({anchorDdMmYyyy} tarixindən bəri)</span> : null}
+                </p>
+
+                {mp?.next_billing_ymd ? (
+                  <p className="text-sm text-gray-300 mb-4">
+                    Növbəti ödəniş tarixi:{' '}
+                    <span className="font-display font-extrabold text-lg text-emerald-300">
+                      {fmtDdMmYyyy(parseYmdLocal(String(mp.next_billing_ymd).slice(0, 10)))}
+                    </span>
+                  </p>
+                ) : null}
+
+                {isPrepaidMonthly ? (
+                  <p className="text-xs text-indigo-200/90 mb-2">Qeydiyyat: ay məbləği əvvəlcədən ödənilir.</p>
+                ) : null}
+                <p className="text-xs text-gray-500 mb-2">
+                  Borc hər ayın eyni təqvim günündə (başlama tarixinə görə) sabit aylıq məbləğ ilə yaranır; dərs sayı və
+                  davamiyyət bu məbləğə təsir etmir.
+                </p>
+                <p className="text-sm text-gray-200 mb-4">
+                  Qalıq borc:{' '}
+                  <span className="text-amber-200 font-mono tabular-nums font-semibold">
+                    {monthlyDebtNum != null ? `${monthlyDebtNum.toFixed(2)} ₼` : '—'}
+                  </span>
+                  {sub != null && Number.isFinite(Number(sub.wallet_balance)) && Number(sub.wallet_balance) > 0.005 ? (
+                    <span className="block mt-2 text-xs text-gray-400">
+                      Artıq ödəniş (balans):{' '}
+                      <span className="text-emerald-300 font-mono tabular-nums font-semibold">
+                        {Number(sub.wallet_balance).toFixed(2)} ₼
+                      </span>
+                    </span>
                   ) : null}
-                </>
-              )}
-            </Card>
+                </p>
+                {isPrepaidMonthly ? (
+                  <button
+                    type="button"
+                    disabled
+                    className="w-full sm:w-auto text-sm font-semibold rounded-xl px-4 py-2.5 bg-indigo-600/35 text-indigo-100/90 border border-indigo-500/25 cursor-not-allowed opacity-90"
+                  >
+                    Öncədən ödəniş
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setPartialInfoOpen((v) => !v)}
+                      className="w-full sm:w-auto text-sm font-semibold rounded-xl px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white border-0"
+                    >
+                      Hissəli ödəniş et
+                    </button>
+                    {partialInfoOpen ? (
+                      <p className="text-xs text-gray-400 mt-3 leading-relaxed border border-indigo-500/20 rounded-xl p-3 bg-[#13112e]/80">
+                        Hissəli ödənişi müəlliminiz qeydə alır. Ödəmək istədiyiniz məbləği müəlliminizə bildirin; o, sistemə
+                        daxil edəndə borc avtomatik yenilənəcək.
+                      </p>
+                    ) : null}
+                  </>
+                )}
+              </Card>
+            </>
           ) : (
             <>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">

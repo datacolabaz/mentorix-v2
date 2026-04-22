@@ -51,6 +51,78 @@ function billingYmdForCalendarMonth(year, month, anchorDay) {
   return `${year}-${pad2(month)}-${pad2(day)}`;
 }
 
+function parseYmdUtcNoon(ymd) {
+  const p = parseYmdParts(ymd);
+  if (!p) return null;
+  return new Date(Date.UTC(p.y, p.mo - 1, p.d, 12, 0, 0));
+}
+
+function diffDaysYmd(aYmd, bYmd) {
+  const a = parseYmdUtcNoon(aYmd);
+  const b = parseYmdUtcNoon(bYmd);
+  if (!a || !b) return null;
+  return Math.round((b.getTime() - a.getTime()) / 86400000);
+}
+
+function addCalendarMonthsYmd(ymd, months) {
+  const p = parseYmdParts(ymd);
+  if (!p) return null;
+  const idx = (p.y * 12 + (p.mo - 1)) + Number(months || 0);
+  const y = Math.floor(idx / 12);
+  const mo = (idx % 12) + 1;
+  return { y, mo };
+}
+
+/**
+ * Cari dövrün başlanğıc/bitmə tarixləri (Baku YMD), ankora görə.
+ * Dövr [cycle_start, cycle_end) kimi götürülür.
+ */
+function computeMonthlyCycleProgress({ anchor_ymd, today_ymd }) {
+  const anchorYmd = anchor_ymd ? String(anchor_ymd).slice(0, 10) : null;
+  const todayYmd = today_ymd ? String(today_ymd).slice(0, 10) : null;
+  const ap = parseYmdParts(anchorYmd);
+  if (!ap || !todayYmd) return null;
+
+  // Əgər ankor gələcəkdədirsə, hələ dövr başlamayıb.
+  if (compareYmd(anchorYmd, todayYmd) > 0) {
+    const { y, mo } = ap;
+    const endYmd = billingYmdForCalendarMonth(y, mo, ap.d);
+    const total = diffDaysYmd(anchorYmd, endYmd);
+    return {
+      cycle_start_ymd: anchorYmd,
+      cycle_end_ymd: endYmd,
+      days_elapsed: 0,
+      days_total: Number.isFinite(total) ? total : null,
+      days_remaining: Number.isFinite(total) ? total : null,
+      next_billing_ymd: anchorYmd,
+    };
+  }
+
+  const dueDates = listBillingDueDatesUpTo(anchorYmd, todayYmd);
+  const cycleStart = dueDates.length ? dueDates[dueDates.length - 1] : anchorYmd;
+  const sp = parseYmdParts(cycleStart);
+  if (!sp) return null;
+
+  const nextMonth = addCalendarMonthsYmd(cycleStart, 1);
+  const cycleEnd = nextMonth ? billingYmdForCalendarMonth(nextMonth.y, nextMonth.mo, ap.d) : null;
+  if (!cycleEnd) return null;
+
+  const total = diffDaysYmd(cycleStart, cycleEnd);
+  let elapsed = diffDaysYmd(cycleStart, todayYmd);
+  if (!Number.isFinite(elapsed)) elapsed = 0;
+  if (Number.isFinite(total)) elapsed = Math.min(Math.max(0, elapsed), total);
+  const remaining = Number.isFinite(total) ? Math.max(0, total - elapsed) : null;
+
+  return {
+    cycle_start_ymd: cycleStart,
+    cycle_end_ymd: cycleEnd,
+    days_elapsed: elapsed,
+    days_total: Number.isFinite(total) ? total : null,
+    days_remaining: remaining,
+    next_billing_ymd: cycleEnd,
+  };
+}
+
 function listBillingDueDatesUpTo(anchorYmd, untilYmd) {
   const ap = parseYmdParts(anchorYmd);
   if (!ap || !untilYmd || !/^\d{4}-\d{2}-\d{2}$/.test(String(untilYmd).slice(0, 10))) return [];
@@ -201,6 +273,7 @@ module.exports = {
   listBillingDueDatesUpTo,
   countSubscriptionBillingMonths,
   computeMonthlyBalanceState,
+  computeMonthlyCycleProgress,
   getTodayBakuYmd,
   loadInstructorMonthlyBalanceRows,
 };
