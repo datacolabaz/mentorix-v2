@@ -4,6 +4,7 @@ import useAuthStore from '../hooks/useAuth'
 import useUiStore from '../hooks/useUi'
 import Brand from '../components/common/Brand'
 import Footer from '../components/common/Footer'
+import { sidebarNavClass } from '../lib/sidebarNavClass'
 
 const NAV = [
   { to: '/student', label: 'Proqresim', icon: '📈', end: true },
@@ -59,22 +60,22 @@ export default function StudentLayout() {
 
       <aside
         className={
-          'w-64 max-w-[85vw] bg-surface-2 border-r border-white/10 flex flex-col flex-shrink-0 z-40 h-full ' +
+          'w-64 max-w-[85vw] bg-[#003366] border-r border-white/10 flex flex-col flex-shrink-0 z-40 h-full ' +
           'fixed md:static inset-y-0 left-0 transform transition-transform duration-200 ease-out ' +
           (navOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0') +
           (focusMode ? ' md:-translate-x-full' : '')
         }
       >
-        <div className="px-3 py-3 border-b border-white/10 pt-14 md:pt-4">
-          <div className="w-full flex items-center justify-center">
-            <Brand size="sidebar" imgClassName="scale-[1.4] -my-1" />
+        <div className="px-2 py-2 border-b border-white/10 pt-14 md:pt-3">
+          <div className="mb-5">
+            <Brand size="sidebar" />
           </div>
-          <div className="mt-3 p-3 bg-surface-1 rounded-xl border border-white/10">
+          <div className="p-3 bg-black/25 rounded-xl border border-white/15">
             <div className="w-8 h-8 rounded-full bg-white/10 border border-white/10 flex items-center justify-center text-sm font-bold mb-2">
               {user?.full_name?.split(' ').map((n) => n[0]).join('').slice(0, 2)}
             </div>
             <div className="text-sm font-semibold truncate">{user?.full_name}</div>
-            <div className="text-xs text-gray-400">Tələbə</div>
+            <div className="text-xs text-gray-200">Tələbə</div>
           </div>
         </div>
         <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
@@ -84,13 +85,7 @@ export default function StudentLayout() {
               to={item.to}
               end={item.end}
               onClick={closeNav}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                  isActive
-                    ? 'bg-primary/10 text-primary border border-primary/20'
-                    : 'text-gray-400 hover:bg-white/5 hover:text-white'
-                }`
-              }
+              className={({ isActive }) => sidebarNavClass(isActive)}
             >
               <span>{item.icon}</span>
               {item.label}
