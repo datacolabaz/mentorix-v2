@@ -4,6 +4,7 @@ import useAuthStore from '../../hooks/useAuth'
 import Button from '../../components/common/Button'
 import { useToast } from '../../components/common/Toast'
 import PhoneInput from '../../components/auth/PhoneInput'
+import Brand from '../../components/common/Brand'
 
 const ROLES = [
   { key: 'instructor', label: 'Müəllim', emoji: '👨‍🏫' },
@@ -104,12 +105,12 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-[100svh] bg-[#0f0c29] flex items-start sm:items-center justify-center p-4 pt-8 sm:pt-4">
+    <div className="min-h-[100svh] bg-[#0b0b0b] flex items-start sm:items-center justify-center p-4 pt-8 sm:pt-4">
       <div className="w-full max-w-sm">
-        <div className="bg-[#1a1740] border border-indigo-500/20 rounded-2xl p-6 sm:p-8">
+        <div className="bg-surface-2 border border-white/10 rounded-2xl p-6 sm:p-8">
           <div className="text-center mb-6 sm:mb-8">
-            <div className="font-display font-extrabold text-4xl bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
-              Edupanel
+            <div className="flex justify-center">
+              <Brand imgClassName="h-10" />
             </div>
             <div className="text-gray-400 text-sm mt-2">Hesabınıza daxil olun</div>
           </div>
@@ -124,9 +125,9 @@ export default function Login() {
                   Telefon və ya email
                 </label>
                 <input
-                  className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-blue-500"
+                  className="w-full bg-surface-1 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-primary/40"
                   type="text"
-                  placeholder="+994XXXXXXXXX və ya admin@edupanel.co"
+                  placeholder="+994XXXXXXXXX və ya admin email"
                   value={adminIdentifier}
                   onChange={(e) => setAdminIdentifier(e.target.value)}
                   required
@@ -137,7 +138,7 @@ export default function Login() {
                   Şifrə
                 </label>
                 <input
-                  className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-blue-500"
+                  className="w-full bg-surface-1 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-primary/40"
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}

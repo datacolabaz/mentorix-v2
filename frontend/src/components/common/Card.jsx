@@ -2,8 +2,8 @@ export default function Card({ children, className = '', hover = false }) {
   return (
     <div
       className={`
-        bg-[#1a1740] border border-indigo-500/20 rounded-2xl
-        ${hover ? 'transition-all hover:-translate-y-0.5 hover:border-indigo-500/40' : ''}
+        bg-surface-2 border border-white/10 rounded-2xl
+        ${hover ? 'transition-all hover:-translate-y-0.5 hover:border-primary/25' : ''}
         ${className}
       `}
     >

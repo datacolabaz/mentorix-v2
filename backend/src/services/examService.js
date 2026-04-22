@@ -389,7 +389,7 @@ const sendExamStartReminderForExam = async (exam) => {
     const r = await sendSms({
       instructorId: exam.instructor_id,
       phone: targetPhone,
-      message: `Edupanel: "${exam.title}" imtahani ${startTime} tarixinde bashlayacaq (~${REMINDER_MINUTES_BEFORE} deq qalib). Hazir olun!`,
+      message: `Mentorix: "${exam.title}" imtahanı ${startTime} tarixində başlayacaq (~${REMINDER_MINUTES_BEFORE} dəq qalıb). Hazır olun!`,
     });
     if (!r?.success) console.error('exam reminder SMS failed', targetPhone, r?.error);
   }
@@ -494,7 +494,7 @@ const notifyParentExamResultAfterSubmit = async (examId, studentId, score) => {
   const pts = Math.round(Number(score) * 100) / 100;
   const safePts = Number.isFinite(pts) ? pts : 0;
   const title = String(row.title || 'İmtahan').trim();
-  const msg = `Edupanel: Salam, ${name}! "${title}" imtahanında ${safePts} bal toplayıb.`;
+  const msg = `Mentorix: Salam, ${name}! "${title}" imtahanında ${safePts} bal toplayıb.`;
 
   const r = await sendSms({
     instructorId: row.instructor_id,

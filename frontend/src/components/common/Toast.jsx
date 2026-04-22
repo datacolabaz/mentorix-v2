@@ -14,7 +14,7 @@ export function ToastProvider({ children }) {
   const colors = {
     success: 'border-emerald-500/30 text-emerald-400',
     error: 'border-red-500/30 text-red-400',
-    info: 'border-blue-500/30 text-blue-400',
+    info: 'border-primary/30 text-primary',
   }
 
   return (
@@ -24,7 +24,7 @@ export function ToastProvider({ children }) {
         {toasts.map((t) => (
           <div
             key={t.id}
-            className={`bg-[#1a1740] border rounded-xl px-4 py-3 text-sm font-semibold shadow-xl animate-fade-up ${colors[t.type]}`}
+            className={`bg-surface-2 border rounded-xl px-4 py-3 text-sm font-semibold shadow-xl animate-fade-up ${colors[t.type]}`}
           >
             {t.msg}
           </div>
