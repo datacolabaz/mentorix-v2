@@ -72,6 +72,7 @@ const getRestorePreview = async (req, res) => {
     const { rows: en } = await db.query(
       `SELECT e.id, e.instructor_id, e.student_id, e.billing_type,
               e.enrolled_at, e.enrollment_start_date,
+              e.lesson_weekdays, e.lesson_times,
               sp.monthly_fee
        FROM enrollments e
        LEFT JOIN student_profiles sp ON sp.user_id = e.student_id
@@ -133,6 +134,75 @@ const getRestorePreview = async (req, res) => {
     const limit = billingLimit(bt);
     if (!limit) return res.json({ success: true, items: [] });
 
+    function parseWeekdays(raw) {
+      let arr = raw;
+      if (typeof raw === 'string') {
+        try {
+          arr = JSON.parse(raw);
+        } catch {
+          arr = [];
+        }
+      }
+      if (!Array.isArray(arr)) return [];
+      const out = [];
+      const seen = new Set();
+      for (const x of arr) {
+        const d = parseInt(String(x), 10);
+        if (Number.isFinite(d) && d >= 1 && d <= 7 && !seen.has(d)) {
+          seen.add(d);
+          out.push(d);
+        }
+      }
+      return out.sort((a, b) => a - b);
+    }
+
+    function parseTimes(raw) {
+      let obj = raw;
+      if (typeof raw === 'string') {
+        try {
+          obj = JSON.parse(raw);
+        } catch {
+          obj = {};
+        }
+      }
+      if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return {};
+      return obj;
+    }
+
+    function parseYmdUtcNoonLocal(ymd) {
+      const s = String(ymd || '').slice(0, 10);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;
+      const [y, m, d] = s.split('-').map(Number);
+      return new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
+    }
+
+    function ymdFromUtcDate(dt) {
+      const y = dt.getUTCFullYear();
+      const m = String(dt.getUTCMonth() + 1).padStart(2, '0');
+      const d = String(dt.getUTCDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+
+    // Enumerate scheduled lesson dates between [startYmd, untilYmd) using weekly pattern.
+    function enumeratePatternYmds(startYmd, untilYmd, wdays, lt) {
+      const startDt = parseYmdUtcNoonLocal(startYmd);
+      const untilDt = parseYmdUtcNoonLocal(untilYmd);
+      if (!startDt || !untilDt) return [];
+      if (startDt.getTime() >= untilDt.getTime()) return [];
+      if (!Array.isArray(wdays) || !wdays.length) return [];
+      // We only need dates, times are already embedded in pattern but don't affect cycle boundaries.
+      const set = new Set();
+      for (let t = startDt.getTime(); t < untilDt.getTime(); t += 86400000) {
+        const dt = new Date(t);
+        const dow = ((dt.getUTCDay() + 6) % 7) + 1; // Mon=1..Sun=7
+        if (!wdays.includes(dow)) continue;
+        const wall = lt?.[String(dow)] ?? lt?.[dow];
+        if (!wall) continue; // must have time for day
+        set.add(ymdFromUtcDate(dt));
+      }
+      return [...set].sort((a, b) => a.localeCompare(b));
+    }
+
     // derive default package price from instructor's previous completed package payments
     const { rows: priceRows } = await db.query(
       `SELECT AVG(p.amount)::numeric AS avg_amt
@@ -153,16 +223,9 @@ const getRestorePreview = async (req, res) => {
       });
     }
 
-    // count lessons that happened before system enrollment time (enrolled_at)
-    const { rows: lessonRows } = await db.query(
-      `SELECT to_char((l.lesson_date AT TIME ZONE 'Asia/Baku')::date, 'YYYY-MM-DD') AS ymd
-       FROM lessons l
-       WHERE l.enrollment_id = $1
-         AND l.lesson_date < $2::timestamptz
-       ORDER BY l.lesson_date`,
-      [enrollment_id, en[0].enrolled_at]
-    );
-    const lessonYmds = lessonRows.map((r) => r.ymd).filter(Boolean);
+    const wdays = parseWeekdays(en[0].lesson_weekdays);
+    const lt = parseTimes(en[0].lesson_times);
+    const lessonYmds = enumeratePatternYmds(anchorYmd, enrolledYmd, wdays, lt);
     if (!lessonYmds.length) return res.json({ success: true, items: [] });
 
     const cycles = Math.ceil(lessonYmds.length / limit);
@@ -201,6 +264,7 @@ const confirmRestorePayments = async (req, res) => {
     const { rows: en } = await db.query(
       `SELECT e.id, e.instructor_id, e.student_id, e.billing_type,
               e.enrolled_at, e.enrollment_start_date,
+              e.lesson_weekdays, e.lesson_times,
               sp.monthly_fee
        FROM enrollments e
        LEFT JOIN student_profiles sp ON sp.user_id = e.student_id
@@ -266,6 +330,73 @@ const confirmRestorePayments = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Bu paket növü dəstəklənmir' });
     }
 
+    function parseWeekdays(raw) {
+      let arr = raw;
+      if (typeof raw === 'string') {
+        try {
+          arr = JSON.parse(raw);
+        } catch {
+          arr = [];
+        }
+      }
+      if (!Array.isArray(arr)) return [];
+      const out = [];
+      const seen = new Set();
+      for (const x of arr) {
+        const d = parseInt(String(x), 10);
+        if (Number.isFinite(d) && d >= 1 && d <= 7 && !seen.has(d)) {
+          seen.add(d);
+          out.push(d);
+        }
+      }
+      return out.sort((a, b) => a - b);
+    }
+
+    function parseTimes(raw) {
+      let obj = raw;
+      if (typeof raw === 'string') {
+        try {
+          obj = JSON.parse(raw);
+        } catch {
+          obj = {};
+        }
+      }
+      if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return {};
+      return obj;
+    }
+
+    function parseYmdUtcNoonLocal(ymd) {
+      const s = String(ymd || '').slice(0, 10);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;
+      const [y, m, d] = s.split('-').map(Number);
+      return new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
+    }
+
+    function ymdFromUtcDate(dt) {
+      const y = dt.getUTCFullYear();
+      const m = String(dt.getUTCMonth() + 1).padStart(2, '0');
+      const d = String(dt.getUTCDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+
+    function enumeratePatternYmds(startYmd, untilYmd, wdays, lt) {
+      const startDt = parseYmdUtcNoonLocal(startYmd);
+      const untilDt = parseYmdUtcNoonLocal(untilYmd);
+      if (!startDt || !untilDt) return [];
+      if (startDt.getTime() >= untilDt.getTime()) return [];
+      if (!Array.isArray(wdays) || !wdays.length) return [];
+      const set = new Set();
+      for (let t = startDt.getTime(); t < untilDt.getTime(); t += 86400000) {
+        const dt = new Date(t);
+        const dow = ((dt.getUTCDay() + 6) % 7) + 1;
+        if (!wdays.includes(dow)) continue;
+        const wall = lt?.[String(dow)] ?? lt?.[dow];
+        if (!wall) continue;
+        set.add(ymdFromUtcDate(dt));
+      }
+      return [...set].sort((a, b) => a.localeCompare(b));
+    }
+
     const { rows: priceRows } = await db.query(
       `SELECT AVG(p.amount)::numeric AS avg_amt
        FROM payments p
@@ -285,15 +416,9 @@ const confirmRestorePayments = async (req, res) => {
       });
     }
 
-    const { rows: lessonRows } = await db.query(
-      `SELECT to_char((l.lesson_date AT TIME ZONE 'Asia/Baku')::date, 'YYYY-MM-DD') AS ymd
-       FROM lessons l
-       WHERE l.enrollment_id = $1
-         AND l.lesson_date < $2::timestamptz
-       ORDER BY l.lesson_date`,
-      [enrollment_id, en[0].enrolled_at]
-    );
-    const lessonYmds = lessonRows.map((r) => r.ymd).filter(Boolean);
+    const wdays = parseWeekdays(en[0].lesson_weekdays);
+    const lt = parseTimes(en[0].lesson_times);
+    const lessonYmds = enumeratePatternYmds(anchorYmd, enrolledYmd, wdays, lt);
     const cycles = Math.ceil(lessonYmds.length / limit);
     const allowed = new Set();
     for (let c = 0; c < cycles; c++) {
