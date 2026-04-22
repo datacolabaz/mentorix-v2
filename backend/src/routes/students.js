@@ -180,6 +180,19 @@ function nextDateForWeekday(afterYmd, weekday /*1-7*/, ymdInclusive) {
   return `${yy}-${mm}-${dd}`;
 }
 
+async function bakuTodayYmdDb(dbConn) {
+  const { rows } = await dbConn.query(
+    `SELECT to_char((CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Baku')::date, 'YYYY-MM-DD') AS ymd`
+  );
+  return rows[0]?.ymd || new Date().toISOString().slice(0, 10);
+}
+
+function maxYmd(a, b) {
+  if (!a) return b;
+  if (!b) return a;
+  return a > b ? a : b;
+}
+
 function generateLessonStarts({ startYmd, lessonWeekdays, lessonTimes, count }) {
   // include startYmd: the first lesson can be on this exact date
   let cursor = startYmd;
@@ -212,8 +225,10 @@ function generateLessonStarts({ startYmd, lessonWeekdays, lessonTimes, count }) 
 async function replaceCycleOneScheduledLessons(client, params) {
   const { enrollmentId, studentId, instructor_id, ni, lwd, lt, firstYmd, limit } = params;
   if (!limit || !firstYmd) return;
+  const todayBaku = await bakuTodayYmdDb(client);
+  const effectiveStart = maxYmd(firstYmd, todayBaku);
   const starts = generateLessonStarts({
-    startYmd: firstYmd,
+    startYmd: effectiveStart,
     lessonWeekdays: lwd,
     lessonTimes: lt,
     count: limit,
@@ -362,6 +377,7 @@ router.post('/enroll', authenticate, authorize('instructor', 'admin'), async (re
     }
 
     const enrollment = await db.transaction(async (client) => {
+      const todayBaku = await bakuTodayYmdDb(client);
       const { rows } = await client.query(
         `INSERT INTO enrollments (
            instructor_id, student_id, billing_type, referral_notes, referral_source_id,
@@ -412,8 +428,9 @@ router.post('/enroll', authenticate, authorize('instructor', 'admin'), async (re
       const limit = billingLimit(enr.billing_type);
       const startYmd = firstYmd || enrollmentYmd;
       if (limit) {
+        const effectiveStart = maxYmd(startYmd, todayBaku);
         const starts = generateLessonStarts({
-          startYmd,
+          startYmd: effectiveStart,
           lessonWeekdays: lwd,
           lessonTimes: lt,
           count: limit,
@@ -436,6 +453,7 @@ router.post('/enroll', authenticate, authorize('instructor', 'admin'), async (re
           if (occupied.rowCount > 0) {
             throw Object.assign(new Error('LESSON_CONFLICT'), {
               code: 'LESSON_CONFLICT',
+              kind: 'occupied',
               at: `${ymd} ${time}`,
             });
           }
@@ -451,6 +469,7 @@ router.post('/enroll', authenticate, authorize('instructor', 'admin'), async (re
           if (exists.rowCount > 0) {
             throw Object.assign(new Error('LESSON_CONFLICT'), {
               code: 'LESSON_CONFLICT',
+              kind: 'existing_lesson',
               at: `${ymd} ${time}`,
             });
           }
@@ -511,9 +530,15 @@ router.post('/enroll', authenticate, authorize('instructor', 'admin'), async (re
     res.json({ success: true, enrollment, pin_sms });
   } catch (err) {
     if (err.code === 'LESSON_CONFLICT') {
+      const detail =
+        err.kind === 'occupied'
+          ? 'Müəllimin həmin gün/saatı “occupied” kimi bloklanıb.'
+          : err.kind === 'existing_lesson'
+            ? 'Müəllimin həmin gün/saatda başqa dərsi var.'
+            : '';
       return res.status(409).json({
         success: false,
-        message: `Dərs cədvəlində uyğun olmayan vaxt var: ${err.at || ''}`.trim(),
+        message: `Dərs cədvəlində uyğun olmayan vaxt var: ${err.at || ''} ${detail}`.trim(),
       });
     }
     res.status(500).json({ success: false, message: err.message });
