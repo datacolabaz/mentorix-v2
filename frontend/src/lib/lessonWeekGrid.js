@@ -76,8 +76,15 @@ export function slotTimesForLesson(l) {
   if (wt) {
     const [h, m] = wt.split(':').map((x) => parseInt(x, 10))
     if (Number.isFinite(h) && Number.isFinite(m)) {
-      hh = h
-      mm = m
+      // Only trust enrollment wall-time if it matches the actual lesson_date closely.
+      // Otherwise (e.g. lesson_times edited later) keep real timestamp so schedule shows true conflicts.
+      const actualMin = sh * 60 + sm
+      const wallMin = h * 60 + m
+      const diff = Math.abs(actualMin - wallMin)
+      if (diff <= 10) {
+        hh = h
+        mm = m
+      }
     }
   }
   const startMin = hh * 60 + mm
@@ -127,7 +134,13 @@ export function fmtAzBakuLessonRow(l) {
   const lt = parseEnrollmentLessonTimes(l.enrollment_lesson_times)
   const wall = dow != null ? lt[String(dow)] ?? lt[dow] : null
   const t = wall != null && wall !== '' ? fmtTime(wall) : ''
-  if (t) return `${dateStr}, ${t}`
+  if (t) {
+    const parts = bakuPartsFromInstant(inst)
+    const actualMin = parts.hour * 60 + parts.minute
+    const [h, m] = t.split(':').map((x) => parseInt(x, 10))
+    const wallMin = (Number.isFinite(h) ? h : 0) * 60 + (Number.isFinite(m) ? m : 0)
+    if (Math.abs(actualMin - wallMin) <= 10) return `${dateStr}, ${t}`
+  }
   return `${dateStr}, ${fmtAzBakuClockHm(inst)}`
 }
 
