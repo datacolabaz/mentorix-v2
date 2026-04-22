@@ -371,7 +371,7 @@ export default function InstructorPayments() {
                       return (
                         <div
                           key={s.enrollment_id}
-                          className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-xl border border-indigo-500/15 bg-[#0f0c29]/80 px-3 py-2"
+                          className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between rounded-xl border border-indigo-500/15 bg-[#0f0c29]/80 px-3 py-2"
                         >
                           <div className="min-w-0">
                             <div className="font-semibold text-white truncate">
@@ -409,36 +409,27 @@ export default function InstructorPayments() {
                               )}
 
                               {isMonthly ? (
-                                <span className="text-xs text-gray-400">
-                                  Aylıq: <span className="text-white font-mono">{formatAzn(s.monthly_fee)}</span>
-                                </span>
+                                <>
+                                  <span className="text-xs text-gray-400">
+                                    Cari balans:{' '}
+                                    <span className="text-white font-mono tabular-nums">{formatAzn(s.net_balance)}</span>
+                                  </span>
+                                  <span className="text-xs text-gray-400">
+                                    Ödənilib:{' '}
+                                    <span className="text-white font-mono tabular-nums">{formatAzn(s.total_payments)}</span>
+                                  </span>
+                                  <span
+                                    className={`text-xs font-semibold tabular-nums ${
+                                      showDebtRed ? 'text-rose-300' : showDebt ? 'text-amber-200/90' : 'text-gray-500'
+                                    }`}
+                                  >
+                                    Qalıq borc: {formatAzn(s.pending_debt)}
+                                  </span>
+                                </>
                               ) : null}
-
-                              <span
-                                className={`text-xs font-semibold tabular-nums ${
-                                  showDebtRed ? 'text-rose-300' : showDebt ? 'text-amber-200/90' : 'text-gray-500'
-                                }`}
-                              >
-                                {isMonthly ? `Borc: ${formatAzn(s.pending_debt)}` : ''}
-                              </span>
                             </div>
 
                             <div className="flex gap-2 flex-wrap justify-end">
-                              {isMonthly ? (
-                                <>
-                                  <Button size="sm" variant="secondary" onClick={() => openAdjust(s)}>
-                                    Balans düzəlişi
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    loading={markingId === s.enrollment_id}
-                                    onClick={() => openQuickPay(s)}
-                                    className="!bg-indigo-600 hover:!bg-indigo-500 !text-white border-0"
-                                  >
-                                    Ödəniş
-                                  </Button>
-                                </>
-                              ) : null}
                               <Button size="sm" variant="secondary" onClick={() => void openHistory(s)}>
                                 Tarixçə
                               </Button>
