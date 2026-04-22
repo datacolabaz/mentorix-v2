@@ -7,6 +7,8 @@ const {
   markMonthlyPaid,
   markMonthlyPaidBatch,
   getEnrollmentPaymentHistory,
+  getRestorePreview,
+  confirmRestorePayments,
   deletePayment,
 } = require('../controllers/paymentController');
 const { authenticate, authorize } = require('../middleware/auth');
@@ -18,6 +20,18 @@ router.get(
   authenticate,
   authorize('admin', 'instructor', 'student'),
   getEnrollmentPaymentHistory
+);
+router.get(
+  '/enrollment/:enrollment_id/restore-preview',
+  authenticate,
+  authorize('admin', 'instructor'),
+  getRestorePreview
+);
+router.post(
+  '/enrollment/:enrollment_id/restore-confirm',
+  authenticate,
+  authorize('admin', 'instructor'),
+  confirmRestorePayments
 );
 router.post('/mark-monthly-paid', authenticate, authorize('admin', 'instructor'), markMonthlyPaid);
 router.post('/mark-monthly-paid-batch', authenticate, authorize('admin', 'instructor'), markMonthlyPaidBatch);

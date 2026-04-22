@@ -603,6 +603,7 @@ export default function InstructorStudents() {
   const [listLoading, setListLoading] = useState(true)
   const [listError, setListError] = useState(null)
   const [lessonsModal, setLessonsModal] = useState(null)
+  const [restoreModal, setRestoreModal] = useState(null) // { enrollmentId, studentName, items, selected:Set, loading, error }
   // Slot cədvəli tələbə qeydiyyatı üçün artıq tələb olunmur (dərslər tarixlərlə avtomatik yaradılır)
   const [enrollMeta] = useState({ loading: false, requiresScheduleSlot: false, availableSlots: [] })
   const [teachingSubjects, setTeachingSubjects] = useState([])
@@ -953,6 +954,50 @@ export default function InstructorStudents() {
     }
   }
 
+  const openRestoreModal = (s) => {
+    const eid = s.enrollment_id
+    const name = s.full_name || 'Tələbə'
+    setRestoreModal({
+      enrollmentId: eid,
+      studentName: name,
+      items: [],
+      selected: new Set(),
+      loading: true,
+      error: null,
+    })
+    void (async () => {
+      try {
+        const d = await api.get(`/payments/enrollment/${encodeURIComponent(eid)}/restore-preview`)
+        const items = Array.isArray(d.items) ? d.items : []
+        setRestoreModal((prev) =>
+          prev?.enrollmentId === eid ? { ...prev, items, loading: false, error: null } : prev
+        )
+      } catch (e) {
+        setRestoreModal((prev) =>
+          prev?.enrollmentId === eid ? { ...prev, items: [], loading: false, error: e?.message || 'Yüklənmədi' } : prev
+        )
+      }
+    })()
+  }
+
+  const confirmRestore = async () => {
+    if (!restoreModal?.enrollmentId) return
+    const ids = [...(restoreModal.selected || new Set())]
+    if (!ids.length) return toast('Heç nə seçilməyib', 'error')
+    setRestoreModal((p) => (p ? { ...p, loading: true, error: null } : p))
+    try {
+      const d = await api.post(
+        `/payments/enrollment/${encodeURIComponent(restoreModal.enrollmentId)}/restore-confirm`,
+        { ids }
+      )
+      toast(`Əlavə olundu: ${d?.count || 0} ödəniş`, 'success')
+      setRestoreModal(null)
+      load(true)
+    } catch (e) {
+      setRestoreModal((p) => (p ? { ...p, loading: false, error: e?.message || 'Xəta' } : p))
+    }
+  }
+
   return (
     <div className="p-4 sm:p-6 min-w-0">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
@@ -1068,6 +1113,16 @@ export default function InstructorStudents() {
                               onClick={() => openLessonsModal(s)}
                             >
                               📅
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              className="px-2"
+                              title="Köhnə ödənişləri təsdiqlə"
+                              aria-label="Köhnə ödənişləri təsdiqlə"
+                              onClick={() => openRestoreModal(s)}
+                            >
+                              ✅
                             </Button>
                             <Button
                               size="sm"
@@ -1189,6 +1244,69 @@ export default function InstructorStudents() {
         >
           Bağla
         </Button>
+      </Modal>
+
+      <Modal
+        open={Boolean(restoreModal)}
+        onClose={() => setRestoreModal(null)}
+        title={restoreModal ? `${restoreModal.studentName} — köhnə ödənişlər` : 'Köhnə ödənişlər'}
+        size="sm"
+      >
+        {restoreModal?.loading ? (
+          <ListSkeleton message="Hesablanır…" />
+        ) : restoreModal?.error ? (
+          <p className="text-sm text-amber-200/90">{restoreModal.error}</p>
+        ) : !restoreModal?.items?.length ? (
+          <p className="text-sm text-gray-500">Bərpa ediləcək köhnə dövr tapılmadı.</p>
+        ) : (
+          <div className="space-y-2">
+            <p className="text-xs text-gray-500">
+              Aşağıdakı dövrləri seçin. Təsdiqləyərkən sistem onları tarixçəyə “completed” kimi əlavə edəcək.
+            </p>
+            <ul className="space-y-2 max-h-[45vh] overflow-y-auto pr-1">
+              {restoreModal.items.map((it) => {
+                const checked = restoreModal.selected?.has(it.id)
+                return (
+                  <li
+                    key={it.id}
+                    className="rounded-xl border border-indigo-500/15 bg-[#0f0c29]/80 px-3 py-2 text-sm text-gray-200"
+                  >
+                    <label className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 accent-blue-500"
+                          checked={Boolean(checked)}
+                          onChange={(e) =>
+                            setRestoreModal((prev) => {
+                              if (!prev) return prev
+                              const nextSel = new Set(prev.selected || [])
+                              if (e.target.checked) nextSel.add(it.id)
+                              else nextSel.delete(it.id)
+                              return { ...prev, selected: nextSel }
+                            })
+                          }
+                        />
+                        <span className="truncate">{it.title}</span>
+                      </div>
+                      <span className="font-mono text-emerald-300 tabular-nums shrink-0">
+                        {Number.isFinite(Number(it.amount)) ? `${Number(it.amount).toFixed(2)} ₼` : '—'}
+                      </span>
+                    </label>
+                  </li>
+                )
+              })}
+            </ul>
+            <Button
+              type="button"
+              onClick={confirmRestore}
+              loading={restoreModal.loading}
+              className="w-full justify-center mt-3"
+            >
+              Seçilənləri təsdiqlə
+            </Button>
+          </div>
+        )}
       </Modal>
     </div>
   )
