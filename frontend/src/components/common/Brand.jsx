@@ -11,7 +11,7 @@ export default function Brand({
     size === 'login'
       ? 'h-[180px] max-h-[220px]'
       : size === 'sidebar'
-        ? 'h-[60px] max-h-[72px]'
+        ? 'h-[76px] max-h-[92px]'
         : 'h-10 max-h-[50px]'
   return (
     <div className={`flex items-center gap-3 min-w-0 ${className}`}>
