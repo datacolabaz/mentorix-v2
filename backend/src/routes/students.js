@@ -304,9 +304,15 @@ async function replaceCycleOneScheduledLessons(client, params) {
       }
     }
     const exists = await client.query(
-      `SELECT l.id
+      `SELECT l.id,
+              u.full_name AS student_name,
+              ist.name AS subject_name,
+              ig.name AS group_name
        FROM lessons l
        JOIN enrollments e2 ON e2.id = l.enrollment_id
+       LEFT JOIN users u ON u.id = l.student_id
+       LEFT JOIN instructor_subjects ist ON ist.id = e2.subject_id
+       LEFT JOIN instructor_groups ig ON ig.id = e2.group_id
        WHERE l.instructor_id = $1
          AND l.student_id <> $3
          AND l.lesson_date = ($2::timestamp AT TIME ZONE 'Asia/Baku')
@@ -319,10 +325,16 @@ async function replaceCycleOneScheduledLessons(client, params) {
       [instructor_id, starts[i], studentId, enrollmentId, group_id || null]
     );
     if (exists.rowCount > 0) {
+      const r = exists.rows[0] || {};
+      const who = String(r.student_name || '').trim();
+      const subj = String(r.subject_name || '').trim();
+      const grp = String(r.group_name || '').trim();
+      const withLabel = [subj, grp].filter(Boolean).join(' — ');
       throw Object.assign(new Error('LESSON_CONFLICT'), {
         code: 'LESSON_CONFLICT',
         kind: 'existing_lesson',
         at: `${ymd} ${time}`,
+        conflict_with: `${who || 'Tələbə'}${withLabel ? ` (${withLabel})` : ''}`,
       });
     }
   }
@@ -528,9 +540,15 @@ router.post('/enroll', authenticate, authorize('instructor', 'admin'), async (re
           }
 
           const exists = await client.query(
-            `SELECT l.id
+            `SELECT l.id,
+                    u.full_name AS student_name,
+                    ist.name AS subject_name,
+                    ig.name AS group_name
              FROM lessons l
              JOIN enrollments e2 ON e2.id = l.enrollment_id
+             LEFT JOIN users u ON u.id = l.student_id
+             LEFT JOIN instructor_subjects ist ON ist.id = e2.subject_id
+             LEFT JOIN instructor_groups ig ON ig.id = e2.group_id
              WHERE l.instructor_id = $1
                AND l.student_id <> $3
                AND l.lesson_date = ($2::timestamp AT TIME ZONE 'Asia/Baku')
@@ -542,10 +560,16 @@ router.post('/enroll', authenticate, authorize('instructor', 'admin'), async (re
             [instructor_id, starts[i], student_id, trackIds.group_id || null]
           );
           if (exists.rowCount > 0) {
+            const r = exists.rows[0] || {};
+            const who = String(r.student_name || '').trim();
+            const subj = String(r.subject_name || '').trim();
+            const grp = String(r.group_name || '').trim();
+            const withLabel = [subj, grp].filter(Boolean).join(' — ');
             throw Object.assign(new Error('LESSON_CONFLICT'), {
               code: 'LESSON_CONFLICT',
               kind: 'existing_lesson',
               at: `${ymd} ${time}`,
+              conflict_with: `${who || 'Tələbə'}${withLabel ? ` (${withLabel})` : ''}`,
             });
           }
         }
@@ -611,9 +635,10 @@ router.post('/enroll', authenticate, authorize('instructor', 'admin'), async (re
           : err.kind === 'existing_lesson'
             ? 'Müəllimin həmin gün/saatda başqa dərsi var.'
             : '';
+      const withWho = err.conflict_with ? ` Toqquşma: ${err.conflict_with}.` : '';
       return res.status(409).json({
         success: false,
-        message: `Dərs cədvəlində uyğun olmayan vaxt var: ${err.at || ''} ${detail}`.trim(),
+        message: `Dərs cədvəlində uyğun olmayan vaxt var: ${err.at || ''} ${detail}${withWho}`.trim(),
       });
     }
     res.status(500).json({ success: false, message: err.message });
