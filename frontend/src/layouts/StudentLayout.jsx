@@ -66,7 +66,7 @@ export default function StudentLayout() {
         }
       >
         <div className="p-5 border-b border-white/10 pt-14 md:pt-5">
-          <Brand imgClassName="h-8" />
+          <Brand imgClassName="h-10" />
           <div className="mt-3 p-3 bg-surface-1 rounded-xl border border-white/10">
             <div className="w-8 h-8 rounded-full bg-white/10 border border-white/10 flex items-center justify-center text-sm font-bold mb-2">
               {user?.full_name?.split(' ').map((n) => n[0]).join('').slice(0, 2)}
