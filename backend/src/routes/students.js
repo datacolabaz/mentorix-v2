@@ -315,14 +315,14 @@ async function replaceCycleOneScheduledLessons(client, params) {
        LEFT JOIN instructor_groups ig ON ig.id = e2.group_id
        WHERE l.instructor_id = $1
          AND l.student_id <> $3
-         AND l.lesson_date = ($2::timestamp AT TIME ZONE 'Asia/Baku')
+         AND to_char((l.lesson_date AT TIME ZONE 'Asia/Baku'), 'YYYY-MM-DD HH24:MI') = $2
          AND NOT (l.enrollment_id = $4::uuid AND l.billing_cycle = 1)
          AND (
            $5::uuid IS NULL
            OR e2.group_id IS DISTINCT FROM $5::uuid
          )
        LIMIT 1`,
-      [instructor_id, starts[i], studentId, enrollmentId, group_id || null]
+      [instructor_id, `${ymd} ${time}`, studentId, enrollmentId, group_id || null]
     );
     if (exists.rowCount > 0) {
       const r = exists.rows[0] || {};
@@ -551,13 +551,13 @@ router.post('/enroll', authenticate, authorize('instructor', 'admin'), async (re
              LEFT JOIN instructor_groups ig ON ig.id = e2.group_id
              WHERE l.instructor_id = $1
                AND l.student_id <> $3
-               AND l.lesson_date = ($2::timestamp AT TIME ZONE 'Asia/Baku')
+               AND to_char((l.lesson_date AT TIME ZONE 'Asia/Baku'), 'YYYY-MM-DD HH24:MI') = $2
                AND (
                  $4::uuid IS NULL
                  OR e2.group_id IS DISTINCT FROM $4::uuid
                )
              LIMIT 1`,
-            [instructor_id, starts[i], student_id, trackIds.group_id || null]
+            [instructor_id, `${ymd} ${time}`, student_id, trackIds.group_id || null]
           );
           if (exists.rowCount > 0) {
             const r = exists.rows[0] || {};
