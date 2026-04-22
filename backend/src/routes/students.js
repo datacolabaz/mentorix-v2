@@ -193,6 +193,46 @@ function maxYmd(a, b) {
   return a > b ? a : b;
 }
 
+async function reserveGroupSlots(client, { instructor_id, ni, lwd, lt, subject_id, group_id }) {
+  // If no group, don't reserve group lock slots.
+  if (!group_id) return;
+  for (const wd of lwd) {
+    const t = lt?.[String(wd)];
+    if (!t) continue;
+    const start = `${String(t).slice(0, 5)}:00`;
+
+    // If a slot exists and is occupied by another group, block.
+    const { rows: slotRows } = await client.query(
+      `SELECT id, is_occupied, group_id
+       FROM teacher_schedules
+       WHERE REPLACE(LOWER(TRIM(instructor_id::text)), '-', '') = $1
+         AND day_of_week = $2
+         AND start_time = $3::time
+       LIMIT 1`,
+      [ni, wd, start]
+    );
+
+    if (!slotRows[0]) continue; // no weekly slot configured -> skip lock
+    const slot = slotRows[0];
+    if (slot.is_occupied && slot.group_id && normUuid(slot.group_id) !== normUuid(group_id)) {
+      throw Object.assign(new Error('LESSON_CONFLICT'), {
+        code: 'LESSON_CONFLICT',
+        kind: 'occupied_other_group',
+        at: `${wd} ${String(t).slice(0, 5)}`,
+      });
+    }
+
+    await client.query(
+      `UPDATE teacher_schedules
+       SET is_occupied = TRUE,
+           subject_id = $2::uuid,
+           group_id = $3::uuid
+       WHERE id = $1::uuid`,
+      [slot.id, subject_id || null, group_id]
+    );
+  }
+}
+
 function generateLessonStarts({ startYmd, lessonWeekdays, lessonTimes, count }) {
   // include startYmd: the first lesson can be on this exact date
   let cursor = startYmd;
@@ -241,7 +281,7 @@ async function replaceCycleOneScheduledLessons(client, params) {
     const time = starts[i].slice(11, 16);
     const w = weekdayFromYmd(ymd);
     const occupied = await client.query(
-      `SELECT id FROM teacher_schedules
+      `SELECT id, group_id FROM teacher_schedules
        WHERE REPLACE(LOWER(TRIM(instructor_id::text)), '-', '') = $1
          AND is_occupied = TRUE
          AND day_of_week = $2
@@ -250,11 +290,16 @@ async function replaceCycleOneScheduledLessons(client, params) {
       [ni, w, time]
     );
     if (occupied.rowCount > 0) {
-      throw Object.assign(new Error('LESSON_CONFLICT'), {
-        code: 'LESSON_CONFLICT',
-        kind: 'occupied',
-        at: `${ymd} ${time}`,
-      });
+      const otherGroup = occupied.rows[0]?.group_id || null;
+      if (group_id && otherGroup && normUuid(otherGroup) === normUuid(group_id)) {
+        // occupied by the same group -> allow
+      } else {
+        throw Object.assign(new Error('LESSON_CONFLICT'), {
+          code: 'LESSON_CONFLICT',
+          kind: 'occupied',
+          at: `${ymd} ${time}`,
+        });
+      }
     }
     const exists = await client.query(
       `SELECT l.id
@@ -410,6 +455,16 @@ router.post('/enroll', authenticate, authorize('instructor', 'admin'), async (re
       );
       const enr = rows[0];
 
+      // Group-lock weekly slots so only same subject/group can use them
+      await reserveGroupSlots(client, {
+        instructor_id,
+        ni,
+        lwd,
+        lt,
+        subject_id: trackIds.subject_id,
+        group_id: trackIds.group_id,
+      });
+
       // teacher_schedules ilə bağlama artıq istifadə olunmur (dərslər dated lessons kimi saxlanır)
 
       const pn = parent_name != null ? String(parent_name).trim() : '';
@@ -447,7 +502,7 @@ router.post('/enroll', authenticate, authorize('instructor', 'admin'), async (re
           const time = starts[i].slice(11, 16);
           const w = weekdayFromYmd(ymd);
           const occupied = await client.query(
-            `SELECT id FROM teacher_schedules
+            `SELECT id, group_id FROM teacher_schedules
              WHERE REPLACE(LOWER(TRIM(instructor_id::text)), '-', '') = $1
                AND is_occupied = TRUE
                AND day_of_week = $2
@@ -456,11 +511,16 @@ router.post('/enroll', authenticate, authorize('instructor', 'admin'), async (re
             [ni, w, time]
           );
           if (occupied.rowCount > 0) {
+            const otherGroup = occupied.rows[0]?.group_id || null;
+            if (trackIds.group_id && otherGroup && normUuid(otherGroup) === normUuid(trackIds.group_id)) {
+              // occupied by the same group -> allow
+            } else {
             throw Object.assign(new Error('LESSON_CONFLICT'), {
               code: 'LESSON_CONFLICT',
               kind: 'occupied',
               at: `${ymd} ${time}`,
             });
+            }
           }
 
           const exists = await client.query(

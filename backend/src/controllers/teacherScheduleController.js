@@ -38,7 +38,7 @@ const listMine = async (req, res) => {
     const iid = req.user.role === 'admin' ? req.query.instructor_id || req.user.id : req.user.id;
     const { rows } = await db.query(
       `SELECT ts.id, ts.instructor_id, ts.day_of_week, ts.start_time, ts.end_time,
-              ts.is_occupied, ts.enrollment_id, ts.student_id, ts.created_at,
+              ts.is_occupied, ts.enrollment_id, ts.student_id, ts.subject_id, ts.group_id, ts.created_at,
               u.full_name AS student_name
        FROM teacher_schedules ts
        LEFT JOIN users u ON u.id = ts.student_id
