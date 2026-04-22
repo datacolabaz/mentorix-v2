@@ -165,8 +165,8 @@ export default function Login() {
                     }}
                     className={`p-3 rounded-xl border text-sm font-semibold transition-all flex flex-col items-center gap-1 ${
                       role === r.key
-                        ? 'border-blue-500 bg-blue-500/20 text-blue-300'
-                        : 'border-indigo-500/20 text-gray-400 hover:border-indigo-500/40'
+                        ? 'border-primary/30 bg-primary/10 text-primary'
+                        : 'border-white/10 text-gray-400 hover:border-white/20'
                     }`}
                   >
                     <span className="text-xl">{r.emoji}</span>
@@ -202,7 +202,7 @@ export default function Login() {
                   </p>
                   <div className="text-center text-xs text-gray-500">{phone}</div>
                   <input
-                    className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-4 text-white text-2xl font-bold text-center tracking-widest outline-none focus:border-blue-500"
+                    className="w-full bg-surface-1 border border-white/10 rounded-xl px-4 py-4 text-white text-2xl font-bold text-center tracking-widest outline-none focus:border-primary/40"
                     placeholder=""
                     aria-label="Giriş PIN-i, 6 rəqəm"
                     maxLength={6}
