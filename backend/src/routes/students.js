@@ -265,6 +265,7 @@ function generateLessonStarts({ startYmd, lessonWeekdays, lessonTimes, count }) 
 async function replaceCycleOneScheduledLessons(client, params) {
   const { enrollmentId, studentId, instructor_id, ni, lwd, lt, firstYmd, limit, group_id } = params;
   if (!limit || !firstYmd) return;
+  const todayBaku = await bakuTodayYmdDb(client);
   const starts = generateLessonStarts({
     startYmd: firstYmd,
     lessonWeekdays: lwd,
@@ -278,6 +279,7 @@ async function replaceCycleOneScheduledLessons(client, params) {
   }
   for (let i = 0; i < starts.length; i++) {
     const ymd = starts[i].slice(0, 10);
+    if (ymd < todayBaku) continue;
     const time = starts[i].slice(11, 16);
     const w = weekdayFromYmd(ymd);
     const occupied = await client.query(
@@ -499,6 +501,8 @@ router.post('/enroll', authenticate, authorize('instructor', 'admin'), async (re
         // conflict check: existing lessons for instructor + occupied weekly slots
         for (let i = 0; i < starts.length; i++) {
           const ymd = starts[i].slice(0, 10);
+          // Keçmiş tarixlər üçün conflict yoxlamırıq: tarixçə üçün dərsləri yazmağa icazə veririk
+          if (ymd < todayBaku) continue;
           const time = starts[i].slice(11, 16);
           const w = weekdayFromYmd(ymd);
           const occupied = await client.query(
