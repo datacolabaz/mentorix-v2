@@ -172,7 +172,7 @@ const listMyPayments = async (req, res) => {
         });
 
         // Monthly subscription: 2 calendar days remaining notification (student + instructor)
-        if (monthlyProgress?.days_remaining === 2) {
+        if (enrollmentOut.notifications_enabled === true && monthlyProgress?.days_remaining === 2) {
           const msg =
             'Hörmətli tələbə, aylıq abunəliyinizin bitməsinə 2 gün qalıb. Davam etmək üçün ödənişi yeniləməyiniz xahiş olunur.';
 
@@ -308,8 +308,8 @@ const listMyPayments = async (req, res) => {
       planned_lessons_in_cycle = c[0]?.n ?? null;
     }
 
-    // Last-lesson notification (package): 1 dərs qalmış
-    if (enrollment && limit != null && calendar_remaining_lessons === 1) {
+    // Last-lesson notification (package): only if enabled (cron will do the time-based trigger)
+    if (enrollment && enrollment.notifications_enabled === true && limit != null && calendar_remaining_lessons === 1) {
       const instId = enrollment?.instructor_id || null;
       const studentBody =
         'Hörmətli tələbə, aylıq abunəliyinizin bitməsinə 2 gün qalıb. Davam etmək üçün ödənişi yeniləməyiniz xahiş olunur.';

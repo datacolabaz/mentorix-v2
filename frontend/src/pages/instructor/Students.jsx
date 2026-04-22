@@ -33,6 +33,7 @@ const emptyForm = {
   parent_phone: '',
   subject_id: '',
   group_id: '',
+  notifications_enabled: true,
 }
 
 function normalizeWeekdays(raw) {
@@ -224,6 +225,16 @@ function StudentFormFields({
           ))}
         </select>
       </div>
+
+      <label className="flex items-center gap-2 text-sm text-gray-200 select-none">
+        <input
+          type="checkbox"
+          className="h-4 w-4 accent-blue-500"
+          checked={Boolean(data.notifications_enabled)}
+          onChange={(e) => setData((p) => ({ ...p, notifications_enabled: e.target.checked }))}
+        />
+        Ödəniş bitməsi barədə bildiriş göndərilsin
+      </label>
 
       {data.billing_type === 'monthly' ? (
         <div className="grid grid-cols-2 gap-3">
@@ -698,6 +709,7 @@ export default function InstructorStudents() {
         first_lesson_date: firstLessonSend || null,
         billing_timing: form.billing_timing || 'postpaid',
         payment_plan: form.payment_plan || 'full',
+        notifications_enabled: Boolean(form.notifications_enabled),
         subject_id: form.subject_id || undefined,
         group_id: form.group_id || undefined,
         lesson_weekdays: form.lesson_weekdays,
@@ -753,6 +765,7 @@ export default function InstructorStudents() {
       lesson_times: normalizeLessonTimes(s.lesson_times),
       parent_name: s.parent_name || '',
       parent_phone: s.parent_phone || '',
+      notifications_enabled: s.notifications_enabled !== false,
     })
     setEditModal(true)
   }
@@ -792,6 +805,7 @@ export default function InstructorStudents() {
         enrollment_date: enrollmentPatch,
         billing_timing: editForm.billing_timing || 'postpaid',
         payment_plan: editForm.payment_plan || 'full',
+        notifications_enabled: Boolean(editForm.notifications_enabled),
         subject_id: editForm.subject_id || null,
         group_id: editForm.group_id || null,
         lesson_weekdays: editForm.lesson_weekdays,
