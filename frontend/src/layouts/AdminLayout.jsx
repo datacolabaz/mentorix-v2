@@ -2,6 +2,7 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import useAuthStore from '../hooks/useAuth'
 import Brand from '../components/common/Brand'
 import Footer from '../components/common/Footer'
+import { sidebarNavClass } from '../lib/sidebarNavClass'
 
 const NAV = [
   { to: '/admin', label: 'Dashboard', icon: '📊', end: true },
@@ -17,12 +18,12 @@ export default function AdminLayout() {
 
   return (
     <div className="flex h-screen bg-[#0b0b0b] text-white overflow-hidden">
-      <aside className="w-60 bg-surface-2 border-r border-white/10 flex flex-col flex-shrink-0">
-        <div className="px-3 py-3 border-b border-white/10">
-          <div className="w-full flex items-center justify-center">
-            <Brand size="sidebar" imgClassName="scale-[1.4] -my-1" />
+      <aside className="w-60 bg-[#003366] border-r border-white/10 flex flex-col flex-shrink-0">
+        <div className="px-2 py-2 border-b border-white/10">
+          <div className="mb-5">
+            <Brand size="sidebar" />
           </div>
-          <div className="mt-3 p-3 bg-surface-1 rounded-xl border border-white/10">
+          <div className="p-3 bg-black/25 rounded-xl border border-white/15">
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-red-500 to-orange-600 flex items-center justify-center text-sm font-bold mb-2">
               {user?.full_name?.split(' ').map(n => n[0]).join('').slice(0, 2)}
             </div>
@@ -34,11 +35,7 @@ export default function AdminLayout() {
         <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
           {NAV.map((item) => (
             <NavLink key={item.to} to={item.to} end={item.end}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                  isActive ? 'bg-primary/10 text-primary border border-primary/20'
-                    : 'text-gray-400 hover:bg-white/5 hover:text-white'
-                }`}>
+              className={({ isActive }) => sidebarNavClass(isActive)}>
               <span>{item.icon}</span>{item.label}
             </NavLink>
           ))}

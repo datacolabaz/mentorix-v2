@@ -4,7 +4,10 @@ export default {
   theme: {
     extend: {
       colors: {
-        primary: '#cafc00',
+        primary: '#22e088',
+        brand: {
+          navy: '#003366',
+        },
         surface: {
           1: '#121212',
           2: '#1a1a1a',

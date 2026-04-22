@@ -2,6 +2,7 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import useAuthStore from '../hooks/useAuth'
 import Brand from '../components/common/Brand'
 import Footer from '../components/common/Footer'
+import { sidebarNavClass } from '../lib/sidebarNavClass'
 
 const NAV = [
   { to: '/parent', label: 'Uşaqlarım', icon: '👶', end: true },
@@ -25,17 +26,13 @@ export default function ParentLayout() {
               {user?.full_name?.split(' ').map(n => n[0]).join('').slice(0, 2)}
             </div>
             <div className="text-sm font-semibold">{user?.full_name}</div>
-            <div className="text-xs text-gray-400">Valideyn</div>
+            <div className="text-xs text-gray-200">Valideyn</div>
           </div>
         </div>
         <nav className="flex-1 p-3 space-y-1">
           {NAV.map((item) => (
             <NavLink key={item.to} to={item.to} end={item.end}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                  isActive ? 'bg-primary/10 text-primary border border-primary/20'
-                    : 'text-gray-400 hover:bg-white/5 hover:text-white'
-                }`}>
+              className={({ isActive }) => sidebarNavClass(isActive)}>
               <span>{item.icon}</span>{item.label}
             </NavLink>
           ))}

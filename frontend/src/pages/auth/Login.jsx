@@ -166,13 +166,8 @@ export default function Login() {
       <div className="w-full max-w-sm">
         <div className="bg-surface-2 border border-white/10 rounded-2xl p-6 sm:p-8">
           <div className="text-center mb-6 sm:mb-8">
-            <div className="flex justify-center">
-              <div className="rounded-2xl bg-[#1a1a1a] border border-white/10 w-full max-w-[360px] py-6 flex justify-center">
-                <Brand
-                  size="login"
-                  imgClassName="scale-[1.35] -my-2 drop-shadow-[0_18px_40px_rgba(0,0,0,0.75)]"
-                />
-              </div>
+            <div className="flex justify-center py-2 bg-transparent">
+              <Brand size="login" />
             </div>
             <div className="text-gray-400 text-sm mt-2">Hesabınıza daxil olun</div>
           </div>
@@ -301,7 +296,7 @@ export default function Login() {
             href="https://wa.me/994503066626"
             target="_blank"
             rel="noreferrer"
-            className="flex items-center justify-center gap-2 mt-6 py-3 px-4 rounded-xl bg-primary text-black text-sm font-semibold hover:brightness-95 transition-all shadow-lg shadow-primary/15"
+            className="flex items-center justify-center gap-2 mt-6 py-3 px-4 rounded-xl bg-primary text-[#041018] text-sm font-semibold hover:brightness-95 transition-all shadow-lg shadow-primary/20"
           >
             Bizimlə əlaqə
           </a>
