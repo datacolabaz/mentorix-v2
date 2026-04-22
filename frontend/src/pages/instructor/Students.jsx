@@ -889,7 +889,6 @@ export default function InstructorStudents() {
         billing_type: editForm.billing_type,
         referral_notes: editForm.referral_notes,
         monthly_fee: editForm.monthly_fee,
-        enrollment_date: enrollmentPatch,
         billing_timing: editForm.billing_timing || 'postpaid',
         payment_plan: editForm.payment_plan || 'full',
         notifications_enabled: Boolean(editForm.notifications_enabled),
@@ -900,10 +899,12 @@ export default function InstructorStudents() {
         parent_name: editForm.parent_name,
         parent_phone: editForm.parent_phone,
       }
+      // Köhnə qeydiyyatlarda tarix NULL ola bilər; boş string göndərsək backend valide etməyə çalışıb 400 qaytarır.
+      if (enrollmentPatch) patchBody.enrollment_date = enrollmentPatch
       if (editForm.billing_type === '8_lessons' || editForm.billing_type === '12_lessons') {
-        patchBody.first_lesson_date = editForm.first_lesson_date || null
+        if (editForm.first_lesson_date) patchBody.first_lesson_date = editForm.first_lesson_date
       } else if (editMonthly) {
-        patchBody.first_lesson_date = editForm.enrollment_date || null
+        if (editForm.enrollment_date) patchBody.first_lesson_date = editForm.enrollment_date
       }
       await api.patch('/students/enrollment/' + encodeURIComponent(editId), patchBody)
       toast('Melumatlari yenilendi!')
