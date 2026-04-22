@@ -277,6 +277,8 @@ CREATE TABLE notifications (
   created_at TIMESTAMP DEFAULT NOW()
 );
 
+-- enrollments.notifications_enabled is added via migration 046
+
 CREATE TABLE sms_logs (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   instructor_id UUID REFERENCES users(id),

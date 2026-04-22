@@ -263,6 +263,7 @@ export default function StudentPayments() {
   const isMonthlySub = enrollment?.billing_type === 'monthly' && hasMonthlyFee
   const sub = enrollment?.subscription
   const mp = enrollment?.monthly_progress || null
+  const notifEnabled = enrollment?.notifications_enabled !== false
   const anchorRaw =
     enrollment?.lesson_start_date_for_display ||
     enrollment?.payment_start_date_for_display ||
@@ -356,6 +357,13 @@ export default function StudentPayments() {
                     </span>
                   </p>
                 ) : null}
+
+                <p className="text-xs text-gray-400 mb-4">
+                  Bildirişlər:{' '}
+                  <span className={notifEnabled ? 'text-emerald-300 font-semibold' : 'text-gray-500 font-semibold'}>
+                    {notifEnabled ? 'Aktiv' : 'Deaktiv'}
+                  </span>
+                </p>
 
                 {isPrepaidMonthly ? (
                   <p className="text-xs text-indigo-200/90 mb-2">Qeydiyyat: ay məbləği əvvəlcədən ödənilir.</p>
@@ -502,6 +510,12 @@ export default function StudentPayments() {
                         <span className="text-emerald-300 font-mono">{remaining}</span>
                       </li>
                     )}
+                    <li>
+                      <span className="text-gray-500">Bildirişlər: </span>
+                      <span className={notifEnabled ? 'text-emerald-300 font-semibold' : 'text-gray-500 font-semibold'}>
+                        {notifEnabled ? 'Aktiv' : 'Deaktiv'}
+                      </span>
+                    </li>
                   </ul>
                 ) : (
                   <p className="text-gray-500 text-sm">Aktiv qeydiyyat tapılmadı.</p>

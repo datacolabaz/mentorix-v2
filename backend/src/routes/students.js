@@ -99,6 +99,14 @@ function parsePaymentPlan(v) {
   return String(v || '').trim().toLowerCase() === 'partial' ? 'partial' : 'full';
 }
 
+function parseNotificationsEnabled(v) {
+  if (v === undefined || v === null || v === '') return true;
+  if (typeof v === 'boolean') return v;
+  const s = String(v).trim().toLowerCase();
+  if (s === 'false' || s === '0' || s === 'no' || s === 'off') return false;
+  return Boolean(v);
+}
+
 /** 1–7 unikal, sıralı (B.e. … Bazar) */
 function parseLessonWeekdays(raw) {
   if (raw == null) return [];
@@ -344,6 +352,7 @@ router.post('/enroll', authenticate, authorize('instructor', 'admin'), async (re
     const mf = parseMonthlyFee(monthly_fee);
     const bt = parseBillingTiming(billing_timing);
     const payPlan = parsePaymentPlan(payment_plan);
+    const notifEnabled = parseNotificationsEnabled(req.body?.notifications_enabled);
 
     let trackIds = { subject_id: null, group_id: null };
     try {
@@ -354,8 +363,13 @@ router.post('/enroll', authenticate, authorize('instructor', 'admin'), async (re
 
     const enrollment = await db.transaction(async (client) => {
       const { rows } = await client.query(
-        `INSERT INTO enrollments (instructor_id, student_id, billing_type, referral_notes, referral_source_id, lesson_weekdays, lesson_times, enrollment_start_date, billing_timing, payment_plan, subject_id, group_id)
-         VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb,$8::date,$9,$10,$11,$12) RETURNING *`,
+        `INSERT INTO enrollments (
+           instructor_id, student_id, billing_type, referral_notes, referral_source_id,
+           lesson_weekdays, lesson_times, enrollment_start_date,
+           billing_timing, payment_plan, subject_id, group_id,
+           notifications_enabled
+         )
+         VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb,$8::date,$9,$10,$11,$12,$13) RETURNING *`,
         [
           instructor_id,
           student_id,
@@ -369,6 +383,7 @@ router.post('/enroll', authenticate, authorize('instructor', 'admin'), async (re
           payPlan,
           trackIds.subject_id,
           trackIds.group_id,
+          notifEnabled,
         ]
       );
       const enr = rows[0];
@@ -622,6 +637,14 @@ router.patch('/enrollment/:enrollmentId', authenticate, authorize('admin', 'inst
     if (hasPp) {
       await db.query(`UPDATE enrollments SET payment_plan = $1::text WHERE id = $2`, [
         parsePaymentPlan(payment_plan),
+        enrollmentId,
+      ]);
+    }
+
+    const hasNotif = Object.prototype.hasOwnProperty.call(req.body, 'notifications_enabled');
+    if (hasNotif) {
+      await db.query(`UPDATE enrollments SET notifications_enabled = $1::boolean WHERE id = $2`, [
+        parseNotificationsEnabled(req.body.notifications_enabled),
         enrollmentId,
       ]);
     }
