@@ -360,132 +360,93 @@ export default function InstructorPayments() {
                 </button>
 
                 {isOpen && (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm min-w-[1020px] table-fixed">
-                      <colgroup>
-                        <col className="w-[18%]" />
-                        <col className="w-[14%]" />
-                        <col className="w-[10%]" />
-                        <col className="w-[8%]" />
-                        <col className="w-[9%]" />
-                        <col className="w-[10%]" />
-                        <col className="w-[10%]" />
-                        <col className="w-[21%]" />
-                      </colgroup>
-                      <thead>
-                        <tr className="border-b border-indigo-500/25 text-left text-[11px] uppercase tracking-wider text-indigo-300/70 bg-[#0f0c29]/90">
-                          <th className="py-3 px-3 font-semibold">Tələbə</th>
-                          <th className="py-3 px-3 font-semibold whitespace-nowrap">Sahə</th>
-                          <th className="py-3 px-3 font-semibold whitespace-nowrap">Başlama</th>
-                          <th className="py-3 px-3 font-semibold whitespace-nowrap">Sxem</th>
-                          <th className="py-3 px-3 font-semibold text-right whitespace-nowrap">Aylıq</th>
-                          <th className="py-3 px-3 font-semibold text-right whitespace-nowrap">Cəmi ödənilən</th>
-                          <th className="py-3 px-3 font-semibold text-right whitespace-nowrap">Qalıq borc</th>
-                          <th className="py-3 px-3 font-semibold text-right whitespace-nowrap">Əməllər</th>
-                        </tr>
-                      </thead>
-                      <tbody className="text-gray-200">
-                        {c.items.map((s) => {
-                          const isMonthly =
-                            s.billing_type === 'monthly' && s.monthly_fee != null && Number(s.monthly_fee) > 0
-                          const isPartial = s.payment_plan === 'partial'
-                          const debt = s.pending_debt != null ? Number(s.pending_debt) : 0
-                          const showDebtRed = isMonthly && isPartial && Number.isFinite(debt) && debt > 0.005
-                          const showDebt = isMonthly && Number.isFinite(debt) && debt > 0.005
-                          return (
-                            <tr
-                              key={s.enrollment_id}
-                              className="border-b border-indigo-500/10 hover:bg-indigo-500/[0.06] transition-colors align-top"
-                            >
-                              <td className="py-3 px-3 min-w-0">
-                                <div className="font-medium text-white truncate" title={`${s.first_name} ${s.last_name}`}>
-                                  {s.first_name} {s.last_name}
-                                </div>
-                                <div className="font-mono text-[11px] text-gray-500 tabular-nums truncate mt-0.5">
-                                  {s.phone || '—'}
-                                </div>
-                              </td>
-                              <td className="py-3 px-3 text-xs text-gray-300 min-w-0">
-                                <div className="text-white/90 truncate" title={s.track_subject_name || ''}>
-                                  {s.track_subject_name || '—'}
-                                </div>
-                                {s.track_group_name ? (
-                                  <div className="text-[10px] text-gray-500 truncate mt-0.5">{s.track_group_name}</div>
-                                ) : null}
-                              </td>
-                              <td className="py-3 px-3 text-xs text-gray-300 whitespace-nowrap">
-                                <span className="font-mono tabular-nums text-white/90">
-                                  {formatDdMmYyyy(s.lesson_start_date || s.payment_start_date)}
-                                </span>
-                              </td>
-                              <td className="py-3 px-3 text-xs whitespace-nowrap">
-                                {isMonthly ? (
-                                  isPartial ? (
-                                    <span className="inline-flex rounded-md bg-rose-500/15 text-rose-200 px-2 py-0.5 font-semibold">
-                                      Hissəli
-                                    </span>
-                                  ) : (
-                                    <span className="inline-flex rounded-md bg-emerald-500/10 text-emerald-200/90 px-2 py-0.5 font-medium">
-                                      Tam
-                                    </span>
-                                  )
+                  <div className="p-3 space-y-2 bg-[#0f0c29]/60">
+                    {c.items.map((s) => {
+                      const isMonthly =
+                        s.billing_type === 'monthly' && s.monthly_fee != null && Number(s.monthly_fee) > 0
+                      const isPartial = s.payment_plan === 'partial'
+                      const debt = s.pending_debt != null ? Number(s.pending_debt) : 0
+                      const showDebtRed = isMonthly && isPartial && Number.isFinite(debt) && debt > 0.005
+                      const showDebt = isMonthly && Number.isFinite(debt) && debt > 0.005
+                      return (
+                        <div
+                          key={s.enrollment_id}
+                          className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-xl border border-indigo-500/15 bg-[#0f0c29]/80 px-3 py-2"
+                        >
+                          <div className="min-w-0">
+                            <div className="font-semibold text-white truncate">
+                              {s.first_name} {s.last_name}
+                            </div>
+                            <div className="text-xs text-gray-400 flex flex-wrap gap-x-3 gap-y-1 mt-0.5">
+                              <span className="font-mono text-[11px] text-gray-500 tabular-nums truncate">{s.phone || '—'}</span>
+                              <span className="text-gray-500">Başlama:</span>
+                              <span className="font-mono text-white/90 tabular-nums">
+                                {formatDdMmYyyy(s.lesson_start_date || s.payment_start_date)}
+                              </span>
+                            </div>
+                            <div className="text-[11px] text-gray-500 mt-1 truncate">
+                              Sahə: <span className="text-gray-300">{s.track_subject_name || '—'}</span>
+                              {s.track_group_name ? <span className="text-gray-500"> · {s.track_group_name}</span> : null}
+                            </div>
+                          </div>
+
+                          <div className="flex flex-col sm:items-end gap-2 shrink-0">
+                            <div className="flex flex-wrap items-center gap-2 justify-between sm:justify-end">
+                              {isMonthly ? (
+                                isPartial ? (
+                                  <span className="inline-flex rounded-md bg-rose-500/15 text-rose-200 px-2 py-0.5 text-xs font-semibold">
+                                    Hissəli
+                                  </span>
                                 ) : (
-                                  '—'
-                                )}
-                              </td>
-                              <td className="py-3 px-3 text-right tabular-nums text-white font-medium whitespace-nowrap">
-                                {isMonthly ? formatAzn(s.monthly_fee) : '—'}
-                              </td>
-                              <td className="py-3 px-3 text-right tabular-nums text-white font-medium whitespace-nowrap">
-                                {isMonthly ? formatAzn(s.total_payments) : '—'}
-                              </td>
-                              <td
-                                className={`py-3 px-3 text-right tabular-nums font-semibold whitespace-nowrap ${
+                                  <span className="inline-flex rounded-md bg-emerald-500/10 text-emerald-200/90 px-2 py-0.5 text-xs font-medium">
+                                    Tam
+                                  </span>
+                                )
+                              ) : (
+                                <span className="inline-flex rounded-md bg-indigo-500/10 text-indigo-200/90 px-2 py-0.5 text-xs font-medium">
+                                  {c.key === '8' ? '8 dərs' : c.key === '12' ? '12 dərs' : 'Paket'}
+                                </span>
+                              )}
+
+                              {isMonthly ? (
+                                <span className="text-xs text-gray-400">
+                                  Aylıq: <span className="text-white font-mono">{formatAzn(s.monthly_fee)}</span>
+                                </span>
+                              ) : null}
+
+                              <span
+                                className={`text-xs font-semibold tabular-nums ${
                                   showDebtRed ? 'text-rose-300' : showDebt ? 'text-amber-200/90' : 'text-gray-500'
                                 }`}
                               >
-                                {isMonthly ? formatAzn(s.pending_debt) : '—'}
-                              </td>
-                              <td className="py-3 px-3 text-right">
-                                <div className="inline-flex flex-col gap-1.5 items-end w-full max-w-[11rem] ml-auto">
-                                  {isMonthly ? (
-                                    <>
-                                      <Button
-                                        type="button"
-                                        size="sm"
-                                        variant="secondary"
-                                        className="w-full justify-center"
-                                        onClick={() => openAdjust(s)}
-                                      >
-                                        Balans düzəlişi
-                                      </Button>
-                                      <Button
-                                        type="button"
-                                        size="sm"
-                                        loading={markingId === s.enrollment_id}
-                                        onClick={() => openQuickPay(s)}
-                                        className="w-full justify-center !bg-indigo-600 hover:!bg-indigo-500 !text-white border-0"
-                                      >
-                                        Ödəniş
-                                      </Button>
-                                    </>
-                                  ) : null}
-                                  <Button
-                                    type="button"
-                                    size="sm"
-                                    variant="secondary"
-                                    className="w-full justify-center"
-                                    onClick={() => void openHistory(s)}
-                                  >
-                                    Tarixçə
+                                {isMonthly ? `Borc: ${formatAzn(s.pending_debt)}` : ''}
+                              </span>
+                            </div>
+
+                            <div className="flex gap-2 flex-wrap justify-end">
+                              {isMonthly ? (
+                                <>
+                                  <Button size="sm" variant="secondary" onClick={() => openAdjust(s)}>
+                                    Balans düzəlişi
                                   </Button>
-                                </div>
-                              </td>
-                            </tr>
-                          )
-                        })}
-                      </tbody>
-                    </table>
+                                  <Button
+                                    size="sm"
+                                    loading={markingId === s.enrollment_id}
+                                    onClick={() => openQuickPay(s)}
+                                    className="!bg-indigo-600 hover:!bg-indigo-500 !text-white border-0"
+                                  >
+                                    Ödəniş
+                                  </Button>
+                                </>
+                              ) : null}
+                              <Button size="sm" variant="secondary" onClick={() => void openHistory(s)}>
+                                Tarixçə
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
                   </div>
                 )}
               </Card>
