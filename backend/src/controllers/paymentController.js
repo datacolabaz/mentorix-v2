@@ -1,6 +1,7 @@
 const db = require('../utils/db');
 const {
   computeMonthlyBalanceState,
+  computeMonthlyCycleProgress,
   getTodayBakuYmd,
   loadInstructorMonthlyBalanceRows,
   roundMoney,
@@ -133,6 +134,7 @@ const listMyPayments = async (req, res) => {
     }
     let enrollmentOut = null;
     let lessonStartForDisplay = null;
+    let monthlyProgress = null;
     if (enrollment) {
       const { student_monthly_fee, ...rest } = enrollment;
       lessonStartForDisplay = rest.enrollment_start_date || null;
@@ -163,6 +165,33 @@ const listMyPayments = async (req, res) => {
           today_ymd: todayBaku,
           total_paid: paid,
         });
+
+        monthlyProgress = computeMonthlyCycleProgress({
+          anchor_ymd: anchorYmd,
+          today_ymd: todayBaku,
+        });
+
+        // Monthly subscription: 2 calendar days remaining notification (student + instructor)
+        if (monthlyProgress?.days_remaining === 2) {
+          const msg =
+            'Hörmətli tələbə, aylıq abunəliyinizin bitməsinə 2 gün qalıb. Davam etmək üçün ödənişi yeniləməyiniz xahiş olunur.';
+
+          await ensureNotificationOnce({
+            user_id: enrollmentOut.student_id,
+            type: 'billing_monthly_2d_student',
+            title: 'Abunəlik bitir',
+            body: msg,
+          });
+
+          if (enrollmentOut.instructor_id) {
+            await ensureNotificationOnce({
+              user_id: enrollmentOut.instructor_id,
+              type: 'billing_monthly_2d_instructor',
+              title: 'Abunəlik bitir',
+              body: msg,
+            });
+          }
+        }
       }
     }
     const limit = enrollment ? billingLimit(enrollment.billing_type) : null;
@@ -281,10 +310,9 @@ const listMyPayments = async (req, res) => {
 
     // Last-lesson notification (package): 1 dərs qalmış
     if (enrollment && limit != null && calendar_remaining_lessons === 1) {
-      const studentName = enrollment?.full_name || enrollment?.student_name || 'Tələbə';
       const instId = enrollment?.instructor_id || null;
-      const cycle = enrollment.billing_cycle || 1;
-      const studentBody = `Növbəti dərs bu paket üçün sonuncu dərsinizdir. (Dövr #${cycle})`;
+      const studentBody =
+        'Hörmətli tələbə, aylıq abunəliyinizin bitməsinə 2 gün qalıb. Davam etmək üçün ödənişi yeniləməyiniz xahiş olunur.';
       await ensureNotificationOnce({
         user_id: enrollment.student_id,
         type: 'billing_pkg_last_lesson_student',
@@ -292,7 +320,8 @@ const listMyPayments = async (req, res) => {
         body: studentBody,
       });
       if (instId) {
-        const instBody = `${studentName} -nın paketində növbəti dərs sonuncudur. Ödənişi yeniləməyi xatırladın. (Dövr #${cycle})`;
+        const instBody =
+          'Hörmətli tələbə, aylıq abunəliyinizin bitməsinə 2 gün qalıb. Davam etmək üçün ödənişi yeniləməyiniz xahiş olunur.';
         await ensureNotificationOnce({
           user_id: instId,
           type: 'billing_pkg_last_lesson_instructor',
@@ -318,6 +347,7 @@ const listMyPayments = async (req, res) => {
             planned_lessons_in_cycle: planned_lessons_in_cycle,
             lesson_start_date_for_display: lessonStartForDisplay,
             payment_start_date_for_display: lessonStartForDisplay,
+            monthly_progress: monthlyProgress,
           }
         : null,
     });
