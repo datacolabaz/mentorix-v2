@@ -223,12 +223,10 @@ function generateLessonStarts({ startYmd, lessonWeekdays, lessonTimes, count }) 
 
 /** 8/12: 1-ci dövrün planlı dərslərini silib yenidən yaradır (client = tranzaksiya client-i) */
 async function replaceCycleOneScheduledLessons(client, params) {
-  const { enrollmentId, studentId, instructor_id, ni, lwd, lt, firstYmd, limit } = params;
+  const { enrollmentId, studentId, instructor_id, ni, lwd, lt, firstYmd, limit, group_id } = params;
   if (!limit || !firstYmd) return;
-  const todayBaku = await bakuTodayYmdDb(client);
-  const effectiveStart = maxYmd(firstYmd, todayBaku);
   const starts = generateLessonStarts({
-    startYmd: effectiveStart,
+    startYmd: firstYmd,
     lessonWeekdays: lwd,
     lessonTimes: lt,
     count: limit,
@@ -254,21 +252,29 @@ async function replaceCycleOneScheduledLessons(client, params) {
     if (occupied.rowCount > 0) {
       throw Object.assign(new Error('LESSON_CONFLICT'), {
         code: 'LESSON_CONFLICT',
+        kind: 'occupied',
         at: `${ymd} ${time}`,
       });
     }
     const exists = await client.query(
-      `SELECT id FROM lessons
-       WHERE instructor_id = $1
-         AND student_id <> $3
-         AND lesson_date = ($2::timestamp AT TIME ZONE 'Asia/Baku')
-         AND NOT (enrollment_id = $4::uuid AND billing_cycle = 1)
+      `SELECT l.id
+       FROM lessons l
+       JOIN enrollments e2 ON e2.id = l.enrollment_id
+       WHERE l.instructor_id = $1
+         AND l.student_id <> $3
+         AND l.lesson_date = ($2::timestamp AT TIME ZONE 'Asia/Baku')
+         AND NOT (l.enrollment_id = $4::uuid AND l.billing_cycle = 1)
+         AND (
+           $5::uuid IS NULL
+           OR e2.group_id IS DISTINCT FROM $5::uuid
+         )
        LIMIT 1`,
-      [instructor_id, starts[i], studentId, enrollmentId]
+      [instructor_id, starts[i], studentId, enrollmentId, group_id || null]
     );
     if (exists.rowCount > 0) {
       throw Object.assign(new Error('LESSON_CONFLICT'), {
         code: 'LESSON_CONFLICT',
+        kind: 'existing_lesson',
         at: `${ymd} ${time}`,
       });
     }
@@ -428,9 +434,8 @@ router.post('/enroll', authenticate, authorize('instructor', 'admin'), async (re
       const limit = billingLimit(enr.billing_type);
       const startYmd = firstYmd || enrollmentYmd;
       if (limit) {
-        const effectiveStart = maxYmd(startYmd, todayBaku);
         const starts = generateLessonStarts({
-          startYmd: effectiveStart,
+          startYmd,
           lessonWeekdays: lwd,
           lessonTimes: lt,
           count: limit,
@@ -459,12 +464,18 @@ router.post('/enroll', authenticate, authorize('instructor', 'admin'), async (re
           }
 
           const exists = await client.query(
-            `SELECT id FROM lessons
-             WHERE instructor_id = $1
-               AND student_id <> $3
-               AND lesson_date = ($2::timestamp AT TIME ZONE 'Asia/Baku')
+            `SELECT l.id
+             FROM lessons l
+             JOIN enrollments e2 ON e2.id = l.enrollment_id
+             WHERE l.instructor_id = $1
+               AND l.student_id <> $3
+               AND l.lesson_date = ($2::timestamp AT TIME ZONE 'Asia/Baku')
+               AND (
+                 $4::uuid IS NULL
+                 OR e2.group_id IS DISTINCT FROM $4::uuid
+               )
              LIMIT 1`,
-            [instructor_id, starts[i], student_id]
+            [instructor_id, starts[i], student_id, trackIds.group_id || null]
           );
           if (exists.rowCount > 0) {
             throw Object.assign(new Error('LESSON_CONFLICT'), {
