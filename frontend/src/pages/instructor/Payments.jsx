@@ -167,6 +167,25 @@ export default function InstructorPayments() {
     })
   }, [quickRow, quickLines, todayBaku])
 
+  const categorizedRows = useMemo(() => {
+    const list = Array.isArray(students) ? students : []
+    const cats = [
+      { key: 'monthly', label: 'Aylıq paketlər', match: (s) => String(s.billing_type) === 'monthly' },
+      { key: '8', label: '8 dərs paketləri', match: (s) => String(s.billing_type) === '8_lessons' },
+      { key: '12', label: '12 dərs paketləri', match: (s) => String(s.billing_type) === '12_lessons' },
+      { key: 'other', label: 'Digər', match: (s) => !['monthly', '8_lessons', '12_lessons'].includes(String(s.billing_type)) },
+    ]
+
+    const out = []
+    for (const c of cats) {
+      const items = list.filter(c.match)
+      if (!items.length) continue
+      out.push({ kind: 'header', key: c.key, label: c.label, count: items.length })
+      for (const s of items) out.push({ kind: 'student', key: s.enrollment_id, s })
+    }
+    return out
+  }, [students])
+
   const submitQuickPay = async (keepOpen = false) => {
     if (!quickRow?.enrollment_id) return
     const payload = []
@@ -344,7 +363,18 @@ export default function InstructorPayments() {
                 </tr>
               </thead>
               <tbody className="text-gray-200">
-                {students.map((s) => {
+                {categorizedRows.map((row) => {
+                  if (row.kind === 'header') {
+                    return (
+                      <tr key={`h-${row.key}`} className="bg-[#13112e]/70 border-b border-indigo-500/20">
+                        <td colSpan={8} className="py-2.5 px-3 text-xs font-semibold text-indigo-200">
+                          {row.label}{' '}
+                          <span className="text-gray-500 font-normal">({row.count} tələbə)</span>
+                        </td>
+                      </tr>
+                    )
+                  }
+                  const s = row.s
                   const isMonthly = s.billing_type === 'monthly' && s.monthly_fee != null && Number(s.monthly_fee) > 0
                   const isPartial = s.payment_plan === 'partial'
                   const debt = s.pending_debt != null ? Number(s.pending_debt) : 0
