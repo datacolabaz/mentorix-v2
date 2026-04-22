@@ -12,6 +12,7 @@ import {
   slotCoversHour,
   slotFirstHour,
   GRID_START,
+  GRID_END,
   GRID_ROW_COUNT,
 } from '../../lib/lessonWeekGrid'
 import { readCache, writeCache } from '../../lib/cache'
