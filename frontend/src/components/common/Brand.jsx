@@ -6,7 +6,7 @@ export default function Brand({ className = '', imgClassName = '', showText = fa
       <img
         src={logo}
         alt="Mentorix"
-        className={`h-9 w-auto select-none ${imgClassName}`}
+        className={`h-10 max-h-[50px] w-auto object-contain select-none ${imgClassName}`}
         draggable={false}
       />
       {showText ? (

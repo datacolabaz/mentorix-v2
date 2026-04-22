@@ -113,8 +113,8 @@ export default function InstructorLayout() {
           focusMode ? 'lg:-translate-x-full' : '',
         ].join(' ')}
       >
-        <div className="p-5 border-b border-white/10 hidden lg:block">
-          <Brand imgClassName="h-10" />
+        <div className="px-4 py-3 border-b border-white/10 hidden lg:block">
+          <Brand imgClassName="h-12 max-h-[50px]" className="justify-center" />
           <div className="mt-3 p-3 bg-surface-1 rounded-xl border border-white/10">
             <div className="w-8 h-8 rounded-full bg-white/10 border border-white/10 flex items-center justify-center text-sm font-bold mb-2">
               {user?.full_name?.split(' ').map((n) => n[0]).join('').slice(0, 2)}
@@ -124,19 +124,22 @@ export default function InstructorLayout() {
           </div>
         </div>
 
-        <div className="lg:hidden p-4 border-b border-white/10 flex items-center justify-between gap-2">
-          <div className="min-w-0">
+        <div className="lg:hidden px-4 py-3 border-b border-white/10">
+          <div className="flex items-center justify-between gap-2">
+            <Brand imgClassName="h-10 max-h-[50px]" />
+            <button
+              type="button"
+              className="p-2 rounded-xl text-gray-400 hover:text-white hover:bg-white/10 shrink-0 text-lg leading-none"
+              onClick={() => setNavOpen(false)}
+              aria-label="Bağla"
+            >
+              ×
+            </button>
+          </div>
+          <div className="mt-3 min-w-0">
             <div className="text-sm font-semibold truncate">{user?.full_name}</div>
             <div className="text-xs text-gray-300">{instructorRoleAz(user?.public_label)}</div>
           </div>
-          <button
-            type="button"
-            className="p-2 rounded-xl text-gray-400 hover:text-white hover:bg-white/10 shrink-0 text-lg leading-none"
-            onClick={() => setNavOpen(false)}
-            aria-label="Bağla"
-          >
-            ×
-          </button>
         </div>
 
         <nav className="flex-1 p-3 space-y-1 overflow-y-auto">

@@ -65,8 +65,8 @@ export default function StudentLayout() {
           (focusMode ? ' md:-translate-x-full' : '')
         }
       >
-        <div className="p-5 border-b border-white/10 pt-14 md:pt-5">
-          <Brand imgClassName="h-10" />
+        <div className="px-4 py-3 border-b border-white/10 pt-14 md:pt-4">
+          <Brand imgClassName="h-12 max-h-[50px]" className="justify-center" />
           <div className="mt-3 p-3 bg-surface-1 rounded-xl border border-white/10">
             <div className="w-8 h-8 rounded-full bg-white/10 border border-white/10 flex items-center justify-center text-sm font-bold mb-2">
               {user?.full_name?.split(' ').map((n) => n[0]).join('').slice(0, 2)}
