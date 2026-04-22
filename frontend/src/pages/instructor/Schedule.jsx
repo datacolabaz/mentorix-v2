@@ -354,4 +354,10 @@ export default function InstructorSchedule() {
           </>
         )}
 
-        <Button type="button" variant="secondary" className="w-full mt-5 justify-center" onClick={() =>
+        <Button type="button" variant="secondary" className="w-full mt-5 justify-center" onClick={() => setCellModal(null)}>
+          Bağla
+        </Button>
+      </Modal>
+    </div>
+  )
+}
