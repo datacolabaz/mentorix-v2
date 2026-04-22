@@ -6,6 +6,7 @@ const {
   loadInstructorMonthlyBalanceRows,
   roundMoney,
   toYmd: anchorToYmd,
+  listBillingDueDatesUpTo,
 } = require('../services/subscriptionBilling');
 
 /** Bu qeydlər balansı azaldır; ümumi gəlir statistikasına daxil edilmir */
@@ -47,6 +48,168 @@ function billingLimit(type) {
   if (type === '12_lessons') return 12;
   return null;
 }
+
+function addOneMonthYmd(anchorYmd, fromYmd) {
+  const a = String(anchorYmd || '').slice(0, 10);
+  const f = String(fromYmd || '').slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(a) || !/^\d{4}-\d{2}-\d{2}$/.test(f)) return null;
+  const [, , ad] = a.split('-').map(Number);
+  const [fy, fmo] = f.split('-').map(Number);
+  let y = fy;
+  let mo = fmo + 1;
+  if (mo === 13) {
+    y += 1;
+    mo = 1;
+  }
+  const last = new Date(y, mo, 0).getDate();
+  const d = Math.min(ad, last);
+  return `${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+}
+
+const getRestorePreview = async (req, res) => {
+  try {
+    const { enrollment_id } = req.params;
+    const { rows: en } = await db.query(
+      `SELECT e.id, e.instructor_id, e.student_id, e.billing_type,
+              e.enrolled_at, e.enrollment_start_date,
+              sp.monthly_fee
+       FROM enrollments e
+       LEFT JOIN student_profiles sp ON sp.user_id = e.student_id
+       WHERE e.id = $1`,
+      [enrollment_id]
+    );
+    if (!en[0]) return res.status(404).json({ success: false, message: 'Qeydiyyat tapılmadı' });
+    if (req.user.role === 'instructor' && !sameUuid(en[0].instructor_id, req.user.id)) {
+      return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
+    }
+
+    if (en[0].billing_type !== 'monthly') {
+      return res.json({ success: true, items: [] });
+    }
+
+    const mf = en[0].monthly_fee != null ? Number(en[0].monthly_fee) : NaN;
+    if (!Number.isFinite(mf) || mf <= 0) {
+      return res.json({ success: true, items: [] });
+    }
+
+    const anchorYmd = anchorToYmd(en[0].enrollment_start_date);
+    const enrolledYmd = toYmd(en[0].enrolled_at) || (await getTodayBakuYmd(db));
+    const todayYmd = await getTodayBakuYmd(db);
+
+    if (!anchorYmd || !enrolledYmd || anchorYmd >= enrolledYmd) {
+      return res.json({ success: true, items: [] });
+    }
+
+    const dueDates = listBillingDueDatesUpTo(anchorYmd, todayYmd);
+    const raw = [];
+    for (const start of dueDates) {
+      if (start >= enrolledYmd) break;
+      const end = addOneMonthYmd(anchorYmd, start);
+      if (!end) continue;
+      raw.push({
+        id: `monthly:${start}`,
+        kind: 'monthly',
+        title: `${start} — ${end}`,
+        cycle_start_ymd: start,
+        cycle_end_ymd: end,
+        amount: mf,
+        payment_date: start,
+      });
+    }
+
+    const { rows: existing } = await db.query(
+      `SELECT payment_date::text AS ymd
+       FROM payments
+       WHERE enrollment_id = $1
+         AND status = 'completed'
+         AND payment_date IS NOT NULL`,
+      [enrollment_id]
+    );
+    const done = new Set(existing.map((r) => String(r.ymd).slice(0, 10)));
+    const items = raw.filter((x) => !done.has(x.payment_date));
+    res.json({ success: true, items });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+const confirmRestorePayments = async (req, res) => {
+  try {
+    const { enrollment_id } = req.params;
+    const ids = Array.isArray(req.body?.ids) ? req.body.ids.map((x) => String(x)) : [];
+    if (!ids.length) return res.status(400).json({ success: false, message: 'Heç nə seçilməyib' });
+
+    const { rows: en } = await db.query(
+      `SELECT e.id, e.instructor_id, e.student_id, e.billing_type,
+              e.enrolled_at, e.enrollment_start_date,
+              sp.monthly_fee
+       FROM enrollments e
+       LEFT JOIN student_profiles sp ON sp.user_id = e.student_id
+       WHERE e.id = $1`,
+      [enrollment_id]
+    );
+    if (!en[0]) return res.status(404).json({ success: false, message: 'Qeydiyyat tapılmadı' });
+    if (req.user.role === 'instructor' && !sameUuid(en[0].instructor_id, req.user.id)) {
+      return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
+    }
+    if (en[0].billing_type !== 'monthly') {
+      return res.status(400).json({ success: false, message: 'Yalnız aylıq paket üçün dəstəklənir' });
+    }
+
+    const mf = en[0].monthly_fee != null ? Number(en[0].monthly_fee) : NaN;
+    if (!Number.isFinite(mf) || mf <= 0) {
+      return res.status(400).json({ success: false, message: 'Aylıq məbləğ tapılmadı' });
+    }
+
+    const anchorYmd = anchorToYmd(en[0].enrollment_start_date);
+    const enrolledYmd = toYmd(en[0].enrolled_at) || (await getTodayBakuYmd(db));
+    const todayYmd = await getTodayBakuYmd(db);
+    if (!anchorYmd || !enrolledYmd || anchorYmd >= enrolledYmd) {
+      return res.status(400).json({ success: false, message: 'Bərpa ediləcək aralıq yoxdur' });
+    }
+
+    const allowed = new Set();
+    for (const start of listBillingDueDatesUpTo(anchorYmd, todayYmd)) {
+      if (start >= enrolledYmd) break;
+      allowed.add(`monthly:${start}`);
+    }
+    const selected = ids.filter((x) => allowed.has(x)).map((x) => x.split(':')[1]);
+    if (!selected.length) {
+      return res.status(400).json({ success: false, message: 'Seçilmiş dövrlər etibarlı deyil' });
+    }
+
+    const inserted = await db.transaction(async (client) => {
+      const { rows: existing } = await client.query(
+        `SELECT payment_date::text AS ymd
+         FROM payments
+         WHERE enrollment_id = $1
+           AND status = 'completed'
+           AND payment_date = ANY($2::date[])`,
+        [enrollment_id, selected]
+      );
+      const done = new Set(existing.map((r) => String(r.ymd).slice(0, 10)));
+      const toInsert = selected.filter((d) => !done.has(String(d).slice(0, 10)));
+      if (!toInsert.length) return [];
+
+      const amounts = toInsert.map(() => mf);
+      const notes = toInsert.map((d) => `[Keçmiş ödəniş qeydi] Aylıq abunə ödənişi (${d})`);
+      const periods = toInsert.map((d) => `Aylıq: ${d}`);
+      const { rows: ins } = await client.query(
+        `INSERT INTO payments (enrollment_id, student_id, amount, currency, payment_method, status, paid_at, payment_date, notes, period)
+         SELECT $1::uuid, $2::uuid, t.amt, 'AZN', 'cash', 'completed', NOW(),
+                t.pd::date, t.nt, t.per
+         FROM unnest($3::numeric[], $4::date[], $5::text[], $6::text[]) AS t(amt, pd, nt, per)
+         RETURNING id, amount, payment_date, notes, period`,
+        [enrollment_id, en[0].student_id, amounts, toInsert, notes, periods]
+      );
+      return ins;
+    });
+
+    res.json({ success: true, inserted, count: inserted.length });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
 
 async function ensureNotificationOnce({ user_id, type, title, body }) {
   // Dedupe: same user+type+body in last 45 days
@@ -752,5 +915,7 @@ module.exports = {
   markMonthlyPaid,
   markMonthlyPaidBatch,
   getEnrollmentPaymentHistory,
+  getRestorePreview,
+  confirmRestorePayments,
   deletePayment,
 };
