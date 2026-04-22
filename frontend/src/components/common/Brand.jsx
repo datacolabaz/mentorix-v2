@@ -9,10 +9,10 @@ export default function Brand({
 }) {
   const sizeClass =
     size === 'login'
-      ? 'h-[180px] max-h-[220px]'
+      ? 'h-[200px] max-h-[248px]'
       : size === 'sidebar'
-        ? 'h-[76px] max-h-[92px]'
-        : 'h-10 max-h-[50px]'
+        ? 'h-[88px] max-h-[104px]'
+        : 'h-11 max-h-[56px]'
   return (
     <div className={`flex items-center gap-3 min-w-0 ${className}`}>
       <img
