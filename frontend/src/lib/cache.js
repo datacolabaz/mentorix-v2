@@ -1,4 +1,4 @@
-const PREFIX = 'edupanel_cache_'
+const PREFIX = 'mentorix_cache_'
 
 function safeNow() {
   try {

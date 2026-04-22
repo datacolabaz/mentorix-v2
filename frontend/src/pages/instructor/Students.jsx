@@ -115,8 +115,7 @@ function applyPaymentScheme(prev, scheme) {
   return { ...prev, billing_timing: 'postpaid', payment_plan: 'full' }
 }
 
-const inp =
-  'w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500'
+const inp = 'w-full bg-surface-1 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-primary/40'
 
 /** Komponent fayl səviyyəsində olmalıdır — parent içində təyin etsək hər render yeni tip olur və input fokusunu itirir */
 function StudentFormFields({
@@ -196,8 +195,8 @@ function StudentFormFields({
         <p className="text-[10px] text-gray-500 mt-1.5">Giriş üçün əsas identifikator telefon nömrəsidir (PIN ilə).</p>
       </div>
 
-      <div className="rounded-xl border border-violet-500/30 bg-violet-950/20 p-3 space-y-2">
-        <p className="text-xs font-semibold text-violet-200 uppercase tracking-wider">1. Qeydiyyat növü *</p>
+      <div className="rounded-xl border border-white/10 bg-surface-2/40 p-3 space-y-2">
+        <p className="text-xs font-semibold text-gray-200 uppercase tracking-wider">1. Qeydiyyat növü *</p>
         <p className="text-[10px] text-gray-400 leading-relaxed">
           <span className="text-gray-200">Dərs sayı ilə</span> — 8 və ya 12 dərsli paket, tarixlər paket üzrə avtomatik planlanır.
           <span className="mx-1 text-gray-600">·</span>

@@ -4,11 +4,11 @@ export default {
   theme: {
     extend: {
       colors: {
-        primary: '#3b82f6',
+        primary: '#cafc00',
         surface: {
-          1: '#13112e',
-          2: '#1a1740',
-          3: '#211e52',
+          1: '#121212',
+          2: '#1a1a1a',
+          3: '#222222',
         },
       },
       fontFamily: {

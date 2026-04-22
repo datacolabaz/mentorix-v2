@@ -1,11 +1,11 @@
-# Edupanel
+# Mentorix
 
 Production-grade School Management SaaS
 
 ## Struktur
 
 ```
-edupanel/
+mentorix/
 ├── backend/   → Node.js + Express + PostgreSQL
 └── frontend/  → React + Vite + Tailwind CSS
 ```

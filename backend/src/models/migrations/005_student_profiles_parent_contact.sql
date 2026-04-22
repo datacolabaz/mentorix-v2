@@ -1,5 +1,5 @@
 -- Valideyn mətni (parent_id olmadan da). Cədvəl yoxdursa yaradılır.
--- QEYD: DATABASE_URL real Edupanel Postgres olmalıdır (Railway → Postgres → Connect).
+-- QEYD: DATABASE_URL real Mentorix Postgres olmalıdır (Railway → Postgres → Connect).
 
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import useAuthStore from '../hooks/useAuth'
 import useUiStore from '../hooks/useUi'
+import Brand from '../components/common/Brand'
 import Footer from '../components/common/Footer'
 
 const NAV = [
@@ -26,11 +27,11 @@ export default function StudentLayout() {
   }, [focusMode])
 
   return (
-    <div className="flex h-screen bg-[#0f0c29] text-white overflow-hidden">
+    <div className="flex h-screen bg-[#0b0b0b] text-white overflow-hidden">
       <button
         type="button"
         onClick={() => setNavOpen(true)}
-        className="md:hidden fixed top-3 left-3 z-50 w-11 h-11 rounded-xl bg-[#13112e] border border-indigo-500/30 text-lg flex items-center justify-center shadow-lg"
+        className="md:hidden fixed top-3 left-3 z-50 w-11 h-11 rounded-xl bg-surface-2 border border-white/10 text-lg flex items-center justify-center shadow-lg"
         aria-label="Menyunu aç"
       >
         ☰
@@ -40,7 +41,7 @@ export default function StudentLayout() {
         <button
           type="button"
           onClick={() => setNavOpen(true)}
-          className="hidden md:flex fixed top-3 left-3 z-[260] w-11 h-11 rounded-xl bg-[#13112e] border border-indigo-500/30 text-lg items-center justify-center shadow-lg"
+          className="hidden md:flex fixed top-3 left-3 z-[260] w-11 h-11 rounded-xl bg-surface-2 border border-white/10 text-lg items-center justify-center shadow-lg"
           aria-label="Menyunu aç"
         >
           ☰
@@ -58,18 +59,16 @@ export default function StudentLayout() {
 
       <aside
         className={
-          'w-64 max-w-[85vw] bg-[#13112e] border-r border-indigo-500/20 flex flex-col flex-shrink-0 z-40 h-full ' +
+          'w-64 max-w-[85vw] bg-surface-2 border-r border-white/10 flex flex-col flex-shrink-0 z-40 h-full ' +
           'fixed md:static inset-y-0 left-0 transform transition-transform duration-200 ease-out ' +
           (navOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0') +
           (focusMode ? ' md:-translate-x-full' : '')
         }
       >
-        <div className="p-5 border-b border-indigo-500/20 pt-14 md:pt-5">
-          <div className="font-display font-extrabold text-xl bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
-            edupanel <span className="text-gray-500 text-xs font-normal">.co</span>
-          </div>
-          <div className="mt-3 p-3 bg-[#1a1740] rounded-xl border border-indigo-500/20">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-cyan-600 flex items-center justify-center text-sm font-bold mb-2">
+        <div className="p-5 border-b border-white/10 pt-14 md:pt-5">
+          <Brand imgClassName="h-8" />
+          <div className="mt-3 p-3 bg-surface-1 rounded-xl border border-white/10">
+            <div className="w-8 h-8 rounded-full bg-white/10 border border-white/10 flex items-center justify-center text-sm font-bold mb-2">
               {user?.full_name?.split(' ').map((n) => n[0]).join('').slice(0, 2)}
             </div>
             <div className="text-sm font-semibold truncate">{user?.full_name}</div>
@@ -86,7 +85,7 @@ export default function StudentLayout() {
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
                   isActive
-                    ? 'bg-blue-500/20 text-blue-300 border border-blue-500/20'
+                    ? 'bg-primary/10 text-primary border border-primary/20'
                     : 'text-gray-400 hover:bg-white/5 hover:text-white'
                 }`
               }
@@ -96,7 +95,7 @@ export default function StudentLayout() {
             </NavLink>
           ))}
         </nav>
-        <div className="p-4 border-t border-indigo-500/20">
+        <div className="p-4 border-t border-white/10">
           <button
             onClick={() => {
               setFocusMode(false)

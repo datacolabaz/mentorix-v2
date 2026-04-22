@@ -4,6 +4,7 @@ import useAuthStore from '../hooks/useAuth'
 import useUiStore from '../hooks/useUi'
 import api from '../lib/api'
 import { instructorRoleAz } from '../lib/instructorLabel'
+import Brand from '../components/common/Brand'
 import Footer from '../components/common/Footer'
 
 const NAV = [
@@ -71,18 +72,18 @@ export default function InstructorLayout() {
   }, [])
 
   return (
-    <div className="flex h-screen bg-[#0f0c29] text-white overflow-hidden">
+    <div className="flex h-screen bg-[#0b0b0b] text-white overflow-hidden">
       {focusMode && (
         <button
           type="button"
           aria-label="Menyunu aç"
-          className="fixed top-3 left-3 z-[260] w-11 h-11 rounded-xl bg-[#13112e] border border-indigo-500/30 text-lg flex items-center justify-center shadow-lg"
+          className="fixed top-3 left-3 z-[260] w-11 h-11 rounded-xl bg-surface-2 border border-white/10 text-lg flex items-center justify-center shadow-lg"
           onClick={() => setNavOpen(true)}
         >
           ☰
         </button>
       )}
-      <header className="lg:hidden fixed top-0 left-0 right-0 z-[60] flex items-center justify-between gap-2 px-3 py-3 bg-[#13112e] border-b border-indigo-500/20">
+      <header className="lg:hidden fixed top-0 left-0 right-0 z-[60] flex items-center justify-between gap-2 px-3 py-3 bg-surface-2 border-b border-white/10">
         <button
           type="button"
           aria-label="Menyu"
@@ -91,9 +92,7 @@ export default function InstructorLayout() {
         >
           ☰
         </button>
-        <div className="font-display font-extrabold text-sm sm:text-base bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent truncate min-w-0">
-          edupanel <span className="text-gray-500 text-xs font-normal">.co</span>
-        </div>
+        <Brand imgClassName="h-6" />
         <div className="w-10 shrink-0" />
       </header>
 
@@ -108,29 +107,27 @@ export default function InstructorLayout() {
 
       <aside
         className={[
-          'w-[min(17rem,88vw)] max-w-[280px] bg-[#13112e] border-r border-indigo-500/20 flex flex-col flex-shrink-0',
+          'w-[min(17rem,88vw)] max-w-[280px] bg-surface-2 border-r border-white/10 flex flex-col flex-shrink-0',
           'fixed lg:static inset-y-0 left-0 z-[80] transition-transform duration-200 ease-out',
           navOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
           focusMode ? 'lg:-translate-x-full' : '',
         ].join(' ')}
       >
-        <div className="p-5 border-b border-indigo-500/20 hidden lg:block">
-          <div className="font-display font-extrabold text-xl bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
-            edupanel <span className="text-gray-500 text-xs font-normal">.co</span>
-          </div>
-          <div className="mt-3 p-3 bg-[#1a1740] rounded-xl border border-indigo-500/20">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-blue-600 flex items-center justify-center text-sm font-bold mb-2">
-              {user?.full_name?.split(' ').map(n => n[0]).join('').slice(0, 2)}
+        <div className="p-5 border-b border-white/10 hidden lg:block">
+          <Brand imgClassName="h-8" />
+          <div className="mt-3 p-3 bg-surface-1 rounded-xl border border-white/10">
+            <div className="w-8 h-8 rounded-full bg-white/10 border border-white/10 flex items-center justify-center text-sm font-bold mb-2">
+              {user?.full_name?.split(' ').map((n) => n[0]).join('').slice(0, 2)}
             </div>
             <div className="text-sm font-semibold break-words">{user?.full_name}</div>
-            <div className="text-xs text-gray-400">{instructorRoleAz(user?.public_label)}</div>
+            <div className="text-xs text-gray-300">{instructorRoleAz(user?.public_label)}</div>
           </div>
         </div>
 
-        <div className="lg:hidden p-4 border-b border-indigo-500/20 flex items-center justify-between gap-2">
+        <div className="lg:hidden p-4 border-b border-white/10 flex items-center justify-between gap-2">
           <div className="min-w-0">
             <div className="text-sm font-semibold truncate">{user?.full_name}</div>
-            <div className="text-xs text-gray-400">{instructorRoleAz(user?.public_label)}</div>
+            <div className="text-xs text-gray-300">{instructorRoleAz(user?.public_label)}</div>
           </div>
           <button
             type="button"
@@ -151,7 +148,7 @@ export default function InstructorLayout() {
               onClick={() => setNavOpen(false)}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                  isActive ? 'bg-blue-500/20 text-blue-300 border border-blue-500/20'
+                  isActive ? 'bg-primary/10 text-primary border border-primary/20'
                     : 'text-gray-400 hover:bg-white/5 hover:text-white'
                 }`}
             >
@@ -170,7 +167,7 @@ export default function InstructorLayout() {
           ))}
         </nav>
 
-        <div className="p-4 border-t border-indigo-500/20">
+        <div className="p-4 border-t border-white/10">
           <button
             onClick={() => {
               setFocusMode(false)

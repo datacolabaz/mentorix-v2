@@ -43,7 +43,7 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log('Edupanel API running on port', PORT);
+  console.log('Mentorix API running on port', PORT);
   processExamNotificationJobs().catch((e) => console.error('exam notification jobs startup', e.message));
   recomputeAllInstructorsUsage().catch((e) => console.error('usage sync startup', e.message));
   setTimeout(() => {

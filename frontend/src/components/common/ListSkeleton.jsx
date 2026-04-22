@@ -10,7 +10,7 @@ export default function ListSkeleton({ message = 'Yüklənir…' }) {
       aria-live="polite"
     >
       <div
-        className="h-9 w-9 rounded-full border-2 border-indigo-500/25 border-t-blue-400 animate-spin shrink-0"
+        className="h-9 w-9 rounded-full border-2 border-white/10 border-t-primary animate-spin shrink-0"
         aria-hidden
       />
       <p className="text-sm">{message}</p>

@@ -87,7 +87,7 @@ async function deliverPermanentPinSms(user, cleanPhone, opts = {}) {
     await db.query('UPDATE users SET pin_hash = $1 WHERE id = $2', [hash, user.id]);
   }
 
-  const message = `Edupanel: Sizin daimi Edupanel giris PIN-iniz: ${plain}. Novbeti girislerde yalniz bu 6 reqemi daxil edin (OTP yox). Kodu hec kese demeyin.`;
+  const message = `Mentorix: Sizin daimi Mentorix giriş PIN-iniz: ${plain}. Növbəti girişlərdə yalnız bu 6 rəqəmi daxil edin (OTP yox). Kodu heç kəsə deməyin.`;
   const smsRes = await sendSms({
     instructorId: billingId || null,
     phone: cleanPhone,
