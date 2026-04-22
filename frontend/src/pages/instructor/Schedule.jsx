@@ -106,6 +106,21 @@ export default function InstructorSchedule() {
     return out
   }, [datedLessons])
 
+  const gridEnd = useMemo(() => {
+    let maxEnd = GRID_END
+    for (const dayList of datedSlotsByDay.values()) {
+      for (const s of dayList) {
+        const em = parseToMinutes(s.end_time)
+        const endHour = Math.ceil(em / 60)
+        if (Number.isFinite(endHour)) maxEnd = Math.max(maxEnd, endHour)
+      }
+    }
+    // always show at least one hour past last label, but keep sane upper bound (0..24)
+    return Math.max(GRID_START + 1, Math.min(24, maxEnd))
+  }, [datedSlotsByDay])
+
+  const gridRowCount = Math.max(1, gridEnd - GRID_START)
+
   const openCellModal = (dayFull, primary) => {
     setCellModal({
       phase: 'pickStudent',
@@ -188,10 +203,10 @@ export default function InstructorSchedule() {
             </div>
             <div className="overflow-x-auto">
               <div
-                className="grid gap-px bg-indigo-500/20 rounded-xl overflow-hidden border border-indigo-500/25 min-w-[680px]"
+                className="grid gap-px bg-indigo-500/20 rounded-xl overflow-hidden border border-indigo-500/25 min-w-[680px] max-h-[70vh] overflow-y-auto"
                 style={{
                   gridTemplateColumns: `3.5rem repeat(7, minmax(0,1fr))`,
-                  gridTemplateRows: `auto repeat(${GRID_ROW_COUNT}, minmax(2rem, 2.25rem))`,
+                  gridTemplateRows: `auto repeat(${gridRowCount}, minmax(2rem, 2.25rem))`,
                 }}
               >
                 <div className="bg-[#13112e] p-2 text-[10px] font-semibold text-gray-500 uppercase tracking-wider" />
@@ -203,7 +218,7 @@ export default function InstructorSchedule() {
                     {d.short}
                   </div>
                 ))}
-                {Array.from({ length: GRID_ROW_COUNT }, (_, i) => GRID_START + i).map((hour) => (
+                {Array.from({ length: gridRowCount }, (_, i) => GRID_START + i).map((hour) => (
                   <Fragment key={`h-${hour}`}>
                     <div className="bg-[#0f0c29] text-[10px] text-gray-500 font-mono tabular-nums flex items-center justify-end pr-2 border-t border-indigo-500/10">
                       {String(hour).padStart(2, '0')}:00

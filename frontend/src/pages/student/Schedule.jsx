@@ -207,6 +207,20 @@ export default function StudentSchedule() {
     return m
   }, [lessons, prepSlots, weeklyPattern])
 
+  const gridEnd = useMemo(() => {
+    let maxEnd = GRID_END
+    for (const list of scheduleSlotsByDay.values()) {
+      for (const s of list) {
+        const em = parseToMinutes(s.end_time)
+        const endHour = Math.ceil(em / 60)
+        if (Number.isFinite(endHour)) maxEnd = Math.max(maxEnd, endHour)
+      }
+    }
+    return Math.max(GRID_START + 1, Math.min(24, maxEnd))
+  }, [scheduleSlotsByDay])
+
+  const gridRowCount = Math.max(1, gridEnd - GRID_START)
+
   const freeDays = useMemo(() => {
     const busy = new Set([...lessonDays, ...patternDays])
     return WEEKDAYS.map((d) => d.v).filter((x) => !busy.has(x))
@@ -341,10 +355,10 @@ export default function StudentSchedule() {
 
           <div className="overflow-x-auto">
             <div
-              className="grid gap-px bg-indigo-500/20 rounded-xl overflow-hidden border border-indigo-500/25 min-w-[680px]"
+              className="grid gap-px bg-indigo-500/20 rounded-xl overflow-hidden border border-indigo-500/25 min-w-[680px] max-h-[70vh] overflow-y-auto"
               style={{
                 gridTemplateColumns: `3.5rem repeat(7, minmax(0,1fr))`,
-                gridTemplateRows: `auto repeat(${GRID_ROW_COUNT}, minmax(2rem, 2.25rem))`,
+                gridTemplateRows: `auto repeat(${gridRowCount}, minmax(2rem, 2.25rem))`,
               }}
             >
               <div className="bg-[#13112e] p-2 text-[10px] font-semibold text-gray-500 uppercase tracking-wider" />
@@ -357,7 +371,7 @@ export default function StudentSchedule() {
                 </div>
               ))}
 
-              {Array.from({ length: GRID_ROW_COUNT }, (_, i) => GRID_START + i).map((hour) => (
+              {Array.from({ length: gridRowCount }, (_, i) => GRID_START + i).map((hour) => (
                 <Fragment key={hour}>
                   <div className="bg-[#0f0c29] text-[10px] text-gray-500 font-mono tabular-nums flex items-center justify-end pr-2 border-t border-indigo-500/10">
                     {String(hour).padStart(2, '0')}:00
