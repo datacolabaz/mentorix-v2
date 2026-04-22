@@ -180,6 +180,59 @@ function nextDateForWeekday(afterYmd, weekday /*1-7*/, ymdInclusive) {
   return `${yy}-${mm}-${dd}`;
 }
 
+async function bakuTodayYmdDb(dbConn) {
+  const { rows } = await dbConn.query(
+    `SELECT to_char((CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Baku')::date, 'YYYY-MM-DD') AS ymd`
+  );
+  return rows[0]?.ymd || new Date().toISOString().slice(0, 10);
+}
+
+function maxYmd(a, b) {
+  if (!a) return b;
+  if (!b) return a;
+  return a > b ? a : b;
+}
+
+async function reserveGroupSlots(client, { instructor_id, ni, lwd, lt, subject_id, group_id }) {
+  // If no group, don't reserve group lock slots.
+  if (!group_id) return;
+  for (const wd of lwd) {
+    const t = lt?.[String(wd)];
+    if (!t) continue;
+    const start = `${String(t).slice(0, 5)}:00`;
+
+    // If a slot exists and is occupied by another group, block.
+    const { rows: slotRows } = await client.query(
+      `SELECT id, is_occupied, group_id
+       FROM teacher_schedules
+       WHERE REPLACE(LOWER(TRIM(instructor_id::text)), '-', '') = $1
+         AND day_of_week = $2
+         AND start_time = $3::time
+       LIMIT 1`,
+      [ni, wd, start]
+    );
+
+    if (!slotRows[0]) continue; // no weekly slot configured -> skip lock
+    const slot = slotRows[0];
+    if (slot.is_occupied && slot.group_id && normUuid(slot.group_id) !== normUuid(group_id)) {
+      throw Object.assign(new Error('LESSON_CONFLICT'), {
+        code: 'LESSON_CONFLICT',
+        kind: 'occupied_other_group',
+        at: `${wd} ${String(t).slice(0, 5)}`,
+      });
+    }
+
+    await client.query(
+      `UPDATE teacher_schedules
+       SET is_occupied = TRUE,
+           subject_id = $2::uuid,
+           group_id = $3::uuid
+       WHERE id = $1::uuid`,
+      [slot.id, subject_id || null, group_id]
+    );
+  }
+}
+
 function generateLessonStarts({ startYmd, lessonWeekdays, lessonTimes, count }) {
   // include startYmd: the first lesson can be on this exact date
   let cursor = startYmd;
@@ -210,7 +263,7 @@ function generateLessonStarts({ startYmd, lessonWeekdays, lessonTimes, count }) 
 
 /** 8/12: 1-ci dövrün planlı dərslərini silib yenidən yaradır (client = tranzaksiya client-i) */
 async function replaceCycleOneScheduledLessons(client, params) {
-  const { enrollmentId, studentId, instructor_id, ni, lwd, lt, firstYmd, limit } = params;
+  const { enrollmentId, studentId, instructor_id, ni, lwd, lt, firstYmd, limit, group_id } = params;
   if (!limit || !firstYmd) return;
   const starts = generateLessonStarts({
     startYmd: firstYmd,
@@ -228,7 +281,7 @@ async function replaceCycleOneScheduledLessons(client, params) {
     const time = starts[i].slice(11, 16);
     const w = weekdayFromYmd(ymd);
     const occupied = await client.query(
-      `SELECT id FROM teacher_schedules
+      `SELECT id, group_id FROM teacher_schedules
        WHERE REPLACE(LOWER(TRIM(instructor_id::text)), '-', '') = $1
          AND is_occupied = TRUE
          AND day_of_week = $2
@@ -237,23 +290,36 @@ async function replaceCycleOneScheduledLessons(client, params) {
       [ni, w, time]
     );
     if (occupied.rowCount > 0) {
-      throw Object.assign(new Error('LESSON_CONFLICT'), {
-        code: 'LESSON_CONFLICT',
-        at: `${ymd} ${time}`,
-      });
+      const otherGroup = occupied.rows[0]?.group_id || null;
+      if (group_id && otherGroup && normUuid(otherGroup) === normUuid(group_id)) {
+        // occupied by the same group -> allow
+      } else {
+        throw Object.assign(new Error('LESSON_CONFLICT'), {
+          code: 'LESSON_CONFLICT',
+          kind: 'occupied',
+          at: `${ymd} ${time}`,
+        });
+      }
     }
     const exists = await client.query(
-      `SELECT id FROM lessons
-       WHERE instructor_id = $1
-         AND student_id <> $3
-         AND lesson_date = ($2::timestamp AT TIME ZONE 'Asia/Baku')
-         AND NOT (enrollment_id = $4::uuid AND billing_cycle = 1)
+      `SELECT l.id
+       FROM lessons l
+       JOIN enrollments e2 ON e2.id = l.enrollment_id
+       WHERE l.instructor_id = $1
+         AND l.student_id <> $3
+         AND l.lesson_date = ($2::timestamp AT TIME ZONE 'Asia/Baku')
+         AND NOT (l.enrollment_id = $4::uuid AND l.billing_cycle = 1)
+         AND (
+           $5::uuid IS NULL
+           OR e2.group_id IS DISTINCT FROM $5::uuid
+         )
        LIMIT 1`,
-      [instructor_id, starts[i], studentId, enrollmentId]
+      [instructor_id, starts[i], studentId, enrollmentId, group_id || null]
     );
     if (exists.rowCount > 0) {
       throw Object.assign(new Error('LESSON_CONFLICT'), {
         code: 'LESSON_CONFLICT',
+        kind: 'existing_lesson',
         at: `${ymd} ${time}`,
       });
     }
@@ -362,6 +428,7 @@ router.post('/enroll', authenticate, authorize('instructor', 'admin'), async (re
     }
 
     const enrollment = await db.transaction(async (client) => {
+      const todayBaku = await bakuTodayYmdDb(client);
       const { rows } = await client.query(
         `INSERT INTO enrollments (
            instructor_id, student_id, billing_type, referral_notes, referral_source_id,
@@ -387,6 +454,16 @@ router.post('/enroll', authenticate, authorize('instructor', 'admin'), async (re
         ]
       );
       const enr = rows[0];
+
+      // Group-lock weekly slots so only same subject/group can use them
+      await reserveGroupSlots(client, {
+        instructor_id,
+        ni,
+        lwd,
+        lt,
+        subject_id: trackIds.subject_id,
+        group_id: trackIds.group_id,
+      });
 
       // teacher_schedules ilə bağlama artıq istifadə olunmur (dərslər dated lessons kimi saxlanır)
 
@@ -425,7 +502,7 @@ router.post('/enroll', authenticate, authorize('instructor', 'admin'), async (re
           const time = starts[i].slice(11, 16);
           const w = weekdayFromYmd(ymd);
           const occupied = await client.query(
-            `SELECT id FROM teacher_schedules
+            `SELECT id, group_id FROM teacher_schedules
              WHERE REPLACE(LOWER(TRIM(instructor_id::text)), '-', '') = $1
                AND is_occupied = TRUE
                AND day_of_week = $2
@@ -434,23 +511,36 @@ router.post('/enroll', authenticate, authorize('instructor', 'admin'), async (re
             [ni, w, time]
           );
           if (occupied.rowCount > 0) {
+            const otherGroup = occupied.rows[0]?.group_id || null;
+            if (trackIds.group_id && otherGroup && normUuid(otherGroup) === normUuid(trackIds.group_id)) {
+              // occupied by the same group -> allow
+            } else {
             throw Object.assign(new Error('LESSON_CONFLICT'), {
               code: 'LESSON_CONFLICT',
+              kind: 'occupied',
               at: `${ymd} ${time}`,
             });
+            }
           }
 
           const exists = await client.query(
-            `SELECT id FROM lessons
-             WHERE instructor_id = $1
-               AND student_id <> $3
-               AND lesson_date = ($2::timestamp AT TIME ZONE 'Asia/Baku')
+            `SELECT l.id
+             FROM lessons l
+             JOIN enrollments e2 ON e2.id = l.enrollment_id
+             WHERE l.instructor_id = $1
+               AND l.student_id <> $3
+               AND l.lesson_date = ($2::timestamp AT TIME ZONE 'Asia/Baku')
+               AND (
+                 $4::uuid IS NULL
+                 OR e2.group_id IS DISTINCT FROM $4::uuid
+               )
              LIMIT 1`,
-            [instructor_id, starts[i], student_id]
+            [instructor_id, starts[i], student_id, trackIds.group_id || null]
           );
           if (exists.rowCount > 0) {
             throw Object.assign(new Error('LESSON_CONFLICT'), {
               code: 'LESSON_CONFLICT',
+              kind: 'existing_lesson',
               at: `${ymd} ${time}`,
             });
           }
@@ -511,9 +601,15 @@ router.post('/enroll', authenticate, authorize('instructor', 'admin'), async (re
     res.json({ success: true, enrollment, pin_sms });
   } catch (err) {
     if (err.code === 'LESSON_CONFLICT') {
+      const detail =
+        err.kind === 'occupied'
+          ? 'Müəllimin həmin gün/saatı “occupied” kimi bloklanıb.'
+          : err.kind === 'existing_lesson'
+            ? 'Müəllimin həmin gün/saatda başqa dərsi var.'
+            : '';
       return res.status(409).json({
         success: false,
-        message: `Dərs cədvəlində uyğun olmayan vaxt var: ${err.at || ''}`.trim(),
+        message: `Dərs cədvəlində uyğun olmayan vaxt var: ${err.at || ''} ${detail}`.trim(),
       });
     }
     res.status(500).json({ success: false, message: err.message });

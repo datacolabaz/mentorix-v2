@@ -54,6 +54,8 @@ CREATE TABLE teacher_schedules (
   is_occupied BOOLEAN NOT NULL DEFAULT FALSE,
   enrollment_id UUID,
   student_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  subject_id UUID REFERENCES instructor_subjects(id) ON DELETE SET NULL,
+  group_id UUID REFERENCES instructor_groups(id) ON DELETE SET NULL,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   CONSTRAINT teacher_schedules_time_order CHECK (start_time < end_time),
   CONSTRAINT teacher_schedules_unique_slot UNIQUE (instructor_id, day_of_week, start_time, end_time)
