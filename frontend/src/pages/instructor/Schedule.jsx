@@ -162,21 +162,21 @@ export default function InstructorSchedule() {
 
   return (
     <div className="p-4 sm:p-6 min-w-0 max-w-[1200px] mx-auto w-full">
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-4">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-3">
         <div>
           <h1 className="font-display font-bold text-xl sm:text-2xl text-white tracking-tight">Cədvəlim</h1>
-          <p className="text-gray-500 text-sm mt-1">
+          <p className="text-gray-500 text-xs sm:text-sm mt-1 leading-relaxed line-clamp-4 sm:line-clamp-none">
             Bu səhifə <span className="text-gray-300">həftəlik cədvəl xəritəsi</span>dir: hər xana «həftənin bu günü, bu saatda kimdə dərs var»ı göstərir, bütün tarixlər üzrə ardıcıllıq deyil. Paket (8/12) üçün real tarixli
             dərslər, aylıq üçün isə həmin gün+saat üçün <span className="text-gray-300">növbəti yaxın bir təqvim tarixi</span> nümunə kimi əlavə olunur — tələbə sentyabrdan hazırlığa gəlirsə belə, burada «cəmi 1
             tarix» görmək o demək deyil ki, o yalnız bir dəfə gəlib; o, yalnız bu xananı təqvimdə harada «taxlamaq» lazım olduğunu göstərir.
           </p>
         </div>
-        <Button type="button" variant="secondary" size="sm" onClick={() => void load()} disabled={loading}>
+        <Button type="button" variant="secondary" size="sm" className="w-full sm:w-auto justify-center" onClick={() => void load()} disabled={loading}>
           Yenilə
         </Button>
       </div>
 
-      <Card className="border border-indigo-500/20 p-4 sm:p-5">
+      <Card className="border border-white/10 p-4 sm:p-5">
         {loading ? (
           <div className="py-10">
             <ListSkeleton message="Cədvəl yüklənir…" />
@@ -196,32 +196,32 @@ export default function InstructorSchedule() {
           <>
             <div className="flex flex-wrap gap-4 text-xs text-gray-500 mb-3">
               <span className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded bg-indigo-600/35 border border-indigo-400/45" /> Dərs
+                <span className="w-3 h-3 rounded bg-primary/20 border border-primary/30" /> Dərs
               </span>
               <span className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded bg-[#0f0c29] border border-indigo-500/15" /> Boş
+                <span className="w-3 h-3 rounded bg-surface-1 border border-white/10" /> Boş
               </span>
             </div>
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
               <div
-                className="grid gap-px bg-indigo-500/20 rounded-xl overflow-hidden border border-indigo-500/25 min-w-[680px] max-h-[70vh] overflow-y-auto"
+                className="grid gap-px bg-white/10 rounded-xl overflow-hidden border border-white/10 min-w-[680px] max-h-[70vh] overflow-y-auto"
                 style={{
                   gridTemplateColumns: `3.5rem repeat(7, minmax(0,1fr))`,
                   gridTemplateRows: `auto repeat(${gridRowCount}, minmax(2rem, 2.25rem))`,
                 }}
               >
-                <div className="bg-[#13112e] p-2 text-[10px] font-semibold text-gray-500 uppercase tracking-wider" />
+                <div className="bg-surface-2 p-2 text-[10px] font-semibold text-gray-500 uppercase tracking-wider" />
                 {WEEKDAYS.map((d) => (
                   <div
                     key={d.v}
-                    className="bg-[#13112e] p-2 text-center text-[11px] font-bold text-indigo-200/90 border-l border-indigo-500/15"
+                    className="bg-surface-2 p-2 text-center text-[11px] font-bold text-gray-200 border-l border-white/10"
                   >
                     {d.short}
                   </div>
                 ))}
                 {Array.from({ length: gridRowCount }, (_, i) => GRID_START + i).map((hour) => (
                   <Fragment key={`h-${hour}`}>
-                    <div className="bg-[#0f0c29] text-[10px] text-gray-500 font-mono tabular-nums flex items-center justify-end pr-2 border-t border-indigo-500/10">
+                    <div className="bg-surface-1 text-[10px] text-gray-500 font-mono tabular-nums flex items-center justify-end pr-2 border-t border-white/10">
                       {String(hour).padStart(2, '0')}:00
                     </div>
                     {WEEKDAYS.map((d) => {

@@ -83,7 +83,7 @@ export default function InstructorLayout() {
           ☰
         </button>
       )}
-      <header className="lg:hidden fixed top-0 left-0 right-0 z-[60] flex items-center justify-between gap-3 px-4 py-4 bg-surface-2/95 border-b border-white/10 backdrop-blur">
+      <header className="lg:hidden fixed top-0 left-0 right-0 z-[1000] h-[64px] flex items-center justify-between gap-3 px-4 bg-surface-2/95 border-b border-white/10 backdrop-blur">
         <button
           type="button"
           aria-label="Menyu"
@@ -188,7 +188,7 @@ export default function InstructorLayout() {
         </div>
       </aside>
 
-      <main className="flex-1 overflow-y-auto min-w-0 pt-[80px] lg:pt-0">
+      <main className="flex-1 overflow-y-auto min-w-0 pt-[64px] lg:pt-0">
         <div className="min-h-full flex flex-col">
           {limitStatus.level ? (
             <div
