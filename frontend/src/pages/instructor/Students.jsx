@@ -607,6 +607,8 @@ export default function InstructorStudents() {
   const [enrollMeta] = useState({ loading: false, requiresScheduleSlot: false, availableSlots: [] })
   const [teachingSubjects, setTeachingSubjects] = useState([])
   const toast = useToast()
+  const [subjectFilter, setSubjectFilter] = useState('')
+  const [openGroups, setOpenGroups] = useState(() => new Set())
 
   const CACHE_KEY = 'instructor_students_v1'
   const CACHE_TTL_MS = 60000
@@ -770,6 +772,90 @@ export default function InstructorStudents() {
     setEditModal(true)
   }
 
+  function bakuNowParts() {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Asia/Baku',
+      weekday: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23',
+    }).formatToParts(new Date())
+    const get = (t) => parts.find((p) => p.type === t)?.value
+    const wdMap = { Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6, Sun: 7 }
+    const dow = wdMap[get('weekday')] || 1
+    const hour = parseInt(get('hour') || '0', 10) || 0
+    const minute = parseInt(get('minute') || '0', 10) || 0
+    return { dow, minutes: hour * 60 + minute }
+  }
+
+  function normalizeLessonTimesMap(raw) {
+    if (!raw) return {}
+    if (typeof raw === 'object') return raw
+    try {
+      const parsed = JSON.parse(String(raw))
+      return parsed && typeof parsed === 'object' ? parsed : {}
+    } catch {
+      return {}
+    }
+  }
+
+  function nextWeeklyDistanceMinutes(s) {
+    const days = normalizeWeekdays(s.lesson_weekdays)
+    if (!days.length) return Number.POSITIVE_INFINITY
+    const lt = normalizeLessonTimesMap(s.lesson_times)
+    const now = bakuNowParts()
+    const cur = (now.dow - 1) * 1440 + now.minutes
+    let best = Number.POSITIVE_INFINITY
+    for (const d of days) {
+      const tRaw = lt?.[String(d)] ?? lt?.[d]
+      const t = String(tRaw || '').slice(0, 5)
+      if (!/^\d{2}:\d{2}$/.test(t)) continue
+      const [hh, mm] = t.split(':').map((x) => parseInt(x, 10))
+      const target = (d - 1) * 1440 + hh * 60 + mm
+      const dist = (target - cur + 10080) % 10080
+      best = Math.min(best, dist)
+    }
+    return best
+  }
+
+  const subjectOptions = useMemo(() => {
+    const set = new Set()
+    for (const s of students) {
+      const name = String(s.track_subject_name || '').trim()
+      if (name) set.add(name)
+    }
+    return [...set].sort((a, b) => a.localeCompare(b))
+  }, [students])
+
+  const grouped = useMemo(() => {
+    const byKey = new Map()
+    for (const s of students) {
+      const subject = String(s.track_subject_name || 'Sahəsiz').trim() || 'Sahəsiz'
+      const group = String(s.track_group_name || 'Qrup yoxdur').trim() || 'Qrup yoxdur'
+      const key = `${subject}__${group}`
+      if (!byKey.has(key)) {
+        byKey.set(key, { key, subject, group, students: [], nextDistMin: Number.POSITIVE_INFINITY })
+      }
+      const g = byKey.get(key)
+      g.students.push(s)
+      g.nextDistMin = Math.min(g.nextDistMin, nextWeeklyDistanceMinutes(s))
+    }
+    const arr = [...byKey.values()]
+    for (const g of arr) {
+      g.students.sort((a, b) => String(a.full_name || '').localeCompare(String(b.full_name || '')))
+    }
+    arr.sort((a, b) => {
+      if (a.nextDistMin !== b.nextDistMin) return a.nextDistMin - b.nextDistMin
+      return `${a.subject}__${a.group}`.localeCompare(`${b.subject}__${b.group}`)
+    })
+    return arr
+  }, [students])
+
+  const visibleGroups = useMemo(() => {
+    if (!subjectFilter) return grouped
+    return grouped.filter((g) => g.subject === subjectFilter)
+  }, [grouped, subjectFilter])
+
   const saveEdit = async () => {
     if (!editId) {
       toast('Qeydiyyat tapılmadı — səhifəni yeniləyin', 'error')
@@ -887,6 +973,22 @@ export default function InstructorStudents() {
         </Button>
       </div>
 
+      <div className="mb-4 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+        <div className="text-sm text-gray-400">Sahəyə görə filtr</div>
+        <select
+          className="w-full sm:w-72 bg-[#13112e] border border-indigo-500/20 rounded-xl px-3 py-2 text-white text-sm outline-none focus:border-blue-500"
+          value={subjectFilter}
+          onChange={(e) => setSubjectFilter(e.target.value)}
+        >
+          <option value="">Hamısı</option>
+          {subjectOptions.map((n) => (
+            <option key={n} value={n}>
+              {n}
+            </option>
+          ))}
+        </select>
+      </div>
+
       <div className="space-y-3">
         {listLoading && <ListSkeleton message="Tələbələr yüklənir…" />}
         {!listLoading && listError && (
@@ -898,67 +1000,104 @@ export default function InstructorStudents() {
             </Button>
           </Card>
         )}
-        {!listLoading && !listError &&
-          students.map((s) => (
-          <Card key={s.enrollment_id} className="p-4 min-w-0 overflow-hidden">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between min-w-0">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-sm font-bold flex-shrink-0">
-                  {s.full_name?.split(' ')
-                    .map((n) => n[0])
-                    .join('')
-                    .slice(0, 2)}
-                </div>
-                <div className="min-w-0">
-                  <div className="font-semibold text-white truncate">{s.full_name}</div>
-                  <div className="text-xs text-gray-400 flex flex-wrap gap-x-3 gap-y-1 mt-0.5">
-                    {s.phone && <span className="break-all">{s.phone}</span>}
-                    {lessonDaysShort(s.lesson_weekdays) && (
-                      <span className="text-indigo-300/90 w-full sm:w-auto">
-                        Dərslər: {lessonDaysShort(s.lesson_weekdays)}
-                      </span>
-                    )}
-                  </div>
-                  {s.track_subject_name ? (
-                    <div className="text-[11px] text-gray-500 mt-1 truncate" title={s.track_group_name || ''}>
-                      Sahə: <span className="text-gray-300">{s.track_subject_name}</span>
-                      {s.track_group_name ? (
-                        <span className="text-gray-500"> · {s.track_group_name}</span>
-                      ) : null}
+        {!listLoading &&
+          !listError &&
+          visibleGroups.map((g) => {
+            const isOpen = openGroups.has(g.key)
+            return (
+              <Card key={g.key} className="p-0 overflow-hidden border border-indigo-500/20">
+                <button
+                  type="button"
+                  className="w-full flex items-center justify-between gap-3 px-4 py-3 bg-[#13112e] hover:bg-[#16143a] transition-colors"
+                  onClick={() =>
+                    setOpenGroups((prev) => {
+                      const next = new Set(prev)
+                      if (next.has(g.key)) next.delete(g.key)
+                      else next.add(g.key)
+                      return next
+                    })
+                  }
+                >
+                  <div className="min-w-0 text-left">
+                    <div className="font-semibold text-white truncate">
+                      {g.subject} — {g.group}
                     </div>
-                  ) : null}
-                </div>
-              </div>
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
-                <div className="text-left sm:text-right">
-                  <span className="text-xs bg-blue-500/20 text-blue-300 px-2 py-1 rounded-lg font-semibold inline-block">
-                    {s.billing_type === 'monthly'
-                      ? 'Davamlı (aylıq)'
-                      : (() => {
-                          const used = s.calendar_used_lessons ?? s.lesson_count ?? 0
-                          const total =
-                            s.calendar_total_lessons ??
-                            (BILLING_OPTS.find((o) => o.value === s.billing_type)?.label || s.billing_type)
-                          return `${used}/${total}`
-                        })()}
-                  </span>
-                  {s.avg_score && <div className="text-xs text-gray-400 mt-1">Orta: {s.avg_score}%</div>}
-                </div>
-                <div className="flex gap-2 flex-wrap">
-                  <Button size="sm" variant="secondary" onClick={() => openLessonsModal(s)}>
-                    Dərslər
-                  </Button>
-                  <Button size="sm" variant="secondary" onClick={() => openEdit(s)}>
-                    Redakte
-                  </Button>
-                  <Button size="sm" variant="danger" onClick={() => deleteStudent(s.enrollment_id, s.full_name)}>
-                    Sil
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </Card>
-        ))}
+                    <div className="text-xs text-gray-500">{g.students.length} tələbə</div>
+                  </div>
+                  <div className="text-gray-400 text-sm font-mono">{isOpen ? '▴' : '▾'}</div>
+                </button>
+
+                {isOpen && (
+                  <div className="p-3 space-y-2 bg-[#0f0c29]/60">
+                    {g.students.map((s) => (
+                      <div
+                        key={s.enrollment_id}
+                        className="flex items-center justify-between gap-3 rounded-xl border border-indigo-500/15 bg-[#0f0c29]/80 px-3 py-2"
+                      >
+                        <div className="min-w-0">
+                          <div className="font-semibold text-white truncate">{s.full_name}</div>
+                          <div className="text-xs text-gray-400 flex flex-wrap gap-x-3 gap-y-1 mt-0.5">
+                            {s.phone && <span className="break-all">{s.phone}</span>}
+                            {lessonDaysShort(s.lesson_weekdays) && (
+                              <span className="text-indigo-300/90 w-full sm:w-auto">
+                                Dərslər: {lessonDaysShort(s.lesson_weekdays)}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="text-[11px] bg-blue-500/20 text-blue-300 px-2 py-1 rounded-lg font-semibold inline-block">
+                            {s.billing_type === 'monthly'
+                              ? 'Aylıq'
+                              : (() => {
+                                  const used = s.calendar_used_lessons ?? s.lesson_count ?? 0
+                                  const total =
+                                    s.calendar_total_lessons ??
+                                    (BILLING_OPTS.find((o) => o.value === s.billing_type)?.label || s.billing_type)
+                                  return `${used}/${total}`
+                                })()}
+                          </span>
+                          <div className="flex gap-1">
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              className="px-2"
+                              title="Dərslər"
+                              aria-label="Dərslər"
+                              onClick={() => openLessonsModal(s)}
+                            >
+                              📅
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              className="px-2"
+                              title="Redaktə"
+                              aria-label="Redaktə"
+                              onClick={() => openEdit(s)}
+                            >
+                              ✏️
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="danger"
+                              className="px-2"
+                              title="Sil"
+                              aria-label="Sil"
+                              onClick={() => deleteStudent(s.enrollment_id, s.full_name)}
+                            >
+                              🗑
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </Card>
+            )
+          })}
         {!listLoading && !listError && !students.length && (
           <div className="text-center py-16 text-gray-500">
             <p className="text-lg mb-2">Telebe yoxdur</p>
