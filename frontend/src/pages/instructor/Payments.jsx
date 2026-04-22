@@ -167,7 +167,7 @@ export default function InstructorPayments() {
     })
   }, [quickRow, quickLines, todayBaku])
 
-  const [openCats, setOpenCats] = useState(() => new Set(['monthly', '8', '12', 'other']))
+  const [openCats, setOpenCats] = useState(() => new Set())
 
   const categorized = useMemo(() => {
     const list = Array.isArray(students) ? students : []
