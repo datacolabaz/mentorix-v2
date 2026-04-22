@@ -113,8 +113,10 @@ export default function InstructorLayout() {
           focusMode ? 'lg:-translate-x-full' : '',
         ].join(' ')}
       >
-        <div className="px-4 py-3 border-b border-white/10 hidden lg:block">
-          <Brand imgClassName="h-12 max-h-[50px]" className="justify-center" />
+        <div className="px-3 py-3 border-b border-white/10 hidden lg:block">
+          <div className="w-full flex items-center justify-center">
+            <Brand size="sidebar" imgClassName="scale-[1.25]" />
+          </div>
           <div className="mt-3 p-3 bg-surface-1 rounded-xl border border-white/10">
             <div className="w-8 h-8 rounded-full bg-white/10 border border-white/10 flex items-center justify-center text-sm font-bold mb-2">
               {user?.full_name?.split(' ').map((n) => n[0]).join('').slice(0, 2)}
@@ -124,9 +126,9 @@ export default function InstructorLayout() {
           </div>
         </div>
 
-        <div className="lg:hidden px-4 py-3 border-b border-white/10">
+        <div className="lg:hidden px-3 py-3 border-b border-white/10">
           <div className="flex items-center justify-between gap-2">
-            <Brand imgClassName="h-10 max-h-[50px]" />
+            <Brand size="sidebar" imgClassName="scale-[1.15]" />
             <button
               type="button"
               className="p-2 rounded-xl text-gray-400 hover:text-white hover:bg-white/10 shrink-0 text-lg leading-none"

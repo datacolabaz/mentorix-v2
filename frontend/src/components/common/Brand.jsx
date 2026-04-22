@@ -1,12 +1,24 @@
 import logo from '../../assets/mentorix-logo.png'
 
-export default function Brand({ className = '', imgClassName = '', showText = false, textClassName = '' }) {
+export default function Brand({
+  className = '',
+  imgClassName = '',
+  showText = false,
+  textClassName = '',
+  size = 'md', // md | sidebar | login
+}) {
+  const sizeClass =
+    size === 'login'
+      ? 'h-[180px] max-h-[220px]'
+      : size === 'sidebar'
+        ? 'h-[60px] max-h-[72px]'
+        : 'h-10 max-h-[50px]'
   return (
     <div className={`flex items-center gap-3 min-w-0 ${className}`}>
       <img
         src={logo}
         alt="Mentorix"
-        className={`h-10 max-h-[50px] w-auto object-contain select-none ${imgClassName}`}
+        className={`${sizeClass} w-auto object-contain select-none ${imgClassName}`}
         draggable={false}
       />
       {showText ? (

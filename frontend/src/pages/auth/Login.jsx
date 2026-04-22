@@ -167,8 +167,11 @@ export default function Login() {
         <div className="bg-surface-2 border border-white/10 rounded-2xl p-6 sm:p-8">
           <div className="text-center mb-6 sm:mb-8">
             <div className="flex justify-center">
-              <div className="px-4 py-4 rounded-2xl bg-[#1a1a1a] border border-white/10">
-                <Brand imgClassName="h-[120px] w-auto drop-shadow-[0_10px_25px_rgba(0,0,0,0.6)]" />
+              <div className="rounded-2xl bg-[#1a1a1a] border border-white/10 w-full max-w-[360px] py-6 flex justify-center">
+                <Brand
+                  size="login"
+                  imgClassName="scale-[1.35] -my-2 drop-shadow-[0_18px_40px_rgba(0,0,0,0.75)]"
+                />
               </div>
             </div>
             <div className="text-gray-400 text-sm mt-2">Hesabınıza daxil olun</div>

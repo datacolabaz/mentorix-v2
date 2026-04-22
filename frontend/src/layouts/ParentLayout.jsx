@@ -16,8 +16,10 @@ export default function ParentLayout() {
   return (
     <div className="flex h-screen bg-[#0b0b0b] text-white overflow-hidden">
       <aside className="w-60 bg-surface-2 border-r border-white/10 flex flex-col flex-shrink-0">
-        <div className="px-4 py-3 border-b border-white/10">
-          <Brand imgClassName="h-12 max-h-[50px]" className="justify-center" />
+        <div className="px-3 py-3 border-b border-white/10">
+          <div className="w-full flex items-center justify-center">
+            <Brand size="sidebar" imgClassName="scale-[1.25]" />
+          </div>
           <div className="mt-3 p-3 bg-surface-1 rounded-xl border border-white/10">
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-400 to-pink-600 flex items-center justify-center text-sm font-bold mb-2">
               {user?.full_name?.split(' ').map(n => n[0]).join('').slice(0, 2)}
