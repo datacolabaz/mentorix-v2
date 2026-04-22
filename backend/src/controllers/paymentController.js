@@ -83,40 +83,15 @@ const getRestorePreview = async (req, res) => {
       return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
     }
 
-    if (en[0].billing_type !== 'monthly') {
-      return res.json({ success: true, items: [] });
-    }
-
-    const mf = en[0].monthly_fee != null ? Number(en[0].monthly_fee) : NaN;
-    if (!Number.isFinite(mf) || mf <= 0) {
-      return res.json({ success: true, items: [] });
-    }
-
-    const anchorYmd = anchorToYmd(en[0].enrollment_start_date);
+    const bt = en[0].billing_type;
     const enrolledYmd = toYmd(en[0].enrolled_at) || (await getTodayBakuYmd(db));
-    const todayYmd = await getTodayBakuYmd(db);
+    const anchorYmd = anchorToYmd(en[0].enrollment_start_date);
 
     if (!anchorYmd || !enrolledYmd || anchorYmd >= enrolledYmd) {
       return res.json({ success: true, items: [] });
     }
 
-    const dueDates = listBillingDueDatesUpTo(anchorYmd, todayYmd);
-    const raw = [];
-    for (const start of dueDates) {
-      if (start >= enrolledYmd) break;
-      const end = addOneMonthYmd(anchorYmd, start);
-      if (!end) continue;
-      raw.push({
-        id: `monthly:${start}`,
-        kind: 'monthly',
-        title: `${start} — ${end}`,
-        cycle_start_ymd: start,
-        cycle_end_ymd: end,
-        amount: mf,
-        payment_date: start,
-      });
-    }
-
+    // Exclude already recorded payments for the same payment_date
     const { rows: existing } = await db.query(
       `SELECT payment_date::text AS ymd
        FROM payments
@@ -126,8 +101,92 @@ const getRestorePreview = async (req, res) => {
       [enrollment_id]
     );
     const done = new Set(existing.map((r) => String(r.ymd).slice(0, 10)));
+
+    // Monthly restore
+    if (bt === 'monthly') {
+      const mf = en[0].monthly_fee != null ? Number(en[0].monthly_fee) : NaN;
+      if (!Number.isFinite(mf) || mf <= 0) {
+        return res.json({ success: true, items: [] });
+      }
+      const todayYmd = await getTodayBakuYmd(db);
+      const dueDates = listBillingDueDatesUpTo(anchorYmd, todayYmd);
+      const raw = [];
+      for (const start of dueDates) {
+        if (start >= enrolledYmd) break;
+        const end = addOneMonthYmd(anchorYmd, start);
+        if (!end) continue;
+        raw.push({
+          id: `monthly:${start}`,
+          kind: 'monthly',
+          title: `${start} — ${end}`,
+          cycle_start_ymd: start,
+          cycle_end_ymd: end,
+          amount: mf,
+          payment_date: start,
+        });
+      }
+      const items = raw.filter((x) => !done.has(x.payment_date));
+      return res.json({ success: true, items });
+    }
+
+    // Package (8/12) restore
+    const limit = billingLimit(bt);
+    if (!limit) return res.json({ success: true, items: [] });
+
+    // derive default package price from instructor's previous completed package payments
+    const { rows: priceRows } = await db.query(
+      `SELECT AVG(p.amount)::numeric AS avg_amt
+       FROM payments p
+       JOIN enrollments e2 ON e2.id = p.enrollment_id
+       WHERE p.status = 'completed'
+         AND e2.instructor_id = $1
+         AND e2.billing_type = $2
+         AND p.amount > 0`,
+      [en[0].instructor_id, bt]
+    );
+    const avgAmt = priceRows[0]?.avg_amt != null ? Number(priceRows[0].avg_amt) : NaN;
+    if (!Number.isFinite(avgAmt) || avgAmt <= 0) {
+      return res.status(400).json({
+        success: false,
+        code: 'PACKAGE_PRICE_UNKNOWN',
+        message: 'Paket üçün avtomatik məbləğ tapılmadı (əvvəlki ödənişlərdən çıxarmaq mümkün olmadı).',
+      });
+    }
+
+    // count lessons that happened before system enrollment time (enrolled_at)
+    const { rows: lessonRows } = await db.query(
+      `SELECT to_char((l.lesson_date AT TIME ZONE 'Asia/Baku')::date, 'YYYY-MM-DD') AS ymd
+       FROM lessons l
+       WHERE l.enrollment_id = $1
+         AND l.lesson_date < $2::timestamptz
+       ORDER BY l.lesson_date`,
+      [enrollment_id, en[0].enrolled_at]
+    );
+    const lessonYmds = lessonRows.map((r) => r.ymd).filter(Boolean);
+    if (!lessonYmds.length) return res.json({ success: true, items: [] });
+
+    const cycles = Math.ceil(lessonYmds.length / limit);
+    const raw = [];
+    for (let c = 0; c < cycles; c++) {
+      const startIdx = c * limit;
+      const endIdx = Math.min(lessonYmds.length - 1, startIdx + limit - 1);
+      const start = lessonYmds[startIdx];
+      const end = lessonYmds[endIdx];
+      if (!start) continue;
+      if (start >= enrolledYmd) break;
+      raw.push({
+        id: `pkg:${c + 1}:${start}`,
+        kind: 'package',
+        title: `Paket Dövr #${c + 1}: ${start} — ${end || start}`,
+        cycle_start_ymd: start,
+        cycle_end_ymd: end || start,
+        amount: avgAmt,
+        payment_date: start,
+      });
+    }
+
     const items = raw.filter((x) => !done.has(x.payment_date));
-    res.json({ success: true, items });
+    return res.json({ success: true, items });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -152,28 +211,99 @@ const confirmRestorePayments = async (req, res) => {
     if (req.user.role === 'instructor' && !sameUuid(en[0].instructor_id, req.user.id)) {
       return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
     }
-    if (en[0].billing_type !== 'monthly') {
-      return res.status(400).json({ success: false, message: 'Yalnız aylıq paket üçün dəstəklənir' });
-    }
-
-    const mf = en[0].monthly_fee != null ? Number(en[0].monthly_fee) : NaN;
-    if (!Number.isFinite(mf) || mf <= 0) {
-      return res.status(400).json({ success: false, message: 'Aylıq məbləğ tapılmadı' });
-    }
-
+    const bt = en[0].billing_type;
     const anchorYmd = anchorToYmd(en[0].enrollment_start_date);
     const enrolledYmd = toYmd(en[0].enrolled_at) || (await getTodayBakuYmd(db));
-    const todayYmd = await getTodayBakuYmd(db);
     if (!anchorYmd || !enrolledYmd || anchorYmd >= enrolledYmd) {
       return res.status(400).json({ success: false, message: 'Bərpa ediləcək aralıq yoxdur' });
     }
 
-    const allowed = new Set();
-    for (const start of listBillingDueDatesUpTo(anchorYmd, todayYmd)) {
-      if (start >= enrolledYmd) break;
-      allowed.add(`monthly:${start}`);
+    if (bt === 'monthly') {
+      const mf = en[0].monthly_fee != null ? Number(en[0].monthly_fee) : NaN;
+      if (!Number.isFinite(mf) || mf <= 0) {
+        return res.status(400).json({ success: false, message: 'Aylıq məbləğ tapılmadı' });
+      }
+      const todayYmd = await getTodayBakuYmd(db);
+      const allowed = new Set();
+      for (const start of listBillingDueDatesUpTo(anchorYmd, todayYmd)) {
+        if (start >= enrolledYmd) break;
+        allowed.add(`monthly:${start}`);
+      }
+      const selected = ids.filter((x) => allowed.has(x)).map((x) => x.split(':')[1]);
+      if (!selected.length) {
+        return res.status(400).json({ success: false, message: 'Seçilmiş dövrlər etibarlı deyil' });
+      }
+      const inserted = await db.transaction(async (client) => {
+        const { rows: existing } = await client.query(
+          `SELECT payment_date::text AS ymd
+           FROM payments
+           WHERE enrollment_id = $1
+             AND status = 'completed'
+             AND payment_date = ANY($2::date[])`,
+          [enrollment_id, selected]
+        );
+        const done = new Set(existing.map((r) => String(r.ymd).slice(0, 10)));
+        const toInsert = selected.filter((d) => !done.has(String(d).slice(0, 10)));
+        if (!toInsert.length) return [];
+        const amounts = toInsert.map(() => mf);
+        const notes = toInsert.map((d) => `[Keçmiş ödəniş qeydi] Aylıq abunə ödənişi (${d})`);
+        const periods = toInsert.map((d) => `Aylıq: ${d}`);
+        const { rows: ins } = await client.query(
+          `INSERT INTO payments (enrollment_id, student_id, amount, currency, payment_method, status, paid_at, payment_date, notes, period)
+           SELECT $1::uuid, $2::uuid, t.amt, 'AZN', 'cash', 'completed', NOW(),
+                  t.pd::date, t.nt, t.per
+           FROM unnest($3::numeric[], $4::date[], $5::text[], $6::text[]) AS t(amt, pd, nt, per)
+           RETURNING id, amount, payment_date, notes, period`,
+          [enrollment_id, en[0].student_id, amounts, toInsert, notes, periods]
+        );
+        return ins;
+      });
+      return res.json({ success: true, inserted, count: inserted.length });
     }
-    const selected = ids.filter((x) => allowed.has(x)).map((x) => x.split(':')[1]);
+
+    const limit = billingLimit(bt);
+    if (!limit) {
+      return res.status(400).json({ success: false, message: 'Bu paket növü dəstəklənmir' });
+    }
+
+    const { rows: priceRows } = await db.query(
+      `SELECT AVG(p.amount)::numeric AS avg_amt
+       FROM payments p
+       JOIN enrollments e2 ON e2.id = p.enrollment_id
+       WHERE p.status = 'completed'
+         AND e2.instructor_id = $1
+         AND e2.billing_type = $2
+         AND p.amount > 0`,
+      [en[0].instructor_id, bt]
+    );
+    const avgAmt = priceRows[0]?.avg_amt != null ? Number(priceRows[0].avg_amt) : NaN;
+    if (!Number.isFinite(avgAmt) || avgAmt <= 0) {
+      return res.status(400).json({
+        success: false,
+        code: 'PACKAGE_PRICE_UNKNOWN',
+        message: 'Paket üçün avtomatik məbləğ tapılmadı (əvvəlki ödənişlərdən çıxarmaq mümkün olmadı).',
+      });
+    }
+
+    const { rows: lessonRows } = await db.query(
+      `SELECT to_char((l.lesson_date AT TIME ZONE 'Asia/Baku')::date, 'YYYY-MM-DD') AS ymd
+       FROM lessons l
+       WHERE l.enrollment_id = $1
+         AND l.lesson_date < $2::timestamptz
+       ORDER BY l.lesson_date`,
+      [enrollment_id, en[0].enrolled_at]
+    );
+    const lessonYmds = lessonRows.map((r) => r.ymd).filter(Boolean);
+    const cycles = Math.ceil(lessonYmds.length / limit);
+    const allowed = new Set();
+    for (let c = 0; c < cycles; c++) {
+      const startIdx = c * limit;
+      const start = lessonYmds[startIdx];
+      if (!start) continue;
+      if (start >= enrolledYmd) break;
+      allowed.add(`pkg:${c + 1}:${start}`);
+    }
+    const selected = ids.filter((x) => allowed.has(x)).map((x) => x.split(':')[2]);
     if (!selected.length) {
       return res.status(400).json({ success: false, message: 'Seçilmiş dövrlər etibarlı deyil' });
     }
@@ -190,10 +320,9 @@ const confirmRestorePayments = async (req, res) => {
       const done = new Set(existing.map((r) => String(r.ymd).slice(0, 10)));
       const toInsert = selected.filter((d) => !done.has(String(d).slice(0, 10)));
       if (!toInsert.length) return [];
-
-      const amounts = toInsert.map(() => mf);
-      const notes = toInsert.map((d) => `[Keçmiş ödəniş qeydi] Aylıq abunə ödənişi (${d})`);
-      const periods = toInsert.map((d) => `Aylıq: ${d}`);
+      const amounts = toInsert.map(() => avgAmt);
+      const notes = toInsert.map((d) => `[Keçmiş ödəniş qeydi] Paket ödənişi (${bt}) (${d})`);
+      const periods = toInsert.map((d) => `Paket: ${bt} · ${d}`);
       const { rows: ins } = await client.query(
         `INSERT INTO payments (enrollment_id, student_id, amount, currency, payment_method, status, paid_at, payment_date, notes, period)
          SELECT $1::uuid, $2::uuid, t.amt, 'AZN', 'cash', 'completed', NOW(),
@@ -204,8 +333,7 @@ const confirmRestorePayments = async (req, res) => {
       );
       return ins;
     });
-
-    res.json({ success: true, inserted, count: inserted.length });
+    return res.json({ success: true, inserted, count: inserted.length });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
