@@ -16,3 +16,4 @@ export function sidebarNavClass(isActive, theme = 'light') {
   }
 
   return `${base} ${inactive}`
+}
