@@ -5,6 +5,7 @@ import useUiStore from '../hooks/useUi'
 import api from '../lib/api'
 import { instructorRoleAz } from '../lib/instructorLabel'
 import Brand from '../components/common/Brand'
+import BrandSvg from '../components/common/BrandSvg'
 import Footer from '../components/common/Footer'
 import { sidebarNavClass } from '../lib/sidebarNavClass'
 import NavIcon from '../components/common/NavIcon'
@@ -74,7 +75,7 @@ export default function InstructorLayout() {
   }, [])
 
   return (
-    <div className="flex h-screen bg-[#0b0b0b] text-white overflow-hidden">
+    <div className={`theme-${theme} flex h-screen bg-token-surfaceMain text-token-textMain overflow-hidden`}>
       {focusMode && (
         <button
           type="button"
@@ -88,7 +89,9 @@ export default function InstructorLayout() {
       <header
         className={[
           'lg:hidden fixed top-0 left-0 right-0 z-[1000] h-[72px] flex items-center justify-between gap-2 px-3 overflow-visible',
-          theme === 'dark' ? 'bg-[#0d0d0d] border-b border-white/10' : 'bg-white border-b border-gray-200',
+          theme === 'dark'
+            ? 'bg-token-surfaceMain border-b border-[rgb(var(--border-subtle))] text-token-textMain'
+            : 'bg-token-surfaceMain border-b border-[rgb(var(--border-subtle))] text-token-textMain',
         ].join(' ')}
       >
         <button
@@ -105,7 +108,7 @@ export default function InstructorLayout() {
           ☰
         </button>
         <div className="flex-1 flex justify-center min-w-0 overflow-visible">
-          <Brand size="md" />
+          {theme === 'dark' ? <BrandSvg size="md" className="text-white" /> : <Brand size="md" />}
         </div>
         <div className="w-11 shrink-0" />
       </header>
@@ -124,8 +127,8 @@ export default function InstructorLayout() {
           theme === 'dark' ? 'theme-dark' : 'theme-light',
           'w-[min(17rem,88vw)] max-w-[280px] flex flex-col flex-shrink-0',
           theme === 'dark'
-            ? 'bg-[#0d0d0d] border-r border-white/10'
-            : 'bg-brand-sidebar border-r border-gray-200',
+            ? 'bg-token-surfaceMain border-r border-[rgb(var(--border-subtle))]'
+            : 'bg-token-surfaceMain border-r border-[rgb(var(--border-subtle))]',
           'fixed lg:static inset-y-0 left-0 z-[80] transition-transform duration-200 ease-out',
           navOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
           focusMode ? 'lg:-translate-x-full' : '',
@@ -138,12 +141,18 @@ export default function InstructorLayout() {
           ].join(' ')}
         >
           <div className="flex justify-center">
-            <Brand size="sidebar" />
+            {theme === 'dark' ? (
+              <BrandSvg size="sidebar" className="text-white" />
+            ) : (
+              <Brand size="sidebar" />
+            )}
           </div>
           <div
             className={[
               'mt-4 p-3 rounded-xl border',
-              theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-200',
+              theme === 'dark'
+                ? 'bg-token-surfaceCard/55 border-[rgb(var(--border-subtle))]'
+                : 'bg-token-surfaceCard/70 border-[rgb(var(--border-subtle))]',
             ].join(' ')}
           >
             <div
@@ -168,12 +177,16 @@ export default function InstructorLayout() {
         <div
           className={[
             'lg:hidden px-4 pt-4 pb-4',
-            theme === 'dark' ? 'border-b border-white/10' : 'border-b border-gray-200',
+            'border-b border-[rgb(var(--border-subtle))]',
           ].join(' ')}
         >
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 min-w-0 flex justify-center">
-              <Brand size="sidebar" />
+              {theme === 'dark' ? (
+                <BrandSvg size="sidebar" className="text-white" />
+              ) : (
+                <Brand size="sidebar" />
+              )}
             </div>
             <button
               type="button"
@@ -219,22 +232,22 @@ export default function InstructorLayout() {
           ))}
         </nav>
 
-        <div className={['p-4', theme === 'dark' ? 'border-t border-white/10' : 'border-t border-gray-200'].join(' ')}>
+        <div className="p-4 border-t border-[rgb(var(--border-subtle))]">
           <button
             type="button"
             onClick={toggleTheme}
             className={[
               'w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl border transition-colors',
               theme === 'dark'
-                ? 'border-white/10 bg-white/5 hover:bg-white/10'
-                : 'border-gray-200 bg-gray-50 hover:bg-gray-100',
+                ? 'border-[rgb(var(--border-subtle))] bg-token-surfaceCard/45 hover:bg-token-surfaceCard/60'
+                : 'border-[rgb(var(--border-subtle))] bg-token-surfaceCard/70 hover:bg-token-surfaceCard/90',
             ].join(' ')}
           >
-            <span className={`text-sm font-medium ${theme === 'dark' ? 'text-gray-200' : 'text-gray-700'}`}>
+            <span className="text-sm font-medium text-token-textMain">
               Tema
             </span>
             <span className="flex items-center gap-2">
-              <span className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+              <span className="text-xs text-token-textMuted">
                 {theme === 'dark' ? 'Gecə' : 'Gündüz'}
               </span>
               <span
