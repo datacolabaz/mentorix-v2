@@ -5,6 +5,7 @@ import Card from '../../components/common/Card'
 import Modal from '../../components/common/Modal'
 import Button from '../../components/common/Button'
 import useAuthStore from '../../hooks/useAuth'
+import useUiStore from '../../hooks/useUi'
 import { useToast } from '../../components/common/Toast'
 import { writeCache } from '../../lib/cache'
 
@@ -24,6 +25,7 @@ const StatCard = ({ label, value, icon }) => (
 
 export default function InstructorDashboard() {
   const { user } = useAuthStore()
+  const { theme } = useUiStore()
   const [students, setStudents] = useState([])
   const [examStats, setExamStats] = useState([])
   const [dash, setDash] = useState({
@@ -193,6 +195,17 @@ export default function InstructorDashboard() {
     return nb - na
   })
 
+  const axisTick = {
+    fill: theme === 'dark' ? '#E5E7EB' : '#003366',
+    fontSize: 12,
+    fontWeight: 600,
+  }
+  const axisTickY = {
+    fill: theme === 'dark' ? '#E5E7EB' : '#003366',
+    fontSize: 11,
+    fontWeight: 600,
+  }
+
   return (
     <div className="p-4 sm:p-6 min-w-0">
       <div className="mb-6">
@@ -232,16 +245,45 @@ export default function InstructorDashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 min-w-0">
         <div className="lg:col-span-2 min-w-0">
-          <Card className="p-4 sm:p-5 min-w-0 overflow-hidden !bg-[#F8FAFC] border-gray-200 shadow-[0_4px_15px_rgba(34,224,136,0.05)]">
+          <Card className="p-4 sm:p-5 min-w-0 overflow-hidden !bg-[#F0F4F8] border-gray-200 shadow-[0_10px_30px_rgba(34,224,136,0.1)]">
             <h2 className="font-display font-bold text-base mb-4 text-[#003366]">Tələbə Proqresi (imtahan)</h2>
             {students.length ? (
-              <div className="w-full h-[220px] min-h-[200px]">
+              <div className="w-full h-[280px] min-h-[240px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={chartRows} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-                    <XAxis dataKey="name" tick={{ fill: '#64748b', fontSize: 10 }} interval={0} angle={-25} textAnchor="end" height={56} />
-                    <YAxis tick={{ fill: '#64748b', fontSize: 11 }} domain={[0, 100]} width={32} />
-                    <Tooltip contentStyle={{ background: '#1a1740', border: '1px solid rgba(99,102,241,.3)', borderRadius: 8 }} />
-                    <Line type="monotone" dataKey="bal" stroke="#3b82f6" strokeWidth={2.5} dot={{ fill: '#3b82f6' }} />
+                    <defs>
+                      <linearGradient id="mentorixLine" x1="0" y1="0" x2="1" y2="0">
+                        <stop offset="0%" stopColor="#003366" />
+                        <stop offset="100%" stopColor="#22e088" />
+                      </linearGradient>
+                    </defs>
+                    <XAxis
+                      dataKey="name"
+                      tick={axisTick}
+                      interval={0}
+                      angle={-45}
+                      textAnchor="end"
+                      height={72}
+                    />
+                    <YAxis tick={axisTickY} domain={[0, 100]} width={36} />
+                    <Tooltip
+                      contentStyle={{
+                        background: '#0b0b0b',
+                        border: '1px solid rgba(34,224,136,0.25)',
+                        borderRadius: 12,
+                        color: '#fff',
+                      }}
+                      cursor={{ stroke: 'rgba(34,224,136,0.35)' }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="bal"
+                      stroke="url(#mentorixLine)"
+                      strokeWidth={3}
+                      dot={{ r: 3, fill: '#22e088', stroke: '#003366', strokeWidth: 1 }}
+                      activeDot={{ r: 5, fill: '#22e088', stroke: '#003366', strokeWidth: 2 }}
+                      isAnimationActive={false}
+                    />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
@@ -256,7 +298,7 @@ export default function InstructorDashboard() {
           </Card>
         </div>
 
-        <Card className="p-4 sm:p-5 min-w-0 !bg-[#F8FAFC] border-gray-200 shadow-[0_4px_15px_rgba(34,224,136,0.05)]">
+        <Card className="p-4 sm:p-5 min-w-0 !bg-[#F0F4F8] border-gray-200 shadow-[0_10px_30px_rgba(34,224,136,0.1)]">
           <h2 className="font-display font-bold text-base mb-4 text-[#003366]">Top Tələbələr (imtahan)</h2>
           <div className="space-y-3">
             {topSorted.slice(0, 5).map((s, i) => {
