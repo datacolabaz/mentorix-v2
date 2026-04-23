@@ -21,6 +21,7 @@ export default function ParentLayout() {
     <div className="flex h-screen bg-[#0b0b0b] text-white overflow-hidden">
       <aside
         className={[
+          theme === 'dark' ? 'theme-dark' : 'theme-light',
           'w-60 flex flex-col flex-shrink-0',
           theme === 'dark' ? 'bg-[#0d0d0d] border-r border-white/10' : 'bg-white border-r border-gray-200',
         ].join(' ')}

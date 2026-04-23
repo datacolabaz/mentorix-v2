@@ -121,6 +121,7 @@ export default function InstructorLayout() {
 
       <aside
         className={[
+          theme === 'dark' ? 'theme-dark' : 'theme-light',
           'w-[min(17rem,88vw)] max-w-[280px] flex flex-col flex-shrink-0',
           theme === 'dark'
             ? 'bg-[#0d0d0d] border-r border-white/10'

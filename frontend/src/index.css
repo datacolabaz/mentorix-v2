@@ -16,6 +16,9 @@
 @layer utilities {
   .font-body { font-family: 'DM Sans', sans-serif; }
   .font-display { font-family: 'Syne', sans-serif; }
+  /* Logo blending for removing faint white box */
+  .mentorix-logo { mix-blend-mode: multiply; }
+  .theme-dark .mentorix-logo { mix-blend-mode: screen; }
   .grid-bg {
     background-image:
       linear-gradient(rgba(34,224,136,.06) 1px, transparent 1px),

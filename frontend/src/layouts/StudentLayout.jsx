@@ -62,7 +62,7 @@ export default function StudentLayout() {
       <aside
         className={
           'w-64 max-w-[85vw] flex flex-col flex-shrink-0 z-40 h-full ' +
-          (theme === 'dark' ? 'bg-[#0d0d0d] border-r border-white/10 ' : 'bg-white border-r border-gray-200 ') +
+          (theme === 'dark' ? 'theme-dark bg-[#0d0d0d] border-r border-white/10 ' : 'theme-light bg-white border-r border-gray-200 ') +
           'fixed md:static inset-y-0 left-0 transform transition-transform duration-200 ease-out ' +
           (navOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0') +
           (focusMode ? ' md:-translate-x-full' : '')
