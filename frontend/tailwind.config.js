@@ -7,7 +7,7 @@ export default {
         primary: '#22e088',
         brand: {
           navy: '#003366',
-          sidebar: '#1a4d72',
+          sidebar: '#ffffff',
         },
         surface: {
           1: '#121212',

@@ -3,13 +3,13 @@ import api from '../../lib/api'
 import Card from '../../components/common/Card'
 
 const StatCard = ({ label, value, icon, color }) => (
-  <Card className="p-5">
+  <Card className="p-5 !bg-white border-gray-200">
     <div className="flex items-start justify-between">
       <div>
-        <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">{label}</div>
+        <div className="text-xs font-semibold text-[#003366] uppercase tracking-wider mb-2">{label}</div>
         <div className={`font-display font-extrabold text-3xl ${color}`}>{value}</div>
       </div>
-      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl bg-white/5`}>
+      <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl bg-gray-100 border border-gray-200">
         {icon}
       </div>
     </div>
