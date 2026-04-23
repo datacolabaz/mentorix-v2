@@ -913,8 +913,10 @@ export default function InstructorStudents() {
         if (JSON.stringify(v) === JSON.stringify(ov)) return
         patchBody[k] = v
       }
-      setIfChanged('full_name', editForm.full_name, original.full_name)
-      setIfChanged('phone', editForm.phone, original.phone)
+      // Backend bəzi hallarda göndərilməyən string sahələri NULL kimi update edə bilir.
+      // Ona görə ən azı bu ikisini həmişə göndəririk.
+      patchBody.full_name = editForm.full_name
+      patchBody.phone = editForm.phone
       setIfChanged('billing_type', editForm.billing_type, original.billing_type)
       setIfChanged('referral_notes', editForm.referral_notes, original.referral_notes)
       setIfChanged('monthly_fee', editForm.monthly_fee, original.monthly_fee)
