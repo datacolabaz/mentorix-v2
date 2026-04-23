@@ -81,7 +81,7 @@ export default function InstructorAnalytics() {
       <h1 className="font-display font-bold text-xl sm:text-2xl mb-6">Analitika</h1>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4 min-w-0">
-        <Card className="p-4 sm:p-5 min-w-0 overflow-hidden !bg-white border-gray-200">
+        <Card className="p-4 sm:p-5 min-w-0 overflow-hidden !bg-[#F8FAFC] border-gray-200 shadow-[0_4px_15px_rgba(34,224,136,0.05)]">
           <h2 className="font-display font-bold text-base mb-4 text-[#003366]">Tələbə Performansı</h2>
           <div className="w-full h-[240px] min-h-[200px]">
             <ResponsiveContainer width="100%" height="100%">
@@ -95,7 +95,7 @@ export default function InstructorAnalytics() {
           </div>
         </Card>
 
-        <Card className="p-4 sm:p-5 min-w-0 overflow-hidden !bg-white border-gray-200">
+        <Card className="p-4 sm:p-5 min-w-0 overflow-hidden !bg-[#F8FAFC] border-gray-200 shadow-[0_4px_15px_rgba(34,224,136,0.05)]">
           <h2 className="font-display font-bold text-base mb-4 text-[#003366]">Yönləndirmə Mənbəyi</h2>
           {pieData.length ? (
             <div className="w-full h-[240px] min-h-[200px]">
@@ -124,7 +124,7 @@ export default function InstructorAnalytics() {
         </Card>
       </div>
 
-      <Card className="p-4 sm:p-5 min-w-0 overflow-hidden !bg-white border-gray-200">
+      <Card className="p-4 sm:p-5 min-w-0 overflow-hidden !bg-[#F8FAFC] border-gray-200 shadow-[0_4px_15px_rgba(34,224,136,0.05)]">
         <h2 className="font-display font-bold text-base mb-4 text-[#003366]">Dərs Sayı</h2>
         <div className="w-full h-[200px] min-h-[180px]">
           <ResponsiveContainer width="100%" height="100%">

@@ -2,12 +2,12 @@ import { useEffect, useState } from 'react'
 import api from '../../lib/api'
 import Card from '../../components/common/Card'
 
-const StatCard = ({ label, value, icon, color }) => (
-  <Card className="p-5 !bg-white border-gray-200">
+const StatCard = ({ label, value, icon }) => (
+  <Card className="p-5 !bg-[#F8FAFC] border-gray-200 shadow-[0_4px_15px_rgba(34,224,136,0.05)]">
     <div className="flex items-start justify-between">
       <div>
         <div className="text-xs font-semibold text-[#003366] uppercase tracking-wider mb-2">{label}</div>
-        <div className={`font-display font-extrabold text-3xl ${color}`}>{value}</div>
+        <div className="font-display font-extrabold text-3xl text-[#003366]">{value}</div>
       </div>
       <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl bg-gray-100 border border-gray-200">
         {icon}
@@ -33,9 +33,9 @@ export default function AdminDashboard() {
       </div>
 
       <div className="grid grid-cols-3 gap-4 mb-6">
-        <StatCard label="Müəllimlər" value={stats?.instructors ?? '—'} icon="👨‍🏫" color="text-blue-400" />
-        <StatCard label="Tələbələr" value={stats?.students ?? '—'} icon="🎓" color="text-emerald-400" />
-        <StatCard label="Gəlir" value={stats ? `₼${stats.revenue}` : '—'} icon="💰" color="text-yellow-400" />
+        <StatCard label="Müəllimlər" value={stats?.instructors ?? '—'} icon="👨‍🏫" />
+        <StatCard label="Tələbələr" value={stats?.students ?? '—'} icon="🎓" />
+        <StatCard label="Gəlir" value={stats ? `₼${stats.revenue}` : '—'} icon="💰" />
       </div>
 
       <Card className="p-5">

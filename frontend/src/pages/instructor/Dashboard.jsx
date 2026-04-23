@@ -8,12 +8,12 @@ import useAuthStore from '../../hooks/useAuth'
 import { useToast } from '../../components/common/Toast'
 import { writeCache } from '../../lib/cache'
 
-const StatCard = ({ label, value, icon, color }) => (
-  <Card className="p-5 !bg-white border-gray-200">
+const StatCard = ({ label, value, icon }) => (
+  <Card className="p-5 !bg-[#F8FAFC] border-gray-200 shadow-[0_4px_15px_rgba(34,224,136,0.05)]">
     <div className="flex items-start justify-between">
       <div>
         <div className="text-xs font-semibold text-[#003366] uppercase tracking-wider mb-2">{label}</div>
-        <div className={`font-display font-extrabold text-3xl ${color}`}>{value}</div>
+        <div className="font-display font-extrabold text-3xl text-[#003366]">{value}</div>
       </div>
       <div className="w-12 h-12 rounded-2xl bg-gray-100 border border-gray-200 flex items-center justify-center text-2xl">
         {icon}
@@ -213,27 +213,16 @@ export default function InstructorDashboard() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4 mb-6">
-        <StatCard label="Tələbə" value={loading ? '—' : students.length} icon="🎓" color="text-blue-400" />
-        <StatCard
-          label="Orta nəticə (faiz)"
-          value={loading ? '—' : `${Math.min(100, Math.max(0, avgScore))}%`}
-          icon="📊"
-          color="text-primary"
-        />
-        <StatCard
-          label="Gözlənən (aylıq)"
-          value={loading ? '—' : pendingMonthlyAz}
-          icon="⏳"
-          color="text-amber-300"
-        />
-        <StatCard label="Ümumi gəlir" value={loading ? '—' : totalEarningsAz} icon="💰" color="text-cyan-400" />
+        <StatCard label="Tələbə" value={loading ? '—' : students.length} icon="🎓" />
+        <StatCard label="Orta nəticə (faiz)" value={loading ? '—' : `${Math.min(100, Math.max(0, avgScore))}%`} icon="📊" />
+        <StatCard label="Gözlənən (aylıq)" value={loading ? '—' : pendingMonthlyAz} icon="⏳" />
+        <StatCard label="Ümumi gəlir" value={loading ? '—' : totalEarningsAz} icon="💰" />
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-6">
         <StatCard
           label="Bu ay ödəniş (nağd)"
           value={loading ? '—' : incomeThisMonthAz}
           icon="📅"
-          color="text-yellow-400"
         />
         <p className="text-xs text-gray-500 self-center sm:col-span-1">
           Gözlənən: aylıq «sonradan» dövr borcu + «əvvəlcədən» balans kəsiri (ankor yalnız dərslərə başlama tarixinin
@@ -243,7 +232,7 @@ export default function InstructorDashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 min-w-0">
         <div className="lg:col-span-2 min-w-0">
-          <Card className="p-4 sm:p-5 min-w-0 overflow-hidden !bg-white border-gray-200">
+          <Card className="p-4 sm:p-5 min-w-0 overflow-hidden !bg-[#F8FAFC] border-gray-200 shadow-[0_4px_15px_rgba(34,224,136,0.05)]">
             <h2 className="font-display font-bold text-base mb-4 text-[#003366]">Tələbə Proqresi (imtahan)</h2>
             {students.length ? (
               <div className="w-full h-[220px] min-h-[200px]">
@@ -267,7 +256,7 @@ export default function InstructorDashboard() {
           </Card>
         </div>
 
-        <Card className="p-4 sm:p-5 min-w-0 !bg-white border-gray-200">
+        <Card className="p-4 sm:p-5 min-w-0 !bg-[#F8FAFC] border-gray-200 shadow-[0_4px_15px_rgba(34,224,136,0.05)]">
           <h2 className="font-display font-bold text-base mb-4 text-[#003366]">Top Tələbələr (imtahan)</h2>
           <div className="space-y-3">
             {topSorted.slice(0, 5).map((s, i) => {

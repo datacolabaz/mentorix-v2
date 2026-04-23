@@ -87,7 +87,7 @@ export default function InstructorLayout() {
       )}
       <header
         className={[
-          'lg:hidden fixed top-0 left-0 right-0 z-[1000] h-[80px] flex items-center justify-between gap-2 px-3 overflow-visible',
+          'lg:hidden fixed top-0 left-0 right-0 z-[1000] h-[72px] flex items-center justify-between gap-2 px-3 overflow-visible',
           theme === 'dark' ? 'bg-[#0d0d0d] border-b border-white/10' : 'bg-white border-b border-gray-200',
         ].join(' ')}
       >
@@ -271,7 +271,7 @@ export default function InstructorLayout() {
         </div>
       </aside>
 
-      <main className="flex-1 overflow-y-auto min-w-0 pt-[80px] lg:pt-0">
+      <main className="flex-1 overflow-y-auto min-w-0 pt-[72px] lg:pt-0">
         <div className="min-h-full flex flex-col">
           {limitStatus.level ? (
             <div
