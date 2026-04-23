@@ -31,7 +31,7 @@ export default function Brand({
 
   if (size === 'sidebar') {
     return (
-      <div className={`flex w-full min-w-0 justify-start items-start ${className}`}>
+      <div className={`flex w-full min-w-0 justify-center items-center ${className}`}>
         <img
           src={logo}
           alt="Mentorix"
