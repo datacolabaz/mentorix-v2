@@ -196,12 +196,12 @@ export default function InstructorDashboard() {
   })
 
   const axisTick = {
-    fill: theme === 'dark' ? '#E5E7EB' : '#003366',
+    fill: theme === 'dark' ? '#E5E7EB' : '#1A1D21',
     fontSize: 12,
     fontWeight: 600,
   }
   const axisTickY = {
-    fill: theme === 'dark' ? '#E5E7EB' : '#003366',
+    fill: theme === 'dark' ? '#E5E7EB' : '#1A1D21',
     fontSize: 11,
     fontWeight: 600,
   }
@@ -309,7 +309,7 @@ export default function InstructorDashboard() {
                 <div key={s.enrollment_id || s.id} className="flex items-center gap-2 sm:gap-3 min-w-0">
                   <span className="text-sm font-bold text-gray-500 w-5 shrink-0">{i + 1}</span>
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium truncate">{s.full_name}</div>
+                    <div className="text-sm font-semibold truncate text-[#1A1D21]">{s.full_name}</div>
                     <div className="h-1.5 bg-[#13112e] rounded-full mt-1">
                       <div
                         className="h-full bg-blue-500 rounded-full transition-all"
