@@ -90,8 +90,8 @@ export default function InstructorLayout() {
         className={[
           'lg:hidden fixed top-0 left-0 right-0 z-[1000] h-[72px] flex items-center justify-between gap-2 px-3 overflow-visible',
           theme === 'dark'
-            ? 'bg-token-surfaceMain border-b border-[rgb(var(--border-subtle))] text-token-textMain'
-            : 'bg-token-surfaceMain border-b border-[rgb(var(--border-subtle))] text-token-textMain',
+            ? 'bg-token-surfaceMain border-b border-[color:var(--border-subtle)] text-token-textMain'
+            : 'bg-token-surfaceMain border-b border-[color:var(--border-subtle)] text-token-textMain',
         ].join(' ')}
       >
         <button
@@ -127,8 +127,8 @@ export default function InstructorLayout() {
           theme === 'dark' ? 'theme-dark' : 'theme-light',
           'w-[min(17rem,88vw)] max-w-[280px] flex flex-col flex-shrink-0',
           theme === 'dark'
-            ? 'bg-token-surfaceMain border-r border-[rgb(var(--border-subtle))]'
-            : 'bg-token-surfaceMain border-r border-[rgb(var(--border-subtle))]',
+            ? 'bg-token-surfaceMain border-r border-[color:var(--border-subtle)]'
+            : 'bg-token-surfaceMain border-r border-[color:var(--border-subtle)]',
           'fixed lg:static inset-y-0 left-0 z-[80] transition-transform duration-200 ease-out',
           navOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
           focusMode ? 'lg:-translate-x-full' : '',
@@ -151,8 +151,8 @@ export default function InstructorLayout() {
             className={[
               'mt-4 p-3 rounded-xl border',
               theme === 'dark'
-                ? 'bg-token-surfaceCard/55 border-[rgb(var(--border-subtle))]'
-                : 'bg-token-surfaceCard/70 border-[rgb(var(--border-subtle))]',
+                ? 'bg-token-surfaceCard/55 border-[color:var(--border-subtle)]'
+                : 'bg-token-surfaceCard/70 border-[color:var(--border-subtle)]',
             ].join(' ')}
           >
             <div
@@ -177,7 +177,7 @@ export default function InstructorLayout() {
         <div
           className={[
             'lg:hidden px-4 pt-4 pb-4',
-            'border-b border-[rgb(var(--border-subtle))]',
+            'border-b border-[color:var(--border-subtle)]',
           ].join(' ')}
         >
           <div className="flex items-start justify-between gap-2">
@@ -232,15 +232,15 @@ export default function InstructorLayout() {
           ))}
         </nav>
 
-        <div className="p-4 border-t border-[rgb(var(--border-subtle))]">
+        <div className="p-4 border-t border-[color:var(--border-subtle)]">
           <button
             type="button"
             onClick={toggleTheme}
             className={[
               'w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl border transition-colors',
               theme === 'dark'
-                ? 'border-[rgb(var(--border-subtle))] bg-token-surfaceCard/45 hover:bg-token-surfaceCard/60'
-                : 'border-[rgb(var(--border-subtle))] bg-token-surfaceCard/70 hover:bg-token-surfaceCard/90',
+                ? 'border-[color:var(--border-subtle)] bg-token-surfaceCard/45 hover:bg-token-surfaceCard/60'
+                : 'border-[color:var(--border-subtle)] bg-token-surfaceCard/70 hover:bg-token-surfaceCard/90',
             ].join(' ')}
           >
             <span className="text-sm font-medium text-token-textMain">

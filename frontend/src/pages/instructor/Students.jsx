@@ -5,6 +5,7 @@ import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
 import ListSkeleton from '../../components/common/ListSkeleton'
+import StatusBadge from '../../components/common/StatusBadge'
 import { useToast } from '../../components/common/Toast'
 import { WEEKDAYS } from './Schedule'
 import { fmtAzBakuLessonRow } from '../../lib/lessonWeekGrid'
@@ -609,7 +610,9 @@ export default function InstructorStudents() {
   const [teachingSubjects, setTeachingSubjects] = useState([])
   const toast = useToast()
   const [subjectFilter, setSubjectFilter] = useState('')
+  const [search, setSearch] = useState('')
   const [openGroups, setOpenGroups] = useState(() => new Set())
+  const [actionMenuId, setActionMenuId] = useState(null)
 
   const CACHE_KEY = 'instructor_students_v1'
   const CACHE_TTL_MS = 60000
@@ -874,6 +877,46 @@ export default function InstructorStudents() {
     return grouped.filter((g) => g.subject === subjectFilter)
   }, [grouped, subjectFilter])
 
+  const filteredGroups = useMemo(() => {
+    const q = String(search || '').trim().toLowerCase()
+    if (!q) return visibleGroups
+    return visibleGroups
+      .map((g) => {
+        const next = (Array.isArray(g.students) ? g.students : []).filter((s) => {
+          const name = String(s?.full_name || '').toLowerCase()
+          const phone = String(s?.phone || '').toLowerCase()
+          return name.includes(q) || phone.includes(q)
+        })
+        return { ...g, students: next }
+      })
+      .filter((g) => g.students.length > 0)
+  }, [visibleGroups, search])
+
+  const initials = (name) =>
+    String(name || '')
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((p) => p[0]?.toUpperCase())
+      .join('') || '—'
+
+  const paymentBadge = (s) => {
+    const plan = s?.payment_plan === 'partial' ? 'installment' : 'full'
+    const timing = s?.billing_timing === 'prepaid' ? 'prepaid' : 'postpaid'
+    if (plan === 'installment') return { variant: 'due', label: 'Hissəli' }
+    if (timing === 'prepaid') return { variant: 'paid', label: 'Öncədən' }
+    return { variant: 'pending', label: 'Sonradan' }
+  }
+
+  const lessonProgress = (s) => {
+    const used = Number(s?.calendar_used_lessons ?? s?.lesson_count ?? 0) || 0
+    const total = Number(s?.calendar_total_lessons ?? 0) || 0
+    if (!total) return null
+    const pct = Math.max(0, Math.min(100, Math.round((used / total) * 100)))
+    return { used, total, pct }
+  }
+
   const saveEdit = async () => {
     if (!editId) {
       toast('Qeydiyyat tapılmadı — səhifəni yeniləyin', 'error')
@@ -1055,9 +1098,26 @@ export default function InstructorStudents() {
       </div>
 
       <div className="mb-4 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
-        <div className="text-sm text-gray-400">Sahəyə görə filtr</div>
+        <div className="flex-1 min-w-0">
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Axtar… (ad və ya telefon)"
+            className={[
+              'w-full rounded-xl px-3 py-2 text-sm outline-none',
+              'bg-token-surfaceCard/55 border border-[color:var(--border-subtle)]',
+              'text-token-textMain placeholder:text-token-textMuted',
+              'focus:border-primary/40 focus:ring-2 focus:ring-primary/15',
+            ].join(' ')}
+          />
+        </div>
         <select
-          className="w-full sm:w-72 bg-[#13112e] border border-indigo-500/20 rounded-xl px-3 py-2 text-white text-sm outline-none focus:border-blue-500"
+          className={[
+            'w-full sm:w-72 rounded-xl px-3 py-2 text-sm outline-none',
+            'bg-token-surfaceCard/55 border border-[color:var(--border-subtle)]',
+            'text-token-textMain',
+            'focus:border-primary/40 focus:ring-2 focus:ring-primary/15',
+          ].join(' ')}
           value={subjectFilter}
           onChange={(e) => setSubjectFilter(e.target.value)}
         >
@@ -1083,13 +1143,20 @@ export default function InstructorStudents() {
         )}
         {!listLoading &&
           !listError &&
-          visibleGroups.map((g) => {
+          filteredGroups.map((g) => {
             const isOpen = openGroups.has(g.key)
             return (
-              <Card key={g.key} className="p-0 overflow-hidden border border-indigo-500/20">
+              <Card
+                key={g.key}
+                hover
+                className="p-0 overflow-hidden border border-[color:var(--border-subtle)] hover:border-primary/20"
+              >
                 <button
                   type="button"
-                  className="w-full flex items-center justify-between gap-3 px-4 py-3 bg-[#13112e] hover:bg-[#16143a] transition-colors"
+                  className={[
+                    'w-full flex items-center justify-between gap-3 px-4 py-3',
+                    'bg-token-surfaceCard/45 hover:bg-token-surfaceCard/60 transition-colors',
+                  ].join(' ')}
                   onClick={() =>
                     setOpenGroups((prev) => {
                       const next = new Set(prev)
@@ -1100,99 +1167,176 @@ export default function InstructorStudents() {
                   }
                 >
                   <div className="min-w-0 text-left">
-                    <div className="font-semibold text-white truncate">
+                    <div className="font-semibold text-token-textMain truncate">
                       {g.subject} — {g.group}
                     </div>
-                    <div className="text-xs text-gray-500">{g.students.length} tələbə</div>
+                    <div className="text-xs text-token-textMuted">{g.students.length} tələbə</div>
                   </div>
-                  <div className="text-gray-400 text-sm font-mono">{isOpen ? '▴' : '▾'}</div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-xs text-token-textMuted tabular-nums">
+                      {isOpen ? 'Açıq' : 'Bağlı'}
+                    </span>
+                    <span
+                      aria-hidden
+                      className={[
+                        'w-8 h-8 rounded-xl border flex items-center justify-center transition-all',
+                        'border-[color:var(--border-subtle)] bg-token-surfaceCard/35',
+                        isOpen ? 'rotate-180' : 'rotate-0',
+                      ].join(' ')}
+                    >
+                      <span className="text-token-textMain/80">⌄</span>
+                    </span>
+                  </div>
                 </button>
 
                 {isOpen && (
-                  <div className="p-3 space-y-2 bg-[#0f0c29]/60">
-                    {g.students.map((s) => (
-                      <div
-                        key={s.enrollment_id}
-                        className="flex items-center justify-between gap-3 rounded-xl border border-indigo-500/15 bg-[#0f0c29]/80 px-3 py-2"
-                      >
-                        <div className="min-w-0">
-                          <div className="font-semibold text-white truncate">{s.full_name}</div>
-                          <div className="text-xs text-gray-400 flex flex-wrap gap-x-3 gap-y-1 mt-0.5">
-                            {s.phone && <span className="break-all">{s.phone}</span>}
-                            {lessonDaysShort(s.lesson_weekdays) && (
-                              <span className="text-indigo-300/90 w-full sm:w-auto">
-                                Dərslər: {lessonDaysShort(s.lesson_weekdays)}
-                              </span>
-                            )}
+                  <div className="p-2 sm:p-3 space-y-1.5 bg-token-surfaceMain/40">
+                    {g.students.map((s) => {
+                      const p = lessonProgress(s)
+                      const pay = paymentBadge(s)
+                      const packLabel =
+                        s.billing_type === 'monthly'
+                          ? 'Aylıq'
+                          : s.billing_type === '8_lessons'
+                            ? '8 dərs'
+                            : s.billing_type === '12_lessons'
+                              ? '12 dərs'
+                              : s.billing_type
+                      return (
+                        <div
+                          key={s.enrollment_id}
+                          className={[
+                            'group flex items-center justify-between gap-3 rounded-xl px-3 py-2',
+                            'border border-[color:var(--border-subtle)]',
+                            'bg-token-surfaceCard/40 hover:bg-token-surfaceCard/55',
+                            'transition-colors',
+                          ].join(' ')}
+                        >
+                          <div className="min-w-0 flex items-center gap-3">
+                            <div
+                              className={[
+                                'w-9 h-9 rounded-full shrink-0 flex items-center justify-center text-xs font-extrabold',
+                                'bg-black/30 border border-[color:var(--border-subtle)]',
+                                'text-white',
+                              ].join(' ')}
+                              title={s.full_name}
+                            >
+                              {initials(s.full_name)}
+                            </div>
+                            <div className="min-w-0">
+                              <div className="font-semibold text-token-textMain truncate">{s.full_name}</div>
+                              <div className="text-xs text-token-textMuted flex flex-wrap gap-x-3 gap-y-1 mt-0.5">
+                                {s.phone && <span className="break-all">{s.phone}</span>}
+                                {lessonDaysShort(s.lesson_weekdays) ? (
+                                  <span className="w-full sm:w-auto">Dərslər: {lessonDaysShort(s.lesson_weekdays)}</span>
+                                ) : null}
+                              </div>
+                            </div>
                           </div>
-                        </div>
 
-                        <div className="flex items-center gap-2 shrink-0">
-                          <span className="text-[11px] bg-blue-500/20 text-blue-300 px-2 py-1 rounded-lg font-semibold inline-block">
-                            {s.billing_type === 'monthly'
-                              ? 'Aylıq'
-                              : (() => {
-                                  const used = s.calendar_used_lessons ?? s.lesson_count ?? 0
-                                  const total =
-                                    s.calendar_total_lessons ??
-                                    (BILLING_OPTS.find((o) => o.value === s.billing_type)?.label || s.billing_type)
-                                  return `${used}/${total}`
-                                })()}
-                          </span>
-                          <div className="flex gap-1">
-                            <Button
-                              size="sm"
-                              variant="secondary"
-                              className="px-2"
-                              title="Dərslər"
-                              aria-label="Dərslər"
-                              onClick={() => openLessonsModal(s)}
-                            >
-                              📅
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="secondary"
-                              className="px-2"
-                              title="Köhnə ödənişləri təsdiqlə"
-                              aria-label="Köhnə ödənişləri təsdiqlə"
-                              onClick={() => openRestoreModal(s)}
-                            >
-                              ✅
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="secondary"
-                              className="px-2"
-                              title="Redaktə"
-                              aria-label="Redaktə"
-                              onClick={() => openEdit(s)}
-                            >
-                              ✏️
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="danger"
-                              className="px-2"
-                              title="Sil"
-                              aria-label="Sil"
-                              onClick={() => deleteStudent(s.enrollment_id, s.full_name)}
-                            >
-                              🗑
-                            </Button>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <div className="hidden sm:flex items-center gap-2">
+                              <StatusBadge variant={pay.variant}>{pay.label}</StatusBadge>
+                              <StatusBadge variant="neutral">{packLabel}</StatusBadge>
+                            </div>
+
+                            <div className="hidden md:flex items-center gap-2 w-[140px]">
+                              <div className="flex-1">
+                                <div className="h-2 rounded-full bg-white/5 border border-white/10 overflow-hidden">
+                                  <div
+                                    className="h-full bg-primary/70"
+                                    style={{ width: `${p ? p.pct : 92}%` }}
+                                  />
+                                </div>
+                                <div className="mt-1 text-[11px] text-token-textMuted text-right tabular-nums">
+                                  {p ? `${p.pct}% (${p.used}/${p.total})` : '—'}
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="relative">
+                              <button
+                                type="button"
+                                className={[
+                                  'w-9 h-9 rounded-xl border flex items-center justify-center',
+                                  'border-[color:var(--border-subtle)] bg-token-surfaceCard/35 hover:bg-token-surfaceCard/60',
+                                  'text-token-textMain/80',
+                                ].join(' ')}
+                                aria-label="Actions"
+                                onClick={() =>
+                                  setActionMenuId((prev) =>
+                                    String(prev) === String(s.enrollment_id) ? null : s.enrollment_id
+                                  )
+                                }
+                              >
+                                ⋯
+                              </button>
+
+                              {String(actionMenuId) === String(s.enrollment_id) ? (
+                                <div
+                                  className={[
+                                    'absolute right-0 mt-2 w-44 z-20 overflow-hidden rounded-2xl border',
+                                    'border-[color:var(--border-subtle)] bg-token-surfaceCard/90 backdrop-blur-[10px]',
+                                    'shadow-[0_18px_45px_rgba(0,0,0,0.35)]',
+                                  ].join(' ')}
+                                  onMouseLeave={() => setActionMenuId(null)}
+                                >
+                                  <button
+                                    type="button"
+                                    className="w-full text-left px-3 py-2 text-sm hover:bg-white/5"
+                                    onClick={() => {
+                                      setActionMenuId(null)
+                                      openEdit(s)
+                                    }}
+                                  >
+                                    Redaktə
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="w-full text-left px-3 py-2 text-sm hover:bg-white/5"
+                                    onClick={() => {
+                                      setActionMenuId(null)
+                                      openLessonsModal(s)
+                                    }}
+                                  >
+                                    Dərslər
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="w-full text-left px-3 py-2 text-sm hover:bg-white/5"
+                                    onClick={() => {
+                                      setActionMenuId(null)
+                                      openRestoreModal(s)
+                                    }}
+                                  >
+                                    Köhnə ödənişlər
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="w-full text-left px-3 py-2 text-sm text-red-200 hover:bg-red-500/10"
+                                    onClick={() => {
+                                      setActionMenuId(null)
+                                      deleteStudent(s.enrollment_id, s.full_name)
+                                    }}
+                                  >
+                                    Sil
+                                  </button>
+                                </div>
+                              ) : null}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 )}
               </Card>
             )
           })}
         {!listLoading && !listError && !students.length && (
-          <div className="text-center py-16 text-gray-500">
-            <p className="text-lg mb-2">Telebe yoxdur</p>
-            <p className="text-sm">Yuxaridan telebe elave edin</p>
+          <div className="text-center py-16 text-token-textMuted">
+            <p className="text-lg mb-2 text-token-textMain">Tələbə yoxdur</p>
+            <p className="text-sm">Yuxarıdan tələbə əlavə edin</p>
           </div>
         )}
       </div>

@@ -14,7 +14,7 @@ export default {
           surfaceCard: 'rgb(var(--surface-card) / <alpha-value>)',
           textMain: 'rgb(var(--text-main) / <alpha-value>)',
           textMuted: 'rgb(var(--text-muted) / <alpha-value>)',
-          borderSubtle: 'rgb(var(--border-subtle))',
+          borderSubtle: 'var(--border-subtle)',
         },
         surface: {
           1: '#121212',
