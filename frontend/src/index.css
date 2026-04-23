@@ -10,27 +10,9 @@
     --surface-main: 244 247 250; /* #F4F7FA */
     --surface-card: 255 255 255; /* #FFFFFF */
     --primary-accent: 0 230 118; /* #00E676 */
-    --border-subtle: 15 23 42 / 0.08; /* slate-900 @ 8% */
+    --border-subtle: rgba(15, 23, 42, 0.08);
     --text-main: 11 18 32; /* #0B1220 */
     --text-muted: 100 116 139; /* slate-500 */
-  }
-
-  .theme-dark {
-    --surface-main: 11 11 15; /* #0B0B0F */
-    --surface-card: 21 23 30; /* #15171E */
-    --primary-accent: 0 230 118; /* #00E676 */
-    --border-subtle: 255 255 255 / 0.08;
-    --text-main: 255 255 255;
-    --text-muted: 148 163 184; /* slate-400 */
-  }
-
-  .theme-light {
-    --surface-main: 244 247 250;
-    --surface-card: 255 255 255;
-    --primary-accent: 0 230 118;
-    --border-subtle: 15 23 42 / 0.08;
-    --text-main: 11 18 32;
-    --text-muted: 100 116 139;
   }
 
   body {
@@ -44,6 +26,25 @@
 @layer utilities {
   .font-body { font-family: 'DM Sans', sans-serif; }
   .font-display { font-family: 'Syne', sans-serif; }
+
+  /* Theme tokens live here so Tailwind/PostCSS stays happy */
+  .theme-dark {
+    --surface-main: 11 11 15; /* #0B0B0F */
+    --surface-card: 21 23 30; /* #15171E */
+    --primary-accent: 0 230 118; /* #00E676 */
+    --border-subtle: rgba(255, 255, 255, 0.08);
+    --text-main: 255 255 255;
+    --text-muted: 148 163 184; /* slate-400 */
+  }
+
+  .theme-light {
+    --surface-main: 244 247 250;
+    --surface-card: 255 255 255;
+    --primary-accent: 0 230 118;
+    --border-subtle: rgba(15, 23, 42, 0.08);
+    --text-main: 11 18 32;
+    --text-muted: 100 116 139;
+  }
   /* Logo blending for removing faint white box */
   .mentorix-logo { mix-blend-mode: normal; }
   .theme-light .mentorix-logo { mix-blend-mode: multiply; }
