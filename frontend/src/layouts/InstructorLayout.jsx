@@ -110,7 +110,7 @@ export default function InstructorLayout() {
 
       <aside
         className={[
-          'w-[min(17rem,88vw)] max-w-[280px] bg-[#003366] border-r border-white/10 flex flex-col flex-shrink-0',
+          'w-[min(17rem,88vw)] max-w-[280px] bg-brand-sidebar border-r border-white/10 flex flex-col flex-shrink-0',
           'fixed lg:static inset-y-0 left-0 z-[80] transition-transform duration-200 ease-out',
           navOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
           focusMode ? 'lg:-translate-x-full' : '',

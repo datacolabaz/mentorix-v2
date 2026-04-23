@@ -18,7 +18,7 @@ export default function AdminLayout() {
 
   return (
     <div className="flex h-screen bg-[#0b0b0b] text-white overflow-hidden">
-      <aside className="w-60 bg-[#003366] border-r border-white/10 flex flex-col flex-shrink-0">
+      <aside className="w-60 bg-brand-sidebar border-r border-white/10 flex flex-col flex-shrink-0">
         <div className="px-2 py-2 border-b border-white/10">
           <div className="mb-5">
             <Brand size="sidebar" />
