@@ -16,7 +16,7 @@ export default function ParentLayout() {
 
   return (
     <div className="flex h-screen bg-[#0b0b0b] text-white overflow-hidden">
-      <aside className="w-60 bg-surface-2 border-r border-white/10 flex flex-col flex-shrink-0">
+      <aside className="w-60 bg-brand-sidebar border-r border-white/10 flex flex-col flex-shrink-0">
         <div className="px-3 py-3 border-b border-white/10">
           <div className="w-full flex items-center justify-center">
             <Brand size="sidebar" imgClassName="scale-[1.4] -my-1" />
