@@ -12,7 +12,7 @@ export function sidebarNavClass(isActive, theme = 'light') {
       : 'text-gray-400 hover:text-gray-700 hover:bg-gray-100'
 
   if (isActive) {
-    return `${base} text-primary bg-primary/10`
+    return `${base} text-white bg-primary shadow-sm shadow-primary/20`
   }
 
   return `${base} ${inactive}`
