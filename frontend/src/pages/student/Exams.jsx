@@ -1060,28 +1060,31 @@ export default function StudentExams() {
                   Suallar bu imtahana əlavə edilmiş fayllardır. Şəkilləri böyütmək üçün üzərinə klikləyin.
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {reviewModal.exam_files.map((f) => (
-                    <a
-                      key={f.id || f.url}
-                      href={f.url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="rounded-xl border border-indigo-500/15 bg-black/20 overflow-hidden hover:border-primary/30 transition-colors"
-                    >
-                      <div className="px-3 py-2 text-xs text-gray-400 border-b border-indigo-500/10 truncate">
-                        {f.name || 'Fayl'}
-                      </div>
-                      <div className="p-2">
-                        <img
-                          src={f.url}
-                          alt={f.name || 'İmtahan faylı'}
-                          className="w-full h-[220px] object-contain bg-black/30 rounded-lg"
-                          loading="lazy"
-                          decoding="async"
-                        />
-                      </div>
-                    </a>
-                  ))}
+                  {reviewModal.exam_files.map((f) => {
+                    const openUrl = materialOpenInNewTabUrl(f.url, reviewModal?.exam?.id || null)
+                    return (
+                      <a
+                        key={f.id || f.url}
+                        href={openUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="rounded-xl border border-indigo-500/15 bg-black/20 overflow-hidden hover:border-primary/30 transition-colors"
+                      >
+                        <div className="px-3 py-2 text-xs text-gray-400 border-b border-indigo-500/10 truncate">
+                          {f.name || 'Fayl'}
+                        </div>
+                        <div className="p-2">
+                          <img
+                            src={resolveMaterialUrl(f.url)}
+                            alt={f.name || 'İmtahan faylı'}
+                            className="w-full h-[220px] object-contain bg-black/30 rounded-lg"
+                            loading="lazy"
+                            decoding="async"
+                          />
+                        </div>
+                      </a>
+                    )
+                  })}
                 </div>
               </div>
             )}
