@@ -3,6 +3,8 @@ import logo from '../../assets/mentorix-logo.png'
 const imgBase = 'object-contain select-none bg-transparent shrink-0'
 const onDarkBoost =
   'drop-shadow-[0_6px_18px_rgba(34,224,136,0.25)] brightness-[1.12] saturate-[1.12]'
+const loginBoost =
+  '[mix-blend-mode:screen] [filter:brightness(1.2)_contrast(1.1)] drop-shadow-[0_0_15px_rgba(34,224,136,0.4)]'
 
 export default function Brand({
   className = '',
@@ -17,7 +19,7 @@ export default function Brand({
         <img
           src={logo}
           alt="Mentorix"
-          className={`mentorix-logo w-[180px] max-w-[min(180px,92vw)] h-auto ${imgBase} ${onDarkBoost} ${imgClassName}`}
+          className={`mentorix-logo w-[220px] max-w-[min(220px,92vw)] h-auto ${imgBase} ${loginBoost} ${imgClassName}`}
           draggable={false}
         />
         {showText ? (
