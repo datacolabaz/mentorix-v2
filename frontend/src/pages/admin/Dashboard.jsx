@@ -3,7 +3,7 @@ import api from '../../lib/api'
 import Card from '../../components/common/Card'
 
 const StatCard = ({ label, value, icon }) => (
-  <Card className="p-5 !bg-[#F8FAFC] border-gray-200 shadow-[0_4px_15px_rgba(34,224,136,0.05)]">
+  <Card className="p-5 !bg-[#F0F4F8] border-gray-200 shadow-[0_10px_30px_rgba(34,224,136,0.1)]">
     <div className="flex items-start justify-between">
       <div>
         <div className="text-xs font-semibold text-[#003366] uppercase tracking-wider mb-2">{label}</div>
