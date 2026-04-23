@@ -1078,9 +1078,9 @@ export default function StudentExams() {
                         </div>
                         <div className="p-2">
                           <img
-                            src={resolveMaterialUrl(f.url)}
+                            src={openUrl}
                             alt={f.name || 'İmtahan faylı'}
-                            className="w-full h-[220px] object-contain bg-black/30 rounded-lg"
+                            className="w-full h-[280px] sm:h-[320px] object-contain bg-black/30 rounded-lg"
                             loading="lazy"
                             decoding="async"
                           />
