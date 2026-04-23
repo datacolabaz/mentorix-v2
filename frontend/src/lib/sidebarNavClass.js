@@ -1,9 +1,19 @@
-/** Ağ sidebar: mətn #003366; aktiv — göy→yaşıl gradient, ağ yazı */
-export function sidebarNavClass(isActive) {
+/**
+ * Sidebar (SaaS): default gray, active mint.
+ * - default: #9ca3af (tailwind text-gray-400)
+ * - active: #22e088 (primary) + subtle bg
+ */
+export function sidebarNavClass(isActive, theme = 'light') {
   const base =
-    'relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all'
+    'flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors'
+  const inactive =
+    theme === 'dark'
+      ? 'text-gray-400 hover:text-white hover:bg-white/5'
+      : 'text-gray-400 hover:text-gray-700 hover:bg-gray-100'
+
   if (isActive) {
-    return `${base} text-white bg-gradient-to-r from-[#003366] to-[#22e088] shadow-sm`
+    return `${base} text-primary bg-primary/10`
   }
-  return `${base} text-[#003366] hover:bg-gray-100 hover:text-[#00264d]`
+
+  return `${base} ${inactive}`
 }
