@@ -597,6 +597,7 @@ export default function InstructorStudents() {
   const [editModal, setEditModal] = useState(false)
   const [form, setForm] = useState(emptyForm)
   const [editForm, setEditForm] = useState(emptyForm)
+  const [editOriginal, setEditOriginal] = useState(null)
   const [editId, setEditId] = useState(null)
   const [loading, setLoading] = useState(false)
   const [listLoading, setListLoading] = useState(true)
@@ -750,6 +751,23 @@ export default function InstructorStudents() {
         ? String(s.first_lesson_date).slice(0, 10)
         : ''
     const pkgAnchor = firstSlice || enrSlice
+    setEditOriginal({
+      full_name: s.full_name || '',
+      phone: s.phone || '',
+      billing_type: s.billing_type || '8_lessons',
+      monthly_fee: s.monthly_fee != null && s.monthly_fee !== '' ? String(s.monthly_fee) : '',
+      enrollment_date: s.billing_type === 'monthly' ? enrSlice : pkgAnchor,
+      first_lesson_date: s.billing_type === 'monthly' ? enrSlice : pkgAnchor,
+      billing_timing: s.billing_timing === 'prepaid' ? 'prepaid' : 'postpaid',
+      payment_plan: s.payment_plan === 'partial' ? 'partial' : 'full',
+      subject_id: s.subject_id ? String(s.subject_id) : '',
+      group_id: s.group_id ? String(s.group_id) : '',
+      lesson_weekdays: normalizeWeekdays(s.lesson_weekdays),
+      lesson_times: normalizeLessonTimes(s.lesson_times),
+      parent_name: s.parent_name || '',
+      parent_phone: s.parent_phone || '',
+      notifications_enabled: s.notifications_enabled !== false,
+    })
     setEditForm({
       full_name: s.full_name || '',
       phone: s.phone || '',
@@ -869,41 +887,57 @@ export default function InstructorStudents() {
       toast('Ən azı bir dərs günü seçin', 'error')
       return
     }
+    const original = editOriginal || {}
     const editPkg = editForm.billing_type === '8_lessons' || editForm.billing_type === '12_lessons'
     const editMonthly = editForm.billing_type === 'monthly'
-    if (editMonthly && !editForm.enrollment_date) {
+    // Telefon kimi sadə dəyişikliklərdə mövcud başlanğıc tarixi varsa bloklama.
+    const effectiveEnrollment =
+      editForm.enrollment_date || original.enrollment_date || ''
+    const effectiveFirstLesson =
+      editForm.first_lesson_date || original.first_lesson_date || ''
+    if (editMonthly && !effectiveEnrollment) {
       toast('Aylıq üçün ayın ankor gününü seçin', 'error')
       return
     }
-    if (editPkg && !editForm.first_lesson_date) {
+    if (editPkg && !effectiveFirstLesson) {
       toast('Paket üçün ilk dərs tarixini seçin', 'error')
       return
     }
-    const enrollmentPatch = editPkg ? editForm.first_lesson_date : editForm.enrollment_date
+    const enrollmentPatch = editPkg ? effectiveFirstLesson : effectiveEnrollment
     setLoading(true)
     try {
-      const patchBody = {
-        full_name: editForm.full_name,
-        phone: editForm.phone,
-        billing_type: editForm.billing_type,
-        referral_notes: editForm.referral_notes,
-        monthly_fee: editForm.monthly_fee,
-        billing_timing: editForm.billing_timing || 'postpaid',
-        payment_plan: editForm.payment_plan || 'full',
-        notifications_enabled: Boolean(editForm.notifications_enabled),
-        subject_id: editForm.subject_id || null,
-        group_id: editForm.group_id || null,
-        lesson_weekdays: editForm.lesson_weekdays,
-        lesson_times: editForm.lesson_times || {},
-        parent_name: editForm.parent_name,
-        parent_phone: editForm.parent_phone,
+      // Yalnız dəyişən sahələri göndər (telefon update-də tarix validasiyası trigger olmasın).
+      const patchBody = {}
+      const setIfChanged = (k, v, ov) => {
+        if (v == null && ov == null) return
+        if (JSON.stringify(v) === JSON.stringify(ov)) return
+        patchBody[k] = v
       }
+      setIfChanged('full_name', editForm.full_name, original.full_name)
+      setIfChanged('phone', editForm.phone, original.phone)
+      setIfChanged('billing_type', editForm.billing_type, original.billing_type)
+      setIfChanged('referral_notes', editForm.referral_notes, original.referral_notes)
+      setIfChanged('monthly_fee', editForm.monthly_fee, original.monthly_fee)
+      setIfChanged('billing_timing', editForm.billing_timing || 'postpaid', original.billing_timing)
+      setIfChanged('payment_plan', editForm.payment_plan || 'full', original.payment_plan)
+      setIfChanged('notifications_enabled', Boolean(editForm.notifications_enabled), Boolean(original.notifications_enabled))
+      setIfChanged('subject_id', editForm.subject_id || null, original.subject_id || null)
+      setIfChanged('group_id', editForm.group_id || null, original.group_id || null)
+      setIfChanged('lesson_weekdays', editForm.lesson_weekdays, original.lesson_weekdays)
+      setIfChanged('lesson_times', editForm.lesson_times || {}, original.lesson_times || {})
+      setIfChanged('parent_name', editForm.parent_name, original.parent_name)
+      setIfChanged('parent_phone', editForm.parent_phone, original.parent_phone)
       // Köhnə qeydiyyatlarda tarix NULL ola bilər; boş string göndərsək backend valide etməyə çalışıb 400 qaytarır.
-      if (enrollmentPatch) patchBody.enrollment_date = enrollmentPatch
+      if (enrollmentPatch) setIfChanged('enrollment_date', enrollmentPatch, original.enrollment_date || null)
       if (editForm.billing_type === '8_lessons' || editForm.billing_type === '12_lessons') {
-        if (editForm.first_lesson_date) patchBody.first_lesson_date = editForm.first_lesson_date
+        if (effectiveFirstLesson) setIfChanged('first_lesson_date', effectiveFirstLesson, original.first_lesson_date || null)
       } else if (editMonthly) {
-        if (editForm.enrollment_date) patchBody.first_lesson_date = editForm.enrollment_date
+        if (effectiveEnrollment) setIfChanged('first_lesson_date', effectiveEnrollment, original.first_lesson_date || null)
+      }
+      if (!Object.keys(patchBody).length) {
+        toast('Dəyişiklik yoxdur', 'info')
+        setEditModal(false)
+        return
       }
       await api.patch('/students/enrollment/' + encodeURIComponent(editId), patchBody)
       toast('Melumatlari yenilendi!')
