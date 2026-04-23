@@ -9,13 +9,15 @@ import { useToast } from '../../components/common/Toast'
 import { writeCache } from '../../lib/cache'
 
 const StatCard = ({ label, value, icon, color }) => (
-  <Card className="p-5">
+  <Card className="p-5 !bg-white border-gray-200">
     <div className="flex items-start justify-between">
       <div>
-        <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">{label}</div>
+        <div className="text-xs font-semibold text-[#003366] uppercase tracking-wider mb-2">{label}</div>
         <div className={`font-display font-extrabold text-3xl ${color}`}>{value}</div>
       </div>
-      <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-2xl">{icon}</div>
+      <div className="w-12 h-12 rounded-2xl bg-gray-100 border border-gray-200 flex items-center justify-center text-2xl">
+        {icon}
+      </div>
     </div>
   </Card>
 )
@@ -216,7 +218,7 @@ export default function InstructorDashboard() {
           label="Orta nəticə (faiz)"
           value={loading ? '—' : `${Math.min(100, Math.max(0, avgScore))}%`}
           icon="📊"
-          color="text-emerald-400"
+          color="text-primary"
         />
         <StatCard
           label="Gözlənən (aylıq)"
@@ -241,8 +243,8 @@ export default function InstructorDashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 min-w-0">
         <div className="lg:col-span-2 min-w-0">
-          <Card className="p-4 sm:p-5 min-w-0 overflow-hidden">
-            <h2 className="font-display font-bold text-base mb-4">Tələbə Proqresi (imtahan)</h2>
+          <Card className="p-4 sm:p-5 min-w-0 overflow-hidden !bg-white border-gray-200">
+            <h2 className="font-display font-bold text-base mb-4 text-[#003366]">Tələbə Proqresi (imtahan)</h2>
             {students.length ? (
               <div className="w-full h-[220px] min-h-[200px]">
                 <ResponsiveContainer width="100%" height="100%">
@@ -255,7 +257,7 @@ export default function InstructorDashboard() {
                 </ResponsiveContainer>
               </div>
             ) : (
-              <div className="h-52 flex items-center justify-center text-gray-500">Hələ məlumat yoxdur</div>
+              <div className="h-52 flex items-center justify-center text-gray-600">Hələ məlumat yoxdur</div>
             )}
             {students.length > 0 && !rosterWithExam.length && (
               <p className="text-gray-500 text-xs mt-2">
@@ -265,8 +267,8 @@ export default function InstructorDashboard() {
           </Card>
         </div>
 
-        <Card className="p-4 sm:p-5 min-w-0">
-          <h2 className="font-display font-bold text-base mb-4">Top Tələbələr (imtahan)</h2>
+        <Card className="p-4 sm:p-5 min-w-0 !bg-white border-gray-200">
+          <h2 className="font-display font-bold text-base mb-4 text-[#003366]">Top Tələbələr (imtahan)</h2>
           <div className="space-y-3">
             {topSorted.slice(0, 5).map((s, i) => {
               const ex = examById[String(s.id)]

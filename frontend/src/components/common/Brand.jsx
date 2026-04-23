@@ -31,13 +31,11 @@ export default function Brand({
 
   if (size === 'sidebar') {
     return (
-      <div
-        className={`flex w-4/5 max-w-full mx-auto min-w-0 justify-center items-center ${className}`}
-      >
+      <div className={`flex w-full min-w-0 justify-start items-start ${className}`}>
         <img
           src={logo}
           alt="Mentorix"
-          className={`h-[48px] max-h-[50px] w-auto max-w-full ${imgBase} ${imgClassName}`}
+          className={`h-[50px] max-h-[52px] w-auto max-w-full ${imgBase} ${imgClassName}`}
           draggable={false}
         />
       </div>
@@ -46,12 +44,12 @@ export default function Brand({
 
   return (
     <div
-      className={`flex items-center justify-center min-w-0 mx-auto max-w-[min(240px,70vw)] overflow-visible ${className}`}
+      className={`flex items-center justify-start min-w-0 max-w-[min(260px,82vw)] overflow-visible ${className}`}
     >
       <img
         src={logo}
         alt="Mentorix"
-        className={`h-[42px] max-h-[48px] w-auto max-w-full sm:h-[46px] sm:max-h-[50px] ${imgBase} ${imgClassName}`}
+        className={`h-[48px] max-h-[50px] w-auto max-w-full sm:h-[50px] sm:max-h-[52px] ${imgBase} ${imgClassName}`}
         draggable={false}
       />
     </div>

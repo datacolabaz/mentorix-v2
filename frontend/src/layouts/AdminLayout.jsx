@@ -18,17 +18,17 @@ export default function AdminLayout() {
 
   return (
     <div className="flex h-screen bg-[#0b0b0b] text-white overflow-hidden">
-      <aside className="w-60 bg-brand-sidebar border-r border-white/10 flex flex-col flex-shrink-0">
-        <div className="px-2 py-2 border-b border-white/10">
+      <aside className="w-60 bg-brand-sidebar border-r border-gray-200 flex flex-col flex-shrink-0 text-[#003366]">
+        <div className="px-2 pt-2 pb-2 border-b border-gray-200">
           <div className="mb-5">
             <Brand size="sidebar" />
           </div>
-          <div className="p-3 bg-black/25 rounded-xl border border-white/15">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-red-500 to-orange-600 flex items-center justify-center text-sm font-bold mb-2">
+          <div className="p-3 bg-gray-50 rounded-xl border border-gray-200">
+            <div className="w-8 h-8 rounded-full bg-[#003366]/10 border border-[#003366]/20 text-[#003366] flex items-center justify-center text-sm font-bold mb-2">
               {user?.full_name?.split(' ').map(n => n[0]).join('').slice(0, 2)}
             </div>
-            <div className="text-sm font-semibold">{user?.full_name}</div>
-            <div className="text-xs text-orange-400 font-semibold">⚙️ Admin</div>
+            <div className="text-sm font-semibold text-[#003366]">{user?.full_name}</div>
+            <div className="text-xs text-[#003366]/80 font-semibold">⚙️ Admin</div>
           </div>
         </div>
 
@@ -41,9 +41,9 @@ export default function AdminLayout() {
           ))}
         </nav>
 
-        <div className="p-4 border-t border-white/10">
+        <div className="p-4 border-t border-gray-200">
           <button onClick={() => { logout(); navigate('/login') }}
-            className="flex items-center gap-2 text-red-400 text-sm font-medium hover:text-red-300 transition-colors w-full px-3 py-2 rounded-xl hover:bg-red-500/10">
+            className="flex items-center gap-2 text-red-600 text-sm font-medium hover:text-red-700 transition-colors w-full px-3 py-2 rounded-xl hover:bg-red-50">
             → Çıxış
           </button>
         </div>
