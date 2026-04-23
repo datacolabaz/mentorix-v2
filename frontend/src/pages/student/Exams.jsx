@@ -403,17 +403,24 @@ export default function StudentExams() {
       title: exam.title,
       loading: true,
       breakdown: null,
+      questions: null,
       type_summary: null,
       score: null,
       submitted_at: null,
       error: null,
     })
     try {
-      const d = await api.get(`/exams/${exam.id}/review`)
+      const [d, q] = await Promise.all([
+        api.get(`/exams/${exam.id}/review`),
+        api.get(`/exams/${exam.id}/questions`).catch(() => ({ questions: [] })),
+      ])
       setReviewModal({
         title: exam.title,
         loading: false,
         breakdown: Array.isArray(d.breakdown) ? d.breakdown : [],
+        questions: Array.isArray(q.questions)
+          ? q.questions.map(({ correct_answer, ...rest }) => rest)
+          : [],
         type_summary: d.type_summary || null,
         score: d.score,
         submitted_at: d.submitted_at,
@@ -424,6 +431,7 @@ export default function StudentExams() {
         title: exam.title,
         loading: false,
         breakdown: [],
+        questions: [],
         type_summary: null,
         score: null,
         submitted_at: null,
@@ -1046,6 +1054,65 @@ export default function StudentExams() {
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+
+            {Array.isArray(reviewModal.questions) && reviewModal.questions.length > 0 && (
+              <div className="mt-6">
+                <h3 className="text-sm font-bold text-white mb-2">İmtahan sualları</h3>
+                <div className="space-y-3 max-h-[min(60vh,520px)] overflow-y-auto pr-1">
+                  {reviewModal.questions.map((q, i) => {
+                    const row = (reviewModal.breakdown || []).find((r) => String(r?.question_id) === String(q?.id)) || null
+                    const selectedKey = row?.student_answer
+                    return (
+                      <div key={q?.id ?? i} className="rounded-xl border border-indigo-500/15 bg-[#0f0c29]/55 p-4">
+                        <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
+                          <span className="text-sm font-bold text-indigo-300">Sual {i + 1}</span>
+                          <span className="text-[11px] uppercase tracking-wide text-gray-500">
+                            {questionTypeLabelAz(q?.question_type)}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-200 leading-snug">{q?.question_text ?? `Sual ${i + 1}`}</p>
+
+                        {q?.question_type === 'closed' && Array.isArray(q.options) ? (
+                          <div className="mt-3 space-y-2">
+                            {q.options.map((opt, oi) => {
+                              const key = String.fromCharCode(65 + oi)
+                              const isSelected =
+                                selectedKey != null &&
+                                String(selectedKey).trim().toUpperCase() === key
+                              return (
+                                <div
+                                  key={`${q?.id}-opt-${key}`}
+                                  className={[
+                                    'rounded-lg border px-3 py-2 text-sm flex items-start gap-2',
+                                    isSelected
+                                      ? 'border-primary/40 bg-primary/10 text-white'
+                                      : 'border-white/10 bg-black/20 text-gray-300',
+                                  ].join(' ')}
+                                >
+                                  <span className={`font-mono text-xs mt-0.5 ${isSelected ? 'text-primary' : 'text-gray-500'}`}>
+                                    {key}
+                                  </span>
+                                  <span className="min-w-0 break-words">{optionDisplayLabel(opt)}</span>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        ) : null}
+
+                        {q?.question_type !== 'closed' && selectedKey ? (
+                          <div className="mt-3">
+                            <span className="text-xs text-gray-500 block mb-0.5">Sizin cavabınız</span>
+                            <code className="block text-amber-200/90 font-mono text-xs break-all bg-black/25 rounded-lg px-2 py-1.5">
+                              {String(selectedKey)}
+                            </code>
+                          </div>
+                        ) : null}
+                      </div>
+                    )
+                  })}
+                </div>
               </div>
             )}
           </>
