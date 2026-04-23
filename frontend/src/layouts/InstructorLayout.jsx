@@ -84,7 +84,7 @@ export default function InstructorLayout() {
           ☰
         </button>
       )}
-      <header className="lg:hidden fixed top-0 left-0 right-0 z-[1000] h-[72px] flex items-center justify-between gap-2 px-3 bg-[#0b0b0b] border-b border-white/10">
+      <header className="lg:hidden fixed top-0 left-0 right-0 z-[1000] h-[72px] flex items-center justify-between gap-2 px-3 bg-[#0b0b0b] border-b border-white/10 overflow-visible">
         <button
           type="button"
           aria-label="Menyu"
@@ -93,7 +93,7 @@ export default function InstructorLayout() {
         >
           ☰
         </button>
-        <div className="flex-1 flex justify-center min-w-0 px-1">
+        <div className="flex-1 flex justify-center min-w-0 px-1 overflow-visible">
           <Brand size="md" />
         </div>
         <div className="w-11 shrink-0" />
