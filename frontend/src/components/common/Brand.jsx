@@ -1,6 +1,8 @@
 import logo from '../../assets/mentorix-logo.png'
 
 const imgBase = 'object-contain select-none bg-transparent shrink-0'
+const onDarkBoost =
+  'drop-shadow-[0_6px_18px_rgba(34,224,136,0.25)] brightness-[1.12] saturate-[1.12]'
 
 export default function Brand({
   className = '',
@@ -15,7 +17,7 @@ export default function Brand({
         <img
           src={logo}
           alt="Mentorix"
-          className={`w-[180px] max-w-[min(180px,92vw)] h-auto ${imgBase} ${imgClassName}`}
+          className={`w-[180px] max-w-[min(180px,92vw)] h-auto ${imgBase} ${onDarkBoost} ${imgClassName}`}
           draggable={false}
         />
         {showText ? (
@@ -35,7 +37,7 @@ export default function Brand({
         <img
           src={logo}
           alt="Mentorix"
-          className={`h-[45px] max-h-[48px] w-auto max-w-full block mx-auto ${imgBase} ${imgClassName}`}
+          className={`h-[45px] max-h-[52px] w-auto max-w-full block mx-auto ${imgBase} ${onDarkBoost} ${imgClassName}`}
           draggable={false}
         />
       </div>
@@ -49,9 +51,10 @@ export default function Brand({
       <img
         src={logo}
         alt="Mentorix"
-        className={`h-[48px] max-h-[50px] w-auto max-w-full sm:h-[50px] sm:max-h-[52px] ${imgBase} ${imgClassName}`}
+        className={`h-[50px] max-h-[56px] w-auto max-w-full sm:h-[52px] sm:max-h-[60px] ${imgBase} ${onDarkBoost} ${imgClassName}`}
         draggable={false}
       />
     </div>
   )
 }
+        
