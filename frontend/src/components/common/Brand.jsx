@@ -1,8 +1,6 @@
 import logo from '../../assets/mentorix-logo.png'
 
-/** Tünd fonda ağ loqo fonunu yumşatmaq (RGB PNG üçün) */
-const imgOnDark =
-  'object-contain select-none [mix-blend-mode:screen] contrast-[1.02]'
+const imgBase = 'object-contain select-none bg-transparent shrink-0'
 
 export default function Brand({
   className = '',
@@ -17,7 +15,7 @@ export default function Brand({
         <img
           src={logo}
           alt="Mentorix"
-          className={`w-[180px] max-w-[min(180px,92vw)] h-auto bg-transparent ${imgOnDark} ${imgClassName}`}
+          className={`w-[180px] max-w-[min(180px,92vw)] h-auto ${imgBase} ${imgClassName}`}
           draggable={false}
         />
         {showText ? (
@@ -39,7 +37,7 @@ export default function Brand({
         <img
           src={logo}
           alt="Mentorix"
-          className={`h-[48px] max-h-[50px] w-auto max-w-full bg-transparent ${imgOnDark} ${imgClassName}`}
+          className={`h-[48px] max-h-[50px] w-auto max-w-full ${imgBase} ${imgClassName}`}
           draggable={false}
         />
       </div>
@@ -47,11 +45,13 @@ export default function Brand({
   }
 
   return (
-    <div className={`flex items-center justify-center min-w-0 max-w-[min(280px,78vw)] mx-auto ${className}`}>
+    <div
+      className={`flex items-center justify-center min-w-0 mx-auto max-w-[min(240px,70vw)] overflow-visible ${className}`}
+    >
       <img
         src={logo}
         alt="Mentorix"
-        className={`h-[46px] max-h-[50px] w-auto max-w-full bg-transparent ${imgOnDark} ${imgClassName}`}
+        className={`h-[42px] max-h-[48px] w-auto max-w-full sm:h-[46px] sm:max-h-[50px] ${imgBase} ${imgClassName}`}
         draggable={false}
       />
     </div>
