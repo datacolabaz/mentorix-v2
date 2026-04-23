@@ -404,6 +404,7 @@ export default function StudentExams() {
       loading: true,
       breakdown: null,
       exam_files: null,
+      exam_id: exam?.id || null,
       type_summary: null,
       score: null,
       submitted_at: null,
@@ -417,6 +418,7 @@ export default function StudentExams() {
         loading: false,
         breakdown: Array.isArray(d.breakdown) ? d.breakdown : [],
         exam_files: files,
+        exam_id: d?.exam?.id || exam?.id || null,
         type_summary: d.type_summary || null,
         score: d.score,
         submitted_at: d.submitted_at,
@@ -428,6 +430,7 @@ export default function StudentExams() {
         loading: false,
         breakdown: [],
         exam_files: [],
+        exam_id: exam?.id || null,
         type_summary: null,
         score: null,
         submitted_at: null,
@@ -1061,7 +1064,7 @@ export default function StudentExams() {
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {reviewModal.exam_files.map((f) => {
-                    const openUrl = materialOpenInNewTabUrl(f.url, reviewModal?.exam?.id || null)
+                    const openUrl = materialOpenInNewTabUrl(f.url, reviewModal?.exam_id || null)
                     return (
                       <a
                         key={f.id || f.url}
