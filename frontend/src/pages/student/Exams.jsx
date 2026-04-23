@@ -291,7 +291,7 @@ export default function StudentExams() {
   const activeExamRef = useRef(false)
   activeExamRef.current = !!activeExam
   const toast = useToast()
-  const { setFocusMode } = useUiStore()
+  const { setFocusMode, theme } = useUiStore()
   const { user } = useAuthStore()
 
   const materialBlobLoadKey = useMemo(() => {
@@ -916,10 +916,28 @@ export default function StudentExams() {
                 <div className="shrink-0 self-start sm:self-center">
                   {isDone ? (
                     <div className="flex gap-2 flex-wrap justify-start sm:justify-end">
-                      <Button variant="secondary" size="sm" onClick={() => openPastReview(exam)}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={
+                          theme === 'dark'
+                            ? 'bg-white/5 hover:bg-white/10 text-gray-200 border border-white/10'
+                            : 'bg-primary/10 hover:bg-primary/15 text-[#1A1D21] border border-primary/20'
+                        }
+                        onClick={() => openPastReview(exam)}
+                      >
                         📋 Nəticəyə bax
                       </Button>
-                      <Button variant="secondary" size="sm" onClick={() => void openLeaderboard(exam)}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={
+                          theme === 'dark'
+                            ? 'bg-white/5 hover:bg-white/10 text-gray-200 border border-white/10'
+                            : 'bg-primary/10 hover:bg-primary/15 text-[#1A1D21] border border-primary/20'
+                        }
+                        onClick={() => void openLeaderboard(exam)}
+                      >
                         🏆 Reytinq
                       </Button>
                     </div>
