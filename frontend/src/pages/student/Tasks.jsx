@@ -163,8 +163,8 @@ export default function StudentAssignments() {
     <div className="p-4 sm:p-6 w-full min-w-0 max-w-4xl mx-auto">
       <div className="flex items-end justify-between gap-3 mb-4">
         <div>
-          <h1 className="font-display font-bold text-xl sm:text-2xl text-white">Tapşırıqlarım</h1>
-          <p className="text-gray-500 text-sm mt-1">Müəllimin sizə göndərdiyi tapşırıqlar.</p>
+          <h1 className="font-display font-bold text-xl sm:text-2xl text-token-textMain">Tapşırıqlarım</h1>
+          <p className="text-token-textMuted text-sm mt-1">Müəllimin sizə göndərdiyi tapşırıqlar.</p>
         </div>
         <Button variant="secondary" size="sm" onClick={() => void load()} disabled={loading}>
           Yenilə
@@ -178,34 +178,42 @@ export default function StudentAssignments() {
       )}
 
       {loading ? (
-        <Card className="p-5 text-sm text-gray-500">Yüklənir…</Card>
+        <Card hover className="p-5 text-sm text-token-textMuted border border-[color:var(--border-subtle)] hover:border-primary/20">
+          Yüklənir…
+        </Card>
       ) : tasks.length === 0 ? (
-        <Card className="p-5 text-sm text-gray-500">Hələ tapşırıq yoxdur.</Card>
+        <Card hover className="p-5 text-sm text-token-textMuted border border-[color:var(--border-subtle)] hover:border-primary/20">
+          Hələ tapşırıq yoxdur.
+        </Card>
       ) : (
         <div className="space-y-3">
           {tasks.map((t) => {
             const done = t.status === 'completed'
             return (
-              <Card key={t.assignment_id} className="p-5">
+              <Card
+                key={t.assignment_id}
+                hover
+                className="p-5 border border-[color:var(--border-subtle)] hover:border-primary/20"
+              >
                 <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
-                    <p className="text-white font-semibold break-words">{t.title}</p>
+                    <p className="text-token-textMain font-semibold break-words">{t.title}</p>
                     {t.topic ? (
                       <p className="text-sm text-indigo-200/90 mt-1 break-words">Mövzu: {t.topic}</p>
                     ) : null}
-                    <p className="text-xs text-gray-500 mt-1">
-                      Müəllim: <span className="text-gray-300">{t.instructor_name}</span>
+                    <p className="text-xs text-token-textMuted mt-1">
+                      Müəllim: <span className="text-token-textMain">{t.instructor_name}</span>
                       {t.assignment_created_at ? (
                         <>
                           {' '}
                           · Yaradılıb:{' '}
-                          <span className="text-gray-300 font-mono">{fmtCreated(t.assignment_created_at)}</span>
+                          <span className="text-token-textMain font-mono">{fmtCreated(t.assignment_created_at)}</span>
                         </>
                       ) : null}
                       {t.due_date ? (
                         <>
                           {' '}
-                          · Son tarix: <span className="text-gray-300 font-mono">{fmtDue(t.due_date)}</span>
+                          · Son tarix: <span className="text-token-textMain font-mono">{fmtDue(t.due_date)}</span>
                         </>
                       ) : null}
                     </p>
@@ -227,8 +235,8 @@ export default function StudentAssignments() {
                   </div>
                 </div>
                 {t.description ? (
-                  <div className="mt-3 text-sm text-gray-200 whitespace-pre-wrap leading-relaxed border-t border-indigo-500/15 pt-3">
-                    <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Müəllim qeydi</span>
+                  <div className="mt-3 text-sm text-token-textMain whitespace-pre-wrap leading-relaxed border-t border-[color:var(--border-subtle)] pt-3">
+                    <span className="text-xs font-semibold text-token-textMuted uppercase tracking-wider">Müəllim qeydi</span>
                     <div className="mt-1">{t.description}</div>
                   </div>
                 ) : null}

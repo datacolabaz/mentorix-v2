@@ -267,8 +267,8 @@ export default function StudentSchedule() {
     <div className="p-4 sm:p-6 w-full min-w-0 max-w-4xl mx-auto">
       <div className="flex items-end justify-between gap-3 mb-4">
         <div>
-          <h1 className="font-display font-bold text-xl sm:text-2xl text-white">Cədvəlim</h1>
-          <p className="text-gray-500 text-sm mt-1">Dərs günləri və hazırlıq üçün boş günlər.</p>
+          <h1 className="font-display font-bold text-xl sm:text-2xl text-token-textMain">Cədvəlim</h1>
+          <p className="text-token-textMuted text-sm mt-1">Dərs günləri və hazırlıq üçün boş günlər.</p>
         </div>
         <Button variant="secondary" size="sm" onClick={() => void load()} disabled={loading}>
           Yenilə
@@ -282,9 +282,9 @@ export default function StudentSchedule() {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Card className="p-5">
+        <Card hover className="p-5">
           <p className="text-sm font-semibold mb-1">Hazırlıq üçün slot yarat</p>
-          <p className="text-xs text-gray-500 mb-3">
+          <p className="text-xs text-token-textMuted mb-3">
             Boş günləri seçin və saat aralığı verin (məs. 1–4-cü günlər 18:00–19:00).
           </p>
 
@@ -316,7 +316,7 @@ export default function StudentSchedule() {
 
           <div className="grid grid-cols-2 gap-3 mt-3">
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Başla</label>
+              <label className="block text-xs text-token-textMuted mb-1">Başla</label>
               <input
                 type="time"
                 value={newStart}
@@ -342,30 +342,30 @@ export default function StudentSchedule() {
           </div>
         </Card>
 
-        <Card className="p-5">
+        <Card hover className="p-5">
           <p className="text-sm font-semibold mb-1">Həftəlik cədvəl</p>
-          <div className="flex flex-wrap gap-4 text-xs text-gray-500 mt-2 mb-3">
+          <div className="flex flex-wrap gap-4 text-xs text-token-textMuted mt-2 mb-3">
             <span className="flex items-center gap-2">
-              <span className="w-3 h-3 rounded bg-indigo-600/35 border border-indigo-400/45" /> Məşğul
+              <span className="w-3 h-3 rounded bg-primary/20 border border-primary/30" /> Məşğul
             </span>
             <span className="flex items-center gap-2">
-              <span className="w-3 h-3 rounded bg-[#0f0c29] border border-indigo-500/15" /> Boş
+              <span className="w-3 h-3 rounded bg-token-surfaceCard/50 border border-[color:var(--border-subtle)]" /> Boş
             </span>
           </div>
 
           <div className="overflow-x-auto">
             <div
-              className="grid gap-px bg-indigo-500/20 rounded-xl overflow-hidden border border-indigo-500/25 min-w-[680px] max-h-[70vh] overflow-y-auto"
+              className="grid gap-px bg-[color:var(--border-subtle)] rounded-xl overflow-hidden border border-[color:var(--border-subtle)] min-w-[680px] max-h-[70vh] overflow-y-auto"
               style={{
                 gridTemplateColumns: `3.5rem repeat(7, minmax(0,1fr))`,
                 gridTemplateRows: `auto repeat(${gridRowCount}, minmax(2rem, 2.25rem))`,
               }}
             >
-              <div className="bg-[#13112e] p-2 text-[10px] font-semibold text-gray-500 uppercase tracking-wider" />
+              <div className="bg-token-surfaceCard/55 p-2 text-[10px] font-semibold text-token-textMuted uppercase tracking-wider" />
               {WEEKDAYS.map((d) => (
                 <div
                   key={d.v}
-                  className="bg-[#13112e] p-2 text-center text-[11px] font-bold text-indigo-200/90 border-l border-indigo-500/15"
+                  className="bg-token-surfaceCard/55 p-2 text-center text-[11px] font-bold text-token-textMain border-l border-[color:var(--border-subtle)]"
                 >
                   {d.short}
                 </div>
@@ -373,7 +373,7 @@ export default function StudentSchedule() {
 
               {Array.from({ length: gridRowCount }, (_, i) => GRID_START + i).map((hour) => (
                 <Fragment key={hour}>
-                  <div className="bg-[#0f0c29] text-[10px] text-gray-500 font-mono tabular-nums flex items-center justify-end pr-2 border-t border-indigo-500/10">
+                  <div className="bg-token-surfaceCard/40 text-[10px] text-token-textMuted font-mono tabular-nums flex items-center justify-end pr-2 border-t border-[color:var(--border-subtle)]">
                     {String(hour).padStart(2, '0')}:00
                   </div>
                   {WEEKDAYS.map((d) => {
@@ -388,17 +388,17 @@ export default function StudentSchedule() {
                       : 1
 
                     const blockStyle = primary
-                      ? 'bg-indigo-600/25 border-indigo-400/45 text-indigo-100'
+                      ? 'bg-token-surfaceCard/55 border-[color:var(--border-subtle)] text-token-textMain hover:bg-token-surfaceCardHover/80 hover:border-primary/25 transition-colors'
                       : ''
 
                     return (
                       <div
                         key={`${d.v}-${hour}`}
-                        className="bg-[#0f0c29]/95 border-l border-t border-indigo-500/10 relative min-h-[2.25rem]"
+                        className="bg-token-surfaceMain/30 border-l border-t border-[color:var(--border-subtle)] relative min-h-[2.25rem]"
                       >
                         {isFirstHour && primary && (
                           <div
-                            className={`absolute left-0.5 right-0.5 rounded-md border px-1 py-0.5 text-[10px] leading-tight z-10 shadow-sm ${blockStyle}`}
+                            className={`absolute left-0.5 right-0.5 rounded-md border px-1 py-0.5 text-[10px] leading-tight z-10 shadow-sm cursor-default ${blockStyle}`}
                             style={{
                               top: '2px',
                               minHeight: `${spanHours * 2.25 - 0.35}rem`,
@@ -421,20 +421,20 @@ export default function StudentSchedule() {
         </Card>
       </div>
 
-      <Card className="p-5 mt-4">
+      <Card hover className="p-5 mt-4">
         <p className="text-sm font-semibold mb-3">Hazırlıq slotlarım</p>
         {loading ? (
-          <p className="text-sm text-gray-500">Yüklənir…</p>
+          <p className="text-sm text-token-textMuted">Yüklənir…</p>
         ) : prepSlots.length === 0 ? (
-          <p className="text-sm text-gray-500">Hələ slot əlavə etməmisiniz.</p>
+          <p className="text-sm text-token-textMuted">Hələ slot əlavə etməmisiniz.</p>
         ) : (
           <div className="space-y-2">
             {prepSlots.map((s) => (
               <div
                 key={s.id}
-                className="p-3 rounded-xl bg-[#13112e] border border-indigo-500/20 flex items-center justify-between gap-2"
+                className="p-3 rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard/40 hover:bg-token-surfaceCard/55 transition-colors flex items-center justify-between gap-2"
               >
-                <div className="text-sm font-mono text-gray-200">
+                <div className="text-sm font-mono text-token-textMain">
                   {WEEKDAYS.find((x) => x.v === s.day_of_week)?.short || s.day_of_week} · {fmtTime(s.start_time)}–{fmtTime(s.end_time)}
                 </div>
                 <button
@@ -450,28 +450,31 @@ export default function StudentSchedule() {
         )}
       </Card>
 
-      <Card className="p-5 mt-4">
+      <Card hover className="p-5 mt-4">
         <p className="text-sm font-semibold mb-3">Dərs cədvəlim (tarixlər)</p>
         {loading ? (
-          <p className="text-sm text-gray-500">Yüklənir…</p>
+          <p className="text-sm text-token-textMuted">Yüklənir…</p>
         ) : lessons.length === 0 ? (
-          <p className="text-sm text-gray-500">Hələ tarixli dərs qeydi yoxdur.</p>
+          <p className="text-sm text-token-textMuted">Hələ tarixli dərs qeydi yoxdur.</p>
         ) : (
           <div className="space-y-2">
             {[...lessons]
               .sort((a, b) => String(a.lesson_date).localeCompare(String(b.lesson_date)))
               .map((l) => (
-                <div key={l.id} className="p-3 rounded-xl bg-[#13112e] border border-indigo-500/20">
+                <div
+                  key={l.id}
+                  className="p-3 rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard/40 hover:bg-token-surfaceCard/55 transition-colors"
+                >
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                     <div className="min-w-0">
-                      <p className="text-sm font-semibold truncate">
+                      <p className="text-sm font-semibold truncate text-token-textMain">
                         {l.instructor_name ? `Dərs · ${l.instructor_name}` : 'Dərs'}
                       </p>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-token-textMuted">
                         #{l.lesson_number} · Dövr #{l.billing_cycle || 1} · {l.status || '—'}
                       </p>
                     </div>
-                    <div className="text-sm font-mono text-gray-200 shrink-0">
+                    <div className="text-sm font-mono text-token-textMain shrink-0">
                       {l.lesson_date ? fmtAzBakuLessonRow(l) : '—'}
                     </div>
                   </div>

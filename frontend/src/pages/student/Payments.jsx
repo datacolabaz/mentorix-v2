@@ -280,8 +280,8 @@ export default function StudentPayments() {
 
   return (
     <div className="p-4 sm:p-6 max-w-3xl mx-auto w-full min-w-0">
-      <h1 className="font-display font-bold text-2xl text-white mb-2">Ödəniş</h1>
-      <p className="text-gray-400 text-sm mb-6">
+      <h1 className="font-display font-bold text-2xl text-token-textMain mb-2">Ödəniş</h1>
+      <p className="text-token-textMuted text-sm mb-6">
         {roleYour} sizi sistemə əlavə edərkən seçdiyi paket və qeydə alınmış ödənişlər.
       </p>
 
@@ -293,21 +293,21 @@ export default function StudentPayments() {
       )}
 
       {loading ? (
-        <div className="text-gray-500 text-center py-12">Yüklənir…</div>
+        <div className="text-token-textMuted text-center py-12">Yüklənir…</div>
       ) : (
         <>
           {isMonthlySub ? (
             <>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-                <Card className="p-5">
-                  <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Tamamlanan Gün</div>
+                <Card hover className="p-5 border border-[color:var(--border-subtle)] hover:border-primary/20">
+                  <div className="text-xs font-semibold text-token-textMuted uppercase tracking-wider mb-2">Tamamlanan Gün</div>
                   <div className="font-display font-extrabold text-3xl text-blue-400">
                     {mp?.days_elapsed != null ? Number(mp.days_elapsed) : 0}
                     {mp?.days_total != null ? `/${Number(mp.days_total)}` : ''}
                   </div>
                   {mp?.days_total != null && Number(mp.days_total) > 0 ? (
                     <div className="mt-3">
-                      <div className="h-2 bg-[#13112e] rounded-full overflow-hidden">
+                      <div className="h-2 bg-token-surfaceMain/50 rounded-full overflow-hidden">
                         <div
                           className="h-full bg-blue-500 rounded-full transition-all max-w-full"
                           style={{
@@ -321,19 +321,19 @@ export default function StudentPayments() {
                     </div>
                   ) : null}
                 </Card>
-                <Card className="p-5">
-                  <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Billing</div>
+                <Card hover className="p-5 border border-[color:var(--border-subtle)] hover:border-primary/20">
+                  <div className="text-xs font-semibold text-token-textMuted uppercase tracking-wider mb-2">Billing</div>
                   <div className="font-display font-bold text-xl text-emerald-400">Aylıq paket</div>
                 </Card>
-                <Card className="p-5">
-                  <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">{roleNoun}</div>
+                <Card hover className="p-5 border border-[color:var(--border-subtle)] hover:border-primary/20">
+                  <div className="text-xs font-semibold text-token-textMuted uppercase tracking-wider mb-2">{roleNoun}</div>
                   <div className="font-display font-bold text-xl text-yellow-400">{enrollment?.instructor_name || '—'}</div>
                 </Card>
               </div>
 
-              <Card className="p-5 mb-4 border border-indigo-500/20">
+              <Card hover className="p-5 mb-4 border border-[color:var(--border-subtle)] hover:border-primary/20">
                 <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
-                  <h2 className="font-semibold text-white">Aylıq abunə</h2>
+                  <h2 className="font-semibold text-token-textMain">Aylıq abunə</h2>
                   <button
                     type="button"
                     onClick={() => setHistoryOpen((v) => !v)}
@@ -344,13 +344,13 @@ export default function StudentPayments() {
                   </button>
                 </div>
 
-                <p className="text-sm text-gray-200 mb-2">
+                <p className="text-sm text-token-textMain mb-2">
                   Status: Davam edir
-                  {anchorDdMmYyyy ? <span className="text-gray-400"> ({anchorDdMmYyyy} tarixindən bəri)</span> : null}
+                  {anchorDdMmYyyy ? <span className="text-token-textMuted"> ({anchorDdMmYyyy} tarixindən bəri)</span> : null}
                 </p>
 
                 {mp?.next_billing_ymd ? (
-                  <p className="text-sm text-gray-300 mb-4">
+                  <p className="text-sm text-token-textMain mb-4">
                     Növbəti ödəniş tarixi:{' '}
                     <span className="font-display font-extrabold text-lg text-emerald-300">
                       {fmtDdMmYyyy(parseYmdLocal(String(mp.next_billing_ymd).slice(0, 10)))}
@@ -358,9 +358,9 @@ export default function StudentPayments() {
                   </p>
                 ) : null}
 
-                <p className="text-xs text-gray-400 mb-4">
+                <p className="text-xs text-token-textMuted mb-4">
                   Bildirişlər:{' '}
-                  <span className={notifEnabled ? 'text-emerald-300 font-semibold' : 'text-gray-500 font-semibold'}>
+                  <span className={notifEnabled ? 'text-emerald-300 font-semibold' : 'text-token-textMuted font-semibold'}>
                     {notifEnabled ? 'Aktiv' : 'Deaktiv'}
                   </span>
                 </p>
@@ -368,17 +368,17 @@ export default function StudentPayments() {
                 {isPrepaidMonthly ? (
                   <p className="text-xs text-indigo-200/90 mb-2">Qeydiyyat: ay məbləği əvvəlcədən ödənilir.</p>
                 ) : null}
-                <p className="text-xs text-gray-500 mb-2">
+                <p className="text-xs text-token-textMuted mb-2">
                   Borc hər ayın eyni təqvim günündə (başlama tarixinə görə) sabit aylıq məbləğ ilə yaranır; dərs sayı və
                   davamiyyət bu məbləğə təsir etmir.
                 </p>
-                <p className="text-sm text-gray-200 mb-4">
+                <p className="text-sm text-token-textMain mb-4">
                   Qalıq borc:{' '}
                   <span className="text-amber-200 font-mono tabular-nums font-semibold">
                     {monthlyDebtNum != null ? `${monthlyDebtNum.toFixed(2)} ₼` : '—'}
                   </span>
                   {sub != null && Number.isFinite(Number(sub.wallet_balance)) && Number(sub.wallet_balance) > 0.005 ? (
-                    <span className="block mt-2 text-xs text-gray-400">
+                    <span className="block mt-2 text-xs text-token-textMuted">
                       Artıq ödəniş (balans):{' '}
                       <span className="text-emerald-300 font-mono tabular-nums font-semibold">
                         {Number(sub.wallet_balance).toFixed(2)} ₼
@@ -404,7 +404,7 @@ export default function StudentPayments() {
                       Hissəli ödəniş et
                     </button>
                     {partialInfoOpen ? (
-                      <p className="text-xs text-gray-400 mt-3 leading-relaxed border border-indigo-500/20 rounded-xl p-3 bg-[#13112e]/80">
+                      <p className="text-xs text-token-textMuted mt-3 leading-relaxed border border-[color:var(--border-subtle)] rounded-xl p-3 bg-token-surfaceCard/40">
                         Hissəli ödənişi müəlliminiz qeydə alır. Ödəmək istədiyiniz məbləği müəlliminizə bildirin; o, sistemə
                         daxil edəndə borc avtomatik yenilənəcək.
                       </p>
@@ -416,15 +416,15 @@ export default function StudentPayments() {
           ) : (
             <>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-                <Card className="p-5">
-                  <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Tamamlanan Dərs</div>
+                <Card hover className="p-5 border border-[color:var(--border-subtle)] hover:border-primary/20">
+                  <div className="text-xs font-semibold text-token-textMuted uppercase tracking-wider mb-2">Tamamlanan Dərs</div>
                   <div className="font-display font-extrabold text-3xl text-blue-400">
                     {Number.isFinite(usedLessons) ? usedLessons : 0}
                     {Number.isFinite(totalLessons) && totalLessons > 0 ? `/${totalLessons}` : ''}
                   </div>
                   {Number.isFinite(totalLessons) && totalLessons > 0 ? (
                     <div className="mt-3">
-                      <div className="h-2 bg-[#13112e] rounded-full overflow-hidden">
+                      <div className="h-2 bg-token-surfaceMain/50 rounded-full overflow-hidden">
                         <div
                           className="h-full bg-blue-500 rounded-full transition-all max-w-full"
                           style={{ width: `${progressPct}%` }}
@@ -433,21 +433,21 @@ export default function StudentPayments() {
                     </div>
                   ) : null}
                 </Card>
-                <Card className="p-5">
-                  <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Billing</div>
+                <Card hover className="p-5 border border-[color:var(--border-subtle)] hover:border-primary/20">
+                  <div className="text-xs font-semibold text-token-textMuted uppercase tracking-wider mb-2">Billing</div>
                   <div className="font-display font-bold text-xl text-emerald-400">
                     {BILLING[enrollment?.billing_type] || enrollment?.billing_type || '—'}
                   </div>
                 </Card>
-                <Card className="p-5">
-                  <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">{roleNoun}</div>
+                <Card hover className="p-5 border border-[color:var(--border-subtle)] hover:border-primary/20">
+                  <div className="text-xs font-semibold text-token-textMuted uppercase tracking-wider mb-2">{roleNoun}</div>
                   <div className="font-display font-bold text-xl text-yellow-400">{enrollment?.instructor_name || '—'}</div>
                 </Card>
               </div>
 
-              <Card className="p-5">
+              <Card hover className="p-5 border border-[color:var(--border-subtle)] hover:border-primary/20">
                 <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-                  <h2 className="font-semibold text-white">Cari paket</h2>
+                  <h2 className="font-semibold text-token-textMain">Cari paket</h2>
                   <button
                     type="button"
                     onClick={() => setHistoryOpen((v) => !v)}
@@ -458,38 +458,38 @@ export default function StudentPayments() {
                   </button>
                 </div>
                 {enrollment ? (
-                  <ul className="text-sm text-gray-300 space-y-2">
+                  <ul className="text-sm text-token-textMain space-y-2">
                     <li>
-                      <span className="text-gray-500">{roleNoun}: </span>
+                      <span className="text-token-textMuted">{roleNoun}: </span>
                       {enrollment.instructor_name || '—'}
                     </li>
                     <li>
-                      <span className="text-gray-500">Paket: </span>
+                      <span className="text-token-textMuted">Paket: </span>
                       {BILLING[enrollment.billing_type] || enrollment.billing_type || '—'}
                     </li>
                     {enrolledAtText && (
                       <li>
-                        <span className="text-gray-500">Sistemə qeydiyyat: </span>
-                        <span className="font-mono text-white/90">{enrolledAtText}</span>
+                        <span className="text-token-textMuted">Sistemə qeydiyyat: </span>
+                        <span className="font-mono text-token-textMain">{enrolledAtText}</span>
                       </li>
                     )}
                     {weekdayLine && (
                       <li>
-                        <span className="text-gray-500">Həftəlik dərs günləri/saatları: </span>
-                        <span className="text-white/90">{weekdayLine}</span>
+                        <span className="text-token-textMuted">Həftəlik dərs günləri/saatları: </span>
+                        <span className="text-token-textMain">{weekdayLine}</span>
                       </li>
                     )}
                     {enrollment.planned_lessons_in_cycle != null && limit != null && (
                       <li>
-                        <span className="text-gray-500">Cədvəldəki dərs sayı (cari dövr): </span>
-                        <span className="font-mono text-white/90">
+                        <span className="text-token-textMuted">Cədvəldəki dərs sayı (cari dövr): </span>
+                        <span className="font-mono text-token-textMain">
                           {Number(enrollment.planned_lessons_in_cycle || 0)} / {limit}
                         </span>
                       </li>
                     )}
                     {(enrollment.next_lesson_display || enrollment.next_lesson_at) && (
                       <li>
-                        <span className="text-gray-500">Növbəti dərs: </span>
+                        <span className="text-token-textMuted">Növbəti dərs: </span>
                         <span className="font-mono text-indigo-200">
                           {enrollment.next_lesson_display
                             ? fmtAzFromDb(enrollment.next_lesson_display)
@@ -498,27 +498,27 @@ export default function StudentPayments() {
                       </li>
                     )}
                     <li>
-                      <span className="text-gray-500">Keçilmiş dərs sayı: </span>
-                      <span className="font-mono text-white/90">{Number.isFinite(usedLessons) ? usedLessons : 0}</span>
+                      <span className="text-token-textMuted">Keçilmiş dərs sayı: </span>
+                      <span className="font-mono text-token-textMain">{Number.isFinite(usedLessons) ? usedLessons : 0}</span>
                       {Number.isFinite(totalLessons) && totalLessons > 0
                         ? ` / ${totalLessons} (Dövr #${enrollment.billing_cycle || 1})`
                         : ''}
                     </li>
                     {remaining != null && (
                       <li>
-                        <span className="text-gray-500">Qalan dərs sayı: </span>
+                        <span className="text-token-textMuted">Qalan dərs sayı: </span>
                         <span className="text-emerald-300 font-mono">{remaining}</span>
                       </li>
                     )}
                     <li>
-                      <span className="text-gray-500">Bildirişlər: </span>
-                      <span className={notifEnabled ? 'text-emerald-300 font-semibold' : 'text-gray-500 font-semibold'}>
+                      <span className="text-token-textMuted">Bildirişlər: </span>
+                      <span className={notifEnabled ? 'text-emerald-300 font-semibold' : 'text-token-textMuted font-semibold'}>
                         {notifEnabled ? 'Aktiv' : 'Deaktiv'}
                       </span>
                     </li>
                   </ul>
                 ) : (
-                  <p className="text-gray-500 text-sm">Aktiv qeydiyyat tapılmadı.</p>
+                  <p className="text-token-textMuted text-sm">Aktiv qeydiyyat tapılmadı.</p>
                 )}
               </Card>
             </>
@@ -527,8 +527,8 @@ export default function StudentPayments() {
       )}
 
       {!loading && historyOpen && (
-        <Card className="p-5 mt-4 border-indigo-500/25">
-          <h2 className="font-display font-bold text-lg text-white mb-4">Ödəniş tarixçəsi</h2>
+        <Card hover className="p-5 mt-4 border border-[color:var(--border-subtle)] hover:border-primary/20">
+          <h2 className="font-display font-bold text-lg text-token-textMain mb-4">Ödəniş tarixçəsi</h2>
           {enrollment?.pre_system_enrollment && (
             <div className="rounded-xl border border-sky-500/30 bg-sky-500/10 text-sky-100 text-sm px-4 py-3 mb-4 leading-relaxed">
               Bu tələbə sistemin aktivləşdirilməsindən öncə qeydiyyatdan keçmişdir. Ödəniş tarixçəsi sistemdə qeydə
@@ -536,15 +536,15 @@ export default function StudentPayments() {
             </div>
           )}
           {enrollment && (
-            <div className="rounded-xl bg-[#1a1740] border border-indigo-500/20 p-3 text-sm text-gray-300 mb-4">
+            <div className="rounded-xl bg-token-surfaceCard/40 border border-[color:var(--border-subtle)] p-3 text-sm text-token-textMain mb-4">
               <p>
-                <span className="text-gray-500">Paket ({roleNoun.toLowerCase()} seçimi):</span>{' '}
-                <span className="text-white font-medium">
+                <span className="text-token-textMuted">Paket ({roleNoun.toLowerCase()} seçimi):</span>{' '}
+                <span className="text-token-textMain font-medium">
                   {BILLING[enrollment.billing_type] || enrollment.billing_type || '—'}
                 </span>
               </p>
               <p className="mt-1">
-                <span className="text-gray-500">Qeydə alınmış ödəniş cəmi:</span>{' '}
+                <span className="text-token-textMuted">Qeydə alınmış ödəniş cəmi:</span>{' '}
                 <span className="text-emerald-300 font-mono">
                   {Number.isFinite(totalPaid) ? totalPaid.toFixed(2) : '0.00'} ₼
                 </span>
@@ -553,7 +553,7 @@ export default function StudentPayments() {
           )}
 
           {!payments.length ? (
-            <p className="text-gray-500 text-sm py-2">
+            <p className="text-token-textMuted text-sm py-2">
               Hələ ödəniş qeydi yoxdur. {roleYour} ödəniş əlavə edəndə burada görünəcək.
             </p>
           ) : (
@@ -563,17 +563,17 @@ export default function StudentPayments() {
                 return (
                 <li
                   key={p.id}
-                  className="rounded-xl border border-indigo-500/20 bg-[#0f0c29]/80 p-3 text-sm"
+                  className="rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard/40 hover:bg-token-surfaceCard/55 transition-colors p-3 text-sm"
                 >
                   <div className="flex justify-between gap-3 flex-wrap items-start">
                     <div className="min-w-0">
-                      <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Ödəniş tarixi</p>
-                      <p className="text-white font-mono tabular-nums text-sm font-medium mt-0.5">
+                      <p className="text-[10px] font-semibold text-token-textMuted uppercase tracking-wider">Ödəniş tarixi</p>
+                      <p className="text-token-textMain font-mono tabular-nums text-sm font-medium mt-0.5">
                         {primaryPaymentDateLabel(p)}
                       </p>
                       {hasSeparatePaymentDate(p) ? (
-                        <p className="text-[10px] text-gray-600 mt-1">
-                          Sistemə qeyd: <span className="font-mono text-gray-500">{fmtAzFromDb(p.paid_at)}</span>
+                        <p className="text-[10px] text-token-textMuted mt-1">
+                          Sistemə qeyd: <span className="font-mono text-token-textMuted">{fmtAzFromDb(p.paid_at)}</span>
                         </p>
                       ) : null}
                     </div>
@@ -592,10 +592,10 @@ export default function StudentPayments() {
                       </p>
                     </div>
                   </div>
-                  {p.period && <p className="text-xs text-gray-500 mt-2">Dövr: {p.period}</p>}
-                  {p.payment_method && <p className="text-xs text-gray-500">Üsul: {p.payment_method}</p>}
+                  {p.period && <p className="text-xs text-token-textMuted mt-2">Dövr: {p.period}</p>}
+                  {p.payment_method && <p className="text-xs text-token-textMuted">Üsul: {p.payment_method}</p>}
                   {noteForStudent ? (
-                    <p className="text-xs text-gray-400 mt-2 leading-relaxed">{noteForStudent}</p>
+                    <p className="text-xs text-token-textMuted mt-2 leading-relaxed">{noteForStudent}</p>
                   ) : null}
                 </li>
                 )
