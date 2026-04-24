@@ -203,8 +203,8 @@ export default function InstructorTasks() {
     <div className="p-4 sm:p-6 w-full min-w-0 max-w-5xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-4">
         <div className="min-w-0">
-          <h1 className="font-display font-bold text-xl sm:text-2xl text-white">Tapşırıqlar</h1>
-          <p className="text-gray-500 text-sm mt-1">
+          <h1 className="font-display font-bold text-xl sm:text-2xl text-token-textMain">Tapşırıqlar</h1>
+          <p className="text-token-textMuted text-sm mt-1">
             Tələbələrinizi seçib göndərin — yalnız seçilənlər «Tapşırıqlarım»da görəcək.
           </p>
         </div>
