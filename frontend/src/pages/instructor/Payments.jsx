@@ -286,23 +286,23 @@ export default function InstructorPayments() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-        <Card className="p-5 border border-indigo-500/20 bg-gradient-to-br from-[#13112e] to-[#0f0c29] shadow-lg shadow-indigo-950/20">
-          <div className="text-[11px] font-semibold text-indigo-300/80 uppercase tracking-widest mb-2">
+        <Card hover className="p-5">
+          <div className="text-[11px] font-semibold text-token-textMuted uppercase tracking-widest mb-2">
             Total Earnings
           </div>
-          <div className="font-display font-extrabold text-2xl sm:text-3xl text-white tabular-nums">
+          <div className="font-display font-extrabold text-2xl sm:text-3xl text-token-textMain tabular-nums">
             {loading ? '…' : formatAzn(totalEarnings)}
           </div>
-          <p className="text-xs text-gray-500 mt-2">Tamamlanmış ödənişlərin cəmi (bütün dövr)</p>
+          <p className="text-xs text-token-textMuted mt-2">Tamamlanmış ödənişlərin cəmi (bütün dövr)</p>
         </Card>
-        <Card className="p-5 border border-indigo-500/20 bg-gradient-to-br from-[#13112e] to-[#0f0c29] shadow-lg shadow-indigo-950/20">
-          <div className="text-[11px] font-semibold text-indigo-300/80 uppercase tracking-widest mb-2">
+        <Card hover className="p-5">
+          <div className="text-[11px] font-semibold text-token-textMuted uppercase tracking-widest mb-2">
             Pending Payments
           </div>
-          <div className="font-display font-extrabold text-2xl sm:text-3xl text-amber-200/95 tabular-nums">
+          <div className="font-display font-extrabold text-2xl sm:text-3xl text-amber-600 dark:text-amber-200/95 tabular-nums">
             {loading ? '…' : formatAzn(pendingAmount)}
           </div>
-          <p className="text-xs text-gray-500 mt-2">
+          <p className="text-xs text-token-textMuted mt-2">
             {loading
               ? '…'
               : `${pendingCount} tələbə · aylıq paketlər üzrə qalıq borc cəmi`}
@@ -310,9 +310,9 @@ export default function InstructorPayments() {
         </Card>
       </div>
 
-      <Card className="overflow-hidden border border-indigo-500/20 mb-3">
-        <div className="px-4 py-3 border-b border-indigo-500/20 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-[#13112e]/80">
-          <h2 className="font-display font-bold text-sm text-white tracking-wide">Tələbələr</h2>
+      <Card hover className="overflow-hidden border border-[color:var(--border-subtle)] mb-3">
+        <div className="px-4 py-3 border-b border-[color:var(--border-subtle)] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-token-surfaceCard/45">
+          <h2 className="font-display font-bold text-sm text-token-textMain tracking-wide">Tələbələr</h2>
           <Button type="button" variant="secondary" size="sm" onClick={() => void load()} disabled={loading}>
             Yenilə
           </Button>
@@ -339,10 +339,17 @@ export default function InstructorPayments() {
           {categorized.map((c) => {
             const isOpen = openCats.has(c.key)
             return (
-              <Card key={c.key} className="p-0 overflow-hidden border border-indigo-500/20">
+              <Card
+                key={c.key}
+                hover
+                className="p-0 overflow-hidden border border-[color:var(--border-subtle)] hover:border-primary/20"
+              >
                 <button
                   type="button"
-                  className="w-full flex items-center justify-between gap-3 px-4 py-3 bg-[#13112e] hover:bg-[#16143a] transition-colors"
+                  className={[
+                    'w-full flex items-center justify-between gap-3 px-4 py-3',
+                    'bg-token-surfaceCard/45 hover:bg-token-surfaceCard/60 transition-colors',
+                  ].join(' ')}
                   onClick={() =>
                     setOpenCats((prev) => {
                       const next = new Set(prev)
@@ -353,14 +360,14 @@ export default function InstructorPayments() {
                   }
                 >
                   <div className="min-w-0 text-left">
-                    <div className="font-semibold text-white truncate">{c.label}</div>
-                    <div className="text-xs text-gray-500">{c.items.length} tələbə</div>
+                    <div className="font-semibold text-token-textMain truncate">{c.label}</div>
+                    <div className="text-xs text-token-textMuted">{c.items.length} tələbə</div>
                   </div>
-                  <div className="text-gray-400 text-sm font-mono">{isOpen ? '▴' : '▾'}</div>
+                  <div className="text-token-textMuted text-sm font-mono">{isOpen ? '▴' : '▾'}</div>
                 </button>
 
                 {isOpen && (
-                  <div className="p-3 space-y-2 bg-[#0f0c29]/60">
+                  <div className="p-2 sm:p-3 space-y-1.5 bg-token-surfaceMain/40">
                     {c.items.map((s) => {
                       const isMonthly =
                         s.billing_type === 'monthly' && s.monthly_fee != null && Number(s.monthly_fee) > 0
@@ -371,22 +378,26 @@ export default function InstructorPayments() {
                       return (
                         <div
                           key={s.enrollment_id}
-                          className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between rounded-xl border border-indigo-500/15 bg-[#0f0c29]/80 px-3 py-2"
+                          className={[
+                            'flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between rounded-xl px-3 py-2',
+                            'border border-[color:var(--border-subtle)]',
+                            'bg-token-surfaceCard/40 hover:bg-token-surfaceCard/55 transition-colors',
+                          ].join(' ')}
                         >
                           <div className="min-w-0">
-                            <div className="font-semibold text-white truncate">
+                            <div className="font-semibold text-token-textMain truncate">
                               {s.first_name} {s.last_name}
                             </div>
-                            <div className="text-xs text-gray-400 flex flex-wrap gap-x-3 gap-y-1 mt-0.5">
-                              <span className="font-mono text-[11px] text-gray-500 tabular-nums truncate">{s.phone || '—'}</span>
-                              <span className="text-gray-500">Başlama:</span>
-                              <span className="font-mono text-white/90 tabular-nums">
+                            <div className="text-xs text-token-textMuted flex flex-wrap gap-x-3 gap-y-1 mt-0.5">
+                              <span className="font-mono text-[11px] tabular-nums truncate">{s.phone || '—'}</span>
+                              <span>Başlama:</span>
+                              <span className="font-mono text-token-textMain tabular-nums">
                                 {formatDdMmYyyy(s.lesson_start_date || s.payment_start_date)}
                               </span>
                             </div>
-                            <div className="text-[11px] text-gray-500 mt-1 truncate">
-                              Sahə: <span className="text-gray-300">{s.track_subject_name || '—'}</span>
-                              {s.track_group_name ? <span className="text-gray-500"> · {s.track_group_name}</span> : null}
+                            <div className="text-[11px] text-token-textMuted mt-1 truncate">
+                              Sahə: <span className="text-token-textMain">{s.track_subject_name || '—'}</span>
+                              {s.track_group_name ? <span> · {s.track_group_name}</span> : null}
                             </div>
                           </div>
 
@@ -410,17 +421,17 @@ export default function InstructorPayments() {
 
                               {isMonthly ? (
                                 <>
-                                  <span className="text-xs text-gray-400">
+                                  <span className="text-xs text-token-textMuted">
                                     Cari balans:{' '}
-                                    <span className="text-white font-mono tabular-nums">{formatAzn(s.net_balance)}</span>
+                                    <span className="text-token-textMain font-mono tabular-nums">{formatAzn(s.net_balance)}</span>
                                   </span>
-                                  <span className="text-xs text-gray-400">
+                                  <span className="text-xs text-token-textMuted">
                                     Ödənilib:{' '}
-                                    <span className="text-white font-mono tabular-nums">{formatAzn(s.total_payments)}</span>
+                                    <span className="text-token-textMain font-mono tabular-nums">{formatAzn(s.total_payments)}</span>
                                   </span>
                                   <span
                                     className={`text-xs font-semibold tabular-nums ${
-                                      showDebtRed ? 'text-rose-300' : showDebt ? 'text-amber-200/90' : 'text-gray-500'
+                                      showDebtRed ? 'text-rose-300' : showDebt ? 'text-amber-200/90' : 'text-token-textMuted'
                                     }`}
                                   >
                                     Qalıq borc: {formatAzn(s.pending_debt)}
