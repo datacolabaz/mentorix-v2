@@ -200,7 +200,13 @@ export default function ExamForm({ students, studentsLoading = false, onCreated 
     finally { setLoading(false) }
   }
  
-  const inp = 'w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500'
+  const inp =
+    'w-full rounded-xl px-4 py-2.5 text-sm outline-none border border-[color:var(--border-subtle)] bg-token-surfaceCard/55 text-token-textMain placeholder:text-token-textMuted focus:border-primary/40'
+  const inpSmFlex =
+    'flex-1 rounded-lg px-3 py-1.5 text-xs outline-none border border-[color:var(--border-subtle)] bg-token-surfaceCard/55 text-token-textMain placeholder:text-token-textMuted focus:border-primary/40'
+  const inpSmFull =
+    'w-full rounded-lg px-3 py-1.5 text-xs outline-none border border-[color:var(--border-subtle)] bg-token-surfaceCard/55 text-token-textMain placeholder:text-token-textMuted focus:border-primary/40'
+  const inpSmFullMono = `${inpSmFull} font-mono`
  
   return (
     <div>
@@ -209,7 +215,7 @@ export default function ExamForm({ students, studentsLoading = false, onCreated 
         {['Umumi', 'Suallar', 'Telebeler'].map((s, i) => (
           <button key={i} onClick={() => setStep(i + 1)}
             className={'flex-1 py-2.5 text-sm font-semibold border-b-2 transition-colors ' +
-              (step === i + 1 ? 'border-blue-500 text-blue-400' : 'border-indigo-500/20 text-gray-500')}>
+              (step === i + 1 ? 'border-blue-500 text-blue-400' : 'border-[color:var(--border-subtle)] text-token-textMuted')}>
             {i + 1}. {s}
           </button>
         ))}
@@ -262,7 +268,7 @@ export default function ExamForm({ students, studentsLoading = false, onCreated 
             <input
               id="allow_finish_after_until"
               type="checkbox"
-              className="h-4 w-4 rounded border-indigo-500/30 bg-[#13112e]"
+              className="h-4 w-4 rounded border-[color:var(--border-subtle)] bg-token-surfaceCard/40"
               checked={meta.allow_finish_after_until !== false}
               onChange={(e) => setMeta((p) => ({ ...p, allow_finish_after_until: e.target.checked }))}
             />
@@ -291,7 +297,7 @@ export default function ExamForm({ students, studentsLoading = false, onCreated 
             <div />
           </div>
  
-          <div className="p-4 bg-[#13112e] rounded-xl border border-indigo-500/20 space-y-3">
+          <div className="space-y-3 rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard/40 p-4">
             <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider">
               PDF / şəkil — bir və ya bir neçə fayl (Ctrl/Cmd ilə seç)
             </label>
@@ -309,7 +315,7 @@ export default function ExamForm({ students, studentsLoading = false, onCreated 
                 {materialFiles.map((f) => (
                   <li
                     key={f.id}
-                    className="flex items-center justify-between gap-2 text-xs bg-[#1a1740] rounded-lg px-3 py-2 border border-indigo-500/20"
+                    className="flex items-center justify-between gap-2 text-xs rounded-lg border border-[color:var(--border-subtle)] bg-token-surfaceCard/50 px-3 py-2"
                   >
                     <span className="text-emerald-400 truncate" title={f.name}>
                       ✓ {f.name}
@@ -327,7 +333,7 @@ export default function ExamForm({ students, studentsLoading = false, onCreated 
             )}
           </div>
  
-          <div className="p-4 bg-[#13112e] rounded-xl border border-indigo-500/20 space-y-3">
+          <div className="space-y-3 rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard/40 p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-semibold">SMS bildirisi</p>
@@ -345,7 +351,7 @@ export default function ExamForm({ students, studentsLoading = false, onCreated 
                 onChange={e => setMeta(p => ({ ...p, show_results: e.target.checked }))}
                 className="w-4 h-4 accent-blue-500" />
             </div>
-            <div className="flex items-start justify-between gap-3 pt-2 border-t border-indigo-500/15">
+            <div className="flex items-start justify-between gap-3 border-t border-[color:var(--border-subtle)] pt-2">
               <div>
                 <p className="text-sm font-semibold">Səhv düzü aparsın (0.25 cərimə)</p>
                 <p className="text-xs text-gray-500 mt-1">
@@ -368,7 +374,7 @@ export default function ExamForm({ students, studentsLoading = false, onCreated 
       {/* STEP 2 */}
       {step === 2 && (
         <div className="space-y-4">
-          <p className="text-xs text-gray-400 bg-[#13112e] border border-indigo-500/20 rounded-xl p-3">
+          <p className="rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard/40 p-3 text-xs text-token-textMuted">
             PDF-deki her sual ucun tipini secin ve duzgun cavabi teyin edin.
           </p>
  
@@ -383,12 +389,12 @@ export default function ExamForm({ students, studentsLoading = false, onCreated 
  
           <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1">
             {questions.length === 0 && (
-              <div className="text-center py-10 text-gray-500 text-sm bg-[#13112e] rounded-xl border border-indigo-500/20">
+              <div className="rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard/40 py-10 text-center text-sm text-token-textMuted">
                 Yuxaridan sual tipi secin
               </div>
             )}
             {questions.map((q, idx) => (
-              <div key={q.id} className="p-4 bg-[#13112e] rounded-xl border border-indigo-500/20">
+              <div key={q.id} className="rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard/40 p-4">
                 {/* Sual basligi */}
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
@@ -410,7 +416,7 @@ export default function ExamForm({ students, studentsLoading = false, onCreated 
                         const v = parseInt(e.target.value, 10)
                         upd(idx, 'points', Number.isFinite(v) ? v : q.points)
                       }}
-                      className="w-14 bg-[#1a1740] border border-indigo-500/20 rounded-lg px-2 py-1 text-white text-xs text-center outline-none" />
+                      className="w-14 rounded-lg border border-[color:var(--border-subtle)] bg-token-surfaceCard/55 px-2 py-1 text-center text-xs text-token-textMain outline-none focus:border-primary/40" />
                     <span className="text-xs text-gray-500">bal</span>
                     <button onClick={() => setQuestions(prev => prev.filter((_, i) => i !== idx))}
                       className="text-red-400 text-sm ml-1">✕</button>
@@ -426,10 +432,10 @@ export default function ExamForm({ students, studentsLoading = false, onCreated 
                         <div key={oi} className="flex items-center gap-2">
                           <span onClick={() => upd(idx, 'correct_answer', key)}
                             className={'w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold cursor-pointer flex-shrink-0 ' +
-                              (q.correct_answer === key ? 'bg-emerald-500 text-white' : 'bg-[#1a1740] text-gray-400 border border-indigo-500/20')}>
+                              (q.correct_answer === key ? 'bg-emerald-500 text-white' : 'border border-[color:var(--border-subtle)] bg-token-surfaceCard/50 text-token-textMuted')}>
                             {key}
                           </span>
-                          <input className="flex-1 bg-[#1a1740] border border-indigo-500/20 rounded-lg px-3 py-1.5 text-white text-xs outline-none focus:border-blue-500"
+                          <input className={inpSmFlex}
                             placeholder={key + ' varianti'} value={opt}
                             onChange={e => updOpt(idx, oi, e.target.value)} />
                         </div>
@@ -459,7 +465,7 @@ export default function ExamForm({ students, studentsLoading = false, onCreated 
                                 'w-8 h-8 rounded-lg text-xs font-bold shrink-0 border transition-colors ' +
                                 (picked
                                   ? 'bg-emerald-500/30 border-emerald-500 text-emerald-200'
-                                  : 'bg-[#1a1740] border-indigo-500/30 text-gray-400 hover:border-indigo-500/50')
+                                  : 'border border-[color:var(--border-subtle)] bg-token-surfaceCard/50 text-token-textMuted hover:border-primary/30')
                               }
                             >
                               {num}
@@ -468,7 +474,7 @@ export default function ExamForm({ students, studentsLoading = false, onCreated 
                             <span className="w-8 text-center text-xs text-gray-500 shrink-0">{num}</span>
                           )}
                           <input
-                            className="flex-1 bg-[#1a1740] border border-indigo-500/20 rounded-lg px-3 py-1.5 text-white text-xs outline-none focus:border-blue-500"
+                            className={inpSmFlex}
                             placeholder={`${num} — ifadə mətni`}
                             value={typeof opt === 'string' ? opt : (opt?.text ?? '')}
                             onChange={(e) => updOpt(idx, oi, e.target.value)}
@@ -486,7 +492,7 @@ export default function ExamForm({ students, studentsLoading = false, onCreated 
                     <div>
                       <label className="block text-xs text-gray-500 mb-1">Düzgün cavab (bitişik rəqəmlər)</label>
                       <input
-                        className="w-full bg-[#1a1740] border border-indigo-500/20 rounded-lg px-3 py-1.5 text-white text-xs font-mono outline-none focus:border-blue-500"
+                        className={inpSmFullMono}
                         placeholder="23"
                         value={q.correct_answer || ''}
                         onChange={(e) => {
@@ -503,7 +509,7 @@ export default function ExamForm({ students, studentsLoading = false, onCreated 
                     <div>
                       <label className="block text-xs text-gray-500 mb-1">Tələbəyə nümunə (placeholder)</label>
                       <input
-                        className="w-full bg-[#1a1740] border border-indigo-500/20 rounded-lg px-3 py-1.5 text-white text-xs font-mono outline-none focus:border-blue-500"
+                        className={inpSmFullMono}
                         placeholder="23"
                         value={q.template_hint || ''}
                         onChange={(e) => upd(idx, 'template_hint', e.target.value)}
@@ -518,11 +524,11 @@ export default function ExamForm({ students, studentsLoading = false, onCreated 
                     {q.options.map((pair, oi) => (
                       <div key={oi} className="flex items-center gap-2">
                         <span className="text-xs text-gray-400 w-4">{oi + 1}</span>
-                        <input className="flex-1 bg-[#1a1740] border border-indigo-500/20 rounded-lg px-3 py-1.5 text-white text-xs outline-none focus:border-blue-500"
+                        <input className={inpSmFlex}
                           placeholder="Sol" value={pair.left || ''}
                           onChange={e => updMatch(idx, oi, 'left', e.target.value)} />
                         <span className="text-gray-500 text-xs">→</span>
-                        <input className="flex-1 bg-[#1a1740] border border-indigo-500/20 rounded-lg px-3 py-1.5 text-white text-xs outline-none focus:border-blue-500"
+                        <input className={inpSmFlex}
                           placeholder="Sag" value={pair.right || ''}
                           onChange={e => updMatch(idx, oi, 'right', e.target.value)} />
                         <button onClick={() => upd(idx, 'options', q.options.filter((_, i) => i !== oi))}
@@ -534,7 +540,7 @@ export default function ExamForm({ students, studentsLoading = false, onCreated 
                     <div>
                       <label className="block text-xs text-gray-500 mb-1">Düzgün uyğunluq açarı (rəqəm+hərf, məs. 1a2b və ya 1ab2cd)</label>
                       <input
-                        className="w-full bg-[#1a1740] border border-indigo-500/20 rounded-lg px-3 py-1.5 text-white text-xs font-mono outline-none focus:border-blue-500"
+                        className={inpSmFullMono}
                         placeholder={deriveMatchingKey(q.options) || '1a2b3c'}
                         value={q.correct_answer || ''}
                         onChange={(e) =>
@@ -548,7 +554,7 @@ export default function ExamForm({ students, studentsLoading = false, onCreated 
                     <div>
                       <label className="block text-xs text-gray-500 mb-1">Tələbəyə nümunə format (placeholder)</label>
                       <input
-                        className="w-full bg-[#1a1740] border border-indigo-500/20 rounded-lg px-3 py-1.5 text-white text-xs font-mono outline-none focus:border-blue-500"
+                        className={inpSmFullMono}
                         placeholder="məs. 1a2b"
                         value={q.template_hint || ''}
                         onChange={(e) => upd(idx, 'template_hint', e.target.value)}
@@ -569,7 +575,7 @@ export default function ExamForm({ students, studentsLoading = false, onCreated 
                         <div key={oi} className="flex items-center gap-2">
                           <span className="w-8 text-center text-xs text-gray-400 shrink-0">{num}</span>
                           <input
-                            className="flex-1 bg-[#1a1740] border border-indigo-500/20 rounded-lg px-3 py-1.5 text-white text-xs outline-none focus:border-blue-500"
+                            className={inpSmFlex}
                             placeholder={`${num} — bənd mətni`}
                             value={typeof opt === 'string' ? opt : (opt?.text ?? '')}
                             onChange={(e) => updOpt(idx, oi, e.target.value)}
@@ -587,7 +593,7 @@ export default function ExamForm({ students, studentsLoading = false, onCreated 
                     <div>
                       <label className="block text-xs text-gray-500 mb-1">Düzgün ardıcıllıq (bitişik rəqəmlər)</label>
                       <input
-                        className="w-full bg-[#1a1740] border border-indigo-500/20 rounded-lg px-3 py-1.5 text-white text-xs font-mono outline-none focus:border-blue-500"
+                        className={inpSmFullMono}
                         placeholder="231"
                         value={String(q.correct_answer || '')}
                         onChange={(e) => upd(idx, 'correct_answer', e.target.value.replace(/\D/g, '').slice(0, 120))}
@@ -596,7 +602,7 @@ export default function ExamForm({ students, studentsLoading = false, onCreated 
                     <div>
                       <label className="block text-xs text-gray-500 mb-1">Tələbəyə nümunə (placeholder)</label>
                       <input
-                        className="w-full bg-[#1a1740] border border-indigo-500/20 rounded-lg px-3 py-1.5 text-white text-xs font-mono outline-none focus:border-blue-500"
+                        className={inpSmFullMono}
                         placeholder="231"
                         value={q.template_hint || ''}
                         onChange={(e) => upd(idx, 'template_hint', e.target.value.replace(/\D/g, '').slice(0, 120))}
@@ -610,7 +616,7 @@ export default function ExamForm({ students, studentsLoading = false, onCreated 
                   <div className="space-y-2">
                     <div>
                       <label className="block text-xs text-gray-500 mb-1">Cavab sahesin placeholder (telebe gore numunen):</label>
-                      <input className="w-full bg-[#1a1740] border border-indigo-500/20 rounded-lg px-3 py-1.5 text-white text-xs outline-none focus:border-blue-500"
+                      <input className={inpSmFull}
                         placeholder="3.5" value={q.template_hint}
                         onChange={e => upd(idx, 'template_hint', e.target.value)} />
                     </div>
@@ -644,16 +650,16 @@ export default function ExamForm({ students, studentsLoading = false, onCreated 
             Yenə də &quot;Hamısını seç&quot; etmək daha aydındır.
           </p>
  
-          <div className="max-h-64 overflow-y-auto space-y-1 bg-[#13112e] rounded-xl p-3 border border-indigo-500/20">
+          <div className="max-h-64 overflow-y-auto space-y-1 rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard/40 p-3">
             {studentsLoading ? (
-              <p className="text-gray-500 text-sm text-center py-8">Tələbələr yüklənir…</p>
+              <p className="text-token-textMuted text-sm text-center py-8">Tələbələr yüklənir…</p>
             ) : !students.length ? (
               <p className="text-amber-200/80 text-sm text-center py-6 px-2">
                 Hələ tələbə yoxdur — əvvəl &quot;Tələbələrim&quot; bölməsindən əlavə edin.
               </p>
             ) : (
               students.map((s) => (
-                <label key={s.id} className="flex items-center gap-3 cursor-pointer hover:bg-white/5 rounded-lg p-2">
+                <label key={s.id} className="flex items-center gap-3 cursor-pointer rounded-lg p-2 hover:bg-token-surfaceCardHover/40">
                   <input
                     type="checkbox"
                     className="accent-blue-500"
@@ -667,13 +673,13 @@ export default function ExamForm({ students, studentsLoading = false, onCreated 
                       }))
                     }
                   />
-                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-xs font-bold">
+                  <div className="w-7 h-7 shrink-0 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-xs font-bold text-white">
                     {s.full_name?.split(' ')
                       .map((n) => n[0])
                       .join('')
                       .slice(0, 2)}
                   </div>
-                  <span className="text-sm">{s.full_name}</span>
+                  <span className="text-sm text-token-textMain font-medium min-w-0 break-words">{s.full_name}</span>
                 </label>
               ))
             )}

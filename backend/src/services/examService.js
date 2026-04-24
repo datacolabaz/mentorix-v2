@@ -22,6 +22,25 @@ function getAnswerRaw(answers, questionId) {
   return undefined;
 }
 
+/** Ardıcıllıq: müəllimin saxladığı açar (boşdursa köhnə sətirlər üçün template_hint) */
+function sequenceEffectiveCorrect(q) {
+  const ca = String(q?.correct_answer ?? '').trim();
+  if (ca) return ca;
+  return String(q?.template_hint ?? '').trim();
+}
+
+/** Ardıcıllıq: yalnız whitespace silinir (NFKC), sonra simvol-simvol müqayisə. */
+function normSequenceIgnoreSpaces(s) {
+  return String(s ?? '')
+    .normalize('NFKC')
+    .replace(/[\s\u00A0\u200B\uFEFF\u200C\u200D]+/g, '')
+    .trim();
+}
+
+function sequenceAnswersEqual(givenRaw, correctRaw) {
+  return normSequenceIgnoreSpaces(givenRaw) === normSequenceIgnoreSpaces(correctRaw);
+}
+
 function inferQuestionType(q) {
   const t = normType(q?.question_type);
   if (['closed', 'multiple', 'matching', 'open', 'sequence'].includes(t)) return t;
@@ -163,14 +182,15 @@ function buildAutoGradingMap(questions, answers) {
     }
 
     if (type === 'sequence') {
-      const correct = String(q.correct_answer ?? '').trim();
-      const g = String(given ?? '').replace(/\D/g, '');
-      const c = String(correct ?? '').replace(/\D/g, '');
+      const correct = sequenceEffectiveCorrect(q);
+      const gStr = given == null || given === '' ? '' : String(given);
       const pts = Number(q.points || 0);
-      if (!g) out[id] = { type: 'sequence', status: 'pending', earned_points: 0 };
-      else if (!c) out[id] = { type: 'sequence', status: 'incorrect', earned_points: 0 };
-      else {
-        const ok = g === c;
+      const gNorm = normSequenceIgnoreSpaces(gStr);
+      if (!gNorm) out[id] = { type: 'sequence', status: 'pending', earned_points: 0 };
+      else if (!normSequenceIgnoreSpaces(correct)) {
+        out[id] = { type: 'sequence', status: 'incorrect', earned_points: 0 };
+      } else {
+        const ok = sequenceAnswersEqual(gStr, correct);
         out[id] = { type: 'sequence', status: ok ? 'correct' : 'incorrect', earned_points: ok ? pts : 0 };
       }
     }
@@ -235,11 +255,9 @@ function scoreQuestionForAuto(q, answers, wrongPenaltyEnabled) {
   }
 
   if (type === 'sequence') {
-    const correct = String(q.correct_answer ?? '').trim();
-    if (!correct) return { type, delta: 0, outcome: 'pending' };
-    const g = String(given ?? '').replace(/\D/g, '');
-    const c = String(correct ?? '').replace(/\D/g, '');
-    const ok = g === c;
+    const correct = sequenceEffectiveCorrect(q);
+    if (!normSequenceIgnoreSpaces(correct)) return { type, delta: 0, outcome: 'pending' };
+    const ok = sequenceAnswersEqual(given, correct);
     if (ok) return { type, delta: pts, outcome: 'correct' };
     return { type, delta: 0, outcome: 'wrong' };
   }
@@ -339,13 +357,13 @@ const buildExamResultBreakdown = (questions, answers) => {
         isCorrect = gn == null ? false : Math.abs(gn - key) < 1e-9;
       }
     } else if (type === 'sequence') {
-      correctDisplay = 'Nümunə: 231';
+      correctDisplay =
+        'Format nümunəsi: bənd nömrələrini ardıcıllaqla bitişik yazın (boşluqsuz).';
       if (!given) isCorrect = null;
       else {
-        const c = String(q.correct_answer ?? '').trim();
-        // matching-dəki kimi: tələbə cavabı var, amma açar yoxdursa pending saxlamırıq
-        if (!c) isCorrect = false;
-        else isCorrect = String(given).replace(/\D/g, '') === String(c).replace(/\D/g, '');
+        const key = sequenceEffectiveCorrect(q);
+        if (!normSequenceIgnoreSpaces(key)) isCorrect = false;
+        else isCorrect = sequenceAnswersEqual(given, key);
       }
     }
 

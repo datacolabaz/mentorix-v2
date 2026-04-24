@@ -23,6 +23,9 @@ function optionDisplayLabel(opt) {
   return '—'
 }
 
+const examInputCls =
+  'w-full rounded-xl px-3 py-2.5 text-sm font-mono outline-none border border-[color:var(--border-subtle)] bg-token-surfaceCard/55 text-token-textMain placeholder:text-token-textMuted focus:border-primary/40'
+
 /** Serverdən gələn /api/uploads/... üçün tam URL (VITE_API_URL=https://host/api və ya /api) */
 function resolveMaterialUrl(rel) {
   if (!rel || typeof rel !== 'string') return ''
@@ -715,7 +718,7 @@ export default function StudentExams() {
                     type="text"
                     inputMode="numeric"
                     autoComplete="off"
-                    className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-3 py-2.5 text-white text-sm font-mono outline-none focus:border-blue-500"
+                    className={examInputCls}
                     placeholder="məs. 134"
                     value={answers[q.id] || ''}
                     onChange={(e) =>
@@ -735,7 +738,7 @@ export default function StudentExams() {
                     type="text"
                     inputMode="text"
                     autoComplete="off"
-                    className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-3 py-2.5 text-white text-sm font-mono outline-none focus:border-blue-500"
+                    className={examInputCls}
                     placeholder="məs. 1a2b3c"
                     value={answers[q.id] || ''}
                     onChange={(e) =>
@@ -774,7 +777,7 @@ export default function StudentExams() {
                     type="text"
                     inputMode="numeric"
                     autoComplete="off"
-                    className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-3 py-2.5 text-white text-sm font-mono outline-none focus:border-blue-500"
+                    className={examInputCls}
                     placeholder="231"
                     value={answers[q.id] || ''}
                     onChange={(e) =>
@@ -783,10 +786,13 @@ export default function StudentExams() {
                   />
                 </div>
               ) : (
-                <textarea className="w-full ml-0 sm:ml-8 lg:ml-10 bg-[#13112e] border border-indigo-500/20 rounded-xl p-3 text-white text-sm resize-none outline-none focus:border-blue-500 transition-colors"
-                  rows={4} placeholder="Cavabınızı yazın..."
+                <textarea
+                  className="w-full ml-0 sm:ml-8 lg:ml-10 rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard/55 p-3 text-sm text-token-textMain placeholder:text-token-textMuted resize-none outline-none focus:border-primary/40 transition-colors"
+                  rows={4}
+                  placeholder="Cavabınızı yazın..."
                   value={answers[q.id] || ''}
-                  onChange={e => setAnswers(p => ({ ...p, [q.id]: e.target.value }))} />
+                  onChange={e => setAnswers(p => ({ ...p, [q.id]: e.target.value }))}
+                />
               )}
             </Card>
           ))}
@@ -795,8 +801,8 @@ export default function StudentExams() {
         </div>
 
         {/* Submit bar */}
-        <div className="bg-[#13112e] border-t border-indigo-500/20 px-3 sm:px-6 py-3 sm:py-4 flex flex-wrap items-center justify-between gap-3 shrink-0 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-          <span className="text-xs sm:text-sm text-gray-400 min-w-0">
+        <div className="shrink-0 border-t border-[color:var(--border-subtle)] bg-token-surfaceCard/50 px-3 py-3 sm:px-6 sm:py-4 flex flex-wrap items-center justify-between gap-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+          <span className="text-xs sm:text-sm text-token-textMuted min-w-0">
             {Object.keys(answers).length} cavablandı
           </span>
           <Button onClick={submitExam} className="px-5 sm:px-8 shrink-0">
@@ -858,17 +864,21 @@ export default function StudentExams() {
                 <p className="text-sm text-token-textMain mb-3 leading-snug">{row.question_text}</p>
                 <div className="grid gap-2 text-sm">
                   <div>
-                    <span className="text-xs text-gray-500 block mb-0.5">Sizin cavabınız</span>
-                    <code className="block text-amber-200/90 font-mono text-xs break-all bg-black/25 rounded-lg px-2 py-1.5">
+                    <span className="text-xs text-token-textMuted block mb-0.5">Sizin cavabınız</span>
+                    <div className="block font-mono text-xs break-all rounded-lg border border-[color:var(--border-subtle)] bg-token-surfaceCard/50 px-2.5 py-1.5 text-token-textMain">
                       {row.student_answer}
-                    </code>
+                    </div>
                   </div>
                   {row.correct_display ? (
                     <div>
-                      <span className="text-xs text-gray-500 block mb-0.5">Şablon / nümunə</span>
-                      <code className="block text-indigo-200/90 font-mono text-xs break-all bg-black/20 rounded-lg px-2 py-1.5">
+                      <span className="text-xs text-token-textMuted block mb-0.5">Şablon / nümunə</span>
+                      <div
+                        className="inline-flex max-w-full items-center rounded-lg border border-[color:var(--border-subtle)] bg-token-surfaceCard/60 px-2.5 py-1.5 font-mono text-xs text-token-textMain break-all"
+                        role="note"
+                        aria-readonly="true"
+                      >
                         {row.correct_display}
-                      </code>
+                      </div>
                     </div>
                   ) : null}
                 </div>
@@ -1062,17 +1072,21 @@ export default function StudentExams() {
                     <p className="text-sm text-token-textMain mb-3 leading-snug">{row.question_text}</p>
                     <div className="grid gap-2 text-sm">
                       <div>
-                        <span className="text-xs text-gray-500 block mb-0.5">Sizin cavabınız</span>
-                        <code className="block text-amber-200/90 font-mono text-xs break-all bg-black/25 rounded-lg px-2 py-1.5">
+                        <span className="text-xs text-token-textMuted block mb-0.5">Sizin cavabınız</span>
+                        <div className="block font-mono text-xs break-all rounded-lg border border-[color:var(--border-subtle)] bg-token-surfaceCard/50 px-2.5 py-1.5 text-token-textMain">
                           {row.student_answer}
-                        </code>
+                        </div>
                       </div>
                       {row.correct_display ? (
                         <div>
-                          <span className="text-xs text-gray-500 block mb-0.5">Şablon / nümunə</span>
-                          <code className="block text-indigo-200/90 font-mono text-xs break-all bg-black/20 rounded-lg px-2 py-1.5">
+                          <span className="text-xs text-token-textMuted block mb-0.5">Şablon / nümunə</span>
+                          <div
+                            className="inline-flex max-w-full items-center rounded-lg border border-[color:var(--border-subtle)] bg-token-surfaceCard/60 px-2.5 py-1.5 font-mono text-xs text-token-textMain break-all"
+                            role="note"
+                            aria-readonly="true"
+                          >
                             {row.correct_display}
-                          </code>
+                          </div>
                         </div>
                       ) : null}
                     </div>
