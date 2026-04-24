@@ -31,8 +31,7 @@
   .theme-light .mentorix-logo { mix-blend-mode: multiply; }
   .theme-dark .mentorix-logo { mix-blend-mode: screen; }
   .grid-bg {
-    background-image: linear-gradient(rgba(34,224,136,.06) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(34,224,136,.06) 1px, transparent 1px);
+    background-image: linear-gradient(rgba(34, 224, 136, 0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(34, 224, 136, 0.06) 1px, transparent 1px);
     background-size: 40px 40px;
   }
 }
