@@ -1160,4 +1160,45 @@ export default function StudentExams() {
               </p>
             </div>
             {leaderModal.results.length === 0 ? (
-              <p className="t
+              <p className="text-sm text-gray-500">Nəticə yoxdur.</p>
+            ) : (
+              <div className="space-y-2 max-h-[min(65vh,520px)] overflow-y-auto pr-1">
+                {leaderModal.results.map((r) => {
+                  const rank = r.rank || 0
+                  const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : null
+                  const mine = user?.id && r.student_id && String(r.student_id) === String(user.id)
+                  return (
+                    <div
+                      key={r.student_id}
+                      className={[
+                        'rounded-xl border px-4 py-3 flex items-center justify-between gap-3',
+                        mine ? 'border-indigo-400/60 bg-indigo-500/10' : 'border-indigo-500/15 bg-[#13112e]/70',
+                      ].join(' ')}
+                    >
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-white truncate">
+                          {medal ? `${medal} ` : ''}{rank ? `${rank}. ` : ''}{r.full_name || '—'}
+                        </p>
+                        <p className="text-[11px] text-gray-500 font-mono tabular-nums mt-1">
+                          {Number.isFinite(Number(r.duration_seconds)) ? `${Math.round(Number(r.duration_seconds))}s` : '—'}
+                        </p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <div className="text-sm font-extrabold text-white">
+                          {r.score_pct != null && Number.isFinite(Number(r.score_pct))
+                            ? `${Math.min(100, Math.max(0, Math.round(Number(r.score_pct))))}%`
+                            : formatScoreBal(r.score)}
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )}
+      </Modal>
+      )}
+    </div>
+  )
+}

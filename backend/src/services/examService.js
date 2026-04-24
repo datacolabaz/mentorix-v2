@@ -505,4 +505,45 @@ const syncExamReminderJob = async (examId) => {
 /** Tələbə təqdimetdikdən sonra valideynə (əvvəlcə profil valideyn nömrəsi, sonra valideyn user, sonra tələbə). */
 const notifyParentExamResultAfterSubmit = async (examId, studentId, score) => {
   const { sendSms } = require('./smsService');
-  const { rows: [row] } = aw
+  const { rows: [row] } = await db.query(
+    `SELECT e.title, e.show_results, e.notify_students, e.notify_enabled, e.instructor_id, u.full_name AS student_name,
+            COALESCE(NULLIF(TRIM(sp.parent_phone), ''), pu.phone, u.phone) AS notify_phone
+     FROM exams e
+     JOIN exam_assignments ea ON ea.exam_id = e.id AND ea.student_id = $2
+     JOIN users u ON u.id = $2
+     LEFT JOIN student_profiles sp ON sp.user_id = u.id
+     LEFT JOIN users pu ON pu.id = sp.parent_id
+     WHERE e.id = $1`,
+    [examId, studentId]
+  );
+  if (!row?.notify_students || !row?.notify_enabled) return;
+  if (!row?.notify_phone) return;
+
+  const clean = String(row.notify_phone).replace(/\D/g, '');
+  if (clean.length < 9) return;
+
+  const name = row.student_name || 'Tələbə';
+  const pts = Math.round(Number(score) * 100) / 100;
+  const safePts = Number.isFinite(pts) ? pts : 0;
+  const title = String(row.title || 'İmtahan').trim();
+  const msg = `Mentorix: Salam, ${name}! "${title}" imtahanında ${safePts} bal toplayıb.`;
+
+  const r = await sendSms({
+    instructorId: row.instructor_id,
+    phone: row.notify_phone,
+    message: msg,
+  });
+  if (!r?.success) console.error('exam result SMS failed', r?.error);
+};
+
+module.exports = {
+  calculateScore,
+  buildExamTypeSummary,
+  buildExamResultBreakdown,
+  buildAutoGradingMap,
+  rankResults,
+  isExamActive,
+  processExamNotificationJobs,
+  syncExamReminderJob,
+  notifyParentExamResultAfterSubmit,
+};
