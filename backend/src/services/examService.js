@@ -164,8 +164,8 @@ function buildAutoGradingMap(questions, answers) {
 
     if (type === 'sequence') {
       const correct = String(q.correct_answer ?? '').trim();
-      const g = String(given ?? '').trim().replace(/\s+/g, '');
-      const c = String(correct ?? '').trim().replace(/\s+/g, '');
+      const g = String(given ?? '').replace(/\D/g, '');
+      const c = String(correct ?? '').replace(/\D/g, '');
       const pts = Number(q.points || 0);
       if (!g) out[id] = { type: 'sequence', status: 'pending', earned_points: 0 };
       else if (!c) out[id] = { type: 'sequence', status: 'incorrect', earned_points: 0 };
@@ -237,8 +237,8 @@ function scoreQuestionForAuto(q, answers, wrongPenaltyEnabled) {
   if (type === 'sequence') {
     const correct = String(q.correct_answer ?? '').trim();
     if (!correct) return { type, delta: 0, outcome: 'pending' };
-    const g = String(given ?? '').trim().replace(/\s+/g, '');
-    const c = String(correct ?? '').trim().replace(/\s+/g, '');
+    const g = String(given ?? '').replace(/\D/g, '');
+    const c = String(correct ?? '').replace(/\D/g, '');
     const ok = g === c;
     if (ok) return { type, delta: pts, outcome: 'correct' };
     return { type, delta: 0, outcome: 'wrong' };
@@ -339,14 +339,13 @@ const buildExamResultBreakdown = (questions, answers) => {
         isCorrect = gn == null ? false : Math.abs(gn - key) < 1e-9;
       }
     } else if (type === 'sequence') {
-      const hint = String(q.template_hint || '').trim();
-      correctDisplay = hint ? `Nümunə: ${hint}` : 'Nümunə: 231';
+      correctDisplay = 'Nümunə: 231';
       if (!given) isCorrect = null;
       else {
         const c = String(q.correct_answer ?? '').trim();
         // matching-dəki kimi: tələbə cavabı var, amma açar yoxdursa pending saxlamırıq
         if (!c) isCorrect = false;
-        else isCorrect = String(given).trim().replace(/\s+/g, '') === c.replace(/\s+/g, '');
+        else isCorrect = String(given).replace(/\D/g, '') === String(c).replace(/\D/g, '');
       }
     }
 
