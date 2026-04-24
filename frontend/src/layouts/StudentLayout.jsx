@@ -33,7 +33,13 @@ export default function StudentLayout() {
       <button
         type="button"
         onClick={() => setNavOpen(true)}
-        className="md:hidden fixed top-3 left-3 z-50 w-11 h-11 rounded-xl bg-surface-2 border border-white/10 text-lg flex items-center justify-center shadow-lg"
+        className={[
+          'md:hidden fixed top-3 left-3 z-50 w-11 h-11 rounded-xl text-lg flex items-center justify-center shadow-lg border',
+          'appearance-none focus:outline-none [-webkit-tap-highlight-color:transparent]',
+          theme === 'dark'
+            ? 'bg-white/5 hover:bg-white/10 active:bg-white/10 border-white/10 text-white'
+            : 'bg-transparent hover:bg-gray-50 active:bg-gray-50 border-gray-200 text-gray-900',
+        ].join(' ')}
         aria-label="Menyunu aç"
       >
         ☰
@@ -43,7 +49,13 @@ export default function StudentLayout() {
         <button
           type="button"
           onClick={() => setNavOpen(true)}
-          className="hidden md:flex fixed top-3 left-3 z-[260] w-11 h-11 rounded-xl bg-surface-2 border border-white/10 text-lg items-center justify-center shadow-lg"
+          className={[
+            'hidden md:flex fixed top-3 left-3 z-[260] w-11 h-11 rounded-xl text-lg items-center justify-center shadow-lg border',
+            'appearance-none focus:outline-none [-webkit-tap-highlight-color:transparent]',
+            theme === 'dark'
+              ? 'bg-white/5 hover:bg-white/10 active:bg-white/10 border-white/10 text-white'
+              : 'bg-transparent hover:bg-gray-50 active:bg-gray-50 border-gray-200 text-gray-900',
+          ].join(' ')}
           aria-label="Menyunu aç"
         >
           ☰
