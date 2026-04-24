@@ -30,6 +30,16 @@
   .mentorix-logo { mix-blend-mode: normal; }
   .theme-light .mentorix-logo { mix-blend-mode: multiply; }
   .theme-dark .mentorix-logo { mix-blend-mode: screen; }
+  /* Bu kod bütün mobil brauzerlərdəki o xətalı daşmanı kəsir */
+  .date-input-class {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important; /* Padding-i daxilə çəkir */
+    display: block;
+    -webkit-appearance: none; /* Safari/Chrome mobil xüsusiyyətlərini sıfırlayır */
+    -moz-appearance: none;
+    appearance: none;
+  }
   .grid-bg {
     background-image: linear-gradient(rgba(34, 224, 136, 0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(34, 224, 136, 0.06) 1px, transparent 1px);
     background-size: 40px 40px;
