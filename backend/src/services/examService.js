@@ -344,7 +344,9 @@ const buildExamResultBreakdown = (questions, answers) => {
       if (!given) isCorrect = null;
       else {
         const c = String(q.correct_answer ?? '').trim();
-        isCorrect = c ? String(given).trim().replace(/\s+/g, '') === c.replace(/\s+/g, '') : null;
+        // matching-dəki kimi: tələbə cavabı var, amma açar yoxdursa pending saxlamırıq
+        if (!c) isCorrect = false;
+        else isCorrect = String(given).trim().replace(/\s+/g, '') === c.replace(/\s+/g, '');
       }
     }
 
