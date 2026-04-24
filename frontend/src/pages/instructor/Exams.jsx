@@ -1076,8 +1076,8 @@ export default function InstructorExams() {
                         className="flex items-center justify-between gap-3 px-3 py-2 border-b border-indigo-500/10 last:border-b-0 cursor-pointer hover:bg-[#0f0e24]"
                       >
                         <div className="min-w-0">
-                          <div className="text-sm text-white truncate">{s.full_name || 'Telebe'}</div>
-                          <div className="text-[11px] text-gray-500 truncate">{s.phone || ''}</div>
+                          <div className="text-sm text-token-textMain font-medium truncate">{s.full_name || 'Telebe'}</div>
+                          <div className="text-[11px] text-token-textMuted truncate">{s.phone || ''}</div>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
                           {wasAssigned ? (
