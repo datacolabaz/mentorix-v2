@@ -8,6 +8,7 @@ const TYPES = {
   closed: 'Qapali (ABCDE)',
   matching: 'Uygunluq',
   multiple: 'Coxsecimli',
+  sequence: 'Ardıcıllıq (Ordering)',
   open: 'Aciq',
 }
 
@@ -63,8 +64,9 @@ export default function ExamForm({ students, studentsLoading = false, onCreated 
     correct_answer: '',
     options: type === 'closed' ? ['', '', '', '', ''] :
               type === 'multiple' ? ['', '', '', ''] :
+              type === 'sequence' ? ['', '', ''] :
               type === 'matching' ? [{ left: '', right: '' }, { left: '', right: '' }] : [],
-    template_hint: type === 'open' ? '3.5' : type === 'matching' ? '' : type === 'multiple' ? '23' : '',
+    template_hint: type === 'open' ? '3.5' : type === 'matching' ? '' : type === 'multiple' ? '23' : type === 'sequence' ? '231' : '',
   }])
  
   const upd = (idx, field, value) =>
@@ -186,6 +188,8 @@ export default function ExamForm({ students, studentsLoading = false, onCreated 
                   .join('')
               : q.question_type === 'matching'
                 ? String(q.correct_answer || '').trim() || deriveMatchingKey(q.options)
+                : q.question_type === 'sequence'
+                  ? String(q.correct_answer || '').replace(/\D/g, '').slice(0, 120)
                 : q.correct_answer,
           template_hint: q.template_hint,
         })),
@@ -553,6 +557,54 @@ export default function ExamForm({ students, studentsLoading = false, onCreated 
                   </div>
                 )}
  
+                {/* ARDICILLIQ / SEQUENCE */}
+                {q.question_type === 'sequence' && (
+                  <div className="space-y-3">
+                    <p className="text-xs text-gray-500">
+                      Bəndləri alt-alta yazın. Tələbə aşağıda bənd nömrələrini düzgün ardıcıllıqla bitişik rəqəm kimi yazacaq.
+                    </p>
+                    {(q.options || []).map((opt, oi) => {
+                      const num = String(oi + 1)
+                      return (
+                        <div key={oi} className="flex items-center gap-2">
+                          <span className="w-8 text-center text-xs text-gray-400 shrink-0">{num}</span>
+                          <input
+                            className="flex-1 bg-[#1a1740] border border-indigo-500/20 rounded-lg px-3 py-1.5 text-white text-xs outline-none focus:border-blue-500"
+                            placeholder={`${num} — bənd mətni`}
+                            value={typeof opt === 'string' ? opt : (opt?.text ?? '')}
+                            onChange={(e) => updOpt(idx, oi, e.target.value)}
+                          />
+                        </div>
+                      )
+                    })}
+                    <button
+                      type="button"
+                      onClick={() => upd(idx, 'options', [...(q.options || []), ''])}
+                      className="text-xs text-indigo-400"
+                    >
+                      + Bənd əlavə et
+                    </button>
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">Düzgün ardıcıllıq (bitişik rəqəmlər)</label>
+                      <input
+                        className="w-full bg-[#1a1740] border border-indigo-500/20 rounded-lg px-3 py-1.5 text-white text-xs font-mono outline-none focus:border-blue-500"
+                        placeholder="231"
+                        value={String(q.correct_answer || '')}
+                        onChange={(e) => upd(idx, 'correct_answer', e.target.value.replace(/\D/g, '').slice(0, 120))}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">Tələbəyə nümunə (placeholder)</label>
+                      <input
+                        className="w-full bg-[#1a1740] border border-indigo-500/20 rounded-lg px-3 py-1.5 text-white text-xs font-mono outline-none focus:border-blue-500"
+                        placeholder="231"
+                        value={q.template_hint || ''}
+                        onChange={(e) => upd(idx, 'template_hint', e.target.value.replace(/\D/g, '').slice(0, 120))}
+                      />
+                    </div>
+                  </div>
+                )}
+
                 {/* ACIQ */}
                 {q.question_type === 'open' && (
                   <div className="space-y-2">

@@ -24,7 +24,7 @@ function getAnswerRaw(answers, questionId) {
 
 function inferQuestionType(q) {
   const t = normType(q?.question_type);
-  if (['closed', 'multiple', 'matching', 'open'].includes(t)) return t;
+  if (['closed', 'multiple', 'matching', 'open', 'sequence'].includes(t)) return t;
   // Legacy / inconsistent DB rows: infer from options shape
   let opts = q?.options;
   if (typeof opts === 'string') {
@@ -161,11 +161,24 @@ function buildAutoGradingMap(questions, answers) {
         earned_points: g.status === 'correct' ? pts : 0,
       };
     }
+
+    if (type === 'sequence') {
+      const correct = String(q.correct_answer ?? '').trim();
+      const g = String(given ?? '').trim().replace(/\s+/g, '');
+      const c = String(correct ?? '').trim().replace(/\s+/g, '');
+      const pts = Number(q.points || 0);
+      if (!g) out[id] = { type: 'sequence', status: 'pending', earned_points: 0 };
+      else if (!c) out[id] = { type: 'sequence', status: 'incorrect', earned_points: 0 };
+      else {
+        const ok = g === c;
+        out[id] = { type: 'sequence', status: ok ? 'correct' : 'incorrect', earned_points: ok ? pts : 0 };
+      }
+    }
   }
   return out;
 }
 
-const TYPE_KEYS = ['closed', 'multiple', 'matching', 'open'];
+const TYPE_KEYS = ['closed', 'multiple', 'matching', 'open', 'sequence'];
 
 function emptyTypeAgg() {
   return { correct: 0, wrong: 0, unanswered: 0, pending: 0, points: 0 };
@@ -217,6 +230,16 @@ function scoreQuestionForAuto(q, answers, wrongPenaltyEnabled) {
     const gn = parseAzNumber(given);
     if (gn == null) return { type, delta: 0, outcome: 'wrong' };
     const ok = Math.abs(gn - key) < 1e-9;
+    if (ok) return { type, delta: pts, outcome: 'correct' };
+    return { type, delta: 0, outcome: 'wrong' };
+  }
+
+  if (type === 'sequence') {
+    const correct = String(q.correct_answer ?? '').trim();
+    if (!correct) return { type, delta: 0, outcome: 'pending' };
+    const g = String(given ?? '').trim().replace(/\s+/g, '');
+    const c = String(correct ?? '').trim().replace(/\s+/g, '');
+    const ok = g === c;
     if (ok) return { type, delta: pts, outcome: 'correct' };
     return { type, delta: 0, outcome: 'wrong' };
   }
@@ -314,6 +337,14 @@ const buildExamResultBreakdown = (questions, answers) => {
       else {
         const gn = parseAzNumber(given);
         isCorrect = gn == null ? false : Math.abs(gn - key) < 1e-9;
+      }
+    } else if (type === 'sequence') {
+      const hint = String(q.template_hint || '').trim();
+      correctDisplay = hint ? `Nümunə: ${hint}` : 'Nümunə: 231';
+      if (!given) isCorrect = null;
+      else {
+        const c = String(q.correct_answer ?? '').trim();
+        isCorrect = c ? String(given).trim().replace(/\s+/g, '') === c.replace(/\s+/g, '') : null;
       }
     }
 

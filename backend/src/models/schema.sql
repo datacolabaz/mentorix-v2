@@ -228,7 +228,7 @@ CREATE TABLE exam_questions (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   exam_id UUID REFERENCES exams(id) ON DELETE CASCADE,
   question_text TEXT NOT NULL,
-  question_type VARCHAR(10) CHECK (question_type IN ('closed','open')),
+  question_type VARCHAR(10) CHECK (question_type IN ('closed','open','matching','multiple','sequence')),
   options JSONB,
   correct_answer VARCHAR(5),
   points INTEGER DEFAULT 10,

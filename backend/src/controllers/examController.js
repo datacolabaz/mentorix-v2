@@ -144,6 +144,13 @@ function buildMatchingCorrectFromPayload(q) {
   }
   return key || null;
 }
+
+function normalizeSequenceAnswer(v) {
+  const s = String(v ?? '').trim();
+  if (!s) return null;
+  const digits = s.replace(/\D/g, '');
+  return digits ? digits.slice(0, 120) : null;
+}
 const {
   calculateScore,
   buildExamTypeSummary,
@@ -244,6 +251,8 @@ const createExam = async (req, res) => {
           const correctAns =
             q.question_type === 'matching'
               ? buildMatchingCorrectFromPayload(q)
+              : q.question_type === 'sequence'
+                ? normalizeSequenceAnswer(q.correct_answer)
               : q.correct_answer != null && q.correct_answer !== ''
                 ? q.correct_answer
                 : null;
@@ -256,6 +265,8 @@ const createExam = async (req, res) => {
               ? '1a2b3c'
               : q.question_type === 'multiple'
                 ? '13'
+                : q.question_type === 'sequence'
+                  ? (templateHint ? templateHint.replace(/\D/g, '').slice(0, 120) : null)
                 : templateHint;
           await client.query(
             `INSERT INTO exam_questions (exam_id, question_text, question_type, options, correct_answer, points, order_num, negative_marking, template_hint)
@@ -1622,6 +1633,9 @@ const patchExam = async (req, res) => {
             });
             if (derived) correctAns = derived;
           }
+          if (row.question_type === 'sequence') {
+            if (sentCorrectKey) correctAns = normalizeSequenceAnswer(correctAns);
+          }
 
           const hintRaw = q.template_hint != null ? String(q.template_hint).trim() : '';
           const templateHint =
@@ -1629,6 +1643,8 @@ const patchExam = async (req, res) => {
               ? '1a2b3c'
               : row.question_type === 'multiple'
                 ? '13'
+                : row.question_type === 'sequence'
+                  ? (hintRaw ? hintRaw.replace(/\D/g, '').slice(0, 120) : null)
                 : hintRaw || null;
 
           const negRaw = q.negative_marking != null && q.negative_marking !== '' ? Number(q.negative_marking) : 0;
