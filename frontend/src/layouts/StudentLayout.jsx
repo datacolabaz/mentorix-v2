@@ -29,7 +29,7 @@ export default function StudentLayout() {
   }, [focusMode])
 
   return (
-    <div className="flex h-screen bg-[#0b0b0b] text-white overflow-hidden">
+    <div className={`theme-${theme} flex h-screen bg-token-surfaceMain text-token-textMain overflow-hidden`}>
       <button
         type="button"
         onClick={() => setNavOpen(true)}
