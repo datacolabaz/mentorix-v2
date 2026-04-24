@@ -10,13 +10,13 @@ import { useToast } from '../../components/common/Toast'
 import { writeCache } from '../../lib/cache'
 
 const StatCard = ({ label, value, icon }) => (
-  <Card className="p-5 !bg-[#F8FAFC] border-gray-200 shadow-[0_4px_15px_rgba(34,224,136,0.05)]">
+  <Card hover className="p-5">
     <div className="flex items-start justify-between">
       <div>
-        <div className="text-xs font-semibold text-[#003366] uppercase tracking-wider mb-2">{label}</div>
-        <div className="font-display font-extrabold text-3xl text-[#003366]">{value}</div>
+        <div className="text-xs font-semibold text-token-textMuted uppercase tracking-wider mb-2">{label}</div>
+        <div className="font-display font-extrabold text-3xl text-token-textMain">{value}</div>
       </div>
-      <div className="w-12 h-12 rounded-2xl bg-gray-100 border border-gray-200 flex items-center justify-center text-2xl">
+      <div className="w-12 h-12 rounded-2xl bg-token-surfaceCard/55 border border-[color:var(--border-subtle)] flex items-center justify-center text-2xl">
         {icon}
       </div>
     </div>
@@ -245,8 +245,8 @@ export default function InstructorDashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 min-w-0">
         <div className="lg:col-span-2 min-w-0">
-          <Card className="p-4 sm:p-5 min-w-0 overflow-hidden !bg-[#F0F4F8] border-gray-200 shadow-[0_10px_30px_rgba(34,224,136,0.1)]">
-            <h2 className="font-display font-bold text-base mb-4 text-[#003366]">Tələbə Proqresi (imtahan)</h2>
+          <Card hover className="p-4 sm:p-5 min-w-0 overflow-hidden">
+            <h2 className="font-display font-bold text-base mb-4 text-token-textMain">Tələbə Proqresi (imtahan)</h2>
             {students.length ? (
               <div className="w-full h-[280px] min-h-[240px]">
                 <ResponsiveContainer width="100%" height="100%">
@@ -288,18 +288,18 @@ export default function InstructorDashboard() {
                 </ResponsiveContainer>
               </div>
             ) : (
-              <div className="h-52 flex items-center justify-center text-gray-600">Hələ məlumat yoxdur</div>
+              <div className="h-52 flex items-center justify-center text-token-textMuted">Hələ məlumat yoxdur</div>
             )}
             {students.length > 0 && !rosterWithExam.length && (
-              <p className="text-gray-500 text-xs mt-2">
+              <p className="text-token-textMuted text-xs mt-2">
                 Hələ təqdim olunmuş imtahan nəticəsi yoxdur — tələbə imtahanı bitirənə qədər orta bal 0 göstərilir.
               </p>
             )}
           </Card>
         </div>
 
-        <Card className="p-4 sm:p-5 min-w-0 !bg-[#F0F4F8] border-gray-200 shadow-[0_10px_30px_rgba(34,224,136,0.1)]">
-          <h2 className="font-display font-bold text-base mb-4 text-[#003366]">Top Tələbələr (imtahan)</h2>
+        <Card hover className="p-4 sm:p-5 min-w-0">
+          <h2 className="font-display font-bold text-base mb-4 text-token-textMain">Top Tələbələr (imtahan)</h2>
           <div className="space-y-3">
             {topSorted.slice(0, 5).map((s, i) => {
               const ex = examById[String(s.id)]
@@ -307,24 +307,24 @@ export default function InstructorDashboard() {
               const pct = hasScore ? Math.min(100, Math.max(0, Number(ex.exam_avg_score))) : 0
               return (
                 <div key={s.enrollment_id || s.id} className="flex items-center gap-2 sm:gap-3 min-w-0">
-                  <span className="text-sm font-bold text-gray-500 w-5 shrink-0">{i + 1}</span>
+                  <span className="text-sm font-bold text-token-textMuted w-5 shrink-0">{i + 1}</span>
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-semibold truncate text-[#1A1D21]">{s.full_name}</div>
-                    <div className="h-1.5 bg-[#13112e] rounded-full mt-1">
+                    <div className="text-sm font-semibold truncate text-token-textMain">{s.full_name}</div>
+                    <div className="h-1.5 bg-white/5 border border-[color:var(--border-subtle)] rounded-full mt-1 overflow-hidden">
                       <div
                         className="h-full bg-blue-500 rounded-full transition-all"
                         style={{ width: hasScore ? `${pct}%` : '0%' }}
                       />
                     </div>
                   </div>
-                  <span className="text-sm font-bold text-blue-400 shrink-0 tabular-nums">
+                  <span className="text-sm font-bold text-token-textMain shrink-0 tabular-nums">
                     {hasScore ? `${Math.round(pct)}%` : '—'}
                   </span>
                 </div>
               )
             })}
             {!students.length && (
-              <div className="text-center text-gray-500 text-sm py-8">Hələ tələbə yoxdur</div>
+              <div className="text-center text-token-textMuted text-sm py-8">Hələ tələbə yoxdur</div>
             )}
           </div>
         </Card>
