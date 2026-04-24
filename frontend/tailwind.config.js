@@ -12,6 +12,7 @@ export default {
         token: {
           surfaceMain: 'rgb(var(--surface-main) / <alpha-value>)',
           surfaceCard: 'rgb(var(--surface-card) / <alpha-value>)',
+          surfaceCardHover: 'rgb(var(--surface-card-hover) / <alpha-value>)',
           textMain: 'rgb(var(--text-main) / <alpha-value>)',
           textMuted: 'rgb(var(--text-muted) / <alpha-value>)',
           borderSubtle: 'var(--border-subtle)',

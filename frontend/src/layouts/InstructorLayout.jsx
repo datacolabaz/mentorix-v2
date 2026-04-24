@@ -5,7 +5,6 @@ import useUiStore from '../hooks/useUi'
 import api from '../lib/api'
 import { instructorRoleAz } from '../lib/instructorLabel'
 import Brand from '../components/common/Brand'
-import BrandSvg from '../components/common/BrandSvg'
 import Footer from '../components/common/Footer'
 import { sidebarNavClass } from '../lib/sidebarNavClass'
 import NavIcon from '../components/common/NavIcon'
@@ -108,7 +107,7 @@ export default function InstructorLayout() {
           ☰
         </button>
         <div className="flex-1 flex justify-center min-w-0 overflow-visible">
-          {theme === 'dark' ? <BrandSvg size="md" className="text-white" /> : <Brand size="md" />}
+          <Brand size="md" />
         </div>
         <div className="w-11 shrink-0" />
       </header>
@@ -141,11 +140,11 @@ export default function InstructorLayout() {
           ].join(' ')}
         >
           <div className="flex justify-center">
-            {theme === 'dark' ? (
-              <BrandSvg size="sidebar" className="text-white" />
-            ) : (
-              <Brand size="sidebar" />
-            )}
+            <Brand
+              size="sidebar"
+              className="py-1"
+              imgClassName="h-[44px] max-h-[44px] sm:h-[46px] sm:max-h-[46px]"
+            />
           </div>
           <div
             className={[
@@ -182,11 +181,11 @@ export default function InstructorLayout() {
         >
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 min-w-0 flex justify-center">
-              {theme === 'dark' ? (
-                <BrandSvg size="sidebar" className="text-white" />
-              ) : (
-                <Brand size="sidebar" />
-              )}
+              <Brand
+                size="sidebar"
+                className="py-1"
+                imgClassName="h-[44px] max-h-[44px] sm:h-[46px] sm:max-h-[46px]"
+              />
             </div>
             <button
               type="button"
