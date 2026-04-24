@@ -1641,6 +1641,8 @@ const patchExam = async (req, res) => {
             });
             if (derived) correctAns = derived;
           }
+
+          const hintRaw = q.template_hint != null ? String(q.template_hint).trim() : '';
           if (row.question_type === 'sequence') {
             // correct_answer açarı gəlirsə — onu normalize et; gəlmirsə amma stored boşdursa, template_hint-dən fallback et.
             if (sentCorrectKey) correctAns = normalizeSequenceAnswer(correctAns);
@@ -1649,8 +1651,6 @@ const patchExam = async (req, res) => {
               if (fallback) correctAns = fallback;
             }
           }
-
-          const hintRaw = q.template_hint != null ? String(q.template_hint).trim() : '';
           const templateHint =
             row.question_type === 'matching'
               ? '1a2b3c'
@@ -1932,4 +1932,33 @@ const serveExamAttachmentByExam = async (req, res) => {
       [examId, sidHex]
     );
     if (!accessRows.length) {
-      return res.status(403).json({ success: f
+      return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
+    }
+  } else {
+    return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
+  }
+
+  return sendExamMaterialFromDiskOrDb(res, filename);
+};
+
+module.exports = {
+  createExam,
+  listExams,
+  softDeleteExam,
+  hardDeleteExam,
+  bulkHardDeleteExams,
+  getExamAssignments,
+  grantLateAccess,
+  patchExam,
+  instructorStudentExamProgress,
+  studentExams,
+  getStudentExamReview,
+  getExamQuestions,
+  submitExam,
+  getResults,
+  getExamGroups,
+  getExamTop10,
+  regradeExamResults,
+  serveExamMaterialFile,
+  serveExamAttachmentByExam,
+};
