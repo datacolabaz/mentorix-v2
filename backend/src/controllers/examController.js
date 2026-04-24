@@ -1932,4 +1932,33 @@ const serveExamAttachmentByExam = async (req, res) => {
       [examId, sidHex]
     );
     if (!accessRows.length) {
-      return res.status(403).json({ success: f
+      return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
+    }
+  } else {
+    return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
+  }
+
+  return sendExamMaterialFromDiskOrDb(res, filename);
+};
+
+module.exports = {
+  createExam,
+  listExams,
+  softDeleteExam,
+  hardDeleteExam,
+  bulkHardDeleteExams,
+  getExamAssignments,
+  grantLateAccess,
+  patchExam,
+  instructorStudentExamProgress,
+  studentExams,
+  getStudentExamReview,
+  getExamQuestions,
+  submitExam,
+  getResults,
+  getExamGroups,
+  getExamTop10,
+  regradeExamResults,
+  serveExamMaterialFile,
+  serveExamAttachmentByExam,
+};
