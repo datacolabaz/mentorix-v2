@@ -164,8 +164,8 @@ function buildAutoGradingMap(questions, answers) {
 
     if (type === 'sequence') {
       const correct = String(q.correct_answer ?? '').trim();
-      const g = String(given ?? '').trim().replace(/\s+/g, '');
-      const c = String(correct ?? '').trim().replace(/\s+/g, '');
+      const g = String(given ?? '').replace(/\D/g, '');
+      const c = String(correct ?? '').replace(/\D/g, '');
       const pts = Number(q.points || 0);
       if (!g) out[id] = { type: 'sequence', status: 'pending', earned_points: 0 };
       else if (!c) out[id] = { type: 'sequence', status: 'incorrect', earned_points: 0 };
@@ -237,8 +237,8 @@ function scoreQuestionForAuto(q, answers, wrongPenaltyEnabled) {
   if (type === 'sequence') {
     const correct = String(q.correct_answer ?? '').trim();
     if (!correct) return { type, delta: 0, outcome: 'pending' };
-    const g = String(given ?? '').trim().replace(/\s+/g, '');
-    const c = String(correct ?? '').trim().replace(/\s+/g, '');
+    const g = String(given ?? '').replace(/\D/g, '');
+    const c = String(correct ?? '').replace(/\D/g, '');
     const ok = g === c;
     if (ok) return { type, delta: pts, outcome: 'correct' };
     return { type, delta: 0, outcome: 'wrong' };
@@ -339,14 +339,13 @@ const buildExamResultBreakdown = (questions, answers) => {
         isCorrect = gn == null ? false : Math.abs(gn - key) < 1e-9;
       }
     } else if (type === 'sequence') {
-      const hint = String(q.template_hint || '').trim();
-      correctDisplay = hint ? `Nümunə: ${hint}` : 'Nümunə: 231';
+      correctDisplay = 'Nümunə: 231';
       if (!given) isCorrect = null;
       else {
         const c = String(q.correct_answer ?? '').trim();
         // matching-dəki kimi: tələbə cavabı var, amma açar yoxdursa pending saxlamırıq
         if (!c) isCorrect = false;
-        else isCorrect = String(given).trim().replace(/\s+/g, '') === c.replace(/\s+/g, '');
+        else isCorrect = String(given).replace(/\D/g, '') === String(c).replace(/\D/g, '');
       }
     }
 
@@ -506,45 +505,4 @@ const syncExamReminderJob = async (examId) => {
 /** Tələbə təqdimetdikdən sonra valideynə (əvvəlcə profil valideyn nömrəsi, sonra valideyn user, sonra tələbə). */
 const notifyParentExamResultAfterSubmit = async (examId, studentId, score) => {
   const { sendSms } = require('./smsService');
-  const { rows: [row] } = await db.query(
-    `SELECT e.title, e.show_results, e.notify_students, e.notify_enabled, e.instructor_id, u.full_name AS student_name,
-            COALESCE(NULLIF(TRIM(sp.parent_phone), ''), pu.phone, u.phone) AS notify_phone
-     FROM exams e
-     JOIN exam_assignments ea ON ea.exam_id = e.id AND ea.student_id = $2
-     JOIN users u ON u.id = $2
-     LEFT JOIN student_profiles sp ON sp.user_id = u.id
-     LEFT JOIN users pu ON pu.id = sp.parent_id
-     WHERE e.id = $1`,
-    [examId, studentId]
-  );
-  if (!row?.notify_students || !row?.notify_enabled) return;
-  if (!row?.notify_phone) return;
-
-  const clean = String(row.notify_phone).replace(/\D/g, '');
-  if (clean.length < 9) return;
-
-  const name = row.student_name || 'Tələbə';
-  const pts = Math.round(Number(score) * 100) / 100;
-  const safePts = Number.isFinite(pts) ? pts : 0;
-  const title = String(row.title || 'İmtahan').trim();
-  const msg = `Mentorix: Salam, ${name}! "${title}" imtahanında ${safePts} bal toplayıb.`;
-
-  const r = await sendSms({
-    instructorId: row.instructor_id,
-    phone: row.notify_phone,
-    message: msg,
-  });
-  if (!r?.success) console.error('exam result SMS failed', r?.error);
-};
-
-module.exports = {
-  calculateScore,
-  buildExamTypeSummary,
-  buildExamResultBreakdown,
-  buildAutoGradingMap,
-  rankResults,
-  isExamActive,
-  processExamNotificationJobs,
-  syncExamReminderJob,
-  notifyParentExamResultAfterSubmit,
-};
+  const { rows: [row] } = aw

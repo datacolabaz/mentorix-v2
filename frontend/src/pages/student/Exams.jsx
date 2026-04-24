@@ -751,7 +751,7 @@ export default function StudentExams() {
                   <p className="text-xs text-gray-500">
                     Bəndləri oxuyun və düzgün ardıcıllığı yalnız rəqəmlərlə bitişik yazın (boşluq yoxdur).
                     <span className="block mt-1">
-                      Nümunə: <span className="font-mono text-indigo-300">{String(q.template_hint || '231')}</span>
+                      Nümunə: <span className="font-mono text-indigo-300">231</span>
                     </span>
                   </p>
                   <div className="rounded-xl border border-indigo-500/15 bg-black/15 p-3 space-y-2">
@@ -775,7 +775,7 @@ export default function StudentExams() {
                     inputMode="numeric"
                     autoComplete="off"
                     className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-3 py-2.5 text-white text-sm font-mono outline-none focus:border-blue-500"
-                    placeholder={String(q.template_hint || '231')}
+                    placeholder="231"
                     value={answers[q.id] || ''}
                     onChange={(e) =>
                       setAnswers((p) => ({ ...p, [q.id]: e.target.value.replace(/\D/g, '').slice(0, 120) }))
@@ -1160,45 +1160,4 @@ export default function StudentExams() {
               </p>
             </div>
             {leaderModal.results.length === 0 ? (
-              <p className="text-sm text-gray-500">Nəticə yoxdur.</p>
-            ) : (
-              <div className="space-y-2 max-h-[min(65vh,520px)] overflow-y-auto pr-1">
-                {leaderModal.results.map((r) => {
-                  const rank = r.rank || 0
-                  const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : null
-                  const mine = user?.id && r.student_id && String(r.student_id) === String(user.id)
-                  return (
-                    <div
-                      key={r.student_id}
-                      className={[
-                        'rounded-xl border px-4 py-3 flex items-center justify-between gap-3',
-                        mine ? 'border-indigo-400/60 bg-indigo-500/10' : 'border-indigo-500/15 bg-[#13112e]/70',
-                      ].join(' ')}
-                    >
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-white truncate">
-                          {medal ? `${medal} ` : ''}{rank ? `${rank}. ` : ''}{r.full_name || '—'}
-                        </p>
-                        <p className="text-[11px] text-gray-500 font-mono tabular-nums mt-1">
-                          {Number.isFinite(Number(r.duration_seconds)) ? `${Math.round(Number(r.duration_seconds))}s` : '—'}
-                        </p>
-                      </div>
-                      <div className="text-right shrink-0">
-                        <div className="text-sm font-extrabold text-white">
-                          {r.score_pct != null && Number.isFinite(Number(r.score_pct))
-                            ? `${Math.min(100, Math.max(0, Math.round(Number(r.score_pct))))}%`
-                            : formatScoreBal(r.score)}
-                        </div>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </div>
-        )}
-      </Modal>
-      )}
-    </div>
-  )
-}
+              <p className="t
