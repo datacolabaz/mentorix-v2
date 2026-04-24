@@ -1197,3 +1197,22 @@ export default function StudentExams() {
                           {Number.isFinite(Number(r.duration_seconds)) ? `${Math.round(Number(r.duration_seconds))}s` : '—'}
                         </p>
                       </div>
+                      <div className="text-right shrink-0">
+                        <div className="text-sm font-extrabold text-white">
+                          {r.score_pct != null && Number.isFinite(Number(r.score_pct))
+                            ? `${Math.min(100, Math.max(0, Math.round(Number(r.score_pct))))}%`
+                            : formatScoreBal(r.score)}
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )}
+      </Modal>
+      )}
+    </div>
+  )
+}
