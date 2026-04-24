@@ -151,6 +151,13 @@ function normalizeSequenceAnswer(v) {
   const digits = s.replace(/\D/g, '');
   return digits ? digits.slice(0, 120) : null;
 }
+
+function normalizeSequenceAnswerFromPayload(q) {
+  const direct = normalizeSequenceAnswer(q?.correct_answer);
+  if (direct) return direct;
+  // UX fallback: müəllim bəzən "düzgün cavab"ı nümunə sahəsinə yazır
+  return normalizeSequenceAnswer(q?.template_hint);
+}
 const {
   calculateScore,
   buildExamTypeSummary,
@@ -252,7 +259,7 @@ const createExam = async (req, res) => {
             q.question_type === 'matching'
               ? buildMatchingCorrectFromPayload(q)
               : q.question_type === 'sequence'
-                ? normalizeSequenceAnswer(q.correct_answer)
+                ? normalizeSequenceAnswerFromPayload(q)
               : q.correct_answer != null && q.correct_answer !== ''
                 ? q.correct_answer
                 : null;
@@ -1635,7 +1642,12 @@ const patchExam = async (req, res) => {
             if (derived) correctAns = derived;
           }
           if (row.question_type === 'sequence') {
+            // correct_answer açarı gəlirsə — onu normalize et; gəlmirsə amma stored boşdursa, template_hint-dən fallback et.
             if (sentCorrectKey) correctAns = normalizeSequenceAnswer(correctAns);
+            if (!sentCorrectKey && !correctAns) {
+              const fallback = normalizeSequenceAnswer(hintRaw);
+              if (fallback) correctAns = fallback;
+            }
           }
 
           const hintRaw = q.template_hint != null ? String(q.template_hint).trim() : '';
@@ -1920,33 +1932,4 @@ const serveExamAttachmentByExam = async (req, res) => {
       [examId, sidHex]
     );
     if (!accessRows.length) {
-      return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
-    }
-  } else {
-    return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
-  }
-
-  return sendExamMaterialFromDiskOrDb(res, filename);
-};
-
-module.exports = {
-  createExam,
-  listExams,
-  softDeleteExam,
-  hardDeleteExam,
-  bulkHardDeleteExams,
-  getExamAssignments,
-  grantLateAccess,
-  patchExam,
-  instructorStudentExamProgress,
-  studentExams,
-  getStudentExamReview,
-  getExamQuestions,
-  submitExam,
-  getResults,
-  getExamGroups,
-  getExamTop10,
-  regradeExamResults,
-  serveExamMaterialFile,
-  serveExamAttachmentByExam,
-};
+      return res.status(403).json({ success: f
