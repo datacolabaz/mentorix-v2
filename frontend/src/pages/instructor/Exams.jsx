@@ -45,11 +45,18 @@ function initEditQuestion(q) {
             { left: '', right: '' },
           ]
       : []
+  const seqItems =
+    type === 'sequence'
+      ? opts.length
+        ? opts.map((r) => (typeof r === 'string' ? r : r && typeof r === 'object' ? String(r.text ?? '') : '')).slice(0, 24)
+        : ['', '', '']
+      : []
   return {
     ...q,
     _closedTexts: closedTexts,
     _multTexts: multTexts,
     _matchRows: matchRows,
+    _seqItems: seqItems,
   }
 }
 
@@ -71,6 +78,11 @@ function serializeEditQuestion(eq) {
       left: String(r.left ?? '').trim(),
       right: String(r.right ?? '').trim(),
     }))
+  } else if (type === 'sequence') {
+    options = (eq._seqItems || []).map((text, j) => ({
+      key: String(j + 1),
+      text: String(text || '').trim(),
+    }))
   } else {
     let o = eq.options
     if (typeof o === 'string') {
@@ -90,6 +102,9 @@ function serializeEditQuestion(eq) {
       .filter((c, i, a) => a.indexOf(c) === i)
       .sort()
       .join('')
+  }
+  if (type === 'sequence') {
+    correct = correct.replace(/\D/g, '').slice(0, 120)
   }
   if (type === 'closed' && correct) correct = correct.toUpperCase().slice(0, 1)
 
@@ -112,6 +127,7 @@ const EDIT_TYPE_AZ = {
   closed: 'Qapalı',
   multiple: 'Çoxseçimli',
   matching: 'Uyğunluq',
+  sequence: 'Ardıcıllıq',
   open: 'Açıq',
 }
 
@@ -849,6 +865,61 @@ export default function InstructorExams() {
                                 />
                               </div>
                             ))}
+                          </div>
+                        )}
+                        {t === 'sequence' && (
+                          <div className="space-y-2">
+                            <label className="text-[11px] text-gray-500">Bəndlər (hər sətir bir bənd)</label>
+                            <div className="space-y-2">
+                              {(q._seqItems || []).map((txt, oi) => (
+                                <label key={oi} className="block text-[11px] text-gray-500">
+                                  {oi + 1}.
+                                  <input
+                                    className={inp + ' mt-0.5'}
+                                    value={String(txt ?? '')}
+                                    onChange={(e) => {
+                                      const v = e.target.value
+                                      patchEditQuestion(idx, {
+                                        _seqItems: (q._seqItems || []).map((x, j) => (j === oi ? v : x)),
+                                      })
+                                    }}
+                                  />
+                                </label>
+                              ))}
+                            </div>
+                            <button
+                              type="button"
+                              className="text-xs font-semibold text-indigo-300 hover:text-indigo-200"
+                              onClick={() => patchEditQuestion(idx, { _seqItems: [...(q._seqItems || []), ''] })}
+                            >
+                              + Bənd əlavə et
+                            </button>
+                            <label className="block text-[11px] text-gray-500">
+                              Düzgün ardıcıllıq (bitişik rəqəmlər, məs. 231)
+                              <input
+                                className={inp + ' mt-1 font-mono text-xs'}
+                                value={String(q.correct_answer ?? '').replace(/\D/g, '')}
+                                onChange={(e) =>
+                                  patchEditQuestion(idx, {
+                                    correct_answer: e.target.value.replace(/\D/g, '').slice(0, 120),
+                                  })
+                                }
+                                placeholder="231"
+                              />
+                            </label>
+                            <label className="block text-[11px] text-gray-500">
+                              Tələbəyə nümunə (placeholder)
+                              <input
+                                className={inp + ' mt-1 font-mono text-xs'}
+                                value={String(q.template_hint ?? '').replace(/\D/g, '')}
+                                onChange={(e) =>
+                                  patchEditQuestion(idx, {
+                                    template_hint: e.target.value.replace(/\D/g, '').slice(0, 120),
+                                  })
+                                }
+                                placeholder="231"
+                              />
+                            </label>
                           </div>
                         )}
                         {t === 'open' && (

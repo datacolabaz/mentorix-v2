@@ -172,6 +172,7 @@ function questionTypeLabelAz(t) {
     closed: 'Qapalı',
     multiple: 'Çoxseçimli (şablon)',
     matching: 'Uyğunluq',
+    sequence: 'Ardıcıllıq',
     open: 'Açıq',
   }
   return m[t] || t
@@ -742,6 +743,42 @@ export default function StudentExams() {
                         ...p,
                         [q.id]: e.target.value.toLowerCase().replace(/[^0-9a-z]/g, ''),
                       }))
+                    }
+                  />
+                </div>
+              ) : q.question_type === 'sequence' ? (
+                <div className="ml-0 sm:ml-8 lg:ml-10 space-y-3">
+                  <p className="text-xs text-gray-500">
+                    Bəndləri oxuyun və düzgün ardıcıllığı yalnız rəqəmlərlə bitişik yazın (boşluq yoxdur).
+                    <span className="block mt-1">
+                      Nümunə: <span className="font-mono text-indigo-300">{String(q.template_hint || '231')}</span>
+                    </span>
+                  </p>
+                  <div className="rounded-xl border border-indigo-500/15 bg-black/15 p-3 space-y-2">
+                    {(Array.isArray(q.options) ? q.options : []).map((opt, oi) => {
+                      const text =
+                        typeof opt === 'string'
+                          ? opt
+                          : opt && typeof opt === 'object'
+                            ? String(opt.text ?? '')
+                            : ''
+                      return (
+                        <div key={oi} className="flex items-start gap-2 text-sm text-gray-300">
+                          <span className="w-6 shrink-0 text-gray-500 font-mono">{oi + 1}.</span>
+                          <span className="min-w-0 break-words">{text || '—'}</span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="off"
+                    className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-3 py-2.5 text-white text-sm font-mono outline-none focus:border-blue-500"
+                    placeholder={String(q.template_hint || '231')}
+                    value={answers[q.id] || ''}
+                    onChange={(e) =>
+                      setAnswers((p) => ({ ...p, [q.id]: e.target.value.replace(/\D/g, '').slice(0, 120) }))
                     }
                   />
                 </div>
