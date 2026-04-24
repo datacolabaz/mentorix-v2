@@ -39,9 +39,10 @@
 
 .theme-dark {
   --surface-main: 11 11 15; /* #0B0B0F */
-  --surface-card: 21 23 30; /* #15171E */
+  --surface-card: 26 29 37; /* #1A1D25 */
+  --surface-card-hover: 32 37 49; /* #202531 */
   --primary-accent: 0 230 118; /* #00E676 */
-  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-subtle: rgba(255, 255, 255, 0.06);
   --text-main: 255 255 255;
   --text-muted: 148 163 184; /* slate-400 */
 }
@@ -49,6 +50,7 @@
 .theme-light {
   --surface-main: 244 247 250;
   --surface-card: 255 255 255;
+  --surface-card-hover: 248 250 252; /* #F8FAFC */
   --primary-accent: 0 230 118;
   --border-subtle: rgba(15, 23, 42, 0.08);
   --text-main: 11 18 32;
