@@ -772,10 +772,10 @@ export default function StudentExams() {
 
   return (
     <div className="p-4 sm:p-6 w-full min-w-0 max-w-3xl mx-auto">
-      <h1 className="font-display font-bold text-2xl mb-6 break-words">İmtahanlarım</h1>
+      <h1 className="font-display font-bold text-2xl mb-6 break-words text-token-textMain">İmtahanlarım</h1>
 
       {listError && !listLoading && (
-        <Card className="p-4 sm:p-5 mb-6 border-red-500/35 bg-red-500/5">
+        <Card hover className="p-4 sm:p-5 mb-6 border-red-500/35 bg-red-500/5">
           <p className="text-red-300 text-sm mb-4">{listError}</p>
           <Button
             type="button"
@@ -791,34 +791,34 @@ export default function StudentExams() {
       )}
 
       {result !== null && (
-        <Card className="p-6 mb-6 text-center border-blue-500/40">
+        <Card hover className="p-6 mb-6 text-center border-blue-500/40">
           <div className="text-5xl mb-3">{result >= 75 ? '🏆' : result >= 60 ? '🥈' : '📚'}</div>
           <div className="font-display font-extrabold text-4xl bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
             {formatScoreBal(result)}
           </div>
-          <div className="text-gray-400 mt-2">Son imtahan nəticəniz</div>
+          <div className="text-token-textMuted mt-2">Son imtahan nəticəniz</div>
         </Card>
       )}
 
       <ExamTypeSummaryPanel summary={resultTypeSummary} />
 
       {resultBreakdown?.length > 0 && (
-        <Card className="p-6 mb-6 border-indigo-500/30">
-          <h2 className="font-display font-bold text-lg text-white mb-1">Suallar üzrə nəticə</h2>
-          <p className="text-xs text-gray-500 mb-4">Yazdığınız cavabların xülasəsi.</p>
+        <Card hover className="p-6 mb-6 border-indigo-500/30">
+          <h2 className="font-display font-bold text-lg text-token-textMain mb-1">Suallar üzrə nəticə</h2>
+          <p className="text-xs text-token-textMuted mb-4">Yazdığınız cavabların xülasəsi.</p>
           <div className="space-y-3 max-h-[min(70vh,520px)] overflow-y-auto pr-1">
             {resultBreakdown.filter(Boolean).map((row) => (
               <div
                 key={row.question_id || row.order}
-                className="rounded-xl border border-indigo-500/20 bg-[#13112e]/80 p-4 text-left"
+                className="rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard/40 hover:bg-token-surfaceCard/55 transition-colors p-4 text-left"
               >
                 <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
-                  <span className="text-sm font-bold text-indigo-300">Sual {row.order}</span>
-                  <span className="text-[11px] uppercase tracking-wide text-gray-500">
+                  <span className="text-sm font-bold text-token-textMain">Sual {row.order}</span>
+                  <span className="text-[11px] uppercase tracking-wide text-token-textMuted">
                     {questionTypeLabelAz(row.question_type)}
                   </span>
                 </div>
-                <p className="text-sm text-gray-300 mb-3 leading-snug">{row.question_text}</p>
+                <p className="text-sm text-token-textMain mb-3 leading-snug">{row.question_text}</p>
                 <div className="grid gap-2 text-sm">
                   <div>
                     <span className="text-xs text-gray-500 block mb-0.5">Sizin cavabınız</span>
@@ -858,7 +858,7 @@ export default function StudentExams() {
       )}
 
       {listLoading ? (
-        <div className="text-center py-16 text-gray-500">İmtahanlar yüklənir…</div>
+        <div className="text-center py-16 text-token-textMuted">İmtahanlar yüklənir…</div>
       ) : (
       <div className="space-y-4">
         {exams.map((exam) => {
@@ -890,11 +890,15 @@ export default function StudentExams() {
           const isDone = !!exam.submitted_at
 
           return (
-            <Card key={exam.id} className="p-4 sm:p-5 min-w-0 overflow-hidden">
+            <Card
+              key={exam.id}
+              hover
+              className="p-4 sm:p-5 min-w-0 overflow-hidden border border-[color:var(--border-subtle)] hover:border-primary/20"
+            >
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div className="min-w-0 flex-1">
-                  <h3 className="font-display font-bold text-lg mb-2 break-words">{exam.title}</h3>
-                  <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-4 text-sm text-gray-400">
+                  <h3 className="font-display font-bold text-lg mb-2 break-words text-token-textMain">{exam.title}</h3>
+                  <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-4 text-sm text-token-textMuted">
                     {until ? (
                       <span className="break-all">
                         🕘{' '}
@@ -949,7 +953,7 @@ export default function StudentExams() {
                       </Button>
                     </div>
                   ) : !until ? (
-                    <span className="text-xs text-amber-400/90 bg-[#13112e] px-3 py-2 rounded-xl inline-block">
+                    <span className="text-xs text-amber-400/90 bg-token-surfaceCard/50 border border-[color:var(--border-subtle)] px-3 py-2 rounded-xl inline-block">
                       Müəllim vaxt təyin etməlidir
                     </span>
                   ) : showContinue ? (
@@ -957,12 +961,12 @@ export default function StudentExams() {
                   ) : canStartFresh ? (
                     <Button onClick={() => startExam(exam)}>🚀 Başla</Button>
                   ) : (
-                    <span className="text-xs text-gray-500 bg-[#13112e] px-3 py-2 rounded-xl inline-block">⛔ Aktiv deyil</span>
+                    <span className="text-xs text-token-textMuted bg-token-surfaceCard/50 border border-[color:var(--border-subtle)] px-3 py-2 rounded-xl inline-block">⛔ Aktiv deyil</span>
                   )}
                 </div>
               </div>
               {!isDone && until && (
-                <div className="mt-3 text-[12px] text-gray-400">
+                <div className="mt-3 text-[12px] text-token-textMuted">
                   {start
                     ? `İmtahan ${formatAzDateTime(start)} – ${formatAzDateTime(until)} aralığında aktivdir.`
                     : `İmtahan ${formatAzDateTime(until)}-a qədər aktivdir.`}{' '}
@@ -973,7 +977,7 @@ export default function StudentExams() {
           )
         })}
         {!exams.length && (
-          <div className="text-center py-16 text-gray-500">Sizin üçün imtahan yoxdur</div>
+          <div className="text-center py-16 text-token-textMuted">Sizin üçün imtahan yoxdur</div>
         )}
       </div>
       )}
@@ -1006,19 +1010,19 @@ export default function StudentExams() {
             <ExamTypeSummaryPanel summary={reviewModal.type_summary} />
             {reviewModal.breakdown?.length > 0 && (
               <div className="space-y-3 max-h-[min(60vh,480px)] overflow-y-auto pr-1">
-                <h3 className="text-sm font-bold text-white mb-2">Suallar üzrə</h3>
+                <h3 className="text-sm font-bold text-token-textMain mb-2">Suallar üzrə</h3>
                 {reviewModal.breakdown.filter(Boolean).map((row) => (
                   <div
                     key={row.question_id || row.order}
-                    className="rounded-xl border border-indigo-500/20 bg-[#13112e]/80 p-4 text-left"
+                    className="rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard/40 hover:bg-token-surfaceCard/55 transition-colors p-4 text-left"
                   >
                     <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
-                      <span className="text-sm font-bold text-indigo-300">Sual {row.order}</span>
-                      <span className="text-[11px] uppercase tracking-wide text-gray-500">
+                      <span className="text-sm font-bold text-token-textMain">Sual {row.order}</span>
+                      <span className="text-[11px] uppercase tracking-wide text-token-textMuted">
                         {questionTypeLabelAz(row.question_type)}
                       </span>
                     </div>
-                    <p className="text-sm text-gray-300 mb-3 leading-snug">{row.question_text}</p>
+                    <p className="text-sm text-token-textMain mb-3 leading-snug">{row.question_text}</p>
                     <div className="grid gap-2 text-sm">
                       <div>
                         <span className="text-xs text-gray-500 block mb-0.5">Sizin cavabınız</span>

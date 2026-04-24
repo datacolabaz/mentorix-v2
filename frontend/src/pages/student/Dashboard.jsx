@@ -64,15 +64,15 @@ export default function StudentDashboard() {
   return (
     <div className="p-4 sm:p-6 w-full min-w-0 max-w-6xl mx-auto">
       <div className="mb-6">
-        <h1 className="font-display font-bold text-2xl break-words">
+        <h1 className="font-display font-bold text-2xl break-words text-token-textMain">
           Salam, {user?.full_name?.split(' ')[0]}! 👋
         </h1>
-        <p className="text-gray-400 text-sm mt-1">Proqresinizə baxın</p>
+        <p className="text-token-textMuted text-sm mt-1">Proqresinizə baxın</p>
       </div>
 
-      <Card className="p-5 min-w-0 overflow-hidden">
-        <h2 className="font-display font-bold text-base mb-1">📊 İmtahan balları</h2>
-        <p className="text-xs text-gray-500 mb-4">
+      <Card hover className="p-5 min-w-0 overflow-hidden border border-[color:var(--border-subtle)] hover:border-primary/20">
+        <h2 className="font-display font-bold text-base mb-1 text-token-textMain">📊 İmtahan balları</h2>
+        <p className="text-xs text-token-textMuted mb-4">
           Tamamladığınız hər imtahan üçün bal payı (böyük dilim = daha yüksək bal nisbəti)
         </p>
         {pieData.length ? (
@@ -108,13 +108,13 @@ export default function StudentDashboard() {
                 />
                 <Legend
                   wrapperStyle={{ fontSize: 11 }}
-                  formatter={(value) => <span className="text-gray-300">{value}</span>}
+                  formatter={(value) => <span className="text-token-textMuted">{value}</span>}
                 />
               </PieChart>
             </ResponsiveContainer>
           </div>
         ) : (
-          <div className="h-48 flex items-center justify-center text-gray-500 text-sm text-center px-4">
+          <div className="h-48 flex items-center justify-center text-token-textMuted text-sm text-center px-4">
             Hələ tamamlanmış imtahan balı yoxdur
           </div>
         )}
