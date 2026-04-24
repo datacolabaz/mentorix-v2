@@ -852,6 +852,7 @@ const getExamQuestions = async (req, res) => {
         ? questions.map(({ correct_answer, template_hint, ...rest }) => {
             if (rest.question_type === 'matching') return { ...rest, template_hint: '1a2b3c' };
             if (rest.question_type === 'multiple') return { ...rest, template_hint: '13' };
+            if (rest.question_type === 'sequence') return { ...rest, template_hint: '231' };
             return { ...rest, template_hint };
           })
         : questions.map((q) => ({ ...q }));
