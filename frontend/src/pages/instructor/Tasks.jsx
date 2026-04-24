@@ -225,42 +225,46 @@ export default function InstructorTasks() {
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
-        <Card className="p-4">
-          <p className="text-xs text-gray-500">Tapşırıqlar</p>
-          <p className="text-lg font-bold text-white mt-1">{tasks.length}</p>
+        <Card hover className="p-4">
+          <p className="text-xs text-token-textMuted">Tapşırıqlar</p>
+          <p className="text-lg font-bold text-token-textMain mt-1">{tasks.length}</p>
         </Card>
-        <Card className="p-4">
-          <p className="text-xs text-gray-500">Təyinatlar (cəmi)</p>
-          <p className="text-lg font-bold text-white mt-1">{stats.total}</p>
+        <Card hover className="p-4">
+          <p className="text-xs text-token-textMuted">Təyinatlar (cəmi)</p>
+          <p className="text-lg font-bold text-token-textMain mt-1">{stats.total}</p>
         </Card>
-        <Card className="p-4">
-          <p className="text-xs text-gray-500">Tamamlanan</p>
-          <p className="text-lg font-bold text-white mt-1">{stats.done}</p>
+        <Card hover className="p-4">
+          <p className="text-xs text-token-textMuted">Tamamlanan</p>
+          <p className="text-lg font-bold text-token-textMain mt-1">{stats.done}</p>
         </Card>
       </div>
 
       {loading ? (
-        <Card className="p-5 text-sm text-gray-500">Yüklənir…</Card>
+        <Card hover className="p-5 text-sm text-token-textMuted">
+          Yüklənir…
+        </Card>
       ) : tasks.length === 0 ? (
-        <Card className="p-5 text-sm text-gray-500">Hələ tapşırıq yoxdur.</Card>
+        <Card hover className="p-5 text-sm text-token-textMuted">
+          Hələ tapşırıq yoxdur.
+        </Card>
       ) : (
         <div className="space-y-3">
           {tasks.map((t) => {
             const recipients = parseRecipients(t)
             return (
-              <Card key={t.id} className="p-5">
+              <Card key={t.id} hover className="p-5">
                 <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
-                    <p className="text-white font-semibold break-words">{t.title}</p>
+                    <p className="text-token-textMain font-semibold break-words">{t.title}</p>
                     {t.topic ? (
-                      <p className="text-sm text-indigo-200/90 mt-1 break-words">Mövzu: {t.topic}</p>
+                      <p className="text-sm text-token-textMuted mt-1 break-words">Mövzu: {t.topic}</p>
                     ) : null}
-                    <p className="text-xs text-gray-500 mt-1">
-                      Yaradılıb: <span className="text-gray-300 font-mono">{fmtCreated(t.created_at)}</span>
+                    <p className="text-xs text-token-textMuted mt-1">
+                      Yaradılıb: <span className="text-token-textMain font-mono">{fmtCreated(t.created_at)}</span>
                       {t.due_date ? (
                         <>
                           {' '}
-                          · Son tarix: <span className="text-gray-300 font-mono">{fmtDue(t.due_date)}</span>
+                          · Son tarix: <span className="text-token-textMain font-mono">{fmtDue(t.due_date)}</span>
                         </>
                       ) : null}
                       <span className="block sm:inline sm:ml-1 mt-0.5 sm:mt-0">
@@ -279,18 +283,18 @@ export default function InstructorTasks() {
                   </Button>
                 </div>
                 {t.description ? (
-                  <div className="mt-3 text-sm text-gray-200 whitespace-pre-wrap leading-relaxed border-t border-indigo-500/15 pt-3">
-                    <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Müəllim qeydi</span>
+                  <div className="mt-3 text-sm text-token-textMain whitespace-pre-wrap leading-relaxed border-t border-[color:var(--border-subtle)] pt-3">
+                    <span className="text-xs font-semibold text-token-textMuted uppercase tracking-wider">Müəllim qeydi</span>
                     <div className="mt-1">{t.description}</div>
                   </div>
                 ) : null}
                 {recipients.length > 0 ? (
                   <div className="mt-3 rounded-xl border border-indigo-500/15 bg-[#0f0c29]/50 p-3">
-                    <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-2">Tələbələr və status</p>
+                    <p className="text-[10px] font-semibold text-token-textMuted uppercase tracking-wider mb-2">Tələbələr və status</p>
                     <ul className="space-y-1.5">
                       {recipients.map((r) => (
                         <li key={r.student_id} className="flex items-center justify-between gap-2 text-sm min-w-0">
-                          <span className="text-gray-200 truncate">{r.full_name || 'Tələbə'}</span>
+                          <span className="text-token-textMain truncate">{r.full_name || 'Tələbə'}</span>
                           <div className="flex items-center gap-2 shrink-0">
                             <span
                               className={

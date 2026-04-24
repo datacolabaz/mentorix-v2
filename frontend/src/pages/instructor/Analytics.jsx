@@ -81,8 +81,8 @@ export default function InstructorAnalytics() {
       <h1 className="font-display font-bold text-xl sm:text-2xl mb-6">Analitika</h1>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4 min-w-0">
-        <Card className="p-4 sm:p-5 min-w-0 overflow-hidden !bg-[#F0F4F8] border-gray-200 shadow-[0_10px_30px_rgba(34,224,136,0.1)]">
-          <h2 className="font-display font-bold text-base mb-4 text-[#003366]">Tələbə Performansı</h2>
+        <Card hover className="p-4 sm:p-5 min-w-0 overflow-hidden">
+          <h2 className="font-display font-bold text-base mb-4 text-token-textMain">Tələbə Performansı</h2>
           <div className="w-full h-[240px] min-h-[200px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={barData} margin={{ top: 8, right: 8, left: 0, bottom: 4 }}>
@@ -95,8 +95,8 @@ export default function InstructorAnalytics() {
           </div>
         </Card>
 
-        <Card className="p-4 sm:p-5 min-w-0 overflow-hidden !bg-[#F0F4F8] border-gray-200 shadow-[0_10px_30px_rgba(34,224,136,0.1)]">
-          <h2 className="font-display font-bold text-base mb-4 text-[#003366]">Yönləndirmə Mənbəyi</h2>
+        <Card hover className="p-4 sm:p-5 min-w-0 overflow-hidden">
+          <h2 className="font-display font-bold text-base mb-4 text-token-textMain">Yönləndirmə Mənbəyi</h2>
           {pieData.length ? (
             <div className="w-full h-[240px] min-h-[200px]">
               <ResponsiveContainer width="100%" height="100%">
@@ -119,13 +119,13 @@ export default function InstructorAnalytics() {
               </ResponsiveContainer>
             </div>
           ) : (
-            <div className="h-52 flex items-center justify-center text-gray-600">Məlumat yoxdur</div>
+            <div className="h-52 flex items-center justify-center text-token-textMuted">Məlumat yoxdur</div>
           )}
         </Card>
       </div>
 
-      <Card className="p-4 sm:p-5 min-w-0 overflow-hidden !bg-[#F0F4F8] border-gray-200 shadow-[0_10px_30px_rgba(34,224,136,0.1)]">
-        <h2 className="font-display font-bold text-base mb-4 text-[#003366]">Dərs Sayı</h2>
+      <Card hover className="p-4 sm:p-5 min-w-0 overflow-hidden">
+        <h2 className="font-display font-bold text-base mb-4 text-token-textMain">Dərs Sayı</h2>
         <div className="w-full h-[200px] min-h-[180px]">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={barData} margin={{ top: 8, right: 8, left: 0, bottom: 4 }}>
@@ -140,11 +140,11 @@ export default function InstructorAnalytics() {
 
       <div className="mt-4" />
 
-      <Card className="p-4 sm:p-5 min-w-0 overflow-hidden">
+      <Card hover className="p-4 sm:p-5 min-w-0 overflow-hidden">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-4">
           <div className="min-w-0">
-            <h2 className="font-display font-bold text-base text-white">İmtahan nəticələri</h2>
-            <p className="text-xs text-gray-500 mt-1">Qruplara görə baxış və ümumi Top 10.</p>
+            <h2 className="font-display font-bold text-base text-token-textMain">İmtahan nəticələri</h2>
+            <p className="text-xs text-token-textMuted mt-1">Qruplara görə baxış və ümumi Top 10.</p>
           </div>
           <Button
             variant="secondary"
@@ -203,7 +203,7 @@ export default function InstructorAnalytics() {
         </div>
 
         {examErr && <p className="text-sm text-amber-200/90 mt-3">{examErr}</p>}
-        {examLoading && <p className="text-xs text-gray-500 mt-3">Yüklənir…</p>}
+        {examLoading && <p className="text-xs text-token-textMuted mt-3">Yüklənir…</p>}
 
         {examId && !examLoading && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
