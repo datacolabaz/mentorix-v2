@@ -179,4 +179,11 @@ export default function InstructorNotifications() {
                     {alert.type === 'sms' ? '📱 SMS' : alert.type === 'ram' ? '🧠 RAM' : '💾 Storage'}
                   </p>
                 </div>
-              </div
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
