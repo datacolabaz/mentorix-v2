@@ -11,6 +11,7 @@ import { WEEKDAYS } from './Schedule'
 import { fmtAzBakuLessonRow } from '../../lib/lessonWeekGrid'
 import { readCache, writeCache } from '../../lib/cache'
 import useUiStore from '../../hooks/useUi'
+import PortalMenu from '../../components/common/PortalMenu'
 
 const BILLING_OPTS = [
   { value: '8_lessons', label: '8 Ders' },
@@ -615,6 +616,7 @@ export default function InstructorStudents() {
   const [openGroups, setOpenGroups] = useState(() => new Set())
   const [actionMenuId, setActionMenuId] = useState(null)
   const { theme } = useUiStore()
+  const actionAnchorsRef = useRef(new Map())
 
   const CACHE_KEY = 'instructor_students_v1'
   const CACHE_TTL_MS = 60000
@@ -960,6 +962,8 @@ export default function InstructorStudents() {
     return m ? `${h}s ${m}dəq` : `${h}s`
   }
 
+  const closeStudentMenu = () => setActionMenuId(null)
+
   const saveEdit = async () => {
     if (!editId) {
       toast('Qeydiyyat tapılmadı — səhifəni yeniləyin', 'error')
@@ -1213,6 +1217,7 @@ export default function InstructorStudents() {
                   : { variant: 'pending', label: `Sonradan · ${g.payMix.postpaid}/${total}` }
 
             const toggleGroup = () => {
+              closeStudentMenu()
               setOpenGroups((prev) => {
                 const next = new Set(prev)
                 if (next.has(g.key)) next.delete(g.key)
@@ -1226,9 +1231,9 @@ export default function InstructorStudents() {
                 hover
                 className={[
                   // NOTE: dropdown needs to escape card bounds (no clipping)
-                  'p-0 overflow-visible border',
+                  'p-0 overflow-visible border relative z-10',
                   'border-[color:var(--border-subtle)] hover:border-primary/20',
-                  isOpen ? 'border-primary/25 bg-token-surfaceCard/20' : '',
+                  isOpen ? 'border-primary/25 bg-token-surfaceCard/20 z-20' : '',
                 ].join(' ')}
               >
                 <div className="relative">
@@ -1395,6 +1400,12 @@ export default function InstructorStudents() {
                                   'text-token-textMain/80',
                                 ].join(' ')}
                                 aria-label="Actions"
+                                ref={(el) => {
+                                  const k = String(s.enrollment_id)
+                                  if (!k) return
+                                  if (el) actionAnchorsRef.current.set(k, el)
+                                  else actionAnchorsRef.current.delete(k)
+                                }}
                                 onClick={() =>
                                   setActionMenuId((prev) =>
                                     String(prev) === String(s.enrollment_id) ? null : s.enrollment_id
@@ -1404,20 +1415,19 @@ export default function InstructorStudents() {
                                 ⋯
                               </button>
 
-                              {String(actionMenuId) === String(s.enrollment_id) ? (
-                                <div
-                                  className={[
-                                    'absolute right-0 mt-2 w-44 z-20 overflow-hidden rounded-2xl border',
-                                    'border-[color:var(--border-subtle)] bg-token-surfaceCard/90 backdrop-blur-[10px]',
-                                    'shadow-[0_18px_45px_rgba(0,0,0,0.35)]',
-                                  ].join(' ')}
-                                  onMouseLeave={() => setActionMenuId(null)}
-                                >
+                              <PortalMenu
+                                open={String(actionMenuId) === String(s.enrollment_id)}
+                                onClose={closeStudentMenu}
+                                anchorRef={{ current: actionAnchorsRef.current.get(String(s.enrollment_id)) }}
+                                align="end"
+                                width={176}
+                              >
+                                <div className="py-1">
                                   <button
                                     type="button"
                                     className="w-full text-left px-3 py-2 text-sm hover:bg-white/5"
                                     onClick={() => {
-                                      setActionMenuId(null)
+                                      closeStudentMenu()
                                       openEdit(s)
                                     }}
                                   >
@@ -1427,7 +1437,7 @@ export default function InstructorStudents() {
                                     type="button"
                                     className="w-full text-left px-3 py-2 text-sm hover:bg-white/5"
                                     onClick={() => {
-                                      setActionMenuId(null)
+                                      closeStudentMenu()
                                       openLessonsModal(s)
                                     }}
                                   >
@@ -1437,7 +1447,7 @@ export default function InstructorStudents() {
                                     type="button"
                                     className="w-full text-left px-3 py-2 text-sm hover:bg-white/5"
                                     onClick={() => {
-                                      setActionMenuId(null)
+                                      closeStudentMenu()
                                       openRestoreModal(s)
                                     }}
                                   >
@@ -1447,14 +1457,14 @@ export default function InstructorStudents() {
                                     type="button"
                                     className="w-full text-left px-3 py-2 text-sm text-red-200 hover:bg-red-500/10"
                                     onClick={() => {
-                                      setActionMenuId(null)
+                                      closeStudentMenu()
                                       deleteStudent(s.enrollment_id, s.full_name)
                                     }}
                                   >
                                     Sil
                                   </button>
                                 </div>
-                              ) : null}
+                              </PortalMenu>
                             </div>
                           </div>
                         </div>
