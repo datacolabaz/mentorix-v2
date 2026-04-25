@@ -276,11 +276,11 @@ export default function InstructorPayments() {
   return (
     <div className="p-4 sm:p-6 min-w-0 max-w-6xl mx-auto w-full">
       <div className="mb-6">
-        <h1 className="font-display font-bold text-xl sm:text-2xl text-white tracking-tight">Ödənişlər</h1>
-        <p className="text-gray-500 text-sm mt-1">
-          Aylıq paketdə keçmiş aylar üçün <span className="text-indigo-300">Ödəniş</span> pəncərəsində hər sətirdə
+        <h1 className="font-display font-bold text-xl sm:text-2xl text-token-textMain tracking-tight">Ödənişlər</h1>
+        <p className="text-token-textMuted text-sm mt-1">
+          Aylıq paketdə keçmiş aylar üçün <span className="text-primary/90 font-semibold">Ödəniş</span> pəncərəsində hər sətirdə
           real ödəniş tarixini qeyd edin — məbləğlər cəmlənir və ankor borc ilə uyğunlaşır. Qalıq borc və balans{' '}
-          <span className="text-indigo-300">Tarixçə</span>də görünür. Davamiyyət ödənişdən ayrıdır. «Balans düzəlişi»
+          <span className="text-primary/90 font-semibold">Tarixçə</span>də görünür. Davamiyyət ödənişdən ayrıdır. «Balans düzəlişi»
           ümumi gəlirə daxil edilmir.
         </p>
       </div>
