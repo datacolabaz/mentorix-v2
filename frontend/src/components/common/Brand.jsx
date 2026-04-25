@@ -1,5 +1,6 @@
 import logoLogin from '../../assets/mentorix-login.png'
 import logoSidebar from '../../assets/mentorix-sidebar.png'
+import logoSidebarLight from '../../assets/mentorix-sidebar-light.png'
 
 const imgBase = 'object-contain select-none bg-transparent shrink-0'
 const onDarkBoost = 'drop-shadow-[0_6px_18px_rgba(34,224,136,0.18)]'
@@ -47,10 +48,10 @@ export default function Brand({
       <div className={`mx-auto w-[92%] min-w-0 flex items-center justify-center ${className}`}>
         <div className={`rounded-2xl px-3 py-2 ${badge}`}>
           <img
-            src={logoSidebar}
+            src={tone === 'light' ? logoSidebarLight : logoSidebar}
             alt="Mentorix"
             className={[
-              'mentorix-logo h-[52px] w-auto',
+              'mentorix-logo h-[52px] w-auto max-w-[240px]',
               imgBase,
               markBoost,
               imgClassName,
