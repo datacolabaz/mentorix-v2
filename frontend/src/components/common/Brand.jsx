@@ -1,4 +1,5 @@
-import logo from '../../assets/mentorix-logo.png'
+import logoLogin from '../../assets/mentorix-login.svg'
+import logoSidebar from '../../assets/mentorix-sidebar.svg'
 
 const imgBase = 'object-contain select-none bg-transparent shrink-0'
 const onDarkBoost =
@@ -17,7 +18,7 @@ export default function Brand({
     return (
       <div className={`flex flex-col items-center justify-center min-w-0 ${className}`}>
         <img
-          src={logo}
+          src={logoLogin}
           alt="Mentorix"
           className={`mentorix-logo w-[220px] max-w-[min(220px,92vw)] h-auto ${imgBase} ${loginBoost} ${imgClassName}`}
           draggable={false}
@@ -37,7 +38,7 @@ export default function Brand({
     return (
       <div className={`mx-auto w-[90%] min-w-0 flex justify-center items-center ${className}`}>
         <img
-          src={logo}
+          src={logoSidebar}
           alt="Mentorix"
           className={`mentorix-logo h-[54px] max-h-[60px] w-auto max-w-full block mx-auto ${imgBase} ${onDarkBoost} ${imgClassName}`}
           draggable={false}
@@ -51,12 +52,6 @@ export default function Brand({
       className={`flex items-center justify-start min-w-0 max-w-[min(260px,82vw)] overflow-visible ${className}`}
     >
       <img
-        src={logo}
+        src={logoSidebar}
         alt="Mentorix"
-        className={`mentorix-logo h-[50px] max-h-[56px] w-auto max-w-full sm:h-[52px] sm:max-h-[60px] ${imgBase} ${onDarkBoost} ${imgClassName}`}
-        draggable={false}
-      />
-    </div>
-  )
-}
-        
+        className={`mentorix-logo h-[50px] max-h-[56px] w-auto max-w-full sm:h-[52px] sm:max-h-[60px] ${imgBase} ${onDark
