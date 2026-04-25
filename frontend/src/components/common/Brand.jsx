@@ -45,7 +45,7 @@ export default function Brand({
             src={logoSidebar}
             alt="Mentorix"
             className={[
-              'mentorix-logo h-[44px] w-auto',
+              'mentorix-logo h-[52px] w-auto',
               imgBase,
               tone === 'dark' ? onDarkBoost : '',
               imgClassName,
