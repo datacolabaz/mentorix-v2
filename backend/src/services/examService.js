@@ -29,16 +29,23 @@ function sequenceEffectiveCorrect(q) {
   return String(q?.template_hint ?? '').trim();
 }
 
-/** Ardıcıllıq: yalnız whitespace silinir (NFKC), sonra simvol-simvol müqayisə. */
+const SEQ_GRADE_DEBUG = process.env.SEQ_GRADE_DEBUG === '1';
+
+/** Ardıcıllıq: yalnız whitespace + görünməyən boşluqlar silinir, sonra simvol-simvol müqayisə. */
 function normSequenceIgnoreSpaces(s) {
   return String(s ?? '')
     .normalize('NFKC')
-    .replace(/[\s\u00A0\u200B\uFEFF\u200C\u200D]+/g, '')
-    .trim();
+    .replace(/[\s\u00A0\u200B\uFEFF\u200C\u200D]+/g, ''); // includes \s+ plus common invisible spaces
 }
 
 function sequenceAnswersEqual(givenRaw, correctRaw) {
-  return normSequenceIgnoreSpaces(givenRaw) === normSequenceIgnoreSpaces(correctRaw);
+  // Explicit casts + sanitization, per requested spec
+  const g = String(givenRaw ?? '').trim().replace(/\s+/g, '');
+  const c = String(correctRaw ?? '').trim().replace(/\s+/g, '');
+  // Extra defense-in-depth for zero-width / NBSP that \s may miss in some runtimes
+  const g2 = normSequenceIgnoreSpaces(g);
+  const c2 = normSequenceIgnoreSpaces(c);
+  return g2 === c2;
 }
 
 function inferQuestionType(q) {
@@ -191,6 +198,12 @@ function buildAutoGradingMap(questions, answers) {
         out[id] = { type: 'sequence', status: 'incorrect', earned_points: 0 };
       } else {
         const ok = sequenceAnswersEqual(gStr, correct);
+        if (SEQ_GRADE_DEBUG) {
+          console.log(
+            `Comparing Student: [${String(gStr)}] with Teacher: [${String(correct)}] for Question Type: Sequence`
+          );
+          console.log(`Sequence normalized → student:[${normSequenceIgnoreSpaces(gStr)}] teacher:[${normSequenceIgnoreSpaces(correct)}] ok:${ok}`);
+        }
         out[id] = { type: 'sequence', status: ok ? 'correct' : 'incorrect', earned_points: ok ? pts : 0 };
       }
     }
@@ -258,6 +271,12 @@ function scoreQuestionForAuto(q, answers, wrongPenaltyEnabled) {
     const correct = sequenceEffectiveCorrect(q);
     if (!normSequenceIgnoreSpaces(correct)) return { type, delta: 0, outcome: 'pending' };
     const ok = sequenceAnswersEqual(given, correct);
+    if (SEQ_GRADE_DEBUG) {
+      console.log(
+        `Comparing Student: [${String(given)}] with Teacher: [${String(correct)}] for Question Type: Sequence`
+      );
+      console.log(`Sequence normalized → student:[${normSequenceIgnoreSpaces(given)}] teacher:[${normSequenceIgnoreSpaces(correct)}] ok:${ok}`);
+    }
     if (ok) return { type, delta: pts, outcome: 'correct' };
     return { type, delta: 0, outcome: 'wrong' };
   }
@@ -364,6 +383,12 @@ const buildExamResultBreakdown = (questions, answers) => {
         const key = sequenceEffectiveCorrect(q);
         if (!normSequenceIgnoreSpaces(key)) isCorrect = false;
         else isCorrect = sequenceAnswersEqual(given, key);
+        if (SEQ_GRADE_DEBUG) {
+          console.log(
+            `Comparing Student: [${String(given)}] with Teacher: [${String(key)}] for Question Type: Sequence`
+          );
+          console.log(`Sequence normalized → student:[${normSequenceIgnoreSpaces(given)}] teacher:[${normSequenceIgnoreSpaces(key)}] ok:${isCorrect}`);
+        }
       }
     }
 
