@@ -54,4 +54,10 @@ export default function Brand({
       <img
         src={logoSidebar}
         alt="Mentorix"
-        className={`mentorix-logo h-[50px] max-h-[56px] w-auto max-w-full sm:h-[52px] sm:max-h-[60px] ${imgBase} ${onDark
+        className={`mentorix-logo h-[50px] max-h-[56px] w-auto max-w-full sm:h-[52px] sm:max-h-[60px] ${imgBase} ${onDarkBoost} ${imgClassName}`}
+        draggable={false}
+      />
+    </div>
+  )
+}
+        
