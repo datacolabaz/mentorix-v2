@@ -165,11 +165,11 @@ export default function Login() {
     <div className="min-h-[100svh] bg-[#0b0b0b] flex items-start sm:items-center justify-center p-4 pt-8 sm:pt-4">
       <div className="w-full max-w-sm">
         <div className="bg-surface-2 border border-white/10 rounded-2xl p-6 sm:p-8">
-          <div className="text-center mb-8 sm:mb-10">
-            <div className="flex justify-center pt-2 pb-6 bg-transparent">
+          <div className="text-center mb-6 sm:mb-8">
+            <div className="flex justify-center pt-1 pb-3 bg-transparent">
               <Brand size="login" />
             </div>
-            <div className="text-gray-400 text-sm mt-2">Hesabınıza daxil olun</div>
+            <div className="text-gray-400 text-sm mt-1">Hesabınıza daxil olun</div>
           </div>
 
           {isAdmin && (
