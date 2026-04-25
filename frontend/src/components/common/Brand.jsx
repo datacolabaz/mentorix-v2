@@ -18,7 +18,7 @@ export default function Brand({
         <img
           src={logoLogin}
           alt="Mentorix"
-          className={`mentorix-logo w-[640px] max-w-[min(640px,92vw)] h-auto ${imgBase} ${loginBoost} ${imgClassName}`}
+          className={`mentorix-logo w-[320px] max-w-[min(320px,92vw)] h-auto ${imgBase} ${loginBoost} ${imgClassName}`}
           draggable={false}
         />
         {showText ? (
