@@ -6,6 +6,7 @@ import Button from '../../components/common/Button'
 import ListSkeleton from '../../components/common/ListSkeleton'
 import Modal from '../../components/common/Modal'
 import { useToast } from '../../components/common/Toast'
+import useUiStore from '../../hooks/useUi'
 
 function formatAzn(n) {
   const x = Number(n)
@@ -53,6 +54,7 @@ export default function InstructorPayments() {
   const [adjustNotes, setAdjustNotes] = useState('')
   const [adjustSaving, setAdjustSaving] = useState(false)
   const toast = useToast()
+  const theme = useUiStore((s) => s.theme)
 
   const load = useCallback(async () => {
     setErr(null)
@@ -441,7 +443,16 @@ export default function InstructorPayments() {
                             </div>
 
                             <div className="flex gap-2 flex-wrap justify-end">
-                              <Button size="sm" variant="secondary" onClick={() => void openHistory(s)}>
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                onClick={() => void openHistory(s)}
+                                className={
+                                  theme === 'light'
+                                    ? '!text-slate-900 !border-slate-200 bg-white hover:bg-slate-50'
+                                    : undefined
+                                }
+                              >
                                 Tarixçə
                               </Button>
                             </div>
