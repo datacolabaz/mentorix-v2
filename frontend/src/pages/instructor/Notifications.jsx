@@ -88,18 +88,18 @@ export default function InstructorNotifications() {
     <div className="p-4 sm:p-6 min-w-0">
       <div className="mb-6">
         <h1 className="font-display font-bold text-2xl break-words">Bildirişlər</h1>
-        <p className="text-gray-400 text-sm mt-1">SMS və saxlama limitləri</p>
+        <p className="text-token-textMuted text-sm mt-1">SMS və saxlama limitləri</p>
       </div>
 
       {loading ? (
-        <div className="text-center py-12 text-gray-500">Yüklənir...</div>
+        <div className="text-center py-12 text-token-textMuted">Yüklənir...</div>
       ) : alerts.length === 0 ? (
         <Card className="p-8 sm:p-12 text-center max-w-lg mx-auto">
           <div className="text-4xl mb-4">✅</div>
-          <div className="font-display font-bold text-lg text-white break-words px-2">
+          <div className="font-display font-bold text-lg text-token-textMain break-words px-2">
             Hər şey qaydasındadır
           </div>
-          <p className="text-gray-400 text-sm mt-2 px-2">
+          <p className="text-token-textMuted text-sm mt-2 px-2">
             Limitləriniz 80%-dən çox dolmayıb
           </p>
           {profile ? (
@@ -107,48 +107,48 @@ export default function InstructorNotifications() {
               <div className="space-y-5">
                 {/* SMS */}
                 <div className="grid grid-cols-[72px_1fr_auto] items-center gap-x-4 gap-y-2">
-                  <div className="text-sm text-gray-300">SMS</div>
+                  <div className="text-sm text-token-textMain">SMS</div>
                   <div className="h-2.5 rounded-full bg-white/10 overflow-hidden">
                     <div
                       className={`h-full ${profile.sms_percent >= 100 ? 'bg-red-500' : profile.sms_percent >= 80 ? 'bg-yellow-500' : 'bg-emerald-500'}`}
                       style={{ width: `${Math.min(100, Number(profile.sms_percent || 0))}%` }}
                     />
                   </div>
-                  <div className="text-sm text-gray-400 tabular-nums text-right whitespace-nowrap">
+                  <div className="text-sm text-token-textMuted tabular-nums text-right whitespace-nowrap">
                     {profile.sms_used}/{profile.sms_limit}
                   </div>
                 </div>
 
                 {/* Storage */}
                 <div className="grid grid-cols-[72px_1fr_auto] items-center gap-x-4 gap-y-2">
-                  <div className="text-sm text-gray-300">Storage</div>
+                  <div className="text-sm text-token-textMain">Storage</div>
                   <div className="h-2.5 rounded-full bg-white/10 overflow-hidden">
                     <div
                       className={`h-full ${profile.storage_percent >= 100 ? 'bg-red-500' : profile.storage_percent >= 80 ? 'bg-yellow-500' : 'bg-emerald-500'}`}
                       style={{ width: `${Math.min(100, Number(profile.storage_percent || 0))}%` }}
                     />
                   </div>
-                  <div className="text-sm text-gray-400 tabular-nums text-right whitespace-nowrap">
+                  <div className="text-sm text-token-textMuted tabular-nums text-right whitespace-nowrap">
                     {formatStorageUsed(profile.storage_used_bytes)} / {formatBytesLimitFromMb(profile.storage_limit_mb)}
                   </div>
                 </div>
 
                 {/* RAM */}
                 <div className="grid grid-cols-[72px_1fr_auto] items-center gap-x-4 gap-y-2">
-                  <div className="text-sm text-gray-300">RAM</div>
+                  <div className="text-sm text-token-textMain">RAM</div>
                   <div className="h-2.5 rounded-full bg-white/10 overflow-hidden">
                     <div
                       className={`h-full ${profile.ram_percent >= 100 ? 'bg-red-500' : profile.ram_percent >= 80 ? 'bg-yellow-500' : 'bg-emerald-500'}`}
                       style={{ width: `${Math.min(100, Number(profile.ram_percent || 0))}%` }}
                     />
                   </div>
-                  <div className="text-sm text-gray-400 tabular-nums text-right whitespace-nowrap">
+                  <div className="text-sm text-token-textMuted tabular-nums text-right whitespace-nowrap">
                     {formatMbValue(profile.ram_used_mb)} / {formatMbValue(profile.ram_limit_mb)}
                   </div>
                 </div>
               </div>
 
-              <div className="text-xs text-gray-500 mt-4 tabular-nums">
+              <div className="text-xs text-token-textMuted mt-4 tabular-nums">
                 <div>
                   Son sync: {syncInfo.syncAt ? syncInfo.syncAt.toLocaleString() : '—'}
                   {syncInfo.syncAt ? ` (${formatAgo(nowTick - syncInfo.syncAt.getTime())})` : ''}
