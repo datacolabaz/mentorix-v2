@@ -614,7 +614,6 @@ export default function InstructorStudents() {
   const [search, setSearch] = useState('')
   const [openGroups, setOpenGroups] = useState(() => new Set())
   const [actionMenuId, setActionMenuId] = useState(null)
-  const [groupMenuKey, setGroupMenuKey] = useState(null)
   const { theme } = useUiStore()
 
   const CACHE_KEY = 'instructor_students_v1'
@@ -1214,7 +1213,6 @@ export default function InstructorStudents() {
                   : { variant: 'pending', label: `Sonradan · ${g.payMix.postpaid}/${total}` }
 
             const toggleGroup = () => {
-              setGroupMenuKey(null)
               setOpenGroups((prev) => {
                 const next = new Set(prev)
                 if (next.has(g.key)) next.delete(g.key)
@@ -1309,24 +1307,6 @@ export default function InstructorStudents() {
                       <button
                         type="button"
                         className={[
-                          'w-9 h-9 rounded-xl border flex items-center justify-center',
-                          'border-[color:var(--border-subtle)] bg-token-surfaceCard/35 hover:bg-token-surfaceCard/60',
-                          'text-token-textMain/80',
-                          'transition-colors duration-200',
-                        ].join(' ')}
-                        aria-label="Qrup actions"
-                        onClick={(e) => {
-                          e.preventDefault()
-                          e.stopPropagation()
-                          setGroupMenuKey((prev) => (prev === g.key ? null : g.key))
-                        }}
-                      >
-                        ⋯
-                      </button>
-
-                      <button
-                        type="button"
-                        className={[
                           'w-9 h-9 rounded-xl border flex items-center justify-center transition-transform duration-200',
                           'border-[color:var(--border-subtle)] bg-token-surfaceCard/35 hover:bg-token-surfaceCard/60',
                           isOpen ? 'rotate-180' : 'rotate-0',
@@ -1338,59 +1318,6 @@ export default function InstructorStudents() {
                       </button>
                     </div>
                   </div>
-
-                  {groupMenuKey === g.key ? (
-                    <div
-                      className={[
-                        'absolute right-3 top-[56px] w-56 z-30 overflow-hidden rounded-2xl border',
-                        'border-[color:var(--border-subtle)] bg-token-surfaceCard/90 backdrop-blur-[10px]',
-                        'shadow-[0_18px_45px_rgba(0,0,0,0.35)]',
-                        'origin-top-right animate-[fadeIn_.16s_ease-out]',
-                      ].join(' ')}
-                      onMouseLeave={() => setGroupMenuKey(null)}
-                    >
-                      <button
-                        type="button"
-                        className="w-full text-left px-3 py-2 text-sm hover:bg-white/5"
-                        onClick={() => {
-                          setGroupMenuKey(null)
-                          setOpenGroups((prev) => new Set(prev).add(g.key))
-                        }}
-                      >
-                        Qrupu aç
-                      </button>
-                      <button
-                        type="button"
-                        className="w-full text-left px-3 py-2 text-sm hover:bg-white/5"
-                        onClick={() => {
-                          setGroupMenuKey(null)
-                          setOpenGroups((prev) => {
-                            const next = new Set(prev)
-                            next.delete(g.key)
-                            return next
-                          })
-                        }}
-                      >
-                        Qrupu bağla
-                      </button>
-                      <button
-                        type="button"
-                        className="w-full text-left px-3 py-2 text-sm hover:bg-white/5"
-                        onClick={async () => {
-                          setGroupMenuKey(null)
-                          const phones = (g.students || []).map((x) => x?.phone).filter(Boolean).join('\n')
-                          try {
-                            await navigator.clipboard.writeText(phones)
-                            toast('Telefonlar kopyalandı', 'success')
-                          } catch {
-                            toast('Kopyalanmadı', 'error')
-                          }
-                        }}
-                      >
-                        Telefonları kopyala
-                      </button>
-                    </div>
-                  ) : null}
                 </div>
 
                 {isOpen && (
