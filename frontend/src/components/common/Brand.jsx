@@ -1,11 +1,9 @@
-import logoLogin from '../../assets/mentorix-login.svg'
-import logoSidebar from '../../assets/mentorix-sidebar.svg'
+import logoLogin from '../../assets/mentorix-login.png'
+import logoSidebar from '../../assets/mentorix-sidebar.png'
 
 const imgBase = 'object-contain select-none bg-transparent shrink-0'
-const onDarkBoost =
-  'drop-shadow-[0_6px_18px_rgba(34,224,136,0.25)] brightness-[1.12] saturate-[1.12]'
-const loginBoost =
-  '[mix-blend-mode:screen] [filter:brightness(1.2)_contrast(1.1)] drop-shadow-[0_0_15px_rgba(34,224,136,0.4)]'
+const onDarkBoost = 'drop-shadow-[0_6px_18px_rgba(34,224,136,0.18)]'
+const loginBoost = 'drop-shadow-[0_0_16px_rgba(34,224,136,0.22)]'
 
 export default function Brand({
   className = '',
