@@ -40,12 +40,27 @@ function normSequenceIgnoreSpaces(s) {
 
 function sequenceAnswersEqual(givenRaw, correctRaw) {
   // Explicit casts + sanitization, per requested spec
-  const g = String(givenRaw ?? '').trim().replace(/\s+/g, '');
-  const c = String(correctRaw ?? '').trim().replace(/\s+/g, '');
+  const rawStudent = String(givenRaw ?? '');
+  const rawTeacher = String(correctRaw ?? '');
+  const studentAnswer = rawStudent.trim().replace(/\s/g, '');
+  const correctAnswer = rawTeacher.trim().replace(/\s/g, '');
+
   // Extra defense-in-depth for zero-width / NBSP that \s may miss in some runtimes
-  const g2 = normSequenceIgnoreSpaces(g);
-  const c2 = normSequenceIgnoreSpaces(c);
-  return g2 === c2;
+  const studentSan = normSequenceIgnoreSpaces(studentAnswer);
+  const teacherSan = normSequenceIgnoreSpaces(correctAnswer);
+
+  if (SEQ_GRADE_DEBUG) {
+    // Requested exact debug line
+    console.log('DEBUG: Student:' + rawStudent + ' | Expected:' + rawTeacher);
+    console.log(
+      `Comparing Student: [${rawStudent}] with Teacher: [${rawTeacher}] for Question Type: Sequence`
+    );
+    console.log(
+      `Sequence sanitized → student:[${studentSan}] teacher:[${teacherSan}]`
+    );
+  }
+
+  return studentSan === teacherSan;
 }
 
 function inferQuestionType(q) {
