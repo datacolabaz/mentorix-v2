@@ -34,25 +34,27 @@ export default function Brand({
 
   if (size === 'sidebar') {
     return (
-      <div className={`mx-auto w-[90%] min-w-0 flex justify-center items-center ${className}`}>
-        <img
-          src={logoSidebar}
-          alt="Mentorix"
-          className={`mentorix-logo h-[72px] max-h-[78px] w-auto max-w-full block mx-auto ${imgBase} ${onDarkBoost} ${imgClassName}`}
-          draggable={false}
-        />
+      <div className={`mx-auto w-[92%] min-w-0 flex items-center justify-center gap-3 ${className}`}>
+        <div className="w-10 h-10 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
+          <span className="font-display font-extrabold text-white text-base leading-none">M</span>
+        </div>
+        <div
+          className="min-w-0 text-lg font-extrabold tracking-wide whitespace-nowrap"
+          style={{ textShadow: '0 0 10px rgba(0, 230, 118, 0.5)' }}
+        >
+          <span className="text-[#E5E7EB]">MENTORIX</span>
+          <span className="text-[#00E676]">.IO</span>
+        </div>
       </div>
     )
   }
 
   return (
-    <div
-      className={`flex items-center justify-start min-w-0 max-w-[min(260px,82vw)] overflow-visible ${className}`}
-    >
+    <div className={`flex items-center justify-start min-w-0 max-w-[min(260px,82vw)] ${className}`}>
       <img
         src={logoSidebar}
         alt="Mentorix"
-        className={`mentorix-logo h-[50px] max-h-[56px] w-auto max-w-full sm:h-[52px] sm:max-h-[60px] ${imgBase} ${onDarkBoost} ${imgClassName}`}
+        className={`mentorix-logo h-[56px] max-h-[62px] w-auto max-w-full sm:h-[60px] sm:max-h-[66px] ${imgBase} ${onDarkBoost} ${imgClassName}`}
         draggable={false}
       />
     </div>
