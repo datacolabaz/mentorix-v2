@@ -143,7 +143,7 @@ export default function InstructorLayout() {
             <Brand
               size="sidebar"
               className="py-1"
-              imgClassName="h-[44px] max-h-[44px] sm:h-[46px] sm:max-h-[46px]"
+              imgClassName="h-[64px] max-h-[64px] sm:h-[68px] sm:max-h-[68px]"
             />
           </div>
           <div
@@ -184,7 +184,7 @@ export default function InstructorLayout() {
               <Brand
                 size="sidebar"
                 className="py-1"
-                imgClassName="h-[44px] max-h-[44px] sm:h-[46px] sm:max-h-[46px]"
+                imgClassName="h-[64px] max-h-[64px] sm:h-[68px] sm:max-h-[68px]"
               />
             </div>
             <button
