@@ -1213,19 +1213,22 @@ export default function InstructorStudents() {
                   ? { variant: 'paid', label: `Öncədən · ${g.payMix.prepaid}/${total}` }
                   : { variant: 'pending', label: `Sonradan · ${g.payMix.postpaid}/${total}` }
 
-            const toggleGroup = () =>
+            const toggleGroup = () => {
+              setGroupMenuKey(null)
               setOpenGroups((prev) => {
                 const next = new Set(prev)
                 if (next.has(g.key)) next.delete(g.key)
                 else next.add(g.key)
                 return next
               })
+            }
             return (
               <Card
                 key={g.key}
                 hover
                 className={[
-                  'p-0 overflow-hidden border',
+                  // NOTE: dropdown needs to escape card bounds (no clipping)
+                  'p-0 overflow-visible border',
                   'border-[color:var(--border-subtle)] hover:border-primary/20',
                   isOpen ? 'border-primary/25 bg-token-surfaceCard/20' : '',
                 ].join(' ')}
@@ -1312,7 +1315,11 @@ export default function InstructorStudents() {
                           'transition-colors duration-200',
                         ].join(' ')}
                         aria-label="Qrup actions"
-                        onClick={() => setGroupMenuKey((prev) => (prev === g.key ? null : g.key))}
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          setGroupMenuKey((prev) => (prev === g.key ? null : g.key))
+                        }}
                       >
                         ⋯
                       </button>
