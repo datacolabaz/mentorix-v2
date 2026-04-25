@@ -1212,6 +1212,14 @@ export default function InstructorStudents() {
                 : g.payMix.prepaid
                   ? { variant: 'paid', label: `Öncədən · ${g.payMix.prepaid}/${total}` }
                   : { variant: 'pending', label: `Sonradan · ${g.payMix.postpaid}/${total}` }
+
+            const toggleGroup = () =>
+              setOpenGroups((prev) => {
+                const next = new Set(prev)
+                if (next.has(g.key)) next.delete(g.key)
+                else next.add(g.key)
+                return next
+              })
             return (
               <Card
                 key={g.key}
@@ -1223,69 +1231,75 @@ export default function InstructorStudents() {
                 ].join(' ')}
               >
                 <div className="relative">
-                  <button
-                    type="button"
+                  <div
                     className={[
                       'w-full grid grid-cols-12 items-center gap-3 px-4 py-3.5 text-left',
                       'bg-token-surfaceCard/45 hover:bg-token-surfaceCard/60',
                       'transition-[background-color,transform] duration-200 ease-out',
                       'active:scale-[0.997]',
                     ].join(' ')}
-                    onClick={() =>
-                      setOpenGroups((prev) => {
-                        const next = new Set(prev)
-                        if (next.has(g.key)) next.delete(g.key)
-                        else next.add(g.key)
-                        return next
-                      })
-                    }
                   >
-                    {/* LEFT */}
-                    <div className="col-span-12 sm:col-span-5 min-w-0">
-                      <div className="text-[15px] sm:text-base font-semibold text-token-textMain truncate">
-                        {g.group}
+                    {/* CLICK AREA (LEFT + CENTER) */}
+                    <button
+                      type="button"
+                      className="col-span-12 sm:col-span-9 grid grid-cols-12 items-center gap-3 text-left min-w-0"
+                      onClick={toggleGroup}
+                      aria-expanded={isOpen}
+                    >
+                      {/* LEFT */}
+                      <div className="col-span-12 sm:col-span-7 min-w-0">
+                        <div className="text-[15px] sm:text-base font-semibold text-token-textMain truncate">
+                          {g.group}
+                        </div>
+                        <div className="text-xs text-token-textMuted truncate">
+                          {g.subject} · {g.students.length} tələbə
+                        </div>
                       </div>
-                      <div className="text-xs text-token-textMuted truncate">
-                        {g.subject} · {g.students.length} tələbə
-                      </div>
-                    </div>
 
-                    {/* CENTER */}
-                    <div className="hidden sm:flex col-span-4 items-center gap-2 min-w-0">
-                      <StatusBadge
-                        variant="neutral"
-                        className={['shrink-0', badgeTone('neutral')].join(' ')}
-                      >
-                        Növbəti dərs:{' '}
-                        <span className={['ml-1 tabular-nums', theme === 'dark' ? 'text-gray-100' : 'text-gray-900'].join(' ')}>
-                          {fmtNextLesson(g.nextDistMin)}
-                        </span>
-                      </StatusBadge>
-                      <StatusBadge
-                        variant={payTop.variant}
-                        className={['shrink-0', badgeTone(payTop.variant)].join(' ')}
-                      >
-                        {payTop.label}
-                      </StatusBadge>
-                      {g.avgScore != null ? (
+                      {/* CENTER */}
+                      <div className="hidden sm:flex col-span-5 items-center gap-2 min-w-0 justify-end">
                         <StatusBadge
-                          variant="pending"
-                          className={['shrink-0', badgeTone('pending')].join(' ')}
+                          variant="neutral"
+                          className={['shrink-0', badgeTone('neutral')].join(' ')}
                         >
-                          Avg bal:{' '}
-                          <span className={['ml-1 tabular-nums', theme === 'dark' ? 'text-gray-100' : 'text-gray-900'].join(' ')}>
-                            {g.avgScore}%
+                          Növbəti dərs:{' '}
+                          <span
+                            className={[
+                              'ml-1 tabular-nums',
+                              theme === 'dark' ? 'text-gray-100' : 'text-gray-900',
+                            ].join(' ')}
+                          >
+                            {fmtNextLesson(g.nextDistMin)}
                           </span>
                         </StatusBadge>
-                      ) : null}
-                    </div>
+                        <StatusBadge
+                          variant={payTop.variant}
+                          className={['shrink-0', badgeTone(payTop.variant)].join(' ')}
+                        >
+                          {payTop.label}
+                        </StatusBadge>
+                        {g.avgScore != null ? (
+                          <StatusBadge
+                            variant="pending"
+                            className={['shrink-0', badgeTone('pending')].join(' ')}
+                          >
+                            Avg bal:{' '}
+                            <span
+                              className={[
+                                'ml-1 tabular-nums',
+                                theme === 'dark' ? 'text-gray-100' : 'text-gray-900',
+                              ].join(' ')}
+                            >
+                              {g.avgScore}%
+                            </span>
+                          </StatusBadge>
+                        ) : null}
+                      </div>
+                    </button>
 
-                    {/* RIGHT */}
+                    {/* ACTIONS (RIGHT) */}
                     <div className="col-span-12 sm:col-span-3 flex items-center justify-between sm:justify-end gap-2">
-                      <StatusBadge
-                        variant={groupStatus.variant}
-                        className={badgeTone(groupStatus.variant)}
-                      >
+                      <StatusBadge variant={groupStatus.variant} className={badgeTone(groupStatus.variant)}>
                         {groupStatus.label}
                       </StatusBadge>
 
@@ -1298,27 +1312,25 @@ export default function InstructorStudents() {
                           'transition-colors duration-200',
                         ].join(' ')}
                         aria-label="Qrup actions"
-                        onClick={(e) => {
-                          e.preventDefault()
-                          e.stopPropagation()
-                          setGroupMenuKey((prev) => (prev === g.key ? null : g.key))
-                        }}
+                        onClick={() => setGroupMenuKey((prev) => (prev === g.key ? null : g.key))}
                       >
                         ⋯
                       </button>
 
-                      <span
-                        aria-hidden
+                      <button
+                        type="button"
                         className={[
                           'w-9 h-9 rounded-xl border flex items-center justify-center transition-transform duration-200',
-                          'border-[color:var(--border-subtle)] bg-token-surfaceCard/35',
+                          'border-[color:var(--border-subtle)] bg-token-surfaceCard/35 hover:bg-token-surfaceCard/60',
                           isOpen ? 'rotate-180' : 'rotate-0',
                         ].join(' ')}
+                        aria-label={isOpen ? 'Qrupu bağla' : 'Qrupu aç'}
+                        onClick={toggleGroup}
                       >
                         <span className="text-token-textMain/80">⌄</span>
-                      </span>
+                      </button>
                     </div>
-                  </button>
+                  </div>
 
                   {groupMenuKey === g.key ? (
                     <div
