@@ -4,14 +4,13 @@ import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
 import { useToast } from '../../components/common/Toast'
 import useAuthStore from '../../hooks/useAuth'
+import useUiStore from '../../hooks/useUi'
 import { instructorRoleAz } from '../../lib/instructorLabel'
-
-const inp =
-  'w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500'
 
 export default function InstructorSettings() {
   const toast = useToast()
   const { user, updateUser } = useAuthStore()
+  const theme = useUiStore((s) => s.theme)
   const [loading, setLoading] = useState(true)
   const [savingLabel, setSavingLabel] = useState(false)
   const [publicLabel, setPublicLabel] = useState('instructor')
@@ -118,13 +117,18 @@ export default function InstructorSettings() {
   }
 
   const roleWord = instructorRoleAz(publicLabel)
+  const inp =
+    theme === 'dark'
+      ? 'w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white placeholder:text-white/40 text-sm outline-none focus:border-blue-500'
+      : 'w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 placeholder:text-slate-400 text-sm outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/15'
 
   return (
     <div className="p-4 sm:p-6 min-w-0 max-w-3xl mx-auto w-full space-y-6">
       <div>
-        <h1 className="font-display font-bold text-xl sm:text-2xl text-white tracking-tight">Tənzimləmələr</h1>
-        <p className="text-gray-500 text-sm mt-1">
-          İnterfeysdə və tələbə tərəfində sizin rolunuz <span className="text-indigo-300">{roleWord}</span> kimi görünəcək.
+        <h1 className="font-display font-bold text-xl sm:text-2xl text-token-textMain tracking-tight">Tənzimləmələr</h1>
+        <p className="text-token-textMuted text-sm mt-1">
+          İnterfeysdə və tələbə tərəfində sizin rolunuz{' '}
+          <span className="text-primary/90 font-semibold">{roleWord}</span> kimi görünəcək.
         </p>
       </div>
 
@@ -166,7 +170,7 @@ export default function InstructorSettings() {
           Tələbə qeydiyyatında sahə və qrup seçiminə imkan verir; ödənişlər cədvəlində sahə adı görünür (hesabat üçün).
         </p>
         {loading ? (
-          <p className="text-gray-500 text-sm">Yüklənir…</p>
+          <p className="text-token-textMuted text-sm">Yüklənir…</p>
         ) : (
           <>
             <div className="flex flex-col sm:flex-row gap-2">
@@ -176,13 +180,25 @@ export default function InstructorSettings() {
                 value={newSubject}
                 onChange={(e) => setNewSubject(e.target.value)}
               />
-              <Button type="button" variant="secondary" loading={busy.addSub} onClick={() => void addSubject()}>
+              <Button
+                type="button"
+                variant="secondary"
+                loading={busy.addSub}
+                onClick={() => void addSubject()}
+                className={
+                  theme === 'light'
+                    ? '!text-slate-900 !border-slate-200 bg-white hover:bg-slate-50'
+                    : undefined
+                }
+              >
                 Sahə əlavə et
               </Button>
             </div>
             <ul className="space-y-4">
               {!subjects.length ? (
-                <li className="text-sm text-gray-500">Hələ sahə yoxdur — əlavə edin və ya qeydiyyatda sahəni boş buraxın.</li>
+                <li className="text-sm text-token-textMuted">
+                  Hələ sahə yoxdur — əlavə edin və ya qeydiyyatda sahəni boş buraxın.
+                </li>
               ) : null}
               {subjects.map((s) => (
                 <li key={s.id} className="rounded-xl border border-indigo-500/15 bg-[#0f0c29]/60 p-4 space-y-3">
@@ -200,7 +216,7 @@ export default function InstructorSettings() {
                   </div>
                   <div className="pl-2 border-l border-indigo-500/20 space-y-2">
                     {(s.groups || []).length === 0 ? (
-                      <p className="text-xs text-gray-500">Qrup yoxdur</p>
+                      <p className="text-xs text-token-textMuted">Qrup yoxdur</p>
                     ) : (
                       <ul className="space-y-1">
                         {(s.groups || []).map((g) => (
@@ -236,6 +252,11 @@ export default function InstructorSettings() {
                         variant="secondary"
                         loading={busy[`addg-${s.id}`]}
                         onClick={() => void addGroup(s.id)}
+                        className={
+                          theme === 'light'
+                            ? '!text-slate-900 !border-slate-200 bg-white hover:bg-slate-50'
+                            : undefined
+                        }
                       >
                         Qrup əlavə et
                       </Button>
