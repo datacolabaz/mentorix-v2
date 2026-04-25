@@ -18,7 +18,7 @@ export default function Brand({
         <img
           src={logoLogin}
           alt="Mentorix"
-          className={`mentorix-logo w-[320px] max-w-[min(320px,92vw)] h-auto ${imgBase} ${loginBoost} ${imgClassName}`}
+          className={`mentorix-logo w-[640px] max-w-[min(640px,92vw)] h-auto ${imgBase} ${loginBoost} ${imgClassName}`}
           draggable={false}
         />
         {showText ? (
@@ -34,10 +34,7 @@ export default function Brand({
 
   if (size === 'sidebar') {
     return (
-      <div className={`mx-auto w-[92%] min-w-0 flex items-center justify-center gap-3 ${className}`}>
-        <div className="w-10 h-10 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
-          <span className="font-display font-extrabold text-white text-base leading-none">M</span>
-        </div>
+      <div className={`mx-auto w-[92%] min-w-0 flex items-center justify-center ${className}`}>
         <div
           className="min-w-0 text-lg font-extrabold tracking-wide whitespace-nowrap"
           style={{ textShadow: '0 0 10px rgba(0, 230, 118, 0.5)' }}
