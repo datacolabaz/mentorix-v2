@@ -865,7 +865,7 @@ export default function StudentExams() {
                 <div className="grid gap-2 text-sm">
                   <div>
                     <span className="text-xs text-token-textMuted block mb-0.5">Sizin cavabınız</span>
-                    <div className="block font-mono text-xs break-all rounded-lg border border-[color:var(--border-subtle)] bg-token-surfaceCard/50 px-2.5 py-1.5 text-token-textMain">
+                    <div className="block font-mono text-xs break-all rounded-lg border border-[color:var(--border-subtle)] bg-token-surfaceCard/50 px-2.5 py-1.5 text-gray-900 dark:text-white">
                       {row.student_answer}
                     </div>
                   </div>
@@ -1073,7 +1073,7 @@ export default function StudentExams() {
                     <div className="grid gap-2 text-sm">
                       <div>
                         <span className="text-xs text-token-textMuted block mb-0.5">Sizin cavabınız</span>
-                        <div className="block font-mono text-xs break-all rounded-lg border border-[color:var(--border-subtle)] bg-token-surfaceCard/50 px-2.5 py-1.5 text-token-textMain">
+                        <div className="block font-mono text-xs break-all rounded-lg border border-[color:var(--border-subtle)] bg-token-surfaceCard/50 px-2.5 py-1.5 text-gray-900 dark:text-white">
                           {row.student_answer}
                         </div>
                       </div>
