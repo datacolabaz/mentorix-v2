@@ -162,6 +162,7 @@ export default function InstructorLayout() {
           <div className="flex justify-center">
             <Brand
               size="sidebar"
+              tone={theme === 'dark' ? 'dark' : 'light'}
               className="py-1"
               imgClassName="h-[64px] max-h-[64px] sm:h-[68px] sm:max-h-[68px]"
             />
@@ -203,6 +204,7 @@ export default function InstructorLayout() {
             <div className="flex-1 min-w-0 flex justify-center">
               <Brand
                 size="sidebar"
+                tone={theme === 'dark' ? 'dark' : 'light'}
                 className="py-1"
                 imgClassName="h-[64px] max-h-[64px] sm:h-[68px] sm:max-h-[68px]"
               />

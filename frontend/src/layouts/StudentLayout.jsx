@@ -100,7 +100,7 @@ export default function StudentLayout() {
       >
         <div className={['px-4 pt-14 md:pt-4 pb-4', theme === 'dark' ? 'border-b border-white/10' : 'border-b border-gray-200'].join(' ')}>
           <div className="flex justify-center">
-            <Brand size="sidebar" />
+            <Brand size="sidebar" tone={theme === 'dark' ? 'dark' : 'light'} />
           </div>
           <div className={['mt-4 p-3 rounded-xl border', theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-200'].join(' ')}>
             <div className={['w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold mb-2 border', theme === 'dark' ? 'bg-white/5 border-white/10 text-white' : 'bg-[#003366]/10 border-[#003366]/20 text-[#003366]'].join(' ')}>
