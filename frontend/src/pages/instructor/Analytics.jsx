@@ -1,5 +1,16 @@
 import { useEffect, useMemo, useState } from 'react'
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  CartesianGrid,
+} from 'recharts'
 import api from '../../lib/api'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
@@ -77,7 +88,7 @@ export default function InstructorAnalytics() {
   }, [groups])
 
   return (
-    <div className="p-4 sm:p-6 min-w-0">
+    <div className="p-6 min-w-0">
       <h1 className="font-display font-bold text-xl sm:text-2xl mb-6">Analitika</h1>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4 min-w-0">
@@ -85,10 +96,33 @@ export default function InstructorAnalytics() {
           <h2 className="font-display font-bold text-base mb-4 text-token-textMain">Tələbə Performansı</h2>
           <div className="w-full h-[240px] min-h-[200px]">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={barData} margin={{ top: 8, right: 8, left: 0, bottom: 4 }}>
-                <XAxis dataKey="name" tick={{ fill: '#64748b', fontSize: 10 }} interval={0} angle={-20} textAnchor="end" height={48} />
-                <YAxis tick={{ fill: '#64748b', fontSize: 11 }} domain={[0, 100]} width={36} />
-                <Tooltip contentStyle={{ background: '#1a1740', border: '1px solid rgba(99,102,241,.3)', borderRadius: 8 }} />
+              <BarChart data={barData} margin={{ top: 12, right: 12, left: 6, bottom: 8 }}>
+                <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
+                <XAxis
+                  dataKey="name"
+                  tick={{ fill: '#94a3b8', fontSize: 11 }}
+                  tickLine={false}
+                  axisLine={false}
+                  minTickGap={14}
+                  interval="preserveStartEnd"
+                />
+                <YAxis
+                  tick={{ fill: '#94a3b8', fontSize: 11 }}
+                  tickLine={false}
+                  axisLine={false}
+                  domain={[0, 100]}
+                  width={34}
+                />
+                <Tooltip
+                  cursor={{ fill: 'rgba(34,224,136,0.08)' }}
+                  contentStyle={{
+                    background: 'rgba(11,11,11,0.92)',
+                    border: '1px solid rgba(255,255,255,0.10)',
+                    borderRadius: 12,
+                    color: '#fff',
+                  }}
+                  labelStyle={{ color: 'rgba(229,231,235,0.9)' }}
+                />
                 <Bar dataKey="bal" fill="#3b82f6" radius={[6, 6, 0, 0]} name="Orta Bal" />
               </BarChart>
             </ResponsiveContainer>
@@ -108,13 +142,22 @@ export default function InstructorAnalytics() {
                     innerRadius="45%"
                     outerRadius="75%"
                     dataKey="value"
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    paddingAngle={2}
+                    labelLine={false}
                   >
                     {pieData.map((_, i) => (
                       <Cell key={i} fill={COLORS[i % COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip contentStyle={{ background: '#1a1740', border: '1px solid rgba(99,102,241,.3)', borderRadius: 8 }} />
+                  <Tooltip
+                    contentStyle={{
+                      background: 'rgba(11,11,11,0.92)',
+                      border: '1px solid rgba(255,255,255,0.10)',
+                      borderRadius: 12,
+                      color: '#fff',
+                      fontSize: 12,
+                    }}
+                  />
                 </PieChart>
               </ResponsiveContainer>
             </div>
@@ -128,10 +171,26 @@ export default function InstructorAnalytics() {
         <h2 className="font-display font-bold text-base mb-4 text-token-textMain">Dərs Sayı</h2>
         <div className="w-full h-[200px] min-h-[180px]">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={barData} margin={{ top: 8, right: 8, left: 0, bottom: 4 }}>
-              <XAxis dataKey="name" tick={{ fill: '#64748b', fontSize: 10 }} interval={0} angle={-20} textAnchor="end" height={48} />
-              <YAxis tick={{ fill: '#64748b', fontSize: 11 }} width={36} />
-              <Tooltip contentStyle={{ background: '#1a1740', border: '1px solid rgba(99,102,241,.3)', borderRadius: 8 }} />
+            <BarChart data={barData} margin={{ top: 12, right: 12, left: 6, bottom: 8 }}>
+              <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
+              <XAxis
+                dataKey="name"
+                tick={{ fill: '#94a3b8', fontSize: 11 }}
+                tickLine={false}
+                axisLine={false}
+                minTickGap={14}
+                interval="preserveStartEnd"
+              />
+              <YAxis tick={{ fill: '#94a3b8', fontSize: 11 }} tickLine={false} axisLine={false} width={34} />
+              <Tooltip
+                cursor={{ fill: 'rgba(34,224,136,0.08)' }}
+                contentStyle={{
+                  background: 'rgba(11,11,11,0.92)',
+                  border: '1px solid rgba(255,255,255,0.10)',
+                  borderRadius: 12,
+                  color: '#fff',
+                }}
+              />
               <Bar dataKey="ders" fill="#10b981" radius={[6, 6, 0, 0]} name="Dərs sayı" />
             </BarChart>
           </ResponsiveContainer>

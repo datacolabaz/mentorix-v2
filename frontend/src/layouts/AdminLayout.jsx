@@ -6,12 +6,22 @@ import { sidebarNavClass } from '../lib/sidebarNavClass'
 import useUiStore from '../hooks/useUi'
 import NavIcon from '../components/common/NavIcon'
 
-const NAV = [
-  { to: '/admin', label: 'Dashboard', icon: <NavIcon name="dashboard" />, end: true },
-  { to: '/admin/instructors', label: 'Müəllimlər', icon: <NavIcon name="instructors" /> },
-  { to: '/admin/payments', label: 'Ödənişlər', icon: <NavIcon name="payments" /> },
-  { to: '/admin/notifications', label: 'Bildirişlər', icon: <NavIcon name="notifications" /> },
-  { to: '/admin/settings', label: 'Tənzimləmələr', icon: <NavIcon name="settings" /> },
+const NAV_SECTIONS = [
+  {
+    title: 'MANAGEMENT',
+    items: [
+      { to: '/admin', label: 'Dashboard', icon: <NavIcon name="dashboard" />, end: true },
+      { to: '/admin/instructors', label: 'Müəllimlər', icon: <NavIcon name="instructors" /> },
+      { to: '/admin/payments', label: 'Ödənişlər', icon: <NavIcon name="payments" /> },
+    ],
+  },
+  {
+    title: 'SYSTEM',
+    items: [
+      { to: '/admin/notifications', label: 'Bildirişlər', icon: <NavIcon name="notifications" /> },
+      { to: '/admin/settings', label: 'Tənzimləmələr', icon: <NavIcon name="settings" /> },
+    ],
+  },
 ]
 
 export default function AdminLayout() {
@@ -25,9 +35,16 @@ export default function AdminLayout() {
         className={[
           theme === 'dark' ? 'theme-dark' : 'theme-light',
           'w-60 flex flex-col flex-shrink-0',
-          theme === 'dark' ? 'bg-[#0d0d0d] border-r border-white/10' : 'bg-white border-r border-gray-200',
+          theme === 'dark'
+            ? 'bg-gradient-to-b from-[#0c0f0d] to-[#070a08] border-r border-white/10'
+            : 'bg-gradient-to-b from-white to-gray-50 border-r border-gray-200',
+          'relative',
         ].join(' ')}
       >
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent"
+        />
         <div className={['px-4 pt-4 pb-4', theme === 'dark' ? 'border-b border-white/10' : 'border-b border-gray-200'].join(' ')}>
           <div className="flex justify-center">
             <Brand size="sidebar" />
@@ -42,12 +59,28 @@ export default function AdminLayout() {
         </div>
 
         <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-          {NAV.map((item) => (
-            <NavLink key={item.to} to={item.to} end={item.end}
-              className={({ isActive }) => sidebarNavClass(isActive, theme)}>
-              <span className="shrink-0">{item.icon}</span>
-              <span className="truncate">{item.label}</span>
-            </NavLink>
+          {NAV_SECTIONS.map((section) => (
+            <div key={section.title} className="space-y-2">
+              <div className="px-4 pt-2">
+                <div className="text-[11px] font-semibold tracking-[0.18em] uppercase text-token-textMuted/80">
+                  {section.title}
+                </div>
+              </div>
+              <div className="space-y-1">
+                {section.items.map((item) => (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    end={item.end}
+                    className={({ isActive }) => sidebarNavClass(isActive, theme)}
+                  >
+                    <span className="shrink-0">{item.icon}</span>
+                    <span className="truncate">{item.label}</span>
+                  </NavLink>
+                ))}
+              </div>
+              <div className="h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+            </div>
           ))}
         </nav>
 

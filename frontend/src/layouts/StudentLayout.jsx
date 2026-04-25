@@ -7,13 +7,28 @@ import Footer from '../components/common/Footer'
 import { sidebarNavClass } from '../lib/sidebarNavClass'
 import NavIcon from '../components/common/NavIcon'
 
-const NAV = [
-  { to: '/student', label: 'Proqresim', icon: <NavIcon name="progress" />, end: true },
-  { to: '/student/schedule', label: 'Cədvəlim', icon: <NavIcon name="schedule" /> },
-  { to: '/student/exams', label: 'İmtahanlarım', icon: <NavIcon name="exams" /> },
-  { to: '/student/assignments', label: 'Tapşırıqlarım', icon: <NavIcon name="tasks" /> },
-  { to: '/student/payments', label: 'Ödəniş', icon: <NavIcon name="payments" /> },
-  { to: '/student/notifications', label: 'Bildirişlər', icon: <NavIcon name="notifications" /> },
+const NAV_GROUPS = [
+  {
+    label: 'MANAGEMENT',
+    items: [
+      { to: '/student', label: 'Proqresim', icon: <NavIcon name="progress" />, end: true },
+      { to: '/student/schedule', label: 'Cədvəlim', icon: <NavIcon name="schedule" /> },
+      { to: '/student/exams', label: 'İmtahanlarım', icon: <NavIcon name="exams" /> },
+      { to: '/student/assignments', label: 'Tapşırıqlarım', icon: <NavIcon name="tasks" /> },
+    ],
+  },
+  {
+    label: 'BILLING',
+    items: [
+      { to: '/student/payments', label: 'Ödəniş', icon: <NavIcon name="payments" /> },
+    ],
+  },
+  {
+    label: 'COMMUNICATION',
+    items: [
+      { to: '/student/notifications', label: 'Bildirişlər', icon: <NavIcon name="notifications" /> },
+    ],
+  },
 ]
 
 export default function StudentLayout() {
@@ -74,7 +89,10 @@ export default function StudentLayout() {
       <aside
         className={
           'w-64 max-w-[85vw] flex flex-col flex-shrink-0 z-40 h-full ' +
-          (theme === 'dark' ? 'theme-dark bg-[#0d0d0d] border-r border-white/10 ' : 'theme-light bg-white border-r border-gray-200 ') +
+          (theme === 'dark'
+            ? 'theme-dark bg-[#0a0b0f] border-r border-white/10 '
+            : 'theme-light bg-white border-r border-gray-200 ') +
+          'bg-gradient-to-b from-black/[0.14] via-transparent to-black/[0.08] ' +
           'fixed md:static inset-y-0 left-0 transform transition-transform duration-200 ease-out ' +
           (navOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0') +
           (focusMode ? ' md:-translate-x-full' : '')
@@ -92,18 +110,28 @@ export default function StudentLayout() {
             <div className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>Tələbə</div>
           </div>
         </div>
-        <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-          {NAV.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.end}
-              onClick={closeNav}
-              className={({ isActive }) => sidebarNavClass(isActive, theme)}
-            >
-              <span className="shrink-0">{item.icon}</span>
-              <span className="truncate">{item.label}</span>
-            </NavLink>
+        <nav className="flex-1 px-4 py-4 space-y-5 overflow-y-auto">
+          {NAV_GROUPS.map((g) => (
+            <div key={g.label} className="space-y-2">
+              <div className="px-2 text-[11px] font-semibold tracking-widest text-token-textMuted/80">
+                {g.label}
+              </div>
+              <div className="space-y-1">
+                {g.items.map((item) => (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    end={item.end}
+                    onClick={closeNav}
+                    className={({ isActive }) => sidebarNavClass(isActive, theme)}
+                  >
+                    <span className="shrink-0">{item.icon}</span>
+                    <span className="truncate">{item.label}</span>
+                  </NavLink>
+                ))}
+              </div>
+              <div className="h-px bg-[color:var(--border-subtle)]/60" />
+            </div>
           ))}
         </nav>
         <div className={['p-4', theme === 'dark' ? 'border-t border-white/10' : 'border-t border-gray-200'].join(' ')}>
