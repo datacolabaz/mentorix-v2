@@ -1,9 +1,27 @@
 const variants = {
   primary:
-    'bg-primary hover:brightness-95 text-[#041018] shadow-lg shadow-primary/20',
-  secondary: 'bg-white/10 hover:bg-white/20 text-white border border-white/20',
+    [
+      'bg-primary text-[#041018]',
+      'shadow-[0_18px_40px_rgba(34,224,136,0.18)]',
+      'hover:shadow-[0_22px_56px_rgba(34,224,136,0.24)]',
+      'hover:brightness-[1.02] hover:scale-[1.02] active:scale-[0.99]',
+      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 focus-visible:ring-offset-2 focus-visible:ring-offset-black',
+    ].join(' '),
+  secondary:
+    [
+      'bg-transparent text-white',
+      'border border-white/15',
+      'hover:bg-white/[0.06] hover:border-white/25',
+      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:ring-offset-2 focus-visible:ring-offset-black',
+    ].join(' '),
   danger: 'bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30',
-  ghost: 'bg-transparent hover:bg-white/10 text-gray-400 hover:text-white',
+  ghost:
+    [
+      'bg-transparent',
+      'text-gray-300/80 hover:text-white',
+      'hover:bg-white/[0.06]',
+      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:ring-offset-2 focus-visible:ring-offset-black',
+    ].join(' '),
 }
 
 const sizes = {
@@ -20,7 +38,8 @@ export default function Button({
     <button
       className={`
         inline-flex items-center gap-2 rounded-xl font-semibold
-        transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed
+        transition-[transform,box-shadow,background-color,border-color,color,filter] duration-200 ease-out
+        disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100
         ${variants[variant]} ${sizes[size]} ${className}
       `}
       disabled={loading || props.disabled}

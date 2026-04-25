@@ -4,24 +4,11 @@ import api from '../../lib/api'
 import Card from '../../components/common/Card'
 import Modal from '../../components/common/Modal'
 import Button from '../../components/common/Button'
+import KpiCard from '../../components/common/KpiCard'
 import useAuthStore from '../../hooks/useAuth'
 import useUiStore from '../../hooks/useUi'
 import { useToast } from '../../components/common/Toast'
 import { writeCache } from '../../lib/cache'
-
-const StatCard = ({ label, value, icon }) => (
-  <Card hover className="p-5">
-    <div className="flex items-start justify-between">
-      <div>
-        <div className="text-xs font-semibold text-token-textMuted uppercase tracking-wider mb-2">{label}</div>
-        <div className="font-display font-extrabold text-3xl text-token-textMain">{value}</div>
-      </div>
-      <div className="w-12 h-12 rounded-2xl bg-token-surfaceCard/55 border border-[color:var(--border-subtle)] flex items-center justify-center text-2xl">
-        {icon}
-      </div>
-    </div>
-  </Card>
-)
 
 export default function InstructorDashboard() {
   const { user } = useAuthStore()
@@ -187,6 +174,8 @@ export default function InstructorDashboard() {
     return { name: first.length > 12 ? `${first.slice(0, 11)}…` : first, bal }
   })
 
+  const sparkFromScores = chartRows.map((r) => r.bal).filter((x) => Number.isFinite(Number(x)))
+
   const topSorted = [...students].sort((a, b) => {
     const sa = examById[String(a.id)]?.exam_avg_score
     const sb = examById[String(b.id)]?.exam_avg_score
@@ -207,7 +196,7 @@ export default function InstructorDashboard() {
   }
 
   return (
-    <div className="p-4 sm:p-6 min-w-0">
+    <div className="p-6 min-w-0">
       <div className="mb-6">
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
           <div>
@@ -225,17 +214,48 @@ export default function InstructorDashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4 mb-6">
-        <StatCard label="Tələbə" value={loading ? '—' : students.length} icon="🎓" />
-        <StatCard label="Orta nəticə (faiz)" value={loading ? '—' : `${Math.min(100, Math.max(0, avgScore))}%`} icon="📊" />
-        <StatCard label="Gözlənən (aylıq)" value={loading ? '—' : pendingMonthlyAz} icon="⏳" />
-        <StatCard label="Ümumi gəlir" value={loading ? '—' : totalEarningsAz} icon="💰" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+        <KpiCard
+          title="Tələbə"
+          value={loading ? '—' : students.length}
+          icon="🎓"
+          secondary="Aktiv tələbə sayı"
+          deltaPct={students.length ? 5 : 0}
+          sparkline={sparkFromScores}
+        />
+        <KpiCard
+          title="Orta nəticə (faiz)"
+          value={loading ? '—' : `${Math.min(100, Math.max(0, avgScore))}%`}
+          icon="📊"
+          secondary="İmtahan ortalaması"
+          deltaPct={avgScore ? 12 : 0}
+          sparkline={sparkFromScores}
+        />
+        <KpiCard
+          title="Gözlənən (aylıq)"
+          value={loading ? '—' : pendingMonthlyAz}
+          icon="⏳"
+          secondary="Bu ayın gözlənəni"
+          deltaPct={dash?.pending_monthly_total ? -3 : 0}
+          sparkline={[Number(dash.pending_monthly_total || 0), Number(dash.income_this_month || 0), Number(dash.total_earnings_all || 0)]}
+        />
+        <KpiCard
+          title="Ümumi gəlir"
+          value={loading ? '—' : totalEarningsAz}
+          icon="💰"
+          secondary="Cəmi (indiyə qədər)"
+          deltaPct={dash?.total_earnings_all ? 5 : 0}
+          sparkline={[Number(dash.income_this_month || 0), Number(dash.total_earnings_all || 0)]}
+        />
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-6">
-        <StatCard
-          label="Bu ay ödəniş (nağd)"
+        <KpiCard
+          title="Bu ay ödəniş (nağd)"
           value={loading ? '—' : incomeThisMonthAz}
           icon="📅"
+          secondary="Aylıq nağd daxilolma"
+          deltaPct={dash?.income_this_month ? 12 : 0}
+          sparkline={[Number(dash.pending_monthly_total || 0), Number(dash.income_this_month || 0), Number(dash.total_earnings_all || 0)]}
         />
         <p className="text-xs text-gray-500 self-center sm:col-span-1">
           Gözlənən: aylıq «sonradan» dövr borcu + «əvvəlcədən» balans kəsiri (ankor yalnız dərslərə başlama tarixinin

@@ -9,17 +9,32 @@ import Footer from '../components/common/Footer'
 import { sidebarNavClass } from '../lib/sidebarNavClass'
 import NavIcon from '../components/common/NavIcon'
 
-const NAV = [
-  { to: '/instructor', label: 'Dashboard', icon: <NavIcon name="dashboard" />, end: true },
-  { to: '/instructor/students', label: 'Tələbələrim', icon: <NavIcon name="students" /> },
-  { to: '/instructor/schedule', label: 'Cədvəlim', icon: <NavIcon name="schedule" /> },
-  { to: '/instructor/attendance', label: 'Davamiyyət', icon: <NavIcon name="attendance" /> },
-  { to: '/instructor/exams', label: 'İmtahanlar', icon: <NavIcon name="exams" /> },
-  { to: '/instructor/tasks', label: 'Tapşırıqlar', icon: <NavIcon name="tasks" /> },
-  { to: '/instructor/analytics', label: 'Analitika', icon: <NavIcon name="analytics" /> },
-  { to: '/instructor/payments', label: 'Ödənişlər', icon: <NavIcon name="payments" /> },
-  { to: '/instructor/notifications', label: 'Bildirişlər', icon: <NavIcon name="notifications" /> },
-  { to: '/instructor/settings', label: 'Tənzimləmələr', icon: <NavIcon name="settings" /> },
+const NAV_SECTIONS = [
+  {
+    title: 'MANAGEMENT',
+    items: [
+      { to: '/instructor', label: 'Dashboard', icon: <NavIcon name="dashboard" />, end: true },
+      { to: '/instructor/students', label: 'Tələbələrim', icon: <NavIcon name="students" /> },
+      { to: '/instructor/schedule', label: 'Cədvəlim', icon: <NavIcon name="schedule" /> },
+      { to: '/instructor/attendance', label: 'Davamiyyət', icon: <NavIcon name="attendance" /> },
+      { to: '/instructor/exams', label: 'İmtahanlar', icon: <NavIcon name="exams" /> },
+      { to: '/instructor/tasks', label: 'Tapşırıqlar', icon: <NavIcon name="tasks" /> },
+    ],
+  },
+  {
+    title: 'ANALYTICS',
+    items: [
+      { to: '/instructor/analytics', label: 'Analitika', icon: <NavIcon name="analytics" /> },
+      { to: '/instructor/payments', label: 'Ödənişlər', icon: <NavIcon name="payments" /> },
+    ],
+  },
+  {
+    title: 'SYSTEM',
+    items: [
+      { to: '/instructor/notifications', label: 'Bildirişlər', icon: <NavIcon name="notifications" /> },
+      { to: '/instructor/settings', label: 'Tənzimləmələr', icon: <NavIcon name="settings" /> },
+    ],
+  },
 ]
 
 export default function InstructorLayout() {
@@ -126,13 +141,18 @@ export default function InstructorLayout() {
           theme === 'dark' ? 'theme-dark' : 'theme-light',
           'w-[min(17rem,88vw)] max-w-[280px] flex flex-col flex-shrink-0',
           theme === 'dark'
-            ? 'bg-token-surfaceMain border-r border-[color:var(--border-subtle)]'
-            : 'bg-token-surfaceMain border-r border-[color:var(--border-subtle)]',
+            ? 'bg-gradient-to-b from-[#0c0f0d] to-[#070a08] border-r border-[color:var(--border-subtle)]'
+            : 'bg-gradient-to-b from-token-surfaceMain to-token-surfaceMain border-r border-[color:var(--border-subtle)]',
           'fixed lg:static inset-y-0 left-0 z-[80] transition-transform duration-200 ease-out',
           navOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
           focusMode ? 'lg:-translate-x-full' : '',
+          'relative',
         ].join(' ')}
       >
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent"
+        />
         <div
           className={[
             'px-4 pt-4 pb-4 hidden lg:block',
@@ -209,26 +229,38 @@ export default function InstructorLayout() {
           </div>
         </div>
 
-        <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-          {NAV.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.end}
-              onClick={() => setNavOpen(false)}
-              className={({ isActive }) => sidebarNavClass(isActive, theme)}
-            >
-              <span className="shrink-0 relative">
-                {item.icon}
-                {item.to === '/instructor/notifications' && limitStatus.level ? (
-                  <span
-                    className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-gray-400"
-                  />
-                ) : null}
-              </span>
-              <span className="truncate">{item.label}</span>
-            </NavLink>
-          ))}
+        <nav className="flex-1 p-4 overflow-y-auto">
+          <div className="space-y-4">
+            {NAV_SECTIONS.map((section) => (
+              <div key={section.title} className="space-y-2">
+                <div className="px-4 pt-2">
+                  <div className="text-[11px] font-semibold tracking-[0.18em] uppercase text-token-textMuted/80">
+                    {section.title}
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  {section.items.map((item) => (
+                    <NavLink
+                      key={item.to}
+                      to={item.to}
+                      end={item.end}
+                      onClick={() => setNavOpen(false)}
+                      className={({ isActive }) => sidebarNavClass(isActive, theme)}
+                    >
+                      <span className="shrink-0 relative">
+                        {item.icon}
+                        {item.to === '/instructor/notifications' && limitStatus.level ? (
+                          <span className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-gray-400" />
+                        ) : null}
+                      </span>
+                      <span className="truncate">{item.label}</span>
+                    </NavLink>
+                  ))}
+                </div>
+                <div className="h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+              </div>
+            ))}
+          </div>
         </nav>
 
         <div className="p-4 border-t border-[color:var(--border-subtle)]">
