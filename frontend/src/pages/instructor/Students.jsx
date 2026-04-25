@@ -10,6 +10,7 @@ import { useToast } from '../../components/common/Toast'
 import { WEEKDAYS } from './Schedule'
 import { fmtAzBakuLessonRow } from '../../lib/lessonWeekGrid'
 import { readCache, writeCache } from '../../lib/cache'
+import useUiStore from '../../hooks/useUi'
 
 const BILLING_OPTS = [
   { value: '8_lessons', label: '8 Ders' },
@@ -614,6 +615,7 @@ export default function InstructorStudents() {
   const [openGroups, setOpenGroups] = useState(() => new Set())
   const [actionMenuId, setActionMenuId] = useState(null)
   const [groupMenuKey, setGroupMenuKey] = useState(null)
+  const { theme } = useUiStore()
 
   const CACHE_KEY = 'instructor_students_v1'
   const CACHE_TTL_MS = 60000
@@ -941,6 +943,16 @@ export default function InstructorStudents() {
     return { used, total, pct }
   }
 
+  const badgeTone = (variant) => {
+    if (theme === 'dark') return ''
+    // Light theme: make badges readable on white surfaces
+    if (variant === 'paid') return 'bg-emerald-500/12 text-emerald-700 border-emerald-600/20'
+    if (variant === 'due') return 'bg-amber-500/12 text-amber-700 border-amber-600/20'
+    if (variant === 'pending') return 'bg-sky-500/12 text-sky-700 border-sky-600/20'
+    if (variant === 'danger') return 'bg-red-500/12 text-red-700 border-red-600/20'
+    return 'bg-black/5 text-gray-700 border-black/10'
+  }
+
   const fmtNextLesson = (distMin) => {
     if (!Number.isFinite(distMin) || distMin === Number.POSITIVE_INFINITY) return '—'
     if (distMin < 60) return `${distMin} dəq`
@@ -1240,22 +1252,42 @@ export default function InstructorStudents() {
 
                     {/* CENTER */}
                     <div className="hidden sm:flex col-span-4 items-center gap-2 min-w-0">
-                      <StatusBadge variant="neutral" className="shrink-0">
-                        Növbəti dərs: <span className="ml-1 text-gray-100 tabular-nums">{fmtNextLesson(g.nextDistMin)}</span>
+                      <StatusBadge
+                        variant="neutral"
+                        className={['shrink-0', badgeTone('neutral')].join(' ')}
+                      >
+                        Növbəti dərs:{' '}
+                        <span className={['ml-1 tabular-nums', theme === 'dark' ? 'text-gray-100' : 'text-gray-900'].join(' ')}>
+                          {fmtNextLesson(g.nextDistMin)}
+                        </span>
                       </StatusBadge>
-                      <StatusBadge variant={payTop.variant} className="shrink-0">
+                      <StatusBadge
+                        variant={payTop.variant}
+                        className={['shrink-0', badgeTone(payTop.variant)].join(' ')}
+                      >
                         {payTop.label}
                       </StatusBadge>
                       {g.avgScore != null ? (
-                        <StatusBadge variant="pending" className="shrink-0">
-                          Avg bal: <span className="ml-1 text-gray-100 tabular-nums">{g.avgScore}%</span>
+                        <StatusBadge
+                          variant="pending"
+                          className={['shrink-0', badgeTone('pending')].join(' ')}
+                        >
+                          Avg bal:{' '}
+                          <span className={['ml-1 tabular-nums', theme === 'dark' ? 'text-gray-100' : 'text-gray-900'].join(' ')}>
+                            {g.avgScore}%
+                          </span>
                         </StatusBadge>
                       ) : null}
                     </div>
 
                     {/* RIGHT */}
                     <div className="col-span-12 sm:col-span-3 flex items-center justify-between sm:justify-end gap-2">
-                      <StatusBadge variant={groupStatus.variant}>{groupStatus.label}</StatusBadge>
+                      <StatusBadge
+                        variant={groupStatus.variant}
+                        className={badgeTone(groupStatus.variant)}
+                      >
+                        {groupStatus.label}
+                      </StatusBadge>
 
                       <button
                         type="button"
