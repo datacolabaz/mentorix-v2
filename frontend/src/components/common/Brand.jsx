@@ -11,6 +11,7 @@ export default function Brand({
   showText = false,
   textClassName = '',
   size = 'md', // md | sidebar | login
+  tone = 'dark', // dark | light (for readability on sidebar)
 }) {
   if (size === 'login') {
     return (
@@ -33,14 +34,24 @@ export default function Brand({
   }
 
   if (size === 'sidebar') {
+    const badge =
+      tone === 'light'
+        ? 'bg-gradient-to-b from-[#0c0f0d] to-[#070a08] border border-black/10 shadow-[0_18px_50px_rgba(0,0,0,0.14)]'
+        : 'bg-white/0 border border-white/0'
     return (
       <div className={`mx-auto w-[92%] min-w-0 flex items-center justify-center ${className}`}>
-        <div
-          className="min-w-0 text-lg font-extrabold tracking-wide whitespace-nowrap"
-          style={{ textShadow: '0 0 10px rgba(0, 230, 118, 0.5)' }}
-        >
-          <span className="text-[#E5E7EB]">MENTORIX</span>
-          <span className="text-[#00E676]">.IO</span>
+        <div className={`rounded-2xl px-3 py-2 ${badge}`}>
+          <img
+            src={logoSidebar}
+            alt="Mentorix"
+            className={[
+              'mentorix-logo h-[44px] w-auto',
+              imgBase,
+              tone === 'dark' ? onDarkBoost : '',
+              imgClassName,
+            ].join(' ')}
+            draggable={false}
+          />
         </div>
       </div>
     )
