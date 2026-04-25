@@ -37,7 +37,7 @@ export default function AdminLayout() {
           'w-60 flex flex-col flex-shrink-0',
           theme === 'dark'
             ? 'bg-gradient-to-b from-[#0c0f0d] to-[#070a08] border-r border-white/10'
-            : 'bg-gradient-to-b from-white to-gray-50 border-r border-gray-200',
+            : 'bg-[#F8FAFC] border-r border-black/[0.06]',
           'relative',
         ].join(' ')}
       >
@@ -45,16 +45,16 @@ export default function AdminLayout() {
           aria-hidden
           className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent"
         />
-        <div className={['px-4 pt-4 pb-4', theme === 'dark' ? 'border-b border-white/10' : 'border-b border-gray-200'].join(' ')}>
+        <div className={['px-4 pt-4 pb-4', theme === 'dark' ? 'border-b border-white/10' : 'border-b border-black/[0.06]'].join(' ')}>
           <div className="flex justify-center">
             <Brand size="sidebar" tone={theme === 'dark' ? 'dark' : 'light'} />
           </div>
-          <div className={['mt-4 p-3 rounded-xl border', theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-200'].join(' ')}>
-            <div className={['w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold mb-2 border', theme === 'dark' ? 'bg-white/5 border-white/10 text-white' : 'bg-[#003366]/10 border-[#003366]/20 text-[#003366]'].join(' ')}>
+          <div className={['mt-4 p-3 rounded-xl border', theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-white/70 border-black/[0.06]'].join(' ')}>
+            <div className={['w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold mb-2 border', theme === 'dark' ? 'bg-white/5 border-white/10 text-white' : 'bg-slate-900/5 border-black/[0.06] text-slate-900'].join(' ')}>
               {user?.full_name?.split(' ').map(n => n[0]).join('').slice(0, 2)}
             </div>
-            <div className={`text-sm font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{user?.full_name}</div>
-            <div className={`text-xs font-semibold ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>⚙️ Admin</div>
+            <div className={`text-sm font-semibold ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>{user?.full_name}</div>
+            <div className={`text-xs font-semibold ${theme === 'dark' ? 'text-gray-400' : 'text-slate-600'}`}>⚙️ Admin</div>
           </div>
         </div>
 
@@ -62,7 +62,7 @@ export default function AdminLayout() {
           {NAV_SECTIONS.map((section) => (
             <div key={section.title} className="space-y-2">
               <div className="px-4 pt-2">
-                <div className="text-[11px] font-semibold tracking-[0.18em] uppercase text-token-textMuted/80">
+                <div className={`text-xs uppercase tracking-wider ${theme === 'dark' ? 'text-token-textMuted/80' : 'text-slate-400'}`}>
                   {section.title}
                 </div>
               </div>
@@ -79,7 +79,7 @@ export default function AdminLayout() {
                   </NavLink>
                 ))}
               </div>
-              <div className="h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+              <div className={theme === 'dark' ? 'h-px bg-gradient-to-r from-transparent via-white/10 to-transparent' : 'h-px bg-black/[0.06]'} />
             </div>
           ))}
         </nav>

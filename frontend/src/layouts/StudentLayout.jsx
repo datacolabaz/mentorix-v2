@@ -91,29 +91,29 @@ export default function StudentLayout() {
           'w-64 max-w-[85vw] flex flex-col flex-shrink-0 z-40 h-full ' +
           (theme === 'dark'
             ? 'theme-dark bg-[#0a0b0f] border-r border-white/10 '
-            : 'theme-light bg-white border-r border-gray-200 ') +
+            : 'theme-light bg-[#F8FAFC] border-r border-black/[0.06] ') +
           'bg-gradient-to-b from-black/[0.14] via-transparent to-black/[0.08] ' +
           'fixed md:static inset-y-0 left-0 transform transition-transform duration-200 ease-out ' +
           (navOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0') +
           (focusMode ? ' md:-translate-x-full' : '')
         }
       >
-        <div className={['px-4 pt-14 md:pt-4 pb-4', theme === 'dark' ? 'border-b border-white/10' : 'border-b border-gray-200'].join(' ')}>
+        <div className={['px-4 pt-14 md:pt-4 pb-4', theme === 'dark' ? 'border-b border-white/10' : 'border-b border-black/[0.06]'].join(' ')}>
           <div className="flex justify-center">
             <Brand size="sidebar" tone={theme === 'dark' ? 'dark' : 'light'} />
           </div>
-          <div className={['mt-4 p-3 rounded-xl border', theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-200'].join(' ')}>
-            <div className={['w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold mb-2 border', theme === 'dark' ? 'bg-white/5 border-white/10 text-white' : 'bg-[#003366]/10 border-[#003366]/20 text-[#003366]'].join(' ')}>
+          <div className={['mt-4 p-3 rounded-xl border', theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-white/70 border-black/[0.06]'].join(' ')}>
+            <div className={['w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold mb-2 border', theme === 'dark' ? 'bg-white/5 border-white/10 text-white' : 'bg-slate-900/5 border-black/[0.06] text-slate-900'].join(' ')}>
               {user?.full_name?.split(' ').map((n) => n[0]).join('').slice(0, 2)}
             </div>
-            <div className={`text-sm font-semibold truncate ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{user?.full_name}</div>
-            <div className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>Tələbə</div>
+            <div className={`text-sm font-semibold truncate ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>{user?.full_name}</div>
+            <div className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-slate-600'}`}>Tələbə</div>
           </div>
         </div>
         <nav className="flex-1 px-4 py-4 space-y-5 overflow-y-auto">
           {NAV_GROUPS.map((g) => (
             <div key={g.label} className="space-y-2">
-              <div className="px-2 text-[11px] font-semibold tracking-widest text-token-textMuted/80">
+              <div className={`px-2 text-xs uppercase tracking-wider ${theme === 'dark' ? 'text-token-textMuted/80' : 'text-slate-400'}`}>
                 {g.label}
               </div>
               <div className="space-y-1">
@@ -130,11 +130,11 @@ export default function StudentLayout() {
                   </NavLink>
                 ))}
               </div>
-              <div className="h-px bg-[color:var(--border-subtle)]/60" />
+              <div className={theme === 'dark' ? 'h-px bg-[color:var(--border-subtle)]/60' : 'h-px bg-black/[0.06]'} />
             </div>
           ))}
         </nav>
-        <div className={['p-4', theme === 'dark' ? 'border-t border-white/10' : 'border-t border-gray-200'].join(' ')}>
+        <div className={['p-4', theme === 'dark' ? 'border-t border-white/10' : 'border-t border-black/[0.06]'].join(' ')}>
           <button
             type="button"
             onClick={toggleTheme}
@@ -142,14 +142,14 @@ export default function StudentLayout() {
               'w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl border transition-colors',
               theme === 'dark'
                 ? 'border-white/10 bg-white/5 hover:bg-white/10'
-                : 'border-gray-200 bg-gray-50 hover:bg-gray-100',
+                : 'border-black/[0.06] bg-white/70 hover:bg-white',
             ].join(' ')}
           >
-            <span className={`text-sm font-medium ${theme === 'dark' ? 'text-gray-200' : 'text-gray-700'}`}>
+            <span className={`text-sm font-medium ${theme === 'dark' ? 'text-gray-200' : 'text-slate-900'}`}>
               Tema
             </span>
             <span className="flex items-center gap-2">
-              <span className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+              <span className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-slate-600'}`}>
                 {theme === 'dark' ? 'Gecə' : 'Gündüz'}
               </span>
               <span

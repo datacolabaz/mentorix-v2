@@ -142,7 +142,7 @@ export default function InstructorLayout() {
           'w-[min(17rem,88vw)] max-w-[280px] flex flex-col flex-shrink-0',
           theme === 'dark'
             ? 'bg-gradient-to-b from-[#0c0f0d] to-[#070a08] border-r border-[color:var(--border-subtle)]'
-            : 'bg-gradient-to-b from-token-surfaceMain to-token-surfaceMain border-r border-[color:var(--border-subtle)]',
+            : 'bg-[#F8FAFC] border-r border-black/[0.06]',
           'fixed lg:static inset-y-0 left-0 z-[80] transition-transform duration-200 ease-out',
           navOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
           focusMode ? 'lg:-translate-x-full' : '',
@@ -156,7 +156,7 @@ export default function InstructorLayout() {
         <div
           className={[
             'px-4 pt-4 pb-4 hidden lg:block',
-            theme === 'dark' ? 'border-b border-white/10' : 'border-b border-gray-200',
+            theme === 'dark' ? 'border-b border-white/10' : 'border-b border-black/[0.06]',
           ].join(' ')}
         >
           <div className="flex justify-center">
@@ -172,7 +172,7 @@ export default function InstructorLayout() {
               'mt-4 p-3 rounded-xl border',
               theme === 'dark'
                 ? 'bg-token-surfaceCard/55 border-[color:var(--border-subtle)]'
-                : 'bg-token-surfaceCard/70 border-[color:var(--border-subtle)]',
+                : 'bg-white/70 border-black/[0.06]',
             ].join(' ')}
           >
             <div
@@ -180,15 +180,15 @@ export default function InstructorLayout() {
                 'w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold mb-2 border',
                 theme === 'dark'
                   ? 'bg-white/5 border-white/10 text-white'
-                  : 'bg-[#003366]/10 border-[#003366]/20 text-[#003366]',
+                  : 'bg-slate-900/5 border-black/[0.06] text-slate-900',
               ].join(' ')}
             >
               {user?.full_name?.split(' ').map((n) => n[0]).join('').slice(0, 2)}
             </div>
-            <div className={`text-sm font-semibold break-words ${theme === 'dark' ? 'text-white' : 'text-[#0f172a]'}`}>
+            <div className={`text-sm font-semibold break-words ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
               {user?.full_name}
             </div>
-            <div className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+            <div className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-slate-600'}`}>
               {instructorRoleAz(user?.public_label)}
             </div>
           </div>
@@ -236,7 +236,7 @@ export default function InstructorLayout() {
             {NAV_SECTIONS.map((section) => (
               <div key={section.title} className="space-y-2">
                 <div className="px-4 pt-2">
-                  <div className="text-[11px] font-semibold tracking-[0.18em] uppercase text-token-textMuted/80">
+                  <div className={`text-xs uppercase tracking-wider ${theme === 'dark' ? 'text-token-textMuted/80' : 'text-slate-400'}`}>
                     {section.title}
                   </div>
                 </div>
@@ -259,7 +259,7 @@ export default function InstructorLayout() {
                     </NavLink>
                   ))}
                 </div>
-                <div className="h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+                <div className={theme === 'dark' ? 'h-px bg-gradient-to-r from-transparent via-white/10 to-transparent' : 'h-px bg-black/[0.06]'} />
               </div>
             ))}
           </div>
