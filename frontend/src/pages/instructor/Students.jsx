@@ -613,6 +613,7 @@ export default function InstructorStudents() {
   const [search, setSearch] = useState('')
   const [openGroups, setOpenGroups] = useState(() => new Set())
   const [actionMenuId, setActionMenuId] = useState(null)
+  const [groupMenuKey, setGroupMenuKey] = useState(null)
 
   const CACHE_KEY = 'instructor_students_v1'
   const CACHE_TTL_MS = 60000
@@ -855,15 +856,38 @@ export default function InstructorStudents() {
       const group = String(s.track_group_name || 'Qrup yoxdur').trim() || 'Qrup yoxdur'
       const key = `${subject}__${group}`
       if (!byKey.has(key)) {
-        byKey.set(key, { key, subject, group, students: [], nextDistMin: Number.POSITIVE_INFINITY })
+        byKey.set(key, {
+          key,
+          subject,
+          group,
+          students: [],
+          nextDistMin: Number.POSITIVE_INFINITY,
+          avgScore: null,
+          payMix: { prepaid: 0, installment: 0, postpaid: 0 },
+        })
       }
       const g = byKey.get(key)
       g.students.push(s)
       g.nextDistMin = Math.min(g.nextDistMin, nextWeeklyDistanceMinutes(s))
+      // lightweight “quick stats” (defensive; may be missing on backend)
+      const scoreRaw = s?.avg_score ?? s?.exam_avg_score ?? s?.last_score_pct ?? s?.score_pct
+      const score = Number(scoreRaw)
+      if (Number.isFinite(score)) {
+        const prev = g.avgScore == null ? { sum: 0, n: 0 } : g.avgScore
+        g.avgScore = { sum: prev.sum + Math.max(0, Math.min(100, score)), n: prev.n + 1 }
+      }
+      if (s?.payment_plan === 'partial') g.payMix.installment += 1
+      else if (s?.billing_timing === 'prepaid') g.payMix.prepaid += 1
+      else g.payMix.postpaid += 1
     }
     const arr = [...byKey.values()]
     for (const g of arr) {
       g.students.sort((a, b) => String(a.full_name || '').localeCompare(String(b.full_name || '')))
+      if (g.avgScore && g.avgScore.n) {
+        g.avgScore = Math.round(g.avgScore.sum / g.avgScore.n)
+      } else {
+        g.avgScore = null
+      }
     }
     arr.sort((a, b) => {
       if (a.nextDistMin !== b.nextDistMin) return a.nextDistMin - b.nextDistMin
@@ -915,6 +939,14 @@ export default function InstructorStudents() {
     if (!total) return null
     const pct = Math.max(0, Math.min(100, Math.round((used / total) * 100)))
     return { used, total, pct }
+  }
+
+  const fmtNextLesson = (distMin) => {
+    if (!Number.isFinite(distMin) || distMin === Number.POSITIVE_INFINITY) return '—'
+    if (distMin < 60) return `${distMin} dəq`
+    const h = Math.floor(distMin / 60)
+    const m = distMin % 60
+    return m ? `${h}s ${m}dəq` : `${h}s`
   }
 
   const saveEdit = async () => {
@@ -1078,8 +1110,8 @@ export default function InstructorStudents() {
   }
 
   return (
-    <div className="p-4 sm:p-6 min-w-0">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+    <div className="p-6 min-w-0">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-5">
         <div className="min-w-0">
           <h1 className="font-display font-bold text-xl sm:text-2xl break-words">Tələbələrim</h1>
           <p className="text-gray-500 text-sm mt-1">
@@ -1087,36 +1119,51 @@ export default function InstructorStudents() {
           </p>
         </div>
         <Button
-          className="w-full sm:w-auto shrink-0 justify-center"
+          className="w-full sm:w-auto shrink-0 justify-center py-2.5 px-5"
           onClick={() => {
             setForm(emptyForm)
             setAddModal(true)
           }}
         >
-          + Telebe Elave Et
+          <span className="inline-flex items-center gap-2">
+            <span
+              aria-hidden
+              className="w-6 h-6 rounded-lg bg-black/15 border border-black/10 inline-flex items-center justify-center"
+            >
+              +
+            </span>
+            Telebe Elave Et
+          </span>
         </Button>
       </div>
 
       <div className="mb-4 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
         <div className="flex-1 min-w-0">
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Axtar… (ad və ya telefon)"
-            className={[
-              'w-full rounded-xl px-3 py-2 text-sm outline-none',
-              'bg-token-surfaceCard/55 border border-[color:var(--border-subtle)]',
-              'text-token-textMain placeholder:text-token-textMuted',
-              'focus:border-primary/40 focus:ring-2 focus:ring-primary/15',
-            ].join(' ')}
-          />
+          <div className="relative">
+            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-token-textMuted">
+              ⌕
+            </span>
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Axtar… (ad və ya telefon)"
+              className={[
+                'w-full rounded-xl pl-9 pr-3 py-2.5 text-sm outline-none',
+                'bg-token-surfaceCard/55 border border-[color:var(--border-subtle)]',
+                'text-token-textMain placeholder:text-token-textMuted',
+                'focus:border-primary/40 focus:ring-2 focus:ring-primary/15',
+                'transition-[box-shadow,border-color] duration-200',
+              ].join(' ')}
+            />
+          </div>
         </div>
         <select
           className={[
-            'w-full sm:w-72 rounded-xl px-3 py-2 text-sm outline-none',
+            'w-full sm:w-72 rounded-xl px-3 py-2.5 text-sm outline-none',
             'bg-token-surfaceCard/55 border border-[color:var(--border-subtle)]',
             'text-token-textMain',
             'focus:border-primary/40 focus:ring-2 focus:ring-primary/15',
+            'transition-[box-shadow,border-color] duration-200',
           ].join(' ')}
           value={subjectFilter}
           onChange={(e) => setSubjectFilter(e.target.value)}
@@ -1130,7 +1177,7 @@ export default function InstructorStudents() {
         </select>
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-2.5">
         {listLoading && <ListSkeleton message="Tələbələr yüklənir…" />}
         {!listLoading && listError && (
           <Card className="p-6 text-center border border-amber-500/30 bg-amber-500/5">
@@ -1145,52 +1192,159 @@ export default function InstructorStudents() {
           !listError &&
           filteredGroups.map((g) => {
             const isOpen = openGroups.has(g.key)
+            const groupStatus = isOpen ? { variant: 'paid', label: 'Aktiv' } : { variant: 'neutral', label: 'Bağlı' }
+            const total = g.students.length
+            const payTop =
+              g.payMix.installment
+                ? { variant: 'due', label: `Hissəli · ${g.payMix.installment}/${total}` }
+                : g.payMix.prepaid
+                  ? { variant: 'paid', label: `Öncədən · ${g.payMix.prepaid}/${total}` }
+                  : { variant: 'pending', label: `Sonradan · ${g.payMix.postpaid}/${total}` }
             return (
               <Card
                 key={g.key}
                 hover
-                className="p-0 overflow-hidden border border-[color:var(--border-subtle)] hover:border-primary/20"
+                className={[
+                  'p-0 overflow-hidden border',
+                  'border-[color:var(--border-subtle)] hover:border-primary/20',
+                  isOpen ? 'border-primary/25 bg-token-surfaceCard/20' : '',
+                ].join(' ')}
               >
-                <button
-                  type="button"
-                  className={[
-                    'w-full flex items-center justify-between gap-3 px-4 py-3',
-                    'bg-token-surfaceCard/45 hover:bg-token-surfaceCard/60 transition-colors',
-                  ].join(' ')}
-                  onClick={() =>
-                    setOpenGroups((prev) => {
-                      const next = new Set(prev)
-                      if (next.has(g.key)) next.delete(g.key)
-                      else next.add(g.key)
-                      return next
-                    })
-                  }
-                >
-                  <div className="min-w-0 text-left">
-                    <div className="font-semibold text-token-textMain truncate">
-                      {g.subject} — {g.group}
+                <div className="relative">
+                  <button
+                    type="button"
+                    className={[
+                      'w-full grid grid-cols-12 items-center gap-3 px-4 py-3.5 text-left',
+                      'bg-token-surfaceCard/45 hover:bg-token-surfaceCard/60',
+                      'transition-[background-color,transform] duration-200 ease-out',
+                      'active:scale-[0.997]',
+                    ].join(' ')}
+                    onClick={() =>
+                      setOpenGroups((prev) => {
+                        const next = new Set(prev)
+                        if (next.has(g.key)) next.delete(g.key)
+                        else next.add(g.key)
+                        return next
+                      })
+                    }
+                  >
+                    {/* LEFT */}
+                    <div className="col-span-12 sm:col-span-5 min-w-0">
+                      <div className="text-[15px] sm:text-base font-semibold text-token-textMain truncate">
+                        {g.group}
+                      </div>
+                      <div className="text-xs text-token-textMuted truncate">
+                        {g.subject} · {g.students.length} tələbə
+                      </div>
                     </div>
-                    <div className="text-xs text-token-textMuted">{g.students.length} tələbə</div>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className="text-xs text-token-textMuted tabular-nums">
-                      {isOpen ? 'Açıq' : 'Bağlı'}
-                    </span>
-                    <span
-                      aria-hidden
+
+                    {/* CENTER */}
+                    <div className="hidden sm:flex col-span-4 items-center gap-2 min-w-0">
+                      <StatusBadge variant="neutral" className="shrink-0">
+                        Növbəti dərs: <span className="ml-1 text-gray-100 tabular-nums">{fmtNextLesson(g.nextDistMin)}</span>
+                      </StatusBadge>
+                      <StatusBadge variant={payTop.variant} className="shrink-0">
+                        {payTop.label}
+                      </StatusBadge>
+                      {g.avgScore != null ? (
+                        <StatusBadge variant="pending" className="shrink-0">
+                          Avg bal: <span className="ml-1 text-gray-100 tabular-nums">{g.avgScore}%</span>
+                        </StatusBadge>
+                      ) : null}
+                    </div>
+
+                    {/* RIGHT */}
+                    <div className="col-span-12 sm:col-span-3 flex items-center justify-between sm:justify-end gap-2">
+                      <StatusBadge variant={groupStatus.variant}>{groupStatus.label}</StatusBadge>
+                      <span
+                        aria-hidden
+                        className={[
+                          'w-9 h-9 rounded-xl border flex items-center justify-center transition-transform duration-200',
+                          'border-[color:var(--border-subtle)] bg-token-surfaceCard/35',
+                          isOpen ? 'rotate-180' : 'rotate-0',
+                        ].join(' ')}
+                      >
+                        <span className="text-token-textMain/80">⌄</span>
+                      </span>
+                    </div>
+                  </button>
+
+                  {/* group dropdown trigger */}
+                  <div className="absolute right-3 top-3.5">
+                    <button
+                      type="button"
                       className={[
-                        'w-8 h-8 rounded-xl border flex items-center justify-center transition-all',
-                        'border-[color:var(--border-subtle)] bg-token-surfaceCard/35',
-                        isOpen ? 'rotate-180' : 'rotate-0',
+                        'w-9 h-9 rounded-xl border flex items-center justify-center',
+                        'border-[color:var(--border-subtle)] bg-token-surfaceCard/35 hover:bg-token-surfaceCard/60',
+                        'text-token-textMain/80',
+                        'transition-colors duration-200',
                       ].join(' ')}
+                      aria-label="Qrup actions"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        setGroupMenuKey((prev) => (prev === g.key ? null : g.key))
+                      }}
                     >
-                      <span className="text-token-textMain/80">⌄</span>
-                    </span>
+                      ⋯
+                    </button>
+                    {groupMenuKey === g.key ? (
+                      <div
+                        className={[
+                          'absolute right-0 mt-2 w-56 z-30 overflow-hidden rounded-2xl border',
+                          'border-[color:var(--border-subtle)] bg-token-surfaceCard/90 backdrop-blur-[10px]',
+                          'shadow-[0_18px_45px_rgba(0,0,0,0.35)]',
+                          'origin-top-right animate-[fadeIn_.16s_ease-out]',
+                        ].join(' ')}
+                        onMouseLeave={() => setGroupMenuKey(null)}
+                      >
+                        <button
+                          type="button"
+                          className="w-full text-left px-3 py-2 text-sm hover:bg-white/5"
+                          onClick={() => {
+                            setGroupMenuKey(null)
+                            setOpenGroups((prev) => new Set(prev).add(g.key))
+                          }}
+                        >
+                          Qrupu aç
+                        </button>
+                        <button
+                          type="button"
+                          className="w-full text-left px-3 py-2 text-sm hover:bg-white/5"
+                          onClick={() => {
+                            setGroupMenuKey(null)
+                            setOpenGroups((prev) => {
+                              const next = new Set(prev)
+                              next.delete(g.key)
+                              return next
+                            })
+                          }}
+                        >
+                          Qrupu bağla
+                        </button>
+                        <button
+                          type="button"
+                          className="w-full text-left px-3 py-2 text-sm hover:bg-white/5"
+                          onClick={async () => {
+                            setGroupMenuKey(null)
+                            const phones = (g.students || []).map((x) => x?.phone).filter(Boolean).join('\n')
+                            try {
+                              await navigator.clipboard.writeText(phones)
+                              toast('Telefonlar kopyalandı', 'success')
+                            } catch {
+                              toast('Kopyalanmadı', 'error')
+                            }
+                          }}
+                        >
+                          Telefonları kopyala
+                        </button>
+                      </div>
+                    ) : null}
                   </div>
-                </button>
+                </div>
 
                 {isOpen && (
-                  <div className="p-2 sm:p-3 space-y-1.5 bg-token-surfaceMain/40">
+                  <div className="p-2.5 sm:p-3 space-y-2 bg-token-surfaceMain/40">
                     {g.students.map((s) => {
                       const p = lessonProgress(s)
                       const pay = paymentBadge(s)
@@ -1209,15 +1363,16 @@ export default function InstructorStudents() {
                             'group flex items-center justify-between gap-3 rounded-xl px-3 py-2',
                             'border border-[color:var(--border-subtle)]',
                             'bg-token-surfaceCard/40 hover:bg-token-surfaceCard/55',
-                            'transition-colors',
+                            'transition-[background-color,transform,border-color] duration-200',
+                            'hover:-translate-y-[1px] hover:border-primary/15',
                           ].join(' ')}
                         >
                           <div className="min-w-0 flex items-center gap-3">
                             <div
                               className={[
                                 'w-9 h-9 rounded-full shrink-0 flex items-center justify-center text-xs font-extrabold',
-                                'bg-black/30 border border-[color:var(--border-subtle)]',
-                                'text-white',
+                                'bg-token-surfaceCard/55 border border-[color:var(--border-subtle)]',
+                                'text-token-textMain',
                               ].join(' ')}
                               title={s.full_name}
                             >
