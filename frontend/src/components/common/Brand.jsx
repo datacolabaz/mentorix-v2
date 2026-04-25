@@ -18,7 +18,7 @@ export default function Brand({
         <img
           src={logoLogin}
           alt="Mentorix"
-          className={`mentorix-logo w-[220px] max-w-[min(220px,92vw)] h-auto ${imgBase} ${loginBoost} ${imgClassName}`}
+          className={`mentorix-logo w-[320px] max-w-[min(320px,92vw)] h-auto ${imgBase} ${loginBoost} ${imgClassName}`}
           draggable={false}
         />
         {showText ? (
@@ -38,7 +38,7 @@ export default function Brand({
         <img
           src={logoSidebar}
           alt="Mentorix"
-          className={`mentorix-logo h-[54px] max-h-[60px] w-auto max-w-full block mx-auto ${imgBase} ${onDarkBoost} ${imgClassName}`}
+          className={`mentorix-logo h-[72px] max-h-[78px] w-auto max-w-full block mx-auto ${imgBase} ${onDarkBoost} ${imgClassName}`}
           draggable={false}
         />
       </div>
