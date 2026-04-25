@@ -30,7 +30,7 @@ export default function AdminLayout() {
   const { theme, toggleTheme } = useUiStore()
 
   return (
-    <div className="flex h-screen bg-[#0b0b0b] text-white overflow-hidden">
+    <div className={`theme-${theme} flex h-screen bg-token-surfaceMain text-token-textMain overflow-hidden`}>
       <aside
         className={[
           theme === 'dark' ? 'theme-dark' : 'theme-light',
@@ -131,7 +131,7 @@ export default function AdminLayout() {
         </div>
       </aside>
 
-      <main className="flex-1 overflow-y-auto bg-[#0b0b0b]">
+      <main className="flex-1 overflow-y-auto bg-token-surfaceMain">
         <div className="min-h-full flex flex-col">
           <div className="flex-1 min-h-0">
             <Outlet />
