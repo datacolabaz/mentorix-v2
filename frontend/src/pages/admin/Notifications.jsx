@@ -52,4 +52,10 @@ export default function AdminNotifications() {
                   <p className="text-token-textMuted text-xs mt-1">{alert.instructor.email}</p>
                 </div>
               </div>
-            </d
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
