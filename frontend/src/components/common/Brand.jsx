@@ -36,8 +36,13 @@ export default function Brand({
   if (size === 'sidebar') {
     const badge =
       tone === 'light'
-        ? 'bg-gradient-to-b from-[#0c0f0d] to-[#070a08] border border-black/10 shadow-[0_18px_50px_rgba(0,0,0,0.14)]'
+        ? 'bg-white/70 backdrop-blur-[10px] border border-black/10 shadow-[0_14px_42px_rgba(0,0,0,0.12)]'
         : 'bg-white/0 border border-white/0'
+
+    const markBoost =
+      tone === 'light'
+        ? 'drop-shadow-[0_3px_10px_rgba(0,0,0,0.30)]'
+        : onDarkBoost
     return (
       <div className={`mx-auto w-[92%] min-w-0 flex items-center justify-center ${className}`}>
         <div className={`rounded-2xl px-3 py-2 ${badge}`}>
@@ -47,7 +52,7 @@ export default function Brand({
             className={[
               'mentorix-logo h-[52px] w-auto',
               imgBase,
-              tone === 'dark' ? onDarkBoost : '',
+              markBoost,
               imgClassName,
             ].join(' ')}
             draggable={false}
