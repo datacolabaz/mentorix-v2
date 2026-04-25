@@ -1256,6 +1256,25 @@ export default function InstructorStudents() {
                     {/* RIGHT */}
                     <div className="col-span-12 sm:col-span-3 flex items-center justify-between sm:justify-end gap-2">
                       <StatusBadge variant={groupStatus.variant}>{groupStatus.label}</StatusBadge>
+
+                      <button
+                        type="button"
+                        className={[
+                          'w-9 h-9 rounded-xl border flex items-center justify-center',
+                          'border-[color:var(--border-subtle)] bg-token-surfaceCard/35 hover:bg-token-surfaceCard/60',
+                          'text-token-textMain/80',
+                          'transition-colors duration-200',
+                        ].join(' ')}
+                        aria-label="Qrup actions"
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          setGroupMenuKey((prev) => (prev === g.key ? null : g.key))
+                        }}
+                      >
+                        ⋯
+                      </button>
+
                       <span
                         aria-hidden
                         className={[
@@ -1269,78 +1288,58 @@ export default function InstructorStudents() {
                     </div>
                   </button>
 
-                  {/* group dropdown trigger */}
-                  <div className="absolute right-3 top-3.5">
-                    <button
-                      type="button"
+                  {groupMenuKey === g.key ? (
+                    <div
                       className={[
-                        'w-9 h-9 rounded-xl border flex items-center justify-center',
-                        'border-[color:var(--border-subtle)] bg-token-surfaceCard/35 hover:bg-token-surfaceCard/60',
-                        'text-token-textMain/80',
-                        'transition-colors duration-200',
+                        'absolute right-3 top-[56px] w-56 z-30 overflow-hidden rounded-2xl border',
+                        'border-[color:var(--border-subtle)] bg-token-surfaceCard/90 backdrop-blur-[10px]',
+                        'shadow-[0_18px_45px_rgba(0,0,0,0.35)]',
+                        'origin-top-right animate-[fadeIn_.16s_ease-out]',
                       ].join(' ')}
-                      aria-label="Qrup actions"
-                      onClick={(e) => {
-                        e.preventDefault()
-                        e.stopPropagation()
-                        setGroupMenuKey((prev) => (prev === g.key ? null : g.key))
-                      }}
+                      onMouseLeave={() => setGroupMenuKey(null)}
                     >
-                      ⋯
-                    </button>
-                    {groupMenuKey === g.key ? (
-                      <div
-                        className={[
-                          'absolute right-0 mt-2 w-56 z-30 overflow-hidden rounded-2xl border',
-                          'border-[color:var(--border-subtle)] bg-token-surfaceCard/90 backdrop-blur-[10px]',
-                          'shadow-[0_18px_45px_rgba(0,0,0,0.35)]',
-                          'origin-top-right animate-[fadeIn_.16s_ease-out]',
-                        ].join(' ')}
-                        onMouseLeave={() => setGroupMenuKey(null)}
+                      <button
+                        type="button"
+                        className="w-full text-left px-3 py-2 text-sm hover:bg-white/5"
+                        onClick={() => {
+                          setGroupMenuKey(null)
+                          setOpenGroups((prev) => new Set(prev).add(g.key))
+                        }}
                       >
-                        <button
-                          type="button"
-                          className="w-full text-left px-3 py-2 text-sm hover:bg-white/5"
-                          onClick={() => {
-                            setGroupMenuKey(null)
-                            setOpenGroups((prev) => new Set(prev).add(g.key))
-                          }}
-                        >
-                          Qrupu aç
-                        </button>
-                        <button
-                          type="button"
-                          className="w-full text-left px-3 py-2 text-sm hover:bg-white/5"
-                          onClick={() => {
-                            setGroupMenuKey(null)
-                            setOpenGroups((prev) => {
-                              const next = new Set(prev)
-                              next.delete(g.key)
-                              return next
-                            })
-                          }}
-                        >
-                          Qrupu bağla
-                        </button>
-                        <button
-                          type="button"
-                          className="w-full text-left px-3 py-2 text-sm hover:bg-white/5"
-                          onClick={async () => {
-                            setGroupMenuKey(null)
-                            const phones = (g.students || []).map((x) => x?.phone).filter(Boolean).join('\n')
-                            try {
-                              await navigator.clipboard.writeText(phones)
-                              toast('Telefonlar kopyalandı', 'success')
-                            } catch {
-                              toast('Kopyalanmadı', 'error')
-                            }
-                          }}
-                        >
-                          Telefonları kopyala
-                        </button>
-                      </div>
-                    ) : null}
-                  </div>
+                        Qrupu aç
+                      </button>
+                      <button
+                        type="button"
+                        className="w-full text-left px-3 py-2 text-sm hover:bg-white/5"
+                        onClick={() => {
+                          setGroupMenuKey(null)
+                          setOpenGroups((prev) => {
+                            const next = new Set(prev)
+                            next.delete(g.key)
+                            return next
+                          })
+                        }}
+                      >
+                        Qrupu bağla
+                      </button>
+                      <button
+                        type="button"
+                        className="w-full text-left px-3 py-2 text-sm hover:bg-white/5"
+                        onClick={async () => {
+                          setGroupMenuKey(null)
+                          const phones = (g.students || []).map((x) => x?.phone).filter(Boolean).join('\n')
+                          try {
+                            await navigator.clipboard.writeText(phones)
+                            toast('Telefonlar kopyalandı', 'success')
+                          } catch {
+                            toast('Kopyalanmadı', 'error')
+                          }
+                        }}
+                      >
+                        Telefonları kopyala
+                      </button>
+                    </div>
+                  ) : null}
                 </div>
 
                 {isOpen && (
