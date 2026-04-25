@@ -7,6 +7,7 @@ import ExamForm from '../../components/instructor/ExamForm'
 import ListSkeleton from '../../components/common/ListSkeleton'
 import { useToast } from '../../components/common/Toast'
 import { localDatetimeInputToUtcIso, utcInstantToDatetimeLocalValue } from '../../lib/examDatetime'
+import useUiStore from '../../hooks/useUi'
 
 function initEditQuestion(q) {
   const type = String(q.question_type || '').trim()
@@ -158,6 +159,7 @@ export default function InstructorExams() {
   const [examsLoading, setExamsLoading] = useState(true)
   const [examsError, setExamsError] = useState(null)
   const toast = useToast()
+  const { theme } = useUiStore()
 
   const loadExams = async () => {
     setExamsError(null)
@@ -511,7 +513,12 @@ export default function InstructorExams() {
             onClick={bulkDelete}
             loading={bulkDeleting}
             disabled={selectedIds.size === 0}
-            className="w-full sm:w-auto justify-center border-red-500/30 text-red-300 hover:text-red-200 hover:border-red-500/50 disabled:opacity-50"
+            className={[
+              'w-full sm:w-auto justify-center disabled:opacity-50',
+              theme === 'dark'
+                ? 'border-red-500/30 text-red-300 hover:text-red-200 hover:border-red-500/50'
+                : 'border-rose-200 text-rose-600 hover:text-rose-700 hover:border-rose-300 hover:bg-rose-50/70',
+            ].join(' ')}
           >
             Seçilənləri sil
           </Button>
@@ -570,7 +577,11 @@ export default function InstructorExams() {
                   <Button
                     size="sm"
                     variant="secondary"
-                    className="border-red-500/30 text-red-300 hover:text-red-200 hover:border-red-500/50"
+                    className={[
+                      theme === 'dark'
+                        ? 'border-red-500/30 text-red-300 hover:text-red-200 hover:border-red-500/50'
+                        : 'border-rose-200 text-rose-600 hover:text-rose-700 hover:border-rose-300 hover:bg-rose-50/70',
+                    ].join(' ')}
                     loading={deletingId === exam.id}
                     onClick={() => deleteExam(exam)}
                   >
