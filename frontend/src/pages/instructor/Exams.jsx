@@ -517,7 +517,7 @@ export default function InstructorExams() {
               'w-full sm:w-auto justify-center disabled:opacity-50',
               theme === 'dark'
                 ? 'border-red-500/30 text-red-300 hover:text-red-200 hover:border-red-500/50'
-                : 'border-rose-300/70 text-rose-600 hover:text-rose-700 hover:border-rose-400 hover:bg-rose-500/10',
+                : '!border-slate-200 !text-slate-700 hover:!text-rose-700 hover:!border-rose-300 hover:bg-rose-500/10',
             ].join(' ')}
           >
             Seçilənləri sil
@@ -580,7 +580,7 @@ export default function InstructorExams() {
                     className={[
                       theme === 'dark'
                         ? 'border-red-500/30 text-red-300 hover:text-red-200 hover:border-red-500/50'
-                        : 'border-rose-300/70 text-rose-600 hover:text-rose-700 hover:border-rose-400 hover:bg-rose-500/10',
+                        : '!border-slate-200 !text-slate-700 hover:!text-rose-700 hover:!border-rose-300 hover:bg-rose-500/10',
                     ].join(' ')}
                     loading={deletingId === exam.id}
                     onClick={() => deleteExam(exam)}
