@@ -14,6 +14,7 @@ import {
 import api from '../../lib/api'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
+import useUiStore from '../../hooks/useUi'
 
 const COLORS = ['#e1306c', '#1877f2', '#000', '#3b82f6', '#6366f1']
 
@@ -27,6 +28,8 @@ export default function InstructorAnalytics() {
   const [top10, setTop10] = useState([])
   const [examLoading, setExamLoading] = useState(false)
   const [examErr, setExamErr] = useState(null)
+  const theme = useUiStore((s) => s.theme)
+  const gridStroke = theme === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(15,23,42,0.10)'
 
   useEffect(() => {
     api
@@ -97,7 +100,7 @@ export default function InstructorAnalytics() {
           <div className="w-full h-[240px] min-h-[200px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={barData} margin={{ top: 12, right: 12, left: 6, bottom: 8 }}>
-                <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
+                <CartesianGrid stroke={gridStroke} vertical={false} />
                 <XAxis
                   dataKey="name"
                   tick={{ fill: '#94a3b8', fontSize: 11 }}
@@ -172,7 +175,7 @@ export default function InstructorAnalytics() {
         <div className="w-full h-[200px] min-h-[180px]">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={barData} margin={{ top: 12, right: 12, left: 6, bottom: 8 }}>
-              <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
+              <CartesianGrid stroke={gridStroke} vertical={false} />
               <XAxis
                 dataKey="name"
                 tick={{ fill: '#94a3b8', fontSize: 11 }}
