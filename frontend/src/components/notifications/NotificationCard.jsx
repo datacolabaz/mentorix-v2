@@ -6,6 +6,12 @@ const STATUS_MAP = {
   scheduled: { label: 'Planlaşdırılıb', badge: 'due' },
 }
 
+const TYPE_MAP = {
+  payment: { icon: '💰', title: 'Ödəniş xatırlatma göndərildi', tone: 'payment' },
+  payment_reminder: { icon: '💰', title: 'Ödəniş xatırlatma göndərildi', tone: 'payment' }, // backward compat
+  otp: { icon: '🔐', title: 'PIN kod göndərildi', tone: 'otp' },
+}
+
 function fmtDateTime(iso) {
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return '—'
@@ -14,17 +20,19 @@ function fmtDateTime(iso) {
 
 export default function NotificationCard({ item, onDetails }) {
   const st = STATUS_MAP[item.status] || STATUS_MAP.sent
-  const studentText =
-    Array.isArray(item.students) && item.students.length
-      ? item.students.length <= 2
-        ? item.students.join(', ')
-        : `${item.students[0]}, ${item.students[1]} +${item.students.length - 2}`
-      : '—'
+  const tp = TYPE_MAP[item.type] || TYPE_MAP.payment
+  const pkgRaw = item.package_type ? String(item.package_type) : ''
+  const pkg = pkgRaw === '8' ? '8 dərs' : pkgRaw === '12' ? '12 dərs' : pkgRaw === 'monthly' ? 'Aylıq' : null
+  const primaryText = item.student_name ? String(item.student_name) : item.phone ? String(item.phone) : '—'
+  const createdAt = item.createdAt || item.created_at || item.created_at === null ? item.createdAt : item.created_at
 
   return (
     <div
       className={[
         'rounded-2xl border border-[color:var(--border-subtle)] bg-token-surfaceCard/55',
+        tp.tone === 'payment'
+          ? 'shadow-[0_10px_30px_rgba(34,224,136,0.06)] hover:border-primary/25'
+          : 'opacity-[0.96] hover:opacity-100 hover:border-slate-300/40 dark:hover:border-white/15',
         'shadow-[0_10px_30px_rgba(0,0,0,0.10)] hover:shadow-[0_16px_40px_rgba(0,0,0,0.14)]',
         'transition-[transform,box-shadow,border-color,background-color] duration-200 hover:-translate-y-[1px]',
         'p-4 sm:p-5',
@@ -32,17 +40,21 @@ export default function NotificationCard({ item, onDetails }) {
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-sm font-semibold text-token-textMain leading-snug">
-            Ödəniş xatırlatma göndərildi
+          <p className="text-sm font-semibold text-token-textMain leading-snug flex items-center gap-2">
+            <span className="text-base leading-none">{tp.icon}</span>
+            <span className="truncate">{tp.title}</span>
           </p>
-          <p className="text-xs text-token-textMuted mt-1 truncate">{studentText}</p>
+          <p className="text-xs text-token-textMuted mt-1 truncate">
+            {primaryText}
+            {pkg ? <span className="text-token-textMuted"> · {pkg}</span> : null}
+          </p>
         </div>
         <StatusBadge variant={st.badge}>{st.label}</StatusBadge>
       </div>
 
       <div className="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-xs text-token-textMuted">{fmtDateTime(item.createdAt)}</p>
+          <p className="text-xs text-token-textMuted">{fmtDateTime(createdAt)}</p>
           <p className="text-xs text-token-textMain/90 mt-2 truncate">{item.message || '—'}</p>
         </div>
         <button

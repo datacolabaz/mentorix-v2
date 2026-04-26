@@ -39,7 +39,7 @@ const getSmsLogs = async (req, res) => {
 
     // Scope: instructor direct sends OR student/parent phones for their active enrollments
     where.push(`(
-      sl.instructor_id = $1 OR norm_phone IN (
+      b.instructor_id = $1 OR b.norm_phone IN (
         SELECT norm_phone FROM (
           SELECT regexp_replace(u.phone, '\\\\D', '', 'g') AS norm_phone
           FROM users u
@@ -61,23 +61,23 @@ const getSmsLogs = async (req, res) => {
     if (type) {
       params.push(type);
       if (type === 'payment') {
-        where.push(`LOWER(COALESCE(sl.type, '')) IN ('payment', 'payment_reminder')`);
+        where.push(`LOWER(COALESCE(b.type, '')) IN ('payment', 'payment_reminder')`);
       } else {
-        where.push(`LOWER(COALESCE(sl.type, '')) = $${params.length}`);
+        where.push(`LOWER(COALESCE(b.type, '')) = $${params.length}`);
       }
     }
 
     if (status) {
-      if (status === 'failed') where.push(`(sl.status ILIKE 'failed:%' OR LOWER(TRIM(sl.status)) = 'failed')`);
+      if (status === 'failed') where.push(`(b.status ILIKE 'failed:%' OR LOWER(TRIM(b.status)) = 'failed')`);
       else {
         params.push(status);
-        where.push(`LOWER(TRIM(sl.status)) = $${params.length}`);
+        where.push(`LOWER(TRIM(b.status)) = $${params.length}`);
       }
     }
 
     if (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
       params.push(date);
-      where.push(`to_char(COALESCE(sl.created_at, sl.sent_at), 'YYYY-MM-DD') = $${params.length}`);
+      where.push(`to_char(b.ts, 'YYYY-MM-DD') = $${params.length}`);
     }
 
     const { rows } = await db.query(
