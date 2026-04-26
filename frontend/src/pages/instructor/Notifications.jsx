@@ -55,64 +55,14 @@ export default function InstructorNotifications() {
   const [nowTick, setNowTick] = useState(Date.now())
   const [tab, setTab] = useState('all') // all | sms
   const [smsFilter, setSmsFilter] = useState('today') // today | week | failed | scheduled
-  const [smsTypeTab, setSmsTypeTab] = useState('payment') // payment | otp
-  const [smsTypeFilter, setSmsTypeFilter] = useState('payment') // all | payment | otp
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [detailsItem, setDetailsItem] = useState(null)
-  const [smsLoading, setSmsLoading] = useState(false)
-  const [smsErr, setSmsErr] = useState(null)
-  const [smsDbItems, setSmsDbItems] = useState([])
-  const [smsShowCount, setSmsShowCount] = useState(20)
 
   useEffect(() => {
     try {
       localStorage.setItem(SEEN_KEY, String(Date.now()))
     } catch {}
   }, [])
-
-  useEffect(() => {
-    if (tab !== 'sms') return
-    let cancelled = false
-    setSmsLoading(true)
-    setSmsErr(null)
-    api
-      .get('/notifications/instructor/sms-history?limit=120')
-      .then((d) => {
-        if (cancelled) return
-        setSmsDbItems(Array.isArray(d.items) ? d.items : [])
-      })
-      .catch((e) => {
-        if (!cancelled) {
-          setSmsDbItems([])
-          setSmsErr(e?.message || 'SMS tarixçə yüklənmədi')
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setSmsLoading(false)
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [tab])
-
-  useEffect(() => {
-    if (tab !== 'sms') return
-    setSmsShowCount(20)
-  }, [tab, smsFilter, smsTypeTab, smsTypeFilter])
-
-  const smsBaseList = useMemo(() => {
-    const base = Array.isArray(smsDbItems) && smsDbItems.length ? smsDbItems : smsHistoryMock
-    return Array.isArray(base) ? base : []
-  }, [smsDbItems])
-
-  // Keep the extra type filter aligned with the active type tab to avoid
-  // "empty" state when a user selects conflicting controls (e.g. OTP tab + Ödəniş filter).
-  useEffect(() => {
-    setSmsTypeFilter((prev) => {
-      if (prev === 'all') return prev
-      return smsTypeTab === 'otp' ? 'otp' : 'payment'
-    })
-  }, [smsTypeTab])
 
   useEffect(() => {
     let cancelled = false
@@ -154,59 +104,31 @@ export default function InstructorNotifications() {
 
   const smsRows = useMemo(() => {
     const now = new Date()
-    const filtered = smsBaseList.filter((x) => {
+    const list = Array.isArray(smsHistoryMock) ? smsHistoryMock : []
+    const filtered = list.filter((x) => {
       if (smsFilter === 'today') return isToday(x.createdAt, now)
       if (smsFilter === 'week') return isThisWeek(x.createdAt, now)
       if (smsFilter === 'failed') return x.status === 'failed'
       if (smsFilter === 'scheduled') return x.status === 'scheduled'
       return true
     })
-    const typed = filtered.filter((x) => {
-      const t = String(x.type || 'payment_reminder')
-      if (smsTypeTab === 'otp') return t === 'otp'
-      return t !== 'otp'
-    })
-    const byExtraFilter = typed.filter((x) => {
-      const t = String(x.type || 'payment_reminder')
-      if (smsTypeFilter === 'all') return true
-      if (smsTypeFilter === 'otp') return t === 'otp'
-      return t !== 'otp'
-    })
-    return byExtraFilter.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-  }, [smsFilter, smsBaseList, smsTypeTab, smsTypeFilter])
+    return filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+  }, [smsFilter])
 
   const smsSummary = useMemo(() => {
-    const sent = smsBaseList.filter((x) => x.status === 'sent')
-    const failed = smsBaseList.filter((x) => x.status === 'failed')
-    const scheduled = smsBaseList.filter((x) => x.status === 'scheduled')
-    const uniq = new Set(
-      smsBaseList.flatMap((x) => (Array.isArray(x.students) ? x.students : x.phone ? [x.phone] : []))
-    )
+    const list = Array.isArray(smsHistoryMock) ? smsHistoryMock : []
+    const sent = list.filter((x) => x.status === 'sent')
+    const failed = list.filter((x) => x.status === 'failed')
+    const scheduled = list.filter((x) => x.status === 'scheduled')
+    const uniq = new Set(list.flatMap((x) => (Array.isArray(x.students) ? x.students : [])))
     return {
-      totalMessages: smsBaseList.length,
+      totalMessages: list.length,
       totalRecipients: uniq.size,
       sent: sent.length,
       failed: failed.length,
       scheduled: scheduled.length,
     }
-  }, [smsBaseList])
-
-  const smsTypeTabs = useMemo(
-    () => [
-      { id: 'payment', label: 'Ödəniş mesajları' },
-      { id: 'otp', label: 'Sistem mesajları (OTP)' },
-    ],
-    []
-  )
-
-  const smsTypeFilters = useMemo(
-    () => [
-      { id: 'all', label: 'Hamısı' },
-      { id: 'payment', label: 'Ödəniş' },
-      { id: 'otp', label: 'OTP' },
-    ],
-    []
-  )
+  }, [])
 
   const tabItems = useMemo(
     () => [
@@ -218,22 +140,18 @@ export default function InstructorNotifications() {
 
   const smsTabs = useMemo(() => {
     const now = new Date()
-    const scope = smsBaseList.filter((x) => {
-      const t = String(x.type || 'payment_reminder')
-      if (smsTypeTab === 'otp') return t === 'otp'
-      return t !== 'otp'
-    })
-    const today = scope.filter((x) => isToday(x.createdAt, now)).length
-    const week = scope.filter((x) => isThisWeek(x.createdAt, now)).length
-    const failed = scope.filter((x) => x.status === 'failed').length
-    const scheduled = scope.filter((x) => x.status === 'scheduled').length
+    const list = Array.isArray(smsHistoryMock) ? smsHistoryMock : []
+    const today = list.filter((x) => isToday(x.createdAt, now)).length
+    const week = list.filter((x) => isThisWeek(x.createdAt, now)).length
+    const failed = list.filter((x) => x.status === 'failed').length
+    const scheduled = list.filter((x) => x.status === 'scheduled').length
     return [
       { id: 'today', label: 'Bu gün', count: today },
       { id: 'week', label: 'Bu həftə', count: week },
       { id: 'failed', label: 'Uğursuz', count: failed },
       { id: 'scheduled', label: 'Planlaşdırılıb', count: scheduled },
     ]
-  }, [smsBaseList, smsTypeTab])
+  }, [])
 
   const openDetails = (item) => {
     setDetailsItem(item)
@@ -265,15 +183,6 @@ export default function InstructorNotifications() {
               <p className="text-xs text-token-textMuted mt-1">
                 Ödəniş xatırlatma mesajlarının göndərilmə statusu və qısa preview.
               </p>
-              {smsLoading ? (
-                <p className="text-xs text-token-textMuted mt-2">Tarixçə yüklənir…</p>
-              ) : smsErr ? (
-                <p className="text-xs text-amber-600 dark:text-amber-200/90 mt-2">{smsErr} (mock göstərilir)</p>
-              ) : smsDbItems.length ? (
-                <p className="text-xs text-token-textMuted mt-2">Mənbə: DB (sms_logs)</p>
-              ) : (
-                <p className="text-xs text-token-textMuted mt-2">Mənbə: mock</p>
-              )}
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <span className="inline-flex items-center gap-2 rounded-full border border-[color:var(--border-subtle)] bg-token-surfaceCard/50 px-3 py-1.5 text-[11px] text-token-textMain">
                   <span className="text-token-textMuted">SMS:</span>
@@ -299,13 +208,6 @@ export default function InstructorNotifications() {
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <FilterTabs tabs={smsTypeTabs} activeId={smsTypeTab} onChange={(id) => setSmsTypeTab(id)} />
-            <div className="sm:shrink-0">
-              <FilterTabs tabs={smsTypeFilters} activeId={smsTypeFilter} onChange={(id) => setSmsTypeFilter(id)} />
-            </div>
-          </div>
-
           {!smsRows.length ? (
             <Card className="p-8 sm:p-10 text-center">
               <div className="text-3xl mb-3">📭</div>
@@ -313,34 +215,10 @@ export default function InstructorNotifications() {
               <p className="text-xs text-token-textMuted mt-1">Filteri dəyişin və ya yeni SMS göndərin.</p>
             </Card>
           ) : (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between gap-3">
-                <div className="text-xs text-token-textMuted">
-                  Göstərilir: <span className="text-token-textMain font-semibold tabular-nums">{Math.min(smsRows.length, smsShowCount)}</span> /{' '}
-                  <span className="text-token-textMain font-semibold tabular-nums">{smsRows.length}</span>
-                </div>
-                {smsShowCount < smsRows.length ? (
-                  <button
-                    type="button"
-                    className="text-xs font-semibold text-primary hover:text-primary/90"
-                    onClick={() => setSmsShowCount((n) => Math.min(smsRows.length, n + 20))}
-                  >
-                    Daha çox göstər
-                  </button>
-                ) : null}
-              </div>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                {smsRows.slice(0, smsShowCount).map((item) => (
-                  <NotificationCard key={item.id} item={item} onDetails={openDetails} />
-                ))}
-              </div>
-              {smsShowCount < smsRows.length ? (
-                <div className="flex justify-center pt-1">
-                  <Button variant="secondary" size="sm" onClick={() => setSmsShowCount((n) => Math.min(smsRows.length, n + 40))}>
-                    Daha çox yüklə
-                  </Button>
-                </div>
-              ) : null}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+              {smsRows.slice(0, 12).map((item) => (
+                <NotificationCard key={item.id} item={item} onDetails={openDetails} />
+              ))}
             </div>
           )}
 
@@ -354,23 +232,13 @@ export default function InstructorNotifications() {
               <div className="space-y-4 text-sm">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="font-semibold text-token-textMain">
-                      {String(detailsItem.type || 'payment_reminder') === 'otp' ? 'PIN kod göndərildi' : 'Ödəniş xatırlatma göndərildi'}
-                    </p>
+                    <p className="font-semibold text-token-textMain">Ödəniş xatırlatma göndərildi</p>
                     <p className="text-xs text-token-textMuted mt-1">
                       {new Date(detailsItem.createdAt).toLocaleString('az-AZ')}
                     </p>
                   </div>
                   <StatusBadge variant={detailsBadge}>{detailsLabel}</StatusBadge>
                 </div>
-                {detailsItem.status === 'failed' && detailsItem.reason ? (
-                  <div className="rounded-xl border border-rose-500/25 bg-rose-500/10 p-3">
-                    <p className="text-xs font-semibold text-rose-700 dark:text-rose-200/90 uppercase tracking-wider mb-2">
-                      Səbəb
-                    </p>
-                    <p className="text-sm text-token-textMain leading-relaxed">{detailsItem.reason}</p>
-                  </div>
-                ) : null}
                 <div className="rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceMain/40 p-3">
                   <p className="text-xs font-semibold text-token-textMuted uppercase tracking-wider mb-2">Tələbələr</p>
                   <p className="text-sm text-token-textMain leading-relaxed">
