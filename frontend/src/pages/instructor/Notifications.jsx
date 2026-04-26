@@ -94,7 +94,8 @@ export default function InstructorNotifications() {
         const rawItems = Array.isArray(d?.data?.items) ? d.data.items : []
         const mapped = rawItems.map((x) => ({
           ...x,
-          createdAt: x.createdAt || x.created_at || x.createdAt === null ? x.createdAt : x.created_at,
+          // Use nullish coalescing to avoid precedence bugs (and keep both API shapes)
+          createdAt: x.createdAt ?? x.created_at ?? null,
         }))
         setSmsDbItems(mapped)
         if (debugSms) {
