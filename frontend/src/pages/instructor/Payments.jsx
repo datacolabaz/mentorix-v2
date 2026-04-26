@@ -7,6 +7,8 @@ import ListSkeleton from '../../components/common/ListSkeleton'
 import Modal from '../../components/common/Modal'
 import { useToast } from '../../components/common/Toast'
 import useUiStore from '../../hooks/useUi'
+import Tooltip from '../../components/common/Tooltip'
+import { formatAgoShort, getLastSmsForStudentName, smsHistoryMock } from '../../mock/smsHistory'
 
 function formatAzn(n) {
   const x = Number(n)
@@ -55,6 +57,19 @@ export default function InstructorPayments() {
   const [adjustSaving, setAdjustSaving] = useState(false)
   const toast = useToast()
   const theme = useUiStore((s) => s.theme)
+  const smsLastByName = useMemo(() => {
+    const map = new Map()
+    for (const item of smsHistoryMock || []) {
+      if (!Array.isArray(item.students)) continue
+      for (const name of item.students) {
+        const prev = map.get(name)
+        if (!prev || new Date(item.createdAt).getTime() > new Date(prev.createdAt).getTime()) {
+          map.set(name, item)
+        }
+      }
+    }
+    return map
+  }, [])
 
   const load = useCallback(async () => {
     setErr(null)
@@ -401,6 +416,48 @@ export default function InstructorPayments() {
                               Sahə: <span className="text-token-textMain">{s.track_subject_name || '—'}</span>
                               {s.track_group_name ? <span> · {s.track_group_name}</span> : null}
                             </div>
+                          <div className="text-[11px] text-token-textMuted mt-1">
+                            {(() => {
+                              const full = [s.first_name, s.last_name].filter(Boolean).join(' ').trim()
+                              const last = smsLastByName.get(full) || getLastSmsForStudentName(full, smsHistoryMock)
+                              if (!last) {
+                                return <span className="text-token-textMuted">SMS göndərilməyib</span>
+                              }
+                              const when = formatAgoShort(last.createdAt)
+                              const status =
+                                last.status === 'failed'
+                                  ? { label: 'Uğursuz', cls: 'text-rose-600 dark:text-rose-300' }
+                                  : last.status === 'scheduled'
+                                    ? { label: 'Plan', cls: 'text-amber-600 dark:text-amber-200/90' }
+                                    : { label: 'Göndərildi', cls: 'text-emerald-600 dark:text-emerald-200/90' }
+                              return (
+                                <Tooltip
+                                  content={
+                                    <div className="space-y-1">
+                                      <div className="flex items-center justify-between gap-2">
+                                        <span className="text-[11px] font-semibold text-token-textMain">Son SMS</span>
+                                        <span className={['text-[10px] font-semibold', status.cls].join(' ')}>
+                                          {status.label}
+                                        </span>
+                                      </div>
+                                      <div className="text-[10px] text-token-textMuted">
+                                        {new Date(last.createdAt).toLocaleString('az-AZ')}
+                                      </div>
+                                      <div className="text-[11px] text-token-textMain leading-snug">
+                                        {String(last.message || '—')}
+                                      </div>
+                                    </div>
+                                  }
+                                >
+                                  <span className="inline-flex items-center gap-2 cursor-default">
+                                    <span className="text-token-textMuted">Son SMS:</span>
+                                    <span className="text-token-textMain font-semibold">{when}</span>
+                                    <span className={['text-[10px] font-semibold', status.cls].join(' ')}>· {status.label}</span>
+                                  </span>
+                                </Tooltip>
+                              )
+                            })()}
+                          </div>
                           </div>
 
                           <div className="flex flex-col sm:items-end gap-2 shrink-0">

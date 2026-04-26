@@ -9,6 +9,7 @@ import useAuthStore from '../../hooks/useAuth'
 import useUiStore from '../../hooks/useUi'
 import { useToast } from '../../components/common/Toast'
 import { writeCache } from '../../lib/cache'
+import { getSmsInsights } from '../../mock/smsHistory'
 
 export default function InstructorDashboard() {
   const { user } = useAuthStore()
@@ -195,6 +196,8 @@ export default function InstructorDashboard() {
     fontWeight: 600,
   }
 
+  const smsInsight = useMemo(() => getSmsInsights(), [])
+
   return (
     <div className="p-6 min-w-0">
       <div className="mb-6">
@@ -247,6 +250,30 @@ export default function InstructorDashboard() {
           deltaPct={dash?.total_earnings_all ? 5 : 0}
           sparkline={[Number(dash.income_this_month || 0), Number(dash.total_earnings_all || 0)]}
         />
+      </div>
+
+      <div className="mb-6">
+        <Card hover className="p-4 sm:p-5 border border-[color:var(--border-subtle)] bg-token-surfaceCard/55">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <div className="text-[11px] font-semibold text-token-textMuted uppercase tracking-widest mb-2">
+                Bildiriş insight
+              </div>
+              <div className="text-sm font-semibold text-token-textMain">
+                Bu gün {smsInsight.sentTodayCount} tələbəyə SMS göndərildi
+              </div>
+              <div className="text-xs text-token-textMuted mt-1">
+                Cavab / çatdırılma problemi: {smsInsight.failedCount}
+              </div>
+            </div>
+            <div className="shrink-0 rounded-2xl border border-[color:var(--border-subtle)] bg-token-surfaceMain/40 px-3 py-2">
+              <div className="text-xs font-semibold text-primary tabular-nums">
+                {smsInsight.sentTodayCount}
+              </div>
+              <div className="text-[10px] text-token-textMuted">bugün</div>
+            </div>
+          </div>
+        </Card>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-6">
         <KpiCard
