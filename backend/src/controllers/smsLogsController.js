@@ -136,6 +136,7 @@ const getSmsLogs = async (req, res) => {
         reason,
         package_type: pkg,
         created_at: r.created_at,
+        createdAt: r.created_at,
       };
     });
 
