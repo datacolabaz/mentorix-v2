@@ -2,48 +2,6 @@ const db = require('../utils/db');
 const { recomputeInstructorUsage } = require('../services/resourceUsageService');
 const { sendRawSms } = require('../services/smsService');
 
-function readProviderCode(json) {
-  const j = json;
-  const candidates = [
-    j?.response?.head?.responsecode,
-    j?.response?.head?.responseCode,
-    j?.response?.responsecode,
-    j?.response?.responseCode,
-    j?.responsecode,
-    j?.responseCode,
-  ];
-  for (const c of candidates) {
-    if (c === undefined || c === null || c === '') continue;
-    const n = typeof c === 'number' ? c : parseInt(String(c).trim(), 10);
-    if (Number.isFinite(n)) return n;
-  }
-  return null;
-}
-
-function interpretSendRawSms(raw) {
-  if (!raw || raw.ok !== true) return { ok: false, status: 'failed', reason: raw?.error || 'HTTP request failed' };
-  const j = raw.json;
-  if (!j) return { ok: false, status: 'failed', reason: 'Empty provider JSON' };
-
-  const rc = readProviderCode(j);
-  if (rc != null && rc !== 0 && rc !== 200) {
-    return { ok: false, status: 'failed', reason: `SMS provider responsecode: ${rc}` };
-  }
-  if (j.error || j.response?.error) {
-    return { ok: false, status: 'failed', reason: j.error || j.response?.error || 'Provider error' };
-  }
-  const statusRaw = j.response?.status ?? j.status ?? null;
-  if (statusRaw != null) {
-    const status = String(statusRaw).trim().toLowerCase();
-    const bad = new Set(['failed', 'error', 'rejected', 'invalid', 'denied']);
-    if (bad.has(status)) return { ok: false, status: 'failed', reason: `SMS provider status: ${String(statusRaw)}` };
-    const okSet = new Set(['sent', 'success', 'ok', 'queued', 'accepted', 'submitted', '0', '200']);
-    if (okSet.has(status)) return { ok: true, status: String(statusRaw), reason: null };
-    return { ok: true, status: String(statusRaw), reason: null };
-  }
-  return { ok: true, status: 'sent', reason: null };
-}
-
 const getAdminNotifications = async (req, res) => {
   try {
     const { rows } = await db.query(
@@ -257,22 +215,14 @@ const quickInstructorNotification = async (req, res) => {
     // Send SMS and write logs. sms_used is already reserved above.
     for (const s of studentsWithPhones) {
       const raw = await sendRawSms(s.phone, msg);
-      const interpreted = interpretSendRawSms(raw);
-      const statusStr = interpreted.ok ? String(interpreted.status || 'sent') : `failed:${interpreted.reason || 'unknown'}`;
+      const statusRaw = raw?.json?.response?.status ?? raw?.json?.status ?? null;
+      const status = statusRaw != null ? String(statusRaw) : raw?.ok ? 'sent' : 'failed';
 
-      try {
-        await db.query(
-          `INSERT INTO sms_logs (instructor_id, phone, message, status, http_status, msisdn, provider)
-           VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-          [instructorId, s.phone, msg, statusStr, raw?.httpStatus ?? null, raw?.msisdn ?? null, raw?.json ?? null],
-        );
-      } catch {
-        await db.query(
-          `INSERT INTO sms_logs (instructor_id, phone, message, status)
-           VALUES ($1, $2, $3, $4)`,
-          [instructorId, s.phone, msg, statusStr],
-        );
-      }
+      await db.query(
+        `INSERT INTO sms_logs (instructor_id, phone, message, status)
+         VALUES ($1, $2, $3, $4)`,
+        [instructorId, s.phone, msg, status || (raw?.ok ? 'sent' : 'failed')],
+      );
     }
 
     return res.json({ success: true, method: 'sms', sent: count });
