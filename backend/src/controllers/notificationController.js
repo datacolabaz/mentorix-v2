@@ -178,10 +178,17 @@ const getInstructorSmsHistory = async (req, res) => {
       const st = String(r.status || '').trim();
       const isFailed = st === 'failed' || st.toLowerCase().startsWith('failed:');
       const reason = isFailed && st.includes(':') ? st.split(':').slice(1).join(':').trim() : null;
+      const msg = String(r.message || '').trim();
+      const otpLike =
+        /\\bkodunuz\\b/i.test(msg) ||
+        /^mentorix\\s*:\\s*\\d{3,8}\\b/i.test(msg) ||
+        /\\bOTP\\b/i.test(msg);
+      const type = otpLike ? 'otp' : 'payment_reminder';
       return {
         id: r.id,
         phone: r.phone,
         message: r.message,
+        type,
         status: isFailed ? 'failed' : st || 'sent',
         reason,
         createdAt: r.sent_at,
