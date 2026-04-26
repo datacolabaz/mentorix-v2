@@ -57,12 +57,40 @@ export default function InstructorNotifications() {
   const [smsFilter, setSmsFilter] = useState('today') // today | week | failed | scheduled
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [detailsItem, setDetailsItem] = useState(null)
+  const [smsLoading, setSmsLoading] = useState(false)
+  const [smsErr, setSmsErr] = useState(null)
+  const [smsDbItems, setSmsDbItems] = useState([])
 
   useEffect(() => {
     try {
       localStorage.setItem(SEEN_KEY, String(Date.now()))
     } catch {}
   }, [])
+
+  useEffect(() => {
+    if (tab !== 'sms') return
+    let cancelled = false
+    setSmsLoading(true)
+    setSmsErr(null)
+    api
+      .get('/notifications/instructor/sms-history?limit=120')
+      .then((d) => {
+        if (cancelled) return
+        setSmsDbItems(Array.isArray(d.items) ? d.items : [])
+      })
+      .catch((e) => {
+        if (!cancelled) {
+          setSmsDbItems([])
+          setSmsErr(e?.message || 'SMS tarixçə yüklənmədi')
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setSmsLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [tab])
 
   useEffect(() => {
     let cancelled = false
@@ -104,7 +132,8 @@ export default function InstructorNotifications() {
 
   const smsRows = useMemo(() => {
     const now = new Date()
-    const list = Array.isArray(smsHistoryMock) ? smsHistoryMock : []
+    const base = Array.isArray(smsDbItems) && smsDbItems.length ? smsDbItems : smsHistoryMock
+    const list = Array.isArray(base) ? base : []
     const filtered = list.filter((x) => {
       if (smsFilter === 'today') return isToday(x.createdAt, now)
       if (smsFilter === 'week') return isThisWeek(x.createdAt, now)
@@ -113,14 +142,17 @@ export default function InstructorNotifications() {
       return true
     })
     return filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-  }, [smsFilter])
+  }, [smsFilter, smsDbItems])
 
   const smsSummary = useMemo(() => {
-    const list = Array.isArray(smsHistoryMock) ? smsHistoryMock : []
+    const base = Array.isArray(smsDbItems) && smsDbItems.length ? smsDbItems : smsHistoryMock
+    const list = Array.isArray(base) ? base : []
     const sent = list.filter((x) => x.status === 'sent')
     const failed = list.filter((x) => x.status === 'failed')
     const scheduled = list.filter((x) => x.status === 'scheduled')
-    const uniq = new Set(list.flatMap((x) => (Array.isArray(x.students) ? x.students : [])))
+    const uniq = new Set(
+      list.flatMap((x) => (Array.isArray(x.students) ? x.students : x.phone ? [x.phone] : []))
+    )
     return {
       totalMessages: list.length,
       totalRecipients: uniq.size,
@@ -128,7 +160,7 @@ export default function InstructorNotifications() {
       failed: failed.length,
       scheduled: scheduled.length,
     }
-  }, [])
+  }, [smsDbItems])
 
   const tabItems = useMemo(
     () => [
@@ -183,6 +215,15 @@ export default function InstructorNotifications() {
               <p className="text-xs text-token-textMuted mt-1">
                 Ödəniş xatırlatma mesajlarının göndərilmə statusu və qısa preview.
               </p>
+              {smsLoading ? (
+                <p className="text-xs text-token-textMuted mt-2">Tarixçə yüklənir…</p>
+              ) : smsErr ? (
+                <p className="text-xs text-amber-600 dark:text-amber-200/90 mt-2">{smsErr} (mock göstərilir)</p>
+              ) : smsDbItems.length ? (
+                <p className="text-xs text-token-textMuted mt-2">Mənbə: DB (sms_logs)</p>
+              ) : (
+                <p className="text-xs text-token-textMuted mt-2">Mənbə: mock</p>
+              )}
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <span className="inline-flex items-center gap-2 rounded-full border border-[color:var(--border-subtle)] bg-token-surfaceCard/50 px-3 py-1.5 text-[11px] text-token-textMain">
                   <span className="text-token-textMuted">SMS:</span>
@@ -239,6 +280,14 @@ export default function InstructorNotifications() {
                   </div>
                   <StatusBadge variant={detailsBadge}>{detailsLabel}</StatusBadge>
                 </div>
+                {detailsItem.status === 'failed' && detailsItem.reason ? (
+                  <div className="rounded-xl border border-rose-500/25 bg-rose-500/10 p-3">
+                    <p className="text-xs font-semibold text-rose-700 dark:text-rose-200/90 uppercase tracking-wider mb-2">
+                      Səbəb
+                    </p>
+                    <p className="text-sm text-token-textMain leading-relaxed">{detailsItem.reason}</p>
+                  </div>
+                ) : null}
                 <div className="rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceMain/40 p-3">
                   <p className="text-xs font-semibold text-token-textMuted uppercase tracking-wider mb-2">Tələbələr</p>
                   <p className="text-sm text-token-textMain leading-relaxed">
