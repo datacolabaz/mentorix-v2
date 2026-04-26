@@ -6,7 +6,7 @@ import Button from '../../components/common/Button'
 import FilterTabs from '../../components/common/FilterTabs'
 import NotificationCard from '../../components/notifications/NotificationCard'
 import StatusBadge from '../../components/common/StatusBadge'
-import { smsHistoryMock, isToday, isThisWeek } from '../../mock/smsHistory'
+import { isToday, isThisWeek } from '../../mock/smsHistory'
 
 const SEEN_KEY = 'mx_instructor_notifications_seen_at_v1'
 
@@ -76,7 +76,7 @@ export default function InstructorNotifications() {
     setSmsLoading(true)
     setSmsErr(null)
     api
-      .get('/notifications/instructor/sms-history?limit=120')
+      .get('/sms-logs?limit=200')
       .then((d) => {
         if (cancelled) return
         setSmsDbItems(Array.isArray(d.items) ? d.items : [])
@@ -101,8 +101,7 @@ export default function InstructorNotifications() {
   }, [tab, smsFilter, smsTypeTab, smsTypeFilter])
 
   const smsBaseList = useMemo(() => {
-    const base = Array.isArray(smsDbItems) && smsDbItems.length ? smsDbItems : smsHistoryMock
-    return Array.isArray(base) ? base : []
+    return Array.isArray(smsDbItems) ? smsDbItems : []
   }, [smsDbItems])
 
   // Keep the extra type filter aligned with the active type tab to avoid
@@ -331,11 +330,9 @@ export default function InstructorNotifications() {
               {smsLoading ? (
                 <p className="text-xs text-token-textMuted mt-2">Tarixçə yüklənir…</p>
               ) : smsErr ? (
-                <p className="text-xs text-amber-600 dark:text-amber-200/90 mt-2">{smsErr} (mock göstərilir)</p>
-              ) : smsDbItems.length ? (
-                <p className="text-xs text-token-textMuted mt-2">Mənbə: DB (sms_logs)</p>
+                <p className="text-xs text-amber-600 dark:text-amber-200/90 mt-2">{smsErr}</p>
               ) : (
-                <p className="text-xs text-token-textMuted mt-2">Mənbə: mock</p>
+                <p className="text-xs text-token-textMuted mt-2">Mənbə: sistem logları</p>
               )}
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <span className="inline-flex items-center gap-2 rounded-full border border-[color:var(--border-subtle)] bg-token-surfaceCard/50 px-3 py-1.5 text-[11px] text-token-textMain">
@@ -372,8 +369,12 @@ export default function InstructorNotifications() {
           {!smsRows.length ? (
             <Card className="p-8 sm:p-10 text-center">
               <div className="text-3xl mb-3">📭</div>
-              <div className="text-sm font-semibold text-token-textMain">Bu filter üçün SMS yoxdur</div>
-              <p className="text-xs text-token-textMuted mt-1">Filteri dəyişin və ya yeni SMS göndərin.</p>
+              <div className="text-sm font-semibold text-token-textMain">
+                {smsErr ? 'SMS tarixçəsi yüklənmədi' : 'Bu filter üçün SMS yoxdur'}
+              </div>
+              <p className="text-xs text-token-textMuted mt-1">
+                {smsErr ? 'Bir az sonra yenidən yoxlayın.' : 'Filteri dəyişin və ya yeni SMS göndərin.'}
+              </p>
             </Card>
           ) : (
             <div className="space-y-3">

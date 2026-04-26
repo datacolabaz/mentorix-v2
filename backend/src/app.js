@@ -35,6 +35,7 @@ app.use('/api/teacher', require('./routes/teacher'));
 app.use('/api/instructor', require('./routes/instructor'));
 app.use('/api/tasks', require('./routes/tasks'));
 app.use('/api/notifications', require('./routes/notifications'));
+app.use('/api/sms-logs', require('./routes/smsLogs'));
 app.use('/api/admin', require('./routes/admin'));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
