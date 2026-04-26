@@ -203,7 +203,8 @@ const getInstructorSmsHistory = async (req, res) => {
         /\\bkodunuz\\b/i.test(msg) ||
         /^mentorix\\s*:\\s*\\d{3,8}\\b/i.test(msg) ||
         /\\bOTP\\b/i.test(msg);
-      const type = kind === 'otp' || otpLike ? 'otp' : 'payment_reminder';
+      const pinLike = /\\bPIN\\b/i.test(msg) || /OTP\\s*yox/i.test(msg) || /daimi\\s+Mentorix\\s+giriş\\s+PIN/i.test(msg);
+      const type = kind === 'otp' || otpLike || pinLike ? 'otp' : 'payment_reminder';
       return {
         id: r.id,
         phone: r.phone,

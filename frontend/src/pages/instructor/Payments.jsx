@@ -7,6 +7,8 @@ import ListSkeleton from '../../components/common/ListSkeleton'
 import Modal from '../../components/common/Modal'
 import { useToast } from '../../components/common/Toast'
 import useUiStore from '../../hooks/useUi'
+import Tooltip from '../../components/common/Tooltip'
+import { formatAgoShort, smsHistoryMock } from '../../mock/smsHistory'
 
 function formatAzn(n) {
   const x = Number(n)
@@ -55,6 +57,48 @@ export default function InstructorPayments() {
   const [adjustSaving, setAdjustSaving] = useState(false)
   const toast = useToast()
   const theme = useUiStore((s) => s.theme)
+  const [smsItems, setSmsItems] = useState([])
+  const [smsItemsErr, setSmsItemsErr] = useState(null)
+
+  useEffect(() => {
+    let cancelled = false
+    setSmsItemsErr(null)
+    api
+      .get('/notifications/instructor/sms-history?limit=200')
+      .then((d) => {
+        if (cancelled) return
+        setSmsItems(Array.isArray(d.items) ? d.items : [])
+      })
+      .catch((e) => {
+        if (!cancelled) {
+          setSmsItems([])
+          setSmsItemsErr(e?.message || 'SMS tarixçə yüklənmədi')
+        }
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const smsByPhone = useMemo(() => {
+    const norm = (v) => String(v || '').replace(/\\D/g, '')
+    const map = new Map()
+    const base = Array.isArray(smsItems) && smsItems.length ? smsItems : smsHistoryMock
+    for (const item of base || []) {
+      const p = norm(item.phone)
+      if (!p) continue
+      const prev = map.get(p)
+      if (!prev) map.set(p, { otp: null, payment: null })
+      const slot = map.get(p)
+      const t = String(item.type || 'payment_reminder')
+      const bucket = t === 'otp' ? 'otp' : 'payment'
+      const prevItem = slot[bucket]
+      if (!prevItem || new Date(item.createdAt).getTime() > new Date(prevItem.createdAt).getTime()) {
+        slot[bucket] = item
+      }
+    }
+    return map
+  }, [smsItems])
 
   const load = useCallback(async () => {
     setErr(null)
@@ -401,6 +445,61 @@ export default function InstructorPayments() {
                               Sahə: <span className="text-token-textMain">{s.track_subject_name || '—'}</span>
                               {s.track_group_name ? <span> · {s.track_group_name}</span> : null}
                             </div>
+                          <div className="text-[11px] text-token-textMuted mt-1 space-y-1">
+                            {smsItemsErr ? (
+                              <span className="text-amber-600 dark:text-amber-200/90">{smsItemsErr} (mock göstərilir)</span>
+                            ) : null}
+                            {(() => {
+                              const norm = (v) => String(v || '').replace(/\\D/g, '')
+                              const p = norm(s.phone)
+                              const pack = smsByPhone.get(p) || { otp: null, payment: null }
+                              const renderLine = (label, item, tone) => {
+                                if (!item) return (
+                                  <span className="inline-flex items-center gap-2">
+                                    <span className="text-token-textMuted">{label}:</span>
+                                    <span className="text-token-textMuted">SMS yoxdur</span>
+                                  </span>
+                                )
+                                const when = formatAgoShort(item.createdAt)
+                                const status =
+                                  item.status === 'failed'
+                                    ? { label: 'Alınmadı', cls: 'text-rose-600 dark:text-rose-300' }
+                                    : item.status === 'scheduled'
+                                      ? { label: 'Plan', cls: 'text-amber-600 dark:text-amber-200/90' }
+                                      : { label: 'Göndərildi', cls: 'text-emerald-600 dark:text-emerald-200/90' }
+                                const icon = tone === 'otp' ? '🔐' : '💰'
+                                return (
+                                  <Tooltip
+                                    content={
+                                      <div className="space-y-1">
+                                        <div className="flex items-center justify-between gap-2">
+                                          <span className="text-[11px] font-semibold text-token-textMain">{label}</span>
+                                          <span className={['text-[10px] font-semibold', status.cls].join(' ')}>{status.label}</span>
+                                        </div>
+                                        <div className="text-[10px] text-token-textMuted">{new Date(item.createdAt).toLocaleString('az-AZ')}</div>
+                                        {item.reason ? (
+                                          <div className="text-[10px] text-rose-700 dark:text-rose-200/90">Səbəb: {String(item.reason)}</div>
+                                        ) : null}
+                                        <div className="text-[11px] text-token-textMain leading-snug">{String(item.message || '—')}</div>
+                                      </div>
+                                    }
+                                  >
+                                    <span className="inline-flex items-center gap-2 cursor-default">
+                                      <span className="text-token-textMuted">{icon} {label}:</span>
+                                      <span className="text-token-textMain font-semibold">{when}</span>
+                                      <span className={['text-[10px] font-semibold', status.cls].join(' ')}>· {status.label}</span>
+                                    </span>
+                                  </Tooltip>
+                                )
+                              }
+                              return (
+                                <>
+                                  {renderLine('Ödəniş SMS', pack.payment, 'payment')}
+                                  {renderLine('PIN/OTP SMS', pack.otp, 'otp')}
+                                </>
+                              )
+                            })()}
+                          </div>
                           </div>
 
                           <div className="flex flex-col sm:items-end gap-2 shrink-0">
