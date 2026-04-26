@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import axios from 'axios'
 import api from '../../lib/api'
 import Card from '../../components/common/Card'
 import Modal from '../../components/common/Modal'
@@ -75,16 +76,25 @@ export default function InstructorNotifications() {
     let cancelled = false
     setSmsLoading(true)
     setSmsErr(null)
-    api
-      .get('/sms-logs?limit=200')
+    axios
+      .get('/api/sms-logs', {
+        params: { limit: 200 },
+        headers: { Authorization: `Bearer ${localStorage.getItem('mx_token') || ''}` },
+      })
       .then((d) => {
         if (cancelled) return
-        setSmsDbItems(Array.isArray(d.items) ? d.items : [])
+        const rawItems = Array.isArray(d?.data?.items) ? d.data.items : []
+        const mapped = rawItems.map((x) => ({
+          ...x,
+          createdAt: x.createdAt || x.created_at || x.createdAt === null ? x.createdAt : x.created_at,
+        }))
+        setSmsDbItems(mapped)
       })
       .catch((e) => {
         if (!cancelled) {
           setSmsDbItems([])
-          setSmsErr(e?.message || 'SMS tarixçə yüklənmədi')
+          // Don't leak raw "Request failed with status code 404" into UI
+          setSmsErr('SMS tarixçəsi hazırda əlçatan deyil')
         }
       })
       .finally(() => {
@@ -196,7 +206,11 @@ export default function InstructorNotifications() {
     const failed = smsBaseList.filter((x) => x.status === 'failed')
     const scheduled = smsBaseList.filter((x) => x.status === 'scheduled')
     const uniq = new Set(
-      smsBaseList.flatMap((x) => (Array.isArray(x.students) ? x.students : x.phone ? [x.phone] : []))
+      smsBaseList.flatMap((x) => {
+        if (x.student_id) return [x.student_id]
+        if (x.student_name) return [x.student_name]
+        return x.phone ? [x.phone] : []
+      })
     )
     return {
       totalMessages: smsBaseList.length,
@@ -263,7 +277,7 @@ export default function InstructorNotifications() {
     detailsStatus === 'failed' ? 'Alınmadı' : detailsStatus === 'scheduled' ? 'Planlaşdırılıb' : 'Göndərildi'
 
   return (
-    <div className="p-4 sm:p-6 min-w-0">
+    <div className="p-4 sm:p-6 min-w-0 flex flex-col gap-6">
       <div className="mb-6">
         <h1 className="font-display font-bold text-2xl break-words">Bildirişlər</h1>
         <p className="text-token-textMuted text-sm mt-1">SMS və saxlama limitləri</p>
@@ -315,25 +329,17 @@ export default function InstructorNotifications() {
         </div>
       </Card>
 
-      <div className="mb-4">
-        <FilterTabs tabs={tabItems} activeId={tab} onChange={(id) => setTab(id)} />
-      </div>
+      <FilterTabs tabs={tabItems} activeId={tab} onChange={(id) => setTab(id)} />
 
       {tab === 'sms' ? (
-        <div className="space-y-4">
+        <div className="space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="min-w-0">
               <h2 className="font-display font-bold text-base text-token-textMain">SMS tarixçəsi</h2>
               <p className="text-xs text-token-textMuted mt-1">
                 Ödəniş xatırlatma mesajlarının göndərilmə statusu və qısa preview.
               </p>
-              {smsLoading ? (
-                <p className="text-xs text-token-textMuted mt-2">Tarixçə yüklənir…</p>
-              ) : smsErr ? (
-                <p className="text-xs text-amber-600 dark:text-amber-200/90 mt-2">{smsErr}</p>
-              ) : (
-                <p className="text-xs text-token-textMuted mt-2">Mənbə: sistem logları</p>
-              )}
+              {smsLoading ? <p className="text-xs text-token-textMuted mt-2">Tarixçə yüklənir…</p> : null}
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <span className="inline-flex items-center gap-2 rounded-full border border-[color:var(--border-subtle)] bg-token-surfaceCard/50 px-3 py-1.5 text-[11px] text-token-textMain">
                   <span className="text-token-textMuted">SMS:</span>
