@@ -55,6 +55,8 @@ export default function InstructorNotifications() {
   const [nowTick, setNowTick] = useState(Date.now())
   const [tab, setTab] = useState('all') // all | sms
   const [smsFilter, setSmsFilter] = useState('today') // today | week | failed | scheduled
+  const [smsTypeTab, setSmsTypeTab] = useState('payment') // payment | otp
+  const [smsTypeFilter, setSmsTypeFilter] = useState('payment') // all | payment | otp
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [detailsItem, setDetailsItem] = useState(null)
   const [smsLoading, setSmsLoading] = useState(false)
@@ -141,8 +143,19 @@ export default function InstructorNotifications() {
       if (smsFilter === 'scheduled') return x.status === 'scheduled'
       return true
     })
-    return filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-  }, [smsFilter, smsDbItems])
+    const typed = filtered.filter((x) => {
+      const t = String(x.type || 'payment_reminder')
+      if (smsTypeTab === 'otp') return t === 'otp'
+      return t !== 'otp'
+    })
+    const byExtraFilter = typed.filter((x) => {
+      const t = String(x.type || 'payment_reminder')
+      if (smsTypeFilter === 'all') return true
+      if (smsTypeFilter === 'otp') return t === 'otp'
+      return t !== 'otp'
+    })
+    return byExtraFilter.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+  }, [smsFilter, smsDbItems, smsTypeTab, smsTypeFilter])
 
   const smsSummary = useMemo(() => {
     const base = Array.isArray(smsDbItems) && smsDbItems.length ? smsDbItems : smsHistoryMock
@@ -161,6 +174,23 @@ export default function InstructorNotifications() {
       scheduled: scheduled.length,
     }
   }, [smsDbItems])
+
+  const smsTypeTabs = useMemo(
+    () => [
+      { id: 'payment', label: 'Ödəniş mesajları' },
+      { id: 'otp', label: 'Sistem mesajları (OTP)' },
+    ],
+    []
+  )
+
+  const smsTypeFilters = useMemo(
+    () => [
+      { id: 'all', label: 'Hamısı' },
+      { id: 'payment', label: 'Ödəniş' },
+      { id: 'otp', label: 'OTP' },
+    ],
+    []
+  )
 
   const tabItems = useMemo(
     () => [
@@ -249,6 +279,13 @@ export default function InstructorNotifications() {
             </div>
           </div>
 
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <FilterTabs tabs={smsTypeTabs} activeId={smsTypeTab} onChange={(id) => setSmsTypeTab(id)} />
+            <div className="sm:shrink-0">
+              <FilterTabs tabs={smsTypeFilters} activeId={smsTypeFilter} onChange={(id) => setSmsTypeFilter(id)} />
+            </div>
+          </div>
+
           {!smsRows.length ? (
             <Card className="p-8 sm:p-10 text-center">
               <div className="text-3xl mb-3">📭</div>
@@ -273,7 +310,9 @@ export default function InstructorNotifications() {
               <div className="space-y-4 text-sm">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="font-semibold text-token-textMain">Ödəniş xatırlatma göndərildi</p>
+                    <p className="font-semibold text-token-textMain">
+                      {String(detailsItem.type || 'payment_reminder') === 'otp' ? 'PIN kod göndərildi' : 'Ödəniş xatırlatma göndərildi'}
+                    </p>
                     <p className="text-xs text-token-textMuted mt-1">
                       {new Date(detailsItem.createdAt).toLocaleString('az-AZ')}
                     </p>
