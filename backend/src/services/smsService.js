@@ -83,24 +83,13 @@ function interpretSmxmlSuccess(raw) {
   return { success: true, reason: null };
 }
 
-async function insertSmsLog({ instructorId, studentId, type, packageType, phone, message, status, httpStatus, msisdn, provider }) {
+async function insertSmsLog({ instructorId, phone, message, status, httpStatus, msisdn, provider }) {
   const safeStatus = String(status || 'unknown').slice(0, 20);
   try {
     await db.query(
-      `INSERT INTO sms_logs (instructor_id, student_id, type, package_type, phone, message, status, http_status, msisdn, provider, created_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())`,
-      [
-        instructorId ?? null,
-        studentId ?? null,
-        type ?? null,
-        packageType ?? null,
-        phone,
-        message,
-        status,
-        httpStatus ?? null,
-        msisdn ?? null,
-        provider ?? null,
-      ]
+      `INSERT INTO sms_logs (instructor_id, phone, message, status, http_status, msisdn, provider)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [instructorId, phone, message, status, httpStatus ?? null, msisdn ?? null, provider ?? null]
     );
   } catch {
     // Backward compatible if migration 036 hasn't been applied yet.
@@ -150,7 +139,7 @@ const sendRaw = async (phone, message) => {
   return { ok: res.ok, httpStatus: res.status, json, error: null, msisdn };
 };
 
-const sendSms = async ({ instructorId, studentId, type, packageType, phone, message }) => {
+const sendSms = async ({ instructorId, phone, message }) => {
   try {
     const raw = await sendRaw(phone, message);
     const interpreted = interpretSmxmlSuccess(raw);
@@ -159,9 +148,6 @@ const sendSms = async ({ instructorId, studentId, type, packageType, phone, mess
 
     await insertSmsLog({
       instructorId,
-      studentId,
-      type,
-      packageType,
       phone,
       message,
       status: logStatus,
@@ -192,23 +178,6 @@ const sendOtpSms = async (phone, code) => {
   const message = `Mentorix: ${code} kodunuz. 5 dəqiqə ərzində daxil edin.`;
   const raw = await sendRaw(phone, message);
   const interpreted = interpretSmxmlSuccess(raw);
-  const statusRaw = raw?.json?.response?.status ?? raw?.json?.status ?? null;
-  const logStatus = interpreted.success ? String(statusRaw ?? 'sent') : `failed:${interpreted.reason || 'unknown'}`;
-
-  // OTP is a system message; we still log it for history/debugging, but it must not consume instructor SMS quota.
-  await insertSmsLog({
-    instructorId: null,
-    studentId: null,
-    type: 'otp',
-    packageType: null,
-    phone,
-    message,
-    status: logStatus,
-    httpStatus: raw?.httpStatus,
-    msisdn: raw?.msisdn,
-    provider: { kind: 'otp', raw: raw?.json ?? null },
-  });
-
   return {
     success: interpreted.success,
     error: interpreted.success ? null : interpreted.reason,

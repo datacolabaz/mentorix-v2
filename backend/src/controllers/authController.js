@@ -90,9 +90,6 @@ async function deliverPermanentPinSms(user, cleanPhone, opts = {}) {
   const message = `Mentorix: Sizin daimi Mentorix giriş PIN-iniz: ${plain}. Növbəti girişlərdə yalnız bu 6 rəqəmi daxil edin (OTP yox). Kodu heç kəsə deməyin.`;
   const smsRes = await sendSms({
     instructorId: billingId || null,
-    studentId: user?.role === 'student' ? user.id : null,
-    type: 'otp',
-    packageType: null,
     phone: cleanPhone,
     message,
   });

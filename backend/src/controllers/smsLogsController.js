@@ -13,7 +13,7 @@ function normDigits(v) {
 function normalizeType(v) {
   const t = String(v || '').trim().toLowerCase();
   if (t === 'otp') return 'otp';
-  if (t === 'payment_reminder') return 'payment_reminder';
+  if (t === 'payment' || t === 'payment_reminder') return 'payment';
   return '';
 }
 
@@ -30,7 +30,7 @@ const getSmsLogs = async (req, res) => {
   try {
     const instructorId = req.user.id;
     const limit = clampLimit(req.query.limit);
-    const type = normalizeType(req.query.type); // payment_reminder | otp
+    const type = normalizeType(req.query.type); // payment | otp
     const status = normalizeStatus(req.query.status); // sent | failed | pending
     const date = String(req.query.date || '').trim(); // YYYY-MM-DD (optional)
 
@@ -60,7 +60,11 @@ const getSmsLogs = async (req, res) => {
 
     if (type) {
       params.push(type);
-      where.push(`LOWER(COALESCE(sl.type, '')) = $${params.length}`);
+      if (type === 'payment') {
+        where.push(`LOWER(COALESCE(sl.type, '')) IN ('payment', 'payment_reminder')`);
+      } else {
+        where.push(`LOWER(COALESCE(sl.type, '')) = $${params.length}`);
+      }
     }
 
     if (status) {
@@ -111,11 +115,15 @@ const getSmsLogs = async (req, res) => {
         /\bOTP\b/i.test(msg) ||
         /\bPIN\b/i.test(msg) ||
         /OTP\s*yox/i.test(msg);
-      const inferredType = otpLike ? 'otp' : 'payment_reminder';
+      const inferredType = otpLike ? 'otp' : 'payment';
 
       const stRaw = String(r.status || '').trim();
       const isFailed = stRaw === 'failed' || stRaw.toLowerCase().startsWith('failed:');
       const reason = isFailed && stRaw.includes(':') ? stRaw.split(':').slice(1).join(':').trim() : null;
+
+      const pkgRaw = r.package_type ? String(r.package_type) : '';
+      const pkg =
+        pkgRaw === '8_lessons' || pkgRaw === '8' ? '8' : pkgRaw === '12_lessons' || pkgRaw === '12' ? '12' : pkgRaw === 'monthly' ? 'monthly' : null;
 
       return {
         id: r.id,
@@ -126,7 +134,7 @@ const getSmsLogs = async (req, res) => {
         message: r.message,
         status: isFailed ? 'failed' : stRaw || 'sent',
         reason,
-        package_type: r.package_type || null,
+        package_type: pkg,
         created_at: r.created_at,
       };
     });
