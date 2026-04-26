@@ -94,6 +94,20 @@ export default function InstructorNotifications() {
     }
   }, [tab])
 
+  const smsBaseList = useMemo(() => {
+    const base = Array.isArray(smsDbItems) && smsDbItems.length ? smsDbItems : smsHistoryMock
+    return Array.isArray(base) ? base : []
+  }, [smsDbItems])
+
+  // Keep the extra type filter aligned with the active type tab to avoid
+  // "empty" state when a user selects conflicting controls (e.g. OTP tab + Ödəniş filter).
+  useEffect(() => {
+    setSmsTypeFilter((prev) => {
+      if (prev === 'all') return prev
+      return smsTypeTab === 'otp' ? 'otp' : 'payment'
+    })
+  }, [smsTypeTab])
+
   useEffect(() => {
     let cancelled = false
     api
@@ -134,9 +148,7 @@ export default function InstructorNotifications() {
 
   const smsRows = useMemo(() => {
     const now = new Date()
-    const base = Array.isArray(smsDbItems) && smsDbItems.length ? smsDbItems : smsHistoryMock
-    const list = Array.isArray(base) ? base : []
-    const filtered = list.filter((x) => {
+    const filtered = smsBaseList.filter((x) => {
       if (smsFilter === 'today') return isToday(x.createdAt, now)
       if (smsFilter === 'week') return isThisWeek(x.createdAt, now)
       if (smsFilter === 'failed') return x.status === 'failed'
@@ -155,25 +167,23 @@ export default function InstructorNotifications() {
       return t !== 'otp'
     })
     return byExtraFilter.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-  }, [smsFilter, smsDbItems, smsTypeTab, smsTypeFilter])
+  }, [smsFilter, smsBaseList, smsTypeTab, smsTypeFilter])
 
   const smsSummary = useMemo(() => {
-    const base = Array.isArray(smsDbItems) && smsDbItems.length ? smsDbItems : smsHistoryMock
-    const list = Array.isArray(base) ? base : []
-    const sent = list.filter((x) => x.status === 'sent')
-    const failed = list.filter((x) => x.status === 'failed')
-    const scheduled = list.filter((x) => x.status === 'scheduled')
+    const sent = smsBaseList.filter((x) => x.status === 'sent')
+    const failed = smsBaseList.filter((x) => x.status === 'failed')
+    const scheduled = smsBaseList.filter((x) => x.status === 'scheduled')
     const uniq = new Set(
-      list.flatMap((x) => (Array.isArray(x.students) ? x.students : x.phone ? [x.phone] : []))
+      smsBaseList.flatMap((x) => (Array.isArray(x.students) ? x.students : x.phone ? [x.phone] : []))
     )
     return {
-      totalMessages: list.length,
+      totalMessages: smsBaseList.length,
       totalRecipients: uniq.size,
       sent: sent.length,
       failed: failed.length,
       scheduled: scheduled.length,
     }
-  }, [smsDbItems])
+  }, [smsBaseList])
 
   const smsTypeTabs = useMemo(
     () => [
@@ -202,18 +212,22 @@ export default function InstructorNotifications() {
 
   const smsTabs = useMemo(() => {
     const now = new Date()
-    const list = Array.isArray(smsHistoryMock) ? smsHistoryMock : []
-    const today = list.filter((x) => isToday(x.createdAt, now)).length
-    const week = list.filter((x) => isThisWeek(x.createdAt, now)).length
-    const failed = list.filter((x) => x.status === 'failed').length
-    const scheduled = list.filter((x) => x.status === 'scheduled').length
+    const scope = smsBaseList.filter((x) => {
+      const t = String(x.type || 'payment_reminder')
+      if (smsTypeTab === 'otp') return t === 'otp'
+      return t !== 'otp'
+    })
+    const today = scope.filter((x) => isToday(x.createdAt, now)).length
+    const week = scope.filter((x) => isThisWeek(x.createdAt, now)).length
+    const failed = scope.filter((x) => x.status === 'failed').length
+    const scheduled = scope.filter((x) => x.status === 'scheduled').length
     return [
       { id: 'today', label: 'Bu gün', count: today },
       { id: 'week', label: 'Bu həftə', count: week },
       { id: 'failed', label: 'Uğursuz', count: failed },
       { id: 'scheduled', label: 'Planlaşdırılıb', count: scheduled },
     ]
-  }, [])
+  }, [smsBaseList, smsTypeTab])
 
   const openDetails = (item) => {
     setDetailsItem(item)
