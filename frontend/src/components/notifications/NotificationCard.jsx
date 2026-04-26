@@ -2,7 +2,7 @@ import StatusBadge from '../common/StatusBadge'
 
 const STATUS_MAP = {
   sent: { label: 'Göndərildi', badge: 'paid' },
-  failed: { label: 'Uğursuz', badge: 'danger' },
+  failed: { label: 'Alınmadı', badge: 'danger' },
   scheduled: { label: 'Planlaşdırılıb', badge: 'due' },
 }
 
