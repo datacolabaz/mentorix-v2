@@ -178,20 +178,6 @@ const sendOtpSms = async (phone, code) => {
   const message = `Mentorix: ${code} kodunuz. 5 dəqiqə ərzində daxil edin.`;
   const raw = await sendRaw(phone, message);
   const interpreted = interpretSmxmlSuccess(raw);
-  const statusRaw = raw?.json?.response?.status ?? raw?.json?.status ?? null;
-  const logStatus = interpreted.success ? String(statusRaw ?? 'sent') : `failed:${interpreted.reason || 'unknown'}`;
-
-  // OTP is a system message; we still log it for history/debugging, but it must not consume instructor SMS quota.
-  await insertSmsLog({
-    instructorId: null,
-    phone,
-    message,
-    status: logStatus,
-    httpStatus: raw?.httpStatus,
-    msisdn: raw?.msisdn,
-    provider: { kind: 'otp', raw: raw?.json ?? null },
-  });
-
   return {
     success: interpreted.success,
     error: interpreted.success ? null : interpreted.reason,
