@@ -2,48 +2,6 @@ const db = require('../utils/db');
 const { recomputeInstructorUsage } = require('../services/resourceUsageService');
 const { sendRawSms } = require('../services/smsService');
 
-function readProviderCode(json) {
-  const j = json;
-  const candidates = [
-    j?.response?.head?.responsecode,
-    j?.response?.head?.responseCode,
-    j?.response?.responsecode,
-    j?.response?.responseCode,
-    j?.responsecode,
-    j?.responseCode,
-  ];
-  for (const c of candidates) {
-    if (c === undefined || c === null || c === '') continue;
-    const n = typeof c === 'number' ? c : parseInt(String(c).trim(), 10);
-    if (Number.isFinite(n)) return n;
-  }
-  return null;
-}
-
-function interpretSendRawSms(raw) {
-  if (!raw || raw.ok !== true) return { ok: false, status: 'failed', reason: raw?.error || 'HTTP request failed' };
-  const j = raw.json;
-  if (!j) return { ok: false, status: 'failed', reason: 'Empty provider JSON' };
-
-  const rc = readProviderCode(j);
-  if (rc != null && rc !== 0 && rc !== 200) {
-    return { ok: false, status: 'failed', reason: `SMS provider responsecode: ${rc}` };
-  }
-  if (j.error || j.response?.error) {
-    return { ok: false, status: 'failed', reason: j.error || j.response?.error || 'Provider error' };
-  }
-  const statusRaw = j.response?.status ?? j.status ?? null;
-  if (statusRaw != null) {
-    const status = String(statusRaw).trim().toLowerCase();
-    const bad = new Set(['failed', 'error', 'rejected', 'invalid', 'denied']);
-    if (bad.has(status)) return { ok: false, status: 'failed', reason: `SMS provider status: ${String(statusRaw)}` };
-    const okSet = new Set(['sent', 'success', 'ok', 'queued', 'accepted', 'submitted', '0', '200']);
-    if (okSet.has(status)) return { ok: true, status: String(statusRaw), reason: null };
-    return { ok: true, status: String(statusRaw), reason: null };
-  }
-  return { ok: true, status: 'sent', reason: null };
-}
-
 const getAdminNotifications = async (req, res) => {
   try {
     const { rows } = await db.query(
@@ -145,81 +103,6 @@ const getStudentNotifications = async (req, res) => {
       [req.user.id],
     );
     res.json({ success: true, notifications: rows });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-};
-
-const getInstructorSmsHistory = async (req, res) => {
-  try {
-    const instructorId = req.user.id;
-    const limit = Math.min(200, Math.max(20, Number(req.query.limit || 50) || 50));
-    const statusFilter = String(req.query.status || '').trim().toLowerCase(); // sent | failed | scheduled | (empty)
-
-    // Include:
-    // - direct instructor sends (instructor_id = $1)
-    // - OTP/system messages for this instructor's active students/parents (phone match)
-    const where = [
-      `(instructor_id = $1 OR regexp_replace(phone, '\\\\D', '', 'g') IN (
-        SELECT regexp_replace(u.phone, '\\\\D', '', 'g')
-        FROM users u
-        JOIN enrollments e ON e.student_id = u.id
-        WHERE e.instructor_id = $1
-          AND COALESCE(NULLIF(LOWER(TRIM(e.status)), ''), 'active') = 'active'
-          AND u.phone IS NOT NULL
-        UNION
-        SELECT regexp_replace(sp.parent_phone, '\\\\D', '', 'g')
-        FROM student_profiles sp
-        JOIN enrollments e2 ON e2.student_id = sp.user_id
-        WHERE e2.instructor_id = $1
-          AND COALESCE(NULLIF(LOWER(TRIM(e2.status)), ''), 'active') = 'active'
-          AND sp.parent_phone IS NOT NULL
-      ))`,
-    ];
-    const params = [instructorId];
-    if (statusFilter) {
-      // We store failures as "failed:<reason>"
-      if (statusFilter === 'failed') where.push(`status ILIKE 'failed:%' OR status = 'failed'`);
-      else where.push(`LOWER(TRIM(status)) = $${params.length + 1}`);
-      if (statusFilter !== 'failed') params.push(statusFilter);
-    }
-
-    const { rows } = await db.query(
-      `SELECT id, phone, message, status, http_status, msisdn, provider, sent_at
-       FROM sms_logs
-       WHERE ${where.join(' AND ')}
-       ORDER BY sent_at DESC
-       LIMIT ${limit}`,
-      params
-    );
-
-    const items = (rows || []).map((r) => {
-      const st = String(r.status || '').trim();
-      const isFailed = st === 'failed' || st.toLowerCase().startsWith('failed:');
-      const reason = isFailed && st.includes(':') ? st.split(':').slice(1).join(':').trim() : null;
-      const msg = String(r.message || '').trim();
-      const kind = r.provider?.kind ? String(r.provider.kind) : null;
-      const otpLike =
-        /\\bkodunuz\\b/i.test(msg) ||
-        /^mentorix\\s*:\\s*\\d{3,8}\\b/i.test(msg) ||
-        /\\bOTP\\b/i.test(msg);
-      const pinLike = /\\bPIN\\b/i.test(msg) || /OTP\\s*yox/i.test(msg) || /daimi\\s+Mentorix\\s+giriş\\s+PIN/i.test(msg);
-      const type = kind === 'otp' || otpLike || pinLike ? 'otp' : 'payment_reminder';
-      return {
-        id: r.id,
-        phone: r.phone,
-        message: r.message,
-        type,
-        status: isFailed ? 'failed' : st || 'sent',
-        reason,
-        createdAt: r.sent_at,
-        httpStatus: r.http_status ?? null,
-        msisdn: r.msisdn ?? null,
-        provider: r.provider ?? null,
-      };
-    });
-
-    return res.json({ success: true, items });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -332,22 +215,14 @@ const quickInstructorNotification = async (req, res) => {
     // Send SMS and write logs. sms_used is already reserved above.
     for (const s of studentsWithPhones) {
       const raw = await sendRawSms(s.phone, msg);
-      const interpreted = interpretSendRawSms(raw);
-      const statusStr = interpreted.ok ? String(interpreted.status || 'sent') : `failed:${interpreted.reason || 'unknown'}`;
+      const statusRaw = raw?.json?.response?.status ?? raw?.json?.status ?? null;
+      const status = statusRaw != null ? String(statusRaw) : raw?.ok ? 'sent' : 'failed';
 
-      try {
-        await db.query(
-          `INSERT INTO sms_logs (instructor_id, phone, message, status, http_status, msisdn, provider)
-           VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-          [instructorId, s.phone, msg, statusStr, raw?.httpStatus ?? null, raw?.msisdn ?? null, raw?.json ?? null],
-        );
-      } catch {
-        await db.query(
-          `INSERT INTO sms_logs (instructor_id, phone, message, status)
-           VALUES ($1, $2, $3, $4)`,
-          [instructorId, s.phone, msg, statusStr],
-        );
-      }
+      await db.query(
+        `INSERT INTO sms_logs (instructor_id, phone, message, status)
+         VALUES ($1, $2, $3, $4)`,
+        [instructorId, s.phone, msg, status || (raw?.ok ? 'sent' : 'failed')],
+      );
     }
 
     return res.json({ success: true, method: 'sms', sent: count });
@@ -359,7 +234,6 @@ const quickInstructorNotification = async (req, res) => {
 module.exports = {
   getAdminNotifications,
   getInstructorNotifications,
-  getInstructorSmsHistory,
   getStudentNotifications,
   quickInstructorNotification,
 };

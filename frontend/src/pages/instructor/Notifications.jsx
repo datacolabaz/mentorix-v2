@@ -52,17 +52,67 @@ export default function InstructorNotifications() {
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
   const [fetchedAt, setFetchedAt] = useState(null)
-  const [nowTick, setNowTick] = useState(Date.now())
   const [tab, setTab] = useState('all') // all | sms
   const [smsFilter, setSmsFilter] = useState('today') // today | week | failed | scheduled
+  const [smsTypeTab, setSmsTypeTab] = useState('payment') // payment | otp
+  const [smsTypeFilter, setSmsTypeFilter] = useState('payment') // all | payment | otp
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [detailsItem, setDetailsItem] = useState(null)
+  const [smsLoading, setSmsLoading] = useState(false)
+  const [smsErr, setSmsErr] = useState(null)
+  const [smsDbItems, setSmsDbItems] = useState([])
+  const [smsShowCount, setSmsShowCount] = useState(20)
+  const [lastUpdatedLabel, setLastUpdatedLabel] = useState('')
 
   useEffect(() => {
     try {
       localStorage.setItem(SEEN_KEY, String(Date.now()))
     } catch {}
   }, [])
+
+  useEffect(() => {
+    if (tab !== 'sms') return
+    let cancelled = false
+    setSmsLoading(true)
+    setSmsErr(null)
+    api
+      .get('/notifications/instructor/sms-history?limit=120')
+      .then((d) => {
+        if (cancelled) return
+        setSmsDbItems(Array.isArray(d.items) ? d.items : [])
+      })
+      .catch((e) => {
+        if (!cancelled) {
+          setSmsDbItems([])
+          setSmsErr(e?.message || 'SMS tarixçə yüklənmədi')
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setSmsLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [tab])
+
+  useEffect(() => {
+    if (tab !== 'sms') return
+    setSmsShowCount(20)
+  }, [tab, smsFilter, smsTypeTab, smsTypeFilter])
+
+  const smsBaseList = useMemo(() => {
+    const base = Array.isArray(smsDbItems) && smsDbItems.length ? smsDbItems : smsHistoryMock
+    return Array.isArray(base) ? base : []
+  }, [smsDbItems])
+
+  // Keep the extra type filter aligned with the active type tab to avoid
+  // "empty" state when a user selects conflicting controls (e.g. OTP tab + Ödəniş filter).
+  useEffect(() => {
+    setSmsTypeFilter((prev) => {
+      if (prev === 'all') return prev
+      return smsTypeTab === 'otp' ? 'otp' : 'payment'
+    })
+  }, [smsTypeTab])
 
   useEffect(() => {
     let cancelled = false
@@ -91,44 +141,89 @@ export default function InstructorNotifications() {
   }, [])
 
   useEffect(() => {
-    const t = setInterval(() => setNowTick(Date.now()), 1000)
-    return () => clearInterval(t)
-  }, [])
+    if (!fetchedAt) return
+    try {
+      setLastUpdatedLabel(formatAgo(Date.now() - new Date(fetchedAt).getTime()))
+    } catch {
+      setLastUpdatedLabel('')
+    }
+  }, [fetchedAt])
 
-  const syncInfo = useMemo(() => {
-    const syncAt = profile?.usage_synced_at ? new Date(profile.usage_synced_at) : null
-    const pageAt = fetchedAt ? new Date(fetchedAt) : null
-    const diffMs = syncAt && pageAt ? Math.abs(pageAt.getTime() - syncAt.getTime()) : null
-    return { syncAt, pageAt, diffMs }
-  }, [profile?.usage_synced_at, fetchedAt, nowTick])
+  const systemPercent = {
+    sms: Number(profile?.sms_percent ?? 0) || 0,
+    storage: Number(profile?.storage_percent ?? 0) || 0,
+    ram: Number(profile?.ram_percent ?? 0) || 0,
+  }
+
+  const usageTone = (pct) => {
+    const p = Number(pct) || 0
+    if (p >= 100) return 'danger'
+    if (p >= 80) return 'due'
+    return 'paid'
+  }
+
+  const barTone = (pct) => {
+    const p = Number(pct) || 0
+    if (p >= 100) return 'bg-rose-500'
+    if (p >= 80) return 'bg-amber-500'
+    return 'bg-emerald-500'
+  }
 
   const smsRows = useMemo(() => {
     const now = new Date()
-    const list = Array.isArray(smsHistoryMock) ? smsHistoryMock : []
-    const filtered = list.filter((x) => {
+    const filtered = smsBaseList.filter((x) => {
       if (smsFilter === 'today') return isToday(x.createdAt, now)
       if (smsFilter === 'week') return isThisWeek(x.createdAt, now)
       if (smsFilter === 'failed') return x.status === 'failed'
       if (smsFilter === 'scheduled') return x.status === 'scheduled'
       return true
     })
-    return filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-  }, [smsFilter])
+    const typed = filtered.filter((x) => {
+      const t = String(x.type || 'payment_reminder')
+      if (smsTypeTab === 'otp') return t === 'otp'
+      return t !== 'otp'
+    })
+    const byExtraFilter = typed.filter((x) => {
+      const t = String(x.type || 'payment_reminder')
+      if (smsTypeFilter === 'all') return true
+      if (smsTypeFilter === 'otp') return t === 'otp'
+      return t !== 'otp'
+    })
+    return byExtraFilter.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+  }, [smsFilter, smsBaseList, smsTypeTab, smsTypeFilter])
 
   const smsSummary = useMemo(() => {
-    const list = Array.isArray(smsHistoryMock) ? smsHistoryMock : []
-    const sent = list.filter((x) => x.status === 'sent')
-    const failed = list.filter((x) => x.status === 'failed')
-    const scheduled = list.filter((x) => x.status === 'scheduled')
-    const uniq = new Set(list.flatMap((x) => (Array.isArray(x.students) ? x.students : [])))
+    const sent = smsBaseList.filter((x) => x.status === 'sent')
+    const failed = smsBaseList.filter((x) => x.status === 'failed')
+    const scheduled = smsBaseList.filter((x) => x.status === 'scheduled')
+    const uniq = new Set(
+      smsBaseList.flatMap((x) => (Array.isArray(x.students) ? x.students : x.phone ? [x.phone] : []))
+    )
     return {
-      totalMessages: list.length,
+      totalMessages: smsBaseList.length,
       totalRecipients: uniq.size,
       sent: sent.length,
       failed: failed.length,
       scheduled: scheduled.length,
     }
-  }, [])
+  }, [smsBaseList])
+
+  const smsTypeTabs = useMemo(
+    () => [
+      { id: 'payment', label: 'Ödəniş mesajları' },
+      { id: 'otp', label: 'Sistem mesajları (OTP)' },
+    ],
+    []
+  )
+
+  const smsTypeFilters = useMemo(
+    () => [
+      { id: 'all', label: 'Hamısı' },
+      { id: 'payment', label: 'Ödəniş' },
+      { id: 'otp', label: 'OTP' },
+    ],
+    []
+  )
 
   const tabItems = useMemo(
     () => [
@@ -140,18 +235,22 @@ export default function InstructorNotifications() {
 
   const smsTabs = useMemo(() => {
     const now = new Date()
-    const list = Array.isArray(smsHistoryMock) ? smsHistoryMock : []
-    const today = list.filter((x) => isToday(x.createdAt, now)).length
-    const week = list.filter((x) => isThisWeek(x.createdAt, now)).length
-    const failed = list.filter((x) => x.status === 'failed').length
-    const scheduled = list.filter((x) => x.status === 'scheduled').length
+    const scope = smsBaseList.filter((x) => {
+      const t = String(x.type || 'payment_reminder')
+      if (smsTypeTab === 'otp') return t === 'otp'
+      return t !== 'otp'
+    })
+    const today = scope.filter((x) => isToday(x.createdAt, now)).length
+    const week = scope.filter((x) => isThisWeek(x.createdAt, now)).length
+    const failed = scope.filter((x) => x.status === 'failed').length
+    const scheduled = scope.filter((x) => x.status === 'scheduled').length
     return [
       { id: 'today', label: 'Bu gün', count: today },
       { id: 'week', label: 'Bu həftə', count: week },
       { id: 'failed', label: 'Uğursuz', count: failed },
       { id: 'scheduled', label: 'Planlaşdırılıb', count: scheduled },
     ]
-  }, [])
+  }, [smsBaseList, smsTypeTab])
 
   const openDetails = (item) => {
     setDetailsItem(item)
@@ -171,6 +270,52 @@ export default function InstructorNotifications() {
         <p className="text-token-textMuted text-sm mt-1">SMS və saxlama limitləri</p>
       </div>
 
+      <Card hover className="p-5 rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard shadow-[0_10px_30px_rgba(0,0,0,0.10)]">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className="font-display font-bold text-base text-token-textMain">Sistem vəziyyəti</h2>
+            <p className="text-xs text-token-textMuted mt-1">
+              {lastUpdatedLabel ? `Son yenilənmə: ${lastUpdatedLabel}` : '—'}
+            </p>
+          </div>
+          <StatusBadge variant={usageTone(Math.max(systemPercent.sms, systemPercent.storage, systemPercent.ram))}>
+            {Math.max(systemPercent.sms, systemPercent.storage, systemPercent.ram) >= 80 ? 'Diqqət' : 'Stabil'}
+          </StatusBadge>
+        </div>
+
+        <div className="mt-4 space-y-4">
+          <div className="grid grid-cols-[92px_1fr_auto] items-center gap-x-4 gap-y-2">
+            <div className="text-sm font-semibold text-token-textMain">SMS</div>
+            <div className="h-2.5 rounded-full bg-white/10 overflow-hidden">
+              <div className={`h-full ${barTone(systemPercent.sms)}`} style={{ width: `${Math.min(100, systemPercent.sms)}%` }} />
+            </div>
+            <div className="text-sm text-token-textMuted tabular-nums text-right whitespace-nowrap">
+              {profile?.sms_used ?? 0}/{profile?.sms_limit ?? 0}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-[92px_1fr_auto] items-center gap-x-4 gap-y-2">
+            <div className="text-sm font-semibold text-token-textMain">Storage</div>
+            <div className="h-2.5 rounded-full bg-white/10 overflow-hidden">
+              <div className={`h-full ${barTone(systemPercent.storage)}`} style={{ width: `${Math.min(100, systemPercent.storage)}%` }} />
+            </div>
+            <div className="text-sm text-token-textMuted tabular-nums text-right whitespace-nowrap">
+              {formatStorageUsed(profile?.storage_used_bytes)} / {formatBytesLimitFromMb(profile?.storage_limit_mb)}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-[92px_1fr_auto] items-center gap-x-4 gap-y-2">
+            <div className="text-sm font-semibold text-token-textMain">RAM</div>
+            <div className="h-2.5 rounded-full bg-white/10 overflow-hidden">
+              <div className={`h-full ${barTone(systemPercent.ram)}`} style={{ width: `${Math.min(100, systemPercent.ram)}%` }} />
+            </div>
+            <div className="text-sm text-token-textMuted tabular-nums text-right whitespace-nowrap">
+              {formatMbValue(profile?.ram_used_mb)} / {formatMbValue(profile?.ram_limit_mb)}
+            </div>
+          </div>
+        </div>
+      </Card>
+
       <div className="mb-4">
         <FilterTabs tabs={tabItems} activeId={tab} onChange={(id) => setTab(id)} />
       </div>
@@ -183,6 +328,15 @@ export default function InstructorNotifications() {
               <p className="text-xs text-token-textMuted mt-1">
                 Ödəniş xatırlatma mesajlarının göndərilmə statusu və qısa preview.
               </p>
+              {smsLoading ? (
+                <p className="text-xs text-token-textMuted mt-2">Tarixçə yüklənir…</p>
+              ) : smsErr ? (
+                <p className="text-xs text-amber-600 dark:text-amber-200/90 mt-2">{smsErr} (mock göstərilir)</p>
+              ) : smsDbItems.length ? (
+                <p className="text-xs text-token-textMuted mt-2">Mənbə: DB (sms_logs)</p>
+              ) : (
+                <p className="text-xs text-token-textMuted mt-2">Mənbə: mock</p>
+              )}
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <span className="inline-flex items-center gap-2 rounded-full border border-[color:var(--border-subtle)] bg-token-surfaceCard/50 px-3 py-1.5 text-[11px] text-token-textMain">
                   <span className="text-token-textMuted">SMS:</span>
@@ -208,6 +362,13 @@ export default function InstructorNotifications() {
             </div>
           </div>
 
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <FilterTabs tabs={smsTypeTabs} activeId={smsTypeTab} onChange={(id) => setSmsTypeTab(id)} />
+            <div className="sm:shrink-0">
+              <FilterTabs tabs={smsTypeFilters} activeId={smsTypeFilter} onChange={(id) => setSmsTypeFilter(id)} />
+            </div>
+          </div>
+
           {!smsRows.length ? (
             <Card className="p-8 sm:p-10 text-center">
               <div className="text-3xl mb-3">📭</div>
@@ -215,10 +376,34 @@ export default function InstructorNotifications() {
               <p className="text-xs text-token-textMuted mt-1">Filteri dəyişin və ya yeni SMS göndərin.</p>
             </Card>
           ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-              {smsRows.slice(0, 12).map((item) => (
-                <NotificationCard key={item.id} item={item} onDetails={openDetails} />
-              ))}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="text-xs text-token-textMuted">
+                  Göstərilir: <span className="text-token-textMain font-semibold tabular-nums">{Math.min(smsRows.length, smsShowCount)}</span> /{' '}
+                  <span className="text-token-textMain font-semibold tabular-nums">{smsRows.length}</span>
+                </div>
+                {smsShowCount < smsRows.length ? (
+                  <button
+                    type="button"
+                    className="text-xs font-semibold text-primary hover:text-primary/90"
+                    onClick={() => setSmsShowCount((n) => Math.min(smsRows.length, n + 20))}
+                  >
+                    Daha çox göstər
+                  </button>
+                ) : null}
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                {smsRows.slice(0, smsShowCount).map((item) => (
+                  <NotificationCard key={item.id} item={item} onDetails={openDetails} />
+                ))}
+              </div>
+              {smsShowCount < smsRows.length ? (
+                <div className="flex justify-center pt-1">
+                  <Button variant="secondary" size="sm" onClick={() => setSmsShowCount((n) => Math.min(smsRows.length, n + 40))}>
+                    Daha çox yüklə
+                  </Button>
+                </div>
+              ) : null}
             </div>
           )}
 
@@ -232,13 +417,23 @@ export default function InstructorNotifications() {
               <div className="space-y-4 text-sm">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="font-semibold text-token-textMain">Ödəniş xatırlatma göndərildi</p>
+                    <p className="font-semibold text-token-textMain">
+                      {String(detailsItem.type || 'payment_reminder') === 'otp' ? 'PIN kod göndərildi' : 'Ödəniş xatırlatma göndərildi'}
+                    </p>
                     <p className="text-xs text-token-textMuted mt-1">
                       {new Date(detailsItem.createdAt).toLocaleString('az-AZ')}
                     </p>
                   </div>
                   <StatusBadge variant={detailsBadge}>{detailsLabel}</StatusBadge>
                 </div>
+                {detailsItem.status === 'failed' && detailsItem.reason ? (
+                  <div className="rounded-xl border border-rose-500/25 bg-rose-500/10 p-3">
+                    <p className="text-xs font-semibold text-rose-700 dark:text-rose-200/90 uppercase tracking-wider mb-2">
+                      Səbəb
+                    </p>
+                    <p className="text-sm text-token-textMain leading-relaxed">{detailsItem.reason}</p>
+                  </div>
+                ) : null}
                 <div className="rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceMain/40 p-3">
                   <p className="text-xs font-semibold text-token-textMuted uppercase tracking-wider mb-2">Tələbələr</p>
                   <p className="text-sm text-token-textMain leading-relaxed">
@@ -269,67 +464,6 @@ export default function InstructorNotifications() {
           <p className="text-token-textMuted text-sm mt-2 px-2">
             Limitləriniz 80%-dən çox dolmayıb
           </p>
-          {profile ? (
-            <div className="mt-6 text-left">
-              <div className="space-y-5">
-                {/* SMS */}
-                <div className="grid grid-cols-[72px_1fr_auto] items-center gap-x-4 gap-y-2">
-                  <div className="text-sm text-token-textMain">SMS</div>
-                  <div className="h-2.5 rounded-full bg-white/10 overflow-hidden">
-                    <div
-                      className={`h-full ${profile.sms_percent >= 100 ? 'bg-red-500' : profile.sms_percent >= 80 ? 'bg-yellow-500' : 'bg-emerald-500'}`}
-                      style={{ width: `${Math.min(100, Number(profile.sms_percent || 0))}%` }}
-                    />
-                  </div>
-                  <div className="text-sm text-token-textMuted tabular-nums text-right whitespace-nowrap">
-                    {profile.sms_used}/{profile.sms_limit}
-                  </div>
-                </div>
-
-                {/* Storage */}
-                <div className="grid grid-cols-[72px_1fr_auto] items-center gap-x-4 gap-y-2">
-                  <div className="text-sm text-token-textMain">Storage</div>
-                  <div className="h-2.5 rounded-full bg-white/10 overflow-hidden">
-                    <div
-                      className={`h-full ${profile.storage_percent >= 100 ? 'bg-red-500' : profile.storage_percent >= 80 ? 'bg-yellow-500' : 'bg-emerald-500'}`}
-                      style={{ width: `${Math.min(100, Number(profile.storage_percent || 0))}%` }}
-                    />
-                  </div>
-                  <div className="text-sm text-token-textMuted tabular-nums text-right whitespace-nowrap">
-                    {formatStorageUsed(profile.storage_used_bytes)} / {formatBytesLimitFromMb(profile.storage_limit_mb)}
-                  </div>
-                </div>
-
-                {/* RAM */}
-                <div className="grid grid-cols-[72px_1fr_auto] items-center gap-x-4 gap-y-2">
-                  <div className="text-sm text-token-textMain">RAM</div>
-                  <div className="h-2.5 rounded-full bg-white/10 overflow-hidden">
-                    <div
-                      className={`h-full ${profile.ram_percent >= 100 ? 'bg-red-500' : profile.ram_percent >= 80 ? 'bg-yellow-500' : 'bg-emerald-500'}`}
-                      style={{ width: `${Math.min(100, Number(profile.ram_percent || 0))}%` }}
-                    />
-                  </div>
-                  <div className="text-sm text-token-textMuted tabular-nums text-right whitespace-nowrap">
-                    {formatMbValue(profile.ram_used_mb)} / {formatMbValue(profile.ram_limit_mb)}
-                  </div>
-                </div>
-              </div>
-
-              <div className="text-xs text-token-textMuted mt-4 tabular-nums">
-                <div>
-                  Son sync: {syncInfo.syncAt ? syncInfo.syncAt.toLocaleString() : '—'}
-                  {syncInfo.syncAt ? ` (${formatAgo(nowTick - syncInfo.syncAt.getTime())})` : ''}
-                </div>
-                <div>
-                  Səhifə: {syncInfo.pageAt ? syncInfo.pageAt.toLocaleString() : '—'}
-                  {syncInfo.pageAt ? ` (${formatAgo(nowTick - syncInfo.pageAt.getTime())})` : ''}
-                </div>
-                <div>
-                  Fərq: {syncInfo.diffMs == null ? '—' : formatAgo(syncInfo.diffMs)}
-                </div>
-              </div>
-            </div>
-          ) : null}
         </Card>
       ) : (
         <div className="space-y-4 max-w-2xl">
