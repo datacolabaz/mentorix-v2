@@ -19,7 +19,9 @@ export default function NotificationCard({ item, onDetails }) {
       ? item.students.length <= 2
         ? item.students.join(', ')
         : `${item.students[0]}, ${item.students[1]} +${item.students.length - 2}`
-      : '—'
+      : item.phone
+        ? String(item.phone)
+        : '—'
 
   return (
     <div
