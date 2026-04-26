@@ -54,10 +54,9 @@ export default function InstructorNotifications() {
   const [loading, setLoading] = useState(true)
   const [fetchedAt, setFetchedAt] = useState(null)
   const [tab, setTab] = useState('all') // all | sms
-  // UX default: show real data immediately (no "0" on load)
-  const [smsFilter, setSmsFilter] = useState('week') // all | today | week | failed | scheduled
-  const [smsTypeTab, setSmsTypeTab] = useState('all') // all | payment | otp
-  const [smsTypeFilter, setSmsTypeFilter] = useState('all') // all | payment | otp
+  const [smsFilter, setSmsFilter] = useState('today') // today | week | failed | scheduled
+  const [smsTypeTab, setSmsTypeTab] = useState('payment') // payment | otp
+  const [smsTypeFilter, setSmsTypeFilter] = useState('payment') // all | payment | otp
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [detailsItem, setDetailsItem] = useState(null)
   const [smsLoading, setSmsLoading] = useState(false)
@@ -65,13 +64,6 @@ export default function InstructorNotifications() {
   const [smsDbItems, setSmsDbItems] = useState([])
   const [smsShowCount, setSmsShowCount] = useState(20)
   const [lastUpdatedLabel, setLastUpdatedLabel] = useState('')
-  const debugSms = useMemo(() => {
-    try {
-      return new URLSearchParams(window.location.search).get('debugSms') === '1'
-    } catch {
-      return false
-    }
-  }, [])
 
   useEffect(() => {
     try {
@@ -97,12 +89,6 @@ export default function InstructorNotifications() {
           createdAt: x.createdAt || x.created_at || x.createdAt === null ? x.createdAt : x.created_at,
         }))
         setSmsDbItems(mapped)
-        if (debugSms) {
-          // eslint-disable-next-line no-console
-          console.log('[sms-logs] raw items:', rawItems)
-          // eslint-disable-next-line no-console
-          console.log('[sms-logs] mapped items:', mapped)
-        }
       })
       .catch((e) => {
         if (!cancelled) {
@@ -131,10 +117,8 @@ export default function InstructorNotifications() {
   // Keep the extra type filter aligned with the active type tab to avoid
   // "empty" state when a user selects conflicting controls (e.g. OTP tab + Ödəniş filter).
   useEffect(() => {
-    // If user is on a strict type tab, keep the extra filter consistent.
-    // Otherwise (all tab), keep user's choice.
     setSmsTypeFilter((prev) => {
-      if (smsTypeTab === 'all') return prev
+      if (prev === 'all') return prev
       return smsTypeTab === 'otp' ? 'otp' : 'payment'
     })
   }, [smsTypeTab])
@@ -197,7 +181,6 @@ export default function InstructorNotifications() {
   const smsRows = useMemo(() => {
     const now = new Date()
     const filtered = smsBaseList.filter((x) => {
-      if (smsFilter === 'all') return true
       if (smsFilter === 'today') return isToday(x.createdAt, now)
       if (smsFilter === 'week') return isThisWeek(x.createdAt, now)
       if (smsFilter === 'failed') return x.status === 'failed'
@@ -206,7 +189,6 @@ export default function InstructorNotifications() {
     })
     const typed = filtered.filter((x) => {
       const t = String(x.type || 'payment')
-      if (smsTypeTab === 'all') return true
       if (smsTypeTab === 'otp') return t === 'otp'
       return t !== 'otp'
     })
@@ -241,7 +223,6 @@ export default function InstructorNotifications() {
 
   const smsTypeTabs = useMemo(
     () => [
-      { id: 'all', label: 'Hamısı' },
       { id: 'payment', label: 'Ödəniş mesajları' },
       { id: 'otp', label: 'Sistem mesajları (OTP)' },
     ],
@@ -269,17 +250,14 @@ export default function InstructorNotifications() {
     const now = new Date()
     const scope = smsBaseList.filter((x) => {
       const t = String(x.type || 'payment')
-      if (smsTypeTab === 'all') return true
       if (smsTypeTab === 'otp') return t === 'otp'
       return t !== 'otp'
     })
-    const all = scope.length
     const today = scope.filter((x) => isToday(x.createdAt, now)).length
     const week = scope.filter((x) => isThisWeek(x.createdAt, now)).length
     const failed = scope.filter((x) => x.status === 'failed').length
     const scheduled = scope.filter((x) => x.status === 'scheduled').length
     return [
-      { id: 'all', label: 'Hamısı', count: all },
       { id: 'today', label: 'Bu gün', count: today },
       { id: 'week', label: 'Bu həftə', count: week },
       { id: 'failed', label: 'Uğursuz', count: failed },
@@ -362,33 +340,23 @@ export default function InstructorNotifications() {
                 Ödəniş xatırlatma mesajlarının göndərilmə statusu və qısa preview.
               </p>
               {smsLoading ? <p className="text-xs text-token-textMuted mt-2">Tarixçə yüklənir…</p> : null}
-              {debugSms && !smsLoading ? (
-                <div className="mt-3 rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceMain/30 p-3">
-                  <p className="text-[11px] font-semibold text-token-textMuted uppercase tracking-wider mb-2">
-                    Debug: API-dən gələn data (filterdən əvvəl, ilk 2)
-                  </p>
-                  <pre className="text-[11px] leading-relaxed text-token-textMain overflow-auto max-h-56">
-                    {JSON.stringify(smsBaseList.slice(0, 2), null, 2)}
-                  </pre>
-                </div>
-              ) : null}
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <span className="inline-flex items-center gap-2 rounded-full border border-[color:var(--border-subtle)] bg-token-surfaceCard/50 px-3 py-1.5 text-[11px] text-token-textMain">
                   <span className="text-token-textMuted">SMS:</span>
-                  <span className="font-semibold tabular-nums">{smsLoading ? '—' : smsSummary.totalMessages}</span>
+                  <span className="font-semibold tabular-nums">{smsSummary.totalMessages}</span>
                 </span>
                 <span className="inline-flex items-center gap-2 rounded-full border border-[color:var(--border-subtle)] bg-token-surfaceCard/50 px-3 py-1.5 text-[11px] text-token-textMain">
                   <span className="text-token-textMuted">Tələbə:</span>
-                  <span className="font-semibold tabular-nums">{smsLoading ? '—' : smsSummary.totalRecipients}</span>
+                  <span className="font-semibold tabular-nums">{smsSummary.totalRecipients}</span>
                 </span>
                 <span className="inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1.5 text-[11px] text-emerald-700 dark:text-emerald-200/90">
-                  Göndərildi <span className="font-bold tabular-nums">{smsLoading ? '—' : smsSummary.sent}</span>
+                  Göndərildi <span className="font-bold tabular-nums">{smsSummary.sent}</span>
                 </span>
                 <span className="inline-flex items-center gap-2 rounded-full border-rose-500/25 bg-rose-500/10 px-3 py-1.5 text-[11px] text-rose-700 dark:text-rose-200/90">
-                  Alınmadı <span className="font-bold tabular-nums">{smsLoading ? '—' : smsSummary.failed}</span>
+                  Alınmadı <span className="font-bold tabular-nums">{smsSummary.failed}</span>
                 </span>
                 <span className="inline-flex items-center gap-2 rounded-full border-amber-500/25 bg-amber-500/10 px-3 py-1.5 text-[11px] text-amber-700 dark:text-amber-200/90">
-                  Plan <span className="font-bold tabular-nums">{smsLoading ? '—' : smsSummary.scheduled}</span>
+                  Plan <span className="font-bold tabular-nums">{smsSummary.scheduled}</span>
                 </span>
               </div>
             </div>
