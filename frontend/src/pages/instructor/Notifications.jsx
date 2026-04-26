@@ -62,6 +62,7 @@ export default function InstructorNotifications() {
   const [smsLoading, setSmsLoading] = useState(false)
   const [smsErr, setSmsErr] = useState(null)
   const [smsDbItems, setSmsDbItems] = useState([])
+  const [smsShowCount, setSmsShowCount] = useState(20)
 
   useEffect(() => {
     try {
@@ -93,6 +94,11 @@ export default function InstructorNotifications() {
       cancelled = true
     }
   }, [tab])
+
+  useEffect(() => {
+    if (tab !== 'sms') return
+    setSmsShowCount(20)
+  }, [tab, smsFilter, smsTypeTab, smsTypeFilter])
 
   const smsBaseList = useMemo(() => {
     const base = Array.isArray(smsDbItems) && smsDbItems.length ? smsDbItems : smsHistoryMock
@@ -307,10 +313,34 @@ export default function InstructorNotifications() {
               <p className="text-xs text-token-textMuted mt-1">Filteri dəyişin və ya yeni SMS göndərin.</p>
             </Card>
           ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-              {smsRows.slice(0, 12).map((item) => (
-                <NotificationCard key={item.id} item={item} onDetails={openDetails} />
-              ))}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="text-xs text-token-textMuted">
+                  Göstərilir: <span className="text-token-textMain font-semibold tabular-nums">{Math.min(smsRows.length, smsShowCount)}</span> /{' '}
+                  <span className="text-token-textMain font-semibold tabular-nums">{smsRows.length}</span>
+                </div>
+                {smsShowCount < smsRows.length ? (
+                  <button
+                    type="button"
+                    className="text-xs font-semibold text-primary hover:text-primary/90"
+                    onClick={() => setSmsShowCount((n) => Math.min(smsRows.length, n + 20))}
+                  >
+                    Daha çox göstər
+                  </button>
+                ) : null}
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                {smsRows.slice(0, smsShowCount).map((item) => (
+                  <NotificationCard key={item.id} item={item} onDetails={openDetails} />
+                ))}
+              </div>
+              {smsShowCount < smsRows.length ? (
+                <div className="flex justify-center pt-1">
+                  <Button variant="secondary" size="sm" onClick={() => setSmsShowCount((n) => Math.min(smsRows.length, n + 40))}>
+                    Daha çox yüklə
+                  </Button>
+                </div>
+              ) : null}
             </div>
           )}
 
