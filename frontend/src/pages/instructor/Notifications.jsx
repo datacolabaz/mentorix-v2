@@ -1,14 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import api from '../../lib/api'
 import Card from '../../components/common/Card'
-import Modal from '../../components/common/Modal'
-import Button from '../../components/common/Button'
-import FilterTabs from '../../components/common/FilterTabs'
-import NotificationCard from '../../components/notifications/NotificationCard'
-import StatusBadge from '../../components/common/StatusBadge'
-import { smsHistoryMock, isToday, isThisWeek } from '../../mock/smsHistory'
-
-const SEEN_KEY = 'mx_instructor_notifications_seen_at_v1'
 
 const LEVEL = {
   critical: { cls: 'border-red-500/40 bg-red-500/10', badge: 'bg-red-500/20 text-red-400', icon: '🔴' },
@@ -53,16 +45,6 @@ export default function InstructorNotifications() {
   const [loading, setLoading] = useState(true)
   const [fetchedAt, setFetchedAt] = useState(null)
   const [nowTick, setNowTick] = useState(Date.now())
-  const [tab, setTab] = useState('all') // all | sms
-  const [smsFilter, setSmsFilter] = useState('today') // today | week | failed | scheduled
-  const [detailsOpen, setDetailsOpen] = useState(false)
-  const [detailsItem, setDetailsItem] = useState(null)
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(SEEN_KEY, String(Date.now()))
-    } catch {}
-  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -102,68 +84,6 @@ export default function InstructorNotifications() {
     return { syncAt, pageAt, diffMs }
   }, [profile?.usage_synced_at, fetchedAt, nowTick])
 
-  const smsRows = useMemo(() => {
-    const now = new Date()
-    const list = Array.isArray(smsHistoryMock) ? smsHistoryMock : []
-    const filtered = list.filter((x) => {
-      if (smsFilter === 'today') return isToday(x.createdAt, now)
-      if (smsFilter === 'week') return isThisWeek(x.createdAt, now)
-      if (smsFilter === 'failed') return x.status === 'failed'
-      if (smsFilter === 'scheduled') return x.status === 'scheduled'
-      return true
-    })
-    return filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-  }, [smsFilter])
-
-  const smsSummary = useMemo(() => {
-    const list = Array.isArray(smsHistoryMock) ? smsHistoryMock : []
-    const sent = list.filter((x) => x.status === 'sent')
-    const failed = list.filter((x) => x.status === 'failed')
-    const scheduled = list.filter((x) => x.status === 'scheduled')
-    const uniq = new Set(list.flatMap((x) => (Array.isArray(x.students) ? x.students : [])))
-    return {
-      totalMessages: list.length,
-      totalRecipients: uniq.size,
-      sent: sent.length,
-      failed: failed.length,
-      scheduled: scheduled.length,
-    }
-  }, [])
-
-  const tabItems = useMemo(
-    () => [
-      { id: 'all', label: 'Bütün bildirişlər' },
-      { id: 'sms', label: 'SMS tarixçəsi' },
-    ],
-    []
-  )
-
-  const smsTabs = useMemo(() => {
-    const now = new Date()
-    const list = Array.isArray(smsHistoryMock) ? smsHistoryMock : []
-    const today = list.filter((x) => isToday(x.createdAt, now)).length
-    const week = list.filter((x) => isThisWeek(x.createdAt, now)).length
-    const failed = list.filter((x) => x.status === 'failed').length
-    const scheduled = list.filter((x) => x.status === 'scheduled').length
-    return [
-      { id: 'today', label: 'Bu gün', count: today },
-      { id: 'week', label: 'Bu həftə', count: week },
-      { id: 'failed', label: 'Uğursuz', count: failed },
-      { id: 'scheduled', label: 'Planlaşdırılıb', count: scheduled },
-    ]
-  }, [])
-
-  const openDetails = (item) => {
-    setDetailsItem(item)
-    setDetailsOpen(true)
-  }
-
-  const detailsStatus = detailsItem?.status
-  const detailsBadge =
-    detailsStatus === 'failed' ? 'danger' : detailsStatus === 'scheduled' ? 'due' : 'paid'
-  const detailsLabel =
-    detailsStatus === 'failed' ? 'Alınmadı' : detailsStatus === 'scheduled' ? 'Planlaşdırılıb' : 'Göndərildi'
-
   return (
     <div className="p-4 sm:p-6 min-w-0">
       <div className="mb-6">
@@ -171,94 +91,7 @@ export default function InstructorNotifications() {
         <p className="text-token-textMuted text-sm mt-1">SMS və saxlama limitləri</p>
       </div>
 
-      <div className="mb-4">
-        <FilterTabs tabs={tabItems} activeId={tab} onChange={(id) => setTab(id)} />
-      </div>
-
-      {tab === 'sms' ? (
-        <div className="space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div className="min-w-0">
-              <h2 className="font-display font-bold text-base text-token-textMain">SMS tarixçəsi</h2>
-              <p className="text-xs text-token-textMuted mt-1">
-                Ödəniş xatırlatma mesajlarının göndərilmə statusu və qısa preview.
-              </p>
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center gap-2 rounded-full border border-[color:var(--border-subtle)] bg-token-surfaceCard/50 px-3 py-1.5 text-[11px] text-token-textMain">
-                  <span className="text-token-textMuted">SMS:</span>
-                  <span className="font-semibold tabular-nums">{smsSummary.totalMessages}</span>
-                </span>
-                <span className="inline-flex items-center gap-2 rounded-full border border-[color:var(--border-subtle)] bg-token-surfaceCard/50 px-3 py-1.5 text-[11px] text-token-textMain">
-                  <span className="text-token-textMuted">Tələbə:</span>
-                  <span className="font-semibold tabular-nums">{smsSummary.totalRecipients}</span>
-                </span>
-                <span className="inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1.5 text-[11px] text-emerald-700 dark:text-emerald-200/90">
-                  Göndərildi <span className="font-bold tabular-nums">{smsSummary.sent}</span>
-                </span>
-                <span className="inline-flex items-center gap-2 rounded-full border-rose-500/25 bg-rose-500/10 px-3 py-1.5 text-[11px] text-rose-700 dark:text-rose-200/90">
-                  Alınmadı <span className="font-bold tabular-nums">{smsSummary.failed}</span>
-                </span>
-                <span className="inline-flex items-center gap-2 rounded-full border-amber-500/25 bg-amber-500/10 px-3 py-1.5 text-[11px] text-amber-700 dark:text-amber-200/90">
-                  Plan <span className="font-bold tabular-nums">{smsSummary.scheduled}</span>
-                </span>
-              </div>
-            </div>
-            <div className="shrink-0">
-              <FilterTabs tabs={smsTabs} activeId={smsFilter} onChange={(id) => setSmsFilter(id)} />
-            </div>
-          </div>
-
-          {!smsRows.length ? (
-            <Card className="p-8 sm:p-10 text-center">
-              <div className="text-3xl mb-3">📭</div>
-              <div className="text-sm font-semibold text-token-textMain">Bu filter üçün SMS yoxdur</div>
-              <p className="text-xs text-token-textMuted mt-1">Filteri dəyişin və ya yeni SMS göndərin.</p>
-            </Card>
-          ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-              {smsRows.slice(0, 12).map((item) => (
-                <NotificationCard key={item.id} item={item} onDetails={openDetails} />
-              ))}
-            </div>
-          )}
-
-          <Modal
-            open={detailsOpen}
-            onClose={() => setDetailsOpen(false)}
-            title="SMS detalları"
-            size="md"
-          >
-            {detailsItem ? (
-              <div className="space-y-4 text-sm">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="font-semibold text-token-textMain">Ödəniş xatırlatma göndərildi</p>
-                    <p className="text-xs text-token-textMuted mt-1">
-                      {new Date(detailsItem.createdAt).toLocaleString('az-AZ')}
-                    </p>
-                  </div>
-                  <StatusBadge variant={detailsBadge}>{detailsLabel}</StatusBadge>
-                </div>
-                <div className="rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceMain/40 p-3">
-                  <p className="text-xs font-semibold text-token-textMuted uppercase tracking-wider mb-2">Tələbələr</p>
-                  <p className="text-sm text-token-textMain leading-relaxed">
-                    {(detailsItem.students || []).join(', ') || '—'}
-                  </p>
-                </div>
-                <div className="rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceMain/40 p-3">
-                  <p className="text-xs font-semibold text-token-textMuted uppercase tracking-wider mb-2">Mesaj</p>
-                  <p className="text-sm text-token-textMain leading-relaxed">{detailsItem.message || '—'}</p>
-                </div>
-                <div className="flex justify-end gap-2 pt-1">
-                  <Button variant="secondary" onClick={() => setDetailsOpen(false)}>
-                    Bağla
-                  </Button>
-                </div>
-              </div>
-            ) : null}
-          </Modal>
-        </div>
-      ) : loading ? (
+      {loading ? (
         <div className="text-center py-12 text-token-textMuted">Yüklənir...</div>
       ) : alerts.length === 0 ? (
         <Card className="p-8 sm:p-12 text-center max-w-lg mx-auto">

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
 import useAuthStore from '../hooks/useAuth'
 import useUiStore from '../hooks/useUi'
@@ -44,18 +44,6 @@ export default function InstructorLayout() {
   const [navOpen, setNavOpen] = useState(false)
   const { focusMode, setFocusMode, theme, toggleTheme } = useUiStore()
   const [limitStatus, setLimitStatus] = useState({ level: null, message: null })
-  const [notifFetchAt, setNotifFetchAt] = useState(0)
-  const [hasAlerts, setHasAlerts] = useState(false)
-
-  const notifUnread = useMemo(() => {
-    if (!hasAlerts || !notifFetchAt) return false
-    try {
-      const seen = Number(localStorage.getItem('mx_instructor_notifications_seen_at_v1') || 0)
-      return !seen || seen < notifFetchAt
-    } catch {
-      return hasAlerts
-    }
-  }, [hasAlerts, notifFetchAt])
 
   useEffect(() => {
     setNavOpen(false)
@@ -86,8 +74,6 @@ export default function InstructorLayout() {
       .then((d) => {
         if (cancelled) return
         const alerts = d.alerts || []
-        setHasAlerts(Array.isArray(alerts) && alerts.length > 0)
-        setNotifFetchAt(Date.now())
         const critical = alerts.find((a) => a.level === 'critical')
         const warning = alerts.find((a) => a.level === 'warning')
         if (critical) setLimitStatus({ level: 'critical', message: critical.message })
@@ -265,8 +251,8 @@ export default function InstructorLayout() {
                     >
                       <span className="shrink-0 relative">
                         {item.icon}
-                        {item.to === '/instructor/notifications' && notifUnread ? (
-                          <span className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-primary shadow-[0_0_0_2px_rgba(15,23,42,0.35)]" />
+                        {item.to === '/instructor/notifications' && limitStatus.level ? (
+                          <span className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-gray-400" />
                         ) : null}
                       </span>
                       <span className="truncate">{item.label}</span>
