@@ -188,12 +188,12 @@ export default function InstructorNotifications() {
       return true
     })
     const typed = filtered.filter((x) => {
-      const t = String(x.type || 'payment_reminder')
+      const t = String(x.type || 'payment')
       if (smsTypeTab === 'otp') return t === 'otp'
       return t !== 'otp'
     })
     const byExtraFilter = typed.filter((x) => {
-      const t = String(x.type || 'payment_reminder')
+      const t = String(x.type || 'payment')
       if (smsTypeFilter === 'all') return true
       if (smsTypeFilter === 'otp') return t === 'otp'
       return t !== 'otp'
@@ -249,7 +249,7 @@ export default function InstructorNotifications() {
   const smsTabs = useMemo(() => {
     const now = new Date()
     const scope = smsBaseList.filter((x) => {
-      const t = String(x.type || 'payment_reminder')
+      const t = String(x.type || 'payment')
       if (smsTypeTab === 'otp') return t === 'otp'
       return t !== 'otp'
     })
