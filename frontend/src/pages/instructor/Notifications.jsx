@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react'
-import axios from 'axios'
 import api from '../../lib/api'
 import Card from '../../components/common/Card'
 import Modal from '../../components/common/Modal'
@@ -84,14 +83,11 @@ export default function InstructorNotifications() {
     let cancelled = false
     setSmsLoading(true)
     setSmsErr(null)
-    axios
-      .get('/api/sms-logs', {
-        params: { limit: 200 },
-        headers: { Authorization: `Bearer ${localStorage.getItem('mx_token') || ''}` },
-      })
+    api
+      .get('/sms-logs', { params: { limit: 200 } })
       .then((d) => {
         if (cancelled) return
-        const rawItems = Array.isArray(d?.data?.items) ? d.data.items : []
+        const rawItems = Array.isArray(d?.items) ? d.items : []
         const mapped = rawItems.map((x) => ({
           ...x,
           // Use nullish coalescing to avoid precedence bugs (and keep both API shapes)
@@ -108,8 +104,12 @@ export default function InstructorNotifications() {
       .catch((e) => {
         if (!cancelled) {
           setSmsDbItems([])
-          // Don't leak raw "Request failed with status code 404" into UI
-          setSmsErr('SMS tarixçəsi hazırda əlçatan deyil')
+          if (debugSms) {
+            // eslint-disable-next-line no-console
+            console.log('[sms-logs] error:', e)
+          }
+          const st = e?.status ? ` (${e.status})` : ''
+          setSmsErr(`SMS tarixçəsi hazırda əlçatan deyil${st}`)
         }
       })
       .finally(() => {
