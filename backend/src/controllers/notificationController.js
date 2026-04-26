@@ -158,9 +158,23 @@ const getInstructorSmsHistory = async (req, res) => {
 
     // Include:
     // - direct instructor sends (instructor_id = $1)
-    // - OTP/system messages for this instructor's active students (phone match)
+    // - OTP/system messages for this instructor's active students/parents (phone match)
     const where = [
-      `(instructor_id = $1 OR regexp_replace(phone, '\\\\D', '', 'g') IN (\n+        SELECT regexp_replace(u.phone, '\\\\D', '', 'g')\n+        FROM users u\n+        JOIN enrollments e ON e.student_id = u.id\n+        WHERE e.instructor_id = $1 AND e.status = 'active' AND u.phone IS NOT NULL\n+      ))`,
+      `(instructor_id = $1 OR regexp_replace(phone, '\\\\D', '', 'g') IN (
+        SELECT regexp_replace(u.phone, '\\\\D', '', 'g')
+        FROM users u
+        JOIN enrollments e ON e.student_id = u.id
+        WHERE e.instructor_id = $1
+          AND COALESCE(NULLIF(LOWER(TRIM(e.status)), ''), 'active') = 'active'
+          AND u.phone IS NOT NULL
+        UNION
+        SELECT regexp_replace(sp.parent_phone, '\\\\D', '', 'g')
+        FROM student_profiles sp
+        JOIN enrollments e2 ON e2.student_id = sp.user_id
+        WHERE e2.instructor_id = $1
+          AND COALESCE(NULLIF(LOWER(TRIM(e2.status)), ''), 'active') = 'active'
+          AND sp.parent_phone IS NOT NULL
+      ))`,
     ];
     const params = [instructorId];
     if (statusFilter) {
