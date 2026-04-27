@@ -871,7 +871,9 @@ export default function StudentExams() {
                   </div>
                   {row.correct_display ? (
                     <div>
-                      <span className="text-xs text-token-textMuted block mb-0.5">Şablon / nümunə</span>
+                      <span className="text-xs text-token-textMuted block mb-0.5">
+                        {row.correct_label || 'Şablon / nümunə'}
+                      </span>
                       <div
                         className="inline-flex max-w-full items-center rounded-lg border border-[color:var(--border-subtle)] bg-token-surfaceCard/60 px-2.5 py-1.5 font-mono text-xs text-token-textMain break-all"
                         role="note"
@@ -1079,7 +1081,9 @@ export default function StudentExams() {
                       </div>
                       {row.correct_display ? (
                         <div>
-                          <span className="text-xs text-token-textMuted block mb-0.5">Şablon / nümunə</span>
+                          <span className="text-xs text-token-textMuted block mb-0.5">
+                            {row.correct_label || 'Şablon / nümunə'}
+                          </span>
                           <div
                             className="inline-flex max-w-full items-center rounded-lg border border-[color:var(--border-subtle)] bg-token-surfaceCard/60 px-2.5 py-1.5 font-mono text-xs text-token-textMain break-all"
                             role="note"

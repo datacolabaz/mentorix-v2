@@ -348,38 +348,67 @@ const buildExamTypeSummary = (questions, answers, opts = {}) => {
 /**
  * Tələbə UI: təqdimetmədən sonra hər sual üçün şablon vs yazılan cavab.
  */
-const buildExamResultBreakdown = (questions, answers) => {
+const buildExamResultBreakdown = (questions, answers, opts = {}) => {
+  const showCorrectAnswers = opts?.showCorrectAnswers === true;
   const order = [...questions].sort((a, b) => (a.order_num || 0) - (b.order_num || 0));
   return order.map((q, idx) => {
     const raw = getAnswerRaw(answers, q.id);
     const given = raw == null || raw === '' ? '' : String(raw).trim();
     const type = inferQuestionType(q);
     let correctDisplay = '';
+    let correctLabel = '';
     let isCorrect = null;
 
     if (type === 'closed') {
-      correctDisplay = ''; // tələbəyə düzgün cavabı göstərmirik
+      const c = String(q.correct_answer ?? '').trim();
+      if (showCorrectAnswers && c) {
+        correctLabel = 'Düzgün cavab';
+        correctDisplay = c;
+      } else {
+        correctDisplay = '';
+      }
       if (!given) isCorrect = null;
       else {
-        const c = String(q.correct_answer ?? '').trim();
         isCorrect = c ? given.toUpperCase() === c.toUpperCase() : null;
       }
     } else if (type === 'multiple') {
+      const ca = String(q.correct_answer ?? '').trim();
+      const caNorm = normDigits(ca);
       const hint = String(q.template_hint || '').trim();
-      correctDisplay = hint ? `Nümunə: ${hint}` : 'Nümunə: 13';
+      if (showCorrectAnswers && caNorm) {
+        correctLabel = 'Düzgün cavab';
+        correctDisplay = caNorm;
+      } else {
+        correctLabel = 'Şablon / nümunə';
+        correctDisplay = hint ? `Nümunə: ${hint}` : 'Nümunə: 13';
+      }
       if (!given) isCorrect = null;
       else {
-        const caN = normDigits(q.correct_answer);
-        isCorrect = caN ? normDigits(given) === caN : null;
+        isCorrect = caNorm ? normDigits(given) === caNorm : null;
       }
     } else if (type === 'matching') {
+      const ca = String(q.correct_answer ?? '').trim();
+      const derived = ca ? ca : deriveMatchingKeyFromOptions(q.options);
       const hint = String(q.template_hint || '').trim();
-      correctDisplay = hint ? `Nümunə: ${hint}` : 'Nümunə: 1a2b3c';
+      if (showCorrectAnswers && derived) {
+        correctLabel = 'Düzgün cavab';
+        correctDisplay = derived;
+      } else {
+        correctLabel = 'Şablon / nümunə';
+        correctDisplay = hint ? `Nümunə: ${hint}` : 'Nümunə: 1a2b3c';
+      }
       if (!given) isCorrect = null;
       else isCorrect = gradeMatching(given, q.correct_answer, q.options).isCorrect;
     } else if (type === 'open') {
+      const ca = String(q.correct_answer ?? '').trim();
       const hint = String(q.template_hint || '').trim();
-      correctDisplay = hint ? `Nümunə / gözlənti: ${hint}` : 'Müəllim qiymətləndirir';
+      if (showCorrectAnswers && ca) {
+        correctLabel = 'Düzgün cavab';
+        correctDisplay = ca;
+      } else {
+        correctLabel = 'Şablon / nümunə';
+        correctDisplay = hint ? `Nümunə / gözlənti: ${hint}` : 'Müəllim qiymətləndirir';
+      }
       const key = openAutoKey(q);
       if (!given) isCorrect = null;
       else if (key == null) isCorrect = null;
@@ -388,11 +417,17 @@ const buildExamResultBreakdown = (questions, answers) => {
         isCorrect = gn == null ? false : Math.abs(gn - key) < 1e-9;
       }
     } else if (type === 'sequence') {
-      correctDisplay =
-        'Format nümunəsi: bənd nömrələrini ardıcıllaqla bitişik yazın (boşluqsuz).';
+      const key = sequenceEffectiveCorrect(q);
+      if (showCorrectAnswers && normSequenceIgnoreSpaces(key)) {
+        correctLabel = 'Düzgün cavab';
+        correctDisplay = key;
+      } else {
+        correctLabel = 'Şablon / nümunə';
+        correctDisplay =
+          'Format nümunəsi: bənd nömrələrini ardıcıllaqla bitişik yazın (boşluqsuz).';
+      }
       if (!given) isCorrect = null;
       else {
-        const key = sequenceEffectiveCorrect(q);
         if (!normSequenceIgnoreSpaces(key)) isCorrect = false;
         else isCorrect = sequenceAnswersEqual(given, key);
         if (SEQ_GRADE_DEBUG) {
@@ -422,6 +457,7 @@ const buildExamResultBreakdown = (questions, answers) => {
       question_text: q.question_text || `Sual ${idx + 1}`,
       student_answer: given || '—',
       correct_display: correctDisplay,
+      correct_label: correctLabel,
       is_correct: isCorrect,
       status_label: statusLabel,
     };

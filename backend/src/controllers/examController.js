@@ -700,7 +700,9 @@ const getStudentExamReview = async (req, res) => {
     }
     if (!answers || typeof answers !== 'object') answers = {};
 
-    const breakdown = buildExamResultBreakdown(questions, answers);
+    const breakdown = buildExamResultBreakdown(questions, answers, {
+      showCorrectAnswers: exam.show_results !== false,
+    });
     const wrongPen = exam.wrong_penalty_enabled !== false;
     const typeSummary = buildExamTypeSummary(questions, answers, { wrongPenaltyEnabled: wrongPen });
 
