@@ -448,4 +448,81 @@ const bulkFillAttendancePeriod = async (req, res) => {
     // Pack reminder: 8-pack at 7 completed lessons, 12-pack at 11 completed lessons (once per cycle).
     const triggerAt = packTriggerAt(limit);
     const { rows: [enInfo] } = await db.query(
-      `SELECT billing_cycle, COALESCE(pack_
+      `SELECT billing_cycle, COALESCE(pack_reminder_sent_cycle, 0) AS pack_reminder_sent_cycle
+       FROM enrollments
+       WHERE id = $1`,
+      [enrollment_id]
+    );
+    const cycleNow = Number(enInfo?.billing_cycle) || cycle;
+    const alreadySent = Number(enInfo?.pack_reminder_sent_cycle || 0) >= cycleNow;
+
+    if (attended && limit && triggerAt && !alreadySent && beforeN < triggerAt && afterN >= triggerAt) {
+      const { rows: [info] } = await db.query(
+        `SELECT e.instructor_id, u.full_name AS student_name, u.phone AS student_phone,
+                COALESCE(NULLIF(TRIM(sp.parent_phone), ''), pu.phone) AS parent_phone
+         FROM enrollments e
+         JOIN users u ON u.id = e.student_id
+         LEFT JOIN student_profiles sp ON sp.user_id = e.student_id
+         LEFT JOIN users pu ON pu.id = sp.parent_id
+         WHERE e.id = $1`,
+        [enrollment_id]
+      );
+      const targetPhone = info?.parent_phone || info?.student_phone;
+      if (targetPhone) {
+        await sendSms({
+          instructorId: info.instructor_id,
+          phone: targetPhone,
+          message:
+            'Mentorix: Növbəti dərsiniz paketinizin son dərsidir. Davam etmək üçün ödənişi nəzərə alın.',
+        });
+        await db.query(
+          `UPDATE enrollments
+           SET pack_reminder_sent_cycle = billing_cycle
+           WHERE id = $1`,
+          [enrollment_id]
+        );
+      }
+    }
+
+    res.json({ success: true, updated: toUpsert.length });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+const getAttendance = async (req, res) => {
+  try {
+    const { enrollment_id } = req.params;
+    const { rows: enRows } = await db.query(
+      'SELECT student_id, instructor_id FROM enrollments WHERE id = $1',
+      [enrollment_id]
+    );
+    if (!enRows[0]) return res.status(404).json({ success: false, message: 'Tapılmadı' });
+    const { student_id: enStudent, instructor_id: enInstr } = enRows[0];
+    if (req.user.role === 'student' && String(enStudent) !== String(req.user.id)) {
+      return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
+    }
+    if (
+      req.user.role === 'instructor' &&
+      String(enInstr).replace(/-/g, '').toLowerCase() !== String(req.user.id).replace(/-/g, '').toLowerCase()
+    ) {
+      return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
+    }
+
+    const { rows } = await db.query(
+      'SELECT * FROM attendance WHERE enrollment_id=$1 ORDER BY billing_cycle, lesson_number',
+      [enrollment_id]
+    );
+    res.json({ success: true, attendance: rows });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+module.exports = {
+  markAttendance,
+  getAttendance,
+  getAttendancePeriod,
+  upsertAttendanceLesson,
+  bulkFillAttendancePeriod,
+};

@@ -72,4 +72,17 @@ cron.schedule('*/10 * * * *', () => {
 });
 
 cron.schedule('25 */6 * * *', () => {
-  extendMonthlyAttendanceSlots().catch((e) => console.error('monthly attendance slots cron
+  extendMonthlyAttendanceSlots().catch((e) => console.error('monthly attendance slots cron', e.message));
+});
+
+// Billing notifications: hourly check for "2 days left" and "last lesson"
+cron.schedule('15 * * * *', () => {
+  runBillingNotifications().catch((e) => console.error('billing notifications cron', e.message));
+});
+
+// Pack reminders fallback: every 30 minutes
+cron.schedule('*/30 * * * *', () => {
+  runPackReminders().catch((e) => console.error('pack reminders cron', e.message));
+});
+
+module.exports = app;
