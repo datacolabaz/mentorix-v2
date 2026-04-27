@@ -471,7 +471,7 @@ const getSmsPlan = async (req, res) => {
           if (debug && debugSkipped.length < 100) {
             debugSkipped.push({
               enrollment_id: r.enrollment_id,
-              billing_type,
+              billing_type: billingType,
               reason: 'already_past_alert_point',
               lesson_count: lessonCount,
               alert_at: alertAt,
@@ -513,7 +513,7 @@ const getSmsPlan = async (req, res) => {
           if (debug && debugSkipped.length < 100) {
             debugSkipped.push({
               enrollment_id: r.enrollment_id,
-              billing_type,
+              billing_type: billingType,
               reason: triggerYmd ? 'trigger_out_of_range' : 'no_schedule_for_pack',
               trigger_ymd: triggerYmd,
               lesson_count: lessonCount,
