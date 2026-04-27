@@ -6,7 +6,7 @@ import Button from '../../components/common/Button'
 import FilterTabs from '../../components/common/FilterTabs'
 import NotificationCard from '../../components/notifications/NotificationCard'
 import StatusBadge from '../../components/common/StatusBadge'
-import { isToday, isThisWeek } from '../../mock/smsHistory'
+import { isToday, isThisWeek, isThisMonth } from '../../mock/smsHistory'
 
 const SEEN_KEY = 'mx_instructor_notifications_seen_at_v1'
 
@@ -83,12 +83,13 @@ export default function InstructorNotifications() {
     let cancelled = false
     setSmsLoading(true)
     setSmsErr(null)
-    api
-      .get('/sms-logs', { params: { limit: 200 } })
-      .then((d) => {
+    Promise.all([api.get('/sms-logs', { params: { limit: 200 } }), api.get('/sms-logs/plan', { params: { days: 31 } })])
+      .then(([hist, plan]) => {
         if (cancelled) return
-        const rawItems = Array.isArray(d?.items) ? d.items : []
-        const mapped = rawItems.map((x) => ({
+        const rawItems = Array.isArray(hist?.items) ? hist.items : []
+        const rawPlan = Array.isArray(plan?.items) ? plan.items : []
+        const merged = [...rawItems, ...rawPlan]
+        const mapped = merged.map((x) => ({
           ...x,
           // Use nullish coalescing to avoid precedence bugs (and keep both API shapes)
           createdAt: x.createdAt ?? x.created_at ?? null,
@@ -98,7 +99,9 @@ export default function InstructorNotifications() {
           // eslint-disable-next-line no-console
           console.log('[sms-logs] raw items:', rawItems)
           // eslint-disable-next-line no-console
-          console.log('[sms-logs] mapped items:', mapped)
+          console.log('[sms-logs/plan] raw items:', rawPlan)
+          // eslint-disable-next-line no-console
+          console.log('[sms-logs] merged mapped:', mapped)
         }
       })
       .catch((e) => {
@@ -200,6 +203,7 @@ export default function InstructorNotifications() {
       if (smsFilter === 'all') return true
       if (smsFilter === 'today') return isToday(x.createdAt, now)
       if (smsFilter === 'week') return isThisWeek(x.createdAt, now)
+      if (smsFilter === 'month') return isThisMonth(x.createdAt, now)
       if (smsFilter === 'failed') return x.status === 'failed'
       if (smsFilter === 'scheduled') return x.status === 'scheduled'
       return true
@@ -276,12 +280,14 @@ export default function InstructorNotifications() {
     const all = scope.length
     const today = scope.filter((x) => isToday(x.createdAt, now)).length
     const week = scope.filter((x) => isThisWeek(x.createdAt, now)).length
+    const month = scope.filter((x) => isThisMonth(x.createdAt, now)).length
     const failed = scope.filter((x) => x.status === 'failed').length
     const scheduled = scope.filter((x) => x.status === 'scheduled').length
     return [
       { id: 'all', label: 'Hamısı', count: all },
       { id: 'today', label: 'Bu gün', count: today },
       { id: 'week', label: 'Bu həftə', count: week },
+      { id: 'month', label: 'Bu ay', count: month },
       { id: 'failed', label: 'Uğursuz', count: failed },
       { id: 'scheduled', label: 'Planlaşdırılıb', count: scheduled },
     ]

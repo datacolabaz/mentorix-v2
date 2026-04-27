@@ -66,6 +66,12 @@ export function isThisWeek(iso, now = new Date()) {
   return d >= start && d < end
 }
 
+export function isThisMonth(iso, now = new Date()) {
+  const d = safeDate(iso)
+  if (!d) return false
+  return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth()
+}
+
 export function getLastSmsForStudentName(fullName, list = smsHistoryMock) {
   const name = String(fullName || '').trim()
   if (!name) return null
