@@ -486,6 +486,7 @@ const getSmsPlan = async (req, res) => {
            WHERE enrollment_id = $1
              AND billing_cycle = $2
              AND lesson_number = $3
+             AND starts_at > NOW()
            LIMIT 1`,
           [r.enrollment_id, cycle, alertAt]
         );
