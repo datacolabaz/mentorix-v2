@@ -368,6 +368,8 @@ const getSmsPlan = async (req, res) => {
     const days = Math.min(90, Math.max(1, Math.trunc(Number(req.query.days || 30) || 30)));
     const todayBaku = await getTodayBakuYmd(db);
     const endYmd = addDaysYmd(todayBaku, days);
+    const debug = String(req.query.debug || '').trim() === '1';
+    const debugSkipped = [];
 
     const { rows } = await db.query(
       `SELECT
@@ -396,22 +398,48 @@ const getSmsPlan = async (req, res) => {
 
     const items = [];
     for (const r of rows) {
-      if (!r.notifications_enabled) continue;
+      if (!r.notifications_enabled) {
+        if (debug && debugSkipped.length < 100) {
+          debugSkipped.push({ enrollment_id: r.enrollment_id, billing_type: r.billing_type, reason: 'notifications_disabled' });
+        }
+        continue;
+      }
 
       const studentName = r.student_name || null;
       const phones = [r.student_phone, r.parent_phone].filter((p) => String(p || '').trim());
-      if (!phones.length) continue;
+      if (!phones.length) {
+        if (debug && debugSkipped.length < 100) {
+          debugSkipped.push({ enrollment_id: r.enrollment_id, billing_type: r.billing_type, reason: 'no_phone' });
+        }
+        continue;
+      }
 
       const billingType = String(r.billing_type || '').trim();
       const cycle = Number(r.billing_cycle || 1) || 1;
 
       if (billingType === 'monthly') {
         const anchorYmd = toYmd(r.enrollment_start_date);
-        if (!anchorYmd) continue;
+        if (!anchorYmd) {
+          if (debug && debugSkipped.length < 100) {
+            debugSkipped.push({ enrollment_id: r.enrollment_id, billing_type, reason: 'missing_anchor_date' });
+          }
+          continue;
+        }
         const prog = computeMonthlyCycleProgress({ anchor_ymd: anchorYmd, today_ymd: todayBaku });
         const cycleEnd = prog?.cycle_end_ymd ? String(prog.cycle_end_ymd).slice(0, 10) : null;
         const triggerYmd = cycleEnd ? addDaysYmd(cycleEnd, -2) : null;
-        if (!triggerYmd || compareYmd(triggerYmd, todayBaku) < 0 || compareYmd(triggerYmd, endYmd) > 0) continue;
+        if (!triggerYmd || compareYmd(triggerYmd, todayBaku) < 0 || compareYmd(triggerYmd, endYmd) > 0) {
+          if (debug && debugSkipped.length < 100) {
+            debugSkipped.push({
+              enrollment_id: r.enrollment_id,
+              billing_type,
+              reason: 'trigger_out_of_range',
+              trigger_ymd: triggerYmd,
+              range: { from: todayBaku, to: endYmd },
+            });
+          }
+          continue;
+        }
 
         for (const phone of phones) {
           items.push({
@@ -439,7 +467,18 @@ const getSmsPlan = async (req, res) => {
         const alertBefore = Math.min(limit - 1, Math.max(1, Number(r.alert_lessons_before ?? 2) || 2));
         const alertAt = Math.max(1, limit - alertBefore);
         const lessonCount = Number(r.lesson_count ?? 0) || 0;
-        if (lessonCount >= alertAt) continue;
+        if (lessonCount >= alertAt) {
+          if (debug && debugSkipped.length < 100) {
+            debugSkipped.push({
+              enrollment_id: r.enrollment_id,
+              billing_type,
+              reason: 'already_past_alert_point',
+              lesson_count: lessonCount,
+              alert_at: alertAt,
+            });
+          }
+          continue;
+        }
 
         const { rows: lr } = await db.query(
           `SELECT starts_at
@@ -470,7 +509,20 @@ const getSmsPlan = async (req, res) => {
           const idx = Math.max(0, (alertAt - 1) - lessonCount);
           triggerYmd = upcoming[idx] || null;
         }
-        if (!triggerYmd || compareYmd(triggerYmd, todayBaku) < 0 || compareYmd(triggerYmd, endYmd) > 0) continue;
+        if (!triggerYmd || compareYmd(triggerYmd, todayBaku) < 0 || compareYmd(triggerYmd, endYmd) > 0) {
+          if (debug && debugSkipped.length < 100) {
+            debugSkipped.push({
+              enrollment_id: r.enrollment_id,
+              billing_type,
+              reason: triggerYmd ? 'trigger_out_of_range' : 'no_schedule_for_pack',
+              trigger_ymd: triggerYmd,
+              lesson_count: lessonCount,
+              alert_at: alertAt,
+              range: { from: todayBaku, to: endYmd },
+            });
+          }
+          continue;
+        }
 
         const pkg = billingType === '8_lessons' ? '8' : '12';
         for (const phone of phones) {
@@ -493,7 +545,12 @@ const getSmsPlan = async (req, res) => {
     }
 
     items.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-    res.json({ success: true, items, range: { from: todayBaku, to: endYmd, days } });
+    res.json({
+      success: true,
+      items,
+      range: { from: todayBaku, to: endYmd, days },
+      ...(debug ? { debug: { skipped: debugSkipped } } : {}),
+    });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
