@@ -54,7 +54,7 @@ export default function InstructorNotifications() {
   const [fetchedAt, setFetchedAt] = useState(null)
   const [tab, setTab] = useState('all') // all | sms
   // UX default: show real data immediately (avoid "0" on first paint)
-  const [smsFilter, setSmsFilter] = useState('week') // all | today | week | failed | scheduled
+  const [smsFilter, setSmsFilter] = useState('all') // all | today | week | failed | scheduled
   const [smsTypeTab, setSmsTypeTab] = useState('all') // all | payment | otp
   const [smsTypeFilter, setSmsTypeFilter] = useState('all') // all | payment | otp
   const [detailsOpen, setDetailsOpen] = useState(false)
