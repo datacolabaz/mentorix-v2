@@ -982,7 +982,7 @@ export default function StudentExams() {
                         className={
                           theme === 'dark'
                             ? 'bg-white/5 hover:bg-white/10 text-gray-200 border border-white/10'
-                            : 'bg-primary/10 hover:bg-primary/15 text-[#1A1D21] border border-primary/20'
+                            : 'bg-slate-100 hover:bg-slate-200 text-slate-900 border border-slate-200'
                         }
                         onClick={() => openPastReview(exam)}
                       >
@@ -994,7 +994,7 @@ export default function StudentExams() {
                         className={
                           theme === 'dark'
                             ? 'bg-white/5 hover:bg-white/10 text-gray-200 border border-white/10'
-                            : 'bg-primary/10 hover:bg-primary/15 text-[#1A1D21] border border-primary/20'
+                            : 'bg-slate-100 hover:bg-slate-200 text-slate-900 border border-slate-200'
                         }
                         onClick={() => void openLeaderboard(exam)}
                       >
