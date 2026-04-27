@@ -376,7 +376,12 @@ const getSmsPlan = async (req, res) => {
          e.id AS enrollment_id,
          e.billing_type,
          e.billing_cycle,
-         COALESCE(att.max_lesson_number, e.lesson_count, 0) AS lesson_count,
+         GREATEST(
+           COALESCE(att.max_lesson_number, 0),
+           COALESCE(les.done_lessons, 0),
+           COALESCE(el.done_lessons, 0),
+           COALESCE(e.lesson_count, 0)
+         ) AS lesson_count,
          e.lesson_weekdays,
          e.lesson_times,
          e.enrollment_start_date,
@@ -393,6 +398,20 @@ const getSmsPlan = async (req, res) => {
          WHERE a.enrollment_id = e.id
            AND a.billing_cycle = e.billing_cycle
        ) att ON TRUE
+       LEFT JOIN LATERAL (
+         SELECT COUNT(*)::int AS done_lessons
+         FROM lessons l
+         WHERE l.enrollment_id = e.id
+           AND l.billing_cycle = e.billing_cycle
+           AND l.lesson_date <= NOW()
+       ) les ON TRUE
+       LEFT JOIN LATERAL (
+         SELECT COUNT(*)::int AS done_lessons
+         FROM enrollment_lessons el
+         WHERE el.enrollment_id = e.id
+           AND el.billing_cycle = e.billing_cycle
+           AND el.starts_at <= NOW()
+       ) el ON TRUE
        JOIN instructor_profiles ip ON ip.user_id = e.instructor_id
        JOIN users su ON su.id = e.student_id
        LEFT JOIN student_profiles sp ON sp.user_id = e.student_id
