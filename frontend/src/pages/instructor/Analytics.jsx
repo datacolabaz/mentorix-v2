@@ -115,7 +115,15 @@ export default function InstructorAnalytics() {
     for (const s of filteredStudents) {
       const id = String(s.id || '').trim()
       if (!id) continue
-      if (!map.has(id)) map.set(id, s)
+      const prev = map.get(id)
+      if (!prev) {
+        map.set(id, s)
+        continue
+      }
+      // Prefer a row that has referral_source filled (some enrollments may not).
+      const prevSrc = String(prev.referral_source || '').trim()
+      const nextSrc = String(s.referral_source || '').trim()
+      if (!prevSrc && nextSrc) map.set(id, s)
     }
     return Array.from(map.values())
   }, [filteredStudents])
