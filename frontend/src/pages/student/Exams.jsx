@@ -987,8 +987,8 @@ export default function StudentExams() {
                                 'disabled:opacity-100 disabled:text-gray-500 disabled:bg-white/[0.03] disabled:border-white/10',
                               ].join(' ')
                             : [
-                                'bg-slate-100 hover:bg-slate-200 border border-slate-200',
-                                'text-slate-900 hover:text-slate-900',
+                                '!bg-slate-100 hover:!bg-slate-200 !border !border-slate-200',
+                                '!text-slate-900 hover:!text-slate-900',
                                 'disabled:opacity-100 disabled:text-slate-400 disabled:bg-slate-50 disabled:border-slate-200',
                               ].join(' ')
                         }
@@ -1007,8 +1007,8 @@ export default function StudentExams() {
                                 'disabled:opacity-100 disabled:text-gray-500 disabled:bg-white/[0.03] disabled:border-white/10',
                               ].join(' ')
                             : [
-                                'bg-slate-100 hover:bg-slate-200 border border-slate-200',
-                                'text-slate-900 hover:text-slate-900',
+                                '!bg-slate-100 hover:!bg-slate-200 !border !border-slate-200',
+                                '!text-slate-900 hover:!text-slate-900',
                                 'disabled:opacity-100 disabled:text-slate-400 disabled:bg-slate-50 disabled:border-slate-200',
                               ].join(' ')
                         }
