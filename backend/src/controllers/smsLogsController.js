@@ -1,5 +1,6 @@
 const db = require('../utils/db');
 const { computeMonthlyCycleProgress, getTodayBakuYmd, toYmd } = require('../services/subscriptionBilling');
+const { sendSms } = require('../services/smsService');
 
 const BILLING_MESSAGE =
   'Hörmətli tələbə, aylıq abunəliyinizin bitməsinə 2 gün qalıb. Davam etmək üçün ödənişi yeniləməyiniz xahiş olunur.';
@@ -582,5 +583,95 @@ const getSmsPlan = async (req, res) => {
   }
 };
 
-module.exports = { getSmsLogs, getSmsPlan };
+const catchupPackReminders = async (req, res) => {
+  try {
+    const instructorId = req.user.id;
+    const dryRun = String(req.query.dryRun || '').trim() === '1';
+
+    const { rows } = await db.query(
+      `SELECT
+         e.id AS enrollment_id,
+         e.billing_type,
+         e.billing_cycle,
+         COALESCE(ip.alert_lessons_before, 2) AS alert_lessons_before,
+         COALESCE(e.notifications_enabled, TRUE) AS notifications_enabled,
+         u.full_name AS student_name,
+         u.phone AS student_phone,
+         COALESCE(NULLIF(TRIM(sp.parent_phone), ''), pu.phone) AS parent_phone,
+         -- lesson_count for current cycle from attendance (most reliable)
+         COALESCE(att.max_lesson_number, 0)::int AS lesson_count
+       FROM enrollments e
+       JOIN users u ON u.id = e.student_id
+       LEFT JOIN student_profiles sp ON sp.user_id = e.student_id
+       LEFT JOIN users pu ON pu.id = sp.parent_id
+       LEFT JOIN instructor_profiles ip ON ip.user_id = e.instructor_id
+       LEFT JOIN LATERAL (
+         SELECT COALESCE(MAX(a.lesson_number), 0) AS max_lesson_number
+         FROM attendance a
+         WHERE a.enrollment_id = e.id AND a.billing_cycle = e.billing_cycle
+       ) att ON TRUE
+       WHERE e.instructor_id = $1
+         AND (e.status IS NULL OR LOWER(TRIM(e.status)) = 'active')
+         AND u.is_active = TRUE
+         AND e.billing_type IN ('8_lessons','12_lessons')`,
+      [instructorId]
+    );
+
+    const sent = [];
+    const skipped = [];
+
+    for (const r of rows) {
+      if (!r.notifications_enabled) {
+        skipped.push({ enrollment_id: r.enrollment_id, reason: 'notifications_disabled' });
+        continue;
+      }
+
+      const limit = r.billing_type === '8_lessons' ? 8 : 12;
+      const alertBefore = Math.min(limit - 1, Math.max(1, Number(r.alert_lessons_before ?? 2) || 2));
+      const alertAt = Math.max(1, limit - alertBefore);
+      const n = Number(r.lesson_count ?? 0) || 0;
+      const remaining = Math.max(0, limit - n);
+
+      // Only catch-up when reminder window is active: remaining <= alertBefore and still not finished.
+      if (n < alertAt || n >= limit) {
+        skipped.push({ enrollment_id: r.enrollment_id, reason: 'not_in_alert_window', n, alertAt, limit });
+        continue;
+      }
+
+      const phone = r.parent_phone || r.student_phone;
+      if (!phone) {
+        skipped.push({ enrollment_id: r.enrollment_id, reason: 'no_phone' });
+        continue;
+      }
+
+      const msg = `Mentorix: ${r.student_name || 'tələbə'} üçün ${remaining} dərs qalır. Ödəniş etməyi unutmayın!`;
+
+      // best-effort dedupe: do not resend identical reminder to same phone recently
+      const { rows: exists } = await db.query(
+        `SELECT 1
+         FROM sms_logs
+         WHERE regexp_replace(phone, '\\\\D', '', 'g') = regexp_replace($1, '\\\\D', '', 'g')
+           AND message = $2
+           AND COALESCE(created_at, sent_at) > NOW() - INTERVAL '45 days'
+         LIMIT 1`,
+        [phone, msg]
+      );
+      if (exists.length) {
+        skipped.push({ enrollment_id: r.enrollment_id, reason: 'already_sent_recently' });
+        continue;
+      }
+
+      if (!dryRun) {
+        await sendSms({ instructorId, phone, message: msg });
+      }
+      sent.push({ enrollment_id: r.enrollment_id, phone, remaining, dryRun });
+    }
+
+    res.json({ success: true, dryRun, sent, skipped });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+module.exports = { getSmsLogs, getSmsPlan, catchupPackReminders };
 
