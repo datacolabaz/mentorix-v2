@@ -496,8 +496,20 @@ export default function InstructorExams() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <h1 className="font-display font-bold text-xl sm:text-2xl">Imtahanlar</h1>
         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-          <div className="flex items-center justify-between sm:justify-start gap-3 bg-[#13112e] border border-indigo-500/20 rounded-xl px-3 py-2">
-            <label className="flex items-center gap-2 text-xs font-semibold text-gray-300 select-none">
+          <div
+            className={[
+              'flex items-center justify-between sm:justify-start gap-3 rounded-xl px-3 py-2 border',
+              theme === 'dark'
+                ? 'bg-[#13112e] border-indigo-500/20'
+                : 'bg-token-surfaceMain border-[color:var(--border-subtle)]',
+            ].join(' ')}
+          >
+            <label
+              className={[
+                'flex items-center gap-2 text-xs font-semibold select-none',
+                theme === 'dark' ? 'text-gray-300' : 'text-token-textMain',
+              ].join(' ')}
+            >
               <input
                 type="checkbox"
                 className="w-4 h-4 accent-blue-500"
@@ -506,7 +518,9 @@ export default function InstructorExams() {
               />
               Hamısını seç
             </label>
-            <span className="text-[11px] text-gray-500">{selectedIds.size} seçildi</span>
+            <span className={['text-[11px]', theme === 'dark' ? 'text-gray-500' : 'text-token-textMuted'].join(' ')}>
+              {selectedIds.size} seçildi
+            </span>
           </div>
           <Button
             variant="secondary"
