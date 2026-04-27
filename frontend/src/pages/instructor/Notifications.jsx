@@ -55,7 +55,7 @@ export default function InstructorNotifications() {
   const [tab, setTab] = useState('all') // all | sms
   // UX default: show real data immediately (avoid "0" on first paint)
   const [smsFilter, setSmsFilter] = useState('all') // all | today | week | failed | scheduled
-  const [paymentOpen, setPaymentOpen] = useState(true)
+  const [paymentOpen, setPaymentOpen] = useState(false)
   const [otpOpen, setOtpOpen] = useState(false)
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [detailsItem, setDetailsItem] = useState(null)
@@ -96,6 +96,14 @@ export default function InstructorNotifications() {
           createdAt: x.createdAt ?? x.created_at ?? null,
         }))
         const normPhone = (p) => String(p || '').replace(/\D/g, '')
+        const rankStatus = (s) => {
+          const st = String(s || '').toLowerCase()
+          if (st === 'failed') return 3
+          if (st === 'sent') return 2
+          if (st === 'pending') return 1
+          if (st === 'scheduled') return 0
+          return 2
+        }
         const uniq = new Map()
         for (const x of mapped) {
           const key = [
@@ -103,9 +111,15 @@ export default function InstructorNotifications() {
             normPhone(x.phone),
             String(x.createdAt || ''),
             String(x.message || ''),
-            String(x.status || ''),
           ].join('|')
-          if (!uniq.has(key)) uniq.set(key, x)
+          const prev = uniq.get(key)
+          if (!prev) {
+            uniq.set(key, x)
+            continue
+          }
+          if (rankStatus(x.status) > rankStatus(prev.status)) {
+            uniq.set(key, x)
+          }
         }
         const deduped = Array.from(uniq.values())
         setSmsDbItems(deduped)
