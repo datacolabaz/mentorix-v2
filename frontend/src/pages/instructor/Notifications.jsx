@@ -95,7 +95,20 @@ export default function InstructorNotifications() {
           // Use nullish coalescing to avoid precedence bugs (and keep both API shapes)
           createdAt: x.createdAt ?? x.created_at ?? null,
         }))
-        setSmsDbItems(mapped)
+        const normPhone = (p) => String(p || '').replace(/\D/g, '')
+        const uniq = new Map()
+        for (const x of mapped) {
+          const key = [
+            String(x.type || ''),
+            normPhone(x.phone),
+            String(x.createdAt || ''),
+            String(x.message || ''),
+            String(x.status || ''),
+          ].join('|')
+          if (!uniq.has(key)) uniq.set(key, x)
+        }
+        const deduped = Array.from(uniq.values())
+        setSmsDbItems(deduped)
         if (debugSms) {
           // eslint-disable-next-line no-console
           console.log('[sms-logs] raw items:', rawItems)
@@ -103,6 +116,8 @@ export default function InstructorNotifications() {
           console.log('[sms-logs/plan] raw items:', rawPlan)
           // eslint-disable-next-line no-console
           console.log('[sms-logs] merged mapped:', mapped)
+          // eslint-disable-next-line no-console
+          console.log('[sms-logs] deduped:', deduped)
         }
       })
       .catch((e) => {
