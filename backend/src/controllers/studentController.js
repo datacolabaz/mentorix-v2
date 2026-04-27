@@ -290,6 +290,17 @@ function weekdayAz(weekday) {
   return m[weekday] || String(weekday);
 }
 
+function add60MinEnd(hhmm) {
+  const s = padHHMM(hhmm);
+  if (!s) return null;
+  const mins = toMinutes(s);
+  if (!Number.isFinite(mins)) return null;
+  const endMin = mins + 60;
+  const eh = String(Math.floor(endMin / 60) % 24).padStart(2, '0');
+  const em = String(endMin % 60).padStart(2, '0');
+  return `${eh}:${em}`;
+}
+
 /** Tələbə profili: həftəlik dərs günləri + slot məlumatı (boş günləri UI çıxarır) */
 /** Müəllim: paket üçün lessons; aylıq üçün lesson_times + həftə günlərindən növbəti təqvim nöqtələri (lessons olmadan da cədvəl dolur). */
 const getInstructorMyLessonsCalendar = async (req, res) => {
@@ -432,39 +443,66 @@ const addMyPrepSlots = async (req, res) => {
       });
     }
 
-    // 2) Prep slot overlaps with active lesson time on that weekday?
-    const { rows: [en] } = await db.query(
+    // 2) Prep slot overlaps with active weekly lesson time(s) on that weekday?
+    // NOTE: allow creating prep slots on lesson weekdays, but never during the lesson time.
+    const { rows: enrollments } = await db.query(
       `SELECT lesson_weekdays, lesson_times
        FROM enrollments
        WHERE student_id = $1
          AND (status IS NULL OR LOWER(TRIM(status)) = 'active')
-       ORDER BY enrolled_at DESC NULLS LAST, id DESC
-       LIMIT 1`,
+       ORDER BY enrolled_at DESC NULLS LAST, id DESC`,
       [studentId]
     );
-    const wdays = parseLessonWeekdaysJson(en?.lesson_weekdays);
-    let lt = en?.lesson_times;
-    if (typeof lt === 'string') {
-      try {
-        lt = JSON.parse(lt);
-      } catch {
-        lt = {};
+    for (const en of enrollments) {
+      const wdays = parseLessonWeekdaysJson(en?.lesson_weekdays);
+      let lt = en?.lesson_times;
+      if (typeof lt === 'string') {
+        try {
+          lt = JSON.parse(lt);
+        } catch {
+          lt = {};
+        }
+      }
+      if (!lt || typeof lt !== 'object') lt = {};
+
+      for (const d of uniq) {
+        if (!wdays.includes(d)) continue;
+        const lessonStart = timeOnWeekday(lt, d);
+        if (!lessonStart) continue;
+        const lessonEnd = add60MinEnd(lessonStart);
+        if (!lessonEnd) continue;
+        if (overlapsTimeRange(start, end, lessonStart, lessonEnd)) {
+          return res.status(400).json({
+            success: false,
+            message: `Toqquşma: ${weekdayAz(d)} günü ${lessonStart}–${lessonEnd} dərs saatı ilə üst-üstə düşür. Digər saat seçin.`,
+          });
+        }
       }
     }
-    if (!lt || typeof lt !== 'object') lt = {};
 
-    for (const d of uniq) {
-      if (!wdays.includes(d)) continue;
-      const lessonStart = timeOnWeekday(lt, d);
-      if (!lessonStart) continue;
-      const lessonEndMin = toMinutes(lessonStart) + 60;
-      const lessonEnd = `${String(Math.floor(lessonEndMin / 60) % 24).padStart(2, '0')}:${String(lessonEndMin % 60).padStart(2, '0')}`;
-      if (overlapsTimeRange(start, end, lessonStart, lessonEnd)) {
-        return res.status(400).json({
-          success: false,
-          message: `Toqquşma: ${weekdayAz(d)} günü ${lessonStart}–${lessonEnd} dərs saatı ilə üst-üstə düşür. Digər saat seçin.`,
-        });
-      }
+    // 3) Extra safety: also check against actual scheduled lessons (in case weekly pattern is missing/old).
+    // We compare by weekday/time-of-day in Asia/Baku; assumes default 60-minute lesson blocks.
+    const { rows: lessonConflicts } = await db.query(
+      `SELECT
+         EXTRACT(ISODOW FROM (l.lesson_date AT TIME ZONE 'Asia/Baku'))::int AS dow,
+         to_char((l.lesson_date AT TIME ZONE 'Asia/Baku')::time, 'HH24:MI') AS start_hm
+       FROM lessons l
+       WHERE l.student_id = $1
+         AND EXTRACT(ISODOW FROM (l.lesson_date AT TIME ZONE 'Asia/Baku'))::int = ANY($2::int[])
+         AND NOT (((l.lesson_date AT TIME ZONE 'Asia/Baku')::time + INTERVAL '60 minutes')::time <= $3::time
+               OR (l.lesson_date AT TIME ZONE 'Asia/Baku')::time >= $4::time)
+       ORDER BY l.lesson_date DESC
+       LIMIT 1`,
+      [studentId, uniq, start, end]
+    );
+    if (lessonConflicts.length) {
+      const c = lessonConflicts[0];
+      const lessonStart = String(c.start_hm || '').slice(0, 5);
+      const lessonEnd = add60MinEnd(lessonStart) || '';
+      return res.status(400).json({
+        success: false,
+        message: `Toqquşma: ${weekdayAz(Number(c.dow))} günü ${lessonStart}${lessonEnd ? `–${lessonEnd}` : ''} dərs saatı ilə üst-üstə düşür. Digər saat seçin.`,
+      });
     }
 
     const { rows } = await db.query(
