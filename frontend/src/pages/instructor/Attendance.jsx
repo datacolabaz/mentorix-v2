@@ -624,18 +624,38 @@ export default function InstructorAttendance() {
               </p>
             </div>
           ) : enrollmentId && period?.enrollment?.billing_type === 'monthly' ? (
-            <div className="rounded-xl border border-indigo-500/20 bg-[#0f0c29]/60 p-4 space-y-4">
-              <p className="text-xs text-gray-300 leading-relaxed">
-                <span className="font-semibold text-indigo-200">Aylıq paket:</span> davamiyyət yalnız izləmə və
+            <div
+              className={[
+                'rounded-xl border p-4 space-y-4',
+                theme === 'dark'
+                  ? 'border-indigo-500/20 bg-[#0f0c29]/60'
+                  : 'border-[color:var(--border-subtle)] bg-token-surfaceMain/70',
+              ].join(' ')}
+            >
+              <p className={['text-xs leading-relaxed', theme === 'dark' ? 'text-gray-300' : 'text-token-textMuted'].join(' ')}>
+                <span className={['font-semibold', theme === 'dark' ? 'text-indigo-200' : 'text-token-textMain'].join(' ')}>
+                  Aylıq paket:
+                </span>{' '}
+                davamiyyət yalnız izləmə və
                 hesabat üçündür; <strong>ödəniş borcu</strong> yalnız Ödənişlər bölməsində təqvim ankoruna görə
                 hesablanır (dərs sayından asılı deyil). Gələcək tarixlər üçün düymələr deaktivdir.
               </p>
               {monthlyMeta.next && (
-                <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-100">
+                <div
+                  className={[
+                    'rounded-lg border px-3 py-2 text-xs',
+                    theme === 'dark'
+                      ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-100'
+                      : 'border-emerald-500/25 bg-emerald-500/10 text-emerald-800',
+                  ].join(' ')}
+                >
                   <span className="font-semibold">Növbəti dərs:</span>{' '}
                   <span className="font-mono">{fmtDdMmFromYmd(monthlyMeta.next)}</span>
                   {monthlyMeta.next_status && monthlyMeta.next_status !== 'pending' && (
-                    <span className="text-emerald-200/80"> ({monthlyMeta.next_status})</span>
+                    <span className={theme === 'dark' ? 'text-emerald-200/80' : 'text-emerald-700'}>
+                      {' '}
+                      ({monthlyMeta.next_status})
+                    </span>
                   )}
                 </div>
               )}
@@ -758,9 +778,18 @@ export default function InstructorAttendance() {
                   </Button>
                 </div>
               </div>
-              <div className="overflow-x-auto rounded-lg border border-indigo-500/15">
+              <div
+                className={[
+                  'overflow-x-auto rounded-lg border',
+                  theme === 'dark' ? 'border-indigo-500/15' : 'border-[color:var(--border-subtle)]',
+                ].join(' ')}
+              >
                 <table className="min-w-full text-xs">
-                  <thead className="bg-[#13112e]/80 text-gray-400">
+                  <thead
+                    className={[
+                      theme === 'dark' ? 'bg-[#13112e]/80 text-gray-400' : 'bg-token-surfaceMain text-token-textMuted',
+                    ].join(' ')}
+                  >
                     <tr>
                       <th className="text-left px-3 py-2 font-semibold">Tarix</th>
                       <th className="text-left px-3 py-2 font-semibold">Status</th>
@@ -770,7 +799,10 @@ export default function InstructorAttendance() {
                   <tbody>
                     {monthlyRows.length === 0 && !monthlyFetching && (
                       <tr>
-                        <td colSpan={3} className="px-3 py-4 text-gray-500 text-center">
+                        <td
+                          colSpan={3}
+                          className={['px-3 py-4 text-center', theme === 'dark' ? 'text-gray-500' : 'text-token-textMuted'].join(' ')}
+                        >
                           Slot yoxdur. &quot;Slotları yenilə&quot; düyməsini sıxın.
                         </td>
                       </tr>
@@ -780,16 +812,34 @@ export default function InstructorAttendance() {
                       const isFutureRow = row.lesson_date > clipToday
                       const rowActionsDisabled = monthlyFetching || isFutureRow
                       return (
-                      <tr key={row.lesson_date} className="border-t border-indigo-500/10">
-                        <td className="px-3 py-2 font-mono text-white whitespace-nowrap">
+                      <tr
+                        key={row.lesson_date}
+                        className={[
+                          'border-t',
+                          theme === 'dark' ? 'border-indigo-500/10' : 'border-[color:var(--border-subtle)]',
+                        ].join(' ')}
+                      >
+                        <td
+                          className={[
+                            'px-3 py-2 font-mono whitespace-nowrap',
+                            theme === 'dark' ? 'text-white' : 'text-token-textMain',
+                          ].join(' ')}
+                        >
                           {fmtDdMmFromYmd(row.lesson_date)}
                           {isFutureRow && (
-                            <span className="block text-[10px] text-gray-500 font-sans normal-case mt-0.5">
+                            <span
+                              className={[
+                                'block text-[10px] font-sans normal-case mt-0.5',
+                                theme === 'dark' ? 'text-gray-500' : 'text-token-textMuted',
+                              ].join(' ')}
+                            >
                               gələcək
                             </span>
                           )}
                         </td>
-                        <td className="px-3 py-2 text-gray-300 capitalize">{row.status || 'pending'}</td>
+                        <td className={['px-3 py-2 capitalize', theme === 'dark' ? 'text-gray-300' : 'text-token-textMuted'].join(' ')}>
+                          {row.status || 'pending'}
+                        </td>
                         <td className="px-3 py-2 text-right whitespace-nowrap">
                           <div className="inline-flex flex-wrap justify-end gap-1">
                             <Button
