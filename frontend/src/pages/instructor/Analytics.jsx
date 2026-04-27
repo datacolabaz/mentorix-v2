@@ -76,14 +76,6 @@ export default function InstructorAnalytics() {
     }
   }
 
-  const referralData = students.reduce((acc, s) => {
-    const src = s.referral_source || 'Digər'
-    acc[src] = (acc[src] || 0) + 1
-    return acc
-  }, {})
-
-  const pieData = Object.entries(referralData).map(([name, value]) => ({ name, value }))
-
   const subjectOptions = useMemo(() => {
     const set = new Set()
     for (const s of students) {
@@ -115,6 +107,32 @@ export default function InstructorAnalytics() {
     }
     return arr
   }, [students, selectedSubject, selectedGroup])
+
+  // `/students` can contain multiple rows per student (multiple enrollments).
+  // For referral source chart and total counts, use unique students.
+  const uniqueStudents = useMemo(() => {
+    const map = new Map()
+    for (const s of filteredStudents) {
+      const id = String(s.id || '').trim()
+      if (!id) continue
+      if (!map.has(id)) map.set(id, s)
+    }
+    return Array.from(map.values())
+  }, [filteredStudents])
+
+  const referralData = useMemo(() => {
+    return uniqueStudents.reduce((acc, s) => {
+      const src = String(s.referral_source || '').trim() || 'Digər'
+      acc[src] = (acc[src] || 0) + 1
+      return acc
+    }, {})
+  }, [uniqueStudents])
+
+  const pieData = useMemo(() => {
+    return Object.entries(referralData)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value)
+  }, [referralData])
 
   const groupedByTrack = useMemo(() => {
     const src = filteredStudents
@@ -230,7 +248,7 @@ export default function InstructorAnalytics() {
 
         <div className="mt-3 text-xs text-token-textMuted">
           Göstərilən tələbə sayı:{' '}
-          <span className="text-token-textMain font-semibold">{filteredStudents.length}</span>
+          <span className="text-token-textMain font-semibold">{uniqueStudents.length}</span>
           {selectedSubject ? (
             <>
               {' '}
