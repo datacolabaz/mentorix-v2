@@ -598,8 +598,13 @@ const catchupPackReminders = async (req, res) => {
          u.full_name AS student_name,
          u.phone AS student_phone,
          COALESCE(NULLIF(TRIM(sp.parent_phone), ''), pu.phone) AS parent_phone,
-         -- lesson_count for current cycle from attendance (most reliable)
-         COALESCE(att.max_lesson_number, 0)::int AS lesson_count
+         -- lesson_count for current cycle: take max across sources (attendance/lessons/enrollment_lessons/enrollments.lesson_count)
+         GREATEST(
+           COALESCE(att.max_lesson_number, 0),
+           COALESCE(les.done_lessons, 0),
+           COALESCE(el.done_lessons, 0),
+           COALESCE(e.lesson_count, 0)
+         )::int AS lesson_count
        FROM enrollments e
        JOIN users u ON u.id = e.student_id
        LEFT JOIN student_profiles sp ON sp.user_id = e.student_id
@@ -610,6 +615,20 @@ const catchupPackReminders = async (req, res) => {
          FROM attendance a
          WHERE a.enrollment_id = e.id AND a.billing_cycle = e.billing_cycle
        ) att ON TRUE
+       LEFT JOIN LATERAL (
+         SELECT COUNT(*)::int AS done_lessons
+         FROM lessons l
+         WHERE l.enrollment_id = e.id
+           AND l.billing_cycle = e.billing_cycle
+           AND l.lesson_date <= NOW()
+       ) les ON TRUE
+       LEFT JOIN LATERAL (
+         SELECT COUNT(*)::int AS done_lessons
+         FROM enrollment_lessons el
+         WHERE el.enrollment_id = e.id
+           AND el.billing_cycle = e.billing_cycle
+           AND el.starts_at <= NOW()
+       ) el ON TRUE
        WHERE e.instructor_id = $1
          AND (e.status IS NULL OR LOWER(TRIM(e.status)) = 'active')
          AND u.is_active = TRUE
