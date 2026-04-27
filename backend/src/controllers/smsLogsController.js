@@ -33,9 +33,42 @@ const getSmsLogs = async (req, res) => {
     const type = normalizeType(req.query.type); // payment | otp
     const status = normalizeStatus(req.query.status); // sent | failed | pending
     const date = String(req.query.date || '').trim(); // YYYY-MM-DD (optional)
+    const phoneQ = normDigits(req.query.phone);
 
     const where = [];
     const params = [instructorId];
+
+    if (phoneQ) {
+      const { rows: allowRows } = await db.query(
+        `SELECT DISTINCT norm_phone FROM (
+           SELECT regexp_replace(u.phone, '\\\\D', '', 'g') AS norm_phone
+           FROM users u
+           JOIN enrollments e ON e.student_id = u.id
+           WHERE e.instructor_id = $1
+             AND COALESCE(NULLIF(LOWER(TRIM(e.status)), ''), 'active') = 'active'
+             AND u.phone IS NOT NULL
+           UNION
+           SELECT regexp_replace(sp.parent_phone, '\\\\D', '', 'g') AS norm_phone
+           FROM student_profiles sp
+           JOIN enrollments e2 ON e2.student_id = sp.user_id
+           WHERE e2.instructor_id = $1
+             AND COALESCE(NULLIF(LOWER(TRIM(e2.status)), ''), 'active') = 'active'
+             AND sp.parent_phone IS NOT NULL
+         ) x
+         WHERE norm_phone IS NOT NULL AND norm_phone <> ''`,
+        [instructorId]
+      );
+      const allowed = new Set((allowRows || []).map((r) => String(r.norm_phone || '')).filter(Boolean));
+      if (!allowed.has(phoneQ)) {
+        return res.status(403).json({
+          success: false,
+          code: 'PHONE_NOT_ALLOWED',
+          message: 'Bu nömrəyə baxmaq üçün icazəniz yoxdur',
+        });
+      }
+      params.push(phoneQ);
+      where.push(`b.norm_phone = $${params.length}`);
+    }
 
     // Scope: instructor direct sends OR student/parent phones for their active enrollments
     where.push(`(
