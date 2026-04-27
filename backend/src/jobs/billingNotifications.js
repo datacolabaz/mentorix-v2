@@ -35,7 +35,7 @@ async function ensureSmsOnce({ instructor_id, phone, message, type }) {
     `SELECT 1 FROM sms_logs
      WHERE phone = $1
        AND message = $2
-       AND status = $3
+       AND (type = $3 OR status = $3)
        AND sent_at > NOW() - INTERVAL '45 days'
      LIMIT 1`,
     [p, msg, kind]
@@ -45,12 +45,22 @@ async function ensureSmsOnce({ instructor_id, phone, message, type }) {
   const raw = await sendRawSms(p, msg);
   const statusRaw = raw?.json?.response?.status ?? raw?.json?.status ?? null;
   const status = statusRaw != null ? String(statusRaw) : raw?.ok ? 'sent' : 'failed';
+  const logStatus = raw?.ok ? String(statusRaw ?? 'sent') : `failed:${String(status || 'unknown')}`;
 
-  await db.query(
-    `INSERT INTO sms_logs (instructor_id, phone, message, status)
-     VALUES ($1, $2, $3, $4)`,
-    [instructor_id || null, p, msg, kind]
-  );
+  try {
+    await db.query(
+      `INSERT INTO sms_logs (instructor_id, phone, message, status, type, created_at)
+       VALUES ($1, $2, $3, $4, $5, NOW())`,
+      [instructor_id || null, p, msg, logStatus, kind]
+    );
+  } catch {
+    // Backward compatible if sms_logs.type doesn't exist yet.
+    await db.query(
+      `INSERT INTO sms_logs (instructor_id, phone, message, status)
+       VALUES ($1, $2, $3, $4)`,
+      [instructor_id || null, p, msg, logStatus]
+    );
+  }
 
   return status === 'sent' || raw?.ok === true;
 }

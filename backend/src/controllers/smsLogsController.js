@@ -58,20 +58,46 @@ const getSmsLogs = async (req, res) => {
       )
     )`);
 
+    // Backward compatible inference for logs that predate sms_logs.type.
+    // OTP-like heuristics are duplicated in JS mapping below.
+    const otpLikeSql = `(
+      b.message ILIKE '%kodunuz%'
+      OR b.message ~* '^\\s*mentorix\\s*:\\s*\\d{3,8}\\b'
+      OR b.message ILIKE '%otp%'
+      OR b.message ILIKE '%pin%'
+    )`;
+
     if (type) {
       params.push(type);
       if (type === 'payment') {
-        where.push(`LOWER(COALESCE(b.type, '')) IN ('payment', 'payment_reminder')`);
+        // Include explicit payment types OR inferred payment (type null) based on message content.
+        // Many legacy "billing reminder" logs stored the kind in `status` and left `type` empty.
+        where.push(`(
+          LOWER(COALESCE(b.type, '')) IN ('payment', 'payment_reminder')
+          OR (b.type IS NULL AND NOT ${otpLikeSql})
+        )`);
       } else {
-        where.push(`LOWER(COALESCE(b.type, '')) = $${params.length}`);
+        // Include explicit OTP type OR inferred OTP when type is missing.
+        where.push(`(
+          LOWER(COALESCE(b.type, '')) = $${params.length}
+          OR (b.type IS NULL AND ${otpLikeSql})
+        )`);
       }
     }
 
     if (status) {
-      if (status === 'failed') where.push(`(b.status ILIKE 'failed:%' OR LOWER(TRIM(b.status)) = 'failed')`);
-      else {
-        params.push(status);
-        where.push(`LOWER(TRIM(b.status)) = $${params.length}`);
+      if (status === 'failed') {
+        where.push(`(b.status ILIKE 'failed:%' OR LOWER(TRIM(b.status)) = 'failed')`);
+      } else if (status === 'pending') {
+        where.push(`LOWER(TRIM(b.status)) = 'pending'`);
+      } else if (status === 'sent') {
+        // Treat any non-failed/non-pending provider/custom status as "sent".
+        // This fixes legacy logs that stored billing kind (e.g. billing_monthly_2d) in `status`.
+        where.push(`NOT (
+          LOWER(TRIM(b.status)) = 'pending'
+          OR LOWER(TRIM(b.status)) = 'failed'
+          OR b.status ILIKE 'failed:%'
+        )`);
       }
     }
 
@@ -119,6 +145,7 @@ const getSmsLogs = async (req, res) => {
 
       const stRaw = String(r.status || '').trim();
       const isFailed = stRaw === 'failed' || stRaw.toLowerCase().startsWith('failed:');
+      const isPending = stRaw.toLowerCase() === 'pending';
       const reason = isFailed && stRaw.includes(':') ? stRaw.split(':').slice(1).join(':').trim() : null;
 
       const pkgRaw = r.package_type ? String(r.package_type) : '';
@@ -132,7 +159,7 @@ const getSmsLogs = async (req, res) => {
         type: normalizeType(r.type) || inferredType,
         phone: r.phone,
         message: r.message,
-        status: isFailed ? 'failed' : stRaw || 'sent',
+        status: isFailed ? 'failed' : isPending ? 'pending' : 'sent',
         reason,
         package_type: pkg,
         created_at: r.created_at,
