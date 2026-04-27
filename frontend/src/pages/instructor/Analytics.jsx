@@ -335,12 +335,17 @@ export default function InstructorAnalytics() {
                   </Pie>
                   <Tooltip
                     contentStyle={{
-                      background: 'rgba(11,11,11,0.92)',
-                      border: '1px solid rgba(255,255,255,0.10)',
+                      background: theme === 'dark' ? 'rgba(11,11,11,0.92)' : 'rgba(255,255,255,0.96)',
+                      border:
+                        theme === 'dark'
+                          ? '1px solid rgba(255,255,255,0.10)'
+                          : '1px solid rgba(15,23,42,0.10)',
                       borderRadius: 12,
-                      color: '#fff',
+                      color: theme === 'dark' ? '#fff' : '#0B1220',
                       fontSize: 12,
                     }}
+                    itemStyle={{ color: theme === 'dark' ? '#fff' : '#0B1220' }}
+                    labelStyle={{ color: theme === 'dark' ? 'rgba(229,231,235,0.9)' : '#0B1220' }}
                   />
                 </PieChart>
               </ResponsiveContainer>
