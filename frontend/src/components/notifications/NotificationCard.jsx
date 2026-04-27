@@ -23,7 +23,14 @@ export default function NotificationCard({ item, onDetails }) {
   const tp = TYPE_MAP[item.type] || TYPE_MAP.payment
   const pkgRaw = item.package_type ? String(item.package_type) : ''
   const pkg = pkgRaw === '8' ? '8 dərs' : pkgRaw === '12' ? '12 dərs' : pkgRaw === 'monthly' ? 'Aylıq' : null
-  const primaryText = item.student_name ? String(item.student_name) : item.phone ? String(item.phone) : '—'
+  const phoneCount = Array.isArray(item.phones) ? item.phones.length : 0
+  const primaryText = item.student_name
+    ? String(item.student_name)
+    : item.phone
+      ? String(item.phone)
+      : phoneCount
+        ? String(item.phones[0])
+        : '—'
   const createdAt = item.createdAt || item.created_at || item.created_at === null ? item.createdAt : item.created_at
 
   return (
@@ -46,6 +53,7 @@ export default function NotificationCard({ item, onDetails }) {
           </p>
           <p className="text-xs text-token-textMuted mt-1 truncate">
             {primaryText}
+            {phoneCount > 1 ? <span className="text-token-textMuted"> · +{phoneCount - 1} nömrə</span> : null}
             {pkg ? <span className="text-token-textMuted"> · {pkg}</span> : null}
           </p>
         </div>
@@ -62,15 +70,4 @@ export default function NotificationCard({ item, onDetails }) {
           onClick={() => onDetails?.(item)}
           className={[
             'inline-flex items-center justify-center rounded-xl px-3 py-2 text-xs font-semibold',
-            'border border-[color:var(--border-subtle)] bg-token-surfaceMain/40',
-            'text-token-textMain hover:bg-token-surfaceMain/55 transition-colors',
-            'whitespace-nowrap',
-          ].join(' ')}
-        >
-          Ətraflı bax
-        </button>
-      </div>
-    </div>
-  )
-}
-
+            'border border-[color:var(--bor

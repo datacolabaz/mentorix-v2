@@ -106,20 +106,24 @@ export default function InstructorNotifications() {
         }
         const uniq = new Map()
         for (const x of mapped) {
+          const studentKey = String(x.student_id || x.student_name || '').trim()
           const key = [
             String(x.type || ''),
-            normPhone(x.phone),
+            studentKey,
             String(x.createdAt || ''),
             String(x.message || ''),
           ].join('|')
           const prev = uniq.get(key)
           if (!prev) {
-            uniq.set(key, x)
+            uniq.set(key, {
+              ...x,
+              phones: x.phone ? [x.phone] : [],
+            })
             continue
           }
-          if (rankStatus(x.status) > rankStatus(prev.status)) {
-            uniq.set(key, x)
-          }
+          const mergedPhones = [...new Set([...(prev.phones || []), ...(x.phone ? [x.phone] : [])])]
+          const winner = rankStatus(x.status) > rankStatus(prev.status) ? x : prev
+          uniq.set(key, { ...winner, phones: mergedPhones })
         }
         const deduped = Array.from(uniq.values())
         setSmsDbItems(deduped)

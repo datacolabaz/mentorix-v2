@@ -44,6 +44,38 @@ function ymdFromTsBaku(ts) {
   }).format(d);
 }
 
+function parseLessonWeekdays(v) {
+  if (!Array.isArray(v)) return [];
+  const out = [];
+  for (const x of v) {
+    const n = Number(x);
+    if (Number.isFinite(n) && n >= 1 && n <= 7 && !out.includes(n)) out.push(n);
+  }
+  return out.sort((a, b) => a - b);
+}
+
+function listUpcomingLessonYmds({ startYmd, weekdays, maxDays }) {
+  const s = String(startYmd || '').slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return [];
+  const wd = parseLessonWeekdays(weekdays);
+  if (!wd.length) return [];
+
+  const start = new Date(`${s}T12:00:00Z`);
+  if (Number.isNaN(start.getTime())) return [];
+
+  const out = [];
+  const days = Math.min(180, Math.max(1, Math.trunc(Number(maxDays || 90) || 90)));
+  for (let i = 0; i <= days; i += 1) {
+    const d = new Date(start);
+    d.setUTCDate(d.getUTCDate() + i);
+    // Convert UTC noon date into Baku weekday by using UTC weekday mapping at noon (stable)
+    const dow = d.getUTCDay() === 0 ? 7 : d.getUTCDay(); // 1..7
+    if (!wd.includes(dow)) continue;
+    out.push(d.toISOString().slice(0, 10));
+  }
+  return out;
+}
+
 function normalizeType(v) {
   const t = String(v || '').trim().toLowerCase();
   if (t === 'otp') return 'otp';
@@ -336,6 +368,8 @@ const getSmsPlan = async (req, res) => {
          e.billing_type,
          e.billing_cycle,
          e.lesson_count,
+         e.lesson_weekdays,
+         e.lesson_times,
          e.enrollment_start_date,
          COALESCE(e.notifications_enabled, TRUE) AS notifications_enabled,
          COALESCE(ip.alert_lessons_before, 2) AS alert_lessons_before,
@@ -409,7 +443,13 @@ const getSmsPlan = async (req, res) => {
            LIMIT 1`,
           [r.enrollment_id, cycle, alertAt]
         );
-        const triggerYmd = ymdFromTsBaku(lr[0]?.starts_at);
+        let triggerYmd = ymdFromTsBaku(lr[0]?.starts_at);
+        if (!triggerYmd) {
+          // Fallback: if enrollment_lessons aren't generated yet, approximate next occurrences by weekly schedule.
+          const upcoming = listUpcomingLessonYmds({ startYmd: todayBaku, weekdays: r.lesson_weekdays, maxDays: days });
+          const idx = Math.max(0, (alertAt - 1) - lessonCount);
+          triggerYmd = upcoming[idx] || null;
+        }
         if (!triggerYmd || compareYmd(triggerYmd, todayBaku) < 0 || compareYmd(triggerYmd, endYmd) > 0) continue;
 
         const pkg = billingType === '8_lessons' ? '8' : '12';
