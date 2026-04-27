@@ -24,6 +24,8 @@ export default function InstructorAnalytics() {
   const [examId, setExamId] = useState('')
   const [groups, setGroups] = useState([])
   const [selectedGrade, setSelectedGrade] = useState('')
+  const [selectedSubject, setSelectedSubject] = useState('')
+  const [selectedGroup, setSelectedGroup] = useState('')
   const [groupResults, setGroupResults] = useState([])
   const [top10, setTop10] = useState([])
   const [examLoading, setExamLoading] = useState(false)
@@ -77,13 +79,48 @@ export default function InstructorAnalytics() {
 
   const pieData = Object.entries(referralData).map(([name, value]) => ({ name, value }))
 
-  const barData = students.map(s => ({
-    name: (s.full_name?.split(' ')?.[0] || '—').length > 10
-      ? `${(s.full_name?.split(' ')?.[0] || '').slice(0, 9)}…`
-      : (s.full_name?.split(' ')?.[0] || '—'),
-    bal: parseFloat(s.avg_score || 0),
-    ders: s.lesson_count || 0,
-  }))
+  const subjectOptions = useMemo(() => {
+    const set = new Set()
+    for (const s of students) {
+      const name = String(s.track_subject_name || '').trim()
+      if (name) set.add(name)
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b))
+  }, [students])
+
+  const groupOptions = useMemo(() => {
+    if (!selectedSubject) return []
+    const set = new Set()
+    for (const s of students) {
+      const subj = String(s.track_subject_name || '').trim()
+      if (subj !== selectedSubject) continue
+      const g = String(s.track_group_name || '').trim()
+      if (g) set.add(g)
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b))
+  }, [students, selectedSubject])
+
+  const filteredStudents = useMemo(() => {
+    let arr = Array.isArray(students) ? students : []
+    if (selectedSubject) {
+      arr = arr.filter((s) => String(s.track_subject_name || '').trim() === selectedSubject)
+    }
+    if (selectedGroup) {
+      arr = arr.filter((s) => String(s.track_group_name || '').trim() === selectedGroup)
+    }
+    return arr
+  }, [students, selectedSubject, selectedGroup])
+
+  const barData = useMemo(() => {
+    return filteredStudents.map((s) => ({
+      name:
+        (s.full_name?.split(' ')?.[0] || '—').length > 10
+          ? `${(s.full_name?.split(' ')?.[0] || '').slice(0, 9)}…`
+          : s.full_name?.split(' ')?.[0] || '—',
+      bal: parseFloat(s.avg_score || 0),
+      ders: s.lesson_count || 0,
+    }))
+  }, [filteredStudents])
 
   const gradeOptions = useMemo(() => {
     const arr = groups.map((g) => g.grade).filter(Boolean)
@@ -93,6 +130,73 @@ export default function InstructorAnalytics() {
   return (
     <div className="p-6 min-w-0">
       <h1 className="font-display font-bold text-xl sm:text-2xl mb-6">Analitika</h1>
+
+      <Card className="p-4 sm:p-5 mb-4">
+        <div className="flex flex-col lg:flex-row lg:items-end gap-3">
+          <div className="min-w-0 flex-1">
+            <div className="text-sm font-semibold text-token-textMain">Filtrlə</div>
+            <div className="text-xs text-token-textMuted mt-1">
+              Sahə və qrup seçin — qrafiklər yalnız həmin tələbələrə görə göstəriləcək.
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full lg:w-auto">
+            <div>
+              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Sahə</label>
+              <select
+                className="w-full bg-token-surfaceMain border border-[color:var(--border-subtle)] rounded-xl px-4 py-2.5 text-token-textMain text-sm outline-none focus:border-blue-500"
+                value={selectedSubject}
+                onChange={(e) => {
+                  const v = e.target.value
+                  setSelectedSubject(v)
+                  setSelectedGroup('')
+                }}
+              >
+                <option value="">Hamısı</option>
+                {subjectOptions.map((n) => (
+                  <option key={n} value={n}>
+                    {n}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Qrup</label>
+              <select
+                className="w-full bg-token-surfaceMain border border-[color:var(--border-subtle)] rounded-xl px-4 py-2.5 text-token-textMain text-sm outline-none focus:border-blue-500 disabled:opacity-60"
+                value={selectedGroup}
+                disabled={!selectedSubject || groupOptions.length === 0}
+                onChange={(e) => setSelectedGroup(e.target.value)}
+              >
+                <option value="">Hamısı</option>
+                {groupOptions.map((n) => (
+                  <option key={n} value={n}>
+                    {n}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-3 text-xs text-token-textMuted">
+          Göstərilən tələbə sayı:{' '}
+          <span className="text-token-textMain font-semibold">{filteredStudents.length}</span>
+          {selectedSubject ? (
+            <>
+              {' '}
+              · Sahə: <span className="text-token-textMain font-semibold">{selectedSubject}</span>
+            </>
+          ) : null}
+          {selectedGroup ? (
+            <>
+              {' '}
+              · Qrup: <span className="text-token-textMain font-semibold">{selectedGroup}</span>
+            </>
+          ) : null}
+        </div>
+      </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4 min-w-0">
         <Card hover className="p-4 sm:p-5 min-w-0 overflow-hidden">
