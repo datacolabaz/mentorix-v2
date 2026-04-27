@@ -161,8 +161,6 @@ const deleteStudent = async (req, res) => {
          SET is_active = FALSE,
              phone = NULL,
              email = NULL,
-             password_hash = NULL,
-             pin_hash = NULL,
              phone_verified = FALSE
          WHERE id = $1`,
         [studentId]
