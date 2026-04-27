@@ -32,6 +32,18 @@ function compareYmd(a, b) {
   return 0;
 }
 
+function ymdFromTsBaku(ts) {
+  if (!ts) return null;
+  const d = new Date(ts);
+  if (Number.isNaN(d.getTime())) return null;
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Baku',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(d);
+}
+
 function normalizeType(v) {
   const t = String(v || '').trim().toLowerCase();
   if (t === 'otp') return 'otp';
@@ -323,13 +335,16 @@ const getSmsPlan = async (req, res) => {
          e.id AS enrollment_id,
          e.billing_type,
          e.billing_cycle,
+         e.lesson_count,
          e.enrollment_start_date,
          COALESCE(e.notifications_enabled, TRUE) AS notifications_enabled,
+         COALESCE(ip.alert_lessons_before, 2) AS alert_lessons_before,
          su.id AS student_id,
          su.full_name AS student_name,
          su.phone AS student_phone,
          sp.parent_phone
        FROM enrollments e
+       JOIN instructor_profiles ip ON ip.user_id = e.instructor_id
        JOIN users su ON su.id = e.student_id
        LEFT JOIN student_profiles sp ON sp.user_id = e.student_id
        WHERE e.instructor_id = $1
@@ -377,23 +392,35 @@ const getSmsPlan = async (req, res) => {
       }
 
       if (billingType === '8_lessons' || billingType === '12_lessons') {
-        const remaining = await remainingLessonsCalendar(r.enrollment_id, cycle);
-        if (remaining !== 1) continue;
+        // For 8/12 lesson packs, payment reminder is sent on attendance marking when lesson_number hits:
+        // alertAt = limit - alert_lessons_before. Plan it using enrollment_lessons schedule when available.
+        const limit = billingType === '8_lessons' ? 8 : 12;
+        const alertBefore = Math.min(limit - 1, Math.max(1, Number(r.alert_lessons_before ?? 2) || 2));
+        const alertAt = Math.max(1, limit - alertBefore);
+        const lessonCount = Number(r.lesson_count ?? 0) || 0;
+        if (lessonCount >= alertAt) continue;
 
-        const nl = await nextLessonMeta(r.enrollment_id, cycle);
-        const nextYmd = nl?.ymd ? String(nl.ymd).slice(0, 10) : null;
-        const triggerYmd = nextYmd ? addDaysYmd(nextYmd, -1) : null;
+        const { rows: lr } = await db.query(
+          `SELECT starts_at
+           FROM enrollment_lessons
+           WHERE enrollment_id = $1
+             AND billing_cycle = $2
+             AND lesson_number = $3
+           LIMIT 1`,
+          [r.enrollment_id, cycle, alertAt]
+        );
+        const triggerYmd = ymdFromTsBaku(lr[0]?.starts_at);
         if (!triggerYmd || compareYmd(triggerYmd, todayBaku) < 0 || compareYmd(triggerYmd, endYmd) > 0) continue;
 
         const pkg = billingType === '8_lessons' ? '8' : '12';
         for (const phone of phones) {
           items.push({
-            id: `plan_pkg_last_${r.enrollment_id}_${normDigits(phone)}_${triggerYmd}`,
+            id: `plan_pkg_alert_${r.enrollment_id}_${normDigits(phone)}_${triggerYmd}`,
             student_id: r.student_id || null,
             student_name: studentName,
             type: 'payment',
             phone,
-            message: BILLING_MESSAGE,
+            message: `Mentorix: ${studentName || 'tələbə'} üçün ${limit - alertAt} dərs qalır. Ödəniş etməyi unutmayın!`,
             status: 'scheduled',
             reason: null,
             package_type: pkg,
