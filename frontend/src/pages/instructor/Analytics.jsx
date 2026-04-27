@@ -130,7 +130,10 @@ export default function InstructorAnalytics() {
 
   const referralData = useMemo(() => {
     return uniqueStudents.reduce((acc, s) => {
-      const src = String(s.referral_source || '').trim() || 'Digər'
+      const src =
+        String(s.referral_source || '').trim() ||
+        String(s.referral_notes || '').trim() ||
+        'Digər'
       acc[src] = (acc[src] || 0) + 1
       return acc
     }, {})
