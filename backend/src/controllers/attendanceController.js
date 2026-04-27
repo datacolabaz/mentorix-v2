@@ -36,6 +36,13 @@ function billingLimit(billingType) {
   return null;
 }
 
+function computePackAlertAt(limit, alertBefore) {
+  if (!limit) return null;
+  const ab = Math.trunc(Number(alertBefore || 2) || 2);
+  const safe = Math.min(limit - 1, Math.max(1, ab));
+  return Math.max(1, limit - safe);
+}
+
 const markAttendance = async (req, res) => {
   try {
     const { enrollment_id, date, attended, session_score, notes } = req.body;
@@ -95,9 +102,7 @@ const markAttendance = async (req, res) => {
 
     const limit = billingLimit(enrollment.billing_type);
 
-    // Pack billing: we want the reminder when 1 lesson remains (after 7/11th lesson).
-    // Monthly billing uses a separate flow; this block is only for 8/12 packs.
-    const alertAt = limit ? limit - 1 : null;
+    const alertAt = computePackAlertAt(limit, enrollment.alert_lessons_before);
 
     if (attended && alertAt && lessonNum === alertAt) {
       const targetPhone = enrollment.parent_phone || enrollment.student_phone;
@@ -208,8 +213,11 @@ const upsertAttendanceLesson = async (req, res) => {
     }
 
     const { rows: enRows } = await db.query(
-      `SELECT e.id, e.student_id, e.instructor_id, e.billing_type, e.billing_cycle
-       FROM enrollments e WHERE e.id = $1`,
+      `SELECT e.id, e.student_id, e.instructor_id, e.billing_type, e.billing_cycle,
+              COALESCE(ip.alert_lessons_before, 2) AS alert_lessons_before
+       FROM enrollments e
+       LEFT JOIN instructor_profiles ip ON ip.user_id = e.instructor_id
+       WHERE e.id = $1`,
       [enrollment_id]
     );
     const enrollment = enRows[0];
@@ -261,8 +269,9 @@ const upsertAttendanceLesson = async (req, res) => {
       [enrollment_id, cycle, ln, Boolean(attended) ? 'done' : 'absent']
     );
 
-    // Qalan 1 dərs qalanda xəbərdarlıq (hər dövr üçün bir dəfə)
-    if (limit && n === limit - 1 && beforeN !== n) {
+    // Pack reminder: when remaining lessons reach alert_lessons_before (once per cycle).
+    const alertAt = computePackAlertAt(limit, enrollment.alert_lessons_before);
+    if (attended && limit && alertAt && beforeN < alertAt && n >= alertAt) {
       const { rows: [info] } = await db.query(
         `SELECT e.instructor_id, u.full_name AS student_name, u.phone AS student_phone,
                 COALESCE(NULLIF(TRIM(sp.parent_phone), ''), pu.phone) AS parent_phone
@@ -274,11 +283,12 @@ const upsertAttendanceLesson = async (req, res) => {
         [enrollment_id]
       );
       const targetPhone = info?.parent_phone || info?.student_phone;
+      const remaining = Math.max(0, limit - n);
       if (targetPhone) {
         await sendSms({
           instructorId: info.instructor_id,
           phone: targetPhone,
-          message: `Mentorix: ${info.student_name} üçün növbəti dərs bu paketdə sonuncu dərsdir. Zəhmət olmasa növbəti ödənişi öncədən edin.`,
+          message: `Mentorix: ${info.student_name} üçün ${remaining} dərs qalır. Ödəniş etməyi unutmayın!`,
         });
       }
     }
@@ -352,6 +362,11 @@ const bulkFillAttendancePeriod = async (req, res) => {
     }
 
     const cycle = Number(enrollment.billing_cycle) || 1;
+    const { rows: beforeRows } = await db.query(
+      `SELECT COUNT(*)::int AS n FROM attendance WHERE enrollment_id = $1 AND billing_cycle = $2`,
+      [enrollment_id, cycle]
+    );
+    const beforeN = beforeRows[0]?.n || 0;
     const { rows: planned } = await db.query(
       `SELECT lesson_number, starts_at
        FROM enrollment_lessons
@@ -380,6 +395,7 @@ const bulkFillAttendancePeriod = async (req, res) => {
       });
     }
 
+    let afterN = 0;
     await db.transaction(async (client) => {
       for (const u of toUpsert) {
         await client.query(
@@ -402,6 +418,7 @@ const bulkFillAttendancePeriod = async (req, res) => {
         [enrollment_id, cycle]
       );
       const n = c[0]?.n || 0;
+      afterN = n;
       await client.query('UPDATE enrollments SET lesson_count = $2 WHERE id = $1', [enrollment_id, n]);
 
       if (limit && n >= limit) {
@@ -414,6 +431,37 @@ const bulkFillAttendancePeriod = async (req, res) => {
         );
       }
     });
+
+    // Send reminder once if we crossed alert threshold in this bulk update.
+    const { rows: [prof] } = await db.query(
+      `SELECT COALESCE(ip.alert_lessons_before, 2) AS alert_lessons_before
+       FROM enrollments e
+       LEFT JOIN instructor_profiles ip ON ip.user_id = e.instructor_id
+       WHERE e.id = $1`,
+      [enrollment_id]
+    );
+    const alertAt = computePackAlertAt(limit, prof?.alert_lessons_before);
+    if (attended && limit && alertAt && beforeN < alertAt && afterN >= alertAt) {
+      const { rows: [info] } = await db.query(
+        `SELECT e.instructor_id, u.full_name AS student_name, u.phone AS student_phone,
+                COALESCE(NULLIF(TRIM(sp.parent_phone), ''), pu.phone) AS parent_phone
+         FROM enrollments e
+         JOIN users u ON u.id = e.student_id
+         LEFT JOIN student_profiles sp ON sp.user_id = e.student_id
+         LEFT JOIN users pu ON pu.id = sp.parent_id
+         WHERE e.id = $1`,
+        [enrollment_id]
+      );
+      const targetPhone = info?.parent_phone || info?.student_phone;
+      const remaining = Math.max(0, limit - afterN);
+      if (targetPhone) {
+        await sendSms({
+          instructorId: info.instructor_id,
+          phone: targetPhone,
+          message: `Mentorix: ${info.student_name} üçün ${remaining} dərs qalır. Ödəniş etməyi unutmayın!`,
+        });
+      }
+    }
 
     res.json({ success: true, updated: toUpsert.length });
   } catch (err) {
