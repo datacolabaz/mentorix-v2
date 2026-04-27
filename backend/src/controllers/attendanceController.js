@@ -95,9 +95,9 @@ const markAttendance = async (req, res) => {
 
     const limit = billingLimit(enrollment.billing_type);
 
-    const alertAt = limit
-      ? limit - enrollment.alert_lessons_before
-      : null;
+    // Pack billing: we want the reminder when 1 lesson remains (after 7/11th lesson).
+    // Monthly billing uses a separate flow; this block is only for 8/12 packs.
+    const alertAt = limit ? limit - 1 : null;
 
     if (attended && alertAt && lessonNum === alertAt) {
       const targetPhone = enrollment.parent_phone || enrollment.student_phone;

@@ -487,10 +487,9 @@ const getSmsPlan = async (req, res) => {
 
       if (billingType === '8_lessons' || billingType === '12_lessons') {
         // For 8/12 lesson packs, payment reminder is sent on attendance marking when lesson_number hits:
-        // alertAt = limit - alert_lessons_before. Plan it using enrollment_lessons schedule when available.
+        // alertAt = limit - 1 (when 1 lesson remains). Plan it using enrollment_lessons schedule when available.
         const limit = billingType === '8_lessons' ? 8 : 12;
-        const alertBefore = Math.min(limit - 1, Math.max(1, Number(r.alert_lessons_before ?? 2) || 2));
-        const alertAt = Math.max(1, limit - alertBefore);
+        const alertAt = Math.max(1, limit - 1);
         const lessonCount = Number(r.lesson_count ?? 0) || 0;
         if (lessonCount >= alertAt) {
           if (debug && debugSkipped.length < 100) {

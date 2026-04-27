@@ -18,6 +18,12 @@ function fmtDateTime(iso) {
   return d.toLocaleString('az-AZ', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
 }
 
+function fmtDateOnly(iso) {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return '—'
+  return d.toLocaleDateString('az-AZ', { year: 'numeric', month: '2-digit', day: '2-digit' })
+}
+
 export default function NotificationCard({ item, onDetails }) {
   const st = STATUS_MAP[item.status] || STATUS_MAP.sent
   const tp = TYPE_MAP[item.type] || TYPE_MAP.payment
@@ -62,7 +68,9 @@ export default function NotificationCard({ item, onDetails }) {
 
       <div className="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-xs text-token-textMuted">{fmtDateTime(createdAt)}</p>
+          <p className="text-xs text-token-textMuted">
+            {item.status === 'scheduled' ? `${fmtDateOnly(createdAt)} (təxmini)` : fmtDateTime(createdAt)}
+          </p>
           <p className="text-xs text-token-textMain/90 mt-2 truncate">{item.message || '—'}</p>
         </div>
         <button
