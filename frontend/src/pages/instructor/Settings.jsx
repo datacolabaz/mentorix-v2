@@ -132,6 +132,13 @@ export default function InstructorSettings() {
       : 'bg-token-surfaceMain border-[color:var(--border-subtle)] text-token-textMain placeholder:text-token-textMuted',
   ].join(' ')
 
+  const secondaryBtnCls = [
+    'whitespace-nowrap',
+    theme === 'dark'
+      ? 'border-white/15 text-white hover:bg-white/[0.06] hover:border-white/25'
+      : '!border-slate-200 !text-slate-800 hover:!text-slate-900 hover:!border-slate-300 hover:bg-slate-500/10',
+  ].join(' ')
+
   return (
     <div className="p-4 sm:p-6 min-w-0 max-w-3xl mx-auto w-full space-y-6">
       <div>
@@ -189,7 +196,13 @@ export default function InstructorSettings() {
                 value={newSubject}
                 onChange={(e) => setNewSubject(e.target.value)}
               />
-              <Button type="button" variant="secondary" loading={busy.addSub} onClick={() => void addSubject()}>
+              <Button
+                type="button"
+                variant="secondary"
+                loading={busy.addSub}
+                onClick={() => void addSubject()}
+                className={secondaryBtnCls}
+              >
                 Sahə əlavə et
               </Button>
             </div>
@@ -274,6 +287,7 @@ export default function InstructorSettings() {
                         variant="secondary"
                         loading={busy[`addg-${s.id}`]}
                         onClick={() => void addGroup(s.id)}
+                        className={secondaryBtnCls}
                       >
                         Qrup əlavə et
                       </Button>
