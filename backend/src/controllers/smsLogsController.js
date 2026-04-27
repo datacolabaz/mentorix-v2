@@ -453,7 +453,20 @@ const getSmsPlan = async (req, res) => {
         let triggerYmd = ymdFromTsBaku(lr[0]?.starts_at);
         if (!triggerYmd) {
           // Fallback: if enrollment_lessons aren't generated yet, approximate next occurrences by weekly schedule.
-          const upcoming = listUpcomingLessonYmds({ startYmd: todayBaku, weekdays: r.lesson_weekdays, maxDays: days });
+          // Prefer enrollment.lesson_weekdays, otherwise derive weekdays from teacher_schedules.
+          let weekdays = r.lesson_weekdays;
+          if (!parseLessonWeekdays(weekdays).length) {
+            const { rows: schedRows } = await db.query(
+              `SELECT DISTINCT day_of_week
+               FROM teacher_schedules
+               WHERE enrollment_id = $1
+                 AND instructor_id = $2
+                 AND is_occupied = TRUE`,
+              [r.enrollment_id, instructorId]
+            );
+            weekdays = (schedRows || []).map((x) => x.day_of_week).filter(Boolean);
+          }
+          const upcoming = listUpcomingLessonYmds({ startYmd: todayBaku, weekdays, maxDays: days });
           const idx = Math.max(0, (alertAt - 1) - lessonCount);
           triggerYmd = upcoming[idx] || null;
         }
