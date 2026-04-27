@@ -18,6 +18,11 @@ import useUiStore from '../../hooks/useUi'
 
 const COLORS = ['#e1306c', '#1877f2', '#000', '#3b82f6', '#6366f1']
 
+function safeNum(v) {
+  const n = Number(v)
+  return Number.isFinite(n) ? n : 0
+}
+
 export default function InstructorAnalytics() {
   const [students, setStudents] = useState([])
   const [exams, setExams] = useState([])
@@ -110,6 +115,49 @@ export default function InstructorAnalytics() {
     }
     return arr
   }, [students, selectedSubject, selectedGroup])
+
+  const groupedByTrack = useMemo(() => {
+    const src = filteredStudents
+    /** subject -> group -> students[] */
+    const subjMap = new Map()
+    for (const s of src) {
+      const subject = String(s.track_subject_name || 'Sahəsiz').trim() || 'Sahəsiz'
+      const group = String(s.track_group_name || 'Qrup yoxdur').trim() || 'Qrup yoxdur'
+      if (!subjMap.has(subject)) subjMap.set(subject, new Map())
+      const gMap = subjMap.get(subject)
+      if (!gMap.has(group)) gMap.set(group, [])
+      gMap.get(group).push(s)
+    }
+
+    const subjects = Array.from(subjMap.entries())
+      .map(([subject, gMap]) => {
+        const groupsArr = Array.from(gMap.entries())
+          .map(([group, list]) => {
+            const count = list.length
+            const avgScore =
+              count > 0
+                ? list.reduce((acc, x) => acc + safeNum(x.avg_score), 0) / count
+                : 0
+            const totalLessons = list.reduce((acc, x) => acc + safeNum(x.lesson_count), 0)
+            const sortedStudents = [...list].sort((a, b) =>
+              String(a.full_name || '').localeCompare(String(b.full_name || ''))
+            )
+            return { group, count, avgScore, totalLessons, students: sortedStudents }
+          })
+          .sort((a, b) => a.group.localeCompare(b.group))
+
+        const count = groupsArr.reduce((acc, g) => acc + g.count, 0)
+        const weightedAvg =
+          count > 0
+            ? groupsArr.reduce((acc, g) => acc + g.avgScore * g.count, 0) / count
+            : 0
+        const totalLessons = groupsArr.reduce((acc, g) => acc + g.totalLessons, 0)
+        return { subject, count, avgScore: weightedAvg, totalLessons, groups: groupsArr }
+      })
+      .sort((a, b) => a.subject.localeCompare(b.subject))
+
+    return subjects
+  }, [filteredStudents])
 
   const barData = useMemo(() => {
     return filteredStudents.map((s) => ({
@@ -302,6 +350,77 @@ export default function InstructorAnalytics() {
             </BarChart>
           </ResponsiveContainer>
         </div>
+      </Card>
+
+      <div className="mt-4" />
+
+      <Card hover className="p-4 sm:p-5 min-w-0 overflow-hidden">
+        <div className="mb-3">
+          <h2 className="font-display font-bold text-base text-token-textMain">Sahələr üzrə izləmə</h2>
+          <p className="text-xs text-token-textMuted mt-1">
+            Sahəni açın → qrupları görün → qrupun içində tələbələri izləyin.
+          </p>
+        </div>
+
+        {!groupedByTrack.length ? (
+          <div className="h-28 flex items-center justify-center text-token-textMuted">Məlumat yoxdur</div>
+        ) : (
+          <div className="space-y-3">
+            {groupedByTrack.map((subj) => (
+              <details
+                key={subj.subject}
+                className="rounded-2xl border border-[color:var(--border-subtle)] bg-token-surfaceMain/40 overflow-hidden"
+              >
+                <summary className="cursor-pointer select-none px-4 py-3 flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="font-semibold text-token-textMain truncate">{subj.subject}</div>
+                    <div className="text-xs text-token-textMuted mt-0.5">
+                      {subj.count} tələbə · Orta bal: {Math.round(subj.avgScore)} · Dərs cəmi: {subj.totalLessons}
+                    </div>
+                  </div>
+                  <div className="text-xs text-token-textMuted shrink-0">Aç / Bağla</div>
+                </summary>
+
+                <div className="px-4 pb-4 space-y-2">
+                  {subj.groups.map((g) => (
+                    <details
+                      key={`${subj.subject}__${g.group}`}
+                      className="rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceMain/60"
+                    >
+                      <summary className="cursor-pointer select-none px-3 py-2.5 flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="text-sm font-semibold text-token-textMain truncate">{g.group}</div>
+                          <div className="text-xs text-token-textMuted mt-0.5">
+                            {g.count} tələbə · Orta bal: {Math.round(g.avgScore)} · Dərs cəmi: {g.totalLessons}
+                          </div>
+                        </div>
+                        <div className="text-xs text-token-textMuted shrink-0">Aç / Bağla</div>
+                      </summary>
+
+                      <div className="px-3 pb-3">
+                        <ul className="divide-y divide-[color:var(--border-subtle)]">
+                          {g.students.map((s) => (
+                            <li key={s.id || s.enrollment_id || s.phone} className="py-2 flex items-center justify-between gap-3">
+                              <div className="min-w-0">
+                                <div className="text-sm text-token-textMain truncate">{s.full_name || '—'}</div>
+                                <div className="text-xs text-token-textMuted mt-0.5">
+                                  Bal: {Math.round(safeNum(s.avg_score))} · Dərs: {safeNum(s.lesson_count)}
+                                </div>
+                              </div>
+                              <div className="text-xs text-token-textMuted shrink-0">
+                                {String(s.billing_type || '').replace(/_/g, ' ')}
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </details>
+                  ))}
+                </div>
+              </details>
+            ))}
+          </div>
+        )}
       </Card>
 
       <div className="mt-4" />
