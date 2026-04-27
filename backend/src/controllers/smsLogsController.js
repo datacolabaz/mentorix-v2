@@ -243,11 +243,13 @@ const getSmsLogs = async (req, res) => {
         /\bPIN\b/i.test(msg) ||
         /OTP\s*yox/i.test(msg);
       const examLike =
-        /\bimtahan/i.test(msg) ||
+        /imtahan/i.test(msg) ||
         /\bbal\b/i.test(msg) ||
-        /\bnetice\b/i.test(msg) ||
-        /\bnəticə\b/i.test(msg);
-      const billingLike = /abunəliyinizin bitməsinə 2 gün qalıb/i.test(msg) || /\b(?:ödəniş|odenis)\b/i.test(msg);
+        /netice/i.test(msg) ||
+        /nəticə/i.test(msg);
+      // NOTE: Avoid `\b` word boundaries for Azerbaijani letters (e.g. "Ödəniş"),
+      // because JS `\b` is ASCII-word based and would fail to match.
+      const billingLike = /abunəliyinizin bitməsinə 2 gün qalıb/i.test(msg) || /ödəniş|odenis/i.test(msg);
       const inferredType = otpLike ? 'otp' : billingLike ? 'payment' : examLike ? 'system' : 'system';
 
       const stRaw = String(r.status || '').trim();
