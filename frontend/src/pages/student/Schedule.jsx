@@ -2,6 +2,7 @@ import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
 import api from '../../lib/api'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
+import Modal from '../../components/common/Modal'
 import { useToast } from '../../components/common/Toast'
 import useAuthStore from '../../hooks/useAuth'
 import {
@@ -81,6 +82,8 @@ export default function StudentSchedule() {
   const [weeklyPattern, setWeeklyPattern] = useState(null) // { lesson_weekdays, lesson_times }
   const [err, setErr] = useState(null)
   const [saving, setSaving] = useState(false)
+  const [conflictOpen, setConflictOpen] = useState(false)
+  const [conflictMsg, setConflictMsg] = useState('')
   const toast = useToast()
 
   // Default: heç bir gün seçilməsin (qarışdırmasın)
@@ -221,11 +224,6 @@ export default function StudentSchedule() {
 
   const gridRowCount = Math.max(1, gridEnd - GRID_START)
 
-  const freeDays = useMemo(() => {
-    // Hazırlıq slotları dərs günlərində də ola bilər (yalnız saat toqquşması bloklanır).
-    return WEEKDAYS.map((d) => d.v)
-  }, [])
-
   const toggleNewDay = (v) => {
     setNewSlotDays((prev) => (prev.includes(v) ? prev.filter((x) => x !== v) : [...prev, v].sort((a, b) => a - b)))
   }
@@ -246,7 +244,14 @@ export default function StudentSchedule() {
       toast('Hazırlıq slotları əlavə olundu', 'success')
       await load()
     } catch (e) {
-      toast(e?.message || 'Xəta', 'error')
+      const msg = e?.message || 'Xəta'
+      const status = e?.status
+      if (status === 409 || /toqquşma/i.test(msg)) {
+        setConflictMsg(msg)
+        setConflictOpen(true)
+      } else {
+        toast(msg, 'error')
+      }
     } finally {
       setSaving(false)
     }
@@ -268,7 +273,7 @@ export default function StudentSchedule() {
       <div className="flex items-end justify-between gap-3 mb-4">
         <div>
           <h1 className="font-display font-bold text-xl sm:text-2xl text-token-textMain">Cədvəlim</h1>
-          <p className="text-token-textMuted text-sm mt-1">Dərs günləri və hazırlıq üçün boş günlər.</p>
+          <p className="text-token-textMuted text-sm mt-1">Dərs və hazırlıq slotlarınız.</p>
         </div>
         <Button variant="secondary" size="sm" onClick={() => void load()} disabled={loading}>
           Yenilə
@@ -281,6 +286,17 @@ export default function StudentSchedule() {
         </Card>
       )}
 
+      <Modal open={conflictOpen} onClose={() => setConflictOpen(false)} title="Slot yaradılmadı" size="md">
+        <div className="space-y-4">
+          <p className="text-sm text-token-textMain leading-relaxed">{conflictMsg}</p>
+          <div className="flex justify-end">
+            <Button type="button" onClick={() => setConflictOpen(false)} className="justify-center">
+              Bağla
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card hover className="p-5">
           <p className="text-sm font-semibold mb-1">Hazırlıq üçün slot yarat</p>
@@ -290,7 +306,6 @@ export default function StudentSchedule() {
 
           <div className="flex flex-wrap gap-2">
             {WEEKDAYS.map((d) => {
-              const isFree = freeDays.includes(d.v)
               const selected = newSlotDays.includes(d.v)
               return (
                 <button
@@ -299,11 +314,9 @@ export default function StudentSchedule() {
                   onClick={() => toggleNewDay(d.v)}
                   className={[
                     'px-3 py-2 rounded-xl text-xs font-semibold border transition-colors',
-                    isFree
-                      ? selected
-                        ? 'bg-emerald-500/20 border-emerald-400/40 text-emerald-200'
-                        : 'bg-[#13112e] border-indigo-500/20 text-gray-200 hover:border-indigo-400/40'
-                      : 'bg-[#13112e] border-indigo-500/10 text-gray-600 opacity-60 cursor-not-allowed',
+                    selected
+                      ? 'bg-emerald-500/20 border-emerald-400/40 text-emerald-200'
+                      : 'bg-[#13112e] border-indigo-500/20 text-gray-200 hover:border-indigo-400/40',
                   ].join(' ')}
                   title="Hazırlıq günü kimi seç"
                 >
