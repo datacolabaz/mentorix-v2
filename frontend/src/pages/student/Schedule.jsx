@@ -222,18 +222,18 @@ export default function StudentSchedule() {
   const gridRowCount = Math.max(1, gridEnd - GRID_START)
 
   const freeDays = useMemo(() => {
-    const busy = new Set([...lessonDays, ...patternDays])
-    return WEEKDAYS.map((d) => d.v).filter((x) => !busy.has(x))
-  }, [lessonDays, patternDays])
+    // Hazırlıq slotları dərs günlərində də ola bilər (yalnız saat toqquşması bloklanır).
+    return WEEKDAYS.map((d) => d.v)
+  }, [])
 
   const toggleNewDay = (v) => {
     setNewSlotDays((prev) => (prev.includes(v) ? prev.filter((x) => x !== v) : [...prev, v].sort((a, b) => a - b)))
   }
 
   const addSlots = async () => {
-    const days = newSlotDays.filter((d) => freeDays.includes(d))
+    const days = newSlotDays
     if (!days.length) {
-      toast('Boş günlərdən ən azı birini seçin', 'error')
+      toast('Ən azı bir gün seçin', 'error')
       return
     }
     setSaving(true)
@@ -285,7 +285,7 @@ export default function StudentSchedule() {
         <Card hover className="p-5">
           <p className="text-sm font-semibold mb-1">Hazırlıq üçün slot yarat</p>
           <p className="text-xs text-token-textMuted mb-3">
-            Boş günləri seçin və saat aralığı verin (məs. 1–4-cü günlər 18:00–19:00).
+            Günləri seçin və saat aralığı verin. Dərs saatı ilə toqquşarsa sistem icazə verməyəcək.
           </p>
 
           <div className="flex flex-wrap gap-2">
@@ -296,7 +296,6 @@ export default function StudentSchedule() {
                 <button
                   type="button"
                   key={d.v}
-                  disabled={!isFree}
                   onClick={() => toggleNewDay(d.v)}
                   className={[
                     'px-3 py-2 rounded-xl text-xs font-semibold border transition-colors',
@@ -306,7 +305,7 @@ export default function StudentSchedule() {
                         : 'bg-[#13112e] border-indigo-500/20 text-gray-200 hover:border-indigo-400/40'
                       : 'bg-[#13112e] border-indigo-500/10 text-gray-600 opacity-60 cursor-not-allowed',
                   ].join(' ')}
-                  title={!isFree ? 'Bu gün dərsiniz var' : 'Hazırlıq günü kimi seç'}
+                  title="Hazırlıq günü kimi seç"
                 >
                   {d.full}
                 </button>
