@@ -122,8 +122,8 @@ export default function InstructorSettings() {
   return (
     <div className="p-4 sm:p-6 min-w-0 max-w-3xl mx-auto w-full space-y-6">
       <div>
-        <h1 className="font-display font-bold text-xl sm:text-2xl text-white tracking-tight">Tənzimləmələr</h1>
-        <p className="text-gray-500 text-sm mt-1">
+        <h1 className="font-display font-bold text-xl sm:text-2xl text-token-textMain tracking-tight">Tənzimləmələr</h1>
+        <p className="text-token-textMuted text-sm mt-1">
           İnterfeysdə və tələbə tərəfində sizin rolunuz <span className="text-indigo-300">{roleWord}</span> kimi görünəcək.
         </p>
       </div>
@@ -254,3 +254,4 @@ export default function InstructorSettings() {
     </div>
   )
 }
+
