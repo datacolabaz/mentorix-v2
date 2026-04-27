@@ -4,6 +4,7 @@ import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
 import { useToast } from '../../components/common/Toast'
+import useUiStore from '../../hooks/useUi'
 
 function billingLabel(t) {
   if (t === '8_lessons') return '8 dərs'
@@ -136,6 +137,38 @@ export default function InstructorAttendance() {
   const [monthlyActTo, setMonthlyActTo] = useState('')
   const [monthlyRangeEnd, setMonthlyRangeEnd] = useState(() => ymdTodayBaku())
   const toast = useToast()
+  const { theme } = useUiStore()
+
+  const labelCls = [
+    'block text-xs font-semibold uppercase tracking-wider mb-2',
+    theme === 'dark' ? 'text-gray-400' : 'text-token-textMuted',
+  ].join(' ')
+
+  const inputCls = [
+    'w-full min-w-0 max-w-full box-border rounded-xl px-4 py-2.5 text-sm outline-none focus:border-blue-500 border',
+    theme === 'dark'
+      ? 'bg-[#13112e] border-indigo-500/20 text-white placeholder:text-gray-500'
+      : 'bg-token-surfaceMain border-[color:var(--border-subtle)] text-token-textMain placeholder:text-token-textMuted',
+  ].join(' ')
+
+  const selectCls = [
+    'w-full min-w-0 max-w-full rounded-xl px-3 sm:px-4 py-2.5 text-sm outline-none focus:border-blue-500 border',
+    theme === 'dark'
+      ? 'bg-[#13112e] border-indigo-500/20 text-white'
+      : 'bg-token-surfaceMain border-[color:var(--border-subtle)] text-token-textMain',
+  ].join(' ')
+
+  const smallLabelCls = [
+    'block text-[10px] font-semibold uppercase tracking-wider mb-1',
+    theme === 'dark' ? 'text-gray-500' : 'text-token-textMuted',
+  ].join(' ')
+
+  const smallInputCls = [
+    'w-full rounded-xl px-3 py-2 text-sm outline-none focus:border-blue-500 border',
+    theme === 'dark'
+      ? 'bg-[#13112e] border-indigo-500/20 text-white placeholder:text-gray-500'
+      : 'bg-token-surfaceMain border-[color:var(--border-subtle)] text-token-textMain placeholder:text-token-textMuted',
+  ].join(' ')
 
   useEffect(() => {
     api
@@ -387,8 +420,9 @@ export default function InstructorAttendance() {
       <div className="max-w-4xl w-full min-w-0">
         <Card className="p-4 sm:p-6 space-y-4 min-w-0 overflow-hidden">
           <div className="min-w-0">
-            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Tələbə</label>
-            <select className="w-full min-w-0 max-w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-3 sm:px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500"
+            <label className={labelCls}>Tələbə</label>
+            <select
+              className={selectCls}
               value={enrollmentId} onChange={async (e) => {
                 const id = e.target.value
                 setEnrollmentId(id)
@@ -404,20 +438,20 @@ export default function InstructorAttendance() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Tarix</label>
+              <label className={labelCls}>Tarix</label>
               <input
                 type="date"
-                className="date-input-class w-full min-w-0 max-w-full box-border bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500"
+                className={['date-input-class', inputCls].join(' ')}
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
                 disabled={!enrollmentId}
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Qeyd (opsional)</label>
+              <label className={labelCls}>Qeyd (opsional)</label>
               <input
                 placeholder="Əlavə qeyd..."
-                className="w-full min-w-0 max-w-full box-border bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500"
+                className={inputCls}
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 disabled={!enrollmentId}
@@ -425,18 +459,33 @@ export default function InstructorAttendance() {
             </div>
           </div>
 
-          {loading && <p className="text-xs text-gray-500">Yüklənir…</p>}
+          {loading && (
+            <p className={['text-xs', theme === 'dark' ? 'text-gray-500' : 'text-token-textMuted'].join(' ')}>
+              Yüklənir…
+            </p>
+          )}
 
           {period?.enrollment && (
-            <div className="rounded-xl border border-indigo-500/20 bg-[#0f0c29]/60 p-3">
-              <p className="text-xs text-gray-400">
-                <span className="text-gray-500">Paket:</span>{' '}
-                <span className="text-white font-semibold">{billingLabel(period.enrollment.billing_type)}</span>{' '}
-                · <span className="text-gray-500">Dövr:</span>{' '}
-                <span className="text-white font-semibold">#{period.enrollment.billing_cycle}</span>
+            <div
+              className={[
+                'rounded-xl border p-3',
+                theme === 'dark'
+                  ? 'border-indigo-500/20 bg-[#0f0c29]/60'
+                  : 'border-[color:var(--border-subtle)] bg-token-surfaceMain/60',
+              ].join(' ')}
+            >
+              <p className={['text-xs', theme === 'dark' ? 'text-gray-400' : 'text-token-textMuted'].join(' ')}>
+                <span className={theme === 'dark' ? 'text-gray-500' : 'text-token-textMuted'}>Paket:</span>{' '}
+                <span className={['font-semibold', theme === 'dark' ? 'text-white' : 'text-token-textMain'].join(' ')}>
+                  {billingLabel(period.enrollment.billing_type)}
+                </span>{' '}
+                · <span className={theme === 'dark' ? 'text-gray-500' : 'text-token-textMuted'}>Dövr:</span>{' '}
+                <span className={['font-semibold', theme === 'dark' ? 'text-white' : 'text-token-textMain'].join(' ')}>
+                  #{period.enrollment.billing_cycle}
+                </span>
               </p>
               {period.enrollment.lesson_limit != null && (
-                <p className="text-xs text-gray-500 mt-1">
+                <p className={['text-xs mt-1', theme === 'dark' ? 'text-gray-500' : 'text-token-textMuted'].join(' ')}>
                   Dərslər: {period.enrollment.lesson_count || 0} / {period.enrollment.lesson_limit}
                 </p>
               )}
@@ -557,12 +606,10 @@ export default function InstructorAttendance() {
                 <>
                   <div className="flex flex-col sm:flex-row sm:items-end gap-3">
                     <div className="flex-1 min-w-0">
-                      <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">
-                        Hesab intervalının sonu (Bakı tarixi)
-                      </label>
+                      <label className={smallLabelCls}>Hesab intervalının sonu (Bakı tarixi)</label>
                       <input
                         type="date"
-                        className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-3 py-2 text-white text-sm outline-none focus:border-blue-500"
+                        className={smallInputCls}
                         value={monthlyRangeEnd}
                         min={monthlyLessonStats.anchor}
                         max={ymdTodayBaku()}
@@ -570,25 +617,40 @@ export default function InstructorAttendance() {
                       />
                     </div>
                   </div>
-                  <p className="text-xs text-gray-400">
+                  <p className={['text-xs', theme === 'dark' ? 'text-gray-400' : 'text-token-textMuted'].join(' ')}>
                     Ödəniş başlanğıcı:{' '}
-                    <span className="font-mono text-white">{monthlyLessonStats.anchor}</span>
+                    <span className={['font-mono', theme === 'dark' ? 'text-white' : 'text-token-textMain'].join(' ')}>
+                      {monthlyLessonStats.anchor}
+                    </span>
                     {' → '}
-                    <span className="font-mono text-white">{monthlyLessonStats.end}</span>
+                    <span className={['font-mono', theme === 'dark' ? 'text-white' : 'text-token-textMain'].join(' ')}>
+                      {monthlyLessonStats.end}
+                    </span>
                     {' · '}
                     <span className="text-emerald-300 font-semibold">{monthlyLessonStats.count}</span> dərs günü
                     (seçilmiş həftəlik cədvələ uyğun)
                   </p>
                 </>
               )}
-              <div className="rounded-lg border border-indigo-500/15 bg-[#13112e]/40 p-3 space-y-3">
-                <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Toplu əməliyyat aralığı</p>
+              <div
+                className={[
+                  'rounded-lg border p-3 space-y-3',
+                  theme === 'dark'
+                    ? 'border-indigo-500/15 bg-[#13112e]/40'
+                    : 'border-[color:var(--border-subtle)] bg-token-surfaceMain/50',
+                ].join(' ')}
+              >
+                <p className={['text-[11px] font-semibold uppercase tracking-wider', theme === 'dark' ? 'text-gray-400' : 'text-token-textMain'].join(' ')}>
+                  Toplu əməliyyat aralığı
+                </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[10px] text-gray-500 mb-1">Başlanğıc</label>
+                    <label className={['block text-[10px] mb-1', theme === 'dark' ? 'text-gray-500' : 'text-token-textMuted'].join(' ')}>
+                      Başlanğıc
+                    </label>
                     <input
                       type="date"
-                      className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-3 py-2 text-white text-sm outline-none focus:border-blue-500"
+                      className={smallInputCls}
                       value={monthlyActFrom}
                       min={monthlyLessonStats?.anchor}
                       max={monthlyActTo || undefined}
@@ -597,10 +659,12 @@ export default function InstructorAttendance() {
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] text-gray-500 mb-1">Son</label>
+                    <label className={['block text-[10px] mb-1', theme === 'dark' ? 'text-gray-500' : 'text-token-textMuted'].join(' ')}>
+                      Son
+                    </label>
                     <input
                       type="date"
-                      className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-3 py-2 text-white text-sm outline-none focus:border-blue-500"
+                      className={smallInputCls}
                       value={monthlyActTo}
                       min={monthlyActFrom || monthlyLessonStats?.anchor}
                       onChange={(e) => setMonthlyActTo(e.target.value)}
@@ -719,26 +783,26 @@ export default function InstructorAttendance() {
         size="md"
       >
         <div className="space-y-4 text-sm">
-          <p className="text-xs text-gray-400 leading-relaxed">
+          <p className={['text-xs leading-relaxed', theme === 'dark' ? 'text-gray-400' : 'text-token-textMuted'].join(' ')}>
             Seçilmiş tarix aralığında cədvəldə olan hər dərs üçün (cari dövr) davamiyyət &quot;Gəldi&quot; kimi yazılır.
             Yalnız bu dövrə aid planlaşdırılmış tarixlər nəzərə alınır.
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Başlanğıc</label>
+              <label className={labelCls}>Başlanğıc</label>
               <input
                 type="date"
-                className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white outline-none focus:border-blue-500"
+                className={inputCls}
                 value={bulkFrom}
                 onChange={(e) => setBulkFrom(e.target.value)}
                 disabled={bulkSaving}
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Son</label>
+              <label className={labelCls}>Son</label>
               <input
                 type="date"
-                className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white outline-none focus:border-blue-500"
+                className={inputCls}
                 value={bulkTo}
                 onChange={(e) => setBulkTo(e.target.value)}
                 disabled={bulkSaving}
@@ -746,9 +810,9 @@ export default function InstructorAttendance() {
             </div>
           </div>
           <div>
-            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Qeyd (istəyə bağlı)</label>
+            <label className={labelCls}>Qeyd (istəyə bağlı)</label>
             <input
-              className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white outline-none focus:border-blue-500"
+              className={inputCls}
               placeholder="Məs: köhnə dövr köçürməsi"
               value={bulkNotes}
               onChange={(e) => setBulkNotes(e.target.value)}
