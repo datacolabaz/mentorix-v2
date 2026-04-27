@@ -17,7 +17,7 @@ export default function Modal({ open, onClose, title, children, size = 'md' }) {
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div
-        className={`bg-surface-2 border border-white/10 rounded-2xl w-full ${sizes[size]} max-h-[90vh] overflow-y-auto`}
+        className={`theme-dark bg-surface-2 border border-white/10 rounded-2xl w-full ${sizes[size]} max-h-[90vh] overflow-y-auto`}
       >
         <div className="flex items-center justify-between p-6 border-b border-white/10">
           <h2 className="font-display font-700 text-lg text-white">{title}</h2>
