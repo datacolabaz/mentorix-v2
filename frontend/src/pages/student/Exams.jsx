@@ -981,8 +981,16 @@ export default function StudentExams() {
                         size="sm"
                         className={
                           theme === 'dark'
-                            ? 'bg-white/5 hover:bg-white/10 text-gray-200 border border-white/10'
-                            : 'bg-slate-100 hover:bg-slate-200 text-slate-900 border border-slate-200'
+                            ? [
+                                'bg-white/5 hover:bg-white/10 border border-white/10',
+                                'text-gray-200 hover:text-white',
+                                'disabled:opacity-100 disabled:text-gray-500 disabled:bg-white/[0.03] disabled:border-white/10',
+                              ].join(' ')
+                            : [
+                                'bg-slate-100 hover:bg-slate-200 border border-slate-200',
+                                'text-slate-900 hover:text-slate-900',
+                                'disabled:opacity-100 disabled:text-slate-400 disabled:bg-slate-50 disabled:border-slate-200',
+                              ].join(' ')
                         }
                         onClick={() => openPastReview(exam)}
                       >
@@ -993,8 +1001,16 @@ export default function StudentExams() {
                         size="sm"
                         className={
                           theme === 'dark'
-                            ? 'bg-white/5 hover:bg-white/10 text-gray-200 border border-white/10'
-                            : 'bg-slate-100 hover:bg-slate-200 text-slate-900 border border-slate-200'
+                            ? [
+                                'bg-white/5 hover:bg-white/10 border border-white/10',
+                                'text-gray-200 hover:text-white',
+                                'disabled:opacity-100 disabled:text-gray-500 disabled:bg-white/[0.03] disabled:border-white/10',
+                              ].join(' ')
+                            : [
+                                'bg-slate-100 hover:bg-slate-200 border border-slate-200',
+                                'text-slate-900 hover:text-slate-900',
+                                'disabled:opacity-100 disabled:text-slate-400 disabled:bg-slate-50 disabled:border-slate-200',
+                              ].join(' ')
                         }
                         onClick={() => void openLeaderboard(exam)}
                       >
