@@ -5,13 +5,12 @@ import Button from '../../components/common/Button'
 import { useToast } from '../../components/common/Toast'
 import useAuthStore from '../../hooks/useAuth'
 import { instructorRoleAz } from '../../lib/instructorLabel'
-
-const inp =
-  'w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500'
+import useUiStore from '../../hooks/useUi'
 
 export default function InstructorSettings() {
   const toast = useToast()
   const { user, updateUser } = useAuthStore()
+  const { theme } = useUiStore()
   const [loading, setLoading] = useState(true)
   const [savingLabel, setSavingLabel] = useState(false)
   const [publicLabel, setPublicLabel] = useState('instructor')
@@ -119,6 +118,20 @@ export default function InstructorSettings() {
 
   const roleWord = instructorRoleAz(publicLabel)
 
+  const cardTitleCls = [
+    'text-sm font-semibold uppercase tracking-wider',
+    theme === 'dark' ? 'text-indigo-200/90' : 'text-token-textMain',
+  ].join(' ')
+
+  const cardTextCls = ['text-xs leading-relaxed', theme === 'dark' ? 'text-gray-500' : 'text-token-textMuted'].join(' ')
+
+  const inp = [
+    'w-full rounded-xl px-4 py-2.5 text-sm outline-none focus:border-blue-500 border',
+    theme === 'dark'
+      ? 'bg-[#13112e] border-indigo-500/20 text-white placeholder:text-gray-500'
+      : 'bg-token-surfaceMain border-[color:var(--border-subtle)] text-token-textMain placeholder:text-token-textMuted',
+  ].join(' ')
+
   return (
     <div className="p-4 sm:p-6 min-w-0 max-w-3xl mx-auto w-full space-y-6">
       <div>
@@ -129,12 +142,12 @@ export default function InstructorSettings() {
       </div>
 
       <Card className="p-5 border border-indigo-500/20 space-y-4">
-        <h2 className="text-sm font-semibold text-indigo-200/90 uppercase tracking-wider">Görünən ad</h2>
-        <p className="text-xs text-gray-500 leading-relaxed">
+        <h2 className={cardTitleCls}>Görünən ad</h2>
+        <p className={cardTextCls}>
           Dashboard və naviqasiyada, həmçinin tələbə ödəniş/tapşırıq ekranlarında göstərilən titul.
         </p>
         <div className="flex flex-col sm:flex-row gap-3">
-          <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-200">
+          <label className={['flex items-center gap-2 cursor-pointer text-sm', theme === 'dark' ? 'text-gray-200' : 'text-token-textMain'].join(' ')}>
             <input
               type="radio"
               name="public_label"
@@ -144,7 +157,7 @@ export default function InstructorSettings() {
             />
             Müəllim
           </label>
-          <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-200">
+          <label className={['flex items-center gap-2 cursor-pointer text-sm', theme === 'dark' ? 'text-gray-200' : 'text-token-textMain'].join(' ')}>
             <input
               type="radio"
               name="public_label"
@@ -161,12 +174,12 @@ export default function InstructorSettings() {
       </Card>
 
       <Card className="p-5 border border-indigo-500/20 space-y-4">
-        <h2 className="text-sm font-semibold text-indigo-200/90 uppercase tracking-wider">Tədris sahələri və qruplar</h2>
-        <p className="text-xs text-gray-500 leading-relaxed">
+        <h2 className={cardTitleCls}>Tədris sahələri və qruplar</h2>
+        <p className={cardTextCls}>
           Tələbə qeydiyyatında sahə və qrup seçiminə imkan verir; ödənişlər cədvəlində sahə adı görünür (hesabat üçün).
         </p>
         {loading ? (
-          <p className="text-gray-500 text-sm">Yüklənir…</p>
+          <p className={['text-sm', theme === 'dark' ? 'text-gray-500' : 'text-token-textMuted'].join(' ')}>Yüklənir…</p>
         ) : (
           <>
             <div className="flex flex-col sm:flex-row gap-2">
@@ -182,12 +195,24 @@ export default function InstructorSettings() {
             </div>
             <ul className="space-y-4">
               {!subjects.length ? (
-                <li className="text-sm text-gray-500">Hələ sahə yoxdur — əlavə edin və ya qeydiyyatda sahəni boş buraxın.</li>
+                <li className={['text-sm', theme === 'dark' ? 'text-gray-500' : 'text-token-textMuted'].join(' ')}>
+                  Hələ sahə yoxdur — əlavə edin və ya qeydiyyatda sahəni boş buraxın.
+                </li>
               ) : null}
               {subjects.map((s) => (
-                <li key={s.id} className="rounded-xl border border-indigo-500/15 bg-[#0f0c29]/60 p-4 space-y-3">
+                <li
+                  key={s.id}
+                  className={[
+                    'rounded-xl border p-4 space-y-3',
+                    theme === 'dark'
+                      ? 'border-indigo-500/15 bg-[#0f0c29]/60'
+                      : 'border-[color:var(--border-subtle)] bg-token-surfaceMain/60',
+                  ].join(' ')}
+                >
                   <div className="flex items-start justify-between gap-2">
-                    <div className="font-medium text-white">{s.name}</div>
+                    <div className={['font-medium', theme === 'dark' ? 'text-white' : 'text-token-textMain'].join(' ')}>
+                      {s.name}
+                    </div>
                     <Button
                       type="button"
                       size="sm"
@@ -198,17 +223,30 @@ export default function InstructorSettings() {
                       Sil
                     </Button>
                   </div>
-                  <div className="pl-2 border-l border-indigo-500/20 space-y-2">
+                  <div
+                    className={[
+                      'pl-2 border-l space-y-2',
+                      theme === 'dark' ? 'border-indigo-500/20' : 'border-[color:var(--border-subtle)]',
+                    ].join(' ')}
+                  >
                     {(s.groups || []).length === 0 ? (
-                      <p className="text-xs text-gray-500">Qrup yoxdur</p>
+                      <p className={['text-xs', theme === 'dark' ? 'text-gray-500' : 'text-token-textMuted'].join(' ')}>
+                        Qrup yoxdur
+                      </p>
                     ) : (
                       <ul className="space-y-1">
                         {(s.groups || []).map((g) => (
-                          <li key={g.id} className="flex items-center justify-between gap-2 text-sm text-gray-300">
+                          <li
+                            key={g.id}
+                            className={['flex items-center justify-between gap-2 text-sm', theme === 'dark' ? 'text-gray-300' : 'text-token-textMain'].join(' ')}
+                          >
                             <span>{g.name}</span>
                             <button
                               type="button"
-                              className="text-xs text-rose-300 hover:text-rose-200 disabled:opacity-40"
+                              className={[
+                                'text-xs disabled:opacity-40',
+                                theme === 'dark' ? 'text-rose-300 hover:text-rose-200' : 'text-rose-700 hover:text-rose-800',
+                              ].join(' ')}
                               disabled={busy[`delg-${g.id}`]}
                               onClick={() => void removeGroup(g.id)}
                             >
@@ -248,8 +286,9 @@ export default function InstructorSettings() {
         )}
       </Card>
 
-      <p className="text-xs text-gray-600">
-        Hesab: <span className="text-gray-400">{user?.full_name}</span>
+      <p className={['text-xs', theme === 'dark' ? 'text-gray-600' : 'text-token-textMuted'].join(' ')}>
+        Hesab:{' '}
+        <span className={theme === 'dark' ? 'text-gray-400' : 'text-token-textMain'}>{user?.full_name}</span>
       </p>
     </div>
   )
