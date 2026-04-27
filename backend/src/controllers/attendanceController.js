@@ -36,11 +36,10 @@ function billingLimit(billingType) {
   return null;
 }
 
-function computePackAlertAt(limit, alertBefore) {
-  if (!limit) return null;
-  const ab = Math.trunc(Number(alertBefore || 2) || 2);
-  const safe = Math.min(limit - 1, Math.max(1, ab));
-  return Math.max(1, limit - safe);
+function packTriggerAt(limit) {
+  if (limit === 8) return 7;
+  if (limit === 12) return 11;
+  return null;
 }
 
 const markAttendance = async (req, res) => {
@@ -61,7 +60,8 @@ const markAttendance = async (req, res) => {
     }
 
     const { rows: [enrollment] } = await db.query(
-      `SELECT e.*, ip.alert_lessons_before, ip.billing_type AS instr_billing,
+      `SELECT e.*, COALESCE(e.pack_reminder_sent_cycle, 0) AS pack_reminder_sent_cycle,
+              ip.alert_lessons_before, ip.billing_type AS instr_billing,
               u.full_name AS student_name, u.phone AS student_phone,
               sp.parent_id,
               COALESCE(NULLIF(TRIM(sp.parent_phone), ''), pu.phone) AS parent_phone
@@ -101,18 +101,25 @@ const markAttendance = async (req, res) => {
     );
 
     const limit = billingLimit(enrollment.billing_type);
+    const triggerAt = packTriggerAt(limit);
+    const alreadySent = Number(enrollment.pack_reminder_sent_cycle || 0) >= (Number(enrollment.billing_cycle) || 1);
 
-    const alertAt = computePackAlertAt(limit, enrollment.alert_lessons_before);
-
-    if (attended && alertAt && lessonNum === alertAt) {
+    if (attended && limit && triggerAt && !alreadySent && lessonNum === triggerAt) {
       const targetPhone = enrollment.parent_phone || enrollment.student_phone;
-      const remaining = limit - lessonNum;
-
-      await sendSms({
-        instructorId: enrollment.instructor_id,
-        phone: targetPhone,
-        message: `Mentorix: ${enrollment.student_name} üçün ${remaining} dərs qalır. Ödəniş etməyi unutmayın!`,
-      });
+      if (targetPhone) {
+        await sendSms({
+          instructorId: enrollment.instructor_id,
+          phone: targetPhone,
+          message:
+            'Mentorix: Növbəti dərsiniz paketinizin son dərsidir. Davam etmək üçün ödənişi nəzərə alın.',
+        });
+        await db.query(
+          `UPDATE enrollments
+           SET pack_reminder_sent_cycle = billing_cycle
+           WHERE id = $1`,
+          [enrollment_id]
+        );
+      }
     }
 
     // 8/12 paketi bitəndə növbəti billing period açılsın
@@ -214,9 +221,8 @@ const upsertAttendanceLesson = async (req, res) => {
 
     const { rows: enRows } = await db.query(
       `SELECT e.id, e.student_id, e.instructor_id, e.billing_type, e.billing_cycle,
-              COALESCE(ip.alert_lessons_before, 2) AS alert_lessons_before
+              COALESCE(e.pack_reminder_sent_cycle, 0) AS pack_reminder_sent_cycle
        FROM enrollments e
-       LEFT JOIN instructor_profiles ip ON ip.user_id = e.instructor_id
        WHERE e.id = $1`,
       [enrollment_id]
     );
@@ -232,6 +238,8 @@ const upsertAttendanceLesson = async (req, res) => {
 
     const cycle = Number(enrollment.billing_cycle) || 1;
     const limit = billingLimit(enrollment.billing_type);
+    const triggerAt = packTriggerAt(limit);
+    const alreadySent = Number(enrollment.pack_reminder_sent_cycle || 0) >= cycle;
     if (limit && ln > limit) {
       return res.status(400).json({ success: false, message: `Bu paket üçün maksimum ${limit} dərs var` });
     }
@@ -269,9 +277,8 @@ const upsertAttendanceLesson = async (req, res) => {
       [enrollment_id, cycle, ln, Boolean(attended) ? 'done' : 'absent']
     );
 
-    // Pack reminder: when remaining lessons reach alert_lessons_before (once per cycle).
-    const alertAt = computePackAlertAt(limit, enrollment.alert_lessons_before);
-    if (attended && limit && alertAt && beforeN < alertAt && n >= alertAt) {
+    // Pack reminder: 8-pack at 7 completed lessons, 12-pack at 11 completed lessons (once per cycle).
+    if (attended && limit && triggerAt && !alreadySent && beforeN < triggerAt && n >= triggerAt) {
       const { rows: [info] } = await db.query(
         `SELECT e.instructor_id, u.full_name AS student_name, u.phone AS student_phone,
                 COALESCE(NULLIF(TRIM(sp.parent_phone), ''), pu.phone) AS parent_phone
@@ -283,13 +290,19 @@ const upsertAttendanceLesson = async (req, res) => {
         [enrollment_id]
       );
       const targetPhone = info?.parent_phone || info?.student_phone;
-      const remaining = Math.max(0, limit - n);
       if (targetPhone) {
         await sendSms({
           instructorId: info.instructor_id,
           phone: targetPhone,
-          message: `Mentorix: ${info.student_name} üçün ${remaining} dərs qalır. Ödəniş etməyi unutmayın!`,
+          message:
+            'Mentorix: Növbəti dərsiniz paketinizin son dərsidir. Davam etmək üçün ödənişi nəzərə alın.',
         });
+        await db.query(
+          `UPDATE enrollments
+           SET pack_reminder_sent_cycle = billing_cycle
+           WHERE id = $1`,
+          [enrollment_id]
+        );
       }
     }
 
@@ -432,76 +445,7 @@ const bulkFillAttendancePeriod = async (req, res) => {
       }
     });
 
-    // Send reminder once if we crossed alert threshold in this bulk update.
-    const { rows: [prof] } = await db.query(
-      `SELECT COALESCE(ip.alert_lessons_before, 2) AS alert_lessons_before
-       FROM enrollments e
-       LEFT JOIN instructor_profiles ip ON ip.user_id = e.instructor_id
-       WHERE e.id = $1`,
-      [enrollment_id]
-    );
-    const alertAt = computePackAlertAt(limit, prof?.alert_lessons_before);
-    if (attended && limit && alertAt && beforeN < alertAt && afterN >= alertAt) {
-      const { rows: [info] } = await db.query(
-        `SELECT e.instructor_id, u.full_name AS student_name, u.phone AS student_phone,
-                COALESCE(NULLIF(TRIM(sp.parent_phone), ''), pu.phone) AS parent_phone
-         FROM enrollments e
-         JOIN users u ON u.id = e.student_id
-         LEFT JOIN student_profiles sp ON sp.user_id = e.student_id
-         LEFT JOIN users pu ON pu.id = sp.parent_id
-         WHERE e.id = $1`,
-        [enrollment_id]
-      );
-      const targetPhone = info?.parent_phone || info?.student_phone;
-      const remaining = Math.max(0, limit - afterN);
-      if (targetPhone) {
-        await sendSms({
-          instructorId: info.instructor_id,
-          phone: targetPhone,
-          message: `Mentorix: ${info.student_name} üçün ${remaining} dərs qalır. Ödəniş etməyi unutmayın!`,
-        });
-      }
-    }
-
-    res.json({ success: true, updated: toUpsert.length });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-};
-
-const getAttendance = async (req, res) => {
-  try {
-    const { enrollment_id } = req.params;
-    const { rows: enRows } = await db.query(
-      'SELECT student_id, instructor_id FROM enrollments WHERE id = $1',
-      [enrollment_id]
-    );
-    if (!enRows[0]) return res.status(404).json({ success: false, message: 'Tapılmadı' });
-    const { student_id: enStudent, instructor_id: enInstr } = enRows[0];
-    if (req.user.role === 'student' && String(enStudent) !== String(req.user.id)) {
-      return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
-    }
-    if (
-      req.user.role === 'instructor' &&
-      String(enInstr).replace(/-/g, '').toLowerCase() !== String(req.user.id).replace(/-/g, '').toLowerCase()
-    ) {
-      return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
-    }
-
-    const { rows } = await db.query(
-      'SELECT * FROM attendance WHERE enrollment_id=$1 ORDER BY billing_cycle, lesson_number',
-      [enrollment_id]
-    );
-    res.json({ success: true, attendance: rows });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-};
-
-module.exports = {
-  markAttendance,
-  getAttendance,
-  getAttendancePeriod,
-  upsertAttendanceLesson,
-  bulkFillAttendancePeriod,
-};
+    // Pack reminder: 8-pack at 7 completed lessons, 12-pack at 11 completed lessons (once per cycle).
+    const triggerAt = packTriggerAt(limit);
+    const { rows: [enInfo] } = await db.query(
+      `SELECT billing_cycle, COALESCE(pack_

@@ -11,6 +11,7 @@ const { processExamNotificationJobs } = require('./services/examService');
 const { recomputeAllInstructorsUsage } = require('./services/resourceUsageService');
 const { extendMonthlyAttendanceSlots } = require('./jobs/monthlyAttendanceSlots');
 const { runBillingNotifications } = require('./jobs/billingNotifications');
+const { runPackReminders } = require('./jobs/packReminders');
 
 const uploadsExamsDir = path.join(__dirname, '../uploads/exams');
 const uploadsAssignmentsDir = path.join(__dirname, '../uploads/assignments');
@@ -55,6 +56,11 @@ app.listen(PORT, () => {
   setTimeout(() => {
     runBillingNotifications().catch((e) => console.error('billing notifications startup', e.message));
   }, 30000);
+
+  // Pack (8/12) "next lesson is last lesson" reminders (non-blocking)
+  setTimeout(() => {
+    runPackReminders().catch((e) => console.error('pack reminders startup', e.message));
+  }, 45000);
 });
 
 cron.schedule('* * * * *', () => {
@@ -66,12 +72,4 @@ cron.schedule('*/10 * * * *', () => {
 });
 
 cron.schedule('25 */6 * * *', () => {
-  extendMonthlyAttendanceSlots().catch((e) => console.error('monthly attendance slots cron', e.message));
-});
-
-// Billing notifications: hourly check for "2 days left" and "last lesson"
-cron.schedule('15 * * * *', () => {
-  runBillingNotifications().catch((e) => console.error('billing notifications cron', e.message));
-});
-
-module.exports = app;
+  extendMonthlyAttendanceSlots().catch((e) => console.error('monthly attendance slots cron
