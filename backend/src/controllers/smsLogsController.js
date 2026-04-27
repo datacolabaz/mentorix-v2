@@ -421,7 +421,7 @@ const getSmsPlan = async (req, res) => {
         const anchorYmd = toYmd(r.enrollment_start_date);
         if (!anchorYmd) {
           if (debug && debugSkipped.length < 100) {
-            debugSkipped.push({ enrollment_id: r.enrollment_id, billing_type, reason: 'missing_anchor_date' });
+            debugSkipped.push({ enrollment_id: r.enrollment_id, billing_type: billingType, reason: 'missing_anchor_date' });
           }
           continue;
         }
@@ -432,7 +432,7 @@ const getSmsPlan = async (req, res) => {
           if (debug && debugSkipped.length < 100) {
             debugSkipped.push({
               enrollment_id: r.enrollment_id,
-              billing_type,
+              billing_type: billingType,
               reason: 'trigger_out_of_range',
               trigger_ymd: triggerYmd,
               range: { from: todayBaku, to: endYmd },
