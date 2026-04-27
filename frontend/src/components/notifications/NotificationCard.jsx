@@ -70,4 +70,15 @@ export default function NotificationCard({ item, onDetails }) {
           onClick={() => onDetails?.(item)}
           className={[
             'inline-flex items-center justify-center rounded-xl px-3 py-2 text-xs font-semibold',
-            'border border-[color:var(--bor
+            'border border-[color:var(--border-subtle)] bg-token-surfaceMain/40',
+            'text-token-textMain hover:bg-token-surfaceMain/55 transition-colors',
+            'whitespace-nowrap',
+          ].join(' ')}
+        >
+          Ətraflı bax
+        </button>
+      </div>
+    </div>
+  )
+}
+
