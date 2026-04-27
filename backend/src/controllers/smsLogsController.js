@@ -80,6 +80,7 @@ function normalizeType(v) {
   const t = String(v || '').trim().toLowerCase();
   if (t === 'otp') return 'otp';
   if (t === 'payment' || t === 'payment_reminder') return 'payment';
+  if (t === 'system') return 'system';
   return '';
 }
 
@@ -240,7 +241,13 @@ const getSmsLogs = async (req, res) => {
         /\bOTP\b/i.test(msg) ||
         /\bPIN\b/i.test(msg) ||
         /OTP\s*yox/i.test(msg);
-      const inferredType = otpLike ? 'otp' : 'payment';
+      const examLike =
+        /\bimtahan/i.test(msg) ||
+        /\bbal\b/i.test(msg) ||
+        /\bnetice\b/i.test(msg) ||
+        /\bnəticə\b/i.test(msg);
+      const billingLike = /abunəliyinizin bitməsinə 2 gün qalıb/i.test(msg) || /\b(?:ödəniş|odenis)\b/i.test(msg);
+      const inferredType = otpLike ? 'otp' : billingLike ? 'payment' : examLike ? 'system' : 'system';
 
       const stRaw = String(r.status || '').trim();
       const isFailed = stRaw === 'failed' || stRaw.toLowerCase().startsWith('failed:');

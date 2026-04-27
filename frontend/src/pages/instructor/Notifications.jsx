@@ -57,6 +57,7 @@ export default function InstructorNotifications() {
   const [smsFilter, setSmsFilter] = useState('all') // all | today | week | failed | scheduled
   const [paymentOpen, setPaymentOpen] = useState(false)
   const [otpOpen, setOtpOpen] = useState(false)
+  const [systemOpen, setSystemOpen] = useState(false)
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [detailsItem, setDetailsItem] = useState(null)
   const [smsLoading, setSmsLoading] = useState(false)
@@ -64,6 +65,7 @@ export default function InstructorNotifications() {
   const [smsDbItems, setSmsDbItems] = useState([])
   const [smsShowCountPayment, setSmsShowCountPayment] = useState(20)
   const [smsShowCountOtp, setSmsShowCountOtp] = useState(20)
+  const [smsShowCountSystem, setSmsShowCountSystem] = useState(20)
   const [lastUpdatedLabel, setLastUpdatedLabel] = useState('')
   const debugSms = useMemo(() => {
     try {
@@ -84,7 +86,7 @@ export default function InstructorNotifications() {
     let cancelled = false
     setSmsLoading(true)
     setSmsErr(null)
-    Promise.all([api.get('/sms-logs', { params: { limit: 200 } }), api.get('/sms-logs/plan', { params: { days: 31 } })])
+    Promise.all([api.get('/sms-logs', { params: { limit: 200 } }), api.get('/sms-logs/plan', { params: { days: 90 } })])
       .then(([hist, plan]) => {
         if (cancelled) return
         const rawItems = Array.isArray(hist?.items) ? hist.items : []
@@ -104,12 +106,25 @@ export default function InstructorNotifications() {
           if (st === 'scheduled') return 0
           return 2
         }
+
+        // Build phone -> student mapping using items that have identity info.
+        const phoneToStudent = new Map()
+        for (const x of mapped) {
+          const phone = normPhone(x.phone)
+          const studentKey = String(x.student_id || x.student_name || '').trim()
+          if (phone && studentKey) phoneToStudent.set(phone, studentKey)
+        }
+
         const uniq = new Map()
         for (const x of mapped) {
-          const studentKey = String(x.student_id || x.student_name || '').trim()
+          const phone = normPhone(x.phone)
+          const studentKey =
+            String(x.student_id || x.student_name || '').trim() ||
+            (phone ? String(phoneToStudent.get(phone) || '').trim() : '')
+          const entityKey = studentKey || phone || 'unknown'
           const key = [
             String(x.type || ''),
-            studentKey,
+            entityKey,
             String(x.createdAt || ''),
             String(x.message || ''),
           ].join('|')
@@ -161,6 +176,7 @@ export default function InstructorNotifications() {
     if (tab !== 'sms') return
     setSmsShowCountPayment(20)
     setSmsShowCountOtp(20)
+    setSmsShowCountSystem(20)
   }, [tab, smsFilter])
 
   const smsBaseList = useMemo(() => {
@@ -236,8 +252,9 @@ export default function InstructorNotifications() {
     return filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
   }, [smsFilter, smsBaseList])
 
-  const paymentRows = useMemo(() => smsRows.filter((x) => String(x.type || 'payment') !== 'otp'), [smsRows])
-  const otpRows = useMemo(() => smsRows.filter((x) => String(x.type || 'payment') === 'otp'), [smsRows])
+  const paymentRows = useMemo(() => smsRows.filter((x) => String(x.type || '') === 'payment'), [smsRows])
+  const otpRows = useMemo(() => smsRows.filter((x) => String(x.type || '') === 'otp'), [smsRows])
+  const systemRows = useMemo(() => smsRows.filter((x) => !['payment', 'otp'].includes(String(x.type || ''))), [smsRows])
 
   const smsSummary = useMemo(() => {
     const sent = smsBaseList.filter((x) => x.status === 'sent')
@@ -488,6 +505,50 @@ export default function InstructorNotifications() {
                     </div>
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                       {otpRows.slice(0, smsShowCountOtp).map((item) => (
+                        <NotificationCard key={item.id} item={item} onDetails={openDetails} />
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+              </Card>
+
+              <Card className="p-3 sm:p-4">
+                <button
+                  type="button"
+                  onClick={() => setSystemOpen((v) => !v)}
+                  className="w-full flex items-center justify-between gap-3 text-left"
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-token-textMain truncate">🧾 Sistem mesajları</p>
+                    <p className="text-xs text-token-textMuted mt-0.5">
+                      Say: <span className="font-semibold tabular-nums text-token-textMain">{systemRows.length}</span>
+                    </p>
+                  </div>
+                  <span className="text-xs font-semibold text-primary">{systemOpen ? 'Bağla' : 'Aç'}</span>
+                </button>
+
+                {systemOpen ? (
+                  <div className="mt-4 space-y-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="text-xs text-token-textMuted">
+                        Göstərilir:{' '}
+                        <span className="text-token-textMain font-semibold tabular-nums">
+                          {Math.min(systemRows.length, smsShowCountSystem)}
+                        </span>{' '}
+                        / <span className="text-token-textMain font-semibold tabular-nums">{systemRows.length}</span>
+                      </div>
+                      {smsShowCountSystem < systemRows.length ? (
+                        <button
+                          type="button"
+                          className="text-xs font-semibold text-primary hover:text-primary/90"
+                          onClick={() => setSmsShowCountSystem((n) => Math.min(systemRows.length, n + 20))}
+                        >
+                          Daha çox göstər
+                        </button>
+                      ) : null}
+                    </div>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                      {systemRows.slice(0, smsShowCountSystem).map((item) => (
                         <NotificationCard key={item.id} item={item} onDetails={openDetails} />
                       ))}
                     </div>
