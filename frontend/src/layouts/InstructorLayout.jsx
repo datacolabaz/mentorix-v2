@@ -150,7 +150,7 @@ export default function InstructorLayout() {
         />
       )}
 
-      <div className="flex-1 min-h-0 lg:flex lg:flex-row">
+      <div className="flex flex-col flex-1 min-h-0 lg:flex-row">
         <aside
           className={[
             theme === 'dark' ? 'theme-dark' : 'theme-light',
@@ -333,7 +333,7 @@ export default function InstructorLayout() {
         </div>
       </aside>
 
-        <main className="w-full h-full min-w-0 overflow-x-hidden overflow-y-auto pt-[72px] lg:pt-0 lg:flex-1">
+        <main className="flex-1 min-h-0 w-full min-w-0 overflow-x-hidden overflow-y-auto pt-[72px] lg:pt-0">
         <div className="min-h-full flex flex-col">
           {limitStatus.level ? (
             <div
@@ -356,4 +356,19 @@ export default function InstructorLayout() {
                   aria-label="Bağla"
                 >
                   ×
-                </b
+                </button>
+              </div>
+            </div>
+          ) : null}
+
+          <div className="flex-1 min-h-0">
+            <Outlet />
+          </div>
+
+          <Footer />
+        </div>
+      </main>
+      </div>
+    </div>
+  )
+}

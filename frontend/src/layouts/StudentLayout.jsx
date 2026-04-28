@@ -86,7 +86,7 @@ export default function StudentLayout() {
         />
       )}
 
-      <div className="flex-1 min-h-0 md:flex md:flex-row">
+      <div className="flex flex-col flex-1 min-h-0 md:flex-row">
         <aside
           className={
             'w-64 max-w-[85vw] flex flex-col flex-shrink-0 z-40 h-full ' +
@@ -189,9 +189,9 @@ export default function StudentLayout() {
 
         <main
           className={
-            'w-full h-full overflow-x-hidden min-w-0 pt-14 md:pt-0 md:flex-1 ' +
+            'flex-1 min-h-0 w-full overflow-x-hidden min-w-0 pt-14 md:pt-0 ' +
             (focusMode
-              ? 'overflow-y-hidden flex flex-col min-h-0'
+              ? 'overflow-y-hidden flex flex-col'
               : 'overflow-y-auto')
           }
         >
@@ -204,4 +204,13 @@ export default function StudentLayout() {
         ) : (
           <div className="min-h-full flex flex-col">
             <div className="flex-1 min-h-0">
-      
+              <Outlet />
+            </div>
+            <Footer />
+          </div>
+        )}
+        </main>
+      </div>
+    </div>
+  )
+}

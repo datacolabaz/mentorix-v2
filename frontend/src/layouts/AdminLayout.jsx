@@ -72,7 +72,7 @@ export default function AdminLayout() {
         />
       )}
 
-      <div className="flex-1 min-h-0 md:flex md:flex-row">
+      <div className="flex flex-col flex-1 min-h-0 md:flex-row">
         <aside
           className={[
             theme === 'dark' ? 'theme-dark' : 'theme-light',
@@ -139,4 +139,51 @@ export default function AdminLayout() {
                 : 'border-gray-200 bg-gray-50 hover:bg-gray-100',
             ].join(' ')}
           >
-            <span className={`text-sm font-medium $
+            <span className={`text-sm font-medium ${theme === 'dark' ? 'text-gray-200' : 'text-gray-700'}`}>
+              Tema
+            </span>
+            <span className="flex items-center gap-2">
+              <span className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+                {theme === 'dark' ? 'Gecə' : 'Gündüz'}
+              </span>
+              <span
+                aria-hidden
+                className={[
+                  'relative inline-flex h-6 w-11 items-center rounded-full transition-colors',
+                  theme === 'dark' ? 'bg-primary/40' : 'bg-gray-300',
+                ].join(' ')}
+              >
+                <span
+                  className={[
+                    'inline-block h-5 w-5 transform rounded-full bg-white transition-transform',
+                    theme === 'dark' ? 'translate-x-5' : 'translate-x-1',
+                  ].join(' ')}
+                />
+              </span>
+            </span>
+          </button>
+
+          <button onClick={() => { logout(); navigate('/login') }}
+            className={[
+              'mt-3 flex items-center gap-2 text-sm font-medium transition-colors w-full px-4 py-3 rounded-xl',
+              theme === 'dark'
+                ? 'text-red-300 hover:text-red-200 hover:bg-red-500/10'
+                : 'text-red-600 hover:text-red-700 hover:bg-red-50',
+            ].join(' ')}>
+            → Çıxış
+          </button>
+        </div>
+        </aside>
+
+        <main className="flex-1 min-h-0 w-full min-w-0 overflow-x-hidden overflow-y-auto bg-token-surfaceMain pt-14 md:pt-0">
+        <div className="min-h-full flex flex-col">
+          <div className="flex-1 min-h-0">
+            <Outlet />
+          </div>
+          <Footer />
+        </div>
+        </main>
+      </div>
+    </div>
+  )
+}
