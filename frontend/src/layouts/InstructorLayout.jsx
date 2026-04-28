@@ -103,7 +103,9 @@ export default function InstructorLayout() {
   }, [])
 
   return (
-    <div className={`theme-${theme} flex flex-col h-screen bg-token-surfaceMain text-token-textMain overflow-hidden`}>
+    <div
+      className={`theme-${theme} flex flex-col min-h-screen lg:h-screen bg-token-surfaceMain text-token-textMain overflow-x-hidden lg:overflow-hidden`}
+    >
       {focusMode && (
         <button
           type="button"
@@ -333,7 +335,7 @@ export default function InstructorLayout() {
         </div>
       </aside>
 
-        <main className="flex-1 min-h-0 w-full min-w-0 overflow-x-hidden overflow-y-auto pt-[72px] lg:pt-0">
+        <main className="flex-1 min-h-[calc(100vh-72px)] lg:min-h-0 w-full min-w-0 overflow-x-hidden overflow-y-auto pt-[72px] lg:pt-0">
         <div className="min-h-full flex flex-col">
           {limitStatus.level ? (
             <div

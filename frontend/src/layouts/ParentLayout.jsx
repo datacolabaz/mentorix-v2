@@ -25,7 +25,9 @@ export default function ParentLayout() {
   }, [location.pathname])
 
   return (
-    <div className={`theme-${theme} flex flex-col h-screen bg-token-surfaceMain text-token-textMain overflow-hidden`}>
+    <div
+      className={`theme-${theme} flex flex-col min-h-screen md:h-screen bg-token-surfaceMain text-token-textMain overflow-x-hidden md:overflow-hidden`}
+    >
       <header
         className={[
           'md:hidden fixed top-0 left-0 right-0 z-[1000] h-[72px] flex items-center justify-between gap-2 px-3 overflow-visible',
@@ -137,7 +139,7 @@ export default function ParentLayout() {
           </button>
         </div>
         </aside>
-        <main className="flex-1 min-h-0 w-full min-w-0 overflow-x-hidden overflow-y-auto bg-token-surfaceMain pt-14 md:pt-0">
+        <main className="flex-1 min-h-[calc(100vh-56px)] md:min-h-0 w-full min-w-0 overflow-x-hidden overflow-y-auto bg-token-surfaceMain pt-14 md:pt-0">
         <div className="min-h-full flex flex-col">
           <div className="flex-1 min-h-0">
             <Outlet />
