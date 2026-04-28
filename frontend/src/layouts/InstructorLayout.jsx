@@ -66,6 +66,8 @@ export default function InstructorLayout() {
       const ch = el?.clientHeight
       const shEl = el?.scrollHeight
       const stEl = el?.scrollTop
+      const mk = document.getElementById('mx_scroll_marker')
+      const mr = mk?.getBoundingClientRect?.()
       const vp = document.querySelector('meta[name="viewport"]')?.getAttribute?.('content') || '—'
       const ua = navigator?.userAgent ? String(navigator.userAgent) : '—'
       const sw = globalThis.screen?.width
@@ -82,6 +84,8 @@ export default function InstructorLayout() {
             ? `${Math.round(Number(ch || 0))}/${Math.round(Number(shEl || 0))}`
             : '—',
         mainScrollTop: stEl != null ? String(Math.round(Number(stEl) || 0)) : '—',
+        marker: mk ? 'yes' : 'no',
+        markerRect: mr ? `${Math.round(mr.x)},${Math.round(mr.y)} ${Math.round(mr.width)}×${Math.round(mr.height)}` : '—',
         scrollY: Math.round(globalThis.scrollY || 0),
         screen: sw && sh ? `${sw}×${sh}` : '—',
         dpr: dpr != null ? String(dpr) : '—',
@@ -405,6 +409,8 @@ export default function InstructorLayout() {
             <div>main: {debugDims?.main || '—'}</div>
             <div>main(h/s): {debugDims?.mainHeights || '—'}</div>
             <div>main.scrollTop: {debugDims?.mainScrollTop || '—'}</div>
+            <div>marker: {debugDims?.marker || '—'}</div>
+            <div>markerRect: {debugDims?.markerRect || '—'}</div>
             <div>scrollY: {debugDims?.scrollY ?? '—'}</div>
             <div>screen: {debugDims?.screen || '—'}</div>
             <div>dpr: {debugDims?.dpr || '—'}</div>
@@ -431,6 +437,7 @@ export default function InstructorLayout() {
         >
           {debugLayout ? (
             <div
+              id="mx_scroll_marker"
               className="mx-4 sm:mx-6 mt-3 rounded-xl px-3 py-3 text-sm font-extrabold"
               style={{
                 background: '#ff00ff',
