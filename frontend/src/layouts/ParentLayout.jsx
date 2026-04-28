@@ -139,7 +139,14 @@ export default function ParentLayout() {
           </button>
         </div>
         </aside>
-        <main className="flex-1 min-h-[calc(100vh-56px)] md:min-h-0 w-full min-w-0 overflow-x-hidden overflow-y-auto bg-token-surfaceMain pt-14 md:pt-0">
+        <main
+          className={[
+            // Mobile: fixed viewport panel under header (56px).
+            'fixed left-0 right-0 bottom-0 top-14 z-[1] w-full min-w-0 overflow-x-hidden overflow-y-auto bg-token-surfaceMain',
+            // Desktop: normal flow next to sidebar.
+            'md:static md:inset-auto md:flex-1 md:min-h-0 md:pt-0',
+          ].join(' ')}
+        >
         <div className="min-h-full flex flex-col">
           <div className="flex-1 min-h-0">
             <Outlet />

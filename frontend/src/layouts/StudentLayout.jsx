@@ -191,7 +191,8 @@ export default function StudentLayout() {
 
         <main
           className={
-            'flex-1 min-h-[calc(100vh-56px)] md:min-h-0 w-full overflow-x-hidden min-w-0 pt-14 md:pt-0 ' +
+            // Mobile: fixed viewport panel under header (56px).
+            'fixed left-0 right-0 bottom-0 top-14 z-[1] w-full overflow-x-hidden min-w-0 ' +
             (focusMode
               ? 'overflow-y-hidden flex flex-col'
               : 'overflow-y-auto')

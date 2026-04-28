@@ -393,7 +393,12 @@ export default function InstructorLayout() {
 
         <main
           ref={mainRef}
-          className="flex-1 min-h-[calc(100vh-72px)] lg:min-h-0 w-full min-w-0 overflow-x-hidden overflow-y-auto pt-[72px] lg:pt-0"
+          className={[
+            // Mobile: make content a fixed viewport panel under header (prevents iOS/WebKit height/flow quirks).
+            'fixed left-0 right-0 bottom-0 top-[72px] z-[1] w-full min-w-0 overflow-x-hidden overflow-y-auto',
+            // Desktop: normal flow next to sidebar.
+            'lg:static lg:inset-auto lg:flex-1 lg:min-h-0 lg:pt-0',
+          ].join(' ')}
         >
         {debugLayout ? (
           <div className="fixed top-[72px] left-0 right-0 z-[2001] bg-red-600 text-white text-xs font-semibold px-3 py-2">
