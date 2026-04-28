@@ -103,7 +103,7 @@ export default function InstructorLayout() {
   }, [])
 
   return (
-    <div className={`theme-${theme} h-screen bg-token-surfaceMain text-token-textMain overflow-hidden lg:flex`}>
+    <div className={`theme-${theme} flex flex-col h-screen bg-token-surfaceMain text-token-textMain overflow-hidden`}>
       {focusMode && (
         <button
           type="button"
@@ -150,63 +150,64 @@ export default function InstructorLayout() {
         />
       )}
 
-      <aside
-        className={[
-          theme === 'dark' ? 'theme-dark' : 'theme-light',
-          'w-[min(17rem,88vw)] max-w-[280px] flex flex-col flex-shrink-0',
-          theme === 'dark'
-            ? 'bg-gradient-to-b from-[#0c0f0d] to-[#070a08] border-r border-[color:var(--border-subtle)]'
-            : 'bg-[#F8FAFC] border-r border-black/[0.06]',
-          'fixed lg:static inset-y-0 left-0 z-[80] transition-transform duration-200 ease-out',
-          navOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
-          focusMode ? 'lg:-translate-x-full' : '',
-          'relative',
-        ].join(' ')}
-      >
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent"
-        />
-        <div
+      <div className="flex-1 min-h-0 lg:flex lg:flex-row">
+        <aside
           className={[
-            'px-4 pt-4 pb-4 hidden lg:block',
-            theme === 'dark' ? 'border-b border-white/10' : 'border-b border-black/[0.06]',
+            theme === 'dark' ? 'theme-dark' : 'theme-light',
+            'w-[min(17rem,88vw)] max-w-[280px] flex flex-col flex-shrink-0',
+            theme === 'dark'
+              ? 'bg-gradient-to-b from-[#0c0f0d] to-[#070a08] border-r border-[color:var(--border-subtle)]'
+              : 'bg-[#F8FAFC] border-r border-black/[0.06]',
+            'fixed lg:static inset-y-0 left-0 z-[80] transition-transform duration-200 ease-out',
+            navOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
+            focusMode ? 'lg:-translate-x-full' : '',
+            'relative',
           ].join(' ')}
         >
-          <div className="flex justify-center">
-            <Brand
-              size="sidebar"
-              tone={theme === 'dark' ? 'dark' : 'light'}
-              className="py-1"
-              imgClassName="h-[64px] max-h-[64px] sm:h-[68px] sm:max-h-[68px]"
-            />
-          </div>
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent"
+          />
           <div
             className={[
-              'mt-4 p-3 rounded-xl border',
-              theme === 'dark'
-                ? 'bg-token-surfaceCard/55 border-[color:var(--border-subtle)]'
-                : 'bg-white/70 border-black/[0.06]',
+              'px-4 pt-4 pb-4 hidden lg:block',
+              theme === 'dark' ? 'border-b border-white/10' : 'border-b border-black/[0.06]',
             ].join(' ')}
           >
+            <div className="flex justify-center">
+              <Brand
+                size="sidebar"
+                tone={theme === 'dark' ? 'dark' : 'light'}
+                className="py-1"
+                imgClassName="h-[64px] max-h-[64px] sm:h-[68px] sm:max-h-[68px]"
+              />
+            </div>
             <div
               className={[
-                'w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold mb-2 border',
+                'mt-4 p-3 rounded-xl border',
                 theme === 'dark'
-                  ? 'bg-white/5 border-white/10 text-white'
-                  : 'bg-slate-900/5 border-black/[0.06] text-slate-900',
+                  ? 'bg-token-surfaceCard/55 border-[color:var(--border-subtle)]'
+                  : 'bg-white/70 border-black/[0.06]',
               ].join(' ')}
             >
-              {user?.full_name?.split(' ').map((n) => n[0]).join('').slice(0, 2)}
-            </div>
-            <div className={`text-sm font-semibold break-words ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
-              {user?.full_name}
-            </div>
-            <div className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-slate-600'}`}>
-              {instructorRoleAz(user?.public_label)}
+              <div
+                className={[
+                  'w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold mb-2 border',
+                  theme === 'dark'
+                    ? 'bg-white/5 border-white/10 text-white'
+                    : 'bg-slate-900/5 border-black/[0.06] text-slate-900',
+                ].join(' ')}
+              >
+                {user?.full_name?.split(' ').map((n) => n[0]).join('').slice(0, 2)}
+              </div>
+              <div className={`text-sm font-semibold break-words ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
+                {user?.full_name}
+              </div>
+              <div className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-slate-600'}`}>
+                {instructorRoleAz(user?.public_label)}
+              </div>
             </div>
           </div>
-        </div>
 
         <div
           className={[
@@ -332,7 +333,7 @@ export default function InstructorLayout() {
         </div>
       </aside>
 
-      <main className="flex-1 w-full min-w-0 overflow-x-hidden overflow-y-auto pt-[72px] lg:pt-0">
+        <main className="w-full h-full min-w-0 overflow-x-hidden overflow-y-auto pt-[72px] lg:pt-0 lg:flex-1">
         <div className="min-h-full flex flex-col">
           {limitStatus.level ? (
             <div
@@ -355,18 +356,4 @@ export default function InstructorLayout() {
                   aria-label="Bağla"
                 >
                   ×
-                </button>
-              </div>
-            </div>
-          ) : null}
-
-          <div className="flex-1 min-h-0">
-            <Outlet />
-          </div>
-
-          <Footer />
-        </div>
-      </main>
-    </div>
-  )
-}
+                </b

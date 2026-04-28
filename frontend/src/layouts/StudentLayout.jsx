@@ -44,7 +44,7 @@ export default function StudentLayout() {
   }, [focusMode])
 
   return (
-    <div className={`theme-${theme} h-screen bg-token-surfaceMain text-token-textMain overflow-hidden md:flex`}>
+    <div className={`theme-${theme} flex flex-col h-screen bg-token-surfaceMain text-token-textMain overflow-hidden`}>
       <button
         type="button"
         onClick={() => setNavOpen(true)}
@@ -86,18 +86,19 @@ export default function StudentLayout() {
         />
       )}
 
-      <aside
-        className={
-          'w-64 max-w-[85vw] flex flex-col flex-shrink-0 z-40 h-full ' +
-          (theme === 'dark'
-            ? 'theme-dark bg-[#0a0b0f] border-r border-white/10 '
-            : 'theme-light bg-[#F8FAFC] border-r border-black/[0.06] ') +
-          'bg-gradient-to-b from-black/[0.14] via-transparent to-black/[0.08] ' +
-          'fixed md:static inset-y-0 left-0 transform transition-transform duration-200 ease-out ' +
-          (navOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0') +
-          (focusMode ? ' md:-translate-x-full' : '')
-        }
-      >
+      <div className="flex-1 min-h-0 md:flex md:flex-row">
+        <aside
+          className={
+            'w-64 max-w-[85vw] flex flex-col flex-shrink-0 z-40 h-full ' +
+            (theme === 'dark'
+              ? 'theme-dark bg-[#0a0b0f] border-r border-white/10 '
+              : 'theme-light bg-[#F8FAFC] border-r border-black/[0.06] ') +
+            'bg-gradient-to-b from-black/[0.14] via-transparent to-black/[0.08] ' +
+            'fixed md:static inset-y-0 left-0 transform transition-transform duration-200 ease-out ' +
+            (navOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0') +
+            (focusMode ? ' md:-translate-x-full' : '')
+          }
+        >
         <div className={['px-4 pt-14 md:pt-4 pb-4', theme === 'dark' ? 'border-b border-white/10' : 'border-b border-black/[0.06]'].join(' ')}>
           <div className="flex justify-center">
             <Brand size="sidebar" tone={theme === 'dark' ? 'dark' : 'light'} />
@@ -184,16 +185,16 @@ export default function StudentLayout() {
             → Çıxış
           </button>
         </div>
-      </aside>
+        </aside>
 
-      <main
-        className={
-          'flex-1 overflow-x-hidden min-w-0 w-full pt-14 md:pt-0 ' +
-          (focusMode
-            ? 'overflow-y-hidden flex flex-col min-h-0'
-            : 'overflow-y-auto')
-        }
-      >
+        <main
+          className={
+            'w-full h-full overflow-x-hidden min-w-0 pt-14 md:pt-0 md:flex-1 ' +
+            (focusMode
+              ? 'overflow-y-hidden flex flex-col min-h-0'
+              : 'overflow-y-auto')
+          }
+        >
         {focusMode ? (
           <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
             <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
@@ -203,12 +204,4 @@ export default function StudentLayout() {
         ) : (
           <div className="min-h-full flex flex-col">
             <div className="flex-1 min-h-0">
-              <Outlet />
-            </div>
-            <Footer />
-          </div>
-        )}
-      </main>
-    </div>
-  )
-}
+      

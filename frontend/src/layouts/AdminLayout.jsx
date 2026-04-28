@@ -37,7 +37,7 @@ export default function AdminLayout() {
   }, [location.pathname])
 
   return (
-    <div className={`theme-${theme} h-screen bg-token-surfaceMain text-token-textMain overflow-hidden md:flex`}>
+    <div className={`theme-${theme} flex flex-col h-screen bg-token-surfaceMain text-token-textMain overflow-hidden`}>
       <header
         className={[
           'md:hidden fixed top-0 left-0 right-0 z-[1000] h-[72px] flex items-center justify-between gap-2 px-3 overflow-visible',
@@ -72,18 +72,19 @@ export default function AdminLayout() {
         />
       )}
 
-      <aside
-        className={[
-          theme === 'dark' ? 'theme-dark' : 'theme-light',
-          'w-[min(17rem,88vw)] max-w-[280px] md:w-60 flex flex-col flex-shrink-0 h-full',
-          theme === 'dark'
-            ? 'bg-gradient-to-b from-[#0c0f0d] to-[#070a08] border-r border-white/10'
-            : 'bg-[#F8FAFC] border-r border-black/[0.06]',
-          'fixed md:static inset-y-0 left-0 z-[80] transition-transform duration-200 ease-out',
-          navOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
-          'relative',
-        ].join(' ')}
-      >
+      <div className="flex-1 min-h-0 md:flex md:flex-row">
+        <aside
+          className={[
+            theme === 'dark' ? 'theme-dark' : 'theme-light',
+            'w-[min(17rem,88vw)] max-w-[280px] md:w-60 flex flex-col flex-shrink-0 h-full',
+            theme === 'dark'
+              ? 'bg-gradient-to-b from-[#0c0f0d] to-[#070a08] border-r border-white/10'
+              : 'bg-[#F8FAFC] border-r border-black/[0.06]',
+            'fixed md:static inset-y-0 left-0 z-[80] transition-transform duration-200 ease-out',
+            navOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
+            'relative',
+          ].join(' ')}
+        >
         <div
           aria-hidden
           className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent"
@@ -138,50 +139,4 @@ export default function AdminLayout() {
                 : 'border-gray-200 bg-gray-50 hover:bg-gray-100',
             ].join(' ')}
           >
-            <span className={`text-sm font-medium ${theme === 'dark' ? 'text-gray-200' : 'text-gray-700'}`}>
-              Tema
-            </span>
-            <span className="flex items-center gap-2">
-              <span className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
-                {theme === 'dark' ? 'Gecə' : 'Gündüz'}
-              </span>
-              <span
-                aria-hidden
-                className={[
-                  'relative inline-flex h-6 w-11 items-center rounded-full transition-colors',
-                  theme === 'dark' ? 'bg-primary/40' : 'bg-gray-300',
-                ].join(' ')}
-              >
-                <span
-                  className={[
-                    'inline-block h-5 w-5 transform rounded-full bg-white transition-transform',
-                    theme === 'dark' ? 'translate-x-5' : 'translate-x-1',
-                  ].join(' ')}
-                />
-              </span>
-            </span>
-          </button>
-
-          <button onClick={() => { logout(); navigate('/login') }}
-            className={[
-              'mt-3 flex items-center gap-2 text-sm font-medium transition-colors w-full px-4 py-3 rounded-xl',
-              theme === 'dark'
-                ? 'text-red-300 hover:text-red-200 hover:bg-red-500/10'
-                : 'text-red-600 hover:text-red-700 hover:bg-red-50',
-            ].join(' ')}>
-            → Çıxış
-          </button>
-        </div>
-      </aside>
-
-      <main className="flex-1 w-full min-w-0 overflow-x-hidden overflow-y-auto bg-token-surfaceMain pt-14 md:pt-0">
-        <div className="min-h-full flex flex-col">
-          <div className="flex-1 min-h-0">
-            <Outlet />
-          </div>
-          <Footer />
-        </div>
-      </main>
-    </div>
-  )
-}
+            <span className={`text-sm font-medium $
