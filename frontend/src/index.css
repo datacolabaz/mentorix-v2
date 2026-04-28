@@ -26,6 +26,16 @@
     --text-muted: 100 116 139; /* slate-500 */
   }
 
+  html, body, #root {
+    width: 100%;
+    min-width: 0;
+    height: 100%;
+  }
+
+  body {
+    overflow-x: hidden;
+  }
+
   body {
     @apply font-body;
   }
