@@ -410,10 +410,20 @@ export default function InstructorLayout() {
             <div className="mt-1 break-words">ua: {debugDims?.ua || '—'}</div>
           </div>
         ) : null}
-        <div className="min-h-full flex flex-col">
+        <div
+          className="min-h-full flex flex-col"
+          style={debugLayout ? { outline: '3px solid magenta', background: 'rgba(255,0,255,0.06)' } : undefined}
+        >
           {debugLayout ? (
-            <div className="mx-4 sm:mx-6 mt-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs font-semibold text-emerald-700">
-              SCROLL CONTENT START (debug)
+            <div
+              className="mx-4 sm:mx-6 mt-3 rounded-xl px-3 py-3 text-sm font-extrabold"
+              style={{
+                background: '#ff00ff',
+                color: '#000',
+                outline: '3px solid #000',
+              }}
+            >
+              SCROLL CONTENT VISIBLE (debug)
             </div>
           ) : null}
           {limitStatus.level ? (
