@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
 import useAuthStore from '../hooks/useAuth'
 import useUiStore from '../hooks/useUi'
@@ -46,6 +46,39 @@ export default function InstructorLayout() {
   const [limitStatus, setLimitStatus] = useState({ level: null, message: null })
   const [notifFetchAt, setNotifFetchAt] = useState(0)
   const [hasAlerts, setHasAlerts] = useState(false)
+  const mainRef = useRef(null)
+
+  const debugLayout = useMemo(() => {
+    try {
+      return new URLSearchParams(location.search).get('debugLayout') === '1'
+    } catch {
+      return false
+    }
+  }, [location.search])
+
+  const [debugDims, setDebugDims] = useState(null)
+  useEffect(() => {
+    if (!debugLayout) return
+    const tick = () => {
+      const el = mainRef.current
+      const r = el?.getBoundingClientRect?.()
+      const vv = globalThis.visualViewport
+      setDebugDims({
+        inner: `${globalThis.innerWidth}×${globalThis.innerHeight}`,
+        doc: `${document.documentElement?.clientWidth}×${document.documentElement?.clientHeight}`,
+        vv: vv ? `${Math.round(vv.width)}×${Math.round(vv.height)}` : '—',
+        main: r ? `${Math.round(r.width)}×${Math.round(r.height)}` : '—',
+        scrollY: Math.round(globalThis.scrollY || 0),
+      })
+    }
+    tick()
+    globalThis.addEventListener?.('resize', tick)
+    globalThis.addEventListener?.('scroll', tick, { passive: true })
+    return () => {
+      globalThis.removeEventListener?.('resize', tick)
+      globalThis.removeEventListener?.('scroll', tick)
+    }
+  }, [debugLayout])
 
   const notifUnread = useMemo(() => {
     if (!hasAlerts || !notifFetchAt) return false
@@ -335,7 +368,20 @@ export default function InstructorLayout() {
         </div>
       </aside>
 
-        <main className="flex-1 min-h-[calc(100vh-72px)] lg:min-h-0 w-full min-w-0 overflow-x-hidden overflow-y-auto pt-[72px] lg:pt-0">
+        <main
+          ref={mainRef}
+          className="flex-1 min-h-[calc(100vh-72px)] lg:min-h-0 w-full min-w-0 overflow-x-hidden overflow-y-auto pt-[72px] lg:pt-0"
+        >
+        {debugLayout ? (
+          <div className="fixed bottom-3 left-3 z-[2000] rounded-xl border border-white/10 bg-black/75 text-white px-3 py-2 text-[11px] leading-snug">
+            <div className="font-bold mb-1">debugLayout=1</div>
+            <div>inner: {debugDims?.inner || '—'}</div>
+            <div>doc: {debugDims?.doc || '—'}</div>
+            <div>vv: {debugDims?.vv || '—'}</div>
+            <div>main: {debugDims?.main || '—'}</div>
+            <div>scrollY: {debugDims?.scrollY ?? '—'}</div>
+          </div>
+        ) : null}
         <div className="min-h-full flex flex-col">
           {limitStatus.level ? (
             <div
