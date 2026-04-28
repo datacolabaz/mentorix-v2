@@ -37,7 +37,7 @@ export default function AdminLayout() {
   }, [location.pathname])
 
   return (
-    <div className={`theme-${theme} flex h-screen bg-token-surfaceMain text-token-textMain overflow-hidden`}>
+    <div className={`theme-${theme} flex flex-col md:flex-row h-screen bg-token-surfaceMain text-token-textMain overflow-hidden`}>
       <header
         className={[
           'md:hidden fixed top-0 left-0 right-0 z-[1000] h-[72px] flex items-center justify-between gap-2 px-3 overflow-visible',
