@@ -1125,7 +1125,7 @@ export default function InstructorStudents() {
   }
 
   return (
-    <div className="p-6 min-w-0">
+    <div className="p-4 sm:p-6 min-w-0">
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-5">
         <div className="min-w-0">
           <h1 className="font-display font-bold text-xl sm:text-2xl break-words">Tələbələrim</h1>

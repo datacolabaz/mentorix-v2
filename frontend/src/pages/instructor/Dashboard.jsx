@@ -196,7 +196,7 @@ export default function InstructorDashboard() {
   }
 
   return (
-    <div className="p-6 min-w-0">
+    <div className="p-4 sm:p-6 min-w-0">
       <div className="mb-6">
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
           <div>
@@ -268,9 +268,10 @@ export default function InstructorDashboard() {
           <Card hover className="p-4 sm:p-5 min-w-0 overflow-hidden">
             <h2 className="font-display font-bold text-base mb-4 text-token-textMain">Tələbə Proqresi (imtahan)</h2>
             {students.length ? (
-              <div className="w-full h-[280px] min-h-[240px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={chartRows} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+              <div className="w-full overflow-x-auto">
+                <div className="min-w-[520px] h-[280px] min-h-[240px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={chartRows} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
                     <defs>
                       <linearGradient id="mentorixLine" x1="0" y1="0" x2="1" y2="0">
                         <stop offset="0%" stopColor="#003366" />
@@ -304,8 +305,9 @@ export default function InstructorDashboard() {
                       activeDot={{ r: 5, fill: '#22e088', stroke: '#003366', strokeWidth: 2 }}
                       isAnimationActive={false}
                     />
-                  </LineChart>
-                </ResponsiveContainer>
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
             ) : (
               <div className="h-52 flex items-center justify-center text-token-textMuted">Hələ məlumat yoxdur</div>
