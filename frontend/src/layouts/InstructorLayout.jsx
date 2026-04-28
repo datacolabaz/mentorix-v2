@@ -103,7 +103,7 @@ export default function InstructorLayout() {
   }, [])
 
   return (
-    <div className={`theme-${theme} flex flex-col lg:flex-row h-screen bg-token-surfaceMain text-token-textMain overflow-hidden`}>
+    <div className={`theme-${theme} h-screen bg-token-surfaceMain text-token-textMain overflow-hidden lg:flex`}>
       {focusMode && (
         <button
           type="button"

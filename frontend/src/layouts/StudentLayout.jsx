@@ -44,7 +44,7 @@ export default function StudentLayout() {
   }, [focusMode])
 
   return (
-    <div className={`theme-${theme} flex flex-col md:flex-row h-screen bg-token-surfaceMain text-token-textMain overflow-hidden`}>
+    <div className={`theme-${theme} h-screen bg-token-surfaceMain text-token-textMain overflow-hidden md:flex`}>
       <button
         type="button"
         onClick={() => setNavOpen(true)}
