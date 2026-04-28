@@ -8,11 +8,11 @@ export default function AdminSettings() {
   const toast = useToast()
 
   return (
-    <div className="p-6">
-      <h1 className="font-display font-bold text-2xl mb-6">Tənzimləmələr</h1>
+    <div className="p-4 sm:p-6 min-w-0 max-w-3xl mx-auto w-full">
+      <h1 className="font-display font-bold text-xl sm:text-2xl mb-4 sm:mb-6 break-words">Tənzimləmələr</h1>
 
-      <div className="max-w-lg space-y-6">
-        <Card className="p-6">
+      <div className="w-full space-y-4 sm:space-y-6">
+        <Card className="p-4 sm:p-6">
           <h2 className="font-display font-bold text-base mb-4">📱 SMS Defolt Limitlər</h2>
           <div className="space-y-4">
             {[
@@ -30,7 +30,7 @@ export default function AdminSettings() {
           </div>
         </Card>
 
-        <Card className="p-6">
+        <Card className="p-4 sm:p-6">
           <h2 className="font-display font-bold text-base mb-4">🔐 Sistem Məlumatları</h2>
           <div className="space-y-3 text-sm">
             <div className="flex justify-between py-2 border-b border-indigo-500/10">

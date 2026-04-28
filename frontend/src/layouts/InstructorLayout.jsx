@@ -332,7 +332,7 @@ export default function InstructorLayout() {
         </div>
       </aside>
 
-      <main className="flex-1 overflow-y-auto min-w-0 pt-[72px] lg:pt-0">
+      <main className="flex-1 w-full min-w-0 overflow-x-hidden overflow-y-auto pt-[72px] lg:pt-0">
         <div className="min-h-full flex flex-col">
           {limitStatus.level ? (
             <div

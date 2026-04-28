@@ -174,7 +174,7 @@ export default function AdminLayout() {
         </div>
       </aside>
 
-      <main className="flex-1 overflow-y-auto bg-token-surfaceMain pt-14 md:pt-0">
+      <main className="flex-1 w-full min-w-0 overflow-x-hidden overflow-y-auto bg-token-surfaceMain pt-14 md:pt-0">
         <div className="min-h-full flex flex-col">
           <div className="flex-1 min-h-0">
             <Outlet />

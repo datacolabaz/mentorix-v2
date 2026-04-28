@@ -201,7 +201,7 @@ export default function InstructorSettings() {
                 variant="secondary"
                 loading={busy.addSub}
                 onClick={() => void addSubject()}
-                className={secondaryBtnCls}
+                className={['w-full sm:w-auto justify-center', secondaryBtnCls].join(' ')}
               >
                 Sahə əlavə et
               </Button>
