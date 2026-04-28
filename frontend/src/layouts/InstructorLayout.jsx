@@ -65,6 +65,7 @@ export default function InstructorLayout() {
       const vv = globalThis.visualViewport
       const ch = el?.clientHeight
       const shEl = el?.scrollHeight
+      const stEl = el?.scrollTop
       const vp = document.querySelector('meta[name="viewport"]')?.getAttribute?.('content') || '—'
       const ua = navigator?.userAgent ? String(navigator.userAgent) : '—'
       const sw = globalThis.screen?.width
@@ -80,6 +81,7 @@ export default function InstructorLayout() {
           typeof ch === 'number' || typeof shEl === 'number'
             ? `${Math.round(Number(ch || 0))}/${Math.round(Number(shEl || 0))}`
             : '—',
+        mainScrollTop: stEl != null ? String(Math.round(Number(stEl) || 0)) : '—',
         scrollY: Math.round(globalThis.scrollY || 0),
         screen: sw && sh ? `${sw}×${sh}` : '—',
         dpr: dpr != null ? String(dpr) : '—',
@@ -402,12 +404,25 @@ export default function InstructorLayout() {
             <div>vv: {debugDims?.vv || '—'}</div>
             <div>main: {debugDims?.main || '—'}</div>
             <div>main(h/s): {debugDims?.mainHeights || '—'}</div>
+            <div>main.scrollTop: {debugDims?.mainScrollTop || '—'}</div>
             <div>scrollY: {debugDims?.scrollY ?? '—'}</div>
             <div>screen: {debugDims?.screen || '—'}</div>
             <div>dpr: {debugDims?.dpr || '—'}</div>
             <div>sm: {debugDims?.sm || '—'}</div>
             <div className="mt-1 break-words">vp: {debugDims?.vp || '—'}</div>
             <div className="mt-1 break-words">ua: {debugDims?.ua || '—'}</div>
+            <button
+              type="button"
+              className="mt-2 w-full rounded-lg bg-white/15 hover:bg-white/20 px-2 py-1 text-left"
+              onClick={() => {
+                try {
+                  const el = mainRef.current
+                  if (el) el.scrollTop = 0
+                } catch {}
+              }}
+            >
+              ScrollTop=0
+            </button>
           </div>
         ) : null}
         <div
