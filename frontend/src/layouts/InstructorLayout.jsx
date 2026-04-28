@@ -63,6 +63,8 @@ export default function InstructorLayout() {
       const el = mainRef.current
       const r = el?.getBoundingClientRect?.()
       const vv = globalThis.visualViewport
+      const ch = el?.clientHeight
+      const shEl = el?.scrollHeight
       const vp = document.querySelector('meta[name="viewport"]')?.getAttribute?.('content') || '—'
       const ua = navigator?.userAgent ? String(navigator.userAgent) : '—'
       const sw = globalThis.screen?.width
@@ -74,6 +76,10 @@ export default function InstructorLayout() {
         doc: `${document.documentElement?.clientWidth}×${document.documentElement?.clientHeight}`,
         vv: vv ? `${Math.round(vv.width)}×${Math.round(vv.height)}` : '—',
         main: r ? `${Math.round(r.width)}×${Math.round(r.height)}` : '—',
+        mainHeights:
+          typeof ch === 'number' || typeof shEl === 'number'
+            ? `${Math.round(Number(ch || 0))}/${Math.round(Number(shEl || 0))}`
+            : '—',
         scrollY: Math.round(globalThis.scrollY || 0),
         screen: sw && sh ? `${sw}×${sh}` : '—',
         dpr: dpr != null ? String(dpr) : '—',
@@ -390,6 +396,7 @@ export default function InstructorLayout() {
             <div>doc: {debugDims?.doc || '—'}</div>
             <div>vv: {debugDims?.vv || '—'}</div>
             <div>main: {debugDims?.main || '—'}</div>
+            <div>main(h/s): {debugDims?.mainHeights || '—'}</div>
             <div>scrollY: {debugDims?.scrollY ?? '—'}</div>
             <div>screen: {debugDims?.screen || '—'}</div>
             <div>dpr: {debugDims?.dpr || '—'}</div>
