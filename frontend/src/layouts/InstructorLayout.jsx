@@ -390,8 +390,8 @@ export default function InstructorLayout() {
           className="flex-1 min-h-[calc(100vh-72px)] lg:min-h-0 w-full min-w-0 overflow-x-hidden overflow-y-auto pt-[72px] lg:pt-0"
         >
         {debugLayout ? (
-          <div className="sticky top-0 z-[1500] bg-red-600 text-white text-xs font-semibold px-3 py-2">
-            MAIN OK · path: {location.pathname}
+          <div className="fixed top-[72px] left-0 right-0 z-[2001] bg-red-600 text-white text-xs font-semibold px-3 py-2">
+            MAIN FIXED · path: {location.pathname}
           </div>
         ) : null}
         {debugLayout ? (
@@ -438,6 +438,11 @@ export default function InstructorLayout() {
           ) : null}
 
           <div className="flex-1 min-h-0">
+            {debugLayout ? (
+              <div className="px-4 sm:px-6 py-2 text-xs font-semibold text-amber-600">
+                OUTLET START (debug)
+              </div>
+            ) : null}
             <Outlet />
           </div>
 
