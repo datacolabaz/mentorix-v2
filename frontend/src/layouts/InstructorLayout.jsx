@@ -411,6 +411,11 @@ export default function InstructorLayout() {
           </div>
         ) : null}
         <div className="min-h-full flex flex-col">
+          {debugLayout ? (
+            <div className="mx-4 sm:mx-6 mt-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs font-semibold text-emerald-700">
+              SCROLL CONTENT START (debug)
+            </div>
+          ) : null}
           {limitStatus.level ? (
             <div
               className={`mx-4 sm:mx-6 mt-4 rounded-2xl border px-4 py-3 text-sm ${
