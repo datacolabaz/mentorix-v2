@@ -63,12 +63,23 @@ export default function InstructorLayout() {
       const el = mainRef.current
       const r = el?.getBoundingClientRect?.()
       const vv = globalThis.visualViewport
+      const vp = document.querySelector('meta[name="viewport"]')?.getAttribute?.('content') || '—'
+      const ua = navigator?.userAgent ? String(navigator.userAgent) : '—'
+      const sw = globalThis.screen?.width
+      const sh = globalThis.screen?.height
+      const dpr = globalThis.devicePixelRatio
+      const mmSm = globalThis.matchMedia?.('(max-width: 640px)')?.matches
       setDebugDims({
         inner: `${globalThis.innerWidth}×${globalThis.innerHeight}`,
         doc: `${document.documentElement?.clientWidth}×${document.documentElement?.clientHeight}`,
         vv: vv ? `${Math.round(vv.width)}×${Math.round(vv.height)}` : '—',
         main: r ? `${Math.round(r.width)}×${Math.round(r.height)}` : '—',
         scrollY: Math.round(globalThis.scrollY || 0),
+        screen: sw && sh ? `${sw}×${sh}` : '—',
+        dpr: dpr != null ? String(dpr) : '—',
+        sm: mmSm == null ? '—' : mmSm ? 'true' : 'false',
+        vp,
+        ua: ua.length > 90 ? `${ua.slice(0, 90)}…` : ua,
       })
     }
     tick()
@@ -380,6 +391,11 @@ export default function InstructorLayout() {
             <div>vv: {debugDims?.vv || '—'}</div>
             <div>main: {debugDims?.main || '—'}</div>
             <div>scrollY: {debugDims?.scrollY ?? '—'}</div>
+            <div>screen: {debugDims?.screen || '—'}</div>
+            <div>dpr: {debugDims?.dpr || '—'}</div>
+            <div>sm: {debugDims?.sm || '—'}</div>
+            <div className="mt-1 break-words">vp: {debugDims?.vp || '—'}</div>
+            <div className="mt-1 break-words">ua: {debugDims?.ua || '—'}</div>
           </div>
         ) : null}
         <div className="min-h-full flex flex-col">
