@@ -390,6 +390,11 @@ export default function InstructorLayout() {
           className="flex-1 min-h-[calc(100vh-72px)] lg:min-h-0 w-full min-w-0 overflow-x-hidden overflow-y-auto pt-[72px] lg:pt-0"
         >
         {debugLayout ? (
+          <div className="sticky top-0 z-[1500] bg-red-600 text-white text-xs font-semibold px-3 py-2">
+            MAIN OK · path: {location.pathname}
+          </div>
+        ) : null}
+        {debugLayout ? (
           <div className="fixed bottom-3 left-3 z-[2000] rounded-xl border border-white/10 bg-black/75 text-white px-3 py-2 text-[11px] leading-snug">
             <div className="font-bold mb-1">debugLayout=1</div>
             <div>inner: {debugDims?.inner || '—'}</div>
