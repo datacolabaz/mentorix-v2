@@ -20,37 +20,15 @@ fs.mkdirSync(uploadsAssignmentsDir, { recursive: true });
 
 const app = express();
 
-function parseAllowedOrigins() {
-  const raw = [
-    process.env.FRONTEND_URL,
-    process.env.FRONTEND_URLS,
-    // common prod domains (safe allowlist defaults)
-    'https://mentorix.io',
-    'https://www.mentorix.io',
-  ]
-    .filter(Boolean)
-    .join(',');
-  const items = raw
-    .split(',')
-    .map((s) => String(s).trim())
-    .filter(Boolean);
-  // De-dup
-  return [...new Set(items)];
-}
-
-const allowedOrigins = parseAllowedOrigins();
-
+// CORS: allow browser clients (Vercel custom domains, etc).
+// We reflect the Origin header (no credentials) to avoid "Failed to fetch" loops.
 app.use(
   cors({
-    origin(origin, cb) {
-      // allow non-browser requests (no Origin header)
-      if (!origin) return cb(null, true);
-      if (allowedOrigins.includes('*')) return cb(null, true);
-      if (allowedOrigins.includes(origin)) return cb(null, true);
-      return cb(new Error(`CORS blocked for origin: ${origin}`));
-    },
+    origin: true,
+    credentials: false,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
+    maxAge: 86400,
   })
 );
 app.use(express.json());
