@@ -1,8 +1,21 @@
 import axios from 'axios'
 
 const parsedTimeout = Number(import.meta.env.VITE_API_TIMEOUT_MS)
+
+function normalizeApiBaseUrl(raw) {
+  const v = raw != null ? String(raw).trim().replace(/\/+$/, '') : ''
+  if (!v) return '/api'
+  // If env already points to the API prefix, keep it. Otherwise append /api.
+  if (v.endsWith('/api')) return v
+  return `${v}/api`
+}
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || '/api',
+  // Preferred:
+  // - leave VITE_API_URL empty in dev (use /api + Vite proxy)
+  // - in prod set VITE_API_URL to backend origin (e.g. https://api.edupanel.co)
+  // This helper ensures the final baseURL includes the required "/api" prefix.
+  baseURL: normalizeApiBaseUrl(import.meta.env.VITE_API_URL),
   // Railway/soyuq başlanğıc + DB bəzən 15s-dən çox çəkir
   timeout: Number.isFinite(parsedTimeout) && parsedTimeout > 0 ? parsedTimeout : 60000,
 })

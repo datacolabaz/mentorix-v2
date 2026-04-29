@@ -129,7 +129,12 @@ function displayNotesForStudent(raw) {
 
 function enrollmentFromStudentProfile(s) {
   if (!s?.enrollment_id) return null
-  const lim = billingLimit(s.billing_type)
+  const btRaw = s.billing_type ?? s.enrollment_billing_type ?? s.enrollmentBillingType ?? null
+  const btStr = btRaw != null ? String(btRaw).trim() : ''
+  // Keep parity with backend normalization in /payments/my:
+  // if legacy rows have empty billing_type, default to 8_lessons so UI doesn't show "—".
+  const btNorm = billingLimit(btStr) ? btStr : btStr === 'monthly' ? 'monthly' : '8_lessons'
+  const lim = billingLimit(btNorm)
   const lc = Number(s.lesson_count)
   const lessonCount = Number.isFinite(lc) ? lc : 0
   const calUsed = s.calendar_used_lessons != null ? Number(s.calendar_used_lessons) : NaN
@@ -138,7 +143,7 @@ function enrollmentFromStudentProfile(s) {
   const mf = s.monthly_fee != null && s.monthly_fee !== '' ? Number(s.monthly_fee) : null
   return {
     id: s.enrollment_id,
-    billing_type: s.billing_type,
+    billing_type: btNorm,
     lesson_count: lessonCount,
     billing_cycle: s.billing_cycle,
     lesson_weekdays: s.lesson_weekdays,

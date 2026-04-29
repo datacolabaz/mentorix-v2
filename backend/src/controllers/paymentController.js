@@ -8,6 +8,7 @@ const {
   toYmd: anchorToYmd,
   listBillingDueDatesUpTo,
 } = require('../services/subscriptionBilling');
+const { ensurePackLessonsUpTo, normalizePackBillingType, syncPackProgressFromLessons } = require('../services/packLessons');
 
 /** Bu qeydlər balansı azaldır; ümumi gəlir statistikasına daxil edilmir */
 const SQL_EXCLUDE_BALANCE_ADJUSTMENT =
@@ -684,6 +685,19 @@ const listMyPayments = async (req, res) => {
       );
       enrollment = anyRows[0] || null;
     }
+
+    // Backfill/extend 8/12 package lessons so student-side counters reflect reality
+    // even if the instructor didn't manually "advance cycles".
+    if (enrollment && ['8_lessons', '12_lessons', null, ''].includes(enrollment.billing_type)) {
+      try {
+        const btNorm = normalizePackBillingType(enrollment.billing_type);
+        await ensurePackLessonsUpTo(db, { ...enrollment, billing_type: btNorm }, { horizonDays: 30 });
+        await syncPackProgressFromLessons(db, enrollment.id, { billingType: btNorm });
+      } catch (e) {
+        // non-fatal: counters will fall back to legacy lesson_count
+        console.error('ensurePackLessonsUpTo failed', e);
+      }
+    }
     let enrollmentOut = null;
     let lessonStartForDisplay = null;
     let monthlyProgress = null;
@@ -810,9 +824,17 @@ const listMyPayments = async (req, res) => {
       );
       const total = agg[0]?.total ?? 0;
       const used = agg[0]?.used ?? 0;
-      calendar_total_lessons = Number(total) || 0;
-      calendar_used_lessons = Math.min(calendar_total_lessons, Math.max(0, Number(used) || 0));
-      calendar_remaining_lessons = Math.max(0, calendar_total_lessons - calendar_used_lessons);
+      /**
+       * For lesson packs, "total in cycle" should be the pack limit (8/12),
+       * not "how many dated lessons rows exist right now".
+       * Legacy/converted enrollments may have only a subset of lessons inserted,
+       * but remaining lessons still must show (limit - used).
+       */
+      const totalRows = Number(total) || 0;
+      const usedRows = Math.max(0, Number(used) || 0);
+      calendar_total_lessons = Math.max(Number(limit) || 0, totalRows);
+      calendar_used_lessons = Math.min(Number(limit) || calendar_total_lessons, usedRows);
+      calendar_remaining_lessons = Math.max(0, (Number(limit) || calendar_total_lessons) - calendar_used_lessons);
     }
 
     let nextLesson = null;
