@@ -66,6 +66,38 @@ function addOneMonthYmd(anchorYmd, fromYmd) {
   return `${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
 }
 
+function ymdToMs(ymd) {
+  const s = String(ymd || '').slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;
+  const [y, m, d] = s.split('-').map((x) => parseInt(x, 10));
+  if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) return null;
+  return Date.UTC(y, m - 1, d, 12, 0, 0);
+}
+
+/**
+ * Monthly anchor should normally be enrollment_start_date (billing start date).
+ * If it's accidentally set far in the future while the enrollment actually started earlier,
+ * prefer enrolled_at to avoid bogus "0/xx" cycles and missing history.
+ */
+function monthlyAnchorYmd({ enrollment_start_date, enrolled_at, today_ymd }) {
+  const anchor = anchorToYmd(enrollment_start_date);
+  const enrolled = toYmd(enrolled_at);
+  const today = today_ymd ? String(today_ymd).slice(0, 10) : null;
+
+  if (!anchor) return enrolled;
+  if (!today) return anchor;
+  if (anchor <= today) return anchor;
+
+  // Only override when the anchor is suspiciously far in the future.
+  const aMs = ymdToMs(anchor);
+  const tMs = ymdToMs(today);
+  const eMs = ymdToMs(enrolled);
+  if (aMs == null || tMs == null) return anchor;
+  const daysAhead = Math.round((aMs - tMs) / 86400000);
+  if (daysAhead > 45 && eMs != null && enrolled && enrolled <= today) return enrolled;
+  return anchor;
+}
+
 const getRestorePreview = async (req, res) => {
   try {
     const { enrollment_id } = req.params;
@@ -85,8 +117,16 @@ const getRestorePreview = async (req, res) => {
     }
 
     const bt = en[0].billing_type;
-    const enrolledYmd = toYmd(en[0].enrolled_at) || (await getTodayBakuYmd(db));
-    const anchorYmd = anchorToYmd(en[0].enrollment_start_date);
+    const todayYmd = await getTodayBakuYmd(db);
+    const enrolledYmd = toYmd(en[0].enrolled_at) || todayYmd;
+    const anchorYmd =
+      bt === 'monthly'
+        ? monthlyAnchorYmd({
+            enrollment_start_date: en[0].enrollment_start_date,
+            enrolled_at: en[0].enrolled_at,
+            today_ymd: todayYmd,
+          })
+        : anchorToYmd(en[0].enrollment_start_date);
 
     if (!anchorYmd || !enrolledYmd || anchorYmd >= enrolledYmd) {
       return res.json({ success: true, items: [] });
@@ -109,7 +149,6 @@ const getRestorePreview = async (req, res) => {
       if (!Number.isFinite(mf) || mf <= 0) {
         return res.json({ success: true, items: [] });
       }
-      const todayYmd = await getTodayBakuYmd(db);
       const dueDates = listBillingDueDatesUpTo(anchorYmd, todayYmd);
       const raw = [];
       for (const start of dueDates) {
@@ -276,8 +315,16 @@ const confirmRestorePayments = async (req, res) => {
       return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
     }
     const bt = en[0].billing_type;
-    const anchorYmd = anchorToYmd(en[0].enrollment_start_date);
-    const enrolledYmd = toYmd(en[0].enrolled_at) || (await getTodayBakuYmd(db));
+    const todayYmd = await getTodayBakuYmd(db);
+    const enrolledYmd = toYmd(en[0].enrolled_at) || todayYmd;
+    const anchorYmd =
+      bt === 'monthly'
+        ? monthlyAnchorYmd({
+            enrollment_start_date: en[0].enrollment_start_date,
+            enrolled_at: en[0].enrolled_at,
+            today_ymd: todayYmd,
+          })
+        : anchorToYmd(en[0].enrollment_start_date);
     if (!anchorYmd || !enrolledYmd || anchorYmd >= enrolledYmd) {
       return res.status(400).json({ success: false, message: 'Bərpa ediləcək aralıq yoxdur' });
     }
@@ -287,7 +334,6 @@ const confirmRestorePayments = async (req, res) => {
       if (!Number.isFinite(mf) || mf <= 0) {
         return res.status(400).json({ success: false, message: 'Aylıq məbləğ tapılmadı' });
       }
-      const todayYmd = await getTodayBakuYmd(db);
       const allowed = new Set();
       for (const start of listBillingDueDatesUpTo(anchorYmd, todayYmd)) {
         if (start >= enrolledYmd) break;
@@ -566,8 +612,12 @@ const listMyPayments = async (req, res) => {
         pre_system_enrollment: preSystemEnrollment,
       };
       if (rest.billing_type === 'monthly' && Number.isFinite(mfNum) && mfNum > 0 && enrollmentOut.id) {
-        const anchorYmd = anchorToYmd(lessonStartForDisplay);
         const todayBaku = await getTodayBakuYmd(db);
+        const anchorYmd = monthlyAnchorYmd({
+          enrollment_start_date: lessonStartForDisplay,
+          enrolled_at: enrollmentOut.enrolled_at,
+          today_ymd: todayBaku,
+        });
         const { rows: pr } = await db.query(
           `SELECT COALESCE(SUM(amount), 0)::numeric AS t
            FROM payments
