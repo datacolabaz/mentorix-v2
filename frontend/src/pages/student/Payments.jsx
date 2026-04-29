@@ -226,12 +226,16 @@ export default function StudentPayments() {
   const packSize = limit != null ? Number(limit) : null
   const totalCompletedAll =
     enrollment?.total_lessons_completed != null ? Number(enrollment.total_lessons_completed) : null
+  const expectedTotal =
+    enrollment?.expected_lessons_total != null ? Number(enrollment.expected_lessons_total) : null
   const currentPackNo =
     enrollment?.current_package_number != null
       ? Number(enrollment.current_package_number)
       : packSize && totalCompletedAll != null
         ? Math.floor(totalCompletedAll / packSize) + 1
         : null
+  const expectedPackNo =
+    enrollment?.current_package_expected != null ? Number(enrollment.current_package_expected) : null
   const completedInCurrentPack =
     enrollment?.lessons_in_current_package != null
       ? Number(enrollment.lessons_in_current_package)
@@ -323,7 +327,17 @@ export default function StudentPayments() {
                 </div>
                 {Number.isFinite(currentPackNo) ? (
                   <div className="text-xs text-token-textMuted mt-2">
-                    Cari paket: <span className="font-mono text-token-textMain">#{currentPackNo}</span>
+                    Cari paket (real): <span className="font-mono text-token-textMain">#{currentPackNo}</span>
+                  </div>
+                ) : null}
+                {Number.isFinite(expectedPackNo) ? (
+                  <div className="text-xs text-token-textMuted mt-1">
+                    Plan üzrə paket: <span className="font-mono text-token-textMain">#{expectedPackNo}</span>
+                  </div>
+                ) : null}
+                {Number.isFinite(expectedTotal) ? (
+                  <div className="text-xs text-token-textMuted mt-1">
+                    Gözlənilən dərs sayı: <span className="font-mono text-token-textMain">{expectedTotal}</span>
                   </div>
                 ) : null}
               </Card>
@@ -369,8 +383,20 @@ export default function StudentPayments() {
                     )}
                     {Number.isFinite(currentPackNo) && (
                       <li>
-                        <span className="text-token-textMuted">Cari paket: </span>
+                        <span className="text-token-textMuted">Cari paket (real): </span>
                         <span className="font-mono text-token-textMain">#{currentPackNo}</span>
+                      </li>
+                    )}
+                    {Number.isFinite(expectedPackNo) && (
+                      <li>
+                        <span className="text-token-textMuted">Plan üzrə paket: </span>
+                        <span className="font-mono text-token-textMain">#{expectedPackNo}</span>
+                      </li>
+                    )}
+                    {Number.isFinite(expectedTotal) && (
+                      <li>
+                        <span className="text-token-textMuted">Gözlənilən dərs sayı: </span>
+                        <span className="font-mono text-token-textMain">{expectedTotal}</span>
                       </li>
                     )}
                     {packSize != null && completedInCurrentPack != null && (

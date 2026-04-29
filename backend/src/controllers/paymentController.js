@@ -135,6 +135,32 @@ function ymdFromUtcNoonDate(dt) {
 }
 
 /**
+ * Pack expected lessons from startYmd up to todayYmd inclusive, based on weekly schedule.
+ * IMPORTANT: calendar day iteration (no "weeks-based" shortcuts).
+ */
+function computeExpectedLessonsSinceStart({ start_ymd, today_ymd, lesson_weekdays, lesson_times }) {
+  const start = String(start_ymd || '').slice(0, 10);
+  const today = String(today_ymd || '').slice(0, 10);
+  const startMs = ymdToMs(start);
+  const todayMs = ymdToMs(today);
+  if (startMs == null || todayMs == null) return 0;
+  if (todayMs < startMs) return 0;
+  const wdays = parseLessonWeekdaysJson(lesson_weekdays);
+  const lt = parseLessonTimesJson(lesson_times);
+  if (!wdays.length) return 0;
+  const wset = new Set(wdays);
+  let expected = 0;
+  for (let t = startMs; t <= todayMs; t += 86400000) {
+    const dt = new Date(t);
+    const dow = ((dt.getUTCDay() + 6) % 7) + 1; // Mon=1..Sun=7
+    if (!wset.has(dow)) continue;
+    if (!timeOnWeekday(lt, dow)) continue;
+    expected += 1;
+  }
+  return expected;
+}
+
+/**
  * Monthly "lessons in cycle" is derived from weekly pattern (lesson_weekdays + lesson_times),
  * independent of payments and calendar days.
  */
@@ -786,6 +812,8 @@ const listMyPayments = async (req, res) => {
     let pack_total_completed = null;
     let current_package_number = null;
     let lessons_in_current_package = null;
+    let expected_lessons_total = null;
+    let current_package_expected = null;
     if (enrollment && limit != null) {
       const cycle = enrollment.billing_cycle || 1;
       /**
@@ -876,6 +904,23 @@ const listMyPayments = async (req, res) => {
       if (lim > 0) {
         current_package_number = Math.floor(pack_total_completed / lim) + 1;
         lessons_in_current_package = pack_total_completed % lim;
+      }
+
+      // Expected lessons based on weekly schedule (calendar day iteration).
+      try {
+        const todayBaku = await getTodayBakuYmd(db);
+        const startYmd = toYmd(enrollmentOut?.enrollment_start_date || enrollmentOut?.lesson_start_date_for_display) || null;
+        if (startYmd && lim > 0) {
+          expected_lessons_total = computeExpectedLessonsSinceStart({
+            start_ymd: startYmd,
+            today_ymd: todayBaku,
+            lesson_weekdays: enrollmentOut?.lesson_weekdays,
+            lesson_times: enrollmentOut?.lesson_times,
+          });
+          current_package_expected = Math.max(1, Math.ceil(Number(expected_lessons_total || 0) / lim));
+        }
+      } catch {
+        // ignore expected calc failures
       }
     }
 
@@ -990,6 +1035,8 @@ const listMyPayments = async (req, res) => {
             total_lessons_completed: pack_total_completed,
             current_package_number: current_package_number,
             lessons_in_current_package: lessons_in_current_package,
+            expected_lessons_total: expected_lessons_total,
+            current_package_expected: current_package_expected,
             next_lesson_at: nextLesson,
             next_lesson_display: nextLessonDisplay,
             planned_lessons_in_cycle: planned_lessons_in_cycle,
