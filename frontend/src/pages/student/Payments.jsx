@@ -581,7 +581,9 @@ export default function StudentPayments() {
                   const total = Number(pkg.total) || packSize || 0
                   const completed = Number(pkg.completed) || 0
                   const paid = payByCycleMap.get(cyc) || 0
-                  const paidLabel = paid > 0.005 ? `Ödəniş: ${paid.toFixed(2)} ₼` : 'Ödəniş: —'
+                  const legacyConfirmed = Boolean(pkg.legacy_confirmed)
+                  const paidLabel =
+                    paid > 0.005 ? `Ödəniş: ${paid.toFixed(2)} ₼` : legacyConfirmed ? 'Ödənilib (keçmiş paket)' : 'Ödəniş: —'
                   const headerRight = completed >= total && total > 0 ? 'Tamamlanıb' : cyc === Number(enrollment?.billing_cycle || 1) ? 'Cari' : ''
 
                   return (

@@ -1105,6 +1105,25 @@ const listMyPayments = async (req, res) => {
           billing_cycle: Number(r.billing_cycle) || 1,
           total_paid: Number(r.total_paid) || 0,
         }));
+
+        // If the student was enrolled before the system record was created, mark earlier packages as teacher-confirmed.
+        // This is purely a display flag for history; it does NOT write payments to DB.
+        const systemCreatedYmd = toYmd(enrollmentOut?.enrolled_at);
+        const payMap = new Map(payments_by_cycle.map((x) => [Number(x.billing_cycle) || 1, Number(x.total_paid) || 0]));
+        if (enrollmentOut?.pre_system_enrollment && systemCreatedYmd && Array.isArray(lesson_packages)) {
+          lesson_packages = lesson_packages.map((p) => {
+            const cyc = Number(p.package_number) || 1;
+            const paid = payMap.get(cyc) || 0;
+            const legacyConfirmed = Boolean(p.end_ymd && String(p.end_ymd).slice(0, 10) < systemCreatedYmd);
+            const payment_status = paid > 0.005 ? 'paid' : legacyConfirmed ? 'confirmed_legacy' : 'unpaid';
+            return {
+              ...p,
+              legacy_confirmed: legacyConfirmed,
+              total_paid: paid,
+              payment_status,
+            };
+          });
+        }
       } catch (e) {
         console.error('payments_by_cycle failed', e);
         payments_by_cycle = [];
