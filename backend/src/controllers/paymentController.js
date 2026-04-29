@@ -904,10 +904,20 @@ const listMyPayments = async (req, res) => {
         ? {
             ...enrollmentOut,
             lesson_limit: limit,
-            countdown_model: limit != null ? 'calendar' : null,
-            calendar_used_lessons,
-            calendar_total_lessons,
-            remaining_lessons: calendar_remaining_lessons,
+            // If there are no dated lessons created yet, fall back to counter-based pack logic
+            // so converted enrollments don't show 0 remaining.
+            countdown_model:
+              limit != null && Number(calendar_total_lessons || 0) > 0 ? 'calendar' : null,
+            calendar_used_lessons:
+              limit != null && Number(calendar_total_lessons || 0) > 0 ? calendar_used_lessons : null,
+            calendar_total_lessons:
+              limit != null && Number(calendar_total_lessons || 0) > 0 ? calendar_total_lessons : null,
+            remaining_lessons:
+              limit != null
+                ? Number(calendar_total_lessons || 0) > 0
+                  ? calendar_remaining_lessons
+                  : Math.max(0, Number(limit) - Number(enrollmentOut.lesson_count || 0))
+                : null,
             next_lesson_at: nextLesson,
             next_lesson_display: nextLessonDisplay,
             planned_lessons_in_cycle: planned_lessons_in_cycle,
