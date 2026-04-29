@@ -74,6 +74,96 @@ function ymdToMs(ymd) {
   return Date.UTC(y, m - 1, d, 12, 0, 0);
 }
 
+function parseLessonWeekdaysJson(raw) {
+  let arr = raw;
+  if (typeof raw === 'string') {
+    try {
+      arr = JSON.parse(raw);
+    } catch {
+      arr = [];
+    }
+  }
+  if (!Array.isArray(arr)) return [];
+  const seen = new Set();
+  const out = [];
+  for (const x of arr) {
+    const d = parseInt(String(x), 10);
+    if (Number.isFinite(d) && d >= 1 && d <= 7 && !seen.has(d)) {
+      seen.add(d);
+      out.push(d);
+    }
+  }
+  return out.sort((a, b) => a - b);
+}
+
+function parseLessonTimesJson(raw) {
+  let obj = raw;
+  if (typeof raw === 'string') {
+    try {
+      obj = JSON.parse(raw);
+    } catch {
+      obj = {};
+    }
+  }
+  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return {};
+  return obj;
+}
+
+function padHHMM(t) {
+  const m = String(t || '')
+    .trim()
+    .match(/^(\d{1,2}):(\d{2})$/);
+  if (!m) return null;
+  const h = Math.min(23, Math.max(0, parseInt(m[1], 10)));
+  const mi = Math.min(59, Math.max(0, parseInt(m[2], 10)));
+  if (!Number.isFinite(h) || !Number.isFinite(mi)) return null;
+  return `${String(h).padStart(2, '0')}:${String(mi).padStart(2, '0')}`;
+}
+
+function timeOnWeekday(lt, weekday) {
+  if (!lt || typeof lt !== 'object') return null;
+  const v = lt[String(weekday)] ?? lt[weekday];
+  return padHHMM(v);
+}
+
+function ymdFromUtcNoonDate(dt) {
+  const y = dt.getUTCFullYear();
+  const m = String(dt.getUTCMonth() + 1).padStart(2, '0');
+  const d = String(dt.getUTCDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+/**
+ * Monthly "lessons in cycle" is derived from weekly pattern (lesson_weekdays + lesson_times),
+ * independent of payments and calendar days.
+ */
+function computeMonthlyCycleLessons({ cycle_start_ymd, cycle_end_ymd, lesson_weekdays, lesson_times, today_ymd }) {
+  const start = String(cycle_start_ymd || '').slice(0, 10);
+  const end = String(cycle_end_ymd || '').slice(0, 10);
+  const today = today_ymd ? String(today_ymd).slice(0, 10) : null;
+  const startMs = ymdToMs(start);
+  const endMs = ymdToMs(end);
+  if (startMs == null || endMs == null) return { lessons_total: null, lessons_elapsed: null };
+  if (endMs <= startMs) return { lessons_total: 0, lessons_elapsed: 0 };
+
+  const wdays = parseLessonWeekdaysJson(lesson_weekdays);
+  const lt = parseLessonTimesJson(lesson_times);
+  if (!wdays.length) return { lessons_total: 0, lessons_elapsed: 0 };
+
+  const wset = new Set(wdays);
+  let total = 0;
+  let elapsed = 0;
+  for (let t = startMs; t < endMs; t += 86400000) {
+    const dt = new Date(t);
+    const dow = ((dt.getUTCDay() + 6) % 7) + 1; // Mon=1..Sun=7
+    if (!wset.has(dow)) continue;
+    if (!timeOnWeekday(lt, dow)) continue;
+    total += 1;
+    if (today && ymdFromUtcNoonDate(dt) <= today) elapsed += 1;
+  }
+  return { lessons_total: total, lessons_elapsed: elapsed };
+}
+
 /**
  * Monthly anchor should normally be enrollment_start_date (billing start date).
  * If it's accidentally set far in the future while the enrollment actually started earlier,
@@ -636,6 +726,16 @@ const listMyPayments = async (req, res) => {
           anchor_ymd: anchorYmd,
           today_ymd: todayBaku,
         });
+        if (monthlyProgress?.cycle_start_ymd && monthlyProgress?.cycle_end_ymd) {
+          const lc = computeMonthlyCycleLessons({
+            cycle_start_ymd: monthlyProgress.cycle_start_ymd,
+            cycle_end_ymd: monthlyProgress.cycle_end_ymd,
+            lesson_weekdays: enrollmentOut.lesson_weekdays,
+            lesson_times: enrollmentOut.lesson_times,
+            today_ymd: todayBaku,
+          });
+          monthlyProgress = { ...monthlyProgress, ...lc };
+        }
 
         // Monthly subscription: 2 calendar days remaining notification (student + instructor)
         if (enrollmentOut.notifications_enabled === true && monthlyProgress?.days_remaining === 2) {

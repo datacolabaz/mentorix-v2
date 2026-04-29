@@ -298,7 +298,7 @@ export default function StudentPayments() {
         <>
           {isMonthlySub ? (
             <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                 <Card hover className="p-5 border border-[color:var(--border-subtle)] hover:border-primary/20">
                   <div className="text-xs font-semibold text-token-textMuted uppercase tracking-wider mb-2">Tamamlanan Gün</div>
                   <div className="font-display font-extrabold text-3xl text-blue-400">
@@ -320,6 +320,16 @@ export default function StudentPayments() {
                       </div>
                     </div>
                   ) : null}
+                </Card>
+                <Card hover className="p-5 border border-[color:var(--border-subtle)] hover:border-primary/20">
+                  <div className="text-xs font-semibold text-token-textMuted uppercase tracking-wider mb-2">Tamamlanan Dərs</div>
+                  <div className="font-display font-extrabold text-3xl text-indigo-300">
+                    {mp?.lessons_elapsed != null ? Number(mp.lessons_elapsed) : 0}
+                    {mp?.lessons_total != null ? `/${Number(mp.lessons_total)}` : ''}
+                  </div>
+                  <p className="text-xs text-token-textMuted mt-2">
+                    Cari dövr: həftəlik dərs günlərinə görə hesablanır.
+                  </p>
                 </Card>
                 <Card hover className="p-5 border border-[color:var(--border-subtle)] hover:border-primary/20">
                   <div className="text-xs font-semibold text-token-textMuted uppercase tracking-wider mb-2">Billing</div>
