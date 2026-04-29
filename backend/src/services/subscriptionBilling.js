@@ -85,8 +85,9 @@ function computeMonthlyCycleProgress({ anchor_ymd, today_ymd }) {
 
   // Əgər ankor gələcəkdədirsə, hələ dövr başlamayıb.
   if (compareYmd(anchorYmd, todayYmd) > 0) {
-    const { y, mo } = ap;
-    const endYmd = billingYmdForCalendarMonth(y, mo, ap.d);
+    // Cycle is [anchor, next_anchor) even if anchor is in the future.
+    const nextMonth = addCalendarMonthsYmd(anchorYmd, 1);
+    const endYmd = nextMonth ? billingYmdForCalendarMonth(nextMonth.y, nextMonth.mo, ap.d) : null;
     const total = diffDaysYmd(anchorYmd, endYmd);
     return {
       cycle_start_ymd: anchorYmd,

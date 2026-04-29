@@ -553,9 +553,31 @@ export default function StudentPayments() {
           )}
 
           {!payments.length ? (
-            <p className="text-token-textMuted text-sm py-2">
-              Hələ ödəniş qeydi yoxdur. {roleYour} ödəniş əlavə edəndə burada görünəcək.
-            </p>
+            <div className="text-token-textMuted text-sm py-2 space-y-2">
+              <p>Hələ ödəniş qeydi yoxdur. {roleYour} ödəniş əlavə edəndə burada görünəcək.</p>
+              {enrollment?.billing_type === 'monthly' && enrollment?.subscription ? (
+                <div className="rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard/40 p-3 text-xs text-token-textMain space-y-1">
+                  <p>
+                    <span className="text-token-textMuted">Yaranmış borc:</span>{' '}
+                    <span className="font-mono text-amber-200 font-semibold tabular-nums">
+                      {Number(enrollment.subscription.subscription_due_total || 0).toFixed(2)} ₼
+                    </span>
+                  </p>
+                  <p>
+                    <span className="text-token-textMuted">Ödənən cəm:</span>{' '}
+                    <span className="font-mono text-emerald-300 font-semibold tabular-nums">
+                      {Number(enrollment.subscription.subscription_total_paid || 0).toFixed(2)} ₼
+                    </span>
+                  </p>
+                  <p>
+                    <span className="text-token-textMuted">Qalıq borc:</span>{' '}
+                    <span className="font-mono text-amber-200 font-semibold tabular-nums">
+                      {Number(enrollment.subscription.pending_debt || 0).toFixed(2)} ₼
+                    </span>
+                  </p>
+                </div>
+              ) : null}
+            </div>
           ) : (
             <ul className="space-y-2">
               {payments.map((p) => {
