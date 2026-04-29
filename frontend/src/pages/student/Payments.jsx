@@ -242,6 +242,9 @@ export default function StudentPayments() {
       : null
 
   const enrolledAtText = enrollment?.enrolled_at ? fmtAzFromDb(enrollment.enrolled_at) : null
+  const packStartYmd =
+    enrollment?.lesson_start_date_for_display || enrollment?.payment_start_date_for_display || null
+  const packStartText = packStartYmd ? fmtDdMmYyyy(parseYmdLocal(String(packStartYmd).slice(0, 10))) : null
 
   const usedLessons =
     enrollment?.countdown_model === 'calendar' && enrollment?.calendar_used_lessons != null
@@ -330,6 +333,12 @@ export default function StudentPayments() {
                       <li>
                         <span className="text-token-textMuted">Sistemə qeydiyyat: </span>
                         <span className="font-mono text-token-textMain">{enrolledAtText}</span>
+                      </li>
+                    )}
+                    {packStartText && (
+                      <li>
+                        <span className="text-token-textMuted">Paket başlanğıcı: </span>
+                        <span className="font-mono text-token-textMain">{packStartText}</span>
                       </li>
                     )}
                     {weekdayLine && (
