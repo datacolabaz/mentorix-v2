@@ -14,5 +14,6 @@ ENV NODE_ENV=production
 # Railway provides PORT at runtime
 EXPOSE 3000
 
-CMD ["sh", "-lc", "node scripts/migrate.js && node src/app.js"]
+RUN chmod +x /app/start.sh
+CMD ["/app/start.sh"]
 
