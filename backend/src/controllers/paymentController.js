@@ -690,6 +690,10 @@ const listMyPayments = async (req, res) => {
     if (enrollment) {
       const { student_monthly_fee, ...rest } = enrollment;
       lessonStartForDisplay = rest.enrollment_start_date || null;
+      // Safety: after removing monthly billing, some legacy rows may still have empty billing_type.
+      // Normalize to 8_lessons so UI doesn't show "—".
+      const btRaw = rest.billing_type != null ? String(rest.billing_type).trim() : '';
+      const btNorm = billingLimit(btRaw) ? btRaw : '8_lessons';
       const mfNum = student_monthly_fee != null ? Number(student_monthly_fee) : NaN;
       const startYmd = toYmd(rest.enrollment_start_date);
       const enrolledYmd = toYmd(rest.enrolled_at);
@@ -697,6 +701,7 @@ const listMyPayments = async (req, res) => {
         Boolean(startYmd && enrolledYmd && startYmd < enrolledYmd);
       enrollmentOut = {
         ...rest,
+        billing_type: btNorm,
         monthly_fee: Number.isFinite(mfNum) ? mfNum : null,
         enrolled_at: rest.enrolled_at || null,
         pre_system_enrollment: preSystemEnrollment,
@@ -760,7 +765,7 @@ const listMyPayments = async (req, res) => {
         }
       }
     }
-    const limit = enrollment ? billingLimit(enrollment.billing_type) : null;
+    const limit = enrollmentOut ? billingLimit(enrollmentOut.billing_type) : null;
     let calendar_used_lessons = null;
     let calendar_total_lessons = null;
     let calendar_remaining_lessons = null;
