@@ -783,6 +783,9 @@ const listMyPayments = async (req, res) => {
     let calendar_used_lessons = null;
     let calendar_total_lessons = null;
     let calendar_remaining_lessons = null;
+    let pack_total_completed = null;
+    let current_package_number = null;
+    let lessons_in_current_package = null;
     if (enrollment && limit != null) {
       const cycle = enrollment.billing_cycle || 1;
       /**
@@ -835,6 +838,45 @@ const listMyPayments = async (req, res) => {
       calendar_total_lessons = Math.max(Number(limit) || 0, totalRows);
       calendar_used_lessons = Math.min(Number(limit) || calendar_total_lessons, usedRows);
       calendar_remaining_lessons = Math.max(0, (Number(limit) || calendar_total_lessons) - calendar_used_lessons);
+
+      // Pack-level totals: count all lessons (all cycles) up to "now" using the same wall-time logic.
+      const { rows: allAgg } = await db.query(
+        `WITH enr AS (
+           SELECT id, lesson_times
+           FROM enrollments
+           WHERE id = $1
+         ),
+         l AS (
+           SELECT
+             lesson_date,
+             to_char((lesson_date AT TIME ZONE 'Asia/Baku')::date, 'YYYY-MM-DD') AS ymd,
+             EXTRACT(ISODOW FROM (lesson_date AT TIME ZONE 'Asia/Baku'))::int AS dow
+           FROM lessons
+           WHERE enrollment_id = $1
+         ),
+         sched AS (
+           SELECT
+             (
+               (l.ymd || ' ' ||
+                 COALESCE(
+                   NULLIF(LEFT((enr.lesson_times ->> l.dow::text), 5), ''),
+                   to_char((l.lesson_date AT TIME ZONE 'Asia/Baku')::time, 'HH24:MI')
+                 ) || ':00'
+               )::timestamp AT TIME ZONE 'Asia/Baku'
+             ) AS scheduled_ts
+           FROM l
+           CROSS JOIN enr
+         )
+         SELECT COUNT(*) FILTER (WHERE scheduled_ts <= NOW())::int AS done_total
+         FROM sched`,
+        [enrollment.id]
+      );
+      pack_total_completed = Number(allAgg[0]?.done_total ?? 0) || 0;
+      const lim = Number(limit) || 0;
+      if (lim > 0) {
+        current_package_number = Math.floor(pack_total_completed / lim) + 1;
+        lessons_in_current_package = pack_total_completed % lim;
+      }
     }
 
     let nextLesson = null;
@@ -945,6 +987,9 @@ const listMyPayments = async (req, res) => {
                   ? calendar_remaining_lessons
                   : Math.max(0, Number(limit) - Number(enrollmentOut.lesson_count || 0))
                 : null,
+            total_lessons_completed: pack_total_completed,
+            current_package_number: current_package_number,
+            lessons_in_current_package: lessons_in_current_package,
             next_lesson_at: nextLesson,
             next_lesson_display: nextLessonDisplay,
             planned_lessons_in_cycle: planned_lessons_in_cycle,

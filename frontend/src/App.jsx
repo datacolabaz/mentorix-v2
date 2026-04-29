@@ -89,6 +89,8 @@ export default function App() {
         <Route path="assignments" element={<StudentTasks />} />
         <Route path="tasks" element={<Navigate to="/student/assignments" replace />} />
         <Route path="payments" element={<StudentPayments />} />
+        {/* backward-compatible alias */}
+        <Route path="payments/my" element={<Navigate to="/student/payments" replace />} />
         <Route path="notifications" element={<StudentNotifications />} />
       </Route>
 

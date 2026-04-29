@@ -223,12 +223,29 @@ export default function StudentPayments() {
   }, [load])
 
   const limit = enrollment ? (enrollment.lesson_limit ?? billingLimit(enrollment.billing_type)) : null
-  const remaining =
-    enrollment && enrollment.remaining_lessons != null
-      ? Number(enrollment.remaining_lessons)
-      : enrollment && limit != null
-        ? Math.max(0, Number(limit) - Number(enrollment.lesson_count || 0))
+  const packSize = limit != null ? Number(limit) : null
+  const totalCompletedAll =
+    enrollment?.total_lessons_completed != null ? Number(enrollment.total_lessons_completed) : null
+  const currentPackNo =
+    enrollment?.current_package_number != null
+      ? Number(enrollment.current_package_number)
+      : packSize && totalCompletedAll != null
+        ? Math.floor(totalCompletedAll / packSize) + 1
         : null
+  const completedInCurrentPack =
+    enrollment?.lessons_in_current_package != null
+      ? Number(enrollment.lessons_in_current_package)
+      : totalCompletedAll != null && packSize
+        ? totalCompletedAll % packSize
+        : null
+  const remaining =
+    packSize && completedInCurrentPack != null
+      ? Math.max(0, packSize - completedInCurrentPack)
+      : enrollment && enrollment.remaining_lessons != null
+        ? Number(enrollment.remaining_lessons)
+        : enrollment && limit != null
+          ? Math.max(0, Number(limit) - Number(enrollment.lesson_count || 0))
+          : null
   const totalPaid = payments
     .filter((p) => p.status === 'completed')
     .reduce((s, p) => s + Number(p.amount || 0), 0)
@@ -251,14 +268,8 @@ export default function StudentPayments() {
     enrollment?.lesson_start_date_for_display || enrollment?.payment_start_date_for_display || null
   const packStartText = packStartYmd ? fmtDdMmYyyy(parseYmdLocal(String(packStartYmd).slice(0, 10))) : null
 
-  const usedLessons =
-    enrollment?.countdown_model === 'calendar' && enrollment?.calendar_used_lessons != null
-      ? Number(enrollment.calendar_used_lessons)
-      : Number(enrollment?.lesson_count || 0)
-  const totalLessons =
-    enrollment?.countdown_model === 'calendar' && enrollment?.calendar_total_lessons != null
-      ? Number(enrollment.calendar_total_lessons)
-      : Number(limit || 0)
+  const usedLessons = completedInCurrentPack != null ? completedInCurrentPack : Number(enrollment?.lesson_count || 0)
+  const totalLessons = packSize != null ? Number(packSize) : Number(limit || 0)
   const progressPct =
     enrollment && totalLessons > 0 ? Math.min(100, Math.max(0, (usedLessons / totalLessons) * 100)) : 0
 
@@ -287,11 +298,16 @@ export default function StudentPayments() {
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
               <Card hover className="p-5 border border-[color:var(--border-subtle)] hover:border-primary/20">
-                <div className="text-xs font-semibold text-token-textMuted uppercase tracking-wider mb-2">Tamamlanan Dərs</div>
+                <div className="text-xs font-semibold text-token-textMuted uppercase tracking-wider mb-2">Bu paketdə</div>
                 <div className="font-display font-extrabold text-3xl text-blue-400">
                   {Number.isFinite(usedLessons) ? usedLessons : 0}
                   {Number.isFinite(totalLessons) && totalLessons > 0 ? `/${totalLessons}` : ''}
                 </div>
+                {Number.isFinite(totalCompletedAll) ? (
+                  <div className="text-xs text-token-textMuted mt-2">
+                    Ümumi keçilən dərs: <span className="font-mono text-token-textMain">{totalCompletedAll}</span>
+                  </div>
+                ) : null}
                 {Number.isFinite(totalLessons) && totalLessons > 0 ? (
                   <div className="mt-3">
                     <div className="h-2 bg-token-surfaceMain/50 rounded-full overflow-hidden">
@@ -305,6 +321,11 @@ export default function StudentPayments() {
                 <div className="font-display font-bold text-xl text-emerald-400">
                   {BILLING[enrollment?.billing_type] || enrollment?.billing_type || '—'}
                 </div>
+                {Number.isFinite(currentPackNo) ? (
+                  <div className="text-xs text-token-textMuted mt-2">
+                    Cari paket: <span className="font-mono text-token-textMain">#{currentPackNo}</span>
+                  </div>
+                ) : null}
               </Card>
               <Card hover className="p-5 border border-[color:var(--border-subtle)] hover:border-primary/20">
                 <div className="text-xs font-semibold text-token-textMuted uppercase tracking-wider mb-2">{roleNoun}</div>
@@ -334,16 +355,36 @@ export default function StudentPayments() {
                       <span className="text-token-textMuted">Paket: </span>
                       {BILLING[enrollment.billing_type] || enrollment.billing_type || '—'}
                     </li>
+                    {packStartText && (
+                      <li>
+                        <span className="text-token-textMuted">Başlanğıc tarixi: </span>
+                        <span className="font-mono text-token-textMain">{packStartText}</span>
+                      </li>
+                    )}
                     {enrolledAtText && (
                       <li>
-                        <span className="text-token-textMuted">Sistemə qeydiyyat: </span>
+                        <span className="text-token-textMuted">Sistemdə yaradılıb: </span>
                         <span className="font-mono text-token-textMain">{enrolledAtText}</span>
                       </li>
                     )}
-                    {packStartText && (
+                    {Number.isFinite(currentPackNo) && (
                       <li>
-                        <span className="text-token-textMuted">Paket başlanğıcı: </span>
-                        <span className="font-mono text-token-textMain">{packStartText}</span>
+                        <span className="text-token-textMuted">Cari paket: </span>
+                        <span className="font-mono text-token-textMain">#{currentPackNo}</span>
+                      </li>
+                    )}
+                    {packSize != null && completedInCurrentPack != null && (
+                      <li>
+                        <span className="text-token-textMuted">Bu paketdə: </span>
+                        <span className="font-mono text-token-textMain">
+                          {completedInCurrentPack} / {packSize} dərs
+                        </span>
+                      </li>
+                    )}
+                    {Number.isFinite(totalCompletedAll) && (
+                      <li>
+                        <span className="text-token-textMuted">Ümumi keçilən dərs: </span>
+                        <span className="font-mono text-token-textMain">{totalCompletedAll}</span>
                       </li>
                     )}
                     {weekdayLine && (
@@ -370,13 +411,6 @@ export default function StudentPayments() {
                         </span>
                       </li>
                     )}
-                    <li>
-                      <span className="text-token-textMuted">Keçilmiş dərs sayı: </span>
-                      <span className="font-mono text-token-textMain">{Number.isFinite(usedLessons) ? usedLessons : 0}</span>
-                      {Number.isFinite(totalLessons) && totalLessons > 0
-                        ? ` / ${totalLessons} (Dövr #${enrollment.billing_cycle || 1})`
-                        : ''}
-                    </li>
                     {remaining != null && (
                       <li>
                         <span className="text-token-textMuted">Qalan dərs sayı: </span>
