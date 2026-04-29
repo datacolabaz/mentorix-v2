@@ -193,9 +193,9 @@ async function remainingLessonsCalendar(enrollmentId, cycle) {
        FROM l
        CROSS JOIN enr
      )
-     SELECT
-       COUNT(*)::int AS total,
-       COUNT(*) FILTER (WHERE scheduled_ts <= NOW())::int AS used
+    SELECT
+      COUNT(*)::int AS total,
+      COUNT(*) FILTER (WHERE scheduled_ts <= NOW() AND status = 'done')::int AS used
      FROM sched`,
     [enrollmentId, lt, cycle]
   );

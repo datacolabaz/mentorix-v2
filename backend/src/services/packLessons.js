@@ -227,6 +227,7 @@ async function syncPackProgressFromLessons(dbConn, enrollmentId, { billingType, 
      ),
      l AS (
        SELECT
+         status,
          billing_cycle,
          lesson_date,
          to_char((lesson_date AT TIME ZONE 'Asia/Baku')::date, 'YYYY-MM-DD') AS ymd,
@@ -247,7 +248,7 @@ async function syncPackProgressFromLessons(dbConn, enrollmentId, { billingType, 
        FROM l
        CROSS JOIN enr
      )
-     SELECT COUNT(*) FILTER (WHERE scheduled_ts <= NOW())::int AS done_total
+     SELECT COUNT(*) FILTER (WHERE scheduled_ts <= NOW() AND status = 'done')::int AS done_total
      FROM sched`,
     [enrollmentId, lt]
   );

@@ -849,7 +849,7 @@ const listMyPayments = async (req, res) => {
          )
          SELECT
            COUNT(*)::int AS total,
-           COUNT(*) FILTER (WHERE scheduled_ts <= NOW())::int AS used
+           COUNT(*) FILTER (WHERE scheduled_ts <= NOW() AND status = 'done')::int AS used
          FROM sched`,
         [enrollment.id, cycle]
       );
@@ -867,7 +867,7 @@ const listMyPayments = async (req, res) => {
       calendar_used_lessons = Math.min(Number(limit) || calendar_total_lessons, usedRows);
       calendar_remaining_lessons = Math.max(0, (Number(limit) || calendar_total_lessons) - calendar_used_lessons);
 
-      // Pack-level totals: count all lessons (all cycles) up to "now" using the same wall-time logic.
+      // Pack-level totals: count all attended lessons (status='done') up to "now" using wall-time logic.
       const { rows: allAgg } = await db.query(
         `WITH enr AS (
            SELECT id, lesson_times
@@ -895,7 +895,7 @@ const listMyPayments = async (req, res) => {
            FROM l
            CROSS JOIN enr
          )
-         SELECT COUNT(*) FILTER (WHERE scheduled_ts <= NOW())::int AS done_total
+         SELECT COUNT(*) FILTER (WHERE scheduled_ts <= NOW() AND status = 'done')::int AS done_total
          FROM sched`,
         [enrollment.id]
       );
@@ -1064,7 +1064,7 @@ const listMyPayments = async (req, res) => {
             if (!pkg.start_ymd || ymd < pkg.start_ymd) pkg.start_ymd = ymd;
             if (!pkg.end_ymd || ymd > pkg.end_ymd) pkg.end_ymd = ymd;
           }
-          if (past) pkg.completed += 1;
+          if (past && st === 'done') pkg.completed += 1;
 
           // attendance pct considers only lessons that happened and are marked done/absent
           if (past && (st === 'done' || st === 'absent')) {

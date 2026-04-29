@@ -38,7 +38,7 @@ async function runPackReminders({ dryRun = false } = {}) {
        LEFT JOIN student_profiles sp ON sp.user_id = e.student_id
        LEFT JOIN users pu ON pu.id = sp.parent_id
        LEFT JOIN LATERAL (
-         SELECT COALESCE(MAX(a.lesson_number), 0) AS max_lesson_number
+        SELECT COALESCE(MAX(a.lesson_number) FILTER (WHERE a.attended = TRUE), 0) AS max_lesson_number
          FROM attendance a
          WHERE a.enrollment_id = e.id AND a.billing_cycle = e.billing_cycle
        ) att ON TRUE
@@ -47,13 +47,15 @@ async function runPackReminders({ dryRun = false } = {}) {
          FROM lessons l
          WHERE l.enrollment_id = e.id
            AND l.billing_cycle = e.billing_cycle
-           AND l.lesson_date <= NOW()
+          AND l.status = 'done'
+          AND l.lesson_date <= NOW()
        ) les ON TRUE
        LEFT JOIN LATERAL (
          SELECT COUNT(*)::int AS done_lessons
          FROM enrollment_lessons el
          WHERE el.enrollment_id = e.id
            AND el.billing_cycle = e.billing_cycle
+          AND el.status = 'done'
            AND el.starts_at <= NOW()
        ) el ON TRUE
        WHERE (e.status IS NULL OR LOWER(TRIM(e.status)) = 'active')
