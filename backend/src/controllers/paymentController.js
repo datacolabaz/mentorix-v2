@@ -927,6 +927,9 @@ const listMyPayments = async (req, res) => {
     let nextLesson = null;
     let nextLessonDisplay = null;
     let planned_lessons_in_cycle = null;
+    let lesson_packages = [];
+    let attendance_pct = null;
+    let payments_by_cycle = [];
     if (enrollment && limit != null) {
       const cycle = enrollment.billing_cycle || 1;
       // Select next lesson by derived scheduled_ts (schedule wall time), not raw lesson_date timestamp hour.
@@ -988,6 +991,126 @@ const listMyPayments = async (req, res) => {
       planned_lessons_in_cycle = c[0]?.n ?? null;
     }
 
+    // Lesson history (package -> lessons) for student UI
+    if (enrollmentOut?.id && limit != null) {
+      try {
+        const { rows: lessonRows } = await db.query(
+          `WITH enr AS (
+             SELECT id, lesson_times
+             FROM enrollments
+             WHERE id = $1
+           ),
+           l AS (
+             SELECT
+               billing_cycle,
+               lesson_number,
+               status,
+               lesson_date,
+               to_char((lesson_date AT TIME ZONE 'Asia/Baku')::date, 'YYYY-MM-DD') AS ymd,
+               EXTRACT(ISODOW FROM (lesson_date AT TIME ZONE 'Asia/Baku'))::int AS dow
+             FROM lessons
+             WHERE enrollment_id = $1
+             ORDER BY billing_cycle, lesson_number
+           ),
+           sched AS (
+             SELECT
+               l.billing_cycle,
+               l.lesson_number,
+               l.status,
+               l.lesson_date,
+               l.ymd,
+               (
+                 (l.ymd || ' ' ||
+                   COALESCE(
+                     NULLIF(LEFT((enr.lesson_times ->> l.dow::text), 5), ''),
+                     to_char((l.lesson_date AT TIME ZONE 'Asia/Baku')::time, 'HH24:MI')
+                   ) || ':00'
+                 )::timestamp AT TIME ZONE 'Asia/Baku'
+               ) AS scheduled_ts
+             FROM l
+             CROSS JOIN enr
+           )
+           SELECT billing_cycle, lesson_number, status, ymd, lesson_date, scheduled_ts
+           FROM sched
+           ORDER BY billing_cycle, lesson_number`,
+          [enrollmentOut.id]
+        );
+
+        // group by billing_cycle
+        const by = new Map();
+        const now = Date.now();
+        let attTotal = 0;
+        let attDone = 0;
+        for (const r of lessonRows) {
+          const cyc = Number(r.billing_cycle) || 1;
+          const ln = Number(r.lesson_number) || 0;
+          const ymd = r.ymd ? String(r.ymd).slice(0, 10) : null;
+          const scheduledMs = r.scheduled_ts ? new Date(r.scheduled_ts).getTime() : null;
+          const past = scheduledMs != null && Number.isFinite(scheduledMs) ? scheduledMs <= now : false;
+          const st = r.status ? String(r.status) : 'pending';
+
+          if (!by.has(cyc)) {
+            by.set(cyc, {
+              package_number: cyc,
+              start_ymd: ymd,
+              end_ymd: ymd,
+              total: Number(limit) || null,
+              completed: 0,
+              lessons: [],
+            });
+          }
+          const pkg = by.get(cyc);
+          if (ymd) {
+            if (!pkg.start_ymd || ymd < pkg.start_ymd) pkg.start_ymd = ymd;
+            if (!pkg.end_ymd || ymd > pkg.end_ymd) pkg.end_ymd = ymd;
+          }
+          if (past) pkg.completed += 1;
+
+          // attendance pct considers only lessons that happened and are marked done/absent
+          if (past && (st === 'done' || st === 'absent')) {
+            attTotal += 1;
+            if (st === 'done') attDone += 1;
+          }
+
+          pkg.lessons.push({
+            lesson_number: ln,
+            ymd,
+            status: st,
+            scheduled_ts: r.scheduled_ts || null,
+          });
+        }
+        lesson_packages = [...by.values()].sort((a, b) => b.package_number - a.package_number);
+        attendance_pct = attTotal > 0 ? Math.round((attDone / attTotal) * 100) : null;
+      } catch (e) {
+        console.error('lesson_packages failed', e);
+        lesson_packages = [];
+        attendance_pct = null;
+      }
+    }
+
+    // Payments summary per package (billing_cycle)
+    if (enrollmentOut?.id) {
+      try {
+        const { rows: payAgg } = await db.query(
+          `SELECT COALESCE(billing_cycle, 1)::int AS billing_cycle,
+                  COALESCE(SUM(amount), 0)::numeric AS total_paid
+           FROM payments
+           WHERE enrollment_id = $1
+             AND status = 'completed'
+           GROUP BY COALESCE(billing_cycle, 1)
+           ORDER BY billing_cycle DESC`,
+          [enrollmentOut.id]
+        );
+        payments_by_cycle = payAgg.map((r) => ({
+          billing_cycle: Number(r.billing_cycle) || 1,
+          total_paid: Number(r.total_paid) || 0,
+        }));
+      } catch (e) {
+        console.error('payments_by_cycle failed', e);
+        payments_by_cycle = [];
+      }
+    }
+
     // Last-lesson notification (package): only if enabled (cron will do the time-based trigger)
     if (enrollment && enrollment.notifications_enabled === true && limit != null && calendar_remaining_lessons === 1) {
       const instId = enrollment?.instructor_id || null;
@@ -1037,6 +1160,9 @@ const listMyPayments = async (req, res) => {
             lessons_in_current_package: lessons_in_current_package,
             expected_lessons_total: expected_lessons_total,
             current_package_expected: current_package_expected,
+            lesson_packages: lesson_packages,
+            attendance_pct: attendance_pct,
+            payments_by_cycle: payments_by_cycle,
             next_lesson_at: nextLesson,
             next_lesson_display: nextLessonDisplay,
             planned_lessons_in_cycle: planned_lessons_in_cycle,
