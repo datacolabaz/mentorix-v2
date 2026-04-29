@@ -192,10 +192,10 @@ export default function StudentLayout() {
         <main
           className={
             // Mobile: fixed viewport panel under header (56px).
-            'fixed left-0 right-0 bottom-0 top-14 z-[1] w-full overflow-x-hidden min-w-0 ' +
-            (focusMode
-              ? 'overflow-y-hidden flex flex-col'
-              : 'overflow-y-auto')
+            'fixed left-0 right-0 bottom-0 top-0 z-[1] w-full overflow-x-hidden min-w-0 ' +
+            (focusMode ? 'overflow-y-hidden flex flex-col' : 'overflow-y-auto') +
+            // Desktop: normal flow (avoid overlay/offset issues when switching sidebar items)
+            ' md:static md:inset-auto md:w-full md:h-auto md:min-w-0'
           }
         >
         {focusMode ? (
