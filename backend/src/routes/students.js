@@ -407,17 +407,20 @@ router.post('/enroll', authenticate, authorize('instructor', 'admin'), async (re
     }
 
     const limitForValidation = billingLimit(billing_type || '8_lessons');
+    if (!limitForValidation) {
+      return res.status(400).json({ success: false, message: 'Billing növü yalnız 8 və ya 12 dərs ola bilər' });
+    }
     const firstYmd = parsePaymentStartDate(first_lesson_date);
-    if (limitForValidation && !firstYmd) {
+    if (!firstYmd) {
       return res.status(400).json({ success: false, message: 'İlk dərs tarixi seçilməlidir' });
     }
-    if (limitForValidation && firstYmd && firstYmd < enrollmentYmd) {
+    if (firstYmd && firstYmd < enrollmentYmd) {
       return res.status(400).json({
         success: false,
         message: 'İlk dərs tarixi, dərslərə başlama tarixindən əvvəl ola bilməz',
       });
     }
-    if (limitForValidation && firstYmd) {
+    if (firstYmd) {
       const wd = weekdayFromYmd(firstYmd);
       if (!wd || !lwd.includes(wd) || !lt[String(wd)]) {
         return res.status(400).json({
@@ -504,7 +507,7 @@ router.post('/enroll', authenticate, authorize('instructor', 'admin'), async (re
         );
       }
 
-      // generate enrollment_lessons for first billing cycle (8/12). Monthly: skip for now.
+      // generate enrollment_lessons for first billing cycle (8/12).
       const limit = billingLimit(enr.billing_type);
       const startYmd = firstYmd || enrollmentYmd;
       if (limit) {
@@ -710,6 +713,13 @@ router.patch('/enrollment/:enrollmentId', authenticate, authorize('admin', 'inst
       : parseLessonTimes(curEnr.lesson_times, lwd);
     if ((hasLwd || hasLt) && lwd.length > 0 && Object.keys(lt).length === 0) {
       return res.status(400).json({ success: false, message: 'Dərs günlərinə uyğun saatları qeyd edin' });
+    }
+
+    if (billing_type != null && billing_type !== '') {
+      const lim = billingLimit(billing_type);
+      if (!lim) {
+        return res.status(400).json({ success: false, message: 'Billing növü yalnız 8 və ya 12 dərs ola bilər' });
+      }
     }
 
     if (hasLwd || hasLt) {

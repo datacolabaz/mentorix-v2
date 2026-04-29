@@ -15,7 +15,7 @@ export default function ParentDashboard() {
     })
   }, [])
 
-  const BILLING = { '8_lessons': '8 Dərs', '12_lessons': '12 Dərs', monthly: 'Aylıq' }
+  const BILLING = { '8_lessons': '8 Dərs', '12_lessons': '12 Dərs' }
 
   return (
     <div className="p-6">

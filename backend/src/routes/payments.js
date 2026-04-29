@@ -4,8 +4,6 @@ const {
   addPayment,
   listMyPayments,
   getInstructorPaymentBoard,
-  markMonthlyPaid,
-  markMonthlyPaidBatch,
   getEnrollmentPaymentHistory,
   getRestorePreview,
   confirmRestorePayments,
@@ -33,8 +31,6 @@ router.post(
   authorize('admin', 'instructor'),
   confirmRestorePayments
 );
-router.post('/mark-monthly-paid', authenticate, authorize('admin', 'instructor'), markMonthlyPaid);
-router.post('/mark-monthly-paid-batch', authenticate, authorize('admin', 'instructor'), markMonthlyPaidBatch);
 router.get('/', authenticate, authorize('admin', 'instructor'), listPayments);
 router.post('/', authenticate, authorize('admin', 'instructor'), addPayment);
 router.delete('/:payment_id', authenticate, authorize('admin', 'instructor'), deletePayment);

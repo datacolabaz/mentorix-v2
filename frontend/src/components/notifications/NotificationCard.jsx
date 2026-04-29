@@ -28,7 +28,7 @@ export default function NotificationCard({ item, onDetails }) {
   const st = STATUS_MAP[item.status] || STATUS_MAP.sent
   const tp = TYPE_MAP[item.type] || TYPE_MAP.payment
   const pkgRaw = item.package_type ? String(item.package_type) : ''
-  const pkg = pkgRaw === '8' ? '8 dərs' : pkgRaw === '12' ? '12 dərs' : pkgRaw === 'monthly' ? 'Aylıq' : null
+  const pkg = pkgRaw === '8' ? '8 dərs' : pkgRaw === '12' ? '12 dərs' : null
   const phoneCount = Array.isArray(item.phones) ? item.phones.length : 0
   const primaryText = item.student_name
     ? String(item.student_name)

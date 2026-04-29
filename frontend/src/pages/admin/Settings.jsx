@@ -16,7 +16,7 @@ export default function AdminSettings() {
           <h2 className="font-display font-bold text-base mb-4">📱 SMS Defolt Limitlər</h2>
           <div className="space-y-4">
             {[
-              { key: 'default_sms_limit', label: 'Aylıq SMS Limiti', unit: 'SMS' },
+              { key: 'default_sms_limit', label: 'SMS Limiti', unit: 'SMS' },
               { key: 'default_storage_mb', label: 'Storage Limiti', unit: 'MB' },
               { key: 'default_ram_mb', label: 'RAM Limiti', unit: 'MB' },
             ].map(({ key, label, unit }) => (

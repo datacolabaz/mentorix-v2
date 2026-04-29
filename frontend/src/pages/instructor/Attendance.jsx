@@ -9,7 +9,6 @@ import useUiStore from '../../hooks/useUi'
 function billingLabel(t) {
   if (t === '8_lessons') return '8 dərs'
   if (t === '12_lessons') return '12 dərs'
-  if (t === 'monthly') return 'Aylıq'
   return t || '—'
 }
 
@@ -185,30 +184,9 @@ export default function InstructorAttendance() {
   }, [enrollmentId])
 
   const loadMonthlySlots = async (id) => {
-    if (!id) return
-    setMonthlyFetching(true)
-    try {
-      const d = await api.get('/attendance/monthly/' + encodeURIComponent(id))
-      setMonthlyRows(Array.isArray(d.slots) ? d.slots : [])
-      const nl = d.next_lesson
-      const nextDate =
-        nl && typeof nl === 'object' && nl.lesson_date
-          ? nl.lesson_date
-          : typeof nl === 'string'
-            ? nl
-            : null
-      setMonthlyMeta({
-        next: nextDate,
-        next_status: nl && typeof nl === 'object' ? nl.status || null : null,
-        anchor: d.anchor_date || null,
-        today: d.today_baku || null,
-      })
-    } catch (err) {
-      setMonthlyRows([])
-      toast(err.message || 'Aylıq davamiyyət yüklənmədi', 'error')
-    } finally {
-      setMonthlyFetching(false)
-    }
+    // Monthly attendance removed (billing is pack-only now).
+    void id
+    setMonthlyRows([])
   }
 
   const loadPeriod = async (id) => {
@@ -217,11 +195,7 @@ export default function InstructorAttendance() {
     try {
       const d = await api.get('/attendance/period/' + encodeURIComponent(id))
       setPeriod(d)
-      if (d?.enrollment?.billing_type === 'monthly') {
-        await loadMonthlySlots(id)
-      } else {
-        setMonthlyRows([])
-      }
+      setMonthlyRows([])
     } catch (err) {
       setPeriod(null)
       setMonthlyRows([])
@@ -241,13 +215,7 @@ export default function InstructorAttendance() {
 
   const monthlyLessonStats = useMemo(() => {
     const en = period?.enrollment
-    if (!en || en.billing_type !== 'monthly') return null
-    const anchor = sliceYmd(en.enrollment_start_date) || sliceYmd(en.enrolled_at)
-    const end = monthlyRangeEnd || ymdTodayBaku()
-    if (!anchor) return null
-    const safeEnd = end < anchor ? anchor : end
-    const n = countLessonDaysBetween(anchor, safeEnd, en.lesson_weekdays)
-    return { anchor, end: safeEnd, count: n }
+    void en
   }, [period, monthlyRangeEnd])
 
   useEffect(() => {
@@ -330,87 +298,22 @@ export default function InstructorAttendance() {
   }
 
   const monthlyGenerateFuture = async () => {
-    if (!enrollmentId) return
-    setMonthlyFetching(true)
-    try {
-      await api.post('/attendance/monthly/' + encodeURIComponent(enrollmentId) + '/generate', {})
-      toast('Gələcək dərs günləri üçün slotlar yeniləndi')
-      await loadMonthlySlots(enrollmentId)
-    } catch (e) {
-      toast(e?.message || 'Xəta', 'error')
-    } finally {
-      setMonthlyFetching(false)
-    }
+    // Monthly attendance removed.
+    void enrollmentId
   }
 
   const monthlyBulkAction = async (action) => {
-    if (!enrollmentId || !monthlyActFrom || !monthlyActTo) {
-      toast('Aralıq tarixləri seçin', 'error')
-      return
-    }
-    if (monthlyActFrom > monthlyActTo) {
-      toast('Tarix aralığı yanlışdır', 'error')
-      return
-    }
-    setMonthlyFetching(true)
-    try {
-      const d = await api.post('/attendance/monthly/' + encodeURIComponent(enrollmentId) + '/bulk', {
-        date_from: monthlyActFrom,
-        date_to: monthlyActTo,
-        action,
-      })
-      toast(`${d?.updated ?? 0} gün yeniləndi`, 'success')
-      await loadMonthlySlots(enrollmentId)
-    } catch (e) {
-      toast(e?.message || 'Xəta', 'error')
-    } finally {
-      setMonthlyFetching(false)
-    }
+    void action
   }
 
   const monthlyArchiveAllPast = async () => {
-    if (!enrollmentId) return
-    const anchor = monthlyMeta.anchor || monthlyLessonStats?.anchor
-    const today = monthlyMeta.today || ymdTodayBaku()
-    if (!anchor) return
-    const yest = addDaysToYmd(today, -1)
-    if (!yest || yest < anchor) {
-      toast('Arxivlənəcək keçmiş tarix yoxdur', 'info')
-      return
-    }
-    if (!window.confirm(`${anchor} – ${yest} aralığındakı bütün dərs günlərini arxivləmək?`)) return
-    setMonthlyFetching(true)
-    try {
-      await api.post('/attendance/monthly/' + encodeURIComponent(enrollmentId) + '/bulk', {
-        date_from: anchor,
-        date_to: yest,
-        action: 'archived',
-      })
-      toast('Keçmiş tarixlər arxivləndi')
-      await loadMonthlySlots(enrollmentId)
-    } catch (e) {
-      toast(e?.message || 'Xəta', 'error')
-    } finally {
-      setMonthlyFetching(false)
-    }
+    void enrollmentId
   }
 
   const putMonthlySlot = async (lessonDate, status, opts = {}) => {
-    if (!enrollmentId) return
-    setMonthlyFetching(true)
-    try {
-      await api.put('/attendance/monthly/' + encodeURIComponent(enrollmentId) + '/day', {
-        lesson_date: lessonDate,
-        status,
-        ...(opts.chargeAbsence ? { charge_absence: true } : {}),
-      })
-      await loadMonthlySlots(enrollmentId)
-      toast('Yadda saxlandı', 'success')
-    } catch (e) {
-      toast(e?.message || 'Xəta', 'error')
-    } finally {
-      setMonthlyFetching(false)
-    }
+    void lessonDate
+    void status
+    void opts
   }
 
   return (
@@ -623,7 +526,7 @@ export default function InstructorAttendance() {
                 Hər dərs üçün “Gəldi/Gəlmədi” seçə bilərsiniz. Paket (8/12) tamamlananda sistem avtomatik növbəti dövrü açır.
               </p>
             </div>
-          ) : enrollmentId && period?.enrollment?.billing_type === 'monthly' ? (
+          ) : false ? (
             <div
               className={[
                 'rounded-xl border p-4 space-y-4',
@@ -634,7 +537,7 @@ export default function InstructorAttendance() {
             >
               <p className={['text-xs leading-relaxed', theme === 'dark' ? 'text-gray-300' : 'text-token-textMuted'].join(' ')}>
                 <span className={['font-semibold', theme === 'dark' ? 'text-indigo-200' : 'text-token-textMain'].join(' ')}>
-                  Aylıq paket:
+                  Paket:
                 </span>{' '}
                 davamiyyət yalnız izləmə və
                 hesabat üçündür; <strong>ödəniş borcu</strong> yalnız Ödənişlər bölməsində təqvim ankoruna görə

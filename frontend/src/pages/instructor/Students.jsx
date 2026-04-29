@@ -16,7 +16,6 @@ import PortalMenu from '../../components/common/PortalMenu'
 const BILLING_OPTS = [
   { value: '8_lessons', label: '8 Ders' },
   { value: '12_lessons', label: '12 Ders' },
-  { value: 'monthly', label: 'Ayliq' },
 ]
 
 const emptyForm = {
@@ -105,7 +104,7 @@ function normName(s) {
     .replace(/\s+/g, ' ')
 }
 
-/** UI ödəniş sxemi → billing_timing + payment_plan (8/12/aylıq) */
+/** UI ödəniş sxemi → billing_timing + payment_plan (8/12 üçün eyni) */
 function paymentSchemeFromForm(data) {
   if (data.payment_plan === 'partial') return 'installment'
   if ((data.billing_timing || 'postpaid') === 'prepaid') return 'full_prepaid'
@@ -202,8 +201,6 @@ function StudentFormFields({
         <p className="text-xs font-semibold text-gray-200 uppercase tracking-wider">1. Qeydiyyat növü *</p>
         <p className="text-[10px] text-gray-400 leading-relaxed">
           <span className="text-gray-200">Dərs sayı ilə</span> — 8 və ya 12 dərsli paket, tarixlər paket üzrə avtomatik planlanır.
-          <span className="mx-1 text-gray-600">·</span>
-          <span className="text-gray-200">Aylıq</span> — sabit aylıq məbləğ; tarix əsasən ödəniş ankoru (hər ayın həmin günü) üçündür, paket sayğacı yoxdur.
         </p>
         <select
           className={inp}
@@ -211,10 +208,6 @@ function StudentFormFields({
           onChange={(e) => {
             const v = e.target.value
             setData((p) => {
-              if (v === 'monthly') {
-                const anchor = p.enrollment_date || p.first_lesson_date || ''
-                return { ...p, billing_type: v, first_lesson_date: anchor, enrollment_date: anchor }
-              }
               const fl = p.first_lesson_date || p.enrollment_date || ''
               return { ...p, billing_type: v, first_lesson_date: fl, enrollment_date: fl }
             })
@@ -222,7 +215,7 @@ function StudentFormFields({
         >
           {BILLING_OPTS.map((o) => (
             <option key={o.value} value={o.value}>
-              {o.value === 'monthly' ? 'Aylıq sabit ödəniş' : o.value === '8_lessons' ? '8 dərs paketi (dərs sayı ilə)' : '12 dərs paketi (dərs sayı ilə)'}
+              {o.value === '8_lessons' ? '8 dərs paketi (dərs sayı ilə)' : '12 dərs paketi (dərs sayı ilə)'}
             </option>
           ))}
         </select>
@@ -238,92 +231,49 @@ function StudentFormFields({
         Ödəniş bitməsi barədə bildiriş göndərilsin
       </label>
 
-      {data.billing_type === 'monthly' ? (
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Aylıq məbləğ (₼) *</label>
-            <input
-              className={inp}
-              type="number"
-              min={0}
-              step={0.01}
-              placeholder="0"
-              value={data.monthly_fee}
-              onChange={(e) => setData((p) => ({ ...p, monthly_fee: e.target.value }))}
-            />
-            <p className="text-[10px] text-gray-500 mt-1.5">Ödəniş dövrü üçün gözlənilən sabit məbləğ.</p>
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Ayın ankor günü (başlama tarixi) *</label>
-            <p className="text-[10px] text-gray-500 mb-2">
-              Hər ayın ödəniş təqvimi bu günə söykənir. Köhnə formada ayrıca «ilk dərs» sahəsi olanda ili orada səhv qalsa belə, bazada əsas tarix budur — ili düzəltmək üçün həmin ankor gününü
-              yeniləyin (redaktə saxlananda serverdə yenilənir).
+      <>
+        <div className="rounded-xl border border-indigo-500/20 bg-[#0f0c29]/60 p-3 space-y-2">
+          <p className="text-xs font-semibold text-indigo-200/90 uppercase tracking-wider">2. Paket: ilk dərs tarixi *</p>
+          <p className="text-[10px] text-gray-500 leading-relaxed">
+            Paket qeydiyyatında təqvim bir tarixdən başlayır: seçdiyiniz gün dərs günlərinizdən biri olmalıdır. Sistem bu tarixdən 8 və ya 12 tarixli dərs sırası qurur.
+          </p>
+          <p className="text-[10px] text-amber-200/90 rounded-lg border border-amber-500/25 bg-amber-500/10 px-2 py-1.5 leading-relaxed">
+            Redaktədə dəyişəndə yalnız 1-ci dövrün planı və həmin dövrün davamiyyəti yenilənir. Artıq növbəti paket dövrünə keçilibsə, tarix dəyişməyi server bloklaya bilər.
+          </p>
+          <input
+            className={inp}
+            type="date"
+            value={data.first_lesson_date}
+            onChange={(e) => {
+              const v = e.target.value
+              setData((p) => ({ ...p, first_lesson_date: v, enrollment_date: v }))
+            }}
+          />
+          {paymentDateHint(data.first_lesson_date) && (
+            <p className="text-[11px] text-indigo-300/80 mt-1.5 tabular-nums">
+              Seçilmiş tarix: <span className="text-white font-medium">{paymentDateHint(data.first_lesson_date)}</span>
             </p>
-            <input
-              className={inp}
-              type="date"
-              value={data.enrollment_date}
-              onChange={(e) => {
-                const v = e.target.value
-                setData((p) => ({ ...p, enrollment_date: v, first_lesson_date: v }))
-              }}
-            />
-            {paymentDateHint(data.enrollment_date) && (
-              <p className="text-[11px] text-indigo-300/80 mt-1.5 tabular-nums">
-                Seçilmiş tarix:{' '}
-                <span className="text-white font-medium">{paymentDateHint(data.enrollment_date)}</span>
-              </p>
-            )}
-          </div>
+          )}
         </div>
-      ) : (
-        <>
-          <div className="rounded-xl border border-indigo-500/20 bg-[#0f0c29]/60 p-3 space-y-2">
-            <p className="text-xs font-semibold text-indigo-200/90 uppercase tracking-wider">2. Paket: ilk dərs tarixi *</p>
-            <p className="text-[10px] text-gray-500 leading-relaxed">
-              Paket qeydiyyatında təqvim bir tarixdən başlayır: seçdiyiniz gün dərs günlərinizdən biri olmalıdır. Sistem bu tarixdən 8 və ya 12 tarixli dərs sırası qurur (aylıq ankor ayrıca
-              deyil).
-            </p>
-            <p className="text-[10px] text-amber-200/90 rounded-lg border border-amber-500/25 bg-amber-500/10 px-2 py-1.5 leading-relaxed">
-              Redaktədə dəyişəndə yalnız 1-ci dövrün planı və həmin dövrün davamiyyəti yenilənir. Artıq növbəti paket dövrünə keçilibsə, tarix dəyişməyi server bloklaya bilər.
-            </p>
-            <input
-              className={inp}
-              type="date"
-              value={data.first_lesson_date}
-              onChange={(e) => {
-                const v = e.target.value
-                setData((p) => ({ ...p, first_lesson_date: v, enrollment_date: v }))
-              }}
-            />
-            {paymentDateHint(data.first_lesson_date) && (
-              <p className="text-[11px] text-indigo-300/80 mt-1.5 tabular-nums">
-                Seçilmiş tarix: <span className="text-white font-medium">{paymentDateHint(data.first_lesson_date)}</span>
-              </p>
-            )}
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Məbləğ qeydi (₼) — ixtiyari</label>
-            <input
-              className={inp}
-              type="number"
-              min={0}
-              step={0.01}
-              placeholder="0"
-              value={data.monthly_fee}
-              onChange={(e) => setData((p) => ({ ...p, monthly_fee: e.target.value }))}
-            />
-            <p className="text-[10px] text-gray-500 mt-1.5">Paket üzrə istinad məbləği; aylıq sabit ödəniş deyil.</p>
-          </div>
-        </>
-      )}
+        <div>
+          <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Məbləğ qeydi (₼) — ixtiyari</label>
+          <input
+            className={inp}
+            type="number"
+            min={0}
+            step={0.01}
+            placeholder="0"
+            value={data.monthly_fee}
+            onChange={(e) => setData((p) => ({ ...p, monthly_fee: e.target.value }))}
+          />
+          <p className="text-[10px] text-gray-500 mt-1.5">Paket üzrə istinad məbləği; abunə tipli sabit ödəniş deyil.</p>
+        </div>
+      </>
 
       <div className="rounded-xl border border-indigo-500/20 bg-[#0f0c29]/60 p-3 space-y-2">
         <p className="text-xs font-semibold text-indigo-200/90 uppercase tracking-wider">Həftənin dərs günləri *</p>
         <p className="text-[10px] text-gray-500 leading-relaxed">
-          {data.billing_type === 'monthly'
-            ? 'Aylıq qeydiyyatda da dərs günləri və saatlar izləmə və əlaqə üçün saxlanılır.'
-            : 'Paketdə tarixlər bu günlərə və aşağıdakı saatlara uyğun avtomatik düzülür.'}
+          Paketdə tarixlər bu günlərə və aşağıdakı saatlara uyğun avtomatik düzülür.
         </p>
         <div className="flex flex-wrap gap-2">
           {WEEKDAYS.map((d) => {
@@ -356,7 +306,7 @@ function StudentFormFields({
         <p className="text-xs font-semibold text-indigo-200/90 uppercase tracking-wider">Ödəniş sxemi</p>
         <div>
           <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
-            Ödəniş modeli (8 dərs / 12 dərs / aylıq üçün eyni) *
+            Ödəniş modeli *
           </label>
           <select
             className={inp}
@@ -369,8 +319,7 @@ function StudentFormFields({
           </select>
           <p className="text-[10px] text-gray-500 mt-2 leading-relaxed">
             <span className="text-rose-200/90 font-medium">Hissəli</span> seçildikdə ödənilən məbləğ borcdan az olanda qalıq «Ödənişlər»
-            və tarixçədə qırmızı ilə göstərilir. Aylıq məsələn <span className="text-white/90">85 ₼</span>dirsə, tam öncədən ödənişdə 85 ₼
-            gözlənilir; hissəlidə isə hər ödəniş ayrıca qeyd olunur və qalıq borc dərhal hesablanır.
+            və tarixçədə qırmızı ilə göstərilir. Hissəlidə hər ödəniş ayrıca qeyd olunur və qalıq borc dərhal hesablanır.
           </p>
         </div>
       </div>
@@ -521,20 +470,9 @@ function StudentFormFields({
           {data.billing_type === '12_lessons' && (
             <p className="text-[10px] text-gray-500">Paket: 12 dərs (qeydiyyatdan sonra sayğac 12-dən geri sayacaq)</p>
           )}
-          {data.billing_type === 'monthly' && (
-            <p className="text-[10px] text-gray-500">
-              Paket: aylıq — borc hər ayın başlama tarixinin təqvim günü üzrə sabit məbləğdir; davamiyyət yalnız izləmə üçündür.
-            </p>
-          )}
-          {data.billing_type === 'monthly' ? (
-            <p className="text-[10px] text-gray-500">
-              Seçilmiş dərs günləri üçün saatları qeyd edin. Aylıq qeydiyyatda tarixli «paket dərsləri» avtomatik yaradılmır — yalnız izləmə üçün cədvəl məlumatıdır.
-            </p>
-          ) : (
-            <p className="text-[10px] text-gray-500">
-              Seçilmiş dərs günləri üçün saatları qeyd edin. Paket qeydiyyatında yuxarıdakı ilk dərs tarixindən başlayaraq 8 və ya 12 tarixli dərs sırası avtomatik yaradılacaq.
-            </p>
-          )}
+          <p className="text-[10px] text-gray-500">
+            Seçilmiş dərs günləri üçün saatları qeyd edin. Paket qeydiyyatında yuxarıdakı ilk dərs tarixindən başlayaraq 8 və ya 12 tarixli dərs sırası avtomatik yaradılacaq.
+          </p>
           <div className="space-y-2">
             {WEEKDAYS.filter((d) => (data.lesson_weekdays?.length ? data.lesson_weekdays.includes(d.v) : false)).map((d) => (
               <div key={d.v} className="flex items-center justify-between gap-3 rounded-xl border border-indigo-500/15 bg-[#13112e]/60 px-3 py-2">
@@ -688,17 +626,12 @@ export default function InstructorStudents() {
       return
     }
     const isPkg = form.billing_type === '8_lessons' || form.billing_type === '12_lessons'
-    const isMonthly = form.billing_type === 'monthly'
-    if (isMonthly && !form.enrollment_date) {
-      toast('Aylıq üçün ayın ankor gününü (başlama tarixini) seçin', 'error')
-      return
-    }
     if (isPkg && !form.first_lesson_date) {
       toast('Paket üçün ilk dərs tarixini seçin', 'error')
       return
     }
-    const enrollmentSend = isPkg ? form.first_lesson_date : form.enrollment_date
-    const firstLessonSend = isPkg ? form.first_lesson_date : form.first_lesson_date || null
+    const enrollmentSend = form.first_lesson_date
+    const firstLessonSend = form.first_lesson_date
     // Slot seçimi tələb olunmur: dərslər lesson_times + start_date ilə avtomatik generasiya olunur
     setLoading(true)
     try {
@@ -763,8 +696,8 @@ export default function InstructorStudents() {
       phone: s.phone || '',
       billing_type: s.billing_type || '8_lessons',
       monthly_fee: s.monthly_fee != null && s.monthly_fee !== '' ? String(s.monthly_fee) : '',
-      enrollment_date: s.billing_type === 'monthly' ? enrSlice : pkgAnchor,
-      first_lesson_date: s.billing_type === 'monthly' ? enrSlice : pkgAnchor,
+      enrollment_date: pkgAnchor,
+      first_lesson_date: pkgAnchor,
       billing_timing: s.billing_timing === 'prepaid' ? 'prepaid' : 'postpaid',
       payment_plan: s.payment_plan === 'partial' ? 'partial' : 'full',
       subject_id: s.subject_id ? String(s.subject_id) : '',
@@ -781,12 +714,12 @@ export default function InstructorStudents() {
       billing_type: s.billing_type || '8_lessons',
       referral_notes: s.referral_notes || '',
       monthly_fee: s.monthly_fee != null && s.monthly_fee !== '' ? String(s.monthly_fee) : '',
-      enrollment_date: s.billing_type === 'monthly' ? enrSlice : pkgAnchor,
+      enrollment_date: pkgAnchor,
       billing_timing: s.billing_timing === 'prepaid' ? 'prepaid' : 'postpaid',
       payment_plan: s.payment_plan === 'partial' ? 'partial' : 'full',
       subject_id: s.subject_id ? String(s.subject_id) : '',
       group_id: s.group_id ? String(s.group_id) : '',
-      first_lesson_date: s.billing_type === 'monthly' ? enrSlice : pkgAnchor,
+      first_lesson_date: pkgAnchor,
       teacher_schedule_id: '',
       lesson_weekdays: normalizeWeekdays(s.lesson_weekdays),
       lesson_times: normalizeLessonTimes(s.lesson_times),
@@ -979,21 +912,16 @@ export default function InstructorStudents() {
     }
     const original = editOriginal || {}
     const editPkg = editForm.billing_type === '8_lessons' || editForm.billing_type === '12_lessons'
-    const editMonthly = editForm.billing_type === 'monthly'
     // Telefon kimi sadə dəyişikliklərdə mövcud başlanğıc tarixi varsa bloklama.
     const effectiveEnrollment =
       editForm.enrollment_date || original.enrollment_date || ''
     const effectiveFirstLesson =
       editForm.first_lesson_date || original.first_lesson_date || ''
-    if (editMonthly && !effectiveEnrollment) {
-      toast('Aylıq üçün ayın ankor gününü seçin', 'error')
-      return
-    }
     if (editPkg && !effectiveFirstLesson) {
       toast('Paket üçün ilk dərs tarixini seçin', 'error')
       return
     }
-    const enrollmentPatch = editPkg ? effectiveFirstLesson : effectiveEnrollment
+    const enrollmentPatch = effectiveFirstLesson || effectiveEnrollment
     setLoading(true)
     try {
       // Yalnız dəyişən sahələri göndər (telefon update-də tarix validasiyası trigger olmasın).
@@ -1331,9 +1259,7 @@ export default function InstructorStudents() {
                       const p = lessonProgress(s)
                       const pay = paymentBadge(s)
                       const packLabel =
-                        s.billing_type === 'monthly'
-                          ? 'Aylıq'
-                          : s.billing_type === '8_lessons'
+                        s.billing_type === '8_lessons'
                             ? '8 dərs'
                             : s.billing_type === '12_lessons'
                               ? '12 dərs'

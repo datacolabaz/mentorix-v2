@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { anchorToYmd, computeMonthlyBalanceState } from '../../lib/subscriptionBillingPreview'
 import api from '../../lib/api'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
@@ -128,56 +127,21 @@ export default function InstructorPayments() {
   )
 
   const openQuickPay = (row) => {
-    setQuickRow(row)
-    const deficit =
-      row.pending_debt != null && Number.isFinite(Number(row.pending_debt)) && Number(row.pending_debt) > 0
-        ? Number(row.pending_debt)
-        : null
-    const mf = row.monthly_fee != null && Number.isFinite(Number(row.monthly_fee)) ? Number(row.monthly_fee) : null
-    const firstAmt = deficit != null && deficit > 0 ? deficit : mf != null && mf > 0 ? mf : ''
-    setQuickLines([newQuickLine({ amount: firstAmt === '' ? '' : String(firstAmt) })])
-    setQuickOpen(true)
+    // Subscription billing removed; quick-pay modal is no longer used.
+    void row
   }
 
-  const quickPartialUnderpay = useMemo(() => {
-    if (!quickRow || quickRow.billing_type !== 'monthly' || quickRow.payment_plan !== 'partial') return false
-    const mf = Number(quickRow.monthly_fee)
-    if (!Number.isFinite(mf) || mf <= 0) return false
-    return quickLines.some((ln) => {
-      const a = Number(ln.amount)
-      return Number.isFinite(a) && a > 0 && a + 0.005 < mf
-    })
-  }, [quickRow, quickLines])
-
-  const quickPreview = useMemo(() => {
-    if (!quickRow || quickRow.billing_type !== 'monthly') return null
-    const mf = Number(quickRow.monthly_fee)
-    if (!Number.isFinite(mf) || mf <= 0) return null
-    const anchor = anchorToYmd(quickRow.lesson_start_date || quickRow.payment_start_date)
-    if (!anchor) return null
-    const basePaid = Number(quickRow.total_payments) || 0
-    let add = 0
-    for (const ln of quickLines) {
-      const a = Number(ln.amount)
-      if (Number.isFinite(a) && a > 0) add += a
-    }
-    return computeMonthlyBalanceState({
-      monthly_fee: mf,
-      anchor_ymd: anchor,
-      today_ymd: todayBaku,
-      total_paid: basePaid + add,
-    })
-  }, [quickRow, quickLines, todayBaku])
+  const quickPartialUnderpay = false
+  const quickPreview = null
 
   const [openCats, setOpenCats] = useState(() => new Set())
 
   const categorized = useMemo(() => {
     const list = Array.isArray(students) ? students : []
     const cats = [
-      { key: 'monthly', label: 'Aylıq paketlər', match: (s) => String(s.billing_type) === 'monthly' },
       { key: '8', label: '8 dərs paketləri', match: (s) => String(s.billing_type) === '8_lessons' },
       { key: '12', label: '12 dərs paketləri', match: (s) => String(s.billing_type) === '12_lessons' },
-      { key: 'other', label: 'Digər', match: (s) => !['monthly', '8_lessons', '12_lessons'].includes(String(s.billing_type)) },
+      { key: 'other', label: 'Digər', match: (s) => !['8_lessons', '12_lessons'].includes(String(s.billing_type)) },
     ]
     return cats
       .map((c) => ({ ...c, items: list.filter(c.match) }))
@@ -185,50 +149,7 @@ export default function InstructorPayments() {
   }, [students])
 
   const submitQuickPay = async (keepOpen = false) => {
-    if (!quickRow?.enrollment_id) return
-    const payload = []
-    for (const ln of quickLines) {
-      const amt = Number(ln.amount)
-      if (!Number.isFinite(amt) || amt <= 0) continue
-      payload.push({
-        amount: amt,
-        payment_date: ln.payment_date && /^\d{4}-\d{2}-\d{2}$/.test(ln.payment_date) ? ln.payment_date : undefined,
-        notes: ln.notes?.trim() || undefined,
-      })
-    }
-    if (payload.length === 0) {
-      toast('Ən azı bir sətirdə məbləğ daxil edin', 'error')
-      return
-    }
-    setMarkingId(quickRow.enrollment_id)
-    try {
-      if (payload.length === 1) {
-        await api.post('/payments/mark-monthly-paid', {
-          enrollment_id: quickRow.enrollment_id,
-          amount: payload[0].amount,
-          payment_date: payload[0].payment_date,
-          notes: payload[0].notes,
-        })
-      } else {
-        await api.post('/payments/mark-monthly-paid-batch', {
-          enrollment_id: quickRow.enrollment_id,
-          payments: payload,
-        })
-      }
-      toast(payload.length > 1 ? `${payload.length} ödəniş qeydə alındı` : 'Ödəniş qeydə alındı')
-      if (!keepOpen) {
-        setQuickOpen(false)
-        setQuickRow(null)
-        setQuickLines([])
-      } else {
-        setQuickLines([newQuickLine()])
-      }
-      await load()
-    } catch (e) {
-      toast(e?.message || 'Xəta', 'error')
-    } finally {
-      setMarkingId(null)
-    }
+    void keepOpen
   }
 
   const fetchHistoryForEnrollment = async (enrollmentId) => {
@@ -280,10 +201,7 @@ export default function InstructorPayments() {
       <div className="mb-6">
         <h1 className="font-display font-bold text-xl sm:text-2xl text-token-textMain tracking-tight">Ödənişlər</h1>
         <p className="text-token-textMuted text-sm mt-1">
-          Aylıq paketdə keçmiş aylar üçün <span className="text-primary/90 font-semibold">Ödəniş</span> pəncərəsində hər sətirdə
-          real ödəniş tarixini qeyd edin — məbləğlər cəmlənir və ankor borc ilə uyğunlaşır. Qalıq borc və balans{' '}
-          <span className="text-primary/90 font-semibold">Tarixçə</span>də görünür. Davamiyyət ödənişdən ayrıdır. «Balans düzəlişi»
-          ümumi gəlirə daxil edilmir.
+          Ödəniş tarixçəsi hər tələbənin «Tarixçə» düyməsində görünür. «Balans düzəlişi» ümumi gəlirə daxil edilmir.
         </p>
       </div>
 
@@ -307,7 +225,7 @@ export default function InstructorPayments() {
           <p className="text-xs text-token-textMuted mt-2">
             {loading
               ? '…'
-              : `${pendingCount} tələbə · aylıq paketlər üzrə qalıq borc cəmi`}
+              : `${pendingCount} tələbə · qalıq borc cəmi`}
           </p>
         </Card>
       </div>
@@ -371,12 +289,10 @@ export default function InstructorPayments() {
                 {isOpen && (
                   <div className="p-2 sm:p-3 space-y-1.5 bg-token-surfaceMain/40">
                     {c.items.map((s) => {
-                      const isMonthly =
-                        s.billing_type === 'monthly' && s.monthly_fee != null && Number(s.monthly_fee) > 0
                       const isPartial = s.payment_plan === 'partial'
                       const debt = s.pending_debt != null ? Number(s.pending_debt) : 0
-                      const showDebtRed = isMonthly && isPartial && Number.isFinite(debt) && debt > 0.005
-                      const showDebt = isMonthly && Number.isFinite(debt) && debt > 0.005
+                      const showDebtRed = isPartial && Number.isFinite(debt) && debt > 0.005
+                      const showDebt = Number.isFinite(debt) && debt > 0.005
                       return (
                         <div
                           key={s.enrollment_id}
@@ -405,40 +321,17 @@ export default function InstructorPayments() {
 
                           <div className="flex flex-col sm:items-end gap-2 shrink-0">
                             <div className="flex flex-wrap items-center gap-2 justify-between sm:justify-end">
-                              {isMonthly ? (
-                                isPartial ? (
-                                  <span className="inline-flex rounded-md bg-rose-500/15 text-rose-200 px-2 py-0.5 text-xs font-semibold">
-                                    Hissəli
-                                  </span>
-                                ) : (
-                                  <span className="inline-flex rounded-md bg-emerald-500/10 text-emerald-200/90 px-2 py-0.5 text-xs font-medium">
-                                    Tam
-                                  </span>
-                                )
-                              ) : (
-                                <span className="inline-flex rounded-md bg-indigo-500/10 text-indigo-200/90 px-2 py-0.5 text-xs font-medium">
-                                  {c.key === '8' ? '8 dərs' : c.key === '12' ? '12 dərs' : 'Paket'}
+                              <span className="inline-flex rounded-md bg-indigo-500/10 text-indigo-200/90 px-2 py-0.5 text-xs font-medium">
+                                {c.key === '8' ? '8 dərs' : c.key === '12' ? '12 dərs' : 'Paket'}
+                              </span>
+                              {showDebt ? (
+                                <span
+                                  className={`text-xs font-semibold tabular-nums ${
+                                    showDebtRed ? 'text-rose-300' : 'text-amber-200/90'
+                                  }`}
+                                >
+                                  Qalıq borc: {formatAzn(s.pending_debt)}
                                 </span>
-                              )}
-
-                              {isMonthly ? (
-                                <>
-                                  <span className="text-xs text-token-textMuted">
-                                    Cari balans:{' '}
-                                    <span className="text-token-textMain font-mono tabular-nums">{formatAzn(s.net_balance)}</span>
-                                  </span>
-                                  <span className="text-xs text-token-textMuted">
-                                    Ödənilib:{' '}
-                                    <span className="text-token-textMain font-mono tabular-nums">{formatAzn(s.total_payments)}</span>
-                                  </span>
-                                  <span
-                                    className={`text-xs font-semibold tabular-nums ${
-                                      showDebtRed ? 'text-rose-300' : showDebt ? 'text-amber-200/90' : 'text-token-textMuted'
-                                    }`}
-                                  >
-                                    Qalıq borc: {formatAzn(s.pending_debt)}
-                                  </span>
-                                </>
                               ) : null}
                             </div>
 
@@ -543,7 +436,7 @@ export default function InstructorPayments() {
             setQuickLines([])
           }
         }}
-        title="Ödənişlər (aylıq abunə)"
+        title="Ödəniş əlavə et"
         size="lg"
       >
         {quickRow && (
@@ -555,37 +448,10 @@ export default function InstructorPayments() {
               </span>
             </p>
             <p className="text-xs text-gray-500 leading-relaxed">
-              Bir neçə ay üçün sətir əlavə edin; hər sətirdə ödəniş tarixi, məbləğ və istəyə bağlı qeyd. Borc Bakı
-              təqvimi üzrə ankorla hesablanır — aşağıda önizləmə canlı yenilənir.
+              Sətir əlavə edin; hər sətirdə ödəniş tarixi, məbləğ və istəyə bağlı qeyd.
             </p>
 
-            {quickPartialUnderpay && quickPreview ? (
-              <p className="text-xs text-rose-200/95 font-medium rounded-xl border border-rose-500/30 bg-rose-950/25 px-3 py-2">
-                Hissəli ödəniş planı: bəzi sətirlərdə məbləğ aylıq məbləğdən azdır — qalıq borc aşağıda qırmızı ilə
-                göstərilir; tam ödənişədək ödənişlər əlavə edin.
-              </p>
-            ) : null}
-
-            {quickPreview && (
-              <div className="rounded-xl border border-indigo-500/25 bg-[#0f0c29]/80 px-3 py-2.5 grid grid-cols-2 gap-x-3 gap-y-1 text-xs tabular-nums">
-                <span className="text-gray-500">Cari balans (ödənişdən sonra)</span>
-                <span
-                  className={`text-right font-semibold ${
-                    quickPreview.net_balance > 0.005 ? 'text-emerald-200' : 'text-gray-400'
-                  }`}
-                >
-                  {formatAzn(quickPreview.net_balance)}
-                </span>
-                <span className="text-gray-500">Qalıq borc</span>
-                <span
-                  className={`text-right font-semibold ${
-                    quickPreview.pending_debt > 0.005 ? 'text-rose-300' : 'text-gray-400'
-                  }`}
-                >
-                  {formatAzn(quickPreview.pending_debt)}
-                </span>
-              </div>
-            )}
+            {/* quick preview removed */}
 
             <div className="space-y-2">
               <div className="hidden sm:grid grid-cols-[1fr_7rem_7rem_2.25rem] gap-2 text-[10px] font-semibold text-gray-500 uppercase tracking-wider px-1">

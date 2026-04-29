@@ -1097,118 +1097,6 @@ function parseOptionalPaymentDateYmd(v) {
   return s;
 }
 
-/** Aylıq ödəniş qeydi (defolt: aylıq məbləğ, tarix Bakı bu gün) */
-const markMonthlyPaid = async (req, res) => {
-  try {
-    const { enrollment_id, amount: amountRaw, payment_date: paymentDateRaw, notes: notesRaw } = req.body;
-    if (!enrollment_id) {
-      return res.status(400).json({ success: false, message: 'enrollment_id tələb olunur' });
-    }
-
-    const { rows: en } = await db.query(
-      `SELECT e.id, e.student_id, e.instructor_id, e.billing_type, sp.monthly_fee
-       FROM enrollments e
-       LEFT JOIN student_profiles sp ON sp.user_id = e.student_id
-       WHERE e.id = $1`,
-      [enrollment_id]
-    );
-    if (!en[0]) return res.status(404).json({ success: false, message: 'Qeydiyyat tapılmadı' });
-
-    if (req.user.role === 'instructor' && !sameUuid(en[0].instructor_id, req.user.id)) {
-      return res.status(403).json({ success: false, message: 'Bu qeydiyyata icazəniz yoxdur' });
-    }
-
-    if (en[0].billing_type !== 'monthly') {
-      return res.status(400).json({ success: false, message: 'Bu əməliyyat yalnız aylıq paket üçün keçərlidir' });
-    }
-
-    const defaultFee = Number(en[0].monthly_fee);
-    const parsed = amountRaw !== undefined && amountRaw !== '' && amountRaw != null ? Number(amountRaw) : NaN;
-    const amount = Number.isFinite(parsed) && parsed > 0 ? parsed : defaultFee;
-    if (!Number.isFinite(amount) || amount <= 0) {
-      return res.status(400).json({ success: false, message: 'Məbləğ müsbət rəqəm olmalıdır' });
-    }
-
-    const payYmd = parseOptionalPaymentDateYmd(paymentDateRaw);
-    const notesBase =
-      notesRaw != null && String(notesRaw).trim() !== '' ? String(notesRaw).trim() : 'Aylıq abunə ödənişi';
-
-    const { rows: ins } = await db.query(
-      `INSERT INTO payments (enrollment_id, student_id, amount, currency, payment_method, status, paid_at, payment_date, notes)
-       VALUES ($1, $2, $3, 'AZN', 'cash', 'completed', NOW(),
-               COALESCE($4::date, (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Baku')::date),
-               $5)
-       RETURNING *`,
-      [enrollment_id, en[0].student_id, amount, payYmd, notesBase]
-    );
-    res.json({ success: true, payment: ins[0] });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-};
-
-/** Bir pəncərədə çox aylıq ödəniş sətiri (tək tranzaksiya) */
-const markMonthlyPaidBatch = async (req, res) => {
-  try {
-    const { enrollment_id, payments: payRows } = req.body;
-    if (!enrollment_id) {
-      return res.status(400).json({ success: false, message: 'enrollment_id tələb olunur' });
-    }
-    if (!Array.isArray(payRows) || payRows.length === 0) {
-      return res.status(400).json({ success: false, message: 'Ən azı bir ödəniş sətiri göndərin' });
-    }
-    if (payRows.length > 40) {
-      return res.status(400).json({ success: false, message: 'Bir dəfədə ən çox 40 sətir' });
-    }
-
-    const { rows: en } = await db.query(
-      `SELECT e.id, e.student_id, e.instructor_id, e.billing_type
-       FROM enrollments e
-       WHERE e.id = $1`,
-      [enrollment_id]
-    );
-    if (!en[0]) return res.status(404).json({ success: false, message: 'Qeydiyyat tapılmadı' });
-    if (req.user.role === 'instructor' && !sameUuid(en[0].instructor_id, req.user.id)) {
-      return res.status(403).json({ success: false, message: 'Bu qeydiyyata icazəniz yoxdur' });
-    }
-    if (en[0].billing_type !== 'monthly') {
-      return res.status(400).json({ success: false, message: 'Bu əməliyyat yalnız aylıq paket üçün keçərlidir' });
-    }
-
-    const normalized = [];
-    for (let i = 0; i < payRows.length; i++) {
-      const r = payRows[i] || {};
-      const amt = Number(r.amount);
-      if (!Number.isFinite(amt) || amt <= 0) {
-        return res.status(400).json({ success: false, message: `${i + 1}-ci sətirdə məbləğ düzgün deyil` });
-      }
-      const ymd = parseOptionalPaymentDateYmd(r.payment_date);
-      const note =
-        r.notes != null && String(r.notes).trim() !== '' ? String(r.notes).trim() : 'Aylıq abunə ödənişi';
-      normalized.push({ amount: amt, payment_date: ymd, notes: note });
-    }
-
-    const inserted = await db.transaction(async (client) => {
-      const amounts = normalized.map((r) => r.amount);
-      const dates = normalized.map((r) => r.payment_date);
-      const notes = normalized.map((r) => r.notes);
-      const { rows: ins } = await client.query(
-        `INSERT INTO payments (enrollment_id, student_id, amount, currency, payment_method, status, paid_at, payment_date, notes)
-         SELECT $1::uuid, $2::uuid, t.amt, 'AZN', 'cash', 'completed', NOW(),
-                COALESCE(t.pd::date, (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Baku')::date), t.nt
-         FROM unnest($3::numeric[], $4::date[], $5::text[]) AS t(amt, pd, nt)
-         RETURNING id, amount, payment_date, notes`,
-        [enrollment_id, en[0].student_id, amounts, dates, notes]
-      );
-      return ins;
-    });
-
-    res.json({ success: true, payments: inserted, count: inserted.length });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-};
-
 const getEnrollmentPaymentHistory = async (req, res) => {
   try {
     const { enrollment_id } = req.params;
@@ -1315,8 +1203,6 @@ module.exports = {
   addPayment,
   listMyPayments,
   getInstructorPaymentBoard,
-  markMonthlyPaid,
-  markMonthlyPaidBatch,
   getEnrollmentPaymentHistory,
   getRestorePreview,
   confirmRestorePayments,

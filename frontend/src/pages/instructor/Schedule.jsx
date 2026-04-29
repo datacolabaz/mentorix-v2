@@ -167,7 +167,7 @@ export default function InstructorSchedule() {
           <h1 className="font-display font-bold text-xl sm:text-2xl text-token-textMain tracking-tight">Cədvəlim</h1>
           <p className="text-token-textMuted text-xs sm:text-sm mt-1 leading-relaxed line-clamp-4 sm:line-clamp-none">
             Bu səhifə <span className="text-token-textMain">həftəlik cədvəl xəritəsi</span>dir: hər xana «həftənin bu günü, bu saatda kimdə dərs var»ı göstərir, bütün tarixlər üzrə ardıcıllıq deyil. Paket (8/12) üçün real tarixli
-            dərslər, aylıq üçün isə həmin gün+saat üçün <span className="text-token-textMain">növbəti yaxın bir təqvim tarixi</span> nümunə kimi əlavə olunur — tələbə sentyabrdan hazırlığa gəlirsə belə, burada «cəmi 1
+            dərslər üçün isə həmin gün+saat üçün <span className="text-token-textMain">növbəti yaxın bir təqvim tarixi</span> nümunə kimi əlavə olunur — tələbə sentyabrdan hazırlığa gəlirsə belə, burada «cəmi 1
             tarix» görmək o demək deyil ki, o yalnız bir dəfə gəlib; o, yalnız bu xananı təqvimdə harada «taxlamaq» lazım olduğunu göstərir.
           </p>
         </div>
@@ -281,7 +281,7 @@ export default function InstructorSchedule() {
         {cellModal?.phase === 'pickStudent' && (
           <>
             <p className="text-xs text-gray-500 mb-3">
-              Tələbəni seçin — aşağıda bu xananın günü və saatına uyğun qeydlər (paket tarixləri və ya aylıq üçün növbəti nümunə tarix) göstərilir.
+              Tələbəni seçin — aşağıda bu xananın günü və saatına uyğun qeydlər (paket tarixləri və ya növbəti nümunə tarix) göstərilir.
             </p>
             <ul className="space-y-2">
               {cellModal.studentNames.map((name) => (
@@ -305,7 +305,7 @@ export default function InstructorSchedule() {
           <>
             {cellModal.lessons.some((l) => l.status === 'monthly_grid') ? (
               <p className="text-[10px] text-gray-500 leading-relaxed mb-2 rounded-lg border border-indigo-500/20 bg-[#13112e]/80 px-2 py-1.5">
-                <span className="text-indigo-200/95 font-semibold">Aylıq cədvəl nümunəsi:</span> aşağıdakı tarix bu gün və saat üçün sistemdə növbəti yaxın uyğun gündür. Davamiyyət tarixçəsi, bütün keçmiş
+                <span className="text-indigo-200/95 font-semibold">Cədvəl nümunəsi:</span> aşağıdakı tarix bu gün və saat üçün sistemdə növbəti yaxın uyğun gündür. Davamiyyət tarixçəsi, bütün keçmiş
                 dərslər və ya «neçənci dərs» burada göstərilmir — yalnız həftəlik şəbəkədə bu xananı təsdiqləmək üçündür.
               </p>
             ) : (

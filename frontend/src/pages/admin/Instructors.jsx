@@ -138,7 +138,6 @@ export default function AdminInstructors() {
               value={form.billing_type} onChange={e => setForm(p => ({ ...p, billing_type: e.target.value }))}>
               <option value="8_lessons">8 Ders</option>
               <option value="12_lessons">12 Ders</option>
-              <option value="monthly">Ayliq</option>
             </select>
           </div>
           <div className="flex gap-3 pt-2">

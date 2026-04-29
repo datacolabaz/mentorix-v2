@@ -8,7 +8,6 @@ import { instructorRoleAz, instructorYourForm } from '../../lib/instructorLabel'
 const BILLING = {
   '8_lessons': '8 dərs paketi',
   '12_lessons': '12 dərs paketi',
-  monthly: 'Aylıq',
 }
 
 function billingLimit(type) {
@@ -255,26 +254,7 @@ export default function StudentPayments() {
   const progressPct =
     enrollment && totalLessons > 0 ? Math.min(100, Math.max(0, (usedLessons / totalLessons) * 100)) : 0
 
-  const monthlyFeeNum =
-    enrollment?.monthly_fee != null && enrollment.monthly_fee !== ''
-      ? Number(enrollment.monthly_fee)
-      : NaN
-  const hasMonthlyFee = Number.isFinite(monthlyFeeNum) && monthlyFeeNum > 0
-  const isMonthlySub = enrollment?.billing_type === 'monthly' && hasMonthlyFee
-  const sub = enrollment?.subscription
-  const mp = enrollment?.monthly_progress || null
   const notifEnabled = enrollment?.notifications_enabled !== false
-  const anchorRaw =
-    enrollment?.lesson_start_date_for_display ||
-    enrollment?.payment_start_date_for_display ||
-    null
-  const anchorDdMmYyyy = anchorRaw
-    ? fmtDdMmYyyy(parseYmdLocal(String(anchorRaw).slice(0, 10)))
-    : null
-  const monthlyDebtNum =
-    sub != null && Number.isFinite(Number(sub.pending_debt)) ? Number(sub.pending_debt) : null
-  const billingTimingNorm = String(enrollment?.billing_timing || '').toLowerCase().trim()
-  const isPrepaidMonthly = isMonthlySub && billingTimingNorm === 'prepaid'
   const roleNoun = instructorRoleAz(enrollment?.instructor_public_label)
   const roleYour = instructorYourForm(enrollment?.instructor_public_label)
 
@@ -296,177 +276,46 @@ export default function StudentPayments() {
         <div className="text-token-textMuted text-center py-12">Yüklənir…</div>
       ) : (
         <>
-          {isMonthlySub ? (
-            <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-                <Card hover className="p-5 border border-[color:var(--border-subtle)] hover:border-primary/20">
-                  <div className="text-xs font-semibold text-token-textMuted uppercase tracking-wider mb-2">Tamamlanan Gün</div>
-                  <div className="font-display font-extrabold text-3xl text-blue-400">
-                    {mp?.days_elapsed != null ? Number(mp.days_elapsed) : 0}
-                    {mp?.days_total != null ? `/${Number(mp.days_total)}` : ''}
-                  </div>
-                  {mp?.days_total != null && Number(mp.days_total) > 0 ? (
-                    <div className="mt-3">
-                      <div className="h-2 bg-token-surfaceMain/50 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-blue-500 rounded-full transition-all max-w-full"
-                          style={{
-                            width: `${Math.min(
-                              100,
-                              Math.max(0, (Number(mp.days_elapsed || 0) / Number(mp.days_total || 1)) * 100)
-                            )}%`,
-                          }}
-                        />
-                      </div>
-                    </div>
-                  ) : null}
-                </Card>
-                <Card hover className="p-5 border border-[color:var(--border-subtle)] hover:border-primary/20">
-                  <div className="text-xs font-semibold text-token-textMuted uppercase tracking-wider mb-2">Tamamlanan Dərs</div>
-                  <div className="font-display font-extrabold text-3xl text-indigo-300">
-                    {mp?.lessons_elapsed != null ? Number(mp.lessons_elapsed) : 0}
-                    {mp?.lessons_total != null ? `/${Number(mp.lessons_total)}` : ''}
-                  </div>
-                  <p className="text-xs text-token-textMuted mt-2">
-                    Cari dövr: həftəlik dərs günlərinə görə hesablanır.
-                  </p>
-                </Card>
-                <Card hover className="p-5 border border-[color:var(--border-subtle)] hover:border-primary/20">
-                  <div className="text-xs font-semibold text-token-textMuted uppercase tracking-wider mb-2">Billing</div>
-                  <div className="font-display font-bold text-xl text-emerald-400">Aylıq paket</div>
-                </Card>
-                <Card hover className="p-5 border border-[color:var(--border-subtle)] hover:border-primary/20">
-                  <div className="text-xs font-semibold text-token-textMuted uppercase tracking-wider mb-2">{roleNoun}</div>
-                  <div className="font-display font-bold text-xl text-yellow-400">{enrollment?.instructor_name || '—'}</div>
-                </Card>
-              </div>
-
-              <Card hover className="p-5 mb-4 border border-[color:var(--border-subtle)] hover:border-primary/20">
-                <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
-                  <h2 className="font-semibold text-token-textMain">Aylıq abunə</h2>
-                  <button
-                    type="button"
-                    onClick={() => setHistoryOpen((v) => !v)}
-                    className="text-sm font-semibold text-blue-400 border border-blue-500/30 rounded-xl px-3 py-1.5 hover:bg-blue-500/10 shrink-0"
-                    aria-expanded={historyOpen}
-                  >
-                    {historyOpen ? 'Tarixçəni gizlət' : 'Ödəniş tarixçəsi'}
-                  </button>
-                </div>
-
-                <p className="text-sm text-token-textMain mb-2">
-                  Status: Davam edir
-                  {anchorDdMmYyyy ? <span className="text-token-textMuted"> ({anchorDdMmYyyy} tarixindən bəri)</span> : null}
-                </p>
-
-                {mp?.next_billing_ymd ? (
-                  <p className="text-sm text-token-textMain mb-4">
-                    Növbəti ödəniş tarixi:{' '}
-                    <span className="font-display font-extrabold text-lg text-emerald-300">
-                      {fmtDdMmYyyy(parseYmdLocal(String(mp.next_billing_ymd).slice(0, 10)))}
-                    </span>
-                  </p>
-                ) : null}
-
-                <p className="text-xs text-token-textMuted mb-4">
-                  Bildirişlər:{' '}
-                  <span className={notifEnabled ? 'text-emerald-300 font-semibold' : 'text-token-textMuted font-semibold'}>
-                    {notifEnabled ? 'Aktiv' : 'Deaktiv'}
-                  </span>
-                </p>
-
-                {isPrepaidMonthly ? (
-                  <p className="text-xs text-indigo-200/90 mb-2">Qeydiyyat: ay məbləği əvvəlcədən ödənilir.</p>
-                ) : null}
-                <p className="text-xs text-token-textMuted mb-2">
-                  Borc hər ayın eyni təqvim günündə (başlama tarixinə görə) sabit aylıq məbləğ ilə yaranır; dərs sayı və
-                  davamiyyət bu məbləğə təsir etmir.
-                </p>
-                <p className="text-sm text-token-textMain mb-4">
-                  Qalıq borc:{' '}
-                  <span className="text-amber-200 font-mono tabular-nums font-semibold">
-                    {monthlyDebtNum != null ? `${monthlyDebtNum.toFixed(2)} ₼` : '—'}
-                  </span>
-                  {sub != null && Number.isFinite(Number(sub.wallet_balance)) && Number(sub.wallet_balance) > 0.005 ? (
-                    <span className="block mt-2 text-xs text-token-textMuted">
-                      Artıq ödəniş (balans):{' '}
-                      <span className="text-emerald-300 font-mono tabular-nums font-semibold">
-                        {Number(sub.wallet_balance).toFixed(2)} ₼
-                      </span>
-                    </span>
-                  ) : null}
-                </p>
-                {isPrepaidMonthly ? (
-                  <button
-                    type="button"
-                    disabled
-                    className="w-full sm:w-auto text-sm font-semibold rounded-xl px-4 py-2.5 bg-indigo-600/35 text-indigo-100/90 border border-indigo-500/25 cursor-not-allowed opacity-90"
-                  >
-                    Öncədən ödəniş
-                  </button>
-                ) : (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => setPartialInfoOpen((v) => !v)}
-                      className="w-full sm:w-auto text-sm font-semibold rounded-xl px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white border-0"
-                    >
-                      Hissəli ödəniş et
-                    </button>
-                    {partialInfoOpen ? (
-                      <p className="text-xs text-token-textMuted mt-3 leading-relaxed border border-[color:var(--border-subtle)] rounded-xl p-3 bg-token-surfaceCard/40">
-                        Hissəli ödənişi müəlliminiz qeydə alır. Ödəmək istədiyiniz məbləği müəlliminizə bildirin; o, sistemə
-                        daxil edəndə borc avtomatik yenilənəcək.
-                      </p>
-                    ) : null}
-                  </>
-                )}
-              </Card>
-            </>
-          ) : (
-            <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-                <Card hover className="p-5 border border-[color:var(--border-subtle)] hover:border-primary/20">
-                  <div className="text-xs font-semibold text-token-textMuted uppercase tracking-wider mb-2">Tamamlanan Dərs</div>
-                  <div className="font-display font-extrabold text-3xl text-blue-400">
-                    {Number.isFinite(usedLessons) ? usedLessons : 0}
-                    {Number.isFinite(totalLessons) && totalLessons > 0 ? `/${totalLessons}` : ''}
-                  </div>
-                  {Number.isFinite(totalLessons) && totalLessons > 0 ? (
-                    <div className="mt-3">
-                      <div className="h-2 bg-token-surfaceMain/50 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-blue-500 rounded-full transition-all max-w-full"
-                          style={{ width: `${progressPct}%` }}
-                        />
-                      </div>
-                    </div>
-                  ) : null}
-                </Card>
-                <Card hover className="p-5 border border-[color:var(--border-subtle)] hover:border-primary/20">
-                  <div className="text-xs font-semibold text-token-textMuted uppercase tracking-wider mb-2">Billing</div>
-                  <div className="font-display font-bold text-xl text-emerald-400">
-                    {BILLING[enrollment?.billing_type] || enrollment?.billing_type || '—'}
-                  </div>
-                </Card>
-                <Card hover className="p-5 border border-[color:var(--border-subtle)] hover:border-primary/20">
-                  <div className="text-xs font-semibold text-token-textMuted uppercase tracking-wider mb-2">{roleNoun}</div>
-                  <div className="font-display font-bold text-xl text-yellow-400">{enrollment?.instructor_name || '—'}</div>
-                </Card>
-              </div>
-
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
               <Card hover className="p-5 border border-[color:var(--border-subtle)] hover:border-primary/20">
-                <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-                  <h2 className="font-semibold text-token-textMain">Cari paket</h2>
-                  <button
-                    type="button"
-                    onClick={() => setHistoryOpen((v) => !v)}
-                    className="text-sm font-semibold text-blue-400 border border-blue-500/30 rounded-xl px-3 py-1.5 hover:bg-blue-500/10"
-                    aria-expanded={historyOpen}
-                  >
-                    {historyOpen ? 'Tarixçəni gizlət' : 'Ödəniş tarixçəsi'}
-                  </button>
+                <div className="text-xs font-semibold text-token-textMuted uppercase tracking-wider mb-2">Tamamlanan Dərs</div>
+                <div className="font-display font-extrabold text-3xl text-blue-400">
+                  {Number.isFinite(usedLessons) ? usedLessons : 0}
+                  {Number.isFinite(totalLessons) && totalLessons > 0 ? `/${totalLessons}` : ''}
                 </div>
+                {Number.isFinite(totalLessons) && totalLessons > 0 ? (
+                  <div className="mt-3">
+                    <div className="h-2 bg-token-surfaceMain/50 rounded-full overflow-hidden">
+                      <div className="h-full bg-blue-500 rounded-full transition-all max-w-full" style={{ width: `${progressPct}%` }} />
+                    </div>
+                  </div>
+                ) : null}
+              </Card>
+              <Card hover className="p-5 border border-[color:var(--border-subtle)] hover:border-primary/20">
+                <div className="text-xs font-semibold text-token-textMuted uppercase tracking-wider mb-2">Billing</div>
+                <div className="font-display font-bold text-xl text-emerald-400">
+                  {BILLING[enrollment?.billing_type] || enrollment?.billing_type || '—'}
+                </div>
+              </Card>
+              <Card hover className="p-5 border border-[color:var(--border-subtle)] hover:border-primary/20">
+                <div className="text-xs font-semibold text-token-textMuted uppercase tracking-wider mb-2">{roleNoun}</div>
+                <div className="font-display font-bold text-xl text-yellow-400">{enrollment?.instructor_name || '—'}</div>
+              </Card>
+            </div>
+
+            <Card hover className="p-5 border border-[color:var(--border-subtle)] hover:border-primary/20">
+              <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                <h2 className="font-semibold text-token-textMain">Cari paket</h2>
+                <button
+                  type="button"
+                  onClick={() => setHistoryOpen((v) => !v)}
+                  className="text-sm font-semibold text-blue-400 border border-blue-500/30 rounded-xl px-3 py-1.5 hover:bg-blue-500/10"
+                  aria-expanded={historyOpen}
+                >
+                  {historyOpen ? 'Tarixçəni gizlət' : 'Ödəniş tarixçəsi'}
+                </button>
+              </div>
                 {enrollment ? (
                   <ul className="text-sm text-token-textMain space-y-2">
                     <li>
@@ -530,9 +379,8 @@ export default function StudentPayments() {
                 ) : (
                   <p className="text-token-textMuted text-sm">Aktiv qeydiyyat tapılmadı.</p>
                 )}
-              </Card>
-            </>
-          )}
+            </Card>
+          </>
         </>
       )}
 
@@ -565,28 +413,6 @@ export default function StudentPayments() {
           {!payments.length ? (
             <div className="text-token-textMuted text-sm py-2 space-y-2">
               <p>Hələ ödəniş qeydi yoxdur. {roleYour} ödəniş əlavə edəndə burada görünəcək.</p>
-              {enrollment?.billing_type === 'monthly' && enrollment?.subscription ? (
-                <div className="rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard/40 p-3 text-xs text-token-textMain space-y-1">
-                  <p>
-                    <span className="text-token-textMuted">Yaranmış borc:</span>{' '}
-                    <span className="font-mono text-amber-200 font-semibold tabular-nums">
-                      {Number(enrollment.subscription.subscription_due_total || 0).toFixed(2)} ₼
-                    </span>
-                  </p>
-                  <p>
-                    <span className="text-token-textMuted">Ödənən cəm:</span>{' '}
-                    <span className="font-mono text-emerald-300 font-semibold tabular-nums">
-                      {Number(enrollment.subscription.subscription_total_paid || 0).toFixed(2)} ₼
-                    </span>
-                  </p>
-                  <p>
-                    <span className="text-token-textMuted">Qalıq borc:</span>{' '}
-                    <span className="font-mono text-amber-200 font-semibold tabular-nums">
-                      {Number(enrollment.subscription.pending_debt || 0).toFixed(2)} ₼
-                    </span>
-                  </p>
-                </div>
-              ) : null}
             </div>
           ) : (
             <ul className="space-y-2">
