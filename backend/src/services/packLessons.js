@@ -140,6 +140,12 @@ async function ensurePackLessonsUpTo(dbConn, enrollmentRow, { horizonDays = 30 }
     : null;
   if (!startYmd || !/^\d{4}-\d{2}-\d{2}$/.test(startYmd)) return { ensured: false, inserted: 0 };
 
+  // Pre-system enrollments: if enrollment_start_date is before enrolled_at (system created),
+  // backfilled historical lessons are considered "done" for timeline/history purposes.
+  const systemCreatedYmd = enrollmentRow?.enrolled_at ? String(enrollmentRow.enrolled_at).slice(0, 10) : null;
+  const hasSystemCreatedYmd = systemCreatedYmd && /^\d{4}-\d{2}-\d{2}$/.test(systemCreatedYmd);
+  const preSystem = Boolean(hasSystemCreatedYmd && startYmd < systemCreatedYmd);
+
   const wdays = parseWeekdays(enrollmentRow.lesson_weekdays);
   const lt = parseTimes(enrollmentRow.lesson_times);
   if (!wdays.length || !Object.keys(lt).length) return { ensured: false, inserted: 0 };
@@ -178,19 +184,23 @@ async function ensurePackLessonsUpTo(dbConn, enrollmentRow, { horizonDays = 30 }
     // Best-effort: if weekday doesn't match, skip (shouldn't happen).
     if (!dow || !wdays.includes(dow)) continue;
 
+    const legacyDone = Boolean(preSystem && hasSystemCreatedYmd && ymd < systemCreatedYmd);
+    const elStatus = legacyDone ? 'done' : 'planned';
+    const lStatus = legacyDone ? 'done' : 'pending';
+
     const a = await dbConn.query(
-      `INSERT INTO enrollment_lessons (enrollment_id, billing_cycle, lesson_number, starts_at)
-       VALUES ($1, $2, $3, $4::timestamp)
+      `INSERT INTO enrollment_lessons (enrollment_id, billing_cycle, lesson_number, starts_at, status, marked_at)
+       VALUES ($1, $2, $3, $4::timestamp, $5, CASE WHEN $5 = 'done' THEN NOW() ELSE NULL END)
        ON CONFLICT (enrollment_id, billing_cycle, lesson_number) DO NOTHING`,
-      [enrollmentRow.id, cycle, lessonNumber, startsAt]
+      [enrollmentRow.id, cycle, lessonNumber, startsAt, elStatus]
     );
     if (a.rowCount > 0) inserted += 1;
 
     await dbConn.query(
       `INSERT INTO lessons (enrollment_id, student_id, instructor_id, lesson_date, status, lesson_number, billing_cycle)
-       VALUES ($1,$2,$3,($4::timestamp AT TIME ZONE 'Asia/Baku'),'pending',$5,$6)
+       VALUES ($1,$2,$3,($4::timestamp AT TIME ZONE 'Asia/Baku'),$5,$6,$7)
        ON CONFLICT (enrollment_id, billing_cycle, lesson_number) DO NOTHING`,
-      [enrollmentRow.id, enrollmentRow.student_id, enrollmentRow.instructor_id, startsAt, lessonNumber, cycle]
+      [enrollmentRow.id, enrollmentRow.student_id, enrollmentRow.instructor_id, startsAt, lStatus, lessonNumber, cycle]
     );
   }
 
