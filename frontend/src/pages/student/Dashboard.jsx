@@ -67,7 +67,7 @@ export default function StudentDashboard() {
         <h1 className="font-display font-bold text-2xl break-words text-token-textMain pl-20 sm:pl-0">
           Salam, {user?.full_name?.split(' ')[0]}! 👋
         </h1>
-        <p className="text-token-textMuted text-sm mt-1">Proqresinizə baxın</p>
+        <p className="text-token-textMuted text-sm mt-1 pl-20 sm:pl-0">Proqresinizə baxın</p>
       </div>
 
       <Card hover className="p-5 min-w-0 overflow-hidden border border-[color:var(--border-subtle)] hover:border-primary/20">
