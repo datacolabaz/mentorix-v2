@@ -680,7 +680,7 @@ function buildVirtualLessonPackages({
   limit,
 }) {
   const start = String(start_ymd || '').slice(0, 10);
-  const today = today_ymd ? String(today_ymd).slice(0, 10) : end;
+  const today = today_ymd ? String(today_ymd).slice(0, 10) : null;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(today)) return [];
   if (!/^\d{4}-\d{2}-\d{2}$/.test(start)) return [];
   const lim = Number(limit) || 0;
