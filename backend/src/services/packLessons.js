@@ -154,6 +154,28 @@ async function ensurePackLessonsUpTo(dbConn, enrollmentRow, { horizonDays = 30 }
   const horizonYmd = ymdAddDays(todayBaku, horizonDays);
   if (!horizonYmd) return { ensured: false, inserted: 0 };
 
+  // IMPORTANT: For pre-system enrollments, past lessons may already exist as planned/pending
+  // (generated earlier). Always repair them to "done" before possibly returning early.
+  if (preSystem && hasSystemCreatedYmd) {
+    await dbConn.query(
+      `UPDATE enrollment_lessons
+       SET status = 'done',
+           marked_at = COALESCE(marked_at, NOW())
+       WHERE enrollment_id = $1
+         AND (starts_at AT TIME ZONE 'Asia/Baku')::date < $2::date
+         AND status = 'planned'`,
+      [enrollmentRow.id, systemCreatedYmd]
+    );
+    await dbConn.query(
+      `UPDATE lessons
+       SET status = 'done'
+       WHERE enrollment_id = $1
+         AND (lesson_date AT TIME ZONE 'Asia/Baku')::date < $2::date
+         AND status = 'pending'`,
+      [enrollmentRow.id, systemCreatedYmd]
+    );
+  }
+
   // If we already have lessons reasonably into the future, skip.
   const { rows: maxRows } = await dbConn.query(
     `SELECT to_char(MAX(lesson_date AT TIME ZONE 'Asia/Baku')::date, 'YYYY-MM-DD') AS max_ymd
@@ -201,6 +223,27 @@ async function ensurePackLessonsUpTo(dbConn, enrollmentRow, { horizonDays = 30 }
        VALUES ($1,$2,$3,($4::timestamp AT TIME ZONE 'Asia/Baku'),$5,$6,$7)
        ON CONFLICT (enrollment_id, billing_cycle, lesson_number) DO NOTHING`,
       [enrollmentRow.id, enrollmentRow.student_id, enrollmentRow.instructor_id, startsAt, lStatus, lessonNumber, cycle]
+    );
+  }
+
+  // Repair again after inserts (covers newly backfilled rows).
+  if (preSystem && hasSystemCreatedYmd) {
+    await dbConn.query(
+      `UPDATE enrollment_lessons
+       SET status = 'done',
+           marked_at = COALESCE(marked_at, NOW())
+       WHERE enrollment_id = $1
+         AND (starts_at AT TIME ZONE 'Asia/Baku')::date < $2::date
+         AND status = 'planned'`,
+      [enrollmentRow.id, systemCreatedYmd]
+    );
+    await dbConn.query(
+      `UPDATE lessons
+       SET status = 'done'
+       WHERE enrollment_id = $1
+         AND (lesson_date AT TIME ZONE 'Asia/Baku')::date < $2::date
+         AND status = 'pending'`,
+      [enrollmentRow.id, systemCreatedYmd]
     );
   }
 
