@@ -676,14 +676,16 @@ function weekdayFromYmd(ymd) {
 function buildVirtualLessonPackages({
   start_ymd,
   end_ymd,
+  today_ymd,
   lesson_weekdays,
   lesson_times,
   limit,
-  system_created_ymd,
 }) {
   const start = String(start_ymd || '').slice(0, 10);
   const end = String(end_ymd || '').slice(0, 10);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(start) || !/^\d{4}-\d{2}-\d{2}$/.test(end)) return [];
+  const today = today_ymd ? String(today_ymd).slice(0, 10) : end;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(today)) return [];
   const lim = Number(limit) || 0;
   if (!lim) return [];
   const wdays = parseLessonWeekdaysJson(lesson_weekdays);
@@ -708,6 +710,7 @@ function buildVirtualLessonPackages({
     const cycle = Math.floor(idx / lim) + 1;
     const lessonNumber = (idx % lim) + 1;
     const ymd = dates[idx];
+    const isPastOrToday = ymd <= today;
     if (!by.has(cycle)) {
       by.set(cycle, {
         package_number: cycle,
@@ -721,25 +724,26 @@ function buildVirtualLessonPackages({
     const pkg = by.get(cycle);
     if (ymd < pkg.start_ymd) pkg.start_ymd = ymd;
     if (ymd > pkg.end_ymd) pkg.end_ymd = ymd;
-    pkg.completed += 1;
+    if (isPastOrToday) pkg.completed += 1;
     pkg.lessons.push({
       lesson_number: lessonNumber,
       ymd,
-      status: 'done',
+      status: isPastOrToday ? 'done' : 'pending',
       scheduled_ts: null,
     });
   }
 
-  const sys = system_created_ymd ? String(system_created_ymd).slice(0, 10) : null;
-  const out = [...by.values()].sort((a, b) => b.package_number - a.package_number);
-  if (sys && /^\d{4}-\d{2}-\d{2}$/.test(sys)) {
-    for (const p of out) {
-      p.legacy_confirmed = Boolean(p.end_ymd && String(p.end_ymd).slice(0, 10) < sys);
-      p.payment_status = p.legacy_confirmed ? 'confirmed_legacy' : 'unpaid';
-      p.total_paid = 0;
-    }
+  const outAsc = [...by.values()].sort((a, b) => a.package_number - b.package_number);
+  const totalDone = outAsc.reduce((acc, p) => acc + (Number(p.completed) || 0), 0);
+  const currentPkg = Math.floor(totalDone / lim) + 1;
+  for (const p of outAsc) {
+    const isPastPkg = (Number(p.package_number) || 1) < currentPkg && (Number(p.completed) || 0) >= lim;
+    p.legacy_confirmed = Boolean(isPastPkg);
+    p.payment_status = p.legacy_confirmed ? 'confirmed_legacy' : 'unpaid';
+    p.total_paid = 0;
+    p.package_status = isPastPkg ? 'completed' : (Number(p.package_number) || 1) === currentPkg ? 'active' : 'upcoming';
   }
-  return out;
+  return outAsc.sort((a, b) => b.package_number - a.package_number);
 }
 
 /** Tələbə: öz enrollment ödənişləri + aktiv paket məlumatı */
@@ -1222,14 +1226,14 @@ const listMyPayments = async (req, res) => {
     ) {
       const todayBaku = await getTodayBakuYmd(db);
       const startYmd = toYmd(enrollmentOut.lesson_start_date_for_display || enrollmentOut.enrollment_start_date);
-      const sysYmd = toYmd(enrollmentOut.enrolled_at);
+      const horizonYmd = ymdAddDays(todayBaku, 90);
       lesson_packages = buildVirtualLessonPackages({
         start_ymd: startYmd,
-        end_ymd: todayBaku,
+        end_ymd: horizonYmd || todayBaku,
+        today_ymd: todayBaku,
         lesson_weekdays: enrollmentOut.lesson_weekdays,
         lesson_times: enrollmentOut.lesson_times,
         limit,
-        system_created_ymd: sysYmd,
       });
     }
 

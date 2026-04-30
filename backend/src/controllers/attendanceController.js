@@ -42,6 +42,25 @@ function packTriggerAt(limit) {
   return null;
 }
 
+async function ensureNotificationOnce({ user_id, type, title, body }) {
+  const { rows } = await db.query(
+    `SELECT 1 FROM notifications
+     WHERE user_id = $1
+       AND type = $2
+       AND body = $3
+       AND created_at > NOW() - INTERVAL '45 days'
+     LIMIT 1`,
+    [user_id, type, body]
+  );
+  if (rows.length) return false;
+  await db.query(
+    `INSERT INTO notifications (user_id, title, body, type, is_read)
+     VALUES ($1,$2,$3,$4,FALSE)`,
+    [user_id, title, body, type]
+  );
+  return true;
+}
+
 const markAttendance = async (req, res) => {
   try {
     const { enrollment_id, date, attended, session_score, notes } = req.body;
@@ -106,6 +125,24 @@ const markAttendance = async (req, res) => {
 
     if (attended && limit && triggerAt && !alreadySent && lessonNum === triggerAt) {
       const targetPhone = enrollment.parent_phone || enrollment.student_phone;
+      const cyc = Number(enrollment.billing_cycle || 1) || 1;
+      const pkgLabel = `Paket #${cyc}`;
+      const studentBody = `Mentorix: ${pkgLabel} paketinizin bitməsinə 1 dərs qalıb. Davam etmək üçün ödənişi nəzərə alın.`;
+      const instructorBody = `Mentorix: ${enrollment.student_name || 'Tələbə'} üçün ${pkgLabel} paketində 7/${limit} tamamlandı. Paket bitəndə ödənişi təsdiqləyin.`;
+
+      await ensureNotificationOnce({
+        user_id: enrollment.student_id,
+        type: 'billing_pkg_last_lesson_student',
+        title: 'Paket bitir',
+        body: studentBody,
+      });
+      await ensureNotificationOnce({
+        user_id: enrollment.instructor_id,
+        type: 'billing_pkg_last_lesson_instructor',
+        title: 'Paket bitir',
+        body: instructorBody,
+      });
+
       if (targetPhone) {
         await sendSms({
           instructorId: enrollment.instructor_id,
