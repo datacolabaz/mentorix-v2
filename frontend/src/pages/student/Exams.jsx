@@ -815,7 +815,7 @@ export default function StudentExams() {
 
   return (
     <div className="p-4 sm:p-6 w-full min-w-0 max-w-3xl mx-auto">
-      <h1 className="font-display font-bold text-2xl mb-6 break-words text-token-textMain">İmtahanlarım</h1>
+      <h1 className="font-display font-bold text-2xl mb-6 break-words text-token-textMain pl-16 sm:pl-0">İmtahanlarım</h1>
 
       {listError && !listLoading && (
         <Card hover className="p-4 sm:p-5 mb-6 border-red-500/35 bg-red-500/5">
