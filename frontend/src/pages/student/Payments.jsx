@@ -585,7 +585,12 @@ export default function StudentPayments() {
                   const legacyConfirmed = Boolean(pkg.legacy_confirmed)
                   const paidLabel =
                     paid > 0.005 ? `Ödəniş: ${paid.toFixed(2)} ₼` : legacyConfirmed ? 'Ödənilib (keçmiş paket)' : 'Ödəniş: —'
-                  const headerRight = completed >= total && total > 0 ? 'Tamamlanıb' : cyc === Number(enrollment?.billing_cycle || 1) ? 'Cari' : ''
+                  const headerRight =
+                    completed >= total && total > 0
+                      ? 'Tamamlanıb'
+                      : String(pkg.package_status || '').toLowerCase() === 'active'
+                        ? 'Cari'
+                        : ''
 
                   return (
                     <Card key={cyc} hover className="p-0 overflow-hidden border border-[color:var(--border-subtle)]">
