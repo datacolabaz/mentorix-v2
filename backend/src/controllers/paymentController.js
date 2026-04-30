@@ -676,16 +676,13 @@ function weekdayFromYmd(ymd) {
 function buildVirtualLessonPackages({
   start_ymd,
   today_ymd,
-  system_created_ymd,
   lesson_weekdays,
   limit,
-  actual_status_by_key,
 }) {
   const start = String(start_ymd || '').slice(0, 10);
   const today = today_ymd ? String(today_ymd).slice(0, 10) : null;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(today)) return [];
   if (!/^\d{4}-\d{2}-\d{2}$/.test(start)) return [];
-  const sys = system_created_ymd ? String(system_created_ymd).slice(0, 10) : null;
   const lim = Number(limit) || 0;
   if (!lim) return [];
   const wdays = parseLessonWeekdaysJson(lesson_weekdays);
@@ -734,14 +731,9 @@ function buildVirtualLessonPackages({
     const pkg = by.get(cycle);
     if (ymd < pkg.start_ymd) pkg.start_ymd = ymd;
     if (ymd > pkg.end_ymd) pkg.end_ymd = ymd;
-    const key = `${cycle}:${lessonNumber}`;
-    const actual = actual_status_by_key && actual_status_by_key.get ? actual_status_by_key.get(key) : null;
-    // Only backdate as "done" for lessons that happened before the system record was created.
-    // After system_created_ymd, we only trust actual lesson status from DB.
-    const backdatedDone = Boolean(sys && ymd < sys);
-    const st = actual?.status || (backdatedDone ? 'done' : 'pending');
     const isPastOrToday = ymd <= today;
-    if (isPastOrToday && st === 'done') pkg.completed += 1;
+    const st = isPastOrToday ? 'done' : 'pending';
+    if (isPastOrToday) pkg.completed += 1;
     pkg.lessons.push({
       lesson_number: lessonNumber,
       ymd,
@@ -751,18 +743,11 @@ function buildVirtualLessonPackages({
   }
 
   const outAsc = [...by.values()].sort((a, b) => a.package_number - b.package_number);
-  const sysYmd = sys && /^\d{4}-\d{2}-\d{2}$/.test(sys) ? sys : null;
-  for (const p of outAsc) {
-    const fullyCompleted = (Number(p.completed) || 0) >= lim;
-    const legacyPaid = Boolean(sysYmd && fullyCompleted && p.end_ymd && String(p.end_ymd).slice(0, 10) < sysYmd);
-    p.legacy_confirmed = legacyPaid;
-    p.payment_status = legacyPaid ? 'confirmed_legacy' : 'unpaid';
-    p.total_paid = 0;
-  }
   const totalDone = outAsc.reduce((acc, p) => acc + (Number(p.completed) || 0), 0);
   const curPkgNo = Math.floor(totalDone / lim) + 1;
   for (const p of outAsc) {
     const isPastPkg = (Number(p.package_number) || 1) < curPkgNo && (Number(p.completed) || 0) >= lim;
+    // legacy_confirmed/payment status are filled later using systemCreatedYmd + payments_by_cycle
     p.package_status = isPastPkg ? 'completed' : (Number(p.package_number) || 1) === curPkgNo ? 'active' : 'upcoming';
   }
   return outAsc.sort((a, b) => b.package_number - a.package_number);
@@ -1079,7 +1064,6 @@ const listMyPayments = async (req, res) => {
     let lesson_packages = [];
     let attendance_pct = null;
     let payments_by_cycle = [];
-    const actualStatusByKey = new Map();
     if (enrollment && limit != null) {
       const cycle = enrollment.billing_cycle || 1;
       // Select next lesson by derived scheduled_ts (schedule wall time), not raw lesson_date timestamp hour.
@@ -1199,11 +1183,6 @@ const listMyPayments = async (req, res) => {
           const past = scheduledMs != null && Number.isFinite(scheduledMs) ? scheduledMs <= now : false;
           const st = r.status ? String(r.status) : 'pending';
 
-          // Keep a lookup for virtual history overlay.
-          if (ln > 0) {
-            actualStatusByKey.set(`${cyc}:${ln}`, { status: st, ymd });
-          }
-
           if (!by.has(cyc)) {
             by.set(cyc, {
               package_number: cyc,
@@ -1249,18 +1228,15 @@ const listMyPayments = async (req, res) => {
     if (enrollmentOut?.pre_system_enrollment && limit != null) {
       const todayBaku = await getTodayBakuYmd(db);
       const startYmd = toYmd(enrollmentOut.lesson_start_date_for_display || enrollmentOut.enrollment_start_date);
-      const systemCreatedYmd = toYmd(enrollmentOut?.enrolled_at);
       lesson_packages = buildVirtualLessonPackages({
         start_ymd: startYmd,
         today_ymd: todayBaku,
-        system_created_ymd: systemCreatedYmd,
         lesson_weekdays: enrollmentOut.lesson_weekdays,
         limit,
-        actual_status_by_key: actualStatusByKey,
       });
 
       // When we synthesize history for pre-system enrollments, align the "real" pack counters
-      // with backdated completion before the system record was created.
+      // with calendar-loop completion so top cards match timeline.
       const virtualDoneTotal = lesson_packages.reduce((acc, p) => acc + (Number(p.completed) || 0), 0);
       pack_total_completed = virtualDoneTotal;
       const lim = Number(limit) || 0;
