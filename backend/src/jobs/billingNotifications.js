@@ -174,6 +174,7 @@ async function remainingLessonsCalendar(enrollmentId, cycle) {
      ),
      l AS (
        SELECT
+         status,
          lesson_date,
          to_char((lesson_date AT TIME ZONE 'Asia/Baku')::date, 'YYYY-MM-DD') AS ymd,
          EXTRACT(ISODOW FROM (lesson_date AT TIME ZONE 'Asia/Baku'))::int AS dow
@@ -182,6 +183,7 @@ async function remainingLessonsCalendar(enrollmentId, cycle) {
      ),
      sched AS (
        SELECT
+         l.status,
          (
            (l.ymd || ' ' ||
              COALESCE(
@@ -212,7 +214,7 @@ async function runLessonPackLastLessonNotifications() {
             COALESCE(e.notifications_enabled, TRUE) AS notifications_enabled,
             su.phone AS student_phone,
             sp.parent_phone
-     FROM enrollments
+     FROM enrollments e
      LEFT JOIN users su ON su.id = e.student_id
      LEFT JOIN student_profiles sp ON sp.user_id = e.student_id
      WHERE e.billing_type IN ('8_lessons','12_lessons')
