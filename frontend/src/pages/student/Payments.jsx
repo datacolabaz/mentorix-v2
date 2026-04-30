@@ -250,9 +250,16 @@ export default function StudentPayments() {
         : enrollment && limit != null
           ? Math.max(0, Number(limit) - Number(enrollment.lesson_count || 0))
           : null
-  const totalPaid = payments
-    .filter((p) => p.status === 'completed')
-    .reduce((s, p) => s + Number(p.amount || 0), 0)
+  function isCompletedPayment(p) {
+    const st = String(p?.status || '').toLowerCase()
+    if (st === 'completed') return true
+    // Legacy DBs may not have payments.status; treat a recorded payment row with paid_at/payment_date as completed.
+    if (!st && (p?.paid_at || p?.payment_date)) return true
+    return false
+  }
+
+  const hasAnyPayments = payments.length > 0
+  const totalPaid = payments.filter(isCompletedPayment).reduce((s, p) => s + Number(p.amount || 0), 0)
 
   const lwd = enrollment ? normalizeWeekdays(enrollment.lesson_weekdays) : []
   const lt = enrollment ? parseLessonTimes(enrollment.lesson_times) : {}
@@ -500,18 +507,12 @@ export default function StudentPayments() {
               </p>
               <p className="mt-1">
                 <span className="text-token-textMuted">Qeydə alınmış ödəniş cəmi:</span>{' '}
-                <span className="text-emerald-300 font-mono">
-                  {Number.isFinite(totalPaid) ? totalPaid.toFixed(2) : '0.00'} ₼
-                </span>
+                <span className="text-emerald-300 font-mono">{hasAnyPayments ? totalPaid.toFixed(2) : '—'} ₼</span>
               </p>
             </div>
           )}
 
-          {!payments.length ? (
-            <div className="text-token-textMuted text-sm py-2 space-y-2">
-              <p>Hələ ödəniş qeydi yoxdur. {roleYour} ödəniş əlavə edəndə burada görünəcək.</p>
-            </div>
-          ) : (
+          {payments.length ? (
             <ul className="space-y-2">
               {payments.map((p) => {
                 const noteForStudent = displayNotesForStudent(p.notes)
@@ -556,7 +557,7 @@ export default function StudentPayments() {
                 )
               })}
             </ul>
-          )}
+          ) : null}
 
           {/* Lesson history */}
           <div className="mt-6">
