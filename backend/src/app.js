@@ -50,6 +50,15 @@ app.use('/api/sms-logs', require('./routes/smsLogs'));
 app.use('/api/admin', require('./routes/admin'));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
+app.get('/api/meta', (req, res) =>
+  res.json({
+    status: 'ok',
+    git_sha: process.env.RAILWAY_GIT_COMMIT_SHA || process.env.GIT_COMMIT_SHA || null,
+    build_id: process.env.RAILWAY_DEPLOYMENT_ID || process.env.RENDER_INSTANCE_ID || process.env.HEROKU_RELEASE_VERSION || null,
+    node: process.version,
+    now: new Date().toISOString(),
+  })
+);
 
 app.use(errorHandler);
 
