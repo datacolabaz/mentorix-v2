@@ -306,16 +306,8 @@ const upsertAttendanceLesson = async (req, res) => {
       }
     }
 
-    // paket dolubsa növbəti cycle aç
-    if (limit && n >= limit) {
-      await db.query(
-        `UPDATE enrollments
-         SET billing_cycle = billing_cycle + 1,
-             lesson_count = 0
-         WHERE id = $1`,
-        [enrollment_id]
-      );
-    }
+    // Paket bitəndə avtomatik növbəti cycle-a KEÇMİRİK.
+    // Yeni paket yalnız müəllim ödənişi təsdiqləyəndə (payments) aktivləşir.
 
     res.json({ success: true });
   } catch (err) {

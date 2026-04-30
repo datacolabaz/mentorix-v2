@@ -8,7 +8,7 @@ const {
   toYmd: anchorToYmd,
   listBillingDueDatesUpTo,
 } = require('../services/subscriptionBilling');
-const { ensurePackLessonsUpTo, normalizePackBillingType, syncPackProgressFromLessons } = require('../services/packLessons');
+const { ensurePackLessonsUpTo, normalizePackBillingType } = require('../services/packLessons');
 
 /** Bu qeydlər balansı azaldır; ümumi gəlir statistikasına daxil edilmir */
 const SQL_EXCLUDE_BALANCE_ADJUSTMENT =
@@ -652,6 +652,96 @@ function isMissingPaymentsStatusColumn(err) {
   return /column\s+"status"\s+does\s+not\s+exist/i.test(msg);
 }
 
+function ymdAddDays(ymd, days) {
+  const s = String(ymd || '').slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;
+  const [y, m, d] = s.split('-').map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
+  const next = new Date(dt.getTime() + Number(days || 0) * 86400000);
+  const yy = next.getUTCFullYear();
+  const mm = String(next.getUTCMonth() + 1).padStart(2, '0');
+  const dd = String(next.getUTCDate()).padStart(2, '0');
+  return `${yy}-${mm}-${dd}`;
+}
+
+function weekdayFromYmd(ymd) {
+  const s = String(ymd || '').slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;
+  const [y, m, d] = s.split('-').map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  // Mon=1..Sun=7
+  return ((dt.getUTCDay() + 6) % 7) + 1;
+}
+
+function buildVirtualLessonPackages({
+  start_ymd,
+  end_ymd,
+  lesson_weekdays,
+  lesson_times,
+  limit,
+  system_created_ymd,
+}) {
+  const start = String(start_ymd || '').slice(0, 10);
+  const end = String(end_ymd || '').slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(start) || !/^\d{4}-\d{2}-\d{2}$/.test(end)) return [];
+  const lim = Number(limit) || 0;
+  if (!lim) return [];
+  const wdays = parseLessonWeekdaysJson(lesson_weekdays);
+  const lt = parseLessonTimesJson(lesson_times);
+  if (!wdays.length || !Object.keys(lt).length) return [];
+
+  const dates = [];
+  let cursor = start;
+  for (let guard = 0; guard < 2200; guard += 1) {
+    const dow = weekdayFromYmd(cursor);
+    if (dow && wdays.includes(dow) && lt[String(dow)]) {
+      dates.push(cursor);
+    }
+    if (cursor >= end) break;
+    cursor = ymdAddDays(cursor, 1);
+    if (!cursor) break;
+  }
+  if (!dates.length) return [];
+
+  const by = new Map();
+  for (let idx = 0; idx < dates.length; idx += 1) {
+    const cycle = Math.floor(idx / lim) + 1;
+    const lessonNumber = (idx % lim) + 1;
+    const ymd = dates[idx];
+    if (!by.has(cycle)) {
+      by.set(cycle, {
+        package_number: cycle,
+        start_ymd: ymd,
+        end_ymd: ymd,
+        total: lim,
+        completed: 0,
+        lessons: [],
+      });
+    }
+    const pkg = by.get(cycle);
+    if (ymd < pkg.start_ymd) pkg.start_ymd = ymd;
+    if (ymd > pkg.end_ymd) pkg.end_ymd = ymd;
+    pkg.completed += 1;
+    pkg.lessons.push({
+      lesson_number: lessonNumber,
+      ymd,
+      status: 'done',
+      scheduled_ts: null,
+    });
+  }
+
+  const sys = system_created_ymd ? String(system_created_ymd).slice(0, 10) : null;
+  const out = [...by.values()].sort((a, b) => b.package_number - a.package_number);
+  if (sys && /^\d{4}-\d{2}-\d{2}$/.test(sys)) {
+    for (const p of out) {
+      p.legacy_confirmed = Boolean(p.end_ymd && String(p.end_ymd).slice(0, 10) < sys);
+      p.payment_status = p.legacy_confirmed ? 'confirmed_legacy' : 'unpaid';
+      p.total_paid = 0;
+    }
+  }
+  return out;
+}
+
 /** Tələbə: öz enrollment ödənişləri + aktiv paket məlumatı */
 const listMyPayments = async (req, res) => {
   try {
@@ -732,15 +822,12 @@ const listMyPayments = async (req, res) => {
       enrollment = anyRows[0] || null;
     }
 
-    // Backfill/extend 8/12 package lessons so student-side counters reflect reality
-    // even if the instructor didn't manually "advance cycles".
+    // Ensure future lessons exist for calendar views, but do NOT auto-advance billing_cycle here.
     if (enrollment && ['8_lessons', '12_lessons', null, ''].includes(enrollment.billing_type)) {
       try {
         const btNorm = normalizePackBillingType(enrollment.billing_type);
         await ensurePackLessonsUpTo(db, { ...enrollment, billing_type: btNorm }, { horizonDays: 30 });
-        await syncPackProgressFromLessons(db, enrollment.id, { billingType: btNorm });
       } catch (e) {
-        // non-fatal: counters will fall back to legacy lesson_count
         console.error('ensurePackLessonsUpTo failed', e);
       }
     }
@@ -1120,6 +1207,28 @@ const listMyPayments = async (req, res) => {
       }
     }
 
+    // Backdating / auto-history restore:
+    // If the student started before system record was created and there are no lesson rows to show,
+    // synthesize packages from schedule between enrollment_start_date and today.
+    if (
+      enrollmentOut?.pre_system_enrollment &&
+      limit != null &&
+      Array.isArray(lesson_packages) &&
+      lesson_packages.length === 0
+    ) {
+      const todayBaku = await getTodayBakuYmd(db);
+      const startYmd = toYmd(enrollmentOut.lesson_start_date_for_display || enrollmentOut.enrollment_start_date);
+      const sysYmd = toYmd(enrollmentOut.enrolled_at);
+      lesson_packages = buildVirtualLessonPackages({
+        start_ymd: startYmd,
+        end_ymd: todayBaku,
+        lesson_weekdays: enrollmentOut.lesson_weekdays,
+        lesson_times: enrollmentOut.lesson_times,
+        limit,
+        system_created_ymd: sysYmd,
+      });
+    }
+
     // Payments summary per package (billing_cycle)
     if (enrollmentOut?.id) {
       try {
@@ -1269,7 +1378,7 @@ const addPayment = async (req, res) => {
       return res.status(400).json({ success: false, message: 'enrollment_id tələb olunur' });
     }
     const { rows: en } = await db.query(
-      'SELECT student_id, billing_type, billing_cycle, instructor_id FROM enrollments WHERE id = $1',
+      'SELECT student_id, billing_type, billing_cycle, lesson_count, instructor_id FROM enrollments WHERE id = $1',
       [enrollment_id]
     );
     if (!en[0]) return res.status(404).json({ success: false, message: 'Qeydiyyat tapılmadı' });
@@ -1297,22 +1406,56 @@ const addPayment = async (req, res) => {
     } else if (legacy_kind === 'balance_adjustment') {
       notesOut = `[Balans düzəlişi]${notesOut ? ` ${notesOut}` : ''}`;
     }
-    const { rows } = await db.query(
-      `INSERT INTO payments (enrollment_id, student_id, amount, payment_method, period, billing_cycle, notes, status, payment_date)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
-      [
-        enrollment_id,
-        studentId,
-        amt,
-        paymentMethodForDb(payment_method),
-        derivedPeriod,
-        cycle,
-        notesOut,
-        status || 'completed',
-        payDate,
-      ]
-    );
-    res.json({ success: true, payment: rows[0] });
+    let inserted;
+    try {
+      ({ rows: inserted } = await db.query(
+        `INSERT INTO payments (enrollment_id, student_id, amount, payment_method, period, billing_cycle, notes, status, payment_date)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
+        [
+          enrollment_id,
+          studentId,
+          amt,
+          paymentMethodForDb(payment_method),
+          derivedPeriod,
+          cycle,
+          notesOut,
+          status || 'completed',
+          payDate,
+        ]
+      ));
+    } catch (e) {
+      if (!isMissingPaymentsStatusColumn(e)) throw e;
+      ({ rows: inserted } = await db.query(
+        `INSERT INTO payments (enrollment_id, student_id, amount, payment_method, period, billing_cycle, notes, payment_date)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
+        [
+          enrollment_id,
+          studentId,
+          amt,
+          paymentMethodForDb(payment_method),
+          derivedPeriod,
+          cycle,
+          notesOut,
+          payDate,
+        ]
+      ));
+    }
+
+    // Manual approval: if package is complete, a completed payment confirmation opens the next package.
+    const lim = billingLimit(bt);
+    const lc = Number(en[0]?.lesson_count ?? 0) || 0;
+    const st = status || 'completed';
+    if ((bt === '8_lessons' || bt === '12_lessons') && lim && lc >= lim && String(st).toLowerCase() === 'completed') {
+      await db.query(
+        `UPDATE enrollments
+         SET billing_cycle = billing_cycle + 1,
+             lesson_count = 0
+         WHERE id = $1`,
+        [enrollment_id]
+      );
+    }
+
+    res.json({ success: true, payment: inserted[0] });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
