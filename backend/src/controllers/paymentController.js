@@ -945,27 +945,29 @@ const listMyPayments = async (req, res) => {
            FROM enrollments
            WHERE id = $1
          ),
-         l AS (
-           SELECT
-             lesson_date,
-             to_char((lesson_date AT TIME ZONE 'Asia/Baku')::date, 'YYYY-MM-DD') AS ymd,
-             EXTRACT(ISODOW FROM (lesson_date AT TIME ZONE 'Asia/Baku'))::int AS dow
-           FROM lessons
-           WHERE enrollment_id = $1 AND billing_cycle = $2
-         ),
-         sched AS (
-           SELECT
-             (
-               (l.ymd || ' ' ||
-                 COALESCE(
-                   NULLIF(LEFT((enr.lesson_times ->> l.dow::text), 5), ''),
-                   to_char((l.lesson_date AT TIME ZONE 'Asia/Baku')::time, 'HH24:MI')
-                 ) || ':00'
-               )::timestamp AT TIME ZONE 'Asia/Baku'
-             ) AS scheduled_ts
-           FROM l
-           CROSS JOIN enr
-         )
+        l AS (
+          SELECT
+            status,
+            lesson_date,
+            to_char((lesson_date AT TIME ZONE 'Asia/Baku')::date, 'YYYY-MM-DD') AS ymd,
+            EXTRACT(ISODOW FROM (lesson_date AT TIME ZONE 'Asia/Baku'))::int AS dow
+          FROM lessons
+          WHERE enrollment_id = $1 AND billing_cycle = $2
+        ),
+        sched AS (
+          SELECT
+            l.status,
+            (
+              (l.ymd || ' ' ||
+                COALESCE(
+                  NULLIF(LEFT((enr.lesson_times ->> l.dow::text), 5), ''),
+                  to_char((l.lesson_date AT TIME ZONE 'Asia/Baku')::time, 'HH24:MI')
+                ) || ':00'
+              )::timestamp AT TIME ZONE 'Asia/Baku'
+            ) AS scheduled_ts
+          FROM l
+          CROSS JOIN enr
+        )
          SELECT
            COUNT(*)::int AS total,
            COUNT(*) FILTER (WHERE scheduled_ts <= NOW() AND status = 'done')::int AS used
@@ -993,27 +995,29 @@ const listMyPayments = async (req, res) => {
            FROM enrollments
            WHERE id = $1
          ),
-         l AS (
-           SELECT
-             lesson_date,
-             to_char((lesson_date AT TIME ZONE 'Asia/Baku')::date, 'YYYY-MM-DD') AS ymd,
-             EXTRACT(ISODOW FROM (lesson_date AT TIME ZONE 'Asia/Baku'))::int AS dow
-           FROM lessons
-           WHERE enrollment_id = $1
-         ),
-         sched AS (
-           SELECT
-             (
-               (l.ymd || ' ' ||
-                 COALESCE(
-                   NULLIF(LEFT((enr.lesson_times ->> l.dow::text), 5), ''),
-                   to_char((l.lesson_date AT TIME ZONE 'Asia/Baku')::time, 'HH24:MI')
-                 ) || ':00'
-               )::timestamp AT TIME ZONE 'Asia/Baku'
-             ) AS scheduled_ts
-           FROM l
-           CROSS JOIN enr
-         )
+        l AS (
+          SELECT
+            status,
+            lesson_date,
+            to_char((lesson_date AT TIME ZONE 'Asia/Baku')::date, 'YYYY-MM-DD') AS ymd,
+            EXTRACT(ISODOW FROM (lesson_date AT TIME ZONE 'Asia/Baku'))::int AS dow
+          FROM lessons
+          WHERE enrollment_id = $1
+        ),
+        sched AS (
+          SELECT
+            l.status,
+            (
+              (l.ymd || ' ' ||
+                COALESCE(
+                  NULLIF(LEFT((enr.lesson_times ->> l.dow::text), 5), ''),
+                  to_char((l.lesson_date AT TIME ZONE 'Asia/Baku')::time, 'HH24:MI')
+                ) || ':00'
+              )::timestamp AT TIME ZONE 'Asia/Baku'
+            ) AS scheduled_ts
+          FROM l
+          CROSS JOIN enr
+        )
          SELECT COUNT(*) FILTER (WHERE scheduled_ts <= NOW() AND status = 'done')::int AS done_total
          FROM sched`,
         [enrollment.id]
