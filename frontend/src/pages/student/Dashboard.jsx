@@ -64,7 +64,7 @@ export default function StudentDashboard() {
   return (
     <div className="p-4 sm:p-6 w-full min-w-0 max-w-6xl mx-auto">
       <div className="mb-6">
-        <h1 className="font-display font-bold text-2xl break-words text-token-textMain pl-16 sm:pl-0">
+        <h1 className="font-display font-bold text-2xl break-words text-token-textMain pl-20 sm:pl-0">
           Salam, {user?.full_name?.split(' ')[0]}! 👋
         </h1>
         <p className="text-token-textMuted text-sm mt-1">Proqresinizə baxın</p>

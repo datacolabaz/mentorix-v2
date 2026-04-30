@@ -313,7 +313,7 @@ export default function StudentPayments() {
 
   return (
     <div className="p-4 sm:p-6 max-w-3xl mx-auto w-full min-w-0">
-      <h1 className="font-display font-bold text-2xl text-token-textMain mb-2 pl-16 sm:pl-0">Ödəniş</h1>
+      <h1 className="font-display font-bold text-2xl text-token-textMain mb-2 pl-20 sm:pl-0">Ödəniş</h1>
       <p className="text-token-textMuted text-sm mb-6">
         {roleYour} sizi sistemə əlavə edərkən seçdiyi paket və qeydə alınmış ödənişlər.
       </p>

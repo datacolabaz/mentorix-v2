@@ -27,7 +27,7 @@ export default function StudentNotifications() {
   return (
     <div className="p-4 sm:p-6 min-w-0">
       <div className="mb-6">
-        <h1 className="font-display font-bold text-2xl break-words pl-16 sm:pl-0">Bildirişlər</h1>
+        <h1 className="font-display font-bold text-2xl break-words pl-20 sm:pl-0">Bildirişlər</h1>
         <p className="text-gray-400 text-sm mt-1">Sizdən ötürülmüş bildirişlər</p>
       </div>
 
