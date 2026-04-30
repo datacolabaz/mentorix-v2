@@ -164,7 +164,7 @@ export default function StudentAssignments() {
       <div className="flex items-end justify-between gap-3 mb-4">
         <div>
           <h1 className="font-display font-bold text-xl sm:text-2xl text-token-textMain pl-20 sm:pl-0">Tapşırıqlarım</h1>
-          <p className="text-token-textMuted text-sm mt-1">Müəllimin sizə göndərdiyi tapşırıqlar.</p>
+          <p className="text-token-textMuted text-sm mt-1 pl-20 sm:pl-0">Müəllimin sizə göndərdiyi tapşırıqlar.</p>
         </div>
         <Button variant="secondary" size="sm" onClick={() => void load()} disabled={loading}>
           Yenilə
