@@ -647,6 +647,11 @@ async function ensureNotificationOnce({ user_id, type, title, body }) {
   return true;
 }
 
+function isMissingPaymentsStatusColumn(err) {
+  const msg = err && err.message ? String(err.message) : '';
+  return /column\s+"status"\s+does\s+not\s+exist/i.test(msg);
+}
+
 /** Tələbə: öz enrollment ödənişləri + aktiv paket məlumatı */
 const listMyPayments = async (req, res) => {
   try {
@@ -670,8 +675,23 @@ const listMyPayments = async (req, res) => {
       );
       payments = rows;
     } catch (payErr) {
-      console.error('listMyPayments: payments query failed', payErr);
-      payments = [];
+      if (isMissingPaymentsStatusColumn(payErr)) {
+        const { rows } = await db.query(
+          `SELECT p.id, p.amount, p.currency, p.payment_method, NULL::text AS status, p.period, p.notes, p.paid_at, p.payment_date,
+                  p.billing_cycle,
+                  e.billing_type, e.lesson_count AS enrollment_lesson_count, e.billing_cycle AS enrollment_billing_cycle,
+                  iu.full_name AS instructor_name
+           FROM payments p
+           INNER JOIN enrollments e ON e.id = p.enrollment_id AND e.student_id = $1
+           LEFT JOIN users iu ON iu.id = e.instructor_id
+           ORDER BY COALESCE(p.paid_at, p.payment_date::timestamptz) DESC NULLS LAST, p.id DESC`,
+          [studentId]
+        );
+        payments = rows;
+      } else {
+        console.error('listMyPayments: payments query failed', payErr);
+        payments = [];
+      }
     }
 
     const { rows: enRows } = await db.query(
@@ -753,12 +773,24 @@ const listMyPayments = async (req, res) => {
           enrolled_at: enrollmentOut.enrolled_at,
           today_ymd: todayBaku,
         });
-        const { rows: pr } = await db.query(
-          `SELECT COALESCE(SUM(amount), 0)::numeric AS t
-           FROM payments
-           WHERE enrollment_id = $1 AND status = 'completed'`,
-          [enrollmentOut.id]
-        );
+        let pr;
+        try {
+          ({ rows: pr } = await db.query(
+            `SELECT COALESCE(SUM(amount), 0)::numeric AS t
+             FROM payments
+             WHERE enrollment_id = $1 AND status = 'completed'`,
+            [enrollmentOut.id]
+          ));
+        } catch (e) {
+          if (!isMissingPaymentsStatusColumn(e)) throw e;
+          ({ rows: pr } = await db.query(
+            `SELECT COALESCE(SUM(amount), 0)::numeric AS t
+             FROM payments
+             WHERE enrollment_id = $1
+               AND (paid_at IS NOT NULL OR payment_date IS NOT NULL)`,
+            [enrollmentOut.id]
+          ));
+        }
         const paid = Number(pr[0]?.t) || 0;
         enrollmentOut.subscription = computeMonthlyBalanceState({
           monthly_fee: mfNum,
@@ -1091,16 +1123,31 @@ const listMyPayments = async (req, res) => {
     // Payments summary per package (billing_cycle)
     if (enrollmentOut?.id) {
       try {
-        const { rows: payAgg } = await db.query(
-          `SELECT COALESCE(billing_cycle, 1)::int AS billing_cycle,
-                  COALESCE(SUM(amount), 0)::numeric AS total_paid
-           FROM payments
-           WHERE enrollment_id = $1
-             AND status = 'completed'
-           GROUP BY COALESCE(billing_cycle, 1)
-           ORDER BY billing_cycle DESC`,
-          [enrollmentOut.id]
-        );
+        let payAgg;
+        try {
+          ({ rows: payAgg } = await db.query(
+            `SELECT COALESCE(billing_cycle, 1)::int AS billing_cycle,
+                    COALESCE(SUM(amount), 0)::numeric AS total_paid
+             FROM payments
+             WHERE enrollment_id = $1
+               AND status = 'completed'
+             GROUP BY COALESCE(billing_cycle, 1)
+             ORDER BY billing_cycle DESC`,
+            [enrollmentOut.id]
+          ));
+        } catch (e) {
+          if (!isMissingPaymentsStatusColumn(e)) throw e;
+          ({ rows: payAgg } = await db.query(
+            `SELECT COALESCE(billing_cycle, 1)::int AS billing_cycle,
+                    COALESCE(SUM(amount), 0)::numeric AS total_paid
+             FROM payments
+             WHERE enrollment_id = $1
+               AND (paid_at IS NOT NULL OR payment_date IS NOT NULL)
+             GROUP BY COALESCE(billing_cycle, 1)
+             ORDER BY billing_cycle DESC`,
+            [enrollmentOut.id]
+          ));
+        }
         payments_by_cycle = payAgg.map((r) => ({
           billing_cycle: Number(r.billing_cycle) || 1,
           total_paid: Number(r.total_paid) || 0,
@@ -1394,23 +1441,47 @@ const getEnrollmentPaymentHistory = async (req, res) => {
       return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
     }
 
-    const { rows } = await db.query(
-      `SELECT id, amount, currency, payment_method, status, payment_date, paid_at, notes, period
-       FROM payments
-       WHERE enrollment_id = $1
-       ORDER BY COALESCE(paid_at, payment_date::timestamptz) DESC NULLS LAST, id DESC`,
-      [enrollment_id]
-    );
+    let rows;
+    try {
+      ({ rows } = await db.query(
+        `SELECT id, amount, currency, payment_method, status, payment_date, paid_at, notes, period
+         FROM payments
+         WHERE enrollment_id = $1
+         ORDER BY COALESCE(paid_at, payment_date::timestamptz) DESC NULLS LAST, id DESC`,
+        [enrollment_id]
+      ));
+    } catch (e) {
+      if (!isMissingPaymentsStatusColumn(e)) throw e;
+      ({ rows } = await db.query(
+        `SELECT id, amount, currency, payment_method, NULL::text AS status, payment_date, paid_at, notes, period
+         FROM payments
+         WHERE enrollment_id = $1
+         ORDER BY COALESCE(paid_at, payment_date::timestamptz) DESC NULLS LAST, id DESC`,
+        [enrollment_id]
+      ));
+    }
 
     let balance_summary = null;
     const mf = en[0].monthly_fee != null ? Number(en[0].monthly_fee) : NaN;
     if (en[0].billing_type === 'monthly' && Number.isFinite(mf) && mf > 0) {
       const todayBaku = await getTodayBakuYmd(db);
-      const { rows: pr } = await db.query(
-        `SELECT COALESCE(SUM(amount), 0)::numeric AS t
-         FROM payments WHERE enrollment_id = $1 AND status = 'completed'`,
-        [enrollment_id]
-      );
+      let pr;
+      try {
+        ({ rows: pr } = await db.query(
+          `SELECT COALESCE(SUM(amount), 0)::numeric AS t
+           FROM payments WHERE enrollment_id = $1 AND status = 'completed'`,
+          [enrollment_id]
+        ));
+      } catch (e) {
+        if (!isMissingPaymentsStatusColumn(e)) throw e;
+        ({ rows: pr } = await db.query(
+          `SELECT COALESCE(SUM(amount), 0)::numeric AS t
+           FROM payments
+           WHERE enrollment_id = $1
+             AND (paid_at IS NOT NULL OR payment_date IS NOT NULL)`,
+          [enrollment_id]
+        ));
+      }
       const paid = Number(pr[0]?.t) || 0;
       const anchorYmd = anchorToYmd(en[0].enrollment_start_date);
       const st = computeMonthlyBalanceState({
