@@ -675,35 +675,43 @@ function weekdayFromYmd(ymd) {
 
 function buildVirtualLessonPackages({
   start_ymd,
-  end_ymd,
   today_ymd,
   lesson_weekdays,
-  lesson_times,
   limit,
 }) {
   const start = String(start_ymd || '').slice(0, 10);
-  const end = String(end_ymd || '').slice(0, 10);
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(start) || !/^\d{4}-\d{2}-\d{2}$/.test(end)) return [];
   const today = today_ymd ? String(today_ymd).slice(0, 10) : end;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(today)) return [];
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(start)) return [];
   const lim = Number(limit) || 0;
   if (!lim) return [];
   const wdays = parseLessonWeekdaysJson(lesson_weekdays);
-  const lt = parseLessonTimesJson(lesson_times);
-  if (!wdays.length || !Object.keys(lt).length) return [];
+  if (!wdays.length) return [];
 
+  // Enumerate lesson dates by scanning calendar from start to "end of current pack".
+  // Step 1: generate all lesson dates up to today.
   const dates = [];
   let cursor = start;
-  for (let guard = 0; guard < 2200; guard += 1) {
+  for (let guard = 0; guard < 4000; guard += 1) {
     const dow = weekdayFromYmd(cursor);
-    if (dow && wdays.includes(dow) && lt[String(dow)]) {
-      dates.push(cursor);
-    }
-    if (cursor >= end) break;
+    if (dow && wdays.includes(dow)) dates.push(cursor);
+    if (cursor >= today) break;
     cursor = ymdAddDays(cursor, 1);
     if (!cursor) break;
   }
   if (!dates.length) return [];
+
+  // Step 2: extend into the future so the current package has all its upcoming lessons (for end_ymd range).
+  const doneCount = dates.filter((d) => d <= today).length;
+  const currentPkg = Math.floor(doneCount / lim) + 1;
+  const needTotal = currentPkg * lim;
+  cursor = ymdAddDays(today, 1);
+  for (let guard = 0; guard < 1200 && dates.length < needTotal; guard += 1) {
+    const dow = weekdayFromYmd(cursor);
+    if (dow && wdays.includes(dow)) dates.push(cursor);
+    cursor = ymdAddDays(cursor, 1);
+    if (!cursor) break;
+  }
 
   const by = new Map();
   for (let idx = 0; idx < dates.length; idx += 1) {
@@ -734,14 +742,13 @@ function buildVirtualLessonPackages({
   }
 
   const outAsc = [...by.values()].sort((a, b) => a.package_number - b.package_number);
-  const totalDone = outAsc.reduce((acc, p) => acc + (Number(p.completed) || 0), 0);
-  const currentPkg = Math.floor(totalDone / lim) + 1;
+  const curPkgNo = currentPkg;
   for (const p of outAsc) {
-    const isPastPkg = (Number(p.package_number) || 1) < currentPkg && (Number(p.completed) || 0) >= lim;
+    const isPastPkg = (Number(p.package_number) || 1) < curPkgNo && (Number(p.completed) || 0) >= lim;
     p.legacy_confirmed = Boolean(isPastPkg);
     p.payment_status = p.legacy_confirmed ? 'confirmed_legacy' : 'unpaid';
     p.total_paid = 0;
-    p.package_status = isPastPkg ? 'completed' : (Number(p.package_number) || 1) === currentPkg ? 'active' : 'upcoming';
+    p.package_status = isPastPkg ? 'completed' : (Number(p.package_number) || 1) === curPkgNo ? 'active' : 'upcoming';
   }
   return outAsc.sort((a, b) => b.package_number - a.package_number);
 }
@@ -1216,23 +1223,15 @@ const listMyPayments = async (req, res) => {
     }
 
     // Backdating / auto-history restore:
-    // If the student started before system record was created and there are no lesson rows to show,
-    // synthesize packages from schedule between enrollment_start_date and today.
-    if (
-      enrollmentOut?.pre_system_enrollment &&
-      limit != null &&
-      Array.isArray(lesson_packages) &&
-      lesson_packages.length === 0
-    ) {
+    // For pre-system enrollments, always synthesize the full package history from schedule (calendar loop),
+    // so students can see their full journey even if lesson rows were created late/partially.
+    if (enrollmentOut?.pre_system_enrollment && limit != null) {
       const todayBaku = await getTodayBakuYmd(db);
       const startYmd = toYmd(enrollmentOut.lesson_start_date_for_display || enrollmentOut.enrollment_start_date);
-      const horizonYmd = ymdAddDays(todayBaku, 90);
       lesson_packages = buildVirtualLessonPackages({
         start_ymd: startYmd,
-        end_ymd: horizonYmd || todayBaku,
         today_ymd: todayBaku,
         lesson_weekdays: enrollmentOut.lesson_weekdays,
-        lesson_times: enrollmentOut.lesson_times,
         limit,
       });
     }
@@ -1278,7 +1277,9 @@ const listMyPayments = async (req, res) => {
           lesson_packages = lesson_packages.map((p) => {
             const cyc = Number(p.package_number) || 1;
             const paid = payMap.get(cyc) || 0;
-            const legacyConfirmed = Boolean(p.end_ymd && String(p.end_ymd).slice(0, 10) < systemCreatedYmd);
+            const legacyConfirmed = Boolean(
+              p.package_status === 'completed' && p.end_ymd && String(p.end_ymd).slice(0, 10) < systemCreatedYmd
+            );
             const payment_status = paid > 0.005 ? 'paid' : legacyConfirmed ? 'confirmed_legacy' : 'unpaid';
             return {
               ...p,
