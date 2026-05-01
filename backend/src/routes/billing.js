@@ -20,10 +20,33 @@ function addDaysIso(days) {
 function callbackUrlFromReq(req) {
   const env = String(process.env.PAYRIFF_CALLBACK_URL || '').trim();
   if (env) return env;
+  const token = String(process.env.PAYRIFF_CALLBACK_TOKEN || '').trim();
   const proto = (req.headers['x-forwarded-proto'] || req.protocol || 'https').toString().split(',')[0].trim();
   const host = (req.headers['x-forwarded-host'] || req.headers.host || '').toString().split(',')[0].trim();
   if (!host) return null;
-  return `${proto}://${host}/api/billing/payriff/callback`;
+  const qs = token ? `?token=${encodeURIComponent(token)}` : '';
+  // Payriff will POST then GET to the same callbackUrl; we handle both in /payriff/return.
+  return `${proto}://${host}/api/billing/payriff/return${qs}`;
+}
+
+function clientIp(req) {
+  const xf = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
+  return xf || req.ip || '';
+}
+
+function ipAllowed(req) {
+  const list = String(process.env.PAYRIFF_CALLBACK_IPS || '').trim();
+  if (!list) return true;
+  const allowed = list.split(',').map((s) => s.trim()).filter(Boolean);
+  const ip = clientIp(req);
+  return allowed.includes(ip);
+}
+
+function callbackTokenOk(req) {
+  const need = String(process.env.PAYRIFF_CALLBACK_TOKEN || '').trim();
+  if (!need) return true;
+  const got = String(req.query?.token || req.headers['x-payriff-callback-token'] || '').trim();
+  return got && got === need;
 }
 
 router.get('/status', authenticate, authorize('instructor'), async (req, res) => {
@@ -34,6 +57,7 @@ router.get('/status', authenticate, authorize('instructor'), async (req, res) =>
       trial: {
         is_active: out.trial.is_active,
       },
+      subscription: out.subscription || null,
       limits: out.limits,
       usage: out.usage,
       remaining: out.remaining,
@@ -135,8 +159,11 @@ router.post('/create-payment', authenticate, authorize('instructor'), async (req
   }
 });
 
-router.post('/payriff/callback', async (req, res) => {
+async function processPayriffCallback(req, res) {
   try {
+    if (!ipAllowed(req)) return res.status(403).json({ success: false, message: 'IP not allowed' });
+    if (!callbackTokenOk(req)) return res.status(403).json({ success: false, message: 'Invalid callback token' });
+
     const body = req.body || {};
     const orderId =
       body?.payload?.orderId ||
@@ -145,6 +172,13 @@ router.post('/payriff/callback', async (req, res) => {
       body?.data?.orderId ||
       null;
     if (!orderId) return res.status(400).json({ success: false, message: 'orderId missing' });
+
+    // Strict idempotency: if already paid -> 200 no-op (no Payriff call).
+    const { rows: paidRows } = await db.query(
+      `SELECT id FROM billing_payments WHERE provider='payriff' AND external_order_id=$1 AND status='paid' LIMIT 1`,
+      [orderId]
+    );
+    if (paidRows[0]) return res.json({ success: true, orderId, paid: true, noop: true });
 
     // Verify status by fetching the order info from Payriff.
     const info = await getOrderInfo(orderId);
@@ -244,6 +278,32 @@ router.post('/payriff/callback', async (req, res) => {
     return res.json({ success: true, orderId, paid });
   } catch (err) {
     return res.status(err.statusCode || err.status || 500).json({ success: false, message: err.message, code: err.code });
+  }
+}
+
+router.post('/payriff/callback', processPayriffCallback);
+
+router.all('/payriff/return', async (req, res) => {
+  // Payriff usually POSTs payment data then does a GET redirect to the same callbackUrl.
+  if (req.method === 'POST') return processPayriffCallback(req, res);
+  try {
+    // GET: redirect user to frontend success/fail URLs.
+    const orderId = String(req.query?.orderId || req.query?.order_id || '').trim();
+    const front = String(process.env.FRONTEND_BASE_URL || '').trim().replace(/\/+$/, '');
+    const base = front || `${req.protocol}://${req.headers.host}`;
+    if (!orderId) return res.redirect(`${base}/payment/fail`);
+
+    const { rows } = await db.query(
+      `SELECT status FROM billing_payments WHERE provider='payriff' AND external_order_id=$1 LIMIT 1`,
+      [orderId]
+    );
+    const st = String(rows[0]?.status || '').toLowerCase();
+    const ok = st === 'paid';
+    return res.redirect(`${base}/payment/${ok ? 'success' : 'fail'}?orderId=${encodeURIComponent(orderId)}`);
+  } catch {
+    const front = String(process.env.FRONTEND_BASE_URL || '').trim().replace(/\/+$/, '');
+    const base = front || `${req.protocol}://${req.headers.host}`;
+    return res.redirect(`${base}/payment/fail`);
   }
 });
 

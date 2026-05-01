@@ -198,6 +198,7 @@ async function resolveEntitlements(userId) {
 
   const usage = await ensureSmsPeriodUpToDate(db, userId);
   const sub = await ensureSubscriptionRow(db, userId);
+  const sub2 = await getCurrentPlan(db, userId);
   const trial = await getTrialRow(db, userId);
 
   const trial_active = phone_verified && isTrialActive(trial);
@@ -229,10 +230,13 @@ async function resolveEntitlements(userId) {
     sms_monthly: remaining(limits.sms_monthly, used.sms_monthly),
   };
 
-  const is_active = trial_active ? true : true; // payment provider integration will refine this later
+  const subscription_active =
+    String(sub2?.status || 'active') === 'active' &&
+    (!sub2?.current_period_end || new Date(sub2.current_period_end).getTime() >= Date.now());
+  const is_active = trial_active ? true : subscription_active;
   const status = buildStatus({
     phone_verified,
-    is_active: trial_active ? true : true,
+    is_active,
     limits,
     used,
     remainingObj: rem,
@@ -248,6 +252,10 @@ async function resolveEntitlements(userId) {
       is_active: trial_active,
       ends_at: trial_active ? new Date(trial.end_date).toISOString() : null,
       days_left: trial_active ? ceilDaysLeft(trial.end_date) : 0,
+    },
+    subscription: {
+      status: String(sub2?.status || 'active'),
+      current_period_end: sub2?.current_period_end ? new Date(sub2.current_period_end).toISOString() : null,
     },
     limits,
     usage: used,
@@ -270,6 +278,28 @@ async function getCurrentPlan(dbConn, userId) {
     [userId]
   );
   const r = rows[0] || null;
+  if (r && String(r.status || 'active') === 'active' && r.current_period_end && new Date(r.current_period_end).getTime() < Date.now()) {
+    // Request-time safety: don't rely only on cron.
+    try {
+      const { rows: up } = await dbConn.query(
+        `UPDATE subscriptions
+         SET status = 'past_due',
+             updated_at = NOW()
+         WHERE user_id = $1 AND status = 'active'
+         RETURNING plan, status, current_period_end, pending_plan, pending_effective_at`,
+        [userId]
+      );
+      if (up[0]) return {
+        plan: normalizePlanSlug(up[0].plan),
+        status: String(up[0].status || 'active'),
+        current_period_end: up[0].current_period_end || null,
+        pending_plan: up[0].pending_plan ? normalizePlanSlug(up[0].pending_plan) : null,
+        pending_effective_at: up[0].pending_effective_at || null,
+      };
+    } catch {
+      // ignore
+    }
+  }
   return r
     ? {
         plan: normalizePlanSlug(r.plan),

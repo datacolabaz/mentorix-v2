@@ -24,6 +24,8 @@ import InstructorPayments from './pages/instructor/Payments'
 import InstructorNotifications from './pages/instructor/Notifications'
 import InstructorSettings from './pages/instructor/Settings'
 import InstructorTasks from './pages/instructor/Tasks'
+import PaymentSuccess from './pages/instructor/PaymentSuccess'
+import PaymentFail from './pages/instructor/PaymentFail'
 import ParentNotifications from './pages/parent/Notifications'
 
 import StudentDashboard from './pages/student/Dashboard'
@@ -80,6 +82,11 @@ export default function App() {
         <Route path="payments" element={<InstructorPayments />} />
         <Route path="notifications" element={<InstructorNotifications />} />
         <Route path="settings" element={<InstructorSettings />} />
+      </Route>
+
+      <Route path="/payment" element={<ProtectedRoute roles={['instructor']}><InstructorLayout /></ProtectedRoute>}>
+        <Route path="success" element={<PaymentSuccess />} />
+        <Route path="fail" element={<PaymentFail />} />
       </Route>
 
       <Route path="/student" element={<ProtectedRoute roles={['student']}><StudentLayout /></ProtectedRoute>}>
