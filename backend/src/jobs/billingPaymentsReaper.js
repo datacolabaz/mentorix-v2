@@ -1,5 +1,6 @@
 const db = require('../utils/db');
 const { sendRenewalReminderEmail } = require('../services/emailService');
+const { enqueueNotification } = require('../services/notificationQueueService');
 
 async function expireAbandonedBillingPayments() {
   // Mark old pending payments as expired to keep DB clean.
@@ -27,21 +28,4 @@ async function markPastDueSubscriptions() {
       `UPDATE subscriptions
        SET status = 'past_due',
            grace_until = NOW() + interval '2 days',
-           updated_at = NOW()
-       WHERE status = 'active'
-         AND current_period_end IS NOT NULL
-         AND current_period_end < NOW()
-       RETURNING user_id, current_period_end`
-    );
-    // Minimal renewal reminder email (fallback channel).
-    for (const r of rows || []) {
-      const iso = r.current_period_end ? new Date(r.current_period_end).toISOString() : null;
-      await sendRenewalReminderEmail({ userId: r.user_id, daysLeft: 0, periodEndIso: iso }).catch(() => {});
-    }
-  } catch {
-    // ignore (migration not applied yet)
-  }
-}
-
-module.exports = { expireAbandonedBillingPayments, markPastDueSubscriptions };
-
+     

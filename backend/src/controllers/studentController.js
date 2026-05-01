@@ -161,7 +161,8 @@ const deleteStudent = async (req, res) => {
          SET is_active = FALSE,
              phone = NULL,
              email = NULL,
-             phone_verified = FALSE
+             phone_verified = FALSE,
+             deleted_at = NOW()
          WHERE id = $1`,
         [studentId]
       );
@@ -186,24 +187,44 @@ const deleteStudent = async (req, res) => {
 
       // 3) enrollment-a bağlı cədvəllər
       if (enrollmentIds.length) {
-        await client.query('DELETE FROM attendance WHERE enrollment_id = ANY($1::uuid[])', [enrollmentIds]);
-        await client.query('DELETE FROM payments WHERE enrollment_id = ANY($1::uuid[])', [enrollmentIds]);
-        await client.query('DELETE FROM enrollment_lessons WHERE enrollment_id = ANY($1::uuid[])', [enrollmentIds]);
-        await client.query('DELETE FROM enrollments WHERE id = ANY($1::uuid[])', [enrollmentIds]);
+        // Keep audit/analytics: soft-delete core rows.
+        await client.query(
+          `UPDATE payments SET deleted_at = NOW()
+           WHERE enrollment_id = ANY($1::uuid[])`,
+          [enrollmentIds]
+        );
+        await client.query(
+          `UPDATE lessons SET deleted_at = NOW()
+           WHERE enrollment_id = ANY($1::uuid[])`,
+          [enrollmentIds]
+        ).catch(() => {});
+        await client.query(
+          `UPDATE enrollments
+           SET status = 'deleted',
+               deleted_at = NOW()
+           WHERE id = ANY($1::uuid[])`,
+          [enrollmentIds]
+        );
+
+        // Non-core helper tables can be cleared safely.
+        await client.query('DELETE FROM attendance WHERE enrollment_id = ANY($1::uuid[])', [enrollmentIds]).catch(() => {});
+        await client.query('DELETE FROM enrollment_lessons WHERE enrollment_id = ANY($1::uuid[])', [enrollmentIds]).catch(() => {});
       }
 
       // 4) user-a bağlı cədvəllər (FK-ları təmizlə)
-      await client.query('DELETE FROM exam_results WHERE student_id = $1', [studentId]);
-      await client.query('DELETE FROM exam_assignments WHERE student_id = $1', [studentId]);
-      await client.query('DELETE FROM payments WHERE student_id = $1', [studentId]);
-      await client.query('DELETE FROM lessons WHERE student_id = $1', [studentId]);
-      await client.query('DELETE FROM notifications WHERE user_id = $1', [studentId]);
-      await client.query('DELETE FROM student_assignments WHERE student_id = $1', [studentId]);
-      await client.query('DELETE FROM student_prep_slots WHERE student_id = $1', [studentId]);
+      // Keep payments/lessons for audit: already soft-deleted above by enrollment_id, but do it again just in case.
+      await client.query('UPDATE payments SET deleted_at = NOW() WHERE student_id = $1', [studentId]).catch(() => {});
+      await client.query('UPDATE lessons SET deleted_at = NOW() WHERE student_id = $1', [studentId]).catch(() => {});
+
+      await client.query('DELETE FROM exam_results WHERE student_id = $1', [studentId]).catch(() => {});
+      await client.query('DELETE FROM exam_assignments WHERE student_id = $1', [studentId]).catch(() => {});
+      await client.query('DELETE FROM notifications WHERE user_id = $1', [studentId]).catch(() => {});
+      await client.query('DELETE FROM student_assignments WHERE student_id = $1', [studentId]).catch(() => {});
+      await client.query('DELETE FROM student_prep_slots WHERE student_id = $1', [studentId]).catch(() => {});
 
       // 5) profil + user
-      await client.query('DELETE FROM student_profiles WHERE user_id = $1', [studentId]);
-      await client.query('DELETE FROM users WHERE id = $1', [studentId]);
+      await client.query('DELETE FROM student_profiles WHERE user_id = $1', [studentId]).catch(() => {});
+      // users row is kept (soft deleted above)
     });
 
     res.json({ success: true });
@@ -512,33 +533,4 @@ const addMyPrepSlots = async (req, res) => {
        RETURNING id, day_of_week, start_time, end_time, created_at`,
       [studentId, start, end, uniq]
     );
-    res.status(201).json({ success: true, slots: rows });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-};
-
-const deleteMyPrepSlot = async (req, res) => {
-  try {
-    const studentId = req.user.id;
-    const { id } = req.params;
-    const { rowCount } = await db.query(
-      `DELETE FROM student_prep_slots WHERE id = $1 AND student_id = $2`,
-      [id, studentId]
-    );
-    if (rowCount === 0) return res.status(404).json({ success: false, message: 'Tapılmadı' });
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-};
-
-module.exports = {
-  listStudents,
-  getStudent,
-  deleteStudent,
-  getMySchedule,
-  getInstructorMyLessonsCalendar,
-  addMyPrepSlots,
-  deleteMyPrepSlot,
-};
+    res.status(201)

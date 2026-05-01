@@ -13,6 +13,9 @@ const { extendMonthlyAttendanceSlots } = require('./jobs/monthlyAttendanceSlots'
 const { runBillingNotifications } = require('./jobs/billingNotifications');
 const { runPackReminders } = require('./jobs/packReminders');
 const { expireAbandonedBillingPayments, markPastDueSubscriptions } = require('./jobs/billingPaymentsReaper');
+const { runNotificationQueueOnce } = require('./jobs/notificationQueueWorker');
+const { reconcileStorageUsage } = require('./jobs/storageUsageReconciler');
+const { runOrphanFilesReaper } = require('./jobs/orphanFilesReaper');
 
 const uploadsExamsDir = path.join(__dirname, '../uploads/exams');
 const uploadsAssignmentsDir = path.join(__dirname, '../uploads/assignments');
@@ -94,23 +97,4 @@ cron.schedule('*/10 * * * *', () => {
 });
 
 cron.schedule('25 */6 * * *', () => {
-  extendMonthlyAttendanceSlots().catch((e) => console.error('monthly attendance slots cron', e.message));
-});
-
-// Billing notifications: hourly check for "2 days left" and "last lesson"
-cron.schedule('15 * * * *', () => {
-  runBillingNotifications().catch((e) => console.error('billing notifications cron', e.message));
-});
-
-// Pack reminders fallback: every 30 minutes
-cron.schedule('*/30 * * * *', () => {
-  runPackReminders().catch((e) => console.error('pack reminders cron', e.message));
-});
-
-// Billing payments cleanup + subscription past_due: every 15 minutes
-cron.schedule('*/15 * * * *', () => {
-  expireAbandonedBillingPayments().catch((e) => console.error('billing payments reaper cron', e.message));
-  markPastDueSubscriptions().catch((e) => console.error('subscription past_due cron', e.message));
-});
-
-module.exports = app;
+  extendMonthlyAttendanceSlots().catch((e) => console.error('monthly attendance

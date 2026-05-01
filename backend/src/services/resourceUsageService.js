@@ -115,6 +115,16 @@ async function recomputeInstructorStorageUsageMb(instructorId, opts = {}) {
        WHERE user_id = $1`,
       [instructorId, storage_used_mb, totalBytes],
     );
+
+    // Source-of-truth for entitlements
+    await db
+      .query(
+        `UPDATE usage_counters
+         SET storage_used_mb = $2
+         WHERE user_id = $1`,
+        [instructorId, storage_used_mb]
+      )
+      .catch(() => {});
   }
 
   return { storage_used_mb, storage_used_bytes: totalBytes };
@@ -186,17 +196,4 @@ async function recomputeAllInstructorsUsage(opts = {}) {
   const { rows } = await db.query('SELECT user_id FROM instructor_profiles');
   const out = { updated: 0 };
   for (const r of rows) {
-    await recomputeInstructorUsage(r.user_id, opts);
-    out.updated += 1;
-  }
-  return out;
-}
-
-module.exports = {
-  bytesToMbInt,
-  recomputeInstructorStorageUsageMb,
-  recomputeInstructorRamUsedMb,
-  recomputeInstructorUsage,
-  recomputeAllInstructorsUsage,
-};
-
+    await recomputeInstructor
