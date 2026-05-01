@@ -33,4 +33,13 @@ async function runNotificationQueueOnce() {
         await markSent(item.id);
         continue;
       }
-      await markFailedOrRetrying(item.id, Number(item.re
+      await markFailedOrRetrying(item.id, Number(item.retry_count || 0) + 1, 'Unknown channel');
+    } catch (e) {
+      await markFailedOrRetrying(item.id, Number(item.retry_count || 0) + 1, e?.message || 'Queue send error');
+    }
+  }
+  return { processed: due.length };
+}
+
+module.exports = { runNotificationQueueOnce };
+
