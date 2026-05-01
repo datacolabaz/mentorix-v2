@@ -196,4 +196,17 @@ async function recomputeAllInstructorsUsage(opts = {}) {
   const { rows } = await db.query('SELECT user_id FROM instructor_profiles');
   const out = { updated: 0 };
   for (const r of rows) {
-    await recomputeInstructor
+    await recomputeInstructorUsage(r.user_id, opts);
+    out.updated += 1;
+  }
+  return out;
+}
+
+module.exports = {
+  bytesToMbInt,
+  recomputeInstructorStorageUsageMb,
+  recomputeInstructorRamUsedMb,
+  recomputeInstructorUsage,
+  recomputeAllInstructorsUsage,
+};
+
