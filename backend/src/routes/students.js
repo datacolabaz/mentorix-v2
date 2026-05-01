@@ -964,4 +964,37 @@ router.get('/enrollment/:enrollmentId/lessons', authenticate, authorize('admin',
     const { rows: lessons } = await db.query(
       `SELECT l.id, l.lesson_date, l.status, l.lesson_number, l.billing_cycle,
               e.lesson_times AS enrollment_lesson_times
- 
+       FROM lessons l
+       JOIN enrollments e ON e.id = l.enrollment_id
+       WHERE l.enrollment_id = $1
+       ORDER BY l.lesson_date ASC`,
+      [enrollmentId]
+    );
+    res.json({ success: true, lessons });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+router.patch('/:id/phone', authenticate, authorize('admin', 'instructor'), async (req, res) => {
+  try {
+    const { phone } = req.body;
+    await db.query('UPDATE users SET phone = $1 WHERE id = $2', [phone, req.params.id]);
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+});
+
+router.get('/my/schedule', authenticate, authorize('student'), getMySchedule);
+router.post('/my/prep-slots', authenticate, authorize('student'), addMyPrepSlots);
+router.delete('/my/prep-slots/:id', authenticate, authorize('student'), deleteMyPrepSlot);
+
+router.get(
+  '/instructor/my-lessons',
+  authenticate,
+  authorize('instructor', 'admin'),
+  getInstructorMyLessonsCalendar
+);
+
+router.get('/:id', authenticate, getStudent);
+
+module.exports = router;

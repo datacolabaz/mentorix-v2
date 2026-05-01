@@ -533,4 +533,33 @@ const addMyPrepSlots = async (req, res) => {
        RETURNING id, day_of_week, start_time, end_time, created_at`,
       [studentId, start, end, uniq]
     );
-    res.status(201)
+    res.status(201).json({ success: true, slots: rows });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+const deleteMyPrepSlot = async (req, res) => {
+  try {
+    const studentId = req.user.id;
+    const { id } = req.params;
+    const { rowCount } = await db.query(
+      `DELETE FROM student_prep_slots WHERE id = $1 AND student_id = $2`,
+      [id, studentId]
+    );
+    if (rowCount === 0) return res.status(404).json({ success: false, message: 'Tapılmadı' });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+module.exports = {
+  listStudents,
+  getStudent,
+  deleteStudent,
+  getMySchedule,
+  getInstructorMyLessonsCalendar,
+  addMyPrepSlots,
+  deleteMyPrepSlot,
+};
