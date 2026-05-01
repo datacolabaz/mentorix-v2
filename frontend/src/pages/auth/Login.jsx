@@ -540,14 +540,15 @@ export default function Login() {
                     type="button"
                     className="w-full text-center text-xs text-gray-500 hover:text-white mt-4"
                     onClick={() => {
-                      setMode('google')
-                      setStep('google')
                       setRole(null)
                       setPhone('')
                       setPinInput('')
+                      setStep('phone')
+                      setOtpCode('')
+                      setOtpSent(false)
                     }}
                   >
-                    ← Google ilə daxil ol
+                    Rol seçiminə geri qayıt
                   </button>
                 </>
               ) : null}
