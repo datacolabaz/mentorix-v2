@@ -71,6 +71,16 @@ function materialFileApiPath(url, examId) {
   return `/exams/by-exam/${encodeURIComponent(examId)}/attachment/${encodeURIComponent(fn)}`
 }
 
+function apiAbsoluteUrl(pathnameWithLeadingSlash) {
+  const p = String(pathnameWithLeadingSlash || '')
+  if (!p) return ''
+  const base = String(api?.defaults?.baseURL || '/api').replace(/\/+$/, '')
+  if (base.startsWith('http')) return `${base}${p}`
+  if (typeof window === 'undefined') return `${base}${p}`
+  const pref = base.startsWith('/') ? base : `/${base}`
+  return `${window.location.origin}${pref}${p}`
+}
+
 /** Yeni pəncərə: img Authorization göndərmir → qısa müddətli token URL */
 function materialOpenInNewTabUrl(rel, examId) {
   const s = String(rel || '')
@@ -83,29 +93,15 @@ function materialOpenInNewTabUrl(rel, examId) {
     const withToken = token
       ? `${directAttachmentPath}${directAttachmentPath.includes('?') ? '&' : '?'}token=${encodeURIComponent(token)}`
       : directAttachmentPath
-    const raw = (import.meta.env.VITE_API_URL || '/api').trim().replace(/\/$/, '')
-    if (raw.startsWith('http')) {
-      const root = raw.endsWith('/api') ? raw : raw.includes('/api') ? raw : `${raw}/api`
-      return `${root.replace(/\/$/, '')}${withToken}`
-    }
-    if (typeof window === 'undefined') return withToken
-    const prefix = raw.startsWith('/') ? raw : `/${raw || 'api'}`
-    return `${window.location.origin}${prefix}${withToken}`
+    return apiAbsoluteUrl(withToken)
   }
 
   const fn = examUploadsStoredFilename(rel)
   if (!fn || !examId) return resolveMaterialUrl(rel)
   const token = typeof localStorage !== 'undefined' ? localStorage.getItem('mx_token') : ''
   if (!token) return resolveMaterialUrl(rel)
-  const raw = (import.meta.env.VITE_API_URL || '/api').trim().replace(/\/$/, '')
   const path = `/exams/by-exam/${encodeURIComponent(examId)}/attachment/${encodeURIComponent(fn)}?token=${encodeURIComponent(token)}`
-  if (raw.startsWith('http')) {
-    const root = raw.endsWith('/api') ? raw : raw.includes('/api') ? raw : `${raw}/api`
-    return `${root.replace(/\/$/, '')}${path}`
-  }
-  if (typeof window === 'undefined') return path
-  const prefix = raw.startsWith('/') ? raw : `/${raw || 'api'}`
-  return `${window.location.origin}${prefix}${path}`
+  return apiAbsoluteUrl(path)
 }
 
 /** exam_files JSONB / string + köhnə pdf_url — vahid siyahı */
