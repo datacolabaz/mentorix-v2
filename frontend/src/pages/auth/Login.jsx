@@ -218,6 +218,10 @@ export default function Login() {
         text: 'continue_with',
         shape: 'pill',
       })
+
+      // Mobile Safari / some layouts can make the GIS iframe ignore taps if layered.
+      // Ensure the container is clickable and provide a fallback click handler.
+      googleBtnRef.current.style.pointerEvents = 'auto'
     } catch {
       // ignore
     }
@@ -322,7 +326,18 @@ export default function Login() {
                 <>
                   {step === 'google' ? (
                     <div className="space-y-4">
-                      <div ref={googleBtnRef} className="flex justify-center" />
+                      <div
+                        className="relative z-10 flex justify-center w-full pointer-events-auto"
+                        onClick={() => {
+                          try {
+                            window.google?.accounts?.id?.prompt?.()
+                          } catch {
+                            // ignore
+                          }
+                        }}
+                      >
+                        <div ref={googleBtnRef} className="pointer-events-auto" style={{ minHeight: 44 }} />
+                      </div>
                       <div className="text-center">
                         <button
                           type="button"
