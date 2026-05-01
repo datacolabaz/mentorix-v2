@@ -48,6 +48,7 @@ app.use('/api/tasks', require('./routes/tasks'));
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/sms-logs', require('./routes/smsLogs'));
 app.use('/api/admin', require('./routes/admin'));
+app.use('/api/trial', require('./routes/trial'));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 app.get('/api/meta', (req, res) =>
