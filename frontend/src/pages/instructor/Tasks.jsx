@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import api from '../../lib/api'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
 import { useToast } from '../../components/common/Toast'
 import useUiStore from '../../hooks/useUi'
+import { BILLING_STATUS_QUERY_KEY, useBillingStatus } from '../../hooks/useBillingStatus'
 
 function fmtDue(d) {
   if (!d) return ''
@@ -50,6 +52,10 @@ export default function InstructorTasks() {
   const [review, setReview] = useState(null)
   const toast = useToast()
   const { setFocusMode } = useUiStore()
+  const queryClient = useQueryClient()
+  const billingQ = useBillingStatus()
+  const billing = billingQ.data || null
+  const blocked = Boolean(billing?.should_block)
 
   const [form, setForm] = useState({
     title: '',
@@ -107,6 +113,10 @@ export default function InstructorTasks() {
   }
 
   const submit = async () => {
+    if (blocked) {
+      toast(billing?.messages?.banner || 'Məhdudiyyətə görə bu əməliyyat deaktivdir', 'error')
+      return
+    }
     const title = String(form.title || '').trim()
     if (!title) {
       toast('Tapşırığın adı tələb olunur', 'error')
@@ -130,6 +140,7 @@ export default function InstructorTasks() {
       setOpen(false)
       setForm({ title: '', topic: '', question_file_url: '', description: '', due_date: '', selectedStudentIds: [] })
       await load()
+      queryClient.invalidateQueries({ queryKey: BILLING_STATUS_QUERY_KEY })
     } catch (e) {
       toast(e?.message || 'Xəta', 'error')
     } finally {
@@ -138,6 +149,10 @@ export default function InstructorTasks() {
   }
 
   const uploadQuestionFile = async (file) => {
+    if (blocked) {
+      toast(billing?.messages?.banner || 'Məhdudiyyətə görə bu əməliyyat deaktivdir', 'error')
+      return
+    }
     if (!file) return
     setSaving(true)
     try {
@@ -147,6 +162,7 @@ export default function InstructorTasks() {
       if (r?.url) {
         setForm((p) => ({ ...p, question_file_url: r.url }))
         toast('Fayl yükləndi', 'success')
+        queryClient.invalidateQueries({ queryKey: BILLING_STATUS_QUERY_KEY })
       }
     } catch (e) {
       toast(e?.message || 'Fayl yüklənmədi', 'error')
@@ -362,6 +378,7 @@ export default function InstructorTasks() {
                   className="hidden"
                   accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xlsx,.xls,.csv,application/pdf,image/png,image/jpeg,text/csv,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                   onChange={(e) => void uploadQuestionFile(e.target.files?.[0])}
+                  disabled={blocked}
                 />
               </label>
             </div>

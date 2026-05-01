@@ -8,6 +8,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.100.7",
     "axios": "^1.6.0",
     "date-fns": "^3.0.0",
     "html2canvas": "^1.4.1",

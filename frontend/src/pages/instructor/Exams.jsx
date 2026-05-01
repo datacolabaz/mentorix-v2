@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import api from '../../lib/api'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
@@ -8,6 +9,7 @@ import ListSkeleton from '../../components/common/ListSkeleton'
 import { useToast } from '../../components/common/Toast'
 import { localDatetimeInputToUtcIso, utcInstantToDatetimeLocalValue } from '../../lib/examDatetime'
 import useUiStore from '../../hooks/useUi'
+import { BILLING_STATUS_QUERY_KEY, useBillingStatus } from '../../hooks/useBillingStatus'
 
 function initEditQuestion(q) {
   const type = String(q.question_type || '').trim()
@@ -160,6 +162,10 @@ export default function InstructorExams() {
   const [examsError, setExamsError] = useState(null)
   const toast = useToast()
   const { theme } = useUiStore()
+  const queryClient = useQueryClient()
+  const billingQ = useBillingStatus()
+  const billing = billingQ.data || null
+  const blocked = Boolean(billing?.should_block)
 
   const loadExams = async () => {
     setExamsError(null)
@@ -406,6 +412,11 @@ export default function InstructorExams() {
   }
 
   const handleEditMaterialsChange = async (e) => {
+    if (blocked) {
+      toast(billing?.messages?.banner || 'Məhdudiyyətə görə bu əməliyyat deaktivdir', 'error')
+      e.target.value = ''
+      return
+    }
     const files = Array.from(e.target.files || [])
     if (!files.length) return
     setEditMaterialBusy(true)
@@ -424,6 +435,7 @@ export default function InstructorExams() {
       )
       setEditMaterialFiles((prev) => [...prev, ...results])
       toast(`${results.length} fayl serverə yükləndi`)
+      queryClient.invalidateQueries({ queryKey: BILLING_STATUS_QUERY_KEY })
     } catch (err) {
       toast(err.message || 'Fayl yüklənmədi (yalnız PDF, JPG, PNG)', 'error')
     } finally {
@@ -978,6 +990,7 @@ export default function InstructorExams() {
                   size="sm"
                   variant="secondary"
                   loading={editMaterialBusy}
+                  disabled={blocked}
                   onClick={() => editMaterialsInputRef.current?.click()}
                 >
                   Faylı yenilə
@@ -990,6 +1003,7 @@ export default function InstructorExams() {
                 accept="application/pdf,image/png,image/jpeg,.pdf,.png,.jpg,.jpeg"
                 className="hidden"
                 onChange={handleEditMaterialsChange}
+                disabled={blocked}
               />
               {editMaterialFiles.length === 0 ? (
                 <div className="text-xs text-gray-500">Hələ material seçilməyib.</div>

@@ -8,6 +8,9 @@ import Brand from '../components/common/Brand'
 import Footer from '../components/common/Footer'
 import { sidebarNavClass } from '../lib/sidebarNavClass'
 import NavIcon from '../components/common/NavIcon'
+import BillingBanner from '../components/common/BillingBanner'
+import BillingUsagePills from '../components/common/BillingUsagePills'
+import { useBillingStatus } from '../hooks/useBillingStatus'
 
 const NAV_SECTIONS = [
   {
@@ -46,6 +49,8 @@ export default function InstructorLayout() {
   const [limitStatus, setLimitStatus] = useState({ level: null, message: null })
   const [notifFetchAt, setNotifFetchAt] = useState(0)
   const [hasAlerts, setHasAlerts] = useState(false)
+  const billingQ = useBillingStatus()
+  const billing = billingQ.data || null
 
   const notifUnread = useMemo(() => {
     if (!hasAlerts || !notifFetchAt) return false
@@ -209,6 +214,11 @@ export default function InstructorLayout() {
                 {instructorRoleAz(user?.public_label)}
               </div>
             </div>
+            {billing ? (
+              <div className="mt-3">
+                <BillingUsagePills billing={billing} />
+              </div>
+            ) : null}
           </div>
 
         <div
@@ -344,6 +354,14 @@ export default function InstructorLayout() {
           ].join(' ')}
         >
         <div className="min-h-full flex flex-col">
+          <div className="mx-4 sm:mx-6 mt-4">
+            <BillingBanner
+              status={billing?.status}
+              banner={billing?.messages?.banner || null}
+              cta={billing?.messages?.cta || null}
+              onCta={() => navigate('/instructor/settings')}
+            />
+          </div>
           {limitStatus.level ? (
             <div
               className={`mx-4 sm:mx-6 mt-4 rounded-2xl border px-4 py-3 text-sm ${

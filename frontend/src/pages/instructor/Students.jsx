@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { format, isValid, parseISO } from 'date-fns'
 import api from '../../lib/api'
 import Card from '../../components/common/Card'
@@ -12,6 +13,7 @@ import { fmtAzBakuLessonRow } from '../../lib/lessonWeekGrid'
 import { readCache, writeCache } from '../../lib/cache'
 import useUiStore from '../../hooks/useUi'
 import PortalMenu from '../../components/common/PortalMenu'
+import { BILLING_STATUS_QUERY_KEY, useBillingStatus } from '../../hooks/useBillingStatus'
 
 const BILLING_OPTS = [
   { value: '8_lessons', label: '8 Ders' },
@@ -555,6 +557,10 @@ export default function InstructorStudents() {
   const [actionMenuId, setActionMenuId] = useState(null)
   const { theme } = useUiStore()
   const actionAnchorsRef = useRef(new Map())
+  const queryClient = useQueryClient()
+  const billingQ = useBillingStatus()
+  const billing = billingQ.data || null
+  const blocked = Boolean(billing?.should_block)
 
   const CACHE_KEY = 'instructor_students_v1'
   const CACHE_TTL_MS = 60000
@@ -617,6 +623,10 @@ export default function InstructorStudents() {
   }, [])
 
   const addStudent = async () => {
+    if (blocked) {
+      toast(billing?.messages?.banner || 'Məhdudiyyətə görə bu əməliyyat deaktivdir', 'error')
+      return
+    }
     if (!form.full_name || !form.phone) {
       toast('Ad ve telefon teleb olunur', 'error')
       return
@@ -673,6 +683,7 @@ export default function InstructorStudents() {
       setAddModal(false)
       setForm(emptyForm)
       load()
+      queryClient.invalidateQueries({ queryKey: BILLING_STATUS_QUERY_KEY })
     } catch (err) {
       toast(err.message || 'Xeta', 'error')
     } finally {
@@ -1063,6 +1074,7 @@ export default function InstructorStudents() {
         </div>
         <Button
           className="w-full sm:w-auto shrink-0 justify-center py-2.5 px-5"
+          disabled={blocked}
           onClick={() => {
             setForm(emptyForm)
             setAddModal(true)

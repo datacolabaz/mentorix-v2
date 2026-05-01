@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import api from '../../lib/api'
 import Card from '../../components/common/Card'
@@ -9,6 +10,7 @@ import useAuthStore from '../../hooks/useAuth'
 import useUiStore from '../../hooks/useUi'
 import { useToast } from '../../components/common/Toast'
 import { writeCache } from '../../lib/cache'
+import { BILLING_STATUS_QUERY_KEY, useBillingStatus } from '../../hooks/useBillingStatus'
 
 export default function InstructorDashboard() {
   const { user } = useAuthStore()
@@ -31,6 +33,10 @@ export default function InstructorDashboard() {
   const [quickBusy, setQuickBusy] = useState(false)
   const [smsProfile, setSmsProfile] = useState(null)
   const [smsProfileLoading, setSmsProfileLoading] = useState(false)
+  const queryClient = useQueryClient()
+  const billingQ = useBillingStatus()
+  const billing = billingQ.data || null
+  const blocked = Boolean(billing?.should_block)
 
   useEffect(() => {
     let cancelled = false
@@ -104,6 +110,10 @@ export default function InstructorDashboard() {
     if (!msg) return toast('Mesaj tələb olunur', 'error')
     if (!quickSelectedIds.length) return toast('Tələbələr seçilməlidir', 'error')
 
+    if (blocked) {
+      return toast(billing?.messages?.banner || 'Məhdudiyyətə görə bu əməliyyat deaktivdir', 'error')
+    }
+
     if (quickMethod === 'sms' && smsDisabled) {
       return toast('Limitiniz bitib, artırmaq üçün adminlə əlaqə saxlayın', 'error')
     }
@@ -131,6 +141,7 @@ export default function InstructorDashboard() {
       }
 
       toast(quickMethod === 'sms' ? 'SMS göndərildi' : 'Bildiriş göndərildi', 'success')
+      queryClient.invalidateQueries({ queryKey: BILLING_STATUS_QUERY_KEY })
       setQuickOpen(false)
       setQuickMessage('')
       setQuickSelectedIds([])
