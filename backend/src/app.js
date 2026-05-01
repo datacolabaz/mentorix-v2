@@ -97,4 +97,38 @@ cron.schedule('*/10 * * * *', () => {
 });
 
 cron.schedule('25 */6 * * *', () => {
-  extendMonthlyAttendanceSlots().catch((e) => console.error('monthly attendance
+  extendMonthlyAttendanceSlots().catch((e) => console.error('monthly attendance slots cron', e.message));
+});
+
+// Billing notifications: hourly check for "2 days left" and "last lesson"
+cron.schedule('15 * * * *', () => {
+  runBillingNotifications().catch((e) => console.error('billing notifications cron', e.message));
+});
+
+// Pack reminders fallback: every 30 minutes
+cron.schedule('*/30 * * * *', () => {
+  runPackReminders().catch((e) => console.error('pack reminders cron', e.message));
+});
+
+// Billing payments cleanup + subscription past_due: every 15 minutes
+cron.schedule('*/15 * * * *', () => {
+  expireAbandonedBillingPayments().catch((e) => console.error('billing payments reaper cron', e.message));
+  markPastDueSubscriptions().catch((e) => console.error('subscription past_due cron', e.message));
+});
+
+// Notification queue retry worker: every minute
+cron.schedule('* * * * *', () => {
+  runNotificationQueueOnce().catch((e) => console.error('notification queue cron', e.message));
+});
+
+// Storage usage reconciliation: every 6 hours
+cron.schedule('0 */6 * * *', () => {
+  reconcileStorageUsage().catch((e) => console.error('storage usage reconcile cron', e.message));
+});
+
+// Orphan files cleanup: daily at 03:30
+cron.schedule('30 3 * * *', () => {
+  runOrphanFilesReaper().catch((e) => console.error('orphan files reaper cron', e.message));
+});
+
+module.exports = app;
