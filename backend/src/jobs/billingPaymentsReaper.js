@@ -28,4 +28,37 @@ async function markPastDueSubscriptions() {
       `UPDATE subscriptions
        SET status = 'past_due',
            grace_until = NOW() + interval '2 days',
-     
+           updated_at = NOW()
+       WHERE status = 'active'
+         AND current_period_end IS NOT NULL
+         AND current_period_end < NOW()
+       RETURNING user_id, current_period_end`
+    );
+    // Minimal renewal reminder email (fallback channel).
+    for (const r of rows || []) {
+      const iso = r.current_period_end ? new Date(r.current_period_end).toISOString() : null;
+      const period = new Date().toISOString().slice(0, 7);
+      const direct = await sendRenewalReminderEmail({ userId: r.user_id, daysLeft: 0, periodEndIso: iso }).catch(() => ({
+        skipped: false,
+        error: true,
+      }));
+      if (direct?.skipped || direct?.error) {
+        await enqueueNotification({
+          channel: 'email',
+          event_type: 'subscription_past_due',
+          unique_key: `subscription_past_due_${r.user_id}_${period}`,
+          user_id: r.user_id,
+          to_addr: '__resolve__',
+          subject: `Mentorix — Abunə bitdi`,
+          body: `Abunənizin müddəti bitib.\nBitmə tarixi: ${iso || '—'}\nPanel → Upgrade/Ödəniş ilə yeniləyin.\n`,
+          context: { periodEnd: iso },
+        }).catch(() => {});
+      }
+    }
+  } catch {
+    // ignore (migration not applied yet)
+  }
+}
+
+module.exports = { expireAbandonedBillingPayments, markPastDueSubscriptions };
+
