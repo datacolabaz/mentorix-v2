@@ -233,6 +233,7 @@ export default function InstructorDashboard() {
   }
 
   return (
+    <>
       <Modal open={onboardOpen} onClose={closeOnboard} title="Başlayaq" size="sm">
         <div className="space-y-3">
           <div className="text-sm text-gray-200 font-semibold">İlk tələbəni əlavə et</div>
@@ -253,7 +254,7 @@ export default function InstructorDashboard() {
           </Button>
         </div>
       </Modal>
-    <div className="p-4 sm:p-6 min-w-0">
+      <div className="p-4 sm:p-6 min-w-0">
       <div className="mb-6">
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
           <div>
@@ -408,6 +409,7 @@ export default function InstructorDashboard() {
           </div>
         </Card>
       </div>
+      </div>
 
       <Modal open={quickOpen} onClose={() => setQuickOpen(false)} title="Sürətli Bildiriş" size="xl">
         <div className="space-y-5">
@@ -520,6 +522,6 @@ export default function InstructorDashboard() {
           </div>
         </div>
       </Modal>
-    </div>
+    </>
   )
 }
