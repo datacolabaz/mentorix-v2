@@ -8,6 +8,8 @@ const DEFAULT_TRIAL = {
   dailyStudentLimit: 2,
 };
 
+const TRIAL_TIMEZONE = 'Asia/Baku';
+
 function ceilDaysLeft(endDate) {
   const endMs = new Date(endDate).getTime();
   if (!Number.isFinite(endMs)) return 0;
@@ -17,7 +19,7 @@ function ceilDaysLeft(endDate) {
 
 async function bakuTodayYmdDb(dbConn) {
   const { rows } = await dbConn.query(
-    `SELECT to_char((CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Baku')::date, 'YYYY-MM-DD') AS ymd`
+    `SELECT to_char((CURRENT_TIMESTAMP AT TIME ZONE '${TRIAL_TIMEZONE}')::date, 'YYYY-MM-DD') AS ymd`
   );
   return rows[0]?.ymd || new Date().toISOString().slice(0, 10);
 }
@@ -101,18 +103,36 @@ router.get('/status', authenticate, authorize('instructor'), async (req, res) =>
     const trialActiveByTime = Boolean(trial && ends_at && Date.now() <= new Date(ends_at).getTime());
     const is_active = Boolean(trialActiveByFlags && trialActiveByTime);
 
-    const should_warn = remaining <= 1;
-    const should_block = !is_active || used >= limit || !phone_verified;
-
+    // Status priority (single source of truth for UI):
+    // 1) phone not verified -> blocked
+    // 2) trial not active (inactive flag OR time passed) -> expired
+    // 3) limit reached -> blocked
+    // 4) 1 slot left -> warning
+    // 5) otherwise -> active
     let status = 'active';
     if (!phone_verified) status = 'blocked';
-    else if (!trial) status = 'blocked';
-    else if (!trialActiveByFlags) status = 'blocked';
-    else if (!trialActiveByTime) status = 'expired';
+    else if (!is_active) status = 'expired';
     else if (used >= limit) status = 'blocked';
-    else if (should_warn) status = 'warning';
+    else if (remaining <= 1) status = 'warning';
+
+    const should_warn = status === 'warning';
+    const should_block = status === 'blocked' || status === 'expired';
+
+    let banner = null;
+    let cta = null;
+    if (status === 'warning') {
+      banner = remaining === 1 ? 'You have 1 student slot left' : `You have ${remaining} student slots left`;
+      cta = 'Upgrade to continue';
+    } else if (status === 'blocked') {
+      banner = !phone_verified ? 'Phone verification required' : 'Trial student limit reached';
+      cta = !phone_verified ? 'Verify phone to start trial' : 'Upgrade to continue';
+    } else if (status === 'expired') {
+      banner = 'Trial expired';
+      cta = 'Upgrade to continue';
+    }
 
     return res.json({
+      timezone: TRIAL_TIMEZONE,
       is_active,
       days_left,
       ends_at,
@@ -128,6 +148,10 @@ router.get('/status', authenticate, authorize('instructor'), async (req, res) =>
       },
       requirements: {
         phone_verified,
+      },
+      messages: {
+        banner,
+        cta,
       },
       status,
       should_warn,
