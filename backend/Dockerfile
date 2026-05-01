@@ -3,8 +3,8 @@ FROM node:18-bullseye-slim
 WORKDIR /app
 
 # Install deps first (better layer caching)
-COPY package*.json ./
-RUN npm ci --omit=dev --no-audit --no-fund
+COPY package.json package-lock.json ./
+RUN test -f package-lock.json && npm ci --omit=dev --no-audit --no-fund
 
 # App source
 COPY . .
