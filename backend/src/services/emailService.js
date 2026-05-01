@@ -57,4 +57,5 @@ async function sendRenewalReminderEmail({ userId, daysLeft, periodEndIso }) {
   return await sendEmail({ to, subject: subj, text: txt });
 }
 
-module.exports = { smtpEnabled, sendEmail, userEmail, sendPaymentEmail, sendR
+module.exports = { smtpEnabled, sendEmail, userEmail, sendPaymentEmail, sendRenewalReminderEmail };
+
