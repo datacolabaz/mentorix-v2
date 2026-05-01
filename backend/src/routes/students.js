@@ -11,6 +11,28 @@ const {
 const { authenticate, authorize } = require('../middleware/auth');
 const db = require('../utils/db');
 const { deliverPermanentPinSms } = require('../controllers/authController');
+const {
+  requireInstructorPhoneVerified,
+  checkTrialActive,
+  checkStudentLimit,
+  checkDailyStudentLimit,
+  consumeTrialStudentSlotTx,
+} = require('../middleware/trial');
+
+function enforceTrialForInstructors(req, res, next) {
+  // Admin actions shouldn't be blocked by trial gating.
+  if (req.user?.role === 'admin') return next();
+  return requireInstructorPhoneVerified(req, res, (e1) => {
+    if (e1) return next(e1);
+    return checkTrialActive(req, res, (e2) => {
+      if (e2) return next(e2);
+      return checkStudentLimit(req, res, (e3) => {
+        if (e3) return next(e3);
+        return checkDailyStudentLimit(req, res, next);
+      });
+    });
+  });
+}
 
 function normalizePhoneDigits(phone) {
   return String(phone || '').replace(/\D/g, '');
@@ -369,7 +391,7 @@ router.get('/', authenticate, authorize('admin', 'instructor'), listStudents);
 
 router.delete('/enrollment/:enrollmentId', authenticate, authorize('admin', 'instructor'), deleteStudent);
 
-router.post('/enroll', authenticate, authorize('instructor', 'admin'), async (req, res) => {
+router.post('/enroll', authenticate, authorize('instructor', 'admin'), enforceTrialForInstructors, async (req, res) => {
   try {
     const {
       student_id,
@@ -604,6 +626,12 @@ router.post('/enroll', authenticate, authorize('instructor', 'admin'), async (re
             [enr.id, student_id, instructor_id, starts[i], i + 1]
           );
         }
+      }
+
+      // Trial usage: only count successful enrollments made by instructors (not admin).
+      if (req.user?.role === 'instructor') {
+        const ymd = req.trial_today_ymd || todayBaku;
+        await consumeTrialStudentSlotTx(client, instructor_id, ymd);
       }
       return enr;
     });
