@@ -326,17 +326,12 @@ export default function Login() {
                 <>
                   {step === 'google' ? (
                     <div className="space-y-4">
-                      <div
-                        className="relative z-10 flex justify-center w-full pointer-events-auto"
-                        onClick={() => {
-                          try {
-                            window.google?.accounts?.id?.prompt?.()
-                          } catch {
-                            // ignore
-                          }
-                        }}
-                      >
-                        <div ref={googleBtnRef} className="pointer-events-auto" style={{ minHeight: 44 }} />
+                      <div className="relative z-10 flex justify-center">
+                        <div
+                          ref={googleBtnRef}
+                          className="pointer-events-auto inline-flex"
+                          style={{ minHeight: 44, maxWidth: '100%', overflow: 'hidden' }}
+                        />
                       </div>
                       <div className="text-center">
                         <button
@@ -354,8 +349,8 @@ export default function Login() {
                         </button>
                       </div>
                       <div className="text-[11px] text-gray-500 leading-relaxed text-center">
-                        Yeni istifadəçi onboarding <strong className="text-gray-300">Google</strong> ilə başlayır. Telefon/PIN yalnız
-                        mövcud hesablar üçün backup girişdir.
+                        Yeni hesab üçün <strong className="text-gray-300">Google</strong> ilə davam edin. Mövcud hesabınız varsa{' '}
+                        <strong className="text-gray-300">Telefonla daxil ol</strong>.
                       </div>
                     </div>
                   ) : null}
