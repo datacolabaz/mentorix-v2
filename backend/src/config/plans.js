@@ -1,15 +1,18 @@
 const PLANS = {
   basic: {
+    price_azn: 15,
     students: 20,
     storage_mb: 1024, // 1 GB
     sms_monthly: 30,
   },
   pro: {
+    price_azn: 29,
     students: 100,
     storage_mb: 5120, // 5 GB
     sms_monthly: 200,
   },
   business: {
+    price_azn: 49,
     students: null, // unlimited
     storage_mb: 20480, // 20 GB
     sms_monthly: 500,

@@ -1,5 +1,7 @@
+import { useState } from 'react'
 import Modal from '../common/Modal'
 import Button from '../common/Button'
+import api from '../../lib/api'
 
 const PLANS = [
   { id: 'basic', title: 'BASIC', price: '15 AZN/ay', highlight: false, items: ['20 students', '1GB storage', '30 SMS'] },
@@ -8,11 +10,18 @@ const PLANS = [
 ]
 
 export default function UpgradeModal({ open, onClose, onSelectPlan }) {
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState(null)
   return (
     <Modal open={open} onClose={onClose} title="Upgrade" size="lg">
       <div className="space-y-4">
+        {err ? (
+          <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 text-rose-100 px-4 py-3 text-sm">
+            {err}
+          </div>
+        ) : null}
         <p className="text-sm text-token-textMuted">
-          Plan seçin. Ödəniş inteqrasiyası (Stripe/iyzico) növbəti mərhələdə qoşulacaq; indi bir kliklə “upgrade tələbini” göndərə bilərsiniz.
+          Plan seçin və Payriff ilə ödəniş edin. Ödəniş uğurlu olarsa plan dərhal aktivləşəcək.
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {PLANS.map((p) => (
@@ -36,7 +45,27 @@ export default function UpgradeModal({ open, onClose, onSelectPlan }) {
                 ))}
               </ul>
               <div className="mt-4">
-                <Button className="w-full justify-center" variant={p.highlight ? 'primary' : 'secondary'} onClick={() => onSelectPlan(p.id)}>
+                <Button
+                  className="w-full justify-center"
+                  variant={p.highlight ? 'primary' : 'secondary'}
+                  loading={busy}
+                  disabled={busy}
+                  onClick={async () => {
+                    setErr(null)
+                    setBusy(true)
+                    try {
+                      const r = await api.post('/billing/create-payment', { plan: p.id })
+                      const url = r?.payment?.payment_url
+                      if (!url) throw new Error('Ödəniş linki alınmadı')
+                      onSelectPlan?.(p.id)
+                      window.location.href = url
+                    } catch (e) {
+                      setErr(e?.message || 'Ödəniş yaradılmadı')
+                    } finally {
+                      setBusy(false)
+                    }
+                  }}
+                >
                   {p.highlight ? 'Upgrade to PRO' : 'Choose'}
                 </Button>
               </div>

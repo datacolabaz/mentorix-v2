@@ -229,7 +229,7 @@ async function resolveEntitlements(userId) {
     sms_monthly: remaining(limits.sms_monthly, used.sms_monthly),
   };
 
-  const is_active = trial_active ? true : true; // plan subscriptions assumed active in this stage
+  const is_active = trial_active ? true : true; // payment provider integration will refine this later
   const status = buildStatus({
     phone_verified,
     is_active: trial_active ? true : true,
@@ -260,6 +260,28 @@ async function resolveEntitlements(userId) {
     timezone: TZ,
   };
 }
+
+async function getCurrentPlan(dbConn, userId) {
+  const { rows } = await dbConn.query(
+    `SELECT plan, status, current_period_end, pending_plan, pending_effective_at
+     FROM subscriptions
+     WHERE user_id = $1
+     LIMIT 1`,
+    [userId]
+  );
+  const r = rows[0] || null;
+  return r
+    ? {
+        plan: normalizePlanSlug(r.plan),
+        status: String(r.status || 'active'),
+        current_period_end: r.current_period_end || null,
+        pending_plan: r.pending_plan ? normalizePlanSlug(r.pending_plan) : null,
+        pending_effective_at: r.pending_effective_at || null,
+      }
+    : { plan: 'basic', status: 'active', current_period_end: null, pending_plan: null, pending_effective_at: null };
+}
+
+module.exports.getCurrentPlan = getCurrentPlan;
 
 async function bumpUsageCountersTx(client, userId, patch) {
   const fields = [];
