@@ -951,11 +951,17 @@ const googleComplete = async (req, res) => {
 
     if (!user) {
       const fullName = g.name || (g.email ? g.email.split('@')[0] : 'User');
+      // Some production DBs still enforce NOT NULL on password_hash. Google users don't have a password,
+      // but password-based login paths must still fail safely (bcrypt compare against a random hash).
+      const oauthPasswordPlaceholder = await bcrypt.hash(
+        `google_oauth:${g.sub}:${Date.now()}:${Math.random()}`,
+        10
+      );
       const { rows: created } = await db.query(
-        `INSERT INTO users (full_name, email, role, auth_provider, google_sub, phone_verified)
-         VALUES ($1, $2, $3, 'google', $4, FALSE)
+        `INSERT INTO users (full_name, email, role, auth_provider, google_sub, phone_verified, password_hash)
+         VALUES ($1, $2, $3, 'google', $4, FALSE, $5)
          RETURNING id, full_name, email, role, phone, phone_verified`,
-        [fullName, g.email, r, g.sub]
+        [fullName, g.email, r, g.sub, oauthPasswordPlaceholder]
       );
       user = created[0];
     } else if (!user.role) {
