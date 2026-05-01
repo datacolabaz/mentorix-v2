@@ -5,6 +5,10 @@ const stylesByStatus = {
     wrap: 'border-amber-500/30 bg-amber-500/10 text-amber-100',
     title: 'Diqqət',
   },
+  grace: {
+    wrap: 'border-amber-500/30 bg-amber-500/10 text-amber-100',
+    title: 'Ödəniş gecikib',
+  },
   blocked: {
     wrap: 'border-rose-500/30 bg-rose-500/10 text-rose-100',
     title: 'Məhdudiyyət',

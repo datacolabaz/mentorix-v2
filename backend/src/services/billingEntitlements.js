@@ -230,10 +230,21 @@ async function resolveEntitlements(userId) {
     sms_monthly: remaining(limits.sms_monthly, used.sms_monthly),
   };
 
+  const subStatus = String(sub2?.status || 'active');
+  const periodEndMs = sub2?.current_period_end ? new Date(sub2.current_period_end).getTime() : null;
+  const nowMs = Date.now();
+  const graceUntilMs = sub2?.grace_until ? new Date(sub2.grace_until).getTime() : null;
+  const inGrace =
+    !trial_active &&
+    subStatus === 'past_due' &&
+    (graceUntilMs == null ? false : nowMs <= graceUntilMs);
+
   const subscription_active =
-    String(sub2?.status || 'active') === 'active' &&
-    (!sub2?.current_period_end || new Date(sub2.current_period_end).getTime() >= Date.now());
-  const is_active = trial_active ? true : subscription_active;
+    subStatus === 'active' &&
+    (!periodEndMs || periodEndMs >= nowMs);
+
+  // Grace period: do not block actions, but show a "grace" state.
+  const is_active = trial_active ? true : subscription_active || inGrace;
   const status = buildStatus({
     phone_verified,
     is_active,
@@ -242,8 +253,9 @@ async function resolveEntitlements(userId) {
     remainingObj: rem,
   });
 
+  const status2 = inGrace ? 'grace' : status;
   const should_warn = status === 'warning';
-  const should_block = status === 'blocked' || status === 'expired';
+  const should_block = (status2 === 'blocked' || status2 === 'expired'); // grace is NOT blocking
   const messages = buildMessages(status, rem.students);
 
   return {
@@ -254,14 +266,15 @@ async function resolveEntitlements(userId) {
       days_left: trial_active ? ceilDaysLeft(trial.end_date) : 0,
     },
     subscription: {
-      status: String(sub2?.status || 'active'),
+      status: subStatus,
       current_period_end: sub2?.current_period_end ? new Date(sub2.current_period_end).toISOString() : null,
+      grace_until: sub2?.grace_until ? new Date(sub2.grace_until).toISOString() : null,
     },
     limits,
     usage: used,
     remaining: rem,
-    status,
-    should_warn,
+    status: status2,
+    should_warn: status2 === 'warning' || status2 === 'grace',
     should_block,
     messages,
     requirements: { phone_verified },
@@ -271,7 +284,7 @@ async function resolveEntitlements(userId) {
 
 async function getCurrentPlan(dbConn, userId) {
   const { rows } = await dbConn.query(
-    `SELECT plan, status, current_period_end, pending_plan, pending_effective_at
+    `SELECT plan, status, current_period_end, pending_plan, pending_effective_at, grace_until
      FROM subscriptions
      WHERE user_id = $1
      LIMIT 1`,
@@ -284,9 +297,10 @@ async function getCurrentPlan(dbConn, userId) {
       const { rows: up } = await dbConn.query(
         `UPDATE subscriptions
          SET status = 'past_due',
+             grace_until = NOW() + interval '2 days',
              updated_at = NOW()
          WHERE user_id = $1 AND status = 'active'
-         RETURNING plan, status, current_period_end, pending_plan, pending_effective_at`,
+         RETURNING plan, status, current_period_end, pending_plan, pending_effective_at, grace_until`,
         [userId]
       );
       if (up[0]) return {
@@ -295,6 +309,7 @@ async function getCurrentPlan(dbConn, userId) {
         current_period_end: up[0].current_period_end || null,
         pending_plan: up[0].pending_plan ? normalizePlanSlug(up[0].pending_plan) : null,
         pending_effective_at: up[0].pending_effective_at || null,
+        grace_until: up[0].grace_until || null,
       };
     } catch {
       // ignore
@@ -307,6 +322,7 @@ async function getCurrentPlan(dbConn, userId) {
         current_period_end: r.current_period_end || null,
         pending_plan: r.pending_plan ? normalizePlanSlug(r.pending_plan) : null,
         pending_effective_at: r.pending_effective_at || null,
+        grace_until: r.grace_until || null,
       }
     : { plan: 'basic', status: 'active', current_period_end: null, pending_plan: null, pending_effective_at: null };
 }

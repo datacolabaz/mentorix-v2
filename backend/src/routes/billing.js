@@ -4,6 +4,7 @@ const db = require('../utils/db');
 const { resolveEntitlements, logBillingEvent, getCurrentPlan } = require('../services/billingEntitlements');
 const { normalizePlanSlug, PLANS } = require('../config/plans');
 const { createOrder, getOrderInfo } = require('../services/payriffService');
+const { sendPaymentEmail } = require('../services/emailService');
 
 function planRank(p) {
   const s = normalizePlanSlug(p);
@@ -85,8 +86,58 @@ router.post('/events', authenticate, authorize('instructor'), async (req, res) =
   }
 });
 
+router.get('/invoices', authenticate, authorize('instructor'), async (req, res) => {
+  try {
+    const { rows } = await db.query(
+      `SELECT plan, amount_cents, status, COALESCE(paid_at, created_at) AS at
+       FROM billing_payments
+       WHERE user_id = $1
+       ORDER BY created_at DESC
+       LIMIT 200`,
+      [req.user.id]
+    );
+    const invoices = (rows || []).map((r) => ({
+      amount: Number(r.amount_cents || 0) / 100,
+      plan: r.plan,
+      date: r.at ? new Date(r.at).toISOString() : null,
+      status: r.status,
+    }));
+    res.json({ success: true, invoices });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 router.post('/create-payment', authenticate, authorize('instructor'), async (req, res) => {
   try {
+    // Fraud signals (soft): too many pending or failed spike.
+    try {
+      const { rows: p } = await db.query(
+        `SELECT
+           COUNT(*) FILTER (WHERE status='pending' AND created_at > NOW() - interval '30 minutes')::int AS pending_30m,
+           COUNT(*) FILTER (WHERE status='failed' AND created_at > NOW() - interval '2 hours')::int AS failed_2h
+         FROM billing_payments
+         WHERE user_id = $1`,
+        [req.user.id]
+      );
+      const pending30 = Number(p[0]?.pending_30m || 0) || 0;
+      const failed2h = Number(p[0]?.failed_2h || 0) || 0;
+      if (pending30 >= 3 || failed2h >= 5) {
+        await db.query(
+          `INSERT INTO risk_logs (user_id, ip, device_id, risk_score, context)
+           VALUES ($1, $2, $3, $4, $5::jsonb)`,
+          [
+            req.user.id,
+            clientIp(req),
+            String(req.headers['x-device-id'] || ''),
+            pending30 >= 3 ? 30 : 20,
+            JSON.stringify({ kind: 'billing_abuse', pending30, failed2h }),
+          ]
+        ).catch(() => {});
+      }
+    } catch {
+      // ignore
+    }
     const plan = normalizePlanSlug(req.body?.plan);
     if (!PLANS[plan]) return res.status(400).json({ success: false, code: 'PLAN_INVALID', message: 'PLAN_INVALID' });
 
@@ -99,10 +150,26 @@ router.post('/create-payment', authenticate, authorize('instructor'), async (req
     const priceAzn = Number(PLANS[plan]?.price_azn || 0) || 0;
     if (!priceAzn) return res.status(500).json({ success: false, code: 'PLAN_PRICE_MISSING', message: 'PLAN_PRICE_MISSING' });
 
+    // Optional proration (feature flag): charge only the difference for remaining days.
+    let finalPriceAzn = priceAzn;
+    if (String(process.env.PAYRIFF_PRORATION || '').trim() === '1' && cur?.current_period_end) {
+      const endMs = new Date(cur.current_period_end).getTime();
+      const nowMs = Date.now();
+      if (Number.isFinite(endMs) && endMs > nowMs) {
+        const remainingDays = Math.ceil((endMs - nowMs) / 86400000);
+        const periodDays = 30;
+        const fromPrice = Number(PLANS[from]?.price_azn || 0) || 0;
+        const diff = Math.max(0, priceAzn - fromPrice);
+        const prorated = diff * Math.min(1, Math.max(0, remainingDays / periodDays));
+        // Minimum charge 1 AZN to avoid zero orders.
+        finalPriceAzn = Math.max(1, Math.round(prorated * 100) / 100);
+      }
+    }
+
     const callbackUrl = callbackUrlFromReq(req);
     if (!callbackUrl) return res.status(500).json({ success: false, code: 'CALLBACK_URL_MISSING', message: 'CALLBACK_URL_MISSING' });
 
-    const amountCents = Math.round(priceAzn * 100);
+    const amountCents = Math.round(finalPriceAzn * 100);
     const { rows: ins } = await db.query(
       `INSERT INTO billing_payments (user_id, provider, plan, amount_cents, currency, status)
        VALUES ($1, 'payriff', $2, $3, 'AZN', 'pending')
@@ -110,9 +177,15 @@ router.post('/create-payment', authenticate, authorize('instructor'), async (req
       [req.user.id, plan, amountCents]
     );
     const paymentId = ins[0]?.id;
+    await db.query(
+      `UPDATE billing_payments
+       SET expires_at = NOW() + interval '30 minutes'
+       WHERE id = $1`,
+      [paymentId]
+    );
 
     const order = await createOrder({
-      amount: priceAzn,
+      amount: finalPriceAzn,
       currency: 'AZN',
       language: 'AZ',
       description: `Mentorix — ${plan.toUpperCase()} plan (30 days)`,
@@ -274,6 +347,28 @@ async function processPayriffCallback(req, res) {
         [existing.user_id, oldPlan, newPlan, existing.amount_cents || null, orderId]
       );
     });
+
+    // Email fallback (non-blocking)
+    try {
+      const { rows } = await db.query(
+        `SELECT user_id, plan, amount_cents FROM billing_payments
+         WHERE provider='payriff' AND external_order_id=$1
+         LIMIT 1`,
+        [orderId]
+      );
+      const r = rows[0];
+      if (r) {
+        await sendPaymentEmail({
+          userId: r.user_id,
+          plan: r.plan,
+          status: paid ? 'paid' : 'failed',
+          amountAzn: (Number(r.amount_cents || 0) / 100).toFixed(2),
+          orderId,
+        }).catch(() => {});
+      }
+    } catch {
+      // ignore
+    }
 
     return res.json({ success: true, orderId, paid });
   } catch (err) {
