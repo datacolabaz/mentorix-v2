@@ -138,9 +138,10 @@ export default function InstructorLayout() {
   }, [billing?.status])
 
   return (
-    <div
-      className={`theme-${theme} flex flex-col min-h-screen lg:h-screen bg-token-surfaceMain text-token-textMain overflow-x-hidden lg:overflow-hidden`}
-    >
+    <>
+      <div
+        className={`theme-${theme} flex flex-col min-h-screen lg:h-screen bg-token-surfaceMain text-token-textMain overflow-x-hidden lg:overflow-hidden`}
+      >
       {focusMode && (
         <button
           type="button"
@@ -432,7 +433,7 @@ export default function InstructorLayout() {
       </main>
       </div>
     </div>
-    <UpgradeModal
+      <UpgradeModal
       open={upgradeOpen}
       onClose={() => setUpgradeOpen(false)}
       onSelectPlan={(plan) => {
@@ -549,5 +550,6 @@ export default function InstructorLayout() {
         </form>
       )}
     </Modal>
+    </>
   )
 }
