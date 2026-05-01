@@ -17,6 +17,7 @@ const {
   checkStudentLimit,
   checkDailyStudentLimit,
 } = require('../middleware/trial');
+const { attachEntitlements, enforceStudentsLimit } = require('../middleware/entitlements');
 
 function enforceTrialForStudentRegister(req, res, next) {
   // Only gate instructor-created students. Admin should be unrestricted.
@@ -40,7 +41,15 @@ router.post('/phone/next-step', phoneNextStep);
 router.post('/pin/forgot-sms', forgotPinSms);
 router.post('/otp/send', sendOtp);
 router.post('/otp/verify', verifyOtp);
-router.post('/register', authenticate, authorize('admin', 'instructor'), enforceTrialForStudentRegister, register);
+router.post(
+  '/register',
+  authenticate,
+  authorize('admin', 'instructor'),
+  enforceTrialForStudentRegister,
+  attachEntitlements,
+  enforceStudentsLimit,
+  register
+);
 router.get('/me', authenticate, me);
 router.post('/pin/set', authenticate, setPin);
 router.post('/pin/login', loginWithPin);

@@ -1,4 +1,5 @@
 const db = require('../utils/db');
+const { ensureSmsPeriodUpToDate, bumpUsageCountersTx } = require('./billingEntitlements');
 
 const SMS_API = 'https://sendsms.az/smxml/api';
 const SMS_LOGIN = process.env.SMS_LOGIN;
@@ -141,6 +142,11 @@ const sendRaw = async (phone, message) => {
 
 const sendSms = async ({ instructorId, phone, message }) => {
   try {
+    // Enforce monthly reset source-of-truth on every SMS attempt (cron not required).
+    if (instructorId) {
+      await ensureSmsPeriodUpToDate(db, instructorId).catch(() => {});
+    }
+
     const raw = await sendRaw(phone, message);
     const interpreted = interpretSmxmlSuccess(raw);
     const statusRaw = raw?.json?.response?.status ?? raw?.json?.status ?? null;
@@ -157,7 +163,11 @@ const sendSms = async ({ instructorId, phone, message }) => {
     });
 
     if (interpreted.success && instructorId) {
-      await db.query('UPDATE instructor_profiles SET sms_used = sms_used + 1 WHERE user_id = $1', [instructorId]);
+      await db.transaction(async (client) => {
+        await bumpUsageCountersTx(client, instructorId, { sms_used_monthly: 1 });
+        // Keep legacy counter in instructor_profiles if present (best-effort).
+        await client.query('UPDATE instructor_profiles SET sms_used = sms_used + 1 WHERE user_id = $1', [instructorId]).catch(() => {});
+      });
     }
 
     return {

@@ -18,6 +18,7 @@ const {
   checkDailyStudentLimit,
   consumeTrialStudentSlotTx,
 } = require('../middleware/trial');
+const { attachEntitlements, enforceStudentsLimit } = require('../middleware/entitlements');
 
 function enforceTrialForInstructors(req, res, next) {
   // Admin actions shouldn't be blocked by trial gating.
@@ -391,7 +392,14 @@ router.get('/', authenticate, authorize('admin', 'instructor'), listStudents);
 
 router.delete('/enrollment/:enrollmentId', authenticate, authorize('admin', 'instructor'), deleteStudent);
 
-router.post('/enroll', authenticate, authorize('instructor', 'admin'), enforceTrialForInstructors, async (req, res) => {
+router.post(
+  '/enroll',
+  authenticate,
+  authorize('instructor', 'admin'),
+  enforceTrialForInstructors,
+  attachEntitlements,
+  enforceStudentsLimit,
+  async (req, res) => {
   try {
     const {
       student_id,

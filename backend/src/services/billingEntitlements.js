@@ -1,0 +1,247 @@
+const db = require('../utils/db');
+const { PLANS, TRIAL_LIMITS, normalizePlanSlug } = require('../config/plans');
+
+const TZ = 'Asia/Baku';
+
+function httpError(code, status = 403, message = code) {
+  const err = new Error(message);
+  err.code = code;
+  err.status = status;
+  err.statusCode = status;
+  return err;
+}
+
+async function currentYmBaku(dbConn) {
+  const { rows } = await dbConn.query(
+    `SELECT to_char((CURRENT_TIMESTAMP AT TIME ZONE '${TZ}'), 'YYYY-MM') AS ym`
+  );
+  return rows[0]?.ym || new Date().toISOString().slice(0, 7);
+}
+
+async function getUserBasics(dbConn, userId) {
+  const { rows } = await dbConn.query(
+    `SELECT id, role, is_active, phone_verified
+     FROM users
+     WHERE id = $1
+     LIMIT 1`,
+    [userId]
+  );
+  return rows[0] || null;
+}
+
+async function ensureSubscriptionRow(dbConn, userId) {
+  const { rows } = await dbConn.query(
+    `SELECT user_id, plan, status
+     FROM subscriptions
+     WHERE user_id = $1
+     LIMIT 1`,
+    [userId]
+  );
+  if (rows[0]) return rows[0];
+
+  const { rows: ins } = await dbConn.query(
+    `INSERT INTO subscriptions (user_id, plan, status)
+     VALUES ($1, 'basic', 'active')
+     RETURNING user_id, plan, status`,
+    [userId]
+  );
+  return ins[0] || { user_id: userId, plan: 'basic', status: 'active' };
+}
+
+async function ensureUsageRow(dbConn, userId) {
+  const { rows } = await dbConn.query(
+    `SELECT user_id, students_count, storage_used_mb, sms_used_monthly, sms_period_ym
+     FROM usage_counters
+     WHERE user_id = $1
+     LIMIT 1`,
+    [userId]
+  );
+  if (rows[0]) return rows[0];
+
+  const ym = await currentYmBaku(dbConn);
+  const { rows: ins } = await dbConn.query(
+    `INSERT INTO usage_counters (user_id, students_count, storage_used_mb, sms_used_monthly, sms_period_ym)
+     VALUES ($1, 0, 0, 0, $2)
+     RETURNING user_id, students_count, storage_used_mb, sms_used_monthly, sms_period_ym`,
+    [userId, ym]
+  );
+  return ins[0];
+}
+
+async function ensureSmsPeriodUpToDate(dbConn, userId) {
+  const usage = await ensureUsageRow(dbConn, userId);
+  const ym = await currentYmBaku(dbConn);
+  if (String(usage.sms_period_ym || '') === String(ym)) return usage;
+
+  const { rows } = await dbConn.query(
+    `UPDATE usage_counters
+     SET sms_used_monthly = 0,
+         sms_period_ym = $2,
+         updated_at = NOW()
+     WHERE user_id = $1
+     RETURNING user_id, students_count, storage_used_mb, sms_used_monthly, sms_period_ym`,
+    [userId, ym]
+  );
+  return rows[0] || usage;
+}
+
+function remaining(limit, used) {
+  // Unlimited = null
+  if (limit == null) return null;
+  const l = Number(limit);
+  const u = Number(used) || 0;
+  if (!Number.isFinite(l)) return null;
+  return Math.max(0, l - u);
+}
+
+async function getTrialRow(dbConn, userId) {
+  const { rows } = await dbConn.query(
+    `SELECT user_id, start_date, end_date, is_active,
+            max_students, storage_limit_mb, sms_limit_monthly
+     FROM trials
+     WHERE user_id = $1
+     LIMIT 1`,
+    [userId]
+  );
+  return rows[0] || null;
+}
+
+function isTrialActive(trial) {
+  if (!trial) return false;
+  if (!trial.is_active) return false;
+  const endMs = new Date(trial.end_date).getTime();
+  if (!Number.isFinite(endMs)) return false;
+  return Date.now() <= endMs;
+}
+
+function ceilDaysLeft(endsAt) {
+  const endMs = new Date(endsAt).getTime();
+  if (!Number.isFinite(endMs)) return 0;
+  const diff = endMs - Date.now();
+  return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+}
+
+function buildStatus({ phone_verified, is_active, usedStudents, limitStudents }) {
+  const remStudents = remaining(limitStudents, usedStudents);
+  // Priority exactly as requested
+  if (!phone_verified) return 'blocked';
+  if (!is_active) return 'expired';
+  if (limitStudents != null && usedStudents >= limitStudents) return 'blocked';
+  if (remStudents != null && remStudents <= 1) return 'warning';
+  return 'active';
+}
+
+function buildMessages(status, remStudents) {
+  if (status === 'warning') {
+    const banner =
+      remStudents === 1 ? 'You have 1 student slot left' : `You have ${remStudents ?? 0} student slots left`;
+    return { banner, cta: 'Upgrade to continue' };
+  }
+  if (status === 'blocked') {
+    return { banner: 'Usage blocked', cta: 'Upgrade to continue' };
+  }
+  if (status === 'expired') {
+    return { banner: 'Trial expired', cta: 'Upgrade to continue' };
+  }
+  return { banner: null, cta: null };
+}
+
+async function resolveEntitlements(userId) {
+  const basics = await getUserBasics(db, userId);
+  if (!basics || !basics.is_active) throw httpError('USER_NOT_FOUND', 404, 'USER_NOT_FOUND');
+  if (basics.role !== 'instructor') throw httpError('FORBIDDEN', 403, 'FORBIDDEN');
+
+  const phone_verified = Boolean(basics.phone_verified);
+
+  const usage = await ensureSmsPeriodUpToDate(db, userId);
+  const sub = await ensureSubscriptionRow(db, userId);
+  const trial = await getTrialRow(db, userId);
+
+  const trial_active = phone_verified && isTrialActive(trial);
+
+  const planSlug = normalizePlanSlug(sub?.plan);
+  const planLimits = PLANS[planSlug] || PLANS.basic;
+
+  const limits = trial_active
+    ? {
+        students: Number(trial?.max_students || TRIAL_LIMITS.students),
+        storage_mb: Number(trial?.storage_limit_mb || TRIAL_LIMITS.storage_mb),
+        sms_monthly: Number(trial?.sms_limit_monthly || TRIAL_LIMITS.sms_monthly),
+      }
+    : {
+        students: planLimits.students,
+        storage_mb: planLimits.storage_mb,
+        sms_monthly: planLimits.sms_monthly,
+      };
+
+  const used = {
+    students: Number(usage?.students_count || 0) || 0,
+    storage_mb: Number(usage?.storage_used_mb || 0) || 0,
+    sms_monthly: Number(usage?.sms_used_monthly || 0) || 0,
+  };
+
+  const rem = {
+    students: remaining(limits.students, used.students),
+    storage_mb: remaining(limits.storage_mb, used.storage_mb),
+    sms_monthly: remaining(limits.sms_monthly, used.sms_monthly),
+  };
+
+  const is_active = trial_active ? true : true; // plan subscriptions assumed active in this stage
+  const status = buildStatus({
+    phone_verified,
+    is_active: trial_active ? true : true,
+    usedStudents: used.students,
+    limitStudents: limits.students,
+  });
+
+  const should_warn = status === 'warning';
+  const should_block = status === 'blocked' || status === 'expired';
+  const messages = buildMessages(status, rem.students);
+
+  return {
+    plan: planSlug,
+    trial: {
+      is_active: trial_active,
+      ends_at: trial_active ? new Date(trial.end_date).toISOString() : null,
+      days_left: trial_active ? ceilDaysLeft(trial.end_date) : 0,
+    },
+    limits,
+    usage: used,
+    remaining: rem,
+    status,
+    should_warn,
+    should_block,
+    messages,
+    requirements: { phone_verified },
+    timezone: TZ,
+  };
+}
+
+async function bumpUsageCountersTx(client, userId, patch) {
+  const fields = [];
+  const values = [userId];
+  let idx = 2;
+  for (const [k, v] of Object.entries(patch || {})) {
+    fields.push(`${k} = ${k} + $${idx}`);
+    values.push(Number(v) || 0);
+    idx += 1;
+  }
+  if (!fields.length) return;
+  await client.query(
+    `INSERT INTO usage_counters (user_id) VALUES ($1)
+     ON CONFLICT (user_id) DO NOTHING`,
+    [userId]
+  );
+  await client.query(
+    `UPDATE usage_counters SET ${fields.join(', ')}, updated_at = NOW() WHERE user_id = $1`,
+    values
+  );
+}
+
+module.exports = {
+  TZ,
+  resolveEntitlements,
+  ensureSmsPeriodUpToDate,
+  bumpUsageCountersTx,
+};
+

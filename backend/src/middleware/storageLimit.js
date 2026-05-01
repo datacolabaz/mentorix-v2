@@ -1,6 +1,7 @@
 const fs = require('fs');
 const db = require('../utils/db');
 const { bytesToMbInt } = require('../services/resourceUsageService');
+const { resolveEntitlements, bumpUsageCountersTx } = require('../services/billingEntitlements');
 
 function safeUnlink(absPath) {
   try {
@@ -14,38 +15,39 @@ async function enforceStorageLimitAfterUpload(req, res, next) {
   try {
     if (!req.file || !req.user?.id) return next();
 
-    const { rows } = await db.query(
-      'SELECT storage_limit_mb, storage_used_mb FROM instructor_profiles WHERE user_id = $1',
-      [req.user.id],
-    );
-    const p = rows[0];
-    if (!p) return next();
+    // Only instructors are billed for storage in this stage.
+    if (req.user.role !== 'instructor') return next();
 
-    const limitMb = Number(p.storage_limit_mb) || 0;
-    const usedMb = Number(p.storage_used_mb) || 0;
+    const ent = await resolveEntitlements(req.user.id);
+    const limitMb = ent?.limits?.storage_mb; // null => unlimited
+    const usedMb = Number(ent?.usage?.storage_mb || 0) || 0;
     const addMb = bytesToMbInt(req.file.size || 0);
     const addBytes = Number(req.file.size) || 0;
 
-    // If limit is 0 or null-ish, treat as unlimited (safety default).
-    if (limitMb > 0 && usedMb + addMb > limitMb) {
+    if (limitMb != null && usedMb + addMb > Number(limitMb)) {
       safeUnlink(req.file.path);
       return res.status(429).json({
         success: false,
-        code: 'STORAGE_LIMIT_EXCEEDED',
-        message: `Storage limitiniz dolub (${usedMb}/${limitMb}MB). Yeni fayl yükləmək üçün admin ilə əlaqə saxlayın.`,
+        code: 'STORAGE_LIMIT',
+        message: `Storage limitiniz dolub (${usedMb}/${Number(limitMb)}MB).`,
       });
     }
 
-    if (limitMb > 0) {
-      await db.query(
-        `UPDATE instructor_profiles
-         SET storage_used_mb = storage_used_mb + $2,
-             storage_used_bytes = COALESCE(storage_used_bytes,0) + $3,
-             usage_synced_at = NOW()
-         WHERE user_id = $1`,
-        [req.user.id, addMb, addBytes],
-      );
-    }
+    // Always track usage (even if unlimited) for analytics + future billing.
+    await db.transaction(async (client) => {
+      await bumpUsageCountersTx(client, req.user.id, { storage_used_mb: addMb });
+      // Keep legacy bytes counter in instructor_profiles if present (best-effort)
+      await client
+        .query(
+          `UPDATE instructor_profiles
+           SET storage_used_mb = COALESCE(storage_used_mb,0) + $2,
+               storage_used_bytes = COALESCE(storage_used_bytes,0) + $3,
+               usage_synced_at = NOW()
+           WHERE user_id = $1`,
+          [req.user.id, addMb, addBytes],
+        )
+        .catch(() => {});
+    });
 
     next();
   } catch (e) {

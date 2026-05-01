@@ -1,4 +1,5 @@
 const db = require('../utils/db');
+const { resolveEntitlements } = require('./billingEntitlements');
 
 /**
  * instructor_profiles SMS limiti — login PIN və digər SMS endpoint-ləri üçün vahid yoxlama.
@@ -10,35 +11,28 @@ async function checkSmsQuota(instructorId, opts = {}) {
   const requireProfile = opts.requireProfile === true;
   if (!instructorId) return { ok: true };
 
-  const { rows } = await db.query(
-    'SELECT sms_limit, sms_used FROM instructor_profiles WHERE user_id = $1',
-    [instructorId],
-  );
-
-  if (!rows[0]) {
+  try {
+    const ent = await resolveEntitlements(instructorId);
+    const lim = ent?.limits?.sms_monthly;
+    const used = Number(ent?.usage?.sms_monthly || 0) || 0;
+    if (lim != null && used >= Number(lim)) {
+      return {
+        ok: false,
+        statusCode: 429,
+        body: { success: false, message: `SMS limiti dolub (${used}/${Number(lim)}).`, code: 'SMS_LIMIT' },
+      };
+    }
+    return { ok: true, remaining: lim == null ? undefined : Math.max(0, Number(lim) - used) };
+  } catch (e) {
     if (requireProfile) {
       return {
         ok: false,
-        statusCode: 404,
-        body: { success: false, message: 'Müəllim profili tapılmadı' },
+        statusCode: e.statusCode || e.status || 404,
+        body: { success: false, message: e.message || 'Müəllim profili tapılmadı', code: e.code },
       };
     }
     return { ok: true };
   }
-
-  const { sms_limit, sms_used } = rows[0];
-  if (sms_used >= sms_limit) {
-    return {
-      ok: false,
-      statusCode: 429,
-      body: {
-        success: false,
-        message: `SMS limiti dolub (${sms_used}/${sms_limit}). Muellimle elaqe saxlayin.`,
-      },
-    };
-  }
-
-  return { ok: true, remaining: sms_limit - sms_used };
 }
 
 module.exports = { checkSmsQuota };

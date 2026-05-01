@@ -49,6 +49,7 @@ app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/sms-logs', require('./routes/smsLogs'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/trial', require('./routes/trial'));
+app.use('/api/billing', require('./routes/billing'));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 app.get('/api/meta', (req, res) =>
