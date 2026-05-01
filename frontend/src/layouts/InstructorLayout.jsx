@@ -12,6 +12,10 @@ import BillingBanner from '../components/common/BillingBanner'
 import BillingUsagePills from '../components/common/BillingUsagePills'
 import { useBillingStatus } from '../hooks/useBillingStatus'
 import UpgradeModal from '../components/instructor/UpgradeModal'
+import Modal from '../components/common/Modal'
+import PhoneInput from '../components/auth/PhoneInput'
+import Button from '../components/common/Button'
+import { useToast } from '../components/common/Toast'
 
 const NAV_SECTIONS = [
   {
@@ -53,6 +57,12 @@ export default function InstructorLayout() {
   const billingQ = useBillingStatus()
   const billing = billingQ.data || null
   const [upgradeOpen, setUpgradeOpen] = useState(false)
+  const [verifyOpen, setVerifyOpen] = useState(false)
+  const [verifyPhone, setVerifyPhone] = useState(user?.phone || '')
+  const [verifyCode, setVerifyCode] = useState('')
+  const [verifyStep, setVerifyStep] = useState('phone') // phone | code
+  const [verifyBusy, setVerifyBusy] = useState(false)
+  const toast = useToast()
   const lastTrackedRef = useRef({ warning: false, blocked: false })
 
   const notifUnread = useMemo(() => {
@@ -86,6 +96,10 @@ export default function InstructorLayout() {
       cancelled = true
     }
   }, [updateUser])
+
+  useEffect(() => {
+    setVerifyPhone(user?.phone || '')
+  }, [user?.phone])
 
   useEffect(() => {
     let cancelled = false
@@ -428,5 +442,112 @@ export default function InstructorLayout() {
         setUpgradeOpen(false)
       }}
     />
+    <Modal
+      open={verifyOpen}
+      onClose={() => {
+        if (verifyBusy) return
+        setVerifyOpen(false)
+      }}
+      title="Telefon təsdiqi"
+      size="sm"
+    >
+      {verifyStep === 'phone' ? (
+        <form
+          className="space-y-4"
+          onSubmit={async (e) => {
+            e.preventDefault()
+            setVerifyBusy(true)
+            try {
+              await api.post('/auth/phone/verify/send', { phone: verifyPhone })
+              setVerifyStep('code')
+              toast('OTP göndərildi', 'success')
+            } catch (err) {
+              toast(err?.message || 'OTP göndərilmədi', 'error')
+            } finally {
+              setVerifyBusy(false)
+            }
+          }}
+        >
+          <p className="text-xs text-gray-400">
+            Telefon təsdiqi tamamlanmadan tələbə əlavə etmək və trial aktivləşdirmək mümkün deyil.
+          </p>
+          <div>
+            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Telefon nömrəsi</label>
+            <PhoneInput value={verifyPhone} onChange={setVerifyPhone} required />
+          </div>
+          <Button type="submit" loading={verifyBusy} className="w-full justify-center py-3">
+            OTP göndər
+          </Button>
+        </form>
+      ) : (
+        <form
+          className="space-y-4"
+          onSubmit={async (e) => {
+            e.preventDefault()
+            setVerifyBusy(true)
+            try {
+              const r = await api.post('/auth/phone/verify/confirm', { phone: verifyPhone, code: verifyCode })
+              if (r?.user) {
+                updateUser(r.user)
+                try {
+                  localStorage.setItem('mx_onboard_add_student_v1', '1')
+                } catch {}
+              }
+              toast('Telefon təsdiqləndi', 'success')
+              setVerifyOpen(false)
+              navigate('/instructor/students')
+            } catch (err) {
+              toast(err?.message || 'Kod yanlışdır', 'error')
+            } finally {
+              setVerifyBusy(false)
+            }
+          }}
+        >
+          <p className="text-xs text-gray-400 text-center">
+            Telefonunuza gələn <strong className="text-gray-200">6 rəqəmli OTP</strong> kodunu daxil edin.
+          </p>
+          <div className="text-center text-xs text-gray-500">{verifyPhone}</div>
+          <input
+            className="w-full bg-surface-1 border border-white/10 rounded-xl px-4 py-4 text-white text-2xl font-bold text-center tracking-widest outline-none focus:border-primary/40"
+            maxLength={6}
+            inputMode="numeric"
+            value={verifyCode}
+            onChange={(e) => setVerifyCode(e.target.value.replace(/\D/g, ''))}
+            required
+          />
+          <Button type="submit" loading={verifyBusy} className="w-full justify-center py-3">
+            Təsdiqlə
+          </Button>
+          <button
+            type="button"
+            disabled={verifyBusy}
+            onClick={async () => {
+              setVerifyBusy(true)
+              try {
+                await api.post('/auth/phone/verify/send', { phone: verifyPhone })
+                toast('OTP yenidən göndərildi', 'success')
+              } catch (e) {
+                toast(e?.message || 'OTP göndərilmədi', 'error')
+              } finally {
+                setVerifyBusy(false)
+              }
+            }}
+            className="w-full text-center text-xs text-gray-500 hover:text-white disabled:opacity-50"
+          >
+            OTP yenidən göndər
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setVerifyStep('phone')
+              setVerifyCode('')
+            }}
+            className="w-full text-center text-xs text-gray-500 hover:text-white"
+          >
+            ← Geri
+          </button>
+        </form>
+      )}
+    </Modal>
   )
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import useAuthStore from '../../hooks/useAuth'
 import Button from '../../components/common/Button'
@@ -80,10 +80,17 @@ export default function Login() {
   const [phone, setPhone] = useState('')
   const [pinInput, setPinInput] = useState('')
 
-  const [flow, setFlow] = useState('phone')
+  // Default onboarding: Google-first
+  const [mode, setMode] = useState('google') // google | phone
+  const [step, setStep] = useState('google') // google | role | teacher_phone | teacher_otp | phone | pin
+  const [googleCredential, setGoogleCredential] = useState(null)
+  const [otpCode, setOtpCode] = useState('')
+  const [otpSent, setOtpSent] = useState(false)
+  const googleBtnRef = useRef(null)
   const [loading, setLoading] = useState(false)
 
-  const { login, phoneNextStep, forgotPinSms, pinLogin } = useAuthStore()
+  const { login, phoneNextStep, forgotPinSms, pinLogin, googleLogin, googleComplete, sendOtp, verifyOtp } =
+    useAuthStore()
   const navigate = useNavigate()
   const toast = useToast()
   const roleMap = { admin: '/admin', instructor: '/instructor', student: '/student', parent: '/parent' }
@@ -110,7 +117,7 @@ export default function Login() {
     try {
       const data = await phoneNextStep(phone, role)
       if (data.next === 'pin') {
-        setFlow('pin')
+        setStep('pin')
         setPinInput('')
         if (data.pin_sms_sent) {
           toast(data.message || 'Nömrənizə daimi PIN SMS ilə göndərildi', 'success')
@@ -157,8 +164,109 @@ export default function Login() {
   }
 
   const resetFlow = () => {
-    setFlow('phone')
+    setStep(mode === 'phone' ? 'phone' : 'google')
     setPinInput('')
+  }
+
+  const roleTitle = useMemo(() => {
+    const r = ROLES.find((x) => x.key === role)
+    return r?.label || '—'
+  }, [role])
+
+  useEffect(() => {
+    if (isAdmin) return
+    if (mode !== 'google') return
+    if (step !== 'google') return
+    if (!googleBtnRef.current) return
+
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID
+    if (!clientId) return
+    const g = window.google
+    if (!g?.accounts?.id) return
+
+    try {
+      g.accounts.id.initialize({
+        client_id: clientId,
+        callback: async (resp) => {
+          const cred = resp?.credential
+          if (!cred) return toast('Google giriş alınmadı', 'error')
+          setLoading(true)
+          try {
+            const r = await googleLogin(cred)
+            if (r?.token && r?.user) {
+              goDashboard(r.user.role)
+              return
+            }
+            if (r?.needs_role) {
+              setGoogleCredential(cred)
+              setStep('role')
+              return
+            }
+            toast(r?.message || 'Giriş alınmadı', 'error')
+          } catch (e) {
+            toast(e?.message || 'Google giriş xətası', 'error')
+          } finally {
+            setLoading(false)
+          }
+        },
+      })
+      googleBtnRef.current.innerHTML = ''
+      g.accounts.id.renderButton(googleBtnRef.current, {
+        theme: 'outline',
+        size: 'large',
+        width: 320,
+        text: 'continue_with',
+        shape: 'pill',
+      })
+    } catch {
+      // ignore
+    }
+  }, [isAdmin, mode, step, googleLogin, toast])
+
+  const completeGoogleWithRole = async (pickedRole) => {
+    if (!googleCredential) return
+    setLoading(true)
+    try {
+      const data = await googleComplete(googleCredential, pickedRole)
+      if (pickedRole === 'instructor') {
+        setRole('instructor')
+        setStep('teacher_phone')
+        return
+      }
+      goDashboard(data.user.role)
+    } catch (e) {
+      toast(e?.message || 'Qeydiyyat tamamlanmadı', 'error')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const sendTeacherOtp = async (e) => {
+    e.preventDefault()
+    setLoading(true)
+    try {
+      await sendOtp(phone, 'instructor')
+      setOtpSent(true)
+      setStep('teacher_otp')
+      toast('OTP göndərildi', 'success')
+    } catch (err) {
+      toast(err?.message || 'OTP göndərilmədi', 'error')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const verifyTeacherOtp = async (e) => {
+    e.preventDefault()
+    setLoading(true)
+    try {
+      await verifyOtp(phone, otpCode, 'instructor', { saveOtpAsPin: true })
+      goDashboard('instructor')
+    } catch (err) {
+      toast(err?.message || 'OTP yanlışdır', 'error')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -210,85 +318,229 @@ export default function Login() {
 
           {!isAdmin && (
             <>
-              <div className="grid grid-cols-3 gap-3 mb-6">
-                {ROLES.map((r) => (
-                  <button
-                    key={r.key}
-                    type="button"
-                    onClick={() => {
-                      setRole(r.key)
-                      resetFlow()
-                      setPhone('')
-                    }}
-                    className={`p-3 rounded-xl border text-sm font-semibold transition-all flex flex-col items-center gap-1 ${
-                      role === r.key
-                        ? 'border-primary/30 bg-primary/10 text-primary'
-                        : 'border-white/10 text-gray-400 hover:border-white/20'
-                    }`}
-                  >
-                    <RoleIcon role={r.key} />
-                    <span className="text-xs">{r.label}</span>
-                  </button>
-                ))}
-              </div>
+              {mode === 'google' ? (
+                <>
+                  {step === 'google' ? (
+                    <div className="space-y-4">
+                      <div ref={googleBtnRef} className="flex justify-center" />
+                      <div className="text-center">
+                        <button
+                          type="button"
+                          className="text-xs text-gray-400 hover:text-gray-200 underline underline-offset-4"
+                          onClick={() => {
+                            setMode('phone')
+                            setStep('phone')
+                            setRole(null)
+                            setPhone('')
+                            setPinInput('')
+                          }}
+                        >
+                          Telefonla daxil ol
+                        </button>
+                      </div>
+                      <div className="text-[11px] text-gray-500 leading-relaxed text-center">
+                        Yeni istifadəçi onboarding <strong className="text-gray-300">Google</strong> ilə başlayır. Telefon/PIN yalnız
+                        mövcud hesablar üçün backup girişdir.
+                      </div>
+                    </div>
+                  ) : null}
 
-              {role && flow === 'phone' && (
-                <form onSubmit={handlePhoneContinue} className="space-y-4">
-                  <p className="text-xs text-gray-500 leading-relaxed">
-                    <strong className="text-gray-300">OTP yoxdur.</strong> PIN yoxdursa, &quot;Davam et&quot; ilə bir dəfə
-                    SMS göndərilir — gələn <strong className="text-gray-300">6 rəqəm</strong> daimi giriş PIN-inizdir.
-                    Sonrakı girişlərdə yalnız həmin PIN (əlavə SMS yox).
-                  </p>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
-                      Telefon nömrəsi
-                    </label>
-                    <PhoneInput value={phone} onChange={setPhone} required />
+                  {step === 'role' ? (
+                    <div className="space-y-4">
+                      <div className="text-center text-sm text-gray-300 font-semibold">Rol seçin</div>
+                      <div className="grid grid-cols-3 gap-3">
+                        {ROLES.map((r) => (
+                          <button
+                            key={r.key}
+                            type="button"
+                            onClick={() => void completeGoogleWithRole(r.key)}
+                            className="p-3 rounded-xl border text-sm font-semibold transition-all flex flex-col items-center gap-1 border-white/10 text-gray-200 hover:border-white/20"
+                          >
+                            <RoleIcon role={r.key} />
+                            <span className="text-xs">{r.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                      <button
+                        type="button"
+                        className="w-full text-center text-xs text-gray-500 hover:text-white"
+                        onClick={() => {
+                          setStep('google')
+                          setGoogleCredential(null)
+                        }}
+                      >
+                        ← Geri
+                      </button>
+                    </div>
+                  ) : null}
+
+                  {step === 'teacher_phone' ? (
+                    <form onSubmit={sendTeacherOtp} className="space-y-4">
+                      <div className="text-center text-xs text-gray-400">
+                        <span className="font-semibold text-gray-200">Müəllim</span> üçün telefon təsdiqi tələb olunur.
+                      </div>
+                      <div className="text-center text-[11px] text-gray-500">Seçilmiş rol: {roleTitle}</div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                          Telefon nömrəsi
+                        </label>
+                        <PhoneInput value={phone} onChange={setPhone} required />
+                      </div>
+                      <Button type="submit" loading={loading} className="w-full justify-center py-3">
+                        OTP göndər
+                      </Button>
+                    </form>
+                  ) : null}
+
+                  {step === 'teacher_otp' ? (
+                    <form onSubmit={verifyTeacherOtp} className="space-y-4">
+                      <p className="text-xs text-gray-400 text-center leading-relaxed">
+                        Telefonunuza gələn <strong className="text-gray-200">6 rəqəmli OTP</strong> kodunu daxil edin.
+                      </p>
+                      <div className="text-center text-xs text-gray-500">{phone}</div>
+                      <input
+                        className="w-full bg-surface-1 border border-white/10 rounded-xl px-4 py-4 text-white text-2xl font-bold text-center tracking-widest outline-none focus:border-primary/40"
+                        placeholder=""
+                        aria-label="OTP kodu, 6 rəqəm"
+                        maxLength={6}
+                        inputMode="numeric"
+                        autoComplete="one-time-code"
+                        value={otpCode}
+                        onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                        required
+                      />
+                      <Button type="submit" loading={loading} className="w-full justify-center py-3">
+                        Təsdiqlə
+                      </Button>
+                      {otpSent ? (
+                        <button
+                          type="button"
+                          disabled={loading}
+                          onClick={async () => {
+                            try {
+                              await sendOtp(phone, 'instructor')
+                              toast('OTP yenidən göndərildi', 'success')
+                            } catch (e) {
+                              toast(e?.message || 'OTP göndərilmədi', 'error')
+                            }
+                          }}
+                          className="w-full text-center text-xs text-gray-500 hover:text-white disabled:opacity-50"
+                        >
+                          OTP yenidən göndər
+                        </button>
+                      ) : null}
+                      <button
+                        type="button"
+                        className="w-full text-center text-xs text-gray-500 hover:text-white"
+                        onClick={() => {
+                          setStep('teacher_phone')
+                          setOtpCode('')
+                        }}
+                      >
+                        ← Geri
+                      </button>
+                    </form>
+                  ) : null}
+                </>
+              ) : null}
+
+              {mode === 'phone' ? (
+                <>
+                  <div className="grid grid-cols-3 gap-3 mb-6">
+                    {ROLES.map((r) => (
+                      <button
+                        key={r.key}
+                        type="button"
+                        onClick={() => {
+                          setRole(r.key)
+                          resetFlow()
+                          setPhone('')
+                        }}
+                        className={`p-3 rounded-xl border text-sm font-semibold transition-all flex flex-col items-center gap-1 ${
+                          role === r.key
+                            ? 'border-primary/30 bg-primary/10 text-primary'
+                            : 'border-white/10 text-gray-400 hover:border-white/20'
+                        }`}
+                      >
+                        <RoleIcon role={r.key} />
+                        <span className="text-xs">{r.label}</span>
+                      </button>
+                    ))}
                   </div>
-                  <Button type="submit" loading={loading} className="w-full justify-center py-3">
-                    Davam et
-                  </Button>
-                </form>
-              )}
 
-              {role && flow === 'pin' && (
-                <form onSubmit={handlePinLogin} className="space-y-4">
-                  <p className="text-xs text-gray-400 text-center leading-relaxed">
-                    SMS ilə gələn və ya əvvəl saxladığınız <strong className="text-gray-200">daimi 6 rəqəmli PIN</strong>{' '}
-                    daxil edin. Bu, OTP deyil — hər girişdə eyni PIN.
-                  </p>
-                  <div className="text-center text-xs text-gray-500">{phone}</div>
-                  <input
-                    className="w-full bg-surface-1 border border-white/10 rounded-xl px-4 py-4 text-white text-2xl font-bold text-center tracking-widest outline-none focus:border-primary/40"
-                    placeholder=""
-                    aria-label="Giriş PIN-i, 6 rəqəm"
-                    maxLength={6}
-                    inputMode="numeric"
-                    autoComplete="one-time-code"
-                    value={pinInput}
-                    onChange={(e) => setPinInput(e.target.value.replace(/\D/g, ''))}
-                    required
-                  />
-                  <Button type="submit" loading={loading} className="w-full justify-center py-3">
-                    PIN ilə daxil ol
-                  </Button>
+                  {role && step === 'phone' && (
+                    <form onSubmit={handlePhoneContinue} className="space-y-4">
+                      <p className="text-xs text-gray-500 leading-relaxed">
+                        Bu giriş <strong className="text-gray-300">yalnız mövcud hesablar</strong> üçündür. PIN yoxdursa,
+                        &quot;Davam et&quot; ilə bir dəfə SMS göndərilir — gələn <strong className="text-gray-300">6 rəqəm</strong>{' '}
+                        daimi giriş PIN-inizdir.
+                      </p>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                          Telefon nömrəsi
+                        </label>
+                        <PhoneInput value={phone} onChange={setPhone} required />
+                      </div>
+                      <Button type="submit" loading={loading} className="w-full justify-center py-3">
+                        Davam et
+                      </Button>
+                    </form>
+                  )}
+
+                  {role && step === 'pin' && (
+                    <form onSubmit={handlePinLogin} className="space-y-4">
+                      <p className="text-xs text-gray-400 text-center leading-relaxed">
+                        SMS ilə gələn və ya əvvəl saxladığınız <strong className="text-gray-200">daimi 6 rəqəmli PIN</strong>{' '}
+                        daxil edin. Bu, OTP deyil — hər girişdə eyni PIN.
+                      </p>
+                      <div className="text-center text-xs text-gray-500">{phone}</div>
+                      <input
+                        className="w-full bg-surface-1 border border-white/10 rounded-xl px-4 py-4 text-white text-2xl font-bold text-center tracking-widest outline-none focus:border-primary/40"
+                        placeholder=""
+                        aria-label="Giriş PIN-i, 6 rəqəm"
+                        maxLength={6}
+                        inputMode="numeric"
+                        autoComplete="one-time-code"
+                        value={pinInput}
+                        onChange={(e) => setPinInput(e.target.value.replace(/\D/g, ''))}
+                        required
+                      />
+                      <Button type="submit" loading={loading} className="w-full justify-center py-3">
+                        PIN ilə daxil ol
+                      </Button>
+                      <button
+                        type="button"
+                        onClick={handleForgotPinSms}
+                        disabled={loading}
+                        className="w-full text-center text-xs text-amber-400/90 hover:text-amber-300 disabled:opacity-50"
+                      >
+                        PIN-i unutdum — yeni PIN SMS (bir dəfə)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={resetFlow}
+                        className="w-full text-center text-xs text-gray-500 hover:text-white"
+                      >
+                        ← Geri
+                      </button>
+                    </form>
+                  )}
+
                   <button
                     type="button"
-                    onClick={handleForgotPinSms}
-                    disabled={loading}
-                    className="w-full text-center text-xs text-amber-400/90 hover:text-amber-300 disabled:opacity-50"
+                    className="w-full text-center text-xs text-gray-500 hover:text-white mt-4"
+                    onClick={() => {
+                      setMode('google')
+                      setStep('google')
+                      setRole(null)
+                      setPhone('')
+                      setPinInput('')
+                    }}
                   >
-                    PIN-i unutdum — yeni PIN SMS (bir dəfə)
+                    ← Google ilə daxil ol
                   </button>
-                  <button
-                    type="button"
-                    onClick={resetFlow}
-                    className="w-full text-center text-xs text-gray-500 hover:text-white"
-                  >
-                    ← Geri
-                  </button>
-                </form>
-              )}
+                </>
+              ) : null}
             </>
           )}
 

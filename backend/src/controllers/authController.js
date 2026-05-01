@@ -1,11 +1,30 @@
 const bcrypt = require('bcryptjs');
 const db = require('../utils/db');
 const { sign, signOTP } = require('../utils/jwt');
+const { OAuth2Client } = require('google-auth-library');
 const { sendSms, sendOtpSms } = require('../services/smsService');
 const { checkSmsQuota } = require('../services/smsQuotaService');
 
 const PHONE_NORM = "regexp_replace(COALESCE(phone::text, ''), '[^0-9]', '', 'g')";
 const LOGIN_ROLES = new Set(['instructor', 'student', 'parent']);
+
+async function logRisk(userId, req, context, riskScore = 10) {
+  try {
+    await db.query(
+      `INSERT INTO risk_logs (user_id, ip, device_id, risk_score, context)
+       VALUES ($1, $2, $3, $4, $5::jsonb)`,
+      [
+        userId || null,
+        String(req?.headers?.['x-forwarded-for'] || req?.ip || ''),
+        String(req?.headers?.['x-device-id'] || ''),
+        Number(riskScore) || 0,
+        JSON.stringify(context || {}),
+      ]
+    );
+  } catch {
+    // ignore
+  }
+}
 
 async function attachInstructorPublicLabel(userLite) {
   if (!userLite || userLite.role !== 'instructor') return userLite;
@@ -536,7 +555,7 @@ const register = async (req, res) => {
 
 const me = async (req, res) => {
   try {
-    const { rows } = await db.query('SELECT id, full_name, email, phone, role FROM users WHERE id = $1', [
+    const { rows } = await db.query('SELECT id, full_name, email, phone, role, phone_verified FROM users WHERE id = $1', [
       req.user.id,
     ]);
     const u = rows[0];
@@ -545,6 +564,205 @@ const me = async (req, res) => {
     res.json({ success: true, user: userOut });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/**
+ * Instructor phone verification for Google-first onboarding.
+ * - Binds phone to the logged-in instructor account
+ * - Sends OTP (6 digits)
+ * - Soft-links accounts if phone already exists under same email (to prevent duplicates)
+ */
+const sendMyPhoneVerifyOtp = async (req, res) => {
+  try {
+    if (req.user?.role !== 'instructor') {
+      return res.status(403).json({ success: false, message: 'Yalnız müəllim üçün' });
+    }
+    const phoneCanon = canonicalPhone(req.body?.phone);
+    if (!phoneCanon) return res.status(400).json({ success: false, message: 'Telefon tələb olunur' });
+    const clean = normalizePhone(phoneCanon);
+
+    const { rows: meRows } = await db.query(
+      `SELECT id, email, phone, phone_verified, google_sub
+       FROM users
+       WHERE id = $1 AND is_active = TRUE
+       LIMIT 1`,
+      [req.user.id]
+    );
+    const meUser = meRows[0];
+    if (!meUser) return res.status(404).json({ success: false, message: 'Tapılmadı' });
+
+    // If phone belongs to another active account, only allow "link" when email matches.
+    const { rows: ownerRows } = await db.query(
+      `SELECT id, email, role, google_sub, phone_verified
+       FROM users
+       WHERE is_active = TRUE
+         AND ${PHONE_NORM} = $1
+       LIMIT 2`,
+      [clean]
+    );
+    const owner = ownerRows.find((u) => u && String(u.id) !== String(req.user.id)) || null;
+    if (owner) {
+      const sameEmail =
+        owner.email &&
+        meUser.email &&
+        String(owner.email).trim().toLowerCase() === String(meUser.email).trim().toLowerCase();
+      if (!sameEmail) {
+        await logRisk(req.user.id, req, { kind: 'phone_reuse_block', phone: phoneCanon, owner_id: owner.id }, 35);
+        return res.status(409).json({ success: false, message: 'Bu telefon artıq başqa hesabda istifadə olunur' });
+      }
+      await logRisk(req.user.id, req, { kind: 'phone_reuse_same_email', phone: phoneCanon, owner_id: owner.id }, 10);
+      // Continue: OTP will still be sent; confirmation endpoint will finalize link if needed.
+    }
+
+    // Enforce SMS quota on the instructor billing id (self).
+    await assertSmsOk(req.user.id);
+
+    // Bind phone immediately (unverified) so OTP verify can succeed.
+    await db.query(
+      `UPDATE users
+       SET phone = $2,
+           phone_verified = FALSE
+       WHERE id = $1`,
+      [req.user.id, phoneCanon]
+    );
+
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 5 * 60000);
+    await db.query('DELETE FROM otp_codes WHERE phone = $1', [clean]);
+    await db.query('INSERT INTO otp_codes (phone, code, expires_at) VALUES ($1, $2, $3)', [clean, code, expiresAt]);
+
+    const sms = await sendOtpSms(clean, code);
+    if (!sms?.success) {
+      await db.query('DELETE FROM otp_codes WHERE phone = $1 AND code = $2', [clean, code]);
+      return res.status(502).json({
+        success: false,
+        message: sms?.error || 'OTP SMS göndərilə bilmədi',
+      });
+    }
+    res.json({ success: true, message: 'OTP göndərildi' });
+  } catch (err) {
+    if (err.statusCode && err.body) return res.status(err.statusCode).json(err.body);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+const verifyMyPhoneVerifyOtp = async (req, res) => {
+  try {
+    if (req.user?.role !== 'instructor') {
+      return res.status(403).json({ success: false, message: 'Yalnız müəllim üçün' });
+    }
+    const phoneCanon = canonicalPhone(req.body?.phone);
+    const clean = phoneCanon ? normalizePhone(phoneCanon) : '';
+    const codeStr = String(req.body?.code ?? '').trim();
+    if (!clean || !codeStr) return res.status(400).json({ success: false, message: 'Telefon və kod tələb olunur' });
+
+    // OTP validity
+    const { rows } = await db.query(
+      'SELECT * FROM otp_codes WHERE phone = $1 AND code = $2 AND is_used = FALSE AND expires_at > NOW()',
+      [clean, codeStr]
+    );
+    if (!rows[0]) return res.status(400).json({ success: false, message: 'Kod yanlışdır və ya müddəti bitib' });
+    await db.query('UPDATE otp_codes SET is_used = TRUE WHERE id = $1', [rows[0].id]);
+
+    const out = await db.transaction(async (client) => {
+      const { rows: meRows } = await client.query(
+        `SELECT id, email, google_sub, pin_hash
+         FROM users
+         WHERE id = $1 AND is_active = TRUE
+         LIMIT 1`,
+        [req.user.id]
+      );
+      const meUser = meRows[0];
+      if (!meUser) throw new Error('Tapılmadı');
+
+      // If another active account owns this phone, link by email (safe merge)
+      const { rows: ownerRows } = await client.query(
+        `SELECT id, email, google_sub, role
+         FROM users
+         WHERE is_active = TRUE
+           AND ${PHONE_NORM} = $1
+         LIMIT 2`,
+        [clean]
+      );
+      const owner = ownerRows.find((u) => u && String(u.id) !== String(req.user.id)) || null;
+
+      if (owner) {
+        const sameEmail =
+          owner.email &&
+          meUser.email &&
+          String(owner.email).trim().toLowerCase() === String(meUser.email).trim().toLowerCase();
+        if (!sameEmail) {
+          await logRisk(req.user.id, req, { kind: 'phone_verify_conflict', phone: phoneCanon, owner_id: owner.id }, 40);
+          const err = new Error('Bu telefon artıq başqa hesabda istifadə olunur');
+          err.statusCode = 409;
+          throw err;
+        }
+
+        // Link google_sub to the phone-owner account if missing
+        if (meUser.google_sub && !owner.google_sub) {
+          await client.query(
+            `UPDATE users
+             SET google_sub = $2,
+                 auth_provider = COALESCE(auth_provider, 'google')
+             WHERE id = $1`,
+            [owner.id, meUser.google_sub]
+          );
+        } else if (meUser.google_sub && owner.google_sub && String(meUser.google_sub) !== String(owner.google_sub)) {
+          await logRisk(req.user.id, req, { kind: 'google_sub_mismatch_same_phone', phone: phoneCanon, owner_id: owner.id }, 50);
+        }
+
+        // Soft-deactivate duplicate google-created account (keep audit via deleted_at if exists)
+        await client
+          .query(
+            `UPDATE users
+             SET is_active = FALSE,
+                 deleted_at = NOW(),
+                 phone = NULL,
+                 email = NULL,
+                 phone_verified = FALSE
+             WHERE id = $1`,
+            [req.user.id]
+          )
+          .catch(() => {});
+
+        const { rows: linkedRows } = await client.query(
+          `SELECT id, full_name, email, phone, role, phone_verified
+           FROM users
+           WHERE id = $1`,
+          [owner.id]
+        );
+        const linked = linkedRows[0];
+        return { user: linked, linkedUserId: owner.id };
+      }
+
+      // Normal: verify phone on current account
+      await client.query(
+        `UPDATE users
+         SET phone = $2,
+             phone_verified = TRUE
+         WHERE id = $1`,
+        [req.user.id, phoneCanon]
+      );
+
+      // Save OTP as PIN if no stored pin (helps phone backup login)
+      if (!hasStoredPin(meUser.pin_hash) && /^\d{6}$/.test(codeStr)) {
+        const hash = await bcrypt.hash(codeStr, 12);
+        await client.query('UPDATE users SET pin_hash = $1 WHERE id = $2', [hash, req.user.id]).catch(() => {});
+      }
+
+      const { rows: fresh } = await client.query(
+        'SELECT id, full_name, email, phone, role, phone_verified FROM users WHERE id = $1',
+        [req.user.id]
+      );
+      return { user: fresh[0], linkedUserId: null };
+    });
+
+    const userOut = out.user?.role === 'instructor' ? await attachInstructorPublicLabel(out.user) : out.user;
+    res.json({ success: true, user: userOut, linked_user_id: out.linkedUserId });
+  } catch (err) {
+    const st = err.statusCode || 500;
+    res.status(st).json({ success: false, message: err.message });
   }
 };
 
@@ -602,6 +820,186 @@ const loginWithPin = async (req, res) => {
   }
 };
 
+function googleClient() {
+  const cid = String(process.env.GOOGLE_CLIENT_ID || '').trim();
+  if (!cid) return null;
+  return new OAuth2Client(cid);
+}
+
+async function verifyGoogleIdTokenOrThrow(credential) {
+  const token = String(credential || '').trim();
+  if (!token) {
+    const err = new Error('Google credential tələb olunur');
+    err.statusCode = 400;
+    throw err;
+  }
+  const client = googleClient();
+  if (!client) {
+    const err = new Error('GOOGLE_CLIENT_ID konfiqurasiya olunmayıb');
+    err.statusCode = 500;
+    throw err;
+  }
+  const cid = String(process.env.GOOGLE_CLIENT_ID || '').trim();
+  const ticket = await client.verifyIdToken({ idToken: token, audience: cid });
+  const payload = ticket.getPayload() || {};
+  const sub = payload.sub ? String(payload.sub) : '';
+  const email = payload.email ? String(payload.email).trim().toLowerCase() : '';
+  const name = payload.name ? String(payload.name).trim() : '';
+  if (!sub) {
+    const err = new Error('Google token etibarsızdır');
+    err.statusCode = 401;
+    throw err;
+  }
+  return { sub, email: email || null, name: name || null, raw: payload };
+}
+
+const googleLogin = async (req, res) => {
+  try {
+    const { credential } = req.body;
+    const g = await verifyGoogleIdTokenOrThrow(credential);
+
+    const bySub = await db.query(
+      `SELECT id, full_name, email, role, phone, phone_verified, auth_provider, google_sub
+       FROM users
+       WHERE is_active = TRUE
+         AND google_sub = $1
+       LIMIT 1`,
+      [g.sub]
+    );
+    let user = bySub.rows[0] || null;
+
+    if (!user && g.email) {
+      const byEmail = await db.query(
+        `SELECT id, full_name, email, role, phone, phone_verified, auth_provider, google_sub
+         FROM users
+         WHERE is_active = TRUE
+           AND email IS NOT NULL
+           AND LOWER(TRIM(email)) = LOWER(TRIM($1))
+         LIMIT 1`,
+        [g.email]
+      );
+      user = byEmail.rows[0] || null;
+      if (user && !user.google_sub) {
+        await db.query(
+          `UPDATE users
+           SET google_sub = $2,
+               auth_provider = COALESCE(auth_provider, 'google')
+           WHERE id = $1`,
+          [user.id, g.sub]
+        );
+      }
+    }
+
+    if (!user || !user.role) {
+      return res.json({
+        success: true,
+        needs_role: true,
+        profile: { email: user?.email || g.email, full_name: user?.full_name || g.name, google_sub: g.sub },
+      });
+    }
+
+    const token = sign({ id: user.id, role: user.role });
+    return res.json({
+      success: true,
+      token,
+      user: {
+        id: user.id,
+        full_name: user.full_name,
+        role: user.role,
+        email: user.email,
+        phone: user.phone,
+        phone_verified: Boolean(user.phone_verified),
+      },
+    });
+  } catch (err) {
+    const st = err.statusCode || 500;
+    res.status(st).json({ success: false, message: err.message });
+  }
+};
+
+const googleComplete = async (req, res) => {
+  try {
+    const { credential, role } = req.body;
+    const g = await verifyGoogleIdTokenOrThrow(credential);
+    const r = String(role || '').trim().toLowerCase();
+    if (!r || !LOGIN_ROLES.has(r)) {
+      return res.status(400).json({ success: false, message: 'Rol seçin: müəllim, tələbə və ya valideyn' });
+    }
+
+    const { rows: existingBySub } = await db.query(
+      `SELECT id, full_name, email, role, phone, phone_verified
+       FROM users
+       WHERE is_active = TRUE
+         AND google_sub = $1
+       LIMIT 1`,
+      [g.sub]
+    );
+    let user = existingBySub[0] || null;
+
+    if (!user && g.email) {
+      const { rows: byEmail } = await db.query(
+        `SELECT id, full_name, email, role, phone, phone_verified
+         FROM users
+         WHERE is_active = TRUE
+           AND email IS NOT NULL
+           AND LOWER(TRIM(email)) = LOWER(TRIM($1))
+         LIMIT 1`,
+        [g.email]
+      );
+      user = byEmail[0] || null;
+    }
+
+    if (!user) {
+      const fullName = g.name || (g.email ? g.email.split('@')[0] : 'User');
+      const { rows: created } = await db.query(
+        `INSERT INTO users (full_name, email, role, auth_provider, google_sub, phone_verified)
+         VALUES ($1, $2, $3, 'google', $4, FALSE)
+         RETURNING id, full_name, email, role, phone, phone_verified`,
+        [fullName, g.email, r, g.sub]
+      );
+      user = created[0];
+    } else if (!user.role) {
+      const { rows: updated } = await db.query(
+        `UPDATE users
+         SET role = $2,
+             auth_provider = COALESCE(auth_provider, 'google'),
+             google_sub = COALESCE(google_sub, $3)
+         WHERE id = $1
+         RETURNING id, full_name, email, role, phone, phone_verified`,
+        [user.id, r, g.sub]
+      );
+      user = updated[0] || user;
+    } else {
+      await db
+        .query(
+          `UPDATE users
+           SET google_sub = COALESCE(google_sub, $2),
+               auth_provider = COALESCE(auth_provider, 'google')
+           WHERE id = $1`,
+          [user.id, g.sub]
+        )
+        .catch(() => {});
+    }
+
+    const token = sign({ id: user.id, role: user.role });
+    return res.json({
+      success: true,
+      token,
+      user: {
+        id: user.id,
+        full_name: user.full_name,
+        role: user.role,
+        email: user.email,
+        phone: user.phone,
+        phone_verified: Boolean(user.phone_verified),
+      },
+    });
+  } catch (err) {
+    const st = err.statusCode || 500;
+    res.status(st).json({ success: false, message: err.message });
+  }
+};
+
 module.exports = {
   login,
   phoneNextStep,
@@ -613,4 +1011,8 @@ module.exports = {
   setPin,
   loginWithPin,
   deliverPermanentPinSms,
+  googleLogin,
+  googleComplete,
+  sendMyPhoneVerifyOtp,
+  verifyMyPhoneVerifyOtp,
 };

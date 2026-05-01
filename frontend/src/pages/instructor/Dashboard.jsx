@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import api from '../../lib/api'
 import Card from '../../components/common/Card'
@@ -14,6 +15,7 @@ import { BILLING_STATUS_QUERY_KEY, useBillingStatus } from '../../hooks/useBilli
 
 export default function InstructorDashboard() {
   const { user } = useAuthStore()
+  const navigate = useNavigate()
   const { theme } = useUiStore()
   const [students, setStudents] = useState([])
   const [examStats, setExamStats] = useState([])
@@ -37,6 +39,8 @@ export default function InstructorDashboard() {
   const billingQ = useBillingStatus()
   const billing = billingQ.data || null
   const blocked = Boolean(billing?.should_block)
+
+  const [onboardOpen, setOnboardOpen] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -69,6 +73,21 @@ export default function InstructorDashboard() {
       cancelled = true
     }
   }, [])
+
+  useEffect(() => {
+    if (loading) return
+    try {
+      const flag = localStorage.getItem('mx_onboard_add_student_v1') === '1'
+      if (!flag) return
+      if (!Array.isArray(students) || students.length > 0) {
+        localStorage.removeItem('mx_onboard_add_student_v1')
+        return
+      }
+      setOnboardOpen(true)
+    } catch {
+      // ignore
+    }
+  }, [loading, students])
 
   useEffect(() => {
     if (!quickOpen) return
@@ -153,6 +172,13 @@ export default function InstructorDashboard() {
     }
   }
 
+  function closeOnboard() {
+    setOnboardOpen(false)
+    try {
+      localStorage.removeItem('mx_onboard_add_student_v1')
+    } catch {}
+  }
+
   const examById = Object.fromEntries(
     examStats.map((r) => [String(r.student_id), r])
   )
@@ -207,6 +233,26 @@ export default function InstructorDashboard() {
   }
 
   return (
+      <Modal open={onboardOpen} onClose={closeOnboard} title="Başlayaq" size="sm">
+        <div className="space-y-3">
+          <div className="text-sm text-gray-200 font-semibold">İlk tələbəni əlavə et</div>
+          <div className="text-xs text-gray-400">
+            Telefon təsdiqi tamamlandı. İndi ilk tələbəni əlavə edib trial-ı aktivləşdirə bilərsiniz.
+          </div>
+          <Button
+            className="w-full justify-center py-3"
+            onClick={() => {
+              closeOnboard()
+              navigate('/instructor/students')
+            }}
+          >
+            Tələbə əlavə et
+          </Button>
+          <Button variant="ghost" className="w-full justify-center py-2" onClick={closeOnboard}>
+            Sonra
+          </Button>
+        </div>
+      </Modal>
     <div className="p-4 sm:p-6 min-w-0">
       <div className="mb-6">
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">

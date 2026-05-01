@@ -9,6 +9,10 @@ const {
   me,
   setPin,
   loginWithPin,
+  googleLogin,
+  googleComplete,
+  sendMyPhoneVerifyOtp,
+  verifyMyPhoneVerifyOtp,
 } = require('../controllers/authController');
 const { authenticate, authorize } = require('../middleware/auth');
 const {
@@ -37,7 +41,11 @@ function enforceTrialForStudentRegister(req, res, next) {
 }
 
 router.post('/login', login);
+router.post('/google/login', googleLogin);
+router.post('/google/complete', googleComplete);
 router.post('/phone/next-step', phoneNextStep);
+router.post('/phone/verify/send', authenticate, authorize('instructor'), sendMyPhoneVerifyOtp);
+router.post('/phone/verify/confirm', authenticate, authorize('instructor'), verifyMyPhoneVerifyOtp);
 router.post('/pin/forgot-sms', forgotPinSms);
 router.post('/otp/send', sendOtp);
 router.post('/otp/verify', verifyOtp);

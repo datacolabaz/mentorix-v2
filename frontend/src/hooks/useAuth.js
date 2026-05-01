@@ -59,6 +59,18 @@ const useAuthStore = create((set) => ({
     return data
   },
 
+  sendMyPhoneVerifyOtp: async (phone) => api.post('/auth/phone/verify/send', { phone }),
+
+  confirmMyPhoneVerifyOtp: async (phone, code) => {
+    const data = await api.post('/auth/phone/verify/confirm', { phone, code })
+    if (data?.user) {
+      const token = localStorage.getItem('mx_token')
+      localStorage.setItem('mx_user', JSON.stringify(data.user))
+      set({ user: data.user, token })
+    }
+    return data
+  },
+
   pinLogin: async (phone, pin, role) => {
     const data = await api.post('/auth/pin/login', { phone, pin, role })
     if (!data?.token || !data?.user) {
@@ -70,6 +82,27 @@ const useAuthStore = create((set) => ({
     localStorage.setItem('mx_user', JSON.stringify(data.user))
     set({ user: data.user, token: data.token })
     return data.user
+  },
+
+  googleLogin: async (credential) => {
+    const data = await api.post('/auth/google/login', { credential })
+    if (data?.token && data?.user) {
+      localStorage.setItem('mx_token', data.token)
+      localStorage.setItem('mx_user', JSON.stringify(data.user))
+      set({ user: data.user, token: data.token })
+    }
+    return data
+  },
+
+  googleComplete: async (credential, role) => {
+    const data = await api.post('/auth/google/complete', { credential, role })
+    if (!data?.token || !data?.user) {
+      throw new Error(data?.message || 'Server cavabı etibarsızdır')
+    }
+    localStorage.setItem('mx_token', data.token)
+    localStorage.setItem('mx_user', JSON.stringify(data.user))
+    set({ user: data.user, token: data.token })
+    return data
   },
 
   setPin: async (pin) => api.post('/auth/pin/set', { pin }),
