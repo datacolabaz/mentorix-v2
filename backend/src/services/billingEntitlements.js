@@ -11,6 +11,18 @@ function httpError(code, status = 403, message = code) {
   return err;
 }
 
+async function logBillingEvent(dbConn, { user_id, event, context }) {
+  try {
+    await dbConn.query(
+      `INSERT INTO billing_events (user_id, event, context)
+       VALUES ($1, $2, $3::jsonb)`,
+      [user_id || null, String(event || '').slice(0, 120), context ? JSON.stringify(context) : null]
+    );
+  } catch {
+    // ignore (backward compatible / migrations not applied yet)
+  }
+}
+
 async function currentYmBaku(dbConn) {
   const { rows } = await dbConn.query(
     `SELECT to_char((CURRENT_TIMESTAMP AT TIME ZONE '${TZ}'), 'YYYY-MM') AS ym`
@@ -121,13 +133,44 @@ function ceilDaysLeft(endsAt) {
   return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
 }
 
-function buildStatus({ phone_verified, is_active, usedStudents, limitStudents }) {
-  const remStudents = remaining(limitStudents, usedStudents);
-  // Priority exactly as requested
+function isWarnStudents(remStudents) {
+  return remStudents != null && remStudents <= 3;
+}
+
+function isWarnPercent(rem, lim, thresholdPct /*0-1*/) {
+  if (lim == null) return false;
+  const l = Number(lim);
+  const r = Number(rem);
+  if (!Number.isFinite(l) || !Number.isFinite(r) || l <= 0) return false;
+  return r / l <= thresholdPct;
+}
+
+function buildStatus({
+  phone_verified,
+  is_active,
+  limits,
+  used,
+  remainingObj,
+}) {
+  // Priority:
+  // 1) phone not verified -> blocked
+  // 2) not active (trial expired/inactive) -> expired
+  // 3) any reached limit -> blocked
+  // 4) any warn threshold -> warning
+  // 5) otherwise -> active
   if (!phone_verified) return 'blocked';
   if (!is_active) return 'expired';
-  if (limitStudents != null && usedStudents >= limitStudents) return 'blocked';
-  if (remStudents != null && remStudents <= 1) return 'warning';
+
+  const reachedStudents = limits.students != null && used.students >= limits.students;
+  const reachedStorage = limits.storage_mb != null && used.storage_mb >= limits.storage_mb;
+  const reachedSms = limits.sms_monthly != null && used.sms_monthly >= limits.sms_monthly;
+  if (reachedStudents || reachedStorage || reachedSms) return 'blocked';
+
+  const warnStudents = isWarnStudents(remainingObj.students);
+  const warnSms = isWarnPercent(remainingObj.sms_monthly, limits.sms_monthly, 0.2);
+  const warnStorage = isWarnPercent(remainingObj.storage_mb, limits.storage_mb, 0.2);
+  if (warnStudents || warnSms || warnStorage) return 'warning';
+
   return 'active';
 }
 
@@ -135,13 +178,13 @@ function buildMessages(status, remStudents) {
   if (status === 'warning') {
     const banner =
       remStudents === 1 ? 'You have 1 student slot left' : `You have ${remStudents ?? 0} student slots left`;
-    return { banner, cta: 'Upgrade to continue' };
+    return { banner, cta: { label: 'Upgrade to PRO', action: 'OPEN_UPGRADE_MODAL' } };
   }
   if (status === 'blocked') {
-    return { banner: 'Usage blocked', cta: 'Upgrade to continue' };
+    return { banner: 'Usage blocked', cta: { label: 'Upgrade to PRO', action: 'OPEN_UPGRADE_MODAL' } };
   }
   if (status === 'expired') {
-    return { banner: 'Trial expired', cta: 'Upgrade to continue' };
+    return { banner: 'Trial expired', cta: { label: 'Upgrade to PRO', action: 'OPEN_UPGRADE_MODAL' } };
   }
   return { banner: null, cta: null };
 }
@@ -190,8 +233,9 @@ async function resolveEntitlements(userId) {
   const status = buildStatus({
     phone_verified,
     is_active: trial_active ? true : true,
-    usedStudents: used.students,
-    limitStudents: limits.students,
+    limits,
+    used,
+    remainingObj: rem,
   });
 
   const should_warn = status === 'warning';
@@ -243,5 +287,6 @@ module.exports = {
   resolveEntitlements,
   ensureSmsPeriodUpToDate,
   bumpUsageCountersTx,
+  logBillingEvent,
 };
 

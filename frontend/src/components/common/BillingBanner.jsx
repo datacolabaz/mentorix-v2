@@ -21,6 +21,7 @@ export default function BillingBanner({ status, banner, cta, onCta }) {
   const meta = stylesByStatus[s]
   if (!meta) return null
   if (!banner && !cta) return null
+  const ctaLabel = cta && typeof cta === 'object' ? cta.label : cta
 
   return (
     <div className={`rounded-2xl border px-4 py-3 flex flex-wrap items-center justify-between gap-3 ${meta.wrap}`}>
@@ -28,9 +29,9 @@ export default function BillingBanner({ status, banner, cta, onCta }) {
         <div className="text-xs font-bold uppercase tracking-wide opacity-90">{meta.title}</div>
         <div className="text-sm font-semibold break-words">{banner || '—'}</div>
       </div>
-      {cta ? (
+      {ctaLabel ? (
         <Button variant={s === 'warning' ? 'secondary' : 'primary'} size="sm" onClick={onCta}>
-          {cta}
+          {ctaLabel}
         </Button>
       ) : null}
     </div>

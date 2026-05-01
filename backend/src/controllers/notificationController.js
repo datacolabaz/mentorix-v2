@@ -1,6 +1,7 @@
 const db = require('../utils/db');
 const { recomputeInstructorUsage } = require('../services/resourceUsageService');
 const { sendRawSms } = require('../services/smsService');
+const { ensureSmsPeriodUpToDate, logBillingEvent, resolveEntitlements, bumpUsageCountersTx } = require('../services/billingEntitlements');
 
 const getAdminNotifications = async (req, res) => {
   try {
@@ -162,24 +163,9 @@ const quickInstructorNotification = async (req, res) => {
       return res.json({ success: true, method: 'internal', sent: allowedIds.length });
     }
 
-    // SMS method
-    const { rows: profRows } = await db.query(
-      `SELECT sms_limit, sms_used
-       FROM instructor_profiles
-       WHERE user_id = $1`,
-      [instructorId],
-    );
-    const prof = profRows[0];
-    const smsLimit = Number(prof?.sms_limit ?? 0);
-    const smsUsed = Number(prof?.sms_used ?? 0);
-
-    if (!smsLimit || smsUsed >= smsLimit) {
-      return res.status(429).json({
-        success: false,
-        code: 'SMS_LIMIT_EXCEEDED',
-        message: 'Limitiniz bitib, artırmaq üçün adminlə əlaqə saxlayın',
-      });
-    }
+    // SMS method (hard-enforced by usage_counters + entitlements; UI disable is not security).
+    // Ensure monthly period source-of-truth is up to date (request-time, not cron).
+    await ensureSmsPeriodUpToDate(db, instructorId).catch(() => {});
 
     const studentsWithPhones = allowedStudents.filter((s) => {
       const p = String(s.phone ?? '').trim();
@@ -194,21 +180,55 @@ const quickInstructorNotification = async (req, res) => {
 
     const count = studentsWithPhones.length;
 
-    // Reserve quota atomically to never exceed sms_limit in concurrent requests.
-    const { rows: updRows } = await db.query(
-      `UPDATE instructor_profiles
-       SET sms_used = sms_used + $2
-       WHERE user_id = $1
-         AND sms_used + $2 <= sms_limit
-       RETURNING sms_used`,
-      [instructorId, count],
-    );
-
-    if (!updRows.length) {
+    // Resolve entitlements once (includes trial-first rule).
+    const ent = await resolveEntitlements(instructorId);
+    const smsLimit = ent?.limits?.sms_monthly; // null => unlimited
+    const smsUsed = Number(ent?.usage?.sms_monthly || 0) || 0;
+    if (smsLimit != null && smsUsed + count > Number(smsLimit)) {
+      void logBillingEvent(db, {
+        user_id: instructorId,
+        event: 'limit_reached_sms',
+        context: { used: smsUsed, add: count, limit: smsLimit, at: 'notifications.quick' },
+      });
       return res.status(429).json({
         success: false,
-        code: 'SMS_LIMIT_EXCEEDED',
-        message: 'Limitiniz bitib, artırmaq üçün adminlə əlaqə saxlayın',
+        code: 'SMS_LIMIT',
+        message: 'SMS limitiniz dolub. Upgrade edin.',
+      });
+    }
+
+    // Reserve quota atomically in usage_counters to avoid concurrent overshoot.
+    const reserved = await db.transaction(async (client) => {
+      await ensureSmsPeriodUpToDate(client, instructorId);
+      await client.query(`INSERT INTO usage_counters (user_id) VALUES ($1) ON CONFLICT (user_id) DO NOTHING`, [
+        instructorId,
+      ]);
+      if (smsLimit == null) {
+        await bumpUsageCountersTx(client, instructorId, { sms_used_monthly: count });
+        return true;
+      }
+      const { rows: r } = await client.query(
+        `UPDATE usage_counters
+         SET sms_used_monthly = sms_used_monthly + $2,
+             updated_at = NOW()
+         WHERE user_id = $1
+           AND sms_used_monthly + $2 <= $3
+         RETURNING sms_used_monthly`,
+        [instructorId, count, Number(smsLimit)]
+      );
+      return r.length > 0;
+    });
+
+    if (!reserved) {
+      void logBillingEvent(db, {
+        user_id: instructorId,
+        event: 'limit_reached_sms',
+        context: { used: smsUsed, add: count, limit: smsLimit, at: 'notifications.quick.reserve' },
+      });
+      return res.status(429).json({
+        success: false,
+        code: 'SMS_LIMIT',
+        message: 'SMS limitiniz dolub. Upgrade edin.',
       });
     }
 

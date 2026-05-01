@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
 import useAuthStore from '../hooks/useAuth'
 import useUiStore from '../hooks/useUi'
@@ -11,6 +11,7 @@ import NavIcon from '../components/common/NavIcon'
 import BillingBanner from '../components/common/BillingBanner'
 import BillingUsagePills from '../components/common/BillingUsagePills'
 import { useBillingStatus } from '../hooks/useBillingStatus'
+import UpgradeModal from '../components/instructor/UpgradeModal'
 
 const NAV_SECTIONS = [
   {
@@ -51,6 +52,8 @@ export default function InstructorLayout() {
   const [hasAlerts, setHasAlerts] = useState(false)
   const billingQ = useBillingStatus()
   const billing = billingQ.data || null
+  const [upgradeOpen, setUpgradeOpen] = useState(false)
+  const lastTrackedRef = useRef({ warning: false, blocked: false })
 
   const notifUnread = useMemo(() => {
     if (!hasAlerts || !notifFetchAt) return false
@@ -106,6 +109,19 @@ export default function InstructorLayout() {
       cancelled = true
     }
   }, [])
+
+  useEffect(() => {
+    const st = String(billing?.status || '')
+    if (!st) return
+    if (st === 'warning' && !lastTrackedRef.current.warning) {
+      lastTrackedRef.current.warning = true
+      api.post('/billing/events', { event: 'billing_warning_shown', context: { status: st } }).catch(() => {})
+    }
+    if ((st === 'blocked' || st === 'expired') && !lastTrackedRef.current.blocked) {
+      lastTrackedRef.current.blocked = true
+      api.post('/billing/events', { event: 'billing_blocked', context: { status: st } }).catch(() => {})
+    }
+  }, [billing?.status])
 
   return (
     <div
@@ -359,7 +375,12 @@ export default function InstructorLayout() {
               status={billing?.status}
               banner={billing?.messages?.banner || null}
               cta={billing?.messages?.cta || null}
-              onCta={() => navigate('/instructor/settings')}
+              onCta={() => {
+                api.post('/billing/events', { event: 'upgrade_clicked', context: { at: 'banner' } }).catch(() => {})
+                const action = billing?.messages?.cta && typeof billing.messages.cta === 'object' ? billing.messages.cta.action : null
+                if (action === 'OPEN_UPGRADE_MODAL') return setUpgradeOpen(true)
+                navigate('/instructor/settings')
+              }}
             />
           </div>
           {limitStatus.level ? (
@@ -397,5 +418,15 @@ export default function InstructorLayout() {
       </main>
       </div>
     </div>
+    <UpgradeModal
+      open={upgradeOpen}
+      onClose={() => setUpgradeOpen(false)}
+      onSelectPlan={(plan) => {
+        api.post('/billing/events', { event: 'upgrade_plan_selected', context: { plan } }).catch(() => {})
+        // revenue-safe: request only (no free plan switch here)
+        api.post('/billing/events', { event: 'upgrade_request_created', context: { plan } }).catch(() => {})
+        setUpgradeOpen(false)
+      }}
+    />
   )
 }

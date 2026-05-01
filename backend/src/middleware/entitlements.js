@@ -1,4 +1,5 @@
-const { resolveEntitlements } = require('../services/billingEntitlements');
+const db = require('../utils/db');
+const { resolveEntitlements, logBillingEvent } = require('../services/billingEntitlements');
 
 function httpError(code, status = 403, message = code) {
   const err = new Error(message);
@@ -26,7 +27,10 @@ function enforceStudentsLimit(req, _res, next) {
     if (!e) return next();
     const lim = e.limits?.students;
     const used = e.usage?.students ?? 0;
-    if (lim != null && used >= lim) throw httpError('STUDENT_LIMIT', 429, 'STUDENT_LIMIT');
+    if (lim != null && used >= lim) {
+      void logBillingEvent(db, { user_id: req.user?.id || null, event: 'limit_reached_students', context: { used, limit: lim } });
+      throw httpError('STUDENT_LIMIT', 429, 'STUDENT_LIMIT');
+    }
     next();
   } catch (e) {
     next(e);
@@ -39,7 +43,10 @@ function enforceStorageLimit(req, _res, next) {
     if (!e) return next();
     const lim = e.limits?.storage_mb;
     const used = e.usage?.storage_mb ?? 0;
-    if (lim != null && used >= lim) throw httpError('STORAGE_LIMIT', 429, 'STORAGE_LIMIT');
+    if (lim != null && used >= lim) {
+      void logBillingEvent(db, { user_id: req.user?.id || null, event: 'limit_reached_storage', context: { used, limit: lim } });
+      throw httpError('STORAGE_LIMIT', 429, 'STORAGE_LIMIT');
+    }
     next();
   } catch (e) {
     next(e);
@@ -52,7 +59,10 @@ function enforceSmsLimit(req, _res, next) {
     if (!e) return next();
     const lim = e.limits?.sms_monthly;
     const used = e.usage?.sms_monthly ?? 0;
-    if (lim != null && used >= lim) throw httpError('SMS_LIMIT', 429, 'SMS_LIMIT');
+    if (lim != null && used >= lim) {
+      void logBillingEvent(db, { user_id: req.user?.id || null, event: 'limit_reached_sms', context: { used, limit: lim } });
+      throw httpError('SMS_LIMIT', 429, 'SMS_LIMIT');
+    }
     next();
   } catch (e) {
     next(e);

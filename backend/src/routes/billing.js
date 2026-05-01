@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const { authenticate, authorize } = require('../middleware/auth');
-const { resolveEntitlements } = require('../services/billingEntitlements');
+const db = require('../utils/db');
+const { resolveEntitlements, logBillingEvent } = require('../services/billingEntitlements');
 
 router.get('/status', authenticate, authorize('instructor'), async (req, res) => {
   try {
@@ -22,6 +23,18 @@ router.get('/status', authenticate, authorize('instructor'), async (req, res) =>
     });
   } catch (err) {
     res.status(err.statusCode || err.status || 500).json({ success: false, message: err.message, code: err.code });
+  }
+});
+
+router.post('/events', authenticate, authorize('instructor'), async (req, res) => {
+  try {
+    const { event, context } = req.body || {};
+    const ev = String(event || '').trim();
+    if (!ev) return res.status(400).json({ success: false, message: 'event tələb olunur' });
+    await logBillingEvent(db, { user_id: req.user.id, event: ev, context: context || null });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
 });
 
