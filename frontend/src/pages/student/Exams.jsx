@@ -73,6 +73,26 @@ function materialFileApiPath(url, examId) {
 
 /** Yeni pəncərə: img Authorization göndərmir → qısa müddətli token URL */
 function materialOpenInNewTabUrl(rel, examId) {
+  const s = String(rel || '')
+  const directAttachmentPath =
+    s && !s.includes('://') && s.includes('/exams/by-exam/') && s.includes('/attachment/') ? (s.startsWith('/') ? s : `/${s}`) : null
+
+  // If backend already returned the attachment endpoint path, just prefix API root and append token.
+  if (directAttachmentPath) {
+    const token = typeof localStorage !== 'undefined' ? localStorage.getItem('mx_token') : ''
+    const withToken = token
+      ? `${directAttachmentPath}${directAttachmentPath.includes('?') ? '&' : '?'}token=${encodeURIComponent(token)}`
+      : directAttachmentPath
+    const raw = (import.meta.env.VITE_API_URL || '/api').trim().replace(/\/$/, '')
+    if (raw.startsWith('http')) {
+      const root = raw.endsWith('/api') ? raw : raw.includes('/api') ? raw : `${raw}/api`
+      return `${root.replace(/\/$/, '')}${withToken}`
+    }
+    if (typeof window === 'undefined') return withToken
+    const prefix = raw.startsWith('/') ? raw : `/${raw || 'api'}`
+    return `${window.location.origin}${prefix}${withToken}`
+  }
+
   const fn = examUploadsStoredFilename(rel)
   if (!fn || !examId) return resolveMaterialUrl(rel)
   const token = typeof localStorage !== 'undefined' ? localStorage.getItem('mx_token') : ''
