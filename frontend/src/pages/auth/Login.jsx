@@ -177,53 +177,101 @@ export default function Login() {
     if (isAdmin) return
     if (mode !== 'google') return
     if (step !== 'google') return
-    if (!googleBtnRef.current) return
 
     const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID
     if (!clientId) return
-    const g = window.google
-    if (!g?.accounts?.id) return
 
-    try {
-      g.accounts.id.initialize({
-        client_id: clientId,
-        callback: async (resp) => {
-          const cred = resp?.credential
-          if (!cred) return toast('Google giriş alınmadı', 'error')
-          setLoading(true)
-          try {
-            const r = await googleLogin(cred)
-            if (r?.token && r?.user) {
-              goDashboard(r.user.role)
-              return
-            }
-            if (r?.needs_role) {
-              setGoogleCredential(cred)
-              setStep('role')
-              return
-            }
-            toast(r?.message || 'Giriş alınmadı', 'error')
-          } catch (e) {
-            toast(e?.message || 'Google giriş xətası', 'error')
-          } finally {
-            setLoading(false)
-          }
-        },
-      })
-      googleBtnRef.current.innerHTML = ''
-      g.accounts.id.renderButton(googleBtnRef.current, {
-        theme: 'outline',
-        size: 'large',
-        width: 320,
-        text: 'continue_with',
-        shape: 'pill',
-      })
+    let cancelled = false
+    let ticks = 0
+    let renderFailures = 0
+    let inited = false
 
-      // Mobile Safari / some layouts can make the GIS iframe ignore taps if layered.
-      // Ensure the container is clickable and provide a fallback click handler.
-      googleBtnRef.current.style.pointerEvents = 'auto'
-    } catch {
-      // ignore
+    const MAX_TICKS = 120 // ~6s @ 50ms — covers slow async GIS script loads on mobile navigations
+    const MAX_RENDER_FAILURES = 8
+
+    const tryMount = () => {
+      if (cancelled || inited) return false
+      const el = googleBtnRef.current
+      if (!el) return false
+
+      const g = window.google
+      if (!g?.accounts?.id) {
+        return false
+      }
+
+      try {
+        g.accounts.id.initialize({
+          client_id: clientId,
+          callback: async (resp) => {
+            const cred = resp?.credential
+            if (!cred) return toast('Google giriş alınmadı', 'error')
+            setLoading(true)
+            try {
+              const r = await googleLogin(cred)
+              if (r?.token && r?.user) {
+                goDashboard(r.user.role)
+                return
+              }
+              if (r?.needs_role) {
+                setGoogleCredential(cred)
+                setStep('role')
+                return
+              }
+              toast(r?.message || 'Giriş alınmadı', 'error')
+            } catch (e) {
+              toast(e?.message || 'Google giriş xətası', 'error')
+            } finally {
+              setLoading(false)
+            }
+          },
+        })
+
+        el.innerHTML = ''
+        g.accounts.id.renderButton(el, {
+          theme: 'outline',
+          size: 'large',
+          width: 320,
+          text: 'continue_with',
+          shape: 'pill',
+        })
+
+        // Mobile Safari / some layouts can make the GIS iframe ignore taps if layered.
+        el.style.pointerEvents = 'auto'
+        inited = true
+        return true
+      } catch {
+        renderFailures += 1
+        return renderFailures >= MAX_RENDER_FAILURES
+      }
+    }
+
+    let iv = null
+    iv = window.setInterval(() => {
+      if (cancelled || inited) {
+        if (iv) window.clearInterval(iv)
+        return
+      }
+      ticks += 1
+      const done = tryMount()
+      if (done || ticks >= MAX_TICKS) {
+        if (iv) window.clearInterval(iv)
+      }
+    }, 50)
+
+    // Immediate attempt on mount (helps when GIS is already present).
+    if (tryMount() && iv) {
+      window.clearInterval(iv)
+      iv = null
+    }
+
+    return () => {
+      cancelled = true
+      if (iv) window.clearInterval(iv)
+      try {
+        window.google?.accounts?.id?.cancel?.()
+      } catch {
+        // ignore
+      }
     }
   }, [isAdmin, mode, step, googleLogin, toast])
 
