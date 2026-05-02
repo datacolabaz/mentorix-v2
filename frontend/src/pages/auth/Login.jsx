@@ -199,6 +199,14 @@ export default function Login() {
         return false
       }
 
+      const buttonWidthPx = () => {
+        // GIS `width` is in pixels; fixed 320 overflows on narrow phones (esp. real iOS), while devtools responsive can mislead.
+        const host = el.parentElement
+        const avail = host?.clientWidth || el.clientWidth || document.documentElement.clientWidth || 320
+        const padded = Math.max(0, Math.floor(avail))
+        return Math.max(240, Math.min(320, padded))
+      }
+
       try {
         g.accounts.id.initialize({
           client_id: clientId,
@@ -230,7 +238,7 @@ export default function Login() {
         g.accounts.id.renderButton(el, {
           theme: 'outline',
           size: 'large',
-          width: 320,
+          width: buttonWidthPx(),
           text: 'continue_with',
           shape: 'pill',
         })
@@ -374,11 +382,11 @@ export default function Login() {
                 <>
                   {step === 'google' ? (
                     <div className="space-y-4">
-                      <div className="relative z-10 flex justify-center">
+                      <div className="relative z-10 w-full flex justify-center min-w-0">
                         <div
                           ref={googleBtnRef}
-                          className="pointer-events-auto inline-flex"
-                          style={{ minHeight: 44, maxWidth: '100%', overflow: 'hidden' }}
+                          className="pointer-events-auto inline-flex max-w-full"
+                          style={{ minHeight: 44 }}
                         />
                       </div>
                       <div className="text-center">
