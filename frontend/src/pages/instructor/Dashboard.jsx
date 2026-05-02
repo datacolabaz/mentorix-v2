@@ -306,7 +306,7 @@ export default function InstructorDashboard() {
           sparkline={[Number(dash.income_this_month || 0), Number(dash.total_earnings_all || 0)]}
         />
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-6">
+      <div className="grid grid-cols-1 gap-3 sm:gap-4 mb-6">
         <KpiCard
           title="Bu ay ödəniş (nağd)"
           value={loading ? '—' : incomeThisMonthAz}
@@ -315,10 +315,6 @@ export default function InstructorDashboard() {
           deltaPct={dash?.income_this_month ? 12 : 0}
           sparkline={[Number(dash.pending_monthly_total || 0), Number(dash.income_this_month || 0), Number(dash.total_earnings_all || 0)]}
         />
-        <p className="text-xs text-gray-500 self-center sm:col-span-1">
-          Gözlənən: ödəniş planına görə qalıq borc və ya gecikmə (başlama tarixinə görə hesablanır).
-          günü).
-        </p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 min-w-0">
