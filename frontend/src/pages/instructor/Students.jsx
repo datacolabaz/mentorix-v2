@@ -23,6 +23,7 @@ const BILLING_OPTS = [
 const emptyForm = {
   full_name: '',
   phone: '',
+  email: '',
   billing_type: '8_lessons',
   referral_notes: '',
   monthly_fee: '',
@@ -198,6 +199,26 @@ function StudentFormFields({
         />
         <p className="text-[10px] text-gray-500 mt-1.5">Giriş üçün əsas identifikator telefon nömrəsidir (PIN ilə).</p>
       </div>
+
+      {mode === 'add' ? (
+        <div>
+          <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+            Email (istəyə bağlı)
+          </label>
+          <input
+            className={inp}
+            type="email"
+            inputMode="email"
+            autoComplete="email"
+            placeholder="student@gmail.com"
+            value={data.email || ''}
+            onChange={(e) => setData((p) => ({ ...p, email: e.target.value }))}
+          />
+          <p className="text-[10px] text-gray-500 mt-1.5">
+            Google ilə giriş üçün eyniləşdirici kimi saxlanılır. Boş buraxılsa, yalnız telefon/PIN üzərindən davam edir.
+          </p>
+        </div>
+      ) : null}
 
       <div className="rounded-xl border border-white/10 bg-surface-2/40 p-3 space-y-2">
         <p className="text-xs font-semibold text-gray-200 uppercase tracking-wider">1. Qeydiyyat növü *</p>
@@ -631,6 +652,13 @@ export default function InstructorStudents() {
       toast('Ad ve telefon teleb olunur', 'error')
       return
     }
+    const emailTrim = String(form.email || '').trim().toLowerCase()
+    if (emailTrim) {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailTrim)) {
+        toast('Email formatı düzgün deyil', 'error')
+        return
+      }
+    }
     if (!form.lesson_weekdays?.length) {
       toast('Ən azı bir dərs günü seçin', 'error')
       return
@@ -648,6 +676,7 @@ export default function InstructorStudents() {
       const reg = await api.post('/auth/register', {
         full_name: form.full_name,
         phone: form.phone,
+        email: emailTrim || undefined,
         role: 'student',
         password: Math.random().toString(36).slice(-8),
       })
@@ -705,6 +734,7 @@ export default function InstructorStudents() {
     setEditOriginal({
       full_name: s.full_name || '',
       phone: s.phone || '',
+      email: s.email || '',
       billing_type: s.billing_type || '8_lessons',
       monthly_fee: s.monthly_fee != null && s.monthly_fee !== '' ? String(s.monthly_fee) : '',
       enrollment_date: pkgAnchor,
@@ -722,6 +752,7 @@ export default function InstructorStudents() {
     setEditForm({
       full_name: s.full_name || '',
       phone: s.phone || '',
+      email: s.email || '',
       billing_type: s.billing_type || '8_lessons',
       referral_notes: s.referral_notes || '',
       monthly_fee: s.monthly_fee != null && s.monthly_fee !== '' ? String(s.monthly_fee) : '',

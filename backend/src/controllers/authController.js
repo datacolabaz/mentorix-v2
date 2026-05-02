@@ -51,6 +51,33 @@ function canonicalPhone(phone) {
   return clean;
 }
 
+function canonicalStudentEmail(email) {
+  const raw = String(email || '').trim().toLowerCase();
+  if (!raw) return null;
+  // basic sanity guard (DB unique index is lower(trim(email)))
+  if (raw.length > 254) return null;
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(raw)) return null;
+  return raw;
+}
+
+async function assertGoogleSubFreeForOtherUser(googleSub, keepUserId) {
+  const sub = String(googleSub || '').trim();
+  if (!sub) return;
+  const { rows } = await db.query(
+    `SELECT id FROM users
+     WHERE is_active = TRUE
+       AND google_sub = $1
+       AND id <> $2
+     LIMIT 1`,
+    [sub, keepUserId]
+  );
+  if (rows[0]?.id) {
+    const err = new Error('Bu Google hesabı artıq başqa istifadəçiyə bağlıdır');
+    err.statusCode = 409;
+    throw err;
+  }
+}
+
 function hasStoredPin(pinHash) {
   return pinHash != null && String(pinHash).trim().length > 0;
 }
@@ -404,8 +431,10 @@ const register = async (req, res) => {
     const phoneCanon = canonicalPhone(phone);
     if (!phoneCanon) return res.status(400).json({ success: false, message: 'Telefon tələb olunur' });
     const hash = await bcrypt.hash(password || 'Pass@123', 12);
-    // Students are phone/PIN-first; ignore email on registration unless explicitly non-empty.
-    const emailCanon = role === 'student' ? null : email?.toLowerCase() || null;
+    const emailCanon = role === 'student' ? canonicalStudentEmail(email) : email?.toLowerCase() || null;
+    if (role === 'student' && email && !emailCanon) {
+      return res.status(400).json({ success: false, message: 'Email formatı düzgün deyil' });
+    }
 
     const user = await db.transaction(async (client) => {
       let created = null;
@@ -414,38 +443,104 @@ const register = async (req, res) => {
 
       // Instructor add-student flow should not create duplicate users for the same phone.
       if (role === 'student') {
-        const { rows: activeByPhone } = await client.query(
-          `SELECT id, full_name, email, role, phone, is_active
-           FROM users
-           WHERE role = 'student'
-             AND is_active = TRUE
-             AND ${PHONE_NORM} = $1
-           LIMIT 1`,
-          [cleanPhone]
-        );
-        if (activeByPhone[0]) {
-          const { rows: up } = await client.query(
-            `UPDATE users
-             SET full_name = $2,
-                 email = COALESCE($3, email),
-                 phone = $4,
-                 password_hash = $5,
-                 role = 'student',
-                 is_active = TRUE,
-                 phone_verified = FALSE
-             WHERE id = $1
-             RETURNING id, full_name, email, role, phone`,
-            [activeByPhone[0].id, full_name, emailCanon, phoneCanon, hash]
+        // 1) Email-first merge (Google unique identifier), if provided.
+        if (emailCanon) {
+          const { rows: activeByEmail } = await client.query(
+            `SELECT id, full_name, email, role, phone, is_active, ${PHONE_NORM} AS phone_digits
+             FROM users
+             WHERE role = 'student'
+               AND is_active = TRUE
+               AND email IS NOT NULL
+               AND LOWER(TRIM(email)) = LOWER(TRIM($1))
+             LIMIT 1`,
+            [emailCanon]
           );
-          created = up[0];
+          const byEmail = activeByEmail[0] || null;
+          if (byEmail) {
+            const otherPhoneSame = String(byEmail.phone_digits || '') === String(cleanPhone);
+            if (!otherPhoneSame) {
+              const { rows: phoneOwner } = await client.query(
+                `SELECT id FROM users
+                 WHERE role = 'student'
+                   AND is_active = TRUE
+                   AND ${PHONE_NORM} = $1
+                   AND id <> $2
+                 LIMIT 1`,
+                [cleanPhone, byEmail.id]
+              );
+              if (phoneOwner[0]?.id) {
+                const err = new Error(
+                  'Bu telefon nömrəsi artıq başqa tələbə hesabına bağlıdır. Eyni tələbə üçün email və telefon uyğun olmalıdır.'
+                );
+                err.statusCode = 409;
+                throw err;
+              }
+            }
+
+            const { rows: up } = await client.query(
+              `UPDATE users
+               SET full_name = $2,
+                   phone = $3,
+                   password_hash = $4,
+                   role = 'student',
+                   is_active = TRUE,
+                   phone_verified = FALSE,
+                   account_status = CASE
+                     WHEN google_sub IS NULL OR TRIM(COALESCE(google_sub::text, '')) = '' THEN 'pending_google'
+                     ELSE 'active'
+                   END
+               WHERE id = $1
+               RETURNING id, full_name, email, role, phone`,
+              [byEmail.id, full_name, phoneCanon, hash]
+            );
+            created = up[0];
+          }
+        }
+
+        // 2) Phone merge (PIN-first), if no email match.
+        if (!created) {
+          const { rows: activeByPhone } = await client.query(
+            `SELECT id, full_name, email, role, phone, is_active
+             FROM users
+             WHERE role = 'student'
+               AND is_active = TRUE
+               AND ${PHONE_NORM} = $1
+             LIMIT 1`,
+            [cleanPhone]
+          );
+          if (activeByPhone[0]) {
+            const { rows: up } = await client.query(
+              `UPDATE users
+               SET full_name = $2,
+                   email = COALESCE($3, email),
+                   phone = $4,
+                   password_hash = $5,
+                   role = 'student',
+                   is_active = TRUE,
+                   phone_verified = FALSE,
+                   account_status = CASE
+                     WHEN ($3::text IS NOT NULL AND TRIM($3::text) <> '' AND (google_sub IS NULL OR TRIM(COALESCE(google_sub::text, '')) = ''))
+                       THEN 'pending_google'
+                     ELSE account_status
+                   END
+               WHERE id = $1
+               RETURNING id, full_name, email, role, phone`,
+              [activeByPhone[0].id, full_name, emailCanon, phoneCanon, hash]
+            );
+            created = up[0];
+          }
         }
       }
 
       if (!created) {
         try {
+          const accountStatus =
+            role === 'student' && emailCanon ? 'pending_google' : 'active';
           const { rows } = await client.query(
-            'INSERT INTO users (full_name, email, phone, password_hash, role) VALUES ($1, $2, $3, $4, $5) RETURNING id, full_name, email, role, phone',
-            [full_name, emailCanon, phoneCanon, hash, role],
+            `INSERT INTO users (full_name, email, phone, password_hash, role, account_status)
+             VALUES ($1, $2, $3, $4, $5, $6)
+             RETURNING id, full_name, email, role, phone`,
+            [full_name, emailCanon, phoneCanon, hash, role, accountStatus]
           );
           created = rows[0];
         } catch (e) {
@@ -504,7 +599,12 @@ const register = async (req, res) => {
                    password_hash = $5,
                    role = 'student',
                    is_active = TRUE,
-                   phone_verified = FALSE
+                   phone_verified = FALSE,
+                   account_status = CASE
+                     WHEN ($3::text IS NOT NULL AND TRIM($3::text) <> '' AND (google_sub IS NULL OR TRIM(COALESCE(google_sub::text, '')) = ''))
+                       THEN 'pending_google'
+                     ELSE COALESCE(account_status, 'active')
+                   END
                WHERE id = $1
                RETURNING id, full_name, email, role, phone`,
               [pick.id, full_name, emailCanon, phoneCanon, hash]
@@ -859,7 +959,7 @@ const googleLogin = async (req, res) => {
     const g = await verifyGoogleIdTokenOrThrow(credential);
 
     const bySub = await db.query(
-      `SELECT id, full_name, email, role, phone, phone_verified, auth_provider, google_sub
+      `SELECT id, full_name, email, role, phone, phone_verified, auth_provider, google_sub, account_status, is_active
        FROM users
        WHERE is_active = TRUE
          AND google_sub = $1
@@ -870,22 +970,44 @@ const googleLogin = async (req, res) => {
 
     if (!user && g.email) {
       const byEmail = await db.query(
-        `SELECT id, full_name, email, role, phone, phone_verified, auth_provider, google_sub
+        `SELECT id, full_name, email, role, phone, phone_verified, auth_provider, google_sub, account_status, is_active
          FROM users
-         WHERE is_active = TRUE
-           AND email IS NOT NULL
+         WHERE email IS NOT NULL
            AND LOWER(TRIM(email)) = LOWER(TRIM($1))
+         ORDER BY
+           CASE WHEN is_active = TRUE THEN 0 ELSE 1 END,
+           CASE WHEN role = 'student' THEN 0 ELSE 1 END,
+           created_at DESC NULLS LAST
          LIMIT 1`,
         [g.email]
       );
       user = byEmail.rows[0] || null;
-      if (user && !user.google_sub) {
+      if (user) {
+        if (user.role && user.role !== 'student') {
+          const err = new Error('Bu Google email artıq başqa rol üçün qeydiyyatdan keçib');
+          err.statusCode = 409;
+          throw err;
+        }
+        if (user.google_sub && String(user.google_sub) !== String(g.sub)) {
+          const err = new Error('Bu email artıq başqa Google hesabına bağlıdır');
+          err.statusCode = 409;
+          throw err;
+        }
+
+        await assertGoogleSubFreeForOtherUser(g.sub, user.id);
+
         await db.query(
           `UPDATE users
            SET google_sub = $2,
-               auth_provider = COALESCE(auth_provider, 'google')
+               auth_provider = COALESCE(auth_provider, 'google'),
+               is_active = TRUE,
+               account_status = 'active',
+               full_name = CASE
+                 WHEN TRIM(COALESCE(full_name, '')) = '' THEN COALESCE($3, full_name)
+                 ELSE full_name
+               END
            WHERE id = $1`,
-          [user.id, g.sub]
+          [user.id, g.sub, g.name || null]
         );
       }
     }
@@ -927,7 +1049,7 @@ const googleComplete = async (req, res) => {
     }
 
     const { rows: existingBySub } = await db.query(
-      `SELECT id, full_name, email, role, phone, phone_verified
+      `SELECT id, full_name, email, role, phone, phone_verified, google_sub, account_status, is_active
        FROM users
        WHERE is_active = TRUE
          AND google_sub = $1
@@ -938,15 +1060,29 @@ const googleComplete = async (req, res) => {
 
     if (!user && g.email) {
       const { rows: byEmail } = await db.query(
-        `SELECT id, full_name, email, role, phone, phone_verified
+        `SELECT id, full_name, email, role, phone, phone_verified, google_sub, account_status, is_active
          FROM users
-         WHERE is_active = TRUE
-           AND email IS NOT NULL
+         WHERE email IS NOT NULL
            AND LOWER(TRIM(email)) = LOWER(TRIM($1))
+         ORDER BY
+           CASE WHEN is_active = TRUE THEN 0 ELSE 1 END,
+           created_at DESC NULLS LAST
          LIMIT 1`,
         [g.email]
       );
       user = byEmail[0] || null;
+      if (user) {
+        if (user.role && user.role !== r) {
+          return res.status(409).json({
+            success: false,
+            message: 'Bu Google email artıq başqa rol üçün mövcuddur',
+          });
+        }
+        if (user.google_sub && String(user.google_sub) !== String(g.sub)) {
+          return res.status(409).json({ success: false, message: 'Bu email artıq başqa Google hesabına bağlıdır' });
+        }
+        await assertGoogleSubFreeForOtherUser(g.sub, user.id);
+      }
     }
 
     if (!user) {
@@ -958,8 +1094,8 @@ const googleComplete = async (req, res) => {
         10
       );
       const { rows: created } = await db.query(
-        `INSERT INTO users (full_name, email, role, auth_provider, google_sub, phone_verified, password_hash)
-         VALUES ($1, $2, $3, 'google', $4, FALSE, $5)
+        `INSERT INTO users (full_name, email, role, auth_provider, google_sub, phone_verified, password_hash, account_status)
+         VALUES ($1, $2, $3, 'google', $4, FALSE, $5, 'active')
          RETURNING id, full_name, email, role, phone, phone_verified`,
         [fullName, g.email, r, g.sub, oauthPasswordPlaceholder]
       );
@@ -969,7 +1105,9 @@ const googleComplete = async (req, res) => {
         `UPDATE users
          SET role = $2,
              auth_provider = COALESCE(auth_provider, 'google'),
-             google_sub = COALESCE(google_sub, $3)
+             google_sub = COALESCE(google_sub, $3),
+             is_active = TRUE,
+             account_status = 'active'
          WHERE id = $1
          RETURNING id, full_name, email, role, phone, phone_verified`,
         [user.id, r, g.sub]
@@ -980,7 +1118,9 @@ const googleComplete = async (req, res) => {
         .query(
           `UPDATE users
            SET google_sub = COALESCE(google_sub, $2),
-               auth_provider = COALESCE(auth_provider, 'google')
+               auth_provider = COALESCE(auth_provider, 'google'),
+               is_active = TRUE,
+               account_status = 'active'
            WHERE id = $1`,
           [user.id, g.sub]
         )

@@ -7,6 +7,7 @@ CREATE TABLE users (
   phone VARCHAR(20) UNIQUE,
   password_hash VARCHAR(255),
   role VARCHAR(20) NOT NULL CHECK (role IN ('admin','instructor','student','parent')),
+  account_status TEXT NOT NULL DEFAULT 'active' CHECK (account_status IN ('active', 'pending_google')),
   is_active BOOLEAN DEFAULT TRUE,
   created_at TIMESTAMP DEFAULT NOW()
 );
