@@ -200,7 +200,7 @@ function StudentFormFields({
         <p className="text-[10px] text-gray-500 mt-1.5">Giriş üçün əsas identifikator telefon nömrəsidir (PIN ilə).</p>
       </div>
 
-      {mode === 'add' ? (
+      {mode === 'add' || mode === 'edit' ? (
         <div>
           <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
             Email (istəyə bağlı)
@@ -216,6 +216,14 @@ function StudentFormFields({
           />
           <p className="text-[10px] text-gray-500 mt-1.5">
             Google ilə giriş üçün eyniləşdirici kimi saxlanılır. Boş buraxılsa, yalnız telefon/PIN üzərindən davam edir.
+            {mode === 'edit' ? (
+              <>
+                {' '}
+                <span className="text-gray-400">
+                  Qeyd: tələbə Google ilə artıq giriş edibsə, email dəyişikliyi server tərəfindən bloklanır.
+                </span>
+              </>
+            ) : null}
           </p>
         </div>
       ) : null}
@@ -563,6 +571,7 @@ export default function InstructorStudents() {
   const [editForm, setEditForm] = useState(emptyForm)
   const [editOriginal, setEditOriginal] = useState(null)
   const [editId, setEditId] = useState(null)
+  const [editStudentId, setEditStudentId] = useState(null)
   const [loading, setLoading] = useState(false)
   const [listLoading, setListLoading] = useState(true)
   const [listError, setListError] = useState(null)
@@ -722,6 +731,7 @@ export default function InstructorStudents() {
 
   const openEdit = (s) => {
     setEditId(s.enrollment_id)
+    setEditStudentId(s.id || s.student_id || null)
     const enrSlice =
       s.enrollment_start_date != null && s.enrollment_start_date !== ''
         ? String(s.enrollment_start_date).slice(0, 10)
@@ -887,7 +897,8 @@ export default function InstructorStudents() {
         const next = (Array.isArray(g.students) ? g.students : []).filter((s) => {
           const name = String(s?.full_name || '').toLowerCase()
           const phone = String(s?.phone || '').toLowerCase()
-          return name.includes(q) || phone.includes(q)
+          const email = String(s?.email || '').toLowerCase()
+          return name.includes(q) || phone.includes(q) || email.includes(q)
         })
         return { ...g, students: next }
       })
@@ -963,9 +974,33 @@ export default function InstructorStudents() {
       toast('Paket üçün ilk dərs tarixini seçin', 'error')
       return
     }
+
+    const emailTrim = String(editForm.email || '').trim().toLowerCase()
+    const origEmailTrim = String(original.email || '').trim().toLowerCase()
+    if (emailTrim !== origEmailTrim) {
+      if (emailTrim) {
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailTrim)) {
+          toast('Email formatı düzgün deyil', 'error')
+          return
+        }
+      }
+    }
+
     const enrollmentPatch = effectiveFirstLesson || effectiveEnrollment
+
+    if (emailTrim !== origEmailTrim) {
+      if (!editStudentId) {
+        toast('Tələbə ID tapılmadı — səhifəni yeniləyib yenidən cəhd edin', 'error')
+        return
+      }
+    }
+
     setLoading(true)
     try {
+      if (emailTrim !== origEmailTrim) {
+        await api.patch(`/students/${encodeURIComponent(editStudentId)}/email`, { email: emailTrim || null })
+      }
+
       // Yalnız dəyişən sahələri göndər (telefon update-də tarix validasiyası trigger olmasın).
       const patchBody = {}
       const setIfChanged = (k, v, ov) => {
@@ -999,11 +1034,13 @@ export default function InstructorStudents() {
       if (!Object.keys(patchBody).length) {
         toast('Dəyişiklik yoxdur', 'info')
         setEditModal(false)
+        setEditStudentId(null)
         return
       }
       await api.patch('/students/enrollment/' + encodeURIComponent(editId), patchBody)
       toast('Melumatlari yenilendi!')
       setEditModal(false)
+      setEditStudentId(null)
       load()
     } catch (err) {
       toast(err.message || 'Xeta', 'error')
@@ -1476,7 +1513,10 @@ export default function InstructorStudents() {
 
       <Modal
         open={editModal}
-        onClose={() => setEditModal(false)}
+        onClose={() => {
+          setEditModal(false)
+          setEditStudentId(null)
+        }}
         title="Telebeyi Redakte Et"
       >
         <StudentFormFields
@@ -1492,7 +1532,14 @@ export default function InstructorStudents() {
           <Button onClick={saveEdit} loading={loading} className="flex-1 justify-center">
             Yadda Saxla
           </Button>
-          <Button variant="secondary" onClick={() => setEditModal(false)} className="flex-1 justify-center">
+          <Button
+            variant="secondary"
+            onClick={() => {
+              setEditModal(false)
+              setEditStudentId(null)
+            }}
+            className="flex-1 justify-center"
+          >
             Legv et
           </Button>
         </div>

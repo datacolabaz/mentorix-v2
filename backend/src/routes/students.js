@@ -10,6 +10,7 @@ const {
 } = require('../controllers/studentController');
 const { authenticate, authorize } = require('../middleware/auth');
 const db = require('../utils/db');
+const { patchStudentEmail } = require('../controllers/studentEmailController');
 const { deliverPermanentPinSms } = require('../controllers/authController');
 const {
   requireInstructorPhoneVerified,
@@ -983,6 +984,8 @@ router.patch('/:id/phone', authenticate, authorize('admin', 'instructor'), async
     res.json({ success: true });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
+
+router.patch('/:id/email', authenticate, authorize('admin', 'instructor'), patchStudentEmail);
 
 router.get('/my/schedule', authenticate, authorize('student'), getMySchedule);
 router.post('/my/prep-slots', authenticate, authorize('student'), addMyPrepSlots);

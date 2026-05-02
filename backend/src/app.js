@@ -42,6 +42,7 @@ app.use('/api/uploads/assignments', express.static(uploadsAssignmentsDir));
 
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/students', require('./routes/students'));
+app.use('/api/instructor/students', require('./routes/instructorStudents'));
 app.use('/api/attendance', require('./routes/attendance'));
 app.use('/api/exams', require('./routes/exams'));
 app.use('/api/payments', require('./routes/payments'));
