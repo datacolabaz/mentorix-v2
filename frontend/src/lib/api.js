@@ -58,7 +58,8 @@ function isPublicAuthPath(config) {
     path.includes('/auth/login') ||
     path.includes('/auth/otp/') ||
     path.includes('/auth/pin/') ||
-    path.includes('/auth/phone/')
+    path.includes('/auth/phone/') ||
+    path.includes('/public/')
   )
 }
 
@@ -77,6 +78,7 @@ function isAuthAttemptConfig(config) {
     path.includes('/auth/otp/') ||
     path.includes('/auth/pin/') ||
     path.includes('/auth/phone/') ||
+    path.includes('/public/') ||
     path.includes('/auth/me') ||
     path.includes('/exams/material-file') ||
     path.includes('/exams/by-exam/')
