@@ -1,7 +1,8 @@
 const router = require('express').Router();
 const { authenticate, authorize } = require('../middleware/auth');
 const db = require('../utils/db');
-const { resolveEntitlements, logBillingEvent, getCurrentPlan } = require('../services/billingEntitlements');
+const { resolveEntitlements, logBillingEvent } = require('../services/billingEntitlements');
+const getCurrentPlan = require('../services/billingGetCurrentPlan');
 const { normalizePlanSlug, PLANS } = require('../config/plans');
 const { createOrder, getOrderInfo } = require('../services/payriffService');
 const { sendPaymentEmail } = require('../services/emailService');

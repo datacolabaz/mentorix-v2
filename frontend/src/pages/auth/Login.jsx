@@ -252,24 +252,63 @@ export default function Login() {
     return r?.label || '—'
   }, [role])
 
+  /** GIS: `initialize()` təkrarlananda xəbərdarlıq verir — callback ref ilə saxlayırıq, düymə üçün yalnız `renderButton` yenilənir */
+  const googleSdkCallbackRef = useRef(null)
+  googleSdkCallbackRef.current = async (resp) => {
+    const cred = resp?.credential
+    if (!cred) return toast('Google giriş alınmadı', 'error')
+    setLoading(true)
+    try {
+      const r = await googleLogin(cred)
+      if (r?.token && r?.user) {
+        goDashboard(r.user.role)
+        return
+      }
+      if (r?.needs_role) {
+        setGoogleCredential(cred)
+        setStep('role')
+        return
+      }
+      toast(r?.message || 'Giriş alınmadı', 'error')
+    } catch (e) {
+      toast(e?.message || 'Google giriş xətası', 'error')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const gisInitializedForClientRef = useRef(null)
+
+  /** Yalnız login səhifəsindən çıxanda — GIS One Tap / daxili axını bağlayır; modal addımı cleanup-da `cancel()` çağırmaq klik axınını poza bilər */
   useEffect(() => {
-    if (isAdmin) return
-    if (mode !== 'google') return
-    if (step !== 'google') return
+    return () => {
+      try {
+        window.google?.accounts?.id?.cancel?.()
+      } catch {
+        /* ignore */
+      }
+      gisInitializedForClientRef.current = null
+    }
+  }, [])
+
+  useEffect(() => {
+    if (isAdmin) return undefined
+    if (mode !== 'google') return undefined
+    if (step !== 'google') return undefined
 
     const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID
-    if (!clientId) return
+    if (!clientId) return undefined
 
     let cancelled = false
     let ticks = 0
     let renderFailures = 0
-    let inited = false
+    let buttonRendered = false
 
-    const MAX_TICKS = 120 // ~6s @ 50ms — covers slow async GIS script loads on mobile navigations
+    const MAX_TICKS = 120
     const MAX_RENDER_FAILURES = 8
 
     const tryMount = () => {
-      if (cancelled || inited) return false
+      if (cancelled || buttonRendered) return false
       const el = googleBtnRef.current
       if (!el) return false
 
@@ -279,7 +318,6 @@ export default function Login() {
       }
 
       const buttonWidthPx = () => {
-        // GIS `width` is in pixels; fixed 320 overflows on narrow phones (esp. real iOS), while devtools responsive can mislead.
         const host = el.parentElement
         const avail = host?.clientWidth || el.clientWidth || document.documentElement.clientWidth || 320
         const padded = Math.max(0, Math.floor(avail))
@@ -287,31 +325,15 @@ export default function Login() {
       }
 
       try {
-        g.accounts.id.initialize({
-          client_id: clientId,
-          callback: async (resp) => {
-            const cred = resp?.credential
-            if (!cred) return toast('Google giriş alınmadı', 'error')
-            setLoading(true)
-            try {
-              const r = await googleLogin(cred)
-              if (r?.token && r?.user) {
-                goDashboard(r.user.role)
-                return
-              }
-              if (r?.needs_role) {
-                setGoogleCredential(cred)
-                setStep('role')
-                return
-              }
-              toast(r?.message || 'Giriş alınmadı', 'error')
-            } catch (e) {
-              toast(e?.message || 'Google giriş xətası', 'error')
-            } finally {
-              setLoading(false)
-            }
-          },
-        })
+        if (gisInitializedForClientRef.current !== clientId) {
+          g.accounts.id.initialize({
+            client_id: clientId,
+            callback: (resp) => {
+              void googleSdkCallbackRef.current?.(resp)
+            },
+          })
+          gisInitializedForClientRef.current = clientId
+        }
 
         el.innerHTML = ''
         g.accounts.id.renderButton(el, {
@@ -322,9 +344,8 @@ export default function Login() {
           shape: 'pill',
         })
 
-        // Mobile Safari / some layouts can make the GIS iframe ignore taps if layered.
         el.style.pointerEvents = 'auto'
-        inited = true
+        buttonRendered = true
         return true
       } catch {
         renderFailures += 1
@@ -334,7 +355,7 @@ export default function Login() {
 
     let iv = null
     iv = window.setInterval(() => {
-      if (cancelled || inited) {
+      if (cancelled || buttonRendered) {
         if (iv) window.clearInterval(iv)
         return
       }
@@ -345,7 +366,6 @@ export default function Login() {
       }
     }, 50)
 
-    // Immediate attempt on mount (helps when GIS is already present).
     if (tryMount() && iv) {
       window.clearInterval(iv)
       iv = null
@@ -355,12 +375,13 @@ export default function Login() {
       cancelled = true
       if (iv) window.clearInterval(iv)
       try {
-        window.google?.accounts?.id?.cancel?.()
+        const el = googleBtnRef.current
+        if (el) el.innerHTML = ''
       } catch {
-        // ignore
+        /* ignore */
       }
     }
-  }, [isAdmin, mode, step, loginModalOpen, googleLogin, toast])
+  }, [isAdmin, mode, step, loginModalOpen])
 
   useEffect(() => {
     if (isAdmin) return
