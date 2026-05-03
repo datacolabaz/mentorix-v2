@@ -377,6 +377,23 @@ export default function Login() {
     }
   }, [isAdmin])
 
+  /** Admin-də saxlanan landing mətnləri — API olmadan yalnız defolt göstərilirdi */
+  useEffect(() => {
+    if (isAdmin) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const data = await api.get('/public/marketing/login', { params: { _: Date.now() } })
+        if (!cancelled && data?.success && data?.landing) setMarketing(data.landing)
+      } catch {
+        /* defolt marketing state qalır */
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [isAdmin])
+
   useEffect(() => {
     if (!demoOpen) return
     setDemoPaneBusy(true)

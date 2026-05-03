@@ -20,7 +20,7 @@ const getPublicLoginMarketing = async (req, res) => {
   try {
     const { payload } = await loadRawPayload();
     const merged = mergeLoginMarketingFromDb(payload);
-    res.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=120');
+    res.set('Cache-Control', 'public, max-age=0, must-revalidate');
     res.json({ success: true, slug: LOGIN_MARKETING_SLUG, landing: merged });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message || 'Xəta' });
