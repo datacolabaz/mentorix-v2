@@ -1,5 +1,4 @@
 const PAYRIFF_BASE_URL = process.env.PAYRIFF_BASE_URL || 'https://api.payriff.com/api/v3';
-const PAYRIFF_SECRET_KEY = process.env.PAYRIFF_SECRET_KEY || '';
 
 function httpError(code, status = 500, message = code) {
   const err = new Error(message);
@@ -9,10 +8,27 @@ function httpError(code, status = 500, message = code) {
   return err;
 }
 
+/** Payriff merchant panelindən gələn secret; hər çağırışda oxunur (deploy sonrası env yenilənəndə restart ehtiyacını azaldır) */
+function payriffSecretKey() {
+  return String(
+    process.env.PAYRIFF_SECRET_KEY ||
+      process.env.PAYRIFF_API_SECRET ||
+      process.env.PAYRIFF_KEY ||
+      ''
+  ).trim();
+}
+
 function authHeaders() {
-  if (!PAYRIFF_SECRET_KEY) throw httpError('PAYRIFF_CONFIG', 500, 'PAYRIFF_SECRET_KEY is missing');
+  const key = payriffSecretKey();
+  if (!key) {
+    throw httpError(
+      'PAYRIFF_CONFIG',
+      500,
+      'Ödəniş (Payriff) konfiqurasiyası yoxdur. Serverdə PAYRIFF_SECRET_KEY əlavə edin (məs. Railway → Variables). Payriff kabinetindən secret/API açarını kopyalayın.'
+    );
+  }
   return {
-    Authorization: PAYRIFF_SECRET_KEY,
+    Authorization: key,
     'Content-Type': 'application/json',
   };
 }
