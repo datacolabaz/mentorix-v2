@@ -6,6 +6,7 @@ import { useToast } from '../../components/common/Toast'
 import PhoneInput from '../../components/auth/PhoneInput'
 import Brand from '../../components/common/Brand'
 import api from '../../lib/api'
+import { trackEvent } from '../../lib/analytics'
 
 function RoleIcon({ role }) {
   const base = 'h-7 w-7 text-primary'
@@ -172,6 +173,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false)
 
   const loginSectionRef = useRef(null)
+  const landingSectionSeenRef = useRef(new Set())
   const [landingLoading, setLandingLoading] = useState(!isAdmin)
   const [landingStats, setLandingStats] = useState(null)
   const [demoOpen, setDemoOpen] = useState(false)
@@ -398,6 +400,61 @@ export default function Login() {
     return () => window.clearTimeout(id)
   }, [demoOpen, demoTab])
 
+  useEffect(() => {
+    if (isAdmin) return
+    trackEvent('mx_public_landing_view', { path: typeof window !== 'undefined' ? window.location.pathname || '/login' : '/login' })
+  }, [isAdmin])
+
+  useEffect(() => {
+    if (isAdmin || typeof IntersectionObserver === 'undefined') return
+    const seen = landingSectionSeenRef.current
+    const targets = []
+
+    const obs = new IntersectionObserver(
+      (entries) => {
+        for (const en of entries) {
+          if (!en.isIntersecting) continue
+          const id = en.target instanceof HTMLElement ? en.target.id : ''
+          if (!id || seen.has(id)) continue
+          seen.add(id)
+          trackEvent('mx_landing_section_view', { section_id: id })
+        }
+      },
+      { threshold: 0.2, rootMargin: '0px 0px -10% 0px' },
+    )
+
+    const ids = [
+      'mx-demo-mini',
+      'mx-trust',
+      'mx-why',
+      'mx-top',
+      'mx-steps',
+      'mx-features',
+      'mx-use-case',
+      'mx-faq',
+      'mx-cta',
+      'mx-login',
+    ]
+    for (const id of ids) {
+      const el = typeof document !== 'undefined' ? document.getElementById(id) : null
+      if (el) {
+        obs.observe(el)
+        targets.push(el)
+      }
+    }
+
+    return () => {
+      for (const el of targets) {
+        try {
+          obs.unobserve(el)
+        } catch {
+          /* ignore */
+        }
+      }
+      obs.disconnect()
+    }
+  }, [isAdmin])
+
   const trustStudentsShown = trustCountWithFloor(landingStats?.students_managed, TRUST_STUDENTS_FLOOR)
   const trustTeachersShown = trustCountWithFloor(landingStats?.instructor_count, TRUST_INSTRUCTORS_FLOOR)
 
@@ -408,6 +465,27 @@ export default function Login() {
   }, [landingStats])
 
   const topIsPreviewOnly = useMemo(() => topInstructorsRows.every((t) => t.preview), [topInstructorsRows])
+
+  const goLoginTracked = (surface) => {
+    trackEvent('mx_landing_cta_primary', { surface })
+    scrollToId('mx-login')
+  }
+
+  const openDemoTracked = (surface) => {
+    trackEvent('mx_landing_demo_open', { surface })
+    setDemoTab('overview')
+    setDemoOpen(true)
+  }
+
+  const onDemoTabTracked = (tabId) => {
+    trackEvent('mx_landing_demo_tab', { tab: tabId })
+    setDemoTab(tabId)
+  }
+
+  const closeDemoTracked = () => {
+    trackEvent('mx_landing_demo_close')
+    setDemoOpen(false)
+  }
 
   const completeGoogleWithRole = async (pickedRole) => {
     if (!googleCredential) return
@@ -474,24 +552,24 @@ export default function Login() {
               <div className="flex flex-col w-full max-w-xl gap-3 sm:flex-row sm:flex-wrap sm:gap-3">
                 <button
                   type="button"
-                  onClick={() => scrollToId('mx-login')}
+                  onClick={() => goLoginTracked('hero')}
                   className="w-full sm:flex-1 sm:min-h-0 inline-flex justify-center items-center text-center rounded-xl bg-primary px-4 sm:px-5 py-3.5 min-h-[48px] text-xs sm:text-sm font-semibold text-[#041018] shadow-lg shadow-primary/20 hover:brightness-95 leading-snug"
                 >
                   {PRIMARY_LANDING_CTA_LABEL}
                 </button>
                 <button
                   type="button"
-                  onClick={() => scrollToId('mx-steps')}
+                  onClick={() => {
+                    trackEvent('mx_landing_secondary_click', { action: 'how_it_works' })
+                    scrollToId('mx-steps')
+                  }}
                   className="w-full sm:w-auto sm:flex-initial inline-flex justify-center items-center rounded-xl border border-white/15 bg-white/5 px-5 py-3.5 min-h-[48px] text-sm font-semibold text-gray-100 hover:bg-white/10"
                 >
                   Necə işləyir?
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    setDemoTab('overview')
-                    setDemoOpen(true)
-                  }}
+                  onClick={() => openDemoTracked('hero_demo_button')}
                   className="w-full sm:w-auto sm:flex-initial inline-flex justify-center items-center rounded-xl border border-white/10 px-5 py-3.5 min-h-[48px] text-sm font-semibold text-gray-300 hover:border-white/20 hover:text-white"
                 >
                   Demo bax
@@ -499,7 +577,10 @@ export default function Login() {
               </div>
               <button
                 type="button"
-                onClick={() => scrollToId('mx-login')}
+                onClick={() => {
+                  trackEvent('mx_landing_secondary_click', { action: 'existing_account_login' })
+                  scrollToId('mx-login')
+                }}
                 className="text-left text-xs text-gray-500 hover:text-gray-300 underline underline-offset-4"
               >
                 Artıq hesabım var — girişə keç
@@ -753,7 +834,10 @@ export default function Login() {
               </ul>
               <button
                 type="button"
-                onClick={() => scrollToId('mx-faq')}
+                onClick={() => {
+                  trackEvent('mx_landing_secondary_click', { action: 'use_case_to_faq' })
+                  scrollToId('mx-faq')
+                }}
                 className="text-xs text-primary hover:brightness-110 font-semibold"
               >
                 FAQ-ya keç →
@@ -786,24 +870,24 @@ export default function Login() {
             <div className="flex flex-col w-full max-w-xl gap-3 mt-5 sm:flex-row sm:flex-wrap">
               <button
                 type="button"
-                onClick={() => scrollToId('mx-login')}
+                onClick={() => goLoginTracked('cta_band')}
                 className="w-full sm:flex-1 inline-flex justify-center items-center text-center rounded-xl bg-primary px-4 sm:px-5 py-3.5 min-h-[48px] text-xs sm:text-sm font-semibold text-[#041018] shadow-lg shadow-primary/30 ring-2 ring-primary/25 hover:brightness-95 leading-snug"
               >
                 {PRIMARY_LANDING_CTA_LABEL}
               </button>
               <button
                 type="button"
-                onClick={() => scrollToId('mx-steps')}
+                onClick={() => {
+                  trackEvent('mx_landing_secondary_click', { action: 'how_it_works' })
+                  scrollToId('mx-steps')
+                }}
                 className="w-full sm:w-auto sm:flex-initial inline-flex justify-center items-center rounded-xl border border-white/20 bg-black/25 px-5 py-3.5 min-h-[48px] text-sm font-semibold text-gray-100 hover:bg-black/35"
               >
                 Necə işləyir?
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  setDemoTab('overview')
-                  setDemoOpen(true)
-                }}
+                onClick={() => openDemoTracked('cta_band_demo_button')}
                 className="w-full sm:w-auto sm:flex-initial inline-flex justify-center items-center rounded-xl border border-white/15 px-5 py-3.5 min-h-[48px] text-sm font-semibold text-gray-100 hover:bg-white/5"
               >
                 Demo bax
@@ -1113,6 +1197,7 @@ export default function Login() {
               target="_blank"
               rel="noreferrer"
               className="flex items-center justify-center gap-2 mt-6 py-3 px-4 rounded-xl bg-primary text-[#041018] text-sm font-semibold hover:brightness-95 transition-all shadow-lg shadow-primary/20"
+              onClick={() => trackEvent('mx_landing_whatsapp_click')}
             >
               Bizimlə əlaqə
             </a>
@@ -1127,7 +1212,7 @@ export default function Login() {
           aria-modal="true"
           aria-label="İnteraktiv demo paneli"
           onMouseDown={(e) => {
-            if (e.target === e.currentTarget) setDemoOpen(false)
+            if (e.target === e.currentTarget) closeDemoTracked()
           }}
         >
           <div className="w-full max-w-2xl max-h-[min(92dvh,800px)] flex flex-col rounded-2xl border border-white/10 bg-[#0d0d0d] shadow-2xl overflow-hidden shadow-black/50">
@@ -1139,7 +1224,7 @@ export default function Login() {
               <button
                 type="button"
                 className="text-xs text-gray-400 hover:text-white px-2 py-1 rounded-lg hover:bg-white/5 shrink-0 min-h-[44px] min-w-[44px]"
-                onClick={() => setDemoOpen(false)}
+                onClick={() => closeDemoTracked()}
               >
                 Bağla
               </button>
@@ -1155,7 +1240,7 @@ export default function Login() {
                 <button
                   key={tab.id}
                   type="button"
-                  onClick={() => setDemoTab(tab.id)}
+                  onClick={() => onDemoTabTracked(tab.id)}
                   className={`rounded-lg px-4 py-2.5 min-h-[44px] text-xs font-semibold whitespace-nowrap shrink-0 transition-colors ${
                     demoTab === tab.id
                       ? 'bg-primary/20 text-primary border border-primary/35 shadow-[0_0_20px_-6px_rgba(0,229,176,0.6)]'
@@ -1309,6 +1394,7 @@ export default function Login() {
                   type="button"
                   className="w-full rounded-xl bg-primary px-4 py-4 min-h-[52px] text-xs sm:text-sm font-bold text-[#041018] shadow-lg shadow-primary/35 ring-2 ring-primary/30 hover:brightness-95 active:scale-[0.99] motion-safe:transition motion-safe:duration-150 leading-snug text-center"
                   onClick={() => {
+                    trackEvent('mx_landing_cta_primary', { surface: 'demo_modal_footer' })
                     setDemoOpen(false)
                     scrollToId('mx-login')
                   }}
