@@ -3,10 +3,16 @@ const {
   getInstructors, updateInstructorLimits,
   getDashboardStats, toggleInstructor,
 } = require('../controllers/adminController');
+const {
+  getAdminLoginMarketing,
+  putAdminLoginMarketing,
+} = require('../controllers/siteMarketingController');
 const { authenticate, authorize } = require('../middleware/auth');
 const db = require('../utils/db');
 
 router.get('/stats', authenticate, authorize('admin'), getDashboardStats);
+router.get('/marketing/login', authenticate, authorize('admin'), getAdminLoginMarketing);
+router.put('/marketing/login', authenticate, authorize('admin'), putAdminLoginMarketing);
 router.get('/instructors', authenticate, authorize('admin'), getInstructors);
 router.patch('/instructors/:id/limits', authenticate, authorize('admin'), updateInstructorLimits);
 router.patch('/instructors/:id/toggle', authenticate, authorize('admin'), toggleInstructor);

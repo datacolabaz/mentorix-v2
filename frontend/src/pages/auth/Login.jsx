@@ -7,6 +7,7 @@ import PhoneInput from '../../components/auth/PhoneInput'
 import Brand from '../../components/common/Brand'
 import api from '../../lib/api'
 import { trackEvent } from '../../lib/analytics'
+import { defaultLoginMarketingPayload } from '../../constants/defaultLoginMarketing'
 
 function RoleIcon({ role }) {
   const base = 'h-7 w-7 text-primary'
@@ -102,24 +103,6 @@ const PREVIEW_TEACHERS = [
   },
 ]
 
-/** Bütün əsas conversion CTA-ları eyni mətn (hero, CTA bloku, demo alt paneli) */
-const PRIMARY_LANDING_CTA_LABEL = 'Pulsuz başla — ilk 5 tələbə əlavə et'
-
-const FAQ_ITEMS = [
-  [
-    'Mentorix məktəb üçün də uyğundur?',
-    'Əsasən fərdi və kiçik qruplarla işləyən müəllimlər üçündür: təqvim, ödəniş izi və davamiyyət bir yerdə toplanır. Böyük strukturlar üçün “əlaqə” ilə konkret ssenariyə uyğunlaşdıra bilərik.',
-  ],
-  [
-    'Mobiltelefonda rahatdırmı?',
-    'Əksər müəllimlər telefondan işləyir: qısa süzmə ilə dərslərə baxıb qeydləri təsdiqləyib SMS xatırlatmasını aktiv saxlayırlar.',
-  ],
-  [
-    'Ödənişlər və mövsümi paketlər necə?',
-    'Paket əsaslı və ya aylıq qeydə alınan modellərlə tarix və status izləmə — “kim, nə zaman, ödənildi / gözləmədə” qarışığı azaldır.',
-  ],
-]
-
 function scrollToId(id) {
   const el = document.getElementById(id)
   if (!el) return
@@ -179,6 +162,7 @@ export default function Login() {
   const [demoOpen, setDemoOpen] = useState(false)
   const [demoTab, setDemoTab] = useState('overview')
   const [demoPaneBusy, setDemoPaneBusy] = useState(false)
+  const [marketing, setMarketing] = useState(() => defaultLoginMarketingPayload())
 
   const { login, phoneNextStep, forgotPinSms, pinLogin, googleLogin, googleComplete, sendOtp, verifyOtp } =
     useAuthStore()
@@ -487,6 +471,8 @@ export default function Login() {
     setDemoOpen(false)
   }
 
+  const m = marketing
+
   const completeGoogleWithRole = async (pickedRole) => {
     if (!googleCredential) return
     setLoading(true)
@@ -541,21 +527,19 @@ export default function Login() {
             <div className="max-w-xl space-y-4">
               <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] text-gray-300">
                 <span className="h-1.5 w-1.5 rounded-full bg-primary shadow-[0_0_12px_rgba(0,229,176,0.9)]" />
-                Mentorix — müəllimlər üçün idarəetmə
+                {m.hero.pill}
               </div>
               <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight text-white leading-tight">
-                Şagirdlərini daha effektiv idarə et
+                {m.hero.headline}
               </h1>
-              <p className="text-gray-400 text-sm sm:text-base leading-relaxed">
-                Dərs planlama, ödəniş izləmə və avtomatik xatırlatmalar — hamısı bir platformada
-              </p>
+              <p className="text-gray-400 text-sm sm:text-base leading-relaxed">{m.hero.subheadline}</p>
               <div className="flex flex-col w-full max-w-xl gap-3 sm:flex-row sm:flex-wrap sm:gap-3">
                 <button
                   type="button"
                   onClick={() => goLoginTracked('hero')}
                   className="w-full sm:flex-1 sm:min-h-0 inline-flex justify-center items-center text-center rounded-xl bg-primary px-4 sm:px-5 py-3.5 min-h-[48px] text-xs sm:text-sm font-semibold text-[#041018] shadow-lg shadow-primary/20 hover:brightness-95 leading-snug"
                 >
-                  {PRIMARY_LANDING_CTA_LABEL}
+                  {m.hero.primary_cta_label}
                 </button>
                 <button
                   type="button"
@@ -565,14 +549,14 @@ export default function Login() {
                   }}
                   className="w-full sm:w-auto sm:flex-initial inline-flex justify-center items-center rounded-xl border border-white/15 bg-white/5 px-5 py-3.5 min-h-[48px] text-sm font-semibold text-gray-100 hover:bg-white/10"
                 >
-                  Necə işləyir?
+                  {m.hero.secondary_how}
                 </button>
                 <button
                   type="button"
                   onClick={() => openDemoTracked('hero_demo_button')}
                   className="w-full sm:w-auto sm:flex-initial inline-flex justify-center items-center rounded-xl border border-white/10 px-5 py-3.5 min-h-[48px] text-sm font-semibold text-gray-300 hover:border-white/20 hover:text-white"
                 >
-                  Demo bax
+                  {m.hero.secondary_demo}
                 </button>
               </div>
               <button
@@ -583,7 +567,7 @@ export default function Login() {
                 }}
                 className="text-left text-xs text-gray-500 hover:text-gray-300 underline underline-offset-4"
               >
-                Artıq hesabım var — girişə keç
+                {m.hero.existing_account}
               </button>
             </div>
 
@@ -594,14 +578,14 @@ export default function Login() {
               <div className="absolute inset-x-8 -top-16 h-32 rounded-full bg-primary/25 blur-3xl" />
               <div className="relative space-y-3">
                 <div className="flex items-center justify-between text-[11px] text-gray-400">
-                  <span>İdarə paneli (prevyu)</span>
+                  <span>{m.mini_preview.title}</span>
                   <span className="rounded-full bg-white/5 px-2 py-0.5 text-[10px] text-gray-300 border border-white/10">
-                    bu gün
+                    {m.mini_preview.badge}
                   </span>
                 </div>
                 <div className="grid grid-cols-3 gap-2">
                   <div className="rounded-xl bg-black/35 border border-white/10 px-2 py-2">
-                    <div className="text-[10px] text-gray-500">Tələbələr</div>
+                    <div className="text-[10px] text-gray-500">{m.mini_preview.col1_label}</div>
                     <div
                       className={`text-sm font-semibold text-white tabular-nums ${landingLoading ? 'motion-safe:animate-pulse' : ''}`}
                     >
@@ -609,21 +593,26 @@ export default function Login() {
                     </div>
                   </div>
                   <div className="rounded-xl bg-black/35 border border-white/10 px-2 py-2">
-                    <div className="text-[10px] text-gray-500">Bu ay</div>
-                    <div className="text-sm font-semibold text-primary">Ödənişlər</div>
+                    <div className="text-[10px] text-gray-500">{m.mini_preview.col2_label}</div>
+                    <div className="text-sm font-semibold text-primary">{m.mini_preview.col2_value}</div>
                   </div>
                   <div className="rounded-xl bg-black/35 border border-white/10 px-2 py-2">
-                    <div className="text-[10px] text-gray-500">SMS</div>
-                    <div className="text-sm font-semibold text-amber-300/90">Aktiv</div>
+                    <div className="text-[10px] text-gray-500">{m.mini_preview.col3_label}</div>
+                    <div className="text-sm font-semibold text-amber-300/90">{m.mini_preview.col3_value}</div>
                   </div>
                 </div>
                 <div className="rounded-xl bg-black/25 border border-white/10 p-3 space-y-2">
                   <div className="flex items-center justify-between">
-                    <div className="text-xs font-semibold text-gray-100">Bu həftə — dərs qrafiki</div>
-                    <div className="text-[10px] text-gray-500">Pn–Cu</div>
+                    <div className="text-xs font-semibold text-gray-100">{m.mini_preview.calendar_title}</div>
                   </div>
-                  <div className="grid grid-cols-5 gap-1">
-                    {['Pn', 'Ç', 'Çr', 'Ca', 'Cm'].map((d) => (
+                  <div
+                    className={`grid gap-1 ${
+                      (m.mini_preview.calendar_days?.length || 5) <= 5
+                        ? 'grid-cols-5'
+                        : 'grid-cols-[repeat(auto-fill,minmax(2.25rem,1fr))]'
+                    }`}
+                  >
+                    {(m.mini_preview.calendar_days?.length ? m.mini_preview.calendar_days : ['Pn', 'Ç', 'Çr', 'Ca', 'Cm']).map((d) => (
                       <div
                         key={d}
                         className="rounded-lg bg-white/5 border border-white/5 px-1 py-2 text-center text-[10px] text-gray-400"
@@ -634,10 +623,10 @@ export default function Login() {
                   </div>
                   <div className="flex gap-2">
                     <div className="h-8 flex-1 rounded-lg bg-primary/15 border border-primary/25 text-[11px] text-primary px-2 flex items-center justify-center font-medium">
-                      18:30
+                      {m.mini_preview.slot1_time}
                     </div>
                     <div className="h-8 flex-1 rounded-lg bg-white/5 border border-white/10 text-[11px] text-gray-400 px-2 flex items-center justify-center">
-                      19:45
+                      {m.mini_preview.slot2_time}
                     </div>
                   </div>
                 </div>
@@ -646,20 +635,20 @@ export default function Login() {
           </header>
 
           <section id="mx-trust" className="space-y-4 scroll-mt-8">
-            <div className="text-xs uppercase tracking-wider text-gray-500 font-semibold">İnam göstəriciləri</div>
+            <div className="text-xs uppercase tracking-wider text-gray-500 font-semibold">{m.trust.heading}</div>
             <div className="grid sm:grid-cols-3 gap-3">
               <div className="rounded-2xl border border-white/10 bg-surface-2/80 backdrop-blur-sm p-4 sm:p-5">
                 <div
                   className={`text-sm text-gray-200 leading-snug font-medium tabular-nums ${landingLoading ? 'motion-safe:animate-pulse' : ''}`}
                 >
-                  {trustPlusCount(trustStudentsShown)} tələbə idarə olunur
+                  {trustPlusCount(trustStudentsShown)} {m.trust.students_suffix}
                 </div>
               </div>
               <div className="rounded-2xl border border-white/10 bg-surface-2/80 backdrop-blur-sm p-4 sm:p-5">
                 <div
                   className={`text-sm text-gray-200 leading-snug font-medium tabular-nums ${landingLoading ? 'motion-safe:animate-pulse' : ''}`}
                 >
-                  {trustPlusCount(trustTeachersShown)} müəllim istifadə edir
+                  {trustPlusCount(trustTeachersShown)} {m.trust.instructors_suffix}
                 </div>
               </div>
               <div className="rounded-2xl border border-white/10 bg-surface-2/80 backdrop-blur-sm p-4 sm:p-5">
@@ -668,31 +657,18 @@ export default function Login() {
                 >
                   {upliftLine(landingStats?.attendance_uplift_percent, landingLoading)}
                 </div>
-                <div className="text-[11px] text-gray-500 mt-1">Son ay vs əvvəlki ay — qeydə alınmış dərslər üzrə</div>
+                <div className="text-[11px] text-gray-500 mt-1">{m.trust.attendance_footnote}</div>
               </div>
             </div>
           </section>
 
           <section id="mx-why" className="space-y-4 scroll-mt-8">
-            <div className="text-xs uppercase tracking-wider text-gray-500 font-semibold">Niyə Mentorix?</div>
+            <div className="text-xs uppercase tracking-wider text-gray-500 font-semibold">{m.why.heading}</div>
             <div className="grid md:grid-cols-3 gap-3">
-              {[
-                {
-                  t: 'Excel-dən daha sürətli',
-                  d: 'Səhifə səhifə cədvəl əvəzinə hazır axın: dərs, ödəniş və mesajlar eyni paneldə.',
-                },
-                {
-                  t: 'WhatsApp-dan daha sistemli',
-                  d: 'Çat qalmaqılmaz “xatırlatma dənizi” yox: qaydalar, tarixlər və statuslar təkrarlanan sualları azaldır.',
-                },
-                {
-                  t: 'Manual işləri avtomatlaşdırır',
-                  d: 'Paket bitməsi, ödəniş təsdiqi və SMS xatırlatmaları üçün təkrarlanan əməliyyatlar avtomatlaşır.',
-                },
-              ].map((x) => (
-                <div key={x.t} className="rounded-2xl border border-white/10 bg-[#121212]/90 p-4 space-y-2">
-                  <div className="text-sm font-semibold text-white">{x.t}</div>
-                  <p className="text-xs text-gray-400 leading-relaxed">{x.d}</p>
+              {(m.why.cards || []).map((x, i) => (
+                <div key={`why-${i}`} className="rounded-2xl border border-white/10 bg-[#121212]/90 p-4 space-y-2">
+                  <div className="text-sm font-semibold text-white">{x.title}</div>
+                  <p className="text-xs text-gray-400 leading-relaxed">{x.body}</p>
                 </div>
               ))}
             </div>
@@ -701,16 +677,18 @@ export default function Login() {
           <section id="mx-top" className="space-y-4 scroll-mt-8">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
               <div>
-                <div className="text-xs uppercase tracking-wider text-gray-500 font-semibold">Top müəllimlər</div>
+                <div className="text-xs uppercase tracking-wider text-gray-500 font-semibold">
+                  {m.top_teachers.heading}
+                </div>
                 <p className="text-sm text-gray-400 mt-1 max-w-2xl">
                   {topIsPreviewOnly ? (
                     <>
-                      Hal-hazırda ilk müəllimlər qoşulur.{' '}
-                      <span className="text-gray-200 font-medium">Sən də ilk istifadəçilərdən biri ol.</span> Aşağıdakı kartlar
-                      interfeys prevyusudur (real sıralama gəldikdə avtomatik əvəzlənəcək).
+                      {m.top_teachers.preview_before}{' '}
+                      <span className="text-gray-200 font-medium">{m.top_teachers.preview_emphasis}</span>{' '}
+                      {m.top_teachers.preview_after}
                     </>
                   ) : (
-                    <>Platformada daha çox aktiv şagirdi olan heyət (canlı statistikadan).</>
+                    <>{m.top_teachers.description_real}</>
                   )}
                 </p>
               </div>
@@ -740,7 +718,9 @@ export default function Login() {
                   ) : null}
                   <div className="flex items-center justify-between gap-2 min-w-0">
                     <div className="text-sm font-semibold text-white truncate min-w-0">{t.display_name}</div>
-                    <div className="text-[11px] text-gray-500 shrink-0">{formatAzInt(t.student_count)} şagird</div>
+                    <div className="text-[11px] text-gray-500 shrink-0">
+                      {formatAzInt(t.student_count)} {m.top_teachers.pupil_suffix}
+                    </div>
                   </div>
                   <div className="flex items-center justify-between gap-2 text-xs min-w-0">
                     <div className="text-amber-300/95">
@@ -750,7 +730,7 @@ export default function Login() {
                           <span className="text-gray-500"> / 5</span>
                         </>
                       ) : (
-                        <span className="text-gray-500">Reytinq: dərs qeydləri üzrə</span>
+                        <span className="text-gray-500">{m.top_teachers.rating_fallback}</span>
                       )}
                     </div>
                     <div className="text-gray-500">
@@ -763,74 +743,50 @@ export default function Login() {
           </section>
 
           <section id="mx-steps" className="space-y-4 scroll-mt-8">
-            <div className="text-xs uppercase tracking-wider text-gray-500 font-semibold">Necə işləyir?</div>
+            <div className="text-xs uppercase tracking-wider text-gray-500 font-semibold">{m.steps.heading}</div>
             <div className="grid md:grid-cols-3 gap-3">
-              {[
-                {
-                  step: '1',
-                  t: 'Qoşul və qrafiki qur',
-                  d: 'Google ilə başla, şagirdləri və həftəlik dərs slotlarını bir neçə dəqiqəyə əlavə et.',
-                },
-                {
-                  step: '2',
-                  t: 'Ödəniş və davamiyyəti izlə',
-                  d: 'Paket/aylıq ödəniş statuslarını və dərs qeydlərini eyni axında saxla — “kim nə vaxt ödədi?” aydın olsun.',
-                },
-                {
-                  step: '3',
-                  t: 'Avtomatik xatırlat',
-                  d: 'Paket sonu və vacib hadisələr üçün SMS ilə valideyn/tələbəni xəbərdar et, əlavə manual izləmə azalsın.',
-                },
-              ].map((x) => (
-                <div key={x.step} className="rounded-2xl border border-primary/20 bg-gradient-to-b from-primary/10 to-[#101010] p-4 space-y-2">
+              {(m.steps.items || []).map((x, i) => (
+                <div
+                  key={`step-${i}-${String(x.step)}`}
+                  className="rounded-2xl border border-primary/20 bg-gradient-to-b from-primary/10 to-[#101010] p-4 space-y-2"
+                >
                   <div className="flex items-center gap-2">
                     <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/20 text-xs font-bold text-primary border border-primary/30">
                       {x.step}
                     </span>
-                    <div className="text-sm font-semibold text-white">{x.t}</div>
+                    <div className="text-sm font-semibold text-white">{x.title}</div>
                   </div>
-                  <p className="text-xs text-gray-400 leading-relaxed pl-10">{x.d}</p>
+                  <p className="text-xs text-gray-400 leading-relaxed pl-10">{x.body}</p>
                 </div>
               ))}
             </div>
           </section>
 
           <section id="mx-features" className="space-y-4 scroll-mt-8">
-            <div className="text-xs uppercase tracking-wider text-gray-500 font-semibold">İmkanlar</div>
+            <div className="text-xs uppercase tracking-wider text-gray-500 font-semibold">{m.features.heading}</div>
             <div className="grid md:grid-cols-3 gap-3">
-              {[
-                { t: 'Dərs cədvəli', d: 'Həftəlik planı bir ekrandan idarə edin və dərsi təqib edin.', accent: 'from-sky-500/15' },
-                { t: 'Ödəniş sistemi', d: 'Paket və aylıq ödəniş axınlarını strukturlaşdırın, gecikmələri əvvəlcədən görün.', accent: 'from-emerald-500/15' },
-                { t: 'SMS xatırlatma', d: 'Valideyn/tələbə üçün avtomatik xəbərdarlıq — əlavə yükləmə olmadan.', accent: 'from-amber-500/15' },
-              ].map((x) => (
+              {(m.features.items || []).map((x, i) => (
                 <div
-                  key={x.t}
-                  className={`rounded-2xl border border-white/10 bg-gradient-to-br ${x.accent} to-[#101010] p-4 space-y-2`}
+                  key={`feat-${i}`}
+                  className={`rounded-2xl border border-white/10 bg-gradient-to-br ${x.accent || 'from-sky-500/15'} to-[#101010] p-4 space-y-2`}
                 >
-                  <div className="text-sm font-semibold text-white">{x.t}</div>
-                  <p className="text-xs text-gray-400 leading-relaxed">{x.d}</p>
+                  <div className="text-sm font-semibold text-white">{x.title}</div>
+                  <p className="text-xs text-gray-400 leading-relaxed">{x.body}</p>
                 </div>
               ))}
             </div>
           </section>
 
           <section id="mx-use-case" className="space-y-4 scroll-mt-8">
-            <div className="text-xs uppercase tracking-wider text-gray-500 font-semibold">Real ssenari</div>
+            <div className="text-xs uppercase tracking-wider text-gray-500 font-semibold">{m.use_case.heading}</div>
             <div className="rounded-2xl border border-white/10 bg-[#121212]/90 p-5 sm:p-6 space-y-4">
-              <p className="text-sm text-gray-200 font-medium">Fərdi hazırlıq müəllimi — həftədə 25 şagird</p>
+              <p className="text-sm text-gray-200 font-medium">{m.use_case.title_line}</p>
               <ul className="space-y-2 text-sm text-gray-400 leading-relaxed list-disc pl-5">
-                <li>
-                  <span className="text-gray-200">Səhər 5 dəqiqə:</span> bu günün dərsləri, gecikən ödənişlər və “paket az qaldı”
-                  SMS-ləri gözləyir.
-                </li>
-                <li>
-                  <span className="text-gray-200">Dərslər bitəndə:</span> davamiyyəti işarələyib növbəti həftə üçün valideynlərə xəbərdarlıq
-                  göndərməyə görə daha az WhatsApp qarışığı.
-                </li>
-                <li>
-                  <span className="text-gray-200">Ay sonu:</span> hansı şagirdin ödənişinin statusunun dəyişdiyini tarix izi ilə sübut
-                  etmək rahatdır.
-                </li>
+                {(m.use_case.bullets || []).map((b, i) => (
+                  <li key={i}>
+                    <span className="text-gray-200">{b.lead}</span> {b.rest}
+                  </li>
+                ))}
               </ul>
               <button
                 type="button"
@@ -840,21 +796,21 @@ export default function Login() {
                 }}
                 className="text-xs text-primary hover:brightness-110 font-semibold"
               >
-                FAQ-ya keç →
+                {m.use_case.faq_link}
               </button>
             </div>
           </section>
 
           <section id="mx-faq" className="space-y-4 scroll-mt-8">
-            <div className="text-xs uppercase tracking-wider text-gray-500 font-semibold">FAQ</div>
+            <div className="text-xs uppercase tracking-wider text-gray-500 font-semibold">{m.faq.heading}</div>
             <div className="rounded-2xl border border-white/10 bg-surface-2/70 divide-y divide-white/10">
-              {FAQ_ITEMS.map(([q, a]) => (
-                <details key={q} className="group p-4 sm:p-5">
+              {(m.faq.items || []).map((it, i) => (
+                <details key={`faq-${i}`} className="group p-4 sm:p-5">
                   <summary className="cursor-pointer text-sm font-semibold text-gray-100 list-none flex items-center justify-between gap-3 [&::-webkit-details-marker]:hidden">
-                    <span>{q}</span>
+                    <span>{it.q}</span>
                     <span className="text-gray-500 text-lg leading-none group-open:rotate-45 transition-transform">+</span>
                   </summary>
-                  <p className="mt-3 text-xs sm:text-sm text-gray-400 leading-relaxed">{a}</p>
+                  <p className="mt-3 text-xs sm:text-sm text-gray-400 leading-relaxed">{it.a}</p>
                 </details>
               ))}
             </div>
@@ -862,10 +818,8 @@ export default function Login() {
 
           <section id="mx-cta" className="rounded-2xl border border-primary/25 bg-gradient-to-br from-primary/15 via-[#0e1412] to-[#0b0b0b] p-6 sm:p-8 scroll-mt-8">
             <div className="space-y-2 max-w-xl">
-              <div className="text-lg sm:text-xl font-semibold text-white">Müəllim kimi daha az kaos — daha çox nəzarət</div>
-              <p className="text-sm text-gray-300 leading-relaxed">
-                Əvvəl dəyəri gör, sonra ilk 5 şagirdi əlavə edib qurulumu rahat keç.
-              </p>
+              <div className="text-lg sm:text-xl font-semibold text-white">{m.cta_band.heading}</div>
+              <p className="text-sm text-gray-300 leading-relaxed">{m.cta_band.subtitle}</p>
             </div>
             <div className="flex flex-col w-full max-w-xl gap-3 mt-5 sm:flex-row sm:flex-wrap">
               <button
@@ -873,7 +827,7 @@ export default function Login() {
                 onClick={() => goLoginTracked('cta_band')}
                 className="w-full sm:flex-1 inline-flex justify-center items-center text-center rounded-xl bg-primary px-4 sm:px-5 py-3.5 min-h-[48px] text-xs sm:text-sm font-semibold text-[#041018] shadow-lg shadow-primary/30 ring-2 ring-primary/25 hover:brightness-95 leading-snug"
               >
-                {PRIMARY_LANDING_CTA_LABEL}
+                {m.hero.primary_cta_label}
               </button>
               <button
                 type="button"
@@ -883,14 +837,14 @@ export default function Login() {
                 }}
                 className="w-full sm:w-auto sm:flex-initial inline-flex justify-center items-center rounded-xl border border-white/20 bg-black/25 px-5 py-3.5 min-h-[48px] text-sm font-semibold text-gray-100 hover:bg-black/35"
               >
-                Necə işləyir?
+                {m.hero.secondary_how}
               </button>
               <button
                 type="button"
                 onClick={() => openDemoTracked('cta_band_demo_button')}
                 className="w-full sm:w-auto sm:flex-initial inline-flex justify-center items-center rounded-xl border border-white/15 px-5 py-3.5 min-h-[48px] text-sm font-semibold text-gray-100 hover:bg-white/5"
               >
-                Demo bax
+                {m.hero.secondary_demo}
               </button>
             </div>
           </section>
@@ -1399,7 +1353,7 @@ export default function Login() {
                     scrollToId('mx-login')
                   }}
                 >
-                  {PRIMARY_LANDING_CTA_LABEL}
+                  {m.hero.primary_cta_label}
                 </button>
               </div>
             </div>

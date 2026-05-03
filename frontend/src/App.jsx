@@ -13,6 +13,7 @@ import AdminInstructors from './pages/admin/Instructors'
 import AdminPayments from './pages/admin/Payments'
 import AdminNotifications from './pages/admin/Notifications'
 import AdminSettings from './pages/admin/Settings'
+import AdminMarketingLogin from './pages/admin/MarketingLogin'
 
 import InstructorDashboard from './pages/instructor/Dashboard'
 import InstructorStudents from './pages/instructor/Students'
@@ -69,6 +70,7 @@ export default function App() {
         <Route path="payments" element={<AdminPayments />} />
         <Route path="notifications" element={<AdminNotifications />} />
         <Route path="settings" element={<AdminSettings />} />
+        <Route path="marketing/login" element={<AdminMarketingLogin />} />
       </Route>
 
       <Route path="/instructor" element={<ProtectedRoute roles={['instructor']}><InstructorLayout /></ProtectedRoute>}>
