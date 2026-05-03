@@ -3,6 +3,15 @@ export default {
   content: ['./index.html', './src/**/*.{js,jsx}'],
   theme: {
     extend: {
+      keyframes: {
+        'demo-enter': {
+          '0%': { opacity: '0.35', transform: 'translateY(8px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+      },
+      animation: {
+        'demo-enter': 'demo-enter 0.45s ease-out both',
+      },
       colors: {
         primary: 'rgb(var(--primary-accent) / <alpha-value>)',
         brand: {
