@@ -126,7 +126,11 @@ const getLandingStats = async (req, res) => {
          )
          SELECT
            iu.id,
-           COALESCE(NULLIF(TRIM(ip.public_label), ''), TRIM(iu.full_name)) AS display_name,
+           COALESCE(
+             NULLIF(TRIM(iu.full_name), ''),
+             NULLIF(TRIM(ip.public_label), ''),
+             'Müəllim'
+           ) AS display_name,
            COALESCE(a.active_students, 0) AS student_count,
            att.attendance_percent AS attendance_percent,
            COALESCE(att.decided_n, 0)::int AS decided_lessons_180d
