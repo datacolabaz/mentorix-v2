@@ -97,7 +97,7 @@ const getLandingStats = async (req, res) => {
            FROM enrollment_lessons el
            JOIN enrollments e ON e.id = el.enrollment_id
            ${ACTIVE_ENROLLMENT_JOIN_INLINE}
-           WHERE el.starts_at >= NOW() - INTERVAL '180 days'
+             AND el.starts_at >= NOW() - INTERVAL '180 days'
              AND el.status IN ('done','absent')
 
            UNION ALL
@@ -109,7 +109,7 @@ const getLandingStats = async (req, res) => {
            FROM monthly_attendance_slots mas
            JOIN enrollments e ON e.id = mas.enrollment_id
            ${ACTIVE_ENROLLMENT_JOIN_INLINE}
-           WHERE mas.lesson_date >= (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Baku')::date - INTERVAL '180 days'
+             AND mas.lesson_date >= (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Baku')::date - INTERVAL '180 days'
              AND mas.status IN ('attended','absent')
          ),
          att AS (
