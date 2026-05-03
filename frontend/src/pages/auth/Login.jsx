@@ -155,6 +155,10 @@ export default function Login() {
   const googleBtnRef = useRef(null)
   const [loading, setLoading] = useState(false)
 
+  /** Əsas CTA — modal; səhifə yüklənəndə / avtomatik açılmır */
+  const [loginModalOpen, setLoginModalOpen] = useState(false)
+  const loginModalPanelRef = useRef(null)
+
   const loginSectionRef = useRef(null)
   const landingSectionSeenRef = useRef(new Set())
   const [landingLoading, setLandingLoading] = useState(!isAdmin)
@@ -356,7 +360,7 @@ export default function Login() {
         // ignore
       }
     }
-  }, [isAdmin, mode, step, googleLogin, toast])
+  }, [isAdmin, mode, step, loginModalOpen, googleLogin, toast])
 
   useEffect(() => {
     if (isAdmin) return
@@ -467,9 +471,20 @@ export default function Login() {
 
   const topIsPreviewOnly = useMemo(() => topInstructorsRows.every((t) => t.preview), [topInstructorsRows])
 
-  const goLoginTracked = (surface) => {
+  const closeLoginModal = () => setLoginModalOpen(false)
+
+  const openLoginModal = (surface) => {
     trackEvent('mx_landing_cta_primary', { surface })
-    scrollToId('mx-login')
+    setDemoOpen(false)
+    setMode('google')
+    setStep('google')
+    setGoogleCredential(null)
+    setRole(null)
+    setPhone('')
+    setPinInput('')
+    setOtpCode('')
+    setOtpSent(false)
+    setLoginModalOpen(true)
   }
 
   const openDemoTracked = (surface) => {
@@ -489,6 +504,9 @@ export default function Login() {
   }
 
   const m = marketing
+
+  const loginSubmitBtnClass =
+    !isAdmin && loginModalOpen ? 'w-full min-h-[52px] justify-center py-4 text-base' : 'w-full justify-center py-3'
 
   const completeGoogleWithRole = async (pickedRole) => {
     if (!googleCredential) return
@@ -536,6 +554,32 @@ export default function Login() {
     }
   }
 
+  useEffect(() => {
+    if (!loginModalOpen || isAdmin) return undefined
+    const onKey = (e) => {
+      if (e.key === 'Escape') closeLoginModal()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [loginModalOpen, isAdmin])
+
+  useEffect(() => {
+    if (!loginModalOpen || isAdmin) return undefined
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prev
+    }
+  }, [loginModalOpen, isAdmin])
+
+  useEffect(() => {
+    if (!loginModalOpen || isAdmin) return
+    const id = window.requestAnimationFrame(() => {
+      loginModalPanelRef.current?.focus()
+    })
+    return () => window.cancelAnimationFrame(id)
+  }, [loginModalOpen, isAdmin])
+
   return (
     <div className="min-h-[100svh] bg-[#0b0b0b]">
       {!isAdmin ? (
@@ -553,7 +597,7 @@ export default function Login() {
               <div className="flex flex-col w-full max-w-xl gap-3 sm:flex-row sm:flex-wrap sm:gap-3">
                 <button
                   type="button"
-                  onClick={() => goLoginTracked('hero')}
+                  onClick={() => openLoginModal('hero')}
                   className="w-full sm:flex-1 sm:min-h-0 inline-flex justify-center items-center text-center rounded-xl bg-primary px-4 sm:px-5 py-3.5 min-h-[48px] text-xs sm:text-sm font-semibold text-[#041018] shadow-lg shadow-primary/20 hover:brightness-95 leading-snug"
                 >
                   {m.hero.primary_cta_label}
@@ -841,7 +885,7 @@ export default function Login() {
             <div className="flex flex-col w-full max-w-xl gap-3 mt-5 sm:flex-row sm:flex-wrap">
               <button
                 type="button"
-                onClick={() => goLoginTracked('cta_band')}
+                onClick={() => openLoginModal('cta_band')}
                 className="w-full sm:flex-1 inline-flex justify-center items-center text-center rounded-xl bg-primary px-4 sm:px-5 py-3.5 min-h-[48px] text-xs sm:text-sm font-semibold text-[#041018] shadow-lg shadow-primary/30 ring-2 ring-primary/25 hover:brightness-95 leading-snug"
               >
                 {m.hero.primary_cta_label}
@@ -868,15 +912,79 @@ export default function Login() {
         </div>
       ) : null}
 
-      <div className={`flex justify-center px-4 ${isAdmin ? 'min-h-[100svh] items-start sm:items-center pt-8 sm:pt-4 pb-10' : 'pb-14 pt-4'}`}>
-        <div id="mx-login" ref={loginSectionRef} className="w-full max-w-sm scroll-mt-6">
-          <div className="bg-surface-2 border border-white/10 rounded-2xl p-6 sm:p-8">
+      {!isAdmin && loginModalOpen ? (
+        <div
+          role="presentation"
+          className="fixed inset-0 z-[100] bg-black/65 backdrop-blur-md"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) closeLoginModal()
+          }}
+        />
+      ) : null}
+
+      <div
+        className={`flex justify-center ${
+          isAdmin
+            ? 'min-h-[100svh] items-start px-4 pb-10 pt-8 sm:items-center sm:pt-4'
+            : loginModalOpen
+              ? 'pointer-events-none fixed inset-0 z-[101] items-stretch justify-center px-0 py-0 sm:items-center sm:px-4 sm:py-6'
+              : 'px-4 pb-14 pt-4'
+        }`}
+      >
+        <div
+          id="mx-login"
+          ref={(node) => {
+            loginSectionRef.current = node
+            loginModalPanelRef.current = node
+          }}
+          tabIndex={!isAdmin && loginModalOpen ? -1 : undefined}
+          role={!isAdmin && loginModalOpen ? 'dialog' : undefined}
+          aria-modal={!isAdmin && loginModalOpen ? true : undefined}
+          aria-labelledby={!isAdmin && loginModalOpen ? 'mx-login-modal-title' : undefined}
+          className={`w-full max-w-sm scroll-mt-6 ${
+            !isAdmin && loginModalOpen
+              ? 'pointer-events-auto flex h-full max-h-full min-h-0 flex-col sm:h-auto sm:max-h-[min(92dvh,680px)]'
+              : ''
+          }`}
+        >
+          <div
+            className={`flex min-h-0 flex-1 flex-col bg-surface-2 p-6 sm:p-8 ${
+              !isAdmin && loginModalOpen
+                ? 'min-h-[100dvh] overflow-y-auto overscroll-y-contain rounded-none border-0 shadow-2xl sm:min-h-0 sm:rounded-2xl sm:border sm:border-white/10'
+                : 'rounded-2xl border border-white/10'
+            }`}
+          >
             {!isAdmin ? (
-              <div className="text-center mb-5">
-                <div className="text-[11px] uppercase tracking-wider text-gray-500 font-semibold">Giriş</div>
-                <div className="text-gray-200 text-sm font-semibold mt-1">Hesabına daxil ol</div>
-                <div className="text-gray-500 text-xs mt-1">Əvvəlcə məhsulu yuxarıda gör — sonra qeydiyyatı rahat keç.</div>
-              </div>
+              loginModalOpen ? (
+                <div className="relative mb-6 shrink-0 space-y-2 px-1 text-center">
+                  <button
+                    type="button"
+                    aria-label="Bağla"
+                    className="absolute right-0 top-0 z-10 flex h-11 w-11 items-center justify-center rounded-xl text-gray-400 hover:bg-white/10 hover:text-white"
+                    onClick={closeLoginModal}
+                  >
+                    <span aria-hidden className="text-xl leading-none">
+                      ×
+                    </span>
+                  </button>
+                  <h2 id="mx-login-modal-title" className="pr-10 text-lg font-semibold text-white sm:text-xl">
+                    Mentorix-ə başla
+                  </h2>
+                  {step === 'google' && mode === 'google' ? (
+                    <p className="text-sm leading-relaxed text-gray-400">
+                      Google ilə daxil ol və dərhal başla. İlk 5 tələbəni pulsuz əlavə et.
+                    </p>
+                  ) : null}
+                </div>
+              ) : (
+                <div className="mb-5 text-center">
+                  <div className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">Giriş</div>
+                  <div className="mt-1 text-sm font-semibold text-gray-200">Hesabına daxil ol</div>
+                  <div className="mt-1 text-xs text-gray-500">
+                    Əvvəlcə məhsulu yuxarıda gör — sonra qeydiyyatı rahat keç.
+                  </div>
+                </div>
+              )
             ) : (
               <div className="text-center mb-6 sm:mb-8">
                 <div className="flex justify-center pt-1 pb-3 bg-transparent">
@@ -887,7 +995,7 @@ export default function Login() {
             )}
 
             {!isAdmin ? (
-              <div className="flex justify-center mb-6">
+              <div className={`flex justify-center ${loginModalOpen ? 'mb-5' : 'mb-6'}`}>
                 <Brand size="login" />
               </div>
             ) : null}
@@ -934,17 +1042,28 @@ export default function Login() {
                   <>
                     {step === 'google' ? (
                       <div className="space-y-4">
-                        <div className="relative z-10 w-full flex justify-center min-w-0">
+                        <div className="relative z-10 flex w-full min-w-0 justify-center">
                           <div
                             ref={googleBtnRef}
                             className="pointer-events-auto inline-flex max-w-full"
-                            style={{ minHeight: 44 }}
+                            style={{ minHeight: loginModalOpen ? 48 : 44 }}
                           />
                         </div>
+                        {loginModalOpen ? (
+                          <div className="flex items-center gap-3 py-1" aria-hidden>
+                            <div className="h-px flex-1 bg-white/15" />
+                            <span className="text-[11px] font-medium uppercase tracking-wide text-gray-500">və ya</span>
+                            <div className="h-px flex-1 bg-white/15" />
+                          </div>
+                        ) : null}
                         <div className="text-center">
                           <button
                             type="button"
-                            className="text-xs text-gray-400 hover:text-gray-200 underline underline-offset-4"
+                            className={
+                              loginModalOpen
+                                ? 'mx-auto flex min-h-[52px] w-full max-w-xs items-center justify-center rounded-xl border border-white/10 bg-white/5 px-4 text-sm font-semibold text-gray-200 hover:bg-white/10 sm:min-h-[48px]'
+                                : 'text-xs text-gray-400 underline underline-offset-4 hover:text-gray-200'
+                            }
                             onClick={() => {
                               setMode('phone')
                               setStep('phone')
@@ -956,9 +1075,19 @@ export default function Login() {
                             Telefonla daxil ol
                           </button>
                         </div>
-                        <div className="text-[11px] text-gray-500 leading-relaxed text-center">
-                          Yeni hesab üçün <strong className="text-gray-300">Google</strong> ilə davam edin. Mövcud hesabınız varsa{' '}
-                          <strong className="text-gray-300">Telefonla daxil ol</strong>.
+                        <div className="px-1 text-center text-[11px] leading-relaxed text-gray-500">
+                          {loginModalOpen ? (
+                            <>
+                              Yeni hesab üçün Google ilə davam edin.
+                              <br />
+                              Mövcud hesabınız varsa telefonla daxil olun.
+                            </>
+                          ) : (
+                            <>
+                              Yeni hesab üçün <strong className="text-gray-300">Google</strong> ilə davam edin. Mövcud hesabınız varsa{' '}
+                              <strong className="text-gray-300">Telefonla daxil ol</strong>.
+                            </>
+                          )}
                         </div>
                       </div>
                     ) : null}
@@ -1004,7 +1133,7 @@ export default function Login() {
                           </label>
                           <PhoneInput value={phone} onChange={setPhone} required />
                         </div>
-                        <Button type="submit" loading={loading} className="w-full justify-center py-3">
+                        <Button type="submit" loading={loading} className={loginSubmitBtnClass}>
                           OTP göndər
                         </Button>
                       </form>
@@ -1027,7 +1156,7 @@ export default function Login() {
                           onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
                           required
                         />
-                        <Button type="submit" loading={loading} className="w-full justify-center py-3">
+                        <Button type="submit" loading={loading} className={loginSubmitBtnClass}>
                           Təsdiqlə
                         </Button>
                         {otpSent ? (
@@ -1123,7 +1252,7 @@ export default function Login() {
                           onChange={(e) => setPinInput(e.target.value.replace(/\D/g, ''))}
                           required
                         />
-                        <Button type="submit" loading={loading} className="w-full justify-center py-3">
+                        <Button type="submit" loading={loading} className={loginSubmitBtnClass}>
                           PIN ilə daxil ol
                         </Button>
                         <button
@@ -1167,7 +1296,9 @@ export default function Login() {
               href="https://wa.me/994503066626"
               target="_blank"
               rel="noreferrer"
-              className="flex items-center justify-center gap-2 mt-6 py-3 px-4 rounded-xl bg-primary text-[#041018] text-sm font-semibold hover:brightness-95 transition-all shadow-lg shadow-primary/20"
+              className={`flex items-center justify-center gap-2 rounded-xl bg-primary text-[#041018] font-semibold shadow-lg shadow-primary/20 transition-all hover:brightness-95 ${
+                !isAdmin && loginModalOpen ? 'mt-8 min-h-[52px] px-4 py-4 text-base' : 'mt-6 px-4 py-3 text-sm'
+              }`}
               onClick={() => trackEvent('mx_landing_whatsapp_click')}
             >
               Bizimlə əlaqə
@@ -1364,11 +1495,7 @@ export default function Login() {
                 <button
                   type="button"
                   className="w-full rounded-xl bg-primary px-4 py-4 min-h-[52px] text-xs sm:text-sm font-bold text-[#041018] shadow-lg shadow-primary/35 ring-2 ring-primary/30 hover:brightness-95 active:scale-[0.99] motion-safe:transition motion-safe:duration-150 leading-snug text-center"
-                  onClick={() => {
-                    trackEvent('mx_landing_cta_primary', { surface: 'demo_modal_footer' })
-                    setDemoOpen(false)
-                    scrollToId('mx-login')
-                  }}
+                  onClick={() => openLoginModal('demo_modal_footer')}
                 >
                   {m.hero.primary_cta_label}
                 </button>
