@@ -555,4 +555,8 @@ export default function InstructorLayout() {
             ← Geri
           </button>
         </form>
-  
+      )}
+    </Modal>
+    </>
+  )
+}
