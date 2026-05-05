@@ -193,7 +193,7 @@ function buildMessages(status, remStudents, phone_verified, details) {
     if (details?.reachedStudents) reasons.push('tələbə limiti dolub');
     if (details?.reachedStorage) reasons.push('storage limiti dolub');
     if (details?.reachedSms) reasons.push('SMS limiti dolub');
-    const banner = reasons.length ? `Usage blocked — ${reasons.join(', ')}` : 'Usage blocked';
+    const banner = reasons.length ? `Məhdudiyyət: ${reasons.join(', ')}` : 'Məhdudiyyət';
     return { banner, cta: { label: 'Upgrade to PRO', action: 'OPEN_UPGRADE_MODAL' } };
   }
   if (status === 'expired') {
