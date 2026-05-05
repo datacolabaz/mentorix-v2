@@ -79,7 +79,7 @@ async function createOrder({ amount, currency = 'AZN', language = 'AZ', descript
   if (!res.ok || !json || String(json.code || '') !== '00000') {
     const msg = json?.message || 'Payriff create order failed';
     const extra = json?.code || json?.responseId ? ` (code=${json?.code || '—'}, responseId=${json?.responseId || '—'})` : '';
-    const endpoint = `${String(PAYRIFF_BASE_URL || '').replace(/\\/+$/, '')}/orders`;
+    const endpoint = `${String(PAYRIFF_BASE_URL || '').replace(/\/+$/, '')}/orders`;
     throw httpError('PAYRIFF_CREATE_FAILED', 502, `${msg}${extra} (endpoint=${endpoint})`);
   }
   return json;
