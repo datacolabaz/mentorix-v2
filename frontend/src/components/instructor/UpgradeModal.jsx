@@ -2,12 +2,7 @@ import { useState } from 'react'
 import Modal from '../common/Modal'
 import Button from '../common/Button'
 import api from '../../lib/api'
-
-const PLANS = [
-  { id: 'basic', title: 'BASIC', price: '15 AZN/ay', highlight: false, items: ['20 students', '1GB storage', '30 SMS'] },
-  { id: 'pro', title: 'PRO', price: '29 AZN/ay', highlight: true, items: ['100 students', '5GB storage', '200 SMS'] },
-  { id: 'business', title: 'BUSINESS', price: '49 AZN/ay', highlight: false, items: ['Unlimited students', '20GB storage', '500 SMS'] },
-]
+import { SUBSCRIPTION_PLANS } from '../../constants/subscriptionPlans'
 
 export default function UpgradeModal({ open, onClose, onSelectPlan }) {
   const [busy, setBusy] = useState(false)
@@ -24,7 +19,7 @@ export default function UpgradeModal({ open, onClose, onSelectPlan }) {
           Plan seçin və Payriff ilə ödəniş edin. Ödəniş uğurlu olarsa plan dərhal aktivləşəcək.
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {PLANS.map((p) => (
+          {SUBSCRIPTION_PLANS.map((p) => (
             <div
               key={p.id}
               className={[

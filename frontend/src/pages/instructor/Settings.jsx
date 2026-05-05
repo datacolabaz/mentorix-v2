@@ -6,12 +6,15 @@ import { useToast } from '../../components/common/Toast'
 import useAuthStore from '../../hooks/useAuth'
 import { instructorRoleAz } from '../../lib/instructorLabel'
 import useUiStore from '../../hooks/useUi'
+import { SUBSCRIPTION_PLANS } from '../../constants/subscriptionPlans'
 
 export default function InstructorSettings() {
   const toast = useToast()
   const { user, updateUser } = useAuthStore()
   const { theme } = useUiStore()
   const [loading, setLoading] = useState(true)
+  const [planBusy, setPlanBusy] = useState(false)
+  const [planErr, setPlanErr] = useState(null)
   const [savingLabel, setSavingLabel] = useState(false)
   const [publicLabel, setPublicLabel] = useState('instructor')
   const [subjects, setSubjects] = useState([])
@@ -147,6 +150,62 @@ export default function InstructorSettings() {
           İnterfeysdə və tələbə tərəfində sizin rolunuz <span className="text-indigo-300">{roleWord}</span> kimi görünəcək.
         </p>
       </div>
+
+      <Card className="p-5 border border-indigo-500/20 space-y-4">
+        <h2 className={cardTitleCls}>Paketlər</h2>
+        <p className={cardTextCls}>Basic, PRO və Business paketlərindən birini seçib ödəniş edə bilərsiniz.</p>
+        {planErr ? (
+          <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 text-rose-100 px-4 py-3 text-sm">
+            {planErr}
+          </div>
+        ) : null}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {SUBSCRIPTION_PLANS.map((p) => (
+            <div
+              key={p.id}
+              className={[
+                'rounded-2xl border p-4',
+                p.highlight ? 'border-primary/40 bg-primary/5' : 'border-[color:var(--border-subtle)] bg-token-surfaceCard/40',
+              ].join(' ')}
+            >
+              <div className="text-sm font-bold text-token-textMain">{p.title}</div>
+              <div className="text-xs text-token-textMuted mt-1">{p.price}</div>
+              <ul className="mt-3 space-y-1 text-xs text-token-textMain">
+                {p.items.map((x) => (
+                  <li key={x} className="flex items-center gap-2">
+                    <span className="text-token-textMuted">•</span>
+                    <span>{x}</span>
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-4">
+                <Button
+                  className="w-full justify-center"
+                  variant={p.highlight ? 'primary' : 'secondary'}
+                  loading={planBusy}
+                  disabled={planBusy}
+                  onClick={async () => {
+                    setPlanErr(null)
+                    setPlanBusy(true)
+                    try {
+                      const r = await api.post('/billing/create-payment', { plan: p.id })
+                      const url = r?.payment?.payment_url
+                      if (!url) throw new Error('Ödəniş linki alınmadı')
+                      window.location.href = url
+                    } catch (e) {
+                      setPlanErr(e?.message || 'Ödəniş yaradılmadı')
+                    } finally {
+                      setPlanBusy(false)
+                    }
+                  }}
+                >
+                  {p.highlight ? 'Upgrade to PRO' : 'Choose'}
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </Card>
 
       <Card className="p-5 border border-indigo-500/20 space-y-4">
         <h2 className={cardTitleCls}>Görünən ad</h2>
