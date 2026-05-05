@@ -58,7 +58,8 @@ function isPublicAuthPath(config) {
     path.includes('/auth/login') ||
     path.includes('/auth/otp/') ||
     path.includes('/auth/pin/') ||
-    path.includes('/auth/phone/') ||
+    // NOTE: /auth/phone/verify/* requires Authorization; keep it out of public paths.
+    path.includes('/auth/phone/next-step') ||
     path.includes('/public/')
   )
 }
