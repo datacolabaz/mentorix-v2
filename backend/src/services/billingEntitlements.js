@@ -176,7 +176,7 @@ function buildStatus({
   return 'active';
 }
 
-function buildMessages(status, remStudents, phone_verified) {
+function buildMessages(status, remStudents, phone_verified, details) {
   if (status === 'warning' && !phone_verified) {
     return {
       banner: 'Hesabınızın tam funksionallığı üçün telefon nömrənizi təsdiqləyin',
@@ -189,7 +189,12 @@ function buildMessages(status, remStudents, phone_verified) {
     return { banner, cta: { label: 'Upgrade to PRO', action: 'OPEN_UPGRADE_MODAL' } };
   }
   if (status === 'blocked') {
-    return { banner: 'Usage blocked', cta: { label: 'Upgrade to PRO', action: 'OPEN_UPGRADE_MODAL' } };
+    const reasons = [];
+    if (details?.reachedStudents) reasons.push('tələbə limiti dolub');
+    if (details?.reachedStorage) reasons.push('storage limiti dolub');
+    if (details?.reachedSms) reasons.push('SMS limiti dolub');
+    const banner = reasons.length ? `Usage blocked — ${reasons.join(', ')}` : 'Usage blocked';
+    return { banner, cta: { label: 'Upgrade to PRO', action: 'OPEN_UPGRADE_MODAL' } };
   }
   if (status === 'expired') {
     return { banner: 'Trial expired', cta: { label: 'Upgrade to PRO', action: 'OPEN_UPGRADE_MODAL' } };
@@ -264,9 +269,13 @@ async function resolveEntitlements(userId) {
   });
 
   const status2 = inGrace ? 'grace' : status;
+  const reachedStudents = limits.students != null && used.students >= limits.students;
+  const reachedStorage = limits.storage_mb != null && used.storage_mb >= limits.storage_mb;
+  const reachedSms = limits.sms_monthly != null && used.sms_monthly >= limits.sms_monthly;
+
   const should_warn = status === 'warning';
   const should_block = (status2 === 'blocked' || status2 === 'expired'); // grace is NOT blocking
-  const messages = buildMessages(status, rem.students, phone_verified);
+  const messages = buildMessages(status, rem.students, phone_verified, { reachedStudents, reachedStorage, reachedSms });
 
   return {
     plan: planSlug,

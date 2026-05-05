@@ -442,6 +442,7 @@ export default function InstructorLayout() {
       <UpgradeModal
       open={upgradeOpen}
       onClose={() => setUpgradeOpen(false)}
+      currentPlan={billing?.plan}
       onSelectPlan={(plan) => {
         api.post('/billing/events', { event: 'upgrade_plan_selected', context: { plan } }).catch(() => {})
         // revenue-safe: request only (no free plan switch here)
@@ -554,8 +555,4 @@ export default function InstructorLayout() {
             ← Geri
           </button>
         </form>
-      )}
-    </Modal>
-    </>
-  )
-}
+  

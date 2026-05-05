@@ -5,11 +5,19 @@ import api from '../../lib/api'
 import { planPriceLabel } from '../../constants/subscriptionPlans'
 import { useSubscriptionPlans } from '../../hooks/useSubscriptionPlans'
 
-export default function UpgradeModal({ open, onClose, onSelectPlan }) {
+function planRank(s) {
+  const v = String(s || '').toLowerCase()
+  if (v === 'business') return 3
+  if (v === 'pro') return 2
+  return 1
+}
+
+export default function UpgradeModal({ open, onClose, onSelectPlan, currentPlan }) {
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState(null)
   const plansQ = useSubscriptionPlans()
   const plans = Array.isArray(plansQ.data) ? plansQ.data : []
+  const curRank = planRank(currentPlan)
   return (
     <Modal open={open} onClose={onClose} title="Upgrade" size="lg">
       <div className="space-y-4">
@@ -43,11 +51,16 @@ export default function UpgradeModal({ open, onClose, onSelectPlan }) {
                 ))}
               </ul>
               <div className="mt-4">
+                {curRank === planRank(p.id) ? (
+                  <div className="mb-2 text-center text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+                    Cari paket
+                  </div>
+                ) : null}
                 <Button
                   className="w-full justify-center"
                   variant={p.highlight ? 'primary' : 'secondary'}
                   loading={busy}
-                  disabled={busy}
+                  disabled={busy || planRank(p.id) <= curRank}
                   onClick={async () => {
                     setErr(null)
                     setBusy(true)
@@ -58,13 +71,17 @@ export default function UpgradeModal({ open, onClose, onSelectPlan }) {
                       onSelectPlan?.(p.id)
                       window.location.href = url
                     } catch (e) {
-                      setErr(e?.message || 'Ödəniş yaradılmadı')
+                      const msg =
+                        e?.message === 'PLAN_NOT_UPGRADE'
+                          ? 'Bu paket artıq cari paketinizdir (və ya daha aşağıdır). Yuxarı paket seçin.'
+                          : e?.message || 'Ödəniş yaradılmadı'
+                      setErr(msg)
                     } finally {
                       setBusy(false)
                     }
                   }}
                 >
-                  {p.highlight ? 'Upgrade to PRO' : 'Choose'}
+                  {planRank(p.id) <= curRank ? 'Seçilə bilməz' : p.highlight ? 'Upgrade to PRO' : 'Choose'}
                 </Button>
               </div>
             </div>
