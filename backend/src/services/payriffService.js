@@ -33,11 +33,24 @@ function authHeaders() {
   };
 }
 
+function payriffMerchantId() {
+  return String(process.env.PAYRIFF_MERCHANT_ID || process.env.PAYRIFF_MERCHANT || '').trim();
+}
+
 async function createOrder({ amount, currency = 'AZN', language = 'AZ', description, callbackUrl, metadata }) {
   if (amount == null || !Number.isFinite(Number(amount)) || Number(amount) <= 0) {
     throw httpError('PAYRIFF_AMOUNT', 400, 'Invalid amount');
   }
+  const merchant = payriffMerchantId();
+  if (!merchant) {
+    throw httpError(
+      'PAYRIFF_CONFIG',
+      500,
+      'Payriff merchant ID tapılmadı. Payriff kabinetində Applications bölməsindəki Merchant ID-ni Railway → Variables-də PAYRIFF_MERCHANT_ID kimi əlavə edin (məs: ES1095804).'
+    );
+  }
   const body = {
+    merchant,
     amount: Number(amount),
     currency,
     language,
