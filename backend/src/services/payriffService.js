@@ -41,16 +41,12 @@ async function createOrder({ amount, currency = 'AZN', language = 'AZ', descript
   if (amount == null || !Number.isFinite(Number(amount)) || Number(amount) <= 0) {
     throw httpError('PAYRIFF_AMOUNT', 400, 'Invalid amount');
   }
-  const merchant = payriffMerchantId();
-  if (!merchant) {
-    throw httpError(
-      'PAYRIFF_CONFIG',
-      500,
-      'Payriff merchant ID tapılmadı. Payriff kabinetində Applications bölməsindəki Merchant ID-ni Railway → Variables-də PAYRIFF_MERCHANT_ID kimi əlavə edin (məs: ES1095804).'
-    );
-  }
-  const body = {
-    merchant,
+  const base = String(PAYRIFF_BASE_URL || '').toLowerCase();
+  const isV2 = base.includes('/api/v2');
+
+  // V3: merchant secret key resolves the application; no merchant field in request body.
+  // V2: most examples require `merchant` wrapper, so we support that when PAYRIFF_BASE_URL points to v2.
+  const v3Body = {
     amount: Number(amount),
     currency,
     language,
@@ -61,6 +57,19 @@ async function createOrder({ amount, currency = 'AZN', language = 'AZ', descript
     metadata: metadata && typeof metadata === 'object' ? metadata : undefined,
   };
 
+  let body = v3Body;
+  if (isV2) {
+    const merchant = payriffMerchantId();
+    if (!merchant) {
+      throw httpError(
+        'PAYRIFF_CONFIG',
+        500,
+        'Payriff merchant ID tapılmadı. Payriff kabinetində Applications bölməsindəki Merchant ID-ni Railway → Variables-də PAYRIFF_MERCHANT_ID kimi əlavə edin (məs: ES1095804).'
+      );
+    }
+    body = { body: v3Body, merchant };
+  }
+
   const res = await fetch(`${PAYRIFF_BASE_URL.replace(/\/+$/, '')}/orders`, {
     method: 'POST',
     headers: authHeaders(),
@@ -68,7 +77,9 @@ async function createOrder({ amount, currency = 'AZN', language = 'AZ', descript
   });
   const json = await res.json().catch(() => null);
   if (!res.ok || !json || String(json.code || '') !== '00000') {
-    throw httpError('PAYRIFF_CREATE_FAILED', 502, json?.message || 'Payriff create order failed');
+    const msg = json?.message || 'Payriff create order failed';
+    const extra = json?.code || json?.responseId ? ` (code=${json?.code || '—'}, responseId=${json?.responseId || '—'})` : '';
+    throw httpError('PAYRIFF_CREATE_FAILED', 502, `${msg}${extra}`);
   }
   return json;
 }
