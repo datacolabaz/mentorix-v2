@@ -154,12 +154,12 @@ function buildStatus({
   remainingObj,
 }) {
   // Priority:
-  // 1) phone not verified -> blocked
+  // 1) phone not verified -> warning (dashboard open; write-actions gate elsewhere)
   // 2) not active (trial expired/inactive) -> expired
   // 3) any reached limit -> blocked
   // 4) any warn threshold -> warning
   // 5) otherwise -> active
-  if (!phone_verified) return 'blocked';
+  if (!phone_verified) return 'warning';
   if (!is_active) return 'expired';
 
   const reachedStudents = limits.students != null && used.students >= limits.students;
@@ -175,7 +175,13 @@ function buildStatus({
   return 'active';
 }
 
-function buildMessages(status, remStudents) {
+function buildMessages(status, remStudents, phone_verified) {
+  if (status === 'warning' && !phone_verified) {
+    return {
+      banner: 'Hesabınızın tam funksionallığı üçün telefon nömrənizi təsdiqləyin',
+      cta: { label: 'Telefonu təsdiqlə', action: 'OPEN_VERIFY_PHONE' },
+    };
+  }
   if (status === 'warning') {
     const banner =
       remStudents === 1 ? 'You have 1 student slot left' : `You have ${remStudents ?? 0} student slots left`;
@@ -257,7 +263,7 @@ async function resolveEntitlements(userId) {
   const status2 = inGrace ? 'grace' : status;
   const should_warn = status === 'warning';
   const should_block = (status2 === 'blocked' || status2 === 'expired'); // grace is NOT blocking
-  const messages = buildMessages(status, rem.students);
+  const messages = buildMessages(status, rem.students, phone_verified);
 
   return {
     plan: planSlug,

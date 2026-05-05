@@ -393,6 +393,12 @@ export default function InstructorLayout() {
               onCta={() => {
                 api.post('/billing/events', { event: 'upgrade_clicked', context: { at: 'banner' } }).catch(() => {})
                 const action = billing?.messages?.cta && typeof billing.messages.cta === 'object' ? billing.messages.cta.action : null
+                if (action === 'OPEN_VERIFY_PHONE') {
+                  setVerifyStep('phone')
+                  setVerifyCode('')
+                  setVerifyOpen(true)
+                  return
+                }
                 if (action === 'OPEN_UPGRADE_MODAL') return setUpgradeOpen(true)
                 navigate('/instructor/settings')
               }}
