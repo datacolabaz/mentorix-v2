@@ -148,10 +148,13 @@ export default function Login() {
 
   // Default onboarding: Google-first
   const [mode, setMode] = useState('google') // google | phone
-  const [step, setStep] = useState('google') // google | role | teacher_phone | teacher_otp | phone | pin
+  const [step, setStep] = useState('google') // google | student_link_phone | student_link_otp | role | teacher_phone | teacher_otp | phone | pin
   const [googleCredential, setGoogleCredential] = useState(null)
   const [otpCode, setOtpCode] = useState('')
   const [otpSent, setOtpSent] = useState(false)
+  const [linkOtpSent, setLinkOtpSent] = useState(false)
+  /** Telefon bağlama ekranından «Müəllim/valideyn» seçənlər üçün — tələbə rolu gizlədilir (təkrar hesab yaradılmır). */
+  const [googleRoleExcludeStudent, setGoogleRoleExcludeStudent] = useState(false)
   const googleBtnRef = useRef(null)
   const [loading, setLoading] = useState(false)
 
@@ -168,8 +171,18 @@ export default function Login() {
   const [demoPaneBusy, setDemoPaneBusy] = useState(false)
   const [marketing, setMarketing] = useState(() => defaultLoginMarketingPayload())
 
-  const { login, phoneNextStep, forgotPinSms, pinLogin, googleLogin, googleComplete, sendOtp, verifyOtp } =
-    useAuthStore()
+  const {
+    login,
+    phoneNextStep,
+    forgotPinSms,
+    pinLogin,
+    googleLogin,
+    googleComplete,
+    googleLinkSendOtp,
+    googleLinkVerify,
+    sendOtp,
+    verifyOtp,
+  } = useAuthStore()
   const navigate = useNavigate()
   const toast = useToast()
   const roleMap = { admin: '/admin', instructor: '/instructor', student: '/student', parent: '/parent' }
@@ -252,6 +265,11 @@ export default function Login() {
     return r?.label || '—'
   }, [role])
 
+  const googleRoleChoices = useMemo(() => {
+    if (step === 'role' && googleRoleExcludeStudent) return ROLES.filter((x) => x.key !== 'student')
+    return ROLES
+  }, [step, googleRoleExcludeStudent])
+
   /** GIS: `initialize()` təkrarlananda xəbərdarlıq verir — callback ref ilə saxlayırıq, düymə üçün yalnız `renderButton` yenilənir */
   const googleSdkCallbackRef = useRef(null)
   googleSdkCallbackRef.current = async (resp) => {
@@ -264,8 +282,18 @@ export default function Login() {
         goDashboard(r.user.role)
         return
       }
+      if (r?.needs_phone_link) {
+        setGoogleCredential(cred)
+        setStep('student_link_phone')
+        setPhone('')
+        setOtpCode('')
+        setLinkOtpSent(false)
+        setGoogleRoleExcludeStudent(false)
+        return
+      }
       if (r?.needs_role) {
         setGoogleCredential(cred)
+        setGoogleRoleExcludeStudent(false)
         setStep('role')
         return
       }
@@ -505,6 +533,8 @@ export default function Login() {
     setPinInput('')
     setOtpCode('')
     setOtpSent(false)
+    setLinkOtpSent(false)
+    setGoogleRoleExcludeStudent(false)
     setLoginModalOpen(true)
   }
 
@@ -542,6 +572,37 @@ export default function Login() {
       goDashboard(data.user.role)
     } catch (e) {
       toast(e?.message || 'Qeydiyyat tamamlanmadı', 'error')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const sendStudentLinkOtp = async (e) => {
+    e.preventDefault()
+    if (!googleCredential) return
+    setLoading(true)
+    try {
+      await googleLinkSendOtp(googleCredential, phone)
+      setLinkOtpSent(true)
+      setStep('student_link_otp')
+      setOtpCode('')
+      toast('OTP göndərildi', 'success')
+    } catch (err) {
+      toast(err?.message || 'SMS göndərilmədi', 'error')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const verifyStudentLink = async (e) => {
+    e.preventDefault()
+    if (!googleCredential) return
+    setLoading(true)
+    try {
+      await googleLinkVerify(googleCredential, phone, otpCode)
+      goDashboard('student')
+    } catch (err) {
+      toast(err?.message || 'Təsdiq alınmadı', 'error')
     } finally {
       setLoading(false)
     }
@@ -996,14 +1057,25 @@ export default function Login() {
                       Google ilə daxil ol və dərhal başla. İlk 5 tələbəni pulsuz əlavə et.
                     </p>
                   ) : null}
+                  {step === 'student_link_phone' || step === 'student_link_otp' ? (
+                    <p className="text-sm leading-relaxed text-gray-400">
+                      Tələbə hesabını müəllimin yaratdığı telefon nömrəsi ilə OTP təsdiqi ilə Google-a bağla.
+                    </p>
+                  ) : null}
                 </div>
               ) : (
-                <div className="mb-5 text-center">
+                <div className="mb-5 text-center space-y-1">
                   <div className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">Giriş</div>
                   <div className="mt-1 text-sm font-semibold text-gray-200">Hesabına daxil ol</div>
-                  <div className="mt-1 text-xs text-gray-500">
-                    Əvvəlcə məhsulu yuxarıda gör — sonra qeydiyyatı rahat keç.
-                  </div>
+                  {step === 'student_link_phone' || step === 'student_link_otp' ? (
+                    <div className="mt-2 text-xs text-gray-400 leading-relaxed px-1">
+                      Tələbə hesabını müəllimin yaratdığı telefon nömrəsi ilə OTP təsdiqi ilə Google-a bağla.
+                    </div>
+                  ) : (
+                    <div className="mt-1 text-xs text-gray-500">
+                      Əvvəlcə məhsulu yuxarıda gör — sonra qeydiyyatı rahat keç.
+                    </div>
+                  )}
                 </div>
               )
             ) : (
@@ -1113,11 +1185,110 @@ export default function Login() {
                       </div>
                     ) : null}
 
+                    {step === 'student_link_phone' ? (
+                      <form onSubmit={sendStudentLinkOtp} className="space-y-4">
+                        <p className="text-sm text-gray-200 text-center leading-relaxed font-medium">
+                          Müəllimin səni artıq sistemə əlavə edib? Telefon nömrəni daxil et və hesabını bağla
+                        </p>
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                            Telefon nömrəsi
+                          </label>
+                          <PhoneInput value={phone} onChange={setPhone} required />
+                        </div>
+                        <Button type="submit" loading={loading} className={loginSubmitBtnClass}>
+                          OTP göndər
+                        </Button>
+                        <button
+                          type="button"
+                          className="w-full text-center text-xs text-primary hover:brightness-110 font-semibold"
+                          onClick={() => {
+                            setGoogleRoleExcludeStudent(true)
+                            setStep('role')
+                          }}
+                        >
+                          Müəllim və ya valideynəm — qeydiyyata davam et
+                        </button>
+                        <button
+                          type="button"
+                          className="w-full text-center text-xs text-gray-500 hover:text-white"
+                          onClick={() => {
+                            setStep('google')
+                            setGoogleCredential(null)
+                            setPhone('')
+                            setOtpCode('')
+                            setLinkOtpSent(false)
+                          }}
+                        >
+                          ← Geri
+                        </button>
+                      </form>
+                    ) : null}
+
+                    {step === 'student_link_otp' ? (
+                      <form onSubmit={verifyStudentLink} className="space-y-4">
+                        <p className="text-xs text-gray-400 text-center leading-relaxed">
+                          Telefonuna gələn <strong className="text-gray-200">6 rəqəmli OTP</strong> kodunu daxil et.
+                          Təsdiqlədikdən sonra giriş <strong className="text-gray-200">yalnız Google ilə</strong> olacaq.
+                        </p>
+                        <div className="text-center text-xs text-gray-500">{phone}</div>
+                        <input
+                          className="w-full bg-surface-1 border border-white/10 rounded-xl px-4 py-4 text-white text-2xl font-bold text-center tracking-widest outline-none focus:border-primary/40"
+                          placeholder=""
+                          aria-label="OTP kodu, 6 rəqəm"
+                          maxLength={6}
+                          inputMode="numeric"
+                          autoComplete="one-time-code"
+                          value={otpCode}
+                          onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                          required
+                        />
+                        <Button type="submit" loading={loading} className={loginSubmitBtnClass}>
+                          Təsdiqlə və daxil ol
+                        </Button>
+                        {linkOtpSent ? (
+                          <button
+                            type="button"
+                            disabled={loading}
+                            onClick={async () => {
+                              try {
+                                await googleLinkSendOtp(googleCredential, phone)
+                                toast('OTP yenidən göndərildi', 'success')
+                              } catch (e) {
+                                toast(e?.message || 'OTP göndərilmədi', 'error')
+                              }
+                            }}
+                            className="w-full text-center text-xs text-gray-500 hover:text-white disabled:opacity-50"
+                          >
+                            OTP yenidən göndər
+                          </button>
+                        ) : null}
+                        <button
+                          type="button"
+                          className="w-full text-center text-xs text-gray-500 hover:text-white"
+                          onClick={() => {
+                            setStep('student_link_phone')
+                            setOtpCode('')
+                          }}
+                        >
+                          ← Geri
+                        </button>
+                      </form>
+                    ) : null}
+
                     {step === 'role' ? (
                       <div className="space-y-4">
                         <div className="text-center text-sm text-gray-300 font-semibold">Rol seçin</div>
-                        <div className="grid grid-cols-3 gap-3">
-                          {ROLES.map((r) => (
+                        {googleRoleExcludeStudent ? (
+                          <p className="text-[11px] text-center text-amber-200/90 leading-relaxed px-1">
+                            Tələbə hesabını telefonla bağlamaq üçün «Geri» ilə əvvəlki addıma qayıdın. Burada yalnız müəllim və
+                            valideyn qeydiyyatı davam edir.
+                          </p>
+                        ) : null}
+                        <div
+                          className={`grid gap-3 ${googleRoleChoices.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}
+                        >
+                          {googleRoleChoices.map((r) => (
                             <button
                               key={r.key}
                               type="button"
@@ -1133,8 +1304,13 @@ export default function Login() {
                           type="button"
                           className="w-full text-center text-xs text-gray-500 hover:text-white"
                           onClick={() => {
-                            setStep('google')
-                            setGoogleCredential(null)
+                            if (googleRoleExcludeStudent) {
+                              setStep('student_link_phone')
+                              setGoogleRoleExcludeStudent(false)
+                            } else {
+                              setStep('google')
+                              setGoogleCredential(null)
+                            }
                           }}
                         >
                           ← Geri

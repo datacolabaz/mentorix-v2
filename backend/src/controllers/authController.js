@@ -945,12 +945,13 @@ async function verifyGoogleIdTokenOrThrow(credential) {
   const sub = payload.sub ? String(payload.sub) : '';
   const email = payload.email ? String(payload.email).trim().toLowerCase() : '';
   const name = payload.name ? String(payload.name).trim() : '';
+  const email_verified = payload.email_verified === true || String(payload.email_verified || '').toLowerCase() === 'true';
   if (!sub) {
     const err = new Error('Google token etibarsızdır');
     err.statusCode = 401;
     throw err;
   }
-  return { sub, email: email || null, name: name || null, raw: payload };
+  return { sub, email: email || null, name: name || null, email_verified, raw: payload };
 }
 
 const googleLogin = async (req, res) => {
@@ -983,6 +984,11 @@ const googleLogin = async (req, res) => {
       );
       user = byEmail.rows[0] || null;
       if (user) {
+        if (!g.email_verified) {
+          const err = new Error('Google email təsdiqlənməyib');
+          err.statusCode = 409;
+          throw err;
+        }
         if (user.role && user.role !== 'student') {
           const err = new Error('Bu Google email artıq başqa rol üçün qeydiyyatdan keçib');
           err.statusCode = 409;
@@ -999,7 +1005,7 @@ const googleLogin = async (req, res) => {
         await db.query(
           `UPDATE users
            SET google_sub = $2,
-               auth_provider = COALESCE(auth_provider, 'google'),
+               auth_provider = 'google',
                is_active = TRUE,
                account_status = 'active',
                full_name = CASE
@@ -1013,10 +1019,21 @@ const googleLogin = async (req, res) => {
     }
 
     if (!user || !user.role) {
+      if (g.email) {
+        return res.json({
+          success: true,
+          needs_phone_link: true,
+          profile: {
+            email: g.email,
+            full_name: g.name,
+            google_sub: g.sub,
+          },
+        });
+      }
       return res.json({
         success: true,
         needs_role: true,
-        profile: { email: user?.email || g.email, full_name: user?.full_name || g.name, google_sub: g.sub },
+        profile: { email: user?.email || null, full_name: user?.full_name || g.name, google_sub: g.sub },
       });
     }
 
@@ -1031,6 +1048,193 @@ const googleLogin = async (req, res) => {
         email: user.email,
         phone: user.phone,
         phone_verified: Boolean(user.phone_verified),
+      },
+    });
+  } catch (err) {
+    const st = err.statusCode || 500;
+    res.status(st).json({ success: false, message: err.message });
+  }
+};
+
+/**
+ * Tələbə: Google email bazada yoxdursa — OTP ilə mövcud telefon hesabına google_sub bağlama (credential hər addımda yoxlanılır).
+ */
+const googleLinkSendOtp = async (req, res) => {
+  try {
+    const { credential, phone } = req.body;
+    const g = await verifyGoogleIdTokenOrThrow(credential);
+    if (!g.email) {
+      return res.status(400).json({ success: false, message: 'Google email mövcud deyil' });
+    }
+    if (!g.email_verified) {
+      return res.status(409).json({ success: false, message: 'Google email təsdiqlənməyib' });
+    }
+    const clean = normalizePhone(phone);
+    if (!clean) return res.status(400).json({ success: false, message: 'Telefon nömrəsi tələb olunur' });
+
+    const user = await findUserByPhoneAndRole(clean, 'student');
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Bu nömrə ilə aktiv tələbə hesabı tapılmadı. Müəllimin səni əvvəlcə sistemə əlavə etməsini xahiş et.',
+      });
+    }
+    if (user.google_sub && String(user.google_sub).trim() !== '') {
+      if (String(user.google_sub) === String(g.sub)) {
+        return res.status(409).json({
+          success: false,
+          message: 'Bu hesab artıq bu Google ilə bağlıdır. Birbaşa «Google ilə daxil ol»dan istifadə edin.',
+        });
+      }
+      return res.status(409).json({
+        success: false,
+        message: 'Bu telefon nömrəsi artıq başqa Google hesabına bağlıdır',
+      });
+    }
+
+    const billingId = await resolveSmsBillingInstructorId(user);
+    const quota = await checkSmsQuota(billingId, { requireProfile: false });
+    if (!quota.ok) return res.status(quota.statusCode).json(quota.body);
+
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 5 * 60000);
+    await db.query('DELETE FROM otp_codes WHERE phone = $1', [clean]);
+    await db.query('INSERT INTO otp_codes (phone, code, expires_at) VALUES ($1, $2, $3)', [
+      clean,
+      code,
+      expiresAt,
+    ]);
+    const sms = await sendOtpSms(clean, code);
+    if (!sms?.success) {
+      await db.query('DELETE FROM otp_codes WHERE phone = $1 AND code = $2', [clean, code]);
+      return res.status(502).json({
+        success: false,
+        message: sms?.error || 'OTP SMS göndərilə bilmədi. Bir az sonra yenidən cəhd edin.',
+      });
+    }
+    res.json({ success: true, message: 'OTP göndərildi' });
+  } catch (err) {
+    const st = err.statusCode || 500;
+    res.status(st).json({ success: false, message: err.message });
+  }
+};
+
+const googleLinkVerify = async (req, res) => {
+  try {
+    const { credential, phone, code } = req.body;
+    const g = await verifyGoogleIdTokenOrThrow(credential);
+    if (!g.email || !g.email_verified) {
+      return res.status(409).json({ success: false, message: 'Google email təsdiqlənməyib' });
+    }
+    const clean = normalizePhone(phone);
+    const codeStr = String(code ?? '').trim();
+    if (!clean || !codeStr) {
+      return res.status(400).json({ success: false, message: 'Telefon və kod tələb olunur' });
+    }
+
+    const { rows: otpRows } = await db.query(
+      'SELECT * FROM otp_codes WHERE phone = $1 AND code = $2 AND is_used = FALSE AND expires_at > NOW()',
+      [clean, codeStr],
+    );
+    if (!otpRows[0]) {
+      return res.status(400).json({ success: false, message: 'Kod yanlışdır və ya müddəti bitib' });
+    }
+
+    const user = await findUserByPhoneAndRole(clean, 'student');
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'İstifadəçi tapılmadı' });
+    }
+    if (user.google_sub && String(user.google_sub).trim() !== '') {
+      if (String(user.google_sub) === String(g.sub)) {
+        return res.status(409).json({
+          success: false,
+          message: 'Bu hesab artıq bu Google ilə bağlıdır.',
+        });
+      }
+      return res.status(409).json({
+        success: false,
+        message: 'Bu telefon nömrəsi artıq başqa Google hesabına bağlıdır',
+      });
+    }
+
+    await assertGoogleSubFreeForOtherUser(g.sub, user.id);
+
+    const emailCanon = canonicalStudentEmail(g.email);
+    if (!emailCanon) {
+      return res.status(400).json({ success: false, message: 'Google email etibarsızdır' });
+    }
+
+    const { rows: clash } = await db.query(
+      `SELECT id FROM users
+       WHERE is_active = TRUE
+         AND id <> $1
+         AND email IS NOT NULL
+         AND LOWER(TRIM(email)) = LOWER(TRIM($2))
+       LIMIT 1`,
+      [user.id, emailCanon],
+    );
+    if (clash[0]?.id) {
+      return res.status(409).json({
+        success: false,
+        message: 'Bu Gmail ünvanı artıq başqa hesaba bağlıdır',
+      });
+    }
+
+    const otpId = otpRows[0].id;
+    try {
+      await db.transaction(async (client) => {
+        const { rows: otpFresh } = await client.query(
+          `SELECT id FROM otp_codes
+           WHERE id = $1 AND phone = $2 AND code = $3 AND is_used = FALSE AND expires_at > NOW()
+           FOR UPDATE`,
+          [otpId, clean, codeStr],
+        );
+        if (!otpFresh[0]) {
+          const err = new Error('Kod yanlışdır və ya müddəti bitib');
+          err.statusCode = 400;
+          throw err;
+        }
+        await client.query(
+          `UPDATE users
+           SET google_sub = $2,
+               email = $3,
+               auth_provider = 'google',
+               phone_verified = TRUE,
+               is_active = TRUE,
+               account_status = 'active',
+               full_name = CASE
+                 WHEN TRIM(COALESCE(full_name, '')) = '' THEN COALESCE($4, full_name)
+                 ELSE full_name
+               END
+           WHERE id = $1`,
+          [user.id, g.sub, emailCanon, g.name || null],
+        );
+        await client.query('UPDATE otp_codes SET is_used = TRUE WHERE id = $1', [otpId]);
+      });
+    } catch (e) {
+      if (e.statusCode) {
+        return res.status(e.statusCode).json({ success: false, message: e.message });
+      }
+      throw e;
+    }
+
+    const { rows: fresh } = await db.query(
+      `SELECT id, full_name, email, role, phone, phone_verified
+       FROM users WHERE id = $1`,
+      [user.id],
+    );
+    const u = fresh[0];
+    const token = sign({ id: u.id, role: u.role });
+    return res.json({
+      success: true,
+      token,
+      user: {
+        id: u.id,
+        full_name: u.full_name,
+        role: u.role,
+        email: u.email,
+        phone: u.phone,
+        phone_verified: Boolean(u.phone_verified),
       },
     });
   } catch (err) {
@@ -1072,6 +1276,9 @@ const googleComplete = async (req, res) => {
       );
       user = byEmail[0] || null;
       if (user) {
+        if (!g.email_verified) {
+          return res.status(409).json({ success: false, message: 'Google email təsdiqlənməyib' });
+        }
         if (user.role && user.role !== r) {
           return res.status(409).json({
             success: false,
@@ -1104,7 +1311,7 @@ const googleComplete = async (req, res) => {
       const { rows: updated } = await db.query(
         `UPDATE users
          SET role = $2,
-             auth_provider = COALESCE(auth_provider, 'google'),
+             auth_provider = 'google',
              google_sub = COALESCE(google_sub, $3),
              is_active = TRUE,
              account_status = 'active'
@@ -1118,7 +1325,7 @@ const googleComplete = async (req, res) => {
         .query(
           `UPDATE users
            SET google_sub = COALESCE(google_sub, $2),
-               auth_provider = COALESCE(auth_provider, 'google'),
+               auth_provider = 'google',
                is_active = TRUE,
                account_status = 'active'
            WHERE id = $1`,
@@ -1159,6 +1366,8 @@ module.exports = {
   deliverPermanentPinSms,
   googleLogin,
   googleComplete,
+  googleLinkSendOtp,
+  googleLinkVerify,
   sendMyPhoneVerifyOtp,
   verifyMyPhoneVerifyOtp,
 };

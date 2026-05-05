@@ -105,6 +105,20 @@ const useAuthStore = create((set) => ({
     return data
   },
 
+  googleLinkSendOtp: async (credential, phone) =>
+    api.post('/auth/google/link/send-otp', { credential, phone }),
+
+  googleLinkVerify: async (credential, phone, code) => {
+    const data = await api.post('/auth/google/link/verify', { credential, phone, code })
+    if (!data?.token || !data?.user) {
+      throw new Error(data?.message || 'Server cavabı etibarsızdır')
+    }
+    localStorage.setItem('mx_token', data.token)
+    localStorage.setItem('mx_user', JSON.stringify(data.user))
+    set({ user: data.user, token: data.token })
+    return data
+  },
+
   setPin: async (pin) => api.post('/auth/pin/set', { pin }),
 
   logout: () => {

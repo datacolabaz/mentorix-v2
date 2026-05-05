@@ -215,6 +215,7 @@ function StudentFormFields({
             onChange={(e) => setData((p) => ({ ...p, email: e.target.value }))}
           />
           <p className="text-[10px] text-gray-500 mt-1.5">
+            <span className="text-indigo-200/90 font-medium">Gmail ilə giriş üçün email əlavə etmək tövsiyə olunur.</span>{' '}
             Google ilə giriş üçün eyniləşdirici kimi saxlanılır. Boş buraxılsa, yalnız telefon/PIN üzərindən davam edir.
             {mode === 'edit' ? (
               <>

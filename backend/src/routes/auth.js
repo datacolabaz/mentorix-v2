@@ -11,6 +11,8 @@ const {
   loginWithPin,
   googleLogin,
   googleComplete,
+  googleLinkSendOtp,
+  googleLinkVerify,
   sendMyPhoneVerifyOtp,
   verifyMyPhoneVerifyOtp,
 } = require('../controllers/authController');
@@ -43,6 +45,8 @@ function enforceTrialForStudentRegister(req, res, next) {
 router.post('/login', login);
 router.post('/google/login', googleLogin);
 router.post('/google/complete', googleComplete);
+router.post('/google/link/send-otp', googleLinkSendOtp);
+router.post('/google/link/verify', googleLinkVerify);
 router.post('/phone/next-step', phoneNextStep);
 router.post('/phone/verify/send', authenticate, authorize('instructor'), sendMyPhoneVerifyOtp);
 router.post('/phone/verify/confirm', authenticate, authorize('instructor'), verifyMyPhoneVerifyOtp);
