@@ -1,6 +1,7 @@
 const db = require('../utils/db');
-const { PLANS, TRIAL_LIMITS, normalizePlanSlug } = require('../config/plans');
+const { TRIAL_LIMITS, normalizePlanSlug } = require('../config/plans');
 const getCurrentPlan = require('./billingGetCurrentPlan');
+const { getActivePlansMap } = require('./subscriptionPlansService');
 
 const TZ = 'Asia/Baku';
 
@@ -211,7 +212,8 @@ async function resolveEntitlements(userId) {
   const trial_active = phone_verified && isTrialActive(trial);
 
   const planSlug = normalizePlanSlug(sub?.plan);
-  const planLimits = PLANS[planSlug] || PLANS.basic;
+  const plansMap = await getActivePlansMap();
+  const planLimits = plansMap[planSlug]?.limits || plansMap.basic?.limits || { students: 20, storage_mb: 1024, sms_monthly: 30, ram_limit_mb: null };
 
   const limits = trial_active
     ? {
@@ -223,6 +225,7 @@ async function resolveEntitlements(userId) {
         students: planLimits.students,
         storage_mb: planLimits.storage_mb,
         sms_monthly: planLimits.sms_monthly,
+        ram_limit_mb: planLimits.ram_limit_mb ?? null,
       };
 
   const used = {

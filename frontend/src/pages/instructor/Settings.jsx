@@ -6,7 +6,8 @@ import { useToast } from '../../components/common/Toast'
 import useAuthStore from '../../hooks/useAuth'
 import { instructorRoleAz } from '../../lib/instructorLabel'
 import useUiStore from '../../hooks/useUi'
-import { SUBSCRIPTION_PLANS } from '../../constants/subscriptionPlans'
+import { planPriceLabel } from '../../constants/subscriptionPlans'
+import { useSubscriptionPlans } from '../../hooks/useSubscriptionPlans'
 
 export default function InstructorSettings() {
   const toast = useToast()
@@ -15,6 +16,8 @@ export default function InstructorSettings() {
   const [loading, setLoading] = useState(true)
   const [planBusy, setPlanBusy] = useState(false)
   const [planErr, setPlanErr] = useState(null)
+  const plansQ = useSubscriptionPlans()
+  const plans = Array.isArray(plansQ.data) ? plansQ.data : []
   const [savingLabel, setSavingLabel] = useState(false)
   const [publicLabel, setPublicLabel] = useState('instructor')
   const [subjects, setSubjects] = useState([])
@@ -160,7 +163,7 @@ export default function InstructorSettings() {
           </div>
         ) : null}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {SUBSCRIPTION_PLANS.map((p) => (
+          {plans.map((p) => (
             <div
               key={p.id}
               className={[
@@ -169,9 +172,9 @@ export default function InstructorSettings() {
               ].join(' ')}
             >
               <div className="text-sm font-bold text-token-textMain">{p.title}</div>
-              <div className="text-xs text-token-textMuted mt-1">{p.price}</div>
+              <div className="text-xs text-token-textMuted mt-1">{planPriceLabel(p)}</div>
               <ul className="mt-3 space-y-1 text-xs text-token-textMain">
-                {p.items.map((x) => (
+                {(p.items || []).map((x) => (
                   <li key={x} className="flex items-center gap-2">
                     <span className="text-token-textMuted">•</span>
                     <span>{x}</span>

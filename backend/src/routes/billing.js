@@ -3,7 +3,8 @@ const { authenticate, authorize } = require('../middleware/auth');
 const db = require('../utils/db');
 const { resolveEntitlements, logBillingEvent } = require('../services/billingEntitlements');
 const getCurrentPlan = require('../services/billingGetCurrentPlan');
-const { normalizePlanSlug, PLANS } = require('../config/plans');
+const { normalizePlanSlug } = require('../config/plans');
+const { getPlanOrThrow, getActivePlansMap } = require('../services/subscriptionPlansService');
 const { createOrder, getOrderInfo } = require('../services/payriffService');
 const { sendPaymentEmail } = require('../services/emailService');
 const { enqueueNotification } = require('../services/notificationQueueService');
@@ -141,7 +142,7 @@ router.post('/create-payment', authenticate, authorize('instructor'), async (req
       // ignore
     }
     const plan = normalizePlanSlug(req.body?.plan);
-    if (!PLANS[plan]) return res.status(400).json({ success: false, code: 'PLAN_INVALID', message: 'PLAN_INVALID' });
+    const picked = await getPlanOrThrow(plan);
 
     const cur = await getCurrentPlan(db, req.user.id);
     const from = normalizePlanSlug(cur.plan);
@@ -149,7 +150,7 @@ router.post('/create-payment', authenticate, authorize('instructor'), async (req
       return res.status(400).json({ success: false, code: 'PLAN_NOT_UPGRADE', message: 'PLAN_NOT_UPGRADE' });
     }
 
-    const priceAzn = Number(PLANS[plan]?.price_azn || 0) || 0;
+    const priceAzn = Number(picked?.price_azn || 0) || 0;
     if (!priceAzn) return res.status(500).json({ success: false, code: 'PLAN_PRICE_MISSING', message: 'PLAN_PRICE_MISSING' });
 
     // Optional proration (feature flag): charge only the difference for remaining days.
@@ -160,7 +161,8 @@ router.post('/create-payment', authenticate, authorize('instructor'), async (req
       if (Number.isFinite(endMs) && endMs > nowMs) {
         const remainingDays = Math.ceil((endMs - nowMs) / 86400000);
         const periodDays = 30;
-        const fromPrice = Number(PLANS[from]?.price_azn || 0) || 0;
+        const plansMap = await getActivePlansMap();
+        const fromPrice = Number(plansMap[from]?.price_azn || 0) || 0;
         const diff = Math.max(0, priceAzn - fromPrice);
         const prorated = diff * Math.min(1, Math.max(0, remainingDays / periodDays));
         // Minimum charge 1 AZN to avoid zero orders.

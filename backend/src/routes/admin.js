@@ -9,6 +9,7 @@ const {
 } = require('../controllers/siteMarketingController');
 const { authenticate, authorize } = require('../middleware/auth');
 const db = require('../utils/db');
+const { adminListPlans, adminUpsertPlan } = require('../services/subscriptionPlansService');
 
 router.get('/stats', authenticate, authorize('admin'), getDashboardStats);
 router.get('/marketing/login', authenticate, authorize('admin'), getAdminLoginMarketing);
@@ -94,6 +95,31 @@ router.get('/billing/payments', authenticate, authorize('admin'), async (req, re
     res.json({ success: true, payments: rows });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+router.get('/plans', authenticate, authorize('admin'), async (_req, res) => {
+  try {
+    const plans = await adminListPlans();
+    res.json({ success: true, plans });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+router.put('/plans', authenticate, authorize('admin'), async (req, res) => {
+  try {
+    const { plans } = req.body || {};
+    if (!Array.isArray(plans) || plans.length === 0) {
+      return res.status(400).json({ success: false, message: 'plans array tələb olunur' });
+    }
+    for (const p of plans) {
+      await adminUpsertPlan(p);
+    }
+    const out = await adminListPlans();
+    res.json({ success: true, plans: out });
+  } catch (err) {
+    res.status(err.statusCode || 500).json({ success: false, message: err.message });
   }
 });
 

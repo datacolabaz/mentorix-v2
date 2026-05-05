@@ -1,10 +1,27 @@
 const express = require('express');
 const { getLandingStats } = require('../controllers/publicLandingController');
 const { getPublicLoginMarketing } = require('../controllers/siteMarketingController');
+const { getActivePlansList } = require('../services/subscriptionPlansService');
 
 const router = express.Router();
 
 router.get('/landing-stats', getLandingStats);
 router.get('/marketing/login', getPublicLoginMarketing);
+router.get('/subscription-plans', async (_req, res) => {
+  try {
+    const list = await getActivePlansList();
+    const plans = list.map((p) => ({
+      id: p.slug,
+      title: p.title,
+      price_azn: p.price_azn,
+      highlight: p.highlight,
+      items: Array.isArray(p.features) ? p.features : null,
+      limits: p.limits,
+    }));
+    res.json({ success: true, plans });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
+  }
+});
 
 module.exports = router;

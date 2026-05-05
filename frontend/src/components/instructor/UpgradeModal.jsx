@@ -2,11 +2,14 @@ import { useState } from 'react'
 import Modal from '../common/Modal'
 import Button from '../common/Button'
 import api from '../../lib/api'
-import { SUBSCRIPTION_PLANS } from '../../constants/subscriptionPlans'
+import { planPriceLabel } from '../../constants/subscriptionPlans'
+import { useSubscriptionPlans } from '../../hooks/useSubscriptionPlans'
 
 export default function UpgradeModal({ open, onClose, onSelectPlan }) {
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState(null)
+  const plansQ = useSubscriptionPlans()
+  const plans = Array.isArray(plansQ.data) ? plansQ.data : []
   return (
     <Modal open={open} onClose={onClose} title="Upgrade" size="lg">
       <div className="space-y-4">
@@ -19,7 +22,7 @@ export default function UpgradeModal({ open, onClose, onSelectPlan }) {
           Plan seçin və Payriff ilə ödəniş edin. Ödəniş uğurlu olarsa plan dərhal aktivləşəcək.
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {SUBSCRIPTION_PLANS.map((p) => (
+          {plans.map((p) => (
             <div
               key={p.id}
               className={[
@@ -30,9 +33,9 @@ export default function UpgradeModal({ open, onClose, onSelectPlan }) {
               ].join(' ')}
             >
               <div className="text-sm font-bold text-token-textMain">{p.title}</div>
-              <div className="text-xs text-token-textMuted mt-1">{p.price}</div>
+              <div className="text-xs text-token-textMuted mt-1">{planPriceLabel(p)}</div>
               <ul className="mt-3 space-y-1 text-xs text-token-textMain">
-                {p.items.map((x) => (
+                {(p.items || []).map((x) => (
                   <li key={x} className="flex items-center gap-2">
                     <span className="text-token-textMuted">•</span>
                     <span>{x}</span>
