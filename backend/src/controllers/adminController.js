@@ -1,19 +1,28 @@
 const db = require('../utils/db');
+const { normalizePlanSlug } = require('../config/plans');
 
 // Butun muellimler
 const getInstructors = async (req, res) => {
   try {
     const { rows } = await db.query(
       `SELECT u.id, u.full_name, u.email, u.phone, u.is_active,
-              ip.subject, ip.billing_type, ip.sms_limit, ip.sms_used,
-              ip.storage_limit_mb, ip.storage_used_mb,
-              ip.ram_limit_mb, ip.max_concurrent_students,
+              ip.subject, ip.billing_type,
+              COALESCE(s.plan, 'basic') AS plan,
+              COALESCE(uc.sms_used_monthly, 0) AS sms_used_monthly,
+              COALESCE(uc.storage_used_mb, 0) AS storage_used_mb,
+              COALESCE(uc.students_count, 0) AS students_used,
+              sp.student_limit AS students_limit,
+              (sp.storage_gb * 1024)::int AS storage_limit_mb,
+              sp.sms_limit AS sms_limit_monthly,
               COUNT(e.id) AS student_count
        FROM users u
        LEFT JOIN instructor_profiles ip ON ip.user_id = u.id
+       LEFT JOIN subscriptions s ON s.user_id = u.id
+       LEFT JOIN usage_counters uc ON uc.user_id = u.id
+       LEFT JOIN subscription_plans sp ON sp.slug = COALESCE(s.plan, 'basic') AND sp.is_active = TRUE
        LEFT JOIN enrollments e ON e.instructor_id = u.id AND e.status = 'active'
        WHERE u.role = 'instructor' AND u.is_active = TRUE
-       GROUP BY u.id, ip.id
+       GROUP BY u.id, ip.id, s.plan, uc.user_id, sp.slug
        ORDER BY u.full_name`
     );
     res.json({ success: true, instructors: rows });
@@ -24,18 +33,41 @@ const getInstructors = async (req, res) => {
 
 // Muellim limitlerini yenile
 const updateInstructorLimits = async (req, res) => {
+  return res.status(410).json({
+    success: false,
+    code: 'DEPRECATED',
+    message: 'Manual limitlər deprecated-dir. Paket seçimi ilə idarə olunur.',
+  });
+};
+
+// Muellimin paketini yenile (limits subscription_plans-dan gəlir)
+const updateInstructorPlan = async (req, res) => {
   try {
     const { id } = req.params;
-    const { sms_limit, storage_limit_mb, ram_limit_mb, max_concurrent_students } = req.body;
+    const planRaw = req.body?.plan;
+    const plan = normalizePlanSlug(planRaw);
+
+    // Ensure instructor exists
+    const { rows: u } = await db.query(
+      `SELECT id FROM users WHERE id = $1 AND role = 'instructor' LIMIT 1`,
+      [id]
+    );
+    if (!u[0]?.id) return res.status(404).json({ success: false, message: 'Müəllim tapılmadı' });
 
     await db.query(
-      `UPDATE instructor_profiles
-       SET sms_limit=$1, storage_limit_mb=$2, ram_limit_mb=$3, max_concurrent_students=$4
-       WHERE user_id=$5`,
-      [sms_limit, storage_limit_mb, ram_limit_mb, max_concurrent_students, id]
+      `INSERT INTO subscriptions (user_id, plan, status)
+       VALUES ($1, $2, 'active')
+       ON CONFLICT (user_id) DO UPDATE SET plan = EXCLUDED.plan, status = 'active'`,
+      [id, plan]
     );
 
-    res.json({ success: true });
+    // Disable legacy trial if present (plan is now source of truth)
+    await db.query(
+      `UPDATE trials SET is_active = FALSE WHERE user_id = $1`,
+      [id]
+    ).catch(() => {});
+
+    res.json({ success: true, plan });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -79,4 +111,4 @@ const toggleInstructor = async (req, res) => {
   }
 };
 
-module.exports = { getInstructors, updateInstructorLimits, getDashboardStats, toggleInstructor };
+module.exports = { getInstructors, updateInstructorLimits, updateInstructorPlan, getDashboardStats, toggleInstructor };

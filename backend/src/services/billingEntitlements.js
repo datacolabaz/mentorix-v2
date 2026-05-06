@@ -1,5 +1,5 @@
 const db = require('../utils/db');
-const { TRIAL_LIMITS, normalizePlanSlug } = require('../config/plans');
+const { normalizePlanSlug } = require('../config/plans');
 const getCurrentPlan = require('./billingGetCurrentPlan');
 const { getActivePlansMap } = require('./subscriptionPlansService');
 
@@ -108,26 +108,6 @@ function remaining(limit, used) {
   return Math.max(0, l - u);
 }
 
-async function getTrialRow(dbConn, userId) {
-  const { rows } = await dbConn.query(
-    `SELECT user_id, start_date, end_date, is_active,
-            max_students, storage_limit_mb, sms_limit_monthly
-     FROM trials
-     WHERE user_id = $1
-     LIMIT 1`,
-    [userId]
-  );
-  return rows[0] || null;
-}
-
-function isTrialActive(trial) {
-  if (!trial) return false;
-  if (!trial.is_active) return false;
-  const endMs = new Date(trial.end_date).getTime();
-  if (!Number.isFinite(endMs)) return false;
-  return Date.now() <= endMs;
-}
-
 function ceilDaysLeft(endsAt) {
   const endMs = new Date(endsAt).getTime();
   if (!Number.isFinite(endMs)) return 0;
@@ -212,26 +192,23 @@ async function resolveEntitlements(userId) {
   const usage = await ensureSmsPeriodUpToDate(db, userId);
   const sub = await ensureSubscriptionRow(db, userId);
   const sub2 = await getCurrentPlan(db, userId);
-  const trial = await getTrialRow(db, userId);
-
-  const trial_active = phone_verified && isTrialActive(trial);
+  // IMPORTANT:
+  // Limits are plan-driven only (subscriptions + subscription_plans).
+  // Legacy instructor_profiles limits and trials are treated as deprecated for limits.
 
   const planSlug = normalizePlanSlug(sub?.plan);
   const plansMap = await getActivePlansMap();
-  const planLimits = plansMap[planSlug]?.limits || plansMap.basic?.limits || { students: 20, storage_mb: 1024, sms_monthly: 30, ram_limit_mb: null };
+  const planLimits =
+    plansMap[planSlug]?.limits ||
+    plansMap.basic?.limits ||
+    { students: 20, storage_mb: 1024, sms_monthly: 30, ram_limit_mb: null };
 
-  const limits = trial_active
-    ? {
-        students: Number(trial?.max_students || TRIAL_LIMITS.students),
-        storage_mb: Number(trial?.storage_limit_mb || TRIAL_LIMITS.storage_mb),
-        sms_monthly: Number(trial?.sms_limit_monthly || TRIAL_LIMITS.sms_monthly),
-      }
-    : {
-        students: planLimits.students,
-        storage_mb: planLimits.storage_mb,
-        sms_monthly: planLimits.sms_monthly,
-        ram_limit_mb: planLimits.ram_limit_mb ?? null,
-      };
+  const limits = {
+    students: planLimits.students,
+    storage_mb: planLimits.storage_mb,
+    sms_monthly: planLimits.sms_monthly,
+    ram_limit_mb: planLimits.ram_limit_mb ?? null,
+  };
 
   const used = {
     students: Number(usage?.students_count || 0) || 0,
@@ -250,7 +227,6 @@ async function resolveEntitlements(userId) {
   const nowMs = Date.now();
   const graceUntilMs = sub2?.grace_until ? new Date(sub2.grace_until).getTime() : null;
   const inGrace =
-    !trial_active &&
     subStatus === 'past_due' &&
     (graceUntilMs == null ? false : nowMs <= graceUntilMs);
 
@@ -259,7 +235,7 @@ async function resolveEntitlements(userId) {
     (!periodEndMs || periodEndMs >= nowMs);
 
   // Grace period: do not block actions, but show a "grace" state.
-  const is_active = trial_active ? true : subscription_active || inGrace;
+  const is_active = subscription_active || inGrace;
   const status = buildStatus({
     phone_verified,
     is_active,
@@ -280,9 +256,10 @@ async function resolveEntitlements(userId) {
   return {
     plan: planSlug,
     trial: {
-      is_active: trial_active,
-      ends_at: trial_active ? new Date(trial.end_date).toISOString() : null,
-      days_left: trial_active ? ceilDaysLeft(trial.end_date) : 0,
+      // Deprecated for limits; kept for backward-compatible UI payload shape.
+      is_active: false,
+      ends_at: null,
+      days_left: 0,
     },
     subscription: {
       status: subStatus,
