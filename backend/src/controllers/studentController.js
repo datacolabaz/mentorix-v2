@@ -200,8 +200,7 @@ const deleteStudent = async (req, res) => {
         ).catch(() => {});
         await client.query(
           `UPDATE enrollments
-           SET status = 'inactive',
-               deleted_at = NOW()
+           SET deleted_at = NOW()
            WHERE id = ANY($1::uuid[])`,
           [enrollmentIds]
         );
