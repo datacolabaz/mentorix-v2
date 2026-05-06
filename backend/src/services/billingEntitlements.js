@@ -53,9 +53,11 @@ async function ensureSubscriptionRow(dbConn, userId) {
   );
   if (rows[0]) return rows[0];
 
+  // Default: 14-day trial on BASIC (plan-driven).
+  // After it expires getCurrentPlan() will move it to past_due (+2d grace), then resolveEntitlements() will mark it expired.
   const { rows: ins } = await dbConn.query(
-    `INSERT INTO subscriptions (user_id, plan, status)
-     VALUES ($1, 'basic', 'active')
+    `INSERT INTO subscriptions (user_id, plan, status, current_period_start, current_period_end, updated_at)
+     VALUES ($1, 'basic', 'active', NOW(), NOW() + interval '14 days', NOW())
      RETURNING user_id, plan, status`,
     [userId]
   );
@@ -165,8 +167,13 @@ function buildMessages(status, remStudents, phone_verified, details) {
   }
   if (status === 'warning') {
     const banner =
-      remStudents === 1 ? 'You have 1 student slot left' : `You have ${remStudents ?? 0} student slots left`;
+      remStudents === 1
+        ? 'Tələbə limitinizin bitməsinə 1 yer qalıb'
+        : `Tələbə limitinizin bitməsinə ${remStudents ?? 0} yer qalıb`;
     return { banner, cta: { label: 'Upgrade to PRO', action: 'OPEN_UPGRADE_MODAL' } };
+  }
+  if (status === 'grace') {
+    return { banner: 'Sınaq müddətiniz bitib. Davam etmək üçün paket seçin.', cta: { label: 'Paket seç', action: 'OPEN_UPGRADE_MODAL' } };
   }
   if (status === 'blocked') {
     const reasons = [];
@@ -174,10 +181,10 @@ function buildMessages(status, remStudents, phone_verified, details) {
     if (details?.reachedStorage) reasons.push('storage limiti dolub');
     if (details?.reachedSms) reasons.push('SMS limiti dolub');
     const banner = reasons.length ? `Məhdudiyyət: ${reasons.join(', ')}` : 'Məhdudiyyət';
-    return { banner, cta: { label: 'Upgrade to PRO', action: 'OPEN_UPGRADE_MODAL' } };
+    return { banner, cta: { label: 'Paket seç', action: 'OPEN_UPGRADE_MODAL' } };
   }
   if (status === 'expired') {
-    return { banner: 'Trial expired', cta: { label: 'Upgrade to PRO', action: 'OPEN_UPGRADE_MODAL' } };
+    return { banner: 'Sınaq müddətiniz bitdi. Davam etmək üçün paket seçin.', cta: { label: 'Paket seç', action: 'OPEN_UPGRADE_MODAL' } };
   }
   return { banner: null, cta: null };
 }
@@ -251,7 +258,15 @@ async function resolveEntitlements(userId) {
 
   const should_warn = status === 'warning';
   const should_block = (status2 === 'blocked' || status2 === 'expired'); // grace is NOT blocking
-  const messages = buildMessages(status, rem.students, phone_verified, { reachedStudents, reachedStorage, reachedSms });
+  const days_left = sub2?.current_period_end ? ceilDaysLeft(sub2.current_period_end) : null;
+  let messages = buildMessages(status2, rem.students, phone_verified, { reachedStudents, reachedStorage, reachedSms });
+  // Show trial countdown banner for default BASIC trial.
+  if (!messages?.banner && planSlug === 'basic' && subStatus === 'active' && days_left != null) {
+    messages = {
+      banner: days_left === 1 ? 'Sınaq müddətinizin bitməsinə 1 gün qaldı' : `Sınaq müddətinizin bitməsinə ${days_left} gün qaldı`,
+      cta: { label: 'Paket seç', action: 'OPEN_UPGRADE_MODAL' },
+    };
+  }
 
   return {
     plan: planSlug,
@@ -265,6 +280,7 @@ async function resolveEntitlements(userId) {
       status: subStatus,
       current_period_end: sub2?.current_period_end ? new Date(sub2.current_period_end).toISOString() : null,
       grace_until: sub2?.grace_until ? new Date(sub2.grace_until).toISOString() : null,
+      days_left,
     },
     limits,
     usage: used,

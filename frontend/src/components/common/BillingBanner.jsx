@@ -15,7 +15,7 @@ const stylesByStatus = {
   },
   expired: {
     wrap: 'border-rose-500/30 bg-rose-500/10 text-rose-100',
-    title: 'Trial bitdi',
+    title: 'Sınaq bitdi',
   },
   active: null,
 }
