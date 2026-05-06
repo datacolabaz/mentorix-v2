@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="12" fill="#0B0B0B"/>
+  <!-- Minimal "M" mark (high-contrast for tabs) -->
+  <path
+    d="M12 50V14h12l8 14 8-14h12v36H44V28.8L32 49 20 28.8V50H12Z"
+    fill="#00E5B0"
+  />
+</svg>
+
