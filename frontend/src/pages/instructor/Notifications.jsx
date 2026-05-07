@@ -55,18 +55,13 @@ export default function InstructorNotifications() {
   const [fetchedAt, setFetchedAt] = useState(null)
   const [tab, setTab] = useState('all') // all | sms
   // UX default: show real data immediately (avoid "0" on first paint)
-  const [smsFilter, setSmsFilter] = useState('month') // all | today | week | month | failed | scheduled
-  const [paymentOpen, setPaymentOpen] = useState(false)
-  const [otpOpen, setOtpOpen] = useState(false)
-  const [systemOpen, setSystemOpen] = useState(false)
+  const [smsTimeFilter, setSmsTimeFilter] = useState('month') // today | week | month
+  const [smsStatusFilter, setSmsStatusFilter] = useState('all') // all | sent | failed | scheduled
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [detailsItem, setDetailsItem] = useState(null)
   const [smsLoading, setSmsLoading] = useState(false)
   const [smsErr, setSmsErr] = useState(null)
   const [smsDbItems, setSmsDbItems] = useState([])
-  const [smsShowCountPayment, setSmsShowCountPayment] = useState(20)
-  const [smsShowCountOtp, setSmsShowCountOtp] = useState(20)
-  const [smsShowCountSystem, setSmsShowCountSystem] = useState(20)
   const [lastUpdatedLabel, setLastUpdatedLabel] = useState('')
   const billingQ = useBillingStatus()
   const billing = billingQ.data || null
@@ -175,12 +170,12 @@ export default function InstructorNotifications() {
     }
   }, [tab])
 
+  const [smsShowCount, setSmsShowCount] = useState(40)
+
   useEffect(() => {
     if (tab !== 'sms') return
-    setSmsShowCountPayment(20)
-    setSmsShowCountOtp(20)
-    setSmsShowCountSystem(20)
-  }, [tab, smsFilter])
+    setSmsShowCount(40)
+  }, [tab, smsTimeFilter, smsStatusFilter])
 
   const smsBaseList = useMemo(() => {
     return Array.isArray(smsDbItems) ? smsDbItems : []
@@ -241,43 +236,28 @@ export default function InstructorNotifications() {
     return 'bg-emerald-500'
   }
 
-  const smsRows = useMemo(() => {
+  const smsTimeRows = useMemo(() => {
     const now = new Date()
     const filtered = smsBaseList.filter((x) => {
-      if (smsFilter === 'all') return true
-      if (smsFilter === 'today') return isToday(x.createdAt, now)
-      if (smsFilter === 'week') return isThisWeek(x.createdAt, now)
-      if (smsFilter === 'month') return isThisMonth(x.createdAt, now)
-      if (smsFilter === 'failed') return x.status === 'failed'
-      if (smsFilter === 'scheduled') return x.status === 'scheduled'
-      return true
+      if (smsTimeFilter === 'today') return isToday(x.createdAt, now)
+      if (smsTimeFilter === 'week') return isThisWeek(x.createdAt, now)
+      return isThisMonth(x.createdAt, now)
     })
     return filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-  }, [smsFilter, smsBaseList])
+  }, [smsTimeFilter, smsBaseList])
 
-  const paymentRows = useMemo(() => smsRows.filter((x) => String(x.type || '') === 'payment'), [smsRows])
-  const otpRows = useMemo(() => smsRows.filter((x) => String(x.type || '') === 'otp'), [smsRows])
-  const systemRows = useMemo(() => smsRows.filter((x) => !['payment', 'otp'].includes(String(x.type || ''))), [smsRows])
+  const smsRows = useMemo(() => {
+    if (smsStatusFilter === 'sent') return smsTimeRows.filter((x) => x.status === 'sent')
+    if (smsStatusFilter === 'failed') return smsTimeRows.filter((x) => x.status === 'failed')
+    if (smsStatusFilter === 'scheduled') return smsTimeRows.filter((x) => x.status === 'scheduled')
+    return smsTimeRows
+  }, [smsStatusFilter, smsTimeRows])
 
-  const smsSummary = useMemo(() => {
-    const sent = smsBaseList.filter((x) => x.status === 'sent')
-    const failed = smsBaseList.filter((x) => x.status === 'failed')
-    const scheduled = smsBaseList.filter((x) => x.status === 'scheduled')
-    const uniq = new Set(
-      smsBaseList.flatMap((x) => {
-        if (x.student_id) return [x.student_id]
-        if (x.student_name) return [x.student_name]
-        return x.phone ? [x.phone] : []
-      })
-    )
-    return {
-      totalMessages: smsBaseList.length,
-      totalRecipients: uniq.size,
-      sent: sent.length,
-      failed: failed.length,
-      scheduled: scheduled.length,
-    }
-  }, [smsBaseList])
+  const smsCounts = useMemo(() => {
+    const sent = smsTimeRows.filter((x) => x.status === 'sent').length
+    const scheduled = smsTimeRows.filter((x) => x.status === 'scheduled').length
+    return { sent, scheduled }
+  }, [smsTimeRows])
 
   const tabItems = useMemo(
     () => [
@@ -287,23 +267,30 @@ export default function InstructorNotifications() {
     []
   )
 
-  const smsTabs = useMemo(() => {
+  const smsTimeTabs = useMemo(() => {
     const now = new Date()
-    const all = smsBaseList.length
     const today = smsBaseList.filter((x) => isToday(x.createdAt, now)).length
     const week = smsBaseList.filter((x) => isThisWeek(x.createdAt, now)).length
     const month = smsBaseList.filter((x) => isThisMonth(x.createdAt, now)).length
-    const failed = smsBaseList.filter((x) => x.status === 'failed').length
-    const scheduled = smsBaseList.filter((x) => x.status === 'scheduled').length
     return [
-      { id: 'all', label: 'Hamısı', count: all },
       { id: 'today', label: 'Bu gün', count: today },
       { id: 'week', label: 'Bu həftə', count: week },
       { id: 'month', label: 'Bu ay', count: month },
+    ]
+  }, [smsBaseList])
+
+  const smsStatusTabs = useMemo(() => {
+    const all = smsTimeRows.length
+    const sent = smsTimeRows.filter((x) => x.status === 'sent').length
+    const failed = smsTimeRows.filter((x) => x.status === 'failed').length
+    const scheduled = smsTimeRows.filter((x) => x.status === 'scheduled').length
+    return [
+      { id: 'all', label: 'Hamısı', count: all },
+      { id: 'sent', label: 'Göndərildi', count: sent },
       { id: 'failed', label: 'Uğursuz', count: failed },
       { id: 'scheduled', label: 'Planlaşdırılıb', count: scheduled },
     ]
-  }, [smsBaseList])
+  }, [smsTimeRows])
 
   const smsQuotaLine = useMemo(() => {
     const lim = billing?.limits?.sms_monthly
@@ -400,10 +387,6 @@ export default function InstructorNotifications() {
                 </div>
               ) : null}
               <div className="mt-3 flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center gap-2 rounded-full border border-[color:var(--border-subtle)] bg-token-surfaceCard/50 px-3 py-1.5 text-[11px] text-token-textMain">
-                  <span className="text-token-textMuted">Tarixçə (filter):</span>
-                  <span className="font-semibold tabular-nums">{smsLoading ? '—' : smsSummary.totalMessages}</span>
-                </span>
                 {smsQuotaLine ? (
                   <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5 text-[11px] text-token-textMain">
                     <span className="text-token-textMuted">Bu ay (limit):</span>
@@ -412,23 +395,19 @@ export default function InstructorNotifications() {
                     </span>
                   </span>
                 ) : null}
-                <span className="inline-flex items-center gap-2 rounded-full border border-[color:var(--border-subtle)] bg-token-surfaceCard/50 px-3 py-1.5 text-[11px] text-token-textMain">
-                  <span className="text-token-textMuted">Tələbə:</span>
-                  <span className="font-semibold tabular-nums">{smsLoading ? '—' : smsSummary.totalRecipients}</span>
-                </span>
                 <span className="inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1.5 text-[11px] text-emerald-700 dark:text-emerald-200/90">
-                  Göndərildi <span className="font-bold tabular-nums">{smsLoading ? '—' : smsSummary.sent}</span>
+                  Göndərildi <span className="font-bold tabular-nums">{smsLoading ? '—' : smsCounts.sent}</span>
                 </span>
-                <span className="inline-flex items-center gap-2 rounded-full border-rose-500/25 bg-rose-500/10 px-3 py-1.5 text-[11px] text-rose-700 dark:text-rose-200/90">
-                  Alınmadı <span className="font-bold tabular-nums">{smsLoading ? '—' : smsSummary.failed}</span>
-                </span>
-                <span className="inline-flex items-center gap-2 rounded-full border-amber-500/25 bg-amber-500/10 px-3 py-1.5 text-[11px] text-amber-700 dark:text-amber-200/90">
-                  Plan <span className="font-bold tabular-nums">{smsLoading ? '—' : smsSummary.scheduled}</span>
+                <span className="inline-flex items-center gap-2 rounded-full border border-amber-500/25 bg-amber-500/10 px-3 py-1.5 text-[11px] text-amber-700 dark:text-amber-200/90">
+                  Plan <span className="font-bold tabular-nums">{smsLoading ? '—' : smsCounts.scheduled}</span>
                 </span>
               </div>
             </div>
             <div className="shrink-0">
-              <FilterTabs tabs={smsTabs} activeId={smsFilter} onChange={(id) => setSmsFilter(id)} />
+              <div className="space-y-2">
+                <FilterTabs tabs={smsTimeTabs} activeId={smsTimeFilter} onChange={(id) => setSmsTimeFilter(id)} />
+                <FilterTabs tabs={smsStatusTabs} activeId={smsStatusFilter} onChange={(id) => setSmsStatusFilter(id)} />
+              </div>
             </div>
           </div>
 
@@ -439,142 +418,34 @@ export default function InstructorNotifications() {
                 {smsErr ? 'SMS tarixçəsi yüklənmədi' : 'Bu filter üçün SMS yoxdur'}
               </div>
               <p className="text-xs text-token-textMuted mt-1">
-                {smsErr ? 'Bir az sonra yenidən yoxlayın.' : 'Filteri dəyişin və ya yeni SMS göndərin.'}
+                {smsErr ? 'Bir az sonra yenidən yoxlayın.' : 'Filtrləri dəyişin və ya yeni SMS göndərin.'}
               </p>
             </Card>
           ) : (
-            <div className="space-y-4">
-              <Card className="p-3 sm:p-4">
-                <button
-                  type="button"
-                  onClick={() => setPaymentOpen((v) => !v)}
-                  className="w-full flex items-center justify-between gap-3 text-left"
-                >
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-token-textMain truncate">💰 Ödəniş mesajları</p>
-                    <p className="text-xs text-token-textMuted mt-0.5">
-                      Say: <span className="font-semibold tabular-nums text-token-textMain">{paymentRows.length}</span>
-                    </p>
-                  </div>
-                  <span className="text-xs font-semibold text-primary">{paymentOpen ? 'Bağla' : 'Aç'}</span>
-                </button>
-
-                {paymentOpen ? (
-                  <div className="mt-4 space-y-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="text-xs text-token-textMuted">
-                        Göstərilir:{' '}
-                        <span className="text-token-textMain font-semibold tabular-nums">
-                          {Math.min(paymentRows.length, smsShowCountPayment)}
-                        </span>{' '}
-                        / <span className="text-token-textMain font-semibold tabular-nums">{paymentRows.length}</span>
-                      </div>
-                      {smsShowCountPayment < paymentRows.length ? (
-                        <button
-                          type="button"
-                          className="text-xs font-semibold text-primary hover:text-primary/90"
-                          onClick={() => setSmsShowCountPayment((n) => Math.min(paymentRows.length, n + 20))}
-                        >
-                          Daha çox göstər
-                        </button>
-                      ) : null}
-                    </div>
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                      {paymentRows.slice(0, smsShowCountPayment).map((item) => (
-                        <NotificationCard key={item.id} item={item} onDetails={openDetails} />
-                      ))}
-                    </div>
-                  </div>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="text-xs text-token-textMuted">
+                  Göstərilir:{' '}
+                  <span className="text-token-textMain font-semibold tabular-nums">
+                    {Math.min(smsRows.length, smsShowCount)}
+                  </span>{' '}
+                  / <span className="text-token-textMain font-semibold tabular-nums">{smsRows.length}</span>
+                </div>
+                {smsShowCount < smsRows.length ? (
+                  <button
+                    type="button"
+                    className="text-xs font-semibold text-primary hover:text-primary/90"
+                    onClick={() => setSmsShowCount((n) => Math.min(smsRows.length, n + 40))}
+                  >
+                    Daha çox göstər
+                  </button>
                 ) : null}
-              </Card>
-
-              <Card className="p-3 sm:p-4">
-                <button
-                  type="button"
-                  onClick={() => setOtpOpen((v) => !v)}
-                  className="w-full flex items-center justify-between gap-3 text-left"
-                >
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-token-textMain truncate">🔐 OTP / PIN mesajları</p>
-                    <p className="text-xs text-token-textMuted mt-0.5">
-                      Say: <span className="font-semibold tabular-nums text-token-textMain">{otpRows.length}</span>
-                    </p>
-                  </div>
-                  <span className="text-xs font-semibold text-primary">{otpOpen ? 'Bağla' : 'Aç'}</span>
-                </button>
-
-                {otpOpen ? (
-                  <div className="mt-4 space-y-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="text-xs text-token-textMuted">
-                        Göstərilir:{' '}
-                        <span className="text-token-textMain font-semibold tabular-nums">
-                          {Math.min(otpRows.length, smsShowCountOtp)}
-                        </span>{' '}
-                        / <span className="text-token-textMain font-semibold tabular-nums">{otpRows.length}</span>
-                      </div>
-                      {smsShowCountOtp < otpRows.length ? (
-                        <button
-                          type="button"
-                          className="text-xs font-semibold text-primary hover:text-primary/90"
-                          onClick={() => setSmsShowCountOtp((n) => Math.min(otpRows.length, n + 20))}
-                        >
-                          Daha çox göstər
-                        </button>
-                      ) : null}
-                    </div>
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                      {otpRows.slice(0, smsShowCountOtp).map((item) => (
-                        <NotificationCard key={item.id} item={item} onDetails={openDetails} />
-                      ))}
-                    </div>
-                  </div>
-                ) : null}
-              </Card>
-
-              <Card className="p-3 sm:p-4">
-                <button
-                  type="button"
-                  onClick={() => setSystemOpen((v) => !v)}
-                  className="w-full flex items-center justify-between gap-3 text-left"
-                >
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-token-textMain truncate">🧾 Sistem mesajları</p>
-                    <p className="text-xs text-token-textMuted mt-0.5">
-                      Say: <span className="font-semibold tabular-nums text-token-textMain">{systemRows.length}</span>
-                    </p>
-                  </div>
-                  <span className="text-xs font-semibold text-primary">{systemOpen ? 'Bağla' : 'Aç'}</span>
-                </button>
-
-                {systemOpen ? (
-                  <div className="mt-4 space-y-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="text-xs text-token-textMuted">
-                        Göstərilir:{' '}
-                        <span className="text-token-textMain font-semibold tabular-nums">
-                          {Math.min(systemRows.length, smsShowCountSystem)}
-                        </span>{' '}
-                        / <span className="text-token-textMain font-semibold tabular-nums">{systemRows.length}</span>
-                      </div>
-                      {smsShowCountSystem < systemRows.length ? (
-                        <button
-                          type="button"
-                          className="text-xs font-semibold text-primary hover:text-primary/90"
-                          onClick={() => setSmsShowCountSystem((n) => Math.min(systemRows.length, n + 20))}
-                        >
-                          Daha çox göstər
-                        </button>
-                      ) : null}
-                    </div>
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                      {systemRows.slice(0, smsShowCountSystem).map((item) => (
-                        <NotificationCard key={item.id} item={item} onDetails={openDetails} />
-                      ))}
-                    </div>
-                  </div>
-                ) : null}
-              </Card>
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                {smsRows.slice(0, smsShowCount).map((item) => (
+                  <NotificationCard key={item.id} item={item} onDetails={openDetails} />
+                ))}
+              </div>
             </div>
           )}
 
