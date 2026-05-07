@@ -62,7 +62,7 @@ export default function InstructorNotifications() {
   const [fetchedAt, setFetchedAt] = useState(null)
   const [tab, setTab] = useState('all') // all | sms
   // UX default: show real data immediately (avoid "0" on first paint)
-  const [smsTimeFilter, setSmsTimeFilter] = useState('month') // today | week | month
+  const [smsTimeFilter, setSmsTimeFilter] = useState('all') // all | today | week | month
   const [smsStatusFilter, setSmsStatusFilter] = useState('all') // all | sent | failed | scheduled
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [detailsItem, setDetailsItem] = useState(null)
@@ -259,6 +259,7 @@ export default function InstructorNotifications() {
   const smsTimeRows = useMemo(() => {
     const now = new Date()
     const filtered = smsBaseList.filter((x) => {
+      if (smsTimeFilter === 'all') return true
       if (smsTimeFilter === 'today') return isToday(x.createdAt, now)
       if (smsTimeFilter === 'week') return isThisWeek(x.createdAt, now)
       return isThisMonth(x.createdAt, now)
@@ -291,10 +292,12 @@ export default function InstructorNotifications() {
 
   const smsTimeTabs = useMemo(() => {
     const now = new Date()
+    const all = smsBaseList.length
     const today = smsBaseList.filter((x) => isToday(x.createdAt, now)).length
     const week = smsBaseList.filter((x) => isThisWeek(x.createdAt, now)).length
     const month = smsBaseList.filter((x) => isThisMonth(x.createdAt, now)).length
     return [
+      { id: 'all', label: 'All time', count: all },
       { id: 'today', label: 'Bu gün', count: today },
       { id: 'week', label: 'Bu həftə', count: week },
       { id: 'month', label: 'Bu ay', count: month },
