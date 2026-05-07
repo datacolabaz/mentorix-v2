@@ -39,6 +39,13 @@ function formatMbValue(mb) {
   return `${m} MB`
 }
 
+function formatStorageUsedFromMb(mb) {
+  const m = Number(mb) || 0
+  if (m <= 0) return '0 KB'
+  if (m < 1) return `${Math.max(1, Math.round(m * 1024))} KB`
+  return formatMbValue(m)
+}
+
 function formatAgo(ms) {
   const s = Math.max(0, Math.floor(ms / 1000))
   if (s < 60) return `${s}s əvvəl`
@@ -216,10 +223,25 @@ export default function InstructorNotifications() {
     }
   }, [fetchedAt])
 
+  const smsUsed = billing?.usage?.sms_monthly ?? profile?.sms_used_monthly ?? profile?.sms_used ?? 0
+  const smsLim = billing?.limits?.sms_monthly ?? profile?.sms_limit ?? null
+  const storageUsedMb = billing?.usage?.storage_mb ?? profile?.storage_used_mb ?? null
+  const storageLimMb = billing?.limits?.storage_mb ?? profile?.storage_limit_mb ?? null
+  const ramUsedMb = billing?.usage?.ram_mb ?? profile?.ram_used_mb ?? null
+  const ramLimMb = billing?.limits?.ram_mb ?? profile?.ram_limit_mb ?? null
+
+  const pctOrZero = (used, lim) => {
+    if (lim == null) return 0
+    const u = Number(used || 0) || 0
+    const l = Number(lim || 0) || 0
+    if (!l) return 0
+    return Math.round((u / l) * 100)
+  }
+
   const systemPercent = {
-    sms: Number(profile?.sms_percent ?? 0) || 0,
-    storage: Number(profile?.storage_percent ?? 0) || 0,
-    ram: Number(profile?.ram_percent ?? 0) || 0,
+    sms: pctOrZero(smsUsed, smsLim),
+    storage: pctOrZero(storageUsedMb, storageLimMb),
+    ram: pctOrZero(ramUsedMb, ramLimMb),
   }
 
   const usageTone = (pct) => {
@@ -339,7 +361,7 @@ export default function InstructorNotifications() {
               <div className={`h-full ${barTone(systemPercent.sms)}`} style={{ width: `${Math.min(100, systemPercent.sms)}%` }} />
             </div>
             <div className="text-sm text-token-textMuted tabular-nums text-right whitespace-nowrap">
-              {profile?.sms_used ?? 0}/{profile?.sms_limit ?? 0}
+              {Number(smsUsed || 0) || 0}/{smsLim == null ? '∞' : Math.round(Number(smsLim))}
             </div>
           </div>
 
@@ -349,7 +371,7 @@ export default function InstructorNotifications() {
               <div className={`h-full ${barTone(systemPercent.storage)}`} style={{ width: `${Math.min(100, systemPercent.storage)}%` }} />
             </div>
             <div className="text-sm text-token-textMuted tabular-nums text-right whitespace-nowrap">
-              {formatStorageUsed(profile?.storage_used_bytes)} / {formatBytesLimitFromMb(profile?.storage_limit_mb)}
+              {formatStorageUsedFromMb(storageUsedMb)} / {storageLimMb == null ? '∞' : formatBytesLimitFromMb(storageLimMb)}
             </div>
           </div>
 
@@ -359,7 +381,7 @@ export default function InstructorNotifications() {
               <div className={`h-full ${barTone(systemPercent.ram)}`} style={{ width: `${Math.min(100, systemPercent.ram)}%` }} />
             </div>
             <div className="text-sm text-token-textMuted tabular-nums text-right whitespace-nowrap">
-              {formatMbValue(profile?.ram_used_mb)} / {formatMbValue(profile?.ram_limit_mb)}
+              {ramUsedMb == null ? '—' : formatMbValue(ramUsedMb)} / {ramLimMb == null ? '∞' : formatMbValue(ramLimMb)}
             </div>
           </div>
         </div>
