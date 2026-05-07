@@ -356,7 +356,7 @@ export default function InstructorNotifications() {
 
         <div className="mt-4 space-y-4">
           <div className="grid grid-cols-[92px_1fr_auto] items-center gap-x-4 gap-y-2">
-            <div className="text-sm font-semibold text-token-textMain">SMS</div>
+            <div className="text-sm font-semibold text-token-textMain">Aylıq SMS</div>
             <div className="h-2.5 rounded-full bg-white/10 overflow-hidden">
               <div className={`h-full ${barTone(systemPercent.sms)}`} style={{ width: `${Math.min(100, systemPercent.sms)}%` }} />
             </div>
@@ -408,21 +408,24 @@ export default function InstructorNotifications() {
                   </pre>
                 </div>
               ) : null}
-              <div className="mt-3 flex flex-wrap items-center gap-2">
+              <div className="mt-3 flex flex-col gap-2">
                 {smsQuotaLine ? (
-                  <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5 text-[11px] text-token-textMain">
-                    <span className="text-token-textMuted">Bu ay (limit):</span>
+                  <span className="inline-flex w-fit items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5 text-[11px] text-token-textMain">
+                    <span className="text-token-textMuted">Bu ay ümumi SMS istifadəsi:</span>
                     <span className="font-semibold tabular-nums">
                       {smsQuotaLine.used}/{smsQuotaLine.limLabel}
                     </span>
                   </span>
                 ) : null}
-                <span className="inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1.5 text-[11px] text-emerald-700 dark:text-emerald-200/90">
-                  Göndərildi <span className="font-bold tabular-nums">{smsLoading ? '—' : smsCounts.sent}</span>
-                </span>
-                <span className="inline-flex items-center gap-2 rounded-full border border-amber-500/25 bg-amber-500/10 px-3 py-1.5 text-[11px] text-amber-700 dark:text-amber-200/90">
-                  Plan <span className="font-bold tabular-nums">{smsLoading ? '—' : smsCounts.scheduled}</span>
-                </span>
+                <div className="flex flex-wrap items-center gap-2 pt-1">
+                  <span className="text-[11px] text-token-textMuted">Seçilmiş filter nəticələri:</span>
+                  <span className="inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1.5 text-[11px] text-emerald-700 dark:text-emerald-200/90">
+                    Göndərildi (filter) <span className="font-bold tabular-nums">{smsLoading ? '—' : smsCounts.sent}</span>
+                  </span>
+                  <span className="inline-flex items-center gap-2 rounded-full border border-amber-500/25 bg-amber-500/10 px-3 py-1.5 text-[11px] text-amber-700 dark:text-amber-200/90">
+                    Planlaşdırılıb (filter) <span className="font-bold tabular-nums">{smsLoading ? '—' : smsCounts.scheduled}</span>
+                  </span>
+                </div>
               </div>
             </div>
             <div className="shrink-0">
