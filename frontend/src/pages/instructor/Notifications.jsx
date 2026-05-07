@@ -96,70 +96,11 @@ export default function InstructorNotifications() {
         if (cancelled) return
         const rawItems = Array.isArray(hist?.items) ? hist.items : []
         const rawPlan = Array.isArray(plan?.items) ? plan.items : []
-        const now = new Date()
         const normPhone = (p) => String(p || '').replace(/\D/g, '')
-        const normalizeStatus = (s) => {
-          const st = String(s || '').trim().toLowerCase()
-          if (!st) return 'sent'
-          if (st === 'scheduled') return 'scheduled'
-          if (st === 'pending') return 'pending'
-          if (st === 'failed' || st.startsWith('failed:')) return 'failed'
-          // Legacy logs stored kinds in `status` (e.g. billing_monthly_2d) — treat as sent
-          return 'sent'
-        }
-        const tsMs = (v) => {
-          const t = new Date(v || '').getTime()
-          return Number.isFinite(t) ? t : NaN
-        }
-
-        const histMapped = rawItems.map((x) => ({
+        const mapped = [...rawItems, ...rawPlan].map((x) => ({
           ...x,
           createdAt: x.createdAt ?? x.created_at ?? null,
-          status: normalizeStatus(x.status),
         }))
-
-        // Build a lookup so we can reconcile "plan" rows that are no longer in the future.
-        const histKey = (x) => {
-          const phone = normPhone(x.phone)
-          const msg = String(x.message || '').trim()
-          const type = String(x.type || '').trim().toLowerCase()
-          const day = String((x.createdAt || '')).slice(0, 10)
-          return [type, phone, day, msg].join('|')
-        }
-        const histByKey = new Map()
-        for (const x of histMapped) {
-          const k = histKey(x)
-          const prev = histByKey.get(k)
-          if (!prev) histByKey.set(k, x)
-        }
-
-        const planMapped = rawPlan.map((x) => {
-          const createdAt = x.createdAt ?? x.created_at ?? null
-          const plannedMs = tsMs(createdAt)
-          const base = {
-            ...x,
-            createdAt,
-            status: normalizeStatus(x.status),
-          }
-
-          // scheduled => ONLY future; if planned time is in the past, derive real status from logs.
-          if (base.status === 'scheduled' && Number.isFinite(plannedMs) && plannedMs <= now.getTime()) {
-            const k = [
-              String(base.type || '').trim().toLowerCase(),
-              normPhone(base.phone),
-              String(createdAt || '').slice(0, 10),
-              String(base.message || '').trim(),
-            ].join('|')
-            const match = histByKey.get(k)
-            if (match) {
-              return { ...base, status: match.status }
-            }
-            return { ...base, status: 'failed', reason: base.reason || 'Vaxtı keçib' }
-          }
-          return base
-        })
-
-        const mapped = [...histMapped, ...planMapped]
         const rankStatus = (s) => {
           const st = String(s || '').toLowerCase()
           if (st === 'failed') return 3

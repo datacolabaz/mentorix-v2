@@ -90,6 +90,7 @@ function normalizeStatus(v) {
   if (!s) return '';
   if (s === 'sent') return 'sent';
   if (s === 'pending') return 'pending';
+  if (s === 'scheduled') return 'scheduled';
   if (s === 'failed') return 'failed';
   return s; // allow provider statuses, but treat failed:<reason> as failed in filters below
 }
@@ -191,14 +192,11 @@ const getSmsLogs = async (req, res) => {
         where.push(`(b.status ILIKE 'failed:%' OR LOWER(TRIM(b.status)) = 'failed')`);
       } else if (status === 'pending') {
         where.push(`LOWER(TRIM(b.status)) = 'pending'`);
+      } else if (status === 'scheduled') {
+        where.push(`LOWER(TRIM(b.status)) = 'scheduled'`);
       } else if (status === 'sent') {
-        // Treat any non-failed/non-pending provider/custom status as "sent".
-        // This fixes legacy logs that stored billing kind (e.g. billing_monthly_2d) in `status`.
-        where.push(`NOT (
-          LOWER(TRIM(b.status)) = 'pending'
-          OR LOWER(TRIM(b.status)) = 'failed'
-          OR b.status ILIKE 'failed:%'
-        )`);
+        // Only explicitly sent rows (we normalize legacy rows via migration).
+        where.push(`LOWER(TRIM(b.status)) = 'sent'`);
       }
     }
 
@@ -255,6 +253,7 @@ const getSmsLogs = async (req, res) => {
       const stRaw = String(r.status || '').trim();
       const isFailed = stRaw === 'failed' || stRaw.toLowerCase().startsWith('failed:');
       const isPending = stRaw.toLowerCase() === 'pending';
+      const isScheduled = stRaw.toLowerCase() === 'scheduled';
       const reason = isFailed && stRaw.includes(':') ? stRaw.split(':').slice(1).join(':').trim() : null;
 
       const pkgRaw = r.package_type ? String(r.package_type) : '';
@@ -268,7 +267,7 @@ const getSmsLogs = async (req, res) => {
         type: normalizeType(r.type) || inferredType,
         phone: r.phone,
         message: r.message,
-        status: isFailed ? 'failed' : isPending ? 'pending' : 'sent',
+        status: isFailed ? 'failed' : isPending ? 'pending' : isScheduled ? 'scheduled' : 'sent',
         reason,
         package_type: pkg,
         created_at: r.created_at,
@@ -373,6 +372,7 @@ const getSmsPlan = async (req, res) => {
     const endYmd = addDaysYmd(todayBaku, days);
     const debug = String(req.query.debug || '').trim() === '1';
     const debugSkipped = [];
+    const nowMs = Date.now();
 
     const { rows } = await db.query(
       `SELECT
@@ -470,6 +470,8 @@ const getSmsPlan = async (req, res) => {
         }
 
         for (const phone of phones) {
+          const scheduledMs = new Date(`${triggerYmd}T09:00:00+04:00`).getTime();
+          if (!Number.isFinite(scheduledMs) || scheduledMs <= nowMs) continue;
           items.push({
             id: `plan_monthly_2d_${r.enrollment_id}_${normDigits(phone)}_${triggerYmd}`,
             student_id: r.student_id || null,
@@ -480,8 +482,8 @@ const getSmsPlan = async (req, res) => {
             status: 'scheduled',
             reason: null,
             package_type: 'monthly',
-            created_at: `${triggerYmd}T09:00:00.000Z`,
-            createdAt: `${triggerYmd}T09:00:00.000Z`,
+            created_at: new Date(scheduledMs).toISOString(),
+            createdAt: new Date(scheduledMs).toISOString(),
             students: studentName ? [studentName] : [],
           });
         }
@@ -555,6 +557,8 @@ const getSmsPlan = async (req, res) => {
 
         const pkg = billingType === '8_lessons' ? '8' : '12';
         for (const phone of phones) {
+          const scheduledMs = new Date(`${triggerYmd}T09:00:00+04:00`).getTime();
+          if (!Number.isFinite(scheduledMs) || scheduledMs <= nowMs) continue;
           items.push({
             id: `plan_pkg_alert_${r.enrollment_id}_${normDigits(phone)}_${triggerYmd}`,
             student_id: r.student_id || null,
@@ -565,8 +569,8 @@ const getSmsPlan = async (req, res) => {
             status: 'scheduled',
             reason: null,
             package_type: pkg,
-            created_at: `${triggerYmd}T09:00:00.000Z`,
-            createdAt: `${triggerYmd}T09:00:00.000Z`,
+            created_at: new Date(scheduledMs).toISOString(),
+            createdAt: new Date(scheduledMs).toISOString(),
             students: studentName ? [studentName] : [],
           });
         }

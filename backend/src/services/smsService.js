@@ -84,13 +84,13 @@ function interpretSmxmlSuccess(raw) {
   return { success: true, reason: null };
 }
 
-async function insertSmsLog({ instructorId, phone, message, status, httpStatus, msisdn, provider }) {
+async function insertSmsLog({ instructorId, phone, message, status, httpStatus, msisdn, provider, deliveredAt }) {
   const safeStatus = String(status || 'unknown').slice(0, 20);
   try {
     await db.query(
-      `INSERT INTO sms_logs (instructor_id, phone, message, status, http_status, msisdn, provider)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-      [instructorId, phone, message, status, httpStatus ?? null, msisdn ?? null, provider ?? null]
+      `INSERT INTO sms_logs (instructor_id, phone, message, status, http_status, msisdn, provider, delivered_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [instructorId, phone, message, status, httpStatus ?? null, msisdn ?? null, provider ?? null, deliveredAt ?? null]
     );
   } catch {
     // Backward compatible if migration 036 hasn't been applied yet.
@@ -149,8 +149,10 @@ const sendSms = async ({ instructorId, phone, message }) => {
 
     const raw = await sendRaw(phone, message);
     const interpreted = interpretSmxmlSuccess(raw);
-    const statusRaw = raw?.json?.response?.status ?? raw?.json?.status ?? null;
-    const logStatus = interpreted.success ? String(statusRaw ?? 'sent') : `failed:${interpreted.reason || 'unknown'}`;
+    // IMPORTANT: Our UX expects a stable lifecycle status: scheduled|sent|failed.
+    // Provider statuses vary (some return "scheduled" even for immediate sends), so we persist only stable values.
+    const logStatus = interpreted.success ? 'sent' : `failed:${interpreted.reason || 'unknown'}`;
+    const deliveredAt = interpreted.success ? new Date() : null;
 
     await insertSmsLog({
       instructorId,
@@ -160,6 +162,7 @@ const sendSms = async ({ instructorId, phone, message }) => {
       httpStatus: raw?.httpStatus,
       msisdn: raw?.msisdn,
       provider: raw?.json ?? null,
+      deliveredAt,
     });
 
     if (interpreted.success && instructorId) {

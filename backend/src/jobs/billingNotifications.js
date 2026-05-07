@@ -43,15 +43,15 @@ async function ensureSmsOnce({ instructor_id, phone, message, type }) {
   if (rows.length) return false;
 
   const raw = await sendRawSms(p, msg);
-  const statusRaw = raw?.json?.response?.status ?? raw?.json?.status ?? null;
-  const status = statusRaw != null ? String(statusRaw) : raw?.ok ? 'sent' : 'failed';
-  const logStatus = raw?.ok ? String(statusRaw ?? 'sent') : `failed:${String(status || 'unknown')}`;
+  // Persist stable lifecycle status (provider may return inconsistent strings).
+  const logStatus = raw?.ok ? 'sent' : `failed:${String(raw?.json?.response?.status ?? raw?.json?.status ?? 'unknown')}`;
+  const deliveredAt = raw?.ok ? new Date() : null;
 
   try {
     await db.query(
-      `INSERT INTO sms_logs (instructor_id, phone, message, status, type, created_at)
-       VALUES ($1, $2, $3, $4, $5, NOW())`,
-      [instructor_id || null, p, msg, logStatus, kind]
+      `INSERT INTO sms_logs (instructor_id, phone, message, status, type, created_at, delivered_at)
+       VALUES ($1, $2, $3, $4, $5, NOW(), $6)`,
+      [instructor_id || null, p, msg, logStatus, kind, deliveredAt]
     );
   } catch {
     // Backward compatible if sms_logs.type doesn't exist yet.
@@ -62,7 +62,7 @@ async function ensureSmsOnce({ instructor_id, phone, message, type }) {
     );
   }
 
-  return status === 'sent' || raw?.ok === true;
+  return raw?.ok === true;
 }
 
 async function runMonthlyTwoDayNotifications() {
