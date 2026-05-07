@@ -40,7 +40,7 @@ export default function BillingUsagePills({ billing }) {
     <div className="flex flex-wrap items-center gap-2">
       <Pill label="Students" value={`${fmtUsed(used.students, 'n')} / ${fmtLimit(lim.students, 'n')}`} />
       <Pill label="Storage" value={`${fmtUsed(used.storage_mb, 'mb')} / ${fmtLimit(lim.storage_mb, 'mb')}`} />
-      <Pill label="SMS" value={`${fmtUsed(used.sms_monthly, 'n')} / ${fmtLimit(lim.sms_monthly, 'n')}`} />
+      <Pill label="Monthly SMS usage" value={`${fmtUsed(used.sms_monthly, 'n')} / ${fmtLimit(lim.sms_monthly, 'n')}`} />
     </div>
   )
 }

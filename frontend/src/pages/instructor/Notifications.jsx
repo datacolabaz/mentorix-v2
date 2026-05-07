@@ -281,6 +281,8 @@ export default function InstructorNotifications() {
     return { sent, scheduled }
   }, [smsTimeRows])
 
+  const smsHistoryTotal = useMemo(() => smsBaseList.length, [smsBaseList])
+
   const tabItems = useMemo(
     () => [
       { id: 'all', label: 'Bütün bildirişlər' },
@@ -307,7 +309,7 @@ export default function InstructorNotifications() {
     const failed = smsTimeRows.filter((x) => x.status === 'failed').length
     const scheduled = smsTimeRows.filter((x) => x.status === 'scheduled').length
     return [
-      { id: 'all', label: 'Hamısı', count: all },
+      { id: 'all', label: 'All (total history)', count: all },
       { id: 'sent', label: 'Göndərildi', count: sent },
       { id: 'failed', label: 'Uğursuz', count: failed },
       { id: 'scheduled', label: 'Planlaşdırılıb', count: scheduled },
@@ -409,6 +411,10 @@ export default function InstructorNotifications() {
                 </div>
               ) : null}
               <div className="mt-3 flex flex-col gap-2">
+                <span className="inline-flex w-fit items-center gap-2 rounded-full border border-[color:var(--border-subtle)] bg-token-surfaceCard/50 px-3 py-1.5 text-[11px] text-token-textMain">
+                  <span className="text-token-textMuted">Total SMS history:</span>
+                  <span className="font-semibold tabular-nums">{smsLoading ? '—' : smsHistoryTotal}</span>
+                </span>
                 {smsQuotaLine ? (
                   <span className="inline-flex w-fit items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5 text-[11px] text-token-textMain">
                     <span className="text-token-textMuted">Bu ay ümumi SMS istifadəsi:</span>
