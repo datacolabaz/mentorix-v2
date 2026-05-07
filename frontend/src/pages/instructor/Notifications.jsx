@@ -7,6 +7,7 @@ import FilterTabs from '../../components/common/FilterTabs'
 import NotificationCard from '../../components/notifications/NotificationCard'
 import StatusBadge from '../../components/common/StatusBadge'
 import { isToday, isThisWeek, isThisMonth } from '../../mock/smsHistory'
+import { useBillingStatus } from '../../hooks/useBillingStatus'
 
 const SEEN_KEY = 'mx_instructor_notifications_seen_at_v1'
 
@@ -54,7 +55,7 @@ export default function InstructorNotifications() {
   const [fetchedAt, setFetchedAt] = useState(null)
   const [tab, setTab] = useState('all') // all | sms
   // UX default: show real data immediately (avoid "0" on first paint)
-  const [smsFilter, setSmsFilter] = useState('all') // all | today | week | failed | scheduled
+  const [smsFilter, setSmsFilter] = useState('month') // all | today | week | month | failed | scheduled
   const [paymentOpen, setPaymentOpen] = useState(false)
   const [otpOpen, setOtpOpen] = useState(false)
   const [systemOpen, setSystemOpen] = useState(false)
@@ -67,6 +68,8 @@ export default function InstructorNotifications() {
   const [smsShowCountOtp, setSmsShowCountOtp] = useState(20)
   const [smsShowCountSystem, setSmsShowCountSystem] = useState(20)
   const [lastUpdatedLabel, setLastUpdatedLabel] = useState('')
+  const billingQ = useBillingStatus()
+  const billing = billingQ.data || null
   const debugSms = useMemo(() => {
     try {
       return new URLSearchParams(window.location.search).get('debugSms') === '1'
@@ -302,6 +305,15 @@ export default function InstructorNotifications() {
     ]
   }, [smsBaseList])
 
+  const smsQuotaLine = useMemo(() => {
+    const lim = billing?.limits?.sms_monthly
+    const used = billing?.usage?.sms_monthly
+    if (lim == null && used == null) return null
+    const usedN = Number(used || 0) || 0
+    const limLabel = lim == null ? '∞' : String(Math.round(Number(lim)))
+    return { used: usedN, limLabel }
+  }, [billing])
+
   const openDetails = (item) => {
     setDetailsItem(item)
     setDetailsOpen(true)
@@ -389,9 +401,17 @@ export default function InstructorNotifications() {
               ) : null}
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <span className="inline-flex items-center gap-2 rounded-full border border-[color:var(--border-subtle)] bg-token-surfaceCard/50 px-3 py-1.5 text-[11px] text-token-textMain">
-                  <span className="text-token-textMuted">SMS:</span>
+                  <span className="text-token-textMuted">Tarixçə (filter):</span>
                   <span className="font-semibold tabular-nums">{smsLoading ? '—' : smsSummary.totalMessages}</span>
                 </span>
+                {smsQuotaLine ? (
+                  <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5 text-[11px] text-token-textMain">
+                    <span className="text-token-textMuted">Bu ay (limit):</span>
+                    <span className="font-semibold tabular-nums">
+                      {smsQuotaLine.used}/{smsQuotaLine.limLabel}
+                    </span>
+                  </span>
+                ) : null}
                 <span className="inline-flex items-center gap-2 rounded-full border border-[color:var(--border-subtle)] bg-token-surfaceCard/50 px-3 py-1.5 text-[11px] text-token-textMain">
                   <span className="text-token-textMuted">Tələbə:</span>
                   <span className="font-semibold tabular-nums">{smsLoading ? '—' : smsSummary.totalRecipients}</span>
