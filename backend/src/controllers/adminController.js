@@ -5,7 +5,7 @@ const { normalizePlanSlug } = require('../config/plans');
 const getInstructors = async (req, res) => {
   try {
     const { rows } = await db.query(
-      `SELECT u.id, u.full_name, u.email, u.phone, u.is_active,
+      `SELECT u.id, u.full_name, u.email, u.phone, u.is_active, u.created_at,
               ip.subject, ip.billing_type,
               COALESCE(s.plan, 'basic') AS plan,
               COALESCE(uc.sms_used_monthly, 0) AS sms_used_monthly,
@@ -23,7 +23,7 @@ const getInstructors = async (req, res) => {
        LEFT JOIN enrollments e ON e.instructor_id = u.id AND e.status = 'active'
        WHERE u.role = 'instructor' AND u.is_active = TRUE
        GROUP BY u.id, ip.id, s.plan, uc.user_id, sp.slug
-       ORDER BY u.full_name`
+       ORDER BY u.created_at DESC NULLS LAST, u.full_name`
     );
     res.json({ success: true, instructors: rows });
   } catch (err) {

@@ -51,7 +51,9 @@ export default function AdminDashboard() {
                 <div className="text-xs text-gray-400">{i.subject || '—'} • {i.student_count} tələbə</div>
               </div>
               <div className="flex items-center gap-2 text-xs">
-                <span className="text-gray-400">SMS: {i.sms_used}/{i.sms_limit}</span>
+                <span className="text-gray-400">
+                  SMS: {i.sms_used_monthly ?? 0}/{i.sms_limit_monthly ?? '∞'}
+                </span>
                 <span className={`px-2 py-0.5 rounded-full ${i.is_active ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>
                   {i.is_active ? 'Aktiv' : 'Deaktiv'}
                 </span>
