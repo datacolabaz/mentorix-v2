@@ -8,6 +8,7 @@ import { instructorRoleAz } from '../../lib/instructorLabel'
 import useUiStore from '../../hooks/useUi'
 import { planPriceLabel } from '../../constants/subscriptionPlans'
 import { useSubscriptionPlans } from '../../hooks/useSubscriptionPlans'
+import { useBillingStatus } from '../../hooks/useBillingStatus'
 
 export default function InstructorSettings() {
   const toast = useToast()
@@ -17,6 +18,8 @@ export default function InstructorSettings() {
   const [planBusy, setPlanBusy] = useState(false)
   const [planErr, setPlanErr] = useState(null)
   const plansQ = useSubscriptionPlans()
+  const billingQ = useBillingStatus()
+  const billing = billingQ.data || null
   const plans = Array.isArray(plansQ.data) ? plansQ.data : []
   const [savingLabel, setSavingLabel] = useState(false)
   const [publicLabel, setPublicLabel] = useState('instructor')
@@ -123,6 +126,15 @@ export default function InstructorSettings() {
   }
 
   const roleWord = instructorRoleAz(publicLabel)
+  const currentPlanId = String(billing?.plan || 'basic').toLowerCase()
+  const currentPlanObj = plans.find((p) => String(p?.id || '').toLowerCase() === currentPlanId) || null
+
+  const planRank = (id) => {
+    const s = String(id || '').toLowerCase()
+    if (s === 'business') return 3
+    if (s === 'pro') return 2
+    return 1
+  }
 
   const cardTitleCls = [
     'text-sm font-semibold uppercase tracking-wider',
@@ -155,8 +167,15 @@ export default function InstructorSettings() {
       </div>
 
       <Card className="p-5 border border-indigo-500/20 space-y-4">
-        <h2 className={cardTitleCls}>Paketlər</h2>
-        <p className={cardTextCls}>Basic, PRO və Business paketlərindən birini seçib ödəniş edə bilərsiniz.</p>
+        <h2 className={cardTitleCls}>Paketini dəyiş</h2>
+        <p className={cardTextCls}>
+          <span className="text-gray-200 font-medium">Sənin planın:</span>{' '}
+          <span className="text-white font-semibold">
+            {currentPlanObj?.title || String(currentPlanId || '').toUpperCase()}
+          </span>{' '}
+          <span className="text-gray-500">({currentPlanObj ? planPriceLabel(currentPlanObj) : '—'})</span>
+        </p>
+        <p className={cardTextCls}>Aşağıdan başqa paket seçərək upgrade/downgrade edə bilərsiniz.</p>
         {planErr ? (
           <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 text-rose-100 px-4 py-3 text-sm">
             {planErr}
@@ -164,11 +183,22 @@ export default function InstructorSettings() {
         ) : null}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {plans.map((p) => (
+            (() => {
+              const pid = String(p?.id || '').toLowerCase()
+              const isCurrent = pid && pid === currentPlanId
+              const isUpgrade = planRank(pid) > planRank(currentPlanId)
+              const btnLabel = isCurrent ? 'Current plan' : isUpgrade ? 'Upgrade' : 'Choose'
+              const btnDisabled = planBusy || isCurrent
+              return (
             <div
               key={p.id}
               className={[
                 'rounded-2xl border p-4',
-                p.highlight ? 'border-primary/40 bg-primary/5' : 'border-[color:var(--border-subtle)] bg-token-surfaceCard/40',
+                isCurrent
+                  ? 'border-emerald-500/40 bg-emerald-500/5'
+                  : p.highlight
+                    ? 'border-primary/40 bg-primary/5'
+                    : 'border-[color:var(--border-subtle)] bg-token-surfaceCard/40',
               ].join(' ')}
             >
               <div className="text-sm font-bold text-token-textMain">{p.title}</div>
@@ -181,12 +211,17 @@ export default function InstructorSettings() {
                   </li>
                 ))}
               </ul>
+              {isCurrent ? (
+                <div className="mt-3 text-[11px] font-semibold text-emerald-300/90">
+                  ✓ Active
+                </div>
+              ) : null}
               <div className="mt-4">
                 <Button
                   className="w-full justify-center"
-                  variant={p.highlight ? 'primary' : 'secondary'}
+                  variant={isCurrent ? 'secondary' : p.highlight ? 'primary' : 'secondary'}
                   loading={planBusy}
-                  disabled={planBusy}
+                  disabled={btnDisabled}
                   onClick={async () => {
                     setPlanErr(null)
                     setPlanBusy(true)
@@ -202,10 +237,12 @@ export default function InstructorSettings() {
                     }
                   }}
                 >
-                  {p.highlight ? 'Upgrade to PRO' : 'Choose'}
+                  {btnLabel}
                 </Button>
               </div>
             </div>
+              )
+            })()
           ))}
         </div>
       </Card>
