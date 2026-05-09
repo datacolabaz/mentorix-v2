@@ -84,6 +84,69 @@ async function getPlanOrThrow(slugRaw) {
   return p;
 }
 
+/** Admin UI + billing üçün plan xüsusiyyətləri (manual mətn yox). */
+function buildPlanFeaturesFromLimits({ student_limit, sms_limit, storage_gb, storage_limit_bytes }) {
+  const lines = [];
+  if (student_limit == null) lines.push('Limitsiz tələbə');
+  else lines.push(`${Math.max(0, Math.round(Number(student_limit)))} tələbə`);
+
+  if (storage_gb == null && storage_limit_bytes == null) lines.push('Limitsiz yaddaş');
+  else if (storage_limit_bytes != null && Number.isFinite(Number(storage_limit_bytes))) {
+    const b = Number(storage_limit_bytes);
+    if (b > 0 && b < 1024 * 1024) lines.push(`${Math.max(1, Math.round(b / 1024))} KB yaddaş`);
+    else {
+      const mb = b / (1024 * 1024);
+      const s = mb >= 10 ? `${Math.round(mb)} MB` : `${Math.round(mb * 10) / 10} MB`;
+      lines.push(`${s} yaddaş`);
+    }
+  } else if (storage_gb != null && Number.isFinite(Number(storage_gb))) {
+    lines.push(`${Number(storage_gb)} GB yaddaş`);
+  } else {
+    lines.push('Limitsiz yaddaş');
+  }
+
+  if (sms_limit == null) lines.push('Limitsiz SMS / ay');
+  else lines.push(`${Math.max(0, Math.round(Number(sms_limit)))} SMS / ay`);
+  return lines;
+}
+
+function resolveLimitsFromAdminPayload(payload) {
+  const usesV2 =
+    Object.prototype.hasOwnProperty.call(payload || {}, 'unlimited_students') ||
+    Object.prototype.hasOwnProperty.call(payload || {}, 'unlimited_storage') ||
+    Object.prototype.hasOwnProperty.call(payload || {}, 'unlimited_sms') ||
+    Object.prototype.hasOwnProperty.call(payload || {}, 'storage_unit');
+
+  if (!usesV2) return null;
+
+  const student_limit = payload.unlimited_students ? null : Math.max(0, Math.round(Number(payload.student_count ?? 0)));
+  const sms_limit = payload.unlimited_sms ? null : Math.max(0, Math.round(Number(payload.sms_count ?? 0)));
+
+  let storage_gb = null;
+  let storage_limit_bytes = null;
+  if (payload.unlimited_storage) {
+    storage_gb = null;
+    storage_limit_bytes = null;
+  } else {
+    const unit = String(payload.storage_unit || 'GB')
+      .trim()
+      .toUpperCase();
+    const val = Number(payload.storage_value);
+    if (!Number.isFinite(val) || val < 0) {
+      storage_gb = null;
+      storage_limit_bytes = null;
+    } else if (unit === 'MB') {
+      storage_gb = null;
+      storage_limit_bytes = Math.round(val * 1024 * 1024);
+    } else {
+      storage_gb = val;
+      storage_limit_bytes = null;
+    }
+  }
+
+  return { student_limit, sms_limit, storage_gb, storage_limit_bytes, usesV2: true };
+}
+
 async function adminListPlans() {
   const { rows } = await db.query(
     `SELECT slug, title, price_azn, student_limit, storage_gb, storage_limit_bytes, sms_limit, ram_limit_mb, features, highlight, is_active, updated_at
@@ -110,39 +173,62 @@ async function adminUpsertPlan(payload) {
   const slug = normalizePlanSlug(payload?.slug);
   const title = String(payload?.title || slug.toUpperCase()).trim();
   const price_azn = Number(payload?.price_azn || 0) || 0;
-
-  const student_limit = payload?.student_limit === '' ? null : payload?.student_limit;
-  const storage_gb = payload?.storage_gb === '' ? null : payload?.storage_gb;
-  const hasStorageLimitBytesKey = Object.prototype.hasOwnProperty.call(payload || {}, 'storage_limit_bytes');
-  let storage_limit_bytes = null;
-  if (hasStorageLimitBytesKey) {
-    storage_limit_bytes = payload?.storage_limit_bytes === '' ? null : Number(payload?.storage_limit_bytes);
-    if (!Number.isFinite(storage_limit_bytes)) storage_limit_bytes = null;
-  } else {
-    const { rows: curSb } = await db.query(
-      `SELECT storage_limit_bytes FROM subscription_plans WHERE slug = $1 LIMIT 1`,
-      [slug],
-    );
-    storage_limit_bytes =
-      curSb[0]?.storage_limit_bytes == null ? null : Number(curSb[0].storage_limit_bytes);
-    if (!Number.isFinite(storage_limit_bytes)) storage_limit_bytes = null;
-  }
-  const sms_limit = payload?.sms_limit === '' ? null : payload?.sms_limit;
-  const ram_limit_mb = payload?.ram_limit_mb === '' ? null : payload?.ram_limit_mb;
   const highlight = Boolean(payload?.highlight);
   const is_active = payload?.is_active !== false;
 
-  // features can be array or stringified JSON or comma-lines; store as JSON array when possible.
-  let features = payload?.features ?? null;
-  if (typeof features === 'string') {
-    const s = features.trim();
-    if (!s) features = null;
-    else {
-      try {
-        const parsed = JSON.parse(s);
-        features = parsed;
-      } catch {
-        features = s.split('\n').map((x) => x.trim()).filter(Boolean);
+  const v2 = resolveLimitsFromAdminPayload(payload);
+
+  let student_limit;
+  let storage_gb;
+  let storage_limit_bytes;
+  let sms_limit;
+  let ram_limit_mb;
+  let features;
+
+  if (v2) {
+    student_limit = v2.student_limit;
+    sms_limit = v2.sms_limit;
+    storage_gb = v2.storage_gb;
+    storage_limit_bytes = v2.storage_limit_bytes;
+    if (Object.prototype.hasOwnProperty.call(payload || {}, 'ram_limit_mb')) {
+      ram_limit_mb = payload?.ram_limit_mb === '' || payload?.ram_limit_mb == null ? null : Number(payload.ram_limit_mb);
+      if (!Number.isFinite(ram_limit_mb)) ram_limit_mb = null;
+    } else {
+      const { rows: curRam } = await db.query(`SELECT ram_limit_mb FROM subscription_plans WHERE slug = $1 LIMIT 1`, [slug]);
+      ram_limit_mb = curRam[0]?.ram_limit_mb == null ? null : Number(curRam[0].ram_limit_mb);
+      if (!Number.isFinite(ram_limit_mb)) ram_limit_mb = null;
+    }
+    features = buildPlanFeaturesFromLimits({ student_limit, sms_limit, storage_gb, storage_limit_bytes });
+  } else {
+    student_limit = payload?.student_limit === '' ? null : payload?.student_limit;
+    storage_gb = payload?.storage_gb === '' ? null : payload?.storage_gb;
+    const hasStorageLimitBytesKey = Object.prototype.hasOwnProperty.call(payload || {}, 'storage_limit_bytes');
+    if (hasStorageLimitBytesKey) {
+      storage_limit_bytes = payload?.storage_limit_bytes === '' ? null : Number(payload?.storage_limit_bytes);
+      if (!Number.isFinite(storage_limit_bytes)) storage_limit_bytes = null;
+    } else {
+      const { rows: curSb } = await db.query(
+        `SELECT storage_limit_bytes FROM subscription_plans WHERE slug = $1 LIMIT 1`,
+        [slug],
+      );
+      storage_limit_bytes =
+        curSb[0]?.storage_limit_bytes == null ? null : Number(curSb[0].storage_limit_bytes);
+      if (!Number.isFinite(storage_limit_bytes)) storage_limit_bytes = null;
+    }
+    sms_limit = payload?.sms_limit === '' ? null : payload?.sms_limit;
+    ram_limit_mb = payload?.ram_limit_mb === '' ? null : payload?.ram_limit_mb;
+
+    features = payload?.features ?? null;
+    if (typeof features === 'string') {
+      const s = features.trim();
+      if (!s) features = null;
+      else {
+        try {
+          const parsed = JSON.parse(s);
+          features = parsed;
+        } catch {
+          features = s.split('\n').map((x) => x.trim()).filter(Boolean);
+        }
       }
     }
   }
@@ -185,5 +271,6 @@ module.exports = {
   getPlanOrThrow,
   adminListPlans,
   adminUpsertPlan,
+  buildPlanFeaturesFromLimits,
 };
 

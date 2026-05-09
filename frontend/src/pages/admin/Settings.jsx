@@ -4,35 +4,147 @@ import Button from '../../components/common/Button'
 import { useToast } from '../../components/common/Toast'
 import api from '../../lib/api'
 
-function formatBytesAz(n) {
-  const b = Number(n)
-  if (!Number.isFinite(b) || b < 0) return null
-  if (b < 1024) return `${Math.round(b)} bayt`
-  if (b < 1024 * 1024) return `${Math.round((b / 1024) * 10) / 10} KB`
-  const mb = b / (1024 * 1024)
-  return mb >= 10 ? `${Math.round(mb)} MB` : `${Math.round(mb * 10) / 10} MB`
-}
+const inp =
+  'w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500 disabled:opacity-45 disabled:cursor-not-allowed'
 
-/** DB-dən gələn features bəzən jsonb obyekt/string ola bilər — textarea üçün sətir siyahısına çevir */
-function normalizePlanFeatures(raw) {
-  if (Array.isArray(raw)) return raw.map((x) => String(x ?? '').trim()).filter(Boolean)
-  if (raw == null) return []
-  if (typeof raw === 'string') {
-    const s = raw.trim()
-    if (!s) return []
-    try {
-      const p = JSON.parse(s)
-      return Array.isArray(p) ? p.map((x) => String(x ?? '').trim()).filter(Boolean) : []
-    } catch {
-      return s.split('\n').map((x) => x.trim()).filter(Boolean)
+/** Serverdəki `buildPlanFeaturesFromLimits` ilə eyni məntiqi önizləmə üçün */
+function previewFeatures(p) {
+  const student_limit = p.unlimited_students ? null : Math.max(0, Math.round(Number(p.student_count) || 0))
+  const sms_limit = p.unlimited_sms ? null : Math.max(0, Math.round(Number(p.sms_count) || 0))
+  let storage_gb = null
+  let storage_limit_bytes = null
+  if (!p.unlimited_storage) {
+    const unit = String(p.storage_unit || 'GB')
+      .trim()
+      .toUpperCase()
+    const val = Number(p.storage_value)
+    if (Number.isFinite(val) && val >= 0) {
+      if (unit === 'MB') {
+        storage_limit_bytes = Math.round(val * 1024 * 1024)
+      } else {
+        storage_gb = val
+      }
     }
   }
-  if (typeof raw === 'object') return []
-  return []
+  const lines = []
+  if (student_limit == null) lines.push('Limitsiz tələbə')
+  else lines.push(`${student_limit} tələbə`)
+  if (storage_gb == null && storage_limit_bytes == null) lines.push('Limitsiz yaddaş')
+  else if (storage_limit_bytes != null) {
+    const b = storage_limit_bytes
+    if (b > 0 && b < 1024 * 1024) lines.push(`${Math.max(1, Math.round(b / 1024))} KB yaddaş`)
+    else {
+      const mb = b / (1024 * 1024)
+      lines.push(`${mb >= 10 ? Math.round(mb) : Math.round(mb * 10) / 10} MB yaddaş`)
+    }
+  } else lines.push(`${Number(storage_gb)} GB yaddaş`)
+  if (sms_limit == null) lines.push('Limitsiz SMS / ay')
+  else lines.push(`${sms_limit} SMS / ay`)
+  return lines
+}
+
+function dbRowToEditor(p) {
+  const unlimited_students = p.student_limit == null
+  const unlimited_sms = p.sms_limit == null
+  const unlimited_storage = p.storage_gb == null && p.storage_limit_bytes == null
+  let storage_value = 1
+  let storage_unit = 'GB'
+  if (!unlimited_storage) {
+    if (p.storage_limit_bytes != null && Number(p.storage_limit_bytes) > 0) {
+      storage_unit = 'MB'
+      storage_value = Number(p.storage_limit_bytes) / (1024 * 1024)
+    } else if (p.storage_gb != null) {
+      storage_unit = 'GB'
+      storage_value = Number(p.storage_gb)
+    }
+  }
+  return {
+    slug: p.slug,
+    title: p.title ?? '',
+    price_azn: Number(p.price_azn) || 0,
+    is_active: p.is_active !== false,
+    highlight: Boolean(p.highlight),
+    ram_limit_mb: p.ram_limit_mb ?? '',
+    unlimited_students,
+    student_count: unlimited_students ? '' : String(p.student_limit ?? ''),
+    unlimited_sms,
+    sms_count: unlimited_sms ? '' : String(p.sms_limit ?? ''),
+    unlimited_storage,
+    storage_value: unlimited_storage ? '' : String(storage_value),
+    storage_unit,
+  }
+}
+
+function editorToPayload(p) {
+  return {
+    slug: p.slug,
+    title: p.title,
+    price_azn: Number(p.price_azn) || 0,
+    is_active: p.is_active,
+    highlight: p.highlight,
+    ram_limit_mb: p.ram_limit_mb === '' || p.ram_limit_mb == null ? null : Number(p.ram_limit_mb),
+    unlimited_students: Boolean(p.unlimited_students),
+    student_count: p.unlimited_students ? null : Number(p.student_count),
+    unlimited_sms: Boolean(p.unlimited_sms),
+    sms_count: p.unlimited_sms ? null : Number(p.sms_count),
+    unlimited_storage: Boolean(p.unlimited_storage),
+    storage_value: p.unlimited_storage ? null : Number(p.storage_value),
+    storage_unit: p.unlimited_storage ? null : p.storage_unit,
+  }
+}
+
+const PRESETS = {
+  basic: {
+    title: 'SADƏ',
+    price_azn: 0,
+    unlimited_students: false,
+    student_count: '5',
+    unlimited_storage: false,
+    storage_value: '0.5',
+    storage_unit: 'MB',
+    unlimited_sms: false,
+    sms_count: '5',
+    highlight: false,
+    ram_limit_mb: '',
+  },
+  pro: {
+    title: 'PRO',
+    price_azn: 10,
+    unlimited_students: false,
+    student_count: '50',
+    unlimited_storage: false,
+    storage_value: '5',
+    storage_unit: 'GB',
+    unlimited_sms: false,
+    sms_count: '200',
+    highlight: true,
+    ram_limit_mb: '',
+  },
+  business: {
+    title: 'BİZNES',
+    price_azn: 19,
+    unlimited_students: true,
+    student_count: '',
+    unlimited_storage: false,
+    storage_value: '20',
+    storage_unit: 'GB',
+    unlimited_sms: false,
+    sms_count: '500',
+    highlight: false,
+    ram_limit_mb: '',
+  },
+}
+
+function Toggle({ label, checked, onChange, id }) {
+  return (
+    <label htmlFor={id} className="flex items-center justify-between gap-3 rounded-xl border border-indigo-500/20 bg-[#13112e]/80 px-3 py-2">
+      <span className="text-xs font-semibold text-gray-300">{label}</span>
+      <input id={id} type="checkbox" className="accent-indigo-500 h-4 w-4 shrink-0" checked={checked} onChange={(e) => onChange(e.target.checked)} />
+    </label>
+  )
 }
 
 export default function AdminSettings() {
-  const [smsDefaults, setSmsDefaults] = useState({ default_sms_limit: 100, default_storage_mb: 1024, default_ram_mb: 512 })
   const [plans, setPlans] = useState([])
   const [plansBusy, setPlansBusy] = useState(false)
   const [plansReloadBusy, setPlansReloadBusy] = useState(false)
@@ -44,12 +156,7 @@ export default function AdminSettings() {
     setPlansErr(null)
     const d = await api.get(`/admin/plans?t=${Date.now()}`)
     const list = Array.isArray(d?.plans) ? d.plans : []
-    setPlans(
-      list.map((p) => ({
-        ...p,
-        features: normalizePlanFeatures(p.features),
-      })),
-    )
+    setPlans(list.map(dbRowToEditor))
     setPlansLoadedAt(new Date().toISOString())
   }, [])
 
@@ -67,317 +174,268 @@ export default function AdminSettings() {
     }
   }, [fetchPlans])
 
+  const validatePlan = (p) => {
+    if (!p.unlimited_students) {
+      const n = Number(p.student_count)
+      if (!Number.isFinite(n) || n < 0) return 'Tələbə sayı düzgün deyil'
+    }
+    if (!p.unlimited_sms) {
+      const n = Number(p.sms_count)
+      if (!Number.isFinite(n) || n < 0) return 'SMS sayı düzgün deyil'
+    }
+    if (!p.unlimited_storage) {
+      const n = Number(p.storage_value)
+      if (!Number.isFinite(n) || n < 0) return 'Yaddaş həcmi düzgün deyil'
+      if (!['MB', 'GB'].includes(String(p.storage_unit || '').toUpperCase())) return 'Yaddaş vahidi MB və ya GB olmalıdır'
+    }
+    return null
+  }
+
+  const patch = useCallback((idx, partial) => {
+    setPlans((arr) => arr.map((x, i) => (i === idx ? { ...x, ...partial } : x)))
+  }, [])
+
+  const applyPreset = useCallback((idx, key) => {
+    const pr = PRESETS[key]
+    if (!pr) return
+    patch(idx, { ...pr })
+    toast(`Şablon: ${key === 'basic' ? 'SADƏ' : key === 'pro' ? 'PRO' : 'BİZNES'}`)
+  }, [patch, toast])
+
   return (
-    <div className="p-4 sm:p-6 min-w-0 max-w-3xl mx-auto w-full">
+    <div className="p-4 sm:p-6 min-w-0 max-w-4xl mx-auto w-full">
       <h1 className="font-display font-bold text-xl sm:text-2xl mb-4 sm:mb-6 break-words">Tənzimləmələr</h1>
 
-      <div className="w-full space-y-4 sm:space-y-6">
-        <Card className="p-4 sm:p-6">
-          <h2 className="font-display font-bold text-base mb-4">💳 Paketlər (Billing)</h2>
-          <p className="text-xs text-gray-500 mb-3 leading-relaxed">
-            <strong className="text-gray-300">Storage (GB)</strong> — böyük limitlər üçün.{' '}
-            <strong className="text-gray-300">Yaddaş (bayt)</strong> — dəqiq kiçik limit (məs. pulsuz sıra: 512 KB ={' '}
-            <code className="text-indigo-300">524288</code>). Bayt doldurulubsa, GB ilə yuvarlama tətbiq olunmur.
-          </p>
-          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-            {plansLoadedAt ? (
-              <p className="text-[11px] text-gray-500">
-                Son yükləmə:{' '}
-                <span className="text-gray-300 tabular-nums">{new Date(plansLoadedAt).toLocaleString('az-AZ')}</span>
-              </p>
-            ) : (
-              <span />
-            )}
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              loading={plansReloadBusy}
-              className="shrink-0"
-              onClick={async () => {
-                setPlansReloadBusy(true)
-                try {
-                  await fetchPlans()
-                  toast('Paketlər yeniləndi')
-                } catch (e) {
-                  setPlansErr(e?.message || 'Yenilənmədi')
-                } finally {
-                  setPlansReloadBusy(false)
-                }
-              }}
-            >
-              Serverdən yenilə
-            </Button>
-          </div>
-          {plansErr ? (
-            <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 text-rose-100 px-4 py-3 text-sm mb-4">
-              {plansErr}
-            </div>
-          ) : null}
-          {!plans.length ? (
-            <div className="text-sm text-gray-400">Plan yoxdur (migration işləməyibsə, backend restart/deploy edin).</div>
+      <Card className="p-4 sm:p-6">
+        <h2 className="font-display font-bold text-base mb-1">Paketlər</h2>
+        <p className="text-xs text-gray-500 mb-4 leading-relaxed">
+          Limitlər üçün <strong className="text-gray-300">Limitsiz</strong> keçidlərini açın. Yaddaş üçün rəqəm +{' '}
+          <strong className="text-gray-300">MB</strong> və ya <strong className="text-gray-300">GB</strong> — server avtomatik saxlayır. Xüsusiyyətlər
+          limitlərdən avtomatik yaradılır.
+        </p>
+
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+          {plansLoadedAt ? (
+            <p className="text-[11px] text-gray-500">
+              Son yükləmə:{' '}
+              <span className="text-gray-300 tabular-nums">{new Date(plansLoadedAt).toLocaleString('az-AZ')}</span>
+            </p>
           ) : (
-            <div className="space-y-4">
-              {plans.map((p, idx) => (
-                <div key={p.slug} className="rounded-2xl border border-indigo-500/15 bg-[#0f0c29]/60 p-4 space-y-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <div className="text-sm font-bold text-white">{p.slug.toUpperCase()}</div>
-                      {p.updated_at ? (
-                        <div className="text-[10px] text-gray-500 mt-0.5 tabular-nums">
-                          DB: {new Date(p.updated_at).toLocaleString('az-AZ')}
-                        </div>
-                      ) : null}
-                    </div>
+            <span />
+          )}
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            loading={plansReloadBusy}
+            className="shrink-0"
+            onClick={async () => {
+              setPlansReloadBusy(true)
+              try {
+                await fetchPlans()
+                toast('Yeniləndi')
+              } catch (e) {
+                setPlansErr(e?.message || 'Yenilənmədi')
+              } finally {
+                setPlansReloadBusy(false)
+              }
+            }}
+          >
+            Serverdən yenilə
+          </Button>
+        </div>
+
+        {plansErr ? (
+          <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 text-rose-100 px-4 py-3 text-sm mb-4">{plansErr}</div>
+        ) : null}
+
+        {!plans.length ? (
+          <div className="text-sm text-gray-400">Plan tapılmadı.</div>
+        ) : (
+          <div className="space-y-6">
+            {plans.map((p, idx) => {
+              const prevLines = previewFeatures(p)
+              return (
+                <div key={p.slug} className="rounded-2xl border border-indigo-500/20 bg-[#0f0c29]/70 p-4 space-y-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="text-xs font-mono uppercase tracking-wider text-indigo-300">{p.slug}</div>
                     <label className="text-xs text-gray-300 flex items-center gap-2">
                       <input
                         type="checkbox"
                         checked={Boolean(p.is_active)}
-                        onChange={(e) =>
-                          setPlans((arr) => arr.map((x, i) => (i === idx ? { ...x, is_active: e.target.checked } : x)))
-                        }
+                        onChange={(e) => patch(idx, { is_active: e.target.checked })}
                       />
                       Aktiv
                     </label>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Başlıq</label>
-                      <input
-                        className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500"
-                        value={p.title ?? ''}
-                        onChange={(e) =>
-                          setPlans((arr) => arr.map((x, i) => (i === idx ? { ...x, title: e.target.value } : x)))
-                        }
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Qiymət (AZN)</label>
-                      <input
-                        type="number"
-                        className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500"
-                        value={p.price_azn ?? 0}
-                        onChange={(e) =>
-                          setPlans((arr) =>
-                            arr.map((x, i) => (i === idx ? { ...x, price_azn: Number(e.target.value || 0) } : x))
-                          )
-                        }
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Student limit</label>
-                      <input
-                        type="number"
-                        className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500"
-                        value={p.student_limit ?? ''}
-                        placeholder="boş = limitsiz"
-                        onChange={(e) =>
-                          setPlans((arr) =>
-                            arr.map((x, i) => (i === idx ? { ...x, student_limit: e.target.value === '' ? null : Number(e.target.value) } : x))
-                          )
-                        }
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Storage (GB)</label>
-                      <input
-                        type="number"
-                        className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500"
-                        value={p.storage_gb ?? ''}
-                        placeholder="boş = limitsiz"
-                        onChange={(e) =>
-                          setPlans((arr) =>
-                            arr.map((x, i) => (i === idx ? { ...x, storage_gb: e.target.value === '' ? null : Number(e.target.value) } : x))
-                          )
-                        }
-                      />
-                    </div>
                     <div className="sm:col-span-2">
-                      <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
-                        Yaddaş limiti (bayt)
-                      </label>
-                      <div className="flex flex-wrap gap-2 mb-2">
-                        <button
-                          type="button"
-                          className="text-xs px-3 py-1.5 rounded-lg border border-indigo-500/30 text-gray-200 hover:bg-indigo-500/10"
-                          onClick={() =>
-                            setPlans((arr) =>
-                              arr.map((x, i) => (i === idx ? { ...x, storage_limit_bytes: 512 * 1024 } : x)),
-                            )
-                          }
-                        >
-                          512 KB (524288)
-                        </button>
-                        <button
-                          type="button"
-                          className="text-xs px-3 py-1.5 rounded-lg border border-indigo-500/30 text-gray-200 hover:bg-indigo-500/10"
-                          onClick={() =>
-                            setPlans((arr) => arr.map((x, i) => (i === idx ? { ...x, storage_limit_bytes: null } : x)))
-                          }
-                        >
-                          Bayt limitini sil
-                        </button>
+                      <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Plan adı</label>
+                      <input className={inp} value={p.title} onChange={(e) => patch(idx, { title: e.target.value })} />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Qiymət (AZN / ay)</label>
+                      <input
+                        type="number"
+                        step="any"
+                        className={inp}
+                        value={p.price_azn}
+                        onChange={(e) => patch(idx, { price_azn: e.target.value === '' ? 0 : Number(e.target.value) })}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">RAM (MB, istəyə bağlı)</label>
+                      <input
+                        type="number"
+                        className={inp}
+                        value={p.ram_limit_mb}
+                        placeholder="boş"
+                        onChange={(e) => patch(idx, { ram_limit_mb: e.target.value })}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    <Button type="button" variant="secondary" size="sm" onClick={() => applyPreset(idx, 'basic')}>
+                      Şablon: SADƏ
+                    </Button>
+                    <Button type="button" variant="secondary" size="sm" onClick={() => applyPreset(idx, 'pro')}>
+                      Şablon: PRO
+                    </Button>
+                    <Button type="button" variant="secondary" size="sm" onClick={() => applyPreset(idx, 'business')}>
+                      Şablon: BİZNES
+                    </Button>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Toggle
+                        id={`us-${p.slug}`}
+                        label="Limitsiz tələbə"
+                        checked={p.unlimited_students}
+                        onChange={(v) => patch(idx, { unlimited_students: v })}
+                      />
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Tələbə limiti</label>
+                        <input
+                          type="number"
+                          min={0}
+                          className={inp}
+                          disabled={p.unlimited_students}
+                          value={p.student_count}
+                          onChange={(e) => patch(idx, { student_count: e.target.value })}
+                        />
                       </div>
-                      <input
-                        type="number"
-                        min={0}
-                        step={1}
-                        className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500"
-                        value={p.storage_limit_bytes ?? ''}
-                        placeholder="boş — əvvəlki dəyər saxlanılır (yalnız «Bayt limitini sil» ilə sıfırla)"
-                        onChange={(e) => {
-                          const v = e.target.value
-                          setPlans((arr) =>
-                            arr.map((x, i) => {
-                              if (i !== idx) return x
-                              if (v === '') return { ...x, storage_limit_bytes: undefined }
-                              const n = Number(v)
-                              return { ...x, storage_limit_bytes: Number.isFinite(n) ? n : x.storage_limit_bytes }
-                            }),
-                          )
-                        }}
-                      />
-                      {p.storage_limit_bytes != null && Number.isFinite(Number(p.storage_limit_bytes)) ? (
-                        <p className="text-[11px] text-indigo-200/90 mt-1">
-                          Aktiv limit:{' '}
-                          <span className="font-semibold tabular-nums">{formatBytesAz(p.storage_limit_bytes)}</span>
-                        </p>
-                      ) : null}
-                      <p className="text-[11px] text-gray-500 mt-1.5">
-                        Saxlayarkən: boş sahə serverdə mövcud bayt limitini dəyişmir. Aydın sıfırlama üçün «Bayt limitini sil».
-                      </p>
                     </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">SMS limit</label>
-                      <input
-                        type="number"
-                        className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500"
-                        value={p.sms_limit ?? ''}
-                        placeholder="boş = limitsiz"
-                        onChange={(e) =>
-                          setPlans((arr) =>
-                            arr.map((x, i) => (i === idx ? { ...x, sms_limit: e.target.value === '' ? null : Number(e.target.value) } : x))
-                          )
-                        }
+
+                    <div className="space-y-2">
+                      <Toggle
+                        id={`usms-${p.slug}`}
+                        label="Limitsiz SMS (aylıq)"
+                        checked={p.unlimited_sms}
+                        onChange={(v) => patch(idx, { unlimited_sms: v })}
                       />
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">SMS / ay</label>
+                        <input
+                          type="number"
+                          min={0}
+                          className={inp}
+                          disabled={p.unlimited_sms}
+                          value={p.sms_count}
+                          onChange={(e) => patch(idx, { sms_count: e.target.value })}
+                        />
+                      </div>
                     </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">RAM limit (MB)</label>
-                      <input
-                        type="number"
-                        className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500"
-                        value={p.ram_limit_mb ?? ''}
-                        placeholder="boş = limitsiz"
-                        onChange={(e) =>
-                          setPlans((arr) =>
-                            arr.map((x, i) => (i === idx ? { ...x, ram_limit_mb: e.target.value === '' ? null : Number(e.target.value) } : x))
-                          )
-                        }
+
+                    <div className="sm:col-span-2 space-y-2">
+                      <Toggle
+                        id={`ust-${p.slug}`}
+                        label="Limitsiz yaddaş"
+                        checked={p.unlimited_storage}
+                        onChange={(v) => patch(idx, { unlimited_storage: v })}
                       />
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Həcm</label>
+                          <input
+                            type="number"
+                            step="any"
+                            min={0}
+                            className={inp}
+                            disabled={p.unlimited_storage}
+                            value={p.storage_value}
+                            onChange={(e) => patch(idx, { storage_value: e.target.value })}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Vahid</label>
+                          <select
+                            className={inp}
+                            disabled={p.unlimited_storage}
+                            value={p.storage_unit}
+                            onChange={(e) => patch(idx, { storage_unit: e.target.value })}
+                          >
+                            <option value="MB">MB</option>
+                            <option value="GB">GB</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer">
+                        <input type="checkbox" className="accent-indigo-500" checked={p.highlight} onChange={(e) => patch(idx, { highlight: e.target.checked })} />
+                        Vurğula (Ən populyar)
+                      </label>
+                    </div>
+
+                    <div className="sm:col-span-2 rounded-xl border border-white/10 bg-black/20 px-3 py-2">
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">Avtomatik xüsusiyyətlər</div>
+                      <ul className="text-xs text-gray-300 space-y-0.5 list-disc list-inside">
+                        {prevLines.map((line, li) => (
+                          <li key={`${p.slug}-${li}`}>{line}</li>
+                        ))}
+                      </ul>
                     </div>
                   </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Xidmətlər (hər sətir 1 maddə)</label>
-                    <textarea
-                      rows={4}
-                      className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500"
-                      value={Array.isArray(p.features) ? p.features.join('\n') : ''}
-                      onChange={(e) =>
-                        setPlans((arr) =>
-                          arr.map((x, i) =>
-                            i === idx ? { ...x, features: e.target.value.split('\n').map((s) => s.trim()).filter(Boolean) } : x
-                          )
-                        )
-                      }
-                    />
-                  </div>
-
-                  <label className="text-xs text-gray-300 flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={Boolean(p.highlight)}
-                      onChange={(e) =>
-                        setPlans((arr) => arr.map((x, i) => (i === idx ? { ...x, highlight: e.target.checked } : x)))
-                      }
-                    />
-                    Highlight (PRO)
-                  </label>
                 </div>
-              ))}
+              )
+            })}
 
-              <Button
-                loading={plansBusy}
-                className="w-full justify-center"
-                onClick={async () => {
-                  setPlansErr(null)
-                  setPlansBusy(true)
-                  try {
-                    const d = await api.put('/admin/plans', { plans })
-                    const saved = Array.isArray(d?.plans) ? d.plans : []
-                    setPlans(
-                      saved.map((row) => ({
-                        ...row,
-                        features: normalizePlanFeatures(row.features),
-                      })),
-                    )
-                    setPlansLoadedAt(new Date().toISOString())
-                    toast('Planlar saxlanıldı')
-                  } catch (e) {
-                    setPlansErr(e?.message || 'Saxlanmadı')
-                  } finally {
-                    setPlansBusy(false)
+            <Button
+              loading={plansBusy}
+              className="w-full justify-center"
+              onClick={async () => {
+                for (const p of plans) {
+                  const err = validatePlan(p)
+                  if (err) {
+                    toast(`${p.slug}: ${err}`, 'error')
+                    return
                   }
-                }}
-              >
-                Planları yadda saxla
-              </Button>
-            </div>
-          )}
-        </Card>
-
-        <Card className="p-4 sm:p-6 border border-amber-500/20">
-          <h2 className="font-display font-bold text-base mb-2">📱 SMS defolt (köhnə UI)</h2>
-          <p className="text-xs text-amber-200/90 mb-4 leading-relaxed">
-            Bu blok <strong className="text-white">bazaya yazılmır</strong> — dəyərlər brauzerdə saxlanır, səhifəni bağlayanda itir.
-            Müəllim limitləri yalnız yuxarıdakı <strong className="text-white">Paketlər (Billing)</strong> cədvəlindən gəlir (
-            <code className="text-indigo-300">subscription_plans</code>). Əgər köhnə rəqamlar görürsünüzsə, əvvəlcə «Serverdən yenilə» və ya migrasiya/deploy yoxlayın.
-          </p>
-          <div className="space-y-4">
-            {[
-              { key: 'default_sms_limit', label: 'SMS Limiti', unit: 'SMS' },
-              { key: 'default_storage_mb', label: 'Storage Limiti', unit: 'MB' },
-              { key: 'default_ram_mb', label: 'RAM Limiti', unit: 'MB' },
-            ].map(({ key, label, unit }) => (
-              <div key={key}>
-                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">{label} ({unit})</label>
-                <input type="number" className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500"
-                  value={smsDefaults[key]} onChange={e => setSmsDefaults(p => ({ ...p, [key]: e.target.value }))} />
-              </div>
-            ))}
-            <Button onClick={() => toast('Yadda saxlandı!')} className="w-full justify-center">Yadda Saxla</Button>
+                }
+                setPlansErr(null)
+                setPlansBusy(true)
+                try {
+                  const payload = plans.map(editorToPayload)
+                  const d = await api.put('/admin/plans', { plans: payload })
+                  const list = Array.isArray(d?.plans) ? d.plans : []
+                  setPlans(list.map(dbRowToEditor))
+                  setPlansLoadedAt(new Date().toISOString())
+                  toast('Planlar saxlanıldı')
+                } catch (e) {
+                  setPlansErr(e?.message || 'Saxlanmadı')
+                } finally {
+                  setPlansBusy(false)
+                }
+              }}
+            >
+              Hamısını saxla
+            </Button>
           </div>
-        </Card>
-
-        <Card className="p-4 sm:p-6">
-          <h2 className="font-display font-bold text-base mb-4">🔐 Sistem Məlumatları</h2>
-          <div className="space-y-3 text-sm">
-            <div className="flex justify-between py-2 border-b border-indigo-500/10">
-              <span className="text-gray-400">Versiya</span>
-              <span className="text-white font-semibold">v2.0.0</span>
-            </div>
-            <div className="flex justify-between py-2 border-b border-indigo-500/10">
-              <span className="text-gray-400">Database</span>
-              <span className="text-emerald-400 font-semibold">✓ Qoşulub</span>
-            </div>
-            <div className="flex justify-between py-2">
-              <span className="text-gray-400">SMS Servisi</span>
-              <span className="text-emerald-400 font-semibold">✓ Aktiv</span>
-            </div>
-          </div>
-        </Card>
-      </div>
+        )}
+      </Card>
     </div>
   )
 }
