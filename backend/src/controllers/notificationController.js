@@ -35,14 +35,25 @@ const getAdminNotifications = async (req, res) => {
           }
         }
 
-        const stLim = lim.storage_mb;
-        const stUsed = Number(used.storage_mb || 0) || 0;
-        if (stLim != null) {
-          const pct = Math.round((stUsed / Math.max(1, Number(stLim))) * 100);
+        const stLimMb = lim.storage_mb;
+        const stLimBytes = lim.storage_limit_bytes;
+        const stUsedMb = Number(used.storage_mb || 0) || 0;
+        const stUsedBytes = Number(used.storage_bytes ?? 0) || 0;
+        if (stLimBytes != null && Number(stLimBytes) > 0) {
+          const pct = Math.round((stUsedBytes / Number(stLimBytes)) * 100);
           if (pct >= 80) {
             alerts.push({
               type: 'storage',
-              message: `Storage limiti ${pct}% dolub (${stUsed}/${Number(stLim)}MB)`,
+              message: `Yaddaş limiti ${pct}% dolub`,
+              level: pct >= 100 ? 'critical' : 'warning',
+            });
+          }
+        } else if (stLimMb != null) {
+          const pct = Math.round((stUsedMb / Math.max(1, Number(stLimMb))) * 100);
+          if (pct >= 80) {
+            alerts.push({
+              type: 'storage',
+              message: `Yaddaş limiti ${pct}% dolub (${stUsedMb}/${Number(stLimMb)} MB)`,
               level: pct >= 100 ? 'critical' : 'warning',
             });
           }
@@ -84,14 +95,25 @@ const getInstructorNotifications = async (req, res) => {
       }
     }
 
-    const stLim = lim.storage_mb;
-    const stUsed = Number(used.storage_mb || 0) || 0;
-    if (stLim != null) {
-      const pct = Math.round((stUsed / Math.max(1, Number(stLim))) * 100);
+    const stLimMb = lim.storage_mb;
+    const stLimBytes = lim.storage_limit_bytes;
+    const stUsedMb = Number(used.storage_mb || 0) || 0;
+    const stUsedBytes = Number(used.storage_bytes ?? 0) || 0;
+    if (stLimBytes != null && Number(stLimBytes) > 0) {
+      const pct = Math.round((stUsedBytes / Number(stLimBytes)) * 100);
       if (pct >= 80) {
         alerts.push({
           type: 'storage',
-          message: `Storage limitiniz ${pct}% dolub (${stUsed}/${Number(stLim)}MB)`,
+          message: `Yaddaş limitiniz ${pct}% dolub`,
+          level: pct >= 100 ? 'critical' : 'warning',
+        });
+      }
+    } else if (stLimMb != null) {
+      const pct = Math.round((stUsedMb / Math.max(1, Number(stLimMb))) * 100);
+      if (pct >= 80) {
+        alerts.push({
+          type: 'storage',
+          message: `Yaddaş limitiniz ${pct}% dolub (${stUsedMb}/${Number(stLimMb)} MB)`,
           level: pct >= 100 ? 'critical' : 'warning',
         });
       }
@@ -103,8 +125,10 @@ const getInstructorNotifications = async (req, res) => {
       profile: {
         sms_limit: smsLim,
         sms_used_monthly: smsUsed,
-        storage_limit_mb: stLim,
-        storage_used_mb: stUsed,
+        storage_limit_mb: stLimMb,
+        storage_limit_bytes: stLimBytes,
+        storage_used_mb: stUsedMb,
+        storage_used_bytes: stUsedBytes,
         plan: ent?.plan || null,
         status: ent?.status || null,
       },
@@ -201,7 +225,6 @@ const quickInstructorNotification = async (req, res) => {
 
     const count = studentsWithPhones.length;
 
-    // Resolve entitlements once (includes trial-first rule).
     const ent = await resolveEntitlements(instructorId);
     const smsLimit = ent?.limits?.sms_monthly; // null => unlimited
     const smsUsed = Number(ent?.usage?.sms_monthly || 0) || 0;
@@ -214,7 +237,7 @@ const quickInstructorNotification = async (req, res) => {
       return res.status(429).json({
         success: false,
         code: 'SMS_LIMIT',
-        message: 'SMS limitiniz dolub. Upgrade edin.',
+        message: 'SMS limitinə çatdınız — davam etmək üçün daha geniş paket seçin.',
       });
     }
 
@@ -249,7 +272,7 @@ const quickInstructorNotification = async (req, res) => {
       return res.status(429).json({
         success: false,
         code: 'SMS_LIMIT',
-        message: 'SMS limitiniz dolub. Upgrade edin.',
+        message: 'SMS limitinə çatdınız — davam etmək üçün daha geniş paket seçin.',
       });
     }
 

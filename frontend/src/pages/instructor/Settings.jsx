@@ -157,7 +157,7 @@ export default function InstructorSettings() {
   const currentPlanPricingLine = useMemo(() => {
     if (!currentPlanObj) return '—'
     const pid = String(currentPlanObj.id || '').toLowerCase()
-    if (pid === 'basic') return 'Ödənişsiz əsas paket — limitlər plana uyğundur.'
+    if (pid === 'basic') return 'Ödənişsiz əsas paket — vaxt limiti yoxdur, istifadə limitləri paket üzrə tətbiq olunur.'
     const m = Number(currentPlanObj.price_azn)
     if (!Number.isFinite(m) || m <= 0) return planPriceLabel(currentPlanObj)
     if (billingInterval === 'monthly') return `${formatAzn(m)} AZN/ay`
@@ -228,7 +228,7 @@ export default function InstructorSettings() {
   ].join(' ')
 
   return (
-    <div className="p-4 sm:p-6 min-w-0 max-w-3xl mx-auto w-full space-y-6">
+    <div className="p-4 sm:p-6 min-w-0 max-w-6xl mx-auto w-full space-y-6">
       <div>
         <h1 className="font-display font-bold text-xl sm:text-2xl text-token-textMain tracking-tight">Tənzimləmələr</h1>
         <p className="text-token-textMuted text-sm mt-1">
@@ -236,7 +236,7 @@ export default function InstructorSettings() {
         </p>
       </div>
 
-      <Card className="p-5 border border-indigo-500/20 space-y-4">
+      <Card className="mx-auto max-w-5xl w-full p-5 border border-indigo-500/20 space-y-4">
         <h2 className={cardTitleCls}>Paketini dəyiş</h2>
         <p className={cardTextCls}>
           <span className="text-gray-200 font-medium">Aktiv paket:</span>{' '}
@@ -246,7 +246,8 @@ export default function InstructorSettings() {
           <span className="text-gray-500"> — {currentPlanPricingLine}</span>
         </p>
         <p className={cardTextCls}>
-          Limitlərə çatdıqda daha geniş paket seçməlisiniz — müddət əsasən ödənişli paketlər üçün tətbiq olunur.
+          SADƏ (pulsuz) paketdə vaxt limiti yoxdur; limitlər istifadəyə əsaslanır və hər hansı limit dolduqda daha geniş
+          paket seçməlisiniz.
         </p>
         <PricingBillingIntervalToggle value={billingInterval} onChange={setBillingInterval} theme={theme} />
         {planErr ? (
@@ -254,15 +255,17 @@ export default function InstructorSettings() {
             {planErr}
           </div>
         ) : null}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 items-stretch">
           {plans.map((p) => {
             const pid = String(p?.id || '').toLowerCase()
             const isCurrent = pid && pid === currentPlanId
             const isUpgrade = planRank(pid) > planRank(currentPlanId)
             const isFree = pid === 'basic'
+            const isProHighlight = pid === 'pro' && Boolean(p.highlight)
 
             let btnLabel = 'Başla'
             if (isCurrent) btnLabel = 'Aktiv paket'
+            else if (isFree) btnLabel = 'Pulsuz başla'
             else if (isUpgrade) btnLabel = 'Upgrade et'
 
             const priceBox = displayPriceForPlan(p)
@@ -288,59 +291,73 @@ export default function InstructorSettings() {
               <div
                 key={p.id}
                 className={[
-                  'rounded-2xl border p-4 transition-[transform,box-shadow,border-color] duration-300 ease-out',
+                  'relative rounded-2xl border p-4 h-full min-h-[22rem]',
+                  'flex flex-col gap-0',
+                  'transition-[transform,box-shadow,border-color] duration-200 ease-out',
+                  'hover:-translate-y-0.5 hover:shadow-[0_14px_44px_rgba(0,0,0,0.14)]',
                   isCurrent
-                    ? 'border-emerald-500/45 bg-emerald-500/8 ring-1 ring-emerald-500/20'
-                    : p.highlight
-                      ? 'border-primary/45 bg-primary/6'
+                    ? 'border-emerald-500/50 bg-emerald-500/[0.07] shadow-[0_8px_32px_rgba(16,185,129,0.12)] ring-1 ring-emerald-500/25'
+                    : isProHighlight
+                      ? 'border-primary/50 bg-primary/[0.08] shadow-[0_12px_40px_rgba(99,102,241,0.18)] ring-1 ring-primary/30 sm:scale-[1.02] z-[1]'
                       : isFree
-                        ? 'border-teal-500/25 bg-teal-500/[0.04]'
-                        : 'border-[color:var(--border-subtle)] bg-token-surfaceCard/40',
+                        ? 'border-teal-500/30 bg-teal-500/[0.04]'
+                        : 'border-[color:var(--border-subtle)] bg-token-surfaceCard/45',
                 ].join(' ')}
               >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="text-sm font-bold text-token-textMain">{p.title}</div>
+                <div className="flex w-full shrink-0 items-start justify-between gap-2">
+                  <div className="flex min-h-[22px] min-w-0 flex-1 flex-wrap items-center gap-2">
+                    {isCurrent ? (
+                      <span className="rounded-full bg-emerald-500/25 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-100 ring-1 ring-emerald-500/40">
+                        Aktiv paket
+                      </span>
+                    ) : isProHighlight ? (
+                      <span className="rounded-full bg-primary/30 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-indigo-100 ring-1 ring-primary/35">
+                        Ən populyar
+                      </span>
+                    ) : null}
+                  </div>
                   {billingInterval === 'yearly' && priceBox?.isPaid ? (
                     <span className="shrink-0 rounded-full bg-emerald-500/18 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-emerald-100">
                       −20%
                     </span>
                   ) : null}
                 </div>
-                <div className="mt-2 flex flex-wrap items-baseline gap-1">
+
+                <div className="mt-3 shrink-0 text-base font-display font-bold tracking-tight text-token-textMain">
+                  {p.title}
+                </div>
+
+                <div className="mt-1 shrink-0 flex flex-wrap items-baseline gap-1">
                   {priceBox?.isPaid ? (
                     <>
-                      <span className="text-lg font-display font-bold tracking-tight text-token-textMain">
-                        {priceBox.main}
-                      </span>
+                      <span className="text-xl font-display font-bold tracking-tight text-token-textMain">{priceBox.main}</span>
                       <span className="text-xs font-medium text-token-textMuted">{priceBox.suffix}</span>
                     </>
                   ) : (
-                    <span className="text-lg font-display font-bold tracking-tight text-token-textMain">Pulsuz</span>
+                    <span className="text-xl font-display font-bold tracking-tight text-token-textMain">Pulsuz</span>
                   )}
                 </div>
+
                 {priceBox?.hint ? (
-                  <p className="mt-1 text-[11px] leading-snug text-token-textMuted">{priceBox.hint}</p>
+                  <p className="mt-1 shrink-0 text-[11px] leading-snug text-token-textMuted">{priceBox.hint}</p>
                 ) : billingInterval === 'yearly' && priceBox?.isPaid ? (
-                  <p className="mt-1 text-[11px] leading-snug text-emerald-600/95 dark:text-emerald-300/90">
+                  <p className="mt-1 shrink-0 text-[11px] leading-snug text-emerald-600/95 dark:text-emerald-300/90">
                     İllik seçərək 20% qənaət edin
                   </p>
                 ) : null}
 
-                <p className="mt-3 text-[11px] leading-relaxed text-token-textMuted">{limitsNote}</p>
+                <div className="mt-3 flex min-h-0 flex-1 flex-col gap-3">
+                  <p className="text-[11px] leading-relaxed text-token-textMuted">{limitsNote}</p>
+                  {isFree ? (
+                    <p className="whitespace-pre-line text-[11px] leading-relaxed text-token-textMain/85">
+                      {`Bu paketdə istifadə müddəti məhdud deyil.\n5 tələbə, 5 SMS və 512 KB limit mövcuddur.\nLimitlərə çatdıqda daha geniş paket seçməyiniz tələb olunacaq.`}
+                    </p>
+                  ) : null}
+                </div>
 
-                {isFree ? (
-                  <p className="mt-3 text-[11px] leading-relaxed text-token-textMain/85">
-                    Bu paketdə istifadə müddəti məhdud deyil. Limitlərə çatdıqda paket seçməyiniz tələb olunacaq.
-                  </p>
-                ) : null}
-
-                {isCurrent ? (
-                  <div className="mt-3 text-[11px] font-semibold text-emerald-300/90">Cari seçim</div>
-                ) : null}
-
-                <div className="mt-4">
+                <div className="mt-auto shrink-0 border-t border-[color:var(--border-subtle)]/60 pt-4">
                   <Button
-                    className="w-full justify-center transition-opacity duration-200"
+                    className="w-full justify-center duration-200 ease-out hover:brightness-[1.06]"
                     variant={isCurrent ? 'secondary' : p.highlight ? 'primary' : 'secondary'}
                     loading={planBusy}
                     disabled={btnDisabled}

@@ -19,7 +19,11 @@ async function checkSmsQuota(instructorId, opts = {}) {
       return {
         ok: false,
         statusCode: 429,
-        body: { success: false, message: `SMS limiti dolub (${used}/${Number(lim)}).`, code: 'SMS_LIMIT' },
+        body: {
+          success: false,
+          message: `SMS limitinə çatdınız (${used}/${Number(lim)}). Davam etmək üçün daha geniş paket seçin.`,
+          code: 'SMS_LIMIT',
+        },
       };
     }
     return { ok: true, remaining: lim == null ? undefined : Math.max(0, Number(lim) - used) };

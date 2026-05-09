@@ -22,7 +22,13 @@ function normalizeRow(r) {
   const slug = normalizePlanSlug(r.slug);
   const price_azn = Number(r.price_azn || 0) || 0;
   const students = r.student_limit == null ? null : Number(r.student_limit);
-  const storage_mb = gbToMb(r.storage_gb);
+  const _rawSb =
+    r.storage_limit_bytes == null || r.storage_limit_bytes === '' ? null : Number(r.storage_limit_bytes);
+  const storage_limit_bytes = Number.isFinite(_rawSb) ? _rawSb : null;
+  const storage_mb =
+    storage_limit_bytes != null && Number.isFinite(storage_limit_bytes)
+      ? null
+      : gbToMb(r.storage_gb);
   const sms_monthly = r.sms_limit == null ? null : Number(r.sms_limit);
   const ram_limit_mb = r.ram_limit_mb == null ? null : Number(r.ram_limit_mb);
   const features = Array.isArray(r.features) ? r.features : r.features ? r.features : null;
@@ -30,7 +36,7 @@ function normalizeRow(r) {
     slug,
     title: String(r.title || slug).trim() || slug.toUpperCase(),
     price_azn,
-    limits: { students, storage_mb, sms_monthly, ram_limit_mb },
+    limits: { students, storage_mb, storage_limit_bytes, sms_monthly, ram_limit_mb },
     highlight: Boolean(r.highlight),
     is_active: Boolean(r.is_active),
     features,
@@ -40,7 +46,7 @@ function normalizeRow(r) {
 
 async function loadPlansFromDb() {
   const { rows } = await db.query(
-    `SELECT slug, title, price_azn, student_limit, storage_gb, sms_limit, ram_limit_mb, features, highlight, is_active, updated_at
+    `SELECT slug, title, price_azn, student_limit, storage_gb, storage_limit_bytes, sms_limit, ram_limit_mb, features, highlight, is_active, updated_at
      FROM subscription_plans
      WHERE is_active = TRUE
      ORDER BY CASE slug WHEN 'basic' THEN 1 WHEN 'pro' THEN 2 WHEN 'business' THEN 3 ELSE 99 END, slug`
@@ -80,7 +86,7 @@ async function getPlanOrThrow(slugRaw) {
 
 async function adminListPlans() {
   const { rows } = await db.query(
-    `SELECT slug, title, price_azn, student_limit, storage_gb, sms_limit, ram_limit_mb, features, highlight, is_active, updated_at
+    `SELECT slug, title, price_azn, student_limit, storage_gb, storage_limit_bytes, sms_limit, ram_limit_mb, features, highlight, is_active, updated_at
      FROM subscription_plans
      ORDER BY CASE slug WHEN 'basic' THEN 1 WHEN 'pro' THEN 2 WHEN 'business' THEN 3 ELSE 99 END, slug`
   );
@@ -90,6 +96,7 @@ async function adminListPlans() {
     price_azn: Number(r.price_azn || 0) || 0,
     student_limit: r.student_limit == null ? null : Number(r.student_limit),
     storage_gb: r.storage_gb == null ? null : Number(r.storage_gb),
+    storage_limit_bytes: r.storage_limit_bytes == null ? null : Number(r.storage_limit_bytes),
     sms_limit: r.sms_limit == null ? null : Number(r.sms_limit),
     ram_limit_mb: r.ram_limit_mb == null ? null : Number(r.ram_limit_mb),
     features: r.features ?? null,
@@ -106,6 +113,20 @@ async function adminUpsertPlan(payload) {
 
   const student_limit = payload?.student_limit === '' ? null : payload?.student_limit;
   const storage_gb = payload?.storage_gb === '' ? null : payload?.storage_gb;
+  const hasStorageLimitBytesKey = Object.prototype.hasOwnProperty.call(payload || {}, 'storage_limit_bytes');
+  let storage_limit_bytes = null;
+  if (hasStorageLimitBytesKey) {
+    storage_limit_bytes = payload?.storage_limit_bytes === '' ? null : Number(payload?.storage_limit_bytes);
+    if (!Number.isFinite(storage_limit_bytes)) storage_limit_bytes = null;
+  } else {
+    const { rows: curSb } = await db.query(
+      `SELECT storage_limit_bytes FROM subscription_plans WHERE slug = $1 LIMIT 1`,
+      [slug],
+    );
+    storage_limit_bytes =
+      curSb[0]?.storage_limit_bytes == null ? null : Number(curSb[0].storage_limit_bytes);
+    if (!Number.isFinite(storage_limit_bytes)) storage_limit_bytes = null;
+  }
   const sms_limit = payload?.sms_limit === '' ? null : payload?.sms_limit;
   const ram_limit_mb = payload?.ram_limit_mb === '' ? null : payload?.ram_limit_mb;
   const highlight = Boolean(payload?.highlight);
@@ -127,13 +148,14 @@ async function adminUpsertPlan(payload) {
   }
 
   await db.query(
-    `INSERT INTO subscription_plans (slug, title, price_azn, student_limit, storage_gb, sms_limit, ram_limit_mb, features, highlight, is_active, updated_at)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9,$10,NOW())
+    `INSERT INTO subscription_plans (slug, title, price_azn, student_limit, storage_gb, storage_limit_bytes, sms_limit, ram_limit_mb, features, highlight, is_active, updated_at)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb,$10,$11,NOW())
      ON CONFLICT (slug) DO UPDATE SET
        title=EXCLUDED.title,
        price_azn=EXCLUDED.price_azn,
        student_limit=EXCLUDED.student_limit,
        storage_gb=EXCLUDED.storage_gb,
+       storage_limit_bytes=EXCLUDED.storage_limit_bytes,
        sms_limit=EXCLUDED.sms_limit,
        ram_limit_mb=EXCLUDED.ram_limit_mb,
        features=EXCLUDED.features,
@@ -146,6 +168,7 @@ async function adminUpsertPlan(payload) {
       price_azn,
       student_limit == null ? null : Number(student_limit),
       storage_gb == null ? null : Number(storage_gb),
+      storage_limit_bytes,
       sms_limit == null ? null : Number(sms_limit),
       ram_limit_mb == null ? null : Number(ram_limit_mb),
       features ? JSON.stringify(features) : null,

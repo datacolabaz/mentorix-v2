@@ -120,9 +120,10 @@ async function recomputeInstructorStorageUsageMb(instructorId, opts = {}) {
     await db
       .query(
         `UPDATE usage_counters
-         SET storage_used_mb = $2
+         SET storage_used_mb = $2,
+             storage_used_bytes = $3
          WHERE user_id = $1`,
-        [instructorId, storage_used_mb]
+        [instructorId, storage_used_mb, totalBytes]
       )
       .catch(() => {});
   }

@@ -74,9 +74,6 @@ router.get('/status', authenticate, authorize('instructor'), async (req, res) =>
     const out = await resolveEntitlements(req.user.id);
     res.json({
       plan: out.plan,
-      trial: {
-        is_active: out.trial.is_active,
-      },
       subscription: out.subscription || null,
       limits: out.limits,
       usage: out.usage,

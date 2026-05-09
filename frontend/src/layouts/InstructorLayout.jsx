@@ -12,7 +12,10 @@ import BillingBanner from '../components/common/BillingBanner'
 import BillingUsagePills from '../components/common/BillingUsagePills'
 import { useBillingStatus } from '../hooks/useBillingStatus'
 import UpgradeModal from '../components/instructor/UpgradeModal'
+import LimitReachedModal from '../components/instructor/LimitReachedModal'
 import Modal from '../components/common/Modal'
+import { useQueryClient } from '@tanstack/react-query'
+import { BILLING_STATUS_QUERY_KEY } from '../hooks/useBillingStatus'
 import PhoneInput from '../components/auth/PhoneInput'
 import Button from '../components/common/Button'
 import { useToast } from '../components/common/Toast'
@@ -57,6 +60,7 @@ export default function InstructorLayout() {
   const billingQ = useBillingStatus()
   const billing = billingQ.data || null
   const [upgradeOpen, setUpgradeOpen] = useState(false)
+  const [limitModal, setLimitModal] = useState({ open: false, message: '' })
   const [verifyOpen, setVerifyOpen] = useState(false)
   const [verifyPhone, setVerifyPhone] = useState(user?.phone || '')
   const [verifyCode, setVerifyCode] = useState('')
@@ -400,6 +404,10 @@ export default function InstructorLayout() {
                   return
                 }
                 if (action === 'OPEN_UPGRADE_MODAL') return setUpgradeOpen(true)
+                if (action === 'OPEN_SETTINGS_PLANS') {
+                  navigate('/instructor/settings')
+                  return
+                }
                 navigate('/instructor/settings')
               }}
             />
@@ -439,6 +447,15 @@ export default function InstructorLayout() {
       </main>
       </div>
     </div>
+      <LimitReachedModal
+        open={limitModal.open}
+        onClose={() => setLimitModal({ open: false, message: '' })}
+        serverMessage={limitModal.message}
+        onViewPlans={() => {
+          setLimitModal({ open: false, message: '' })
+          navigate('/instructor/settings')
+        }}
+      />
       <UpgradeModal
       open={upgradeOpen}
       onClose={() => setUpgradeOpen(false)}

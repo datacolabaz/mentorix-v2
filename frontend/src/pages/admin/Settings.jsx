@@ -4,6 +4,15 @@ import Button from '../../components/common/Button'
 import { useToast } from '../../components/common/Toast'
 import api from '../../lib/api'
 
+function formatBytesAz(n) {
+  const b = Number(n)
+  if (!Number.isFinite(b) || b < 0) return null
+  if (b < 1024) return `${Math.round(b)} bayt`
+  if (b < 1024 * 1024) return `${Math.round((b / 1024) * 10) / 10} KB`
+  const mb = b / (1024 * 1024)
+  return mb >= 10 ? `${Math.round(mb)} MB` : `${Math.round(mb * 10) / 10} MB`
+}
+
 export default function AdminSettings() {
   const [smsDefaults, setSmsDefaults] = useState({ default_sms_limit: 100, default_storage_mb: 1024, default_ram_mb: 512 })
   const [plans, setPlans] = useState([])
@@ -33,6 +42,11 @@ export default function AdminSettings() {
       <div className="w-full space-y-4 sm:space-y-6">
         <Card className="p-4 sm:p-6">
           <h2 className="font-display font-bold text-base mb-4">💳 Paketlər (Billing)</h2>
+          <p className="text-xs text-gray-500 mb-3 leading-relaxed">
+            <strong className="text-gray-300">Storage (GB)</strong> — böyük limitlər üçün.{' '}
+            <strong className="text-gray-300">Yaddaş (bayt)</strong> — dəqiq kiçik limit (məs. pulsuz sıra: 512 KB ={' '}
+            <code className="text-indigo-300">524288</code>). Bayt doldurulubsa, GB ilə yuvarlama tətbiq olunmur.
+          </p>
           {plansErr ? (
             <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 text-rose-100 px-4 py-3 text-sm mb-4">
               {plansErr}
@@ -109,6 +123,61 @@ export default function AdminSettings() {
                           )
                         }
                       />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                        Yaddaş limiti (bayt)
+                      </label>
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        <button
+                          type="button"
+                          className="text-xs px-3 py-1.5 rounded-lg border border-indigo-500/30 text-gray-200 hover:bg-indigo-500/10"
+                          onClick={() =>
+                            setPlans((arr) =>
+                              arr.map((x, i) => (i === idx ? { ...x, storage_limit_bytes: 512 * 1024 } : x)),
+                            )
+                          }
+                        >
+                          512 KB (524288)
+                        </button>
+                        <button
+                          type="button"
+                          className="text-xs px-3 py-1.5 rounded-lg border border-indigo-500/30 text-gray-200 hover:bg-indigo-500/10"
+                          onClick={() =>
+                            setPlans((arr) => arr.map((x, i) => (i === idx ? { ...x, storage_limit_bytes: null } : x)))
+                          }
+                        >
+                          Bayt limitini sil
+                        </button>
+                      </div>
+                      <input
+                        type="number"
+                        min={0}
+                        step={1}
+                        className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500"
+                        value={p.storage_limit_bytes ?? ''}
+                        placeholder="boş — əvvəlki dəyər saxlanılır (yalnız «Bayt limitini sil» ilə sıfırla)"
+                        onChange={(e) => {
+                          const v = e.target.value
+                          setPlans((arr) =>
+                            arr.map((x, i) => {
+                              if (i !== idx) return x
+                              if (v === '') return { ...x, storage_limit_bytes: undefined }
+                              const n = Number(v)
+                              return { ...x, storage_limit_bytes: Number.isFinite(n) ? n : x.storage_limit_bytes }
+                            }),
+                          )
+                        }}
+                      />
+                      {p.storage_limit_bytes != null && Number.isFinite(Number(p.storage_limit_bytes)) ? (
+                        <p className="text-[11px] text-indigo-200/90 mt-1">
+                          Aktiv limit:{' '}
+                          <span className="font-semibold tabular-nums">{formatBytesAz(p.storage_limit_bytes)}</span>
+                        </p>
+                      ) : null}
+                      <p className="text-[11px] text-gray-500 mt-1.5">
+                        Saxlayarkən: boş sahə serverdə mövcud bayt limitini dəyişmir. Aydın sıfırlama üçün «Bayt limitini sil».
+                      </p>
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">SMS limit</label>

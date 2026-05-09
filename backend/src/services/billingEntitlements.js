@@ -65,7 +65,7 @@ async function ensureSubscriptionRow(dbConn, userId) {
 
 async function ensureUsageRow(dbConn, userId) {
   const { rows } = await dbConn.query(
-    `SELECT user_id, students_count, storage_used_mb, sms_used_monthly, sms_period_ym
+    `SELECT user_id, students_count, storage_used_mb, storage_used_bytes, sms_used_monthly, sms_period_ym
      FROM usage_counters
      WHERE user_id = $1
      LIMIT 1`,
@@ -75,9 +75,9 @@ async function ensureUsageRow(dbConn, userId) {
 
   const ym = await currentYmBaku(dbConn);
   const { rows: ins } = await dbConn.query(
-    `INSERT INTO usage_counters (user_id, students_count, storage_used_mb, sms_used_monthly, sms_period_ym)
-     VALUES ($1, 0, 0, 0, $2)
-     RETURNING user_id, students_count, storage_used_mb, sms_used_monthly, sms_period_ym`,
+    `INSERT INTO usage_counters (user_id, students_count, storage_used_mb, storage_used_bytes, sms_used_monthly, sms_period_ym)
+     VALUES ($1, 0, 0, 0, 0, $2)
+     RETURNING user_id, students_count, storage_used_mb, storage_used_bytes, sms_used_monthly, sms_period_ym`,
     [userId, ym]
   );
   return ins[0];
@@ -94,7 +94,7 @@ async function ensureSmsPeriodUpToDate(dbConn, userId) {
          sms_period_ym = $2,
          updated_at = NOW()
      WHERE user_id = $1
-     RETURNING user_id, students_count, storage_used_mb, sms_used_monthly, sms_period_ym`,
+     RETURNING user_id, students_count, storage_used_mb, storage_used_bytes, sms_used_monthly, sms_period_ym`,
     [userId, ym]
   );
   return rows[0] || usage;
@@ -116,16 +116,21 @@ function ceilDaysLeft(endsAt) {
   return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
 }
 
-function isWarnStudents(remStudents) {
-  return remStudents != null && remStudents <= 3;
-}
-
 function isWarnPercent(rem, lim, thresholdPct /*0-1*/) {
   if (lim == null) return false;
   const l = Number(lim);
   const r = Number(rem);
   if (!Number.isFinite(l) || !Number.isFinite(r) || l <= 0) return false;
   return r / l <= thresholdPct;
+}
+
+function storageWarn80(limits, used) {
+  const limB = limits.storage_limit_bytes;
+  if (limB == null || !Number.isFinite(Number(limB))) return false;
+  const cap = Number(limB);
+  const u = Number(used.storage_bytes ?? 0) || 0;
+  if (cap <= 0) return false;
+  return u / cap >= 0.8;
 }
 
 function buildStatus({
@@ -137,27 +142,47 @@ function buildStatus({
 }) {
   // Priority:
   // 1) phone not verified -> warning (dashboard open; write-actions gate elsewhere)
-  // 2) not active (trial expired/inactive) -> expired
-  // 3) any reached limit -> blocked
-  // 4) any warn threshold -> warning
+  // 2) subscription not active (billing) -> expired
+  // 3) any hard usage cap reached -> blocked (permanent free tier: usage only, no time)
+  // 4) any ~80% usage warn -> warning
   // 5) otherwise -> active
   if (!phone_verified) return 'warning';
   if (!is_active) return 'expired';
 
   const reachedStudents = limits.students != null && used.students >= limits.students;
-  const reachedStorage = limits.storage_mb != null && used.storage_mb >= limits.storage_mb;
   const reachedSms = limits.sms_monthly != null && used.sms_monthly >= limits.sms_monthly;
+  const reachedStorageMb = limits.storage_mb != null && used.storage_mb >= limits.storage_mb;
+  const reachedStorageBytes =
+    limits.storage_limit_bytes != null &&
+    Number(used.storage_bytes ?? 0) >= Number(limits.storage_limit_bytes);
+  const reachedStorage = reachedStorageMb || reachedStorageBytes;
   if (reachedStudents || reachedStorage || reachedSms) return 'blocked';
 
-  const warnStudents = isWarnStudents(remainingObj.students);
+  const warnStudents = isWarnPercent(remainingObj.students, limits.students, 0.2);
   const warnSms = isWarnPercent(remainingObj.sms_monthly, limits.sms_monthly, 0.2);
-  const warnStorage = isWarnPercent(remainingObj.storage_mb, limits.storage_mb, 0.2);
+  const warnStorageMb = isWarnPercent(remainingObj.storage_mb, limits.storage_mb, 0.2);
+  const warnStorage = warnStorageMb || storageWarn80(limits, used);
   if (warnStudents || warnSms || warnStorage) return 'warning';
 
   return 'active';
 }
 
-function buildMessages(status, remStudents, phone_verified, details) {
+function fmtBytes(n) {
+  const x = Number(n) || 0;
+  if (x < 1024) return `${Math.round(x)} B`;
+  if (x < 1024 * 1024) return `${Math.round(x / 102.4) / 10} KB`;
+  return `${Math.round(x / (1024 * 102.4)) / 10} MB`;
+}
+
+function buildMessages(status, ctx) {
+  const {
+    phone_verified,
+    limits,
+    used,
+    remainingObj,
+    details,
+  } = ctx || {};
+
   if (status === 'warning' && !phone_verified) {
     return {
       banner: 'Hesabınızın tam funksionallığı üçün telefon nömrənizi təsdiqləyin',
@@ -165,25 +190,47 @@ function buildMessages(status, remStudents, phone_verified, details) {
     };
   }
   if (status === 'warning') {
-    const banner =
-      remStudents === 1
-        ? 'Tələbə limitinizin bitməsinə 1 yer qalıb'
-        : `Tələbə limitinizin bitməsinə ${remStudents ?? 0} yer qalıb`;
-    return { banner, cta: { label: 'Yüksəlt', action: 'OPEN_UPGRADE_MODAL' } };
+    const parts = [];
+    if (limits.students != null && isWarnPercent(remainingObj.students, limits.students, 0.2)) {
+      parts.push(`Tələbə limitinə yaxınlasırsınız (${used.students}/${limits.students})`);
+    }
+    if (limits.sms_monthly != null && isWarnPercent(remainingObj.sms_monthly, limits.sms_monthly, 0.2)) {
+      parts.push(`SMS limitinə yaxınlasırsınız (${used.sms_monthly}/${limits.sms_monthly})`);
+    }
+    if (limits.storage_limit_bytes != null) {
+      const cap = Number(limits.storage_limit_bytes);
+      const u = Number(used.storage_bytes ?? 0) || 0;
+      if (cap > 0 && u / cap >= 0.8) {
+        parts.push(`Yaddaş limitinə yaxınlasırsınız (${fmtBytes(u)}/${fmtBytes(cap)})`);
+      }
+    } else if (limits.storage_mb != null && isWarnPercent(remainingObj.storage_mb, limits.storage_mb, 0.2)) {
+      parts.push(`Yaddaş limitinə yaxınlasırsınız (${used.storage_mb}/${limits.storage_mb} MB)`);
+    }
+    const banner = parts.length ? parts.join(' ') : 'Limitlərə yaxınlasırsınız';
+    return { banner, cta: { label: 'Paketlərə bax', action: 'OPEN_SETTINGS_PLANS' } };
   }
   if (status === 'grace') {
-    return { banner: 'Abunəlik müddətiniz tamamlanmadı. Davam üçün paket seçin.', cta: { label: 'Paket seç', action: 'OPEN_UPGRADE_MODAL' } };
+    return {
+      banner: 'Ödəniş gecikib. Davam üçün paket vəziyyətini yeniləyin.',
+      cta: { label: 'Paketlərə bax', action: 'OPEN_SETTINGS_PLANS' },
+    };
   }
   if (status === 'blocked') {
     const reasons = [];
-    if (details?.reachedStudents) reasons.push('tələbə limiti dolub');
-    if (details?.reachedStorage) reasons.push('storage limiti dolub');
-    if (details?.reachedSms) reasons.push('SMS limiti dolub');
-    const banner = reasons.length ? `Məhdudiyyət: ${reasons.join(', ')}` : 'Məhdudiyyət';
-    return { banner, cta: { label: 'Paket seç', action: 'OPEN_UPGRADE_MODAL' } };
+    if (details?.reachedStudents) reasons.push('tələbə limiti');
+    if (details?.reachedStorage) reasons.push('yaddaş limiti');
+    if (details?.reachedSms) reasons.push('SMS limiti');
+    const detail = reasons.length ? ` (${reasons.join(', ')})` : '';
+    return {
+      banner: `Limitə çatdınız${detail}. Davam etmək üçün paket seçməlisiniz.`,
+      cta: { label: 'Paketlərə bax', action: 'OPEN_SETTINGS_PLANS' },
+    };
   }
   if (status === 'expired') {
-    return { banner: 'Sınaq müddətiniz bitdi. Davam etmək üçün paket seçin.', cta: { label: 'Paket seç', action: 'OPEN_UPGRADE_MODAL' } };
+    return {
+      banner: 'Abunəlik aktiv deyil və ya ödəniş müddəti keçib. Davam etmək üçün paket seçin.',
+      cta: { label: 'Paketlərə bax', action: 'OPEN_SETTINGS_PLANS' },
+    };
   }
   return { banner: null, cta: null };
 }
@@ -207,11 +254,13 @@ async function resolveEntitlements(userId) {
   const planLimits =
     plansMap[planSlug]?.limits ||
     plansMap.basic?.limits ||
-    { students: 20, storage_mb: 1024, sms_monthly: 30, ram_limit_mb: null };
+    { students: 5, storage_mb: null, storage_limit_bytes: 512 * 1024, sms_monthly: 5, ram_limit_mb: null };
 
   const limits = {
     students: planLimits.students,
     storage_mb: planLimits.storage_mb,
+    storage_limit_bytes:
+      planLimits.storage_limit_bytes == null ? null : Number(planLimits.storage_limit_bytes),
     sms_monthly: planLimits.sms_monthly,
     ram_limit_mb: planLimits.ram_limit_mb ?? null,
   };
@@ -219,6 +268,7 @@ async function resolveEntitlements(userId) {
   const used = {
     students: Number(usage?.students_count || 0) || 0,
     storage_mb: Number(usage?.storage_used_mb || 0) || 0,
+    storage_bytes: Number(usage?.storage_used_bytes ?? 0) || 0,
     sms_monthly: Number(usage?.sms_used_monthly || 0) || 0,
   };
 
@@ -226,6 +276,10 @@ async function resolveEntitlements(userId) {
     students: remaining(limits.students, used.students),
     storage_mb: remaining(limits.storage_mb, used.storage_mb),
     sms_monthly: remaining(limits.sms_monthly, used.sms_monthly),
+    storage_bytes:
+      limits.storage_limit_bytes == null
+        ? null
+        : remaining(limits.storage_limit_bytes, used.storage_bytes),
   };
 
   const subStatus = String(sub2?.status || 'active');
@@ -252,22 +306,25 @@ async function resolveEntitlements(userId) {
 
   const status2 = inGrace ? 'grace' : status;
   const reachedStudents = limits.students != null && used.students >= limits.students;
-  const reachedStorage = limits.storage_mb != null && used.storage_mb >= limits.storage_mb;
+  const reachedStorageMb = limits.storage_mb != null && used.storage_mb >= limits.storage_mb;
+  const reachedStorageBytes =
+    limits.storage_limit_bytes != null && used.storage_bytes >= Number(limits.storage_limit_bytes);
+  const reachedStorage = reachedStorageMb || reachedStorageBytes;
   const reachedSms = limits.sms_monthly != null && used.sms_monthly >= limits.sms_monthly;
 
   const should_warn = status === 'warning';
   const should_block = (status2 === 'blocked' || status2 === 'expired'); // grace is NOT blocking
   const days_left = sub2?.current_period_end ? ceilDaysLeft(sub2.current_period_end) : null;
-  const messages = buildMessages(status2, rem.students, phone_verified, { reachedStudents, reachedStorage, reachedSms });
+  const messages = buildMessages(status2, {
+    phone_verified,
+    limits,
+    used,
+    remainingObj: rem,
+    details: { reachedStudents, reachedStorage, reachedSms },
+  });
 
   return {
     plan: planSlug,
-    trial: {
-      // Deprecated for limits; kept for backward-compatible UI payload shape.
-      is_active: false,
-      ends_at: null,
-      days_left: 0,
-    },
     subscription: {
       status: subStatus,
       current_period_end: sub2?.current_period_end ? new Date(sub2.current_period_end).toISOString() : null,

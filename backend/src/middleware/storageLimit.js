@@ -19,23 +19,38 @@ async function enforceStorageLimitAfterUpload(req, res, next) {
     if (req.user.role !== 'instructor') return next();
 
     const ent = await resolveEntitlements(req.user.id);
-    const limitMb = ent?.limits?.storage_mb; // null => unlimited
+    const limitMb = ent?.limits?.storage_mb;
+    const limitBytes = ent?.limits?.storage_limit_bytes;
     const usedMb = Number(ent?.usage?.storage_mb || 0) || 0;
+    const usedBytes = Number(ent?.usage?.storage_bytes ?? 0) || 0;
     const addMb = bytesToMbInt(req.file.size || 0);
     const addBytes = Number(req.file.size) || 0;
+
+    if (
+      limitBytes != null &&
+      Number.isFinite(Number(limitBytes)) &&
+      usedBytes + addBytes > Number(limitBytes)
+    ) {
+      safeUnlink(req.file.path);
+      return res.status(429).json({
+        success: false,
+        code: 'STORAGE_LIMIT',
+        message: 'Yaddaş limitinə çatdınız — davam etmək üçün daha geniş paket seçin.',
+      });
+    }
 
     if (limitMb != null && usedMb + addMb > Number(limitMb)) {
       safeUnlink(req.file.path);
       return res.status(429).json({
         success: false,
         code: 'STORAGE_LIMIT',
-        message: `Storage limitiniz dolub (${usedMb}/${Number(limitMb)}MB).`,
+        message: `Yaddaş limitiniz dolub (${usedMb}/${Number(limitMb)} MB).`,
       });
     }
 
     // Always track usage (even if unlimited) for analytics + future billing.
     await db.transaction(async (client) => {
-      await bumpUsageCountersTx(client, req.user.id, { storage_used_mb: addMb });
+      await bumpUsageCountersTx(client, req.user.id, { storage_used_mb: addMb, storage_used_bytes: addBytes });
       // Keep legacy bytes counter in instructor_profiles if present (best-effort)
       await client
         .query(

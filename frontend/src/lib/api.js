@@ -2,6 +2,8 @@ import axios from 'axios'
 
 const parsedTimeout = Number(import.meta.env.VITE_API_TIMEOUT_MS)
 
+const USAGE_LIMIT_CODES = new Set(['STUDENT_LIMIT', 'STORAGE_LIMIT', 'SMS_LIMIT'])
+
 function normalizeApiBaseUrl(raw) {
   const v = raw != null ? String(raw).trim().replace(/\/+$/, '') : ''
   if (!v) return '/api'
@@ -99,6 +101,18 @@ api.interceptors.response.use(
     const data = err.response?.data
     const status = err.response?.status
     const msg = data?.message || err.message || 'Xəta'
+    const code = data?.code
+    if (status === 429 && typeof code === 'string' && USAGE_LIMIT_CODES.has(code)) {
+      try {
+        window.dispatchEvent(
+          new CustomEvent('mx:usage-limit', {
+            detail: { code, message: msg },
+          }),
+        )
+      } catch {
+        /* ignore */
+      }
+    }
     const wrapped =
       data && typeof data === 'object'
         ? { ...data, message: msg, status }

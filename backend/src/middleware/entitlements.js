@@ -29,7 +29,11 @@ function enforceStudentsLimit(req, _res, next) {
     const used = e.usage?.students ?? 0;
     if (lim != null && used >= lim) {
       void logBillingEvent(db, { user_id: req.user?.id || null, event: 'limit_reached_students', context: { used, limit: lim } });
-      throw httpError('STUDENT_LIMIT', 429, 'STUDENT_LIMIT');
+      throw httpError(
+        'STUDENT_LIMIT',
+        429,
+        'Tələbə limitinə çatdınız — davam etmək üçün daha geniş paket seçin.',
+      );
     }
     next();
   } catch (e) {
@@ -41,11 +45,33 @@ function enforceStorageLimit(req, _res, next) {
   try {
     const e = req.entitlements;
     if (!e) return next();
-    const lim = e.limits?.storage_mb;
-    const used = e.usage?.storage_mb ?? 0;
-    if (lim != null && used >= lim) {
-      void logBillingEvent(db, { user_id: req.user?.id || null, event: 'limit_reached_storage', context: { used, limit: lim } });
-      throw httpError('STORAGE_LIMIT', 429, 'STORAGE_LIMIT');
+    const limMb = e.limits?.storage_mb;
+    const limBytes = e.limits?.storage_limit_bytes;
+    const usedMb = e.usage?.storage_mb ?? 0;
+    const usedBytes = e.usage?.storage_bytes ?? 0;
+    if (
+      limBytes != null &&
+      Number.isFinite(Number(limBytes)) &&
+      Number(usedBytes) >= Number(limBytes)
+    ) {
+      void logBillingEvent(db, {
+        user_id: req.user?.id || null,
+        event: 'limit_reached_storage',
+        context: { used_bytes: usedBytes, limit_bytes: limBytes },
+      });
+      throw httpError(
+        'STORAGE_LIMIT',
+        429,
+        'Yaddaş limitinə çatdınız — davam etmək üçün daha geniş paket seçin.',
+      );
+    }
+    if (limMb != null && usedMb >= limMb) {
+      void logBillingEvent(db, { user_id: req.user?.id || null, event: 'limit_reached_storage', context: { used: usedMb, limit: limMb } });
+      throw httpError(
+        'STORAGE_LIMIT',
+        429,
+        'Yaddaş limitinə çatdınız — davam etmək üçün daha geniş paket seçin.',
+      );
     }
     next();
   } catch (e) {
@@ -61,7 +87,11 @@ function enforceSmsLimit(req, _res, next) {
     const used = e.usage?.sms_monthly ?? 0;
     if (lim != null && used >= lim) {
       void logBillingEvent(db, { user_id: req.user?.id || null, event: 'limit_reached_sms', context: { used, limit: lim } });
-      throw httpError('SMS_LIMIT', 429, 'SMS_LIMIT');
+      throw httpError(
+        'SMS_LIMIT',
+        429,
+        'SMS limitinə çatdınız — davam etmək üçün daha geniş paket seçin.',
+      );
     }
     next();
   } catch (e) {

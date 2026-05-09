@@ -7,9 +7,11 @@ const errorHandler = (err, req, res, next) => {
   if (err.code === '23503')
     return res.status(400).json({ success: false, message: 'Əlaqəli məlumat tapılmadı' });
 
-  res.status(err.status || 500).json({
+  const status = Number(err.status || err.statusCode || 500) || 500;
+  res.status(status).json({
     success: false,
     message: err.message || 'Server xətası',
+    ...(err.code && typeof err.code === 'string' ? { code: err.code } : {}),
   });
 };
 

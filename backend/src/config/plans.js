@@ -1,9 +1,10 @@
 const PLANS = {
   basic: {
-    price_azn: 15,
-    students: 20,
-    storage_mb: 1024, // 1 GB
-    sms_monthly: 30,
+    price_azn: 0,
+    students: 5,
+    storage_limit_bytes: 512 * 1024,
+    storage_mb: null,
+    sms_monthly: 5,
   },
   pro: {
     price_azn: 29,
@@ -19,12 +20,6 @@ const PLANS = {
   },
 };
 
-const TRIAL_LIMITS = {
-  students: 5,
-  storage_mb: 200,
-  sms_monthly: 10,
-};
-
 function normalizePlanSlug(raw) {
   const s = String(raw || '').trim().toLowerCase();
   if (s === 'pro') return 'pro';
@@ -32,5 +27,5 @@ function normalizePlanSlug(raw) {
   return 'basic';
 }
 
-module.exports = { PLANS, TRIAL_LIMITS, normalizePlanSlug };
+module.exports = { PLANS, normalizePlanSlug };
 

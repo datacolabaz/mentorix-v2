@@ -1,3 +1,12 @@
+function fmtBytesShort(n) {
+  const x = Number(n)
+  if (!Number.isFinite(x) || x < 0) return '—'
+  if (x < 1024) return `${Math.round(x)} B`
+  if (x < 1024 * 1024) return `${Math.round(x / 102.4) / 10} KB`
+  const mb = x / (1024 * 1024)
+  return mb >= 10 ? `${Math.round(mb)} MB` : `${Math.round(mb * 10) / 10} MB`
+}
+
 function fmtLimit(v, unit) {
   if (v == null) return '∞'
   if (unit === 'mb') {
@@ -36,10 +45,15 @@ export default function BillingUsagePills({ billing }) {
   if (!billing) return null
   const lim = billing.limits || {}
   const used = billing.usage || {}
+  const byteCap = lim.storage_limit_bytes
+  const storageLabel =
+    byteCap != null && Number.isFinite(Number(byteCap))
+      ? `${fmtBytesShort(used.storage_bytes)} / ${fmtBytesShort(byteCap)}`
+      : `${fmtUsed(used.storage_mb, 'mb')} / ${fmtLimit(lim.storage_mb, 'mb')}`
   return (
     <div className="flex flex-wrap items-center gap-2">
       <Pill label="Students" value={`${fmtUsed(used.students, 'n')} / ${fmtLimit(lim.students, 'n')}`} />
-      <Pill label="Storage" value={`${fmtUsed(used.storage_mb, 'mb')} / ${fmtLimit(lim.storage_mb, 'mb')}`} />
+      <Pill label="Storage" value={storageLabel} />
       <Pill label="Monthly SMS usage" value={`${fmtUsed(used.sms_monthly, 'n')} / ${fmtLimit(lim.sms_monthly, 'n')}`} />
     </div>
   )
