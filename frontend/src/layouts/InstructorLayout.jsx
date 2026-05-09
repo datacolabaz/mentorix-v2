@@ -477,7 +477,7 @@ export default function InstructorLayout() {
           }}
         >
           <p className="text-xs text-gray-400">
-            Telefon təsdiqi tamamlanmadan tələbə əlavə etmək və trial aktivləşdirmək mümkün deyil.
+            Telefon təsdiqi tamamlanmadan yeni tələbə əlavə etmək mümkün deyil.
           </p>
           <div>
             <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Telefon nömrəsi</label>

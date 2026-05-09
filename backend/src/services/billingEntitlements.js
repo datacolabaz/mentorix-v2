@@ -53,11 +53,10 @@ async function ensureSubscriptionRow(dbConn, userId) {
   );
   if (rows[0]) return rows[0];
 
-  // Default: 14-day trial on BASIC (plan-driven).
-  // After it expires getCurrentPlan() will move it to past_due (+2d grace), then resolveEntitlements() will mark it expired.
+  // Permanent free (BASIC): no subscription end date — limits come from subscription_plans only.
   const { rows: ins } = await dbConn.query(
     `INSERT INTO subscriptions (user_id, plan, status, current_period_start, current_period_end, updated_at)
-     VALUES ($1, 'basic', 'active', NOW(), NOW() + interval '14 days', NOW())
+     VALUES ($1, 'basic', 'active', NOW(), NULL, NOW())
      RETURNING user_id, plan, status`,
     [userId]
   );
@@ -170,10 +169,10 @@ function buildMessages(status, remStudents, phone_verified, details) {
       remStudents === 1
         ? 'Tələbə limitinizin bitməsinə 1 yer qalıb'
         : `Tələbə limitinizin bitməsinə ${remStudents ?? 0} yer qalıb`;
-    return { banner, cta: { label: 'Upgrade to PRO', action: 'OPEN_UPGRADE_MODAL' } };
+    return { banner, cta: { label: 'Yüksəlt', action: 'OPEN_UPGRADE_MODAL' } };
   }
   if (status === 'grace') {
-    return { banner: 'Sınaq müddətiniz bitib. Davam etmək üçün paket seçin.', cta: { label: 'Paket seç', action: 'OPEN_UPGRADE_MODAL' } };
+    return { banner: 'Abunəlik müddətiniz tamamlanmadı. Davam üçün paket seçin.', cta: { label: 'Paket seç', action: 'OPEN_UPGRADE_MODAL' } };
   }
   if (status === 'blocked') {
     const reasons = [];
@@ -259,14 +258,7 @@ async function resolveEntitlements(userId) {
   const should_warn = status === 'warning';
   const should_block = (status2 === 'blocked' || status2 === 'expired'); // grace is NOT blocking
   const days_left = sub2?.current_period_end ? ceilDaysLeft(sub2.current_period_end) : null;
-  let messages = buildMessages(status2, rem.students, phone_verified, { reachedStudents, reachedStorage, reachedSms });
-  // Show trial countdown banner for default BASIC trial.
-  if (!messages?.banner && planSlug === 'basic' && subStatus === 'active' && days_left != null) {
-    messages = {
-      banner: days_left === 1 ? 'Sınaq müddətinizin bitməsinə 1 gün qaldı' : `Sınaq müddətinizin bitməsinə ${days_left} gün qaldı`,
-      cta: { label: 'Paket seç', action: 'OPEN_UPGRADE_MODAL' },
-    };
-  }
+  const messages = buildMessages(status2, rem.students, phone_verified, { reachedStudents, reachedStorage, reachedSms });
 
   return {
     plan: planSlug,

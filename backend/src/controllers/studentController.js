@@ -150,9 +150,13 @@ const getStudent = async (req, res) => {
 const deleteStudent = async (req, res) => {
   try {
     const enrId = req.params.enrollmentId;
-    const { rows: enr } = await db.query('SELECT id, student_id FROM enrollments WHERE id = $1', [enrId]);
+    const { rows: enr } = await db.query(
+      'SELECT id, student_id, instructor_id FROM enrollments WHERE id = $1',
+      [enrId],
+    );
     if (!enr[0]) return res.status(404).json({ success: false, message: 'Enrollment tapılmadı' });
     const studentId = enr[0].student_id;
+    const instructorIdForUsage = enr[0].instructor_id;
 
     await db.transaction(async (client) => {
       // Safety: even if hard delete fails due to unexpected FK, disable login and free unique phone/email immediately
@@ -225,6 +229,28 @@ const deleteStudent = async (req, res) => {
       await client.query('DELETE FROM student_profiles WHERE user_id = $1', [studentId]).catch(() => {});
       // users row is kept (soft deleted above)
     });
+
+    if (instructorIdForUsage) {
+      const { rows: cntRows } = await db.query(
+        `SELECT COUNT(DISTINCT u.id)::int AS n
+         FROM enrollments e
+         JOIN users u ON u.id = e.student_id
+         WHERE e.instructor_id = $1
+           AND e.deleted_at IS NULL
+           AND COALESCE(NULLIF(LOWER(TRIM(e.status)), ''), 'active') = 'active'
+           AND u.is_active = TRUE`,
+        [instructorIdForUsage],
+      );
+      const n = Number(cntRows[0]?.n ?? 0) || 0;
+      await db
+        .query(
+          `INSERT INTO usage_counters (user_id, students_count)
+           VALUES ($1, $2)
+           ON CONFLICT (user_id) DO UPDATE SET students_count = $2, updated_at = NOW()`,
+          [instructorIdForUsage, n],
+        )
+        .catch(() => {});
+    }
 
     res.json({ success: true });
   } catch (err) {

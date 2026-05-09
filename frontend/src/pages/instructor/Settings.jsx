@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import api from '../../lib/api'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
@@ -8,9 +9,13 @@ import { instructorRoleAz } from '../../lib/instructorLabel'
 import useUiStore from '../../hooks/useUi'
 import { planPriceLabel } from '../../constants/subscriptionPlans'
 import { useSubscriptionPlans } from '../../hooks/useSubscriptionPlans'
-import { useBillingStatus } from '../../hooks/useBillingStatus'
+import { useBillingStatus, BILLING_STATUS_QUERY_KEY } from '../../hooks/useBillingStatus'
+import { SUBSCRIPTION_PLANS_QUERY_KEY } from '../../hooks/useSubscriptionPlans'
+import PricingBillingIntervalToggle from '../../components/instructor/PricingBillingIntervalToggle'
+import { formatAzn, yearlyTotalAzn, YEARLY_DISCOUNT } from '../../lib/pricing'
 
 export default function InstructorSettings() {
+  const qc = useQueryClient()
   const toast = useToast()
   const { user, updateUser } = useAuthStore()
   const { theme } = useUiStore()
@@ -27,6 +32,7 @@ export default function InstructorSettings() {
   const [newSubject, setNewSubject] = useState('')
   const [newGroupBySubject, setNewGroupBySubject] = useState({})
   const [busy, setBusy] = useState({})
+  const [billingInterval, setBillingInterval] = useState('yearly')
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -129,6 +135,70 @@ export default function InstructorSettings() {
   const currentPlanId = String(billing?.plan || 'basic').toLowerCase()
   const currentPlanObj = plans.find((p) => String(p?.id || '').toLowerCase() === currentPlanId) || null
 
+  const displayPriceForPlan = useCallback(
+    (p) => {
+      const pid = String(p?.id || '').toLowerCase()
+      const monthly = Number(p?.price_azn)
+      const isPaid = pid !== 'basic' && Number.isFinite(monthly) && monthly > 0
+      if (!isPaid) return { main: null, suffix: '', hint: null, isPaid: false }
+      if (billingInterval === 'monthly')
+        return { main: `${formatAzn(monthly)} AZN`, suffix: '/ay', hint: null, isPaid: true }
+      const y = yearlyTotalAzn(monthly, YEARLY_DISCOUNT)
+      return {
+        main: `${formatAzn(y)} AZN`,
+        suffix: '/il',
+        hint: `≈ ${formatAzn(monthly)} AZN/ay qarşılığında (12 ay, −${Math.round(YEARLY_DISCOUNT * 100)}%)`,
+        isPaid: true,
+      }
+    },
+    [billingInterval],
+  )
+
+  const currentPlanPricingLine = useMemo(() => {
+    if (!currentPlanObj) return '—'
+    const pid = String(currentPlanObj.id || '').toLowerCase()
+    if (pid === 'basic') return 'Ödənişsiz əsas paket — limitlər plana uyğundur.'
+    const m = Number(currentPlanObj.price_azn)
+    if (!Number.isFinite(m) || m <= 0) return planPriceLabel(currentPlanObj)
+    if (billingInterval === 'monthly') return `${formatAzn(m)} AZN/ay`
+    return `${formatAzn(yearlyTotalAzn(m))} AZN/il (təxm. ${formatAzn(m)} AZN/ay)`
+  }, [billingInterval, currentPlanObj])
+
+  async function downgradeToBasic() {
+    setPlanErr(null)
+    setPlanBusy(true)
+    try {
+      await api.post('/billing/select-basic')
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: BILLING_STATUS_QUERY_KEY }),
+        qc.invalidateQueries({ queryKey: SUBSCRIPTION_PLANS_QUERY_KEY }),
+      ])
+      toast('SADƏ (pulsuz) paket seçildi')
+    } catch (e) {
+      setPlanErr(e?.message || 'Əməliyyat alınmadı')
+    } finally {
+      setPlanBusy(false)
+    }
+  }
+
+  async function startUpgrade(planId) {
+    setPlanErr(null)
+    setPlanBusy(true)
+    try {
+      const r = await api.post('/billing/create-payment', {
+        plan: planId,
+        interval: billingInterval,
+      })
+      const url = r?.payment?.payment_url
+      if (!url) throw new Error('Ödəniş linki alınmadı')
+      window.location.href = url
+    } catch (e) {
+      setPlanErr(e?.message || 'Ödəniş yaradılmadı')
+    } finally {
+      setPlanBusy(false)
+    }
+  }
+
   const planRank = (id) => {
     const s = String(id || '').toLowerCase()
     if (s === 'business') return 3
@@ -169,81 +239,119 @@ export default function InstructorSettings() {
       <Card className="p-5 border border-indigo-500/20 space-y-4">
         <h2 className={cardTitleCls}>Paketini dəyiş</h2>
         <p className={cardTextCls}>
-          <span className="text-gray-200 font-medium">Sənin planın:</span>{' '}
+          <span className="text-gray-200 font-medium">Aktiv paket:</span>{' '}
           <span className="text-white font-semibold">
             {currentPlanObj?.title || String(currentPlanId || '').toUpperCase()}
-          </span>{' '}
-          <span className="text-gray-500">({currentPlanObj ? planPriceLabel(currentPlanObj) : '—'})</span>
+          </span>
+          <span className="text-gray-500"> — {currentPlanPricingLine}</span>
         </p>
-        <p className={cardTextCls}>Aşağıdan başqa paket seçərək upgrade/downgrade edə bilərsiniz.</p>
+        <p className={cardTextCls}>
+          Limitlərə çatdıqda daha geniş paket seçməlisiniz — müddət əsasən ödənişli paketlər üçün tətbiq olunur.
+        </p>
+        <PricingBillingIntervalToggle value={billingInterval} onChange={setBillingInterval} theme={theme} />
         {planErr ? (
           <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 text-rose-100 px-4 py-3 text-sm">
             {planErr}
           </div>
         ) : null}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {plans.map((p) => (
-            (() => {
-              const pid = String(p?.id || '').toLowerCase()
-              const isCurrent = pid && pid === currentPlanId
-              const isUpgrade = planRank(pid) > planRank(currentPlanId)
-              const btnLabel = isCurrent ? 'Current plan' : isUpgrade ? 'Upgrade' : 'Choose'
-              const btnDisabled = planBusy || isCurrent
-              return (
-            <div
-              key={p.id}
-              className={[
-                'rounded-2xl border p-4',
-                isCurrent
-                  ? 'border-emerald-500/40 bg-emerald-500/5'
-                  : p.highlight
-                    ? 'border-primary/40 bg-primary/5'
-                    : 'border-[color:var(--border-subtle)] bg-token-surfaceCard/40',
-              ].join(' ')}
-            >
-              <div className="text-sm font-bold text-token-textMain">{p.title}</div>
-              <div className="text-xs text-token-textMuted mt-1">{planPriceLabel(p)}</div>
-              <ul className="mt-3 space-y-1 text-xs text-token-textMain">
-                {(p.items || []).map((x) => (
-                  <li key={x} className="flex items-center gap-2">
-                    <span className="text-token-textMuted">•</span>
-                    <span>{x}</span>
-                  </li>
-                ))}
-              </ul>
-              {isCurrent ? (
-                <div className="mt-3 text-[11px] font-semibold text-emerald-300/90">
-                  ✓ Active
+          {plans.map((p) => {
+            const pid = String(p?.id || '').toLowerCase()
+            const isCurrent = pid && pid === currentPlanId
+            const isUpgrade = planRank(pid) > planRank(currentPlanId)
+            const isFree = pid === 'basic'
+
+            let btnLabel = 'Başla'
+            if (isCurrent) btnLabel = 'Aktiv paket'
+            else if (isUpgrade) btnLabel = 'Upgrade et'
+
+            const priceBox = displayPriceForPlan(p)
+
+            const limitsNote =
+              typeof p?.limitsNote === 'string' && p.limitsNote.trim()
+                ? p.limitsNote
+                : Array.isArray(p?.items) && p.items.length && String(p.items[0] || '').trim()
+                  ? String(p.items[0]).trim()
+                  : 'Limitlər mövcud paketə uyğun tətbiq olunur (idarəetmədə dəyişdirilə bilər).'
+
+            async function onPlanAction() {
+              if (isCurrent) return
+              if (isUpgrade) return startUpgrade(p.id)
+              if (isFree) return downgradeToBasic()
+              setPlanErr(null)
+              toast('Bu paketə keçid üçün dəstəyə yazın — cari abunə üçün endirimli dəyişiklik tələb olunur.')
+            }
+
+            const btnDisabled = planBusy || isCurrent
+
+            return (
+              <div
+                key={p.id}
+                className={[
+                  'rounded-2xl border p-4 transition-[transform,box-shadow,border-color] duration-300 ease-out',
+                  isCurrent
+                    ? 'border-emerald-500/45 bg-emerald-500/8 ring-1 ring-emerald-500/20'
+                    : p.highlight
+                      ? 'border-primary/45 bg-primary/6'
+                      : isFree
+                        ? 'border-teal-500/25 bg-teal-500/[0.04]'
+                        : 'border-[color:var(--border-subtle)] bg-token-surfaceCard/40',
+                ].join(' ')}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="text-sm font-bold text-token-textMain">{p.title}</div>
+                  {billingInterval === 'yearly' && priceBox?.isPaid ? (
+                    <span className="shrink-0 rounded-full bg-emerald-500/18 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-emerald-100">
+                      −20%
+                    </span>
+                  ) : null}
                 </div>
-              ) : null}
-              <div className="mt-4">
-                <Button
-                  className="w-full justify-center"
-                  variant={isCurrent ? 'secondary' : p.highlight ? 'primary' : 'secondary'}
-                  loading={planBusy}
-                  disabled={btnDisabled}
-                  onClick={async () => {
-                    setPlanErr(null)
-                    setPlanBusy(true)
-                    try {
-                      const r = await api.post('/billing/create-payment', { plan: p.id })
-                      const url = r?.payment?.payment_url
-                      if (!url) throw new Error('Ödəniş linki alınmadı')
-                      window.location.href = url
-                    } catch (e) {
-                      setPlanErr(e?.message || 'Ödəniş yaradılmadı')
-                    } finally {
-                      setPlanBusy(false)
-                    }
-                  }}
-                >
-                  {btnLabel}
-                </Button>
+                <div className="mt-2 flex flex-wrap items-baseline gap-1">
+                  {priceBox?.isPaid ? (
+                    <>
+                      <span className="text-lg font-display font-bold tracking-tight text-token-textMain">
+                        {priceBox.main}
+                      </span>
+                      <span className="text-xs font-medium text-token-textMuted">{priceBox.suffix}</span>
+                    </>
+                  ) : (
+                    <span className="text-lg font-display font-bold tracking-tight text-token-textMain">Pulsuz</span>
+                  )}
+                </div>
+                {priceBox?.hint ? (
+                  <p className="mt-1 text-[11px] leading-snug text-token-textMuted">{priceBox.hint}</p>
+                ) : billingInterval === 'yearly' && priceBox?.isPaid ? (
+                  <p className="mt-1 text-[11px] leading-snug text-emerald-600/95 dark:text-emerald-300/90">
+                    İllik seçərək 20% qənaət edin
+                  </p>
+                ) : null}
+
+                <p className="mt-3 text-[11px] leading-relaxed text-token-textMuted">{limitsNote}</p>
+
+                {isFree ? (
+                  <p className="mt-3 text-[11px] leading-relaxed text-token-textMain/85">
+                    Bu paketdə istifadə müddəti məhdud deyil. Limitlərə çatdıqda paket seçməyiniz tələb olunacaq.
+                  </p>
+                ) : null}
+
+                {isCurrent ? (
+                  <div className="mt-3 text-[11px] font-semibold text-emerald-300/90">Cari seçim</div>
+                ) : null}
+
+                <div className="mt-4">
+                  <Button
+                    className="w-full justify-center transition-opacity duration-200"
+                    variant={isCurrent ? 'secondary' : p.highlight ? 'primary' : 'secondary'}
+                    loading={planBusy}
+                    disabled={btnDisabled}
+                    onClick={() => void onPlanAction()}
+                  >
+                    {btnLabel}
+                  </Button>
+                </div>
               </div>
-            </div>
-              )
-            })()
-          ))}
+            )
+          })}
         </div>
       </Card>
 

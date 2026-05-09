@@ -1,7 +1,7 @@
 export const DEFAULT_SUBSCRIPTION_PLANS = [
-  { id: 'basic', title: 'BASIC', price_azn: 6, highlight: false, items: ['20 students', '1GB storage', '30 SMS'] },
-  { id: 'pro', title: 'PRO', price_azn: 10, highlight: true, items: ['100 students', '5GB storage', '200 SMS'] },
-  { id: 'business', title: 'BUSINESS', price_azn: 19, highlight: false, items: ['Unlimited students', '20GB storage', '500 SMS'] },
+  { id: 'basic', title: 'SADƏ', price_azn: 0, highlight: false, items: [] },
+  { id: 'pro', title: 'PRO', price_azn: 10, highlight: true, items: [] },
+  { id: 'business', title: 'BİZNES', price_azn: 19, highlight: false, items: [] },
 ]
 
 export function planPriceLabel(p) {

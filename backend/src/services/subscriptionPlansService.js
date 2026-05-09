@@ -14,7 +14,8 @@ function gbToMb(gb) {
   if (gb == null) return null;
   const n = Number(gb);
   if (!Number.isFinite(n)) return null;
-  return Math.round(n * 1024);
+  // Ceil avoids sub‑MB GB fractions collapsing to 0 MB (free tier fractions).
+  return Math.max(0, Math.ceil(n * 1024));
 }
 
 function normalizeRow(r) {

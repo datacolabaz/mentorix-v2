@@ -12,28 +12,12 @@ const { authenticate, authorize } = require('../middleware/auth');
 const db = require('../utils/db');
 const { patchStudentEmail } = require('../controllers/studentEmailController');
 const { deliverPermanentPinSms } = require('../controllers/authController');
-const {
-  requireInstructorPhoneVerified,
-  checkTrialActive,
-  checkStudentLimit,
-  checkDailyStudentLimit,
-  consumeTrialStudentSlotTx,
-} = require('../middleware/trial');
+const { requireInstructorPhoneVerified } = require('../middleware/trial');
 const { attachEntitlements, enforceStudentsLimit } = require('../middleware/entitlements');
 
-function enforceTrialForInstructors(req, res, next) {
-  // Admin actions shouldn't be blocked by trial gating.
+function gateInstructorEnrollment(req, res, next) {
   if (req.user?.role === 'admin') return next();
-  return requireInstructorPhoneVerified(req, res, (e1) => {
-    if (e1) return next(e1);
-    return checkTrialActive(req, res, (e2) => {
-      if (e2) return next(e2);
-      return checkStudentLimit(req, res, (e3) => {
-        if (e3) return next(e3);
-        return checkDailyStudentLimit(req, res, next);
-      });
-    });
-  });
+  return requireInstructorPhoneVerified(req, res, next);
 }
 
 function normalizePhoneDigits(phone) {
@@ -397,7 +381,7 @@ router.post(
   '/enroll',
   authenticate,
   authorize('instructor', 'admin'),
-  enforceTrialForInstructors,
+  gateInstructorEnrollment,
   attachEntitlements,
   enforceStudentsLimit,
   async (req, res) => {
@@ -637,10 +621,24 @@ router.post(
         }
       }
 
-      // Trial usage: only count successful enrollments made by instructors (not admin).
       if (req.user?.role === 'instructor') {
-        const ymd = req.trial_today_ymd || todayBaku;
-        await consumeTrialStudentSlotTx(client, instructor_id, ymd);
+        const { rows: cntRows } = await client.query(
+          `SELECT COUNT(DISTINCT u.id)::int AS n
+           FROM enrollments e
+           JOIN users u ON u.id = e.student_id
+           WHERE e.instructor_id = $1
+             AND e.deleted_at IS NULL
+             AND COALESCE(NULLIF(LOWER(TRIM(e.status)), ''), 'active') = 'active'
+             AND u.is_active = TRUE`,
+          [instructor_id],
+        )
+        const n = Number(cntRows[0]?.n ?? 0) || 0
+        await client.query(
+          `INSERT INTO usage_counters (user_id, students_count)
+           VALUES ($1, $2)
+           ON CONFLICT (user_id) DO UPDATE SET students_count = $2, updated_at = NOW()`,
+          [instructor_id, n],
+        )
       }
       return enr;
     });

@@ -16,6 +16,22 @@ function planRank(p) {
   return 1;
 }
 
+function normalizeBillingInterval(raw) {
+  const s = String(raw ?? '')
+    .trim()
+    .toLowerCase()
+  if (s === 'year' || s === 'yearly' || s === 'annual' || s === '12m' || s === 'illik' || s === 'il')
+    return 'yearly'
+  return 'monthly'
+}
+
+/** 20% off vs paying 12 × monthly */
+function yearlyTotalFromMonthly(monthlyAzn, discountPct = 0.2) {
+  const m = Number(monthlyAzn || 0) || 0
+  const d = Number(discountPct) || 0
+  return Math.round(m * 12 * (1 - Math.min(1, Math.max(0, d))) * 100) / 100
+}
+
 function addDaysIso(days) {
   const d = new Date(Date.now() + days * 86400000);
   return d.toISOString();
@@ -111,6 +127,38 @@ router.get('/invoices', authenticate, authorize('instructor'), async (req, res) 
   }
 });
 
+router.post('/select-basic', authenticate, authorize('instructor'), async (req, res) => {
+  try {
+    const uid = req.user.id
+    const cur = await getCurrentPlan(db, uid)
+    const from = normalizePlanSlug(cur.plan)
+    if (from === 'basic') {
+      return res.json({ success: true, plan: 'basic', noop: true })
+    }
+    await db.query(
+      `UPDATE subscriptions
+       SET plan = 'basic',
+           status = 'active',
+           current_period_start = NOW(),
+           current_period_end = NULL,
+           grace_until = NULL,
+           pending_plan = NULL,
+           pending_effective_at = NULL,
+           updated_at = NOW()
+       WHERE user_id = $1`,
+      [uid]
+    )
+    void logBillingEvent(db, {
+      user_id: uid,
+      event: 'downgrade_self_basic',
+      context: { previous_plan: from },
+    })
+    return res.json({ success: true, plan: 'basic' })
+  } catch (err) {
+    return res.status(err.statusCode || err.status || 500).json({ success: false, message: err.message })
+  }
+})
+
 router.post('/create-payment', authenticate, authorize('instructor'), async (req, res) => {
   try {
     // Fraud signals (soft): too many pending or failed spike.
@@ -153,9 +201,15 @@ router.post('/create-payment', authenticate, authorize('instructor'), async (req
     const priceAzn = Number(picked?.price_azn || 0) || 0;
     if (!priceAzn) return res.status(500).json({ success: false, code: 'PLAN_PRICE_MISSING', message: 'PLAN_PRICE_MISSING' });
 
+    const billingInterval = normalizeBillingInterval(req.body?.interval ?? req.body?.billing_interval);
+
     // Optional proration (feature flag): charge only the difference for remaining days.
-    let finalPriceAzn = priceAzn;
-    if (String(process.env.PAYRIFF_PRORATION || '').trim() === '1' && cur?.current_period_end) {
+    let finalPriceAzn = billingInterval === 'yearly' ? yearlyTotalFromMonthly(priceAzn, 0.2) : priceAzn;
+    if (
+      billingInterval === 'monthly' &&
+      String(process.env.PAYRIFF_PRORATION || '').trim() === '1' &&
+      cur?.current_period_end
+    ) {
       const endMs = new Date(cur.current_period_end).getTime();
       const nowMs = Date.now();
       if (Number.isFinite(endMs) && endMs > nowMs) {
@@ -175,10 +229,10 @@ router.post('/create-payment', authenticate, authorize('instructor'), async (req
 
     const amountCents = Math.round(finalPriceAzn * 100);
     const { rows: ins } = await db.query(
-      `INSERT INTO billing_payments (user_id, provider, plan, amount_cents, currency, status)
-       VALUES ($1, 'payriff', $2, $3, 'AZN', 'pending')
+      `INSERT INTO billing_payments (user_id, provider, plan, amount_cents, currency, status, billing_interval)
+       VALUES ($1, 'payriff', $2, $3, 'AZN', 'pending', $4)
        RETURNING id`,
-      [req.user.id, plan, amountCents]
+      [req.user.id, plan, amountCents, billingInterval]
     );
     const paymentId = ins[0]?.id;
     await db.query(
@@ -188,13 +242,14 @@ router.post('/create-payment', authenticate, authorize('instructor'), async (req
       [paymentId]
     );
 
+    const periodLabel = billingInterval === 'yearly' ? '12 ay' : '30 gün'
     const order = await createOrder({
       amount: finalPriceAzn,
       currency: 'AZN',
       language: 'AZ',
-      description: `Mentorix — ${plan.toUpperCase()} plan (30 days)`,
+      description: `Mentorix — ${String(picked?.title || plan).trim()} (${periodLabel})`,
       callbackUrl,
-      metadata: { payment_id: paymentId, user_id: req.user.id, plan },
+      metadata: { payment_id: paymentId, user_id: req.user.id, plan, billing_interval: billingInterval },
     });
 
     const orderId = order?.payload?.orderId || null;
@@ -265,7 +320,8 @@ async function processPayriffCallback(req, res) {
     // Idempotent processing.
     await db.transaction(async (client) => {
       const { rows: existingRows } = await client.query(
-        `SELECT id, user_id, plan, status
+        `SELECT id, user_id, plan, status,
+                COALESCE(NULLIF(TRIM(billing_interval), ''), 'monthly') AS billing_interval
          FROM billing_payments
          WHERE provider = 'payriff' AND external_order_id = $1
          LIMIT 1`,
@@ -316,6 +372,7 @@ async function processPayriffCallback(req, res) {
       );
       const oldPlan = normalizePlanSlug(subRows[0]?.plan || 'basic');
       const newPlan = normalizePlanSlug(existing.plan);
+      const billingInt = normalizeBillingInterval(existing.billing_interval);
 
       await client.query(
         `UPDATE billing_payments
@@ -331,19 +388,35 @@ async function processPayriffCallback(req, res) {
       await client.query(`UPDATE trials SET is_active = FALSE WHERE user_id = $1`, [existing.user_id]).catch(() => {});
 
       // Upgrade immediate; downgrade scheduled (not used here because create-payment only allows upgrades).
-      await client.query(
-        `UPDATE subscriptions
-         SET plan = $2,
-             status = 'active',
-             provider = 'payriff',
-             current_period_start = NOW(),
-             current_period_end = NOW() + interval '30 days',
-             pending_plan = NULL,
-             pending_effective_at = NULL,
-             updated_at = NOW()
-         WHERE user_id = $1`,
-        [existing.user_id, newPlan]
-      );
+      if (billingInt === 'yearly') {
+        await client.query(
+          `UPDATE subscriptions
+           SET plan = $2,
+               status = 'active',
+               provider = 'payriff',
+               current_period_start = NOW(),
+               current_period_end = NOW() + interval '365 days',
+               pending_plan = NULL,
+               pending_effective_at = NULL,
+               updated_at = NOW()
+           WHERE user_id = $1`,
+          [existing.user_id, newPlan]
+        );
+      } else {
+        await client.query(
+          `UPDATE subscriptions
+           SET plan = $2,
+               status = 'active',
+               provider = 'payriff',
+               current_period_start = NOW(),
+               current_period_end = NOW() + interval '30 days',
+               pending_plan = NULL,
+               pending_effective_at = NULL,
+               updated_at = NOW()
+           WHERE user_id = $1`,
+          [existing.user_id, newPlan]
+        );
+      }
 
       await client.query(
         `INSERT INTO billing_history (user_id, action, old_plan, new_plan, amount_cents, currency, status, provider, external_order_id)

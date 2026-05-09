@@ -238,7 +238,7 @@ export default function InstructorDashboard() {
         <div className="space-y-3">
           <div className="text-sm text-gray-200 font-semibold">İlk tələbəni əlavə et</div>
           <div className="text-xs text-gray-400">
-            Telefon təsdiqi tamamlandı. İndi ilk tələbəni əlavə edib trial-ı aktivləşdirə bilərsiniz.
+            Telefon təsdiqi tamamlandı. İndi ilk tələbənizi əlavə edə bilərsiniz.
           </div>
           <Button
             className="w-full justify-center py-3"
