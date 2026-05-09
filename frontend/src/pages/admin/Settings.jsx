@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
 import { useToast } from '../../components/common/Toast'
@@ -13,19 +13,51 @@ function formatBytesAz(n) {
   return mb >= 10 ? `${Math.round(mb)} MB` : `${Math.round(mb * 10) / 10} MB`
 }
 
+/** DB-dən gələn features bəzən jsonb obyekt/string ola bilər — textarea üçün sətir siyahısına çevir */
+function normalizePlanFeatures(raw) {
+  if (Array.isArray(raw)) return raw.map((x) => String(x ?? '').trim()).filter(Boolean)
+  if (raw == null) return []
+  if (typeof raw === 'string') {
+    const s = raw.trim()
+    if (!s) return []
+    try {
+      const p = JSON.parse(s)
+      return Array.isArray(p) ? p.map((x) => String(x ?? '').trim()).filter(Boolean) : []
+    } catch {
+      return s.split('\n').map((x) => x.trim()).filter(Boolean)
+    }
+  }
+  if (typeof raw === 'object') return []
+  return []
+}
+
 export default function AdminSettings() {
   const [smsDefaults, setSmsDefaults] = useState({ default_sms_limit: 100, default_storage_mb: 1024, default_ram_mb: 512 })
   const [plans, setPlans] = useState([])
   const [plansBusy, setPlansBusy] = useState(false)
+  const [plansReloadBusy, setPlansReloadBusy] = useState(false)
   const [plansErr, setPlansErr] = useState(null)
+  const [plansLoadedAt, setPlansLoadedAt] = useState(null)
   const toast = useToast()
+
+  const fetchPlans = useCallback(async () => {
+    setPlansErr(null)
+    const d = await api.get(`/admin/plans?t=${Date.now()}`)
+    const list = Array.isArray(d?.plans) ? d.plans : []
+    setPlans(
+      list.map((p) => ({
+        ...p,
+        features: normalizePlanFeatures(p.features),
+      })),
+    )
+    setPlansLoadedAt(new Date().toISOString())
+  }, [])
 
   useEffect(() => {
     let cancelled = false
     ;(async () => {
       try {
-        const d = await api.get('/admin/plans')
-        if (!cancelled) setPlans(Array.isArray(d?.plans) ? d.plans : [])
+        await fetchPlans()
       } catch (e) {
         if (!cancelled) setPlansErr(e?.message || 'Planlar yüklənmədi')
       }
@@ -33,7 +65,7 @@ export default function AdminSettings() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [fetchPlans])
 
   return (
     <div className="p-4 sm:p-6 min-w-0 max-w-3xl mx-auto w-full">
@@ -47,6 +79,36 @@ export default function AdminSettings() {
             <strong className="text-gray-300">Yaddaş (bayt)</strong> — dəqiq kiçik limit (məs. pulsuz sıra: 512 KB ={' '}
             <code className="text-indigo-300">524288</code>). Bayt doldurulubsa, GB ilə yuvarlama tətbiq olunmur.
           </p>
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+            {plansLoadedAt ? (
+              <p className="text-[11px] text-gray-500">
+                Son yükləmə:{' '}
+                <span className="text-gray-300 tabular-nums">{new Date(plansLoadedAt).toLocaleString('az-AZ')}</span>
+              </p>
+            ) : (
+              <span />
+            )}
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              loading={plansReloadBusy}
+              className="shrink-0"
+              onClick={async () => {
+                setPlansReloadBusy(true)
+                try {
+                  await fetchPlans()
+                  toast('Paketlər yeniləndi')
+                } catch (e) {
+                  setPlansErr(e?.message || 'Yenilənmədi')
+                } finally {
+                  setPlansReloadBusy(false)
+                }
+              }}
+            >
+              Serverdən yenilə
+            </Button>
+          </div>
           {plansErr ? (
             <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 text-rose-100 px-4 py-3 text-sm mb-4">
               {plansErr}
@@ -59,7 +121,14 @@ export default function AdminSettings() {
               {plans.map((p, idx) => (
                 <div key={p.slug} className="rounded-2xl border border-indigo-500/15 bg-[#0f0c29]/60 p-4 space-y-3">
                   <div className="flex items-center justify-between gap-3">
-                    <div className="text-sm font-bold text-white">{p.slug.toUpperCase()}</div>
+                    <div>
+                      <div className="text-sm font-bold text-white">{p.slug.toUpperCase()}</div>
+                      {p.updated_at ? (
+                        <div className="text-[10px] text-gray-500 mt-0.5 tabular-nums">
+                          DB: {new Date(p.updated_at).toLocaleString('az-AZ')}
+                        </div>
+                      ) : null}
+                    </div>
                     <label className="text-xs text-gray-300 flex items-center gap-2">
                       <input
                         type="checkbox"
@@ -246,7 +315,14 @@ export default function AdminSettings() {
                   setPlansBusy(true)
                   try {
                     const d = await api.put('/admin/plans', { plans })
-                    setPlans(Array.isArray(d?.plans) ? d.plans : plans)
+                    const saved = Array.isArray(d?.plans) ? d.plans : []
+                    setPlans(
+                      saved.map((row) => ({
+                        ...row,
+                        features: normalizePlanFeatures(row.features),
+                      })),
+                    )
+                    setPlansLoadedAt(new Date().toISOString())
                     toast('Planlar saxlanıldı')
                   } catch (e) {
                     setPlansErr(e?.message || 'Saxlanmadı')
@@ -261,8 +337,13 @@ export default function AdminSettings() {
           )}
         </Card>
 
-        <Card className="p-4 sm:p-6">
-          <h2 className="font-display font-bold text-base mb-4">📱 SMS Defolt Limitlər</h2>
+        <Card className="p-4 sm:p-6 border border-amber-500/20">
+          <h2 className="font-display font-bold text-base mb-2">📱 SMS defolt (köhnə UI)</h2>
+          <p className="text-xs text-amber-200/90 mb-4 leading-relaxed">
+            Bu blok <strong className="text-white">bazaya yazılmır</strong> — dəyərlər brauzerdə saxlanır, səhifəni bağlayanda itir.
+            Müəllim limitləri yalnız yuxarıdakı <strong className="text-white">Paketlər (Billing)</strong> cədvəlindən gəlir (
+            <code className="text-indigo-300">subscription_plans</code>). Əgər köhnə rəqamlar görürsünüzsə, əvvəlcə «Serverdən yenilə» və ya migrasiya/deploy yoxlayın.
+          </p>
           <div className="space-y-4">
             {[
               { key: 'default_sms_limit', label: 'SMS Limiti', unit: 'SMS' },
