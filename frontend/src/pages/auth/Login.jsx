@@ -66,11 +66,13 @@ function RoleIcon({ role }) {
   )
 }
 
-const ROLES = [
+/** Giriş ekranında göstərilən rollar (valideyn indi gizlədilib — lazım olanda əlavə et: { key: 'parent', label: 'Valideyn' }). */
+const ROLES_LOGIN = [
   { key: 'instructor', label: 'Müəllim' },
   { key: 'student', label: 'Tələbə' },
-  { key: 'parent', label: 'Valideyn' },
 ]
+
+const ROLE_LABELS = { instructor: 'Müəllim', student: 'Tələbə', parent: 'Valideyn' }
 
 const TRUST_STUDENTS_FLOOR = 100
 const TRUST_INSTRUCTORS_FLOOR = 15
@@ -153,7 +155,7 @@ export default function Login() {
   const [otpCode, setOtpCode] = useState('')
   const [otpSent, setOtpSent] = useState(false)
   const [linkOtpSent, setLinkOtpSent] = useState(false)
-  /** Telefon bağlama ekranından «Müəllim/valideyn» seçənlər üçün — tələbə rolu gizlədilir (təkrar hesab yaradılmır). */
+  /** Telefon bağlama ekranından «Müəllim» seçənlər üçün — tələbə rolu gizlədilir (təkrar hesab yaradılmır). */
   const [googleRoleExcludeStudent, setGoogleRoleExcludeStudent] = useState(false)
   const googleBtnRef = useRef(null)
   const [loading, setLoading] = useState(false)
@@ -261,13 +263,13 @@ export default function Login() {
   }
 
   const roleTitle = useMemo(() => {
-    const r = ROLES.find((x) => x.key === role)
-    return r?.label || '—'
+    if (!role) return '—'
+    return ROLE_LABELS[role] || role
   }, [role])
 
   const googleRoleChoices = useMemo(() => {
-    if (step === 'role' && googleRoleExcludeStudent) return ROLES.filter((x) => x.key !== 'student')
-    return ROLES
+    if (step === 'role' && googleRoleExcludeStudent) return ROLES_LOGIN.filter((x) => x.key !== 'student')
+    return ROLES_LOGIN
   }, [step, googleRoleExcludeStudent])
 
   /** GIS: `initialize()` təkrarlananda xəbərdarlıq verir — callback ref ilə saxlayırıq, düymə üçün yalnız `renderButton` yenilənir */
@@ -1207,7 +1209,7 @@ export default function Login() {
                             setStep('role')
                           }}
                         >
-                          Müəllim və ya valideynəm — qeydiyyata davam et
+                          Müəlliməm — qeydiyyata davam et
                         </button>
                         <button
                           type="button"
@@ -1281,13 +1283,11 @@ export default function Login() {
                         <div className="text-center text-sm text-gray-300 font-semibold">Rol seçin</div>
                         {googleRoleExcludeStudent ? (
                           <p className="text-[11px] text-center text-amber-200/90 leading-relaxed px-1">
-                            Tələbə hesabını telefonla bağlamaq üçün «Geri» ilə əvvəlki addıma qayıdın. Burada yalnız müəllim və
-                            valideyn qeydiyyatı davam edir.
+                            Tələbə hesabını telefonla bağlamaq üçün «Geri» ilə əvvəlki addıma qayıdın. Burada yalnız müəllim
+                            qeydiyyatı davam edir.
                           </p>
                         ) : null}
-                        <div
-                          className={`grid gap-3 ${googleRoleChoices.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}
-                        >
+                        <div className={`grid gap-3 ${googleRoleChoices.length <= 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
                           {googleRoleChoices.map((r) => (
                             <button
                               key={r.key}
@@ -1390,8 +1390,8 @@ export default function Login() {
 
                 {mode === 'phone' ? (
                   <>
-                    <div className="grid grid-cols-3 gap-3 mb-6">
-                      {ROLES.map((r) => (
+                    <div className={`grid gap-3 mb-6 ${ROLES_LOGIN.length <= 2 ? 'grid-cols-2 max-w-[280px] mx-auto' : 'grid-cols-3'}`}>
+                      {ROLES_LOGIN.map((r) => (
                         <button
                           key={r.key}
                           type="button"
