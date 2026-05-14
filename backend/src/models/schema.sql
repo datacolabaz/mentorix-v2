@@ -232,7 +232,7 @@ CREATE TABLE exam_questions (
   question_type VARCHAR(10) CHECK (question_type IN ('closed','open','matching','multiple','sequence')),
   options JSONB,
   correct_answer VARCHAR(5),
-  points INTEGER DEFAULT 10,
+  points NUMERIC(8, 2) DEFAULT 10,
   order_num INTEGER,
   negative_marking NUMERIC(6,3) DEFAULT 0
 );

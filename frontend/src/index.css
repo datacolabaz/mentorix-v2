@@ -67,6 +67,20 @@
     background-image: linear-gradient(rgba(34, 224, 136, 0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(34, 224, 136, 0.06) 1px, transparent 1px);
     background-size: 40px 40px;
   }
+  /* İmtahan nəticəsi: irsi rəng / WebKit autofill kimi hallarda belə oxunaqlı */
+  .mx-exam-answer-readout {
+    background-color: #0c0c0f !important;
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+  }
+  .mx-exam-answer-readout-text {
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+  }
+  .mx-exam-answer-readout-muted {
+    color: #a8a8b0 !important;
+    -webkit-text-fill-color: #a8a8b0 !important;
+  }
 }
 
 .theme-dark {

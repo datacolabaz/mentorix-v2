@@ -4,6 +4,7 @@ import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
 import Countdown from '../../components/exam/Countdown'
+import ExamBreakdownList from '../../components/exam/ExamBreakdownList'
 import { useToast } from '../../components/common/Toast'
 import useUiStore from '../../hooks/useUi'
 import useAuthStore from '../../hooks/useAuth'
@@ -197,6 +198,83 @@ function questionTypeLabelAz(t) {
   return m[t] || t
 }
 
+function normExamAnswerKey(id) {
+  if (id == null) return ''
+  return String(id).trim().toLowerCase().replace(/-/g, '')
+}
+
+function parseAnswersSnapshot(v) {
+  if (v == null) return null
+  if (typeof v === 'string') {
+    try {
+      const o = JSON.parse(v)
+      return typeof o === 'object' && o !== null ? o : null
+    } catch {
+      return null
+    }
+  }
+  if (typeof v === 'object') return v
+  return null
+}
+
+/** Təqdim / `answers` JSON: bir sualın xam dəyəri (uuid, sıra nömrəsi, 0-based indeks, massiv) */
+function pickSubmittedAnswerRaw(answers, questionId, displayOrder) {
+  if (!answers || typeof answers !== 'object') return undefined
+  if (Array.isArray(answers)) {
+    const i = Number(displayOrder) > 0 ? Number(displayOrder) - 1 : -1
+    if (i >= 0 && i < answers.length) return answers[i]
+    return undefined
+  }
+  const idStr = questionId == null ? '' : String(questionId)
+  if (idStr && Object.prototype.hasOwnProperty.call(answers, idStr)) return answers[idStr]
+  if (questionId != null && answers[questionId] !== undefined) return answers[questionId]
+  const want = normExamAnswerKey(questionId)
+  if (want) {
+    for (const k of Object.keys(answers)) {
+      if (normExamAnswerKey(k) === want) return answers[k]
+    }
+  }
+  if (displayOrder != null) {
+    const d = String(displayOrder).trim()
+    if (d && answers[d] !== undefined) return answers[d]
+    const n = Number(displayOrder)
+    if (Number.isFinite(n) && answers[n] !== undefined) return answers[n]
+    if (Number.isFinite(n) && n >= 1) {
+      const z = String(n - 1)
+      if (answers[z] !== undefined) return answers[z]
+    }
+  }
+  return undefined
+}
+
+function formatSubmittedAnswerText(raw) {
+  if (raw == null) return ''
+  if (typeof raw === 'string' || typeof raw === 'number' || typeof raw === 'boolean') {
+    return String(raw).replace(/\uFEFF/g, '').trim()
+  }
+  if (typeof raw === 'object') {
+    for (const k of ['choice', 'key', 'value', 'answer', 'letter', 'text']) {
+      if (raw[k] != null && String(raw[k]).trim() !== '') {
+        return String(raw[k]).replace(/\uFEFF/g, '').trim()
+      }
+    }
+  }
+  return String(raw).replace(/\uFEFF/g, '').trim()
+}
+
+/** Breakdown + DB/təqdim `answers` — mövcud olduqda tələbə cavabını həmişə `answers`-dan göstərir */
+function mergeReviewBreakdownWithAnswers(breakdown, answers) {
+  if (!Array.isArray(breakdown)) return []
+  const snap = parseAnswersSnapshot(answers)
+  if (!snap || typeof snap !== 'object') return breakdown
+  return breakdown.map((row) => {
+    const raw = pickSubmittedAnswerRaw(snap, row.question_id, row.order)
+    const txt = formatSubmittedAnswerText(raw)
+    if (!txt) return row
+    return { ...row, student_answer: txt }
+  })
+}
+
 const SUMMARY_TYPE_KEYS = ['closed', 'multiple', 'matching', 'open']
 
 /** Backend `buildExamTypeSummary` cavabı */
@@ -310,6 +388,8 @@ export default function StudentExams() {
   const [, bumpListUi] = useState(0)
   const activeExamRef = useRef(false)
   activeExamRef.current = !!activeExam
+  /** Siyahıdan avtomatik `/review` yükləməsinin təkrarlanmaması üçün */
+  const lastListReviewKeyRef = useRef('')
   const toast = useToast()
   const { setFocusMode, theme } = useUiStore()
   const { user } = useAuthStore()
@@ -396,6 +476,40 @@ export default function StudentExams() {
     loadExams(false)
   }, [loadExams])
 
+  /**
+   * Təqdimdən dərhal sonra breakdown `submit` cavabından gəlir; səhifə yenilənəndə state itir.
+   * Siyahı yenilənəndə ən son təqdim olunmuş imtahan üçün `/review` ilə xülasəni bir dəfə doldururuq.
+   */
+  useEffect(() => {
+    if (activeExam) return
+    if (!Array.isArray(exams) || exams.length === 0) return
+    const completed = exams.filter((e) => e?.submitted_at)
+    if (!completed.length) return
+    let latest = completed[0]
+    for (const e of completed) {
+      const t = new Date(e.submitted_at).getTime()
+      const t0 = new Date(latest.submitted_at).getTime()
+      if (t > t0) latest = e
+    }
+    if (!latest?.id) return
+    const key = `${latest.id}:${latest.submitted_at || ''}`
+    if (lastListReviewKeyRef.current === key) return
+    const ac = new AbortController()
+    api
+      .get(`/exams/${latest.id}/review`, { signal: ac.signal })
+      .then((d) => {
+        lastListReviewKeyRef.current = key
+        setResult(d.score ?? null)
+        const br = Array.isArray(d.breakdown) ? d.breakdown : []
+        setResultBreakdown(mergeReviewBreakdownWithAnswers(br, d.answers))
+        setResultTypeSummary(d.type_summary ?? null)
+      })
+      .catch(() => {
+        /* icazə yoxdursa və s. */
+      })
+    return () => ac.abort()
+  }, [exams, activeExam])
+
   // Gözləyərkən səhifə yeniləmədən "Başla" görünsün (vaxt keçəndə re-render)
   useEffect(() => {
     if (activeExam) return undefined
@@ -433,10 +547,12 @@ export default function StudentExams() {
     try {
       const d = await api.get(`/exams/${exam.id}/review`)
       const files = normalizeExamFiles(d.exam || exam)
+      const br = Array.isArray(d.breakdown) ? d.breakdown : []
+      const merged = mergeReviewBreakdownWithAnswers(br, d.answers)
       setReviewModal({
         title: exam.title,
         loading: false,
-        breakdown: Array.isArray(d.breakdown) ? d.breakdown : [],
+        breakdown: merged,
         exam_files: files,
         exam_id: d?.exam?.id || exam?.id || null,
         type_summary: d.type_summary || null,
@@ -510,7 +626,8 @@ export default function StudentExams() {
         answers,
       })
       setResult(data?.score ?? null)
-      setResultBreakdown(Array.isArray(data?.breakdown) ? data.breakdown : null)
+      const br = Array.isArray(data?.breakdown) ? data.breakdown : []
+      setResultBreakdown(mergeReviewBreakdownWithAnswers(br, data.answers))
       setResultTypeSummary(data?.type_summary ?? null)
       setActiveExam(null)
       setFocusMode(false)
@@ -690,7 +807,7 @@ export default function StudentExams() {
                   {q.question_text ?? `Sual ${i + 1}`}
                 </p>
                 <span className="text-gray-500 text-xs flex-shrink-0 w-full sm:w-auto sm:ml-auto text-left sm:text-right">
-                  {q.points} bal
+                  {Number(q.points)} bal
                 </span>
               </div>
 
@@ -747,7 +864,10 @@ export default function StudentExams() {
                   <p className="text-xs text-gray-500">
                     Cavabınızı rəqəm+hərf cütləri ilə bitişik yazın (boşluq yoxdur; ardıcıllıq fərqi etmir).
                     <span className="block mt-1">
-                      Nümunə: <span className="font-mono text-indigo-300">1a2b3c</span>
+                      Nümunə:{' '}
+                      <span className="font-mono text-indigo-300">
+                        {(String(q.template_hint || '').trim() || '1a2b3c')}
+                      </span>
                     </span>
                   </p>
                   <input
@@ -755,7 +875,7 @@ export default function StudentExams() {
                     inputMode="text"
                     autoComplete="off"
                     className={examInputCls}
-                    placeholder="məs. 1a2b3c"
+                    placeholder={`məs. ${String(q.template_hint || '').trim() || '1a2b3c'}`}
                     value={answers[q.id] || ''}
                     onChange={(e) =>
                       setAnswers((p) => ({
@@ -865,60 +985,7 @@ export default function StudentExams() {
         <Card hover className="p-6 mb-6 border-indigo-500/30">
           <h2 className="font-display font-bold text-lg text-token-textMain mb-1">Suallar üzrə nəticə</h2>
           <p className="text-xs text-token-textMuted mb-4">Yazdığınız cavabların xülasəsi.</p>
-          <div className="space-y-3 max-h-[min(70vh,520px)] overflow-y-auto pr-1">
-            {resultBreakdown.filter(Boolean).map((row) => (
-              <div
-                key={row.question_id || row.order}
-                className="rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard/40 hover:bg-token-surfaceCard/55 transition-colors p-4 text-left"
-              >
-                <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
-                  <span className="text-sm font-bold text-token-textMain">Sual {row.order}</span>
-                  <span className="text-[11px] uppercase tracking-wide text-token-textMuted">
-                    {questionTypeLabelAz(row.question_type)}
-                  </span>
-                </div>
-                <p className="text-sm text-token-textMain mb-3 leading-snug">{row.question_text}</p>
-                <div className="grid gap-2 text-sm">
-                  <div>
-                    <span className="text-xs text-token-textMuted block mb-0.5">Sizin cavabınız</span>
-                    <div className="block font-mono text-xs break-all rounded-lg border border-[color:var(--border-subtle)] bg-token-surfaceCard/50 px-2.5 py-1.5 text-gray-900 dark:text-white">
-                      {row.student_answer}
-                    </div>
-                  </div>
-                  {row.correct_display ? (
-                    <div>
-                      <span className="text-xs text-token-textMuted block mb-0.5">
-                        {row.correct_label || 'Şablon / nümunə'}
-                      </span>
-                      <div
-                        className="inline-flex max-w-full items-center rounded-lg border border-[color:var(--border-subtle)] bg-token-surfaceCard/60 px-2.5 py-1.5 font-mono text-xs text-token-textMain break-all"
-                        role="note"
-                        aria-readonly="true"
-                      >
-                        {row.correct_display}
-                      </div>
-                    </div>
-                  ) : null}
-                </div>
-                <div className="mt-3">
-                  <span
-                    className={
-                      'inline-flex text-xs font-bold px-2.5 py-1 rounded-lg ' +
-                      (row.status_label === 'Düzgün' || row.status_label === 'Doğru'
-                        ? 'bg-emerald-500/20 text-emerald-300'
-                        : row.status_label === 'Səhv'
-                          ? 'bg-red-500/15 text-red-300'
-                          : row.status_label === 'Cavabsız'
-                            ? 'bg-amber-500/15 text-amber-200'
-                            : 'bg-gray-500/15 text-gray-400')
-                    }
-                  >
-                    {row.status_label === 'Manual qiymətləndirmə' ? 'Yoxlanılır' : row.status_label}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
+          <ExamBreakdownList rows={resultBreakdown} />
         </Card>
       )}
 
@@ -1090,60 +1157,9 @@ export default function StudentExams() {
             </div>
             <ExamTypeSummaryPanel summary={reviewModal.type_summary} />
             {reviewModal.breakdown?.length > 0 && (
-              <div className="space-y-3 max-h-[min(60vh,480px)] overflow-y-auto pr-1">
+              <div>
                 <h3 className="text-sm font-bold text-token-textMain mb-2">Suallar üzrə</h3>
-                {reviewModal.breakdown.filter(Boolean).map((row) => (
-                  <div
-                    key={row.question_id || row.order}
-                    className="rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard/40 hover:bg-token-surfaceCard/55 transition-colors p-4 text-left"
-                  >
-                    <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
-                      <span className="text-sm font-bold text-token-textMain">Sual {row.order}</span>
-                      <span className="text-[11px] uppercase tracking-wide text-token-textMuted">
-                        {questionTypeLabelAz(row.question_type)}
-                      </span>
-                    </div>
-                    <p className="text-sm text-token-textMain mb-3 leading-snug">{row.question_text}</p>
-                    <div className="grid gap-2 text-sm">
-                      <div>
-                        <span className="text-xs text-token-textMuted block mb-0.5">Sizin cavabınız</span>
-                        <div className="block font-mono text-xs break-all rounded-lg border border-[color:var(--border-subtle)] bg-token-surfaceCard/50 px-2.5 py-1.5 text-gray-900 dark:text-white">
-                          {row.student_answer}
-                        </div>
-                      </div>
-                      {row.correct_display ? (
-                        <div>
-                          <span className="text-xs text-token-textMuted block mb-0.5">
-                            {row.correct_label || 'Şablon / nümunə'}
-                          </span>
-                          <div
-                            className="inline-flex max-w-full items-center rounded-lg border border-[color:var(--border-subtle)] bg-token-surfaceCard/60 px-2.5 py-1.5 font-mono text-xs text-token-textMain break-all"
-                            role="note"
-                            aria-readonly="true"
-                          >
-                            {row.correct_display}
-                          </div>
-                        </div>
-                      ) : null}
-                    </div>
-                    <div className="mt-3">
-                      <span
-                        className={
-                          'inline-flex text-xs font-bold px-2.5 py-1 rounded-lg ' +
-                          (row.status_label === 'Düzgün' || row.status_label === 'Doğru'
-                            ? 'bg-emerald-500/20 text-emerald-300'
-                            : row.status_label === 'Səhv'
-                              ? 'bg-red-500/15 text-red-300'
-                              : row.status_label === 'Cavabsız'
-                                ? 'bg-amber-500/15 text-amber-200'
-                                : 'bg-gray-500/15 text-gray-400')
-                        }
-                      >
-                        {row.status_label === 'Manual qiymətləndirmə' ? 'Yoxlanılır' : row.status_label}
-                      </span>
-                    </div>
-                  </div>
-                ))}
+                <ExamBreakdownList rows={reviewModal.breakdown} />
               </div>
             )}
 

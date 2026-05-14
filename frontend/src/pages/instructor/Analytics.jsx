@@ -14,6 +14,8 @@ import {
 import api from '../../lib/api'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
+import Modal from '../../components/common/Modal'
+import ExamBreakdownList from '../../components/exam/ExamBreakdownList'
 import useUiStore from '../../hooks/useUi'
 
 const COLORS = ['#e1306c', '#1877f2', '#000', '#3b82f6', '#6366f1']
@@ -28,6 +30,10 @@ export default function InstructorAnalytics() {
   const [exams, setExams] = useState([])
   const [examId, setExamId] = useState('')
   const [groups, setGroups] = useState([])
+
+  useEffect(() => {
+    setStudentReviewModal(null)
+  }, [examId])
   const [selectedGrade, setSelectedGrade] = useState('')
   const [selectedSubject, setSelectedSubject] = useState('')
   const [selectedGroup, setSelectedGroup] = useState('')
@@ -35,6 +41,8 @@ export default function InstructorAnalytics() {
   const [top10, setTop10] = useState([])
   const [examLoading, setExamLoading] = useState(false)
   const [examErr, setExamErr] = useState(null)
+  /** { open, loading, error, title, score, submitted_at, breakdown } */
+  const [studentReviewModal, setStudentReviewModal] = useState(null)
   const theme = useUiStore((s) => s.theme)
   const gridStroke = theme === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(15,23,42,0.10)'
 
@@ -73,6 +81,40 @@ export default function InstructorAnalytics() {
       setGroupResults([])
     } finally {
       setExamLoading(false)
+    }
+  }
+
+  const openStudentExamAnswers = async (studentId, displayName) => {
+    if (!examId || !studentId) return
+    setStudentReviewModal({
+      loading: true,
+      error: null,
+      title: displayName || 'Tələbə',
+      score: null,
+      submitted_at: null,
+      breakdown: [],
+    })
+    try {
+      const d = await api.get(
+        `/exams/${encodeURIComponent(examId)}/review?student_id=${encodeURIComponent(studentId)}`
+      )
+      setStudentReviewModal({
+        loading: false,
+        error: null,
+        title: d.student_name || displayName || 'Tələbə',
+        score: d.score,
+        submitted_at: d.submitted_at,
+        breakdown: Array.isArray(d.breakdown) ? d.breakdown : [],
+      })
+    } catch (e) {
+      setStudentReviewModal({
+        loading: false,
+        error: e?.message || 'Yüklənmədi',
+        title: displayName || 'Tələbə',
+        score: null,
+        submitted_at: null,
+        breakdown: [],
+      })
     }
   }
 
@@ -566,22 +608,31 @@ export default function InstructorAnalytics() {
               ) : (
                 <div className="space-y-2 max-h-[420px] overflow-y-auto pr-1">
                   {groupResults.map((r) => (
-                    <div key={r.student_id} className="flex items-center justify-between gap-3 px-3 py-2 rounded-xl border border-indigo-500/10 bg-[#13112e]/60">
-                      <div className="min-w-0">
+                    <div
+                      key={r.student_id}
+                      className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl border border-indigo-500/10 bg-[#13112e]/60"
+                    >
+                      <div className="min-w-0 flex-1">
                         <p className="text-sm font-semibold text-white truncate">
                           {r.rank === 1 ? '🥇 ' : r.rank === 2 ? '🥈 ' : r.rank === 3 ? '🥉 ' : ''}
                           {r.rank}. {r.full_name}
                         </p>
                         <p className="text-[11px] text-gray-500 font-mono tabular-nums">
-                          {Number.isFinite(Number(r.duration_seconds)) ? `${Math.round(Number(r.duration_seconds))}s` : '—'}
+                          {Number.isFinite(Number(r.duration_seconds))
+                            ? `${Math.round(Number(r.duration_seconds))}s`
+                            : '—'}
                         </p>
                       </div>
+                      <button
+                        type="button"
+                        onClick={() => void openStudentExamAnswers(r.student_id, r.full_name)}
+                        className="text-[11px] font-semibold text-sky-300 hover:text-sky-200 border border-sky-500/30 rounded-lg px-2 py-1 shrink-0"
+                      >
+                        Cavablar
+                      </button>
                       <div className="text-right shrink-0">
                         <p className="text-sm font-extrabold text-white">
-                          {Math.round(
-                            Math.min(100, Math.max(0, Number(r.score_pct ?? r.score) || 0))
-                          )}
-                          %
+                          {Math.round(Math.min(100, Math.max(0, Number(r.score_pct ?? r.score) || 0)))}%
                         </p>
                       </div>
                     </div>
@@ -592,6 +643,41 @@ export default function InstructorAnalytics() {
           </div>
         )}
       </Card>
+
+      {studentReviewModal != null && (
+        <Modal
+          open
+          onClose={() => setStudentReviewModal(null)}
+          title={`${studentReviewModal.title || 'Tələbə'} — cavablar`}
+          size="lg"
+        >
+          {studentReviewModal.loading ? (
+            <p className="text-gray-500 text-center py-10">Yüklənir…</p>
+          ) : studentReviewModal.error ? (
+            <p className="text-red-400 text-sm text-center py-6">{studentReviewModal.error}</p>
+          ) : (
+            <>
+              <div className="text-center mb-4">
+                <div className="font-display font-extrabold text-2xl text-white">
+                  {Number.isFinite(Number(studentReviewModal.score))
+                    ? Math.round(Number(studentReviewModal.score) * 100) / 100
+                    : '—'}{' '}
+                  bal
+                </div>
+                {studentReviewModal.submitted_at && (
+                  <p className="text-xs text-gray-500 mt-2">
+                    Təqdim: {new Date(studentReviewModal.submitted_at).toLocaleString('az-AZ')}
+                  </p>
+                )}
+              </div>
+              <ExamBreakdownList
+                rows={studentReviewModal.breakdown}
+                answerHeading="Tələbənin cavabı"
+              />
+            </>
+          )}
+        </Modal>
+      )}
     </div>
   )
 }

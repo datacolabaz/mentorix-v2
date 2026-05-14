@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import api from '../../lib/api'
 import Card from '../../components/common/Card'
@@ -208,8 +208,33 @@ export default function InstructorDashboard() {
       row?.exam_avg_score != null
         ? Math.min(100, Math.max(0, Number(row.exam_avg_score)))
         : 0
-    return { name: first.length > 12 ? `${first.slice(0, 11)}…` : first, bal }
+    const examCount = Math.max(0, Math.floor(Number(row?.exams_taken)))
+    return {
+      name: first.length > 12 ? `${first.slice(0, 11)}…` : first,
+      fullName: String(s.full_name || '—').trim() || '—',
+      bal,
+      examCount,
+    }
   })
+
+  const ExamLineTooltip = ({ active, payload }) => {
+    if (!active || !payload?.length) return null
+    const p = payload[0]?.payload
+    if (!p) return null
+    const n = Number(p.examCount) || 0
+    const pct = Math.round(Number(p.bal))
+    return (
+      <div className="rounded-xl border border-white/10 bg-[#0b0b0b] px-3 py-2 text-xs shadow-lg max-w-[240px]">
+        <div className="font-semibold text-white mb-1">{p.fullName || p.name}</div>
+        <div className="text-emerald-300">Orta faiz: {pct}%</div>
+        <div className="text-gray-400 mt-1 leading-snug">
+          {n > 0
+            ? `${n} təqdim olunmuş imtahanın ortalamasıdır (Dashboard ümumi göstərici).`
+            : 'Hələ təqdim olunmuş imtahan yoxdur — qrafikdə 0 göstərilir.'}
+        </div>
+      </div>
+    )
+  }
 
   const sparkFromScores = chartRows.map((r) => r.bal).filter((x) => Number.isFinite(Number(x)))
 
@@ -320,7 +345,15 @@ export default function InstructorDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 min-w-0">
         <div className="lg:col-span-2 min-w-0">
           <Card hover className="p-4 sm:p-5 min-w-0 overflow-hidden">
-            <h2 className="font-display font-bold text-base mb-4 text-token-textMain">Tələbə Proqresi (imtahan)</h2>
+            <h2 className="font-display font-bold text-base text-token-textMain">Tələbə Proqresi (imtahan)</h2>
+            <p className="text-xs text-token-textMuted mt-1 mb-3 leading-relaxed">
+              Qrafikdə ilk 10 tələbə: hər biri üçün təqdim olunmuş bütün imtahanlar üzrə orta faiz. Tək imtahanın
+              cədvəli və qruplar üçün{' '}
+              <Link to="/instructor/analytics" className="text-primary underline-offset-2 hover:underline font-medium">
+                Analitika
+              </Link>
+              .
+            </p>
             {students.length ? (
               <div className="w-full overflow-x-auto">
                 <div className="min-w-[520px] h-[280px] min-h-[240px]">
@@ -341,15 +374,7 @@ export default function InstructorDashboard() {
                       height={72}
                     />
                     <YAxis tick={axisTickY} domain={[0, 100]} width={36} />
-                    <Tooltip
-                      contentStyle={{
-                        background: '#0b0b0b',
-                        border: '1px solid rgba(34,224,136,0.25)',
-                        borderRadius: 12,
-                        color: '#fff',
-                      }}
-                      cursor={{ stroke: 'rgba(34,224,136,0.35)' }}
-                    />
+                    <Tooltip content={ExamLineTooltip} cursor={{ stroke: 'rgba(34,224,136,0.35)' }} />
                     <Line
                       type="monotone"
                       dataKey="bal"
@@ -375,12 +400,16 @@ export default function InstructorDashboard() {
         </div>
 
         <Card hover className="p-4 sm:p-5 min-w-0">
-          <h2 className="font-display font-bold text-base mb-4 text-token-textMain">Top Tələbələr (imtahan)</h2>
+          <h2 className="font-display font-bold text-base text-token-textMain">Top Tələbələr (imtahan)</h2>
+          <p className="text-xs text-token-textMuted mt-1 mb-3">
+            Sıralama eyni mənbəyə əsasən: təqdim olunmuş imtahanların orta faizi; yanında imtahan sayı.
+          </p>
           <div className="space-y-3">
             {topSorted.slice(0, 5).map((s, i) => {
               const ex = examById[String(s.id)]
               const hasScore = ex?.exam_avg_score != null
               const pct = hasScore ? Math.min(100, Math.max(0, Number(ex.exam_avg_score))) : 0
+              const taken = Math.max(0, Math.floor(Number(ex?.exams_taken)))
               return (
                 <div key={s.enrollment_id || s.id} className="flex items-center gap-2 sm:gap-3 min-w-0">
                   <span className="text-sm font-bold text-token-textMuted w-5 shrink-0">{i + 1}</span>
@@ -392,6 +421,9 @@ export default function InstructorDashboard() {
                         style={{ width: hasScore ? `${pct}%` : '0%' }}
                       />
                     </div>
+                    {hasScore && taken > 0 ? (
+                      <div className="text-[11px] text-token-textMuted mt-0.5">{taken} imtahanın ortası</div>
+                    ) : null}
                   </div>
                   <span className="text-sm font-bold text-token-textMain shrink-0 tabular-nums">
                     {hasScore ? `${Math.round(pct)}%` : '—'}

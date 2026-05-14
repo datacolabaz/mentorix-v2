@@ -22,6 +22,68 @@ function getAnswerRaw(answers, questionId) {
   return undefined;
 }
 
+function orderedExamQuestions(questions) {
+  return [...(questions || [])].sort((a, b) => (a.order_num || 0) - (b.order_num || 0));
+}
+
+function indexOfQuestionInExamOrder(ordered, q) {
+  const want = normQuestionKey(q?.id);
+  if (!want) return -1;
+  for (let i = 0; i < ordered.length; i += 1) {
+    if (normQuestionKey(ordered[i]?.id) === want) return i;
+  }
+  return -1;
+}
+
+/** Köhnə / müxtəlif klientlər: obyekt, FEFF və s. */
+function normalizeAnswerPayload(raw) {
+  if (raw == null) return '';
+  if (typeof raw === 'string' || typeof raw === 'number' || typeof raw === 'boolean') {
+    return String(raw).replace(/\uFEFF/g, '').trim();
+  }
+  if (typeof raw === 'object') {
+    for (const k of ['choice', 'key', 'value', 'answer', 'letter', 'text']) {
+      if (raw[k] != null && String(raw[k]).trim() !== '') {
+        return String(raw[k]).replace(/\uFEFF/g, '').trim();
+      }
+    }
+  }
+  return String(raw).replace(/\uFEFF/g, '').trim();
+}
+
+/**
+ * Cavab obyekti: { [sual_uuid]: "A" } və ya { "3": "A" }, bəzən answers[] imtahan sual sırası ilə.
+ */
+function resolveAnswerRaw(answers, q, indexInFullOrder) {
+  const idx = Number.isFinite(indexInFullOrder) && indexInFullOrder >= 0 ? indexInFullOrder : -1;
+  const candidates = [];
+
+  if (Array.isArray(answers)) {
+    if (idx >= 0 && answers[idx] !== undefined) candidates.push(answers[idx]);
+    if (q?.order_num != null) {
+      const j = Number(q.order_num) - 1;
+      if (Number.isFinite(j) && j >= 0 && j < answers.length) candidates.push(answers[j]);
+    }
+  }
+
+  if (answers && typeof answers === 'object' && !Array.isArray(answers)) {
+    candidates.push(getAnswerRaw(answers, q.id));
+    if (q?.order_num != null) {
+      candidates.push(getAnswerRaw(answers, q.order_num));
+      candidates.push(getAnswerRaw(answers, String(q.order_num)));
+    }
+  }
+
+  for (const c of candidates) {
+    if (c === undefined || c === null) continue;
+    if (normalizeAnswerPayload(c) !== '') return c;
+  }
+  if (!Array.isArray(answers) && answers && typeof answers === 'object') {
+    return getAnswerRaw(answers, q.id);
+  }
+  return undefined;
+}
+
 /** Ardıcıllıq: müəllimin saxladığı açar (boşdursa köhnə sətirlər üçün template_hint) */
 function sequenceEffectiveCorrect(q) {
   const ca = String(q?.correct_answer ?? '').trim();
@@ -165,6 +227,46 @@ function deriveMatchingKeyFromOptions(options) {
   return key;
 }
 
+function matchingPairCountFromOptions(options) {
+  let opts = options;
+  if (typeof opts === 'string') {
+    try {
+      opts = JSON.parse(opts);
+    } catch {
+      opts = [];
+    }
+  }
+  if (!Array.isArray(opts)) return 0;
+  return opts.filter((row) => row && typeof row === 'object').length;
+}
+
+/** Cüt sayına uyğun format nümunəsi (ümumi «1a2b3c» üç cütdür; iki cüt üçün 1a2b olmalıdır). */
+function syntheticMatchingTemplateHint(pairCount) {
+  const n = Math.min(Math.max(Number(pairCount) || 0, 1), 26);
+  let s = '';
+  for (let i = 1; i <= n; i += 1) {
+    s += `${i}${String.fromCharCode(96 + i)}`;
+  }
+  return s;
+}
+
+/**
+ * Tələbə tərəfində göstəriləcək uyğunluq nümunəsi: müəllim şablonu və ya cüt sayına uyğun sintetik.
+ * `correct_answer` burada istifadə olunmur (cavab sızdırılmır).
+ */
+function matchingStudentTemplateHint(q) {
+  const hint = q.template_hint != null ? String(q.template_hint).trim() : '';
+  const n = matchingPairCountFromOptions(q?.options);
+  const hintNorm = normMatchStrict(hint);
+  // Köhnə məntiq: bütün uyğunluq suallarına DB-də "1a2b3c" yazılırdı; cüt sayı 3 deyilsə tələbəni aldadırdı.
+  if (hintNorm === '1a2b3c' && n > 0 && n !== 3) {
+    return syntheticMatchingTemplateHint(n);
+  }
+  if (hint) return hint;
+  if (n > 0) return syntheticMatchingTemplateHint(n);
+  return '1a2b3c';
+}
+
 function gradeMatching(given, correct, optionsForFallback) {
   const g = normMatchStrict(given);
   const fallback = !String(correct ?? '').trim() ? deriveMatchingKeyFromOptions(optionsForFallback) : '';
@@ -182,12 +284,14 @@ function gradeMatching(given, correct, optionsForFallback) {
  */
 function buildAutoGradingMap(questions, answers) {
   const out = {};
+  const fullOrder = orderedExamQuestions(questions);
   for (const q of questions || []) {
     if (!q?.id) continue;
     const type = inferQuestionType(q);
     const id = q.id;
-    const raw = getAnswerRaw(answers, id);
-    const given = raw == null || raw === '' ? '' : String(raw);
+    const iFull = indexOfQuestionInExamOrder(fullOrder, q);
+    const raw = resolveAnswerRaw(answers, q, iFull);
+    const given = normalizeAnswerPayload(raw);
 
     if (type === 'matching') {
       const correct = String(q.correct_answer ?? '');
@@ -233,10 +337,10 @@ function emptyTypeAgg() {
  * Hər sual üçün avtomatik bal hissəsi + xülasə üçün nəticə növü.
  * `wrongPenaltyEnabled` — `exams.wrong_penalty_enabled` (müəllim seçimi).
  */
-function scoreQuestionForAuto(q, answers, wrongPenaltyEnabled) {
+function scoreQuestionForAuto(q, answers, wrongPenaltyEnabled, indexInFullOrder) {
   const type = inferQuestionType(q);
-  const rawAns = getAnswerRaw(answers, q.id);
-  const given = rawAns != null && rawAns !== '' ? String(rawAns).trim() : '';
+  const rawAns = resolveAnswerRaw(answers, q, indexInFullOrder);
+  const given = normalizeAnswerPayload(rawAns);
   const pts = Number(q.points || 0);
   const pen = wrongSelectionPenaltyMagnitude(q, wrongPenaltyEnabled);
 
@@ -302,10 +406,12 @@ function scoreQuestionForAuto(q, answers, wrongPenaltyEnabled) {
 const calculateScore = (questions, answers, opts = {}) => {
   const wrongPenaltyEnabled = opts.wrongPenaltyEnabled !== false;
   let earned = 0;
-  const scored = (questions || []).filter((q) => TYPE_KEYS.includes(inferQuestionType(q)));
+  const fullOrder = orderedExamQuestions(questions);
+  const scored = fullOrder.filter((q) => TYPE_KEYS.includes(inferQuestionType(q)));
 
   for (const q of scored) {
-    const r = scoreQuestionForAuto(q, answers, wrongPenaltyEnabled);
+    const idx = indexOfQuestionInExamOrder(fullOrder, q);
+    const r = scoreQuestionForAuto(q, answers, wrongPenaltyEnabled, idx);
     earned += r.delta;
   }
 
@@ -319,11 +425,13 @@ const calculateScore = (questions, answers, opts = {}) => {
 const buildExamTypeSummary = (questions, answers, opts = {}) => {
   const wrongPenaltyEnabled = opts.wrongPenaltyEnabled !== false;
   const byType = Object.fromEntries(TYPE_KEYS.map((k) => [k, emptyTypeAgg()]));
-  const scored = (questions || []).filter((q) => TYPE_KEYS.includes(inferQuestionType(q)));
+  const fullOrder = orderedExamQuestions(questions);
+  const scored = fullOrder.filter((q) => TYPE_KEYS.includes(inferQuestionType(q)));
 
   let rawSum = 0;
   for (const q of scored) {
-    const r = scoreQuestionForAuto(q, answers, wrongPenaltyEnabled);
+    const idx = indexOfQuestionInExamOrder(fullOrder, q);
+    const r = scoreQuestionForAuto(q, answers, wrongPenaltyEnabled, idx);
     rawSum += r.delta;
     const bucket = byType[r.type];
     if (r.outcome === 'correct') bucket.correct += 1;
@@ -350,10 +458,10 @@ const buildExamTypeSummary = (questions, answers, opts = {}) => {
  */
 const buildExamResultBreakdown = (questions, answers, opts = {}) => {
   const showCorrectAnswers = opts?.showCorrectAnswers === true;
-  const order = [...questions].sort((a, b) => (a.order_num || 0) - (b.order_num || 0));
+  const order = orderedExamQuestions(questions);
   return order.map((q, idx) => {
-    const raw = getAnswerRaw(answers, q.id);
-    const given = raw == null || raw === '' ? '' : String(raw).trim();
+    const raw = resolveAnswerRaw(answers, q, idx);
+    const given = normalizeAnswerPayload(raw);
     const type = inferQuestionType(q);
     let correctDisplay = '';
     let correctLabel = '';
@@ -389,13 +497,13 @@ const buildExamResultBreakdown = (questions, answers, opts = {}) => {
     } else if (type === 'matching') {
       const ca = String(q.correct_answer ?? '').trim();
       const derived = ca ? ca : deriveMatchingKeyFromOptions(q.options);
-      const hint = String(q.template_hint || '').trim();
       if (showCorrectAnswers && derived) {
         correctLabel = 'Düzgün cavab';
         correctDisplay = derived;
       } else {
-        correctLabel = 'Şablon / nümunə';
-        correctDisplay = hint ? `Nümunə: ${hint}` : 'Nümunə: 1a2b3c';
+        // Düzgün açar gizlədiləndə format nümunəsi səhvən «düzgün cavab» kimi görünür — ikinci sütun göstərilmir.
+        correctLabel = '';
+        correctDisplay = '';
       }
       if (!given) isCorrect = null;
       else isCorrect = gradeMatching(given, q.correct_answer, q.options).isCorrect;
@@ -632,6 +740,7 @@ module.exports = {
   buildExamTypeSummary,
   buildExamResultBreakdown,
   buildAutoGradingMap,
+  matchingStudentTemplateHint,
   rankResults,
   isExamActive,
   processExamNotificationJobs,

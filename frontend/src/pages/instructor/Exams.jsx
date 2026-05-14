@@ -769,12 +769,22 @@ export default function InstructorExams() {
                             Bal
                             <input
                               type="number"
-                              min={1}
+                              min={0.01}
                               max={1000}
-                              className="w-16 bg-[#13112e] border border-indigo-500/25 rounded-lg px-2 py-1 text-white text-xs text-center"
-                              value={Number.isFinite(Number(q.points)) ? q.points : ''}
+                              step="any"
+                              className="min-w-[4.5rem] w-20 bg-[#13112e] border border-indigo-500/25 rounded-lg px-2 py-1 text-white text-xs text-center"
+                              value={
+                                q.points === '' || q.points == null || !Number.isFinite(Number(q.points))
+                                  ? ''
+                                  : q.points
+                              }
                               onChange={(e) => {
-                                const v = parseInt(e.target.value, 10)
+                                const raw = e.target.value
+                                if (raw === '') {
+                                  patchEditQuestion(idx, { points: '' })
+                                  return
+                                }
+                                const v = parseFloat(raw)
                                 patchEditQuestion(idx, { points: Number.isFinite(v) ? v : q.points })
                               }}
                             />

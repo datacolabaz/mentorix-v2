@@ -158,11 +158,24 @@ function normalizeSequenceAnswerFromPayload(q) {
   // UX fallback: müəllim bəzən "düzgün cavab"ı nümunə sahəsinə yazır
   return normalizeSequenceAnswer(q?.template_hint);
 }
+
+/** Sual balları: tam və kəsr (məs. 1.5); iki onluq yerə yuvarlanır, 0.01–1000 aralığında. */
+function normalizeQuestionPoints(raw, fallback = 10) {
+  if (raw == null || raw === '') return fallback;
+  const n =
+    typeof raw === 'number'
+      ? raw
+      : Number(String(raw).trim().replace(/\s/g, '').replace(',', '.'));
+  if (!Number.isFinite(n)) return fallback;
+  const clamped = Math.min(1000, Math.max(0.01, n));
+  return Math.round(clamped * 100) / 100;
+}
 const {
   calculateScore,
   buildExamTypeSummary,
   buildExamResultBreakdown,
   buildAutoGradingMap,
+  matchingStudentTemplateHint,
   rankResults,
   syncExamReminderJob,
   notifyParentExamResultAfterSubmit,
@@ -269,7 +282,7 @@ const createExam = async (req, res) => {
               : null;
           const safeTemplateHint =
             q.question_type === 'matching'
-              ? '1a2b3c'
+              ? templateHint || matchingStudentTemplateHint({ template_hint: '', options: q.options })
               : q.question_type === 'multiple'
                 ? '13'
                 : q.question_type === 'sequence'
@@ -284,7 +297,7 @@ const createExam = async (req, res) => {
               q.question_type,
               JSON.stringify(q.options || null),
               correctAns,
-              q.points,
+              normalizeQuestionPoints(q.points),
               i + 1,
               neg,
               safeTemplateHint,
@@ -648,13 +661,81 @@ const studentExams = async (req, res) => {
   }
 };
 
-/** Tələbə: təqdim etdikdən sonra öz nəticəsinə və sual üzrə xülasəyə baxış */
+/** Tələbə: öz nəticəsi; müəllim/admin: ?student_id= ilə hər hansı tələbənin cavabları + düzgün açarlar */
 const getStudentExamReview = async (req, res) => {
   try {
-    if (req.user.role !== 'student') {
+    const examId = req.params.id;
+    const role = req.user.role;
+    const instructorView = role === 'instructor' || role === 'admin';
+    const targetStudentId = instructorView
+      ? String(req.query.student_id || req.query.studentId || '').trim()
+      : null;
+
+    if (instructorView) {
+      if (!targetStudentId) {
+        return res.status(400).json({ success: false, message: 'student_id sorğu parametri lazımdır' });
+      }
+      const { rows: [exam] } = await db.query('SELECT * FROM exams WHERE id = $1', [examId]);
+      if (!exam) return res.status(404).json({ success: false, message: 'Tapılmadı' });
+      if (exam.is_deleted === true) return res.status(404).json({ success: false, message: 'Tapılmadı' });
+      if (role === 'instructor' && normStudentHex(exam.instructor_id) !== normStudentHex(req.user.id)) {
+        return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
+      }
+      const targetHex = normStudentHex(targetStudentId);
+      if (!targetHex) {
+        return res.status(400).json({ success: false, message: 'Yanlış tələbə identifikatoru' });
+      }
+      const { rows: resultRows } = await db.query(
+        `SELECT er.score, er.answers, er.submitted_at, u.full_name AS student_name
+         FROM exam_results er
+         JOIN users u ON u.id = er.student_id
+         WHERE er.exam_id = $1
+           AND REPLACE(LOWER(TRIM(er.student_id::text)), '-', '') = $2
+           AND er.submitted_at IS NOT NULL
+         ORDER BY er.submitted_at DESC
+         LIMIT 1`,
+        [examId, targetHex]
+      );
+      const result = resultRows[0];
+      if (!result) {
+        return res.status(404).json({ success: false, message: 'Bu tələbə üçün təqdim olunmuş nəticə tapılmadı' });
+      }
+
+      const { rows: questions } = await db.query(
+        'SELECT * FROM exam_questions WHERE exam_id = $1 ORDER BY order_num',
+        [examId]
+      );
+
+      let answers = result.answers;
+      if (typeof answers === 'string') {
+        try {
+          answers = JSON.parse(answers);
+        } catch {
+          answers = {};
+        }
+      }
+      if (!answers || typeof answers !== 'object') answers = {};
+
+      const breakdown = buildExamResultBreakdown(questions, answers, { showCorrectAnswers: true });
+      const wrongPen = exam.wrong_penalty_enabled !== false;
+      const typeSummary = buildExamTypeSummary(questions, answers, { wrongPenaltyEnabled: wrongPen });
+
+      return res.json({
+        success: true,
+        exam,
+        score: result.score,
+        submitted_at: result.submitted_at,
+        breakdown,
+        type_summary: typeSummary,
+        student_name: result.student_name || null,
+        student_id: targetStudentId,
+      });
+    }
+
+    if (role !== 'student') {
       return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
     }
-    const examId = req.params.id;
+
     const sidHex = normStudentHex(req.user.id);
     if (!sidHex) {
       return res.status(400).json({ success: false, message: 'İstifadəçi identifikatoru yoxdur' });
@@ -663,7 +744,10 @@ const getStudentExamReview = async (req, res) => {
     const { rows: resultRows } = await db.query(
       `SELECT score, answers, submitted_at FROM exam_results
        WHERE exam_id = $1
-         AND REPLACE(LOWER(TRIM(student_id::text)), '-', '') = $2`,
+         AND REPLACE(LOWER(TRIM(student_id::text)), '-', '') = $2
+         AND submitted_at IS NOT NULL
+       ORDER BY submitted_at DESC NULLS LAST
+       LIMIT 1`,
       [examId, sidHex]
     );
     const result = resultRows[0];
@@ -713,6 +797,8 @@ const getStudentExamReview = async (req, res) => {
       submitted_at: result.submitted_at,
       breakdown,
       type_summary: typeSummary,
+      /** Modalda breakdown.student_answer boş qalsa, birbaşa təqdim olunmuş cavab obyekti ilə doldurmaq üçün */
+      answers,
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -859,7 +945,11 @@ const getExamQuestions = async (req, res) => {
     const safe =
       req.user.role === 'student'
         ? questions.map(({ correct_answer, template_hint, ...rest }) => {
-            if (rest.question_type === 'matching') return { ...rest, template_hint: '1a2b3c' };
+            if (rest.question_type === 'matching')
+              return {
+                ...rest,
+                template_hint: matchingStudentTemplateHint({ ...rest, template_hint }),
+              };
             if (rest.question_type === 'multiple') return { ...rest, template_hint: '13' };
             if (rest.question_type === 'sequence') return { ...rest, template_hint: '231' };
             return { ...rest, template_hint };
@@ -875,7 +965,15 @@ const getExamQuestions = async (req, res) => {
 // Imtahan cavablarini gondor
 const submitExam = async (req, res) => {
   try {
-    const { exam_id, answers } = req.body;
+    let { exam_id, answers } = req.body;
+    if (typeof answers === 'string') {
+      try {
+        answers = JSON.parse(answers);
+      } catch {
+        answers = {};
+      }
+    }
+    if (!answers || typeof answers !== 'object') answers = {};
     const student_id = req.user.id;
 
     const sidHex = normStudentHex(student_id);
@@ -917,7 +1015,9 @@ const submitExam = async (req, res) => {
       [exam_id]
     );
     const { rows: [exam] } = await db.query(
-      `SELECT id, is_deleted, duration_minutes, COALESCE(wrong_penalty_enabled, TRUE) AS wrong_penalty_enabled
+      `SELECT id, is_deleted, duration_minutes,
+              COALESCE(wrong_penalty_enabled, TRUE) AS wrong_penalty_enabled,
+              COALESCE(show_results, TRUE) AS show_results
        FROM exams WHERE id = $1`,
       [exam_id]
     );
@@ -928,7 +1028,9 @@ const submitExam = async (req, res) => {
     const wrongPen = exam.wrong_penalty_enabled !== false;
     const score = calculateScore(questions, answers, { wrongPenaltyEnabled: wrongPen });
     const typeSummary = buildExamTypeSummary(questions, answers, { wrongPenaltyEnabled: wrongPen });
-    const breakdown = buildExamResultBreakdown(questions, answers);
+    const breakdown = buildExamResultBreakdown(questions, answers, {
+      showCorrectAnswers: exam.show_results !== false,
+    });
     const grading = buildAutoGradingMap(questions, answers);
     const now = new Date();
     const startedAt = attempt?.started_at ? new Date(attempt.started_at) : now;
@@ -968,7 +1070,7 @@ const submitExam = async (req, res) => {
       );
     });
 
-    res.json({ success: true, score, breakdown, type_summary: typeSummary });
+    res.json({ success: true, score, breakdown, type_summary: typeSummary, answers });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -1256,7 +1358,9 @@ const regradeExamResults = async (req, res) => {
     }
 
     const { rows: [exam] } = await db.query(
-      `SELECT id, instructor_id, COALESCE(wrong_penalty_enabled, TRUE) AS wrong_penalty_enabled
+      `SELECT id, instructor_id,
+              COALESCE(wrong_penalty_enabled, TRUE) AS wrong_penalty_enabled,
+              COALESCE(show_results, TRUE) AS show_results
        FROM exams WHERE id = $1`,
       [examId]
     );
@@ -1315,7 +1419,9 @@ const regradeExamResults = async (req, res) => {
         updated += 1;
 
         if (sample.length < 3) {
-          const breakdown = buildExamResultBreakdown(questions, answers);
+          const breakdown = buildExamResultBreakdown(questions, answers, {
+            showCorrectAnswers: exam.show_results !== false,
+          });
           sample.push({ result_id: r.id, student_id: r.student_id, score, breakdown: breakdown.slice(0, 5) });
         }
       }
@@ -1601,8 +1707,7 @@ const patchExam = async (req, res) => {
           if (!row) continue;
 
           const qText = (q.question_text != null && String(q.question_text).trim()) || 'Sual';
-          const ptsRaw = parseInt(String(q.points != null ? q.points : '10'), 10);
-          const pts = Number.isFinite(ptsRaw) ? Math.min(1000, Math.max(1, ptsRaw)) : 10;
+          const pts = normalizeQuestionPoints(q.points != null ? q.points : 10);
 
           let opts = q.options;
           if (typeof opts === 'string') {
@@ -1655,7 +1760,7 @@ const patchExam = async (req, res) => {
           }
           const templateHint =
             row.question_type === 'matching'
-              ? '1a2b3c'
+              ? hintRaw || matchingStudentTemplateHint({ template_hint: '', options: opts })
               : row.question_type === 'multiple'
                 ? '13'
                 : row.question_type === 'sequence'

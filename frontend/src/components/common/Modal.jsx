@@ -28,7 +28,7 @@ export default function Modal({ open, onClose, title, children, size = 'md' }) {
             ✕
           </button>
         </div>
-        <div className="p-6 text-token-textMain">{children}</div>
+        <div className="p-6 text-zinc-200">{children}</div>
       </div>
     </div>
   )

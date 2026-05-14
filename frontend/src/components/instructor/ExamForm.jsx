@@ -409,14 +409,24 @@ export default function ExamForm({ students, studentsLoading = false, onCreated 
                   <div className="flex items-center gap-2">
                     <input
                       type="number"
-                      min="1"
-                      max="100"
-                      value={Number.isFinite(Number(q.points)) ? q.points : ''}
+                      min="0.01"
+                      max="1000"
+                      step="any"
+                      value={
+                        q.points === '' || q.points == null || !Number.isFinite(Number(q.points))
+                          ? ''
+                          : q.points
+                      }
                       onChange={(e) => {
-                        const v = parseInt(e.target.value, 10)
+                        const raw = e.target.value
+                        if (raw === '') {
+                          upd(idx, 'points', '')
+                          return
+                        }
+                        const v = parseFloat(raw)
                         upd(idx, 'points', Number.isFinite(v) ? v : q.points)
                       }}
-                      className="w-14 rounded-lg border border-[color:var(--border-subtle)] bg-token-surfaceCard/55 px-2 py-1 text-center text-xs text-token-textMain outline-none focus:border-primary/40" />
+                      className="min-w-[4.5rem] w-20 rounded-lg border border-[color:var(--border-subtle)] bg-token-surfaceCard/55 px-2 py-1 text-center text-xs text-token-textMain outline-none focus:border-primary/40" />
                     <span className="text-xs text-gray-500">bal</span>
                     <button onClick={() => setQuestions(prev => prev.filter((_, i) => i !== idx))}
                       className="text-red-400 text-sm ml-1">✕</button>
