@@ -48,14 +48,17 @@ function defaultLoginMarketingPayload() {
       heading: 'Niyə Mentorix?',
       cards: [
         {
+          card_enabled: true,
           title: 'Excel-dən daha sürətli',
           body: 'Səhifə səhifə cədvəl əvəzinə hazır axın: dərs, ödəniş və mesajlar eyni paneldə.',
         },
         {
+          card_enabled: true,
           title: 'WhatsApp-dan daha sistemli',
           body: 'Çat qalmaqılmaz “xatırlatma dənizi” yox: qaydalar, tarixlər və statuslar təkrarlanan sualları azaldır.',
         },
         {
+          card_enabled: true,
           title: 'Manual işləri avtomatlaşdırır',
           body: 'Paket bitməsi, ödəniş təsdiqi və SMS xatırlatmaları üçün təkrarlanan əməliyyatlar avtomatlaşır.',
         },
@@ -217,6 +220,12 @@ function mergeLoginMarketingFromDb(payloadFromDb) {
     }
   }
 
+  function parseCardEnabled(v, defaultTrue = true) {
+    if (v === true || v === 1 || v === '1' || v === 'true' || v === 'TRUE') return true
+    if (v === false || v === 0 || v === '0' || v === 'false' || v === 'FALSE') return false
+    return defaultTrue
+  }
+
   /** @returns {typeof d.why.cards} */
   function mergeWhyCards(cardsRaw, fallback) {
     if (!Array.isArray(cardsRaw) || cardsRaw.length === 0) return fallback
@@ -226,6 +235,9 @@ function mergeLoginMarketingFromDb(payloadFromDb) {
         typeof row !== 'object' || !row
           ? null
           : {
+              card_enabled: Object.prototype.hasOwnProperty.call(row, 'card_enabled')
+                ? parseCardEnabled(row.card_enabled, true)
+                : true,
               title: trimStr(row.title, 140) || '—',
               body: trimStr(row.body, 2000) || '',
             },

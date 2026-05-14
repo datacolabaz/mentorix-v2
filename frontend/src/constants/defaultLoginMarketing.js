@@ -44,14 +44,17 @@ export function defaultLoginMarketingPayload() {
       heading: 'Niyə Mentorix?',
       cards: [
         {
+          card_enabled: true,
           title: 'Excel-dən daha sürətli',
           body: 'Səhifə səhifə cədvəl əvəzinə hazır axın: dərs, ödəniş və mesajlar eyni paneldə.',
         },
         {
+          card_enabled: true,
           title: 'WhatsApp-dan daha sistemli',
           body: 'Çat qalmaqılmaz “xatırlatma dənizi” yox: qaydalar, tarixlər və statuslar təkrarlanan sualları azaldır.',
         },
         {
+          card_enabled: true,
           title: 'Manual işləri avtomatlaşdırır',
           body: 'Paket bitməsi, ödəniş təsdiqi və SMS xatırlatmaları üçün təkrarlanan əməliyyatlar avtomatlaşır.',
         },

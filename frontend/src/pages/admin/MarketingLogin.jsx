@@ -211,7 +211,7 @@ export default function MarketingLogin() {
             onClick={() =>
               setLanding((L) => ({
                 ...L,
-                why: { ...L.why, cards: [...L.why.cards, { title: '', body: '' }] },
+                why: { ...L.why, cards: [...L.why.cards, { card_enabled: true, title: '', body: '' }] },
               }))
             }
           >
@@ -228,11 +228,11 @@ export default function MarketingLogin() {
         </div>
         {landing.why.cards.map((c, i) => (
           <div key={i} className="p-3 rounded-xl border border-indigo-500/15 space-y-2">
-            <div className="flex justify-between gap-2">
+            <div className="flex flex-wrap justify-between items-start gap-2">
               <span className="text-xs text-gray-500">Kart {i + 1}</span>
               <button
                 type="button"
-                className="text-xs text-red-400 hover:text-red-300"
+                className="text-xs text-red-400 hover:text-red-300 shrink-0"
                 onClick={() =>
                   setLanding((L) => ({
                     ...L,
@@ -243,6 +243,30 @@ export default function MarketingLogin() {
                 Sil
               </button>
             </div>
+            <label className="flex items-start gap-2.5 cursor-pointer select-none rounded-lg border border-indigo-500/15 bg-[#13112e]/60 px-2.5 py-2">
+              <input
+                type="checkbox"
+                className="mt-0.5 rounded border-indigo-500/40 text-primary focus:ring-primary/40 shrink-0"
+                checked={c.card_enabled !== false}
+                onChange={(e) =>
+                  setLanding((L) => ({
+                    ...L,
+                    why: {
+                      ...L.why,
+                      cards: L.why.cards.map((row, j) =>
+                        j === i ? { ...row, card_enabled: e.target.checked } : row,
+                      ),
+                    },
+                  }))
+                }
+              />
+              <span className="text-xs text-gray-300 leading-snug">
+                <span className="font-semibold text-white">Login landingində göstər</span>
+                <span className="block text-[11px] text-gray-500 mt-0.5">
+                  Söndürülsə, bu kart yalnız admin paneldə qalır.
+                </span>
+              </span>
+            </label>
             <input
               className={inp}
               placeholder="Başlıq"

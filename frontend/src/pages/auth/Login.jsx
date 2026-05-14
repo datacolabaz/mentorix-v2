@@ -173,6 +173,11 @@ export default function Login() {
   const [demoPaneBusy, setDemoPaneBusy] = useState(false)
   const [marketing, setMarketing] = useState(() => defaultLoginMarketingPayload())
 
+  const whyCardsForLanding = useMemo(
+    () => (marketing?.why?.cards || []).filter((c) => c.card_enabled !== false),
+    [marketing],
+  )
+
   const {
     login,
     phoneNextStep,
@@ -482,11 +487,9 @@ export default function Login() {
     const ids = [
       'mx-demo-mini',
       'mx-trust',
-      'mx-why',
-      'mx-top',
-      'mx-steps',
-      'mx-features',
     ]
+    if (whyCardsForLanding.length > 0) ids.push('mx-why')
+    ids.push('mx-top', 'mx-steps', 'mx-features')
     if (marketing?.use_case?.section_enabled !== false) {
       ids.push('mx-use-case')
     }
@@ -509,7 +512,7 @@ export default function Login() {
       }
       obs.disconnect()
     }
-  }, [isAdmin, marketing.use_case?.section_enabled])
+  }, [isAdmin, marketing.use_case?.section_enabled, whyCardsForLanding.length])
 
   const trustStudentsShown = trustCountWithFloor(landingStats?.students_managed, TRUST_STUDENTS_FLOOR)
   const trustTeachersShown = trustCountWithFloor(landingStats?.instructor_count, TRUST_INSTRUCTORS_FLOOR)
@@ -807,17 +810,19 @@ export default function Login() {
             </div>
           </section>
 
+          {whyCardsForLanding.length > 0 ? (
           <section id="mx-why" className="space-y-4 scroll-mt-8">
             <div className="text-xs uppercase tracking-wider text-gray-500 font-semibold">{m.why.heading}</div>
             <div className="grid md:grid-cols-3 gap-3">
-              {(m.why.cards || []).map((x, i) => (
-                <div key={`why-${i}`} className="rounded-2xl border border-white/10 bg-[#121212]/90 p-4 space-y-2">
+              {whyCardsForLanding.map((x, i) => (
+                <div key={`why-${i}-${String(x.title).slice(0, 24)}`} className="rounded-2xl border border-white/10 bg-[#121212]/90 p-4 space-y-2">
                   <div className="text-sm font-semibold text-white">{x.title}</div>
                   <p className="text-xs text-gray-400 leading-relaxed">{x.body}</p>
                 </div>
               ))}
             </div>
           </section>
+          ) : null}
 
           <section id="mx-top" className="space-y-4 scroll-mt-8">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
