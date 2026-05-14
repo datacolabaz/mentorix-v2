@@ -28,6 +28,11 @@ export default function InstructorSettings() {
   const plans = Array.isArray(plansQ.data) ? plansQ.data : []
   const [savingLabel, setSavingLabel] = useState(false)
   const [publicLabel, setPublicLabel] = useState('instructor')
+  const [mapLat, setMapLat] = useState('')
+  const [mapLng, setMapLng] = useState('')
+  const [mapKind, setMapKind] = useState('teacher')
+  const [mapVisible, setMapVisible] = useState(true)
+  const [savingMap, setSavingMap] = useState(false)
   const [subjects, setSubjects] = useState([])
   const [newSubject, setNewSubject] = useState('')
   const [newGroupBySubject, setNewGroupBySubject] = useState({})
@@ -39,6 +44,11 @@ export default function InstructorSettings() {
     try {
       const d = await api.get('/instructor/teaching')
       setPublicLabel(d.public_label === 'trainer' ? 'trainer' : 'instructor')
+      const m = d.map || {}
+      setMapLat(m.latitude != null && Number.isFinite(Number(m.latitude)) ? String(m.latitude) : '')
+      setMapLng(m.longitude != null && Number.isFinite(Number(m.longitude)) ? String(m.longitude) : '')
+      setMapKind(m.map_profile_kind === 'trainer' ? 'trainer' : 'teacher')
+      setMapVisible(m.map_visible !== false)
       setSubjects(Array.isArray(d.subjects) ? d.subjects : [])
     } catch (e) {
       toast(e?.message || 'Yüklənmədi', 'error')
@@ -61,6 +71,49 @@ export default function InstructorSettings() {
       toast(e?.message || 'Xəta', 'error')
     } finally {
       setSavingLabel(false)
+    }
+  }
+
+  const fillMapFromGeolocation = () => {
+    if (!navigator.geolocation) {
+      toast('Brauzer mövqeni dəstəkləmir', 'error')
+      return
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setMapLat(String(pos.coords.latitude.toFixed(6)))
+        setMapLng(String(pos.coords.longitude.toFixed(6)))
+        toast('Koordinatlar dolduruldu')
+      },
+      () => toast('Mövqe alınmadı', 'error'),
+      { enableHighAccuracy: true, timeout: 12000 },
+    )
+  }
+
+  const saveMapProfile = async () => {
+    setSavingMap(true)
+    try {
+      const lat = mapLat.trim() === '' ? null : Number(String(mapLat).replace(',', '.'))
+      const lng = mapLng.trim() === '' ? null : Number(String(mapLng).replace(',', '.'))
+      if (lat != null && (!Number.isFinite(lat) || lat < -90 || lat > 90)) {
+        toast('Enlik düzgün deyil', 'error')
+        return
+      }
+      if (lng != null && (!Number.isFinite(lng) || lng < -180 || lng > 180)) {
+        toast('Uzunluq düzgün deyil', 'error')
+        return
+      }
+      await api.patch('/instructor/map-profile', {
+        latitude: lat,
+        longitude: lng,
+        map_profile_kind: mapKind,
+        map_visible: mapVisible,
+      })
+      toast('Xəritə profili saxlanıldı')
+    } catch (e) {
+      toast(e?.message || 'Xəta', 'error')
+    } finally {
+      setSavingMap(false)
     }
   }
 
@@ -401,6 +454,50 @@ export default function InstructorSettings() {
         </div>
         <Button type="button" loading={savingLabel} onClick={() => void saveLabel()} className="w-full sm:w-auto justify-center">
           Saxla
+        </Button>
+      </Card>
+
+      <Card className="p-5 border border-indigo-500/20 space-y-4">
+        <h2 className={cardTitleCls}>Xəritədə tap</h2>
+        <p className={cardTextCls}>
+          mentorix.io/search səhifəsində yalnız koordinatı olan və «xəritədə görünür» işarəsi aktiv olan müəllimlər göstərilir.
+        </p>
+        <label className={['flex items-center gap-2 cursor-pointer text-sm', theme === 'dark' ? 'text-gray-200' : 'text-token-textMain'].join(' ')}>
+          <input
+            type="checkbox"
+            checked={mapVisible}
+            onChange={(e) => setMapVisible(e.target.checked)}
+            className="accent-indigo-500 rounded"
+          />
+          Xəritədə axtarışda görünsün
+        </label>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <label className="flex-1 text-xs text-token-textMuted">
+            Enlik (latitude)
+            <input className={`${inp} mt-1`} placeholder="40.4093" value={mapLat} onChange={(e) => setMapLat(e.target.value)} />
+          </label>
+          <label className="flex-1 text-xs text-token-textMuted">
+            Uzunluq (longitude)
+            <input className={`${inp} mt-1`} placeholder="49.8671" value={mapLng} onChange={(e) => setMapLng(e.target.value)} />
+          </label>
+        </div>
+        <div className="flex flex-col sm:flex-row gap-2 flex-wrap">
+          <Button type="button" variant="secondary" onClick={() => fillMapFromGeolocation()} className="justify-center">
+            Mövqeyimdən doldur
+          </Button>
+          <div className="flex gap-3 items-center text-sm">
+            <label className={['flex items-center gap-2 cursor-pointer', theme === 'dark' ? 'text-gray-200' : 'text-token-textMain'].join(' ')}>
+              <input type="radio" name="map_kind" checked={mapKind === 'teacher'} onChange={() => setMapKind('teacher')} className="accent-indigo-500" />
+              Pin: müəllim (yaşıl)
+            </label>
+            <label className={['flex items-center gap-2 cursor-pointer', theme === 'dark' ? 'text-gray-200' : 'text-token-textMain'].join(' ')}>
+              <input type="radio" name="map_kind" checked={mapKind === 'trainer'} onChange={() => setMapKind('trainer')} className="accent-indigo-500" />
+              Pin: təlimçi (narıncı)
+            </label>
+          </div>
+        </div>
+        <Button type="button" loading={savingMap} onClick={() => void saveMapProfile()} className="w-full sm:w-auto justify-center">
+          Xəritə məlumatını saxla
         </Button>
       </Card>
 

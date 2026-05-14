@@ -1,12 +1,14 @@
 const express = require('express');
 const { getLandingStats } = require('../controllers/publicLandingController');
 const { getPublicLoginMarketing } = require('../controllers/siteMarketingController');
+const { getInstructorsInMapView } = require('../controllers/publicInstructorMapController');
 const { getActivePlansList } = require('../services/subscriptionPlansService');
 
 const router = express.Router();
 
 router.get('/landing-stats', getLandingStats);
 router.get('/marketing/login', getPublicLoginMarketing);
+router.get('/instructors-map', getInstructorsInMapView);
 router.get('/subscription-plans', async (_req, res) => {
   try {
     const list = await getActivePlansList();

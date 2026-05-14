@@ -30,7 +30,11 @@ CREATE TABLE instructor_profiles (
   ram_used_mb INTEGER DEFAULT 0,
   usage_synced_at TIMESTAMPTZ,
   max_concurrent_students INTEGER DEFAULT 30,
-  alert_lessons_before INTEGER DEFAULT 2
+  alert_lessons_before INTEGER DEFAULT 2,
+  latitude NUMERIC(10, 7),
+  longitude NUMERIC(10, 7),
+  map_profile_kind VARCHAR(20) NOT NULL DEFAULT 'teacher' CHECK (map_profile_kind IN ('teacher', 'trainer')),
+  map_visible BOOLEAN NOT NULL DEFAULT TRUE
 );
 
 CREATE TABLE student_profiles (

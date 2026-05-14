@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import useAuthStore from './hooks/useAuth'
 
 import Login from './pages/auth/Login'
+import InstructorMapSearch from './pages/public/InstructorMapSearch'
 import AdminLayout from './layouts/AdminLayout'
 import InstructorLayout from './layouts/InstructorLayout'
 import StudentLayout from './layouts/StudentLayout'
@@ -61,6 +62,7 @@ export default function App() {
 
   return (
     <Routes>
+      <Route path="/search" element={<InstructorMapSearch />} />
       <Route path="/login" element={user ? <Navigate to={`/${user.role}`} /> : <Login />} />
       <Route path="/" element={<Navigate to={user ? `/${user.role}` : '/login'} />} />
 

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import useAuthStore from '../../hooks/useAuth'
 import Button from '../../components/common/Button'
 import { useToast } from '../../components/common/Toast'
@@ -705,16 +705,25 @@ export default function Login() {
                   {m.hero.secondary_demo}
                 </button>
               </div>
-              <button
-                type="button"
-                onClick={() => {
-                  trackEvent('mx_landing_secondary_click', { action: 'existing_account_login' })
-                  scrollToId('mx-login')
-                }}
-                className="text-left text-xs text-gray-500 hover:text-gray-300 underline underline-offset-4"
-              >
-                {m.hero.existing_account}
-              </button>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    trackEvent('mx_landing_secondary_click', { action: 'existing_account_login' })
+                    scrollToId('mx-login')
+                  }}
+                  className="text-left text-xs text-gray-500 hover:text-gray-300 underline underline-offset-4"
+                >
+                  {m.hero.existing_account}
+                </button>
+                <Link
+                  to="/search"
+                  onClick={() => trackEvent('mx_landing_secondary_click', { action: 'instructor_map_search' })}
+                  className="text-xs font-semibold text-primary hover:brightness-110"
+                >
+                  Təlimçini xəritədə tap →
+                </Link>
+              </div>
             </div>
 
             <div

@@ -15,11 +15,16 @@ const getTeaching = async (req, res) => {
   try {
     const iid = req.user.id;
     const { rows: prof } = await db.query(
-      `SELECT COALESCE(NULLIF(TRIM(public_label), ''), 'instructor') AS public_label
+      `SELECT COALESCE(NULLIF(TRIM(public_label), ''), 'instructor') AS public_label,
+              latitude,
+              longitude,
+              COALESCE(NULLIF(TRIM(map_profile_kind), ''), 'teacher') AS map_profile_kind,
+              COALESCE(map_visible, TRUE) AS map_visible
        FROM instructor_profiles WHERE user_id = $1`,
       [iid]
     );
-    const public_label = parsePublicLabel(prof[0]?.public_label);
+    const p = prof[0];
+    const public_label = parsePublicLabel(p?.public_label);
 
     const { rows: subjects } = await db.query(
       `SELECT id, name, sort_order
@@ -41,7 +46,17 @@ const getTeaching = async (req, res) => {
       if (bucket) bucket.groups.push({ id: g.id, name: g.name, sort_order: g.sort_order });
     }
 
-    res.json({ success: true, public_label, subjects: [...byId.values()] });
+    res.json({
+      success: true,
+      public_label,
+      map: {
+        latitude: p?.latitude != null ? Number(p.latitude) : null,
+        longitude: p?.longitude != null ? Number(p.longitude) : null,
+        map_profile_kind: p?.map_profile_kind === 'trainer' ? 'trainer' : 'teacher',
+        map_visible: p?.map_visible !== false,
+      },
+      subjects: [...byId.values()],
+    });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
