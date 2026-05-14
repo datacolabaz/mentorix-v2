@@ -161,6 +161,25 @@ export default function MarketingLogin() {
 
       <Card className="p-4 sm:p-6 space-y-4">
         <h2 className="font-display font-bold text-base">İnam bloku</h2>
+        <label className="flex items-start gap-3 cursor-pointer select-none rounded-xl border border-indigo-500/20 bg-[#13112e]/80 px-3 py-2.5">
+          <input
+            type="checkbox"
+            className="mt-0.5 rounded border-indigo-500/40 text-primary focus:ring-primary/40"
+            checked={landing.trust.section_enabled !== false}
+            onChange={(e) =>
+              setLanding((L) => ({
+                ...L,
+                trust: { ...L.trust, section_enabled: e.target.checked },
+              }))
+            }
+          />
+          <span className="text-sm text-gray-200 leading-snug">
+            <span className="font-semibold text-white">Login landingində göstər</span>
+            <span className="block text-xs text-gray-500 mt-0.5">
+              Söndürülsə, İnam bloku tam gizlənir; mətnlər admin-də saxlanılır.
+            </span>
+          </span>
+        </label>
         <div>
           <label className={lbl}>Başlıq</label>
           <input

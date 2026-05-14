@@ -39,6 +39,7 @@ function defaultLoginMarketingPayload() {
       slot2_time: '19:45',
     },
     trust: {
+      section_enabled: true,
       heading: 'İnam göstəriciləri',
       students_suffix: 'tələbə idarə olunur',
       instructors_suffix: 'müəllim istifadə edir',
@@ -208,7 +209,16 @@ function mergeLoginMarketingFromDb(payloadFromDb) {
 
   function patchTrust(orig, raw) {
     if (!raw || typeof raw !== 'object') return orig
+    const origShown = orig.section_enabled !== false
+    let section_enabled = origShown
+    if (Object.prototype.hasOwnProperty.call(raw, 'section_enabled')) {
+      const v = raw.section_enabled
+      if (v === true || v === 1 || v === '1' || v === 'true' || v === 'TRUE') section_enabled = true
+      else if (v === false || v === 0 || v === '0' || v === 'false' || v === 'FALSE') section_enabled = false
+      else section_enabled = origShown
+    }
     return {
+      section_enabled,
       heading: trimStr(raw.heading ?? orig.heading, 120) || orig.heading,
       students_suffix: trimStr(raw.students_suffix ?? orig.students_suffix, 80) || orig.students_suffix,
       instructors_suffix:

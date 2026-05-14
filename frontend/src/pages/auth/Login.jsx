@@ -484,10 +484,8 @@ export default function Login() {
       { threshold: 0.2, rootMargin: '0px 0px -10% 0px' },
     )
 
-    const ids = [
-      'mx-demo-mini',
-      'mx-trust',
-    ]
+    const ids = ['mx-demo-mini']
+    if (marketing?.trust?.section_enabled !== false) ids.push('mx-trust')
     if (whyCardsForLanding.length > 0) ids.push('mx-why')
     ids.push('mx-top', 'mx-steps', 'mx-features')
     if (marketing?.use_case?.section_enabled !== false) {
@@ -512,7 +510,7 @@ export default function Login() {
       }
       obs.disconnect()
     }
-  }, [isAdmin, marketing.use_case?.section_enabled, whyCardsForLanding.length])
+  }, [isAdmin, marketing.use_case?.section_enabled, marketing.trust?.section_enabled, whyCardsForLanding.length])
 
   const trustStudentsShown = trustCountWithFloor(landingStats?.students_managed, TRUST_STUDENTS_FLOOR)
   const trustTeachersShown = trustCountWithFloor(landingStats?.instructor_count, TRUST_INSTRUCTORS_FLOOR)
@@ -782,6 +780,7 @@ export default function Login() {
             </div>
           </header>
 
+          {m.trust?.section_enabled !== false ? (
           <section id="mx-trust" className="space-y-4 scroll-mt-8">
             <div className="text-xs uppercase tracking-wider text-gray-500 font-semibold">{m.trust.heading}</div>
             <div className="grid sm:grid-cols-3 gap-3">
@@ -809,6 +808,7 @@ export default function Login() {
               </div>
             </div>
           </section>
+          ) : null}
 
           {whyCardsForLanding.length > 0 ? (
           <section id="mx-why" className="space-y-4 scroll-mt-8">

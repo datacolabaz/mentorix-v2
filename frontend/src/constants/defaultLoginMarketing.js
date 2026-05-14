@@ -35,6 +35,7 @@ export function defaultLoginMarketingPayload() {
       slot2_time: '19:45',
     },
     trust: {
+      section_enabled: true,
       heading: 'İnam göstəriciləri',
       students_suffix: 'tələbə idarə olunur',
       instructors_suffix: 'müəllim istifadə edir',
