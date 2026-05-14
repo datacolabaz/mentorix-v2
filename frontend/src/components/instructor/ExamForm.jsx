@@ -13,7 +13,7 @@ const TYPES = {
 }
 
 /** Uyğunluq: sol sətirdəki rəqəm + sağdakı hərflər → bitişik açar (server ilə eyni məntiq) */
-function deriveMatchingKey(options) {
+export function deriveMatchingKey(options) {
   if (!Array.isArray(options)) return ''
   let key = ''
   for (let i = 0; i < options.length; i++) {
@@ -187,7 +187,7 @@ export default function ExamForm({ students, studentsLoading = false, onCreated 
                   .sort()
                   .join('')
               : q.question_type === 'matching'
-                ? String(q.correct_answer || '').trim() || deriveMatchingKey(q.options)
+                ? deriveMatchingKey(q.options) || String(q.correct_answer || '').trim()
                 : q.question_type === 'sequence'
                   ? String(q.correct_answer || '').replace(/\D/g, '').slice(0, 120)
                 : q.correct_answer,

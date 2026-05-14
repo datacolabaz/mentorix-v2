@@ -486,11 +486,11 @@ export default function Login() {
       'mx-top',
       'mx-steps',
       'mx-features',
-      'mx-use-case',
-      'mx-faq',
-      'mx-cta',
-      'mx-login',
     ]
+    if (marketing?.use_case?.section_enabled !== false) {
+      ids.push('mx-use-case')
+    }
+    ids.push('mx-faq', 'mx-cta', 'mx-login')
     for (const id of ids) {
       const el = typeof document !== 'undefined' ? document.getElementById(id) : null
       if (el) {
@@ -509,7 +509,7 @@ export default function Login() {
       }
       obs.disconnect()
     }
-  }, [isAdmin])
+  }, [isAdmin, marketing.use_case?.section_enabled])
 
   const trustStudentsShown = trustCountWithFloor(landingStats?.students_managed, TRUST_STUDENTS_FLOOR)
   const trustTeachersShown = trustCountWithFloor(landingStats?.instructor_count, TRUST_INSTRUCTORS_FLOOR)
@@ -922,6 +922,7 @@ export default function Login() {
             </div>
           </section>
 
+          {m.use_case?.section_enabled !== false ? (
           <section id="mx-use-case" className="space-y-4 scroll-mt-8">
             <div className="text-xs uppercase tracking-wider text-gray-500 font-semibold">{m.use_case.heading}</div>
             <div className="rounded-2xl border border-white/10 bg-[#121212]/90 p-5 sm:p-6 space-y-4">
@@ -945,6 +946,7 @@ export default function Login() {
               </button>
             </div>
           </section>
+          ) : null}
 
           <section id="mx-faq" className="space-y-4 scroll-mt-8">
             <div className="text-xs uppercase tracking-wider text-gray-500 font-semibold">{m.faq.heading}</div>

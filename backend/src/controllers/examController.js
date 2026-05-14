@@ -124,25 +124,10 @@ function patchCoalesceBool(v) {
   return null;
 }
 
-/** Uyğunluq: explicit `correct_answer` və ya sol/sağ cütlərdən açar; `template_hint` heç vaxt düzgün cavab sayılmır */
+/** Uyğunluq: sol/sağ cədvəli üstün tuturuq; köhnə sətirlərdə yalnız `correct_answer` qalıbsa ondan istifadə. */
 function buildMatchingCorrectFromPayload(q) {
-  const explicit = String(q.correct_answer ?? '').trim();
-  if (explicit) return explicit;
-  const opts = q.options;
-  if (!Array.isArray(opts)) return null;
-  let key = '';
-  for (let i = 0; i < opts.length; i++) {
-    const row = opts[i];
-    if (!row || typeof row !== 'object') continue;
-    const L = String(row.left ?? '').trim();
-    const R = String(row.right ?? '').trim();
-    const num = (L.match(/\d+/) || [])[0] || String(i + 1);
-    const letters = R.replace(/[^a-z]/gi, '').toLowerCase();
-    for (const ch of letters) {
-      if (/[a-z]/.test(ch)) key += num + ch;
-    }
-  }
-  return key || null;
+  const c = matchingCanonicalCorrect(q);
+  return c || null;
 }
 
 function normalizeSequenceAnswer(v) {
@@ -176,6 +161,7 @@ const {
   buildExamResultBreakdown,
   buildAutoGradingMap,
   matchingStudentTemplateHint,
+  matchingCanonicalCorrect,
   rankResults,
   syncExamReminderJob,
   notifyParentExamResultAfterSubmit,

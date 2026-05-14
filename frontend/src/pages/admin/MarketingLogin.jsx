@@ -534,25 +534,60 @@ export default function MarketingLogin() {
       </Card>
 
       <Card className="p-4 sm:p-6 space-y-4">
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="font-display font-bold text-base">Real ssenari</h2>
-          <Button
-            type="button"
-            variant="secondary"
-            className="text-xs shrink-0"
-            onClick={() =>
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            <Button
+              type="button"
+              variant="secondary"
+              className="text-xs"
+              disabled={!(landing.use_case.bullets || []).length}
+              onClick={() =>
+                setLanding((L) => ({
+                  ...L,
+                  use_case: { ...L.use_case, bullets: [] },
+                }))
+              }
+            >
+              Bütün güllələri sil
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              className="text-xs shrink-0"
+              onClick={() =>
+                setLanding((L) => ({
+                  ...L,
+                  use_case: {
+                    ...L.use_case,
+                    bullets: [...(L.use_case.bullets || []), { lead: '', rest: '' }],
+                  },
+                }))
+              }
+            >
+              Güllə əlavə et
+            </Button>
+          </div>
+        </div>
+        <label className="flex items-start gap-3 cursor-pointer select-none rounded-xl border border-indigo-500/20 bg-[#13112e]/80 px-3 py-2.5">
+          <input
+            type="checkbox"
+            className="mt-0.5 rounded border-indigo-500/40 text-primary focus:ring-primary/40"
+            checked={landing.use_case.section_enabled !== false}
+            onChange={(e) =>
               setLanding((L) => ({
                 ...L,
-                use_case: {
-                  ...L.use_case,
-                  bullets: [...L.use_case.bullets, { lead: '', rest: '' }],
-                },
+                use_case: { ...L.use_case, section_enabled: e.target.checked },
               }))
             }
-          >
-            Güllə əlavə et
-          </Button>
-        </div>
+          />
+          <span className="text-sm text-gray-200 leading-snug">
+            <span className="font-semibold text-white">Login landingində göstər</span>
+            <span className="block text-xs text-gray-500 mt-0.5">
+              Söndürülsə, «Real ssenari» kartı tam çıxarılır (məzmunu saxlayırıq — yenidən yandıra bilərsiniz).
+            </span>
+          </span>
+        </label>
         <div>
           <label className={lbl}>Bölmə başlığı</label>
           <input
@@ -573,19 +608,19 @@ export default function MarketingLogin() {
             }
           />
         </div>
-        {landing.use_case.bullets.map((b, i) => (
+        {(landing.use_case.bullets || []).map((b, i) => (
           <div key={i} className="p-3 rounded-xl border border-indigo-500/15 space-y-2">
-            <div className="flex justify-between gap-2">
-              <span className="text-xs text-gray-500">Güllə {i + 1}</span>
+            <div className="flex justify-between items-center gap-2">
+              <span className="text-xs text-gray-500 font-medium">Güllə {i + 1}</span>
               <button
                 type="button"
-                className="text-xs text-red-400 hover:text-red-300"
+                className="text-xs font-semibold rounded-lg border border-red-500/35 px-2.5 py-1 text-red-300 hover:bg-red-500/10 hover:border-red-400/50"
                 onClick={() =>
                   setLanding((L) => ({
                     ...L,
                     use_case: {
                       ...L.use_case,
-                      bullets: L.use_case.bullets.filter((_, j) => j !== i),
+                      bullets: (L.use_case.bullets || []).filter((_, j) => j !== i),
                     },
                   }))
                 }
@@ -602,7 +637,7 @@ export default function MarketingLogin() {
                   ...L,
                   use_case: {
                     ...L.use_case,
-                    bullets: L.use_case.bullets.map((row, j) =>
+                    bullets: (L.use_case.bullets || []).map((row, j) =>
                       j === i ? { ...row, lead: e.target.value } : row,
                     ),
                   },
@@ -618,7 +653,7 @@ export default function MarketingLogin() {
                   ...L,
                   use_case: {
                     ...L.use_case,
-                    bullets: L.use_case.bullets.map((row, j) =>
+                    bullets: (L.use_case.bullets || []).map((row, j) =>
                       j === i ? { ...row, rest: e.target.value } : row,
                     ),
                   },

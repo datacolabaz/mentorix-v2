@@ -117,6 +117,7 @@ function defaultLoginMarketingPayload() {
       ],
     },
     use_case: {
+      section_enabled: true,
       heading: 'Real ssenari',
       title_line: 'Fərdi hazırlıq müəllimi — həftədə 25 şagird',
       bullets: [
@@ -289,13 +290,25 @@ function mergeLoginMarketingFromDb(payloadFromDb) {
   function mergeUseCase(orig, raw) {
     if (!raw || typeof raw !== 'object') return orig
     let bullets = orig.bullets
-    if (Array.isArray(raw.bullets) && raw.bullets.length) {
-      bullets = raw.bullets.slice(0, 20).map((b) => ({
-        lead: trimStr(b.lead, 120) || '',
-        rest: trimStr(b.rest, 1200) || '',
-      }))
+    /** Boş massiv də qəbul olunur — admin bütün güllələri siləndə defolta qayıtmasın */
+    if (Array.isArray(raw.bullets)) {
+      bullets = raw.bullets.length
+        ? raw.bullets.slice(0, 20).map((b) => ({
+            lead: trimStr(b.lead, 120) || '',
+            rest: trimStr(b.rest, 1200) || '',
+          }))
+        : []
+    }
+    const origShown = orig.section_enabled !== false
+    let section_enabled = origShown
+    if (Object.prototype.hasOwnProperty.call(raw, 'section_enabled')) {
+      const v = raw.section_enabled
+      if (v === true || v === 1 || v === '1' || v === 'true' || v === 'TRUE') section_enabled = true
+      else if (v === false || v === 0 || v === '0' || v === 'false' || v === 'FALSE') section_enabled = false
+      else section_enabled = origShown
     }
     return {
+      section_enabled,
       heading: trimStr(raw.heading ?? orig.heading, 160) || orig.heading,
       title_line:
         trimStr(raw.title_line ?? orig.title_line, 300) || orig.title_line,

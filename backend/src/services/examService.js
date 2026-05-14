@@ -227,6 +227,17 @@ function deriveMatchingKeyFromOptions(options) {
   return key;
 }
 
+/**
+ * Uyğunluq üçün düzgün açar: əvvəlcə müəllimin cədvəlindəki sol/sağ cütlər (options),
+ * boşdursa DB-də saxlanmış `correct_answer`. Köhnə səhv: `template_hint` (1a2b3c) ayrıca
+ * saxlanıb `correct_answer` kimi qalırdı və real cütləri kölgələyirdi.
+ */
+function matchingCanonicalCorrect(q) {
+  const fromOpts = String(deriveMatchingKeyFromOptions(q?.options) ?? '').trim();
+  if (fromOpts) return fromOpts;
+  return String(q?.correct_answer ?? '').trim();
+}
+
 function matchingPairCountFromOptions(options) {
   let opts = options;
   if (typeof opts === 'string') {
@@ -267,10 +278,14 @@ function matchingStudentTemplateHint(q) {
   return '1a2b3c';
 }
 
-function gradeMatching(given, correct, optionsForFallback) {
+function gradeMatching(given, correctStored, optionsForFallback) {
   const g = normMatchStrict(given);
-  const fallback = !String(correct ?? '').trim() ? deriveMatchingKeyFromOptions(optionsForFallback) : '';
-  const c = normMatchStrict(String(correct ?? '').trim() ? correct : fallback);
+  const c = normMatchStrict(
+    matchingCanonicalCorrect({
+      correct_answer: correctStored,
+      options: optionsForFallback,
+    })
+  );
   if (!g) return { status: 'pending', isCorrect: null };
   // tələbə cavabı var, amma açar tapılmadısa pending saxlamırıq (UI-da "Yoxlanılır" qalmasın)
   if (!c) return { status: 'incorrect', isCorrect: false };
@@ -495,11 +510,10 @@ const buildExamResultBreakdown = (questions, answers, opts = {}) => {
         isCorrect = caNorm ? normDigits(given) === caNorm : null;
       }
     } else if (type === 'matching') {
-      const ca = String(q.correct_answer ?? '').trim();
-      const derived = ca ? ca : deriveMatchingKeyFromOptions(q.options);
-      if (showCorrectAnswers && derived) {
+      const canonical = matchingCanonicalCorrect(q);
+      if (showCorrectAnswers && canonical) {
         correctLabel = 'Düzgün cavab';
-        correctDisplay = derived;
+        correctDisplay = canonical;
       } else {
         // Düzgün açar gizlədiləndə format nümunəsi səhvən «düzgün cavab» kimi görünür — ikinci sütun göstərilmir.
         correctLabel = '';
@@ -741,6 +755,7 @@ module.exports = {
   buildExamResultBreakdown,
   buildAutoGradingMap,
   matchingStudentTemplateHint,
+  matchingCanonicalCorrect,
   rankResults,
   isExamActive,
   processExamNotificationJobs,

@@ -109,6 +109,7 @@ export function defaultLoginMarketingPayload() {
       ],
     },
     use_case: {
+      section_enabled: true,
       heading: 'Real ssenari',
       title_line: 'Fərdi hazırlıq müəllimi — həftədə 25 şagird',
       bullets: [

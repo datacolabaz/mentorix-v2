@@ -4,7 +4,7 @@ import api from '../../lib/api'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
-import ExamForm from '../../components/instructor/ExamForm'
+import ExamForm, { deriveMatchingKey } from '../../components/instructor/ExamForm'
 import ListSkeleton from '../../components/common/ListSkeleton'
 import { useToast } from '../../components/common/Toast'
 import { localDatetimeInputToUtcIso, utcInstantToDatetimeLocalValue } from '../../lib/examDatetime'
@@ -54,13 +54,18 @@ function initEditQuestion(q) {
         ? opts.map((r) => (typeof r === 'string' ? r : r && typeof r === 'object' ? String(r.text ?? '') : '')).slice(0, 24)
         : ['', '', '']
       : []
-  return {
+  const base = {
     ...q,
     _closedTexts: closedTexts,
     _multTexts: multTexts,
     _matchRows: matchRows,
     _seqItems: seqItems,
   }
+  if (type === 'matching') {
+    const dk = deriveMatchingKey(matchRows)
+    if (dk) return { ...base, correct_answer: dk }
+  }
+  return base
 }
 
 function serializeEditQuestion(eq) {
@@ -98,6 +103,10 @@ function serializeEditQuestion(eq) {
     options = Array.isArray(o) ? o : []
   }
   let correct = String(eq.correct_answer ?? '').trim()
+  if (type === 'matching') {
+    const dk = deriveMatchingKey(options)
+    if (dk) correct = dk
+  }
   if (type === 'multiple') {
     correct = correct
       .replace(/\D/g, '')
