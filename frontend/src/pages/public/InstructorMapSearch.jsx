@@ -107,7 +107,7 @@ export default function InstructorMapSearch() {
       lastBoundsRef.current = bbox
       setRadiusMode(false)
       try {
-        const { data } = await api.get('/public/instructors-map', {
+        const res = await api.get('/public/instructors-map', {
           params: {
             north: bbox.north,
             south: bbox.south,
@@ -117,16 +117,16 @@ export default function InstructorMapSearch() {
           },
         })
         if (seq !== loadSeqRef.current) return
-        if (data?.success) {
-          setInstructors(Array.isArray(data.instructors) ? data.instructors : [])
+        if (res?.success) {
+          setInstructors(Array.isArray(res.instructors) ? res.instructors : [])
         } else {
           setInstructors([])
-          setFetchError(data?.message || 'Server cavabı düzgün deyil')
+          setFetchError(res?.message || 'Məlumat alınmadı')
         }
       } catch (e) {
         if (seq !== loadSeqRef.current) return
         setInstructors([])
-        setFetchError(e?.response?.data?.message || e?.message || 'Şəbəkə xətası')
+        setFetchError(e?.message || 'Şəbəkə xətası')
       } finally {
         if (seq === loadSeqRef.current) {
           setLoading(false)
@@ -144,20 +144,20 @@ export default function InstructorMapSearch() {
       setFetchError('')
       setRadiusMode(true)
       try {
-        const { data } = await api.get('/public/instructors-map', {
+        const res = await api.get('/public/instructors-map', {
           params: { lat, lng, radius_km: radius, kind },
         })
         if (seq !== loadSeqRef.current) return
-        if (data?.success) {
-          setInstructors(Array.isArray(data.instructors) ? data.instructors : [])
+        if (res?.success) {
+          setInstructors(Array.isArray(res.instructors) ? res.instructors : [])
         } else {
           setInstructors([])
-          setFetchError(data?.message || 'Server cavabı düzgün deyil')
+          setFetchError(res?.message || 'Məlumat alınmadı')
         }
       } catch (e) {
         if (seq !== loadSeqRef.current) return
         setInstructors([])
-        setFetchError(e?.response?.data?.message || e?.message || 'Şəbəkə xətası')
+        setFetchError(e?.message || 'Şəbəkə xətası')
       } finally {
         if (seq === loadSeqRef.current) {
           setLoading(false)
