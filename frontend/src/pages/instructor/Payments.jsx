@@ -27,6 +27,39 @@ function formatDdMmYyyy(val) {
   return `${day}.${m}.${y}`
 }
 
+function normPhoneDigits(v) {
+  return String(v ?? '').replace(/\D/g, '')
+}
+
+/** Ad və telefon üzrə (case-insensitive, +994 / boşluq tolerant) */
+function matchesStudentSearch(student, searchTerm) {
+  const q = String(searchTerm ?? '').trim().toLowerCase()
+  if (!q) return true
+  const qDigits = normPhoneDigits(searchTerm)
+  const name = `${student.first_name || ''} ${student.last_name || ''}`.trim().toLowerCase()
+  if (name.includes(q)) return true
+  const phoneDigits = normPhoneDigits(student.phone)
+  if (!qDigits) return false
+  return (
+    phoneDigits.includes(qDigits) ||
+    (qDigits.length >= 7 && phoneDigits.endsWith(qDigits)) ||
+    (qDigits.startsWith('0') && phoneDigits.endsWith(qDigits.slice(1)))
+  )
+}
+
+function SearchIcon({ className = 'w-4 h-4' }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z"
+        stroke="currentColor"
+        strokeWidth="2"
+      />
+      <path d="M16 16l5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  )
+}
+
 export default function InstructorPayments() {
   const [loading, setLoading] = useState(true)
   const [err, setErr] = useState(null)
@@ -135,6 +168,7 @@ export default function InstructorPayments() {
   const quickPreview = null
 
   const [openCats, setOpenCats] = useState(() => new Set())
+  const [searchTerm, setSearchTerm] = useState('')
 
   const categorized = useMemo(() => {
     const list = Array.isArray(students) ? students : []
@@ -144,9 +178,16 @@ export default function InstructorPayments() {
       { key: 'other', label: 'Digər', match: (s) => !['8_lessons', '12_lessons'].includes(String(s.billing_type)) },
     ]
     return cats
-      .map((c) => ({ ...c, items: list.filter(c.match) }))
-      .filter((c) => c.items.length > 0)
-  }, [students])
+      .map((c) => {
+        const allItems = list.filter(c.match)
+        const items =
+          c.key === '8' && searchTerm.trim()
+            ? allItems.filter((s) => matchesStudentSearch(s, searchTerm))
+            : allItems
+        return { ...c, items, totalCount: allItems.length }
+      })
+      .filter((c) => (c.key === '8' ? c.totalCount > 0 : c.items.length > 0))
+  }, [students, searchTerm])
 
   const submitQuickPay = async (keepOpen = false) => {
     void keepOpen
@@ -281,13 +322,45 @@ export default function InstructorPayments() {
                 >
                   <div className="min-w-0 text-left">
                     <div className="font-semibold text-token-textMain truncate">{c.label}</div>
-                    <div className="text-xs text-token-textMuted">{c.items.length} tələbə</div>
+                    <div className="text-xs text-token-textMuted">
+                      {c.key === '8' && searchTerm.trim()
+                        ? `${c.items.length} / ${c.totalCount} tələbə`
+                        : `${c.items.length} tələbə`}
+                    </div>
                   </div>
                   <div className="text-token-textMuted text-sm font-mono">{isOpen ? '▴' : '▾'}</div>
                 </button>
 
                 {isOpen && (
                   <div className="p-2 sm:p-3 space-y-1.5 bg-token-surfaceMain/40">
+                    {c.key === '8' ? (
+                      <div className="px-1 pb-1">
+                        <label className="sr-only" htmlFor="pack-student-search">
+                          Tələbə axtarışı
+                        </label>
+                        <div className="relative">
+                          <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-token-textMuted pointer-events-none" />
+                          <input
+                            id="pack-student-search"
+                            type="search"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            placeholder="Ad və ya telefon ilə axtar…"
+                            className={[
+                              'w-full rounded-xl border border-[color:var(--border-subtle)]',
+                              'bg-token-surfaceCard/70 text-token-textMain text-sm',
+                              'pl-10 pr-3 py-2.5 outline-none transition-colors',
+                              'placeholder:text-token-textMuted',
+                              'focus:border-primary/45 focus:ring-1 focus:ring-primary/25',
+                            ].join(' ')}
+                            autoComplete="off"
+                          />
+                        </div>
+                      </div>
+                    ) : null}
+                    {c.key === '8' && searchTerm.trim() && c.items.length === 0 ? (
+                      <p className="text-sm text-token-textMuted text-center py-6 px-2">Şagird tapılmadı</p>
+                    ) : null}
                     {c.items.map((s) => {
                       const isPartial = s.payment_plan === 'partial'
                       const debt = s.pending_debt != null ? Number(s.pending_debt) : 0
