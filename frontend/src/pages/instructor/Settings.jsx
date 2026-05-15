@@ -12,6 +12,7 @@ import { useSubscriptionPlans } from '../../hooks/useSubscriptionPlans'
 import { useBillingStatus, BILLING_STATUS_QUERY_KEY } from '../../hooks/useBillingStatus'
 import { SUBSCRIPTION_PLANS_QUERY_KEY } from '../../hooks/useSubscriptionPlans'
 import PricingBillingIntervalToggle from '../../components/instructor/PricingBillingIntervalToggle'
+import InstructorMapPinPicker from '../../components/instructor/InstructorMapPinPicker'
 import { formatAzn, yearlyTotalAzn, YEARLY_DISCOUNT } from '../../lib/pricing'
 
 export default function InstructorSettings() {
@@ -33,6 +34,7 @@ export default function InstructorSettings() {
   const [mapKind, setMapKind] = useState('teacher')
   const [mapVisible, setMapVisible] = useState(true)
   const [savingMap, setSavingMap] = useState(false)
+  const [mapFlyKey, setMapFlyKey] = useState(0)
   const [subjects, setSubjects] = useState([])
   const [newSubject, setNewSubject] = useState('')
   const [newGroupBySubject, setNewGroupBySubject] = useState({})
@@ -83,7 +85,8 @@ export default function InstructorSettings() {
       (pos) => {
         setMapLat(String(pos.coords.latitude.toFixed(6)))
         setMapLng(String(pos.coords.longitude.toFixed(6)))
-        toast('Koordinatlar dolduruldu')
+        setMapFlyKey((k) => k + 1)
+        toast('Mövqe xəritədə göstərildi')
       },
       () => toast('Mövqe alınmadı', 'error'),
       { enableHighAccuracy: true, timeout: 12000 },
@@ -460,7 +463,7 @@ export default function InstructorSettings() {
       <Card className="p-5 border border-indigo-500/20 space-y-4">
         <h2 className={cardTitleCls}>Xəritədə tap</h2>
         <p className={cardTextCls}>
-          mentorix.io/search səhifəsində yalnız koordinatı olan və «xəritədə görünür» işarəsi aktiv olan müəllimlər göstərilir.
+          mentorix.io/search səhifəsində yalnız pin qoyduğunuz və «xəritədə görünür» aktiv olan müəllimlər göstərilir.
         </p>
         <label className={['flex items-center gap-2 cursor-pointer text-sm', theme === 'dark' ? 'text-gray-200' : 'text-token-textMain'].join(' ')}>
           <input
@@ -471,31 +474,36 @@ export default function InstructorSettings() {
           />
           Xəritədə axtarışda görünsün
         </label>
-        <div className="flex flex-col sm:flex-row gap-2">
-          <label className="flex-1 text-xs text-token-textMuted">
-            Enlik (latitude)
-            <input className={`${inp} mt-1`} placeholder="40.4093" value={mapLat} onChange={(e) => setMapLat(e.target.value)} />
+        {!loading ? (
+          <InstructorMapPinPicker
+            latitude={mapLat}
+            longitude={mapLng}
+            mapKind={mapKind}
+            flyKey={mapFlyKey}
+            onChange={(lat, lng) => {
+              setMapLat(lat)
+              setMapLng(lng)
+            }}
+          />
+        ) : null}
+        <div className="flex gap-3 items-center text-sm flex-wrap">
+          <label className={['flex items-center gap-2 cursor-pointer', theme === 'dark' ? 'text-gray-200' : 'text-token-textMain'].join(' ')}>
+            <input type="radio" name="map_kind" checked={mapKind === 'teacher'} onChange={() => setMapKind('teacher')} className="accent-indigo-500" />
+            Pin: müəllim (yaşıl)
           </label>
-          <label className="flex-1 text-xs text-token-textMuted">
-            Uzunluq (longitude)
-            <input className={`${inp} mt-1`} placeholder="49.8671" value={mapLng} onChange={(e) => setMapLng(e.target.value)} />
+          <label className={['flex items-center gap-2 cursor-pointer', theme === 'dark' ? 'text-gray-200' : 'text-token-textMain'].join(' ')}>
+            <input type="radio" name="map_kind" checked={mapKind === 'trainer'} onChange={() => setMapKind('trainer')} className="accent-indigo-500" />
+            Pin: təlimçi (narıncı)
           </label>
         </div>
-        <div className="flex flex-col sm:flex-row gap-2 flex-wrap">
-          <Button type="button" variant="secondary" onClick={() => fillMapFromGeolocation()} className="justify-center">
-            Mövqeyimdən doldur
-          </Button>
-          <div className="flex gap-3 items-center text-sm">
-            <label className={['flex items-center gap-2 cursor-pointer', theme === 'dark' ? 'text-gray-200' : 'text-token-textMain'].join(' ')}>
-              <input type="radio" name="map_kind" checked={mapKind === 'teacher'} onChange={() => setMapKind('teacher')} className="accent-indigo-500" />
-              Pin: müəllim (yaşıl)
-            </label>
-            <label className={['flex items-center gap-2 cursor-pointer', theme === 'dark' ? 'text-gray-200' : 'text-token-textMain'].join(' ')}>
-              <input type="radio" name="map_kind" checked={mapKind === 'trainer'} onChange={() => setMapKind('trainer')} className="accent-indigo-500" />
-              Pin: təlimçi (narıncı)
-            </label>
-          </div>
-        </div>
+        <Button type="button" variant="secondary" onClick={() => fillMapFromGeolocation()} className="w-full sm:w-auto justify-center">
+          Mövqeyimdən doldur
+        </Button>
+        {(mapLat || mapLng) && (
+          <p className="text-xs text-token-textMuted font-mono">
+            Seçilmiş mövqe: {mapLat || '—'}, {mapLng || '—'}
+          </p>
+        )}
         <Button type="button" loading={savingMap} onClick={() => void saveMapProfile()} className="w-full sm:w-auto justify-center">
           Xəritə məlumatını saxla
         </Button>
