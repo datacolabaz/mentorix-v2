@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import api from '../../lib/api'
 import Card from '../../components/common/Card'
@@ -13,6 +14,8 @@ import { useBillingStatus, BILLING_STATUS_QUERY_KEY } from '../../hooks/useBilli
 import { SUBSCRIPTION_PLANS_QUERY_KEY } from '../../hooks/useSubscriptionPlans'
 import PricingBillingIntervalToggle from '../../components/instructor/PricingBillingIntervalToggle'
 import InstructorMapPinPicker from '../../components/instructor/InstructorMapPinPicker'
+import InstructorMapPreviewModal from '../../components/instructor/InstructorMapPreviewModal'
+import { reverseGeocodeLabel } from '../../lib/reverseGeocode'
 import { formatAzn, yearlyTotalAzn, YEARLY_DISCOUNT } from '../../lib/pricing'
 
 export default function InstructorSettings() {
@@ -35,6 +38,13 @@ export default function InstructorSettings() {
   const [mapVisible, setMapVisible] = useState(true)
   const [savingMap, setSavingMap] = useState(false)
   const [mapFlyKey, setMapFlyKey] = useState(0)
+  const [mapRadiusKm, setMapRadiusKm] = useState(10)
+  const [locationLabel, setLocationLabel] = useState('')
+  const [locationLoading, setLocationLoading] = useState(false)
+  const [mapPreviewOpen, setMapPreviewOpen] = useState(false)
+  const [mapJustSaved, setMapJustSaved] = useState(false)
+  const savedMapRef = useRef(null)
+  const geocodeTimerRef = useRef(null)
   const [subjects, setSubjects] = useState([])
   const [newSubject, setNewSubject] = useState('')
   const [newGroupBySubject, setNewGroupBySubject] = useState({})
@@ -52,6 +62,13 @@ export default function InstructorSettings() {
       setMapKind(m.map_profile_kind === 'trainer' ? 'trainer' : 'teacher')
       setMapVisible(m.map_visible !== false)
       setSubjects(Array.isArray(d.subjects) ? d.subjects : [])
+      savedMapRef.current = {
+        lat: m.latitude != null && Number.isFinite(Number(m.latitude)) ? String(m.latitude) : '',
+        lng: m.longitude != null && Number.isFinite(Number(m.longitude)) ? String(m.longitude) : '',
+        kind: m.map_profile_kind === 'trainer' ? 'trainer' : 'teacher',
+        visible: m.map_visible !== false,
+      }
+      setMapJustSaved(false)
     } catch (e) {
       toast(e?.message || 'Yüklənmədi', 'error')
     } finally {
@@ -62,6 +79,35 @@ export default function InstructorSettings() {
   useEffect(() => {
     void load()
   }, [load])
+
+  const hasMapPin = mapLat.trim() !== '' && mapLng.trim() !== ''
+
+  const mapDirty = useMemo(() => {
+    const s = savedMapRef.current
+    if (!s) return hasMapPin || mapVisible
+    return s.lat !== mapLat || s.lng !== mapLng || s.kind !== mapKind || s.visible !== mapVisible
+  }, [mapLat, mapLng, mapKind, mapVisible, hasMapPin])
+
+  const primarySubject = subjects[0]?.name || ''
+
+  useEffect(() => {
+    if (!hasMapPin) {
+      setLocationLabel('')
+      return
+    }
+    if (geocodeTimerRef.current) window.clearTimeout(geocodeTimerRef.current)
+    setLocationLoading(true)
+    geocodeTimerRef.current = window.setTimeout(() => {
+      void (async () => {
+        const label = await reverseGeocodeLabel(mapLat, mapLng)
+        setLocationLabel(label || 'Mövqe seçildi')
+        setLocationLoading(false)
+      })()
+    }, 450)
+    return () => {
+      if (geocodeTimerRef.current) window.clearTimeout(geocodeTimerRef.current)
+    }
+  }, [mapLat, mapLng, hasMapPin])
 
   const saveLabel = async () => {
     setSavingLabel(true)
@@ -86,7 +132,8 @@ export default function InstructorSettings() {
         setMapLat(String(pos.coords.latitude.toFixed(6)))
         setMapLng(String(pos.coords.longitude.toFixed(6)))
         setMapFlyKey((k) => k + 1)
-        toast('Mövqe xəritədə göstərildi')
+        setMapJustSaved(false)
+        toast('📍 Mövqeyiniz xəritədə işarələndi — indi saxlayın', 'info')
       },
       () => toast('Mövqe alınmadı', 'error'),
       { enableHighAccuracy: true, timeout: 12000 },
@@ -106,13 +153,28 @@ export default function InstructorSettings() {
         toast('Uzunluq düzgün deyil', 'error')
         return
       }
+      if (mapVisible && (lat == null || lng == null)) {
+        toast('Xəritədə görünmək üçün əvvəlcə pin qoyun', 'error')
+        return
+      }
       await api.patch('/instructor/map-profile', {
         latitude: lat,
         longitude: lng,
         map_profile_kind: mapKind,
         map_visible: mapVisible,
       })
-      toast('Xəritə profili saxlanıldı')
+      savedMapRef.current = {
+        lat: mapLat,
+        lng: mapLng,
+        kind: mapKind,
+        visible: mapVisible,
+      }
+      setMapJustSaved(true)
+      if (mapVisible && lat != null && lng != null) {
+        toast('✓ Uğurla saxlanıldı — tələbələr sizi xəritədə tapa bilər', 'success')
+      } else {
+        toast('✓ Saxlanıldı — hazırda xəritədə gizlisiniz', 'success')
+      }
     } catch (e) {
       toast(e?.message || 'Xəta', 'error')
     } finally {
@@ -463,51 +525,161 @@ export default function InstructorSettings() {
       <Card className="p-5 border border-indigo-500/20 space-y-4">
         <h2 className={cardTitleCls}>Xəritədə tap</h2>
         <p className={cardTextCls}>
-          mentorix.io/search səhifəsində yalnız pin qoyduğunuz və «xəritədə görünür» aktiv olan müəllimlər göstərilir.
+          Tələbələr mentorix.io/search səhifəsində sizi xəritədə axtarır. Pin qoyun, saxlayın — hazırsınız.
         </p>
-        <label className={['flex items-center gap-2 cursor-pointer text-sm', theme === 'dark' ? 'text-gray-200' : 'text-token-textMain'].join(' ')}>
+
+        <label
+          className={[
+            'flex items-start gap-3 cursor-pointer rounded-xl border p-3 transition-colors',
+            mapVisible ? 'border-primary/40 bg-primary/5' : 'border-white/10 bg-white/[0.02]',
+            theme === 'dark' ? 'text-gray-200' : 'text-token-textMain',
+          ].join(' ')}
+        >
           <input
             type="checkbox"
             checked={mapVisible}
-            onChange={(e) => setMapVisible(e.target.checked)}
-            className="accent-indigo-500 rounded"
+            onChange={(e) => {
+              setMapVisible(e.target.checked)
+              setMapJustSaved(false)
+            }}
+            className="accent-indigo-500 rounded mt-0.5"
           />
-          Xəritədə axtarışda görünsün
+          <span className="text-sm leading-snug">
+            <span className="font-semibold text-white block">Tələbələr sizi xəritədə tapa bilsin</span>
+            <span className="text-xs text-token-textMuted">
+              {mapVisible ? 'Aktiv — saxladıqdan sonra axtarışda görünəcəksiniz' : 'Deaktiv — heç kim sizi xəritədə görməyəcək'}
+            </span>
+          </span>
         </label>
+
+        {hasMapPin ? (
+          <div
+            className={[
+              'rounded-xl border px-4 py-3 space-y-1',
+              mapVisible ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-amber-500/25 bg-amber-500/5',
+            ].join(' ')}
+          >
+            <p className="text-sm font-semibold text-white">
+              {locationLoading ? '📍 Ünvan müəyyən edilir…' : `📍 ${locationLabel || 'Mövqe seçildi'}`}
+            </p>
+            {mapVisible ? (
+              <p className="text-xs text-emerald-400/90">✓ Pin düzgün qoyulub — saxladıqdan sonra tələbələr sizi burada görəcək</p>
+            ) : (
+              <p className="text-xs text-amber-400/90">Pin var, amma görünmə bağlıdır — yuxarıdakı seçimi aktiv edin</p>
+            )}
+            <p className="text-xs text-token-textMuted">
+              Tələbələr sizi təxminən <span className="text-primary font-semibold">{mapRadiusKm} km</span> radiusda axtarışda görə bilər
+            </p>
+            {mapDirty ? (
+              <p className="text-xs text-amber-300 font-medium pt-1">● Dəyişikliklər hələ saxlanmayıb</p>
+            ) : mapJustSaved ? (
+              <p className="text-xs text-emerald-400 font-medium pt-1">● Son dəfə uğurla saxlanıldı</p>
+            ) : null}
+          </div>
+        ) : (
+          <div className="rounded-xl border border-dashed border-white/15 px-4 py-3 text-xs text-token-textMuted">
+            Hələ pin yoxdur — aşağıdakı xəritədə iş yerinizə klik edin
+          </div>
+        )}
+
         {!loading ? (
           <InstructorMapPinPicker
             latitude={mapLat}
             longitude={mapLng}
             mapKind={mapKind}
             flyKey={mapFlyKey}
+            displayName={user?.full_name || ''}
+            radiusKm={mapRadiusKm}
             onChange={(lat, lng) => {
               setMapLat(lat)
               setMapLng(lng)
+              setMapJustSaved(false)
             }}
           />
         ) : null}
-        <div className="flex gap-3 items-center text-sm flex-wrap">
+
+        <div className="flex flex-wrap items-center gap-3 text-sm">
+          <span className="text-xs text-token-textMuted">Pin növü:</span>
           <label className={['flex items-center gap-2 cursor-pointer', theme === 'dark' ? 'text-gray-200' : 'text-token-textMain'].join(' ')}>
-            <input type="radio" name="map_kind" checked={mapKind === 'teacher'} onChange={() => setMapKind('teacher')} className="accent-indigo-500" />
-            Pin: müəllim (yaşıl)
+            <input
+              type="radio"
+              name="map_kind"
+              checked={mapKind === 'teacher'}
+              onChange={() => {
+                setMapKind('teacher')
+                setMapJustSaved(false)
+              }}
+              className="accent-indigo-500"
+            />
+            👨‍🏫 Müəllim
           </label>
           <label className={['flex items-center gap-2 cursor-pointer', theme === 'dark' ? 'text-gray-200' : 'text-token-textMain'].join(' ')}>
-            <input type="radio" name="map_kind" checked={mapKind === 'trainer'} onChange={() => setMapKind('trainer')} className="accent-indigo-500" />
-            Pin: təlimçi (narıncı)
+            <input
+              type="radio"
+              name="map_kind"
+              checked={mapKind === 'trainer'}
+              onChange={() => {
+                setMapKind('trainer')
+                setMapJustSaved(false)
+              }}
+              className="accent-indigo-500"
+            />
+            🥊 Təlimçi
           </label>
         </div>
-        <Button type="button" variant="secondary" onClick={() => fillMapFromGeolocation()} className="w-full sm:w-auto justify-center">
-          Mövqeyimdən doldur
-        </Button>
-        {(mapLat || mapLng) && (
-          <p className="text-xs text-token-textMuted font-mono">
-            Seçilmiş mövqe: {mapLat || '—'}, {mapLng || '—'}
-          </p>
-        )}
-        <Button type="button" loading={savingMap} onClick={() => void saveMapProfile()} className="w-full sm:w-auto justify-center">
-          Xəritə məlumatını saxla
-        </Button>
+
+        <div className="flex flex-col sm:flex-row gap-2 flex-wrap items-center">
+          <Button type="button" variant="secondary" onClick={() => fillMapFromGeolocation()} className="justify-center">
+            Mövqeyimdən doldur
+          </Button>
+          <label className="text-xs text-token-textMuted flex items-center gap-1.5">
+            Görünürlük radiusu (tələbə üçün)
+            <select
+              className={`${inp} !py-1 !px-2 !w-auto text-xs`}
+              value={mapRadiusKm}
+              onChange={(e) => setMapRadiusKm(Number(e.target.value))}
+            >
+              <option value={5}>5 km</option>
+              <option value={10}>10 km</option>
+              <option value={25}>25 km</option>
+            </select>
+          </label>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-2">
+          <Button type="button" loading={savingMap} onClick={() => void saveMapProfile()} className="flex-1 justify-center">
+            {mapDirty ? 'Dəyişiklikləri saxla' : 'Xəritə məlumatını saxla'}
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={!hasMapPin}
+            onClick={() => setMapPreviewOpen(true)}
+            className="flex-1 justify-center"
+          >
+            Axtarışda necə görünürəm?
+          </Button>
+        </div>
+
+        {mapJustSaved && mapVisible && hasMapPin ? (
+          <Link to="/search" className="block text-center text-sm font-semibold text-primary hover:underline py-1">
+            → Canlı xəritədə bax
+          </Link>
+        ) : null}
       </Card>
+
+      <InstructorMapPreviewModal
+        open={mapPreviewOpen}
+        onClose={() => setMapPreviewOpen(false)}
+        fullName={user?.full_name}
+        subject={primarySubject}
+        mapKind={mapKind}
+        latitude={mapLat}
+        longitude={mapLng}
+        locationLabel={locationLabel}
+        mapVisible={mapVisible}
+        radiusKm={mapRadiusKm}
+      />
 
       <Card className="p-5 border border-indigo-500/20 space-y-4">
         <h2 className={cardTitleCls}>Tədris sahələri və qruplar</h2>
