@@ -1,10 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from 'react-leaflet'
 import api from '../../lib/api'
 import Brand from '../../components/common/Brand'
-
-const BAKU_CENTER = [40.4093, 49.8671]
+import { BAKU_BBOX, BAKU_CENTER, distanceKm, formatDistanceKm } from '../../lib/geo'
 
 const DARK_TILE = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
 const TILE_ATTRIB =
@@ -16,11 +15,27 @@ function zoomForRadiusKm(r) {
   return 11
 }
 
-function BoundsTracker({ kind, onBounds }) {
+function kindLabel(k) {
+  if (k === 'trainer') return 'Təlimçi'
+  return 'Müəllim'
+}
+
+function resultCountLabel(count, kind) {
+  if (kind === 'teacher') return `${count} müəllim tapıldı`
+  if (kind === 'trainer') return `${count} təlimçi tapıldı`
+  return `${count} nəticə tapıldı`
+}
+
+function BoundsTracker({ kind, onBounds, enabled }) {
   const map = useMap()
   const debounceRef = useRef(null)
+  const skipNextRef = useRef(false)
 
   const emit = useCallback(() => {
+    if (!enabled || skipNextRef.current) {
+      skipNextRef.current = false
+      return
+    }
     const b = map.getBounds()
     const payload = {
       north: b.getNorth(),
@@ -32,49 +47,65 @@ function BoundsTracker({ kind, onBounds }) {
     debounceRef.current = window.setTimeout(() => {
       onBounds(payload)
     }, 320)
-  }, [map, onBounds])
+  }, [map, onBounds, enabled])
 
   useEffect(() => {
-    emit()
     map.on('moveend', emit)
     return () => {
       map.off('moveend', emit)
       if (debounceRef.current) window.clearTimeout(debounceRef.current)
     }
-  }, [map, emit, kind])
+  }, [map, emit])
 
   return null
 }
 
-function FlyTo({ target }) {
+function FlyTo({ target, onDone }) {
   const map = useMap()
   useEffect(() => {
-    if (target?.center && target.zoom != null) {
-      map.flyTo(target.center, target.zoom, { duration: 1.2 })
-    }
-  }, [map, target])
+    if (!target?.center || target.zoom == null) return
+    map.flyTo(target.center, target.zoom, { duration: 1.1 })
+    const t = window.setTimeout(() => onDone?.(), 1150)
+    return () => window.clearTimeout(t)
+  }, [map, target, onDone])
   return null
 }
 
-function kindLabel(k) {
-  if (k === 'trainer') return 'Təlimçi'
-  return 'Müəllim'
+function MapInvalidateSize() {
+  const map = useMap()
+  useEffect(() => {
+    const t = window.setTimeout(() => map.invalidateSize(), 120)
+    return () => window.clearTimeout(t)
+  }, [map])
+  return null
 }
 
 export default function InstructorMapSearch() {
   const [kind, setKind] = useState('all')
   const [instructors, setInstructors] = useState([])
-  const [loading, setLoading] = useState(false)
-  const [err, setErr] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [hasFetched, setHasFetched] = useState(false)
+  const [fetchError, setFetchError] = useState('')
+  const [locationHint, setLocationHint] = useState('')
   const [listOnly, setListOnly] = useState(false)
   const [radiusKm, setRadiusKm] = useState(10)
   const [flyTarget, setFlyTarget] = useState(null)
-  const lastBoundsRef = useRef(null)
+  const [selectedId, setSelectedId] = useState(null)
+  const [refPoint, setRefPoint] = useState({ lat: BAKU_CENTER[0], lng: BAKU_CENTER[1] })
+  const [userLocated, setUserLocated] = useState(false)
+  const lastBoundsRef = useRef(BAKU_BBOX)
+  const [radiusMode, setRadiusMode] = useState(false)
+  const suppressBoundsRef = useRef(false)
+  const loadSeqRef = useRef(0)
+  const skipKindReloadRef = useRef(true)
 
-  const load = useCallback(
+  const loadByBbox = useCallback(
     async (bbox) => {
+      const seq = ++loadSeqRef.current
       setLoading(true)
-      setErr('')
+      setFetchError('')
+      lastBoundsRef.current = bbox
+      setRadiusMode(false)
       try {
         const { data } = await api.get('/public/instructors-map', {
           params: {
@@ -85,48 +116,144 @@ export default function InstructorMapSearch() {
             kind,
           },
         })
-        if (data?.success) setInstructors(Array.isArray(data.instructors) ? data.instructors : [])
-        else setErr(data?.message || 'Məlumat alınmadı')
+        if (seq !== loadSeqRef.current) return
+        if (data?.success) {
+          setInstructors(Array.isArray(data.instructors) ? data.instructors : [])
+        } else {
+          setInstructors([])
+          setFetchError(data?.message || 'Server cavabı düzgün deyil')
+        }
       } catch (e) {
-        setErr(e?.message || 'Şəbəkə xətası')
+        if (seq !== loadSeqRef.current) return
         setInstructors([])
+        setFetchError(e?.response?.data?.message || e?.message || 'Şəbəkə xətası')
       } finally {
-        setLoading(false)
+        if (seq === loadSeqRef.current) {
+          setLoading(false)
+          setHasFetched(true)
+        }
       }
     },
     [kind],
   )
 
+  const loadByRadius = useCallback(
+    async (lat, lng, radius) => {
+      const seq = ++loadSeqRef.current
+      setLoading(true)
+      setFetchError('')
+      setRadiusMode(true)
+      try {
+        const { data } = await api.get('/public/instructors-map', {
+          params: { lat, lng, radius_km: radius, kind },
+        })
+        if (seq !== loadSeqRef.current) return
+        if (data?.success) {
+          setInstructors(Array.isArray(data.instructors) ? data.instructors : [])
+        } else {
+          setInstructors([])
+          setFetchError(data?.message || 'Server cavabı düzgün deyil')
+        }
+      } catch (e) {
+        if (seq !== loadSeqRef.current) return
+        setInstructors([])
+        setFetchError(e?.response?.data?.message || e?.message || 'Şəbəkə xətası')
+      } finally {
+        if (seq === loadSeqRef.current) {
+          setLoading(false)
+          setHasFetched(true)
+        }
+      }
+    },
+    [kind],
+  )
+
+  /** İlk giriş: Bakı + müəllimlər */
+  useEffect(() => {
+    void loadByBbox(BAKU_BBOX)
+  }, [loadByBbox])
+
   const onBounds = useCallback(
     (bbox) => {
-      lastBoundsRef.current = bbox
-      void load(bbox)
+      if (suppressBoundsRef.current) return
+      void loadByBbox(bbox)
     },
-    [load],
+    [loadByBbox],
   )
 
   useEffect(() => {
-    if (listOnly && !lastBoundsRef.current) {
-      lastBoundsRef.current = { north: 40.52, south: 40.32, east: 50.05, west: 49.72 }
+    if (skipKindReloadRef.current) {
+      skipKindReloadRef.current = false
+      return
     }
-    if (lastBoundsRef.current) void load(lastBoundsRef.current)
-  }, [kind, listOnly, load])
+    if (radiusMode && userLocated) {
+      void loadByRadius(refPoint.lat, refPoint.lng, radiusKm)
+    } else {
+      void loadByBbox(lastBoundsRef.current || BAKU_BBOX)
+    }
+  }, [kind, loadByBbox, loadByRadius, radiusMode, userLocated, refPoint.lat, refPoint.lng, radiusKm])
+
+  useEffect(() => {
+    if (!radiusMode || !userLocated) return
+    void loadByRadius(refPoint.lat, refPoint.lng, radiusKm)
+  }, [radiusKm, radiusMode, userLocated, refPoint.lat, refPoint.lng, loadByRadius])
+
+  const applyCenter = useCallback(
+    (lat, lng, { fallback = false, useRadius = true } = {}) => {
+      setRefPoint({ lat, lng })
+      setUserLocated(true)
+      suppressBoundsRef.current = true
+      setFlyTarget({ center: [lat, lng], zoom: zoomForRadiusKm(radiusKm), key: Date.now() })
+      window.setTimeout(() => {
+        suppressBoundsRef.current = false
+      }, 1400)
+      if (useRadius) {
+        setRadiusMode(true)
+        void loadByRadius(lat, lng, radiusKm)
+      }
+      if (fallback) {
+        setLocationHint('Mövqe alınmadı — Bakı mərkəzi göstərilir')
+      } else {
+        setLocationHint('')
+      }
+    },
+    [loadByRadius, radiusKm],
+  )
 
   const nearMe = () => {
     if (!navigator.geolocation) {
-      setErr('Brauzeriniz yaxınlıq məlumatını dəstəkləmir')
+      applyCenter(BAKU_CENTER[0], BAKU_CENTER[1], { fallback: true })
       return
     }
+    setLocationHint('Mövqe soruşulur…')
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        const lat = pos.coords.latitude
-        const lng = pos.coords.longitude
-        setFlyTarget({ center: [lat, lng], zoom: zoomForRadiusKm(radiusKm) })
+        applyCenter(pos.coords.latitude, pos.coords.longitude, { fallback: false })
       },
-      () => setErr('Yaxınlıq icazəsi verilmədi və ya mövqe tapılmadı'),
-      { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 },
+      () => {
+        applyCenter(BAKU_CENTER[0], BAKU_CENTER[1], { fallback: true })
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
     )
   }
+
+  const instructorsSorted = useMemo(() => {
+    return instructors
+      .map((p) => ({
+        ...p,
+        distanceKm: distanceKm(refPoint.lat, refPoint.lng, p.latitude, p.longitude),
+      }))
+      .sort((a, b) => a.distanceKm - b.distanceKm)
+  }, [instructors, refPoint])
+
+  const focusInstructor = (p) => {
+    setSelectedId(p.id)
+    setFlyTarget({ center: [p.latitude, p.longitude], zoom: 15, key: Date.now() })
+    if (listOnly) setListOnly(false)
+  }
+
+  const count = instructorsSorted.length
+  const isEmpty = hasFetched && !loading && count === 0 && !fetchError
 
   return (
     <div className="min-h-[100svh] bg-[#0b0b0b] text-white flex flex-col">
@@ -136,7 +263,7 @@ export default function InstructorMapSearch() {
             <Brand className="h-8 w-auto shrink-0" />
             <div className="min-w-0">
               <h1 className="font-display font-bold text-lg sm:text-xl truncate">Təlimçini xəritədə tap</h1>
-              <p className="text-xs text-gray-500 hidden sm:block">Xəritəni hərəkət etdirdikcə siyahı yenilənir</p>
+              <p className="text-xs text-gray-500 hidden sm:block">Bakı və ətrafı · xəritəni hərəkət etdirdikcə siyahı yenilənir</p>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -159,7 +286,7 @@ export default function InstructorMapSearch() {
 
       <div className="flex-1 flex flex-col lg:flex-row min-h-0">
         {!listOnly ? (
-          <div className="w-full lg:w-[58%] h-[42vh] lg:h-auto lg:min-h-0 border-b lg:border-b-0 lg:border-r border-white/10 relative z-0">
+          <div className="w-full lg:w-[58%] h-[42vh] lg:h-auto lg:min-h-[420px] border-b lg:border-b-0 lg:border-r border-white/10 relative z-0">
             <MapContainer
               center={BAKU_CENTER}
               zoom={11}
@@ -168,28 +295,35 @@ export default function InstructorMapSearch() {
               attributionControl
             >
               <TileLayer attribution={TILE_ATTRIB} url={DARK_TILE} />
-              <BoundsTracker kind={kind} onBounds={onBounds} />
+              <MapInvalidateSize />
+              <BoundsTracker kind={kind} onBounds={onBounds} enabled={!radiusMode} />
               {flyTarget ? <FlyTo target={flyTarget} /> : null}
-              {instructors.map((p) => {
+              {instructorsSorted.map((p) => {
                 const isTrainer = p.map_profile_kind === 'trainer'
                 const color = isTrainer ? '#f59e0b' : '#00E676'
+                const selected = selectedId === p.id
                 return (
                   <CircleMarker
                     key={String(p.id)}
                     center={[p.latitude, p.longitude]}
-                    radius={isTrainer ? 9 : 8}
+                    radius={selected ? 13 : isTrainer ? 10 : 9}
                     pathOptions={{
-                      color,
+                      color: '#ffffff',
                       fillColor: color,
-                      fillOpacity: 0.88,
-                      weight: 2,
+                      fillOpacity: selected ? 1 : 0.92,
+                      weight: selected ? 3 : 2,
+                    }}
+                    eventHandlers={{
+                      click: () => focusInstructor(p),
                     }}
                   >
                     <Popup>
-                      <div className="text-gray-900 text-sm min-w-[160px]">
+                      <div className="text-gray-900 text-sm min-w-[180px]">
                         <div className="font-bold">{p.full_name}</div>
                         <div className="text-gray-600 text-xs mt-1">{p.subject}</div>
-                        <div className="text-[11px] mt-1 font-semibold text-gray-700">{kindLabel(p.map_profile_kind)}</div>
+                        <div className="text-[11px] mt-1 text-gray-500">
+                          {kindLabel(p.map_profile_kind)} · {formatDistanceKm(p.distanceKm)}
+                        </div>
                       </div>
                     </Popup>
                   </CircleMarker>
@@ -197,7 +331,7 @@ export default function InstructorMapSearch() {
               })}
             </MapContainer>
             {loading ? (
-              <div className="pointer-events-none absolute bottom-3 left-3 text-xs bg-black/70 px-2 py-1 rounded-md text-gray-300">
+              <div className="pointer-events-none absolute bottom-3 left-3 text-xs bg-black/75 px-2.5 py-1 rounded-md text-gray-300 border border-white/10">
                 Yenilənir…
               </div>
             ) : null}
@@ -247,33 +381,67 @@ export default function InstructorMapSearch() {
                 </select>
               </label>
             </div>
-            {err ? <p className="text-xs text-red-400">{err}</p> : null}
+            {locationHint ? <p className="text-xs text-amber-400/90">{locationHint}</p> : null}
+            {fetchError ? <p className="text-xs text-red-400">{fetchError}</p> : null}
+            {hasFetched && !fetchError ? (
+              <p className="text-sm font-semibold text-white">
+                Nəticə: <span className="text-primary">{resultCountLabel(count, kind)}</span>
+              </p>
+            ) : null}
           </div>
 
           <div className="flex-1 overflow-y-auto p-4 space-y-2">
-            {!instructors.length && !loading ? (
-              <p className="text-sm text-gray-500">
-                Bu ərazidə koordinatı olan müəllim/təlimçi yoxdur. Müəllimlər profilində xəritə mövqeyini əlavə edəndə burada
-                görünəcək.
-              </p>
+            {loading && !count ? (
+              <div className="space-y-2">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="h-16 rounded-xl bg-white/5 animate-pulse border border-white/5" />
+                ))}
+              </div>
             ) : null}
-            {instructors.map((p) => {
+
+            {isEmpty ? (
+              <div className="rounded-xl border border-white/10 bg-[#121212]/80 p-5 text-center space-y-2">
+                <p className="text-sm font-semibold text-white">Bu ərazidə müəllim yoxdur</p>
+                <p className="text-xs text-gray-400 leading-relaxed">
+                  Radiusu artır və ya filteri dəyiş. Xəritəni başqa əraziyə sürüşdürün.
+                </p>
+                <button
+                  type="button"
+                  onClick={nearMe}
+                  className="mt-2 text-xs font-bold text-primary hover:underline"
+                >
+                  Mənim yaxınlığımda yenidən yoxla
+                </button>
+              </div>
+            ) : null}
+
+            {instructorsSorted.map((p) => {
               const isTrainer = p.map_profile_kind === 'trainer'
+              const selected = selectedId === p.id
               return (
-                <div
+                <button
                   key={String(p.id)}
-                  className="rounded-xl border border-white/10 bg-[#121212]/90 p-3 flex gap-3 items-start"
+                  type="button"
+                  onClick={() => focusInstructor(p)}
+                  className={`w-full text-left rounded-xl border p-3 flex gap-3 items-start transition-colors ${
+                    selected
+                      ? 'border-primary/60 bg-primary/10 ring-1 ring-primary/30'
+                      : 'border-white/10 bg-[#121212]/90 hover:border-white/20 hover:bg-[#161616]'
+                  }`}
                 >
                   <span
-                    className="mt-1 h-3 w-3 rounded-full shrink-0 ring-2 ring-white/20"
+                    className="mt-1.5 h-3.5 w-3.5 rounded-full shrink-0 ring-2 ring-white/25"
                     style={{ backgroundColor: isTrainer ? '#f59e0b' : '#00E676' }}
                   />
                   <div className="min-w-0 flex-1">
-                    <div className="font-semibold text-white text-sm">{p.full_name}</div>
-                    <div className="text-xs text-gray-400 mt-0.5">{p.subject}</div>
+                    <div className="flex items-baseline justify-between gap-2">
+                      <span className="font-semibold text-white text-sm truncate">{p.full_name}</span>
+                      <span className="text-xs font-bold text-primary shrink-0">{formatDistanceKm(p.distanceKm)}</span>
+                    </div>
+                    <div className="text-xs text-gray-400 mt-0.5 truncate">{p.subject}</div>
                     <div className="text-[11px] text-gray-500 mt-1">{kindLabel(p.map_profile_kind)}</div>
                   </div>
-                </div>
+                </button>
               )
             })}
           </div>
