@@ -1353,4 +1353,71 @@ const googleComplete = async (req, res) => {
       const { rows: created } = await db.query(
         `INSERT INTO users (full_name, email, role, auth_provider, google_sub, phone_verified, password_hash, account_status)
          VALUES ($1, $2, $3, 'google', $4, FALSE, $5, 'active')
-         RETURNING id, full_name
+         RETURNING id, full_name, email, role, phone, phone_verified`,
+        [fullName, g.email, r, g.sub, oauthPasswordPlaceholder]
+      );
+      user = created[0];
+    } else if (!user.role) {
+      const { rows: updated } = await db.query(
+        `UPDATE users
+         SET role = $2,
+             auth_provider = 'google',
+             google_sub = COALESCE(google_sub, $3),
+             is_active = TRUE,
+             account_status = 'active'
+         WHERE id = $1
+         RETURNING id, full_name, email, role, phone, phone_verified`,
+        [user.id, r, g.sub]
+      );
+      user = updated[0] || user;
+    } else {
+      await db
+        .query(
+          `UPDATE users
+           SET google_sub = COALESCE(google_sub, $2),
+               auth_provider = 'google',
+               is_active = TRUE,
+               account_status = 'active'
+           WHERE id = $1`,
+          [user.id, g.sub]
+        )
+        .catch(() => {});
+    }
+
+    const token = sign({ id: user.id, role: user.role });
+    return res.json({
+      success: true,
+      token,
+      user: {
+        id: user.id,
+        full_name: user.full_name,
+        role: user.role,
+        email: user.email,
+        phone: user.phone,
+        phone_verified: Boolean(user.phone_verified),
+      },
+    });
+  } catch (err) {
+    const st = err.statusCode || 500;
+    res.status(st).json({ success: false, message: err.message });
+  }
+};
+
+module.exports = {
+  login,
+  phoneNextStep,
+  forgotPinSms,
+  sendOtp,
+  verifyOtp,
+  register,
+  me,
+  setPin,
+  loginWithPin,
+  deliverPermanentPinSms,
+  googleLogin,
+  googleComplete,
+  googleLinkSendOtp,
+  googleLinkVerify,
+  sendMyPhoneVerifyOtp,
+  verifyMyPhoneVerifyOtp,
+};
