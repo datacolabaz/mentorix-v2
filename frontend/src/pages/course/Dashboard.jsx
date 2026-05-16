@@ -78,4 +78,55 @@ export default function CourseDashboard() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard
-    
+          title="Bu gün dərs"
+          value={loading ? '…' : String(stats.lessons_today ?? 0)}
+          secondary={loading ? '' : lessonLabel(stats.lessons_today)}
+        />
+        <KpiCard
+          title="Aktiv müəllim"
+          value={loading ? '…' : String(stats.active_teachers ?? 0)}
+          secondary={loading ? '' : 'kursda qeydiyyatlı'}
+        />
+        <KpiCard
+          title="Aktiv tələbə"
+          value={loading ? '…' : String(stats.active_students ?? 0)}
+          secondary={
+            loading
+              ? ''
+              : stats.active_groups > 0
+                ? `${stats.active_groups} aktiv qrup`
+                : 'ümumi qeydiyyat'
+          }
+        />
+        <KpiCard
+          title="Gözləyən ödəniş"
+          value={loading ? '…' : formatAzn(stats.pending_payments)}
+          secondary={loading ? '' : 'cari ay (aylıq abunəlik)'}
+        />
+      </div>
+
+      <Card className="p-5 border border-indigo-500/20 space-y-4">
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-indigo-200/90">Sürətli keçidlər</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {QUICK_LINKS.map((item) => (
+            <Link
+              key={item.to}
+              to={item.to}
+              className="rounded-xl border border-white/10 bg-white/[0.03] p-4 hover:border-primary/40 hover:bg-primary/5 transition-colors"
+            >
+              <div className="text-sm font-semibold text-white">{item.label}</div>
+              <div className="text-xs text-token-textMuted mt-1">{item.desc}</div>
+            </Link>
+          ))}
+        </div>
+      </Card>
+
+      <Card className="p-5 border border-emerald-500/20 bg-emerald-500/[0.04]">
+        <p className="text-sm text-token-textMuted leading-relaxed">
+          Statistikalar kursunuza bağlı müəllimlərin cədvəli, tələbə qeydiyyatı və aylıq ödəniş balansından
+          hesablanır. Əlavə müəllim və qruplar bölmələri növbəti mərhələdə genişləndiriləcək.
+        </p>
+      </Card>
+    </div>
+  )
+}
