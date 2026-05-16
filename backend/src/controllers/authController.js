@@ -4,6 +4,7 @@ const { sign, signOTP } = require('../utils/jwt');
 const { OAuth2Client } = require('google-auth-library');
 const { sendSms, sendOtpSms } = require('../services/smsService');
 const { checkSmsQuota } = require('../services/smsQuotaService');
+const { resolveLoginUserOrError } = require('../services/authService');
 
 const PHONE_NORM = "regexp_replace(COALESCE(phone::text, ''), '[^0-9]', '', 'g')";
 const LOGIN_ROLES = new Set(['instructor', 'student', 'parent', 'course']);
@@ -231,20 +232,13 @@ const phoneNextStep = async (req, res) => {
     const clean = normalizePhone(phone);
     if (!clean) return res.status(400).json({ success: false, message: 'Telefon nömrəsi tələb olunur' });
     if (!role || !LOGIN_ROLES.has(role)) {
-      return res.status(400).json({ success: false, message: 'Rol seçin: müəllim, tələbə və ya valideyn' });
+      return res.status(400).json({ success: false, message: 'Rol seçin: müəllim, tələbə və ya kurs' });
     }
-    const user = await findUserByPhoneAndRole(clean, role);
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message:
-          role === 'instructor'
-            ? 'Bu nömrə ilə müəllim tapılmadı.'
-            : role === 'student'
-              ? 'Bu nömrə ilə tələbə tapılmadı.'
-              : 'Bu nömrə ilə valideyn tapılmadı.',
-      });
+    const resolved = await resolveLoginUserOrError(clean, role);
+    if (resolved.status) {
+      return res.status(resolved.status).json(resolved.body);
     }
+    const user = resolved.user;
 
     if (!hasStoredPin(user.pin_hash)) {
       try {
@@ -289,8 +283,11 @@ const forgotPinSms = async (req, res) => {
     if (!role || !LOGIN_ROLES.has(role)) {
       return res.status(400).json({ success: false, message: 'Rol seçilməlidir' });
     }
-    const user = await findUserByPhoneAndRole(clean, role);
-    if (!user) return res.status(404).json({ success: false, message: 'İstifadəçi tapılmadı' });
+    const resolved = await resolveLoginUserOrError(clean, role);
+    if (resolved.status) {
+      return res.status(resolved.status).json(resolved.body);
+    }
+    const user = resolved.user;
     try {
       const r = await deliverPermanentPinSms(user, clean, { force: true });
       return res.json({
@@ -917,8 +914,11 @@ const loginWithPin = async (req, res) => {
     if (!/^\d{6}$/.test(p)) {
       return res.status(400).json({ success: false, message: '6 rəqəmli PIN daxil edin' });
     }
-    const user = await findUserByPhoneAndRole(clean, role);
-    if (!user) return res.status(404).json({ success: false, message: 'İstifadəçi tapılmadı' });
+    const resolved = await resolveLoginUserOrError(clean, role);
+    if (resolved.status) {
+      return res.status(resolved.status).json(resolved.body);
+    }
+    const user = resolved.user;
     if (!hasStoredPin(user.pin_hash)) {
       return res.status(400).json({
         success: false,
@@ -1272,7 +1272,7 @@ const googleComplete = async (req, res) => {
     const g = await verifyGoogleIdTokenOrThrow(credential);
     const r = String(role || '').trim().toLowerCase();
     if (!r || !LOGIN_ROLES.has(r)) {
-      return res.status(400).json({ success: false, message: 'Rol seçin: müəllim, tələbə və ya valideyn' });
+      return res.status(400).json({ success: false, message: 'Rol seçin: müəllim, tələbə və ya kurs' });
     }
 
     const { rows: existingBySub } = await db.query(

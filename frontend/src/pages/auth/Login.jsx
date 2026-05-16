@@ -48,6 +48,19 @@ function RoleIcon({ role }) {
       </svg>
     )
   }
+  if (role === 'course') {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" className={base} aria-hidden>
+        <path
+          d="M4 19V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v13"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinejoin="round"
+        />
+        <path d="M8 8h8M8 12h5M8 16h8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      </svg>
+    )
+  }
   return (
     <svg viewBox="0 0 24 24" fill="none" className={base} aria-hidden>
       <path

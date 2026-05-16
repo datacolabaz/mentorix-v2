@@ -15,15 +15,15 @@ const PHONE_NORM = "regexp_replace(COALESCE(phone::text, ''), '[^0-9]', '', 'g')
 const PHONE_PIN_ROLES = new Set(['instructor', 'student', 'parent', 'course']);
 
 const notFoundByRole = {
-  instructor: 'Bu nomre ile muellim tapilmadi. Admin terefinden qeydiyyatdan kecdiyinizi yoxlayin.',
-  student: 'Bu nomre ile telebe tapilmadi. Admin ve ya muelliminiz terefinden qeydiyyatinizi yoxlayin.',
-  parent: 'Bu nomre ile valideyn tapilmadi. Qeydiyyatinizi yoxlayin.',
-  course: 'Bu nomre ile kurs hesabi tapilmadi. Platforma ile elaqe saxlayin.',
+  instructor: 'Bu nömrə ilə müəllim tapılmadı. Admin tərəfindən qeydiyyatdan keçdiyinizi yoxlayın.',
+  student: 'Bu nömrə ilə tələbə tapılmadı. Müəlliminiz və ya admin qeydiyyatınızı yoxlayın.',
+  parent: 'Bu nömrə ilə valideyn tapılmadı.',
+  course: 'Bu nömrə ilə kurs hesabı tapılmadı. Platforma ilə əlaqə saxlayın.',
 };
 
 const roleLabelAz = {
-  instructor: 'Muellim',
-  student: 'Telebe',
+  instructor: 'Müəllim',
+  student: 'Tələbə',
   parent: 'Valideyn',
   course: 'Kurs',
 };
@@ -128,7 +128,7 @@ async function deliverPinSms(cleanPhone, plainPin, billingInstructorId) {
 function badRoleResponse() {
   return {
     status: 400,
-    body: { success: false, message: 'Rol teleb olunur: instructor, student ve ya parent' },
+    body: { success: false, message: 'Rol seçin: müəllim, tələbə, kurs və ya valideyn' },
   };
 }
 
@@ -153,7 +153,7 @@ async function resolveLoginUserOrError(cleanPhone, role) {
       status: 403,
       body: {
         success: false,
-        message: `Bu nomre ${actual} hesabina aiddir. Giris ucun "${wanted}" yerine "${actual}" secin.`,
+        message: `Bu nömrə ${actual} hesabına aiddir. Giriş üçün "${wanted}" əvəzinə "${actual}" seçin.`,
         actualRole: any.role,
       },
     };
@@ -358,6 +358,7 @@ module.exports = {
   PHONE_PIN_ROLES,
   notFoundByRole,
   inferLoginRoleFromPhone,
+  resolveLoginUserOrError,
   unifiedPhoneStep,
   unifiedPhoneVerify,
   unifiedForgotPin,
