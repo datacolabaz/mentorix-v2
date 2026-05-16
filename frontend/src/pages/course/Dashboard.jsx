@@ -51,4 +51,7 @@ export default function CourseDashboard() {
           Kurs paneli hazırdır. Növbəti mərhələdə müəllimlər, qruplar, cədvəl və maliyyə modulları tam CRM funksiyası ilə
           əlavə olunacaq.
         </p>
-      </Car
+      </Card>
+    </div>
+  )
+}
