@@ -8,6 +8,7 @@ const bcrypt = require('bcryptjs');
 const db = require('../utils/db');
 const { sendSms } = require('./smsService');
 const { checkSmsQuota } = require('./smsQuotaService');
+const { findUserByPhone, getActiveRoles, userHasRole, grantUserRole } = require('./userRolesService');
 
 /** JS `normalizePhone` ilə eyni: bütün qeyri-rəqəmləri sil (boşluq, mötərizə və s.) */
 const PHONE_NORM = "regexp_replace(COALESCE(phone::text, ''), '[^0-9]', '', 'g')";
@@ -69,11 +70,16 @@ async function inferLoginRoleFromPhone(phone) {
 
 /**
  * SMS kotası kimin hesabına yazılsın (instructor_profiles.sms_used).
- * Müəllim: özü; tələbə/valideyn: ilk aktiv enrollment müəllimi.
+ * loginRole — girişdə seçilmiş panel (JWT rolü); user.role DB-də köhnə primary ola bilər.
  */
-async function resolveSmsBillingInstructorId(user) {
+async function resolveSmsBillingInstructorId(user, loginRole = null) {
+  const role = loginRole || user.role;
+  if (role === 'instructor' || role === 'course') {
+    if (await userHasRole(user.id, 'instructor')) return user.id;
+  }
+  if (role === 'instructor') return user.id;
   if (user.role === 'instructor') return user.id;
-  if (user.role === 'student') {
+  if (role === 'student' || user.role === 'student') {
     const { rows } = await db.query(
       `SELECT e.instructor_id FROM enrollments e
        WHERE e.student_id = $1 AND e.status = 'active'
@@ -83,7 +89,7 @@ async function resolveSmsBillingInstructorId(user) {
     );
     return rows[0]?.instructor_id || null;
   }
-  if (user.role === 'parent') {
+  if (role === 'parent' || user.role === 'parent') {
     const { rows } = await db.query(
       `SELECT e.instructor_id FROM enrollments e
        INNER JOIN student_profiles sp ON sp.user_id = e.student_id
@@ -139,29 +145,49 @@ function badRoleResponse() {
 async function resolveLoginUserOrError(cleanPhone, role) {
   if (!role || !PHONE_PIN_ROLES.has(role)) return badRoleResponse();
   if (!cleanPhone) {
-    return { status: 400, body: { success: false, message: 'Telefon nomresi teleb olunur' } };
+    return { status: 400, body: { success: false, message: 'Telefon nömrəsi tələb olunur' } };
   }
 
-  const byRole = await findUserByPhoneAndRole(cleanPhone, role);
-  if (byRole) return { user: byRole };
+  const user = await findUserByPhone(cleanPhone);
+  if (!user) {
+    return {
+      status: 404,
+      body: { success: false, message: notFoundByRole[role] || 'İstifadəçi tapılmadı' },
+    };
+  }
 
-  const any = await findUserByPhoneAmongLoginRoles(cleanPhone);
-  if (any && any.role !== role) {
-    const actual = roleLabelAz[any.role] || any.role;
+  const roles = await getActiveRoles(user.id);
+  if (roles.length === 0) {
+    const legacy = user.role;
+    if (legacy && PHONE_PIN_ROLES.has(legacy)) {
+      await grantUserRole(user.id, legacy);
+      if (legacy === role) return { user, loginRole: role, availableRoles: [legacy] };
+    }
+  }
+
+  const activeRoles = roles.length ? roles : user.role ? [user.role] : [];
+
+  if (activeRoles.includes(role)) {
+    return { user, loginRole: role, availableRoles: activeRoles };
+  }
+
+  if (activeRoles.length > 0) {
+    const labels = activeRoles.map((r) => roleLabelAz[r] || r).join(', ');
     const wanted = roleLabelAz[role] || role;
     return {
       status: 403,
       body: {
         success: false,
-        message: `Bu nömrə ${actual} hesabına aiddir. Giriş üçün "${wanted}" əvəzinə "${actual}" seçin.`,
-        actualRole: any.role,
+        message: `Bu nömrədə "${wanted}" profili aktiv deyil. Mövcud rollar: ${labels}.`,
+        availableRoles: activeRoles,
+        actualRole: activeRoles[0],
       },
     };
   }
 
   return {
     status: 404,
-    body: { success: false, message: notFoundByRole[role] || 'Istifadeci tapilmadi' },
+    body: { success: false, message: notFoundByRole[role] || 'İstifadəçi tapılmadı' },
   };
 }
 
@@ -178,7 +204,7 @@ async function unifiedPhoneStep(phone, role) {
   if (!user.pin_hash) {
     const plain = generatePhonePin();
     const hash = await bcrypt.hash(plain, 12);
-    const billingId = await resolveSmsBillingInstructorId(user);
+    const billingId = await resolveSmsBillingInstructorId(user, role);
     try {
       await assertSmsQuotaAllowsSend(billingId);
       await db.query('UPDATE users SET pin_hash = $1 WHERE id = $2', [hash, user.id]);
@@ -263,7 +289,7 @@ async function unifiedForgotPin(phone, role) {
   const prevVerified = user.phone_verified;
   const plain = generatePhonePin();
   const hash = await bcrypt.hash(plain, 12);
-  const billingId = await resolveSmsBillingInstructorId(user);
+  const billingId = await resolveSmsBillingInstructorId(user, role);
   try {
     await assertSmsQuotaAllowsSend(billingId);
     await db.query('UPDATE users SET pin_hash = $1, phone_verified = FALSE WHERE id = $2', [hash, user.id]);
@@ -310,57 +336,11 @@ async function unifiedLoginWithPinBody(phone, pin) {
   if (!user.pin_hash) {
     const plain = generatePhonePin();
     const hash = await bcrypt.hash(plain, 12);
-    const billingId = await resolveSmsBillingInstructorId(user);
+    const billingId = await resolveSmsBillingInstructorId(user, role);
     try {
       await assertSmsQuotaAllowsSend(billingId);
       await db.query('UPDATE users SET pin_hash = $1 WHERE id = $2', [hash, user.id]);
       await deliverPinSms(clean, plain, billingId);
     } catch (e) {
       await db.query('UPDATE users SET pin_hash = NULL WHERE id = $1', [user.id]).catch(() => {});
-      if (e.statusCode && e.payload) return { status: e.statusCode, body: e.payload };
-      throw e;
-    }
-    return {
-      status: 400,
-      body: {
-        success: false,
-        pinSent: true,
-        message: 'PIN nomrenize SMS ile gonderildi. PIN-i daxil edib yeniden cehd edin.',
-      },
-    };
-  }
-  if (pin == null || String(pin).trim() === '') {
-    return { status: 400, body: { success: false, message: 'PIN daxil edin' } };
-  }
-  const valid = await bcrypt.compare(String(pin).trim(), user.pin_hash);
-  if (!valid) {
-    return { status: 401, body: { success: false, message: 'PIN yanlisdir' } };
-  }
-  await db.query('UPDATE users SET phone_verified = TRUE WHERE id = $1', [user.id]);
-  return {
-    status: 200,
-    body: {
-      success: true,
-      user: {
-        id: user.id,
-        full_name: user.full_name,
-        role: user.role,
-        phone: user.phone,
-        phone_verified: true,
-      },
-    },
-  };
-}
-
-module.exports = {
-  normalizePhone,
-  generatePhonePin,
-  PHONE_PIN_ROLES,
-  notFoundByRole,
-  inferLoginRoleFromPhone,
-  resolveLoginUserOrError,
-  unifiedPhoneStep,
-  unifiedPhoneVerify,
-  unifiedForgotPin,
-  unifiedLoginWithPinBody,
-};
+      if (e.statusCode && e.paylo

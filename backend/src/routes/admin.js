@@ -10,6 +10,7 @@ const {
 } = require('../controllers/siteMarketingController');
 const { authenticate, authorize } = require('../middleware/auth');
 const db = require('../utils/db');
+const { grantCourseRoleToUser } = require('../services/userRolesService');
 const { adminListPlans, adminUpsertPlan } = require('../services/subscriptionPlansService');
 
 router.get('/stats', authenticate, authorize('admin'), getDashboardStats);
@@ -20,6 +21,23 @@ router.patch('/instructors/:id/limits', authenticate, authorize('admin'), update
 router.patch('/instructors/:id/plan', authenticate, authorize('admin'), updateInstructorPlan);
 router.patch('/instructors/:id/toggle', authenticate, authorize('admin'), toggleInstructor);
 
+/** Müəllim hesabına əlavə olaraq Kurs paneli rolu verir (vahid telefon, çoxlu rol). */
+router.post('/instructors/:id/grant-course', authenticate, authorize('admin'), async (req, res) => {
+  try {
+    const { rows } = await db.query(
+      `SELECT id, full_name, role FROM users WHERE id = $1 AND is_active = TRUE`,
+      [req.params.id],
+    );
+    if (!rows[0]) {
+      return res.status(404).json({ success: false, message: 'İstifadəçi tapılmadı' });
+    }
+    const courseName = req.body?.course_name || rows[0].full_name;
+    await grantCourseRoleToUser(req.params.id, courseName);
+    res.json({ success: true, message: 'Kurs rolu aktiv edildi — eyni nömrə ilə Kurs girişi mümkündür' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
 
 router.patch('/instructors/:id/profile', authenticate, authorize('admin'), async (req, res) => {
   try {
@@ -78,33 +96,4 @@ router.get('/billing/payments', authenticate, authorize('admin'), async (req, re
     const { rows } = await db.query(sql, params);
     res.json({ success: true, payments: rows });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-});
-
-router.get('/plans', authenticate, authorize('admin'), async (_req, res) => {
-  try {
-    const plans = await adminListPlans();
-    res.json({ success: true, plans });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-});
-
-router.put('/plans', authenticate, authorize('admin'), async (req, res) => {
-  try {
-    const { plans } = req.body || {};
-    if (!Array.isArray(plans) || plans.length === 0) {
-      return res.status(400).json({ success: false, message: 'plans array tələb olunur' });
-    }
-    for (const p of plans) {
-      await adminUpsertPlan(p);
-    }
-    const out = await adminListPlans();
-    res.json({ success: true, plans: out });
-  } catch (err) {
-    res.status(err.statusCode || 500).json({ success: false, message: err.message });
-  }
-});
-
-module.exports = router;
+    res.status(500).json(

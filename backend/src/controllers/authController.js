@@ -4,7 +4,8 @@ const { sign, signOTP } = require('../utils/jwt');
 const { OAuth2Client } = require('google-auth-library');
 const { sendSms, sendOtpSms } = require('../services/smsService');
 const { checkSmsQuota } = require('../services/smsQuotaService');
-const { resolveLoginUserOrError } = require('../services/authService');
+const { resolveLoginUserOrError, resolveSmsBillingInstructorId: resolveSmsBillingForLogin } = require('../services/authService');
+const { getActiveRoles, grantUserRole, grantCourseRoleToUser } = require('../services/userRolesService');
 
 const PHONE_NORM = "regexp_replace(COALESCE(phone::text, ''), '[^0-9]', '', 'g')";
 const LOGIN_ROLES = new Set(['instructor', 'student', 'parent', 'course']);
@@ -55,11 +56,20 @@ async function attachCourseProfile(userLite) {
   };
 }
 
-async function enrichUserForClient(userLite) {
+async function enrichUserForClient(userLite, sessionRole = null) {
   if (!userLite) return userLite;
-  if (userLite.role === 'instructor') return attachInstructorPublicLabel(userLite);
-  if (userLite.role === 'course') return attachCourseProfile(userLite);
-  return userLite;
+  const roles = await getActiveRoles(userLite.id);
+  const legacyRoles =
+    roles.length > 0
+      ? roles
+      : userLite.role && LOGIN_ROLES.has(userLite.role)
+        ? [userLite.role]
+        : [];
+  const role = sessionRole || userLite.role;
+  let out = { ...userLite, role, roles: legacyRoles };
+  if (role === 'instructor') out = await attachInstructorPublicLabel(out);
+  if (role === 'course') out = await attachCourseProfile(out);
+  return out;
 }
 
 function normalizePhone(phone) {
@@ -129,7 +139,8 @@ async function assertSmsOk(billingId) {
  */
 async function deliverPermanentPinSms(user, cleanPhone, opts = {}) {
   const force = opts.force === true;
-  const billingId = await resolveSmsBillingInstructorId(user);
+  const loginRole = opts.loginRole || null;
+  const billingId = await resolveSmsBillingForLogin(user, loginRole);
   await assertSmsOk(billingId);
 
   if (!force && hasStoredPin(user.pin_hash)) {
@@ -239,15 +250,17 @@ const phoneNextStep = async (req, res) => {
       return res.status(resolved.status).json(resolved.body);
     }
     const user = resolved.user;
+    const loginRole = resolved.loginRole || role;
 
     if (!hasStoredPin(user.pin_hash)) {
       try {
-        const r = await deliverPermanentPinSms(user, clean, { force: false });
+        const r = await deliverPermanentPinSms(user, clean, { force: false, loginRole });
         if (r.alreadyHadPin) {
           return res.json({
             success: true,
             next: 'pin',
             message: 'PIN kodunuzu daxil edin.',
+            available_roles: resolved.availableRoles || [],
           });
         }
         return res.json({
@@ -257,6 +270,7 @@ const phoneNextStep = async (req, res) => {
           message:
             'Nömrənizə daimi 6 rəqəmli PIN SMS ilə göndərildi. Gələn kodu aşağıya daxil edin (OTP yox).',
           sms_debug: r?.sms || null,
+          available_roles: resolved.availableRoles || [],
         });
       } catch (e) {
         if (e.statusCode && e.body) return res.status(e.statusCode).json(e.body);
@@ -268,6 +282,7 @@ const phoneNextStep = async (req, res) => {
       success: true,
       next: 'pin',
       message: 'PIN kodunuzu daxil edin (əlavə SMS göndərilmir).',
+      available_roles: resolved.availableRoles || [],
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -636,10 +651,22 @@ const register = async (req, res) => {
         }
       }
 
+      await client.query(
+        `INSERT INTO user_roles (user_id, role, is_active) VALUES ($1, $2, TRUE)
+         ON CONFLICT (user_id, role) DO UPDATE SET is_active = TRUE`,
+        [created.id, role],
+      );
+
       if (role === 'instructor') {
         await client.query(
           'INSERT INTO instructor_profiles (user_id, subject, billing_type) VALUES ($1, $2, $3)',
           [created.id, subject || null, billing_type || '8_lessons'],
+        );
+      } else if (role === 'course') {
+        await client.query(
+          `INSERT INTO course_profiles (user_id, course_name) VALUES ($1, $2)
+           ON CONFLICT (user_id) DO NOTHING`,
+          [created.id, full_name || 'Kurs'],
         );
       } else if (role === 'student') {
         // Avoid requiring a UNIQUE constraint on student_profiles.user_id for older DBs.
@@ -680,7 +707,7 @@ const me = async (req, res) => {
     ]);
     const u = rows[0];
     if (!u) return res.status(404).json({ success: false, message: 'Tapılmadı' });
-    const userOut = await enrichUserForClient(u);
+    const userOut = await enrichUserForClient(u, req.user.role);
     res.json({ success: true, user: userOut });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -930,9 +957,9 @@ const loginWithPin = async (req, res) => {
     const valid = await bcrypt.compare(p, user.pin_hash);
     if (!valid) return res.status(401).json({ success: false, message: 'PIN yanlışdır' });
     await db.query('UPDATE users SET phone_verified = TRUE WHERE id = $1', [user.id]);
-    const token = signOTP({ id: user.id, role: user.role });
-    const baseUser = { id: user.id, full_name: user.full_name, role: user.role, phone: user.phone };
-    const userOut = await enrichUserForClient(baseUser);
+    const token = signOTP({ id: user.id, role });
+    const baseUser = { id: user.id, full_name: user.full_name, role, phone: user.phone };
+    const userOut = await enrichUserForClient(baseUser, role);
     res.json({
       success: true,
       token,
@@ -1326,71 +1353,4 @@ const googleComplete = async (req, res) => {
       const { rows: created } = await db.query(
         `INSERT INTO users (full_name, email, role, auth_provider, google_sub, phone_verified, password_hash, account_status)
          VALUES ($1, $2, $3, 'google', $4, FALSE, $5, 'active')
-         RETURNING id, full_name, email, role, phone, phone_verified`,
-        [fullName, g.email, r, g.sub, oauthPasswordPlaceholder]
-      );
-      user = created[0];
-    } else if (!user.role) {
-      const { rows: updated } = await db.query(
-        `UPDATE users
-         SET role = $2,
-             auth_provider = 'google',
-             google_sub = COALESCE(google_sub, $3),
-             is_active = TRUE,
-             account_status = 'active'
-         WHERE id = $1
-         RETURNING id, full_name, email, role, phone, phone_verified`,
-        [user.id, r, g.sub]
-      );
-      user = updated[0] || user;
-    } else {
-      await db
-        .query(
-          `UPDATE users
-           SET google_sub = COALESCE(google_sub, $2),
-               auth_provider = 'google',
-               is_active = TRUE,
-               account_status = 'active'
-           WHERE id = $1`,
-          [user.id, g.sub]
-        )
-        .catch(() => {});
-    }
-
-    const token = sign({ id: user.id, role: user.role });
-    return res.json({
-      success: true,
-      token,
-      user: {
-        id: user.id,
-        full_name: user.full_name,
-        role: user.role,
-        email: user.email,
-        phone: user.phone,
-        phone_verified: Boolean(user.phone_verified),
-      },
-    });
-  } catch (err) {
-    const st = err.statusCode || 500;
-    res.status(st).json({ success: false, message: err.message });
-  }
-};
-
-module.exports = {
-  login,
-  phoneNextStep,
-  forgotPinSms,
-  sendOtp,
-  verifyOtp,
-  register,
-  me,
-  setPin,
-  loginWithPin,
-  deliverPermanentPinSms,
-  googleLogin,
-  googleComplete,
-  googleLinkSendOtp,
-  googleLinkVerify,
-  sendMyPhoneVerifyOtp,
-  verifyMyPhoneVerifyOtp,
-};
+         RETURNING id, full_name
