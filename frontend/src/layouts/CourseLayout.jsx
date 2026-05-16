@@ -222,4 +222,17 @@ export default function CourseLayout() {
         <main
           className={[
             'fixed left-0 right-0 bottom-0 top-[72px] z-[1] w-full min-w-0 overflow-x-hidden overflow-y-auto bg-token-surfaceMain',
-            'lg:stati
+            'lg:static lg:inset-auto lg:flex-1 lg:min-h-0 lg:pt-0',
+          ].join(' ')}
+        >
+          <div className="min-h-full flex flex-col">
+            <div className="flex-1 min-h-0">
+              <Outlet />
+            </div>
+            <Footer />
+          </div>
+        </main>
+      </div>
+    </div>
+  )
+}
