@@ -1397,7 +1397,7 @@ const addPayment = async (req, res) => {
       return res.status(400).json({ success: false, message: 'enrollment_id tələb olunur' });
     }
     const { rows: en } = await db.query(
-      'SELECT student_id, billing_type, billing_cycle, lesson_count, instructor_id FROM enrollments WHERE id = $1',
+      'SELECT student_id, billing_type, billing_cycle, lesson_count, instructor_id, course_id FROM enrollments WHERE id = $1',
       [enrollment_id]
     );
     if (!en[0]) return res.status(404).json({ success: false, message: 'Qeydiyyat tapılmadı' });
@@ -1412,6 +1412,7 @@ const addPayment = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Məbləğ müsbət rəqəm olmalıdır' });
     }
     const studentId = en[0]?.student_id || null;
+    const courseId = en[0]?.course_id || null;
     const cycle = en[0]?.billing_cycle != null ? Number(en[0].billing_cycle) : null;
     const bt = en[0]?.billing_type || null;
     const payDate = payment_date || null;
@@ -1428,11 +1429,12 @@ const addPayment = async (req, res) => {
     let inserted;
     try {
       ({ rows: inserted } = await db.query(
-        `INSERT INTO payments (enrollment_id, student_id, amount, payment_method, period, billing_cycle, notes, status, payment_date)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
+        `INSERT INTO payments (enrollment_id, student_id, course_id, amount, payment_method, period, billing_cycle, notes, status, payment_date)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
         [
           enrollment_id,
           studentId,
+          courseId,
           amt,
           paymentMethodForDb(payment_method),
           derivedPeriod,
@@ -1445,11 +1447,12 @@ const addPayment = async (req, res) => {
     } catch (e) {
       if (!isMissingPaymentsStatusColumn(e)) throw e;
       ({ rows: inserted } = await db.query(
-        `INSERT INTO payments (enrollment_id, student_id, amount, payment_method, period, billing_cycle, notes, payment_date)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
+        `INSERT INTO payments (enrollment_id, student_id, course_id, amount, payment_method, period, billing_cycle, notes, payment_date)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
         [
           enrollment_id,
           studentId,
+          courseId,
           amt,
           paymentMethodForDb(payment_method),
           derivedPeriod,

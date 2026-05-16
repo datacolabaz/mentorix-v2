@@ -38,6 +38,7 @@ const emptyForm = {
   parent_phone: '',
   subject_id: '',
   group_id: '',
+  course_id: '',
   notifications_enabled: true,
 }
 
@@ -131,6 +132,7 @@ function StudentFormFields({
   onRefreshSlots,
   toast,
   teachingSubjects = [],
+  teachingCourses = [],
   onCreateSubject,
   onCreateGroup,
 }) {
@@ -199,6 +201,24 @@ function StudentFormFields({
         />
         <p className="text-[10px] text-gray-500 mt-1.5">Giriş üçün əsas identifikator telefon nömrəsidir (PIN ilə).</p>
       </div>
+
+      {Array.isArray(teachingCourses) && teachingCourses.length > 0 ? (
+        <div>
+          <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Kurs</label>
+          <select
+            className={inp}
+            value={data.course_id || ''}
+            onChange={(e) => setData((p) => ({ ...p, course_id: e.target.value }))}
+          >
+            <option value="">— Kurs seçin (ixtiyari) —</option>
+            {teachingCourses.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      ) : null}
 
       {mode === 'add' || mode === 'edit' ? (
         <div>
@@ -581,6 +601,7 @@ export default function InstructorStudents() {
   // Slot cədvəli tələbə qeydiyyatı üçün artıq tələb olunmur (dərslər tarixlərlə avtomatik yaradılır)
   const [enrollMeta] = useState({ loading: false, requiresScheduleSlot: false, availableSlots: [] })
   const [teachingSubjects, setTeachingSubjects] = useState([])
+  const [teachingCourses, setTeachingCourses] = useState([])
   const toast = useToast()
   const [subjectFilter, setSubjectFilter] = useState('')
   const [search, setSearch] = useState('')
@@ -618,6 +639,10 @@ export default function InstructorStudents() {
       .get('/instructor/teaching')
       .then((d) => setTeachingSubjects(Array.isArray(d.subjects) ? d.subjects : []))
       .catch(() => setTeachingSubjects([]))
+    void api
+      .get('/courses')
+      .then((d) => setTeachingCourses(Array.isArray(d.courses) ? d.courses : []))
+      .catch(() => setTeachingCourses([]))
   }, [])
 
   const createTeachingSubject = async (name) => {
@@ -704,6 +729,7 @@ export default function InstructorStudents() {
         notifications_enabled: Boolean(form.notifications_enabled),
         subject_id: form.subject_id || undefined,
         group_id: form.group_id || undefined,
+        course_id: form.course_id || undefined,
         lesson_weekdays: form.lesson_weekdays,
         lesson_times: form.lesson_times || {},
         parent_name: form.parent_name,
@@ -1499,6 +1525,7 @@ export default function InstructorStudents() {
           onRefreshSlots={null}
           toast={toast}
           teachingSubjects={teachingSubjects}
+          teachingCourses={teachingCourses}
           onCreateSubject={createTeachingSubject}
           onCreateGroup={createTeachingGroup}
         />

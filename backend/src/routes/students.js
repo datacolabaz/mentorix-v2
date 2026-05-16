@@ -403,6 +403,7 @@ router.post(
       lesson_times,
       subject_id,
       group_id,
+      course_id,
     } = req.body;
     const instructor_id = req.user.role === 'admin' ? req.body.instructor_id : req.user.id;
     const ni = normUuid(instructor_id);
@@ -471,9 +472,9 @@ router.post(
            instructor_id, student_id, billing_type, referral_notes, referral_source_id,
            lesson_weekdays, lesson_times, enrollment_start_date,
            billing_timing, payment_plan, subject_id, group_id,
-           notifications_enabled
+           notifications_enabled, course_id
          )
-         VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb,$8::date,$9,$10,$11,$12,$13) RETURNING *`,
+         VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb,$8::date,$9,$10,$11,$12,$13,$14) RETURNING *`,
         [
           instructor_id,
           student_id,
@@ -488,6 +489,7 @@ router.post(
           trackIds.subject_id,
           trackIds.group_id,
           notifEnabled,
+          course_id || null,
         ]
       );
       const enr = rows[0];
@@ -619,6 +621,15 @@ router.post(
             [enr.id, student_id, instructor_id, starts[i], i + 1]
           );
         }
+      }
+
+      if (course_id) {
+        await client.query(
+          `INSERT INTO course_students (course_id, student_id, enrollment_id)
+           VALUES ($1, $2, $3)
+           ON CONFLICT (course_id, student_id) DO UPDATE SET enrollment_id = EXCLUDED.enrollment_id`,
+          [course_id, student_id, enr.id],
+        );
       }
 
       if (req.user?.role === 'instructor') {

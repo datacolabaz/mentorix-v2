@@ -46,6 +46,8 @@ import CourseSchedule from './pages/course/Schedule'
 import CourseFinance from './pages/course/Finance'
 import CourseNotifications from './pages/course/Notifications'
 import CourseSettings from './pages/course/Settings'
+import CourseCatalogList from './pages/courses/CourseList'
+import CourseCatalogDetail from './pages/courses/CourseDetail'
 
 const Placeholder = ({ title }) => (
   <div className="p-4 sm:p-6 min-w-0">
@@ -82,6 +84,11 @@ export default function App() {
         <Route path="notifications" element={<AdminNotifications />} />
         <Route path="settings" element={<AdminSettings />} />
         <Route path="marketing/login" element={<AdminMarketingLogin />} />
+      </Route>
+
+      <Route path="/courses" element={<ProtectedRoute roles={['instructor']}><InstructorLayout /></ProtectedRoute>}>
+        <Route index element={<CourseCatalogList />} />
+        <Route path=":id" element={<CourseCatalogDetail />} />
       </Route>
 
       <Route path="/instructor" element={<ProtectedRoute roles={['instructor']}><InstructorLayout /></ProtectedRoute>}>

@@ -19,6 +19,14 @@ export default function NavIcon({ name, className = 'w-5 h-5' }) {
           <path d="M4 13h7V4H4v9Zm9 7h7V11h-7v9ZM4 20h7v-5H4v5Zm9-11h7V4h-7v5Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
         </IconBase>
       )
+    case 'courses':
+      return (
+        <IconBase className={className}>
+          <path d="M4 6h16v12H4V6Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+          <path d="M8 4h8v2H8V4Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+          <path d="M8 10h8M8 14h5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        </IconBase>
+      )
     case 'students':
       return (
         <IconBase className={className}>
