@@ -343,4 +343,52 @@ async function unifiedLoginWithPinBody(phone, pin) {
       await deliverPinSms(clean, plain, billingId);
     } catch (e) {
       await db.query('UPDATE users SET pin_hash = NULL WHERE id = $1', [user.id]).catch(() => {});
-      if (e.statusCode && e.paylo
+      if (e.statusCode && e.payload) return { status: e.statusCode, body: e.payload };
+      throw e;
+    }
+    return {
+      status: 400,
+      body: {
+        success: false,
+        pinSent: true,
+        message: 'PIN nomrenize SMS ile gonderildi. PIN-i daxil edib yeniden cehd edin.',
+      },
+    };
+  }
+  if (pin == null || String(pin).trim() === '') {
+    return { status: 400, body: { success: false, message: 'PIN daxil edin' } };
+  }
+  const valid = await bcrypt.compare(String(pin).trim(), user.pin_hash);
+  if (!valid) {
+    return { status: 401, body: { success: false, message: 'PIN yanlisdir' } };
+  }
+  await db.query('UPDATE users SET phone_verified = TRUE WHERE id = $1', [user.id]);
+  return {
+    status: 200,
+    body: {
+      success: true,
+      user: {
+        id: user.id,
+        full_name: user.full_name,
+        role: user.role,
+        phone: user.phone,
+        phone_verified: true,
+      },
+    },
+  };
+}
+
+module.exports = {
+  normalizePhone,
+  generatePhonePin,
+  PHONE_PIN_ROLES,
+  notFoundByRole,
+  roleLabelAz,
+  inferLoginRoleFromPhone,
+  resolveLoginUserOrError,
+  resolveSmsBillingInstructorId,
+  unifiedPhoneStep,
+  unifiedPhoneVerify,
+  unifiedForgotPin,
+  unifiedLoginWithPinBody,
+};
