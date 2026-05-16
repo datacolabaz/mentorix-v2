@@ -18,7 +18,10 @@ async function getCourseByOwnerUserId(ownerUserId) {
     `SELECT c.id, c.owner_user_id, c.name, cp.course_name, cp.logo_url
      FROM courses c
      LEFT JOIN course_profiles cp ON cp.user_id = c.owner_user_id
-     WHERE c.owner_user_id = $1`,
+     WHERE c.owner_user_id = $1
+       AND COALESCE(c.is_organization, FALSE) = TRUE
+     ORDER BY c.created_at ASC
+     LIMIT 1`,
     [ownerUserId],
   );
   return rows[0] || null;
@@ -33,16 +36,34 @@ async function ensureCourseForOwner(ownerUserId) {
   const { rows: userRows } = await db.query(`SELECT full_name FROM users WHERE id = $1`, [ownerUserId]);
   const name = prof[0]?.course_name || userRows[0]?.full_name || 'Kursum';
 
-  const { rows: courseRows } = await db.query(
-    `INSERT INTO courses (owner_user_id, name)
-     VALUES ($1, $2)
-     ON CONFLICT (owner_user_id) DO UPDATE SET
-       name = COALESCE(NULLIF(TRIM(EXCLUDED.name), ''), courses.name),
-       updated_at = NOW()
-     RETURNING id, owner_user_id, name`,
-    [ownerUserId, name],
+  const { rows: existing } = await db.query(
+    `SELECT id, owner_user_id, name FROM courses
+     WHERE owner_user_id = $1 AND COALESCE(is_organization, FALSE) = TRUE
+     ORDER BY created_at ASC
+     LIMIT 1`,
+    [ownerUserId],
   );
-  const course = courseRows[0];
+
+  let course;
+  if (existing.length) {
+    const { rows: updated } = await db.query(
+      `UPDATE courses SET
+         name = COALESCE(NULLIF(TRIM($2), ''), name),
+         updated_at = NOW()
+       WHERE id = $1
+       RETURNING id, owner_user_id, name`,
+      [existing[0].id, name],
+    );
+    course = updated[0];
+  } else {
+    const { rows: inserted } = await db.query(
+      `INSERT INTO courses (owner_user_id, name, instructor_id, is_organization)
+       VALUES ($1, $2, $1, TRUE)
+       RETURNING id, owner_user_id, name`,
+      [ownerUserId, name],
+    );
+    course = inserted[0];
+  }
 
   const { rows: isInstructor } = await db.query(
     `SELECT 1 FROM instructor_profiles WHERE user_id = $1 LIMIT 1`,
@@ -185,81 +206,4 @@ async function countLessonsToday(instructorIds) {
 
   for (const row of monthlyRows) {
     const wdays = parseLessonWeekdaysJson(row.lesson_weekdays);
-    if (!wdays.includes(todayDow)) continue;
-    const anchor = row.enrollment_start_date
-      ? String(row.enrollment_start_date).slice(0, 10)
-      : null;
-    if (anchor && /^\d{4}-\d{2}-\d{2}$/.test(anchor) && anchor > todayBaku) continue;
-
-    const { rows: exists } = await db.query(
-      `SELECT 1 FROM lessons l
-       WHERE l.enrollment_id = $1
-         AND COALESCE(l.status, '') NOT IN ('cancelled')
-         AND to_char((l.lesson_date AT TIME ZONE 'Asia/Baku')::date, 'YYYY-MM-DD') = $2
-       LIMIT 1`,
-      [row.id, todayBaku],
-    );
-    if (!exists.length) total += 1;
-  }
-
-  return total;
-}
-
-/** Cari ay üçün gözlənilən borc (aylıq abunəliklər üzrə) — bütün kurs müəllimləri */
-async function sumPendingPaymentsForInstructors(instructorIds) {
-  let sum = 0;
-  for (const id of instructorIds) {
-    const { pendingSum } = await loadInstructorMonthlyBalanceRows(db, normUuid(id));
-    sum += Number(pendingSum) || 0;
-  }
-  return roundMoney(sum);
-}
-
-async function getCourseDashboardStats(ownerUserId) {
-  const course = await ensureCourseForOwner(ownerUserId);
-  const instructorIds = await getActiveInstructorIdsForCourse(course.id);
-  const linkedTeachers = await listCourseTeachers(course.id, ownerUserId);
-  const staffTeachers = linkedTeachers.filter((t) => !t.is_owner).length;
-
-  const [lessonsToday, activeTeachers, activeStudents, activeGroups, pendingPayments] =
-    await Promise.all([
-      countLessonsToday(instructorIds),
-      countActiveTeachers(course.id),
-      countUniqueActiveStudents(instructorIds),
-      countActiveGroups(course.id),
-      sumPendingPaymentsForInstructors(instructorIds),
-    ]);
-
-  const ownerTeacher = linkedTeachers.find((t) => t.is_owner) || null;
-
-  return {
-    course_id: course.id,
-    course_name: course.name,
-    lessons_today: lessonsToday,
-    active_teachers: activeTeachers,
-    staff_teachers: staffTeachers,
-    active_students: activeStudents,
-    active_groups: activeGroups,
-    pending_payments: pendingPayments,
-    linked_teachers: linkedTeachers,
-    owner_teacher_name: ownerTeacher?.full_name || null,
-    today_baku: await bakuTodayYmd(),
-  };
-}
-
-async function getCourseTeachersForOwner(ownerUserId) {
-  const course = await ensureCourseForOwner(ownerUserId);
-  const teachers = await listCourseTeachers(course.id, ownerUserId);
-  return { course_id: course.id, course_name: course.name, teachers };
-}
-
-module.exports = {
-  normUuid,
-  getCourseByOwnerUserId,
-  ensureCourseForOwner,
-  assertCourseAccess,
-  getActiveInstructorIdsForCourse,
-  getCourseDashboardStats,
-  listCourseTeachers,
-  getCourseTeachersForOwner,
-};
+    if (!wdays
