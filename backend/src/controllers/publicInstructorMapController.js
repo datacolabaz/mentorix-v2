@@ -74,6 +74,33 @@ const getInstructorsInMapView = async (req, res) => {
       kindSql = ` AND ip.map_profile_kind = $${params.length}`;
     }
 
+    const userLat = parseFloatQ(req.query.user_lat);
+    const userLng = parseFloatQ(req.query.user_lng);
+    const sortLat = userLat != null ? userLat : lat;
+    const sortLng = userLng != null ? userLng : lng;
+
+    let distanceSql = '';
+    let orderSql = 'ORDER BY u.full_name ASC';
+    if (sortLat != null && sortLng != null) {
+      params.push(sortLat, sortLng);
+      const latP = params.length - 1;
+      const lngP = params.length;
+      distanceSql = `, (
+        6371 * acos(
+          LEAST(
+            1,
+            GREATEST(
+              -1,
+              cos(radians($${latP})) * cos(radians(ip.latitude::float8))
+                * cos(radians(ip.longitude::float8) - radians($${lngP}))
+                + sin(radians($${latP})) * sin(radians(ip.latitude::float8))
+            )
+          )
+        )
+      )::float8 AS distance_km`;
+      orderSql = 'ORDER BY distance_km ASC NULLS LAST, u.full_name ASC';
+    }
+
     const { rows } = await db.query(
       `SELECT
          u.id,
@@ -82,6 +109,7 @@ const getInstructorsInMapView = async (req, res) => {
          ip.latitude::float8 AS latitude,
          ip.longitude::float8 AS longitude,
          ip.map_profile_kind
+         ${distanceSql}
        FROM users u
        INNER JOIN instructor_profiles ip ON ip.user_id = u.id
        WHERE u.role = 'instructor'
@@ -93,7 +121,7 @@ const getInstructorsInMapView = async (req, res) => {
          AND ip.latitude BETWEEN $2 AND $1
          AND ip.longitude BETWEEN LEAST($3::float8, $4::float8) AND GREATEST($3::float8, $4::float8)
          ${kindSql}
-       ORDER BY u.full_name ASC
+       ${orderSql}
        LIMIT 200`,
       params
     );

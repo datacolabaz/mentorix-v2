@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from 'react-leaflet'
 import api from '../../lib/api'
 import Brand from '../../components/common/Brand'
+import InstructorMapMarker from '../../components/public/InstructorMapMarker'
 import { BAKU_BBOX, BAKU_CENTER, distanceKm, formatDistanceKm } from '../../lib/geo'
 import { reverseGeocodeLabel } from '../../lib/reverseGeocode'
 
@@ -105,6 +106,7 @@ export default function InstructorMapSearch() {
   const suppressBoundsRef = useRef(false)
   const loadSeqRef = useRef(0)
   const skipKindReloadRef = useRef(true)
+  const autoNearestDoneRef = useRef(false)
 
   const loadByBbox = useCallback(
     async (bbox) => {
@@ -121,6 +123,8 @@ export default function InstructorMapSearch() {
             east: bbox.east,
             west: bbox.west,
             kind,
+            user_lat: refPoint.lat,
+            user_lng: refPoint.lng,
           },
         })
         if (seq !== loadSeqRef.current) return
@@ -141,7 +145,7 @@ export default function InstructorMapSearch() {
         }
       }
     },
-    [kind],
+    [kind, refPoint.lat, refPoint.lng],
   )
 
   const loadByRadius = useCallback(
@@ -152,7 +156,14 @@ export default function InstructorMapSearch() {
       setRadiusMode(true)
       try {
         const res = await api.get('/public/instructors-map', {
-          params: { lat, lng, radius_km: radius, kind },
+          params: {
+            lat,
+            lng,
+            radius_km: radius,
+            kind,
+            user_lat: refPoint.lat,
+            user_lng: refPoint.lng,
+          },
         })
         if (seq !== loadSeqRef.current) return
         if (res?.success) {
@@ -172,7 +183,7 @@ export default function InstructorMapSearch() {
         }
       }
     },
-    [kind],
+    [kind, refPoint.lat, refPoint.lng],
   )
 
   /** İlk giriş: Bakı + müəllimlər */
@@ -297,12 +308,26 @@ export default function InstructorMapSearch() {
 
   const instructorsSorted = useMemo(() => {
     return instructors
-      .map((p) => ({
-        ...p,
-        distanceKm: distanceKm(refPoint.lat, refPoint.lng, p.latitude, p.longitude),
-      }))
+      .map((p) => {
+        const fromApi = p.distance_km != null ? Number(p.distance_km) : null
+        const distanceKmVal =
+          fromApi != null && Number.isFinite(fromApi)
+            ? fromApi
+            : distanceKm(refPoint.lat, refPoint.lng, p.latitude, p.longitude)
+        return { ...p, distanceKm: distanceKmVal }
+      })
       .sort((a, b) => a.distanceKm - b.distanceKm)
   }, [instructors, refPoint])
+
+  const nearestInstructor = instructorsSorted[0] ?? null
+  const nearestId = nearestInstructor?.id ?? null
+
+  useEffect(() => {
+    if (autoNearestDoneRef.current || loading || !nearestInstructor) return
+    if (distanceOrigin !== 'user') return
+    autoNearestDoneRef.current = true
+    setSelectedId(nearestInstructor.id)
+  }, [distanceOrigin, loading, nearestInstructor])
 
   const focusInstructor = (p) => {
     setSelectedId(p.id)
@@ -321,7 +346,9 @@ export default function InstructorMapSearch() {
             <Brand className="h-8 w-auto shrink-0" />
             <div className="min-w-0">
               <h1 className="font-display font-bold text-lg sm:text-xl truncate">Təlimçini xəritədə tap</h1>
-              <p className="text-xs text-gray-500 hidden sm:block">Bakı və ətrafı · xəritəni hərəkət etdirdikcə siyahı yenilənir</p>
+              <p className="text-xs text-gray-500 hidden sm:block">
+                Sizə ən yaxın müəllim və təlimçi · məsafəyə görə sıralanır
+              </p>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -373,38 +400,31 @@ export default function InstructorMapSearch() {
                   </Popup>
                 </CircleMarker>
               ) : null}
-              {instructorsSorted.map((p) => {
-                const isTrainer = p.map_profile_kind === 'trainer'
-                const color = isTrainer ? '#f59e0b' : '#00E676'
-                const selected = selectedId === p.id
-                return (
-                  <CircleMarker
-                    key={String(p.id)}
-                    center={[p.latitude, p.longitude]}
-                    radius={selected ? 13 : isTrainer ? 10 : 9}
-                    pathOptions={{
-                      color: '#ffffff',
-                      fillColor: color,
-                      fillOpacity: selected ? 1 : 0.92,
-                      weight: selected ? 3 : 2,
-                    }}
-                    eventHandlers={{
-                      click: () => focusInstructor(p),
-                    }}
-                  >
-                    <Popup>
-                      <div className="text-gray-900 text-sm min-w-[180px]">
-                        <div className="font-bold">{p.full_name}</div>
-                        <div className="text-gray-600 text-xs mt-1">{p.subject}</div>
-                        <div className="text-[11px] mt-1 text-gray-500">
-                          {kindLabel(p.map_profile_kind)} · {formatDistanceKm(p.distanceKm)}
-                        </div>
-                      </div>
-                    </Popup>
-                  </CircleMarker>
-                )
-              })}
+              {instructorsSorted.map((p) => (
+                <InstructorMapMarker
+                  key={String(p.id)}
+                  instructor={p}
+                  isNearest={p.id === nearestId}
+                  selected={selectedId === p.id}
+                  onSelect={focusInstructor}
+                />
+              ))}
             </MapContainer>
+            {nearestInstructor && distanceOrigin === 'user' && !loading ? (
+              <div className="absolute top-3 left-3 right-3 sm:right-auto sm:max-w-sm z-[400] pointer-events-auto">
+                <button
+                  type="button"
+                  onClick={() => focusInstructor(nearestInstructor)}
+                  className="w-full text-left rounded-xl border border-amber-500/50 bg-black/85 backdrop-blur-md px-3 py-2.5 shadow-lg hover:border-amber-400/70 transition-colors"
+                >
+                  <p className="text-[10px] font-bold text-amber-400 uppercase tracking-wide">Sizə ən yaxın</p>
+                  <p className="text-sm font-semibold text-white mt-0.5 leading-snug">
+                    {kindLabel(nearestInstructor.map_profile_kind)}: {nearestInstructor.full_name}
+                    <span className="text-primary ml-1">({formatDistanceKm(nearestInstructor.distanceKm)})</span>
+                  </p>
+                </button>
+              </div>
+            ) : null}
             {loading ? (
               <div className="pointer-events-none absolute bottom-3 left-3 text-xs bg-black/75 px-2.5 py-1 rounded-md text-gray-300 border border-white/10">
                 Yenilənir…
@@ -474,6 +494,24 @@ export default function InstructorMapSearch() {
           </div>
 
           <div className="flex-1 overflow-y-auto p-4 space-y-2">
+
+            {nearestInstructor && distanceOrigin === 'user' && count > 0 && !loading ? (
+              <div className="rounded-xl border border-amber-500/40 bg-gradient-to-r from-amber-500/15 to-emerald-500/10 p-3 mb-3">
+                <p className="text-[10px] font-bold text-amber-400 uppercase tracking-wide">Sizə ən yaxın</p>
+                <p className="text-sm font-semibold text-white mt-1">
+                  {kindLabel(nearestInstructor.map_profile_kind)}: {nearestInstructor.full_name}
+                  <span className="text-primary ml-1">({formatDistanceKm(nearestInstructor.distanceKm)})</span>
+                </p>
+                <button
+                  type="button"
+                  onClick={() => focusInstructor(nearestInstructor)}
+                  className="mt-2 text-xs font-bold text-primary hover:underline"
+                >
+                  Xəritədə göstər →
+                </button>
+              </div>
+            ) : null}
+
             {loading && !count ? (
               <div className="space-y-2">
                 {[1, 2, 3].map((i) => (
@@ -498,9 +536,18 @@ export default function InstructorMapSearch() {
               </div>
             ) : null}
 
-            {instructorsSorted.map((p) => {
+            {count > 0 ? (
+              <div className="flex items-center justify-between mb-1 px-0.5">
+                <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Ən yaxın təlimçilər</h2>
+                <span className="text-[10px] text-gray-500">məsafəyə görə</span>
+              </div>
+            ) : null}
+
+            {instructorsSorted.map((p, idx) => {
               const isTrainer = p.map_profile_kind === 'trainer'
               const selected = selectedId === p.id
+              const rank = idx + 1
+              const isNearest = rank === 1
               return (
                 <button
                   key={String(p.id)}
@@ -509,14 +556,22 @@ export default function InstructorMapSearch() {
                   className={`w-full text-left rounded-xl border p-3 flex gap-3 items-start transition-colors ${
                     selected
                       ? 'border-primary/60 bg-primary/10 ring-1 ring-primary/30'
-                      : 'border-white/10 bg-[#121212]/90 hover:border-white/20 hover:bg-[#161616]'
+                      : isNearest
+                        ? 'border-amber-500/40 bg-amber-500/5 hover:border-amber-400/50'
+                        : 'border-white/10 bg-[#121212]/90 hover:border-white/20 hover:bg-[#161616]'
                   }`}
                 >
+                  <span className="mt-0.5 w-6 shrink-0 text-center text-sm font-bold text-gray-500">{rank}.</span>
                   <span
                     className="mt-1.5 h-3.5 w-3.5 rounded-full shrink-0 ring-2 ring-white/25"
                     style={{ backgroundColor: isTrainer ? '#f59e0b' : '#00E676' }}
                   />
                   <div className="min-w-0 flex-1">
+                    {isNearest ? (
+                      <span className="inline-block text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-amber-500/20 text-amber-400 mb-1">
+                        ⭐ Ən yaxın
+                      </span>
+                    ) : null}
                     <div className="flex items-baseline justify-between gap-2">
                       <span className="font-semibold text-white text-sm truncate">{p.full_name}</span>
                       <span className="text-xs font-bold text-primary shrink-0 text-right">
