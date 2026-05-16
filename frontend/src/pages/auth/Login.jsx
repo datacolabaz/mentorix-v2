@@ -253,7 +253,7 @@ export default function Login() {
     setLoading(true)
     try {
       const user = await pinLogin(phone, pinInput, role)
-      goDashboard(user.role)
+      goDashboard(role || user?.role)
     } catch (err) {
       if (err.needs_setup) toast(err.message || 'Əvvəlcə "Davam et" basın', 'error')
       else toast(err.message || 'PIN yanlışdır', 'error')
