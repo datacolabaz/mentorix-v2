@@ -345,6 +345,8 @@ export default function InstructorSettings() {
       : '!border-slate-200 !text-slate-800 hover:!text-slate-900 hover:!border-slate-300 hover:bg-slate-500/10',
   ].join(' ')
 
+  const settingsCardCls = 'w-full p-5 border border-indigo-500/20 space-y-4'
+
   return (
     <div className="p-4 sm:p-6 min-w-0 max-w-6xl mx-auto w-full space-y-6">
       <div>
@@ -354,7 +356,7 @@ export default function InstructorSettings() {
         </p>
       </div>
 
-      <Card className="mx-auto max-w-5xl w-full p-5 border border-indigo-500/20 space-y-4">
+      <Card className={settingsCardCls}>
         <h2 className={cardTitleCls}>Paketini dəyiş</h2>
         <p className={cardTextCls}>
           <span className="text-gray-200 font-medium">Aktiv paket:</span>{' '}
@@ -490,7 +492,7 @@ export default function InstructorSettings() {
         </div>
       </Card>
 
-      <Card className="p-5 border border-indigo-500/20 space-y-4">
+      <Card className={settingsCardCls}>
         <h2 className={cardTitleCls}>Görünən ad</h2>
         <p className={cardTextCls}>
           Dashboard və naviqasiyada, həmçinin tələbə ödəniş/tapşırıq ekranlarında göstərilən titul.
@@ -522,7 +524,7 @@ export default function InstructorSettings() {
         </Button>
       </Card>
 
-      <Card className="p-5 border border-indigo-500/20 space-y-4">
+      <Card className={settingsCardCls}>
         <h2 className={cardTitleCls}>Xəritədə tap</h2>
         <p className={cardTextCls}>
           Tələbələr mentorix.io/search səhifəsində sizi xəritədə axtarır. Pin qoyun, saxlayın — hazırsınız.
@@ -681,7 +683,7 @@ export default function InstructorSettings() {
         radiusKm={mapRadiusKm}
       />
 
-      <Card className="p-5 border border-indigo-500/20 space-y-4">
+      <Card className={settingsCardCls}>
         <h2 className={cardTitleCls}>Tədris sahələri və qruplar</h2>
         <p className={cardTextCls}>
           Tələbə qeydiyyatında sahə və qrup seçiminə imkan verir; ödənişlər cədvəlində sahə adı görünür (hesabat üçün).
