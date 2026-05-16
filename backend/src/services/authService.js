@@ -12,18 +12,20 @@ const { checkSmsQuota } = require('./smsQuotaService');
 /** JS `normalizePhone` ilə eyni: bütün qeyri-rəqəmləri sil (boşluq, mötərizə və s.) */
 const PHONE_NORM = "regexp_replace(COALESCE(phone::text, ''), '[^0-9]', '', 'g')";
 
-const PHONE_PIN_ROLES = new Set(['instructor', 'student', 'parent']);
+const PHONE_PIN_ROLES = new Set(['instructor', 'student', 'parent', 'course']);
 
 const notFoundByRole = {
   instructor: 'Bu nomre ile muellim tapilmadi. Admin terefinden qeydiyyatdan kecdiyinizi yoxlayin.',
   student: 'Bu nomre ile telebe tapilmadi. Admin ve ya muelliminiz terefinden qeydiyyatinizi yoxlayin.',
   parent: 'Bu nomre ile valideyn tapilmadi. Qeydiyyatinizi yoxlayin.',
+  course: 'Bu nomre ile kurs hesabi tapilmadi. Platforma ile elaqe saxlayin.',
 };
 
 const roleLabelAz = {
   instructor: 'Muellim',
   student: 'Telebe',
   parent: 'Valideyn',
+  course: 'Kurs',
 };
 
 function normalizePhone(phone) {
@@ -51,7 +53,7 @@ async function findUserByPhoneAndRole(cleanPhone, role) {
 async function findUserByPhoneAmongLoginRoles(cleanPhone) {
   const { rows } = await db.query(
     `SELECT * FROM users WHERE ${PHONE_NORM} = $1 AND is_active = TRUE
-     AND role IN ('instructor','student','parent')`,
+     AND role IN ('instructor','student','parent','course')`,
     [cleanPhone],
   );
   return rows[0] || null;

@@ -66,13 +66,14 @@ function RoleIcon({ role }) {
   )
 }
 
-/** Giriş ekranında göstərilən rollar (valideyn indi gizlədilib — lazım olanda əlavə et: { key: 'parent', label: 'Valideyn' }). */
+/** Giriş ekranında göstərilən rollar (valideyn gizlədilib; kurs = tədris mərkəzi admini). */
 const ROLES_LOGIN = [
   { key: 'instructor', label: 'Müəllim' },
   { key: 'student', label: 'Tələbə' },
+  { key: 'course', label: 'Kurs' },
 ]
 
-const ROLE_LABELS = { instructor: 'Müəllim', student: 'Tələbə', parent: 'Valideyn' }
+const ROLE_LABELS = { instructor: 'Müəllim', student: 'Tələbə', parent: 'Valideyn', course: 'Kurs' }
 
 const TRUST_STUDENTS_FLOOR = 100
 const TRUST_INSTRUCTORS_FLOOR = 15
@@ -192,7 +193,7 @@ export default function Login() {
   } = useAuthStore()
   const navigate = useNavigate()
   const toast = useToast()
-  const roleMap = { admin: '/admin', instructor: '/instructor', student: '/student', parent: '/parent' }
+  const roleMap = { admin: '/admin', instructor: '/instructor', student: '/student', parent: '/parent', course: '/course' }
 
   const goDashboard = (r) => navigate(roleMap[r] || '/login', { replace: true })
 

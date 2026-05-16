@@ -8,6 +8,7 @@ import AdminLayout from './layouts/AdminLayout'
 import InstructorLayout from './layouts/InstructorLayout'
 import StudentLayout from './layouts/StudentLayout'
 import ParentLayout from './layouts/ParentLayout'
+import CourseLayout from './layouts/CourseLayout'
 
 import AdminDashboard from './pages/admin/Dashboard'
 import AdminInstructors from './pages/admin/Instructors'
@@ -37,6 +38,14 @@ import StudentSchedule from './pages/student/Schedule'
 import StudentTasks from './pages/student/Tasks'
 import StudentNotifications from './pages/student/Notifications'
 import ParentDashboard from './pages/parent/Dashboard'
+import CourseDashboard from './pages/course/Dashboard'
+import CourseTeachers from './pages/course/Teachers'
+import CourseStudents from './pages/course/Students'
+import CourseGroups from './pages/course/Groups'
+import CourseSchedule from './pages/course/Schedule'
+import CourseFinance from './pages/course/Finance'
+import CourseNotifications from './pages/course/Notifications'
+import CourseSettings from './pages/course/Settings'
 
 const Placeholder = ({ title }) => (
   <div className="p-4 sm:p-6 min-w-0">
@@ -109,6 +118,17 @@ export default function App() {
         <Route index element={<ParentDashboard />} />
         <Route path="payments" element={<Placeholder title="Ödəniş" />} />
         <Route path="notifications" element={<ParentNotifications />} />
+      </Route>
+
+      <Route path="/course" element={<ProtectedRoute roles={['course']}><CourseLayout /></ProtectedRoute>}>
+        <Route index element={<CourseDashboard />} />
+        <Route path="teachers" element={<CourseTeachers />} />
+        <Route path="students" element={<CourseStudents />} />
+        <Route path="groups" element={<CourseGroups />} />
+        <Route path="schedule" element={<CourseSchedule />} />
+        <Route path="finance" element={<CourseFinance />} />
+        <Route path="notifications" element={<CourseNotifications />} />
+        <Route path="settings" element={<CourseSettings />} />
       </Route>
 
       <Route path="*" element={<Placeholder title="404 — Tapılmadı" />} />

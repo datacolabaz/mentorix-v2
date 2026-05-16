@@ -6,7 +6,7 @@ const { sendSms, sendOtpSms } = require('../services/smsService');
 const { checkSmsQuota } = require('../services/smsQuotaService');
 
 const PHONE_NORM = "regexp_replace(COALESCE(phone::text, ''), '[^0-9]', '', 'g')";
-const LOGIN_ROLES = new Set(['instructor', 'student', 'parent']);
+const LOGIN_ROLES = new Set(['instructor', 'student', 'parent', 'course']);
 
 async function logRisk(userId, req, context, riskScore = 10) {
   try {
@@ -36,6 +36,29 @@ async function attachInstructorPublicLabel(userLite) {
   const raw = String(rows[0]?.public_label || 'instructor').toLowerCase();
   const public_label = raw === 'trainer' ? 'trainer' : 'instructor';
   return { ...userLite, public_label };
+}
+
+async function attachCourseProfile(userLite) {
+  if (!userLite || userLite.role !== 'course') return userLite;
+  const { rows } = await db.query(
+    `SELECT course_name, logo_url, branch_address
+     FROM course_profiles WHERE user_id = $1`,
+    [userLite.id]
+  );
+  const p = rows[0] || {};
+  return {
+    ...userLite,
+    course_name: p.course_name || null,
+    course_logo_url: p.logo_url || null,
+    course_branch_address: p.branch_address || null,
+  };
+}
+
+async function enrichUserForClient(userLite) {
+  if (!userLite) return userLite;
+  if (userLite.role === 'instructor') return attachInstructorPublicLabel(userLite);
+  if (userLite.role === 'course') return attachCourseProfile(userLite);
+  return userLite;
 }
 
 function normalizePhone(phone) {
@@ -411,7 +434,7 @@ const verifyOtp = async (req, res) => {
 
     const token = signOTP({ id: user.id, role: user.role });
     const baseUser = { id: user.id, full_name: user.full_name, role: user.role, phone: user.phone };
-    const userOut = user.role === 'instructor' ? await attachInstructorPublicLabel(baseUser) : baseUser;
+    const userOut = await enrichUserForClient(baseUser);
     res.json({
       success: true,
       token,
@@ -660,7 +683,7 @@ const me = async (req, res) => {
     ]);
     const u = rows[0];
     if (!u) return res.status(404).json({ success: false, message: 'Tapılmadı' });
-    const userOut = u.role === 'instructor' ? await attachInstructorPublicLabel(u) : u;
+    const userOut = await enrichUserForClient(u);
     res.json({ success: true, user: userOut });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -858,7 +881,7 @@ const verifyMyPhoneVerifyOtp = async (req, res) => {
       return { user: fresh[0], linkedUserId: null };
     });
 
-    const userOut = out.user?.role === 'instructor' ? await attachInstructorPublicLabel(out.user) : out.user;
+    const userOut = await enrichUserForClient(out.user);
     res.json({ success: true, user: userOut, linked_user_id: out.linkedUserId });
   } catch (err) {
     const st = err.statusCode || 500;
@@ -909,7 +932,7 @@ const loginWithPin = async (req, res) => {
     await db.query('UPDATE users SET phone_verified = TRUE WHERE id = $1', [user.id]);
     const token = signOTP({ id: user.id, role: user.role });
     const baseUser = { id: user.id, full_name: user.full_name, role: user.role, phone: user.phone };
-    const userOut = user.role === 'instructor' ? await attachInstructorPublicLabel(baseUser) : baseUser;
+    const userOut = await enrichUserForClient(baseUser);
     res.json({
       success: true,
       token,
