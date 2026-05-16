@@ -32,6 +32,17 @@ function lessonLabel(count) {
   return `${n} dərs bu gün`
 }
 
+function teacherSecondary(stats) {
+  const staff = Number(stats.staff_teachers) || 0
+  const total = Number(stats.active_teachers) || 0
+  if (staff > 0) return `${staff} əlavə · cəmi ${total}`
+  if (total === 1 && stats.owner_teacher_name) {
+    return `Sizin müəllim hesabınız (${stats.owner_teacher_name})`
+  }
+  if (total === 0) return 'müəllim əlaqəsi yoxdur'
+  return 'kursa bağlı hesablar'
+}
+
 export default function CourseDashboard() {
   const { user } = useAuthStore()
   const courseName = user?.course_name || user?.full_name || 'Kursunuz'
@@ -83,9 +94,9 @@ export default function CourseDashboard() {
           secondary={loading ? '' : lessonLabel(stats.lessons_today)}
         />
         <KpiCard
-          title="Aktiv müəllim"
+          title="Bağlı müəllim"
           value={loading ? '…' : String(stats.active_teachers ?? 0)}
-          secondary={loading ? '' : 'kursda qeydiyyatlı'}
+          secondary={loading ? '' : teacherSecondary(stats)}
         />
         <KpiCard
           title="Aktiv tələbə"
@@ -123,8 +134,11 @@ export default function CourseDashboard() {
 
       <Card className="p-5 border border-emerald-500/20 bg-emerald-500/[0.04]">
         <p className="text-sm text-token-textMuted leading-relaxed">
-          Statistikalar kursunuza bağlı müəllimlərin cədvəli, tələbə qeydiyyatı və aylıq ödəniş balansından
-          hesablanır. Əlavə müəllim və qruplar bölmələri növbəti mərhələdə genişləndiriləcək.
+          <strong className="text-emerald-200/90 font-medium">1 müəllim</strong> — sizin mövcud müəllim
+          hesabınız avtomatik kursa bağlanır (ayrıca yaratmaq lazım deyil).{' '}
+          <strong className="text-emerald-200/90 font-medium">{stats.active_students ?? 0} tələbə</strong> — həmin
+          müəllim hesabınızdakı aktiv qeydiyyatlar. Başqa müəllim əlavə etdikdə rəqəmlər avtomatik
+          birləşəcək.
         </p>
       </Card>
     </div>

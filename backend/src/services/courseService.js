@@ -94,6 +94,42 @@ async function countActiveTeachers(courseId) {
   return rows[0]?.c ?? 0;
 }
 
+/** Kursa bağlı müəllimlər (sahib daxil) + hər birinin aktiv tələbə sayı */
+async function listCourseTeachers(courseId, ownerUserId) {
+  const { rows } = await db.query(
+    `SELECT ct.instructor_user_id AS id,
+            u.full_name,
+            u.phone,
+            (ct.instructor_user_id = $2) AS is_owner,
+            (
+              SELECT COUNT(DISTINCT e.student_id)::int
+              FROM enrollments e
+              INNER JOIN users su ON su.id = e.student_id
+              WHERE e.instructor_id = ct.instructor_user_id
+                AND su.role = 'student'
+                AND COALESCE(su.is_active, TRUE) = TRUE
+                AND COALESCE(LOWER(TRIM(e.status)), 'active') = 'active'
+                AND e.deleted_at IS NULL
+            ) AS active_students
+     FROM course_teachers ct
+     INNER JOIN users u ON u.id = ct.instructor_user_id
+     WHERE ct.course_id = $1
+       AND ct.is_active = TRUE
+       AND COALESCE(u.is_active, TRUE) = TRUE
+     ORDER BY is_owner DESC, u.full_name ASC`,
+    [courseId, ownerUserId],
+  );
+  return rows.map((r) => ({
+    id: r.id,
+    full_name: r.full_name,
+    phone: r.phone,
+    is_owner: Boolean(r.is_owner),
+    active_students: Number(r.active_students) || 0,
+    /** Sahibin mövcud müəllim profili avtomatik əlaqələnib (ayrıca "əlavə et" lazım deyil) */
+    auto_linked: Boolean(r.is_owner),
+  }));
+}
+
 async function countActiveGroups(courseId) {
   const { rows } = await db.query(
     `SELECT COUNT(*)::int AS c FROM course_groups WHERE course_id = $1 AND is_active = TRUE`,
@@ -182,6 +218,8 @@ async function sumPendingPaymentsForInstructors(instructorIds) {
 async function getCourseDashboardStats(ownerUserId) {
   const course = await ensureCourseForOwner(ownerUserId);
   const instructorIds = await getActiveInstructorIdsForCourse(course.id);
+  const linkedTeachers = await listCourseTeachers(course.id, ownerUserId);
+  const staffTeachers = linkedTeachers.filter((t) => !t.is_owner).length;
 
   const [lessonsToday, activeTeachers, activeStudents, activeGroups, pendingPayments] =
     await Promise.all([
@@ -192,16 +230,27 @@ async function getCourseDashboardStats(ownerUserId) {
       sumPendingPaymentsForInstructors(instructorIds),
     ]);
 
+  const ownerTeacher = linkedTeachers.find((t) => t.is_owner) || null;
+
   return {
     course_id: course.id,
     course_name: course.name,
     lessons_today: lessonsToday,
     active_teachers: activeTeachers,
+    staff_teachers: staffTeachers,
     active_students: activeStudents,
     active_groups: activeGroups,
     pending_payments: pendingPayments,
+    linked_teachers: linkedTeachers,
+    owner_teacher_name: ownerTeacher?.full_name || null,
     today_baku: await bakuTodayYmd(),
   };
+}
+
+async function getCourseTeachersForOwner(ownerUserId) {
+  const course = await ensureCourseForOwner(ownerUserId);
+  const teachers = await listCourseTeachers(course.id, ownerUserId);
+  return { course_id: course.id, course_name: course.name, teachers };
 }
 
 module.exports = {
@@ -211,4 +260,6 @@ module.exports = {
   assertCourseAccess,
   getActiveInstructorIdsForCourse,
   getCourseDashboardStats,
+  listCourseTeachers,
+  getCourseTeachersForOwner,
 };
