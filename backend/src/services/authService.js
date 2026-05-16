@@ -8,7 +8,13 @@ const bcrypt = require('bcryptjs');
 const db = require('../utils/db');
 const { sendSms } = require('./smsService');
 const { checkSmsQuota } = require('./smsQuotaService');
-const { findUserByPhone, getActiveRoles, userHasRole, grantUserRole } = require('./userRolesService');
+const {
+  findUserByPhone,
+  getActiveRoles,
+  userHasRole,
+  grantUserRole,
+  ensureCourseRoleIfInstructor,
+} = require('./userRolesService');
 
 /** JS `normalizePhone` ilə eyni: bütün qeyri-rəqəmləri sil (boşluq, mötərizə və s.) */
 const PHONE_NORM = "regexp_replace(COALESCE(phone::text, ''), '[^0-9]', '', 'g')";
@@ -169,6 +175,17 @@ async function resolveLoginUserOrError(cleanPhone, role) {
 
   if (activeRoles.includes(role)) {
     return { user, loginRole: role, availableRoles: activeRoles };
+  }
+
+  // Müəllim hesabı olanlar Kurs panelinə də daxil ola bilər — əl ilə SQL lazım deyil
+  if (role === 'course' && (await ensureCourseRoleIfInstructor(user.id))) {
+    const rolesAfter = await getActiveRoles(user.id);
+    return {
+      user,
+      loginRole: 'course',
+      availableRoles: rolesAfter.length ? rolesAfter : ['instructor', 'course'],
+      course_auto_enabled: true,
+    };
   }
 
   if (activeRoles.length > 0) {

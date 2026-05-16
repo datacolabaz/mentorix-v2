@@ -63,6 +63,28 @@ async function grantCourseRoleToUser(userId, courseName = null) {
   );
 }
 
+/** Müəllim hesabı varsa, Kurs panelinə giriş üçün course rolunu avtomatik verir. */
+async function isInstructorAccount(userId) {
+  if (await userHasRole(userId, 'instructor')) return true;
+  const { rows: legacy } = await db.query(
+    `SELECT 1 FROM users WHERE id = $1 AND role = 'instructor' AND COALESCE(is_active, TRUE) = TRUE LIMIT 1`,
+    [userId],
+  );
+  if (legacy.length) return true;
+  const { rows: prof } = await db.query(
+    `SELECT 1 FROM instructor_profiles WHERE user_id = $1 LIMIT 1`,
+    [userId],
+  );
+  return prof.length > 0;
+}
+
+async function ensureCourseRoleIfInstructor(userId, courseName = null) {
+  if (!(await isInstructorAccount(userId))) return false;
+  if (await userHasRole(userId, 'course')) return true;
+  await grantCourseRoleToUser(userId, courseName);
+  return true;
+}
+
 module.exports = {
   LOGIN_ROLES,
   getActiveRoles,
@@ -70,4 +92,6 @@ module.exports = {
   grantUserRole,
   findUserByPhone,
   grantCourseRoleToUser,
+  isInstructorAccount,
+  ensureCourseRoleIfInstructor,
 };

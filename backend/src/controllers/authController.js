@@ -662,6 +662,16 @@ const register = async (req, res) => {
           'INSERT INTO instructor_profiles (user_id, subject, billing_type) VALUES ($1, $2, $3)',
           [created.id, subject || null, billing_type || '8_lessons'],
         );
+        await client.query(
+          `INSERT INTO user_roles (user_id, role, is_active) VALUES ($1, 'course', TRUE)
+           ON CONFLICT (user_id, role) DO UPDATE SET is_active = TRUE`,
+          [created.id],
+        );
+        await client.query(
+          `INSERT INTO course_profiles (user_id, course_name) VALUES ($1, $2)
+           ON CONFLICT (user_id) DO NOTHING`,
+          [created.id, full_name || 'Kurs'],
+        );
       } else if (role === 'course') {
         await client.query(
           `INSERT INTO course_profiles (user_id, course_name) VALUES ($1, $2)
