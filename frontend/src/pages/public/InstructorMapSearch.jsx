@@ -8,8 +8,6 @@ import { BAKU_BBOX, BAKU_CENTER, distanceKm, formatDistanceKm } from '../../lib/
 import { reverseGeocodeLabel } from '../../lib/reverseGeocode'
 
 const DARK_TILE = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-const TILE_ATTRIB =
-  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
 
 function zoomForRadiusKm(r) {
   if (r <= 5) return 13
@@ -377,9 +375,9 @@ export default function InstructorMapSearch() {
               zoom={11}
               className="h-full w-full z-0"
               scrollWheelZoom
-              attributionControl
+              attributionControl={false}
             >
-              <TileLayer attribution={TILE_ATTRIB} url={DARK_TILE} />
+              <TileLayer url={DARK_TILE} attribution="" />
               <MapInvalidateSize />
               <BoundsTracker kind={kind} onBounds={onBounds} enabled={!radiusMode} />
               {flyTarget ? <FlyTo target={flyTarget} /> : null}

@@ -4,8 +4,6 @@ import { Link } from 'react-router-dom'
 import { formatDistanceKm } from '../../lib/geo'
 
 const DARK_TILE = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-const TILE_ATTRIB =
-  '&copy; OpenStreetMap &copy; CARTO'
 
 function kindLabel(k) {
   return k === 'trainer' ? 'Təlimçi' : 'Müəllim'
@@ -60,8 +58,14 @@ export default function InstructorMapPreviewModal({
 
         <div className="h-52 relative">
           {hasPin ? (
-            <MapContainer center={[lat, lng]} zoom={14} className="h-full w-full" scrollWheelZoom={false}>
-              <TileLayer url={DARK_TILE} attribution={TILE_ATTRIB} />
+            <MapContainer
+              center={[lat, lng]}
+              zoom={14}
+              className="h-full w-full"
+              scrollWheelZoom={false}
+              attributionControl={false}
+            >
+              <TileLayer url={DARK_TILE} attribution="" />
               <CircleMarker
                 center={[lat, lng]}
                 radius={11}

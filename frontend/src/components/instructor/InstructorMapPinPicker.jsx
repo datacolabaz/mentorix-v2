@@ -4,8 +4,6 @@ import { MapContainer, TileLayer, Marker, Circle, useMap, useMapEvents } from 'r
 
 const BAKU_CENTER = [40.4093, 49.8671]
 const DARK_TILE = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-const TILE_ATTRIB =
-  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
 
 function parseCoord(v) {
   if (v === '' || v == null) return null
@@ -119,8 +117,14 @@ export default function InstructorMapPinPicker({
         </span>
       </p>
       <div className="h-[min(52vh,340px)] w-full rounded-xl overflow-hidden border border-white/10 ring-1 ring-primary/20 z-0 relative">
-        <MapContainer center={center} zoom={zoom} className="h-full w-full" scrollWheelZoom>
-          <TileLayer url={DARK_TILE} attribution={TILE_ATTRIB} />
+        <MapContainer
+          center={center}
+          zoom={zoom}
+          className="h-full w-full"
+          scrollWheelZoom
+          attributionControl={false}
+        >
+          <TileLayer url={DARK_TILE} attribution="" />
           <MapClickPick onPick={handlePick} />
           <MapFlyTo center={hasPin ? center : null} flyKey={flyKey} />
           {hasPin ? (
