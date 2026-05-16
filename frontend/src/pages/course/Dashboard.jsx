@@ -4,6 +4,7 @@ import api from '../../lib/api'
 import Card from '../../components/common/Card'
 import KpiCard from '../../components/common/KpiCard'
 import useAuthStore from '../../hooks/useAuth'
+import CourseSetupModal from '../../components/course/CourseSetupModal'
 
 const QUICK_LINKS = [
   { to: '/course/leads', label: 'Lidlər', desc: 'Qəbul və sınaq dərs izləmə' },
@@ -20,6 +21,8 @@ const EMPTY_STATS = {
   pending_payments: 0,
   leads_new: 0,
   leads_total: 0,
+  needs_branding: false,
+  course_name: '',
 }
 
 function formatAzn(amount) {
@@ -30,10 +33,29 @@ function formatAzn(amount) {
 
 export default function CourseDashboard() {
   const { user } = useAuthStore()
-  const courseName = user?.course_name || user?.full_name || 'Kursunuz'
   const [stats, setStats] = useState(EMPTY_STATS)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [setupOpen, setSetupOpen] = useState(false)
+
+  const courseName = stats.course_name || user?.course_name || user?.full_name || 'Kursunuz'
+
+  const loadStats = () => {
+    setLoading(true)
+    setError(null)
+    return api
+      .get('/course/dashboard-stats')
+      .then((res) => {
+        const next = { ...EMPTY_STATS, ...(res.stats || {}) }
+        setStats(next)
+        if (next.needs_branding) setSetupOpen(true)
+      })
+      .catch((err) => {
+        setError(err?.response?.data?.message || err?.message || 'Statistika yüklənmədi')
+        setStats(EMPTY_STATS)
+      })
+      .finally(() => setLoading(false))
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -43,7 +65,9 @@ export default function CourseDashboard() {
       .get('/course/dashboard-stats')
       .then((res) => {
         if (cancelled) return
-        setStats({ ...EMPTY_STATS, ...(res.stats || {}) })
+        const next = { ...EMPTY_STATS, ...(res.stats || {}) }
+        setStats(next)
+        if (next.needs_branding) setSetupOpen(true)
       })
       .catch((err) => {
         if (cancelled) return
@@ -58,12 +82,19 @@ export default function CourseDashboard() {
     }
   }, [])
 
+  const onSetupComplete = () => {
+    setSetupOpen(false)
+    void loadStats()
+  }
+
   return (
     <div className="p-4 sm:p-6 min-w-0 max-w-6xl mx-auto w-full space-y-6">
+      <CourseSetupModal open={setupOpen} onComplete={onSetupComplete} />
+
       <div>
         <h1 className="font-display font-bold text-xl sm:text-2xl text-token-textMain tracking-tight">Dashboard</h1>
         <p className="text-token-textMuted text-sm mt-1">
-          <span className="text-emerald-400/95 font-medium">{courseName}</span> — kurs CRM (müəssisə)
+          <span className="text-emerald-400/95 font-medium">{courseName}</span>
         </p>
         {error ? (
           <p className="text-sm text-red-300/90 mt-2" role="alert">
@@ -81,7 +112,7 @@ export default function CourseDashboard() {
         <KpiCard
           title="Kurs tələbəsi"
           value={loading ? '…' : String(stats.active_students ?? 0)}
-          secondary={loading ? '' : 'yalnız course_id üzrə'}
+          secondary={loading ? '' : 'qeydiyyatlı şagirdlər'}
         />
         <KpiCard
           title="Müəllim heyəti"
@@ -109,15 +140,6 @@ export default function CourseDashboard() {
             </Link>
           ))}
         </div>
-      </Card>
-
-      <Card className="p-5 border border-emerald-500/20 bg-emerald-500/[0.04]">
-        <p className="text-sm text-token-textMuted leading-relaxed">
-          <strong className="text-emerald-200/90 font-medium">Data izolyasiyası:</strong> Bu panel fərdi müəllim
-          hesabınızdan (<code className="text-emerald-300/80">instructor_id</code>) tam ayrıdır. Şəxsi 28 tələbəniz
-          yalnız <strong className="text-white/90">Müəllim panelində</strong> görünür. Kursa keçirmək üçün gələcəkdə
-          &quot;Transfer et&quot; əməliyyatı əlavə olunacaq.
-        </p>
       </Card>
     </div>
   )

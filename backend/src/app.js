@@ -19,8 +19,10 @@ const { runOrphanFilesReaper } = require('./jobs/orphanFilesReaper');
 
 const uploadsExamsDir = path.join(__dirname, '../uploads/exams');
 const uploadsAssignmentsDir = path.join(__dirname, '../uploads/assignments');
+const uploadsCourseLogosDir = path.join(__dirname, '../uploads/course-logos');
 fs.mkdirSync(uploadsExamsDir, { recursive: true });
 fs.mkdirSync(uploadsAssignmentsDir, { recursive: true });
+fs.mkdirSync(uploadsCourseLogosDir, { recursive: true });
 
 const app = express();
 
@@ -39,6 +41,7 @@ app.use(express.json());
 
 app.use('/api/uploads/exams', express.static(uploadsExamsDir));
 app.use('/api/uploads/assignments', express.static(uploadsAssignmentsDir));
+app.use('/api/uploads/course-logos', express.static(uploadsCourseLogosDir));
 
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/students', require('./routes/students'));

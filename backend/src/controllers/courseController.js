@@ -1,12 +1,38 @@
+const path = require('path');
+const fs = require('fs');
+const multer = require('multer');
 const {
   getOrgDashboardStats,
   ensureOrgCourseForOwner,
+  getOrgSettings,
+  updateOrgSettings,
+  updateOrgLogo,
   listLeads,
   createLead,
   updateLead,
   listOrgTeachers,
   LEAD_STATUSES,
 } = require('../services/courseOrgService');
+
+const uploadsCourseLogosDir = path.join(__dirname, '../../uploads/course-logos');
+fs.mkdirSync(uploadsCourseLogosDir, { recursive: true });
+
+const uploadLogo = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, uploadsCourseLogosDir),
+    filename: (req, file, cb) => {
+      const ext = path.extname(file.originalname || '').toLowerCase() || '.png';
+      cb(null, `course-${req.user.id}${ext}`);
+    },
+  }),
+  limits: { fileSize: 2 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (!file.mimetype || !file.mimetype.startsWith('image/')) {
+      return cb(new Error('Yalnız şəkil faylı qəbul olunur'));
+    }
+    cb(null, true);
+  },
+}).single('logo');
 
 async function withOrgCourse(req, res, handler) {
   try {
@@ -47,11 +73,44 @@ const patchLead = (req, res) =>
     res.json({ success: true, lead });
   });
 
+const getSettings = (req, res) =>
+  withOrgCourse(req, res, async () => {
+    const settings = await getOrgSettings(req.user.id);
+    res.json({ success: true, settings });
+  });
+
+const patchSettings = (req, res) =>
+  withOrgCourse(req, res, async () => {
+    const settings = await updateOrgSettings(req.user.id, req.body);
+    res.json({ success: true, settings });
+  });
+
+const postLogo = (req, res) => {
+  uploadLogo(req, res, async (err) => {
+    if (err) {
+      return res.status(400).json({ success: false, message: err.message || 'Yükləmə xətası' });
+    }
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'Loqo faylı seçin' });
+    }
+    try {
+      const rel = `/api/uploads/course-logos/${req.file.filename}`;
+      const settings = await updateOrgLogo(req.user.id, rel);
+      res.json({ success: true, settings, logo_url: rel });
+    } catch (e) {
+      res.status(e.statusCode || 500).json({ success: false, message: e.message });
+    }
+  });
+};
+
 module.exports = {
   getDashboardStats,
   listTeachers,
   getLeads,
   postLead,
   patchLead,
+  getSettings,
+  patchSettings,
+  postLogo,
   LEAD_STATUSES,
 };

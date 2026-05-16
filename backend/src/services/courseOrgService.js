@@ -15,7 +15,9 @@ async function ensureOrgCourseForOwner(ownerUserId) {
     [ownerUserId],
   );
   const { rows: userRows } = await db.query(`SELECT full_name FROM users WHERE id = $1`, [ownerUserId]);
-  const name = prof[0]?.course_name || userRows[0]?.full_name || 'Kursum';
+  const profileName = prof[0]?.course_name ? String(prof[0].course_name).trim() : '';
+  const fullName = userRows[0]?.full_name || '';
+  const name = profileName || fullName || 'Kursum';
 
   const { rows: existing } = await db.query(
     `SELECT id, owner_user_id, name FROM courses
@@ -94,8 +96,69 @@ async function countLeadsByStatus(courseId) {
   return { total, by_status: map };
 }
 
+async function getOrgSettings(ownerUserId) {
+  const course = await ensureOrgCourseForOwner(ownerUserId);
+  const { rows: prof } = await db.query(
+    `SELECT course_name, logo_url, branch_address FROM course_profiles WHERE user_id = $1`,
+    [ownerUserId],
+  );
+  const { rows: userRows } = await db.query(`SELECT full_name FROM users WHERE id = $1`, [ownerUserId]);
+  const fullName = (userRows[0]?.full_name || '').trim();
+  const p = prof[0] || {};
+  const courseName = (p.course_name || course.name || '').trim();
+  const needsBranding =
+    !courseName ||
+    courseName === fullName ||
+    courseName === 'Kursum' ||
+    courseName.toLowerCase() === 'kursum';
+
+  return {
+    course_id: course.id,
+    course_name: courseName,
+    logo_url: p.logo_url || null,
+    branch_address: p.branch_address || null,
+    needs_branding: needsBranding,
+  };
+}
+
+async function updateOrgSettings(ownerUserId, body) {
+  const course = await ensureOrgCourseForOwner(ownerUserId);
+  const courseName = String(body?.course_name || '').trim();
+  if (!courseName) {
+    const err = new Error('Kurs adı tələb olunur');
+    err.statusCode = 400;
+    throw err;
+  }
+  const branch = body?.branch_address != null ? String(body.branch_address).trim() : null;
+
+  await db.query(
+    `INSERT INTO course_profiles (user_id, course_name, branch_address)
+     VALUES ($1, $2, $3)
+     ON CONFLICT (user_id) DO UPDATE SET
+       course_name = EXCLUDED.course_name,
+       branch_address = COALESCE(EXCLUDED.branch_address, course_profiles.branch_address),
+       updated_at = NOW()`,
+    [ownerUserId, courseName, branch || null],
+  );
+  await db.query(`UPDATE courses SET name = $1, updated_at = NOW() WHERE id = $2`, [courseName, course.id]);
+
+  return getOrgSettings(ownerUserId);
+}
+
+async function updateOrgLogo(ownerUserId, logoUrl) {
+  await ensureOrgCourseForOwner(ownerUserId);
+  await db.query(
+    `INSERT INTO course_profiles (user_id, logo_url)
+     VALUES ($1, $2)
+     ON CONFLICT (user_id) DO UPDATE SET logo_url = EXCLUDED.logo_url, updated_at = NOW()`,
+    [ownerUserId, logoUrl],
+  );
+  return getOrgSettings(ownerUserId);
+}
+
 async function getOrgDashboardStats(ownerUserId) {
   const course = await ensureOrgCourseForOwner(ownerUserId);
+  const settings = await getOrgSettings(ownerUserId);
   const courseId = course.id;
 
   const [students, teachers, groups, leads, pendingRow] = await Promise.all([
@@ -114,7 +177,9 @@ async function getOrgDashboardStats(ownerUserId) {
 
   return {
     course_id: courseId,
-    course_name: course.name,
+    course_name: settings.course_name,
+    logo_url: settings.logo_url,
+    needs_branding: settings.needs_branding,
     data_isolated: true,
     lessons_today: 0,
     active_teachers: teachers,
@@ -223,6 +288,9 @@ module.exports = {
   LEAD_STATUSES,
   ensureOrgCourseForOwner,
   assertOrgCourseOwner,
+  getOrgSettings,
+  updateOrgSettings,
+  updateOrgLogo,
   getOrgDashboardStats,
   listLeads,
   createLead,

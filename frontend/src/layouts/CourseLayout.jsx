@@ -4,6 +4,7 @@ import useAuthStore from '../hooks/useAuth'
 import api from '../lib/api'
 import useUiStore from '../hooks/useUi'
 import Brand from '../components/common/Brand'
+import { resolveApiAssetUrl } from '../lib/apiAssetUrl'
 import Footer from '../components/common/Footer'
 import { sidebarNavClass } from '../lib/sidebarNavClass'
 import NavIcon from '../components/common/NavIcon'
@@ -41,6 +42,7 @@ export default function CourseLayout() {
   const [navOpen, setNavOpen] = useState(false)
 
   const courseName = user?.course_name || user?.full_name || 'Kurs'
+  const courseLogo = user?.course_logo_url ? resolveApiAssetUrl(user.course_logo_url) : null
 
   useEffect(() => {
     setNavOpen(false)
@@ -134,18 +136,22 @@ export default function CourseLayout() {
             >
               <div
                 className={[
-                  'w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold mb-2 border',
+                  'w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold mb-2 border overflow-hidden',
                   theme === 'dark'
                     ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-100'
                     : 'bg-emerald-600/10 border-emerald-600/20 text-emerald-800',
                 ].join(' ')}
               >
-                {courseName
-                  .split(' ')
-                  .map((n) => n[0])
-                  .join('')
-                  .slice(0, 2)
-                  .toUpperCase()}
+                {courseLogo ? (
+                  <img src={courseLogo} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  courseName
+                    .split(' ')
+                    .map((n) => n[0])
+                    .join('')
+                    .slice(0, 2)
+                    .toUpperCase()
+                )}
               </div>
               <div className={`text-sm font-semibold break-words ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
                 {courseName}
