@@ -13,6 +13,7 @@ const NAV_SECTIONS = [
     title: 'İDARƏETMƏ',
     items: [
       { to: '/course', label: 'Dashboard', icon: <NavIcon name="dashboard" />, end: true },
+      { to: '/course/leads', label: 'Lidlər', icon: <NavIcon name="notifications" /> },
       { to: '/course/teachers', label: 'Müəllimlər', icon: <NavIcon name="instructors" /> },
       { to: '/course/students', label: 'Tələbələr', icon: <NavIcon name="students" /> },
       { to: '/course/groups', label: 'Qruplar / Siniflər', icon: <NavIcon name="groups" /> },

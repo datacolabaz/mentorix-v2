@@ -40,6 +40,7 @@ import StudentNotifications from './pages/student/Notifications'
 import ParentDashboard from './pages/parent/Dashboard'
 import CourseDashboard from './pages/course/Dashboard'
 import CourseTeachers from './pages/course/Teachers'
+import CourseLeads from './pages/course/Leads'
 import CourseStudents from './pages/course/Students'
 import CourseGroups from './pages/course/Groups'
 import CourseSchedule from './pages/course/Schedule'
@@ -129,6 +130,7 @@ export default function App() {
 
       <Route path="/course" element={<ProtectedRoute roles={['course']}><CourseLayout /></ProtectedRoute>}>
         <Route index element={<CourseDashboard />} />
+        <Route path="leads" element={<CourseLeads />} />
         <Route path="teachers" element={<CourseTeachers />} />
         <Route path="students" element={<CourseStudents />} />
         <Route path="groups" element={<CourseGroups />} />

@@ -6,10 +6,10 @@ import KpiCard from '../../components/common/KpiCard'
 import useAuthStore from '../../hooks/useAuth'
 
 const QUICK_LINKS = [
-  { to: '/course/teachers', label: 'Müəllim əlavə et', desc: 'Kursda işləyən müəllimlər' },
-  { to: '/course/students', label: 'Tələbə bazası', desc: 'Ümumi şagird siyahısı' },
-  { to: '/course/groups', label: 'Qrup yarat', desc: 'Sinif və qrup təyinatı' },
-  { to: '/course/finance', label: 'Ödənişlər', desc: 'Borc və paketlər' },
+  { to: '/course/leads', label: 'Lidlər', desc: 'Qəbul və sınaq dərs izləmə' },
+  { to: '/course/teachers', label: 'Müəllimlər', desc: 'Kursda işləyən heyət' },
+  { to: '/course/students', label: 'Tələbələr', desc: 'Qeydiyyatlı şagirdlər' },
+  { to: '/course/groups', label: 'Qruplar', desc: 'Sinif və otaqlar' },
 ]
 
 const EMPTY_STATS = {
@@ -18,29 +18,14 @@ const EMPTY_STATS = {
   active_students: 0,
   active_groups: 0,
   pending_payments: 0,
+  leads_new: 0,
+  leads_total: 0,
 }
 
 function formatAzn(amount) {
   const n = Number(amount)
   if (!Number.isFinite(n)) return '0 ₼'
   return `${n.toLocaleString('az-AZ', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} ₼`
-}
-
-function lessonLabel(count) {
-  const n = Number(count) || 0
-  if (n === 1) return '1 dərs bu gün'
-  return `${n} dərs bu gün`
-}
-
-function teacherSecondary(stats) {
-  const staff = Number(stats.staff_teachers) || 0
-  const total = Number(stats.active_teachers) || 0
-  if (staff > 0) return `${staff} əlavə · cəmi ${total}`
-  if (total === 1 && stats.owner_teacher_name) {
-    return `Sizin müəllim hesabınız (${stats.owner_teacher_name})`
-  }
-  if (total === 0) return 'müəllim əlaqəsi yoxdur'
-  return 'kursa bağlı hesablar'
 }
 
 export default function CourseDashboard() {
@@ -78,7 +63,7 @@ export default function CourseDashboard() {
       <div>
         <h1 className="font-display font-bold text-xl sm:text-2xl text-token-textMain tracking-tight">Dashboard</h1>
         <p className="text-token-textMuted text-sm mt-1">
-          <span className="text-emerald-400/95 font-medium">{courseName}</span> — ümumi vəziyyət və qısayollar
+          <span className="text-emerald-400/95 font-medium">{courseName}</span> — kurs CRM (müəssisə)
         </p>
         {error ? (
           <p className="text-sm text-red-300/90 mt-2" role="alert">
@@ -89,30 +74,24 @@ export default function CourseDashboard() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard
-          title="Bu gün dərs"
-          value={loading ? '…' : String(stats.lessons_today ?? 0)}
-          secondary={loading ? '' : lessonLabel(stats.lessons_today)}
+          title="Yeni lid"
+          value={loading ? '…' : String(stats.leads_new ?? 0)}
+          secondary={loading ? '' : `${stats.leads_total ?? 0} cəmi lead`}
         />
         <KpiCard
-          title="Bağlı müəllim"
-          value={loading ? '…' : String(stats.active_teachers ?? 0)}
-          secondary={loading ? '' : teacherSecondary(stats)}
-        />
-        <KpiCard
-          title="Aktiv tələbə"
+          title="Kurs tələbəsi"
           value={loading ? '…' : String(stats.active_students ?? 0)}
-          secondary={
-            loading
-              ? ''
-              : stats.active_groups > 0
-                ? `${stats.active_groups} aktiv qrup`
-                : 'ümumi qeydiyyat'
-          }
+          secondary={loading ? '' : 'yalnız course_id üzrə'}
+        />
+        <KpiCard
+          title="Müəllim heyəti"
+          value={loading ? '…' : String(stats.active_teachers ?? 0)}
+          secondary={loading ? '' : 'əlavə edilmiş işçilər'}
         />
         <KpiCard
           title="Gözləyən ödəniş"
           value={loading ? '…' : formatAzn(stats.pending_payments)}
-          secondary={loading ? '' : 'cari ay (aylıq abunəlik)'}
+          secondary={loading ? '' : 'kurs tələbələri üzrə'}
         />
       </div>
 
@@ -134,11 +113,10 @@ export default function CourseDashboard() {
 
       <Card className="p-5 border border-emerald-500/20 bg-emerald-500/[0.04]">
         <p className="text-sm text-token-textMuted leading-relaxed">
-          <strong className="text-emerald-200/90 font-medium">1 müəllim</strong> — sizin mövcud müəllim
-          hesabınız avtomatik kursa bağlanır (ayrıca yaratmaq lazım deyil).{' '}
-          <strong className="text-emerald-200/90 font-medium">{stats.active_students ?? 0} tələbə</strong> — həmin
-          müəllim hesabınızdakı aktiv qeydiyyatlar. Başqa müəllim əlavə etdikdə rəqəmlər avtomatik
-          birləşəcək.
+          <strong className="text-emerald-200/90 font-medium">Data izolyasiyası:</strong> Bu panel fərdi müəllim
+          hesabınızdan (<code className="text-emerald-300/80">instructor_id</code>) tam ayrıdır. Şəxsi 28 tələbəniz
+          yalnız <strong className="text-white/90">Müəllim panelində</strong> görünür. Kursa keçirmək üçün gələcəkdə
+          &quot;Transfer et&quot; əməliyyatı əlavə olunacaq.
         </p>
       </Card>
     </div>
