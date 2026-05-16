@@ -56,6 +56,7 @@ app.use('/api/admin', require('./routes/admin'));
 app.use('/api/trial', require('./routes/trial'));
 app.use('/api/billing', require('./routes/billing'));
 app.use('/api/public', require('./routes/public'));
+app.use('/api/course', require('./routes/course'));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 app.get('/api/meta', (req, res) =>
@@ -130,7 +131,4 @@ cron.schedule('0 */6 * * *', () => {
 
 // Orphan files cleanup: daily at 03:30
 cron.schedule('30 3 * * *', () => {
-  runOrphanFilesReaper().catch((e) => console.error('orphan files reaper cron', e.message));
-});
-
-module.exports = app;
+  runOrphanFilesReaper().catch((e) => console.error('orphan files re
