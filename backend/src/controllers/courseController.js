@@ -12,6 +12,10 @@ const {
   updateLead,
   listOrgTeachers,
   addOrgTeacher,
+  listOrgStudents,
+  addOrgStudent,
+  listOrgGroups,
+  createOrgGroup,
   LEAD_STATUSES,
 } = require('../services/courseOrgService');
 
@@ -60,6 +64,30 @@ const postTeacher = (req, res) =>
   withOrgCourse(req, res, async () => {
     const teacher = await addOrgTeacher(req.user.id, req.body?.phone);
     res.status(201).json({ success: true, teacher });
+  });
+
+const listStudents = (req, res) =>
+  withOrgCourse(req, res, async (course) => {
+    const students = await listOrgStudents(course.id);
+    res.json({ success: true, course_id: course.id, students });
+  });
+
+const postStudent = (req, res) =>
+  withOrgCourse(req, res, async () => {
+    const student = await addOrgStudent(req.user.id, req.body?.phone);
+    res.status(201).json({ success: true, student });
+  });
+
+const listGroups = (req, res) =>
+  withOrgCourse(req, res, async (course) => {
+    const groups = await listOrgGroups(course.id);
+    res.json({ success: true, course_id: course.id, groups });
+  });
+
+const postGroup = (req, res) =>
+  withOrgCourse(req, res, async (course) => {
+    const group = await createOrgGroup(course.id, req.user.id, req.body);
+    res.status(201).json({ success: true, group });
   });
 
 const getLeads = (req, res) =>
@@ -114,6 +142,10 @@ module.exports = {
   getDashboardStats,
   listTeachers,
   postTeacher,
+  listStudents,
+  postStudent,
+  listGroups,
+  postGroup,
   getLeads,
   postLead,
   patchLead,

@@ -330,6 +330,140 @@ async function updateLead(courseId, leadId, body) {
   return rows[0];
 }
 
+async function findStudentUserByPhone(cleanPhone) {
+  const user = await findUserByPhone(cleanPhone);
+  if (!user) return null;
+  if (await userHasRole(user.id, 'student')) return user;
+  const { rows } = await db.query(
+    `SELECT 1 FROM users WHERE id = $1 AND role = 'student' AND COALESCE(is_active, TRUE) = TRUE LIMIT 1`,
+    [user.id],
+  );
+  return rows.length ? user : null;
+}
+
+async function listOrgStudents(courseId) {
+  const { rows } = await db.query(
+    `SELECT u.id, u.full_name, u.phone, cs.enrollment_id, cs.created_at,
+            e.instructor_id, iu.full_name AS instructor_name,
+            cg.id AS group_id, cg.name AS group_name
+     FROM course_students cs
+     INNER JOIN users u ON u.id = cs.student_id
+     LEFT JOIN enrollments e ON e.id = cs.enrollment_id AND e.deleted_at IS NULL
+     LEFT JOIN users iu ON iu.id = e.instructor_id
+     LEFT JOIN LATERAL (
+       SELECT g.id, g.name
+       FROM course_group_members cgm
+       INNER JOIN course_groups g ON g.id = cgm.group_id AND g.course_id = cs.course_id AND g.is_active = TRUE
+       WHERE cgm.student_id = cs.student_id
+       ORDER BY g.name
+       LIMIT 1
+     ) cg ON TRUE
+     WHERE cs.course_id = $1 AND COALESCE(u.is_active, TRUE) = TRUE
+     ORDER BY u.full_name`,
+    [courseId],
+  );
+  return rows;
+}
+
+async function addOrgStudent(ownerUserId, phone) {
+  const course = await ensureOrgCourseForOwner(ownerUserId);
+  const clean = normalizePhone(phone);
+  if (!clean) {
+    const err = new Error('Telefon nömrəsi tələb olunur');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const student = await findStudentUserByPhone(clean);
+  if (!student) {
+    const err = new Error(
+      'Tələbə tapılmadı, zəhmət olmasa əvvəlcə onun platformada qeydiyyatdan keçdiyinə əmin olun',
+    );
+    err.statusCode = 404;
+    throw err;
+  }
+
+  const { rows: existing } = await db.query(
+    `SELECT 1 FROM course_students WHERE course_id = $1 AND student_id = $2`,
+    [course.id, student.id],
+  );
+  if (existing.length) {
+    const err = new Error('Bu tələbə artıq kursda qeydiyyatlıdır');
+    err.statusCode = 409;
+    throw err;
+  }
+
+  const { rows: enr } = await db.query(
+    `SELECT e.id FROM enrollments e
+     INNER JOIN course_teachers ct ON ct.instructor_user_id = e.instructor_id AND ct.course_id = $1 AND ct.is_active = TRUE AND ct.status = 'ACTIVE'
+     WHERE e.student_id = $2 AND e.deleted_at IS NULL
+     ORDER BY e.enrolled_at DESC NULLS LAST
+     LIMIT 1`,
+    [course.id, student.id],
+  );
+  const enrollmentId = enr[0]?.id || null;
+
+  await db.query(
+    `INSERT INTO course_students (course_id, student_id, enrollment_id)
+     VALUES ($1, $2, $3)`,
+    [course.id, student.id, enrollmentId],
+  );
+
+  const list = await listOrgStudents(course.id);
+  return list.find((s) => String(s.id) === String(student.id)) || {
+    id: student.id,
+    full_name: student.full_name,
+    phone: student.phone,
+    enrollment_id: enrollmentId,
+  };
+}
+
+async function listOrgGroups(courseId) {
+  const { rows } = await db.query(
+    `SELECT cg.id, cg.name, cg.instructor_user_id, cg.sort_order, cg.created_at,
+            u.full_name AS instructor_name,
+            (SELECT COUNT(*)::int FROM course_group_members cgm WHERE cgm.group_id = cg.id) AS member_count
+     FROM course_groups cg
+     LEFT JOIN users u ON u.id = cg.instructor_user_id
+     WHERE cg.course_id = $1 AND cg.is_active = TRUE
+     ORDER BY cg.sort_order ASC, cg.name ASC`,
+    [courseId],
+  );
+  return rows;
+}
+
+async function createOrgGroup(courseId, ownerUserId, body) {
+  const name = String(body?.name || '').trim();
+  if (!name) {
+    const err = new Error('Qrup adı tələb olunur');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const instructorUserId = body?.instructor_user_id || null;
+  if (instructorUserId) {
+    const { rows: ct } = await db.query(
+      `SELECT 1 FROM course_teachers
+       WHERE course_id = $1 AND instructor_user_id = $2 AND is_active = TRUE AND status = 'ACTIVE'`,
+      [courseId, instructorUserId],
+    );
+    if (!ct.length) {
+      const err = new Error('Seçilmiş müəllim bu kursun heyətində deyil');
+      err.statusCode = 400;
+      throw err;
+    }
+  }
+
+  const { rows } = await db.query(
+    `INSERT INTO course_groups (course_id, name, instructor_user_id, sort_order)
+     VALUES ($1, $2, $3, COALESCE($4::int, 0))
+     RETURNING id`,
+    [courseId, name, instructorUserId, body?.sort_order != null ? Number(body.sort_order) : 0],
+  );
+  const groups = await listOrgGroups(courseId);
+  return groups.find((g) => String(g.id) === String(rows[0].id)) || rows[0];
+}
+
 async function listOrgTeachers(courseId, ownerUserId) {
   const { rows } = await db.query(
     `SELECT ct.instructor_user_id AS id, u.full_name, u.phone, ct.status,
@@ -367,4 +501,8 @@ module.exports = {
   updateLead,
   listOrgTeachers,
   addOrgTeacher,
+  listOrgStudents,
+  addOrgStudent,
+  listOrgGroups,
+  createOrgGroup,
 };
