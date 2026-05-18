@@ -50,19 +50,58 @@ function normPhoneDigits(v) {
   return String(v || '').replace(/\D/g, '')
 }
 
+function foldAzSearch(s) {
+  return String(s || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .replace(/ı/g, 'i')
+    .replace(/ö/g, 'o')
+    .replace(/ü/g, 'u')
+    .replace(/ğ/g, 'g')
+    .replace(/ş/g, 's')
+    .replace(/ç/g, 'c')
+    .replace(/ə/g, 'e')
+}
+
 function matchesSmsSearch(item, query) {
-  const q = String(query || '').trim().toLowerCase()
+  const q = String(query || '').trim()
   if (!q) return true
+  const qFold = foldAzSearch(q)
   const digits = normPhoneDigits(q)
-  const name = String(item.student_name || '').toLowerCase()
-  if (name && name.includes(q)) return true
+  const name = foldAzSearch(item.student_name || '')
+  if (name && qFold && name.includes(qFold)) return true
+  const msg = foldAzSearch(item.message || '')
+  if (msg && qFold && msg.includes(qFold)) return true
   const phoneList = [...(item.phones || []), item.phone].filter(Boolean)
   for (const p of phoneList) {
     const d = normPhoneDigits(p)
-    if (digits && d.includes(digits)) return true
-    if (q && String(p).toLowerCase().includes(q)) return true
+    if (digits.length >= 3 && d.includes(digits)) return true
+    if (qFold && foldAzSearch(p).includes(qFold)) return true
   }
   return false
+}
+
+function buildStudentPhoneNameMap(students) {
+  const map = new Map()
+  for (const s of students || []) {
+    const name = String(s.full_name || s.student_name || s.name || '').trim()
+    if (!name) continue
+    for (const p of [s.phone, s.parent_phone, s.parentPhone]) {
+      const d = normPhoneDigits(p)
+      if (d) map.set(d, name)
+    }
+  }
+  return map
+}
+
+function enrichSmsWithStudentNames(items, phoneToName) {
+  return (items || []).map((x) => {
+    const phone = normPhoneDigits(x.phone)
+    const fromMap = phone && phoneToName.get(phone)
+    const student_name = x.student_name || fromMap || null
+    return student_name ? { ...x, student_name } : x
+  })
 }
 
 function formatAgo(ms) {
@@ -120,11 +159,16 @@ export default function InstructorNotifications() {
     setSmsErr(null)
     const logParams = { limit: 200 }
     if (smsSearchDebounced.length >= 2) logParams.search = smsSearchDebounced
-    Promise.all([api.get('/sms-logs', { params: logParams }), api.get('/sms-logs/plan', { params: { days: 90 } })])
-      .then(([hist, plan]) => {
+    Promise.all([
+      api.get('/sms-logs', { params: logParams }),
+      api.get('/sms-logs/plan', { params: { days: 90 } }),
+      api.get('/students').catch(() => ({ students: [] })),
+    ])
+      .then(([hist, plan, studentsRes]) => {
         if (cancelled) return
-        const rawItems = Array.isArray(hist?.items) ? hist.items : []
-        const rawPlan = Array.isArray(plan?.items) ? plan.items : []
+        const phoneToName = buildStudentPhoneNameMap(studentsRes?.students || studentsRes?.items || [])
+        const rawItems = enrichSmsWithStudentNames(Array.isArray(hist?.items) ? hist.items : [], phoneToName)
+        const rawPlan = enrichSmsWithStudentNames(Array.isArray(plan?.items) ? plan.items : [], phoneToName)
         const normPhone = (p) => String(p || '').replace(/\D/g, '')
         const mapped = [...rawItems, ...rawPlan].map((x) => ({
           ...x,
@@ -139,8 +183,11 @@ export default function InstructorNotifications() {
           return 2
         }
 
-        // Build phone -> student mapping using items that have identity info.
+        // Build phone -> student mapping (enrollment + enriched names).
         const phoneToStudent = new Map()
+        for (const [digits, name] of phoneToName.entries()) {
+          if (digits && name) phoneToStudent.set(digits, name)
+        }
         for (const x of mapped) {
           const phone = normPhone(x.phone)
           const studentKey = String(x.student_id || x.student_name || '').trim()
@@ -151,7 +198,7 @@ export default function InstructorNotifications() {
         for (const x of mapped) {
           const phone = normPhone(x.phone)
           const studentKey =
-            String(x.student_id || x.student_name || '').trim() ||
+            String(x.student_name || x.student_id || '').trim() ||
             (phone ? String(phoneToStudent.get(phone) || '').trim() : '')
           const entityKey = studentKey || phone || 'unknown'
           const key = [
@@ -164,13 +211,20 @@ export default function InstructorNotifications() {
           if (!prev) {
             uniq.set(key, {
               ...x,
+              student_name: x.student_name || (phone ? phoneToName.get(phone) : null) || null,
               phones: x.phone ? [x.phone] : [],
             })
             continue
           }
           const mergedPhones = [...new Set([...(prev.phones || []), ...(x.phone ? [x.phone] : [])])]
           const winner = rankStatus(x.status) > rankStatus(prev.status) ? x : prev
-          uniq.set(key, { ...winner, phones: mergedPhones })
+          const mergedName =
+            winner.student_name ||
+            x.student_name ||
+            (phone ? phoneToName.get(phone) : null) ||
+            prev.student_name ||
+            null
+          uniq.set(key, { ...winner, student_name: mergedName, phones: mergedPhones })
         }
         const deduped = Array.from(uniq.values())
         setSmsDbItems(deduped)

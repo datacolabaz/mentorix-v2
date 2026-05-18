@@ -15,6 +15,88 @@ function normDigits(v) {
   return String(v || '').replace(/\D/g, '');
 }
 
+function foldAzName(s) {
+  return String(s || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .replace(/ı/g, 'i')
+    .replace(/ö/g, 'o')
+    .replace(/ü/g, 'u')
+    .replace(/ğ/g, 'g')
+    .replace(/ş/g, 's')
+    .replace(/ç/g, 'c')
+    .replace(/ə/g, 'e');
+}
+
+function escapeIlike(v) {
+  return String(v || '').replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');
+}
+
+function pushNameSearchConditions(searchParts, params, searchRaw) {
+  const esc = escapeIlike(searchRaw);
+  params.push(`%${esc}%`);
+  const nameIdx = params.length;
+  const folded = foldAzName(searchRaw);
+  const foldedEsc = escapeIlike(folded);
+  let nameIdxFold = null;
+  if (folded && folded !== String(searchRaw).toLowerCase()) {
+    params.push(`%${foldedEsc}%`);
+    nameIdxFold = params.length;
+  }
+
+  const nameMatch = (col) => {
+    if (nameIdxFold) {
+      return `(${col} ILIKE $${nameIdx} OR ${col} ILIKE $${nameIdxFold})`;
+    }
+    return `${col} ILIKE $${nameIdx}`;
+  };
+
+  searchParts.push(`COALESCE(su.full_name, enr_name.full_name, '') ILIKE $${nameIdx}`);
+  if (nameIdxFold) {
+    searchParts.push(`COALESCE(su.full_name, enr_name.full_name, '') ILIKE $${nameIdxFold}`);
+  }
+  searchParts.push(`b.message ILIKE $${nameIdx}`);
+  if (nameIdxFold) searchParts.push(`b.message ILIKE $${nameIdxFold}`);
+
+  searchParts.push(`EXISTS (
+    SELECT 1 FROM enrollments e
+    INNER JOIN users u ON u.id = e.student_id
+    LEFT JOIN student_profiles sp ON sp.user_id = u.id
+    WHERE e.instructor_id = $1
+      AND (e.deleted_at IS NULL)
+      AND (${nameMatch('u.full_name')})
+      AND (
+        b.student_id = u.id
+        OR regexp_replace(COALESCE(u.phone, ''), '\\\\D', '', 'g') = b.norm_phone
+        OR regexp_replace(COALESCE(sp.parent_phone, ''), '\\\\D', '', 'g') = b.norm_phone
+      )
+  )`);
+
+  searchParts.push(`b.norm_phone IN (
+    SELECT DISTINCT regexp_replace(COALESCE(ph, ''), '\\\\D', '', 'g') AS norm_phone
+    FROM (
+      SELECT u.phone AS ph
+      FROM enrollments e
+      INNER JOIN users u ON u.id = e.student_id
+      WHERE e.instructor_id = $1
+        AND (e.deleted_at IS NULL)
+        AND (${nameMatch('u.full_name')})
+        AND u.phone IS NOT NULL
+      UNION ALL
+      SELECT sp.parent_phone AS ph
+      FROM enrollments e
+      INNER JOIN users u ON u.id = e.student_id
+      INNER JOIN student_profiles sp ON sp.user_id = u.id
+      WHERE e.instructor_id = $1
+        AND (e.deleted_at IS NULL)
+        AND (${nameMatch('u.full_name')})
+        AND sp.parent_phone IS NOT NULL
+    ) t
+    WHERE ph IS NOT NULL AND TRIM(ph) <> ''
+  )`);
+}
+
 function addDaysYmd(ymd, days) {
   const s = String(ymd || '').slice(0, 10);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;
@@ -98,7 +180,8 @@ function normalizeStatus(v) {
 const getSmsLogs = async (req, res) => {
   try {
     const instructorId = req.user.id;
-    const limit = clampLimit(req.query.limit);
+    const searchRawEarly = String(req.query.search || req.query.q || '').trim();
+    const limit = searchRawEarly.length >= 2 ? Math.min(500, Math.max(clampLimit(req.query.limit), 200)) : clampLimit(req.query.limit);
     const type = normalizeType(req.query.type); // payment | otp
     const status = normalizeStatus(req.query.status); // sent | failed | pending
     const date = String(req.query.date || '').trim(); // YYYY-MM-DD (optional)
@@ -218,27 +301,14 @@ const getSmsLogs = async (req, res) => {
           INNER JOIN users u ON u.id = e.student_id
           LEFT JOIN student_profiles sp ON sp.user_id = u.id
           WHERE e.instructor_id = $1
-            AND e.deleted_at IS NULL
+            AND (e.deleted_at IS NULL)
             AND (
               regexp_replace(COALESCE(u.phone, ''), '\\\\D', '', 'g') LIKE $${phoneIdx}
               OR regexp_replace(COALESCE(sp.parent_phone, ''), '\\\\D', '', 'g') LIKE $${phoneIdx}
             )
         )`);
       }
-      params.push(`%${searchRaw.replace(/%/g, '\\%').replace(/_/g, '\\_')}%`);
-      const nameIdx = params.length;
-      searchParts.push(`COALESCE(su.full_name, enr_name.full_name, '') ILIKE $${nameIdx}`);
-      searchParts.push(`EXISTS (
-        SELECT 1 FROM enrollments e
-        INNER JOIN users u ON u.id = e.student_id
-        WHERE e.instructor_id = $1
-          AND e.deleted_at IS NULL
-          AND u.full_name ILIKE $${nameIdx}
-          AND (
-            b.student_id = u.id
-            OR regexp_replace(COALESCE(u.phone, ''), '\\\\D', '', 'g') = b.norm_phone
-          )
-      )`);
+      pushNameSearchConditions(searchParts, params, searchRaw);
       if (searchParts.length) where.push(`(${searchParts.join(' OR ')})`);
     }
 
@@ -266,9 +336,13 @@ const getSmsLogs = async (req, res) => {
          SELECT u.full_name
          FROM users u
          INNER JOIN enrollments e ON e.student_id = u.id
+         LEFT JOIN student_profiles sp ON sp.user_id = u.id
          WHERE e.instructor_id = $1
-           AND e.deleted_at IS NULL
-           AND regexp_replace(COALESCE(u.phone, ''), '\\\\D', '', 'g') = b.norm_phone
+           AND (e.deleted_at IS NULL)
+           AND (
+             regexp_replace(COALESCE(u.phone, ''), '\\\\D', '', 'g') = b.norm_phone
+             OR regexp_replace(COALESCE(sp.parent_phone, ''), '\\\\D', '', 'g') = b.norm_phone
+           )
          LIMIT 1
        ) enr_name ON TRUE
        WHERE ${where.join(' AND ')}
