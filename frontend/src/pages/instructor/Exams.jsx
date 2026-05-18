@@ -127,9 +127,10 @@ function serializeEditQuestion(eq) {
     points: eq.points,
     options,
     template_hint: eq.template_hint,
-    negative_marking: eq.negative_marking,
     order_num: eq.order_num,
   }
+  if (type === 'closed') base.negative_marking = eq.negative_marking
+  else if (type === 'multiple') base.negative_marking = 0
   /** Boşdursa açarı göndərmə — PATCH köhnə `correct_answer`-ı saxlasın (təsadüfi silinməsin). */
   if (correct) base.correct_answer = correct
   return base
@@ -733,7 +734,7 @@ export default function InstructorExams() {
                 <div>
                   <span className="text-sm font-semibold">Səhv düzü aparsın (0.25 cərimə)</span>
                   <p className="text-xs text-gray-500 mt-1 max-w-[min(100%,280px)]">
-                    Qapalı və çoxseçimli suallar üçün cərimə. Söndürsəniz, bu imtahan üçün cərimə hesablanmır.
+                    Yalnız qapalı (ABCDE) suallarda səhv üçün 0.25 çıxılır. Çoxseçimli suallar cəriməsiz qalır.
                   </p>
                 </div>
                 <input
@@ -806,9 +807,9 @@ export default function InstructorExams() {
                           onChange={(e) => patchEditQuestion(idx, { question_text: e.target.value })}
                           placeholder="Sual mətni"
                         />
-                        {(t === 'closed' || t === 'multiple') && (
+                        {t === 'closed' && (
                           <label className="block text-[11px] text-gray-500">
-                            Mənfi bal (cərimə əmsalı, məs. -0.25)
+                            Mənfi bal (qapalı sual cəriməsi, məs. -0.25)
                             <input
                               type="number"
                               step="0.01"

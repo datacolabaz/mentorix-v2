@@ -141,30 +141,20 @@ function inferQuestionType(q) {
 }
 
 /**
- * Qapalı və çoxseçimli: hər səhv seçim/cavab üçün çıxılan sabit cərimə (default 0.25).
+ * Qapalı sual: səhv cavab üçün sabit cərimə (default 0.25).
  * `exams.wrong_penalty_enabled === false` olanda 0; `negative_marking === 0` olan sualda 0.
+ * Çoxseçimli suallarda cərimə yoxdur (səhv = 0 bal).
  */
 function wrongSelectionPenaltyMagnitude(q, wrongPenaltyEnabled) {
   if (!wrongPenaltyEnabled) return 0;
   const t = inferQuestionType(q);
-  if (t !== 'closed' && t !== 'multiple') return 0;
+  if (t !== 'closed') return 0;
   const n = q.negative_marking;
   if (n === null || n === undefined || n === '') return 0.25;
   const v = Number(n);
   if (Number.isNaN(v)) return 0.25;
   if (v === 0) return 0;
   return Math.abs(v);
-}
-
-/** Çoxseçimli: tələbənin seçdiyi və düzgün cavabda olmayan variantların sayı (hər rəqəm bir dəfə). */
-function countWrongMultipleSelections(givenRaw, correctRaw) {
-  const cSet = new Set(String(correctRaw ?? '').replace(/\D/g, '').split('').filter(Boolean));
-  const sSet = new Set(String(givenRaw ?? '').replace(/\D/g, '').split('').filter(Boolean));
-  let n = 0;
-  for (const d of sSet) {
-    if (!cSet.has(d)) n += 1;
-  }
-  return n;
 }
 
 /** Çoxseçimli: yalnız rəqəmlər, ardıcıllıqdan asılı olmayaraq (23 = 32) */
@@ -376,8 +366,7 @@ function scoreQuestionForAuto(q, answers, wrongPenaltyEnabled, indexInFullOrder)
     const caNorm = normDigits(ca);
     if (!caNorm) return { type, delta: 0, outcome: 'pending' };
     if (normDigits(given) === caNorm) return { type, delta: pts, outcome: 'correct' };
-    const wrongPicks = countWrongMultipleSelections(given, ca);
-    return { type, delta: -(wrongPicks * pen), outcome: 'wrong' };
+    return { type, delta: 0, outcome: 'wrong' };
   }
 
   if (type === 'matching') {
@@ -416,7 +405,7 @@ function scoreQuestionForAuto(q, answers, wrongPenaltyEnabled, indexInFullOrder)
 }
 
 /**
- * Avtomatik bal: qapalı + çoxseçimli (səhvə cərimə, imtahan bayrağına görə), uyğunluq, açıq.
+ * Avtomatik bal: qapalı (səhvə cərimə, imtahan bayrağına görə), çoxseçimli, uyğunluq, açıq.
  */
 const calculateScore = (questions, answers, opts = {}) => {
   const wrongPenaltyEnabled = opts.wrongPenaltyEnabled !== false;

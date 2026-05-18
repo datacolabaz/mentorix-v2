@@ -248,7 +248,7 @@ const createExam = async (req, res) => {
         for (let i = 0; i < questions.length; i++) {
           const q = questions[i];
           let neg = 0;
-          if (q.question_type === 'closed' || q.question_type === 'multiple') {
+          if (q.question_type === 'closed') {
             if (!wrongPenaltyOn) neg = 0;
             else if (q.negative_marking != null && q.negative_marking !== '') neg = Number(q.negative_marking);
             else neg = -0.25;
@@ -1753,8 +1753,12 @@ const patchExam = async (req, res) => {
                   ? (hintRaw ? hintRaw.replace(/\D/g, '').slice(0, 120) : null)
                 : hintRaw || null;
 
-          const negRaw = q.negative_marking != null && q.negative_marking !== '' ? Number(q.negative_marking) : 0;
-          const negMark = Number.isFinite(negRaw) ? negRaw : 0;
+          let negMark = 0;
+          if (row.question_type === 'closed') {
+            const negRaw = q.negative_marking != null && q.negative_marking !== '' ? Number(q.negative_marking) : 0;
+            negMark = Number.isFinite(negRaw) ? negRaw : 0;
+            if (!finalWrongPen) negMark = 0;
+          }
 
           const ordRaw = parseInt(String(q.order_num != null ? q.order_num : row.order_num), 10);
           const orderNum = Number.isFinite(ordRaw) ? Math.max(1, ordRaw) : Math.max(1, Number(row.order_num) || 1);
