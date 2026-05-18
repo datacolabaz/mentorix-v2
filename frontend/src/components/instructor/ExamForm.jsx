@@ -355,7 +355,7 @@ export default function ExamForm({ students, studentsLoading = false, onCreated 
               <div>
                 <p className="text-sm font-semibold">Səhv düzü aparsın (0.25 cərimə)</p>
                 <p className="text-xs text-gray-500 mt-1">
-                  Yalnız qapalı (ABCDE) suallarda səhv cavab üçün 0.25 bal çıxılır. Çoxseçimlilər cəriməsizdir.
+                  Yalnız qapalı (ABCDE) suallarda səhv cavab üçün 0.25 bal çıxılır. Digər sual tipləri cəriməsizdir.
                 </p>
               </div>
               <input
@@ -707,3 +707,4 @@ export default function ExamForm({ students, studentsLoading = false, onCreated 
   )
 }
  
+                                                                      

@@ -734,7 +734,7 @@ export default function InstructorExams() {
                 <div>
                   <span className="text-sm font-semibold">Səhv düzü aparsın (0.25 cərimə)</span>
                   <p className="text-xs text-gray-500 mt-1 max-w-[min(100%,280px)]">
-                    Yalnız qapalı (ABCDE) suallarda səhv üçün 0.25 çıxılır. Çoxseçimli suallar cəriməsiz qalır.
+                    Yalnız qapalı (ABCDE) suallarda səhv cavab üçün 0.25 bal çıxılır. Digər sual tipləri cəriməsizdir.
                   </p>
                 </div>
                 <input
@@ -1176,11 +1176,4 @@ export default function InstructorExams() {
             <div className="flex gap-3">
               <Button onClick={saveEdit} loading={loading} className="flex-1 justify-center">Yadda Saxla</Button>
               <Button variant="secondary" onClick={() => setEditModal(false)} className="flex-1 justify-center">Legv et</Button>
-            </div>
-          </div>
-        </Modal>
-      )}
-    </div>
-  )
-}
- 
+         
