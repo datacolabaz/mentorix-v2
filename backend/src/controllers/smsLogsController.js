@@ -103,6 +103,8 @@ const getSmsLogs = async (req, res) => {
     const status = normalizeStatus(req.query.status); // sent | failed | pending
     const date = String(req.query.date || '').trim(); // YYYY-MM-DD (optional)
     const phoneQ = normDigits(req.query.phone);
+    const searchRaw = String(req.query.search || req.query.q || '').trim();
+    const searchDigits = normDigits(searchRaw);
 
     const where = [];
     const params = [instructorId];
@@ -205,6 +207,41 @@ const getSmsLogs = async (req, res) => {
       where.push(`to_char(b.ts, 'YYYY-MM-DD') = $${params.length}`);
     }
 
+    if (searchRaw.length >= 2) {
+      const searchParts = [];
+      if (searchDigits.length >= 3) {
+        params.push(`%${searchDigits}%`);
+        const phoneIdx = params.length;
+        searchParts.push(`b.norm_phone LIKE $${phoneIdx}`);
+        searchParts.push(`EXISTS (
+          SELECT 1 FROM enrollments e
+          INNER JOIN users u ON u.id = e.student_id
+          LEFT JOIN student_profiles sp ON sp.user_id = u.id
+          WHERE e.instructor_id = $1
+            AND e.deleted_at IS NULL
+            AND (
+              regexp_replace(COALESCE(u.phone, ''), '\\\\D', '', 'g') LIKE $${phoneIdx}
+              OR regexp_replace(COALESCE(sp.parent_phone, ''), '\\\\D', '', 'g') LIKE $${phoneIdx}
+            )
+        )`);
+      }
+      params.push(`%${searchRaw.replace(/%/g, '\\%').replace(/_/g, '\\_')}%`);
+      const nameIdx = params.length;
+      searchParts.push(`COALESCE(su.full_name, enr_name.full_name, '') ILIKE $${nameIdx}`);
+      searchParts.push(`EXISTS (
+        SELECT 1 FROM enrollments e
+        INNER JOIN users u ON u.id = e.student_id
+        WHERE e.instructor_id = $1
+          AND e.deleted_at IS NULL
+          AND u.full_name ILIKE $${nameIdx}
+          AND (
+            b.student_id = u.id
+            OR regexp_replace(COALESCE(u.phone, ''), '\\\\D', '', 'g') = b.norm_phone
+          )
+      )`);
+      if (searchParts.length) where.push(`(${searchParts.join(' OR ')})`);
+    }
+
     const { rows } = await db.query(
       `WITH base AS (
          SELECT
@@ -216,7 +253,7 @@ const getSmsLogs = async (req, res) => {
        SELECT
          b.id,
          b.student_id,
-         su.full_name AS student_name,
+         COALESCE(su.full_name, enr_name.full_name) AS student_name,
          b.type,
          b.phone,
          b.message,
@@ -225,6 +262,15 @@ const getSmsLogs = async (req, res) => {
          b.ts AS created_at
        FROM base b
        LEFT JOIN users su ON su.id = b.student_id
+       LEFT JOIN LATERAL (
+         SELECT u.full_name
+         FROM users u
+         INNER JOIN enrollments e ON e.student_id = u.id
+         WHERE e.instructor_id = $1
+           AND e.deleted_at IS NULL
+           AND regexp_replace(COALESCE(u.phone, ''), '\\\\D', '', 'g') = b.norm_phone
+         LIMIT 1
+       ) enr_name ON TRUE
        WHERE ${where.join(' AND ')}
        ORDER BY b.ts DESC
        LIMIT ${limit}`,

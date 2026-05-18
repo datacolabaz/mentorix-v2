@@ -46,6 +46,25 @@ function formatStorageUsedFromMb(mb) {
   return formatMbValue(m)
 }
 
+function normPhoneDigits(v) {
+  return String(v || '').replace(/\D/g, '')
+}
+
+function matchesSmsSearch(item, query) {
+  const q = String(query || '').trim().toLowerCase()
+  if (!q) return true
+  const digits = normPhoneDigits(q)
+  const name = String(item.student_name || '').toLowerCase()
+  if (name && name.includes(q)) return true
+  const phoneList = [...(item.phones || []), item.phone].filter(Boolean)
+  for (const p of phoneList) {
+    const d = normPhoneDigits(p)
+    if (digits && d.includes(digits)) return true
+    if (q && String(p).toLowerCase().includes(q)) return true
+  }
+  return false
+}
+
 function formatAgo(ms) {
   const s = Math.max(0, Math.floor(ms / 1000))
   if (s < 60) return `${s}s əvvəl`
@@ -69,6 +88,8 @@ export default function InstructorNotifications() {
   const [smsLoading, setSmsLoading] = useState(false)
   const [smsErr, setSmsErr] = useState(null)
   const [smsDbItems, setSmsDbItems] = useState([])
+  const [smsSearch, setSmsSearch] = useState('')
+  const [smsSearchDebounced, setSmsSearchDebounced] = useState('')
   const [lastUpdatedLabel, setLastUpdatedLabel] = useState('')
   const billingQ = useBillingStatus()
   const billing = billingQ.data || null
@@ -88,10 +109,18 @@ export default function InstructorNotifications() {
 
   useEffect(() => {
     if (tab !== 'sms') return
+    const t = setTimeout(() => setSmsSearchDebounced(smsSearch.trim()), 350)
+    return () => clearTimeout(t)
+  }, [smsSearch, tab])
+
+  useEffect(() => {
+    if (tab !== 'sms') return
     let cancelled = false
     setSmsLoading(true)
     setSmsErr(null)
-    Promise.all([api.get('/sms-logs', { params: { limit: 200 } }), api.get('/sms-logs/plan', { params: { days: 90 } })])
+    const logParams = { limit: 200 }
+    if (smsSearchDebounced.length >= 2) logParams.search = smsSearchDebounced
+    Promise.all([api.get('/sms-logs', { params: logParams }), api.get('/sms-logs/plan', { params: { days: 90 } })])
       .then(([hist, plan]) => {
         if (cancelled) return
         const rawItems = Array.isArray(hist?.items) ? hist.items : []
@@ -173,14 +202,14 @@ export default function InstructorNotifications() {
     return () => {
       cancelled = true
     }
-  }, [tab])
+  }, [tab, smsSearchDebounced])
 
   const [smsShowCount, setSmsShowCount] = useState(40)
 
   useEffect(() => {
     if (tab !== 'sms') return
     setSmsShowCount(40)
-  }, [tab, smsTimeFilter, smsStatusFilter])
+  }, [tab, smsTimeFilter, smsStatusFilter, smsSearchDebounced])
 
   const smsBaseList = useMemo(() => {
     return Array.isArray(smsDbItems) ? smsDbItems : []
@@ -259,13 +288,14 @@ export default function InstructorNotifications() {
   const smsTimeRows = useMemo(() => {
     const now = new Date()
     const filtered = smsBaseList.filter((x) => {
+      if (!matchesSmsSearch(x, smsSearchDebounced)) return false
       if (smsTimeFilter === 'all') return true
       if (smsTimeFilter === 'today') return isToday(x.createdAt, now)
       if (smsTimeFilter === 'week') return isThisWeek(x.createdAt, now)
       return isThisMonth(x.createdAt, now)
     })
     return filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-  }, [smsTimeFilter, smsBaseList])
+  }, [smsTimeFilter, smsBaseList, smsSearchDebounced])
 
   const smsRows = useMemo(() => {
     if (smsStatusFilter === 'sent') return smsTimeRows.filter((x) => x.status === 'sent')
@@ -435,11 +465,17 @@ export default function InstructorNotifications() {
                 </div>
               </div>
             </div>
-            <div className="shrink-0">
-              <div className="space-y-2">
-                <FilterTabs tabs={smsTimeTabs} activeId={smsTimeFilter} onChange={(id) => setSmsTimeFilter(id)} />
-                <FilterTabs tabs={smsStatusTabs} activeId={smsStatusFilter} onChange={(id) => setSmsStatusFilter(id)} />
-              </div>
+            <div className="shrink-0 w-full sm:w-auto space-y-2">
+              <input
+                type="search"
+                value={smsSearch}
+                onChange={(e) => setSmsSearch(e.target.value)}
+                placeholder="Ad və ya telefon (məs: Gözel / 559815866)"
+                className="w-full sm:w-72 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white placeholder:text-token-textMuted focus:border-primary/40 outline-none"
+                aria-label="SMS tarixçəsində axtarış"
+              />
+              <FilterTabs tabs={smsTimeTabs} activeId={smsTimeFilter} onChange={(id) => setSmsTimeFilter(id)} />
+              <FilterTabs tabs={smsStatusTabs} activeId={smsStatusFilter} onChange={(id) => setSmsStatusFilter(id)} />
             </div>
           </div>
 
@@ -447,10 +483,14 @@ export default function InstructorNotifications() {
             <Card className="p-8 sm:p-10 text-center">
               <div className="text-3xl mb-3">📭</div>
               <div className="text-sm font-semibold text-token-textMain">
-                {smsErr ? 'SMS tarixçəsi yüklənmədi' : 'Bu filter üçün SMS yoxdur'}
+                {smsErr ? 'SMS tarixçəsi yüklənmədi' : smsSearchDebounced ? 'Axtarışa uyğun SMS tapılmadı' : 'Bu filter üçün SMS yoxdur'}
               </div>
               <p className="text-xs text-token-textMuted mt-1">
-                {smsErr ? 'Bir az sonra yenidən yoxlayın.' : 'Filtrləri dəyişin və ya yeni SMS göndərin.'}
+                {smsErr
+                  ? 'Bir az sonra yenidən yoxlayın.'
+                  : smsSearchDebounced
+                    ? 'Ad və ya telefonu yoxlayın (ən azı 2 simvol).'
+                    : 'Filtrləri dəyişin və ya yeni SMS göndərin.'}
               </p>
             </Card>
           ) : (
