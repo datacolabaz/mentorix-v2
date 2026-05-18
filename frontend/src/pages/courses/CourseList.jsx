@@ -37,8 +37,10 @@ export default function CourseList() {
           <h1 className="font-display font-bold text-xl sm:text-2xl text-token-textMain tracking-tight">
             Kurslar
           </h1>
-          <p className="text-token-textMuted text-sm mt-1">
-            Tələbə, cədvəl və ödənişlər kurs üzrə idarə olunur
+          <p className="text-token-textMuted text-sm mt-1 max-w-xl leading-relaxed">
+            Fənn/kurs kataloqu — istəsəniz burada ayrı kurslar yaradın. Mövcud 28 tələbəniz{' '}
+            <strong className="text-white/85">Müəllim → Tələbələr</strong> bölməsində qalır; Tədris Mərkəzi (
+            <strong className="text-white/85">/course</strong>) isə ayrı paneldir.
           </p>
         </div>
         <Button onClick={() => setCreateOpen(true)}>+ Yeni kurs</Button>
