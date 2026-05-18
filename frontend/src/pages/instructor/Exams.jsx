@@ -1176,4 +1176,11 @@ export default function InstructorExams() {
             <div className="flex gap-3">
               <Button onClick={saveEdit} loading={loading} className="flex-1 justify-center">Yadda Saxla</Button>
               <Button variant="secondary" onClick={() => setEditModal(false)} className="flex-1 justify-center">Legv et</Button>
-         
+            </div>
+          </div>
+        </Modal>
+      )}
+    </div>
+  )
+}
+ 
