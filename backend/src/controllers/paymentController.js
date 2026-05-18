@@ -255,7 +255,8 @@ const getRestorePreview = async (req, res) => {
        FROM payments
        WHERE enrollment_id = $1
          AND status = 'completed'
-         AND payment_date IS NOT NULL`,
+         AND payment_date IS NOT NULL
+         AND (deleted_at IS NULL)`,
       [enrollment_id]
     );
     const done = new Set(existing.map((r) => String(r.ymd).slice(0, 10)));
@@ -771,6 +772,7 @@ const listMyPayments = async (req, res) => {
          FROM payments p
          INNER JOIN enrollments e ON e.id = p.enrollment_id AND e.student_id = $1
          LEFT JOIN users iu ON iu.id = e.instructor_id
+         WHERE (p.deleted_at IS NULL)
          ORDER BY COALESCE(p.paid_at, p.payment_date::timestamptz) DESC NULLS LAST, p.id DESC`,
         [studentId]
       );
@@ -785,6 +787,7 @@ const listMyPayments = async (req, res) => {
            FROM payments p
            INNER JOIN enrollments e ON e.id = p.enrollment_id AND e.student_id = $1
            LEFT JOIN users iu ON iu.id = e.instructor_id
+           WHERE (p.deleted_at IS NULL)
            ORDER BY COALESCE(p.paid_at, p.payment_date::timestamptz) DESC NULLS LAST, p.id DESC`,
           [studentId]
         );
@@ -876,7 +879,7 @@ const listMyPayments = async (req, res) => {
           ({ rows: pr } = await db.query(
             `SELECT COALESCE(SUM(amount), 0)::numeric AS t
              FROM payments
-             WHERE enrollment_id = $1 AND status = 'completed'`,
+             WHERE enrollment_id = $1 AND status = 'completed' AND (deleted_at IS NULL)`,
             [enrollmentOut.id]
           ));
         } catch (e) {
@@ -885,6 +888,7 @@ const listMyPayments = async (req, res) => {
             `SELECT COALESCE(SUM(amount), 0)::numeric AS t
              FROM payments
              WHERE enrollment_id = $1
+               AND (deleted_at IS NULL)
                AND (paid_at IS NOT NULL OR payment_date IS NOT NULL)`,
             [enrollmentOut.id]
           ));
@@ -1381,6 +1385,9 @@ const listPayments = async (req, res) => {
     if (req.user.role === 'instructor') {
       sql += ` WHERE REPLACE(LOWER(TRIM(e.instructor_id::text)), '-', '') = $1`;
       params.push(normUuid(req.user.id));
+      sql += ` AND (p.deleted_at IS NULL)`;
+    } else {
+      sql += ` WHERE (p.deleted_at IS NULL)`;
     }
     sql += ` ORDER BY p.paid_at DESC`;
     const { rows } = await db.query(sql, params);
@@ -1493,6 +1500,7 @@ const getInstructorPaymentBoard = async (req, res) => {
        FROM payments p
        INNER JOIN enrollments e ON e.id = p.enrollment_id
        WHERE p.status = 'completed'
+         AND (p.deleted_at IS NULL)
          AND REPLACE(LOWER(TRIM(e.instructor_id::text)), '-', '') = $1
          ${SQL_EXCLUDE_BALANCE_ADJUSTMENT}`,
       [iid]
@@ -1606,25 +1614,81 @@ const getEnrollmentPaymentHistory = async (req, res) => {
       return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
     }
 
-    let rows;
+    const studentId = en[0].student_id;
+    const instructorId = en[0].instructor_id;
+
+    let rowsPrimary;
     try {
-      ({ rows } = await db.query(
+      ({ rows: rowsPrimary } = await db.query(
         `SELECT id, amount, currency, payment_method, status, payment_date, paid_at, notes, period
          FROM payments
          WHERE enrollment_id = $1
+           AND (deleted_at IS NULL)
          ORDER BY COALESCE(paid_at, payment_date::timestamptz) DESC NULLS LAST, id DESC`,
         [enrollment_id]
       ));
     } catch (e) {
       if (!isMissingPaymentsStatusColumn(e)) throw e;
-      ({ rows } = await db.query(
+      ({ rows: rowsPrimary } = await db.query(
         `SELECT id, amount, currency, payment_method, NULL::text AS status, payment_date, paid_at, notes, period
          FROM payments
          WHERE enrollment_id = $1
+           AND (deleted_at IS NULL)
          ORDER BY COALESCE(paid_at, payment_date::timestamptz) DESC NULLS LAST, id DESC`,
         [enrollment_id]
       ));
     }
+
+    let rowsRelated = [];
+    if (studentId && instructorId) {
+      try {
+        ({ rows: rowsRelated } = await db.query(
+          `SELECT p.id, p.amount, p.currency, p.payment_method, p.status, p.payment_date, p.paid_at, p.notes, p.period
+           FROM payments p
+           INNER JOIN enrollments e2 ON e2.id = p.enrollment_id
+           WHERE p.enrollment_id <> $1::uuid
+             AND e2.student_id = $2
+             AND e2.instructor_id = $3
+             AND (p.deleted_at IS NULL)
+           ORDER BY COALESCE(p.paid_at, p.payment_date::timestamptz) DESC NULLS LAST, p.id DESC`,
+          [enrollment_id, studentId, instructorId]
+        ));
+      } catch (e) {
+        if (!isMissingPaymentsStatusColumn(e)) throw e;
+        ({ rows: rowsRelated } = await db.query(
+          `SELECT p.id, p.amount, p.currency, p.payment_method, NULL::text AS status, p.payment_date, p.paid_at, p.notes, p.period
+           FROM payments p
+           INNER JOIN enrollments e2 ON e2.id = p.enrollment_id
+           WHERE p.enrollment_id <> $1::uuid
+             AND e2.student_id = $2
+             AND e2.instructor_id = $3
+             AND (p.deleted_at IS NULL)
+           ORDER BY COALESCE(p.paid_at, p.payment_date::timestamptz) DESC NULLS LAST, p.id DESC`,
+          [enrollment_id, studentId, instructorId]
+        ));
+      }
+    }
+
+    const seenIds = new Set();
+    const rows = [];
+    const pushRow = (r, fromOther) => {
+      const id = String(r.id || '');
+      if (!id || seenIds.has(id)) return;
+      seenIds.add(id);
+      rows.push({ ...r, from_other_enrollment: fromOther });
+    };
+    for (const r of rowsPrimary || []) pushRow(r, false);
+    for (const r of rowsRelated || []) pushRow(r, true);
+    rows.sort((a, b) => {
+      const ta = a.paid_at ? new Date(a.paid_at).getTime() : 0;
+      const tb = b.paid_at ? new Date(b.paid_at).getTime() : 0;
+      const da = a.payment_date ? new Date(String(a.payment_date).slice(0, 10) + 'T12:00:00Z').getTime() : 0;
+      const db = b.payment_date ? new Date(String(b.payment_date).slice(0, 10) + 'T12:00:00Z').getTime() : 0;
+      const ca = Math.max(ta || 0, da || 0);
+      const cb = Math.max(tb || 0, db || 0);
+      if (cb !== ca) return cb - ca;
+      return String(b.id || '').localeCompare(String(a.id || ''));
+    });
 
     let balance_summary = null;
     const mf = en[0].monthly_fee != null ? Number(en[0].monthly_fee) : NaN;
@@ -1634,7 +1698,7 @@ const getEnrollmentPaymentHistory = async (req, res) => {
       try {
         ({ rows: pr } = await db.query(
           `SELECT COALESCE(SUM(amount), 0)::numeric AS t
-           FROM payments WHERE enrollment_id = $1 AND status = 'completed'`,
+           FROM payments WHERE enrollment_id = $1 AND status = 'completed' AND (deleted_at IS NULL)`,
           [enrollment_id]
         ));
       } catch (e) {
@@ -1643,6 +1707,7 @@ const getEnrollmentPaymentHistory = async (req, res) => {
           `SELECT COALESCE(SUM(amount), 0)::numeric AS t
            FROM payments
            WHERE enrollment_id = $1
+             AND (deleted_at IS NULL)
              AND (paid_at IS NOT NULL OR payment_date IS NOT NULL)`,
           [enrollment_id]
         ));

@@ -242,7 +242,8 @@ export default function InstructorPayments() {
       <div className="mb-6">
         <h1 className="font-display font-bold text-xl sm:text-2xl text-token-textMain tracking-tight">Ödənişlər</h1>
         <p className="text-token-textMuted text-sm mt-1">
-          Ödəniş tarixçəsi hər tələbənin «Tarixçə» düyməsində görünür. «Balans düzəlişi» ümumi gəlirə daxil edilmir.
+          Ödəniş tarixçəsi hər tələbənin «Tarixçə» düyməsində görünür. Eyni müəllim üçün köhnə qeydiyyatda qalan
+          ödənişlər də siyahıda göstərilir. «Balans düzəlişi» ümumi gəlirə daxil edilmir.
         </p>
       </div>
 
@@ -689,13 +690,18 @@ export default function InstructorPayments() {
             )}
             {historyLoading && <p className="text-gray-500 text-xs">Yüklənir…</p>}
             {!historyLoading && !historyPayments.length && (
-              <p className="text-gray-500 text-xs">Hələ ödəniş qeydi yoxdur.</p>
+              <p className="text-gray-500 text-xs">
+                Bu qeydiyyat üçün (və eyni müəllim altında digər qeydiyyatlar üçün) sistemdə ödəniş sətri tapılmadı.
+                Əvvəl əl ilə qeyd edilməyibsə və ya köhnə hesab silinibsə, tarixçə boş ola bilər.
+              </p>
             )}
             {!historyLoading && historyPayments.length > 0 && (
               <div>
                 <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">Əməliyyatlar</p>
                 <p className="text-[10px] text-gray-600 mb-2 leading-snug">
                   Təkrarlanan və ya səhv qeydi silin — cəm avtomatik yenilənir (ümumi gəlir də SQL üzrə düzəlir).
+                  «Köhnə qeydiyyat» ödənişi siləndə həmin qeydiyyatın cəmi dəyişir; bu sətirdə yalnız arxiv üçün
+                  göstərilir.
                 </p>
                 <ul className="space-y-2 max-h-56 overflow-y-auto pr-0.5">
                   {historyPayments.map((p) => {
@@ -717,9 +723,18 @@ export default function InstructorPayments() {
                           under ? 'border-rose-500/40 bg-rose-950/20' : 'border-indigo-500/15'
                         }`}
                       >
-                        <span className={`text-xs whitespace-nowrap shrink-0 ${under ? 'text-rose-200/95' : 'text-gray-400'}`}>
-                          {formatDdMmYyyy(p.payment_date || p.paid_at)}
-                        </span>
+                        <div className="flex flex-col gap-0.5 shrink-0 min-w-[5.5rem]">
+                          <span
+                            className={`text-xs whitespace-nowrap ${under ? 'text-rose-200/95' : 'text-gray-400'}`}
+                          >
+                            {formatDdMmYyyy(p.payment_date || p.paid_at)}
+                          </span>
+                          {p.from_other_enrollment ? (
+                            <span className="text-[9px] font-semibold uppercase tracking-wide text-amber-300/90">
+                              köhnə qeyd.
+                            </span>
+                          ) : null}
+                        </div>
                         <span
                           className={`font-mono tabular-nums text-sm font-medium shrink-0 ${
                             under ? 'text-rose-200' : 'text-white'

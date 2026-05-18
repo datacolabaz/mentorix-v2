@@ -228,6 +228,7 @@ async function loadInstructorMonthlyBalanceRows(db, instructorNormId) {
        SELECT enrollment_id, COALESCE(SUM(amount), 0)::numeric AS t
        FROM payments
        WHERE status = 'completed'
+         AND (deleted_at IS NULL)
        GROUP BY enrollment_id
      )
      SELECT e.id AS enrollment_id,
