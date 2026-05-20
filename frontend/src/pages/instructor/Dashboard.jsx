@@ -13,17 +13,29 @@ import { useToast } from '../../components/common/Toast'
 import { writeCache } from '../../lib/cache'
 import { BILLING_STATUS_QUERY_KEY, useBillingStatus } from '../../hooks/useBillingStatus'
 
+const DEFAULT_DASH = {
+  income_this_month: 0,
+  income_last_month: 0,
+  total_earnings_all: 0,
+  pending_monthly_total: 0,
+  active_enrollments: 0,
+  exam_avg_pct: null,
+  income_delta_pct: 0,
+  total_income_flow_delta_pct: 0,
+  enrollment_growth_delta_pct: 0,
+  exam_trend_delta_pct: 0,
+  spark_income_months: [],
+  spark_enrollment_months: [],
+  spark_exam_months: [],
+}
+
 export default function InstructorDashboard() {
   const { user } = useAuthStore()
   const navigate = useNavigate()
   const { theme } = useUiStore()
   const [students, setStudents] = useState([])
   const [examStats, setExamStats] = useState([])
-  const [dash, setDash] = useState({
-    income_this_month: 0,
-    total_earnings_all: 0,
-    pending_monthly_total: 0,
-  })
+  const [dash, setDash] = useState({ ...DEFAULT_DASH })
   const [loading, setLoading] = useState(true)
   const toast = useToast()
 
@@ -50,7 +62,7 @@ export default function InstructorDashboard() {
       api.get('/exams/student-progress').catch(() => ({ stats: [] })),
       api
         .get('/teacher/dashboard-stats')
-        .catch(() => ({ stats: { income_this_month: 0, total_earnings_all: 0, pending_monthly_total: 0 } })),
+        .catch(() => ({ stats: { ...DEFAULT_DASH } })),
       api.get('/students/instructor/my-lessons').catch(() => ({ lessons: [] })),
     ])
       .then(([studentsRes, examsRes, dashRes, lessonsRes]) => {
@@ -58,9 +70,7 @@ export default function InstructorDashboard() {
         const nextStudents = studentsRes.students || []
         setStudents(nextStudents)
         setExamStats(examsRes.stats || [])
-        setDash(
-          dashRes.stats || { income_this_month: 0, total_earnings_all: 0, pending_monthly_total: 0 }
-        )
+        setDash({ ...DEFAULT_DASH, ...(dashRes.stats || {}) })
         // Pre-fetch: tələbələr və cədvəl keşi (60s TTL üçün yazılır)
         writeCache('instructor_students_v1', { students: nextStudents })
         const nextLessons = Array.isArray(lessonsRes.lessons) ? lessonsRes.lessons : []
@@ -201,6 +211,30 @@ export default function InstructorDashboard() {
       )
     : 0
 
+  const activeStudentKpi =
+    dash.active_enrollments != null && Number.isFinite(Number(dash.active_enrollments))
+      ? Math.max(0, Math.floor(Number(dash.active_enrollments)))
+      : students.length
+
+  const examPctKpi =
+    dash.exam_avg_pct != null && Number.isFinite(Number(dash.exam_avg_pct))
+      ? Math.min(100, Math.max(0, Math.round(Number(dash.exam_avg_pct))))
+      : Math.min(100, Math.max(0, avgScore))
+
+  const sparkEnroll =
+    Array.isArray(dash.spark_enrollment_months) && dash.spark_enrollment_months.length >= 2
+      ? dash.spark_enrollment_months
+      : [activeStudentKpi, activeStudentKpi]
+
+  const sparkIncome =
+    Array.isArray(dash.spark_income_months) && dash.spark_income_months.length >= 2
+      ? dash.spark_income_months
+      : [
+          Number(dash.pending_monthly_total || 0),
+          Number(dash.income_this_month || 0),
+          Number(dash.total_earnings_all || 0),
+        ]
+
   const chartRows = students.slice(0, 10).map((s) => {
     const first = s.full_name?.split(' ')?.[0] || '—'
     const row = examById[String(s.id)]
@@ -237,6 +271,13 @@ export default function InstructorDashboard() {
   }
 
   const sparkFromScores = chartRows.map((r) => r.bal).filter((x) => Number.isFinite(Number(x)))
+
+  const sparkExamMonths =
+    Array.isArray(dash.spark_exam_months) && dash.spark_exam_months.length >= 2
+      ? dash.spark_exam_months
+      : sparkFromScores.length >= 2
+        ? sparkFromScores
+        : [examPctKpi, examPctKpi]
 
   const topSorted = [...students].sort((a, b) => {
     const sa = examById[String(a.id)]?.exam_avg_score
@@ -300,45 +341,55 @@ export default function InstructorDashboard() {
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
         <KpiCard
           title="Tələbə"
-          value={loading ? '—' : students.length}
+          to="/instructor/students"
+          ariaLabel="Tələbələr səhifəsinə keç"
+          value={loading ? '—' : activeStudentKpi}
           icon="🎓"
           secondary="Aktiv tələbə sayı"
-          deltaPct={students.length ? 5 : 0}
-          sparkline={sparkFromScores}
+          deltaPct={dash.enrollment_growth_delta_pct ?? 0}
+          sparkline={sparkEnroll}
         />
         <KpiCard
           title="Orta nəticə (faiz)"
-          value={loading ? '—' : `${Math.min(100, Math.max(0, avgScore))}%`}
+          to="/instructor/analytics"
+          ariaLabel="Analitika səhifəsinə keç"
+          value={loading ? '—' : `${examPctKpi}%`}
           icon="📊"
           secondary="İmtahan ortalaması"
-          deltaPct={avgScore ? 12 : 0}
-          sparkline={sparkFromScores}
+          deltaPct={dash.exam_trend_delta_pct ?? 0}
+          sparkline={sparkExamMonths}
         />
         <KpiCard
           title="Gözlənən ödəniş"
+          to="/instructor/payments"
+          ariaLabel="Ödənişlər səhifəsinə keç"
           value={loading ? '—' : pendingMonthlyAz}
           icon="⏳"
           secondary="Bu ayın gözlənəni"
-          deltaPct={dash?.pending_monthly_total ? -3 : 0}
-          sparkline={[Number(dash.pending_monthly_total || 0), Number(dash.income_this_month || 0), Number(dash.total_earnings_all || 0)]}
+          deltaPct={0}
+          sparkline={sparkIncome}
         />
         <KpiCard
           title="Ümumi gəlir"
+          to="/instructor/payments"
+          ariaLabel="Ödənişlər — ümumi gəlir"
           value={loading ? '—' : totalEarningsAz}
           icon="💰"
           secondary="Cəmi (indiyə qədər)"
-          deltaPct={dash?.total_earnings_all ? 5 : 0}
-          sparkline={[Number(dash.income_this_month || 0), Number(dash.total_earnings_all || 0)]}
+          deltaPct={dash.total_income_flow_delta_pct ?? 0}
+          sparkline={sparkIncome}
         />
       </div>
       <div className="grid grid-cols-1 gap-3 sm:gap-4 mb-6">
         <KpiCard
           title="Bu ay ödəniş (nağd)"
+          to="/instructor/payments"
+          ariaLabel="Ödənişlər — bu ayın daxilolmaları"
           value={loading ? '—' : incomeThisMonthAz}
           icon="📅"
           secondary="Nağd daxilolma"
-          deltaPct={dash?.income_this_month ? 12 : 0}
-          sparkline={[Number(dash.pending_monthly_total || 0), Number(dash.income_this_month || 0), Number(dash.total_earnings_all || 0)]}
+          deltaPct={dash.income_delta_pct ?? 0}
+          sparkline={sparkIncome}
         />
       </div>
 

@@ -1,3 +1,5 @@
+import { useId } from 'react'
+import { Link } from 'react-router-dom'
 import { ResponsiveContainer, AreaChart, Area } from 'recharts'
 import Card from './Card'
 
@@ -34,12 +36,21 @@ export default function KpiCard({
   deltaPct,
   sparkline = [],
   className = '',
+  /** React Router path — kartı kliklənən keçidə çevirir */
+  to,
+  /** Link üçün əlçatanlıq etiketi (to verildikdə tövsiyə olunur) */
+  ariaLabel,
 }) {
+  const sparkFillId = useId().replace(/:/g, '')
   const hasSpark = Array.isArray(sparkline) && sparkline.length >= 2
   const data = hasSpark ? sparkline.map((v, i) => ({ i, v: Number(v) || 0 })) : []
 
-  return (
-    <Card hover className={['p-5 min-w-0 overflow-hidden', className].join(' ')}>
+  const label =
+    ariaLabel ||
+    (to ? `${title}: ətraflı baxış üçün keçid` : undefined)
+
+  const inner = (
+    <>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="text-xs font-semibold text-token-textMuted uppercase tracking-wider mb-2">
@@ -74,7 +85,7 @@ export default function KpiCard({
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={data} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
                 <defs>
-                  <linearGradient id="mentorixSpark" x1="0" y1="0" x2="1" y2="0">
+                  <linearGradient id={sparkFillId} x1="0" y1="0" x2="1" y2="0">
                     <stop offset="0%" stopColor="rgba(34,224,136,0.30)" />
                     <stop offset="100%" stopColor="rgba(59,130,246,0.22)" />
                   </linearGradient>
@@ -84,7 +95,7 @@ export default function KpiCard({
                   dataKey="v"
                   stroke="rgba(229,231,235,0.35)"
                   strokeWidth={1.5}
-                  fill="url(#mentorixSpark)"
+                  fill={`url(#${sparkFillId})`}
                   dot={false}
                   isAnimationActive={false}
                 />
@@ -95,7 +106,24 @@ export default function KpiCard({
           )}
         </div>
       </div>
-    </Card>
+    </>
   )
-}
 
+  const cardClass = ['p-5 min-w-0 overflow-hidden', className].join(' ')
+
+  if (to) {
+    return (
+      <Link
+        to={to}
+        aria-label={label}
+        className="block h-full rounded-2xl no-underline text-inherit focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/55"
+      >
+        <Card hover className={`${cardClass} h-full`}>
+          {inner}
+        </Card>
+      </Link>
+    )
+  }
+
+  return <Card hover className={cardClass}>{inner}</Card>
+}
