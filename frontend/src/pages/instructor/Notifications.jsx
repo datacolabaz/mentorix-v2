@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import api from '../../lib/api'
 import Card from '../../components/common/Card'
 import Modal from '../../components/common/Modal'
@@ -50,6 +50,25 @@ function normPhoneDigits(v) {
   return String(v || '').replace(/\D/g, '')
 }
 
+/** +994 / 0 prefiks fərqlərini nəzərə alır (Ödənişlər ilə eyni məntiq) */
+function phonesMatch(a, b) {
+  const da = normPhoneDigits(a)
+  const db = normPhoneDigits(b)
+  if (!da || !db) return false
+  if (da === db) return true
+  const core = (d) => {
+    let x = d
+    if (x.startsWith('994')) x = x.slice(3)
+    if (x.startsWith('0')) x = x.slice(1)
+    return x
+  }
+  const ca = core(da)
+  const cb = core(db)
+  if (ca && cb && ca === cb) return true
+  if (ca.length >= 9 && cb.length >= 9 && ca.slice(-9) === cb.slice(-9)) return true
+  return da.endsWith(db) || db.endsWith(da)
+}
+
 function foldAzSearch(s) {
   return String(s || '')
     .toLowerCase()
@@ -64,32 +83,69 @@ function foldAzSearch(s) {
     .replace(/ə/g, 'e')
 }
 
-function matchesSmsSearch(item, query) {
+function studentDisplayName(s) {
+  const full = String(s?.full_name || s?.student_name || s?.name || '').trim()
+  if (full) return full
+  const parts = `${s?.first_name || ''} ${s?.last_name || ''}`.trim()
+  return parts || ''
+}
+
+function matchesSmsSearch(item, query, phoneToName, students = []) {
   const q = String(query || '').trim()
   if (!q) return true
   const qFold = foldAzSearch(q)
+  const qLower = q.toLowerCase()
   const digits = normPhoneDigits(q)
+
   const name = foldAzSearch(item.student_name || '')
   if (name && qFold && name.includes(qFold)) return true
+  if (name && qLower && name.includes(qLower)) return true
+
   const msg = foldAzSearch(item.message || '')
   if (msg && qFold && msg.includes(qFold)) return true
+
   const phoneList = [...(item.phones || []), item.phone].filter(Boolean)
   for (const p of phoneList) {
     const d = normPhoneDigits(p)
     if (digits.length >= 3 && d.includes(digits)) return true
     if (qFold && foldAzSearch(p).includes(qFold)) return true
+    const mapped = phoneToName?.get?.(d)
+    if (mapped && foldAzSearch(mapped).includes(qFold)) return true
+  }
+
+  for (const s of students || []) {
+    const sName = foldAzSearch(studentDisplayName(s))
+    if (!sName || !qFold || !sName.includes(qFold)) continue
+    if (item.student_id && s.id && String(item.student_id) === String(s.id)) return true
+    const sPhones = [s.phone, s.parent_phone, s.parentPhone].filter(Boolean)
+    for (const ip of phoneList) {
+      for (const sp of sPhones) {
+        if (phonesMatch(ip, sp)) return true
+      }
+    }
   }
   return false
+}
+
+function addPhoneNameKeys(map, phone, name) {
+  const d = normPhoneDigits(phone)
+  if (!d || !name) return
+  map.set(d, name)
+  if (d.startsWith('994')) map.set(d.slice(3), name)
+  if (d.startsWith('0')) map.set(d.slice(1), name)
+  let core = d
+  if (core.startsWith('994')) core = core.slice(3)
+  if (core.startsWith('0')) core = core.slice(1)
+  if (core.length >= 9) map.set(core.slice(-9), name)
 }
 
 function buildStudentPhoneNameMap(students) {
   const map = new Map()
   for (const s of students || []) {
-    const name = String(s.full_name || s.student_name || s.name || '').trim()
+    const name = studentDisplayName(s)
     if (!name) continue
     for (const p of [s.phone, s.parent_phone, s.parentPhone]) {
-      const d = normPhoneDigits(p)
-      if (d) map.set(d, name)
+      addPhoneNameKeys(map, p, name)
     }
   }
   return map
@@ -127,7 +183,9 @@ export default function InstructorNotifications() {
   const [smsLoading, setSmsLoading] = useState(false)
   const [smsErr, setSmsErr] = useState(null)
   const [smsDbItems, setSmsDbItems] = useState([])
+  const [smsStudents, setSmsStudents] = useState([])
   const [smsSearch, setSmsSearch] = useState('')
+  const smsFetchSeq = useRef(0)
   const [smsSearchDebounced, setSmsSearchDebounced] = useState('')
   const [lastUpdatedLabel, setLastUpdatedLabel] = useState('')
   const billingQ = useBillingStatus()
@@ -155,18 +213,19 @@ export default function InstructorNotifications() {
   useEffect(() => {
     if (tab !== 'sms') return
     let cancelled = false
+    const seq = ++smsFetchSeq.current
     setSmsLoading(true)
     setSmsErr(null)
-    const logParams = { limit: 200 }
-    if (smsSearchDebounced.length >= 2) logParams.search = smsSearchDebounced
     Promise.all([
-      api.get('/sms-logs', { params: logParams }),
+      api.get('/sms-logs', { params: { limit: 200 } }),
       api.get('/sms-logs/plan', { params: { days: 90 } }),
       api.get('/students').catch(() => ({ students: [] })),
     ])
       .then(([hist, plan, studentsRes]) => {
-        if (cancelled) return
-        const phoneToName = buildStudentPhoneNameMap(studentsRes?.students || studentsRes?.items || [])
+        if (cancelled || seq !== smsFetchSeq.current) return
+        const roster = studentsRes?.students || studentsRes?.items || []
+        setSmsStudents(roster)
+        const phoneToName = buildStudentPhoneNameMap(roster)
         const rawItems = enrichSmsWithStudentNames(Array.isArray(hist?.items) ? hist.items : [], phoneToName)
         const rawPlan = enrichSmsWithStudentNames(Array.isArray(plan?.items) ? plan.items : [], phoneToName)
         const normPhone = (p) => String(p || '').replace(/\D/g, '')
@@ -240,8 +299,9 @@ export default function InstructorNotifications() {
         }
       })
       .catch((e) => {
-        if (!cancelled) {
+        if (!cancelled && seq === smsFetchSeq.current) {
           setSmsDbItems([])
+          setSmsStudents([])
           if (debugSms) {
             // eslint-disable-next-line no-console
             console.log('[sms-logs] error:', e)
@@ -251,12 +311,12 @@ export default function InstructorNotifications() {
         }
       })
       .finally(() => {
-        if (!cancelled) setSmsLoading(false)
+        if (!cancelled && seq === smsFetchSeq.current) setSmsLoading(false)
       })
     return () => {
       cancelled = true
     }
-  }, [tab, smsSearchDebounced])
+  }, [tab])
 
   const [smsShowCount, setSmsShowCount] = useState(40)
 
@@ -268,6 +328,8 @@ export default function InstructorNotifications() {
   const smsBaseList = useMemo(() => {
     return Array.isArray(smsDbItems) ? smsDbItems : []
   }, [smsDbItems])
+
+  const smsPhoneToName = useMemo(() => buildStudentPhoneNameMap(smsStudents), [smsStudents])
 
   useEffect(() => {
     let cancelled = false
@@ -342,14 +404,14 @@ export default function InstructorNotifications() {
   const smsTimeRows = useMemo(() => {
     const now = new Date()
     const filtered = smsBaseList.filter((x) => {
-      if (!matchesSmsSearch(x, smsSearchDebounced)) return false
+      if (!matchesSmsSearch(x, smsSearchDebounced, smsPhoneToName, smsStudents)) return false
       if (smsTimeFilter === 'all') return true
       if (smsTimeFilter === 'today') return isToday(x.createdAt, now)
       if (smsTimeFilter === 'week') return isThisWeek(x.createdAt, now)
       return isThisMonth(x.createdAt, now)
     })
     return filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-  }, [smsTimeFilter, smsBaseList, smsSearchDebounced])
+  }, [smsTimeFilter, smsBaseList, smsSearchDebounced, smsPhoneToName, smsStudents])
 
   const smsRows = useMemo(() => {
     if (smsStatusFilter === 'sent') return smsTimeRows.filter((x) => x.status === 'sent')
@@ -608,51 +670,4 @@ export default function InstructorNotifications() {
                     {(detailsItem.students || []).join(', ') || '—'}
                   </p>
                 </div>
-                <div className="rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceMain/40 p-3">
-                  <p className="text-xs font-semibold text-token-textMuted uppercase tracking-wider mb-2">Mesaj</p>
-                  <p className="text-sm text-token-textMain leading-relaxed">{detailsItem.message || '—'}</p>
-                </div>
-                <div className="flex justify-end gap-2 pt-1">
-                  <Button variant="secondary" onClick={() => setDetailsOpen(false)}>
-                    Bağla
-                  </Button>
-                </div>
-              </div>
-            ) : null}
-          </Modal>
-        </div>
-      ) : loading ? (
-        <div className="text-center py-12 text-token-textMuted">Yüklənir...</div>
-      ) : alerts.length === 0 ? (
-        <Card className="p-8 sm:p-12 text-center max-w-lg mx-auto">
-          <div className="text-4xl mb-4">✅</div>
-          <div className="font-display font-bold text-lg text-token-textMain break-words px-2">
-            Hər şey qaydasındadır
-          </div>
-          <p className="text-token-textMuted text-sm mt-2 px-2">
-            Limitləriniz 80%-dən çox dolmayıb
-          </p>
-        </Card>
-      ) : (
-        <div className="space-y-4 max-w-2xl">
-          {alerts.map((alert, i) => (
-            <div key={i} className={`border rounded-2xl p-4 sm:p-5 ${LEVEL[alert.level].cls}`}>
-              <div className="flex items-start gap-3 sm:gap-4 min-w-0">
-                <span className="text-2xl shrink-0">{LEVEL[alert.level].icon}</span>
-                <div className="flex-1 min-w-0">
-                  <span className={`inline-block px-2 py-0.5 rounded-lg text-xs font-semibold mb-2 ${LEVEL[alert.level].badge}`}>
-                    {alert.level === 'critical' ? 'Kritik' : 'Xəbərdarlıq'}
-                  </span>
-                  <p className="text-gray-300 text-sm break-words">{alert.message}</p>
-                  <p className="text-gray-500 text-xs mt-1">
-                    {alert.type === 'sms' ? '📱 SMS' : alert.type === 'ram' ? '🧠 RAM' : '💾 Storage'}
-                  </p>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
+                <div className="rounded-xl border border-[color:var(--borde
