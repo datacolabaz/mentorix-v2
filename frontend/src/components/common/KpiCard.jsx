@@ -36,9 +36,7 @@ export default function KpiCard({
   deltaPct,
   sparkline = [],
   className = '',
-  /** React Router path — kartı kliklənən keçidə çevirir */
   to,
-  /** Link üçün əlçatanlıq etiketi (to verildikdə tövsiyə olunur) */
   ariaLabel,
 }) {
   const sparkFillId = useId().replace(/:/g, '')
@@ -95,7 +93,7 @@ export default function KpiCard({
                   dataKey="v"
                   stroke="rgba(229,231,235,0.35)"
                   strokeWidth={1.5}
-                  fill={`url(#${sparkFillId})`}
+                  fill={'url(#' + sparkFillId + ')'}
                   dot={false}
                   isAnimationActive={false}
                 />

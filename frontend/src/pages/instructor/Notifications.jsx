@@ -73,7 +73,7 @@ function foldAzSearch(s) {
   return String(s || '')
     .toLowerCase()
     .normalize('NFD')
-    .replace(/\p{M}/gu, '')
+    .replace(/[\u0300-\u036f]/g, '')
     .replace(/ı/g, 'i')
     .replace(/ö/g, 'o')
     .replace(/ü/g, 'u')
@@ -109,7 +109,7 @@ function matchesSmsSearch(item, query, phoneToName, students = []) {
     const d = normPhoneDigits(p)
     if (digits.length >= 3 && d.includes(digits)) return true
     if (qFold && foldAzSearch(p).includes(qFold)) return true
-    const mapped = phoneToName?.get?.(d)
+    const mapped = phoneToName && phoneToName.get(d)
     if (mapped && foldAzSearch(mapped).includes(qFold)) return true
   }
 
@@ -187,6 +187,7 @@ export default function InstructorNotifications() {
   const [smsSearch, setSmsSearch] = useState('')
   const smsFetchSeq = useRef(0)
   const [smsSearchDebounced, setSmsSearchDebounced] = useState('')
+  const [smsShowCount, setSmsShowCount] = useState(40)
   const [lastUpdatedLabel, setLastUpdatedLabel] = useState('')
   const billingQ = useBillingStatus()
   const billing = billingQ.data || null
@@ -316,9 +317,7 @@ export default function InstructorNotifications() {
     return () => {
       cancelled = true
     }
-  }, [tab])
-
-  const [smsShowCount, setSmsShowCount] = useState(40)
+  }, [tab, debugSms])
 
   useEffect(() => {
     if (tab !== 'sms') return
@@ -670,4 +669,51 @@ export default function InstructorNotifications() {
                     {(detailsItem.students || []).join(', ') || '—'}
                   </p>
                 </div>
-                <div className="rounded-xl border border-[color:var(--borde
+                <div className="rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceMain/40 p-3">
+                  <p className="text-xs font-semibold text-token-textMuted uppercase tracking-wider mb-2">Mesaj</p>
+                  <p className="text-sm text-token-textMain leading-relaxed">{detailsItem.message || '—'}</p>
+                </div>
+                <div className="flex justify-end gap-2 pt-1">
+                  <Button variant="secondary" onClick={() => setDetailsOpen(false)}>
+                    Bağla
+                  </Button>
+                </div>
+              </div>
+            ) : null}
+          </Modal>
+        </div>
+      ) : loading ? (
+        <div className="text-center py-12 text-token-textMuted">Yüklənir...</div>
+      ) : alerts.length === 0 ? (
+        <Card className="p-8 sm:p-12 text-center max-w-lg mx-auto">
+          <div className="text-4xl mb-4">✅</div>
+          <div className="font-display font-bold text-lg text-token-textMain break-words px-2">
+            Hər şey qaydasındadır
+          </div>
+          <p className="text-token-textMuted text-sm mt-2 px-2">
+            Limitləriniz 80%-dən çox dolmayıb
+          </p>
+        </Card>
+      ) : (
+        <div className="space-y-4 max-w-2xl">
+          {alerts.map((alert, i) => (
+            <div key={i} className={`border rounded-2xl p-4 sm:p-5 ${LEVEL[alert.level].cls}`}>
+              <div className="flex items-start gap-3 sm:gap-4 min-w-0">
+                <span className="text-2xl shrink-0">{LEVEL[alert.level].icon}</span>
+                <div className="flex-1 min-w-0">
+                  <span className={`inline-block px-2 py-0.5 rounded-lg text-xs font-semibold mb-2 ${LEVEL[alert.level].badge}`}>
+                    {alert.level === 'critical' ? 'Kritik' : 'Xəbərdarlıq'}
+                  </span>
+                  <p className="text-gray-300 text-sm break-words">{alert.message}</p>
+                  <p className="text-gray-500 text-xs mt-1">
+                    {alert.type === 'sms' ? '📱 SMS' : alert.type === 'ram' ? '🧠 RAM' : '💾 Storage'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
