@@ -15,11 +15,58 @@ function pad2(n) {
 function toYmd(v) {
   if (v == null) return null;
   if (v instanceof Date && !Number.isNaN(v.getTime())) {
-    return v.toISOString().slice(0, 10);
+    return toBakuYmd(v);
   }
   const s = String(v);
   const m = s.match(/^(\d{4}-\d{2}-\d{2})/);
   return m ? m[1] : null;
+}
+
+/** timestamptz / Date → YYYY-MM-DD (Asia/Baku təqvimi) */
+function toBakuYmd(v) {
+  if (v == null) return null;
+  const d = v instanceof Date ? v : new Date(v);
+  if (Number.isNaN(d.getTime())) {
+    const s = String(v);
+    const m = s.match(/^(\d{4}-\d{2}-\d{2})/);
+    return m ? m[1] : null;
+  }
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Baku',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(d);
+}
+
+function ymdToMs(ymd) {
+  const s = String(ymd || '').slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;
+  const [y, m, d] = s.split('-').map((x) => parseInt(x, 10));
+  if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) return null;
+  return Date.UTC(y, m - 1, d, 12, 0, 0);
+}
+
+/**
+ * Aylıq ankor: əsasən enrollment_start_date; gələcək/yanlış ankor → enrolled_at (Baku günü).
+ * Eyni qeydiyyat günü olan tələbələrdə UTC sürüşməsi olmasın deyə enrolled_at Baku ilə oxunur.
+ */
+function resolveMonthlyAnchorYmd({ enrollment_start_date, enrolled_at, today_ymd }) {
+  const anchor = toYmd(enrollment_start_date);
+  const enrolled = toBakuYmd(enrolled_at);
+  const today = today_ymd ? String(today_ymd).slice(0, 10) : null;
+
+  if (!anchor) return enrolled;
+  if (!today) return anchor;
+  if (compareYmd(anchor, today) <= 0) return anchor;
+
+  const aMs = ymdToMs(anchor);
+  const tMs = ymdToMs(today);
+  const eMs = ymdToMs(enrolled);
+  if (aMs == null || tMs == null) return anchor;
+  const daysAhead = Math.round((aMs - tMs) / 86400000);
+  if (daysAhead > 45 && eMs != null && enrolled && compareYmd(enrolled, today) <= 0) return enrolled;
+  return anchor;
 }
 
 function roundMoney(n) {
@@ -234,6 +281,7 @@ async function loadInstructorMonthlyBalanceRows(db, instructorNormId) {
      SELECT e.id AS enrollment_id,
             sp.monthly_fee,
             to_char(e.enrollment_start_date::date, 'YYYY-MM-DD') AS anchor_raw,
+            e.enrolled_at,
             COALESCE(p.t, 0)::numeric AS total_paid
      FROM enrollments e
      INNER JOIN users u ON u.id = e.student_id
@@ -249,7 +297,11 @@ async function loadInstructorMonthlyBalanceRows(db, instructorNormId) {
   const byEnrollment = new Map();
   let pendingSum = 0;
   for (const r of rows) {
-    const anchorYmd = toYmd(r.anchor_raw);
+    const anchorYmd = resolveMonthlyAnchorYmd({
+      enrollment_start_date: r.anchor_raw,
+      enrolled_at: r.enrolled_at,
+      today_ymd: todayBaku,
+    });
     const state = computeMonthlyBalanceState({
       monthly_fee: r.monthly_fee,
       anchor_ymd: anchorYmd,
@@ -270,6 +322,9 @@ async function loadInstructorMonthlyBalanceRows(db, instructorNormId) {
 
 module.exports = {
   toYmd,
+  toBakuYmd,
+  ymdToMs,
+  resolveMonthlyAnchorYmd,
   roundMoney,
   compareYmd,
   listBillingDueDatesUpTo,
