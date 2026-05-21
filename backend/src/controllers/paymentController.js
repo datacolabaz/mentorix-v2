@@ -1776,4 +1776,274 @@ const confirmDuePayment = async (req, res) => {
       ({ rows: inserted } = await db.query(
         `INSERT INTO payments (enrollment_id, student_id, amount, currency, payment_method, paid_at, payment_date, notes, period)
          VALUES ($1,$2,$3,'AZN','cash',NOW(),$4::date,$5,$6)
-         RETURNING *`
+         RETURNING *`,
+        [enrollment_id, en[0].student_id, amt, due_ymd, notesOut, period]
+      ));
+    }
+
+    const [dd, mm, yyyy] = due_ymd.split('-');
+    const dueLabel = `${dd}.${mm}.${yyyy}`;
+    const smsBody = `Mentorix: ${studentName} — ${dueLabel} tarixinə aylıq ödəniş təsdiqləndi (${amt} ₼).`;
+    const phone = en[0].phone ? String(en[0].phone).trim() : null;
+    try {
+      await db.query(
+        `INSERT INTO sms_logs (instructor_id, student_id, phone, type, message, status, package_type, sent_at)
+         VALUES ($1,$2,$3,'payment',$4,'sent','monthly',NOW())`,
+        [req.user.id, en[0].student_id, phone, smsBody]
+      );
+    } catch (smsErr) {
+      try {
+        await db.query(
+          `INSERT INTO sms_logs (instructor_id, phone, message, status)
+           VALUES ($1,$2,$3,'sent')`,
+          [req.user.id, phone, smsBody]
+        );
+      } catch {
+        // sms_logs optional — payment still counts
+      }
+    }
+
+    await ensureNotificationOnce({
+      user_id: req.user.id,
+      type: 'payment_confirmed',
+      title: 'Ödəniş təsdiqləndi',
+      body: `${studentName}: ${dueLabel} — ${amt} ₼`,
+    });
+
+    res.json({ success: true, payment: inserted[0], due_ymd, amount: amt });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+function parseOptionalPaymentDateYmd(v) {
+  if (v === undefined || v === null || v === '') return null;
+  const s = String(v).trim().slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;
+  const [y, mo, d] = s.split('-').map(Number);
+  const dt = new Date(Date.UTC(y, mo - 1, d));
+  if (dt.getUTCFullYear() !== y || dt.getUTCMonth() !== mo - 1 || dt.getUTCDate() !== d) return null;
+  return s;
+}
+
+const getEnrollmentPaymentHistory = async (req, res) => {
+  try {
+    const { enrollment_id } = req.params;
+    const { rows: en } = await db.query(
+      `SELECT e.instructor_id, e.student_id, e.billing_type, e.enrollment_start_date, e.enrolled_at,
+              e.billing_timing, COALESCE(e.payment_plan, 'full') AS payment_plan,
+              sp.monthly_fee
+       FROM enrollments e
+       LEFT JOIN student_profiles sp ON sp.user_id = e.student_id
+       WHERE e.id = $1`,
+      [enrollment_id]
+    );
+    if (!en[0]) return res.status(404).json({ success: false, message: 'Tapılmadı' });
+    if (req.user.role === 'instructor' && !sameUuid(en[0].instructor_id, req.user.id)) {
+      return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
+    }
+    if (req.user.role === 'student' && !sameUuid(en[0].student_id, req.user.id)) {
+      return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
+    }
+    if (req.user.role !== 'instructor' && req.user.role !== 'admin' && req.user.role !== 'student') {
+      return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
+    }
+
+    const studentId = en[0].student_id;
+    const instructorId = en[0].instructor_id;
+
+    let rowsPrimary;
+    try {
+      ({ rows: rowsPrimary } = await db.query(
+        `SELECT id, amount, currency, payment_method, status, payment_date, paid_at, notes, period
+         FROM payments
+         WHERE enrollment_id = $1
+           AND (deleted_at IS NULL)
+         ORDER BY payment_date ASC NULLS LAST, COALESCE(paid_at, payment_date::timestamptz) ASC NULLS LAST, id ASC`,
+        [enrollment_id]
+      ));
+    } catch (e) {
+      if (!isMissingPaymentsStatusColumn(e)) throw e;
+      ({ rows: rowsPrimary } = await db.query(
+        `SELECT id, amount, currency, payment_method, NULL::text AS status, payment_date, paid_at, notes, period
+         FROM payments
+         WHERE enrollment_id = $1
+           AND (deleted_at IS NULL)
+         ORDER BY payment_date ASC NULLS LAST, COALESCE(paid_at, payment_date::timestamptz) ASC NULLS LAST, id ASC`,
+        [enrollment_id]
+      ));
+    }
+
+    let rowsRelated = [];
+    const isMonthly = String(en[0].billing_type) === 'monthly';
+    if (studentId && instructorId && !isMonthly) {
+      try {
+        ({ rows: rowsRelated } = await db.query(
+          `SELECT p.id, p.amount, p.currency, p.payment_method, p.status, p.payment_date, p.paid_at, p.notes, p.period
+           FROM payments p
+           INNER JOIN enrollments e2 ON e2.id = p.enrollment_id
+           WHERE p.enrollment_id <> $1::uuid
+             AND e2.student_id = $2
+             AND e2.instructor_id = $3
+             AND (p.deleted_at IS NULL)
+           ORDER BY p.payment_date ASC NULLS LAST, COALESCE(p.paid_at, p.payment_date::timestamptz) ASC NULLS LAST, p.id ASC`,
+          [enrollment_id, studentId, instructorId]
+        ));
+      } catch (e) {
+        if (!isMissingPaymentsStatusColumn(e)) throw e;
+        ({ rows: rowsRelated } = await db.query(
+          `SELECT p.id, p.amount, p.currency, p.payment_method, NULL::text AS status, p.payment_date, p.paid_at, p.notes, p.period
+           FROM payments p
+           INNER JOIN enrollments e2 ON e2.id = p.enrollment_id
+           WHERE p.enrollment_id <> $1::uuid
+             AND e2.student_id = $2
+             AND e2.instructor_id = $3
+             AND (p.deleted_at IS NULL)
+           ORDER BY p.payment_date ASC NULLS LAST, COALESCE(p.paid_at, p.payment_date::timestamptz) ASC NULLS LAST, p.id ASC`,
+          [enrollment_id, studentId, instructorId]
+        ));
+      }
+    }
+
+    const seenIds = new Set();
+    let rows = [];
+    const pushRow = (r, fromOther) => {
+      const id = String(r.id || '');
+      if (!id || seenIds.has(id)) return;
+      seenIds.add(id);
+      rows.push({ ...r, from_other_enrollment: fromOther });
+    };
+    for (const r of rowsPrimary || []) pushRow(r, false);
+    for (const r of rowsRelated || []) pushRow(r, true);
+    rows.sort(comparePaymentHistoryAsc);
+
+    let balance_summary = null;
+    const mf = en[0].monthly_fee != null ? Number(en[0].monthly_fee) : NaN;
+    if (en[0].billing_type === 'monthly' && Number.isFinite(mf) && mf > 0) {
+      const todayBaku = await getTodayBakuYmd(db);
+      let pr;
+      try {
+        ({ rows: pr } = await db.query(
+          `SELECT COALESCE(SUM(amount), 0)::numeric AS t
+           FROM payments WHERE enrollment_id = $1 AND status = 'completed' AND (deleted_at IS NULL)`,
+          [enrollment_id]
+        ));
+      } catch (e) {
+        if (!isMissingPaymentsStatusColumn(e)) throw e;
+        ({ rows: pr } = await db.query(
+          `SELECT COALESCE(SUM(amount), 0)::numeric AS t
+           FROM payments
+           WHERE enrollment_id = $1
+             AND (deleted_at IS NULL)
+             AND (paid_at IS NOT NULL OR payment_date IS NOT NULL)`,
+          [enrollment_id]
+        ));
+      }
+      const paid = Number(pr[0]?.t) || 0;
+      const todayBakuForAnchor = await getTodayBakuYmd(db);
+      const anchorYmd = resolveMonthlyAnchorYmd({
+        enrollment_start_date: en[0].enrollment_start_date,
+        enrolled_at: en[0].enrolled_at,
+        today_ymd: todayBakuForAnchor,
+      });
+      const st = computeMonthlyBalanceState({
+        monthly_fee: mf,
+        anchor_ymd: anchorYmd,
+        today_ymd: todayBakuForAnchor,
+        total_paid: paid,
+      });
+      const dues = listBillingDueDatesUpTo(anchorYmd, todayBakuForAnchor);
+      balance_summary = {
+        monthly_fee: mf,
+        billing_timing: en[0].billing_timing || 'postpaid',
+        payment_plan: en[0].payment_plan || 'full',
+        anchor_ymd: anchorYmd,
+        schedule_last_due_ymd: dues.length ? dues[dues.length - 1] : null,
+        accrued_total: st.accrued_total,
+        total_payments: st.total_payments,
+        pending_debt: st.pending_debt,
+        net_balance: st.net_balance,
+        subscription_months: st.subscription_months,
+        billing_anchor_future: Boolean(st.billing_anchor_future),
+      };
+      rows = buildMonthlyPaymentHistoryTimeline({
+        anchorYmd,
+        todayYmd: todayBakuForAnchor,
+        monthlyFee: mf,
+        payments: rows,
+      });
+    }
+
+    res.json({ success: true, payments: rows, balance_summary: balance_summary });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+function looksLikeUuid(s) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(s || '').trim());
+}
+
+/** Tarixçə UI: əsasən ödəniş tarixi (ankor), sonra qəbul vaxtı — köhnədən yeniyə */
+function paymentHistorySortMs(r) {
+  const pd = r.payment_date != null ? String(r.payment_date).slice(0, 10) : '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(pd)) {
+    return new Date(`${pd}T12:00:00Z`).getTime();
+  }
+  if (r.paid_at) {
+    const t = new Date(r.paid_at).getTime();
+    return Number.isFinite(t) ? t : 0;
+  }
+  return 0;
+}
+
+function comparePaymentHistoryAsc(a, b) {
+  const da = paymentHistorySortMs(a);
+  const db = paymentHistorySortMs(b);
+  if (da !== db) return da - db;
+  const ta = a.paid_at ? new Date(a.paid_at).getTime() : 0;
+  const tb = b.paid_at ? new Date(b.paid_at).getTime() : 0;
+  if (ta !== tb) return ta - tb;
+  return String(a.id || '').localeCompare(String(b.id || ''));
+}
+
+/** Müəllim/admin: təkrarlanan və ya səhv ödəniş sətirini silir (cəmlər SUM ilə avtomatik düzəlir) */
+const deletePayment = async (req, res) => {
+  try {
+    const paymentId = String(req.params.payment_id || '').trim();
+    if (!looksLikeUuid(paymentId)) {
+      return res.status(400).json({ success: false, message: 'Ödəniş ID düzgün deyil' });
+    }
+
+    const { rows } = await db.query(
+      `SELECT p.id, p.enrollment_id, e.instructor_id
+       FROM payments p
+       INNER JOIN enrollments e ON e.id = p.enrollment_id
+       WHERE p.id = $1`,
+      [paymentId]
+    );
+    if (!rows[0]) {
+      return res.status(404).json({ success: false, message: 'Ödəniş tapılmadı' });
+    }
+    if (req.user.role === 'instructor' && !sameUuid(rows[0].instructor_id, req.user.id)) {
+      return res.status(403).json({ success: false, message: 'Bu ödənişi silmək üçün icazəniz yoxdur' });
+    }
+
+    await db.query(`DELETE FROM payments WHERE id = $1`, [paymentId]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+module.exports = {
+  listPayments,
+  addPayment,
+  listMyPayments,
+  getInstructorPaymentBoard,
+  getEnrollmentPaymentHistory,
+  getRestorePreview,
+  confirmRestorePayments,
+  confirmDuePayment,
+  deletePayment,
+};
