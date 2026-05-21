@@ -7,6 +7,7 @@ const {
   roundMoney,
   toYmd: anchorToYmd,
   listBillingDueDatesUpTo,
+  compareYmd,
 } = require('../services/subscriptionBilling');
 const { ensurePackLessonsUpTo, normalizePackBillingType } = require('../services/packLessons');
 
@@ -196,6 +197,117 @@ function computeMonthlyCycleLessons({ cycle_start_ymd, cycle_end_ymd, lesson_wee
  * If it's accidentally set far in the future while the enrollment actually started earlier,
  * prefer enrolled_at to avoid bogus "0/xx" cycles and missing history.
  */
+/** Yeni təsdiq axını: yalnız cari ay və sonrası (keçmiş qeydlərə toxunulmur). */
+function paymentConfirmationCutoffYmd(todayBaku) {
+  const t = String(todayBaku || '').slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(t)) return t;
+  return `${t.slice(0, 7)}-01`;
+}
+
+function listUnconfirmedMonthlyDues({ anchorYmd, todayYmd, monthlyFee, paidDateSet, confirmationCutoffYmd }) {
+  const fee = Number(monthlyFee);
+  if (!anchorYmd || !todayYmd || !Number.isFinite(fee) || fee <= 0) return [];
+  const cutoff = confirmationCutoffYmd || paymentConfirmationCutoffYmd(todayYmd);
+  const dueDates = listBillingDueDatesUpTo(anchorYmd, todayYmd);
+  const out = [];
+  for (const due of dueDates) {
+    if (compareYmd(due, cutoff) < 0) continue;
+    if (paidDateSet.has(due)) continue;
+    if (compareYmd(due, todayYmd) > 0) continue;
+    out.push({
+      due_ymd: due,
+      amount: fee,
+      period: `Aylıq: ${due}`,
+    });
+  }
+  return out;
+}
+
+async function loadPaidDatesForEnrollment(db, enrollmentId) {
+  let rows;
+  try {
+    ({ rows } = await db.query(
+      `SELECT payment_date::text AS ymd
+       FROM payments
+       WHERE enrollment_id = $1
+         AND status = 'completed'
+         AND payment_date IS NOT NULL
+         AND (deleted_at IS NULL)`,
+      [enrollmentId]
+    ));
+  } catch (e) {
+    if (!isMissingPaymentsStatusColumn(e)) throw e;
+    ({ rows } = await db.query(
+      `SELECT payment_date::text AS ymd
+       FROM payments
+       WHERE enrollment_id = $1
+         AND payment_date IS NOT NULL
+         AND (deleted_at IS NULL)
+         AND (paid_at IS NOT NULL)`,
+      [enrollmentId]
+    ));
+  }
+  return new Set((rows || []).map((r) => String(r.ymd || '').slice(0, 10)).filter(Boolean));
+}
+
+async function buildDueConfirmationsForInstructor(db, instructorId, todayBaku) {
+  const cutoff = paymentConfirmationCutoffYmd(todayBaku);
+  const { rows } = await db.query(
+    `SELECT e.id AS enrollment_id, e.student_id, e.enrollment_start_date, e.enrolled_at,
+            u.full_name, u.phone, sp.monthly_fee
+     FROM enrollments e
+     INNER JOIN users u ON u.id = e.student_id
+     LEFT JOIN student_profiles sp ON sp.user_id = u.id
+     WHERE e.billing_type = 'monthly'
+       AND u.role = 'student'
+       AND u.is_active = TRUE
+       AND REPLACE(LOWER(TRIM(e.instructor_id::text)), '-', '') = $1
+       AND (e.deleted_at IS NULL)`,
+    [normUuid(instructorId)]
+  );
+
+  const items = [];
+  for (const r of rows || []) {
+    const fee = r.monthly_fee != null ? Number(r.monthly_fee) : NaN;
+    if (!Number.isFinite(fee) || fee <= 0) continue;
+    const anchorYmd = monthlyAnchorYmd({
+      enrollment_start_date: r.enrollment_start_date,
+      enrolled_at: r.enrolled_at,
+      today_ymd: todayBaku,
+    });
+    if (!anchorYmd) continue;
+    const paidSet = await loadPaidDatesForEnrollment(db, r.id);
+    const dues = listUnconfirmedMonthlyDues({
+      anchorYmd,
+      todayYmd: todayBaku,
+      monthlyFee: fee,
+      paidDateSet: paidSet,
+      confirmationCutoffYmd: cutoff,
+    });
+    const parts = String(r.full_name || '').trim().split(/\s+/);
+    for (const d of dues) {
+      items.push({
+        enrollment_id: r.enrollment_id,
+        student_id: r.student_id,
+        student_name: r.full_name,
+        first_name: parts[0] || '—',
+        last_name: parts.length > 1 ? parts.slice(1).join(' ') : '—',
+        phone: r.phone,
+        due_ymd: d.due_ymd,
+        amount: d.amount,
+        period: d.period,
+        overdue: compareYmd(d.due_ymd, todayBaku) < 0,
+      });
+    }
+  }
+  items.sort((a, b) => {
+    const c = compareYmd(a.due_ymd, b.due_ymd);
+    if (c !== 0) return c;
+    return String(a.student_name || '').localeCompare(String(b.student_name || ''), 'az');
+  });
+  return items;
+}
+
 function monthlyAnchorYmd({ enrollment_start_date, enrolled_at, today_ymd }) {
   const anchor = anchorToYmd(enrollment_start_date);
   const enrolled = toYmd(enrolled_at);
@@ -1568,14 +1680,140 @@ const getInstructorPaymentBoard = async (req, res) => {
       };
     });
 
+    const due_confirmations = await buildDueConfirmationsForInstructor(db, req.user.id, todayBaku);
+
     res.json({
       success: true,
       totalEarnings: Number(sumRows[0].total) || 0,
       pendingCount,
       pendingAmount,
       today_baku: todayBaku || null,
+      payment_confirmation_cutoff: paymentConfirmationCutoffYmd(todayBaku),
+      due_confirmations,
       students,
     });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/** Müəllim: ödəniş vaxtı çatıb — təsdiqdən sonra tarixçə + gəlir sayğacları */
+const confirmDuePayment = async (req, res) => {
+  try {
+    const enrollment_id = String(req.body?.enrollment_id || '').trim();
+    const due_ymd = parseOptionalPaymentDateYmd(req.body?.due_ymd);
+    if (!enrollment_id || !looksLikeUuid(enrollment_id)) {
+      return res.status(400).json({ success: false, message: 'Qeydiyyat seçilməyib' });
+    }
+    if (!due_ymd) {
+      return res.status(400).json({ success: false, message: 'Ödəniş tarixi düzgün deyil' });
+    }
+
+    const { rows: en } = await db.query(
+      `SELECT e.id, e.instructor_id, e.student_id, e.billing_type,
+              e.enrollment_start_date, e.enrolled_at, u.full_name, u.phone, sp.monthly_fee
+       FROM enrollments e
+       INNER JOIN users u ON u.id = e.student_id
+       LEFT JOIN student_profiles sp ON sp.user_id = u.id
+       WHERE e.id = $1`,
+      [enrollment_id]
+    );
+    if (!en[0]) return res.status(404).json({ success: false, message: 'Qeydiyyat tapılmadı' });
+    if (req.user.role === 'instructor' && !sameUuid(en[0].instructor_id, req.user.id)) {
+      return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
+    }
+    if (String(en[0].billing_type) !== 'monthly') {
+      return res.status(400).json({ success: false, message: 'Yalnız aylıq abunə üçün təsdiq mövcuddur' });
+    }
+
+    const todayBaku = await getTodayBakuYmd(db);
+    const cutoff = paymentConfirmationCutoffYmd(todayBaku);
+    if (compareYmd(due_ymd, cutoff) < 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Keçmiş aylar üçün təsdiq tələb olunmur — mövcud tarixçə qeydləri saxlanılır',
+      });
+    }
+    if (compareYmd(due_ymd, todayBaku) > 0) {
+      return res.status(400).json({ success: false, message: 'Ödəniş tarixi hələ çatmayıb' });
+    }
+
+    const anchorYmd = monthlyAnchorYmd({
+      enrollment_start_date: en[0].enrollment_start_date,
+      enrolled_at: en[0].enrolled_at,
+      today_ymd: todayBaku,
+    });
+    const allowedDue = new Set(
+      listBillingDueDatesUpTo(anchorYmd, todayBaku).filter((d) => compareYmd(d, cutoff) >= 0)
+    );
+    if (!allowedDue.has(due_ymd)) {
+      return res.status(400).json({ success: false, message: 'Bu tarix aylıq dövr üçün etibarlı deyil' });
+    }
+
+    const paidSet = await loadPaidDatesForEnrollment(db, enrollment_id);
+    if (paidSet.has(due_ymd)) {
+      return res.status(409).json({ success: false, message: 'Bu tarix üçün ödəniş artıq qeydə alınıb' });
+    }
+
+    const fee = Number(en[0].monthly_fee);
+    const amtRaw = req.body?.amount != null ? Number(req.body.amount) : fee;
+    if (!Number.isFinite(amtRaw) || amtRaw <= 0) {
+      return res.status(400).json({ success: false, message: 'Məbləğ müsbət olmalıdır' });
+    }
+    const amt = roundMoney(amtRaw);
+    const studentName = String(en[0].full_name || 'Tələbə').trim();
+    const notesExtra = req.body?.notes != null && String(req.body.notes).trim() ? String(req.body.notes).trim() : '';
+    const notesOut = `[Ödəniş təsdiqi]${notesExtra ? ` ${notesExtra}` : ''}`;
+    const period = `Aylıq: ${due_ymd}`;
+
+    let inserted;
+    try {
+      ({ rows: inserted } = await db.query(
+        `INSERT INTO payments (enrollment_id, student_id, amount, currency, payment_method, status, paid_at, payment_date, notes, period)
+         VALUES ($1,$2,$3,'AZN','cash','completed',NOW(),$4::date,$5,$6)
+         RETURNING *`,
+        [enrollment_id, en[0].student_id, amt, due_ymd, notesOut, period]
+      ));
+    } catch (e) {
+      if (!isMissingPaymentsStatusColumn(e)) throw e;
+      ({ rows: inserted } = await db.query(
+        `INSERT INTO payments (enrollment_id, student_id, amount, currency, payment_method, paid_at, payment_date, notes, period)
+         VALUES ($1,$2,$3,'AZN','cash',NOW(),$4::date,$5,$6)
+         RETURNING *`,
+        [enrollment_id, en[0].student_id, amt, due_ymd, notesOut, period]
+      ));
+    }
+
+    const [dd, mm, yyyy] = due_ymd.split('-');
+    const dueLabel = `${dd}.${mm}.${yyyy}`;
+    const smsBody = `Mentorix: ${studentName} — ${dueLabel} tarixinə aylıq ödəniş təsdiqləndi (${amt} ₼).`;
+    const phone = en[0].phone ? String(en[0].phone).trim() : null;
+    try {
+      await db.query(
+        `INSERT INTO sms_logs (instructor_id, student_id, phone, type, message, status, package_type, sent_at)
+         VALUES ($1,$2,$3,'payment',$4,'sent','monthly',NOW())`,
+        [req.user.id, en[0].student_id, phone, smsBody]
+      );
+    } catch (smsErr) {
+      try {
+        await db.query(
+          `INSERT INTO sms_logs (instructor_id, phone, message, status)
+           VALUES ($1,$2,$3,'sent')`,
+          [req.user.id, phone, smsBody]
+        );
+      } catch {
+        // sms_logs optional — payment still counts
+      }
+    }
+
+    await ensureNotificationOnce({
+      user_id: req.user.id,
+      type: 'payment_confirmed',
+      title: 'Ödəniş təsdiqləndi',
+      body: `${studentName}: ${dueLabel} — ${amt} ₼`,
+    });
+
+    res.json({ success: true, payment: inserted[0], due_ymd, amount: amt });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -1795,5 +2033,6 @@ module.exports = {
   getEnrollmentPaymentHistory,
   getRestorePreview,
   confirmRestorePayments,
+  confirmDuePayment,
   deletePayment,
 };

@@ -7,6 +7,7 @@ const {
   getEnrollmentPaymentHistory,
   getRestorePreview,
   confirmRestorePayments,
+  confirmDuePayment,
   deletePayment,
 } = require('../controllers/paymentController');
 const { authenticate, authorize } = require('../middleware/auth');
@@ -33,6 +34,7 @@ router.post(
 );
 router.get('/', authenticate, authorize('admin', 'instructor'), listPayments);
 router.post('/', authenticate, authorize('admin', 'instructor'), addPayment);
+router.post('/confirm-due', authenticate, authorize('instructor'), confirmDuePayment);
 router.delete('/:payment_id', authenticate, authorize('admin', 'instructor'), deletePayment);
 
 module.exports = router;

@@ -92,6 +92,8 @@ export default function InstructorPayments() {
   const [pendingCount, setPendingCount] = useState(0)
   const [pendingAmount, setPendingAmount] = useState(0)
   const [students, setStudents] = useState([])
+  const [dueConfirmations, setDueConfirmations] = useState([])
+  const [confirmingKey, setConfirmingKey] = useState(null)
   const [markingId, setMarkingId] = useState(null)
   const [quickOpen, setQuickOpen] = useState(false)
   const [quickRow, setQuickRow] = useState(null)
@@ -125,6 +127,7 @@ export default function InstructorPayments() {
         setTodayBaku(String(d.today_baku).slice(0, 10))
       }
       setStudents(d.students || [])
+      setDueConfirmations(Array.isArray(d.due_confirmations) ? d.due_confirmations : [])
     } catch (e) {
       setErr(e?.message || 'Məlumat yüklənmədi')
       setStudents([])
@@ -218,6 +221,26 @@ export default function InstructorPayments() {
     void keepOpen
   }
 
+  const dueConfirmKey = (item) => `${item.enrollment_id}|${item.due_ymd}`
+
+  const confirmDuePayment = async (item) => {
+    const key = dueConfirmKey(item)
+    setConfirmingKey(key)
+    try {
+      await api.post('/payments/confirm-due', {
+        enrollment_id: item.enrollment_id,
+        due_ymd: item.due_ymd,
+        amount: item.amount,
+      })
+      toast('Ödəniş təsdiqləndi — tarixçəyə əlavə olundu', 'success')
+      await load()
+    } catch (e) {
+      toast(e?.message || 'Təsdiq alınmadı', 'error')
+    } finally {
+      setConfirmingKey(null)
+    }
+  }
+
   const fetchHistoryForEnrollment = async (enrollmentId) => {
     setHistoryLoading(true)
     try {
@@ -267,10 +290,56 @@ export default function InstructorPayments() {
       <div className="mb-6">
         <h1 className="font-display font-bold text-xl sm:text-2xl text-token-textMain tracking-tight">Ödənişlər</h1>
         <p className="text-token-textMuted text-sm mt-1">
-          Ödəniş tarixçəsi hər tələbənin «Tarixçə» düyməsində görünür. Eyni müəllim üçün köhnə qeydiyyatda qalan
-          ödənişlər də siyahıda göstərilir. «Balans düzəlişi» ümumi gəlirə daxil edilmir.
+          Aylıq ödənişlər cari aydan etibarən təsdiq tələb edir; təsdiqdən sonra tarixçə və gəlir sayğacları yenilənir.
+          Keçmiş ayların mövcud qeydlərinə toxunulmur.
         </p>
       </div>
+
+      {!loading && dueConfirmations.length > 0 ? (
+        <Card hover className="p-4 sm:p-5 mb-6 border border-amber-500/30 bg-amber-500/5">
+          <h2 className="font-display font-bold text-sm text-amber-200/95 mb-1">Ödəniş xatırlatması</h2>
+          <p className="text-xs text-token-textMuted mb-3 leading-relaxed">
+            Ödəniş vaxtı çatıb, amma hələ tarixçəyə düşməyib. Nağd alındısa təsdiqləyin — sonra «Tarixçə» və
+            bildirişlər bölməsində görünəcək.
+          </p>
+          <ul className="space-y-2">
+            {dueConfirmations.map((item) => {
+              const key = dueConfirmKey(item)
+              const busy = confirmingKey === key
+              const name = item.student_name || `${item.first_name || ''} ${item.last_name || ''}`.trim()
+              const dueLabel = formatDdMmYyyy(item.due_ymd)
+              return (
+                <li
+                  key={key}
+                  className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-xl border border-amber-500/25 bg-token-surfaceCard/50 px-3 py-3"
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-token-textMain">{name || '—'}</p>
+                    <p className="text-xs text-amber-200/90 mt-1 leading-relaxed">
+                      <span className="font-medium">{dueLabel}</span> tarixli ödəniş vaxtı çatıb
+                      {item.overdue ? ' (gecikib)' : ''}. Ödənişi etmisinizsə təsdiqləyin.
+                    </p>
+                    <p className="text-xs text-token-textMuted mt-1 tabular-nums">
+                      Məbləğ: {formatAzn(item.amount)}
+                      {item.period ? ` · ${item.period}` : ''}
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    loading={busy}
+                    disabled={!!confirmingKey}
+                    onClick={() => void confirmDuePayment(item)}
+                    className="shrink-0 w-full sm:w-auto justify-center"
+                  >
+                    Təsdiqlə
+                  </Button>
+                </li>
+              )
+            })}
+          </ul>
+        </Card>
+      ) : null}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
         <Card hover className="p-5">
@@ -280,7 +349,7 @@ export default function InstructorPayments() {
           <div className="font-display font-extrabold text-2xl sm:text-3xl text-token-textMain tabular-nums">
             {loading ? '…' : formatAzn(totalEarnings)}
           </div>
-          <p className="text-xs text-token-textMuted mt-2">Tamamlanmış ödənişlərin cəmi (bütün dövr)</p>
+          <p className="text-xs text-token-textMuted mt-2">Təsdiqlənmiş ödənişlərin cəmi (bütün dövr)</p>
         </Card>
         <Card hover className="p-5">
           <div className="text-[11px] font-semibold text-token-textMuted uppercase tracking-widest mb-2">

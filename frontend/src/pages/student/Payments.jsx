@@ -136,6 +136,7 @@ function displayNotesForStudent(raw) {
   if (/^\[Başlanğıc balansı\]/i.test(s)) return ''
   if (/^\[Keçmiş ödəniş qeydi\]/i.test(s)) return ''
   if (/^\[Balans düzəlişi\]/i.test(s)) return ''
+  if (/^\[Ödəniş təsdiqi\]/i.test(s)) return ''
   return s
 }
 
