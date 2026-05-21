@@ -8,7 +8,9 @@ const {
   toYmd: anchorToYmd,
   toBakuYmd,
   resolveMonthlyAnchorYmd,
+  allocateMonthlyPaymentsToDues,
   buildMonthlyPaymentHistoryTimeline,
+  lastPaidDueYmd,
   listBillingDueDatesUpTo,
   compareYmd,
 } = require('../services/subscriptionBilling');
@@ -226,38 +228,34 @@ function listUnconfirmedMonthlyDues({ anchorYmd, todayYmd, monthlyFee, paidDateS
   return out;
 }
 
-async function loadPaidDatesForEnrollment(db, enrollmentId) {
+async function loadPaidDatesForEnrollment(db, enrollmentId, anchorYmd, todayYmd) {
+  if (!anchorYmd) return new Set();
   let rows;
   try {
     ({ rows } = await db.query(
-      `SELECT payment_date::text AS ymd
+      `SELECT id, amount, status, payment_date, paid_at, notes, period
        FROM payments
        WHERE enrollment_id = $1
-         AND status = 'completed'
-         AND payment_date IS NOT NULL
          AND (deleted_at IS NULL)`,
       [enrollmentId]
     ));
   } catch (e) {
-    if (!isMissingPaymentsStatusColumn(e)) throw e;
-    ({ rows } = await db.query(
-      `SELECT payment_date::text AS ymd
-       FROM payments
-       WHERE enrollment_id = $1
-         AND payment_date IS NOT NULL
-         AND (deleted_at IS NULL)
-         AND (paid_at IS NOT NULL)`,
-      [enrollmentId]
-    ));
+    throw e;
   }
-  return new Set((rows || []).map((r) => String(r.ymd || '').slice(0, 10)).filter(Boolean));
+  const { paidByDue } = allocateMonthlyPaymentsToDues({
+    anchorYmd,
+    todayYmd: todayYmd || anchorYmd,
+    payments: rows || [],
+  });
+  return new Set([...paidByDue.keys()]);
 }
 
 async function buildDueConfirmationsForInstructor(db, instructorId, todayBaku) {
   const cutoff = paymentConfirmationCutoffYmd(todayBaku);
   const { rows } = await db.query(
     `SELECT e.id AS enrollment_id, e.student_id, e.enrollment_start_date, e.enrolled_at,
-            u.full_name, u.phone, sp.monthly_fee
+            u.full_name, u.phone, sp.monthly_fee,
+            to_char(sp.payment_start_date::date, 'YYYY-MM-DD') AS payment_start_date
      FROM enrollments e
      INNER JOIN users u ON u.id = e.student_id
      LEFT JOIN student_profiles sp ON sp.user_id = u.id
@@ -276,10 +274,11 @@ async function buildDueConfirmationsForInstructor(db, instructorId, todayBaku) {
     const anchorYmd = resolveMonthlyAnchorYmd({
       enrollment_start_date: r.enrollment_start_date,
       enrolled_at: r.enrolled_at,
+      payment_start_date: r.payment_start_date,
       today_ymd: todayBaku,
     });
     if (!anchorYmd) continue;
-    const paidSet = await loadPaidDatesForEnrollment(db, r.id);
+    const paidSet = await loadPaidDatesForEnrollment(db, r.id, anchorYmd, todayBaku);
     const dues = listUnconfirmedMonthlyDues({
       anchorYmd,
       todayYmd: todayBaku,
@@ -318,7 +317,8 @@ const getRestorePreview = async (req, res) => {
       `SELECT e.id, e.instructor_id, e.student_id, e.billing_type,
               e.enrolled_at, e.enrollment_start_date,
               e.lesson_weekdays, e.lesson_times,
-              sp.monthly_fee
+              sp.monthly_fee,
+              to_char(sp.payment_start_date::date, 'YYYY-MM-DD') AS payment_start_date
        FROM enrollments e
        LEFT JOIN student_profiles sp ON sp.user_id = e.student_id
        WHERE e.id = $1`,
@@ -331,31 +331,22 @@ const getRestorePreview = async (req, res) => {
 
     const bt = en[0].billing_type;
     const todayYmd = await getTodayBakuYmd(db);
-    const enrolledYmd = toYmd(en[0].enrolled_at) || todayYmd;
+    const enrolledYmd = toBakuYmd(en[0].enrolled_at) || toYmd(en[0].enrolled_at) || todayYmd;
     const anchorYmd =
       bt === 'monthly'
         ? resolveMonthlyAnchorYmd({
             enrollment_start_date: en[0].enrollment_start_date,
             enrolled_at: en[0].enrolled_at,
+            payment_start_date: en[0].payment_start_date,
             today_ymd: todayYmd,
           })
         : anchorToYmd(en[0].enrollment_start_date);
 
-    if (!anchorYmd || !enrolledYmd || anchorYmd >= enrolledYmd) {
+    if (!anchorYmd) {
       return res.json({ success: true, items: [] });
     }
 
-    // Exclude already recorded payments for the same payment_date
-    const { rows: existing } = await db.query(
-      `SELECT payment_date::text AS ymd
-       FROM payments
-       WHERE enrollment_id = $1
-         AND status = 'completed'
-         AND payment_date IS NOT NULL
-         AND (deleted_at IS NULL)`,
-      [enrollment_id]
-    );
-    const done = new Set(existing.map((r) => String(r.ymd).slice(0, 10)));
+    let done = new Set();
 
     // Monthly restore
     if (bt === 'monthly') {
@@ -363,10 +354,31 @@ const getRestorePreview = async (req, res) => {
       if (!Number.isFinite(mf) || mf <= 0) {
         return res.json({ success: true, items: [] });
       }
+      let existingPayments;
+      try {
+        ({ rows: existingPayments } = await db.query(
+          `SELECT id, amount, status, payment_date, paid_at, notes, period
+           FROM payments
+           WHERE enrollment_id = $1
+             AND (deleted_at IS NULL)`,
+          [enrollment_id]
+        ));
+      } catch (e) {
+        throw e;
+      }
+      const { paidByDue } = allocateMonthlyPaymentsToDues({
+        anchorYmd,
+        todayYmd,
+        payments: existingPayments || [],
+      });
+      done = new Set(paidByDue.keys());
+      const preSystem = enrolledYmd && compareYmd(anchorYmd, enrolledYmd) < 0;
+
       const dueDates = listBillingDueDatesUpTo(anchorYmd, todayYmd);
       const raw = [];
       for (const start of dueDates) {
-        if (start >= enrolledYmd) break;
+        if (compareYmd(start, todayYmd) > 0) continue;
+        if (preSystem && compareYmd(start, enrolledYmd) >= 0) continue;
         const end = addOneMonthYmd(anchorYmd, start);
         if (!end) continue;
         raw.push({
@@ -386,6 +398,19 @@ const getRestorePreview = async (req, res) => {
     // Package (8/12) restore
     const limit = billingLimit(bt);
     if (!limit) return res.json({ success: true, items: [] });
+
+    if (!done.size) {
+      const { rows: existing } = await db.query(
+        `SELECT payment_date::text AS ymd
+         FROM payments
+         WHERE enrollment_id = $1
+           AND status = 'completed'
+           AND payment_date IS NOT NULL
+           AND (deleted_at IS NULL)`,
+        [enrollment_id]
+      );
+      done = new Set((existing || []).map((r) => String(r.ymd).slice(0, 10)));
+    }
 
     function parseWeekdays(raw) {
       let arr = raw;
@@ -518,7 +543,8 @@ const confirmRestorePayments = async (req, res) => {
       `SELECT e.id, e.instructor_id, e.student_id, e.billing_type,
               e.enrolled_at, e.enrollment_start_date,
               e.lesson_weekdays, e.lesson_times,
-              sp.monthly_fee
+              sp.monthly_fee,
+              to_char(sp.payment_start_date::date, 'YYYY-MM-DD') AS payment_start_date
        FROM enrollments e
        LEFT JOIN student_profiles sp ON sp.user_id = e.student_id
        WHERE e.id = $1`,
@@ -530,16 +556,17 @@ const confirmRestorePayments = async (req, res) => {
     }
     const bt = en[0].billing_type;
     const todayYmd = await getTodayBakuYmd(db);
-    const enrolledYmd = toYmd(en[0].enrolled_at) || todayYmd;
+    const enrolledYmd = toBakuYmd(en[0].enrolled_at) || toYmd(en[0].enrolled_at) || todayYmd;
     const anchorYmd =
       bt === 'monthly'
         ? resolveMonthlyAnchorYmd({
             enrollment_start_date: en[0].enrollment_start_date,
             enrolled_at: en[0].enrolled_at,
+            payment_start_date: en[0].payment_start_date,
             today_ymd: todayYmd,
           })
         : anchorToYmd(en[0].enrollment_start_date);
-    if (!anchorYmd || !enrolledYmd || anchorYmd >= enrolledYmd) {
+    if (!anchorYmd) {
       return res.status(400).json({ success: false, message: 'Bərpa ediləcək aralıq yoxdur' });
     }
 
@@ -548,9 +575,11 @@ const confirmRestorePayments = async (req, res) => {
       if (!Number.isFinite(mf) || mf <= 0) {
         return res.status(400).json({ success: false, message: 'Aylıq məbləğ tapılmadı' });
       }
+      const preSystem = enrolledYmd && compareYmd(anchorYmd, enrolledYmd) < 0;
       const allowed = new Set();
       for (const start of listBillingDueDatesUpTo(anchorYmd, todayYmd)) {
-        if (start >= enrolledYmd) break;
+        if (compareYmd(start, todayYmd) > 0) continue;
+        if (preSystem && compareYmd(start, enrolledYmd) >= 0) continue;
         allowed.add(`monthly:${start}`);
       }
       const selected = ids.filter((x) => allowed.has(x)).map((x) => x.split(':')[1]);
@@ -1609,6 +1638,7 @@ const getInstructorPaymentBoard = async (req, res) => {
               sp.monthly_fee,
               to_char(e.enrollment_start_date::date, 'YYYY-MM-DD') AS lesson_start_date,
               e.enrolled_at,
+              to_char(sp.payment_start_date::date, 'YYYY-MM-DD') AS payment_start_date,
               ist.name AS track_subject_name,
               ig.name AS track_group_name
        FROM enrollments e
@@ -1648,6 +1678,7 @@ const getInstructorPaymentBoard = async (req, res) => {
             resolveMonthlyAnchorYmd({
               enrollment_start_date: r.lesson_start_date,
               enrolled_at: r.enrolled_at,
+              payment_start_date: r.payment_start_date,
               today_ymd: todayBaku,
             }) || billingAnchorYmd;
         }
@@ -1708,7 +1739,8 @@ const confirmDuePayment = async (req, res) => {
 
     const { rows: en } = await db.query(
       `SELECT e.id, e.instructor_id, e.student_id, e.billing_type,
-              e.enrollment_start_date, e.enrolled_at, u.full_name, u.phone, sp.monthly_fee
+              e.enrollment_start_date, e.enrolled_at, u.full_name, u.phone, sp.monthly_fee,
+              to_char(sp.payment_start_date::date, 'YYYY-MM-DD') AS payment_start_date
        FROM enrollments e
        INNER JOIN users u ON u.id = e.student_id
        LEFT JOIN student_profiles sp ON sp.user_id = u.id
@@ -1738,6 +1770,7 @@ const confirmDuePayment = async (req, res) => {
     const anchorYmd = resolveMonthlyAnchorYmd({
       enrollment_start_date: en[0].enrollment_start_date,
       enrolled_at: en[0].enrolled_at,
+      payment_start_date: en[0].payment_start_date,
       today_ymd: todayBaku,
     });
     const allowedDue = new Set(
@@ -1747,7 +1780,7 @@ const confirmDuePayment = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Bu tarix aylıq dövr üçün etibarlı deyil' });
     }
 
-    const paidSet = await loadPaidDatesForEnrollment(db, enrollment_id);
+    const paidSet = await loadPaidDatesForEnrollment(db, enrollment_id, anchorYmd, todayBaku);
     if (paidSet.has(due_ymd)) {
       return res.status(409).json({ success: false, message: 'Bu tarix üçün ödəniş artıq qeydə alınıb' });
     }
@@ -1832,7 +1865,8 @@ const getEnrollmentPaymentHistory = async (req, res) => {
     const { rows: en } = await db.query(
       `SELECT e.instructor_id, e.student_id, e.billing_type, e.enrollment_start_date, e.enrolled_at,
               e.billing_timing, COALESCE(e.payment_plan, 'full') AS payment_plan,
-              sp.monthly_fee
+              sp.monthly_fee,
+              to_char(sp.payment_start_date::date, 'YYYY-MM-DD') AS payment_start_date
        FROM enrollments e
        LEFT JOIN student_profiles sp ON sp.user_id = e.student_id
        WHERE e.id = $1`,
@@ -1944,7 +1978,13 @@ const getEnrollmentPaymentHistory = async (req, res) => {
       const anchorYmd = resolveMonthlyAnchorYmd({
         enrollment_start_date: en[0].enrollment_start_date,
         enrolled_at: en[0].enrolled_at,
+        payment_start_date: en[0].payment_start_date,
         today_ymd: todayBakuForAnchor,
+      });
+      const { paidByDue } = allocateMonthlyPaymentsToDues({
+        anchorYmd,
+        todayYmd: todayBakuForAnchor,
+        payments: rows,
       });
       const st = computeMonthlyBalanceState({
         monthly_fee: mf,
@@ -1959,6 +1999,8 @@ const getEnrollmentPaymentHistory = async (req, res) => {
         payment_plan: en[0].payment_plan || 'full',
         anchor_ymd: anchorYmd,
         schedule_last_due_ymd: dues.length ? dues[dues.length - 1] : null,
+        last_paid_due_ymd: lastPaidDueYmd(paidByDue),
+        payment_count_allocated: paidByDue.size,
         accrued_total: st.accrued_total,
         total_payments: st.total_payments,
         pending_debt: st.pending_debt,

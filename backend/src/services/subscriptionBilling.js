@@ -51,11 +51,19 @@ function ymdToMs(ymd) {
  * Aylıq ankor: əsasən enrollment_start_date; gələcək/yanlış ankor → enrolled_at (Baku günü).
  * enrollment_start_date qeydiyyatdan sonradırsa, borclanma qeydiyyat günündən başlayır (eyni gün 02.09 → eyni dövr).
  */
-function resolveMonthlyAnchorYmd({ enrollment_start_date, enrolled_at, today_ymd }) {
+function resolveMonthlyAnchorYmd({
+  enrollment_start_date,
+  enrolled_at,
+  payment_start_date,
+  today_ymd,
+}) {
   let anchor = toYmd(enrollment_start_date);
+  const profileStart = toYmd(payment_start_date);
   const enrolled = toBakuYmd(enrolled_at);
   const today = today_ymd ? String(today_ymd).slice(0, 10) : null;
 
+  if (!anchor) anchor = profileStart || enrolled;
+  if (profileStart && anchor && compareYmd(profileStart, anchor) < 0) anchor = profileStart;
   if (!anchor) return enrolled;
   if (enrolled && compareYmd(anchor, enrolled) > 0) {
     anchor = enrolled;
@@ -90,41 +98,92 @@ function canonicalMonthlyDueYmd(anchorYmd, paymentYmd) {
   return best;
 }
 
+function isCountableMonthlyPayment(p) {
+  const notes = String(p?.notes || '');
+  if (notes.startsWith('[Balans düzəlişi]')) return false;
+  const st = p?.status != null ? String(p.status).toLowerCase() : '';
+  if (st && st !== 'completed') return false;
+  return Boolean(p?.payment_date || p?.paid_at);
+}
+
+/**
+ * Ödənişləri aylıq dövrlərə paylaşdır: əvvəl dəqiq/ankor tarix, sonra qalan ödənişlər FIFO (köhnə səhv tarixlər üçün).
+ */
+function allocateMonthlyPaymentsToDues({ anchorYmd, todayYmd, payments }) {
+  if (!anchorYmd) return { dues: [], paidByDue: new Map(), orphans: [] };
+  const until = todayYmd || anchorYmd;
+  const allDues = listBillingDueDatesUpTo(anchorYmd, until);
+  const dues = allDues.filter((d) => compareYmd(d, until) <= 0);
+  const dueSet = new Set(dues);
+
+  const completed = (payments || [])
+    .filter(isCountableMonthlyPayment)
+    .sort((a, b) => {
+      const ra = toYmd(a.payment_date) || toBakuYmd(a.paid_at) || '';
+      const rb = toYmd(b.payment_date) || toBakuYmd(b.paid_at) || '';
+      const ca = compareYmd(ra, rb);
+      if (ca !== 0) return ca;
+      const ta = a.paid_at ? new Date(a.paid_at).getTime() : 0;
+      const tb = b.paid_at ? new Date(b.paid_at).getTime() : 0;
+      if (ta !== tb) return ta - tb;
+      return String(a.id || '').localeCompare(String(b.id || ''));
+    });
+
+  const paidByDue = new Map();
+  const unmatched = [];
+
+  for (const p of completed) {
+    const raw = toYmd(p.payment_date) || toBakuYmd(p.paid_at);
+    const due = raw ? canonicalMonthlyDueYmd(anchorYmd, raw) : null;
+    if (due && dueSet.has(due) && !paidByDue.has(due)) {
+      paidByDue.set(due, {
+        ...p,
+        payment_date: due,
+        canonical_due_ymd: due,
+        timeline_status: 'paid',
+      });
+    } else {
+      unmatched.push(p);
+    }
+  }
+
+  for (const due of dues) {
+    if (paidByDue.has(due)) continue;
+    const p = unmatched.shift();
+    if (!p) continue;
+    paidByDue.set(due, {
+      ...p,
+      payment_date: due,
+      canonical_due_ymd: due,
+      timeline_status: 'paid',
+      assigned_by_order: true,
+    });
+  }
+
+  return { dues, paidByDue, orphans: unmatched };
+}
+
 /**
  * Aylıq tarixçə: ankor üzrə bütün dövrlər (köhnədən yeniyə), ödənilmiş + ödənilməmiş slotlar.
  */
 function buildMonthlyPaymentHistoryTimeline({ anchorYmd, todayYmd, monthlyFee, payments }) {
   if (!anchorYmd || !todayYmd) return [];
-  const dues = listBillingDueDatesUpTo(anchorYmd, todayYmd);
   const fee = Number(monthlyFee);
-  const paidByDue = new Map();
-
-  for (const p of payments || []) {
-    const raw = toYmd(p.payment_date) || toBakuYmd(p.paid_at);
-    if (!raw) continue;
-    const due = canonicalMonthlyDueYmd(anchorYmd, raw);
-    if (!due) continue;
-    const list = paidByDue.get(due) || [];
-    list.push({
-      ...p,
-      payment_date: due,
-      canonical_due_ymd: due,
-      timeline_status: 'paid',
-    });
-    paidByDue.set(due, list);
-  }
+  const { dues, paidByDue, orphans } = allocateMonthlyPaymentsToDues({
+    anchorYmd,
+    todayYmd,
+    payments,
+  });
 
   const usedPaymentIds = new Set();
   const out = [];
 
   for (const due of dues) {
     if (compareYmd(due, todayYmd) > 0) continue;
-    const paidList = paidByDue.get(due) || [];
-    if (paidList.length) {
-      for (const p of paidList) {
-        if (p.id) usedPaymentIds.add(String(p.id));
-        out.push(p);
-      }
+    const p = paidByDue.get(due);
+    if (p) {
+      if (p.id) usedPaymentIds.add(String(p.id));
+      out.push(p);
       continue;
     }
     out.push({
@@ -143,7 +202,7 @@ function buildMonthlyPaymentHistoryTimeline({ anchorYmd, todayYmd, monthlyFee, p
     });
   }
 
-  for (const p of payments || []) {
+  for (const p of orphans) {
     if (p.id && usedPaymentIds.has(String(p.id))) continue;
     const raw = toYmd(p.payment_date) || toBakuYmd(p.paid_at);
     out.push({
@@ -163,6 +222,14 @@ function buildMonthlyPaymentHistoryTimeline({ anchorYmd, todayYmd, monthlyFee, p
   });
 
   return out;
+}
+
+function lastPaidDueYmd(paidByDue) {
+  let last = null;
+  for (const due of paidByDue.keys()) {
+    if (!last || compareYmd(due, last) > 0) last = due;
+  }
+  return last;
 }
 
 function roundMoney(n) {
@@ -377,6 +444,7 @@ async function loadInstructorMonthlyBalanceRows(db, instructorNormId) {
      SELECT e.id AS enrollment_id,
             sp.monthly_fee,
             to_char(e.enrollment_start_date::date, 'YYYY-MM-DD') AS anchor_raw,
+            to_char(sp.payment_start_date::date, 'YYYY-MM-DD') AS payment_start_raw,
             e.enrolled_at,
             COALESCE(p.t, 0)::numeric AS total_paid
      FROM enrollments e
@@ -396,6 +464,7 @@ async function loadInstructorMonthlyBalanceRows(db, instructorNormId) {
     const anchorYmd = resolveMonthlyAnchorYmd({
       enrollment_start_date: r.anchor_raw,
       enrolled_at: r.enrolled_at,
+      payment_start_date: r.payment_start_raw,
       today_ymd: todayBaku,
     });
     const state = computeMonthlyBalanceState({
@@ -422,7 +491,9 @@ module.exports = {
   ymdToMs,
   resolveMonthlyAnchorYmd,
   canonicalMonthlyDueYmd,
+  allocateMonthlyPaymentsToDues,
   buildMonthlyPaymentHistoryTimeline,
+  lastPaidDueYmd,
   roundMoney,
   compareYmd,
   listBillingDueDatesUpTo,

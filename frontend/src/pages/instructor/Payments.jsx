@@ -759,6 +759,22 @@ export default function InstructorPayments() {
                 <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 tabular-nums pt-1 border-t border-indigo-500/15">
                   <span className="text-gray-500">Ankor dövr sayı</span>
                   <span className="text-right text-white font-medium">{historySummary.subscription_months ?? 0}</span>
+                  {historySummary.last_paid_due_ymd ? (
+                    <>
+                      <span className="text-gray-500">Son ödənilmiş dövr</span>
+                      <span className="text-right text-emerald-200/95 tabular-nums">
+                        {formatDdMmYyyy(historySummary.last_paid_due_ymd)}
+                      </span>
+                    </>
+                  ) : null}
+                  {historySummary.schedule_last_due_ymd ? (
+                    <>
+                      <span className="text-gray-500">Cari dövr son tarixi</span>
+                      <span className="text-right text-white tabular-nums">
+                        {formatDdMmYyyy(historySummary.schedule_last_due_ymd)}
+                      </span>
+                    </>
+                  ) : null}
                   <span className="text-gray-500">Yaranan borc</span>
                   <span className="text-right text-white">{formatAzn(historySummary.accrued_total)}</span>
                   <span className="text-gray-500">Cəmi ödənilən</span>
