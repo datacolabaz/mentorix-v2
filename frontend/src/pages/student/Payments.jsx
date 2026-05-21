@@ -643,4 +643,24 @@ export default function StudentPayments() {
                                   key={`${cyc}:${ls.lesson_number}`}
                                   className="flex items-center justify-between gap-2 rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard/40 px-3 py-2 text-sm"
                                 >
-          
+                                  <span className="text-token-textMain">
+                                    Dərs {ls.lesson_number || '—'}: <span className="font-mono">{ymd}</span>
+                                  </span>
+                                  <span className={`text-xs font-semibold ${st.cls}`}>{st.text}</span>
+                                </li>
+                              )
+                            })}
+                          </ul>
+                        </div>
+                      )}
+                    </Card>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        </Card>
+      )}
+    </div>
+  )
+}
