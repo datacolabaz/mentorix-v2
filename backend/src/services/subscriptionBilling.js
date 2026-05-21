@@ -49,14 +49,17 @@ function ymdToMs(ymd) {
 
 /**
  * Aylıq ankor: əsasən enrollment_start_date; gələcək/yanlış ankor → enrolled_at (Baku günü).
- * Eyni qeydiyyat günü olan tələbələrdə UTC sürüşməsi olmasın deyə enrolled_at Baku ilə oxunur.
+ * enrollment_start_date qeydiyyatdan sonradırsa, borclanma qeydiyyat günündən başlayır (eyni gün 02.09 → eyni dövr).
  */
 function resolveMonthlyAnchorYmd({ enrollment_start_date, enrolled_at, today_ymd }) {
-  const anchor = toYmd(enrollment_start_date);
+  let anchor = toYmd(enrollment_start_date);
   const enrolled = toBakuYmd(enrolled_at);
   const today = today_ymd ? String(today_ymd).slice(0, 10) : null;
 
   if (!anchor) return enrolled;
+  if (enrolled && compareYmd(anchor, enrolled) > 0) {
+    anchor = enrolled;
+  }
   if (!today) return anchor;
   if (compareYmd(anchor, today) <= 0) return anchor;
 
@@ -67,6 +70,99 @@ function resolveMonthlyAnchorYmd({ enrollment_start_date, enrolled_at, today_ymd
   const daysAhead = Math.round((aMs - tMs) / 86400000);
   if (daysAhead > 45 && eMs != null && enrolled && compareYmd(enrolled, today) <= 0) return enrolled;
   return anchor;
+}
+
+/** Ödəniş tarixini həmin aylıq dövrün ankor gününə map edir (məs. 15.03 → 02.03). */
+function canonicalMonthlyDueYmd(anchorYmd, paymentYmd) {
+  const anchor = anchorYmd ? String(anchorYmd).slice(0, 10) : null;
+  const pd = paymentYmd ? String(paymentYmd).slice(0, 10) : null;
+  if (!anchor || !pd || !/^\d{4}-\d{2}-\d{2}$/.test(anchor) || !/^\d{4}-\d{2}-\d{2}$/.test(pd)) {
+    return pd;
+  }
+  if (compareYmd(pd, anchor) < 0) return pd;
+  const dues = listBillingDueDatesUpTo(anchor, pd);
+  if (!dues.length) return pd;
+  let best = dues[0];
+  for (const d of dues) {
+    if (compareYmd(d, pd) <= 0) best = d;
+    else break;
+  }
+  return best;
+}
+
+/**
+ * Aylıq tarixçə: ankor üzrə bütün dövrlər (köhnədən yeniyə), ödənilmiş + ödənilməmiş slotlar.
+ */
+function buildMonthlyPaymentHistoryTimeline({ anchorYmd, todayYmd, monthlyFee, payments }) {
+  if (!anchorYmd || !todayYmd) return [];
+  const dues = listBillingDueDatesUpTo(anchorYmd, todayYmd);
+  const fee = Number(monthlyFee);
+  const paidByDue = new Map();
+
+  for (const p of payments || []) {
+    const raw = toYmd(p.payment_date) || toBakuYmd(p.paid_at);
+    if (!raw) continue;
+    const due = canonicalMonthlyDueYmd(anchorYmd, raw);
+    if (!due) continue;
+    const list = paidByDue.get(due) || [];
+    list.push({
+      ...p,
+      payment_date: due,
+      canonical_due_ymd: due,
+      timeline_status: 'paid',
+    });
+    paidByDue.set(due, list);
+  }
+
+  const usedPaymentIds = new Set();
+  const out = [];
+
+  for (const due of dues) {
+    if (compareYmd(due, todayYmd) > 0) continue;
+    const paidList = paidByDue.get(due) || [];
+    if (paidList.length) {
+      for (const p of paidList) {
+        if (p.id) usedPaymentIds.add(String(p.id));
+        out.push(p);
+      }
+      continue;
+    }
+    out.push({
+      id: null,
+      due_ymd: due,
+      payment_date: due,
+      amount: Number.isFinite(fee) && fee > 0 ? fee : null,
+      currency: 'AZN',
+      payment_method: null,
+      status: 'pending',
+      paid_at: null,
+      notes: null,
+      period: `Aylıq: ${due}`,
+      timeline_status: 'unpaid',
+      from_other_enrollment: false,
+    });
+  }
+
+  for (const p of payments || []) {
+    if (p.id && usedPaymentIds.has(String(p.id))) continue;
+    const raw = toYmd(p.payment_date) || toBakuYmd(p.paid_at);
+    out.push({
+      ...p,
+      payment_date: raw,
+      timeline_status: 'paid',
+    });
+  }
+
+  out.sort((a, b) => {
+    const da = a.payment_date ? String(a.payment_date).slice(0, 10) : '';
+    const db = b.payment_date ? String(b.payment_date).slice(0, 10) : '';
+    if (da !== db) return compareYmd(da, db);
+    if (a.timeline_status === 'unpaid' && b.timeline_status !== 'unpaid') return 1;
+    if (b.timeline_status === 'unpaid' && a.timeline_status !== 'unpaid') return -1;
+    return String(a.id || '').localeCompare(String(b.id || ''));
+  });
+
+  return out;
 }
 
 function roundMoney(n) {
@@ -173,164 +269,4 @@ function computeMonthlyCycleProgress({ anchor_ymd, today_ymd }) {
 
 function listBillingDueDatesUpTo(anchorYmd, untilYmd) {
   const ap = parseYmdParts(anchorYmd);
-  if (!ap || !untilYmd || !/^\d{4}-\d{2}-\d{2}$/.test(String(untilYmd).slice(0, 10))) return [];
-  const until = String(untilYmd).slice(0, 10);
-  const anchorDay = ap.d;
-  const out = [];
-  let y = ap.y;
-  let mo = ap.mo;
-  for (;;) {
-    const cur = billingYmdForCalendarMonth(y, mo, anchorDay);
-    if (compareYmd(cur, until) > 0) break;
-    out.push(cur);
-    if (mo === 12) {
-      y += 1;
-      mo = 1;
-    } else {
-      mo += 1;
-    }
-  }
-  return out;
-}
-
-function countSubscriptionBillingMonths(anchorYmd, untilYmd) {
-  return listBillingDueDatesUpTo(anchorYmd, untilYmd).length;
-}
-
-/**
- * @param {object} p
- * @param {number|string} p.monthly_fee
- * @param {string|null} p.anchor_ymd
- * @param {string|null} p.today_ymd
- * @param {number|string} p.total_paid
- */
-function computeMonthlyBalanceState({ monthly_fee, anchor_ymd, today_ymd, total_paid }) {
-  const fee = Number(monthly_fee);
-  const paid = roundMoney(Number(total_paid) || 0);
-  const anchorYmd = anchor_ymd ? String(anchor_ymd).slice(0, 10) : null;
-  const todayYmd = today_ymd ? String(today_ymd).slice(0, 10) : null;
-
-  /** Ankor tarixi bu gündən sonradırsa — heç bir dövr borcu yaranmayıb; öncədən ödənilənlər "artıq balans" sayılmır */
-  if (anchorYmd && todayYmd && compareYmd(anchorYmd, todayYmd) > 0) {
-    return {
-      accrued_total: 0,
-      total_payments: paid,
-      net_balance: 0,
-      pending_debt: 0,
-      wallet_balance: 0,
-      subscription_due_total: 0,
-      subscription_total_paid: paid,
-      subscription_prepaid: 0,
-      subscription_months: 0,
-      billing_model: 'monthly_anchor',
-      payment_status: 'ödənilib',
-      billing_anchor_future: true,
-    };
-  }
-
-  let monthsCount = 0;
-  let accrued = 0;
-  if (anchorYmd && Number.isFinite(fee) && fee > 0 && todayYmd) {
-    monthsCount = countSubscriptionBillingMonths(anchorYmd, todayYmd);
-    accrued = roundMoney(monthsCount * fee);
-  }
-
-  const netBalance = roundMoney(paid - accrued);
-  const owe = roundMoney(Math.max(0, accrued - paid));
-
-  const eps = 0.005;
-  let payment_status = 'ödənilib';
-  if (owe > eps) {
-    payment_status = paid > eps ? 'gözlənilir' : 'borclu';
-  }
-
-  return {
-    accrued_total: accrued,
-    total_payments: paid,
-    net_balance: netBalance,
-    pending_debt: owe,
-    wallet_balance: roundMoney(Math.max(0, netBalance)),
-    subscription_due_total: accrued,
-    subscription_total_paid: paid,
-    subscription_prepaid: roundMoney(Math.max(0, netBalance)),
-    subscription_months: monthsCount,
-    billing_model: 'monthly_anchor',
-    payment_status,
-    billing_anchor_future: false,
-  };
-}
-
-async function getTodayBakuYmd(db) {
-  const { rows } = await db.query(
-    `SELECT to_char((CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Baku')::date, 'YYYY-MM-DD') AS ymd`
-  );
-  return rows[0]?.ymd || new Date().toISOString().slice(0, 10);
-}
-
-/** Bütün aylıq tələbələr üçün sorğu + balans (müəllim paneli, dashboard). */
-async function loadInstructorMonthlyBalanceRows(db, instructorNormId) {
-  const todayBaku = await getTodayBakuYmd(db);
-  const { rows } = await db.query(
-    `WITH pays AS (
-       SELECT enrollment_id, COALESCE(SUM(amount), 0)::numeric AS t
-       FROM payments
-       WHERE status = 'completed'
-         AND (deleted_at IS NULL)
-       GROUP BY enrollment_id
-     )
-     SELECT e.id AS enrollment_id,
-            sp.monthly_fee,
-            to_char(e.enrollment_start_date::date, 'YYYY-MM-DD') AS anchor_raw,
-            e.enrolled_at,
-            COALESCE(p.t, 0)::numeric AS total_paid
-     FROM enrollments e
-     INNER JOIN users u ON u.id = e.student_id
-     LEFT JOIN student_profiles sp ON sp.user_id = u.id
-     LEFT JOIN pays p ON p.enrollment_id = e.id
-     WHERE u.role = 'student'
-       AND u.is_active = TRUE
-       AND e.billing_type = 'monthly'
-       AND REPLACE(LOWER(TRIM(e.instructor_id::text)), '-', '') = $1`,
-    [instructorNormId]
-  );
-
-  const byEnrollment = new Map();
-  let pendingSum = 0;
-  for (const r of rows) {
-    const anchorYmd = resolveMonthlyAnchorYmd({
-      enrollment_start_date: r.anchor_raw,
-      enrolled_at: r.enrolled_at,
-      today_ymd: todayBaku,
-    });
-    const state = computeMonthlyBalanceState({
-      monthly_fee: r.monthly_fee,
-      anchor_ymd: anchorYmd,
-      today_ymd: todayBaku,
-      total_paid: r.total_paid,
-    });
-    pendingSum += state.pending_debt;
-    byEnrollment.set(String(r.enrollment_id), {
-      enrollment_id: r.enrollment_id,
-      monthly_fee: r.monthly_fee,
-      anchor_ymd: anchorYmd,
-      ...state,
-    });
-  }
-
-  return { todayBaku, byEnrollment, pendingSum: roundMoney(pendingSum) };
-}
-
-module.exports = {
-  toYmd,
-  toBakuYmd,
-  ymdToMs,
-  resolveMonthlyAnchorYmd,
-  roundMoney,
-  compareYmd,
-  listBillingDueDatesUpTo,
-  countSubscriptionBillingMonths,
-  computeMonthlyBalanceState,
-  computeMonthlyCycleProgress,
-  getTodayBakuYmd,
-  loadInstructorMonthlyBalanceRows,
-};
+  if (!ap || !untilYmd || !/^\d{4}-\d{2}-\d{2}$/.test(String(unti
