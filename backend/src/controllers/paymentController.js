@@ -228,6 +228,28 @@ function listUnconfirmedMonthlyDues({ anchorYmd, todayYmd, monthlyFee, paidDateS
   return out;
 }
 
+function supportsAnchorDueConfirmation(billingType) {
+  const bt = String(billingType || '');
+  return bt === 'monthly' || bt === '8_lessons' || bt === '12_lessons';
+}
+
+async function inferFeeForEnrollment(db, enrollmentId, profileFee) {
+  const mf = profileFee != null ? Number(profileFee) : NaN;
+  if (Number.isFinite(mf) && mf > 0) return mf;
+  const { rows } = await db.query(
+    `SELECT amount FROM payments
+     WHERE enrollment_id = $1 AND (deleted_at IS NULL)
+     ORDER BY payment_date DESC NULLS LAST, paid_at DESC NULLS LAST
+     LIMIT 5`,
+    [enrollmentId]
+  );
+  for (const r of rows || []) {
+    const a = Number(r.amount);
+    if (Number.isFinite(a) && a > 0) return roundMoney(a);
+  }
+  return NaN;
+}
+
 async function loadPaidDatesForEnrollment(db, enrollmentId, anchorYmd, todayYmd) {
   if (!anchorYmd) return new Set();
   let rows;
@@ -254,12 +276,13 @@ async function buildDueConfirmationsForInstructor(db, instructorId, todayBaku) {
   const cutoff = paymentConfirmationCutoffYmd(todayBaku);
   const { rows } = await db.query(
     `SELECT e.id AS enrollment_id, e.student_id, e.enrollment_start_date, e.enrolled_at,
-            u.full_name, u.phone, sp.monthly_fee,
+            e.billing_type, u.full_name, u.phone, sp.monthly_fee,
             to_char(sp.payment_start_date::date, 'YYYY-MM-DD') AS payment_start_date
      FROM enrollments e
      INNER JOIN users u ON u.id = e.student_id
      LEFT JOIN student_profiles sp ON sp.user_id = u.id
-     WHERE e.billing_type = 'monthly'
+     WHERE e.billing_type IN ('monthly', '8_lessons', '12_lessons')
+       AND e.enrollment_start_date IS NOT NULL
        AND u.role = 'student'
        AND u.is_active = TRUE
        AND REPLACE(LOWER(TRIM(e.instructor_id::text)), '-', '') = $1
@@ -269,7 +292,7 @@ async function buildDueConfirmationsForInstructor(db, instructorId, todayBaku) {
 
   const items = [];
   for (const r of rows || []) {
-    const fee = r.monthly_fee != null ? Number(r.monthly_fee) : NaN;
+    const fee = await inferFeeForEnrollment(db, r.enrollment_id, r.monthly_fee);
     if (!Number.isFinite(fee) || fee <= 0) continue;
     const anchorYmd = resolveMonthlyAnchorYmd({
       enrollment_start_date: r.enrollment_start_date,
@@ -1751,8 +1774,11 @@ const confirmDuePayment = async (req, res) => {
     if (req.user.role === 'instructor' && !sameUuid(en[0].instructor_id, req.user.id)) {
       return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
     }
-    if (String(en[0].billing_type) !== 'monthly') {
-      return res.status(400).json({ success: false, message: 'Yalnız aylıq abunə üçün təsdiq mövcuddur' });
+    if (!supportsAnchorDueConfirmation(en[0].billing_type)) {
+      return res.status(400).json({ success: false, message: 'Bu paket növü üçün təsdiq dəstəklənmir' });
+    }
+    if (!en[0].enrollment_start_date) {
+      return res.status(400).json({ success: false, message: 'Dərslərə başlama tarixi təyin edilməyib' });
     }
 
     const todayBaku = await getTodayBakuYmd(db);
@@ -1785,7 +1811,7 @@ const confirmDuePayment = async (req, res) => {
       return res.status(409).json({ success: false, message: 'Bu tarix üçün ödəniş artıq qeydə alınıb' });
     }
 
-    const fee = Number(en[0].monthly_fee);
+    const fee = await inferFeeForEnrollment(db, enrollment_id, en[0].monthly_fee);
     const amtRaw = req.body?.amount != null ? Number(req.body.amount) : fee;
     if (!Number.isFinite(amtRaw) || amtRaw <= 0) {
       return res.status(400).json({ success: false, message: 'Məbləğ müsbət olmalıdır' });
@@ -2027,6 +2053,7 @@ const getEnrollmentPaymentHistory = async (req, res) => {
         net_balance: st.net_balance,
         subscription_months: st.subscription_months,
         billing_anchor_future: Boolean(st.billing_anchor_future),
+        payment_confirmation_cutoff: paymentConfirmationCutoffYmd(todayBakuForAnchor),
       };
       rows = buildMonthlyPaymentHistoryTimeline({
         anchorYmd,
@@ -2048,64 +2075,4 @@ function looksLikeUuid(s) {
 
 /** Tarixçə UI: əsasən ödəniş tarixi (ankor), sonra qəbul vaxtı — köhnədən yeniyə */
 function paymentHistorySortMs(r) {
-  const pd = r.payment_date != null ? String(r.payment_date).slice(0, 10) : '';
-  if (/^\d{4}-\d{2}-\d{2}$/.test(pd)) {
-    return new Date(`${pd}T12:00:00Z`).getTime();
-  }
-  if (r.paid_at) {
-    const t = new Date(r.paid_at).getTime();
-    return Number.isFinite(t) ? t : 0;
-  }
-  return 0;
-}
-
-function comparePaymentHistoryAsc(a, b) {
-  const da = paymentHistorySortMs(a);
-  const db = paymentHistorySortMs(b);
-  if (da !== db) return da - db;
-  const ta = a.paid_at ? new Date(a.paid_at).getTime() : 0;
-  const tb = b.paid_at ? new Date(b.paid_at).getTime() : 0;
-  if (ta !== tb) return ta - tb;
-  return String(a.id || '').localeCompare(String(b.id || ''));
-}
-
-/** Müəllim/admin: təkrarlanan və ya səhv ödəniş sətirini silir (cəmlər SUM ilə avtomatik düzəlir) */
-const deletePayment = async (req, res) => {
-  try {
-    const paymentId = String(req.params.payment_id || '').trim();
-    if (!looksLikeUuid(paymentId)) {
-      return res.status(400).json({ success: false, message: 'Ödəniş ID düzgün deyil' });
-    }
-
-    const { rows } = await db.query(
-      `SELECT p.id, p.enrollment_id, e.instructor_id
-       FROM payments p
-       INNER JOIN enrollments e ON e.id = p.enrollment_id
-       WHERE p.id = $1`,
-      [paymentId]
-    );
-    if (!rows[0]) {
-      return res.status(404).json({ success: false, message: 'Ödəniş tapılmadı' });
-    }
-    if (req.user.role === 'instructor' && !sameUuid(rows[0].instructor_id, req.user.id)) {
-      return res.status(403).json({ success: false, message: 'Bu ödənişi silmək üçün icazəniz yoxdur' });
-    }
-
-    await db.query(`DELETE FROM payments WHERE id = $1`, [paymentId]);
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-};
-
-module.exports = {
-  listPayments,
-  addPayment,
-  listMyPayments,
-  getInstructorPaymentBoard,
-  getEnrollmentPaymentHistory,
-  getRestorePreview,
-  confirmRestorePayments,
-  confirmDuePayment,
-  deletePayment,
-};
+  const pd = r.payment_date != null ? String(r.payment_date)

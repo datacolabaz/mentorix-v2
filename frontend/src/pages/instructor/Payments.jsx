@@ -223,7 +223,7 @@ export default function InstructorPayments() {
 
   const dueConfirmKey = (item) => `${item.enrollment_id}|${item.due_ymd}`
 
-  const confirmDuePayment = async (item) => {
+  const confirmDuePayment = async (item, opts = {}) => {
     const key = dueConfirmKey(item)
     setConfirmingKey(key)
     try {
@@ -233,12 +233,26 @@ export default function InstructorPayments() {
         amount: item.amount,
       })
       toast('Ödəniş təsdiqləndi — tarixçəyə əlavə olundu', 'success')
+      if (opts.refreshHistory && historyRow?.enrollment_id === item.enrollment_id) {
+        await fetchHistoryForEnrollment(item.enrollment_id)
+      }
       await load()
     } catch (e) {
       toast(e?.message || 'Təsdiq alınmadı', 'error')
     } finally {
       setConfirmingKey(null)
     }
+  }
+
+  const canConfirmUnpaidDue = (p) => {
+    if (p.timeline_status !== 'unpaid') return false
+    const dueYmd = String(p.due_ymd || p.payment_date || '').slice(0, 10)
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dueYmd)) return false
+    const cutoff = String(historySummary?.payment_confirmation_cutoff || '').slice(0, 10)
+    if (!cutoff) return false
+    if (dueYmd < cutoff) return false
+    if (todayBaku && dueYmd > todayBaku) return false
+    return true
   }
 
   const fetchHistoryForEnrollment = async (enrollmentId) => {
@@ -725,7 +739,7 @@ export default function InstructorPayments() {
       <Modal
         open={historyOpen}
         onClose={() => {
-          if (!historyLoading && !deletingPaymentId) {
+          if (!historyLoading && !deletingPaymentId && !confirmingKey) {
             setHistoryOpen(false)
             setHistorySummary(null)
             setDeletingPaymentId(null)
@@ -781,138 +795,4 @@ export default function InstructorPayments() {
                   <span className="text-right text-emerald-200/95">{formatAzn(historySummary.total_payments)}</span>
                   <span className="text-gray-500">Qalıq borc</span>
                   <span
-                    className={`text-right font-semibold ${
-                      Number(historySummary.pending_debt) > 0.005 ? 'text-rose-200' : 'text-gray-400'
-                    }`}
-                  >
-                    {formatAzn(historySummary.pending_debt)}
-                  </span>
-                  {Number(historySummary.net_balance) > 0.005 && !historySummary.billing_anchor_future ? (
-                    <>
-                      <span className="text-gray-500">Artıq balans</span>
-                      <span className="text-right text-emerald-200 font-medium">
-                        {formatAzn(historySummary.net_balance)}
-                      </span>
-                    </>
-                  ) : null}
-                </div>
-              </div>
-            )}
-            {historyLoading && <p className="text-gray-500 text-xs">Yüklənir…</p>}
-            {!historyLoading && !historyPayments.length && (
-              <p className="text-gray-500 text-xs">
-                Bu qeydiyyat üçün (və eyni müəllim altında digər qeydiyyatlar üçün) sistemdə ödəniş sətri tapılmadı.
-                Əvvəl əl ilə qeyd edilməyibsə və ya köhnə hesab silinibsə, tarixçə boş ola bilər.
-              </p>
-            )}
-            {!historyLoading && historyPayments.length > 0 && (
-              <div>
-                <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">Əməliyyatlar</p>
-                <p className="text-[10px] text-gray-600 mb-2 leading-snug">
-                  Aylıq abunədə bütün dövrlər ankor üzrə (köhnədən yeniyə) göstərilir. Boz «gözləyir» = həmin ay
-                  üçün qeyd yoxdur. Eyni gün iki sətir = iki ayrı ödəniş qeydi. Səhvdirsə silin.
-                </p>
-                <ul className="space-y-2 max-h-56 overflow-y-auto pr-0.5">
-                  {(() => {
-                    const dateCounts = historyPayments.reduce((acc, p) => {
-                      const k = historyDateKey(p)
-                      acc[k] = (acc[k] || 0) + 1
-                      return acc
-                    }, {})
-                    return historyPayments.map((p) => {
-                    const dateLabel = historyDateKey(p)
-                    const dupDate = (dateCounts[dateLabel] || 0) > 1
-                    const isUnpaid = p.timeline_status === 'unpaid'
-                    const mf = historySummary?.monthly_fee != null ? Number(historySummary.monthly_fee) : NaN
-                    const partial = historySummary?.payment_plan === 'partial'
-                    const amt = Number(p.amount)
-                    const under =
-                      !isUnpaid &&
-                      partial &&
-                      Number.isFinite(mf) &&
-                      mf > 0 &&
-                      Number.isFinite(amt) &&
-                      amt > 0 &&
-                      amt + 0.005 < mf
-                    const busy = !!deletingPaymentId || historyLoading
-                    const rowKey = p.id || `due-${String(p.due_ymd || p.payment_date || dateLabel)}`
-                    return (
-                      <li
-                        key={rowKey}
-                        className={`flex items-center justify-between gap-2 border rounded-lg px-2 py-2 sm:px-3 bg-[#13112e]/60 ${
-                          isUnpaid
-                            ? 'border-amber-500/25 bg-amber-950/15'
-                            : under
-                              ? 'border-rose-500/40 bg-rose-950/20'
-                              : 'border-indigo-500/15'
-                        }`}
-                      >
-                        <div className="flex flex-col gap-0.5 shrink-0 min-w-[5.5rem]">
-                          <span
-                            className={`text-xs whitespace-nowrap ${
-                              isUnpaid ? 'text-amber-200/90' : under ? 'text-rose-200/95' : 'text-gray-400'
-                            }`}
-                          >
-                            {dateLabel}
-                          </span>
-                          {isUnpaid ? (
-                            <span className="text-[9px] font-semibold uppercase tracking-wide text-amber-300/90">
-                              gözləyir
-                            </span>
-                          ) : null}
-                          {dupDate ? (
-                            <span className="text-[9px] text-sky-300/90">eyni gün — #{String(p.id || '').slice(0, 8)}</span>
-                          ) : null}
-                          {p.period ? (
-                            <span className="text-[9px] text-gray-500 leading-tight truncate max-w-[9rem]">
-                              {p.period}
-                            </span>
-                          ) : null}
-                          {p.from_other_enrollment ? (
-                            <span className="text-[9px] font-semibold uppercase tracking-wide text-amber-300/90">
-                              köhnə qeyd.
-                            </span>
-                          ) : null}
-                        </div>
-                        <span
-                          className={`font-mono tabular-nums text-sm font-medium shrink-0 ${
-                            isUnpaid ? 'text-amber-200/80' : under ? 'text-rose-200' : 'text-white'
-                          }`}
-                        >
-                          {isUnpaid ? '—' : formatAzn(p.amount)}
-                        </span>
-                        {p.id ? (
-                          <button
-                            type="button"
-                            title="Ödənişi sil"
-                            disabled={busy}
-                            onClick={() => void deleteHistoryPayment(p.id)}
-                            className="ml-auto p-1.5 rounded-lg text-gray-500 hover:text-rose-300 hover:bg-rose-500/15 disabled:opacity-40 shrink-0 transition-colors"
-                          >
-                            {deletingPaymentId === p.id ? (
-                              <span className="text-[10px] text-gray-400 tabular-nums">…</span>
-                            ) : (
-                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
-                                <path
-                                  d="M9 3h6l1 2h5v2H3V5h5l1-2zm0 5h2v9H9V8zm4 0h2v9h-2V8zM5 8h2v10a2 2 0 002 2h8a2 2 0 002-2V8h2v10a4 4 0 01-4 4H9a4 4 0 01-4-4V8z"
-                                  fill="currentColor"
-                                />
-                              </svg>
-                            )}
-                          </button>
-                        ) : (
-                          <span className="ml-auto text-[10px] text-amber-300/70 shrink-0">təsdiq</span>
-                        )}
-                      </li>
-                    )
-                  })
-                  })()}
-                </ul>
-              </div>
-            )}
-          </div>
-        )}
-      </Modal>
-    </div>
-  )
-}
+           
