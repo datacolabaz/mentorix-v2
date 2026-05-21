@@ -777,4 +777,39 @@ export default function InstructorPayments() {
                         </div>
                         <span
                           className={`font-mono tabular-nums text-sm font-medium shrink-0 ${
-                            unde
+                            under ? 'text-rose-200' : 'text-white'
+                          }`}
+                        >
+                          {formatAzn(p.amount)}
+                        </span>
+                        <button
+                          type="button"
+                          title="Ödənişi sil"
+                          disabled={busy}
+                          onClick={() => void deleteHistoryPayment(p.id)}
+                          className="ml-auto p-1.5 rounded-lg text-gray-500 hover:text-rose-300 hover:bg-rose-500/15 disabled:opacity-40 shrink-0 transition-colors"
+                        >
+                          {deletingPaymentId === p.id ? (
+                            <span className="text-[10px] text-gray-400 tabular-nums">…</span>
+                          ) : (
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+                              <path
+                                d="M9 3h6l1 2h5v2H3V5h5l1-2zm0 5h2v9H9V8zm4 0h2v9h-2V8zM5 8h2v10a2 2 0 002 2h8a2 2 0 002-2V8h2v10a4 4 0 01-4 4H9a4 4 0 01-4-4V8z"
+                                fill="currentColor"
+                              />
+                            </svg>
+                          )}
+                        </button>
+                      </li>
+                    )
+                  })
+                  })()}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
+      </Modal>
+    </div>
+  )
+}
