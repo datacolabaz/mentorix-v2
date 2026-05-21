@@ -1777,4 +1777,23 @@ const deletePayment = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Ödəniş tapılmadı' });
     }
     if (req.user.role === 'instructor' && !sameUuid(rows[0].instructor_id, req.user.id)) {
-      return res.status(403).json({ success: false, message: 'Bu ödənişi s
+      return res.status(403).json({ success: false, message: 'Bu ödənişi silmək üçün icazəniz yoxdur' });
+    }
+
+    await db.query(`DELETE FROM payments WHERE id = $1`, [paymentId]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+module.exports = {
+  listPayments,
+  addPayment,
+  listMyPayments,
+  getInstructorPaymentBoard,
+  getEnrollmentPaymentHistory,
+  getRestorePreview,
+  confirmRestorePayments,
+  deletePayment,
+};
