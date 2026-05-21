@@ -1849,6 +1849,25 @@ const confirmDuePayment = async (req, res) => {
   }
 };
 
+/** 8/12 paket, amma ödənişlər aylıq ankor üzrə (02.09, 02.10…) — tarixçə monthly timeline ilə göstərilir */
+function usesAnchorMonthlyPaymentTimeline(enrollment, payments) {
+  const bt = String(enrollment?.billing_type || '');
+  if (bt === 'monthly') return true;
+  if (!enrollment?.enrollment_start_date) return false;
+  if (bt !== '8_lessons' && bt !== '12_lessons') return false;
+  return (payments || []).length > 0;
+}
+
+function inferMonthlyFeeForTimeline(profileFee, payments) {
+  const mf = profileFee != null ? Number(profileFee) : NaN;
+  if (Number.isFinite(mf) && mf > 0) return mf;
+  const amounts = (payments || [])
+    .map((p) => Number(p.amount))
+    .filter((n) => Number.isFinite(n) && n > 0);
+  if (!amounts.length) return NaN;
+  return amounts[0];
+}
+
 function parseOptionalPaymentDateYmd(v) {
   if (v === undefined || v === null || v === '') return null;
   const s = String(v).trim().slice(0, 10);
@@ -1909,8 +1928,8 @@ const getEnrollmentPaymentHistory = async (req, res) => {
     }
 
     let rowsRelated = [];
-    const isMonthly = String(en[0].billing_type) === 'monthly';
-    if (studentId && instructorId && !isMonthly) {
+    const useAnchorTimeline = usesAnchorMonthlyPaymentTimeline(en[0], rowsPrimary);
+    if (studentId && instructorId && !useAnchorTimeline) {
       try {
         ({ rows: rowsRelated } = await db.query(
           `SELECT p.id, p.amount, p.currency, p.payment_method, p.status, p.payment_date, p.paid_at, p.notes, p.period
@@ -1952,9 +1971,9 @@ const getEnrollmentPaymentHistory = async (req, res) => {
     rows.sort(comparePaymentHistoryAsc);
 
     let balance_summary = null;
-    const mf = en[0].monthly_fee != null ? Number(en[0].monthly_fee) : NaN;
-    if (en[0].billing_type === 'monthly' && Number.isFinite(mf) && mf > 0) {
-      const todayBaku = await getTodayBakuYmd(db);
+    const mf = inferMonthlyFeeForTimeline(en[0].monthly_fee, rows);
+    if (useAnchorTimeline && Number.isFinite(mf) && mf > 0) {
+      const todayBakuForAnchor = await getTodayBakuYmd(db);
       let pr;
       try {
         ({ rows: pr } = await db.query(
@@ -1974,7 +1993,6 @@ const getEnrollmentPaymentHistory = async (req, res) => {
         ));
       }
       const paid = Number(pr[0]?.t) || 0;
-      const todayBakuForAnchor = await getTodayBakuYmd(db);
       const anchorYmd = resolveMonthlyAnchorYmd({
         enrollment_start_date: en[0].enrollment_start_date,
         enrolled_at: en[0].enrolled_at,
@@ -1998,9 +2016,11 @@ const getEnrollmentPaymentHistory = async (req, res) => {
         billing_timing: en[0].billing_timing || 'postpaid',
         payment_plan: en[0].payment_plan || 'full',
         anchor_ymd: anchorYmd,
+        billing_type: en[0].billing_type,
         schedule_last_due_ymd: dues.length ? dues[dues.length - 1] : null,
         last_paid_due_ymd: lastPaidDueYmd(paidByDue),
         payment_count_allocated: paidByDue.size,
+        db_payment_rows: rows.length,
         accrued_total: st.accrued_total,
         total_payments: st.total_payments,
         pending_debt: st.pending_debt,

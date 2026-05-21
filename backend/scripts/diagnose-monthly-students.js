@@ -25,7 +25,9 @@ async function diagnoseStudent(row, todayBaku) {
   });
   const dues = listBillingDueDatesUpTo(anchorYmd, todayBaku);
   const { rows: payments } = await db.query(
-    `SELECT id, amount, status, payment_date, paid_at, notes, period
+    `SELECT id, amount, status,
+            to_char(payment_date::date, 'YYYY-MM-DD') AS payment_date,
+            paid_at, notes, period
      FROM payments
      WHERE enrollment_id = $1
        AND (deleted_at IS NULL)
@@ -38,7 +40,9 @@ async function diagnoseStudent(row, todayBaku) {
     payments,
   });
   const lastPaid = lastPaidDueYmd(paidByDue);
-  const rawDates = (payments || []).map((p) => String(p.payment_date || '').slice(0, 10)).filter(Boolean);
+  const rawDates = (payments || [])
+    .map((p) => String(p.payment_date || '').slice(0, 10))
+    .filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d));
 
   return {
     full_name: row.full_name,
