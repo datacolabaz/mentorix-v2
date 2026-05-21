@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { format, isValid, parseISO } from 'date-fns'
 import api from '../../lib/api'
 import Card from '../../components/common/Card'
@@ -115,6 +115,18 @@ function primaryPaymentDateLabel(p) {
 function hasSeparatePaymentDate(p) {
   const ymd = p.payment_date != null ? String(p.payment_date).slice(0, 10) : ''
   return /^\d{4}-\d{2}-\d{2}$/.test(ymd) && Boolean(p.paid_at)
+}
+
+function paymentHistorySortMs(p) {
+  const ymd = p.payment_date != null ? String(p.payment_date).slice(0, 10) : ''
+  if (/^\d{4}-\d{2}-\d{2}$/.test(ymd)) {
+    return new Date(`${ymd}T12:00:00Z`).getTime()
+  }
+  if (p.paid_at) {
+    const t = new Date(p.paid_at).getTime()
+    return Number.isFinite(t) ? t : 0
+  }
+  return 0
 }
 
 /** Bu qeyd növləri tələbə üçün göstərilmir (yalnız müəllim/admin tərəfi) */
@@ -259,6 +271,16 @@ export default function StudentPayments() {
   }
 
   const hasAnyPayments = payments.length > 0
+  const paymentsChronological = useMemo(
+    () =>
+      [...payments].sort((a, b) => {
+        const da = paymentHistorySortMs(a)
+        const db = paymentHistorySortMs(b)
+        if (da !== db) return da - db
+        return String(a.id || '').localeCompare(String(b.id || ''))
+      }),
+    [payments]
+  )
   const totalPaid = payments.filter(isCompletedPayment).reduce((s, p) => s + Number(p.amount || 0), 0)
 
   const lwd = enrollment ? normalizeWeekdays(enrollment.lesson_weekdays) : []
@@ -512,9 +534,9 @@ export default function StudentPayments() {
             </div>
           )}
 
-          {payments.length ? (
+          {paymentsChronological.length ? (
             <ul className="space-y-2">
-              {payments.map((p) => {
+              {paymentsChronological.map((p) => {
                 const noteForStudent = displayNotesForStudent(p.notes)
                 return (
                 <li
@@ -621,24 +643,4 @@ export default function StudentPayments() {
                                   key={`${cyc}:${ls.lesson_number}`}
                                   className="flex items-center justify-between gap-2 rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard/40 px-3 py-2 text-sm"
                                 >
-                                  <span className="text-token-textMain">
-                                    Dərs {ls.lesson_number || '—'}: <span className="font-mono">{ymd}</span>
-                                  </span>
-                                  <span className={`text-xs font-semibold ${st.cls}`}>{st.text}</span>
-                                </li>
-                              )
-                            })}
-                          </ul>
-                        </div>
-                      )}
-                    </Card>
-                  )
-                })}
-              </div>
-            )}
-          </div>
-        </Card>
-      )}
-    </div>
-  )
-}
+          

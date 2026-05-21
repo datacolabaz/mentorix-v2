@@ -31,6 +31,31 @@ function normPhoneDigits(v) {
   return String(v ?? '').replace(/\D/g, '')
 }
 
+function paymentHistorySortMs(p) {
+  const pd = p.payment_date != null ? String(p.payment_date).slice(0, 10) : ''
+  if (/^\d{4}-\d{2}-\d{2}$/.test(pd)) {
+    return new Date(`${pd}T12:00:00Z`).getTime()
+  }
+  if (p.paid_at) {
+    const t = new Date(p.paid_at).getTime()
+    return Number.isFinite(t) ? t : 0
+  }
+  return 0
+}
+
+function sortPaymentsChronologically(list) {
+  return [...(list || [])].sort((a, b) => {
+    const da = paymentHistorySortMs(a)
+    const db = paymentHistorySortMs(b)
+    if (da !== db) return da - db
+    return String(a.id || '').localeCompare(String(b.id || ''))
+  })
+}
+
+function historyDateKey(p) {
+  return formatDdMmYyyy(p.payment_date || p.paid_at)
+}
+
 /** Ad və telefon üzrə (case-insensitive, +994 / boşluq tolerant) */
 function matchesStudentSearch(student, searchTerm) {
   const q = String(searchTerm ?? '').trim().toLowerCase()
@@ -197,7 +222,7 @@ export default function InstructorPayments() {
     setHistoryLoading(true)
     try {
       const d = await api.get('/payments/enrollment/' + encodeURIComponent(enrollmentId) + '/history')
-      setHistoryPayments(Array.isArray(d.payments) ? d.payments : [])
+      setHistoryPayments(sortPaymentsChronologically(d.payments))
       setHistorySummary(d.balance_summary ?? null)
     } catch (e) {
       toast(e?.message || 'Tarixçə yüklənmədi', 'error')
@@ -699,12 +724,19 @@ export default function InstructorPayments() {
               <div>
                 <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">Əməliyyatlar</p>
                 <p className="text-[10px] text-gray-600 mb-2 leading-snug">
-                  Təkrarlanan və ya səhv qeydi silin — cəm avtomatik yenilənir (ümumi gəlir də SQL üzrə düzəlir).
-                  «Köhnə qeydiyyat» ödənişi siləndə həmin qeydiyyatın cəmi dəyişir; bu sətirdə yalnız arxiv üçün
-                  göstərilir.
+                  Siyahı köhnədən yeniyə (ödəniş tarixinə görə) sıralanır. Eyni gün iki sətir = iki ayrı qeyd
+                  (məs. keçmiş ödəniş bərpası + əl ilə qeyd, və ya hissəli ödəniş). Səhvdirsə silin.
                 </p>
                 <ul className="space-y-2 max-h-56 overflow-y-auto pr-0.5">
-                  {historyPayments.map((p) => {
+                  {(() => {
+                    const dateCounts = historyPayments.reduce((acc, p) => {
+                      const k = historyDateKey(p)
+                      acc[k] = (acc[k] || 0) + 1
+                      return acc
+                    }, {})
+                    return historyPayments.map((p) => {
+                    const dateLabel = historyDateKey(p)
+                    const dupDate = (dateCounts[dateLabel] || 0) > 1
                     const mf = historySummary?.monthly_fee != null ? Number(historySummary.monthly_fee) : NaN
                     const partial = historySummary?.payment_plan === 'partial'
                     const amt = Number(p.amount)
@@ -727,8 +759,16 @@ export default function InstructorPayments() {
                           <span
                             className={`text-xs whitespace-nowrap ${under ? 'text-rose-200/95' : 'text-gray-400'}`}
                           >
-                            {formatDdMmYyyy(p.payment_date || p.paid_at)}
+                            {dateLabel}
                           </span>
+                          {dupDate ? (
+                            <span className="text-[9px] text-sky-300/90">eyni gün — #{String(p.id || '').slice(0, 8)}</span>
+                          ) : null}
+                          {p.period ? (
+                            <span className="text-[9px] text-gray-500 leading-tight truncate max-w-[9rem]">
+                              {p.period}
+                            </span>
+                          ) : null}
                           {p.from_other_enrollment ? (
                             <span className="text-[9px] font-semibold uppercase tracking-wide text-amber-300/90">
                               köhnə qeyd.
@@ -737,38 +777,4 @@ export default function InstructorPayments() {
                         </div>
                         <span
                           className={`font-mono tabular-nums text-sm font-medium shrink-0 ${
-                            under ? 'text-rose-200' : 'text-white'
-                          }`}
-                        >
-                          {formatAzn(p.amount)}
-                        </span>
-                        <button
-                          type="button"
-                          title="Ödənişi sil"
-                          disabled={busy}
-                          onClick={() => void deleteHistoryPayment(p.id)}
-                          className="ml-auto p-1.5 rounded-lg text-gray-500 hover:text-rose-300 hover:bg-rose-500/15 disabled:opacity-40 shrink-0 transition-colors"
-                        >
-                          {deletingPaymentId === p.id ? (
-                            <span className="text-[10px] text-gray-400 tabular-nums">…</span>
-                          ) : (
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
-                              <path
-                                d="M9 3h6l1 2h5v2H3V5h5l1-2zm0 5h2v9H9V8zm4 0h2v9h-2V8zM5 8h2v10a2 2 0 002 2h8a2 2 0 002-2V8h2v10a4 4 0 01-4 4H9a4 4 0 01-4-4V8z"
-                                fill="currentColor"
-                              />
-                            </svg>
-                          )}
-                        </button>
-                      </li>
-                    )
-                  })}
-                </ul>
-              </div>
-            )}
-          </div>
-        )}
-      </Modal>
-    </div>
-  )
-}
+                            unde

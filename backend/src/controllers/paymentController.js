@@ -773,7 +773,7 @@ const listMyPayments = async (req, res) => {
          INNER JOIN enrollments e ON e.id = p.enrollment_id AND e.student_id = $1
          LEFT JOIN users iu ON iu.id = e.instructor_id
          WHERE (p.deleted_at IS NULL)
-         ORDER BY COALESCE(p.paid_at, p.payment_date::timestamptz) DESC NULLS LAST, p.id DESC`,
+         ORDER BY p.payment_date ASC NULLS LAST, COALESCE(p.paid_at, p.payment_date::timestamptz) ASC NULLS LAST, p.id ASC`,
         [studentId]
       );
       payments = rows;
@@ -788,7 +788,7 @@ const listMyPayments = async (req, res) => {
            INNER JOIN enrollments e ON e.id = p.enrollment_id AND e.student_id = $1
            LEFT JOIN users iu ON iu.id = e.instructor_id
            WHERE (p.deleted_at IS NULL)
-           ORDER BY COALESCE(p.paid_at, p.payment_date::timestamptz) DESC NULLS LAST, p.id DESC`,
+           ORDER BY p.payment_date ASC NULLS LAST, COALESCE(p.paid_at, p.payment_date::timestamptz) ASC NULLS LAST, p.id ASC`,
           [studentId]
         );
         payments = rows;
@@ -1624,7 +1624,7 @@ const getEnrollmentPaymentHistory = async (req, res) => {
          FROM payments
          WHERE enrollment_id = $1
            AND (deleted_at IS NULL)
-         ORDER BY COALESCE(paid_at, payment_date::timestamptz) DESC NULLS LAST, id DESC`,
+         ORDER BY payment_date ASC NULLS LAST, COALESCE(paid_at, payment_date::timestamptz) ASC NULLS LAST, id ASC`,
         [enrollment_id]
       ));
     } catch (e) {
@@ -1634,7 +1634,7 @@ const getEnrollmentPaymentHistory = async (req, res) => {
          FROM payments
          WHERE enrollment_id = $1
            AND (deleted_at IS NULL)
-         ORDER BY COALESCE(paid_at, payment_date::timestamptz) DESC NULLS LAST, id DESC`,
+         ORDER BY payment_date ASC NULLS LAST, COALESCE(paid_at, payment_date::timestamptz) ASC NULLS LAST, id ASC`,
         [enrollment_id]
       ));
     }
@@ -1650,7 +1650,7 @@ const getEnrollmentPaymentHistory = async (req, res) => {
              AND e2.student_id = $2
              AND e2.instructor_id = $3
              AND (p.deleted_at IS NULL)
-           ORDER BY COALESCE(p.paid_at, p.payment_date::timestamptz) DESC NULLS LAST, p.id DESC`,
+           ORDER BY p.payment_date ASC NULLS LAST, COALESCE(p.paid_at, p.payment_date::timestamptz) ASC NULLS LAST, p.id ASC`,
           [enrollment_id, studentId, instructorId]
         ));
       } catch (e) {
@@ -1663,7 +1663,7 @@ const getEnrollmentPaymentHistory = async (req, res) => {
              AND e2.student_id = $2
              AND e2.instructor_id = $3
              AND (p.deleted_at IS NULL)
-           ORDER BY COALESCE(p.paid_at, p.payment_date::timestamptz) DESC NULLS LAST, p.id DESC`,
+           ORDER BY p.payment_date ASC NULLS LAST, COALESCE(p.paid_at, p.payment_date::timestamptz) ASC NULLS LAST, p.id ASC`,
           [enrollment_id, studentId, instructorId]
         ));
       }
@@ -1679,16 +1679,7 @@ const getEnrollmentPaymentHistory = async (req, res) => {
     };
     for (const r of rowsPrimary || []) pushRow(r, false);
     for (const r of rowsRelated || []) pushRow(r, true);
-    rows.sort((a, b) => {
-      const ta = a.paid_at ? new Date(a.paid_at).getTime() : 0;
-      const tb = b.paid_at ? new Date(b.paid_at).getTime() : 0;
-      const da = a.payment_date ? new Date(String(a.payment_date).slice(0, 10) + 'T12:00:00Z').getTime() : 0;
-      const db = b.payment_date ? new Date(String(b.payment_date).slice(0, 10) + 'T12:00:00Z').getTime() : 0;
-      const ca = Math.max(ta || 0, da || 0);
-      const cb = Math.max(tb || 0, db || 0);
-      if (cb !== ca) return cb - ca;
-      return String(b.id || '').localeCompare(String(a.id || ''));
-    });
+    rows.sort(comparePaymentHistoryAsc);
 
     let balance_summary = null;
     const mf = en[0].monthly_fee != null ? Number(en[0].monthly_fee) : NaN;
@@ -1744,6 +1735,29 @@ function looksLikeUuid(s) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(s || '').trim());
 }
 
+/** Tarixçə UI: əsasən ödəniş tarixi (ankor), sonra qəbul vaxtı — köhnədən yeniyə */
+function paymentHistorySortMs(r) {
+  const pd = r.payment_date != null ? String(r.payment_date).slice(0, 10) : '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(pd)) {
+    return new Date(`${pd}T12:00:00Z`).getTime();
+  }
+  if (r.paid_at) {
+    const t = new Date(r.paid_at).getTime();
+    return Number.isFinite(t) ? t : 0;
+  }
+  return 0;
+}
+
+function comparePaymentHistoryAsc(a, b) {
+  const da = paymentHistorySortMs(a);
+  const db = paymentHistorySortMs(b);
+  if (da !== db) return da - db;
+  const ta = a.paid_at ? new Date(a.paid_at).getTime() : 0;
+  const tb = b.paid_at ? new Date(b.paid_at).getTime() : 0;
+  if (ta !== tb) return ta - tb;
+  return String(a.id || '').localeCompare(String(b.id || ''));
+}
+
 /** Müəllim/admin: təkrarlanan və ya səhv ödəniş sətirini silir (cəmlər SUM ilə avtomatik düzəlir) */
 const deletePayment = async (req, res) => {
   try {
@@ -1763,23 +1777,4 @@ const deletePayment = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Ödəniş tapılmadı' });
     }
     if (req.user.role === 'instructor' && !sameUuid(rows[0].instructor_id, req.user.id)) {
-      return res.status(403).json({ success: false, message: 'Bu ödənişi silmək üçün icazəniz yoxdur' });
-    }
-
-    await db.query(`DELETE FROM payments WHERE id = $1`, [paymentId]);
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-};
-
-module.exports = {
-  listPayments,
-  addPayment,
-  listMyPayments,
-  getInstructorPaymentBoard,
-  getEnrollmentPaymentHistory,
-  getRestorePreview,
-  confirmRestorePayments,
-  deletePayment,
-};
+      return res.status(403).json({ success: false, message: 'Bu ödənişi s
