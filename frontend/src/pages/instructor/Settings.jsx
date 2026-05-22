@@ -359,11 +359,11 @@ export default function InstructorSettings() {
       <Card className={settingsCardCls}>
         <h2 className={cardTitleCls}>Paketini dəyiş</h2>
         <p className={cardTextCls}>
-          <span className="text-gray-200 font-medium">Aktiv paket:</span>{' '}
-          <span className="text-white font-semibold">
+          <span className={theme === 'dark' ? 'text-gray-200' : 'text-token-textMuted'}>Aktiv paket:</span>{' '}
+          <span className="font-semibold text-token-textMain">
             {currentPlanObj?.title || String(currentPlanId || '').toUpperCase()}
           </span>
-          <span className="text-gray-500"> — {currentPlanPricingLine}</span>
+          <span className={theme === 'dark' ? 'text-gray-500' : 'text-token-textMuted'}> — {currentPlanPricingLine}</span>
         </p>
         <p className={cardTextCls}>
           SADƏ (pulsuz) paketdə vaxt limiti yoxdur; limitlər istifadəyə əsaslanır və hər hansı limit dolduqda daha geniş
@@ -427,17 +427,17 @@ export default function InstructorSettings() {
                 <div className="flex w-full shrink-0 items-start justify-between gap-2">
                   <div className="flex min-h-[22px] min-w-0 flex-1 flex-wrap items-center gap-2">
                     {isCurrent ? (
-                      <span className="rounded-full bg-emerald-500/25 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-100 ring-1 ring-emerald-500/40">
+                      <span className="rounded-full bg-emerald-500/25 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-900 dark:text-emerald-100 ring-1 ring-emerald-500/40">
                         Aktiv paket
                       </span>
                     ) : isProHighlight ? (
-                      <span className="rounded-full bg-primary/30 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-indigo-100 ring-1 ring-primary/35">
+                      <span className="rounded-full bg-primary/30 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-indigo-900 dark:text-indigo-100 ring-1 ring-primary/35">
                         Ən populyar
                       </span>
                     ) : null}
                   </div>
                   {billingInterval === 'yearly' && priceBox?.isPaid ? (
-                    <span className="shrink-0 rounded-full bg-emerald-500/18 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-emerald-100">
+                    <span className="shrink-0 rounded-full bg-emerald-500/18 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-emerald-800 dark:text-emerald-100">
                       −20%
                     </span>
                   ) : null}
@@ -477,7 +477,16 @@ export default function InstructorSettings() {
 
                 <div className="mt-auto shrink-0 border-t border-[color:var(--border-subtle)]/60 pt-4">
                   <Button
-                    className="w-full justify-center duration-200 ease-out hover:brightness-[1.06]"
+                    className={[
+                      'w-full justify-center duration-200 ease-out',
+                      !isCurrent ? 'hover:brightness-[1.06]' : '',
+                      isCurrent && theme === 'light'
+                        ? '!bg-emerald-50 !text-emerald-950 !border-emerald-500/35 !opacity-100'
+                        : '',
+                      isCurrent && theme === 'dark'
+                        ? '!bg-emerald-500/15 !text-emerald-100 !border-emerald-500/35 !opacity-100'
+                        : '',
+                    ].join(' ')}
                     variant={isCurrent ? 'secondary' : p.highlight ? 'primary' : 'secondary'}
                     loading={planBusy}
                     disabled={btnDisabled}

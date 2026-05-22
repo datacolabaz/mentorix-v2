@@ -42,7 +42,7 @@ export default function PricingBillingIntervalToggle({ value, onChange, theme = 
           onClick={() => onChange('yearly')}
         >
           İllik
-          <span className="ml-1 inline-block rounded-full bg-emerald-500/22 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-emerald-100">
+          <span className="ml-1 inline-block rounded-full bg-emerald-500/22 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-emerald-900 dark:text-emerald-100">
             −20%
           </span>
         </button>
