@@ -4,6 +4,8 @@ import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from 'react-leaf
 import api from '../../lib/api'
 import Brand from '../../components/common/Brand'
 import InstructorMapMarker from '../../components/public/InstructorMapMarker'
+import GoogleInstructorSearchMap from '../../components/public/GoogleInstructorSearchMap'
+import { isGoogleMapsConfigured } from '../../lib/googleMapsLoader'
 import { BAKU_BBOX, BAKU_CENTER, distanceKm, formatDistanceKm } from '../../lib/geo'
 import { reverseGeocodeLabel } from '../../lib/reverseGeocode'
 
@@ -335,6 +337,7 @@ export default function InstructorMapSearch() {
 
   const count = instructorsSorted.length
   const isEmpty = hasFetched && !loading && count === 0 && !fetchError
+  const useGoogleMap = isGoogleMapsConfigured()
 
   return (
     <div className="min-h-[100svh] bg-[#0b0b0b] text-white flex flex-col">
@@ -370,44 +373,59 @@ export default function InstructorMapSearch() {
       <div className="flex-1 flex flex-col lg:flex-row min-h-0">
         {!listOnly ? (
           <div className="w-full lg:w-[58%] h-[42vh] lg:h-auto lg:min-h-[420px] border-b lg:border-b-0 lg:border-r border-white/10 relative z-0">
-            <MapContainer
-              center={BAKU_CENTER}
-              zoom={11}
-              className="h-full w-full z-0"
-              scrollWheelZoom
-              attributionControl={false}
-            >
-              <TileLayer url={DARK_TILE} attribution="" />
-              <MapInvalidateSize />
-              <BoundsTracker kind={kind} onBounds={onBounds} enabled={!radiusMode} />
-              {flyTarget ? <FlyTo target={flyTarget} /> : null}
-              {distanceOrigin === 'user' && userLocated ? (
-                <CircleMarker
-                  center={[refPoint.lat, refPoint.lng]}
-                  radius={8}
-                  pathOptions={{
-                    color: '#60a5fa',
-                    fillColor: '#3b82f6',
-                    fillOpacity: 0.95,
-                    weight: 3,
-                  }}
-                >
-                  <Popup>
-                    <div className="text-gray-900 text-xs font-semibold">Siz buradasınız</div>
-                    {userLocationLabel ? <div className="text-gray-600 text-[11px]">{userLocationLabel}</div> : null}
-                  </Popup>
-                </CircleMarker>
-              ) : null}
-              {instructorsSorted.map((p) => (
-                <InstructorMapMarker
-                  key={String(p.id)}
-                  instructor={p}
-                  isNearest={p.id === nearestId}
-                  selected={selectedId === p.id}
-                  onSelect={focusInstructor}
-                />
-              ))}
-            </MapContainer>
+            {useGoogleMap ? (
+              <GoogleInstructorSearchMap
+                className="h-full w-full"
+                instructors={instructorsSorted}
+                refPoint={refPoint}
+                showUserLocation={distanceOrigin === 'user' && userLocated}
+                selectedId={selectedId}
+                nearestId={nearestId}
+                flyTarget={flyTarget}
+                radiusMode={radiusMode}
+                onBounds={onBounds}
+                onSelect={focusInstructor}
+              />
+            ) : (
+              <MapContainer
+                center={BAKU_CENTER}
+                zoom={11}
+                className="h-full w-full z-0"
+                scrollWheelZoom
+                attributionControl={false}
+              >
+                <TileLayer url={DARK_TILE} attribution="" />
+                <MapInvalidateSize />
+                <BoundsTracker kind={kind} onBounds={onBounds} enabled={!radiusMode} />
+                {flyTarget ? <FlyTo target={flyTarget} /> : null}
+                {distanceOrigin === 'user' && userLocated ? (
+                  <CircleMarker
+                    center={[refPoint.lat, refPoint.lng]}
+                    radius={8}
+                    pathOptions={{
+                      color: '#60a5fa',
+                      fillColor: '#3b82f6',
+                      fillOpacity: 0.95,
+                      weight: 3,
+                    }}
+                  >
+                    <Popup>
+                      <div className="text-gray-900 text-xs font-semibold">Siz buradasınız</div>
+                      {userLocationLabel ? <div className="text-gray-600 text-[11px]">{userLocationLabel}</div> : null}
+                    </Popup>
+                  </CircleMarker>
+                ) : null}
+                {instructorsSorted.map((p) => (
+                  <InstructorMapMarker
+                    key={String(p.id)}
+                    instructor={p}
+                    isNearest={p.id === nearestId}
+                    selected={selectedId === p.id}
+                    onSelect={focusInstructor}
+                  />
+                ))}
+              </MapContainer>
+            )}
             {nearestInstructor && distanceOrigin === 'user' && !loading ? (
               <div className="absolute top-3 left-3 right-3 sm:right-auto sm:max-w-sm z-[400] pointer-events-auto">
                 <button
