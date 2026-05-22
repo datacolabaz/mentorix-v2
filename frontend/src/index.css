@@ -91,6 +91,10 @@
   --border-subtle: rgba(255, 255, 255, 0.06);
   --text-main: 255 255 255;
   --text-muted: 148 163 184; /* slate-400 */
+  --field-bg: 19 17 46; /* #13112e */
+  --field-text: 255 255 255;
+  --field-border: rgba(99, 102, 241, 0.28);
+  --field-placeholder: 148 163 184;
 }
 
 .theme-light {
@@ -101,6 +105,80 @@
   --border-subtle: rgba(15, 23, 42, 0.08);
   --text-main: 11 18 32;
   --text-muted: 100 116 139;
+  --field-bg: 255 255 255;
+  --field-text: 11 18 32;
+  --field-border: rgba(15, 23, 42, 0.14);
+  --field-placeholder: 100 116 139;
+}
+
+/* Form controls: gündüz = ağ fon + tünd mətn (bütün panel) */
+.theme-light input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='color']):not([type='file']):not([type='button']):not([type='submit']):not([type='reset']):not([type='hidden']):not([type='image']),
+.theme-light textarea,
+.theme-light select,
+.theme-dark input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='color']):not([type='file']):not([type='button']):not([type='submit']):not([type='reset']):not([type='hidden']):not([type='image']),
+.theme-dark textarea,
+.theme-dark select {
+  color: rgb(var(--field-text)) !important;
+  -webkit-text-fill-color: rgb(var(--field-text)) !important;
+  background-color: rgb(var(--field-bg)) !important;
+  border-color: var(--field-border) !important;
+  caret-color: rgb(var(--field-text));
+}
+
+.theme-light input::placeholder,
+.theme-light textarea::placeholder,
+.theme-dark input::placeholder,
+.theme-dark textarea::placeholder {
+  color: rgb(var(--field-placeholder)) !important;
+  -webkit-text-fill-color: rgb(var(--field-placeholder)) !important;
+  opacity: 1;
+}
+
+.theme-light select option,
+.theme-dark select option {
+  background-color: rgb(var(--field-bg));
+  color: rgb(var(--field-text));
+}
+
+.theme-light input:-webkit-autofill,
+.theme-light input:-webkit-autofill:hover,
+.theme-light input:-webkit-autofill:focus,
+.theme-light textarea:-webkit-autofill,
+.theme-light textarea:-webkit-autofill:focus {
+  -webkit-text-fill-color: rgb(var(--field-text)) !important;
+  -webkit-box-shadow: 0 0 0 1000px rgb(var(--field-bg)) inset !important;
+  box-shadow: 0 0 0 1000px rgb(var(--field-bg)) inset !important;
+}
+
+.theme-dark input:-webkit-autofill,
+.theme-dark input:-webkit-autofill:hover,
+.theme-dark input:-webkit-autofill:focus,
+.theme-dark textarea:-webkit-autofill,
+.theme-dark textarea:-webkit-autofill:focus {
+  -webkit-text-fill-color: rgb(var(--field-text)) !important;
+  -webkit-box-shadow: 0 0 0 1000px rgb(var(--field-bg)) inset !important;
+  box-shadow: 0 0 0 1000px rgb(var(--field-bg)) inset !important;
+}
+
+@layer components {
+  .mx-field {
+    @apply rounded-xl border px-3 py-2 text-sm outline-none transition-[border-color,box-shadow] w-full;
+    color: rgb(var(--field-text));
+    background-color: rgb(var(--field-bg));
+    border-color: var(--field-border);
+  }
+  .mx-field::placeholder {
+    color: rgb(var(--field-placeholder));
+    opacity: 1;
+  }
+  .mx-field:focus {
+    border-color: rgba(0, 230, 118, 0.45);
+    box-shadow: 0 0 0 1px rgba(0, 230, 118, 0.2);
+  }
+  .mx-field:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
 }
 
 @keyframes fade-up {

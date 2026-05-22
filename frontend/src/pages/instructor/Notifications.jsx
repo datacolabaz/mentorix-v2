@@ -602,7 +602,7 @@ export default function InstructorNotifications() {
                 value={smsSearch}
                 onChange={(e) => setSmsSearch(e.target.value)}
                 placeholder="Ad və ya telefon (məs: Gözel / 559815866)"
-                className="w-full sm:w-72 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white placeholder:text-token-textMuted focus:border-primary/40 outline-none"
+                className="mx-field w-full sm:w-72"
                 aria-label="SMS tarixçəsində axtarış"
               />
               <FilterTabs tabs={smsTimeTabs} activeId={smsTimeFilter} onChange={(id) => setSmsTimeFilter(id)} />
