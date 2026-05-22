@@ -42,4 +42,29 @@ function stylesByStatus(theme) {
 
 export default function BillingBanner({ status, banner, cta, onCta }) {
   const { theme } = useUiStore()
-  const s = String(status
+  const s = String(status || 'active')
+  const meta = stylesByStatus(theme)[s]
+  if (!meta) return null
+  if (!banner && !cta) return null
+  const ctaLabel = cta && typeof cta === 'object' ? cta.label : cta
+
+  return (
+    <div className={`rounded-2xl border px-4 py-3 flex flex-wrap items-center justify-between gap-3 ${meta.wrap}`}>
+      <div className="min-w-0">
+        <div className="text-xs font-bold uppercase tracking-wide opacity-90">{meta.title}</div>
+        <div className="text-sm font-semibold break-words">{banner || '—'}</div>
+      </div>
+      {ctaLabel ? (
+        <Button
+          variant={s === 'warning' || s === 'grace' ? 'secondary' : 'primary'}
+          size="sm"
+          onClick={onCta}
+          className={meta.ctaClass || ''}
+        >
+          {ctaLabel}
+        </Button>
+      ) : null}
+    </div>
+  )
+}
+

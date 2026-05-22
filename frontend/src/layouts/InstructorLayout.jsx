@@ -570,4 +570,30 @@ export default function InstructorLayout() {
               setVerifyBusy(true)
               try {
                 await api.post('/auth/phone/verify/send', { phone: verifyPhone })
-                
+                toast('OTP yenidən göndərildi', 'success')
+              } catch (e) {
+                toast(e?.message || 'OTP göndərilmədi', 'error')
+              } finally {
+                setVerifyBusy(false)
+              }
+            }}
+            className="w-full text-center text-xs text-gray-500 hover:text-white disabled:opacity-50"
+          >
+            OTP yenidən göndər
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setVerifyStep('phone')
+              setVerifyCode('')
+            }}
+            className="w-full text-center text-xs text-gray-500 hover:text-white"
+          >
+            ← Geri
+          </button>
+        </form>
+      )}
+    </Modal>
+    </>
+  )
+}

@@ -717,4 +717,19 @@ export default function InstructorNotifications() {
               <div className="flex items-start gap-3 sm:gap-4 min-w-0">
                 <span className="text-2xl shrink-0">{LEVEL[alert.level].icon}</span>
                 <div className="flex-1 min-w-0">
-                  <span className={`inline-block px-2 py-0.5 rounded-lg text-xs font-semibold mb-
+                  <span className={`inline-block px-2 py-0.5 rounded-lg text-xs font-semibold mb-2 ${LEVEL[alert.level].badge}`}>
+                    {alert.level === 'critical' ? 'Kritik' : 'Xəbərdarlıq'}
+                  </span>
+                  <p className="text-sm text-token-textMain break-words">{alert.message}</p>
+                  <p className="text-xs text-token-textMuted mt-1">
+                    {alert.type === 'sms' ? '📱 SMS' : alert.type === 'ram' ? '🧠 RAM' : '💾 Storage'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
