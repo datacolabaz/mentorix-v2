@@ -2075,4 +2075,64 @@ function looksLikeUuid(s) {
 
 /** Tarixçə UI: əsasən ödəniş tarixi (ankor), sonra qəbul vaxtı — köhnədən yeniyə */
 function paymentHistorySortMs(r) {
-  const pd = r.payment_date != null ? String(r.payment_date)
+  const pd = r.payment_date != null ? String(r.payment_date).slice(0, 10) : '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(pd)) {
+    return new Date(`${pd}T12:00:00Z`).getTime();
+  }
+  if (r.paid_at) {
+    const t = new Date(r.paid_at).getTime();
+    return Number.isFinite(t) ? t : 0;
+  }
+  return 0;
+}
+
+function comparePaymentHistoryAsc(a, b) {
+  const da = paymentHistorySortMs(a);
+  const db = paymentHistorySortMs(b);
+  if (da !== db) return da - db;
+  const ta = a.paid_at ? new Date(a.paid_at).getTime() : 0;
+  const tb = b.paid_at ? new Date(b.paid_at).getTime() : 0;
+  if (ta !== tb) return ta - tb;
+  return String(a.id || '').localeCompare(String(b.id || ''));
+}
+
+/** Müəllim/admin: təkrarlanan və ya səhv ödəniş sətirini silir (cəmlər SUM ilə avtomatik düzəlir) */
+const deletePayment = async (req, res) => {
+  try {
+    const paymentId = String(req.params.payment_id || '').trim();
+    if (!looksLikeUuid(paymentId)) {
+      return res.status(400).json({ success: false, message: 'Ödəniş ID düzgün deyil' });
+    }
+
+    const { rows } = await db.query(
+      `SELECT p.id, p.enrollment_id, e.instructor_id
+       FROM payments p
+       INNER JOIN enrollments e ON e.id = p.enrollment_id
+       WHERE p.id = $1`,
+      [paymentId]
+    );
+    if (!rows[0]) {
+      return res.status(404).json({ success: false, message: 'Ödəniş tapılmadı' });
+    }
+    if (req.user.role === 'instructor' && !sameUuid(rows[0].instructor_id, req.user.id)) {
+      return res.status(403).json({ success: false, message: 'Bu ödənişi silmək üçün icazəniz yoxdur' });
+    }
+
+    await db.query(`DELETE FROM payments WHERE id = $1`, [paymentId]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+module.exports = {
+  listPayments,
+  addPayment,
+  listMyPayments,
+  getInstructorPaymentBoard,
+  getEnrollmentPaymentHistory,
+  getRestorePreview,
+  confirmRestorePayments,
+  confirmDuePayment,
+  deletePayment,
+};
