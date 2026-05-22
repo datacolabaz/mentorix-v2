@@ -239,6 +239,7 @@ export default function InstructorPayments() {
       await load()
     } catch (e) {
       toast(e?.message || 'Təsdiq alınmadı', 'error')
+      if (e?.status === 409) await load()
     } finally {
       setConfirmingKey(null)
     }

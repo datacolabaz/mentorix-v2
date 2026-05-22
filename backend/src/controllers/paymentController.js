@@ -301,7 +301,7 @@ async function buildDueConfirmationsForInstructor(db, instructorId, todayBaku) {
       today_ymd: todayBaku,
     });
     if (!anchorYmd) continue;
-    const paidSet = await loadPaidDatesForEnrollment(db, r.id, anchorYmd, todayBaku);
+    const paidSet = await loadPaidDatesForEnrollment(db, r.enrollment_id, anchorYmd, todayBaku);
     const dues = listUnconfirmedMonthlyDues({
       anchorYmd,
       todayYmd: todayBaku,
