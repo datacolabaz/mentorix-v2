@@ -49,10 +49,12 @@
 @layer utilities {
   .font-body { font-family: 'DM Sans', sans-serif; }
   .font-display { font-family: 'Syne', sans-serif; }
-  /* Logo blending for removing faint white box */
+  /* Logo blending for removing faint white box (sidebar/header) */
   .mentorix-logo { mix-blend-mode: normal; }
-  .theme-light .mentorix-logo { mix-blend-mode: multiply; }
-  .theme-dark .mentorix-logo { mix-blend-mode: screen; }
+  .theme-light .mentorix-logo:not(.mentorix-logo--login) { mix-blend-mode: multiply; }
+  .theme-dark .mentorix-logo:not(.mentorix-logo--login) { mix-blend-mode: screen; }
+  /* Login kartı həmişə tünd fonda — tema blend-i ağ loqonu silir */
+  .mentorix-logo--login { mix-blend-mode: normal !important; }
   /* Bu kod bütün mobil brauzerlərdəki o xətalı daşmanı kəsir */
   .date-input-class {
     width: 100% !important;
