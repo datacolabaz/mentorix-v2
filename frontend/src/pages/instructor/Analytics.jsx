@@ -25,8 +25,19 @@ function safeNum(v) {
   return Number.isFinite(n) ? n : 0
 }
 
+/** İmtahan orta faizi (0–100); yoxdursa davamiyyət session_score */
+function studentPerformanceBal(s, examById) {
+  const row = examById[String(s?.id)]
+  if (row?.exam_avg_score != null && Number.isFinite(Number(row.exam_avg_score))) {
+    return Math.min(100, Math.max(0, Number(row.exam_avg_score)))
+  }
+  const att = Number(s?.avg_score)
+  return Number.isFinite(att) ? Math.min(100, Math.max(0, att)) : 0
+}
+
 export default function InstructorAnalytics() {
   const [students, setStudents] = useState([])
+  const [examStats, setExamStats] = useState([])
   const [exams, setExams] = useState([])
   const [examId, setExamId] = useState('')
   const [groups, setGroups] = useState([])
@@ -47,11 +58,24 @@ export default function InstructorAnalytics() {
   const gridStroke = theme === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(15,23,42,0.10)'
 
   useEffect(() => {
-    api
-      .get('/students')
-      .then((d) => setStudents(d.students || []))
-      .catch(() => setStudents([]))
+    Promise.all([
+      api.get('/students').catch(() => ({ students: [] })),
+      api.get('/exams/student-progress').catch(() => ({ stats: [] })),
+    ])
+      .then(([studentsRes, examsRes]) => {
+        setStudents(studentsRes.students || [])
+        setExamStats(Array.isArray(examsRes.stats) ? examsRes.stats : [])
+      })
+      .catch(() => {
+        setStudents([])
+        setExamStats([])
+      })
   }, [])
+
+  const examById = useMemo(
+    () => Object.fromEntries(examStats.map((r) => [String(r.student_id), r])),
+    [examStats]
+  )
 
   useEffect(() => {
     api
@@ -207,7 +231,7 @@ export default function InstructorAnalytics() {
             const count = list.length
             const avgScore =
               count > 0
-                ? list.reduce((acc, x) => acc + safeNum(x.avg_score), 0) / count
+                ? list.reduce((acc, x) => acc + studentPerformanceBal(x, examById), 0) / count
                 : 0
             const totalLessons = list.reduce((acc, x) => acc + safeNum(x.lesson_count), 0)
             const sortedStudents = [...list].sort((a, b) =>
@@ -228,18 +252,22 @@ export default function InstructorAnalytics() {
       .sort((a, b) => a.subject.localeCompare(b.subject))
 
     return subjects
-  }, [filteredStudents])
+  }, [filteredStudents, examById])
 
   const barData = useMemo(() => {
-    return filteredStudents.map((s) => ({
-      name:
-        (s.full_name?.split(' ')?.[0] || '—').length > 10
-          ? `${(s.full_name?.split(' ')?.[0] || '').slice(0, 9)}…`
-          : s.full_name?.split(' ')?.[0] || '—',
-      bal: parseFloat(s.avg_score || 0),
-      ders: s.lesson_count || 0,
-    }))
-  }, [filteredStudents])
+    return filteredStudents.map((s) => {
+      const ex = examById[String(s.id)]
+      return {
+        name:
+          (s.full_name?.split(' ')?.[0] || '—').length > 10
+            ? `${(s.full_name?.split(' ')?.[0] || '').slice(0, 9)}…`
+            : s.full_name?.split(' ')?.[0] || '—',
+        bal: studentPerformanceBal(s, examById),
+        ders: s.lesson_count || 0,
+        examsTaken: Math.max(0, Math.floor(Number(ex?.exams_taken) || 0)),
+      }
+    })
+  }, [filteredStudents, examById])
 
   const gradeOptions = useMemo(() => {
     const arr = groups.map((g) => g.grade).filter(Boolean)
@@ -319,7 +347,10 @@ export default function InstructorAnalytics() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4 min-w-0">
         <Card hover className="p-4 sm:p-5 min-w-0 overflow-hidden">
-          <h2 className="font-display font-bold text-base mb-4 text-token-textMain">Tələbə Performansı</h2>
+          <h2 className="font-display font-bold text-base text-token-textMain">Tələbə Performansı</h2>
+          <p className="text-xs text-token-textMuted mb-4">
+            Təqdim olunmuş imtahanlar üzrə orta faiz (0–100). İmtahan yoxdursa — davamiyyət balı.
+          </p>
           <div className="w-full h-[240px] min-h-[200px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={barData} margin={{ top: 12, right: 12, left: 6, bottom: 8 }}>
@@ -348,6 +379,12 @@ export default function InstructorAnalytics() {
                     color: '#fff',
                   }}
                   labelStyle={{ color: 'rgba(229,231,235,0.9)' }}
+                  formatter={(value, _name, item) => {
+                    const n = Math.round(Number(value) * 10) / 10
+                    const taken = item?.payload?.examsTaken
+                    if (taken > 0) return [`${n}%`, `Orta bal (${taken} imtahan)`]
+                    return [`${n}%`, 'Orta bal (davamiyyət)']
+                  }}
                 />
                 <Bar dataKey="bal" fill="#3b82f6" radius={[6, 6, 0, 0]} name="Orta Bal" />
               </BarChart>
@@ -480,7 +517,11 @@ export default function InstructorAnalytics() {
                               <div className="min-w-0">
                                 <div className="text-sm text-token-textMain truncate">{s.full_name || '—'}</div>
                                 <div className="text-xs text-token-textMuted mt-0.5">
-                                  Bal: {Math.round(safeNum(s.avg_score))} · Dərs: {safeNum(s.lesson_count)}
+                                  Bal: {Math.round(studentPerformanceBal(s, examById))}
+                                  {examById[String(s.id)]?.exams_taken
+                                    ? ` · ${examById[String(s.id)].exams_taken} imtahan`
+                                    : ''}{' '}
+                                  · Dərs: {safeNum(s.lesson_count)}
                                 </div>
                               </div>
                               <div className="text-xs text-token-textMuted shrink-0">
