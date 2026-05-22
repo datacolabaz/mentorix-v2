@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const {
   listStudents,
+  getReferralBreakdown,
   getStudent,
   deleteStudent,
   getMySchedule,
@@ -373,6 +374,7 @@ async function replaceCycleOneScheduledLessons(client, params) {
   }
 }
 
+router.get('/referral-breakdown', authenticate, authorize('admin', 'instructor'), getReferralBreakdown);
 router.get('/', authenticate, authorize('admin', 'instructor'), listStudents);
 
 router.delete('/enrollment/:enrollmentId', authenticate, authorize('admin', 'instructor'), deleteStudent);

@@ -38,6 +38,9 @@ function studentPerformanceBal(s, examById) {
 export default function InstructorAnalytics() {
   const [students, setStudents] = useState([])
   const [examStats, setExamStats] = useState([])
+  const [referralBreakdown, setReferralBreakdown] = useState([])
+  const [referralLoading, setReferralLoading] = useState(false)
+  const [referralModal, setReferralModal] = useState(null)
   const [exams, setExams] = useState([])
   const [examId, setExamId] = useState('')
   const [groups, setGroups] = useState([])
@@ -194,22 +197,30 @@ export default function InstructorAnalytics() {
     return Array.from(map.values())
   }, [filteredStudents])
 
-  const referralData = useMemo(() => {
-    return uniqueStudents.reduce((acc, s) => {
-      const src =
-        String(s.referral_source || '').trim() ||
-        String(s.referral_notes || '').trim() ||
-        'Digər'
-      acc[src] = (acc[src] || 0) + 1
-      return acc
-    }, {})
-  }, [uniqueStudents])
+  useEffect(() => {
+    const params = {}
+    if (selectedSubject) params.subject = selectedSubject
+    if (selectedGroup) params.group = selectedGroup
+    setReferralLoading(true)
+    api
+      .get('/students/referral-breakdown', { params })
+      .then((d) => setReferralBreakdown(Array.isArray(d.breakdown) ? d.breakdown : []))
+      .catch(() => setReferralBreakdown([]))
+      .finally(() => setReferralLoading(false))
+  }, [selectedSubject, selectedGroup])
 
   const pieData = useMemo(() => {
-    return Object.entries(referralData)
-      .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value)
-  }, [referralData])
+    return referralBreakdown.map((b) => ({
+      name: b.source,
+      value: b.count,
+    }))
+  }, [referralBreakdown])
+
+  const referralModalStudents = useMemo(() => {
+    if (!referralModal?.source) return []
+    const row = referralBreakdown.find((b) => b.source === referralModal.source)
+    return row?.students || []
+  }, [referralBreakdown, referralModal])
 
   const groupedByTrack = useMemo(() => {
     const src = filteredStudents
@@ -393,8 +404,13 @@ export default function InstructorAnalytics() {
         </Card>
 
         <Card hover className="p-4 sm:p-5 min-w-0 overflow-hidden">
-          <h2 className="font-display font-bold text-base mb-4 text-token-textMain">Yönləndirmə Mənbəyi</h2>
-          {pieData.length ? (
+          <h2 className="font-display font-bold text-base text-token-textMain">Yönləndirmə Mənbəyi</h2>
+          <p className="text-xs text-token-textMuted mt-1 mb-4">
+            Seqmentə klik edin — həmin mənbədən gələn tələbələrin siyahısı açılır.
+          </p>
+          {referralLoading ? (
+            <div className="h-52 flex items-center justify-center text-token-textMuted text-sm">Yüklənir…</div>
+          ) : pieData.length ? (
             <div className="w-full h-[240px] min-h-[200px]">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -407,9 +423,25 @@ export default function InstructorAnalytics() {
                     dataKey="value"
                     paddingAngle={2}
                     labelLine={false}
+                    style={{ cursor: 'pointer' }}
+                    onClick={(_data, index) => {
+                      const entry = pieData[index]
+                      if (entry?.name) setReferralModal({ source: entry.name })
+                    }}
                   >
-                    {pieData.map((_, i) => (
-                      <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                    {pieData.map((entry, i) => (
+                      <Cell
+                        key={entry.name}
+                        fill={COLORS[i % COLORS.length]}
+                        stroke={
+                          referralModal?.source === entry.name
+                            ? theme === 'dark'
+                              ? '#fff'
+                              : '#0B1220'
+                            : 'transparent'
+                        }
+                        strokeWidth={referralModal?.source === entry.name ? 2 : 0}
+                      />
                     ))}
                   </Pie>
                   <Tooltip
@@ -717,6 +749,45 @@ export default function InstructorAnalytics() {
               />
             </>
           )}
+        </Modal>
+      )}
+
+      {referralModal != null && (
+        <Modal
+          open
+          onClose={() => setReferralModal(null)}
+          title={`${referralModal.source} — ${referralModalStudents.length} tələbə`}
+          size="md"
+        >
+          {referralModalStudents.length === 0 ? (
+            <p className="text-sm text-token-textMuted text-center py-8">Bu mənbə üçün tələbə tapılmadı.</p>
+          ) : (
+            <ul className="space-y-2 max-h-[min(420px,60vh)] overflow-y-auto pr-1">
+              {referralModalStudents.map((s) => {
+                const track = [s.track_subject_name, s.track_group_name].filter(Boolean).join(' · ')
+                return (
+                  <li
+                    key={s.id}
+                    className="rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceMain/40 px-3 py-2.5"
+                  >
+                    <p className="text-sm font-semibold text-token-textMain">{s.full_name || '—'}</p>
+                    {s.phone ? (
+                      <p className="text-xs text-token-textMuted mt-0.5 font-mono">{s.phone}</p>
+                    ) : null}
+                    {track ? <p className="text-xs text-token-textMuted mt-0.5">{track}</p> : null}
+                    {s.referral_notes && referralModal.source !== String(s.referral_source || '').trim() ? (
+                      <p className="text-[11px] text-token-textMuted mt-1 italic">{s.referral_notes}</p>
+                    ) : null}
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+          <div className="flex justify-end pt-4">
+            <Button variant="secondary" onClick={() => setReferralModal(null)}>
+              Bağla
+            </Button>
+          </div>
         </Modal>
       )}
     </div>

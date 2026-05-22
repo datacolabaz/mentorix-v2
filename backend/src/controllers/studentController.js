@@ -103,6 +103,105 @@ const listStudents = async (req, res) => {
   }
 };
 
+/** Analitika: yönləndirmə mənbəyi üzrə unikal tələbələr (chart + klik siyahısı) */
+function referralSourceLabel(row) {
+  const src = String(row?.referral_source || '').trim();
+  if (src) return src;
+  const notes = String(row?.referral_notes || '').trim();
+  if (notes) return notes;
+  return 'Digər';
+}
+
+const getReferralBreakdown = async (req, res) => {
+  try {
+    const isAdmin = req.user.role === 'admin';
+    const instructorId =
+      req.user.id != null ? String(req.user.id).trim().toLowerCase().replace(/-/g, '') : '';
+    const subjectFilter = String(req.query?.subject || '').trim();
+    const groupFilter = String(req.query?.group || '').trim();
+
+    let rows;
+    const baseSql = `SELECT u.id, u.full_name, u.phone,
+              ist.name AS track_subject_name,
+              ig.name AS track_group_name,
+              rs.name AS referral_source,
+              e.referral_notes
+       FROM users u
+       INNER JOIN enrollments e ON e.student_id = u.id
+       LEFT JOIN instructor_subjects ist ON ist.id = e.subject_id
+       LEFT JOIN instructor_groups ig ON ig.id = e.group_id
+       LEFT JOIN referral_sources rs ON rs.id = e.referral_source_id
+       WHERE u.role = 'student'
+         AND u.is_active = TRUE
+         AND (e.deleted_at IS NULL)`;
+
+    if (!isAdmin) {
+      if (!instructorId) {
+        return res.status(400).json({ success: false, message: 'İstifadəçi identifikatoru yoxdur' });
+      }
+      ({ rows } = await db.query(
+        `${baseSql}
+           AND REPLACE(LOWER(TRIM(e.instructor_id::text)), '-', '') = $1
+         ORDER BY u.full_name`,
+        [instructorId]
+      ));
+    } else {
+      ({ rows } = await db.query(`${baseSql} ORDER BY u.full_name`));
+    }
+
+    let filtered = rows || [];
+    if (subjectFilter) {
+      filtered = filtered.filter((r) => String(r.track_subject_name || '').trim() === subjectFilter);
+    }
+    if (groupFilter) {
+      filtered = filtered.filter((r) => String(r.track_group_name || '').trim() === groupFilter);
+    }
+
+    const byStudent = new Map();
+    for (const r of filtered) {
+      const id = String(r.id || '').trim();
+      if (!id) continue;
+      const prev = byStudent.get(id);
+      if (!prev) {
+        byStudent.set(id, r);
+        continue;
+      }
+      const prevHasSrc = Boolean(String(prev.referral_source || '').trim());
+      const nextHasSrc = Boolean(String(r.referral_source || '').trim());
+      if (!prevHasSrc && nextHasSrc) byStudent.set(id, r);
+    }
+
+    const bySource = new Map();
+    for (const r of byStudent.values()) {
+      const source = referralSourceLabel(r);
+      if (!bySource.has(source)) bySource.set(source, []);
+      bySource.get(source).push({
+        id: r.id,
+        full_name: r.full_name,
+        phone: r.phone,
+        track_subject_name: r.track_subject_name,
+        track_group_name: r.track_group_name,
+        referral_source: r.referral_source,
+        referral_notes: r.referral_notes,
+      });
+    }
+
+    const breakdown = Array.from(bySource.entries())
+      .map(([source, students]) => ({
+        source,
+        count: students.length,
+        students: students.sort((a, b) =>
+          String(a.full_name || '').localeCompare(String(b.full_name || ''), 'az')
+        ),
+      }))
+      .sort((a, b) => b.count - a.count || a.source.localeCompare(b.source, 'az'));
+
+    res.json({ success: true, breakdown, total_students: byStudent.size });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 const getStudent = async (req, res) => {
   try {
     if (req.user.role === 'student' && String(req.params.id) !== String(req.user.id)) {
@@ -581,6 +680,7 @@ const deleteMyPrepSlot = async (req, res) => {
 
 module.exports = {
   listStudents,
+  getReferralBreakdown,
   getStudent,
   deleteStudent,
   getMySchedule,
