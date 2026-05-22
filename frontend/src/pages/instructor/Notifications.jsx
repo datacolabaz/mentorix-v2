@@ -8,12 +8,24 @@ import NotificationCard from '../../components/notifications/NotificationCard'
 import StatusBadge from '../../components/common/StatusBadge'
 import { isToday, isThisWeek, isThisMonth } from '../../mock/smsHistory'
 import { useBillingStatus } from '../../hooks/useBillingStatus'
+import useUiStore from '../../hooks/useUi'
 
 const SEEN_KEY = 'mx_instructor_notifications_seen_at_v1'
 
-const LEVEL = {
-  critical: { cls: 'border-red-500/40 bg-red-500/10', badge: 'bg-red-500/20 text-red-400', icon: '🔴' },
-  warning: { cls: 'border-yellow-500/40 bg-yellow-500/10', badge: 'bg-yellow-500/20 text-yellow-400', icon: '🟡' },
+function alertLevelStyles(theme) {
+  const light = theme !== 'dark'
+  return {
+    critical: {
+      cls: light ? 'border-red-500/35 bg-red-50' : 'border-red-500/40 bg-red-500/10',
+      badge: light ? 'bg-red-100 text-red-800' : 'bg-red-500/20 text-red-400',
+      icon: '🔴',
+    },
+    warning: {
+      cls: light ? 'border-amber-500/35 bg-amber-50' : 'border-yellow-500/40 bg-yellow-500/10',
+      badge: light ? 'bg-amber-100 text-amber-900' : 'bg-yellow-500/20 text-yellow-400',
+      icon: '🟡',
+    },
+  }
 }
 
 function formatStorageUsed(usedBytes) {
@@ -170,6 +182,10 @@ function formatAgo(ms) {
 }
 
 export default function InstructorNotifications() {
+  const { theme } = useUiStore()
+  const LEVEL = useMemo(() => alertLevelStyles(theme), [theme])
+  const progressTrackCls =
+    theme === 'dark' ? 'bg-white/10' : 'bg-slate-900/[0.08]'
   const [alerts, setAlerts] = useState([])
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -505,7 +521,7 @@ export default function InstructorNotifications() {
         <div className="mt-4 space-y-4">
           <div className="grid grid-cols-[92px_1fr_auto] items-center gap-x-4 gap-y-2">
             <div className="text-sm font-semibold text-token-textMain">Aylıq SMS</div>
-            <div className="h-2.5 rounded-full bg-white/10 overflow-hidden">
+            <div className={`h-2.5 rounded-full overflow-hidden ${progressTrackCls}`}>
               <div className={`h-full ${barTone(systemPercent.sms)}`} style={{ width: `${Math.min(100, systemPercent.sms)}%` }} />
             </div>
             <div className="text-sm text-token-textMuted tabular-nums text-right whitespace-nowrap">
@@ -515,7 +531,7 @@ export default function InstructorNotifications() {
 
           <div className="grid grid-cols-[92px_1fr_auto] items-center gap-x-4 gap-y-2">
             <div className="text-sm font-semibold text-token-textMain">Storage</div>
-            <div className="h-2.5 rounded-full bg-white/10 overflow-hidden">
+            <div className={`h-2.5 rounded-full overflow-hidden ${progressTrackCls}`}>
               <div className={`h-full ${barTone(systemPercent.storage)}`} style={{ width: `${Math.min(100, systemPercent.storage)}%` }} />
             </div>
             <div className="text-sm text-token-textMuted tabular-nums text-right whitespace-nowrap">
@@ -525,7 +541,7 @@ export default function InstructorNotifications() {
 
           <div className="grid grid-cols-[92px_1fr_auto] items-center gap-x-4 gap-y-2">
             <div className="text-sm font-semibold text-token-textMain">RAM</div>
-            <div className="h-2.5 rounded-full bg-white/10 overflow-hidden">
+            <div className={`h-2.5 rounded-full overflow-hidden ${progressTrackCls}`}>
               <div className={`h-full ${barTone(systemPercent.ram)}`} style={{ width: `${Math.min(100, systemPercent.ram)}%` }} />
             </div>
             <div className="text-sm text-token-textMuted tabular-nums text-right whitespace-nowrap">
@@ -701,19 +717,4 @@ export default function InstructorNotifications() {
               <div className="flex items-start gap-3 sm:gap-4 min-w-0">
                 <span className="text-2xl shrink-0">{LEVEL[alert.level].icon}</span>
                 <div className="flex-1 min-w-0">
-                  <span className={`inline-block px-2 py-0.5 rounded-lg text-xs font-semibold mb-2 ${LEVEL[alert.level].badge}`}>
-                    {alert.level === 'critical' ? 'Kritik' : 'Xəbərdarlıq'}
-                  </span>
-                  <p className="text-gray-300 text-sm break-words">{alert.message}</p>
-                  <p className="text-gray-500 text-xs mt-1">
-                    {alert.type === 'sms' ? '📱 SMS' : alert.type === 'ram' ? '🧠 RAM' : '💾 Storage'}
-                  </p>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
+                  <span className={`inline-block px-2 py-0.5 rounded-lg text-xs font-semibold mb-

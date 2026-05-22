@@ -417,8 +417,12 @@ export default function InstructorLayout() {
             <div
               className={`mx-4 sm:mx-6 mt-4 rounded-2xl border px-4 py-3 text-sm ${
                 limitStatus.level === 'critical'
-                  ? 'border-red-500/40 bg-red-500/10 text-red-200'
-                  : 'border-yellow-500/40 bg-yellow-500/10 text-yellow-200'
+                  ? theme === 'dark'
+                    ? 'border-red-500/40 bg-red-500/10 text-red-200'
+                    : 'border-red-600/30 bg-red-50 text-red-950'
+                  : theme === 'dark'
+                    ? 'border-yellow-500/40 bg-yellow-500/10 text-yellow-200'
+                    : 'border-amber-600/30 bg-amber-50 text-amber-950'
               }`}
             >
               <div className="flex items-start justify-between gap-3">
@@ -426,11 +430,26 @@ export default function InstructorLayout() {
                   <div className="font-semibold">
                     {limitStatus.level === 'critical' ? 'Limit dolub' : 'Diqqət'}
                   </div>
-                  <div className="text-white/80 break-words">{limitStatus.message}</div>
+                  <div
+                    className={[
+                      'break-words',
+                      theme === 'dark'
+                        ? 'text-white/85'
+                        : limitStatus.level === 'critical'
+                          ? 'text-red-950/90'
+                          : 'text-amber-950/90',
+                    ].join(' ')}
+                  >
+                    {limitStatus.message}
+                  </div>
                 </div>
                 <button
                   onClick={() => setLimitStatus({ level: null, message: null })}
-                  className="shrink-0 text-white/70 hover:text-white transition-colors"
+                  className={
+                    theme === 'dark'
+                      ? 'shrink-0 text-white/70 hover:text-white transition-colors'
+                      : 'shrink-0 text-amber-900/55 hover:text-amber-950 transition-colors'
+                  }
                   aria-label="Bağla"
                 >
                   ×
@@ -551,30 +570,4 @@ export default function InstructorLayout() {
               setVerifyBusy(true)
               try {
                 await api.post('/auth/phone/verify/send', { phone: verifyPhone })
-                toast('OTP yenidən göndərildi', 'success')
-              } catch (e) {
-                toast(e?.message || 'OTP göndərilmədi', 'error')
-              } finally {
-                setVerifyBusy(false)
-              }
-            }}
-            className="w-full text-center text-xs text-gray-500 hover:text-white disabled:opacity-50"
-          >
-            OTP yenidən göndər
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setVerifyStep('phone')
-              setVerifyCode('')
-            }}
-            className="w-full text-center text-xs text-gray-500 hover:text-white"
-          >
-            ← Geri
-          </button>
-        </form>
-      )}
-    </Modal>
-    </>
-  )
-}
+                
