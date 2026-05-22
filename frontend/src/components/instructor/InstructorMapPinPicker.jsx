@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 import L from 'leaflet'
 import { MapContainer, TileLayer, Marker, Circle, useMap, useMapEvents } from 'react-leaflet'
+import { isGoogleMapsConfigured } from '../../lib/googleMapsLoader'
+import GoogleMapPinPicker from './GoogleMapPinPicker'
 
 const BAKU_CENTER = [40.4093, 49.8671]
 const DARK_TILE = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
@@ -82,16 +84,13 @@ function DraggablePin({ position, kind, displayName, onPick }) {
   )
 }
 
-/**
- * Müəllim mövqeyini xəritədə pin ilə seçmək (klik / sürüşdürmə).
- */
-export default function InstructorMapPinPicker({
+function LeafletMapPinPicker({
   latitude,
   longitude,
-  mapKind = 'teacher',
-  flyKey = 0,
-  displayName = '',
-  radiusKm = 10,
+  mapKind,
+  flyKey,
+  displayName,
+  radiusKm,
   onChange,
 }) {
   const lat = parseCoord(latitude)
@@ -109,47 +108,76 @@ export default function InstructorMapPinPicker({
   )
 
   return (
+    <div className="h-[min(52vh,340px)] w-full rounded-xl overflow-hidden border border-[color:var(--border-subtle)] ring-1 ring-primary/20 z-0 relative">
+      <MapContainer
+        center={center}
+        zoom={zoom}
+        className="h-full w-full"
+        scrollWheelZoom={false}
+        attributionControl={false}
+      >
+        <TileLayer url={DARK_TILE} attribution="" />
+        <MapClickPick onPick={handlePick} />
+        <MapFlyTo center={hasPin ? center : null} flyKey={flyKey} />
+        {hasPin ? (
+          <>
+            <Circle
+              center={center}
+              radius={radiusM}
+              pathOptions={{
+                color: mapKind === 'trainer' ? '#f97316' : '#22c55e',
+                fillColor: mapKind === 'trainer' ? '#f97316' : '#22c55e',
+                fillOpacity: 0.08,
+                weight: 2,
+                dashArray: '6 8',
+              }}
+            />
+            <DraggablePin position={center} kind={mapKind} displayName={displayName} onPick={handlePick} />
+          </>
+        ) : null}
+      </MapContainer>
+      {!hasPin ? (
+        <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/90 to-transparent pointer-events-none">
+          <p className="text-xs text-amber-300 text-center font-medium">Xəritəyə toxunun — pin burada görünəcək</p>
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
+/**
+ * Müəllim mövqeyini xəritədə pin ilə seçmək (Google Maps; API açarı yoxdursa Leaflet).
+ */
+export default function InstructorMapPinPicker(props) {
+  const useGoogle = isGoogleMapsConfigured()
+
+  return (
     <div className="space-y-2">
       <p className="text-xs text-token-textMuted leading-relaxed">
-        <span className="text-white font-medium">Addım 1:</span> işlədiyiniz yerə klik edin və ya pini sürüşdürün.
+        <span className="font-medium text-token-textMain">Addım 1:</span> işlədiyiniz yerə klik edin və ya pini sürüşdürün.
         <span className="block mt-1">
-          <span className="text-white font-medium">Addım 2:</span> aşağıdan saxlayın — tələbələr sizi xəritədə görəcək.
+          <span className="font-medium text-token-textMain">Addım 2:</span> aşağıdan saxlayın — tələbələr sizi xəritədə görəcək.
         </span>
+        {useGoogle ? (
+          <span className="block mt-1 text-[10px]">Səhifəni scroll etmək üçün xəritə xaricində süpürün; zoom üçün Ctrl + scroll.</span>
+        ) : (
+          <span className="block mt-1 text-[10px] text-amber-700 dark:text-amber-300/90">
+            Google Maps API açarı təyin edilməyib — ehtiyat xəritə (scroll artıq səhifəni hərəkət etdirir).
+          </span>
+        )}
       </p>
-      <div className="h-[min(52vh,340px)] w-full rounded-xl overflow-hidden border border-white/10 ring-1 ring-primary/20 z-0 relative">
-        <MapContainer
-          center={center}
-          zoom={zoom}
-          className="h-full w-full"
-          scrollWheelZoom
-          attributionControl={false}
-        >
-          <TileLayer url={DARK_TILE} attribution="" />
-          <MapClickPick onPick={handlePick} />
-          <MapFlyTo center={hasPin ? center : null} flyKey={flyKey} />
-          {hasPin ? (
-            <>
-              <Circle
-                center={center}
-                radius={radiusM}
-                pathOptions={{
-                  color: mapKind === 'trainer' ? '#f97316' : '#22c55e',
-                  fillColor: mapKind === 'trainer' ? '#f97316' : '#22c55e',
-                  fillOpacity: 0.08,
-                  weight: 2,
-                  dashArray: '6 8',
-                }}
-              />
-              <DraggablePin position={center} kind={mapKind} displayName={displayName} onPick={handlePick} />
-            </>
-          ) : null}
-        </MapContainer>
-        {!hasPin ? (
-          <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/90 to-transparent pointer-events-none">
-            <p className="text-xs text-amber-300 text-center font-medium">👆 Xəritəyə toxunun — pin burada görünəcək</p>
-          </div>
-        ) : null}
-      </div>
+      {useGoogle ? (
+        <GoogleMapPinPicker
+          latitude={props.latitude}
+          longitude={props.longitude}
+          mapKind={props.mapKind}
+          flyKey={props.flyKey}
+          radiusKm={props.radiusKm}
+          onChange={props.onChange}
+        />
+      ) : (
+        <LeafletMapPinPicker {...props} />
+      )}
     </div>
   )
 }

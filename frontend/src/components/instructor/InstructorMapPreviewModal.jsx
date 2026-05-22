@@ -2,6 +2,8 @@ import { MapContainer, TileLayer, CircleMarker, Popup } from 'react-leaflet'
 import Button from '../common/Button'
 import { Link } from 'react-router-dom'
 import { formatDistanceKm } from '../../lib/geo'
+import { isGoogleMapsConfigured } from '../../lib/googleMapsLoader'
+import GoogleMapPreview from './GoogleMapPreview'
 
 const DARK_TILE = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
 
@@ -58,33 +60,37 @@ export default function InstructorMapPreviewModal({
 
         <div className="h-52 relative">
           {hasPin ? (
-            <MapContainer
-              center={[lat, lng]}
-              zoom={14}
-              className="h-full w-full"
-              scrollWheelZoom={false}
-              attributionControl={false}
-            >
-              <TileLayer url={DARK_TILE} attribution="" />
-              <CircleMarker
+            isGoogleMapsConfigured() ? (
+              <GoogleMapPreview latitude={lat} longitude={lng} fillColor={color} className="h-full w-full" />
+            ) : (
+              <MapContainer
                 center={[lat, lng]}
-                radius={11}
-                pathOptions={{
-                  color: '#fff',
-                  fillColor: color,
-                  fillOpacity: 1,
-                  weight: 3,
-                }}
+                zoom={14}
+                className="h-full w-full"
+                scrollWheelZoom={false}
+                attributionControl={false}
               >
-                <Popup>
-                  <div className="text-gray-900 text-sm min-w-[140px]">
-                    <div className="font-bold">{fullName}</div>
-                    <div className="text-xs text-gray-600 mt-0.5">{subject || '—'}</div>
-                    <div className="text-[11px] mt-1">{kindLabel(mapKind)}</div>
-                  </div>
-                </Popup>
-              </CircleMarker>
-            </MapContainer>
+                <TileLayer url={DARK_TILE} attribution="" />
+                <CircleMarker
+                  center={[lat, lng]}
+                  radius={11}
+                  pathOptions={{
+                    color: '#fff',
+                    fillColor: color,
+                    fillOpacity: 1,
+                    weight: 3,
+                  }}
+                >
+                  <Popup>
+                    <div className="text-gray-900 text-sm min-w-[140px]">
+                      <div className="font-bold">{fullName}</div>
+                      <div className="text-xs text-gray-600 mt-0.5">{subject || '—'}</div>
+                      <div className="text-[11px] mt-1">{kindLabel(mapKind)}</div>
+                    </div>
+                  </Popup>
+                </CircleMarker>
+              </MapContainer>
+            )
           ) : (
             <div className="h-full flex items-center justify-center text-sm text-gray-500 px-6 text-center">
               Əvvəlcə xəritədə pin qoyun
