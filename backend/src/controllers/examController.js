@@ -164,6 +164,7 @@ const {
   matchingCanonicalCorrect,
   rankResults,
   syncExamReminderJob,
+  sendExamPlacedNotifications,
   notifyParentExamResultAfterSubmit,
 } = require('../services/examService');
 
@@ -321,6 +322,9 @@ const createExam = async (req, res) => {
 
     res.status(201).json({ success: true, exam: result });
     setImmediate(() => {
+      sendExamPlacedNotifications(result.id).catch((e) =>
+        console.error('sendExamPlacedNotifications', e.message)
+      );
       syncExamReminderJob(result.id).catch((e) => console.error('syncExamReminderJob', e.message));
     });
   } catch (err) {

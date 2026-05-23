@@ -115,6 +115,7 @@ export default function InstructorDashboard() {
   const smsLimit = Number(smsProfile?.sms_limit ?? 0)
   const smsUsed = Number(smsProfile?.sms_used ?? 0)
   const smsDisabled = smsLimit <= 0 || smsUsed >= smsLimit
+  const whatsappConfigured = Boolean(smsProfile?.whatsapp_configured)
 
   function toggleSelected(id) {
     setQuickSelectedIds((prev) => {
@@ -134,6 +135,14 @@ export default function InstructorDashboard() {
     // smsProfile is fetched by effect (only once)
   }
 
+  function selectAllStudents() {
+    setQuickSelectedIds(students.map((s) => String(s.id)))
+  }
+
+  function clearSelectedStudents() {
+    setQuickSelectedIds([])
+  }
+
   async function submitQuickNotification() {
     const msg = String(quickMessage ?? '').trim()
     if (!msg) return toast('Mesaj tələb olunur', 'error')
@@ -145,6 +154,10 @@ export default function InstructorDashboard() {
 
     if (quickMethod === 'sms' && smsDisabled) {
       return toast('Limitiniz bitib, artırmaq üçün adminlə əlaqə saxlayın', 'error')
+    }
+
+    if (quickMethod === 'whatsapp' && !whatsappConfigured) {
+      return toast('WhatsApp API serverdə konfiqurasiya olunmayıb (Railway WHATSAPP_* dəyişənləri)', 'error')
     }
 
     setQuickBusy(true)
@@ -169,7 +182,17 @@ export default function InstructorDashboard() {
           .catch(() => {})
       }
 
-      toast(quickMethod === 'sms' ? 'SMS göndərildi' : 'Bildiriş göndərildi', 'success')
+      if (quickMethod === 'whatsapp') {
+        const sent = Number(d?.sent ?? 0)
+        const failed = Number(d?.failed ?? 0)
+        if (failed > 0) {
+          toast(`WhatsApp: ${sent} göndərildi, ${failed} uğursuz`, sent > 0 ? 'success' : 'error')
+        } else {
+          toast(`WhatsApp: ${sent} tələbəyə göndərildi`, 'success')
+        }
+      } else {
+        toast(quickMethod === 'sms' ? 'SMS göndərildi' : 'Bildiriş göndərildi', 'success')
+      }
       queryClient.invalidateQueries({ queryKey: BILLING_STATUS_QUERY_KEY })
       setQuickOpen(false)
       setQuickMessage('')
@@ -506,12 +529,30 @@ export default function InstructorDashboard() {
           </div>
 
           <div>
-            <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
               <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
                 Tələbələr
               </label>
-              <div className="text-xs text-gray-500">
-                Seçilən: <span className="text-white/80 font-semibold">{quickSelectedIds.length}</span>
+              <div className="flex items-center gap-2 text-xs">
+                <span className="text-gray-500">
+                  Seçilən: <span className="text-white/80 font-semibold">{quickSelectedIds.length}</span>
+                </span>
+                <button
+                  type="button"
+                  className="text-emerald-300 hover:text-emerald-200 font-medium"
+                  onClick={selectAllStudents}
+                  disabled={!students.length}
+                >
+                  Hamısını seç
+                </button>
+                <button
+                  type="button"
+                  className="text-gray-400 hover:text-gray-300"
+                  onClick={clearSelectedStudents}
+                  disabled={!quickSelectedIds.length}
+                >
+                  Təmizlə
+                </button>
               </div>
             </div>
 
@@ -578,6 +619,32 @@ export default function InstructorDashboard() {
                     ) : (
                       <div className="text-xs text-gray-500">
                         Qalıq: <span className="text-white/80 font-semibold">{Math.max(0, smsLimit - smsUsed)}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </label>
+
+              <label
+                className={`flex items-center justify-between gap-3 px-3 py-2 rounded-xl border border-indigo-500/10 ${
+                  !whatsappConfigured ? 'opacity-60' : ''
+                }`}
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <input
+                    type="radio"
+                    value="whatsapp"
+                    checked={quickMethod === 'whatsapp'}
+                    disabled={!whatsappConfigured}
+                    onChange={() => setQuickMethod('whatsapp')}
+                  />
+                  <div className="min-w-0">
+                    <div className="text-sm font-semibold text-white/90">WhatsApp olaraq göndər</div>
+                    {!whatsappConfigured ? (
+                      <div className="text-xs text-amber-300">Serverdə WHATSAPP_* dəyişənləri təyin edilməyib</div>
+                    ) : (
+                      <div className="text-xs text-gray-500">
+                        Kütləvi mesaj — test rejimində yalnız Meta test recipient nömrələri
                       </div>
                     )}
                   </div>

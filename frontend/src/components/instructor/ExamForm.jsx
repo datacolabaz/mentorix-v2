@@ -336,9 +336,10 @@ export default function ExamForm({ students, studentsLoading = false, onCreated 
           <div className="space-y-3 rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard/40 p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-semibold">SMS bildirisi</p>
+                <p className="text-sm font-semibold">Əlavə SMS / WhatsApp xatırlatması</p>
                 <p className="text-xs text-gray-500">
-                  Başlamadan 5 dəq əvvəl SMS (əvvəl tələbə nömrəsi, yoxdursa valideyn). İmtahan bitəndə nəticə valideynə SMS.
+                  İmtahan yerləşdiriləndə seçilmiş tələbələrə avtomatik WhatsApp (konfiqurasiya varsa) və ya SMS göndərilir.
+                  Bu seçim: başlamadan 5 dəq əvvəl xatırlatma və imtahan bitəndə nəticə bildirişi.
                 </p>
               </div>
               <input type="checkbox" checked={meta.notify_students}

@@ -131,6 +131,9 @@ const getInstructorNotifications = async (req, res) => {
         storage_used_bytes: stUsedBytes,
         plan: ent?.plan || null,
         status: ent?.status || null,
+        whatsapp_configured: Boolean(
+          process.env.WHATSAPP_ACCESS_TOKEN && process.env.WHATSAPP_PHONE_NUMBER_ID
+        ),
       },
     });
   } catch (err) {
@@ -196,7 +199,9 @@ const quickInstructorNotification = async (req, res) => {
       });
     }
 
-    const safeMethod = method === 'sms' ? 'sms' : 'internal';
+    const rawMethod = String(method || 'internal').trim().toLowerCase();
+    const safeMethod =
+      rawMethod === 'sms' ? 'sms' : rawMethod === 'whatsapp' ? 'whatsapp' : 'internal';
     const title = 'Sürətli Bildiriş';
 
     if (safeMethod === 'internal') {
@@ -208,10 +213,6 @@ const quickInstructorNotification = async (req, res) => {
       return res.json({ success: true, method: 'internal', sent: allowedIds.length });
     }
 
-    // SMS method (hard-enforced by usage_counters + entitlements; UI disable is not security).
-    // Ensure monthly period source-of-truth is up to date (request-time, not cron).
-    await ensureSmsPeriodUpToDate(db, instructorId).catch(() => {});
-
     const studentsWithPhones = allowedStudents.filter((s) => {
       const p = String(s.phone ?? '').trim();
       return !!p;
@@ -222,6 +223,59 @@ const quickInstructorNotification = async (req, res) => {
         message: 'Bəzi tələbələr üçün telefon nömrəsi tapılmadı',
       });
     }
+
+    if (safeMethod === 'whatsapp') {
+      if (!process.env.WHATSAPP_ACCESS_TOKEN || !process.env.WHATSAPP_PHONE_NUMBER_ID) {
+        return res.status(503).json({
+          success: false,
+          message:
+            'WhatsApp API konfiqurasiya olunmayıb (WHATSAPP_ACCESS_TOKEN və WHATSAPP_PHONE_NUMBER_ID).',
+        });
+      }
+
+      const { sendStudentWhatsAppOrSms } = require('../services/studentMessagingService');
+      let sent = 0;
+      let failed = 0;
+      const errors = [];
+
+      for (const s of studentsWithPhones) {
+        const r = await sendStudentWhatsAppOrSms({
+          instructorId,
+          studentId: s.id,
+          phone: s.phone,
+          message: msg,
+          logType: 'instructor_whatsapp',
+          whatsappOnly: true,
+        });
+        if (r?.success) sent += 1;
+        else {
+          failed += 1;
+          if (errors.length < 5) errors.push({ student_id: s.id, error: r?.error || 'failed' });
+        }
+      }
+
+      if (!sent) {
+        return res.status(502).json({
+          success: false,
+          message:
+            'Heç bir tələbəyə WhatsApp göndərilmədi. Test rejimində yalnız Meta test recipient nömrələrinə icazə var; prod üçün Step 2 + message template lazımdır.',
+          failed,
+          errors,
+        });
+      }
+
+      return res.json({
+        success: true,
+        method: 'whatsapp',
+        sent,
+        failed,
+        ...(errors.length ? { errors } : {}),
+      });
+    }
+
+    // SMS method (hard-enforced by usage_counters + entitlements; UI disable is not security).
+    // Ensure monthly period source-of-truth is up to date (request-time, not cron).
+    await ensureSmsPeriodUpToDate(db, instructorId).catch(() => {});
 
     const count = studentsWithPhones.length;
 
