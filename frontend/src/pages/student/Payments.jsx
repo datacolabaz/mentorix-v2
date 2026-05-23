@@ -313,6 +313,7 @@ export default function StudentPayments() {
   const lessonPackages = Array.isArray(enrollment?.lesson_packages) ? enrollment.lesson_packages : []
   const paymentsByCycle = Array.isArray(enrollment?.payments_by_cycle) ? enrollment.payments_by_cycle : []
   const payByCycleMap = new Map(paymentsByCycle.map((x) => [Number(x.billing_cycle) || 1, Number(x.total_paid) || 0]))
+  const orphanPayments = Array.isArray(enrollment?.payment_history_orphans) ? enrollment.payment_history_orphans : []
   const attendancePct = enrollment?.attendance_pct != null ? Number(enrollment.attendance_pct) : null
 
   const [openPackages, setOpenPackages] = useState(() => new Set())
@@ -324,6 +325,49 @@ export default function StudentPayments() {
       else next.add(cyc)
       return next
     })
+  }
+
+  function renderPaymentRow(p) {
+    const noteForStudent = displayNotesForStudent(p.notes)
+    return (
+      <li
+        key={p.id}
+        className="rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard/40 hover:bg-token-surfaceCard/55 transition-colors p-3 text-sm"
+      >
+        <div className="flex justify-between gap-3 flex-wrap items-start">
+          <div className="min-w-0">
+            <p className="text-[10px] font-semibold text-token-textMuted uppercase tracking-wider">Ödəniş tarixi</p>
+            <p className="text-token-textMain font-mono tabular-nums text-sm font-medium mt-0.5">
+              {primaryPaymentDateLabel(p)}
+            </p>
+            {hasSeparatePaymentDate(p) ? (
+              <p className="text-[10px] text-token-textMuted mt-1">
+                Sistemə qeyd: <span className="font-mono text-token-textMuted">{fmtAzFromDb(p.paid_at)}</span>
+              </p>
+            ) : null}
+          </div>
+          <div className="text-right shrink-0">
+            <p className="font-mono text-emerald-300 font-semibold tabular-nums">
+              {p.amount != null ? Number(p.amount).toFixed(2) : '—'} {p.currency || 'AZN'}
+            </p>
+            <p
+              className={
+                p.status === 'completed'
+                  ? 'text-emerald-400/90 text-xs font-semibold mt-0.5'
+                  : 'text-amber-400 text-xs mt-0.5'
+              }
+            >
+              {p.status || '—'}
+            </p>
+          </div>
+        </div>
+        {p.period ? <p className="text-xs text-token-textMuted mt-2">Dövr: {p.period}</p> : null}
+        {p.payment_method ? <p className="text-xs text-token-textMuted">Üsul: {p.payment_method}</p> : null}
+        {noteForStudent ? (
+          <p className="text-xs text-token-textMuted mt-2 leading-relaxed">{noteForStudent}</p>
+        ) : null}
+      </li>
+    )
   }
 
   function lessonStatusLabel(st) {
@@ -535,55 +579,90 @@ export default function StudentPayments() {
             </div>
           )}
 
-          {paymentsChronological.length ? (
-            <ul className="space-y-2">
-              {paymentsChronological.map((p) => {
-                const noteForStudent = displayNotesForStudent(p.notes)
+          {lessonPackages.length ? (
+            <div className="space-y-2">
+              <p className="text-xs text-token-textMuted mb-2">
+                Paketlər üzrə ödənişlər — paketi açın, həmin dövrə aid ödənişləri görün.
+              </p>
+              {lessonPackages.map((pkg) => {
+                const cyc = Number(pkg.package_number) || 1
+                const isOpen = openPackages.has(cyc)
+                const start = pkg.start_ymd ? fmtDdMmYyyy(parseYmdLocal(pkg.start_ymd)) : '—'
+                const end = pkg.end_ymd ? fmtDdMmYyyy(parseYmdLocal(pkg.end_ymd)) : '—'
+                const total = Number(pkg.total) || packSize || 0
+                const completed = Number(pkg.completed) || 0
+                const paid =
+                  pkg.total_paid != null ? Number(pkg.total_paid) : payByCycleMap.get(cyc) || 0
+                const legacyConfirmed = Boolean(pkg.legacy_confirmed)
+                const pkgPayments = Array.isArray(pkg.package_payments) ? pkg.package_payments : []
+                const paidLabel =
+                  paid > 0.005
+                    ? `Ödəniş: ${paid.toFixed(2)} ₼`
+                    : legacyConfirmed
+                      ? 'Ödənilib (keçmiş paket)'
+                      : 'Ödəniş: —'
+                const headerRight =
+                  completed >= total && total > 0
+                    ? 'Tamamlanıb'
+                    : String(pkg.package_status || '').toLowerCase() === 'active'
+                      ? 'Cari'
+                      : ''
+
                 return (
-                <li
-                  key={p.id}
-                  className="rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard/40 hover:bg-token-surfaceCard/55 transition-colors p-3 text-sm"
-                >
-                  <div className="flex justify-between gap-3 flex-wrap items-start">
-                    <div className="min-w-0">
-                      <p className="text-[10px] font-semibold text-token-textMuted uppercase tracking-wider">Ödəniş tarixi</p>
-                      <p className="text-token-textMain font-mono tabular-nums text-sm font-medium mt-0.5">
-                        {primaryPaymentDateLabel(p)}
-                      </p>
-                      {hasSeparatePaymentDate(p) ? (
-                        <p className="text-[10px] text-token-textMuted mt-1">
-                          Sistemə qeyd: <span className="font-mono text-token-textMuted">{fmtAzFromDb(p.paid_at)}</span>
-                        </p>
-                      ) : null}
-                    </div>
-                    <div className="text-right shrink-0">
-                      <p className="font-mono text-emerald-300 font-semibold tabular-nums">
-                        {p.amount != null ? Number(p.amount).toFixed(2) : '—'} {p.currency || 'AZN'}
-                      </p>
-                      <p
-                        className={
-                          p.status === 'completed'
-                            ? 'text-emerald-400/90 text-xs font-semibold mt-0.5'
-                            : 'text-amber-400 text-xs mt-0.5'
-                        }
-                      >
-                        {p.status || '—'}
-                      </p>
-                    </div>
-                  </div>
-                  {p.period && <p className="text-xs text-token-textMuted mt-2">Dövr: {p.period}</p>}
-                  {p.payment_method && <p className="text-xs text-token-textMuted">Üsul: {p.payment_method}</p>}
-                  {noteForStudent ? (
-                    <p className="text-xs text-token-textMuted mt-2 leading-relaxed">{noteForStudent}</p>
-                  ) : null}
-                </li>
+                  <Card key={`pay-${cyc}`} hover className="p-0 overflow-hidden border border-[color:var(--border-subtle)]">
+                    <button
+                      type="button"
+                      onClick={() => togglePkg(cyc)}
+                      className="w-full px-4 py-3 flex items-center justify-between gap-3 bg-token-surfaceCard/45 hover:bg-token-surfaceCard/60 transition-colors"
+                    >
+                      <div className="min-w-0 text-left">
+                        <div className="font-semibold text-token-textMain truncate">
+                          Paket #{cyc}
+                          {headerRight ? ` · ${headerRight}` : ''}
+                        </div>
+                        <div className="text-xs text-token-textMuted mt-0.5">
+                          {start} — {end} · <span className="font-mono">{completed}/{total}</span> dərs ·{' '}
+                          <span className={paid > 0.005 || legacyConfirmed ? 'text-emerald-300' : ''}>{paidLabel}</span>
+                        </div>
+                      </div>
+                      <div className="text-token-textMuted text-sm font-mono shrink-0">{isOpen ? '▴' : '▾'}</div>
+                    </button>
+
+                    {isOpen ? (
+                      <div className="p-3 bg-token-surfaceMain/40 border-t border-[color:var(--border-subtle)]">
+                        {pkgPayments.length ? (
+                          <ul className="space-y-2">{pkgPayments.map((p) => renderPaymentRow(p))}</ul>
+                        ) : legacyConfirmed ? (
+                          <p className="text-xs text-emerald-300/90 px-1">
+                            Keçmiş paket — ödəniş sistemə ayrıca yazılmayıb, təlimçi tərəfindən təsdiqlənib.
+                          </p>
+                        ) : (
+                          <p className="text-xs text-token-textMuted px-1">Bu paket üçün qeydə alınmış ödəniş yoxdur.</p>
+                        )}
+                      </div>
+                    ) : null}
+                  </Card>
                 )
               })}
-            </ul>
+            </div>
+          ) : paymentsChronological.length ? (
+            <ul className="space-y-2">{paymentsChronological.map((p) => renderPaymentRow(p))}</ul>
+          ) : (
+            <p className="text-token-textMuted text-sm">Qeydə alınmış ödəniş yoxdur.</p>
+          )}
+
+          {orphanPayments.length ? (
+            <div className="mt-4">
+              <h3 className="text-sm font-semibold text-token-textMain mb-2">Paketə bağlanmayan ödənişlər</h3>
+              <p className="text-xs text-token-textMuted mb-2">
+                Bu sətirlər ümumi tarixçədə qalır; təlimçi lazım gələrsə paketə uyğunlaşdıra bilər.
+              </p>
+              <ul className="space-y-2">{orphanPayments.map((p) => renderPaymentRow(p))}</ul>
+            </div>
           ) : null}
 
           {/* Lesson history */}
-          <div className="mt-6">
+          <div className="mt-8 pt-6 border-t border-[color:var(--border-subtle)]">
             <div className="flex items-center justify-between gap-3 mb-3">
               <h3 className="font-display font-bold text-lg text-token-textMain">Dərs tarixçəsi</h3>
               {Number.isFinite(attendancePct) ? (
@@ -599,12 +678,14 @@ export default function StudentPayments() {
               <div className="space-y-2">
                 {lessonPackages.map((pkg) => {
                   const cyc = Number(pkg.package_number) || 1
-                  const isOpen = openPackages.has(cyc)
+                  const lessonOpenKey = `lesson-${cyc}`
+                  const isOpen = openPackages.has(lessonOpenKey)
                   const start = pkg.start_ymd ? fmtDdMmYyyy(parseYmdLocal(pkg.start_ymd)) : '—'
                   const end = pkg.end_ymd ? fmtDdMmYyyy(parseYmdLocal(pkg.end_ymd)) : '—'
                   const total = Number(pkg.total) || packSize || 0
                   const completed = Number(pkg.completed) || 0
-                  const paid = payByCycleMap.get(cyc) || 0
+                  const paid =
+                    pkg.total_paid != null ? Number(pkg.total_paid) : payByCycleMap.get(cyc) || 0
                   const legacyConfirmed = Boolean(pkg.legacy_confirmed)
                   const paidLabel =
                     paid > 0.005 ? `Ödəniş: ${paid.toFixed(2)} ₼` : legacyConfirmed ? 'Ödənilib (keçmiş paket)' : 'Ödəniş: —'
@@ -616,10 +697,10 @@ export default function StudentPayments() {
                         : ''
 
                   return (
-                    <Card key={cyc} hover className="p-0 overflow-hidden border border-[color:var(--border-subtle)]">
+                    <Card key={lessonOpenKey} hover className="p-0 overflow-hidden border border-[color:var(--border-subtle)]">
                       <button
                         type="button"
-                        onClick={() => togglePkg(cyc)}
+                        onClick={() => togglePkg(lessonOpenKey)}
                         className="w-full px-4 py-3 flex items-center justify-between gap-3 bg-token-surfaceCard/45 hover:bg-token-surfaceCard/60 transition-colors"
                       >
                         <div className="min-w-0 text-left">

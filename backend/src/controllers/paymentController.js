@@ -801,6 +801,132 @@ function isMissingPaymentsStatusColumn(err) {
   return /column\s+"status"\s+does\s+not\s+exist/i.test(msg);
 }
 
+function isCompletedPaymentRow(p) {
+  const st = String(p?.status || '').toLowerCase();
+  if (st === 'completed') return true;
+  if (!st && (p?.paid_at || p?.payment_date)) return true;
+  return false;
+}
+
+function isStudentCountablePayment(p) {
+  const notes = String(p?.notes || '');
+  if (notes.startsWith('[Balans düzəlişi]')) return false;
+  return isCompletedPaymentRow(p);
+}
+
+function paymentSortYmd(p) {
+  const ymd = p?.payment_date != null ? String(p.payment_date).slice(0, 10) : '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(ymd)) return ymd;
+  return toBakuYmd(p?.paid_at) || toYmd(p?.paid_at) || '';
+}
+
+function comparePaymentsChronological(a, b) {
+  const da = paymentSortYmd(a);
+  const db = paymentSortYmd(b);
+  const ca = compareYmd(da, db);
+  if (ca !== 0) return ca;
+  const ta = a?.paid_at ? new Date(a.paid_at).getTime() : 0;
+  const tb = b?.paid_at ? new Date(b.paid_at).getTime() : 0;
+  if (ta !== tb) return ta - tb;
+  return String(a?.id || '').localeCompare(String(b?.id || ''));
+}
+
+/**
+ * Paket tarixçəsi üçün ödənişləri billing_cycle / tarix pəncərəsi / FIFO ilə paketlərə paylaşdır.
+ */
+function allocatePaymentsToLessonPackages({ lessonPackages, payments, systemCreatedYmd, preSystemEnrollment }) {
+  const pkgs = [...(lessonPackages || [])].sort(
+    (a, b) => (Number(a.package_number) || 0) - (Number(b.package_number) || 0)
+  );
+  const buckets = new Map();
+  for (const pkg of pkgs) {
+    buckets.set(Number(pkg.package_number) || 1, { total_paid: 0, payments: [] });
+  }
+
+  const sorted = [...(payments || [])].filter(isStudentCountablePayment).sort(comparePaymentsChronological);
+  const used = new Set();
+
+  const assign = (p, cyc) => {
+    if (!buckets.has(cyc)) return false;
+    buckets.get(cyc).payments.push(p);
+    buckets.get(cyc).total_paid += Number(p.amount) || 0;
+    used.add(String(p.id));
+    return true;
+  };
+
+  // Keçmiş importlarda billing_cycle çox vaxt 1 qalır — pre-system üçün yalnız tarix/FIFO.
+  if (!preSystemEnrollment) {
+    for (const p of sorted) {
+      const cyc = Number(p.billing_cycle);
+      if (!Number.isFinite(cyc) || cyc < 1 || !buckets.has(cyc)) continue;
+      assign(p, cyc);
+    }
+  }
+
+  for (const p of sorted) {
+    if (used.has(String(p.id))) continue;
+    const ymd = paymentSortYmd(p);
+    if (!ymd) continue;
+    const match = pkgs.find((pkg) => {
+      const s = pkg.start_ymd ? String(pkg.start_ymd).slice(0, 10) : null;
+      const e = pkg.end_ymd ? String(pkg.end_ymd).slice(0, 10) : null;
+      if (!s || !e) return false;
+      return compareYmd(ymd, s) >= 0 && compareYmd(ymd, e) <= 0;
+    });
+    if (match) assign(p, Number(match.package_number) || 1);
+  }
+
+  if (preSystemEnrollment) {
+    const unmatched = sorted.filter((p) => !used.has(String(p.id)));
+    const needPkg = pkgs.filter((pkg) => {
+      const cyc = Number(pkg.package_number) || 1;
+      const b = buckets.get(cyc);
+      const total = Number(pkg.total) || 0;
+      const completed = Number(pkg.completed) || 0;
+      const isDone =
+        String(pkg.package_status || '').toLowerCase() === 'completed' ||
+        (total > 0 && completed >= total);
+      return isDone && (b?.total_paid || 0) <= 0.005;
+    });
+    let ui = 0;
+    for (const pkg of needPkg) {
+      if (ui >= unmatched.length) break;
+      assign(unmatched[ui++], Number(pkg.package_number) || 1);
+    }
+  }
+
+  const orphans = sorted.filter((p) => !used.has(String(p.id)));
+  const sysYmd = systemCreatedYmd ? String(systemCreatedYmd).slice(0, 10) : null;
+
+  const enriched = (lessonPackages || []).map((pkg) => {
+    const cyc = Number(pkg.package_number) || 1;
+    const b = buckets.get(cyc) || { total_paid: 0, payments: [] };
+    const paid = Number(b.total_paid) || 0;
+    const legacyConfirmed = Boolean(
+      paid <= 0.005 &&
+        (String(pkg.package_status || '').toLowerCase() === 'completed' ||
+          (Number(pkg.total) > 0 && Number(pkg.completed) >= Number(pkg.total))) &&
+        pkg.end_ymd &&
+        sysYmd &&
+        compareYmd(String(pkg.end_ymd).slice(0, 10), sysYmd) < 0
+    );
+    return {
+      ...pkg,
+      total_paid: paid,
+      package_payments: b.payments,
+      legacy_confirmed: legacyConfirmed,
+      payment_status: paid > 0.005 ? 'paid' : legacyConfirmed ? 'confirmed_legacy' : 'unpaid',
+    };
+  });
+
+  const payments_by_cycle = enriched.map((p) => ({
+    billing_cycle: Number(p.package_number) || 1,
+    total_paid: Number(p.total_paid) || 0,
+  }));
+
+  return { lesson_packages: enriched, orphans, payments_by_cycle };
+}
+
 function ymdAddDays(ymd, days) {
   const s = String(ymd || '').slice(0, 10);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;
@@ -1426,30 +1552,25 @@ const listMyPayments = async (req, res) => {
             [enrollmentOut.id]
           ));
         }
-        payments_by_cycle = payAgg.map((r) => ({
-          billing_cycle: Number(r.billing_cycle) || 1,
-          total_paid: Number(r.total_paid) || 0,
-        }));
-
-        // If the student was enrolled before the system record was created, mark earlier packages as teacher-confirmed.
-        // This is purely a display flag for history; it does NOT write payments to DB.
         const systemCreatedYmd = toYmd(enrollmentOut?.enrolled_at);
-        const payMap = new Map(payments_by_cycle.map((x) => [Number(x.billing_cycle) || 1, Number(x.total_paid) || 0]));
-        if (enrollmentOut?.pre_system_enrollment && systemCreatedYmd && Array.isArray(lesson_packages)) {
-          lesson_packages = lesson_packages.map((p) => {
-            const cyc = Number(p.package_number) || 1;
-            const paid = payMap.get(cyc) || 0;
-            const legacyConfirmed = Boolean(
-              p.package_status === 'completed' && p.end_ymd && String(p.end_ymd).slice(0, 10) < systemCreatedYmd
-            );
-            const payment_status = paid > 0.005 ? 'paid' : legacyConfirmed ? 'confirmed_legacy' : 'unpaid';
-            return {
-              ...p,
-              legacy_confirmed: legacyConfirmed,
-              total_paid: paid,
-              payment_status,
-            };
+        if (Array.isArray(lesson_packages) && lesson_packages.length) {
+          const allocated = allocatePaymentsToLessonPackages({
+            lessonPackages: lesson_packages,
+            payments,
+            systemCreatedYmd,
+            preSystemEnrollment: Boolean(enrollmentOut?.pre_system_enrollment),
           });
+          lesson_packages = allocated.lesson_packages;
+          payments_by_cycle = allocated.payments_by_cycle;
+          enrollmentOut = {
+            ...enrollmentOut,
+            payment_history_orphans: allocated.orphans,
+          };
+        } else {
+          payments_by_cycle = payAgg.map((r) => ({
+            billing_cycle: Number(r.billing_cycle) || 1,
+            total_paid: Number(r.total_paid) || 0,
+          }));
         }
       } catch (e) {
         console.error('payments_by_cycle failed', e);
