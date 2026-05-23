@@ -10,6 +10,7 @@ import {
 import api from '../../lib/api'
 import Card from '../../components/common/Card'
 import useAuthStore from '../../hooks/useAuth'
+import useUiStore from '../../hooks/useUi'
 
 const PIE_COLORS = [
   '#3b82f6',
@@ -28,9 +29,46 @@ function truncate(str, n) {
   return `${s.slice(0, n - 1)}…`
 }
 
+function ExamPieTooltip({ active, payload, theme }) {
+  if (!active || !payload?.length) return null
+  const entry = payload[0]
+  const val = Number(entry?.value)
+  const fullTitle = entry?.payload?.fullTitle ?? entry?.name ?? 'İmtahan'
+  const isDark = theme === 'dark'
+
+  return (
+    <div
+      className={`rounded-xl border px-3 py-2.5 text-xs shadow-lg max-w-[min(280px,90vw)] ${
+        isDark
+          ? 'border-white/15 bg-[#0b0b0b] text-slate-50'
+          : 'border-slate-200 bg-white text-slate-900 shadow-slate-200/80'
+      }`}
+    >
+      <p className={`text-[10px] font-bold uppercase tracking-wide ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+        Bal
+      </p>
+      <p className={`mt-1 text-sm font-semibold leading-snug ${isDark ? 'text-white' : 'text-slate-900'}`}>
+        {fullTitle}: {Number.isFinite(val) ? Math.round(val) : '—'}%
+      </p>
+    </div>
+  )
+}
+
 export default function StudentDashboard() {
   const { user } = useAuthStore()
+  const theme = useUiStore((s) => s.theme)
   const [exams, setExams] = useState([])
+
+  const pieLabelStyle = useMemo(
+    () => ({
+      fill: theme === 'dark' ? '#f8fafc' : '#0f172a',
+      fontSize: 11,
+      fontWeight: 600,
+    }),
+    [theme],
+  )
+
+  const pieSliceStroke = theme === 'dark' ? 'rgba(15,12,41,0.9)' : 'rgba(255,255,255,0.85)'
 
   useEffect(() => {
     if (!user?.id) return
@@ -88,24 +126,16 @@ export default function StudentDashboard() {
                   innerRadius={48}
                   outerRadius={88}
                   paddingAngle={2}
-                  label={({ value }) => `${Math.round(value)}%`}
+                  label={{
+                    ...pieLabelStyle,
+                    formatter: (value) => `${Math.round(Number(value))}%`,
+                  }}
                 >
                   {pieData.map((_, i) => (
-                    <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} stroke="rgba(15,12,41,0.9)" strokeWidth={1} />
+                    <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} stroke={pieSliceStroke} strokeWidth={1} />
                   ))}
                 </Pie>
-                <Tooltip
-                  contentStyle={{
-                    background: '#1a1740',
-                    border: '1px solid rgba(99,102,241,.35)',
-                    borderRadius: 8,
-                    fontSize: 12,
-                  }}
-                  formatter={(val, _name, props) => {
-                    const title = props?.payload?.fullTitle ?? 'İmtahan'
-                    return [`${title}: ${Math.round(Number(val))}%`, 'Bal']
-                  }}
-                />
+                <Tooltip content={(props) => <ExamPieTooltip {...props} theme={theme} />} />
                 <Legend
                   wrapperStyle={{ fontSize: 11 }}
                   formatter={(value) => <span className="text-token-textMuted">{value}</span>}

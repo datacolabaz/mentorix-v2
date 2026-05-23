@@ -55,6 +55,25 @@
   .theme-dark .mentorix-logo:not(.mentorix-logo--login) { mix-blend-mode: screen; }
   /* Login kartı həmişə tünd fonda — tema blend-i ağ loqonu silir */
   .mentorix-logo--login { mix-blend-mode: normal !important; }
+  /* Recharts tooltip — gündüz/qaranlıq kontrast */
+  .theme-dark .recharts-default-tooltip {
+    background-color: rgba(11, 11, 11, 0.96) !important;
+    border-color: rgba(255, 255, 255, 0.12) !important;
+    color: #f8fafc !important;
+  }
+  .theme-light .recharts-default-tooltip {
+    background-color: #ffffff !important;
+    border-color: rgba(15, 23, 42, 0.12) !important;
+    color: #0f172a !important;
+  }
+  .theme-dark .recharts-tooltip-item,
+  .theme-dark .recharts-tooltip-label {
+    color: #f1f5f9 !important;
+  }
+  .theme-light .recharts-tooltip-item,
+  .theme-light .recharts-tooltip-label {
+    color: #0f172a !important;
+  }
   /* Bu kod bütün mobil brauzerlərdəki o xətalı daşmanı kəsir */
   .date-input-class {
     width: 100% !important;
