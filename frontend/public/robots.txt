@@ -1,0 +1,14 @@
+# https://mentorix.io — ictimai səhifələr indekslənsin, panel yolları yox
+User-agent: *
+Allow: /
+Allow: /login
+Allow: /search
+Disallow: /admin
+Disallow: /instructor
+Disallow: /student
+Disallow: /parent
+Disallow: /payment
+Disallow: /courses
+Disallow: /api
+
+Sitemap: https://mentorix.io/sitemap.xml

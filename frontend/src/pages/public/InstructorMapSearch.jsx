@@ -8,6 +8,7 @@ import GoogleInstructorSearchMap from '../../components/public/GoogleInstructorS
 import { isGoogleMapsConfigured } from '../../lib/googleMapsLoader'
 import { BAKU_BBOX, BAKU_CENTER, distanceKm, formatDistanceKm } from '../../lib/geo'
 import { reverseGeocodeLabel } from '../../lib/reverseGeocode'
+import { setPageSeo } from '../../lib/pageSeo'
 
 const DARK_TILE = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
 
@@ -107,6 +108,15 @@ export default function InstructorMapSearch() {
   const loadSeqRef = useRef(0)
   const skipKindReloadRef = useRef(true)
   const autoNearestDoneRef = useRef(false)
+
+  useEffect(() => {
+    setPageSeo({
+      title: 'Müəllim və təlimçi axtarışı — Mentorix xəritəsi | Bakı',
+      description:
+        'Yaxınlığınızdakı repetitor, müəllim və təlimçiləri xəritədə tapın. Mentorix ictimai axtarış — Bakı və Azərbaycan.',
+      canonicalPath: '/search',
+    })
+  }, [])
 
   const loadByBbox = useCallback(
     async (bbox) => {

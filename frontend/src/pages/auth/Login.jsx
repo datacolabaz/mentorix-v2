@@ -8,6 +8,7 @@ import Brand from '../../components/common/Brand'
 import api from '../../lib/api'
 import { trackEvent } from '../../lib/analytics'
 import { defaultLoginMarketingPayload } from '../../constants/defaultLoginMarketing'
+import { setPageSeo } from '../../lib/pageSeo'
 
 function RoleIcon({ role }) {
   const base = 'h-7 w-7 text-primary'
@@ -186,6 +187,17 @@ export default function Login() {
   const [demoTab, setDemoTab] = useState('overview')
   const [demoPaneBusy, setDemoPaneBusy] = useState(false)
   const [marketing, setMarketing] = useState(() => defaultLoginMarketingPayload())
+
+  useEffect(() => {
+    setPageSeo({
+      title: isAdmin
+        ? 'Mentorix — admin girişi'
+        : 'Mentorix — müəllim və tələbə girişi | repetitor paneli',
+      description:
+        'Mentorix ilə müəllim, tələbə və tədris mərkəzi hesabına daxil olun. Tələbə idarəetməsi, ödənişlər, davamiyyət və imtahanlar bir paneldə.',
+      canonicalPath: isAdmin ? '/login?admin=true' : '/login',
+    })
+  }, [isAdmin])
 
   const whyCardsForLanding = useMemo(
     () => (marketing?.why?.cards || []).filter((c) => c.card_enabled !== false),
