@@ -587,7 +587,9 @@ export default function StudentPayments() {
                 const pkgPayments = Array.isArray(pkg.package_payments) ? pkg.package_payments : []
                 const paidLabel =
                   paid > 0.005
-                    ? `Ödəniş: ${paid.toFixed(2)} ₼`
+                    ? legacyConfirmed
+                      ? `Ödənilib (keçmiş paket) · ${paid.toFixed(2)} ₼`
+                      : `Ödəniş: ${paid.toFixed(2)} ₼`
                     : legacyConfirmed
                       ? 'Ödənilib (keçmiş paket)'
                       : 'Ödəniş: —'
@@ -621,7 +623,14 @@ export default function StudentPayments() {
                     {isOpen ? (
                       <div className="p-3 bg-token-surfaceMain/40 border-t border-[color:var(--border-subtle)]">
                         {pkgPayments.length ? (
-                          <ul className="space-y-2">{pkgPayments.map((p) => renderPaymentRow(p))}</ul>
+                          <>
+                            {legacyConfirmed ? (
+                              <p className="text-[10px] text-emerald-300/80 px-1 mb-2">
+                                Keçmiş paket — ödəniş tarixi sistemdə qeydə alınıb.
+                              </p>
+                            ) : null}
+                            <ul className="space-y-2">{pkgPayments.map((p) => renderPaymentRow(p))}</ul>
+                          </>
                         ) : legacyConfirmed ? (
                           <p className="text-xs text-emerald-300/90 px-1">
                             Keçmiş paket — ödəniş sistemə ayrıca yazılmayıb, təlimçi tərəfindən təsdiqlənib.

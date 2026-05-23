@@ -832,9 +832,16 @@ function comparePaymentsChronological(a, b) {
 }
 
 /**
- * Paket tarixçəsi üçün ödənişləri billing_cycle / tarix pəncərəsi / FIFO ilə paketlərə paylaşdır.
+ * Paket tarixçəsi — 8/12 dərs + aylıq ödənişlər (Nihad Isayev tipli): ankor üzrə 1 ödəniş / paket.
  */
-function allocatePaymentsToLessonPackages({ lessonPackages, payments, systemCreatedYmd, preSystemEnrollment }) {
+function allocatePaymentsToLessonPackages({
+  lessonPackages,
+  payments,
+  systemCreatedYmd,
+  preSystemEnrollment,
+  enrollment,
+  todayYmd,
+}) {
   const pkgs = [...(lessonPackages || [])].sort(
     (a, b) => (Number(a.package_number) || 0) - (Number(b.package_number) || 0)
   );
@@ -845,19 +852,20 @@ function allocatePaymentsToLessonPackages({ lessonPackages, payments, systemCrea
 
   const sorted = [...(payments || [])].filter(isStudentCountablePayment).sort(comparePaymentsChronological);
   const used = new Set();
+  const sysYmd = systemCreatedYmd ? String(systemCreatedYmd).slice(0, 10) : null;
 
   const pkgHasPayment = (cyc) => (buckets.get(cyc)?.payments?.length || 0) > 0;
 
   const assign = (p, cyc) => {
     if (!buckets.has(cyc)) return false;
+    const id = p?.id != null ? String(p.id) : '';
+    if (id && used.has(id)) return false;
     if (pkgHasPayment(cyc)) return false;
     buckets.get(cyc).payments.push(p);
     buckets.get(cyc).total_paid += Number(p.amount) || 0;
-    used.add(String(p.id));
+    if (id) used.add(id);
     return true;
   };
-
-  const sysYmd = systemCreatedYmd ? String(systemCreatedYmd).slice(0, 10) : null;
 
   const isPkgCompleted = (pkg) => {
     const total = Number(pkg.total) || 0;
@@ -868,44 +876,96 @@ function allocatePaymentsToLessonPackages({ lessonPackages, payments, systemCrea
     );
   };
 
-  const isLegacyCompletedPkg = (pkg) =>
-    Boolean(
-      sysYmd &&
-        pkg.end_ymd &&
-        isPkgCompleted(pkg) &&
-        compareYmd(String(pkg.end_ymd).slice(0, 10), sysYmd) < 0
-    );
+  const useMonthlyPack = usesAnchorMonthlyPaymentTimeline(enrollment, sorted);
 
-  // Keçmiş importlarda billing_cycle çox vaxt 1 qalır — pre-system üçün yalnız FIFO (1 ödəniş / paket).
-  if (!preSystemEnrollment) {
-    for (const p of sorted) {
-      const cyc = Number(p.billing_cycle);
-      if (!Number.isFinite(cyc) || cyc < 1 || !buckets.has(cyc)) continue;
-      assign(p, cyc);
+  if (useMonthlyPack && enrollment?.enrollment_start_date) {
+    const anchorYmd = resolveMonthlyAnchorYmd({
+      enrollment_start_date: enrollment.enrollment_start_date,
+      enrolled_at: enrollment.enrolled_at,
+      payment_start_date: enrollment.payment_start_date,
+      today_ymd: todayYmd,
+    });
+    const lastPkgEnd = pkgs.reduce((mx, p) => {
+      const e = p.end_ymd ? String(p.end_ymd).slice(0, 10) : '';
+      if (e && (!mx || compareYmd(e, mx) > 0)) return e;
+      return mx;
+    }, '');
+    const untilYmd =
+      lastPkgEnd && todayYmd && compareYmd(lastPkgEnd, todayYmd) > 0 ? lastPkgEnd : todayYmd || anchorYmd;
+
+    const { paidByDue } = allocateMonthlyPaymentsToDues({
+      anchorYmd,
+      todayYmd: untilYmd || anchorYmd,
+      payments: sorted,
+    });
+
+    const paidList = [...paidByDue.entries()]
+      .sort((a, b) => compareYmd(a[0], b[0]))
+      .map(([due, p]) => ({
+        due,
+        payment: {
+          ...p,
+          payment_date: p.payment_date || due,
+        },
+      }));
+
+    const completedPkgs = pkgs.filter(isPkgCompleted);
+
+    for (const pkg of completedPkgs) {
+      const cyc = Number(pkg.package_number) || 1;
+      if (pkgHasPayment(cyc)) continue;
+      const s = pkg.start_ymd ? String(pkg.start_ymd).slice(0, 10) : null;
+      const e = pkg.end_ymd ? String(pkg.end_ymd).slice(0, 10) : null;
+      const inWindow = paidList.find(({ due, payment }) => {
+        const id = payment?.id != null ? String(payment.id) : '';
+        if (id && used.has(id)) return false;
+        if (!s || !e) return false;
+        return compareYmd(due, s) >= 0 && compareYmd(due, e) <= 0;
+      });
+      if (inWindow) assign(inWindow.payment, cyc);
     }
 
-    for (const p of sorted) {
-      if (used.has(String(p.id))) continue;
-      const ymd = paymentSortYmd(p);
-      if (!ymd) continue;
-      const match = pkgs.find((pkg) => {
-        if (pkgHasPayment(Number(pkg.package_number) || 1)) return false;
-        const s = pkg.start_ymd ? String(pkg.start_ymd).slice(0, 10) : null;
-        const e = pkg.end_ymd ? String(pkg.end_ymd).slice(0, 10) : null;
-        if (!s || !e) return false;
-        return compareYmd(ymd, s) >= 0 && compareYmd(ymd, e) <= 0;
-      });
-      if (match) assign(p, Number(match.package_number) || 1);
+    let pi = 0;
+    for (const pkg of completedPkgs) {
+      const cyc = Number(pkg.package_number) || 1;
+      if (pkgHasPayment(cyc)) continue;
+      while (pi < paidList.length) {
+        const { payment } = paidList[pi++];
+        const id = payment?.id != null ? String(payment.id) : '';
+        if (id && used.has(id)) continue;
+        assign(payment, cyc);
+        break;
+      }
     }
   } else {
-    const unmatched = sorted.filter((p) => !used.has(String(p.id)));
-    const needPkg = pkgs.filter(
-      (pkg) => isPkgCompleted(pkg) && !isLegacyCompletedPkg(pkg) && !pkgHasPayment(Number(pkg.package_number) || 1)
-    );
-    let ui = 0;
-    for (const pkg of needPkg) {
-      if (ui >= unmatched.length) break;
-      assign(unmatched[ui++], Number(pkg.package_number) || 1);
+    if (!preSystemEnrollment) {
+      for (const p of sorted) {
+        const cyc = Number(p.billing_cycle);
+        if (!Number.isFinite(cyc) || cyc < 1 || !buckets.has(cyc)) continue;
+        assign(p, cyc);
+      }
+
+      for (const p of sorted) {
+        if (used.has(String(p.id))) continue;
+        const ymd = paymentSortYmd(p);
+        if (!ymd) continue;
+        const match = pkgs.find((pkg) => {
+          if (pkgHasPayment(Number(pkg.package_number) || 1)) return false;
+          const s = pkg.start_ymd ? String(pkg.start_ymd).slice(0, 10) : null;
+          const e = pkg.end_ymd ? String(pkg.end_ymd).slice(0, 10) : null;
+          if (!s || !e) return false;
+          return compareYmd(ymd, s) >= 0 && compareYmd(ymd, e) <= 0;
+        });
+        if (match) assign(p, Number(match.package_number) || 1);
+      }
+    } else {
+      const unmatched = sorted.filter((p) => !used.has(String(p.id)));
+      const needPkg = pkgs.filter((pkg) => isPkgCompleted(pkg) && !pkgHasPayment(Number(pkg.package_number) || 1));
+      let ui = 0;
+      for (const pkg of needPkg) {
+        if (ui >= unmatched.length) break;
+        assign(unmatched[ui++], Number(pkg.package_number) || 1);
+      }
     }
   }
 
@@ -1089,6 +1149,7 @@ const listMyPayments = async (req, res) => {
       `SELECT e.*,
               iu.full_name AS instructor_name,
               sp.monthly_fee AS student_monthly_fee,
+              to_char(sp.payment_start_date::date, 'YYYY-MM-DD') AS payment_start_date,
               COALESCE(NULLIF(TRIM(ip.public_label), ''), 'instructor') AS instructor_public_label
        FROM enrollments e
        LEFT JOIN users iu ON iu.id = e.instructor_id
@@ -1110,6 +1171,7 @@ const listMyPayments = async (req, res) => {
         `SELECT e.*,
                 iu.full_name AS instructor_name,
                 sp.monthly_fee AS student_monthly_fee,
+                to_char(sp.payment_start_date::date, 'YYYY-MM-DD') AS payment_start_date,
                 COALESCE(NULLIF(TRIM(ip.public_label), ''), 'instructor') AS instructor_public_label
          FROM enrollments e
          LEFT JOIN users iu ON iu.id = e.instructor_id
@@ -1567,11 +1629,14 @@ const listMyPayments = async (req, res) => {
         }
         const systemCreatedYmd = toYmd(enrollmentOut?.enrolled_at);
         if (Array.isArray(lesson_packages) && lesson_packages.length) {
+          const todayBakuAlloc = await getTodayBakuYmd(db);
           const allocated = allocatePaymentsToLessonPackages({
             lessonPackages: lesson_packages,
             payments,
             systemCreatedYmd,
             preSystemEnrollment: Boolean(enrollmentOut?.pre_system_enrollment),
+            enrollment: enrollmentOut,
+            todayYmd: todayBakuAlloc,
           });
           lesson_packages = allocated.lesson_packages;
           payments_by_cycle = allocated.payments_by_cycle;
