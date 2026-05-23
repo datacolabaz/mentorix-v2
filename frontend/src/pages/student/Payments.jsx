@@ -325,6 +325,14 @@ export default function StudentPayments() {
     })
   }
 
+  function lessonStatusLabel(st) {
+    const s = String(st || '').toLowerCase()
+    if (s === 'done') return { text: 'İştirak etdi', cls: 'text-emerald-300' }
+    if (s === 'absent') return { text: 'Qaib', cls: 'text-rose-300' }
+    if (s === 'cancelled') return { text: 'Ləğv edildi', cls: 'text-token-textMuted' }
+    return { text: 'Gözlənilir', cls: 'text-token-textMuted' }
+  }
+
   function renderPaymentRow(p) {
     const noteForStudent = displayNotesForStudent(p.notes)
     return (
@@ -572,7 +580,7 @@ export default function StudentPayments() {
           {lessonPackages.length ? (
             <div className="space-y-2">
               <p className="text-xs text-token-textMuted mb-2">
-                Paketlər üzrə ödənişlər — paketi açın, həmin dövrə aid ödənişləri görün.
+                Paketi açın — həmin dövrün ödənişi və dərs tarixləri görünür.
               </p>
               {lessonPackages.map((pkg) => {
                 const cyc = Number(pkg.package_number) || 1
@@ -638,6 +646,32 @@ export default function StudentPayments() {
                         ) : (
                           <p className="text-xs text-token-textMuted px-1">Bu paket üçün qeydə alınmış ödəniş yoxdur.</p>
                         )}
+
+                        {(pkg.lessons || []).length > 0 ? (
+                          <div className="mt-4 pt-3 border-t border-[color:var(--border-subtle)]">
+                            <p className="text-[10px] font-semibold text-token-textMuted uppercase tracking-wider mb-2">
+                              Dərs tarixləri · {completed}/{total}
+                            </p>
+                            <ul className="space-y-1.5">
+                              {(pkg.lessons || []).map((ls) => {
+                                const ymd = ls.ymd ? fmtDdMmYyyy(parseYmdLocal(ls.ymd)) : '—'
+                                const st = lessonStatusLabel(ls.status)
+                                return (
+                                  <li
+                                    key={`${cyc}:${ls.lesson_number}`}
+                                    className="flex items-center justify-between gap-2 rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard/40 px-3 py-2 text-sm"
+                                  >
+                                    <span className="text-token-textMain">
+                                      Dərs {ls.lesson_number || '—'}:{' '}
+                                      <span className="font-mono tabular-nums">{ymd}</span>
+                                    </span>
+                                    <span className={`text-xs font-semibold shrink-0 ${st.cls}`}>{st.text}</span>
+                                  </li>
+                                )
+                              })}
+                            </ul>
+                          </div>
+                        ) : null}
                       </div>
                     ) : null}
                   </Card>
