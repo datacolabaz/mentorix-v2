@@ -313,7 +313,6 @@ export default function StudentPayments() {
   const lessonPackages = Array.isArray(enrollment?.lesson_packages) ? enrollment.lesson_packages : []
   const paymentsByCycle = Array.isArray(enrollment?.payments_by_cycle) ? enrollment.payments_by_cycle : []
   const payByCycleMap = new Map(paymentsByCycle.map((x) => [Number(x.billing_cycle) || 1, Number(x.total_paid) || 0]))
-  const orphanPayments = Array.isArray(enrollment?.payment_history_orphans) ? enrollment.payment_history_orphans : []
   const [openPackages, setOpenPackages] = useState(() => new Set())
 
   function togglePkg(cyc) {
@@ -684,15 +683,6 @@ export default function StudentPayments() {
             <p className="text-token-textMuted text-sm">Qeydə alınmış ödəniş yoxdur.</p>
           )}
 
-          {orphanPayments.length ? (
-            <div className="mt-4">
-              <h3 className="text-sm font-semibold text-token-textMain mb-2">Paketə bağlanmayan ödənişlər</h3>
-              <p className="text-xs text-token-textMuted mb-2">
-                Bu sətirlər ümumi tarixçədə qalır; təlimçi lazım gələrsə paketə uyğunlaşdıra bilər.
-              </p>
-              <ul className="space-y-2">{orphanPayments.map((p) => renderPaymentRow(p))}</ul>
-            </div>
-          ) : null}
         </Card>
       )}
     </div>
