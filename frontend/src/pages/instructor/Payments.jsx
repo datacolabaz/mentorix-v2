@@ -56,6 +56,14 @@ function historyDateKey(p) {
   return formatDdMmYyyy(p.payment_date || p.paid_at)
 }
 
+function lessonStatusLabel(status) {
+  const st = String(status || '').toLowerCase()
+  if (st === 'done') return { text: 'Keçib', cls: 'text-emerald-300' }
+  if (st === 'absent') return { text: 'Qayıb', cls: 'text-rose-300' }
+  if (st === 'cancelled') return { text: 'Ləğv', cls: 'text-gray-400' }
+  return { text: 'Gözləyir', cls: 'text-amber-200/90' }
+}
+
 /** Ad və telefon üzrə (case-insensitive, +994 / boşluq tolerant) */
 function matchesStudentSearch(student, searchTerm) {
   const q = String(searchTerm ?? '').trim().toLowerCase()
@@ -93,6 +101,8 @@ export default function InstructorPayments() {
   const [pendingAmount, setPendingAmount] = useState(0)
   const [students, setStudents] = useState([])
   const [dueConfirmations, setDueConfirmations] = useState([])
+  const [packConfirmations, setPackConfirmations] = useState([])
+  const [packConfirmOpen, setPackConfirmOpen] = useState(false)
   const [confirmingKey, setConfirmingKey] = useState(null)
   const [markingId, setMarkingId] = useState(null)
   const [quickOpen, setQuickOpen] = useState(false)
@@ -104,6 +114,10 @@ export default function InstructorPayments() {
   const [historyRow, setHistoryRow] = useState(null)
   const [historyPayments, setHistoryPayments] = useState([])
   const [historySummary, setHistorySummary] = useState(null)
+  const [historyViewMode, setHistoryViewMode] = useState('monthly')
+  const [historyPackages, setHistoryPackages] = useState([])
+  const [historyPackSummary, setHistoryPackSummary] = useState(null)
+  const [openHistoryPackages, setOpenHistoryPackages] = useState(() => new Set())
   const [historyLoading, setHistoryLoading] = useState(false)
   const [deletingPaymentId, setDeletingPaymentId] = useState(null)
   const [adjustOpen, setAdjustOpen] = useState(false)
@@ -128,6 +142,9 @@ export default function InstructorPayments() {
       }
       setStudents(d.students || [])
       setDueConfirmations(Array.isArray(d.due_confirmations) ? d.due_confirmations : [])
+      const packs = Array.isArray(d.pack_confirmations) ? d.pack_confirmations : []
+      setPackConfirmations(packs)
+      if (packs.length > 0) setPackConfirmOpen(true)
     } catch (e) {
       setErr(e?.message || 'Məlumat yüklənmədi')
       setStudents([])
@@ -223,6 +240,32 @@ export default function InstructorPayments() {
 
   const dueConfirmKey = (item) => `${item.enrollment_id}|${item.due_ymd}`
 
+  const packConfirmKey = (item) => `${item.enrollment_id}|p${item.package_number}`
+
+  const confirmPackPayment = async (item, opts = {}) => {
+    const key = packConfirmKey(item)
+    setConfirmingKey(key)
+    try {
+      await api.post('/payments/confirm-pack', {
+        enrollment_id: item.enrollment_id,
+        package_number: item.package_number,
+        amount: item.amount,
+        payment_date: item.due_ymd,
+      })
+      toast('Paket ödənişi təsdiqləndi — tarixçəyə əlavə olundu', 'success')
+      if (opts.refreshHistory && historyRow?.enrollment_id === item.enrollment_id) {
+        await fetchHistoryForEnrollment(item.enrollment_id, historyRow.billing_type, '8')
+      }
+      setPackConfirmations((prev) => prev.filter((x) => packConfirmKey(x) !== key))
+      await load()
+    } catch (e) {
+      toast(e?.message || 'Təsdiq alınmadı', 'error')
+      if (e?.status === 409) await load()
+    } finally {
+      setConfirmingKey(null)
+    }
+  }
+
   const confirmDuePayment = async (item, opts = {}) => {
     const key = dueConfirmKey(item)
     setConfirmingKey(key)
@@ -234,7 +277,7 @@ export default function InstructorPayments() {
       })
       toast('Ödəniş təsdiqləndi — tarixçəyə əlavə olundu', 'success')
       if (opts.refreshHistory && historyRow?.enrollment_id === item.enrollment_id) {
-        await fetchHistoryForEnrollment(item.enrollment_id)
+        await fetchHistoryForEnrollment(item.enrollment_id, historyRow.billing_type)
       }
       await load()
     } catch (e) {
@@ -256,12 +299,50 @@ export default function InstructorPayments() {
     return true
   }
 
-  const fetchHistoryForEnrollment = async (enrollmentId) => {
+  const toggleHistoryPkg = (cyc) => {
+    setOpenHistoryPackages((prev) => {
+      const next = new Set(prev)
+      if (next.has(cyc)) next.delete(cyc)
+      else next.add(cyc)
+      return next
+    })
+  }
+
+  const isPackBillingRow = (billingType, categoryKey) =>
+    categoryKey === '8' ||
+    categoryKey === '12' ||
+    billingType === '8_lessons' ||
+    billingType === '12_lessons'
+
+  const fetchHistoryForEnrollment = async (enrollmentId, billingType, categoryKey) => {
     setHistoryLoading(true)
     try {
-      const d = await api.get('/payments/enrollment/' + encodeURIComponent(enrollmentId) + '/history')
-      setHistoryPayments(sortPaymentsChronologically(d.payments))
-      setHistorySummary(d.balance_summary ?? null)
+      const forcePack = isPackBillingRow(billingType, categoryKey)
+      const d = await api.get('/payments/enrollment/' + encodeURIComponent(enrollmentId) + '/history', {
+        params: forcePack ? { view: 'packages' } : undefined,
+      })
+      const mode = d.view_mode === 'packages' || forcePack ? 'packages' : 'monthly'
+      setHistoryViewMode(mode)
+      if (mode === 'packages') {
+        setHistoryPackages(Array.isArray(d.lesson_packages) ? d.lesson_packages : [])
+        setHistoryPackSummary(d.summary ?? null)
+        setHistoryPayments([])
+        setHistorySummary(null)
+        const unpaid = (d.lesson_packages || []).filter(
+          (p) =>
+            p.payment_status === 'unpaid' &&
+            !p.legacy_confirmed &&
+            Number(p.completed) >= Number(p.total) &&
+            Number(p.total) > 0
+        )
+        setOpenHistoryPackages(new Set(unpaid.map((p) => Number(p.package_number) || 1)))
+      } else {
+        setHistoryPackages([])
+        setHistoryPackSummary(null)
+        setOpenHistoryPackages(new Set())
+        setHistoryPayments(sortPaymentsChronologically(d.payments))
+        setHistorySummary(d.balance_summary ?? null)
+      }
     } catch (e) {
       toast(e?.message || 'Tarixçə yüklənmədi', 'error')
     } finally {
@@ -269,13 +350,18 @@ export default function InstructorPayments() {
     }
   }
 
-  const openHistory = async (row) => {
+  const openHistory = async (row, categoryKey) => {
     if (!row?.enrollment_id) return
+    const forcePack = isPackBillingRow(row.billing_type, categoryKey)
     setHistoryRow(row)
     setHistoryOpen(true)
     setHistoryPayments([])
     setHistorySummary(null)
-    await fetchHistoryForEnrollment(row.enrollment_id)
+    setHistoryPackages([])
+    setHistoryPackSummary(null)
+    setHistoryViewMode(forcePack ? 'packages' : 'monthly')
+    setOpenHistoryPackages(new Set())
+    await fetchHistoryForEnrollment(row.enrollment_id, row.billing_type, categoryKey)
   }
 
   const deleteHistoryPayment = async (paymentId) => {
@@ -291,7 +377,7 @@ export default function InstructorPayments() {
     try {
       await api.delete('/payments/' + encodeURIComponent(paymentId))
       toast('Ödəniş silindi')
-      await fetchHistoryForEnrollment(eid)
+      await fetchHistoryForEnrollment(eid, historyRow?.billing_type)
       await load()
     } catch (e) {
       toast(e?.message || 'Silinmədi', 'error')
@@ -305,14 +391,74 @@ export default function InstructorPayments() {
       <div className="mb-6">
         <h1 className="font-display font-bold text-xl sm:text-2xl text-token-textMain tracking-tight">Ödənişlər</h1>
         <p className="text-token-textMuted text-sm mt-1">
-          Aylıq ödənişlər cari aydan etibarən təsdiq tələb edir; təsdiqdən sonra tarixçə və gəlir sayğacları yenilənir.
-          Keçmiş ayların mövcud qeydlərinə toxunulmur.
+          8/12 dərs paketləri tamamlananda təsdiq tələb olunur; aylıq ödənişlər isə cari aydan etibarən təsdiqlənir.
+          Təsdiqdən sonra tarixçə və tələbə profilində ödənişlər yenilənir.
         </p>
       </div>
 
+      <Modal
+        open={packConfirmOpen && packConfirmations.length > 0}
+        onClose={() => !confirmingKey && setPackConfirmOpen(false)}
+        title="Paket ödənişi təsdiqi"
+        size="md"
+      >
+        <p className="text-xs text-token-textMuted mb-3 leading-relaxed">
+          Bu tələbələrin dərs paketi tamamlanıb, amma ödəniş hələ qeydə alınmayıb. Nağd alındısa təsdiqləyin.
+        </p>
+        <ul className="space-y-2 max-h-[min(60vh,24rem)] overflow-y-auto pr-0.5">
+          {packConfirmations.map((item) => {
+            const key = packConfirmKey(item)
+            const busy = confirmingKey === key
+            const name = item.student_name || `${item.first_name || ''} ${item.last_name || ''}`.trim()
+            return (
+              <li
+                key={key}
+                className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-xl border border-emerald-500/25 bg-token-surfaceCard/50 px-3 py-3"
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-token-textMain">{name || '—'}</p>
+                  <p className="text-xs text-emerald-200/90 mt-1">
+                    {item.period || `Paket #${item.package_number}`} tamamlanıb
+                    {item.overdue ? ' · gecikib' : ''}
+                  </p>
+                  <p className="text-xs text-token-textMuted mt-1 tabular-nums">Məbləğ: {formatAzn(item.amount)}</p>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  loading={busy}
+                  disabled={!!confirmingKey}
+                  onClick={() => void confirmPackPayment(item)}
+                  className="shrink-0 w-full sm:w-auto justify-center"
+                >
+                  Təsdiqlə
+                </Button>
+              </li>
+            )
+          })}
+        </ul>
+        <div className="flex justify-end pt-3">
+          <Button type="button" variant="secondary" size="sm" disabled={!!confirmingKey} onClick={() => setPackConfirmOpen(false)}>
+            Sonra
+          </Button>
+        </div>
+      </Modal>
+
+      {!loading && packConfirmations.length > 0 ? (
+        <Card hover className="p-4 sm:p-5 mb-6 border border-emerald-500/30 bg-emerald-500/5">
+          <h2 className="font-display font-bold text-sm text-emerald-200/95 mb-1">Paket ödənişi gözləyir</h2>
+          <p className="text-xs text-token-textMuted mb-3 leading-relaxed">
+            {packConfirmations.length} tamamlanmış paket üçün ödəniş təsdiqi lazımdır.
+          </p>
+          <Button type="button" size="sm" onClick={() => setPackConfirmOpen(true)}>
+            Təsdiq pəncərəsini aç
+          </Button>
+        </Card>
+      ) : null}
+
       {!loading && dueConfirmations.length > 0 ? (
         <Card hover className="p-4 sm:p-5 mb-6 border border-amber-500/30 bg-amber-500/5">
-          <h2 className="font-display font-bold text-sm text-amber-200/95 mb-1">Ödəniş xatırlatması</h2>
+          <h2 className="font-display font-bold text-sm text-amber-200/95 mb-1">Aylıq ödəniş xatırlatması</h2>
           <p className="text-xs text-token-textMuted mb-3 leading-relaxed">
             Ödəniş vaxtı çatıb, amma hələ tarixçəyə düşməyib. Nağd alındısa təsdiqləyin — sonra «Tarixçə» və
             bildirişlər bölməsində görünəcək.
@@ -522,7 +668,7 @@ export default function InstructorPayments() {
                               <Button
                                 size="sm"
                                 variant="secondary"
-                                onClick={() => void openHistory(s)}
+                                onClick={() => void openHistory(s, c.key)}
                                 className={
                                   theme === 'light'
                                     ? '!text-slate-900 !border-slate-200 bg-white hover:bg-slate-50'
@@ -747,14 +893,35 @@ export default function InstructorPayments() {
           }
         }}
         title="Ödəniş tarixçəsi"
-        size="md"
+        size={historyViewMode === 'packages' ? 'lg' : 'md'}
       >
         {historyRow && (
           <div className="space-y-3 text-sm">
             <p className="text-gray-400">
               {historyRow.first_name} {historyRow.last_name}
             </p>
-            {!historyLoading && historySummary && (
+            {!historyLoading && historyViewMode === 'packages' && historyPackSummary && (
+              <div className="rounded-xl border border-indigo-500/20 bg-[#13112e]/70 p-3 space-y-1.5 text-xs">
+                <p className="text-gray-500">
+                  Paket:{' '}
+                  <span className="text-gray-300">
+                    {historyPackSummary.billing_type === '12_lessons' ? '12 dərs' : '8 dərs'}
+                  </span>
+                </p>
+                <p className="text-gray-500">
+                  Qeydə alınmış cəmi:{' '}
+                  <span className="text-emerald-200/95 font-mono tabular-nums">
+                    {formatAzn(historyPackSummary.total_paid)}
+                  </span>
+                </p>
+                {historyPackSummary.pre_system_enrollment ? (
+                  <p className="text-amber-200/80 leading-relaxed pt-1 border-t border-indigo-500/15">
+                    Sistemdən əvvəlki qeydiyyat — paketlər qeydiyyat tarixindən hesablanır.
+                  </p>
+                ) : null}
+              </div>
+            )}
+            {!historyLoading && historyViewMode === 'monthly' && historySummary && (
               <div className="rounded-xl border border-indigo-500/20 bg-[#13112e]/70 p-3 space-y-2 text-xs">
                 {historySummary.billing_anchor_future ? (
                   <p className="text-sky-200/90 leading-relaxed">
@@ -814,13 +981,148 @@ export default function InstructorPayments() {
               </div>
             )}
             {historyLoading && <p className="text-gray-500 text-xs">Yüklənir…</p>}
-            {!historyLoading && !historyPayments.length && (
+            {!historyLoading && historyViewMode === 'packages' && historyPackages.length > 0 && (
+              <div>
+                <p className="text-[10px] text-gray-500 mb-2 leading-snug">
+                  Paketi açın — ödəniş və dərs tarixləri görünür. Tamamlanmış, ödənilməmiş paketlər üçün «Təsdiqlə»
+                  düyməsi var.
+                </p>
+                <ul className="space-y-2 max-h-[min(55vh,22rem)] overflow-y-auto pr-0.5">
+                  {historyPackages.map((pkg) => {
+                    const cyc = Number(pkg.package_number) || 1
+                    const isOpen = openHistoryPackages.has(cyc)
+                    const total = Number(pkg.total) || 0
+                    const completed = Number(pkg.completed) || 0
+                    const paid = Number(pkg.total_paid) || 0
+                    const legacyConfirmed = Boolean(pkg.legacy_confirmed)
+                    const pkgPayments = Array.isArray(pkg.package_payments) ? pkg.package_payments : []
+                    const isDone = total > 0 && completed >= total
+                    const needsConfirm =
+                      isDone && pkg.payment_status === 'unpaid' && !legacyConfirmed && paid <= 0.005
+                    const paidLabel =
+                      paid > 0.005
+                        ? `Ödəniş: ${formatAzn(paid)}`
+                        : legacyConfirmed
+                          ? 'Ödənilib (keçmiş paket)'
+                          : needsConfirm
+                            ? 'Ödəniş gözləyir'
+                            : 'Ödəniş: —'
+                    const confirmItem =
+                      needsConfirm && historyRow?.enrollment_id
+                        ? {
+                            enrollment_id: historyRow.enrollment_id,
+                            package_number: cyc,
+                            amount: historyPackSummary?.monthly_fee,
+                            due_ymd: pkg.end_ymd ? String(pkg.end_ymd).slice(0, 10) : todayBaku,
+                            period: `Paket #${cyc}`,
+                          }
+                        : null
+                    const rowKey = packConfirmKey(confirmItem || { enrollment_id: '', package_number: cyc })
+                    const confirmBusy = confirmItem && confirmingKey === rowKey
+
+                    return (
+                      <li
+                        key={`pkg-${cyc}`}
+                        className="rounded-xl border border-indigo-500/20 bg-[#13112e]/60 overflow-hidden"
+                      >
+                        <button
+                          type="button"
+                          onClick={() => toggleHistoryPkg(cyc)}
+                          className="w-full px-3 py-2.5 flex items-center justify-between gap-2 text-left hover:bg-indigo-500/5 transition-colors"
+                        >
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-white">
+                              Paket #{cyc}
+                              {isDone ? ' · Tamamlanıb' : ''}
+                            </p>
+                            <p className="text-[11px] text-gray-500 mt-0.5">
+                              {formatDdMmYyyy(pkg.start_ymd)} — {formatDdMmYyyy(pkg.end_ymd)} · {completed}/{total}{' '}
+                              dərs ·{' '}
+                              <span className={paid > 0.005 || legacyConfirmed ? 'text-emerald-300' : needsConfirm ? 'text-amber-200/90' : ''}>
+                                {paidLabel}
+                              </span>
+                            </p>
+                          </div>
+                          <span className="text-gray-500 text-xs shrink-0">{isOpen ? '▴' : '▾'}</span>
+                        </button>
+                        {isOpen ? (
+                          <div className="px-3 pb-3 border-t border-indigo-500/15 space-y-2">
+                            {pkgPayments.length ? (
+                              <ul className="space-y-1.5 pt-2">
+                                {pkgPayments.map((p) => (
+                                  <li
+                                    key={p.id}
+                                    className="flex items-center justify-between gap-2 text-xs border border-indigo-500/15 rounded-lg px-2 py-1.5"
+                                  >
+                                    <span className="text-gray-400">{historyDateKey(p)}</span>
+                                    <span className="text-white font-mono tabular-nums">{formatAzn(p.amount)}</span>
+                                    {p.id ? (
+                                      <button
+                                        type="button"
+                                        title="Sil"
+                                        disabled={!!deletingPaymentId || !!confirmingKey}
+                                        onClick={() => void deleteHistoryPayment(p.id)}
+                                        className="p-1 text-gray-500 hover:text-rose-300"
+                                      >
+                                        ×
+                                      </button>
+                                    ) : null}
+                                  </li>
+                                ))}
+                              </ul>
+                            ) : legacyConfirmed ? (
+                              <p className="text-xs text-emerald-300/90 pt-2">Keçmiş paket — təsdiqlənib.</p>
+                            ) : (
+                              <p className="text-xs text-gray-500 pt-2">Bu paket üçün ödəniş qeydi yoxdur.</p>
+                            )}
+                            {(pkg.lessons || []).length > 0 ? (
+                              <ul className="space-y-1 pt-1">
+                                {(pkg.lessons || []).map((ls) => {
+                                  const st = lessonStatusLabel(ls.status)
+                                  return (
+                                    <li
+                                      key={`${cyc}-${ls.lesson_number}`}
+                                      className="flex justify-between text-[11px] rounded-lg border border-indigo-500/10 px-2 py-1"
+                                    >
+                                      <span className="text-gray-400">
+                                        Dərs {ls.lesson_number}: {formatDdMmYyyy(ls.ymd)}
+                                      </span>
+                                      <span className={st.cls}>{st.text}</span>
+                                    </li>
+                                  )
+                                })}
+                              </ul>
+                            ) : null}
+                            {confirmItem ? (
+                              <Button
+                                type="button"
+                                size="sm"
+                                loading={confirmBusy}
+                                disabled={!!confirmingKey && !confirmBusy}
+                                onClick={() => void confirmPackPayment(confirmItem, { refreshHistory: true })}
+                                className="w-full justify-center mt-1"
+                              >
+                                Paket ödənişini təsdiqlə
+                              </Button>
+                            ) : null}
+                          </div>
+                        ) : null}
+                      </li>
+                    )
+                  })}
+                </ul>
+              </div>
+            )}
+            {!historyLoading && historyViewMode === 'packages' && !historyPackages.length && (
+              <p className="text-gray-500 text-xs">Paket məlumatı tapılmadı.</p>
+            )}
+            {!historyLoading && historyViewMode === 'monthly' && !historyPayments.length && (
               <p className="text-gray-500 text-xs">
                 Bu qeydiyyat üçün (və eyni müəllim altında digər qeydiyyatlar üçün) sistemdə ödəniş sətri tapılmadı.
                 Əvvəl əl ilə qeyd edilməyibsə və ya köhnə hesab silinibsə, tarixçə boş ola bilər.
               </p>
             )}
-            {!historyLoading && historyPayments.length > 0 && (
+            {!historyLoading && historyViewMode === 'monthly' && historyPayments.length > 0 && (
               <div>
                 <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">Əməliyyatlar</p>
                 <p className="text-[10px] text-gray-600 mb-2 leading-snug">

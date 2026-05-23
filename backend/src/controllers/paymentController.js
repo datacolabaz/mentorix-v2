@@ -15,6 +15,7 @@ const {
   compareYmd,
 } = require('../services/subscriptionBilling');
 const { ensurePackLessonsUpTo, normalizePackBillingType } = require('../services/packLessons');
+const { buildEnrollmentPackageHistoryView } = require('../services/enrollmentPackagePayments');
 
 /** Bu qeydlər balansı azaldır; ümumi gəlir statistikasına daxil edilmir */
 const SQL_EXCLUDE_BALANCE_ADJUSTMENT =
@@ -281,7 +282,7 @@ async function buildDueConfirmationsForInstructor(db, instructorId, todayBaku) {
      FROM enrollments e
      INNER JOIN users u ON u.id = e.student_id
      LEFT JOIN student_profiles sp ON sp.user_id = u.id
-     WHERE e.billing_type IN ('monthly', '8_lessons', '12_lessons')
+     WHERE e.billing_type = 'monthly'
        AND e.enrollment_start_date IS NOT NULL
        AND u.role = 'student'
        AND u.is_active = TRUE
@@ -328,6 +329,61 @@ async function buildDueConfirmationsForInstructor(db, instructorId, todayBaku) {
   items.sort((a, b) => {
     const c = compareYmd(a.due_ymd, b.due_ymd);
     if (c !== 0) return c;
+    return String(a.student_name || '').localeCompare(String(b.student_name || ''), 'az');
+  });
+  return items;
+}
+
+async function buildPackDueConfirmationsForInstructor(db, instructorId, todayBaku) {
+  const { rows } = await db.query(
+    `SELECT e.id AS enrollment_id, u.full_name, sp.monthly_fee
+     FROM enrollments e
+     INNER JOIN users u ON u.id = e.student_id
+     LEFT JOIN student_profiles sp ON sp.user_id = u.id
+     WHERE e.billing_type IN ('8_lessons', '12_lessons')
+       AND e.enrollment_start_date IS NOT NULL
+       AND u.role = 'student'
+       AND u.is_active = TRUE
+       AND REPLACE(LOWER(TRIM(e.instructor_id::text)), '-', '') = $1
+       AND (e.deleted_at IS NULL)`,
+    [normUuid(instructorId)]
+  );
+
+  const items = [];
+  for (const r of rows || []) {
+    const fee = await inferFeeForEnrollment(db, r.enrollment_id, r.monthly_fee);
+    if (!Number.isFinite(fee) || fee <= 0) continue;
+    const view = await buildEnrollmentPackageHistoryView(db, r.enrollment_id);
+    if (!view?.lesson_packages?.length) continue;
+    const parts = String(r.full_name || '').trim().split(/\s+/);
+    for (const pkg of view.lesson_packages) {
+      const total = Number(pkg.total) || 0;
+      const completed = Number(pkg.completed) || 0;
+      if (total <= 0 || completed < total) continue;
+      if (pkg.payment_status === 'paid' || pkg.legacy_confirmed) continue;
+      if ((Number(pkg.total_paid) || 0) > 0.005) continue;
+      const endYmd = pkg.end_ymd ? String(pkg.end_ymd).slice(0, 10) : todayBaku;
+      const dueYmd = /^\d{4}-\d{2}-\d{2}$/.test(endYmd) ? endYmd : todayBaku;
+      items.push({
+        kind: 'pack',
+        enrollment_id: r.enrollment_id,
+        package_number: Number(pkg.package_number) || 1,
+        student_name: r.full_name,
+        first_name: parts[0] || '—',
+        last_name: parts.length > 1 ? parts.slice(1).join(' ') : '—',
+        amount: fee,
+        due_ymd: dueYmd,
+        period: `Paket #${Number(pkg.package_number) || 1}`,
+        overdue: compareYmd(dueYmd, todayBaku) < 0,
+      });
+    }
+  }
+  items.sort((a, b) => {
+    const c = compareYmd(a.due_ymd, b.due_ymd);
+    if (c !== 0) return c;
+    const pa = Number(a.package_number) || 0;
+    const pb = Number(b.package_number) || 0;
+    if (pa !== pb) return pa - pb;
     return String(a.student_name || '').localeCompare(String(b.student_name || ''), 'az');
   });
   return items;
@@ -1931,6 +1987,7 @@ const getInstructorPaymentBoard = async (req, res) => {
     });
 
     const due_confirmations = await buildDueConfirmationsForInstructor(db, req.user.id, todayBaku);
+    const pack_confirmations = await buildPackDueConfirmationsForInstructor(db, req.user.id, todayBaku);
 
     res.json({
       success: true,
@@ -1940,6 +1997,7 @@ const getInstructorPaymentBoard = async (req, res) => {
       today_baku: todayBaku || null,
       payment_confirmation_cutoff: paymentConfirmationCutoffYmd(todayBaku),
       due_confirmations,
+      pack_confirmations,
       students,
     });
   } catch (err) {
@@ -2074,13 +2132,132 @@ const confirmDuePayment = async (req, res) => {
   }
 };
 
-/** 8/12 paket, amma ödənişlər aylıq ankor üzrə (02.09, 02.10…) — tarixçə monthly timeline ilə göstərilir */
+/** Müəllim: 8/12 paket tamamlanıb — təsdiqdən sonra ödəniş qeydə alınır */
+const confirmPackPayment = async (req, res) => {
+  try {
+    const enrollment_id = String(req.body?.enrollment_id || '').trim();
+    const package_number = Number(req.body?.package_number);
+    if (!enrollment_id || !looksLikeUuid(enrollment_id)) {
+      return res.status(400).json({ success: false, message: 'Qeydiyyat seçilməyib' });
+    }
+    if (!Number.isFinite(package_number) || package_number < 1) {
+      return res.status(400).json({ success: false, message: 'Paket nömrəsi düzgün deyil' });
+    }
+
+    const { rows: en } = await db.query(
+      `SELECT e.id, e.instructor_id, e.student_id, e.billing_type, e.billing_cycle, e.lesson_count,
+              u.full_name, u.phone, sp.monthly_fee
+       FROM enrollments e
+       INNER JOIN users u ON u.id = e.student_id
+       LEFT JOIN student_profiles sp ON sp.user_id = u.id
+       WHERE e.id = $1`,
+      [enrollment_id]
+    );
+    if (!en[0]) return res.status(404).json({ success: false, message: 'Qeydiyyat tapılmadı' });
+    if (req.user.role === 'instructor' && !sameUuid(en[0].instructor_id, req.user.id)) {
+      return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
+    }
+    const bt = String(en[0].billing_type || '');
+    if (bt !== '8_lessons' && bt !== '12_lessons') {
+      return res.status(400).json({ success: false, message: 'Bu əməliyyat yalnız dərs paketi üçün keçərlidir' });
+    }
+
+    const view = await buildEnrollmentPackageHistoryView(db, enrollment_id);
+    const pkg = (view?.lesson_packages || []).find(
+      (p) => (Number(p.package_number) || 1) === package_number
+    );
+    if (!pkg) {
+      return res.status(404).json({ success: false, message: 'Paket tapılmadı' });
+    }
+    const total = Number(pkg.total) || 0;
+    const completed = Number(pkg.completed) || 0;
+    if (total <= 0 || completed < total) {
+      return res.status(400).json({ success: false, message: 'Paket hələ tamamlanmayıb' });
+    }
+    if (pkg.payment_status === 'paid' || pkg.legacy_confirmed || (Number(pkg.total_paid) || 0) > 0.005) {
+      return res.status(409).json({ success: false, message: 'Bu paket üçün ödəniş artıq qeydə alınıb' });
+    }
+
+    const fee = await inferFeeForEnrollment(db, enrollment_id, en[0].monthly_fee);
+    const amtRaw = req.body?.amount != null ? Number(req.body.amount) : fee;
+    if (!Number.isFinite(amtRaw) || amtRaw <= 0) {
+      return res.status(400).json({ success: false, message: 'Məbləğ müsbət olmalıdır' });
+    }
+    const amt = roundMoney(amtRaw);
+    const payDate =
+      parseOptionalPaymentDateYmd(req.body?.payment_date) ||
+      (pkg.end_ymd ? String(pkg.end_ymd).slice(0, 10) : null) ||
+      (await getTodayBakuYmd(db));
+    const studentName = String(en[0].full_name || 'Tələbə').trim();
+    const notesExtra = req.body?.notes != null && String(req.body.notes).trim() ? String(req.body.notes).trim() : '';
+    const notesOut = `[Ödəniş təsdiqi] Paket #${package_number}${notesExtra ? ` ${notesExtra}` : ''}`;
+    const period = `Paket #${package_number}`;
+
+    let inserted;
+    try {
+      ({ rows: inserted } = await db.query(
+        `INSERT INTO payments (enrollment_id, student_id, amount, currency, payment_method, status, paid_at, payment_date, notes, period, billing_cycle)
+         VALUES ($1,$2,$3,'AZN','cash','completed',NOW(),$4::date,$5,$6,$7)
+         RETURNING *`,
+        [enrollment_id, en[0].student_id, amt, payDate, notesOut, period, package_number]
+      ));
+    } catch (e) {
+      if (!isMissingPaymentsStatusColumn(e)) throw e;
+      ({ rows: inserted } = await db.query(
+        `INSERT INTO payments (enrollment_id, student_id, amount, currency, payment_method, paid_at, payment_date, notes, period, billing_cycle)
+         VALUES ($1,$2,$3,'AZN','cash',NOW(),$4::date,$5,$6,$7)
+         RETURNING *`,
+        [enrollment_id, en[0].student_id, amt, payDate, notesOut, period, package_number]
+      ));
+    }
+
+    const lim = billingLimit(bt);
+    const lc = Number(en[0].lesson_count ?? 0) || 0;
+    const curCycle = Number(en[0].billing_cycle ?? 1) || 1;
+    if (lim && package_number === curCycle && lc >= lim) {
+      await db.query(
+        `UPDATE enrollments SET billing_cycle = billing_cycle + 1, lesson_count = 0 WHERE id = $1`,
+        [enrollment_id]
+      );
+    }
+
+    const [dd, mm, yyyy] = payDate.split('-');
+    const dueLabel = `${dd}.${mm}.${yyyy}`;
+    await ensureNotificationOnce({
+      user_id: req.user.id,
+      type: 'payment_confirmed',
+      title: 'Paket ödənişi təsdiqləndi',
+      body: `${studentName}: Paket #${package_number} — ${amt} ₼ (${dueLabel})`,
+    });
+
+    res.json({
+      success: true,
+      payment: inserted[0],
+      package_number,
+      amount: amt,
+      payment_date: payDate,
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/** Yalnız aylıq paket — 8/12 dərs üçün heç vaxt aylıq timeline istifadə olunmur */
 function usesAnchorMonthlyPaymentTimeline(enrollment, payments) {
-  const bt = String(enrollment?.billing_type || '');
+  const bt = String(enrollment?.billing_type || '').trim();
+  if (bt === '8_lessons' || bt === '12_lessons') return false;
   if (bt === 'monthly') return true;
   if (!enrollment?.enrollment_start_date) return false;
-  if (bt !== '8_lessons' && bt !== '12_lessons') return false;
   return (payments || []).length > 0;
+}
+
+function shouldUsePackagePaymentHistory(billingType, forcePackages) {
+  if (forcePackages) return true;
+  const bt = String(billingType || '').trim();
+  if (bt === 'monthly') return false;
+  if (bt === '8_lessons' || bt === '12_lessons') return true;
+  if (!bt) return true;
+  return false;
 }
 
 function inferMonthlyFeeForTimeline(profileFee, payments) {
@@ -2125,6 +2302,32 @@ const getEnrollmentPaymentHistory = async (req, res) => {
     }
     if (req.user.role !== 'instructor' && req.user.role !== 'admin' && req.user.role !== 'student') {
       return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
+    }
+
+    const forcePackages = String(req.query?.view || '').trim().toLowerCase() === 'packages';
+    if (shouldUsePackagePaymentHistory(en[0].billing_type, forcePackages)) {
+      const packView = (await buildEnrollmentPackageHistoryView(db, enrollment_id)) || {};
+      return res.json({
+        success: true,
+        view_mode: 'packages',
+        student_name: packView.student_name || null,
+        lesson_packages: packView.lesson_packages || [],
+        payments_by_cycle: packView.payments_by_cycle || [],
+        summary: packView.summary || {
+          billing_type: normalizePackBillingType(en[0].billing_type),
+          monthly_fee:
+            en[0].monthly_fee != null && Number.isFinite(Number(en[0].monthly_fee))
+              ? Number(en[0].monthly_fee)
+              : null,
+          total_paid: 0,
+          pre_system_enrollment: false,
+          lesson_start_date: anchorToYmd(en[0].enrollment_start_date),
+          pack_count: 0,
+          billing_timing: en[0].billing_timing === 'prepaid' ? 'prepaid' : 'postpaid',
+        },
+        payments: [],
+        balance_summary: null,
+      });
     }
 
     const studentId = en[0].student_id;
@@ -2333,5 +2536,6 @@ module.exports = {
   getRestorePreview,
   confirmRestorePayments,
   confirmDuePayment,
+  confirmPackPayment,
   deletePayment,
 };
