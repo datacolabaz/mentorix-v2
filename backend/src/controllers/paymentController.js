@@ -846,48 +846,62 @@ function allocatePaymentsToLessonPackages({ lessonPackages, payments, systemCrea
   const sorted = [...(payments || [])].filter(isStudentCountablePayment).sort(comparePaymentsChronological);
   const used = new Set();
 
+  const pkgHasPayment = (cyc) => (buckets.get(cyc)?.payments?.length || 0) > 0;
+
   const assign = (p, cyc) => {
     if (!buckets.has(cyc)) return false;
+    if (pkgHasPayment(cyc)) return false;
     buckets.get(cyc).payments.push(p);
     buckets.get(cyc).total_paid += Number(p.amount) || 0;
     used.add(String(p.id));
     return true;
   };
 
-  // Keçmiş importlarda billing_cycle çox vaxt 1 qalır — pre-system üçün yalnız tarix/FIFO.
+  const sysYmd = systemCreatedYmd ? String(systemCreatedYmd).slice(0, 10) : null;
+
+  const isPkgCompleted = (pkg) => {
+    const total = Number(pkg.total) || 0;
+    const completed = Number(pkg.completed) || 0;
+    return (
+      String(pkg.package_status || '').toLowerCase() === 'completed' ||
+      (total > 0 && completed >= total)
+    );
+  };
+
+  const isLegacyCompletedPkg = (pkg) =>
+    Boolean(
+      sysYmd &&
+        pkg.end_ymd &&
+        isPkgCompleted(pkg) &&
+        compareYmd(String(pkg.end_ymd).slice(0, 10), sysYmd) < 0
+    );
+
+  // Keçmiş importlarda billing_cycle çox vaxt 1 qalır — pre-system üçün yalnız FIFO (1 ödəniş / paket).
   if (!preSystemEnrollment) {
     for (const p of sorted) {
       const cyc = Number(p.billing_cycle);
       if (!Number.isFinite(cyc) || cyc < 1 || !buckets.has(cyc)) continue;
       assign(p, cyc);
     }
-  }
 
-  for (const p of sorted) {
-    if (used.has(String(p.id))) continue;
-    const ymd = paymentSortYmd(p);
-    if (!ymd) continue;
-    const match = pkgs.find((pkg) => {
-      const s = pkg.start_ymd ? String(pkg.start_ymd).slice(0, 10) : null;
-      const e = pkg.end_ymd ? String(pkg.end_ymd).slice(0, 10) : null;
-      if (!s || !e) return false;
-      return compareYmd(ymd, s) >= 0 && compareYmd(ymd, e) <= 0;
-    });
-    if (match) assign(p, Number(match.package_number) || 1);
-  }
-
-  if (preSystemEnrollment) {
+    for (const p of sorted) {
+      if (used.has(String(p.id))) continue;
+      const ymd = paymentSortYmd(p);
+      if (!ymd) continue;
+      const match = pkgs.find((pkg) => {
+        if (pkgHasPayment(Number(pkg.package_number) || 1)) return false;
+        const s = pkg.start_ymd ? String(pkg.start_ymd).slice(0, 10) : null;
+        const e = pkg.end_ymd ? String(pkg.end_ymd).slice(0, 10) : null;
+        if (!s || !e) return false;
+        return compareYmd(ymd, s) >= 0 && compareYmd(ymd, e) <= 0;
+      });
+      if (match) assign(p, Number(match.package_number) || 1);
+    }
+  } else {
     const unmatched = sorted.filter((p) => !used.has(String(p.id)));
-    const needPkg = pkgs.filter((pkg) => {
-      const cyc = Number(pkg.package_number) || 1;
-      const b = buckets.get(cyc);
-      const total = Number(pkg.total) || 0;
-      const completed = Number(pkg.completed) || 0;
-      const isDone =
-        String(pkg.package_status || '').toLowerCase() === 'completed' ||
-        (total > 0 && completed >= total);
-      return isDone && (b?.total_paid || 0) <= 0.005;
-    });
+    const needPkg = pkgs.filter(
+      (pkg) => isPkgCompleted(pkg) && !isLegacyCompletedPkg(pkg) && !pkgHasPayment(Number(pkg.package_number) || 1)
+    );
     let ui = 0;
     for (const pkg of needPkg) {
       if (ui >= unmatched.length) break;
@@ -896,7 +910,6 @@ function allocatePaymentsToLessonPackages({ lessonPackages, payments, systemCrea
   }
 
   const orphans = sorted.filter((p) => !used.has(String(p.id)));
-  const sysYmd = systemCreatedYmd ? String(systemCreatedYmd).slice(0, 10) : null;
 
   const enriched = (lessonPackages || []).map((pkg) => {
     const cyc = Number(pkg.package_number) || 1;

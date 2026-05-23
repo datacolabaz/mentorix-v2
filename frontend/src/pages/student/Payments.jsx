@@ -314,8 +314,6 @@ export default function StudentPayments() {
   const paymentsByCycle = Array.isArray(enrollment?.payments_by_cycle) ? enrollment.payments_by_cycle : []
   const payByCycleMap = new Map(paymentsByCycle.map((x) => [Number(x.billing_cycle) || 1, Number(x.total_paid) || 0]))
   const orphanPayments = Array.isArray(enrollment?.payment_history_orphans) ? enrollment.payment_history_orphans : []
-  const attendancePct = enrollment?.attendance_pct != null ? Number(enrollment.attendance_pct) : null
-
   const [openPackages, setOpenPackages] = useState(() => new Set())
 
   function togglePkg(cyc) {
@@ -368,14 +366,6 @@ export default function StudentPayments() {
         ) : null}
       </li>
     )
-  }
-
-  function lessonStatusLabel(st) {
-    const s = String(st || '').toLowerCase()
-    if (s === 'done') return { text: 'İştirak etdi', cls: 'text-emerald-300' }
-    if (s === 'absent') return { text: 'Qaib', cls: 'text-rose-300' }
-    if (s === 'cancelled') return { text: 'Ləğv edildi', cls: 'text-token-textMuted' }
-    return { text: 'Gözlənilir', cls: 'text-token-textMuted' }
   }
 
   return (
@@ -660,87 +650,6 @@ export default function StudentPayments() {
               <ul className="space-y-2">{orphanPayments.map((p) => renderPaymentRow(p))}</ul>
             </div>
           ) : null}
-
-          {/* Lesson history */}
-          <div className="mt-8 pt-6 border-t border-[color:var(--border-subtle)]">
-            <div className="flex items-center justify-between gap-3 mb-3">
-              <h3 className="font-display font-bold text-lg text-token-textMain">Dərs tarixçəsi</h3>
-              {Number.isFinite(attendancePct) ? (
-                <span className="text-xs text-token-textMuted">
-                  Davamiyyət: <span className="font-mono text-token-textMain">{Math.max(0, Math.min(100, attendancePct))}%</span>
-                </span>
-              ) : null}
-            </div>
-
-            {!lessonPackages.length ? (
-              <p className="text-token-textMuted text-sm">Hələ dərs tarixçəsi yoxdur.</p>
-            ) : (
-              <div className="space-y-2">
-                {lessonPackages.map((pkg) => {
-                  const cyc = Number(pkg.package_number) || 1
-                  const lessonOpenKey = `lesson-${cyc}`
-                  const isOpen = openPackages.has(lessonOpenKey)
-                  const start = pkg.start_ymd ? fmtDdMmYyyy(parseYmdLocal(pkg.start_ymd)) : '—'
-                  const end = pkg.end_ymd ? fmtDdMmYyyy(parseYmdLocal(pkg.end_ymd)) : '—'
-                  const total = Number(pkg.total) || packSize || 0
-                  const completed = Number(pkg.completed) || 0
-                  const paid =
-                    pkg.total_paid != null ? Number(pkg.total_paid) : payByCycleMap.get(cyc) || 0
-                  const legacyConfirmed = Boolean(pkg.legacy_confirmed)
-                  const paidLabel =
-                    paid > 0.005 ? `Ödəniş: ${paid.toFixed(2)} ₼` : legacyConfirmed ? 'Ödənilib (keçmiş paket)' : 'Ödəniş: —'
-                  const headerRight =
-                    completed >= total && total > 0
-                      ? 'Tamamlanıb'
-                      : String(pkg.package_status || '').toLowerCase() === 'active'
-                        ? 'Cari'
-                        : ''
-
-                  return (
-                    <Card key={lessonOpenKey} hover className="p-0 overflow-hidden border border-[color:var(--border-subtle)]">
-                      <button
-                        type="button"
-                        onClick={() => togglePkg(lessonOpenKey)}
-                        className="w-full px-4 py-3 flex items-center justify-between gap-3 bg-token-surfaceCard/45 hover:bg-token-surfaceCard/60 transition-colors"
-                      >
-                        <div className="min-w-0 text-left">
-                          <div className="font-semibold text-token-textMain truncate">
-                            Paket #{cyc}{headerRight ? ` · ${headerRight}` : ''}
-                          </div>
-                          <div className="text-xs text-token-textMuted mt-0.5">
-                            {start} — {end} · <span className="font-mono">{completed}/{total}</span> dərs · {paidLabel}
-                          </div>
-                        </div>
-                        <div className="text-token-textMuted text-sm font-mono shrink-0">{isOpen ? '▴' : '▾'}</div>
-                      </button>
-
-                      {isOpen && (
-                        <div className="p-3 bg-token-surfaceMain/40">
-                          <ul className="space-y-1.5">
-                            {(pkg.lessons || []).map((ls) => {
-                              const ymd = ls.ymd ? fmtDdMmYyyy(parseYmdLocal(ls.ymd)) : '—'
-                              const st = lessonStatusLabel(ls.status)
-                              return (
-                                <li
-                                  key={`${cyc}:${ls.lesson_number}`}
-                                  className="flex items-center justify-between gap-2 rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard/40 px-3 py-2 text-sm"
-                                >
-                                  <span className="text-token-textMain">
-                                    Dərs {ls.lesson_number || '—'}: <span className="font-mono">{ymd}</span>
-                                  </span>
-                                  <span className={`text-xs font-semibold ${st.cls}`}>{st.text}</span>
-                                </li>
-                              )
-                            })}
-                          </ul>
-                        </div>
-                      )}
-                    </Card>
-                  )
-                })}
-              </div>
-            )}
-          </div>
         </Card>
       )}
     </div>
