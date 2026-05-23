@@ -134,6 +134,8 @@ const getInstructorNotifications = async (req, res) => {
         whatsapp_configured: Boolean(
           process.env.WHATSAPP_ACCESS_TOKEN && process.env.WHATSAPP_PHONE_NUMBER_ID
         ),
+        whatsapp_production_style: Boolean(String(process.env.WHATSAPP_TEMPLATE_NAME || '').trim()),
+        whatsapp_template_name: String(process.env.WHATSAPP_TEMPLATE_NAME || '').trim() || null,
       },
     });
   } catch (err) {
@@ -258,7 +260,7 @@ const quickInstructorNotification = async (req, res) => {
         return res.status(502).json({
           success: false,
           message:
-            'Heç bir tələbəyə WhatsApp göndərilmədi. Test rejimində yalnız Meta test recipient nömrələrinə icazə var; prod üçün Step 2 + message template lazımdır.',
+            'Heç bir tələbəyə WhatsApp göndərilmədi. Test rejimində recipient siyahısı və ya təsdiqlənmiş WHATSAPP_TEMPLATE_NAME şablonu lazımdır.',
           failed,
           errors,
         });

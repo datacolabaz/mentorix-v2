@@ -116,6 +116,7 @@ export default function InstructorDashboard() {
   const smsUsed = Number(smsProfile?.sms_used ?? 0)
   const smsDisabled = smsLimit <= 0 || smsUsed >= smsLimit
   const whatsappConfigured = Boolean(smsProfile?.whatsapp_configured)
+  const whatsappProductionStyle = Boolean(smsProfile?.whatsapp_production_style)
 
   function toggleSelected(id) {
     setQuickSelectedIds((prev) => {
@@ -642,9 +643,13 @@ export default function InstructorDashboard() {
                     <div className="text-sm font-semibold text-white/90">WhatsApp olaraq göndər</div>
                     {!whatsappConfigured ? (
                       <div className="text-xs text-amber-300">Serverdə WHATSAPP_* dəyişənləri təyin edilməyib</div>
-                    ) : (
+                    ) : whatsappProductionStyle ? (
                       <div className="text-xs text-gray-500">
-                        Kütləvi mesaj — test rejimində yalnız Meta test recipient nömrələri
+                        Təsdiqlənmiş şablon ilə bütün tələbə nömrələrinə (recipient siyahısı lazım deyil)
+                      </div>
+                    ) : (
+                      <div className="text-xs text-amber-200/90">
+                        Test rejimi: yalnız Meta test recipient nömrələri. Prod üçün şablon + Step 2
                       </div>
                     )}
                   </div>

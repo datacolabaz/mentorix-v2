@@ -1,6 +1,6 @@
 const db = require('../utils/db');
 const { sendSms } = require('./smsService');
-const { sendWhatsAppMessage } = require('./whatsappService');
+const { sendWhatsAppOutbound } = require('./whatsappService');
 
 function pickStudentNotifyPhone(row) {
   const st = row?.phone && String(row.phone).replace(/\D/g, '').length >= 9 ? row.phone : '';
@@ -41,12 +41,19 @@ async function sendStudentWhatsAppOrSms({
   message,
   logType = 'notification',
   whatsappOnly = false,
+  templateBodyParams = null,
+  templateNameOverride = null,
 }) {
   if (!phone || !String(message || '').trim()) {
     return { success: false, error: 'phone_or_message_missing' };
   }
 
-  const wa = await sendWhatsAppMessage({ phone, message });
+  const wa = await sendWhatsAppOutbound({
+    phone,
+    message,
+    templateBodyParams,
+    templateNameOverride,
+  });
   if (wa.success) {
     if (instructorId) {
       await logOutboundMessage({

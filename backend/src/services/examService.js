@@ -631,6 +631,8 @@ async function loadExamAssignmentPhones(examId) {
 /** İmtahan yerləşdirildikdə: seçilmiş tələbələrə WhatsApp (və ya SMS fallback). */
 const sendExamPlacedNotifications = async (examId) => {
   const { sendStudentWhatsAppOrSms, pickStudentNotifyPhone } = require('./studentMessagingService');
+  const { getWhatsAppConfig } = require('./whatsappService');
+  const waCfg = getWhatsAppConfig();
   const { rows: [exam] } = await db.query(
     `SELECT id, instructor_id, title, duration_minutes, start_time, available_from, available_until, status, is_deleted
      FROM exams WHERE id = $1`,
@@ -661,12 +663,15 @@ const sendExamPlacedNotifications = async (examId) => {
       `Müddət: ${mins} dəqiqə.${linkHint}\n` +
       `Mentorix tətbiqində «İmtahanlar» bölməsinə daxil olun.`;
 
+    const examTpl = waCfg.examTemplateName;
     const r = await sendStudentWhatsAppOrSms({
       instructorId: exam.instructor_id,
       studentId: s.student_id,
       phone: targetPhone,
       message: msg,
       logType: 'exam_placed',
+      templateNameOverride: examTpl,
+      templateBodyParams: examTpl ? [firstName, title, when, String(mins)] : null,
     });
     if (r?.success) sent += 1;
     else {
