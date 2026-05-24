@@ -389,7 +389,7 @@ export default function InstructorDashboard() {
           ariaLabel="Ödənişlər səhifəsinə keç"
           value={loading ? '—' : pendingMonthlyAz}
           icon="⏳"
-          secondary="Bu ayın gözlənəni"
+          secondary="Aylıq + paket (təsdiq gözləyən)"
           deltaPct={0}
           sparkline={sparkIncome}
         />

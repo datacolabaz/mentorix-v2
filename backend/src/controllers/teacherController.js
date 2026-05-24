@@ -1,5 +1,6 @@
 const db = require('../utils/db');
-const { loadInstructorMonthlyBalanceRows, roundMoney } = require('../services/subscriptionBilling');
+const { roundMoney } = require('../services/subscriptionBilling');
+const { sumInstructorExpectedPayments } = require('../services/instructorExpectedPayments');
 
 function normUuid(id) {
   return String(id).trim().toLowerCase().replace(/-/g, '');
@@ -237,8 +238,7 @@ const getTeacherDashboardStats = async (req, res) => {
       sparkExamQ,
     ]);
 
-    const { pendingSum } = await loadInstructorMonthlyBalanceRows(db, iid);
-    const pendingMonthlyTotal = roundMoney(pendingSum);
+    const pendingMonthlyTotal = await sumInstructorExpectedPayments(db, instructorId);
 
     const incomeThisMonth = Number(incomeRows[0]?.income_this_month ?? 0);
     const incomeLastMonth = Number(incomeLastRows[0]?.income_last_month ?? 0);

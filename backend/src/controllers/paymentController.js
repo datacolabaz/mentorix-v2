@@ -16,6 +16,7 @@ const {
 } = require('../services/subscriptionBilling');
 const { ensurePackLessonsUpTo, normalizePackBillingType } = require('../services/packLessons');
 const { buildEnrollmentPackageHistoryView } = require('../services/enrollmentPackagePayments');
+const { sumInstructorExpectedPayments } = require('../services/instructorExpectedPayments');
 
 /** Bu qeydlər balansı azaldır; ümumi gəlir statistikasına daxil edilmir */
 const SQL_EXCLUDE_BALANCE_ADJUSTMENT =
@@ -1930,8 +1931,8 @@ const getInstructorPaymentBoard = async (req, res) => {
       [iid]
     );
 
-    const { byEnrollment: balMap, pendingSum, todayBaku } = await loadInstructorMonthlyBalanceRows(db, iid);
-    const pendingAmount = roundMoney(pendingSum);
+    const { byEnrollment: balMap, todayBaku } = await loadInstructorMonthlyBalanceRows(db, iid);
+    const pendingAmount = await sumInstructorExpectedPayments(db, req.user.id);
 
     let pendingCount = 0;
     const students = rows.map((r) => {
