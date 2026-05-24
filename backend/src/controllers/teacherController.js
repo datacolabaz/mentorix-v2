@@ -1,6 +1,5 @@
 const db = require('../utils/db');
 const { roundMoney } = require('../services/subscriptionBilling');
-const { sumInstructorExpectedPayments } = require('../services/instructorExpectedPayments');
 
 function normUuid(id) {
   return String(id).trim().toLowerCase().replace(/-/g, '');
@@ -238,8 +237,6 @@ const getTeacherDashboardStats = async (req, res) => {
       sparkExamQ,
     ]);
 
-    const pendingMonthlyTotal = await sumInstructorExpectedPayments(db, instructorId);
-
     const incomeThisMonth = Number(incomeRows[0]?.income_this_month ?? 0);
     const incomeLastMonth = Number(incomeLastRows[0]?.income_last_month ?? 0);
     const sum30 = Number(winRows[0]?.sum_30d ?? 0);
@@ -272,7 +269,6 @@ const getTeacherDashboardStats = async (req, res) => {
         income_this_month: incomeThisMonth,
         income_last_month: incomeLastMonth,
         total_earnings_all: Number(totalRows[0]?.total_earnings_all ?? 0),
-        pending_monthly_total: Math.round(pendingMonthlyTotal * 100) / 100,
         active_enrollments: activeEnrollments,
         exam_avg_pct: examAvg,
         income_delta_pct: pctChange(incomeThisMonth, incomeLastMonth),

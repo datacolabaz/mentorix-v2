@@ -17,7 +17,6 @@ const DEFAULT_DASH = {
   income_this_month: 0,
   income_last_month: 0,
   total_earnings_all: 0,
-  pending_monthly_total: 0,
   active_enrollments: 0,
   exam_avg_pct: null,
   income_delta_pct: 0,
@@ -222,8 +221,6 @@ export default function InstructorDashboard() {
   const moneyFmt = new Intl.NumberFormat('en-US')
   const incomeThisMonthAz = `₼ ${moneyFmt.format(Math.round(Number(dash.income_this_month || 0)))}`
   const totalEarningsAz = `₼ ${moneyFmt.format(Math.round(Number(dash.total_earnings_all || 0)))}`
-  const pendingMonthlyAz = `₼ ${moneyFmt.format(Math.round(Number(dash.pending_monthly_total || 0)))}`
-
   const rosterWithExam = students.filter((s) => examById[String(s.id)]?.exam_avg_score != null)
   const avgScore = rosterWithExam.length
     ? Math.min(
@@ -253,11 +250,7 @@ export default function InstructorDashboard() {
   const sparkIncome =
     Array.isArray(dash.spark_income_months) && dash.spark_income_months.length >= 2
       ? dash.spark_income_months
-      : [
-          Number(dash.pending_monthly_total || 0),
-          Number(dash.income_this_month || 0),
-          Number(dash.total_earnings_all || 0),
-        ]
+      : [Number(dash.income_this_month || 0), Number(dash.total_earnings_all || 0)]
 
   const chartRows = students.slice(0, 10).map((s) => {
     const first = s.full_name?.split(' ')?.[0] || '—'
@@ -362,7 +355,7 @@ export default function InstructorDashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 mb-6">
         <KpiCard
           title="Tələbə"
           to="/instructor/students"
@@ -382,16 +375,6 @@ export default function InstructorDashboard() {
           secondary="İmtahan ortalaması"
           deltaPct={dash.exam_trend_delta_pct ?? 0}
           sparkline={sparkExamMonths}
-        />
-        <KpiCard
-          title="Gözlənən ödəniş"
-          to="/instructor/payments"
-          ariaLabel="Ödənişlər səhifəsinə keç"
-          value={loading ? '—' : pendingMonthlyAz}
-          icon="⏳"
-          secondary="Aylıq + paket (təsdiq gözləyən)"
-          deltaPct={0}
-          sparkline={sparkIncome}
         />
         <KpiCard
           title="Ümumi gəlir"
