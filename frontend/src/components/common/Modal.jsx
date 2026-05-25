@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 
-export default function Modal({ open, onClose, title, children, size = 'md' }) {
+export default function Modal({ open, onClose, title, children, size = 'md', zIndex = 250 }) {
   useEffect(() => {
     if (open) document.body.style.overflow = 'hidden'
     else document.body.style.overflow = ''
@@ -13,7 +13,8 @@ export default function Modal({ open, onClose, title, children, size = 'md' }) {
 
   return (
     <div
-      className="fixed inset-0 z-[250] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+      className="fixed inset-0 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+      style={{ zIndex }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div

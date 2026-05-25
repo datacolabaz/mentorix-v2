@@ -1631,6 +1631,7 @@ export default function InstructorStudents() {
         onClose={() => !deleteBusy && setDeleteConfirm(null)}
         title="Tələbəni sil"
         size="sm"
+        zIndex={400}
       >
         {deleteConfirm ? (
           <div className="space-y-5 text-sm">
