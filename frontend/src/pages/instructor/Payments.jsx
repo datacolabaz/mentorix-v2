@@ -999,11 +999,19 @@ export default function InstructorPayments() {
                     const isDone = total > 0 && completed >= total
                     const needsConfirm =
                       isDone && pkg.payment_status === 'unpaid' && !legacyConfirmed && paid <= 0.005
+                    const legacyFee =
+                      historyPackSummary?.monthly_fee != null &&
+                      Number.isFinite(Number(historyPackSummary.monthly_fee)) &&
+                      Number(historyPackSummary.monthly_fee) > 0
+                        ? Number(historyPackSummary.monthly_fee)
+                        : null
                     const paidLabel =
                       paid > 0.005
                         ? `Ödəniş: ${formatAzn(paid)}`
                         : legacyConfirmed
-                          ? 'Ödənilib (keçmiş paket)'
+                          ? legacyFee != null
+                            ? `Ödəniş: ${formatAzn(legacyFee)} (keçmiş paket)`
+                            : 'Ödənilib (keçmiş paket)'
                           : needsConfirm
                             ? 'Ödəniş gözləyir'
                             : 'Ödəniş: —'

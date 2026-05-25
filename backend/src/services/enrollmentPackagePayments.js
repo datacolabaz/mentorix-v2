@@ -112,7 +112,9 @@ function allocatePaymentsToLessonPackages({
     );
   };
 
-  const useMonthlyPack = usesAnchorMonthlyPaymentTimeline(enrollment, sorted);
+  /** Sistemdən əvvəl qeydiyyatda aylıq ankor paylaması paketləri səhv buraxır (məs. #8 boş qalır). */
+  const useMonthlyPack =
+    !preSystemEnrollment && usesAnchorMonthlyPaymentTimeline(enrollment, sorted);
 
   if (useMonthlyPack && enrollment?.enrollment_start_date) {
     const anchorYmd = resolveMonthlyAnchorYmd({
@@ -191,6 +193,26 @@ function allocatePaymentsToLessonPackages({
       if (match) assign(p, Number(match.package_number) || 1);
     }
   } else {
+    // Sistemdən əvvəl: billing_cycle → tarix pəncərəsi → qalan ödənişlər FIFO
+    for (const p of sorted) {
+      const cyc = Number(p.billing_cycle);
+      if (!Number.isFinite(cyc) || cyc < 1 || !buckets.has(cyc)) continue;
+      assign(p, cyc);
+    }
+    for (const p of sorted) {
+      if (used.has(String(p.id))) continue;
+      const ymd =
+        p.payment_date != null ? String(p.payment_date).slice(0, 10) : toBakuYmd(p.paid_at) || '';
+      if (!ymd) continue;
+      const match = pkgs.find((pkg) => {
+        if (pkgHasPayment(Number(pkg.package_number) || 1)) return false;
+        const s = pkg.start_ymd ? String(pkg.start_ymd).slice(0, 10) : null;
+        const e = pkg.end_ymd ? String(pkg.end_ymd).slice(0, 10) : null;
+        if (!s || !e) return false;
+        return compareYmd(ymd, s) >= 0 && compareYmd(ymd, e) <= 0;
+      });
+      if (match) assign(p, Number(match.package_number) || 1);
+    }
     const unmatched = sorted.filter((p) => !used.has(String(p.id)));
     const needPkg = pkgs.filter((pkg) => isPkgCompleted(pkg) && !pkgHasPayment(Number(pkg.package_number) || 1));
     let ui = 0;
