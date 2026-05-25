@@ -1640,7 +1640,8 @@ export default function InstructorStudents() {
               istədiyinizdən əminsiniz?
             </p>
             <p className="text-xs text-gray-500 text-center leading-relaxed">
-              Bu əməliyyat geri qaytarıla bilməz. Tələbəyə aid qeydiyyat və bağlı məlumatlar silinəcək.
+              Bu əməliyyat geri qaytarıla bilməz. Tələbə siyahıdan çıxacaq; qeydə alınmış nağd ödənişlər aylıq və illik
+              hesabatda qalacaq.
             </p>
             <div className="flex flex-col-reverse sm:flex-row gap-2 sm:justify-center pt-1">
               <Button

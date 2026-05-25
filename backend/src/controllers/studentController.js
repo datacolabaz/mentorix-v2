@@ -290,12 +290,7 @@ const deleteStudent = async (req, res) => {
 
       // 3) enrollment-a bağlı cədvəllər
       if (enrollmentIds.length) {
-        // Keep audit/analytics: soft-delete core rows.
-        await client.query(
-          `UPDATE payments SET deleted_at = NOW()
-           WHERE enrollment_id = ANY($1::uuid[])`,
-          [enrollmentIds]
-        );
+        // Ödənişlər saxlanılır — aylıq/illik gəlir hesabatına təsir etməsin (yalnız enrollment/lessons gizlənir).
         await client.query(
           `UPDATE lessons SET deleted_at = NOW()
            WHERE enrollment_id = ANY($1::uuid[])`,
@@ -314,8 +309,6 @@ const deleteStudent = async (req, res) => {
       }
 
       // 4) user-a bağlı cədvəllər (FK-ları təmizlə)
-      // Keep payments/lessons for audit: already soft-deleted above by enrollment_id, but do it again just in case.
-      await client.query('UPDATE payments SET deleted_at = NOW() WHERE student_id = $1', [studentId]).catch(() => {});
       await client.query('UPDATE lessons SET deleted_at = NOW() WHERE student_id = $1', [studentId]).catch(() => {});
 
       await client.query('DELETE FROM exam_results WHERE student_id = $1', [studentId]).catch(() => {});

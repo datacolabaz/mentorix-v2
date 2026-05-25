@@ -17,6 +17,7 @@ const {
 const { ensurePackLessonsUpTo, normalizePackBillingType } = require('../services/packLessons');
 const { buildEnrollmentPackageHistoryView } = require('../services/enrollmentPackagePayments');
 const { sumInstructorExpectedPayments } = require('../services/instructorExpectedPayments');
+const { SQL_INSTRUCTOR_REVENUE_FROM } = require('../services/instructorRevenue');
 
 /** Bu qeydlər balansı azaldır; ümumi gəlir statistikasına daxil edilmir */
 const SQL_EXCLUDE_BALANCE_ADJUSTMENT =
@@ -1920,12 +1921,7 @@ const getInstructorPaymentBoard = async (req, res) => {
 
     const { rows: sumRows } = await db.query(
       `SELECT COALESCE(SUM(p.amount), 0)::numeric AS total
-       FROM payments p
-       INNER JOIN enrollments e ON e.id = p.enrollment_id
-       WHERE p.status = 'completed'
-         AND (p.deleted_at IS NULL)
-         AND REPLACE(LOWER(TRIM(e.instructor_id::text)), '-', '') = $1
-         ${SQL_EXCLUDE_BALANCE_ADJUSTMENT}`,
+       ${SQL_INSTRUCTOR_REVENUE_FROM}`,
       [iid]
     );
 

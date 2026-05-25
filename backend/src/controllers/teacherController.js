@@ -1,5 +1,6 @@
 const db = require('../utils/db');
 const { roundMoney } = require('../services/subscriptionBilling');
+const { SQL_INSTRUCTOR_REVENUE_FROM } = require('../services/instructorRevenue');
 
 function normUuid(id) {
   return String(id).trim().toLowerCase().replace(/-/g, '');
@@ -21,13 +22,7 @@ const getTeacherDashboardStats = async (req, res) => {
     const monthStartSql = "date_trunc('month', NOW())";
     const lastMonthStartSql = "date_trunc('month', NOW()) - interval '1 month'";
 
-    const paymentJoinWhere = `
-       FROM payments p
-       JOIN enrollments e ON e.id = p.enrollment_id
-       WHERE REPLACE(LOWER(TRIM(e.instructor_id::text)), '-', '') = $1
-         AND p.status = 'completed'
-         AND (p.deleted_at IS NULL)
-         AND (p.notes IS NULL OR TRIM(p.notes) NOT LIKE '[Balans düzəlişi]%')`;
+    const paymentJoinWhere = SQL_INSTRUCTOR_REVENUE_FROM;
 
     const incomeQ = db.query(
       `SELECT COALESCE(SUM(p.amount), 0)::numeric AS income_this_month
