@@ -34,8 +34,16 @@ export default function AdminDashboard() {
 
       <div className="grid grid-cols-3 gap-4 mb-6">
         <StatCard label="Müəllimlər" value={stats?.instructors ?? '—'} icon="👨‍🏫" />
-        <StatCard label="Tələbələr" value={stats?.students ?? '—'} icon="🎓" />
-        <StatCard label="Gəlir" value={stats ? `₼${stats.revenue}` : '—'} icon="💰" />
+        <StatCard label="Tələbələr (aktiv)" value={stats?.students ?? '—'} icon="🎓" />
+        <StatCard
+          label="Gəlir"
+          value={
+            stats
+              ? `₼${Number(stats.revenue || 0).toLocaleString('az-AZ', { maximumFractionDigits: 0 })}`
+              : '—'
+          }
+          icon="💰"
+        />
       </div>
 
       <Card className="p-5">

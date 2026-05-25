@@ -1,5 +1,10 @@
 const db = require('../utils/db');
 const { normalizePlanSlug } = require('../config/plans');
+const {
+  ACTIVE_ENROLLMENT_JOIN_INLINE,
+  ACTIVE_ENROLLMENT_WHERE,
+  ACTIVE_STUDENT_USER_JOIN,
+} = require('../sql/activeEnrollments');
 
 // Butun muellimler
 const getInstructors = async (req, res) => {
@@ -14,14 +19,19 @@ const getInstructors = async (req, res) => {
               sp.student_limit AS students_limit,
               (sp.storage_gb * 1024)::int AS storage_limit_mb,
               sp.sms_limit AS sms_limit_monthly,
-              COUNT(e.id) AS student_count
+              (
+                SELECT COUNT(DISTINCT e.student_id)::int
+                FROM enrollments e
+                ${ACTIVE_STUDENT_USER_JOIN}
+                WHERE e.instructor_id = u.id
+                  AND ${ACTIVE_ENROLLMENT_WHERE}
+              ) AS student_count
        FROM users u
        LEFT JOIN instructor_profiles ip ON ip.user_id = u.id
        LEFT JOIN subscriptions s ON s.user_id = u.id
        LEFT JOIN usage_counters uc ON uc.user_id = u.id
        LEFT JOIN subscription_plans sp ON sp.slug = COALESCE(s.plan, 'basic') AND sp.is_active = TRUE
-       LEFT JOIN enrollments e ON e.instructor_id = u.id AND e.status = 'active'
-       WHERE u.role = 'instructor' AND u.is_active = TRUE
+       WHERE u.role = 'instructor' AND u.is_active = TRUE AND u.deleted_at IS NULL
        GROUP BY u.id, ip.id, s.plan, uc.user_id, sp.slug
        ORDER BY u.created_at DESC NULLS LAST, u.full_name`
     );
@@ -77,11 +87,20 @@ const updateInstructorPlan = async (req, res) => {
 const getDashboardStats = async (req, res) => {
   try {
     const [instructors, students, payments] = await Promise.all([
-      db.query("SELECT COUNT(*) FROM users WHERE role='instructor' AND is_active=TRUE"),
-      db.query("SELECT COUNT(*) FROM users WHERE role='student' AND is_active=TRUE"),
+      db.query(
+        `SELECT COUNT(*)::int AS count
+         FROM users
+         WHERE role = 'instructor' AND is_active = TRUE AND deleted_at IS NULL`
+      ),
+      db.query(
+        `SELECT COUNT(DISTINCT e.student_id)::int AS count
+         FROM enrollments e
+         ${ACTIVE_ENROLLMENT_JOIN_INLINE}`
+      ),
       db.query(
         `SELECT COALESCE(SUM(amount),0) AS total FROM payments
          WHERE status='completed'
+           AND (deleted_at IS NULL)
            AND (notes IS NULL OR TRIM(notes) NOT LIKE '[Balans düzəlişi]%')`
       ),
     ]);
