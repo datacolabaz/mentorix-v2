@@ -598,6 +598,8 @@ export default function InstructorStudents() {
   const [listError, setListError] = useState(null)
   const [lessonsModal, setLessonsModal] = useState(null)
   const [restoreModal, setRestoreModal] = useState(null) // { enrollmentId, studentName, items, selected:Set, loading, error }
+  const [deleteConfirm, setDeleteConfirm] = useState(null) // { enrollmentId, studentName }
+  const [deleteBusy, setDeleteBusy] = useState(false)
   // Slot cədvəli tələbə qeydiyyatı üçün artıq tələb olunmur (dərslər tarixlərlə avtomatik yaradılır)
   const [enrollMeta] = useState({ loading: false, requiresScheduleSlot: false, availableSlots: [] })
   const [teachingSubjects, setTeachingSubjects] = useState([])
@@ -1103,14 +1105,26 @@ export default function InstructorStudents() {
     })()
   }
 
-  const deleteStudent = async (enrollmentId, name) => {
-    if (!window.confirm(name + ' silinsin?')) return
+  const openDeleteConfirm = (s) => {
+    closeStudentMenu()
+    setDeleteConfirm({
+      enrollmentId: s.enrollment_id,
+      studentName: String(s.full_name || 'Tələbə').trim() || 'Tələbə',
+    })
+  }
+
+  const confirmDeleteStudent = async () => {
+    if (!deleteConfirm?.enrollmentId || deleteBusy) return
+    setDeleteBusy(true)
     try {
-      await api.delete('/students/enrollment/' + enrollmentId)
-      toast('Telebe silindi')
+      await api.delete('/students/enrollment/' + deleteConfirm.enrollmentId)
+      toast('Tələbə silindi', 'success')
+      setDeleteConfirm(null)
       load()
     } catch (err) {
-      toast(err.message || 'Xeta', 'error')
+      toast(err.message || 'Silinmədi', 'error')
+    } finally {
+      setDeleteBusy(false)
     }
   }
 
@@ -1491,7 +1505,7 @@ export default function InstructorStudents() {
                                     className="w-full text-left px-3 py-2 text-sm text-red-200 hover:bg-red-500/10"
                                     onClick={() => {
                                       closeStudentMenu()
-                                      deleteStudent(s.enrollment_id, s.full_name)
+                                      openDeleteConfirm(s)
                                     }}
                                   >
                                     Sil
@@ -1610,6 +1624,45 @@ export default function InstructorStudents() {
         >
           Bağla
         </Button>
+      </Modal>
+
+      <Modal
+        open={Boolean(deleteConfirm)}
+        onClose={() => !deleteBusy && setDeleteConfirm(null)}
+        title="Tələbəni sil"
+        size="sm"
+      >
+        {deleteConfirm ? (
+          <div className="space-y-5 text-sm">
+            <p className="text-gray-300 leading-relaxed text-center px-1">
+              <span className="font-semibold text-white">{deleteConfirm.studentName}</span> adlı tələbəni silmək
+              istədiyinizdən əminsiniz?
+            </p>
+            <p className="text-xs text-gray-500 text-center leading-relaxed">
+              Bu əməliyyat geri qaytarıla bilməz. Tələbəyə aid qeydiyyat və bağlı məlumatlar silinəcək.
+            </p>
+            <div className="flex flex-col-reverse sm:flex-row gap-2 sm:justify-center pt-1">
+              <Button
+                type="button"
+                variant="secondary"
+                className="sm:min-w-[7.5rem] justify-center"
+                disabled={deleteBusy}
+                onClick={() => setDeleteConfirm(null)}
+              >
+                Ləğv et
+              </Button>
+              <Button
+                type="button"
+                variant="danger"
+                className="sm:min-w-[7.5rem] justify-center"
+                loading={deleteBusy}
+                onClick={() => void confirmDeleteStudent()}
+              >
+                Sil
+              </Button>
+            </div>
+          </div>
+        ) : null}
       </Modal>
 
       <Modal
