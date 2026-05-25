@@ -17,6 +17,7 @@ import InstructorMapPinPicker from '../../components/instructor/InstructorMapPin
 import InstructorMapPreviewModal from '../../components/instructor/InstructorMapPreviewModal'
 import { reverseGeocodeLabel } from '../../lib/reverseGeocode'
 import { formatAzn, yearlyTotalAzn, YEARLY_DISCOUNT } from '../../lib/pricing'
+import { planDetailLines, planLimitsHeadline } from '../../lib/subscriptionPlanCopy'
 
 export default function InstructorSettings() {
   const qc = useQueryClient()
@@ -392,10 +393,9 @@ export default function InstructorSettings() {
 
             const limitsNote =
               typeof p?.limitsNote === 'string' && p.limitsNote.trim()
-                ? p.limitsNote
-                : Array.isArray(p?.items) && p.items.length && String(p.items[0] || '').trim()
-                  ? String(p.items[0]).trim()
-                  : 'Limitlər mövcud paketə uyğun tətbiq olunur (idarəetmədə dəyişdirilə bilər).'
+                ? p.limitsNote.trim()
+                : planLimitsHeadline(p)
+            const detailLines = planDetailLines(p)
 
             async function onPlanAction() {
               if (isCurrent) return
@@ -467,12 +467,10 @@ export default function InstructorSettings() {
                 ) : null}
 
                 <div className="mt-3 flex min-h-0 flex-1 flex-col gap-3">
-                  <p className="text-[11px] leading-relaxed text-token-textMuted">{limitsNote}</p>
-                  {isFree ? (
-                    <p className="whitespace-pre-line text-[11px] leading-relaxed text-token-textMain/85">
-                      {`Bu paketdə istifadə müddəti məhdud deyil.\n5 tələbə, 5 SMS və 512 KB limit mövcuddur.\nLimitlərə çatdıqda daha geniş paket seçməyiniz tələb olunacaq.`}
-                    </p>
-                  ) : null}
+                  <p className="text-[11px] font-medium leading-relaxed text-token-textMain/90">{limitsNote}</p>
+                  <p className="whitespace-pre-line text-[11px] leading-relaxed text-token-textMain/85">
+                    {detailLines.join('\n')}
+                  </p>
                 </div>
 
                 <div className="mt-auto shrink-0 border-t border-[color:var(--border-subtle)]/60 pt-4">
