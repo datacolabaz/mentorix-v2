@@ -9,6 +9,7 @@ const {
   confirmRestorePayments,
   confirmDuePayment,
   confirmPackPayment,
+  confirmAllLegacyPackPayments,
   deletePayment,
 } = require('../controllers/paymentController');
 const { authenticate, authorize } = require('../middleware/auth');
@@ -37,6 +38,12 @@ router.get('/', authenticate, authorize('admin', 'instructor'), listPayments);
 router.post('/', authenticate, authorize('admin', 'instructor'), addPayment);
 router.post('/confirm-due', authenticate, authorize('instructor'), confirmDuePayment);
 router.post('/confirm-pack', authenticate, authorize('instructor'), confirmPackPayment);
+router.post(
+  '/enrollment/:enrollment_id/confirm-legacy-packs',
+  authenticate,
+  authorize('instructor'),
+  confirmAllLegacyPackPayments
+);
 router.delete('/:payment_id', authenticate, authorize('admin', 'instructor'), deletePayment);
 
 module.exports = router;

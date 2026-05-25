@@ -13,6 +13,12 @@ function formatAzn(n) {
   return `${x.toLocaleString('az-AZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₼`
 }
 
+function roundMoney(n) {
+  const x = Number(n)
+  if (!Number.isFinite(x)) return 0
+  return Math.round(x * 100) / 100
+}
+
 function formatDdMmYyyy(val) {
   if (val == null || val === '') return '—'
   if (val instanceof Date && !Number.isNaN(val.getTime())) {
@@ -120,6 +126,10 @@ export default function InstructorPayments() {
   const [openHistoryPackages, setOpenHistoryPackages] = useState(() => new Set())
   const [historyLoading, setHistoryLoading] = useState(false)
   const [deletingPaymentId, setDeletingPaymentId] = useState(null)
+  /** Sistemdən əvvəl qeydiyyat: keçmiş paket ödənişlərini toplu qeydə alma təklifi */
+  const [legacyRestorePrompt, setLegacyRestorePrompt] = useState(null)
+  const [legacyRestoreOpen, setLegacyRestoreOpen] = useState(false)
+  const [legacyRestoreBusy, setLegacyRestoreBusy] = useState(false)
   const [adjustOpen, setAdjustOpen] = useState(false)
   const [adjustRow, setAdjustRow] = useState(null)
   const [adjustAmount, setAdjustAmount] = useState('')
@@ -254,7 +264,7 @@ export default function InstructorPayments() {
       })
       toast('Paket ödənişi təsdiqləndi — tarixçəyə əlavə olundu', 'success')
       if (opts.refreshHistory && historyRow?.enrollment_id === item.enrollment_id) {
-        await fetchHistoryForEnrollment(item.enrollment_id, historyRow.billing_type, '8')
+        await fetchHistoryForEnrollment(item.enrollment_id, historyRow.billing_type, '8', historyRow)
       }
       setPackConfirmations((prev) => prev.filter((x) => packConfirmKey(x) !== key))
       await load()
@@ -277,7 +287,7 @@ export default function InstructorPayments() {
       })
       toast('Ödəniş təsdiqləndi — tarixçəyə əlavə olundu', 'success')
       if (opts.refreshHistory && historyRow?.enrollment_id === item.enrollment_id) {
-        await fetchHistoryForEnrollment(item.enrollment_id, historyRow.billing_type)
+        await fetchHistoryForEnrollment(item.enrollment_id, historyRow.billing_type, '8', historyRow)
       }
       await load()
     } catch (e) {
@@ -314,8 +324,10 @@ export default function InstructorPayments() {
     billingType === '8_lessons' ||
     billingType === '12_lessons'
 
-  const fetchHistoryForEnrollment = async (enrollmentId, billingType, categoryKey) => {
+  const fetchHistoryForEnrollment = async (enrollmentId, billingType, categoryKey, studentRow) => {
     setHistoryLoading(true)
+    setLegacyRestorePrompt(null)
+    setLegacyRestoreOpen(false)
     try {
       const forcePack = isPackBillingRow(billingType, categoryKey)
       const d = await api.get('/payments/enrollment/' + encodeURIComponent(enrollmentId) + '/history', {
@@ -324,11 +336,12 @@ export default function InstructorPayments() {
       const mode = d.view_mode === 'packages' || forcePack ? 'packages' : 'monthly'
       setHistoryViewMode(mode)
       if (mode === 'packages') {
-        setHistoryPackages(Array.isArray(d.lesson_packages) ? d.lesson_packages : [])
+        const packages = Array.isArray(d.lesson_packages) ? d.lesson_packages : []
+        setHistoryPackages(packages)
         setHistoryPackSummary(d.summary ?? null)
         setHistoryPayments([])
         setHistorySummary(null)
-        const unpaid = (d.lesson_packages || []).filter(
+        const unpaid = packages.filter(
           (p) =>
             p.payment_status === 'unpaid' &&
             !p.legacy_confirmed &&
@@ -336,6 +349,30 @@ export default function InstructorPayments() {
             Number(p.total) > 0
         )
         setOpenHistoryPackages(new Set(unpaid.map((p) => Number(p.package_number) || 1)))
+
+        if (d.summary?.pre_system_enrollment) {
+          const legacyPkgs = packages.filter(
+            (p) =>
+              p.legacy_confirmed &&
+              (Number(p.total_paid) || 0) <= 0.005 &&
+              Number(p.total) > 0 &&
+              Number(p.completed) >= Number(p.total)
+          )
+          const fee = d.summary?.monthly_fee != null ? Number(d.summary.monthly_fee) : NaN
+          if (legacyPkgs.length > 0 && Number.isFinite(fee) && fee > 0) {
+            const name = studentRow
+              ? `${studentRow.first_name || ''} ${studentRow.last_name || ''}`.trim()
+              : d.student_name || 'Tələbə'
+            setLegacyRestorePrompt({
+              enrollmentId,
+              studentName: name || 'Tələbə',
+              packages: legacyPkgs,
+              fee,
+              totalAmount: roundMoney(legacyPkgs.length * fee),
+            })
+            setLegacyRestoreOpen(true)
+          }
+        }
       } else {
         setHistoryPackages([])
         setHistoryPackSummary(null)
@@ -361,7 +398,36 @@ export default function InstructorPayments() {
     setHistoryPackSummary(null)
     setHistoryViewMode(forcePack ? 'packages' : 'monthly')
     setOpenHistoryPackages(new Set())
-    await fetchHistoryForEnrollment(row.enrollment_id, row.billing_type, categoryKey)
+    await fetchHistoryForEnrollment(row.enrollment_id, row.billing_type, categoryKey, row)
+  }
+
+  const confirmAllLegacyPackPayments = async () => {
+    const m = legacyRestorePrompt
+    if (!m?.enrollmentId) return
+    setLegacyRestoreBusy(true)
+    try {
+      const d = await api.post(
+        `/payments/enrollment/${encodeURIComponent(m.enrollmentId)}/confirm-legacy-packs`,
+        {}
+      )
+      const n = Number(d?.count) || 0
+      toast(
+        n > 0
+          ? `${n} keçmiş paket ödənişi sistemə əlavə olundu (${formatAzn(d?.total_amount ?? m.totalAmount)})`
+          : 'Əlavə olunacaq paket qalmayıb',
+        n > 0 ? 'success' : 'info'
+      )
+      setLegacyRestorePrompt(null)
+      setLegacyRestoreOpen(false)
+      if (historyRow?.enrollment_id === m.enrollmentId) {
+        await fetchHistoryForEnrollment(m.enrollmentId, historyRow.billing_type, '8', historyRow)
+      }
+      await load()
+    } catch (e) {
+      toast(e?.message || 'Qeydə alınmadı', 'error')
+    } finally {
+      setLegacyRestoreBusy(false)
+    }
   }
 
   const deleteHistoryPayment = async (paymentId) => {
@@ -377,7 +443,7 @@ export default function InstructorPayments() {
     try {
       await api.delete('/payments/' + encodeURIComponent(paymentId))
       toast('Ödəniş silindi')
-      await fetchHistoryForEnrollment(eid, historyRow?.billing_type)
+      await fetchHistoryForEnrollment(eid, historyRow?.billing_type, '8', historyRow)
       await load()
     } catch (e) {
       toast(e?.message || 'Silinmədi', 'error')
@@ -884,12 +950,59 @@ export default function InstructorPayments() {
       </Modal>
 
       <Modal
+        open={legacyRestoreOpen && Boolean(legacyRestorePrompt)}
+        onClose={() => !legacyRestoreBusy && setLegacyRestoreOpen(false)}
+        title="Keçmiş paket ödənişləri"
+        size="sm"
+      >
+        {legacyRestorePrompt ? (
+          <div className="space-y-4 text-sm">
+            <p className="text-gray-300 leading-relaxed">
+              <span className="font-medium text-white">{legacyRestorePrompt.studentName}</span> sistemə əvvəl
+              qeydiyyatdan əlavə olunub.{' '}
+              <span className="text-amber-200/95 font-medium">{legacyRestorePrompt.packages.length} tamamlanmış paket</span>{' '}
+              üçün ödənişlər hələ sistemdə qeyd olunmayıb.
+            </p>
+            <p className="text-gray-400 text-xs leading-relaxed">
+              Təsdiq etsəniz, hər paket üçün{' '}
+              <span className="text-emerald-200/95 font-mono tabular-nums">{formatAzn(legacyRestorePrompt.fee)}</span>{' '}
+              məbləğində ödəniş tarixçəyə yazılacaq (cəmi{' '}
+              <span className="text-white font-mono tabular-nums">{formatAzn(legacyRestorePrompt.totalAmount)}</span>
+              ).
+            </p>
+            <ul className="max-h-40 overflow-y-auto space-y-1 text-xs text-gray-500 border border-indigo-500/15 rounded-lg p-2">
+              {legacyRestorePrompt.packages.map((p) => (
+                <li key={p.package_number}>
+                  Paket #{p.package_number} · {formatDdMmYyyy(p.start_ymd)} — {formatDdMmYyyy(p.end_ymd)}
+                </li>
+              ))}
+            </ul>
+            <div className="flex flex-col-reverse sm:flex-row gap-2 justify-end pt-1">
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={legacyRestoreBusy}
+                onClick={() => setLegacyRestoreOpen(false)}
+              >
+                Sonra
+              </Button>
+              <Button type="button" loading={legacyRestoreBusy} onClick={() => void confirmAllLegacyPackPayments()}>
+                Bütün əvvəlki ödənişləri qeydə al
+              </Button>
+            </div>
+          </div>
+        ) : null}
+      </Modal>
+
+      <Modal
         open={historyOpen}
         onClose={() => {
-          if (!historyLoading && !deletingPaymentId && !confirmingKey) {
+          if (!historyLoading && !deletingPaymentId && !confirmingKey && !legacyRestoreBusy) {
             setHistoryOpen(false)
             setHistorySummary(null)
             setDeletingPaymentId(null)
+            setLegacyRestorePrompt(null)
+            setLegacyRestoreOpen(false)
           }
         }}
         title="Ödəniş tarixçəsi"
@@ -915,9 +1028,21 @@ export default function InstructorPayments() {
                   </span>
                 </p>
                 {historyPackSummary.pre_system_enrollment ? (
-                  <p className="text-amber-200/80 leading-relaxed pt-1 border-t border-indigo-500/15">
-                    Sistemdən əvvəlki qeydiyyat — paketlər qeydiyyat tarixindən hesablanır.
-                  </p>
+                  <div className="pt-1 border-t border-indigo-500/15 space-y-2">
+                    <p className="text-amber-200/80 leading-relaxed">
+                      Sistemdən əvvəlki qeydiyyat — paketlər qeydiyyat tarixindən hesablanır.
+                    </p>
+                    {legacyRestorePrompt?.enrollmentId === historyRow?.enrollment_id && !legacyRestoreOpen ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="w-full justify-center"
+                        onClick={() => setLegacyRestoreOpen(true)}
+                      >
+                        Keçmiş paket ödənişlərini qeydə al ({legacyRestorePrompt.packages.length})
+                      </Button>
+                    ) : null}
+                  </div>
                 ) : null}
               </div>
             )}

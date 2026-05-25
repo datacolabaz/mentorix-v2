@@ -2194,7 +2194,7 @@ const confirmPackPayment = async (req, res) => {
     if (total <= 0 || completed < total) {
       return res.status(400).json({ success: false, message: 'Paket hələ tamamlanmayıb' });
     }
-    if (pkg.payment_status === 'paid' || pkg.legacy_confirmed || (Number(pkg.total_paid) || 0) > 0.005) {
+    if (pkg.payment_status === 'paid' || (Number(pkg.total_paid) || 0) > 0.005) {
       return res.status(409).json({ success: false, message: 'Bu paket üçün ödəniş artıq qeydə alınıb' });
     }
 
@@ -2547,6 +2547,106 @@ const deletePayment = async (req, res) => {
   }
 };
 
+/** Müəllim: sistemdən əvvəl tamamlanmış paketlər — bütün keçmiş ödənişləri bir dəfədə qeydə al */
+const confirmAllLegacyPackPayments = async (req, res) => {
+  try {
+    const enrollment_id = String(req.params?.enrollment_id || '').trim();
+    if (!enrollment_id || !looksLikeUuid(enrollment_id)) {
+      return res.status(400).json({ success: false, message: 'Qeydiyyat seçilməyib' });
+    }
+
+    const { rows: en } = await db.query(
+      `SELECT e.id, e.instructor_id, e.student_id, e.billing_type, u.full_name, sp.monthly_fee
+       FROM enrollments e
+       INNER JOIN users u ON u.id = e.student_id
+       LEFT JOIN student_profiles sp ON sp.user_id = e.student_id
+       WHERE e.id = $1`,
+      [enrollment_id]
+    );
+    if (!en[0]) return res.status(404).json({ success: false, message: 'Qeydiyyat tapılmadı' });
+    if (req.user.role === 'instructor' && !sameUuid(en[0].instructor_id, req.user.id)) {
+      return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
+    }
+    const bt = String(en[0].billing_type || '');
+    if (bt !== '8_lessons' && bt !== '12_lessons') {
+      return res.status(400).json({ success: false, message: 'Yalnız dərs paketi üçün keçərlidir' });
+    }
+
+    const view = await buildEnrollmentPackageHistoryView(db, enrollment_id);
+    const fee = await inferFeeForEnrollment(db, enrollment_id, en[0].monthly_fee);
+    if (!Number.isFinite(fee) || fee <= 0) {
+      return res.status(400).json({ success: false, message: 'Paket məbləği təyin olunmayıb' });
+    }
+
+    const legacyPkgs = (view?.lesson_packages || []).filter((pkg) => {
+      const total = Number(pkg.total) || 0;
+      const completed = Number(pkg.completed) || 0;
+      if (total <= 0 || completed < total) return false;
+      if ((Number(pkg.total_paid) || 0) > 0.005) return false;
+      if (pkg.payment_status === 'paid') return false;
+      return Boolean(pkg.legacy_confirmed);
+    });
+
+    if (!legacyPkgs.length) {
+      return res.json({
+        success: true,
+        count: 0,
+        total_amount: 0,
+        message: 'Qeydə alınacaq keçmiş paket yoxdur',
+      });
+    }
+
+    const inserted = [];
+    for (const pkg of legacyPkgs) {
+      const package_number = Number(pkg.package_number) || 1;
+      const amt = roundMoney(fee);
+      const payDate =
+        pkg.end_ymd && /^\d{4}-\d{2}-\d{2}$/.test(String(pkg.end_ymd).slice(0, 10))
+          ? String(pkg.end_ymd).slice(0, 10)
+          : await getTodayBakuYmd(db);
+      const notesOut = `[Keçmiş paket qeydi] Paket #${package_number}`;
+      const period = `Paket #${package_number}`;
+
+      let rows;
+      try {
+        ({ rows } = await db.query(
+          `INSERT INTO payments (enrollment_id, student_id, amount, currency, payment_method, status, paid_at, payment_date, notes, period, billing_cycle)
+           VALUES ($1,$2,$3,'AZN','cash','completed',NOW(),$4::date,$5,$6,$7)
+           RETURNING id, amount, payment_date, billing_cycle`,
+          [enrollment_id, en[0].student_id, amt, payDate, notesOut, period, package_number]
+        ));
+      } catch (e) {
+        if (!isMissingPaymentsStatusColumn(e)) throw e;
+        ({ rows } = await db.query(
+          `INSERT INTO payments (enrollment_id, student_id, amount, currency, payment_method, paid_at, payment_date, notes, period, billing_cycle)
+           VALUES ($1,$2,$3,'AZN','cash',NOW(),$4::date,$5,$6,$7)
+           RETURNING id, amount, payment_date, billing_cycle`,
+          [enrollment_id, en[0].student_id, amt, payDate, notesOut, period, package_number]
+        ));
+      }
+      if (rows[0]) inserted.push(rows[0]);
+    }
+
+    const total_amount = roundMoney(inserted.reduce((s, r) => s + (Number(r.amount) || 0), 0));
+    const studentName = String(en[0].full_name || 'Tələbə').trim();
+    await ensureNotificationOnce({
+      user_id: en[0].student_id,
+      type: 'payment',
+      title: 'Ödəniş qeydləri yeniləndi',
+      body: `${studentName}: ${inserted.length} keçmiş paket ödənişi sistemə əlavə olundu (${total_amount} ₼)`,
+    });
+
+    res.json({
+      success: true,
+      count: inserted.length,
+      total_amount,
+      payments: inserted,
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 module.exports = {
   listPayments,
   addPayment,
@@ -2557,5 +2657,6 @@ module.exports = {
   confirmRestorePayments,
   confirmDuePayment,
   confirmPackPayment,
+  confirmAllLegacyPackPayments,
   deletePayment,
 };
