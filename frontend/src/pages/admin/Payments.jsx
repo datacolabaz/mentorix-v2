@@ -64,9 +64,20 @@ export default function AdminPayments() {
                   <div className="flex items-center gap-2">
                     <div className="flex-1 h-1.5 bg-[#13112e] rounded-full max-w-24">
                       <div className="h-full bg-blue-500 rounded-full"
-                        style={{ width: `${Math.min(100, ((i.sms_used||0)/(i.sms_limit||100))*100)}%` }} />
+                        style={{
+                          width: `${Math.min(
+                            100,
+                            ((Number(i.sms_used_monthly ?? i.sms_used) || 0) /
+                              Math.max(1, Number(i.sms_limit_monthly ?? i.sms_limit) || 1)) *
+                              100
+                          )}%`,
+                        }}
+                      />
                     </div>
-                    <span className="text-xs text-gray-400">{i.sms_used||0}/{i.sms_limit||100}</span>
+                    <span className="text-xs text-gray-400">
+                      {Number(i.sms_used_monthly ?? i.sms_used) || 0}/
+                      {i.sms_limit_monthly ?? i.sms_limit ?? '∞'}
+                    </span>
                   </div>
                 </td>
                 <td className="py-4 px-4">

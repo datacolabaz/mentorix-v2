@@ -5,6 +5,7 @@ const {
   ACTIVE_ENROLLMENT_WHERE,
   ACTIVE_STUDENT_USER_JOIN,
 } = require('../sql/activeEnrollments');
+const { SMS_LOGS_MONTHLY_COUNT_SUBQUERY } = require('../sql/adminSmsUsage');
 
 // Butun muellimler
 const getInstructors = async (req, res) => {
@@ -13,12 +14,15 @@ const getInstructors = async (req, res) => {
       `SELECT u.id, u.full_name, u.email, u.phone, u.is_active, u.created_at,
               ip.subject, ip.billing_type,
               COALESCE(s.plan, 'basic') AS plan,
-              COALESCE(uc.sms_used_monthly, 0) AS sms_used_monthly,
+              GREATEST(
+                COALESCE(uc.sms_used_monthly, 0),
+                ${SMS_LOGS_MONTHLY_COUNT_SUBQUERY}
+              )::int AS sms_used_monthly,
+              sp.sms_limit AS sms_limit_monthly,
               COALESCE(uc.storage_used_mb, 0) AS storage_used_mb,
               COALESCE(uc.students_count, 0) AS students_used,
               sp.student_limit AS students_limit,
               (sp.storage_gb * 1024)::int AS storage_limit_mb,
-              sp.sms_limit AS sms_limit_monthly,
               (
                 SELECT COUNT(DISTINCT e.student_id)::int
                 FROM enrollments e
@@ -32,10 +36,14 @@ const getInstructors = async (req, res) => {
        LEFT JOIN usage_counters uc ON uc.user_id = u.id
        LEFT JOIN subscription_plans sp ON sp.slug = COALESCE(s.plan, 'basic') AND sp.is_active = TRUE
        WHERE u.role = 'instructor' AND u.is_active = TRUE AND u.deleted_at IS NULL
-       GROUP BY u.id, ip.id, s.plan, uc.user_id, sp.slug
        ORDER BY u.created_at DESC NULLS LAST, u.full_name`
     );
-    res.json({ success: true, instructors: rows });
+    const instructors = (rows || []).map((r) => ({
+      ...r,
+      sms_used: Number(r.sms_used_monthly) || 0,
+      sms_limit: r.sms_limit_monthly,
+    }));
+    res.json({ success: true, instructors });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
