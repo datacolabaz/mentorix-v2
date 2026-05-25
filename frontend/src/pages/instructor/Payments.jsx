@@ -128,7 +128,6 @@ export default function InstructorPayments() {
   const [deletingPaymentId, setDeletingPaymentId] = useState(null)
   /** Sistemdən əvvəl qeydiyyat: keçmiş paket ödənişlərini toplu qeydə alma təklifi */
   const [legacyRestorePrompt, setLegacyRestorePrompt] = useState(null)
-  const [legacyRestoreOpen, setLegacyRestoreOpen] = useState(false)
   const [legacyRestoreBusy, setLegacyRestoreBusy] = useState(false)
   const [adjustOpen, setAdjustOpen] = useState(false)
   const [adjustRow, setAdjustRow] = useState(null)
@@ -327,7 +326,6 @@ export default function InstructorPayments() {
   const fetchHistoryForEnrollment = async (enrollmentId, billingType, categoryKey, studentRow) => {
     setHistoryLoading(true)
     setLegacyRestorePrompt(null)
-    setLegacyRestoreOpen(false)
     try {
       const forcePack = isPackBillingRow(billingType, categoryKey)
       const d = await api.get('/payments/enrollment/' + encodeURIComponent(enrollmentId) + '/history', {
@@ -358,7 +356,11 @@ export default function InstructorPayments() {
               Number(p.total) > 0 &&
               Number(p.completed) >= Number(p.total)
           )
-          const fee = d.summary?.monthly_fee != null ? Number(d.summary.monthly_fee) : NaN
+          let fee = d.summary?.monthly_fee != null ? Number(d.summary.monthly_fee) : NaN
+          if (!Number.isFinite(fee) || fee <= 0) {
+            const rowFee = studentRow?.monthly_fee != null ? Number(studentRow.monthly_fee) : NaN
+            if (Number.isFinite(rowFee) && rowFee > 0) fee = rowFee
+          }
           if (legacyPkgs.length > 0 && Number.isFinite(fee) && fee > 0) {
             const name = studentRow
               ? `${studentRow.first_name || ''} ${studentRow.last_name || ''}`.trim()
@@ -370,7 +372,6 @@ export default function InstructorPayments() {
               fee,
               totalAmount: roundMoney(legacyPkgs.length * fee),
             })
-            setLegacyRestoreOpen(true)
           }
         }
       } else {
@@ -418,7 +419,6 @@ export default function InstructorPayments() {
         n > 0 ? 'success' : 'info'
       )
       setLegacyRestorePrompt(null)
-      setLegacyRestoreOpen(false)
       if (historyRow?.enrollment_id === m.enrollmentId) {
         await fetchHistoryForEnrollment(m.enrollmentId, historyRow.billing_type, '8', historyRow)
       }
@@ -950,51 +950,6 @@ export default function InstructorPayments() {
       </Modal>
 
       <Modal
-        open={legacyRestoreOpen && Boolean(legacyRestorePrompt)}
-        onClose={() => !legacyRestoreBusy && setLegacyRestoreOpen(false)}
-        title="Keçmiş paket ödənişləri"
-        size="sm"
-      >
-        {legacyRestorePrompt ? (
-          <div className="space-y-4 text-sm">
-            <p className="text-gray-300 leading-relaxed">
-              <span className="font-medium text-white">{legacyRestorePrompt.studentName}</span> sistemə əvvəl
-              qeydiyyatdan əlavə olunub.{' '}
-              <span className="text-amber-200/95 font-medium">{legacyRestorePrompt.packages.length} tamamlanmış paket</span>{' '}
-              üçün ödənişlər hələ sistemdə qeyd olunmayıb.
-            </p>
-            <p className="text-gray-400 text-xs leading-relaxed">
-              Təsdiq etsəniz, hər paket üçün{' '}
-              <span className="text-emerald-200/95 font-mono tabular-nums">{formatAzn(legacyRestorePrompt.fee)}</span>{' '}
-              məbləğində ödəniş tarixçəyə yazılacaq (cəmi{' '}
-              <span className="text-white font-mono tabular-nums">{formatAzn(legacyRestorePrompt.totalAmount)}</span>
-              ).
-            </p>
-            <ul className="max-h-40 overflow-y-auto space-y-1 text-xs text-gray-500 border border-indigo-500/15 rounded-lg p-2">
-              {legacyRestorePrompt.packages.map((p) => (
-                <li key={p.package_number}>
-                  Paket #{p.package_number} · {formatDdMmYyyy(p.start_ymd)} — {formatDdMmYyyy(p.end_ymd)}
-                </li>
-              ))}
-            </ul>
-            <div className="flex flex-col-reverse sm:flex-row gap-2 justify-end pt-1">
-              <Button
-                type="button"
-                variant="secondary"
-                disabled={legacyRestoreBusy}
-                onClick={() => setLegacyRestoreOpen(false)}
-              >
-                Sonra
-              </Button>
-              <Button type="button" loading={legacyRestoreBusy} onClick={() => void confirmAllLegacyPackPayments()}>
-                Bütün əvvəlki ödənişləri qeydə al
-              </Button>
-            </div>
-          </div>
-        ) : null}
-      </Modal>
-
-      <Modal
         open={historyOpen}
         onClose={() => {
           if (!historyLoading && !deletingPaymentId && !confirmingKey && !legacyRestoreBusy) {
@@ -1002,7 +957,6 @@ export default function InstructorPayments() {
             setHistorySummary(null)
             setDeletingPaymentId(null)
             setLegacyRestorePrompt(null)
-            setLegacyRestoreOpen(false)
           }
         }}
         title="Ödəniş tarixçəsi"
@@ -1013,6 +967,40 @@ export default function InstructorPayments() {
             <p className="text-gray-400">
               {historyRow.first_name} {historyRow.last_name}
             </p>
+            {!historyLoading &&
+              legacyRestorePrompt?.enrollmentId === historyRow?.enrollment_id &&
+              legacyRestorePrompt.packages?.length > 0 && (
+                <div className="rounded-xl border border-amber-500/45 bg-amber-500/15 p-4 space-y-3">
+                  <p className="text-amber-100 font-semibold text-sm">Keçmiş paket ödənişləri</p>
+                  <p className="text-amber-50/90 text-xs leading-relaxed">
+                    Bu tələbə sistemə əvvəl qeydiyyatdan əlavə olunub.{' '}
+                    <span className="font-medium">{legacyRestorePrompt.packages.length} tamamlanmış paket</span> üçün
+                    ödənişlər hələ sistemdə yoxdur. Təsdiq etsəniz, hər paket üçün{' '}
+                    <span className="font-mono tabular-nums">{formatAzn(legacyRestorePrompt.fee)}</span> yazılacaq (cəmi{' '}
+                    <span className="font-mono tabular-nums font-medium">{formatAzn(legacyRestorePrompt.totalAmount)}</span>
+                    ).
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <Button
+                      type="button"
+                      className="flex-1 justify-center"
+                      loading={legacyRestoreBusy}
+                      onClick={() => void confirmAllLegacyPackPayments()}
+                    >
+                      Bütün əvvəlki ödənişləri qeydə al
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="flex-1 justify-center"
+                      disabled={legacyRestoreBusy}
+                      onClick={() => setLegacyRestorePrompt(null)}
+                    >
+                      Sonra
+                    </Button>
+                  </div>
+                </div>
+              )}
             {!historyLoading && historyViewMode === 'packages' && historyPackSummary && (
               <div className="rounded-xl border border-indigo-500/20 bg-[#13112e]/70 p-3 space-y-1.5 text-xs">
                 <p className="text-gray-500">
@@ -1032,16 +1020,6 @@ export default function InstructorPayments() {
                     <p className="text-amber-200/80 leading-relaxed">
                       Sistemdən əvvəlki qeydiyyat — paketlər qeydiyyat tarixindən hesablanır.
                     </p>
-                    {legacyRestorePrompt?.enrollmentId === historyRow?.enrollment_id && !legacyRestoreOpen ? (
-                      <Button
-                        type="button"
-                        size="sm"
-                        className="w-full justify-center"
-                        onClick={() => setLegacyRestoreOpen(true)}
-                      >
-                        Keçmiş paket ödənişlərini qeydə al ({legacyRestorePrompt.packages.length})
-                      </Button>
-                    ) : null}
                   </div>
                 ) : null}
               </div>
