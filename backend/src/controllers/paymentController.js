@@ -18,6 +18,7 @@ const { ensurePackLessonsUpTo, normalizePackBillingType } = require('../services
 const { buildEnrollmentPackageHistoryView } = require('../services/enrollmentPackagePayments');
 const { sumInstructorExpectedPayments } = require('../services/instructorExpectedPayments');
 const { SQL_INSTRUCTOR_REVENUE_FROM } = require('../services/instructorRevenue');
+const { loadActiveEnrollmentForPayments } = require('../services/enrollmentGuards');
 
 /** Bu qeydlər balansı azaldır; ümumi gəlir statistikasına daxil edilmir */
 const SQL_EXCLUDE_BALANCE_ADJUSTMENT =
@@ -1827,14 +1828,16 @@ const addPayment = async (req, res) => {
     if (!enrollment_id) {
       return res.status(400).json({ success: false, message: 'enrollment_id tələb olunur' });
     }
-    const { rows: en } = await db.query(
-      'SELECT student_id, billing_type, billing_cycle, lesson_count, instructor_id, course_id FROM enrollments WHERE id = $1',
-      [enrollment_id]
-    );
-    if (!en[0]) return res.status(404).json({ success: false, message: 'Qeydiyyat tapılmadı' });
-    if (req.user.role === 'instructor' && !sameUuid(en[0].instructor_id, req.user.id)) {
-      return res.status(403).json({ success: false, message: 'Bu qeydiyyata ödəniş əlavə etmək üçün icazəniz yoxdur' });
+    let en;
+    try {
+      en = await loadActiveEnrollmentForPayments(db, enrollment_id, {
+        instructorUserId: req.user.id,
+        userRole: req.user.role,
+      });
+    } catch (e) {
+      return res.status(e.statusCode || 500).json({ success: false, message: e.message });
     }
+    en = [en];
     if (legacy_kind === 'balance_adjustment' && en[0].billing_type !== 'monthly') {
       return res.status(400).json({ success: false, message: 'Balans düzəlişi yalnız aylıq paket üçün mümkündür' });
     }
@@ -1941,6 +1944,7 @@ const getInstructorPaymentBoard = async (req, res) => {
        LEFT JOIN instructor_subjects ist ON ist.id = e.subject_id
        LEFT JOIN instructor_groups ig ON ig.id = e.group_id
        WHERE u.role = 'student' AND u.is_active = TRUE
+         AND e.deleted_at IS NULL
          AND REPLACE(LOWER(TRIM(e.instructor_id::text)), '-', '') = $1
        ORDER BY u.full_name`,
       [iid]
@@ -2033,20 +2037,16 @@ const confirmDuePayment = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Ödəniş tarixi düzgün deyil' });
     }
 
-    const { rows: en } = await db.query(
-      `SELECT e.id, e.instructor_id, e.student_id, e.billing_type,
-              e.enrollment_start_date, e.enrolled_at, u.full_name, u.phone, sp.monthly_fee,
-              to_char(sp.payment_start_date::date, 'YYYY-MM-DD') AS payment_start_date
-       FROM enrollments e
-       INNER JOIN users u ON u.id = e.student_id
-       LEFT JOIN student_profiles sp ON sp.user_id = u.id
-       WHERE e.id = $1`,
-      [enrollment_id]
-    );
-    if (!en[0]) return res.status(404).json({ success: false, message: 'Qeydiyyat tapılmadı' });
-    if (req.user.role === 'instructor' && !sameUuid(en[0].instructor_id, req.user.id)) {
-      return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
+    let enRow;
+    try {
+      enRow = await loadActiveEnrollmentForPayments(db, enrollment_id, {
+        instructorUserId: req.user.id,
+        userRole: req.user.role,
+      });
+    } catch (e) {
+      return res.status(e.statusCode || 500).json({ success: false, message: e.message });
     }
+    const en = [enRow];
     if (!supportsAnchorDueConfirmation(en[0].billing_type)) {
       return res.status(400).json({ success: false, message: 'Bu paket növü üçün təsdiq dəstəklənmir' });
     }
@@ -2160,19 +2160,16 @@ const confirmPackPayment = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Paket nömrəsi düzgün deyil' });
     }
 
-    const { rows: en } = await db.query(
-      `SELECT e.id, e.instructor_id, e.student_id, e.billing_type, e.billing_cycle, e.lesson_count,
-              u.full_name, u.phone, sp.monthly_fee
-       FROM enrollments e
-       INNER JOIN users u ON u.id = e.student_id
-       LEFT JOIN student_profiles sp ON sp.user_id = u.id
-       WHERE e.id = $1`,
-      [enrollment_id]
-    );
-    if (!en[0]) return res.status(404).json({ success: false, message: 'Qeydiyyat tapılmadı' });
-    if (req.user.role === 'instructor' && !sameUuid(en[0].instructor_id, req.user.id)) {
-      return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
+    let enRow;
+    try {
+      enRow = await loadActiveEnrollmentForPayments(db, enrollment_id, {
+        instructorUserId: req.user.id,
+        userRole: req.user.role,
+      });
+    } catch (e) {
+      return res.status(e.statusCode || 500).json({ success: false, message: e.message });
     }
+    const en = [enRow];
     const bt = String(en[0].billing_type || '');
     if (bt !== '8_lessons' && bt !== '12_lessons') {
       return res.status(400).json({ success: false, message: 'Bu əməliyyat yalnız dərs paketi üçün keçərlidir' });
@@ -2551,25 +2548,22 @@ const confirmAllLegacyPackPayments = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Qeydiyyat seçilməyib' });
     }
 
-    const { rows: en } = await db.query(
-      `SELECT e.id, e.instructor_id, e.student_id, e.billing_type, u.full_name, sp.monthly_fee
-       FROM enrollments e
-       INNER JOIN users u ON u.id = e.student_id
-       LEFT JOIN student_profiles sp ON sp.user_id = e.student_id
-       WHERE e.id = $1`,
-      [enrollment_id]
-    );
-    if (!en[0]) return res.status(404).json({ success: false, message: 'Qeydiyyat tapılmadı' });
-    if (req.user.role === 'instructor' && !sameUuid(en[0].instructor_id, req.user.id)) {
-      return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
+    let enRow;
+    try {
+      enRow = await loadActiveEnrollmentForPayments(db, enrollment_id, {
+        instructorUserId: req.user.id,
+        userRole: req.user.role,
+      });
+    } catch (e) {
+      return res.status(e.statusCode || 500).json({ success: false, message: e.message });
     }
-    const bt = String(en[0].billing_type || '');
+    const bt = String(enRow.billing_type || '');
     if (bt !== '8_lessons' && bt !== '12_lessons') {
       return res.status(400).json({ success: false, message: 'Yalnız dərs paketi üçün keçərlidir' });
     }
 
     const view = await buildEnrollmentPackageHistoryView(db, enrollment_id);
-    const fee = await inferFeeForEnrollment(db, enrollment_id, en[0].monthly_fee);
+    const fee = await inferFeeForEnrollment(db, enrollment_id, enRow.monthly_fee);
     if (!Number.isFinite(fee) || fee <= 0) {
       return res.status(400).json({ success: false, message: 'Paket məbləği təyin olunmayıb' });
     }
@@ -2609,7 +2603,7 @@ const confirmAllLegacyPackPayments = async (req, res) => {
           `INSERT INTO payments (enrollment_id, student_id, amount, currency, payment_method, status, paid_at, payment_date, notes, period, billing_cycle)
            VALUES ($1,$2,$3,'AZN','cash','completed',NOW(),$4::date,$5,$6,$7)
            RETURNING id, amount, payment_date, billing_cycle`,
-          [enrollment_id, en[0].student_id, amt, payDate, notesOut, period, package_number]
+          [enrollment_id, enRow.student_id, amt, payDate, notesOut, period, package_number]
         ));
       } catch (e) {
         if (!isMissingPaymentsStatusColumn(e)) throw e;
@@ -2617,16 +2611,16 @@ const confirmAllLegacyPackPayments = async (req, res) => {
           `INSERT INTO payments (enrollment_id, student_id, amount, currency, payment_method, paid_at, payment_date, notes, period, billing_cycle)
            VALUES ($1,$2,$3,'AZN','cash',NOW(),$4::date,$5,$6,$7)
            RETURNING id, amount, payment_date, billing_cycle`,
-          [enrollment_id, en[0].student_id, amt, payDate, notesOut, period, package_number]
+          [enrollment_id, enRow.student_id, amt, payDate, notesOut, period, package_number]
         ));
       }
       if (rows[0]) inserted.push(rows[0]);
     }
 
     const total_amount = roundMoney(inserted.reduce((s, r) => s + (Number(r.amount) || 0), 0));
-    const studentName = String(en[0].full_name || 'Tələbə').trim();
+    const studentName = String(enRow.full_name || 'Tələbə').trim();
     await ensureNotificationOnce({
-      user_id: en[0].student_id,
+      user_id: enRow.student_id,
       type: 'payment',
       title: 'Ödəniş qeydləri yeniləndi',
       body: `${studentName}: ${inserted.length} keçmiş paket ödənişi sistemə əlavə olundu (${total_amount} ₼)`,
