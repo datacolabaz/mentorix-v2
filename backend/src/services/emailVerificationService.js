@@ -75,15 +75,27 @@ async function sendVerificationEmail({ email, token, code }) {
     </div>
   `;
 
-  const r = await client.emails.send({
-    from: EMAIL_FROM,
-    to,
-    subject,
-    text,
-    html,
-  });
+  try {
+    const { data, error } = await client.emails.send({
+      from: EMAIL_FROM,
+      to,
+      subject,
+      text,
+      html,
+    });
 
-  return { ok: true, messageId: r?.id || null };
+    if (error) {
+      const msg =
+        error?.message ||
+        (typeof error === 'string' ? error : null) ||
+        'Resend email göndərmədi';
+      return { ok: false, error: msg };
+    }
+
+    return { ok: true, messageId: data?.id || null };
+  } catch (err) {
+    return { ok: false, error: err?.message || 'Resend xətası' };
+  }
 }
 
 module.exports = { sendVerificationEmail, buildVerificationUrl, isConfigured };
