@@ -72,33 +72,93 @@ router.delete('/instructors/:id', authenticate, authorize('admin'), async (req, 
 
 router.get('/billing/payments', authenticate, authorize('admin'), async (req, res) => {
   try {
-    const { status, limit } = req.query || {};
+    const { status, limit, payment_method, product_type } = req.query || {};
     const lim = Math.min(200, Math.max(1, parseInt(String(limit || '50'), 10) || 50));
-    const st = status ? String(status).trim().toLowerCase() : null;
-    const where = st ? 'WHERE bp.status = $1' : '';
-    const params = st ? [st, lim] : [lim];
+    const parts = [];
+    const params = [];
+    if (status) {
+      params.push(String(status).trim().toLowerCase());
+      parts.push(`bp.status = $${params.length}`);
+    }
+    if (payment_method) {
+      params.push(String(payment_method).trim().toLowerCase());
+      parts.push(`bp.payment_method = $${params.length}`);
+    }
+    if (product_type) {
+      params.push(String(product_type).trim().toLowerCase());
+      parts.push(`bp.product_type = $${params.length}`);
+    }
+    params.push(lim);
+    const where = parts.length ? `WHERE ${parts.join(' AND ')}` : '';
     const sql = `
       SELECT
         bp.id,
         bp.user_id,
         u.full_name,
         u.email,
+        u.phone,
         bp.plan,
         bp.amount_cents,
         bp.currency,
         bp.status,
+        bp.payment_method,
+        bp.product_type,
+        bp.sms_quantity,
+        bp.provider,
+        bp.billing_interval,
         bp.external_order_id,
+        bp.admin_note,
         bp.created_at,
-        bp.paid_at
+        bp.paid_at,
+        bp.reviewed_at
       FROM billing_payments bp
       LEFT JOIN users u ON u.id = bp.user_id
       ${where}
       ORDER BY bp.created_at DESC
-      LIMIT $${st ? 2 : 1}`;
+      LIMIT $${params.length}`;
     const { rows } = await db.query(sql, params);
     res.json({ success: true, payments: rows });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+router.post('/billing/payments/:id/approve', authenticate, authorize('admin'), async (req, res) => {
+  try {
+    const out = await fulfillBillingPayment(req.params.id, { reviewedBy: req.user.id });
+    res.json({ success: true, ...out });
+  } catch (err) {
+    res.status(err.statusCode || 500).json({ success: false, message: err.message });
+  }
+});
+
+router.post('/billing/payments/:id/reject', authenticate, authorize('admin'), async (req, res) => {
+  try {
+    const out = await rejectBillingPayment(req.params.id, {
+      reviewedBy: req.user.id,
+      adminNote: req.body?.admin_note ?? req.body?.note,
+    });
+    res.json({ success: true, ...out });
+  } catch (err) {
+    res.status(err.statusCode || 500).json({ success: false, message: err.message });
+  }
+});
+
+router.get('/billing/settings', authenticate, authorize('admin'), async (_req, res) => {
+  try {
+    const settings = await adminGetBillingSettings();
+    res.json({ success: true, settings });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+router.put('/billing/settings', authenticate, authorize('admin'), async (req, res) => {
+  try {
+    const settings = await adminUpdateBillingSettings(req.body || {});
+    res.json({ success: true, settings });
+  } catch (err) {
+    res.status(err.statusCode || 500).json({ success: false, message: err.message });
   }
 });
 
