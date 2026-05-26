@@ -11,6 +11,7 @@ const {
   isVerificationExpired,
 } = require('../services/emailVerificationIssue');
 const { resolveLoginUserOrError, resolveSmsBillingInstructorId: resolveSmsBillingForLogin } = require('../services/authService');
+const { guardEmailVerifiedBeforeToken } = require('../services/emailVerificationGuard');
 const { getActiveRoles, grantUserRole, grantCourseRoleToUser } = require('../services/userRolesService');
 
 const PHONE_NORM = "regexp_replace(COALESCE(phone::text, ''), '[^0-9]', '', 'g')";
@@ -266,12 +267,7 @@ const phoneNextStep = async (req, res) => {
     const user = resolved.user;
     const loginRole = resolved.loginRole || role;
 
-    if (user.is_verified === false) {
-      return res.status(403).json({
-        success: false,
-        message: 'E-poçt təsdiqlənməyib. Zəhmət olmasa e-poçtunuzu təsdiqləyin və sonra yenidən cəhd edin.',
-      });
-    }
+    if (!guardEmailVerifiedBeforeToken(res, user)) return;
 
     if (!hasStoredPin(user.pin_hash)) {
       try {
@@ -324,12 +320,7 @@ const forgotPinSms = async (req, res) => {
       return res.status(resolved.status).json(resolved.body);
     }
     const user = resolved.user;
-    if (user.is_verified === false) {
-      return res.status(403).json({
-        success: false,
-        message: 'E-poçt təsdiqlənməyib. Zəhmət olmasa e-poçtunuzu təsdiqləyin və sonra yenidən cəhd edin.',
-      });
-    }
+    if (!guardEmailVerifiedBeforeToken(res, user)) return;
     try {
       const r = await deliverPermanentPinSms(user, clean, { force: true });
       return res.json({
@@ -374,12 +365,7 @@ const login = async (req, res) => {
       return res.status(401).json({ success: false, message: 'Giriş məlumatları yanlışdır' });
     if (user.role !== 'admin')
       return res.status(403).json({ success: false, message: 'Yalnız admin bu girişlə daxil ola bilər' });
-    if (user.is_verified === false) {
-      return res.status(403).json({
-        success: false,
-        message: 'E-poçt təsdiqlənməyib. Zəhmət olmasa e-poçtunuzdakı təsdiq linkinə klik edin.',
-      });
-    }
+    if (!guardEmailVerifiedBeforeToken(res, user)) return;
     const token = sign({ id: user.id, role: user.role });
     res.json({
       success: true,
@@ -404,12 +390,7 @@ const sendOtp = async (req, res) => {
     if (!user) {
       return res.status(404).json({ success: false, message: 'Bu nömrə seçilmiş rol üçün qeydiyyatda yoxdur' });
     }
-    if (user.is_verified === false) {
-      return res.status(403).json({
-        success: false,
-        message: 'E-poçt təsdiqlənməyib. Zəhmət olmasa e-poçtunuza gələn təsdiq linkinə klik edin.',
-      });
-    }
+    if (!guardEmailVerifiedBeforeToken(res, user)) return;
 
     const billingId = await resolveSmsBillingInstructorId(user);
     const quota = await checkSmsQuota(billingId, { requireProfile: false });
@@ -458,12 +439,7 @@ const verifyOtp = async (req, res) => {
 
     const user = await findUserByPhoneAndRole(clean, role);
     if (!user) return res.status(404).json({ success: false, message: 'İstifadəçi tapılmadı' });
-    if (user.is_verified === false) {
-      return res.status(403).json({
-        success: false,
-        message: 'E-poçt təsdiqlənməyib. Zəhmət olmasa e-poçtunuzu təsdiq linkindən aktivləşdirin.',
-      });
-    }
+    if (!guardEmailVerifiedBeforeToken(res, user)) return;
 
     await db.query('UPDATE users SET phone_verified = TRUE WHERE id = $1', [user.id]);
 
@@ -945,13 +921,7 @@ const loginWithEmail = async (req, res) => {
       });
     }
 
-    if (user.is_verified === false) {
-      return res.status(403).json({
-        success: false,
-        code: 'EMAIL_NOT_VERIFIED',
-        message: 'Email təsdiqlənməyib. Poçtunuzdakı linkə klik edin və ya təsdiq kodunu daxil edin.',
-      });
-    }
+    if (!guardEmailVerifiedBeforeToken(res, user)) return;
 
     const token = sign({ id: user.id, role });
     const baseUser = { id: user.id, full_name: user.full_name, role, email: user.email, phone: user.phone };
@@ -1001,11 +971,13 @@ const resendVerificationEmail = async (req, res) => {
 
 const me = async (req, res) => {
   try {
-    const { rows } = await db.query('SELECT id, full_name, email, phone, role, phone_verified FROM users WHERE id = $1', [
-      req.user.id,
-    ]);
+    const { rows } = await db.query(
+      'SELECT id, full_name, email, phone, role, phone_verified, is_active, is_verified FROM users WHERE id = $1',
+      [req.user.id],
+    );
     const u = rows[0];
-    if (!u) return res.status(404).json({ success: false, message: 'Tapılmadı' });
+    if (!u || u.is_active === false) return res.status(404).json({ success: false, message: 'Tapılmadı' });
+    if (!guardEmailVerifiedBeforeToken(res, u)) return;
     const userOut = await enrichUserForClient(u, req.user.role);
     res.json({ success: true, user: userOut });
   } catch (err) {
@@ -1255,12 +1227,7 @@ const loginWithPin = async (req, res) => {
     }
     const valid = await bcrypt.compare(p, user.pin_hash);
     if (!valid) return res.status(401).json({ success: false, message: 'PIN yanlışdır' });
-    if (user.is_verified === false) {
-      return res.status(403).json({
-        success: false,
-        message: 'E-poçt təsdiqlənməyib. Zəhmət olmasa e-poçtunuzu təsdiqləyin və sonra yenidən cəhd edin.',
-      });
-    }
+    if (!guardEmailVerifiedBeforeToken(res, user)) return;
     await db.query('UPDATE users SET phone_verified = TRUE WHERE id = $1', [user.id]);
     const token = signOTP({ id: user.id, role });
     const baseUser = { id: user.id, full_name: user.full_name, role, phone: user.phone };
@@ -1315,7 +1282,7 @@ const googleLogin = async (req, res) => {
     const g = await verifyGoogleIdTokenOrThrow(credential);
 
     const bySub = await db.query(
-      `SELECT id, full_name, email, role, phone, phone_verified, auth_provider, google_sub, account_status, is_active
+      `SELECT id, full_name, email, role, phone, phone_verified, auth_provider, google_sub, account_status, is_active, is_verified
        FROM users
        WHERE is_active = TRUE
          AND google_sub = $1
@@ -1326,7 +1293,7 @@ const googleLogin = async (req, res) => {
 
     if (!user && g.email) {
       const byEmail = await db.query(
-        `SELECT id, full_name, email, role, phone, phone_verified, auth_provider, google_sub, account_status, is_active
+        `SELECT id, full_name, email, role, phone, phone_verified, auth_provider, google_sub, account_status, is_active, is_verified
          FROM users
          WHERE email IS NOT NULL
            AND LOWER(TRIM(email)) = LOWER(TRIM($1))
@@ -1392,12 +1359,7 @@ const googleLogin = async (req, res) => {
       });
     }
 
-    if (user.is_verified === false) {
-      return res.status(403).json({
-        success: false,
-        message: 'E-poçt təsdiqlənməyib. Zəhmət olmasa e-poçtunuzu təsdiqləyin və sonra yenidən cəhd edin.',
-      });
-    }
+    if (!guardEmailVerifiedBeforeToken(res, user)) return;
 
     const token = sign({ id: user.id, role: user.role });
     return res.json({
@@ -1586,12 +1548,7 @@ const googleLinkVerify = async (req, res) => {
       [user.id],
     );
     const u = fresh[0];
-    if (u?.is_verified === false) {
-      return res.status(403).json({
-        success: false,
-        message: 'E-poçt təsdiqlənməyib. Zəhmət olmasa e-poçtunuzu təsdiqləyin.',
-      });
-    }
+    if (!u || !guardEmailVerifiedBeforeToken(res, u)) return;
     const token = sign({ id: u.id, role: u.role });
     return res.json({
       success: true,
@@ -1621,7 +1578,7 @@ const googleComplete = async (req, res) => {
     }
 
     const { rows: existingBySub } = await db.query(
-      `SELECT id, full_name, email, role, phone, phone_verified, google_sub, account_status, is_active
+      `SELECT id, full_name, email, role, phone, phone_verified, google_sub, account_status, is_active, is_verified
        FROM users
        WHERE is_active = TRUE
          AND google_sub = $1
@@ -1632,7 +1589,7 @@ const googleComplete = async (req, res) => {
 
     if (!user && g.email) {
       const { rows: byEmail } = await db.query(
-        `SELECT id, full_name, email, role, phone, phone_verified, google_sub, account_status, is_active
+        `SELECT id, full_name, email, role, phone, phone_verified, google_sub, account_status, is_active, is_verified
          FROM users
          WHERE email IS NOT NULL
            AND LOWER(TRIM(email)) = LOWER(TRIM($1))
@@ -1669,9 +1626,9 @@ const googleComplete = async (req, res) => {
         10
       );
       const { rows: created } = await db.query(
-        `INSERT INTO users (full_name, email, role, auth_provider, google_sub, phone_verified, password_hash, account_status)
-         VALUES ($1, $2, $3, 'google', $4, FALSE, $5, 'active')
-         RETURNING id, full_name, email, role, phone, phone_verified`,
+        `INSERT INTO users (full_name, email, role, auth_provider, google_sub, phone_verified, password_hash, account_status, is_verified)
+         VALUES ($1, $2, $3, 'google', $4, FALSE, $5, 'active', TRUE)
+         RETURNING id, full_name, email, role, phone, phone_verified, is_verified`,
         [fullName, g.email, r, g.sub, oauthPasswordPlaceholder]
       );
       user = created[0];
@@ -1684,30 +1641,25 @@ const googleComplete = async (req, res) => {
              is_active = TRUE,
              account_status = 'active'
          WHERE id = $1
-         RETURNING id, full_name, email, role, phone, phone_verified`,
+         RETURNING id, full_name, email, role, phone, phone_verified, is_verified`,
         [user.id, r, g.sub]
       );
       user = updated[0] || user;
     } else {
-      await db
-        .query(
-          `UPDATE users
-           SET google_sub = COALESCE(google_sub, $2),
-               auth_provider = 'google',
-               is_active = TRUE,
-               account_status = 'active'
-           WHERE id = $1`,
-          [user.id, g.sub]
-        )
-        .catch(() => {});
+      const { rows: linked } = await db.query(
+        `UPDATE users
+         SET google_sub = COALESCE(google_sub, $2),
+             auth_provider = 'google',
+             is_active = TRUE,
+             account_status = 'active'
+         WHERE id = $1
+         RETURNING id, full_name, email, role, phone, phone_verified, is_verified`,
+        [user.id, g.sub]
+      );
+      if (linked[0]) user = linked[0];
     }
 
-    if (user.is_verified === false) {
-      return res.status(403).json({
-        success: false,
-        message: 'E-poçt təsdiqlənməyib. Zəhmət olmasa e-poçtunuzu təsdiqləyin və sonra yenidən cəhd edin.',
-      });
-    }
+    if (!guardEmailVerifiedBeforeToken(res, user)) return;
 
     const token = sign({ id: user.id, role: user.role });
     return res.json({

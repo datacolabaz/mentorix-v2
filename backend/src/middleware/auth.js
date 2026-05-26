@@ -1,11 +1,25 @@
 const { verify } = require('../utils/jwt');
+const {
+  fetchUserAuthState,
+  respondEmailNotVerified,
+  isUserEmailVerified,
+} = require('../services/emailVerificationGuard');
 
-const authenticate = (req, res, next) => {
+const authenticate = async (req, res, next) => {
   const token = req.headers.authorization?.split(' ')[1];
-  if (!token)
+  if (!token) {
     return res.status(401).json({ success: false, message: 'Token yoxdur' });
+  }
   try {
-    req.user = verify(token);
+    const payload = verify(token);
+    const row = await fetchUserAuthState(payload.id);
+    if (!row || row.is_active === false) {
+      return res.status(401).json({ success: false, message: 'Token etibarsızdır' });
+    }
+    if (!isUserEmailVerified(row)) {
+      return respondEmailNotVerified(res);
+    }
+    req.user = { ...payload, role: payload.role || row.role };
     next();
   } catch {
     res.status(401).json({ success: false, message: 'Token etibarsızdır' });
@@ -13,8 +27,9 @@ const authenticate = (req, res, next) => {
 };
 
 const authorize = (...roles) => (req, res, next) => {
-  if (!roles.includes(req.user.role))
+  if (!roles.includes(req.user.role)) {
     return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
+  }
   next();
 };
 
