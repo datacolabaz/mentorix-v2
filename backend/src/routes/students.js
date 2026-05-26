@@ -659,13 +659,22 @@ router.post(
     let pin_sms = { attempted: false, sent: false, skipped: false, message: '' };
     try {
       const { rows: urows } = await db.query(
-        `SELECT id, role, phone, pin_hash
+        `SELECT id, role, phone, pin_hash, is_verified
          FROM users
          WHERE id = $1 AND is_active = TRUE`,
         [student_id]
       );
       const u = urows[0];
       if (u && u.role === 'student') {
+        if (u.is_verified === false) {
+          pin_sms.attempted = true;
+          pin_sms.skipped = true;
+          pin_sms.message = 'E-poçt təsdiqi tələb olunur — PIN SMS göndərilmədi.';
+          // Login yalnız email təsdiqindən sonra icazəlidir.
+          // PIN SMS göndərmirik ki, SMS xərci azalsın.
+          // (İstəsəniz təsdiqdən sonra PIN “Daxil ol” ilə göndərilə bilər.)
+          return res.json({ success: true, enrollment, pin_sms });
+        }
         const clean = normalizePhoneDigits(u.phone);
         pin_sms.attempted = true;
         if (!clean) {

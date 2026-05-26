@@ -15,6 +15,7 @@ const {
   googleLinkVerify,
   sendMyPhoneVerifyOtp,
   verifyMyPhoneVerifyOtp,
+  verifyEmail,
 } = require('../controllers/authController');
 const { authenticate, authorize } = require('../middleware/auth');
 const { requireInstructorPhoneVerified } = require('../middleware/trial');
@@ -47,6 +48,8 @@ router.post(
   enforceStudentsLimit,
   register
 );
+
+router.post('/verify-email', verifyEmail);
 router.get('/me', authenticate, me);
 router.post('/pin/set', authenticate, setPin);
 router.post('/pin/login', loginWithPin);

@@ -9,12 +9,19 @@ CREATE TABLE users (
   role VARCHAR(20) NOT NULL CHECK (role IN ('admin','instructor','student','parent','course')),
   account_status TEXT NOT NULL DEFAULT 'active' CHECK (account_status IN ('active', 'pending_google')),
   is_active BOOLEAN DEFAULT TRUE,
+  verification_token TEXT,
+  verification_expiry TIMESTAMPTZ,
+  is_verified BOOLEAN NOT NULL DEFAULT TRUE,
   created_at TIMESTAMP DEFAULT NOW()
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS users_email_lower_unique_not_null
   ON users (lower(trim(email)))
   WHERE email IS NOT NULL AND trim(email) <> '';
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_verification_token_unique
+  ON users (verification_token)
+  WHERE verification_token IS NOT NULL;
 
 CREATE TABLE instructor_profiles (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

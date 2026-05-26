@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import useAuthStore from './hooks/useAuth'
 
 import Login from './pages/auth/Login'
+import VerifyEmail from './pages/auth/VerifyEmail'
 import InstructorMapSearch from './pages/public/InstructorMapSearch'
 import AdminLayout from './layouts/AdminLayout'
 import InstructorLayout from './layouts/InstructorLayout'
@@ -78,6 +79,7 @@ export default function App() {
     <Routes>
       <Route path="/search" element={<InstructorMapSearch />} />
       <Route path="/login" element={user ? <Navigate to={`/${user.role}`} /> : <Login />} />
+      <Route path="/verify-email" element={<VerifyEmail />} />
       <Route path="/" element={<Navigate to={user ? `/${user.role}` : '/login'} />} />
 
       <Route path="/admin" element={<ProtectedRoute roles={['admin']}><AdminLayout /></ProtectedRoute>}>
