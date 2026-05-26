@@ -14,6 +14,7 @@ const NAV_SECTIONS = [
       { to: '/admin', label: 'Dashboard', icon: <NavIcon name="dashboard" />, end: true },
       { to: '/admin/instructors', label: 'Müəllimlər', icon: <NavIcon name="instructors" /> },
       { to: '/admin/payments', label: 'Ödənişlər', icon: <NavIcon name="payments" /> },
+      { to: '/admin/billing', label: 'Platform ödənişləri', icon: <NavIcon name="payments" /> },
     ],
   },
   {

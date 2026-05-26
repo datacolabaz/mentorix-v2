@@ -65,7 +65,8 @@ async function ensureSubscriptionRow(dbConn, userId) {
 
 async function ensureUsageRow(dbConn, userId) {
   const { rows } = await dbConn.query(
-    `SELECT user_id, students_count, storage_used_mb, storage_used_bytes, sms_used_monthly, sms_period_ym
+    `SELECT user_id, students_count, storage_used_mb, storage_used_bytes, sms_used_monthly, sms_period_ym,
+            COALESCE(extra_sms_balance, 0) AS extra_sms_balance
      FROM usage_counters
      WHERE user_id = $1
      LIMIT 1`,
@@ -77,7 +78,8 @@ async function ensureUsageRow(dbConn, userId) {
   const { rows: ins } = await dbConn.query(
     `INSERT INTO usage_counters (user_id, students_count, storage_used_mb, storage_used_bytes, sms_used_monthly, sms_period_ym)
      VALUES ($1, 0, 0, 0, 0, $2)
-     RETURNING user_id, students_count, storage_used_mb, storage_used_bytes, sms_used_monthly, sms_period_ym`,
+     RETURNING user_id, students_count, storage_used_mb, storage_used_bytes, sms_used_monthly, sms_period_ym,
+               COALESCE(extra_sms_balance, 0) AS extra_sms_balance`,
     [userId, ym]
   );
   return ins[0];
@@ -94,7 +96,8 @@ async function ensureSmsPeriodUpToDate(dbConn, userId) {
          sms_period_ym = $2,
          updated_at = NOW()
      WHERE user_id = $1
-     RETURNING user_id, students_count, storage_used_mb, storage_used_bytes, sms_used_monthly, sms_period_ym`,
+     RETURNING user_id, students_count, storage_used_mb, storage_used_bytes, sms_used_monthly, sms_period_ym,
+               COALESCE(extra_sms_balance, 0) AS extra_sms_balance`,
     [userId, ym]
   );
   return rows[0] || usage;
@@ -256,12 +259,19 @@ async function resolveEntitlements(userId) {
     plansMap.basic?.limits ||
     { students: 5, storage_mb: null, storage_limit_bytes: 512 * 1024, sms_monthly: 5, ram_limit_mb: null };
 
+  const extraSmsBalance = Number(usage?.extra_sms_balance || 0) || 0;
+  const baseSmsLimit = planLimits.sms_monthly;
+  const effectiveSmsLimit =
+    baseSmsLimit == null ? null : Math.max(0, Number(baseSmsLimit) + extraSmsBalance);
+
   const limits = {
     students: planLimits.students,
     storage_mb: planLimits.storage_mb,
     storage_limit_bytes:
       planLimits.storage_limit_bytes == null ? null : Number(planLimits.storage_limit_bytes),
-    sms_monthly: planLimits.sms_monthly,
+    sms_monthly: effectiveSmsLimit,
+    sms_monthly_plan: baseSmsLimit,
+    extra_sms_balance: extraSmsBalance,
     ram_limit_mb: planLimits.ram_limit_mb ?? null,
   };
 
@@ -270,6 +280,7 @@ async function resolveEntitlements(userId) {
     storage_mb: Number(usage?.storage_used_mb || 0) || 0,
     storage_bytes: Number(usage?.storage_used_bytes ?? 0) || 0,
     sms_monthly: Number(usage?.sms_used_monthly || 0) || 0,
+    extra_sms_balance: extraSmsBalance,
   };
 
   const rem = {

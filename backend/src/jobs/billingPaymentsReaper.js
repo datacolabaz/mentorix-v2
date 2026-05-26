@@ -11,8 +11,16 @@ async function expireAbandonedBillingPayments() {
        SET status = 'expired',
            updated_at = NOW()
        WHERE status = 'pending'
-         AND (expires_at IS NOT NULL AND expires_at < NOW()
-              OR created_at < NOW() - interval '30 minutes')`
+         AND (
+           (COALESCE(provider, '') = 'manual' AND expires_at IS NOT NULL AND expires_at < NOW())
+           OR (
+             COALESCE(provider, '') <> 'manual'
+             AND (
+               (expires_at IS NOT NULL AND expires_at < NOW())
+               OR created_at < NOW() - interval '30 minutes'
+             )
+           )
+         )`
     );
     return rowCount || 0;
   } catch (e) {

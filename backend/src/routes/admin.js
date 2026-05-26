@@ -12,6 +12,8 @@ const { authenticate, authorize } = require('../middleware/auth');
 const db = require('../utils/db');
 const { grantCourseRoleToUser } = require('../services/userRolesService');
 const { adminListPlans, adminUpsertPlan } = require('../services/subscriptionPlansService');
+const { fulfillBillingPayment, rejectBillingPayment } = require('../services/billingActivationService');
+const { adminGetBillingSettings, adminUpdateBillingSettings } = require('../services/billingSettingsService');
 
 router.get('/stats', authenticate, authorize('admin'), getDashboardStats);
 router.get('/marketing/login', authenticate, authorize('admin'), getAdminLoginMarketing);

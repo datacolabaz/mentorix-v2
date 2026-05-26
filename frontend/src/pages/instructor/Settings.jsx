@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import api from '../../lib/api'
 import Card from '../../components/common/Card'
@@ -18,8 +18,11 @@ import InstructorMapPreviewModal from '../../components/instructor/InstructorMap
 import { reverseGeocodeLabel } from '../../lib/reverseGeocode'
 import { formatAzn, yearlyTotalAzn, YEARLY_DISCOUNT } from '../../lib/pricing'
 import { planDetailLines, planLimitsHeadline } from '../../lib/subscriptionPlanCopy'
+import PaymentMethodModal from '../../components/instructor/PaymentMethodModal'
+import { useBillingConfig } from '../../hooks/useBillingConfig'
 
 export default function InstructorSettings() {
+  const navigate = useNavigate()
   const qc = useQueryClient()
   const toast = useToast()
   const { user, updateUser } = useAuthStore()
@@ -30,6 +33,11 @@ export default function InstructorSettings() {
   const plansQ = useSubscriptionPlans()
   const billingQ = useBillingStatus()
   const billing = billingQ.data || null
+  const billingConfigQ = useBillingConfig()
+  const manualAccount = billingConfigQ.data?.manual_transfer_account || ''
+  const smsPacks = Array.isArray(billingConfigQ.data?.sms_packs) ? billingConfigQ.data.sms_packs : []
+  const [checkout, setCheckout] = useState(null)
+  const [billingPayments, setBillingPayments] = useState([])
   const plans = Array.isArray(plansQ.data) ? plansQ.data : []
   const [savingLabel, setSavingLabel] = useState(false)
   const [publicLabel, setPublicLabel] = useState('instructor')
@@ -399,7 +407,7 @@ export default function InstructorSettings() {
 
             async function onPlanAction() {
               if (isCurrent) return
-              if (isUpgrade) return startUpgrade(p.id)
+              if (isUpgrade) return openPlanCheckout(p.id)
               if (isFree) return downgradeToBasic()
               setPlanErr(null)
               toast('Bu paketə keçid üçün dəstəyə yazın — cari abunə üçün endirimli dəyişiklik tələb olunur.')
@@ -497,6 +505,68 @@ export default function InstructorSettings() {
             )
           })}
         </div>
+      </Card>
+
+      {smsPacks.length ? (
+        <Card className={settingsCardCls}>
+          <h2 className={cardTitleCls}>Əlavə SMS al</h2>
+          <p className={cardTextCls}>
+            Paket limitinizə əlavə SMS balansı. Kartla dərhal, köçürmə ilə admin təsdiqindən sonra aktivləşir.
+          </p>
+          {billing?.usage?.extra_sms_balance > 0 ? (
+            <p className="text-xs text-emerald-400/90">
+              Əlavə balans: +{billing.usage.extra_sms_balance} SMS (cari limitə əlavə olunur)
+            </p>
+          ) : null}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {smsPacks.map((pack) => (
+              <div
+                key={pack.quantity}
+                className="rounded-2xl border border-[color:var(--border-subtle)] p-4 flex flex-col gap-3"
+              >
+                <div className="font-display font-bold text-token-textMain">{pack.label}</div>
+                <div className="text-lg font-bold text-token-textMain">{formatAzn(pack.price_azn)} AZN</div>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="w-full justify-center mt-auto"
+                  disabled={planBusy}
+                  onClick={() => openSmsCheckout(pack)}
+                >
+                  Al
+                </Button>
+              </div>
+            ))}
+          </div>
+        </Card>
+      ) : null}
+
+      <Card className={settingsCardCls}>
+        <h2 className={cardTitleCls}>Ödəniş tarixçəsi</h2>
+        <p className={cardTextCls}>Paket və SMS ödənişlərinizin statusu.</p>
+        {!billingPayments.length ? (
+          <p className="text-sm text-token-textMuted">Hələ ödəniş yoxdur.</p>
+        ) : (
+          <ul className="space-y-2 max-h-64 overflow-y-auto">
+            {billingPayments.slice(0, 20).map((p) => (
+              <li
+                key={p.id}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[color:var(--border-subtle)] px-3 py-2 text-sm"
+              >
+                <span className="text-token-textMain">
+                  {p.product_type === 'sms'
+                    ? `+${p.sms_quantity} SMS`
+                    : `Paket: ${String(p.plan || '').toUpperCase()}`}
+                  {' · '}
+                  {Number(p.amount || 0).toFixed(2)} ₼
+                </span>
+                <span className="text-xs text-token-textMuted">
+                  {p.payment_method === 'cash' ? 'Köçürmə' : 'Kart'} · {p.status}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
       </Card>
 
       <Card className={settingsCardCls}>
@@ -814,6 +884,17 @@ export default function InstructorSettings() {
         Hesab:{' '}
         <span className={theme === 'dark' ? 'text-gray-400' : 'text-token-textMain'}>{user?.full_name}</span>
       </p>
+
+      <PaymentMethodModal
+        open={Boolean(checkout)}
+        onClose={() => setCheckout(null)}
+        title={checkout?.type === 'sms' ? 'SMS ödənişi' : 'Paket ödənişi'}
+        subtitle={checkout?.title ? `Seçim: ${checkout.title}` : undefined}
+        amountAzn={checkout?.amountAzn}
+        manualAccount={manualAccount}
+        busy={planBusy}
+        onConfirm={confirmCheckout}
+      />
     </div>
   )
 }

@@ -4,38 +4,16 @@ const db = require('../utils/db');
 const { resolveEntitlements, logBillingEvent } = require('../services/billingEntitlements');
 const getCurrentPlan = require('../services/billingGetCurrentPlan');
 const { normalizePlanSlug } = require('../config/plans');
-const { getPlanOrThrow, getActivePlansMap } = require('../services/subscriptionPlansService');
-const { createOrder, getOrderInfo } = require('../services/payriffService');
+const { getOrderInfo } = require('../services/payriffService');
 const { sendPaymentEmail } = require('../services/emailService');
 const { enqueueNotification } = require('../services/notificationQueueService');
-
-function planRank(p) {
-  const s = normalizePlanSlug(p);
-  if (s === 'business') return 3;
-  if (s === 'pro') return 2;
-  return 1;
-}
-
-function normalizeBillingInterval(raw) {
-  const s = String(raw ?? '')
-    .trim()
-    .toLowerCase()
-  if (s === 'year' || s === 'yearly' || s === 'annual' || s === '12m' || s === 'illik' || s === 'il')
-    return 'yearly'
-  return 'monthly'
-}
-
-/** 20% off vs paying 12 × monthly */
-function yearlyTotalFromMonthly(monthlyAzn, discountPct = 0.2) {
-  const m = Number(monthlyAzn || 0) || 0
-  const d = Number(discountPct) || 0
-  return Math.round(m * 12 * (1 - Math.min(1, Math.max(0, d))) * 100) / 100
-}
-
-function addDaysIso(days) {
-  const d = new Date(Date.now() + days * 86400000);
-  return d.toISOString();
-}
+const {
+  createPlanCheckout,
+  createSmsCheckout,
+  normalizePaymentMethod,
+} = require('../services/billingCheckoutService');
+const { fulfillBillingPayment } = require('../services/billingActivationService');
+const { getBillingConfig } = require('../services/billingSettingsService');
 
 function callbackUrlFromReq(req) {
   const env = String(process.env.PAYRIFF_CALLBACK_URL || '').trim();
@@ -102,14 +80,51 @@ router.post('/events', authenticate, authorize('instructor'), async (req, res) =
   }
 });
 
-router.get('/invoices', authenticate, authorize('instructor'), async (req, res) => {
+router.get('/config', authenticate, authorize('instructor'), async (_req, res) => {
+  try {
+    const config = await getBillingConfig();
+    res.json({ success: true, ...config });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+router.get('/payments', authenticate, authorize('instructor'), async (req, res) => {
   try {
     const { rows } = await db.query(
-      `SELECT plan, amount_cents, status, COALESCE(paid_at, created_at) AS at
+      `SELECT id, plan, amount_cents, currency, status, payment_method, product_type, sms_quantity,
+              provider, COALESCE(paid_at, created_at) AS at, created_at, admin_note
        FROM billing_payments
        WHERE user_id = $1
        ORDER BY created_at DESC
        LIMIT 200`,
+      [req.user.id]
+    );
+    const payments = (rows || []).map((r) => ({
+      id: r.id,
+      amount: Number(r.amount_cents || 0) / 100,
+      plan: r.plan,
+      status: r.status,
+      payment_method: r.payment_method,
+      product_type: r.product_type,
+      sms_quantity: r.sms_quantity,
+      provider: r.provider,
+      date: r.at ? new Date(r.at).toISOString() : null,
+      created_at: r.created_at ? new Date(r.created_at).toISOString() : null,
+      admin_note: r.admin_note,
+    }));
+    res.json({ success: true, payments });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+/** @deprecated — use GET /billing/payments */
+router.get('/invoices', authenticate, authorize('instructor'), async (req, res) => {
+  try {
+    const { rows } = await db.query(
+      `SELECT plan, amount_cents, status, COALESCE(paid_at, created_at) AS at
+       FROM billing_payments WHERE user_id = $1 ORDER BY created_at DESC LIMIT 200`,
       [req.user.id]
     );
     const invoices = (rows || []).map((r) => ({
@@ -158,14 +173,12 @@ router.post('/select-basic', authenticate, authorize('instructor'), async (req, 
 
 router.post('/create-payment', authenticate, authorize('instructor'), async (req, res) => {
   try {
-    // Fraud signals (soft): too many pending or failed spike.
     try {
       const { rows: p } = await db.query(
         `SELECT
            COUNT(*) FILTER (WHERE status='pending' AND created_at > NOW() - interval '30 minutes')::int AS pending_30m,
            COUNT(*) FILTER (WHERE status='failed' AND created_at > NOW() - interval '2 hours')::int AS failed_2h
-         FROM billing_payments
-         WHERE user_id = $1`,
+         FROM billing_payments WHERE user_id = $1`,
         [req.user.id]
       );
       const pending30 = Number(p[0]?.pending_30m || 0) || 0;
@@ -186,103 +199,35 @@ router.post('/create-payment', authenticate, authorize('instructor'), async (req
     } catch {
       // ignore
     }
-    const plan = normalizePlanSlug(req.body?.plan);
-    const picked = await getPlanOrThrow(plan);
 
-    const cur = await getCurrentPlan(db, req.user.id);
-    const from = normalizePlanSlug(cur.plan);
-    if (planRank(plan) <= planRank(from)) {
-      return res.status(400).json({ success: false, code: 'PLAN_NOT_UPGRADE', message: 'PLAN_NOT_UPGRADE' });
-    }
+    const paymentMethod = normalizePaymentMethod(req.body?.payment_method ?? req.body?.paymentMethod ?? 'card');
+    const callbackUrl = paymentMethod === 'cash' ? null : callbackUrlFromReq(req);
 
-    const priceAzn = Number(picked?.price_azn || 0) || 0;
-    if (!priceAzn) return res.status(500).json({ success: false, code: 'PLAN_PRICE_MISSING', message: 'PLAN_PRICE_MISSING' });
-
-    const billingInterval = normalizeBillingInterval(req.body?.interval ?? req.body?.billing_interval);
-
-    // Optional proration (feature flag): charge only the difference for remaining days.
-    let finalPriceAzn = billingInterval === 'yearly' ? yearlyTotalFromMonthly(priceAzn, 0.2) : priceAzn;
-    if (
-      billingInterval === 'monthly' &&
-      String(process.env.PAYRIFF_PRORATION || '').trim() === '1' &&
-      cur?.current_period_end
-    ) {
-      const endMs = new Date(cur.current_period_end).getTime();
-      const nowMs = Date.now();
-      if (Number.isFinite(endMs) && endMs > nowMs) {
-        const remainingDays = Math.ceil((endMs - nowMs) / 86400000);
-        const periodDays = 30;
-        const plansMap = await getActivePlansMap();
-        const fromPrice = Number(plansMap[from]?.price_azn || 0) || 0;
-        const diff = Math.max(0, priceAzn - fromPrice);
-        const prorated = diff * Math.min(1, Math.max(0, remainingDays / periodDays));
-        // Minimum charge 1 AZN to avoid zero orders.
-        finalPriceAzn = Math.max(1, Math.round(prorated * 100) / 100);
-      }
-    }
-
-    const callbackUrl = callbackUrlFromReq(req);
-    if (!callbackUrl) return res.status(500).json({ success: false, code: 'CALLBACK_URL_MISSING', message: 'CALLBACK_URL_MISSING' });
-
-    const amountCents = Math.round(finalPriceAzn * 100);
-    const { rows: ins } = await db.query(
-      `INSERT INTO billing_payments (user_id, provider, plan, amount_cents, currency, status, billing_interval)
-       VALUES ($1, 'payriff', $2, $3, 'AZN', 'pending', $4)
-       RETURNING id`,
-      [req.user.id, plan, amountCents, billingInterval]
-    );
-    const paymentId = ins[0]?.id;
-    await db.query(
-      `UPDATE billing_payments
-       SET expires_at = NOW() + interval '30 minutes'
-       WHERE id = $1`,
-      [paymentId]
-    );
-
-    const periodLabel = billingInterval === 'yearly' ? '12 ay' : '30 gün'
-    const order = await createOrder({
-      amount: finalPriceAzn,
-      currency: 'AZN',
-      language: 'AZ',
-      description: `Mentorix — ${String(picked?.title || plan).trim()} (${periodLabel})`,
+    const payment = await createPlanCheckout({
+      userId: req.user.id,
+      plan: req.body?.plan,
+      interval: req.body?.interval ?? req.body?.billing_interval,
+      paymentMethod,
       callbackUrl,
-      metadata: { payment_id: paymentId, user_id: req.user.id, plan, billing_interval: billingInterval },
     });
 
-    const orderId = order?.payload?.orderId || null;
-    const paymentUrl = order?.payload?.paymentUrl || null;
+    return res.json({ success: true, payment });
+  } catch (err) {
+    return res.status(err.statusCode || err.status || 500).json({ success: false, message: err.message, code: err.code });
+  }
+});
 
-    await db.query(
-      `UPDATE billing_payments
-       SET external_order_id = $2,
-           payment_url = $3,
-           raw_create_response = $4::jsonb,
-           updated_at = NOW()
-       WHERE id = $1`,
-      [paymentId, orderId, paymentUrl, JSON.stringify(order)]
-    );
-
-    await db.query(
-      `INSERT INTO billing_history (user_id, action, old_plan, new_plan, amount_cents, currency, status, provider, external_order_id)
-       VALUES ($1, 'payment', $2, $3, $4, 'AZN', 'pending', 'payriff', $5)`,
-      [req.user.id, from, plan, amountCents, orderId]
-    );
-
-    void logBillingEvent(db, { user_id: req.user.id, event: 'payment_intent_created', context: { plan, orderId } });
-
-    return res.json({
-      success: true,
-      payment: {
-        id: paymentId,
-        provider: 'payriff',
-        plan,
-        amount_cents: amountCents,
-        currency: 'AZN',
-        status: 'pending',
-        external_order_id: orderId,
-        payment_url: paymentUrl,
-      },
+router.post('/create-sms-payment', authenticate, authorize('instructor'), async (req, res) => {
+  try {
+    const paymentMethod = normalizePaymentMethod(req.body?.payment_method ?? req.body?.paymentMethod ?? 'card');
+    const callbackUrl = paymentMethod === 'cash' ? null : callbackUrlFromReq(req);
+    const payment = await createSmsCheckout({
+      userId: req.user.id,
+      smsQuantity: req.body?.quantity ?? req.body?.sms_quantity,
+      paymentMethod,
+      callbackUrl,
     });
+    return res.json({ success: true, payment });
   } catch (err) {
     return res.status(err.statusCode || err.status || 500).json({ success: false, message: err.message, code: err.code });
   }
@@ -314,11 +259,14 @@ async function processPayriffCallback(req, res) {
     const paymentStatus = String(info?.payload?.paymentStatus || '').toUpperCase();
     const paid = paymentStatus === 'PAID';
 
+    let paymentIdToFulfill = null;
+
     // Idempotent processing.
     await db.transaction(async (client) => {
       const { rows: existingRows } = await client.query(
-        `SELECT id, user_id, plan, status,
-                COALESCE(NULLIF(TRIM(billing_interval), ''), 'monthly') AS billing_interval
+        `SELECT id, user_id, plan, status, provider, amount_cents, product_type, sms_quantity,
+                COALESCE(NULLIF(TRIM(billing_interval), ''), 'monthly') AS billing_interval,
+                external_order_id
          FROM billing_payments
          WHERE provider = 'payriff' AND external_order_id = $1
          LIMIT 1`,
@@ -362,65 +310,16 @@ async function processPayriffCallback(req, res) {
         return;
       }
 
-      // Paid -> activate upgrade immediately (upgrade rule).
-      const { rows: subRows } = await client.query(
-        `SELECT plan FROM subscriptions WHERE user_id = $1 LIMIT 1`,
-        [existing.user_id]
-      );
-      const oldPlan = normalizePlanSlug(subRows[0]?.plan || 'basic');
-      const newPlan = normalizePlanSlug(existing.plan);
-      const billingInt = normalizeBillingInterval(existing.billing_interval);
-
       await client.query(
-        `UPDATE billing_payments
-         SET status = 'paid',
-             paid_at = NOW(),
-             raw_callback = $2::jsonb,
-             updated_at = NOW()
-         WHERE id = $1`,
+        `UPDATE billing_payments SET raw_callback = $2::jsonb, updated_at = NOW() WHERE id = $1`,
         [existing.id, JSON.stringify({ callback: body, info })]
       );
-
-      // Deactivate trial immediately on paid conversion.
-      await client.query(`UPDATE trials SET is_active = FALSE WHERE user_id = $1`, [existing.user_id]).catch(() => {});
-
-      // Upgrade immediate; downgrade scheduled (not used here because create-payment only allows upgrades).
-      if (billingInt === 'yearly') {
-        await client.query(
-          `UPDATE subscriptions
-           SET plan = $2,
-               status = 'active',
-               provider = 'payriff',
-               current_period_start = NOW(),
-               current_period_end = NOW() + interval '365 days',
-               pending_plan = NULL,
-               pending_effective_at = NULL,
-               updated_at = NOW()
-           WHERE user_id = $1`,
-          [existing.user_id, newPlan]
-        );
-      } else {
-        await client.query(
-          `UPDATE subscriptions
-           SET plan = $2,
-               status = 'active',
-               provider = 'payriff',
-               current_period_start = NOW(),
-               current_period_end = NOW() + interval '30 days',
-               pending_plan = NULL,
-               pending_effective_at = NULL,
-               updated_at = NOW()
-           WHERE user_id = $1`,
-          [existing.user_id, newPlan]
-        );
-      }
-
-      await client.query(
-        `INSERT INTO billing_history (user_id, action, old_plan, new_plan, amount_cents, currency, status, provider, external_order_id)
-         VALUES ($1, 'upgrade', $2, $3, $4, 'AZN', 'paid', 'payriff', $5)`,
-        [existing.user_id, oldPlan, newPlan, existing.amount_cents || null, orderId]
-      );
+      paymentIdToFulfill = existing.id;
     });
+
+    if (paymentIdToFulfill) {
+      await fulfillBillingPayment(paymentIdToFulfill);
+    }
 
     // Email fallback (non-blocking)
     try {

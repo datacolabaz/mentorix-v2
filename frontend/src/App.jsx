@@ -29,6 +29,8 @@ import InstructorSettings from './pages/instructor/Settings'
 import InstructorTasks from './pages/instructor/Tasks'
 import PaymentSuccess from './pages/instructor/PaymentSuccess'
 import PaymentFail from './pages/instructor/PaymentFail'
+import PaymentPending from './pages/instructor/PaymentPending'
+import AdminBilling from './pages/admin/AdminBilling'
 import ParentNotifications from './pages/parent/Notifications'
 
 import StudentDashboard from './pages/student/Dashboard'
@@ -82,6 +84,7 @@ export default function App() {
         <Route index element={<AdminDashboard />} />
         <Route path="instructors" element={<AdminInstructors />} />
         <Route path="payments" element={<AdminPayments />} />
+        <Route path="billing" element={<AdminBilling />} />
         <Route path="notifications" element={<AdminNotifications />} />
         <Route path="settings" element={<AdminSettings />} />
         <Route path="marketing/login" element={<AdminMarketingLogin />} />
@@ -108,6 +111,7 @@ export default function App() {
       <Route path="/payment" element={<ProtectedRoute roles={['instructor']}><InstructorLayout /></ProtectedRoute>}>
         <Route path="success" element={<PaymentSuccess />} />
         <Route path="fail" element={<PaymentFail />} />
+        <Route path="pending" element={<PaymentPending />} />
       </Route>
 
       <Route path="/student" element={<ProtectedRoute roles={['student']}><StudentLayout /></ProtectedRoute>}>
@@ -136,11 +140,4 @@ export default function App() {
         <Route path="groups" element={<CourseGroups />} />
         <Route path="schedule" element={<CourseSchedule />} />
         <Route path="finance" element={<CourseFinance />} />
-        <Route path="notifications" element={<CourseNotifications />} />
-        <Route path="settings" element={<CourseSettings />} />
-      </Route>
-
-      <Route path="*" element={<Placeholder title="404 — Tapılmadı" />} />
-    </Routes>
-  )
-}
+        <Rou
