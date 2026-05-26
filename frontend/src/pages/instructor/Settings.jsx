@@ -308,15 +308,73 @@ export default function InstructorSettings() {
     }
   }
 
-  async function startUpgrade(planId) {
+  useEffect(() => {
+    api
+      .get('/billing/payments')
+      .then((d) => setBillingPayments(Array.isArray(d?.payments) ? d.payments : []))
+      .catch(() => {})
+  }, [planBusy])
+
+  function openPlanCheckout(planId) {
+    const p = plans.find((x) => String(x.id).toLowerCase() === String(planId).toLowerCase())
+    const monthly = Number(p?.price_azn || 0)
+    const amountAzn =
+      billingInterval === 'yearly' ? yearlyTotalAzn(monthly, YEARLY_DISCOUNT) : monthly
+    setCheckout({ type: 'plan', planId, amountAzn, title: p?.title || planId })
+  }
+
+  function openSmsCheckout(pack) {
+    setCheckout({
+      type: 'sms',
+      quantity: pack.quantity,
+      amountAzn: pack.price_azn,
+      title: pack.label,
+    })
+  }
+
+  async function confirmCheckout(paymentMethod) {
+    if (!checkout) return
     setPlanErr(null)
     setPlanBusy(true)
     try {
-      const r = await api.post('/billing/create-payment', {
-        plan: planId,
-        interval: billingInterval,
+      if (checkout.type === 'plan') {
+        const r = await api.post('/billing/create-payment', {
+          plan: checkout.planId,
+          interval: billingInterval,
+          payment_method: paymentMethod,
+        })
+        const pay = r?.payment
+        setCheckout(null)
+        if (paymentMethod === 'cash') {
+          const qs = new URLSearchParams({
+            account: pay?.manual_transfer_account || manualAccount,
+            amount: String((Number(pay?.amount_cents || 0) / 100).toFixed(2)),
+            product: 'plan',
+          })
+          navigate(`/payment/pending?${qs}`)
+          return
+        }
+        const url = pay?.payment_url
+        if (!url) throw new Error('Ödəniş linki alınmadı')
+        window.location.href = url
+        return
+      }
+      const r = await api.post('/billing/create-sms-payment', {
+        quantity: checkout.quantity,
+        payment_method: paymentMethod,
       })
-      const url = r?.payment?.payment_url
+      const pay = r?.payment
+      setCheckout(null)
+      if (paymentMethod === 'cash') {
+        const qs = new URLSearchParams({
+          account: pay?.manual_transfer_account || manualAccount,
+          amount: String((Number(pay?.amount_cents || 0) / 100).toFixed(2)),
+          product: 'sms',
+        })
+        navigate(`/payment/pending?${qs}`)
+        return
+      }
+      const url = pay?.payment_url
       if (!url) throw new Error('Ödəniş linki alınmadı')
       window.location.href = url
     } catch (e) {
