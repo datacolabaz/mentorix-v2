@@ -1,11 +1,6 @@
 import { Link, useSearchParams } from 'react-router-dom'
 import Card from '../../components/common/Card'
-
-function formatAccount(digits) {
-  const s = String(digits || '').replace(/\D/g, '')
-  if (s.length !== 12) return s || '—'
-  return `${s.slice(0, 4)} ${s.slice(4, 8)} ${s.slice(8, 12)}`
-}
+import { formatBankCardDisplay } from '../../lib/billingPaymentLabels'
 
 export default function PaymentPending() {
   const [params] = useSearchParams()
@@ -29,9 +24,9 @@ export default function PaymentPending() {
           </p>
         ) : null}
         <div className="rounded-xl border border-amber-500/25 bg-token-surfaceCard/60 p-4">
-          <div className="text-xs uppercase tracking-wider text-token-textMuted mb-2">Köçürmə hesabı (12 rəqəm)</div>
+          <div className="text-xs uppercase tracking-wider text-token-textMuted mb-2">Bank kartı nömrəsi (16 rəqəm)</div>
           <div className="font-mono text-xl tracking-widest font-bold text-token-textMain select-all">
-            {formatAccount(account)}
+            {formatBankCardDisplay(account)}
           </div>
         </div>
         <p className="text-xs text-token-textMuted">

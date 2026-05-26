@@ -1,6 +1,7 @@
 const db = require('../utils/db');
 
-const DEFAULT_ACCOUNT = '000000000000';
+const BANK_CARD_DIGITS = 16;
+const DEFAULT_ACCOUNT = '0000000000000000';
 const DEFAULT_SMS_PACKS = [
   { quantity: 50, price_azn: 10, label: '50 SMS' },
   { quantity: 100, price_azn: 18, label: '100 SMS' },
@@ -23,7 +24,7 @@ async function setSetting(key, value) {
 
 async function getManualTransferAccount() {
   const raw = String((await getSetting('manual_transfer_account')) || DEFAULT_ACCOUNT).replace(/\D/g, '');
-  return raw.padStart(12, '0').slice(-12);
+  return raw.slice(0, BANK_CARD_DIGITS);
 }
 
 async function getSmsPacks() {
@@ -60,8 +61,8 @@ async function adminGetBillingSettings() {
 async function adminUpdateBillingSettings({ manual_transfer_account, sms_packs }) {
   if (manual_transfer_account != null) {
     const digits = String(manual_transfer_account).replace(/\D/g, '');
-    if (digits.length !== 12) {
-      const err = new Error('Köçürmə hesabı 12 rəqəm olmalıdır');
+    if (digits.length !== BANK_CARD_DIGITS) {
+      const err = new Error('Bank kartı nömrəsi 16 rəqəm olmalıdır');
       err.statusCode = 400;
       throw err;
     }

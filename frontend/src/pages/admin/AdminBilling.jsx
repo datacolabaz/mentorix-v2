@@ -3,7 +3,7 @@ import api from '../../lib/api'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
 import { useToast } from '../../components/common/Toast'
-import { billingPaymentStatusLabel } from '../../lib/billingPaymentLabels'
+import { billingPaymentStatusLabel, BANK_CARD_DIGITS, normalizeBankCardDigits } from '../../lib/billingPaymentLabels'
 
 const STATUS_LABEL = {
   pending: 'Gözləyir',
@@ -166,16 +166,18 @@ export default function AdminBilling() {
 
       <Card className="p-5 space-y-6">
         <div>
-          <h2 className="font-display font-bold text-sm mb-3">Köçürmə hesabı (12 rəqəm)</h2>
+          <h2 className="font-display font-bold text-sm mb-3">Bank kartı nömrəsi (16 rəqəm)</h2>
           <input
             className="w-full max-w-md bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white text-sm font-mono tracking-wider"
             value={accountDraft}
-            maxLength={12}
+            maxLength={BANK_CARD_DIGITS}
             inputMode="numeric"
-            onChange={(e) => setAccountDraft(e.target.value.replace(/\D/g, '').slice(0, 12))}
-            placeholder="000000000000"
+            onChange={(e) => setAccountDraft(normalizeBankCardDigits(e.target.value))}
+            placeholder="0000000000000000"
           />
-          <p className="text-xs text-gray-500 mt-2">Müəllim nağd/köçürmə seçəndə bu nömrə göstərilir.</p>
+          <p className="text-xs text-gray-500 mt-2">
+            Müəllim köçürmə seçəndə bu kart nömrəsi göstərilir ({accountDraft.replace(/\D/g, '').length}/{BANK_CARD_DIGITS} rəqəm).
+          </p>
         </div>
 
         <div>

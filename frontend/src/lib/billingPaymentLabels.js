@@ -1,3 +1,22 @@
+/** Bank kartı (köçürmə üçün) — 16 rəqəm */
+
+export const BANK_CARD_DIGITS = 16
+
+export function normalizeBankCardDigits(raw) {
+  return String(raw || '')
+    .replace(/\D/g, '')
+    .slice(0, BANK_CARD_DIGITS)
+}
+
+export function formatBankCardDisplay(digits) {
+  const s = normalizeBankCardDigits(digits)
+  if (!s) return '—'
+  if (s.length === BANK_CARD_DIGITS) {
+    return s.match(/.{1,4}/g).join(' ')
+  }
+  return s.replace(/(.{4})/g, '$1 ').trim()
+}
+
 /** Müəllim ödəniş tarixçəsi — status və mətnlər */
 
 export const BILLING_PAYMENT_STATUS_AZ = {

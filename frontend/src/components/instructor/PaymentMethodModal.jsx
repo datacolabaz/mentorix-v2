@@ -2,6 +2,7 @@ import { useState } from 'react'
 import Modal from '../common/Modal'
 import Button from '../common/Button'
 import { formatAzn } from '../../lib/pricing'
+import { formatBankCardDisplay } from '../../lib/billingPaymentLabels'
 
 export default function PaymentMethodModal({
   open,
@@ -71,10 +72,10 @@ export default function PaymentMethodModal({
         {method === 'cash' && manualAccount ? (
           <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 space-y-2">
             <p className="text-xs text-token-textMuted">
-              Aşağıdakı 12 rəqəmli hesaba köçürün və adminə müraciət edin. Təsdiq gözləyən statusda qalacaq.
+              Aşağıdakı 16 rəqəmli bank kartına köçürün və adminə müraciət edin. Təsdiq gözləyən statusda qalacaq.
             </p>
             <div className="font-mono text-lg tracking-widest font-bold text-token-textMain select-all">
-              {manualAccount}
+              {formatBankCardDisplay(manualAccount)}
             </div>
           </div>
         ) : null}
