@@ -229,4 +229,109 @@ export default function AdminBilling() {
                   type="button"
                   size="sm"
                   variant="danger"
-               
+                  disabled={smsPacksDraft.length <= 1}
+                  onClick={() => removePackRow(idx)}
+                >
+                  Sil
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <Button loading={savingSettings} onClick={() => void saveSettings()}>
+          Tənzimləmələri saxla
+        </Button>
+      </Card>
+
+      <div className="flex gap-2">
+        {[
+          ['pending', 'Gözləyən köçürmələr'],
+          ['all', 'Bütün ödənişlər'],
+        ].map(([k, label]) => (
+          <button
+            key={k}
+            type="button"
+            onClick={() => setTab(k)}
+            className={[
+              'px-4 py-2 rounded-xl text-sm font-semibold border transition-colors',
+              tab === k
+                ? 'border-primary/40 bg-primary/10 text-white'
+                : 'border-indigo-500/20 text-gray-400 hover:text-white',
+            ].join(' ')}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      <Card className="overflow-hidden">
+        {loading ? (
+          <div className="p-8 text-center text-gray-500">Yüklənir…</div>
+        ) : !payments.length ? (
+          <div className="p-8 text-center text-gray-500">Ödəniş tapılmadı</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-indigo-500/20 text-gray-400 text-xs uppercase">
+                  {['Müəllim', 'Məhsul', 'Məbləğ', 'Üsul', 'Status', 'Tarix', 'Əməliyyat'].map((h) => (
+                    <th key={h} className="py-3 px-4 text-left font-semibold">
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {payments.map((p) => (
+                  <tr key={p.id} className="border-b border-indigo-500/10 hover:bg-indigo-500/5">
+                    <td className="py-3 px-4">
+                      <div className="font-semibold text-white">{p.full_name || '—'}</div>
+                      <div className="text-xs text-gray-500">{p.email}</div>
+                    </td>
+                    <td className="py-3 px-4 text-gray-300">
+                      {p.product_type === 'sms'
+                        ? `+${p.sms_quantity || 0} SMS`
+                        : String(p.plan || '').toUpperCase()}
+                      {p.billing_interval ? (
+                        <span className="text-gray-500 text-xs ml-1">({p.billing_interval})</span>
+                      ) : null}
+                    </td>
+                    <td className="py-3 px-4 font-semibold text-white">
+                      {(Number(p.amount_cents || 0) / 100).toFixed(2)} ₼
+                    </td>
+                    <td className="py-3 px-4 text-gray-400 text-xs">
+                      {p.payment_method === 'cash' ? 'Köçürmə' : 'Kart'}
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className={`px-2 py-1 rounded-lg text-xs font-semibold ${statusCls(p.status)}`}>
+                        {STATUS_LABEL[p.status] || billingPaymentStatusLabel(p.status)}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-xs text-gray-500">
+                      {p.created_at ? new Date(p.created_at).toLocaleString('az-AZ') : '—'}
+                    </td>
+                    <td className="py-3 px-4">
+                      {p.status === 'pending' && p.payment_method === 'cash' ? (
+                        <div className="flex gap-2">
+                          <Button size="sm" loading={busyId === p.id} onClick={() => void approve(p.id)}>
+                            Təsdiq
+                          </Button>
+                          <Button size="sm" variant="danger" disabled={busyId === p.id} onClick={() => void reject(p.id)}>
+                            Rədd
+                          </Button>
+                        </div>
+                      ) : (
+                        <span className="text-gray-600 text-xs">—</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
+    </div>
+  )
+}
