@@ -140,4 +140,11 @@ export default function App() {
         <Route path="groups" element={<CourseGroups />} />
         <Route path="schedule" element={<CourseSchedule />} />
         <Route path="finance" element={<CourseFinance />} />
-        <Rou
+        <Route path="notifications" element={<CourseNotifications />} />
+        <Route path="settings" element={<CourseSettings />} />
+      </Route>
+
+      <Route path="*" element={<Placeholder title="404 — Tapılmadı" />} />
+    </Routes>
+  )
+}
