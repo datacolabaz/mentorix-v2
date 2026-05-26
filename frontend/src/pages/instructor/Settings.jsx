@@ -20,6 +20,7 @@ import { formatAzn, yearlyTotalAzn, YEARLY_DISCOUNT } from '../../lib/pricing'
 import { planDetailLines, planLimitsHeadline } from '../../lib/subscriptionPlanCopy'
 import PaymentMethodModal from '../../components/instructor/PaymentMethodModal'
 import { useBillingConfig } from '../../hooks/useBillingConfig'
+import { billingPaymentStatusLabel, billingPaymentTitle } from '../../lib/billingPaymentLabels'
 
 export default function InstructorSettings() {
   const navigate = useNavigate()
@@ -601,7 +602,10 @@ export default function InstructorSettings() {
 
       <Card className={settingsCardCls}>
         <h2 className={cardTitleCls}>Ödəniş tarixçəsi</h2>
-        <p className={cardTextCls}>Paket və SMS ödənişlərinizin statusu.</p>
+        <p className={cardTextCls}>
+          Yalnız real ödənişlər (gözləyən, ödənilmiş, rədd edilmiş) göstərilir. Kartla ödənişə başlayıb
+          bitirmədən bağlasanız, sistemdə «tamamlanmayıb» qeydi yaranır — burada görünmür.
+        </p>
         {!billingPayments.length ? (
           <p className="text-sm text-token-textMuted">Hələ ödəniş yoxdur.</p>
         ) : (
@@ -612,14 +616,19 @@ export default function InstructorSettings() {
                 className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[color:var(--border-subtle)] px-3 py-2 text-sm"
               >
                 <span className="text-token-textMain">
-                  {p.product_type === 'sms'
-                    ? `+${p.sms_quantity} SMS`
-                    : `Paket: ${String(p.plan || '').toUpperCase()}`}
-                  {' · '}
-                  {Number(p.amount || 0).toFixed(2)} ₼
+                  {billingPaymentTitle(p)} · {Number(p.amount || 0).toFixed(2)} ₼
                 </span>
-                <span className="text-xs text-token-textMuted">
-                  {p.payment_method === 'cash' ? 'Köçürmə' : 'Kart'} · {p.status}
+                <span
+                  className={[
+                    'text-xs font-medium',
+                    p.status === 'paid'
+                      ? 'text-emerald-400'
+                      : p.status === 'pending'
+                        ? 'text-amber-300'
+                        : 'text-token-textMuted',
+                  ].join(' ')}
+                >
+                  {p.payment_method === 'cash' ? 'Köçürmə' : 'Kart'} · {billingPaymentStatusLabel(p.status)}
                 </span>
               </li>
             ))}
@@ -812,148 +821,4 @@ export default function InstructorSettings() {
         subject={primarySubject}
         mapKind={mapKind}
         latitude={mapLat}
-        longitude={mapLng}
-        locationLabel={locationLabel}
-        mapVisible={mapVisible}
-        radiusKm={mapRadiusKm}
-      />
-
-      <Card className={settingsCardCls}>
-        <h2 className={cardTitleCls}>Tədris sahələri və qruplar</h2>
-        <p className={cardTextCls}>
-          Tələbə qeydiyyatında sahə və qrup seçiminə imkan verir; ödənişlər cədvəlində sahə adı görünür (hesabat üçün).
-        </p>
-        {loading ? (
-          <p className={['text-sm', theme === 'dark' ? 'text-gray-500' : 'text-token-textMuted'].join(' ')}>Yüklənir…</p>
-        ) : (
-          <>
-            <div className="flex flex-col sm:flex-row gap-2">
-              <input
-                className={inp}
-                placeholder="Məs: Java Programming"
-                value={newSubject}
-                onChange={(e) => setNewSubject(e.target.value)}
-              />
-              <Button
-                type="button"
-                variant="secondary"
-                loading={busy.addSub}
-                onClick={() => void addSubject()}
-                className={['w-full sm:w-auto justify-center', secondaryBtnCls].join(' ')}
-              >
-                Sahə əlavə et
-              </Button>
-            </div>
-            <ul className="space-y-4">
-              {!subjects.length ? (
-                <li className={['text-sm', theme === 'dark' ? 'text-gray-500' : 'text-token-textMuted'].join(' ')}>
-                  Hələ sahə yoxdur — əlavə edin və ya qeydiyyatda sahəni boş buraxın.
-                </li>
-              ) : null}
-              {subjects.map((s) => (
-                <li
-                  key={s.id}
-                  className={[
-                    'rounded-xl border p-4 space-y-3',
-                    theme === 'dark'
-                      ? 'border-indigo-500/15 bg-[#0f0c29]/60'
-                      : 'border-[color:var(--border-subtle)] bg-token-surfaceMain/60',
-                  ].join(' ')}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className={['font-medium', theme === 'dark' ? 'text-white' : 'text-token-textMain'].join(' ')}>
-                      {s.name}
-                    </div>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="danger"
-                      loading={busy[`dels-${s.id}`]}
-                      onClick={() => void removeSubject(s.id)}
-                    >
-                      Sil
-                    </Button>
-                  </div>
-                  <div
-                    className={[
-                      'pl-2 border-l space-y-2',
-                      theme === 'dark' ? 'border-indigo-500/20' : 'border-[color:var(--border-subtle)]',
-                    ].join(' ')}
-                  >
-                    {(s.groups || []).length === 0 ? (
-                      <p className={['text-xs', theme === 'dark' ? 'text-gray-500' : 'text-token-textMuted'].join(' ')}>
-                        Qrup yoxdur
-                      </p>
-                    ) : (
-                      <ul className="space-y-1">
-                        {(s.groups || []).map((g) => (
-                          <li
-                            key={g.id}
-                            className={['flex items-center justify-between gap-2 text-sm', theme === 'dark' ? 'text-gray-300' : 'text-token-textMain'].join(' ')}
-                          >
-                            <span>{g.name}</span>
-                            <button
-                              type="button"
-                              className={[
-                                'text-xs disabled:opacity-40',
-                                theme === 'dark' ? 'text-rose-300 hover:text-rose-200' : 'text-rose-700 hover:text-rose-800',
-                              ].join(' ')}
-                              disabled={busy[`delg-${g.id}`]}
-                              onClick={() => void removeGroup(g.id)}
-                            >
-                              Sil
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                    <div className="flex flex-col sm:flex-row gap-2 pt-1">
-                      <input
-                        className={inp + ' text-xs'}
-                        placeholder="Yeni qrup adı"
-                        value={newGroupBySubject[s.id] || ''}
-                        onChange={(e) =>
-                          setNewGroupBySubject((p) => ({
-                            ...p,
-                            [s.id]: e.target.value,
-                          }))
-                        }
-                      />
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="secondary"
-                        loading={busy[`addg-${s.id}`]}
-                        onClick={() => void addGroup(s.id)}
-                        className={secondaryBtnCls}
-                      >
-                        Qrup əlavə et
-                      </Button>
-                    </div>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </>
-        )}
-      </Card>
-
-      <p className={['text-xs', theme === 'dark' ? 'text-gray-600' : 'text-token-textMuted'].join(' ')}>
-        Hesab:{' '}
-        <span className={theme === 'dark' ? 'text-gray-400' : 'text-token-textMain'}>{user?.full_name}</span>
-      </p>
-
-      <PaymentMethodModal
-        open={Boolean(checkout)}
-        onClose={() => setCheckout(null)}
-        title={checkout?.type === 'sms' ? 'SMS ödənişi' : 'Paket ödənişi'}
-        subtitle={checkout?.title ? `Seçim: ${checkout.title}` : undefined}
-        amountAzn={checkout?.amountAzn}
-        manualAccount={manualAccount}
-        busy={planBusy}
-        onConfirm={confirmCheckout}
-      />
-    </div>
-  )
-}
-
+        longitu

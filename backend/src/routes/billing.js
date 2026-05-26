@@ -91,11 +91,15 @@ router.get('/config', authenticate, authorize('instructor'), async (_req, res) =
 
 router.get('/payments', authenticate, authorize('instructor'), async (req, res) => {
   try {
+    const includeAbandoned = String(req.query?.include_abandoned || '').trim() === '1';
+    const statusFilter = includeAbandoned
+      ? ''
+      : `AND status IN ('pending', 'paid', 'rejected')`;
     const { rows } = await db.query(
       `SELECT id, plan, amount_cents, currency, status, payment_method, product_type, sms_quantity,
-              provider, COALESCE(paid_at, created_at) AS at, created_at, admin_note
+              provider, billing_interval, COALESCE(paid_at, created_at) AS at, created_at, admin_note
        FROM billing_payments
-       WHERE user_id = $1
+       WHERE user_id = $1 ${statusFilter}
        ORDER BY created_at DESC
        LIMIT 200`,
       [req.user.id]
@@ -108,6 +112,7 @@ router.get('/payments', authenticate, authorize('instructor'), async (req, res) 
       payment_method: r.payment_method,
       product_type: r.product_type,
       sms_quantity: r.sms_quantity,
+      billing_interval: r.billing_interval,
       provider: r.provider,
       date: r.at ? new Date(r.at).toISOString() : null,
       created_at: r.created_at ? new Date(r.created_at).toISOString() : null,
