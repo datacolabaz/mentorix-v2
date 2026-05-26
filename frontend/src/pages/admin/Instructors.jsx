@@ -11,7 +11,7 @@ export default function AdminInstructors() {
   const [editModal, setEditModal] = useState(false)
   const [selected, setSelected] = useState(null)
   const [loading, setLoading] = useState(false)
-  const [form, setForm] = useState({ full_name: "", phone: "", subject: "", billing_type: "8_lessons" })
+  const [form, setForm] = useState({ full_name: "", email: "", phone: "", subject: "", billing_type: "8_lessons" })
   const [editForm, setEditForm] = useState({ full_name: "", phone: "", subject: "" })
   const [planBusy, setPlanBusy] = useState({})
   const toast = useToast()
@@ -24,10 +24,16 @@ export default function AdminInstructors() {
     setLoading(true)
     try {
       const rnd = Math.random().toString(36).slice(-10)
-      await api.post("/auth/register", { ...form, role: "instructor", password: rnd })
-      toast("Muellim elave edildi")
+      const res = await api.post("/auth/register", { ...form, role: "instructor", password: rnd })
+      if (res?.email_verification_sent) {
+        toast("Muellim elave edildi. Email tesdiq linki gonderildi.")
+      } else if (res?.email_verification_error) {
+        toast("Muellim elave edildi, amma email gonderile bilmedi: " + res.email_verification_error, "error")
+      } else {
+        toast("Muellim elave edildi")
+      }
       setAddModal(false)
-      setForm({ full_name: "", phone: "", subject: "", billing_type: "8_lessons" })
+      setForm({ full_name: "", email: "", phone: "", subject: "", billing_type: "8_lessons" })
       load()
     } catch (err) { toast(err.message || "Xeta", "error") }
     finally { setLoading(false) }
@@ -131,6 +137,12 @@ export default function AdminInstructors() {
             <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Ad Soyad</label>
             <input placeholder="Ali Huseynov" className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500"
               value={form.full_name} onChange={e => setForm(p => ({ ...p, full_name: e.target.value }))} />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Email</label>
+            <input type="email" placeholder="muellim@gmail.com" className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500"
+              value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} />
+            <p className="text-[10px] text-gray-500 mt-1">Tesdiq linki ve 6 reqemli kod bu emaile gonderilir.</p>
           </div>
           <div>
             <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Telefon</label>

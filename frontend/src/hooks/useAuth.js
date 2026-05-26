@@ -121,6 +121,25 @@ const useAuthStore = create((set) => ({
 
   setPin: async (pin) => api.post('/auth/pin/set', { pin }),
 
+  signupWithEmail: async (body) => api.post('/auth/signup', body),
+
+  loginWithEmail: async ({ email, password, role = 'instructor' }) => {
+    const data = await api.post('/auth/login/email', { email, password, role })
+    if (!data?.token || !data?.user) {
+      const err = new Error(data?.message || 'Server cavabı etibarsızdır')
+      err.code = data?.code
+      throw err
+    }
+    localStorage.setItem('mx_token', data.token)
+    localStorage.setItem('mx_user', JSON.stringify(data.user))
+    set({ user: data.user, token: data.token })
+    return data.user
+  },
+
+  verifyEmailCode: async ({ email, code }) => api.post('/auth/verify-email', { email, code }),
+
+  resendVerificationEmail: async (email) => api.post('/auth/resend-verification', { email }),
+
   logout: () => {
     localStorage.removeItem('mx_token')
     localStorage.removeItem('mx_user')

@@ -1,21 +1,27 @@
 const bcrypt = require('bcryptjs');
-const crypto = require('crypto');
 const db = require('../utils/db');
 const { sign, signOTP } = require('../utils/jwt');
 const { OAuth2Client } = require('google-auth-library');
 const { sendSms, sendOtpSms } = require('../services/smsService');
 const { checkSmsQuota } = require('../services/smsQuotaService');
-const { sendVerificationEmail } = require('../services/emailVerificationService');
+const {
+  issueEmailVerification,
+  clearVerificationFields,
+  findUserForVerification,
+  isVerificationExpired,
+} = require('../services/emailVerificationIssue');
 const { resolveLoginUserOrError, resolveSmsBillingInstructorId: resolveSmsBillingForLogin } = require('../services/authService');
 const { getActiveRoles, grantUserRole, grantCourseRoleToUser } = require('../services/userRolesService');
 
 const PHONE_NORM = "regexp_replace(COALESCE(phone::text, ''), '[^0-9]', '', 'g')";
 const LOGIN_ROLES = new Set(['instructor', 'student', 'parent', 'course']);
 
-const EMAIL_VERIFICATION_TTL_MINUTES = Number(process.env.EMAIL_VERIFICATION_TTL_MINUTES || 60);
+const SIGNUP_ROLES = new Set(['instructor', 'course']);
 
-function generateEmailVerificationToken() {
-  return crypto.randomBytes(24).toString('hex');
+function normalizeEmailInput(email) {
+  const e = String(email || '').trim().toLowerCase();
+  if (!e || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) return null;
+  return e;
 }
 
 async function logRisk(userId, req, context, riskScore = 10) {
@@ -511,11 +517,6 @@ const register = async (req, res) => {
     }
 
     const wantsEmailVerification = Boolean(emailCanon);
-    const verificationToken = wantsEmailVerification ? generateEmailVerificationToken() : null;
-    const verificationExpiry = verificationToken
-      ? new Date(Date.now() + EMAIL_VERIFICATION_TTL_MINUTES * 60 * 1000)
-      : null;
-
     let emailVerificationSent = false;
     let emailVerificationError = null;
 
@@ -743,28 +744,12 @@ const register = async (req, res) => {
       return created;
     });
 
-    if (verificationToken) {
-      const { rows: freshRows } = await db.query('SELECT id, email, is_verified FROM users WHERE id = $1 LIMIT 1', [
-        user.id,
-      ]);
-      const fresh = freshRows[0];
-
-      if (fresh?.email) {
-        await db.query(
-          `UPDATE users
-           SET verification_token = $1,
-               verification_expiry = $2,
-               is_verified = FALSE
-           WHERE id = $3`,
-          [verificationToken, verificationExpiry, user.id],
-        );
-
-        const mail = await sendVerificationEmail({ email: fresh.email, token: verificationToken });
-        if (!mail?.ok) {
-          emailVerificationError = mail?.error || 'E-poçt təsdiqi göndərilə bilmədi';
-        } else {
-          emailVerificationSent = true;
-        }
+    if (wantsEmailVerification && user?.email) {
+      const { mail } = await issueEmailVerification(user.id, user.email);
+      if (!mail?.ok) {
+        emailVerificationError = mail?.error || 'E-poçt təsdiqi göndərilə bilmədi';
+      } else {
+        emailVerificationSent = true;
       }
     }
 
@@ -788,52 +773,226 @@ const register = async (req, res) => {
 
 
 
-/** Email verifikasiyası */
+/** Email verifikasiyası — link (token) və ya email + 6 rəqəmli kod */
 const verifyEmail = async (req, res) => {
   try {
-    const { token } = req.body || {};
-    const t = String(token || '').trim();
-    if (!t) return res.status(400).json({ success: false, message: 'Token tələb olunur' });
+    const { token, email, code } = req.body || {};
+    const hasToken = String(token || '').trim().length > 0;
+    const hasCode = String(email || '').trim() && String(code || '').trim();
 
-    const { rows } = await db.query(
-      `SELECT id, email, is_verified, verification_expiry
-       FROM users
-       WHERE verification_token = $1
-       LIMIT 1`,
-      [t],
-    );
-
-    const user = rows[0];
-    if (!user) {
-      return res.status(400).json({ success: false, code: 'INVALID_TOKEN', message: 'Yanlış və ya etibarsız token' });
-    }
-
-    if (user.is_verified === true) {
-      await db
-        .query('UPDATE users SET verification_token = NULL, verification_expiry = NULL WHERE id = $1', [user.id])
-        .catch(() => {});
-      return res.json({ success: true, code: 'ALREADY_VERIFIED', message: 'Bu hesab artıq təsdiqlənib' });
-    }
-
-    const exp = user.verification_expiry ? new Date(user.verification_expiry).getTime() : 0;
-    if (!Number.isFinite(exp) || exp < Date.now()) {
+    if (!hasToken && !hasCode) {
       return res.status(400).json({
         success: false,
-        code: 'EXPIRED_TOKEN',
-        message: 'Təsdiq linkinin və ya kodun müddəti bitib. Yenidən qeydiyyatdan keçin və ya e-poçtunuzu yenidən göndərin.',
+        message: 'Token və ya email + təsdiq kodu tələb olunur',
       });
     }
 
-    await db.query(
-      `UPDATE users
-       SET is_verified = TRUE,
-           verification_token = NULL,
-           verification_expiry = NULL
-       WHERE id = $1`,
-      [user.id],
-    );
+    const user = await findUserForVerification({ token, email, code });
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        code: 'INVALID_TOKEN',
+        message: 'Yanlış və ya etibarsız təsdiq linki / kod',
+      });
+    }
+
+    if (user.is_verified === true) {
+      await clearVerificationFields(user.id).catch(() => {});
+      return res.json({ success: true, code: 'ALREADY_VERIFIED', message: 'Bu hesab artıq təsdiqlənib' });
+    }
+
+    if (isVerificationExpired(user)) {
+      return res.status(400).json({
+        success: false,
+        code: 'EXPIRED_TOKEN',
+        message: 'Təsdiq linkinin və ya kodun müddəti bitib. Yenidən göndərin.',
+      });
+    }
+
+    await clearVerificationFields(user.id);
 
     return res.json({ success: true, message: 'Email təsdiqləndi' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/** İctimai qeydiyyat — müəllim / kurs (öz Gmail ilə) */
+const signup = async (req, res) => {
+  try {
+    const { full_name, email, password, phone, role: roleRaw } = req.body || {};
+    const role = String(roleRaw || 'instructor').trim().toLowerCase();
+    if (!SIGNUP_ROLES.has(role)) {
+      return res.status(400).json({ success: false, message: 'Yalnız müəllim və ya kurs üçün qeydiyyat mövcuddur' });
+    }
+
+    const emailCanon = normalizeEmailInput(email);
+    if (!emailCanon) return res.status(400).json({ success: false, message: 'Düzgün email daxil edin' });
+
+    const name = String(full_name || '').trim();
+    if (!name) return res.status(400).json({ success: false, message: 'Ad soyad tələb olunur' });
+
+    const pass = String(password || '');
+    if (pass.length < 8) {
+      return res.status(400).json({ success: false, message: 'Şifrə ən azı 8 simvol olmalıdır' });
+    }
+
+    const phoneCanon = phone ? canonicalPhone(phone) : null;
+    const hash = await bcrypt.hash(pass, 12);
+
+    const { rows: existing } = await db.query(
+      `SELECT id FROM users WHERE lower(trim(email)) = $1 AND is_active = TRUE LIMIT 1`,
+      [emailCanon],
+    );
+    if (existing[0]) {
+      return res.status(409).json({ success: false, message: 'Bu email artıq qeydiyyatdadır' });
+    }
+
+    const user = await db.transaction(async (client) => {
+      const { rows } = await client.query(
+        `INSERT INTO users (full_name, email, phone, password_hash, role, is_verified, account_status)
+         VALUES ($1, $2, $3, $4, $5, FALSE, 'active')
+         RETURNING id, full_name, email, role, phone`,
+        [name, emailCanon, phoneCanon, hash, role],
+      );
+      const created = rows[0];
+
+      await client.query(
+        `INSERT INTO user_roles (user_id, role, is_active) VALUES ($1, $2, TRUE)
+         ON CONFLICT (user_id, role) DO UPDATE SET is_active = TRUE`,
+        [created.id, role],
+      );
+
+      if (role === 'instructor') {
+        await client.query(
+          'INSERT INTO instructor_profiles (user_id, subject, billing_type) VALUES ($1, NULL, $2)',
+          [created.id, '8_lessons'],
+        );
+        await client.query(
+          `INSERT INTO user_roles (user_id, role, is_active) VALUES ($1, 'course', TRUE)
+           ON CONFLICT (user_id, role) DO UPDATE SET is_active = TRUE`,
+          [created.id],
+        );
+        await client.query(
+          `INSERT INTO course_profiles (user_id, course_name) VALUES ($1, $2) ON CONFLICT (user_id) DO NOTHING`,
+          [created.id, name],
+        );
+      } else if (role === 'course') {
+        await client.query(
+          `INSERT INTO course_profiles (user_id, course_name) VALUES ($1, $2) ON CONFLICT (user_id) DO NOTHING`,
+          [created.id, name],
+        );
+      }
+
+      return created;
+    });
+
+    const { mail } = await issueEmailVerification(user.id, emailCanon);
+    if (!mail?.ok) {
+      return res.status(500).json({
+        success: false,
+        message: mail?.error || 'Təsdiq emaili göndərilə bilmədi',
+      });
+    }
+
+    return res.status(201).json({
+      success: true,
+      message: 'Qeydiyyat uğurludur. Email ünvanınıza təsdiq kodu və link göndərildi.',
+      user: { id: user.id, full_name: user.full_name, email: user.email, role: user.role },
+      email_verification_sent: true,
+    });
+  } catch (err) {
+    if (err.code === '23505') {
+      return res.status(409).json({ success: false, message: 'Bu email və ya telefon artıq mövcuddur' });
+    }
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/** Email + şifrə ilə giriş (müəllim / kurs) */
+const loginWithEmail = async (req, res) => {
+  try {
+    const { email, password, role: roleRaw } = req.body || {};
+    const emailCanon = normalizeEmailInput(email);
+    if (!emailCanon) return res.status(400).json({ success: false, message: 'Düzgün email daxil edin' });
+    const pass = String(password || '');
+    if (!pass) return res.status(400).json({ success: false, message: 'Şifrə tələb olunur' });
+
+    const role = String(roleRaw || 'instructor').trim().toLowerCase();
+    if (!SIGNUP_ROLES.has(role)) {
+      return res.status(400).json({ success: false, message: 'Rol dəstəklənmir' });
+    }
+
+    const { rows } = await db.query(
+      `SELECT u.*
+       FROM users u
+       WHERE u.is_active = TRUE
+         AND lower(trim(u.email)) = $1
+       LIMIT 1`,
+      [emailCanon],
+    );
+    const user = rows[0];
+    if (!user || !user.password_hash || !(await bcrypt.compare(pass, user.password_hash))) {
+      return res.status(401).json({ success: false, message: 'Email və ya şifrə yanlışdır' });
+    }
+
+    const roles = await getActiveRoles(user.id);
+    const allowed = roles.length ? roles : user.role ? [user.role] : [];
+    if (!allowed.includes(role)) {
+      return res.status(403).json({
+        success: false,
+        message: `Bu hesab "${role}" rolu ilə giriş üçün uyğun deyil`,
+      });
+    }
+
+    if (user.is_verified === false) {
+      return res.status(403).json({
+        success: false,
+        code: 'EMAIL_NOT_VERIFIED',
+        message: 'Email təsdiqlənməyib. Poçtunuzdakı linkə klik edin və ya təsdiq kodunu daxil edin.',
+      });
+    }
+
+    const token = sign({ id: user.id, role });
+    const baseUser = { id: user.id, full_name: user.full_name, role, email: user.email, phone: user.phone };
+    const userOut = await enrichUserForClient(baseUser, role);
+    return res.json({ success: true, token, user: userOut });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/** Təsdiq emailini təkrar göndər */
+const resendVerificationEmail = async (req, res) => {
+  try {
+    const emailCanon = normalizeEmailInput(req.body?.email);
+    if (!emailCanon) return res.status(400).json({ success: false, message: 'Email tələb olunur' });
+
+    const { rows } = await db.query(
+      `SELECT id, email, is_verified FROM users
+       WHERE is_active = TRUE AND lower(trim(email)) = $1
+       LIMIT 1`,
+      [emailCanon],
+    );
+    const user = rows[0];
+
+    if (!user) {
+      return res.json({
+        success: true,
+        message: 'Əgər hesab mövcuddursa, təsdiq emaili göndərildi',
+      });
+    }
+
+    if (user.is_verified === true) {
+      return res.json({ success: true, code: 'ALREADY_VERIFIED', message: 'Email artıq təsdiqlənib' });
+    }
+
+    const { mail } = await issueEmailVerification(user.id, user.email);
+    if (!mail?.ok) {
+      return res.status(500).json({ success: false, message: mail?.error || 'Email göndərilə bilmədi' });
+    }
+
+    return res.json({ success: true, message: 'Təsdiq emaili yenidən göndərildi' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -1577,6 +1736,9 @@ module.exports = {
   verifyOtp,
   register,
   verifyEmail,
+  signup,
+  loginWithEmail,
+  resendVerificationEmail,
   me,
   setPin,
   loginWithPin,

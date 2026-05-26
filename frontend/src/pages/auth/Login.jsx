@@ -4,6 +4,7 @@ import useAuthStore from '../../hooks/useAuth'
 import Button from '../../components/common/Button'
 import { useToast } from '../../components/common/Toast'
 import PhoneInput from '../../components/auth/PhoneInput'
+import InstructorEmailAuth from '../../components/auth/InstructorEmailAuth'
 import Brand from '../../components/common/Brand'
 import api from '../../lib/api'
 import { trackEvent } from '../../lib/analytics'
@@ -165,7 +166,7 @@ export default function Login() {
 
   // Default onboarding: Google-first
   const [mode, setMode] = useState('google') // google | phone
-  const [step, setStep] = useState('google') // google | student_link_phone | student_link_otp | role | teacher_phone | teacher_otp | phone | pin
+  const [step, setStep] = useState('google') // google | email_auth | student_link_phone | ...
   const [googleCredential, setGoogleCredential] = useState(null)
   const [otpCode, setOtpCode] = useState('')
   const [otpSent, setOtpSent] = useState(false)
@@ -1193,7 +1194,18 @@ export default function Login() {
                             <div className="h-px flex-1 bg-white/15" />
                           </div>
                         ) : null}
-                        <div className="text-center">
+                        <div className="space-y-2">
+                          <button
+                            type="button"
+                            className={
+                              loginModalOpen
+                                ? 'mx-auto flex min-h-[52px] w-full max-w-xs items-center justify-center rounded-xl border border-primary/30 bg-primary/10 px-4 text-sm font-semibold text-primary hover:bg-primary/15 sm:min-h-[48px]'
+                                : 'text-xs text-primary underline underline-offset-4'
+                            }
+                            onClick={() => setStep('email_auth')}
+                          >
+                            Email ilə qeydiyyat / giriş
+                          </button>
                           <button
                             type="button"
                             className={
@@ -1213,20 +1225,16 @@ export default function Login() {
                           </button>
                         </div>
                         <div className="px-1 text-center text-[11px] leading-relaxed text-gray-500">
-                          {loginModalOpen ? (
-                            <>
-                              Yeni hesab üçün Google ilə davam edin.
-                              <br />
-                              Mövcud hesabınız varsa telefonla daxil olun.
-                            </>
-                          ) : (
-                            <>
-                              Yeni hesab üçün <strong className="text-gray-300">Google</strong> ilə davam edin. Mövcud hesabınız varsa{' '}
-                              <strong className="text-gray-300">Telefonla daxil ol</strong>.
-                            </>
-                          )}
+                          Müəllim: öz Gmail ilə qeydiyyat — emailə kod və link gəlir, təsdiqdən sonra giriş.
                         </div>
                       </div>
+                    ) : null}
+
+                    {step === 'email_auth' ? (
+                      <InstructorEmailAuth
+                        onSuccess={(u) => goDashboard(u?.role || 'instructor')}
+                        onBack={() => setStep('google')}
+                      />
                     ) : null}
 
                     {step === 'student_link_phone' ? (
@@ -1246,12 +1254,9 @@ export default function Login() {
                         <button
                           type="button"
                           className="w-full text-center text-xs text-primary hover:brightness-110 font-semibold"
-                          onClick={() => {
-                            setGoogleRoleExcludeStudent(true)
-                            setStep('role')
-                          }}
+                          onClick={() => setStep('email_auth')}
                         >
-                          Müəlliməm — qeydiyyata davam et
+                          Müəlliməm — email ilə qeydiyyat
                         </button>
                         <button
                           type="button"

@@ -24,7 +24,7 @@ function buildVerificationUrl(token) {
   return `${getVerifyBaseUrl()}/verify-email?token=${encodeURIComponent(String(token))}`;
 }
 
-async function sendVerificationEmail({ email, token }) {
+async function sendVerificationEmail({ email, token, code }) {
   const to = String(email || '').trim();
   if (!to) return { ok: false, error: 'Email boşdur' };
 
@@ -37,23 +37,41 @@ async function sendVerificationEmail({ email, token }) {
   }
 
   const verifyUrl = buildVerificationUrl(token);
-  const safeToken = crypto.randomBytes(8).toString('hex'); // just to avoid accidental caching; not used
+  const codeStr = code != null ? String(code).trim() : '';
+  const ref = crypto.randomBytes(4).toString('hex');
 
   const subject = 'Mentorix — e-poçt təsdiqi';
 
-  const text = `Salam!\n\nMentorix hesabınızı aktivləşdirmək üçün e-poçt ünvanınızı təsdiqləyin:\n${verifyUrl}\n\nƏgər bu müraciəti siz etməmisinizsə, bu e-məktubu nəzərə almayın.`;
+  const text = [
+    'Salam!',
+    '',
+    'Mentorix hesabınızı aktivləşdirmək üçün:',
+    codeStr ? `Təsdiq kodu: ${codeStr}` : null,
+    `Və ya bu linkə klik edin: ${verifyUrl}`,
+    '',
+    'Kod və link 60 dəqiqə ərzində etibarlıdır.',
+    'Əgər bu müraciəti siz etməmisinizsə, bu e-məktubu nəzərə almayın.',
+  ]
+    .filter(Boolean)
+    .join('\n');
 
   const html = `
-    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; line-height: 1.5;">
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; line-height: 1.5; max-width: 520px;">
       <h3 style="margin: 0 0 12px;">Mentorix — e-poçt təsdiqi</h3>
       <p style="margin: 0 0 16px;">Salam!</p>
-      <p style="margin: 0 0 16px;">Hesabınızı aktivləşdirmək üçün aşağıdakı linkə klik edin:</p>
+      <p style="margin: 0 0 16px;">Hesabınızı aktivləşdirmək üçün aşağıdakılardan birini edin:</p>
+      ${
+        codeStr
+          ? `<p style="margin: 0 0 12px; font-size: 22px; font-weight: bold; letter-spacing: 4px;">${codeStr}</p>
+             <p style="margin: 0 0 16px; color: #6b7280; font-size: 13px;">Bu kodu giriş səhifəsində daxil edə bilərsiniz.</p>`
+          : ''
+      }
       <p style="margin: 0 0 16px;">
-        <a href="${verifyUrl}" style="color: #4f46e5; text-decoration: none;">E-poçtu təsdiqlə</a>
+        <a href="${verifyUrl}" style="display: inline-block; background: #4f46e5; color: #fff; padding: 10px 18px; border-radius: 8px; text-decoration: none;">E-poçtu link ilə təsdiqlə</a>
       </p>
+      <p style="margin: 0 0 8px; color: #6b7280; font-size: 12px;">Link: <a href="${verifyUrl}">${verifyUrl}</a></p>
       <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 16px 0;">
-      <p style="margin: 0 0 6px; color: #6b7280; font-size: 12px;">Əgər bu müraciəti siz etməmisinizsə, bu e-məktubu nəzərə almayın.</p>
-      <p style="margin: 0; color: #6b7280; font-size: 12px;">Ref: ${safeToken}</p>
+      <p style="margin: 0; color: #6b7280; font-size: 12px;">Əgər bu müraciəti siz etməmisinizsə, bu e-məktubu nəzərə almayın. Ref: ${ref}</p>
     </div>
   `;
 
@@ -68,5 +86,4 @@ async function sendVerificationEmail({ email, token }) {
   return { ok: true, messageId: r?.id || null };
 }
 
-module.exports = { sendVerificationEmail };
-
+module.exports = { sendVerificationEmail, buildVerificationUrl, isConfigured };

@@ -66,9 +66,13 @@ export default function VerifyEmail() {
           {message}
         </p>
 
+        <p className="text-center text-xs text-gray-500 mt-2">
+          Emaildə 6 rəqəmli kod da var — giriş səhifəsində «Email ilə qeydiyyat / giriş» → kodu daxil edə bilərsiniz.
+        </p>
+
         <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
           <Button
-            disabled={loading || kind !== 'success'}
+            disabled={loading || (kind !== 'success' && kind !== 'loading')}
             onClick={() => navigate('/login')}
             className="w-full sm:w-auto"
           >

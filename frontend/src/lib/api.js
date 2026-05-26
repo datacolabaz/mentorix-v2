@@ -62,6 +62,9 @@ function isPublicAuthPath(config) {
     path.includes('/auth/pin/') ||
     path.includes('/auth/google') ||
     path.includes('/auth/verify-email') ||
+    path.includes('/auth/signup') ||
+    path.includes('/auth/login/email') ||
+    path.includes('/auth/resend-verification') ||
     // NOTE: /auth/phone/verify/* requires Authorization; keep it out of public paths.
     path.includes('/auth/phone/next-step') ||
     path.includes('/public/')

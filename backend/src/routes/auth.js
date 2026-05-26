@@ -16,6 +16,9 @@ const {
   sendMyPhoneVerifyOtp,
   verifyMyPhoneVerifyOtp,
   verifyEmail,
+  signup,
+  loginWithEmail,
+  resendVerificationEmail,
 } = require('../controllers/authController');
 const { authenticate, authorize } = require('../middleware/auth');
 const { requireInstructorPhoneVerified } = require('../middleware/trial');
@@ -49,6 +52,9 @@ router.post(
   register
 );
 
+router.post('/signup', signup);
+router.post('/login/email', loginWithEmail);
+router.post('/resend-verification', resendVerificationEmail);
 router.post('/verify-email', verifyEmail);
 router.get('/me', authenticate, me);
 router.post('/pin/set', authenticate, setPin);

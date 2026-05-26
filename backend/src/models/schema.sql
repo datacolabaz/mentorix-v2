@@ -10,6 +10,7 @@ CREATE TABLE users (
   account_status TEXT NOT NULL DEFAULT 'active' CHECK (account_status IN ('active', 'pending_google')),
   is_active BOOLEAN DEFAULT TRUE,
   verification_token TEXT,
+  verification_code VARCHAR(10),
   verification_expiry TIMESTAMPTZ,
   is_verified BOOLEAN NOT NULL DEFAULT TRUE,
   created_at TIMESTAMP DEFAULT NOW()
