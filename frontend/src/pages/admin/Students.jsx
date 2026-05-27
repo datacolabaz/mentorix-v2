@@ -16,6 +16,7 @@ export default function AdminStudents() {
   const [detail, setDetail] = useState(null)
   const [detailOpen, setDetailOpen] = useState(false)
   const [detailLoading, setDetailLoading] = useState(false)
+  const [deleteBusy, setDeleteBusy] = useState(false)
   const toast = useToast()
 
   const filters = {
@@ -83,6 +84,24 @@ export default function AdminStudents() {
       }
     } catch (err) {
       toast(err.message || 'Xəta', 'error')
+    }
+  }
+
+  const deleteStudent = async (student) => {
+    if (!student?.id) return
+    const name = student.full_name || 'Tələbə'
+    if (!window.confirm(`${name} silinsin? Bu əməliyyat geri qaytarılmır.`)) return
+    setDeleteBusy(true)
+    try {
+      await api.delete(`/admin/students/${student.id}`)
+      toast('Silindi')
+      setDetailOpen(false)
+      setDetail(null)
+      load()
+    } catch (err) {
+      toast(err.message || 'Xəta', 'error')
+    } finally {
+      setDeleteBusy(false)
     }
   }
 
@@ -203,6 +222,14 @@ export default function AdminStudents() {
                       onClick={() => toggleStudent(s)}
                     >
                       {s.is_active ? 'Deaktiv' : 'Aktiv'}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="danger"
+                      loading={deleteBusy}
+                      onClick={() => deleteStudent(s)}
+                    >
+                      Sil
                     </Button>
                   </div>
                 </td>

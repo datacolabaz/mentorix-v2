@@ -8,6 +8,7 @@ const {
   getStudents,
   getStudentById,
   toggleStudent,
+  deleteStudent,
   getClasses,
 } = require('../controllers/adminController');
 const {
@@ -25,6 +26,7 @@ router.get('/stats', authenticate, authorize('admin'), getDashboardStats);
 router.get('/students', authenticate, authorize('admin'), getStudents);
 router.get('/students/:id', authenticate, authorize('admin'), getStudentById);
 router.patch('/students/:id/toggle', authenticate, authorize('admin'), toggleStudent);
+router.delete('/students/:id', authenticate, authorize('admin'), deleteStudent);
 router.get('/classes', authenticate, authorize('admin'), getClasses);
 router.get('/marketing/login', authenticate, authorize('admin'), getAdminLoginMarketing);
 router.put('/marketing/login', authenticate, authorize('admin'), putAdminLoginMarketing);

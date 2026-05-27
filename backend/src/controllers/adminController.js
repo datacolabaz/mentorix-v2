@@ -353,6 +353,60 @@ const toggleStudent = async (req, res) => {
   }
 };
 
+const deleteStudent = async (req, res) => {
+  try {
+    const studentId = String(req.params.id || '').trim();
+    if (!studentId) return res.status(400).json({ success: false, message: 'ID tələb olunur' });
+
+    const { rows: u } = await db.query(
+      `SELECT id FROM users WHERE id = $1 AND role = 'student' AND deleted_at IS NULL LIMIT 1`,
+      [studentId],
+    );
+    if (!u[0]) return res.status(404).json({ success: false, message: 'Tələbə tapılmadı' });
+
+    await db.transaction(async (client) => {
+      // Collect enrollments first (needed for per-enrollment tables)
+      const { rows: enrRows } = await client.query(
+        `SELECT id FROM enrollments WHERE student_id = $1`,
+        [studentId],
+      );
+      const enrollmentIds = enrRows.map((r) => r.id).filter(Boolean);
+
+      if (enrollmentIds.length) {
+        // lessons & related
+        await client.query('DELETE FROM attendance WHERE enrollment_id = ANY($1::uuid[])', [enrollmentIds]).catch(() => {});
+        await client.query('DELETE FROM enrollment_lessons WHERE enrollment_id = ANY($1::uuid[])', [enrollmentIds]).catch(() => {});
+        await client.query('DELETE FROM monthly_attendance_slots WHERE enrollment_id = ANY($1::uuid[])', [enrollmentIds]).catch(() => {});
+        await client.query('DELETE FROM lessons WHERE enrollment_id = ANY($1::uuid[])', [enrollmentIds]).catch(() => {});
+        await client.query('DELETE FROM payments WHERE enrollment_id = ANY($1::uuid[])', [enrollmentIds]).catch(() => {});
+        await client.query('DELETE FROM enrollments WHERE id = ANY($1::uuid[])', [enrollmentIds]).catch(() => {});
+      }
+
+      // Student-scoped tables
+      await client.query('DELETE FROM student_assignments WHERE student_id = $1', [studentId]).catch(() => {});
+      await client.query('DELETE FROM student_prep_slots WHERE student_id = $1', [studentId]).catch(() => {});
+      await client.query('DELETE FROM exam_results WHERE student_id = $1', [studentId]).catch(() => {});
+      await client.query('DELETE FROM exam_assignments WHERE student_id = $1', [studentId]).catch(() => {});
+      await client.query('DELETE FROM notifications WHERE user_id = $1', [studentId]).catch(() => {});
+      await client.query('DELETE FROM student_profiles WHERE user_id = $1', [studentId]).catch(() => {});
+
+      // Billing/subscription artifacts linked by user_id (optional, but requested: delete everything)
+      await client.query('DELETE FROM subscriptions WHERE user_id = $1', [studentId]).catch(() => {});
+      await client.query('DELETE FROM billing_payments WHERE user_id = $1', [studentId]).catch(() => {});
+      await client.query('DELETE FROM billing_history WHERE user_id = $1', [studentId]).catch(() => {});
+      await client.query('DELETE FROM trials WHERE user_id = $1', [studentId]).catch(() => {});
+      await client.query('DELETE FROM usage_counters WHERE user_id = $1', [studentId]).catch(() => {});
+
+      // Finally delete user row
+      await client.query('DELETE FROM users WHERE id = $1', [studentId]);
+    });
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 const getClasses = async (req, res) => {
   try {
     const filters = {
@@ -426,5 +480,6 @@ module.exports = {
   getStudents,
   getStudentById,
   toggleStudent,
+  deleteStudent,
   getClasses,
 };
