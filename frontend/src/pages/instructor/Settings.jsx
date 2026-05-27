@@ -21,6 +21,8 @@ import { planDetailLines, planLimitsHeadline } from '../../lib/subscriptionPlanC
 import PaymentMethodModal from '../../components/instructor/PaymentMethodModal'
 import { useBillingConfig } from '../../hooks/useBillingConfig'
 import { billingPaymentStatusLabel, billingPaymentTitle } from '../../lib/billingPaymentLabels'
+import Modal from '../../components/common/Modal'
+import { QRCodeCanvas } from 'qrcode.react'
 
 export default function InstructorSettings() {
   const navigate = useNavigate()
@@ -38,6 +40,8 @@ export default function InstructorSettings() {
   const manualAccount = billingConfigQ.data?.manual_transfer_account || ''
   const smsPacks = Array.isArray(billingConfigQ.data?.sms_packs) ? billingConfigQ.data.sms_packs : []
   const [checkout, setCheckout] = useState(null)
+  const [qrOpen, setQrOpen] = useState(false)
+  const [qrGroup, setQrGroup] = useState(null)
   const [billingPayments, setBillingPayments] = useState([])
   const plans = Array.isArray(plansQ.data) ? plansQ.data : []
   const [savingLabel, setSavingLabel] = useState(false)
@@ -900,18 +904,81 @@ export default function InstructorSettings() {
                             key={g.id}
                             className={['flex items-center justify-between gap-2 text-sm', theme === 'dark' ? 'text-gray-300' : 'text-token-textMain'].join(' ')}
                           >
-                            <span>{g.name}</span>
-                            <button
-                              type="button"
-                              className={[
-                                'text-xs disabled:opacity-40',
-                                theme === 'dark' ? 'text-rose-300 hover:text-rose-200' : 'text-rose-700 hover:text-rose-800',
-                              ].join(' ')}
-                              disabled={busy[`delg-${g.id}`]}
-                              onClick={() => void removeGroup(g.id)}
-                            >
-                              Sil
-                            </button>
+                            <div className="min-w-0">
+                              <div className="truncate">{g.name}</div>
+                              {g.join_code ? (
+                                <div className="text-[11px] text-gray-500 mt-0.5">
+                                  Join code:{' '}
+                                  <span className={theme === 'dark' ? 'text-gray-300 font-semibold' : 'text-token-textMain font-semibold'}>
+                                    {g.join_code}
+                                  </span>
+                                </div>
+                              ) : null}
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              {g.join_code ? (
+                                <>
+                                  <button
+                                    type="button"
+                                    className={['text-xs', theme === 'dark' ? 'text-primary hover:brightness-110' : 'text-primary hover:brightness-110'].join(' ')}
+                                    onClick={async () => {
+                                      try {
+                                        await navigator.clipboard.writeText(String(g.join_code))
+                                        toast('Kod kopyalandı', 'success')
+                                      } catch {
+                                        toast('Kopyalanmadı', 'error')
+                                      }
+                                    }}
+                                  >
+                                    Copy
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className={['text-xs', theme === 'dark' ? 'text-primary hover:brightness-110' : 'text-primary hover:brightness-110'].join(' ')}
+                                    onClick={async () => {
+                                      const link = `${window.location.origin}/join/${encodeURIComponent(String(g.join_code))}`
+                                      try {
+                                        if (navigator.share) {
+                                          await navigator.share({ title: 'Mentorix invite', text: 'Qrupa qoşul', url: link })
+                                          return
+                                        }
+                                      } catch {
+                                        // ignore
+                                      }
+                                      try {
+                                        await navigator.clipboard.writeText(link)
+                                        toast('Link kopyalandı', 'success')
+                                      } catch {
+                                        toast('Link kopyalanmadı', 'error')
+                                      }
+                                    }}
+                                  >
+                                    Share
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className={['text-xs', theme === 'dark' ? 'text-primary hover:brightness-110' : 'text-primary hover:brightness-110'].join(' ')}
+                                    onClick={() => {
+                                      setQrGroup({ ...g, subjectName: s.name })
+                                      setQrOpen(true)
+                                    }}
+                                  >
+                                    QR
+                                  </button>
+                                </>
+                              ) : null}
+                              <button
+                                type="button"
+                                className={[
+                                  'text-xs disabled:opacity-40',
+                                  theme === 'dark' ? 'text-rose-300 hover:text-rose-200' : 'text-rose-700 hover:text-rose-800',
+                                ].join(' ')}
+                                disabled={busy[`delg-${g.id}`]}
+                                onClick={() => void removeGroup(g.id)}
+                              >
+                                Sil
+                              </button>
+                            </div>
                           </li>
                         ))}
                       </ul>
@@ -962,6 +1029,55 @@ export default function InstructorSettings() {
         busy={planBusy}
         onConfirm={confirmCheckout}
       />
+
+      <Modal
+        open={qrOpen}
+        onClose={() => setQrOpen(false)}
+        title="QR ilə qoşul"
+        size="sm"
+      >
+        <div className="space-y-4">
+          <div className="text-sm text-gray-400 text-center">
+            {qrGroup?.subjectName ? <div className="text-xs text-gray-500">{qrGroup.subjectName}</div> : null}
+            <div className="text-white font-semibold">{qrGroup?.name}</div>
+            {qrGroup?.join_code ? (
+              <div className="mt-1">
+                Join code: <span className="text-gray-200 font-semibold">{qrGroup.join_code}</span>
+              </div>
+            ) : null}
+          </div>
+
+          {qrGroup?.join_code ? (
+            <div className="flex justify-center">
+              <div className="bg-white rounded-2xl p-4">
+                <QRCodeCanvas
+                  value={`${window.location.origin}/join/${encodeURIComponent(String(qrGroup.join_code))}`}
+                  size={220}
+                  includeMargin
+                />
+              </div>
+            </div>
+          ) : null}
+
+          {qrGroup?.join_code ? (
+            <Button
+              className="w-full justify-center"
+              variant="secondary"
+              onClick={async () => {
+                const link = `${window.location.origin}/join/${encodeURIComponent(String(qrGroup.join_code))}`
+                try {
+                  await navigator.clipboard.writeText(link)
+                  toast('Link kopyalandı', 'success')
+                } catch {
+                  toast('Link kopyalanmadı', 'error')
+                }
+              }}
+            >
+              Linki kopyala
+            </Button>
+          ) : null}
+        </div>
+      </Modal>
     </div>
   )
 }
