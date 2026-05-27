@@ -1428,7 +1428,7 @@ router.post('/my/join', authenticate, authorize('student'), async (req, res) => 
        FROM enrollments
        WHERE student_id = $1
          AND (deleted_at IS NULL)
-         AND COALESCE(LOWER(TRIM(status)), 'active') = 'active'`,
+         AND COALESCE(LOWER(TRIM(status)), 'active') IN ('active', 'pending_setup')`,
       [req.user.id],
     );
     const alreadyInGroup = existing.find((e) => String(e.group_id || '') === String(g.group_id));
