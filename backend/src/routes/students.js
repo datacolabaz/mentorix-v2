@@ -836,11 +836,20 @@ router.post(
         }
       }
 
-      const lwd = parseLessonWeekdays(lesson_weekdays);
+      let lwd = parseLessonWeekdays(lesson_weekdays);
+      let ltSource = lesson_times;
+      if (lwd.length === 0) {
+        const effGroupId = group_id || enr.group_id;
+        if (effGroupId) {
+          const sched = await getGroupLessonSchedule(effGroupId);
+          lwd = sched.lesson_weekdays;
+          ltSource = sched.lesson_times;
+        }
+      }
       if (lwd.length === 0) {
         return res.status(400).json({ success: false, message: 'Ən azı bir dərs günü seçin' });
       }
-      const lt = parseLessonTimes(lesson_times, lwd);
+      const lt = parseLessonTimes(ltSource, lwd);
       if (Object.keys(lt).length === 0) {
         return res.status(400).json({ success: false, message: 'Dərs günlərinə uyğun saatları qeyd edin' });
       }
@@ -1346,6 +1355,8 @@ router.patch('/:id/email', authenticate, authorize('admin', 'instructor'), patch
 
 const {
   listActiveEnrollmentsForStudent,
+  applyGroupScheduleToEnrollment,
+  getGroupLessonSchedule,
 } = require('../services/studentEnrollmentsService');
 
 // Student: all active groups / enrollments.
@@ -1433,6 +1444,7 @@ router.post('/my/join', authenticate, authorize('student'), async (req, res) => 
     );
     const alreadyInGroup = existing.find((e) => String(e.group_id || '') === String(g.group_id));
     if (alreadyInGroup) {
+      await applyGroupScheduleToEnrollment(alreadyInGroup.id, g.group_id).catch(() => {});
       const enrollments = await listActiveEnrollmentsForStudent(req.user.id);
       return res.json({
         success: true,
@@ -1461,6 +1473,8 @@ router.post('/my/join', authenticate, authorize('student'), async (req, res) => 
         [enrollmentId, g.subject_id || null, g.group_id],
       )
       .catch(() => {});
+
+    await applyGroupScheduleToEnrollment(enrollmentId, g.group_id).catch(() => {});
 
     const enrollments = await listActiveEnrollmentsForStudent(req.user.id);
     return res.json({

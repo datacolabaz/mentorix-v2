@@ -19,6 +19,8 @@ const { buildEnrollmentPackageHistoryView } = require('../services/enrollmentPac
 const { sumInstructorExpectedPayments } = require('../services/instructorExpectedPayments');
 const { SQL_INSTRUCTOR_REVENUE_FROM } = require('../services/instructorRevenue');
 const { loadActiveEnrollmentForPayments } = require('../services/enrollmentGuards');
+const { getGroupLessonSchedule } = require('../services/studentEnrollmentsService');
+const { parseLessonWeekdaysJson } = require('./monthlyAttendanceController');
 
 /** Bu qeydlər balansı azaldır; ümumi gəlir statistikasına daxil edilmir */
 const SQL_EXCLUDE_BALANCE_ADJUSTMENT =
@@ -1261,6 +1263,14 @@ const listMyPayments = async (req, res) => {
         [studentId]
       );
       enrollment = anyRows[0] || null;
+    }
+
+    if (enrollment && !parseLessonWeekdaysJson(enrollment.lesson_weekdays).length && enrollment.group_id) {
+      const sched = await getGroupLessonSchedule(enrollment.group_id);
+      if (sched.lesson_weekdays.length) {
+        enrollment.lesson_weekdays = sched.lesson_weekdays;
+        enrollment.lesson_times = sched.lesson_times;
+      }
     }
 
     // Ensure future lessons exist for calendar views, but do NOT auto-advance billing_cycle here.

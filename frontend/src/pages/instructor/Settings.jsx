@@ -930,7 +930,22 @@ export default function InstructorSettings() {
                                       }
                                     }}
                                   >
-                                    Copy
+                                    Kod
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className={['text-xs', theme === 'dark' ? 'text-primary hover:brightness-110' : 'text-primary hover:brightness-110'].join(' ')}
+                                    onClick={async () => {
+                                      const link = `${window.location.origin}/join/${encodeURIComponent(String(g.join_code))}`
+                                      try {
+                                        await navigator.clipboard.writeText(link)
+                                        toast('Link kopyalandı', 'success')
+                                      } catch {
+                                        toast('Link kopyalanmadı', 'error')
+                                      }
+                                    }}
+                                  >
+                                    Link
                                   </button>
                                   <button
                                     type="button"
@@ -953,7 +968,7 @@ export default function InstructorSettings() {
                                       }
                                     }}
                                   >
-                                    Share
+                                    Paylaş
                                   </button>
                                   <button
                                     type="button"

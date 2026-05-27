@@ -4,7 +4,6 @@ import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
 import { useToast } from '../../components/common/Toast'
-import useAuthStore from '../../hooks/useAuth'
 import GroupSwitcher from '../../components/student/GroupSwitcher'
 import { useStudentGroups } from '../../contexts/StudentGroupContext'
 import { withEnrollmentQuery } from '../../lib/studentGroupQuery'
@@ -78,7 +77,6 @@ function weeklySlotFromEnrollment(day, wallTimeRaw) {
 }
 
 export default function StudentSchedule() {
-  const { user } = useAuthStore()
   const { activeEnrollmentId, activeEnrollment } = useStudentGroups()
   const [loading, setLoading] = useState(true)
   const [lessons, setLessons] = useState([])
@@ -99,16 +97,21 @@ export default function StudentSchedule() {
     setLoading(true)
     setErr(null)
     try {
-      const [d, pay] = await Promise.all([
-        api.get(withEnrollmentQuery('/students/my/schedule', activeEnrollmentId)),
-        user?.id ? api.get('/payments/my').catch(() => null) : Promise.resolve(null),
-      ])
+      const d = await api.get(withEnrollmentQuery('/students/my/schedule', activeEnrollmentId))
       setLessons(Array.isArray(d.lessons) ? d.lessons : [])
       setPrepSlots(Array.isArray(d.prepSlots) ? d.prepSlots : [])
 
-      const en = pay?.enrollment || null
-      if (en && (en.lesson_weekdays || en.lesson_times)) {
-        setWeeklyPattern({ lesson_weekdays: en.lesson_weekdays, lesson_times: en.lesson_times })
+      const fromApi = d?.weeklyPattern
+      const fromCtx =
+        activeEnrollment?.lesson_weekdays || activeEnrollment?.lesson_times
+          ? {
+              lesson_weekdays: activeEnrollment.lesson_weekdays,
+              lesson_times: activeEnrollment.lesson_times,
+            }
+          : null
+      const pattern = fromApi || fromCtx
+      if (pattern && normalizeWeekdays(pattern.lesson_weekdays).length) {
+        setWeeklyPattern(pattern)
       } else {
         setWeeklyPattern(null)
       }
@@ -120,7 +123,7 @@ export default function StudentSchedule() {
     } finally {
       setLoading(false)
     }
-  }, [user?.id, activeEnrollmentId])
+  }, [activeEnrollmentId, activeEnrollment?.lesson_weekdays, activeEnrollment?.lesson_times])
 
   useEffect(() => {
     void load()

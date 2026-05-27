@@ -5,6 +5,11 @@ const {
   parseYmdUtcNoon,
   ymdFromUtcDate,
 } = require('./monthlyAttendanceController');
+const {
+  enrichStudentsWithGroupSchedule,
+  getGroupLessonSchedule,
+  resolveEnrollmentScope,
+} = require('../services/studentEnrollmentsService');
 
 const listStudents = async (req, res) => {
   try {
@@ -98,7 +103,8 @@ const listStudents = async (req, res) => {
          ${group}`,
         [instructorId]
       );
-      return res.json({ success: true, students: rows });
+      const students = await enrichStudentsWithGroupSchedule(rows);
+      return res.json({ success: true, students });
     }
 
     const { rows } = await db.query(
@@ -107,7 +113,8 @@ const listStudents = async (req, res) => {
        WHERE u.role = 'student' AND u.is_active = TRUE
        ${group}`
     );
-    res.json({ success: true, students: rows });
+    const students = await enrichStudentsWithGroupSchedule(rows);
+    res.json({ success: true, students });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -532,7 +539,38 @@ const getInstructorMyLessonsCalendar = async (req, res) => {
   }
 };
 
-const { resolveEnrollmentScope } = require('../services/studentEnrollmentsService');
+async function weeklyPatternForEnrollment(enrollmentId) {
+  const { rows } = await db.query(
+    `SELECT lesson_weekdays, lesson_times, group_id
+     FROM enrollments
+     WHERE id = $1 AND (deleted_at IS NULL)`,
+    [enrollmentId],
+  );
+  const en = rows[0];
+  if (!en) return null;
+
+  let lesson_weekdays = parseLessonWeekdaysJson(en.lesson_weekdays);
+  let lesson_times = en.lesson_times;
+  if (typeof lesson_times === 'string') {
+    try {
+      lesson_times = JSON.parse(lesson_times);
+    } catch {
+      lesson_times = {};
+    }
+  }
+  if (!lesson_times || typeof lesson_times !== 'object' || Array.isArray(lesson_times)) {
+    lesson_times = {};
+  }
+
+  if (!lesson_weekdays.length && en.group_id) {
+    const sched = await getGroupLessonSchedule(en.group_id);
+    lesson_weekdays = sched.lesson_weekdays;
+    lesson_times = sched.lesson_times;
+  }
+
+  if (!lesson_weekdays.length) return null;
+  return { lesson_weekdays, lesson_times };
+}
 
 const getMySchedule = async (req, res) => {
   try {
@@ -570,11 +608,18 @@ const getMySchedule = async (req, res) => {
        ORDER BY l.lesson_date ASC`,
       lessonParams,
     );
+
+    let weeklyPattern = null;
+    if (scope?.enrollment_id) {
+      weeklyPattern = await weeklyPatternForEnrollment(scope.enrollment_id);
+    }
+
     res.json({
       success: true,
       lessons,
       prepSlots,
       enrollment_id: scope?.enrollment_id || null,
+      weeklyPattern,
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
