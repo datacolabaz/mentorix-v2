@@ -20,7 +20,6 @@ const { sumInstructorExpectedPayments } = require('../services/instructorExpecte
 const { SQL_INSTRUCTOR_REVENUE_FROM } = require('../services/instructorRevenue');
 const { loadActiveEnrollmentForPayments } = require('../services/enrollmentGuards');
 const { getGroupLessonSchedule } = require('../services/studentEnrollmentsService');
-const { parseLessonWeekdaysJson } = require('./monthlyAttendanceController');
 
 /** Bu qeydlər balansı azaldır; ümumi gəlir statistikasına daxil edilmir */
 const SQL_EXCLUDE_BALANCE_ADJUSTMENT =
