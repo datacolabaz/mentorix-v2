@@ -1007,6 +1007,116 @@ router.patch('/:id/phone', authenticate, authorize('admin', 'instructor'), async
 
 router.patch('/:id/email', authenticate, authorize('admin', 'instructor'), patchStudentEmail);
 
+// Student: get my linked teacher/class (active enrollment).
+router.get('/my/link', authenticate, authorize('student'), async (req, res) => {
+  try {
+    const { rows } = await db.query(
+      `SELECT e.id AS enrollment_id,
+              e.instructor_id,
+              ig.id AS group_id,
+              ig.name AS group_name,
+              COALESCE(NULLIF(TRIM(ist.name), ''), 'Sahəsiz') AS subject_name,
+              u.full_name AS instructor_name
+       FROM enrollments e
+       LEFT JOIN instructor_groups ig ON ig.id = e.group_id
+       LEFT JOIN instructor_subjects ist ON ist.id = e.subject_id
+       LEFT JOIN users u ON u.id = e.instructor_id
+       WHERE e.student_id = $1
+         AND COALESCE(LOWER(TRIM(e.status)), 'active') = 'active'
+       ORDER BY e.enrolled_at DESC NULLS LAST
+       LIMIT 1`,
+      [req.user.id],
+    );
+    const r = rows[0] || null;
+    res.json({ success: true, link: r });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// Student: join a teacher class by join code.
+router.post('/my/join', authenticate, authorize('student'), async (req, res) => {
+  try {
+    const raw = String(req.body?.code || '').trim().toUpperCase();
+    const code = raw.replace(/\s+/g, '');
+    if (!code) return res.status(400).json({ success: false, message: 'Join kodu tələb olunur' });
+
+    const { rows: grpRows } = await db.query(
+      `SELECT ig.id AS group_id,
+              ig.instructor_id,
+              ig.subject_id,
+              ig.name AS group_name,
+              ig.join_code,
+              ig.join_code_expires_at,
+              COALESCE(NULLIF(TRIM(ist.name), ''), 'Sahəsiz') AS subject_name
+       FROM instructor_groups ig
+       LEFT JOIN instructor_subjects ist ON ist.id = ig.subject_id
+       WHERE UPPER(TRIM(ig.join_code)) = $1
+       LIMIT 1`,
+      [code],
+    );
+    const g = grpRows[0];
+    if (!g) {
+      return res.status(404).json({ success: false, code: 'INVALID_CODE', message: 'Kod yanlışdır' });
+    }
+    if (g.join_code_expires_at && new Date(g.join_code_expires_at).getTime() < Date.now()) {
+      return res.status(410).json({ success: false, code: 'EXPIRED_CODE', message: 'Kodun müddəti bitib' });
+    }
+
+    // Prevent duplicate join (same group) and restrict to one active teacher by default.
+    const { rows: existing } = await db.query(
+      `SELECT id, instructor_id, group_id, status
+       FROM enrollments
+       WHERE student_id = $1
+         AND COALESCE(LOWER(TRIM(status)), 'active') = 'active'
+       ORDER BY enrolled_at DESC NULLS LAST
+       LIMIT 5`,
+      [req.user.id],
+    );
+    const alreadyInGroup = existing.find((e) => String(e.group_id || '') === String(g.group_id));
+    if (alreadyInGroup) {
+      return res.json({ success: true, code: 'ALREADY_JOINED', message: 'Bu qrupa artıq qoşulmusunuz' });
+    }
+    const hasOtherTeacher = existing.find((e) => String(e.instructor_id || '') !== String(g.instructor_id));
+    if (hasOtherTeacher) {
+      return res.status(409).json({
+        success: false,
+        code: 'ALREADY_LINKED',
+        message: 'Siz artıq başqa müəllimə qoşulmusunuz',
+      });
+    }
+
+    const { rows: enr } = await db.query(
+      `INSERT INTO enrollments (instructor_id, student_id, status, enrolled_at)
+       VALUES ($1, $2, 'active', NOW())
+       RETURNING id`,
+      [g.instructor_id, req.user.id],
+    );
+    const enrollmentId = enr[0]?.id;
+
+    // Best-effort: set subject_id / group_id if columns exist in DB.
+    await db
+      .query(
+        `UPDATE enrollments
+         SET subject_id = $2,
+             group_id = $3
+         WHERE id = $1`,
+        [enrollmentId, g.subject_id || null, g.group_id],
+      )
+      .catch(() => {});
+
+    return res.json({
+      success: true,
+      message: 'Qrupa qoşuldunuz',
+      enrollment_id: enrollmentId,
+      teacher_id: g.instructor_id,
+      class: { id: g.group_id, name: g.group_name, subject: g.subject_name, join_code: g.join_code },
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 router.get('/my/schedule', authenticate, authorize('student'), getMySchedule);
 router.post('/my/prep-slots', authenticate, authorize('student'), addMyPrepSlots);
 router.delete('/my/prep-slots/:id', authenticate, authorize('student'), deleteMyPrepSlot);

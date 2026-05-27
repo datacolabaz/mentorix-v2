@@ -10,6 +10,19 @@ function looksUuid(s) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(s || '').trim());
 }
 
+async function generateUniqueJoinCode() {
+  // Format: MX-12345
+  for (let i = 0; i < 50; i++) {
+    const code = `MX-${String(Math.floor(Math.random() * 100000)).padStart(5, '0')}`;
+    const { rows } = await db.query(
+      `SELECT 1 FROM instructor_groups WHERE join_code = $1 LIMIT 1`,
+      [code],
+    );
+    if (!rows[0]) return code;
+  }
+  throw new Error('Join code yaradıla bilmədi');
+}
+
 /** Müəllim: görünən ad + sahə/qrup siyahısı */
 const getTeaching = async (req, res) => {
   try {
@@ -34,7 +47,7 @@ const getTeaching = async (req, res) => {
       [iid]
     );
     const { rows: groups } = await db.query(
-      `SELECT id, subject_id, name, sort_order
+      `SELECT id, subject_id, name, sort_order, join_code, join_code_expires_at
        FROM instructor_groups
        WHERE instructor_id = $1
        ORDER BY sort_order ASC, name ASC`,
@@ -43,7 +56,14 @@ const getTeaching = async (req, res) => {
     const byId = new Map(subjects.map((s) => [String(s.id), { id: s.id, name: s.name, sort_order: s.sort_order, groups: [] }]));
     for (const g of groups) {
       const bucket = byId.get(String(g.subject_id));
-      if (bucket) bucket.groups.push({ id: g.id, name: g.name, sort_order: g.sort_order });
+      if (bucket)
+        bucket.groups.push({
+          id: g.id,
+          name: g.name,
+          sort_order: g.sort_order,
+          join_code: g.join_code || null,
+          join_code_expires_at: g.join_code_expires_at || null,
+        });
     }
 
     res.json({
@@ -130,10 +150,12 @@ const postGroup = async (req, res) => {
       [subject_id]
     );
     const sgo = Number(mxg[0]?.n) || 0;
+    const joinCode = await generateUniqueJoinCode();
     const { rows } = await db.query(
-      `INSERT INTO instructor_groups (instructor_id, subject_id, name, sort_order)
-       VALUES ($1, $2, $3, $4) RETURNING id, subject_id, name, sort_order`,
-      [req.user.id, subject_id, name, sgo]
+      `INSERT INTO instructor_groups (instructor_id, subject_id, name, sort_order, join_code)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING id, subject_id, name, sort_order, join_code, join_code_expires_at`,
+      [req.user.id, subject_id, name, sgo, joinCode]
     );
     res.status(201).json({ success: true, group: rows[0] });
   } catch (err) {

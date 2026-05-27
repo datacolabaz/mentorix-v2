@@ -41,6 +41,7 @@ import StudentPayments from './pages/student/Payments'
 import StudentSchedule from './pages/student/Schedule'
 import StudentTasks from './pages/student/Tasks'
 import StudentNotifications from './pages/student/Notifications'
+import StudentJoinClass from './pages/student/JoinClass'
 import ParentDashboard from './pages/parent/Dashboard'
 import CourseDashboard from './pages/course/Dashboard'
 import CourseTeachers from './pages/course/Teachers'
@@ -64,6 +65,7 @@ const Placeholder = ({ title }) => (
 const ProtectedRoute = ({ children, roles }) => {
   const { user } = useAuthStore()
   if (!user) return <Navigate to="/login" replace />
+  if (!user.role) return <Navigate to="/onboarding/role" replace />
   if (roles && !roles.includes(user.role)) return <Navigate to="/login" replace />
   return children
 }
@@ -79,7 +81,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/search" element={<InstructorMapSearch />} />
-      <Route path="/login" element={user ? <Navigate to={`/${user.role}`} /> : <Login />} />
+      <Route path="/login" element={user ? <Navigate to={user?.role ? `/${user.role}` : '/onboarding/role'} replace /> : <Login />} />
       <Route path="/verify-email" element={<VerifyEmail />} />
       <Route
         path="/onboarding/role"
@@ -89,7 +91,9 @@ export default function App() {
           </ProtectedRoute>
         }
       />
-      <Route path="/" element={<Navigate to={user ? `/${user.role}` : '/login'} />} />
+      <Route path="/" element={<Navigate to={user ? (user?.role ? `/${user.role}` : '/onboarding/role') : '/login'} />} />
+
+      <Route path="/join/:code" element={<StudentJoinClass />} />
 
       <Route path="/admin" element={<ProtectedRoute roles={['admin']}><AdminLayout /></ProtectedRoute>}>
         <Route index element={<AdminDashboard />} />
@@ -127,6 +131,7 @@ export default function App() {
 
       <Route path="/student" element={<ProtectedRoute roles={['student']}><StudentLayout /></ProtectedRoute>}>
         <Route index element={<StudentDashboard />} />
+        <Route path="join" element={<StudentJoinClass />} />
         <Route path="schedule" element={<StudentSchedule />} />
         <Route path="exams" element={<StudentExams />} />
         <Route path="assignments" element={<StudentTasks />} />
