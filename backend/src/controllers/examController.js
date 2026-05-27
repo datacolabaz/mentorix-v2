@@ -557,12 +557,20 @@ const instructorStudentExamProgress = async (req, res) => {
 };
 
 // Telebe ucun imtahanlar
+const { resolveEnrollmentScope } = require('../services/studentEnrollmentsService');
+
 const studentExams = async (req, res) => {
   try {
     const sidHex = normStudentHex(req.user.id);
     if (!sidHex) {
       return res.status(400).json({ success: false, message: 'İstifadəçi identifikatoru yoxdur' });
     }
+    const enrollmentId = String(req.query.enrollment_id || '').trim() || null;
+    const scope = enrollmentId ? await resolveEnrollmentScope(req.user.id, enrollmentId) : null;
+    if (enrollmentId && !scope) {
+      return res.status(404).json({ success: false, message: 'Qrup tapılmadı' });
+    }
+    const instructorFilter = scope?.instructor_id || null;
     /** Təyinat + nəticə: yalnız exam_assignments istifadə etsək, nəticəsi olan amma təyinatı
      *  silinmiş/köhnə DB-də olmayan tələbələr üçün siyahı boş qalır; müəllim statistikası isə
      *  exam_results-dan görünür. */
@@ -642,10 +650,11 @@ const studentExams = async (req, res) => {
          SELECT exam_id, COUNT(*) AS question_count FROM exam_questions GROUP BY exam_id
        ) eq_count ON eq_count.exam_id = e.id
        WHERE COALESCE(e.is_deleted, FALSE) = FALSE
+         AND ($2::uuid IS NULL OR e.instructor_id = $2)
        ORDER BY COALESCE(e.available_from, e.start_time) DESC NULLS LAST`,
-      [sidHex]
+      [sidHex, instructorFilter]
     );
-    res.json({ success: true, exams: rows });
+    res.json({ success: true, exams: rows, enrollment_id: scope?.enrollment_id || null });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

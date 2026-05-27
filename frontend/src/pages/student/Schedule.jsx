@@ -5,6 +5,9 @@ import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
 import { useToast } from '../../components/common/Toast'
 import useAuthStore from '../../hooks/useAuth'
+import GroupSwitcher from '../../components/student/GroupSwitcher'
+import { useStudentGroups } from '../../contexts/StudentGroupContext'
+import { withEnrollmentQuery } from '../../lib/studentGroupQuery'
 import {
   fmtTime,
   parseLessonInstant,
@@ -76,6 +79,7 @@ function weeklySlotFromEnrollment(day, wallTimeRaw) {
 
 export default function StudentSchedule() {
   const { user } = useAuthStore()
+  const { activeEnrollmentId, activeEnrollment } = useStudentGroups()
   const [loading, setLoading] = useState(true)
   const [lessons, setLessons] = useState([])
   const [prepSlots, setPrepSlots] = useState([])
@@ -96,7 +100,7 @@ export default function StudentSchedule() {
     setErr(null)
     try {
       const [d, pay] = await Promise.all([
-        api.get('/students/my/schedule'),
+        api.get(withEnrollmentQuery('/students/my/schedule', activeEnrollmentId)),
         user?.id ? api.get('/payments/my').catch(() => null) : Promise.resolve(null),
       ])
       setLessons(Array.isArray(d.lessons) ? d.lessons : [])
@@ -116,7 +120,7 @@ export default function StudentSchedule() {
     } finally {
       setLoading(false)
     }
-  }, [user?.id])
+  }, [user?.id, activeEnrollmentId])
 
   useEffect(() => {
     void load()
@@ -270,10 +274,18 @@ export default function StudentSchedule() {
 
   return (
     <div className="p-4 sm:p-6 w-full min-w-0 max-w-4xl mx-auto">
-      <div className="flex items-end justify-between gap-3 mb-4">
-        <div>
-          <h1 className="font-display font-bold text-xl sm:text-2xl text-token-textMain pl-20 sm:pl-0">Cədvəlim</h1>
-          <p className="text-token-textMuted text-sm mt-1 pl-20 sm:pl-0">Dərs və hazırlıq slotlarınız.</p>
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-end gap-3 flex-1 min-w-0 pl-14 sm:pl-0">
+          <div className="min-w-0">
+            <h1 className="font-display font-bold text-xl sm:text-2xl text-token-textMain">Cədvəlim</h1>
+            {activeEnrollment && (
+              <p className="text-sm text-token-textMuted mt-1">
+                {activeEnrollment.group_name} • {activeEnrollment.instructor_name}
+              </p>
+            )}
+            <p className="text-token-textMuted text-sm mt-1">Seçilmiş qrupun dərsləri və hazırlıq slotları.</p>
+          </div>
+          <GroupSwitcher className="w-full sm:w-auto sm:min-w-[200px] shrink-0" />
         </div>
         <Button variant="secondary" size="sm" onClick={() => void load()} disabled={loading}>
           Yenilə

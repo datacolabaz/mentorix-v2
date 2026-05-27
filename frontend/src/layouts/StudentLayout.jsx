@@ -6,12 +6,14 @@ import Brand from '../components/common/Brand'
 import Footer from '../components/common/Footer'
 import { sidebarNavClass } from '../lib/sidebarNavClass'
 import NavIcon from '../components/common/NavIcon'
+import { StudentGroupProvider } from '../contexts/StudentGroupContext'
 
 const NAV_GROUPS = [
   {
     label: 'MANAGEMENT',
     items: [
       { to: '/student', label: 'Proqresim', icon: <NavIcon name="progress" />, end: true },
+      { to: '/student/groups', label: 'Qruplarım', icon: <NavIcon name="courses" /> },
       { to: '/student/schedule', label: 'Cədvəlim', icon: <NavIcon name="schedule" /> },
       { to: '/student/exams', label: 'İmtahanlarım', icon: <NavIcon name="exams" /> },
       { to: '/student/assignments', label: 'Tapşırıqlarım', icon: <NavIcon name="tasks" /> },
@@ -44,6 +46,7 @@ export default function StudentLayout() {
   }, [focusMode])
 
   return (
+    <StudentGroupProvider>
     <div
       className={`theme-${theme} flex flex-col min-h-screen md:h-screen bg-token-surfaceMain text-token-textMain overflow-x-hidden md:overflow-hidden`}
     >
@@ -215,5 +218,6 @@ export default function StudentLayout() {
         </main>
       </div>
     </div>
+    </StudentGroupProvider>
   )
 }

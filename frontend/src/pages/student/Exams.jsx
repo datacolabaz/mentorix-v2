@@ -8,6 +8,9 @@ import ExamBreakdownList from '../../components/exam/ExamBreakdownList'
 import { useToast } from '../../components/common/Toast'
 import useUiStore from '../../hooks/useUi'
 import useAuthStore from '../../hooks/useAuth'
+import GroupSwitcher from '../../components/student/GroupSwitcher'
+import { useStudentGroups } from '../../contexts/StudentGroupContext'
+import { withEnrollmentQuery } from '../../lib/studentGroupQuery'
 
 /** API JSON: { key, text } və ya string; boş text olanda `opt.text || opt` obyekti render edirdi (React #31) */
 function optionDisplayLabel(opt) {
@@ -445,10 +448,12 @@ export default function StudentExams() {
   }, [activeExam?.id, startedAt])
 
   /** quiet: arxa plan yeniləməsində tam səhifə “yüklənir” göstərmə */
+  const { activeEnrollmentId, activeEnrollment } = useStudentGroups()
+
   const loadExams = useCallback((quiet = false) => {
     if (!quiet) setListLoading(true)
     return api
-      .get('/exams/my')
+      .get(withEnrollmentQuery('/exams/my', activeEnrollmentId))
       .then((d) => {
         setListError(null)
         const raw = d?.exams
@@ -467,7 +472,7 @@ export default function StudentExams() {
       .finally(() => {
         if (!quiet) setListLoading(false)
       })
-  }, [])
+  }, [activeEnrollmentId, toast])
 
   const [reviewModal, setReviewModal] = useState(null)
   const [leaderModal, setLeaderModal] = useState(null)
@@ -951,7 +956,17 @@ export default function StudentExams() {
 
   return (
     <div className="p-4 sm:p-6 w-full min-w-0 max-w-3xl mx-auto">
-      <h1 className="font-display font-bold text-2xl mb-6 break-words text-token-textMain pl-20 sm:pl-0">İmtahanlarım</h1>
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-6 pl-20 sm:pl-0">
+        <div>
+          <h1 className="font-display font-bold text-2xl break-words text-token-textMain">İmtahanlarım</h1>
+          {activeEnrollment && (
+            <p className="text-sm text-token-textMuted mt-1">
+              {activeEnrollment.group_name} • {activeEnrollment.instructor_name}
+            </p>
+          )}
+        </div>
+        <GroupSwitcher className="w-full sm:w-auto sm:min-w-[200px]" />
+      </div>
 
       {listError && !listLoading && (
         <Card hover className="p-4 sm:p-5 mb-6 border-red-500/35 bg-red-500/5">

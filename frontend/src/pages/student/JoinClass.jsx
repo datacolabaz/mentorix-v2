@@ -1,18 +1,23 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import api from '../../lib/api'
 import useAuthStore from '../../hooks/useAuth'
 import Button from '../../components/common/Button'
-import Brand from '../../components/common/Brand'
+import Card from '../../components/common/Card'
 import { useToast } from '../../components/common/Toast'
+import { useStudentGroupsOptional } from '../../contexts/StudentGroupContext'
 
 const inputClass =
-  'w-full bg-surface-1 border border-white/10 rounded-xl px-4 py-4 text-white text-lg outline-none focus:border-primary/40 text-center tracking-widest'
+  'w-full border border-[color:var(--border-subtle)] rounded-xl px-4 py-4 text-token-textMain text-lg outline-none focus:border-primary/40 text-center tracking-widest bg-token-surfaceCard/55'
 
 export default function JoinClass() {
   const toast = useToast()
   const navigate = useNavigate()
   const { user } = useAuthStore()
+  const ctx = useStudentGroupsOptional()
+  const enrollments = ctx?.enrollments ?? []
+  const refreshEnrollments = ctx?.refreshEnrollments ?? (async () => [])
+  const setActiveEnrollmentId = ctx?.setActiveEnrollmentId ?? (() => {})
   const params = useParams()
   const [searchParams] = useSearchParams()
 
@@ -23,15 +28,6 @@ export default function JoinClass() {
 
   const [code, setCode] = useState(initialCode)
   const [busy, setBusy] = useState(false)
-  const [link, setLink] = useState(null)
-
-  useEffect(() => {
-    if (!user) return
-    void api
-      .get('/students/my/link')
-      .then((d) => setLink(d?.link || null))
-      .catch(() => {})
-  }, [user])
 
   const submit = async (e) => {
     e?.preventDefault?.()
@@ -41,7 +37,9 @@ export default function JoinClass() {
     try {
       const r = await api.post('/students/my/join', { code: v })
       toast(r?.message || 'Qoşuldunuz', 'success')
-      navigate('/student', { replace: true })
+      if (r?.enrollment_id) setActiveEnrollmentId(r.enrollment_id)
+      await refreshEnrollments()
+      navigate('/student/groups', { replace: true })
     } catch (err) {
       const st = err?.status ?? err?.response?.status
       const msg = err?.response?.data?.message || err?.message || 'Xəta baş verdi'
@@ -58,66 +56,61 @@ export default function JoinClass() {
 
   if (!user) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-surface-1 p-4">
-        <div className="w-full max-w-lg rounded-2xl border border-white/10 bg-white/5 p-6 text-center">
-          <Brand />
-          <div className="mt-4 text-white font-display font-bold text-xl">Qrupa qoşul</div>
-          <div className="mt-2 text-sm text-gray-400">Davam etmək üçün əvvəlcə daxil olun.</div>
-          <Button className="w-full justify-center mt-5" onClick={() => navigate('/login')}>
-            Login
-          </Button>
-        </div>
-      </div>
-    )
-  }
-
-  if (link?.enrollment_id) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-surface-1 p-4">
-        <div className="w-full max-w-lg rounded-2xl border border-white/10 bg-white/5 p-6 text-center">
-          <Brand />
-          <div className="mt-4 text-white font-display font-bold text-xl">Siz artıq qoşulmusunuz</div>
-          <div className="mt-2 text-sm text-gray-300">
-            {link?.group_name ? (
-              <>
-                Qrup: <strong className="text-white">{link.group_name}</strong>
-              </>
-            ) : (
-              'Aktiv müəllim bağlantınız var.'
-            )}
-          </div>
-          <Button className="w-full justify-center mt-5" onClick={() => navigate('/student', { replace: true })}>
-            Panelə keç
-          </Button>
-        </div>
+      <div className="p-6 max-w-lg mx-auto text-center">
+        <p className="text-token-textMuted text-sm">Davam etmək üçün daxil olun.</p>
+        <Button className="mt-4 justify-center w-full" onClick={() => navigate('/login')}>
+          Login
+        </Button>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-surface-1 p-4">
-      <div className="w-full max-w-lg rounded-2xl border border-white/10 bg-white/5 p-6">
-        <div className="flex items-center justify-center">
-          <Brand />
-        </div>
-        <div className="mt-4 text-center text-white font-display font-bold text-xl">Qrupa qoşul</div>
-        <div className="mt-2 text-center text-sm text-gray-400">
-          Müəllimin verdiyi join kodunu daxil edin (məs: <span className="text-gray-200 font-semibold">MX-48291</span>)
-        </div>
-        <form className="mt-5 space-y-3" onSubmit={submit}>
+    <div className="p-4 sm:p-6 max-w-lg mx-auto w-full">
+      <h1 className="font-display font-bold text-2xl text-token-textMain pl-14 sm:pl-0">Qrupa qoşul</h1>
+      <p className="text-sm text-token-textMuted mt-1 mb-6 pl-14 sm:pl-0">
+        Müəllimin verdiyi join kodunu daxil edin. Bir neçə qrupa qoşula bilərsiniz.
+      </p>
+
+      {enrollments.length > 0 && (
+        <Card className="p-4 mb-4 border border-[color:var(--border-subtle)]">
+          <div className="text-xs font-semibold uppercase tracking-wider text-token-textMuted mb-3">
+            Mövcud qruplarınız ({enrollments.length})
+          </div>
+          <ul className="space-y-2">
+            {enrollments.map((g) => (
+              <li
+                key={g.enrollment_id}
+                className="flex items-center gap-3 p-2 rounded-lg bg-black/[0.03] dark:bg-white/5"
+              >
+                <span
+                  className="w-2 h-2 rounded-full shrink-0"
+                  style={{ backgroundColor: g.color }}
+                />
+                <span className="text-sm text-token-textMain min-w-0 truncate">
+                  <strong>{g.group_name}</strong>
+                  <span className="text-token-textMuted"> — {g.instructor_name}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
+
+      <Card className="p-5 border border-[color:var(--border-subtle)]">
+        <form className="space-y-3" onSubmit={submit}>
           <input
             className={inputClass}
             value={code}
             onChange={(e) => setCode(e.target.value)}
-            placeholder="MX-00000"
+            placeholder="MX-97762"
             autoCapitalize="characters"
           />
           <Button className="w-full justify-center" loading={busy} type="submit">
             Qoşul
           </Button>
         </form>
-      </div>
+      </Card>
     </div>
   )
 }
-

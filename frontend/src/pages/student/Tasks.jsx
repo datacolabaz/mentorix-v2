@@ -8,6 +8,9 @@ import ReactQuill from 'react-quill'
 import 'react-quill/dist/quill.snow.css'
 import 'katex/dist/katex.min.css'
 import useUiStore from '../../hooks/useUi'
+import GroupSwitcher from '../../components/student/GroupSwitcher'
+import { useStudentGroups } from '../../contexts/StudentGroupContext'
+import { withEnrollmentQuery } from '../../lib/studentGroupQuery'
 
 function fmtDue(d) {
   if (!d) return ''
@@ -23,6 +26,7 @@ function fmtCreated(iso) {
 }
 
 export default function StudentAssignments() {
+  const { activeEnrollmentId, activeEnrollment } = useStudentGroups()
   const [loading, setLoading] = useState(true)
   const [tasks, setTasks] = useState([])
   const [err, setErr] = useState(null)
@@ -45,7 +49,7 @@ export default function StudentAssignments() {
     setLoading(true)
     setErr(null)
     try {
-      const d = await api.get('/tasks/my')
+      const d = await api.get(withEnrollmentQuery('/tasks/my', activeEnrollmentId))
       setTasks(Array.isArray(d.tasks) ? d.tasks : [])
     } catch (e) {
       setErr(e?.message || 'Yüklənmədi')
@@ -53,7 +57,7 @@ export default function StudentAssignments() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [activeEnrollmentId])
 
   useEffect(() => {
     void load()
@@ -161,10 +165,18 @@ export default function StudentAssignments() {
 
   return (
     <div className="p-4 sm:p-6 w-full min-w-0 max-w-4xl mx-auto">
-      <div className="flex items-end justify-between gap-3 mb-4">
-        <div>
-          <h1 className="font-display font-bold text-xl sm:text-2xl text-token-textMain pl-20 sm:pl-0">Tapşırıqlarım</h1>
-          <p className="text-token-textMuted text-sm mt-1 pl-20 sm:pl-0">Müəllimin sizə göndərdiyi tapşırıqlar.</p>
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-end gap-3 flex-1 min-w-0 pl-14 sm:pl-0">
+          <div className="min-w-0">
+            <h1 className="font-display font-bold text-xl sm:text-2xl text-token-textMain">Tapşırıqlarım</h1>
+            {activeEnrollment && (
+              <p className="text-sm text-token-textMuted mt-1">
+                {activeEnrollment.group_name} • {activeEnrollment.instructor_name}
+              </p>
+            )}
+            <p className="text-token-textMuted text-sm mt-1">Müəllimin sizə göndərdiyi tapşırıqlar.</p>
+          </div>
+          <GroupSwitcher className="w-full sm:w-auto sm:min-w-[200px] shrink-0" />
         </div>
         <Button variant="secondary" size="sm" onClick={() => void load()} disabled={loading}>
           Yenilə

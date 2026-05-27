@@ -139,9 +139,24 @@ const deleteInstructorAssignment = async (req, res) => {
   }
 };
 
+const { resolveEnrollmentScope } = require('../services/studentEnrollmentsService');
+
 const listMyTasks = async (req, res) => {
   try {
     const studentId = req.user.id;
+    const enrollmentId = String(req.query.enrollment_id || '').trim() || null;
+    const scope = enrollmentId ? await resolveEnrollmentScope(studentId, enrollmentId) : null;
+    if (enrollmentId && !scope) {
+      return res.status(404).json({ success: false, message: 'Qrup tapılmadı' });
+    }
+
+    const params = [studentId];
+    let instructorFilter = '';
+    if (scope?.instructor_id) {
+      params.push(scope.instructor_id);
+      instructorFilter = ` AND t.instructor_id = $${params.length}`;
+    }
+
     const { rows } = await db.query(
       `SELECT a.id AS assignment_id, a.status, a.done_at, a.submitted_at, a.seen_at, a.created_at AS assigned_at,
               t.id AS task_id, t.title, t.topic, t.description, t.due_date, t.created_at AS assignment_created_at,
@@ -149,11 +164,11 @@ const listMyTasks = async (req, res) => {
        FROM student_assignments a
        JOIN assignments t ON t.id = a.assignment_id
        JOIN users u ON u.id = t.instructor_id
-       WHERE a.student_id = $1
+       WHERE a.student_id = $1${instructorFilter}
        ORDER BY COALESCE(t.due_date, DATE '2999-12-31') ASC, t.created_at DESC`,
-      [studentId]
+      params,
     );
-    res.json({ success: true, tasks: rows });
+    res.json({ success: true, tasks: rows, enrollment_id: scope?.enrollment_id || null });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

@@ -522,9 +522,17 @@ const getInstructorMyLessonsCalendar = async (req, res) => {
   }
 };
 
+const { resolveEnrollmentScope } = require('../services/studentEnrollmentsService');
+
 const getMySchedule = async (req, res) => {
   try {
     const studentId = req.user.id;
+    const enrollmentId = String(req.query.enrollment_id || '').trim() || null;
+    const scope = enrollmentId ? await resolveEnrollmentScope(studentId, enrollmentId) : null;
+    if (enrollmentId && !scope) {
+      return res.status(404).json({ success: false, message: 'Qrup tapılmadı' });
+    }
+
     const { rows: prepSlots } = await db.query(
       `SELECT id, day_of_week, start_time, end_time, created_at
        FROM student_prep_slots
@@ -532,18 +540,32 @@ const getMySchedule = async (req, res) => {
        ORDER BY day_of_week, start_time`,
       [studentId]
     );
+    const lessonParams = [studentId];
+    let lessonFilter = 'l.student_id = $1';
+    if (scope?.enrollment_id) {
+      lessonParams.push(scope.enrollment_id);
+      lessonFilter += ` AND l.enrollment_id = $${lessonParams.length}`;
+    }
+
     const { rows: lessons } = await db.query(
       `SELECT l.id, l.enrollment_id, l.instructor_id, iu.full_name AS instructor_name,
               l.lesson_date, l.status, l.lesson_number, l.billing_cycle,
-              e.lesson_times AS enrollment_lesson_times
+              e.lesson_times AS enrollment_lesson_times,
+              ig.name AS group_name
        FROM lessons l
        JOIN users iu ON iu.id = l.instructor_id
        JOIN enrollments e ON e.id = l.enrollment_id
-       WHERE l.student_id = $1
+       LEFT JOIN instructor_groups ig ON ig.id = e.group_id
+       WHERE ${lessonFilter}
        ORDER BY l.lesson_date ASC`,
-      [studentId]
+      lessonParams,
     );
-    res.json({ success: true, lessons, prepSlots });
+    res.json({
+      success: true,
+      lessons,
+      prepSlots,
+      enrollment_id: scope?.enrollment_id || null,
+    });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

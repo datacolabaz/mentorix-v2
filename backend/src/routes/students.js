@@ -1007,28 +1007,39 @@ router.patch('/:id/phone', authenticate, authorize('admin', 'instructor'), async
 
 router.patch('/:id/email', authenticate, authorize('admin', 'instructor'), patchStudentEmail);
 
-// Student: get my linked teacher/class (active enrollment).
+const {
+  listActiveEnrollmentsForStudent,
+} = require('../services/studentEnrollmentsService');
+
+// Student: all active groups / enrollments.
+router.get('/my/enrollments', authenticate, authorize('student'), async (req, res) => {
+  try {
+    const enrollments = await listActiveEnrollmentsForStudent(req.user.id);
+    res.json({ success: true, enrollments, count: enrollments.length });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// Student: get my linked teacher/class (backward compat — first + full list).
 router.get('/my/link', authenticate, authorize('student'), async (req, res) => {
   try {
-    const { rows } = await db.query(
-      `SELECT e.id AS enrollment_id,
-              e.instructor_id,
-              ig.id AS group_id,
-              ig.name AS group_name,
-              COALESCE(NULLIF(TRIM(ist.name), ''), 'Sahəsiz') AS subject_name,
-              u.full_name AS instructor_name
-       FROM enrollments e
-       LEFT JOIN instructor_groups ig ON ig.id = e.group_id
-       LEFT JOIN instructor_subjects ist ON ist.id = e.subject_id
-       LEFT JOIN users u ON u.id = e.instructor_id
-       WHERE e.student_id = $1
-         AND COALESCE(LOWER(TRIM(e.status)), 'active') = 'active'
-       ORDER BY e.enrolled_at DESC NULLS LAST
-       LIMIT 1`,
-      [req.user.id],
-    );
-    const r = rows[0] || null;
-    res.json({ success: true, link: r });
+    const enrollments = await listActiveEnrollmentsForStudent(req.user.id);
+    const links = enrollments.map((e) => ({
+      enrollment_id: e.enrollment_id,
+      instructor_id: e.instructor_id,
+      group_id: e.group_id,
+      group_name: e.group_name,
+      subject_name: e.subject_name,
+      instructor_name: e.instructor_name,
+    }));
+    res.json({
+      success: true,
+      link: links[0] || null,
+      links,
+      enrollments,
+      count: enrollments.length,
+    });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -1063,26 +1074,23 @@ router.post('/my/join', authenticate, authorize('student'), async (req, res) => 
       return res.status(410).json({ success: false, code: 'EXPIRED_CODE', message: 'Kodun müddəti bitib' });
     }
 
-    // Prevent duplicate join (same group) and restrict to one active teacher by default.
     const { rows: existing } = await db.query(
       `SELECT id, instructor_id, group_id, status
        FROM enrollments
        WHERE student_id = $1
-         AND COALESCE(LOWER(TRIM(status)), 'active') = 'active'
-       ORDER BY enrolled_at DESC NULLS LAST
-       LIMIT 5`,
+         AND (deleted_at IS NULL)
+         AND COALESCE(LOWER(TRIM(status)), 'active') = 'active'`,
       [req.user.id],
     );
     const alreadyInGroup = existing.find((e) => String(e.group_id || '') === String(g.group_id));
     if (alreadyInGroup) {
-      return res.json({ success: true, code: 'ALREADY_JOINED', message: 'Bu qrupa artıq qoşulmusunuz' });
-    }
-    const hasOtherTeacher = existing.find((e) => String(e.instructor_id || '') !== String(g.instructor_id));
-    if (hasOtherTeacher) {
-      return res.status(409).json({
-        success: false,
-        code: 'ALREADY_LINKED',
-        message: 'Siz artıq başqa müəllimə qoşulmusunuz',
+      const enrollments = await listActiveEnrollmentsForStudent(req.user.id);
+      return res.json({
+        success: true,
+        code: 'ALREADY_JOINED',
+        message: 'Bu qrupa artıq qoşulmusunuz',
+        enrollment_id: alreadyInGroup.id,
+        enrollments,
       });
     }
 
@@ -1105,13 +1113,121 @@ router.post('/my/join', authenticate, authorize('student'), async (req, res) => 
       )
       .catch(() => {});
 
+    const enrollments = await listActiveEnrollmentsForStudent(req.user.id);
     return res.json({
       success: true,
       message: 'Qrupa qoşuldunuz',
       enrollment_id: enrollmentId,
       teacher_id: g.instructor_id,
       class: { id: g.group_id, name: g.group_name, subject: g.subject_name, join_code: g.join_code },
+      enrollments,
     });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// Student: dashboard overview (groups, pending tasks, upcoming exams, avg scores).
+router.get('/my/overview', authenticate, authorize('student'), async (req, res) => {
+  try {
+    const studentId = req.user.id;
+    const enrollments = await listActiveEnrollmentsForStudent(studentId);
+    const sidHex = String(studentId).trim().toLowerCase().replace(/-/g, '');
+
+    const { rows: examRows } = await db.query(
+      `SELECT e.id, e.title, e.instructor_id, e.start_time, e.available_from,
+              er.score, er.submitted_at
+       FROM exam_assignments ea
+       JOIN exams e ON e.id = ea.exam_id AND COALESCE(e.is_deleted, FALSE) = FALSE
+       LEFT JOIN LATERAL (
+         SELECT score, submitted_at FROM exam_results er0
+         WHERE er0.exam_id = e.id
+           AND REPLACE(LOWER(TRIM(er0.student_id::text)), '-', '') = $1
+         ORDER BY er0.submitted_at DESC NULLS LAST
+         LIMIT 1
+       ) er ON TRUE
+       WHERE REPLACE(LOWER(TRIM(ea.student_id::text)), '-', '') = $1`,
+      [sidHex],
+    );
+
+    const { rows: taskRows } = await db.query(
+      `SELECT a.status, t.instructor_id, t.due_date, t.title
+       FROM student_assignments a
+       JOIN assignments t ON t.id = a.assignment_id
+       WHERE a.student_id = $1`,
+      [studentId],
+    );
+
+    const now = Date.now();
+    const pendingTasks = taskRows.filter((t) => String(t.status).toLowerCase() === 'pending');
+    const upcomingExams = examRows.filter((e) => {
+      if (e.submitted_at) return false;
+      const start = e.available_from || e.start_time;
+      if (!start) return true;
+      return new Date(start).getTime() >= now - 86400000;
+    });
+
+    const byEnrollment = enrollments.map((enr) => {
+      const iid = String(enr.instructor_id);
+      const enrExams = examRows.filter((e) => String(e.instructor_id) === iid);
+      const doneScores = enrExams
+        .filter((e) => e.submitted_at && e.score != null)
+        .map((e) => Number(e.score))
+        .filter((n) => Number.isFinite(n));
+      const avgScore = doneScores.length
+        ? Math.round(doneScores.reduce((a, b) => a + b, 0) / doneScores.length)
+        : null;
+      return {
+        enrollment_id: enr.enrollment_id,
+        group_name: enr.group_name,
+        instructor_name: enr.instructor_name,
+        subject_name: enr.subject_name,
+        color: enr.color,
+        pending_tasks: pendingTasks.filter((t) => String(t.instructor_id) === iid).length,
+        upcoming_exams: upcomingExams.filter((e) => String(e.instructor_id) === iid).length,
+        avg_score: avgScore,
+      };
+    });
+
+    const allDone = examRows
+      .filter((e) => e.submitted_at && e.score != null)
+      .map((e) => Number(e.score))
+      .filter((n) => Number.isFinite(n));
+
+    res.json({
+      success: true,
+      groups_count: enrollments.length,
+      pending_tasks_total: pendingTasks.length,
+      upcoming_exams_total: upcomingExams.length,
+      avg_score_overall: allDone.length
+        ? Math.round(allDone.reduce((a, b) => a + b, 0) / allDone.length)
+        : null,
+      by_group: byEnrollment,
+      enrollments,
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// Student: leave a group (sets enrollment inactive — optional).
+router.post('/my/leave/:enrollmentId', authenticate, authorize('student'), async (req, res) => {
+  try {
+    const { rows } = await db.query(
+      `UPDATE enrollments
+       SET status = 'left'
+       WHERE id = $1
+         AND student_id = $2
+         AND (deleted_at IS NULL)
+         AND COALESCE(LOWER(TRIM(status)), 'active') = 'active'
+       RETURNING id`,
+      [req.params.enrollmentId, req.user.id],
+    );
+    if (!rows[0]) {
+      return res.status(404).json({ success: false, message: 'Aktiv qeydiyyat tapılmadı' });
+    }
+    const enrollments = await listActiveEnrollmentsForStudent(req.user.id);
+    res.json({ success: true, message: 'Qrupdan ayrıldınız', enrollments });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

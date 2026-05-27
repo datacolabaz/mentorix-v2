@@ -44,6 +44,8 @@ import StudentSchedule from './pages/student/Schedule'
 import StudentTasks from './pages/student/Tasks'
 import StudentNotifications from './pages/student/Notifications'
 import StudentJoinClass from './pages/student/JoinClass'
+import StudentMyGroups from './pages/student/MyGroups'
+import { StudentGroupProvider } from './contexts/StudentGroupContext'
 import ParentDashboard from './pages/parent/Dashboard'
 import CourseDashboard from './pages/course/Dashboard'
 import CourseTeachers from './pages/course/Teachers'
@@ -95,7 +97,14 @@ export default function App() {
       />
       <Route path="/" element={<Navigate to={user ? (user?.role ? `/${user.role}` : '/onboarding/role') : '/login'} />} />
 
-      <Route path="/join/:code" element={<StudentJoinClass />} />
+      <Route
+        path="/join/:code"
+        element={
+          <StudentGroupProvider>
+            <StudentJoinClass />
+          </StudentGroupProvider>
+        }
+      />
 
       <Route path="/admin" element={<ProtectedRoute roles={['admin']}><AdminLayout /></ProtectedRoute>}>
         <Route index element={<AdminDashboard />} />
@@ -135,6 +144,7 @@ export default function App() {
 
       <Route path="/student" element={<ProtectedRoute roles={['student']}><StudentLayout /></ProtectedRoute>}>
         <Route index element={<StudentDashboard />} />
+        <Route path="groups" element={<StudentMyGroups />} />
         <Route path="join" element={<StudentJoinClass />} />
         <Route path="schedule" element={<StudentSchedule />} />
         <Route path="exams" element={<StudentExams />} />
