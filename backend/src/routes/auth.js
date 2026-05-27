@@ -16,6 +16,7 @@ const {
   sendMyPhoneVerifyOtp,
   verifyMyPhoneVerifyOtp,
   verifyEmail,
+  selectOnboardingRole,
   signup,
   loginWithEmail,
   resendVerificationEmail,
@@ -56,6 +57,7 @@ router.post('/signup', signup);
 router.post('/login/email', loginWithEmail);
 router.post('/resend-verification', resendVerificationEmail);
 router.post('/verify-email', verifyEmail);
+router.post('/onboarding/role', authenticate, selectOnboardingRole);
 router.get('/me', authenticate, me);
 router.post('/pin/set', authenticate, setPin);
 router.post('/pin/login', loginWithPin);

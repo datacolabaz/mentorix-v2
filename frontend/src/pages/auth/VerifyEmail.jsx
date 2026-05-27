@@ -5,12 +5,14 @@ import Brand from '../../components/common/Brand'
 import Button from '../../components/common/Button'
 import { useToast } from '../../components/common/Toast'
 import { setPageSeo } from '../../lib/pageSeo'
+import useAuthStore from '../../hooks/useAuth'
 
 export default function VerifyEmail() {
   const [searchParams] = useSearchParams()
   const token = useMemo(() => String(searchParams.get('token') || '').trim(), [searchParams])
   const toast = useToast()
   const navigate = useNavigate()
+  const { setSession } = useAuthStore()
 
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('E-poçt təsdiqi prosesinə başlayır...')
@@ -37,6 +39,21 @@ export default function VerifyEmail() {
       setMessage('E-poçt təsdiqlənir...')
       try {
         const r = await api.post('/auth/verify-email', { token })
+        if (r?.token && r?.user) {
+          setSession(r.token, r.user)
+          if (r?.needs_role) {
+            setKind('success')
+            setMessage('Email təsdiqləndi. İndi rol seçin.')
+            toast('Email təsdiqləndi. Rol seçin.', 'success')
+            setTimeout(() => navigate('/onboarding/role', { replace: true }), 400)
+          } else {
+            setKind('success')
+            setMessage(r?.message || 'Email təsdiqləndi')
+            toast(r?.message || 'Email təsdiqləndi', 'success')
+            setTimeout(() => navigate(`/${r.user.role}`, { replace: true }), 400)
+          }
+          return
+        }
         setKind('success')
         setMessage(r?.message || 'Email təsdiqləndi')
         toast(r?.message || 'Email təsdiqləndi', 'success')

@@ -1,8 +1,10 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import Button from '../common/Button'
 import PhoneInput from './PhoneInput'
 import useAuthStore from '../../hooks/useAuth'
 import { useToast } from '../common/Toast'
+import api from '../../lib/api'
 
 const inputClass =
   'w-full bg-surface-1 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-primary/40'
@@ -12,7 +14,8 @@ const inputClass =
  */
 export default function InstructorEmailAuth({ onSuccess, onBack }) {
   const toast = useToast()
-  const { signupWithEmail, loginWithEmail, verifyEmailCode, resendVerificationEmail } = useAuthStore()
+  const { signupWithEmail, loginWithEmail, verifyEmailCode, resendVerificationEmail, setSession } = useAuthStore()
+  const navigate = useNavigate()
 
   const [tab, setTab] = useState('signup') // signup | login
   const [phase, setPhase] = useState('form') // form | verify
@@ -48,8 +51,15 @@ export default function InstructorEmailAuth({ onSuccess, onBack }) {
     e.preventDefault()
     setLoading(true)
     try {
-      const user = await loginWithEmail({ email, password, role: 'instructor' })
-      onSuccess?.(user)
+      const data = await api.post('/auth/login/email', { email, password })
+      if (data?.needs_role && data?.token && data?.user) {
+        setSession(data.token, data.user)
+        navigate('/onboarding/role', { replace: true })
+        return
+      }
+      if (!data?.token || !data?.user) throw new Error(data?.message || 'Server cavabı etibarsızdır')
+      setSession(data.token, data.user)
+      onSuccess?.(data.user)
     } catch (err) {
       const code = err?.code || err?.response?.data?.code
       if (code === 'EMAIL_NOT_VERIFIED') {
@@ -67,7 +77,18 @@ export default function InstructorEmailAuth({ onSuccess, onBack }) {
     e.preventDefault()
     setLoading(true)
     try {
-      await verifyEmailCode({ email, code: verifyCode })
+      const r = await verifyEmailCode({ email, code: verifyCode })
+      if (r?.token && r?.user) {
+        setSession(r.token, r.user)
+        if (r?.needs_role) {
+          toast('Email təsdiqləndi! İndi rol seçin.', 'success')
+          navigate('/onboarding/role', { replace: true })
+          return
+        }
+        toast('Email təsdiqləndi! Daxil oldunuz.', 'success')
+        onSuccess?.(r.user)
+        return
+      }
       toast('Email təsdiqləndi! İndi daxil ola bilərsiniz.', 'success')
       setTab('login')
       setPhase('form')

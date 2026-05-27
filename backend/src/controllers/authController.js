@@ -18,6 +18,7 @@ const PHONE_NORM = "regexp_replace(COALESCE(phone::text, ''), '[^0-9]', '', 'g')
 const LOGIN_ROLES = new Set(['instructor', 'student', 'parent', 'course']);
 
 const SIGNUP_ROLES = new Set(['instructor', 'course']);
+const ONBOARDING_ROLES = new Set(['instructor', 'student', 'course']);
 
 function normalizeEmailInput(email) {
   const e = String(email || '').trim().toLowerCase();
@@ -85,6 +86,22 @@ async function enrichUserForClient(userLite, sessionRole = null) {
   if (role === 'instructor') out = await attachInstructorPublicLabel(out);
   if (role === 'course') out = await attachCourseProfile(out);
   return out;
+}
+
+async function userNeedsRoleSelection(userId, fallbackRole = null) {
+  const roles = await getActiveRoles(userId);
+  if (roles.length > 0) return false;
+  const raw = String(fallbackRole || '').trim().toLowerCase();
+  if (raw && LOGIN_ROLES.has(raw)) return false;
+  return true;
+}
+
+async function loadUserLiteById(userId) {
+  const { rows } = await db.query(
+    'SELECT id, full_name, email, phone, role, phone_verified, is_active, is_verified FROM users WHERE id = $1 LIMIT 1',
+    [userId],
+  );
+  return rows[0] || null;
 }
 
 function normalizePhone(phone) {
@@ -786,8 +803,77 @@ const verifyEmail = async (req, res) => {
     }
 
     await clearVerificationFields(user.id);
+    const u = await loadUserLiteById(user.id);
+    const needsRole = await userNeedsRoleSelection(user.id, u?.role);
+    const sessionRole = needsRole ? null : (u?.role || null);
+    const sessionToken = sign({ id: user.id, role: sessionRole });
+    const userOut = u ? await enrichUserForClient(u, sessionRole) : null;
 
-    return res.json({ success: true, message: 'Email təsdiqləndi' });
+    return res.json({
+      success: true,
+      message: 'Email təsdiqləndi',
+      needs_role: needsRole,
+      token: sessionToken,
+      user: userOut || { id: user.id, email: u?.email || null, role: sessionRole },
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/** Email OTP verifikasiyasından sonra rol seçimi (müəllim / tələbə / kurs) */
+const selectOnboardingRole = async (req, res) => {
+  try {
+    const picked = String(req.body?.role || '').trim().toLowerCase();
+    if (!picked || !ONBOARDING_ROLES.has(picked)) {
+      return res.status(400).json({ success: false, message: 'Rol seçin: müəllim, tələbə və ya kurs' });
+    }
+
+    const me = await loadUserLiteById(req.user.id);
+    if (!me || me.is_active === false) return res.status(404).json({ success: false, message: 'Tapılmadı' });
+    if (!guardEmailVerifiedBeforeToken(res, me)) return;
+
+    const needsRole = await userNeedsRoleSelection(me.id, me.role);
+    const effectiveRole = needsRole ? picked : (me.role || (await getActiveRoles(me.id))[0] || picked);
+
+    if (needsRole) {
+      await db.transaction(async (client) => {
+        await client.query(`UPDATE users SET role = $2 WHERE id = $1 AND (role IS NULL OR TRIM(role) = '')`, [
+          me.id,
+          picked,
+        ]);
+        await grantUserRole(me.id, picked, client);
+
+        if (picked === 'instructor') {
+          await client.query(
+            `INSERT INTO instructor_profiles (user_id, subject, billing_type)
+             VALUES ($1, NULL, '8_lessons')
+             ON CONFLICT (user_id) DO NOTHING`,
+            [me.id],
+          );
+          // Instructor hesabı üçün kurs paneli də açıq olsun.
+          await grantCourseRoleToUser(me.id, me.full_name || 'Kurs');
+        } else if (picked === 'course') {
+          await client.query(
+            `INSERT INTO course_profiles (user_id, course_name)
+             VALUES ($1, $2)
+             ON CONFLICT (user_id) DO NOTHING`,
+            [me.id, me.full_name || 'Kurs'],
+          );
+        } else if (picked === 'student') {
+          const up = await client.query('UPDATE student_profiles SET updated_at = NOW() WHERE user_id = $1', [me.id]);
+          if (up.rowCount === 0) {
+            await client.query('INSERT INTO student_profiles (user_id) VALUES ($1)', [me.id]).catch(() => {});
+          }
+        }
+      });
+    }
+
+    const fresh = await loadUserLiteById(me.id);
+    const role = String(effectiveRole || fresh?.role || picked).trim().toLowerCase();
+    const token = sign({ id: me.id, role });
+    const userOut = await enrichUserForClient(fresh || me, role);
+    return res.json({ success: true, token, user: userOut });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -894,10 +980,7 @@ const loginWithEmail = async (req, res) => {
     const pass = String(password || '');
     if (!pass) return res.status(400).json({ success: false, message: 'Şifrə tələb olunur' });
 
-    const role = String(roleRaw || 'instructor').trim().toLowerCase();
-    if (!SIGNUP_ROLES.has(role)) {
-      return res.status(400).json({ success: false, message: 'Rol dəstəklənmir' });
-    }
+    const requestedRole = String(roleRaw || '').trim().toLowerCase();
 
     const { rows } = await db.query(
       `SELECT u.*
@@ -914,11 +997,23 @@ const loginWithEmail = async (req, res) => {
 
     const roles = await getActiveRoles(user.id);
     const allowed = roles.length ? roles : user.role ? [user.role] : [];
-    if (!allowed.includes(role)) {
-      return res.status(403).json({
-        success: false,
-        message: `Bu hesab "${role}" rolu ilə giriş üçün uyğun deyil`,
+    if (allowed.length === 0) {
+      if (!guardEmailVerifiedBeforeToken(res, user)) return;
+      const token = sign({ id: user.id, role: null });
+      return res.json({
+        success: true,
+        needs_role: true,
+        token,
+        user: { id: user.id, full_name: user.full_name, email: user.email, role: null, phone: user.phone },
       });
+    }
+
+    const role = requestedRole || String(allowed[0] || '').trim().toLowerCase();
+    if (!role || !LOGIN_ROLES.has(role)) {
+      return res.status(400).json({ success: false, message: 'Rol seçin: müəllim, tələbə və ya kurs' });
+    }
+    if (!allowed.includes(role)) {
+      return res.status(403).json({ success: false, message: `Bu hesab "${role}" rolu ilə giriş üçün uyğun deyil` });
     }
 
     if (!guardEmailVerifiedBeforeToken(res, user)) return;
@@ -1688,6 +1783,7 @@ module.exports = {
   verifyOtp,
   register,
   verifyEmail,
+  selectOnboardingRole,
   signup,
   loginWithEmail,
   resendVerificationEmail,

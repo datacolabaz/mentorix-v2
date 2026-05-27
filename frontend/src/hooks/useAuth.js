@@ -140,6 +140,13 @@ const useAuthStore = create((set) => ({
 
   resendVerificationEmail: async (email) => api.post('/auth/resend-verification', { email }),
 
+  setSession: (token, user) => {
+    if (!token || !user) return
+    localStorage.setItem('mx_token', token)
+    localStorage.setItem('mx_user', JSON.stringify(user))
+    set({ user, token })
+  },
+
   logout: () => {
     localStorage.removeItem('mx_token')
     localStorage.removeItem('mx_user')
