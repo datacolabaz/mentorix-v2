@@ -25,6 +25,13 @@ function normalizePhoneDigits(phone) {
   return String(phone || '').replace(/\D/g, '');
 }
 
+function canonicalPhoneForJoin(phone) {
+  const clean = normalizePhoneDigits(phone);
+  if (!clean) return null;
+  if (clean.startsWith('994')) return `+${clean}`;
+  return clean;
+}
+
 function sameUuid(a, b) {
   if (a == null || b == null) return false;
   return String(a).replace(/-/g, '').toLowerCase() === String(b).replace(/-/g, '').toLowerCase();
@@ -1381,6 +1388,18 @@ router.post('/my/join', authenticate, authorize('student'), async (req, res) => 
     const raw = String(req.body?.code || '').trim().toUpperCase();
     const code = raw.replace(/\s+/g, '');
     if (!code) return res.status(400).json({ success: false, message: 'Join kodu tələb olunur' });
+
+    // If student account has no phone yet, allow setting it at join time (student-provided).
+    const joinPhone = canonicalPhoneForJoin(req.body?.phone);
+    if (joinPhone) {
+      await db.query(
+        `UPDATE users
+         SET phone = $2
+         WHERE id = $1
+           AND (phone IS NULL OR TRIM(phone::text) = '')`,
+        [req.user.id, joinPhone],
+      ).catch(() => {});
+    }
 
     const { rows: grpRows } = await db.query(
       `SELECT ig.id AS group_id,

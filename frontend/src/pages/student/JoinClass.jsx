@@ -10,10 +10,13 @@ import { useStudentGroupsOptional } from '../../contexts/StudentGroupContext'
 const inputClass =
   'w-full border border-[color:var(--border-subtle)] rounded-xl px-4 py-4 text-token-textMain text-lg outline-none focus:border-primary/40 text-center tracking-widest bg-token-surfaceCard/55'
 
+const phoneInputClass =
+  'w-full border border-[color:var(--border-subtle)] rounded-xl px-4 py-3 text-token-textMain text-sm outline-none focus:border-primary/40 bg-token-surfaceCard/55'
+
 export default function JoinClass() {
   const toast = useToast()
   const navigate = useNavigate()
-  const { user } = useAuthStore()
+  const { user, updateUser } = useAuthStore()
   const ctx = useStudentGroupsOptional()
   const enrollments = ctx?.enrollments ?? []
   const refreshEnrollments = ctx?.refreshEnrollments ?? (async () => [])
@@ -27,19 +30,26 @@ export default function JoinClass() {
   }, [params.code, searchParams])
 
   const [code, setCode] = useState(initialCode)
+  const [phone, setPhone] = useState(user?.phone || '')
   const [busy, setBusy] = useState(false)
 
   const submit = async (e) => {
     e?.preventDefault?.()
     const v = String(code || '').trim().toUpperCase().replace(/\s+/g, '')
     if (!v) return toast('Kodu daxil edin', 'error')
+    const needsPhone = !(user?.phone && String(user.phone).trim())
+    const p = String(phone || '').trim()
+    if (needsPhone && !p) return toast('Telefon nömrəsini daxil edin', 'error')
     setBusy(true)
     try {
-      const r = await api.post('/students/my/join', { code: v })
+      const body = { code: v }
+      if (needsPhone && p) body.phone = p
+      const r = await api.post('/students/my/join', body)
       toast(
         r?.message || 'Qrupa qoşuldunuz. Müəlliminiz qeydiyyatı tamamlayacaq.',
         'success',
       )
+      if (needsPhone && p) updateUser({ phone: p })
       if (r?.enrollment_id) setActiveEnrollmentId(r.enrollment_id)
       await refreshEnrollments()
       navigate('/student/groups', { replace: true })
@@ -102,6 +112,24 @@ export default function JoinClass() {
 
       <Card className="p-5 border border-[color:var(--border-subtle)]">
         <form className="space-y-3" onSubmit={submit}>
+          {(!user?.phone || !String(user.phone).trim()) && (
+            <div className="space-y-1">
+              <label className="block text-xs font-semibold text-token-textMuted uppercase tracking-wider">
+                Telefon (məcburi)
+              </label>
+              <input
+                className={phoneInputClass}
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="+994501234567"
+                inputMode="tel"
+                autoComplete="tel"
+              />
+              <p className="text-[11px] text-token-textMuted">
+                Müəllim artıq telefonu yazmayacaq — burada daxil etdiyiniz nömrə profilinizdə saxlanılır.
+              </p>
+            </div>
+          )}
           <input
             className={inputClass}
             value={code}
