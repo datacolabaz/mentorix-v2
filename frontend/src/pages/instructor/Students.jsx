@@ -734,6 +734,17 @@ export default function InstructorStudents() {
   const isPendingSetup = (s) =>
     String(s?.enrollment_status || '').toLowerCase() === 'pending_setup'
 
+  /** Join kodu və ya köhnə aktiv qeydiyyat — cədvəl/paket tamamlanmayıb */
+  const needsSetup = (s) => {
+    if (isPendingSetup(s)) return true
+    const days = normalizeWeekdays(s?.lesson_weekdays)
+    if (!days.length) return true
+    if (!s?.configured_at && String(s?.enrollment_status || '').toLowerCase() === 'active') {
+      return true
+    }
+    return false
+  }
+
   const createTeachingSubject = async (name) => {
     const d = await api.post('/instructor/teaching/subjects', { name })
     const s = d?.subject
@@ -1041,7 +1052,7 @@ export default function InstructorStudents() {
   const pendingStudents = useMemo(() => {
     const q = String(search || '').trim().toLowerCase()
     return students.filter((s) => {
-      if (!isPendingSetup(s)) return false
+      if (!needsSetup(s)) return false
       if (!q) return true
       const name = String(s?.full_name || '').toLowerCase()
       const phone = String(s?.phone || '').toLowerCase()
@@ -1049,10 +1060,22 @@ export default function InstructorStudents() {
     })
   }, [students, search])
 
+  const pendingToastShown = useRef(false)
+  useEffect(() => {
+    if (listLoading || pendingToastShown.current) return
+    if (pendingStudents.length > 0) {
+      pendingToastShown.current = true
+      toast(
+        `${pendingStudents.length} tələbə quraşdırma gözləyir — yuxarıdakı sarı blokdan tamamlayın`,
+        'info',
+      )
+    }
+  }, [listLoading, pendingStudents.length, toast])
+
   const grouped = useMemo(() => {
     const byKey = new Map()
     for (const s of students) {
-      if (isPendingSetup(s)) continue
+      if (needsSetup(s)) continue
       const subject = String(s.track_subject_name || 'Sahəsiz').trim() || 'Sahəsiz'
       const group = String(s.track_group_name || 'Qrup yoxdur').trim() || 'Qrup yoxdur'
       const key = `${subject}__${group}`
@@ -1631,9 +1654,9 @@ export default function InstructorStudents() {
                             <div className="min-w-0">
                               <div className="font-semibold text-token-textMain truncate flex items-center gap-2">
                                 {s.full_name}
-                                {isPendingSetup(s) && (
+                                {needsSetup(s) && (
                                   <StatusBadge variant="due" className="text-[10px]">
-                                    Gözləyir
+                                    Quraşdırma lazım
                                   </StatusBadge>
                                 )}
                               </div>
@@ -1647,6 +1670,15 @@ export default function InstructorStudents() {
                           </div>
 
                           <div className="flex items-center gap-2 shrink-0">
+                            {needsSetup(s) && (
+                              <Button
+                                size="sm"
+                                className="hidden sm:inline-flex"
+                                onClick={() => openCompleteSetup(s)}
+                              >
+                                Quraşdır
+                              </Button>
+                            )}
                             <div className="hidden sm:flex items-center gap-2">
                               <StatusBadge variant={pay.variant}>{pay.label}</StatusBadge>
                               <StatusBadge variant="neutral">{packLabel}</StatusBadge>
@@ -1698,7 +1730,7 @@ export default function InstructorStudents() {
                                 width={176}
                               >
                                 <div className="py-1">
-                                  {isPendingSetup(s) && (
+                                  {needsSetup(s) && (
                                     <button
                                       type="button"
                                       className="w-full text-left px-3 py-2 text-sm text-amber-200 hover:bg-amber-500/10 font-semibold"
