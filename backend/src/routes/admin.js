@@ -1,8 +1,14 @@
 const router = require('express').Router();
 const {
-  getInstructors, updateInstructorLimits,
-  getDashboardStats, toggleInstructor,
+  getInstructors,
+  updateInstructorLimits,
+  getDashboardStats,
+  toggleInstructor,
   updateInstructorPlan,
+  getStudents,
+  getStudentById,
+  toggleStudent,
+  getClasses,
 } = require('../controllers/adminController');
 const {
   getAdminLoginMarketing,
@@ -16,6 +22,10 @@ const { fulfillBillingPayment, rejectBillingPayment } = require('../services/bil
 const { adminGetBillingSettings, adminUpdateBillingSettings } = require('../services/billingSettingsService');
 
 router.get('/stats', authenticate, authorize('admin'), getDashboardStats);
+router.get('/students', authenticate, authorize('admin'), getStudents);
+router.get('/students/:id', authenticate, authorize('admin'), getStudentById);
+router.patch('/students/:id/toggle', authenticate, authorize('admin'), toggleStudent);
+router.get('/classes', authenticate, authorize('admin'), getClasses);
 router.get('/marketing/login', authenticate, authorize('admin'), getAdminLoginMarketing);
 router.put('/marketing/login', authenticate, authorize('admin'), putAdminLoginMarketing);
 router.get('/instructors', authenticate, authorize('admin'), getInstructors);

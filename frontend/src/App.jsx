@@ -14,6 +14,8 @@ import CourseLayout from './layouts/CourseLayout'
 
 import AdminDashboard from './pages/admin/Dashboard'
 import AdminInstructors from './pages/admin/Instructors'
+import AdminStudents from './pages/admin/Students'
+import AdminClasses from './pages/admin/Classes'
 import AdminPayments from './pages/admin/Payments'
 import AdminNotifications from './pages/admin/Notifications'
 import AdminSettings from './pages/admin/Settings'
@@ -98,6 +100,8 @@ export default function App() {
       <Route path="/admin" element={<ProtectedRoute roles={['admin']}><AdminLayout /></ProtectedRoute>}>
         <Route index element={<AdminDashboard />} />
         <Route path="instructors" element={<AdminInstructors />} />
+        <Route path="students" element={<AdminStudents />} />
+        <Route path="classes" element={<AdminClasses />} />
         <Route path="payments" element={<AdminPayments />} />
         <Route path="billing" element={<AdminBilling />} />
         <Route path="notifications" element={<AdminNotifications />} />

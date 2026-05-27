@@ -94,33 +94,312 @@ const updateInstructorPlan = async (req, res) => {
 // Admin dashboard stats
 const getDashboardStats = async (req, res) => {
   try {
-    const [instructors, students, payments] = await Promise.all([
+    const [
+      instructors,
+      studentsTotal,
+      studentsEnrolled,
+      classes,
+      subscriptions,
+      tuitionRevenue,
+      platformRevenue,
+      exams,
+      unassignedStudents,
+    ] = await Promise.all([
       db.query(
         `SELECT COUNT(*)::int AS count
          FROM users
          WHERE role = 'instructor' AND is_active = TRUE AND deleted_at IS NULL`
       ),
       db.query(
+        `SELECT COUNT(*)::int AS count
+         FROM users
+         WHERE role = 'student' AND deleted_at IS NULL`
+      ),
+      db.query(
         `SELECT COUNT(DISTINCT e.student_id)::int AS count
          FROM enrollments e
          ${ACTIVE_ENROLLMENT_JOIN_INLINE}`
       ),
+      db.query(`SELECT COUNT(*)::int AS count FROM instructor_groups`),
       db.query(
-        `SELECT COALESCE(SUM(amount),0) AS total FROM payments
-         WHERE status='completed'
+        `SELECT COUNT(*)::int AS count
+         FROM subscriptions
+         WHERE LOWER(TRIM(COALESCE(status, ''))) = 'active'`
+      ),
+      db.query(
+        `SELECT COALESCE(SUM(amount), 0) AS total FROM payments
+         WHERE status = 'completed'
            AND (deleted_at IS NULL)
            AND (notes IS NULL OR TRIM(notes) NOT LIKE '[Balans düzəlişi]%')`
       ),
+      db.query(
+        `SELECT COALESCE(SUM(amount_cents), 0)::bigint AS total_cents
+         FROM billing_payments
+         WHERE LOWER(TRIM(status)) = 'paid'`
+      ),
+      db.query(
+        `SELECT COUNT(*)::int AS count
+         FROM exams
+         WHERE COALESCE(is_deleted, FALSE) = FALSE`
+      ),
+      db.query(
+        `SELECT COUNT(*)::int AS count
+         FROM users u
+         WHERE u.role = 'student'
+           AND u.deleted_at IS NULL
+           AND NOT EXISTS (
+             SELECT 1 FROM enrollments e
+             WHERE e.student_id = u.id
+               AND e.deleted_at IS NULL
+               AND COALESCE(e.status, 'active') = 'active'
+               AND e.instructor_id IS NOT NULL
+           )`
+      ),
     ]);
+
+    const tuition = parseFloat(tuitionRevenue.rows[0].total) || 0;
+    const platform = (Number(platformRevenue.rows[0].total_cents) || 0) / 100;
 
     res.json({
       success: true,
       stats: {
-        instructors: parseInt(instructors.rows[0].count),
-        students: parseInt(students.rows[0].count),
-        revenue: parseFloat(payments.rows[0].total),
+        instructors: parseInt(instructors.rows[0].count, 10),
+        students: parseInt(studentsTotal.rows[0].count, 10),
+        students_enrolled: parseInt(studentsEnrolled.rows[0].count, 10),
+        students_unassigned: parseInt(unassignedStudents.rows[0].count, 10),
+        classes: parseInt(classes.rows[0].count, 10),
+        subscriptions: parseInt(subscriptions.rows[0].count, 10),
+        exams: parseInt(exams.rows[0].count, 10),
+        revenue: tuition + platform,
+        revenue_tuition: tuition,
+        revenue_platform: platform,
       },
     });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+const buildStudentListQuery = (filters) => {
+  const params = [];
+  const where = [`u.role = 'student'`, `u.deleted_at IS NULL`];
+
+  if (filters.q) {
+    params.push(`%${filters.q}%`);
+    const i = params.length;
+    where.push(`(
+      u.full_name ILIKE $${i}
+      OR COALESCE(u.email, '') ILIKE $${i}
+      OR COALESCE(u.phone, '') ILIKE $${i}
+    )`);
+  }
+
+  if (filters.instructor) {
+    params.push(`%${filters.instructor}%`);
+    where.push(`COALESCE(iu.full_name, '') ILIKE $${params.length}`);
+  }
+
+  if (filters.className) {
+    params.push(`%${filters.className}%`);
+    where.push(`COALESCE(ig.name, '') ILIKE $${params.length}`);
+  }
+
+  if (filters.status === 'active') where.push('u.is_active = TRUE');
+  if (filters.status === 'inactive') where.push('u.is_active = FALSE');
+
+  if (filters.unassigned === 'true' || filters.unassigned === '1') {
+    where.push(`e.id IS NULL`);
+  } else if (filters.unassigned === 'false' || filters.unassigned === '0') {
+    where.push(`e.id IS NOT NULL`);
+  }
+
+  const sql = `
+    SELECT
+      u.id,
+      u.full_name,
+      u.email,
+      u.phone,
+      u.is_active,
+      u.is_verified,
+      u.created_at,
+      e.id AS enrollment_id,
+      e.status AS enrollment_status,
+      e.instructor_id,
+      iu.full_name AS instructor_name,
+      e.group_id,
+      ig.name AS group_name,
+      ig.join_code AS group_join_code,
+      (e.id IS NULL) AS is_unassigned
+    FROM users u
+    LEFT JOIN LATERAL (
+      SELECT e2.*
+      FROM enrollments e2
+      WHERE e2.student_id = u.id
+        AND e2.deleted_at IS NULL
+        AND COALESCE(e2.status, 'active') = 'active'
+        AND e2.instructor_id IS NOT NULL
+      ORDER BY e2.id DESC
+      LIMIT 1
+    ) e ON TRUE
+    LEFT JOIN users iu ON iu.id = e.instructor_id AND iu.deleted_at IS NULL
+    LEFT JOIN instructor_groups ig ON ig.id = e.group_id
+    WHERE ${where.join(' AND ')}
+    ORDER BY u.created_at DESC NULLS LAST, u.full_name ASC`;
+
+  return { sql, params };
+};
+
+const getStudents = async (req, res) => {
+  try {
+    const filters = {
+      q: String(req.query.q || req.query.name || '').trim() || null,
+      instructor: String(req.query.instructor || req.query.teacher || '').trim() || null,
+      className: String(req.query.class || req.query.course || '').trim() || null,
+      status: String(req.query.status || '').trim().toLowerCase() || null,
+      unassigned: req.query.unassigned != null ? String(req.query.unassigned) : null,
+    };
+    const { sql, params } = buildStudentListQuery(filters);
+    const { rows } = await db.query(sql, params);
+    res.json({ success: true, students: rows });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+const getStudentById = async (req, res) => {
+  try {
+    const id = req.params.id;
+    const { rows: users } = await db.query(
+      `SELECT id, full_name, email, phone, is_active, is_verified, created_at
+       FROM users
+       WHERE id = $1 AND role = 'student' AND deleted_at IS NULL
+       LIMIT 1`,
+      [id],
+    );
+    if (!users[0]) {
+      return res.status(404).json({ success: false, message: 'Tələbə tapılmadı' });
+    }
+
+    const { rows: enrollments } = await db.query(
+      `SELECT
+         e.id,
+         e.status,
+         e.enrollment_start_date,
+         e.instructor_id,
+         iu.full_name AS instructor_name,
+         iu.phone AS instructor_phone,
+         e.group_id,
+         ig.name AS group_name,
+         ig.join_code AS group_join_code,
+         ist.name AS subject_name
+       FROM enrollments e
+       LEFT JOIN users iu ON iu.id = e.instructor_id
+       LEFT JOIN instructor_groups ig ON ig.id = e.group_id
+       LEFT JOIN instructor_subjects ist ON ist.id = e.subject_id
+       WHERE e.student_id = $1 AND e.deleted_at IS NULL
+       ORDER BY e.id DESC`,
+      [id],
+    );
+
+    const { rows: profileRows } = await db.query(
+      `SELECT parent_name, parent_phone, parent_email, grade, school
+       FROM student_profiles
+       WHERE user_id = $1
+       LIMIT 1`,
+      [id],
+    ).catch(() => ({ rows: [] }));
+
+    const active = enrollments.find((e) => String(e.status || 'active').toLowerCase() === 'active');
+    res.json({
+      success: true,
+      student: users[0],
+      profile: profileRows[0] || null,
+      enrollments,
+      link: active
+        ? {
+            instructor_id: active.instructor_id,
+            instructor_name: active.instructor_name,
+            group_id: active.group_id,
+            group_name: active.group_name,
+            join_code: active.group_join_code,
+          }
+        : null,
+      is_unassigned: !active,
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+const toggleStudent = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const isActive = req.body?.is_active;
+    if (typeof isActive !== 'boolean') {
+      return res.status(400).json({ success: false, message: 'is_active (boolean) tələb olunur' });
+    }
+    const { rows } = await db.query(
+      `UPDATE users SET is_active = $1
+       WHERE id = $2 AND role = 'student' AND deleted_at IS NULL
+       RETURNING id, is_active`,
+      [isActive, id],
+    );
+    if (!rows[0]) {
+      return res.status(404).json({ success: false, message: 'Tələbə tapılmadı' });
+    }
+    res.json({ success: true, student: rows[0] });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+const getClasses = async (req, res) => {
+  try {
+    const filters = {
+      q: String(req.query.q || '').trim() || null,
+      instructor: String(req.query.instructor || req.query.teacher || '').trim() || null,
+    };
+    const params = [];
+    const where = ['TRUE'];
+
+    if (filters.q) {
+      params.push(`%${filters.q}%`);
+      where.push(`ig.name ILIKE $${params.length}`);
+    }
+    if (filters.instructor) {
+      params.push(`%${filters.instructor}%`);
+      where.push(`iu.full_name ILIKE $${params.length}`);
+    }
+
+    const { rows } = await db.query(
+      `SELECT
+         ig.id,
+         ig.name,
+         ig.join_code,
+         ig.join_code_expires_at,
+         ig.created_at,
+         ig.instructor_id,
+         iu.full_name AS instructor_name,
+         iu.phone AS instructor_phone,
+         COALESCE(NULLIF(TRIM(ist.name), ''), 'Sahəsiz') AS subject,
+         COALESCE(cnt.n, 0)::int AS student_count
+       FROM instructor_groups ig
+       JOIN users iu ON iu.id = ig.instructor_id AND iu.deleted_at IS NULL
+       LEFT JOIN instructor_subjects ist ON ist.id = ig.subject_id
+       LEFT JOIN (
+         SELECT e.group_id, COUNT(DISTINCT e.student_id) AS n
+         FROM enrollments e
+         JOIN users su ON su.id = e.student_id AND su.role = 'student' AND su.deleted_at IS NULL
+         WHERE e.deleted_at IS NULL
+           AND COALESCE(e.status, 'active') = 'active'
+           AND e.group_id IS NOT NULL
+         GROUP BY e.group_id
+       ) cnt ON cnt.group_id = ig.id
+       WHERE ${where.join(' AND ')}
+       ORDER BY ig.created_at DESC NULLS LAST, ig.name ASC`,
+      params,
+    );
+    res.json({ success: true, classes: rows });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -138,4 +417,14 @@ const toggleInstructor = async (req, res) => {
   }
 };
 
-module.exports = { getInstructors, updateInstructorLimits, updateInstructorPlan, getDashboardStats, toggleInstructor };
+module.exports = {
+  getInstructors,
+  updateInstructorLimits,
+  updateInstructorPlan,
+  getDashboardStats,
+  toggleInstructor,
+  getStudents,
+  getStudentById,
+  toggleStudent,
+  getClasses,
+};

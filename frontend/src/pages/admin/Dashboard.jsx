@@ -32,11 +32,13 @@ export default function AdminDashboard() {
         <p className="text-gray-400 text-sm mt-1">{new Date().toLocaleDateString('az-AZ', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
       </div>
 
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
         <StatCard label="Müəllimlər" value={stats?.instructors ?? '—'} icon="👨‍🏫" />
-        <StatCard label="Tələbələr (aktiv)" value={stats?.students ?? '—'} icon="🎓" />
+        <StatCard label="Tələbələr" value={stats?.students ?? '—'} icon="🎓" />
+        <StatCard label="Qruplar" value={stats?.classes ?? '—'} icon="📚" />
+        <StatCard label="Aktiv abunə" value={stats?.subscriptions ?? '—'} icon="⭐" />
         <StatCard
-          label="Gəlir"
+          label="Gəlir (cəmi)"
           value={
             stats
               ? `₼${Number(stats.revenue || 0).toLocaleString('az-AZ', { maximumFractionDigits: 0 })}`
@@ -44,6 +46,9 @@ export default function AdminDashboard() {
           }
           icon="💰"
         />
+        <StatCard label="İmtahanlar" value={stats?.exams ?? '—'} icon="📝" />
+        <StatCard label="Bağlı tələbə" value={stats?.students_enrolled ?? '—'} icon="🔗" />
+        <StatCard label="Təyin olunmamış" value={stats?.students_unassigned ?? '—'} icon="⚠️" />
       </div>
 
       <Card className="p-5">
