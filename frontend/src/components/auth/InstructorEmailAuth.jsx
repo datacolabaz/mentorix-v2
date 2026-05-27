@@ -26,6 +26,7 @@ export default function InstructorEmailAuth({ onSuccess, onBack }) {
   const [password, setPassword] = useState('')
   const [phone, setPhone] = useState('')
   const [verifyCode, setVerifyCode] = useState('')
+  const [role, setRole] = useState('student') // student | instructor | course
 
   const handleSignup = async (e) => {
     e.preventDefault()
@@ -36,7 +37,7 @@ export default function InstructorEmailAuth({ onSuccess, onBack }) {
         email,
         password,
         phone: phone || undefined,
-        role: 'instructor',
+        role,
       })
       setPhase('verify')
       toast('Təsdiq kodu və link emailinizə göndərildi', 'success')
@@ -51,7 +52,7 @@ export default function InstructorEmailAuth({ onSuccess, onBack }) {
     e.preventDefault()
     setLoading(true)
     try {
-      const data = await api.post('/auth/login/email', { email, password })
+      const data = await api.post('/auth/login/email', { email, password, role })
       if (data?.needs_role && data?.token && data?.user) {
         setSession(data.token, data.user)
         navigate('/onboarding/role', { replace: true })
@@ -166,6 +167,27 @@ export default function InstructorEmailAuth({ onSuccess, onBack }) {
 
   return (
     <div className="space-y-4">
+      <div className="grid grid-cols-3 gap-2">
+        {[
+          { key: 'student', label: 'Tələbə' },
+          { key: 'instructor', label: 'Müəllim' },
+          { key: 'course', label: 'Kurs' },
+        ].map((r) => (
+          <button
+            key={r.key}
+            type="button"
+            onClick={() => setRole(r.key)}
+            className={[
+              'px-3 py-2 rounded-xl border text-xs font-semibold transition-colors',
+              role === r.key
+                ? 'border-primary/60 bg-primary/10 text-white'
+                : 'border-white/10 bg-white/5 text-gray-300 hover:bg-white/10',
+            ].join(' ')}
+          >
+            {r.label}
+          </button>
+        ))}
+      </div>
       <div className="flex rounded-xl border border-white/10 overflow-hidden text-sm font-semibold">
         <button
           type="button"

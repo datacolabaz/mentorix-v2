@@ -19,7 +19,8 @@ const authenticate = async (req, res, next) => {
     if (!isUserEmailVerified(row)) {
       return respondEmailNotVerified(res);
     }
-    req.user = { ...payload, role: payload.role || row.role };
+    const effectiveRole = row?.role_selected === false ? null : (payload.role || row.role);
+    req.user = { ...payload, role: effectiveRole };
     next();
   } catch {
     res.status(401).json({ success: false, message: 'Token etibarsızdır' });

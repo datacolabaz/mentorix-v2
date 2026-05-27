@@ -23,7 +23,7 @@ function respondEmailNotVerified(res) {
 /** DB-dən cari verification status (hər sessiya yoxlaması üçün). */
 async function fetchUserAuthState(userId) {
   const { rows } = await db.query(
-    `SELECT id, role, is_active, is_verified
+    `SELECT id, role, is_active, is_verified, role_selected
      FROM users
      WHERE id = $1
      LIMIT 1`,

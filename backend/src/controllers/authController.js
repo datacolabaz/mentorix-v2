@@ -89,6 +89,12 @@ async function enrichUserForClient(userLite, sessionRole = null) {
 }
 
 async function userNeedsRoleSelection(userId, fallbackRole = null) {
+  try {
+    const { rows } = await db.query('SELECT role_selected FROM users WHERE id = $1 LIMIT 1', [userId]);
+    if (rows[0]?.role_selected === false) return true;
+  } catch {
+    // ignore
+  }
   const roles = await getActiveRoles(userId);
   if (roles.length > 0) return false;
   const raw = String(fallbackRole || '').trim().toLowerCase();
@@ -98,7 +104,7 @@ async function userNeedsRoleSelection(userId, fallbackRole = null) {
 
 async function loadUserLiteById(userId) {
   const { rows } = await db.query(
-    'SELECT id, full_name, email, phone, role, phone_verified, is_active, is_verified FROM users WHERE id = $1 LIMIT 1',
+    'SELECT id, full_name, email, phone, role, phone_verified, is_active, is_verified, role_selected FROM users WHERE id = $1 LIMIT 1',
     [userId],
   );
   return rows[0] || null;
@@ -814,7 +820,10 @@ const verifyEmail = async (req, res) => {
       message: 'Email təsdiqləndi',
       needs_role: needsRole,
       token: sessionToken,
-      user: userOut || { id: user.id, email: u?.email || null, role: sessionRole },
+      user:
+        userOut
+          ? { ...userOut, role: needsRole ? null : userOut.role }
+          : { id: user.id, email: u?.email || null, role: sessionRole },
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -838,10 +847,13 @@ const selectOnboardingRole = async (req, res) => {
 
     if (needsRole) {
       await db.transaction(async (client) => {
-        await client.query(`UPDATE users SET role = $2 WHERE id = $1 AND (role IS NULL OR TRIM(role) = '')`, [
-          me.id,
-          picked,
-        ]);
+        await client.query(
+          `UPDATE users
+           SET role = $2,
+               role_selected = TRUE
+           WHERE id = $1`,
+          [me.id, picked],
+        );
         await grantUserRole(me.id, picked, client);
 
         if (picked === 'instructor') {
@@ -883,10 +895,9 @@ const selectOnboardingRole = async (req, res) => {
 const signup = async (req, res) => {
   try {
     const { full_name, email, password, phone, role: roleRaw } = req.body || {};
-    const role = String(roleRaw || 'instructor').trim().toLowerCase();
-    if (!SIGNUP_ROLES.has(role)) {
-      return res.status(400).json({ success: false, message: 'Yalnız müəllim və ya kurs üçün qeydiyyat mövcuddur' });
-    }
+    const role = String(roleRaw || '').trim().toLowerCase();
+    const roleSelected = Boolean(role) && ONBOARDING_ROLES.has(role);
+    const initialRole = roleSelected ? role : 'student';
 
     const emailCanon = normalizeEmailInput(email);
     if (!emailCanon) return res.status(400).json({ success: false, message: 'Düzgün email daxil edin' });
@@ -912,20 +923,22 @@ const signup = async (req, res) => {
 
     const user = await db.transaction(async (client) => {
       const { rows } = await client.query(
-        `INSERT INTO users (full_name, email, phone, password_hash, role, is_verified, account_status)
-         VALUES ($1, $2, $3, $4, $5, FALSE, 'active')
-         RETURNING id, full_name, email, role, phone`,
-        [name, emailCanon, phoneCanon, hash, role],
+        `INSERT INTO users (full_name, email, phone, password_hash, role, is_verified, account_status, role_selected)
+         VALUES ($1, $2, $3, $4, $5, FALSE, 'active', $6)
+         RETURNING id, full_name, email, role, phone, role_selected`,
+        [name, emailCanon, phoneCanon, hash, initialRole, roleSelected],
       );
       const created = rows[0];
 
-      await client.query(
-        `INSERT INTO user_roles (user_id, role, is_active) VALUES ($1, $2, TRUE)
-         ON CONFLICT (user_id, role) DO UPDATE SET is_active = TRUE`,
-        [created.id, role],
-      );
+      if (roleSelected) {
+        await client.query(
+          `INSERT INTO user_roles (user_id, role, is_active) VALUES ($1, $2, TRUE)
+           ON CONFLICT (user_id, role) DO UPDATE SET is_active = TRUE`,
+          [created.id, initialRole],
+        );
+      }
 
-      if (role === 'instructor') {
+      if (initialRole === 'instructor') {
         await client.query(
           'INSERT INTO instructor_profiles (user_id, subject, billing_type) VALUES ($1, NULL, $2)',
           [created.id, '8_lessons'],
@@ -939,11 +952,14 @@ const signup = async (req, res) => {
           `INSERT INTO course_profiles (user_id, course_name) VALUES ($1, $2) ON CONFLICT (user_id) DO NOTHING`,
           [created.id, name],
         );
-      } else if (role === 'course') {
+      } else if (initialRole === 'course') {
         await client.query(
           `INSERT INTO course_profiles (user_id, course_name) VALUES ($1, $2) ON CONFLICT (user_id) DO NOTHING`,
           [created.id, name],
         );
+      } else if (initialRole === 'student') {
+        // Ensure student profile exists (optional fields later)
+        await client.query('INSERT INTO student_profiles (user_id) VALUES ($1) ON CONFLICT DO NOTHING', [created.id]).catch(() => {});
       }
 
       return created;
@@ -960,7 +976,7 @@ const signup = async (req, res) => {
     return res.status(201).json({
       success: true,
       message: 'Qeydiyyat uğurludur. Email ünvanınıza təsdiq kodu və link göndərildi.',
-      user: { id: user.id, full_name: user.full_name, email: user.email, role: user.role },
+      user: { id: user.id, full_name: user.full_name, email: user.email, role: user.role_selected ? user.role : null },
       email_verification_sent: true,
     });
   } catch (err) {
@@ -1067,13 +1083,15 @@ const resendVerificationEmail = async (req, res) => {
 const me = async (req, res) => {
   try {
     const { rows } = await db.query(
-      'SELECT id, full_name, email, phone, role, phone_verified, is_active, is_verified FROM users WHERE id = $1',
+      'SELECT id, full_name, email, phone, role, phone_verified, is_active, is_verified, role_selected FROM users WHERE id = $1',
       [req.user.id],
     );
     const u = rows[0];
     if (!u || u.is_active === false) return res.status(404).json({ success: false, message: 'Tapılmadı' });
     if (!guardEmailVerifiedBeforeToken(res, u)) return;
-    const userOut = await enrichUserForClient(u, req.user.role);
+    const sessionRole = u.role_selected === false ? null : req.user.role;
+    const userOut = await enrichUserForClient(u, sessionRole);
+    if (u.role_selected === false) userOut.role = null;
     res.json({ success: true, user: userOut });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
