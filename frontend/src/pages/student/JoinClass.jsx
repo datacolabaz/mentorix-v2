@@ -36,7 +36,10 @@ export default function JoinClass() {
     setBusy(true)
     try {
       const r = await api.post('/students/my/join', { code: v })
-      toast(r?.message || 'Qoşuldunuz', 'success')
+      toast(
+        r?.message || 'Qrupa qoşuldunuz. Müəlliminiz qeydiyyatı tamamlayacaq.',
+        'success',
+      )
       if (r?.enrollment_id) setActiveEnrollmentId(r.enrollment_id)
       await refreshEnrollments()
       navigate('/student/groups', { replace: true })

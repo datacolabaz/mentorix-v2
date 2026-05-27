@@ -26,6 +26,11 @@ const emptyForm = {
   email: '',
   billing_type: '8_lessons',
   referral_notes: '',
+  referral_source_id: '',
+  initial_payment_status: 'unpaid',
+  payment_due_date: '',
+  discount_percent: '',
+  teacher_notes: '',
   monthly_fee: '',
   enrollment_date: '',
   billing_timing: 'postpaid',
@@ -133,6 +138,7 @@ function StudentFormFields({
   toast,
   teachingSubjects = [],
   teachingCourses = [],
+  referralSources = [],
   onCreateSubject,
   onCreateGroup,
 }) {
@@ -548,15 +554,85 @@ function StudentFormFields({
           </div>
         </div>
       )}
-      <div>
-        <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Menbe (ixtiyari)</label>
-        <input
-          className={inp}
-          placeholder="Instagram, tovsiye..."
-          value={data.referral_notes}
-          onChange={(e) => setData((p) => ({ ...p, referral_notes: e.target.value }))}
-        />
+      <div className="rounded-xl border border-indigo-500/20 bg-[#0f0c29]/60 p-3 space-y-3">
+        <p className="text-xs font-semibold text-indigo-200/90 uppercase tracking-wider">Marketinq</p>
+        {referralSources.length > 0 && (
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Mənbə</label>
+            <select
+              className={inp}
+              value={data.referral_source_id || ''}
+              onChange={(e) => setData((p) => ({ ...p, referral_source_id: e.target.value }))}
+            >
+              <option value="">— Seçin —</option>
+              {referralSources.map((rs) => (
+                <option key={rs.id} value={rs.id}>
+                  {rs.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+        <div>
+          <label className="block text-xs text-gray-500 mb-1">Qeyd (ixtiyari)</label>
+          <input
+            className={inp}
+            placeholder="Instagram, tövsiyə..."
+            value={data.referral_notes}
+            onChange={(e) => setData((p) => ({ ...p, referral_notes: e.target.value }))}
+          />
+        </div>
       </div>
+
+      {(mode === 'setup' || mode === 'add' || mode === 'edit') && (
+        <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3 space-y-3">
+          <p className="text-xs font-semibold text-emerald-200/90 uppercase tracking-wider">Ödəniş statusu</p>
+          <select
+            className={inp}
+            value={data.initial_payment_status || 'unpaid'}
+            onChange={(e) => setData((p) => ({ ...p, initial_payment_status: e.target.value }))}
+          >
+            <option value="unpaid">Ödənilməyib</option>
+            <option value="partial">Hissəli</option>
+            <option value="paid">Ödənilib</option>
+          </select>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Ödəniş son tarixi (ixtiyari)</label>
+            <input
+              type="date"
+              className={inp}
+              value={data.payment_due_date || ''}
+              onChange={(e) => setData((p) => ({ ...p, payment_due_date: e.target.value }))}
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Endirim % (ixtiyari)</label>
+            <input
+              type="number"
+              min={0}
+              max={100}
+              step={0.5}
+              className={inp}
+              value={data.discount_percent}
+              onChange={(e) => setData((p) => ({ ...p, discount_percent: e.target.value }))}
+            />
+          </div>
+        </div>
+      )}
+
+      {(mode === 'setup' || mode === 'edit') && (
+        <div>
+          <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+            Müəllim qeydi (ixtiyari)
+          </label>
+          <textarea
+            className={`${inp} min-h-[72px] resize-y`}
+            placeholder="Daxili qeydlər..."
+            value={data.teacher_notes || ''}
+            onChange={(e) => setData((p) => ({ ...p, teacher_notes: e.target.value }))}
+          />
+        </div>
+      )}
       <div className="pt-2 border-t border-indigo-500/20">
         <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Valideyn (ixtiyari)</p>
         <div className="grid grid-cols-2 gap-3">
@@ -588,6 +664,10 @@ export default function InstructorStudents() {
   const [students, setStudents] = useState([])
   const [addModal, setAddModal] = useState(false)
   const [editModal, setEditModal] = useState(false)
+  const [setupModal, setSetupModal] = useState(false)
+  const [setupForm, setSetupForm] = useState(emptyForm)
+  const [setupEnrollmentId, setSetupEnrollmentId] = useState(null)
+  const [referralSources, setReferralSources] = useState([])
   const [form, setForm] = useState(emptyForm)
   const [editForm, setEditForm] = useState(emptyForm)
   const [editOriginal, setEditOriginal] = useState(null)
@@ -645,7 +725,14 @@ export default function InstructorStudents() {
       .get('/courses')
       .then((d) => setTeachingCourses(Array.isArray(d.courses) ? d.courses : []))
       .catch(() => setTeachingCourses([]))
+    void api
+      .get('/students/referral-sources')
+      .then((d) => setReferralSources(Array.isArray(d.sources) ? d.sources : []))
+      .catch(() => setReferralSources([]))
   }, [])
+
+  const isPendingSetup = (s) =>
+    String(s?.enrollment_status || '').toLowerCase() === 'pending_setup'
 
   const createTeachingSubject = async (name) => {
     const d = await api.post('/instructor/teaching/subjects', { name })
@@ -758,6 +845,86 @@ export default function InstructorStudents() {
     }
   }
 
+  const openCompleteSetup = (s) => {
+    closeStudentMenu()
+    const pkgAnchor =
+      s.enrollment_start_date != null && s.enrollment_start_date !== ''
+        ? String(s.enrollment_start_date).slice(0, 10)
+        : s.enrolled_at
+          ? String(s.enrolled_at).slice(0, 10)
+          : ''
+    setSetupEnrollmentId(s.enrollment_id)
+    setSetupForm({
+      ...emptyForm,
+      full_name: s.full_name || '',
+      phone: s.phone || '',
+      email: s.email || '',
+      billing_type: s.billing_type || '8_lessons',
+      subject_id: s.subject_id || '',
+      group_id: s.group_id || '',
+      referral_notes: s.referral_notes || '',
+      referral_source_id: s.referral_source_id || '',
+      initial_payment_status: s.initial_payment_status || 'unpaid',
+      payment_due_date: s.payment_due_date ? String(s.payment_due_date).slice(0, 10) : '',
+      discount_percent: s.discount_percent != null ? String(s.discount_percent) : '',
+      teacher_notes: s.teacher_notes || '',
+      monthly_fee: s.monthly_fee != null ? String(s.monthly_fee) : '',
+      parent_name: s.parent_name || '',
+      parent_phone: s.parent_phone || '',
+      enrollment_date: pkgAnchor,
+      first_lesson_date: s.first_lesson_date || pkgAnchor,
+      lesson_weekdays: normalizeWeekdays(s.lesson_weekdays),
+      lesson_times: normalizeLessonTimes(s.lesson_times),
+      billing_timing: s.billing_timing || 'postpaid',
+      payment_plan: s.payment_plan || 'full',
+      notifications_enabled: s.notifications_enabled !== false,
+    })
+    setSetupModal(true)
+  }
+
+  const saveCompleteSetup = async () => {
+    if (!setupEnrollmentId) return
+    if (!setupForm.full_name?.trim() || !setupForm.phone?.trim()) {
+      toast('Ad və telefon tələb olunur', 'error')
+      return
+    }
+    setLoading(true)
+    try {
+      await api.post(`/students/enrollment/${encodeURIComponent(setupEnrollmentId)}/complete-setup`, {
+        full_name: setupForm.full_name,
+        phone: setupForm.phone,
+        email: setupForm.email || null,
+        billing_type: setupForm.billing_type,
+        enrollment_date: setupForm.enrollment_date || setupForm.first_lesson_date,
+        first_lesson_date: setupForm.first_lesson_date,
+        lesson_weekdays: setupForm.lesson_weekdays,
+        lesson_times: setupForm.lesson_times,
+        billing_timing: setupForm.billing_timing,
+        payment_plan: setupForm.payment_plan,
+        initial_payment_status: setupForm.initial_payment_status,
+        payment_due_date: setupForm.payment_due_date || null,
+        discount_percent: setupForm.discount_percent || null,
+        teacher_notes: setupForm.teacher_notes,
+        referral_notes: setupForm.referral_notes,
+        referral_source_id: setupForm.referral_source_id || null,
+        parent_name: setupForm.parent_name,
+        parent_phone: setupForm.parent_phone,
+        monthly_fee: setupForm.monthly_fee,
+        subject_id: setupForm.subject_id || null,
+        group_id: setupForm.group_id || null,
+        notifications_enabled: setupForm.notifications_enabled,
+      })
+      toast('Quraşdırma tamamlandı — tələbə aktivdir')
+      setSetupModal(false)
+      setSetupEnrollmentId(null)
+      load()
+    } catch (err) {
+      toast(err?.message || 'Xəta', 'error')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const openEdit = (s) => {
     setEditId(s.enrollment_id)
     setEditStudentId(s.id || s.student_id || null)
@@ -794,6 +961,11 @@ export default function InstructorStudents() {
       email: s.email || '',
       billing_type: s.billing_type || '8_lessons',
       referral_notes: s.referral_notes || '',
+      referral_source_id: s.referral_source_id || '',
+      initial_payment_status: s.initial_payment_status || 'unpaid',
+      payment_due_date: s.payment_due_date ? String(s.payment_due_date).slice(0, 10) : '',
+      discount_percent: s.discount_percent != null ? String(s.discount_percent) : '',
+      teacher_notes: s.teacher_notes || '',
       monthly_fee: s.monthly_fee != null && s.monthly_fee !== '' ? String(s.monthly_fee) : '',
       enrollment_date: pkgAnchor,
       billing_timing: s.billing_timing === 'prepaid' ? 'prepaid' : 'postpaid',
@@ -866,9 +1038,21 @@ export default function InstructorStudents() {
     return [...set].sort((a, b) => a.localeCompare(b))
   }, [students])
 
+  const pendingStudents = useMemo(() => {
+    const q = String(search || '').trim().toLowerCase()
+    return students.filter((s) => {
+      if (!isPendingSetup(s)) return false
+      if (!q) return true
+      const name = String(s?.full_name || '').toLowerCase()
+      const phone = String(s?.phone || '').toLowerCase()
+      return name.includes(q) || phone.includes(q)
+    })
+  }, [students, search])
+
   const grouped = useMemo(() => {
     const byKey = new Map()
     for (const s of students) {
+      if (isPendingSetup(s)) continue
       const subject = String(s.track_subject_name || 'Sahəsiz').trim() || 'Sahəsiz'
       const group = String(s.track_group_name || 'Qrup yoxdur').trim() || 'Qrup yoxdur'
       const key = `${subject}__${group}`
@@ -1241,6 +1425,43 @@ export default function InstructorStudents() {
         </select>
       </div>
 
+      {!listLoading && pendingStudents.length > 0 && (
+        <Card className="mb-5 p-4 border border-amber-500/35 bg-amber-500/5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+            <div>
+              <h2 className="font-display font-bold text-base text-amber-100">
+                Təyin gözləyən tələbələr
+              </h2>
+              <p className="text-xs text-amber-200/70 mt-1">
+                Join kodu ilə qoşulub — paket, cədvəl və ödəniş məlumatlarını tamamlayın.
+              </p>
+            </div>
+            <StatusBadge variant="due">{pendingStudents.length} gözləyir</StatusBadge>
+          </div>
+          <div className="space-y-2">
+            {pendingStudents.map((s) => (
+              <div
+                key={s.enrollment_id}
+                className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-amber-500/25 bg-black/20 px-3 py-3"
+              >
+                <div className="min-w-0">
+                  <div className="font-semibold text-token-textMain">{s.full_name}</div>
+                  <div className="text-xs text-token-textMuted mt-0.5">
+                    {s.phone || '—'} • {s.track_group_name || 'Qrup'} •{' '}
+                    {s.enrolled_at
+                      ? new Date(s.enrolled_at).toLocaleDateString('az-AZ')
+                      : '—'}
+                  </div>
+                </div>
+                <Button size="sm" onClick={() => openCompleteSetup(s)}>
+                  Quraşdırmanı tamamla
+                </Button>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
       <div className="space-y-2.5">
         {listLoading && <ListSkeleton message="Tələbələr yüklənir…" />}
         {!listLoading && listError && (
@@ -1408,7 +1629,14 @@ export default function InstructorStudents() {
                               {initials(s.full_name)}
                             </div>
                             <div className="min-w-0">
-                              <div className="font-semibold text-token-textMain truncate">{s.full_name}</div>
+                              <div className="font-semibold text-token-textMain truncate flex items-center gap-2">
+                                {s.full_name}
+                                {isPendingSetup(s) && (
+                                  <StatusBadge variant="due" className="text-[10px]">
+                                    Gözləyir
+                                  </StatusBadge>
+                                )}
+                              </div>
                               <div className="text-xs text-token-textMuted flex flex-wrap gap-x-3 gap-y-1 mt-0.5">
                                 {s.phone && <span className="break-all">{s.phone}</span>}
                                 {lessonDaysShort(s.lesson_weekdays) ? (
@@ -1470,6 +1698,15 @@ export default function InstructorStudents() {
                                 width={176}
                               >
                                 <div className="py-1">
+                                  {isPendingSetup(s) && (
+                                    <button
+                                      type="button"
+                                      className="w-full text-left px-3 py-2 text-sm text-amber-200 hover:bg-amber-500/10 font-semibold"
+                                      onClick={() => openCompleteSetup(s)}
+                                    >
+                                      Quraşdırmanı tamamla
+                                    </button>
+                                  )}
                                   <button
                                     type="button"
                                     className="w-full text-left px-3 py-2 text-sm hover:bg-white/5"
@@ -1530,6 +1767,46 @@ export default function InstructorStudents() {
         )}
       </div>
 
+      <Modal
+        open={setupModal}
+        onClose={() => {
+          setSetupModal(false)
+          setSetupEnrollmentId(null)
+        }}
+        title="Quraşdırmanı tamamla"
+        size="lg"
+      >
+        <p className="text-xs text-gray-400 mb-4">
+          Tələbə join kodu ilə qoşulub. Paket, cədvəl və ödəniş məlumatlarını doldurun — sonra aktiv
+          tələbə olacaq.
+        </p>
+        <StudentFormFields
+          data={setupForm}
+          setData={setSetupForm}
+          mode="setup"
+          toast={toast}
+          teachingSubjects={teachingSubjects}
+          referralSources={referralSources}
+          onCreateSubject={createTeachingSubject}
+          onCreateGroup={createTeachingGroup}
+        />
+        <div className="flex gap-3 mt-4">
+          <Button onClick={saveCompleteSetup} loading={loading} className="flex-1 justify-center">
+            Tamamla və aktiv et
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={() => {
+              setSetupModal(false)
+              setSetupEnrollmentId(null)
+            }}
+            className="flex-1 justify-center"
+          >
+            Legv et
+          </Button>
+        </div>
+      </Modal>
+
       <Modal open={addModal} onClose={closeAddModal} title="Yeni Telebe Elave Et">
         <StudentFormFields
           data={form}
@@ -1540,6 +1817,7 @@ export default function InstructorStudents() {
           toast={toast}
           teachingSubjects={teachingSubjects}
           teachingCourses={teachingCourses}
+          referralSources={referralSources}
           onCreateSubject={createTeachingSubject}
           onCreateGroup={createTeachingGroup}
         />
@@ -1567,6 +1845,7 @@ export default function InstructorStudents() {
           mode="edit"
           toast={toast}
           teachingSubjects={teachingSubjects}
+          referralSources={referralSources}
           onCreateSubject={createTeachingSubject}
           onCreateGroup={createTeachingGroup}
         />

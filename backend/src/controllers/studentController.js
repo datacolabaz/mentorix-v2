@@ -53,9 +53,17 @@ const listStudents = async (req, res) => {
                   to_char(e.enrollment_start_date::date, 'YYYY-MM-DD')
                 )
               END AS first_lesson_date,
-              e.status AS enrollment_status, e.referral_notes,
+              e.status AS enrollment_status,
+              e.enrolled_at,
+              e.configured_at,
+              e.initial_payment_status,
+              e.payment_due_date,
+              e.discount_percent,
+              e.referral_notes,
+              e.referral_source_id,
               e.instructor_id, iu.full_name AS instructor_name,
               rs.name AS referral_source,
+              sp.notes AS teacher_notes,
               ROUND(AVG(a.session_score)) AS avg_score`;
 
     const joins = `FROM users u
@@ -72,7 +80,9 @@ const listStudents = async (req, res) => {
                 sp.monthly_fee,
                 sp.parent_name, sp.parent_phone, pu.full_name, pu.phone,
                 e.id, e.billing_type, e.lesson_count, e.billing_cycle, e.lesson_weekdays, e.lesson_times, e.enrollment_start_date, e.billing_timing, e.payment_plan, e.status,
-                e.referral_notes, e.instructor_id, e.subject_id, e.group_id, ist.name, ig.name, iu.full_name, rs.name
+                e.referral_notes, e.referral_source_id, e.instructor_id, e.subject_id, e.group_id,
+                e.enrolled_at, e.configured_at, e.initial_payment_status, e.payment_due_date, e.discount_percent,
+                ist.name, ig.name, iu.full_name, rs.name, sp.notes
        ORDER BY u.full_name`;
 
     if (!isAdmin) {

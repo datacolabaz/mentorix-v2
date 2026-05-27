@@ -116,6 +116,30 @@ function parseNotificationsEnabled(v) {
   return Boolean(v);
 }
 
+function parseInitialPaymentStatus(v) {
+  const s = String(v || '').trim().toLowerCase();
+  if (s === 'paid' || s === 'partial' || s === 'unpaid') return s;
+  return 'unpaid';
+}
+
+function billingFromInitialPaymentStatus(status) {
+  if (status === 'paid') return { billing_timing: 'prepaid', payment_plan: 'full' };
+  if (status === 'partial') return { billing_timing: 'postpaid', payment_plan: 'partial' };
+  return { billing_timing: 'postpaid', payment_plan: 'full' };
+}
+
+function parseDiscountPercent(v) {
+  if (v === undefined || v === null || v === '') return null;
+  const n = Number(v);
+  if (!Number.isFinite(n) || n < 0 || n > 100) return null;
+  return n;
+}
+
+function appendPackageHistory(existing, entry) {
+  const base = Array.isArray(existing) ? existing : [];
+  return [...base, entry].slice(-50);
+}
+
 /** 1–7 unikal, sıralı (B.e. … Bazar) */
 function parseLessonWeekdays(raw) {
   if (raw == null) return [];
@@ -369,12 +393,22 @@ async function replaceCycleOneScheduledLessons(client, params) {
       `INSERT INTO lessons (enrollment_id, student_id, instructor_id, lesson_date, status, lesson_number, billing_cycle)
        VALUES ($1,$2,$3,($4::timestamp AT TIME ZONE 'Asia/Baku'),'pending',$5,1)
        ON CONFLICT (enrollment_id, billing_cycle, lesson_number) DO NOTHING`,
-      [enrollmentId, student_id, instructor_id, starts[i], i + 1]
+      [enrollmentId, studentId, instructor_id, starts[i], i + 1]
     );
   }
 }
 
 router.get('/referral-breakdown', authenticate, authorize('admin', 'instructor'), getReferralBreakdown);
+
+router.get('/referral-sources', authenticate, authorize('admin', 'instructor'), async (_req, res) => {
+  try {
+    const { rows } = await db.query(`SELECT id, name, icon FROM referral_sources ORDER BY name ASC`);
+    res.json({ success: true, sources: rows });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 router.get('/', authenticate, authorize('admin', 'instructor'), listStudents);
 
 router.delete('/enrollment/:enrollmentId', authenticate, authorize('admin', 'instructor'), deleteStudent);
@@ -474,9 +508,9 @@ router.post(
            instructor_id, student_id, billing_type, referral_notes, referral_source_id,
            lesson_weekdays, lesson_times, enrollment_start_date,
            billing_timing, payment_plan, subject_id, group_id,
-           notifications_enabled, course_id
+           notifications_enabled, course_id, status, configured_at
          )
-         VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb,$8::date,$9,$10,$11,$12,$13,$14) RETURNING *`,
+         VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb,$8::date,$9,$10,$11,$12,$13,$14,'active',NOW()) RETURNING *`,
         [
           instructor_id,
           student_id,
@@ -717,6 +751,302 @@ router.post(
     res.status(500).json({ success: false, message: err.message });
   }
 });
+
+// Join-code tələbəsi: müəllim quraşdırmanı tamamlayır → aktiv tələbə + dərs planı
+router.post(
+  '/enrollment/:enrollmentId/complete-setup',
+  authenticate,
+  authorize('instructor', 'admin'),
+  gateInstructorEnrollment,
+  attachEntitlements,
+  async (req, res) => {
+    try {
+      const { enrollmentId } = req.params;
+      const {
+        billing_type,
+        referral_notes,
+        referral_source_id,
+        parent_name,
+        parent_phone,
+        monthly_fee,
+        enrollment_date,
+        billing_timing,
+        payment_plan,
+        initial_payment_status,
+        payment_due_date,
+        discount_percent,
+        teacher_notes,
+        first_lesson_date,
+        lesson_weekdays,
+        lesson_times,
+        subject_id,
+        group_id,
+        full_name,
+        phone,
+        email,
+      } = req.body;
+
+      const { rows: enrRows } = await db.query(
+        `SELECT e.*, u.full_name, u.phone, u.email
+         FROM enrollments e
+         JOIN users u ON u.id = e.student_id
+         WHERE e.id = $1 AND (e.deleted_at IS NULL)`,
+        [enrollmentId],
+      );
+      const enr = enrRows[0];
+      if (!enr) return res.status(404).json({ success: false, message: 'Qeydiyyat tapılmadı' });
+
+      const instructor_id =
+        req.user.role === 'admin' ? req.body.instructor_id || enr.instructor_id : req.user.id;
+      if (req.user.role === 'instructor' && !sameUuid(enr.instructor_id, req.user.id)) {
+        return res.status(403).json({ success: false, message: 'Bu qeydiyyata icazəniz yoxdur' });
+      }
+
+      const st = String(enr.status || '').toLowerCase();
+      if (st !== 'pending_setup' && st !== 'active') {
+        return res.status(400).json({
+          success: false,
+          message: 'Bu qeydiyyat üçün quraşdırma tamamlanmır',
+        });
+      }
+
+      const studentId = enr.student_id;
+      const ni = normUuid(instructor_id);
+
+      if (full_name != null || phone != null) {
+        await db.query(
+          `UPDATE users SET
+             full_name = COALESCE(NULLIF($1, ''), full_name),
+             phone = COALESCE(NULLIF($2, ''), phone)
+           WHERE id = $3`,
+          [full_name != null ? String(full_name).trim() : null, phone != null ? String(phone).trim() : null, studentId],
+        );
+      }
+      if (email !== undefined && req.user.role === 'instructor') {
+        const emailTrim = email != null ? String(email).trim() : '';
+        if (emailTrim) {
+          await db.query(`UPDATE users SET email = $1 WHERE id = $2`, [emailTrim, studentId]);
+        }
+      }
+
+      const lwd = parseLessonWeekdays(lesson_weekdays);
+      if (lwd.length === 0) {
+        return res.status(400).json({ success: false, message: 'Ən azı bir dərs günü seçin' });
+      }
+      const lt = parseLessonTimes(lesson_times, lwd);
+      if (Object.keys(lt).length === 0) {
+        return res.status(400).json({ success: false, message: 'Dərs günlərinə uyğun saatları qeyd edin' });
+      }
+
+      const enrollmentYmd = parsePaymentStartDate(enrollment_date);
+      if (!enrollmentYmd) {
+        return res.status(400).json({ success: false, message: 'Dərslərə başlama tarixi seçilməlidir' });
+      }
+
+      const btRaw = billing_type || enr.billing_type || '8_lessons';
+      const limitForValidation = billingLimit(btRaw);
+      if (!limitForValidation) {
+        return res.status(400).json({ success: false, message: 'Paket növü yalnız 8 və ya 12 dərs ola bilər' });
+      }
+
+      const firstYmd = parsePaymentStartDate(first_lesson_date);
+      if (!firstYmd) {
+        return res.status(400).json({ success: false, message: 'İlk dərs tarixi seçilməlidir' });
+      }
+      if (firstYmd < enrollmentYmd) {
+        return res.status(400).json({
+          success: false,
+          message: 'İlk dərs tarixi, dərslərə başlama tarixindən əvvəl ola bilməz',
+        });
+      }
+      const wd = weekdayFromYmd(firstYmd);
+      if (!wd || !lwd.includes(wd) || !lt[String(wd)]) {
+        return res.status(400).json({
+          success: false,
+          message: 'İlk dərs tarixi seçdiyiniz dərs günləri/saatları ilə uyğun deyil',
+        });
+      }
+
+      const ips = parseInitialPaymentStatus(initial_payment_status);
+      const billingMapped = billingFromInitialPaymentStatus(ips);
+      const bt = billing_timing != null ? parseBillingTiming(billing_timing) : billingMapped.billing_timing;
+      const payPlan = payment_plan != null ? parsePaymentPlan(payment_plan) : billingMapped.payment_plan;
+      const mf = parseMonthlyFee(monthly_fee);
+      const dueYmd = parsePaymentStartDate(payment_due_date);
+      const disc = parseDiscountPercent(discount_percent);
+      const notifEnabled = parseNotificationsEnabled(req.body?.notifications_enabled);
+
+      let trackIds = { subject_id: enr.subject_id, group_id: enr.group_id };
+      try {
+        trackIds = await resolveEnrollmentTrack(
+          db,
+          instructor_id,
+          subject_id !== undefined ? subject_id : enr.subject_id,
+          group_id !== undefined ? group_id : enr.group_id,
+        );
+      } catch (e) {
+        return res.status(e.statusCode || 400).json({ success: false, message: e.message });
+      }
+
+      const historyEntry = {
+        at: new Date().toISOString(),
+        action: st === 'pending_setup' ? 'configured' : 'reconfigured',
+        billing_type: btRaw,
+        initial_payment_status: ips,
+        by: instructor_id,
+      };
+
+      const enrollment = await db.transaction(async (client) => {
+        const { rows: updated } = await client.query(
+          `UPDATE enrollments SET
+             billing_type = $2,
+             referral_notes = $3,
+             referral_source_id = $4,
+             lesson_weekdays = $5::jsonb,
+             lesson_times = $6::jsonb,
+             enrollment_start_date = $7::date,
+             billing_timing = $8,
+             payment_plan = $9,
+             subject_id = $10,
+             group_id = $11,
+             notifications_enabled = $12,
+             initial_payment_status = $13,
+             payment_due_date = $14::date,
+             discount_percent = $15,
+             status = 'active',
+             configured_at = COALESCE(configured_at, NOW()),
+             package_history = $16::jsonb
+           WHERE id = $1
+           RETURNING *`,
+          [
+            enrollmentId,
+            btRaw,
+            referral_notes || null,
+            referral_source_id || null,
+            JSON.stringify(lwd),
+            JSON.stringify(lt),
+            enrollmentYmd,
+            bt,
+            payPlan,
+            trackIds.subject_id,
+            trackIds.group_id,
+            notifEnabled,
+            ips,
+            dueYmd,
+            disc,
+            JSON.stringify(appendPackageHistory(enr.package_history, historyEntry)),
+          ],
+        );
+
+        await reserveGroupSlots(client, {
+          instructor_id,
+          ni,
+          lwd,
+          lt,
+          subject_id: trackIds.subject_id,
+          group_id: trackIds.group_id,
+        });
+
+        const pn = parent_name != null ? String(parent_name).trim() : '';
+        const pp = parent_phone != null ? String(parent_phone).trim() : '';
+        const tn = teacher_notes != null ? String(teacher_notes).trim() : '';
+        const pr = await client.query(
+          `UPDATE student_profiles SET
+             parent_name = COALESCE(NULLIF($1, ''), parent_name),
+             parent_phone = COALESCE(NULLIF($2, ''), parent_phone),
+             monthly_fee = COALESCE($3, monthly_fee),
+             notes = COALESCE(NULLIF($4, ''), notes)
+           WHERE user_id = $5`,
+          [pn, pp, mf, tn, studentId],
+        );
+        if (pr.rowCount === 0) {
+          await client.query(
+            `INSERT INTO student_profiles (user_id, parent_name, parent_phone, monthly_fee, notes)
+             VALUES ($1, NULLIF($2, ''), NULLIF($3, ''), $4, NULLIF($5, ''))`,
+            [studentId, pn, pp, mf, tn],
+          );
+        }
+
+        await replaceCycleOneScheduledLessons(client, {
+          enrollmentId,
+          studentId,
+          instructor_id,
+          ni,
+          lwd,
+          lt,
+          firstYmd,
+          limit: limitForValidation,
+          group_id: trackIds.group_id,
+        });
+
+        if (req.user?.role === 'instructor') {
+          const { rows: cntRows } = await client.query(
+            `SELECT COUNT(DISTINCT u.id)::int AS n
+             FROM enrollments e
+             JOIN users u ON u.id = e.student_id
+             WHERE e.instructor_id = $1
+               AND e.deleted_at IS NULL
+               AND COALESCE(LOWER(TRIM(e.status)), 'active') = 'active'
+               AND u.is_active = TRUE`,
+            [instructor_id],
+          );
+          const n = Number(cntRows[0]?.n ?? 0) || 0;
+          await client.query(
+            `INSERT INTO usage_counters (user_id, students_count)
+             VALUES ($1, $2)
+             ON CONFLICT (user_id) DO UPDATE SET students_count = $2, updated_at = NOW()`,
+            [instructor_id, n],
+          );
+        }
+
+        return updated[0];
+      });
+
+      res.json({
+        success: true,
+        message: 'Tələbə quraşdırması tamamlandı',
+        enrollment,
+      });
+    } catch (err) {
+      if (err.code === 'LESSON_CONFLICT') {
+        return res.status(409).json({
+          success: false,
+          message: err.message || 'Dərs cədvəlində toqquşma var',
+        });
+      }
+      res.status(err.statusCode || 500).json({ success: false, message: err.message });
+    }
+  },
+);
+
+router.patch(
+  '/enrollment/:enrollmentId/status',
+  authenticate,
+  authorize('instructor', 'admin'),
+  async (req, res) => {
+    try {
+      const status = String(req.body?.status || '').trim().toLowerCase();
+      const allowed = new Set(['active', 'paused', 'archived', 'pending_setup']);
+      if (!allowed.has(status)) {
+        return res.status(400).json({ success: false, message: 'Etibarsız status' });
+      }
+      const { rows: enr } = await db.query(`SELECT instructor_id FROM enrollments WHERE id = $1`, [
+        req.params.enrollmentId,
+      ]);
+      if (!enr[0]) return res.status(404).json({ success: false, message: 'Tapılmadı' });
+      if (req.user.role === 'instructor' && !sameUuid(enr[0].instructor_id, req.user.id)) {
+        return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
+      }
+      const { rows } = await db.query(
+        `UPDATE enrollments SET status = $2 WHERE id = $1 RETURNING id, status`,
+        [req.params.enrollmentId, status],
+      );
+      res.json({ success: true, enrollment: rows[0] });
+    } catch (err) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  },
+);
 
 // Telebe ve enrollment redakte et
 router.patch('/enrollment/:enrollmentId', authenticate, authorize('admin', 'instructor'), async (req, res) => {
@@ -1096,7 +1426,7 @@ router.post('/my/join', authenticate, authorize('student'), async (req, res) => 
 
     const { rows: enr } = await db.query(
       `INSERT INTO enrollments (instructor_id, student_id, status, enrolled_at)
-       VALUES ($1, $2, 'active', NOW())
+       VALUES ($1, $2, 'pending_setup', NOW())
        RETURNING id`,
       [g.instructor_id, req.user.id],
     );
@@ -1116,7 +1446,8 @@ router.post('/my/join', authenticate, authorize('student'), async (req, res) => 
     const enrollments = await listActiveEnrollmentsForStudent(req.user.id);
     return res.json({
       success: true,
-      message: 'Qrupa qoşuldunuz',
+      message: 'Qrupa qoşuldunuz. Müəlliminiz qeydiyyatı tamamlayacaq.',
+      code: 'PENDING_SETUP',
       enrollment_id: enrollmentId,
       teacher_id: g.instructor_id,
       class: { id: g.group_id, name: g.group_name, subject: g.subject_name, join_code: g.join_code },

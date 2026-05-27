@@ -27,6 +27,7 @@ async function listActiveEnrollmentsForStudent(studentId) {
        e.subject_id,
        e.status,
        e.enrolled_at,
+       e.configured_at,
        e.enrollment_start_date,
        ig.name AS group_name,
        ig.join_code,
@@ -49,7 +50,7 @@ async function listActiveEnrollmentsForStudent(studentId) {
      ) cnt ON cnt.group_id = e.group_id
      WHERE e.student_id = $1
        AND (e.deleted_at IS NULL)
-       AND COALESCE(LOWER(TRIM(e.status)), 'active') = 'active'
+       AND COALESCE(LOWER(TRIM(e.status)), 'active') IN ('active', 'pending_setup')
      ORDER BY e.enrolled_at DESC NULLS LAST, ig.name ASC NULLS LAST`,
     [studentId],
   );
@@ -69,7 +70,7 @@ async function resolveEnrollmentScope(studentId, enrollmentId) {
      WHERE id = $1
        AND student_id = $2
        AND (deleted_at IS NULL)
-       AND COALESCE(LOWER(TRIM(status)), 'active') = 'active'
+       AND COALESCE(LOWER(TRIM(status)), 'active') IN ('active', 'pending_setup')
      LIMIT 1`,
     [enrollmentId, studentId],
   );
