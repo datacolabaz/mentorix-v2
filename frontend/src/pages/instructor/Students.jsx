@@ -10,6 +10,7 @@ import StatusBadge from '../../components/common/StatusBadge'
 import { useToast } from '../../components/common/Toast'
 import { WEEKDAYS } from './Schedule'
 import { fmtAzBakuLessonRow } from '../../lib/lessonWeekGrid'
+import { alignFirstLessonYmd } from '../../lib/firstLessonDate'
 import { readCache, writeCache } from '../../lib/cache'
 import useUiStore from '../../hooks/useUi'
 import PortalMenu from '../../components/common/PortalMenu'
@@ -160,6 +161,17 @@ function StudentFormFields({
     setCreateName(String(preset || '').trim())
   }
 
+  const alignFirstFromEnrollment = (p, lesson_weekdays, lesson_times) => {
+    const anchor = p.enrollment_date || ''
+    if (!anchor) return p
+    const first_lesson_date = alignFirstLessonYmd(
+      anchor,
+      lesson_weekdays ?? p.lesson_weekdays,
+      lesson_times ?? p.lesson_times,
+    )
+    return { ...p, first_lesson_date }
+  }
+
   const saveCreate = async () => {
     const name = String(createName || '').trim()
     if (!name) return toast('Ad boş ola bilməz', 'error')
@@ -292,19 +304,37 @@ function StudentFormFields({
       <>
         <div className="rounded-xl border border-indigo-500/20 bg-[#0f0c29]/60 p-3 space-y-2">
           <p className="text-xs font-semibold text-indigo-200/90 uppercase tracking-wider">2. Paket: ilk dərs tarixi *</p>
-          <p className="text-[10px] text-gray-500 leading-relaxed">
-            Paket qeydiyyatında təqvim bir tarixdən başlayır: seçdiyiniz gün dərs günlərinizdən biri olmalıdır. Sistem bu tarixdən 8 və ya 12 tarixli dərs sırası qurur.
-          </p>
-          <p className="text-[10px] text-amber-200/90 rounded-lg border border-amber-500/25 bg-amber-500/10 px-2 py-1.5 leading-relaxed">
-            Redaktədə dəyişəndə yalnız 1-ci dövrün planı və həmin dövrün davamiyyəti yenilənir. Artıq növbəti paket dövrünə keçilibsə, tarix dəyişməyi server bloklaya bilər.
-          </p>
+          {mode === 'setup' && data.enrollment_date && paymentDateHint(data.enrollment_date) ? (
+            <p className="text-[10px] text-gray-500 leading-relaxed">
+              Qoşulma tarixi:{' '}
+              <span className="text-gray-300 font-medium">{paymentDateHint(data.enrollment_date)}</span> — dərs günü
+              olmaya bilər; ilk dərs avtomatik növbəti uyğun dərs gününə keçirilir.
+            </p>
+          ) : (
+            <p className="text-[10px] text-gray-500 leading-relaxed">
+              Paket qeydiyyatında təqvim bir tarixdən başlayır. Tarix dərs günü deyilsə, sistem ən yaxın uyğun dərs
+              gününə keçirir və 8 və ya 12 dərs sırası qurur.
+            </p>
+          )}
+          {mode !== 'setup' ? (
+            <p className="text-[10px] text-amber-200/90 rounded-lg border border-amber-500/25 bg-amber-500/10 px-2 py-1.5 leading-relaxed">
+              Redaktədə dəyişəndə yalnız 1-ci dövrün planı və həmin dövrün davamiyyəti yenilənir. Artıq növbəti paket
+              dövrünə keçilibsə, tarix dəyişməyi server bloklaya bilər.
+            </p>
+          ) : null}
           <input
             className={inp}
             type="date"
             value={data.first_lesson_date}
             onChange={(e) => {
               const v = e.target.value
-              setData((p) => ({ ...p, first_lesson_date: v, enrollment_date: v }))
+              setData((p) => {
+                if (mode === 'setup') {
+                  const first_lesson_date = alignFirstLessonYmd(v, p.lesson_weekdays, p.lesson_times)
+                  return { ...p, first_lesson_date }
+                }
+                return { ...p, first_lesson_date: v, enrollment_date: v }
+              })
             }}
           />
           {paymentDateHint(data.first_lesson_date) && (
@@ -345,7 +375,9 @@ function StudentFormFields({
                     const cur = new Set(Array.isArray(p.lesson_weekdays) ? p.lesson_weekdays : [])
                     if (cur.has(d.v)) cur.delete(d.v)
                     else cur.add(d.v)
-                    return { ...p, lesson_weekdays: [...cur].sort((a, b) => a - b) }
+                    const lesson_weekdays = [...cur].sort((a, b) => a - b)
+                    const next = { ...p, lesson_weekdays }
+                    return mode === 'setup' ? alignFirstFromEnrollment(next, lesson_weekdays, p.lesson_times) : next
                   })
                 }
                 className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
@@ -539,12 +571,15 @@ function StudentFormFields({
                   type="time"
                   className="bg-[#13112e] border border-indigo-500/20 rounded-xl px-3 py-2 text-white text-sm outline-none focus:border-indigo-400"
                   value={(data.lesson_times && (data.lesson_times[d.v] || data.lesson_times[String(d.v)])) || ''}
-                  onChange={(e) =>
-                    setData((p) => ({
-                      ...p,
-                      lesson_times: { ...(p.lesson_times || {}), [String(d.v)]: e.target.value },
-                    }))
-                  }
+                  onChange={(e) => {
+                    const lesson_times = { ...(data.lesson_times || {}), [String(d.v)]: e.target.value }
+                    setData((p) => {
+                      const next = { ...p, lesson_times }
+                      return mode === 'setup'
+                        ? alignFirstFromEnrollment(next, p.lesson_weekdays, lesson_times)
+                        : next
+                    })
+                  }}
                 />
               </div>
             ))}
@@ -864,6 +899,14 @@ export default function InstructorStudents() {
         : s.enrolled_at
           ? String(s.enrolled_at).slice(0, 10)
           : ''
+    const lwd = normalizeWeekdays(s.lesson_weekdays)
+    const lt = normalizeLessonTimes(s.lesson_times)
+    const firstFromApi =
+      s.first_lesson_date != null && String(s.first_lesson_date).trim() !== ''
+        ? String(s.first_lesson_date).slice(0, 10)
+        : ''
+    const firstLesson =
+      firstFromApi || (pkgAnchor ? alignFirstLessonYmd(pkgAnchor, lwd, lt) : '')
     setSetupEnrollmentId(s.enrollment_id)
     setSetupForm({
       ...emptyForm,
@@ -883,9 +926,9 @@ export default function InstructorStudents() {
       parent_name: s.parent_name || '',
       parent_phone: s.parent_phone || '',
       enrollment_date: pkgAnchor,
-      first_lesson_date: s.first_lesson_date || pkgAnchor,
-      lesson_weekdays: normalizeWeekdays(s.lesson_weekdays),
-      lesson_times: normalizeLessonTimes(s.lesson_times),
+      first_lesson_date: firstLesson || pkgAnchor,
+      lesson_weekdays: lwd,
+      lesson_times: lt,
       billing_timing: s.billing_timing || 'postpaid',
       payment_plan: s.payment_plan || 'full',
       notifications_enabled: s.notifications_enabled !== false,

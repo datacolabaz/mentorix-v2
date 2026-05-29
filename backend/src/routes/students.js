@@ -220,6 +220,22 @@ function nextDateForWeekday(afterYmd, weekday /*1-7*/, ymdInclusive) {
   return `${yy}-${mm}-${dd}`;
 }
 
+/** Qoşulma/ilk tarix dərs günü deyilsə, həmin gündən sonrakı ən yaxın dərs gününə keçir */
+function alignFirstLessonYmd(anchorYmd, lessonWeekdays, lessonTimes) {
+  const lwd = parseLessonWeekdays(lessonWeekdays);
+  if (!anchorYmd || !lwd.length) return anchorYmd;
+  const lt = parseLessonTimes(lessonTimes, lwd);
+  const wd = weekdayFromYmd(anchorYmd);
+  if (wd && lwd.includes(wd) && lt[String(wd)]) return anchorYmd;
+  let best = null;
+  for (const d of lwd) {
+    if (!lt[String(d)]) continue;
+    const candidate = nextDateForWeekday(anchorYmd, d, true);
+    if (!best || candidate < best) best = candidate;
+  }
+  return best || anchorYmd;
+}
+
 async function bakuTodayYmdDb(dbConn) {
   const { rows } = await dbConn.query(
     `SELECT to_char((CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Baku')::date, 'YYYY-MM-DD') AS ymd`
@@ -469,24 +485,26 @@ router.post(
     if (!limitForValidation) {
       return res.status(400).json({ success: false, message: 'Billing növü yalnız 8 və ya 12 dərs ola bilər' });
     }
-    const firstYmd = parsePaymentStartDate(first_lesson_date);
+    let firstYmd = parsePaymentStartDate(first_lesson_date);
     if (!firstYmd) {
       return res.status(400).json({ success: false, message: 'İlk dərs tarixi seçilməlidir' });
     }
-    if (firstYmd && firstYmd < enrollmentYmd) {
+    if (firstYmd < enrollmentYmd) {
       return res.status(400).json({
         success: false,
         message: 'İlk dərs tarixi, dərslərə başlama tarixindən əvvəl ola bilməz',
       });
     }
-    if (firstYmd) {
-      const wd = weekdayFromYmd(firstYmd);
-      if (!wd || !lwd.includes(wd) || !lt[String(wd)]) {
-        return res.status(400).json({
-          success: false,
-          message: 'İlk dərs tarixi seçdiyiniz dərs günləri/saatları ilə uyğun deyil',
-        });
-      }
+    firstYmd = alignFirstLessonYmd(firstYmd, lwd, lt);
+    if (firstYmd < enrollmentYmd) {
+      firstYmd = alignFirstLessonYmd(enrollmentYmd, lwd, lt);
+    }
+    const wd = weekdayFromYmd(firstYmd);
+    if (!wd || !lwd.includes(wd) || !lt[String(wd)]) {
+      return res.status(400).json({
+        success: false,
+        message: 'İlk dərs tarixi seçdiyiniz dərs günləri/saatları ilə uyğun deyil',
+      });
     }
 
     const { rows: cnt } = await db.query(
@@ -865,7 +883,7 @@ router.post(
         return res.status(400).json({ success: false, message: 'Paket növü yalnız 8 və ya 12 dərs ola bilər' });
       }
 
-      const firstYmd = parsePaymentStartDate(first_lesson_date);
+      let firstYmd = parsePaymentStartDate(first_lesson_date);
       if (!firstYmd) {
         return res.status(400).json({ success: false, message: 'İlk dərs tarixi seçilməlidir' });
       }
@@ -874,6 +892,10 @@ router.post(
           success: false,
           message: 'İlk dərs tarixi, dərslərə başlama tarixindən əvvəl ola bilməz',
         });
+      }
+      firstYmd = alignFirstLessonYmd(firstYmd, lwd, lt);
+      if (firstYmd < enrollmentYmd) {
+        firstYmd = alignFirstLessonYmd(enrollmentYmd, lwd, lt);
       }
       const wd = weekdayFromYmd(firstYmd);
       if (!wd || !lwd.includes(wd) || !lt[String(wd)]) {
@@ -1249,7 +1271,7 @@ router.patch('/enrollment/:enrollmentId', authenticate, authorize('admin', 'inst
           ]);
         }
       } else if (wantsChange) {
-        const firstYmd = parsePaymentStartDate(flRaw);
+        let firstYmd = parsePaymentStartDate(flRaw);
         const enrSlice =
           ent.enrollment_start_date != null ? String(ent.enrollment_start_date).slice(0, 10) : '';
         const enrollmentYmd = parsePaymentStartDate(enrSlice);
@@ -1274,9 +1296,13 @@ router.patch('/enrollment/:enrollmentId', authenticate, authorize('admin', 'inst
             message: 'İlk dərs tarixini yalnız birinci dövr üzrə dəyişmək mümkündür (növbəti paketə keçilib).',
           });
         }
-        const wd = weekdayFromYmd(firstYmd);
         const lwdNow = parseLessonWeekdays(ent.lesson_weekdays);
         const ltNow = parseLessonTimes(ent.lesson_times, lwdNow);
+        firstYmd = alignFirstLessonYmd(firstYmd, lwdNow, ltNow);
+        if (firstYmd < enrollmentYmd) {
+          firstYmd = alignFirstLessonYmd(enrollmentYmd, lwdNow, ltNow);
+        }
+        const wd = weekdayFromYmd(firstYmd);
         if (!wd || !lwdNow.includes(wd) || !ltNow[String(wd)]) {
           return res.status(400).json({
             success: false,
