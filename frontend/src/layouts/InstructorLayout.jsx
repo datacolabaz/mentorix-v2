@@ -61,7 +61,12 @@ export default function InstructorLayout() {
   const billingQ = useBillingStatus()
   const billing = billingQ.data || null
   const [upgradeOpen, setUpgradeOpen] = useState(false)
-  const [limitModal, setLimitModal] = useState({ open: false, message: '' })
+  const [limitModal, setLimitModal] = useState({
+    open: false,
+    message: '',
+    primaryLabel: 'Paketlərə bax',
+    action: 'OPEN_SETTINGS_PLANS',
+  })
   const [verifyOpen, setVerifyOpen] = useState(false)
   const [verifyPhone, setVerifyPhone] = useState(user?.phone || '')
   const [verifyCode, setVerifyCode] = useState('')
@@ -106,6 +111,34 @@ export default function InstructorLayout() {
     setVerifyPhone(user?.phone || '')
   }, [user?.phone])
 
+  const runBillingAction = (action) => {
+    const act = action || 'OPEN_SETTINGS_PLANS'
+    api.post('/billing/events', { event: 'upgrade_clicked', context: { at: 'banner', action: act } }).catch(() => {})
+    if (act === 'OPEN_VERIFY_PHONE') {
+      setVerifyStep('phone')
+      setVerifyCode('')
+      setVerifyOpen(true)
+      return
+    }
+    if (act === 'OPEN_UPGRADE_MODAL') {
+      setUpgradeOpen(true)
+      return
+    }
+    if (act === 'OPEN_SMS_TOPUP') {
+      navigate('/instructor/settings', { state: { scrollTo: 'billing-sms-addons' } })
+      return
+    }
+    if (act === 'OPEN_SETTINGS_PAYMENTS') {
+      navigate('/instructor/settings', { state: { scrollTo: 'billing-payments' } })
+      return
+    }
+    if (act === 'OPEN_SETTINGS_STORAGE') {
+      navigate('/instructor/exams')
+      return
+    }
+    navigate('/instructor/settings')
+  }
+
   useEffect(() => {
     let cancelled = false
     api
@@ -115,6 +148,10 @@ export default function InstructorLayout() {
         const alerts = d.alerts || []
         setHasAlerts(Array.isArray(alerts) && alerts.length > 0)
         setNotifFetchAt(Date.now())
+        if (d.billing_messages?.suppress_limit_bar) {
+          setLimitStatus({ level: null, message: null })
+          return
+        }
         const critical = alerts.find((a) => a.level === 'critical')
         const warning = alerts.find((a) => a.level === 'warning')
         if (critical) setLimitStatus({ level: 'critical', message: critical.message })
@@ -127,7 +164,7 @@ export default function InstructorLayout() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [billing?.messages?.suppress_limit_bar])
 
   useEffect(() => {
     const st = String(billing?.status || '')
@@ -393,27 +430,19 @@ export default function InstructorLayout() {
           <div className="mx-4 sm:mx-6 mt-4">
             <BillingBanner
               status={billing?.status}
+              tone={billing?.messages?.tone || null}
               banner={billing?.messages?.banner || null}
               cta={billing?.messages?.cta || null}
               onCta={() => {
-                api.post('/billing/events', { event: 'upgrade_clicked', context: { at: 'banner' } }).catch(() => {})
-                const action = billing?.messages?.cta && typeof billing.messages.cta === 'object' ? billing.messages.cta.action : null
-                if (action === 'OPEN_VERIFY_PHONE') {
-                  setVerifyStep('phone')
-                  setVerifyCode('')
-                  setVerifyOpen(true)
-                  return
-                }
-                if (action === 'OPEN_UPGRADE_MODAL') return setUpgradeOpen(true)
-                if (action === 'OPEN_SETTINGS_PLANS') {
-                  navigate('/instructor/settings')
-                  return
-                }
-                navigate('/instructor/settings')
+                const action =
+                  billing?.messages?.cta && typeof billing.messages.cta === 'object'
+                    ? billing.messages.cta.action
+                    : null
+                runBillingAction(action)
               }}
             />
           </div>
-          {limitStatus.level ? (
+          {limitStatus.level && !billing?.messages?.suppress_limit_bar && !billing?.messages?.banner ? (
             <div
               className={`mx-4 sm:mx-6 mt-4 rounded-2xl border px-4 py-3 text-sm ${
                 limitStatus.level === 'critical'
@@ -469,11 +498,13 @@ export default function InstructorLayout() {
     </div>
       <LimitReachedModal
         open={limitModal.open}
-        onClose={() => setLimitModal({ open: false, message: '' })}
+        onClose={() => setLimitModal({ open: false, message: '', primaryLabel: 'Paketlərə bax', action: 'OPEN_SETTINGS_PLANS' })}
         serverMessage={limitModal.message}
-        onViewPlans={() => {
-          setLimitModal({ open: false, message: '' })
-          navigate('/instructor/settings')
+        primaryLabel={limitModal.primaryLabel}
+        onPrimary={() => {
+          const action = limitModal.action || 'OPEN_SETTINGS_PLANS'
+          setLimitModal({ open: false, message: '', primaryLabel: 'Paketlərə bax', action: 'OPEN_SETTINGS_PLANS' })
+          runBillingAction(action)
         }}
       />
       <UpgradeModal

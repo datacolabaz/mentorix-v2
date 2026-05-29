@@ -8,6 +8,8 @@ import NotificationCard from '../../components/notifications/NotificationCard'
 import StatusBadge from '../../components/common/StatusBadge'
 import { isToday, isThisWeek, isThisMonth } from '../../mock/smsHistory'
 import { useBillingStatus } from '../../hooks/useBillingStatus'
+import { smsUsageFromBilling, storageUsageFromBilling } from '../../lib/billingUsageDisplay'
+import { useNavigate } from 'react-router-dom'
 import useUiStore from '../../hooks/useUi'
 
 const SEEN_KEY = 'mx_instructor_notifications_seen_at_v1'
@@ -182,6 +184,7 @@ function formatAgo(ms) {
 }
 
 export default function InstructorNotifications() {
+  const navigate = useNavigate()
   const { theme } = useUiStore()
   const LEVEL = useMemo(() => alertLevelStyles(theme), [theme])
   const progressTrackCls =
@@ -381,12 +384,19 @@ export default function InstructorNotifications() {
     }
   }, [fetchedAt])
 
-  const smsUsed = billing?.usage?.sms_monthly ?? profile?.sms_used_monthly ?? profile?.sms_used ?? 0
-  const smsLim = billing?.limits?.sms_monthly ?? profile?.sms_limit ?? null
+  const smsUsed = billing?.usage?.sms_monthly ?? profile?.sms_used_monthly ?? 0
+  const smsLim = billing?.limits?.sms_monthly ?? null
   const storageUsedMb = billing?.usage?.storage_mb ?? profile?.storage_used_mb ?? null
-  const storageLimMb = billing?.limits?.storage_mb ?? profile?.storage_limit_mb ?? null
+  const storageLimMb =
+    billing?.limits?.storage_mb ??
+    (billing?.limits?.storage_limit_bytes != null
+      ? Number(billing.limits.storage_limit_bytes) / (1024 * 1024)
+      : profile?.storage_limit_mb ?? null)
   const ramUsedMb = billing?.usage?.ram_mb ?? profile?.ram_used_mb ?? null
   const ramLimMb = billing?.limits?.ram_mb ?? profile?.ram_limit_mb ?? null
+
+  const smsUsage = smsUsageFromBilling(billing)
+  const storageUsage = storageUsageFromBilling(billing)
 
   const pctOrZero = (used, lim) => {
     if (lim == null) return 0
@@ -397,8 +407,8 @@ export default function InstructorNotifications() {
   }
 
   const systemPercent = {
-    sms: pctOrZero(smsUsed, smsLim),
-    storage: pctOrZero(storageUsedMb, storageLimMb),
+    sms: billing ? smsUsage.pct : pctOrZero(smsUsed, smsLim),
+    storage: billing ? storageUsage.pct : pctOrZero(storageUsedMb, storageLimMb),
     ram: pctOrZero(ramUsedMb, ramLimMb),
   }
 
@@ -479,12 +489,9 @@ export default function InstructorNotifications() {
   }, [smsTimeRows])
 
   const smsQuotaLine = useMemo(() => {
-    const lim = billing?.limits?.sms_monthly
-    const used = billing?.usage?.sms_monthly
-    if (lim == null && used == null) return null
-    const usedN = Number(used || 0) || 0
-    const limLabel = lim == null ? '∞' : String(Math.round(Number(lim)))
-    return { used: usedN, limLabel }
+    if (!billing) return null
+    const { used, limit, label } = smsUsageFromBilling(billing)
+    return { used, limLabel: limit == null ? '∞' : String(limit), label }
   }, [billing])
 
   const openDetails = (item) => {
@@ -525,7 +532,7 @@ export default function InstructorNotifications() {
               <div className={`h-full ${barTone(systemPercent.sms)}`} style={{ width: `${Math.min(100, systemPercent.sms)}%` }} />
             </div>
             <div className="text-sm text-token-textMuted tabular-nums text-right whitespace-nowrap">
-              {Number(smsUsed || 0) || 0}/{smsLim == null ? '∞' : Math.round(Number(smsLim))}
+              {billing ? smsUsage.label : `${Number(smsUsed || 0) || 0}/${smsLim == null ? '∞' : Math.round(Number(smsLim))}`}
             </div>
           </div>
 
@@ -724,6 +731,28 @@ export default function InstructorNotifications() {
                   <p className="text-xs text-token-textMuted mt-1">
                     {alert.type === 'sms' ? '📱 SMS' : alert.type === 'ram' ? '🧠 RAM' : '💾 Storage'}
                   </p>
+                  {alert.cta?.label ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      className="mt-3"
+                      onClick={() => {
+                        const act = alert.cta?.action
+                        if (act === 'OPEN_SMS_TOPUP') {
+                          navigate('/instructor/settings', { state: { scrollTo: 'billing-sms-addons' } })
+                          return
+                        }
+                        if (act === 'OPEN_SETTINGS_STORAGE') {
+                          navigate('/instructor/exams')
+                          return
+                        }
+                        navigate('/instructor/settings')
+                      }}
+                    >
+                      {alert.cta.label}
+                    </Button>
+                  ) : null}
                 </div>
               </div>
             </div>

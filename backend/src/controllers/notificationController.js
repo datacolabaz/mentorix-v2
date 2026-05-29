@@ -2,6 +2,13 @@ const db = require('../utils/db');
 const { recomputeInstructorUsage } = require('../services/resourceUsageService');
 const { sendRawSms } = require('../services/smsService');
 const { ensureSmsPeriodUpToDate, logBillingEvent, resolveEntitlements, bumpUsageCountersTx } = require('../services/billingEntitlements');
+const {
+  smsUsageLine,
+  storageUsageLine,
+  pickLimitCta,
+  isHighestTierPlan,
+} = require('../services/billingAlertHelpers');
+const { getActivePlansMap } = require('../services/subscriptionPlansService');
 
 const getAdminNotifications = async (req, res) => {
   try {
@@ -21,42 +28,41 @@ const getAdminNotifications = async (req, res) => {
         const lim = ent?.limits || {};
         const used = ent?.usage || {};
 
+        const plansMap = await getActivePlansMap();
+        const plan = ent?.plan || 'basic';
         const alerts = [];
-        const smsLim = lim.sms_monthly;
-        const smsUsed = Number(used.sms_monthly || 0) || 0;
-        if (smsLim != null) {
-          const pct = Math.round((smsUsed / Math.max(1, Number(smsLim))) * 100);
-          if (pct >= 80) {
-            alerts.push({
-              type: 'sms',
-              message: `SMS limiti ${pct}% dolub (${smsUsed}/${Number(smsLim)})`,
-              level: pct >= 100 ? 'critical' : 'warning',
-            });
-          }
+        const smsLine = smsUsageLine(used.sms_monthly, lim);
+        if (smsLine && smsLine.pct >= 80) {
+          const cta = pickLimitCta({
+            plan,
+            plansMap,
+            reachedSms: smsLine.pct >= 100,
+            reachedStorage: false,
+            reachedStudents: false,
+          });
+          alerts.push({
+            type: 'sms',
+            message: smsLine.pct >= 100 ? smsLine.message : smsLine.warnMessage,
+            level: smsLine.pct >= 100 ? 'critical' : 'warning',
+            cta,
+          });
         }
 
-        const stLimMb = lim.storage_mb;
-        const stLimBytes = lim.storage_limit_bytes;
-        const stUsedMb = Number(used.storage_mb || 0) || 0;
-        const stUsedBytes = Number(used.storage_bytes ?? 0) || 0;
-        if (stLimBytes != null && Number(stLimBytes) > 0) {
-          const pct = Math.round((stUsedBytes / Number(stLimBytes)) * 100);
-          if (pct >= 80) {
-            alerts.push({
-              type: 'storage',
-              message: `Yaddaş limiti ${pct}% dolub`,
-              level: pct >= 100 ? 'critical' : 'warning',
-            });
-          }
-        } else if (stLimMb != null) {
-          const pct = Math.round((stUsedMb / Math.max(1, Number(stLimMb))) * 100);
-          if (pct >= 80) {
-            alerts.push({
-              type: 'storage',
-              message: `Yaddaş limiti ${pct}% dolub (${stUsedMb}/${Number(stLimMb)} MB)`,
-              level: pct >= 100 ? 'critical' : 'warning',
-            });
-          }
+        const stLine = storageUsageLine(used, lim);
+        if (stLine && stLine.pct >= 80) {
+          const cta = pickLimitCta({
+            plan,
+            plansMap,
+            reachedSms: false,
+            reachedStorage: stLine.pct >= 100,
+            reachedStudents: false,
+          });
+          alerts.push({
+            type: 'storage',
+            message: stLine.pct >= 100 ? stLine.message : stLine.warnMessage,
+            level: stLine.pct >= 100 ? 'critical' : 'warning',
+            cta,
+          });
         }
 
         if (alerts.length) {
@@ -81,50 +87,81 @@ const getInstructorNotifications = async (req, res) => {
     const lim = ent?.limits || {};
     const used = ent?.usage || {};
 
+    const plansMap = await getActivePlansMap();
+    const plan = ent?.plan || 'basic';
+    const pendingTopup = ent?.pending_topup || null;
+    const messages = ent?.messages || null;
     const alerts = [];
-    const smsLim = lim.sms_monthly;
-    const smsUsed = Number(used.sms_monthly || 0) || 0;
-    if (smsLim != null) {
-      const pct = Math.round((smsUsed / Math.max(1, Number(smsLim))) * 100);
-      if (pct >= 80) {
+
+    if (messages?.suppress_limit_bar) {
+      /* InstructorLayout BillingBanner göstərir; təkrar qırmızı zolaq yox */
+    } else {
+      const smsLine = smsUsageLine(used.sms_monthly, lim);
+      if (smsLine && smsLine.pct >= 80) {
+        const highest = isHighestTierPlan(plan, plansMap);
+        const cta =
+          smsLine.pct >= 100 && highest
+            ? { label: 'SMS Balansı Artır', action: 'OPEN_SMS_TOPUP' }
+            : pickLimitCta({
+                plan,
+                plansMap,
+                reachedSms: smsLine.pct >= 100,
+                reachedStorage: false,
+                reachedStudents: false,
+              });
         alerts.push({
           type: 'sms',
-          message: `SMS limitiniz ${pct}% dolub (${smsUsed}/${Number(smsLim)})`,
-          level: pct >= 100 ? 'critical' : 'warning',
+          message:
+            smsLine.pct >= 100 && highest
+              ? 'Aylıq SMS limitinizə çatdınız. İstifadəyə davam etmək üçün əlavə SMS paketi əldə edə bilərsiniz.'
+              : smsLine.pct >= 100
+                ? smsLine.message
+                : smsLine.warnMessage,
+          level: smsLine.pct >= 100 ? 'critical' : 'warning',
+          cta,
+        });
+      }
+
+      const stLine = storageUsageLine(used, lim);
+      if (stLine && stLine.pct >= 80) {
+        const highest = isHighestTierPlan(plan, plansMap);
+        const cta =
+          stLine.pct >= 100 && highest
+            ? { label: 'Yaddaşı idarə et', action: 'OPEN_SETTINGS_STORAGE' }
+            : pickLimitCta({
+                plan,
+                plansMap,
+                reachedSms: false,
+                reachedStorage: stLine.pct >= 100,
+                reachedStudents: false,
+              });
+        alerts.push({
+          type: 'storage',
+          message:
+            stLine.pct >= 100 && highest
+              ? 'Yaddaş limitiniz dolub. Yeni fayl yükləmək üçün əlavə yaddaş sahəsi alın və ya köhnə faylları silin.'
+              : stLine.pct >= 100
+                ? stLine.message
+                : stLine.warnMessage,
+          level: stLine.pct >= 100 ? 'critical' : 'warning',
+          cta,
         });
       }
     }
 
-    const stLimMb = lim.storage_mb;
-    const stLimBytes = lim.storage_limit_bytes;
-    const stUsedMb = Number(used.storage_mb || 0) || 0;
-    const stUsedBytes = Number(used.storage_bytes ?? 0) || 0;
-    if (stLimBytes != null && Number(stLimBytes) > 0) {
-      const pct = Math.round((stUsedBytes / Number(stLimBytes)) * 100);
-      if (pct >= 80) {
-        alerts.push({
-          type: 'storage',
-          message: `Yaddaş limitiniz ${pct}% dolub`,
-          level: pct >= 100 ? 'critical' : 'warning',
-        });
-      }
-    } else if (stLimMb != null) {
-      const pct = Math.round((stUsedMb / Math.max(1, Number(stLimMb))) * 100);
-      if (pct >= 80) {
-        alerts.push({
-          type: 'storage',
-          message: `Yaddaş limitiniz ${pct}% dolub (${stUsedMb}/${Number(stLimMb)} MB)`,
-          level: pct >= 100 ? 'critical' : 'warning',
-        });
-      }
-    }
+    const smsLim = lim.sms_monthly;
+    const smsUsed = Number(used.sms_monthly || 0) || 0;
 
     res.json({
       success: true,
       alerts,
+      billing_messages: messages,
+      pending_topup: pendingTopup,
       profile: {
         sms_limit: smsLim,
+        sms_limit_plan: lim.sms_monthly_plan ?? null,
         sms_used_monthly: smsUsed,
+        plan,
         storage_limit_mb: stLimMb,
         storage_limit_bytes: stLimBytes,
         storage_used_mb: stUsedMb,

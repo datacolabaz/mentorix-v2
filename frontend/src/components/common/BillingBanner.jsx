@@ -36,13 +36,22 @@ function stylesByStatus(theme) {
       title: 'Abunəlik',
       ctaClass: '',
     },
+    pending: {
+      wrap: light
+        ? 'border-sky-600/25 bg-sky-50 text-sky-950'
+        : 'border-sky-500/30 bg-sky-500/10 text-sky-100',
+      title: 'Ödəniş gözləmədədir',
+      ctaClass: light
+        ? '!text-sky-950 !border-sky-700/30 hover:!bg-sky-100/70'
+        : '',
+    },
     active: null,
   }
 }
 
-export default function BillingBanner({ status, banner, cta, onCta }) {
+export default function BillingBanner({ status, banner, cta, onCta, tone }) {
   const { theme } = useUiStore()
-  const s = String(status || 'active')
+  const s = tone === 'pending' ? 'pending' : String(status || 'active')
   const meta = stylesByStatus(theme)[s]
   if (!meta) return null
   if (!banner && !cta) return null

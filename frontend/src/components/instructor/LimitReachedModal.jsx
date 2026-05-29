@@ -1,7 +1,13 @@
 import Modal from '../common/Modal'
 import Button from '../common/Button'
 
-export default function LimitReachedModal({ open, onClose, onViewPlans, serverMessage }) {
+export default function LimitReachedModal({
+  open,
+  onClose,
+  onPrimary,
+  serverMessage,
+  primaryLabel = 'Paketlərə bax',
+}) {
   return (
     <Modal open={open} onClose={onClose} title="Limitə çatdınız" size="sm">
       <div className="space-y-4">
@@ -14,8 +20,8 @@ export default function LimitReachedModal({ open, onClose, onViewPlans, serverMe
           <Button type="button" variant="secondary" className="w-full sm:w-auto justify-center" onClick={onClose}>
             Bağla
           </Button>
-          <Button type="button" variant="primary" className="w-full sm:w-auto justify-center" onClick={onViewPlans}>
-            Paketlərə bax
+          <Button type="button" variant="primary" className="w-full sm:w-auto justify-center" onClick={onPrimary}>
+            {primaryLabel}
           </Button>
         </div>
       </div>

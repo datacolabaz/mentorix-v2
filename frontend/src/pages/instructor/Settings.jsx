@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import api from '../../lib/api'
 import Card from '../../components/common/Card'
@@ -32,6 +32,7 @@ import { QRCodeCanvas } from 'qrcode.react'
 
 export default function InstructorSettings() {
   const navigate = useNavigate()
+  const location = useLocation()
   const qc = useQueryClient()
   const toast = useToast()
   const { user, updateUser } = useAuthStore()
@@ -99,6 +100,15 @@ export default function InstructorSettings() {
   useEffect(() => {
     void load()
   }, [load])
+
+  useEffect(() => {
+    const scrollTo = location.state?.scrollTo
+    if (!scrollTo) return
+    const t = window.setTimeout(() => {
+      document.getElementById(String(scrollTo))?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 200)
+    return () => window.clearTimeout(t)
+  }, [location.state?.scrollTo])
 
   const hasMapPin = mapLat.trim() !== '' && mapLng.trim() !== ''
 
@@ -659,7 +669,7 @@ export default function InstructorSettings() {
         </Card>
       ) : null}
 
-      <Card className={settingsCardCls}>
+      <Card id="billing-payments" className={settingsCardCls}>
         <h2 className={cardTitleCls}>Ödəniş tarixçəsi</h2>
         <p className={cardTextCls}>
           Yalnız real ödənişlər (gözləyən, ödənilmiş, rədd edilmiş) göstərilir. Kartla ödənişə başlayıb

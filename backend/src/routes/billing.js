@@ -52,6 +52,8 @@ router.get('/status', authenticate, authorize('instructor'), async (req, res) =>
     const out = await resolveEntitlements(req.user.id);
     res.json({
       plan: out.plan,
+      is_highest_tier: out.is_highest_tier,
+      pending_topup: out.pending_topup || null,
       subscription: out.subscription || null,
       limits: out.limits,
       usage: out.usage,

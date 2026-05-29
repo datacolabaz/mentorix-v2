@@ -2,6 +2,13 @@ const db = require('../utils/db');
 const { normalizePlanSlug } = require('../config/plans');
 const getCurrentPlan = require('./billingGetCurrentPlan');
 const { getActivePlansMap } = require('./subscriptionPlansService');
+const {
+  isHighestTierPlan,
+  smsUsageLine,
+  storageUsageLine,
+  fetchPendingTopups,
+  pickLimitCta,
+} = require('./billingAlertHelpers');
 
 const TZ = 'Asia/Baku';
 
@@ -184,7 +191,37 @@ function buildMessages(status, ctx) {
     used,
     remainingObj,
     details,
+    plan,
+    plansMap,
+    pendingTopup,
   } = ctx || {};
+
+  const highest = isHighestTierPlan(plan, plansMap);
+  const onlySms =
+    details?.reachedSms && !details?.reachedStudents && !details?.reachedStorage;
+  const onlyStorage =
+    details?.reachedStorage && !details?.reachedStudents && !details?.reachedSms;
+
+  if (pendingTopup?.hasPendingAny && (status === 'blocked' || status === 'warning')) {
+    if (pendingTopup.hasPendingSms && onlySms) {
+      return {
+        banner:
+          'Ödənişiniz admin təsdiqi gözləyir. Tezliklə SMS balansınız yenilənəcək.',
+        cta: { label: 'Ödəniş tarixçəsi', action: 'OPEN_SETTINGS_PAYMENTS' },
+        suppress_limit_bar: true,
+        tone: 'pending',
+      };
+    }
+    if (pendingTopup.hasPendingPlan) {
+      return {
+        banner:
+          'Ödənişiniz admin təsdiqi gözləyir. Təsdiqlənəndən sonra paket limitləriniz yenilənəcək.',
+        cta: { label: 'Ödəniş tarixçəsi', action: 'OPEN_SETTINGS_PAYMENTS' },
+        suppress_limit_bar: true,
+        tone: 'pending',
+      };
+    }
+  }
 
   if (status === 'warning' && !phone_verified) {
     return {
@@ -197,20 +234,28 @@ function buildMessages(status, ctx) {
     if (limits.students != null && isWarnPercent(remainingObj.students, limits.students, 0.2)) {
       parts.push(`Tələbə limitinə yaxınlasırsınız (${used.students}/${limits.students})`);
     }
-    if (limits.sms_monthly != null && isWarnPercent(remainingObj.sms_monthly, limits.sms_monthly, 0.2)) {
-      parts.push(`SMS limitinə yaxınlasırsınız (${used.sms_monthly}/${limits.sms_monthly})`);
+    const smsLine = smsUsageLine(used.sms_monthly, limits);
+    if (smsLine && limits.sms_monthly != null && isWarnPercent(remainingObj.sms_monthly, limits.sms_monthly, 0.2)) {
+      parts.push(smsLine.warnMessage);
     }
-    if (limits.storage_limit_bytes != null) {
-      const cap = Number(limits.storage_limit_bytes);
+    const stLine = storageUsageLine(used, limits);
+    if (stLine) {
+      const cap = limits.storage_limit_bytes;
       const u = Number(used.storage_bytes ?? 0) || 0;
-      if (cap > 0 && u / cap >= 0.8) {
-        parts.push(`Yaddaş limitinə yaxınlasırsınız (${fmtBytes(u)}/${fmtBytes(cap)})`);
-      }
-    } else if (limits.storage_mb != null && isWarnPercent(remainingObj.storage_mb, limits.storage_mb, 0.2)) {
-      parts.push(`Yaddaş limitinə yaxınlasırsınız (${used.storage_mb}/${limits.storage_mb} MB)`);
+      const nearBytes = cap != null && Number(cap) > 0 && u / Number(cap) >= 0.8;
+      const nearMb =
+        limits.storage_mb != null && isWarnPercent(remainingObj.storage_mb, limits.storage_mb, 0.2);
+      if (nearBytes || nearMb) parts.push(stLine.warnMessage);
     }
     const banner = parts.length ? parts.join(' ') : 'Limitlərə yaxınlasırsınız';
-    return { banner, cta: { label: 'Paketlərə bax', action: 'OPEN_SETTINGS_PLANS' } };
+    const cta = pickLimitCta({
+      plan,
+      plansMap,
+      reachedSms: Boolean(smsLine && smsLine.pct >= 80),
+      reachedStorage: Boolean(stLine && stLine.pct >= 80),
+      reachedStudents: false,
+    });
+    return { banner, cta };
   }
   if (status === 'grace') {
     return {
@@ -219,6 +264,20 @@ function buildMessages(status, ctx) {
     };
   }
   if (status === 'blocked') {
+    if (onlySms && highest) {
+      return {
+        banner:
+          'Aylıq SMS limitinizə çatdınız. İstifadəyə davam etmək üçün əlavə SMS paketi əldə edə bilərsiniz.',
+        cta: { label: 'SMS Balansı Artır', action: 'OPEN_SMS_TOPUP' },
+      };
+    }
+    if (onlyStorage && highest) {
+      return {
+        banner:
+          'Yaddaş limitiniz dolub. Yeni fayl yükləmək üçün əlavə yaddaş sahəsi alın və ya köhnə faylları silin.',
+        cta: { label: 'Yaddaşı idarə et', action: 'OPEN_SETTINGS_STORAGE' },
+      };
+    }
     const reasons = [];
     if (details?.reachedStudents) reasons.push('tələbə limiti');
     if (details?.reachedStorage) reasons.push('yaddaş limiti');
@@ -226,7 +285,13 @@ function buildMessages(status, ctx) {
     const detail = reasons.length ? ` (${reasons.join(', ')})` : '';
     return {
       banner: `Limitə çatdınız${detail}. Davam etmək üçün paket seçməlisiniz.`,
-      cta: { label: 'Paketlərə bax', action: 'OPEN_SETTINGS_PLANS' },
+      cta: pickLimitCta({
+        plan,
+        plansMap,
+        reachedSms: details?.reachedSms,
+        reachedStorage: details?.reachedStorage,
+        reachedStudents: details?.reachedStudents,
+      }),
     };
   }
   if (status === 'expired') {
@@ -326,16 +391,22 @@ async function resolveEntitlements(userId) {
   const should_warn = status === 'warning';
   const should_block = (status2 === 'blocked' || status2 === 'expired'); // grace is NOT blocking
   const days_left = sub2?.current_period_end ? ceilDaysLeft(sub2.current_period_end) : null;
+  const pendingTopup = await fetchPendingTopups(db, userId);
   const messages = buildMessages(status2, {
     phone_verified,
     limits,
     used,
     remainingObj: rem,
     details: { reachedStudents, reachedStorage, reachedSms },
+    plan: planSlug,
+    plansMap,
+    pendingTopup,
   });
 
   return {
     plan: planSlug,
+    is_highest_tier: isHighestTierPlan(planSlug, plansMap),
+    pending_topup: pendingTopup,
     subscription: {
       status: subStatus,
       current_period_end: sub2?.current_period_end ? new Date(sub2.current_period_end).toISOString() : null,
