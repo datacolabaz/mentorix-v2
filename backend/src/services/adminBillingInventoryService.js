@@ -195,7 +195,10 @@ async function getAdminBillingInventory() {
   const { live, display } = await buildInventoryDisplayWithUsage(operator, usageMerged);
 
   const smsRem = display.sms_has_data ? display.sms_remaining : null;
-  const stRem = display.storage_has_data ? display.storage_remaining_mb : null;
+  const stRem =
+    display.storage_has_limit && display.storage_remaining_mb != null
+      ? display.storage_remaining_mb
+      : null;
   const smsLow = smsRem != null && smsRem <= operator.operator_sms_low_alert;
   const stLow = stRem != null && stRem <= operator.operator_storage_mb_low_alert;
 

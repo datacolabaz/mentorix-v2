@@ -82,10 +82,10 @@ export default function AdminDashboard() {
           icon="📦"
         />
         <StatCard
-          label="Yaddaş — qalan"
+          label="Yaddaş — boş (disk)"
           value={
-            stHas && (display.storage_total_mb ?? 0) > 0
-              ? `${(display.storage_remaining_mb ?? 0).toLocaleString('az-AZ')} MB`
+            display?.storage_has_limit && display.storage_remaining_mb != null
+              ? `${display.storage_remaining_mb.toLocaleString('az-AZ')} MB`
               : stHas
                 ? `${(display.storage_used_mb ?? 0).toLocaleString('az-AZ')} MB istifadə`
                 : '—'

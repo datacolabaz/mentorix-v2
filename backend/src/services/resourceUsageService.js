@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const { statfs } = require('fs/promises');
 const db = require('../utils/db');
 
 function bytesToMbInt(bytes) {
@@ -209,7 +210,77 @@ function sumDirectoryBytes(dirPath) {
   return total;
 }
 
-/** Serverdə uploads/ qovluğunun real disk ölçüsü */
+async function statfsForPath(targetPath) {
+  if (!targetPath) return null;
+  try {
+    const st = await statfs(targetPath);
+    const total_bytes = Number(st.blocks) * Number(st.bsize);
+    const free_bytes = Number(st.bfree) * Number(st.bsize);
+    const used_bytes = Math.max(0, total_bytes - free_bytes);
+    if (!Number.isFinite(total_bytes) || total_bytes <= 0) return null;
+    return {
+      path: targetPath,
+      total_bytes,
+      free_bytes,
+      used_bytes,
+      total_mb: bytesToMbInt(total_bytes),
+      free_mb: bytesToMbInt(free_bytes),
+      used_mb: bytesToMbInt(used_bytes),
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** Railway/hosting disk + uploads fayllarının ölçüsü */
+async function getPlatformHostingStorageStats() {
+  const uploadsRoot =
+    process.env.UPLOADS_DIR || process.env.RAILWAY_VOLUME_MOUNT_PATH || path.join(__dirname, '../../uploads');
+  const candidatePaths = [
+    uploadsRoot,
+    process.env.RAILWAY_VOLUME_MOUNT_PATH,
+    '/data',
+    '/app/uploads',
+    path.join(__dirname, '../../uploads'),
+    '/',
+  ].filter(Boolean);
+  const seen = new Set();
+  const mounts = [];
+  for (const p of candidatePaths) {
+    const norm = path.resolve(p);
+    if (seen.has(norm)) continue;
+    seen.add(norm);
+    const disk = await statfsForPath(norm);
+    if (disk) mounts.push(disk);
+  }
+  mounts.sort((a, b) => b.total_bytes - a.total_bytes);
+  const primary = mounts[0] || null;
+  const file_used_bytes = sumDirectoryBytes(uploadsRoot);
+  const envTotalMb = Number(process.env.PLATFORM_STORAGE_TOTAL_MB);
+  const env_total_mb = Number.isFinite(envTotalMb) && envTotalMb > 0 ? Math.round(envTotalMb) : 0;
+
+  const onRailway = Boolean(process.env.RAILWAY_ENVIRONMENT || process.env.RAILWAY_PROJECT_ID);
+  const onVercel = Boolean(process.env.VERCEL);
+
+  return {
+    uploads_root: uploadsRoot,
+    storage_used_bytes: file_used_bytes,
+    storage_used_mb: bytesToMbInt(file_used_bytes),
+    disk: primary,
+    disk_mounts: mounts,
+    env_total_mb,
+    hosting: {
+      railway: onRailway,
+      vercel: onVercel,
+      /** Fayllar Railway backend-də saxlanır; Vercel yalnız frontend */
+      note: onVercel && !onRailway
+        ? 'Vercel yalnız frontend; yaddaş Railway uploads diskində'
+        : null,
+    },
+  };
+}
+
+/** @deprecated use getPlatformHostingStorageStats */
 function getPlatformUploadsStorageStats() {
   const uploadsRoot = path.join(__dirname, '../../uploads');
   const storage_used_bytes = sumDirectoryBytes(uploadsRoot);
@@ -237,5 +308,6 @@ module.exports = {
   recomputeInstructorUsage,
   recomputeAllInstructorsUsage,
   getPlatformUploadsStorageStats,
+  getPlatformHostingStorageStats,
 };
 

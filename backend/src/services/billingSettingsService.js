@@ -141,8 +141,10 @@ async function adminUpdateBillingSettings({
   manual_transfer_account,
   sms_packs,
   storage_packs,
+  operator_sms_stock_total,
   operator_sms_stock_remaining,
   operator_sms_low_alert,
+  operator_storage_mb_total,
   operator_storage_mb_remaining,
   operator_storage_mb_low_alert,
 }) {

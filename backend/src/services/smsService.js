@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const db = require('../utils/db');
 const { ensureSmsPeriodUpToDate, bumpUsageCountersTx } = require('./billingEntitlements');
 
@@ -262,7 +263,7 @@ async function fetchSmsProviderBalance({ bypassCache = false } = {}) {
       }
       const rc = readSmxmlResponseCode(json);
       if (rc != null && rc !== 0 && rc !== 200) {
-        lastError = `Provayder kodu: ${rc}`;
+        lastError = `SMXML kodu: ${rc} (balans üçün QuickSMS istifadə olunur)`;
         continue;
       }
       const balance = extractSmsBalanceFromJson(json);

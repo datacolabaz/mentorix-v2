@@ -22,10 +22,11 @@ function stockCardCls(low, hasData) {
 }
 
 function sourceBadge(source) {
-  if (source === 'sendsms.az') return 'Avtomatik · sendsms.az'
+  if (source === 'sendsms.az') return 'Avtomatik · sendsms.az QuickSMS'
   if (source === 'manual') return 'Əl ilə qeyd'
-  if (source === 'hosting') return 'Avtomatik · hosting'
-  if (source === 'disk') return 'Avtomatik · server faylları'
+  if (source === 'railway-disk') return 'Avtomatik · Railway disk'
+  if (source === 'env-limit') return 'PLATFORM_STORAGE_TOTAL_MB'
+  if (source === 'uploads-scan') return 'uploads qovluğu'
   return ''
 }
 
@@ -119,15 +120,19 @@ export default function AdminInventory() {
 
   const smsTotal = display?.sms_total ?? 0
   const smsRem = display?.sms_remaining ?? 0
+  const smsUsed = display?.sms_used_this_month ?? 0
   const stTotal = display?.storage_total_mb ?? 0
-  const stRem = display?.storage_remaining_mb ?? 0
+  const stRem = display?.storage_remaining_mb
   const stUsed = display?.storage_used_mb ?? 0
+  const stHasLimit = Boolean(display?.storage_has_limit)
   const smsHas = Boolean(display?.sms_has_data)
   const stHas = Boolean(display?.storage_has_data)
   const smsLow =
     smsHas && smsRem <= (inventory?.operator?.operator_sms_low_alert ?? 500)
   const stLow =
-    stHas && stRem <= (inventory?.operator?.operator_storage_mb_low_alert ?? 500)
+    stHasLimit &&
+    stRem != null &&
+    stRem <= (inventory?.operator?.operator_storage_mb_low_alert ?? 500)
 
   return (
     <div className="p-6 space-y-6 max-w-5xl">
@@ -207,8 +212,15 @@ export default function AdminInventory() {
                   </div>
                 </div>
               </div>
+              <p className="text-[11px] text-gray-500 mt-3">
+                Bu ay platformda göndərilən: <strong className="text-gray-300">{smsUsed.toLocaleString('az-AZ')}</strong>{' '}
+                SMS
+                {!smsHas && display?.sms_provider_error ? (
+                  <span className="block text-amber-300/90 mt-1">{display.sms_provider_error}</span>
+                ) : null}
+              </p>
               {smsHas && smsTotal > 0 ? (
-                <div className="mt-3 h-1.5 rounded-full bg-black/30 overflow-hidden">
+                <div className="mt-2 h-1.5 rounded-full bg-black/30 overflow-hidden">
                   <div
                     className="h-full bg-emerald-500/80 rounded-full"
                     style={{ width: `${Math.min(100, Math.round((smsRem / smsTotal) * 100))}%` }}
@@ -233,17 +245,20 @@ export default function AdminInventory() {
                   </div>
                 </div>
                 <div>
-                  <div className="text-[10px] text-gray-500 uppercase">Qalan / boş</div>
+                  <div className="text-[10px] text-gray-500 uppercase">Boş qalan (disk)</div>
                   <div className="font-display font-bold text-2xl text-white mt-1">
-                    {stHas && stTotal > 0 ? stRem.toLocaleString('az-AZ') : '—'}{' '}
+                    {stHasLimit && stRem != null ? stRem.toLocaleString('az-AZ') : '—'}{' '}
                     <span className="text-sm font-normal text-gray-500">MB</span>
                   </div>
                 </div>
               </div>
               <p className="text-[11px] text-gray-500 mt-2">
-                İstifadə: {stUsed.toLocaleString('az-AZ')} MB (uploads + DB)
+                İstifadə: {stUsed.toLocaleString('az-AZ')} MB (fayllar + DB)
+                {display?.storage_disk_path ? (
+                  <span className="block text-gray-600 mt-0.5">Disk: {display.storage_disk_path}</span>
+                ) : null}
               </p>
-              {stHas && stTotal > 0 ? (
+              {stHasLimit && stTotal > 0 && stRem != null ? (
                 <div className="mt-2 h-1.5 rounded-full bg-black/30 overflow-hidden">
                   <div
                     className="h-full bg-blue-500/80 rounded-full"
