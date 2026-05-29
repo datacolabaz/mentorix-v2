@@ -22,7 +22,9 @@ function stockCardCls(low, hasData) {
 }
 
 function sourceBadge(source) {
-  if (source === 'sendsms.az') return 'Avtomatik · sendsms.az QuickSMS'
+  if (source === 'sendsms.az') return 'Avtomatik · sendsms.az'
+  if (source === 'estimate') return 'Təxmini (ümumi − göndərilən)'
+  if (source === 'saved') return 'Son saxlanılan'
   if (source === 'manual') return 'Əl ilə qeyd'
   if (source === 'railway-disk') return 'Avtomatik · Railway disk'
   if (source === 'env-limit') return 'PLATFORM_STORAGE_TOTAL_MB'
@@ -126,6 +128,7 @@ export default function AdminInventory() {
   const stUsed = display?.storage_used_mb ?? 0
   const stHasLimit = Boolean(display?.storage_has_limit)
   const smsHasBalance = Boolean(display?.sms_has_balance)
+  const smsHasEstimate = Boolean(display?.sms_has_estimate)
   const smsHas = Boolean(display?.sms_has_data)
   const smsUsedAll = display?.sms_used_all_time ?? 0
   const stHas = Boolean(display?.storage_has_data)
@@ -141,7 +144,7 @@ export default function AdminInventory() {
       <div>
         <h1 className="font-display font-bold text-2xl">SMS və yaddaş ehtiyatı</h1>
         <p className="text-gray-400 text-sm mt-1">
-          SMS balansı sendsms.az-dan avtomatik oxunur; yaddaş server faylları + hosting limitindən hesablanır.
+          SMS: sendsms.az SMXML (işləməsə panel rəqəmini əl ilə yazın); yaddaş Railway diskindən.
         </p>
         {!loading && !loadError ? (
           <div className="mt-3 flex flex-wrap gap-2">
@@ -202,14 +205,18 @@ export default function AdminInventory() {
                 <div>
                   <div className="text-[10px] text-gray-500 uppercase">Ümumi (təxmini)</div>
                   <div className="font-display font-bold text-2xl text-white mt-1">
-                    {smsHasBalance ? smsTotal.toLocaleString('az-AZ') : '—'}{' '}
+                    {smsHasBalance || smsHasEstimate || smsTotal > 0
+                      ? smsTotal.toLocaleString('az-AZ')
+                      : '—'}{' '}
                     <span className="text-sm font-normal text-gray-500">ədəd</span>
                   </div>
                 </div>
                 <div>
-                  <div className="text-[10px] text-gray-500 uppercase">Qalan balans</div>
+                  <div className="text-[10px] text-gray-500 uppercase">
+                    {smsHasEstimate ? 'Qalan (təxmini)' : 'Qalan balans'}
+                  </div>
                   <div className="font-display font-bold text-2xl text-white mt-1">
-                    {smsHasBalance ? smsRem.toLocaleString('az-AZ') : '—'}{' '}
+                    {smsHasBalance || smsHasEstimate ? smsRem.toLocaleString('az-AZ') : '—'}{' '}
                     <span className="text-sm font-normal text-gray-500">ədəd</span>
                   </div>
                 </div>
@@ -225,9 +232,14 @@ export default function AdminInventory() {
                 {!smsHasBalance && display?.sms_provider_error ? (
                   <span className="block text-amber-300/90">{display.sms_provider_error}</span>
                 ) : null}
-                {!smsHasBalance ? (
+                {!smsHasBalance && !smsHasEstimate ? (
                   <span className="block text-gray-500">
-                    Qalan balans üçün aşağıdan «Qalan SMS» yazıb saxlayın və ya sendsms panelində IP icazəsi verin.
+                    sendsms.az API ilə balans gəlmir. «Ümumi alınmış SMS» və «Qalan SMS» yazıb saxlayın (paneldə
+                    gördüyünüz rəqəmlər).
+                  </span>
+                ) : smsHasEstimate ? (
+                  <span className="block text-gray-500">
+                    Təxmini: ümumi alınmış − platformda göndərilən ({smsUsedAll.toLocaleString('az-AZ')}).
                   </span>
                 ) : null}
               </p>

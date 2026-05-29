@@ -195,156 +195,125 @@ function quicksmsAuthKey(login, password, { upper = false } = {}) {
   return upper ? raw.toUpperCase() : raw;
 }
 
-function parseQuicksmsBalanceJson(json) {
-  if (!json || typeof json !== 'object') return { balance: null, error: null };
+const SMXML_RC_HINTS = {
+  0: null,
+  200: null,
+  102: 'sendsms.az bu hesabda API balansını qaytarmır (paneldən qalanı əl ilə qeyd edin)',
+  104: 'Sorğu rədd edildi — IP icazəsi və ya balans API deaktiv ola bilər',
+  221: 'Login və ya parol səhvdir',
+  235: 'SMXML sorğu formatı qəbul olunmadı',
+};
+
+function smxmlRcHint(code) {
+  if (code == null) return null;
+  return SMXML_RC_HINTS[code] || `Provayder kodu: ${code}`;
+}
+
+function parseBalanceFromText(text) {
+  const raw = String(text || '').trim();
+  if (!raw) return { balance: null, error: 'Boş cavab' };
+  if (/file not found|404|not found/i.test(raw)) {
+    return { balance: null, error: 'Balans URL mövcud deyil' };
+  }
+  try {
+    const json = JSON.parse(raw);
+    return parseBalanceFromJson(json);
+  } catch {
+    const num = raw.replace(/[^\d.]/g, '');
+    const n = Number(num);
+    if (Number.isFinite(n) && n >= 0 && n < 1e9) return { balance: Math.round(n), error: null };
+    const m = raw.match(/obj["\s:]+(\d+)/i) || raw.match(/balance["\s:]+(\d+)/i);
+    if (m) return { balance: Math.round(Number(m[1])), error: null };
+    return { balance: null, error: 'Cavab JSON deyil' };
+  }
+}
+
+function parseBalanceFromJson(json) {
+  if (!json || typeof json !== 'object') return { balance: null, error: 'Boş JSON' };
   const code = json.errorCode != null ? Number(json.errorCode) : null;
   if (code != null && Number.isFinite(code) && code < 0) {
-    return { balance: null, error: json.errorMessage || `QuickSMS errorCode ${code}` };
+    return { balance: null, error: json.errorMessage || `errorCode ${code}` };
   }
   const obj = json.obj ?? json.balance ?? json.data?.balance ?? json.data?.obj;
   const n = Number(obj);
   if (Number.isFinite(n) && n >= 0) return { balance: Math.round(n), error: null };
-  return { balance: null, error: json.errorMessage || 'Balans tapılmadı' };
-}
 
-function extractSmxmlBalanceFromJson(json) {
   const body = json?.response?.body;
-  if (body != null) {
-    const direct = Number(body.balance ?? body.credit ?? body.obj);
-    if (Number.isFinite(direct) && direct >= 0) return Math.round(direct);
-    if (Array.isArray(body) && body[0]) {
-      const b = Number(body[0].balance ?? body[0].credit);
-      if (Number.isFinite(b) && b >= 0) return Math.round(b);
-    }
+  if (typeof body === 'number' && body >= 0) return { balance: Math.round(body), error: null };
+  if (body != null && typeof body === 'object') {
+    const b = Number(body.balance ?? body.credit ?? body.obj ?? body.amount);
+    if (Number.isFinite(b) && b >= 0) return { balance: Math.round(b), error: null };
+  }
+  if (typeof body === 'string') {
+    const bn = Number(body.replace(/[^\d.]/g, ''));
+    if (Number.isFinite(bn) && bn >= 0) return { balance: Math.round(bn), error: null };
   }
   const headBal = Number(json?.response?.head?.balance ?? json?.response?.head?.credit);
-  if (Number.isFinite(headBal) && headBal >= 0) return Math.round(headBal);
-  return null;
-}
+  if (Number.isFinite(headBal) && headBal >= 0) return { balance: Math.round(headBal), error: null };
 
-async function fetchQuicksmsBalance() {
-  const login = String(SMS_LOGIN || '').trim();
-  const keys = [
-    quicksmsAuthKey(login, SMS_PASSWORD, { upper: false }),
-    quicksmsAuthKey(login, SMS_PASSWORD, { upper: true }),
-  ];
-  const bases = [
-    process.env.SMS_QUICKSMS_BASE_URL,
-    'https://sendsms.az',
-    'https://www.sendsms.az',
-    'https://lsim.az',
-    'https://www.lsim.az',
-  ].filter(Boolean);
-  const paths = ['/quicksms/v1/balance', '/quicksms/v1/balance/'];
-  let lastError = 'QuickSMS balans oxunmadı';
-
-  for (const base of bases) {
-    const origin = String(base).replace(/\/+$/, '');
-    for (const p of paths) {
-      for (const key of keys) {
-        const payload = { login, key };
-        const attempts = [
-          {
-            label: 'POST JSON',
-            run: () =>
-              fetch(`${origin}${p}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-                body: JSON.stringify(payload),
-              }),
-          },
-          {
-            label: 'GET query',
-            run: () =>
-              fetch(
-                `${origin}${p}?login=${encodeURIComponent(login)}&key=${encodeURIComponent(key)}`,
-                { method: 'GET', headers: { Accept: 'application/json' } }
-              ),
-          },
-          {
-            label: 'POST form',
-            run: () =>
-              fetch(`${origin}${p}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
-                body: new URLSearchParams({ login, key }).toString(),
-              }),
-          },
-        ];
-        for (const { label, run } of attempts) {
-          try {
-            const res = await run();
-            const text = await res.text();
-            let json = null;
-            try {
-              json = JSON.parse(text);
-            } catch {
-              lastError = `${origin}${p} ${label}: JSON deyil`;
-              continue;
-            }
-            const parsed = parseQuicksmsBalanceJson(json);
-            if (parsed.balance != null) {
-              return {
-                ok: true,
-                balance: parsed.balance,
-                method: 'quicksms',
-                endpoint: `${origin}${p}`,
-                error: null,
-              };
-            }
-            lastError = parsed.error || `${origin}${p} ${label}: balans yoxdur`;
-          } catch (e) {
-            lastError = e.message || lastError;
-          }
-        }
-      }
-    }
+  const rc = readSmxmlResponseCode(json);
+  if (rc === 0 || rc === 200) {
+    return { balance: null, error: smxmlRcHint(rc) || 'Balans sahəsi tapılmadı' };
   }
-  return { ok: false, balance: null, error: lastError };
+  return { balance: null, error: smxmlRcHint(rc) || 'Balans tapılmadı' };
 }
 
 async function fetchSmxmlBalance() {
-  const login = SMS_LOGIN;
+  const login = String(SMS_LOGIN || '').trim();
   const key = quicksmsAuthKey(login, SMS_PASSWORD);
-  const operations = ['balance', 'getbalance', 'credit', 'getcredit'];
-  let lastError = 'SMXML balans oxunmadı';
+  const operations = ['balance', 'credit', 'getbalance', 'getcredit', 'check_balance'];
+  let lastError = 'sendsms.az SMXML balans cavab vermədi';
+  let lastRaw = null;
 
   for (const operation of operations) {
-    for (const auth of [
-      { login, key, password: null },
-      { login, password: SMS_PASSWORD, key: null },
-      { login, key, password: SMS_PASSWORD },
-    ]) {
+    const variants = [
+      {
+        head: { operation, login, password: SMS_PASSWORD, title: SMS_TITLE, controlid: `${Date.now()}-${operation}` },
+        body: [],
+      },
+      {
+        head: { operation, login, key, title: SMS_TITLE, controlid: `${Date.now()}-${operation}-key` },
+        body: [],
+      },
+      {
+        head: { operation, login, password: SMS_PASSWORD, key, title: SMS_TITLE, controlid: `${Date.now()}-${operation}-both` },
+        body: [],
+      },
+    ];
+    for (const req of variants) {
       try {
-        const head = {
-          operation,
-          login,
-          controlid: `${Date.now()}-${operation}`,
-        };
-        if (auth.key) head.key = auth.key;
-        if (auth.password) head.password = auth.password;
-
         const res = await fetch(SMS_API, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-          body: JSON.stringify({ request: { head } }),
+          body: JSON.stringify({ request: req }),
         });
-        const json = await res.json();
-        const rc = readSmxmlResponseCode(json);
-        if (rc != null && rc !== 0 && rc !== 200) {
-          lastError = `SMXML ${operation} kodu: ${rc}`;
-          continue;
+        const text = await res.text();
+        lastRaw = text.slice(0, 500);
+        const parsed = parseBalanceFromText(text);
+        const rc = (() => {
+          try {
+            return readSmxmlResponseCode(JSON.parse(text));
+          } catch {
+            return null;
+          }
+        })();
+        if (parsed.balance != null && (rc === 0 || rc === 200 || rc == null)) {
+          return {
+            ok: true,
+            balance: parsed.balance,
+            method: 'smxml',
+            operation,
+            error: null,
+            raw: lastRaw,
+          };
         }
-        const balance = extractSmxmlBalanceFromJson(json);
-        if (balance != null) {
-          return { ok: true, balance, method: 'smxml', operation, error: null };
-        }
+        lastError = parsed.error || smxmlRcHint(rc) || lastError;
       } catch (e) {
         lastError = e.message || lastError;
       }
     }
   }
-  return { ok: false, balance: null, error: lastError };
+  return { ok: false, balance: null, error: lastError, raw: lastRaw };
 }
 
 let smsBalanceCache = { at: 0, result: null };
@@ -359,13 +328,6 @@ async function fetchSmsProviderBalance({ bypassCache = false } = {}) {
     return smsBalanceCache.result;
   }
 
-  const quick = await fetchQuicksmsBalance();
-  if (quick.ok) {
-    const out = { ...quick, fetched_at: new Date().toISOString() };
-    smsBalanceCache = { at: now, result: out };
-    return out;
-  }
-
   const smxml = await fetchSmxmlBalance();
   if (smxml.ok) {
     const out = { ...smxml, fetched_at: new Date().toISOString() };
@@ -376,7 +338,8 @@ async function fetchSmsProviderBalance({ bypassCache = false } = {}) {
   const out = {
     ok: false,
     balance: null,
-    error: [quick.error, smxml.error].filter(Boolean).join(' · ') || 'Balans oxunmadı',
+    error: smxml.error || 'Balans oxunmadı',
+    raw: smxml.raw || null,
     fetched_at: new Date().toISOString(),
   };
   smsBalanceCache = { at: now, result: out };

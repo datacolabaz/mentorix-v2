@@ -25,6 +25,10 @@ function buildInventoryDisplay(operator, usage, live) {
   const diskFreeMb = disk?.free_mb ?? 0;
 
   let sms_remaining = hasManualSmsRem ? op.operator_sms_stock_remaining : providerBalance;
+  if (sms_remaining == null && !hasManualSmsRem && op.operator_sms_stock_remaining > 0) {
+    sms_remaining = op.operator_sms_stock_remaining;
+  }
+
   let sms_total = null;
   if (hasManualSmsTotal) {
     sms_total = op.operator_sms_stock_total;
@@ -34,6 +38,13 @@ function buildInventoryDisplay(operator, usage, live) {
     sms_total = providerBalance + smsUsedMonth;
   } else if (sms_remaining != null) {
     sms_total = sms_remaining;
+  }
+
+  let sms_remaining_estimate = null;
+  if (sms_remaining == null && sms_total != null && sms_total > 0) {
+    sms_remaining_estimate = Math.max(0, sms_total - smsUsedAllTime);
+  } else if (sms_remaining == null && op.operator_sms_stock_total > 0) {
+    sms_remaining_estimate = Math.max(0, op.operator_sms_stock_total - smsUsedAllTime);
   }
 
   let storage_total_mb = null;
@@ -57,7 +68,9 @@ function buildInventoryDisplay(operator, usage, live) {
 
   let sms_source = 'none';
   if (hasManualSmsRem || hasManualSmsTotal) sms_source = 'manual';
-  else if (providerBalance != null) sms_source = live.sms.method === 'quicksms' ? 'sendsms.az' : 'sendsms.az';
+  else if (providerBalance != null) sms_source = 'sendsms.az';
+  else if (sms_has_estimate) sms_source = 'estimate';
+  else if (sms_remaining != null && op.operator_sms_stock_remaining > 0) sms_source = 'saved';
 
   let storage_source = 'none';
   if (hasManualStRem || hasManualStTotal) storage_source = 'manual';
@@ -73,6 +86,7 @@ function buildInventoryDisplay(operator, usage, live) {
     sms_allocated_to_instructors: smsAllocated,
     sms_has_data,
     sms_has_balance,
+    sms_has_estimate,
     sms_source,
     sms_provider_error: live.sms.ok ? null : live.sms.error,
     storage_total_mb: storage_total_mb ?? 0,
