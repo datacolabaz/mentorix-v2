@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const db = require('../utils/db');
 const { normalizeExamStartTime } = require('../utils/examTime');
+const { recomputeInstructorStorageUsageMb } = require('../services/resourceUsageService');
 
 /** JWT / DB UUID format fərqi olanda exam_assignments uyğunlaşması */
 const normStudentHex = (id) =>
@@ -439,6 +440,10 @@ const hardDeleteExam = async (req, res) => {
       await client.query('DELETE FROM exams WHERE id = $1', [examId]);
     });
 
+    if (exam.instructor_id) {
+      await recomputeInstructorStorageUsageMb(exam.instructor_id, { persist: true });
+    }
+
     res.json({ success: true, exam_id: examId, deleted: true });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -506,6 +511,11 @@ const bulkHardDeleteExams = async (req, res) => {
       await client.query('DELETE FROM exam_assignments WHERE exam_id = ANY($1::uuid[])', [examIds]);
       await client.query('DELETE FROM exams WHERE id = ANY($1::uuid[])', [examIds]);
     });
+
+    const instructorIds = [...new Set(exams.map((e) => e.instructor_id).filter(Boolean))];
+    for (const iid of instructorIds) {
+      await recomputeInstructorStorageUsageMb(iid, { persist: true });
+    }
 
     res.json({ success: true, deleted: examIds.length, exam_ids: examIds });
   } catch (err) {
@@ -1905,11 +1915,16 @@ const patchExam = async (req, res) => {
       );
       if (updatedExam.pdf_url) newUrls.add(String(updatedExam.pdf_url));
 
+      let filesRemoved = false;
       for (const u of oldUrls) {
         if (!newUrls.has(u)) {
+          filesRemoved = true;
           safeUnlinkUpload(u);
           await deleteExamMaterialBlobByUrl(u);
         }
+      }
+      if (filesRemoved && before.instructor_id) {
+        await recomputeInstructorStorageUsageMb(before.instructor_id, { persist: true });
       }
     }
 

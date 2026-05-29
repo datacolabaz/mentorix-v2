@@ -1,4 +1,5 @@
 const db = require('../utils/db');
+const { recomputeInstructorStorageUsageMb } = require('../services/resourceUsageService');
 
 function parseDate(v) {
   if (v === undefined || v === null || v === '') return null;
@@ -133,6 +134,7 @@ const deleteInstructorAssignment = async (req, res) => {
       [id, instructorId]
     );
     if (rowCount === 0) return res.status(404).json({ success: false, message: 'Tapılmadı' });
+    await recomputeInstructorStorageUsageMb(instructorId, { persist: true });
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
