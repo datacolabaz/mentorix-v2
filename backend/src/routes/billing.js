@@ -1,7 +1,7 @@
 const router = require('express').Router();
 const { authenticate, authorize } = require('../middleware/auth');
 const db = require('../utils/db');
-const { resolveEntitlements, logBillingEvent } = require('../services/billingEntitlements');
+const { resolveEntitlements, logBillingEvent, assertPlanFitsUsage } = require('../services/billingEntitlements');
 const getCurrentPlan = require('../services/billingGetCurrentPlan');
 const { normalizePlanSlug } = require('../config/plans');
 const { getOrderInfo } = require('../services/payriffService');
@@ -152,6 +152,7 @@ router.post('/select-basic', authenticate, authorize('instructor'), async (req, 
     if (from === 'basic') {
       return res.json({ success: true, plan: 'basic', noop: true })
     }
+    await assertPlanFitsUsage(db, uid, 'basic')
     await db.query(
       `UPDATE subscriptions
        SET plan = 'basic',

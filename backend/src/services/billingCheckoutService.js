@@ -5,7 +5,7 @@ const { getPlanOrThrow, getActivePlansMap } = require('./subscriptionPlansServic
 const { createOrder } = require('./payriffService');
 const { getManualTransferAccount, getSmsPacks, findSmsPack } = require('./billingSettingsService');
 const { normalizeBillingInterval } = require('./billingActivationService');
-const { logBillingEvent } = require('./billingEntitlements');
+const { logBillingEvent, assertPlanFitsUsage } = require('./billingEntitlements');
 
 function planRank(p) {
   const s = normalizePlanSlug(p);
@@ -41,12 +41,20 @@ async function createPlanCheckout({
 
   const cur = await getCurrentPlan(db, userId);
   const from = normalizePlanSlug(cur.plan);
-  if (planRank(plan) <= planRank(from)) {
-    const err = new Error('PLAN_NOT_UPGRADE');
-    err.code = 'PLAN_NOT_UPGRADE';
+  const toRank = planRank(plan);
+  const fromRank = planRank(from);
+
+  if (toRank < fromRank) {
+    await assertPlanFitsUsage(db, userId, plan);
+  } else if (toRank > fromRank) {
+    /* upgrade */
+  } else if (plan !== from) {
+    const err = new Error('PLAN_SAME_TIER');
+    err.code = 'PLAN_SAME_TIER';
     err.statusCode = 400;
     throw err;
   }
+  /* toRank === fromRank && plan === from → renewal */
 
   const priceAzn = Number(picked?.price_azn || 0) || 0;
   if (!priceAzn) {
@@ -60,6 +68,7 @@ async function createPlanCheckout({
   let finalPriceAzn = billingInterval === 'yearly' ? yearlyTotalFromMonthly(priceAzn, 0.2) : priceAzn;
 
   if (
+    toRank > fromRank &&
     billingInterval === 'monthly' &&
     String(process.env.PAYRIFF_PRORATION || '').trim() === '1' &&
     cur?.current_period_end

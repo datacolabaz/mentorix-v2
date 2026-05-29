@@ -18,6 +18,12 @@ import InstructorMapPreviewModal from '../../components/instructor/InstructorMap
 import { reverseGeocodeLabel } from '../../lib/reverseGeocode'
 import { formatAzn, yearlyTotalAzn, YEARLY_DISCOUNT } from '../../lib/pricing'
 import { planDetailLines, planLimitsHeadline } from '../../lib/subscriptionPlanCopy'
+import {
+  downgradeBlockedByUsage,
+  isSmsMonthlyLimitReached,
+  planRank,
+} from '../../lib/subscriptionPlanGuards'
+import Tooltip from '../../components/common/Tooltip'
 import PaymentMethodModal from '../../components/instructor/PaymentMethodModal'
 import { useBillingConfig } from '../../hooks/useBillingConfig'
 import { billingPaymentStatusLabel, billingPaymentTitle } from '../../lib/billingPaymentLabels'
@@ -307,7 +313,11 @@ export default function InstructorSettings() {
       ])
       toast('SADƏ (pulsuz) paket seçildi')
     } catch (e) {
-      setPlanErr(e?.message || 'Əməliyyat alınmadı')
+      const msg =
+        e?.code === 'PLAN_USAGE_EXCEEDS' || /limitini aşır/i.test(String(e?.message || ''))
+          ? e?.message || 'Cari istifadəniz bu paketin limitini aşır'
+          : e?.message || 'Əməliyyat alınmadı'
+      setPlanErr(msg)
     } finally {
       setPlanBusy(false)
     }
@@ -383,17 +393,16 @@ export default function InstructorSettings() {
       if (!url) throw new Error('Ödəniş linki alınmadı')
       window.location.href = url
     } catch (e) {
-      setPlanErr(e?.message || 'Ödəniş yaradılmadı')
+      const msg =
+        e?.code === 'PLAN_USAGE_EXCEEDS' || /limitini aşır/i.test(String(e?.message || ''))
+          ? e?.message || 'Cari istifadəniz bu paketin limitini aşır'
+          : e?.code === 'PLAN_NOT_UPGRADE'
+            ? 'Bu paketə keçid üçün ödəniş axını hazır deyil — daha aşağı paket seçin və ya dəstək.'
+            : e?.message || 'Ödəniş yaradılmadı'
+      setPlanErr(msg)
     } finally {
       setPlanBusy(false)
     }
-  }
-
-  const planRank = (id) => {
-    const s = String(id || '').toLowerCase()
-    if (s === 'business') return 3
-    if (s === 'pro') return 2
-    return 1
   }
 
   const cardTitleCls = [
@@ -452,13 +461,25 @@ export default function InstructorSettings() {
             const pid = String(p?.id || '').toLowerCase()
             const isCurrent = pid && pid === currentPlanId
             const isUpgrade = planRank(pid) > planRank(currentPlanId)
+            const isDowngrade = planRank(pid) < planRank(currentPlanId)
             const isFree = pid === 'basic'
             const isProHighlight = pid === 'pro' && Boolean(p.highlight)
+            const usageGuard =
+              !isCurrent && (isDowngrade || isFree) ? downgradeBlockedByUsage(billing, p) : { blocked: false, tooltip: null }
+            const smsLimitReached = isCurrent && isSmsMonthlyLimitReached(billing)
 
             let btnLabel = 'Başla'
-            if (isCurrent) btnLabel = 'Aktiv paket'
-            else if (isFree) btnLabel = 'Pulsuz başla'
-            else if (isUpgrade) btnLabel = 'Upgrade et'
+            if (isCurrent) {
+              btnLabel = smsLimitReached && smsPacks.length ? 'SMS əlavə et' : 'Paketi yenilə'
+            } else if (usageGuard.blocked) {
+              btnLabel = isFree ? 'Pulsuz başla' : 'Keçid mümkün deyil'
+            } else if (isFree) {
+              btnLabel = 'Pulsuz başla'
+            } else if (isUpgrade) {
+              btnLabel = 'Upgrade et'
+            } else {
+              btnLabel = 'Paketə keç'
+            }
 
             const priceBox = displayPriceForPlan(p)
 
@@ -469,14 +490,59 @@ export default function InstructorSettings() {
             const detailLines = planDetailLines(p)
 
             async function onPlanAction() {
-              if (isCurrent) return
-              if (isUpgrade) return openPlanCheckout(p.id)
-              if (isFree) return downgradeToBasic()
+              if (usageGuard.blocked) return
               setPlanErr(null)
-              toast('Bu paketə keçid üçün dəstəyə yazın — cari abunə üçün endirimli dəyişiklik tələb olunur.')
+              if (isCurrent) {
+                if (smsLimitReached && smsPacks.length) {
+                  document.getElementById('billing-sms-addons')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                  return
+                }
+                return openPlanCheckout(p.id)
+              }
+              if (isUpgrade) return openPlanCheckout(p.id)
+              if (isFree) {
+                if (
+                  !window.confirm(
+                    'SADƏ (pulsuz) paketə keçmək istəyirsiniz? Ödənişli abunə müddəti dayandırılacaq; limitlər pulsuz paketə uyğun tətbiq olunacaq.',
+                  )
+                ) {
+                  return
+                }
+                return downgradeToBasic()
+              }
+              const title = p?.title || pid.toUpperCase()
+              if (
+                !window.confirm(
+                  `${title} paketinə keçmək üçün ödəniş tələb olunur. Cari istifadəniz yeni paket limitlərinə uyğundursa davam edə bilərsiniz.`,
+                )
+              ) {
+                return
+              }
+              return openPlanCheckout(p.id)
             }
 
-            const btnDisabled = planBusy || isCurrent
+            const btnDisabled = planBusy || Boolean(usageGuard.blocked)
+
+            const planBtn = (
+              <Button
+                className={[
+                  'w-full justify-center duration-200 ease-out',
+                  !isCurrent && !btnDisabled ? 'hover:brightness-[1.06]' : '',
+                  isCurrent && theme === 'light'
+                    ? '!bg-emerald-50 !text-emerald-950 !border-emerald-500/35 !opacity-100'
+                    : '',
+                  isCurrent && theme === 'dark'
+                    ? '!bg-emerald-500/15 !text-emerald-100 !border-emerald-500/35 !opacity-100'
+                    : '',
+                ].join(' ')}
+                variant={isCurrent ? (smsLimitReached ? 'primary' : 'secondary') : p.highlight ? 'primary' : 'secondary'}
+                loading={planBusy}
+                disabled={btnDisabled}
+                onClick={() => void onPlanAction()}
+              >
+                {btnLabel}
+              </Button>
+            )
 
             return (
               <div
@@ -545,24 +611,13 @@ export default function InstructorSettings() {
                 </div>
 
                 <div className="mt-auto shrink-0 border-t border-[color:var(--border-subtle)]/60 pt-4">
-                  <Button
-                    className={[
-                      'w-full justify-center duration-200 ease-out',
-                      !isCurrent ? 'hover:brightness-[1.06]' : '',
-                      isCurrent && theme === 'light'
-                        ? '!bg-emerald-50 !text-emerald-950 !border-emerald-500/35 !opacity-100'
-                        : '',
-                      isCurrent && theme === 'dark'
-                        ? '!bg-emerald-500/15 !text-emerald-100 !border-emerald-500/35 !opacity-100'
-                        : '',
-                    ].join(' ')}
-                    variant={isCurrent ? 'secondary' : p.highlight ? 'primary' : 'secondary'}
-                    loading={planBusy}
-                    disabled={btnDisabled}
-                    onClick={() => void onPlanAction()}
-                  >
-                    {btnLabel}
-                  </Button>
+                  {usageGuard.blocked && usageGuard.tooltip ? (
+                    <Tooltip content={usageGuard.tooltip} className="block w-full">
+                      <span className="block w-full">{planBtn}</span>
+                    </Tooltip>
+                  ) : (
+                    planBtn
+                  )}
                 </div>
               </div>
             )
@@ -571,7 +626,7 @@ export default function InstructorSettings() {
       </Card>
 
       {smsPacks.length ? (
-        <Card className={settingsCardCls}>
+        <Card id="billing-sms-addons" className={settingsCardCls}>
           <h2 className={cardTitleCls}>Əlavə SMS al</h2>
           <p className={cardTextCls}>
             Paket limitinizə əlavə SMS balansı. Kartla dərhal, köçürmə ilə admin təsdiqindən sonra aktivləşir.

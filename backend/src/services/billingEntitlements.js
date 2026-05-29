@@ -354,6 +354,55 @@ async function resolveEntitlements(userId) {
   };
 }
 
+/**
+ * Paketə keçid / endirmə: cari istifadə hədəf paket limitlərini aşırsa blokla.
+ */
+async function assertPlanFitsUsage(dbConn, userId, targetPlanSlug) {
+  const slug = normalizePlanSlug(targetPlanSlug);
+  const usage = await ensureSmsPeriodUpToDate(dbConn, userId);
+  const plansMap = await getActivePlansMap();
+  const lim =
+    plansMap[slug]?.limits ||
+    plansMap.basic?.limits ||
+    { students: 5, storage_limit_bytes: 512 * 1024, sms_monthly: 5 };
+
+  const students = Number(usage?.students_count || 0) || 0;
+  if (lim.students != null && students > Number(lim.students)) {
+    throw httpError(
+      'PLAN_USAGE_EXCEEDS',
+      400,
+      'Sizin tələbə sayınız bu paketin limitini aşır'
+    );
+  }
+
+  const storageBytes = Number(usage?.storage_used_bytes ?? 0) || 0;
+  if (lim.storage_limit_bytes != null && storageBytes > Number(lim.storage_limit_bytes)) {
+    throw httpError(
+      'PLAN_USAGE_EXCEEDS',
+      400,
+      'Cari yaddaş istifadəniz bu paketin limitindən çoxdur'
+    );
+  }
+
+  const storageMb = Number(usage?.storage_used_mb || 0) || 0;
+  if (lim.storage_mb != null && lim.storage_limit_bytes == null && storageMb > Number(lim.storage_mb)) {
+    throw httpError(
+      'PLAN_USAGE_EXCEEDS',
+      400,
+      'Cari yaddaş istifadəniz bu paketin limitindən çoxdur'
+    );
+  }
+
+  const smsUsed = Number(usage?.sms_used_monthly || 0) || 0;
+  if (lim.sms_monthly != null && smsUsed > Number(lim.sms_monthly)) {
+    throw httpError(
+      'PLAN_USAGE_EXCEEDS',
+      400,
+      'Bu ay göndərilmiş SMS sayınız hədəf paketin limitindən çoxdur'
+    );
+  }
+}
+
 async function bumpUsageCountersTx(client, userId, patch) {
   const fields = [];
   const values = [userId];
@@ -380,6 +429,7 @@ module.exports = {
   resolveEntitlements,
   getCurrentPlan,
   ensureSmsPeriodUpToDate,
+  assertPlanFitsUsage,
   bumpUsageCountersTx,
   logBillingEvent,
 };

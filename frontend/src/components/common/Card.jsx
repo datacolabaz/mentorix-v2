@@ -1,6 +1,7 @@
-export default function Card({ children, className = '', hover = false }) {
+export default function Card({ children, className = '', hover = false, ...rest }) {
   return (
     <div
+      {...rest}
       className={`
         rounded-2xl
         bg-token-surfaceCard/75 backdrop-blur-[10px]
