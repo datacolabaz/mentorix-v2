@@ -154,6 +154,15 @@ router.post('/select-basic', authenticate, authorize('instructor'), async (req, 
     if (from === 'basic') {
       return res.json({ success: true, plan: 'basic', noop: true })
     }
+    const fromRank = from === 'business' ? 3 : from === 'pro' ? 2 : 1
+    if (fromRank >= 2) {
+      return res.status(400).json({
+        success: false,
+        code: 'PLAN_DOWNGRADE_FORBIDDEN',
+        message:
+          'Ödənişli paketdən pulsuz paketə keçmək olmaz. Əlavə SMS alın və ya cari paket limitlərindən istifadə edin.',
+      })
+    }
     await assertPlanFitsUsage(db, uid, 'basic')
     await db.query(
       `UPDATE subscriptions

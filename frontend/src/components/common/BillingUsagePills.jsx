@@ -1,3 +1,5 @@
+import { smsUsageDisplay, storageUsageDisplay } from '../../lib/billingUsageDisplay'
+
 function fmtBytesShort(n) {
   const x = Number(n)
   if (!Number.isFinite(x) || x < 0) return '—'
@@ -32,11 +34,25 @@ function fmtUsed(v, unit) {
   return String(Math.round(n))
 }
 
-function Pill({ label, value }) {
+function Pill({ label, value, title, tone }) {
+  const toneCls =
+    tone === 'warn'
+      ? 'border-amber-500/35 text-amber-100'
+      : tone === 'pending'
+        ? 'border-sky-500/30 text-sky-100'
+        : ''
   return (
-    <span className="inline-flex items-center gap-2 rounded-full border border-[color:var(--border-subtle)] bg-token-surfaceCard/40 px-3 py-1.5 text-[11px] text-token-textMain">
-      <span className="text-token-textMuted">{label}:</span>
-      <span className="font-semibold tabular-nums">{value}</span>
+    <span
+      title={title || undefined}
+      className={[
+        'inline-flex flex-col gap-0.5 rounded-full border border-[color:var(--border-subtle)] bg-token-surfaceCard/40 px-3 py-1.5 text-[11px] text-token-textMain',
+        toneCls,
+      ].join(' ')}
+    >
+      <span className="inline-flex items-center gap-2">
+        <span className="text-token-textMuted">{label}:</span>
+        <span className="font-semibold tabular-nums">{value}</span>
+      </span>
     </span>
   )
 }
@@ -45,17 +61,28 @@ export default function BillingUsagePills({ billing }) {
   if (!billing) return null
   const lim = billing.limits || {}
   const used = billing.usage || {}
+  const sms = smsUsageDisplay(billing)
+  const storage = storageUsageDisplay(billing)
+
   const byteCap = lim.storage_limit_bytes
   const storageLabel =
     byteCap != null && Number.isFinite(Number(byteCap))
       ? `${fmtBytesShort(used.storage_bytes)} / ${fmtBytesShort(byteCap)}`
       : `${fmtUsed(used.storage_mb, 'mb')} / ${fmtLimit(lim.storage_mb, 'mb')}`
+
+  const smsTone = sms.overEffective ? 'warn' : sms.pending > 0 && sms.overPlanOnly ? 'pending' : null
+  const smsTitle = sms.detail
+    ? `Effektiv limit: ${sms.label}. (${sms.detail})`
+    : `Aylıq SMS: istifadə / cari limit (paket + təsdiqlənmiş əlavə)`
+
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <Pill label="Students" value={`${fmtUsed(used.students, 'n')} / ${fmtLimit(lim.students, 'n')}`} />
-      <Pill label="Storage" value={storageLabel} />
-      <Pill label="Monthly SMS usage" value={`${fmtUsed(used.sms_monthly, 'n')} / ${fmtLimit(lim.sms_monthly, 'n')}`} />
+      <Pill
+        label="Students"
+        value={`${fmtUsed(used.students, 'n')} / ${fmtLimit(lim.students, 'n')}`}
+      />
+      <Pill label="Storage" value={storageLabel} title={storage.detail} />
+      <Pill label="SMS (aylıq)" value={sms.label} title={smsTitle} tone={smsTone} />
     </div>
   )
 }
-

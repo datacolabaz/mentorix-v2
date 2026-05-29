@@ -83,10 +83,15 @@ async function fetchPendingTopups(dbConn, userId) {
   const list = rows || [];
   const hasPendingSms = list.some((r) => String(r.product_type || '') === 'sms');
   const hasPendingPlan = list.some((r) => String(r.product_type || '') === 'plan');
+  const pending_sms_quantity = list.reduce((sum, r) => {
+    if (String(r.product_type || '') !== 'sms') return sum;
+    return sum + Math.max(0, Math.round(Number(r.sms_quantity) || 0));
+  }, 0);
   return {
     hasPendingAny: list.length > 0,
     hasPendingSms,
     hasPendingPlan,
+    pending_sms_quantity,
     items: list,
   };
 }

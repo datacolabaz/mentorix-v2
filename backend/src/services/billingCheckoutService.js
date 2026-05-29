@@ -45,7 +45,12 @@ async function createPlanCheckout({
   const fromRank = planRank(from);
 
   if (toRank < fromRank) {
-    await assertPlanFitsUsage(db, userId, plan);
+    const err = new Error(
+      'Daha aşağı limitli paketə keçmək mümkün deyil. Cari paketinizdə əlavə SMS ala bilərsiniz.'
+    );
+    err.code = 'PLAN_DOWNGRADE_FORBIDDEN';
+    err.statusCode = 400;
+    throw err;
   } else if (toRank > fromRank) {
     /* upgrade */
   } else if (plan !== from) {

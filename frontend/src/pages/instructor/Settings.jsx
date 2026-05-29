@@ -19,10 +19,15 @@ import { reverseGeocodeLabel } from '../../lib/reverseGeocode'
 import { formatAzn, yearlyTotalAzn, YEARLY_DISCOUNT } from '../../lib/pricing'
 import { planDetailLines, planLimitsHeadline } from '../../lib/subscriptionPlanCopy'
 import {
-  downgradeBlockedByUsage,
+  canBuySmsOnCurrentPlan,
+  hasPendingSmsTopup,
   isSmsMonthlyLimitReached,
+  isStorageLimitReached,
+  planDowngradeGuard,
   planRank,
+  shouldOfferLimitTopUpChoice,
 } from '../../lib/subscriptionPlanGuards'
+import { extraSmsBalance, pendingSmsQuantity, planSmsMonthlyLimit, smsUsageDisplay } from '../../lib/billingUsageDisplay'
 import Tooltip from '../../components/common/Tooltip'
 import PaymentMethodModal from '../../components/instructor/PaymentMethodModal'
 import { useBillingConfig } from '../../hooks/useBillingConfig'
@@ -47,6 +52,7 @@ export default function InstructorSettings() {
   const manualAccount = billingConfigQ.data?.manual_transfer_account || ''
   const smsPacks = Array.isArray(billingConfigQ.data?.sms_packs) ? billingConfigQ.data.sms_packs : []
   const [checkout, setCheckout] = useState(null)
+  const [limitChoice, setLimitChoice] = useState(null) // { targetPlanId, targetTitle, mode: 'upgrade'|'current' }
   const [qrOpen, setQrOpen] = useState(false)
   const [qrGroup, setQrGroup] = useState(null)
   const [billingPayments, setBillingPayments] = useState([])
@@ -302,6 +308,8 @@ export default function InstructorSettings() {
     [billingInterval],
   )
 
+  const smsUsageInfo = useMemo(() => smsUsageDisplay(billing), [billing])
+
   const currentPlanPricingLine = useMemo(() => {
     if (!currentPlanObj) return '—'
     const pid = String(currentPlanObj.id || '').toLowerCase()
@@ -311,27 +319,6 @@ export default function InstructorSettings() {
     if (billingInterval === 'monthly') return `${formatAzn(m)} AZN/ay`
     return `${formatAzn(yearlyTotalAzn(m))} AZN/il (təxm. ${formatAzn(m)} AZN/ay)`
   }, [billingInterval, currentPlanObj])
-
-  async function downgradeToBasic() {
-    setPlanErr(null)
-    setPlanBusy(true)
-    try {
-      await api.post('/billing/select-basic')
-      await Promise.all([
-        qc.invalidateQueries({ queryKey: BILLING_STATUS_QUERY_KEY }),
-        qc.invalidateQueries({ queryKey: SUBSCRIPTION_PLANS_QUERY_KEY }),
-      ])
-      toast('SADƏ (pulsuz) paket seçildi')
-    } catch (e) {
-      const msg =
-        e?.code === 'PLAN_USAGE_EXCEEDS' || /limitini aşır/i.test(String(e?.message || ''))
-          ? e?.message || 'Cari istifadəniz bu paketin limitini aşır'
-          : e?.message || 'Əməliyyat alınmadı'
-      setPlanErr(msg)
-    } finally {
-      setPlanBusy(false)
-    }
-  }
 
   useEffect(() => {
     api
@@ -457,9 +444,53 @@ export default function InstructorSettings() {
           <span className={theme === 'dark' ? 'text-gray-500' : 'text-token-textMuted'}> — {currentPlanPricingLine}</span>
         </p>
         <p className={cardTextCls}>
-          SADƏ (pulsuz) paketdə vaxt limiti yoxdur; limitlər istifadəyə əsaslanır və hər hansı limit dolduqda daha geniş
-          paket seçməlisiniz.
+          SADƏ (pulsuz) paketdə vaxt limiti yoxdur; limitlər istifadəyə əsaslanır. PRO və Premium paketindən aşağı
+          limitli paketə keçid bağlıdır — limit artırmaq üçün cari paketdə əlavə SMS alın.
         </p>
+        {billing ? (
+          <div className="space-y-2">
+            {smsUsageInfo.effective != null ? (
+              <p className="text-[11px] text-token-textMuted leading-relaxed">
+                SMS limiti:{' '}
+                <span className="text-token-textMain font-medium">{smsUsageInfo.label}</span>
+                {smsUsageInfo.detail ? (
+                  <span className="text-token-textMuted"> — {smsUsageInfo.detail}</span>
+                ) : null}
+                . PRO paketində qalmaq üçün effektiv limit (paket + təsdiqlənmiş əlavə SMS) istifadənizdən böyük və ya
+                bərabər olmalıdır.
+              </p>
+            ) : null}
+            {smsUsageInfo.smsShortfall > 0 ? (
+              <p className="text-[11px] text-amber-300/95 rounded-lg border border-amber-500/25 bg-amber-500/10 px-3 py-2 leading-relaxed">
+                Bu ay {smsUsageInfo.used} SMS istifadə olunub, cari effektiv limit {smsUsageInfo.effective}. PRO-da qalmaq
+                üçün ən azı <span className="font-medium text-white">+{smsUsageInfo.smsShortfall} SMS</span> əlavə paketi
+                lazımdır (və ya istifadə növbəti ay sıfırlanana qədər gözləyin).
+              </p>
+            ) : null}
+            {hasPendingSmsTopup(billing) ? (
+              <p className="text-[11px] text-sky-300/95 rounded-lg border border-sky-500/25 bg-sky-500/10 px-3 py-2 leading-relaxed">
+                Gözləyən SMS ödənişi təsdiqlənənə qədər limit artmayıb görünə bilər. Təsdiqdən sonra effektiv limit
+                artır və PRO paketində qalırsınız.
+              </p>
+            ) : null}
+            {shouldOfferLimitTopUpChoice(billing, { smsPacksCount: smsPacks.length }) ? (
+              <p className="text-[11px] text-indigo-300/90 rounded-lg border border-indigo-500/25 bg-indigo-500/10 px-3 py-2 leading-relaxed">
+                {canBuySmsOnCurrentPlan(billing, smsPacks.length) ? (
+                  <>
+                    SMS limiti üçün mütləq Premium-a keçməyin — cari paketdə{' '}
+                    <span className="font-medium text-white">əlavə SMS</span> ala bilərsiniz.
+                  </>
+                ) : null}
+                {isStorageLimitReached(billing) ? (
+                  <>
+                    {canBuySmsOnCurrentPlan(billing, smsPacks.length) ? ' ' : null}
+                    Yaddaş üçün əlavə paket yoxdur: imtahan fayllarını azaldın və ya daha yüksək paket seçin.
+                  </>
+                ) : null}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
         <PricingBillingIntervalToggle value={billingInterval} onChange={setBillingInterval} theme={theme} />
         {planErr ? (
           <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 text-rose-100 px-4 py-3 text-sm">
@@ -475,18 +506,29 @@ export default function InstructorSettings() {
             const isFree = pid === 'basic'
             const isProHighlight = pid === 'pro' && Boolean(p.highlight)
             const usageGuard =
-              !isCurrent && (isDowngrade || isFree) ? downgradeBlockedByUsage(billing, p) : { blocked: false, tooltip: null }
-            const smsLimitReached = isCurrent && isSmsMonthlyLimitReached(billing)
+              !isCurrent && (isDowngrade || isFree)
+                ? planDowngradeGuard(billing, currentPlanId, p)
+                : { blocked: false, tooltip: null }
+            const smsLimitReached = isSmsMonthlyLimitReached(billing)
+            const storageLimitReached = isStorageLimitReached(billing)
+            const limitChoiceOffer = shouldOfferLimitTopUpChoice(billing, { smsPacksCount: smsPacks.length })
 
             let btnLabel = 'Başla'
             if (isCurrent) {
-              btnLabel = smsLimitReached && smsPacks.length ? 'SMS əlavə et' : 'Paketi yenilə'
+              if (limitChoiceOffer) btnLabel = 'Limit həlli'
+              else if (smsPacks.length) btnLabel = 'SMS əlavə et'
+              else btnLabel = 'Paketi yenilə'
             } else if (usageGuard.blocked) {
-              btnLabel = isFree ? 'Pulsuz başla' : 'Keçid mümkün deyil'
+              btnLabel =
+                usageGuard.reason === 'tier'
+                  ? 'Keçid bağlıdır'
+                  : isFree
+                    ? 'Pulsuz başla'
+                    : 'Keçid mümkün deyil'
             } else if (isFree) {
               btnLabel = 'Pulsuz başla'
             } else if (isUpgrade) {
-              btnLabel = 'Upgrade et'
+              btnLabel = limitChoiceOffer ? 'Seçim et' : 'Upgrade et'
             } else {
               btnLabel = 'Paketə keç'
             }
@@ -499,26 +541,42 @@ export default function InstructorSettings() {
                 : planLimitsHeadline(p)
             const detailLines = planDetailLines(p)
 
+            function openLimitChoiceModal(mode) {
+              setLimitChoice({
+                mode,
+                targetPlanId: p.id,
+                targetTitle: p?.title || pid.toUpperCase(),
+              })
+            }
+
             async function onPlanAction() {
-              if (usageGuard.blocked) return
+              if (usageGuard.blocked) {
+                if (usageGuard.reason === 'tier' && canBuySmsOnCurrentPlan(billing, smsPacks.length)) {
+                  document.getElementById('billing-sms-addons')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                }
+                return
+              }
               setPlanErr(null)
               if (isCurrent) {
-                if (smsLimitReached && smsPacks.length) {
+                if (limitChoiceOffer) {
+                  openLimitChoiceModal('current')
+                  return
+                }
+                if (smsPacks.length) {
                   document.getElementById('billing-sms-addons')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
                   return
                 }
                 return openPlanCheckout(p.id)
               }
-              if (isUpgrade) return openPlanCheckout(p.id)
-              if (isFree) {
-                if (
-                  !window.confirm(
-                    'SADƏ (pulsuz) paketə keçmək istəyirsiniz? Ödənişli abunə müddəti dayandırılacaq; limitlər pulsuz paketə uyğun tətbiq olunacaq.',
-                  )
-                ) {
+              if (isUpgrade) {
+                if (limitChoiceOffer) {
+                  openLimitChoiceModal('upgrade')
                   return
                 }
-                return downgradeToBasic()
+                return openPlanCheckout(p.id)
+              }
+              if (isDowngrade || isFree) {
+                return
               }
               const title = p?.title || pid.toUpperCase()
               if (
@@ -545,7 +603,15 @@ export default function InstructorSettings() {
                     ? '!bg-emerald-500/15 !text-emerald-100 !border-emerald-500/35 !opacity-100'
                     : '',
                 ].join(' ')}
-                variant={isCurrent ? (smsLimitReached ? 'primary' : 'secondary') : p.highlight ? 'primary' : 'secondary'}
+                variant={
+                  isCurrent
+                    ? limitChoiceOffer || (smsLimitReached && smsPacks.length)
+                      ? 'primary'
+                      : 'secondary'
+                    : p.highlight
+                      ? 'primary'
+                      : 'secondary'
+                }
                 loading={planBusy}
                 disabled={btnDisabled}
                 onClick={() => void onPlanAction()}
@@ -641,9 +707,15 @@ export default function InstructorSettings() {
           <p className={cardTextCls}>
             Paket limitinizə əlavə SMS balansı. Kartla dərhal, köçürmə ilə admin təsdiqindən sonra aktivləşir.
           </p>
-          {billing?.usage?.extra_sms_balance > 0 ? (
+          {extraSmsBalance(billing) > 0 ? (
             <p className="text-xs text-emerald-400/90">
-              Əlavə balans: +{billing.usage.extra_sms_balance} SMS (cari limitə əlavə olunur)
+              Təsdiqlənmiş əlavə SMS: +{extraSmsBalance(billing)} (paket {planSmsMonthlyLimit(billing) ?? '—'} + əlavə ={' '}
+              {billing?.limits?.sms_monthly ?? '—'} limit)
+            </p>
+          ) : null}
+          {pendingSmsQuantity(billing) > 0 ? (
+            <p className="text-xs text-sky-400/90">
+              Gözləyən əlavə SMS: +{pendingSmsQuantity(billing)} (admin təsdiqindən sonra limitə əlavə olunacaq)
             </p>
           ) : null}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -1098,6 +1170,93 @@ export default function InstructorSettings() {
         Hesab:{' '}
         <span className={theme === 'dark' ? 'text-gray-400' : 'text-token-textMain'}>{user?.full_name}</span>
       </p>
+
+      <Modal
+        open={Boolean(limitChoice)}
+        onClose={() => setLimitChoice(null)}
+        title={
+          limitChoice?.mode === 'upgrade'
+            ? 'Paket seçimi'
+            : `${currentPlanObj?.title || currentPlanId.toUpperCase()} — limit həlli`
+        }
+        size="md"
+      >
+        {limitChoice ? (
+          <div className="space-y-4">
+            <p className="text-sm text-gray-400 leading-relaxed">
+              {limitChoice.mode === 'upgrade' ? (
+                <>
+                  <span className="text-white font-medium">{currentPlanObj?.title || currentPlanId.toUpperCase()}</span>{' '}
+                  paketində qala bilərsiniz. SMS üçün aşağıdan əlavə paket alın; yaddaş üçün isə yalnız faylları azaldın
+                  və ya{' '}
+                  <span className="text-white font-medium">{limitChoice.targetTitle}</span> paketinə keçin.
+                </>
+              ) : (
+                <>
+                  Cari paketinizdə limit dolub. SMS-i artırmaq üçün əlavə paket alın; yaddaşı azaltmaq üçün imtahan
+                  materiallarına baxın.
+                </>
+              )}
+            </p>
+            {smsUsageInfo.detail ? (
+              <p className="text-xs text-gray-500 rounded-lg bg-white/5 px-3 py-2">{smsUsageInfo.detail}</p>
+            ) : null}
+            <div className="flex flex-col gap-2">
+              {canBuySmsOnCurrentPlan(billing, smsPacks.length) &&
+              (isSmsMonthlyLimitReached(billing) || limitChoice.mode === 'current') ? (
+                <Button
+                  variant="primary"
+                  className="w-full justify-center"
+                  onClick={() => {
+                    setLimitChoice(null)
+                    document.getElementById('billing-sms-addons')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                  }}
+                >
+                  {currentPlanObj?.title || 'Cari paket'} — SMS əlavə et
+                </Button>
+              ) : null}
+              {isStorageLimitReached(billing) ? (
+                <Button
+                  variant="secondary"
+                  className="w-full justify-center"
+                  onClick={() => {
+                    setLimitChoice(null)
+                    navigate('/instructor/exams')
+                  }}
+                >
+                  Yaddaşı azalt (imtahan faylları)
+                </Button>
+              ) : null}
+              {limitChoice.mode === 'upgrade' && !billing?.is_highest_tier ? (
+                <Button
+                  variant="secondary"
+                  className="w-full justify-center"
+                  disabled={planBusy}
+                  onClick={() => {
+                    const planId = limitChoice.targetPlanId
+                    setLimitChoice(null)
+                    openPlanCheckout(planId)
+                  }}
+                >
+                  {limitChoice.targetTitle} paketinə keç
+                </Button>
+              ) : limitChoice.mode !== 'upgrade' ? (
+                <Button
+                  variant="secondary"
+                  className="w-full justify-center"
+                  disabled={planBusy}
+                  onClick={() => {
+                    setLimitChoice(null)
+                    openPlanCheckout(limitChoice.targetPlanId)
+                  }}
+                >
+                  Paketi yenilə
+                </Button>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
+      </Modal>
 
       <PaymentMethodModal
         open={Boolean(checkout)}
