@@ -42,11 +42,11 @@ function smsUsageLine(used, limits) {
 
 function storageUsageLine(used, limits) {
   const cap = limits?.storage_limit_bytes;
-  const u = Number(used?.storage_bytes ?? 0) || 0;
+  const usedBytes = Number(used?.storage_bytes ?? 0) || 0;
   if (cap != null && Number(cap) > 0) {
-    const l = Number(cap);
-    const pct = Math.round((u / l) * 100);
-    const displayPct = u >= l ? 100 : Math.min(pct, 100);
+    const capN = Number(cap);
+    const pct = Math.round((usedBytes / capN) * 100);
+    const displayPct = usedBytes >= capN ? 100 : Math.min(pct, 100);
     return {
       pct,
       displayPct,
@@ -58,13 +58,13 @@ function storageUsageLine(used, limits) {
   const stLimMb = limits?.storage_mb;
   const stUsedMb = Number(used?.storage_mb || 0) || 0;
   if (stLimMb == null) return null;
-  const { pct, used: u, limit: l } = usageRatio(stUsedMb, stLimMb);
-  const displayPct = u >= l ? 100 : Math.min(pct, 100);
+  const { pct, used: usedMb, limit: limMb } = usageRatio(stUsedMb, stLimMb);
+  const displayPct = usedMb >= limMb ? 100 : Math.min(pct, 100);
   return {
     pct,
     displayPct,
-    message: `Yaddaş limitiniz ${displayPct}% dolub (${u}/${l} MB)`,
-    warnMessage: `Yaddaş limitinə yaxınlasırsınız (${u}/${l} MB)`,
+    message: `Yaddaş limitiniz ${displayPct}% dolub (${usedMb}/${limMb} MB)`,
+    warnMessage: `Yaddaş limitinə yaxınlasırsınız (${usedMb}/${limMb} MB)`,
     bytes: false,
   };
 }
@@ -113,8 +113,4 @@ module.exports = {
   highestPlanSlug,
   isHighestTierPlan,
   usageRatio,
-  smsUsageLine,
-  storageUsageLine,
-  fetchPendingTopups,
-  pickLimitCta,
-};
+  smsUsa
