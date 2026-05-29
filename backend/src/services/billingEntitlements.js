@@ -12,6 +12,8 @@ const {
 } = require('./billingAlertHelpers');
 
 const TZ = 'Asia/Baku';
+/** Aşağı paketə keçid: cari abunəlik dövrü ən azı 30 gün aktiv olmalıdır */
+const DOWNGRADE_MIN_PERIOD_MS = 30 * 24 * 60 * 60 * 1000;
 
 function httpError(code, status = 403, message = code) {
   const err = new Error(message);
@@ -431,6 +433,7 @@ async function resolveEntitlements(userId) {
   const should_block = (status2 === 'blocked' || status2 === 'expired'); // grace is NOT blocking
   const days_left = sub2?.current_period_end ? ceilDaysLeft(sub2.current_period_end) : null;
   const pendingTopup = await fetchPendingTopups(db, userId);
+  const periodMeta = downgradePeriodMeta(sub2?.current_period_start);
   const messages = buildMessages(status2, {
     phone_verified,
     limits,
@@ -449,10 +452,15 @@ async function resolveEntitlements(userId) {
     pending_plan_slug: pendingTopup?.pending_plan_slug || null,
     subscription: {
       status: subStatus,
+      current_period_start: sub2?.current_period_start
+        ? new Date(sub2.current_period_start).toISOString()
+        : null,
       current_period_end: sub2?.current_period_end ? new Date(sub2.current_period_end).toISOString() : null,
       grace_until: sub2?.grace_until ? new Date(sub2.grace_until).toISOString() : null,
       days_left,
       pending_plan: sub2?.pending_plan || null,
+      downgrade_period_met: periodMeta.period_met,
+      days_until_downgrade: periodMeta.days_until_downgrade,
     },
     limits,
     usage: used,
@@ -464,6 +472,51 @@ async function resolveEntitlements(userId) {
     requirements: { phone_verified },
     timezone: TZ,
   };
+}
+
+function downgradePeriodMeta(periodStart) {
+  if (!periodStart) {
+    return { period_met: false, days_until_downgrade: null };
+  }
+  const startMs = new Date(periodStart).getTime();
+  if (!Number.isFinite(startMs)) {
+    return { period_met: false, days_until_downgrade: null };
+  }
+  const elapsed = Date.now() - startMs;
+  if (elapsed >= DOWNGRADE_MIN_PERIOD_MS) {
+    return { period_met: true, days_until_downgrade: 0 };
+  }
+  const days = Math.ceil((DOWNGRADE_MIN_PERIOD_MS - elapsed) / 86400000);
+  return { period_met: false, days_until_downgrade: days };
+}
+
+/**
+ * Aşağı paketə keçid: 1 ay tamam + tələbə/SMS/yaddaş hədəf paketə uyğun.
+ */
+async function assertDowngradeAllowed(dbConn, userId, targetPlanSlug) {
+  const target = normalizePlanSlug(targetPlanSlug);
+  const cur = await getCurrentPlan(dbConn, userId);
+  const from = normalizePlanSlug(cur?.plan || 'basic');
+  if (planRank(target) >= planRank(from)) return;
+
+  const { rows } = await dbConn.query(
+    `SELECT current_period_start FROM subscriptions WHERE user_id = $1 LIMIT 1`,
+    [userId]
+  );
+  const meta = downgradePeriodMeta(rows[0]?.current_period_start);
+  if (!meta.period_met) {
+    const days = meta.days_until_downgrade;
+    const hint =
+      days != null && days > 0
+        ? ` Təxminən ${days} gün sonra yenidən yoxlayın.`
+        : '';
+    throw httpError(
+      'PLAN_DOWNGRADE_PERIOD',
+      400,
+      `Cari paket dövrü tam deyil (ən azı 1 ay).${hint}`
+    );
+  }
+  await assertPlanFitsUsage(dbConn, userId, target);
 }
 
 /**
@@ -542,6 +595,7 @@ module.exports = {
   getCurrentPlan,
   ensureSmsPeriodUpToDate,
   assertPlanFitsUsage,
+  assertDowngradeAllowed,
   bumpUsageCountersTx,
   logBillingEvent,
 };

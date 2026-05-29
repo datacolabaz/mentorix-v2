@@ -66,29 +66,55 @@ export function downgradeBlockedByUsage(billing, targetPlan) {
   return { blocked: false, reason: null, tooltip: null }
 }
 
+const DOWNGRADE_MIN_PERIOD_MS = 30 * 24 * 60 * 60 * 1000
+
 /**
- * Ödənişli paketdən (PRO/Premium) aşağı limitli paketə keçid — həmişə bağlı.
- * @returns {{ blocked: boolean, reason: string | null, tooltip: string | null }}
+ * Cari paket dövrü 1 aydan qısadırsa aşağı paketə keçid bağlıdır.
  */
-export function downgradeBlockedByTier(currentPlanId, targetPlanId) {
-  const from = planRank(currentPlanId)
-  const to = planRank(targetPlanId)
-  if (to >= from) return { blocked: false, reason: null, tooltip: null }
-  if (from >= 2) {
+export function downgradeBlockedByPeriod(billing) {
+  if (billing?.subscription?.downgrade_period_met === true) {
+    return { blocked: false, reason: null, tooltip: null }
+  }
+  const days = billing?.subscription?.days_until_downgrade
+  if (days != null && Number(days) > 0) {
     return {
       blocked: true,
-      reason: 'tier',
+      reason: 'period',
+      tooltip: `Cari paket dövrü tam deyil. Təxminən ${days} gün sonra aşağı paketə keçid mümkün ola bilər.`,
+    }
+  }
+  const start = billing?.subscription?.current_period_start
+  if (!start) {
+    return {
+      blocked: true,
+      reason: 'period',
+      tooltip: 'Cari paket dövrü tamamlanmayıb. Ən azı 1 ay sonra aşağı paketə keçid mümkün ola bilər.',
+    }
+  }
+  const startMs = new Date(start).getTime()
+  if (!Number.isFinite(startMs) || Date.now() - startMs < DOWNGRADE_MIN_PERIOD_MS) {
+    const left = Number.isFinite(startMs)
+      ? Math.ceil((DOWNGRADE_MIN_PERIOD_MS - (Date.now() - startMs)) / 86400000)
+      : null
+    return {
+      blocked: true,
+      reason: 'period',
       tooltip:
-        'Daha aşağı limitli paketə keçmək olmaz. Cari paketinizdə əlavə SMS alın və ya yaddaşı idarə edin.',
+        left != null && left > 0
+          ? `Cari paket dövrü tam deyil. Təxminən ${left} gün sonra yenidən yoxlayın.`
+          : 'Cari paket dövrü tam deyil. Ən azı 1 ay sonra aşağı paketə keçid mümkün ola bilər.',
     }
   }
   return { blocked: false, reason: null, tooltip: null }
 }
 
-/** Aşağı paket + istifadə uyğunluğu */
+/** Aşağı paket: 1 ay + tələbə/SMS/yaddaş hər üçü hədəf paketə uyğun olmalıdır */
 export function planDowngradeGuard(billing, currentPlanId, targetPlan) {
-  const tier = downgradeBlockedByTier(currentPlanId, targetPlan?.id)
-  if (tier.blocked) return tier
+  const to = planRank(targetPlan?.id)
+  const from = planRank(currentPlanId)
+  if (to >= from) return { blocked: false, reason: null, tooltip: null }
+  const period = downgradeBlockedByPeriod(billing)
+  if (period.blocked) return period
   return downgradeBlockedByUsage(billing, targetPlan)
 }
 

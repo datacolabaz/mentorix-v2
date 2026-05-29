@@ -451,9 +451,16 @@ export default function InstructorSettings() {
           <span className={theme === 'dark' ? 'text-gray-500' : 'text-token-textMuted'}> — {currentPlanPricingLine}</span>
         </p>
         <p className={cardTextCls}>
-          SADƏ (pulsuz) paketdə vaxt limiti yoxdur; limitlər istifadəyə əsaslanır. PRO və Premium paketindən aşağı
-          limitli paketə keçid bağlıdır — limit artırmaq üçün cari paketdə əlavə SMS alın.
+          Aşağı paketə keçid yalnız cari paket dövrü <span className="font-medium">ən azı 1 ay</span> tamamlandıqdan
+          sonra mümkündür və yalnız tələbə sayı, SMS və yaddaş hər üçü hədəf paket limitinə uyğun olduqda icazə
+          verilir. Limit dolubsa cari paketdə əlavə SMS alın və ya yaddaşı idarə edin.
         </p>
+        {billing?.subscription?.downgrade_period_met === false &&
+        billing?.subscription?.days_until_downgrade != null ? (
+          <p className="text-[11px] text-token-textMuted">
+            Aşağı paketə keçid təxminən {billing.subscription.days_until_downgrade} gün sonra açıla bilər.
+          </p>
+        ) : null}
         {billing ? (
           <div className="space-y-2">
             {smsUsageInfo.effective != null ? (
@@ -539,8 +546,8 @@ export default function InstructorSettings() {
               else btnLabel = 'Paketi yenilə'
             } else if (usageGuard.blocked) {
               btnLabel =
-                usageGuard.reason === 'tier'
-                  ? 'Keçid bağlıdır'
+                usageGuard.reason === 'period'
+                  ? '1 ay gözləyin'
                   : isFree
                     ? 'Pulsuz başla'
                     : 'Keçid mümkün deyil'
@@ -572,9 +579,6 @@ export default function InstructorSettings() {
                 return
               }
               if (usageGuard.blocked) {
-                if (usageGuard.reason === 'tier' && canBuySmsOnCurrentPlan(billing, smsPacks.length)) {
-                  document.getElementById('billing-sms-addons')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                }
                 return
               }
               setPlanErr(null)

@@ -5,7 +5,7 @@ const { getPlanOrThrow, getActivePlansMap } = require('./subscriptionPlansServic
 const { createOrder } = require('./payriffService');
 const { getManualTransferAccount, getSmsPacks, findSmsPack } = require('./billingSettingsService');
 const { normalizeBillingInterval } = require('./billingActivationService');
-const { logBillingEvent, assertPlanFitsUsage } = require('./billingEntitlements');
+const { logBillingEvent, assertDowngradeAllowed } = require('./billingEntitlements');
 
 function planRank(p) {
   const s = normalizePlanSlug(p);
@@ -45,12 +45,7 @@ async function createPlanCheckout({
   const fromRank = planRank(from);
 
   if (toRank < fromRank) {
-    const err = new Error(
-      'Daha aşağı limitli paketə keçmək mümkün deyil. Cari paketinizdə əlavə SMS ala bilərsiniz.'
-    );
-    err.code = 'PLAN_DOWNGRADE_FORBIDDEN';
-    err.statusCode = 400;
-    throw err;
+    await assertDowngradeAllowed(db, userId, plan);
   } else if (toRank > fromRank) {
     /* upgrade */
   } else if (plan !== from) {

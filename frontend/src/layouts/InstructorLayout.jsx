@@ -13,6 +13,9 @@ import BillingUsagePills from '../components/common/BillingUsagePills'
 import { useBillingStatus } from '../hooks/useBillingStatus'
 import UpgradeModal from '../components/instructor/UpgradeModal'
 import LimitReachedModal from '../components/instructor/LimitReachedModal'
+import BillingLimitTopUpModal from '../components/instructor/BillingLimitTopUpModal'
+import { useSubscriptionPlans } from '../hooks/useSubscriptionPlans'
+import { isSmsMonthlyLimitReached, isStorageLimitReached } from '../lib/subscriptionPlanGuards'
 import Modal from '../components/common/Modal'
 import { useQueryClient } from '@tanstack/react-query'
 import { BILLING_STATUS_QUERY_KEY } from '../hooks/useBillingStatus'
@@ -60,6 +63,16 @@ export default function InstructorLayout() {
   const [hasAlerts, setHasAlerts] = useState(false)
   const billingQ = useBillingStatus()
   const billing = billingQ.data || null
+  const plansQ = useSubscriptionPlans()
+  const currentPlanTitle = useMemo(() => {
+    const pid = String(billing?.plan || '').toLowerCase()
+    const p = (Array.isArray(plansQ.data) ? plansQ.data : []).find(
+      (x) => String(x?.id || '').toLowerCase() === pid,
+    )
+    return p?.title || (pid === 'business' ? 'PREMIUM' : pid.toUpperCase())
+  }, [billing?.plan, plansQ.data])
+  const [topUpModalOpen, setTopUpModalOpen] = useState(false)
+  const topUpPromptSigRef = useRef('')
   const [upgradeOpen, setUpgradeOpen] = useState(false)
   const [limitModal, setLimitModal] = useState({
     open: false,
@@ -496,6 +509,21 @@ export default function InstructorLayout() {
       </main>
       </div>
     </div>
+      <BillingLimitTopUpModal
+        open={topUpModalOpen}
+        onClose={() => setTopUpModalOpen(false)}
+        planTitle={currentPlanTitle}
+        smsReached={smsLimitReached}
+        storageReached={storageLimitReached}
+        onBuySms={() => {
+          setTopUpModalOpen(false)
+          navigate('/instructor/settings', { state: { scrollTo: 'billing-sms-addons' } })
+        }}
+        onManageStorage={() => {
+          setTopUpModalOpen(false)
+          navigate('/instructor/exams')
+        }}
+      />
       <LimitReachedModal
         open={limitModal.open}
         onClose={() => setLimitModal({ open: false, message: '', primaryLabel: 'Paketlərə bax', action: 'OPEN_SETTINGS_PLANS' })}
