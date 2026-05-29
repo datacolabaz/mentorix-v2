@@ -87,11 +87,16 @@ async function fetchPendingTopups(dbConn, userId) {
     if (String(r.product_type || '') !== 'sms') return sum;
     return sum + Math.max(0, Math.round(Number(r.sms_quantity) || 0));
   }, 0);
+  const pendingPlanRow = list.find((r) => String(r.product_type || '') === 'plan');
+  const pending_plan_slug = pendingPlanRow?.plan
+    ? normalizePlanSlug(pendingPlanRow.plan)
+    : null;
   return {
     hasPendingAny: list.length > 0,
     hasPendingSms,
     hasPendingPlan,
     pending_sms_quantity,
+    pending_plan_slug,
     items: list,
   };
 }

@@ -54,6 +54,7 @@ router.get('/status', authenticate, authorize('instructor'), async (req, res) =>
       plan: out.plan,
       is_highest_tier: out.is_highest_tier,
       pending_topup: out.pending_topup || null,
+      pending_plan_slug: out.pending_plan_slug || null,
       subscription: out.subscription || null,
       limits: out.limits,
       usage: out.usage,

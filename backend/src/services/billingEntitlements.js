@@ -4,6 +4,7 @@ const getCurrentPlan = require('./billingGetCurrentPlan');
 const { getActivePlansMap } = require('./subscriptionPlansService');
 const {
   isHighestTierPlan,
+  planRank,
   smsUsageLine,
   storageUsageLine,
   fetchPendingTopups,
@@ -213,9 +214,11 @@ function buildMessages(status, ctx) {
       };
     }
     if (pendingTopup.hasPendingPlan) {
+      const pendingTitle =
+        plansMap?.[pendingTopup.pending_plan_slug || '']?.title ||
+        String(pendingTopup.pending_plan_slug || 'paket').toUpperCase();
       return {
-        banner:
-          'Ödənişiniz admin təsdiqi gözləyir. Təsdiqlənəndən sonra paket limitləriniz yenilənəcək.',
+        banner: `Ödənişiniz admin təsdiqi gözləyir. Təsdiqlənəndən sonra ${pendingTitle} paketi və limitləri aktiv olacaq.`,
         cta: { label: 'Ödəniş tarixçəsi', action: 'OPEN_SETTINGS_PAYMENTS' },
         suppress_limit_bar: true,
         tone: 'pending',
@@ -303,6 +306,41 @@ function buildMessages(status, ctx) {
   return { banner: null, cta: null };
 }
 
+/** Son ödənilmiş paket abunəlikdən yüksəkdirsə — aktiv planı uyğunlaşdır (Premium ödənişi PRO-da qalmış hallar). */
+async function reconcileSubscriptionPlanFromLastPaidPlan(dbConn, userId) {
+  try {
+    const { rows } = await dbConn.query(
+      `SELECT plan FROM billing_payments
+       WHERE user_id = $1::uuid
+         AND status = 'paid'
+         AND COALESCE(product_type, 'plan') = 'plan'
+         AND plan IS NOT NULL
+         AND TRIM(plan) <> ''
+       ORDER BY COALESCE(paid_at, reviewed_at, created_at) DESC
+       LIMIT 1`,
+      [userId]
+    );
+    const paidPlan = rows[0]?.plan ? normalizePlanSlug(rows[0].plan) : null;
+    if (!paidPlan || paidPlan === 'basic') return null;
+
+    const sub = await getCurrentPlan(dbConn, userId);
+    const cur = normalizePlanSlug(sub?.plan || 'basic');
+    if (planRank(paidPlan) <= planRank(cur)) return null;
+
+    await dbConn.query(
+      `UPDATE subscriptions
+       SET plan = $2,
+           status = 'active',
+           updated_at = NOW()
+       WHERE user_id = $1`,
+      [userId, paidPlan]
+    );
+    return paidPlan;
+  } catch {
+    return null;
+  }
+}
+
 async function resolveEntitlements(userId) {
   const basics = await getUserBasics(db, userId);
   if (!basics || !basics.is_active) throw httpError('USER_NOT_FOUND', 404, 'USER_NOT_FOUND');
@@ -311,13 +349,14 @@ async function resolveEntitlements(userId) {
   const phone_verified = Boolean(basics.phone_verified);
 
   const usage = await ensureSmsPeriodUpToDate(db, userId);
-  const sub = await ensureSubscriptionRow(db, userId);
+  await ensureSubscriptionRow(db, userId);
+  await reconcileSubscriptionPlanFromLastPaidPlan(db, userId);
   const sub2 = await getCurrentPlan(db, userId);
   // IMPORTANT:
   // Limits are plan-driven only (subscriptions + subscription_plans).
   // Legacy instructor_profiles limits and trials are treated as deprecated for limits.
 
-  const planSlug = normalizePlanSlug(sub?.plan);
+  const planSlug = normalizePlanSlug(sub2?.plan);
   const plansMap = await getActivePlansMap();
   const planLimits =
     plansMap[planSlug]?.limits ||
@@ -407,11 +446,13 @@ async function resolveEntitlements(userId) {
     plan: planSlug,
     is_highest_tier: isHighestTierPlan(planSlug, plansMap),
     pending_topup: pendingTopup,
+    pending_plan_slug: pendingTopup?.pending_plan_slug || null,
     subscription: {
       status: subStatus,
       current_period_end: sub2?.current_period_end ? new Date(sub2.current_period_end).toISOString() : null,
       grace_until: sub2?.grace_until ? new Date(sub2.grace_until).toISOString() : null,
       days_left,
+      pending_plan: sub2?.pending_plan || null,
     },
     limits,
     usage: used,
