@@ -192,6 +192,29 @@ function normMatchStrict(str) {
   return String(str ?? '').trim().toLowerCase().replace(/\s+/g, '');
 }
 
+/** Uyğunluq: "1b1c2a2e" və "1bc2ae" eyni məna → "1bc2ae" */
+function matchingAnswerCanonical(raw) {
+  const s = normMatchStrict(raw);
+  if (!s) return '';
+  const map = new Map();
+  const re = /(\d+)([a-z]+)/gi;
+  let m;
+  while ((m = re.exec(s)) !== null) {
+    const num = m[1];
+    const letters = m[2].split('').filter((ch) => /[a-z]/.test(ch));
+    const prev = map.get(num) || [];
+    map.set(num, prev.concat(letters));
+  }
+  const nums = [...map.keys()].sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
+  return nums
+    .map((n) => {
+      const letters = [...new Set(map.get(n) || [])].sort().join('');
+      return letters ? `${n}${letters}` : '';
+    })
+    .filter(Boolean)
+    .join('');
+}
+
 function deriveMatchingKeyFromOptions(options) {
   let opts = options;
   if (typeof opts === 'string') {
@@ -210,11 +233,9 @@ function deriveMatchingKeyFromOptions(options) {
     const R = String(row.right ?? '').trim();
     const num = (L.match(/\d+/) || [])[0] || String(i + 1);
     const letters = R.replace(/[^a-z]/gi, '').toLowerCase();
-    for (const ch of letters) {
-      if (/[a-z]/.test(ch)) key += num + ch;
-    }
+    if (letters) key += num + letters;
   }
-  return key;
+  return matchingAnswerCanonical(key);
 }
 
 /**
@@ -225,7 +246,7 @@ function deriveMatchingKeyFromOptions(options) {
 function matchingCanonicalCorrect(q) {
   const fromOpts = String(deriveMatchingKeyFromOptions(q?.options) ?? '').trim();
   if (fromOpts) return fromOpts;
-  return String(q?.correct_answer ?? '').trim();
+  return matchingAnswerCanonical(q?.correct_answer ?? '');
 }
 
 function matchingPairCountFromOptions(options) {
@@ -269,13 +290,11 @@ function matchingStudentTemplateHint(q) {
 }
 
 function gradeMatching(given, correctStored, optionsForFallback) {
-  const g = normMatchStrict(given);
-  const c = normMatchStrict(
-    matchingCanonicalCorrect({
-      correct_answer: correctStored,
-      options: optionsForFallback,
-    })
-  );
+  const g = matchingAnswerCanonical(given);
+  const c = matchingCanonicalCorrect({
+    correct_answer: correctStored,
+    options: optionsForFallback,
+  });
   if (!g) return { status: 'pending', isCorrect: null };
   // tələbə cavabı var, amma açar tapılmadısa pending saxlamırıq (UI-da "Yoxlanılır" qalmasın)
   if (!c) return { status: 'incorrect', isCorrect: false };

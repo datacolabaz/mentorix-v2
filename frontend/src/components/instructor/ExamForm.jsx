@@ -12,7 +12,7 @@ const TYPES = {
   open: 'Aciq',
 }
 
-/** Uyğunluq: sol sətirdəki rəqəm + sağdakı hərflər → bitişik açar (server ilə eyni məntiq) */
+/** Uyğunluq: hər sətir üçün rəqəm + bütün hərflər (məs. 1→bc, 2→ae → "1bc2ae") */
 export function deriveMatchingKey(options) {
   if (!Array.isArray(options)) return ''
   let key = ''
@@ -23,9 +23,7 @@ export function deriveMatchingKey(options) {
     const R = String(row.right ?? '').trim()
     const num = (L.match(/\d+/) || [])[0] || String(i + 1)
     const letters = R.replace(/[^a-z]/gi, '').toLowerCase()
-    for (const ch of letters) {
-      if (/[a-z]/.test(ch)) key += num + ch
-    }
+    if (letters) key += num + letters
   }
   return key
 }
@@ -549,10 +547,12 @@ export default function ExamForm({ students, studentsLoading = false, onCreated 
                     <button onClick={() => upd(idx, 'options', [...q.options, { left: '', right: '' }])}
                       className="text-xs text-indigo-400">+ Cut elave et</button>
                     <div>
-                      <label className="block text-xs text-gray-500 mb-1">Düzgün uyğunluq açarı (rəqəm+hərf, məs. 1a2b və ya 1ab2cd)</label>
+                      <label className="block text-xs text-gray-500 mb-1">
+                        Düzgün uyğunluq açarı (hər sətir: rəqəm + hərflər, məs. 1bc2ae)
+                      </label>
                       <input
                         className={inpSmFullMono}
-                        placeholder={deriveMatchingKey(q.options) || '1a2b3c'}
+                        placeholder={deriveMatchingKey(q.options) || '1bc2ae'}
                         value={q.correct_answer || ''}
                         onChange={(e) =>
                           upd(idx, 'correct_answer', e.target.value.toLowerCase().replace(/[^0-9a-z]/g, ''))
@@ -707,4 +707,3 @@ export default function ExamForm({ students, studentsLoading = false, onCreated 
     </div>
   )
 }
- 

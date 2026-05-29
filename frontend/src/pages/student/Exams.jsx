@@ -918,12 +918,13 @@ export default function StudentExams() {
               ) : q.question_type === 'matching' ? (
                 <div className="ml-0 sm:ml-8 lg:ml-10 space-y-3">
                   <p className="text-xs text-gray-500">
-                    Cavabınızı rəqəm+hərf cütləri ilə bitişik yazın (boşluq yoxdur; ardıcıllıq fərqi etmir).
+                    Hər sətir üçün sol rəqəm + sağdakı bütün hərflər bitişik yazın (boşluq yoxdur).
                     <span className="block mt-1">
                       Nümunə:{' '}
                       <span className="font-mono text-indigo-300">
-                        {(String(q.template_hint || '').trim() || '1a2b3c')}
+                        {(String(q.template_hint || '').trim() || '1bc2ae')}
                       </span>
+                      <span className="text-gray-500"> (1→bc, 2→ae)</span>
                     </span>
                   </p>
                   <input
@@ -1327,10 +1328,3 @@ export default function StudentExams() {
                 })}
               </div>
             )}
-          </div>
-        )}
-      </Modal>
-      )}
-    </div>
-  )
-}
