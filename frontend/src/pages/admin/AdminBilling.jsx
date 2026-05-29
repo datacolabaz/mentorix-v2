@@ -29,6 +29,21 @@ function emptyStoragePack() {
   return { quantity_mb: '', price_azn: '', label: '' }
 }
 
+function emptyOperatorStock() {
+  return {
+    operator_sms_stock_remaining: '',
+    operator_sms_low_alert: '500',
+    operator_storage_mb_remaining: '',
+    operator_storage_mb_low_alert: '500',
+  }
+}
+
+function stockCardCls(low) {
+  return low
+    ? 'border-rose-500/40 bg-rose-500/10'
+    : 'border-emerald-500/25 bg-emerald-500/5'
+}
+
 export default function AdminBilling() {
   const toast = useToast()
   const [tab, setTab] = useState('pending')
@@ -42,7 +57,11 @@ export default function AdminBilling() {
     emptyStoragePack(),
     emptyStoragePack(),
   ])
+  const [operatorDraft, setOperatorDraft] = useState(emptyOperatorStock())
+  const [inventory, setInventory] = useState(null)
+  const [inventoryLoading, setInventoryLoading] = useState(true)
   const [savingSettings, setSavingSettings] = useState(false)
+  const [savingStock, setSavingStock] = useState(false)
 
   const loadPayments = useCallback(async () => {
     setLoading(true)
@@ -82,10 +101,28 @@ export default function AdminBilling() {
             }))
           : [emptyStoragePack(), emptyStoragePack(), emptyStoragePack()],
       )
+      setOperatorDraft({
+        operator_sms_stock_remaining: String(s.operator_sms_stock_remaining ?? ''),
+        operator_sms_low_alert: String(s.operator_sms_low_alert ?? '500'),
+        operator_storage_mb_remaining: String(s.operator_storage_mb_remaining ?? ''),
+        operator_storage_mb_low_alert: String(s.operator_storage_mb_low_alert ?? '500'),
+      })
     } catch {
       // ignore
     }
   }, [])
+
+  const loadInventory = useCallback(async () => {
+    setInventoryLoading(true)
+    try {
+      const d = await api.get('/admin/billing/inventory')
+      setInventory(d.inventory || null)
+    } catch (e) {
+      toast(e?.message || 'Ehtiyat məlumatı yüklənmədi', 'error')
+    } finally {
+      setInventoryLoading(false)
+    }
+  }, [toast])
 
   useEffect(() => {
     void loadPayments()
@@ -93,7 +130,8 @@ export default function AdminBilling() {
 
   useEffect(() => {
     void loadSettings()
-  }, [loadSettings])
+    void loadInventory()
+  }, [loadSettings, loadInventory])
 
   async function approve(id) {
     setBusyId(id)
@@ -210,14 +248,230 @@ export default function AdminBilling() {
     }
   }
 
+  async function saveOperatorStock() {
+    setSavingStock(true)
+    try {
+      const payload = {
+        operator_sms_stock_remaining: Math.max(0, Math.round(Number(operatorDraft.operator_sms_stock_remaining) || 0)),
+        operator_sms_low_alert: Math.max(0, Math.round(Number(operatorDraft.operator_sms_low_alert) || 0)),
+        operator_storage_mb_remaining: Math.max(
+          0,
+          Math.round(Number(operatorDraft.operator_storage_mb_remaining) || 0),
+        ),
+        operator_storage_mb_low_alert: Math.max(
+          0,
+          Math.round(Number(operatorDraft.operator_storage_mb_low_alert) || 0),
+        ),
+      }
+      const d = await api.put('/admin/billing/settings', payload)
+      const s = d.settings || d
+      setOperatorDraft({
+        operator_sms_stock_remaining: String(s.operator_sms_stock_remaining ?? payload.operator_sms_stock_remaining),
+        operator_sms_low_alert: String(s.operator_sms_low_alert ?? payload.operator_sms_low_alert),
+        operator_storage_mb_remaining: String(
+          s.operator_storage_mb_remaining ?? payload.operator_storage_mb_remaining,
+        ),
+        operator_storage_mb_low_alert: String(
+          s.operator_storage_mb_low_alert ?? payload.operator_storage_mb_low_alert,
+        ),
+      })
+      toast('Ehtiyat sayğacları yeniləndi')
+      await loadInventory()
+    } catch (e) {
+      toast(e?.message || 'Xəta', 'error')
+    } finally {
+      setSavingStock(false)
+    }
+  }
+
+  const op = inventory?.operator
+  const usage = inventory?.usage
+  const nearLimit = inventory?.instructors_near_limit || []
+  const alerts = inventory?.alerts || []
+
   return (
     <div className="p-6 space-y-6">
       <div>
         <h1 className="font-display font-bold text-2xl">Platform ödənişləri</h1>
         <p className="text-gray-400 text-sm mt-1">
-          Köçürmə hesabı, əlavə SMS paketləri, manual təsdiqlər
+          SMS/yaddaş ehtiyatı, köçürmə hesabı, əlavə paketlər, manual təsdiqlər
         </p>
       </div>
+
+      {alerts.length > 0 ? (
+        <div className="space-y-2">
+          {alerts.map((a, i) => (
+            <div
+              key={`${a.kind}-${i}`}
+              className={[
+                'rounded-xl border px-4 py-3 text-sm',
+                a.level === 'critical'
+                  ? 'border-rose-500/40 bg-rose-500/15 text-rose-100'
+                  : 'border-amber-500/40 bg-amber-500/15 text-amber-100',
+              ].join(' ')}
+            >
+              {a.message}
+            </div>
+          ))}
+        </div>
+      ) : null}
+
+      <Card className="p-5 space-y-5">
+        <div>
+          <h2 className="font-display font-bold text-sm">SMS və yaddaş ehtiyatı</h2>
+          <p className="text-xs text-gray-500 mt-1">
+            Provayderdən aldığınız SMS və hosting yaddaşını burada izləyin. Azaldıqda sifariş vermək üçün xəbərdarlıq
+            həddi təyin edin.
+          </p>
+        </div>
+
+        {inventoryLoading ? (
+          <div className="text-sm text-gray-500">Ehtiyat yüklənir…</div>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className={`rounded-xl border p-4 ${stockCardCls(op?.sms_low)}`}>
+                <div className="text-xs text-gray-400 uppercase tracking-wide mb-1">SMS ehtiyatı</div>
+                <div className="font-display font-bold text-2xl text-white">
+                  {(op?.operator_sms_stock_remaining ?? 0).toLocaleString('az-AZ')} ədəd
+                </div>
+                <div className="text-xs text-gray-500 mt-1">
+                  Xəbərdarlıq həddi: ≤ {(op?.operator_sms_low_alert ?? 500).toLocaleString('az-AZ')} ədəd
+                  {op?.sms_low ? ' · Sifariş lazımdır' : ''}
+                </div>
+              </div>
+              <div className={`rounded-xl border p-4 ${stockCardCls(op?.storage_low)}`}>
+                <div className="text-xs text-gray-400 uppercase tracking-wide mb-1">Yaddaş ehtiyatı</div>
+                <div className="font-display font-bold text-2xl text-white">
+                  {(op?.operator_storage_mb_remaining ?? 0).toLocaleString('az-AZ')} MB
+                </div>
+                <div className="text-xs text-gray-500 mt-1">
+                  Xəbərdarlıq həddi: ≤ {(op?.operator_storage_mb_low_alert ?? 500).toLocaleString('az-AZ')} MB
+                  {op?.storage_low ? ' · Artırma lazımdır' : ''}
+                </div>
+              </div>
+            </div>
+
+            {usage ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 text-sm">
+                {[
+                  ['Bu ay göndərilən SMS', usage.sms_sent_this_month],
+                  ['Satılmış əlavə SMS (cəmi)', usage.extra_sms_sold_total],
+                  ['Gözləyən SMS top-up', usage.pending_sms_topup],
+                  ['Platform yaddaş istifadəsi', `${usage.storage_used_mb} MB`],
+                  ['Satılmış əlavə yaddaş', `${usage.extra_storage_sold_mb} MB`],
+                  ['Gözləyən yaddaş top-up', `${usage.pending_storage_topup_mb} MB`],
+                ].map(([label, val]) => (
+                  <div key={label} className="rounded-lg bg-[#13112e] border border-indigo-500/15 px-3 py-2">
+                    <div className="text-[10px] text-gray-500 uppercase">{label}</div>
+                    <div className="font-semibold text-white mt-0.5">
+                      {typeof val === 'number' ? val.toLocaleString('az-AZ') : val}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-3 rounded-xl border border-indigo-500/15 p-3">
+                <h3 className="text-xs font-semibold text-gray-300">SMS sayğacını yenilə</h3>
+                <label className="block text-xs text-gray-400">
+                  Qalan SMS (provayder balansı)
+                  <input
+                    type="number"
+                    min={0}
+                    className="mt-1 w-full bg-[#13112e] border border-indigo-500/20 rounded-lg px-3 py-2 text-white text-sm"
+                    value={operatorDraft.operator_sms_stock_remaining}
+                    onChange={(e) =>
+                      setOperatorDraft((d) => ({ ...d, operator_sms_stock_remaining: e.target.value }))
+                    }
+                  />
+                </label>
+                <label className="block text-xs text-gray-400">
+                  Aşağı ehtiyat xəbərdarlığı (ədəd)
+                  <input
+                    type="number"
+                    min={0}
+                    className="mt-1 w-full bg-[#13112e] border border-indigo-500/20 rounded-lg px-3 py-2 text-white text-sm"
+                    value={operatorDraft.operator_sms_low_alert}
+                    onChange={(e) => setOperatorDraft((d) => ({ ...d, operator_sms_low_alert: e.target.value }))}
+                  />
+                </label>
+              </div>
+              <div className="space-y-3 rounded-xl border border-indigo-500/15 p-3">
+                <h3 className="text-xs font-semibold text-gray-300">Yaddaş sayğacını yenilə</h3>
+                <label className="block text-xs text-gray-400">
+                  Qalan yaddaş (MB)
+                  <input
+                    type="number"
+                    min={0}
+                    className="mt-1 w-full bg-[#13112e] border border-indigo-500/20 rounded-lg px-3 py-2 text-white text-sm"
+                    value={operatorDraft.operator_storage_mb_remaining}
+                    onChange={(e) =>
+                      setOperatorDraft((d) => ({ ...d, operator_storage_mb_remaining: e.target.value }))
+                    }
+                  />
+                </label>
+                <label className="block text-xs text-gray-400">
+                  Aşağı ehtiyat xəbərdarlığı (MB)
+                  <input
+                    type="number"
+                    min={0}
+                    className="mt-1 w-full bg-[#13112e] border border-indigo-500/20 rounded-lg px-3 py-2 text-white text-sm"
+                    value={operatorDraft.operator_storage_mb_low_alert}
+                    onChange={(e) =>
+                      setOperatorDraft((d) => ({ ...d, operator_storage_mb_low_alert: e.target.value }))
+                    }
+                  />
+                </label>
+              </div>
+            </div>
+
+            <Button loading={savingStock} onClick={() => void saveOperatorStock()}>
+              Ehtiyatı saxla
+            </Button>
+
+            {nearLimit.length > 0 ? (
+              <div>
+                <h3 className="text-xs font-semibold text-gray-300 mb-2">
+                  Limitə yaxın müəllimlər (≥80%)
+                </h3>
+                <div className="overflow-x-auto rounded-xl border border-indigo-500/15">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="border-b border-indigo-500/20 text-gray-500 uppercase">
+                        {['Müəllim', 'Plan', 'SMS', 'Yaddaş'].map((h) => (
+                          <th key={h} className="py-2 px-3 text-left font-semibold">
+                            {h}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {nearLimit.map((row) => (
+                        <tr key={row.id} className="border-b border-indigo-500/10">
+                          <td className="py-2 px-3 text-white">{row.full_name || row.email}</td>
+                          <td className="py-2 px-3 text-gray-400">{String(row.plan || '').toUpperCase()}</td>
+                          <td className="py-2 px-3 text-gray-300">
+                            {row.sms_cap != null
+                              ? `${row.sms_used}/${row.sms_cap} (${row.sms_pct}%)`
+                              : '—'}
+                          </td>
+                          <td className="py-2 px-3 text-gray-300">
+                            {row.storage_cap_mb != null
+                              ? `${row.storage_used_mb}/${row.storage_cap_mb} MB (${row.storage_pct}%)`
+                              : '—'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : null}
+          </>
+        )}
+      </Card>
 
       <Card className="p-5 space-y-6">
         <div>

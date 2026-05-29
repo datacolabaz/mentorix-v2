@@ -77,20 +77,48 @@ function findStoragePack(packs, quantityMb) {
   return packs.find((p) => p.quantity_mb === q) || null;
 }
 
+async function getOperatorInventoryFromSettings() {
+  const read = async (key, fallback) => {
+    const raw = await getSetting(key);
+    if (raw == null || raw === '') return fallback;
+    const n = Number(raw);
+    return Number.isFinite(n) ? Math.max(0, Math.round(n)) : fallback;
+  };
+  const operator_sms_stock_remaining = await read('operator_sms_stock_remaining', 0);
+  const operator_sms_low_alert = await read('operator_sms_low_alert', 500);
+  const operator_storage_mb_remaining = await read('operator_storage_mb_remaining', 0);
+  const operator_storage_mb_low_alert = await read('operator_storage_mb_low_alert', 500);
+  return {
+    operator_sms_stock_remaining,
+    operator_sms_low_alert,
+    operator_storage_mb_remaining,
+    operator_storage_mb_low_alert,
+  };
+}
+
 async function getBillingConfig() {
-  const [manual_transfer_account, sms_packs, storage_packs] = await Promise.all([
+  const [manual_transfer_account, sms_packs, storage_packs, operator] = await Promise.all([
     getManualTransferAccount(),
     getSmsPacks(),
     getStoragePacks(),
+    getOperatorInventoryFromSettings(),
   ]);
-  return { manual_transfer_account, sms_packs, storage_packs };
+  return { manual_transfer_account, sms_packs, storage_packs, ...operator };
 }
 
 async function adminGetBillingSettings() {
   return getBillingConfig();
 }
 
-async function adminUpdateBillingSettings({ manual_transfer_account, sms_packs, storage_packs }) {
+async function adminUpdateBillingSettings({
+  manual_transfer_account,
+  sms_packs,
+  storage_packs,
+  operator_sms_stock_remaining,
+  operator_sms_low_alert,
+  operator_storage_mb_remaining,
+  operator_storage_mb_low_alert,
+}) {
   if (manual_transfer_account != null) {
     const digits = String(manual_transfer_account).replace(/\D/g, '');
     if (digits.length !== BANK_CARD_DIGITS) {
@@ -116,10 +144,22 @@ async function adminUpdateBillingSettings({ manual_transfer_account, sms_packs, 
     }
     await setSetting('storage_packs', JSON.stringify(storage_packs));
   }
+  const opFields = [
+    ['operator_sms_stock_remaining', operator_sms_stock_remaining],
+    ['operator_sms_low_alert', operator_sms_low_alert],
+    ['operator_storage_mb_remaining', operator_storage_mb_remaining],
+    ['operator_storage_mb_low_alert', operator_storage_mb_low_alert],
+  ];
+  for (const [key, val] of opFields) {
+    if (val == null || val === '') continue;
+    const n = Math.max(0, Math.round(Number(val) || 0));
+    await setSetting(key, String(n));
+  }
   return getBillingConfig();
 }
 
 module.exports = {
+  getSetting,
   getManualTransferAccount,
   getSmsPacks,
   findSmsPack,

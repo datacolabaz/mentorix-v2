@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import api from '../../lib/api'
 import Card from '../../components/common/Card'
 
@@ -19,10 +20,15 @@ const StatCard = ({ label, value, icon }) => (
 export default function AdminDashboard() {
   const [stats, setStats] = useState(null)
   const [instructors, setInstructors] = useState([])
+  const [inventoryAlerts, setInventoryAlerts] = useState([])
 
   useEffect(() => {
     api.get('/admin/stats').then((d) => setStats(d.stats))
     api.get('/admin/instructors').then((d) => setInstructors(d.instructors?.slice(0, 5) || []))
+    api
+      .get('/admin/billing/inventory')
+      .then((d) => setInventoryAlerts(d.inventory?.alerts || []))
+      .catch(() => setInventoryAlerts([]))
   }, [])
 
   return (
@@ -31,6 +37,27 @@ export default function AdminDashboard() {
         <h1 className="font-display font-bold text-2xl">Dashboard</h1>
         <p className="text-gray-400 text-sm mt-1">{new Date().toLocaleDateString('az-AZ', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
       </div>
+
+      {inventoryAlerts.length > 0 ? (
+        <div className="mb-4 space-y-2">
+          {inventoryAlerts.map((a, i) => (
+            <div
+              key={`${a.kind}-${i}`}
+              className={[
+                'rounded-xl border px-4 py-3 text-sm flex flex-wrap items-center justify-between gap-2',
+                a.level === 'critical'
+                  ? 'border-rose-500/40 bg-rose-500/15 text-rose-100'
+                  : 'border-amber-500/40 bg-amber-500/15 text-amber-100',
+              ].join(' ')}
+            >
+              <span>{a.message}</span>
+              <Link to="/admin/billing" className="text-xs font-semibold underline hover:no-underline">
+                Ehtiyatı yenilə →
+              </Link>
+            </div>
+          ))}
+        </div>
+      ) : null}
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
         <StatCard label="Müəllimlər" value={stats?.instructors ?? '—'} icon="👨‍🏫" />

@@ -21,6 +21,7 @@ const { grantCourseRoleToUser } = require('../services/userRolesService');
 const { adminListPlans, adminUpsertPlan } = require('../services/subscriptionPlansService');
 const { fulfillBillingPayment, rejectBillingPayment } = require('../services/billingActivationService');
 const { adminGetBillingSettings, adminUpdateBillingSettings } = require('../services/billingSettingsService');
+const { getAdminBillingInventory } = require('../services/adminBillingInventoryService');
 
 router.get('/stats', authenticate, authorize('admin'), getDashboardStats);
 router.get('/students', authenticate, authorize('admin'), getStudents);
@@ -154,6 +155,15 @@ router.post('/billing/payments/:id/reject', authenticate, authorize('admin'), as
     res.json({ success: true, ...out });
   } catch (err) {
     res.status(err.statusCode || 500).json({ success: false, message: err.message });
+  }
+});
+
+router.get('/billing/inventory', authenticate, authorize('admin'), async (_req, res) => {
+  try {
+    const inventory = await getAdminBillingInventory();
+    res.json({ success: true, inventory });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
 });
 
