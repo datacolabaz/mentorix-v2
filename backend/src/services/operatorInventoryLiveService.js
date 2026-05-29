@@ -11,6 +11,7 @@ function buildInventoryDisplay(operator, usage, live) {
 
   const providerBalance = live.sms.ok ? live.sms.balance : null;
   const smsUsedMonth = Number(usage?.sms_sent_this_month || 0) || 0;
+  const smsUsedAllTime = Number(usage?.sms_sent_all_time || 0) || 0;
   const smsAllocated = Number(usage?.sms_allocated_to_instructors || 0) || 0;
 
   const disk = live.storage.disk;
@@ -49,7 +50,8 @@ function buildInventoryDisplay(operator, usage, live) {
     storage_remaining_mb = Math.max(0, storage_total_mb - storageUsedMb);
   }
 
-  const sms_has_data = sms_remaining != null;
+  const sms_has_data = sms_remaining != null || smsUsedMonth > 0 || smsUsedAllTime > 0;
+  const sms_has_balance = sms_remaining != null;
   const storage_has_data =
     storage_total_mb != null || storage_remaining_mb != null || storageUsedMb > 0;
 
@@ -67,8 +69,10 @@ function buildInventoryDisplay(operator, usage, live) {
     sms_total: sms_total ?? 0,
     sms_remaining: sms_remaining ?? 0,
     sms_used_this_month: smsUsedMonth,
+    sms_used_all_time: smsUsedAllTime,
     sms_allocated_to_instructors: smsAllocated,
     sms_has_data,
+    sms_has_balance,
     sms_source,
     sms_provider_error: live.sms.ok ? null : live.sms.error,
     storage_total_mb: storage_total_mb ?? 0,

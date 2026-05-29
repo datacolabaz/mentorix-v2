@@ -85,13 +85,16 @@ async function getPlatformAllocatedStats() {
 
 async function getPlatformUsageStats() {
   const { rows: smsRows } = await db.query(
-    `SELECT COUNT(*)::int AS cnt
+    `SELECT
+       COUNT(*) FILTER (
+         WHERE to_char(
+                 (COALESCE(sl.created_at, sl.sent_at) AT TIME ZONE 'Asia/Baku'),
+                 'YYYY-MM'
+               ) = to_char((CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Baku'), 'YYYY-MM')
+       )::int AS cnt_month,
+       COUNT(*)::int AS cnt_all
      FROM sms_logs sl
-     WHERE to_char(
-             (COALESCE(sl.created_at, sl.sent_at) AT TIME ZONE 'Asia/Baku'),
-             'YYYY-MM'
-           ) = to_char((CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Baku'), 'YYYY-MM')
-       AND COALESCE(LOWER(TRIM(sl.status)), 'sent') NOT LIKE 'failed%'`
+     WHERE COALESCE(LOWER(TRIM(sl.status)), 'sent') NOT LIKE 'failed%'`
   );
   const { rows: ucRows } = await db.query(
     `SELECT
@@ -117,7 +120,8 @@ async function getPlatformUsageStats() {
     /* köhnə DB — storage_mb / product_type olmaya bilər */
   }
   return {
-    sms_sent_this_month: Number(smsRows[0]?.cnt || 0) || 0,
+    sms_sent_this_month: Number(smsRows[0]?.cnt_month || 0) || 0,
+    sms_sent_all_time: Number(smsRows[0]?.cnt_all || 0) || 0,
     sms_used_counters: Number(uc.sms_used_counters || 0) || 0,
     extra_sms_sold_total: Number(uc.extra_sms_total || 0) || 0,
     storage_used_mb: Math.round((Number(uc.storage_used_bytes_total || 0) || 0) / (1024 * 1024)),
@@ -194,7 +198,7 @@ async function getAdminBillingInventory() {
   const usageMerged = { ...usage, ...platform_allocated };
   const { live, display } = await buildInventoryDisplayWithUsage(operator, usageMerged);
 
-  const smsRem = display.sms_has_data ? display.sms_remaining : null;
+  const smsRem = display.sms_has_balance ? display.sms_remaining : null;
   const stRem =
     display.storage_has_limit && display.storage_remaining_mb != null
       ? display.storage_remaining_mb

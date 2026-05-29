@@ -125,7 +125,9 @@ export default function AdminInventory() {
   const stRem = display?.storage_remaining_mb
   const stUsed = display?.storage_used_mb ?? 0
   const stHasLimit = Boolean(display?.storage_has_limit)
+  const smsHasBalance = Boolean(display?.sms_has_balance)
   const smsHas = Boolean(display?.sms_has_data)
+  const smsUsedAll = display?.sms_used_all_time ?? 0
   const stHas = Boolean(display?.storage_has_data)
   const smsLow =
     smsHas && smsRem <= (inventory?.operator?.operator_sms_low_alert ?? 500)
@@ -189,7 +191,7 @@ export default function AdminInventory() {
       ) : (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className={`rounded-2xl border p-5 ${stockCardCls(smsLow, smsHas)}`}>
+            <div className={`rounded-2xl border p-5 ${stockCardCls(smsLow, smsHasBalance)}`}>
               <div className="flex items-center justify-between gap-2 mb-3">
                 <div className="text-xs text-gray-400 uppercase">SMS (provayder)</div>
                 {display?.sms_source ? (
@@ -200,26 +202,36 @@ export default function AdminInventory() {
                 <div>
                   <div className="text-[10px] text-gray-500 uppercase">Ümumi (təxmini)</div>
                   <div className="font-display font-bold text-2xl text-white mt-1">
-                    {smsHas ? smsTotal.toLocaleString('az-AZ') : '—'}{' '}
+                    {smsHasBalance ? smsTotal.toLocaleString('az-AZ') : '—'}{' '}
                     <span className="text-sm font-normal text-gray-500">ədəd</span>
                   </div>
                 </div>
                 <div>
                   <div className="text-[10px] text-gray-500 uppercase">Qalan balans</div>
                   <div className="font-display font-bold text-2xl text-white mt-1">
-                    {smsHas ? smsRem.toLocaleString('az-AZ') : '—'}{' '}
+                    {smsHasBalance ? smsRem.toLocaleString('az-AZ') : '—'}{' '}
                     <span className="text-sm font-normal text-gray-500">ədəd</span>
                   </div>
                 </div>
               </div>
-              <p className="text-[11px] text-gray-500 mt-3">
-                Bu ay platformda göndərilən: <strong className="text-gray-300">{smsUsed.toLocaleString('az-AZ')}</strong>{' '}
-                SMS
-                {!smsHas && display?.sms_provider_error ? (
-                  <span className="block text-amber-300/90 mt-1">{display.sms_provider_error}</span>
+              <p className="text-[11px] text-gray-500 mt-3 space-y-1">
+                <span className="block">
+                  Bu ay göndərilən: <strong className="text-gray-300">{smsUsed.toLocaleString('az-AZ')}</strong> SMS
+                </span>
+                <span className="block">
+                  Cəmi göndərilən (platform):{' '}
+                  <strong className="text-gray-300">{smsUsedAll.toLocaleString('az-AZ')}</strong> SMS
+                </span>
+                {!smsHasBalance && display?.sms_provider_error ? (
+                  <span className="block text-amber-300/90">{display.sms_provider_error}</span>
+                ) : null}
+                {!smsHasBalance ? (
+                  <span className="block text-gray-500">
+                    Qalan balans üçün aşağıdan «Qalan SMS» yazıb saxlayın və ya sendsms panelində IP icazəsi verin.
+                  </span>
                 ) : null}
               </p>
-              {smsHas && smsTotal > 0 ? (
+              {smsHasBalance && smsTotal > 0 ? (
                 <div className="mt-2 h-1.5 rounded-full bg-black/30 overflow-hidden">
                   <div
                     className="h-full bg-emerald-500/80 rounded-full"

@@ -188,44 +188,168 @@ const sendSms = async ({ instructorId, phone, message }) => {
   }
 };
 
-function extractSmsBalanceFromJson(json) {
-  if (!json || typeof json !== 'object') return null;
-  const keyRe = /balance|credit|sms|qty|quantity|count/i;
-  const walk = (node, depth) => {
-    if (!node || depth > 10) return null;
-    if (typeof node === 'number' && Number.isFinite(node) && node >= 0) return Math.round(node);
-    if (typeof node === 'string' && /^\d+(\.\d+)?$/.test(node.trim())) {
-      return Math.round(Number(node));
+/** LSIM / sendsms.az QuickSMS: KEY = md5(md5(password) + login) */
+function quicksmsAuthKey(login, password, { upper = false } = {}) {
+  const md5pass = crypto.createHash('md5').update(String(password)).digest('hex');
+  const raw = crypto.createHash('md5').update(md5pass + String(login)).digest('hex');
+  return upper ? raw.toUpperCase() : raw;
+}
+
+function parseQuicksmsBalanceJson(json) {
+  if (!json || typeof json !== 'object') return { balance: null, error: null };
+  const code = json.errorCode != null ? Number(json.errorCode) : null;
+  if (code != null && Number.isFinite(code) && code < 0) {
+    return { balance: null, error: json.errorMessage || `QuickSMS errorCode ${code}` };
+  }
+  const obj = json.obj ?? json.balance ?? json.data?.balance ?? json.data?.obj;
+  const n = Number(obj);
+  if (Number.isFinite(n) && n >= 0) return { balance: Math.round(n), error: null };
+  return { balance: null, error: json.errorMessage || 'Balans tapılmadı' };
+}
+
+function extractSmxmlBalanceFromJson(json) {
+  const body = json?.response?.body;
+  if (body != null) {
+    const direct = Number(body.balance ?? body.credit ?? body.obj);
+    if (Number.isFinite(direct) && direct >= 0) return Math.round(direct);
+    if (Array.isArray(body) && body[0]) {
+      const b = Number(body[0].balance ?? body[0].credit);
+      if (Number.isFinite(b) && b >= 0) return Math.round(b);
     }
-    if (typeof node !== 'object') return null;
-    if (Array.isArray(node)) {
-      for (const item of node) {
-        const v = walk(item, depth + 1);
-        if (v != null) return v;
+  }
+  const headBal = Number(json?.response?.head?.balance ?? json?.response?.head?.credit);
+  if (Number.isFinite(headBal) && headBal >= 0) return Math.round(headBal);
+  return null;
+}
+
+async function fetchQuicksmsBalance() {
+  const login = String(SMS_LOGIN || '').trim();
+  const keys = [
+    quicksmsAuthKey(login, SMS_PASSWORD, { upper: false }),
+    quicksmsAuthKey(login, SMS_PASSWORD, { upper: true }),
+  ];
+  const bases = [
+    process.env.SMS_QUICKSMS_BASE_URL,
+    'https://sendsms.az',
+    'https://www.sendsms.az',
+    'https://lsim.az',
+    'https://www.lsim.az',
+  ].filter(Boolean);
+  const paths = ['/quicksms/v1/balance', '/quicksms/v1/balance/'];
+  let lastError = 'QuickSMS balans oxunmadı';
+
+  for (const base of bases) {
+    const origin = String(base).replace(/\/+$/, '');
+    for (const p of paths) {
+      for (const key of keys) {
+        const payload = { login, key };
+        const attempts = [
+          {
+            label: 'POST JSON',
+            run: () =>
+              fetch(`${origin}${p}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+                body: JSON.stringify(payload),
+              }),
+          },
+          {
+            label: 'GET query',
+            run: () =>
+              fetch(
+                `${origin}${p}?login=${encodeURIComponent(login)}&key=${encodeURIComponent(key)}`,
+                { method: 'GET', headers: { Accept: 'application/json' } }
+              ),
+          },
+          {
+            label: 'POST form',
+            run: () =>
+              fetch(`${origin}${p}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
+                body: new URLSearchParams({ login, key }).toString(),
+              }),
+          },
+        ];
+        for (const { label, run } of attempts) {
+          try {
+            const res = await run();
+            const text = await res.text();
+            let json = null;
+            try {
+              json = JSON.parse(text);
+            } catch {
+              lastError = `${origin}${p} ${label}: JSON deyil`;
+              continue;
+            }
+            const parsed = parseQuicksmsBalanceJson(json);
+            if (parsed.balance != null) {
+              return {
+                ok: true,
+                balance: parsed.balance,
+                method: 'quicksms',
+                endpoint: `${origin}${p}`,
+                error: null,
+              };
+            }
+            lastError = parsed.error || `${origin}${p} ${label}: balans yoxdur`;
+          } catch (e) {
+            lastError = e.message || lastError;
+          }
+        }
       }
-      return null;
     }
-    for (const [k, v] of Object.entries(node)) {
-      if (keyRe.test(k)) {
-        const n = typeof v === 'number' ? v : Number(v);
-        if (Number.isFinite(n) && n >= 0) return Math.round(n);
+  }
+  return { ok: false, balance: null, error: lastError };
+}
+
+async function fetchSmxmlBalance() {
+  const login = SMS_LOGIN;
+  const key = quicksmsAuthKey(login, SMS_PASSWORD);
+  const operations = ['balance', 'getbalance', 'credit', 'getcredit'];
+  let lastError = 'SMXML balans oxunmadı';
+
+  for (const operation of operations) {
+    for (const auth of [
+      { login, key, password: null },
+      { login, password: SMS_PASSWORD, key: null },
+      { login, key, password: SMS_PASSWORD },
+    ]) {
+      try {
+        const head = {
+          operation,
+          login,
+          controlid: `${Date.now()}-${operation}`,
+        };
+        if (auth.key) head.key = auth.key;
+        if (auth.password) head.password = auth.password;
+
+        const res = await fetch(SMS_API, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({ request: { head } }),
+        });
+        const json = await res.json();
+        const rc = readSmxmlResponseCode(json);
+        if (rc != null && rc !== 0 && rc !== 200) {
+          lastError = `SMXML ${operation} kodu: ${rc}`;
+          continue;
+        }
+        const balance = extractSmxmlBalanceFromJson(json);
+        if (balance != null) {
+          return { ok: true, balance, method: 'smxml', operation, error: null };
+        }
+      } catch (e) {
+        lastError = e.message || lastError;
       }
     }
-    for (const v of Object.values(node)) {
-      const found = walk(v, depth + 1);
-      if (found != null) return found;
-    }
-    return null;
-  };
-  return walk(json, 0);
+  }
+  return { ok: false, balance: null, error: lastError };
 }
 
 let smsBalanceCache = { at: 0, result: null };
 const SMS_BALANCE_CACHE_MS = 60_000;
 
-/**
- * sendsms.az SMXML — mümkün balans əməliyyatlarını sınayır.
- */
 async function fetchSmsProviderBalance({ bypassCache = false } = {}) {
   if (!SMS_LOGIN || !SMS_PASSWORD) {
     return { ok: false, balance: null, error: 'SMS_LOGIN / SMS_PASSWORD təyin olunmayıb' };
@@ -235,50 +359,26 @@ async function fetchSmsProviderBalance({ bypassCache = false } = {}) {
     return smsBalanceCache.result;
   }
 
-  const operations = ['balance', 'credit', 'getbalance', 'querybalance'];
-  let lastError = 'Balans API cavab vermədi';
-
-  for (const operation of operations) {
-    try {
-      const res = await fetch(SMS_API, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          request: {
-            head: {
-              operation,
-              login: SMS_LOGIN,
-              password: SMS_PASSWORD,
-              controlid: `${Date.now()}-${operation}`,
-            },
-          },
-        }),
-      });
-      let json = null;
-      try {
-        json = await res.json();
-      } catch {
-        lastError = 'Provayder JSON qaytarmadı';
-        continue;
-      }
-      const rc = readSmxmlResponseCode(json);
-      if (rc != null && rc !== 0 && rc !== 200) {
-        lastError = `SMXML kodu: ${rc} (balans üçün QuickSMS istifadə olunur)`;
-        continue;
-      }
-      const balance = extractSmsBalanceFromJson(json);
-      if (balance != null) {
-        const out = { ok: true, balance, operation, error: null, fetched_at: new Date().toISOString() };
-        smsBalanceCache = { at: now, result: out };
-        return out;
-      }
-      lastError = 'Balans sahəsi tapılmadı';
-    } catch (e) {
-      lastError = e.message || lastError;
-    }
+  const quick = await fetchQuicksmsBalance();
+  if (quick.ok) {
+    const out = { ...quick, fetched_at: new Date().toISOString() };
+    smsBalanceCache = { at: now, result: out };
+    return out;
   }
 
-  const out = { ok: false, balance: null, error: lastError, fetched_at: new Date().toISOString() };
+  const smxml = await fetchSmxmlBalance();
+  if (smxml.ok) {
+    const out = { ...smxml, fetched_at: new Date().toISOString() };
+    smsBalanceCache = { at: now, result: out };
+    return out;
+  }
+
+  const out = {
+    ok: false,
+    balance: null,
+    error: [quick.error, smxml.error].filter(Boolean).join(' · ') || 'Balans oxunmadı',
+    fetched_at: new Date().toISOString(),
+  };
   smsBalanceCache = { at: now, result: out };
   return out;
 }
