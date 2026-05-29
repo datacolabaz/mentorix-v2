@@ -61,10 +61,13 @@ function buildInventoryDisplay(operator, usage, live) {
     storage_remaining_mb = Math.max(0, storage_total_mb - storageUsedMb);
   }
 
-  const sms_has_data = sms_remaining != null || smsUsedMonth > 0 || smsUsedAllTime > 0;
+  const sms_has_estimate = sms_remaining == null && sms_remaining_estimate != null;
   const sms_has_balance = sms_remaining != null;
+  const sms_has_data =
+    sms_has_balance || sms_has_estimate || smsUsedMonth > 0 || smsUsedAllTime > 0;
   const storage_has_data =
     storage_total_mb != null || storage_remaining_mb != null || storageUsedMb > 0;
+  const storage_has_limit = storage_total_mb != null && storage_total_mb > 0;
 
   let sms_source = 'none';
   if (hasManualSmsRem || hasManualSmsTotal) sms_source = 'manual';
@@ -80,7 +83,8 @@ function buildInventoryDisplay(operator, usage, live) {
 
   return {
     sms_total: sms_total ?? 0,
-    sms_remaining: sms_remaining ?? 0,
+    sms_remaining: sms_remaining ?? sms_remaining_estimate ?? 0,
+    sms_remaining_estimate: sms_remaining_estimate ?? null,
     sms_used_this_month: smsUsedMonth,
     sms_used_all_time: smsUsedAllTime,
     sms_allocated_to_instructors: smsAllocated,
@@ -94,14 +98,27 @@ function buildInventoryDisplay(operator, usage, live) {
     storage_used_mb: storageUsedMb,
     storage_free_mb: storage_remaining_mb,
     storage_has_data,
-    storage_has_limit: storage_total_mb != null && storage_total_mb > 0,
+    storage_has_limit,
     storage_source,
-    storage_disk_path: disk?.path ?? live.storage.uploads_root ?? null,
+    storage_disk_path: disk?.path ?? live.storage?.uploads_root ?? null,
   };
 }
 
 async function getLiveInventorySnapshot() {
-  const [sms, storage] = await Promise.all([fetchSmsProviderBalance(), getPlatformHostingStorageStats()]);
+  const [sms, storage] = await Promise.all([
+    fetchSmsProviderBalance().catch((e) => ({
+      ok: false,
+      balance: null,
+      error: e?.message || 'SMS balans sorğusu uğursuz',
+    })),
+    getPlatformHostingStorageStats().catch(() => ({
+      storage_used_mb: 0,
+      storage_used_bytes: 0,
+      uploads_root: null,
+      disk: null,
+      env_total_mb: 0,
+    })),
+  ]);
   return { sms, storage };
 }
 
