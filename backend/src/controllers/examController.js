@@ -1878,15 +1878,16 @@ const patchExam = async (req, res) => {
             [examId, sid]
           );
         }
-        if (toAdd.length) {
-          assignmentSummary.new_student_ids = toAdd;
-        }
 
         const { rows: afterRows } = await client.query(
           `SELECT student_id FROM exam_assignments WHERE exam_id = $1`,
           [examId]
         );
-        assignmentSummary = { wanted: wanted.length, assigned: afterRows.length };
+        assignmentSummary = {
+          wanted: wanted.length,
+          assigned: afterRows.length,
+          ...(toAdd.length ? { new_student_ids: toAdd } : {}),
+        };
       }
     });
 
