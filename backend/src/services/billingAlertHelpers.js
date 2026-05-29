@@ -113,4 +113,8 @@ module.exports = {
   highestPlanSlug,
   isHighestTierPlan,
   usageRatio,
-  smsUsa
+  smsUsageLine,
+  storageUsageLine,
+  fetchPendingTopups,
+  pickLimitCta,
+};
