@@ -196,6 +196,39 @@ export default function InstructorLayout() {
     }
   }, [billing?.status])
 
+  const smsLimitReached = Boolean(billing && isSmsMonthlyLimitReached(billing))
+  const storageLimitReached = Boolean(billing && isStorageLimitReached(billing))
+
+  useEffect(() => {
+    if (!billing?.is_highest_tier) return
+    if (!smsLimitReached && !storageLimitReached) return
+    const st = String(billing?.status || '')
+    if (st !== 'blocked' && st !== 'warning') return
+    const sig = `${billing.plan}:${st}:${smsLimitReached}:${storageLimitReached}`
+    if (topUpPromptSigRef.current === sig) return
+    topUpPromptSigRef.current = sig
+    setTopUpModalOpen(true)
+  }, [billing, smsLimitReached, storageLimitReached])
+
+  useEffect(() => {
+    const onUsageLimit = (ev) => {
+      const code = ev?.detail?.code
+      const message = ev?.detail?.message || ''
+      if (billing?.is_highest_tier && (code === 'SMS_LIMIT' || code === 'STORAGE_LIMIT')) {
+        setTopUpModalOpen(true)
+        return
+      }
+      setLimitModal({
+        open: true,
+        message,
+        primaryLabel: code === 'SMS_LIMIT' ? 'SMS Balansı Artır' : 'Paketlərə bax',
+        action: code === 'SMS_LIMIT' ? 'OPEN_SMS_TOPUP' : 'OPEN_SETTINGS_PLANS',
+      })
+    }
+    window.addEventListener('mx:usage-limit', onUsageLimit)
+    return () => window.removeEventListener('mx:usage-limit', onUsageLimit)
+  }, [billing?.is_highest_tier])
+
   return (
     <>
       <div
