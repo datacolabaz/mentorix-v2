@@ -81,7 +81,11 @@ export default function BillingUsagePills({ billing }) {
         label="Students"
         value={`${fmtUsed(used.students, 'n')} / ${fmtLimit(lim.students, 'n')}`}
       />
-      <Pill label="Storage" value={storageLabel} title={storage.detail} />
+      <Pill
+        label="Storage"
+        value={storageLabel}
+        title={storage.detail || 'Paket yaddaşı + təsdiqlənmiş əlavə yer'}
+      />
       <Pill label="SMS (aylıq)" value={sms.label} title={smsTitle} tone={smsTone} />
     </div>
   )

@@ -14,6 +14,7 @@ const { enqueueNotification } = require('../services/notificationQueueService');
 const {
   createPlanCheckout,
   createSmsCheckout,
+  createStorageCheckout,
   normalizePaymentMethod,
 } = require('../services/billingCheckoutService');
 const { fulfillBillingPayment } = require('../services/billingActivationService');
@@ -103,7 +104,7 @@ router.get('/payments', authenticate, authorize('instructor'), async (req, res) 
       ? ''
       : `AND status IN ('pending', 'paid', 'rejected')`;
     const { rows } = await db.query(
-      `SELECT id, plan, amount_cents, currency, status, payment_method, product_type, sms_quantity,
+      `SELECT id, plan, amount_cents, currency, status, payment_method, product_type, sms_quantity, storage_mb,
               provider, billing_interval, COALESCE(paid_at, created_at) AS at, created_at, admin_note
        FROM billing_payments
        WHERE user_id = $1 ${statusFilter}
@@ -119,6 +120,7 @@ router.get('/payments', authenticate, authorize('instructor'), async (req, res) 
       payment_method: r.payment_method,
       product_type: r.product_type,
       sms_quantity: r.sms_quantity,
+      storage_mb: r.storage_mb,
       billing_interval: r.billing_interval,
       provider: r.provider,
       date: r.at ? new Date(r.at).toISOString() : null,
@@ -237,6 +239,22 @@ router.post('/create-sms-payment', authenticate, authorize('instructor'), async 
     const payment = await createSmsCheckout({
       userId: req.user.id,
       smsQuantity: req.body?.quantity ?? req.body?.sms_quantity,
+      paymentMethod,
+      callbackUrl,
+    });
+    return res.json({ success: true, payment });
+  } catch (err) {
+    return res.status(err.statusCode || err.status || 500).json({ success: false, message: err.message, code: err.code });
+  }
+});
+
+router.post('/create-storage-payment', authenticate, authorize('instructor'), async (req, res) => {
+  try {
+    const paymentMethod = normalizePaymentMethod(req.body?.payment_method ?? req.body?.paymentMethod ?? 'card');
+    const callbackUrl = paymentMethod === 'cash' ? null : callbackUrlFromReq(req);
+    const payment = await createStorageCheckout({
+      userId: req.user.id,
+      storageMb: req.body?.quantity_mb ?? req.body?.storage_mb ?? req.body?.quantity,
       paymentMethod,
       callbackUrl,
     });

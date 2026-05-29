@@ -20,6 +20,7 @@ import { formatAzn, yearlyTotalAzn, YEARLY_DISCOUNT } from '../../lib/pricing'
 import { planDetailLines, planLimitsHeadline } from '../../lib/subscriptionPlanCopy'
 import {
   canBuySmsOnCurrentPlan,
+  canBuyStorageOnCurrentPlan,
   hasPendingSmsTopup,
   isSmsMonthlyLimitReached,
   isStorageLimitReached,
@@ -51,6 +52,9 @@ export default function InstructorSettings() {
   const billingConfigQ = useBillingConfig()
   const manualAccount = billingConfigQ.data?.manual_transfer_account || ''
   const smsPacks = Array.isArray(billingConfigQ.data?.sms_packs) ? billingConfigQ.data.sms_packs : []
+  const storagePacks = Array.isArray(billingConfigQ.data?.storage_packs)
+    ? billingConfigQ.data.storage_packs
+    : []
   const [checkout, setCheckout] = useState(null)
   const [limitChoice, setLimitChoice] = useState(null) // null | { open: true }
   const [qrOpen, setQrOpen] = useState(false)
@@ -316,6 +320,7 @@ export default function InstructorSettings() {
   )
 
   const smsUsageInfo = useMemo(() => smsUsageDisplay(billing), [billing])
+  const storageUsageInfo = useMemo(() => storageUsageDisplay(billing), [billing])
 
   const currentPlanPricingLine = useMemo(() => {
     if (!currentPlanObj) return '—'
@@ -351,6 +356,15 @@ export default function InstructorSettings() {
     })
   }
 
+  function openStorageCheckout(pack) {
+    setCheckout({
+      type: 'storage',
+      quantity_mb: pack.quantity_mb,
+      amountAzn: pack.price_azn,
+      title: pack.label,
+    })
+  }
+
   async function confirmCheckout(paymentMethod) {
     if (!checkout) return
     setPlanErr(null)
@@ -369,6 +383,27 @@ export default function InstructorSettings() {
             account: pay?.manual_transfer_account || manualAccount,
             amount: String((Number(pay?.amount_cents || 0) / 100).toFixed(2)),
             product: 'plan',
+          })
+          navigate(`/payment/pending?${qs}`)
+          return
+        }
+        const url = pay?.payment_url
+        if (!url) throw new Error('Ödəniş linki alınmadı')
+        window.location.href = url
+        return
+      }
+      if (checkout.type === 'storage') {
+        const r = await api.post('/billing/create-storage-payment', {
+          quantity_mb: checkout.quantity_mb,
+          payment_method: paymentMethod,
+        })
+        const pay = r?.payment
+        setCheckout(null)
+        if (paymentMethod === 'cash') {
+          const qs = new URLSearchParams({
+            account: pay?.manual_transfer_account || manualAccount,
+            amount: String((Number(pay?.amount_cents || 0) / 100).toFixed(2)),
+            product: 'storage',
           })
           navigate(`/payment/pending?${qs}`)
           return
@@ -495,23 +530,15 @@ export default function InstructorSettings() {
                 paketi üçün ödəniş admin təsdiqi gözləyir. Təsdiqdən sonra aktiv paket və limitlər yenilənəcək.
               </p>
             ) : null}
-            {shouldOfferLimitTopUpChoice(billing, { smsPacksCount: smsPacks.length }) ? (
+            {shouldOfferLimitTopUpChoice(billing, {
+              smsPacksCount: smsPacks.length,
+              storagePacksCount: storagePacks.length,
+            }) ? (
               <p className="text-[11px] text-indigo-300/90 rounded-lg border border-indigo-500/25 bg-indigo-500/10 px-3 py-2 leading-relaxed">
-                {billing?.is_highest_tier ? (
-                  <>
-                    Limit dolubsa: cari paketdə <span className="font-medium text-white">əlavə SMS</span> alın və ya
-                    yaddaş üçün imtahan fayllarını azaldın. Aşağı paketə keçmək olmaz.
-                  </>
-                ) : (
-                  <>
-                    {canBuySmsOnCurrentPlan(billing, smsPacks.length) ? (
-                      <>
-                        SMS üçün cari paketdə <span className="font-medium text-white">əlavə SMS</span> ala bilərsiniz.
-                      </>
-                    ) : null}
-                    {isStorageLimitReached(billing) ? ' Yaddaş üçün faylları azaldın və ya yüksək paket seçin.' : null}
-                  </>
-                )}
+                Limit dolubsa: cari paketdə{' '}
+                <span className="font-medium text-white">əlavə SMS</span> və ya{' '}
+                <span className="font-medium text-white">əlavə yaddaş</span> ala bilərsiniz. Aşağı paketə keçid yalnız
+                1 ay sonra və istifadə uyğun olduqda mümkündür.
               </p>
             ) : null}
           </div>
@@ -537,12 +564,15 @@ export default function InstructorSettings() {
                 : { blocked: false, tooltip: null }
             const smsLimitReached = isSmsMonthlyLimitReached(billing)
             const storageLimitReached = isStorageLimitReached(billing)
-            const limitChoiceOffer = shouldOfferLimitTopUpChoice(billing, { smsPacksCount: smsPacks.length })
+            const limitChoiceOffer = shouldOfferLimitTopUpChoice(billing, {
+              smsPacksCount: smsPacks.length,
+              storagePacksCount: storagePacks.length,
+            })
 
             let btnLabel = 'Başla'
             if (isCurrent) {
               if (limitChoiceOffer) btnLabel = 'Limit həlli'
-              else if (smsPacks.length) btnLabel = 'SMS əlavə et'
+              else if (smsPacks.length || storagePacks.length) btnLabel = 'Əlavə limit al'
               else btnLabel = 'Paketi yenilə'
             } else if (usageGuard.blocked) {
               btnLabel =
@@ -585,6 +615,10 @@ export default function InstructorSettings() {
               if (isCurrent) {
                 if (limitChoiceOffer) {
                   openLimitChoiceModal()
+                  return
+                }
+                if (storagePacks.length && isStorageLimitReached(billing)) {
+                  document.getElementById('billing-storage-addons')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
                   return
                 }
                 if (smsPacks.length) {
@@ -757,6 +791,48 @@ export default function InstructorSettings() {
                   className="w-full justify-center mt-auto"
                   disabled={planBusy}
                   onClick={() => openSmsCheckout(pack)}
+                >
+                  Al
+                </Button>
+              </div>
+            ))}
+          </div>
+        </Card>
+      ) : null}
+
+      {storagePacks.length ? (
+        <Card id="billing-storage-addons" className={settingsCardCls}>
+          <h2 className={cardTitleCls}>Əlavə yaddaş al</h2>
+          <p className={cardTextCls}>
+            Paket limitinizə əlavə yaddaş sahəsi. Kartla dərhal, köçürmə ilə admin təsdiqindən sonra aktivləşir.
+          </p>
+          {storageUsageInfo.detail ? (
+            <p className="text-xs text-token-textMuted">{storageUsageInfo.detail}</p>
+          ) : null}
+          {extraStorageBytes(billing) > 0 ? (
+            <p className="text-xs text-emerald-400/90">
+              Təsdiqlənmiş əlavə yaddaş: +{Math.round(extraStorageBytes(billing) / (1024 * 1024))} MB
+            </p>
+          ) : null}
+          {pendingStorageMb(billing) > 0 ? (
+            <p className="text-xs text-sky-400/90">
+              Gözləyən əlavə yaddaş: +{pendingStorageMb(billing)} MB (admin təsdiqindən sonra)
+            </p>
+          ) : null}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {storagePacks.map((pack) => (
+              <div
+                key={pack.quantity_mb}
+                className="rounded-2xl border border-[color:var(--border-subtle)] p-4 flex flex-col gap-3"
+              >
+                <div className="font-display font-bold text-token-textMain">{pack.label}</div>
+                <div className="text-lg font-bold text-token-textMain">{formatAzn(pack.price_azn)} AZN</div>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="w-full justify-center mt-auto"
+                  disabled={planBusy}
+                  onClick={() => openStorageCheckout(pack)}
                 >
                   Al
                 </Button>
@@ -1255,7 +1331,13 @@ export default function InstructorSettings() {
       <PaymentMethodModal
         open={Boolean(checkout)}
         onClose={() => setCheckout(null)}
-        title={checkout?.type === 'sms' ? 'SMS ödənişi' : 'Paket ödənişi'}
+        title={
+          checkout?.type === 'sms'
+            ? 'SMS ödənişi'
+            : checkout?.type === 'storage'
+              ? 'Yaddaş ödənişi'
+              : 'Paket ödənişi'
+        }
         subtitle={checkout?.title ? `Seçim: ${checkout.title}` : undefined}
         amountAzn={checkout?.amountAzn}
         manualAccount={manualAccount}

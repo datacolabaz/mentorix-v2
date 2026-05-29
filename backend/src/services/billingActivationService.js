@@ -93,9 +93,44 @@ async function activateSmsPayment(client, payment) {
   return { sms_quantity: qty };
 }
 
+/** Əlavə yaddaş (byte) */
+async function activateStoragePayment(client, payment) {
+  const userId = payment.user_id;
+  const mb = Math.max(1, Math.round(Number(payment.storage_mb) || 0));
+  if (!mb) {
+    const err = new Error('Yaddaş miqdarı yanlışdır');
+    err.statusCode = 400;
+    throw err;
+  }
+  const addBytes = mb * 1024 * 1024;
+
+  await client.query(
+    `INSERT INTO usage_counters (user_id, students_count, storage_used_mb, storage_used_bytes, sms_used_monthly, sms_period_ym, extra_sms_balance, extra_storage_bytes)
+     VALUES ($1, 0, 0, 0, 0, to_char((CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Baku'), 'YYYY-MM'), 0, 0)
+     ON CONFLICT (user_id) DO NOTHING`,
+    [userId]
+  );
+  await client.query(
+    `UPDATE usage_counters
+     SET extra_storage_bytes = COALESCE(extra_storage_bytes, 0) + $2,
+         updated_at = NOW()
+     WHERE user_id = $1`,
+    [userId, addBytes]
+  );
+
+  await client.query(
+    `INSERT INTO billing_history (user_id, action, old_plan, new_plan, amount_cents, currency, status, provider, external_order_id)
+     VALUES ($1, 'storage_topup', NULL, $2, $3, 'AZN', 'paid', $4, $5)`,
+    [userId, `+${mb} MB yaddaş`, payment.amount_cents || null, payment.provider || 'manual', String(payment.id)]
+  );
+
+  return { storage_mb: mb, storage_bytes: addBytes };
+}
+
 async function activateBillingPayment(client, payment) {
   const productType = String(payment.product_type || 'plan').toLowerCase();
   if (productType === 'sms') return activateSmsPayment(client, payment);
+  if (productType === 'storage') return activateStoragePayment(client, payment);
   return activatePlanPayment(client, payment);
 }
 
@@ -104,7 +139,7 @@ async function fulfillBillingPayment(paymentId, { reviewedBy = null } = {}) {
   return db.transaction(async (client) => {
     const { rows } = await client.query(
       `SELECT id, user_id, plan, amount_cents, currency, status, provider, payment_method,
-              product_type, sms_quantity, billing_interval, external_order_id
+              product_type, sms_quantity, storage_mb, billing_interval, external_order_id
        FROM billing_payments
        WHERE id = $1
        FOR UPDATE`,
@@ -193,6 +228,7 @@ async function rejectBillingPayment(paymentId, { reviewedBy, adminNote } = {}) {
 module.exports = {
   activatePlanPayment,
   activateSmsPayment,
+  activateStoragePayment,
   activateBillingPayment,
   fulfillBillingPayment,
   rejectBillingPayment,

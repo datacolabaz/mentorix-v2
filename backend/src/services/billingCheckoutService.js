@@ -3,7 +3,13 @@ const { normalizePlanSlug } = require('../config/plans');
 const getCurrentPlan = require('./billingGetCurrentPlan');
 const { getPlanOrThrow, getActivePlansMap } = require('./subscriptionPlansService');
 const { createOrder } = require('./payriffService');
-const { getManualTransferAccount, getSmsPacks, findSmsPack } = require('./billingSettingsService');
+const {
+  getManualTransferAccount,
+  getSmsPacks,
+  findSmsPack,
+  getStoragePacks,
+  findStoragePack,
+} = require('./billingSettingsService');
 const { normalizeBillingInterval } = require('./billingActivationService');
 const { logBillingEvent, assertDowngradeAllowed } = require('./billingEntitlements');
 
@@ -297,9 +303,121 @@ async function createSmsCheckout({ userId, smsQuantity, paymentMethod: paymentMe
   };
 }
 
+async function createStorageCheckout({ userId, storageMb, paymentMethod: paymentMethodRaw, callbackUrl }) {
+  const paymentMethod = normalizePaymentMethod(paymentMethodRaw);
+  const packs = await getStoragePacks();
+  const pack = findStoragePack(packs, storageMb);
+  if (!pack) {
+    const err = new Error('Yaddaş paketi tapılmadı');
+    err.code = 'STORAGE_PACK_INVALID';
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const cur = await getCurrentPlan(db, userId);
+  const planSlug = normalizePlanSlug(cur.plan);
+  const finalPriceAzn = Number(pack.price_azn) || 0;
+  const amountCents = Math.round(finalPriceAzn * 100);
+  const provider = paymentMethod === 'cash' ? 'manual' : 'payriff';
+
+  const { rows: ins } = await db.query(
+    `INSERT INTO billing_payments (
+       user_id, provider, plan, amount_cents, currency, status,
+       payment_method, product_type, storage_mb
+     )
+     VALUES ($1, $2, $3, $4, 'AZN', 'pending', $5, 'storage', $6)
+     RETURNING id`,
+    [userId, provider, planSlug, amountCents, paymentMethod, pack.quantity_mb]
+  );
+  const paymentId = ins[0]?.id;
+
+  if (paymentMethod === 'cash') {
+    await db.query(
+      `UPDATE billing_payments SET expires_at = NOW() + interval '7 days', updated_at = NOW() WHERE id = $1`,
+      [paymentId]
+    );
+    const manualAccount = await getManualTransferAccount();
+    await db.query(
+      `INSERT INTO billing_history (user_id, action, old_plan, new_plan, amount_cents, currency, status, provider, external_order_id)
+       VALUES ($1, 'storage_topup', NULL, $2, $3, 'AZN', 'pending', 'manual', $4)`,
+      [userId, pack.label, amountCents, String(paymentId)]
+    );
+    return {
+      id: paymentId,
+      provider: 'manual',
+      payment_method: 'cash',
+      product_type: 'storage',
+      storage_mb: pack.quantity_mb,
+      plan: planSlug,
+      amount_cents: amountCents,
+      currency: 'AZN',
+      status: 'pending',
+      manual_transfer_account: manualAccount,
+      description: `Mentorix — ${pack.label}`,
+    };
+  }
+
+  if (!callbackUrl) {
+    const err = new Error('CALLBACK_URL_MISSING');
+    err.code = 'CALLBACK_URL_MISSING';
+    err.statusCode = 500;
+    throw err;
+  }
+
+  await db.query(
+    `UPDATE billing_payments SET expires_at = NOW() + interval '30 minutes' WHERE id = $1`,
+    [paymentId]
+  );
+
+  const order = await createOrder({
+    amount: finalPriceAzn,
+    currency: 'AZN',
+    language: 'AZ',
+    description: `Mentorix — ${pack.label}`,
+    callbackUrl,
+    metadata: {
+      payment_id: paymentId,
+      user_id: userId,
+      product_type: 'storage',
+      storage_mb: pack.quantity_mb,
+    },
+  });
+
+  const orderId = order?.payload?.orderId || null;
+  const paymentUrl = order?.payload?.paymentUrl || null;
+
+  await db.query(
+    `UPDATE billing_payments
+     SET external_order_id = $2, payment_url = $3, raw_create_response = $4::jsonb, updated_at = NOW()
+     WHERE id = $1`,
+    [paymentId, orderId, paymentUrl, JSON.stringify(order)]
+  );
+
+  await db.query(
+    `INSERT INTO billing_history (user_id, action, old_plan, new_plan, amount_cents, currency, status, provider, external_order_id)
+     VALUES ($1, 'storage_topup', NULL, $2, $3, 'AZN', 'pending', 'payriff', $4)`,
+    [userId, pack.label, amountCents, orderId]
+  );
+
+  return {
+    id: paymentId,
+    provider: 'payriff',
+    payment_method: 'card',
+    product_type: 'storage',
+    storage_mb: pack.quantity_mb,
+    plan: planSlug,
+    amount_cents: amountCents,
+    currency: 'AZN',
+    status: 'pending',
+    external_order_id: orderId,
+    payment_url: paymentUrl,
+  };
+}
+
 module.exports = {
   createPlanCheckout,
   createSmsCheckout,
+  createStorageCheckout,
   normalizePaymentMethod,
   planRank,
 };

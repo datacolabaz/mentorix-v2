@@ -743,8 +743,8 @@ export default function InstructorNotifications() {
                           navigate('/instructor/settings', { state: { scrollTo: 'billing-sms-addons' } })
                           return
                         }
-                        if (act === 'OPEN_SETTINGS_STORAGE') {
-                          navigate('/instructor/exams')
+                        if (act === 'OPEN_SETTINGS_STORAGE' || act === 'OPEN_STORAGE_TOPUP') {
+                          navigate('/instructor/settings', { state: { scrollTo: 'billing-storage-addons' } })
                           return
                         }
                         navigate('/instructor/settings')

@@ -104,10 +104,51 @@ export function smsUsageDisplay(billing) {
   }
 }
 
+export function pendingStorageMb(billing) {
+  const n = Number(billing?.pending_topup?.pending_storage_mb)
+  if (Number.isFinite(n) && n > 0) return Math.round(n)
+  const items = billing?.pending_topup?.items
+  if (!Array.isArray(items)) return 0
+  return items.reduce((sum, r) => {
+    if (String(r?.product_type || '') !== 'storage') return sum
+    return sum + Math.max(0, Math.round(Number(r.storage_mb) || 0))
+  }, 0)
+}
+
+export function planStorageByteLimit(billing) {
+  const plan = billing?.limits?.storage_limit_bytes_plan
+  if (plan != null && Number.isFinite(Number(plan))) return Number(plan)
+  const extra = Number(billing?.limits?.extra_storage_bytes ?? billing?.usage?.extra_storage_bytes) || 0
+  const effective = billing?.limits?.storage_limit_bytes
+  if (effective == null || !Number.isFinite(Number(effective))) return null
+  return Math.max(0, Number(effective) - extra)
+}
+
+export function extraStorageBytes(billing) {
+  return Math.max(
+    0,
+    Number(billing?.limits?.extra_storage_bytes ?? billing?.usage?.extra_storage_bytes) || 0,
+  )
+}
+
+function fmtMbFromBytes(b) {
+  const mb = Number(b) / (1024 * 1024)
+  return mb >= 10 ? `${Math.round(mb)} MB` : `${Math.round(mb * 10) / 10} MB`
+}
+
 export function storageUsageDisplay(billing) {
   const core = storageUsageFromBilling(billing)
-  return {
-    ...core,
-    detail: 'Yaddaş yalnız paket limitindədir; əlavə yaddaş paketi yoxdur',
+  const extraB = extraStorageBytes(billing)
+  const planBaseB = planStorageByteLimit(billing)
+  const pendingMb = pendingStorageMb(billing)
+  const parts = []
+  if (planBaseB != null) parts.push(`paket ${fmtMbFromBytes(planBaseB)}`)
+  if (extraB > 0) parts.push(`+${fmtMbFromBytes(extraB)} əlavə`)
+  if (pendingMb > 0) parts.push(`+${pendingMb} MB gözləyir`)
+  let detail = parts.length ? parts.join(', ') : null
+  if (pendingMb > 0 && core.limit != null) {
+    const after = Number(core.limit) + pendingMb * 1024 * 1024
+    detail = detail ? `${detail} → ${fmtMbFromBytes(after)} olacaq` : `Təsdiqdən sonra ${fmtMbFromBytes(after)}`
   }
+  return { ...core, detail, pendingMb, extraB, planBaseB }
 }

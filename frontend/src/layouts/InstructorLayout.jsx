@@ -141,6 +141,10 @@ export default function InstructorLayout() {
       navigate('/instructor/settings', { state: { scrollTo: 'billing-sms-addons' } })
       return
     }
+    if (act === 'OPEN_STORAGE_TOPUP') {
+      navigate('/instructor/settings', { state: { scrollTo: 'billing-storage-addons' } })
+      return
+    }
     if (act === 'OPEN_SETTINGS_PAYMENTS') {
       navigate('/instructor/settings', { state: { scrollTo: 'billing-payments' } })
       return
@@ -521,7 +525,7 @@ export default function InstructorLayout() {
         }}
         onManageStorage={() => {
           setTopUpModalOpen(false)
-          navigate('/instructor/exams')
+          navigate('/instructor/settings', { state: { scrollTo: 'billing-storage-addons' } })
         }}
       />
       <LimitReachedModal

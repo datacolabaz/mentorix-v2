@@ -27,8 +27,13 @@ export default function BillingLimitTopUpModal({
             </Button>
           ) : null}
           {storageReached ? (
-            <Button type="button" variant="secondary" className="w-full justify-center" onClick={onManageStorage}>
-              Yaddaşı idarə et
+            <Button
+              type="button"
+              variant={smsReached ? 'secondary' : 'primary'}
+              className="w-full justify-center"
+              onClick={onManageStorage}
+            >
+              Yaddaş al
             </Button>
           ) : null}
           <Button type="button" variant="secondary" className="w-full justify-center" onClick={onClose}>

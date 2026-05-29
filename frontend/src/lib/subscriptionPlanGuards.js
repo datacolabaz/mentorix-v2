@@ -168,10 +168,16 @@ export function canBuySmsOnCurrentPlan(billing, smsPacksCount = 0) {
   return smsPacksCount > 0
 }
 
+export function canBuyStorageOnCurrentPlan(billing, storagePacksCount = 0) {
+  return storagePacksCount > 0
+}
+
 /** Cari paketdə limit dolubsa — əlavə SMS və ya (aşağı deyilsə) yüksək paket */
-export function shouldOfferLimitTopUpChoice(billing, { smsPacksCount = 0 } = {}) {
+export function shouldOfferLimitTopUpChoice(
+  billing,
+  { smsPacksCount = 0, storagePacksCount = 0 } = {},
+) {
   const sms = isSmsMonthlyLimitReached(billing) && canBuySmsOnCurrentPlan(billing, smsPacksCount)
-  const storage = isStorageLimitReached(billing)
-  if (billing?.is_highest_tier) return sms || storage
+  const storage = isStorageLimitReached(billing) && canBuyStorageOnCurrentPlan(billing, storagePacksCount)
   return sms || storage
 }

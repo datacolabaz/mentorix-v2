@@ -116,6 +116,7 @@ router.get('/billing/payments', authenticate, authorize('admin'), async (req, re
         bp.payment_method,
         bp.product_type,
         bp.sms_quantity,
+        bp.storage_mb,
         bp.provider,
         bp.billing_interval,
         bp.external_order_id,

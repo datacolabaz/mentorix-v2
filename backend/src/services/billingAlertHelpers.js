@@ -71,7 +71,7 @@ function storageUsageLine(used, limits) {
 
 async function fetchPendingTopups(dbConn, userId) {
   const { rows } = await dbConn.query(
-    `SELECT product_type, plan, sms_quantity, amount_cents, created_at
+    `SELECT product_type, plan, sms_quantity, storage_mb, amount_cents, created_at
      FROM billing_payments
      WHERE user_id = $1::uuid
        AND status = 'pending'
@@ -91,11 +91,18 @@ async function fetchPendingTopups(dbConn, userId) {
   const pending_plan_slug = pendingPlanRow?.plan
     ? normalizePlanSlug(pendingPlanRow.plan)
     : null;
+  const hasPendingStorage = list.some((r) => String(r.product_type || '') === 'storage');
+  const pending_storage_mb = list.reduce((sum, r) => {
+    if (String(r.product_type || '') !== 'storage') return sum;
+    return sum + Math.max(0, Math.round(Number(r.storage_mb) || 0));
+  }, 0);
   return {
     hasPendingAny: list.length > 0,
     hasPendingSms,
     hasPendingPlan,
+    hasPendingStorage,
     pending_sms_quantity,
+    pending_storage_mb,
     pending_plan_slug,
     items: list,
   };
@@ -110,7 +117,7 @@ function pickLimitCta({ plan, plansMap, reachedSms, reachedStorage, reachedStude
     return { label: 'SMS Balansı Artır', action: 'OPEN_SMS_TOPUP' };
   }
   if (reachedStorage && highest) {
-    return { label: 'Yaddaşı idarə et', action: 'OPEN_SETTINGS_STORAGE' };
+    return { label: 'Yaddaş al', action: 'OPEN_STORAGE_TOPUP' };
   }
   if (reachedSms || reachedStorage) {
     return { label: 'Paketlərə bax', action: 'OPEN_SETTINGS_PLANS' };

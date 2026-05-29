@@ -21,8 +21,12 @@ function statusCls(st) {
   return 'bg-gray-500/20 text-gray-400'
 }
 
-function emptyPack() {
+function emptySmsPack() {
   return { quantity: '', price_azn: '', label: '' }
+}
+
+function emptyStoragePack() {
+  return { quantity_mb: '', price_azn: '', label: '' }
 }
 
 export default function AdminBilling() {
@@ -32,7 +36,12 @@ export default function AdminBilling() {
   const [loading, setLoading] = useState(true)
   const [busyId, setBusyId] = useState(null)
   const [accountDraft, setAccountDraft] = useState('')
-  const [smsPacksDraft, setSmsPacksDraft] = useState([emptyPack(), emptyPack(), emptyPack()])
+  const [smsPacksDraft, setSmsPacksDraft] = useState([emptySmsPack(), emptySmsPack(), emptySmsPack()])
+  const [storagePacksDraft, setStoragePacksDraft] = useState([
+    emptyStoragePack(),
+    emptyStoragePack(),
+    emptyStoragePack(),
+  ])
   const [savingSettings, setSavingSettings] = useState(false)
 
   const loadPayments = useCallback(async () => {
@@ -61,7 +70,17 @@ export default function AdminBilling() {
               price_azn: String(p.price_azn ?? ''),
               label: String(p.label || ''),
             }))
-          : [emptyPack(), emptyPack(), emptyPack()],
+          : [emptySmsPack(), emptySmsPack(), emptySmsPack()],
+      )
+      const stPacks = Array.isArray(s.storage_packs) && s.storage_packs.length ? s.storage_packs : []
+      setStoragePacksDraft(
+        stPacks.length
+          ? stPacks.map((p) => ({
+              quantity_mb: String(p.quantity_mb ?? ''),
+              price_azn: String(p.price_azn ?? ''),
+              label: String(p.label || ''),
+            }))
+          : [emptyStoragePack(), emptyStoragePack(), emptyStoragePack()],
       )
     } catch {
       // ignore
@@ -108,11 +127,23 @@ export default function AdminBilling() {
   }
 
   function addPackRow() {
-    setSmsPacksDraft((rows) => [...rows, emptyPack()])
+    setSmsPacksDraft((rows) => [...rows, emptySmsPack()])
   }
 
   function removePackRow(idx) {
     setSmsPacksDraft((rows) => (rows.length <= 1 ? rows : rows.filter((_, i) => i !== idx)))
+  }
+
+  function patchStoragePack(idx, field, value) {
+    setStoragePacksDraft((rows) => rows.map((r, i) => (i === idx ? { ...r, [field]: value } : r)))
+  }
+
+  function addStoragePackRow() {
+    setStoragePacksDraft((rows) => [...rows, emptyStoragePack()])
+  }
+
+  function removeStoragePackRow(idx) {
+    setStoragePacksDraft((rows) => (rows.length <= 1 ? rows : rows.filter((_, i) => i !== idx)))
   }
 
   async function saveSettings() {
@@ -132,9 +163,24 @@ export default function AdminBilling() {
         return
       }
 
+      const storage_packs = storagePacksDraft
+        .map((p) => {
+          const quantity_mb = Math.round(Number(p.quantity_mb) || 0)
+          const price_azn = Number(p.price_azn) || 0
+          const label = String(p.label || '').trim() || `+${quantity_mb} MB yaddaş`
+          return { quantity_mb, price_azn, label }
+        })
+        .filter((p) => p.quantity_mb > 0 && p.price_azn > 0)
+
+      if (!storage_packs.length) {
+        toast('Ən azı bir yaddaş paketi doldurun', 'error')
+        return
+      }
+
       const d = await api.put('/admin/billing/settings', {
         manual_transfer_account: accountDraft,
         sms_packs,
+        storage_packs,
       })
       const s = d.settings || d
       setAccountDraft(s.manual_transfer_account || accountDraft)
@@ -142,6 +188,15 @@ export default function AdminBilling() {
         setSmsPacksDraft(
           s.sms_packs.map((p) => ({
             quantity: String(p.quantity),
+            price_azn: String(p.price_azn),
+            label: String(p.label || ''),
+          })),
+        )
+      }
+      if (Array.isArray(s.storage_packs)) {
+        setStoragePacksDraft(
+          s.storage_packs.map((p) => ({
+            quantity_mb: String(p.quantity_mb),
             price_azn: String(p.price_azn),
             label: String(p.label || ''),
           })),
@@ -241,6 +296,67 @@ export default function AdminBilling() {
           </div>
         </div>
 
+        <div>
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <h2 className="font-display font-bold text-sm">Əlavə yaddaş paketləri</h2>
+            <Button type="button" size="sm" variant="secondary" onClick={addStoragePackRow}>
+              + Paket
+            </Button>
+          </div>
+          <p className="text-xs text-gray-500 mb-3">
+            Müəllim Tənzimləmələr → «Əlavə yaddaş al» bölməsində bu paketlər görünür.
+          </p>
+          <div className="space-y-3">
+            {storagePacksDraft.map((p, idx) => (
+              <div
+                key={idx}
+                className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_1.2fr_auto] gap-2 items-end rounded-xl border border-indigo-500/15 p-3"
+              >
+                <label className="block text-xs text-gray-400">
+                  MB
+                  <input
+                    type="number"
+                    min={1}
+                    className="mt-1 w-full bg-[#13112e] border border-indigo-500/20 rounded-lg px-3 py-2 text-white text-sm"
+                    value={p.quantity_mb}
+                    onChange={(e) => patchStoragePack(idx, 'quantity_mb', e.target.value)}
+                  />
+                </label>
+                <label className="block text-xs text-gray-400">
+                  Qiymət (AZN)
+                  <input
+                    type="number"
+                    min={0}
+                    step={0.01}
+                    className="mt-1 w-full bg-[#13112e] border border-indigo-500/20 rounded-lg px-3 py-2 text-white text-sm"
+                    value={p.price_azn}
+                    onChange={(e) => patchStoragePack(idx, 'price_azn', e.target.value)}
+                  />
+                </label>
+                <label className="block text-xs text-gray-400">
+                  Başlıq
+                  <input
+                    type="text"
+                    className="mt-1 w-full bg-[#13112e] border border-indigo-500/20 rounded-lg px-3 py-2 text-white text-sm"
+                    value={p.label}
+                    placeholder="+10 MB yaddaş"
+                    onChange={(e) => patchStoragePack(idx, 'label', e.target.value)}
+                  />
+                </label>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="danger"
+                  disabled={storagePacksDraft.length <= 1}
+                  onClick={() => removeStoragePackRow(idx)}
+                >
+                  Sil
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+
         <Button loading={savingSettings} onClick={() => void saveSettings()}>
           Tənzimləmələri saxla
         </Button>
@@ -294,7 +410,9 @@ export default function AdminBilling() {
                     <td className="py-3 px-4 text-gray-300">
                       {p.product_type === 'sms'
                         ? `+${p.sms_quantity || 0} SMS`
-                        : String(p.plan || '').toUpperCase()}
+                        : p.product_type === 'storage'
+                          ? `+${p.storage_mb || 0} MB yaddaş`
+                          : String(p.plan || '').toUpperCase()}
                       {p.billing_interval ? (
                         <span className="text-gray-500 text-xs ml-1">({p.billing_interval})</span>
                       ) : null}
