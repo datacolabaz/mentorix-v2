@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import useAuthStore from './hooks/useAuth'
 
 import Login from './pages/auth/Login'
@@ -66,9 +66,20 @@ const Placeholder = ({ title }) => (
   </div>
 )
 
+const RETURN_AFTER_LOGIN_KEY = 'mx_return_after_login'
+
 const ProtectedRoute = ({ children, roles }) => {
   const { user } = useAuthStore()
-  if (!user) return <Navigate to="/login" replace />
+  const location = useLocation()
+  if (!user) {
+    try {
+      const path = `${location.pathname || ''}${location.search || ''}`
+      if (path && path !== '/login') sessionStorage.setItem(RETURN_AFTER_LOGIN_KEY, path)
+    } catch {
+      /* ignore */
+    }
+    return <Navigate to="/login" replace />
+  }
   if (!user.role) return <Navigate to="/onboarding/role" replace />
   if (roles && !roles.includes(user.role)) return <Navigate to="/login" replace />
   return children

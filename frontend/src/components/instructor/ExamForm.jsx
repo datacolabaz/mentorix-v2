@@ -140,7 +140,7 @@ export default function ExamForm({ students, studentsLoading = false, onCreated 
     setLoading(true)
     try {
       const exam_files = materialFiles.map(({ name, url }) => ({ name, url }))
-      await api.post('/exams', {
+      const created = await api.post('/exams', {
         title: meta.title,
         subject: meta.subject,
         topic: meta.topic,
@@ -194,8 +194,8 @@ export default function ExamForm({ students, studentsLoading = false, onCreated 
           template_hint: q.template_hint,
         })),
       })
-      toast('Imtahan yaradildi!')
-      onCreated?.()
+      toast('İmtahan yaradıldı!')
+      onCreated?.(created?.exam || null)
     } catch (err) { toast(err.message || 'Xeta', 'error') }
     finally { setLoading(false) }
   }

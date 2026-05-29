@@ -221,7 +221,20 @@ export default function Login() {
   const toast = useToast()
   const roleMap = { admin: '/admin', instructor: '/instructor', student: '/student', parent: '/parent', course: '/course' }
 
-  const goDashboard = (r) => navigate(roleMap[r] || '/login', { replace: true })
+  const goDashboard = (r) => {
+    const fallback = roleMap[r] || '/login'
+    try {
+      const ret = sessionStorage.getItem('mx_return_after_login')
+      if (ret && ret.startsWith('/') && ret !== '/login') {
+        sessionStorage.removeItem('mx_return_after_login')
+        navigate(ret, { replace: true })
+        return
+      }
+    } catch {
+      /* ignore */
+    }
+    navigate(fallback, { replace: true })
+  }
 
   const handleEmailLogin = async (e) => {
     e.preventDefault()

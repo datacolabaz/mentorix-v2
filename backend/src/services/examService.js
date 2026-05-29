@@ -598,6 +598,12 @@ const isExamActive = (exam) => {
 
 const REMINDER_MINUTES_BEFORE = 5;
 
+function buildStudentExamUrl(examId) {
+  const base = String(process.env.FRONTEND_URL || process.env.FRONTEND_BASE_URL || '').replace(/\/+$/, '');
+  if (!base || !examId) return null;
+  return `${base}/student/exams?exam=${encodeURIComponent(String(examId))}`;
+}
+
 function formatExamScheduleAz(exam) {
   const fromRaw = exam?.available_from || exam?.start_time;
   const untilRaw = exam?.available_until;
@@ -614,9 +620,9 @@ function formatExamScheduleAz(exam) {
   return '—';
 }
 
-async function loadExamAssignmentPhones(examId) {
+async function loadExamAssignmentContacts(examId) {
   const { rows } = await db.query(
-    `SELECT ea.student_id, u.phone, u.full_name,
+    `SELECT ea.student_id, u.phone, u.email, u.full_name, u.is_verified,
             COALESCE(NULLIF(TRIM(sp.parent_phone), ''), pu.phone) AS parent_phone
      FROM exam_assignments ea
      JOIN users u ON u.id = ea.student_id
@@ -628,29 +634,98 @@ async function loadExamAssignmentPhones(examId) {
   return rows || [];
 }
 
-/** İmtahan yerləşdirildikdə: seçilmiş tələbələrə WhatsApp (və ya SMS fallback). */
-const sendExamPlacedNotifications = async (examId) => {
+async function insertStudentExamInAppNotification(studentId, exam, examLink) {
+  const title = 'Yeni imtahan';
+  const body = examLink
+    ? `«${String(exam.title || 'İmtahan').trim()}» üçün təyin edildiniz. Link: ${examLink}`
+    : `«${String(exam.title || 'İmtahan').trim()}» üçün təyin edildiniz. Mentorix → İmtahanlar.`;
+  await db
+    .query(
+      `INSERT INTO notifications (user_id, title, body, type, is_read)
+       VALUES ($1, $2, $3, 'exam', FALSE)`,
+      [studentId, title, body]
+    )
+    .catch(() => {});
+}
+
+async function enqueueExamPlacedEmails(exam, assignments, examLink) {
+  const { enqueueNotification } = require('./notificationQueueService');
+  const when = formatExamScheduleAz(exam);
+  const mins = Number(exam.duration_minutes) || 60;
+  const title = String(exam.title || 'İmtahan').trim();
+  const subject = `Mentorix — Yeni imtahan: ${title}`;
+  let queued = 0;
+
+  for (const s of assignments) {
+    const email = s.email != null ? String(s.email).trim() : '';
+    if (!email || !email.includes('@')) continue;
+    const firstName = String(s.full_name || 'Tələbə').trim().split(/\s+/)[0] || 'Tələbə';
+    const body =
+      `Salam, ${firstName}!\n\n` +
+      `«${title}» imtahanı sizin üçün planlaşdırılıb.\n` +
+      `Aktivlik: ${when}\n` +
+      `Müddət: ${mins} dəqiqə\n\n` +
+      (examLink
+        ? `İmtahana keçid (giriş tələb olunur):\n${examLink}\n\n`
+        : `Mentorix tətbiqində «İmtahanlar» bölməsinə daxil olun.\n\n`) +
+      `Hörmətlə,\nMentorix`;
+
+    try {
+      await enqueueNotification({
+        channel: 'email',
+        event_type: 'exam_placed',
+        unique_key: `exam_placed_email_${exam.id}_${s.student_id}`,
+        user_id: s.student_id,
+        instructor_id: exam.instructor_id,
+        to_addr: email,
+        subject,
+        body,
+        context: { exam_id: exam.id, exam_link: examLink },
+      });
+      queued += 1;
+    } catch (e) {
+      console.error('exam placed email enqueue failed', s.student_id, e?.message);
+    }
+  }
+  return queued;
+}
+
+/** İmtahan yerləşdirildikdə: tələbələrə WhatsApp/SMS, email (növbə) və panel bildirişi. */
+const sendExamPlacedNotifications = async (examId, options = {}) => {
   const { sendStudentWhatsAppOrSms, pickStudentNotifyPhone } = require('./studentMessagingService');
   const { getWhatsAppConfig } = require('./whatsappService');
   const waCfg = getWhatsAppConfig();
+  const filterIds = Array.isArray(options.studentIds)
+    ? new Set(options.studentIds.map((x) => String(x)))
+    : null;
+
   const { rows: [exam] } = await db.query(
     `SELECT id, instructor_id, title, duration_minutes, start_time, available_from, available_until, status, is_deleted
      FROM exams WHERE id = $1`,
     [examId]
   );
-  if (!exam || exam.is_deleted || exam.status === 'cancelled') return { sent: 0, skipped: 0 };
+  if (!exam || exam.is_deleted || exam.status === 'cancelled') {
+    return { sent: 0, skipped: 0, emails: 0 };
+  }
 
-  const assignments = await loadExamAssignmentPhones(examId);
+  let assignments = await loadExamAssignmentContacts(examId);
+  if (filterIds && filterIds.size) {
+    assignments = assignments.filter((s) => filterIds.has(String(s.student_id)));
+  }
+  if (!assignments.length) return { sent: 0, skipped: 0, emails: 0 };
+
   const when = formatExamScheduleAz(exam);
   const mins = Number(exam.duration_minutes) || 60;
   const title = String(exam.title || 'İmtahan').trim();
-  const baseUrl = String(process.env.FRONTEND_URL || process.env.FRONTEND_BASE_URL || '').replace(/\/+$/, '');
-  const linkHint = baseUrl ? ` Giriş: ${baseUrl}/student/exams` : '';
+  const examLink = buildStudentExamUrl(exam.id);
+  const linkHint = examLink ? `\nLink: ${examLink}` : '';
 
   let sent = 0;
   let skipped = 0;
 
   for (const s of assignments) {
+    await insertStudentExamInAppNotification(s.student_id, exam, examLink);
+
     const targetPhone = pickStudentNotifyPhone(s);
     if (!targetPhone) {
       skipped += 1;
@@ -661,7 +736,7 @@ const sendExamPlacedNotifications = async (examId) => {
       `Mentorix: Salam, ${firstName}! "${title}" imtahanı sizin üçün planlaşdırılıb.\n` +
       `Aktivlik: ${when}\n` +
       `Müddət: ${mins} dəqiqə.${linkHint}\n` +
-      `Mentorix tətbiqində «İmtahanlar» bölməsinə daxil olun.`;
+      `Giriş edib imtahana başlayın.`;
 
     const examTpl = waCfg.examTemplateName;
     const r = await sendStudentWhatsAppOrSms({
@@ -680,13 +755,14 @@ const sendExamPlacedNotifications = async (examId) => {
     }
   }
 
-  return { sent, skipped };
+  const emails = await enqueueExamPlacedEmails(exam, assignments, examLink);
+  return { sent, skipped, emails };
 };
 
 /** İmtahan başlamasına ~5 dəq qalmış: əvvəlcə tələbə nömrəsi, yoxdursa valideyn. */
 const sendExamStartReminderForExam = async (exam) => {
   const { sendStudentWhatsAppOrSms, pickStudentNotifyPhone } = require('./studentMessagingService');
-  const assignments = await loadExamAssignmentPhones(exam.id);
+  const assignments = await loadExamAssignmentContacts(exam.id);
   const startTime = formatExamScheduleAz(exam);
 
   for (const s of assignments) {
@@ -826,6 +902,7 @@ module.exports = {
   isExamActive,
   processExamNotificationJobs,
   syncExamReminderJob,
+  buildStudentExamUrl,
   sendExamPlacedNotifications,
   notifyParentExamResultAfterSubmit,
 };

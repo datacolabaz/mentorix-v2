@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import api from '../../lib/api'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
@@ -375,6 +376,9 @@ function formatAzDateTime(d) {
 }
 
 export default function StudentExams() {
+  const [searchParams, setSearchParams] = useSearchParams()
+  const deepLinkExamId = searchParams.get('exam')
+  const deepLinkHandledRef = useRef('')
   const [exams, setExams] = useState([])
   const [listLoading, setListLoading] = useState(true)
   const [listError, setListError] = useState(null)
@@ -623,6 +627,53 @@ export default function StudentExams() {
       toast(err.message || 'Xəta', 'error')
     }
   }
+
+  /** Paylaşım linki: /student/exams?exam=uuid */
+  useEffect(() => {
+    const targetId = deepLinkExamId ? String(deepLinkExamId).trim() : ''
+    if (!targetId || listLoading || activeExam) return
+    if (deepLinkHandledRef.current === targetId) return
+
+    const exam = exams.find((e) => e?.id != null && String(e.id) === targetId)
+    if (!exam) {
+      deepLinkHandledRef.current = targetId
+      setSearchParams({}, { replace: true })
+      toast('Bu imtahan tapılmadı və ya sizə təyin edilməyib', 'error')
+      return
+    }
+
+    deepLinkHandledRef.current = targetId
+    setSearchParams({}, { replace: true })
+
+    const now = new Date()
+    const w = parseExamWindow(exam)
+    const start = w?.from
+    const until = w?.until
+    const lateUntil = exam.late_access_until ? new Date(exam.late_access_until) : null
+    const inLateWindow =
+      !!(lateUntil && !Number.isNaN(lateUntil.getTime()) && now <= lateUntil)
+    const inGlobalWindow = !!(start && until && now >= start && now <= until)
+    const inExamWindow = !!(start && until && (inGlobalWindow || inLateWindow))
+    const hasOpenAttempt = !!(exam.started_at && !exam.submitted_at)
+    const showContinue = hasOpenAttempt && inExamWindow
+    const canStartFresh = !hasOpenAttempt && inExamWindow
+
+    if (exam.submitted_at) {
+      void openPastReview(exam)
+      return
+    }
+    if (showContinue || canStartFresh) {
+      void startExam(exam)
+      return
+    }
+    if (start && now < start) {
+      toast(`İmtahan ${formatAzDateTime(start)} tarixində başlayacaq`, 'info')
+      return
+    }
+    toast('İmtahan hazırda aktiv deyil', 'error')
+    // openPastReview / startExam: stable enough per render; deepLinkHandledRef prevents repeats
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deepLinkExamId, exams, listLoading, activeExam, setSearchParams, toast])
 
   const submitExam = async () => {
     try {

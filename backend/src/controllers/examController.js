@@ -1887,6 +1887,9 @@ const patchExam = async (req, res) => {
             [examId, sid]
           );
         }
+        if (toAdd.length) {
+          assignmentSummary.new_student_ids = toAdd;
+        }
 
         const { rows: afterRows } = await client.query(
           `SELECT student_id FROM exam_assignments WHERE exam_id = $1`,
@@ -1929,6 +1932,15 @@ const patchExam = async (req, res) => {
     }
 
     res.json({ success: true, exam: updatedExam, assignments: assignmentSummary });
+
+    const newAssignees = assignmentSummary?.new_student_ids;
+    if (Array.isArray(newAssignees) && newAssignees.length) {
+      setImmediate(() => {
+        sendExamPlacedNotifications(examId, { studentIds: newAssignees }).catch((e) =>
+          console.error('sendExamPlacedNotifications(new)', e.message)
+        );
+      });
+    }
 
     if (notifyProvided || startNorm != null) {
       setImmediate(() => {

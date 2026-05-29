@@ -10,6 +10,7 @@ import { useToast } from '../../components/common/Toast'
 import { localDatetimeInputToUtcIso, utcInstantToDatetimeLocalValue } from '../../lib/examDatetime'
 import useUiStore from '../../hooks/useUi'
 import { BILLING_STATUS_QUERY_KEY, useBillingStatus } from '../../hooks/useBillingStatus'
+import { copyStudentExamLink, studentExamShareUrl } from '../../lib/examShare'
 
 function initEditQuestion(q) {
   const type = String(q.question_type || '').trim()
@@ -607,6 +608,51 @@ export default function InstructorExams() {
                   </div>
                 </div>
                 <div className="flex gap-2 flex-wrap self-start sm:self-auto shrink-0">
+                  {exam?.id && (
+                    <>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={async () => {
+                          try {
+                            await copyStudentExamLink(exam.id)
+                            toast('Tələbə linki kopyalandı', 'success')
+                          } catch {
+                            toast('Link kopyalanmadı', 'error')
+                          }
+                        }}
+                      >
+                        Link
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={async () => {
+                          const link = studentExamShareUrl(exam.id)
+                          try {
+                            if (navigator.share) {
+                              await navigator.share({
+                                title: exam.title || 'İmtahan',
+                                text: 'Yeni imtahan — Mentorix',
+                                url: link,
+                              })
+                              return
+                            }
+                          } catch {
+                            /* fallback */
+                          }
+                          try {
+                            await copyStudentExamLink(exam.id)
+                            toast('Link kopyalandı', 'success')
+                          } catch {
+                            toast('Paylaşım alınmadı', 'error')
+                          }
+                        }}
+                      >
+                        Paylaş
+                      </Button>
+                    </>
+                  )}
                   <Button size="sm" variant="secondary" onClick={() => openEdit(exam)}>
                     Redakte
                   </Button>
@@ -637,9 +683,17 @@ export default function InstructorExams() {
         <ExamForm
           students={students}
           studentsLoading={studentsLoading}
-          onCreated={() => {
+          onCreated={async (createdExam) => {
             setAddModal(false)
             loadExams()
+            if (createdExam?.id) {
+              try {
+                const link = await copyStudentExamLink(createdExam.id)
+                toast(`İmtahan yaradıldı. Tələbə linki kopyalandı: ${link}`, 'success')
+              } catch {
+                toast('İmtahan yaradıldı', 'success')
+              }
+            }
           }}
         />
       </Modal>
