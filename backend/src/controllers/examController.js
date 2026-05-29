@@ -162,6 +162,7 @@ const {
   buildExamResultBreakdown,
   buildAutoGradingMap,
   matchingStudentTemplateHint,
+  stripExamQuestionForStudent,
   matchingCanonicalCorrect,
   rankResults,
   syncExamReminderJob,
@@ -949,20 +950,10 @@ const getExamQuestions = async (req, res) => {
       [id]
     );
 
-    // Tələbəyə correct_answer heç vaxt getməsin; matching/multiple üçün şablon maskalanır.
-    // Müəllim/admin redaktədə hər sualın real düzgün cavabını və şablonunu görməlidir.
+    // Tələbəyə correct_answer və uyğunluq cütləri (options) getməsin.
     const safe =
       req.user.role === 'student'
-        ? questions.map(({ correct_answer, template_hint, ...rest }) => {
-            if (rest.question_type === 'matching')
-              return {
-                ...rest,
-                template_hint: matchingStudentTemplateHint({ ...rest, template_hint }),
-              };
-            if (rest.question_type === 'multiple') return { ...rest, template_hint: '13' };
-            if (rest.question_type === 'sequence') return { ...rest, template_hint: '231' };
-            return { ...rest, template_hint };
-          })
+        ? questions.map((q) => stripExamQuestionForStudent(q))
         : questions.map((q) => ({ ...q }));
 
     res.json({ success: true, exam, questions: safe, started_at: startedAtForStudent });

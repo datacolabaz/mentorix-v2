@@ -273,20 +273,37 @@ function syntheticMatchingTemplateHint(pairCount) {
 }
 
 /**
- * Tələbə tərəfində göstəriləcək uyğunluq nümunəsi: müəllim şablonu və ya cüt sayına uyğun sintetik.
- * `correct_answer` burada istifadə olunmur (cavab sızdırılmır).
+ * Tələbə tərəfində göstəriləcək uyğunluq format nümunəsi — yalnız cüt sayına görə sintetik.
+ * DB-dəki `template_hint` / `correct_answer` heç vaxt ötürülmür (müəllim açarı sızdırılmasın).
  */
 function matchingStudentTemplateHint(q) {
-  const hint = q.template_hint != null ? String(q.template_hint).trim() : '';
   const n = matchingPairCountFromOptions(q?.options);
-  const hintNorm = normMatchStrict(hint);
-  // Köhnə məntiq: bütün uyğunluq suallarına DB-də "1a2b3c" yazılırdı; cüt sayı 3 deyilsə tələbəni aldadırdı.
-  if (hintNorm === '1a2b3c' && n > 0 && n !== 3) {
-    return syntheticMatchingTemplateHint(n);
-  }
-  if (hint) return hint;
   if (n > 0) return syntheticMatchingTemplateHint(n);
   return '1a2b3c';
+}
+
+/** Tələbə imtahanı: uyğunluq sualında options cütləri düzgün cavabı kodlayır — göndərilmir. */
+function stripExamQuestionForStudent(q) {
+  const { correct_answer: _ca, template_hint: _th, ...rest } = q;
+  const type = inferQuestionType(rest);
+  if (type === 'matching') {
+    return {
+      ...rest,
+      options: null,
+      template_hint: matchingStudentTemplateHint({ options: q?.options }),
+    };
+  }
+  if (type === 'multiple') {
+    return { ...rest, template_hint: '13' };
+  }
+  if (type === 'sequence') {
+    return { ...rest, template_hint: '231' };
+  }
+  if (type === 'open') {
+    return { ...rest };
+  }
+  // closed və digər: yalnız variantlar; düzgün hərf (A/B/…) göndərilmir
+  return { ...rest };
 }
 
 function gradeMatching(given, correctStored, optionsForFallback) {
@@ -916,6 +933,7 @@ module.exports = {
   buildExamResultBreakdown,
   buildAutoGradingMap,
   matchingStudentTemplateHint,
+  stripExamQuestionForStudent,
   matchingCanonicalCorrect,
   rankResults,
   isExamActive,

@@ -612,10 +612,21 @@ export default function StudentExams() {
     try {
       const data = await api.get(`/exams/${exam.id}/questions`)
       setActiveExam(data.exam)
-      // Defense-in-depth: tələbə payload-da correct_answer olsa belə UI-a buraxmırıq
+      // Defense-in-depth: imtahan bitənə qədər düzgün cavablar UI-a buraxılmır
       setQuestions(
         Array.isArray(data.questions)
-          ? data.questions.map(({ correct_answer, ...rest }) => rest)
+          ? data.questions.map((q) => {
+              if (!q || typeof q !== 'object') return q
+              const { correct_answer: _ca, ...rest } = q
+              if (rest.question_type === 'matching') {
+                return { ...rest, options: null }
+              }
+              if (rest.question_type === 'open') {
+                const { template_hint: _th, ...openRest } = rest
+                return openRest
+              }
+              return rest
+            })
           : []
       )
       setAnswers({})
@@ -922,11 +933,11 @@ export default function StudentExams() {
                   <p className="text-xs text-gray-500">
                     Hər sətir üçün sol rəqəm + sağdakı bütün hərflər bitişik yazın (boşluq yoxdur).
                     <span className="block mt-1">
-                      Nümunə:{' '}
+                      Format nümunəsi:{' '}
                       <span className="font-mono text-indigo-300">
-                        {(String(q.template_hint || '').trim() || '1bc2ae')}
+                        {String(q.template_hint || '').trim() || '1a2b3c'}
                       </span>
-                      <span className="text-gray-500"> (1→bc, 2→ae)</span>
+                      <span className="text-gray-500"> (məs. 1→a, 2→b)</span>
                     </span>
                   </p>
                   <input
