@@ -480,6 +480,8 @@ export default function StudentExams() {
 
   const [reviewModal, setReviewModal] = useState(null)
   const [leaderModal, setLeaderModal] = useState(null)
+  /** Paylaşım linkindən gələndə imtahanı birbaşa açmırıq — təsdiq modalı */
+  const [startConfirm, setStartConfirm] = useState(null) // { exam, mode: 'fresh' | 'continue' }
 
   useEffect(() => {
     loadExams(false)
@@ -663,7 +665,7 @@ export default function StudentExams() {
       return
     }
     if (showContinue || canStartFresh) {
-      void startExam(exam)
+      setStartConfirm({ exam, mode: showContinue ? 'continue' : 'fresh' })
       return
     }
     if (start && now < start) {
@@ -1196,6 +1198,47 @@ export default function StudentExams() {
         )}
       </div>
       )}
+
+      <Modal
+        open={!!startConfirm}
+        onClose={() => setStartConfirm(null)}
+        title={startConfirm?.mode === 'continue' ? 'İmtahana davam' : 'İmtahana başla'}
+        size="sm"
+      >
+        {startConfirm?.exam && (
+          <div className="space-y-4">
+            <p className="text-sm text-gray-300 leading-relaxed">
+              {startConfirm.mode === 'continue'
+                ? 'Yarımçıq imtahana davam etmək istəyirsiniz?'
+                : 'İmtahana başlamağa əminsiniz?'}
+            </p>
+            <div className="rounded-xl border border-indigo-500/20 bg-indigo-500/10 px-4 py-3 text-sm">
+              <p className="font-semibold text-white break-words">{startConfirm.exam.title}</p>
+              <p className="text-gray-400 mt-1">
+                Müddət: {Number(startConfirm.exam.duration_minutes) || '—'} dəqiqə
+              </p>
+            </div>
+            <p className="text-xs text-gray-500">
+              Başladıqdan sonra vaxt geri sayılır. İnternet bağlantınızın stabil olduğundan əmin olun.
+            </p>
+            <div className="flex flex-col-reverse sm:flex-row gap-2 sm:justify-end pt-1">
+              <Button variant="secondary" className="w-full sm:w-auto" onClick={() => setStartConfirm(null)}>
+                Xeyr
+              </Button>
+              <Button
+                className="w-full sm:w-auto"
+                onClick={() => {
+                  const ex = startConfirm.exam
+                  setStartConfirm(null)
+                  void startExam(ex)
+                }}
+              >
+                Bəli, başla
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
 
       {/* Modal open=false olanda belə React children-ı hesablayır; reviewModal null ikən
           reviewModal?.loading hər ikisi falsedur və üçüncü budaq null.score ilə çökürdü */}
