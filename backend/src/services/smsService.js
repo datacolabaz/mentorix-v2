@@ -6,6 +6,13 @@ const SMS_API = 'https://sendsms.az/smxml/api';
 const SMS_LOGIN = process.env.SMS_LOGIN;
 const SMS_PASSWORD = process.env.SMS_PASSWORD;
 const SMS_TITLE = process.env.SMS_TITLE || 'Mentorix';
+/** Medpanel və LSIM Laravel paketi: GET …/quicksms/v1/balance?login=&key= */
+const SMS_QUICKSMS_BASES = (
+  process.env.SMS_QUICKSMS_BASE_URL || 'https://apps.lsim.az/quicksms'
+)
+  .split(',')
+  .map((s) => s.trim().replace(/\/$/, ''))
+  .filter(Boolean);
 
 const normalizePhone = (phone) => String(phone ?? '').replace(/\D/g, '');
 
@@ -209,6 +216,19 @@ function smxmlRcHint(code) {
   return SMXML_RC_HINTS[code] || `Provayder kodu: ${code}`;
 }
 
+const QUICKSMS_ERROR_HINTS = {
+  '-107': 'Server IP provayder panelində icazəli deyil (Railway egress IP əlavə edin)',
+  '-500': 'QuickSMS xətası — login/key və ya hesab uyğunsuzluğu',
+};
+
+function quicksmsErrorHint(json) {
+  if (!json || typeof json !== 'object') return null;
+  const code = json.errorCode != null ? String(json.errorCode) : null;
+  if (code && QUICKSMS_ERROR_HINTS[code]) return QUICKSMS_ERROR_HINTS[code];
+  if (json.errorMessage) return String(json.errorMessage);
+  return null;
+}
+
 function parseBalanceFromText(text) {
   const raw = String(text || '').trim();
   if (!raw) return { balance: null, error: 'Boş cavab' };
@@ -256,6 +276,49 @@ function parseBalanceFromJson(json) {
     return { balance: null, error: smxmlRcHint(rc) || 'Balans sahəsi tapılmadı' };
   }
   return { balance: null, error: smxmlRcHint(rc) || 'Balans tapılmadı' };
+}
+
+async function fetchQuicksmsBalance() {
+  const login = String(SMS_LOGIN || '').trim();
+  const key = quicksmsAuthKey(login, SMS_PASSWORD);
+  let lastError = 'QuickSMS balans cavab vermədi';
+  let lastRaw = null;
+
+  for (const base of SMS_QUICKSMS_BASES) {
+    const url = `${base}/v1/balance?login=${encodeURIComponent(login)}&key=${encodeURIComponent(key)}`;
+    try {
+      const res = await fetch(url, {
+        method: 'GET',
+        headers: { Accept: 'application/json' },
+      });
+      const text = await res.text();
+      lastRaw = text.slice(0, 500);
+      if (/file not found|404 not found/i.test(text)) {
+        lastError = `${base}/v1/balance mövcud deyil`;
+        continue;
+      }
+      const parsed = parseBalanceFromText(text);
+      if (parsed.balance != null) {
+        return {
+          ok: true,
+          balance: parsed.balance,
+          method: 'quicksms',
+          base,
+          error: null,
+          raw: lastRaw,
+        };
+      }
+      try {
+        const json = JSON.parse(text);
+        lastError = quicksmsErrorHint(json) || parsed.error || lastError;
+      } catch {
+        lastError = parsed.error || lastError;
+      }
+    } catch (e) {
+      lastError = e.message || lastError;
+    }
+  }
+  return { ok: false, balance: null, error: lastError, raw: lastRaw };
 }
 
 async function fetchSmxmlBalance() {
@@ -318,6 +381,24 @@ async function fetchSmxmlBalance() {
 
 let smsBalanceCache = { at: 0, result: null };
 const SMS_BALANCE_CACHE_MS = 60_000;
+let egressIpCache = { at: 0, ip: null };
+
+/** Railway / hosting çıxış IP — LSIM panelində icazə üçün */
+async function getServerEgressIp() {
+  const now = Date.now();
+  if (egressIpCache.ip && now - egressIpCache.at < 300_000) return egressIpCache.ip;
+  try {
+    const res = await fetch('https://api.ipify.org?format=json', {
+      headers: { Accept: 'application/json' },
+    });
+    const json = await res.json();
+    const ip = json?.ip ? String(json.ip).trim() : null;
+    if (ip) egressIpCache = { at: now, ip };
+    return ip;
+  } catch {
+    return null;
+  }
+}
 
 async function fetchSmsProviderBalance({ bypassCache = false } = {}) {
   if (!SMS_LOGIN || !SMS_PASSWORD) {
@@ -328,6 +409,13 @@ async function fetchSmsProviderBalance({ bypassCache = false } = {}) {
     return smsBalanceCache.result;
   }
 
+  const quicksms = await fetchQuicksmsBalance();
+  if (quicksms.ok) {
+    const out = { ...quicksms, fetched_at: new Date().toISOString() };
+    smsBalanceCache = { at: now, result: out };
+    return out;
+  }
+
   const smxml = await fetchSmxmlBalance();
   if (smxml.ok) {
     const out = { ...smxml, fetched_at: new Date().toISOString() };
@@ -335,11 +423,19 @@ async function fetchSmsProviderBalance({ bypassCache = false } = {}) {
     return out;
   }
 
+  const egress_ip = await getServerEgressIp();
+  let error = quicksms.error || smxml.error || 'Balans oxunmadı';
+  if (egress_ip && /ip|107|icazə/i.test(error) === false) {
+    error = `${error}. LSIM/sendsms panelində bu server IP-ni icazəli edin: ${egress_ip}`;
+  } else if (egress_ip) {
+    error = `${error} (icazəli IP: ${egress_ip})`;
+  }
   const out = {
     ok: false,
     balance: null,
-    error: smxml.error || 'Balans oxunmadı',
-    raw: smxml.raw || null,
+    error,
+    egress_ip,
+    raw: quicksms.raw || smxml.raw || null,
     fetched_at: new Date().toISOString(),
   };
   smsBalanceCache = { at: now, result: out };

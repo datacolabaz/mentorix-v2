@@ -232,10 +232,16 @@ export default function AdminInventory() {
                 {!smsHasBalance && display?.sms_provider_error ? (
                   <span className="block text-amber-300/90">{display.sms_provider_error}</span>
                 ) : null}
+                {!smsHasBalance && display?.sms_server_egress_ip ? (
+                  <span className="block text-amber-200/80">
+                    Railway çıxış IP (medpanel serverindən fərqlidir — LSIM panelində icazəli edin):{' '}
+                    <strong className="font-mono">{display.sms_server_egress_ip}</strong>
+                  </span>
+                ) : null}
                 {!smsHasBalance && !smsHasEstimate ? (
                   <span className="block text-gray-500">
-                    sendsms.az API ilə balans gəlmir. «Ümumi alınmış SMS» və «Qalan SMS» yazıb saxlayın (paneldə
-                    gördüyünüz rəqəmlər).
+                    Login/parol medpanel ilə eynidirsə, adətən səbəb IP-dir: apps.lsim.az QuickSMS balansı yalnız
+                    icazəli serverdən işləyir. Müvəqqəti: «Ümumi / Qalan SMS» əl ilə (məs. 1833).
                   </span>
                 ) : smsHasEstimate ? (
                   <span className="block text-gray-500">

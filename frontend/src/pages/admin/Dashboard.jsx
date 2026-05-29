@@ -107,7 +107,8 @@ export default function AdminDashboard() {
           <Link to="/admin/inventory" className="underline font-semibold">
             SMS & Ehtiyat
           </Link>{' '}
-          — SMS balansı avtomatik gəlmirsə SMS_LOGIN/SMS_PASSWORD yoxlayın.
+          — SMS balansı gəlmirsə: eyni SMS_LOGIN/SMS_PASSWORD, Railway IP-ni sendsms/LSIM panelində icazəli edin
+          (medpanel server IP icazəlidir). Opsional: SMS_QUICKSMS_BASE_URL=https://apps.lsim.az/quicksms
         </p>
       ) : null}
 

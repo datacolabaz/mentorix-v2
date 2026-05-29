@@ -71,7 +71,9 @@ function buildInventoryDisplay(operator, usage, live) {
 
   let sms_source = 'none';
   if (hasManualSmsRem || hasManualSmsTotal) sms_source = 'manual';
-  else if (providerBalance != null) sms_source = 'sendsms.az';
+  else if (providerBalance != null) {
+    sms_source = live.sms?.method === 'quicksms' ? 'apps.lsim.az' : 'sendsms.az';
+  }
   else if (sms_has_estimate) sms_source = 'estimate';
   else if (sms_remaining != null && op.operator_sms_stock_remaining > 0) sms_source = 'saved';
 
@@ -93,6 +95,7 @@ function buildInventoryDisplay(operator, usage, live) {
     sms_has_estimate,
     sms_source,
     sms_provider_error: live.sms.ok ? null : live.sms.error,
+    sms_server_egress_ip: live.sms.ok ? null : live.sms.egress_ip ?? null,
     storage_total_mb: storage_total_mb ?? 0,
     storage_remaining_mb: storage_remaining_mb ?? null,
     storage_used_mb: storageUsedMb,
