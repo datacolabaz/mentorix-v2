@@ -21,7 +21,10 @@ const { grantCourseRoleToUser } = require('../services/userRolesService');
 const { adminListPlans, adminUpsertPlan } = require('../services/subscriptionPlansService');
 const { fulfillBillingPayment, rejectBillingPayment } = require('../services/billingActivationService');
 const { adminGetBillingSettings, adminUpdateBillingSettings } = require('../services/billingSettingsService');
-const { getAdminBillingInventory } = require('../services/adminBillingInventoryService');
+const {
+  getAdminBillingInventory,
+  syncOperatorInventoryFromLive,
+} = require('../services/adminBillingInventoryService');
 
 router.get('/stats', authenticate, authorize('admin'), getDashboardStats);
 router.get('/students', authenticate, authorize('admin'), getStudents);
@@ -164,6 +167,17 @@ router.get('/billing/inventory', authenticate, authorize('admin'), async (_req, 
     res.json({ success: true, inventory });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+router.post('/billing/inventory/sync', authenticate, authorize('admin'), async (_req, res) => {
+  try {
+    const inventory = await getAdminBillingInventory();
+    await syncOperatorInventoryFromLive(inventory.operator, inventory.usage);
+    const refreshed = await getAdminBillingInventory();
+    res.json({ success: true, inventory: refreshed });
+  } catch (err) {
+    res.status(err.statusCode || 500).json({ success: false, message: err.message });
   }
 });
 

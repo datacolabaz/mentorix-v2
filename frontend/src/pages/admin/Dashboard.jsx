@@ -38,8 +38,9 @@ export default function AdminDashboard() {
       })
   }, [])
 
-  const op = inventory?.operator
-  const invConfigured = op?.inventory_configured
+  const display = inventory?.display
+  const smsHas = Boolean(display?.sms_has_data)
+  const stHas = Boolean(display?.storage_has_data)
 
   return (
     <div className="p-6">
@@ -71,44 +72,42 @@ export default function AdminDashboard() {
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
         <StatCard
-          label="SMS — qalan ehtiyat"
-          value={
-            invConfigured
-              ? (op?.operator_sms_stock_remaining ?? 0).toLocaleString('az-AZ')
-              : 'Qeyd yoxdur'
-          }
+          label="SMS — qalan (provayder)"
+          value={smsHas ? (display.sms_remaining ?? 0).toLocaleString('az-AZ') : 'Oxunmur'}
           icon="📱"
         />
         <StatCard
-          label="SMS — ümumi alınıb"
-          value={
-            invConfigured ? (op?.operator_sms_stock_total ?? 0).toLocaleString('az-AZ') : '—'
-          }
+          label="SMS — ümumi (təxmini)"
+          value={smsHas ? (display.sms_total ?? 0).toLocaleString('az-AZ') : '—'}
           icon="📦"
         />
         <StatCard
           label="Yaddaş — qalan"
           value={
-            invConfigured
-              ? `${(op?.operator_storage_mb_remaining ?? 0).toLocaleString('az-AZ')} MB`
-              : 'Qeyd yoxdur'
+            stHas && (display.storage_total_mb ?? 0) > 0
+              ? `${(display.storage_remaining_mb ?? 0).toLocaleString('az-AZ')} MB`
+              : stHas
+                ? `${(display.storage_used_mb ?? 0).toLocaleString('az-AZ')} MB istifadə`
+                : '—'
           }
           icon="💾"
         />
         <StatCard
-          label="Yaddaş — ümumi"
+          label="Yaddaş — ümumi limit"
           value={
-            invConfigured ? `${(op?.operator_storage_mb_total ?? 0).toLocaleString('az-AZ')} MB` : '—'
+            stHas && (display.storage_total_mb ?? 0) > 0
+              ? `${(display.storage_total_mb ?? 0).toLocaleString('az-AZ')} MB`
+              : '—'
           }
           icon="🗄️"
         />
       </div>
-      {!invConfigured && inventory !== null ? (
+      {inventory && !smsHas ? (
         <p className="text-sm text-amber-200/90 mb-4 -mt-2">
           <Link to="/admin/inventory" className="underline font-semibold">
             SMS & Ehtiyat
           </Link>{' '}
-          səhifəsində provayder balansınızı bir dəfə qeyd edin.
+          — SMS balansı avtomatik gəlmirsə SMS_LOGIN/SMS_PASSWORD yoxlayın.
         </p>
       ) : null}
 

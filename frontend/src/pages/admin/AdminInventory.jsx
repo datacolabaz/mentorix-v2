@@ -16,9 +16,17 @@ function emptyStock() {
   }
 }
 
-function stockCardCls(low, configured) {
-  if (!configured) return 'border-amber-500/35 bg-amber-500/5'
+function stockCardCls(low, hasData) {
+  if (!hasData) return 'border-amber-500/35 bg-amber-500/5'
   return low ? 'border-rose-500/40 bg-rose-500/10' : 'border-emerald-500/25 bg-emerald-500/5'
+}
+
+function sourceBadge(source) {
+  if (source === 'sendsms.az') return 'Avtomatik · sendsms.az'
+  if (source === 'manual') return 'Əl ilə qeyd'
+  if (source === 'hosting') return 'Avtomatik · hosting'
+  if (source === 'disk') return 'Avtomatik · server faylları'
+  return ''
 }
 
 function StatBig({ label, value, sub }) {
@@ -38,6 +46,7 @@ export default function AdminInventory() {
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState(null)
   const [saving, setSaving] = useState(false)
+  const [syncing, setSyncing] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -70,6 +79,19 @@ export default function AdminInventory() {
     void load()
   }, [load])
 
+  async function syncLive() {
+    setSyncing(true)
+    try {
+      await api.post('/admin/billing/inventory/sync')
+      toast('Provayder/hosting məlumatı saxlanıldı')
+      await load()
+    } catch (e) {
+      toast(e?.message || 'Sinxron uğursuz', 'error')
+    } finally {
+      setSyncing(false)
+    }
+  }
+
   async function save() {
     setSaving(true)
     try {
@@ -91,23 +113,39 @@ export default function AdminInventory() {
     }
   }
 
-  const op = inventory?.operator
   const usage = inventory?.usage
+  const display = inventory?.display
   const alerts = inventory?.alerts || []
-  const configured = op?.inventory_configured
 
-  const smsTotal = op?.operator_sms_stock_total ?? 0
-  const smsRem = op?.operator_sms_stock_remaining ?? 0
-  const stTotal = op?.operator_storage_mb_total ?? 0
-  const stRem = op?.operator_storage_mb_remaining ?? 0
+  const smsTotal = display?.sms_total ?? 0
+  const smsRem = display?.sms_remaining ?? 0
+  const stTotal = display?.storage_total_mb ?? 0
+  const stRem = display?.storage_remaining_mb ?? 0
+  const stUsed = display?.storage_used_mb ?? 0
+  const smsHas = Boolean(display?.sms_has_data)
+  const stHas = Boolean(display?.storage_has_data)
+  const smsLow =
+    smsHas && smsRem <= (inventory?.operator?.operator_sms_low_alert ?? 500)
+  const stLow =
+    stHas && stRem <= (inventory?.operator?.operator_storage_mb_low_alert ?? 500)
 
   return (
     <div className="p-6 space-y-6 max-w-5xl">
       <div>
         <h1 className="font-display font-bold text-2xl">SMS və yaddaş ehtiyatı</h1>
         <p className="text-gray-400 text-sm mt-1">
-          Provayderdən aldığınız ümumi və qalan SMS / yaddaş — azaldıqda sifariş üçün xəbərdarlıq
+          SMS balansı sendsms.az-dan avtomatik oxunur; yaddaş server faylları + hosting limitindən hesablanır.
         </p>
+        {!loading && !loadError ? (
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button size="sm" variant="secondary" loading={syncing} onClick={() => void syncLive()}>
+              Provayderdən yenilə və saxla
+            </Button>
+            <Button size="sm" variant="secondary" onClick={() => void load()}>
+              Yenilə
+            </Button>
+          </div>
+        ) : null}
       </div>
 
       {loadError ? (
@@ -146,23 +184,30 @@ export default function AdminInventory() {
       ) : (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className={`rounded-2xl border p-5 ${stockCardCls(op?.sms_low, configured)}`}>
-              <div className="text-xs text-gray-400 uppercase mb-3">SMS (provayder)</div>
+            <div className={`rounded-2xl border p-5 ${stockCardCls(smsLow, smsHas)}`}>
+              <div className="flex items-center justify-between gap-2 mb-3">
+                <div className="text-xs text-gray-400 uppercase">SMS (provayder)</div>
+                {display?.sms_source ? (
+                  <span className="text-[10px] text-gray-500">{sourceBadge(display.sms_source)}</span>
+                ) : null}
+              </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <div className="text-[10px] text-gray-500 uppercase">Ümumi alınıb</div>
+                  <div className="text-[10px] text-gray-500 uppercase">Ümumi (təxmini)</div>
                   <div className="font-display font-bold text-2xl text-white mt-1">
-                    {configured ? smsTotal.toLocaleString('az-AZ') : '—'} <span className="text-sm font-normal text-gray-500">ədəd</span>
+                    {smsHas ? smsTotal.toLocaleString('az-AZ') : '—'}{' '}
+                    <span className="text-sm font-normal text-gray-500">ədəd</span>
                   </div>
                 </div>
                 <div>
-                  <div className="text-[10px] text-gray-500 uppercase">Qalan ehtiyat</div>
+                  <div className="text-[10px] text-gray-500 uppercase">Qalan balans</div>
                   <div className="font-display font-bold text-2xl text-white mt-1">
-                    {configured ? smsRem.toLocaleString('az-AZ') : '—'} <span className="text-sm font-normal text-gray-500">ədəd</span>
+                    {smsHas ? smsRem.toLocaleString('az-AZ') : '—'}{' '}
+                    <span className="text-sm font-normal text-gray-500">ədəd</span>
                   </div>
                 </div>
               </div>
-              {configured && smsTotal > 0 ? (
+              {smsHas && smsTotal > 0 ? (
                 <div className="mt-3 h-1.5 rounded-full bg-black/30 overflow-hidden">
                   <div
                     className="h-full bg-emerald-500/80 rounded-full"
@@ -172,24 +217,34 @@ export default function AdminInventory() {
               ) : null}
             </div>
 
-            <div className={`rounded-2xl border p-5 ${stockCardCls(op?.storage_low, configured)}`}>
-              <div className="text-xs text-gray-400 uppercase mb-3">Yaddaş (hosting)</div>
+            <div className={`rounded-2xl border p-5 ${stockCardCls(stLow, stHas)}`}>
+              <div className="flex items-center justify-between gap-2 mb-3">
+                <div className="text-xs text-gray-400 uppercase">Yaddaş (server)</div>
+                {display?.storage_source ? (
+                  <span className="text-[10px] text-gray-500">{sourceBadge(display.storage_source)}</span>
+                ) : null}
+              </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <div className="text-[10px] text-gray-500 uppercase">Ümumi alınıb</div>
+                  <div className="text-[10px] text-gray-500 uppercase">Ümumi limit</div>
                   <div className="font-display font-bold text-2xl text-white mt-1">
-                    {configured ? stTotal.toLocaleString('az-AZ') : '—'} <span className="text-sm font-normal text-gray-500">MB</span>
+                    {stHas && stTotal > 0 ? stTotal.toLocaleString('az-AZ') : '—'}{' '}
+                    <span className="text-sm font-normal text-gray-500">MB</span>
                   </div>
                 </div>
                 <div>
-                  <div className="text-[10px] text-gray-500 uppercase">Qalan ehtiyat</div>
+                  <div className="text-[10px] text-gray-500 uppercase">Qalan / boş</div>
                   <div className="font-display font-bold text-2xl text-white mt-1">
-                    {configured ? stRem.toLocaleString('az-AZ') : '—'} <span className="text-sm font-normal text-gray-500">MB</span>
+                    {stHas && stTotal > 0 ? stRem.toLocaleString('az-AZ') : '—'}{' '}
+                    <span className="text-sm font-normal text-gray-500">MB</span>
                   </div>
                 </div>
               </div>
-              {configured && stTotal > 0 ? (
-                <div className="mt-3 h-1.5 rounded-full bg-black/30 overflow-hidden">
+              <p className="text-[11px] text-gray-500 mt-2">
+                İstifadə: {stUsed.toLocaleString('az-AZ')} MB (uploads + DB)
+              </p>
+              {stHas && stTotal > 0 ? (
+                <div className="mt-2 h-1.5 rounded-full bg-black/30 overflow-hidden">
                   <div
                     className="h-full bg-blue-500/80 rounded-full"
                     style={{ width: `${Math.min(100, Math.round((stRem / stTotal) * 100))}%` }}
@@ -223,10 +278,10 @@ export default function AdminInventory() {
           ) : null}
 
           <Card className="p-5 space-y-4">
-            <h2 className="font-display font-bold text-sm">Ehtiyatı qeyd et / yenilə</h2>
+            <h2 className="font-display font-bold text-sm">Əl ilə düzəliş (istəyə bağlı)</h2>
             <p className="text-xs text-gray-500">
-              SMS provayder panelindən və hostingdən gördüyünüz rəqəmləri yazın. Hər sifarişdən sonra «Qalan»ı
-              yeniləyin.
+              Avtomatik oxuma işləmirsə buradan yazın. Hosting ümumi limiti üçün Railway-də{' '}
+              <code className="text-gray-400">PLATFORM_STORAGE_TOTAL_MB</code> təyin edin (məs. 51200 = 50 GB).
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-3 rounded-xl border border-indigo-500/15 p-3">

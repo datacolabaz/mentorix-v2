@@ -187,6 +187,101 @@ const sendSms = async ({ instructorId, phone, message }) => {
   }
 };
 
+function extractSmsBalanceFromJson(json) {
+  if (!json || typeof json !== 'object') return null;
+  const keyRe = /balance|credit|sms|qty|quantity|count/i;
+  const walk = (node, depth) => {
+    if (!node || depth > 10) return null;
+    if (typeof node === 'number' && Number.isFinite(node) && node >= 0) return Math.round(node);
+    if (typeof node === 'string' && /^\d+(\.\d+)?$/.test(node.trim())) {
+      return Math.round(Number(node));
+    }
+    if (typeof node !== 'object') return null;
+    if (Array.isArray(node)) {
+      for (const item of node) {
+        const v = walk(item, depth + 1);
+        if (v != null) return v;
+      }
+      return null;
+    }
+    for (const [k, v] of Object.entries(node)) {
+      if (keyRe.test(k)) {
+        const n = typeof v === 'number' ? v : Number(v);
+        if (Number.isFinite(n) && n >= 0) return Math.round(n);
+      }
+    }
+    for (const v of Object.values(node)) {
+      const found = walk(v, depth + 1);
+      if (found != null) return found;
+    }
+    return null;
+  };
+  return walk(json, 0);
+}
+
+let smsBalanceCache = { at: 0, result: null };
+const SMS_BALANCE_CACHE_MS = 60_000;
+
+/**
+ * sendsms.az SMXML — mümkün balans əməliyyatlarını sınayır.
+ */
+async function fetchSmsProviderBalance({ bypassCache = false } = {}) {
+  if (!SMS_LOGIN || !SMS_PASSWORD) {
+    return { ok: false, balance: null, error: 'SMS_LOGIN / SMS_PASSWORD təyin olunmayıb' };
+  }
+  const now = Date.now();
+  if (!bypassCache && smsBalanceCache.result && now - smsBalanceCache.at < SMS_BALANCE_CACHE_MS) {
+    return smsBalanceCache.result;
+  }
+
+  const operations = ['balance', 'credit', 'getbalance', 'querybalance'];
+  let lastError = 'Balans API cavab vermədi';
+
+  for (const operation of operations) {
+    try {
+      const res = await fetch(SMS_API, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          request: {
+            head: {
+              operation,
+              login: SMS_LOGIN,
+              password: SMS_PASSWORD,
+              controlid: `${Date.now()}-${operation}`,
+            },
+          },
+        }),
+      });
+      let json = null;
+      try {
+        json = await res.json();
+      } catch {
+        lastError = 'Provayder JSON qaytarmadı';
+        continue;
+      }
+      const rc = readSmxmlResponseCode(json);
+      if (rc != null && rc !== 0 && rc !== 200) {
+        lastError = `Provayder kodu: ${rc}`;
+        continue;
+      }
+      const balance = extractSmsBalanceFromJson(json);
+      if (balance != null) {
+        const out = { ok: true, balance, operation, error: null, fetched_at: new Date().toISOString() };
+        smsBalanceCache = { at: now, result: out };
+        return out;
+      }
+      lastError = 'Balans sahəsi tapılmadı';
+    } catch (e) {
+      lastError = e.message || lastError;
+    }
+  }
+
+  const out = { ok: false, balance: null, error: lastError, fetched_at: new Date().toISOString() };
+  smsBalanceCache = { at: now, result: out };
+  return out;
+}
+
 const sendOtpSms = async (phone, code) => {
   const message = `Mentorix: ${code} kodunuz. 5 dəqiqə ərzində daxil edin.`;
   const raw = await sendRaw(phone, message);
@@ -198,4 +293,4 @@ const sendOtpSms = async (phone, code) => {
   };
 };
 
-module.exports = { sendSms, sendOtpSms, sendRawSms: sendRaw };
+module.exports = { sendSms, sendOtpSms, sendRawSms: sendRaw, fetchSmsProviderBalance };

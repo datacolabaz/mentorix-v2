@@ -193,6 +193,33 @@ async function recomputeInstructorUsage(instructorId, opts = {}) {
   return { ...storage, ...ram };
 }
 
+function sumDirectoryBytes(dirPath) {
+  let total = 0;
+  let entries;
+  try {
+    entries = fs.readdirSync(dirPath, { withFileTypes: true });
+  } catch {
+    return 0;
+  }
+  for (const ent of entries) {
+    const abs = path.join(dirPath, ent.name);
+    if (ent.isDirectory()) total += sumDirectoryBytes(abs);
+    else if (ent.isFile()) total += safeStatSize(abs);
+  }
+  return total;
+}
+
+/** Serverdə uploads/ qovluğunun real disk ölçüsü */
+function getPlatformUploadsStorageStats() {
+  const uploadsRoot = path.join(__dirname, '../../uploads');
+  const storage_used_bytes = sumDirectoryBytes(uploadsRoot);
+  return {
+    storage_used_bytes,
+    storage_used_mb: bytesToMbInt(storage_used_bytes),
+    uploads_root: uploadsRoot,
+  };
+}
+
 async function recomputeAllInstructorsUsage(opts = {}) {
   const { rows } = await db.query('SELECT user_id FROM instructor_profiles');
   const out = { updated: 0 };
@@ -209,5 +236,6 @@ module.exports = {
   recomputeInstructorRamUsedMb,
   recomputeInstructorUsage,
   recomputeAllInstructorsUsage,
+  getPlatformUploadsStorageStats,
 };
 

@@ -1,5 +1,6 @@
 const db = require('../utils/db');
 const { getSetting } = require('./billingSettingsService');
+const { buildInventoryDisplayWithUsage, syncOperatorInventoryFromLive } = require('./operatorInventoryLiveService');
 
 const DEFAULTS = {
   operator_sms_stock_total: 0,
@@ -45,6 +46,10 @@ async function getOperatorInventorySettings() {
     operator_storage_mb_remaining: stRem,
     operator_storage_mb_low_alert: stLow,
     inventory_configured,
+    has_sms_total: hasSmsTotal,
+    has_sms_remaining: hasSmsRem,
+    has_storage_total: hasStTotal,
+    has_storage_remaining: hasStRem,
     sms_low: inventory_configured && hasSmsRem && smsRem <= smsLow,
     storage_low: inventory_configured && hasStRem && stRem <= stLow,
   };
@@ -186,27 +191,41 @@ async function getAdminBillingInventory() {
     getPlatformAllocatedStats(),
     getInstructorsNearLimits(20),
   ]);
+  const usageMerged = { ...usage, ...platform_allocated };
+  const { live, display } = await buildInventoryDisplayWithUsage(operator, usageMerged);
+
+  const smsRem = display.sms_has_data ? display.sms_remaining : null;
+  const stRem = display.storage_has_data ? display.storage_remaining_mb : null;
+  const smsLow = smsRem != null && smsRem <= operator.operator_sms_low_alert;
+  const stLow = stRem != null && stRem <= operator.operator_storage_mb_low_alert;
+
   const alerts = [];
-  if (!operator.inventory_configured) {
+  if (!display.sms_has_data && !display.storage_has_data) {
     alerts.push({
       level: 'warning',
       kind: 'inventory_not_configured',
       message:
-        'SMS və yaddaş ehtiyatı hələ qeyd olunmayıb. Provayderdən aldığınız ümumi və qalan miqdarları daxil edib saxlayın.',
+        'SMS balansı avtomatik oxunmadı. Railway-də SMS_LOGIN/SMS_PASSWORD yoxlayın və ya əl ilə daxil edib saxlayın. Yaddaş üçün PLATFORM_STORAGE_TOTAL_MB (MB) təyin edin.',
+    });
+  } else if (!display.sms_has_data && display.sms_provider_error) {
+    alerts.push({
+      level: 'warning',
+      kind: 'sms_provider',
+      message: `SMS provayder balansı: ${display.sms_provider_error}`,
     });
   }
-  if (operator.sms_low) {
+  if (smsLow) {
     alerts.push({
       level: 'critical',
       kind: 'operator_sms',
-      message: `SMS ehtiyatınız ${operator.operator_sms_stock_remaining} ədədə düşüb (hədd: ${operator.operator_sms_low_alert}). Provayderdən SMS sifariş edin.`,
+      message: `SMS ehtiyatı ${smsRem} ədədə düşüb (hədd: ${operator.operator_sms_low_alert}). Provayderdən SMS sifariş edin.`,
     });
   }
-  if (operator.storage_low) {
+  if (stLow) {
     alerts.push({
       level: 'critical',
       kind: 'operator_storage',
-      message: `Yaddaş ehtiyatınız ${operator.operator_storage_mb_remaining} MB-a düşüb (hədd: ${operator.operator_storage_mb_low_alert} MB). Hosting/yaddaş artırın.`,
+      message: `Yaddaş ehtiyatı ${stRem} MB-a düşüb (hədd: ${operator.operator_storage_mb_low_alert} MB). Hosting artırın.`,
     });
   }
   if (instructors_near_limit.length >= 5) {
@@ -218,7 +237,9 @@ async function getAdminBillingInventory() {
   }
   return {
     operator,
-    usage: { ...usage, ...platform_allocated },
+    usage: usageMerged,
+    live,
+    display,
     instructors_near_limit,
     alerts,
   };
@@ -227,4 +248,5 @@ async function getAdminBillingInventory() {
 module.exports = {
   getAdminBillingInventory,
   getOperatorInventorySettings,
+  syncOperatorInventoryFromLive,
 };
