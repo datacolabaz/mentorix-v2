@@ -16,6 +16,7 @@ const NAV_SECTIONS = [
       { to: '/admin/students', label: 'Tələbələr', icon: <NavIcon name="students" /> },
       { to: '/admin/classes', label: 'Kurslar / Qruplar', icon: <NavIcon name="courses" /> },
       { to: '/admin/payments', label: 'Ödənişlər', icon: <NavIcon name="payments" /> },
+      { to: '/admin/inventory', label: 'SMS & Ehtiyat', icon: <NavIcon name="notifications" /> },
       { to: '/admin/billing', label: 'Platform ödənişləri', icon: <NavIcon name="payments" /> },
     ],
   },

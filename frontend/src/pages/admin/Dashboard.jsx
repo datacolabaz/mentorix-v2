@@ -21,15 +21,25 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState(null)
   const [instructors, setInstructors] = useState([])
   const [inventoryAlerts, setInventoryAlerts] = useState([])
+  const [inventory, setInventory] = useState(null)
 
   useEffect(() => {
     api.get('/admin/stats').then((d) => setStats(d.stats))
     api.get('/admin/instructors').then((d) => setInstructors(d.instructors?.slice(0, 5) || []))
     api
       .get('/admin/billing/inventory')
-      .then((d) => setInventoryAlerts(d.inventory?.alerts || []))
-      .catch(() => setInventoryAlerts([]))
+      .then((d) => {
+        setInventory(d.inventory || null)
+        setInventoryAlerts(d.inventory?.alerts || [])
+      })
+      .catch(() => {
+        setInventory(null)
+        setInventoryAlerts([])
+      })
   }, [])
+
+  const op = inventory?.operator
+  const invConfigured = op?.inventory_configured
 
   return (
     <div className="p-6">
@@ -51,12 +61,55 @@ export default function AdminDashboard() {
               ].join(' ')}
             >
               <span>{a.message}</span>
-              <Link to="/admin/billing" className="text-xs font-semibold underline hover:no-underline">
+              <Link to="/admin/inventory" className="text-xs font-semibold underline hover:no-underline">
                 Ehtiyatı yenilə →
               </Link>
             </div>
           ))}
         </div>
+      ) : null}
+
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+        <StatCard
+          label="SMS — qalan ehtiyat"
+          value={
+            invConfigured
+              ? (op?.operator_sms_stock_remaining ?? 0).toLocaleString('az-AZ')
+              : 'Qeyd yoxdur'
+          }
+          icon="📱"
+        />
+        <StatCard
+          label="SMS — ümumi alınıb"
+          value={
+            invConfigured ? (op?.operator_sms_stock_total ?? 0).toLocaleString('az-AZ') : '—'
+          }
+          icon="📦"
+        />
+        <StatCard
+          label="Yaddaş — qalan"
+          value={
+            invConfigured
+              ? `${(op?.operator_storage_mb_remaining ?? 0).toLocaleString('az-AZ')} MB`
+              : 'Qeyd yoxdur'
+          }
+          icon="💾"
+        />
+        <StatCard
+          label="Yaddaş — ümumi"
+          value={
+            invConfigured ? `${(op?.operator_storage_mb_total ?? 0).toLocaleString('az-AZ')} MB` : '—'
+          }
+          icon="🗄️"
+        />
+      </div>
+      {!invConfigured && inventory !== null ? (
+        <p className="text-sm text-amber-200/90 mb-4 -mt-2">
+          <Link to="/admin/inventory" className="underline font-semibold">
+            SMS & Ehtiyat
+          </Link>{' '}
+          səhifəsində provayder balansınızı bir dəfə qeyd edin.
+        </p>
       ) : null}
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">

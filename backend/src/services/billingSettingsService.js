@@ -84,15 +84,42 @@ async function getOperatorInventoryFromSettings() {
     const n = Number(raw);
     return Number.isFinite(n) ? Math.max(0, Math.round(n)) : fallback;
   };
-  const operator_sms_stock_remaining = await read('operator_sms_stock_remaining', 0);
-  const operator_sms_low_alert = await read('operator_sms_low_alert', 500);
-  const operator_storage_mb_remaining = await read('operator_storage_mb_remaining', 0);
-  const operator_storage_mb_low_alert = await read('operator_storage_mb_low_alert', 500);
-  return {
+  const isSet = async (key) => {
+    const raw = await getSetting(key);
+    return raw != null && String(raw).trim() !== '';
+  };
+  const [
+    operator_sms_stock_total,
     operator_sms_stock_remaining,
     operator_sms_low_alert,
+    operator_storage_mb_total,
     operator_storage_mb_remaining,
     operator_storage_mb_low_alert,
+    hasSmsTotal,
+    hasSmsRem,
+    hasStTotal,
+    hasStRem,
+  ] = await Promise.all([
+    read('operator_sms_stock_total', 0),
+    read('operator_sms_stock_remaining', 0),
+    read('operator_sms_low_alert', 500),
+    read('operator_storage_mb_total', 0),
+    read('operator_storage_mb_remaining', 0),
+    read('operator_storage_mb_low_alert', 500),
+    isSet('operator_sms_stock_total'),
+    isSet('operator_sms_stock_remaining'),
+    isSet('operator_storage_mb_total'),
+    isSet('operator_storage_mb_remaining'),
+  ]);
+  const inventory_configured = hasSmsTotal || hasSmsRem || hasStTotal || hasStRem;
+  return {
+    operator_sms_stock_total,
+    operator_sms_stock_remaining,
+    operator_sms_low_alert,
+    operator_storage_mb_total,
+    operator_storage_mb_remaining,
+    operator_storage_mb_low_alert,
+    inventory_configured,
   };
 }
 
@@ -145,8 +172,10 @@ async function adminUpdateBillingSettings({
     await setSetting('storage_packs', JSON.stringify(storage_packs));
   }
   const opFields = [
+    ['operator_sms_stock_total', operator_sms_stock_total],
     ['operator_sms_stock_remaining', operator_sms_stock_remaining],
     ['operator_sms_low_alert', operator_sms_low_alert],
+    ['operator_storage_mb_total', operator_storage_mb_total],
     ['operator_storage_mb_remaining', operator_storage_mb_remaining],
     ['operator_storage_mb_low_alert', operator_storage_mb_low_alert],
   ];

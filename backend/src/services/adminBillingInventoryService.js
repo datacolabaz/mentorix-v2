@@ -2,8 +2,10 @@ const db = require('../utils/db');
 const { getSetting } = require('./billingSettingsService');
 
 const DEFAULTS = {
+  operator_sms_stock_total: 0,
   operator_sms_stock_remaining: 0,
   operator_sms_low_alert: 500,
+  operator_storage_mb_total: 0,
   operator_storage_mb_remaining: 0,
   operator_storage_mb_low_alert: 500,
 };
@@ -15,20 +17,64 @@ async function readNum(key, fallback) {
   return Number.isFinite(n) ? Math.max(0, Math.round(n)) : fallback;
 }
 
+async function isKeySet(key) {
+  const raw = await getSetting(key);
+  return raw != null && String(raw).trim() !== '';
+}
+
 async function getOperatorInventorySettings() {
-  const [smsRem, smsLow, stRem, stLow] = await Promise.all([
-    readNum('operator_sms_stock_remaining', DEFAULTS.operator_sms_stock_remaining),
-    readNum('operator_sms_low_alert', DEFAULTS.operator_sms_low_alert),
-    readNum('operator_storage_mb_remaining', DEFAULTS.operator_storage_mb_remaining),
-    readNum('operator_storage_mb_low_alert', DEFAULTS.operator_storage_mb_low_alert),
-  ]);
+  const [smsTotal, smsRem, smsLow, stTotal, stRem, stLow, hasSmsTotal, hasSmsRem, hasStTotal, hasStRem] =
+    await Promise.all([
+      readNum('operator_sms_stock_total', DEFAULTS.operator_sms_stock_total),
+      readNum('operator_sms_stock_remaining', DEFAULTS.operator_sms_stock_remaining),
+      readNum('operator_sms_low_alert', DEFAULTS.operator_sms_low_alert),
+      readNum('operator_storage_mb_total', DEFAULTS.operator_storage_mb_total),
+      readNum('operator_storage_mb_remaining', DEFAULTS.operator_storage_mb_remaining),
+      readNum('operator_storage_mb_low_alert', DEFAULTS.operator_storage_mb_low_alert),
+      isKeySet('operator_sms_stock_total'),
+      isKeySet('operator_sms_stock_remaining'),
+      isKeySet('operator_storage_mb_total'),
+      isKeySet('operator_storage_mb_remaining'),
+    ]);
+  const inventory_configured = hasSmsTotal || hasSmsRem || hasStTotal || hasStRem;
   return {
+    operator_sms_stock_total: smsTotal,
     operator_sms_stock_remaining: smsRem,
     operator_sms_low_alert: smsLow,
+    operator_storage_mb_total: stTotal,
     operator_storage_mb_remaining: stRem,
     operator_storage_mb_low_alert: stLow,
-    sms_low: smsRem <= smsLow,
-    storage_low: stRem <= stLow,
+    inventory_configured,
+    sms_low: inventory_configured && hasSmsRem && smsRem <= smsLow,
+    storage_low: inventory_configured && hasStRem && stRem <= stLow,
+  };
+}
+
+async function getPlatformAllocatedStats() {
+  const { rows } = await db.query(
+    `SELECT
+       COALESCE(SUM(
+         (CASE WHEN sp.sms_limit IS NULL THEN 0 ELSE sp.sms_limit END)
+         + COALESCE(uc.extra_sms_balance, 0)
+       ), 0)::bigint AS sms_allocated_to_instructors,
+       COALESCE(SUM(
+         COALESCE(
+           sp.storage_limit_bytes,
+           CASE WHEN sp.storage_gb IS NOT NULL THEN (sp.storage_gb * 1024 * 1024)::bigint ELSE 0 END
+         )
+         + COALESCE(uc.extra_storage_bytes, 0)
+       ), 0)::bigint AS storage_allocated_bytes
+     FROM users u
+     LEFT JOIN subscriptions s ON s.user_id = u.id
+     LEFT JOIN usage_counters uc ON uc.user_id = u.id
+     LEFT JOIN subscription_plans sp ON sp.slug = COALESCE(s.plan, 'basic') AND sp.is_active = TRUE
+     WHERE u.role = 'instructor' AND u.is_active = TRUE AND u.deleted_at IS NULL`
+  );
+  const r = rows[0] || {};
+  const storage_allocated_bytes = Number(r.storage_allocated_bytes || 0) || 0;
+  return {
+    sms_allocated_to_instructors: Number(r.sms_allocated_to_instructors || 0) || 0,
+    storage_allocated_mb: Math.round(storage_allocated_bytes / (1024 * 1024)),
   };
 }
 
@@ -52,14 +98,19 @@ async function getPlatformUsageStats() {
      JOIN users u ON u.id = uc.user_id AND u.role = 'instructor' AND u.deleted_at IS NULL`
   );
   const uc = ucRows[0] || {};
-  const { rows: pendingRows } = await db.query(
-    `SELECT
-       COALESCE(SUM(sms_quantity) FILTER (WHERE product_type = 'sms'), 0)::int AS pending_sms,
-       COALESCE(SUM(storage_mb) FILTER (WHERE product_type = 'storage'), 0)::int AS pending_storage_mb
-     FROM billing_payments
-     WHERE status = 'pending' AND payment_method = 'cash'`
-  );
-  const pending = pendingRows[0] || {};
+  let pending = { pending_sms: 0, pending_storage_mb: 0 };
+  try {
+    const { rows: pendingRows } = await db.query(
+      `SELECT
+         COALESCE(SUM(sms_quantity) FILTER (WHERE product_type = 'sms'), 0)::int AS pending_sms,
+         COALESCE(SUM(storage_mb) FILTER (WHERE product_type = 'storage'), 0)::int AS pending_storage_mb
+       FROM billing_payments
+       WHERE status = 'pending' AND payment_method = 'cash'`
+    );
+    pending = pendingRows[0] || pending;
+  } catch {
+    /* köhnə DB — storage_mb / product_type olmaya bilər */
+  }
   return {
     sms_sent_this_month: Number(smsRows[0]?.cnt || 0) || 0,
     sms_used_counters: Number(uc.sms_used_counters || 0) || 0,
@@ -158,7 +209,7 @@ async function getAdminBillingInventory() {
   }
   return {
     operator,
-    usage,
+    usage: { ...usage, ...platform_allocated },
     instructors_near_limit,
     alerts,
   };

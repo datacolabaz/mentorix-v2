@@ -35,6 +35,7 @@ import PaymentSuccess from './pages/instructor/PaymentSuccess'
 import PaymentFail from './pages/instructor/PaymentFail'
 import PaymentPending from './pages/instructor/PaymentPending'
 import AdminBilling from './pages/admin/AdminBilling'
+import AdminInventory from './pages/admin/AdminInventory'
 import ParentNotifications from './pages/parent/Notifications'
 
 import StudentDashboard from './pages/student/Dashboard'
@@ -124,6 +125,7 @@ export default function App() {
         <Route path="classes" element={<AdminClasses />} />
         <Route path="payments" element={<AdminPayments />} />
         <Route path="billing" element={<AdminBilling />} />
+        <Route path="inventory" element={<AdminInventory />} />
         <Route path="notifications" element={<AdminNotifications />} />
         <Route path="settings" element={<AdminSettings />} />
         <Route path="marketing/login" element={<AdminMarketingLogin />} />

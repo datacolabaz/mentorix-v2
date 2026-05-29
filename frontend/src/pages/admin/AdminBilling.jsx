@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import api from '../../lib/api'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
@@ -294,7 +295,11 @@ export default function AdminBilling() {
       <div>
         <h1 className="font-display font-bold text-2xl">Platform ödənişləri</h1>
         <p className="text-gray-400 text-sm mt-1">
-          SMS/yaddaş ehtiyatı, köçürmə hesabı, əlavə paketlər, manual təsdiqlər
+          Köçürmə hesabı, əlavə paketlər, manual təsdiqlər.{' '}
+          <Link to="/admin/inventory" className="text-primary hover:underline font-medium">
+            SMS & Ehtiyat →
+          </Link>{' '}
+          (ümumi və qalan balans)
         </p>
       </div>
 
