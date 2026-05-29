@@ -28,7 +28,15 @@ import {
   planRank,
   shouldOfferLimitTopUpChoice,
 } from '../../lib/subscriptionPlanGuards'
-import { extraSmsBalance, pendingSmsQuantity, planSmsMonthlyLimit, smsUsageDisplay } from '../../lib/billingUsageDisplay'
+import {
+  extraSmsBalance,
+  extraStorageBytes,
+  pendingSmsQuantity,
+  pendingStorageMb,
+  planSmsMonthlyLimit,
+  smsUsageDisplay,
+  storageUsageDisplay,
+} from '../../lib/billingUsageDisplay'
 import Tooltip from '../../components/common/Tooltip'
 import PaymentMethodModal from '../../components/instructor/PaymentMethodModal'
 import { useBillingConfig } from '../../hooks/useBillingConfig'
