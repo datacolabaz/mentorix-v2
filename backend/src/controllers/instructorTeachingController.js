@@ -208,7 +208,19 @@ const postGroup = async (req, res) => {
       group: { ...g, invite_ready: Boolean(rowToDefaults(rows[0])) },
     });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    const msg = String(err?.message || '');
+    if (/column/i.test(msg) && /does not exist|undefined column/i.test(msg)) {
+      return res.status(503).json({
+        success: false,
+        message:
+          'Server verilənlər bazası yenilənməlidir (qrup paketi sütunları). Bir neçə dəqiqə gözləyin və ya dəstək yazın.',
+        code: 'SCHEMA_OUTDATED',
+      });
+    }
+    if (err?.code === '23505') {
+      return res.status(409).json({ success: false, message: 'Bu qrup və ya dəvət kodu artıq mövcuddur' });
+    }
+    res.status(500).json({ success: false, message: msg || 'Qrup yaradılmadı' });
   }
 };
 
@@ -250,7 +262,15 @@ const patchGroup = async (req, res) => {
     const g = decorateGroupInvitationFields(rows[0]);
     res.json({ success: true, group: { ...g, invite_ready: Boolean(rowToDefaults(rows[0])) } });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    const msg = String(err?.message || '');
+    if (/column/i.test(msg) && /does not exist|undefined column/i.test(msg)) {
+      return res.status(503).json({
+        success: false,
+        message: 'Server verilənlər bazası yenilənməlidir. Bir neçə dəqiqə gözləyin və ya dəstək yazın.',
+        code: 'SCHEMA_OUTDATED',
+      });
+    }
+    res.status(500).json({ success: false, message: msg || 'Qrup yenilənmədi' });
   }
 };
 

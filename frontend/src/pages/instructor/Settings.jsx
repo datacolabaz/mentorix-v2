@@ -94,6 +94,7 @@ export default function InstructorSettings() {
   const [newSubject, setNewSubject] = useState('')
   const [newGroupBySubject, setNewGroupBySubject] = useState({})
   const [groupModal, setGroupModal] = useState(null)
+  const [groupModalError, setGroupModalError] = useState('')
   const [groupPkg, setGroupPkg] = useState(emptyGroupPackage)
   const [busy, setBusy] = useState({})
   const [billingInterval, setBillingInterval] = useState('yearly')
@@ -291,12 +292,16 @@ export default function InstructorSettings() {
     if (!groupModal) return
     const lwd = groupPkg.default_lesson_weekdays || []
     if (!lwd.length) {
-      toast('Ən azı bir dərs günü seçin', 'error')
+      const msg = 'Ən azı bir dərs günü seçin'
+      setGroupModalError(msg)
+      toast(msg, 'error')
       return
     }
     const fee = String(groupPkg.default_package_fee || '').trim()
     if (!fee) {
-      toast('Paket qiyməti (₼) tələb olunur', 'error')
+      const msg = 'Paket qiyməti (₼) tələb olunur'
+      setGroupModalError(msg)
+      toast(msg, 'error')
       return
     }
     setBusy((b) => ({ ...b, groupModal: true }))

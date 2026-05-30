@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { createPortal } from 'react-dom'
 
-export default function Modal({ open, onClose, title, children, size = 'md', zIndex = 9999 }) {
+export default function Modal({ open, onClose, title, children, size = 'md', zIndex = 10000 }) {
   useEffect(() => {
     if (open) document.body.style.overflow = 'hidden'
     else document.body.style.overflow = ''
@@ -14,7 +14,7 @@ export default function Modal({ open, onClose, title, children, size = 'md', zIn
 
   const node = (
     <div
-      className="fixed inset-0 flex items-center justify-center p-4 sm:p-6 bg-black/70 backdrop-blur-sm"
+      className="fixed inset-0 flex items-center justify-center p-4 sm:p-6 bg-black/75"
       style={{ zIndex }}
       role="dialog"
       aria-modal="true"

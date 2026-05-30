@@ -20,11 +20,11 @@ export function ToastProvider({ children }) {
   return (
     <ToastContext.Provider value={show}>
       {children}
-      <div className="fixed bottom-6 right-6 z-[9999] flex flex-col gap-2">
+      <div className="fixed bottom-6 right-6 z-[10100] flex flex-col gap-2 pointer-events-none">
         {toasts.map((t) => (
           <div
             key={t.id}
-            className={`bg-surface-2 border rounded-xl px-4 py-3 text-sm font-semibold shadow-xl animate-fade-up ${colors[t.type]}`}
+            className={`pointer-events-auto bg-surface-2 border rounded-xl px-4 py-3 text-sm font-semibold shadow-xl animate-fade-up ${colors[t.type]}`}
           >
             {t.msg}
           </div>
