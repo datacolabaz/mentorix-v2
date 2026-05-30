@@ -155,17 +155,29 @@ export default function PhoneInput({
   const masked = useMemo(() => formatNationalDisplay(country.id, national), [country.id, national])
   const full = useMemo(() => e164(country, national), [country, national])
 
-  // Propagate + persist
+  const outboundE164 = useMemo(() => {
+    if (country.id === 'AZ') {
+      return canonicalAzPhoneE164(full) || ''
+    }
+    return full
+  }, [country.id, full])
+
+  const azInvalid =
+    country.id === 'AZ' &&
+    onlyDigits(national).length > 0 &&
+    (onlyDigits(national).length !== 9 || !isValidAzMobileNational(national))
+
+  // Propagate + persist (AZ: yalnız tam və düzgün 9 rəqəm)
   useEffect(() => {
-    if (typeof onChange === 'function') onChange(full)
+    if (typeof onChange === 'function') onChange(outboundE164)
     try {
       localStorage.setItem(STORAGE_COUNTRY, country?.id || 'AZ')
-      if (full) localStorage.setItem(STORAGE_PHONE, full)
+      if (outboundE164) localStorage.setItem(STORAGE_PHONE, outboundE164)
       else localStorage.removeItem(STORAGE_PHONE)
     } catch {
       // ignore
     }
-  }, [full, country?.id])
+  }, [outboundE164, country?.id])
 
   const setFromRawInput = (raw) => {
     const s = String(raw || '')
