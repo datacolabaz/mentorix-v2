@@ -23,6 +23,15 @@ function lessonYmdBaku(startsAt) {
   }).format(d);
 }
 
+function todayYmdBaku() {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Baku',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date());
+}
+
 function parseYmd(v) {
   if (v === undefined || v === null || v === '') return null;
   const s = String(v).trim();
@@ -360,14 +369,24 @@ const bulkFillAttendancePeriod = async (req, res) => {
     const { enrollment_id, date_from, date_to, notes } = req.body;
     const attended = req.body.attended !== false;
 
+    const today = todayYmdBaku();
     const df = parseYmd(date_from);
-    const dt = parseYmd(date_to);
+    let dt = parseYmd(date_to);
     if (!enrollment_id || !df || !dt || df > dt) {
       return res.status(400).json({
         success: false,
         message: 'enrollment_id, date_from və date_to (YYYY-MM-DD) düzgün göndərilməlidir',
       });
     }
+    if (dt > today) dt = today;
+    if (df > dt) {
+      return res.json({
+        success: true,
+        updated: 0,
+        message: 'Seçilmiş aralıq bu gündən sonra başlayır — dərs yoxdur',
+      });
+    }
+
     const spanDays = Math.ceil(
       (new Date(`${dt}T12:00:00Z`).getTime() - new Date(`${df}T12:00:00Z`).getTime()) / 86400000
     );
@@ -426,6 +445,7 @@ const bulkFillAttendancePeriod = async (req, res) => {
     for (const row of planned) {
       const y = lessonYmdBaku(row.starts_at);
       if (!y) continue;
+      if (y > today) continue;
       if (y >= effFrom && y <= dt) {
         toUpsert.push({ lesson_number: Number(row.lesson_number), date: y });
       }

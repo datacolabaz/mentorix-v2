@@ -44,6 +44,19 @@ function ymdTodayBaku() {
   }).format(new Date())
 }
 
+/** enrollment_lessons.starts_at → YYYY-MM-DD (Asia/Baku) */
+function lessonYmdFromStartsAt(startsAt) {
+  if (!startsAt) return null
+  const d = new Date(startsAt)
+  if (Number.isNaN(d.getTime())) return null
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Baku',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(d)
+}
+
 function sliceYmd(v) {
   if (v == null || v === '') return null
   const s = String(v)
@@ -114,7 +127,7 @@ function fmtDdMmFromYmd(ymd) {
 export default function InstructorAttendance() {
   const [students, setStudents] = useState([])
   const [enrollmentId, setEnrollmentId] = useState('')
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0])
+  const [date, setDate] = useState(() => ymdTodayBaku())
   const [notes, setNotes] = useState('')
   const [period, setPeriod] = useState(null)
   const [saving, setSaving] = useState(false)
@@ -213,6 +226,23 @@ export default function InstructorAttendance() {
     return Math.min(n, limit)
   }, [period])
 
+  /** Cari dərs: bu günün dərsi və ya keçmişdə qeyd olunmamış ən erkən dərs */
+  const currentLessonNumberByDate = useMemo(() => {
+    const limit = period?.enrollment?.lesson_limit
+    if (!limit) return null
+    const todayYmd = ymdTodayBaku()
+    let firstOpenPast = null
+    for (let n = 1; n <= limit; n++) {
+      const planned = (period.lessons || []).find((l) => Number(l.lesson_number) === n)
+      const lessonYmd = planned?.starts_at ? lessonYmdFromStartsAt(planned.starts_at) : null
+      if (!lessonYmd || lessonYmd > todayYmd) continue
+      const row = (period.attendance || []).find((a) => Number(a.lesson_number) === n)
+      if (lessonYmd === todayYmd) return n
+      if (!row && firstOpenPast == null) firstOpenPast = n
+    }
+    return firstOpenPast
+  }, [period])
+
   const monthlyLessonStats = useMemo(() => {
     const en = period?.enrollment
     void en
@@ -233,6 +263,11 @@ export default function InstructorAttendance() {
     }
     if (bulkFrom > bulkTo) {
       toast('Başlanğıc tarixi bitirmə tarixindən sonra ola bilməz', 'error')
+      return
+    }
+    const today = ymdTodayBaku()
+    if (bulkFrom > today) {
+      toast('Gələcək tarix üçün toplu qeyd mümkün deyil', 'error')
       return
     }
     setBulkSaving(true)
@@ -346,6 +381,7 @@ export default function InstructorAttendance() {
                 type="date"
                 className={['date-input-class', inputCls].join(' ')}
                 value={date}
+                max={ymdTodayBaku()}
                 onChange={(e) => setDate(e.target.value)}
                 disabled={!enrollmentId}
               />
@@ -407,13 +443,21 @@ export default function InstructorAttendance() {
                 </Button>
               </div>
               {Array.from({ length: period.enrollment.lesson_limit }, (_, i) => i + 1).map((n) => {
+                const todayYmd = ymdTodayBaku()
                 const row = (period.attendance || []).find((a) => Number(a.lesson_number) === n)
                 const status = row ? (row.attended ? 'attended' : 'absent') : 'empty'
                 const planned = (period.lessons || []).find((l) => Number(l.lesson_number) === n)
                 const plannedStr = planned?.starts_at ? fmtAzBakuDateTime(planned.starts_at) : '—'
-                const isPast = n < currentLessonNumber
-                const isCurrent = n === currentLessonNumber
-                const isFuture = n > currentLessonNumber
+                const lessonYmd = planned?.starts_at ? lessonYmdFromStartsAt(planned.starts_at) : null
+                const isFutureBySchedule = lessonYmd != null && lessonYmd > todayYmd
+                const isFutureByCount = lessonYmd == null && n > currentLessonNumber
+                const isFuture = isFutureBySchedule || isFutureByCount
+                const isPastBySchedule = lessonYmd != null && lessonYmd < todayYmd
+                const isPast = isPastBySchedule || (!lessonYmd && n < currentLessonNumber)
+                const isCurrent =
+                  !isFuture &&
+                  (currentLessonNumberByDate === n ||
+                    (currentLessonNumberByDate == null && lessonYmd == null && n === currentLessonNumber))
                 const disabled = saving || isFuture
 
                 const containerCls = [
@@ -523,7 +567,8 @@ export default function InstructorAttendance() {
                 )
               })}
               <p className="text-[11px] text-gray-500">
-                Hər dərs üçün “Gəldi/Gəlmədi” seçə bilərsiniz. Paket (8/12) tamamlananda sistem avtomatik növbəti dövrü açır.
+                Yalnız bu gün və ya keçmiş planlaşdırılmış dərslər üçün “Gəldi/Gəlmədi” seçə bilərsiniz. Gələcək tarixlər
+                bağlıdır.
               </p>
             </div>
           ) : false ? (
@@ -804,6 +849,7 @@ export default function InstructorAttendance() {
                 type="date"
                 className={inputCls}
                 value={bulkFrom}
+                max={ymdTodayBaku()}
                 onChange={(e) => setBulkFrom(e.target.value)}
                 disabled={bulkSaving}
               />
@@ -814,6 +860,7 @@ export default function InstructorAttendance() {
                 type="date"
                 className={inputCls}
                 value={bulkTo}
+                max={ymdTodayBaku()}
                 onChange={(e) => setBulkTo(e.target.value)}
                 disabled={bulkSaving}
               />
