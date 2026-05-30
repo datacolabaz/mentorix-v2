@@ -87,9 +87,9 @@ export default function CourseDetail() {
   if (!course) {
     return (
       <div className="p-4 sm:p-6">
-        <p className="text-red-300">Kurs tapılmadı</p>
+        <p className="text-red-300">Fənn kartı tapılmadı</p>
         <Link to="/courses" className="text-emerald-400 text-sm mt-2 inline-block">
-          ← Kurslara qayıt
+          ← Fənn kataloquna qayıt
         </Link>
       </div>
     )
@@ -101,7 +101,7 @@ export default function CourseDetail() {
     <div className="p-4 sm:p-6 min-w-0 max-w-6xl mx-auto w-full space-y-6">
       <div>
         <Link to="/courses" className="text-xs text-emerald-400/90 hover:text-emerald-300">
-          ← Kurslar
+          ← Fənn kataloqu
         </Link>
         <h1 className="font-display font-bold text-2xl text-token-textMain mt-2">{course.name}</h1>
         <p className="text-token-textMuted text-sm mt-1">
@@ -113,7 +113,7 @@ export default function CourseDetail() {
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card className="p-4 border border-white/10">
-          <div className="text-xs text-token-textMuted uppercase">Tələbə</div>
+          <div className="text-xs text-token-textMuted uppercase">Tələbə (bu fənn)</div>
           <div className="text-2xl font-bold text-white tabular-nums">{course.student_count ?? 0}</div>
         </Card>
         <Card className="p-4 border border-white/10">
@@ -133,7 +133,9 @@ export default function CourseDetail() {
       <Card className="p-5 border border-indigo-500/20 space-y-4">
         <h2 className="text-sm font-semibold uppercase tracking-wider text-indigo-200/90">Tələbələr</h2>
         {(course.students || []).length === 0 ? (
-          <p className="text-sm text-token-textMuted">Bu kursa hələ tələbə əlavə edilməyib.</p>
+          <p className="text-sm text-token-textMuted">
+            Bu fənn kartına hələ heç kim təyin olunmayıb. «Tələbələrim»dəki tələbələri aşağıdan seçib əlavə edin.
+          </p>
         ) : (
           <ul className="divide-y divide-white/5">
             {course.students.map((s) => (

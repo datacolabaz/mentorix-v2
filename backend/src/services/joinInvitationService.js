@@ -1,13 +1,14 @@
 const db = require('../utils/db');
+const { applyGroupScheduleToEnrollment } = require('./studentEnrollmentsService');
 const {
-  applyGroupScheduleToEnrollment,
-  getGroupLessonSchedule,
-} = require('./studentEnrollmentsService');
+  getGroupInviteDefaults,
+  assertGroupDefaultsReady,
+} = require('./groupInviteDefaults');
+const { activateEnrollmentFromGroupDefaults } = require('./enrollmentActivationService');
 const {
   canonicalStudentPhone,
   upsertStudentContactPhone,
 } = require('../utils/studentPhone');
-const { bakuTodayYmd } = require('../controllers/monthlyAttendanceController');
 
 function getFrontendBaseUrl() {
   const raw =
@@ -260,7 +261,11 @@ async function listPendingJoinRequests(instructorId) {
             u.full_name AS student_full_name,
             u.email AS student_email,
             ig.name AS group_name,
-            ist.name AS subject_name
+            ist.name AS subject_name,
+            ig.default_billing_type,
+            ig.default_package_fee,
+            ig.default_lesson_weekdays,
+            ig.default_lesson_times
      FROM student_join_requests sjr
      JOIN enrollments e ON e.id = sjr.enrollment_id AND (e.deleted_at IS NULL)
      JOIN users u ON u.id = sjr.student_id
@@ -272,24 +277,34 @@ async function listPendingJoinRequests(instructorId) {
      ORDER BY sjr.created_at ASC`,
     [instructorId],
   );
-  return rows.map((r) => ({
-    request_id: r.request_id,
-    enrollment_id: r.enrollment_id,
-    student_id: r.student_id,
-    student_name:
-      r.student_full_name ||
-      `${String(r.first_name || '').trim()} ${String(r.last_name || '').trim()}`.trim(),
-    first_name: r.first_name,
-    last_name: r.last_name,
-    phone_number: r.phone_number,
-    parent_name: r.parent_name,
-    parent_phone: r.parent_phone,
-    student_email: r.student_email,
-    group_name: r.group_name,
-    subject_name: r.subject_name,
-    created_at: r.created_at,
-    status: r.status,
-  }));
+  const { rowToDefaults } = require('./groupInviteDefaults');
+  return rows.map((r) => {
+    const def = rowToDefaults(r);
+    const pack =
+      def?.billing_type === '12_lessons' ? '12 dərs' : def?.billing_type === '8_lessons' ? '8 dərs' : null;
+    const fee =
+      def?.package_fee != null && Number.isFinite(def.package_fee) ? `${def.package_fee} AZN` : null;
+    return {
+      request_id: r.request_id,
+      enrollment_id: r.enrollment_id,
+      student_id: r.student_id,
+      student_name:
+        r.student_full_name ||
+        `${String(r.first_name || '').trim()} ${String(r.last_name || '').trim()}`.trim(),
+      first_name: r.first_name,
+      last_name: r.last_name,
+      phone_number: r.phone_number,
+      parent_name: r.parent_name,
+      parent_phone: r.parent_phone,
+      student_email: r.student_email,
+      group_name: r.group_name,
+      subject_name: r.subject_name,
+      package_label: pack,
+      package_fee: fee,
+      created_at: r.created_at,
+      status: r.status,
+    };
+  });
 }
 
 async function countPendingJoinRequests(instructorId) {
@@ -305,73 +320,7 @@ async function countPendingJoinRequests(instructorId) {
   return Number(rows[0]?.n ?? 0) || 0;
 }
 
-async function getGroupEnrollmentTemplate(groupId) {
-  const { rows } = await db.query(
-    `SELECT billing_type,
-            monthly_fee,
-            billing_timing,
-            payment_plan,
-            lesson_weekdays,
-            lesson_times,
-            notifications_enabled,
-            initial_payment_status,
-            enrollment_start_date
-     FROM enrollments
-     WHERE group_id = $1
-       AND (deleted_at IS NULL)
-       AND COALESCE(LOWER(TRIM(status)), 'active') = 'active'
-       AND configured_at IS NOT NULL
-       AND billing_type IS NOT NULL
-     ORDER BY configured_at DESC NULLS LAST
-     LIMIT 1`,
-    [groupId],
-  );
-  return rows[0] || null;
-}
-
-function parseLessonWeekdaysJson(raw) {
-  if (raw == null) return [];
-  if (Array.isArray(raw)) {
-    return [...new Set(raw.map((x) => parseInt(String(x), 10)).filter((n) => n >= 1 && n <= 7))].sort(
-      (a, b) => a - b,
-    );
-  }
-  if (typeof raw === 'string') {
-    try {
-      return parseLessonWeekdaysJson(JSON.parse(raw));
-    } catch {
-      return [];
-    }
-  }
-  return [];
-}
-
-function parseLessonTimesJson(raw, lwd) {
-  if (raw == null || !lwd.length) return {};
-  let o = raw;
-  if (typeof raw === 'string') {
-    try {
-      o = JSON.parse(raw);
-    } catch {
-      return {};
-    }
-  }
-  if (!o || typeof o !== 'object') return {};
-  const out = {};
-  for (const d of lwd) {
-    const v = o[String(d)] ?? o[d];
-    if (v != null && String(v).trim() !== '') out[String(d)] = String(v).slice(0, 5);
-  }
-  return out;
-}
-
-function billingLimit(bt) {
-  if (bt === '8_lessons') return 8;
-  if (bt === '12_lessons') return 12;
-  return null;
-}
-
-/** Təsdiq: qrup şablonu varsa aktiv et, yoxdursa pending_setup + cədvəl */
+/** Təsdiq: qrupun paket/cədvəl/qiymətini tətbiq et → aktiv tələbə + 1-ci ödəniş dövrü */
 async function approveJoinRequest(requestId, instructorId) {
   const { rows } = await db.query(
     `SELECT sjr.*, e.status AS enrollment_status
@@ -398,110 +347,55 @@ async function approveJoinRequest(requestId, instructorId) {
   const groupId = req.group_id;
   const fullName = `${String(req.first_name || '').trim()} ${String(req.last_name || '').trim()}`.trim();
 
-  const tpl = await getGroupEnrollmentTemplate(groupId);
-  const sched = await getGroupLessonSchedule(groupId);
-  let lwd = tpl ? parseLessonWeekdaysJson(tpl.lesson_weekdays) : [];
-  let lt = tpl ? parseLessonTimesJson(tpl.lesson_times, lwd) : {};
-  if (!lwd.length) {
-    lwd = sched.lesson_weekdays;
-    lt = sched.lesson_times;
+  const defaults = await getGroupInviteDefaults(groupId);
+  assertGroupDefaultsReady(defaults);
+
+  try {
+    await db.transaction(async (client) => {
+      await client.query(`UPDATE users SET full_name = $1 WHERE id = $2`, [fullName, studentId]);
+      if (req.phone_number) {
+        await upsertStudentContactPhone(client, studentId, req.phone_number);
+      }
+
+      await activateEnrollmentFromGroupDefaults(client, {
+        enrollmentId,
+        studentId,
+        instructorId,
+        groupId: defaults.group_id,
+        subjectId: defaults.subject_id,
+        defaults,
+        studentProfile: {
+          parent_name: req.parent_name,
+          parent_phone: req.parent_phone,
+        },
+      });
+
+      await client.query(
+        `UPDATE student_join_requests
+         SET status = 'APPROVED', resolved_at = NOW(), resolved_by = $2
+         WHERE id = $1`,
+        [requestId, instructorId],
+      );
+    });
+  } catch (err) {
+    if (err.code === 'LESSON_CONFLICT') {
+      err.statusCode = 409;
+    }
+    throw err;
   }
 
-  const enrollmentYmd = (await bakuTodayYmd()) || new Date().toISOString().slice(0, 10);
-  const bt = tpl?.billing_type || '8_lessons';
-  const limit = billingLimit(bt);
-  const canActivate = Boolean(tpl && lwd.length && Object.keys(lt).length && limit);
-
-  await db.transaction(async (client) => {
-    await client.query(`UPDATE users SET full_name = $1 WHERE id = $2`, [fullName, studentId]);
-    if (req.phone_number) {
-      await upsertStudentContactPhone(client, studentId, req.phone_number);
-    }
-    const pr2 = await client.query(
-      `UPDATE student_profiles SET
-         parent_name = COALESCE(NULLIF($1, ''), parent_name),
-         parent_phone = COALESCE(NULLIF($2, ''), parent_phone),
-         phone_number = COALESCE($3, phone_number)
-       WHERE user_id = $4`,
-      [req.parent_name, req.parent_phone, req.phone_number, studentId],
-    );
-    if (pr2.rowCount === 0) {
-      await client.query(
-        `INSERT INTO student_profiles (user_id, parent_name, parent_phone, phone_number)
-         VALUES ($1, NULLIF($2, ''), NULLIF($3, ''), $4)`,
-        [studentId, req.parent_name, req.parent_phone, req.phone_number],
-      );
-    }
-
-    if (canActivate) {
-      const billingTiming =
-        String(tpl.billing_timing || '').trim().toLowerCase() === 'prepaid' ? 'prepaid' : 'postpaid';
-      const paymentPlan =
-        String(tpl.payment_plan || '').trim().toLowerCase() === 'partial' ? 'partial' : 'full';
-      const mf = tpl.monthly_fee != null ? Number(tpl.monthly_fee) : null;
-      const notif = tpl.notifications_enabled !== false;
-
-      await client.query(
-        `UPDATE enrollments SET
-           billing_type = $2,
-           lesson_weekdays = $3::jsonb,
-           lesson_times = $4::jsonb,
-           enrollment_start_date = $5::date,
-           billing_timing = $6,
-           payment_plan = $7,
-           notifications_enabled = $8,
-           initial_payment_status = COALESCE($9, initial_payment_status),
-           status = 'active',
-           configured_at = COALESCE(configured_at, NOW())
-         WHERE id = $1`,
-        [
-          enrollmentId,
-          bt,
-          JSON.stringify(lwd),
-          JSON.stringify(lt),
-          enrollmentYmd,
-          billingTiming,
-          paymentPlan,
-          notif,
-          tpl.initial_payment_status || 'unpaid',
-        ],
-      );
-
-      if (mf != null && Number.isFinite(mf)) {
-        await client.query(
-          `UPDATE student_profiles SET monthly_fee = $1 WHERE user_id = $2`,
-          [mf, studentId],
-        );
-      }
-    } else {
-      await client.query(
-        `UPDATE enrollments SET
-           status = 'pending_setup',
-           lesson_weekdays = COALESCE($2::jsonb, lesson_weekdays),
-           lesson_times = COALESCE($3::jsonb, lesson_times)
-         WHERE id = $1`,
-        [
-          enrollmentId,
-          lwd.length ? JSON.stringify(lwd) : null,
-          Object.keys(lt).length ? JSON.stringify(lt) : null,
-        ],
-      );
-    }
-
-    await client.query(
-      `UPDATE student_join_requests
-       SET status = 'APPROVED', resolved_at = NOW(), resolved_by = $2
-       WHERE id = $1`,
-      [requestId, instructorId],
-    );
-  });
+  const packLabel = defaults.billing_type === '12_lessons' ? '12 dərs' : '8 dərs';
+  const fee =
+    defaults.package_fee != null && Number.isFinite(defaults.package_fee)
+      ? `${defaults.package_fee} AZN`
+      : '';
 
   return {
     enrollment_id: enrollmentId,
-    activated: canActivate,
-    message: canActivate
-      ? 'Tələbə təsdiqləndi və qrupa aktiv əlavə olundu.'
-      : 'Tələbə təsdiqləndi. Paket və ödəniş quraşdırmasını tamamlayın.',
+    activated: true,
+    message: fee
+      ? `Tələbə təsdiqləndi: ${packLabel}, ${fee}, qrup cədvəli tətbiq olundu.`
+      : `Tələbə təsdiqləndi: ${packLabel} paketi və qrup cədvəli tətbiq olundu.`,
   };
 }
 

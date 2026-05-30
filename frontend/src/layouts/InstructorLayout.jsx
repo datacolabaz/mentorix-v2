@@ -25,7 +25,7 @@ const NAV_SECTIONS = [
     title: 'MANAGEMENT',
     items: [
       { to: '/instructor', label: 'Dashboard', icon: <NavIcon name="dashboard" />, end: true },
-      { to: '/courses', label: 'Kurslar', icon: <NavIcon name="courses" /> },
+      { to: '/courses', label: 'Fənn kataloqu', icon: <NavIcon name="courses" /> },
       { to: '/instructor/students', label: 'Tələbələrim', icon: <NavIcon name="students" /> },
       { to: '/instructor/join-requests', label: 'Sorğular', icon: <NavIcon name="notifications" />, badgeKey: 'join_requests' },
       { to: '/instructor/schedule', label: 'Cədvəlim', icon: <NavIcon name="schedule" /> },

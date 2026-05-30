@@ -248,7 +248,7 @@ export default function JoinClass() {
                 type="submit"
                 disabled={!user || !initialCode || infoError}
               >
-                Sorğu göndər
+                Qoşul
               </Button>
             </form>
           </Card>

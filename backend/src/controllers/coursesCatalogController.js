@@ -1,4 +1,5 @@
 const {
+  countPanelEnrollmentStudents,
   listCoursesForInstructor,
   getCourseDetail,
   createCourse,
@@ -8,8 +9,11 @@ const {
 
 const list = async (req, res) => {
   try {
-    const courses = await listCoursesForInstructor(req.user.id);
-    res.json({ success: true, courses });
+    const [courses, panel_enrollment_student_count] = await Promise.all([
+      listCoursesForInstructor(req.user.id),
+      countPanelEnrollmentStudents(req.user.id),
+    ]);
+    res.json({ success: true, courses, panel_enrollment_student_count });
   } catch (err) {
     res.status(err.statusCode || 500).json({ success: false, message: err.message });
   }

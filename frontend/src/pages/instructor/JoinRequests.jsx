@@ -109,6 +109,12 @@ export default function InstructorJoinRequests() {
                 {req.subject_name && (
                   <p className="text-xs text-token-textMuted mt-1">Sahə: {req.subject_name}</p>
                 )}
+                {(req.package_label || req.package_fee) && (
+                  <p className="text-xs text-primary/90 mt-1">
+                    Qrup paketi: {req.package_label}
+                    {req.package_fee ? ` · ${req.package_fee}` : ''}
+                  </p>
+                )}
                 <div className="text-xs text-token-textMuted mt-2 space-y-0.5">
                   {req.phone_number && <div>Telefon: {req.phone_number}</div>}
                   {req.student_email && <div>Email: {req.student_email}</div>}

@@ -44,6 +44,11 @@ import { useBillingConfig } from '../../hooks/useBillingConfig'
 import { billingPaymentStatusLabel, billingPaymentTitle } from '../../lib/billingPaymentLabels'
 import Modal from '../../components/common/Modal'
 import { QRCodeCanvas } from 'qrcode.react'
+import GroupPackageFields, {
+  emptyGroupPackage,
+  groupPackageFromApi,
+  groupPackagePayload,
+} from '../../components/instructor/GroupPackageFields'
 
 export default function InstructorSettings() {
   const navigate = useNavigate()
@@ -88,6 +93,8 @@ export default function InstructorSettings() {
   const [subjects, setSubjects] = useState([])
   const [newSubject, setNewSubject] = useState('')
   const [newGroupBySubject, setNewGroupBySubject] = useState({})
+  const [groupModal, setGroupModal] = useState(null)
+  const [groupPkg, setGroupPkg] = useState(emptyGroupPackage)
   const [busy, setBusy] = useState({})
   const [billingInterval, setBillingInterval] = useState('yearly')
 
@@ -264,23 +271,51 @@ export default function InstructorSettings() {
     }
   }
 
-  const addGroup = async (subjectId) => {
+  const openCreateGroup = (subjectId) => {
     const raw = newGroupBySubject[subjectId] || ''
     const name = String(raw).trim()
     if (!name) {
       toast('Qrup adı daxil edin', 'error')
       return
     }
-    setBusy((b) => ({ ...b, [`addg-${subjectId}`]: true }))
+    setGroupPkg(emptyGroupPackage())
+    setGroupModal({ mode: 'create', subjectId, name })
+  }
+
+  const openEditGroupPackage = (subjectId, group) => {
+    setGroupPkg(groupPackageFromApi(group))
+    setGroupModal({ mode: 'edit', subjectId, group })
+  }
+
+  const saveGroupModal = async () => {
+    if (!groupModal) return
+    const lwd = groupPkg.default_lesson_weekdays || []
+    if (!lwd.length) {
+      toast('Ən azı bir dərs günü seçin', 'error')
+      return
+    }
+    const fee = String(groupPkg.default_package_fee || '').trim()
+    if (!fee) {
+      toast('Paket qiyməti (₼) tələb olunur', 'error')
+      return
+    }
+    setBusy((b) => ({ ...b, groupModal: true }))
     try {
-      await api.post('/instructor/teaching/groups', { subject_id: subjectId, name })
-      setNewGroupBySubject((p) => ({ ...p, [subjectId]: '' }))
-      toast('Qrup əlavə olundu')
+      const body = groupPackagePayload(groupPkg, groupModal.mode === 'create' ? groupModal.name : groupModal.group?.name)
+      if (groupModal.mode === 'create') {
+        await api.post('/instructor/teaching/groups', { subject_id: groupModal.subjectId, ...body })
+        setNewGroupBySubject((p) => ({ ...p, [groupModal.subjectId]: '' }))
+        toast('Qrup və paket tənzimləri yaradıldı')
+      } else {
+        await api.patch(`/instructor/teaching/groups/${encodeURIComponent(groupModal.group.id)}`, body)
+        toast('Qrup paketi yeniləndi')
+      }
+      setGroupModal(null)
       await load()
     } catch (e) {
       toast(e?.message || 'Xəta', 'error')
     } finally {
-      setBusy((b) => ({ ...b, [`addg-${subjectId}`]: false }))
+      setBusy((b) => ({ ...b, groupModal: false }))
     }
   }
 
@@ -1081,7 +1116,8 @@ export default function InstructorSettings() {
       <Card className={settingsCardCls}>
         <h2 className={cardTitleCls}>Tədris sahələri və qruplar</h2>
         <p className={cardTextCls}>
-          Tələbə qeydiyyatında sahə və qrup seçiminə imkan verir; ödənişlər cədvəlində sahə adı görünür (hesabat üçün).
+          Qrup yaradarkən paket (8/12 dərs), qiymət və cədvəli bir dəfə təyin edin. Dəvət linki ilə qoşulan tələbə yalnız ad və
+          telefon yazır; «Təsdiqlə» basanda billing avtomatik oturur.
         </p>
         {loading ? (
           <p className={['text-sm', theme === 'dark' ? 'text-gray-500' : 'text-token-textMuted'].join(' ')}>Yüklənir…</p>
@@ -1154,15 +1190,33 @@ export default function InstructorSettings() {
                             <div className="min-w-0">
                               <div className="truncate">{g.name}</div>
                               {g.join_code ? (
-                                <div className="text-[11px] text-gray-500 mt-0.5">
-                                  Join code:{' '}
-                                  <span className={theme === 'dark' ? 'text-gray-300 font-semibold' : 'text-token-textMain font-semibold'}>
-                                    {g.join_code}
-                                  </span>
+                                <div className="text-[11px] text-gray-500 mt-0.5 space-y-0.5">
+                                  <div>
+                                    {g.invite_ready ? (
+                                      <span className="text-emerald-400/90 font-medium">Paket hazır · </span>
+                                    ) : (
+                                      <span className="text-amber-400/90 font-medium">Paket təyin edin · </span>
+                                    )}
+                                    {g.default_billing_type === '12_lessons' ? '12 dərs' : '8 dərs'}
+                                    {g.default_package_fee != null ? ` · ${g.default_package_fee} ₼` : ''}
+                                  </div>
+                                  <div>
+                                    Kod:{' '}
+                                    <span className={theme === 'dark' ? 'text-gray-300 font-semibold' : 'text-token-textMain font-semibold'}>
+                                      {g.join_code}
+                                    </span>
+                                  </div>
                                 </div>
                               ) : null}
                             </div>
                             <div className="flex items-center gap-2 shrink-0">
+                              <button
+                                type="button"
+                                className={['text-xs', theme === 'dark' ? 'text-indigo-300' : 'text-indigo-700'].join(' ')}
+                                onClick={() => openEditGroupPackage(s.id, g)}
+                              >
+                                Paket
+                              </button>
                               {g.join_code ? (
                                 <>
                                   <button
@@ -1278,11 +1332,10 @@ export default function InstructorSettings() {
                         type="button"
                         size="sm"
                         variant="secondary"
-                        loading={busy[`addg-${s.id}`]}
-                        onClick={() => void addGroup(s.id)}
+                        onClick={() => openCreateGroup(s.id)}
                         className={secondaryBtnCls}
                       >
-                        Qrup əlavə et
+                        Qrup + paket
                       </Button>
                     </div>
                   </div>
@@ -1370,6 +1423,44 @@ export default function InstructorSettings() {
         busy={planBusy}
         onConfirm={confirmCheckout}
       />
+
+      <Modal
+        open={Boolean(groupModal)}
+        onClose={() => setGroupModal(null)}
+        title={groupModal?.mode === 'edit' ? 'Qrup paketi' : 'Yeni qrup və paket'}
+        size="lg"
+      >
+        {groupModal ? (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-xs font-semibold text-gray-400 uppercase mb-1.5">Qrup adı</label>
+              <input
+                className={inp}
+                value={groupModal.mode === 'create' ? groupModal.name : groupModal.group?.name || ''}
+                readOnly={groupModal.mode === 'create'}
+                onChange={
+                  groupModal.mode === 'edit'
+                    ? (e) =>
+                        setGroupModal((m) => ({
+                          ...m,
+                          group: { ...m.group, name: e.target.value },
+                        }))
+                    : undefined
+                }
+              />
+            </div>
+            <GroupPackageFields value={groupPkg} onChange={setGroupPkg} />
+            <div className="flex gap-2">
+              <Button className="flex-1 justify-center" loading={busy.groupModal} onClick={() => void saveGroupModal()}>
+                Yadda saxla
+              </Button>
+              <Button variant="secondary" className="flex-1 justify-center" onClick={() => setGroupModal(null)}>
+                Ləğv et
+              </Button>
+            </div>
+          </div>
+        ) : null}
+      </Modal>
 
       <Modal
         open={qrOpen}

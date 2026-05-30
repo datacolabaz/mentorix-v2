@@ -76,7 +76,7 @@ export default function CreateCourseModal({ open, onClose, onCreated }) {
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="Yeni kurs" size="lg">
+    <Modal open={open} onClose={onClose} title="Yeni fənn kartı" size="lg">
       <form onSubmit={submit} className="space-y-5">
         {error ? <p className="text-sm text-red-300">{error}</p> : null}
 
@@ -176,7 +176,7 @@ export default function CreateCourseModal({ open, onClose, onCreated }) {
             Ləğv
           </Button>
           <Button type="submit" disabled={busy}>
-            {busy ? 'Yaradılır…' : 'Kurs yarat'}
+            {busy ? 'Yaradılır…' : 'Fənn kartını yarat'}
           </Button>
         </div>
       </form>

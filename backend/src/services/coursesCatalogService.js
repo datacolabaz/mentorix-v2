@@ -41,6 +41,19 @@ async function assertInstructorOwnsCourse(courseId, instructorId) {
   return rows[0] || null;
 }
 
+async function countPanelEnrollmentStudents(instructorId) {
+  const { rows } = await db.query(
+    `SELECT COUNT(DISTINCT e.student_id)::int AS n
+     FROM enrollments e
+     INNER JOIN users u ON u.id = e.student_id AND COALESCE(u.is_active, TRUE) = TRUE
+     WHERE REPLACE(LOWER(TRIM(e.instructor_id::text)), '-', '') = $1
+       AND e.deleted_at IS NULL
+       AND COALESCE(LOWER(TRIM(e.status)), 'active') IN ('active', 'pending_setup', 'pending_approval')`,
+    [normUuid(instructorId)],
+  );
+  return Number(rows[0]?.n ?? 0) || 0;
+}
+
 async function listCoursesForInstructor(instructorId) {
   const iid = normUuid(instructorId);
   const { rows } = await db.query(
@@ -241,6 +254,7 @@ async function listAssignableStudents(instructorId) {
 }
 
 module.exports = {
+  countPanelEnrollmentStudents,
   listCoursesForInstructor,
   getCourseDetail,
   createCourse,
