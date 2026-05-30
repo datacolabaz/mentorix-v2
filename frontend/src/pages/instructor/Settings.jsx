@@ -887,25 +887,6 @@ export default function InstructorSettings() {
       </Card>
 
       <Card className={settingsCardCls}>
-        <h2 className={cardTitleCls}>Mobil nömrə</h2>
-        <p className={cardTextCls}>
-          Əvvəl mobil nömrə ilə qeydiyyatdan keçmisinizsə, Gmail hesabınızı həmin profilə bağlayın — tələbələr, ödənişlər və
-          digər məlumatlar itməsin.
-        </p>
-        <p className={['text-xs', user?.phone_verified ? 'text-emerald-400/90' : 'text-amber-300/90'].join(' ')}>
-          {user?.phone_verified
-            ? `Təsdiqlənib: ${user?.phone || '—'}`
-            : 'Telefon hələ bağlanmayıb — SMS xatırlatmaları üçün tövsiyə olunur.'}
-        </p>
-        <Link
-          to="/verify-phone"
-          className="inline-flex items-center justify-center rounded-xl border border-primary/30 bg-primary/10 px-4 py-2.5 text-sm font-semibold text-primary hover:bg-primary/15"
-        >
-          Mobil nömrəni bağla / sinxronla
-        </Link>
-      </Card>
-
-      <Card className={settingsCardCls}>
         <h2 className={cardTitleCls}>Görünən ad</h2>
         <p className={cardTextCls}>
           Dashboard və naviqasiyada, həmçinin tələbə ödəniş/tapşırıq ekranlarında göstərilən titul.

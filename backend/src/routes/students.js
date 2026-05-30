@@ -4,6 +4,7 @@ const {
   getReferralBreakdown,
   getStudent,
   deleteStudent,
+  createStudent,
   getMySchedule,
   getInstructorMyLessonsCalendar,
   addMyPrepSlots,
@@ -434,6 +435,16 @@ router.get('/referral-sources', authenticate, authorize('admin', 'instructor'), 
 
 router.get('/', authenticate, authorize('admin', 'instructor'), listStudents);
 
+router.post(
+  '/',
+  authenticate,
+  authorize('instructor', 'admin'),
+  gateInstructorEnrollment,
+  attachEntitlements,
+  enforceStudentsLimit,
+  createStudent,
+);
+
 router.delete('/enrollment/:enrollmentId', authenticate, authorize('admin', 'instructor'), deleteStudent);
 
 router.post(
@@ -573,7 +584,11 @@ router.post(
         `UPDATE student_profiles SET
           parent_name = COALESCE(NULLIF($1, ''), parent_name),
           parent_phone = COALESCE(NULLIF($2, ''), parent_phone),
-          monthly_fee = $3
+          monthly_fee = $3,
+          phone_number = COALESCE(
+            NULLIF(phone_number, ''),
+            (SELECT phone FROM users WHERE id = $4)
+          )
          WHERE user_id = $4`,
         [pn, pp, mf, student_id]
       );
@@ -838,14 +853,11 @@ router.post(
       const studentId = enr.student_id;
       const ni = normUuid(instructor_id);
 
-      if (full_name != null || phone != null) {
-        await db.query(
-          `UPDATE users SET
-             full_name = COALESCE(NULLIF($1, ''), full_name),
-             phone = COALESCE(NULLIF($2, ''), phone)
-           WHERE id = $3`,
-          [full_name != null ? String(full_name).trim() : null, phone != null ? String(phone).trim() : null, studentId],
-        );
+      if (full_name != null && String(full_name).trim()) {
+        await db.query('UPDATE users SET full_name = $1 WHERE id = $2', [String(full_name).trim(), studentId]);
+      }
+      if (phone != null && String(phone).trim() !== '') {
+        await upsertStudentContactPhone(db, studentId, phone);
       }
       if (email !== undefined && req.user.role === 'instructor') {
         const emailTrim = email != null ? String(email).trim() : '';
@@ -1119,7 +1131,12 @@ router.patch('/enrollment/:enrollmentId', authenticate, authorize('admin', 'inst
       return res.status(403).json({ success: false, message: 'Bu qeydiyyata icazəniz yoxdur' });
     }
 
-    await db.query('UPDATE users SET full_name = $1, phone = $2 WHERE id = $3', [full_name, phone, studentId]);
+    if (full_name != null && String(full_name).trim()) {
+      await db.query('UPDATE users SET full_name = $1 WHERE id = $2', [String(full_name).trim(), studentId]);
+    }
+    if (phone != null && String(phone).trim() !== '') {
+      await upsertStudentContactPhone(db, studentId, phone);
+    }
 
     const hasLwd = Object.prototype.hasOwnProperty.call(req.body, 'lesson_weekdays');
     const hasLt = Object.prototype.hasOwnProperty.call(req.body, 'lesson_times');

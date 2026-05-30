@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Button from '../common/Button'
-import PhoneInput from './PhoneInput'
 import useAuthStore from '../../hooks/useAuth'
 import { useToast } from '../common/Toast'
 import api from '../../lib/api'
@@ -10,11 +9,11 @@ const inputClass =
   'w-full bg-surface-1 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-primary/40'
 
 /**
- * Müəllim öz Gmail + şifrə ilə qeydiyyat / giriş / email təsdiqi (kod və ya link).
+ * Email + şifrə ilə qeydiyyat / giriş / email təsdiqi (6 rəqəmli kod və ya link).
  */
-export default function InstructorEmailAuth({ onSuccess, onBack }) {
+export default function InstructorEmailAuth({ onSuccess }) {
   const toast = useToast()
-  const { signupWithEmail, loginWithEmail, verifyEmailCode, resendVerificationEmail, setSession } = useAuthStore()
+  const { signupWithEmail, verifyEmailCode, resendVerificationEmail, setSession } = useAuthStore()
   const navigate = useNavigate()
 
   const [tab, setTab] = useState('signup') // signup | login
@@ -24,7 +23,6 @@ export default function InstructorEmailAuth({ onSuccess, onBack }) {
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [phone, setPhone] = useState('')
   const [verifyCode, setVerifyCode] = useState('')
   const [role, setRole] = useState('student') // student | instructor | course
 
@@ -36,7 +34,6 @@ export default function InstructorEmailAuth({ onSuccess, onBack }) {
         full_name: fullName,
         email,
         password,
-        phone: phone || undefined,
         role,
       })
       setPhase('verify')
@@ -156,11 +153,6 @@ export default function InstructorEmailAuth({ onSuccess, onBack }) {
         >
           Təsdiqlədikdən sonra giriş →
         </button>
-        {onBack ? (
-          <button type="button" onClick={onBack} className="w-full text-center text-xs text-gray-500 hover:text-white">
-            ← Geri
-          </button>
-        ) : null}
       </div>
     )
   }
@@ -233,10 +225,6 @@ export default function InstructorEmailAuth({ onSuccess, onBack }) {
             minLength={8}
             required
           />
-          <div>
-            <label className="block text-xs text-gray-500 mb-1">Telefon (istəyə bağlı)</label>
-            <PhoneInput value={phone} onChange={setPhone} />
-          </div>
           <Button type="submit" loading={loading} className="w-full justify-center">
             Qeydiyyatdan keç
           </Button>
@@ -275,12 +263,6 @@ export default function InstructorEmailAuth({ onSuccess, onBack }) {
           </button>
         </form>
       )}
-
-      {onBack ? (
-        <button type="button" onClick={onBack} className="w-full text-center text-xs text-gray-500 hover:text-white pt-1">
-          ← Google / telefon ilə giriş
-        </button>
-      ) : null}
     </div>
   )
 }

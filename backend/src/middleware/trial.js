@@ -29,21 +29,18 @@ function effectiveInstructorId(req) {
   return req.user?.id || null;
 }
 
+/** Auth no longer requires phone OTP; keep hook for route compatibility. */
 async function requireInstructorPhoneVerified(req, _res, next) {
   try {
     const instructorId = effectiveInstructorId(req);
     if (!instructorId) throw httpError('INSTRUCTOR_REQUIRED', 400, 'INSTRUCTOR_REQUIRED');
 
     const { rows } = await db.query(
-      `SELECT id, role, phone_verified
-       FROM users
-       WHERE id = $1 AND is_active = TRUE
-       LIMIT 1`,
+      `SELECT id, role FROM users WHERE id = $1 AND is_active = TRUE LIMIT 1`,
       [instructorId]
     );
     const u = rows[0];
     if (!u || u.role !== 'instructor') throw httpError('INSTRUCTOR_REQUIRED', 400, 'INSTRUCTOR_REQUIRED');
-    if (!u.phone_verified) throw httpError('PHONE_REQUIRED', 403, 'PHONE_REQUIRED');
 
     req.trial_instructor_id = instructorId;
     next();

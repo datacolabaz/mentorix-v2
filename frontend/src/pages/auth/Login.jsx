@@ -3,92 +3,12 @@ import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import useAuthStore from '../../hooks/useAuth'
 import Button from '../../components/common/Button'
 import { useToast } from '../../components/common/Toast'
-import PhoneInput from '../../components/auth/PhoneInput'
 import InstructorEmailAuth from '../../components/auth/InstructorEmailAuth'
 import Brand from '../../components/common/Brand'
 import api from '../../lib/api'
 import { trackEvent } from '../../lib/analytics'
 import { defaultLoginMarketingPayload } from '../../constants/defaultLoginMarketing'
 import { setPageSeo } from '../../lib/pageSeo'
-
-function RoleIcon({ role }) {
-  const base = 'h-7 w-7 text-primary'
-  if (role === 'instructor') {
-    return (
-      <svg viewBox="0 0 24 24" fill="none" className={base} aria-hidden>
-        <path
-          d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4Zm-7 9a7 7 0 0 1 14 0"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-        />
-        <path
-          d="M17.5 3.5h4v4"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-    )
-  }
-  if (role === 'student') {
-    return (
-      <svg viewBox="0 0 24 24" fill="none" className={base} aria-hidden>
-        <path
-          d="M12 3 2 8l10 5 10-5-10-5Z"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinejoin="round"
-        />
-        <path
-          d="M6 10.5V16c0 1.5 3 3 6 3s6-1.5 6-3v-5.5"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-        />
-      </svg>
-    )
-  }
-  if (role === 'course') {
-    return (
-      <svg viewBox="0 0 24 24" fill="none" className={base} aria-hidden>
-        <path
-          d="M4 19V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v13"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinejoin="round"
-        />
-        <path d="M8 8h8M8 12h5M8 16h8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-      </svg>
-    )
-  }
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className={base} aria-hidden>
-      <path
-        d="M8 11a3 3 0 1 0-3-3 3 3 0 0 0 3 3Zm8 0a3 3 0 1 0-3-3 3 3 0 0 0 3 3Z"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
-      <path
-        d="M2.5 21a5.5 5.5 0 0 1 11 0m-1.5 0a5.5 5.5 0 0 1 11 0"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
-    </svg>
-  )
-}
-
-/** Giriş ekranında göstərilən rollar (valideyn gizlədilib; kurs = tədris mərkəzi admini). */
-const ROLES_LOGIN = [
-  { key: 'instructor', label: 'Müəllim' },
-  { key: 'student', label: 'Tələbə' },
-  { key: 'course', label: 'Kurs' },
-]
-
-const ROLE_LABELS = { instructor: 'Müəllim', student: 'Tələbə', parent: 'Valideyn', course: 'Kurs' }
 
 const TRUST_STUDENTS_FLOOR = 100
 const TRUST_INSTRUCTORS_FLOOR = 15
@@ -153,27 +73,13 @@ function upliftLine(pct, loading) {
   return '+30% daha yaxşı davamiyyət'
 }
 
-/** PIN + admin email girişi (OTP yox — daimi PIN bir dəfə SMS) */
+/** Email qeydiyyat/giriş + admin email girişi */
 export default function Login() {
   const [searchParams] = useSearchParams()
   const isAdmin = searchParams.get('admin') === 'true'
 
-  const [role, setRole] = useState(null)
   const [adminIdentifier, setAdminIdentifier] = useState('')
   const [password, setPassword] = useState('')
-  const [phone, setPhone] = useState('')
-  const [pinInput, setPinInput] = useState('')
-
-  // Default onboarding: Google-first
-  const [mode, setMode] = useState('google') // google | phone
-  const [step, setStep] = useState('google') // google | email_auth | student_link_phone | ...
-  const [googleCredential, setGoogleCredential] = useState(null)
-  const [otpCode, setOtpCode] = useState('')
-  const [otpSent, setOtpSent] = useState(false)
-  const [linkOtpSent, setLinkOtpSent] = useState(false)
-  /** Telefon bağlama ekranından «Müəllim» seçənlər üçün — tələbə rolu gizlədilir (təkrar hesab yaradılmır). */
-  const [googleRoleExcludeStudent, setGoogleRoleExcludeStudent] = useState(false)
-  const googleBtnRef = useRef(null)
   const [loading, setLoading] = useState(false)
 
   /** Əsas CTA — modal; səhifə yüklənəndə / avtomatik açılmır */
@@ -205,18 +111,7 @@ export default function Login() {
     [marketing],
   )
 
-  const {
-    login,
-    phoneNextStep,
-    forgotPinSms,
-    pinLogin,
-    googleLogin,
-    googleComplete,
-    googleLinkSendOtp,
-    googleLinkVerify,
-    sendOtp,
-    verifyOtp,
-  } = useAuthStore()
+  const { login } = useAuthStore()
   const navigate = useNavigate()
   const toast = useToast()
   const roleMap = { admin: '/admin', instructor: '/instructor', student: '/student', parent: '/parent', course: '/course' }
@@ -248,215 +143,6 @@ export default function Login() {
       setLoading(false)
     }
   }
-
-  const handlePhoneContinue = async (e) => {
-    e.preventDefault()
-    if (!role) return
-    setLoading(true)
-    try {
-      const data = await phoneNextStep(phone, role)
-      if (data.next === 'pin') {
-        setStep('pin')
-        setPinInput('')
-        if (data.pin_sms_sent) {
-          toast(data.message || 'Nömrənizə daimi PIN SMS ilə göndərildi', 'success')
-        } else {
-          toast(data.message || 'PIN kodunuzu daxil edin', 'success')
-        }
-      } else {
-        toast('Gözlənilməz cavab. Səhifəni yeniləyib yenidən cəhd edin.', 'error')
-      }
-    } catch (err) {
-      toast(err.message || 'Xəta', 'error')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handlePinLogin = async (e) => {
-    e.preventDefault()
-    if (!role) return
-    setLoading(true)
-    try {
-      const user = await pinLogin(phone, pinInput, role)
-      goDashboard(role || user?.role)
-    } catch (err) {
-      if (err.needs_setup) toast(err.message || 'Əvvəlcə "Davam et" basın', 'error')
-      else toast(err.message || 'PIN yanlışdır', 'error')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleForgotPinSms = async () => {
-    if (!role) return
-    setLoading(true)
-    try {
-      const data = await forgotPinSms(phone, role)
-      setPinInput('')
-      toast(data.message || 'Yeni PIN SMS ilə göndərildi', 'success')
-    } catch (err) {
-      toast(err.message || 'SMS göndərilmədi', 'error')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const resetFlow = () => {
-    setStep(mode === 'phone' ? 'phone' : 'google')
-    setPinInput('')
-  }
-
-  const roleTitle = useMemo(() => {
-    if (!role) return '—'
-    return ROLE_LABELS[role] || role
-  }, [role])
-
-  const googleRoleChoices = useMemo(() => {
-    if (step === 'role' && googleRoleExcludeStudent) return ROLES_LOGIN.filter((x) => x.key !== 'student')
-    return ROLES_LOGIN
-  }, [step, googleRoleExcludeStudent])
-
-  /** GIS: `initialize()` təkrarlananda xəbərdarlıq verir — callback ref ilə saxlayırıq, düymə üçün yalnız `renderButton` yenilənir */
-  const googleSdkCallbackRef = useRef(null)
-  googleSdkCallbackRef.current = async (resp) => {
-    const cred = resp?.credential
-    if (!cred) return toast('Google giriş alınmadı', 'error')
-    setLoading(true)
-    try {
-      const r = await googleLogin(cred)
-      if (r?.token && r?.user) {
-        goDashboard(r.user.role)
-        return
-      }
-      if (r?.needs_phone_link) {
-        setGoogleCredential(cred)
-        setStep('student_link_phone')
-        setPhone('')
-        setOtpCode('')
-        setLinkOtpSent(false)
-        setGoogleRoleExcludeStudent(false)
-        return
-      }
-      if (r?.needs_role) {
-        setGoogleCredential(cred)
-        setGoogleRoleExcludeStudent(false)
-        setStep('role')
-        return
-      }
-      toast(r?.message || 'Giriş alınmadı', 'error')
-    } catch (e) {
-      toast(e?.message || 'Google giriş xətası', 'error')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const gisInitializedForClientRef = useRef(null)
-
-  /** Yalnız login səhifəsindən çıxanda — GIS One Tap / daxili axını bağlayır; modal addımı cleanup-da `cancel()` çağırmaq klik axınını poza bilər */
-  useEffect(() => {
-    return () => {
-      try {
-        window.google?.accounts?.id?.cancel?.()
-      } catch {
-        /* ignore */
-      }
-      gisInitializedForClientRef.current = null
-    }
-  }, [])
-
-  useEffect(() => {
-    if (isAdmin) return undefined
-    if (mode !== 'google') return undefined
-    if (step !== 'google') return undefined
-
-    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID
-    if (!clientId) return undefined
-
-    let cancelled = false
-    let ticks = 0
-    let renderFailures = 0
-    let buttonRendered = false
-
-    const MAX_TICKS = 120
-    const MAX_RENDER_FAILURES = 8
-
-    const tryMount = () => {
-      if (cancelled || buttonRendered) return false
-      const el = googleBtnRef.current
-      if (!el) return false
-
-      const g = window.google
-      if (!g?.accounts?.id) {
-        return false
-      }
-
-      const buttonWidthPx = () => {
-        const host = el.parentElement
-        const avail = host?.clientWidth || el.clientWidth || document.documentElement.clientWidth || 320
-        const padded = Math.max(0, Math.floor(avail))
-        return Math.max(240, Math.min(320, padded))
-      }
-
-      try {
-        if (gisInitializedForClientRef.current !== clientId) {
-          g.accounts.id.initialize({
-            client_id: clientId,
-            callback: (resp) => {
-              void googleSdkCallbackRef.current?.(resp)
-            },
-          })
-          gisInitializedForClientRef.current = clientId
-        }
-
-        el.innerHTML = ''
-        g.accounts.id.renderButton(el, {
-          theme: 'outline',
-          size: 'large',
-          width: buttonWidthPx(),
-          text: 'continue_with',
-          shape: 'pill',
-        })
-
-        el.style.pointerEvents = 'auto'
-        buttonRendered = true
-        return true
-      } catch {
-        renderFailures += 1
-        return renderFailures >= MAX_RENDER_FAILURES
-      }
-    }
-
-    let iv = null
-    iv = window.setInterval(() => {
-      if (cancelled || buttonRendered) {
-        if (iv) window.clearInterval(iv)
-        return
-      }
-      ticks += 1
-      const done = tryMount()
-      if (done || ticks >= MAX_TICKS) {
-        if (iv) window.clearInterval(iv)
-      }
-    }, 50)
-
-    if (tryMount() && iv) {
-      window.clearInterval(iv)
-      iv = null
-    }
-
-    return () => {
-      cancelled = true
-      if (iv) window.clearInterval(iv)
-      try {
-        const el = googleBtnRef.current
-        if (el) el.innerHTML = ''
-      } catch {
-        /* ignore */
-      }
-    }
-  }, [isAdmin, mode, step, loginModalOpen])
 
   useEffect(() => {
     if (isAdmin) return
@@ -568,16 +254,6 @@ export default function Login() {
   const openLoginModal = (surface) => {
     trackEvent('mx_landing_cta_primary', { surface })
     setDemoOpen(false)
-    setMode('google')
-    setStep('google')
-    setGoogleCredential(null)
-    setRole(null)
-    setPhone('')
-    setPinInput('')
-    setOtpCode('')
-    setOtpSent(false)
-    setLinkOtpSent(false)
-    setGoogleRoleExcludeStudent(false)
     setLoginModalOpen(true)
   }
 
@@ -598,86 +274,6 @@ export default function Login() {
   }
 
   const m = marketing
-
-  const loginSubmitBtnClass =
-    !isAdmin && loginModalOpen ? 'w-full min-h-[52px] justify-center py-4 text-base' : 'w-full justify-center py-3'
-
-  const completeGoogleWithRole = async (pickedRole) => {
-    if (!googleCredential) return
-    setLoading(true)
-    try {
-      const data = await googleComplete(googleCredential, pickedRole)
-      if (pickedRole === 'instructor') {
-        setRole('instructor')
-        setStep('teacher_phone')
-        return
-      }
-      goDashboard(data.user.role)
-    } catch (e) {
-      toast(e?.message || 'Qeydiyyat tamamlanmadı', 'error')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const sendStudentLinkOtp = async (e) => {
-    e.preventDefault()
-    if (!googleCredential) return
-    setLoading(true)
-    try {
-      await googleLinkSendOtp(googleCredential, phone)
-      setLinkOtpSent(true)
-      setStep('student_link_otp')
-      setOtpCode('')
-      toast('OTP göndərildi', 'success')
-    } catch (err) {
-      toast(err?.message || 'SMS göndərilmədi', 'error')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const verifyStudentLink = async (e) => {
-    e.preventDefault()
-    if (!googleCredential) return
-    setLoading(true)
-    try {
-      await googleLinkVerify(googleCredential, phone, otpCode)
-      goDashboard('student')
-    } catch (err) {
-      toast(err?.message || 'Təsdiq alınmadı', 'error')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const sendTeacherOtp = async (e) => {
-    e.preventDefault()
-    setLoading(true)
-    try {
-      await sendOtp(phone, 'instructor')
-      setOtpSent(true)
-      setStep('teacher_otp')
-      toast('OTP göndərildi', 'success')
-    } catch (err) {
-      toast(err?.message || 'OTP göndərilmədi', 'error')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const verifyTeacherOtp = async (e) => {
-    e.preventDefault()
-    setLoading(true)
-    try {
-      await verifyOtp(phone, otpCode, 'instructor', { saveOtpAsPin: true })
-      goDashboard('instructor')
-    } catch (err) {
-      toast(err?.message || 'OTP yanlışdır', 'error')
-    } finally {
-      setLoading(false)
-    }
-  }
 
   useEffect(() => {
     if (!loginModalOpen || isAdmin) return undefined
@@ -1110,30 +706,17 @@ export default function Login() {
                   <h2 id="mx-login-modal-title" className="pr-10 text-lg font-semibold text-white sm:text-xl">
                     Mentorix-ə başla
                   </h2>
-                  {step === 'google' && mode === 'google' ? (
-                    <p className="text-sm leading-relaxed text-gray-400">
-                      Google ilə daxil ol və dərhal başla. İlk 5 tələbəni pulsuz əlavə et.
-                    </p>
-                  ) : null}
-                  {step === 'student_link_phone' || step === 'student_link_otp' ? (
-                    <p className="text-sm leading-relaxed text-gray-400">
-                      Tələbə hesabını müəllimin yaratdığı telefon nömrəsi ilə OTP təsdiqi ilə Google-a bağla.
-                    </p>
-                  ) : null}
+                  <p className="text-sm leading-relaxed text-gray-400">
+                    Email ilə qeydiyyat — təsdiq kodu və link Gmail ünvanınıza göndərilir.
+                  </p>
                 </div>
               ) : (
                 <div className="mb-5 text-center space-y-1">
                   <div className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">Giriş</div>
                   <div className="mt-1 text-sm font-semibold text-gray-200">Hesabına daxil ol</div>
-                  {step === 'student_link_phone' || step === 'student_link_otp' ? (
-                    <div className="mt-2 text-xs text-gray-400 leading-relaxed px-1">
-                      Tələbə hesabını müəllimin yaratdığı telefon nömrəsi ilə OTP təsdiqi ilə Google-a bağla.
-                    </div>
-                  ) : (
-                    <div className="mt-1 text-xs text-gray-500">
-                      Əvvəlcə məhsulu yuxarıda gör — sonra qeydiyyatı rahat keç.
-                    </div>
-                  )}
+                  <div className="mt-1 text-xs text-gray-500">
+                    Əvvəlcə məhsulu yuxarıda gör — sonra email ilə qeydiyyatı keç.
+                  </div>
                 </div>
               )
             ) : (
@@ -1188,249 +771,7 @@ export default function Login() {
             )}
 
             {!isAdmin && (
-              <>
-                {mode === 'google' ? (
-                  <>
-                    {step === 'google' ? (
-                      <div className="space-y-4">
-                        <div className="relative z-10 flex w-full min-w-0 justify-center">
-                          <div
-                            ref={googleBtnRef}
-                            className="pointer-events-auto inline-flex max-w-full"
-                            style={{ minHeight: loginModalOpen ? 48 : 44 }}
-                          />
-                        </div>
-                        {loginModalOpen ? (
-                          <div className="flex items-center gap-3 py-1" aria-hidden>
-                            <div className="h-px flex-1 bg-white/15" />
-                            <span className="text-[11px] font-medium uppercase tracking-wide text-gray-500">və ya</span>
-                            <div className="h-px flex-1 bg-white/15" />
-                          </div>
-                        ) : null}
-                        <div className="space-y-2">
-                          <button
-                            type="button"
-                            className={
-                              loginModalOpen
-                                ? 'mx-auto flex min-h-[52px] w-full max-w-xs items-center justify-center rounded-xl border border-primary/30 bg-primary/10 px-4 text-sm font-semibold text-primary hover:bg-primary/15 sm:min-h-[48px]'
-                                : 'text-xs text-primary underline underline-offset-4'
-                            }
-                            onClick={() => setStep('email_auth')}
-                          >
-                            Email ilə qeydiyyat / giriş
-                          </button>
-                        </div>
-                        <div className="px-1 text-center text-[11px] leading-relaxed text-gray-500">
-                          Müəllim: öz Gmail ilə qeydiyyat — emailə kod və link gəlir, təsdiqdən sonra giriş.
-                        </div>
-                      </div>
-                    ) : null}
-
-                    {step === 'email_auth' ? (
-                      <InstructorEmailAuth
-                        onSuccess={(u) => goDashboard(u?.role || 'instructor')}
-                        onBack={() => setStep('google')}
-                      />
-                    ) : null}
-
-                    {step === 'student_link_phone' ? (
-                      <form onSubmit={sendStudentLinkOtp} className="space-y-4">
-                        <p className="text-sm text-gray-200 text-center leading-relaxed font-medium">
-                          Müəllimin səni artıq sistemə əlavə edib? Telefon nömrəni daxil et və hesabını bağla
-                        </p>
-                        <div>
-                          <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
-                            Telefon nömrəsi
-                          </label>
-                          <PhoneInput value={phone} onChange={setPhone} required />
-                        </div>
-                        <Button type="submit" loading={loading} className={loginSubmitBtnClass}>
-                          OTP göndər
-                        </Button>
-                        <button
-                          type="button"
-                          className="w-full text-center text-xs text-primary hover:brightness-110 font-semibold"
-                          onClick={() => setStep('email_auth')}
-                        >
-                          Müəlliməm — email ilə qeydiyyat
-                        </button>
-                        <button
-                          type="button"
-                          className="w-full text-center text-xs text-gray-500 hover:text-white"
-                          onClick={() => {
-                            setStep('google')
-                            setGoogleCredential(null)
-                            setPhone('')
-                            setOtpCode('')
-                            setLinkOtpSent(false)
-                          }}
-                        >
-                          ← Geri
-                        </button>
-                      </form>
-                    ) : null}
-
-                    {step === 'student_link_otp' ? (
-                      <form onSubmit={verifyStudentLink} className="space-y-4">
-                        <p className="text-xs text-gray-400 text-center leading-relaxed">
-                          Telefonuna gələn <strong className="text-gray-200">6 rəqəmli OTP</strong> kodunu daxil et.
-                          Təsdiqlədikdən sonra giriş <strong className="text-gray-200">yalnız Google ilə</strong> olacaq.
-                        </p>
-                        <div className="text-center text-xs text-gray-500">{phone}</div>
-                        <input
-                          className="w-full bg-surface-1 border border-white/10 rounded-xl px-4 py-4 text-white text-2xl font-bold text-center tracking-widest outline-none focus:border-primary/40"
-                          placeholder=""
-                          aria-label="OTP kodu, 6 rəqəm"
-                          maxLength={6}
-                          inputMode="numeric"
-                          autoComplete="one-time-code"
-                          value={otpCode}
-                          onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
-                          required
-                        />
-                        <Button type="submit" loading={loading} className={loginSubmitBtnClass}>
-                          Təsdiqlə və daxil ol
-                        </Button>
-                        {linkOtpSent ? (
-                          <button
-                            type="button"
-                            disabled={loading}
-                            onClick={async () => {
-                              try {
-                                await googleLinkSendOtp(googleCredential, phone)
-                                toast('OTP yenidən göndərildi', 'success')
-                              } catch (e) {
-                                toast(e?.message || 'OTP göndərilmədi', 'error')
-                              }
-                            }}
-                            className="w-full text-center text-xs text-gray-500 hover:text-white disabled:opacity-50"
-                          >
-                            OTP yenidən göndər
-                          </button>
-                        ) : null}
-                        <button
-                          type="button"
-                          className="w-full text-center text-xs text-gray-500 hover:text-white"
-                          onClick={() => {
-                            setStep('student_link_phone')
-                            setOtpCode('')
-                          }}
-                        >
-                          ← Geri
-                        </button>
-                      </form>
-                    ) : null}
-
-                    {step === 'role' ? (
-                      <div className="space-y-4">
-                        <div className="text-center text-sm text-gray-300 font-semibold">Rol seçin</div>
-                        {googleRoleExcludeStudent ? (
-                          <p className="text-[11px] text-center text-amber-200/90 leading-relaxed px-1">
-                            Tələbə hesabını telefonla bağlamaq üçün «Geri» ilə əvvəlki addıma qayıdın. Burada yalnız müəllim
-                            qeydiyyatı davam edir.
-                          </p>
-                        ) : null}
-                        <div className={`grid gap-3 ${googleRoleChoices.length <= 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
-                          {googleRoleChoices.map((r) => (
-                            <button
-                              key={r.key}
-                              type="button"
-                              onClick={() => void completeGoogleWithRole(r.key)}
-                              className="p-3 rounded-xl border text-sm font-semibold transition-all flex flex-col items-center gap-1 border-white/10 text-gray-200 hover:border-white/20"
-                            >
-                              <RoleIcon role={r.key} />
-                              <span className="text-xs">{r.label}</span>
-                            </button>
-                          ))}
-                        </div>
-                        <button
-                          type="button"
-                          className="w-full text-center text-xs text-gray-500 hover:text-white"
-                          onClick={() => {
-                            if (googleRoleExcludeStudent) {
-                              setStep('student_link_phone')
-                              setGoogleRoleExcludeStudent(false)
-                            } else {
-                              setStep('google')
-                              setGoogleCredential(null)
-                            }
-                          }}
-                        >
-                          ← Geri
-                        </button>
-                      </div>
-                    ) : null}
-
-                    {step === 'teacher_phone' ? (
-                      <form onSubmit={sendTeacherOtp} className="space-y-4">
-                        <div className="text-center text-xs text-gray-400">
-                          <span className="font-semibold text-gray-200">Müəllim</span> üçün telefon təsdiqi tələb olunur.
-                        </div>
-                        <div className="text-center text-[11px] text-gray-500">Seçilmiş rol: {roleTitle}</div>
-                        <div>
-                          <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
-                            Telefon nömrəsi
-                          </label>
-                          <PhoneInput value={phone} onChange={setPhone} required />
-                        </div>
-                        <Button type="submit" loading={loading} className={loginSubmitBtnClass}>
-                          OTP göndər
-                        </Button>
-                      </form>
-                    ) : null}
-
-                    {step === 'teacher_otp' ? (
-                      <form onSubmit={verifyTeacherOtp} className="space-y-4">
-                        <p className="text-xs text-gray-400 text-center leading-relaxed">
-                          Telefonunuza gələn <strong className="text-gray-200">6 rəqəmli OTP</strong> kodunu daxil edin.
-                        </p>
-                        <div className="text-center text-xs text-gray-500">{phone}</div>
-                        <input
-                          className="w-full bg-surface-1 border border-white/10 rounded-xl px-4 py-4 text-white text-2xl font-bold text-center tracking-widest outline-none focus:border-primary/40"
-                          placeholder=""
-                          aria-label="OTP kodu, 6 rəqəm"
-                          maxLength={6}
-                          inputMode="numeric"
-                          autoComplete="one-time-code"
-                          value={otpCode}
-                          onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
-                          required
-                        />
-                        <Button type="submit" loading={loading} className={loginSubmitBtnClass}>
-                          Təsdiqlə
-                        </Button>
-                        {otpSent ? (
-                          <button
-                            type="button"
-                            disabled={loading}
-                            onClick={async () => {
-                              try {
-                                await sendOtp(phone, 'instructor')
-                                toast('OTP yenidən göndərildi', 'success')
-                              } catch (e) {
-                                toast(e?.message || 'OTP göndərilmədi', 'error')
-                              }
-                            }}
-                            className="w-full text-center text-xs text-gray-500 hover:text-white disabled:opacity-50"
-                          >
-                            OTP yenidən göndər
-                          </button>
-                        ) : null}
-                        <button
-                          type="button"
-                          className="w-full text-center text-xs text-gray-500 hover:text-white"
-                          onClick={() => {
-                            setStep('teacher_phone')
-                            setOtpCode('')
-                          }}
-                        >
-                          ← Geri
-                        </button>
-                      </form>
-                    ) : null}
-                  </>
-                ) : null}
-              </>
+              <InstructorEmailAuth onSuccess={(u) => goDashboard(u?.role || 'instructor')} />
             )}
 
             <a

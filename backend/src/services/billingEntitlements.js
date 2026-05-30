@@ -157,12 +157,10 @@ function buildStatus({
   remainingObj,
 }) {
   // Priority:
-  // 1) phone not verified -> warning (dashboard open; write-actions gate elsewhere)
-  // 2) subscription not active (billing) -> expired
-  // 3) any hard usage cap reached -> blocked (permanent free tier: usage only, no time)
-  // 4) any ~80% usage warn -> warning
-  // 5) otherwise -> active
-  if (!phone_verified) return 'warning';
+  // 1) subscription not active (billing) -> expired
+  // 2) any hard usage cap reached -> blocked
+  // 3) any ~80% usage warn -> warning
+  // 4) otherwise -> active
   if (!is_active) return 'expired';
 
   const reachedStudents = limits.students != null && used.students >= limits.students;
@@ -239,12 +237,6 @@ function buildMessages(status, ctx) {
     }
   }
 
-  if (status === 'warning' && !phone_verified) {
-    return {
-      banner: 'Hesabınızın tam funksionallığı üçün telefon nömrənizi təsdiqləyin',
-      cta: { label: 'Telefonu təsdiqlə', action: 'OPEN_VERIFY_PHONE' },
-    };
-  }
   if (status === 'warning') {
     const parts = [];
     if (limits.students != null && isWarnPercent(remainingObj.students, limits.students, 0.2)) {

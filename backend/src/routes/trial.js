@@ -81,12 +81,8 @@ router.get('/status', authenticate, authorize('instructor'), async (req, res) =>
       return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
     }
 
-    // Contract: trial only counts after phone verified.
-    // If phone isn't verified, don't auto-create a trial row.
-    const phone_verified = phone.phone_verified;
-
     const todayYmd = await bakuTodayYmdDb(db);
-    const trial = phone_verified ? await ensureTrialRow(db, userId) : await getTrialRow(db, userId);
+    const trial = await ensureTrialRow(db, userId);
 
     const ends_at = trial?.end_date ? new Date(trial.end_date).toISOString() : null;
     const days_left = ends_at ? ceilDaysLeft(ends_at) : 0;
@@ -103,15 +99,8 @@ router.get('/status', authenticate, authorize('instructor'), async (req, res) =>
     const trialActiveByTime = Boolean(trial && ends_at && Date.now() <= new Date(ends_at).getTime());
     const is_active = Boolean(trialActiveByFlags && trialActiveByTime);
 
-    // Status priority (single source of truth for UI):
-    // 1) phone not verified -> blocked
-    // 2) trial not active (inactive flag OR time passed) -> expired
-    // 3) limit reached -> blocked
-    // 4) 1 slot left -> warning
-    // 5) otherwise -> active
     let status = 'active';
-    if (!phone_verified) status = 'blocked';
-    else if (!is_active) status = 'expired';
+    if (!is_active) status = 'expired';
     else if (used >= limit) status = 'blocked';
     else if (remaining <= 1) status = 'warning';
 
@@ -124,8 +113,8 @@ router.get('/status', authenticate, authorize('instructor'), async (req, res) =>
       banner = remaining === 1 ? 'You have 1 student slot left' : `You have ${remaining} student slots left`;
       cta = 'Upgrade to continue';
     } else if (status === 'blocked') {
-      banner = !phone_verified ? 'Phone verification required' : 'Trial student limit reached';
-      cta = !phone_verified ? 'Verify phone to start trial' : 'Upgrade to continue';
+      banner = 'Trial student limit reached';
+      cta = 'Upgrade to continue';
     } else if (status === 'expired') {
       banner = 'Trial expired';
       cta = 'Upgrade to continue';
@@ -146,9 +135,7 @@ router.get('/status', authenticate, authorize('instructor'), async (req, res) =>
         limit: dailyLimit,
         remaining_today,
       },
-      requirements: {
-        phone_verified,
-      },
+      requirements: {},
       messages: {
         banner,
         cta,

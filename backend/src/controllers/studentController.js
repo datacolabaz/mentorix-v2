@@ -1,3 +1,5 @@
+const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 const db = require('../utils/db');
 const {
   bakuTodayYmd,
@@ -10,6 +12,19 @@ const {
   getGroupLessonSchedule,
   resolveEnrollmentScope,
 } = require('../services/studentEnrollmentsService');
+const {
+  STUDENT_CONTACT_PHONE_SQL,
+  canonicalStudentPhone,
+  assertStudentPhoneAvailable,
+  upsertStudentContactPhone,
+} = require('../utils/studentPhone');
+
+function normalizeStudentEmail(email) {
+  const e = String(email || '').trim().toLowerCase();
+  if (!e) return null;
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) return null;
+  return e;
+}
 
 const listStudents = async (req, res) => {
   try {
@@ -17,7 +32,9 @@ const listStudents = async (req, res) => {
     const instructorId =
       req.user.id != null ? String(req.user.id).trim().toLowerCase().replace(/-/g, '') : '';
 
-    const select = `SELECT u.id, u.full_name, u.email, u.phone,
+    const select = `SELECT u.id, u.full_name, u.email,
+              ${STUDENT_CONTACT_PHONE_SQL} AS phone,
+              sp.phone_number,
               sp.parent_id, sp.grade,
               sp.monthly_fee,
               COALESCE(NULLIF(TRIM(sp.parent_name), ''), pu.full_name) AS parent_name,
@@ -81,7 +98,7 @@ const listStudents = async (req, res) => {
        LEFT JOIN referral_sources rs ON rs.id = e.referral_source_id
        LEFT JOIN attendance a ON a.enrollment_id = e.id AND a.attended = TRUE`;
 
-    const group = `GROUP BY u.id, u.full_name, u.email, u.phone, sp.parent_id, sp.grade,
+    const group = `GROUP BY u.id, u.full_name, u.email, u.phone, sp.phone_number, sp.parent_id, sp.grade,
                 sp.monthly_fee,
                 sp.parent_name, sp.parent_phone, pu.full_name, pu.phone,
                 e.id, e.billing_type, e.lesson_count, e.billing_cycle, e.lesson_weekdays, e.lesson_times, e.enrollment_start_date, e.billing_timing, e.payment_plan, e.status,
@@ -733,6 +750,70 @@ const addMyPrepSlots = async (req, res) => {
   }
 };
 
+/** Müəllim paneli: tələbə + profil telefonu (SMS/WhatsApp üçün). */
+const createStudent = async (req, res) => {
+  try {
+    const { first_name, last_name, phone_number, email } = req.body || {};
+    const firstName = String(first_name || '').trim();
+    const lastName = String(last_name || '').trim();
+    if (!firstName) return res.status(400).json({ success: false, message: 'Ad tələb olunur' });
+    if (!lastName) return res.status(400).json({ success: false, message: 'Soyad tələb olunur' });
+
+    const phoneCanon = canonicalStudentPhone(phone_number);
+    if (!phoneCanon) {
+      return res.status(400).json({
+        success: false,
+        message: 'Telefon nömrəsi tələb olunur (+994 XX XXX XX XX)',
+      });
+    }
+
+    let emailCanon = null;
+    if (email != null && String(email).trim() !== '') {
+      emailCanon = normalizeStudentEmail(email);
+      if (!emailCanon) {
+        return res.status(400).json({ success: false, message: 'Email formatı düzgün deyil' });
+      }
+    }
+
+    const full_name = `${firstName} ${lastName}`.trim();
+    const password = crypto.randomBytes(18).toString('base64url').slice(0, 18);
+    const hash = await bcrypt.hash(password, 12);
+
+    const user = await db.transaction(async (client) => {
+      await assertStudentPhoneAvailable(client, phoneCanon);
+      const { rows } = await client.query(
+        `INSERT INTO users (full_name, email, phone, password_hash, role, account_status, is_verified, phone_verified)
+         VALUES ($1, $2, $3, $4, 'student', 'active', FALSE, FALSE)
+         RETURNING id, full_name, email, phone`,
+        [full_name, emailCanon, phoneCanon, hash],
+      );
+      const created = rows[0];
+      await client.query(
+        `INSERT INTO user_roles (user_id, role, is_active) VALUES ($1, 'student', TRUE)
+         ON CONFLICT (user_id, role) DO UPDATE SET is_active = TRUE`,
+        [created.id],
+      );
+      await client.query(
+        `INSERT INTO student_profiles (user_id, phone_number) VALUES ($1, $2)`,
+        [created.id, phoneCanon],
+      );
+      return { ...created, phone_number: phoneCanon, phone: phoneCanon };
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: 'Tələbə yaradıldı',
+      user: { id: user.id, full_name: user.full_name, email: user.email, phone: user.phone, phone_number: user.phone_number },
+    });
+  } catch (err) {
+    if (err.code === '23505') {
+      return res.status(409).json({ success: false, message: 'Bu email və ya telefon artıq mövcuddur' });
+    }
+    const st = err.statusCode || 500;
+    return res.status(st).json({ success: false, message: err.message || 'Xəta' });
+  }
+};
+
 const deleteMyPrepSlot = async (req, res) => {
   try {
     const studentId = req.user.id;
@@ -750,6 +831,7 @@ const deleteMyPrepSlot = async (req, res) => {
 
 module.exports = {
   listStudents,
+  createStudent,
   getReferralBreakdown,
   getStudent,
   deleteStudent,

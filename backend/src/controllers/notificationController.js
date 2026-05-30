@@ -218,9 +218,11 @@ const quickInstructorNotification = async (req, res) => {
     if (!ids.length) return res.status(400).json({ success: false, message: 'Tələbələr seçilməlidir' });
 
     const allowedStudentsRes = await db.query(
-      `SELECT u.id, u.phone
+      `SELECT u.id,
+              COALESCE(NULLIF(TRIM(sp.phone_number), ''), NULLIF(TRIM(u.phone), '')) AS phone
        FROM users u
        JOIN enrollments e ON e.student_id = u.id
+       LEFT JOIN student_profiles sp ON sp.user_id = u.id
        WHERE e.instructor_id = $1
          AND e.status = 'active'
          AND u.role = 'student'

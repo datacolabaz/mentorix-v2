@@ -81,7 +81,8 @@ const markAttendance = async (req, res) => {
     const { rows: [enrollment] } = await db.query(
       `SELECT e.*, COALESCE(e.pack_reminder_sent_cycle, 0) AS pack_reminder_sent_cycle,
               ip.alert_lessons_before, ip.billing_type AS instr_billing,
-              u.full_name AS student_name, u.phone AS student_phone,
+              u.full_name AS student_name,
+              COALESCE(NULLIF(TRIM(sp.phone_number), ''), NULLIF(TRIM(u.phone), '')) AS student_phone,
               sp.parent_id,
               COALESCE(NULLIF(TRIM(sp.parent_phone), ''), pu.phone) AS parent_phone
        FROM enrollments e
@@ -124,7 +125,7 @@ const markAttendance = async (req, res) => {
     const alreadySent = Number(enrollment.pack_reminder_sent_cycle || 0) >= (Number(enrollment.billing_cycle) || 1);
 
     if (attended && limit && triggerAt && !alreadySent && lessonNum === triggerAt) {
-      const targetPhone = enrollment.parent_phone || enrollment.student_phone;
+      const targetPhone = enrollment.student_phone || enrollment.parent_phone;
       const cyc = Number(enrollment.billing_cycle || 1) || 1;
       const pkgLabel = `Paket #${cyc}`;
       const studentBody = `Mentorix: ${pkgLabel} paketinizin bitməsinə 1 dərs qalıb. Davam etmək üçün ödənişi nəzərə alın.`;
@@ -317,8 +318,9 @@ const upsertAttendanceLesson = async (req, res) => {
     // Pack reminder: 8-pack at 7 completed lessons, 12-pack at 11 completed lessons (once per cycle).
     if (attended && limit && triggerAt && !alreadySent && beforeN < triggerAt && n >= triggerAt) {
       const { rows: [info] } = await db.query(
-        `SELECT e.instructor_id, u.full_name AS student_name, u.phone AS student_phone,
-                COALESCE(NULLIF(TRIM(sp.parent_phone), ''), pu.phone) AS parent_phone
+        `SELECT e.instructor_id,               u.full_name AS student_name,
+              COALESCE(NULLIF(TRIM(sp.phone_number), ''), NULLIF(TRIM(u.phone), '')) AS student_phone,
+              COALESCE(NULLIF(TRIM(sp.parent_phone), ''), pu.phone) AS parent_phone
          FROM enrollments e
          JOIN users u ON u.id = e.student_id
          LEFT JOIN student_profiles sp ON sp.user_id = e.student_id
@@ -326,7 +328,7 @@ const upsertAttendanceLesson = async (req, res) => {
          WHERE e.id = $1`,
         [enrollment_id]
       );
-      const targetPhone = info?.parent_phone || info?.student_phone;
+      const targetPhone = info?.student_phone || info?.parent_phone;
       if (targetPhone) {
         await sendSms({
           instructorId: info.instructor_id,
@@ -487,8 +489,9 @@ const bulkFillAttendancePeriod = async (req, res) => {
 
     if (attended && limit && triggerAt && !alreadySent && beforeN < triggerAt && afterN >= triggerAt) {
       const { rows: [info] } = await db.query(
-        `SELECT e.instructor_id, u.full_name AS student_name, u.phone AS student_phone,
-                COALESCE(NULLIF(TRIM(sp.parent_phone), ''), pu.phone) AS parent_phone
+        `SELECT e.instructor_id,               u.full_name AS student_name,
+              COALESCE(NULLIF(TRIM(sp.phone_number), ''), NULLIF(TRIM(u.phone), '')) AS student_phone,
+              COALESCE(NULLIF(TRIM(sp.parent_phone), ''), pu.phone) AS parent_phone
          FROM enrollments e
          JOIN users u ON u.id = e.student_id
          LEFT JOIN student_profiles sp ON sp.user_id = e.student_id
@@ -496,7 +499,7 @@ const bulkFillAttendancePeriod = async (req, res) => {
          WHERE e.id = $1`,
         [enrollment_id]
       );
-      const targetPhone = info?.parent_phone || info?.student_phone;
+      const targetPhone = info?.student_phone || info?.parent_phone;
       if (targetPhone) {
         await sendSms({
           instructorId: info.instructor_id,

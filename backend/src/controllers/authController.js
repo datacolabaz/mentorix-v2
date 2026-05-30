@@ -751,16 +751,18 @@ const register = async (req, res) => {
           [created.id, full_name || 'Kurs'],
         );
       } else if (role === 'student') {
-        // Avoid requiring a UNIQUE constraint on student_profiles.user_id for older DBs.
-        const up = await client.query('UPDATE student_profiles SET parent_id = $2 WHERE user_id = $1', [
-          created.id,
-          parent_id || null,
-        ]);
+        const up = await client.query(
+          `UPDATE student_profiles
+           SET parent_id = $2,
+               phone_number = COALESCE(NULLIF(phone_number, ''), $3)
+           WHERE user_id = $1`,
+          [created.id, parent_id || null, phoneCanon],
+        );
         if (up.rowCount === 0) {
-          await client.query('INSERT INTO student_profiles (user_id, parent_id) VALUES ($1, $2)', [
-            created.id,
-            parent_id || null,
-          ]);
+          await client.query(
+            'INSERT INTO student_profiles (user_id, parent_id, phone_number) VALUES ($1, $2, $3)',
+            [created.id, parent_id || null, phoneCanon],
+          );
         }
       }
 
@@ -918,7 +920,7 @@ const selectOnboardingRole = async (req, res) => {
 /** İctimai qeydiyyat — müəllim / kurs (öz Gmail ilə) */
 const signup = async (req, res) => {
   try {
-    const { full_name, email, password, phone, role: roleRaw } = req.body || {};
+    const { full_name, email, password, role: roleRaw } = req.body || {};
     const role = String(roleRaw || '').trim().toLowerCase();
     const roleSelected = Boolean(role) && ONBOARDING_ROLES.has(role);
     const initialRole = roleSelected ? role : 'student';
@@ -934,7 +936,6 @@ const signup = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Şifrə ən azı 8 simvol olmalıdır' });
     }
 
-    const phoneCanon = phone ? canonicalPhone(phone) : null;
     const hash = await bcrypt.hash(pass, 12);
 
     const { rows: existing } = await db.query(
@@ -948,9 +949,9 @@ const signup = async (req, res) => {
     const user = await db.transaction(async (client) => {
       const { rows } = await client.query(
         `INSERT INTO users (full_name, email, phone, password_hash, role, is_verified, account_status, role_selected)
-         VALUES ($1, $2, $3, $4, $5, FALSE, 'active', $6)
+         VALUES ($1, $2, NULL, $3, $4, FALSE, 'active', $5)
          RETURNING id, full_name, email, role, phone, role_selected`,
-        [name, emailCanon, phoneCanon, hash, initialRole, roleSelected],
+        [name, emailCanon, hash, initialRole, roleSelected],
       );
       const created = rows[0];
 
@@ -1005,7 +1006,7 @@ const signup = async (req, res) => {
     });
   } catch (err) {
     if (err.code === '23505') {
-      return res.status(409).json({ success: false, message: 'Bu email və ya telefon artıq mövcuddur' });
+      return res.status(409).json({ success: false, message: 'Bu email artıq qeydiyyatdadır' });
     }
     res.status(500).json({ success: false, message: err.message });
   }

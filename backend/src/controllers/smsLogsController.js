@@ -512,7 +512,7 @@ const getSmsPlan = async (req, res) => {
          COALESCE(ip.alert_lessons_before, 2) AS alert_lessons_before,
          su.id AS student_id,
          su.full_name AS student_name,
-         su.phone AS student_phone,
+         COALESCE(NULLIF(TRIM(sp.phone_number), ''), NULLIF(TRIM(su.phone), '')) AS student_phone,
          sp.parent_phone
        FROM enrollments e
        LEFT JOIN LATERAL (
@@ -722,7 +722,7 @@ const catchupPackReminders = async (req, res) => {
          COALESCE(ip.alert_lessons_before, 2) AS alert_lessons_before,
          COALESCE(e.notifications_enabled, TRUE) AS notifications_enabled,
          u.full_name AS student_name,
-         u.phone AS student_phone,
+         COALESCE(NULLIF(TRIM(sp.phone_number), ''), NULLIF(TRIM(u.phone), '')) AS student_phone,
          COALESCE(NULLIF(TRIM(sp.parent_phone), ''), pu.phone) AS parent_phone,
          -- lesson_count for current cycle: take max across sources (attendance/lessons/enrollment_lessons/enrollments.lesson_count)
          GREATEST(
@@ -783,7 +783,7 @@ const catchupPackReminders = async (req, res) => {
         continue;
       }
 
-      const phone = r.parent_phone || r.student_phone;
+      const phone = r.student_phone || r.parent_phone;
       if (!phone) {
         skipped.push({ enrollment_id: r.enrollment_id, reason: 'no_phone' });
         continue;

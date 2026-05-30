@@ -1,20 +1,8 @@
 const router = require('express').Router();
 const {
   login,
-  phoneNextStep,
-  forgotPinSms,
-  sendOtp,
-  verifyOtp,
   register,
   me,
-  setPin,
-  loginWithPin,
-  googleLogin,
-  googleComplete,
-  googleLinkSendOtp,
-  googleLinkVerify,
-  sendMyPhoneVerifyOtp,
-  verifyMyPhoneVerifyOtp,
   verifyEmail,
   selectOnboardingRole,
   signup,
@@ -22,32 +10,16 @@ const {
   resendVerificationEmail,
 } = require('../controllers/authController');
 const { authenticate, authorize } = require('../middleware/auth');
-const { requireInstructorPhoneVerified } = require('../middleware/trial');
 const { attachEntitlements, enforceStudentsLimit } = require('../middleware/entitlements');
 
-/** Phone verify + subscription plan limits (no time-based trial). */
-function gateInstructorStudentRegister(req, res, next) {
-  if (req.user?.role !== 'instructor') return next();
-  if (String(req.body?.role || '').toLowerCase() !== 'student') return next();
-  return requireInstructorPhoneVerified(req, res, next);
-}
+/** Email-based auth only; legacy phone/PIN/Google routes removed from public API. */
 
 router.post('/login', login);
-router.post('/google/login', googleLogin);
-router.post('/google/complete', googleComplete);
-router.post('/google/link/send-otp', googleLinkSendOtp);
-router.post('/google/link/verify', googleLinkVerify);
-router.post('/phone/next-step', phoneNextStep);
-router.post('/phone/verify/send', authenticate, authorize('instructor', 'student', 'course'), sendMyPhoneVerifyOtp);
-router.post('/phone/verify/confirm', authenticate, authorize('instructor', 'student', 'course'), verifyMyPhoneVerifyOtp);
-router.post('/pin/forgot-sms', forgotPinSms);
-router.post('/otp/send', sendOtp);
-router.post('/otp/verify', verifyOtp);
+
 router.post(
   '/register',
   authenticate,
   authorize('admin', 'instructor'),
-  gateInstructorStudentRegister,
   attachEntitlements,
   enforceStudentsLimit,
   register
@@ -59,7 +31,5 @@ router.post('/resend-verification', resendVerificationEmail);
 router.post('/verify-email', verifyEmail);
 router.post('/onboarding/role', authenticate, selectOnboardingRole);
 router.get('/me', authenticate, me);
-router.post('/pin/set', authenticate, setPin);
-router.post('/pin/login', loginWithPin);
 
 module.exports = router;

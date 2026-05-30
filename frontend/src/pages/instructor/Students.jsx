@@ -14,7 +14,20 @@ import { alignFirstLessonYmd } from '../../lib/firstLessonDate'
 import { readCache, writeCache } from '../../lib/cache'
 import useUiStore from '../../hooks/useUi'
 import PortalMenu from '../../components/common/PortalMenu'
+import PhoneInput from '../../components/auth/PhoneInput'
 import { BILLING_STATUS_QUERY_KEY, useBillingStatus } from '../../hooks/useBillingStatus'
+
+function splitFullName(full) {
+  const t = String(full || '').trim()
+  if (!t) return { first_name: '', last_name: '' }
+  const i = t.indexOf(' ')
+  if (i < 0) return { first_name: t, last_name: '' }
+  return { first_name: t.slice(0, i), last_name: t.slice(i + 1).trim() }
+}
+
+function joinFullName(first, last) {
+  return `${String(first || '').trim()} ${String(last || '').trim()}`.trim()
+}
 
 const BILLING_OPTS = [
   { value: '8_lessons', label: '8 Ders' },
@@ -22,6 +35,9 @@ const BILLING_OPTS = [
 ]
 
 const emptyForm = {
+  first_name: '',
+  last_name: '',
+  phone_number: '',
   full_name: '',
   phone: '',
   email: '',
@@ -200,24 +216,52 @@ function StudentFormFields({
 
   return (
     <div className="space-y-3">
-      <div>
-        <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Ad Soyad *</label>
-        <input
-          className={inp}
-          placeholder="Eli Huseynov"
-          value={data.full_name}
-          onChange={(e) => setData((p) => ({ ...p, full_name: e.target.value }))}
-        />
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Ad *</label>
+          <input
+            className={inp}
+            placeholder="Əli"
+            value={data.first_name ?? splitFullName(data.full_name).first_name}
+            onChange={(e) => {
+              const first_name = e.target.value
+              setData((p) => ({
+                ...p,
+                first_name,
+                full_name: joinFullName(first_name, p.last_name ?? splitFullName(p.full_name).last_name),
+              }))
+            }}
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Soyad *</label>
+          <input
+            className={inp}
+            placeholder="Hüseynov"
+            value={data.last_name ?? splitFullName(data.full_name).last_name}
+            onChange={(e) => {
+              const last_name = e.target.value
+              setData((p) => ({
+                ...p,
+                last_name,
+                full_name: joinFullName(p.first_name ?? splitFullName(p.full_name).first_name, last_name),
+              }))
+            }}
+          />
+        </div>
       </div>
       <div>
-        <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Telefon *</label>
-        <input
-          className={inp}
-          placeholder="+994XXXXXXXXX"
-          value={data.phone}
-          onChange={(e) => setData((p) => ({ ...p, phone: e.target.value }))}
+        <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+          Tələbə telefonu *
+        </label>
+        <PhoneInput
+          value={data.phone_number || data.phone || ''}
+          onChange={(v) => setData((p) => ({ ...p, phone_number: v, phone: v }))}
+          required
         />
-        <p className="text-[10px] text-gray-500 mt-1.5">Giriş üçün əsas identifikator telefon nömrəsidir (PIN ilə).</p>
+        <p className="text-[10px] text-gray-500 mt-1.5">
+          Ödəniş xatırlatması və qrup kodları bu nömrəyə SMS/WhatsApp ilə göndərilir (müəllim hesabından ayrıdır).
+        </p>
       </div>
 
       {Array.isArray(teachingCourses) && teachingCourses.length > 0 ? (
@@ -253,8 +297,8 @@ function StudentFormFields({
             onChange={(e) => setData((p) => ({ ...p, email: e.target.value }))}
           />
           <p className="text-[10px] text-gray-500 mt-1.5">
-            <span className="text-indigo-200/90 font-medium">Gmail ilə giriş üçün email əlavə etmək tövsiyə olunur.</span>{' '}
-            Google ilə giriş üçün eyniləşdirici kimi saxlanılır. Boş buraxılsa, yalnız telefon/PIN üzərindən davam edir.
+            <span className="text-indigo-200/90 font-medium">İstəyə bağlı:</span> tələbə panelinə email ilə daxil ola
+            bilsin. Boş buraxılsa, yalnız müəllim tərəfindən idarə olunur.
             {mode === 'edit' ? (
               <>
                 {' '}
@@ -818,8 +862,15 @@ export default function InstructorStudents() {
       toast(billing?.messages?.banner || 'Məhdudiyyətə görə bu əməliyyat deaktivdir', 'error')
       return
     }
-    if (!form.full_name || !form.phone) {
-      toast('Ad ve telefon teleb olunur', 'error')
+    const firstName = String(form.first_name || splitFullName(form.full_name).first_name).trim()
+    const lastName = String(form.last_name || splitFullName(form.full_name).last_name).trim()
+    const phoneNumber = String(form.phone_number || form.phone || '').trim()
+    if (!firstName || !lastName) {
+      toast('Ad və soyad tələb olunur', 'error')
+      return
+    }
+    if (!phoneNumber) {
+      toast('Tələbə telefonu tələb olunur', 'error')
       return
     }
     const emailTrim = String(form.email || '').trim().toLowerCase()
@@ -843,12 +894,11 @@ export default function InstructorStudents() {
     // Slot seçimi tələb olunmur: dərslər lesson_times + start_date ilə avtomatik generasiya olunur
     setLoading(true)
     try {
-      const reg = await api.post('/auth/register', {
-        full_name: form.full_name,
-        phone: form.phone,
+      const reg = await api.post('/students', {
+        first_name: firstName,
+        last_name: lastName,
+        phone_number: phoneNumber,
         email: emailTrim || undefined,
-        role: 'student',
-        password: Math.random().toString(36).slice(-8),
       })
       const newUserId = reg.user?.id
       if (!newUserId) throw new Error('Qeydiyyat cavabı gözlənilən deyil')
@@ -872,13 +922,11 @@ export default function InstructorStudents() {
       })
       const ps = enrRes?.pin_sms
       if (ps?.error) {
-        toast('Telebe elave edildi, amma PIN SMS gonderile bilmedi. Bir az sonra yeniden cehd edin ve ya telebenin giris ekraninda “Davam et” ile PIN isteyin.', 'error')
+        toast('Tələbə əlavə edildi, amma PIN SMS göndərilmədi (email girişi tövsiyə olunur).', 'error')
       } else if (ps?.sent) {
-        toast('Telebe elave edildi. PIN SMS telebeye gonderildi.')
-      } else if (ps?.skipped && ps?.message) {
-        toast(`Telebe elave edildi. ${ps.message}`)
+        toast('Tələbə əlavə edildi.')
       } else {
-        toast('Telebe elave edildi!')
+        toast('Tələbə əlavə edildi!')
       }
       setAddModal(false)
       setForm(emptyForm)
@@ -908,10 +956,14 @@ export default function InstructorStudents() {
     const firstLesson =
       firstFromApi || (pkgAnchor ? alignFirstLessonYmd(pkgAnchor, lwd, lt) : '')
     setSetupEnrollmentId(s.enrollment_id)
+    const setupNames = splitFullName(s.full_name)
     setSetupForm({
       ...emptyForm,
+      first_name: setupNames.first_name,
+      last_name: setupNames.last_name,
       full_name: s.full_name || '',
-      phone: s.phone || '',
+      phone: s.phone || s.phone_number || '',
+      phone_number: s.phone_number || s.phone || '',
       email: s.email || '',
       billing_type: s.billing_type || '8_lessons',
       subject_id: s.subject_id || '',
@@ -938,15 +990,18 @@ export default function InstructorStudents() {
 
   const saveCompleteSetup = async () => {
     if (!setupEnrollmentId) return
-    if (!setupForm.full_name?.trim() || !setupForm.phone?.trim()) {
-      toast('Ad və telefon tələb olunur', 'error')
+    const setupFirst = String(setupForm.first_name || splitFullName(setupForm.full_name).first_name).trim()
+    const setupLast = String(setupForm.last_name || splitFullName(setupForm.full_name).last_name).trim()
+    const setupPhone = String(setupForm.phone_number || setupForm.phone || '').trim()
+    if (!setupFirst || !setupLast || !setupPhone) {
+      toast('Ad, soyad və telefon tələb olunur', 'error')
       return
     }
     setLoading(true)
     try {
       await api.post(`/students/enrollment/${encodeURIComponent(setupEnrollmentId)}/complete-setup`, {
-        full_name: setupForm.full_name,
-        phone: setupForm.phone,
+        full_name: joinFullName(setupFirst, setupLast),
+        phone: setupPhone,
         email: setupForm.email || null,
         billing_type: setupForm.billing_type,
         enrollment_date: setupForm.enrollment_date || setupForm.first_lesson_date,
@@ -1009,9 +1064,13 @@ export default function InstructorStudents() {
       parent_phone: s.parent_phone || '',
       notifications_enabled: s.notifications_enabled !== false,
     })
+    const editNames = splitFullName(s.full_name)
     setEditForm({
+      first_name: editNames.first_name,
+      last_name: editNames.last_name,
       full_name: s.full_name || '',
-      phone: s.phone || '',
+      phone: s.phone || s.phone_number || '',
+      phone_number: s.phone_number || s.phone || '',
       email: s.email || '',
       billing_type: s.billing_type || '8_lessons',
       referral_notes: s.referral_notes || '',
@@ -1234,10 +1293,14 @@ export default function InstructorStudents() {
       toast('Qeydiyyat tapılmadı — səhifəni yeniləyin', 'error')
       return
     }
-    if (!editForm.full_name?.trim() || !editForm.phone?.trim()) {
-      toast('Ad və telefon mütləqdir', 'error')
+    const editFirst = String(editForm.first_name || splitFullName(editForm.full_name).first_name).trim()
+    const editLast = String(editForm.last_name || splitFullName(editForm.full_name).last_name).trim()
+    const editPhone = String(editForm.phone_number || editForm.phone || '').trim()
+    if (!editFirst || !editLast || !editPhone) {
+      toast('Ad, soyad və telefon mütləqdir', 'error')
       return
     }
+    const editFullName = joinFullName(editFirst, editLast)
     if (!editForm.lesson_weekdays?.length) {
       toast('Ən azı bir dərs günü seçin', 'error')
       return
@@ -1289,8 +1352,8 @@ export default function InstructorStudents() {
       }
       // Backend bəzi hallarda göndərilməyən string sahələri NULL kimi update edə bilir.
       // Ona görə ən azı bu ikisini həmişə göndəririk.
-      patchBody.full_name = editForm.full_name
-      patchBody.phone = editForm.phone
+      patchBody.full_name = editFullName
+      patchBody.phone = editPhone
       setIfChanged('billing_type', editForm.billing_type, original.billing_type)
       setIfChanged('referral_notes', editForm.referral_notes, original.referral_notes)
       setIfChanged('monthly_fee', editForm.monthly_fee, original.monthly_fee)
@@ -1446,7 +1509,7 @@ export default function InstructorStudents() {
             >
               +
             </span>
-            Telebe Elave Et
+            Yeni tələbə əlavə et
           </span>
         </Button>
       </div>
@@ -1882,7 +1945,7 @@ export default function InstructorStudents() {
         </div>
       </Modal>
 
-      <Modal open={addModal} onClose={closeAddModal} title="Yeni Telebe Elave Et">
+      <Modal open={addModal} onClose={closeAddModal} title="Yeni tələbə əlavə et">
         <StudentFormFields
           data={form}
           setData={setForm}
@@ -1898,7 +1961,7 @@ export default function InstructorStudents() {
         />
         <div className="flex gap-3 mt-4">
           <Button onClick={addStudent} loading={loading} className="flex-1 justify-center">
-            Elave Et
+            Əlavə et
           </Button>
           <Button variant="secondary" onClick={closeAddModal} className="flex-1 justify-center">
             Legv et

@@ -3,7 +3,6 @@ import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import useAuthStore from './hooks/useAuth'
 
 import Login from './pages/auth/Login'
-import VerifyPhone from './pages/auth/VerifyPhone'
 import VerifyEmail from './pages/auth/VerifyEmail'
 import RoleOnboarding from './pages/auth/RoleOnboarding'
 import InstructorMapSearch from './pages/public/InstructorMapSearch'
@@ -100,14 +99,6 @@ export default function App() {
       <Route path="/search" element={<InstructorMapSearch />} />
       <Route path="/login" element={user ? <Navigate to={user?.role ? `/${user.role}` : '/onboarding/role'} replace /> : <Login />} />
       <Route path="/verify-email" element={<VerifyEmail />} />
-      <Route
-        path="/verify-phone"
-        element={
-          <ProtectedRoute>
-            <VerifyPhone />
-          </ProtectedRoute>
-        }
-      />
       <Route
         path="/onboarding/role"
         element={

@@ -4,7 +4,7 @@ CREATE TABLE users (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   full_name VARCHAR(255) NOT NULL,
   email VARCHAR(255),
-  phone VARCHAR(20) UNIQUE,
+  phone VARCHAR(20),
   password_hash VARCHAR(255),
   role VARCHAR(20) NOT NULL CHECK (role IN ('admin','instructor','student','parent','course')),
   account_status TEXT NOT NULL DEFAULT 'active' CHECK (account_status IN ('active', 'pending_google')),
@@ -19,6 +19,10 @@ CREATE TABLE users (
 CREATE UNIQUE INDEX IF NOT EXISTS users_email_lower_unique_not_null
   ON users (lower(trim(email)))
   WHERE email IS NOT NULL AND trim(email) <> '';
+
+CREATE UNIQUE INDEX IF NOT EXISTS users_phone_norm_unique_not_null
+  ON users (regexp_replace(COALESCE(phone::text, ''), '[^0-9]', '', 'g'))
+  WHERE phone IS NOT NULL AND trim(COALESCE(phone::text, '')) <> '';
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_users_verification_token_unique
   ON users (verification_token)
@@ -48,6 +52,7 @@ CREATE TABLE instructor_profiles (
 CREATE TABLE student_profiles (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  phone_number VARCHAR(20),
   parent_id UUID REFERENCES users(id),
   parent_name VARCHAR(255),
   parent_phone VARCHAR(50),
