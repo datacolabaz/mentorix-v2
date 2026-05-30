@@ -53,10 +53,10 @@ export default function CourseList() {
               Tələbələrim
             </Link>{' '}
             və{' '}
-            <Link to="/instructor/settings" className="text-primary font-semibold hover:underline">
-              Tənzimləmələr → Qruplar
+            <Link to="/instructor/teaching-groups" className="text-primary font-semibold hover:underline">
+              Kurslar və qruplar
             </Link>{' '}
-            (dəvət linki, davamiyyət, paket) orada aparılır.
+            (dəvət linki, paket) orada aparılır.
           </p>
           <p className="text-xs text-token-textMuted mt-2">
             Paneldə cəmi:{' '}

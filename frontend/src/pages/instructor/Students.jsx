@@ -1445,8 +1445,8 @@ export default function InstructorStudents() {
           <h1 className="font-display font-bold text-xl sm:text-2xl break-words">Tələbələrim</h1>
           <p className="text-gray-500 text-sm mt-1 max-w-xl">
             {listLoading ? '…' : `${students.length} tələbə`} · Yeni tələbələr{' '}
-            <Link to="/instructor/settings" className="text-primary hover:underline font-medium">
-              Tənzimləmələr → Qruplar
+            <Link to="/instructor/teaching-groups" className="text-primary hover:underline font-medium">
+              Kurslar və qruplar
             </Link>{' '}
             bölməsindəki dəvət linki ilə özü qoşulur
           </p>
@@ -1464,7 +1464,7 @@ export default function InstructorStudents() {
             ) : null}
           </Link>
           <Link
-            to="/instructor/settings"
+            to="/instructor/teaching-groups"
             className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold bg-primary text-black hover:brightness-110 transition-colors"
           >
             Dəvət linki
