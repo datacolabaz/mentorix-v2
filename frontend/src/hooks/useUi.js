@@ -30,6 +30,10 @@ const useUiStore = create((set, get) => ({
   focusMode: false,
   setFocusMode: (focusMode) => set({ focusMode: Boolean(focusMode) }),
 
+  /** Modal/overlay açıq olanda sidebarı müvəqqəti gizlət (məzmun üstünə düşməsin). */
+  overlayLock: false,
+  setOverlayLock: (overlayLock) => set({ overlayLock: Boolean(overlayLock) }),
+
   theme: readTheme(), // light | dark (sidebar)
   setTheme: (theme) => {
     const next = theme === 'dark' ? 'dark' : 'light'

@@ -31,7 +31,7 @@ const DEFAULT_DASH = {
 export default function InstructorDashboard() {
   const { user } = useAuthStore()
   const navigate = useNavigate()
-  const { theme } = useUiStore()
+  const { theme, setOverlayLock } = useUiStore()
   const [students, setStudents] = useState([])
   const [examStats, setExamStats] = useState([])
   const [dash, setDash] = useState({ ...DEFAULT_DASH })
@@ -127,13 +127,23 @@ export default function InstructorDashboard() {
     })
   }
 
+  function closeQuick() {
+    setQuickOpen(false)
+    setOverlayLock(false)
+  }
+
   function openQuick() {
     setQuickOpen(true)
+    setOverlayLock(true)
     setQuickMessage('')
     setQuickSelectedIds([])
     setQuickMethod('internal')
     // smsProfile is fetched by effect (only once)
   }
+
+  useEffect(() => {
+    if (!quickOpen) setOverlayLock(false)
+  }, [quickOpen, setOverlayLock])
 
   function selectAllStudents() {
     setQuickSelectedIds(students.map((s) => String(s.id)))
@@ -194,7 +204,7 @@ export default function InstructorDashboard() {
         toast(quickMethod === 'sms' ? 'SMS göndərildi' : 'Bildiriş göndərildi', 'success')
       }
       queryClient.invalidateQueries({ queryKey: BILLING_STATUS_QUERY_KEY })
-      setQuickOpen(false)
+      closeQuick()
       setQuickMessage('')
       setQuickSelectedIds([])
       // Keep smsProfile; next opening will use same cached value
@@ -497,7 +507,7 @@ export default function InstructorDashboard() {
       </div>
       </div>
 
-      <Modal open={quickOpen} onClose={() => setQuickOpen(false)} title="Sürətli Bildiriş" size="xl">
+      <Modal open={quickOpen} onClose={closeQuick} title="Sürətli Bildiriş" size="xl">
         <div className="space-y-5">
           <div>
             <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
@@ -642,7 +652,7 @@ export default function InstructorDashboard() {
           </div>
 
           <div className="flex items-center justify-end gap-3 pt-2">
-            <Button variant="ghost" onClick={() => setQuickOpen(false)} disabled={quickBusy}>
+            <Button variant="ghost" onClick={closeQuick} disabled={quickBusy}>
               Ləğv et
             </Button>
             <Button

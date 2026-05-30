@@ -54,7 +54,8 @@ export default function InstructorLayout() {
   const navigate = useNavigate()
   const location = useLocation()
   const [navOpen, setNavOpen] = useState(false)
-  const { focusMode, setFocusMode, theme, toggleTheme } = useUiStore()
+  const { focusMode, setFocusMode, overlayLock, theme, toggleTheme } = useUiStore()
+  const sidebarHidden = focusMode || overlayLock
   const [limitStatus, setLimitStatus] = useState({ level: null, message: null })
   const [notifFetchAt, setNotifFetchAt] = useState(0)
   const [hasAlerts, setHasAlerts] = useState(false)
@@ -95,8 +96,8 @@ export default function InstructorLayout() {
   }, [location.pathname])
 
   useEffect(() => {
-    if (focusMode) setNavOpen(false)
-  }, [focusMode])
+    if (focusMode || overlayLock) setNavOpen(false)
+  }, [focusMode, overlayLock])
 
   useEffect(() => {
     let cancelled = false
@@ -270,9 +271,16 @@ export default function InstructorLayout() {
             theme === 'dark'
               ? 'bg-gradient-to-b from-[#0c0f0d] to-[#070a08] border-r border-[color:var(--border-subtle)]'
               : 'bg-[#F8FAFC] border-r border-black/[0.06]',
-            'fixed lg:static inset-y-0 left-0 z-[80] transition-transform duration-200 ease-out',
-            navOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
-            focusMode ? 'lg:-translate-x-full' : '',
+            // Modal açıq olanda lg:static saxlamırıq — yoxsa sidebar yer tutur və modalın altında qalır.
+            sidebarHidden
+              ? 'fixed inset-y-0 left-0 z-[80]'
+              : 'fixed lg:static inset-y-0 left-0 z-[80]',
+            'transition-transform duration-200 ease-out',
+            sidebarHidden
+              ? '-translate-x-full pointer-events-none'
+              : navOpen
+                ? 'translate-x-0'
+                : '-translate-x-full lg:translate-x-0',
             'relative',
           ].join(' ')}
         >
