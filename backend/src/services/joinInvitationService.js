@@ -332,6 +332,7 @@ async function listPendingJoinRequests(instructorId) {
      JOIN users u ON u.id = sjr.student_id
      JOIN instructor_groups ig ON ig.id = sjr.group_id
      LEFT JOIN instructor_subjects ist ON ist.id = ig.subject_id
+     LEFT JOIN referral_sources rs ON rs.id = sjr.referral_source_id
      WHERE sjr.instructor_id = $1
        AND UPPER(TRIM(sjr.status)) = 'PENDING'
        AND COALESCE(LOWER(TRIM(e.status)), '') = 'pending_approval'
