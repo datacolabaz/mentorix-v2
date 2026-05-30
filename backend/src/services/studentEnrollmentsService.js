@@ -183,7 +183,7 @@ async function listActiveEnrollmentsForStudent(studentId) {
      ) cnt ON cnt.group_id = e.group_id
      WHERE e.student_id = $1
        AND (e.deleted_at IS NULL)
-       AND COALESCE(LOWER(TRIM(e.status)), 'active') IN ('active', 'pending_setup')
+       AND COALESCE(LOWER(TRIM(e.status)), 'active') IN ('active', 'pending_setup', 'pending_approval')
      ORDER BY e.enrolled_at DESC NULLS LAST, ig.name ASC NULLS LAST`,
     [studentId],
   );

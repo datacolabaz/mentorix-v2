@@ -107,9 +107,14 @@ export default function MyGroups() {
                   <p className="text-sm text-token-textMuted mt-0.5">
                     {g.instructor_name} • {g.subject_name}
                   </p>
+                  {String(g.status || '').toLowerCase() === 'pending_approval' && (
+                    <span className="inline-block mt-2 text-[10px] font-semibold uppercase tracking-wide text-sky-300 bg-sky-500/10 border border-sky-500/30 rounded-lg px-2 py-0.5">
+                      Sorğu göndərildi — müəllim təsdiqi gözlənilir
+                    </span>
+                  )}
                   {String(g.status || '').toLowerCase() === 'pending_setup' && (
                     <span className="inline-block mt-2 text-[10px] font-semibold uppercase tracking-wide text-amber-400 bg-amber-500/10 border border-amber-500/30 rounded-lg px-2 py-0.5">
-                      Müəllim təsdiqi gözlənilir
+                      Müəllim quraşdırmanı tamamlayır
                     </span>
                   )}
                   <div className="flex flex-wrap gap-3 mt-3 text-xs text-token-textMuted">

@@ -1,4 +1,9 @@
 const db = require('../utils/db');
+const {
+  syncInvitationFieldsForGroup,
+  decorateGroupInvitationFields,
+  buildInvitationLink,
+} = require('../services/joinInvitationService');
 
 function parsePublicLabel(v) {
   const s = String(v || '').trim().toLowerCase();
@@ -57,13 +62,15 @@ const getTeaching = async (req, res) => {
     for (const g of groups) {
       const bucket = byId.get(String(g.subject_id));
       if (bucket)
-        bucket.groups.push({
+        bucket.groups.push(decorateGroupInvitationFields({
           id: g.id,
           name: g.name,
           sort_order: g.sort_order,
           join_code: g.join_code || null,
           join_code_expires_at: g.join_code_expires_at || null,
-        });
+          invitation_code: g.invitation_code || null,
+          invitation_link: g.invitation_link || null,
+        }));
     }
 
     res.json({
@@ -152,12 +159,15 @@ const postGroup = async (req, res) => {
     const sgo = Number(mxg[0]?.n) || 0;
     const joinCode = await generateUniqueJoinCode();
     const { rows } = await db.query(
-      `INSERT INTO instructor_groups (instructor_id, subject_id, name, sort_order, join_code)
-       VALUES ($1, $2, $3, $4, $5)
-       RETURNING id, subject_id, name, sort_order, join_code, join_code_expires_at`,
-      [req.user.id, subject_id, name, sgo, joinCode]
+      `INSERT INTO instructor_groups (instructor_id, subject_id, name, sort_order, join_code, invitation_code, invitation_link)
+       VALUES ($1, $2, $3, $4, $5, $5, $6)
+       RETURNING id, subject_id, name, sort_order, join_code, join_code_expires_at, invitation_code, invitation_link`,
+      [req.user.id, subject_id, name, sgo, joinCode, buildInvitationLink(joinCode)]
     );
-    res.status(201).json({ success: true, group: rows[0] });
+    res.status(201).json({
+      success: true,
+      group: decorateGroupInvitationFields(rows[0]),
+    });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

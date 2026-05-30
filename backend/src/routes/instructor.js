@@ -10,8 +10,26 @@ const {
 } = require('../controllers/instructorTeachingController');
 const { patchInstructorMapProfile } = require('../controllers/instructorMapProfileController');
 const { listClasses, rotateJoinCode } = require('../controllers/instructorClassesController');
+const {
+  listJoinRequests,
+  joinRequestsCount,
+  approveRequest,
+  rejectRequest,
+} = require('../controllers/joinInvitationController');
+const { attachEntitlements, enforceStudentsLimit } = require('../middleware/entitlements');
 
 router.get('/teaching', authenticate, authorize('instructor'), getTeaching);
+router.get('/join-requests', authenticate, authorize('instructor'), listJoinRequests);
+router.get('/join-requests/count', authenticate, authorize('instructor'), joinRequestsCount);
+router.post(
+  '/join-requests/:id/approve',
+  authenticate,
+  authorize('instructor'),
+  attachEntitlements,
+  enforceStudentsLimit,
+  approveRequest,
+);
+router.post('/join-requests/:id/reject', authenticate, authorize('instructor'), rejectRequest);
 router.get('/classes', authenticate, authorize('instructor'), listClasses);
 router.post('/classes/:id/rotate-join-code', authenticate, authorize('instructor'), rotateJoinCode);
 router.patch('/profile-label', authenticate, authorize('instructor'), patchPublicLabel);

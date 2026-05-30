@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { format, isValid, parseISO } from 'date-fns'
 import api from '../../lib/api'
@@ -27,6 +28,37 @@ function splitFullName(full) {
 
 function joinFullName(first, last) {
   return `${String(first || '').trim()} ${String(last || '').trim()}`.trim()
+}
+
+/** Ad/soyad: ayrı sahələr və ya tək sətirdə «Ad Soyad». */
+function resolveStudentNames(data) {
+  let firstName = String(data?.first_name || splitFullName(data?.full_name).first_name).trim()
+  let lastName = String(data?.last_name || splitFullName(data?.full_name).last_name).trim()
+  if (firstName && !lastName) {
+    const split = splitFullName(firstName)
+    if (split.last_name) {
+      firstName = split.first_name
+      lastName = split.last_name
+    }
+  }
+  return { firstName, lastName }
+}
+
+const DEFAULT_LESSON_TIME = '15:00'
+
+function defaultAddForm() {
+  const today = format(new Date(), 'yyyy-MM-dd')
+  const dow = ((new Date().getDay() + 6) % 7) + 1
+  const lesson_weekdays = [dow]
+  const lesson_times = { [String(dow)]: DEFAULT_LESSON_TIME }
+  const first_lesson_date = alignFirstLessonYmd(today, lesson_weekdays, lesson_times) || today
+  return {
+    ...emptyForm,
+    first_lesson_date,
+    enrollment_date: first_lesson_date,
+    lesson_weekdays,
+    lesson_times,
+  }
 }
 
 const BILLING_OPTS = [
@@ -417,11 +449,19 @@ function StudentFormFields({
                 onClick={() =>
                   setData((p) => {
                     const cur = new Set(Array.isArray(p.lesson_weekdays) ? p.lesson_weekdays : [])
-                    if (cur.has(d.v)) cur.delete(d.v)
-                    else cur.add(d.v)
+                    const lesson_times = { ...(p.lesson_times || {}) }
+                    if (cur.has(d.v)) {
+                      cur.delete(d.v)
+                      delete lesson_times[String(d.v)]
+                      delete lesson_times[d.v]
+                    } else {
+                      cur.add(d.v)
+                      const key = String(d.v)
+                      if (!lesson_times[key] && !lesson_times[d.v]) lesson_times[key] = DEFAULT_LESSON_TIME
+                    }
                     const lesson_weekdays = [...cur].sort((a, b) => a - b)
-                    const next = { ...p, lesson_weekdays }
-                    return mode === 'setup' ? alignFirstFromEnrollment(next, lesson_weekdays, p.lesson_times) : next
+                    const next = { ...p, lesson_weekdays, lesson_times }
+                    return mode === 'setup' ? alignFirstFromEnrollment(next, lesson_weekdays, lesson_times) : next
                   })
                 }
                 className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
@@ -813,8 +853,12 @@ export default function InstructorStudents() {
   const isPendingSetup = (s) =>
     String(s?.enrollment_status || '').toLowerCase() === 'pending_setup'
 
+  const isPendingApproval = (s) =>
+    String(s?.enrollment_status || '').toLowerCase() === 'pending_approval'
+
   /** Join kodu və ya köhnə aktiv qeydiyyat — cədvəl/paket tamamlanmayıb */
   const needsSetup = (s) => {
+    if (isPendingApproval(s)) return false
     if (isPendingSetup(s)) return true
     const days = normalizeWeekdays(s?.lesson_weekdays)
     if (!days.length) return true
@@ -1494,24 +1538,33 @@ export default function InstructorStudents() {
             {listLoading ? '…' : `${students.length} telebe`}
           </p>
         </div>
-        <Button
-          className="w-full sm:w-auto shrink-0 justify-center py-2.5 px-5"
-          disabled={blocked}
-          onClick={() => {
-            setForm(emptyForm)
-            setAddModal(true)
-          }}
-        >
-          <span className="inline-flex items-center gap-2">
-            <span
-              aria-hidden
-              className="w-6 h-6 rounded-lg bg-black/15 border border-black/10 inline-flex items-center justify-center"
-            >
-              +
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto shrink-0">
+          <Link
+            to="/instructor/join-requests"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold border border-primary/35 text-primary hover:bg-primary/10 transition-colors"
+          >
+            Sorğular
+          </Link>
+          <Button
+            className="w-full sm:w-auto shrink-0 justify-center py-2.5 px-5"
+            disabled={blocked}
+            onClick={() => {
+              setForm(defaultAddForm())
+              setAddFormError('')
+              setAddModal(true)
+            }}
+          >
+            <span className="inline-flex items-center gap-2">
+              <span
+                aria-hidden
+                className="w-6 h-6 rounded-lg bg-black/15 border border-black/10 inline-flex items-center justify-center"
+              >
+                +
+              </span>
+              Yeni tələbə əlavə et
             </span>
-            Yeni tələbə əlavə et
-          </span>
-        </Button>
+          </Button>
+        </div>
       </div>
 
       <div className="mb-4 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
@@ -1760,6 +1813,11 @@ export default function InstructorStudents() {
                             <div className="min-w-0">
                               <div className="font-semibold text-token-textMain truncate flex items-center gap-2">
                                 {s.full_name}
+                                {isPendingApproval(s) && (
+                                  <StatusBadge variant="pending" className="text-[10px]">
+                                    Sorğu gözləyir
+                                  </StatusBadge>
+                                )}
                                 {needsSetup(s) && (
                                   <StatusBadge variant="due" className="text-[10px]">
                                     Quraşdırma lazım
@@ -1963,10 +2021,11 @@ export default function InstructorStudents() {
           <Button onClick={addStudent} loading={loading} className="flex-1 justify-center">
             Əlavə et
           </Button>
-          <Button variant="secondary" onClick={closeAddModal} className="flex-1 justify-center">
+          <Button type="button" variant="secondary" onClick={closeAddModal} className="flex-1 justify-center">
             Legv et
           </Button>
         </div>
+        </form>
       </Modal>
 
       <Modal

@@ -8,13 +8,15 @@ const {
   signup,
   loginWithEmail,
   resendVerificationEmail,
+  googleLogin,
+  googleComplete,
 } = require('../controllers/authController');
 const { authenticate, authorize } = require('../middleware/auth');
 const { attachEntitlements, enforceStudentsLimit } = require('../middleware/entitlements');
 
-/** Email-based auth only; legacy phone/PIN/Google routes removed from public API. */
-
 router.post('/login', login);
+router.post('/google/login', googleLogin);
+router.post('/google/complete', googleComplete);
 
 router.post(
   '/register',

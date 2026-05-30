@@ -1,4 +1,5 @@
 const db = require('../utils/db');
+const { buildInvitationLink } = require('../services/joinInvitationService');
 
 async function generateUniqueJoinCode() {
   for (let i = 0; i < 50; i++) {
@@ -47,13 +48,16 @@ const rotateJoinCode = async (req, res) => {
     const gid = String(req.params.id || '').trim();
     if (!gid) return res.status(400).json({ success: false, message: 'ID tələb olunur' });
     const code = await generateUniqueJoinCode();
+    const link = buildInvitationLink(code);
     const { rows } = await db.query(
       `UPDATE instructor_groups
        SET join_code = $3,
-           join_code_expires_at = NULL
+           join_code_expires_at = NULL,
+           invitation_code = $3,
+           invitation_link = $4
        WHERE id = $1 AND instructor_id = $2
-       RETURNING id, join_code, join_code_expires_at`,
-      [gid, iid, code],
+       RETURNING id, join_code, join_code_expires_at, invitation_code, invitation_link`,
+      [gid, iid, code, link],
     );
     if (!rows[0]) return res.status(404).json({ success: false, message: 'Tapılmadı' });
     res.json({ success: true, group: rows[0] });

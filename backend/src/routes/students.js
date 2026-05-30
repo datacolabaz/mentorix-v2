@@ -16,6 +16,8 @@ const { patchStudentEmail } = require('../controllers/studentEmailController');
 const { deliverPermanentPinSms } = require('../controllers/authController');
 const { requireInstructorPhoneVerified } = require('../middleware/trial');
 const { attachEntitlements, enforceStudentsLimit } = require('../middleware/entitlements');
+const { createJoinRequest } = require('../services/joinInvitationService');
+const { submitJoinWithProfile } = require('../controllers/joinInvitationController');
 
 function gateInstructorEnrollment(req, res, next) {
   if (req.user?.role === 'admin') return next();
@@ -1436,9 +1438,29 @@ router.get('/my/link', authenticate, authorize('student'), async (req, res) => {
   }
 });
 
+router.post('/my/join-request', authenticate, authorize('student'), submitJoinWithProfile);
+
 // Student: join a teacher class by join code.
 router.post('/my/join', authenticate, authorize('student'), async (req, res) => {
   try {
+    const hasProfile =
+      req.body?.first_name != null &&
+      req.body?.last_name != null &&
+      req.body?.phone_number != null;
+    if (hasProfile) {
+      const result = await createJoinRequest({
+        studentId: req.user.id,
+        code: req.body?.code,
+        first_name: req.body.first_name,
+        last_name: req.body.last_name,
+        phone_number: req.body.phone_number,
+        parent_name: req.body.parent_name,
+        parent_phone: req.body.parent_phone,
+      });
+      const enrollments = await listActiveEnrollmentsForStudent(req.user.id);
+      return res.status(201).json({ ...result, success: true, enrollments });
+    }
+
     const raw = String(req.body?.code || '').trim().toUpperCase();
     const code = raw.replace(/\s+/g, '');
     if (!code) return res.status(400).json({ success: false, message: 'Join kodu tələb olunur' });
@@ -1482,7 +1504,7 @@ router.post('/my/join', authenticate, authorize('student'), async (req, res) => 
        FROM enrollments
        WHERE student_id = $1
          AND (deleted_at IS NULL)
-         AND COALESCE(LOWER(TRIM(status)), 'active') IN ('active', 'pending_setup')`,
+         AND COALESCE(LOWER(TRIM(status)), 'active') IN ('active', 'pending_setup', 'pending_approval')`,
       [req.user.id],
     );
     const alreadyInGroup = existing.find((e) => String(e.group_id || '') === String(g.group_id));

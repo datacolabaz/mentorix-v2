@@ -100,16 +100,23 @@ export default function InstructorDashboard() {
 
   useEffect(() => {
     if (!quickOpen) return
-    if (smsProfileLoading) return
-    if (smsProfile) return
-
+    let cancelled = false
     setSmsProfileLoading(true)
     api
       .get('/notifications/instructor')
-      .then((d) => setSmsProfile(d.profile || null))
-      .catch(() => setSmsProfile(null))
-      .finally(() => setSmsProfileLoading(false))
-  }, [quickOpen, smsProfile, smsProfileLoading])
+      .then((d) => {
+        if (!cancelled) setSmsProfile(d.profile || null)
+      })
+      .catch(() => {
+        if (!cancelled) setSmsProfile(null)
+      })
+      .finally(() => {
+        if (!cancelled) setSmsProfileLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [quickOpen])
 
   const smsLimit = Number(smsProfile?.sms_limit ?? 0)
   const smsUsed = Number(smsProfile?.sms_used ?? 0)

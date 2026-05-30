@@ -30,6 +30,7 @@ import InstructorAnalytics from './pages/instructor/Analytics'
 import InstructorPayments from './pages/instructor/Payments'
 import InstructorNotifications from './pages/instructor/Notifications'
 import InstructorSettings from './pages/instructor/Settings'
+import InstructorJoinRequests from './pages/instructor/JoinRequests'
 import InstructorTasks from './pages/instructor/Tasks'
 import PaymentSuccess from './pages/instructor/PaymentSuccess'
 import PaymentFail from './pages/instructor/PaymentFail'
@@ -139,6 +140,7 @@ export default function App() {
       <Route path="/instructor" element={<ProtectedRoute roles={['instructor']}><InstructorLayout /></ProtectedRoute>}>
         <Route index element={<InstructorDashboard />} />
         <Route path="students" element={<InstructorStudents />} />
+        <Route path="join-requests" element={<InstructorJoinRequests />} />
         <Route path="schedule" element={<InstructorSchedule />} />
         <Route path="exams" element={<InstructorExams />} />
         <Route path="attendance" element={<InstructorAttendance />} />

@@ -27,6 +27,7 @@ const NAV_SECTIONS = [
       { to: '/instructor', label: 'Dashboard', icon: <NavIcon name="dashboard" />, end: true },
       { to: '/courses', label: 'Kurslar', icon: <NavIcon name="courses" /> },
       { to: '/instructor/students', label: 'Tələbələrim', icon: <NavIcon name="students" /> },
+      { to: '/instructor/join-requests', label: 'Sorğular', icon: <NavIcon name="notifications" />, badgeKey: 'join_requests' },
       { to: '/instructor/schedule', label: 'Cədvəlim', icon: <NavIcon name="schedule" /> },
       { to: '/instructor/attendance', label: 'Davamiyyət', icon: <NavIcon name="attendance" /> },
       { to: '/instructor/exams', label: 'İmtahanlar', icon: <NavIcon name="exams" /> },
@@ -59,6 +60,7 @@ export default function InstructorLayout() {
   const [limitStatus, setLimitStatus] = useState({ level: null, message: null })
   const [notifFetchAt, setNotifFetchAt] = useState(0)
   const [hasAlerts, setHasAlerts] = useState(false)
+  const [joinRequestsCount, setJoinRequestsCount] = useState(0)
   const billingQ = useBillingStatus()
   const billing = billingQ.data || null
   const plansQ = useSubscriptionPlans()
@@ -165,6 +167,20 @@ export default function InstructorLayout() {
       cancelled = true
     }
   }, [billing?.messages?.suppress_limit_bar])
+
+  const fetchJoinRequestsCount = () => {
+    api
+      .get('/instructor/join-requests/count')
+      .then((d) => setJoinRequestsCount(Number(d?.count ?? 0) || 0))
+      .catch(() => setJoinRequestsCount(0))
+  }
+
+  useEffect(() => {
+    fetchJoinRequestsCount()
+    const onChange = () => fetchJoinRequestsCount()
+    window.addEventListener('mx:join-requests-changed', onChange)
+    return () => window.removeEventListener('mx:join-requests-changed', onChange)
+  }, [location.pathname])
 
   useEffect(() => {
     const st = String(billing?.status || '')
@@ -395,7 +411,12 @@ export default function InstructorLayout() {
                           <span className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-primary shadow-[0_0_0_2px_rgba(15,23,42,0.35)]" />
                         ) : null}
                       </span>
-                      <span className="truncate">{item.label}</span>
+                      <span className="truncate flex-1">{item.label}</span>
+                      {item.badgeKey === 'join_requests' && joinRequestsCount > 0 ? (
+                        <span className="shrink-0 min-w-[1.25rem] h-5 px-1.5 rounded-full bg-primary text-[#041018] text-[10px] font-bold inline-flex items-center justify-center">
+                          {joinRequestsCount > 99 ? '99+' : joinRequestsCount}
+                        </span>
+                      ) : null}
                     </NavLink>
                   ))}
                 </div>

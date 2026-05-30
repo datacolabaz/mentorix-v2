@@ -5,6 +5,7 @@ import api from '../../lib/api'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
 import { useToast } from '../../components/common/Toast'
+import { buildWhatsAppInviteMessage, groupInvitationLink } from '../../lib/joinInvite'
 import useAuthStore from '../../hooks/useAuth'
 import { instructorRoleAz } from '../../lib/instructorLabel'
 import useUiStore from '../../hooks/useUi'
@@ -1182,7 +1183,7 @@ export default function InstructorSettings() {
                                     type="button"
                                     className={['text-xs', theme === 'dark' ? 'text-primary hover:brightness-110' : 'text-primary hover:brightness-110'].join(' ')}
                                     onClick={async () => {
-                                      const link = `${window.location.origin}/join/${encodeURIComponent(String(g.join_code))}`
+                                      const link = groupInvitationLink(g)
                                       try {
                                         await navigator.clipboard.writeText(link)
                                         toast('Link kopyalandı', 'success')
@@ -1192,6 +1193,23 @@ export default function InstructorSettings() {
                                     }}
                                   >
                                     Link
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className={['text-xs font-semibold', theme === 'dark' ? 'text-emerald-300 hover:brightness-110' : 'text-emerald-700 hover:brightness-110'].join(' ')}
+                                    title="WhatsApp üçün hazır mətn"
+                                    onClick={async () => {
+                                      const link = groupInvitationLink(g)
+                                      const text = buildWhatsAppInviteMessage(link)
+                                      try {
+                                        await navigator.clipboard.writeText(text)
+                                        toast('WhatsApp mətni kopyalandı', 'success')
+                                      } catch {
+                                        toast('Kopyalanmadı', 'error')
+                                      }
+                                    }}
+                                  >
+                                    Linki Kopyala
                                   </button>
                                   <button
                                     type="button"
