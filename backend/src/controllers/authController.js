@@ -1147,14 +1147,13 @@ const sendMyPhoneVerifyOtp = async (req, res) => {
     if (!meUser) return res.status(404).json({ success: false, message: 'Tapılmadı' });
 
     const { rows: ownerRows } = await db.query(
-      `SELECT id, email, role, google_sub, phone_verified
+      `SELECT id, email, role, google_sub, phone_verified, is_active
        FROM users
-       WHERE is_active = TRUE
-         AND ${PHONE_NORM} = $1
-       LIMIT 2`,
+       WHERE ${PHONE_NORM} = $1`,
       [clean]
     );
-    const owner = ownerRows.find((u) => u && String(u.id) !== String(req.user.id)) || null;
+    const owner =
+      ownerRows.find((u) => u && String(u.id) !== String(req.user.id) && u.is_active === true) || null;
     if (owner) {
       if (!phoneLinkRolesCompatible(sessionRole, owner.role)) {
         await logRisk(req.user.id, req, { kind: 'phone_role_mismatch', phone: phoneCanon, owner_id: owner.id }, 35);
@@ -1181,13 +1180,16 @@ const sendMyPhoneVerifyOtp = async (req, res) => {
     const billingId = await resolveSmsBillingForLogin(meUser, sessionRole);
     await assertSmsOk(billingId);
 
-    await db.query(
-      `UPDATE users
-       SET phone = $2,
-           phone_verified = FALSE
-       WHERE id = $1`,
-      [req.user.id, phoneCanon]
-    );
+    // Köhnə mobil hesab varsa telefonu indi yazma — UNIQUE pozulur; OTP təsdiqindən sonra birləşdirilir.
+    if (!owner) {
+      await db.query(
+        `UPDATE users
+         SET phone = $2,
+             phone_verified = FALSE
+         WHERE id = $1`,
+        [req.user.id, phoneCanon]
+      );
+    }
 
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = new Date(Date.now() + 5 * 60000);
@@ -1208,6 +1210,13 @@ const sendMyPhoneVerifyOtp = async (req, res) => {
       will_link_existing: Boolean(owner),
     });
   } catch (err) {
+    if (err.code === '23505' && /phone/i.test(String(err.constraint || err.detail || err.message))) {
+      return res.status(409).json({
+        success: false,
+        message:
+          'Bu telefon artıq başqa hesabda qeydiyyatdadır. OTP göndərilməsi üçün yenidən cəhd edin — sistem hesabları birləşdirəcək.',
+      });
+    }
     if (err.statusCode && err.body) return res.status(err.statusCode).json(err.body);
     res.status(500).json({ success: false, message: err.message });
   }
