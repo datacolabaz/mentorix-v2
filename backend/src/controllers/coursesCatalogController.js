@@ -56,4 +56,9 @@ const assignableStudents = async (req, res) => {
   try {
     const students = await listAssignableStudents(req.user.id);
     res.json({ success: true, students });
-  } catch (err) 
+  } catch (err) {
+    res.status(err.statusCode || 500).json({ success: false, message: err.message });
+  }
+};
+
+module.exports = { list, getOne, create, assignStudents, assignableStudents };

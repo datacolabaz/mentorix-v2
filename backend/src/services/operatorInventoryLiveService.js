@@ -135,4 +135,41 @@ async function syncOperatorInventoryFromLive(operator, usage) {
   const { live, display } = await buildInventoryDisplayWithUsage(operator, usage);
   const payload = {};
 
-  if (live.s
+  if (live.sms.ok && live.sms.balance != null) {
+    payload.operator_sms_stock_remaining = live.sms.balance;
+    if (!operator?.has_sms_total && display.sms_total > 0) {
+      payload.operator_sms_stock_total = display.sms_total;
+    }
+  }
+
+  const diskTotal = live.storage.disk?.total_mb || 0;
+  const envTotal = live.storage.env_total_mb || 0;
+  const totalMb = diskTotal > 0 ? diskTotal : envTotal;
+  if (totalMb > 0) {
+    payload.operator_storage_mb_total = totalMb;
+    const free =
+      live.storage.disk?.free_mb != null
+        ? live.storage.disk.free_mb
+        : Math.max(0, totalMb - (display.storage_used_mb || 0));
+    payload.operator_storage_mb_remaining = free;
+  } else if (display.storage_used_mb > 0 && !operator?.has_storage_total) {
+    payload.operator_storage_mb_total = display.storage_used_mb;
+    payload.operator_storage_mb_remaining = 0;
+  }
+
+  if (!Object.keys(payload).length) {
+    const err = new Error(
+      'Sinxron üçün SMS balansı (QuickSMS) və ya Railway disk/env PLATFORM_STORAGE_TOTAL_MB lazımdır'
+    );
+    err.statusCode = 400;
+    throw err;
+  }
+
+  await adminUpdateBillingSettings(payload);
+  return payload;
+}
+
+module.exports = {
+  buildInventoryDisplayWithUsage,
+  syncOperatorInventoryFromLive,
+};
