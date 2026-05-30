@@ -1,5 +1,6 @@
 const db = require('../utils/db');
 const { getGroupLessonSchedule } = require('./studentEnrollmentsService');
+const { parseDiscountPercent } = require('../utils/groupPaymentTerms');
 
 function parseLessonWeekdays(raw) {
   if (raw == null) return [];
@@ -76,6 +77,9 @@ function parseGroupDefaultsPayload(body) {
   return {
     billing_type: normalizeBillingType(body?.default_billing_type ?? body?.billing_type),
     package_fee: parsePackageFee(body?.default_package_fee ?? body?.package_fee ?? body?.monthly_fee),
+    discount_percent: parseDiscountPercent(
+      body?.default_discount_percent ?? body?.discount_percent,
+    ),
     billing_timing,
     payment_plan,
     lesson_weekdays: lwd,
@@ -94,6 +98,7 @@ function rowToDefaults(row) {
   return {
     billing_type,
     package_fee: row.default_package_fee != null ? Number(row.default_package_fee) : null,
+    discount_percent: parseDiscountPercent(row.default_discount_percent),
     billing_timing: String(row.default_billing_timing || 'postpaid').toLowerCase() === 'prepaid' ? 'prepaid' : 'postpaid',
     payment_plan: String(row.default_payment_plan || 'full').toLowerCase() === 'partial' ? 'partial' : 'full',
     lesson_weekdays: lwd,
@@ -147,9 +152,9 @@ async function getPeerEnrollmentDefaults(groupId) {
 async function getGroupInviteDefaults(groupId) {
   const { rows } = await db.query(
     `SELECT id, subject_id, instructor_id, name,
-            default_billing_type, default_package_fee, default_billing_timing,
-            default_payment_plan, default_lesson_weekdays, default_lesson_times,
-            default_notifications_enabled, default_initial_payment_status
+            default_billing_type, default_package_fee, default_discount_percent,
+            default_billing_timing, default_payment_plan, default_lesson_weekdays,
+            default_lesson_times, default_notifications_enabled, default_initial_payment_status
      FROM instructor_groups
      WHERE id = $1
      LIMIT 1`,
@@ -171,6 +176,7 @@ async function getGroupInviteDefaults(groupId) {
     return {
       billing_type: '8_lessons',
       package_fee: null,
+      discount_percent: null,
       billing_timing: 'postpaid',
       payment_plan: 'full',
       lesson_weekdays: sched.lesson_weekdays,

@@ -148,13 +148,4 @@ export default function AdminDashboard() {
                   SMS: {i.sms_used_monthly ?? 0}/{i.sms_limit_monthly ?? '∞'}
                 </span>
                 <span className={`px-2 py-0.5 rounded-full ${i.is_active ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>
-                  {i.is_active ? 'Aktiv' : 'Deaktiv'}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </Card>
-    </div>
-  )
-}
+                  {i.is_active ? '

@@ -388,32 +388,4 @@ export default function AdminInventory() {
                 </thead>
                 <tbody>
                   {inventory.instructors_near_limit.map((row) => (
-                    <tr key={row.id} className="border-b border-indigo-500/10">
-                      <td className="py-2 px-2 text-white">{row.full_name}</td>
-                      <td className="py-2 px-2 text-gray-400">{String(row.plan || '').toUpperCase()}</td>
-                      <td className="py-2 px-2 text-gray-300">
-                        {row.sms_cap != null ? `${row.sms_used}/${row.sms_cap} (${row.sms_pct}%)` : '—'}
-                      </td>
-                      <td className="py-2 px-2 text-gray-300">
-                        {row.storage_cap_mb != null
-                          ? `${row.storage_used_mb}/${row.storage_cap_mb} MB`
-                          : '—'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </Card>
-          ) : null}
-        </>
-      )}
-
-      <p className="text-xs text-gray-600">
-        <Link to="/admin/billing" className="text-primary hover:underline">
-          Platform ödənişləri →
-        </Link>{' '}
-        (paket qiymətləri və köçürmələr)
-      </p>
-    </div>
-  )
-}
+                    <tr key={row.id} 

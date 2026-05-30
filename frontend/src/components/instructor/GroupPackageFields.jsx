@@ -1,4 +1,12 @@
 import { WEEKDAYS } from '../../pages/instructor/Schedule'
+import {
+  applyPaymentScheme,
+  computeFinalPackageFee,
+  formatAzn,
+  paymentSchemeFromForm,
+  paymentTimingLabel,
+  parseDiscountPercent,
+} from '../../lib/groupPaymentTerms'
 
 const DEFAULT_LESSON_TIME = '15:00'
 
@@ -11,6 +19,7 @@ export function emptyGroupPackage() {
   return {
     default_billing_type: '8_lessons',
     default_package_fee: '',
+    default_discount_percent: '',
     default_billing_timing: 'postpaid',
     default_payment_plan: 'full',
     default_lesson_weekdays: [dow],
@@ -22,14 +31,14 @@ export function emptyGroupPackage() {
 
 export function groupPackageFromApi(g) {
   if (!g) return emptyGroupPackage()
-  const lwd = Array.isArray(g.default_lesson_weekdays)
-    ? g.default_lesson_weekdays
-    : []
+  const lwd = Array.isArray(g.default_lesson_weekdays) ? g.default_lesson_weekdays : []
   const lt =
     g.default_lesson_times && typeof g.default_lesson_times === 'object' ? g.default_lesson_times : {}
   return {
     default_billing_type: g.default_billing_type || '8_lessons',
     default_package_fee: g.default_package_fee != null ? String(g.default_package_fee) : '',
+    default_discount_percent:
+      g.default_discount_percent != null ? String(g.default_discount_percent) : '',
     default_billing_timing: g.default_billing_timing || 'postpaid',
     default_payment_plan: g.default_payment_plan || 'full',
     default_lesson_weekdays: lwd,
@@ -42,6 +51,11 @@ export function groupPackageFromApi(g) {
 export default function GroupPackageFields({ value, onChange, compact }) {
   const v = value || emptyGroupPackage()
   const set = (patch) => onChange({ ...v, ...patch })
+
+  const scheme = paymentSchemeFromForm(v)
+  const baseFee = Number(v.default_package_fee)
+  const disc = parseDiscountPercent(v.default_discount_percent)
+  const finalFee = computeFinalPackageFee(baseFee, disc)
 
   const toggleDay = (day) => {
     const cur = new Set(Array.isArray(v.default_lesson_weekdays) ? v.default_lesson_weekdays : [])
@@ -60,7 +74,8 @@ export default function GroupPackageFields({ value, onChange, compact }) {
     <div className={compact ? 'space-y-3' : 'space-y-4 rounded-xl border border-indigo-500/20 bg-[#0f0c29]/40 p-3'}>
       {!compact && (
         <p className="text-xs text-gray-400 leading-relaxed">
-          Dəvət linki ilə qoşulan tələbələr bu paket və cədvəli miras alır. Tələbə qiymət və paket görmür.
+          Dəvət linki ilə qoşulan tələbə paket qiymətini, ödəniş vaxtını və endirimi görür; «Razıyam» ilə təsdiq
+          edir. Təsdiqdən sonra eyni şərtlər tətbiq olunur.
         </p>
       )}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -76,18 +91,60 @@ export default function GroupPackageFields({ value, onChange, compact }) {
           </select>
         </div>
         <div>
-          <label className="block text-xs font-semibold text-gray-400 uppercase mb-1.5">Qiymət (₼) *</label>
+          <label className="block text-xs font-semibold text-gray-400 uppercase mb-1.5">Əsas qiymət (₼) *</label>
           <input
             className={inp}
             type="number"
             min={0}
             step={0.01}
-            placeholder="100"
+            placeholder="150"
             value={v.default_package_fee}
             onChange={(e) => set({ default_package_fee: e.target.value })}
           />
         </div>
       </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label className="block text-xs font-semibold text-gray-400 uppercase mb-1.5">
+            Endirim % (ixtiyari)
+          </label>
+          <input
+            className={inp}
+            type="number"
+            min={0}
+            max={100}
+            step={0.1}
+            placeholder="0"
+            value={v.default_discount_percent}
+            onChange={(e) => set({ default_discount_percent: e.target.value })}
+          />
+        </div>
+        <div className="flex flex-col justify-end">
+          <p className="text-xs text-gray-500 mb-1">Tələbəyə göstərilən məbləğ</p>
+          <p className="text-lg font-bold text-emerald-300 tabular-nums">
+            {finalFee != null ? formatAzn(finalFee) : '—'}
+          </p>
+          {disc != null && disc > 0 && Number.isFinite(baseFee) ? (
+            <p className="text-xs text-gray-500 line-through tabular-nums">{formatAzn(baseFee)}</p>
+          ) : null}
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-xs font-semibold text-gray-400 uppercase mb-1.5">Ödəniş vaxtı *</label>
+        <select
+          className={inp}
+          value={scheme}
+          onChange={(e) => onChange(applyPaymentScheme(v, e.target.value))}
+        >
+          <option value="full_prepaid">Əvvəlcədən tam — paket başlamazdan əvvəl tam ödəniş</option>
+          <option value="postpaid_full">Sonradan tam — paket bitdikdən sonra tam məbləğ</option>
+          <option value="installment">Hissəli — paket müddətində hissə-hissə ödəniş</option>
+        </select>
+        <p className="text-xs text-gray-500 mt-1.5">{paymentTimingLabel(scheme)}</p>
+      </div>
+
       <div>
         <label className="block text-xs font-semibold text-gray-400 uppercase mb-1.5">Dərs günləri və saatları *</label>
         <div className="flex flex-wrap gap-2 mb-2">
@@ -139,6 +196,7 @@ export function groupPackagePayload(pkg, name) {
     name,
     default_billing_type: pkg.default_billing_type,
     default_package_fee: pkg.default_package_fee,
+    default_discount_percent: pkg.default_discount_percent || null,
     default_billing_timing: pkg.default_billing_timing,
     default_payment_plan: pkg.default_payment_plan,
     default_lesson_weekdays: pkg.default_lesson_weekdays,

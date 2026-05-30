@@ -197,6 +197,4 @@ module.exports = {
   getStoragePacks,
   findStoragePack,
   getBillingConfig,
-  adminGetBillingSettings,
-  adminUpdateBillingSettings,
-};
+  a

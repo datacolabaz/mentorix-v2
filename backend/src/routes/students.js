@@ -1456,6 +1456,7 @@ router.post('/my/join', authenticate, authorize('student'), async (req, res) => 
         phone_number: req.body.phone_number,
         parent_name: req.body.parent_name,
         parent_phone: req.body.parent_phone,
+        payment_terms_accepted: Boolean(req.body?.payment_terms_accepted),
       });
       const enrollments = await listActiveEnrollmentsForStudent(req.user.id);
       return res.status(201).json({ ...result, success: true, enrollments });

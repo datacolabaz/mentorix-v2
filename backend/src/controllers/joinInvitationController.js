@@ -79,6 +79,7 @@ const submitJoinWithProfile = async (req, res) => {
       phone_number,
       parent_name,
       parent_phone,
+      payment_terms_accepted: Boolean(req.body?.payment_terms_accepted),
     });
     res.status(201).json({ success: true, ...result });
   } catch (err) {
@@ -93,8 +94,4 @@ const submitJoinWithProfile = async (req, res) => {
 module.exports = {
   getPublicJoin,
   listJoinRequests,
-  joinRequestsCount,
-  approveRequest,
-  rejectRequest,
-  submitJoinWithProfile,
-};
+  joinReque

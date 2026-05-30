@@ -8,6 +8,8 @@ import { useToast } from '../../components/common/Toast'
 import PhoneInput from '../../components/auth/PhoneInput'
 import GoogleSignInButton from '../../components/auth/GoogleSignInButton'
 import { useStudentGroupsOptional } from '../../contexts/StudentGroupContext'
+import { formatAzn, billingTypeLabel } from '../../lib/groupPaymentTerms'
+import { WEEKDAYS } from '../instructor/Schedule'
 
 const inp =
   'w-full border border-[color:var(--border-subtle)] rounded-xl px-4 py-3 text-token-textMain text-sm outline-none focus:border-primary/40 bg-token-surfaceCard/55'
@@ -48,6 +50,7 @@ export default function JoinClass() {
   const [busy, setBusy] = useState(false)
   const [authBusy, setAuthBusy] = useState(false)
   const [submitted, setSubmitted] = useState(false)
+  const [termsAccepted, setTermsAccepted] = useState(false)
 
   useEffect(() => {
     if (!initialCode) {
@@ -123,6 +126,10 @@ export default function JoinClass() {
     const ln = String(lastName).trim()
     if (!fn || !ln) return toast('Ad və soyad tələb olunur', 'error')
     if (!String(phone).trim()) return toast('Telefon tələb olunur', 'error')
+    if (!joinInfo?.package_offer) {
+      return toast('Qrup paketi hələ hazır deyil — müəllimlə əlaqə saxlayın', 'error')
+    }
+    if (!termsAccepted) return toast('Ödəniş şərtləri ilə razılaşın', 'error')
     setBusy(true)
     try {
       const r = await api.post('/students/my/join', {
@@ -132,6 +139,7 @@ export default function JoinClass() {
         phone_number: phone,
         parent_name: parentName || undefined,
         parent_phone: parentPhone || undefined,
+        payment_terms_accepted: true,
       })
       toast(r?.message || 'Sorğunuz göndərildi', 'success')
       setSubmitted(true)
@@ -157,13 +165,67 @@ export default function JoinClass() {
         <Card className="p-4 border border-red-500/30 text-red-300 text-sm mb-4">{infoError}</Card>
       )}
       {joinInfo && (
-        <Card className="p-4 mb-4 border border-[color:var(--border-subtle)]">
-          <p className="text-xs uppercase tracking-wider text-token-textMuted mb-1">Qrup</p>
-          <p className="text-lg font-semibold text-token-textMain">{joinInfo.group_name}</p>
-          <p className="text-sm text-token-textMuted mt-1">
-            {joinInfo.subject_name} · {joinInfo.instructor_name}
-          </p>
-        </Card>
+        <>
+          <Card className="p-4 mb-4 border border-[color:var(--border-subtle)]">
+            <p className="text-xs uppercase tracking-wider text-token-textMuted mb-1">Qrup</p>
+            <p className="text-lg font-semibold text-token-textMain">{joinInfo.group_name}</p>
+            <p className="text-sm text-token-textMuted mt-1">
+              {joinInfo.subject_name} · {joinInfo.instructor_name}
+            </p>
+          </Card>
+          {joinInfo.package_offer ? (
+            <Card className="p-4 mb-4 border border-emerald-500/25 bg-emerald-500/5 space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-wider text-emerald-200/90">Paket və ödəniş</p>
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <p className="text-token-textMuted text-xs">Paket</p>
+                  <p className="text-token-textMain font-medium">
+                    {joinInfo.package_offer.billing_type_label ||
+                      billingTypeLabel(joinInfo.package_offer.billing_type)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-token-textMuted text-xs">Ödəniş vaxtı</p>
+                  <p className="text-token-textMain font-medium">
+                    {joinInfo.package_offer.payment_timing_short}
+                  </p>
+                </div>
+                <div className="col-span-2">
+                  <p className="text-token-textMuted text-xs">Məbləğ</p>
+                  <p className="text-xl font-bold text-emerald-300 tabular-nums">
+                    {formatAzn(joinInfo.package_offer.final_price)}
+                  </p>
+                  {joinInfo.package_offer.discount_percent ? (
+                    <p className="text-xs text-token-textMuted mt-0.5">
+                      Əsas qiymət {formatAzn(joinInfo.package_offer.package_fee)} · endirim{' '}
+                      {joinInfo.package_offer.discount_percent}%
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+              <p className="text-xs text-token-textMuted leading-relaxed">
+                {joinInfo.package_offer.payment_timing_label}
+              </p>
+              {(joinInfo.package_offer.lesson_weekdays || []).length > 0 ? (
+                <p className="text-xs text-token-textMuted">
+                  Cədvəl:{' '}
+                  {(joinInfo.package_offer.lesson_weekdays || [])
+                    .map((d) => {
+                      const wd = WEEKDAYS.find((w) => w.v === d)
+                      const t = joinInfo.package_offer.lesson_times?.[String(d)]
+                      return wd ? `${wd.short} ${t || ''}`.trim() : null
+                    })
+                    .filter(Boolean)
+                    .join(' · ')}
+                </p>
+              ) : null}
+            </Card>
+          ) : (
+            <Card className="p-4 mb-4 border border-amber-500/30 bg-amber-500/10 text-sm text-amber-100/95">
+              Müəllim qrup paketini hələ tamamlamayıb. Qoşulmaq üçün ondan dəvət linkini yeniləməsini xahiş edin.
+            </Card>
+          )}
+        </>
       )}
 
       {submitted ? (
@@ -242,11 +304,30 @@ export default function JoinClass() {
                   inputMode="tel"
                 />
               </div>
+              {joinInfo?.package_offer ? (
+                <label className="flex items-start gap-3 text-sm cursor-pointer rounded-xl border border-white/10 p-3 bg-white/[0.03]">
+                  <input
+                    type="checkbox"
+                    className="mt-1 rounded border-white/20"
+                    checked={termsAccepted}
+                    onChange={(e) => setTermsAccepted(e.target.checked)}
+                  />
+                  <span className="text-token-textMuted leading-relaxed">
+                    Paket qiyməti ({formatAzn(joinInfo.package_offer.final_price)}), ödəniş vaxtı (
+                    <strong className="text-token-textMain">
+                      {joinInfo.package_offer.payment_timing_short}
+                    </strong>
+                    ) və cədvəllə razıyam; müəllimin təsdiqindən sonra bu şərtlər tətbiq olunacaq.
+                  </span>
+                </label>
+              ) : null}
               <Button
                 className="w-full justify-center"
                 loading={busy}
                 type="submit"
-                disabled={!user || !initialCode || infoError}
+                disabled={
+                  !user || !initialCode || infoError || !joinInfo?.package_offer || !termsAccepted
+                }
               >
                 Qoşul
               </Button>

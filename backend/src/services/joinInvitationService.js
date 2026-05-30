@@ -4,6 +4,7 @@ const {
   getGroupInviteDefaults,
   assertGroupDefaultsReady,
 } = require('./groupInviteDefaults');
+const { buildPackagePreview } = require('../utils/groupPaymentTerms');
 const { activateEnrollmentFromGroupDefaults } = require('./enrollmentActivationService');
 const {
   canonicalStudentPhone,
@@ -84,6 +85,8 @@ async function getPublicJoinInfo(code) {
   }
   const inviteCode = g.invitation_code || g.join_code;
   const invitation_link = g.invitation_link || buildInvitationLink(inviteCode);
+  const defaults = await getGroupInviteDefaults(g.group_id);
+  const package_offer = buildPackagePreview(defaults);
   return {
     group_id: g.group_id,
     group_name: g.group_name,
@@ -91,6 +94,8 @@ async function getPublicJoinInfo(code) {
     instructor_name: g.instructor_name,
     invitation_code: inviteCode,
     invitation_link,
+    package_offer,
+    invite_ready: Boolean(package_offer),
   };
 }
 
@@ -114,6 +119,7 @@ async function createJoinRequest({
   phone_number,
   parent_name,
   parent_phone,
+  payment_terms_accepted,
 }) {
   const g = await findGroupByInvitationCode(code);
   if (!g) {
@@ -177,6 +183,28 @@ async function createJoinRequest({
   const parentName = parent_name != null ? String(parent_name).trim() : '';
   const parentPhone = parent_phone != null ? String(parent_phone).trim() : '';
 
+  const defaults = await getGroupInviteDefaults(g.group_id);
+  const package_offer = buildPackagePreview(defaults);
+  if (!package_offer) {
+    const err = new Error(
+      'Qrup paketi hələ tam deyil. Müəllimdən dəvət linkini yeniləməsini xahiş edin.',
+    );
+    err.statusCode = 400;
+    err.code = 'GROUP_PACKAGE_NOT_READY';
+    throw err;
+  }
+  if (!payment_terms_accepted) {
+    const err = new Error('Ödəniş şərtləri ilə razılaşmaq üçün qutunu işarələyin');
+    err.statusCode = 400;
+    err.code = 'TERMS_NOT_ACCEPTED';
+    throw err;
+  }
+
+  const terms_snapshot = {
+    ...package_offer,
+    accepted_at: new Date().toISOString(),
+  };
+
   const result = await db.transaction(async (client) => {
     await client.query(`UPDATE users SET full_name = $1 WHERE id = $2`, [fullName, studentId]);
     await upsertStudentContactPhone(client, studentId, phoneCanon);
@@ -210,8 +238,9 @@ async function createJoinRequest({
     const { rows: reqRows } = await client.query(
       `INSERT INTO student_join_requests (
          enrollment_id, instructor_id, group_id, student_id, status,
-         first_name, last_name, phone_number, parent_name, parent_phone
-       ) VALUES ($1, $2, $3, $4, 'PENDING', $5, $6, $7, $8, $9)
+         first_name, last_name, phone_number, parent_name, parent_phone,
+         payment_terms_accepted_at, terms_snapshot
+       ) VALUES ($1, $2, $3, $4, 'PENDING', $5, $6, $7, $8, $9, NOW(), $10::jsonb)
        RETURNING id, status, created_at`,
       [
         enrollmentId,
@@ -223,6 +252,7 @@ async function createJoinRequest({
         phoneCanon,
         parentName || null,
         parentPhone || null,
+        JSON.stringify(terms_snapshot),
       ],
     );
 

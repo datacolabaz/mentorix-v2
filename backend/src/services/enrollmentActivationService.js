@@ -1,6 +1,7 @@
 const db = require('../utils/db');
 const { bakuTodayYmd } = require('../controllers/monthlyAttendanceController');
 const { ensurePackLessonsUpTo } = require('./packLessons');
+const { computeFinalPackageFee } = require('../utils/groupPaymentTerms');
 
 function normUuid(id) {
   return String(id).trim().toLowerCase().replace(/-/g, '');
@@ -193,9 +194,10 @@ async function activateEnrollmentFromGroupDefaults(client, opts) {
        group_id = $9,
        notifications_enabled = $10,
        initial_payment_status = $11,
+       discount_percent = $12,
        status = 'active',
        configured_at = COALESCE(configured_at, NOW()),
-       package_history = $12::jsonb
+       package_history = $13::jsonb
      WHERE id = $1
      RETURNING *`,
     [
@@ -210,6 +212,7 @@ async function activateEnrollmentFromGroupDefaults(client, opts) {
       groupId,
       defaults.notifications_enabled !== false,
       defaults.initial_payment_status || 'unpaid',
+      defaults.discount_percent != null ? defaults.discount_percent : null,
       JSON.stringify(appendPackageHistory(enrBefore[0]?.package_history, historyEntry)),
     ],
   );
@@ -234,7 +237,7 @@ async function activateEnrollmentFromGroupDefaults(client, opts) {
     group_id: groupId,
   });
 
-  const mf = defaults.package_fee;
+  const mf = computeFinalPackageFee(defaults.package_fee, defaults.discount_percent);
   const pn = studentProfile.parent_name != null ? String(studentProfile.parent_name).trim() : '';
   const pp = studentProfile.parent_phone != null ? String(studentProfile.parent_phone).trim() : '';
   const pr = await client.query(

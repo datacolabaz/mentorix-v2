@@ -54,9 +54,9 @@ const getTeaching = async (req, res) => {
     const { rows: groups } = await db.query(
       `SELECT id, subject_id, name, sort_order, join_code, join_code_expires_at,
               invitation_code, invitation_link,
-              default_billing_type, default_package_fee, default_billing_timing,
-              default_payment_plan, default_lesson_weekdays, default_lesson_times,
-              default_notifications_enabled, default_initial_payment_status
+              default_billing_type, default_package_fee, default_discount_percent,
+              default_billing_timing, default_payment_plan, default_lesson_weekdays,
+              default_lesson_times, default_notifications_enabled, default_initial_payment_status
        FROM instructor_groups
        WHERE instructor_id = $1
        ORDER BY sort_order ASC, name ASC`,
@@ -77,6 +77,8 @@ const getTeaching = async (req, res) => {
             invitation_link: g.invitation_link || null,
             default_billing_type: g.default_billing_type || '8_lessons',
             default_package_fee: g.default_package_fee != null ? Number(g.default_package_fee) : null,
+            default_discount_percent:
+              g.default_discount_percent != null ? Number(g.default_discount_percent) : null,
             default_billing_timing: g.default_billing_timing || 'postpaid',
             default_payment_plan: g.default_payment_plan || 'full',
             default_lesson_weekdays: g.default_lesson_weekdays || [],
@@ -177,10 +179,10 @@ const postGroup = async (req, res) => {
     const { rows } = await db.query(
       `INSERT INTO instructor_groups (
          instructor_id, subject_id, name, sort_order, join_code, invitation_code, invitation_link,
-         default_billing_type, default_package_fee, default_billing_timing, default_payment_plan,
-         default_lesson_weekdays, default_lesson_times, default_notifications_enabled,
-         default_initial_payment_status
-       ) VALUES ($1, $2, $3, $4, $5, $5, $6, $7, $8, $9, $10, $11::jsonb, $12::jsonb, $13, $14)
+         default_billing_type, default_package_fee, default_discount_percent,
+         default_billing_timing, default_payment_plan, default_lesson_weekdays,
+         default_lesson_times, default_notifications_enabled, default_initial_payment_status
+       ) VALUES ($1, $2, $3, $4, $5, $5, $6, $7, $8, $9, $10, $11, $12::jsonb, $13::jsonb, $14, $15)
        RETURNING *`,
       [
         req.user.id,
@@ -191,6 +193,7 @@ const postGroup = async (req, res) => {
         buildInvitationLink(joinCode),
         defs.billing_type,
         defs.package_fee,
+        defs.discount_percent,
         defs.billing_timing,
         defs.payment_plan,
         JSON.stringify(defs.lesson_weekdays),
@@ -219,12 +222,13 @@ const patchGroup = async (req, res) => {
          name = COALESCE(NULLIF($3, ''), name),
          default_billing_type = $4,
          default_package_fee = $5,
-         default_billing_timing = $6,
-         default_payment_plan = $7,
-         default_lesson_weekdays = $8::jsonb,
-         default_lesson_times = $9::jsonb,
-         default_notifications_enabled = $10,
-         default_initial_payment_status = $11
+         default_discount_percent = $6,
+         default_billing_timing = $7,
+         default_payment_plan = $8,
+         default_lesson_weekdays = $9::jsonb,
+         default_lesson_times = $10::jsonb,
+         default_notifications_enabled = $11,
+         default_initial_payment_status = $12
        WHERE id = $1 AND instructor_id = $2
        RETURNING *`,
       [
@@ -233,6 +237,7 @@ const patchGroup = async (req, res) => {
         req.body?.name != null ? String(req.body.name).trim() : null,
         defs.billing_type,
         defs.package_fee,
+        defs.discount_percent,
         defs.billing_timing,
         defs.payment_plan,
         JSON.stringify(defs.lesson_weekdays),
@@ -257,19 +262,4 @@ const deleteGroup = async (req, res) => {
       id,
       req.user.id,
     ]);
-    if (!rowCount) return res.status(404).json({ success: false, message: 'Tapılmadı' });
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-};
-
-module.exports = {
-  getTeaching,
-  patchPublicLabel,
-  postSubject,
-  deleteSubject,
-  postGroup,
-  patchGroup,
-  deleteGroup,
-};
+    if (!rowCount) return res.status(404).json({ success: 
