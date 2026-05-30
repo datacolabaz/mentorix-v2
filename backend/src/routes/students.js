@@ -1457,6 +1457,8 @@ router.post('/my/join', authenticate, authorize('student'), async (req, res) => 
         parent_name: req.body.parent_name,
         parent_phone: req.body.parent_phone,
         payment_terms_accepted: Boolean(req.body?.payment_terms_accepted),
+        referral_source_id: req.body?.referral_source_id,
+        referral_notes: req.body?.referral_notes,
       });
       const enrollments = await listActiveEnrollmentsForStudent(req.user.id);
       return res.status(201).json({ ...result, success: true, enrollments });

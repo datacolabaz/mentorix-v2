@@ -87,6 +87,9 @@ async function getPublicJoinInfo(code) {
   const invitation_link = g.invitation_link || buildInvitationLink(inviteCode);
   const defaults = await getGroupInviteDefaults(g.group_id);
   const package_offer = buildPackagePreview(defaults);
+  const { rows: referralRows } = await db.query(
+    `SELECT id, name, icon FROM referral_sources ORDER BY name ASC`,
+  );
   return {
     group_id: g.group_id,
     group_name: g.group_name,
@@ -96,6 +99,7 @@ async function getPublicJoinInfo(code) {
     invitation_link,
     package_offer,
     invite_ready: Boolean(package_offer),
+    referral_sources: referralRows || [],
   };
 }
 
@@ -120,6 +124,8 @@ async function createJoinRequest({
   parent_name,
   parent_phone,
   payment_terms_accepted,
+  referral_source_id,
+  referral_notes,
 }) {
   const g = await findGroupByInvitationCode(code);
   if (!g) {
@@ -181,7 +187,26 @@ async function createJoinRequest({
   }
 
   const parentName = parent_name != null ? String(parent_name).trim() : '';
-  const parentPhone = parent_phone != null ? String(parent_phone).trim() : '';
+  const parentPhoneRaw = parent_phone != null ? String(parent_phone).trim() : '';
+  const parentPhoneCanon = parentPhoneRaw ? canonicalStudentPhone(parentPhoneRaw) : null;
+  if (parentPhoneRaw && !parentPhoneCanon) {
+    const err = new Error('Valideyn telefonu düzgün deyil (+994 50 123 45 67)');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  let referralSourceId = null;
+  if (referral_source_id != null && String(referral_source_id).trim()) {
+    const rid = String(referral_source_id).trim();
+    const { rows: rs } = await db.query(`SELECT id FROM referral_sources WHERE id = $1 LIMIT 1`, [rid]);
+    if (!rs[0]) {
+      const err = new Error('Yönləndirmə mənbəsi seçimi düzgün deyil');
+      err.statusCode = 400;
+      throw err;
+    }
+    referralSourceId = rs[0].id;
+  }
+  const referralNotes = referral_notes != null ? String(referral_notes).trim().slice(0, 500) : '';
 
   const defaults = await getGroupInviteDefaults(g.group_id);
   const package_offer = buildPackagePreview(defaults);
@@ -215,13 +240,13 @@ async function createJoinRequest({
          parent_phone = COALESCE(NULLIF($2, ''), parent_phone),
          phone_number = COALESCE($3, phone_number)
        WHERE user_id = $4`,
-      [parentName, parentPhone, phoneCanon, studentId],
+      [parentName, parentPhoneCanon || parentPhoneRaw || null, phoneCanon, studentId],
     );
     if (pr.rowCount === 0) {
       await client.query(
         `INSERT INTO student_profiles (user_id, parent_name, parent_phone, phone_number)
          VALUES ($1, NULLIF($2, ''), NULLIF($3, ''), $4)`,
-        [studentId, parentName, parentPhone, phoneCanon],
+        [studentId, parentName, parentPhoneCanon || parentPhoneRaw || null, phoneCanon],
       );
     }
 
@@ -239,8 +264,9 @@ async function createJoinRequest({
       `INSERT INTO student_join_requests (
          enrollment_id, instructor_id, group_id, student_id, status,
          first_name, last_name, phone_number, parent_name, parent_phone,
-         payment_terms_accepted_at, terms_snapshot
-       ) VALUES ($1, $2, $3, $4, 'PENDING', $5, $6, $7, $8, $9, NOW(), $10::jsonb)
+         payment_terms_accepted_at, terms_snapshot,
+         referral_source_id, referral_notes
+       ) VALUES ($1, $2, $3, $4, 'PENDING', $5, $6, $7, $8, $9, NOW(), $10::jsonb, $11, $12)
        RETURNING id, status, created_at`,
       [
         enrollmentId,
@@ -251,8 +277,10 @@ async function createJoinRequest({
         lastName,
         phoneCanon,
         parentName || null,
-        parentPhone || null,
+        parentPhoneCanon || parentPhoneRaw || null,
         JSON.stringify(terms_snapshot),
+        referralSourceId,
+        referralNotes || null,
       ],
     );
 
@@ -295,7 +323,10 @@ async function listPendingJoinRequests(instructorId) {
             ig.default_billing_type,
             ig.default_package_fee,
             ig.default_lesson_weekdays,
-            ig.default_lesson_times
+            ig.default_lesson_times,
+            sjr.referral_source_id,
+            sjr.referral_notes,
+            rs.name AS referral_source_name
      FROM student_join_requests sjr
      JOIN enrollments e ON e.id = sjr.enrollment_id AND (e.deleted_at IS NULL)
      JOIN users u ON u.id = sjr.student_id
@@ -326,6 +357,9 @@ async function listPendingJoinRequests(instructorId) {
       phone_number: r.phone_number,
       parent_name: r.parent_name,
       parent_phone: r.parent_phone,
+      referral_source_id: r.referral_source_id,
+      referral_source_name: r.referral_source_name,
+      referral_notes: r.referral_notes,
       student_email: r.student_email,
       group_name: r.group_name,
       subject_name: r.subject_name,
@@ -394,6 +428,8 @@ async function approveJoinRequest(requestId, instructorId) {
         groupId: defaults.group_id,
         subjectId: defaults.subject_id,
         defaults,
+        referral_source_id: req.referral_source_id,
+        referral_notes: req.referral_notes,
         studentProfile: {
           parent_name: req.parent_name,
           parent_phone: req.parent_phone,

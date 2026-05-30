@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { canonicalAzPhoneE164, isValidAzMobileNational, onlyDigits as azOnlyDigits } from '../../lib/azPhone'
 
 const STORAGE_COUNTRY = 'mx_login_country'
 const STORAGE_PHONE = 'mx_login_phone'
@@ -13,7 +14,7 @@ const COUNTRIES = [
 ]
 
 function onlyDigits(s) {
-  return String(s || '').replace(/\D/g, '')
+  return azOnlyDigits(s)
 }
 
 function pickCountryByDial(digits) {
@@ -203,8 +204,16 @@ export default function PhoneInput({
           placeholder={placeholder || (country.id === 'AZ' ? '50 123 45 67' : 'Telefon')}
           value={masked}
           onChange={(e) => setFromRawInput(e.target.value)}
+          maxLength={country.id === 'AZ' ? 12 : undefined}
         />
       </div>
+      {azInvalid ? (
+        <p className="mt-1.5 text-xs text-red-400/95">
+          Mobil nömrə 9 rəqəm olmalıdır (məs: 50 123 45 67). Operator: 50, 51, 55, 70, 77 və s.
+        </p>
+      ) : country.id === 'AZ' && onlyDigits(national).length === 9 && outboundE164 ? (
+        <p className="mt-1.5 text-xs text-emerald-400/90 font-mono">{outboundE164}</p>
+      ) : null}
 
       {open && (
         <div className="mt-2 rounded-xl border border-indigo-500/20 bg-[#13112e] overflow-hidden">

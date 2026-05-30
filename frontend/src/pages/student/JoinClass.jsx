@@ -9,6 +9,7 @@ import PhoneInput from '../../components/auth/PhoneInput'
 import GoogleSignInButton from '../../components/auth/GoogleSignInButton'
 import { useStudentGroupsOptional } from '../../contexts/StudentGroupContext'
 import { formatAzn, billingTypeLabel } from '../../lib/groupPaymentTerms'
+import { canonicalAzPhoneE164 } from '../../lib/azPhone'
 import { WEEKDAYS } from '../instructor/Schedule'
 
 const inp =
@@ -51,6 +52,8 @@ export default function JoinClass() {
   const [authBusy, setAuthBusy] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [termsAccepted, setTermsAccepted] = useState(false)
+  const [referralSourceId, setReferralSourceId] = useState('')
+  const [referralNotes, setReferralNotes] = useState('')
 
   useEffect(() => {
     if (!initialCode) {
@@ -125,7 +128,10 @@ export default function JoinClass() {
     const fn = String(firstName).trim()
     const ln = String(lastName).trim()
     if (!fn || !ln) return toast('Ad və soyad tələb olunur', 'error')
-    if (!String(phone).trim()) return toast('Telefon tələb olunur', 'error')
+    const phoneCanon = canonicalAzPhoneE164(phone)
+    if (!phoneCanon) {
+      return toast('Telefon düzgün deyil: +994 və 9 rəqəm (məs. 50 123 45 67)', 'error')
+    }
     if (!joinInfo?.package_offer) {
       return toast('Qrup paketi hələ hazır deyil — müəllimlə əlaqə saxlayın', 'error')
     }
@@ -136,10 +142,12 @@ export default function JoinClass() {
         code: initialCode,
         first_name: fn,
         last_name: ln,
-        phone_number: phone,
+        phone_number: phoneCanon,
         parent_name: parentName || undefined,
-        parent_phone: parentPhone || undefined,
+        parent_phone: parentPhone ? canonicalAzPhoneE164(parentPhone) || undefined : undefined,
         payment_terms_accepted: true,
+        referral_source_id: referralSourceId || undefined,
+        referral_notes: referralNotes.trim() || undefined,
       })
       toast(r?.message || 'Sorğunuz göndərildi', 'success')
       setSubmitted(true)
@@ -296,13 +304,41 @@ export default function JoinClass() {
                 <label className="block text-xs font-semibold text-token-textMuted uppercase mb-1.5">
                   Valideyn telefonu (ixtiyari)
                 </label>
-                <input
-                  className={inp}
-                  value={parentPhone}
-                  onChange={(e) => setParentPhone(e.target.value)}
-                  placeholder="+994…"
-                  inputMode="tel"
-                />
+                <PhoneInput value={parentPhone} onChange={setParentPhone} />
+              </div>
+              <div className="rounded-xl border border-indigo-500/20 bg-indigo-500/5 p-3 space-y-3">
+                <p className="text-xs font-semibold text-indigo-200/90 uppercase tracking-wider">
+                  Kim yönləndirdi?
+                </p>
+                {(joinInfo?.referral_sources || []).length > 0 ? (
+                  <div>
+                    <label className="block text-xs text-token-textMuted mb-1.5">Mənbə (ixtiyari)</label>
+                    <select
+                      className={inp}
+                      value={referralSourceId}
+                      onChange={(e) => setReferralSourceId(e.target.value)}
+                    >
+                      <option value="">— Seçin —</option>
+                      {(joinInfo.referral_sources || []).map((rs) => (
+                        <option key={rs.id} value={rs.id}>
+                          {rs.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ) : null}
+                <div>
+                  <label className="block text-xs text-token-textMuted mb-1.5">
+                    Ətraflı (məs. hansı müəllim tövsiyə etdi)
+                  </label>
+                  <input
+                    className={inp}
+                    value={referralNotes}
+                    onChange={(e) => setReferralNotes(e.target.value)}
+                    placeholder="Məs: Rəşad müəllim, Instagram, dost..."
+                    maxLength={500}
+                  />
+                </div>
               </div>
               {joinInfo?.package_offer ? (
                 <label className="flex items-start gap-3 text-sm cursor-pointer rounded-xl border border-white/10 p-3 bg-white/[0.03]">

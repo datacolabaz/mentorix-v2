@@ -124,6 +124,12 @@ export default function InstructorJoinRequests() {
                       {req.parent_phone ? ` · ${req.parent_phone}` : ''}
                     </div>
                   )}
+                  {(req.referral_source_name || req.referral_notes) && (
+                    <div>
+                      Yönləndirmə:{' '}
+                      {[req.referral_source_name, req.referral_notes].filter(Boolean).join(' · ')}
+                    </div>
+                  )}
                   <div className="text-[10px] opacity-70">{fmtDate(req.created_at)}</div>
                 </div>
                 <div className="flex gap-2 mt-4">

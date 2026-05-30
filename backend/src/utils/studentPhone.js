@@ -10,18 +10,25 @@ function normalizePhoneDigits(phone) {
   return String(phone || '').replace(/\D/g, '');
 }
 
-/** Azərbaycan mobil: +994 + 9 rəqəm. */
+const AZ_MOBILE_PREFIXES = new Set(['10', '50', '51', '55', '60', '70', '77', '99']);
+
+function isValidAzMobileNational(nineDigits) {
+  const n = normalizePhoneDigits(nineDigits);
+  if (n.length !== 9) return false;
+  return AZ_MOBILE_PREFIXES.has(n.slice(0, 2));
+}
+
+/** Azərbaycan mobil: +994 + 9 rəqəm (50/55/70/77 və s.). */
 function canonicalStudentPhone(phone) {
   const clean = normalizePhoneDigits(phone);
   if (!clean) return null;
-  if (clean.startsWith('994')) {
-    const national = clean.slice(3);
-    if (national.length !== 9) return null;
-    return `+994${national}`;
-  }
-  if (clean.length === 9) return `+994${clean}`;
-  if (clean.startsWith('0') && clean.length === 10) return `+994${clean.slice(1)}`;
-  return null;
+  let national = '';
+  if (clean.startsWith('994')) national = clean.slice(3);
+  else if (clean.length === 9) national = clean;
+  else if (clean.startsWith('0') && clean.length === 10) national = clean.slice(1);
+  else return null;
+  if (!isValidAzMobileNational(national)) return null;
+  return `+994${national}`;
 }
 
 async function assertStudentPhoneAvailable(dbConn, phoneCanon, excludeUserId = null) {
@@ -61,7 +68,9 @@ async function assertStudentPhoneAvailable(dbConn, phoneCanon, excludeUserId = n
 async function upsertStudentContactPhone(dbConn, userId, phoneCanon, opts = {}) {
   const phone = canonicalStudentPhone(phoneCanon);
   if (!phone) {
-    const err = new Error('Telefon nömrəsi düzgün deyil (+994...)');
+    const err = new Error(
+      'Telefon nömrəsi düzgün deyil. Nümunə: +994 50 123 45 67 (9 rəqəm, düzgün operator kodu)',
+    );
     err.statusCode = 400;
     throw err;
   }
@@ -97,6 +106,7 @@ module.exports = {
   STUDENT_CONTACT_PHONE_SQL,
   normalizePhoneDigits,
   canonicalStudentPhone,
+  isValidAzMobileNational,
   assertStudentPhoneAvailable,
   upsertStudentContactPhone,
 };

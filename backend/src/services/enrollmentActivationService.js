@@ -159,6 +159,8 @@ async function activateEnrollmentFromGroupDefaults(client, opts) {
     subjectId,
     defaults,
     studentProfile = {},
+    referral_source_id = null,
+    referral_notes = null,
   } = opts;
 
   const ni = normUuid(instructorId);
@@ -195,9 +197,11 @@ async function activateEnrollmentFromGroupDefaults(client, opts) {
        notifications_enabled = $10,
        initial_payment_status = $11,
        discount_percent = $12,
+       referral_source_id = $13,
+       referral_notes = $14,
        status = 'active',
        configured_at = COALESCE(configured_at, NOW()),
-       package_history = $13::jsonb
+       package_history = $15::jsonb
      WHERE id = $1
      RETURNING *`,
     [
@@ -213,6 +217,8 @@ async function activateEnrollmentFromGroupDefaults(client, opts) {
       defaults.notifications_enabled !== false,
       defaults.initial_payment_status || 'unpaid',
       defaults.discount_percent != null ? defaults.discount_percent : null,
+      referral_source_id || null,
+      referral_notes != null ? String(referral_notes).trim().slice(0, 500) || null : null,
       JSON.stringify(appendPackageHistory(enrBefore[0]?.package_history, historyEntry)),
     ],
   );

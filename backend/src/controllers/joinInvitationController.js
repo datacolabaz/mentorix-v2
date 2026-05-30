@@ -80,6 +80,8 @@ const submitJoinWithProfile = async (req, res) => {
       parent_name,
       parent_phone,
       payment_terms_accepted: Boolean(req.body?.payment_terms_accepted),
+      referral_source_id: req.body?.referral_source_id,
+      referral_notes: req.body?.referral_notes,
     });
     res.status(201).json({ success: true, ...result });
   } catch (err) {
