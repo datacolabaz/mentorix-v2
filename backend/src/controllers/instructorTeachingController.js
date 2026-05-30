@@ -262,4 +262,19 @@ const deleteGroup = async (req, res) => {
       id,
       req.user.id,
     ]);
-    if (!rowCount) return res.status(404).json({ success: 
+    if (!rowCount) return res.status(404).json({ success: false, message: 'Tapılmadı' });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+module.exports = {
+  getTeaching,
+  patchPublicLabel,
+  postSubject,
+  deleteSubject,
+  postGroup,
+  patchGroup,
+  deleteGroup,
+};

@@ -94,4 +94,8 @@ const submitJoinWithProfile = async (req, res) => {
 module.exports = {
   getPublicJoin,
   listJoinRequests,
-  joinReque
+  joinRequestsCount,
+  approveRequest,
+  rejectRequest,
+  submitJoinWithProfile,
+};
