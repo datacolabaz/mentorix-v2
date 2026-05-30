@@ -2078,4 +2078,131 @@ export default function InstructorStudents() {
             <p className="text-xs text-gray-500 mb-3">
               Cəmi <span className="text-indigo-200 font-semibold">{lessonsModal.lessons.length}</span> dərs
             </p>
-            <ul c
+            <ul className="space-y-2 max-h-[50vh] overflow-y-auto">
+              {lessonsModal.lessons.map((l) => (
+                <li
+                  key={l.id}
+                  className="rounded-xl border border-indigo-500/15 bg-[#0f0c29]/80 px-3 py-2 text-sm text-gray-200 font-mono"
+                >
+                  {fmtAzBakuLessonRow(l)}
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+        <Button
+          type="button"
+          variant="secondary"
+          className="w-full mt-5 justify-center"
+          onClick={() => setLessonsModal(null)}
+        >
+          Bağla
+        </Button>
+      </Modal>
+
+      <Modal
+        open={Boolean(deleteConfirm)}
+        onClose={() => !deleteBusy && setDeleteConfirm(null)}
+        title="Tələbəni sil"
+        size="sm"
+        zIndex={400}
+      >
+        {deleteConfirm ? (
+          <div className="space-y-5 text-sm">
+            <p className="text-gray-300 leading-relaxed text-center px-1">
+              <span className="font-semibold text-white">{deleteConfirm.studentName}</span> adlı tələbəni silmək
+              istədiyinizdən əminsiniz?
+            </p>
+            <p className="text-xs text-gray-500 text-center leading-relaxed">
+              Bu əməliyyat geri qaytarıla bilməz. Tələbə siyahıdan çıxacaq; qeydə alınmış nağd ödənişlər aylıq və illik
+              hesabatda qalacaq.
+            </p>
+            <div className="flex flex-col-reverse sm:flex-row gap-2 sm:justify-center pt-1">
+              <Button
+                type="button"
+                variant="secondary"
+                className="sm:min-w-[7.5rem] justify-center"
+                disabled={deleteBusy}
+                onClick={() => setDeleteConfirm(null)}
+              >
+                Ləğv et
+              </Button>
+              <Button
+                type="button"
+                variant="danger"
+                className="sm:min-w-[7.5rem] justify-center"
+                loading={deleteBusy}
+                onClick={() => void confirmDeleteStudent()}
+              >
+                Sil
+              </Button>
+            </div>
+          </div>
+        ) : null}
+      </Modal>
+
+      <Modal
+        open={Boolean(restoreModal)}
+        onClose={() => setRestoreModal(null)}
+        title={restoreModal ? `${restoreModal.studentName} — köhnə ödənişlər` : 'Köhnə ödənişlər'}
+        size="sm"
+      >
+        {restoreModal?.loading ? (
+          <ListSkeleton message="Hesablanır…" />
+        ) : restoreModal?.error ? (
+          <p className="text-sm text-amber-200/90">{restoreModal.error}</p>
+        ) : !restoreModal?.items?.length ? (
+          <p className="text-sm text-gray-500">Bərpa ediləcək köhnə dövr tapılmadı.</p>
+        ) : (
+          <div className="space-y-2">
+            <p className="text-xs text-gray-500">
+              Aşağıdakı dövrləri seçin. Təsdiqləyərkən sistem onları tarixçəyə “completed” kimi əlavə edəcək.
+            </p>
+            <ul className="space-y-2 max-h-[45vh] overflow-y-auto pr-1">
+              {restoreModal.items.map((it) => {
+                const checked = restoreModal.selected?.has(it.id)
+                return (
+                  <li
+                    key={it.id}
+                    className="rounded-xl border border-indigo-500/15 bg-[#0f0c29]/80 px-3 py-2 text-sm text-gray-200"
+                  >
+                    <label className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 accent-blue-500"
+                          checked={Boolean(checked)}
+                          onChange={(e) =>
+                            setRestoreModal((prev) => {
+                              if (!prev) return prev
+                              const nextSel = new Set(prev.selected || [])
+                              if (e.target.checked) nextSel.add(it.id)
+                              else nextSel.delete(it.id)
+                              return { ...prev, selected: nextSel }
+                            })
+                          }
+                        />
+                        <span className="truncate">{it.title}</span>
+                      </div>
+                      <span className="font-mono text-emerald-300 tabular-nums shrink-0">
+                        {Number.isFinite(Number(it.amount)) ? `${Number(it.amount).toFixed(2)} ₼` : '—'}
+                      </span>
+                    </label>
+                  </li>
+                )
+              })}
+            </ul>
+            <Button
+              type="button"
+              onClick={confirmRestore}
+              loading={restoreModal.loading}
+              className="w-full justify-center mt-3"
+            >
+              Seçilənləri təsdiqlə
+            </Button>
+          </div>
+        )}
+      </Modal>
+    </div>
+  )
+}
