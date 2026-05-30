@@ -383,4 +383,74 @@ let smsBalanceCache = { at: 0, result: null };
 const SMS_BALANCE_CACHE_MS = 60_000;
 let egressIpCache = { at: 0, ip: null };
 
-/** Railway / hosting çıxış IP — LSIM pane
+/** Railway / hosting çıxış IP — LSIM panelində icazə üçün */
+async function getServerEgressIp() {
+  const now = Date.now();
+  if (egressIpCache.ip && now - egressIpCache.at < 300_000) return egressIpCache.ip;
+  try {
+    const res = await fetch('https://api.ipify.org?format=json', {
+      headers: { Accept: 'application/json' },
+    });
+    const json = await res.json();
+    const ip = json?.ip ? String(json.ip).trim() : null;
+    if (ip) egressIpCache = { at: now, ip };
+    return ip;
+  } catch {
+    return null;
+  }
+}
+
+async function fetchSmsProviderBalance({ bypassCache = false } = {}) {
+  if (!SMS_LOGIN || !SMS_PASSWORD) {
+    return { ok: false, balance: null, error: 'SMS_LOGIN / SMS_PASSWORD təyin olunmayıb' };
+  }
+  const now = Date.now();
+  if (!bypassCache && smsBalanceCache.result && now - smsBalanceCache.at < SMS_BALANCE_CACHE_MS) {
+    return smsBalanceCache.result;
+  }
+
+  const quicksms = await fetchQuicksmsBalance();
+  if (quicksms.ok) {
+    const out = { ...quicksms, fetched_at: new Date().toISOString() };
+    smsBalanceCache = { at: now, result: out };
+    return out;
+  }
+
+  const smxml = await fetchSmxmlBalance();
+  if (smxml.ok) {
+    const out = { ...smxml, fetched_at: new Date().toISOString() };
+    smsBalanceCache = { at: now, result: out };
+    return out;
+  }
+
+  const egress_ip = await getServerEgressIp();
+  let error = quicksms.error || smxml.error || 'Balans oxunmadı';
+  if (egress_ip && /ip|107|icazə/i.test(error) === false) {
+    error = `${error}. LSIM/sendsms panelində bu server IP-ni icazəli edin: ${egress_ip}`;
+  } else if (egress_ip) {
+    error = `${error} (icazəli IP: ${egress_ip})`;
+  }
+  const out = {
+    ok: false,
+    balance: null,
+    error,
+    egress_ip,
+    raw: quicksms.raw || smxml.raw || null,
+    fetched_at: new Date().toISOString(),
+  };
+  smsBalanceCache = { at: now, result: out };
+  return out;
+}
+
+const sendOtpSms = async (phone, code) => {
+  const message = `Mentorix: ${code} kodunuz. 5 dəqiqə ərzində daxil edin.`;
+  const raw = await sendRaw(phone, message);
+  const interpreted = interpretSmxmlSuccess(raw);
+  return {
+    success: interpreted.success,
+    error: interpreted.success ? null : interpreted.reason,
+    raw,
+  };
+};
+
+module.exports = { sendSms, sendOtpSms, sendRawSms: sendRaw, fetchSmsProviderBalance };
