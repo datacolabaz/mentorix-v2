@@ -46,21 +46,6 @@ function resolveStudentNames(data) {
 
 const DEFAULT_LESSON_TIME = '15:00'
 
-function defaultAddForm() {
-  const today = format(new Date(), 'yyyy-MM-dd')
-  const dow = ((new Date().getDay() + 6) % 7) + 1
-  const lesson_weekdays = [dow]
-  const lesson_times = { [String(dow)]: DEFAULT_LESSON_TIME }
-  const first_lesson_date = alignFirstLessonYmd(today, lesson_weekdays, lesson_times) || today
-  return {
-    ...emptyForm,
-    first_lesson_date,
-    enrollment_date: first_lesson_date,
-    lesson_weekdays,
-    lesson_times,
-  }
-}
-
 const BILLING_OPTS = [
   { value: '8_lessons', label: '8 Ders' },
   { value: '12_lessons', label: '12 Ders' },
@@ -781,13 +766,12 @@ function StudentFormFields({
 
 export default function InstructorStudents() {
   const [students, setStudents] = useState([])
-  const [addModal, setAddModal] = useState(false)
   const [editModal, setEditModal] = useState(false)
+  const [joinPendingCount, setJoinPendingCount] = useState(0)
   const [setupModal, setSetupModal] = useState(false)
   const [setupForm, setSetupForm] = useState(emptyForm)
   const [setupEnrollmentId, setSetupEnrollmentId] = useState(null)
   const [referralSources, setReferralSources] = useState([])
-  const [form, setForm] = useState(emptyForm)
   const [editForm, setEditForm] = useState(emptyForm)
   const [editOriginal, setEditOriginal] = useState(null)
   const [editId, setEditId] = useState(null)
@@ -901,87 +885,17 @@ export default function InstructorStudents() {
     void load(true)
   }, [])
 
-  const addStudent = async () => {
-    if (blocked) {
-      toast(billing?.messages?.banner || 'Məhdudiyyətə görə bu əməliyyat deaktivdir', 'error')
-      return
+  useEffect(() => {
+    const refresh = () => {
+      api
+        .get('/instructor/join-requests/count')
+        .then((d) => setJoinPendingCount(Number(d?.count ?? 0) || 0))
+        .catch(() => setJoinPendingCount(0))
     }
-    const firstName = String(form.first_name || splitFullName(form.full_name).first_name).trim()
-    const lastName = String(form.last_name || splitFullName(form.full_name).last_name).trim()
-    const phoneNumber = String(form.phone_number || form.phone || '').trim()
-    if (!firstName || !lastName) {
-      toast('Ad və soyad tələb olunur', 'error')
-      return
-    }
-    if (!phoneNumber) {
-      toast('Tələbə telefonu tələb olunur', 'error')
-      return
-    }
-    const emailTrim = String(form.email || '').trim().toLowerCase()
-    if (emailTrim) {
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailTrim)) {
-        toast('Email formatı düzgün deyil', 'error')
-        return
-      }
-    }
-    if (!form.lesson_weekdays?.length) {
-      toast('Ən azı bir dərs günü seçin', 'error')
-      return
-    }
-    const isPkg = form.billing_type === '8_lessons' || form.billing_type === '12_lessons'
-    if (isPkg && !form.first_lesson_date) {
-      toast('Paket üçün ilk dərs tarixini seçin', 'error')
-      return
-    }
-    const enrollmentSend = form.first_lesson_date
-    const firstLessonSend = form.first_lesson_date
-    // Slot seçimi tələb olunmur: dərslər lesson_times + start_date ilə avtomatik generasiya olunur
-    setLoading(true)
-    try {
-      const reg = await api.post('/students', {
-        first_name: firstName,
-        last_name: lastName,
-        phone_number: phoneNumber,
-        email: emailTrim || undefined,
-      })
-      const newUserId = reg.user?.id
-      if (!newUserId) throw new Error('Qeydiyyat cavabı gözlənilən deyil')
-      const enrRes = await api.post('/students/enroll', {
-        student_id: newUserId,
-        billing_type: form.billing_type,
-        referral_notes: form.referral_notes,
-        monthly_fee: form.monthly_fee,
-        enrollment_date: enrollmentSend || null,
-        first_lesson_date: firstLessonSend || null,
-        billing_timing: form.billing_timing || 'postpaid',
-        payment_plan: form.payment_plan || 'full',
-        notifications_enabled: Boolean(form.notifications_enabled),
-        subject_id: form.subject_id || undefined,
-        group_id: form.group_id || undefined,
-        course_id: form.course_id || undefined,
-        lesson_weekdays: form.lesson_weekdays,
-        lesson_times: form.lesson_times || {},
-        parent_name: form.parent_name,
-        parent_phone: form.parent_phone,
-      })
-      const ps = enrRes?.pin_sms
-      if (ps?.error) {
-        toast('Tələbə əlavə edildi, amma PIN SMS göndərilmədi (email girişi tövsiyə olunur).', 'error')
-      } else if (ps?.sent) {
-        toast('Tələbə əlavə edildi.')
-      } else {
-        toast('Tələbə əlavə edildi!')
-      }
-      setAddModal(false)
-      setForm(emptyForm)
-      load()
-      queryClient.invalidateQueries({ queryKey: BILLING_STATUS_QUERY_KEY })
-    } catch (err) {
-      toast(err.message || 'Xeta', 'error')
-    } finally {
-      setLoading(false)
-    }
-  }
+    refresh()
+    window.addEventListener('mx:join-requests-changed', refresh)
+    return () => window.removeEventListener('mx:join-requests-changed', refresh)
+  }, [])
 
   const openCompleteSetup = (s) => {
     closeStudentMenu()
@@ -1435,11 +1349,6 @@ export default function InstructorStudents() {
     }
   }
 
-  const closeAddModal = () => {
-    setAddModal(false)
-    setForm(emptyForm)
-  }
-
   const openLessonsModal = (s) => {
     const eid = s.enrollment_id
     const name = s.full_name || 'Tələbə'
@@ -1534,8 +1443,12 @@ export default function InstructorStudents() {
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-5">
         <div className="min-w-0">
           <h1 className="font-display font-bold text-xl sm:text-2xl break-words">Tələbələrim</h1>
-          <p className="text-gray-500 text-sm mt-1">
-            {listLoading ? '…' : `${students.length} telebe`}
+          <p className="text-gray-500 text-sm mt-1 max-w-xl">
+            {listLoading ? '…' : `${students.length} tələbə`} · Yeni tələbələr{' '}
+            <Link to="/instructor/settings" className="text-primary hover:underline font-medium">
+              Tənzimləmələr → Qruplar
+            </Link>{' '}
+            bölməsindəki dəvət linki ilə özü qoşulur
           </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto shrink-0">
@@ -1544,25 +1457,18 @@ export default function InstructorStudents() {
             className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold border border-primary/35 text-primary hover:bg-primary/10 transition-colors"
           >
             Sorğular
-          </Link>
-          <Button
-            className="w-full sm:w-auto shrink-0 justify-center py-2.5 px-5"
-            disabled={blocked}
-            onClick={() => {
-              setForm(defaultAddForm())
-              setAddModal(true)
-            }}
-          >
-            <span className="inline-flex items-center gap-2">
-              <span
-                aria-hidden
-                className="w-6 h-6 rounded-lg bg-black/15 border border-black/10 inline-flex items-center justify-center"
-              >
-                +
+            {joinPendingCount > 0 ? (
+              <span className="min-w-[1.25rem] h-5 px-1.5 rounded-full bg-primary text-black text-xs font-bold inline-flex items-center justify-center">
+                {joinPendingCount > 99 ? '99+' : joinPendingCount}
               </span>
-              Yeni tələbə əlavə et
-            </span>
-          </Button>
+            ) : null}
+          </Link>
+          <Link
+            to="/instructor/settings"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold bg-primary text-black hover:brightness-110 transition-colors"
+          >
+            Dəvət linki
+          </Link>
         </div>
       </div>
 
@@ -1997,30 +1903,6 @@ export default function InstructorStudents() {
             }}
             className="flex-1 justify-center"
           >
-            Legv et
-          </Button>
-        </div>
-      </Modal>
-
-      <Modal open={addModal} onClose={closeAddModal} title="Yeni tələbə əlavə et">
-        <StudentFormFields
-          data={form}
-          setData={setForm}
-          scheduleMeta={enrollMeta}
-          mode="add"
-          onRefreshSlots={null}
-          toast={toast}
-          teachingSubjects={teachingSubjects}
-          teachingCourses={teachingCourses}
-          referralSources={referralSources}
-          onCreateSubject={createTeachingSubject}
-          onCreateGroup={createTeachingGroup}
-        />
-        <div className="flex gap-3 mt-4">
-          <Button onClick={addStudent} loading={loading} className="flex-1 justify-center">
-            Əlavə et
-          </Button>
-          <Button type="button" variant="secondary" onClick={closeAddModal} className="flex-1 justify-center">
             Legv et
           </Button>
         </div>
