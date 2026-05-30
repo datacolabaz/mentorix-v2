@@ -182,13 +182,14 @@ const postGroup = async (req, res) => {
          default_billing_type, default_package_fee, default_discount_percent,
          default_billing_timing, default_payment_plan, default_lesson_weekdays,
          default_lesson_times, default_notifications_enabled, default_initial_payment_status
-       ) VALUES ($1, $2, $3, $4, $5, $5, $6, $7, $8, $9, $10, $11, $12::jsonb, $13::jsonb, $14, $15)
+       ) VALUES ($1, $2, $3, $4, $5::text, $6::varchar, $7, $8, $9, $10, $11, $12, $13::jsonb, $14::jsonb, $15, $16)
        RETURNING *`,
       [
         req.user.id,
         subject_id,
         name,
         sgo,
+        joinCode,
         joinCode,
         buildInvitationLink(joinCode),
         defs.billing_type,
