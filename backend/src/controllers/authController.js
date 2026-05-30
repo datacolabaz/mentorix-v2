@@ -154,6 +154,30 @@ function hasStoredPin(pinHash) {
   return pinHash != null && String(pinHash).trim().length > 0;
 }
 
+const PHONE_VERIFY_ROLES = new Set(['instructor', 'student', 'course']);
+
+function phoneLinkRolesCompatible(sessionRole, ownerRole) {
+  if (sessionRole === ownerRole) return true;
+  if (
+    (sessionRole === 'instructor' && ownerRole === 'course') ||
+    (sessionRole === 'course' && ownerRole === 'instructor')
+  ) {
+    return true;
+  }
+  return false;
+}
+
+function buildAuthUserPayload(user) {
+  return {
+    id: user.id,
+    full_name: user.full_name,
+    role: user.role,
+    email: user.email,
+    phone: user.phone,
+    phone_verified: Boolean(user.phone_verified),
+  };
+}
+
 function generateLoginPin() {
   let p = '';
   for (let i = 0; i < 6; i++) p += String(Math.floor(Math.random() * 10));
@@ -1099,22 +1123,21 @@ const me = async (req, res) => {
 };
 
 /**
- * Instructor phone verification for Google-first onboarding.
- * - Binds phone to the logged-in instructor account
- * - Sends OTP (6 digits)
- * - Soft-links accounts if phone already exists under same email (to prevent duplicates)
+ * Google qeydiyyatından sonra telefon təsdiqi (müəllim / tələbə / kurs).
+ * OTP ilə mövcud telefon hesabına google_sub bağlanır (köhnə mobil qeydiyyat sinxronu).
  */
 const sendMyPhoneVerifyOtp = async (req, res) => {
   try {
-    if (req.user?.role !== 'instructor') {
-      return res.status(403).json({ success: false, message: 'Yalnız müəllim üçün' });
+    const sessionRole = req.user?.role;
+    if (!PHONE_VERIFY_ROLES.has(sessionRole)) {
+      return res.status(403).json({ success: false, message: 'Bu rol üçün telefon təsdiqi mövcud deyil' });
     }
     const phoneCanon = canonicalPhone(req.body?.phone);
     if (!phoneCanon) return res.status(400).json({ success: false, message: 'Telefon tələb olunur' });
     const clean = normalizePhone(phoneCanon);
 
     const { rows: meRows } = await db.query(
-      `SELECT id, email, phone, phone_verified, google_sub
+      `SELECT id, email, phone, phone_verified, google_sub, role
        FROM users
        WHERE id = $1 AND is_active = TRUE
        LIMIT 1`,
@@ -1123,7 +1146,6 @@ const sendMyPhoneVerifyOtp = async (req, res) => {
     const meUser = meRows[0];
     if (!meUser) return res.status(404).json({ success: false, message: 'Tapılmadı' });
 
-    // If phone belongs to another active account, only allow "link" when email matches.
     const { rows: ownerRows } = await db.query(
       `SELECT id, email, role, google_sub, phone_verified
        FROM users
@@ -1134,22 +1156,31 @@ const sendMyPhoneVerifyOtp = async (req, res) => {
     );
     const owner = ownerRows.find((u) => u && String(u.id) !== String(req.user.id)) || null;
     if (owner) {
-      const sameEmail =
-        owner.email &&
-        meUser.email &&
-        String(owner.email).trim().toLowerCase() === String(meUser.email).trim().toLowerCase();
-      if (!sameEmail) {
-        await logRisk(req.user.id, req, { kind: 'phone_reuse_block', phone: phoneCanon, owner_id: owner.id }, 35);
-        return res.status(409).json({ success: false, message: 'Bu telefon artıq başqa hesabda istifadə olunur' });
+      if (!phoneLinkRolesCompatible(sessionRole, owner.role)) {
+        await logRisk(req.user.id, req, { kind: 'phone_role_mismatch', phone: phoneCanon, owner_id: owner.id }, 35);
+        return res.status(409).json({
+          success: false,
+          message: 'Bu telefon başqa rol üçün qeydiyyatdadır. Düzgün rolu seçin və ya müəlliminizlə əlaqə saxlayın.',
+        });
       }
-      await logRisk(req.user.id, req, { kind: 'phone_reuse_same_email', phone: phoneCanon, owner_id: owner.id }, 10);
-      // Continue: OTP will still be sent; confirmation endpoint will finalize link if needed.
+      if (
+        owner.google_sub &&
+        meUser.google_sub &&
+        String(owner.google_sub).trim() !== '' &&
+        String(owner.google_sub) !== String(meUser.google_sub)
+      ) {
+        await logRisk(req.user.id, req, { kind: 'phone_google_sub_clash', phone: phoneCanon, owner_id: owner.id }, 45);
+        return res.status(409).json({
+          success: false,
+          message: 'Bu telefon artıq başqa Google hesabına bağlıdır',
+        });
+      }
+      await logRisk(req.user.id, req, { kind: 'phone_link_existing', phone: phoneCanon, owner_id: owner.id }, 10);
     }
 
-    // Enforce SMS quota on the instructor billing id (self).
-    await assertSmsOk(req.user.id);
+    const billingId = await resolveSmsBillingForLogin(meUser, sessionRole);
+    await assertSmsOk(billingId);
 
-    // Bind phone immediately (unverified) so OTP verify can succeed.
     await db.query(
       `UPDATE users
        SET phone = $2,
@@ -1171,7 +1202,11 @@ const sendMyPhoneVerifyOtp = async (req, res) => {
         message: sms?.error || 'OTP SMS göndərilə bilmədi',
       });
     }
-    res.json({ success: true, message: 'OTP göndərildi' });
+    res.json({
+      success: true,
+      message: 'OTP göndərildi',
+      will_link_existing: Boolean(owner),
+    });
   } catch (err) {
     if (err.statusCode && err.body) return res.status(err.statusCode).json(err.body);
     res.status(500).json({ success: false, message: err.message });
@@ -1180,15 +1215,15 @@ const sendMyPhoneVerifyOtp = async (req, res) => {
 
 const verifyMyPhoneVerifyOtp = async (req, res) => {
   try {
-    if (req.user?.role !== 'instructor') {
-      return res.status(403).json({ success: false, message: 'Yalnız müəllim üçün' });
+    const sessionRole = req.user?.role;
+    if (!PHONE_VERIFY_ROLES.has(sessionRole)) {
+      return res.status(403).json({ success: false, message: 'Bu rol üçün telefon təsdiqi mövcud deyil' });
     }
     const phoneCanon = canonicalPhone(req.body?.phone);
     const clean = phoneCanon ? normalizePhone(phoneCanon) : '';
     const codeStr = String(req.body?.code ?? '').trim();
     if (!clean || !codeStr) return res.status(400).json({ success: false, message: 'Telefon və kod tələb olunur' });
 
-    // OTP validity
     const { rows } = await db.query(
       'SELECT * FROM otp_codes WHERE phone = $1 AND code = $2 AND is_used = FALSE AND expires_at > NOW()',
       [clean, codeStr]
@@ -1198,7 +1233,7 @@ const verifyMyPhoneVerifyOtp = async (req, res) => {
 
     const out = await db.transaction(async (client) => {
       const { rows: meRows } = await client.query(
-        `SELECT id, email, google_sub, pin_hash
+        `SELECT id, email, google_sub, pin_hash, full_name, role
          FROM users
          WHERE id = $1 AND is_active = TRUE
          LIMIT 1`,
@@ -1207,9 +1242,8 @@ const verifyMyPhoneVerifyOtp = async (req, res) => {
       const meUser = meRows[0];
       if (!meUser) throw new Error('Tapılmadı');
 
-      // If another active account owns this phone, link by email (safe merge)
       const { rows: ownerRows } = await client.query(
-        `SELECT id, email, google_sub, role
+        `SELECT id, email, google_sub, role, full_name
          FROM users
          WHERE is_active = TRUE
            AND ${PHONE_NORM} = $1
@@ -1219,31 +1253,39 @@ const verifyMyPhoneVerifyOtp = async (req, res) => {
       const owner = ownerRows.find((u) => u && String(u.id) !== String(req.user.id)) || null;
 
       if (owner) {
-        const sameEmail =
-          owner.email &&
-          meUser.email &&
-          String(owner.email).trim().toLowerCase() === String(meUser.email).trim().toLowerCase();
-        if (!sameEmail) {
-          await logRisk(req.user.id, req, { kind: 'phone_verify_conflict', phone: phoneCanon, owner_id: owner.id }, 40);
-          const err = new Error('Bu telefon artıq başqa hesabda istifadə olunur');
+        if (!phoneLinkRolesCompatible(sessionRole, owner.role)) {
+          const err = new Error('Bu telefon başqa rol üçün qeydiyyatdadır');
+          err.statusCode = 409;
+          throw err;
+        }
+        if (
+          owner.google_sub &&
+          meUser.google_sub &&
+          String(owner.google_sub).trim() !== '' &&
+          String(owner.google_sub) !== String(meUser.google_sub)
+        ) {
+          await logRisk(req.user.id, req, { kind: 'phone_verify_google_clash', phone: phoneCanon, owner_id: owner.id }, 50);
+          const err = new Error('Bu telefon artıq başqa Google hesabına bağlıdır');
           err.statusCode = 409;
           throw err;
         }
 
-        // Link google_sub to the phone-owner account if missing
-        if (meUser.google_sub && !owner.google_sub) {
-          await client.query(
-            `UPDATE users
-             SET google_sub = $2,
-                 auth_provider = COALESCE(auth_provider, 'google')
-             WHERE id = $1`,
-            [owner.id, meUser.google_sub]
-          );
-        } else if (meUser.google_sub && owner.google_sub && String(meUser.google_sub) !== String(owner.google_sub)) {
-          await logRisk(req.user.id, req, { kind: 'google_sub_mismatch_same_phone', phone: phoneCanon, owner_id: owner.id }, 50);
-        }
+        await assertGoogleSubFreeForOtherUser(meUser.google_sub, owner.id);
 
-        // Soft-deactivate duplicate google-created account (keep audit via deleted_at if exists)
+        await client.query(
+          `UPDATE users
+           SET google_sub = COALESCE(NULLIF(TRIM(google_sub), ''), $2),
+               email = COALESCE(NULLIF(TRIM(email), ''), $3),
+               auth_provider = COALESCE(auth_provider, 'google'),
+               phone_verified = TRUE,
+               full_name = CASE
+                 WHEN TRIM(COALESCE(full_name, '')) = '' THEN COALESCE($4, full_name)
+                 ELSE full_name
+               END
+           WHERE id = $1`,
+          [owner.id, meUser.google_sub, meUser.email, meUser.full_name || null]
+        );
+
         await client
           .query(
             `UPDATE users
@@ -1251,6 +1293,7 @@ const verifyMyPhoneVerifyOtp = async (req, res) => {
                  deleted_at = NOW(),
                  phone = NULL,
                  email = NULL,
+                 google_sub = NULL,
                  phone_verified = FALSE
              WHERE id = $1`,
             [req.user.id]
@@ -1263,11 +1306,9 @@ const verifyMyPhoneVerifyOtp = async (req, res) => {
            WHERE id = $1`,
           [owner.id]
         );
-        const linked = linkedRows[0];
-        return { user: linked, linkedUserId: owner.id };
+        return { user: linkedRows[0], linkedUserId: owner.id, merged: true };
       }
 
-      // Normal: verify phone on current account
       await client.query(
         `UPDATE users
          SET phone = $2,
@@ -1276,7 +1317,6 @@ const verifyMyPhoneVerifyOtp = async (req, res) => {
         [req.user.id, phoneCanon]
       );
 
-      // Save OTP as PIN if no stored pin (helps phone backup login)
       if (!hasStoredPin(meUser.pin_hash) && /^\d{6}$/.test(codeStr)) {
         const hash = await bcrypt.hash(codeStr, 12);
         await client.query('UPDATE users SET pin_hash = $1 WHERE id = $2', [hash, req.user.id]).catch(() => {});
@@ -1286,11 +1326,19 @@ const verifyMyPhoneVerifyOtp = async (req, res) => {
         'SELECT id, full_name, email, phone, role, phone_verified FROM users WHERE id = $1',
         [req.user.id]
       );
-      return { user: fresh[0], linkedUserId: null };
+      return { user: fresh[0], linkedUserId: null, merged: false };
     });
 
-    const userOut = await enrichUserForClient(out.user);
-    res.json({ success: true, user: userOut, linked_user_id: out.linkedUserId });
+    const sessionUser = out.user;
+    const token = sign({ id: sessionUser.id, role: sessionUser.role });
+    const userOut = await enrichUserForClient(sessionUser, sessionUser.role);
+    res.json({
+      success: true,
+      token,
+      user: userOut,
+      linked_user_id: out.linkedUserId,
+      merged: out.merged,
+    });
   } catch (err) {
     const st = err.statusCode || 500;
     res.status(st).json({ success: false, message: err.message });
@@ -1478,14 +1526,7 @@ const googleLogin = async (req, res) => {
     return res.json({
       success: true,
       token,
-      user: {
-        id: user.id,
-        full_name: user.full_name,
-        role: user.role,
-        email: user.email,
-        phone: user.phone,
-        phone_verified: Boolean(user.phone_verified),
-      },
+      user: buildAuthUserPayload(user),
     });
   } catch (err) {
     const st = err.statusCode || 500;
@@ -1778,14 +1819,7 @@ const googleComplete = async (req, res) => {
     return res.json({
       success: true,
       token,
-      user: {
-        id: user.id,
-        full_name: user.full_name,
-        role: user.role,
-        email: user.email,
-        phone: user.phone,
-        phone_verified: Boolean(user.phone_verified),
-      },
+      user: buildAuthUserPayload(user),
     });
   } catch (err) {
     const st = err.statusCode || 500;

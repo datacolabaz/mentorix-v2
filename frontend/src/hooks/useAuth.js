@@ -63,10 +63,13 @@ const useAuthStore = create((set) => ({
 
   confirmMyPhoneVerifyOtp: async (phone, code) => {
     const data = await api.post('/auth/phone/verify/confirm', { phone, code })
-    if (data?.user) {
-      const token = localStorage.getItem('mx_token')
+    if (data?.token && data?.user) {
+      localStorage.setItem('mx_token', data.token)
       localStorage.setItem('mx_user', JSON.stringify(data.user))
-      set({ user: data.user, token })
+      set({ user: data.user, token: data.token })
+    } else if (data?.user) {
+      localStorage.setItem('mx_user', JSON.stringify(data.user))
+      set({ user: data.user, token: localStorage.getItem('mx_token') })
     }
     return data
   },

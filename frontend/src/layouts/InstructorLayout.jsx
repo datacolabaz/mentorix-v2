@@ -53,7 +53,7 @@ const NAV_SECTIONS = [
 ]
 
 export default function InstructorLayout() {
-  const { user, logout, updateUser } = useAuthStore()
+  const { user, logout, updateUser, setSession } = useAuthStore()
   const navigate = useNavigate()
   const location = useLocation()
   const [navOpen, setNavOpen] = useState(false)
@@ -628,11 +628,10 @@ export default function InstructorLayout() {
             setVerifyBusy(true)
             try {
               const r = await api.post('/auth/phone/verify/confirm', { phone: verifyPhone, code: verifyCode })
-              if (r?.user) {
+              if (r?.token && r?.user) {
+                setSession(r.token, r.user)
+              } else if (r?.user) {
                 updateUser(r.user)
-                try {
-                  localStorage.setItem('mx_onboard_add_student_v1', '1')
-                } catch {}
               }
               toast('Telefon təsdiqləndi', 'success')
               setVerifyOpen(false)

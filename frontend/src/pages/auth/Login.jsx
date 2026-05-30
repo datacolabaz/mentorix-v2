@@ -1219,23 +1219,6 @@ export default function Login() {
                           >
                             Email ilə qeydiyyat / giriş
                           </button>
-                          <button
-                            type="button"
-                            className={
-                              loginModalOpen
-                                ? 'mx-auto flex min-h-[52px] w-full max-w-xs items-center justify-center rounded-xl border border-white/10 bg-white/5 px-4 text-sm font-semibold text-gray-200 hover:bg-white/10 sm:min-h-[48px]'
-                                : 'text-xs text-gray-400 underline underline-offset-4 hover:text-gray-200'
-                            }
-                            onClick={() => {
-                              setMode('phone')
-                              setStep('phone')
-                              setRole(null)
-                              setPhone('')
-                              setPinInput('')
-                            }}
-                          >
-                            Telefonla daxil ol
-                          </button>
                         </div>
                         <div className="px-1 text-center text-[11px] leading-relaxed text-gray-500">
                           Müəllim: öz Gmail ilə qeydiyyat — emailə kod və link gəlir, təsdiqdən sonra giriş.
@@ -1445,105 +1428,6 @@ export default function Login() {
                         </button>
                       </form>
                     ) : null}
-                  </>
-                ) : null}
-
-                {mode === 'phone' ? (
-                  <>
-                    <div className={`grid gap-3 mb-6 ${ROLES_LOGIN.length <= 2 ? 'grid-cols-2 max-w-[280px] mx-auto' : 'grid-cols-3'}`}>
-                      {ROLES_LOGIN.map((r) => (
-                        <button
-                          key={r.key}
-                          type="button"
-                          onClick={() => {
-                            setRole(r.key)
-                            resetFlow()
-                            setPhone('')
-                          }}
-                          className={`p-3 rounded-xl border text-sm font-semibold transition-all flex flex-col items-center gap-1 ${
-                            role === r.key
-                              ? 'border-primary/30 bg-primary/10 text-primary'
-                              : 'border-white/10 text-gray-400 hover:border-white/20'
-                          }`}
-                        >
-                          <RoleIcon role={r.key} />
-                          <span className="text-xs">{r.label}</span>
-                        </button>
-                      ))}
-                    </div>
-
-                    {role && step === 'phone' && (
-                      <form onSubmit={handlePhoneContinue} className="space-y-4">
-                        <p className="text-xs text-gray-500 leading-relaxed">
-                          Bu giriş <strong className="text-gray-300">yalnız mövcud hesablar</strong> üçündür. PIN yoxdursa,
-                          &quot;Davam et&quot; ilə bir dəfə SMS göndərilir — gələn <strong className="text-gray-300">6 rəqəm</strong>{' '}
-                          daimi giriş PIN-inizdir.
-                        </p>
-                        <div>
-                          <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
-                            Telefon nömrəsi
-                          </label>
-                          <PhoneInput value={phone} onChange={setPhone} required />
-                        </div>
-                        <Button type="submit" loading={loading} className="w-full justify-center py-3">
-                          Davam et
-                        </Button>
-                      </form>
-                    )}
-
-                    {role && step === 'pin' && (
-                      <form onSubmit={handlePinLogin} className="space-y-4">
-                        <p className="text-xs text-gray-400 text-center leading-relaxed">
-                          SMS ilə gələn və ya əvvəl saxladığınız <strong className="text-gray-200">daimi 6 rəqəmli PIN</strong>{' '}
-                          daxil edin. Bu, OTP deyil — hər girişdə eyni PIN.
-                        </p>
-                        <div className="text-center text-xs text-gray-500">{phone}</div>
-                        <input
-                          className="w-full bg-surface-1 border border-white/10 rounded-xl px-4 py-4 text-white text-2xl font-bold text-center tracking-widest outline-none focus:border-primary/40"
-                          placeholder=""
-                          aria-label="Giriş PIN-i, 6 rəqəm"
-                          maxLength={6}
-                          inputMode="numeric"
-                          autoComplete="one-time-code"
-                          value={pinInput}
-                          onChange={(e) => setPinInput(e.target.value.replace(/\D/g, ''))}
-                          required
-                        />
-                        <Button type="submit" loading={loading} className={loginSubmitBtnClass}>
-                          PIN ilə daxil ol
-                        </Button>
-                        <button
-                          type="button"
-                          onClick={handleForgotPinSms}
-                          disabled={loading}
-                          className="w-full text-center text-xs text-amber-400/90 hover:text-amber-300 disabled:opacity-50"
-                        >
-                          PIN-i unutdum — yeni PIN SMS (bir dəfə)
-                        </button>
-                        <button
-                          type="button"
-                          onClick={resetFlow}
-                          className="w-full text-center text-xs text-gray-500 hover:text-white"
-                        >
-                          ← Geri
-                        </button>
-                      </form>
-                    )}
-
-                    <button
-                      type="button"
-                      className="w-full text-center text-xs text-gray-500 hover:text-white mt-4"
-                      onClick={() => {
-                        setRole(null)
-                        setPhone('')
-                        setPinInput('')
-                        setStep('phone')
-                        setOtpCode('')
-                        setOtpSent(false)
-                      }}
-                    >
-                      Rol seçiminə geri qayıt
-                    </button>
                   </>
                 ) : null}
               </>
