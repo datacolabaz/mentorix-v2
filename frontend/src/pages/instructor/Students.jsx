@@ -333,6 +333,7 @@ function StudentFormFields({
         <PhoneInput
           value={data.phone_number || data.phone || ''}
           onChange={(v) => setData((p) => ({ ...p, phone_number: v, phone: v }))}
+          persistLoginDefaults={false}
           required
         />
         <p className="text-[10px] text-gray-500 mt-1.5">
