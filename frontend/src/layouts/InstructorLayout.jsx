@@ -345,7 +345,7 @@ export default function InstructorLayout() {
             </div>
             {billing ? (
               <div className="mt-3">
-                <BillingUsagePills billing={billing} />
+                <BillingUsagePills billing={billing} planTitle={currentPlanTitle} />
               </div>
             ) : null}
           </div>

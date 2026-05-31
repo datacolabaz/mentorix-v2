@@ -1,92 +1,82 @@
-import { smsUsageDisplay, storageUsageDisplay } from '../../lib/billingUsageDisplay'
+import { smsUsageDisplay, storageUsageFromBilling } from '../../lib/billingUsageDisplay'
 
-function fmtBytesShort(n) {
-  const x = Number(n)
-  if (!Number.isFinite(x) || x < 0) return '—'
-  if (x < 1024) return `${Math.round(x)} B`
-  if (x < 1024 * 1024) return `${Math.round(x / 102.4) / 10} KB`
-  const mb = x / (1024 * 1024)
-  return mb >= 10 ? `${Math.round(mb)} MB` : `${Math.round(mb * 10) / 10} MB`
-}
-
-function fmtLimit(v, unit) {
-  if (v == null) return '∞'
-  if (unit === 'mb') {
-    const n = Number(v)
-    if (!Number.isFinite(n)) return '—'
-    const gb = n / 1024
-    return gb >= 1 ? `${gb.toFixed(gb >= 10 ? 0 : 1)}GB` : `${Math.round(n)}MB`
+function fmtStorageMbPair(billing) {
+  const lim = billing?.limits || {}
+  const used = billing?.usage || {}
+  const byteCap = lim.storage_limit_bytes
+  if (byteCap != null && Number.isFinite(Number(byteCap)) && Number(byteCap) > 0) {
+    const cap = Number(byteCap)
+    const u = Math.max(0, Number(used.storage_bytes) || 0)
+    const toMb = (b) => {
+      const mb = b / (1024 * 1024)
+      if (mb >= 1024) return `${Math.round((mb / 1024) * 10) / 10} GB`
+      return `${Math.round(mb)} MB`
+    }
+    return `${toMb(u)} / ${toMb(cap)}`
   }
-  const n = Number(v)
-  if (!Number.isFinite(n)) return '—'
-  return String(Math.round(n))
+  const usedMb = Math.max(0, Number(used.storage_mb) || 0)
+  const limMb = lim.storage_mb
+  if (limMb == null || limMb === '') return `${Math.round(usedMb)} MB / ∞`
+  return `${Math.round(usedMb)} MB / ${Math.round(Number(limMb))} MB`
 }
 
-function fmtUsed(v, unit) {
-  if (unit === 'mb') {
-    const n = Number(v)
-    if (!Number.isFinite(n)) return '—'
-    const gb = n / 1024
-    return gb >= 1 ? `${gb.toFixed(gb >= 10 ? 0 : 1)}GB` : `${Math.round(n)}MB`
-  }
-  const n = Number(v)
-  if (!Number.isFinite(n)) return '—'
-  return String(Math.round(n))
+function fmtStudentsLine(billing) {
+  const used = Math.max(0, Number(billing?.usage?.students) || 0)
+  const lim = billing?.limits?.students
+  if (lim == null || lim === '') return `${used} / ∞ istifadə olunur`
+  const cap = Math.max(0, Number(lim) || 0)
+  return `${used} / ${cap} istifadə olunur`
 }
 
-function Pill({ label, value, title, tone }) {
-  const toneCls =
-    tone === 'warn'
-      ? 'border-amber-500/35 text-amber-100'
-      : tone === 'pending'
-        ? 'border-sky-500/30 text-sky-100'
-        : ''
+function fmtSmsRemainingLine(billing) {
+  const sms = smsUsageDisplay(billing)
+  const used = Math.max(0, Number(billing?.usage?.sms_monthly) || 0)
+  const effective = sms.effective
+  if (effective == null || effective === '') return `${used} / ∞ qalıb`
+  const remaining = Math.max(0, Math.round(effective - used))
+  const cap = Math.max(0, Math.round(effective))
+  return `${remaining} / ${cap} qalıb`
+}
+
+function UsageRow({ icon, label, value, warn }) {
   return (
-    <span
-      title={title || undefined}
-      className={[
-        'inline-flex flex-col gap-0.5 rounded-full border border-[color:var(--border-subtle)] bg-token-surfaceCard/40 px-3 py-1.5 text-[11px] text-token-textMain',
-        toneCls,
-      ].join(' ')}
-    >
-      <span className="inline-flex items-center gap-2">
-        <span className="text-token-textMuted">{label}:</span>
-        <span className="font-semibold tabular-nums">{value}</span>
-      </span>
-    </span>
+    <div className="min-w-0">
+      <p className="text-[11px] font-semibold text-token-textMuted leading-snug">
+        {icon} {label}
+      </p>
+      <p
+        className={[
+          'text-sm font-semibold tabular-nums mt-0.5 leading-snug',
+          warn ? 'text-amber-200' : 'text-token-textMain',
+        ].join(' ')}
+      >
+        {value}
+      </p>
+    </div>
   )
 }
 
-export default function BillingUsagePills({ billing }) {
+export default function BillingUsagePills({ billing, planTitle = '' }) {
   if (!billing) return null
-  const lim = billing.limits || {}
-  const used = billing.usage || {}
+
   const sms = smsUsageDisplay(billing)
-  const storage = storageUsageDisplay(billing)
+  const storage = storageUsageFromBilling(billing)
+  const studentsWarn =
+    billing.limits?.students != null &&
+    Number(billing.usage?.students) >= Number(billing.limits.students)
+  const storageWarn = storage.limit != null && storage.pct >= 90
+  const smsWarn = sms.overEffective
 
-  const byteCap = lim.storage_limit_bytes
-  const storageLabel =
-    byteCap != null && Number.isFinite(Number(byteCap))
-      ? `${fmtBytesShort(used.storage_bytes)} / ${fmtBytesShort(byteCap)}`
-      : `${fmtUsed(used.storage_mb, 'mb')} / ${fmtLimit(lim.storage_mb, 'mb')}`
-
-  const smsTone = sms.overEffective ? 'warn' : sms.pending > 0 && sms.overPlanOnly ? 'pending' : null
-  const smsTitle = sms.detail
-    ? `Effektiv limit: ${sms.label}. (${sms.detail})`
-    : `Aylıq SMS: istifadə / cari limit (paket + təsdiqlənmiş əlavə)`
+  const planLabel = String(planTitle || '').trim() || 'Paket'
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <Pill
-        label="Students"
-        value={`${fmtUsed(used.students, 'n')} / ${fmtLimit(lim.students, 'n')}`}
-      />
-      <Pill
-        label="Storage"
-        value={storageLabel}
-        title={storage.detail || 'Paket yaddaşı + təsdiqlənmiş əlavə yer'}
-      />
-      <Pill label="SMS (aylıq)" value={sms.label} title={smsTitle} tone={smsTone} />
+    <div className="rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard/40 p-3 space-y-3">
+      <p className="text-sm font-bold text-token-textMain leading-snug">📦 {planLabel} Paket</p>
+      <div className="space-y-2.5">
+        <UsageRow icon="👥" label="Tələbələr" value={fmtStudentsLine(billing)} warn={studentsWarn} />
+        <UsageRow icon="💾" label="Sənəd yaddaşı" value={fmtStorageMbPair(billing)} warn={storageWarn} />
+        <UsageRow icon="📱" label="SMS" value={fmtSmsRemainingLine(billing)} warn={smsWarn} />
+      </div>
     </div>
   )
 }
