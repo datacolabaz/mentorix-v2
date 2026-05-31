@@ -14,6 +14,7 @@ const { runBillingNotifications } = require('./jobs/billingNotifications');
 const { runPackReminders } = require('./jobs/packReminders');
 const { expireAbandonedBillingPayments, markPastDueSubscriptions } = require('./jobs/billingPaymentsReaper');
 const { runNotificationQueueOnce } = require('./jobs/notificationQueueWorker');
+const { runAssignmentNotifications } = require('./jobs/assignmentNotifications');
 const { reconcileStorageUsage } = require('./jobs/storageUsageReconciler');
 const { runOrphanFilesReaper } = require('./jobs/orphanFilesReaper');
 
@@ -109,6 +110,11 @@ cron.schedule('25 */6 * * *', () => {
 // Billing notifications: hourly check for "2 days left" and "last lesson"
 cron.schedule('15 * * * *', () => {
   runBillingNotifications().catch((e) => console.error('billing notifications cron', e.message));
+});
+
+// Assignment reminders (24h) and overdue: hourly
+cron.schedule('20 * * * *', () => {
+  runAssignmentNotifications().catch((e) => console.error('assignment notifications cron', e.message));
 });
 
 // Pack reminders fallback: every 30 minutes

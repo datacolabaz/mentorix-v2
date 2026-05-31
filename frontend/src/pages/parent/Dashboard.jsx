@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import api from '../../lib/api'
 import Card from '../../components/common/Card'
 import useAuthStore from '../../hooks/useAuth'
@@ -6,23 +7,59 @@ import useAuthStore from '../../hooks/useAuth'
 export default function ParentDashboard() {
   const { user } = useAuthStore()
   const [children, setChildren] = useState([])
+  const [hwSummary, setHwSummary] = useState(null)
 
   useEffect(() => {
-    // Valideynin usaqlarini al
-    api.get('/students').then(d => {
-      const mine = (d.students || []).filter(s => s.parent_id === user.id)
+    api.get('/students').then((d) => {
+      const mine = (d.students || []).filter((s) => s.parent_id === user.id)
       setChildren(mine)
     })
-  }, [])
+    api
+      .get('/tasks/parent')
+      .then((d) => setHwSummary(d.summary || null))
+      .catch(() => setHwSummary(null))
+  }, [user.id])
 
   const BILLING = { '8_lessons': '8 Dərs', '12_lessons': '12 Dərs' }
 
   return (
     <div className="p-6">
-      <div className="mb-6">
-        <h1 className="font-display font-bold text-2xl">Valideyn Portalı</h1>
-        <p className="text-gray-400 text-sm mt-1">Uşaqlarınızın proqresi</p>
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-end justify-between gap-3">
+        <div>
+          <h1 className="font-display font-bold text-2xl">Valideyn Portalı</h1>
+          <p className="text-gray-400 text-sm mt-1">Uşaqlarınızın proqresi</p>
+        </div>
+        <Link
+          to="/parent/assignments"
+          className="text-sm font-semibold text-primary hover:underline"
+        >
+          Ev tapşırıqları →
+        </Link>
       </div>
+
+      {hwSummary && hwSummary.assigned > 0 && (
+        <Card className="p-4 mb-6 border border-indigo-500/20">
+          <p className="text-xs text-gray-400 uppercase tracking-wider mb-2">Ev tapşırıqları (ümumi)</p>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center text-sm">
+            <div>
+              <div className="font-bold text-lg">{hwSummary.assigned}</div>
+              <div className="text-gray-500 text-xs">Təyin</div>
+            </div>
+            <div>
+              <div className="font-bold text-lg text-blue-400">{hwSummary.submitted}</div>
+              <div className="text-gray-500 text-xs">Təslim</div>
+            </div>
+            <div>
+              <div className="font-bold text-lg text-emerald-400">{hwSummary.reviewed}</div>
+              <div className="text-gray-500 text-xs">Yoxlanılıb</div>
+            </div>
+            <div>
+              <div className="font-bold text-lg text-amber-400">{hwSummary.overdue}</div>
+              <div className="text-gray-500 text-xs">Gecikmiş</div>
+            </div>
+          </div>
+        </Card>
+      )}
 
       <div className="space-y-6">
         {children.map(child => {

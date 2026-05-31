@@ -437,7 +437,7 @@ router.get('/referral-sources', authenticate, authorize('admin', 'instructor'), 
   }
 });
 
-router.get('/', authenticate, authorize('admin', 'instructor'), listStudents);
+router.get('/', authenticate, authorize('admin', 'instructor', 'parent'), listStudents);
 
 router.post(
   '/',

@@ -12,11 +12,43 @@ const {
   saveMyAssignmentDraft,
   submitMyAssignment,
   getInstructorStudentAssignment,
+  reviewInstructorAssignment,
+  getAssignmentAnalytics,
+  listInstructorGroups,
+  listParentAssignments,
   listMyTasks,
   markMyTaskDone,
 } = require('../controllers/taskController');
 
+const ASSIGNMENT_MIME_OK = new Set([
+  'application/pdf',
+  'image/png',
+  'image/jpeg',
+  'image/jpg',
+  'text/csv',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-powerpoint',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'application/zip',
+  'application/x-zip-compressed',
+]);
+
+function assignmentFileFilter(req, file, cb) {
+  const ext = path.extname(file.originalname || '').toLowerCase();
+  const extOk = ['.pdf', '.png', '.jpg', '.jpeg', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.csv', '.zip'].includes(
+    ext,
+  );
+  if (ASSIGNMENT_MIME_OK.has(file.mimetype) || extOk) return cb(null, true);
+  return cb(new Error('Fayl formatı dəstəklənmir (PDF, Word, Excel, PowerPoint, şəkil, ZIP)'));
+}
+
 router.get('/', authenticate, authorize('instructor'), listInstructorTasks);
+router.get('/analytics', authenticate, authorize('instructor'), getAssignmentAnalytics);
+router.get('/groups', authenticate, authorize('instructor'), listInstructorGroups);
+router.get('/parent', authenticate, authorize('parent'), listParentAssignments);
 router.post('/', authenticate, authorize('instructor'), createInstructorTask);
 router.delete('/:id', authenticate, authorize('instructor'), deleteInstructorAssignment);
 
@@ -28,6 +60,7 @@ router.patch('/assignments/:id/submit', authenticate, authorize('student'), subm
 
 // Instructor review of a specific student assignment row
 router.get('/instructor/review/:id', authenticate, authorize('instructor'), getInstructorStudentAssignment);
+router.patch('/instructor/review/:id', authenticate, authorize('instructor'), reviewInstructorAssignment);
 
 // Upload attachments for assignments (local storage, unguessable filenames)
 const uploadsAssignmentsDir = path.join(__dirname, '../../uploads/assignments');
@@ -56,17 +89,7 @@ const storage = multer.diskStorage({
 const uploadAssignmentFile = multer({
   storage,
   limits: { fileSize: 20 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => {
-    const ok = [
-      'application/pdf',
-      'image/png',
-      'text/csv',
-      'application/vnd.ms-excel',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    ].includes(file.mimetype);
-    if (!ok) return cb(new Error('Yalnız PDF, PNG, CSV, XLS və ya XLSX faylı qəbul edilir'));
-    cb(null, true);
-  },
+  fileFilter: assignmentFileFilter,
 });
 
 router.post(
@@ -90,21 +113,7 @@ router.post(
 const uploadInstructorQuestionFile = multer({
   storage,
   limits: { fileSize: 20 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => {
-    const ok = [
-      'application/pdf',
-      'image/png',
-      'image/jpeg',
-      'image/jpg',
-      'text/csv',
-      'application/msword',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'application/vnd.ms-excel',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    ].includes(file.mimetype);
-    if (!ok) return cb(new Error('Yalnız PDF, şəkil, CSV, Word və ya Excel faylı qəbul edilir'));
-    cb(null, true);
-  },
+  fileFilter: assignmentFileFilter,
 });
 
 router.post(

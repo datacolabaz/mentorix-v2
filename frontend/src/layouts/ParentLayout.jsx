@@ -9,6 +9,7 @@ import NavIcon from '../components/common/NavIcon'
 
 const NAV = [
   { to: '/parent', label: 'Uşaqlarım', icon: <NavIcon name="children" />, end: true },
+  { to: '/parent/assignments', label: 'Ev tapşırıqları', icon: <NavIcon name="tasks" /> },
   { to: '/parent/payments', label: 'Ödəniş', icon: <NavIcon name="payments" /> },
   { to: '/parent/notifications', label: 'Bildirişlər', icon: <NavIcon name="notifications" /> },
 ]

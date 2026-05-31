@@ -50,6 +50,8 @@ import StudentJoinClass from './pages/student/JoinClass'
 import StudentMyGroups from './pages/student/MyGroups'
 import { StudentGroupProvider } from './contexts/StudentGroupContext'
 import ParentDashboard from './pages/parent/Dashboard'
+import ParentAssignments from './pages/parent/Assignments'
+import AssignmentAnalytics from './pages/instructor/AssignmentAnalytics'
 import CourseDashboard from './pages/course/Dashboard'
 import CourseTeachers from './pages/course/Teachers'
 import CourseLeads from './pages/course/Leads'
@@ -143,6 +145,8 @@ export default function App() {
         <Route path="attendance" element={<InstructorAttendance />} />
         <Route path="analytics" element={<InstructorAnalytics />} />
         <Route path="tasks" element={<InstructorTasks />} />
+        <Route path="tasks/analytics" element={<AssignmentAnalytics />} />
+        <Route path="assignments" element={<InstructorTasks />} />
         <Route path="payments" element={<InstructorPayments />} />
         <Route path="notifications" element={<InstructorNotifications />} />
         <Route path="settings" element={<InstructorSettings />} />
@@ -170,6 +174,7 @@ export default function App() {
 
       <Route path="/parent" element={<ProtectedRoute roles={['parent']}><ParentLayout /></ProtectedRoute>}>
         <Route index element={<ParentDashboard />} />
+        <Route path="assignments" element={<ParentAssignments />} />
         <Route path="payments" element={<Placeholder title="Ödəniş" />} />
         <Route path="notifications" element={<ParentNotifications />} />
       </Route>

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import api from '../../lib/api'
 import Card from '../../components/common/Card'
@@ -7,6 +8,7 @@ import Modal from '../../components/common/Modal'
 import { useToast } from '../../components/common/Toast'
 import useUiStore from '../../hooks/useUi'
 import { BILLING_STATUS_QUERY_KEY, useBillingStatus } from '../../hooks/useBillingStatus'
+import { assignmentStatusClass, assignmentStatusLabel } from '../../lib/assignmentHelpers'
 
 function fmtDue(d) {
   if (!d) return ''
@@ -50,6 +52,11 @@ export default function InstructorTasks() {
   const [reviewLoading, setReviewLoading] = useState(false)
   const [reviewErr, setReviewErr] = useState(null)
   const [review, setReview] = useState(null)
+  const [reviewScore, setReviewScore] = useState('')
+  const [reviewFeedback, setReviewFeedback] = useState('')
+  const [reviewSaving, setReviewSaving] = useState(false)
+  const [groups, setGroups] = useState([])
+  const [analytics, setAnalytics] = useState(null)
   const toast = useToast()
   const { setFocusMode } = useUiStore()
   const queryClient = useQueryClient()
@@ -63,6 +70,8 @@ export default function InstructorTasks() {
     question_file_url: '',
     description: '',
     due_date: '',
+    max_score: '',
+    group_id: '',
     selectedStudentIds: [],
   })
 
@@ -92,10 +101,30 @@ export default function InstructorTasks() {
     }
   }, [])
 
+  const loadGroups = useCallback(async () => {
+    try {
+      const d = await api.get('/tasks/groups')
+      setGroups(Array.isArray(d.groups) ? d.groups : [])
+    } catch {
+      setGroups([])
+    }
+  }, [])
+
+  const loadAnalytics = useCallback(async () => {
+    try {
+      const d = await api.get('/tasks/analytics')
+      setAnalytics(d.analytics || null)
+    } catch {
+      setAnalytics(null)
+    }
+  }, [])
+
   useEffect(() => {
     void load()
     void loadStudents()
-  }, [load, loadStudents])
+    void loadGroups()
+    void loadAnalytics()
+  }, [load, loadStudents, loadGroups, loadAnalytics])
 
   const stats = useMemo(() => {
     const total = tasks.reduce((s, t) => s + (t.assigned_count || 0), 0)
@@ -134,11 +163,22 @@ export default function InstructorTasks() {
         question_file_url: form.question_file_url || null,
         description: form.description || null,
         due_date: form.due_date || null,
+        max_score: form.max_score ? Number(form.max_score) : null,
+        group_id: form.group_id || null,
         student_ids: form.selectedStudentIds,
       })
       toast(`Göndərildi (${d.assignedCount || 0} tələbə)`, 'success')
       setOpen(false)
-      setForm({ title: '', topic: '', question_file_url: '', description: '', due_date: '', selectedStudentIds: [] })
+      setForm({
+        title: '',
+        topic: '',
+        question_file_url: '',
+        description: '',
+        due_date: '',
+        max_score: '',
+        group_id: '',
+        selectedStudentIds: [],
+      })
       await load()
       queryClient.invalidateQueries({ queryKey: BILLING_STATUS_QUERY_KEY })
     } catch (e) {
@@ -205,13 +245,55 @@ export default function InstructorTasks() {
     setReviewLoading(true)
     setReviewErr(null)
     setReview(null)
+    setReviewScore('')
+    setReviewFeedback('')
     try {
       const d = await api.get('/tasks/instructor/review/' + encodeURIComponent(studentAssignmentId))
-      setReview(d.review || null)
+      const r = d.review || null
+      setReview(r)
+      setReviewScore(r?.score != null ? String(r.score) : '')
+      setReviewFeedback(r?.feedback || '')
     } catch (e) {
       setReviewErr(e?.message || 'Yüklənmədi')
     } finally {
       setReviewLoading(false)
+    }
+  }
+
+  const saveReview = async () => {
+    if (!review?.student_assignment_id) return
+    setReviewSaving(true)
+    try {
+      const body = {
+        feedback: reviewFeedback,
+        score: reviewScore !== '' ? Number(reviewScore) : undefined,
+      }
+      const d = await api.patch('/tasks/instructor/review/' + encodeURIComponent(review.student_assignment_id), body)
+      setReview(d.review || review)
+      toast('Rəy saxlanıldı', 'success')
+      await load()
+      await loadAnalytics()
+    } catch (e) {
+      toast(e?.message || 'Xəta', 'error')
+    } finally {
+      setReviewSaving(false)
+    }
+  }
+
+  const decideLate = async (decision) => {
+    if (!review?.student_assignment_id) return
+    setReviewSaving(true)
+    try {
+      const d = await api.patch('/tasks/instructor/review/' + encodeURIComponent(review.student_assignment_id), {
+        late_decision: decision,
+      })
+      setReview(d.review || review)
+      toast(decision === 'accepted' ? 'Gecikmiş təslim qəbul edildi' : 'Gecikmiş təslim rədd edildi', 'success')
+      await load()
+    } catch (e) {
+      toast(e?.message || 'Xəta', 'error')
+    } finally {
+      setReviewSaving(false)
     }
   }
 
@@ -221,10 +303,16 @@ export default function InstructorTasks() {
         <div className="min-w-0">
           <h1 className="font-display font-bold text-xl sm:text-2xl text-token-textMain">Tapşırıqlar</h1>
           <p className="text-token-textMuted text-sm mt-1">
-            Tələbələrinizi seçib göndərin — yalnız seçilənlər «Tapşırıqlarım»da görəcək.
+            Ev tapşırığı verin, təslimləri yoxlayın, bal və rəy yazın.
           </p>
         </div>
-        <div className="flex gap-2 shrink-0">
+        <div className="flex flex-wrap gap-2 shrink-0">
+          <Link
+            to="/instructor/tasks/analytics"
+            className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold border border-indigo-500/30 text-indigo-200 hover:bg-indigo-500/10"
+          >
+            Analitika
+          </Link>
           <Button variant="secondary" size="sm" onClick={() => void load()} disabled={loading}>
             Yenilə
           </Button>
@@ -240,18 +328,26 @@ export default function InstructorTasks() {
         </Card>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
         <Card hover className="p-4">
           <p className="text-xs text-token-textMuted">Tapşırıqlar</p>
           <p className="text-lg font-bold text-token-textMain mt-1">{tasks.length}</p>
         </Card>
         <Card hover className="p-4">
-          <p className="text-xs text-token-textMuted">Təyinatlar (cəmi)</p>
+          <p className="text-xs text-token-textMuted">Təyinat (cəmi)</p>
           <p className="text-lg font-bold text-token-textMain mt-1">{stats.total}</p>
         </Card>
         <Card hover className="p-4">
-          <p className="text-xs text-token-textMuted">Tamamlanan</p>
-          <p className="text-lg font-bold text-token-textMain mt-1">{stats.done}</p>
+          <p className="text-xs text-token-textMuted">Təslim nisbəti</p>
+          <p className="text-lg font-bold text-token-textMain mt-1">
+            {analytics?.submission_rate != null ? `${analytics.submission_rate}%` : '—'}
+          </p>
+        </Card>
+        <Card hover className="p-4">
+          <p className="text-xs text-token-textMuted">Orta bal</p>
+          <p className="text-lg font-bold text-token-textMain mt-1">
+            {analytics?.average_score != null ? analytics.average_score : '—'}
+          </p>
         </Card>
       </div>
 
@@ -283,8 +379,21 @@ export default function InstructorTasks() {
                           · Son tarix: <span className="text-token-textMain font-mono">{fmtDue(t.due_date)}</span>
                         </>
                       ) : null}
+                      {t.group_name ? (
+                        <>
+                          {' '}
+                          · Qrup: <span className="text-token-textMain">{t.group_name}</span>
+                        </>
+                      ) : null}
+                      {t.max_score ? (
+                        <>
+                          {' '}
+                          · Max: <span className="text-token-textMain">{t.max_score}</span>
+                        </>
+                      ) : null}
                       <span className="block sm:inline sm:ml-1 mt-0.5 sm:mt-0">
-                        · {t.assigned_count || 0} tələbə · {t.done_count || 0} bitirdi
+                        · Təyin: {t.assigned_count || 0} · Təslim: {t.submitted_count || 0} · Gözləyir:{' '}
+                        {t.pending_count || 0}
                       </span>
                     </p>
                   </div>
@@ -313,15 +422,11 @@ export default function InstructorTasks() {
                           <span className="text-token-textMain truncate">{r.full_name || 'Tələbə'}</span>
                           <div className="flex items-center gap-2 shrink-0">
                             <span
-                              className={
-                                r.status === 'completed'
-                                  ? 'text-[10px] font-bold px-2 py-0.5 rounded-lg bg-emerald-500/15 border border-emerald-400/35 text-emerald-200'
-                                  : 'text-[10px] font-bold px-2 py-0.5 rounded-lg bg-amber-500/10 border border-amber-400/30 text-amber-100'
-                              }
+                              className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border ${assignmentStatusClass(r.status)}`}
                             >
-                              {r.status === 'completed' ? 'Bitirdi' : 'Gözləyir'}
+                              {assignmentStatusLabel(r.status)}
                             </span>
-                            {r.status === 'completed' ? (
+                            {['submitted', 'late', 'reviewed', 'completed'].includes(r.status) ? (
                               <Button size="sm" variant="secondary" onClick={() => void openReview(r.student_assignment_id)}>
                                 Yoxla
                               </Button>
@@ -376,7 +481,7 @@ export default function InstructorTasks() {
                 <input
                   type="file"
                   className="hidden"
-                  accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xlsx,.xls,.csv,application/pdf,image/png,image/jpeg,text/csv,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                  accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xlsx,.xls,.ppt,.pptx,.csv,.zip,application/pdf,image/png,image/jpeg,application/zip"
                   onChange={(e) => void uploadQuestionFile(e.target.files?.[0])}
                   disabled={blocked}
                 />
@@ -390,14 +495,43 @@ export default function InstructorTasks() {
               <p className="text-sm text-gray-500">Fayl yoxdur.</p>
             )}
           </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Son tarix</label>
+              <input
+                type="date"
+                className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500"
+                value={form.due_date}
+                onChange={(e) => setForm((p) => ({ ...p, due_date: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Max bal (ixtiyari)</label>
+              <input
+                type="number"
+                min={1}
+                className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500"
+                value={form.max_score}
+                onChange={(e) => setForm((p) => ({ ...p, max_score: e.target.value }))}
+                placeholder="100"
+              />
+            </div>
+          </div>
           <div>
-            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Son tarix (ixtiyari)</label>
-            <input
-              type="date"
+            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Qrup (hamısına təyin)</label>
+            <select
               className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500"
-              value={form.due_date}
-              onChange={(e) => setForm((p) => ({ ...p, due_date: e.target.value }))}
-            />
+              value={form.group_id}
+              onChange={(e) => setForm((p) => ({ ...p, group_id: e.target.value }))}
+            >
+              <option value="">— Qrup seçin (ixtiyari) —</option>
+              {groups.map((g) => (
+                <option key={g.id} value={g.id}>
+                  {g.subject_name ? `${g.subject_name} · ` : ''}
+                  {g.name}
+                </option>
+              ))}
+            </select>
           </div>
           <div className="border-t border-indigo-500/20 pt-3">
             <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
@@ -535,6 +669,46 @@ export default function InstructorTasks() {
                 <div className="mt-2">{renderPreview(review.question_file_url)}</div>
               </div>
             )}
+
+            {review.status === 'late' && !review.late_decision ? (
+              <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 p-3 flex flex-wrap gap-2">
+                <p className="text-sm text-amber-100 w-full">Gecikmiş təslim — qəbul və ya rədd edin.</p>
+                <Button size="sm" onClick={() => void decideLate('accepted')} loading={reviewSaving}>
+                  Gecikməni qəbul et
+                </Button>
+                <Button size="sm" variant="danger" onClick={() => void decideLate('rejected')} loading={reviewSaving}>
+                  Rədd et
+                </Button>
+              </div>
+            ) : null}
+
+            <div className="rounded-xl border border-indigo-500/15 bg-[#0f0c29]/40 p-3 space-y-3">
+              <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Qiymət və rəy</p>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min={0}
+                  max={review.max_score || undefined}
+                  className="w-28 bg-[#13112e] border border-indigo-500/20 rounded-lg px-3 py-2 text-white text-sm"
+                  value={reviewScore}
+                  onChange={(e) => setReviewScore(e.target.value)}
+                  placeholder={review.max_score ? `0–${review.max_score}` : 'Bal'}
+                />
+                {review.max_score ? (
+                  <span className="text-sm text-gray-400">/ {review.max_score}</span>
+                ) : null}
+              </div>
+              <textarea
+                rows={4}
+                className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-3 py-2 text-white text-sm resize-none"
+                value={reviewFeedback}
+                onChange={(e) => setReviewFeedback(e.target.value)}
+                placeholder="Rəy (məs: Loops hissəsində səhvlər var)"
+              />
+              <Button onClick={() => void saveReview()} loading={reviewSaving}>
+                Rəyi saxla
+              </Button>
+            </div>
 
             <Button
               variant="secondary"

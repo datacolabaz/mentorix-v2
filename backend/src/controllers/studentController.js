@@ -101,11 +101,25 @@ const listStudents = async (req, res) => {
     const group = `GROUP BY u.id, u.full_name, u.email, u.phone, sp.phone_number, sp.parent_id, sp.grade,
                 sp.monthly_fee,
                 sp.parent_name, sp.parent_phone, pu.full_name, pu.phone,
-                e.id, e.billing_type, e.lesson_count, e.billing_cycle, e.lesson_weekdays, e.lesson_times, e.enrollment_start_date, e.billing_timing, e.payment_plan, e.status,
+                e.id, e.billing_type, e.lesson_count, e.billing_cycle, e.lesson_weekdays, e.lesson_times, e.lesson_end_times, e.enrollment_start_date, e.billing_timing, e.payment_plan, e.status,
                 e.referral_notes, e.referral_source_id, e.instructor_id, e.subject_id, e.group_id,
                 e.enrolled_at, e.configured_at, e.initial_payment_status, e.payment_due_date, e.discount_percent,
                 ist.name, ig.name, iu.full_name, rs.name, sp.notes
        ORDER BY u.full_name`;
+
+    if (req.user.role === 'parent') {
+      const { rows } = await db.query(
+        `${select}
+         ${joins}
+         WHERE u.role = 'student' AND u.is_active = TRUE
+           AND sp.parent_id = $1
+           AND e.id IS NOT NULL
+         ${group}`,
+        [req.user.id],
+      );
+      const students = await enrichStudentsWithGroupSchedule(rows);
+      return res.json({ success: true, students });
+    }
 
     if (!isAdmin) {
       if (!instructorId) {

@@ -11,10 +11,33 @@ import useUiStore from '../../hooks/useUi'
 import GroupSwitcher from '../../components/student/GroupSwitcher'
 import { useStudentGroups } from '../../contexts/StudentGroupContext'
 import { withEnrollmentQuery } from '../../lib/studentGroupQuery'
+import {
+  assignmentStatusClass,
+  assignmentStatusLabel,
+  filterTasksByTab,
+  isPreviewable,
+} from '../../lib/assignmentHelpers'
 
 function fmtDue(d) {
   if (!d) return ''
   return String(d).slice(0, 10)
+}
+
+function renderPreview(url) {
+  const s = String(url || '').toLowerCase()
+  if (s.endsWith('.pdf')) {
+    return <iframe title="pdf" src={url} className="w-full h-[60vh] rounded-xl border border-indigo-500/15" />
+  }
+  if (s.endsWith('.png') || s.endsWith('.jpg') || s.endsWith('.jpeg') || s.endsWith('.webp') || s.endsWith('.gif')) {
+    return (
+      <img
+        src={url}
+        alt="preview"
+        className="w-full max-h-[60vh] object-contain rounded-xl border border-indigo-500/15 bg-black/20"
+      />
+    )
+  }
+  return null
 }
 
 function fmtCreated(iso) {
@@ -39,7 +62,10 @@ export default function StudentAssignments() {
   const [detail, setDetail] = useState(null)
   const [editorHtml, setEditorHtml] = useState('')
   const [attachments, setAttachments] = useState([])
+  const [tab, setTab] = useState('active')
   const { setFocusMode } = useUiStore()
+
+  const filteredTasks = useMemo(() => filterTasksByTab(tasks, tab), [tasks, tab])
 
   useEffect(() => {
     return () => setFocusMode(false)
@@ -99,7 +125,9 @@ export default function StudentAssignments() {
     }
   }
 
-  const locked = Boolean(detail?.submitted_at) || detail?.status === 'completed'
+  const locked =
+    Boolean(detail?.submitted_at) ||
+    ['submitted', 'reviewed', 'late', 'late_rejected', 'completed'].includes(detail?.status)
 
   const saveDraft = async () => {
     if (!openId) return
@@ -189,18 +217,40 @@ export default function StudentAssignments() {
         </Card>
       )}
 
+      <div className="flex flex-wrap gap-2 mb-4">
+        {[
+          { id: 'active', label: 'Aktiv' },
+          { id: 'completed', label: 'Tamamlanmış' },
+          { id: 'overdue', label: 'Gecikmiş' },
+        ].map((x) => (
+          <button
+            key={x.id}
+            type="button"
+            onClick={() => setTab(x.id)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold border ${
+              tab === x.id
+                ? 'bg-indigo-600/45 border-indigo-400/55 text-white'
+                : 'border-indigo-500/20 text-gray-500'
+            }`}
+          >
+            {x.label}
+          </button>
+        ))}
+      </div>
+
       {loading ? (
         <Card hover className="p-5 text-sm text-token-textMuted border border-[color:var(--border-subtle)] hover:border-primary/20">
           Yüklənir…
         </Card>
-      ) : tasks.length === 0 ? (
+      ) : filteredTasks.length === 0 ? (
         <Card hover className="p-5 text-sm text-token-textMuted border border-[color:var(--border-subtle)] hover:border-primary/20">
-          Hələ tapşırıq yoxdur.
+          Bu bölmədə tapşırıq yoxdur.
         </Card>
       ) : (
         <div className="space-y-3">
-          {tasks.map((t) => {
-            const done = t.status === 'completed'
+          {filteredTasks.map((t) => {
+            const st = t.display_status || t.status
+            const done = ['submitted', 'reviewed', 'late', 'completed'].includes(st)
             return (
               <Card
                 key={t.assignment_id}
@@ -231,15 +281,8 @@ export default function StudentAssignments() {
                     </p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <span
-                      className={[
-                        'text-xs font-bold px-2.5 py-1 rounded-lg border',
-                        done
-                          ? 'bg-emerald-500/15 border-emerald-400/40 text-emerald-200'
-                          : 'bg-indigo-500/15 border-indigo-400/35 text-indigo-200',
-                      ].join(' ')}
-                    >
-                      {done ? 'Bitirdi' : 'Gözləyir'}
+                    <span className={`text-xs font-bold px-2.5 py-1 rounded-lg border ${assignmentStatusClass(t.status, st)}`}>
+                      {assignmentStatusLabel(t.status, st)}
                     </span>
                     <Button size="sm" variant="secondary" onClick={() => void openWorkspace(t.assignment_id)}>
                       Aç
@@ -305,7 +348,25 @@ export default function StudentAssignments() {
                     · Təslim: <span className="text-gray-300 font-mono">{fmtCreated(detail.submitted_at)}</span>
                   </>
                 ) : null}
+                {detail.reviewed_at ? (
+                  <>
+                    {' '}
+                    · Yoxlama: <span className="text-gray-300 font-mono">{fmtCreated(detail.reviewed_at)}</span>
+                  </>
+                ) : null}
               </p>
+              {detail.score != null ? (
+                <p className="text-sm text-emerald-200/95 mt-2 font-semibold">
+                  Bal: {detail.score}
+                  {detail.max_score != null ? ` / ${detail.max_score}` : ''}
+                </p>
+              ) : null}
+              {detail.feedback ? (
+                <div className="mt-2 text-sm text-gray-200 whitespace-pre-wrap rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3">
+                  <span className="text-xs font-semibold text-emerald-300/90 uppercase">Müəllim rəyi</span>
+                  <div className="mt-1">{detail.feedback}</div>
+                </div>
+              ) : null}
               {detail.description ? (
                 <div className="mt-3 text-sm text-gray-200 whitespace-pre-wrap leading-relaxed">
                   <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Müəllim qeydi</span>
@@ -350,11 +411,11 @@ export default function StudentAssignments() {
                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Fayllar</p>
                 {!locked && (
                   <label className="text-xs font-semibold text-blue-400 hover:text-blue-300 cursor-pointer">
-                    + Yüklə (PNG/PDF/XLSX/CSV)
+                    + Yüklə (PDF, Word, şəkil, ZIP)
                     <input
                       type="file"
                       multiple
-                      accept=".png,.pdf,.xlsx,.xls,.csv,application/pdf,image/png,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                      accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.zip,application/pdf,image/png,image/jpeg,application/zip"
                       className="hidden"
                       onChange={(e) => void uploadFiles(e.target.files)}
                     />
