@@ -9,7 +9,7 @@ export function useSubscriptionPlans() {
     queryKey: SUBSCRIPTION_PLANS_QUERY_KEY,
     queryFn: async () => {
       const d = await api.get('/public/subscription-plans')
-      const plans = Array.isArray(d?.plans) ? d.plans : []
+      const plans = (Array.isArray(d?.plans) ? d.plans : []).filter(Boolean)
       return plans.length ? plans : DEFAULT_SUBSCRIPTION_PLANS
     },
     placeholderData: keepPreviousData,

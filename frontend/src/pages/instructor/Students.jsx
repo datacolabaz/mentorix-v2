@@ -185,8 +185,22 @@ function StudentFormFields({
     [teachingSubjects, data.subject_id]
   )
 
-  const subjectNames = useMemo(() => teachingSubjects.map((s) => String(s.name || '').trim()).filter(Boolean), [teachingSubjects])
-  const groupNames = useMemo(() => (selectedSubject?.groups || []).map((g) => String(g.name || '').trim()).filter(Boolean), [selectedSubject?.groups])
+  const subjectNames = useMemo(
+    () =>
+      teachingSubjects
+        .filter((s) => s?.id)
+        .map((s) => String(s.name || '').trim())
+        .filter(Boolean),
+    [teachingSubjects],
+  )
+  const groupNames = useMemo(
+    () =>
+      (selectedSubject?.groups || [])
+        .filter((g) => g?.id)
+        .map((g) => String(g.name || '').trim())
+        .filter(Boolean),
+    [selectedSubject?.groups],
+  )
 
   const openCreate = (kind, preset) => {
     setCreateOpen(kind)
@@ -279,24 +293,6 @@ function StudentFormFields({
           Ödəniş xatırlatması və qrup kodları bu nömrəyə SMS/WhatsApp ilə göndərilir (müəllim hesabından ayrıdır).
         </p>
       </div>
-
-      {Array.isArray(teachingCourses) && teachingCourses.length > 0 ? (
-        <div>
-          <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Kurs</label>
-          <select
-            className={inp}
-            value={data.course_id || ''}
-            onChange={(e) => setData((p) => ({ ...p, course_id: e.target.value }))}
-          >
-            <option value="">— Kurs seçin (ixtiyari) —</option>
-            {teachingCourses.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-        </div>
-      ) : null}
 
       {mode === 'add' || mode === 'edit' ? (
         <div>
@@ -861,7 +857,7 @@ export default function InstructorStudents() {
     setTeachingSubjects((prev) =>
       (Array.isArray(prev) ? prev : []).map((s) => {
         if (String(s.id) !== String(subjectId)) return s
-        const groups = Array.isArray(s.groups) ? s.groups : []
+        const groups = (Array.isArray(s.groups) ? s.groups : []).filter(Boolean)
         return { ...s, groups: [...groups, g] }
       })
     )

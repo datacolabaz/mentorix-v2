@@ -515,7 +515,7 @@ export default function InstructorSettings() {
           </div>
         ) : null}
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 items-stretch">
-          {plans.map((p) => {
+          {plans.filter(Boolean).map((p) => {
             const pid = String(p?.id || '').toLowerCase()
             const isCurrent = pid && pid === currentPlanId
             const isUpgrade = planRank(pid) > planRank(currentPlanId)

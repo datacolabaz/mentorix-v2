@@ -20,6 +20,19 @@ function formatIncomeAzn(n) {
   return `${formatAzn(v)} ₼`
 }
 
+/** API/cədvəl kənar hallarında null qrup/sahə elementlərini süzür */
+function normalizeTeachingSubjects(raw) {
+  return (Array.isArray(raw) ? raw : [])
+    .filter((s) => s && s.id)
+    .map((s) => ({
+      ...s,
+      name: String(s.name || '').trim() || '—',
+      groups: (Array.isArray(s.groups) ? s.groups : [])
+        .filter((g) => g && g.id)
+        .map((g) => ({ ...g, name: String(g.name || '').trim() || '—' })),
+    }))
+}
+
 export default function InstructorTeachingGroups() {
   const toast = useToast()
   const { theme } = useUiStore()
@@ -220,7 +233,7 @@ export default function InstructorTeachingGroups() {
                   Hələ sahə yoxdur — ilk sahənizi əlavə edin.
                 </li>
               ) : null}
-              {subjects.map((s) => (
+              {subjects.filter((s) => s?.id).map((s) => (
                 <li
                   key={s.id}
                   className={[
@@ -277,7 +290,7 @@ export default function InstructorTeachingGroups() {
                       </p>
                     ) : (
                       <ul className="space-y-1">
-                        {(s.groups || []).map((g) => (
+                        {(s.groups || []).filter((g) => g?.id).map((g) => (
                           <li
                             key={g.id}
                             className={[
