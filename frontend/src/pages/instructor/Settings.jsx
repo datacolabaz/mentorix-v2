@@ -1160,4 +1160,10 @@ export default function InstructorSettings() {
         amountAzn={checkout?.amountAzn}
         manualAccount={manualAccount}
         busy={planBusy}
-      
+        onConfirm={confirmCheckout}
+      />
+
+    </div>
+  )
+}
+
