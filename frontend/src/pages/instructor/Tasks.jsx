@@ -55,6 +55,8 @@ export default function InstructorTasks() {
   const [reviewScore, setReviewScore] = useState('')
   const [reviewFeedback, setReviewFeedback] = useState('')
   const [reviewSaving, setReviewSaving] = useState(false)
+  const [aiLoading, setAiLoading] = useState(false)
+  const [aiMeta, setAiMeta] = useState(null)
   const [groups, setGroups] = useState([])
   const [analytics, setAnalytics] = useState(null)
   const toast = useToast()
@@ -247,12 +249,14 @@ export default function InstructorTasks() {
     setReview(null)
     setReviewScore('')
     setReviewFeedback('')
+    setAiMeta(null)
     try {
       const d = await api.get('/tasks/instructor/review/' + encodeURIComponent(studentAssignmentId))
       const r = d.review || null
       setReview(r)
       setReviewScore(r?.score != null ? String(r.score) : '')
       setReviewFeedback(r?.feedback || '')
+      setAiMeta(r?.ai_metadata && typeof r.ai_metadata === 'object' ? r.ai_metadata : null)
     } catch (e) {
       setReviewErr(e?.message || 'Yüklənmədi')
     } finally {
@@ -278,6 +282,32 @@ export default function InstructorTasks() {
     } finally {
       setReviewSaving(false)
     }
+  }
+
+  const runAiSuggest = async () => {
+    if (!review?.student_assignment_id) return
+    setAiLoading(true)
+    try {
+      const d = await api.post(
+        '/tasks/instructor/review/' + encodeURIComponent(review.student_assignment_id) + '/ai-suggest',
+      )
+      const ai = d.ai || null
+      setAiMeta(ai)
+      setReview((prev) => (prev ? { ...prev, ai_metadata: ai } : prev))
+      toast('AI təklifi hazırdır', 'success')
+    } catch (e) {
+      if (e?.ai) setAiMeta(e.ai)
+      toast(e?.message || 'AI xətası', 'error')
+    } finally {
+      setAiLoading(false)
+    }
+  }
+
+  const applyAiSuggestion = () => {
+    if (!aiMeta || aiMeta.status !== 'ready') return
+    if (aiMeta.suggested_score != null) setReviewScore(String(aiMeta.suggested_score))
+    if (aiMeta.draft_feedback) setReviewFeedback(aiMeta.draft_feedback)
+    toast('Təklif formaya köçürüldü — yoxlayıb saxlayın', 'success')
   }
 
   const decideLate = async (decision) => {
@@ -679,6 +709,75 @@ export default function InstructorTasks() {
                 <Button size="sm" variant="danger" onClick={() => void decideLate('rejected')} loading={reviewSaving}>
                   Rədd et
                 </Button>
+              </div>
+            ) : null}
+
+            {review.submitted_at ? (
+              <div className="rounded-xl border border-violet-500/25 bg-violet-500/5 p-3 space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-[10px] font-semibold text-violet-300 uppercase tracking-wider">
+                    AI köməkçi (təklif)
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <Button size="sm" variant="secondary" onClick={() => void runAiSuggest()} loading={aiLoading}>
+                      {aiMeta?.status === 'ready' ? 'Yenidən analiz et' : 'AI təklifi'}
+                    </Button>
+                    {aiMeta?.status === 'ready' ? (
+                      <Button size="sm" onClick={applyAiSuggestion}>
+                        Tətbiq et
+                      </Button>
+                    ) : null}
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500">
+                  AI yalnız köməkçidir; final bal və rəyi müəllim təsdiq edir.
+                </p>
+                {aiLoading || aiMeta?.status === 'pending' ? (
+                  <p className="text-sm text-violet-200/90">Analiz edilir…</p>
+                ) : null}
+                {aiMeta?.status === 'error' ? (
+                  <p className="text-sm text-amber-200/90">{aiMeta.error || 'AI xətası'}</p>
+                ) : null}
+                {aiMeta?.status === 'ready' ? (
+                  <div className="space-y-2 text-sm text-gray-200">
+                    {aiMeta.suggested_score != null ? (
+                      <p>
+                        <span className="text-gray-500">Tövsiyə olunan bal:</span>{' '}
+                        <span className="font-semibold text-white">
+                          {aiMeta.suggested_score}
+                          {review.max_score != null ? ` / ${review.max_score}` : ''}
+                        </span>
+                      </p>
+                    ) : null}
+                    {aiMeta.summary ? <p className="text-indigo-100/90">{aiMeta.summary}</p> : null}
+                    {Array.isArray(aiMeta.strengths) && aiMeta.strengths.length ? (
+                      <div>
+                        <p className="text-[10px] font-semibold text-emerald-400/90 uppercase">Güclü tərəflər</p>
+                        <ul className="list-disc list-inside text-emerald-100/80 mt-1 space-y-0.5">
+                          {aiMeta.strengths.map((s) => (
+                            <li key={s}>{s}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : null}
+                    {Array.isArray(aiMeta.weaknesses) && aiMeta.weaknesses.length ? (
+                      <div>
+                        <p className="text-[10px] font-semibold text-amber-400/90 uppercase">Zəif tərəflər</p>
+                        <ul className="list-disc list-inside text-amber-100/80 mt-1 space-y-0.5">
+                          {aiMeta.weaknesses.map((s) => (
+                            <li key={s}>{s}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : null}
+                    {aiMeta.recommendations ? (
+                      <div>
+                        <p className="text-[10px] font-semibold text-violet-300/90 uppercase">Tövsiyə</p>
+                        <p className="text-gray-300 mt-1 whitespace-pre-wrap">{aiMeta.recommendations}</p>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
               </div>
             ) : null}
 

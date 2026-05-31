@@ -377,13 +377,76 @@ const submitMyAssignment = async (req, res) => {
   }
 };
 
+const requestAiReviewSuggestion = async (req, res) => {
+  try {
+    if (!process.env.OPENAI_API_KEY) {
+      return res.status(503).json({
+        success: false,
+        message: 'AI xidməti aktiv deyil. OPENAI_API_KEY təyin edin.',
+      });
+    }
+
+    const instructorId = req.user.id;
+    const id = req.params.id;
+    const { rows } = await db.query(
+      `SELECT a.id, a.status, a.answer_text, a.attachment_urls, a.submitted_at, a.ai_metadata,
+              t.title, t.topic, t.description, t.max_score, t.instructor_id
+       FROM student_assignments a
+       JOIN assignments t ON t.id = a.assignment_id
+       WHERE a.id = $1 AND t.instructor_id = $2
+       LIMIT 1`,
+      [id, instructorId],
+    );
+    if (!rows[0]) return res.status(404).json({ success: false, message: 'Tapılmadı' });
+
+    if (!rows[0].submitted_at || !['submitted', 'late', 'reviewed'].includes(rows[0].status)) {
+      return res.status(400).json({ success: false, message: 'Yalnız təslim edilmiş iş üçün AI təklifi mümkündür' });
+    }
+
+    const pending = {
+      status: 'pending',
+      requested_at: new Date().toISOString(),
+    };
+    await db.query(`UPDATE student_assignments SET ai_metadata = $1::jsonb WHERE id = $2`, [
+      JSON.stringify(pending),
+      id,
+    ]);
+
+    const { runAssignmentAiReview } = require('../services/assignmentAiReviewService');
+    let ai;
+    try {
+      ai = await runAssignmentAiReview(rows[0]);
+    } catch (err) {
+      const failed = {
+        status: 'error',
+        error: err.message || 'AI xətası',
+        completed_at: new Date().toISOString(),
+      };
+      await db.query(`UPDATE student_assignments SET ai_metadata = $1::jsonb WHERE id = $2`, [
+        JSON.stringify(failed),
+        id,
+      ]);
+      return res.status(422).json({ success: false, message: failed.error, ai: failed });
+    }
+
+    await db.query(`UPDATE student_assignments SET ai_metadata = $1::jsonb WHERE id = $2`, [
+      JSON.stringify(ai),
+      id,
+    ]);
+
+    res.json({ success: true, ai });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 const getInstructorStudentAssignment = async (req, res) => {
   try {
     const instructorId = req.user.id;
     const id = req.params.id;
     const { rows } = await db.query(
       `SELECT a.id AS student_assignment_id, a.status, a.answer_text, a.attachment_urls,
-              a.submitted_at, a.score, a.feedback, a.reviewed_at, a.late_decision,
+              a.submitted_at, a.score, a.feedback, a.reviewed_at, a.late_decision, a.ai_metadata,
               s.full_name AS student_name, s.id AS student_id,
               t.id AS assignment_id, t.title, t.topic, t.question_file_url, t.description,
               t.due_date, t.max_score, t.created_at AS assignment_created_at
@@ -638,6 +701,7 @@ module.exports = {
   saveMyAssignmentDraft,
   submitMyAssignment,
   getInstructorStudentAssignment,
+  requestAiReviewSuggestion,
   reviewInstructorAssignment,
   getAssignmentAnalytics,
   listParentAssignments,

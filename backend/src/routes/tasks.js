@@ -12,6 +12,7 @@ const {
   saveMyAssignmentDraft,
   submitMyAssignment,
   getInstructorStudentAssignment,
+  requestAiReviewSuggestion,
   reviewInstructorAssignment,
   getAssignmentAnalytics,
   listInstructorGroups,
@@ -60,6 +61,7 @@ router.patch('/assignments/:id/submit', authenticate, authorize('student'), subm
 
 // Instructor review of a specific student assignment row
 router.get('/instructor/review/:id', authenticate, authorize('instructor'), getInstructorStudentAssignment);
+router.post('/instructor/review/:id/ai-suggest', authenticate, authorize('instructor'), requestAiReviewSuggestion);
 router.patch('/instructor/review/:id', authenticate, authorize('instructor'), reviewInstructorAssignment);
 
 // Upload attachments for assignments (local storage, unguessable filenames)
