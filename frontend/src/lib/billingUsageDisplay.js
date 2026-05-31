@@ -133,6 +133,10 @@ export function extraStorageBytes(billing) {
 
 function fmtMbFromBytes(b) {
   const mb = Number(b) / (1024 * 1024)
+  if (mb >= 1024) {
+    const gb = mb / 1024
+    return gb % 1 === 0 ? `${Math.round(gb)} GB` : `${Math.round(gb * 10) / 10} GB`
+  }
   return mb >= 10 ? `${Math.round(mb)} MB` : `${Math.round(mb * 10) / 10} MB`
 }
 
@@ -144,7 +148,11 @@ export function storageUsageDisplay(billing) {
   const parts = []
   if (planBaseB != null) parts.push(`paket ${fmtMbFromBytes(planBaseB)}`)
   if (extraB > 0) parts.push(`+${fmtMbFromBytes(extraB)} əlavə`)
-  if (pendingMb > 0) parts.push(`+${pendingMb} MB gözləyir`)
+  if (pendingMb > 0) {
+    const pendingLabel =
+      pendingMb >= 1024 && pendingMb % 1024 === 0 ? `+${pendingMb / 1024} GB` : `+${pendingMb} MB`
+    parts.push(`${pendingLabel} gözləyir`)
+  }
   let detail = parts.length ? parts.join(', ') : null
   if (pendingMb > 0 && core.limit != null) {
     const after = Number(core.limit) + pendingMb * 1024 * 1024

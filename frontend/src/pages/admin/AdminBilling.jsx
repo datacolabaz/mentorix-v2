@@ -26,8 +26,55 @@ function emptySmsPack() {
   return { quantity: '', price_azn: '', label: '' }
 }
 
+function defaultStoragePacksDraft() {
+  return [
+    {
+      quantity_gb: '1',
+      quantity_mb: '1024',
+      price_azn: '2',
+      label: '+1 GB Sənəd Yaddaşı',
+      billing_period: 'monthly',
+    },
+    {
+      quantity_gb: '5',
+      quantity_mb: '5120',
+      price_azn: '6',
+      label: '+5 GB Sənəd Yaddaşı',
+      billing_period: 'monthly',
+    },
+    {
+      quantity_gb: '15',
+      quantity_mb: '15360',
+      price_azn: '14',
+      label: '+15 GB Sənəd Yaddaşı',
+      billing_period: 'monthly',
+    },
+  ]
+}
+
+function storagePackFromApi(p) {
+  const mb = Math.round(Number(p.quantity_mb) || 0)
+  let quantity_gb = ''
+  if (p.quantity_gb != null && p.quantity_gb !== '' && Number.isFinite(Number(p.quantity_gb))) {
+    quantity_gb = String(Math.round(Number(p.quantity_gb)))
+  } else if (mb >= 1024 && mb % 1024 === 0) {
+    quantity_gb = String(mb / 1024)
+  } else if (mb > 0) {
+    quantity_gb = String(Math.round((mb / 1024) * 100) / 100)
+  }
+  const quantity_mb =
+    mb > 0 ? String(mb) : quantity_gb && Number(quantity_gb) > 0 ? String(Math.round(Number(quantity_gb) * 1024)) : ''
+  return {
+    quantity_gb,
+    quantity_mb,
+    price_azn: String(p.price_azn ?? ''),
+    label: String(p.label || ''),
+    billing_period: String(p.billing_period || 'monthly'),
+  }
+}
+
 function emptyStoragePack() {
-  return { quantity_mb: '', price_azn: '', label: '' }
+  return { quantity_gb: '', quantity_mb: '', price_azn: '', label: '', billing_period: 'monthly' }
 }
 
 function emptyOperatorStock() {
@@ -53,11 +100,7 @@ export default function AdminBilling() {
   const [busyId, setBusyId] = useState(null)
   const [accountDraft, setAccountDraft] = useState('')
   const [smsPacksDraft, setSmsPacksDraft] = useState([emptySmsPack(), emptySmsPack(), emptySmsPack()])
-  const [storagePacksDraft, setStoragePacksDraft] = useState([
-    emptyStoragePack(),
-    emptyStoragePack(),
-    emptyStoragePack(),
-  ])
+  const [storagePacksDraft, setStoragePacksDraft] = useState(defaultStoragePacksDraft)
   const [operatorDraft, setOperatorDraft] = useState(emptyOperatorStock())
   const [inventory, setInventory] = useState(null)
   const [inventoryLoading, setInventoryLoading] = useState(true)
@@ -174,7 +217,21 @@ export default function AdminBilling() {
   }
 
   function patchStoragePack(idx, field, value) {
-    setStoragePacksDraft((rows) => rows.map((r, i) => (i === idx ? { ...r, [field]: value } : r)))
+    setStoragePacksDraft((rows) =>
+      rows.map((r, i) => {
+        if (i !== idx) return r
+        const next = { ...r, [field]: value }
+        if (field === 'quantity_gb') {
+          const gb = Number(value)
+          next.quantity_mb = Number.isFinite(gb) && gb > 0 ? String(Math.round(gb * 1024)) : ''
+        }
+        if (field === 'quantity_mb') {
+          const mb = Math.round(Number(value) || 0)
+          if (mb >= 1024 && mb % 1024 === 0) next.quantity_gb = String(mb / 1024)
+        }
+        return next
+      }),
+    )
   }
 
   function addStoragePackRow() {
@@ -233,13 +290,7 @@ export default function AdminBilling() {
         )
       }
       if (Array.isArray(s.storage_packs)) {
-        setStoragePacksDraft(
-          s.storage_packs.map((p) => ({
-            quantity_mb: String(p.quantity_mb),
-            price_azn: String(p.price_azn),
-            label: String(p.label || ''),
-          })),
-        )
+        setStoragePacksDraft(s.storage_packs.map(storagePackFromApi))
       }
       toast('Ödəniş tənzimləmələri saxlanıldı')
     } catch (e) {
@@ -562,24 +613,30 @@ export default function AdminBilling() {
               + Paket
             </Button>
           </div>
-          <p className="text-xs text-gray-500 mb-3">
-            Müəllim Tənzimləmələr → «Əlavə yaddaş al» bölməsində bu paketlər görünür.
+          <p className="text-xs text-gray-500 mb-3 leading-relaxed">
+            Müəllim <strong className="text-gray-300">Tənzimləmələr → Əlavə yaddaş</strong> modalında bu paketlər görünür.
+            GB daxil etdikdə MB avtomatik hesablanır (1 GB = 1024 MB). Dəyişikliklər «Tənzimləmələri saxla» ilə
+            dərhal tətbiq olunur.
           </p>
           <div className="space-y-3">
             {storagePacksDraft.map((p, idx) => (
               <div
                 key={idx}
-                className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_1.2fr_auto] gap-2 items-end rounded-xl border border-indigo-500/15 p-3"
+                className="grid grid-cols-1 sm:grid-cols-[0.8fr_0.9fr_0.7fr_1.4fr_auto] gap-2 items-end rounded-xl border border-indigo-500/15 p-3"
               >
                 <label className="block text-xs text-gray-400">
-                  MB
+                  Həcm (GB)
                   <input
                     type="number"
-                    min={1}
+                    min={0.1}
+                    step={0.1}
                     className="mt-1 w-full bg-[#13112e] border border-indigo-500/20 rounded-lg px-3 py-2 text-white text-sm"
-                    value={p.quantity_mb}
-                    onChange={(e) => patchStoragePack(idx, 'quantity_mb', e.target.value)}
+                    value={p.quantity_gb}
+                    onChange={(e) => patchStoragePack(idx, 'quantity_gb', e.target.value)}
                   />
+                  {p.quantity_mb ? (
+                    <span className="text-[10px] text-gray-500 mt-0.5 block">= {p.quantity_mb} MB limitə əlavə</span>
+                  ) : null}
                 </label>
                 <label className="block text-xs text-gray-400">
                   Qiymət (AZN)
@@ -593,12 +650,23 @@ export default function AdminBilling() {
                   />
                 </label>
                 <label className="block text-xs text-gray-400">
-                  Başlıq
+                  Dövr
+                  <select
+                    className="mt-1 w-full bg-[#13112e] border border-indigo-500/20 rounded-lg px-3 py-2 text-white text-sm"
+                    value={p.billing_period}
+                    onChange={(e) => patchStoragePack(idx, 'billing_period', e.target.value)}
+                  >
+                    <option value="monthly">Aylıq</option>
+                    <option value="yearly">İllik</option>
+                  </select>
+                </label>
+                <label className="block text-xs text-gray-400">
+                  Başlıq (UI)
                   <input
                     type="text"
                     className="mt-1 w-full bg-[#13112e] border border-indigo-500/20 rounded-lg px-3 py-2 text-white text-sm"
                     value={p.label}
-                    placeholder="+10 MB yaddaş"
+                    placeholder="+1 GB Sənəd Yaddaşı"
                     onChange={(e) => patchStoragePack(idx, 'label', e.target.value)}
                   />
                 </label>

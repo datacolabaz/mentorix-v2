@@ -8,11 +8,25 @@ const DEFAULT_SMS_PACKS = [
   { quantity: 200, price_azn: 32, label: '200 SMS' },
 ];
 
+/** quantity_mb = plan limitinə əlavə olunacaq həcm (GB paketlər üçün 1024×GB). */
 const DEFAULT_STORAGE_PACKS = [
-  { quantity_mb: 5, price_azn: 5, label: '+5 MB yaddaş' },
-  { quantity_mb: 10, price_azn: 9, label: '+10 MB yaddaş' },
-  { quantity_mb: 20, price_azn: 16, label: '+20 MB yaddaş' },
+  { quantity_gb: 1, quantity_mb: 1024, price_azn: 2, label: '+1 GB Sənəd Yaddaşı', billing_period: 'monthly' },
+  { quantity_gb: 5, quantity_mb: 5120, price_azn: 6, label: '+5 GB Sənəd Yaddaşı', billing_period: 'monthly' },
+  { quantity_gb: 15, quantity_mb: 15360, price_azn: 14, label: '+15 GB Sənəd Yaddaşı', billing_period: 'monthly' },
 ];
+
+function resolveStoragePackMb(p) {
+  const gb = Number(p?.quantity_gb);
+  if (Number.isFinite(gb) && gb > 0) return Math.round(gb * 1024);
+  return Math.max(1, Math.round(Number(p?.quantity_mb ?? p?.quantity) || 0));
+}
+
+function defaultStorageLabel(p, quantity_mb) {
+  const gb = Number(p?.quantity_gb);
+  if (Number.isFinite(gb) && gb >= 1) return `+${gb} GB Sənəd Yaddaşı`;
+  if (quantity_mb >= 1024 && quantity_mb % 1024 === 0) return `+${quantity_mb / 1024} GB Sənəd Yaddaşı`;
+  return `+${quantity_mb} MB Sənəd Yaddaşı`;
+}
 
 async function getSetting(key) {
   const { rows } = await db.query(`SELECT value FROM billing_settings WHERE key = $1 LIMIT 1`, [key]);
@@ -61,11 +75,22 @@ async function getStoragePacks() {
     const parsed = raw ? JSON.parse(raw) : DEFAULT_STORAGE_PACKS;
     if (!Array.isArray(parsed)) return DEFAULT_STORAGE_PACKS;
     return parsed
-      .map((p) => ({
-        quantity_mb: Math.max(1, Math.round(Number(p.quantity_mb ?? p.quantity) || 0)),
-        price_azn: Math.max(0, Number(p.price_azn) || 0),
-        label: String(p.label || `+${p.quantity_mb} MB yaddaş`).trim(),
-      }))
+      .map((p) => {
+        const quantity_mb = resolveStoragePackMb(p);
+        const quantity_gb =
+          p.quantity_gb != null && Number.isFinite(Number(p.quantity_gb))
+            ? Math.round(Number(p.quantity_gb))
+            : quantity_mb >= 1024 && quantity_mb % 1024 === 0
+              ? quantity_mb / 1024
+              : null;
+        return {
+          quantity_mb,
+          quantity_gb,
+          price_azn: Math.max(0, Number(p.price_azn) || 0),
+          label: String(p.label || defaultStorageLabel(p, quantity_mb)).trim(),
+          billing_period: String(p.billing_period || 'monthly').trim() || 'monthly',
+        };
+      })
       .filter((p) => p.quantity_mb > 0 && p.price_azn > 0);
   } catch {
     return DEFAULT_STORAGE_PACKS;

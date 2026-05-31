@@ -744,7 +744,7 @@ export default function InstructorNotifications() {
                           return
                         }
                         if (act === 'OPEN_SETTINGS_STORAGE' || act === 'OPEN_STORAGE_TOPUP') {
-                          navigate('/instructor/settings', { state: { scrollTo: 'billing-storage-addons' } })
+                          navigate('/instructor/settings', { state: { openStorageAddon: true } })
                           return
                         }
                         navigate('/instructor/settings')

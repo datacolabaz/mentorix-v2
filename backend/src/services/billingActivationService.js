@@ -118,10 +118,14 @@ async function activateStoragePayment(client, payment) {
     [userId, addBytes]
   );
 
+  const histLabel =
+    mb >= 1024 && mb % 1024 === 0
+      ? `+${mb / 1024} GB Sənəd Yaddaşı`
+      : `+${mb} MB Sənəd Yaddaşı`;
   await client.query(
     `INSERT INTO billing_history (user_id, action, old_plan, new_plan, amount_cents, currency, status, provider, external_order_id)
      VALUES ($1, 'storage_topup', NULL, $2, $3, 'AZN', 'paid', $4, $5)`,
-    [userId, `+${mb} MB yaddaş`, payment.amount_cents || null, payment.provider || 'manual', String(payment.id)]
+    [userId, histLabel, payment.amount_cents || null, payment.provider || 'manual', String(payment.id)]
   );
 
   return { storage_mb: mb, storage_bytes: addBytes };

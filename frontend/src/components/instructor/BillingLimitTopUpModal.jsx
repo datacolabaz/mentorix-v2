@@ -33,7 +33,7 @@ export default function BillingLimitTopUpModal({
               className="w-full justify-center"
               onClick={onManageStorage}
             >
-              Yaddaş al
+              Əlavə yaddaş al
             </Button>
           ) : null}
           <Button type="button" variant="secondary" className="w-full justify-center" onClick={onClose}>

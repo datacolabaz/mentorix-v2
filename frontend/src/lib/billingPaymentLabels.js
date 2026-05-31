@@ -34,7 +34,11 @@ export function billingPaymentStatusLabel(status) {
 
 export function billingPaymentTitle(p) {
   if (p?.product_type === 'sms') return `+${p.sms_quantity || 0} SMS`
-  if (p?.product_type === 'storage') return `+${p.storage_mb || 0} MB yaddaş`
+  if (p?.product_type === 'storage') {
+    const mb = Math.round(Number(p.storage_mb) || 0)
+    if (mb >= 1024 && mb % 1024 === 0) return `+${mb / 1024} GB Sənəd Yaddaşı`
+    return `+${mb} MB Sənəd Yaddaşı`
+  }
   const plan = String(p?.plan || '').toUpperCase()
   const interval = p?.billing_interval === 'yearly' ? ' (illik)' : p?.billing_interval === 'monthly' ? ' (aylıq)' : ''
   return `Paket: ${plan}${interval}`

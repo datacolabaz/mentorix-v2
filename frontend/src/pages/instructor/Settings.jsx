@@ -39,6 +39,8 @@ import {
 } from '../../lib/billingUsageDisplay'
 import Tooltip from '../../components/common/Tooltip'
 import PaymentMethodModal from '../../components/instructor/PaymentMethodModal'
+import StorageAddonModal from '../../components/instructor/StorageAddonModal'
+import { formatStorageBytesHuman } from '../../lib/storageAddonDisplay'
 import { useBillingConfig } from '../../hooks/useBillingConfig'
 import { billingPaymentStatusLabel, billingPaymentTitle } from '../../lib/billingPaymentLabels'
 import Modal from '../../components/common/Modal'
@@ -64,6 +66,7 @@ export default function InstructorSettings() {
     : []
   const [checkout, setCheckout] = useState(null)
   const [limitChoice, setLimitChoice] = useState(null) // null | { open: true }
+  const [storageAddonOpen, setStorageAddonOpen] = useState(false)
   const [billingPayments, setBillingPayments] = useState([])
   const plans = Array.isArray(plansQ.data) ? plansQ.data : []
   const [savingLabel, setSavingLabel] = useState(false)
@@ -113,6 +116,13 @@ export default function InstructorSettings() {
   useEffect(() => {
     void load()
   }, [load])
+
+  useEffect(() => {
+    if (location.state?.openStorageAddon) {
+      setStorageAddonOpen(true)
+      navigate(location.pathname, { replace: true, state: { scrollTo: location.state?.scrollTo } })
+    }
+  }, [location.state?.openStorageAddon, location.pathname, navigate])
 
   useEffect(() => {
     const scrollTo = location.state?.scrollTo
@@ -552,7 +562,11 @@ export default function InstructorSettings() {
                   return
                 }
                 if (storagePacks.length && isStorageLimitReached(billing)) {
-                  document.getElementById('billing-storage-addons')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                  setStorageAddonOpen(true)
+                  return
+                }
+                if (storagePacks.length) {
+                  setStorageAddonOpen(true)
                   return
                 }
                 if (smsPacks.length) {
@@ -736,43 +750,37 @@ export default function InstructorSettings() {
 
       {storagePacks.length ? (
         <Card id="billing-storage-addons" className={settingsCardCls}>
-          <h2 className={cardTitleCls}>Əlavə yaddaş al</h2>
+          <h2 className={cardTitleCls}>Əlavə yaddaş</h2>
           <p className={cardTextCls}>
-            Paket limitinizə əlavə yaddaş sahəsi. Kartla dərhal, köçürmə ilə admin təsdiqindən sonra aktivləşir.
+            +1 GB, +5 GB və ya +15 GB paketləri — aylıq ödənişlə paket limitinizə əlavə olunur. Kartla dərhal, köçürmə
+            ilə admin təsdiqindən sonra aktivləşir.
           </p>
           {storageUsageInfo.detail ? (
             <p className="text-xs text-token-textMuted">{storageUsageInfo.detail}</p>
           ) : null}
           {extraStorageBytes(billing) > 0 ? (
             <p className="text-xs text-emerald-400/90">
-              Təsdiqlənmiş əlavə yaddaş: +{Math.round(extraStorageBytes(billing) / (1024 * 1024))} MB
+              Təsdiqlənmiş əlavə: +{formatStorageBytesHuman(extraStorageBytes(billing))}
             </p>
           ) : null}
           {pendingStorageMb(billing) > 0 ? (
             <p className="text-xs text-sky-400/90">
-              Gözləyən əlavə yaddaş: +{pendingStorageMb(billing)} MB (admin təsdiqindən sonra)
+              Gözləyən əlavə: +
+              {pendingStorageMb(billing) >= 1024 && pendingStorageMb(billing) % 1024 === 0
+                ? `${pendingStorageMb(billing) / 1024} GB`
+                : `${pendingStorageMb(billing)} MB`}{' '}
+              (təsdiqdən sonra)
             </p>
           ) : null}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {storagePacks.map((pack) => (
-              <div
-                key={pack.quantity_mb}
-                className="rounded-2xl border border-[color:var(--border-subtle)] p-4 flex flex-col gap-3"
-              >
-                <div className="font-display font-bold text-token-textMain">{pack.label}</div>
-                <div className="text-lg font-bold text-token-textMain">{formatAzn(pack.price_azn)} AZN</div>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  className="w-full justify-center mt-auto"
-                  disabled={planBusy}
-                  onClick={() => openStorageCheckout(pack)}
-                >
-                  Al
-                </Button>
-              </div>
-            ))}
-          </div>
+          <Button
+            type="button"
+            variant="primary"
+            className="w-full sm:w-auto justify-center"
+            disabled={planBusy}
+            onClick={() => setStorageAddonOpen(true)}
+          >
+            Əlavə yaddaş seç
+          </Button>
         </Card>
       ) : null}
 
@@ -1064,6 +1072,18 @@ export default function InstructorSettings() {
         ) : null}
       </Modal>
 
+      <StorageAddonModal
+        open={storageAddonOpen}
+        onClose={() => setStorageAddonOpen(false)}
+        packs={storagePacks}
+        billing={billing}
+        busy={planBusy}
+        onSelectPack={(pack) => {
+          setStorageAddonOpen(false)
+          openStorageCheckout(pack)
+        }}
+      />
+
       <PaymentMethodModal
         open={Boolean(checkout)}
         onClose={() => setCheckout(null)}
@@ -1071,7 +1091,7 @@ export default function InstructorSettings() {
           checkout?.type === 'sms'
             ? 'SMS ödənişi'
             : checkout?.type === 'storage'
-              ? 'Yaddaş ödənişi'
+              ? 'Əlavə yaddaş ödənişi'
               : 'Paket ödənişi'
         }
         subtitle={checkout?.title ? `Seçim: ${checkout.title}` : undefined}

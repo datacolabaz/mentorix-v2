@@ -128,7 +128,7 @@ export default function InstructorLayout() {
       return
     }
     if (act === 'OPEN_STORAGE_TOPUP') {
-      navigate('/instructor/settings', { state: { scrollTo: 'billing-storage-addons' } })
+      navigate('/instructor/settings', { state: { openStorageAddon: true } })
       return
     }
     if (act === 'OPEN_SETTINGS_PAYMENTS') {
@@ -570,7 +570,7 @@ export default function InstructorLayout() {
         }}
         onManageStorage={() => {
           setTopUpModalOpen(false)
-          navigate('/instructor/settings', { state: { scrollTo: 'billing-storage-addons' } })
+          navigate('/instructor/settings', { state: { openStorageAddon: true } })
         }}
       />
       <LimitReachedModal
