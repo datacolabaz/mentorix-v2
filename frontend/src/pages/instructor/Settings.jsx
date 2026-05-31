@@ -269,7 +269,16 @@ export default function InstructorSettings() {
   const currentPlanPricingLine = useMemo(() => {
     if (!currentPlanObj) return '—'
     const pid = String(currentPlanObj.id || '').toLowerCase()
-    if (pid === 'basic') return 'Ödənişsiz əsas paket — vaxt limiti yoxdur, istifadə limitləri paket üzrə tətbiq olunur.'
+    if (pid === 'basic') {
+      const days = billing?.subscription?.days_left
+      if (days != null && days > 0) {
+        return `14 günlük pulsuz sınaq — ${days} gün qalıb (əlavə SMS/yaddaş yalnız ödənişli paketlərdə)`
+      }
+      if (String(billing?.status || '') === 'expired') {
+        return 'SADƏ sınaq müddəti bitib — davam üçün ödənişli paket seçin'
+      }
+      return '14 günlük pulsuz sınaq — əlavə limit yalnız PRO və yuxarı paketlərdə'
+    }
     const m = Number(currentPlanObj.price_azn)
     if (!Number.isFinite(m) || m <= 0) return planPriceLabel(currentPlanObj)
     if (billingInterval === 'monthly') return `${formatAzn(m)} AZN/ay`
@@ -420,7 +429,7 @@ export default function InstructorSettings() {
         </p>
       </div>
 
-      <Card className={settingsCardCls}>
+      <Card id="billing-plans" className={settingsCardCls}>
         <h2 className={cardTitleCls}>Paketini dəyiş</h2>
         <p className={cardTextCls}>
           <span className={theme === 'dark' ? 'text-gray-200' : 'text-token-textMuted'}>Aktiv paket:</span>{' '}
@@ -479,10 +488,19 @@ export default function InstructorSettings() {
               storagePacksCount: storagePacks.length,
             }) ? (
               <p className="text-[11px] text-indigo-300/90 rounded-lg border border-indigo-500/25 bg-indigo-500/10 px-3 py-2 leading-relaxed">
-                Limit dolubsa: cari paketdə{' '}
-                <span className="font-medium text-white">əlavə SMS</span> və ya{' '}
-                <span className="font-medium text-white">əlavə yaddaş</span> ala bilərsiniz. Aşağı paketə keçid yalnız
-                1 ay sonra və istifadə uyğun olduqda mümkündür.
+                {currentPlanId === 'basic' ? (
+                  <>
+                    SADƏ paketində əlavə SMS/yaddaş alına bilməz. Limit dolubsa{' '}
+                    <span className="font-medium text-white">PRO və ya daha yüksək paket</span> seçin.
+                  </>
+                ) : (
+                  <>
+                    Limit dolubsa: cari paketdə{' '}
+                    <span className="font-medium text-white">əlavə SMS</span> və ya{' '}
+                    <span className="font-medium text-white">əlavə yaddaş</span> ala bilərsiniz. Aşağı paketə keçid
+                    yalnız 1 ay sonra və istifadə uyğun olduqda mümkündür.
+                  </>
+                )}
               </p>
             ) : null}
           </div>
@@ -515,8 +533,13 @@ export default function InstructorSettings() {
 
             let btnLabel = 'Başla'
             if (isCurrent) {
-              if (limitChoiceOffer) btnLabel = 'Limit həlli'
-              else if (smsPacks.length || storagePacks.length) btnLabel = 'Əlavə limit al'
+              if (limitChoiceOffer) btnLabel = isFree ? 'Paketi yüksəlt' : 'Limit həlli'
+              else if (
+                (canBuySmsOnCurrentPlan(billing, smsPacks.length) ||
+                  canBuyStorageOnCurrentPlan(billing, storagePacks.length)) &&
+                (smsPacks.length || storagePacks.length)
+              )
+                btnLabel = 'Əlavə limit al'
               else btnLabel = 'Paketi yenilə'
             } else if (usageGuard.blocked) {
               btnLabel =
@@ -708,7 +731,7 @@ export default function InstructorSettings() {
         </div>
       </Card>
 
-      {smsPacks.length ? (
+      {smsPacks.length && canBuySmsOnCurrentPlan(billing, smsPacks.length) ? (
         <Card id="billing-sms-addons" className={settingsCardCls}>
           <h2 className={cardTitleCls}>Əlavə SMS al</h2>
           <p className={cardTextCls}>
@@ -748,7 +771,7 @@ export default function InstructorSettings() {
         </Card>
       ) : null}
 
-      {storagePacks.length ? (
+      {storagePacks.length && canBuyStorageOnCurrentPlan(billing, storagePacks.length) ? (
         <Card id="billing-storage-addons" className={settingsCardCls}>
           <h2 className={cardTitleCls}>Əlavə yaddaş</h2>
           <p className={cardTextCls}>
@@ -1025,8 +1048,17 @@ export default function InstructorSettings() {
         {limitChoice?.open ? (
           <div className="space-y-4">
             <p className="text-sm text-gray-400 leading-relaxed">
-              Hansı limitə ehtiyacınız var? Aşağı paketə keçmək lazım deyil — cari{' '}
-              <span className="text-white font-medium">{currentPlanTitle}</span> paketində qalın.
+              {currentPlanId === 'basic' ? (
+                <>
+                  SADƏ paketində əlavə SMS/yaddaş alına bilməz. Limit dolubsa{' '}
+                  <span className="text-white font-medium">PRO və ya daha yüksək paket</span> seçin.
+                </>
+              ) : (
+                <>
+                  Hansı limitə ehtiyacınız var? Aşağı paketə keçmək lazım deyil — cari{' '}
+                  <span className="text-white font-medium">{currentPlanTitle}</span> paketində qalın.
+                </>
+              )}
             </p>
             {smsUsageInfo.detail ? (
               <p className="text-xs text-gray-500 rounded-lg bg-white/5 px-3 py-2">{smsUsageInfo.detail}</p>

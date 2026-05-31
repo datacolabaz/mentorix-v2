@@ -96,14 +96,16 @@ async function fetchPendingTopups(dbConn, userId) {
 }
 
 function pickLimitCta({ plan, plansMap, reachedSms, reachedStorage, reachedStudents }) {
+  const planSlug = normalizePlanSlug(plan);
+  const onBasic = planSlug === 'basic';
   const highest = isHighestTierPlan(plan, plansMap);
   if (reachedStudents) {
     return { label: 'Paketlərə bax', action: 'OPEN_SETTINGS_PLANS' };
   }
-  if (reachedSms && highest) {
+  if (reachedSms && highest && !onBasic) {
     return { label: 'SMS Balansı Artır', action: 'OPEN_SMS_TOPUP' };
   }
-  if (reachedStorage && highest) {
+  if (reachedStorage && highest && !onBasic) {
     return { label: 'Yaddaş al', action: 'OPEN_STORAGE_TOPUP' };
   }
   if (reachedSms || reachedStorage) {

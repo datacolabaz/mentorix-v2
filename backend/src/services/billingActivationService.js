@@ -60,9 +60,21 @@ async function activatePlanPayment(client, payment) {
   return { oldPlan, newPlan };
 }
 
+async function assertAddonsAllowedForUser(client, userId) {
+  const { rows } = await client.query(`SELECT plan FROM subscriptions WHERE user_id = $1 LIMIT 1`, [userId]);
+  const plan = normalizePlanSlug(rows[0]?.plan);
+  if (plan === 'basic') {
+    const err = new Error('SADƏ paketində əlavə limit aktivləşdirilə bilməz');
+    err.code = 'ADDON_NOT_ON_BASIC';
+    err.statusCode = 403;
+    throw err;
+  }
+}
+
 /** Əlavə SMS balansı */
 async function activateSmsPayment(client, payment) {
   const userId = payment.user_id;
+  await assertAddonsAllowedForUser(client, userId);
   const qty = Math.max(1, Math.round(Number(payment.sms_quantity) || 0));
   if (!qty) {
     const err = new Error('SMS miqdarı yanlışdır');
@@ -96,6 +108,7 @@ async function activateSmsPayment(client, payment) {
 /** Əlavə yaddaş (byte) */
 async function activateStoragePayment(client, payment) {
   const userId = payment.user_id;
+  await assertAddonsAllowedForUser(client, userId);
   const mb = Math.max(1, Math.round(Number(payment.storage_mb) || 0));
   if (!mb) {
     const err = new Error('Yaddaş miqdarı yanlışdır');

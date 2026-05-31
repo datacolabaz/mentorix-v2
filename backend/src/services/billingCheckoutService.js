@@ -1,5 +1,16 @@
 const db = require('../utils/db');
 const { normalizePlanSlug, planRank } = require('../config/plans');
+
+function assertAddonsAllowed(planSlug) {
+  if (normalizePlanSlug(planSlug) === 'basic') {
+    const err = new Error(
+      'SADƏ paketində əlavə SMS və yaddaş alına bilməz. PRO, GROWTH və ya PREMIUM paketinə keçin.',
+    );
+    err.code = 'ADDON_NOT_ON_BASIC';
+    err.statusCode = 403;
+    throw err;
+  }
+}
 const getCurrentPlan = require('./billingGetCurrentPlan');
 const { getPlanOrThrow, getActivePlansMap } = require('./subscriptionPlansService');
 const { createOrder } = require('./payriffService');
@@ -198,6 +209,8 @@ async function createSmsCheckout({ userId, smsQuantity, paymentMethod: paymentMe
 
   const cur = await getCurrentPlan(db, userId);
   const planSlug = normalizePlanSlug(cur.plan);
+  assertAddonsAllowed(planSlug);
+
   const finalPriceAzn = Number(pack.price_azn) || 0;
   const amountCents = Math.round(finalPriceAzn * 100);
   const provider = paymentMethod === 'cash' ? 'manual' : 'payriff';
@@ -309,6 +322,8 @@ async function createStorageCheckout({ userId, storageMb, paymentMethod: payment
 
   const cur = await getCurrentPlan(db, userId);
   const planSlug = normalizePlanSlug(cur.plan);
+  assertAddonsAllowed(planSlug);
+
   const finalPriceAzn = Number(pack.price_azn) || 0;
   const amountCents = Math.round(finalPriceAzn * 100);
   const provider = paymentMethod === 'cash' ? 'manual' : 'payriff';

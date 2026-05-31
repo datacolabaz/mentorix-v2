@@ -1,5 +1,6 @@
 const db = require('../utils/db');
 const { normalizePlanSlug } = require('../config/plans');
+const { BASIC_TRIAL_DAYS } = require('../config/billingTrial');
 const getCurrentPlan = require('./billingGetCurrentPlan');
 const { getActivePlansMap } = require('./subscriptionPlansService');
 const {
@@ -272,18 +273,26 @@ function buildMessages(status, ctx) {
     };
   }
   if (status === 'blocked') {
-    if (onlySms && highest) {
+    const onBasic = normalizePlanSlug(plan) === 'basic';
+    if (onlySms && highest && !onBasic) {
       return {
         banner:
           'Aylıq SMS limitinizə çatdınız. İstifadəyə davam etmək üçün əlavə SMS paketi əldə edə bilərsiniz.',
         cta: { label: 'SMS Balansı Artır', action: 'OPEN_SMS_TOPUP' },
       };
     }
-    if (onlyStorage && highest) {
+    if (onlyStorage && highest && !onBasic) {
       return {
         banner:
           'Yaddaş limitiniz dolub. Davam etmək üçün əlavə yaddaş paketi alın və ya köhnə faylları silin.',
         cta: { label: 'Yaddaş al', action: 'OPEN_STORAGE_TOPUP' },
+      };
+    }
+    if (onBasic && (details?.reachedSms || details?.reachedStorage)) {
+      return {
+        banner:
+          'SADƏ sınaq limitinə çatdınız. Əlavə SMS/yaddaş bu paketdə mövcud deyil — PRO və ya daha yüksək paket seçin.',
+        cta: { label: 'Paketlərə bax', action: 'OPEN_SETTINGS_PLANS' },
       };
     }
     const reasons = [];
@@ -303,8 +312,11 @@ function buildMessages(status, ctx) {
     };
   }
   if (status === 'expired') {
+    const onBasic = normalizePlanSlug(plan) === 'basic';
     return {
-      banner: 'Abunəlik aktiv deyil və ya ödəniş müddəti keçib. Davam etmək üçün paket seçin.',
+      banner: onBasic
+        ? '14 günlük SADƏ sınaq müddəti bitib. Davam etmək üçün PRO və ya daha yüksək paket seçin.'
+        : 'Abunəlik aktiv deyil və ya ödəniş müddəti keçib. Davam etmək üçün paket seçin.',
       cta: { label: 'Paketlərə bax', action: 'OPEN_SETTINGS_PLANS' },
     };
   }
@@ -456,8 +468,11 @@ async function resolveEntitlements(userId) {
     pendingTopup,
   });
 
+  const can_buy_addons = planSlug !== 'basic' && subscription_active;
+
   return {
     plan: planSlug,
+    can_buy_addons,
     is_highest_tier: isHighestTierPlan(planSlug, plansMap),
     pending_topup: pendingTopup,
     pending_plan_slug: pendingTopup?.pending_plan_slug || null,

@@ -164,12 +164,22 @@ export function isStorageLimitReached(billing) {
   return usedMb >= Number(limMb)
 }
 
-/** SMS: cari paketdə əlavə paket alına bilər (bütün ödənişli paketlər, o cümlədən Premium) */
+export function isBasicPlan(billing) {
+  return String(billing?.plan || '').toLowerCase() === 'basic'
+}
+
+/** Əlavə SMS/yaddaş yalnız ödənişli paketlərdə (SADƏ-də yox). */
 export function canBuySmsOnCurrentPlan(billing, smsPacksCount = 0) {
+  if (isBasicPlan(billing)) return false
+  if (billing?.can_buy_addons === false) return false
+  if (String(billing?.status || '') === 'expired') return false
   return smsPacksCount > 0
 }
 
 export function canBuyStorageOnCurrentPlan(billing, storagePacksCount = 0) {
+  if (isBasicPlan(billing)) return false
+  if (billing?.can_buy_addons === false) return false
+  if (String(billing?.status || '') === 'expired') return false
   return storagePacksCount > 0
 }
 

@@ -66,7 +66,7 @@ export function planLimitsHeadline(p) {
 
 const PLAN_DESCRIPTIONS = {
   basic:
-    'Platformanı sınaqdan keçirmək və kiçik qrupları idarə etmək üçün tamamilə ödənişsiz əsas paket.',
+    '14 günlük pulsuz sınaq — platformanı kifayət qədər sınamaq üçün. Əlavə SMS/yaddaş yalnız ödənişli paketlərdə.',
   pro: 'Fərdi repetitorlar və kiçik qrupları olan təlimçilər üçün ən populyar seçim.',
   growth: 'Tədris fəaliyyətini böyüdən və daha çox qrupu olan peşəkar müəllimlər üçün.',
   premium: 'Böyük auditoriyası olan kurslar və limitsiz tələbə bazası idarə etmək istəyənlər üçün tam paket.',
@@ -84,9 +84,10 @@ export function planDetailLines(p) {
 
   if (normId === 'basic') {
     return [
-      desc || 'Ödənişsiz əsas paket.',
-      limitsText ? `${limitsText} mövcuddur.` : 'Limitlər pulsuz paketə uyğun tətbiq olunur.',
-      'Limitlərə çatdıqda daha geniş paket seçməyiniz tələb olunacaq.',
+      desc || '14 günlük pulsuz sınaq paketi.',
+      limitsText ? `Sınaq müddətində: ${limitsText}.` : 'Limitlər SADƏ paketinə uyğun tətbiq olunur.',
+      'Əlavə SMS və yaddaş alına bilməz — limit dolanda PRO və ya daha yüksək paket seçin.',
+      '14 gün bitəndən sonra davam etmək üçün ödənişli paket tələb olunur.',
     ]
   }
 
