@@ -1,6 +1,7 @@
 const db = require('../utils/db');
 const { getGroupLessonSchedule } = require('./studentEnrollmentsService');
 const { parseDiscountPercent } = require('../utils/groupPaymentTerms');
+const { parseLessonEndTimes } = require('../utils/lessonScheduleTimes');
 
 function parseLessonWeekdays(raw) {
   if (raw == null) return [];
@@ -57,6 +58,11 @@ function parseGroupDefaultsPayload(body) {
     body?.default_lesson_times ?? body?.lesson_times,
     lwd,
   );
+  const let_ = parseLessonEndTimes(
+    body?.default_lesson_end_times ?? body?.lesson_end_times,
+    lwd,
+    lt,
+  );
   const billing_timing =
     String((body?.default_billing_timing ?? body?.billing_timing) || '')
       .trim()
@@ -84,6 +90,7 @@ function parseGroupDefaultsPayload(body) {
     payment_plan,
     lesson_weekdays: lwd,
     lesson_times: lt,
+    lesson_end_times: let_,
     notifications_enabled: body?.default_notifications_enabled !== false,
     initial_payment_status,
   };
@@ -93,6 +100,7 @@ function rowToDefaults(row) {
   if (!row) return null;
   const lwd = parseLessonWeekdays(row.default_lesson_weekdays);
   const lt = parseLessonTimes(row.default_lesson_times, lwd);
+  const let_ = parseLessonEndTimes(row.default_lesson_end_times, lwd, lt);
   const billing_type = normalizeBillingType(row.default_billing_type);
   if (!lwd.length || !Object.keys(lt).length) return null;
   return {
@@ -103,6 +111,7 @@ function rowToDefaults(row) {
     payment_plan: String(row.default_payment_plan || 'full').toLowerCase() === 'partial' ? 'partial' : 'full',
     lesson_weekdays: lwd,
     lesson_times: lt,
+    lesson_end_times: let_,
     notifications_enabled: row.default_notifications_enabled !== false,
     initial_payment_status: String(row.default_initial_payment_status || 'unpaid').toLowerCase(),
     source: 'group',
@@ -154,7 +163,8 @@ async function getGroupInviteDefaults(groupId) {
     `SELECT id, subject_id, instructor_id, name,
             default_billing_type, default_package_fee, default_discount_percent,
             default_billing_timing, default_payment_plan, default_lesson_weekdays,
-            default_lesson_times, default_notifications_enabled, default_initial_payment_status
+            default_lesson_times, default_lesson_end_times,
+            default_notifications_enabled, default_initial_payment_status
      FROM instructor_groups
      WHERE id = $1
      LIMIT 1`,
@@ -207,19 +217,4 @@ function assertGroupDefaultsReady(def) {
     err.statusCode = 400;
     throw err;
   }
-  if (!def.billing_type || (def.billing_type !== '8_lessons' && def.billing_type !== '12_lessons')) {
-    const err = new Error('Qrup paketi 8 və ya 12 dərs olmalıdır');
-    err.statusCode = 400;
-    throw err;
-  }
-}
-
-module.exports = {
-  parseLessonWeekdays,
-  parseLessonTimes,
-  parseGroupDefaultsPayload,
-  rowToDefaults,
-  getGroupInviteDefaults,
-  assertGroupDefaultsReady,
-  normalizeBillingType,
-};
+  if (!def.billing_type || (def.billing_type !== 

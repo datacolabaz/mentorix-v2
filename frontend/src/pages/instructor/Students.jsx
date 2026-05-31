@@ -10,7 +10,7 @@ import ListSkeleton from '../../components/common/ListSkeleton'
 import StatusBadge from '../../components/common/StatusBadge'
 import { useToast } from '../../components/common/Toast'
 import { WEEKDAYS } from './Schedule'
-import { fmtAzBakuLessonRow } from '../../lib/lessonWeekGrid'
+import { addMinutesToHm, fmtAzBakuLessonRow } from '../../lib/lessonWeekGrid'
 import { alignFirstLessonYmd } from '../../lib/firstLessonDate'
 import { readCache, writeCache } from '../../lib/cache'
 import useUiStore from '../../hooks/useUi'
@@ -72,6 +72,7 @@ const emptyForm = {
   first_lesson_date: '',
   lesson_weekdays: [],
   lesson_times: {},
+  lesson_end_times: {},
   teacher_schedule_id: '',
   parent_name: '',
   parent_phone: '',
@@ -122,6 +123,32 @@ function normalizeLessonTimes(raw) {
     if (t) out[String(k)] = t.length === 5 ? t : t.slice(0, 5)
   }
   return out
+}
+
+function normalizeLessonEndTimes(raw, lessonTimes) {
+  const lt = lessonTimes || {}
+  const out = {}
+  const parsed = normalizeLessonTimes(raw)
+  for (const [k, v] of Object.entries(parsed)) {
+    const start = lt[k] || lt[String(k)] || DEFAULT_LESSON_TIME
+    const end = fmtSlotTime(v)
+    if (!end) continue
+    if (parseToMinutesSafe(end) <= parseToMinutesSafe(start)) {
+      out[String(k)] = addMinutesToHm(start, 60)
+    } else {
+      out[String(k)] = end
+    }
+  }
+  for (const k of Object.keys(lt)) {
+    if (!out[k]) out[k] = addMinutesToHm(lt[k], 60)
+  }
+  return out
+}
+
+function parseToMinutesSafe(t) {
+  const s = fmtSlotTime(t)
+  const [h, m] = s.split(':').map((x) => parseInt(x, 10))
+  return (Number.isFinite(h) ? h : 0) * 60 + (Number.isFinite(m) ? m : 0)
 }
 
 function fmtSlotTime(t) {
@@ -430,17 +457,21 @@ function StudentFormFields({
                   setData((p) => {
                     const cur = new Set(Array.isArray(p.lesson_weekdays) ? p.lesson_weekdays : [])
                     const lesson_times = { ...(p.lesson_times || {}) }
+                    const lesson_end_times = { ...(p.lesson_end_times || {}) }
                     if (cur.has(d.v)) {
                       cur.delete(d.v)
                       delete lesson_times[String(d.v)]
                       delete lesson_times[d.v]
+                      delete lesson_end_times[String(d.v)]
+                      delete lesson_end_times[d.v]
                     } else {
                       cur.add(d.v)
                       const key = String(d.v)
                       if (!lesson_times[key] && !lesson_times[d.v]) lesson_times[key] = DEFAULT_LESSON_TIME
+                      lesson_end_times[key] = addMinutesToHm(lesson_times[key], 60)
                     }
                     const lesson_weekdays = [...cur].sort((a, b) => a - b)
-                    const next = { ...p, lesson_weekdays, lesson_times }
+                    const next = { ...p, lesson_weekdays, lesson_times, lesson_end_times }
                     return mode === 'setup' ? alignFirstFromEnrollment(next, lesson_weekdays, lesson_times) : next
                   })
                 }
@@ -630,21 +661,41 @@ function StudentFormFields({
           <div className="space-y-2">
             {WEEKDAYS.filter((d) => (data.lesson_weekdays?.length ? data.lesson_weekdays.includes(d.v) : false)).map((d) => (
               <div key={d.v} className="flex items-center justify-between gap-3 rounded-xl border border-indigo-500/15 bg-[#13112e]/60 px-3 py-2">
-                <div className="text-xs text-gray-300 font-semibold">{d.full}</div>
-                <input
-                  type="time"
-                  className="bg-[#13112e] border border-indigo-500/20 rounded-xl px-3 py-2 text-white text-sm outline-none focus:border-indigo-400"
-                  value={(data.lesson_times && (data.lesson_times[d.v] || data.lesson_times[String(d.v)])) || ''}
-                  onChange={(e) => {
-                    const lesson_times = { ...(data.lesson_times || {}), [String(d.v)]: e.target.value }
-                    setData((p) => {
-                      const next = { ...p, lesson_times }
-                      return mode === 'setup'
-                        ? alignFirstFromEnrollment(next, p.lesson_weekdays, lesson_times)
-                        : next
-                    })
-                  }}
-                />
+                <div className="text-xs text-gray-300 font-semibold shrink-0">{d.full}</div>
+                <div className="flex items-center gap-2">
+                  <label className="text-[10px] text-gray-500">Başlanğıc</label>
+                  <input
+                    type="time"
+                    className="bg-[#13112e] border border-indigo-500/20 rounded-xl px-2 py-2 text-white text-sm outline-none focus:border-indigo-400"
+                    value={(data.lesson_times && (data.lesson_times[d.v] || data.lesson_times[String(d.v)])) || ''}
+                    onChange={(e) => {
+                      const key = String(d.v)
+                      const start = e.target.value
+                      const lesson_times = { ...(data.lesson_times || {}), [key]: start }
+                      const lesson_end_times = { ...(data.lesson_end_times || {}) }
+                      const curEnd = lesson_end_times[key]
+                      if (!curEnd || parseToMinutesSafe(curEnd) <= parseToMinutesSafe(start)) {
+                        lesson_end_times[key] = addMinutesToHm(start, 60)
+                      }
+                      setData((p) => {
+                        const next = { ...p, lesson_times, lesson_end_times }
+                        return mode === 'setup'
+                          ? alignFirstFromEnrollment(next, p.lesson_weekdays, lesson_times)
+                          : next
+                      })
+                    }}
+                  />
+                  <label className="text-[10px] text-gray-500">Bitmə</label>
+                  <input
+                    type="time"
+                    className="bg-[#13112e] border border-indigo-500/20 rounded-xl px-2 py-2 text-white text-sm outline-none focus:border-indigo-400"
+                    value={(data.lesson_end_times && (data.lesson_end_times[d.v] || data.lesson_end_times[String(d.v)])) || ''}
+                    onChange={(e) => {
+                      const lesson_end_times = { ...(data.lesson_end_times || {}), [String(d.v)]: e.target.value }
+                      setData((p) => ({ ...p, lesson_end_times }))
+                    }}
+                  />
+                </div>
               </div>
             ))}
             {!data.lesson_weekdays?.length && (
@@ -897,6 +948,7 @@ export default function InstructorStudents() {
           : ''
     const lwd = normalizeWeekdays(s.lesson_weekdays)
     const lt = normalizeLessonTimes(s.lesson_times)
+    const let_ = normalizeLessonEndTimes(s.lesson_end_times, lt)
     const firstFromApi =
       s.first_lesson_date != null && String(s.first_lesson_date).trim() !== ''
         ? String(s.first_lesson_date).slice(0, 10)
@@ -929,6 +981,7 @@ export default function InstructorStudents() {
       first_lesson_date: firstLesson || pkgAnchor,
       lesson_weekdays: lwd,
       lesson_times: lt,
+      lesson_end_times: let_,
       billing_timing: s.billing_timing || 'postpaid',
       payment_plan: s.payment_plan || 'full',
       notifications_enabled: s.notifications_enabled !== false,
@@ -956,6 +1009,7 @@ export default function InstructorStudents() {
         first_lesson_date: setupForm.first_lesson_date,
         lesson_weekdays: setupForm.lesson_weekdays,
         lesson_times: setupForm.lesson_times,
+        lesson_end_times: setupForm.lesson_end_times,
         billing_timing: setupForm.billing_timing,
         payment_plan: setupForm.payment_plan,
         initial_payment_status: setupForm.initial_payment_status,
@@ -1008,6 +1062,7 @@ export default function InstructorStudents() {
       group_id: s.group_id ? String(s.group_id) : '',
       lesson_weekdays: normalizeWeekdays(s.lesson_weekdays),
       lesson_times: normalizeLessonTimes(s.lesson_times),
+      lesson_end_times: normalizeLessonEndTimes(s.lesson_end_times, normalizeLessonTimes(s.lesson_times)),
       parent_name: s.parent_name || '',
       parent_phone: s.parent_phone || '',
       notifications_enabled: s.notifications_enabled !== false,
@@ -1037,6 +1092,7 @@ export default function InstructorStudents() {
       teacher_schedule_id: '',
       lesson_weekdays: normalizeWeekdays(s.lesson_weekdays),
       lesson_times: normalizeLessonTimes(s.lesson_times),
+      lesson_end_times: normalizeLessonEndTimes(s.lesson_end_times, normalizeLessonTimes(s.lesson_times)),
       parent_name: s.parent_name || '',
       parent_phone: s.parent_phone || '',
       notifications_enabled: s.notifications_enabled !== false,
@@ -1312,6 +1368,7 @@ export default function InstructorStudents() {
       setIfChanged('group_id', editForm.group_id || null, original.group_id || null)
       setIfChanged('lesson_weekdays', editForm.lesson_weekdays, original.lesson_weekdays)
       setIfChanged('lesson_times', editForm.lesson_times || {}, original.lesson_times || {})
+      setIfChanged('lesson_end_times', editForm.lesson_end_times || {}, original.lesson_end_times || {})
       setIfChanged('parent_name', editForm.parent_name, original.parent_name)
       setIfChanged('parent_phone', editForm.parent_phone, original.parent_phone)
       // Köhnə qeydiyyatlarda tarix NULL ola bilər; boş string göndərsək backend valide etməyə çalışıb 400 qaytarır.
@@ -2078,4 +2135,3 @@ export default function InstructorStudents() {
     </div>
   )
 }
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 

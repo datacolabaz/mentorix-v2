@@ -40,7 +40,7 @@ const listStudents = async (req, res) => {
               COALESCE(NULLIF(TRIM(sp.parent_name), ''), pu.full_name) AS parent_name,
               COALESCE(NULLIF(TRIM(sp.parent_phone), ''), pu.phone) AS parent_phone,
               e.id AS enrollment_id, e.billing_type, e.lesson_count, e.billing_cycle,
-              e.lesson_weekdays, e.lesson_times,
+              e.lesson_weekdays, e.lesson_times, e.lesson_end_times,
               e.enrollment_start_date,
               e.billing_timing,
               COALESCE(e.payment_plan, 'full') AS payment_plan,
@@ -485,7 +485,8 @@ const getInstructorMyLessonsCalendar = async (req, res) => {
     const { rows: lessons } = await db.query(
       `SELECT l.id, l.lesson_date, l.status, l.lesson_number, l.billing_cycle,
               u.full_name AS student_name,
-              e.lesson_times AS enrollment_lesson_times
+              e.lesson_times AS enrollment_lesson_times,
+              e.lesson_end_times AS enrollment_lesson_end_times
        FROM lessons l
        JOIN users u ON u.id = l.student_id
        JOIN enrollments e ON e.id = l.enrollment_id
@@ -497,7 +498,7 @@ const getInstructorMyLessonsCalendar = async (req, res) => {
 
     const today = await bakuTodayYmd();
     const { rows: monthlyRows } = await db.query(
-      `SELECT e.id AS enrollment_id, e.lesson_weekdays, e.lesson_times,
+      `SELECT e.id AS enrollment_id, e.lesson_weekdays, e.lesson_times, e.lesson_end_times,
               e.enrollment_start_date,
               u.full_name AS student_name
        FROM enrollments e
@@ -543,6 +544,7 @@ const getInstructorMyLessonsCalendar = async (req, res) => {
           billing_cycle: null,
           student_name: row.student_name,
           enrollment_lesson_times: row.lesson_times,
+          enrollment_lesson_end_times: row.lesson_end_times,
         });
       }
     }

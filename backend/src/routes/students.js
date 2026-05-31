@@ -170,6 +170,8 @@ function parseLessonWeekdays(raw) {
   return [...set].sort((a, b) => a - b);
 }
 
+const { parseLessonEndTimes } = require('../utils/lessonScheduleTimes');
+
 function parseLessonTimes(raw, lessonWeekdays) {
   if (raw == null) return {};
   let obj = raw;
@@ -473,6 +475,7 @@ router.post(
       teacher_schedule_id,
       lesson_weekdays,
       lesson_times,
+      lesson_end_times,
       subject_id,
       group_id,
       course_id,
@@ -488,6 +491,7 @@ router.post(
     if (Object.keys(lt).length === 0) {
       return res.status(400).json({ success: false, message: 'Dərs günlərinə uyğun saatları qeyd edin' });
     }
+    const let_ = parseLessonEndTimes(lesson_end_times, lwd, lt);
 
     const enrollmentYmd = parsePaymentStartDate(enrollment_date);
     if (!enrollmentYmd) {
@@ -544,11 +548,11 @@ router.post(
       const { rows } = await client.query(
         `INSERT INTO enrollments (
            instructor_id, student_id, billing_type, referral_notes, referral_source_id,
-           lesson_weekdays, lesson_times, enrollment_start_date,
+           lesson_weekdays, lesson_times, lesson_end_times, enrollment_start_date,
            billing_timing, payment_plan, subject_id, group_id,
            notifications_enabled, course_id, status, configured_at
          )
-         VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb,$8::date,$9,$10,$11,$12,$13,$14,'active',NOW()) RETURNING *`,
+         VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb,$8::jsonb,$9::date,$10,$11,$12,$13,$14,$15,'active',NOW()) RETURNING *`,
         [
           instructor_id,
           student_id,
@@ -557,6 +561,7 @@ router.post(
           referral_source_id || null,
           JSON.stringify(lwd),
           JSON.stringify(lt),
+          JSON.stringify(let_),
           enrollmentYmd,
           bt,
           payPlan,
@@ -821,6 +826,7 @@ router.post(
         first_lesson_date,
         lesson_weekdays,
         lesson_times,
+        lesson_end_times,
         subject_id,
         group_id,
         full_name,
@@ -885,6 +891,7 @@ router.post(
       if (Object.keys(lt).length === 0) {
         return res.status(400).json({ success: false, message: 'Dərs günlərinə uyğun saatları qeyd edin' });
       }
+      const let_ = parseLessonEndTimes(lesson_end_times, lwd, lt);
 
       const enrollmentYmd = parsePaymentStartDate(enrollment_date);
       if (!enrollmentYmd) {
@@ -956,18 +963,19 @@ router.post(
              referral_source_id = $4,
              lesson_weekdays = $5::jsonb,
              lesson_times = $6::jsonb,
-             enrollment_start_date = $7::date,
-             billing_timing = $8,
-             payment_plan = $9,
-             subject_id = $10,
-             group_id = $11,
-             notifications_enabled = $12,
-             initial_payment_status = $13,
-             payment_due_date = $14::date,
-             discount_percent = $15,
+             lesson_end_times = $7::jsonb,
+             enrollment_start_date = $8::date,
+             billing_timing = $9,
+             payment_plan = $10,
+             subject_id = $11,
+             group_id = $12,
+             notifications_enabled = $13,
+             initial_payment_status = $14,
+             payment_due_date = $15::date,
+             discount_percent = $16,
              status = 'active',
              configured_at = COALESCE(configured_at, NOW()),
-             package_history = $16::jsonb
+             package_history = $17::jsonb
            WHERE id = $1
            RETURNING *`,
           [
@@ -977,6 +985,7 @@ router.post(
             referral_source_id || null,
             JSON.stringify(lwd),
             JSON.stringify(lt),
+            JSON.stringify(let_),
             enrollmentYmd,
             bt,
             payPlan,
@@ -1116,6 +1125,7 @@ router.patch('/enrollment/:enrollmentId', authenticate, authorize('admin', 'inst
       payment_plan,
       lesson_weekdays,
       lesson_times,
+      lesson_end_times,
       subject_id,
       group_id,
       first_lesson_date,
@@ -1142,8 +1152,9 @@ router.patch('/enrollment/:enrollmentId', authenticate, authorize('admin', 'inst
 
     const hasLwd = Object.prototype.hasOwnProperty.call(req.body, 'lesson_weekdays');
     const hasLt = Object.prototype.hasOwnProperty.call(req.body, 'lesson_times');
+    const hasLet = Object.prototype.hasOwnProperty.call(req.body, 'lesson_end_times');
     const { rows: curEnrRows } = await db.query(
-      'SELECT lesson_weekdays, lesson_times FROM enrollments WHERE id = $1',
+      'SELECT lesson_weekdays, lesson_times, lesson_end_times FROM enrollments WHERE id = $1',
       [enrollmentId]
     );
     const curEnr = curEnrRows[0] || {};
@@ -1158,6 +1169,9 @@ router.patch('/enrollment/:enrollmentId', authenticate, authorize('admin', 'inst
     if ((hasLwd || hasLt) && lwd.length > 0 && Object.keys(lt).length === 0) {
       return res.status(400).json({ success: false, message: 'Dərs günlərinə uyğun saatları qeyd edin' });
     }
+    const let_ = hasLet
+      ? parseLessonEndTimes(lesson_end_times, lwd, lt)
+      : parseLessonEndTimes(curEnr.lesson_end_times, lwd, lt);
 
     if (billing_type != null && billing_type !== '') {
       const lim = billingLimit(billing_type);
@@ -1166,15 +1180,23 @@ router.patch('/enrollment/:enrollmentId', authenticate, authorize('admin', 'inst
       }
     }
 
-    if (hasLwd || hasLt) {
+    if (hasLwd || hasLt || hasLet) {
       await db.query(
         `UPDATE enrollments
          SET billing_type = $1,
              referral_notes = $2,
              lesson_weekdays = $3::jsonb,
-             lesson_times = $4::jsonb
-         WHERE id = $5`,
-        [billing_type, referral_notes || null, JSON.stringify(lwd), JSON.stringify(lt), enrollmentId]
+             lesson_times = $4::jsonb,
+             lesson_end_times = $5::jsonb
+         WHERE id = $6`,
+        [
+          billing_type,
+          referral_notes || null,
+          JSON.stringify(lwd),
+          JSON.stringify(lt),
+          JSON.stringify(let_),
+          enrollmentId,
+        ],
       );
     } else {
       await db.query(

@@ -294,3 +294,63 @@ const patchGroup = async (req, res) => {
          default_payment_plan = $8,
          default_lesson_weekdays = $9::jsonb,
          default_lesson_times = $10::jsonb,
+         default_notifications_enabled = $11,
+         default_initial_payment_status = $12
+       WHERE id = $1 AND instructor_id = $2
+       RETURNING *`,
+      [
+        id,
+        req.user.id,
+        req.body?.name != null ? String(req.body.name).trim() : null,
+        defs.billing_type,
+        defs.package_fee,
+        defs.discount_percent,
+        defs.billing_timing,
+        defs.payment_plan,
+        JSON.stringify(defs.lesson_weekdays),
+        JSON.stringify(defs.lesson_times),
+        JSON.stringify(defs.lesson_end_times),
+        defs.notifications_enabled,
+        defs.initial_payment_status,
+      ],
+    );
+    if (!rows[0]) return res.status(404).json({ success: false, message: 'Tapılmadı' });
+    const g = decorateGroupInvitationFields(rows[0]);
+    res.json({ success: true, group: { ...g, invite_ready: Boolean(rowToDefaults(rows[0])) } });
+  } catch (err) {
+    const msg = String(err?.message || '');
+    if (/column/i.test(msg) && /does not exist|undefined column/i.test(msg)) {
+      return res.status(503).json({
+        success: false,
+        message: 'Server verilənlər bazası yenilənməlidir. Bir neçə dəqiqə gözləyin və ya dəstək yazın.',
+        code: 'SCHEMA_OUTDATED',
+      });
+    }
+    res.status(500).json({ success: false, message: msg || 'Qrup yenilənmədi' });
+  }
+};
+
+const deleteGroup = async (req, res) => {
+  try {
+    const id = req.params.id;
+    if (!looksUuid(id)) return res.status(400).json({ success: false, message: 'ID düzgün deyil' });
+    const { rowCount } = await db.query(`DELETE FROM instructor_groups WHERE id = $1 AND instructor_id = $2`, [
+      id,
+      req.user.id,
+    ]);
+    if (!rowCount) return res.status(404).json({ success: false, message: 'Tapılmadı' });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+module.exports = {
+  getTeaching,
+  patchPublicLabel,
+  postSubject,
+  deleteSubject,
+  postGroup,
+  patchGroup,
+  deleteGroup,
+};

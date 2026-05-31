@@ -87,13 +87,35 @@ export function slotTimesForLesson(l) {
       }
     }
   }
-  const startMin = hh * 60 + mm
-  const endMin = startMin + 60
+  const start = `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`
+  const endTimes = parseEnrollmentLessonTimes(l.enrollment_lesson_end_times)
+  const endKey = String(day)
+  let endWall = fmtTime(endTimes[endKey] ?? endTimes[day])
+  if (endWall) {
+    const startMin = hh * 60 + mm
+    const [eh, em] = endWall.split(':').map((x) => parseInt(x, 10))
+    const endMin = (Number.isFinite(eh) ? eh : 0) * 60 + (Number.isFinite(em) ? em : 0)
+    if (!Number.isFinite(endMin) || endMin <= startMin) endWall = ''
+  }
+  if (!endWall) {
+    const endMin = hh * 60 + mm + 60
+    const eh = String(Math.floor(endMin / 60) % 24).padStart(2, '0')
+    const em = String(endMin % 60).padStart(2, '0')
+    endWall = `${eh}:${em}`
+  }
+  return { day, start, end: endWall }
+}
+
+/** Başlanğıcdan +N dəqiqə (cədvəl defaultu) */
+export function addMinutesToHm(hhmm, minutes = 60) {
+  const s = fmtTime(hhmm)
+  if (!s) return ''
+  const [h, m] = s.split(':').map((x) => parseInt(x, 10))
+  const startMin = (Number.isFinite(h) ? h : 0) * 60 + (Number.isFinite(m) ? m : 0)
+  const endMin = startMin + minutes
   const eh = String(Math.floor(endMin / 60) % 24).padStart(2, '0')
   const em = String(endMin % 60).padStart(2, '0')
-  const start = `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`
-  const end = `${eh}:${em}`
-  return { day, start, end }
+  return `${eh}:${em}`
 }
 
 /** Bakı təqvimi: DD.MM.YYYY — `az-AZ` + dateStyle bəzi brauzerlərdə «M04» kimi səhv ay göstərir. */
@@ -136,32 +158,4 @@ export function fmtAzBakuLessonRow(l) {
   const t = wall != null && wall !== '' ? fmtTime(wall) : ''
   if (t) {
     const parts = bakuPartsFromInstant(inst)
-    const actualMin = parts.hour * 60 + parts.minute
-    const [h, m] = t.split(':').map((x) => parseInt(x, 10))
-    const wallMin = (Number.isFinite(h) ? h : 0) * 60 + (Number.isFinite(m) ? m : 0)
-    if (Math.abs(actualMin - wallMin) <= 10) return `${dateStr}, ${t}`
-  }
-  return `${dateStr}, ${fmtAzBakuClockHm(inst)}`
-}
-
-export function parseToMinutes(t) {
-  const s = fmtTime(t)
-  const [h, m] = s.split(':').map((x) => parseInt(x, 10))
-  return (Number.isFinite(h) ? h : 0) * 60 + (Number.isFinite(m) ? m : 0)
-}
-
-export function slotCoversHour(slot, hour) {
-  const sm = parseToMinutes(slot.start_time)
-  const em = parseToMinutes(slot.end_time)
-  const rowStart = hour * 60
-  const rowEnd = (hour + 1) * 60
-  return sm < rowEnd && em > rowStart
-}
-
-export function slotFirstHour(slot) {
-  return Math.floor(parseToMinutes(slot.start_time) / 60)
-}
-
-export const GRID_START = 8
-export const GRID_END = 20
-export const GRID_ROW_COUNT = GRID_END - GRID_START
+    const actualMin = parts.hour

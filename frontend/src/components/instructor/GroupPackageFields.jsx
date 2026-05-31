@@ -1,4 +1,5 @@
 import { WEEKDAYS } from '../../pages/instructor/Schedule'
+import { addMinutesToHm } from '../../lib/lessonWeekGrid'
 import {
   applyPaymentScheme,
   computeFinalPackageFee,
@@ -24,6 +25,7 @@ export function emptyGroupPackage() {
     default_payment_plan: 'full',
     default_lesson_weekdays: [dow],
     default_lesson_times: { [String(dow)]: DEFAULT_LESSON_TIME },
+    default_lesson_end_times: { [String(dow)]: addMinutesToHm(DEFAULT_LESSON_TIME, 60) },
     default_notifications_enabled: true,
     default_initial_payment_status: 'unpaid',
   }
@@ -43,6 +45,10 @@ export function groupPackageFromApi(g) {
     default_payment_plan: g.default_payment_plan || 'full',
     default_lesson_weekdays: lwd,
     default_lesson_times: lt,
+    default_lesson_end_times:
+      g.default_lesson_end_times && typeof g.default_lesson_end_times === 'object'
+        ? g.default_lesson_end_times
+        : {},
     default_notifications_enabled: g.default_notifications_enabled !== false,
     default_initial_payment_status: g.default_initial_payment_status || 'unpaid',
   }
@@ -60,14 +66,21 @@ export default function GroupPackageFields({ value, onChange, compact }) {
   const toggleDay = (day) => {
     const cur = new Set(Array.isArray(v.default_lesson_weekdays) ? v.default_lesson_weekdays : [])
     const lt = { ...(v.default_lesson_times || {}) }
+    const let_ = { ...(v.default_lesson_end_times || {}) }
     if (cur.has(day)) {
       cur.delete(day)
       delete lt[String(day)]
+      delete let_[String(day)]
     } else {
       cur.add(day)
       if (!lt[String(day)]) lt[String(day)] = DEFAULT_LESSON_TIME
+      let_[String(day)] = addMinutesToHm(lt[String(day)], 60)
     }
-    set({ default_lesson_weekdays: [...cur].sort((a, b) => a - b), default_lesson_times: lt })
+    set({
+      default_lesson_weekdays: [...cur].sort((a, b) => a - b),
+      default_lesson_times: lt,
+      default_lesson_end_times: let_,
+    })
   }
 
   return (
@@ -168,40 +181,17 @@ export default function GroupPackageFields({ value, onChange, compact }) {
         </div>
         <div className="space-y-2">
           {WEEKDAYS.filter((d) => (v.default_lesson_weekdays || []).includes(d.v)).map((d) => (
-            <div key={d.v} className="flex items-center justify-between gap-2 text-sm">
-              <span className="text-gray-300">{d.full}</span>
-              <input
-                type="time"
-                className="bg-[#13112e] border border-indigo-500/20 rounded-lg px-2 py-1 text-white text-sm"
-                value={v.default_lesson_times?.[String(d.v)] || ''}
-                onChange={(e) =>
-                  set({
-                    default_lesson_times: {
-                      ...(v.default_lesson_times || {}),
-                      [String(d.v)]: e.target.value,
-                    },
-                  })
-                }
-              />
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-export function groupPackagePayload(pkg, name) {
-  return {
-    name,
-    default_billing_type: pkg.default_billing_type,
-    default_package_fee: pkg.default_package_fee,
-    default_discount_percent: pkg.default_discount_percent || null,
-    default_billing_timing: pkg.default_billing_timing,
-    default_payment_plan: pkg.default_payment_plan,
-    default_lesson_weekdays: pkg.default_lesson_weekdays,
-    default_lesson_times: pkg.default_lesson_times,
-    default_notifications_enabled: pkg.default_notifications_enabled,
-    default_initial_payment_status: pkg.default_initial_payment_status,
-  }
-}
+            <div key={d.v} className="flex items-center justify-between gap-2 text-sm flex-wrap">
+              <span className="text-gray-300 shrink-0">{d.full}</span>
+              <div className="flex items-center gap-2">
+                <input
+                  type="time"
+                  title="Başlanğıc"
+                  className="bg-[#13112e] border border-indigo-500/20 rounded-lg px-2 py-1 text-white text-sm"
+                  value={v.default_lesson_times?.[String(d.v)] || ''}
+                  onChange={(e) => {
+                    const key = String(d.v)
+                    const start = e.target.value
+                    const default_lesson_times = { ...(v.default_lesson_times || {}), [key]: start }
+                    const default_lesson_end_times = { ...(v.default_lesson_end_times || {}) }
+        

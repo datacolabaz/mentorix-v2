@@ -166,6 +166,7 @@ async function activateEnrollmentFromGroupDefaults(client, opts) {
   const ni = normUuid(instructorId);
   const lwd = defaults.lesson_weekdays;
   const lt = defaults.lesson_times;
+  const let_ = defaults.lesson_end_times || {};
   const bt = defaults.billing_type;
   const limit = billingLimit(bt);
   const enrollmentYmd = (await bakuTodayYmd()) || new Date().toISOString().slice(0, 10);
@@ -189,19 +190,20 @@ async function activateEnrollmentFromGroupDefaults(client, opts) {
        billing_type = $2,
        lesson_weekdays = $3::jsonb,
        lesson_times = $4::jsonb,
-       enrollment_start_date = $5::date,
-       billing_timing = $6,
-       payment_plan = $7,
-       subject_id = $8,
-       group_id = $9,
-       notifications_enabled = $10,
-       initial_payment_status = $11,
-       discount_percent = $12,
-       referral_source_id = $13,
-       referral_notes = $14,
+       lesson_end_times = $5::jsonb,
+       enrollment_start_date = $6::date,
+       billing_timing = $7,
+       payment_plan = $8,
+       subject_id = $9,
+       group_id = $10,
+       notifications_enabled = $11,
+       initial_payment_status = $12,
+       discount_percent = $13,
+       referral_source_id = $14,
+       referral_notes = $15,
        status = 'active',
        configured_at = COALESCE(configured_at, NOW()),
-       package_history = $15::jsonb
+       package_history = $16::jsonb
      WHERE id = $1
      RETURNING *`,
     [
@@ -209,6 +211,7 @@ async function activateEnrollmentFromGroupDefaults(client, opts) {
       bt,
       JSON.stringify(lwd),
       JSON.stringify(lt),
+      JSON.stringify(let_),
       enrollmentYmd,
       defaults.billing_timing,
       defaults.payment_plan,
