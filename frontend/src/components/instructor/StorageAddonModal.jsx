@@ -111,4 +111,6 @@ export default function StorageAddonModal({
           Bağla
         </Button>
       </div>
-   
+    </Modal>
+  )
+}

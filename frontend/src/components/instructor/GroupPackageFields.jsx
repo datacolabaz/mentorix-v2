@@ -194,4 +194,48 @@ export default function GroupPackageFields({ value, onChange, compact }) {
                     const start = e.target.value
                     const default_lesson_times = { ...(v.default_lesson_times || {}), [key]: start }
                     const default_lesson_end_times = { ...(v.default_lesson_end_times || {}) }
-        
+                    if (!default_lesson_end_times[key]) {
+                      default_lesson_end_times[key] = addMinutesToHm(start, 60)
+                    }
+                    set({ default_lesson_times, default_lesson_end_times })
+                  }}
+                />
+                <span className="text-gray-600">–</span>
+                <input
+                  type="time"
+                  title="Bitmə"
+                  className="bg-[#13112e] border border-indigo-500/20 rounded-lg px-2 py-1 text-white text-sm"
+                  value={v.default_lesson_end_times?.[String(d.v)] || ''}
+                  onChange={(e) =>
+                    set({
+                      default_lesson_end_times: {
+                        ...(v.default_lesson_end_times || {}),
+                        [String(d.v)]: e.target.value,
+                      },
+                    })
+                  }
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export function groupPackagePayload(pkg, name) {
+  return {
+    name,
+    default_billing_type: pkg.default_billing_type,
+    default_package_fee: pkg.default_package_fee,
+    default_discount_percent: pkg.default_discount_percent || null,
+    default_billing_timing: pkg.default_billing_timing,
+    default_payment_plan: pkg.default_payment_plan,
+    default_lesson_weekdays: pkg.default_lesson_weekdays,
+    default_lesson_times: pkg.default_lesson_times,
+    default_lesson_end_times: pkg.default_lesson_end_times,
+    default_notifications_enabled: pkg.default_notifications_enabled,
+    default_initial_payment_status: pkg.default_initial_payment_status,
+  }
+}
