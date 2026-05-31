@@ -508,9 +508,18 @@ function StudentFormFields({
           </p>
         </div>
       </div>
-      {Array.isArray(teachingSubjects) && teachingSubjects.length > 0 && (
+      {Array.isArray(teachingSubjects) && (
         <div className="rounded-xl border border-indigo-500/20 bg-[#0f0c29]/60 p-3 space-y-3">
           <p className="text-xs font-semibold text-indigo-200/90 uppercase tracking-wider">Sahə və qrup</p>
+          {!teachingSubjects.length ? (
+            <p className="text-[11px] text-gray-500">
+              Hələ tədris sahəsi yoxdur — aşağıdan «+ Yeni» ilə yaradın və ya{' '}
+              <a href="/instructor/teaching-groups" className="text-blue-300 hover:underline">
+                Kurslar və qruplar
+              </a>{' '}
+              səhifəsinə keçin.
+            </p>
+          ) : null}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Tədris sahəsi</label>
@@ -527,8 +536,12 @@ function StudentFormFields({
                       const v = e.target.value
                       setSubjectDraft(v)
                       const match = teachingSubjects.find((s) => normName(s.name) === normName(v))
-                      if (match) setData((p) => ({ ...p, subject_id: match.id, group_id: '' }))
-                      else setData((p) => ({ ...p, subject_id: '', group_id: '' }))
+                      if (match) {
+                        setSubjectDraft('')
+                        setData((p) => ({ ...p, subject_id: match.id, group_id: '' }))
+                      } else {
+                        setData((p) => ({ ...p, subject_id: '', group_id: '' }))
+                      }
                     }}
                     placeholder="Yazın və ya seçin…"
                   />
@@ -577,8 +590,12 @@ function StudentFormFields({
                       setGroupDraft(v)
                       const groups = selectedSubject?.groups || []
                       const match = groups.find((g) => g && normName(g.name) === normName(v))
-                      if (match) setData((p) => ({ ...p, group_id: match.id }))
-                      else setData((p) => ({ ...p, group_id: '' }))
+                      if (match) {
+                        setGroupDraft('')
+                        setData((p) => ({ ...p, group_id: match.id }))
+                      } else {
+                        setData((p) => ({ ...p, group_id: '' }))
+                      }
                     }}
                     placeholder={data.subject_id ? 'Yazın və ya seçin…' : 'Əvvəl sahə seçin'}
                   />

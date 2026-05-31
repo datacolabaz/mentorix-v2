@@ -94,7 +94,8 @@ const getTeaching = async (req, res) => {
               invitation_code, invitation_link,
               default_billing_type, default_package_fee, default_discount_percent,
               default_billing_timing, default_payment_plan, default_lesson_weekdays,
-              default_lesson_times, default_notifications_enabled, default_initial_payment_status
+              default_lesson_times, default_lesson_end_times,
+              default_notifications_enabled, default_initial_payment_status
        FROM instructor_groups
        WHERE instructor_id = $1
        ORDER BY sort_order ASC, name ASC`,
@@ -235,8 +236,9 @@ const postGroup = async (req, res) => {
          instructor_id, subject_id, name, sort_order, join_code, invitation_code, invitation_link,
          default_billing_type, default_package_fee, default_discount_percent,
          default_billing_timing, default_payment_plan, default_lesson_weekdays,
-         default_lesson_times, default_notifications_enabled, default_initial_payment_status
-       ) VALUES ($1, $2, $3, $4, $5::text, $6::varchar, $7, $8, $9, $10, $11, $12, $13::jsonb, $14::jsonb, $15, $16)
+         default_lesson_times, default_lesson_end_times,
+         default_notifications_enabled, default_initial_payment_status
+       ) VALUES ($1, $2, $3, $4, $5::text, $6::varchar, $7, $8, $9, $10, $11, $12, $13::jsonb, $14::jsonb, $15::jsonb, $16, $17)
        RETURNING *`,
       [
         req.user.id,
@@ -253,6 +255,7 @@ const postGroup = async (req, res) => {
         defs.payment_plan,
         JSON.stringify(defs.lesson_weekdays),
         JSON.stringify(defs.lesson_times),
+        JSON.stringify(defs.lesson_end_times || {}),
         defs.notifications_enabled,
         defs.initial_payment_status,
       ],
@@ -294,8 +297,9 @@ const patchGroup = async (req, res) => {
          default_payment_plan = $8,
          default_lesson_weekdays = $9::jsonb,
          default_lesson_times = $10::jsonb,
-         default_notifications_enabled = $11,
-         default_initial_payment_status = $12
+         default_lesson_end_times = $11::jsonb,
+         default_notifications_enabled = $12,
+         default_initial_payment_status = $13
        WHERE id = $1 AND instructor_id = $2
        RETURNING *`,
       [
@@ -309,7 +313,7 @@ const patchGroup = async (req, res) => {
         defs.payment_plan,
         JSON.stringify(defs.lesson_weekdays),
         JSON.stringify(defs.lesson_times),
-        JSON.stringify(defs.lesson_end_times),
+        JSON.stringify(defs.lesson_end_times || {}),
         defs.notifications_enabled,
         defs.initial_payment_status,
       ],

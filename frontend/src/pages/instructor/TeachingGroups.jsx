@@ -36,7 +36,8 @@ function normalizeTeachingSubjects(raw) {
 export default function InstructorTeachingGroups() {
   const toast = useToast()
   const { theme } = useUiStore()
-  const [loading, setLoading] = useState(true)
+  const [initialLoading, setInitialLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   const [subjects, setSubjects] = useState([])
   const [newSubject, setNewSubject] = useState('')
   const [newGroupBySubject, setNewGroupBySubject] = useState({})
@@ -49,15 +50,18 @@ export default function InstructorTeachingGroups() {
 
   const safeSubjects = useMemo(() => normalizeTeachingSubjects(subjects), [subjects])
 
-  const load = useCallback(async () => {
-    setLoading(true)
+  const load = useCallback(async (opts = {}) => {
+    const silent = Boolean(opts.silent)
+    if (silent) setRefreshing(true)
+    else setInitialLoading(true)
     try {
       const d = await api.get('/instructor/teaching')
       setSubjects(Array.isArray(d.subjects) ? d.subjects : [])
     } catch (e) {
       toast(e?.message || 'Yüklənmədi', 'error')
     } finally {
-      setLoading(false)
+      if (silent) setRefreshing(false)
+      else setInitialLoading(false)
     }
   }, [toast])
 
@@ -73,10 +77,22 @@ export default function InstructorTeachingGroups() {
     }
     setBusy((b) => ({ ...b, addSub: true }))
     try {
-      await api.post('/instructor/teaching/subjects', { name })
+      const d = await api.post('/instructor/teaching/subjects', { name })
+      const created = d?.subject
+      if (created?.id) {
+        setSubjects((prev) => [
+          ...(Array.isArray(prev) ? prev : []),
+          {
+            ...created,
+            groups: Array.isArray(created.groups) ? created.groups : [],
+            student_count: Number(created.student_count) || 0,
+            income_this_month: Number(created.income_this_month) || 0,
+          },
+        ])
+      }
       setNewSubject('')
       toast('Sahə əlavə olundu')
-      await load()
+      await load({ silent: true })
     } catch (e) {
       toast(e?.message || 'Xəta', 'error')
     } finally {
@@ -90,7 +106,7 @@ export default function InstructorTeachingGroups() {
     try {
       await api.delete('/instructor/teaching/subjects/' + encodeURIComponent(id))
       toast('Silindi')
-      await load()
+      await load({ silent: true })
     } catch (e) {
       toast(e?.message || 'Xəta', 'error')
     } finally {
@@ -145,7 +161,7 @@ export default function InstructorTeachingGroups() {
         toast('Qrup paketi yeniləndi')
       }
       setGroupModal(null)
-      await load()
+      await load({ silent: true })
     } catch (e) {
       const msg = e?.message || 'Xəta'
       setGroupModalError(msg)
@@ -161,7 +177,7 @@ export default function InstructorTeachingGroups() {
     try {
       await api.delete('/instructor/teaching/groups/' + encodeURIComponent(groupId))
       toast('Silindi')
-      await load()
+      await load({ silent: true })
     } catch (e) {
       toast(e?.message || 'Xəta', 'error')
     } finally {
@@ -208,31 +224,42 @@ export default function InstructorTeachingGroups() {
           Qrup yaradarkən paket (8/12 dərs), qiymət və cədvəli bir dəfə təyin edin. Dəvət linki ilə qoşulan tələbə paketi
           görür və razılaşır; siz «Sorğular»da təsdiqləyirsiniz.
         </p>
-        {loading ? (
+        <div className="flex flex-col sm:flex-row gap-2">
+          <input
+            className={inp}
+            placeholder="Məs: Python"
+            value={newSubject}
+            onChange={(e) => setNewSubject(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                void addSubject()
+              }
+            }}
+            disabled={busy.addSub}
+          />
+          <Button
+            type="button"
+            variant="secondary"
+            loading={busy.addSub}
+            onClick={() => void addSubject()}
+            className={['w-full sm:w-auto justify-center', secondaryBtnCls].join(' ')}
+          >
+            Sahə əlavə et
+          </Button>
+        </div>
+        {refreshing ? (
+          <p className={['text-xs', theme === 'dark' ? 'text-gray-500' : 'text-token-textMuted'].join(' ')}>
+            Siyahı yenilənir…
+          </p>
+        ) : null}
+        {initialLoading ? (
           <p className={['text-sm', theme === 'dark' ? 'text-gray-500' : 'text-token-textMuted'].join(' ')}>Yüklənir…</p>
         ) : (
-          <>
-            <div className="flex flex-col sm:flex-row gap-2">
-              <input
-                className={inp}
-                placeholder="Məs: Python"
-                value={newSubject}
-                onChange={(e) => setNewSubject(e.target.value)}
-              />
-              <Button
-                type="button"
-                variant="secondary"
-                loading={busy.addSub}
-                onClick={() => void addSubject()}
-                className={['w-full sm:w-auto justify-center', secondaryBtnCls].join(' ')}
-              >
-                Sahə əlavə et
-              </Button>
-            </div>
-            <ul className="space-y-4">
+          <ul className="space-y-4">
               {!safeSubjects.length ? (
                 <li className={['text-sm', theme === 'dark' ? 'text-gray-500' : 'text-token-textMuted'].join(' ')}>
-                  Hələ sahə yoxdur — ilk sahənizi əlavə edin.
+                  Hələ sahə yoxdur — yuxarıdan ilk sahənizi əlavə edin.
                 </li>
               ) : null}
               {safeSubjects.map((s) => (
@@ -474,7 +501,6 @@ export default function InstructorTeachingGroups() {
                 </li>
               ))}
             </ul>
-          </>
         )}
       </Card>
 
