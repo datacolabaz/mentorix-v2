@@ -148,7 +148,9 @@ export default function PhoneInput({
     const q = String(query || '').trim().toLowerCase()
     if (!q) return COUNTRIES
     return COUNTRIES.filter(
-      (c) => c.name.toLowerCase().includes(q) || c.dial.includes(q) || c.id.toLowerCase().includes(q)
+      (c) =>
+        c &&
+        (c.name.toLowerCase().includes(q) || c.dial.includes(q) || c.id.toLowerCase().includes(q)),
     )
   }, [query])
 
@@ -264,8 +266,4 @@ export default function PhoneInput({
             )}
           </div>
         </div>
-      )}
-    </div>
-  )
-}
-
+   

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import api from '../../lib/api'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
@@ -46,6 +46,8 @@ export default function InstructorTeachingGroups() {
   const [busy, setBusy] = useState({})
   const [qrOpen, setQrOpen] = useState(false)
   const [qrGroup, setQrGroup] = useState(null)
+
+  const safeSubjects = useMemo(() => normalizeTeachingSubjects(subjects), [subjects])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -138,7 +140,7 @@ export default function InstructorTeachingGroups() {
         await api.post('/instructor/teaching/groups', { subject_id: groupModal.subjectId, ...body })
         setNewGroupBySubject((p) => ({ ...p, [groupModal.subjectId]: '' }))
         toast('Qrup və paket tənzimləri yaradıldı')
-      } else {
+      } else if (groupModal.group?.id) {
         await api.patch(`/instructor/teaching/groups/${encodeURIComponent(groupModal.group.id)}`, body)
         toast('Qrup paketi yeniləndi')
       }
@@ -228,12 +230,12 @@ export default function InstructorTeachingGroups() {
               </Button>
             </div>
             <ul className="space-y-4">
-              {!subjects.length ? (
+              {!safeSubjects.length ? (
                 <li className={['text-sm', theme === 'dark' ? 'text-gray-500' : 'text-token-textMuted'].join(' ')}>
                   Hələ sahə yoxdur — ilk sahənizi əlavə edin.
                 </li>
               ) : null}
-              {subjects.filter((s) => s?.id).map((s) => (
+              {safeSubjects.map((s) => (
                 <li
                   key={s.id}
                   className={[
@@ -290,7 +292,7 @@ export default function InstructorTeachingGroups() {
                       </p>
                     ) : (
                       <ul className="space-y-1">
-                        {(s.groups || []).filter((g) => g?.id).map((g) => (
+                        {(s?.groups || []).map((g) => (
                           <li
                             key={g.id}
                             className={[
@@ -527,53 +529,3 @@ export default function InstructorTeachingGroups() {
                 }}
               >
                 Ləğv et
-              </Button>
-            </div>
-          </div>
-        ) : null}
-      </Modal>
-
-      <Modal open={qrOpen} onClose={() => setQrOpen(false)} title="QR ilə qoşul" size="sm">
-        <div className="space-y-4">
-          <div className="text-sm text-gray-400 text-center">
-            {qrGroup?.subjectName ? <div className="text-xs text-gray-500">{qrGroup.subjectName}</div> : null}
-            <div className="text-white font-semibold">{qrGroup?.name}</div>
-            {qrGroup?.join_code ? (
-              <div className="mt-1">
-                Join code: <span className="text-gray-200 font-semibold">{qrGroup.join_code}</span>
-              </div>
-            ) : null}
-          </div>
-          {qrGroup?.join_code ? (
-            <div className="flex justify-center">
-              <div className="bg-white rounded-2xl p-4">
-                <QRCodeCanvas
-                  value={`${window.location.origin}/join/${encodeURIComponent(String(qrGroup.join_code))}`}
-                  size={220}
-                  includeMargin
-                />
-              </div>
-            </div>
-          ) : null}
-          {qrGroup?.join_code ? (
-            <Button
-              className="w-full justify-center"
-              variant="secondary"
-              onClick={async () => {
-                const link = `${window.location.origin}/join/${encodeURIComponent(String(qrGroup.join_code))}`
-                try {
-                  await navigator.clipboard.writeText(link)
-                  toast('Link kopyalandı', 'success')
-                } catch {
-                  toast('Link kopyalanmadı', 'error')
-                }
-              }}
-            >
-              Linki kopyala
-            </Button>
-          ) : null}
-        </div>
-      </Modal>
-    </div>
-  )
-}

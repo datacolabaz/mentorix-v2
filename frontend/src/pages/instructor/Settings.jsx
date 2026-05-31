@@ -765,12 +765,12 @@ export default function InstructorSettings() {
             </p>
           ) : null}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {smsPacks.map((pack) => (
+            {smsPacks.filter(Boolean).map((pack) => (
               <div
-                key={pack.quantity}
+                key={pack?.quantity ?? pack?.label}
                 className="rounded-2xl border border-[color:var(--border-subtle)] p-4 flex flex-col gap-3"
               >
-                <div className="font-display font-bold text-token-textMain">{pack.label}</div>
+                <div className="font-display font-bold text-token-textMain">{pack?.label ?? '—'}</div>
                 <div className="text-lg font-bold text-token-textMain">{formatAzn(pack.price_azn)} AZN</div>
                 <Button
                   type="button"
@@ -1160,10 +1160,4 @@ export default function InstructorSettings() {
         amountAzn={checkout?.amountAzn}
         manualAccount={manualAccount}
         busy={planBusy}
-        onConfirm={confirmCheckout}
-      />
-
-    </div>
-  )
-}
-
+      

@@ -60,7 +60,7 @@ export default function StorageAddonModal({
         ) : null}
 
         <div className="space-y-2">
-          {packs.map((pack) => {
+          {packs.filter(Boolean).map((pack) => {
             const headline = storagePackHeadline(pack)
             const period = storagePackPeriodLabel(pack)
             const afterB =
@@ -111,6 +111,4 @@ export default function StorageAddonModal({
           Bağla
         </Button>
       </div>
-    </Modal>
-  )
-}
+   

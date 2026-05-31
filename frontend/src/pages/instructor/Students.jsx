@@ -545,7 +545,7 @@ function StudentFormFields({
                       const v = e.target.value
                       setGroupDraft(v)
                       const groups = selectedSubject?.groups || []
-                      const match = groups.find((g) => normName(g.name) === normName(v))
+                      const match = groups.find((g) => g && normName(g.name) === normName(v))
                       if (match) setData((p) => ({ ...p, group_id: match.id }))
                       else setData((p) => ({ ...p, group_id: '' }))
                     }}
@@ -664,9 +664,9 @@ function StudentFormFields({
               onChange={(e) => setData((p) => ({ ...p, referral_source_id: e.target.value }))}
             >
               <option value="">— Seçin —</option>
-              {referralSources.map((rs) => (
+              {referralSources.filter(Boolean).map((rs) => (
                 <option key={rs.id} value={rs.id}>
-                  {rs.name}
+                  {rs?.name ?? '—'}
                 </option>
               ))}
             </select>
@@ -2078,3 +2078,4 @@ export default function InstructorStudents() {
     </div>
   )
 }
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 
