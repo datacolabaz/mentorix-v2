@@ -184,6 +184,71 @@ const deleteInstructorAssignment = async (req, res) => {
   }
 };
 
+const updateInstructorAssignment = async (req, res) => {
+  try {
+    const instructorId = req.user.id;
+    const id = req.params.id;
+
+    const { rows: cur } = await db.query(
+      `SELECT id, title, topic, question_file_url, description, due_date, max_score, group_id
+       FROM assignments WHERE id = $1 AND instructor_id = $2 LIMIT 1`,
+      [id, instructorId],
+    );
+    if (!cur[0]) return res.status(404).json({ success: false, message: 'Tapılmadı' });
+
+    const title =
+      req.body.title !== undefined ? String(req.body.title || '').trim() : String(cur[0].title || '').trim();
+    if (!title) return res.status(400).json({ success: false, message: 'Tapşırığın adı tələb olunur' });
+
+    const topic =
+      req.body.topic !== undefined
+        ? req.body.topic != null
+          ? String(req.body.topic).trim()
+          : ''
+        : cur[0].topic;
+    const description =
+      req.body.description !== undefined
+        ? req.body.description != null
+          ? String(req.body.description).trim()
+          : ''
+        : cur[0].description;
+    const due_date =
+      req.body.due_date !== undefined ? parseDate(req.body.due_date) : cur[0].due_date;
+    const max_score =
+      req.body.max_score !== undefined ? parseMaxScore(req.body.max_score) : cur[0].max_score;
+    const question_file_url =
+      req.body.question_file_url !== undefined
+        ? normalizeUrl(req.body.question_file_url)
+        : cur[0].question_file_url;
+
+    const { rows } = await db.query(
+      `UPDATE assignments
+       SET title = $3,
+           topic = NULLIF($4, ''),
+           description = NULLIF($5, ''),
+           due_date = $6,
+           max_score = $7,
+           question_file_url = $8
+       WHERE id = $1 AND instructor_id = $2
+       RETURNING *`,
+      [
+        id,
+        instructorId,
+        title,
+        topic || null,
+        description || null,
+        due_date,
+        max_score,
+        question_file_url,
+      ],
+    );
+
+    res.json({ success: true, task: rows[0] });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 const { resolveEnrollmentScope } = require('../services/studentEnrollmentsService');
 
 const listMyTasks = async (req, res) => {
@@ -278,8 +343,11 @@ const getMyAssignment = async (req, res) => {
     );
     if (!rows[0]) return res.status(404).json({ success: false, message: 'Tapılmadı' });
 
-    await db.query(
-      `UPDATE student_assignments SET seen_at = COALESCE(seen_at, NOW()) WHERE id = $1 AND student_id = $2`,
+    const { rows: seenRows } = await db.query(
+      `UPDATE student_assignments
+       SET seen_at = COALESCE(seen_at, NOW())
+       WHERE id = $1 AND student_id = $2
+       RETURNING seen_at`,
       [id, studentId],
     );
 
@@ -299,7 +367,11 @@ const getMyAssignment = async (req, res) => {
       )
       .catch(() => {});
 
-    const assignment = { ...rows[0], display_status: normalizeStatus(rows[0]) };
+    const assignment = {
+      ...rows[0],
+      seen_at: seenRows[0]?.seen_at || rows[0].seen_at,
+      display_status: normalizeStatus(rows[0]),
+    };
     res.json({ success: true, assignment });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -779,6 +851,7 @@ const listInstructorGroups = async (req, res) => {
 module.exports = {
   listInstructorTasks,
   createInstructorTask,
+  updateInstructorAssignment,
   deleteInstructorAssignment,
   getMyAssignment,
   saveMyAssignmentDraft,

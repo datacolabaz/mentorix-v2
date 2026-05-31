@@ -1,16 +1,15 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import api from '../../lib/api'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
 import { useToast } from '../../components/common/Toast'
-import ReactQuill from 'react-quill'
-import 'react-quill/dist/quill.snow.css'
-import 'katex/dist/katex.min.css'
 import useUiStore from '../../hooks/useUi'
+import ErrorBoundary from '../../components/common/ErrorBoundary'
+import AssignmentAnswerEditor from '../../components/student/AssignmentAnswerEditor'
 import GroupSwitcher from '../../components/student/GroupSwitcher'
 import { useStudentGroups } from '../../contexts/StudentGroupContext'
-import { bumpStudentAlerts, useStudentAlerts } from '../../hooks/useStudentAlerts'
+import { bumpStudentAlerts } from '../../hooks/useStudentAlerts'
 import { withEnrollmentQuery } from '../../lib/studentGroupQuery'
 import {
   assignmentStatusClass,
@@ -61,9 +60,6 @@ export default function StudentAssignments() {
   const [err, setErr] = useState(null)
   const [busyId, setBusyId] = useState(null)
   const toast = useToast()
-  const { summary } = useStudentAlerts()
-  const newToastShown = useRef(false)
-
   const [openId, setOpenId] = useState(null)
   const [detailLoading, setDetailLoading] = useState(false)
   const [detailErr, setDetailErr] = useState(null)
@@ -75,8 +71,28 @@ export default function StudentAssignments() {
 
   const filteredTasks = useMemo(() => filterTasksByTab(tasks, tab), [tasks, tab])
 
+  const markTaskSeenLocally = useCallback((studentAssignmentId, seenAt) => {
+    const when = seenAt || new Date().toISOString()
+    setTasks((prev) =>
+      prev
+        .filter(Boolean)
+        .map((t) =>
+          String(t.assignment_id) === String(studentAssignmentId)
+            ? { ...t, seen_at: t.seen_at || when }
+            : t,
+        ),
+    )
+  }, [])
+
   const newTaskCount = useMemo(
-    () => tasks.filter((t) => !t.seen_at && !t.submitted_at && ['pending', 'overdue'].includes(t.display_status || t.status)).length,
+    () =>
+      tasks.filter(
+        (t) =>
+          t &&
+          !t.seen_at &&
+          !t.submitted_at &&
+          ['pending', 'overdue'].includes(t.display_status || t.status),
+      ).length,
     [tasks],
   )
 
@@ -89,7 +105,8 @@ export default function StudentAssignments() {
     setErr(null)
     try {
       const d = await api.get(withEnrollmentQuery('/tasks/my', activeEnrollmentId))
-      setTasks(Array.isArray(d.tasks) ? d.tasks : [])
+      const list = Array.isArray(d.tasks) ? d.tasks : []
+      setTasks(list.filter((t) => t && t.assignment_id != null))
     } catch (e) {
       setErr(e?.message || 'Yüklənmədi')
       setTasks([])
@@ -102,31 +119,9 @@ export default function StudentAssignments() {
     void load()
   }, [load])
 
-  useEffect(() => {
-    if (loading || newToastShown.current) return
-    const n = Number(summary?.unseen_assignments) || newTaskCount
-    if (n > 0) {
-      newToastShown.current = true
-      toast(`Sizdə ${n} yeni tapşırıq var — aşağıdan açın`, 'info')
-    }
-  }, [loading, newTaskCount, summary?.unseen_assignments, toast])
-
-  const quillModules = useMemo(
-    () => ({
-      toolbar: [
-        [{ header: [1, 2, 3, false] }],
-        ['bold', 'italic', 'underline', 'strike'],
-        [{ color: [] }, { background: [] }],
-        [{ list: 'ordered' }, { list: 'bullet' }],
-        ['blockquote', 'code-block'],
-        ['link', 'formula'],
-        ['clean'],
-      ],
-    }),
-    []
-  )
-
   const openWorkspace = async (assignmentId) => {
+    markTaskSeenLocally(assignmentId)
+    bumpStudentAlerts()
     setOpenId(assignmentId)
     setFocusMode(true)
     setDetail(null)
@@ -140,11 +135,12 @@ export default function StudentAssignments() {
       setDetail(a)
       setEditorHtml(a?.answer_text || '')
       setAttachments(Array.isArray(a?.attachment_urls) ? a.attachment_urls : [])
+      markTaskSeenLocally(assignmentId, a?.seen_at)
+      bumpStudentAlerts()
     } catch (e) {
       setDetailErr(e?.message || 'Yüklənmədi')
     } finally {
       setDetailLoading(false)
-      bumpStudentAlerts()
     }
   }
 
@@ -241,21 +237,22 @@ export default function StudentAssignments() {
         </Card>
       )}
 
-      {(newTaskCount > 0 || Number(summary?.unseen_assignments) > 0) && (
+      {newTaskCount > 0 && (
         <Card className="p-4 mb-4 border border-violet-500/35 bg-gradient-to-r from-violet-500/15 to-indigo-500/10">
           <div className="flex flex-wrap items-start gap-3">
             <span className="text-2xl" aria-hidden>
               📋
             </span>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold text-violet-100">Yeni tapşırıq</p>
+              <p className="text-sm font-semibold text-violet-100">
+                {newTaskCount === 1 ? 'Yeni tapşırıq' : `${newTaskCount} yeni tapşırıq`}
+              </p>
               <p className="text-xs text-gray-300 mt-1">
-                Müəlliminiz ev tapşırığı göndərib. Aşağıdakı siyahıdan açın və təslim edin. E-poçtunuzda da
-                bildiriş olmalıdır (qeydiyyat Gmail).
+                Bu qrupda gözləyən tapşırıqlar var — aşağıdakı siyahıdan açın və təslim edin.
               </p>
             </div>
             <span className="shrink-0 text-xs font-bold tabular-nums px-2.5 py-1 rounded-full bg-violet-500 text-white">
-              {Math.max(newTaskCount, Number(summary?.unseen_assignments) || 0)}
+              {newTaskCount}
             </span>
           </div>
         </Card>
@@ -364,6 +361,8 @@ export default function StudentAssignments() {
           if (busyId) return null
           setOpenId(null)
           setFocusMode(false)
+          void load()
+          bumpStudentAlerts()
         }}
         title={detail?.title ? `Tapşırıq — ${detail.title}` : 'Tapşırıq'}
         size="xl"
@@ -451,7 +450,13 @@ export default function StudentAssignments() {
                 Mətn yazın və ya aşağıdan fayl yükləyin — hər ikisi də qəbul edilir.
               </p>
               <div className={`assignment-answer-editor rounded-xl overflow-hidden border border-indigo-500/20 ${locked ? 'opacity-95 pointer-events-none' : ''}`}>
-                <ReactQuill theme="snow" value={editorHtml} onChange={setEditorHtml} modules={quillModules} />
+                <ErrorBoundary title="Cavab redaktoru açılmadı">
+                  <AssignmentAnswerEditor
+                    value={editorHtml}
+                    onChange={setEditorHtml}
+                    readOnly={locked}
+                  />
+                </ErrorBoundary>
               </div>
               <style>{`
                 .assignment-answer-editor .ql-toolbar {

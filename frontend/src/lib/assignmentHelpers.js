@@ -22,7 +22,7 @@ export function assignmentStatusClass(status, displayStatus) {
 }
 
 export function filterTasksByTab(tasks, tab) {
-  const list = Array.isArray(tasks) ? tasks : []
+  const list = (Array.isArray(tasks) ? tasks : []).filter(Boolean)
   if (tab === 'active') {
     return list.filter((t) => ['pending', 'overdue'].includes(t.display_status || t.status))
   }

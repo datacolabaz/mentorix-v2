@@ -31,7 +31,7 @@ function normalizeNationalDigits(countryId, digits) {
     if (x.startsWith('0')) x = x.slice(1)
     return x.slice(0, 9)
   }
-  const meta = COUNTRIES.find((c) => c.id === countryId) || null
+  const meta = COUNTRIES.find((c) => c && c.id === countryId) || null
   const max = meta?.max ?? 15
   return d.slice(0, max)
 }
@@ -48,7 +48,7 @@ function formatNationalDisplay(countryId, nationalDigits) {
     return [a, b, c, d].filter(Boolean).join(' ')
   }
   // digər ölkələr üçün sadə qrup (3-3-4 və ya ümumi)
-  const meta = COUNTRIES.find((c) => c.id === countryId)
+  const meta = COUNTRIES.find((c) => c && c.id === countryId)
   const max = meta?.max ?? 15
   const x = n.slice(0, max)
   if (x.length <= 3) return x
@@ -77,7 +77,7 @@ export default function PhoneInput({
 
   const initialCountry = useMemo(() => {
     const saved = typeof localStorage !== 'undefined' ? localStorage.getItem(STORAGE_COUNTRY) : null
-    const c = saved ? COUNTRIES.find((x) => x.id === saved) : null
+    const c = saved ? COUNTRIES.find((x) => x && x.id === saved) : null
     return c || COUNTRIES[0]
   }, [])
 
@@ -154,18 +154,20 @@ export default function PhoneInput({
     )
   }, [query])
 
-  const masked = useMemo(() => formatNationalDisplay(country.id, national), [country.id, national])
-  const full = useMemo(() => e164(country, national), [country, national])
+  const countryId = country?.id || COUNTRIES[0]?.id || 'AZ'
+
+  const masked = useMemo(() => formatNationalDisplay(countryId, national), [countryId, national])
+  const full = useMemo(() => e164(country || COUNTRIES[0], national), [country, national])
 
   const outboundE164 = useMemo(() => {
-    if (country.id === 'AZ') {
+    if (countryId === 'AZ') {
       return canonicalAzPhoneE164(full) || ''
     }
     return full
-  }, [country.id, full])
+  }, [countryId, full])
 
   const azInvalid =
-    country.id === 'AZ' &&
+    countryId === 'AZ' &&
     onlyDigits(national).length > 0 &&
     (onlyDigits(national).length !== 9 || !isValidAzMobileNational(national))
 
@@ -191,7 +193,7 @@ export default function PhoneInput({
       setNational(normalizeNationalDigits(found.id, d.slice(found.dial.length)))
       return
     }
-    setNational(normalizeNationalDigits(country.id, d))
+    setNational(normalizeNationalDigits(countryId, d))
   }
 
   return (
@@ -215,17 +217,17 @@ export default function PhoneInput({
           autoFocus={autoFocus}
           required={required}
           className="flex-1 min-w-0 bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-blue-500"
-          placeholder={placeholder || (country.id === 'AZ' ? '50 123 45 67' : 'Telefon')}
+          placeholder={placeholder || (countryId === 'AZ' ? '50 123 45 67' : 'Telefon')}
           value={masked}
           onChange={(e) => setFromRawInput(e.target.value)}
-          maxLength={country.id === 'AZ' ? 12 : undefined}
+          maxLength={countryId === 'AZ' ? 12 : undefined}
         />
       </div>
       {azInvalid ? (
         <p className="mt-1.5 text-xs text-red-400/95">
           Mobil nömrə 9 rəqəm olmalıdır (məs: 50 123 45 67). Operator: 50, 51, 55, 70, 77 və s.
         </p>
-      ) : country.id === 'AZ' && onlyDigits(national).length === 9 && outboundE164 ? (
+      ) : countryId === 'AZ' && onlyDigits(national).length === 9 && outboundE164 ? (
         <p className="mt-1.5 text-xs text-emerald-400/90 font-mono">{outboundE164}</p>
       ) : null}
 
@@ -251,7 +253,7 @@ export default function PhoneInput({
                   setQuery('')
                 }}
                 className={`w-full flex items-center justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-white/5 ${
-                  c.id === country.id ? 'bg-blue-500/10' : ''
+                  c && country && c.id === country.id ? 'bg-blue-500/10' : ''
                 }`}
               >
                 <span className="flex items-center gap-2 min-w-0">

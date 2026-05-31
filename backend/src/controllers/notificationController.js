@@ -196,19 +196,58 @@ const getStudentNotifications = async (req, res) => {
   }
 };
 
+const { resolveEnrollmentScope } = require('../services/studentEnrollmentsService');
+
+const ASSIGNMENT_NOTIF_TYPES = [
+  'assignment_new',
+  'assignment_reminder',
+  'assignment_overdue',
+  'assignment_reviewed',
+  'assignment_submitted',
+];
+
 const getStudentNotificationSummary = async (req, res) => {
   try {
     const studentId = req.user.id;
+    const enrollmentId = String(req.query.enrollment_id || '').trim() || null;
+    const scope = enrollmentId ? await resolveEnrollmentScope(studentId, enrollmentId) : null;
+    if (enrollmentId && !scope) {
+      return res.status(404).json({ success: false, message: 'Qrup tapılmadı' });
+    }
+
+    const instructorId = scope?.instructor_id || null;
+    const nParams = [studentId];
+    let notifScopeSql = '';
+    if (instructorId) {
+      nParams.push(instructorId);
+      const types = ASSIGNMENT_NOTIF_TYPES.map((t) => `'${t}'`).join(', ');
+      notifScopeSql = ` AND (
+         type NOT IN (${types})
+         OR EXISTS (
+           SELECT 1 FROM assignments asg
+           WHERE asg.instructor_id = $${nParams.length}
+             AND asg.id::text = COALESCE(meta->>'assignment_id', '')
+         )
+       )`;
+    }
+
     const { rows: nrows } = await db.query(
       `SELECT
          COUNT(*) FILTER (WHERE is_read = FALSE)::int AS unread_count,
          COUNT(*) FILTER (
-           WHERE is_read = FALSE AND type IN ('assignment_new', 'assignment_reminder', 'assignment_overdue', 'assignment_reviewed', 'assignment_submitted')
+           WHERE is_read = FALSE AND type IN (${ASSIGNMENT_NOTIF_TYPES.map((t) => `'${t}'`).join(', ')})
          )::int AS unread_assignment_notifications
        FROM notifications
-       WHERE user_id = $1`,
-      [studentId],
+       WHERE user_id = $1${notifScopeSql}`,
+      nParams,
     );
+
+    const tParams = [studentId];
+    let taskScopeSql = '';
+    if (instructorId) {
+      tParams.push(instructorId);
+      taskScopeSql = ` AND t.instructor_id = $${tParams.length}`;
+    }
     const { rows: trows } = await db.query(
       `SELECT
          COUNT(*) FILTER (
@@ -218,8 +257,9 @@ const getStudentNotificationSummary = async (req, res) => {
            WHERE a.status IN ('pending', 'late') AND a.submitted_at IS NULL AND a.seen_at IS NULL
          )::int AS unseen_assignments
        FROM student_assignments a
-       WHERE a.student_id = $1`,
-      [studentId],
+       JOIN assignments t ON t.id = a.assignment_id
+       WHERE a.student_id = $1${taskScopeSql}`,
+      tParams,
     );
     res.json({
       success: true,
@@ -228,6 +268,7 @@ const getStudentNotificationSummary = async (req, res) => {
         unread_assignment_notifications: Number(nrows[0]?.unread_assignment_notifications) || 0,
         pending_assignments: Number(trows[0]?.pending_assignments) || 0,
         unseen_assignments: Number(trows[0]?.unseen_assignments) || 0,
+        enrollment_id: scope?.enrollment_id || null,
       },
     });
   } catch (err) {

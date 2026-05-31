@@ -1,22 +1,26 @@
 import { useCallback, useEffect, useState } from 'react'
 import api from '../lib/api'
+import { withEnrollmentQuery } from '../lib/studentGroupQuery'
 
-export function useStudentAlerts() {
+export function useStudentAlerts({ enrollmentId } = {}) {
   const [summary, setSummary] = useState(null)
   const [loading, setLoading] = useState(true)
 
   const refresh = useCallback(async () => {
     try {
-      const d = await api.get('/notifications/student/summary')
+      const d = await api.get(
+        withEnrollmentQuery('/notifications/student/summary', enrollmentId || ''),
+      )
       setSummary(d.summary || null)
     } catch {
       setSummary(null)
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [enrollmentId])
 
   useEffect(() => {
+    setLoading(true)
     void refresh()
     const interval = window.setInterval(() => void refresh(), 60_000)
     const onRefresh = () => void refresh()
@@ -29,10 +33,7 @@ export function useStudentAlerts() {
     }
   }, [refresh])
 
-  const tasksBadge = Math.max(
-    Number(summary?.unseen_assignments) || 0,
-    Number(summary?.unread_assignment_notifications) || 0,
-  )
+  const tasksBadge = Number(summary?.unseen_assignments) || 0
   const notifBadge = Number(summary?.unread_notifications) || 0
 
   return { summary, loading, refresh, tasksBadge, notifBadge }

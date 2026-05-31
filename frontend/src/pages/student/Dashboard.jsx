@@ -107,7 +107,9 @@ export default function StudentDashboard() {
 
   const groupStats = useMemo(() => {
     if (!overview?.by_group || !activeEnrollmentId) return null
-    return overview.by_group.find((g) => String(g.enrollment_id) === String(activeEnrollmentId))
+    return overview.by_group.find(
+      (g) => g && String(g.enrollment_id) === String(activeEnrollmentId),
+    )
   }, [overview, activeEnrollmentId])
 
   const pieData = useMemo(() => {

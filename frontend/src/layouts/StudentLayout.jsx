@@ -6,8 +6,9 @@ import Brand from '../components/common/Brand'
 import Footer from '../components/common/Footer'
 import { sidebarNavClass } from '../lib/sidebarNavClass'
 import NavIcon from '../components/common/NavIcon'
-import { StudentGroupProvider } from '../contexts/StudentGroupContext'
+import { StudentGroupProvider, useStudentGroups } from '../contexts/StudentGroupContext'
 import { useStudentAlerts } from '../hooks/useStudentAlerts'
+import StudentAssignmentAlertModal from '../components/student/StudentAssignmentAlertModal'
 
 function NavBadge({ count }) {
   if (!count || count < 1) return null
@@ -45,11 +46,20 @@ const NAV_GROUPS = [
 ]
 
 export default function StudentLayout() {
+  return (
+    <StudentGroupProvider>
+      <StudentLayoutInner />
+    </StudentGroupProvider>
+  )
+}
+
+function StudentLayoutInner() {
   const { user, logout } = useAuthStore()
   const navigate = useNavigate()
   const [navOpen, setNavOpen] = useState(false)
   const { focusMode, setFocusMode, theme, toggleTheme } = useUiStore()
-  const { tasksBadge, notifBadge } = useStudentAlerts()
+  const { activeEnrollmentId } = useStudentGroups()
+  const { tasksBadge, notifBadge } = useStudentAlerts({ enrollmentId: activeEnrollmentId })
 
   const closeNav = () => setNavOpen(false)
 
@@ -58,7 +68,8 @@ export default function StudentLayout() {
   }, [focusMode])
 
   return (
-    <StudentGroupProvider>
+    <>
+    <StudentAssignmentAlertModal />
     <div
       className={`theme-${theme} flex flex-col min-h-screen md:h-screen bg-token-surfaceMain text-token-textMain overflow-x-hidden md:overflow-hidden`}
     >
@@ -232,6 +243,6 @@ export default function StudentLayout() {
         </main>
       </div>
     </div>
-    </StudentGroupProvider>
+    </>
   )
 }

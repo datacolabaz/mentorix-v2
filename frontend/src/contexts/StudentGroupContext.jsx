@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import api from '../lib/api'
 import useAuthStore from '../hooks/useAuth'
 import { readStoredEnrollmentId, storeEnrollmentId } from '../lib/studentGroupQuery'
+import { bumpStudentAlerts } from '../hooks/useStudentAlerts'
 
 const StudentGroupContext = createContext(null)
 
@@ -20,7 +21,9 @@ export function StudentGroupProvider({ children }) {
     setLoading(true)
     try {
       const d = await api.get('/students/my/enrollments')
-      const list = Array.isArray(d.enrollments) ? d.enrollments : []
+      const list = (Array.isArray(d.enrollments) ? d.enrollments : []).filter(
+        (e) => e && e.enrollment_id != null,
+      )
       setEnrollments(list)
       return list
     } catch {
@@ -43,21 +46,29 @@ export function StudentGroupProvider({ children }) {
       }
       return
     }
-    const exists = enrollments.some((e) => String(e.enrollment_id) === String(activeEnrollmentId))
+    const exists = enrollments.some(
+      (e) => e && String(e.enrollment_id) === String(activeEnrollmentId),
+    )
     if (!activeEnrollmentId || !exists) {
-      const next = enrollments[0].enrollment_id
-      setActiveEnrollmentIdState(next)
-      storeEnrollmentId(next)
+      const next = enrollments[0]?.enrollment_id
+      if (next) {
+        setActiveEnrollmentIdState(next)
+        storeEnrollmentId(next)
+      }
     }
   }, [enrollments, activeEnrollmentId])
 
   const setActiveEnrollmentId = useCallback((id) => {
     setActiveEnrollmentIdState(id || '')
     storeEnrollmentId(id || '')
+    bumpStudentAlerts()
   }, [])
 
   const activeEnrollment = useMemo(
-    () => enrollments.find((e) => String(e.enrollment_id) === String(activeEnrollmentId)) || null,
+    () =>
+      enrollments.find(
+        (e) => e && String(e.enrollment_id) === String(activeEnrollmentId),
+      ) || null,
     [enrollments, activeEnrollmentId],
   )
 

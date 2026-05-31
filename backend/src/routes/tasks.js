@@ -8,6 +8,7 @@ const { enforceStorageLimitAfterUpload } = require('../middleware/storageLimit')
 const {
   listInstructorTasks,
   createInstructorTask,
+  updateInstructorAssignment,
   deleteInstructorAssignment,
   getMyAssignment,
   saveMyAssignmentDraft,
@@ -67,6 +68,7 @@ router.get('/analytics', authenticate, authorize('instructor'), getAssignmentAna
 router.get('/groups', authenticate, authorize('instructor'), listInstructorGroups);
 router.get('/parent', authenticate, authorize('parent'), listParentAssignments);
 router.post('/', authenticate, authorize('instructor'), createInstructorTask);
+router.patch('/:id', authenticate, authorize('instructor'), updateInstructorAssignment);
 router.delete('/:id', authenticate, authorize('instructor'), deleteInstructorAssignment);
 
 router.get('/assignment-file/:filename', authenticateAssignmentFile, serveAssignmentFile);

@@ -47,6 +47,7 @@ export default function InstructorTasks() {
   const [students, setStudents] = useState([])
   const [err, setErr] = useState(null)
   const [open, setOpen] = useState(false)
+  const [editingId, setEditingId] = useState(null)
   const [saving, setSaving] = useState(false)
   const [deletingId, setDeletingId] = useState(null)
   const [reviewOpen, setReviewOpen] = useState(false)
@@ -144,6 +145,40 @@ export default function InstructorTasks() {
     })
   }
 
+  const resetForm = () => {
+    setEditingId(null)
+    setForm({
+      title: '',
+      topic: '',
+      question_file_url: '',
+      description: '',
+      due_date: '',
+      max_score: '',
+      group_id: '',
+      selectedStudentIds: [],
+    })
+  }
+
+  const openCreate = () => {
+    resetForm()
+    setOpen(true)
+  }
+
+  const openEdit = (task) => {
+    setEditingId(task.id)
+    setForm({
+      title: task.title || '',
+      topic: task.topic || '',
+      question_file_url: task.question_file_url || '',
+      description: task.description || '',
+      due_date: task.due_date ? String(task.due_date).slice(0, 10) : '',
+      max_score: task.max_score != null ? String(task.max_score) : '',
+      group_id: task.group_id || '',
+      selectedStudentIds: [],
+    })
+    setOpen(true)
+  }
+
   const submit = async () => {
     if (blocked) {
       toast(billing?.messages?.banner || 'Məhdudiyyətə görə bu əməliyyat deaktivdir', 'error')
@@ -154,34 +189,37 @@ export default function InstructorTasks() {
       toast('Tapşırığın adı tələb olunur', 'error')
       return
     }
-    if (!form.selectedStudentIds.length) {
+    if (!editingId && !form.selectedStudentIds.length) {
       toast('Ən azı bir tələbə seçin', 'error')
       return
     }
     setSaving(true)
     try {
-      const d = await api.post('/tasks', {
-        title,
-        topic: form.topic || null,
-        question_file_url: form.question_file_url || null,
-        description: form.description || null,
-        due_date: form.due_date || null,
-        max_score: form.max_score ? Number(form.max_score) : null,
-        group_id: form.group_id || null,
-        student_ids: form.selectedStudentIds,
-      })
-      toast(`Göndərildi (${d.assignedCount || 0} tələbə)`, 'success')
+      if (editingId) {
+        await api.patch('/tasks/' + encodeURIComponent(editingId), {
+          title,
+          topic: form.topic || null,
+          question_file_url: form.question_file_url || null,
+          description: form.description || null,
+          due_date: form.due_date || null,
+          max_score: form.max_score ? Number(form.max_score) : null,
+        })
+        toast('Tapşırıq yeniləndi', 'success')
+      } else {
+        const d = await api.post('/tasks', {
+          title,
+          topic: form.topic || null,
+          question_file_url: form.question_file_url || null,
+          description: form.description || null,
+          due_date: form.due_date || null,
+          max_score: form.max_score ? Number(form.max_score) : null,
+          group_id: form.group_id || null,
+          student_ids: form.selectedStudentIds,
+        })
+        toast(`Göndərildi (${d.assignedCount || 0} tələbə)`, 'success')
+      }
       setOpen(false)
-      setForm({
-        title: '',
-        topic: '',
-        question_file_url: '',
-        description: '',
-        due_date: '',
-        max_score: '',
-        group_id: '',
-        selectedStudentIds: [],
-      })
+      resetForm()
       await load()
       queryClient.invalidateQueries({ queryKey: BILLING_STATUS_QUERY_KEY })
     } catch (e) {
@@ -347,7 +385,7 @@ export default function InstructorTasks() {
           <Button variant="secondary" size="sm" onClick={() => void load()} disabled={loading}>
             Yenilə
           </Button>
-          <Button size="sm" onClick={() => setOpen(true)}>
+          <Button size="sm" onClick={openCreate}>
             + Yeni tapşırıq
           </Button>
         </div>
@@ -428,15 +466,19 @@ export default function InstructorTasks() {
                       </span>
                     </p>
                   </div>
-                  <Button
-                    size="sm"
-                    variant="danger"
-                    loading={deletingId === t.id}
-                    onClick={() => void removeTask(t.id, t.title)}
-                    className="shrink-0"
-                  >
-                    Sil
-                  </Button>
+                  <div className="flex flex-wrap gap-2 shrink-0">
+                    <Button size="sm" variant="secondary" onClick={() => openEdit(t)}>
+                      Redaktə
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="danger"
+                      loading={deletingId === t.id}
+                      onClick={() => void removeTask(t.id, t.title)}
+                    >
+                      Sil
+                    </Button>
+                  </div>
                 </div>
                 {t.description ? (
                   <div className="mt-3 text-sm text-token-textMain whitespace-pre-wrap leading-relaxed border-t border-[color:var(--border-subtle)] pt-3">
@@ -474,7 +516,16 @@ export default function InstructorTasks() {
         </div>
       )}
 
-      <Modal open={open} onClose={() => (saving ? null : setOpen(false))} title="Yeni tapşırıq" size="lg">
+      <Modal
+        open={open}
+        onClose={() => {
+          if (saving) return
+          setOpen(false)
+          resetForm()
+        }}
+        title={editingId ? 'Tapşırığı redaktə et' : 'Yeni tapşırıq'}
+        size="lg"
+      >
         <div className="space-y-4 max-h-[min(70vh,32rem)] overflow-y-auto pr-1">
           <div>
             <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Ad (başlıq) *</label>
@@ -553,63 +604,78 @@ export default function InstructorTasks() {
               />
             </div>
           </div>
-          <div>
-            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Qrup (hamısına təyin)</label>
-            <select
-              className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500"
-              value={form.group_id}
-              onChange={(e) => setForm((p) => ({ ...p, group_id: e.target.value }))}
-            >
-              <option value="">— Qrup seçin (ixtiyari) —</option>
-              {groups.map((g) => (
-                <option key={g.id} value={g.id}>
-                  {g.subject_name ? `${g.subject_name} · ` : ''}
-                  {g.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="border-t border-indigo-500/20 pt-3">
-            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
-              Tələbələr * (bir və ya bir neçə)
-            </label>
-            {studentsLoading ? (
-              <p className="text-sm text-gray-500">Tələbələr yüklənir…</p>
-            ) : !students.length ? (
-              <p className="text-sm text-amber-200/90">Aktiv tələbə yoxdur — əvvəlcə «Tələbələrim»dən əlavə edin.</p>
-            ) : !students.filter((s) => (s.enrollment_status || 'active') === 'active').length ? (
-              <p className="text-sm text-amber-200/90">Aktiv qeydiyyatlı tələbə yoxdur.</p>
-            ) : (
-              <ul className="max-h-48 overflow-y-auto space-y-2 rounded-xl border border-indigo-500/15 p-2 bg-[#0f0c29]/40">
-                {students
-                  .filter((s) => (s.enrollment_status || 'active') === 'active')
-                  .map((s) => {
-                  const sid = s.id
-                  const checked = sid && form.selectedStudentIds.includes(sid)
-                  return (
-                    <li key={s.enrollment_id || sid}>
-                      <label className="flex items-center gap-3 cursor-pointer px-2 py-1.5 rounded-lg hover:bg-white/5">
-                        <input
-                          type="checkbox"
-                          className="rounded border-indigo-500/40 text-blue-500 focus:ring-blue-500/30"
-                          checked={!!checked}
-                          onChange={() => sid && toggleStudent(sid)}
-                          disabled={!sid}
-                        />
-                        <span className="text-sm text-white truncate">{s.full_name}</span>
-                      </label>
-                    </li>
-                  )
-                })}
-              </ul>
-            )}
-          </div>
+          {editingId ? (
+            <p className="text-xs text-amber-200/90 rounded-xl border border-amber-500/25 bg-amber-500/10 px-3 py-2">
+              Təyin olunmuş tələbələr dəyişdirilmir. Başlıq, qeyd, fayl və son tarixi yeniləyə bilərsiniz.
+            </p>
+          ) : (
+            <>
+              <div>
+                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Qrup (hamısına təyin)</label>
+                <select
+                  className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500"
+                  value={form.group_id}
+                  onChange={(e) => setForm((p) => ({ ...p, group_id: e.target.value }))}
+                >
+                  <option value="">— Qrup seçin (ixtiyari) —</option>
+                  {groups.map((g) => (
+                    <option key={g.id} value={g.id}>
+                      {g.subject_name ? `${g.subject_name} · ` : ''}
+                      {g.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="border-t border-indigo-500/20 pt-3">
+                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                  Tələbələr * (bir və ya bir neçə)
+                </label>
+                {studentsLoading ? (
+                  <p className="text-sm text-gray-500">Tələbələr yüklənir…</p>
+                ) : !students.length ? (
+                  <p className="text-sm text-amber-200/90">Aktiv tələbə yoxdur — əvvəlcə «Tələbələrim»dən əlavə edin.</p>
+                ) : !students.filter((s) => (s.enrollment_status || 'active') === 'active').length ? (
+                  <p className="text-sm text-amber-200/90">Aktiv qeydiyyatlı tələbə yoxdur.</p>
+                ) : (
+                  <ul className="max-h-48 overflow-y-auto space-y-2 rounded-xl border border-indigo-500/15 p-2 bg-[#0f0c29]/40">
+                    {students
+                      .filter((s) => (s.enrollment_status || 'active') === 'active')
+                      .map((s) => {
+                        const sid = s.id
+                        const checked = sid && form.selectedStudentIds.includes(sid)
+                        return (
+                          <li key={s.enrollment_id || sid}>
+                            <label className="flex items-center gap-3 cursor-pointer px-2 py-1.5 rounded-lg hover:bg-white/5">
+                              <input
+                                type="checkbox"
+                                className="rounded border-indigo-500/40 text-blue-500 focus:ring-blue-500/30"
+                                checked={!!checked}
+                                onChange={() => sid && toggleStudent(sid)}
+                                disabled={!sid}
+                              />
+                              <span className="text-sm text-white truncate">{s.full_name}</span>
+                            </label>
+                          </li>
+                        )
+                      })}
+                  </ul>
+                )}
+              </div>
+            </>
+          )}
           <div className="flex gap-2 justify-end pt-2 sticky bottom-0 bg-[#1a1740] pb-1 -mb-1">
-            <Button variant="secondary" onClick={() => setOpen(false)} disabled={saving}>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setOpen(false)
+                resetForm()
+              }}
+              disabled={saving}
+            >
               Ləğv et
             </Button>
             <Button onClick={() => void submit()} loading={saving}>
-              Göndər
+              {editingId ? 'Saxla' : 'Göndər'}
             </Button>
           </div>
         </div>
