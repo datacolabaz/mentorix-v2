@@ -43,9 +43,9 @@ export default function StudentAssignmentAlertModal() {
   const load = useCallback(async () => {
     try {
       const d = await api.get('/notifications/student')
-      const list = (Array.isArray(d.notifications) ? d.notifications : []).filter(
-        (n) => !n.is_read && ASSIGNMENT_TYPES.has(String(n.type || '').toLowerCase()),
-      )
+      const list = (Array.isArray(d.notifications) ? d.notifications : [])
+        .filter((n) => n && n.id != null)
+        .filter((n) => !n.is_read && ASSIGNMENT_TYPES.has(String(n.type || '').toLowerCase()))
       setItems(list)
       if (list.length === 0) {
         setOpen(false)
@@ -57,7 +57,7 @@ export default function StudentAssignmentAlertModal() {
       } catch {
         dismissed = []
       }
-      const unseen = list.filter((n) => !dismissed.includes(n.id))
+      const unseen = list.filter((n) => n && !dismissed.includes(n.id))
       setOpen(unseen.length > 0)
     } catch {
       setItems([])
@@ -75,7 +75,7 @@ export default function StudentAssignmentAlertModal() {
   const dismissSession = () => {
     try {
       const prev = JSON.parse(sessionStorage.getItem(DISMISS_KEY) || '[]')
-      const ids = items.map((n) => n.id)
+      const ids = items.filter((n) => n && n.id != null).map((n) => n.id)
       sessionStorage.setItem(DISMISS_KEY, JSON.stringify([...new Set([...prev, ...ids])]))
     } catch {
       /* ignore */

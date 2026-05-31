@@ -13,24 +13,12 @@ import GroupPackageFields, {
   groupPackagePayload,
 } from '../../components/instructor/GroupPackageFields'
 import { formatAzn } from '../../lib/pricing'
+import { normalizeTeachingSubjects } from '../../lib/teachingSubjects'
 
 function formatIncomeAzn(n) {
   const v = Number(n)
   if (!Number.isFinite(v) || v <= 0) return '0 ₼'
   return `${formatAzn(v)} ₼`
-}
-
-/** API/cədvəl kənar hallarında null qrup/sahə elementlərini süzür */
-function normalizeTeachingSubjects(raw) {
-  return (Array.isArray(raw) ? raw : [])
-    .filter((s) => s && s.id)
-    .map((s) => ({
-      ...s,
-      name: String(s.name || '').trim() || '—',
-      groups: (Array.isArray(s.groups) ? s.groups : [])
-        .filter((g) => g && g.id)
-        .map((g) => ({ ...g, name: String(g.name || '').trim() || '—' })),
-    }))
 }
 
 export default function InstructorTeachingGroups() {

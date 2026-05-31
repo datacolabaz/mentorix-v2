@@ -16,6 +16,11 @@ import { readCache, writeCache } from '../../lib/cache'
 import useUiStore from '../../hooks/useUi'
 import PortalMenu from '../../components/common/PortalMenu'
 import PhoneInput from '../../components/auth/PhoneInput'
+import {
+  findGroupById,
+  findSubjectById,
+  normalizeTeachingSubjects,
+} from '../../lib/teachingSubjects'
 import { BILLING_STATUS_QUERY_KEY, useBillingStatus } from '../../hooks/useBillingStatus'
 
 function splitFullName(full) {
@@ -207,18 +212,20 @@ function StudentFormFields({
   const [createOpen, setCreateOpen] = useState(null) // 'subject' | 'group' | null
   const [createName, setCreateName] = useState('')
 
+  const safeSubjects = useMemo(
+    () => normalizeTeachingSubjects(teachingSubjects),
+    [teachingSubjects],
+  )
+
   const selectedSubject = useMemo(
-    () => teachingSubjects.find((s) => String(s.id) === String(data.subject_id || '')) || null,
-    [teachingSubjects, data.subject_id]
+    () => findSubjectById(safeSubjects, data.subject_id),
+    [safeSubjects, data.subject_id],
   )
 
   const subjectNames = useMemo(
     () =>
-      teachingSubjects
-        .filter((s) => s?.id)
-        .map((s) => String(s.name || '').trim())
-        .filter(Boolean),
-    [teachingSubjects],
+      safeSubjects.map((s) => String(s.name || '').trim()).filter(Boolean),
+    [safeSubjects],
   )
   const groupNames = useMemo(
     () =>
@@ -535,7 +542,7 @@ function StudentFormFields({
                     onChange={(e) => {
                       const v = e.target.value
                       setSubjectDraft(v)
-                      const match = teachingSubjects.find((s) => normName(s.name) === normName(v))
+                      const match = safeSubjects.find((s) => s && normName(s.name) === normName(v))
                       if (match) {
                         setSubjectDraft('')
                         setData((p) => ({ ...p, subject_id: match.id, group_id: '' }))
@@ -582,7 +589,7 @@ function StudentFormFields({
                     value={
                       groupDraft ||
                       (data.group_id
-                        ? String((selectedSubject?.groups || []).find((g) => String(g.id) === String(data.group_id))?.name || '')
+                        ? String(findGroupById(selectedSubject, data.group_id)?.name || '')
                         : '')
                     }
                     onChange={(e) => {
@@ -884,7 +891,7 @@ export default function InstructorStudents() {
   useEffect(() => {
     void api
       .get('/instructor/teaching')
-      .then((d) => setTeachingSubjects(Array.isArray(d.subjects) ? d.subjects : []))
+      .then((d) => setTeachingSubjects(normalizeTeachingSubjects(d.subjects)))
       .catch(() => setTeachingSubjects([]))
     void api
       .get('/students/referral-sources')
@@ -914,7 +921,7 @@ export default function InstructorStudents() {
     const d = await api.post('/instructor/teaching/subjects', { name })
     const s = d?.subject
     if (!s?.id) throw new Error(d?.message || 'Sahə yaradılmadı')
-    setTeachingSubjects((prev) => [...(Array.isArray(prev) ? prev : []), { ...s, groups: [] }])
+    setTeachingSubjects((prev) => normalizeTeachingSubjects([...(Array.isArray(prev) ? prev : []), { ...s, groups: [] }]))
     return s
   }
 
@@ -923,7 +930,7 @@ export default function InstructorStudents() {
     const g = d?.group
     if (!g?.id) throw new Error(d?.message || 'Qrup yaradılmadı')
     setTeachingSubjects((prev) =>
-      (Array.isArray(prev) ? prev : []).map((s) => {
+      normalizeTeachingSubjects(prev).map((s) => {
         if (String(s.id) !== String(subjectId)) return s
         const groups = (Array.isArray(s.groups) ? s.groups : []).filter(Boolean)
         return { ...s, groups: [...groups, g] }

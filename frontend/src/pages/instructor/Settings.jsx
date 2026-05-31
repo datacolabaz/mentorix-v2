@@ -296,7 +296,7 @@ export default function InstructorSettings() {
   }, [planBusy])
 
   function openPlanCheckout(planId) {
-    const p = plans.find((x) => String(x.id).toLowerCase() === String(planId).toLowerCase())
+    const p = plans.find((x) => x && String(x.id).toLowerCase() === String(planId).toLowerCase())
     const monthly = Number(p?.price_azn || 0)
     const amountAzn =
       billingInterval === 'yearly' ? yearlyTotalAzn(monthly, YEARLY_DISCOUNT) : monthly
