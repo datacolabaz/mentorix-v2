@@ -15,6 +15,51 @@ function looksUuid(s) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(s || '').trim());
 }
 
+/** Tələbələr siyahısı ilə eyni müqayisə (JWT UUID format fərqləri) */
+function normalizedInstructorId(userId) {
+  return String(userId || '')
+    .trim()
+    .toLowerCase()
+    .replace(/-/g, '');
+}
+
+const INSTRUCTOR_ID_MATCH = `REPLACE(LOWER(TRIM(%COL%::text)), '-', '')`;
+
+function instructorIdWhere(column, paramIndex = 1) {
+  return `${INSTRUCTOR_ID_MATCH.replace('%COL%', column)} = $${paramIndex}`;
+}
+
+async function loadInstructorGroups(instructorUserId) {
+  const iidNorm = normalizedInstructorId(instructorUserId);
+  const baseCols = `id, subject_id, name, sort_order, join_code, join_code_expires_at,
+              invitation_code, invitation_link,
+              default_billing_type, default_package_fee, default_discount_percent,
+              default_billing_timing, default_payment_plan, default_lesson_weekdays,
+              default_lesson_times, default_notifications_enabled, default_initial_payment_status`;
+  const withEndTimes = `${baseCols}, default_lesson_end_times`;
+  try {
+    const { rows } = await db.query(
+      `SELECT ${withEndTimes}
+       FROM instructor_groups
+       WHERE ${instructorIdWhere('instructor_id', 1)}
+       ORDER BY sort_order ASC, name ASC`,
+      [iidNorm],
+    );
+    return rows;
+  } catch (err) {
+    const msg = String(err?.message || '');
+    if (!/default_lesson_end_times|does not exist/i.test(msg)) throw err;
+    const { rows } = await db.query(
+      `SELECT ${baseCols}
+       FROM instructor_groups
+       WHERE ${instructorIdWhere('instructor_id', 1)}
+       ORDER BY sort_order ASC, name ASC`,
+      [iidNorm],
+    );
+    return rows.map((g) => ({ ...g, default_lesson_end_times: {} }));
+  }
+}
+
 async function generateUniqueJoinCode() {
   // Format: MX-12345
   for (let i = 0; i < 50; i++) {
@@ -32,6 +77,28 @@ async function generateUniqueJoinCode() {
 const getTeaching = async (req, res) => {
   try {
     const iid = req.user.id;
+    const iidNorm = normalizedInstructorId(iid);
+
+    // Köhnə məlumat: sahə başqa instructor_id ilə qalıbsa, aktiv qruplar/tələbələrə görə düzəlt
+    await db.query(
+      `UPDATE instructor_subjects ist
+       SET instructor_id = $2::uuid
+       WHERE ist.id IN (
+         SELECT DISTINCT g.subject_id
+         FROM instructor_groups g
+         WHERE ${instructorIdWhere('g.instructor_id', 1)}
+           AND g.subject_id IS NOT NULL
+         UNION
+         SELECT DISTINCT e.subject_id
+         FROM enrollments e
+         WHERE ${instructorIdWhere('e.instructor_id', 1)}
+           AND e.deleted_at IS NULL
+           AND e.subject_id IS NOT NULL
+       )
+       AND NOT (${instructorIdWhere('ist.instructor_id', 1)})`,
+      [iidNorm, iid],
+    ).catch(() => {});
+
     const { rows: prof } = await db.query(
       `SELECT COALESCE(NULLIF(TRIM(public_label), ''), 'instructor') AS public_label,
               latitude,
@@ -45,17 +112,30 @@ const getTeaching = async (req, res) => {
     const public_label = parsePublicLabel(p?.public_label);
 
     const { rows: subjects } = await db.query(
-      `SELECT id, name, sort_order
-       FROM instructor_subjects
-       WHERE instructor_id = $1
-       ORDER BY sort_order ASC, name ASC`,
-      [iid]
+      `SELECT DISTINCT ist.id, ist.name, ist.sort_order
+       FROM instructor_subjects ist
+       WHERE ${instructorIdWhere('ist.instructor_id', 1)}
+          OR ist.id IN (
+            SELECT e.subject_id
+            FROM enrollments e
+            WHERE ${instructorIdWhere('e.instructor_id', 1)}
+              AND e.deleted_at IS NULL
+              AND e.subject_id IS NOT NULL
+          )
+          OR ist.id IN (
+            SELECT g.subject_id
+            FROM instructor_groups g
+            WHERE ${instructorIdWhere('g.instructor_id', 1)}
+              AND g.subject_id IS NOT NULL
+          )
+       ORDER BY ist.sort_order ASC, ist.name ASC`,
+      [iidNorm],
     );
     const { rows: subjectStats } = await db.query(
       `WITH students_by_subject AS (
          SELECT e.subject_id, COUNT(DISTINCT e.student_id)::int AS student_count
          FROM enrollments e
-         WHERE e.instructor_id = $1::uuid
+         WHERE ${instructorIdWhere('e.instructor_id', 1)}
            AND e.deleted_at IS NULL
            AND e.subject_id IS NOT NULL
            AND COALESCE(LOWER(TRIM(e.status)), 'active') IN ('active', 'pending_setup', 'pending_approval')
@@ -65,7 +145,7 @@ const getTeaching = async (req, res) => {
          SELECT e.subject_id, COALESCE(SUM(p.amount), 0)::numeric AS income_this_month
          FROM payments p
          INNER JOIN enrollments e ON e.id = p.enrollment_id
-         WHERE e.instructor_id = $1::uuid
+         WHERE ${instructorIdWhere('e.instructor_id', 1)}
            AND e.deleted_at IS NULL
            AND e.subject_id IS NOT NULL
            AND p.status = 'completed'
@@ -78,7 +158,7 @@ const getTeaching = async (req, res) => {
               COALESCE(i.income_this_month, 0) AS income_this_month
        FROM students_by_subject s
        FULL OUTER JOIN income_by_subject i ON i.subject_id = s.subject_id`,
-      [iid]
+      [iidNorm],
     );
     const statsBySubject = new Map(
       subjectStats.map((r) => [
@@ -89,18 +169,7 @@ const getTeaching = async (req, res) => {
         },
       ]),
     );
-    const { rows: groups } = await db.query(
-      `SELECT id, subject_id, name, sort_order, join_code, join_code_expires_at,
-              invitation_code, invitation_link,
-              default_billing_type, default_package_fee, default_discount_percent,
-              default_billing_timing, default_payment_plan, default_lesson_weekdays,
-              default_lesson_times, default_lesson_end_times,
-              default_notifications_enabled, default_initial_payment_status
-       FROM instructor_groups
-       WHERE instructor_id = $1
-       ORDER BY sort_order ASC, name ASC`,
-      [iid]
-    );
+    const groups = await loadInstructorGroups(iid);
     const byId = new Map(
       subjects.map((s) => {
         const st = statsBySubject.get(String(s.id)) || { student_count: 0, income_this_month: 0 };
@@ -116,30 +185,52 @@ const getTeaching = async (req, res) => {
     );
     for (const g of groups) {
       if (!g?.id) continue;
-      const bucket = byId.get(String(g.subject_id));
-      if (bucket)
-        bucket.groups.push(
-          decorateGroupInvitationFields({
-            id: g.id,
-            name: g.name,
-            sort_order: g.sort_order,
-            join_code: g.join_code || null,
-            join_code_expires_at: g.join_code_expires_at || null,
-            invitation_code: g.invitation_code || null,
-            invitation_link: g.invitation_link || null,
-            default_billing_type: g.default_billing_type || '8_lessons',
-            default_package_fee: g.default_package_fee != null ? Number(g.default_package_fee) : null,
-            default_discount_percent:
-              g.default_discount_percent != null ? Number(g.default_discount_percent) : null,
-            default_billing_timing: g.default_billing_timing || 'postpaid',
-            default_payment_plan: g.default_payment_plan || 'full',
-            default_lesson_weekdays: g.default_lesson_weekdays || [],
-            default_lesson_times: g.default_lesson_times || {},
-            default_notifications_enabled: g.default_notifications_enabled !== false,
-            default_initial_payment_status: g.default_initial_payment_status || 'unpaid',
-            invite_ready: Boolean(rowToDefaults(g)),
-          }),
+      let bucket = byId.get(String(g.subject_id));
+      if (!bucket && g.subject_id) {
+        const { rows: subRows } = await db.query(
+          `SELECT id, name, sort_order FROM instructor_subjects WHERE id = $1 LIMIT 1`,
+          [g.subject_id],
         );
+        if (subRows[0]) {
+          const st = statsBySubject.get(String(subRows[0].id)) || {
+            student_count: 0,
+            income_this_month: 0,
+          };
+          bucket = {
+            id: subRows[0].id,
+            name: subRows[0].name,
+            sort_order: subRows[0].sort_order,
+            student_count: st.student_count,
+            income_this_month: st.income_this_month,
+            groups: [],
+          };
+          byId.set(String(subRows[0].id), bucket);
+        }
+      }
+      if (!bucket) continue;
+      bucket.groups.push(
+        decorateGroupInvitationFields({
+          id: g.id,
+          name: g.name,
+          sort_order: g.sort_order,
+          join_code: g.join_code || null,
+          join_code_expires_at: g.join_code_expires_at || null,
+          invitation_code: g.invitation_code || null,
+          invitation_link: g.invitation_link || null,
+          default_billing_type: g.default_billing_type || '8_lessons',
+          default_package_fee: g.default_package_fee != null ? Number(g.default_package_fee) : null,
+          default_discount_percent:
+            g.default_discount_percent != null ? Number(g.default_discount_percent) : null,
+          default_billing_timing: g.default_billing_timing || 'postpaid',
+          default_payment_plan: g.default_payment_plan || 'full',
+          default_lesson_weekdays: g.default_lesson_weekdays || [],
+          default_lesson_times: g.default_lesson_times || {},
+          default_lesson_end_times: g.default_lesson_end_times || {},
+          default_notifications_enabled: g.default_notifications_enabled !== false,
+          default_initial_payment_status: g.default_initial_payment_status || 'unpaid',
+          invite_ready: Boolean(rowToDefaults(g)),
+        }),
+      );
     }
 
     res.json({
