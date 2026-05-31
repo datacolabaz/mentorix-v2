@@ -158,4 +158,32 @@ export function fmtAzBakuLessonRow(l) {
   const t = wall != null && wall !== '' ? fmtTime(wall) : ''
   if (t) {
     const parts = bakuPartsFromInstant(inst)
-    const actualMin = parts.hour
+    const actualMin = parts.hour * 60 + parts.minute
+    const [h, m] = t.split(':').map((x) => parseInt(x, 10))
+    const wallMin = (Number.isFinite(h) ? h : 0) * 60 + (Number.isFinite(m) ? m : 0)
+    if (Math.abs(actualMin - wallMin) <= 10) return `${dateStr}, ${t}`
+  }
+  return `${dateStr}, ${fmtAzBakuClockHm(inst)}`
+}
+
+export function parseToMinutes(t) {
+  const s = fmtTime(t)
+  const [h, m] = s.split(':').map((x) => parseInt(x, 10))
+  return (Number.isFinite(h) ? h : 0) * 60 + (Number.isFinite(m) ? m : 0)
+}
+
+export function slotCoversHour(slot, hour) {
+  const sm = parseToMinutes(slot.start_time)
+  const em = parseToMinutes(slot.end_time)
+  const rowStart = hour * 60
+  const rowEnd = (hour + 1) * 60
+  return sm < rowEnd && em > rowStart
+}
+
+export function slotFirstHour(slot) {
+  return Math.floor(parseToMinutes(slot.start_time) / 60)
+}
+
+export const GRID_START = 8
+export const GRID_END = 20
+export const GRID_ROW_COUNT = GRID_END - GRID_START
