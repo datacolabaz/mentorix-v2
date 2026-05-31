@@ -217,4 +217,19 @@ function assertGroupDefaultsReady(def) {
     err.statusCode = 400;
     throw err;
   }
-  if (!def.billing_type || (def.billing_type !== 
+  if (!def.billing_type || (def.billing_type !== '8_lessons' && def.billing_type !== '12_lessons')) {
+    const err = new Error('Qrup paketi 8 və ya 12 dərs olmalıdır');
+    err.statusCode = 400;
+    throw err;
+  }
+}
+
+module.exports = {
+  parseLessonWeekdays,
+  parseLessonTimes,
+  parseGroupDefaultsPayload,
+  rowToDefaults,
+  getGroupInviteDefaults,
+  assertGroupDefaultsReady,
+  normalizeBillingType,
+};
