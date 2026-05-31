@@ -1,4 +1,5 @@
 const db = require('../utils/db');
+const { sendAssignmentNewEmail } = require('./studentNotificationEmailService');
 
 function bakuTodayYmd() {
   return new Intl.DateTimeFormat('en-CA', {
@@ -43,23 +44,58 @@ function normalizeStatus(row) {
   return 'pending';
 }
 
-async function notifyStudent(userId, title, body, type = 'assignment') {
-  if (!userId) return;
-  await db
-    .query(
-      `INSERT INTO notifications (user_id, title, body, type, is_read)
-       VALUES ($1, $2, $3, $4, FALSE)`,
-      [userId, title, body, type],
-    )
-    .catch(() => {});
+async function notifyStudent(userId, title, body, type = 'assignment', meta = {}) {
+  if (!userId) return false;
+  try {
+    await db.query(
+      `INSERT INTO notifications (user_id, title, body, type, is_read, meta)
+       VALUES ($1, $2, $3, $4, FALSE, $5::jsonb)`,
+      [userId, title, body, type, JSON.stringify(meta || {})],
+    );
+    return true;
+  } catch (err) {
+    const msg = String(err?.message || '');
+    if (/meta|column/i.test(msg)) {
+      try {
+        await db.query(
+          `INSERT INTO notifications (user_id, title, body, type, is_read)
+           VALUES ($1, $2, $3, $4, FALSE)`,
+          [userId, title, body, type],
+        );
+        return true;
+      } catch (err2) {
+        console.error('[notifyStudent]', err2?.message || err2);
+        return false;
+      }
+    }
+    console.error('[notifyStudent]', msg);
+    return false;
+  }
 }
 
-async function notifyStudentsOfNewAssignment(task, studentIds) {
+async function notifyStudentsOfNewAssignment(task, studentIds, instructorName = '') {
   const title = 'Yeni tapşırıq';
   const due = task.due_date ? ` Son tarix: ${String(task.due_date).slice(0, 10)}.` : '';
-  const body = `«${task.title}» tapşırığı təyin olundu.${due}`;
+  const body = `«${task.title}» — ${instructorName || 'Müəllim'} təyin etdi.${due}`;
+  const meta = {
+    assignment_id: task.id,
+    due_date: task.due_date || null,
+    instructor_name: instructorName || null,
+    href: '/student/assignments',
+  };
+
   for (const sid of studentIds) {
-    await notifyStudent(sid, title, body, 'assignment_new');
+    await notifyStudent(sid, title, body, 'assignment_new', meta);
+    sendAssignmentNewEmail({
+      userId: sid,
+      title: task.title,
+      body: task.description || body,
+      dueDate: task.due_date,
+      instructorName,
+      assignmentId: task.id,
+    }).catch((err) => {
+      console.error('[assignment email]', sid, err?.message || err);
+    });
   }
 }
 

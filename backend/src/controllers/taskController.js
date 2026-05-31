@@ -154,7 +154,8 @@ const createInstructorTask = async (req, res) => {
       return { task, assignedCount: targets.length, studentIds: targets };
     });
 
-    await notifyStudentsOfNewAssignment(out.task, out.studentIds);
+    const { rows: iu } = await db.query(`SELECT full_name FROM users WHERE id = $1 LIMIT 1`, [instructorId]);
+    await notifyStudentsOfNewAssignment(out.task, out.studentIds, iu[0]?.full_name || '');
 
     res.status(201).json({ success: true, task: out.task, assignedCount: out.assignedCount });
   } catch (err) {
@@ -275,6 +276,28 @@ const getMyAssignment = async (req, res) => {
       [id, studentId],
     );
     if (!rows[0]) return res.status(404).json({ success: false, message: 'Tapılmadı' });
+
+    await db.query(
+      `UPDATE student_assignments SET seen_at = COALESCE(seen_at, NOW()) WHERE id = $1 AND student_id = $2`,
+      [id, studentId],
+    );
+
+    await db
+      .query(
+        `UPDATE notifications
+         SET is_read = TRUE
+         WHERE user_id = $1
+           AND is_read = FALSE
+           AND type IN ('assignment_new', 'assignment_reminder', 'assignment_overdue')
+           AND (meta->>'assignment_id')::text = (
+             SELECT sa.assignment_id::text FROM student_assignments sa
+             WHERE sa.id = $2 AND sa.student_id = $1
+             LIMIT 1
+           )`,
+        [studentId, id],
+      )
+      .catch(() => {});
+
     const assignment = { ...rows[0], display_status: normalizeStatus(rows[0]) };
     res.json({ success: true, assignment });
   } catch (err) {

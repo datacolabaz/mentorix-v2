@@ -7,6 +7,17 @@ import Footer from '../components/common/Footer'
 import { sidebarNavClass } from '../lib/sidebarNavClass'
 import NavIcon from '../components/common/NavIcon'
 import { StudentGroupProvider } from '../contexts/StudentGroupContext'
+import { useStudentAlerts } from '../hooks/useStudentAlerts'
+
+function NavBadge({ count }) {
+  if (!count || count < 1) return null
+  const label = count > 99 ? '99+' : String(count)
+  return (
+    <span className="ml-auto min-w-[1.25rem] h-5 px-1.5 rounded-full bg-violet-500 text-white text-[10px] font-bold flex items-center justify-center tabular-nums">
+      {label}
+    </span>
+  )
+}
 
 const NAV_GROUPS = [
   {
@@ -16,7 +27,7 @@ const NAV_GROUPS = [
       { to: '/student/groups', label: 'Qruplarım', icon: <NavIcon name="courses" /> },
       { to: '/student/schedule', label: 'Cədvəlim', icon: <NavIcon name="schedule" /> },
       { to: '/student/exams', label: 'İmtahanlarım', icon: <NavIcon name="exams" /> },
-      { to: '/student/assignments', label: 'Tapşırıqlarım', icon: <NavIcon name="tasks" /> },
+      { to: '/student/assignments', label: 'Tapşırıqlarım', icon: <NavIcon name="tasks" />, badgeKey: 'tasks' },
     ],
   },
   {
@@ -28,7 +39,7 @@ const NAV_GROUPS = [
   {
     label: 'COMMUNICATION',
     items: [
-      { to: '/student/notifications', label: 'Bildirişlər', icon: <NavIcon name="notifications" /> },
+      { to: '/student/notifications', label: 'Bildirişlər', icon: <NavIcon name="notifications" />, badgeKey: 'notifications' },
     ],
   },
 ]
@@ -38,6 +49,7 @@ export default function StudentLayout() {
   const navigate = useNavigate()
   const [navOpen, setNavOpen] = useState(false)
   const { focusMode, setFocusMode, theme, toggleTheme } = useUiStore()
+  const { tasksBadge, notifBadge } = useStudentAlerts()
 
   const closeNav = () => setNavOpen(false)
 
@@ -133,6 +145,8 @@ export default function StudentLayout() {
                   >
                     <span className="shrink-0">{item.icon}</span>
                     <span className="truncate">{item.label}</span>
+                    {item.badgeKey === 'tasks' ? <NavBadge count={tasksBadge} /> : null}
+                    {item.badgeKey === 'notifications' ? <NavBadge count={notifBadge} /> : null}
                   </NavLink>
                 ))}
               </div>

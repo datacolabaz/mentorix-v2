@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import api from '../../lib/api'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
@@ -10,6 +10,7 @@ import 'katex/dist/katex.min.css'
 import useUiStore from '../../hooks/useUi'
 import GroupSwitcher from '../../components/student/GroupSwitcher'
 import { useStudentGroups } from '../../contexts/StudentGroupContext'
+import { bumpStudentAlerts, useStudentAlerts } from '../../hooks/useStudentAlerts'
 import { withEnrollmentQuery } from '../../lib/studentGroupQuery'
 import {
   assignmentStatusClass,
@@ -55,6 +56,8 @@ export default function StudentAssignments() {
   const [err, setErr] = useState(null)
   const [busyId, setBusyId] = useState(null)
   const toast = useToast()
+  const { summary } = useStudentAlerts()
+  const newToastShown = useRef(false)
 
   const [openId, setOpenId] = useState(null)
   const [detailLoading, setDetailLoading] = useState(false)
@@ -66,6 +69,11 @@ export default function StudentAssignments() {
   const { setFocusMode } = useUiStore()
 
   const filteredTasks = useMemo(() => filterTasksByTab(tasks, tab), [tasks, tab])
+
+  const newTaskCount = useMemo(
+    () => tasks.filter((t) => !t.seen_at && !t.submitted_at && ['pending', 'overdue'].includes(t.display_status || t.status)).length,
+    [tasks],
+  )
 
   useEffect(() => {
     return () => setFocusMode(false)
@@ -88,6 +96,15 @@ export default function StudentAssignments() {
   useEffect(() => {
     void load()
   }, [load])
+
+  useEffect(() => {
+    if (loading || newToastShown.current) return
+    const n = Number(summary?.unseen_assignments) || newTaskCount
+    if (n > 0) {
+      newToastShown.current = true
+      toast(`Sizdə ${n} yeni tapşırıq var — aşağıdan açın`, 'info')
+    }
+  }, [loading, newTaskCount, summary?.unseen_assignments, toast])
 
   const quillModules = useMemo(
     () => ({
@@ -122,6 +139,7 @@ export default function StudentAssignments() {
       setDetailErr(e?.message || 'Yüklənmədi')
     } finally {
       setDetailLoading(false)
+      bumpStudentAlerts()
     }
   }
 
@@ -159,6 +177,7 @@ export default function StudentAssignments() {
       setDetail((p) => ({ ...(p || {}), ...(d.assignment || {}), status: 'completed' }))
       toast('Təslim edildi', 'success')
       await load()
+      bumpStudentAlerts()
     } catch (e) {
       toast(e?.message || 'Xəta', 'error')
     } finally {
@@ -217,6 +236,26 @@ export default function StudentAssignments() {
         </Card>
       )}
 
+      {(newTaskCount > 0 || Number(summary?.unseen_assignments) > 0) && (
+        <Card className="p-4 mb-4 border border-violet-500/35 bg-gradient-to-r from-violet-500/15 to-indigo-500/10">
+          <div className="flex flex-wrap items-start gap-3">
+            <span className="text-2xl" aria-hidden>
+              📋
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-violet-100">Yeni tapşırıq</p>
+              <p className="text-xs text-gray-300 mt-1">
+                Müəlliminiz ev tapşırığı göndərib. Aşağıdakı siyahıdan açın və təslim edin. E-poçtunuzda da
+                bildiriş olmalıdır (qeydiyyat Gmail).
+              </p>
+            </div>
+            <span className="shrink-0 text-xs font-bold tabular-nums px-2.5 py-1 rounded-full bg-violet-500 text-white">
+              {Math.max(newTaskCount, Number(summary?.unseen_assignments) || 0)}
+            </span>
+          </div>
+        </Card>
+      )}
+
       <div className="flex flex-wrap gap-2 mb-4">
         {[
           { id: 'active', label: 'Aktiv' },
@@ -251,15 +290,28 @@ export default function StudentAssignments() {
           {filteredTasks.map((t) => {
             const st = t.display_status || t.status
             const done = ['submitted', 'reviewed', 'late', 'completed'].includes(st)
+            const isNew = !t.seen_at && !t.submitted_at
             return (
               <Card
                 key={t.assignment_id}
                 hover
-                className="p-5 border border-[color:var(--border-subtle)] hover:border-primary/20"
+                className={[
+                  'p-5 border hover:border-primary/20',
+                  isNew
+                    ? 'border-violet-500/40 ring-1 ring-violet-400/25 bg-violet-500/5'
+                    : 'border-[color:var(--border-subtle)]',
+                ].join(' ')}
               >
                 <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
-                    <p className="text-token-textMain font-semibold break-words">{t.title}</p>
+                    <p className="text-token-textMain font-semibold break-words flex flex-wrap items-center gap-2">
+                      {t.title}
+                      {isNew ? (
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-violet-200 bg-violet-500/30 px-2 py-0.5 rounded-full">
+                          Yeni
+                        </span>
+                      ) : null}
+                    </p>
                     {t.topic ? (
                       <p className="text-sm text-indigo-200/90 mt-1 break-words">Mövzu: {t.topic}</p>
                     ) : null}

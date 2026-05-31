@@ -183,7 +183,7 @@ const getInstructorNotifications = async (req, res) => {
 const getStudentNotifications = async (req, res) => {
   try {
     const { rows } = await db.query(
-      `SELECT id, title, body, type, is_read, created_at
+      `SELECT id, title, body, type, is_read, created_at, COALESCE(meta, '{}'::jsonb) AS meta
        FROM notifications
        WHERE user_id = $1
        ORDER BY created_at DESC
@@ -191,6 +191,70 @@ const getStudentNotifications = async (req, res) => {
       [req.user.id],
     );
     res.json({ success: true, notifications: rows });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+const getStudentNotificationSummary = async (req, res) => {
+  try {
+    const studentId = req.user.id;
+    const { rows: nrows } = await db.query(
+      `SELECT
+         COUNT(*) FILTER (WHERE is_read = FALSE)::int AS unread_count,
+         COUNT(*) FILTER (
+           WHERE is_read = FALSE AND type IN ('assignment_new', 'assignment_reminder', 'assignment_overdue', 'assignment_reviewed', 'assignment_submitted')
+         )::int AS unread_assignment_notifications
+       FROM notifications
+       WHERE user_id = $1`,
+      [studentId],
+    );
+    const { rows: trows } = await db.query(
+      `SELECT
+         COUNT(*) FILTER (
+           WHERE a.status IN ('pending', 'late') AND a.submitted_at IS NULL
+         )::int AS pending_assignments,
+         COUNT(*) FILTER (
+           WHERE a.status IN ('pending', 'late') AND a.submitted_at IS NULL AND a.seen_at IS NULL
+         )::int AS unseen_assignments
+       FROM student_assignments a
+       WHERE a.student_id = $1`,
+      [studentId],
+    );
+    res.json({
+      success: true,
+      summary: {
+        unread_notifications: Number(nrows[0]?.unread_count) || 0,
+        unread_assignment_notifications: Number(nrows[0]?.unread_assignment_notifications) || 0,
+        pending_assignments: Number(trows[0]?.pending_assignments) || 0,
+        unseen_assignments: Number(trows[0]?.unseen_assignments) || 0,
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+const markStudentNotificationRead = async (req, res) => {
+  try {
+    const id = req.params.id;
+    const { rowCount } = await db.query(
+      `UPDATE notifications SET is_read = TRUE WHERE id = $1 AND user_id = $2`,
+      [id, req.user.id],
+    );
+    if (!rowCount) return res.status(404).json({ success: false, message: 'Tapılmadı' });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+const markAllStudentNotificationsRead = async (req, res) => {
+  try {
+    await db.query(`UPDATE notifications SET is_read = TRUE WHERE user_id = $1 AND is_read = FALSE`, [
+      req.user.id,
+    ]);
+    res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -394,5 +458,8 @@ module.exports = {
   getAdminNotifications,
   getInstructorNotifications,
   getStudentNotifications,
+  getStudentNotificationSummary,
+  markStudentNotificationRead,
+  markAllStudentNotificationsRead,
   quickInstructorNotification,
 };
