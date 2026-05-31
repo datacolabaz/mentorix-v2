@@ -12,6 +12,7 @@ import {
   parseLessonInstant,
   bakuPartsFromInstant,
   slotTimesForLesson,
+  weeklySlotFromPattern,
   fmtAzBakuLessonRow,
   parseToMinutes,
   slotCoversHour,
@@ -62,26 +63,12 @@ function parseLessonTimesMap(raw) {
   return obj
 }
 
-function weeklySlotFromEnrollment(day, wallTimeRaw) {
-  const wt = wallTimeRaw != null && wallTimeRaw !== '' ? fmtTime(wallTimeRaw) : ''
-  if (!wt) return null
-  const [h, m] = wt.split(':').map((x) => parseInt(x, 10))
-  if (!Number.isFinite(h) || !Number.isFinite(m)) return null
-  const startMin = h * 60 + m
-  const endMin = startMin + 60
-  const eh = String(Math.floor(endMin / 60) % 24).padStart(2, '0')
-  const em = String(endMin % 60).padStart(2, '0')
-  const start = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
-  const end = `${eh}:${em}`
-  return { day, start, end }
-}
-
 export default function StudentSchedule() {
   const { activeEnrollmentId, activeEnrollment } = useStudentGroups()
   const [loading, setLoading] = useState(true)
   const [lessons, setLessons] = useState([])
   const [prepSlots, setPrepSlots] = useState([])
-  const [weeklyPattern, setWeeklyPattern] = useState(null) // { lesson_weekdays, lesson_times }
+  const [weeklyPattern, setWeeklyPattern] = useState(null) // { lesson_weekdays, lesson_times, lesson_end_times }
   const [err, setErr] = useState(null)
   const [saving, setSaving] = useState(false)
   const [conflictOpen, setConflictOpen] = useState(false)
@@ -107,6 +94,7 @@ export default function StudentSchedule() {
           ? {
               lesson_weekdays: activeEnrollment.lesson_weekdays,
               lesson_times: activeEnrollment.lesson_times,
+              lesson_end_times: activeEnrollment.lesson_end_times,
             }
           : null
       const pattern = fromApi || fromCtx
@@ -123,7 +111,12 @@ export default function StudentSchedule() {
     } finally {
       setLoading(false)
     }
-  }, [activeEnrollmentId, activeEnrollment?.lesson_weekdays, activeEnrollment?.lesson_times])
+  }, [
+    activeEnrollmentId,
+    activeEnrollment?.lesson_weekdays,
+    activeEnrollment?.lesson_times,
+    activeEnrollment?.lesson_end_times,
+  ])
 
   useEffect(() => {
     void load()
@@ -192,9 +185,9 @@ export default function StudentSchedule() {
     if (weeklyPattern) {
       const wd = normalizeWeekdays(weeklyPattern.lesson_weekdays)
       const lt = parseLessonTimesMap(weeklyPattern.lesson_times)
+      const let_ = parseLessonTimesMap(weeklyPattern.lesson_end_times)
       for (const day of wd) {
-        const wall = lt?.[String(day)] ?? lt?.[day]
-        const slot = weeklySlotFromEnrollment(day, wall)
+        const slot = weeklySlotFromPattern(day, lt, let_)
         if (!slot) continue
         const list = m.get(day) || []
         const hasLesson = list.some((x) => x.kind === 'lesson')

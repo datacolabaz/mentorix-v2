@@ -12,6 +12,7 @@ const {
   getGroupLessonSchedule,
   resolveEnrollmentScope,
 } = require('../services/studentEnrollmentsService');
+const { parseLessonEndTimes } = require('../utils/lessonScheduleTimes');
 const {
   STUDENT_CONTACT_PHONE_SQL,
   canonicalStudentPhone,
@@ -574,7 +575,7 @@ const getInstructorMyLessonsCalendar = async (req, res) => {
 
 async function weeklyPatternForEnrollment(enrollmentId) {
   const { rows } = await db.query(
-    `SELECT lesson_weekdays, lesson_times, group_id
+    `SELECT lesson_weekdays, lesson_times, lesson_end_times, group_id
      FROM enrollments
      WHERE id = $1 AND (deleted_at IS NULL)`,
     [enrollmentId],
@@ -584,6 +585,7 @@ async function weeklyPatternForEnrollment(enrollmentId) {
 
   let lesson_weekdays = parseLessonWeekdaysJson(en.lesson_weekdays);
   let lesson_times = en.lesson_times;
+  let lesson_end_times = en.lesson_end_times;
   if (typeof lesson_times === 'string') {
     try {
       lesson_times = JSON.parse(lesson_times);
@@ -599,10 +601,12 @@ async function weeklyPatternForEnrollment(enrollmentId) {
     const sched = await getGroupLessonSchedule(en.group_id);
     lesson_weekdays = sched.lesson_weekdays;
     lesson_times = sched.lesson_times;
+    lesson_end_times = sched.lesson_end_times;
   }
 
   if (!lesson_weekdays.length) return null;
-  return { lesson_weekdays, lesson_times };
+  const lesson_end_times_out = parseLessonEndTimes(lesson_end_times, lesson_weekdays, lesson_times);
+  return { lesson_weekdays, lesson_times, lesson_end_times: lesson_end_times_out };
 }
 
 const getMySchedule = async (req, res) => {
@@ -632,6 +636,7 @@ const getMySchedule = async (req, res) => {
       `SELECT l.id, l.enrollment_id, l.instructor_id, iu.full_name AS instructor_name,
               l.lesson_date, l.status, l.lesson_number, l.billing_cycle,
               e.lesson_times AS enrollment_lesson_times,
+              e.lesson_end_times AS enrollment_lesson_end_times,
               ig.name AS group_name
        FROM lessons l
        JOIN users iu ON iu.id = l.instructor_id

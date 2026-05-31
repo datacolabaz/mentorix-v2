@@ -106,6 +106,33 @@ export function slotTimesForLesson(l) {
   return { day, start, end: endWall }
 }
 
+/** Həftəlik şablon: müəllimin lesson_times + lesson_end_times (yoxdursa +60 dəq). */
+export function weeklySlotFromPattern(day, lessonTimes, lessonEndTimes) {
+  const lt = parseEnrollmentLessonTimes(lessonTimes)
+  const let_ = parseEnrollmentLessonTimes(lessonEndTimes)
+  const key = String(day)
+  const wt = lt[key] ?? lt[day]
+  const startRaw = wt != null && wt !== '' ? fmtTime(wt) : ''
+  if (!startRaw) return null
+  const [h, m] = startRaw.split(':').map((x) => parseInt(x, 10))
+  if (!Number.isFinite(h) || !Number.isFinite(m)) return null
+  const startMin = h * 60 + m
+  const start = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+  let endWall = fmtTime(let_[key] ?? let_[day])
+  if (endWall) {
+    const [eh, em] = endWall.split(':').map((x) => parseInt(x, 10))
+    const endMin = (Number.isFinite(eh) ? eh : 0) * 60 + (Number.isFinite(em) ? em : 0)
+    if (!Number.isFinite(endMin) || endMin <= startMin) endWall = ''
+  }
+  if (!endWall) {
+    const endMin = startMin + 60
+    const eh = String(Math.floor(endMin / 60) % 24).padStart(2, '0')
+    const em = String(endMin % 60).padStart(2, '0')
+    endWall = `${eh}:${em}`
+  }
+  return { day, start, end: endWall }
+}
+
 /** Başlanğıcdan +N dəqiqə (cədvəl defaultu) */
 export function addMinutesToHm(hhmm, minutes = 60) {
   const s = fmtTime(hhmm)
