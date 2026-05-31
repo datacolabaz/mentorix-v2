@@ -83,7 +83,8 @@ router.post('/instructor/review/:id/ai-suggest', authenticate, authorize('instru
 router.patch('/instructor/review/:id', authenticate, authorize('instructor'), reviewInstructorAssignment);
 
 // Upload attachments for assignments (local storage, unguessable filenames)
-const uploadsAssignmentsDir = path.join(__dirname, '../../uploads/assignments');
+const { ensureAssignmentsUploadDir, persistAssignmentFileBlob } = require('../services/assignmentFileStorage');
+const uploadsAssignmentsDir = ensureAssignmentsUploadDir();
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, uploadsAssignmentsDir),
   filename: (req, file, cb) => {
@@ -122,11 +123,17 @@ router.post(
       next();
     });
   },
-  (req, res) => {
+  async (req, res) => {
     if (!req.file) return res.status(400).json({ success: false, message: 'Fayl tələb olunur' });
+    try {
+      await persistAssignmentFileBlob(req.file);
+    } catch (e) {
+      console.error('assignment blob persist', e);
+      return res.status(500).json({ success: false, message: 'Fayl saxlanılmadı' });
+    }
     const rel = `/api/uploads/assignments/${req.file.filename}`;
     res.json({ success: true, url: rel, filename: req.file.originalname });
-  }
+  },
 );
 
 // Instructor question file upload
@@ -147,11 +154,17 @@ router.post(
     });
   },
   enforceStorageLimitAfterUpload,
-  (req, res) => {
+  async (req, res) => {
     if (!req.file) return res.status(400).json({ success: false, message: 'Fayl teleb olunur' });
+    try {
+      await persistAssignmentFileBlob(req.file);
+    } catch (e) {
+      console.error('assignment blob persist', e);
+      return res.status(500).json({ success: false, message: 'Fayl saxlanılmadı' });
+    }
     const rel = `/api/uploads/assignments/${req.file.filename}`;
     res.json({ success: true, url: rel, filename: req.file.originalname });
-  }
+  },
 );
 
 module.exports = router;

@@ -18,11 +18,11 @@ const { runAssignmentNotifications } = require('./jobs/assignmentNotifications')
 const { reconcileStorageUsage } = require('./jobs/storageUsageReconciler');
 const { runOrphanFilesReaper } = require('./jobs/orphanFilesReaper');
 
+const { ensureAssignmentsUploadDir } = require('./services/assignmentFileStorage');
 const uploadsExamsDir = path.join(__dirname, '../uploads/exams');
-const uploadsAssignmentsDir = path.join(__dirname, '../uploads/assignments');
+const uploadsAssignmentsDir = ensureAssignmentsUploadDir();
 const uploadsCourseLogosDir = path.join(__dirname, '../uploads/course-logos');
 fs.mkdirSync(uploadsExamsDir, { recursive: true });
-fs.mkdirSync(uploadsAssignmentsDir, { recursive: true });
 fs.mkdirSync(uploadsCourseLogosDir, { recursive: true });
 
 const app = express();

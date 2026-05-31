@@ -1,7 +1,5 @@
-const fs = require('fs');
 const path = require('path');
-
-const UPLOADS_DIR = path.join(__dirname, '../../uploads/assignments');
+const { readAssignmentFileBuffer } = require('./assignmentFileStorage');
 const MAX_EXTRACT_CHARS = 14000;
 const OPENAI_MODEL = process.env.OPENAI_ASSIGNMENT_MODEL || 'gpt-4o-mini';
 
@@ -12,41 +10,29 @@ function stripHtml(html) {
     .trim();
 }
 
-function uploadPathFromApiUrl(url) {
+function filenameFromApiUrl(url) {
   const s = String(url || '').trim();
   const prefix = '/api/uploads/assignments/';
   if (!s.startsWith(prefix)) return null;
   const filename = path.basename(s);
   if (!filename || filename === '.' || filename.includes('..')) return null;
-  return path.join(UPLOADS_DIR, filename);
+  return filename;
 }
 
-async function extractPdfText(filePath) {
-  const pdfParse = require('pdf-parse');
-  const buf = await fs.promises.readFile(filePath);
-  const data = await pdfParse(buf);
-  return String(data.text || '').trim();
-}
-
-async function extractDocxText(filePath) {
-  const mammoth = require('mammoth');
-  const result = await mammoth.extractRawText({ path: filePath });
-  return String(result.value || '').trim();
-}
-
-async function extractTextFromFile(filePath) {
-  const ext = path.extname(filePath).toLowerCase();
-  if (ext === '.pdf') return extractPdfText(filePath);
-  if (ext === '.docx') return extractDocxText(filePath);
-  if (ext === '.doc') {
-    try {
-      return await extractDocxText(filePath);
-    } catch {
-      return '';
-    }
+async function extractTextFromBuffer(buf, ext) {
+  const e = String(ext || '').toLowerCase();
+  if (e === '.pdf') {
+    const pdfParse = require('pdf-parse');
+    const data = await pdfParse(buf);
+    return String(data.text || '').trim();
   }
-  if (['.txt', '.csv'].includes(ext)) {
-    return (await fs.promises.readFile(filePath, 'utf8')).trim();
+  if (e === '.docx' || e === '.doc') {
+    const mammoth = require('mammoth');
+    const result = await mammoth.extractRawText({ buffer: buf });
+    return String(result.value || '').trim();
+  }
+  if (['.txt', '.csv'].includes(e)) {
+    return buf.toString('utf8').trim();
   }
   return '';
 }
@@ -58,18 +44,24 @@ async function collectSubmissionText({ answer_text, attachment_urls }) {
 
   const urls = Array.isArray(attachment_urls) ? attachment_urls : [];
   for (const url of urls) {
-    const fp = uploadPathFromApiUrl(url);
-    if (!fp || !fs.existsSync(fp)) continue;
-    const ext = path.extname(fp).toLowerCase();
+    const fn = filenameFromApiUrl(url);
+    if (!fn) continue;
+    const ext = path.extname(fn).toLowerCase();
     if (['.png', '.jpg', '.jpeg', '.gif', '.webp'].includes(ext)) {
-      parts.push(`[Şəkil faylı: ${path.basename(fp)} — mətn çıxarılmadı, müəllim fayla baxsın]`);
+      parts.push(`[Şəkil faylı: ${fn} — mətn çıxarılmadı, müəllim fayla baxsın]`);
       continue;
     }
     try {
-      const text = await extractTextFromFile(fp);
-      if (text) parts.push(`[Fayl: ${path.basename(fp)}]\n${text}`);
+      const hit = await readAssignmentFileBuffer(fn);
+      if (!hit) {
+        parts.push(`[Fayl: ${fn} — tapılmadı]`);
+        continue;
+      }
+      const buf = Buffer.isBuffer(hit) ? hit : hit.buffer;
+      const text = await extractTextFromBuffer(buf, ext);
+      if (text) parts.push(`[Fayl: ${fn}]\n${text}`);
     } catch {
-      parts.push(`[Fayl: ${path.basename(fp)} — oxunmadı]`);
+      parts.push(`[Fayl: ${fn} — oxunmadı]`);
     }
   }
 

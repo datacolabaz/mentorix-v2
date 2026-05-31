@@ -1,5 +1,4 @@
 const path = require('path');
-const fs = require('fs');
 const db = require('../utils/db');
 const { recomputeInstructorStorageUsageMb } = require('../services/resourceUsageService');
 const {
@@ -702,11 +701,10 @@ const getAssignmentAnalytics = async (req, res) => {
   }
 };
 
-const ASSIGNMENTS_UPLOAD_DIR = path.join(__dirname, '../../uploads/assignments');
-
-function isSafeAssignmentFilename(name) {
-  return /^[a-f0-9-]{36}\.(pdf|png|jpe?g|docx?|xlsx?|pptx?|zip|csv)$/i.test(String(name || ''));
-}
+const {
+  isSafeAssignmentFilename,
+  sendAssignmentFileToResponse,
+} = require('../services/assignmentFileStorage');
 
 /** Vercel: /api/uploads/assignments proxysiz — JWT ilə fayl çatdırılması */
 const serveAssignmentFile = async (req, res) => {
@@ -756,28 +754,7 @@ const serveAssignmentFile = async (req, res) => {
       return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
     }
 
-    const abs = path.join(ASSIGNMENTS_UPLOAD_DIR, filename);
-    if (!fs.existsSync(abs)) {
-      return res.status(404).json({ success: false, message: 'Fayl tapılmadı' });
-    }
-
-    const ext = path.extname(filename).toLowerCase();
-    const mime =
-      ext === '.pdf'
-        ? 'application/pdf'
-        : ext === '.png'
-          ? 'image/png'
-          : ext === '.jpg' || ext === '.jpeg'
-            ? 'image/jpeg'
-            : ext === '.doc'
-              ? 'application/msword'
-              : ext === '.docx'
-                ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-                : 'application/octet-stream';
-
-    res.setHeader('Content-Type', mime);
-    res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
-    return res.sendFile(abs);
+    return sendAssignmentFileToResponse(res, filename);
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
