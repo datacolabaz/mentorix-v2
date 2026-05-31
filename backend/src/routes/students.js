@@ -18,6 +18,7 @@ const { requireInstructorPhoneVerified } = require('../middleware/trial');
 const { attachEntitlements, enforceStudentsLimit } = require('../middleware/entitlements');
 const { createJoinRequest } = require('../services/joinInvitationService');
 const { submitJoinWithProfile } = require('../controllers/joinInvitationController');
+const { upsertStudentContactPhone } = require('../utils/studentPhone');
 
 function gateInstructorEnrollment(req, res, next) {
   if (req.user?.role === 'admin') return next();

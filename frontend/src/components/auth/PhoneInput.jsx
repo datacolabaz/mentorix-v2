@@ -144,6 +144,14 @@ export default function PhoneInput({
     }
   }, [])
 
+  // Modal və ya siyahı scroll olanda inline ölkə siyahısı bağlansın — layout sıçramasın.
+  useEffect(() => {
+    if (!open) return undefined
+    const onScroll = () => setOpen(false)
+    window.addEventListener('scroll', onScroll, true)
+    return () => window.removeEventListener('scroll', onScroll, true)
+  }, [open])
+
   const list = useMemo(() => {
     const q = String(query || '').trim().toLowerCase()
     if (!q) return COUNTRIES
@@ -223,13 +231,15 @@ export default function PhoneInput({
           maxLength={countryId === 'AZ' ? 12 : undefined}
         />
       </div>
-      {azInvalid ? (
-        <p className="mt-1.5 text-xs text-red-400/95">
-          Mobil nömrə 9 rəqəm olmalıdır (məs: 50 123 45 67). Operator: 50, 51, 55, 70, 77 və s.
-        </p>
-      ) : countryId === 'AZ' && onlyDigits(national).length === 9 && outboundE164 ? (
-        <p className="mt-1.5 text-xs text-emerald-400/90 font-mono">{outboundE164}</p>
-      ) : null}
+      <div className="min-h-[1.35rem] mt-1.5">
+        {azInvalid ? (
+          <p className="text-xs text-red-400/95">
+            Mobil nömrə 9 rəqəm olmalıdır (məs: 50 123 45 67). Operator: 50, 51, 55, 70, 77 və s.
+          </p>
+        ) : countryId === 'AZ' && onlyDigits(national).length === 9 && outboundE164 ? (
+          <p className="text-xs text-emerald-400/90 font-mono">{outboundE164}</p>
+        ) : null}
+      </div>
 
       {open && (
         <div className="mt-2 rounded-xl border border-indigo-500/20 bg-[#13112e] overflow-hidden">

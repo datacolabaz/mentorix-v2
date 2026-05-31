@@ -35,6 +35,18 @@ function joinFullName(first, last) {
   return `${String(first || '').trim()} ${String(last || '').trim()}`.trim()
 }
 
+function focusFieldNearest(e) {
+  const t = e.target
+  if (!t?.matches?.('input, textarea, select')) return
+  requestAnimationFrame(() => {
+    try {
+      t.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+    } catch {
+      /* ignore */
+    }
+  })
+}
+
 /** Ad/soyad: ayrı sahələr və ya tək sətirdə «Ad Soyad». */
 function resolveStudentNames(data) {
   let firstName = String(data?.first_name || splitFullName(data?.full_name).first_name).trim()
@@ -1942,75 +1954,96 @@ export default function InstructorStudents() {
       <Modal
         open={setupModal}
         onClose={() => {
+          if (loading) return
           setSetupModal(false)
           setSetupEnrollmentId(null)
         }}
         title="Quraşdırmanı tamamla"
         size="lg"
+        scrollBody
+        footer={
+          <div className="flex gap-3">
+            <Button onClick={saveCompleteSetup} loading={loading} className="flex-1 justify-center">
+              Tamamla və aktiv et
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setSetupModal(false)
+                setSetupEnrollmentId(null)
+              }}
+              disabled={loading}
+              className="flex-1 justify-center"
+            >
+              Legv et
+            </Button>
+          </div>
+        }
       >
-        <p className="text-xs text-gray-400 mb-4">
-          Tələbə join kodu ilə qoşulub. Paket, cədvəl və ödəniş məlumatlarını doldurun — sonra aktiv
-          tələbə olacaq.
-        </p>
-        <StudentFormFields
-          data={setupForm}
-          setData={setSetupForm}
-          mode="setup"
-          toast={toast}
-          teachingSubjects={teachingSubjects}
-          referralSources={referralSources}
-          onCreateSubject={createTeachingSubject}
-          onCreateGroup={createTeachingGroup}
-        />
-        <div className="flex gap-3 mt-4">
-          <Button onClick={saveCompleteSetup} loading={loading} className="flex-1 justify-center">
-            Tamamla və aktiv et
-          </Button>
-          <Button
-            variant="secondary"
-            onClick={() => {
-              setSetupModal(false)
-              setSetupEnrollmentId(null)
-            }}
-            className="flex-1 justify-center"
-          >
-            Legv et
-          </Button>
+        <div
+          className="min-h-[min(52vh,28rem)] [overflow-anchor:none]"
+          onFocusCapture={focusFieldNearest}
+        >
+          <p className="text-xs text-gray-400 mb-4">
+            Tələbə join kodu ilə qoşulub. Paket, cədvəl və ödəniş məlumatlarını doldurun — sonra aktiv
+            tələbə olacaq.
+          </p>
+          <StudentFormFields
+            data={setupForm}
+            setData={setSetupForm}
+            mode="setup"
+            toast={toast}
+            teachingSubjects={teachingSubjects}
+            referralSources={referralSources}
+            onCreateSubject={createTeachingSubject}
+            onCreateGroup={createTeachingGroup}
+          />
         </div>
       </Modal>
 
       <Modal
         open={editModal}
         onClose={() => {
+          if (loading) return
           setEditModal(false)
           setEditStudentId(null)
         }}
-        title="Telebeyi Redakte Et"
+        title="Tələbəni redaktə et"
+        size="lg"
+        scrollBody
+        footer={
+          <div className="flex gap-3">
+            <Button onClick={saveEdit} loading={loading} className="flex-1 justify-center">
+              Yadda saxla
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setEditModal(false)
+                setEditStudentId(null)
+              }}
+              disabled={loading}
+              className="flex-1 justify-center"
+            >
+              Ləğv et
+            </Button>
+          </div>
+        }
       >
-        <StudentFormFields
-          data={editForm}
-          setData={setEditForm}
-          mode="edit"
-          toast={toast}
-          teachingSubjects={teachingSubjects}
-          referralSources={referralSources}
-          onCreateSubject={createTeachingSubject}
-          onCreateGroup={createTeachingGroup}
-        />
-        <div className="flex gap-3 mt-4">
-          <Button onClick={saveEdit} loading={loading} className="flex-1 justify-center">
-            Yadda Saxla
-          </Button>
-          <Button
-            variant="secondary"
-            onClick={() => {
-              setEditModal(false)
-              setEditStudentId(null)
-            }}
-            className="flex-1 justify-center"
-          >
-            Legv et
-          </Button>
+        <div
+          className="min-h-[min(52vh,28rem)] [overflow-anchor:none]"
+          onFocusCapture={focusFieldNearest}
+        >
+          <StudentFormFields
+            data={editForm}
+            setData={setEditForm}
+            mode="edit"
+            toast={toast}
+            teachingSubjects={teachingSubjects}
+            referralSources={referralSources}
+            onCreateSubject={createTeachingSubject}
+            onCreateGroup={createTeachingGroup}
+          />
         </div>
       </Modal>
 
