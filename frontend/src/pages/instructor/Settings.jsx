@@ -533,11 +533,13 @@ export default function InstructorSettings() {
               smsPacksCount: smsPacks.length,
               storagePacksCount: storagePacks.length,
             })
+            const basicTrialActive = isCurrent && isFree && isBasicTrialActive(billing)
+            const basicTrialExpired = isCurrent && isFree && isBasicTrialExpired(billing)
 
             let btnLabel = 'Başla'
             if (isCurrent) {
               if (isFree) {
-                btnLabel = 'Cari sınaq paketi'
+                btnLabel = basicTrialExpired ? 'Paketi yüksəlt (PRO-ya keç)' : 'Aktiv paket'
               } else if (limitChoiceOffer) {
                 btnLabel = 'Limit həlli'
               } else if (
@@ -587,7 +589,10 @@ export default function InstructorSettings() {
               }
               setPlanErr(null)
               if (isCurrent) {
-                if (isFree) return
+                if (isFree) {
+                  if (basicTrialExpired) return openPlanCheckout('pro')
+                  return
+                }
                 if (limitChoiceOffer) {
                   openLimitChoiceModal()
                   return
@@ -624,7 +629,7 @@ export default function InstructorSettings() {
             }
 
             const btnDisabled =
-              planBusy || Boolean(usageGuard.blocked) || isPendingPlan || (isCurrent && isFree)
+              planBusy || Boolean(usageGuard.blocked) || isPendingPlan || basicTrialActive
 
             const planBtn = (
               <Button
