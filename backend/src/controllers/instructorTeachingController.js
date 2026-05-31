@@ -51,6 +51,44 @@ const getTeaching = async (req, res) => {
        ORDER BY sort_order ASC, name ASC`,
       [iid]
     );
+    const { rows: subjectStats } = await db.query(
+      `WITH students_by_subject AS (
+         SELECT e.subject_id, COUNT(DISTINCT e.student_id)::int AS student_count
+         FROM enrollments e
+         WHERE e.instructor_id = $1::uuid
+           AND e.deleted_at IS NULL
+           AND e.subject_id IS NOT NULL
+           AND COALESCE(LOWER(TRIM(e.status)), 'active') IN ('active', 'pending_setup', 'pending_approval')
+         GROUP BY e.subject_id
+       ),
+       income_by_subject AS (
+         SELECT e.subject_id, COALESCE(SUM(p.amount), 0)::numeric AS income_this_month
+         FROM payments p
+         INNER JOIN enrollments e ON e.id = p.enrollment_id
+         WHERE e.instructor_id = $1::uuid
+           AND e.deleted_at IS NULL
+           AND e.subject_id IS NOT NULL
+           AND p.status = 'completed'
+           AND (p.notes IS NULL OR TRIM(p.notes) NOT LIKE '[Balans düzəlişi]%')
+           AND COALESCE(p.payment_date::timestamptz, p.paid_at, NOW()) >= date_trunc('month', NOW())
+         GROUP BY e.subject_id
+       )
+       SELECT COALESCE(s.subject_id, i.subject_id) AS subject_id,
+              COALESCE(s.student_count, 0) AS student_count,
+              COALESCE(i.income_this_month, 0) AS income_this_month
+       FROM students_by_subject s
+       FULL OUTER JOIN income_by_subject i ON i.subject_id = s.subject_id`,
+      [iid]
+    );
+    const statsBySubject = new Map(
+      subjectStats.map((r) => [
+        String(r.subject_id),
+        {
+          student_count: Number(r.student_count) || 0,
+          income_this_month: Number(r.income_this_month) || 0,
+        },
+      ]),
+    );
     const { rows: groups } = await db.query(
       `SELECT id, subject_id, name, sort_order, join_code, join_code_expires_at,
               invitation_code, invitation_link,
@@ -62,7 +100,19 @@ const getTeaching = async (req, res) => {
        ORDER BY sort_order ASC, name ASC`,
       [iid]
     );
-    const byId = new Map(subjects.map((s) => [String(s.id), { id: s.id, name: s.name, sort_order: s.sort_order, groups: [] }]));
+    const byId = new Map(
+      subjects.map((s) => {
+        const st = statsBySubject.get(String(s.id)) || { student_count: 0, income_this_month: 0 };
+        return {
+          id: s.id,
+          name: s.name,
+          sort_order: s.sort_order,
+          student_count: st.student_count,
+          income_this_month: st.income_this_month,
+          groups: [],
+        };
+      }),
+    );
     for (const g of groups) {
       const bucket = byId.get(String(g.subject_id));
       if (bucket)
@@ -136,7 +186,10 @@ const postSubject = async (req, res) => {
       `INSERT INTO instructor_subjects (instructor_id, name, sort_order) VALUES ($1, $2, $3) RETURNING id, name, sort_order`,
       [req.user.id, name, so]
     );
-    res.status(201).json({ success: true, subject: { ...rows[0], groups: [] } });
+    res.status(201).json({
+      success: true,
+      subject: { ...rows[0], groups: [], student_count: 0, income_this_month: 0 },
+    });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

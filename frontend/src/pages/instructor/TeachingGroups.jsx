@@ -12,6 +12,13 @@ import GroupPackageFields, {
   groupPackageFromApi,
   groupPackagePayload,
 } from '../../components/instructor/GroupPackageFields'
+import { formatAzn } from '../../lib/pricing'
+
+function formatIncomeAzn(n) {
+  const v = Number(n)
+  if (!Number.isFinite(v) || v <= 0) return '0 ₼'
+  return `${formatAzn(v)} ₼`
+}
 
 export default function InstructorTeachingGroups() {
   const toast = useToast()
@@ -223,9 +230,30 @@ export default function InstructorTeachingGroups() {
                       : 'border-[color:var(--border-subtle)] bg-token-surfaceMain/60',
                   ].join(' ')}
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className={['font-medium', theme === 'dark' ? 'text-white' : 'text-token-textMain'].join(' ')}>
-                      {s.name}
+                  <div className="flex items-start justify-between gap-2 flex-wrap">
+                    <div className="min-w-0 flex-1">
+                      <div className={['font-medium text-base', theme === 'dark' ? 'text-white' : 'text-token-textMain'].join(' ')}>
+                        {s.name}
+                      </div>
+                      <div
+                        className={[
+                          'mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-xs tabular-nums',
+                          theme === 'dark' ? 'text-gray-400' : 'text-token-textMuted',
+                        ].join(' ')}
+                      >
+                        <span>
+                          <span className="font-medium text-token-textMain">{Number(s.student_count) || 0}</span> tələbə
+                        </span>
+                        <span>
+                          Bu ay gəlir:{' '}
+                          <span className="font-medium text-emerald-400/95">
+                            {formatIncomeAzn(s.income_this_month)}
+                          </span>
+                        </span>
+                        <span>
+                          {(s.groups || []).length} qrup
+                        </span>
+                      </div>
                     </div>
                     <Button
                       type="button"

@@ -59,9 +59,6 @@ import CourseSchedule from './pages/course/Schedule'
 import CourseFinance from './pages/course/Finance'
 import CourseNotifications from './pages/course/Notifications'
 import CourseSettings from './pages/course/Settings'
-import CourseCatalogList from './pages/courses/CourseList'
-import CourseCatalogDetail from './pages/courses/CourseDetail'
-
 const Placeholder = ({ title }) => (
   <div className="p-4 sm:p-6 min-w-0">
     <h1 className="font-display font-bold text-xl sm:text-2xl text-white break-words">{title}</h1>
@@ -133,10 +130,8 @@ export default function App() {
         <Route path="marketing/login" element={<AdminMarketingLogin />} />
       </Route>
 
-      <Route path="/courses" element={<ProtectedRoute roles={['instructor']}><InstructorLayout /></ProtectedRoute>}>
-        <Route index element={<CourseCatalogList />} />
-        <Route path=":id" element={<CourseCatalogDetail />} />
-      </Route>
+      <Route path="/courses" element={<Navigate to="/instructor/teaching-groups" replace />} />
+      <Route path="/courses/*" element={<Navigate to="/instructor/teaching-groups" replace />} />
 
       <Route path="/instructor" element={<ProtectedRoute roles={['instructor']}><InstructorLayout /></ProtectedRoute>}>
         <Route index element={<InstructorDashboard />} />

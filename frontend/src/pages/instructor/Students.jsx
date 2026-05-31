@@ -171,7 +171,6 @@ function StudentFormFields({
   onRefreshSlots,
   toast,
   teachingSubjects = [],
-  teachingCourses = [],
   referralSources = [],
   onCreateSubject,
   onCreateGroup,
@@ -786,7 +785,6 @@ export default function InstructorStudents() {
   // Slot cədvəli tələbə qeydiyyatı üçün artıq tələb olunmur (dərslər tarixlərlə avtomatik yaradılır)
   const [enrollMeta] = useState({ loading: false, requiresScheduleSlot: false, availableSlots: [] })
   const [teachingSubjects, setTeachingSubjects] = useState([])
-  const [teachingCourses, setTeachingCourses] = useState([])
   const toast = useToast()
   const [subjectFilter, setSubjectFilter] = useState('')
   const [search, setSearch] = useState('')
@@ -824,10 +822,6 @@ export default function InstructorStudents() {
       .get('/instructor/teaching')
       .then((d) => setTeachingSubjects(Array.isArray(d.subjects) ? d.subjects : []))
       .catch(() => setTeachingSubjects([]))
-    void api
-      .get('/courses')
-      .then((d) => setTeachingCourses(Array.isArray(d.courses) ? d.courses : []))
-      .catch(() => setTeachingCourses([]))
     void api
       .get('/students/referral-sources')
       .then((d) => setReferralSources(Array.isArray(d.sources) ? d.sources : []))
