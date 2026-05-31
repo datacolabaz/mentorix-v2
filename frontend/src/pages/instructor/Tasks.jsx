@@ -9,6 +9,7 @@ import { useToast } from '../../components/common/Toast'
 import useUiStore from '../../hooks/useUi'
 import { BILLING_STATUS_QUERY_KEY, useBillingStatus } from '../../hooks/useBillingStatus'
 import { assignmentStatusClass, assignmentStatusLabel } from '../../lib/assignmentHelpers'
+import { assignmentFileLabel, assignmentFileOpenUrl, isAssignmentPreviewable } from '../../lib/assignmentFileUrl'
 
 function fmtDue(d) {
   if (!d) return ''
@@ -518,8 +519,13 @@ export default function InstructorTasks() {
               </label>
             </div>
             {form.question_file_url ? (
-              <a className="text-sm text-blue-300 hover:text-blue-200 break-all" href={form.question_file_url} target="_blank" rel="noreferrer">
-                {form.question_file_url}
+              <a
+                className="text-sm text-blue-300 hover:text-blue-200 break-all"
+                href={assignmentFileOpenUrl(form.question_file_url)}
+                target="_blank"
+                rel="noreferrer"
+              >
+                {assignmentFileLabel(form.question_file_url)}
               </a>
             ) : (
               <p className="text-sm text-gray-500">Fayl yoxdur.</p>
@@ -629,10 +635,15 @@ export default function InstructorTasks() {
               <p className="text-sm text-white font-semibold break-words">{review.title}</p>
               {review.topic ? <p className="text-sm text-indigo-200/90 mt-1">Mövzu: {review.topic}</p> : null}
               {review.question_file_url ? (
-                <p className="text-xs text-gray-500 mt-1 break-all">
+                <p className="text-xs text-gray-500 mt-1">
                   Tapşırıq faylı:{' '}
-                  <a className="text-blue-300 hover:text-blue-200" href={review.question_file_url} target="_blank" rel="noreferrer">
-                    {review.question_file_url}
+                  <a
+                    className="text-blue-300 hover:text-blue-200 font-semibold"
+                    href={assignmentFileOpenUrl(review.question_file_url)}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {assignmentFileLabel(review.question_file_url)}
                   </a>
                 </p>
               ) : null}
@@ -659,8 +670,13 @@ export default function InstructorTasks() {
                 <ul className="space-y-2">
                   {review.attachment_urls.map((u) => (
                     <li key={u}>
-                      <a className="text-sm text-blue-300 hover:text-blue-200 break-all" href={u} target="_blank" rel="noreferrer">
-                        {u}
+                      <a
+                        className="text-sm text-blue-300 hover:text-blue-200 break-all"
+                        href={assignmentFileOpenUrl(u)}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        {assignmentFileLabel(u)}
                       </a>
                     </li>
                   ))}
@@ -678,25 +694,27 @@ export default function InstructorTasks() {
                     .filter((u) => isPreviewable(u))
                     .map((u) => (
                       <div key={`pv-${u}`} className="space-y-2">
-                        <a className="text-xs text-blue-300 break-all" href={u} target="_blank" rel="noreferrer">
-                          {u}
+                        <a
+                          className="text-xs text-blue-300 break-all"
+                          href={assignmentFileOpenUrl(u)}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          {assignmentFileLabel(u)}
                         </a>
-                        {renderPreview(u)}
+                        {renderPreview(assignmentFileOpenUrl(u))}
                       </div>
                     ))}
                 </div>
               </div>
             )}
 
-            {review.question_file_url && isPreviewable(review.question_file_url) && (
+            {review.question_file_url && isAssignmentPreviewable(review.question_file_url) && (
               <div className="rounded-xl border border-indigo-500/15 bg-[#0f0c29]/40 p-3">
                 <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-2">
                   Tapşırıq faylı — ön baxış
                 </p>
-                <a className="text-xs text-blue-300 break-all" href={review.question_file_url} target="_blank" rel="noreferrer">
-                  {review.question_file_url}
-                </a>
-                <div className="mt-2">{renderPreview(review.question_file_url)}</div>
+                <div className="mt-2">{renderPreview(assignmentFileOpenUrl(review.question_file_url))}</div>
               </div>
             )}
 

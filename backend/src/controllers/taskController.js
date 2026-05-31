@@ -1,3 +1,5 @@
+const path = require('path');
+const fs = require('fs');
 const db = require('../utils/db');
 const { recomputeInstructorStorageUsageMb } = require('../services/resourceUsageService');
 const {
@@ -700,6 +702,87 @@ const getAssignmentAnalytics = async (req, res) => {
   }
 };
 
+const ASSIGNMENTS_UPLOAD_DIR = path.join(__dirname, '../../uploads/assignments');
+
+function isSafeAssignmentFilename(name) {
+  return /^[a-f0-9-]{36}\.(pdf|png|jpe?g|docx?|xlsx?|pptx?|zip|csv)$/i.test(String(name || ''));
+}
+
+/** Vercel: /api/uploads/assignments proxysiz — JWT ilə fayl çatdırılması */
+const serveAssignmentFile = async (req, res) => {
+  try {
+    const filename = path.basename(String(req.params.filename || ''));
+    if (!isSafeAssignmentFilename(filename)) {
+      return res.status(400).json({ success: false, message: 'Yanlış fayl adı' });
+    }
+
+    const role = req.user.role;
+    const userId = req.user.id;
+    const needle = `%${filename}%`;
+    if (role === 'student') {
+      const { rows: allowed } = await db.query(
+        `SELECT 1 FROM student_assignments sa
+         JOIN assignments t ON t.id = sa.assignment_id
+         WHERE sa.student_id = $1::uuid
+           AND (
+             COALESCE(t.question_file_url, '') LIKE $2
+             OR sa.attachment_urls::text LIKE $2
+           )
+         LIMIT 1`,
+        [userId, needle],
+      );
+      if (!allowed[0]) {
+        return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
+      }
+    } else if (role === 'instructor') {
+      const { rows: allowed } = await db.query(
+        `SELECT 1 FROM assignments t
+         WHERE t.instructor_id = $1::uuid
+           AND (
+             COALESCE(t.question_file_url, '') LIKE $2
+             OR EXISTS (
+               SELECT 1 FROM student_assignments sa
+               WHERE sa.assignment_id = t.id
+                 AND sa.attachment_urls::text LIKE $2
+             )
+           )
+         LIMIT 1`,
+        [userId, needle],
+      );
+      if (!allowed[0]) {
+        return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
+      }
+    } else if (role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
+    }
+
+    const abs = path.join(ASSIGNMENTS_UPLOAD_DIR, filename);
+    if (!fs.existsSync(abs)) {
+      return res.status(404).json({ success: false, message: 'Fayl tapılmadı' });
+    }
+
+    const ext = path.extname(filename).toLowerCase();
+    const mime =
+      ext === '.pdf'
+        ? 'application/pdf'
+        : ext === '.png'
+          ? 'image/png'
+          : ext === '.jpg' || ext === '.jpeg'
+            ? 'image/jpeg'
+            : ext === '.doc'
+              ? 'application/msword'
+              : ext === '.docx'
+                ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+                : 'application/octet-stream';
+
+    res.setHeader('Content-Type', mime);
+    res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+    return res.sendFile(abs);
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 const listInstructorGroups = async (req, res) => {
   try {
     const { rows } = await db.query(
@@ -731,4 +814,5 @@ module.exports = {
   listInstructorGroups,
   listMyTasks,
   markMyTaskDone,
+  serveAssignmentFile,
 };

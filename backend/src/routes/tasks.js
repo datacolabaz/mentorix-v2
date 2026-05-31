@@ -2,6 +2,7 @@ const router = require('express').Router();
 const path = require('path');
 const crypto = require('crypto');
 const multer = require('multer');
+const { verify } = require('../utils/jwt');
 const { authenticate, authorize } = require('../middleware/auth');
 const { enforceStorageLimitAfterUpload } = require('../middleware/storageLimit');
 const {
@@ -19,7 +20,22 @@ const {
   listParentAssignments,
   listMyTasks,
   markMyTaskDone,
+  serveAssignmentFile,
 } = require('../controllers/taskController');
+
+/** Bearer və ya ?token= — statik /api/uploads Vercel-də 404 ola bilər */
+function authenticateAssignmentFile(req, res, next) {
+  const headerToken = req.headers.authorization?.split(' ')[1];
+  const q = req.query.token;
+  const token = headerToken || (typeof q === 'string' && q.trim() ? q.trim() : null);
+  if (!token) return res.status(401).json({ success: false, message: 'Token yoxdur' });
+  try {
+    req.user = verify(token);
+    next();
+  } catch {
+    return res.status(401).json({ success: false, message: 'Token etibarsızdır' });
+  }
+}
 
 const ASSIGNMENT_MIME_OK = new Set([
   'application/pdf',
@@ -52,6 +68,8 @@ router.get('/groups', authenticate, authorize('instructor'), listInstructorGroup
 router.get('/parent', authenticate, authorize('parent'), listParentAssignments);
 router.post('/', authenticate, authorize('instructor'), createInstructorTask);
 router.delete('/:id', authenticate, authorize('instructor'), deleteInstructorAssignment);
+
+router.get('/assignment-file/:filename', authenticateAssignmentFile, serveAssignmentFile);
 
 router.get('/my', authenticate, authorize('student'), listMyTasks);
 router.get('/assignments/:id', authenticate, authorize('student'), getMyAssignment);

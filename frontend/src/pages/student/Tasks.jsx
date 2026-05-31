@@ -18,6 +18,11 @@ import {
   filterTasksByTab,
   isPreviewable,
 } from '../../lib/assignmentHelpers'
+import {
+  assignmentFileLabel,
+  assignmentFileOpenUrl,
+  isAssignmentPreviewable,
+} from '../../lib/assignmentFileUrl'
 
 function fmtDue(d) {
   if (!d) return ''
@@ -373,12 +378,18 @@ export default function StudentAssignments() {
               <p className="text-sm text-white font-semibold break-words">{detail.title}</p>
               {detail.topic ? <p className="text-sm text-indigo-200/90 mt-1">Mövzu: {detail.topic}</p> : null}
               {detail.question_file_url ? (
-                <p className="text-xs text-gray-500 mt-1 break-all">
-                  Tapşırıq faylı:{' '}
-                  <a className="text-blue-300 hover:text-blue-200" href={detail.question_file_url} target="_blank" rel="noreferrer">
-                    {detail.question_file_url}
+                <div className="mt-2">
+                  <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Tapşırıq faylı</p>
+                  <a
+                    className="inline-flex items-center gap-2 mt-1 text-sm font-semibold text-blue-300 hover:text-blue-200"
+                    href={assignmentFileOpenUrl(detail.question_file_url)}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    📎 {assignmentFileLabel(detail.question_file_url)}
                   </a>
-                </p>
+                  <p className="text-[11px] text-gray-500 mt-1">Yeni pəncərədə açılır və ya yüklənir (Word/PDF).</p>
+                </div>
               ) : null}
               <p className="text-xs text-gray-500 mt-1">
                 Müəllim: <span className="text-gray-300">{detail.instructor_name}</span>
@@ -427,21 +438,37 @@ export default function StudentAssignments() {
               ) : null}
             </div>
 
-            {detail.question_file_url && isPreviewable(detail.question_file_url) && (
+            {detail.question_file_url && isAssignmentPreviewable(detail.question_file_url) && (
               <div className="rounded-xl border border-indigo-500/15 bg-[#0f0c29]/40 p-3">
                 <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-2">Tapşırıq faylı — ön baxış</p>
-                <a className="text-xs text-blue-300 break-all" href={detail.question_file_url} target="_blank" rel="noreferrer">
-                  {detail.question_file_url}
-                </a>
-                <div className="mt-2">{renderPreview(detail.question_file_url)}</div>
+                <div className="mt-2">{renderPreview(assignmentFileOpenUrl(detail.question_file_url))}</div>
               </div>
             )}
 
             <div>
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Cavab</p>
-              <div className={locked ? 'opacity-95 pointer-events-none' : ''}>
+              <p className="text-[11px] text-gray-500 mb-2">
+                Mətn yazın və ya aşağıdan fayl yükləyin — hər ikisi də qəbul edilir.
+              </p>
+              <div className={`assignment-answer-editor rounded-xl overflow-hidden border border-indigo-500/20 ${locked ? 'opacity-95 pointer-events-none' : ''}`}>
                 <ReactQuill theme="snow" value={editorHtml} onChange={setEditorHtml} modules={quillModules} />
               </div>
+              <style>{`
+                .assignment-answer-editor .ql-toolbar {
+                  border-color: rgba(99, 102, 241, 0.25);
+                  background: rgba(15, 12, 41, 0.6);
+                }
+                .assignment-answer-editor .ql-container {
+                  border-color: rgba(99, 102, 241, 0.25);
+                  background: rgba(19, 17, 46, 0.85);
+                  min-height: 280px;
+                  font-size: 15px;
+                }
+                .assignment-answer-editor .ql-editor {
+                  min-height: 240px;
+                  color: #f3f4f6;
+                }
+              `}</style>
               {locked ? (
                 <p className="text-xs text-amber-200/90 mt-2">Bu tapşırıq təslim edilib — redaktə bağlanıb.</p>
               ) : null}
@@ -487,11 +514,11 @@ export default function StudentAssignments() {
                     <li key={u} className="flex items-center justify-between gap-2">
                       <a
                         className="text-sm text-blue-300 hover:text-blue-200 break-all"
-                        href={u}
+                        href={assignmentFileOpenUrl(u)}
                         target="_blank"
                         rel="noreferrer"
                       >
-                        {u}
+                        {assignmentFileLabel(u)}
                       </a>
                       {!locked && (
                         <button
