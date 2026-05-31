@@ -366,7 +366,7 @@ async function resolveEntitlements(userId) {
   const planLimits =
     plansMap[planSlug]?.limits ||
     plansMap.basic?.limits ||
-    { students: 5, storage_mb: null, storage_limit_bytes: 512 * 1024, sms_monthly: 5, ram_limit_mb: null };
+    { students: 5, storage_mb: null, storage_limit_bytes: 5 * 1024 * 1024, sms_monthly: 5, ram_limit_mb: null };
 
   const extraSmsBalance = Number(usage?.extra_sms_balance || 0) || 0;
   const baseSmsLimit = planLimits.sms_monthly;

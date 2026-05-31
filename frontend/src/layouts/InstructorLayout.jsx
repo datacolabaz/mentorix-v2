@@ -70,7 +70,7 @@ export default function InstructorLayout() {
     const p = (Array.isArray(plansQ.data) ? plansQ.data : []).find(
       (x) => String(x?.id || '').toLowerCase() === pid,
     )
-    return p?.title || (pid === 'business' ? 'PREMIUM' : pid.toUpperCase())
+    return p?.title || (pid === 'premium' || pid === 'business' ? 'PREMIUM' : pid.toUpperCase())
   }, [billing?.plan, plansQ.data])
   const [topUpModalOpen, setTopUpModalOpen] = useState(false)
   const topUpPromptSigRef = useRef('')

@@ -120,7 +120,8 @@ export function planDowngradeGuard(billing, currentPlanId, targetPlan) {
 
 export function planRank(id) {
   const s = String(id || '').toLowerCase()
-  if (s === 'business') return 3
+  if (s === 'premium' || s === 'business' || s === 'biznes') return 4
+  if (s === 'growth') return 3
   if (s === 'pro') return 2
   return 1
 }

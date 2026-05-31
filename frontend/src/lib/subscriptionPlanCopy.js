@@ -1,21 +1,34 @@
 /** Paket kartlarında limit sətirləri (API: items və ya limits). */
 
+function storageLabelFromBytes(bytes) {
+  const b = Number(bytes)
+  if (!Number.isFinite(b) || b <= 0) return null
+  if (b === 5 * 1024 * 1024) return '5 MB Sənəd Yaddaşı'
+  if (b === 256 * 1024 * 1024) return '256 MB Sənəd Yaddaşı'
+  if (b === 1024 * 1024 * 1024) return '1 GB Sənəd Yaddaşı'
+  if (b === 2048 * 1024 * 1024) return '2 GB Sənəd Yaddaşı'
+  if (b < 1024 * 1024) return `${Math.max(1, Math.round(b / 1024))} KB Sənəd Yaddaşı`
+  const mb = b / (1024 * 1024)
+  if (mb >= 1024) {
+    const gb = mb / 1024
+    return `${gb % 1 === 0 ? Math.round(gb) : Math.round(gb * 10) / 10} GB Sənəd Yaddaşı`
+  }
+  return `${mb >= 10 ? Math.round(mb) : Math.round(mb * 10) / 10} MB Sənəd Yaddaşı`
+}
+
 function formatStorageFromLimits(lim) {
   if (!lim) return null
   const bytes = lim.storage_limit_bytes
   if (bytes != null && Number.isFinite(Number(bytes))) {
-    const b = Number(bytes)
-    if (b > 0 && b < 1024 * 1024) return `${Math.max(1, Math.round(b / 1024))} KB yaddaş`
-    const mb = b / (1024 * 1024)
-    return mb >= 10 ? `${Math.round(mb)} MB yaddaş` : `${Math.round(mb * 10) / 10} MB yaddaş`
+    return storageLabelFromBytes(bytes)
   }
   const mb = lim.storage_mb
   if (mb != null && Number.isFinite(Number(mb))) {
     const gb = Number(mb) / 1024
-    if (gb >= 1) return `${gb % 1 === 0 ? Math.round(gb) : Math.round(gb * 10) / 10} GB yaddaş`
-    return `${Math.round(Number(mb))} MB yaddaş`
+    if (gb >= 1) return `${gb % 1 === 0 ? Math.round(gb) : Math.round(gb * 10) / 10} GB Sənəd Yaddaşı`
+    return `${Math.round(Number(mb))} MB Sənəd Yaddaşı`
   }
-  if (lim.storage_mb === null && lim.storage_limit_bytes === null) return 'Limitsiz yaddaş'
+  if (lim.storage_mb === null && lim.storage_limit_bytes === null) return 'Limitsiz Sənəd Yaddaşı'
   return null
 }
 
@@ -28,15 +41,17 @@ export function planLimitFeatureLines(p) {
   const lim = p?.limits
   if (!lim) return []
 
+  const id = String(p?.id || '').toLowerCase()
   const lines = []
   if (lim.students == null) lines.push('Limitsiz tələbə')
   else lines.push(`${Math.max(0, Math.round(Number(lim.students)))} tələbə`)
 
   const storage = formatStorageFromLimits(lim)
   if (storage) lines.push(storage)
-  else if (lim.storage_mb == null && lim.storage_limit_bytes == null) lines.push('Limitsiz yaddaş')
+  else if (lim.storage_mb == null && lim.storage_limit_bytes === null) lines.push('Limitsiz Sənəd Yaddaşı')
 
   if (lim.sms_monthly == null) lines.push('Limitsiz SMS / ay')
+  else if (id === 'premium' || id === 'business') lines.push('200 SMS / Əlavə balans imkanı')
   else lines.push(`${Math.max(0, Math.round(Number(lim.sms_monthly)))} SMS / ay`)
 
   return lines
@@ -45,21 +60,31 @@ export function planLimitFeatureLines(p) {
 /** Qısa başlıq (kartın üstündəki birinci sətir). */
 export function planLimitsHeadline(p) {
   const lines = planLimitFeatureLines(p)
-  if (lines.length) return lines[0]
+  if (lines.length) return lines.join(' · ')
   return 'Limitlər mövcud paketə uyğun tətbiq olunur.'
 }
 
-/** Kartda SADƏ kimi tam izah (bütün paketlər). */
+const PLAN_DESCRIPTIONS = {
+  basic:
+    'Platformanı sınaqdan keçirmək və kiçik qrupları idarə etmək üçün tamamilə ödənişsiz əsas paket.',
+  pro: 'Fərdi repetitorlar və kiçik qrupları olan təlimçilər üçün ən populyar seçim.',
+  growth: 'Tədris fəaliyyətini böyüdən və daha çox qrupu olan peşəkar müəllimlər üçün.',
+  premium: 'Böyük auditoriyası olan kurslar və limitsiz tələbə bazası idarə etmək istəyənlər üçün tam paket.',
+}
+
+/** Kartda tam izah (bütün paketlər). */
 export function planDetailLines(p) {
   const id = String(p?.id || '').toLowerCase()
+  const normId = id === 'business' ? 'premium' : id
   const features = planLimitFeatureLines(p)
   const limitsText = features.length ? features.join(', ') : null
   const price = Number(p?.price_azn)
-  const isPaid = id !== 'basic' && Number.isFinite(price) && price > 0
+  const isPaid = normId !== 'basic' && Number.isFinite(price) && price > 0
+  const desc = PLAN_DESCRIPTIONS[normId]
 
-  if (id === 'basic') {
+  if (normId === 'basic') {
     return [
-      'Bu paketdə istifadə müddəti məhdud deyil.',
+      desc || 'Ödənişsiz əsas paket.',
       limitsText ? `${limitsText} mövcuddur.` : 'Limitlər pulsuz paketə uyğun tətbiq olunur.',
       'Limitlərə çatdıqda daha geniş paket seçməyiniz tələb olunacaq.',
     ]
@@ -67,13 +92,13 @@ export function planDetailLines(p) {
 
   if (isPaid) {
     const lines = [
-      'Aylıq və ya illik ödənişlə aktiv abunədir; ödəniş təsdiqlənəndən sonra limitlər dərhal tətbiq olunur.',
+      desc || 'Aylıq və ya illik ödənişlə aktiv abunədir; ödəniş təsdiqlənəndən sonra limitlər dərhal tətbiq olunur.',
     ]
     if (limitsText) lines.push(`Paketə daxildir: ${limitsText}.`)
-    if (id === 'business') {
-      lines.push('Ən geniş paket — limitsiz tələbə və yüksək SMS/yaddaş həcmi üçün.')
+    if (normId === 'premium') {
+      lines.push('Limitsiz tələbə — SMS limiti 200/ay (əlavə balans alına bilər).')
     } else {
-      lines.push('Limitlərə çatdıqda daha geniş paket seçməyiniz tələb olunacaq.')
+      lines.push('Limitlərə çatdıqda paketi yüksəldin və ya əlavə SMS/yaddaş alın.')
     }
     return lines
   }

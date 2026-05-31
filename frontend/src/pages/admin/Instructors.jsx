@@ -101,9 +101,10 @@ export default function AdminInstructors() {
                     disabled={!!planBusy[i.id]}
                     onChange={(e) => void setPlan(i.id, e.target.value)}
                   >
-                    <option value="basic">BASIC</option>
+                    <option value="basic">SADƏ</option>
                     <option value="pro">PRO</option>
-                    <option value="business">BIZNES</option>
+                    <option value="growth">GROWTH</option>
+                    <option value="premium">PREMIUM</option>
                   </select>
                 </td>
                 <td className="py-3 px-4 text-gray-300">{i.student_count || 0}</td>

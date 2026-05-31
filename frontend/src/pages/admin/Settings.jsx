@@ -100,7 +100,7 @@ const PRESETS = {
     unlimited_students: false,
     student_count: '5',
     unlimited_storage: false,
-    storage_value: '0.5',
+    storage_value: '5',
     storage_unit: 'MB',
     unlimited_sms: false,
     sms_count: '5',
@@ -113,23 +113,36 @@ const PRESETS = {
     unlimited_students: false,
     student_count: '50',
     unlimited_storage: false,
-    storage_value: '5',
-    storage_unit: 'GB',
+    storage_value: '256',
+    storage_unit: 'MB',
     unlimited_sms: false,
-    sms_count: '200',
+    sms_count: '50',
     highlight: true,
     ram_limit_mb: '',
   },
-  business: {
-    title: 'BİZNES',
-    price_azn: 19,
+  growth: {
+    title: 'GROWTH',
+    price_azn: 20,
+    unlimited_students: false,
+    student_count: '100',
+    unlimited_storage: false,
+    storage_value: '1024',
+    storage_unit: 'MB',
+    unlimited_sms: false,
+    sms_count: '100',
+    highlight: false,
+    ram_limit_mb: '',
+  },
+  premium: {
+    title: 'PREMIUM',
+    price_azn: 30,
     unlimited_students: true,
     student_count: '',
     unlimited_storage: false,
-    storage_value: '20',
-    storage_unit: 'GB',
+    storage_value: '2048',
+    storage_unit: 'MB',
     unlimited_sms: false,
-    sms_count: '500',
+    sms_count: '200',
     highlight: false,
     ram_limit_mb: '',
   },
@@ -303,8 +316,11 @@ export default function AdminSettings() {
                     <Button type="button" variant="secondary" size="sm" onClick={() => applyPreset(idx, 'pro')}>
                       Şablon: PRO
                     </Button>
-                    <Button type="button" variant="secondary" size="sm" onClick={() => applyPreset(idx, 'business')}>
-                      Şablon: BİZNES
+                    <Button type="button" variant="secondary" size="sm" onClick={() => applyPreset(idx, 'growth')}>
+                      Şablon: GROWTH
+                    </Button>
+                    <Button type="button" variant="secondary" size="sm" onClick={() => applyPreset(idx, 'premium')}>
+                      Şablon: PREMIUM
                     </Button>
                   </div>
 

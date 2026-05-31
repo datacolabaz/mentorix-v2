@@ -483,7 +483,7 @@ export default function InstructorSettings() {
             {planErr}
           </div>
         ) : null}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 items-stretch">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 items-stretch">
           {plans.map((p) => {
             const pid = String(p?.id || '').toLowerCase()
             const isCurrent = pid && pid === currentPlanId

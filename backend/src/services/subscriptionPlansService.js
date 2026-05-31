@@ -49,7 +49,7 @@ async function loadPlansFromDb() {
     `SELECT slug, title, price_azn, student_limit, storage_gb, storage_limit_bytes, sms_limit, ram_limit_mb, features, highlight, is_active, updated_at
      FROM subscription_plans
      WHERE is_active = TRUE
-     ORDER BY CASE slug WHEN 'basic' THEN 1 WHEN 'pro' THEN 2 WHEN 'business' THEN 3 ELSE 99 END, slug`
+     ORDER BY CASE slug WHEN 'basic' THEN 1 WHEN 'pro' THEN 2 WHEN 'growth' THEN 3 WHEN 'premium' THEN 4 WHEN 'business' THEN 4 ELSE 99 END, slug`
   );
   const out = (rows || []).map(normalizeRow);
   return out;
@@ -84,28 +84,42 @@ async function getPlanOrThrow(slugRaw) {
   return p;
 }
 
+function storageLabelForBytes(bytes) {
+  const b = Number(bytes);
+  if (!Number.isFinite(b) || b <= 0) return null;
+  if (b === 5 * 1024 * 1024) return '5 MB Sənəd Yaddaşı';
+  if (b === 256 * 1024 * 1024) return '256 MB Sənəd Yaddaşı';
+  if (b === 1024 * 1024 * 1024) return '1 GB Sənəd Yaddaşı';
+  if (b === 2048 * 1024 * 1024) return '2 GB Sənəd Yaddaşı';
+  if (b < 1024 * 1024) return `${Math.max(1, Math.round(b / 1024))} KB Sənəd Yaddaşı`;
+  const mb = b / (1024 * 1024);
+  if (mb >= 1024) {
+    const gb = mb / 1024;
+    return `${gb % 1 === 0 ? Math.round(gb) : Math.round(gb * 10) / 10} GB Sənəd Yaddaşı`;
+  }
+  return `${mb >= 10 ? Math.round(mb) : Math.round(mb * 10) / 10} MB Sənəd Yaddaşı`;
+}
+
 /** Admin UI + billing üçün plan xüsusiyyətləri (manual mətn yox). */
-function buildPlanFeaturesFromLimits({ student_limit, sms_limit, storage_gb, storage_limit_bytes }) {
+function buildPlanFeaturesFromLimits({ slug, student_limit, sms_limit, storage_gb, storage_limit_bytes }) {
   const lines = [];
+  const planSlug = normalizePlanSlug(slug);
   if (student_limit == null) lines.push('Limitsiz tələbə');
   else lines.push(`${Math.max(0, Math.round(Number(student_limit)))} tələbə`);
 
-  if (storage_gb == null && storage_limit_bytes == null) lines.push('Limitsiz yaddaş');
+  if (storage_gb == null && storage_limit_bytes == null) lines.push('Limitsiz Sənəd Yaddaşı');
   else if (storage_limit_bytes != null && Number.isFinite(Number(storage_limit_bytes))) {
-    const b = Number(storage_limit_bytes);
-    if (b > 0 && b < 1024 * 1024) lines.push(`${Math.max(1, Math.round(b / 1024))} KB yaddaş`);
-    else {
-      const mb = b / (1024 * 1024);
-      const s = mb >= 10 ? `${Math.round(mb)} MB` : `${Math.round(mb * 10) / 10} MB`;
-      lines.push(`${s} yaddaş`);
-    }
+    const label = storageLabelForBytes(storage_limit_bytes);
+    lines.push(label || 'Sənəd Yaddaşı');
   } else if (storage_gb != null && Number.isFinite(Number(storage_gb))) {
-    lines.push(`${Number(storage_gb)} GB yaddaş`);
+    const gb = Number(storage_gb);
+    lines.push(gb >= 1 ? `${gb} GB Sənəd Yaddaşı` : `${Math.round(gb * 1024)} MB Sənəd Yaddaşı`);
   } else {
-    lines.push('Limitsiz yaddaş');
+    lines.push('Limitsiz Sənəd Yaddaşı');
   }
 
   if (sms_limit == null) lines.push('Limitsiz SMS / ay');
+  else if (planSlug === 'premium') lines.push('200 SMS / Əlavə balans imkanı');
   else lines.push(`${Math.max(0, Math.round(Number(sms_limit)))} SMS / ay`);
   return lines;
 }
@@ -151,7 +165,7 @@ async function adminListPlans() {
   const { rows } = await db.query(
     `SELECT slug, title, price_azn, student_limit, storage_gb, storage_limit_bytes, sms_limit, ram_limit_mb, features, highlight, is_active, updated_at
      FROM subscription_plans
-     ORDER BY CASE slug WHEN 'basic' THEN 1 WHEN 'pro' THEN 2 WHEN 'business' THEN 3 ELSE 99 END, slug`
+     ORDER BY CASE slug WHEN 'basic' THEN 1 WHEN 'pro' THEN 2 WHEN 'growth' THEN 3 WHEN 'premium' THEN 4 WHEN 'business' THEN 4 ELSE 99 END, slug`
   );
   return (rows || []).map((r) => ({
     slug: String(r.slug),
@@ -198,7 +212,13 @@ async function adminUpsertPlan(payload) {
       ram_limit_mb = curRam[0]?.ram_limit_mb == null ? null : Number(curRam[0].ram_limit_mb);
       if (!Number.isFinite(ram_limit_mb)) ram_limit_mb = null;
     }
-    features = buildPlanFeaturesFromLimits({ student_limit, sms_limit, storage_gb, storage_limit_bytes });
+    features = buildPlanFeaturesFromLimits({
+      slug,
+      student_limit,
+      sms_limit,
+      storage_gb,
+      storage_limit_bytes,
+    });
   } else {
     student_limit = payload?.student_limit === '' ? null : payload?.student_limit;
     storage_gb = payload?.storage_gb === '' ? null : payload?.storage_gb;

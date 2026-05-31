@@ -1,5 +1,5 @@
 const db = require('../utils/db');
-const { normalizePlanSlug } = require('../config/plans');
+const { normalizePlanSlug, planRank } = require('../config/plans');
 const getCurrentPlan = require('./billingGetCurrentPlan');
 const { getPlanOrThrow, getActivePlansMap } = require('./subscriptionPlansService');
 const { createOrder } = require('./payriffService');
@@ -12,13 +12,6 @@ const {
 } = require('./billingSettingsService');
 const { normalizeBillingInterval } = require('./billingActivationService');
 const { logBillingEvent, assertDowngradeAllowed } = require('./billingEntitlements');
-
-function planRank(p) {
-  const s = normalizePlanSlug(p);
-  if (s === 'business') return 3;
-  if (s === 'pro') return 2;
-  return 1;
-}
 
 function yearlyTotalFromMonthly(monthlyAzn, discountPct = 0.2) {
   const m = Number(monthlyAzn || 0) || 0;

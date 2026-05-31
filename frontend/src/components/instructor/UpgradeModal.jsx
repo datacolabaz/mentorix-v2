@@ -9,13 +9,7 @@ import useUiStore from '../../hooks/useUi'
 import PricingBillingIntervalToggle from './PricingBillingIntervalToggle'
 import PaymentMethodModal from './PaymentMethodModal'
 import { formatAzn, yearlyTotalAzn, YEARLY_DISCOUNT } from '../../lib/pricing'
-
-function planRank(s) {
-  const v = String(s || '').toLowerCase()
-  if (v === 'business') return 3
-  if (v === 'pro') return 2
-  return 1
-}
+import { planRank } from '../../lib/subscriptionPlanGuards'
 
 export default function UpgradeModal({ open, onClose, onSelectPlan, currentPlan }) {
   const navigate = useNavigate()
@@ -114,7 +108,7 @@ export default function UpgradeModal({ open, onClose, onSelectPlan, currentPlan 
             Plan seçin və ödəniş üsulunu təyin edin. Kartla ödəniş dərhal aktivləşir; köçürmə admin təsdiqi ilə.
           </p>
           <PricingBillingIntervalToggle value={billingInterval} onChange={setBillingInterval} theme={theme} />
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
             {plans.map((p) => {
               const pr = priceLines(p)
               const tgtRank = planRank(p.id)

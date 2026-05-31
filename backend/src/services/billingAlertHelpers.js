@@ -1,17 +1,4 @@
-const { normalizePlanSlug } = require('../config/plans');
-
-function planRank(slug) {
-  const s = normalizePlanSlug(slug);
-  if (s === 'business') return 3;
-  if (s === 'pro') return 2;
-  return 1;
-}
-
-function highestPlanSlug(plansMap) {
-  const slugs = Object.keys(plansMap || {}).filter(Boolean);
-  if (!slugs.length) return 'business';
-  return slugs.reduce((best, s) => (planRank(s) > planRank(best) ? s : best), slugs[0]);
-}
+const { normalizePlanSlug, planRank, highestPlanSlug } = require('../config/plans');
 
 function isHighestTierPlan(planSlug, plansMap) {
   return planRank(planSlug) >= planRank(highestPlanSlug(plansMap));
