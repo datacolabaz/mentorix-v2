@@ -1,6 +1,6 @@
-import { Component, lazy, Suspense } from 'react'
-
-const ReactQuill = lazy(() => import('react-quill'))
+import { Component } from 'react'
+import ReactQuill from 'react-quill'
+import 'react-quill/dist/quill.snow.css'
 
 const MODULES = {
   toolbar: [
@@ -61,7 +61,7 @@ class QuillErrorBoundary extends Component {
 export default function AssignmentAnswerEditor({ value, onChange, readOnly = false }) {
   return (
     <QuillErrorBoundary value={value} onChange={onChange} readOnly={readOnly}>
-      <Suspense fallback={<p className="text-sm text-gray-500 py-8 text-center">Redaktor yüklənir…</p>}>
+      <div className="min-h-[320px]">
         <ReactQuill
           theme="snow"
           value={value}
@@ -70,7 +70,7 @@ export default function AssignmentAnswerEditor({ value, onChange, readOnly = fal
           modules={MODULES}
           formats={FORMATS}
         />
-      </Suspense>
+      </div>
     </QuillErrorBoundary>
   )
 }

@@ -4,7 +4,6 @@ import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
 import { useToast } from '../../components/common/Toast'
-import useUiStore from '../../hooks/useUi'
 import ErrorBoundary from '../../components/common/ErrorBoundary'
 import AssignmentAnswerEditor from '../../components/student/AssignmentAnswerEditor'
 import GroupSwitcher from '../../components/student/GroupSwitcher'
@@ -31,14 +30,14 @@ function fmtDue(d) {
 function renderPreview(url) {
   const s = String(url || '').toLowerCase()
   if (s.endsWith('.pdf')) {
-    return <iframe title="pdf" src={url} className="w-full h-[60vh] rounded-xl border border-indigo-500/15" />
+    return <iframe title="pdf" src={url} className="w-full h-[min(40vh,360px)] rounded-xl border border-indigo-500/15" />
   }
   if (s.endsWith('.png') || s.endsWith('.jpg') || s.endsWith('.jpeg') || s.endsWith('.webp') || s.endsWith('.gif')) {
     return (
       <img
         src={url}
         alt="preview"
-        className="w-full max-h-[60vh] object-contain rounded-xl border border-indigo-500/15 bg-black/20"
+        className="w-full max-h-[min(40vh,360px)] object-contain rounded-xl border border-indigo-500/15 bg-black/20"
       />
     )
   }
@@ -67,7 +66,6 @@ export default function StudentAssignments() {
   const [editorHtml, setEditorHtml] = useState('')
   const [attachments, setAttachments] = useState([])
   const [tab, setTab] = useState('active')
-  const { setFocusMode } = useUiStore()
 
   const filteredTasks = useMemo(() => filterTasksByTab(tasks, tab), [tasks, tab])
 
@@ -96,22 +94,24 @@ export default function StudentAssignments() {
     [tasks],
   )
 
-  useEffect(() => {
-    return () => setFocusMode(false)
-  }, [setFocusMode])
-
-  const load = useCallback(async () => {
-    setLoading(true)
-    setErr(null)
+  const load = useCallback(async (opts = {}) => {
+    const quiet = Boolean(opts.quiet)
+    if (!quiet) {
+      setLoading(true)
+      setErr(null)
+    }
     try {
       const d = await api.get(withEnrollmentQuery('/tasks/my', activeEnrollmentId))
       const list = Array.isArray(d.tasks) ? d.tasks : []
       setTasks(list.filter((t) => t && t.assignment_id != null))
+      if (!quiet) setErr(null)
     } catch (e) {
-      setErr(e?.message || 'Yüklənmədi')
-      setTasks([])
+      if (!quiet) {
+        setErr(e?.message || 'Yüklənmədi')
+        setTasks([])
+      }
     } finally {
-      setLoading(false)
+      if (!quiet) setLoading(false)
     }
   }, [activeEnrollmentId])
 
@@ -119,11 +119,11 @@ export default function StudentAssignments() {
     void load()
   }, [load])
 
+  const [previewOpen, setPreviewOpen] = useState(false)
+
   const openWorkspace = async (assignmentId) => {
-    markTaskSeenLocally(assignmentId)
-    bumpStudentAlerts()
     setOpenId(assignmentId)
-    setFocusMode(true)
+    setPreviewOpen(false)
     setDetail(null)
     setEditorHtml('')
     setAttachments([])
@@ -135,7 +135,6 @@ export default function StudentAssignments() {
       setDetail(a)
       setEditorHtml(a?.answer_text || '')
       setAttachments(Array.isArray(a?.attachment_urls) ? a.attachment_urls : [])
-      markTaskSeenLocally(assignmentId, a?.seen_at)
       bumpStudentAlerts()
     } catch (e) {
       setDetailErr(e?.message || 'Yüklənmədi')
@@ -158,7 +157,7 @@ export default function StudentAssignments() {
       })
       setDetail((p) => ({ ...(p || {}), ...(d.assignment || {}) }))
       toast('Qaralama saxlanıldı', 'success')
-      await load()
+      await load({ quiet: true })
     } catch (e) {
       toast(e?.message || 'Xəta', 'error')
     } finally {
@@ -177,13 +176,24 @@ export default function StudentAssignments() {
       })
       setDetail((p) => ({ ...(p || {}), ...(d.assignment || {}), status: 'completed' }))
       toast('Təslim edildi', 'success')
-      await load()
+      await load({ quiet: true })
       bumpStudentAlerts()
     } catch (e) {
       toast(e?.message || 'Xəta', 'error')
     } finally {
       setBusyId(null)
     }
+  }
+
+  const closeWorkspace = () => {
+    if (busyId) return undefined
+    if (openId && detail) {
+      markTaskSeenLocally(openId, detail.seen_at)
+    }
+    setOpenId(null)
+    setPreviewOpen(false)
+    void load({ quiet: true })
+    bumpStudentAlerts()
   }
 
   const uploadFiles = async (files) => {
@@ -357,18 +367,35 @@ export default function StudentAssignments() {
 
       <Modal
         open={Boolean(openId)}
-        onClose={() => {
-          if (busyId) return null
-          setOpenId(null)
-          setFocusMode(false)
-          void load()
-          bumpStudentAlerts()
-        }}
+        onClose={closeWorkspace}
         title={detail?.title ? `Tapşırıq — ${detail.title}` : 'Tapşırıq'}
         size="xl"
+        scrollBody
+        footer={
+          detail && !detailLoading && !detailErr ? (
+            <div className="flex flex-col sm:flex-row gap-2 sm:justify-end">
+              <Button variant="secondary" onClick={closeWorkspace} disabled={Boolean(busyId)}>
+                Bağla
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() => void saveDraft()}
+                loading={busyId === 'draft' || busyId === 'upload'}
+                disabled={locked}
+              >
+                Qaralama kimi saxla
+              </Button>
+              <Button onClick={() => void submitWork()} loading={busyId === 'submit'} disabled={locked}>
+                Təslim et
+              </Button>
+            </div>
+          ) : null
+        }
       >
         {detailLoading ? (
-          <p className="text-sm text-gray-500">Yüklənir…</p>
+          <div className="min-h-[min(60vh,520px)] flex items-center justify-center text-sm text-gray-500">
+            Yüklənir…
+          </div>
         ) : detailErr ? (
           <p className="text-sm text-amber-200/90">{detailErr}</p>
         ) : detail ? (
@@ -439,8 +466,21 @@ export default function StudentAssignments() {
 
             {detail.question_file_url && isAssignmentPreviewable(detail.question_file_url) && (
               <div className="rounded-xl border border-indigo-500/15 bg-[#0f0c29]/40 p-3">
-                <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-2">Tapşırıq faylı — ön baxış</p>
-                <div className="mt-2">{renderPreview(assignmentFileOpenUrl(detail.question_file_url))}</div>
+                <button
+                  type="button"
+                  className="w-full flex items-center justify-between gap-2 text-left"
+                  onClick={() => setPreviewOpen((o) => !o)}
+                >
+                  <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
+                    Tapşırıq faylı — ön baxış
+                  </p>
+                  <span className="text-xs text-violet-300 shrink-0">{previewOpen ? 'Gizlət ▲' : 'Göstər ▼'}</span>
+                </button>
+                {previewOpen ? (
+                  <div className="mt-2 max-h-[45vh] overflow-auto rounded-lg border border-indigo-500/10">
+                    {renderPreview(assignmentFileOpenUrl(detail.question_file_url))}
+                  </div>
+                ) : null}
               </div>
             )}
 
@@ -538,30 +578,6 @@ export default function StudentAssignments() {
                   ))}
                 </ul>
               )}
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-2 sm:justify-end">
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  setOpenId(null)
-                  setFocusMode(false)
-                }}
-                disabled={Boolean(busyId)}
-              >
-                Bağla
-              </Button>
-              <Button
-                variant="secondary"
-                onClick={() => void saveDraft()}
-                loading={busyId === 'draft' || busyId === 'upload'}
-                disabled={locked}
-              >
-                Qaralama kimi saxla
-              </Button>
-              <Button onClick={() => void submitWork()} loading={busyId === 'submit'} disabled={locked}>
-                Təslim et
-              </Button>
             </div>
           </div>
         ) : null}

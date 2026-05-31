@@ -1,7 +1,16 @@
 import { useEffect } from 'react'
 import { createPortal } from 'react-dom'
 
-export default function Modal({ open, onClose, title, children, size = 'md', zIndex = 10000 }) {
+export default function Modal({
+  open,
+  onClose,
+  title,
+  children,
+  footer = null,
+  size = 'md',
+  zIndex = 10000,
+  scrollBody = false,
+}) {
   useEffect(() => {
     if (open) document.body.style.overflow = 'hidden'
     else document.body.style.overflow = ''
@@ -21,9 +30,11 @@ export default function Modal({ open, onClose, title, children, size = 'md', zIn
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div
-        className={`theme-dark bg-surface-2 border border-white/10 rounded-2xl w-full ${sizes[size]} max-h-[min(90vh,900px)] overflow-y-auto shadow-2xl`}
+        className={`theme-dark bg-surface-2 border border-white/10 rounded-2xl w-full ${sizes[size]} max-h-[min(90vh,900px)] shadow-2xl flex flex-col overflow-hidden ${
+          scrollBody ? '' : 'overflow-y-auto'
+        }`}
       >
-        <div className="flex items-center justify-between p-6 border-b border-white/10">
+        <div className="flex shrink-0 items-center justify-between p-6 border-b border-white/10">
           <h2 className="font-display font-700 text-lg text-white">{title}</h2>
           <button
             type="button"
@@ -34,7 +45,18 @@ export default function Modal({ open, onClose, title, children, size = 'md', zIn
             ✕
           </button>
         </div>
-        <div className="p-6 text-zinc-200">{children}</div>
+        <div
+          className={
+            scrollBody
+              ? 'flex-1 min-h-0 overflow-y-auto overscroll-contain [overflow-anchor:none] p-6 text-zinc-200'
+              : 'p-6 text-zinc-200'
+          }
+        >
+          {children}
+        </div>
+        {footer ? (
+          <div className="shrink-0 border-t border-white/10 px-6 py-4 text-zinc-200 bg-surface-2">{footer}</div>
+        ) : null}
       </div>
     </div>
   )

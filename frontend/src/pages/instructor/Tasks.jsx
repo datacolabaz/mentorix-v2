@@ -6,7 +6,6 @@ import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
 import { useToast } from '../../components/common/Toast'
-import useUiStore from '../../hooks/useUi'
 import { BILLING_STATUS_QUERY_KEY, useBillingStatus } from '../../hooks/useBillingStatus'
 import { assignmentStatusClass, assignmentStatusLabel } from '../../lib/assignmentHelpers'
 import { assignmentFileLabel, assignmentFileOpenUrl, isAssignmentPreviewable } from '../../lib/assignmentFileUrl'
@@ -49,6 +48,7 @@ export default function InstructorTasks() {
   const [open, setOpen] = useState(false)
   const [editingId, setEditingId] = useState(null)
   const [saving, setSaving] = useState(false)
+  const [fileUploading, setFileUploading] = useState(false)
   const [deletingId, setDeletingId] = useState(null)
   const [reviewOpen, setReviewOpen] = useState(false)
   const [reviewLoading, setReviewLoading] = useState(false)
@@ -62,7 +62,6 @@ export default function InstructorTasks() {
   const [groups, setGroups] = useState([])
   const [analytics, setAnalytics] = useState(null)
   const toast = useToast()
-  const { setFocusMode } = useUiStore()
   const queryClient = useQueryClient()
   const billingQ = useBillingStatus()
   const billing = billingQ.data || null
@@ -235,7 +234,7 @@ export default function InstructorTasks() {
       return
     }
     if (!file) return
-    setSaving(true)
+    setFileUploading(true)
     try {
       const fd = new FormData()
       fd.append('file', file)
@@ -248,8 +247,26 @@ export default function InstructorTasks() {
     } catch (e) {
       toast(e?.message || 'Fayl yüklənmədi', 'error')
     } finally {
-      setSaving(false)
+      setFileUploading(false)
     }
+  }
+
+  const closeTaskModal = () => {
+    if (saving || fileUploading) return
+    setOpen(false)
+    resetForm()
+  }
+
+  const focusFieldNearest = (e) => {
+    const t = e.target
+    if (!t?.matches?.('input, textarea, select')) return
+    requestAnimationFrame(() => {
+      try {
+        t.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+      } catch {
+        /* ignore */
+      }
+    })
   }
 
   const removeTask = async (id, title) => {
@@ -282,7 +299,6 @@ export default function InstructorTasks() {
 
   const openReview = async (studentAssignmentId) => {
     setReviewOpen(true)
-    setFocusMode(true)
     setReviewLoading(true)
     setReviewErr(null)
     setReview(null)
@@ -518,15 +534,25 @@ export default function InstructorTasks() {
 
       <Modal
         open={open}
-        onClose={() => {
-          if (saving) return
-          setOpen(false)
-          resetForm()
-        }}
+        onClose={closeTaskModal}
         title={editingId ? 'Tapşırığı redaktə et' : 'Yeni tapşırıq'}
         size="lg"
+        scrollBody
+        footer={
+          <div className="flex gap-2 justify-end">
+            <Button variant="secondary" onClick={closeTaskModal} disabled={saving || fileUploading}>
+              Ləğv et
+            </Button>
+            <Button onClick={() => void submit()} loading={saving} disabled={fileUploading}>
+              {editingId ? 'Saxla' : 'Göndər'}
+            </Button>
+          </div>
+        }
       >
-        <div className="space-y-4 max-h-[min(70vh,32rem)] overflow-y-auto pr-1">
+        <div
+          className="space-y-4 min-h-[min(52vh,28rem)] [overflow-anchor:none]"
+          onFocusCapture={focusFieldNearest}
+        >
           <div>
             <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Ad (başlıq) *</label>
             <input
@@ -565,11 +591,13 @@ export default function InstructorTasks() {
                   className="hidden"
                   accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xlsx,.xls,.ppt,.pptx,.csv,.zip,application/pdf,image/png,image/jpeg,application/zip"
                   onChange={(e) => void uploadQuestionFile(e.target.files?.[0])}
-                  disabled={blocked}
+                  disabled={blocked || fileUploading}
                 />
               </label>
             </div>
-            {form.question_file_url ? (
+            {fileUploading ? (
+              <p className="text-sm text-gray-500">Fayl yüklənir…</p>
+            ) : form.question_file_url ? (
               <a
                 className="text-sm text-blue-300 hover:text-blue-200 break-all"
                 href={assignmentFileOpenUrl(form.question_file_url)}
@@ -604,79 +632,66 @@ export default function InstructorTasks() {
               />
             </div>
           </div>
-          {editingId ? (
-            <p className="text-xs text-amber-200/90 rounded-xl border border-amber-500/25 bg-amber-500/10 px-3 py-2">
-              Təyin olunmuş tələbələr dəyişdirilmir. Başlıq, qeyd, fayl və son tarixi yeniləyə bilərsiniz.
-            </p>
-          ) : (
-            <>
-              <div>
-                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Qrup (hamısına təyin)</label>
-                <select
-                  className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500"
-                  value={form.group_id}
-                  onChange={(e) => setForm((p) => ({ ...p, group_id: e.target.value }))}
-                >
-                  <option value="">— Qrup seçin (ixtiyari) —</option>
-                  {groups.map((g) => (
-                    <option key={g.id} value={g.id}>
-                      {g.subject_name ? `${g.subject_name} · ` : ''}
-                      {g.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="border-t border-indigo-500/20 pt-3">
-                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
-                  Tələbələr * (bir və ya bir neçə)
-                </label>
-                {studentsLoading ? (
-                  <p className="text-sm text-gray-500">Tələbələr yüklənir…</p>
-                ) : !students.length ? (
-                  <p className="text-sm text-amber-200/90">Aktiv tələbə yoxdur — əvvəlcə «Tələbələrim»dən əlavə edin.</p>
-                ) : !students.filter((s) => (s.enrollment_status || 'active') === 'active').length ? (
-                  <p className="text-sm text-amber-200/90">Aktiv qeydiyyatlı tələbə yoxdur.</p>
-                ) : (
-                  <ul className="max-h-48 overflow-y-auto space-y-2 rounded-xl border border-indigo-500/15 p-2 bg-[#0f0c29]/40">
-                    {students
-                      .filter((s) => (s.enrollment_status || 'active') === 'active')
-                      .map((s) => {
-                        const sid = s.id
-                        const checked = sid && form.selectedStudentIds.includes(sid)
-                        return (
-                          <li key={s.enrollment_id || sid}>
-                            <label className="flex items-center gap-3 cursor-pointer px-2 py-1.5 rounded-lg hover:bg-white/5">
-                              <input
-                                type="checkbox"
-                                className="rounded border-indigo-500/40 text-blue-500 focus:ring-blue-500/30"
-                                checked={!!checked}
-                                onChange={() => sid && toggleStudent(sid)}
-                                disabled={!sid}
-                              />
-                              <span className="text-sm text-white truncate">{s.full_name}</span>
-                            </label>
-                          </li>
-                        )
-                      })}
-                  </ul>
-                )}
-              </div>
-            </>
-          )}
-          <div className="flex gap-2 justify-end pt-2 sticky bottom-0 bg-[#1a1740] pb-1 -mb-1">
-            <Button
-              variant="secondary"
-              onClick={() => {
-                setOpen(false)
-                resetForm()
-              }}
-              disabled={saving}
-            >
-              Ləğv et
-            </Button>
-            <Button onClick={() => void submit()} loading={saving}>
-              {editingId ? 'Saxla' : 'Göndər'}
-            </Button>
+          <div className="min-h-[13.5rem]">
+            {editingId ? (
+              <p className="text-xs text-amber-200/90 rounded-xl border border-amber-500/25 bg-amber-500/10 px-3 py-2">
+                Təyin olunmuş tələbələr dəyişdirilmir. Başlıq, qeyd, fayl və son tarixi yeniləyə bilərsiniz.
+              </p>
+            ) : (
+              <>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Qrup (hamısına təyin)</label>
+                  <select
+                    className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500"
+                    value={form.group_id}
+                    onChange={(e) => setForm((p) => ({ ...p, group_id: e.target.value }))}
+                  >
+                    <option value="">— Qrup seçin (ixtiyari) —</option>
+                    {groups.map((g) => (
+                      <option key={g.id} value={g.id}>
+                        {g.subject_name ? `${g.subject_name} · ` : ''}
+                        {g.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="border-t border-indigo-500/20 pt-3 mt-4">
+                  <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                    Tələbələr * (bir və ya bir neçə)
+                  </label>
+                  {studentsLoading ? (
+                    <p className="text-sm text-gray-500">Tələbələr yüklənir…</p>
+                  ) : !students.length ? (
+                    <p className="text-sm text-amber-200/90">Aktiv tələbə yoxdur — əvvəlcə «Tələbələrim»dən əlavə edin.</p>
+                  ) : !students.filter((s) => (s.enrollment_status || 'active') === 'active').length ? (
+                    <p className="text-sm text-amber-200/90">Aktiv qeydiyyatlı tələbə yoxdur.</p>
+                  ) : (
+                    <ul className="max-h-48 overflow-y-auto overscroll-contain space-y-2 rounded-xl border border-indigo-500/15 p-2 bg-[#0f0c29]/40">
+                      {students
+                        .filter((s) => (s.enrollment_status || 'active') === 'active')
+                        .map((s) => {
+                          const sid = s.id
+                          const checked = sid && form.selectedStudentIds.includes(sid)
+                          return (
+                            <li key={s.enrollment_id || sid}>
+                              <label className="flex items-center gap-3 cursor-pointer px-2 py-1.5 rounded-lg hover:bg-white/5">
+                                <input
+                                  type="checkbox"
+                                  className="rounded border-indigo-500/40 text-blue-500 focus:ring-blue-500/30"
+                                  checked={!!checked}
+                                  onChange={() => sid && toggleStudent(sid)}
+                                  disabled={!sid}
+                                />
+                                <span className="text-sm text-white truncate">{s.full_name}</span>
+                              </label>
+                            </li>
+                          )
+                        })}
+                    </ul>
+                  )}
+                </div>
+              </>
+            )}
           </div>
         </div>
       </Modal>
@@ -684,10 +699,10 @@ export default function InstructorTasks() {
       <Modal
         open={reviewOpen}
         onClose={() => {
-          if (reviewLoading) return null
+          if (reviewLoading) return
           setReviewOpen(false)
-          setFocusMode(false)
         }}
+        scrollBody
         title={review?.student_name ? `Yoxla — ${review.student_name}` : 'Yoxla'}
         size="xl"
       >
@@ -896,10 +911,7 @@ export default function InstructorTasks() {
             <Button
               variant="secondary"
               className="w-full justify-center"
-              onClick={() => {
-                setReviewOpen(false)
-                setFocusMode(false)
-              }}
+              onClick={() => setReviewOpen(false)}
             >
               Bağla
             </Button>
