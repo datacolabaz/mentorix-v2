@@ -63,8 +63,15 @@ async function createPlanCheckout({
     err.code = 'PLAN_SAME_TIER';
     err.statusCode = 400;
     throw err;
+  } else if (normalizePlanSlug(plan) === 'basic') {
+    const err = new Error(
+      'SADƏ paketi yenilənmir — yalnız 14 günlük sınaqdır. PRO və ya daha yüksək paket seçin.',
+    );
+    err.code = 'BASIC_NOT_RENEWABLE';
+    err.statusCode = 400;
+    throw err;
   }
-  /* toRank === fromRank && plan === from → renewal */
+  /* toRank === fromRank && plan === from → paid plan renewal */
 
   const priceAzn = Number(picked?.price_azn || 0) || 0;
   if (!priceAzn) {

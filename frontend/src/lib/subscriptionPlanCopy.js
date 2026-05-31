@@ -87,7 +87,8 @@ export function planDetailLines(p) {
       desc || '14 günlük pulsuz sınaq paketi.',
       limitsText ? `Sınaq müddətində: ${limitsText}.` : 'Limitlər SADƏ paketinə uyğun tətbiq olunur.',
       'Əlavə SMS və yaddaş alına bilməz — limit dolanda PRO və ya daha yüksək paket seçin.',
-      '14 gün bitəndən sonra davam etmək üçün ödənişli paket tələb olunur.',
+      'SADƏ paketi yenilənmir; 14 gün bitəndən sonra ödənişli paket tələb olunur.',
+      'Hər cihazdan (IP) yalnız bir dəfə pulsuz sınaq verilir.',
     ]
   }
 

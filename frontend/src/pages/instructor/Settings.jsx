@@ -21,7 +21,10 @@ import { planDetailLines, planLimitsHeadline } from '../../lib/subscriptionPlanC
 import {
   canBuySmsOnCurrentPlan,
   canBuyStorageOnCurrentPlan,
+  canRenewBasicPlan,
   hasPendingSmsTopup,
+  isBasicTrialActive,
+  isBasicTrialExpired,
   isSmsMonthlyLimitReached,
   isStorageLimitReached,
   planDowngradeGuard,
@@ -533,14 +536,18 @@ export default function InstructorSettings() {
 
             let btnLabel = 'Başla'
             if (isCurrent) {
-              if (limitChoiceOffer) btnLabel = isFree ? 'Paketi yüksəlt' : 'Limit həlli'
-              else if (
+              if (isFree) {
+                btnLabel = 'Cari sınaq paketi'
+              } else if (limitChoiceOffer) {
+                btnLabel = 'Limit həlli'
+              } else if (
                 (canBuySmsOnCurrentPlan(billing, smsPacks.length) ||
                   canBuyStorageOnCurrentPlan(billing, storagePacks.length)) &&
                 (smsPacks.length || storagePacks.length)
               )
                 btnLabel = 'Əlavə limit al'
-              else btnLabel = 'Paketi yenilə'
+              else if (canRenewBasicPlan(billing)) btnLabel = 'Paketi yenilə'
+              else btnLabel = 'Cari paket'
             } else if (usageGuard.blocked) {
               btnLabel =
                 usageGuard.reason === 'period'
@@ -580,6 +587,7 @@ export default function InstructorSettings() {
               }
               setPlanErr(null)
               if (isCurrent) {
+                if (isFree) return
                 if (limitChoiceOffer) {
                   openLimitChoiceModal()
                   return
@@ -615,7 +623,8 @@ export default function InstructorSettings() {
               return openPlanCheckout(p.id)
             }
 
-            const btnDisabled = planBusy || Boolean(usageGuard.blocked) || isPendingPlan
+            const btnDisabled =
+              planBusy || Boolean(usageGuard.blocked) || isPendingPlan || (isCurrent && isFree)
 
             const planBtn = (
               <Button
@@ -630,13 +639,15 @@ export default function InstructorSettings() {
                     : '',
                 ].join(' ')}
                 variant={
-                  isCurrent
-                    ? limitChoiceOffer || (smsLimitReached && smsPacks.length)
-                      ? 'primary'
-                      : 'secondary'
-                    : p.highlight
-                      ? 'primary'
-                      : 'secondary'
+                  basicTrialExpired
+                    ? 'primary'
+                    : isCurrent
+                      ? limitChoiceOffer || (smsLimitReached && smsPacks.length)
+                        ? 'primary'
+                        : 'secondary'
+                      : p.highlight
+                        ? 'primary'
+                        : 'secondary'
                 }
                 loading={planBusy}
                 disabled={btnDisabled}
@@ -1087,17 +1098,31 @@ export default function InstructorSettings() {
                 Yaddaşı idarə et (faylları azalt)
               </Button>
               {!billing?.is_highest_tier ? (
-                <Button
-                  variant="secondary"
-                  className="w-full justify-center"
-                  disabled={planBusy}
-                  onClick={() => {
-                    setLimitChoice(null)
-                    openPlanCheckout(currentPlanId)
-                  }}
-                >
-                  Paketi yenilə
-                </Button>
+                currentPlanId === 'basic' ? (
+                  <Button
+                    variant="primary"
+                    className="w-full justify-center"
+                    disabled={planBusy}
+                    onClick={() => {
+                      setLimitChoice(null)
+                      openPlanCheckout('pro')
+                    }}
+                  >
+                    PRO-ya keç
+                  </Button>
+                ) : (
+                  <Button
+                    variant="secondary"
+                    className="w-full justify-center"
+                    disabled={planBusy}
+                    onClick={() => {
+                      setLimitChoice(null)
+                      openPlanCheckout(currentPlanId)
+                    }}
+                  >
+                    Paketi yenilə
+                  </Button>
+                )
               ) : null}
             </div>
           </div>

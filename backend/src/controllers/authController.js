@@ -13,6 +13,8 @@ const {
 const { resolveLoginUserOrError, resolveSmsBillingInstructorId: resolveSmsBillingForLogin } = require('../services/authService');
 const { guardEmailVerifiedBeforeToken } = require('../services/emailVerificationGuard');
 const { getActiveRoles, grantUserRole, grantCourseRoleToUser } = require('../services/userRolesService');
+const { grantBasicTrialForInstructor } = require('../services/basicTrialIpService');
+const { clientIp } = require('../utils/clientIp');
 
 const PHONE_NORM = "regexp_replace(COALESCE(phone::text, ''), '[^0-9]', '', 'g')";
 const LOGIN_ROLES = new Set(['instructor', 'student', 'parent', 'course']);
@@ -33,7 +35,7 @@ async function logRisk(userId, req, context, riskScore = 10) {
        VALUES ($1, $2, $3, $4, $5::jsonb)`,
       [
         userId || null,
-        String(req?.headers?.['x-forwarded-for'] || req?.ip || ''),
+        clientIp(req),
         String(req?.headers?.['x-device-id'] || ''),
         Number(riskScore) || 0,
         JSON.stringify(context || {}),
@@ -42,6 +44,14 @@ async function logRisk(userId, req, context, riskScore = 10) {
   } catch {
     // ignore
   }
+}
+
+async function provisionInstructorBasicTrial(client, userId, req) {
+  const result = await grantBasicTrialForInstructor(client, userId, clientIp(req));
+  if (!result.granted) {
+    await logRisk(userId, req, { kind: 'basic_trial_ip_denied', reason: result.reason }, 35);
+  }
+  return result;
 }
 
 async function attachInstructorPublicLabel(userLite) {
@@ -744,6 +754,7 @@ const register = async (req, res) => {
            ON CONFLICT (user_id) DO NOTHING`,
           [created.id, full_name || 'Kurs'],
         );
+        await provisionInstructorBasicTrial(client, created.id, req);
       } else if (role === 'course') {
         await client.query(
           `INSERT INTO course_profiles (user_id, course_name) VALUES ($1, $2)
@@ -891,6 +902,7 @@ const selectOnboardingRole = async (req, res) => {
           );
           // Instructor hesabı üçün kurs paneli də açıq olsun.
           await grantCourseRoleToUser(me.id, me.full_name || 'Kurs');
+          await provisionInstructorBasicTrial(client, me.id, req);
         } else if (picked === 'course') {
           await client.query(
             `INSERT INTO course_profiles (user_id, course_name)
@@ -977,6 +989,7 @@ const signup = async (req, res) => {
           `INSERT INTO course_profiles (user_id, course_name) VALUES ($1, $2) ON CONFLICT (user_id) DO NOTHING`,
           [created.id, name],
         );
+        await provisionInstructorBasicTrial(client, created.id, req);
       } else if (initialRole === 'course') {
         await client.query(
           `INSERT INTO course_profiles (user_id, course_name) VALUES ($1, $2) ON CONFLICT (user_id) DO NOTHING`,
@@ -1796,6 +1809,14 @@ const googleComplete = async (req, res) => {
         [fullName, g.email, r, g.sub, oauthPasswordPlaceholder]
       );
       user = created[0];
+      if (r === 'instructor') {
+        await db.query(
+          `INSERT INTO instructor_profiles (user_id, subject, billing_type) VALUES ($1, NULL, '8_lessons')`,
+          [user.id],
+        );
+        await grantCourseRoleToUser(user.id, user.full_name || 'Kurs');
+        await provisionInstructorBasicTrial(db, user.id, req);
+      }
     } else if (!user.role) {
       const { rows: updated } = await db.query(
         `UPDATE users

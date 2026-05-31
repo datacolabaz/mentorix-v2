@@ -32,10 +32,7 @@ function callbackUrlFromReq(req) {
   return `${proto}://${host}/api/billing/payriff/return${qs}`;
 }
 
-function clientIp(req) {
-  const xf = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
-  return xf || req.ip || '';
-}
+const { clientIp } = require('../utils/clientIp');
 
 function ipAllowed(req) {
   const list = String(process.env.PAYRIFF_CALLBACK_IPS || '').trim();
@@ -58,6 +55,8 @@ router.get('/status', authenticate, authorize('instructor'), async (req, res) =>
     res.json({
       plan: out.plan,
       can_buy_addons: out.can_buy_addons,
+      can_renew_basic: out.can_renew_basic,
+      basic_trial_ip_denied: out.basic_trial_ip_denied,
       is_highest_tier: out.is_highest_tier,
       pending_topup: out.pending_topup || null,
       pending_plan_slug: out.pending_plan_slug || null,

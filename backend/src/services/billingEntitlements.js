@@ -1,6 +1,7 @@
 const db = require('../utils/db');
 const { normalizePlanSlug } = require('../config/plans');
 const { BASIC_TRIAL_DAYS } = require('../config/billingTrial');
+const { isBasicTrialGranted, hasBasicTrialIpDenial } = require('./basicTrialIpService');
 const getCurrentPlan = require('./billingGetCurrentPlan');
 const { getActivePlansMap } = require('./subscriptionPlansService');
 const {
@@ -313,9 +314,12 @@ function buildMessages(status, ctx) {
   }
   if (status === 'expired') {
     const onBasic = normalizePlanSlug(plan) === 'basic';
+    const ipDenied = Boolean(ctx?.basic_trial_ip_denied);
     return {
       banner: onBasic
-        ? '14 günlük SADƏ sınaq müddəti bitib. Davam etmək üçün PRO və ya daha yüksək paket seçin.'
+        ? ipDenied
+          ? 'Bu cihazdan artıq pulsuz SADƏ sınaq istifadə olunub. Davam etmək üçün PRO və ya daha yüksək paket seçin.'
+          : '14 günlük SADƏ sınaq müddəti bitib. Davam etmək üçün PRO və ya daha yüksək paket seçin.'
         : 'Abunəlik aktiv deyil və ya ödəniş müddəti keçib. Davam etmək üçün paket seçin.',
       cta: { label: 'Paketlərə bax', action: 'OPEN_SETTINGS_PLANS' },
     };
@@ -457,6 +461,7 @@ async function resolveEntitlements(userId) {
   const days_left = sub2?.current_period_end ? ceilDaysLeft(sub2.current_period_end) : null;
   const pendingTopup = await fetchPendingTopups(db, userId);
   const periodMeta = downgradePeriodMeta(sub2?.current_period_start);
+  const basic_trial_ip_denied = planSlug === 'basic' ? await hasBasicTrialIpDenial(db, userId) : false;
   const messages = buildMessages(status2, {
     phone_verified,
     limits,
@@ -466,13 +471,17 @@ async function resolveEntitlements(userId) {
     plan: planSlug,
     plansMap,
     pendingTopup,
+    basic_trial_ip_denied,
   });
 
   const can_buy_addons = planSlug !== 'basic' && subscription_active;
+  const can_renew_basic = false;
 
   return {
     plan: planSlug,
     can_buy_addons,
+    can_renew_basic,
+    basic_trial_ip_denied,
     is_highest_tier: isHighestTierPlan(planSlug, plansMap),
     pending_topup: pendingTopup,
     pending_plan_slug: pendingTopup?.pending_plan_slug || null,

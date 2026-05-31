@@ -168,6 +168,27 @@ export function isBasicPlan(billing) {
   return String(billing?.plan || '').toLowerCase() === 'basic'
 }
 
+/** SADƏ yalnız 14 günlük sınaqdır — yenilənmir. */
+export function canRenewBasicPlan(billing) {
+  if (billing?.can_renew_basic === false) return false
+  return !isBasicPlan(billing)
+}
+
+/** 14 günlük SADƏ sınaq hələ aktivdirsə (pulsuz paket «yenilənmir»). */
+export function isBasicTrialActive(billing) {
+  if (!isBasicPlan(billing)) return false
+  if (String(billing?.status || '') === 'expired') return false
+  const end = billing?.subscription?.current_period_end
+  if (end && new Date(end).getTime() < Date.now()) return false
+  const days = billing?.subscription?.days_left
+  if (days != null && days <= 0) return false
+  return true
+}
+
+export function isBasicTrialExpired(billing) {
+  return isBasicPlan(billing) && !isBasicTrialActive(billing)
+}
+
 /** Əlavə SMS/yaddaş yalnız ödənişli paketlərdə (SADƏ-də yox). */
 export function canBuySmsOnCurrentPlan(billing, smsPacksCount = 0) {
   if (isBasicPlan(billing)) return false
