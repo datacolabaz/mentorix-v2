@@ -9,6 +9,19 @@ import StatusBadge from '../../components/common/StatusBadge'
 import { isToday, isThisWeek, isThisMonth } from '../../mock/smsHistory'
 import { useBillingStatus } from '../../hooks/useBillingStatus'
 import { smsUsageFromBilling, storageUsageFromBilling } from '../../lib/billingUsageDisplay'
+import {
+  SMS_STATUS_UI,
+  countSmsByStatus,
+  currentMonthLabelAz,
+  exportSmsHistoryCsv,
+  formatPhoneDisplay,
+  formatRelativeAz,
+  formatSmsDateTimeLong,
+  humanizeSmsFailure,
+  smsMessageLength,
+  smsPartCount,
+  smsStatusLabel,
+} from '../../lib/smsHistoryDisplay'
 import { useNavigate } from 'react-router-dom'
 import useUiStore from '../../hooks/useUi'
 
@@ -174,13 +187,13 @@ function enrichSmsWithStudentNames(items, phoneToName) {
   })
 }
 
-function formatAgo(ms) {
-  const s = Math.max(0, Math.floor(ms / 1000))
-  if (s < 60) return `${s}s əvvəl`
-  const m = Math.floor(s / 60)
-  if (m < 60) return `${m}dəq əvvəl`
-  const h = Math.floor(m / 60)
-  return `${h}saat əvvəl`
+function DetailRow({ label, value, mono }) {
+  return (
+    <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-3 py-2 border-b border-[color:var(--border-subtle)] last:border-0">
+      <dt className="text-xs font-semibold text-token-textMuted uppercase tracking-wider sm:w-36 shrink-0">{label}</dt>
+      <dd className={`text-sm text-token-textMain break-words ${mono ? 'font-mono text-xs' : ''}`}>{value || '—'}</dd>
+    </div>
+  )
 }
 
 export default function InstructorNotifications() {
@@ -207,7 +220,6 @@ export default function InstructorNotifications() {
   const smsFetchSeq = useRef(0)
   const [smsSearchDebounced, setSmsSearchDebounced] = useState('')
   const [smsShowCount, setSmsShowCount] = useState(40)
-  const [lastUpdatedLabel, setLastUpdatedLabel] = useState('')
   const billingQ = useBillingStatus()
   const billing = billingQ.data || null
   const debugSms = useMemo(() => {
@@ -377,15 +389,6 @@ export default function InstructorNotifications() {
     }
   }, [])
 
-  useEffect(() => {
-    if (!fetchedAt) return
-    try {
-      setLastUpdatedLabel(formatAgo(Date.now() - new Date(fetchedAt).getTime()))
-    } catch {
-      setLastUpdatedLabel('')
-    }
-  }, [fetchedAt])
-
   const smsUsed = billing?.usage?.sms_monthly ?? profile?.sms_used_monthly ?? 0
   const smsLim = billing?.limits?.sms_monthly ?? null
   const storageUsedMb = billing?.usage?.storage_mb ?? profile?.storage_used_mb ?? null
@@ -394,9 +397,6 @@ export default function InstructorNotifications() {
     (billing?.limits?.storage_limit_bytes != null
       ? Number(billing.limits.storage_limit_bytes) / (1024 * 1024)
       : profile?.storage_limit_mb ?? null)
-  const ramUsedMb = billing?.usage?.ram_mb ?? profile?.ram_used_mb ?? null
-  const ramLimMb = billing?.limits?.ram_mb ?? profile?.ram_limit_mb ?? null
-
   const smsUsage = smsUsageFromBilling(billing)
   const storageUsage = storageUsageFromBilling(billing)
 
@@ -411,7 +411,6 @@ export default function InstructorNotifications() {
   const systemPercent = {
     sms: billing ? smsUsage.pct : pctOrZero(smsUsed, smsLim),
     storage: billing ? storageUsage.pct : pctOrZero(storageUsedMb, storageLimMb),
-    ram: pctOrZero(ramUsedMb, ramLimMb),
   }
 
   const usageTone = (pct) => {
@@ -448,13 +447,37 @@ export default function InstructorNotifications() {
     return smsTimeRows
   }, [smsStatusFilter, smsTimeRows])
 
-  const smsCounts = useMemo(() => {
-    const sent = smsTimeRows.filter((x) => x.status === 'sent').length
-    const scheduled = smsTimeRows.filter((x) => x.status === 'scheduled').length
-    return { sent, scheduled }
-  }, [smsTimeRows])
-
   const smsHistoryTotal = useMemo(() => smsBaseList.length, [smsBaseList])
+
+  const smsThisMonthRows = useMemo(() => {
+    const now = new Date()
+    return smsBaseList.filter((x) => isThisMonth(x.createdAt, now))
+  }, [smsBaseList])
+
+  const smsMonthStats = useMemo(
+    () => ({
+      sent: countSmsByStatus(smsThisMonthRows, 'sent'),
+      logged: countSmsByStatus(smsThisMonthRows, 'logged'),
+      failed: countSmsByStatus(smsThisMonthRows, 'failed'),
+      scheduled: countSmsByStatus(smsThisMonthRows, 'scheduled'),
+      whatsapp: countSmsByStatus(smsThisMonthRows, 'whatsapp'),
+      pending: countSmsByStatus(smsThisMonthRows, 'pending'),
+    }),
+    [smsThisMonthRows],
+  )
+
+  const lastSmsActivityLabel = useMemo(() => {
+    const rows = [...smsBaseList]
+      .filter((x) => x.createdAt)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    if (!rows.length) return 'Son SMS: hələ göndərilməyib'
+    const lastSent = rows.find((x) => x.status === 'sent')
+    const target = lastSent || rows[0]
+    if (target.status === 'sent') {
+      return `Son SMS: ${formatRelativeAz(target.createdAt)} · ${formatSmsDateTimeLong(target.createdAt)}`
+    }
+    return `Son aktivlik: ${formatRelativeAz(target.createdAt)}`
+  }, [smsBaseList])
 
   const tabItems = useMemo(
     () => [
@@ -471,7 +494,7 @@ export default function InstructorNotifications() {
     const week = smsBaseList.filter((x) => isThisWeek(x.createdAt, now)).length
     const month = smsBaseList.filter((x) => isThisMonth(x.createdAt, now)).length
     return [
-      { id: 'all', label: 'All time', count: all },
+      { id: 'all', label: 'Hamısı', count: all },
       { id: 'today', label: 'Bu gün', count: today },
       { id: 'week', label: 'Bu həftə', count: week },
       { id: 'month', label: 'Bu ay', count: month },
@@ -485,11 +508,11 @@ export default function InstructorNotifications() {
     const failed = smsTimeRows.filter((x) => x.status === 'failed').length
     const scheduled = smsTimeRows.filter((x) => x.status === 'scheduled').length
     return [
-      { id: 'all', label: 'All (total history)', count: all },
-      { id: 'sent', label: 'Göndərildi', count: sent },
-      { id: 'logged', label: 'Yalnız qeyd', count: logged },
-      { id: 'failed', label: 'Uğursuz', count: failed },
-      { id: 'scheduled', label: 'Planlaşdırılıb', count: scheduled },
+      { id: 'all', label: 'Hamısı', count: all },
+      { id: 'sent', label: `${SMS_STATUS_UI.sent.icon} Göndərildi`, count: sent },
+      { id: 'logged', label: `${SMS_STATUS_UI.logged.icon} Yalnız qeyd`, count: logged },
+      { id: 'failed', label: `${SMS_STATUS_UI.failed.icon} Uğursuz`, count: failed },
+      { id: 'scheduled', label: `${SMS_STATUS_UI.scheduled.icon} Planlaşdırılıb`, count: scheduled },
     ]
   }, [smsTimeRows])
 
@@ -513,16 +536,14 @@ export default function InstructorNotifications() {
         : detailsStatus === 'whatsapp'
           ? 'due'
           : 'paid'
-  const detailsLabel =
-    detailsStatus === 'failed'
-      ? 'Alınmadı'
-      : detailsStatus === 'scheduled'
-        ? 'Planlaşdırılıb'
-        : detailsStatus === 'logged'
-          ? 'Yalnız qeyd (SMS göndərilməyib)'
-          : detailsStatus === 'whatsapp'
-            ? 'WhatsApp'
-            : 'Göndərildi'
+  const detailsLabel = detailsStatus ? smsStatusLabel(detailsStatus) : '—'
+
+  const handleExportCsv = () => {
+    const stamp = new Date().toISOString().slice(0, 10)
+    exportSmsHistoryCsv(smsRows, `sms-tarixcesi-${stamp}.csv`)
+  }
+
+  const monthName = currentMonthLabelAz()
 
   return (
     <div className="p-4 sm:p-6 min-w-0 flex flex-col gap-6">
@@ -535,12 +556,10 @@ export default function InstructorNotifications() {
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <h2 className="font-display font-bold text-base text-token-textMain">Sistem vəziyyəti</h2>
-            <p className="text-xs text-token-textMuted mt-1">
-              {lastUpdatedLabel ? `Son yenilənmə: ${lastUpdatedLabel}` : '—'}
-            </p>
+            <p className="text-xs text-token-textMuted mt-1">{lastSmsActivityLabel}</p>
           </div>
-          <StatusBadge variant={usageTone(Math.max(systemPercent.sms, systemPercent.storage, systemPercent.ram))}>
-            {Math.max(systemPercent.sms, systemPercent.storage, systemPercent.ram) >= 80 ? 'Diqqət' : 'Stabil'}
+          <StatusBadge variant={usageTone(Math.max(systemPercent.sms, systemPercent.storage))}>
+            {Math.max(systemPercent.sms, systemPercent.storage) >= 80 ? 'Diqqət' : 'Stabil'}
           </StatusBadge>
         </div>
 
@@ -566,12 +585,15 @@ export default function InstructorNotifications() {
           </div>
 
           <div className="grid grid-cols-[92px_1fr_auto] items-center gap-x-4 gap-y-2">
-            <div className="text-sm font-semibold text-token-textMain">RAM</div>
+            <div className="text-sm font-semibold text-token-textMain">Bildirişlər</div>
             <div className={`h-2.5 rounded-full overflow-hidden ${progressTrackCls}`}>
-              <div className={`h-full ${barTone(systemPercent.ram)}`} style={{ width: `${Math.min(100, systemPercent.ram)}%` }} />
+              <div
+                className={`h-full ${alerts.length ? 'bg-amber-500' : 'bg-emerald-500'}`}
+                style={{ width: alerts.length ? `${Math.min(100, alerts.length * 25)}%` : '4%' }}
+              />
             </div>
             <div className="text-sm text-token-textMuted tabular-nums text-right whitespace-nowrap">
-              {ramUsedMb == null ? '—' : formatMbValue(ramUsedMb)} / {ramLimMb == null ? '∞' : formatMbValue(ramLimMb)}
+              {loading ? '—' : `${alerts.length} aktiv`}
             </div>
           </div>
         </div>
@@ -585,9 +607,54 @@ export default function InstructorNotifications() {
             <div className="min-w-0">
               <h2 className="font-display font-bold text-base text-token-textMain">SMS tarixçəsi</h2>
               <p className="text-xs text-token-textMuted mt-1">
-                Ödəniş xatırlatma mesajlarının göndərilmə statusu və qısa preview.
+                Real SMS göndərişləri, sistem qeydləri və planlaşdırılmış xatırlatmalar — audit üçün metadata ilə.
               </p>
               {smsLoading ? <p className="text-xs text-token-textMuted mt-2">Tarixçə yüklənir…</p> : null}
+              {!smsLoading ? (
+                <Card className="mt-4 p-4 border border-[color:var(--border-subtle)] bg-token-surfaceMain/30">
+                  <p className="text-xs font-semibold text-token-textMain">
+                    Bu ay ({monthName})
+                  </p>
+                  <ul className="mt-2 space-y-1.5 text-sm text-token-textMain">
+                    <li className="flex items-center gap-2">
+                      <span className="text-emerald-500">{SMS_STATUS_UI.sent.icon}</span>
+                      <span>
+                        <span className="font-semibold tabular-nums">{smsMonthStats.sent}</span> SMS göndərilib
+                        <span className="text-token-textMuted text-xs"> (paket limitinə daxil)</span>
+                      </span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <span>{SMS_STATUS_UI.logged.icon}</span>
+                      <span>
+                        <span className="font-semibold tabular-nums">{smsMonthStats.logged}</span> sistem qeydi
+                        <span className="text-token-textMuted text-xs"> (SMS göndərilməyib)</span>
+                      </span>
+                    </li>
+                    {smsMonthStats.whatsapp > 0 ? (
+                      <li className="flex items-center gap-2">
+                        <span>{SMS_STATUS_UI.whatsapp.icon}</span>
+                        <span>
+                          <span className="font-semibold tabular-nums">{smsMonthStats.whatsapp}</span> WhatsApp
+                        </span>
+                      </li>
+                    ) : null}
+                    <li className="flex items-center gap-2">
+                      <span className="text-rose-500">{SMS_STATUS_UI.failed.icon}</span>
+                      <span>
+                        <span className="font-semibold tabular-nums">{smsMonthStats.failed}</span> uğursuz SMS
+                      </span>
+                    </li>
+                    {smsMonthStats.scheduled > 0 ? (
+                      <li className="flex items-center gap-2">
+                        <span>{SMS_STATUS_UI.scheduled.icon}</span>
+                        <span>
+                          <span className="font-semibold tabular-nums">{smsMonthStats.scheduled}</span> planlaşdırılıb
+                        </span>
+                      </li>
+                    ) : null}
+                  </ul>
+                </Card>
+              ) : null}
               {debugSms && !smsLoading ? (
                 <div className="mt-3 rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceMain/30 p-3">
                   <p className="text-[11px] font-semibold text-token-textMuted uppercase tracking-wider mb-2">
@@ -598,31 +665,33 @@ export default function InstructorNotifications() {
                   </pre>
                 </div>
               ) : null}
-              <div className="mt-3 flex flex-col gap-2">
-                <span className="inline-flex w-fit items-center gap-2 rounded-full border border-[color:var(--border-subtle)] bg-token-surfaceCard/50 px-3 py-1.5 text-[11px] text-token-textMain">
-                  <span className="text-token-textMuted">Total SMS history:</span>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-2 rounded-full border border-[color:var(--border-subtle)] bg-token-surfaceCard/50 px-3 py-1.5 text-[11px] text-token-textMain">
+                  <span className="text-token-textMuted">Ümumi tarixçə:</span>
                   <span className="font-semibold tabular-nums">{smsLoading ? '—' : smsHistoryTotal}</span>
                 </span>
                 {smsQuotaLine ? (
-                  <span className="inline-flex w-fit items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5 text-[11px] text-token-textMain">
-                    <span className="text-token-textMuted">Bu ay ümumi SMS istifadəsi:</span>
+                  <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5 text-[11px] text-token-textMain">
+                    <span className="text-token-textMuted">Paket limiti (bu ay):</span>
                     <span className="font-semibold tabular-nums">
-                      {smsQuotaLine.used}/{smsQuotaLine.limLabel}
+                      {smsQuotaLine.used}/{smsQuotaLine.limLabel} istifadə
                     </span>
                   </span>
                 ) : null}
-                <div className="flex flex-wrap items-center gap-2 pt-1">
-                  <span className="text-[11px] text-token-textMuted">Seçilmiş filter nəticələri:</span>
-                  <span className="inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1.5 text-[11px] text-emerald-700 dark:text-emerald-200/90">
-                    Göndərildi (filter) <span className="font-bold tabular-nums">{smsLoading ? '—' : smsCounts.sent}</span>
-                  </span>
-                  <span className="inline-flex items-center gap-2 rounded-full border border-amber-500/25 bg-amber-500/10 px-3 py-1.5 text-[11px] text-amber-700 dark:text-amber-200/90">
-                    Planlaşdırılıb (filter) <span className="font-bold tabular-nums">{smsLoading ? '—' : smsCounts.scheduled}</span>
-                  </span>
-                </div>
               </div>
             </div>
             <div className="shrink-0 w-full sm:w-auto space-y-2">
+              <div className="flex flex-wrap gap-2 justify-end">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  disabled={!smsRows.length || smsLoading}
+                  onClick={handleExportCsv}
+                >
+                  CSV export
+                </Button>
+              </div>
               <input
                 type="search"
                 value={smsSearch}
@@ -688,44 +757,76 @@ export default function InstructorNotifications() {
               <div className="space-y-4 text-sm">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="font-semibold text-token-textMain">
-                      {detailsStatus === 'logged'
-                        ? /ödəniş təsdiqləndi|odenis tesdiqlendi/i.test(String(detailsItem.message || ''))
-                          ? 'Ödəniş qeydi (SMS göndərilməyib)'
-                          : 'Sistem qeydi (SMS göndərilməyib)'
-                        : detailsStatus === 'whatsapp'
-                          ? 'WhatsApp mesajı'
-                          : String(detailsItem.type || 'payment_reminder') === 'otp'
-                            ? 'PIN kod göndərildi'
-                            : detailsStatus === 'sent'
-                              ? 'SMS göndərildi'
-                              : 'Ödəniş xatırlatma'}
-                    </p>
-                    <p className="text-xs text-token-textMuted mt-1">
-                      {new Date(detailsItem.createdAt).toLocaleString('az-AZ')}
-                    </p>
+                    <p className="font-semibold text-token-textMain">{detailsLabel}</p>
+                    <p className="text-xs text-token-textMuted mt-1">{formatSmsDateTimeLong(detailsItem.createdAt)}</p>
+                    <p className="text-xs text-token-textMuted mt-0.5">{formatRelativeAz(detailsItem.createdAt)}</p>
                   </div>
                   <StatusBadge variant={detailsBadge}>{detailsLabel}</StatusBadge>
                 </div>
-                {detailsItem.status === 'failed' && detailsItem.reason ? (
-                  <div className="rounded-xl border border-rose-500/25 bg-rose-500/10 p-3">
-                    <p className="text-xs font-semibold text-rose-700 dark:text-rose-200/90 uppercase tracking-wider mb-2">
-                      Səbəb
-                    </p>
-                    <p className="text-sm text-token-textMain leading-relaxed">{detailsItem.reason}</p>
+
+                {detailsStatus === 'logged' ? (
+                  <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 p-3 text-xs text-token-textMain leading-relaxed">
+                    Bu qeyd SMS provayderinə göndərilməyib və paket limitinizdən çıxılmır. Köhnə jurnal və ya daxili
+                    bildiriş ola bilər.
                   </div>
                 ) : null}
+
+                {detailsItem.status === 'failed' ? (
+                  <div className="rounded-xl border border-rose-500/25 bg-rose-500/10 p-3">
+                    <p className="text-xs font-semibold text-rose-700 dark:text-rose-200/90 uppercase tracking-wider mb-2">
+                      Uğursuzluq səbəbi
+                    </p>
+                    <p className="text-sm text-token-textMain leading-relaxed">
+                      {humanizeSmsFailure(detailsItem.reason)}
+                    </p>
+                    {detailsItem.reason ? (
+                      <p className="text-[11px] text-token-textMuted mt-2 font-mono break-all">{detailsItem.reason}</p>
+                    ) : null}
+                  </div>
+                ) : null}
+
+                <dl className="rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceMain/40 px-3 py-1">
+                  <DetailRow label="Status" value={detailsLabel} />
+                  <DetailRow label="Göndərilmə vaxtı" value={formatSmsDateTimeLong(detailsItem.createdAt)} />
+                  <DetailRow
+                    label="Alıcı"
+                    value={detailsItem.student_name || (detailsItem.students || []).join(', ') || '—'}
+                  />
+                  <DetailRow label="Telefon" value={formatPhoneDisplay(detailsItem.phone)} mono />
+                  <DetailRow
+                    label="Mesaj uzunluğu"
+                    value={`${detailsItem.message_length ?? smsMessageLength(detailsItem.message)} simvol`}
+                  />
+                  <DetailRow
+                    label="SMS hissə"
+                    value={String(detailsItem.sms_parts ?? smsPartCount(detailsItem.message) || '—')}
+                  />
+                  {detailsStatus === 'sent' || detailsStatus === 'failed' ? (
+                    <>
+                      <DetailRow label="SMS provayder" value={detailsItem.provider_label || 'sendsms.az'} />
+                      <DetailRow label="Message ID" value={detailsItem.message_id || detailsItem.msisdn || '—'} mono />
+                      {detailsItem.http_status != null ? (
+                        <DetailRow label="HTTP status" value={String(detailsItem.http_status)} mono />
+                      ) : null}
+                    </>
+                  ) : null}
+                  <DetailRow
+                    label="Limitə təsir"
+                    value={detailsItem.counts_toward_quota ? 'Bəli — paketdən çıxır' : 'Xeyr — yalnız qeyd'}
+                  />
+                </dl>
+
                 <div className="rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceMain/40 p-3">
-                  <p className="text-xs font-semibold text-token-textMuted uppercase tracking-wider mb-2">Tələbələr</p>
-                  <p className="text-sm text-token-textMain leading-relaxed">
-                    {(detailsItem.students || []).join(', ') || '—'}
+                  <p className="text-xs font-semibold text-token-textMuted uppercase tracking-wider mb-2">Mesaj mətni</p>
+                  <p className="text-sm text-token-textMain leading-relaxed whitespace-pre-wrap break-words">
+                    {detailsItem.message || '—'}
                   </p>
                 </div>
-                <div className="rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceMain/40 p-3">
-                  <p className="text-xs font-semibold text-token-textMuted uppercase tracking-wider mb-2">Mesaj</p>
-                  <p className="text-sm text-token-textMain leading-relaxed">{detailsItem.message || '—'}</p>
-                </div>
-                <div className="flex justify-end gap-2 pt-1">
+
+                <div className="flex flex-wrap justify-end gap-2 pt-1">
+                  <Button variant="secondary" size="sm" onClick={() => exportSmsHistoryCsv([detailsItem], 'sms-detay.csv')}>
+                    Bu sətiri export et
+                  </Button>
                   <Button variant="secondary" onClick={() => setDetailsOpen(false)}>
                     Bağla
                   </Button>

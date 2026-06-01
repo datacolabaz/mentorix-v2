@@ -396,6 +396,20 @@ const getSmsLogs = async (req, res) => {
       const pkg =
         pkgRaw === '8_lessons' || pkgRaw === '8' ? '8' : pkgRaw === '12_lessons' || pkgRaw === '12' ? '12' : pkgRaw === 'monthly' ? 'monthly' : null;
 
+      const msgText = String(r.message || '');
+      const msgLen = msgText.length;
+      const smsParts = msgLen <= 0 ? 0 : msgLen <= 160 ? 1 : Math.ceil(msgLen / 153);
+
+      let providerMessageId = r.msisdn ? String(r.msisdn) : null;
+      if (r.provider && typeof r.provider === 'object') {
+        const ctrl =
+          r.provider?.request?.head?.controlid ??
+          r.provider?.response?.head?.controlid ??
+          r.provider?.response?.body?.[0]?.messageid ??
+          null;
+        if (ctrl != null && String(ctrl).trim()) providerMessageId = String(ctrl).trim();
+      }
+
       return {
         id: r.id,
         student_id: r.student_id || null,
@@ -406,6 +420,14 @@ const getSmsLogs = async (req, res) => {
         status: displayStatus,
         reason,
         package_type: pkg,
+        http_status: r.http_status ?? null,
+        msisdn: r.msisdn ?? null,
+        provider_label: displayStatus === 'sent' || displayStatus === 'failed' ? 'sendsms.az' : null,
+        message_id: providerMessageId || (r.id ? `log-${r.id}` : null),
+        message_length: msgLen,
+        sms_parts: smsParts,
+        delivered_at: r.delivered_at ?? null,
+        counts_toward_quota: displayStatus === 'sent',
         created_at: r.created_at,
         createdAt: r.created_at,
       };
