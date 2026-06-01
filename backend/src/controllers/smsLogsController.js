@@ -228,24 +228,57 @@ const getSmsLogs = async (req, res) => {
       where.push(`b.norm_phone = $${params.length}`);
     }
 
-    // Scope: instructor direct sends OR student/parent phones for their active enrollments
+    // Scope: yalnız cari aktiv tələbələr; köhnə silinmiş hesab / qeydiyyatdan əvvəl eyni nömrə logları istisna.
+    const activeStudentIdsSql = `SELECT e.student_id
+      FROM enrollments e
+      INNER JOIN users u ON u.id = e.student_id
+      WHERE e.instructor_id = $1
+        AND (e.deleted_at IS NULL)
+        AND COALESCE(NULLIF(LOWER(TRIM(e.status)), ''), 'active') = 'active'
+        AND u.is_active = TRUE`;
+    const activePhonesSql = `SELECT norm_phone FROM (
+        SELECT regexp_replace(COALESCE(NULLIF(TRIM(sp.phone_number), ''), u.phone), '\\\\D', '', 'g') AS norm_phone
+        FROM users u
+        JOIN enrollments e ON e.student_id = u.id
+        LEFT JOIN student_profiles sp ON sp.user_id = u.id
+        WHERE e.instructor_id = $1
+          AND (e.deleted_at IS NULL)
+          AND COALESCE(NULLIF(LOWER(TRIM(e.status)), ''), 'active') = 'active'
+          AND u.is_active = TRUE
+        UNION
+        SELECT regexp_replace(sp.parent_phone, '\\\\D', '', 'g') AS norm_phone
+        FROM student_profiles sp
+        JOIN enrollments e2 ON e2.student_id = sp.user_id
+        WHERE e2.instructor_id = $1
+          AND (e2.deleted_at IS NULL)
+          AND COALESCE(NULLIF(LOWER(TRIM(e2.status)), ''), 'active') = 'active'
+          AND sp.parent_phone IS NOT NULL
+      ) x
+      WHERE norm_phone IS NOT NULL AND norm_phone <> ''`;
     where.push(`(
-      b.instructor_id = $1 OR b.norm_phone IN (
-        SELECT norm_phone FROM (
-          SELECT regexp_replace(u.phone, '\\\\D', '', 'g') AS norm_phone
-          FROM users u
-          JOIN enrollments e ON e.student_id = u.id
-          WHERE e.instructor_id = $1
-            AND COALESCE(NULLIF(LOWER(TRIM(e.status)), ''), 'active') = 'active'
-            AND u.phone IS NOT NULL
-          UNION
-          SELECT regexp_replace(sp.parent_phone, '\\\\D', '', 'g') AS norm_phone
-          FROM student_profiles sp
-          JOIN enrollments e2 ON e2.student_id = sp.user_id
-          WHERE e2.instructor_id = $1
-            AND COALESCE(NULLIF(LOWER(TRIM(e2.status)), ''), 'active') = 'active'
-            AND sp.parent_phone IS NOT NULL
-        ) x
+      (b.student_id IS NULL OR b.student_id IN (${activeStudentIdsSql}))
+      AND (
+        b.instructor_id = $1
+        OR (
+          b.norm_phone IN (${activePhonesSql})
+          AND (
+            b.student_id IN (${activeStudentIdsSql})
+            OR (
+              b.student_id IS NULL
+              AND b.ts >= COALESCE((
+                SELECT MIN(COALESCE(e.enrolled_at, e.configured_at, u.created_at))
+                FROM enrollments e
+                INNER JOIN users u ON u.id = e.student_id
+                LEFT JOIN student_profiles sp ON sp.user_id = u.id
+                WHERE e.instructor_id = $1
+                  AND (e.deleted_at IS NULL)
+                  AND COALESCE(NULLIF(LOWER(TRIM(e.status)), ''), 'active') = 'active'
+                  AND u.is_active = TRUE
+                  AND regexp_replace(COALESCE(NULLIF(TRIM(sp.phone_number), ''), u.phone), '\\\\D', '', 'g') = b.norm_phone
+              ), b.ts)
+            )
+          )
+        )
       )
     )`);
 
