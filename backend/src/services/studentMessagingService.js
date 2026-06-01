@@ -61,7 +61,7 @@ async function sendStudentWhatsAppOrSms({
         studentId,
         phone,
         message,
-        status: 'sent',
+        status: 'whatsapp',
         channel: 'whatsapp',
         logType,
       });

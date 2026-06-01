@@ -1,6 +1,7 @@
 const db = require('../utils/db');
 const { computeMonthlyCycleProgress, getTodayBakuYmd, toYmd } = require('../services/subscriptionBilling');
 const { sendSms } = require('../services/smsService');
+const { mapSmsLogDisplayStatus, BILLABLE_SENT_WHERE } = require('../utils/smsBillableLog');
 
 const BILLING_MESSAGE =
   'Hörmətli tələbə, aylıq abunəliyinizin bitməsinə 2 gün qalıb. Davam etmək üçün ödənişi yeniləməyiniz xahiş olunur.';
@@ -171,6 +172,8 @@ function normalizeStatus(v) {
   const s = String(v || '').trim().toLowerCase();
   if (!s) return '';
   if (s === 'sent') return 'sent';
+  if (s === 'logged') return 'logged';
+  if (s === 'whatsapp') return 'whatsapp';
   if (s === 'pending') return 'pending';
   if (s === 'scheduled') return 'scheduled';
   if (s === 'failed') return 'failed';
@@ -279,9 +282,14 @@ const getSmsLogs = async (req, res) => {
         where.push(`LOWER(TRIM(b.status)) = 'pending'`);
       } else if (status === 'scheduled') {
         where.push(`LOWER(TRIM(b.status)) = 'scheduled'`);
+      } else if (status === 'logged') {
+        where.push(`LOWER(TRIM(b.status)) IN ('logged', 'note')`);
+      } else if (status === 'whatsapp') {
+        where.push(
+          `(LOWER(TRIM(b.status)) = 'whatsapp' OR COALESCE(LOWER(b.package_type), '') = 'whatsapp')`,
+        );
       } else if (status === 'sent') {
-        // Only explicitly sent rows (we normalize legacy rows via migration).
-        where.push(`LOWER(TRIM(b.status)) = 'sent'`);
+        where.push(BILLABLE_SENT_WHERE.replace(/\bsl\./g, 'b.'));
       }
     }
 
@@ -329,6 +337,10 @@ const getSmsLogs = async (req, res) => {
          b.message,
          b.status,
          b.package_type,
+         b.http_status,
+         b.msisdn,
+         b.provider,
+         b.delivered_at,
          b.ts AS created_at
        FROM base b
        LEFT JOIN users su ON su.id = b.student_id
@@ -371,10 +383,14 @@ const getSmsLogs = async (req, res) => {
       const inferredType = otpLike ? 'otp' : billingLike ? 'payment' : examLike ? 'system' : 'system';
 
       const stRaw = String(r.status || '').trim();
-      const isFailed = stRaw === 'failed' || stRaw.toLowerCase().startsWith('failed:');
-      const isPending = stRaw.toLowerCase() === 'pending';
-      const isScheduled = stRaw.toLowerCase() === 'scheduled';
-      const reason = isFailed && stRaw.includes(':') ? stRaw.split(':').slice(1).join(':').trim() : null;
+      const displayStatus = mapSmsLogDisplayStatus(r);
+      const isFailed = displayStatus === 'failed';
+      const isPending = displayStatus === 'pending';
+      const isScheduled = displayStatus === 'scheduled';
+      const reason =
+        isFailed && (stRaw.includes(':') || stRaw.toLowerCase().startsWith('failed'))
+          ? stRaw.split(':').slice(1).join(':').trim() || null
+          : null;
 
       const pkgRaw = r.package_type ? String(r.package_type) : '';
       const pkg =
@@ -387,7 +403,7 @@ const getSmsLogs = async (req, res) => {
         type: normalizeType(r.type) || inferredType,
         phone: r.phone,
         message: r.message,
-        status: isFailed ? 'failed' : isPending ? 'pending' : isScheduled ? 'scheduled' : 'sent',
+        status: displayStatus,
         reason,
         package_type: pkg,
         created_at: r.created_at,

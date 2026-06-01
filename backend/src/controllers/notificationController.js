@@ -1,7 +1,7 @@
 const db = require('../utils/db');
 const { recomputeInstructorUsage } = require('../services/resourceUsageService');
-const { sendRawSms } = require('../services/smsService');
-const { ensureSmsPeriodUpToDate, logBillingEvent, resolveEntitlements, bumpUsageCountersTx } = require('../services/billingEntitlements');
+const { sendSms } = require('../services/smsService');
+const { ensureSmsPeriodUpToDate, logBillingEvent, resolveEntitlements } = require('../services/billingEntitlements');
 const {
   smsUsageLine,
   storageUsageLine,
@@ -423,73 +423,47 @@ const quickInstructorNotification = async (req, res) => {
     // Ensure monthly period source-of-truth is up to date (request-time, not cron).
     await ensureSmsPeriodUpToDate(db, instructorId).catch(() => {});
 
-    const count = studentsWithPhones.length;
-
     const ent = await resolveEntitlements(instructorId);
-    const smsLimit = ent?.limits?.sms_monthly; // null => unlimited
-    const smsUsed = Number(ent?.usage?.sms_monthly || 0) || 0;
-    if (smsLimit != null && smsUsed + count > Number(smsLimit)) {
-      void logBillingEvent(db, {
-        user_id: instructorId,
-        event: 'limit_reached_sms',
-        context: { used: smsUsed, add: count, limit: smsLimit, at: 'notifications.quick' },
-      });
-      return res.status(429).json({
-        success: false,
-        code: 'SMS_LIMIT',
-        message: 'SMS limitinə çatdınız — davam etmək üçün daha geniş paket seçin.',
-      });
-    }
+    const smsLimit = ent?.limits?.sms_monthly;
+    let smsUsed = Number(ent?.usage?.sms_monthly || 0) || 0;
 
-    // Reserve quota atomically in usage_counters to avoid concurrent overshoot.
-    const reserved = await db.transaction(async (client) => {
-      await ensureSmsPeriodUpToDate(client, instructorId);
-      await client.query(`INSERT INTO usage_counters (user_id) VALUES ($1) ON CONFLICT (user_id) DO NOTHING`, [
-        instructorId,
-      ]);
-      if (smsLimit == null) {
-        await bumpUsageCountersTx(client, instructorId, { sms_used_monthly: count });
-        return true;
-      }
-      const { rows: r } = await client.query(
-        `UPDATE usage_counters
-         SET sms_used_monthly = sms_used_monthly + $2,
-             updated_at = NOW()
-         WHERE user_id = $1
-           AND sms_used_monthly + $2 <= $3
-         RETURNING sms_used_monthly`,
-        [instructorId, count, Number(smsLimit)]
-      );
-      return r.length > 0;
-    });
+    let sent = 0;
+    let failed = 0;
+    const errors = [];
 
-    if (!reserved) {
-      void logBillingEvent(db, {
-        user_id: instructorId,
-        event: 'limit_reached_sms',
-        context: { used: smsUsed, add: count, limit: smsLimit, at: 'notifications.quick.reserve' },
-      });
-      return res.status(429).json({
-        success: false,
-        code: 'SMS_LIMIT',
-        message: 'SMS limitinə çatdınız — davam etmək üçün daha geniş paket seçin.',
-      });
-    }
-
-    // Send SMS and write logs. sms_used is already reserved above.
     for (const s of studentsWithPhones) {
-      const raw = await sendRawSms(s.phone, msg);
-      const statusRaw = raw?.json?.response?.status ?? raw?.json?.status ?? null;
-      const status = statusRaw != null ? String(statusRaw) : raw?.ok ? 'sent' : 'failed';
-
-      await db.query(
-        `INSERT INTO sms_logs (instructor_id, phone, message, status)
-         VALUES ($1, $2, $3, $4)`,
-        [instructorId, s.phone, msg, status || (raw?.ok ? 'sent' : 'failed')],
-      );
+      if (smsLimit != null && smsUsed >= Number(smsLimit)) {
+        errors.push({ phone: s.phone, error: 'SMS limiti dolub' });
+        failed += 1;
+        continue;
+      }
+      const r = await sendSms({ instructorId, phone: s.phone, message: msg });
+      if (r.success) {
+        sent += 1;
+        smsUsed += 1;
+      } else {
+        failed += 1;
+        errors.push({ phone: s.phone, error: r.error || 'göndərilmədi' });
+      }
     }
 
-    return res.json({ success: true, method: 'sms', sent: count });
+    if (!sent) {
+      return res.status(502).json({
+        success: false,
+        message: 'Heç bir tələbəyə SMS göndərilmədi.',
+        sent: 0,
+        failed,
+        errors,
+      });
+    }
+
+    return res.json({
+      success: true,
+      method: 'sms',
+      sent,
+      failed,
+      ...(errors.length ? { errors } : {}),
+    });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

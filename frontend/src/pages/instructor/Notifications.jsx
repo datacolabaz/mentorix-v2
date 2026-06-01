@@ -255,11 +255,13 @@ export default function InstructorNotifications() {
         }))
         const rankStatus = (s) => {
           const st = String(s || '').toLowerCase()
-          if (st === 'failed') return 3
-          if (st === 'sent') return 2
+          if (st === 'failed') return 4
+          if (st === 'sent') return 3
+          if (st === 'whatsapp') return 2
           if (st === 'pending') return 1
           if (st === 'scheduled') return 0
-          return 2
+          if (st === 'logged') return -1
+          return 0
         }
 
         // Build phone -> student mapping (enrollment + enriched names).
@@ -440,6 +442,7 @@ export default function InstructorNotifications() {
 
   const smsRows = useMemo(() => {
     if (smsStatusFilter === 'sent') return smsTimeRows.filter((x) => x.status === 'sent')
+    if (smsStatusFilter === 'logged') return smsTimeRows.filter((x) => x.status === 'logged')
     if (smsStatusFilter === 'failed') return smsTimeRows.filter((x) => x.status === 'failed')
     if (smsStatusFilter === 'scheduled') return smsTimeRows.filter((x) => x.status === 'scheduled')
     return smsTimeRows
@@ -478,11 +481,13 @@ export default function InstructorNotifications() {
   const smsStatusTabs = useMemo(() => {
     const all = smsTimeRows.length
     const sent = smsTimeRows.filter((x) => x.status === 'sent').length
+    const logged = smsTimeRows.filter((x) => x.status === 'logged').length
     const failed = smsTimeRows.filter((x) => x.status === 'failed').length
     const scheduled = smsTimeRows.filter((x) => x.status === 'scheduled').length
     return [
       { id: 'all', label: 'All (total history)', count: all },
       { id: 'sent', label: 'Göndərildi', count: sent },
+      { id: 'logged', label: 'Yalnız qeyd', count: logged },
       { id: 'failed', label: 'Uğursuz', count: failed },
       { id: 'scheduled', label: 'Planlaşdırılıb', count: scheduled },
     ]
@@ -501,9 +506,23 @@ export default function InstructorNotifications() {
 
   const detailsStatus = detailsItem?.status
   const detailsBadge =
-    detailsStatus === 'failed' ? 'danger' : detailsStatus === 'scheduled' ? 'due' : 'paid'
+    detailsStatus === 'failed'
+      ? 'danger'
+      : detailsStatus === 'scheduled' || detailsStatus === 'logged'
+        ? 'due'
+        : detailsStatus === 'whatsapp'
+          ? 'due'
+          : 'paid'
   const detailsLabel =
-    detailsStatus === 'failed' ? 'Alınmadı' : detailsStatus === 'scheduled' ? 'Planlaşdırılıb' : 'Göndərildi'
+    detailsStatus === 'failed'
+      ? 'Alınmadı'
+      : detailsStatus === 'scheduled'
+        ? 'Planlaşdırılıb'
+        : detailsStatus === 'logged'
+          ? 'Yalnız qeyd (SMS göndərilməyib)'
+          : detailsStatus === 'whatsapp'
+            ? 'WhatsApp'
+            : 'Göndərildi'
 
   return (
     <div className="p-4 sm:p-6 min-w-0 flex flex-col gap-6">
@@ -670,7 +689,17 @@ export default function InstructorNotifications() {
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="font-semibold text-token-textMain">
-                      {String(detailsItem.type || 'payment_reminder') === 'otp' ? 'PIN kod göndərildi' : 'Ödəniş xatırlatma göndərildi'}
+                      {detailsStatus === 'logged'
+                        ? /ödəniş təsdiqləndi|odenis tesdiqlendi/i.test(String(detailsItem.message || ''))
+                          ? 'Ödəniş qeydi (SMS göndərilməyib)'
+                          : 'Sistem qeydi (SMS göndərilməyib)'
+                        : detailsStatus === 'whatsapp'
+                          ? 'WhatsApp mesajı'
+                          : String(detailsItem.type || 'payment_reminder') === 'otp'
+                            ? 'PIN kod göndərildi'
+                            : detailsStatus === 'sent'
+                              ? 'SMS göndərildi'
+                              : 'Ödəniş xatırlatma'}
                     </p>
                     <p className="text-xs text-token-textMuted mt-1">
                       {new Date(detailsItem.createdAt).toLocaleString('az-AZ')}

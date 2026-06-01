@@ -12,6 +12,7 @@ const {
   fetchPendingTopups,
   pickLimitCta,
 } = require('./billingAlertHelpers');
+const { countBillableSmsForPeriod } = require('../utils/smsBillableLog');
 
 const TZ = 'Asia/Baku';
 /** Aşağı paketə keçid: cari abunəlik dövrü ən azı 30 gün aktiv olmalıdır */
@@ -116,6 +117,27 @@ async function ensureSmsPeriodUpToDate(dbConn, userId) {
     [userId, ym]
   );
   return rows[0] || usage;
+}
+
+/** sms_logs (həqiqi göndərişlər) ilə usage_counters.sms_used_monthly sinxronlaşdırır. */
+async function reconcileSmsUsageMonthly(dbConn, userId) {
+  const usage = await ensureSmsPeriodUpToDate(dbConn, userId);
+  const ym = String(usage.sms_period_ym || (await currentYmBaku(dbConn)));
+  const fromLogs = await countBillableSmsForPeriod(dbConn, userId, ym);
+  const counter = Math.max(0, Number(usage.sms_used_monthly) || 0);
+  const reconciled = Math.max(counter, fromLogs);
+  if (reconciled !== counter) {
+    const { rows } = await dbConn.query(
+      `UPDATE usage_counters
+       SET sms_used_monthly = $2,
+           updated_at = NOW()
+       WHERE user_id = $1
+       RETURNING sms_used_monthly`,
+      [userId, reconciled],
+    );
+    return { ...usage, sms_used_monthly: Number(rows[0]?.sms_used_monthly ?? reconciled) };
+  }
+  return usage;
 }
 
 function remaining(limit, used) {
@@ -369,7 +391,8 @@ async function resolveEntitlements(userId) {
 
   const phone_verified = Boolean(basics.phone_verified);
 
-  const usage = await ensureSmsPeriodUpToDate(db, userId);
+  let usage = await ensureSmsPeriodUpToDate(db, userId);
+  usage = await reconcileSmsUsageMonthly(db, userId);
   await ensureSubscriptionRow(db, userId);
   await reconcileSubscriptionPlanFromLastPaidPlan(db, userId);
   const sub2 = await getCurrentPlan(db, userId);
@@ -629,6 +652,7 @@ module.exports = {
   resolveEntitlements,
   getCurrentPlan,
   ensureSmsPeriodUpToDate,
+  reconcileSmsUsageMonthly,
   assertPlanFitsUsage,
   assertDowngradeAllowed,
   bumpUsageCountersTx,

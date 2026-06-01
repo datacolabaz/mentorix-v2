@@ -1,6 +1,6 @@
 const db = require('../utils/db');
 const { computeMonthlyCycleProgress, getTodayBakuYmd, toYmd } = require('../services/subscriptionBilling');
-const { sendRawSms } = require('../services/smsService');
+const { sendSms } = require('../services/smsService');
 
 async function ensureNotificationOnce({ user_id, type, title, body }) {
   const { rows } = await db.query(
@@ -42,27 +42,25 @@ async function ensureSmsOnce({ instructor_id, phone, message, type }) {
   );
   if (rows.length) return false;
 
-  const raw = await sendRawSms(p, msg);
-  // Persist stable lifecycle status (provider may return inconsistent strings).
-  const logStatus = raw?.ok ? 'sent' : `failed:${String(raw?.json?.response?.status ?? raw?.json?.status ?? 'unknown')}`;
-  const deliveredAt = raw?.ok ? new Date() : null;
+  const result = await sendSms({
+    instructorId: instructor_id || null,
+    phone: p,
+    message: msg,
+  });
 
-  try {
-    await db.query(
-      `INSERT INTO sms_logs (instructor_id, phone, message, status, type, created_at, delivered_at)
-       VALUES ($1, $2, $3, $4, $5, NOW(), $6)`,
-      [instructor_id || null, p, msg, logStatus, kind, deliveredAt]
-    );
-  } catch {
-    // Backward compatible if sms_logs.type doesn't exist yet.
-    await db.query(
-      `INSERT INTO sms_logs (instructor_id, phone, message, status)
-       VALUES ($1, $2, $3, $4)`,
-      [instructor_id || null, p, msg, logStatus]
-    );
+  if (result.success) {
+    try {
+      await db.query(
+        `UPDATE sms_logs SET type = $3 WHERE instructor_id = $1 AND phone = $2 AND message = $4
+         AND COALESCE(created_at, sent_at) > NOW() - INTERVAL '2 minutes'`,
+        [instructor_id || null, p, kind, msg],
+      );
+    } catch {
+      // type column optional
+    }
   }
 
-  return raw?.ok === true;
+  return result.success === true;
 }
 
 async function runMonthlyTwoDayNotifications() {

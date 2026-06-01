@@ -2124,26 +2124,6 @@ const confirmDuePayment = async (req, res) => {
 
     const [dd, mm, yyyy] = due_ymd.split('-');
     const dueLabel = `${dd}.${mm}.${yyyy}`;
-    const smsBody = `Mentorix: ${studentName} — ${dueLabel} tarixinə aylıq ödəniş təsdiqləndi (${amt} ₼).`;
-    const phone = en[0].phone ? String(en[0].phone).trim() : null;
-    try {
-      await db.query(
-        `INSERT INTO sms_logs (instructor_id, student_id, phone, type, message, status, package_type, sent_at)
-         VALUES ($1,$2,$3,'payment',$4,'sent','monthly',NOW())`,
-        [req.user.id, en[0].student_id, phone, smsBody]
-      );
-    } catch (smsErr) {
-      try {
-        await db.query(
-          `INSERT INTO sms_logs (instructor_id, phone, message, status)
-           VALUES ($1,$2,$3,'sent')`,
-          [req.user.id, phone, smsBody]
-        );
-      } catch {
-        // sms_logs optional — payment still counts
-      }
-    }
-
     await ensureNotificationOnce({
       user_id: req.user.id,
       type: 'payment_confirmed',

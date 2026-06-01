@@ -2,6 +2,8 @@ import StatusBadge from '../common/StatusBadge'
 
 const STATUS_MAP = {
   sent: { label: 'Göndərildi', badge: 'paid' },
+  logged: { label: 'Yalnız qeyd', badge: 'due' },
+  whatsapp: { label: 'WhatsApp', badge: 'due' },
   failed: { label: 'Alınmadı', badge: 'danger' },
   scheduled: { label: 'Planlaşdırılıb', badge: 'due' },
 }
@@ -24,9 +26,27 @@ function fmtDateOnly(iso) {
   return d.toLocaleDateString('az-AZ', { year: 'numeric', month: '2-digit', day: '2-digit' })
 }
 
+function resolveCardPresentation(item) {
+  const status = String(item?.status || '').toLowerCase()
+  if (status === 'logged') {
+    if (/ödəniş təsdiqləndi|odenis tesdiqlendi/i.test(String(item?.message || ''))) {
+      return { icon: '📝', title: 'Ödəniş qeydi (SMS göndərilməyib)', tone: 'note' }
+    }
+    return { icon: '📝', title: 'Sistem qeydi (SMS göndərilməyib)', tone: 'note' }
+  }
+  if (status === 'whatsapp') {
+    return { icon: '💬', title: 'WhatsApp mesajı', tone: 'whatsapp' }
+  }
+  const tp = TYPE_MAP[item?.type] || TYPE_MAP.payment
+  if (status === 'sent' && (item?.type === 'system' || /imtahan/i.test(String(item?.message || '')))) {
+    return { icon: '📱', title: 'SMS göndərildi', tone: 'system' }
+  }
+  return tp
+}
+
 export default function NotificationCard({ item, onDetails }) {
-  const st = STATUS_MAP[item.status] || STATUS_MAP.sent
-  const tp = TYPE_MAP[item.type] || TYPE_MAP.payment
+  const st = STATUS_MAP[item.status] || STATUS_MAP.logged
+  const tp = resolveCardPresentation(item)
   const pkgRaw = item.package_type ? String(item.package_type) : ''
   const pkg = pkgRaw === '8' ? '8 dərs' : pkgRaw === '12' ? '12 dərs' : null
   const phoneCount = Array.isArray(item.phones) ? item.phones.length : 0
