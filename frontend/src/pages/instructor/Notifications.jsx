@@ -812,7 +812,7 @@ export default function InstructorNotifications() {
                   />
                   <DetailRow
                     label="SMS hissə"
-                    value={String(detailsItem.sms_parts ?? smsPartCount(detailsItem.message) || '—')}
+                    value={String(detailsItem.sms_parts ?? smsPartCount(detailsItem.message) ?? '—')}
                   />
                   {detailsStatus === 'sent' || detailsStatus === 'failed' ? (
                     <>
