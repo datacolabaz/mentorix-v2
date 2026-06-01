@@ -92,22 +92,52 @@ function interpretSmxmlSuccess(raw) {
   return { success: true, reason: null };
 }
 
-async function insertSmsLog({ instructorId, phone, message, status, httpStatus, msisdn, provider, deliveredAt }) {
+async function insertSmsLog({
+  instructorId,
+  studentId,
+  phone,
+  message,
+  status,
+  httpStatus,
+  msisdn,
+  provider,
+  deliveredAt,
+  logType,
+}) {
   const safeStatus = String(status || 'unknown').slice(0, 20);
+  const typ = logType ? String(logType).slice(0, 40) : null;
   try {
     await db.query(
-      `INSERT INTO sms_logs (instructor_id, phone, message, status, http_status, msisdn, provider, delivered_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-      [instructorId, phone, message, status, httpStatus ?? null, msisdn ?? null, provider ?? null, deliveredAt ?? null]
+      `INSERT INTO sms_logs (instructor_id, student_id, phone, message, status, type, http_status, msisdn, provider, delivered_at, sent_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, CASE WHEN $5 = 'sent' THEN NOW() ELSE NULL END)`,
+      [
+        instructorId,
+        studentId ?? null,
+        phone,
+        message,
+        status,
+        typ,
+        httpStatus ?? null,
+        msisdn ?? null,
+        provider ?? null,
+        deliveredAt ?? null,
+      ],
     );
   } catch {
-    // Backward compatible if migration 036 hasn't been applied yet.
-    await db.query('INSERT INTO sms_logs (instructor_id, phone, message, status) VALUES ($1, $2, $3, $4)', [
-      instructorId,
-      phone,
-      message,
-      safeStatus,
-    ]);
+    try {
+      await db.query(
+        `INSERT INTO sms_logs (instructor_id, student_id, phone, message, status, type)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [instructorId, studentId ?? null, phone, message, safeStatus, typ],
+      );
+    } catch {
+      await db.query('INSERT INTO sms_logs (instructor_id, phone, message, status) VALUES ($1, $2, $3, $4)', [
+        instructorId,
+        phone,
+        message,
+        safeStatus,
+      ]);
+    }
   }
 }
 
@@ -148,7 +178,7 @@ const sendRaw = async (phone, message) => {
   return { ok: res.ok, httpStatus: res.status, json, error: null, msisdn };
 };
 
-const sendSms = async ({ instructorId, phone, message }) => {
+const sendSms = async ({ instructorId, phone, message, logType, studentId }) => {
   try {
     // Enforce monthly reset source-of-truth on every SMS attempt (cron not required).
     if (instructorId) {
@@ -164,6 +194,7 @@ const sendSms = async ({ instructorId, phone, message }) => {
 
     await insertSmsLog({
       instructorId,
+      studentId,
       phone,
       message,
       status: logStatus,
@@ -171,6 +202,7 @@ const sendSms = async ({ instructorId, phone, message }) => {
       msisdn: raw?.msisdn,
       provider: raw?.json ?? null,
       deliveredAt,
+      logType,
     });
 
     if (interpreted.success && instructorId) {

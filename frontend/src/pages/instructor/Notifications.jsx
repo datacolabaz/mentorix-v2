@@ -764,10 +764,22 @@ export default function InstructorNotifications() {
                   <StatusBadge variant={detailsBadge}>{detailsLabel}</StatusBadge>
                 </div>
 
-                {detailsStatus === 'logged' ? (
+                {detailsItem.source_detail || detailsStatus === 'logged' ? (
                   <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 p-3 text-xs text-token-textMain leading-relaxed">
-                    Bu qeyd SMS provayderinə göndərilməyib və paket limitinizdən çıxılmır. Köhnə jurnal və ya daxili
-                    bildiriş ola bilər.
+                    {detailsItem.source_detail ||
+                      'Bu qeyd SMS provayderinə göndərilməyib və paket limitinizdən çıxılmır.'}
+                    {detailsItem.initiated_by === 'system' ? (
+                      <span className="block mt-1 text-token-textMuted">
+                        Müəllim «Bildirişlər»dən əl ilə göndərməyib — sistem avtomatik qeyd edib.
+                      </span>
+                    ) : null}
+                  </div>
+                ) : null}
+
+                {detailsItem.source === 'exam_placed' && detailsStatus === 'sent' ? (
+                  <div className="rounded-xl border border-sky-500/25 bg-sky-500/10 p-3 text-xs text-token-textMain leading-relaxed">
+                    Bu SMS imtahan yaradılanda və ya tələbə imtahana təyin ediləndə avtomatik göndərilib. İmtahan silinsə
+                    belə, tarixçədə qala bilər.
                   </div>
                 ) : null}
 
@@ -786,6 +798,7 @@ export default function InstructorNotifications() {
                 ) : null}
 
                 <dl className="rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceMain/40 px-3 py-1">
+                  <DetailRow label="Mənbə" value={detailsItem.source_title || '—'} />
                   <DetailRow label="Status" value={detailsLabel} />
                   <DetailRow label="Göndərilmə vaxtı" value={formatSmsDateTimeLong(detailsItem.createdAt)} />
                   <DetailRow

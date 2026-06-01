@@ -1,7 +1,7 @@
 const db = require('../utils/db');
 const { computeMonthlyCycleProgress, getTodayBakuYmd, toYmd } = require('../services/subscriptionBilling');
 const { sendSms } = require('../services/smsService');
-const { mapSmsLogDisplayStatus, BILLABLE_SENT_WHERE } = require('../utils/smsBillableLog');
+const { mapSmsLogDisplayStatus, inferSmsLogSource, BILLABLE_SENT_WHERE } = require('../utils/smsBillableLog');
 
 const BILLING_MESSAGE =
   'Hörmətli tələbə, aylıq abunəliyinizin bitməsinə 2 gün qalıb. Davam etmək üçün ödənişi yeniləməyiniz xahiş olunur.';
@@ -164,6 +164,7 @@ function normalizeType(v) {
   const t = String(v || '').trim().toLowerCase();
   if (t === 'otp') return 'otp';
   if (t === 'payment' || t === 'payment_reminder') return 'payment';
+  if (t === 'exam_placed' || t === 'exam_result' || t === 'exam_reminder') return t;
   if (t === 'system') return 'system';
   return '';
 }
@@ -372,15 +373,23 @@ const getSmsLogs = async (req, res) => {
         /\bOTP\b/i.test(msg) ||
         /\bPIN\b/i.test(msg) ||
         /OTP\s*yox/i.test(msg);
-      const examLike =
-        /imtahan/i.test(msg) ||
-        /\bbal\b/i.test(msg) ||
-        /netice/i.test(msg) ||
-        /nəticə/i.test(msg);
+      const examPlacedLike = /imtahanı sizin üçün planlaşdırılıb|planlaşdırılıb.*imtahan/i.test(msg);
+      const examResultLike = /imtahanında.*(bal toplay|% toplay)/i.test(msg);
+      const examReminderLike = /imtahanı.*başlayacaq/i.test(msg);
       // NOTE: Avoid `\b` word boundaries for Azerbaijani letters (e.g. "Ödəniş"),
       // because JS `\b` is ASCII-word based and would fail to match.
       const billingLike = /abunəliyinizin bitməsinə 2 gün qalıb/i.test(msg) || /ödəniş|odenis/i.test(msg);
-      const inferredType = otpLike ? 'otp' : billingLike ? 'payment' : examLike ? 'system' : 'system';
+      const inferredType = otpLike
+        ? 'otp'
+        : examPlacedLike
+          ? 'exam_placed'
+          : examResultLike
+            ? 'exam_result'
+            : examReminderLike
+              ? 'exam_reminder'
+              : billingLike
+                ? 'payment'
+                : 'system';
 
       const stRaw = String(r.status || '').trim();
       const displayStatus = mapSmsLogDisplayStatus(r);
@@ -410,11 +419,14 @@ const getSmsLogs = async (req, res) => {
         if (ctrl != null && String(ctrl).trim()) providerMessageId = String(ctrl).trim();
       }
 
+      const typeNorm = normalizeType(r.type) || inferredType;
+      const sourceMeta = inferSmsLogSource({ ...r, type: typeNorm, status: displayStatus });
+
       return {
         id: r.id,
         student_id: r.student_id || null,
         student_name: r.student_name || null,
-        type: normalizeType(r.type) || inferredType,
+        type: typeNorm,
         phone: r.phone,
         message: r.message,
         status: displayStatus,
@@ -428,6 +440,10 @@ const getSmsLogs = async (req, res) => {
         sms_parts: smsParts,
         delivered_at: r.delivered_at ?? null,
         counts_toward_quota: displayStatus === 'sent',
+        source: sourceMeta.source,
+        source_title: sourceMeta.title,
+        source_detail: sourceMeta.detail,
+        initiated_by: sourceMeta.initiated_by,
         created_at: r.created_at,
         createdAt: r.created_at,
       };

@@ -16,7 +16,20 @@ const TYPE_MAP = {
 
 function resolveCardPresentation(item) {
   const status = String(item?.status || '').toLowerCase()
+  const source = String(item?.source || '').toLowerCase()
+  const sourceTitle = item?.source_title ? String(item.source_title) : null
+  const sourceDetail = item?.source_detail ? String(item.source_detail) : null
+  const isExamAuto = source === 'exam_placed' || source === 'exam_result' || source === 'exam_reminder'
+
   if (status === 'logged') {
+    if (isExamAuto || source === 'exam_result') {
+      return {
+        icon: '📝',
+        title: sourceTitle || 'Avtomatik imtahan qeydi',
+        subtitle: sourceDetail || 'SMS göndərilməyib · müəllim əl ilə göndərməyib',
+        tone: 'note',
+      }
+    }
     if (/ödəniş təsdiqləndi|odenis tesdiqlendi/i.test(String(item?.message || ''))) {
       return {
         icon: '📝',
@@ -25,20 +38,27 @@ function resolveCardPresentation(item) {
         tone: 'note',
       }
     }
-    if (/imtahan|bal|nəticə|netice/i.test(String(item?.message || ''))) {
-      return {
-        icon: '📝',
-        title: 'Köhnə sistem qeydi',
-        subtitle: 'SMS göndərilməyib · imtahan/jurnal qeydi',
-        tone: 'note',
-      }
-    }
     return { icon: '📝', title: 'Sistem qeydi', subtitle: 'SMS göndərilməyib · limitdən çıxılmır', tone: 'note' }
   }
   if (status === 'whatsapp') {
-    return { icon: '💬', title: 'WhatsApp mesajı', subtitle: 'SMS limitindən çıxılmır', tone: 'whatsapp' }
+    return {
+      icon: '💬',
+      title: sourceTitle || 'WhatsApp mesajı',
+      subtitle: sourceDetail || (isExamAuto ? 'İmtahan bildirişi · SMS limitindən çıxılmır' : 'SMS limitindən çıxılmır'),
+      tone: 'whatsapp',
+    }
   }
   const tp = TYPE_MAP[item?.type] || TYPE_MAP.payment
+  if (status === 'sent' && isExamAuto) {
+    return {
+      icon: '🤖',
+      title: sourceTitle || 'Avtomatik imtahan SMS-i',
+      subtitle:
+        sourceDetail ||
+        'İmtahan yaradılanda sistem göndərib — Bildirişlər səhifəsindən əl ilə deyil.',
+      tone: 'exam_auto',
+    }
+  }
   if (status === 'sent') {
     return {
       icon: '📱',

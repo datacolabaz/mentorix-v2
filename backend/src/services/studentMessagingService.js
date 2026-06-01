@@ -78,7 +78,7 @@ async function sendStudentWhatsAppOrSms({
     };
   }
 
-  const sms = await sendSms({ instructorId, phone, message });
+  const sms = await sendSms({ instructorId, phone, message, logType, studentId });
 
   return {
     ...sms,

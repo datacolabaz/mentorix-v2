@@ -80,6 +80,42 @@ const BILLABLE_SENT_WHERE = `
   )
 `;
 
+function inferSmsLogSource(row) {
+  const typ = String(row?.type || '').trim().toLowerCase();
+  const msg = String(row?.message || '');
+  if (typ === 'exam_placed' || /imtahanı sizin üçün planlaşdırılıb|planlaşdırılıb/i.test(msg)) {
+    return {
+      source: 'exam_placed',
+      title: 'Avtomatik imtahan bildirişi',
+      detail: 'İmtahan yaradılanda və ya tələbə təyin ediləndə sistem göndərib — Bildirişlər səhifəsindən deyil.',
+      initiated_by: 'system',
+    };
+  }
+  if (typ === 'exam_result' || /imtahanında.*bal toplay|imtahanında.*% toplay/i.test(msg)) {
+    return {
+      source: 'exam_result',
+      title: 'Avtomatik nəticə bildirişi',
+      detail: 'Tələbə imtahanı təqdim edəndə sistem qeydə alıb (SMS getməyibsə yalnız jurnal qeydidir).',
+      initiated_by: 'system',
+    };
+  }
+  if (typ === 'exam_reminder' || /imtahanı.*başlayacaq/i.test(msg)) {
+    return {
+      source: 'exam_reminder',
+      title: 'Avtomatik imtahan xatırlatması',
+      detail: 'İmtahan başlamazdan əvvəl sistem göndərib.',
+      initiated_by: 'system',
+    };
+  }
+  if (typ === 'otp' || /\bkodunuz\b/i.test(msg) || /\bOTP\b/i.test(msg)) {
+    return { source: 'otp', title: 'PIN / OTP', detail: 'Giriş kodu SMS-i', initiated_by: 'system' };
+  }
+  if (typ === 'payment' || typ === 'payment_reminder' || /ödəniş|odenis/i.test(msg)) {
+    return { source: 'payment', title: 'Ödəniş xatırlatması', detail: null, initiated_by: 'system' };
+  }
+  return { source: 'manual', title: 'Əl ilə / ümumi SMS', detail: null, initiated_by: 'instructor' };
+}
+
 function mapSmsLogDisplayStatus(row) {
   const stRaw = String(row?.status || '').trim();
   const stLow = stRaw.toLowerCase();
@@ -98,6 +134,7 @@ module.exports = {
   isBillableSmsLogRow,
   countBillableSmsForPeriod,
   mapSmsLogDisplayStatus,
+  inferSmsLogSource,
   BILLABLE_TYPE_BLOCKLIST,
   BILLABLE_SENT_WHERE,
 };
