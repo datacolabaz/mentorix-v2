@@ -1,5 +1,12 @@
+const bcrypt = require('bcrypt');
 const db = require('../utils/db');
 const { normalizePlanSlug } = require('../config/plans');
+
+function normalizeAdminEmail(email) {
+  const e = String(email || '').trim().toLowerCase();
+  if (!e || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) return null;
+  return e;
+}
 const {
   ACTIVE_ENROLLMENT_JOIN_INLINE,
   ACTIVE_ENROLLMENT_WHERE,
@@ -11,7 +18,9 @@ const { SMS_LOGS_MONTHLY_COUNT_SUBQUERY } = require('../sql/adminSmsUsage');
 const getInstructors = async (req, res) => {
   try {
     const { rows } = await db.query(
-      `SELECT u.id, u.full_name, u.email, u.phone, u.is_active, u.created_at,
+      `SELECT u.id, u.full_name, u.email, u.phone, u.is_active, u.is_verified, u.created_at,
+              (u.password_hash IS NOT NULL) AS has_password,
+              (COALESCE(TRIM(u.google_sub::text), '') <> '') AS has_google,
               ip.subject, ip.billing_type,
               COALESCE(s.plan, 'basic') AS plan,
               GREATEST(
@@ -44,6 +53,97 @@ const getInstructors = async (req, res) => {
       sms_limit: r.sms_limit_monthly,
     }));
     res.json({ success: true, instructors });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/** Admin: müəllim email + şifrə təyin et (email boş hesablar üçün giriş bərpası). */
+const patchInstructorProfile = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { full_name, phone, subject, email, new_password } = req.body || {};
+
+    const { rows: u } = await db.query(
+      `SELECT id, role FROM users WHERE id = $1 AND role = 'instructor' LIMIT 1`,
+      [id],
+    );
+    if (!u[0]) return res.status(404).json({ success: false, message: 'Müəllim tapılmadı' });
+
+    if (full_name != null && String(full_name).trim()) {
+      await db.query('UPDATE users SET full_name = $1 WHERE id = $2', [String(full_name).trim(), id]);
+    }
+    if (phone !== undefined) {
+      const p = phone != null && String(phone).trim() ? String(phone).trim() : null;
+      await db.query('UPDATE users SET phone = $1 WHERE id = $2', [p, id]);
+    }
+    if (subject !== undefined) {
+      await db.query(
+        `INSERT INTO instructor_profiles (user_id, subject) VALUES ($1, $2)
+         ON CONFLICT (user_id) DO UPDATE SET subject = EXCLUDED.subject`,
+        [id, subject != null ? String(subject).trim() : null],
+      );
+    }
+
+    if (email !== undefined) {
+      const raw = String(email || '').trim();
+      if (!raw) {
+        await db.query(
+          `UPDATE users SET email = NULL WHERE id = $1`,
+          [id],
+        );
+      } else {
+        const emailCanon = normalizeAdminEmail(raw);
+        if (!emailCanon) {
+          return res.status(400).json({ success: false, message: 'Email formatı düzgün deyil' });
+        }
+        const { rows: clash } = await db.query(
+          `SELECT id FROM users
+           WHERE is_active = TRUE
+             AND id <> $1
+             AND email IS NOT NULL
+             AND LOWER(TRIM(email)) = $2
+           LIMIT 1`,
+          [id, emailCanon],
+        );
+        if (clash[0]) {
+          return res.status(409).json({ success: false, message: 'Bu email başqa hesabda istifadə olunur' });
+        }
+        await db.query(
+          `UPDATE users
+           SET email = $2,
+               is_verified = TRUE,
+               account_status = CASE
+                 WHEN account_status IN ('pending_google', 'pending') THEN 'active'
+                 ELSE COALESCE(account_status, 'active')
+               END
+           WHERE id = $1`,
+          [id, emailCanon],
+        );
+      }
+    }
+
+    if (new_password != null && String(new_password).trim() !== '') {
+      const pass = String(new_password);
+      if (pass.length < 8) {
+        return res.status(400).json({ success: false, message: 'Şifrə ən azı 8 simvol olmalıdır' });
+      }
+      const hash = await bcrypt.hash(pass, 12);
+      await db.query('UPDATE users SET password_hash = $1 WHERE id = $2', [hash, id]);
+    }
+
+    const { rows: out } = await db.query(
+      `SELECT u.id, u.full_name, u.email, u.phone, u.is_verified,
+              (u.password_hash IS NOT NULL) AS has_password,
+              (COALESCE(TRIM(u.google_sub::text), '') <> '') AS has_google,
+              ip.subject
+       FROM users u
+       LEFT JOIN instructor_profiles ip ON ip.user_id = u.id
+       WHERE u.id = $1`,
+      [id],
+    );
+
+    res.json({ success: true, instructor: out[0] || null });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -473,6 +573,7 @@ const toggleInstructor = async (req, res) => {
 
 module.exports = {
   getInstructors,
+  patchInstructorProfile,
   updateInstructorLimits,
   updateInstructorPlan,
   getDashboardStats,
