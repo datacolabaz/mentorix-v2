@@ -10,6 +10,8 @@ const {
   resendVerificationEmail,
   googleLogin,
   googleComplete,
+  requestPasswordReset,
+  resetPassword,
 } = require('../controllers/authController');
 const { authenticate, authorize } = require('../middleware/auth');
 const { attachEntitlements, enforceStudentsLimit } = require('../middleware/entitlements');
@@ -29,6 +31,8 @@ router.post(
 
 router.post('/signup', signup);
 router.post('/login/email', loginWithEmail);
+router.post('/password/forgot', requestPasswordReset);
+router.post('/password/reset', resetPassword);
 router.post('/resend-verification', resendVerificationEmail);
 router.post('/verify-email', verifyEmail);
 router.post('/onboarding/role', authenticate, selectOnboardingRole);

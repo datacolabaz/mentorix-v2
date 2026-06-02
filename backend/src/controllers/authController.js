@@ -15,6 +15,7 @@ const { guardEmailVerifiedBeforeToken } = require('../services/emailVerification
 const { getActiveRoles, grantUserRole, grantCourseRoleToUser } = require('../services/userRolesService');
 const { grantBasicTrialForInstructor } = require('../services/basicTrialIpService');
 const { clientIp } = require('../utils/clientIp');
+const { sendPasswordResetEmail } = require('../services/passwordResetEmailService');
 
 const PHONE_NORM = "regexp_replace(COALESCE(phone::text, ''), '[^0-9]', '', 'g')";
 const LOGIN_ROLES = new Set(['instructor', 'student', 'parent', 'course']);
@@ -27,6 +28,95 @@ function normalizeEmailInput(email) {
   if (!e || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) return null;
   return e;
 }
+
+const PASSWORD_RESET_TTL_MINUTES = Number(process.env.PASSWORD_RESET_TTL_MINUTES || 30);
+
+function generatePasswordResetToken() {
+  return require('crypto').randomBytes(24).toString('hex');
+}
+
+/** Email əsaslı parol bərpası: email göndər. (Privacy: email tapılmasa da success qaytarır.) */
+const requestPasswordReset = async (req, res) => {
+  try {
+    const emailCanon = normalizeEmailInput(req.body?.email);
+    if (!emailCanon) return res.status(400).json({ success: false, message: 'Düzgün email daxil edin' });
+
+    const { rows } = await db.query(
+      `SELECT id, email, is_active, password_hash
+       FROM users
+       WHERE is_active = TRUE
+         AND email IS NOT NULL
+         AND lower(trim(email)) = $1
+       LIMIT 1`,
+      [emailCanon],
+    );
+    const user = rows[0] || null;
+    // Always respond success to avoid email enumeration.
+    if (!user || !user.password_hash) {
+      return res.json({ success: true, message: 'Əgər bu email hesabınıza bağlıdırsa, bərpa linki göndərildi.' });
+    }
+
+    const token = generatePasswordResetToken();
+    const expiresAt = new Date(Date.now() + PASSWORD_RESET_TTL_MINUTES * 60 * 1000);
+
+    await db.query(
+      `INSERT INTO password_reset_tokens (user_id, token, expires_at)
+       VALUES ($1, $2, $3)`,
+      [user.id, token, expiresAt],
+    );
+
+    const mail = await sendPasswordResetEmail({ email: user.email, token });
+    if (!mail?.ok) {
+      // Still return 200, but with a hint for admins/devs.
+      return res.json({
+        success: true,
+        message: 'Əgər bu email hesabınıza bağlıdırsa, bərpa linki göndərildi.',
+        email_send_error: mail?.error || 'Email göndərilmədi',
+      });
+    }
+
+    return res.json({ success: true, message: 'Bərpa linki emailinizə göndərildi.' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/** Token ilə parol yenilə */
+const resetPassword = async (req, res) => {
+  try {
+    const token = String(req.body?.token || '').trim();
+    const newPassword = String(req.body?.new_password || '');
+    if (!token) return res.status(400).json({ success: false, message: 'Token tələb olunur' });
+    if (newPassword.length < 8) {
+      return res.status(400).json({ success: false, message: 'Şifrə ən azı 8 simvol olmalıdır' });
+    }
+
+    const { rows } = await db.query(
+      `SELECT prt.id, prt.user_id, prt.expires_at, prt.used_at
+       FROM password_reset_tokens prt
+       WHERE prt.token = $1
+       LIMIT 1`,
+      [token],
+    );
+    const row = rows[0] || null;
+    if (!row) return res.status(400).json({ success: false, message: 'Token tapılmadı' });
+    if (row.used_at) return res.status(400).json({ success: false, message: 'Bu link artıq istifadə olunub' });
+    const exp = row.expires_at ? new Date(row.expires_at).getTime() : 0;
+    if (!Number.isFinite(exp) || exp < Date.now()) {
+      return res.status(400).json({ success: false, message: 'Tokenin müddəti bitib' });
+    }
+
+    const hash = await bcrypt.hash(newPassword, 12);
+    await db.transaction(async (client) => {
+      await client.query('UPDATE users SET password_hash = $1 WHERE id = $2', [hash, row.user_id]);
+      await client.query('UPDATE password_reset_tokens SET used_at = NOW() WHERE id = $1', [row.id]);
+    });
+
+    return res.json({ success: true, message: 'Şifrə yeniləndi. İndi daxil ola bilərsiniz.' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
 
 async function logRisk(userId, req, context, riskScore = 10) {
   try {
@@ -1864,6 +1954,8 @@ module.exports = {
   forgotPinSms,
   sendOtp,
   verifyOtp,
+  requestPasswordReset,
+  resetPassword,
   register,
   verifyEmail,
   selectOnboardingRole,

@@ -61,6 +61,10 @@ const useAuthStore = create((set) => ({
 
   resendVerificationEmail: async (email) => api.post('/auth/resend-verification', { email }),
 
+  requestPasswordReset: async (email) => api.post('/auth/password/forgot', { email }),
+
+  resetPasswordWithToken: async ({ token, new_password }) => api.post('/auth/password/reset', { token, new_password }),
+
   setSession: (token, user) => {
     if (!token || !user) return
     localStorage.setItem('mx_token', token)

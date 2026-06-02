@@ -4,6 +4,7 @@ import useAuthStore from './hooks/useAuth'
 
 import Login from './pages/auth/Login'
 import VerifyEmail from './pages/auth/VerifyEmail'
+import ResetPassword from './pages/auth/ResetPassword'
 import RoleOnboarding from './pages/auth/RoleOnboarding'
 import InstructorMapSearch from './pages/public/InstructorMapSearch'
 import AdminLayout from './layouts/AdminLayout'
@@ -100,6 +101,7 @@ export default function App() {
       <Route path="/search" element={<InstructorMapSearch />} />
       <Route path="/login" element={user ? <Navigate to={user?.role ? `/${user.role}` : '/onboarding/role'} replace /> : <Login />} />
       <Route path="/verify-email" element={<VerifyEmail />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
       <Route
         path="/onboarding/role"
         element={

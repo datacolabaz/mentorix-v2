@@ -13,7 +13,7 @@ const inputClass =
  */
 export default function InstructorEmailAuth({ onSuccess }) {
   const toast = useToast()
-  const { signupWithEmail, verifyEmailCode, resendVerificationEmail, setSession } = useAuthStore()
+  const { signupWithEmail, verifyEmailCode, resendVerificationEmail, requestPasswordReset, setSession } = useAuthStore()
   const navigate = useNavigate()
 
   const [tab, setTab] = useState('signup') // signup | login
@@ -109,6 +109,23 @@ export default function InstructorEmailAuth({ onSuccess }) {
       toast(r?.message || 'Email yenidən göndərildi', 'success')
     } catch (err) {
       toast(err.message || 'Göndərilmədi', 'error')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleForgotPassword = async () => {
+    const em = String(email || '').trim()
+    if (!em) {
+      toast('Email daxil edin', 'error')
+      return
+    }
+    setLoading(true)
+    try {
+      const r = await requestPasswordReset(em)
+      toast(r?.message || 'Bərpa linki göndərildi (emaili yoxlayın)', 'success')
+    } catch (err) {
+      toast(err?.response?.data?.message || err?.message || 'Göndərilmədi', 'error')
     } finally {
       setLoading(false)
     }
@@ -252,6 +269,14 @@ export default function InstructorEmailAuth({ onSuccess }) {
           <Button type="submit" loading={loading} className="w-full justify-center">
             Daxil ol
           </Button>
+          <button
+            type="button"
+            className="w-full text-xs font-semibold text-primary hover:text-primary/90 text-center"
+            disabled={loading}
+            onClick={handleForgotPassword}
+          >
+            Parolumu unutmuşam
+          </button>
           <button
             type="button"
             className="w-full text-xs text-gray-500 hover:text-white text-center"
