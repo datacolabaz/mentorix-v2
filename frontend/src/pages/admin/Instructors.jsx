@@ -83,7 +83,7 @@ export default function AdminInstructors() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-indigo-500/20 text-gray-400 text-xs uppercase">
-              {["Ad", "Fenn", "Telefon", "Plan", "Telebe", "SMS", "Status", "Emeliyyat"].map(h => (
+              {["Ad", "Email", "Fenn", "Telefon", "Plan", "Telebe", "SMS", "Status", "Emeliyyat"].map(h => (
                 <th key={h} className="py-3 px-4 text-left font-semibold tracking-wider">{h}</th>
               ))}
             </tr>
@@ -92,6 +92,7 @@ export default function AdminInstructors() {
             {instructors.map(i => (
               <tr key={i.id} className="border-b border-indigo-500/10 hover:bg-indigo-500/5">
                 <td className="py-3 px-4"><div className="font-semibold text-white">{i.full_name}</div></td>
+                <td className="py-3 px-4 text-gray-300 text-xs">{i.email || "-"}</td>
                 <td className="py-3 px-4 text-gray-300">{i.subject || "-"}</td>
                 <td className="py-3 px-4 text-gray-300 text-xs">{i.phone || "-"}</td>
                 <td className="py-3 px-4">
