@@ -78,11 +78,14 @@ const patchInstructorProfile = async (req, res) => {
       await db.query('UPDATE users SET phone = $1 WHERE id = $2', [p, id]);
     }
     if (subject !== undefined) {
-      await db.query(
-        `INSERT INTO instructor_profiles (user_id, subject) VALUES ($1, $2)
-         ON CONFLICT (user_id) DO UPDATE SET subject = EXCLUDED.subject`,
-        [id, subject != null ? String(subject).trim() : null],
+      const subj = subject != null ? String(subject).trim() : null;
+      const { rowCount } = await db.query(
+        'UPDATE instructor_profiles SET subject = $1 WHERE user_id = $2',
+        [subj, id],
       );
+      if (rowCount === 0) {
+        await db.query('INSERT INTO instructor_profiles (user_id, subject) VALUES ($1, $2)', [id, subj]);
+      }
     }
 
     if (email !== undefined) {
