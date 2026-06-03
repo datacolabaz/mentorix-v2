@@ -14,32 +14,55 @@ const TRUST_STUDENTS_FLOOR = 100
 const TRUST_INSTRUCTORS_FLOOR = 15
 
 /** Real sıralama boş olanda sahə tam boş görünməsin — aydın “prevyu” etiketi ilə */
+/** Real top siyahısı etibarlı görünməyənə qədər nümunə kartlar */
+const TOP_INSTRUCTOR_MIN_STUDENTS = 15
+
 const PREVIEW_TEACHERS = [
   {
     id: 'mx-preview-1',
     display_name: 'Leyla M.',
-    student_count: 28,
-    attendance_percent: 92,
-    rating_stars: 4.5,
+    student_count: 156,
+    attendance_percent: 98,
+    rating_stars: 4.8,
     preview: true,
+    avatar_tone: 'from-sky-500/30 to-cyan-600/20',
   },
   {
     id: 'mx-preview-2',
     display_name: 'Rəşad K.',
-    student_count: 19,
-    attendance_percent: 88,
-    rating_stars: 4,
+    student_count: 142,
+    attendance_percent: 97,
+    rating_stars: 4.7,
     preview: true,
+    avatar_tone: 'from-emerald-500/30 to-primary/20',
   },
   {
     id: 'mx-preview-3',
     display_name: 'Nərgiz Ə.',
-    student_count: 34,
-    attendance_percent: 95,
-    rating_stars: 4.5,
+    student_count: 178,
+    attendance_percent: 99,
+    rating_stars: 4.9,
     preview: true,
+    avatar_tone: 'from-amber-500/30 to-orange-600/20',
   },
 ]
+
+function teacherInitials(displayName) {
+  const parts = String(displayName || '')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+  if (parts.length === 0) return 'M'
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
+  return `${parts[0][0] || ''}${parts[parts.length - 1][0] || ''}`.toUpperCase()
+}
+
+function formatTopStudentCount(count, preview) {
+  const n = Number(count)
+  if (!Number.isFinite(n)) return '—'
+  if (preview && n >= 100) return `+${formatAzInt(n)}`
+  return formatAzInt(n)
+}
 
 function scrollToId(id) {
   const el = document.getElementById(id)
@@ -243,7 +266,12 @@ export default function Login() {
 
   const topInstructorsRows = useMemo(() => {
     const real = landingStats?.top_instructors
-    if (Array.isArray(real) && real.length > 0) return real.map((t) => ({ ...t, preview: false }))
+    if (Array.isArray(real) && real.length > 0) {
+      const credible = real.filter((t) => Number(t.student_count) >= TOP_INSTRUCTOR_MIN_STUDENTS)
+      if (credible.length >= 2) {
+        return credible.slice(0, 6).map((t) => ({ ...t, preview: false }))
+      }
+    }
     return PREVIEW_TEACHERS
   }, [landingStats])
 
@@ -355,9 +383,12 @@ export default function Login() {
                 <Link
                   to="/search"
                   onClick={() => trackEvent('mx_landing_secondary_click', { action: 'instructor_map_search' })}
-                  className="text-xs font-semibold text-primary hover:brightness-110"
+                  className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:brightness-110"
                 >
-                  Təlimçini xəritədə tap →
+                  <span>Təlimçini xəritədə tap</span>
+                  <span aria-hidden className="text-sm leading-none">
+                    →
+                  </span>
                 </Link>
               </div>
             </div>
@@ -511,10 +542,28 @@ export default function Login() {
                       </span>
                     </>
                   ) : null}
-                  <div className="flex items-center justify-between gap-2 min-w-0">
-                    <div className="text-sm font-semibold text-white truncate min-w-0">{t.display_name}</div>
-                    <div className="text-[11px] text-gray-500 shrink-0">
-                      {formatAzInt(t.student_count)} {m.top_teachers.pupil_suffix}
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div
+                      className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/15 bg-gradient-to-br ${
+                        t.avatar_tone || 'from-primary/25 to-emerald-600/15'
+                      } text-xs font-bold text-white shadow-inner shadow-black/30`}
+                      aria-hidden
+                    >
+                      {t.avatar_url ? (
+                        <img
+                          src={t.avatar_url}
+                          alt=""
+                          className="h-full w-full rounded-full object-cover"
+                        />
+                      ) : (
+                        teacherInitials(t.display_name)
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-semibold text-white truncate">{t.display_name}</div>
+                      <div className="text-[11px] text-gray-500">
+                        {formatTopStudentCount(t.student_count, t.preview)} {m.top_teachers.pupil_suffix}
+                      </div>
                     </div>
                   </div>
                   <div className="flex items-center justify-between gap-2 text-xs min-w-0">
@@ -605,7 +654,9 @@ export default function Login() {
                 <details key={`faq-${i}`} className="group p-4 sm:p-5">
                   <summary className="cursor-pointer text-sm font-semibold text-gray-100 list-none flex items-center justify-between gap-3 [&::-webkit-details-marker]:hidden">
                     <span>{it.q}</span>
-                    <span className="text-gray-500 text-lg leading-none group-open:rotate-45 transition-transform">+</span>
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-primary/45 bg-primary/15 text-primary text-xl font-bold leading-none group-open:rotate-45 transition-transform">
+                      +
+                    </span>
                   </summary>
                   <p className="mt-3 text-xs sm:text-sm text-gray-400 leading-relaxed">{it.a}</p>
                 </details>
@@ -778,7 +829,7 @@ export default function Login() {
               href="https://wa.me/994503066626"
               target="_blank"
               rel="noreferrer"
-              className={`flex items-center justify-center gap-2 rounded-xl bg-primary text-[#041018] font-semibold shadow-lg shadow-primary/20 transition-all hover:brightness-95 ${
+              className={`flex items-center justify-center gap-2 rounded-xl border border-primary/50 bg-transparent text-primary font-semibold transition-colors hover:bg-primary/10 ${
                 !isAdmin && loginModalOpen ? 'mt-8 min-h-[52px] px-4 py-4 text-base' : 'mt-6 px-4 py-3 text-sm'
               }`}
               onClick={() => trackEvent('mx_landing_whatsapp_click')}

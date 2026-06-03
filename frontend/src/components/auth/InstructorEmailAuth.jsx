@@ -24,7 +24,7 @@ export default function InstructorEmailAuth({ onSuccess }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [verifyCode, setVerifyCode] = useState('')
-  const [role, setRole] = useState('student') // student | instructor | course
+  const [role, setRole] = useState('instructor') // student | instructor | course
 
   const handleSignup = async (e) => {
     e.preventDefault()
@@ -226,7 +226,7 @@ export default function InstructorEmailAuth({ onSuccess }) {
           <input
             type="email"
             className={inputClass}
-            placeholder="Gmail / email"
+            placeholder="E-poçt ünvanınız"
             autoComplete="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -251,7 +251,7 @@ export default function InstructorEmailAuth({ onSuccess }) {
           <input
             type="email"
             className={inputClass}
-            placeholder="Email"
+            placeholder="E-poçt ünvanınız"
             autoComplete="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -275,7 +275,7 @@ export default function InstructorEmailAuth({ onSuccess }) {
             disabled={loading}
             onClick={handleForgotPassword}
           >
-            Parolumu unutmuşam
+            Şifrəmi unutmuşam
           </button>
           <button
             type="button"

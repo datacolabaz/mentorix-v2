@@ -18,9 +18,10 @@ function defaultLoginMarketingPayload() {
     version: 1,
     hero: {
       pill: 'Mentorix — müəllimlər və təlimçilər üçün idarəetmə',
-      headline: 'Şagirdlərini daha effektiv idarə et',
-      subheadline: 'Dərs planlama, ödəniş izləmə və avtomatik xatırlatmalar — hamısı bir platformada',
-      primary_cta_label: 'Pulsuz başla — ilk 5 tələbə əlavə et',
+      headline: 'Kursunu və tələbələrini ağıllı sistemlə idarə et',
+      subheadline:
+        'Süni intellekt dəstəyi, avtomatik SMS xatırlatmaları və ödəniş izləmə — vaxtını dərsə qoy, idarəetməni platformaya burax',
+      primary_cta_label: 'Pulsuz başla (ilk 5 tələbə ödənişsiz)',
       secondary_how: 'Necə işləyir?',
       secondary_demo: 'Demo bax',
       existing_account: 'Artıq hesabım var — girişə keç',
@@ -90,7 +91,7 @@ function defaultLoginMarketingPayload() {
           step: '2',
           title: 'Ödəniş və davamiyyəti izlə',
           body:
-            'Paket/aylıq ödəniş statuslarını və dərs qeydlərini eyni axında saxla — “kim nə vaxt ödədi?” aydın olsun.',
+            'Ödənişləri və dəftər qeydlərini unudun. Kimin nə vaxt ödədiyini tək ekranda görün.',
         },
         {
           step: '3',
