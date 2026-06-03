@@ -13,57 +13,6 @@ import { setPageSeo } from '../../lib/pageSeo'
 const TRUST_STUDENTS_FLOOR = 100
 const TRUST_INSTRUCTORS_FLOOR = 15
 
-/** Real sıralama boş olanda sahə tam boş görünməsin — aydın “prevyu” etiketi ilə */
-/** Real top siyahısı etibarlı görünməyənə qədər nümunə kartlar */
-const TOP_INSTRUCTOR_MIN_STUDENTS = 15
-
-const PREVIEW_TEACHERS = [
-  {
-    id: 'mx-preview-1',
-    display_name: 'Leyla M.',
-    student_count: 156,
-    attendance_percent: 98,
-    rating_stars: 4.8,
-    preview: true,
-    avatar_tone: 'from-sky-500/30 to-cyan-600/20',
-  },
-  {
-    id: 'mx-preview-2',
-    display_name: 'Rəşad K.',
-    student_count: 142,
-    attendance_percent: 97,
-    rating_stars: 4.7,
-    preview: true,
-    avatar_tone: 'from-emerald-500/30 to-primary/20',
-  },
-  {
-    id: 'mx-preview-3',
-    display_name: 'Nərgiz Ə.',
-    student_count: 178,
-    attendance_percent: 99,
-    rating_stars: 4.9,
-    preview: true,
-    avatar_tone: 'from-amber-500/30 to-orange-600/20',
-  },
-]
-
-function teacherInitials(displayName) {
-  const parts = String(displayName || '')
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean)
-  if (parts.length === 0) return 'M'
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
-  return `${parts[0][0] || ''}${parts[parts.length - 1][0] || ''}`.toUpperCase()
-}
-
-function formatTopStudentCount(count, preview) {
-  const n = Number(count)
-  if (!Number.isFinite(n)) return '—'
-  if (preview && n >= 100) return `+${formatAzInt(n)}`
-  return formatAzInt(n)
-}
-
 function scrollToId(id) {
   const el = document.getElementById(id)
   if (!el) return
@@ -173,7 +122,7 @@ export default function Login() {
     ;(async () => {
       setLandingLoading(true)
       try {
-        const data = await api.get('/public/landing-stats', { params: { top: 6 } })
+        const data = await api.get('/public/landing-stats', { params: { top: 0 } })
         if (!cancelled && data?.success && data?.stats) setLandingStats(data.stats)
       } catch {
         if (!cancelled) setLandingStats(null)
@@ -236,7 +185,7 @@ export default function Login() {
     const ids = ['mx-demo-mini']
     if (marketing?.trust?.section_enabled !== false) ids.push('mx-trust')
     if (whyCardsForLanding.length > 0) ids.push('mx-why')
-    ids.push('mx-top', 'mx-steps', 'mx-features')
+    ids.push('mx-steps', 'mx-features')
     if (marketing?.use_case?.section_enabled !== false) {
       ids.push('mx-use-case')
     }
@@ -263,19 +212,6 @@ export default function Login() {
 
   const trustStudentsShown = trustCountWithFloor(landingStats?.students_managed, TRUST_STUDENTS_FLOOR)
   const trustTeachersShown = trustCountWithFloor(landingStats?.instructor_count, TRUST_INSTRUCTORS_FLOOR)
-
-  const topInstructorsRows = useMemo(() => {
-    const real = landingStats?.top_instructors
-    if (Array.isArray(real) && real.length > 0) {
-      const credible = real.filter((t) => Number(t.student_count) >= TOP_INSTRUCTOR_MIN_STUDENTS)
-      if (credible.length >= 2) {
-        return credible.slice(0, 6).map((t) => ({ ...t, preview: false }))
-      }
-    }
-    return PREVIEW_TEACHERS
-  }, [landingStats])
-
-  const topIsPreviewOnly = useMemo(() => topInstructorsRows.every((t) => t.preview), [topInstructorsRows])
 
   const closeLoginModal = () => setLoginModalOpen(false)
 
@@ -499,92 +435,6 @@ export default function Login() {
             </div>
           </section>
           ) : null}
-
-          <section id="mx-top" className="space-y-4 scroll-mt-8">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-              <div>
-                <div className="text-xs uppercase tracking-wider text-gray-500 font-semibold">
-                  {m.top_teachers.heading}
-                </div>
-                <p className="text-sm text-gray-400 mt-1 max-w-2xl">
-                  {topIsPreviewOnly ? (
-                    <>
-                      {m.top_teachers.preview_before}{' '}
-                      <span className="text-gray-200 font-medium">{m.top_teachers.preview_emphasis}</span>{' '}
-                      {m.top_teachers.preview_after}
-                    </>
-                  ) : (
-                    <>{m.top_teachers.description_real}</>
-                  )}
-                </p>
-              </div>
-              {topIsPreviewOnly ? (
-                <span className="self-start rounded-full border border-amber-400/40 bg-amber-500/15 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide text-amber-100 shadow-sm shadow-amber-500/10">
-                  Preview · nümunə
-                </span>
-              ) : null}
-            </div>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {topInstructorsRows.map((t) => (
-                <div
-                  key={t.id}
-                  className={`rounded-2xl border bg-[#131313]/90 flex flex-col gap-2.5 relative overflow-hidden p-4 ${
-                    t.preview ? 'border-amber-500/35 ring-1 ring-amber-500/25 pt-12' : 'border-white/10'
-                  }`}
-                >
-                  {t.preview ? (
-                    <>
-                      <span className="absolute left-3 top-3 z-10 rounded-md border border-amber-400/55 bg-amber-500/25 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-amber-50 shadow-sm shadow-amber-500/20">
-                        Preview
-                      </span>
-                      <span className="absolute right-3 top-3 z-10 rounded-md border border-white/20 bg-black/70 px-2 py-1 text-[9px] font-semibold text-gray-200 backdrop-blur-sm">
-                        nümunə
-                      </span>
-                    </>
-                  ) : null}
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div
-                      className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/15 bg-gradient-to-br ${
-                        t.avatar_tone || 'from-primary/25 to-emerald-600/15'
-                      } text-xs font-bold text-white shadow-inner shadow-black/30`}
-                      aria-hidden
-                    >
-                      {t.avatar_url ? (
-                        <img
-                          src={t.avatar_url}
-                          alt=""
-                          className="h-full w-full rounded-full object-cover"
-                        />
-                      ) : (
-                        teacherInitials(t.display_name)
-                      )}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="text-sm font-semibold text-white truncate">{t.display_name}</div>
-                      <div className="text-[11px] text-gray-500">
-                        {formatTopStudentCount(t.student_count, t.preview)} {m.top_teachers.pupil_suffix}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between gap-2 text-xs min-w-0">
-                    <div className="text-amber-300/95">
-                      {t.rating_stars != null ? (
-                        <>
-                          ★ {Number(t.rating_stars).toFixed(1)}
-                          <span className="text-gray-500"> / 5</span>
-                        </>
-                      ) : (
-                        <span className="text-gray-500">{m.top_teachers.rating_fallback}</span>
-                      )}
-                    </div>
-                    <div className="text-gray-500">
-                      {t.attendance_percent != null ? `${formatAzInt(t.attendance_percent)}% davamiyyət` : ''}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
 
           <section id="mx-steps" className="space-y-4 scroll-mt-8">
             <div className="text-xs uppercase tracking-wider text-gray-500 font-semibold">{m.steps.heading}</div>
@@ -1040,3 +890,4 @@ export default function Login() {
     </div>
   )
 }
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                

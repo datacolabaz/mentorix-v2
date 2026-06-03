@@ -24,9 +24,9 @@ const { ACTIVE_ENROLLMENT_JOIN_INLINE } = require('../sql/activeEnrollments');
  */
 const getLandingStats = async (req, res) => {
   try {
-    const topLimit = clampInt(req.query.top, 6, 1, 12);
+    const topLimit = clampInt(req.query.top, 0, 0, 12);
 
-    const [{ rows: totRows }, { rows: upliftRows }, { rows: topRows }] = await Promise.all([
+    const queries = [
       db.query(
         `SELECT
            COUNT(DISTINCT e.student_id)::int AS students_managed,
@@ -76,72 +76,82 @@ const getLandingStats = async (req, res) => {
          )
          SELECT p_prev, a_prev, p_cur, a_cur FROM agg`
       ),
-      db.query(
-        `WITH active AS (
-           SELECT
-             e.instructor_id,
-             COUNT(DISTINCT e.student_id)::int AS active_students
-           FROM enrollments e
-           ${ACTIVE_ENROLLMENT_JOIN_INLINE}
-           GROUP BY e.instructor_id
-         ),
-         marked AS (
-           SELECT
-             e.instructor_id,
-             CASE WHEN el.status = 'done' THEN 1 ELSE 0 END AS present,
-             CASE WHEN el.status = 'absent' THEN 1 ELSE 0 END AS absent
-           FROM enrollment_lessons el
-           JOIN enrollments e ON e.id = el.enrollment_id
-           ${ACTIVE_ENROLLMENT_JOIN_INLINE}
-             AND el.starts_at >= NOW() - INTERVAL '180 days'
-             AND el.status IN ('done','absent')
+    ]
 
-           UNION ALL
+    if (topLimit > 0) {
+      queries.push(
+        db.query(
+          `WITH active AS (
+             SELECT
+               e.instructor_id,
+               COUNT(DISTINCT e.student_id)::int AS active_students
+             FROM enrollments e
+             ${ACTIVE_ENROLLMENT_JOIN_INLINE}
+             GROUP BY e.instructor_id
+           ),
+           marked AS (
+             SELECT
+               e.instructor_id,
+               CASE WHEN el.status = 'done' THEN 1 ELSE 0 END AS present,
+               CASE WHEN el.status = 'absent' THEN 1 ELSE 0 END AS absent
+             FROM enrollment_lessons el
+             JOIN enrollments e ON e.id = el.enrollment_id
+             ${ACTIVE_ENROLLMENT_JOIN_INLINE}
+               AND el.starts_at >= NOW() - INTERVAL '180 days'
+               AND el.status IN ('done','absent')
 
+             UNION ALL
+
+             SELECT
+               e.instructor_id,
+               CASE WHEN mas.status = 'attended' THEN 1 ELSE 0 END AS present,
+               CASE WHEN mas.status = 'absent' THEN 1 ELSE 0 END AS absent
+             FROM monthly_attendance_slots mas
+             JOIN enrollments e ON e.id = mas.enrollment_id
+             ${ACTIVE_ENROLLMENT_JOIN_INLINE}
+               AND mas.lesson_date >= (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Baku')::date - INTERVAL '180 days'
+               AND mas.status IN ('attended','absent')
+           ),
+           att AS (
+             SELECT
+               instructor_id,
+               SUM(present)::int AS present_n,
+               (SUM(present) + SUM(absent))::int AS decided_n,
+               CASE WHEN (SUM(present) + SUM(absent)) > 0
+                    THEN ROUND(100.0 * SUM(present) / NULLIF(SUM(present) + SUM(absent), 0))
+                    ELSE NULL
+               END AS attendance_percent
+             FROM marked
+             GROUP BY instructor_id
+           )
            SELECT
-             e.instructor_id,
-             CASE WHEN mas.status = 'attended' THEN 1 ELSE 0 END AS present,
-             CASE WHEN mas.status = 'absent' THEN 1 ELSE 0 END AS absent
-           FROM monthly_attendance_slots mas
-           JOIN enrollments e ON e.id = mas.enrollment_id
-           ${ACTIVE_ENROLLMENT_JOIN_INLINE}
-             AND mas.lesson_date >= (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Baku')::date - INTERVAL '180 days'
-             AND mas.status IN ('attended','absent')
-         ),
-         att AS (
-           SELECT
-             instructor_id,
-             SUM(present)::int AS present_n,
-             (SUM(present) + SUM(absent))::int AS decided_n,
-             CASE WHEN (SUM(present) + SUM(absent)) > 0
-                  THEN ROUND(100.0 * SUM(present) / NULLIF(SUM(present) + SUM(absent), 0))
-                  ELSE NULL
-             END AS attendance_percent
-           FROM marked
-           GROUP BY instructor_id
-         )
-         SELECT
-           iu.id,
-           COALESCE(
-             NULLIF(TRIM(iu.full_name), ''),
-             NULLIF(TRIM(ip.public_label), ''),
-             'Müəllim'
-           ) AS display_name,
-           COALESCE(a.active_students, 0) AS student_count,
-           att.attendance_percent AS attendance_percent,
-           COALESCE(att.decided_n, 0)::int AS decided_lessons_180d
-         FROM active a
-         JOIN users iu ON iu.id = a.instructor_id
-         LEFT JOIN instructor_profiles ip ON ip.user_id = iu.id
-         LEFT JOIN att ON att.instructor_id = iu.id
-         ORDER BY a.active_students DESC,
-                  COALESCE(att.attendance_percent, 0) DESC,
-                  COALESCE(att.decided_n, 0) DESC,
-                  iu.created_at ASC NULLS LAST
-         LIMIT $1`,
-        [topLimit]
-      ),
-    ]);
+             iu.id,
+             COALESCE(
+               NULLIF(TRIM(iu.full_name), ''),
+               NULLIF(TRIM(ip.public_label), ''),
+               'Müəllim'
+             ) AS display_name,
+             COALESCE(a.active_students, 0) AS student_count,
+             att.attendance_percent AS attendance_percent,
+             COALESCE(att.decided_n, 0)::int AS decided_lessons_180d
+           FROM active a
+           JOIN users iu ON iu.id = a.instructor_id
+           LEFT JOIN instructor_profiles ip ON ip.user_id = iu.id
+           LEFT JOIN att ON att.instructor_id = iu.id
+           ORDER BY a.active_students DESC,
+                    COALESCE(att.attendance_percent, 0) DESC,
+                    COALESCE(att.decided_n, 0) DESC,
+                    iu.created_at ASC NULLS LAST
+           LIMIT $1`,
+          [topLimit]
+        )
+      )
+    }
+
+    const results = await Promise.all(queries)
+    const totRows = results[0].rows
+    const upliftRows = results[1].rows
+    const topRows = topLimit > 0 ? results[2].rows : []
 
     const totals = totRows[0] || { students_managed: 0, instructor_count: 0 };
 
@@ -177,18 +187,4 @@ const getLandingStats = async (req, res) => {
         students_managed: Number(totals.students_managed) || 0,
         instructor_count: Number(totals.instructor_count) || 0,
         attendance_uplift_percent: attendanceUpliftPercent,
-        attendance_windows: {
-          prev_marked_lessons: prevDenom,
-          curr_marked_lessons: currDenom,
-        },
-        top_instructors,
-      },
-    });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message || 'Xəta' });
-  }
-};
-
-module.exports = {
-  getLandingStats,
-};
+        attendance_wind
