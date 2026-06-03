@@ -187,4 +187,18 @@ const getLandingStats = async (req, res) => {
         students_managed: Number(totals.students_managed) || 0,
         instructor_count: Number(totals.instructor_count) || 0,
         attendance_uplift_percent: attendanceUpliftPercent,
-        attendance_wind
+        attendance_windows: {
+          prev_marked_lessons: prevDenom,
+          curr_marked_lessons: currDenom,
+        },
+        top_instructors,
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message || 'Xəta' });
+  }
+};
+
+module.exports = {
+  getLandingStats,
+};
