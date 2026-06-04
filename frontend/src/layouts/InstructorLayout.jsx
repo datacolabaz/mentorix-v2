@@ -386,9 +386,14 @@ export default function InstructorLayout() {
               {instructorRoleAz(user?.public_label)}
             </div>
           </div>
+          {billing ? (
+            <div className="mt-3">
+              <BillingUsagePills billing={billing} planTitle={currentPlanTitle} collapsible />
+            </div>
+          ) : null}
         </div>
 
-        <nav className="flex-1 p-4 overflow-y-auto">
+        <nav className="flex-1 p-4 overflow-y-auto min-h-0">
           <div className="space-y-4">
             {NAV_SECTIONS.map((section) => (
               <div key={section.title} className="space-y-2">

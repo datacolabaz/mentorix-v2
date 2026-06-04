@@ -1,3 +1,4 @@
+import { useEffect, useId, useState } from 'react'
 import { smsUsageDisplay, storageUsageFromBilling } from '../../lib/billingUsageDisplay'
 
 function fmtStorageMbPair(billing) {
@@ -38,6 +39,13 @@ function fmtSmsRemainingLine(billing) {
   return `${remaining} / ${cap} qalıb`
 }
 
+function compactSummary(billing) {
+  const students = Math.max(0, Number(billing?.usage?.students) || 0)
+  const storage = fmtStorageMbPair(billing).split(' / ')[0]
+  const sms = fmtSmsRemainingLine(billing).split(' / ')[0]
+  return `👥 ${students} · 💾 ${storage} · 📱 ${sms}`
+}
+
 function UsageRow({ icon, label, value, warn }) {
   return (
     <div className="min-w-0">
@@ -56,7 +64,41 @@ function UsageRow({ icon, label, value, warn }) {
   )
 }
 
-export default function BillingUsagePills({ billing, planTitle = '' }) {
+const STORAGE_KEY = 'mx_billing_pills_expanded_v1'
+
+export default function BillingUsagePills({ billing, planTitle = '', collapsible = true }) {
+  const panelId = useId()
+  const [expanded, setExpanded] = useState(false)
+
+  useEffect(() => {
+    if (!collapsible) {
+      setExpanded(true)
+      return
+    }
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY)
+      if (saved === '1') setExpanded(true)
+      else if (saved === '0') setExpanded(false)
+      else setExpanded(false)
+    } catch {
+      setExpanded(false)
+    }
+  }, [collapsible])
+
+  const toggle = () => {
+    setExpanded((v) => {
+      const next = !v
+      if (collapsible) {
+        try {
+          localStorage.setItem(STORAGE_KEY, next ? '1' : '0')
+        } catch {
+          /* ignore */
+        }
+      }
+      return next
+    })
+  }
+
   if (!billing) return null
 
   const sms = smsUsageDisplay(billing)
@@ -68,15 +110,50 @@ export default function BillingUsagePills({ billing, planTitle = '' }) {
   const smsWarn = sms.overEffective
 
   const planLabel = String(planTitle || '').trim() || 'Paket'
+  const summary = compactSummary(billing)
+
+  const header = (
+    <>
+      <span className="text-sm font-bold text-token-textMain leading-snug truncate">📦 {planLabel} Paket</span>
+      {collapsible ? (
+        <span
+          aria-hidden
+          className={[
+            'shrink-0 text-token-textMuted text-xs transition-transform duration-200',
+            expanded ? 'rotate-180' : 'rotate-0',
+          ].join(' ')}
+        >
+          ▾
+        </span>
+      ) : null}
+    </>
+  )
 
   return (
-    <div className="rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard/40 p-3 space-y-3">
-      <p className="text-sm font-bold text-token-textMain leading-snug">📦 {planLabel} Paket</p>
-      <div className="space-y-2.5">
-        <UsageRow icon="👥" label="Tələbələr" value={fmtStudentsLine(billing)} warn={studentsWarn} />
-        <UsageRow icon="💾" label="Sənəd yaddaşı" value={fmtStorageMbPair(billing)} warn={storageWarn} />
-        <UsageRow icon="📱" label="SMS" value={fmtSmsRemainingLine(billing)} warn={smsWarn} />
-      </div>
+    <div className="rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard/40 overflow-hidden">
+      {collapsible ? (
+        <button
+          type="button"
+          onClick={toggle}
+          aria-expanded={expanded}
+          aria-controls={panelId}
+          className="w-full flex items-center justify-between gap-2 p-3 text-left hover:bg-white/[0.03] transition-colors"
+        >
+          {header}
+        </button>
+      ) : (
+        <div className="p-3 pb-0">{header}</div>
+      )}
+
+      {!collapsible || expanded ? (
+        <div id={panelId} className={collapsible ? 'px-3 pb-3 pt-0 space-y-2.5 border-t border-white/5' : 'p-3 pt-0 space-y-2.5'}>
+          <UsageRow icon="👥" label="Tələbələr" value={fmtStudentsLine(billing)} warn={studentsWarn} />
+          <UsageRow icon="💾" label="Sənəd yaddaşı" value={fmtStorageMbPair(billing)} warn={storageWarn} />
+          <UsageRow icon="📱" label="SMS" value={fmtSmsRemainingLine(billing)} warn={smsWarn} />
+        </div>
+      ) : (
+        <p className="px-3 pb-2.5 text-[10px] text-token-textMuted leading-snug truncate">{summary}</p>
+      )}
     </div>
   )
 }
