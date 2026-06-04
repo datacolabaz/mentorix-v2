@@ -10,12 +10,11 @@ export function dashboardPathForRole(role) {
   return ROLE_HOME[role] || '/login'
 }
 
-/** Google ilə giriş: OTP telefon təsdiqi səhifəsi (müəllim / tələbə). */
+/** Yalnız müəllim: Google sonrası OTP telefon təsdiqi. */
 export function userNeedsPhoneVerificationPage(user) {
-  if (!user) return false
-  if (!['instructor', 'student'].includes(user.role)) return false
-  if (user.needs_phone_verification === true) return true
+  if (!user || user.role !== 'instructor') return false
   if (user.phone_verified === true) return false
+  if (user.needs_phone_verification === true) return true
   const hasGoogle = Boolean(String(user.google_id || user.google_sub || '').trim())
   return hasGoogle
 }

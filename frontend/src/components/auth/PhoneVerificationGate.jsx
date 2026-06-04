@@ -6,7 +6,7 @@ import Button from '../common/Button'
 import PhoneInput from './PhoneInput'
 import { useToast } from '../common/Toast'
 
-const VERIFY_ROLES = new Set(['instructor', 'student', 'course'])
+const VERIFY_ROLES = new Set(['instructor'])
 
 /**
  * Google hesabı: panel / sorğu / SMS ilk cəhdi — bir dəfə OTP telefon təsdiqi.
@@ -80,11 +80,6 @@ export default function PhoneVerificationGate() {
 
   if (!VERIFY_ROLES.has(user?.role)) return null
 
-  const roleHint =
-    user?.role === 'instructor'
-      ? 'SMS göndərmək və ya panel funksiyalarından istifadə üçün'
-      : 'Sorğu göndərmək və ya profil əməliyyatları üçün'
-
   return (
     <Modal
       open={open}
@@ -120,8 +115,8 @@ export default function PhoneVerificationGate() {
       {step === 'phone' ? (
         <>
           <p className="text-sm text-zinc-300 leading-relaxed mb-4">
-            {roleHint} mobil nömrənizi <strong className="text-white">bir dəfə</strong> OTP ilə təsdiqləyin. Nömrə
-            Google hesabınıza bağlanır; eyni nömrə ilə ikinci hesab açıla bilməz.
+            SMS və ya panel üçün mobil nömrənizi <strong className="text-white">bir dəfə</strong> OTP ilə təsdiqləyin.
+            Eyni nömrə başqa müəllim hesabında ola bilməz.
           </p>
           <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-2">
             Mobil telefon *

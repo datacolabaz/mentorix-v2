@@ -11,8 +11,6 @@ import { useStudentGroupsOptional } from '../../contexts/StudentGroupContext'
 import { formatAzn, billingTypeLabel } from '../../lib/groupPaymentTerms'
 import { canonicalAzPhoneE164 } from '../../lib/azPhone'
 import { WEEKDAYS } from '../instructor/Schedule'
-import { postAuthNavigate, userNeedsPhoneVerificationPage } from '../../lib/postAuth'
-import PhoneVerificationGate from '../../components/auth/PhoneVerificationGate'
 
 const inp =
   'w-full border border-[color:var(--border-subtle)] rounded-xl px-4 py-3 text-token-textMain text-sm outline-none focus:border-primary/40 bg-token-surfaceCard/55'
@@ -114,24 +112,15 @@ export default function JoinClass() {
         toast('Bu hesab tələbə deyil — müəllim panelinə daxil olun.', 'error')
         return
       }
-      const u = {
-        ...r.user,
-        needs_phone_verification:
-          r.needs_phone_verification ?? r.user?.needs_phone_verification ?? false,
-      }
+      const u = { ...r.user, needs_phone_verification: false }
       persistAuth(r.token, u)
-      if (userNeedsPhoneVerificationPage(u)) {
-        try {
-          const path = code ? `/join/${code}` : '/student/join'
-          sessionStorage.setItem('mx_return_after_login', path)
-        } catch {
-          /* ignore */
-        }
-        postAuthNavigate(u, navigate)
-        toast('Mobil nömrənizi OTP ilə təsdiqləyin', 'success')
-      } else {
-        toast('Daxil oldunuz', 'success')
+      try {
+        const path = code ? `/join/${code}` : '/student/join'
+        sessionStorage.setItem('mx_return_after_login', path)
+      } catch {
+        /* ignore */
       }
+      toast('Daxil oldunuz', 'success')
     } catch (err) {
       toast(err?.message || 'Google girişi uğursuz', 'error')
     } finally {
@@ -184,8 +173,6 @@ export default function JoinClass() {
   const loginHref = `/login?next=${encodeURIComponent(`/join/${initialCode || ''}`)}`
 
   return (
-    <>
-    <PhoneVerificationGate />
     <div className="p-4 sm:p-6 max-w-lg mx-auto w-full min-h-[70vh]">
       <h1 className="font-display font-bold text-2xl text-token-textMain">Qrupa qoşul</h1>
       <p className="text-sm text-token-textMuted mt-1 mb-6">
@@ -396,6 +383,5 @@ export default function JoinClass() {
         </>
       )}
     </div>
-    </>
   )
 }

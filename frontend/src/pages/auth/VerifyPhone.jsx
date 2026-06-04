@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../../lib/api'
 import useAuthStore from '../../hooks/useAuth'
@@ -20,7 +20,11 @@ export default function VerifyPhone() {
   const [code, setCode] = useState('')
   const [busy, setBusy] = useState(false)
 
-  const roleLabel = user?.role === 'instructor' ? 'Müəllim' : 'Tələbə'
+  useEffect(() => {
+    if (user && user.role !== 'instructor') {
+      postAuthNavigate(user, navigate)
+    }
+  }, [user, navigate])
 
   const sendOtp = async () => {
     setBusy(true)
@@ -66,8 +70,8 @@ export default function VerifyPhone() {
         <div className="rounded-2xl border border-white/10 bg-white/5 p-6 space-y-4">
           <div className="text-center space-y-1">
             <h1 className="text-xl font-display font-bold text-white">Mobil nömrə təsdiqi</h1>
-            <p className="text-sm text-zinc-400">
-              {roleLabel} · Google hesabınız təsdiqləndi. Davam etmək üçün nömrənizi bir dəfə OTP ilə təsdiqləyin.
+            <p className="text-sm text-zinc-400 leading-relaxed">
+              Google hesabınız təsdiqləndi. Müəllim panelinə keçmək üçün mobil nömrənizi bir dəfə OTP ilə təsdiqləyin.
             </p>
           </div>
 
@@ -78,7 +82,8 @@ export default function VerifyPhone() {
               </label>
               <PhoneInput value={phone} onChange={setPhone} persistLoginDefaults={false} />
               <p className="text-[11px] text-zinc-500 leading-relaxed">
-                Bir nömrə yalnız bir Mentorix hesabına aid ola bilər. Təsdiqdən sonra yenidən soruşulmayacaq.
+                Bu mobil nömrə başqa müəllim hesabında qeydiyyatdadırsa, sistem xəbərdarlıq edəcək. Təsdiqdən sonra
+                yenidən soruşulmayacaq.
               </p>
               <Button type="button" className="w-full justify-center" loading={busy} onClick={() => void sendOtp()}>
                 OTP göndər

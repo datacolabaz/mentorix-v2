@@ -9,7 +9,6 @@ import NavIcon from '../components/common/NavIcon'
 import { StudentGroupProvider, useStudentGroups } from '../contexts/StudentGroupContext'
 import { useStudentAlerts } from '../hooks/useStudentAlerts'
 import StudentAssignmentAlertModal from '../components/student/StudentAssignmentAlertModal'
-import PhoneVerificationGate from '../components/auth/PhoneVerificationGate'
 
 function NavBadge({ count }) {
   if (!count || count < 1) return null
@@ -70,7 +69,6 @@ function StudentLayoutInner() {
 
   return (
     <>
-    <PhoneVerificationGate />
     <StudentAssignmentAlertModal />
     <div
       className={`theme-${theme} flex flex-col min-h-screen md:h-screen bg-token-surfaceMain text-token-textMain overflow-x-hidden md:overflow-hidden`}

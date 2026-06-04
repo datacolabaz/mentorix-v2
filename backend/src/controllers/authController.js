@@ -200,7 +200,7 @@ async function enrichUserForClient(userLite, sessionRole = null) {
     out = await attachInstructorPublicLabel(out);
   }
   if (role === 'course') out = await attachCourseProfile(out);
-  if (role === 'instructor' || role === 'student') {
+  if (role === 'instructor') {
     const { rows: gRows } = await db.query(
       'SELECT google_sub, auth_provider, phone_verified_at FROM users WHERE id = $1 LIMIT 1',
       [userLite.id],
@@ -1327,8 +1327,8 @@ const sendMyPhoneVerifyOtp = async (req, res) => {
           code: 'PHONE_ALREADY_VERIFIED',
         });
       }
-      const { assertAccountPhoneAvailable } = require('../utils/instructorPhone');
-      await assertAccountPhoneAvailable(db, phoneCanon, req.user.id);
+      const { assertInstructorPhoneAvailable } = require('../utils/instructorPhone');
+      await assertInstructorPhoneAvailable(db, phoneCanon, req.user.id);
     }
 
     const { rows: ownerRows } = await db.query(
@@ -1504,9 +1504,9 @@ const verifyMyPhoneVerifyOtp = async (req, res) => {
         return { user: linkedRows[0], linkedUserId: owner.id, merged: true };
       }
 
-      const { assertAccountPhoneAvailable } = require('../utils/instructorPhone');
-      if (PHONE_VERIFY_ROLES.has(sessionRole)) {
-        await assertAccountPhoneAvailable(client, phoneCanon, req.user.id);
+      if (sessionRole === 'instructor') {
+        const { assertInstructorPhoneAvailable } = require('../utils/instructorPhone');
+        await assertInstructorPhoneAvailable(client, phoneCanon, req.user.id);
       }
 
       await client.query(

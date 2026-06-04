@@ -716,7 +716,7 @@ export default function Login() {
             )}
 
             {!isAdmin && (
-              <InstructorEmailAuth onSuccess={(u) => goDashboard(u?.role || 'instructor')} />
+              <InstructorEmailAuth onSuccess={(u) => goDashboard(u)} />
             )}
 
             <a

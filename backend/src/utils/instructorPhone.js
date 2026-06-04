@@ -1,7 +1,7 @@
 const { canonicalStudentPhone, normalizePhoneDigits } = require('./studentPhone');
 
-/** Google OTP telefon təsdiqi — müəllim və tələbə */
-const PHONE_VERIFY_ROLES = new Set(['instructor', 'student']);
+/** Google OTP telefon təsdiqi — yalnız müəllim (tələbə telefon tələb etmir). */
+const PHONE_VERIFY_ROLES = new Set(['instructor']);
 
 function isGoogleAccountUser(user) {
   if (!user) return false;
@@ -9,7 +9,7 @@ function isGoogleAccountUser(user) {
   return String(user.auth_provider || '').toLowerCase() === 'google';
 }
 
-/** Google ilə giriş: bir dəfə OTP telefon təsdiqi (müəllim / tələbə / kurs). */
+/** Google ilə giriş: bir dəfə OTP telefon təsdiqi (yalnız müəllim). */
 function userNeedsPhoneVerification(user) {
   if (!user || !PHONE_VERIFY_ROLES.has(user.role)) return false;
   if (!isGoogleAccountUser(user)) return false;

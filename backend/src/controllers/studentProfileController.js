@@ -72,9 +72,6 @@ async function resolveProfileCompletionUrl(studentId, instructorId) {
 /** Tələbə: ad, soyad, telefon — sorğu göndərmədən əvvəl */
 const patchMyContactProfile = async (req, res) => {
   try {
-    const { assertPhoneVerifiedForAction } = require('../utils/instructorPhone');
-    await assertPhoneVerifiedForAction(db, req.user.id);
-
     const firstName = String(req.body?.first_name || '').trim();
     const lastName = String(req.body?.last_name || '').trim();
     const phoneRaw = req.body?.phone ?? req.body?.phone_number;
@@ -185,9 +182,6 @@ const sendEnrollmentProfileCompletionEmail = async (req, res) => {
 
 /** Sorğu / təsdiq üçün profil tamamlığı */
 async function assertStudentProfileComplete(studentId) {
-  const { assertPhoneVerifiedForAction } = require('../utils/instructorPhone');
-  await assertPhoneVerifiedForAction(db, studentId);
-
   const phone = await getStudentContactPhone(studentId);
   if (!phone) {
     const err = new Error(

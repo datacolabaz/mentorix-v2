@@ -169,9 +169,6 @@ async function createJoinRequest({
     throw err;
   }
 
-  const { assertPhoneVerifiedForAction } = require('../utils/instructorPhone');
-  await assertPhoneVerifiedForAction(db, studentId);
-
   const fullName = `${firstName} ${lastName}`.trim();
 
   const { rows: existing } = await db.query(
