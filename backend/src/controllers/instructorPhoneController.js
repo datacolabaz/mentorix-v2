@@ -1,5 +1,5 @@
 const db = require('../utils/db');
-const { instructorNeedsPhoneBinding } = require('../utils/instructorPhone');
+const { userNeedsPhoneVerification } = require('../utils/instructorPhone');
 
 /** @deprecated OTP axını: POST /auth/phone/send-otp */
 const bindInstructorPhone = async (req, res) => {
@@ -39,9 +39,11 @@ const instructorPhoneStatus = async (req, res) => {
       [req.user.id],
     );
     const u = rows[0];
+    const needs = userNeedsPhoneVerification(u);
     res.json({
       success: true,
-      needs_instructor_phone: instructorNeedsPhoneBinding(u),
+      needs_phone_verification: needs,
+      needs_instructor_phone: u?.role === 'instructor' && needs,
       phone: u?.phone || null,
       phone_verified: Boolean(u?.phone_verified),
     });

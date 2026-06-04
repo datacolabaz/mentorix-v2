@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import api from '../../lib/api'
 import useAuthStore from '../../hooks/useAuth'
 import Button from '../../components/common/Button'
@@ -7,6 +7,8 @@ import Card from '../../components/common/Card'
 import Modal from '../../components/common/Modal'
 import { useToast } from '../../components/common/Toast'
 import GoogleSignInButton from '../../components/auth/GoogleSignInButton'
+import { postAuthNavigate, userNeedsPhoneVerificationPage } from '../../lib/postAuth'
+import PhoneVerificationGate from '../../components/auth/PhoneVerificationGate'
 import PhoneInput from '../../components/auth/PhoneInput'
 import { canonicalAzPhoneE164 } from '../../lib/azPhone'
 
@@ -24,6 +26,7 @@ function splitFullName(full) {
 
 export default function ExamInvite() {
   const { examId } = useParams()
+  const navigate = useNavigate()
   const toast = useToast()
   const { user, setSession, updateUser } = useAuthStore()
   const id = useMemo(() => String(examId || '').trim(), [examId])
@@ -153,11 +156,26 @@ export default function ExamInvite() {
         toast('Bu hesab tələbə deyil', 'error')
         return
       }
-      setSession(r.token, r.user)
-      const n = splitFullName(r.user.full_name)
+      const u = {
+        ...r.user,
+        needs_phone_verification:
+          r.needs_phone_verification ?? r.user?.needs_phone_verification ?? false,
+      }
+      setSession(r.token, u)
+      if (userNeedsPhoneVerificationPage(u)) {
+        try {
+          if (id) sessionStorage.setItem(RETURN_KEY, `/exam/${id}`)
+        } catch {
+          /* ignore */
+        }
+        postAuthNavigate(u, navigate)
+        toast('Mobil nömrənizi OTP ilə təsdiqləyin', 'success')
+        return
+      }
+      const n = splitFullName(u.full_name)
       if (n.first_name) setFirstName(n.first_name)
       if (n.last_name) setLastName(n.last_name)
-      if (r.user.phone) setPhone(r.user.phone)
+      if (u.phone) setPhone(u.phone)
       toast('İndi ad, soyad və telefonu doldurub müraciət göndərin', 'success')
     } catch (err) {
       toast(err?.message || 'Google girişi uğursuz', 'error')
@@ -171,6 +189,8 @@ export default function ExamInvite() {
     user?.role === 'student' && requestState !== 'pending' && requestState !== 'assigned'
 
   return (
+    <>
+    <PhoneVerificationGate />
     <div className="p-4 sm:p-6 max-w-lg mx-auto w-full min-h-[70vh]">
       <h1 className="font-display font-bold text-2xl text-token-textMain">İmtahana qoşul</h1>
       <p className="text-sm text-token-textMuted mt-1 mb-6">
@@ -285,5 +305,6 @@ export default function ExamInvite() {
         </Card>
       )}
     </div>
+    </>
   )
 }

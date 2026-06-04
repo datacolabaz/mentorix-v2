@@ -4,6 +4,7 @@ import Button from '../common/Button'
 const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
 
 export default function GoogleSignInButton({ onCredential, disabled, label = 'Google ilə davam et' }) {
+  const wrapRef = useRef(null)
   const divRef = useRef(null)
   const [ready, setReady] = useState(false)
   const [err, setErr] = useState('')
@@ -13,33 +14,52 @@ export default function GoogleSignInButton({ onCredential, disabled, label = 'Go
       setErr('Google girişi konfiqurasiya olunmayıb')
       return
     }
+
     const mount = () => {
       if (!window.google?.accounts?.id || !divRef.current) return
+
       window.google.accounts.id.initialize({
         client_id: CLIENT_ID,
         callback: (resp) => {
           if (resp?.credential) onCredential?.(resp.credential)
         },
+        auto_select: false,
+        cancel_on_tap_outside: true,
+        itp_support: true,
       })
+
+      try {
+        window.google.accounts.id.cancel()
+      } catch {
+        /* One Tap açıqdırsa bağla */
+      }
+
+      const width = Math.max(280, Math.floor(wrapRef.current?.offsetWidth || 320))
       divRef.current.innerHTML = ''
       window.google.accounts.id.renderButton(divRef.current, {
-        theme: 'outline',
+        type: 'standard',
+        theme: 'filled_black',
         size: 'large',
-        width: 320,
-        text: 'continue_with',
+        shape: 'pill',
+        width,
+        text: 'signin_with',
         locale: 'az',
+        logo_alignment: 'left',
       })
       setReady(true)
     }
+
     if (window.google?.accounts?.id) {
       mount()
       return
     }
+
     const existing = document.querySelector('script[data-mx-gsi]')
     if (existing) {
       existing.addEventListener('load', mount)
       return () => existing.removeEventListener('load', mount)
     }
+
     const s = document.createElement('script')
     s.src = 'https://accounts.google.com/gsi/client'
     s.async = true
@@ -52,6 +72,27 @@ export default function GoogleSignInButton({ onCredential, disabled, label = 'Go
       s.onload = null
     }
   }, [onCredential])
+
+  useEffect(() => {
+    if (!ready || !wrapRef.current) return
+    const ro = new ResizeObserver(() => {
+      if (!window.google?.accounts?.id || !divRef.current) return
+      const width = Math.max(280, Math.floor(wrapRef.current.offsetWidth || 320))
+      divRef.current.innerHTML = ''
+      window.google.accounts.id.renderButton(divRef.current, {
+        type: 'standard',
+        theme: 'filled_black',
+        size: 'large',
+        shape: 'pill',
+        width,
+        text: 'signin_with',
+        locale: 'az',
+        logo_alignment: 'left',
+      })
+    })
+    ro.observe(wrapRef.current)
+    return () => ro.disconnect()
+  }, [ready])
 
   if (!CLIENT_ID) {
     return (
@@ -66,10 +107,16 @@ export default function GoogleSignInButton({ onCredential, disabled, label = 'Go
   }
 
   return (
-    <div className={disabled ? 'opacity-50 pointer-events-none' : ''}>
-      <div ref={divRef} className="flex justify-center min-h-[44px]" />
+    <div
+      ref={wrapRef}
+      className={[
+        'mx-google-signin w-full',
+        disabled ? 'opacity-50 pointer-events-none' : '',
+      ].join(' ')}
+    >
+      <div ref={divRef} className="flex justify-center w-full min-h-[48px] [&>div]:!w-full [&>div]:!max-w-full" />
       {!ready && (
-        <Button type="button" variant="secondary" className="w-full justify-center" disabled>
+        <Button type="button" variant="secondary" className="w-full justify-center rounded-full" disabled>
           {label}…
         </Button>
       )}

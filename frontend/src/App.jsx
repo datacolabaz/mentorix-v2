@@ -4,8 +4,10 @@ import useAuthStore from './hooks/useAuth'
 
 import Login from './pages/auth/Login'
 import VerifyEmail from './pages/auth/VerifyEmail'
+import VerifyPhone from './pages/auth/VerifyPhone'
 import ResetPassword from './pages/auth/ResetPassword'
 import RoleOnboarding from './pages/auth/RoleOnboarding'
+import { dashboardPathForRole, userNeedsPhoneVerificationPage } from './lib/postAuth'
 import InstructorMapSearch from './pages/public/InstructorMapSearch'
 import PublicInstructorProfile from './pages/public/PublicInstructorProfile'
 import AdminLayout from './layouts/AdminLayout'
@@ -77,7 +79,7 @@ const Placeholder = ({ title }) => (
 
 const RETURN_AFTER_LOGIN_KEY = 'mx_return_after_login'
 
-const ProtectedRoute = ({ children, roles }) => {
+const ProtectedRoute = ({ children, roles, skipPhoneGate }) => {
   const { user } = useAuthStore()
   const location = useLocation()
   if (!user) {
@@ -91,7 +93,16 @@ const ProtectedRoute = ({ children, roles }) => {
   }
   if (!user.role) return <Navigate to="/onboarding/role" replace />
   if (roles && !roles.includes(user.role)) return <Navigate to="/login" replace />
+  if (!skipPhoneGate && userNeedsPhoneVerificationPage(user) && location.pathname !== '/verify-phone') {
+    return <Navigate to="/verify-phone" replace />
+  }
   return children
+}
+
+function postLoginPath(user) {
+  if (!user?.role) return '/onboarding/role'
+  if (userNeedsPhoneVerificationPage(user)) return '/verify-phone'
+  return dashboardPathForRole(user.role)
 }
 
 export default function App() {
@@ -108,8 +119,20 @@ export default function App() {
       <Routes>
       <Route path="/search" element={<InstructorMapSearch />} />
       <Route path="/teachers/:id" element={<PublicInstructorProfile />} />
-      <Route path="/login" element={user ? <Navigate to={user?.role ? `/${user.role}` : '/onboarding/role'} replace /> : <Login />} />
+      <Route path="/login" element={user ? <Navigate to={postLoginPath(user)} replace /> : <Login />} />
       <Route path="/verify-email" element={<VerifyEmail />} />
+      <Route
+        path="/verify-phone"
+        element={
+          <ProtectedRoute skipPhoneGate>
+            {user && !userNeedsPhoneVerificationPage(user) ? (
+              <Navigate to={postLoginPath(user)} replace />
+            ) : (
+              <VerifyPhone />
+            )}
+          </ProtectedRoute>
+        }
+      />
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route
         path="/onboarding/role"
@@ -119,7 +142,7 @@ export default function App() {
           </ProtectedRoute>
         }
       />
-      <Route path="/" element={<Navigate to={user ? (user?.role ? `/${user.role}` : '/onboarding/role') : '/login'} />} />
+      <Route path="/" element={<Navigate to={user ? postLoginPath(user) : '/login'} />} />
 
       <Route
         path="/join/:code"

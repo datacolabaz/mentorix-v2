@@ -198,10 +198,21 @@ async function enrichUserForClient(userLite, sessionRole = null) {
   let out = { ...userLite, role, roles: legacyRoles };
   if (role === 'instructor') {
     out = await attachInstructorPublicLabel(out);
-    const { instructorNeedsPhoneBinding } = require('../utils/instructorPhone');
-    out.needs_instructor_phone = instructorNeedsPhoneBinding(out);
   }
   if (role === 'course') out = await attachCourseProfile(out);
+  if (role === 'instructor' || role === 'student') {
+    const { rows: gRows } = await db.query(
+      'SELECT google_sub, auth_provider, phone_verified_at FROM users WHERE id = $1 LIMIT 1',
+      [userLite.id],
+    );
+    const g = gRows[0] || {};
+    out = attachPhoneVerificationFlags({
+      ...out,
+      google_sub: g.google_sub,
+      auth_provider: g.auth_provider,
+      phone_verified_at: g.phone_verified_at,
+    });
+  }
   return out;
 }
 
@@ -271,7 +282,7 @@ function hasStoredPin(pinHash) {
   return pinHash != null && String(pinHash).trim().length > 0;
 }
 
-const PHONE_VERIFY_ROLES = new Set(['instructor', 'student', 'course']);
+const PHONE_VERIFY_ROLES = new Set(['instructor', 'student']);
 
 function phoneLinkRolesCompatible(sessionRole, ownerRole) {
   if (sessionRole === ownerRole) return true;
@@ -285,6 +296,7 @@ function phoneLinkRolesCompatible(sessionRole, ownerRole) {
 }
 
 function buildAuthUserPayload(user) {
+  const googleId = user.google_sub != null ? String(user.google_sub).trim() : '';
   return {
     id: user.id,
     full_name: user.full_name,
@@ -292,6 +304,19 @@ function buildAuthUserPayload(user) {
     email: user.email,
     phone: user.phone,
     phone_verified: Boolean(user.phone_verified),
+    phone_verified_at: user.phone_verified_at || null,
+    google_id: googleId || null,
+    google_sub: googleId || null,
+  };
+}
+
+function attachPhoneVerificationFlags(userLite) {
+  const { userNeedsPhoneVerification } = require('../utils/instructorPhone');
+  const needs = userNeedsPhoneVerification(userLite);
+  return {
+    ...userLite,
+    needs_phone_verification: needs,
+    needs_instructor_phone: userLite?.role === 'instructor' && needs,
   };
 }
 
@@ -1253,7 +1278,9 @@ const resendVerificationEmail = async (req, res) => {
 const me = async (req, res) => {
   try {
     const { rows } = await db.query(
-      'SELECT id, full_name, email, phone, role, phone_verified, is_active, is_verified, role_selected FROM users WHERE id = $1',
+      `SELECT id, full_name, email, phone, role, phone_verified, phone_verified_at,
+              google_sub, auth_provider, is_active, is_verified, role_selected
+       FROM users WHERE id = $1`,
       [req.user.id],
     );
     const u = rows[0];
@@ -1292,16 +1319,16 @@ const sendMyPhoneVerifyOtp = async (req, res) => {
     const meUser = meRows[0];
     if (!meUser) return res.status(404).json({ success: false, message: 'Tapılmadı' });
 
-    if (sessionRole === 'instructor') {
+    if (PHONE_VERIFY_ROLES.has(sessionRole)) {
       if (meUser.phone_verified && canonicalPhone(meUser.phone)) {
         return res.status(403).json({
           success: false,
-          message: 'Mobil nömrəniz artıq təsdiqlənib və dəyişdirilə bilməz.',
+          message: 'Mobil nömrəniz artıq təsdiqlənib. Dəyişdirmək üçün dəstək ilə əlaqə saxlayın.',
           code: 'PHONE_ALREADY_VERIFIED',
         });
       }
-      const { assertInstructorPhoneAvailable } = require('../utils/instructorPhone');
-      await assertInstructorPhoneAvailable(db, phoneCanon, req.user.id);
+      const { assertAccountPhoneAvailable } = require('../utils/instructorPhone');
+      await assertAccountPhoneAvailable(db, phoneCanon, req.user.id);
     }
 
     const { rows: ownerRows } = await db.query(
@@ -1445,6 +1472,7 @@ const verifyMyPhoneVerifyOtp = async (req, res) => {
                email = COALESCE(NULLIF(TRIM(email), ''), $3),
                auth_provider = COALESCE(auth_provider, 'google'),
                phone_verified = TRUE,
+               phone_verified_at = COALESCE(phone_verified_at, NOW()),
                full_name = CASE
                  WHEN TRIM(COALESCE(full_name, '')) = '' THEN COALESCE($4, full_name)
                  ELSE full_name
@@ -1476,18 +1504,24 @@ const verifyMyPhoneVerifyOtp = async (req, res) => {
         return { user: linkedRows[0], linkedUserId: owner.id, merged: true };
       }
 
-      if (sessionRole === 'instructor') {
-        const { assertInstructorPhoneAvailable } = require('../utils/instructorPhone');
-        await assertInstructorPhoneAvailable(client, phoneCanon, req.user.id);
+      const { assertAccountPhoneAvailable } = require('../utils/instructorPhone');
+      if (PHONE_VERIFY_ROLES.has(sessionRole)) {
+        await assertAccountPhoneAvailable(client, phoneCanon, req.user.id);
       }
 
       await client.query(
         `UPDATE users
          SET phone = $2,
-             phone_verified = TRUE
+             phone_verified = TRUE,
+             phone_verified_at = COALESCE(phone_verified_at, NOW())
          WHERE id = $1`,
         [req.user.id, phoneCanon]
       );
+
+      if (sessionRole === 'student') {
+        const { upsertStudentContactPhone } = require('../utils/studentPhone');
+        await upsertStudentContactPhone(client, req.user.id, phoneCanon).catch(() => {});
+      }
 
       if (!hasStoredPin(meUser.pin_hash) && /^\d{6}$/.test(codeStr)) {
         const hash = await bcrypt.hash(codeStr, 12);
@@ -1646,12 +1680,7 @@ const googleLogin = async (req, res) => {
           err.statusCode = 409;
           throw err;
         }
-        if (user.role && user.role !== 'student') {
-          const err = new Error('Bu Google email artıq başqa rol üçün qeydiyyatdan keçib');
-          err.statusCode = 409;
-          throw err;
-        }
-        if (user.google_sub && String(user.google_sub) !== String(g.sub)) {
+        if (user.google_sub && String(user.google_sub).trim() !== '' && String(user.google_sub) !== String(g.sub)) {
           const err = new Error('Bu email artıq başqa Google hesabına bağlıdır');
           err.statusCode = 409;
           throw err;
@@ -1659,19 +1688,23 @@ const googleLogin = async (req, res) => {
 
         await assertGoogleSubFreeForOtherUser(g.sub, user.id);
 
-        await db.query(
+        const { rows: linkedByEmail } = await db.query(
           `UPDATE users
            SET google_sub = $2,
-               auth_provider = 'google',
+               auth_provider = COALESCE(NULLIF(TRIM(auth_provider), ''), 'google'),
                is_active = TRUE,
                account_status = 'active',
+               is_verified = TRUE,
                full_name = CASE
                  WHEN TRIM(COALESCE(full_name, '')) = '' THEN COALESCE($3, full_name)
                  ELSE full_name
                END
-           WHERE id = $1`,
-          [user.id, g.sub, g.name || null]
+           WHERE id = $1
+           RETURNING id, full_name, email, role, phone, phone_verified, phone_verified_at,
+                     auth_provider, google_sub, account_status, is_active, is_verified`,
+          [user.id, g.sub, g.name || null],
         );
+        if (linkedByEmail[0]) user = linkedByEmail[0];
       }
     }
 
@@ -1698,14 +1731,18 @@ const googleLogin = async (req, res) => {
 
     const token = sign({ id: user.id, role: user.role });
     logAuthLogin(req, user, user.role);
-    const payload = buildAuthUserPayload(user);
-    const { instructorNeedsPhoneBinding } = require('../utils/instructorPhone');
-    const needs_instructor_phone = instructorNeedsPhoneBinding(user);
+    const sessionUser = {
+      ...user,
+      google_sub: user.google_sub || g.sub,
+      auth_provider: user.auth_provider || 'google',
+    };
+    const payload = attachPhoneVerificationFlags(buildAuthUserPayload(sessionUser));
     return res.json({
       success: true,
       token,
-      user: { ...payload, needs_instructor_phone },
-      needs_instructor_phone,
+      user: payload,
+      needs_phone_verification: Boolean(payload.needs_phone_verification),
+      needs_instructor_phone: Boolean(payload.needs_instructor_phone),
     });
   } catch (err) {
     const st = err.statusCode || 500;
@@ -1973,6 +2010,8 @@ const googleComplete = async (req, res) => {
         );
         await grantCourseRoleToUser(user.id, user.full_name || 'Kurs');
         await provisionInstructorBasicTrial(db, user.id, req);
+      } else if (r === 'student') {
+        await db.query('INSERT INTO student_profiles (user_id) VALUES ($1) ON CONFLICT DO NOTHING', [user.id]).catch(() => {});
       }
     } else if (!user.role) {
       const { rows: updated } = await db.query(
@@ -2005,14 +2044,18 @@ const googleComplete = async (req, res) => {
 
     const token = sign({ id: user.id, role: user.role });
     logAuthLogin(req, user, user.role);
-    const payload = buildAuthUserPayload(user);
-    const { instructorNeedsPhoneBinding } = require('../utils/instructorPhone');
-    const needs_instructor_phone = instructorNeedsPhoneBinding(user);
+    const sessionUser = {
+      ...user,
+      google_sub: user.google_sub || g.sub,
+      auth_provider: user.auth_provider || 'google',
+    };
+    const payload = attachPhoneVerificationFlags(buildAuthUserPayload(sessionUser));
     return res.json({
       success: true,
       token,
-      user: { ...payload, needs_instructor_phone },
-      needs_instructor_phone,
+      user: payload,
+      needs_phone_verification: Boolean(payload.needs_phone_verification),
+      needs_instructor_phone: Boolean(payload.needs_instructor_phone),
     });
   } catch (err) {
     const st = err.statusCode || 500;

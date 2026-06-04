@@ -6,6 +6,7 @@ import useAuthStore from '../../hooks/useAuth'
 import { useToast } from '../common/Toast'
 import api from '../../lib/api'
 import { getAttributionPayload } from '../../lib/analytics'
+import { postAuthNavigate } from '../../lib/postAuth'
 
 const inputClass =
   'w-full bg-surface-1 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-primary/40'
@@ -48,11 +49,14 @@ export default function InstructorEmailAuth({ onSuccess }) {
       }
       const u = {
         ...r.user,
+        needs_phone_verification:
+          r.needs_phone_verification ?? r.user?.needs_phone_verification ?? r.needs_instructor_phone,
         needs_instructor_phone: r.needs_instructor_phone ?? r.user?.needs_instructor_phone,
       }
       setSession(r.token, u)
-      toast('Daxil oldunuz', 'success')
-      onSuccess?.(u)
+      toast(u.needs_phone_verification ? 'Mobil nömrənizi təsdiqləyin' : 'Daxil oldunuz', 'success')
+      if (onSuccess) onSuccess(u)
+      else postAuthNavigate(u, navigate)
     } catch (err) {
       toast(err?.message || 'Google girişi uğursuz', 'error')
     } finally {
@@ -241,14 +245,28 @@ export default function InstructorEmailAuth({ onSuccess }) {
           Seçilmiş rol: {role === 'instructor' ? 'Müəllim' : role === 'course' ? 'Kurs' : 'Tələbə'}
         </p>
         <GoogleSignInButton onCredential={handleGoogleCredential} disabled={loading} />
-        {isInstructor ? (
-          <p className="text-[10px] text-gray-500 text-center leading-relaxed">
-            Müəllim hesabı yalnız Google ilə açılır. Panel açılır; ilk SMS göndərişində mobil nömrə OTP ilə təsdiqlənir.
-          </p>
-        ) : null}
+        <p className="text-[10px] text-gray-500 text-center leading-relaxed">
+          {isInstructor
+            ? 'Müəllim: Google ilə qeydiyyat → OTP telefon təsdiqi → panel.'
+            : 'Tələbə: Google ilə qeydiyyat → OTP telefon təsdiqi → panel.'}
+        </p>
       </div>
 
-      {isInstructor ? null : (
+      {isInstructor ? (
+        <>
+          <div className="flex items-center gap-3 text-xs text-gray-500">
+            <span className="flex-1 h-px bg-white/10" />
+            <span>və ya köhnə email hesabı</span>
+            <span className="flex-1 h-px bg-white/10" />
+          </div>
+          <p className="text-[10px] text-gray-500 text-center leading-relaxed">
+            Əvvəl email ilə qeydiyyat etmisinizsə: eyni Gmail ünvanı ilə daxil olun — köhnə hesab avtomatik birləşir. Və ya
+            aşağıdan email/şifrə ilə giriş edin.
+          </p>
+        </>
+      ) : null}
+
+      {!isInstructor ? (
         <>
           <div className="flex items-center gap-3 text-xs text-gray-500">
             <span className="flex-1 h-px bg-white/10" />
@@ -347,6 +365,49 @@ export default function InstructorEmailAuth({ onSuccess }) {
               </button>
             </form>
           )}
+        </>
+      ) : (
+        <>
+          <div className="flex rounded-xl border border-white/10 overflow-hidden text-sm font-semibold">
+            <button
+              type="button"
+              className={`flex-1 py-2.5 ${tab === 'login' ? 'bg-primary text-[#041018]' : 'text-gray-400 hover:bg-white/5'}`}
+              onClick={() => setTab('login')}
+            >
+              Email giriş
+            </button>
+          </div>
+          <form onSubmit={handleLogin} className="space-y-3">
+            <input
+              type="email"
+              className={inputClass}
+              placeholder="E-poçt (məs. datanalystelman@gmail.com)"
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+            <input
+              type="password"
+              className={inputClass}
+              placeholder="Şifrə"
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+            <Button type="submit" loading={loading} className="w-full justify-center">
+              Email ilə daxil ol
+            </Button>
+            <button
+              type="button"
+              className="w-full text-xs font-semibold text-primary hover:text-primary/90 text-center"
+              disabled={loading}
+              onClick={handleForgotPassword}
+            >
+              Şifrəmi unutmuşam
+            </button>
+          </form>
         </>
       )}
     </div>

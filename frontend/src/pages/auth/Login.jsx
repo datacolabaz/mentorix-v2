@@ -9,6 +9,7 @@ import api from '../../lib/api'
 import { trackEvent, trackRegisterClick, trackPricingView } from '../../lib/analytics'
 import { defaultLoginMarketingPayload } from '../../constants/defaultLoginMarketing'
 import { setPageSeo } from '../../lib/pageSeo'
+import { postAuthNavigate } from '../../lib/postAuth'
 
 const TRUST_STUDENTS_FLOOR = 100
 const TRUST_INSTRUCTORS_FLOOR = 15
@@ -99,19 +100,12 @@ export default function Login() {
   const toast = useToast()
   const roleMap = { admin: '/admin', instructor: '/instructor', student: '/student', parent: '/parent', course: '/course' }
 
-  const goDashboard = (r) => {
-    const fallback = roleMap[r] || '/login'
-    try {
-      const ret = sessionStorage.getItem('mx_return_after_login')
-      if (ret && ret.startsWith('/') && ret !== '/login') {
-        sessionStorage.removeItem('mx_return_after_login')
-        navigate(ret, { replace: true })
-        return
-      }
-    } catch {
-      /* ignore */
-    }
-    navigate(fallback, { replace: true })
+  const goDashboard = (roleOrUser) => {
+    const u =
+      roleOrUser && typeof roleOrUser === 'object'
+        ? roleOrUser
+        : useAuthStore.getState().user || { role: roleOrUser }
+    postAuthNavigate(u, navigate)
   }
 
   const handleEmailLogin = async (e) => {
