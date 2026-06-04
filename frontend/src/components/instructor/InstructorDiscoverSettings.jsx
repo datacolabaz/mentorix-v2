@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import api from '../../lib/api'
 import Card from '../common/Card'
 import Button from '../common/Button'
 import { useToast } from '../common/Toast'
+import { groupServiceAreas } from '../../lib/serviceAreaGroups'
 
 const FORMAT_OPTS = [
   { id: 'online', label: '💻 Onlayn' },
@@ -27,6 +28,17 @@ export default function InstructorDiscoverSettings({ mapVisible, theme, inp }) {
   const [catSearch, setCatSearch] = useState('')
   const [catSuggestions, setCatSuggestions] = useState([])
   const [pickedCats, setPickedCats] = useState([])
+  const [areaFilter, setAreaFilter] = useState('')
+
+  const areaGroups = useMemo(() => groupServiceAreas(areas), [areas])
+  const filterAreaList = useCallback(
+    (list) => {
+      const q = areaFilter.trim().toLowerCase()
+      if (!q) return list
+      return list.filter((a) => String(a.name_az || '').toLowerCase().includes(q))
+    },
+    [areaFilter],
+  )
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -227,22 +239,47 @@ export default function InstructorDiscoverSettings({ mapVisible, theme, inp }) {
 
         {formats.includes('student_place') || formats.includes('teacher_place') ? (
           <div>
-            <p className="text-xs font-bold text-gray-500 uppercase mb-2">Rayon / metro (canlı dərs)</p>
-            <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto">
-              {areas.map((a) => (
-                <button
-                  key={a.id}
-                  type="button"
-                  onClick={() => toggleArea(a.id)}
-                  className={`text-xs px-2 py-1 rounded-lg border ${
-                    areaIds.includes(a.id)
-                      ? 'border-primary/50 bg-primary/15 text-primary'
-                      : 'border-white/10 text-gray-400'
-                  }`}
-                >
-                  {a.name_az}
-                </button>
-              ))}
+            <p className="text-xs font-bold text-gray-500 uppercase mb-2">
+              Rayon / şəhər / metro (canlı dərs)
+            </p>
+            <input
+              type="search"
+              value={areaFilter}
+              onChange={(e) => setAreaFilter(e.target.value)}
+              placeholder="Rayon axtar… (məs. Gəncə, Lənkəran)"
+              className={`${inp} mb-2`}
+            />
+            <div className="max-h-52 overflow-y-auto space-y-3 pr-1">
+              {[
+                ['Populyar', areaGroups.popular],
+                ['Bakı rayonları', areaGroups.bakuDistricts],
+                ['Metro', areaGroups.metros],
+                ['Azərbaycan rayonları', areaGroups.regions],
+              ].map(([label, list]) => {
+                const shown = filterAreaList(list)
+                if (!shown.length) return null
+                return (
+                  <div key={label}>
+                    <p className="text-[10px] font-bold text-gray-500 uppercase mb-1.5">{label}</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {shown.map((a) => (
+                        <button
+                          key={a.id}
+                          type="button"
+                          onClick={() => toggleArea(a.id)}
+                          className={`text-xs px-2 py-1 rounded-lg border ${
+                            areaIds.includes(a.id)
+                              ? 'border-primary/50 bg-primary/15 text-primary'
+                              : 'border-white/10 text-gray-400'
+                          }`}
+                        >
+                          {a.name_az}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           </div>
         ) : null}

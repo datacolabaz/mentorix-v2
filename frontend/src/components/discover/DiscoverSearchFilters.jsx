@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import api from '../../lib/api'
+import { areaKindLabel, groupServiceAreas } from '../../lib/serviceAreaGroups'
 
 const FORMAT_OPTIONS = [
   { value: 'any', label: 'Fərq etmir' },
@@ -53,6 +54,8 @@ export default function DiscoverSearchFilters({ value, onChange }) {
     const t = window.setTimeout(() => void runSearch(categoryQuery), 280)
     return () => window.clearTimeout(t)
   }, [categoryQuery, runSearch])
+
+  const areaGroups = useMemo(() => groupServiceAreas(areas), [areas])
 
   const selectedLabel = useMemo(() => {
     if (v.category_name) return v.category_name
@@ -155,25 +158,43 @@ export default function DiscoverSearchFilters({ value, onChange }) {
             value={v.area_id || ''}
             onChange={(e) => patch({ area_id: e.target.value || null })}
           >
-            <option value="">Rayon və ya metro seçin</option>
-            <optgroup label="Populyar">
-              {areas
-                .filter((a) => a.is_popular)
-                .map((a) => (
+            <option value="">Rayon, şəhər və ya metro seçin</option>
+            {areaGroups.popular.length ? (
+              <optgroup label="Populyar">
+                {areaGroups.popular.map((a) => (
                   <option key={a.id} value={a.id}>
-                    {a.name_az} ({a.kind === 'metro' ? 'Metro' : 'Rayon'})
+                    {a.name_az} ({areaKindLabel(a.kind)})
                   </option>
                 ))}
-            </optgroup>
-            <optgroup label="Digər">
-              {areas
-                .filter((a) => !a.is_popular)
-                .map((a) => (
+              </optgroup>
+            ) : null}
+            {areaGroups.bakuDistricts.length ? (
+              <optgroup label="Bakı rayonları">
+                {areaGroups.bakuDistricts.map((a) => (
                   <option key={a.id} value={a.id}>
                     {a.name_az}
                   </option>
                 ))}
-            </optgroup>
+              </optgroup>
+            ) : null}
+            {areaGroups.metros.length ? (
+              <optgroup label="Metro">
+                {areaGroups.metros.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.name_az}
+                  </option>
+                ))}
+              </optgroup>
+            ) : null}
+            {areaGroups.regions.length ? (
+              <optgroup label="Azərbaycan rayonları">
+                {areaGroups.regions.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.name_az}
+                  </option>
+                ))}
+              </optgroup>
+            ) : null}
           </select>
         </div>
       ) : null}
