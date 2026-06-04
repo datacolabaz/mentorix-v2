@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../../lib/api'
 import useAuthStore from '../../hooks/useAuth'
-import { postAuthNavigate } from '../../lib/postAuth'
+import { postAuthNavigate, userNeedsPhoneVerificationPage } from '../../lib/postAuth'
 import Brand from '../../components/common/Brand'
 import Button from '../../components/common/Button'
 import PhoneInput from '../../components/auth/PhoneInput'
@@ -21,10 +21,25 @@ export default function VerifyPhone() {
   const [busy, setBusy] = useState(false)
 
   useEffect(() => {
-    if (user && user.role !== 'instructor') {
+    if (!user) return
+    if (user.role !== 'instructor') {
       postAuthNavigate(user, navigate)
+      return
     }
-  }, [user, navigate])
+    void (async () => {
+      try {
+        const data = await api.get('/auth/me')
+        if (data?.user) {
+          setSession(localStorage.getItem('mx_token'), data.user)
+          if (!userNeedsPhoneVerificationPage(data.user)) {
+            postAuthNavigate(data.user, navigate)
+          }
+        }
+      } catch {
+        /* ignore */
+      }
+    })()
+  }, [user, navigate, setSession])
 
   const sendOtp = async () => {
     setBusy(true)
@@ -33,6 +48,18 @@ export default function VerifyPhone() {
       toast(r?.message || 'OTP göndərildi', 'success')
       setStep('otp')
     } catch (err) {
+      if (err?.code === 'PHONE_ALREADY_VERIFIED') {
+        try {
+          const data = await api.get('/auth/me')
+          if (data?.user) {
+            setSession(localStorage.getItem('mx_token'), data.user)
+            postAuthNavigate(data.user, navigate)
+            return
+          }
+        } catch {
+          /* fall through */
+        }
+      }
       toast(err?.message || 'OTP göndərilmədi', 'error')
     } finally {
       setBusy(false)

@@ -221,7 +221,8 @@ async function enrichUserForClient(userLite, sessionRole = null) {
   if (role === 'course') out = await attachCourseProfile(out);
   if (role === 'instructor') {
     const { rows: gRows } = await db.query(
-      'SELECT google_sub, auth_provider, phone_verified_at FROM users WHERE id = $1 LIMIT 1',
+      `SELECT google_sub, auth_provider, phone_verified, phone_verified_at
+       FROM users WHERE id = $1 LIMIT 1`,
       [userLite.id],
     );
     const g = gRows[0] || {};
@@ -229,7 +230,8 @@ async function enrichUserForClient(userLite, sessionRole = null) {
       ...out,
       google_sub: g.google_sub,
       auth_provider: g.auth_provider,
-      phone_verified_at: g.phone_verified_at,
+      phone_verified: userLite.phone_verified ?? g.phone_verified,
+      phone_verified_at: userLite.phone_verified_at ?? g.phone_verified_at,
     });
   }
   return out;
@@ -1248,7 +1250,14 @@ const loginWithEmail = async (req, res) => {
     if (!guardEmailVerifiedBeforeToken(res, user)) return;
 
     const token = sign({ id: user.id, role });
-    const baseUser = { id: user.id, full_name: user.full_name, role, email: user.email, phone: user.phone };
+    const baseUser = {
+      id: user.id,
+      full_name: user.full_name,
+      role,
+      email: user.email,
+      phone: user.phone,
+      phone_verified: user.phone_verified,
+    };
     const userOut = await enrichUserForClient(baseUser, role);
     logAuthLogin(req, user, role);
     return res.json({ success: true, token, user: userOut });

@@ -10,13 +10,17 @@ export function dashboardPathForRole(role) {
   return ROLE_HOME[role] || '/login'
 }
 
-/** Yalnız müəllim: Google sonrası OTP telefon təsdiqi. */
+function isGoogleAccountUser(user) {
+  if (Boolean(String(user.google_id || user.google_sub || '').trim())) return true
+  return String(user.auth_provider || '').toLowerCase() === 'google'
+}
+
+/** Yalnız Google ilə giriş edən müəllim: bir dəfə OTP telefon təsdiqi. */
 export function userNeedsPhoneVerificationPage(user) {
   if (!user || user.role !== 'instructor') return false
-  if (user.phone_verified === true) return false
-  if (user.needs_phone_verification === true) return true
-  const hasGoogle = Boolean(String(user.google_id || user.google_sub || '').trim())
-  return hasGoogle
+  if (!isGoogleAccountUser(user)) return false
+  if (user.phone_verified === true && String(user.phone || '').trim()) return false
+  return true
 }
 
 export function postAuthNavigate(user, navigate) {
