@@ -1,19 +1,9 @@
 import axios from 'axios'
+import { normalizeApiBaseUrl } from './apiBase'
 
 const parsedTimeout = Number(import.meta.env.VITE_API_TIMEOUT_MS)
 
 const USAGE_LIMIT_CODES = new Set(['STUDENT_LIMIT', 'STORAGE_LIMIT', 'SMS_LIMIT'])
-
-function normalizeApiBaseUrl(raw) {
-  const v = raw != null ? String(raw).trim().replace(/\/+$/, '') : ''
-  if (!v) return '/api'
-  // If someone sets "api.example.com" without protocol, treat it as https.
-  // Vite env vars are strings; in the browser an invalid/unknown scheme can break requests.
-  const withProto = v.includes('://') || v.startsWith('/') ? v : `https://${v}`
-  // If env already points to the API prefix, keep it. Otherwise append /api.
-  if (withProto.endsWith('/api')) return withProto
-  return `${withProto}/api`
-}
 
 const api = axios.create({
   // Preferred:

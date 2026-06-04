@@ -22,6 +22,7 @@ const { ensureAssignmentsUploadDir } = require('./services/assignmentFileStorage
 const uploadsExamsDir = path.join(__dirname, '../uploads/exams');
 const uploadsAssignmentsDir = ensureAssignmentsUploadDir();
 const uploadsCourseLogosDir = path.join(__dirname, '../uploads/course-logos');
+const { servePublicInstructorAvatar } = require('./controllers/instructorAvatarController');
 const uploadsInstructorAvatarsDir = path.join(__dirname, '../uploads/instructor-avatars');
 fs.mkdirSync(uploadsExamsDir, { recursive: true });
 fs.mkdirSync(uploadsCourseLogosDir, { recursive: true });
@@ -45,7 +46,7 @@ app.use(express.json());
 app.use('/api/uploads/exams', express.static(uploadsExamsDir));
 app.use('/api/uploads/assignments', express.static(uploadsAssignmentsDir));
 app.use('/api/uploads/course-logos', express.static(uploadsCourseLogosDir));
-app.use('/api/uploads/instructor-avatars', express.static(uploadsInstructorAvatarsDir));
+app.get('/api/uploads/instructor-avatars/:filename', servePublicInstructorAvatar);
 
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/students', require('./routes/students'));

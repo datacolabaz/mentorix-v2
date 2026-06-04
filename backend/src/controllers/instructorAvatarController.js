@@ -2,8 +2,14 @@ const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
 const db = require('../utils/db');
+const {
+  uploadsDir,
+  isSafeAvatarFilename,
+  persistAvatarBlob,
+  deleteAvatarBlob,
+  servePublicInstructorAvatar,
+} = require('../services/instructorAvatarStorage');
 
-const uploadsDir = path.join(__dirname, '../../uploads/instructor-avatars');
 fs.mkdirSync(uploadsDir, { recursive: true });
 
 const ALLOWED_MIME = new Set(['image/jpeg', 'image/png', 'image/webp']);
@@ -35,15 +41,21 @@ function avatarRelPath(filename) {
   return `/api/uploads/instructor-avatars/${filename}`;
 }
 
-function tryUnlinkAvatarUrl(url) {
-  if (!url || typeof url !== 'string') return;
+function filenameFromAvatarUrl(url) {
+  if (!url || typeof url !== 'string') return null;
   const marker = '/instructor-avatars/';
   const idx = url.indexOf(marker);
-  if (idx < 0) return;
+  if (idx < 0) return null;
   const filename = url.slice(idx + marker.length).split('?')[0];
-  if (!filename || filename.includes('..')) return;
+  return isSafeAvatarFilename(filename) ? filename : null;
+}
+
+function tryUnlinkAvatarUrl(url) {
+  const filename = filenameFromAvatarUrl(url);
+  if (!filename) return;
   const full = path.join(uploadsDir, filename);
   fs.unlink(full, () => {});
+  void deleteAvatarBlob(filename);
 }
 
 const postInstructorAvatar = (req, res) => {
@@ -56,6 +68,9 @@ const postInstructorAvatar = (req, res) => {
     }
     try {
       const rel = avatarRelPath(req.file.filename);
+      const buf = fs.readFileSync(req.file.path);
+      await persistAvatarBlob(req.file.filename, buf, req.file.mimetype);
+
       const { rows: prev } = await db.query(
         `SELECT avatar_url FROM instructor_profiles WHERE user_id = $1 LIMIT 1`,
         [req.user.id],
@@ -93,4 +108,4 @@ const deleteInstructorAvatar = async (req, res) => {
   }
 };
 
-module.exports = { postInstructorAvatar, deleteInstructorAvatar };
+module.exports = { postInstructorAvatar, deleteInstructorAvatar, servePublicInstructorAvatar };
