@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
+import { copyStudentTaskLink } from '../../lib/taskShare'
 import api from '../../lib/api'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
@@ -483,6 +484,20 @@ export default function InstructorTasks() {
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2 shrink-0">
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={async () => {
+                        try {
+                          await copyStudentTaskLink(t.id)
+                          toast('Tapşırıq linki kopyalandı', 'success')
+                        } catch {
+                          toast('Link kopyalanmadı', 'error')
+                        }
+                      }}
+                    >
+                      Link
+                    </Button>
                     <Button size="sm" variant="secondary" onClick={() => openEdit(t)}>
                       Redaktə
                     </Button>

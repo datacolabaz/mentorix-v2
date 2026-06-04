@@ -13,6 +13,13 @@ const {
   rejectExamAccessRequest,
   isMissingExamAccessTableError,
 } = require('../services/examAccessRequestService');
+const {
+  listPendingTaskAccessRequests,
+  countPendingTaskAccessRequests,
+  approveTaskAccessRequest,
+  rejectTaskAccessRequest,
+  isMissingTaskAccessTableError,
+} = require('../services/taskAccessRequestService');
 
 const getPublicJoin = async (req, res) => {
   try {
@@ -33,6 +40,7 @@ const listJoinRequests = async (req, res) => {
     const warnings = [];
     const groupRequests = await listPendingJoinRequests(req.user.id);
     let examRequests = [];
+    let taskRequests = [];
     try {
       examRequests = await listPendingExamAccessRequests(req.user.id);
     } catch (e) {
@@ -44,9 +52,21 @@ const listJoinRequests = async (req, res) => {
         warnings.push(e.message || 'İmtahan sorğuları yüklənmədi');
       }
     }
+    try {
+      taskRequests = await listPendingTaskAccessRequests(req.user.id);
+    } catch (e) {
+      if (isMissingTaskAccessTableError(e)) {
+        warnings.push(
+          'Tapşırıq sorğuları aktiv deyil: serverdə «node scripts/migrate.js» (migrasiya 131) işə salın.',
+        );
+      } else {
+        warnings.push(e.message || 'Tapşırıq sorğuları yüklənmədi');
+      }
+    }
     const requests = [
       ...groupRequests.map((r) => ({ ...r, kind: 'group_join' })),
       ...examRequests,
+      ...taskRequests,
     ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
     res.json({ success: true, requests, warnings });
   } catch (err) {
@@ -111,12 +131,18 @@ const joinRequestsCount = async (req, res) => {
   try {
     const groupCount = await countPendingJoinRequests(req.user.id);
     let examCount = 0;
+    let taskCount = 0;
     try {
       examCount = await countPendingExamAccessRequests(req.user.id);
     } catch (e) {
       if (!isMissingExamAccessTableError(e)) throw e;
     }
-    res.json({ success: true, count: groupCount + examCount });
+    try {
+      taskCount = await countPendingTaskAccessRequests(req.user.id);
+    } catch (e) {
+      if (!isMissingTaskAccessTableError(e)) throw e;
+    }
+    res.json({ success: true, count: groupCount + examCount + taskCount });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -132,7 +158,9 @@ const approveRequest = async (req, res) => {
     const result =
       kind === 'exam_access'
         ? await approveExamAccessRequest(req.params.id, req.user.id, { sendSms })
-        : await approveJoinRequest(req.params.id, req.user.id);
+        : kind === 'task_access'
+          ? await approveTaskAccessRequest(req.params.id, req.user.id)
+          : await approveJoinRequest(req.params.id, req.user.id);
     res.json({ success: true, ...result });
   } catch (err) {
     res.status(err.statusCode || 500).json({ success: false, message: err.message });
@@ -145,7 +173,9 @@ const rejectRequest = async (req, res) => {
     const result =
       kind === 'exam_access'
         ? await rejectExamAccessRequest(req.params.id, req.user.id)
-        : await rejectJoinRequest(req.params.id, req.user.id, req.body?.reason);
+        : kind === 'task_access'
+          ? await rejectTaskAccessRequest(req.params.id, req.user.id)
+          : await rejectJoinRequest(req.params.id, req.user.id, req.body?.reason);
     res.json({ success: true, ...result });
   } catch (err) {
     res.status(err.statusCode || 500).json({ success: false, message: err.message });

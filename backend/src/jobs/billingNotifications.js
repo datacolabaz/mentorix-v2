@@ -74,7 +74,8 @@ async function runMonthlyTwoDayNotifications() {
      LEFT JOIN users su ON su.id = e.student_id
      LEFT JOIN student_profiles sp ON sp.user_id = e.student_id
      WHERE e.billing_type = 'monthly'
-       AND (e.status IS NULL OR LOWER(TRIM(e.status)) = 'active')`
+       AND (e.status IS NULL OR LOWER(TRIM(e.status)) = 'active')
+       AND COALESCE(e.enrollment_source, 'manual') IN ('group', 'manual')`
   );
 
   let sent = 0;
@@ -216,7 +217,8 @@ async function runLessonPackLastLessonNotifications() {
      LEFT JOIN users su ON su.id = e.student_id
      LEFT JOIN student_profiles sp ON sp.user_id = e.student_id
      WHERE e.billing_type IN ('8_lessons','12_lessons')
-       AND (e.status IS NULL OR LOWER(TRIM(e.status)) = 'active')`
+       AND (e.status IS NULL OR LOWER(TRIM(e.status)) = 'active')
+       AND COALESCE(e.enrollment_source, 'manual') IN ('group', 'manual')`
   );
 
   let sent = 0;

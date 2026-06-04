@@ -97,7 +97,7 @@ export default function InstructorJoinRequests() {
     <div className="p-4 sm:p-6 max-w-3xl mx-auto w-full">
       <h1 className="font-display font-bold text-xl sm:text-2xl text-token-textMain">Sorğular</h1>
       <p className="text-token-textMuted text-sm mt-1 mb-6">
-        Tələbənin imtahan və ya qrup qoşulma sorğuları.
+        Tələbənin imtahan, tapşırıq və ya qrup qoşulma sorğuları.
       </p>
 
       {warnings.length > 0 && (
@@ -127,6 +127,12 @@ export default function InstructorJoinRequests() {
                       <span className="text-token-textMuted font-normal">·</span> «{req.exam_title || 'İmtahan'}»
                       imtahanına giriş istəyir
                     </>
+                  ) : req.kind === 'task_access' ? (
+                    <>
+                      {' '}
+                      <span className="text-token-textMuted font-normal">·</span> «{req.task_title || 'Tapşırıq'}»
+                      tapşırığına giriş istəyir
+                    </>
                   ) : req.group_name ? (
                     <>
                       {' '}
@@ -139,6 +145,9 @@ export default function InstructorJoinRequests() {
                 </p>
                 {req.kind === 'exam_access' && (
                   <p className="text-[10px] uppercase tracking-wide text-amber-400/90 mt-1">İmtahan sorğusu</p>
+                )}
+                {req.kind === 'task_access' && (
+                  <p className="text-[10px] uppercase tracking-wide text-violet-400/90 mt-1">Tapşırıq sorğusu</p>
                 )}
                 {req.subject_name && (
                   <p className="text-xs text-token-textMuted mt-1">Sahə: {req.subject_name}</p>

@@ -18,28 +18,8 @@ async function insertUserNotification(userId, title, body, type, meta = {}) {
     .catch((e) => console.error('insertUserNotification', type, e.message));
 }
 
-/** Təsdiqdən sonra müəllimin tələbə siyahısında görünsün */
-async function ensureInstructorStudentEnrollment(client, instructorId, studentId) {
-  const ni = normHex(instructorId);
-  const { rows: existing } = await client.query(
-    `SELECT id, status FROM enrollments
-     WHERE student_id = $1::uuid
-       AND (deleted_at IS NULL)
-       AND REPLACE(LOWER(TRIM(instructor_id::text)), '-', '') = $2
-       AND COALESCE(LOWER(TRIM(status)), '') NOT IN ('rejected', 'left', 'archived')
-     LIMIT 1`,
-    [studentId, ni],
-  );
-  if (existing[0]?.id) return existing[0].id;
-
-  const { rows: ins } = await client.query(
-    `INSERT INTO enrollments (instructor_id, student_id, status, enrolled_at)
-     VALUES ($1::uuid, $2::uuid, 'pending_setup', NOW())
-     RETURNING id`,
-    [instructorId, studentId],
-  );
-  return ins[0]?.id || null;
-}
+const { assertStudentProfileComplete } = require('../controllers/studentProfileController');
+const { ensureLightInstructorEnrollment } = require('./lightEnrollmentService');
 
 async function notifyInstructorExamAccessRequest(instructorId, studentName, examTitle, examId) {
   const title = 'İmtahana giriş sorğusu';
@@ -125,8 +105,6 @@ async function getStudentAccessStatus(studentId, examId) {
     rejected_request: rejected[0] || null,
   };
 }
-
-const { assertStudentProfileComplete } = require('../controllers/studentProfileController');
 
 async function createExamAccessRequest(studentId, examId) {
   const exam = await getExamForStudentRequest(examId);
@@ -292,7 +270,7 @@ async function approveExamAccessRequest(requestId, instructorId, options = {}) {
   let enrollmentId = null;
   const { trackInstructorStudentLink } = require('./instructorStudentService');
   await db.transaction(async (client) => {
-    enrollmentId = await ensureInstructorStudentEnrollment(client, instructorId, req.student_id);
+    enrollmentId = await ensureLightInstructorEnrollment(client, instructorId, req.student_id, 'exam');
     await trackInstructorStudentLink(instructorId, req.student_id, { skipLimitCheck: true }, client);
     await client.query(
       `INSERT INTO exam_assignments (exam_id, student_id) VALUES ($1, $2)

@@ -273,8 +273,8 @@ async function createJoinRequest({
     }
 
     const { rows: enr } = await client.query(
-      `INSERT INTO enrollments (instructor_id, student_id, status, enrolled_at, subject_id, group_id)
-       VALUES ($1, $2, 'pending_approval', NOW(), $3, $4)
+      `INSERT INTO enrollments (instructor_id, student_id, status, enrolled_at, subject_id, group_id, enrollment_source)
+       VALUES ($1, $2, 'pending_approval', NOW(), $3, $4, 'group')
        RETURNING id`,
       [g.instructor_id, studentId, g.subject_id || null, g.group_id],
     );

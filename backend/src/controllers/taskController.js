@@ -7,6 +7,8 @@ const {
   notifyStudentsOfNewAssignment,
   resolveGroupStudentIds,
 } = require('../services/assignmentHomeworkService');
+const { upsertStudentContactPhone } = require('../utils/studentPhone');
+const { ensureTaskAccessRequestFromLink } = require('../services/taskAccessRequestService');
 
 function parseDate(v) {
   if (v === undefined || v === null || v === '') return null;
@@ -848,6 +850,24 @@ const listInstructorGroups = async (req, res) => {
   }
 };
 
+/** Tapşırıq paylaşım linki — yalnız ad/soyad/telefon profili */
+const postTaskAccessFromLink = async (req, res) => {
+  try {
+    if (req.body?.phone != null && String(req.body.phone).trim() !== '') {
+      await upsertStudentContactPhone(db, req.user.id, req.body.phone);
+    }
+    const result = await ensureTaskAccessRequestFromLink(req.user.id, req.params.id);
+    const st = result.created ? 201 : 200;
+    res.status(st).json({ success: true, ...result });
+  } catch (err) {
+    res.status(err.statusCode || 500).json({
+      success: false,
+      message: err.message,
+      code: err.code,
+    });
+  }
+};
+
 module.exports = {
   listInstructorTasks,
   createInstructorTask,
@@ -865,4 +885,5 @@ module.exports = {
   listMyTasks,
   markMyTaskDone,
   serveAssignmentFile,
+  postTaskAccessFromLink,
 };

@@ -176,7 +176,8 @@ export default function JoinClass() {
     <div className="p-4 sm:p-6 max-w-lg mx-auto w-full min-h-[70vh]">
       <h1 className="font-display font-bold text-2xl text-token-textMain">Qrupa qoşul</h1>
       <p className="text-sm text-token-textMuted mt-1 mb-6">
-        Müəllimin göndərdiyi link ilə qeydiyyatdan keçin — məlumatlarınızı özünüz doldurun.
+        Qrup dəvət linki — paket, valideyn və yönləndirmə məlumatlarını doldurun. Ödəniş xatırlatmaları bu qrup
+        tələbələrinə gedəcək.
       </p>
 
       {infoLoading && <p className="text-sm text-token-textMuted">Yüklənir…</p>}

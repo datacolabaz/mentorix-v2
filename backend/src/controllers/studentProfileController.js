@@ -48,6 +48,20 @@ async function resolveProfileCompletionUrl(studentId, instructorId) {
     return `${frontendBaseUrl()}/exam/${encodeURIComponent(String(examRows[0].exam_id))}`;
   }
 
+  const { rows: taskRows } = await db.query(
+    `SELECT tar.assignment_id
+     FROM task_access_requests tar
+     WHERE tar.student_id = $1::uuid
+       AND tar.instructor_id = $2::uuid
+       AND UPPER(TRIM(tar.status)) IN ('PENDING', 'APPROVED', 'REJECTED')
+     ORDER BY tar.created_at DESC
+     LIMIT 1`,
+    [studentId, instructorId],
+  );
+  if (taskRows[0]?.assignment_id) {
+    return `${frontendBaseUrl()}/task/${encodeURIComponent(String(taskRows[0].assignment_id))}`;
+  }
+
   const { rows: joinRows } = await db.query(
     `SELECT ig.invitation_code, ig.join_code
      FROM student_join_requests sjr

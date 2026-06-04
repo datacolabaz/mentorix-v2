@@ -22,6 +22,7 @@ const {
   listMyTasks,
   markMyTaskDone,
   serveAssignmentFile,
+  postTaskAccessFromLink,
 } = require('../controllers/taskController');
 
 /** Bearer və ya ?token= — statik /api/uploads Vercel-də 404 ola bilər */
@@ -70,6 +71,7 @@ router.get('/parent', authenticate, authorize('parent'), listParentAssignments);
 router.post('/', authenticate, authorize('instructor'), createInstructorTask);
 router.patch('/:id', authenticate, authorize('instructor'), updateInstructorAssignment);
 router.delete('/:id', authenticate, authorize('instructor'), deleteInstructorAssignment);
+router.post('/:id/access-from-link', authenticate, authorize('student'), postTaskAccessFromLink);
 
 router.get('/assignment-file/:filename', authenticateAssignmentFile, serveAssignmentFile);
 

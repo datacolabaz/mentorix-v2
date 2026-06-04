@@ -56,6 +56,7 @@ import StudentTasks from './pages/student/Tasks'
 import StudentNotifications from './pages/student/Notifications'
 import StudentJoinClass from './pages/student/JoinClass'
 import StudentExamInvite from './pages/student/ExamInvite'
+import StudentTaskInvite from './pages/student/TaskInvite'
 import StudentMyGroups from './pages/student/MyGroups'
 import { StudentGroupProvider } from './contexts/StudentGroupContext'
 import ParentDashboard from './pages/parent/Dashboard'
@@ -153,6 +154,7 @@ export default function App() {
         }
       />
       <Route path="/exam/:examId" element={<StudentExamInvite />} />
+      <Route path="/task/:taskId" element={<StudentTaskInvite />} />
 
       <Route path="/admin" element={<ProtectedRoute roles={['admin']}><AdminLayout /></ProtectedRoute>}>
         <Route index element={<AdminDashboard />} />

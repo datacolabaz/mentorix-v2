@@ -61,6 +61,7 @@ async function runPackReminders({ dryRun = false } = {}) {
        WHERE (e.status IS NULL OR LOWER(TRIM(e.status)) = 'active')
          AND u.is_active = TRUE
          AND e.billing_type IN ('8_lessons','12_lessons')
+         AND COALESCE(e.enrollment_source, 'manual') IN ('group', 'manual')
      )
      SELECT *
      FROM prog
