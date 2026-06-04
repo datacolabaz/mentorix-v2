@@ -19,7 +19,15 @@ const { requireInstructorPhoneVerified } = require('../middleware/trial');
 const { attachEntitlements, enforceStudentsLimit } = require('../middleware/entitlements');
 const { createJoinRequest } = require('../services/joinInvitationService');
 const { submitJoinWithProfile } = require('../controllers/joinInvitationController');
-const { upsertStudentContactPhone } = require('../utils/studentPhone');
+const {
+  patchMyContactProfile,
+  sendEnrollmentProfileCompletionEmail,
+} = require('../controllers/studentProfileController');
+const {
+  upsertStudentContactPhone,
+  canonicalStudentPhone,
+  STUDENT_CONTACT_PHONE_SQL,
+} = require('../utils/studentPhone');
 
 function gateInstructorEnrollment(req, res, next) {
   if (req.user?.role === 'admin') return next();
@@ -811,6 +819,16 @@ router.post(
   }
 });
 
+router.post(
+  '/enrollment/:enrollmentId/send-profile-completion-email',
+  authenticate,
+  authorize('instructor', 'admin'),
+  gateInstructorEnrollment,
+  sendEnrollmentProfileCompletionEmail,
+);
+
+router.patch('/my/contact-profile', authenticate, authorize('student'), patchMyContactProfile);
+
 // Join-code tələbəsi: müəllim quraşdırmanı tamamlayır → aktiv tələbə + dərs planı
 router.post(
   '/enrollment/:enrollmentId/complete-setup',
@@ -876,13 +894,63 @@ router.post(
       if (full_name != null && String(full_name).trim()) {
         await db.query('UPDATE users SET full_name = $1 WHERE id = $2', [String(full_name).trim(), studentId]);
       }
-      if (phone != null && String(phone).trim() !== '') {
+      const { rows: phoneRowsBefore } = await db.query(
+        `SELECT ${STUDENT_CONTACT_PHONE_SQL} AS contact_phone
+         FROM users u
+         LEFT JOIN student_profiles sp ON sp.user_id = u.id
+         WHERE u.id = $1::uuid
+         LIMIT 1`,
+        [studentId],
+      );
+      const hadPhoneBefore = Boolean(canonicalStudentPhone(phoneRowsBefore[0]?.contact_phone));
+      const bodyPhoneCanon =
+        phone != null && String(phone).trim() !== '' ? canonicalStudentPhone(phone) : null;
+
+      if (st === 'pending_setup' && !hadPhoneBefore) {
+        if (bodyPhoneCanon) {
+          return res.status(403).json({
+            success: false,
+            code: 'STUDENT_MUST_COMPLETE_PROFILE',
+            message:
+              'Telefonu müəllim daxil edə bilməz. Tələbəyə email ilə profil tamamlama linki göndərin.',
+          });
+        }
+        return res.status(400).json({
+          success: false,
+          code: 'PROFILE_INCOMPLETE',
+          message:
+            'Tələbənin mobil nömrəsi yoxdur. «Profil linki göndər» düyməsi ilə email göndərin — tələbə linkdən tamamlayandan sonra quraşdırma mümkün olacaq.',
+        });
+      }
+
+      if (phone != null && String(phone).trim() !== '' && hadPhoneBefore) {
+        await upsertStudentContactPhone(db, studentId, phone);
+      } else if (phone != null && String(phone).trim() !== '' && st !== 'pending_setup') {
         await upsertStudentContactPhone(db, studentId, phone);
       }
       if (email !== undefined && req.user.role === 'instructor') {
         const emailTrim = email != null ? String(email).trim() : '';
         if (emailTrim) {
           await db.query(`UPDATE users SET email = $1 WHERE id = $2`, [emailTrim, studentId]);
+        }
+      }
+
+      if (st === 'pending_setup') {
+        const { rows: phoneRows } = await db.query(
+          `SELECT ${STUDENT_CONTACT_PHONE_SQL} AS contact_phone
+           FROM users u
+           LEFT JOIN student_profiles sp ON sp.user_id = u.id
+           WHERE u.id = $1::uuid
+           LIMIT 1`,
+          [studentId],
+        );
+        if (!canonicalStudentPhone(phoneRows[0]?.contact_phone)) {
+          return res.status(400).json({
+            success: false,
+            code: 'PROFILE_INCOMPLETE',
+            message:
+              'Tələbə telefonu hələ qeydiyə alınmayıb. Email ilə tamamlama linki göndərin.',
+          });
         }
       }
 

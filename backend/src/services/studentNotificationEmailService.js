@@ -166,8 +166,85 @@ async function sendExamAccessApprovedEmail({
   }
 }
 
+/**
+ * Profil tamamlanmayıb (telefon/ad) — tələbəyə yenidən link.
+ */
+async function sendStudentProfileCompletionEmail({
+  userId,
+  emailOverride = null,
+  completionUrl,
+  instructorName,
+  studentName,
+}) {
+  const to =
+    emailOverride && String(emailOverride).includes('@')
+      ? String(emailOverride).trim()
+      : await userEmail(userId);
+  if (!to) return { ok: false, skipped: true, reason: 'no_email' };
+
+  const teacher = String(instructorName || 'Müəlliminiz').trim();
+  const name = String(studentName || 'Tələbə').trim();
+  const url = String(completionUrl || `${frontendBaseUrl()}/student`).trim();
+  const subject = 'Mentorix — Qeydiyyatı tamamlayın';
+  const text = [
+    `Salam, ${name}!`,
+    '',
+    `${teacher} sizin qeydiyyatınızı tamamlamağınızı xahiş edir.`,
+    '',
+    'Müraciətiniz müəllimə yalnız aşağıdakı məlumatları doldurduqdan sonra göndəriləcək:',
+    '• Ad və soyad',
+    '• Mobil telefon (+994)',
+    '',
+    'Linkə daxil olun, Google ilə giriş edin və məlumatları doldurun:',
+    url,
+    '',
+    'Hörmətlə,',
+    'Mentorix',
+  ].join('\n');
+
+  const html = `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; line-height: 1.55; max-width: 520px; color: #111827;">
+      <p style="margin: 0 0 12px; font-size: 13px; color: #d97706; font-weight: 600;">Qeydiyyatı tamamlayın</p>
+      <p style="margin: 0 0 16px;">${escapeHtml(teacher)} sizin qeydiyyatınızı tamamlamağınızı xahiş edir.</p>
+      <p style="margin: 0 0 12px; color: #4b5563;">Müraciət müəllimə yalnız <strong>ad, soyad və mobil telefon</strong> doldurulduqdan sonra gedəcək.</p>
+      <p style="margin: 0 0 20px;">
+        <a href="${escapeHtml(url)}" style="display: inline-block; background: #4f46e5; color: #fff; padding: 12px 20px; border-radius: 10px; text-decoration: none; font-weight: 600;">Linkə keç və tamamla</a>
+      </p>
+      <p style="margin: 0; font-size: 12px; color: #9ca3af;">Mentorix — tələbə paneli</p>
+    </div>
+  `;
+
+  if (resendReady()) {
+    try {
+      const client = new Resend(RESEND_API_KEY);
+      const { data, error } = await client.emails.send({
+        from: EMAIL_FROM,
+        to,
+        subject,
+        text,
+        html,
+      });
+      if (error) {
+        return { ok: false, error: error?.message || 'Resend xətası' };
+      }
+      return { ok: true, provider: 'resend', messageId: data?.id || null };
+    } catch (err) {
+      return { ok: false, error: err?.message || 'Resend xətası' };
+    }
+  }
+
+  try {
+    const r = await sendEmail({ to, subject, text });
+    if (r?.skipped) return { ok: false, skipped: true, reason: 'smtp_not_configured' };
+    return { ok: true, provider: 'smtp', messageId: r?.messageId || null };
+  } catch (err) {
+    return { ok: false, error: err?.message || 'Email xətası' };
+  }
+}
+
 module.exports = {
   sendAssignmentNewEmail,
   sendExamAccessApprovedEmail,
+  sendStudentProfileCompletionEmail,
   frontendBaseUrl,
 };

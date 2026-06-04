@@ -4,15 +4,28 @@ import api from '../../lib/api'
 import useAuthStore from '../../hooks/useAuth'
 import Button from '../../components/common/Button'
 import Card from '../../components/common/Card'
+import Modal from '../../components/common/Modal'
 import { useToast } from '../../components/common/Toast'
 import GoogleSignInButton from '../../components/auth/GoogleSignInButton'
+import PhoneInput from '../../components/auth/PhoneInput'
+import { canonicalAzPhoneE164 } from '../../lib/azPhone'
 
 const RETURN_KEY = 'mx_return_after_login'
+const inp =
+  'w-full border border-[color:var(--border-subtle)] rounded-xl px-4 py-3 text-token-textMain text-sm outline-none focus:border-primary/40 bg-token-surfaceCard/55'
+
+function splitFullName(full) {
+  const t = String(full || '').trim()
+  if (!t) return { first_name: '', last_name: '' }
+  const i = t.indexOf(' ')
+  if (i < 0) return { first_name: t, last_name: '' }
+  return { first_name: t.slice(0, i), last_name: t.slice(i + 1).trim() }
+}
 
 export default function ExamInvite() {
   const { examId } = useParams()
   const toast = useToast()
-  const { user, setSession } = useAuthStore()
+  const { user, setSession, updateUser } = useAuthStore()
   const id = useMemo(() => String(examId || '').trim(), [examId])
 
   const [info, setInfo] = useState(null)
@@ -20,7 +33,11 @@ export default function ExamInvite() {
   const [infoError, setInfoError] = useState('')
   const [authBusy, setAuthBusy] = useState(false)
   const [requestBusy, setRequestBusy] = useState(false)
-  const [requestState, setRequestState] = useState(null) // pending | assigned | error
+  const [requestState, setRequestState] = useState(null)
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
+  const [phone, setPhone] = useState('')
+  const [fieldErrors, setFieldErrors] = useState(null)
 
   useEffect(() => {
     if (!id) {
@@ -51,34 +68,67 @@ export default function ExamInvite() {
     }
   }, [id])
 
+  useEffect(() => {
+    if (!user) return
+    const n = splitFullName(user.full_name)
+    if (!firstName && n.first_name) setFirstName(n.first_name)
+    if (!lastName && n.last_name) setLastName(n.last_name)
+    if (!phone && user.phone) setPhone(user.phone)
+  }, [user, firstName, lastName, phone])
+
+  const collectMissing = useCallback(() => {
+    const missing = []
+    if (!String(firstName).trim()) missing.push('Ad')
+    if (!String(lastName).trim()) missing.push('Soyad')
+    if (!canonicalAzPhoneE164(phone)) {
+      missing.push('Mobil telefon (+994 və 9 rəqəm, məs. 50 123 45 67)')
+    }
+    return missing
+  }, [firstName, lastName, phone])
+
   const submitAccessRequest = useCallback(async () => {
-    if (!id) return
+    if (!id || !user) return
+    const missing = collectMissing()
+    if (missing.length) {
+      setFieldErrors(missing)
+      return
+    }
+    setFieldErrors(null)
+    const phoneCanon = canonicalAzPhoneE164(phone)
     setRequestBusy(true)
     try {
-      const sub = await api.post(`/exams/${encodeURIComponent(id)}/access-from-link`)
+      const prof = await api.patch('/students/my/contact-profile', {
+        first_name: String(firstName).trim(),
+        last_name: String(lastName).trim(),
+        phone: phoneCanon,
+      })
+      if (prof?.user) updateUser(prof.user)
+
+      const sub = await api.post(`/exams/${encodeURIComponent(id)}/access-from-link`, {
+        phone: phoneCanon,
+      })
       if (sub?.already_assigned) {
         setRequestState('assigned')
         toast('İmtahan sizə təyin edilib', 'success')
         return
       }
       setRequestState('pending')
-      toast(sub?.message || 'Müəllimə sorğu göndərildi', 'success')
+      toast(sub?.message || 'Müraciət müəllimə göndərildi', 'success')
     } catch (err) {
       setRequestState('error')
       if (err?.code === 'ALREADY_PENDING' || String(err?.message || '').includes('artıq göndərilib')) {
         setRequestState('pending')
         return
       }
+      if (err?.code === 'PROFILE_INCOMPLETE' || err?.code === 'PHONE_REQUIRED') {
+        setFieldErrors(collectMissing())
+        return
+      }
       toast(err?.message || 'Sorğu göndərilmədi', 'error')
     } finally {
       setRequestBusy(false)
     }
-  }, [id, toast])
-
-  useEffect(() => {
-    if (!user || user.role !== 'student' || !id || infoLoading || infoError) return
-    void submitAccessRequest()
-  }, [user, id, infoLoading, infoError, submitAccessRequest])
+  }, [id, user, firstName, lastName, phone, collectMissing, toast, updateUser])
 
   const handleGoogleCredential = async (credential) => {
     setAuthBusy(true)
@@ -100,17 +150,11 @@ export default function ExamInvite() {
         return
       }
       setSession(r.token, r.user)
-      if (id && r.user?.role === 'student') {
-        try {
-          const sub = await api.post(`/exams/${encodeURIComponent(id)}/access-from-link`)
-          setRequestState(sub?.already_assigned ? 'assigned' : 'pending')
-          toast(sub?.message || 'Müəllimə sorğu göndərildi', 'success')
-        } catch (err) {
-          toast(err?.message || 'Sorğu göndərilmədi', 'error')
-        }
-      } else {
-        toast('Daxil oldunuz', 'success')
-      }
+      const n = splitFullName(r.user.full_name)
+      if (n.first_name) setFirstName(n.first_name)
+      if (n.last_name) setLastName(n.last_name)
+      if (r.user.phone) setPhone(r.user.phone)
+      toast('İndi ad, soyad və telefonu doldurub müraciət göndərin', 'success')
     } catch (err) {
       toast(err?.message || 'Google girişi uğursuz', 'error')
     } finally {
@@ -119,12 +163,15 @@ export default function ExamInvite() {
   }
 
   const loginHref = `/login?next=${encodeURIComponent(id ? `/exam/${id}` : '/student')}`
+  const showProfileForm =
+    user?.role === 'student' && requestState !== 'pending' && requestState !== 'assigned'
 
   return (
     <div className="p-4 sm:p-6 max-w-lg mx-auto w-full min-h-[70vh]">
       <h1 className="font-display font-bold text-2xl text-token-textMain">İmtahana qoşul</h1>
       <p className="text-sm text-token-textMuted mt-1 mb-6">
-        Müəllimin paylaşdığı link. Google ilə daxil olun — sorğu avtomatik müəllimə gedəcək.
+        Müəllimin paylaşdığı link. Google ilə daxil olun, məlumatlarınızı tam doldurun — sonra müraciət müəllimə
+        gedəcək.
       </p>
 
       {infoLoading && <p className="text-sm text-token-textMuted">Yüklənir…</p>}
@@ -139,17 +186,68 @@ export default function ExamInvite() {
         </Card>
       )}
 
+      <Modal
+        open={Boolean(fieldErrors?.length)}
+        onClose={() => setFieldErrors(null)}
+        title="Tələb olunan sahələr"
+        size="sm"
+        zIndex={10200}
+        footer={
+          <div className="flex justify-center">
+            <Button type="button" className="min-w-[120px] justify-center" onClick={() => setFieldErrors(null)}>
+              Tamam
+            </Button>
+          </div>
+        }
+      >
+        <p className="text-sm text-center text-zinc-300 mb-3 leading-relaxed">
+          Müraciət müəllimə yalnız bu məlumatlar doldurulduqdan sonra gedəcək:
+        </p>
+        <ul className="text-sm text-amber-200/95 space-y-1.5 list-disc pl-5">
+          {fieldErrors?.map((label) => (
+            <li key={label}>{label}</li>
+          ))}
+        </ul>
+      </Modal>
+
       {user?.role === 'student' ? (
-        <Card className="p-4 space-y-3">
-          {requestBusy && <p className="text-sm text-token-textMuted">Sorğu göndərilir…</p>}
+        <Card className="p-4 space-y-4">
+          {showProfileForm && (
+            <>
+              <p className="text-sm text-token-textMuted leading-relaxed">
+                Bütün sahələri doldurun. Boş və ya natamam müraciət müəllimə <strong>göndərilmir</strong>.
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-token-textMuted mb-1.5">
+                    Ad *
+                  </label>
+                  <input className={inp} value={firstName} onChange={(e) => setFirstName(e.target.value)} />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-token-textMuted mb-1.5">
+                    Soyad *
+                  </label>
+                  <input className={inp} value={lastName} onChange={(e) => setLastName(e.target.value)} />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-token-textMuted mb-1.5">
+                  Mobil telefon *
+                </label>
+                <PhoneInput value={phone} onChange={setPhone} />
+              </div>
+              <Button type="button" loading={requestBusy} onClick={() => void submitAccessRequest()}>
+                Müraciəti müəllimə göndər
+              </Button>
+            </>
+          )}
           {requestState === 'pending' && (
             <p className="text-sm text-amber-200/90">
-              Sorğu müəllimə göndərilib. Təsdiqdən sonra bildiriş əvvəlcə <strong>Gmail</strong> ünvanınıza gedəcək; SMS
-              yalnız müəllim seçəndə göndərilir. Sonra{' '}
+              Müraciət müəllimə göndərilib. Təsdiqdən sonra bildiriş <strong>Gmail</strong> ünvanınıza gedəcək.{' '}
               <Link to="/student/exams" className="text-primary hover:underline">
                 İmtahanlarım
-              </Link>{' '}
-              bölməsindən başlaya bilərsiniz.
+              </Link>
             </p>
           )}
           {requestState === 'assigned' && (
@@ -162,7 +260,7 @@ export default function ExamInvite() {
           )}
           {requestState === 'error' && (
             <Button type="button" loading={requestBusy} onClick={() => void submitAccessRequest()}>
-              Sorğunu yenidən göndər
+              Yenidən cəhd et
             </Button>
           )}
         </Card>
@@ -171,7 +269,7 @@ export default function ExamInvite() {
       ) : (
         <Card className="p-4 space-y-4">
           <p className="text-sm text-token-textMuted">
-            Davam etmək üçün tələbə kimi Google ilə daxil olun. Sorğu avtomatik müəllimə gedəcək.
+            Əvvəlcə tələbə kimi Google ilə daxil olun. Sonra ad, soyad və telefonu doldurub müraciət göndərin.
           </p>
           <GoogleSignInButton onCredential={handleGoogleCredential} disabled={authBusy} />
           <Link

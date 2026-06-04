@@ -1,5 +1,9 @@
 const db = require('../utils/db');
 const { sendEmail, userEmail } = require('./emailService');
+const {
+  canonicalStudentPhone,
+  STUDENT_CONTACT_PHONE_SQL,
+} = require('../utils/studentPhone');
 
 const normHex = (id) =>
   id == null ? '' : String(id).trim().toLowerCase().replace(/-/g, '');
@@ -122,12 +126,25 @@ async function getStudentAccessStatus(studentId, examId) {
   };
 }
 
+const { assertStudentProfileComplete } = require('../controllers/studentProfileController');
+
 async function createExamAccessRequest(studentId, examId) {
   const exam = await getExamForStudentRequest(examId);
   if (!exam || exam.is_deleted) {
     const err = new Error('İmtahan tapılmadı');
     err.statusCode = 404;
     throw err;
+  }
+
+  try {
+    await assertStudentProfileComplete(studentId);
+  } catch (e) {
+    if (e.code === 'STUDENT_PROFILE_INCOMPLETE') {
+      e.code = 'PROFILE_INCOMPLETE';
+      e.message =
+        'Əvvəlcə ad, soyad və mobil telefonu doldurun — sonra müraciət müəllimə göndəriləcək.';
+    }
+    throw e;
   }
 
   const status = await getStudentAccessStatus(studentId, examId);
@@ -212,29 +229,28 @@ async function listPendingExamAccessRequests(instructorId) {
      ORDER BY ear.created_at DESC`,
     [instructorId],
   );
-  return rows.map((r) => ({
-    request_id: r.request_id,
-    kind: 'exam_access',
-    status: r.status,
-    created_at: r.created_at,
-    exam_id: r.exam_id,
-    exam_title: r.exam_title,
-    student_name: r.student_full_name || r.student_name,
-    student_email: r.student_account_email || r.student_email,
-    phone: r.phone_number || r.user_phone,
-  }));
+  return rows
+    .map((r) => {
+      const phoneCanon = canonicalStudentPhone(r.phone_number || r.user_phone);
+      return {
+        request_id: r.request_id,
+        kind: 'exam_access',
+        status: r.status,
+        created_at: r.created_at,
+        exam_id: r.exam_id,
+        exam_title: r.exam_title,
+        student_name: r.student_full_name || r.student_name,
+        student_email: r.student_account_email || r.student_email,
+        phone: phoneCanon || r.phone_number || r.user_phone,
+        profile_complete: Boolean(phoneCanon),
+      };
+    })
+    .filter((r) => r.profile_complete);
 }
 
 async function countPendingExamAccessRequests(instructorId) {
-  const { rows } = await db.query(
-    `SELECT COUNT(*)::int AS n
-     FROM exam_access_requests ear
-     JOIN exams e ON e.id = ear.exam_id AND COALESCE(e.is_deleted, FALSE) = FALSE
-     WHERE ear.instructor_id = $1::uuid
-       AND UPPER(TRIM(ear.status)) = 'PENDING'`,
-    [instructorId],
-  );
-  return Number(rows[0]?.n ?? 0) || 0;
+  const pending = await listPendingExamAccessRequests(instructorId);
+  return pending.length;
 }
 
 async function approveExamAccessRequest(requestId, instructorId, options = {}) {
@@ -259,6 +275,8 @@ async function approveExamAccessRequest(requestId, instructorId, options = {}) {
     err.statusCode = 400;
     throw err;
   }
+
+  await assertStudentProfileComplete(req.student_id);
 
   let enrollmentId = null;
   await db.transaction(async (client) => {

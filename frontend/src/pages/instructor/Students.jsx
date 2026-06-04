@@ -22,6 +22,7 @@ import {
   normalizeTeachingSubjects,
 } from '../../lib/teachingSubjects'
 import { BILLING_STATUS_QUERY_KEY, useBillingStatus } from '../../hooks/useBillingStatus'
+import { canonicalAzPhoneE164 } from '../../lib/azPhone'
 
 function splitFullName(full) {
   const t = String(full || '').trim()
@@ -218,6 +219,9 @@ function StudentFormFields({
   referralSources = [],
   onCreateSubject,
   onCreateGroup,
+  lockStudentPhone = false,
+  onSendProfileCompletionEmail,
+  sendProfileEmailBusy = false,
 }) {
   const [subjectDraft, setSubjectDraft] = useState('')
   const [groupDraft, setGroupDraft] = useState('')
@@ -330,15 +334,38 @@ function StudentFormFields({
         <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
           Tələbə telefonu *
         </label>
-        <PhoneInput
-          value={data.phone_number || data.phone || ''}
-          onChange={(v) => setData((p) => ({ ...p, phone_number: v, phone: v }))}
-          persistLoginDefaults={false}
-          required
-        />
-        <p className="text-[10px] text-gray-500 mt-1.5">
-          Ödəniş xatırlatması və qrup kodları bu nömrəyə SMS/WhatsApp ilə göndərilir (müəllim hesabından ayrıdır).
-        </p>
+        {lockStudentPhone ? (
+          <div className="rounded-xl border border-amber-500/35 bg-amber-500/10 p-3 space-y-3">
+            <p className="text-xs text-amber-100/95 leading-relaxed">
+              Telefon tələbənin özü link vasitəsilə təsdiqləməlidir — müəllim daxil edə bilməz. Gmail ünvanına
+              tamamlama linki göndərin; tələbə ad, soyad və telefonu doldurduqdan sonra quraşdırmanı davam edə
+              bilərsiniz.
+            </p>
+            {onSendProfileCompletionEmail ? (
+              <Button
+                type="button"
+                size="sm"
+                loading={sendProfileEmailBusy}
+                onClick={() => void onSendProfileCompletionEmail()}
+              >
+                Profil tamamlama linki göndər (email)
+              </Button>
+            ) : null}
+          </div>
+        ) : (
+          <>
+            <PhoneInput
+              value={data.phone_number || data.phone || ''}
+              onChange={(v) => setData((p) => ({ ...p, phone_number: v, phone: v }))}
+              persistLoginDefaults={false}
+              required
+            />
+            <p className="text-[10px] text-gray-500 mt-1.5">
+              Ödəniş xatırlatması və qrup kodları bu nömrəyə SMS/WhatsApp ilə göndərilir (müəllim hesabından
+              ayrıdır).
+            </p>
+          </>
+        )}
       </div>
 
       {mode === 'add' || mode === 'edit' ? (
@@ -854,6 +881,9 @@ export default function InstructorStudents() {
   const [setupModal, setSetupModal] = useState(false)
   const [setupForm, setSetupForm] = useState(emptyForm)
   const [setupEnrollmentId, setSetupEnrollmentId] = useState(null)
+  const [setupFieldErrors, setSetupFieldErrors] = useState(null)
+  const [setupPhoneLocked, setSetupPhoneLocked] = useState(false)
+  const [sendProfileEmailBusy, setSendProfileEmailBusy] = useState(false)
   const [referralSources, setReferralSources] = useState([])
   const [editForm, setEditForm] = useState(emptyForm)
   const [editOriginal, setEditOriginal] = useState(null)
@@ -993,6 +1023,8 @@ export default function InstructorStudents() {
     const firstLesson =
       firstFromApi || (pkgAnchor ? alignFirstLessonYmd(pkgAnchor, lwd, lt) : '')
     setSetupEnrollmentId(s.enrollment_id)
+    const phoneRaw = s.phone || s.phone_number || ''
+    setSetupPhoneLocked(!canonicalAzPhoneE164(phoneRaw))
     const setupNames = splitFullName(s.full_name)
     setSetupForm({
       ...emptyForm,
@@ -1026,20 +1058,46 @@ export default function InstructorStudents() {
     setSetupModal(true)
   }
 
-  const saveCompleteSetup = async () => {
-    if (!setupEnrollmentId) return
+  const collectSetupMissingFields = () => {
+    const missing = []
     const setupFirst = String(setupForm.first_name || splitFullName(setupForm.full_name).first_name).trim()
     const setupLast = String(setupForm.last_name || splitFullName(setupForm.full_name).last_name).trim()
-    const setupPhone = String(setupForm.phone_number || setupForm.phone || '').trim()
-    if (!setupFirst || !setupLast || !setupPhone) {
-      toast('Ad, soyad və telefon tələb olunur', 'error')
+    const setupPhoneRaw = String(setupForm.phone_number || setupForm.phone || '').trim()
+    if (!setupFirst) missing.push('Ad')
+    if (!setupLast) missing.push('Soyad')
+    if (!canonicalAzPhoneE164(setupPhoneRaw)) {
+      missing.push(
+        setupPhoneLocked
+          ? 'Tələbə telefonu (email ilə profil linki göndərin — tələbə özü doldurmalıdır)'
+          : 'Tələbə telefonu (düzgün AZ mobil, məs. +994 50 123 45 67)',
+      )
+    }
+    if (!String(setupForm.first_lesson_date || '').trim()) {
+      missing.push('Paket: ilk dərs tarixi')
+    }
+    if (!Array.isArray(setupForm.lesson_weekdays) || setupForm.lesson_weekdays.length === 0) {
+      missing.push('Ən azı bir dərs günü')
+    }
+    return missing
+  }
+
+  const saveCompleteSetup = async () => {
+    if (!setupEnrollmentId) return
+    const missing = collectSetupMissingFields()
+    if (missing.length) {
+      setSetupFieldErrors(missing)
       return
     }
+    setSetupFieldErrors(null)
+    const setupFirst = String(setupForm.first_name || splitFullName(setupForm.full_name).first_name).trim()
+    const setupLast = String(setupForm.last_name || splitFullName(setupForm.full_name).last_name).trim()
+    const setupPhone = canonicalAzPhoneE164(
+      String(setupForm.phone_number || setupForm.phone || '').trim(),
+    )
     setLoading(true)
     try {
-      await api.post(`/students/enrollment/${encodeURIComponent(setupEnrollmentId)}/complete-setup`, {
+      const body = {
         full_name: joinFullName(setupFirst, setupLast),
-        phone: setupPhone,
         email: setupForm.email || null,
         billing_type: setupForm.billing_type,
         enrollment_date: setupForm.enrollment_date || setupForm.first_lesson_date,
@@ -1061,15 +1119,52 @@ export default function InstructorStudents() {
         subject_id: setupForm.subject_id || null,
         group_id: setupForm.group_id || null,
         notifications_enabled: setupForm.notifications_enabled,
-      })
+      }
+      if (setupPhone && !setupPhoneLocked) body.phone = setupPhone
+      await api.post(`/students/enrollment/${encodeURIComponent(setupEnrollmentId)}/complete-setup`, body)
       toast('Quraşdırma tamamlandı — tələbə aktivdir')
       setSetupModal(false)
       setSetupEnrollmentId(null)
       load()
     } catch (err) {
-      toast(err?.message || 'Xəta', 'error')
+      if (err?.code === 'PROFILE_INCOMPLETE' || err?.code === 'STUDENT_MUST_COMPLETE_PROFILE') {
+        setSetupFieldErrors([
+          err?.message || 'Tələbə profili tam deyil — email ilə link göndərin.',
+        ])
+      } else {
+        toast(err?.message || 'Xəta', 'error')
+      }
     } finally {
       setLoading(false)
+    }
+  }
+
+  const sendSetupProfileCompletionEmail = async () => {
+    if (!setupEnrollmentId) return
+    setSendProfileEmailBusy(true)
+    try {
+      const r = await api.post(
+        `/students/enrollment/${encodeURIComponent(setupEnrollmentId)}/send-profile-completion-email`,
+      )
+      toast(r?.message || 'Email göndərildi', 'success')
+      try {
+        const d = await api.get('/students')
+        const next = d.students || []
+        setStudents(next)
+        writeCache(CACHE_KEY, { students: next })
+        const refreshed = next.find((s) => s.enrollment_id === setupEnrollmentId)
+        if (refreshed) {
+          const p = refreshed.phone || refreshed.phone_number || ''
+          setSetupPhoneLocked(!canonicalAzPhoneE164(p))
+          setSetupForm((prev) => ({ ...prev, phone: p, phone_number: p }))
+        }
+      } catch {
+        /* ignore refresh */
+      }
+    } catch (err) {
+      toast(err?.message || 'Email göndərilmədi', 'error')
+    } finally {
+      setSendProfileEmailBusy(false)
     }
   }
 
@@ -1956,6 +2051,30 @@ export default function InstructorStudents() {
       </div>
 
       <Modal
+        open={Boolean(setupFieldErrors?.length)}
+        onClose={() => setSetupFieldErrors(null)}
+        title="Tələb olunan sahələr"
+        size="sm"
+        zIndex={10200}
+        footer={
+          <div className="flex justify-center">
+            <Button type="button" className="min-w-[120px] justify-center" onClick={() => setSetupFieldErrors(null)}>
+              Tamam
+            </Button>
+          </div>
+        }
+      >
+        <p className="text-sm text-center text-zinc-300 mb-3 leading-relaxed">
+          Zəhmət olmasa quraşdırma formasında aşağıdakı sahələri doldurun:
+        </p>
+        <ul className="text-sm text-amber-200/95 space-y-1.5 list-disc pl-5">
+          {setupFieldErrors?.map((label) => (
+            <li key={label}>{label}</li>
+          ))}
+        </ul>
+      </Modal>
+
+      <Modal
         open={setupModal}
         onClose={() => {
           if (loading) return
@@ -1989,8 +2108,8 @@ export default function InstructorStudents() {
           onFocusCapture={focusFieldNearest}
         >
           <p className="text-xs text-gray-400 mb-4">
-            Tələbə join kodu ilə qoşulub. Paket, cədvəl və ödəniş məlumatlarını doldurun — sonra aktiv
-            tələbə olacaq.
+            Tələbə qoşulub, lakin qeydiyyat tam deyil. Paket, cədvəl, ödəniş və{' '}
+            <strong className="text-gray-300">mobil telefon</strong> mütləqdir — sonra aktiv tələbə olacaq.
           </p>
           <StudentFormFields
             data={setupForm}
@@ -2001,6 +2120,9 @@ export default function InstructorStudents() {
             referralSources={referralSources}
             onCreateSubject={createTeachingSubject}
             onCreateGroup={createTeachingGroup}
+            lockStudentPhone={setupPhoneLocked}
+            onSendProfileCompletionEmail={sendSetupProfileCompletionEmail}
+            sendProfileEmailBusy={sendProfileEmailBusy}
           />
         </div>
       </Modal>

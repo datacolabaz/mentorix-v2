@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const db = require('../utils/db');
+const { upsertStudentContactPhone } = require('../utils/studentPhone');
 const { normalizeExamStartTime } = require('../utils/examTime');
 const { recomputeInstructorStorageUsageMb } = require('../services/resourceUsageService');
 
@@ -2101,6 +2102,9 @@ const postExamAccessRequest = async (req, res) => {
 /** İmtahan paylaşım linki: sorğu avtomatik göndərilir, müəllim Sorğular-da görür */
 const postExamAccessFromLink = async (req, res) => {
   try {
+    if (req.body?.phone != null && String(req.body.phone).trim() !== '') {
+      await upsertStudentContactPhone(db, req.user.id, req.body.phone);
+    }
     const result = await ensureExamAccessRequestFromLink(req.user.id, req.params.id);
     const st = result.created ? 201 : 200;
     res.status(st).json({ success: true, ...result });
