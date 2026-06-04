@@ -284,15 +284,17 @@ export default function Login() {
       {!isAdmin ? (
         <div className="w-full max-w-5xl mx-auto px-4 pt-10 sm:pt-14 pb-8 space-y-12 sm:space-y-16">
           <header className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-8 sm:gap-10">
-            <div className="max-w-xl space-y-4">
+            <div className="max-w-xl w-full space-y-4 flex flex-col items-center text-center sm:items-start sm:text-left">
               <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] text-gray-300">
                 <span className="h-1.5 w-1.5 rounded-full bg-primary shadow-[0_0_12px_rgba(0,229,176,0.9)]" />
                 {m.hero.pill}
               </div>
-              <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight text-white leading-tight">
+              <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight text-white leading-tight w-full">
                 {m.hero.headline}
               </h1>
-              <p className="text-gray-400 text-sm sm:text-base leading-relaxed">{m.hero.subheadline}</p>
+              <p className="text-gray-400 text-sm sm:text-base leading-relaxed w-full max-w-md sm:max-w-none">
+                {m.hero.subheadline}
+              </p>
               <div className="flex flex-col w-full max-w-xl gap-3">
                 <div className="flex flex-col sm:flex-row gap-3">
                   <button
@@ -352,14 +354,14 @@ export default function Login() {
                   </button>
                 </div>
               </div>
-              <div className="pt-1">
+              <div className="pt-1 w-full">
                 <button
                   type="button"
                   onClick={() => {
                     trackEvent('mx_landing_secondary_click', { action: 'existing_account_login' })
                     scrollToId('mx-login')
                   }}
-                  className="text-left text-xs text-gray-500 hover:text-gray-300 underline underline-offset-4"
+                  className="text-xs text-gray-500 hover:text-gray-300 underline underline-offset-4"
                 >
                   {m.hero.existing_account}
                 </button>
