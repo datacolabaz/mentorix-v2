@@ -20,8 +20,11 @@ const {
   rejectRequest,
 } = require('../controllers/joinInvitationController');
 const { attachEntitlements, enforceStudentsLimit } = require('../middleware/entitlements');
+const { postInstructorAvatar, deleteInstructorAvatar } = require('../controllers/instructorAvatarController');
 
 router.get('/teaching', authenticate, authorize('instructor'), getTeaching);
+router.post('/avatar', authenticate, authorize('instructor'), postInstructorAvatar);
+router.delete('/avatar', authenticate, authorize('instructor'), deleteInstructorAvatar);
 router.get('/join-requests', authenticate, authorize('instructor'), listJoinRequests);
 router.get('/join-requests/count', authenticate, authorize('instructor'), joinRequestsCount);
 router.post(

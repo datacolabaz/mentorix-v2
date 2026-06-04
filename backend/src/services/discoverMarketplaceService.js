@@ -152,6 +152,7 @@ async function searchDiscoverInstructors({
        ip.latitude::float8 AS latitude,
        ip.longitude::float8 AS longitude,
        ip.map_profile_kind,
+       ip.avatar_url,
        ip.discover_hourly_rate,
        ip.discover_bio,
        ip.discover_verified,

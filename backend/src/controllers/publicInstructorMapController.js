@@ -143,7 +143,8 @@ const getInstructorsInMapView = async (req, res) => {
          COALESCE(NULLIF(TRIM(ip.subject), ''), '—') AS subject,
          ip.latitude::float8 AS latitude,
          ip.longitude::float8 AS longitude,
-         ip.map_profile_kind
+         ip.map_profile_kind,
+         ip.avatar_url
          ${distanceSql}
        FROM users u
        INNER JOIN instructor_profiles ip ON ip.user_id = u.id

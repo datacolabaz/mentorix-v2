@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import { formatDistanceKm } from '../../lib/geo'
 import { isGoogleMapsConfigured } from '../../lib/googleMapsLoader'
 import GoogleMapPreview from './GoogleMapPreview'
+import InstructorAvatar from '../common/InstructorAvatar'
 
 const DARK_TILE = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
 
@@ -18,6 +19,7 @@ export default function InstructorMapPreviewModal({
   open,
   onClose,
   fullName,
+  avatarUrl,
   subject,
   mapKind,
   latitude,
@@ -104,12 +106,13 @@ export default function InstructorMapPreviewModal({
               mapVisible ? 'border-primary/40 bg-primary/5' : 'border-amber-500/30 bg-amber-500/5'
             }`}
           >
-            <span
-              className="h-10 w-10 rounded-full shrink-0 flex items-center justify-center text-lg ring-2 ring-white/20"
-              style={{ backgroundColor: color }}
-            >
-              {isTrainer ? '🥊' : '👨‍🏫'}
-            </span>
+            <InstructorAvatar
+              fullName={fullName}
+              avatarUrl={avatarUrl}
+              size="sm"
+              kind={mapKind}
+              ringClassName="ring-2 ring-white/20"
+            />
             <div className="min-w-0 flex-1">
               <div className="font-semibold text-white">{fullName || 'Müəllim'}</div>
               {locationLabel ? (

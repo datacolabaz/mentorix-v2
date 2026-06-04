@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { loadGoogleMaps } from '../../lib/googleMapsLoader'
 import { BAKU_CENTER } from '../../lib/geo'
+import { resolveApiAssetUrl } from '../../lib/apiAssetUrl'
+import { instructorInitials } from '../../lib/instructorInitials'
 
 const DARK_MAP_STYLES = [
   { elementType: 'geometry', stylers: [{ color: '#1a1a1a' }] },
@@ -141,9 +143,10 @@ export default function GoogleInstructorSearchMap({
       seen.add(id)
       const isNearest = p.id === nearestId
       const selected = p.id === selectedId
-      const initial = (p.full_name || 'M').trim().charAt(0).toUpperCase() || 'M'
+      const initial = instructorInitials(p.full_name).replace(/\./g, '') || 'M'
+      const avatarIcon = p.avatar_url ? resolveApiAssetUrl(p.avatar_url) : ''
       const icon = {
-        url: pinIconUrl({ initial, kind: p.map_profile_kind, isNearest, selected }),
+        url: avatarIcon || pinIconUrl({ initial, kind: p.map_profile_kind, isNearest, selected }),
         scaledSize: new maps.Size(selected ? 40 : isNearest ? 38 : 34, selected ? 40 : isNearest ? 38 : 34),
         anchor: new maps.Point(selected ? 20 : isNearest ? 19 : 17, selected ? 20 : isNearest ? 19 : 17),
       }

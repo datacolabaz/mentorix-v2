@@ -14,6 +14,7 @@ const { postPublicInquiry } = require('../controllers/studentInquiryController')
 const { getActivePlansList } = require('../services/subscriptionPlansService');
 const { getPublicJoin } = require('../controllers/joinInvitationController');
 const { postAccessEvent } = require('../controllers/accessAnalyticsController');
+const { getPublicInstructorProfile } = require('../controllers/publicInstructorProfileController');
 
 const router = express.Router();
 
@@ -23,6 +24,7 @@ router.post('/analytics/event', postAccessEvent);
 router.get('/landing-stats', getLandingStats);
 router.get('/marketing/login', getPublicLoginMarketing);
 router.get('/instructors-map', getInstructorsInMapView);
+router.get('/instructors/:id', getPublicInstructorProfile);
 router.get('/instructor-discovery', getInstructorDiscovery);
 router.get('/categories', getCategoriesTree);
 router.get('/categories/popular', getPopularCategories);

@@ -105,7 +105,8 @@ const getTeaching = async (req, res) => {
               longitude,
               COALESCE(NULLIF(TRIM(map_profile_kind), ''), 'teacher') AS map_profile_kind,
               COALESCE(map_visible, TRUE) AS map_visible,
-              COALESCE(map_search_radius_km, 10) AS map_search_radius_km
+              COALESCE(map_search_radius_km, 10) AS map_search_radius_km,
+              avatar_url
        FROM instructor_profiles WHERE user_id = $1`,
       [iid]
     );
@@ -237,6 +238,7 @@ const getTeaching = async (req, res) => {
     res.json({
       success: true,
       public_label,
+      avatar_url: p?.avatar_url || null,
       map: {
         latitude: p?.latitude != null ? Number(p.latitude) : null,
         longitude: p?.longitude != null ? Number(p.longitude) : null,

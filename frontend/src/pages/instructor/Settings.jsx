@@ -16,6 +16,7 @@ import PricingBillingIntervalToggle from '../../components/instructor/PricingBil
 import InstructorMapPinPicker from '../../components/instructor/InstructorMapPinPicker'
 import InstructorMapPreviewModal from '../../components/instructor/InstructorMapPreviewModal'
 import InstructorDiscoverSettings from '../../components/instructor/InstructorDiscoverSettings'
+import InstructorAvatarUpload from '../../components/instructor/InstructorAvatarUpload'
 import { reverseGeocodeLabel } from '../../lib/reverseGeocode'
 import { formatAzn, yearlyTotalAzn, YEARLY_DISCOUNT } from '../../lib/pricing'
 import { planDetailLines, planLimitsHeadline } from '../../lib/subscriptionPlanCopy'
@@ -89,6 +90,7 @@ export default function InstructorSettings() {
   const savedMapRef = useRef(null)
   const geocodeTimerRef = useRef(null)
   const [primarySubjectName, setPrimarySubjectName] = useState('')
+  const [avatarUrl, setAvatarUrl] = useState(null)
   const [billingInterval, setBillingInterval] = useState('yearly')
 
   const load = useCallback(async () => {
@@ -96,6 +98,7 @@ export default function InstructorSettings() {
     try {
       const d = await api.get('/instructor/teaching')
       setPublicLabel(d.public_label === 'trainer' ? 'trainer' : 'instructor')
+      setAvatarUrl(d.avatar_url || null)
       const m = d.map || {}
       setMapLat(m.latitude != null && Number.isFinite(Number(m.latitude)) ? String(m.latitude) : '')
       setMapLng(m.longitude != null && Number.isFinite(Number(m.longitude)) ? String(m.longitude) : '')
@@ -875,6 +878,20 @@ export default function InstructorSettings() {
       </Card>
 
       <Card className={settingsCardCls}>
+        <h2 className={cardTitleCls}>Profil şəkli</h2>
+        <p className={cardTextCls}>
+          Tələbə və valideynlər sizi axtarışda və profil səhifənizdə bu şəkil ilə görəcək. Yalnız müəllimlər üçün.
+        </p>
+        <InstructorAvatarUpload
+          fullName={user?.full_name}
+          avatarUrl={avatarUrl}
+          mapKind={mapKind}
+          theme={theme}
+          onAvatarChange={setAvatarUrl}
+        />
+      </Card>
+
+      <Card className={settingsCardCls}>
         <h2 className={cardTitleCls}>Görünən ad</h2>
         <p className={cardTextCls}>
           Dashboard və naviqasiyada, həmçinin tələbə ödəniş/tapşırıq ekranlarında göstərilən titul.
@@ -1056,6 +1073,7 @@ export default function InstructorSettings() {
         open={mapPreviewOpen}
         onClose={() => setMapPreviewOpen(false)}
         fullName={user?.full_name}
+        avatarUrl={avatarUrl}
         subject={primarySubjectName}
         mapKind={mapKind}
         latitude={mapLat}

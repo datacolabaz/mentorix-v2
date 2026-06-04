@@ -7,6 +7,7 @@ import VerifyEmail from './pages/auth/VerifyEmail'
 import ResetPassword from './pages/auth/ResetPassword'
 import RoleOnboarding from './pages/auth/RoleOnboarding'
 import InstructorMapSearch from './pages/public/InstructorMapSearch'
+import PublicInstructorProfile from './pages/public/PublicInstructorProfile'
 import AdminLayout from './layouts/AdminLayout'
 import InstructorLayout from './layouts/InstructorLayout'
 import StudentLayout from './layouts/StudentLayout'
@@ -104,6 +105,7 @@ export default function App() {
       <AnalyticsPageTracker />
       <Routes>
       <Route path="/search" element={<InstructorMapSearch />} />
+      <Route path="/teachers/:id" element={<PublicInstructorProfile />} />
       <Route path="/login" element={user ? <Navigate to={user?.role ? `/${user.role}` : '/onboarding/role'} replace /> : <Login />} />
       <Route path="/verify-email" element={<VerifyEmail />} />
       <Route path="/reset-password" element={<ResetPassword />} />

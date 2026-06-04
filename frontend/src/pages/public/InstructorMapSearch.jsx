@@ -13,6 +13,7 @@ import DiscoverSearchFilters from '../../components/discover/DiscoverSearchFilte
 import CategoryMegaMenu from '../../components/discover/CategoryMegaMenu'
 import InquiryFormModal from '../../components/discover/InquiryFormModal'
 import DiscoverAuthModal from '../../components/discover/DiscoverAuthModal'
+import InstructorAvatar from '../../components/common/InstructorAvatar'
 import useAuthStore from '../../hooks/useAuth'
 
 const DARK_TILE = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
@@ -665,10 +666,13 @@ export default function InstructorMapSearch() {
                   }`}
                 >
                   <button type="button" onClick={() => focusInstructor(p)} className="flex gap-3 flex-1 min-w-0 text-left">
-                    <span className="mt-0.5 w-6 shrink-0 text-center text-sm font-bold text-gray-500">{rank}.</span>
-                    <span
-                      className="mt-1.5 h-3.5 w-3.5 rounded-full shrink-0 ring-2 ring-white/25"
-                      style={{ backgroundColor: isTrainer ? '#f59e0b' : '#00E676' }}
+                    <span className="mt-1 w-6 shrink-0 text-center text-sm font-bold text-gray-500">{rank}.</span>
+                    <InstructorAvatar
+                      fullName={p.full_name}
+                      avatarUrl={p.avatar_url}
+                      size="sm"
+                      kind={p.map_profile_kind}
+                      className="mt-0.5"
                     />
                     <div className="min-w-0 flex-1">
                       {p.is_premium_listing ? (
@@ -702,15 +706,24 @@ export default function InstructorMapSearch() {
                         <div className="text-[11px] text-emerald-400/90 mt-0.5">{p.discover_hourly_rate} AZN/saat</div>
                       ) : null}
                       <div className="text-[11px] text-gray-500 mt-1">{kindLabel(p.map_profile_kind)}</div>
+                      <Link
+                        to={`/teachers/${p.id}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="inline-block text-[11px] font-semibold text-primary hover:underline mt-1"
+                      >
+                        Profilə bax →
+                      </Link>
                     </div>
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => onInquiryClick(p)}
-                    className="shrink-0 text-[10px] font-bold px-2 py-1.5 rounded-lg border border-primary/40 text-primary hover:bg-primary/10 self-center"
-                  >
-                    Müraciət
-                  </button>
+                  <div className="flex flex-col gap-1.5 shrink-0 self-center">
+                    <button
+                      type="button"
+                      onClick={() => onInquiryClick(p)}
+                      className="text-[10px] font-bold px-2 py-1.5 rounded-lg border border-primary/40 text-primary hover:bg-primary/10"
+                    >
+                      Müraciət
+                    </button>
+                  </div>
                 </div>
               )
             })}
