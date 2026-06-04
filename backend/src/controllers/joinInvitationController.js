@@ -54,6 +54,59 @@ const listJoinRequests = async (req, res) => {
   }
 };
 
+/** Sorğular boşdursa: migrasiya / DB diaqnostikası */
+const joinRequestsDiagnostics = async (req, res) => {
+  try {
+    let examTableOk = true;
+    let examTableError = null;
+    try {
+      await require('../utils/db').query('SELECT 1 FROM exam_access_requests LIMIT 1');
+    } catch (e) {
+      examTableOk = false;
+      examTableError = e.message;
+    }
+    const db = require('../utils/db');
+    const instructorId = req.user.id;
+    let pending = 0;
+    let total = 0;
+    let recent = [];
+    if (examTableOk) {
+      const { rows: counts } = await db.query(
+        `SELECT
+           COUNT(*) FILTER (WHERE UPPER(TRIM(status)) = 'PENDING')::int AS pending,
+           COUNT(*)::int AS total
+         FROM exam_access_requests
+         WHERE instructor_id = $1::uuid`,
+        [instructorId],
+      );
+      pending = Number(counts[0]?.pending ?? 0) || 0;
+      total = Number(counts[0]?.total ?? 0) || 0;
+      const { rows } = await db.query(
+        `SELECT ear.id, ear.status, ear.created_at, ear.student_name, ear.student_email,
+                e.title AS exam_title
+         FROM exam_access_requests ear
+         JOIN exams e ON e.id = ear.exam_id
+         WHERE ear.instructor_id = $1::uuid
+         ORDER BY ear.created_at DESC
+         LIMIT 8`,
+        [instructorId],
+      );
+      recent = rows;
+    }
+    res.json({
+      success: true,
+      exam_access_table_ok: examTableOk,
+      exam_access_table_error: examTableError,
+      exam_requests_pending: pending,
+      exam_requests_total: total,
+      recent_exam_requests: recent,
+      share_link_hint: 'İmtahanlar → link kopyala — URL /exam/... olmalıdır',
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 const joinRequestsCount = async (req, res) => {
   try {
     const groupCount = await countPendingJoinRequests(req.user.id);
@@ -72,9 +125,13 @@ const joinRequestsCount = async (req, res) => {
 const approveRequest = async (req, res) => {
   try {
     const kind = String(req.body?.kind || req.query?.kind || 'group_join').trim();
+    const sendSms =
+      req.body?.send_sms === true ||
+      req.body?.send_sms === 'true' ||
+      req.body?.send_sms === 1;
     const result =
       kind === 'exam_access'
-        ? await approveExamAccessRequest(req.params.id, req.user.id)
+        ? await approveExamAccessRequest(req.params.id, req.user.id, { sendSms })
         : await approveJoinRequest(req.params.id, req.user.id);
     res.json({ success: true, ...result });
   } catch (err) {
@@ -130,6 +187,7 @@ const submitJoinWithProfile = async (req, res) => {
 module.exports = {
   getPublicJoin,
   listJoinRequests,
+  joinRequestsDiagnostics,
   joinRequestsCount,
   approveRequest,
   rejectRequest,

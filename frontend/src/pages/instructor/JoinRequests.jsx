@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import api from '../../lib/api'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
+import Modal from '../../components/common/Modal'
 import ListSkeleton from '../../components/common/ListSkeleton'
 import { useToast } from '../../components/common/Toast'
 import { useQueryClient } from '@tanstack/react-query'
@@ -27,8 +28,11 @@ export default function InstructorJoinRequests() {
   const queryClient = useQueryClient()
   const [requests, setRequests] = useState([])
   const [warnings, setWarnings] = useState([])
+  const [diag, setDiag] = useState(null)
   const [loading, setLoading] = useState(true)
   const [actingId, setActingId] = useState(null)
+  const [examApproveModal, setExamApproveModal] = useState(null)
+  const [examApproveSendSms, setExamApproveSendSms] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -45,16 +49,26 @@ export default function InstructorJoinRequests() {
     }
   }, [toast])
 
+  const loadDiag = useCallback(async () => {
+    try {
+      const d = await api.get('/instructor/join-requests/diagnostics')
+      setDiag(d)
+    } catch {
+      setDiag(null)
+    }
+  }, [])
+
   useEffect(() => {
     void load()
-  }, [load])
+    void loadDiag()
+  }, [load, loadDiag])
 
-  const approve = async (requestId, kind = 'group_join') => {
+  const approve = async (requestId, kind = 'group_join', opts = {}) => {
     setActingId(requestId)
     try {
-      const r = await api.post(`/instructor/join-requests/${encodeURIComponent(requestId)}/approve`, {
-        kind,
-      })
+      const body = { kind }
+      if (kind === 'exam_access') body.send_sms = Boolean(opts.sendSms)
+      const r = await api.post(`/instructor/join-requests/${encodeURIComponent(requestId)}/approve`, body)
       toast(r?.message || 'Təsdiqləndi', 'success')
       await load()
       queryClient.invalidateQueries({ queryKey: BILLING_STATUS_QUERY_KEY })
@@ -64,7 +78,13 @@ export default function InstructorJoinRequests() {
       toast(err?.message || 'Xəta', 'error')
     } finally {
       setActingId(null)
+      setExamApproveModal(null)
     }
+  }
+
+  const openExamApprove = (req) => {
+    setExamApproveSendSms(false)
+    setExamApproveModal(req)
   }
 
   const reject = async (requestId, kind = 'group_join') => {
@@ -104,13 +124,28 @@ export default function InstructorJoinRequests() {
       {loading ? (
         <ListSkeleton rows={4} />
       ) : !requests.length ? (
-        <Card className="p-8 text-center text-token-textMuted text-sm border border-[color:var(--border-subtle)] space-y-2">
+        <Card className="p-8 text-center text-token-textMuted text-sm border border-[color:var(--border-subtle)] space-y-3">
           <p>Gözləyən sorğu yoxdur.</p>
-          <p className="text-xs">
-            İmtahan üçün İmtahanlar səhifəsindən <strong className="text-token-textMain">linki kopyalayın</strong> və
-            tələbəyə göndərin. Tələbə linkə klik edib Google ilə daxil olanda sorğu avtomatik gələcək — email axtarmaq
-            lazım deyil.
+          <p className="text-xs text-left">
+            <strong className="text-token-textMain">Bəli — imtahan linkini yenidən kopyalayıb qrupa göndərin.</strong>{' '}
+            Linkdə mütləq <code className="text-primary">/exam/</code> olmalıdır (köhnə{' '}
+            <code>/student/exams?exam=</code> də işləyir, amma yenisi daha etibarlıdır).
           </p>
+          <p className="text-xs text-left">
+            Qrup <code>/join/KOD</code> linki ayrıdır — orada tələbə formu doldurmalıdır; OTK5 imtahanı üçün{' '}
+            <strong className="text-token-textMain">İmtahanlar → OTK5 → link kopyala</strong> edin.
+          </p>
+          <p className="text-xs text-left">
+            Tələbə yalnız Gmail ilə qeydiyyat olubsa kifayət etmir — <strong>imtahan linkinə klik</strong> etməlidir.
+          </p>
+          {diag && !diag.exam_access_table_ok && (
+            <p className="text-xs text-amber-300 text-left">
+              Server: imtahan sorğuları cədvəli yoxdur — Railway-də deploy + migrate lazımdır.
+            </p>
+          )}
+          {diag?.exam_requests_total > 0 && diag.exam_requests_pending === 0 && (
+            <p className="text-xs text-left">Keçmiş sorğular var, gözləyən yoxdur (hamısı təsdiqlənib/rədd edilib).</p>
+          )}
         </Card>
       ) : (
         <ul className="space-y-3">
@@ -171,7 +206,11 @@ export default function InstructorJoinRequests() {
                     size="sm"
                     className="flex-1 justify-center"
                     loading={actingId === req.request_id}
-                    onClick={() => approve(req.request_id, req.kind || 'group_join')}
+                    onClick={() =>
+                      req.kind === 'exam_access'
+                        ? openExamApprove(req)
+                        : approve(req.request_id, req.kind || 'group_join')
+                    }
                   >
                     Təsdiqlə
                   </Button>
@@ -190,6 +229,55 @@ export default function InstructorJoinRequests() {
           ))}
         </ul>
       )}
+
+      <Modal
+        open={!!examApproveModal}
+        onClose={() => setExamApproveModal(null)}
+        title="İmtahan sorğusunu təsdiqlə"
+        size="sm"
+      >
+        {examApproveModal && (
+          <div className="space-y-4 text-sm text-gray-300">
+            <p>
+              <strong className="text-white">{examApproveModal.student_name}</strong>
+              {examApproveModal.exam_title
+                ? ` — «${examApproveModal.exam_title}»`
+                : ''}
+            </p>
+            <p className="text-xs text-emerald-200/90">
+              Təsdiqdən sonra tələbəyə <strong>Gmail ünvanına</strong> imtahan bildirişi gedəcək (SMTP konfiqurasiya
+              olunubsa). Mentorix panelində də bildiriş görünəcək.
+            </p>
+            <label className="flex items-start gap-3 rounded-xl border border-indigo-500/25 bg-indigo-500/10 p-3 cursor-pointer">
+              <input
+                type="checkbox"
+                className="mt-1 w-4 h-4 accent-blue-500 shrink-0"
+                checked={examApproveSendSms}
+                onChange={(e) => setExamApproveSendSms(e.target.checked)}
+              />
+              <span>
+                <span className="font-semibold text-white block">SMS / WhatsApp da göndər</span>
+                <span className="text-xs text-gray-400">
+                  Yalnız tələbənin profilində telefon varsa. Gmail qeydiyyatlı tələbələrə əvvəlcə email kifayətdir.
+                </span>
+              </span>
+            </label>
+            <div className="flex flex-col-reverse sm:flex-row gap-2 sm:justify-end pt-1">
+              <Button variant="secondary" onClick={() => setExamApproveModal(null)}>
+                Ləğv et
+              </Button>
+              <Button
+                loading={actingId === examApproveModal.request_id}
+                onClick={() =>
+                  approve(examApproveModal.request_id, 'exam_access', { sendSms: examApproveSendSms })
+                }
+              >
+                Təsdiqlə
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   )
 }

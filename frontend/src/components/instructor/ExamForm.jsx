@@ -336,8 +336,8 @@ export default function ExamForm({ students, studentsLoading = false, onCreated 
               <div>
                 <p className="text-sm font-semibold">Əlavə SMS / WhatsApp xatırlatması</p>
                 <p className="text-xs text-gray-500">
-                  İmtahan yerləşdiriləndə seçilmiş tələbələrə avtomatik WhatsApp (konfiqurasiya varsa) və ya SMS göndərilir.
-                  Bu seçim: başlamadan 5 dəq əvvəl xatırlatma və imtahan bitəndə nəticə bildirişi.
+                  İlk təyinatda tələbəyə əsasən <strong>Gmail</strong> və panel bildirişi gedir; SMS ayrıca Sorğular
+                  təsdiqində seçilir. Bu checkbox: başlamadan 5 dəq əvvəl xatırlatma və imtahan bitəndə nəticə SMS-i.
                 </p>
               </div>
               <input type="checkbox" checked={meta.notify_students}

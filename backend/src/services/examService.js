@@ -726,11 +726,15 @@ async function enqueueExamPlacedEmails(exam, assignments, examLink) {
   return queued;
 }
 
-/** İmtahan yerləşdirildikdə: tələbələrə WhatsApp/SMS, email (növbə) və panel bildirişi. */
+/**
+ * İmtahan təyinatı: əvvəl Gmail (email növbəsi) + panel bildirişi.
+ * SMS/WhatsApp yalnız options.sendSms === true olduqda (müəllim təsdiqi ilə).
+ */
 const sendExamPlacedNotifications = async (examId, options = {}) => {
+  const sendSms = options.sendSms === true;
   const { sendStudentWhatsAppOrSms, pickStudentNotifyPhone } = require('./studentMessagingService');
   const { getWhatsAppConfig } = require('./whatsappService');
-  const waCfg = getWhatsAppConfig();
+  const waCfg = sendSms ? getWhatsAppConfig() : { examTemplateName: null };
   const filterIds = Array.isArray(options.studentIds)
     ? new Set(options.studentIds.map((x) => String(x)))
     : null;
@@ -756,43 +760,48 @@ const sendExamPlacedNotifications = async (examId, options = {}) => {
   const examLink = buildStudentExamUrl(exam.id);
   const linkHint = examLink ? `\nLink: ${examLink}` : '';
 
+  const emails = await enqueueExamPlacedEmails(exam, assignments, examLink);
+
   let sent = 0;
   let skipped = 0;
 
   for (const s of assignments) {
     await insertStudentExamInAppNotification(s.student_id, exam, examLink);
+  }
 
-    const targetPhone = pickStudentNotifyPhone(s);
-    if (!targetPhone) {
-      skipped += 1;
-      continue;
-    }
-    const firstName = String(s.full_name || 'Tələbə').trim().split(/\s+/)[0] || 'Tələbə';
-    const msg =
-      `Mentorix: Salam, ${firstName}! "${title}" imtahanı sizin üçün planlaşdırılıb.\n` +
-      `Aktivlik: ${when}\n` +
-      `Müddət: ${mins} dəqiqə.${linkHint}\n` +
-      `Giriş edib imtahana başlayın.`;
+  if (sendSms) {
+    for (const s of assignments) {
+      const targetPhone = pickStudentNotifyPhone(s);
+      if (!targetPhone) {
+        skipped += 1;
+        continue;
+      }
+      const firstName = String(s.full_name || 'Tələbə').trim().split(/\s+/)[0] || 'Tələbə';
+      const msg =
+        `Mentorix: Salam, ${firstName}! "${title}" imtahanı sizin üçün planlaşdırılıb.\n` +
+        `Aktivlik: ${when}\n` +
+        `Müddət: ${mins} dəqiqə.${linkHint}\n` +
+        `Giriş edib imtahana başlayın.`;
 
-    const examTpl = waCfg.examTemplateName;
-    const r = await sendStudentWhatsAppOrSms({
-      instructorId: exam.instructor_id,
-      studentId: s.student_id,
-      phone: targetPhone,
-      message: msg,
-      logType: 'exam_placed',
-      templateNameOverride: examTpl,
-      templateBodyParams: examTpl ? [firstName, title, when, String(mins)] : null,
-    });
-    if (r?.success) sent += 1;
-    else {
-      skipped += 1;
-      console.error('exam placed notify failed', s.student_id, r?.error || r?.whatsapp_error);
+      const examTpl = waCfg.examTemplateName;
+      const r = await sendStudentWhatsAppOrSms({
+        instructorId: exam.instructor_id,
+        studentId: s.student_id,
+        phone: targetPhone,
+        message: msg,
+        logType: 'exam_placed',
+        templateNameOverride: examTpl,
+        templateBodyParams: examTpl ? [firstName, title, when, String(mins)] : null,
+      });
+      if (r?.success) sent += 1;
+      else {
+        skipped += 1;
+        console.error('exam placed notify failed', s.student_id, r?.error || r?.whatsapp_error);
+      }
     }
   }
 
-  const emails = await enqueueExamPlacedEmails(exam, assignments, examLink);
-  return { sent, skipped, emails };
+  return { sent, skipped, emails, sendSms };
 };
 
 /** İmtahan başlamasına ~5 dəq qalmış: əvvəlcə tələbə nömrəsi, yoxdursa valideyn. */

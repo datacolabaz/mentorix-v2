@@ -100,7 +100,17 @@ export default function ExamInvite() {
         return
       }
       setSession(r.token, r.user)
-      toast('Daxil oldunuz — müəllimə sorğu göndərilir', 'success')
+      if (id && r.user?.role === 'student') {
+        try {
+          const sub = await api.post(`/exams/${encodeURIComponent(id)}/access-from-link`)
+          setRequestState(sub?.already_assigned ? 'assigned' : 'pending')
+          toast(sub?.message || 'Müəllimə sorğu göndərildi', 'success')
+        } catch (err) {
+          toast(err?.message || 'Sorğu göndərilmədi', 'error')
+        }
+      } else {
+        toast('Daxil oldunuz', 'success')
+      }
     } catch (err) {
       toast(err?.message || 'Google girişi uğursuz', 'error')
     } finally {
@@ -134,11 +144,12 @@ export default function ExamInvite() {
           {requestBusy && <p className="text-sm text-token-textMuted">Sorğu göndərilir…</p>}
           {requestState === 'pending' && (
             <p className="text-sm text-amber-200/90">
-              Sorğu müəllimə göndərilib. Təsdiqlədikdən sonra{' '}
+              Sorğu müəllimə göndərilib. Təsdiqdən sonra bildiriş əvvəlcə <strong>Gmail</strong> ünvanınıza gedəcək; SMS
+              yalnız müəllim seçəndə göndərilir. Sonra{' '}
               <Link to="/student/exams" className="text-primary hover:underline">
                 İmtahanlarım
               </Link>{' '}
-              bölməsindən imtahana başlaya bilərsiniz.
+              bölməsindən başlaya bilərsiniz.
             </p>
           )}
           {requestState === 'assigned' && (

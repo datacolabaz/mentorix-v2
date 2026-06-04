@@ -15,6 +15,7 @@ const { listInstructorInquiries, revealInquiryContact } = require('../controller
 const { listClasses, rotateJoinCode } = require('../controllers/instructorClassesController');
 const {
   listJoinRequests,
+  joinRequestsDiagnostics,
   joinRequestsCount,
   approveRequest,
   rejectRequest,
@@ -28,6 +29,7 @@ router.get('/marketplace-opportunity', authenticate, authorize('instructor'), ge
 router.post('/avatar', authenticate, authorize('instructor'), postInstructorAvatar);
 router.delete('/avatar', authenticate, authorize('instructor'), deleteInstructorAvatar);
 router.get('/join-requests', authenticate, authorize('instructor'), listJoinRequests);
+router.get('/join-requests/diagnostics', authenticate, authorize('instructor'), joinRequestsDiagnostics);
 router.get('/join-requests/count', authenticate, authorize('instructor'), joinRequestsCount);
 router.post(
   '/join-requests/:id/approve',

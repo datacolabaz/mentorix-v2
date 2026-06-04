@@ -9,6 +9,7 @@ import ExamBreakdownList from '../../components/exam/ExamBreakdownList'
 import { useToast } from '../../components/common/Toast'
 import useUiStore from '../../hooks/useUi'
 import useAuthStore from '../../hooks/useAuth'
+import PhoneInput from '../../components/auth/PhoneInput'
 import GroupSwitcher from '../../components/student/GroupSwitcher'
 import { useStudentGroups } from '../../contexts/StudentGroupContext'
 import { withEnrollmentQuery } from '../../lib/studentGroupQuery'
@@ -399,7 +400,11 @@ export default function StudentExams() {
   const lastListReviewKeyRef = useRef('')
   const toast = useToast()
   const { setFocusMode, theme } = useUiStore()
-  const { user } = useAuthStore()
+  const { user, setSession } = useAuthStore()
+  const token = useAuthStore((s) => s.token)
+  const [phonePromptOpen, setPhonePromptOpen] = useState(false)
+  const [contactPhone, setContactPhone] = useState('')
+  const [phonePromptBusy, setPhonePromptBusy] = useState(false)
 
   const materialBlobLoadKey = useMemo(() => {
     if (!activeExam) return ''
@@ -489,6 +494,38 @@ export default function StudentExams() {
   useEffect(() => {
     loadExams(false)
   }, [loadExams])
+
+  const studentHasContactPhone = useMemo(() => {
+    const p = String(user?.phone_number || user?.phone || '').replace(/\D/g, '')
+    return p.length >= 9
+  }, [user?.phone, user?.phone_number])
+
+  useEffect(() => {
+    if (!user || user.role !== 'student' || studentHasContactPhone || listLoading) return
+    if (!exams.length) return
+    try {
+      if (sessionStorage.getItem('mx_student_phone_prompt_skip') === '1') return
+    } catch {
+      /* ignore */
+    }
+    setPhonePromptOpen(true)
+  }, [user, studentHasContactPhone, exams.length, listLoading])
+
+  const saveContactPhone = async () => {
+    setPhonePromptBusy(true)
+    try {
+      const r = await api.patch('/auth/profile', { phone_number: contactPhone })
+      if (r?.user) {
+        setSession(token, r.user)
+        toast('Mobil nömrə saxlanıldı', 'success')
+        setPhonePromptOpen(false)
+      }
+    } catch (err) {
+      toast(err?.message || 'Telefon saxlanılmadı', 'error')
+    } finally {
+      setPhonePromptBusy(false)
+    }
+  }
 
   /**
    * Təqdimdən dərhal sonra breakdown `submit` cavabından gəlir; səhifə yenilənəndə state itir.
@@ -1266,6 +1303,46 @@ export default function StudentExams() {
         )}
       </div>
       )}
+
+      <Modal
+        open={phonePromptOpen}
+        onClose={() => {
+          try {
+            sessionStorage.setItem('mx_student_phone_prompt_skip', '1')
+          } catch {
+            /* ignore */
+          }
+          setPhonePromptOpen(false)
+        }}
+        title="Mobil nömrə (istəyə bağlı)"
+        size="sm"
+      >
+        <div className="space-y-4 text-sm text-gray-300">
+          <p>
+            İmtahan xəbərdarlığı əvvəlcə <strong className="text-white">Gmail</strong> ünvanınıza gedir. SMS üçün mobil
+            nömrənizi əlavə edə bilərsiniz — müəllim SMS göndərməyi seçəndə istifadə olunur.
+          </p>
+          <PhoneInput value={contactPhone} onChange={setContactPhone} />
+          <div className="flex flex-col-reverse sm:flex-row gap-2 sm:justify-end">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                try {
+                  sessionStorage.setItem('mx_student_phone_prompt_skip', '1')
+                } catch {
+                  /* ignore */
+                }
+                setPhonePromptOpen(false)
+              }}
+            >
+              Sonra
+            </Button>
+            <Button loading={phonePromptBusy} onClick={() => void saveContactPhone()}>
+              Saxla
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       <Modal
         open={!!accessPrompt}

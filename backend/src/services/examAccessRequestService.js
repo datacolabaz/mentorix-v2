@@ -237,7 +237,8 @@ async function countPendingExamAccessRequests(instructorId) {
   return Number(rows[0]?.n ?? 0) || 0;
 }
 
-async function approveExamAccessRequest(requestId, instructorId) {
+async function approveExamAccessRequest(requestId, instructorId, options = {}) {
+  const sendSms = options.sendSms === true;
   const { rows } = await db.query(
     `SELECT ear.*, e.title AS exam_title
      FROM exam_access_requests ear
@@ -284,15 +285,20 @@ async function approveExamAccessRequest(requestId, instructorId) {
   );
 
   const { sendExamPlacedNotifications } = require('./examService');
-  sendExamPlacedNotifications(req.exam_id, { studentIds: [req.student_id] }).catch((e) =>
+  sendExamPlacedNotifications(req.exam_id, { studentIds: [req.student_id], sendSms }).catch((e) =>
     console.error('sendExamPlacedNotifications(access)', e.message),
   );
 
+  const smsPart = sendSms
+    ? ' SMS/WhatsApp göndərildi (nömrə varsa).'
+    : ' SMS göndərilmədi — yalnız Gmail və panel bildirişi.';
   return {
     exam_id: req.exam_id,
     student_id: req.student_id,
     enrollment_id: enrollmentId,
-    message: `Tələbə təsdiqləndi: «${examTitle}» imtahanı + sizin tələbə siyahınız.`,
+    email_notified: true,
+    sms_sent: sendSms,
+    message: `Tələbə təsdiqləndi: «${examTitle}». Gmail ünvanına bildiriş göndərilir.${smsPart}`,
   };
 }
 
