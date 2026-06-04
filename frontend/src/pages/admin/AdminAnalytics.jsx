@@ -44,11 +44,35 @@ function fmtPct(n) {
   return `${Number(n).toLocaleString('az-Latn-AZ', { maximumFractionDigits: 1 })}%`
 }
 
-function OverviewCard({ label, value, sub }) {
+function formatConversion(ov) {
+  if (ov?.conversion_display === 'insufficient_data') {
+    return { value: 'Kifayət qədər məlumat yoxdur', sub: 'Qeydiyyat / unikal ziyarətçi', warn: true }
+  }
+  if (ov?.conversion_pct == null) return { value: '—', sub: 'Qeydiyyat / unikal ziyarətçi', warn: false }
+  return {
+    value: fmtPct(ov.conversion_pct),
+    sub: 'Dövr ərzində qeydiyyat ÷ unikal ziyarətçi (max 100%)',
+    warn: Boolean(ov.conversion_warning),
+  }
+}
+
+function OverviewCard({ label, value, sub, warn }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-[#141820] to-[#0d1016] p-5">
+    <div
+      className={[
+        'rounded-2xl border bg-gradient-to-br from-[#141820] to-[#0d1016] p-5',
+        warn ? 'border-amber-500/35' : 'border-white/10',
+      ].join(' ')}
+    >
       <div className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">{label}</div>
-      <div className="mt-2 font-display text-3xl font-bold text-white tabular-nums">{value}</div>
+      <div
+        className={[
+          'mt-2 font-display font-bold text-white tabular-nums',
+          warn ? 'text-lg leading-snug text-amber-100' : 'text-3xl',
+        ].join(' ')}
+      >
+        {value}
+      </div>
       {sub ? <div className="mt-1 text-xs text-gray-500">{sub}</div> : null}
     </div>
   )
@@ -125,6 +149,7 @@ export default function AdminAnalytics() {
 
   const ov = data?.overview || {}
   const monthly = data?.monthly || {}
+  const conversionUi = formatConversion(ov)
 
   return (
     <div className="p-4 sm:p-6 max-w-[1400px] mx-auto space-y-6">
@@ -168,11 +193,21 @@ export default function AdminAnalytics() {
             <div className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3">
               Ümumi vəziyyət · {period === '7d' ? 'son 7 gün' : period === '30d' ? 'son 30 gün' : 'bütün dövr'}
             </div>
+            {ov.conversion_message ? (
+              <div className="mb-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-xs text-amber-100 leading-relaxed">
+                {ov.conversion_message}
+              </div>
+            ) : null}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-              <OverviewCard label="Toplam ziyarət" value={fmt(ov.total_visitors)} sub="Səhifə baxışları" />
-              <OverviewCard label="Unikal ziyarətçi" value={fmt(ov.unique_visitors)} sub="Sessiya üzrə" />
-              <OverviewCard label="Qeydiyyatlar" value={fmt(ov.registrations)} />
-              <OverviewCard label="Konversiya" value={fmtPct(ov.conversion_pct)} sub="Qeydiyyat / unikal" />
+              <OverviewCard label="Toplam ziyarət" value={fmt(ov.total_visitors)} sub="Səhifə baxışları (dövr)" />
+              <OverviewCard label="Unikal ziyarətçi" value={fmt(ov.unique_visitors)} sub="Sessiya üzrə (dövr)" />
+              <OverviewCard label="Qeydiyyatlar" value={fmt(ov.registrations)} sub="Yalnız bu dövrdə yaradılan hesablar" />
+              <OverviewCard
+                label="Konversiya"
+                value={conversionUi.value}
+                sub={conversionUi.sub}
+                warn={conversionUi.warn}
+              />
             </div>
           </section>
 

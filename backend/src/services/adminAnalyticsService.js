@@ -51,6 +51,59 @@ function withShares(rows, valueKey = 'count') {
   }));
 }
 
+/**
+ * Konversiya = dövr ərzində qeydiyyat / unikal ziyarətçi.
+ * İzləmə natamamdırsa (qeydiyyat > unikal ziyarətçi) faiz göstərilmir.
+ */
+function computeConversionMetrics(registrations, uniqueVisitors) {
+  const regs = Math.max(0, Number(registrations) || 0);
+  const uv = Math.max(0, Number(uniqueVisitors) || 0);
+
+  if (regs > 0 && uv < regs) {
+    return {
+      conversion_pct: null,
+      conversion_display: 'insufficient_data',
+      conversion_warning: true,
+      conversion_message:
+        'Ziyarətçi izləməsi bu dövrü tam əhatə etmir (analitika yeni aktiv ola bilər). Konversiya hesablanmır.',
+    };
+  }
+
+  if (uv <= 0) {
+    return {
+      conversion_pct: regs > 0 ? null : 0,
+      conversion_display: regs > 0 ? 'insufficient_data' : 'zero',
+      conversion_warning: regs > 0,
+      conversion_message:
+        regs > 0
+          ? 'Bu dövrdə ziyarətçi qeydi yoxdur — konversiya hesablanmır.'
+          : null,
+    };
+  }
+
+  if (regs <= 0) {
+    return {
+      conversion_pct: 0,
+      conversion_display: 'zero',
+      conversion_warning: false,
+      conversion_message: null,
+    };
+  }
+
+  const rawPct = (regs / uv) * 100;
+  const capped = Math.min(100, Math.round(rawPct * 10) / 10);
+
+  return {
+    conversion_pct: capped,
+    conversion_display: 'percent',
+    conversion_warning: rawPct > 100,
+    conversion_message:
+      rawPct > 100
+        ? 'Hesablanmış dəyər 100% ilə məhdudlaşdırılıb (ziyarətçi sayı natamam ola bilər).'
+        : null,
+  };
+}
+
 async function getAdminAnalyticsDashboard(periodRaw) {
   const period = normalizePeriod(periodRaw);
   const periodFilter = periodWhere(period);
@@ -72,9 +125,7 @@ async function getAdminAnalyticsDashboard(periodRaw) {
             AND e.event_type IN (${visitTypes})) AS total_visitors,
          (SELECT COUNT(DISTINCT COALESCE(e.session_key, e.id::text))::int FROM access_events e
             WHERE ${periodFilter} AND e.event_type IN (${visitTypes})) AS unique_visitors,
-         (SELECT COUNT(*)::int FROM access_events e WHERE ${periodFilter}
-            AND e.event_type = 'signup_complete') AS event_registrations,
-         (SELECT COUNT(*)::int FROM users u WHERE u.deleted_at IS NULL AND ${userPeriodWhere(period)}) AS user_registrations`,
+         (SELECT COUNT(*)::int FROM users u WHERE u.deleted_at IS NULL AND ${userPeriodWhere(period)}) AS registrations_in_period`,
     ),
     db.query(
       `SELECT COALESCE(NULLIF(TRIM(referrer_source), ''), 'direct') AS source,
@@ -166,12 +217,10 @@ async function getAdminAnalyticsDashboard(periodRaw) {
   ]);
 
   const ov = overviewRes.rows[0] || {};
-  const registrations = Math.max(
-    Number(ov.user_registrations) || 0,
-    Number(ov.event_registrations) || 0,
-  );
+  const registrations = Number(ov.registrations_in_period) || 0;
   const uniqueVisitors = Number(ov.unique_visitors) || 0;
   const totalVisitors = Number(ov.total_visitors) || 0;
+  const conversion = computeConversionMetrics(registrations, uniqueVisitors);
 
   const funnelMap = Object.fromEntries(
     (funnelRes.rows || []).map((r) => [r.step, Number(r.count) || 0]),
@@ -202,7 +251,7 @@ async function getAdminAnalyticsDashboard(periodRaw) {
       total_visitors: totalVisitors,
       unique_visitors: uniqueVisitors,
       registrations,
-      conversion_pct: pct(registrations, uniqueVisitors),
+      ...conversion,
     },
     traffic_sources,
     top_pages: (pagesRes.rows || []).map((r) => ({
