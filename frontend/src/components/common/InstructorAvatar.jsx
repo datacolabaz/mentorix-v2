@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { resolveApiAssetUrl } from '../../lib/apiAssetUrl'
 import { instructorInitials } from '../../lib/instructorInitials'
 
@@ -22,23 +23,25 @@ export default function InstructorAvatar({
 }) {
   const sz = SIZE[size] || SIZE.md
   const src = avatarUrl ? resolveApiAssetUrl(avatarUrl) : ''
+  const [imgError, setImgError] = useState(false)
+  const showPhoto = Boolean(src) && !imgError
   const initials = instructorInitials(fullName)
   const accent =
     kind === 'trainer'
       ? 'bg-gradient-to-br from-amber-500 to-amber-700'
       : 'bg-gradient-to-br from-emerald-500 to-emerald-700'
 
-  if (src) {
+  useEffect(() => {
+    setImgError(false)
+  }, [src])
+
+  if (showPhoto) {
     return (
       <img
         src={src}
-        alt={fullName ? `${fullName} profil şəkli` : 'Profil şəkli'}
-        className={[
-          sz,
-          'rounded-full object-cover shrink-0',
-          ringClassName,
-          className,
-        ].join(' ')}
+        alt=""
+        className={[sz, 'rounded-full object-cover shrink-0', ringClassName, className].join(' ')}
+        onError={() => setImgError(true)}
       />
     )
   }

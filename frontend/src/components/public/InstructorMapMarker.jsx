@@ -72,7 +72,9 @@ export default function InstructorMapMarker({ instructor, isNearest, selected, o
             <div className="text-[10px] font-bold text-amber-600 mb-1">⭐ Ən yaxın</div>
           ) : null}
           <div className="font-bold">{instructor.full_name}</div>
-          <div className="text-gray-600 text-xs mt-1">{instructor.subject}</div>
+          <div className="text-gray-600 text-xs mt-1">
+            {instructor.display_subject || instructor.subject || '—'}
+          </div>
           <div className="text-[11px] mt-1 font-semibold text-emerald-700">{distanceLabel} · sizdən</div>
           <div className="text-[11px] text-gray-500">{kindLabel(instructor.map_profile_kind)}</div>
         </div>

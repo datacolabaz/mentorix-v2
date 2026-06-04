@@ -4,6 +4,7 @@ import api from '../../lib/api'
 import Brand from '../../components/common/Brand'
 import InstructorAvatar from '../../components/common/InstructorAvatar'
 import { setPageSeo } from '../../lib/pageSeo'
+import { instructorDisplaySubject } from '../../lib/instructorDisplay'
 import InquiryFormModal from '../../components/discover/InquiryFormModal'
 import DiscoverAuthModal from '../../components/discover/DiscoverAuthModal'
 import useAuthStore from '../../hooks/useAuth'
@@ -72,7 +73,7 @@ export default function PublicInstructorProfile() {
     else setAuthModalOpen(true)
   }
 
-  const cats = Array.isArray(instructor?.category_names) ? instructor.category_names : []
+  const subjectLine = instructor ? instructorDisplaySubject(instructor) : null
   const formats = Array.isArray(instructor?.delivery_formats) ? instructor.delivery_formats : []
 
   return (
@@ -132,7 +133,7 @@ export default function PublicInstructorProfile() {
                 ) : null}
                 <h1 className="font-display font-bold text-2xl text-white">{instructor.full_name}</h1>
                 <p className="text-sm text-gray-400 mt-1">
-                  {cats.length ? cats.join(' · ') : instructor.subject}
+                  {subjectLine || 'Fənn göstərilməyib'}
                 </p>
                 <p className="text-xs text-gray-500 mt-1">{kindLabel(instructor.map_profile_kind)}</p>
                 {instructor.discover_hourly_rate != null ? (

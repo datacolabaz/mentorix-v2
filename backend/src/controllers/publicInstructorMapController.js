@@ -1,6 +1,10 @@
 const db = require('../utils/db');
 const { getCategorySubtreeIds } = require('../services/categoryService');
-const { sqlPlanListingPriority, enrichInstructorListingRow } = require('../services/mapListingPlanService');
+const {
+  sqlPlanListingPriority,
+  PUBLIC_DISCOVER_LISTING_SQL,
+  enrichInstructorListingRow,
+} = require('../services/mapListingPlanService');
 const { notifyMarketplaceSearchOpportunity } = require('../services/marketplaceSearchOpportunityService');
 
 function parseFloatQ(v) {
@@ -149,7 +153,8 @@ const getInstructorsInMapView = async (req, res) => {
          ip.longitude::float8 AS longitude,
          ip.map_profile_kind,
          ip.avatar_url,
-         COALESCE(s.plan, 'basic') AS plan
+         COALESCE(s.plan, 'basic') AS plan,
+         ${PUBLIC_DISCOVER_LISTING_SQL}
          ${distanceSql}
        FROM users u
        INNER JOIN instructor_profiles ip ON ip.user_id = u.id

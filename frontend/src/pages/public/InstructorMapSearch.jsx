@@ -16,6 +16,7 @@ import DiscoverAuthModal from '../../components/discover/DiscoverAuthModal'
 import InstructorAvatar from '../../components/common/InstructorAvatar'
 import useAuthStore from '../../hooks/useAuth'
 import { sortInstructorsForMapListing } from '../../lib/mapListingSort'
+import { instructorDisplaySubject } from '../../lib/instructorDisplay'
 
 const DARK_TILE = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
 
@@ -653,7 +654,7 @@ export default function InstructorMapSearch() {
               const selected = selectedId === p.id
               const rank = idx + 1
               const isNearest = rank === 1
-              const cats = Array.isArray(p.category_names) ? p.category_names : []
+              const subjectLine = instructorDisplaySubject(p)
               return (
                 <div
                   key={String(p.id)}
@@ -705,7 +706,7 @@ export default function InstructorMapSearch() {
                         </span>
                       </div>
                       <div className="text-xs text-gray-400 mt-0.5 truncate">
-                        {cats.length ? cats.join(', ') : p.subject}
+                        {subjectLine || 'Fənn göstərilməyib'}
                       </div>
                       {p.discover_hourly_rate != null ? (
                         <div className="text-[11px] text-emerald-400/90 mt-0.5">{p.discover_hourly_rate} AZN/saat</div>

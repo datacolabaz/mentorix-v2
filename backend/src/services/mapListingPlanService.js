@@ -11,12 +11,39 @@ function sqlPlanListingPriority(planColumn = "COALESCE(s.plan, 'basic')") {
   END`;
 }
 
+/** İctimai axtarış/xəritə siyahısı üçün əlavə sahələr */
+const PUBLIC_DISCOVER_LISTING_SQL = `
+  ip.discover_hourly_rate,
+  ip.discover_verified,
+  (
+    SELECT COALESCE(json_agg(c.name_az ORDER BY c.name_az), '[]'::json)
+    FROM instructor_categories ic
+    INNER JOIN categories c ON c.id = ic.category_id
+    WHERE ic.user_id = u.id
+    LIMIT 5
+  ) AS category_names`;
+
+function normalizeCategoryNames(raw) {
+  if (Array.isArray(raw)) return raw.map(String).filter(Boolean);
+  return [];
+}
+
 function enrichInstructorListingRow(row) {
   const plan = normalizePlanSlug(row?.plan);
   const rank = planRank(plan);
+  const category_names = normalizeCategoryNames(row?.category_names);
+  const subjectTrim = String(row?.subject || '').trim();
+  const display_subject =
+    category_names.length > 0
+      ? category_names.join(', ')
+      : subjectTrim && subjectTrim !== '—'
+        ? subjectTrim
+        : null;
   return {
     ...row,
     plan,
+    category_names,
+    display_subject,
     listing_priority: 5 - rank,
     is_top_listing: plan === 'premium',
     is_featured_listing: plan === 'growth',
@@ -48,6 +75,8 @@ function shouldReceiveSearchOpportunityAlerts(planSlug) {
 
 module.exports = {
   sqlPlanListingPriority,
+  PUBLIC_DISCOVER_LISTING_SQL,
+  normalizeCategoryNames,
   enrichInstructorListingRow,
   mapFeatureLineForPlan,
   shouldReceiveSearchOpportunityAlerts,

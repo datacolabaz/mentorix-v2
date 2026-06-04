@@ -1,6 +1,10 @@
 const db = require('../utils/db');
 const { normalizePlanSlug, planRank } = require('../config/plans');
-const { sqlPlanListingPriority, enrichInstructorListingRow } = require('./mapListingPlanService');
+const {
+  sqlPlanListingPriority,
+  enrichInstructorListingRow,
+  normalizeCategoryNames,
+} = require('./mapListingPlanService');
 const { getCategorySubtreeIds } = require('./categoryService');
 
 const FREE_MAX_FORMATS = 1;
@@ -189,7 +193,7 @@ async function searchDiscoverInstructors({
     enrichInstructorListingRow({
       ...r,
       delivery_formats: Array.isArray(r.delivery_formats) ? r.delivery_formats : [],
-      category_names: Array.isArray(r.category_names) ? r.category_names : [],
+      category_names: normalizeCategoryNames(r.category_names),
     }),
   );
 }
@@ -306,6 +310,18 @@ async function upsertInstructorDiscoverProfile(userId, body) {
         `INSERT INTO instructor_categories (user_id, category_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
         [userId, cid],
       );
+    }
+    if (ids.length) {
+      const { rows: catNames } = await db.query(
+        `SELECT c.name_az FROM categories c
+         INNER JOIN instructor_categories ic ON ic.category_id = c.id
+         WHERE ic.user_id = $1 ORDER BY c.name_az LIMIT 5`,
+        [userId],
+      );
+      const label = catNames.map((r) => r.name_az).filter(Boolean).join(', ').slice(0, 255);
+      if (label) {
+        await db.query(`UPDATE instructor_profiles SET subject = $1 WHERE user_id = $2`, [label, userId]);
+      }
     }
   }
 
