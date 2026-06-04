@@ -102,9 +102,13 @@ export default function PublicInstructorProfile() {
   const subjectLine = instructor ? instructorDisplaySubject(instructor) : null
   const formats = Array.isArray(instructor?.delivery_formats) ? instructor.delivery_formats : []
   const tags = useMemo(() => (instructor ? expertiseTags(instructor) : []), [instructor])
-  const bio = String(instructor?.discover_bio || '').trim()
-  const education = String(instructor?.discover_education || '').trim()
+  const bio = String(instructor?.bio || instructor?.discover_bio || '').trim()
+  const education = String(instructor?.education || instructor?.discover_education || '').trim()
   const certifications = String(instructor?.discover_certifications || '').trim()
+  const experienceYears =
+    instructor?.experience_years != null && Number.isFinite(Number(instructor.experience_years))
+      ? Number(instructor.experience_years)
+      : null
 
   return (
     <div className="min-h-[100svh] bg-[#0b0b0b] text-white flex flex-col">
@@ -171,11 +175,18 @@ export default function PublicInstructorProfile() {
                     {subjectLine || 'Fənn göstərilməyib'}
                   </p>
                   <p className="text-xs text-gray-500 mt-1">{kindLabel(instructor.map_profile_kind)}</p>
-                  {instructor.discover_hourly_rate != null ? (
-                    <p className="text-emerald-400 font-bold text-lg mt-3">
-                      {instructor.discover_hourly_rate} AZN / saat
-                    </p>
-                  ) : null}
+                  <div className="flex flex-wrap justify-center gap-2 mt-3">
+                    {experienceYears != null && experienceYears > 0 ? (
+                      <span className="text-sm font-semibold text-sky-300/95 px-3 py-1 rounded-full border border-sky-500/30 bg-sky-500/10">
+                        {experienceYears} il təcrübə
+                      </span>
+                    ) : null}
+                    {instructor.discover_hourly_rate != null ? (
+                      <p className="text-emerald-400 font-bold text-lg">
+                        {instructor.discover_hourly_rate} AZN / saat
+                      </p>
+                    ) : null}
+                  </div>
                 </div>
                 <div className="w-full max-w-sm pt-1">
                   <button

@@ -93,6 +93,10 @@ export default function InstructorSettings() {
   const [avatarUrl, setAvatarUrl] = useState(null)
   const [accountName, setAccountName] = useState('')
   const [savingAccountName, setSavingAccountName] = useState(false)
+  const [profEducation, setProfEducation] = useState('')
+  const [profExperienceYears, setProfExperienceYears] = useState('')
+  const [profBio, setProfBio] = useState('')
+  const [savingProfessional, setSavingProfessional] = useState(false)
   const [billingInterval, setBillingInterval] = useState('yearly')
 
   useEffect(() => {
@@ -119,11 +123,49 @@ export default function InstructorSettings() {
     }
   }
 
+  const saveProfessionalDetails = async () => {
+    const bio = profBio.trim()
+    if (bio.length > 300) {
+      toast('Haqqımda ən çox 300 simvol ola bilər', 'error')
+      return
+    }
+    setSavingProfessional(true)
+    try {
+      const res = await api.patch('/instructor/professional-details', {
+        education: profEducation.trim() || null,
+        experience_years: profExperienceYears.trim() === '' ? null : profExperienceYears.trim(),
+        bio: bio || null,
+      })
+      setProfEducation(res?.education || '')
+      setProfExperienceYears(
+        res?.experience_years != null && Number.isFinite(Number(res.experience_years))
+          ? String(res.experience_years)
+          : '',
+      )
+      setProfBio(res?.bio || '')
+      toast(res?.message || 'Məlumatlar saxlanıldı', 'success')
+    } catch (e) {
+      toast(e?.message || 'Saxlanılmadı', 'error')
+    } finally {
+      setSavingProfessional(false)
+    }
+  }
+
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const d = await api.get('/instructor/teaching')
+      const [d, prof] = await Promise.all([
+        api.get('/instructor/teaching'),
+        api.get('/instructor/professional-details').catch(() => ({})),
+      ])
       setPublicLabel(d.public_label === 'trainer' ? 'trainer' : 'instructor')
+      setProfEducation(prof?.education || '')
+      setProfExperienceYears(
+        prof?.experience_years != null && Number.isFinite(Number(prof.experience_years))
+          ? String(prof.experience_years)
+          : '',
+      )
+      setProfBio(prof?.bio || '')
       setAvatarUrl(d.avatar_url || null)
       const m = d.map || {}
       setMapLat(m.latitude != null && Number.isFinite(Number(m.latitude)) ? String(m.latitude) : '')
@@ -941,6 +983,64 @@ export default function InstructorSettings() {
           theme={theme}
           onAvatarChange={setAvatarUrl}
         />
+      </Card>
+
+      <Card className={settingsCardCls}>
+        <h2 className={cardTitleCls}>Peşəkar məlumatlar</h2>
+        <p className={cardTextCls}>
+          Tələbə və valideynlər profil səhifənizdə təhsilinizi, təcrübənizi və qısa bio-nuzu görəcək.
+        </p>
+        <div className="space-y-4 max-w-xl">
+          <div>
+            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1.5">
+              Təhsil / Ali məktəb
+            </label>
+            <input
+              type="text"
+              className={inp}
+              value={profEducation}
+              onChange={(e) => setProfEducation(e.target.value)}
+              placeholder="Məsələn: BDU - Tətbiqi Riyaziyyat"
+              maxLength={500}
+            />
+          </div>
+          <div>
+            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1.5">
+              Təcrübə (il ilə)
+            </label>
+            <input
+              type="number"
+              min={0}
+              max={60}
+              className={inp}
+              value={profExperienceYears}
+              onChange={(e) => setProfExperienceYears(e.target.value)}
+              placeholder="Məsələn: 5"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1.5">
+              Haqqımda (qısa bio)
+            </label>
+            <textarea
+              className={`${inp} resize-y min-h-[6rem]`}
+              value={profBio}
+              onChange={(e) => setProfBio(e.target.value.slice(0, 300))}
+              placeholder="Tələbələrə metodologiyanız və dərsləri necə keçdiyiniz barədə qısa məlumat yazın. Maksimum 300 simvol."
+              maxLength={300}
+              rows={4}
+            />
+            <p className="text-[11px] text-gray-500 mt-1 text-right">{profBio.length}/300</p>
+          </div>
+          <Button
+            type="button"
+            loading={savingProfessional}
+            onClick={() => void saveProfessionalDetails()}
+            className="w-full sm:w-auto justify-center"
+          >
+            Məlumatları yadda saxla
+          </Button>
+        </div>
       </Card>
 
       <Card className={settingsCardCls}>

@@ -11,6 +11,10 @@ const {
 } = require('../controllers/instructorTeachingController');
 const { patchInstructorMapProfile } = require('../controllers/instructorMapProfileController');
 const { getDiscoverProfile, patchDiscoverProfile } = require('../controllers/instructorDiscoverController');
+const {
+  getProfessionalDetails,
+  patchProfessionalDetails,
+} = require('../controllers/instructorProfessionalController');
 const { listInstructorInquiries, revealInquiryContact } = require('../controllers/studentInquiryController');
 const { listClasses, rotateJoinCode } = require('../controllers/instructorClassesController');
 const {
@@ -44,6 +48,8 @@ router.get('/classes', authenticate, authorize('instructor'), listClasses);
 router.post('/classes/:id/rotate-join-code', authenticate, authorize('instructor'), rotateJoinCode);
 router.patch('/profile-label', authenticate, authorize('instructor'), patchPublicLabel);
 router.patch('/map-profile', authenticate, authorize('instructor'), patchInstructorMapProfile);
+router.get('/professional-details', authenticate, authorize('instructor'), getProfessionalDetails);
+router.patch('/professional-details', authenticate, authorize('instructor'), patchProfessionalDetails);
 router.get('/discover-profile', authenticate, authorize('instructor'), getDiscoverProfile);
 router.patch('/discover-profile', authenticate, authorize('instructor'), patchDiscoverProfile);
 router.get('/inquiries', authenticate, authorize('instructor'), listInstructorInquiries);
