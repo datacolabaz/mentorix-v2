@@ -218,14 +218,22 @@
 }
 .animate-fade-up { animation: fade-up 0.3s ease forwards; }
 
-/* Google Sign-In — tam en, düzbucaqlı düymə (One Tap pill deyil) */
-.mx-google-signin iframe {
-  border-radius: 12px !important;
-  margin: 0 auto;
-  max-width: 100% !important;
+/* Google Sign-In — öz dizaynımız görünür; rəsmi düymə yalnız klik üçün gizlidir */
+.mx-google-signin__hit {
+  opacity: 0;
+  cursor: pointer;
 }
-.mx-google-signin > div > div {
+.mx-google-signin__hit iframe {
   width: 100% !important;
-  display: flex !important;
-  justify-content: stretch !important;
+  height: 48px !important;
+  min-height: 48px !important;
+  margin: 0 !important;
+  border: 0 !important;
+  border-radius: 12px !important;
+}
+.mx-google-signin__hit > div,
+.mx-google-signin__hit > div > div {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 48px !important;
 }
