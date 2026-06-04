@@ -229,9 +229,9 @@ export default function InstructorEmailAuth({ onSuccess }) {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {/* 1. Rol */}
-      <div className="space-y-3">
+      <div className="space-y-2">
         <p className="text-sm font-medium text-gray-200">Rolunuzu seçin:</p>
         <div className="space-y-2" role="radiogroup" aria-label="Rol seçimi">
           {ROLES.map((r) => {
@@ -267,9 +267,9 @@ export default function InstructorEmailAuth({ onSuccess }) {
       </div>
 
       {/* 2. Google — əsas yol */}
-      <div className="space-y-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+      <div className="space-y-2 rounded-2xl border border-white/10 bg-white/[0.03] p-3.5">
         <p className="text-sm font-semibold text-white text-center">Google ilə davam edin</p>
-        <p className="text-xs text-gray-500 text-center leading-relaxed">
+        <p className="text-xs text-gray-500 text-center leading-snug">
           Yeni hesab avtomatik yaradılır; köhnə email hesabınız varsa, aşağıdan email ilə daxil olun.
         </p>
         <GoogleSignInButton onCredential={handleGoogleCredential} disabled={loading} />

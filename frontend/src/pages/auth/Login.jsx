@@ -629,15 +629,15 @@ export default function Login() {
           }`}
         >
           <div
-            className={`flex min-h-0 flex-1 flex-col bg-surface-2 p-6 sm:p-8 ${
+            className={`flex min-h-0 flex-1 flex-col bg-surface-2 ${
               !isAdmin && loginModalOpen
-                ? 'min-h-[100dvh] overflow-y-auto overscroll-y-contain rounded-none border-0 shadow-2xl sm:min-h-0 sm:rounded-2xl sm:border sm:border-white/10'
-                : 'rounded-2xl border border-white/10'
+                ? 'min-h-[100dvh] overflow-y-auto overscroll-y-contain rounded-none border-0 p-5 shadow-2xl sm:min-h-0 sm:rounded-2xl sm:border sm:border-white/10 sm:p-6'
+                : 'rounded-2xl border border-white/10 p-5 sm:p-6'
             }`}
           >
             {!isAdmin ? (
               loginModalOpen ? (
-                <div className="relative mb-6 shrink-0 space-y-2 px-1 text-center">
+                <div className="relative mb-4 shrink-0 space-y-1 px-1 text-center">
                   <button
                     type="button"
                     aria-label="Bağla"
@@ -651,16 +651,19 @@ export default function Login() {
                   <h2 id="mx-login-modal-title" className="pr-10 text-lg font-semibold text-white sm:text-xl">
                     Mentorix-ə xoş gəlmisiniz
                   </h2>
-                  <p className="text-sm leading-relaxed text-gray-400">
+                  <p className="text-sm leading-snug text-gray-400">
                     Rol seçin, Google ilə daxil olun və ya köhnə email hesabınızdan istifadə edin.
                   </p>
                 </div>
               ) : (
-                <div className="mb-5 text-center space-y-1">
+                <div className="mb-3 text-center space-y-1.5">
                   <div className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">Giriş</div>
-                  <div className="mt-1 text-sm font-semibold text-gray-200">Hesabına daxil ol</div>
-                  <div className="mt-1 text-xs text-gray-500">
+                  <div className="text-sm font-semibold text-gray-200">Hesabına daxil ol</div>
+                  <p className="text-xs text-gray-500 leading-snug max-w-[18rem] mx-auto">
                     Əvvəlcə məhsulu yuxarıda gör — sonra email ilə qeydiyyatı keç.
+                  </p>
+                  <div className="flex justify-center pt-0.5">
+                    <Brand size="login" />
                   </div>
                 </div>
               )
@@ -672,12 +675,6 @@ export default function Login() {
                 <div className="text-gray-400 text-sm mt-1">Hesabınıza daxil olun</div>
               </div>
             )}
-
-            {!isAdmin && !loginModalOpen ? (
-              <div className="flex justify-center mb-6">
-                <Brand size="login" />
-              </div>
-            ) : null}
 
             {isAdmin && (
               <form onSubmit={handleEmailLogin} className="space-y-4">
