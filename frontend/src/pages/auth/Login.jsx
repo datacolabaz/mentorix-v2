@@ -649,10 +649,10 @@ export default function Login() {
                     </span>
                   </button>
                   <h2 id="mx-login-modal-title" className="pr-10 text-lg font-semibold text-white sm:text-xl">
-                    Mentorix-ə başla
+                    Mentorix-ə xoş gəlmisiniz
                   </h2>
                   <p className="text-sm leading-relaxed text-gray-400">
-                    Email ilə qeydiyyat — təsdiq kodu və link Gmail ünvanınıza göndərilir.
+                    Rol seçin, Google ilə daxil olun və ya köhnə email hesabınızdan istifadə edin.
                   </p>
                 </div>
               ) : (
@@ -673,8 +673,8 @@ export default function Login() {
               </div>
             )}
 
-            {!isAdmin ? (
-              <div className={`flex justify-center ${loginModalOpen ? 'mb-5' : 'mb-6'}`}>
+            {!isAdmin && !loginModalOpen ? (
+              <div className="flex justify-center mb-6">
                 <Brand size="login" />
               </div>
             ) : null}

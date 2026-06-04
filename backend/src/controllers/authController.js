@@ -1709,21 +1709,14 @@ const googleLogin = async (req, res) => {
     }
 
     if (!user || !user.role) {
-      if (g.email) {
-        return res.json({
-          success: true,
-          needs_phone_link: true,
-          profile: {
-            email: g.email,
-            full_name: g.name,
-            google_sub: g.sub,
-          },
-        });
-      }
       return res.json({
         success: true,
         needs_role: true,
-        profile: { email: user?.email || null, full_name: user?.full_name || g.name, google_sub: g.sub },
+        profile: {
+          email: g.email || user?.email || null,
+          full_name: user?.full_name || g.name || null,
+          google_sub: g.sub,
+        },
       });
     }
 

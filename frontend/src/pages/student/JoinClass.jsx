@@ -97,7 +97,7 @@ export default function JoinClass() {
     setAuthBusy(true)
     try {
       let r = await api.post('/auth/google/login', { credential })
-      if (r?.needs_role) {
+      if (r?.needs_role || r?.needs_phone_link) {
         r = await api.post('/auth/google/complete', { credential, role: 'student' })
       }
       if (r?.needs_phone_link) {

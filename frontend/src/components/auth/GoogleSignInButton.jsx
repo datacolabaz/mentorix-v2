@@ -23,13 +23,16 @@ export default function GoogleSignInButton({ onCredential, disabled, label = 'Go
         callback: (resp) => {
           if (resp?.credential) onCredential?.(resp.credential)
         },
+        context: 'signin',
         auto_select: false,
         cancel_on_tap_outside: true,
         itp_support: true,
+        use_fedcm_for_prompt: false,
       })
 
       try {
         window.google.accounts.id.cancel()
+        window.google.accounts.id.disableAutoSelect()
       } catch {
         /* One Tap açıqdırsa bağla */
       }
@@ -40,9 +43,9 @@ export default function GoogleSignInButton({ onCredential, disabled, label = 'Go
         type: 'standard',
         theme: 'filled_black',
         size: 'large',
-        shape: 'pill',
+        shape: 'rectangular',
         width,
-        text: 'signin_with',
+        text: 'continue_with',
         locale: 'az',
         logo_alignment: 'left',
       })
@@ -83,9 +86,9 @@ export default function GoogleSignInButton({ onCredential, disabled, label = 'Go
         type: 'standard',
         theme: 'filled_black',
         size: 'large',
-        shape: 'pill',
+        shape: 'rectangular',
         width,
-        text: 'signin_with',
+        text: 'continue_with',
         locale: 'az',
         logo_alignment: 'left',
       })

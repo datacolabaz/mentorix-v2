@@ -218,13 +218,14 @@
 }
 .animate-fade-up { animation: fade-up 0.3s ease forwards; }
 
-/* Google Sign-In — tünd login modalı ilə uyğun */
+/* Google Sign-In — tam en, düzbucaqlı düymə (One Tap pill deyil) */
 .mx-google-signin iframe {
-  border-radius: 9999px !important;
+  border-radius: 12px !important;
   margin: 0 auto;
+  max-width: 100% !important;
 }
 .mx-google-signin > div > div {
   width: 100% !important;
   display: flex !important;
-  justify-content: center !important;
+  justify-content: stretch !important;
 }
