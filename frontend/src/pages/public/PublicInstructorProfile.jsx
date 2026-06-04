@@ -115,9 +115,14 @@ export default function PublicInstructorProfile() {
                 ringClassName="ring-4 ring-primary/40"
               />
               <div>
-                {instructor.is_premium_listing ? (
+                {instructor.is_top_listing ? (
                   <span className="inline-block text-[10px] font-bold px-2 py-0.5 rounded-md bg-violet-500/20 text-violet-300 mb-2">
-                    TOP müəllim
+                    🔥 TOP müəllim
+                  </span>
+                ) : null}
+                {instructor.is_featured_listing ? (
+                  <span className="inline-block text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 mb-2 ml-1">
+                    ⭐ Önə çıxır
                   </span>
                 ) : null}
                 {instructor.discover_verified ? (

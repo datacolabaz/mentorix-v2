@@ -1,5 +1,6 @@
 const db = require('../utils/db');
 const { normalizePlanSlug, planRank } = require('../config/plans');
+const { sqlPlanListingPriority, enrichInstructorListingRow } = require('./mapListingPlanService');
 const { getCategorySubtreeIds } = require('./categoryService');
 
 const FREE_MAX_FORMATS = 1;
@@ -158,6 +159,7 @@ async function searchDiscoverInstructors({
        ip.discover_verified,
        ip.teacher_place_address,
        COALESCE(s.plan, 'basic') AS plan,
+       ${sqlPlanListingPriority()} AS listing_sort,
        ${distanceSql},
        (
          SELECT COALESCE(json_agg(json_build_object('format', df.format, 'travel_radius_km', df.travel_radius_km) ORDER BY df.format), '[]'::json)
@@ -175,9 +177,7 @@ async function searchDiscoverInstructors({
      LEFT JOIN subscriptions s ON s.user_id = u.id AND s.status = 'active'
      WHERE ${where.join(' AND ')}
      ORDER BY
-       CASE WHEN COALESCE(s.plan, 'basic') IN ('premium', 'growth') THEN 0
-            WHEN COALESCE(s.plan, 'basic') = 'pro' THEN 1
-            ELSE 2 END ASC,
+       ${sqlPlanListingPriority()} ASC,
        ip.discover_verified DESC,
        distance_km ASC NULLS LAST,
        u.full_name ASC
@@ -185,12 +185,13 @@ async function searchDiscoverInstructors({
     params,
   );
 
-  return rows.map((r) => ({
-    ...r,
-    is_premium_listing: ['pro', 'growth', 'premium'].includes(normalizePlanSlug(r.plan)),
-    delivery_formats: Array.isArray(r.delivery_formats) ? r.delivery_formats : [],
-    category_names: Array.isArray(r.category_names) ? r.category_names : [],
-  }));
+  return rows.map((r) =>
+    enrichInstructorListingRow({
+      ...r,
+      delivery_formats: Array.isArray(r.delivery_formats) ? r.delivery_formats : [],
+      category_names: Array.isArray(r.category_names) ? r.category_names : [],
+    }),
+  );
 }
 
 async function getInstructorDiscoverProfile(userId) {

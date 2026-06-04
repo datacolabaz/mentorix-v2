@@ -12,6 +12,7 @@ import useUiStore from '../../hooks/useUi'
 import { useToast } from '../../components/common/Toast'
 import { writeCache } from '../../lib/cache'
 import { BILLING_STATUS_QUERY_KEY, useBillingStatus } from '../../hooks/useBillingStatus'
+import MarketplaceOpportunityCard from '../../components/instructor/MarketplaceOpportunityCard'
 
 const DEFAULT_DASH = {
   income_this_month: 0,
@@ -370,6 +371,10 @@ export default function InstructorDashboard() {
             </Button>
           </div>
         </div>
+      </div>
+
+      <div className="mb-6">
+        <MarketplaceOpportunityCard theme={theme} />
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 mb-6">

@@ -57,11 +57,27 @@ export function planLimitFeatureLines(p) {
   return lines
 }
 
+const MAP_FEATURE_LINES = {
+  basic: '📍 Xəritədə görünür',
+  pro: '📍 Xəritədə görünür',
+  growth: '⭐ Axtarışda önə çıxır',
+  premium: '🔥 Axtarışda həmişə ən yuxarıda (TOP)',
+}
+
+function mapFeatureForPlan(p) {
+  const id = String(p?.id || '')
+    .trim()
+    .toLowerCase()
+  const normId = id === 'business' ? 'premium' : id
+  return MAP_FEATURE_LINES[normId] || MAP_FEATURE_LINES.basic
+}
+
 /** Qısa başlıq (kartın üstündəki birinci sətir). */
 export function planLimitsHeadline(p) {
   const lines = planLimitFeatureLines(p)
-  if (lines.length) return lines.join(' · ')
-  return 'Limitlər mövcud paketə uyğun tətbiq olunur.'
+  const mapLine = mapFeatureForPlan(p)
+  const merged = lines.length ? [...lines, mapLine] : [mapLine]
+  return merged.join(' · ')
 }
 
 const PLAN_DESCRIPTIONS = {
@@ -82,9 +98,12 @@ export function planDetailLines(p) {
   const isPaid = normId !== 'basic' && Number.isFinite(price) && price > 0
   const desc = PLAN_DESCRIPTIONS[normId]
 
+  const mapLine = mapFeatureForPlan(p)
+
   if (normId === 'basic') {
     return [
       desc || '14 günlük pulsuz sınaq paketi.',
+      mapLine,
       limitsText ? `Sınaq müddətində: ${limitsText}.` : 'Limitlər SADƏ paketinə uyğun tətbiq olunur.',
       'Əlavə SMS və yaddaş alına bilməz — limit dolanda PRO və ya daha yüksək paket seçin.',
       'SADƏ paketi yenilənmir; 14 gün bitəndən sonra ödənişli paket tələb olunur.',
@@ -95,6 +114,7 @@ export function planDetailLines(p) {
   if (isPaid) {
     const lines = [
       desc || 'Aylıq və ya illik ödənişlə aktiv abunədir; ödəniş təsdiqlənəndən sonra limitlər dərhal tətbiq olunur.',
+      mapLine,
     ]
     if (limitsText) lines.push(`Paketə daxildir: ${limitsText}.`)
     if (normId === 'premium') {

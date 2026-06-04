@@ -1,5 +1,6 @@
 const { searchDiscoverInstructors } = require('../services/discoverMarketplaceService');
 const { getCategoryBySlug, getCategoryById } = require('../services/categoryService');
+const { notifyMarketplaceSearchOpportunity } = require('../services/marketplaceSearchOpportunityService');
 
 function parseFloatQ(v) {
   const n = Number.parseFloat(String(v ?? '').replace(',', '.'));
@@ -33,6 +34,16 @@ const getInstructorDiscovery = async (req, res) => {
       q: req.query.q,
       kind: String(req.query.kind || 'all').toLowerCase(),
       limit: Number.parseInt(req.query.limit, 10) || 50,
+    });
+
+    setImmediate(() => {
+      notifyMarketplaceSearchOpportunity({
+        categoryId,
+        areaId: String(req.query.area_id || '').trim() || null,
+        searchQ: req.query.q,
+        kind: String(req.query.kind || 'all').toLowerCase(),
+        format: req.query.format || 'any',
+      }).catch(() => {});
     });
 
     res.set('Cache-Control', 'public, max-age=30');

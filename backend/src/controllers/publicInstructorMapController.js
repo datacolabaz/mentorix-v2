@@ -1,5 +1,7 @@
 const db = require('../utils/db');
 const { getCategorySubtreeIds } = require('../services/categoryService');
+const { sqlPlanListingPriority, enrichInstructorListingRow } = require('../services/mapListingPlanService');
+const { notifyMarketplaceSearchOpportunity } = require('../services/marketplaceSearchOpportunityService');
 
 function parseFloatQ(v) {
   const n = Number.parseFloat(String(v ?? '').replace(',', '.'));
@@ -133,7 +135,9 @@ const getInstructorsInMapView = async (req, res) => {
           )
         )
       )::float8 AS distance_km`;
-      orderSql = 'ORDER BY distance_km ASC NULLS LAST, u.full_name ASC';
+      orderSql = `ORDER BY ${sqlPlanListingPriority()} ASC, distance_km ASC NULLS LAST, u.full_name ASC`;
+    } else {
+      orderSql = `ORDER BY ${sqlPlanListingPriority()} ASC, u.full_name ASC`;
     }
 
     const { rows } = await db.query(
@@ -144,10 +148,12 @@ const getInstructorsInMapView = async (req, res) => {
          ip.latitude::float8 AS latitude,
          ip.longitude::float8 AS longitude,
          ip.map_profile_kind,
-         ip.avatar_url
+         ip.avatar_url,
+         COALESCE(s.plan, 'basic') AS plan
          ${distanceSql}
        FROM users u
        INNER JOIN instructor_profiles ip ON ip.user_id = u.id
+       LEFT JOIN subscriptions s ON s.user_id = u.id AND s.status = 'active'
        WHERE u.role = 'instructor'
          AND COALESCE(u.is_active, TRUE) = TRUE
          AND u.deleted_at IS NULL
@@ -165,8 +171,24 @@ const getInstructorsInMapView = async (req, res) => {
       params
     );
 
+    const instructors = rows.map((r) => enrichInstructorListingRow(r));
+
+    setImmediate(() => {
+      notifyMarketplaceSearchOpportunity({
+        categoryId,
+        areaId,
+        searchQ: null,
+        north: n,
+        south: s,
+        east: e,
+        west: w,
+        kind: kindFilter || 'all',
+        format,
+      }).catch(() => {});
+    });
+
     res.set('Cache-Control', 'public, max-age=30');
-    res.json({ success: true, instructors: rows });
+    res.json({ success: true, instructors });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message || 'Xəta' });
   }

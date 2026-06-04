@@ -15,6 +15,7 @@ import InquiryFormModal from '../../components/discover/InquiryFormModal'
 import DiscoverAuthModal from '../../components/discover/DiscoverAuthModal'
 import InstructorAvatar from '../../components/common/InstructorAvatar'
 import useAuthStore from '../../hooks/useAuth'
+import { sortInstructorsForMapListing } from '../../lib/mapListingSort'
 
 const DARK_TILE = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
 
@@ -357,16 +358,15 @@ export default function InstructorMapSearch() {
         : 'Bakı mərkəzindən (təxmini)'
 
   const instructorsSorted = useMemo(() => {
-    return instructors
-      .map((p) => {
-        const fromApi = p.distance_km != null ? Number(p.distance_km) : null
-        const distanceKmVal =
-          fromApi != null && Number.isFinite(fromApi)
-            ? fromApi
-            : distanceKm(refPoint.lat, refPoint.lng, p.latitude, p.longitude)
-        return { ...p, distanceKm: distanceKmVal }
-      })
-      .sort((a, b) => a.distanceKm - b.distanceKm)
+    const withDist = instructors.map((p) => {
+      const fromApi = p.distance_km != null ? Number(p.distance_km) : null
+      const distanceKmVal =
+        fromApi != null && Number.isFinite(fromApi)
+          ? fromApi
+          : distanceKm(refPoint.lat, refPoint.lng, p.latitude, p.longitude)
+      return { ...p, distanceKm: distanceKmVal }
+    })
+    return sortInstructorsForMapListing(withDist, (p) => p.distanceKm ?? Infinity)
   }, [instructors, refPoint])
 
   const nearestInstructor = instructorsSorted[0] ?? null
@@ -675,9 +675,14 @@ export default function InstructorMapSearch() {
                       className="mt-0.5"
                     />
                     <div className="min-w-0 flex-1">
-                      {p.is_premium_listing ? (
+                      {p.is_top_listing ? (
                         <span className="inline-block text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-violet-500/20 text-violet-300 mb-1">
-                          TOP
+                          🔥 TOP
+                        </span>
+                      ) : null}
+                      {p.is_featured_listing ? (
+                        <span className="inline-block text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-amber-500/20 text-amber-300 mb-1 ml-1">
+                          ⭐ Önə çıxır
                         </span>
                       ) : null}
                       {p.discover_verified ? (

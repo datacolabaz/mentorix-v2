@@ -21,8 +21,10 @@ const {
 } = require('../controllers/joinInvitationController');
 const { attachEntitlements, enforceStudentsLimit } = require('../middleware/entitlements');
 const { postInstructorAvatar, deleteInstructorAvatar } = require('../controllers/instructorAvatarController');
+const { getMarketplaceOpportunity } = require('../controllers/instructorMarketplaceController');
 
 router.get('/teaching', authenticate, authorize('instructor'), getTeaching);
+router.get('/marketplace-opportunity', authenticate, authorize('instructor'), getMarketplaceOpportunity);
 router.post('/avatar', authenticate, authorize('instructor'), postInstructorAvatar);
 router.delete('/avatar', authenticate, authorize('instructor'), deleteInstructorAvatar);
 router.get('/join-requests', authenticate, authorize('instructor'), listJoinRequests);
