@@ -6,12 +6,14 @@ import Brand from '../../components/common/Brand'
 import InstructorMapMarker from '../../components/public/InstructorMapMarker'
 import GoogleInstructorSearchMap from '../../components/public/GoogleInstructorSearchMap'
 import { isGoogleMapsConfigured } from '../../lib/googleMapsLoader'
-import { BAKU_BBOX, BAKU_CENTER, distanceKm, formatDistanceKm } from '../../lib/geo'
+import { BAKU_BBOX, BAKU_CENTER, bboxFromCenter, distanceKm, formatDistanceKm } from '../../lib/geo'
 import { reverseGeocodeLabel } from '../../lib/reverseGeocode'
 import { setPageSeo } from '../../lib/pageSeo'
 import DiscoverSearchFilters from '../../components/discover/DiscoverSearchFilters'
 import CategoryMegaMenu from '../../components/discover/CategoryMegaMenu'
 import InquiryFormModal from '../../components/discover/InquiryFormModal'
+import DiscoverAuthModal from '../../components/discover/DiscoverAuthModal'
+import useAuthStore from '../../hooks/useAuth'
 
 const DARK_TILE = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
 
@@ -86,7 +88,18 @@ function MapInvalidateSize() {
   return null
 }
 
+function mapFilterParams(filters) {
+  const p = {}
+  if (filters?.category_id) p.category_id = filters.category_id
+  if (filters?.format && filters.format !== 'any') p.format = filters.format
+  if (filters?.area_id) p.area_id = filters.area_id
+  return p
+}
+
 export default function InstructorMapSearch() {
+  const { user, token } = useAuthStore()
+  const isAuthenticated = Boolean(token && user)
+  const [authModalOpen, setAuthModalOpen] = useState(false)
   const [kind, setKind] = useState('all')
   const [instructors, setInstructors] = useState([])
   const [loading, setLoading] = useState(true)
@@ -118,8 +131,9 @@ export default function InstructorMapSearch() {
     category_name: null,
     area_id: null,
   })
-  const [discoverMode, setDiscoverMode] = useState(false)
   const [inquiryTarget, setInquiryTarget] = useState(null)
+  const [mapCenter, setMapCenter] = useState({ lat: BAKU_CENTER[0], lng: BAKU_CENTER[1] })
+  const geoResolvedRef = useRef(false)
 
   useEffect(() => {
     setPageSeo({
@@ -137,7 +151,6 @@ export default function InstructorMapSearch() {
       setFetchError('')
       lastBoundsRef.current = bbox
       setRadiusMode(false)
-      setDiscoverMode(false)
       try {
         const res = await api.get('/public/instructors-map', {
           params: {
@@ -148,6 +161,7 @@ export default function InstructorMapSearch() {
             kind,
             user_lat: refPoint.lat,
             user_lng: refPoint.lng,
+            ...mapFilterParams(discoverFilters),
           },
         })
         if (seq !== loadSeqRef.current) return
@@ -168,50 +182,13 @@ export default function InstructorMapSearch() {
         }
       }
     },
-    [kind, refPoint.lat, refPoint.lng],
+    [kind, refPoint.lat, refPoint.lng, discoverFilters],
   )
 
-  const loadDiscover = useCallback(async () => {
-    const seq = ++loadSeqRef.current
-    setLoading(true)
-    setFetchError('')
-    setDiscoverMode(true)
-    setRadiusMode(false)
-    try {
-      const res = await api.get('/public/instructor-discovery', {
-        params: {
-          category_id: discoverFilters.category_id || undefined,
-          category_slug: discoverFilters.category_slug || undefined,
-          format: discoverFilters.format || 'any',
-          lat: refPoint.lat,
-          lng: refPoint.lng,
-          area_id: discoverFilters.area_id || undefined,
-          kind,
-        },
-      })
-      if (seq !== loadSeqRef.current) return
-      if (res?.success) {
-        setInstructors(Array.isArray(res.instructors) ? res.instructors : [])
-      } else {
-        setInstructors([])
-        setFetchError(res?.message || 'Məlumat alınmadı')
-      }
-    } catch (e) {
-      if (seq !== loadSeqRef.current) return
-      setInstructors([])
-      setFetchError(e?.message || 'Şəbəkə xətası')
-    } finally {
-      if (seq === loadSeqRef.current) {
-        setLoading(false)
-        setHasFetched(true)
-      }
-    }
-  }, [discoverFilters, kind, refPoint.lat, refPoint.lng])
-
-  const hasDiscoverFilters =
-    Boolean(discoverFilters.category_id) ||
-    (discoverFilters.format && discoverFilters.format !== 'any') ||
-    Boolean(discoverFilters.area_id)
+  const reloadMapSearch = useCallback(() => {
+    const bbox = lastBoundsRef.current || bboxFromCenter(refPoint.lat, refPoint.lng, radiusKm)
+    void loadByBbox(bbox)
+  }, [loadByBbox, refPoint.lat, refPoint.lng, radiusKm])
 
   const loadByRadius = useCallback(
     async (lat, lng, radius) => {
@@ -228,6 +205,7 @@ export default function InstructorMapSearch() {
             kind,
             user_lat: refPoint.lat,
             user_lng: refPoint.lng,
+            ...mapFilterParams(discoverFilters),
           },
         })
         if (seq !== loadSeqRef.current) return
@@ -248,26 +226,20 @@ export default function InstructorMapSearch() {
         }
       }
     },
-    [kind, refPoint.lat, refPoint.lng],
+    [kind, refPoint.lat, refPoint.lng, discoverFilters],
   )
 
-  /** İlk giriş: Bakı + müəllimlər */
   useEffect(() => {
-    if (hasDiscoverFilters) void loadDiscover()
-    else void loadByBbox(BAKU_BBOX)
-  }, [loadByBbox, hasDiscoverFilters, loadDiscover])
-
-  useEffect(() => {
-    if (!hasDiscoverFilters) return
-    void loadDiscover()
-  }, [discoverFilters, hasDiscoverFilters, loadDiscover])
+    if (radiusMode || suppressBoundsRef.current) return
+    reloadMapSearch()
+  }, [discoverFilters, reloadMapSearch, radiusMode])
 
   const onBounds = useCallback(
     (bbox) => {
-      if (suppressBoundsRef.current || discoverMode) return
+      if (suppressBoundsRef.current || radiusMode) return
       void loadByBbox(bbox)
     },
-    [loadByBbox, discoverMode],
+    [loadByBbox, radiusMode],
   )
 
   useEffect(() => {
@@ -293,8 +265,9 @@ export default function InstructorMapSearch() {
   }, [])
 
   const applyCenter = useCallback(
-    (lat, lng, { fallback = false, useRadius = true } = {}) => {
+    (lat, lng, { fallback = false, useRadius = false, loadSearch = true } = {}) => {
       setRefPoint({ lat, lng })
+      setMapCenter({ lat, lng })
       setUserLocated(!fallback)
       setDistanceOrigin(fallback ? 'baku' : 'user')
       setNearMeActive(!fallback)
@@ -306,23 +279,28 @@ export default function InstructorMapSearch() {
       if (useRadius) {
         setRadiusMode(true)
         void loadByRadius(lat, lng, radiusKm)
+      } else if (loadSearch) {
+        setRadiusMode(false)
+        const bbox = bboxFromCenter(lat, lng, radiusKm)
+        lastBoundsRef.current = bbox
+        void loadByBbox(bbox)
       }
       if (fallback) {
-        setUserLocationLabel('')
-        setLocationHint('Mövqe alınmadı — məsafə Bakı mərkəzindən göstərilir. Brauzerdə mövqe icazəsi verin.')
+        setUserLocationLabel('Bakı (Badamdar / mərkəz)')
+        setLocationHint('Mövqe icazəsi verilməyib — Bakı mərkəzi göstərilir.')
       } else {
         setLocationHint('')
         void resolveUserLabel(lat, lng)
       }
     },
-    [loadByRadius, radiusKm, resolveUserLabel],
+    [loadByBbox, loadByRadius, radiusKm, resolveUserLabel],
   )
 
   const requestUserLocation = useCallback(
     (opts = {}) => {
-      const { silent = false } = opts
+      const { silent = false, forBoot = false } = opts
       if (!navigator.geolocation) {
-        if (!silent) applyCenter(BAKU_CENTER[0], BAKU_CENTER[1], { fallback: true })
+        applyCenter(BAKU_CENTER[0], BAKU_CENTER[1], { fallback: true, useRadius: false })
         return
       }
       setLocating(true)
@@ -331,37 +309,37 @@ export default function InstructorMapSearch() {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
           setLocating(false)
-          applyCenter(pos.coords.latitude, pos.coords.longitude, { fallback: false })
+          geoResolvedRef.current = true
+          applyCenter(pos.coords.latitude, pos.coords.longitude, {
+            fallback: false,
+            useRadius: false,
+            loadSearch: forBoot || !silent,
+          })
         },
         () => {
           setLocating(false)
-          if (nearMeActive || !silent) {
-            applyCenter(BAKU_CENTER[0], BAKU_CENTER[1], { fallback: true })
-          } else {
-            setDistanceOrigin('baku')
-            setLocationHint('Mövqe icazəsi yoxdur — «Mənim yaxınlığımda» ilə aktiv edin')
-          }
+          geoResolvedRef.current = true
+          applyCenter(BAKU_CENTER[0], BAKU_CENTER[1], { fallback: true, useRadius: false })
         },
-        { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 },
+        { enableHighAccuracy: true, timeout: 20000, maximumAge: 60000 },
       )
     },
-    [applyCenter, nearMeActive],
+    [applyCenter],
   )
 
-  /** Səhifəyə girəndə bir dəfə GPS soruş — məsafə dəqiq olsun */
+  /** Səhifəyə girəndə GPS → xəritə mərkəzi (Google Maps) */
   const geoBootRef = useRef(false)
   useEffect(() => {
     if (geoBootRef.current) return
     geoBootRef.current = true
-    requestUserLocation({ silent: true })
+    requestUserLocation({ silent: true, forBoot: true })
     return () => {
       if (geoWatchRef.current != null) {
         navigator.geolocation?.clearWatch(geoWatchRef.current)
         geoWatchRef.current = null
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [requestUserLocation])
 
   const nearMe = () => {
     setNearMeActive(true)
@@ -400,10 +378,35 @@ export default function InstructorMapSearch() {
     setSelectedId(nearestInstructor.id)
   }, [distanceOrigin, loading, nearestInstructor])
 
+  const requireContactAuth = (action) => {
+    if (isAuthenticated) {
+      action()
+      return
+    }
+    setAuthModalOpen(true)
+  }
+
   const focusInstructor = (p) => {
     setSelectedId(p.id)
     setFlyTarget({ center: [p.latitude, p.longitude], zoom: 15, key: Date.now() })
     if (listOnly) setListOnly(false)
+  }
+
+  const onMarkerSelect = (p) => {
+    requireContactAuth(() => focusInstructor(p))
+  }
+
+  const onInquiryClick = (p) => {
+    requireContactAuth(() => setInquiryTarget(p))
+  }
+
+  const handleCategoryPick = (pick) => {
+    setDiscoverFilters((f) => ({
+      ...f,
+      category_id: pick.category_id,
+      category_slug: pick.category_slug,
+      category_name: pick.category_name,
+    }))
   }
 
   const count = instructorsSorted.length
@@ -449,13 +452,15 @@ export default function InstructorMapSearch() {
                 className="h-full w-full"
                 instructors={instructorsSorted}
                 refPoint={refPoint}
-                showUserLocation={distanceOrigin === 'user' && userLocated}
+                showUserLocation={userLocated}
                 selectedId={selectedId}
                 nearestId={nearestId}
                 flyTarget={flyTarget}
                 radiusMode={radiusMode}
+                mapCenter={mapCenter}
+                mapZoom={zoomForRadiusKm(radiusKm)}
                 onBounds={onBounds}
-                onSelect={focusInstructor}
+                onSelect={onMarkerSelect}
               />
             ) : (
               <MapContainer
@@ -492,7 +497,7 @@ export default function InstructorMapSearch() {
                     instructor={p}
                     isNearest={p.id === nearestId}
                     selected={selectedId === p.id}
-                    onSelect={focusInstructor}
+                    onSelect={onMarkerSelect}
                   />
                 ))}
               </MapContainer>
@@ -523,16 +528,15 @@ export default function InstructorMapSearch() {
         <aside className={`flex-1 flex flex-col min-h-0 bg-[#0b0b0b] ${listOnly ? 'w-full' : 'lg:w-[42%]'}`}>
           <div className="p-4 border-b border-white/10 space-y-3 shrink-0">
             <CategoryMegaMenu
-              onPick={(pick) =>
-                setDiscoverFilters((f) => ({
-                  ...f,
-                  category_id: pick.category_id,
-                  category_slug: pick.category_slug,
-                  category_name: pick.category_name,
-                }))
-              }
+              activeCategoryId={discoverFilters.category_id}
+              onPick={handleCategoryPick}
             />
-            <DiscoverSearchFilters value={discoverFilters} onChange={setDiscoverFilters} />
+            <DiscoverSearchFilters
+              value={discoverFilters}
+              onChange={(next) => {
+                setDiscoverFilters(next)
+              }}
+            />
             <div className="flex flex-wrap gap-2">
               {[
                 ['all', 'Hamısı'],
@@ -700,7 +704,7 @@ export default function InstructorMapSearch() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setInquiryTarget(p)}
+                    onClick={() => onInquiryClick(p)}
                     className="shrink-0 text-[10px] font-bold px-2 py-1.5 rounded-lg border border-primary/40 text-primary hover:bg-primary/10 self-center"
                   >
                     Müraciət
@@ -713,12 +717,14 @@ export default function InstructorMapSearch() {
       </div>
 
       <InquiryFormModal
-        open={Boolean(inquiryTarget)}
+        open={Boolean(inquiryTarget) && isAuthenticated}
         onClose={() => setInquiryTarget(null)}
         instructor={inquiryTarget}
         categoryId={discoverFilters.category_id}
         categoryName={discoverFilters.category_name}
       />
+
+      <DiscoverAuthModal open={authModalOpen} onClose={() => setAuthModalOpen(false)} />
     </div>
   )
 }

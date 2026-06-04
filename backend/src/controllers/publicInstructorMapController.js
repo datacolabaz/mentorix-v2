@@ -1,4 +1,5 @@
 const db = require('../utils/db');
+const { getCategorySubtreeIds } = require('../services/categoryService');
 
 function parseFloatQ(v) {
   const n = Number.parseFloat(String(v ?? '').replace(',', '.'));
@@ -13,11 +14,15 @@ function clamp(n, min, max) {
  * GET /api/public/instructors-map
  * Query: north, south, east, west (WGS84) OR lat, lng, radius_km (center + radius)
  *        kind = all | teacher | trainer
+ *        category_id, format, area_id — optional discovery filters
  */
 const getInstructorsInMapView = async (req, res) => {
   try {
     const kind = String(req.query.kind || 'all').toLowerCase();
     const kindFilter = kind === 'teacher' || kind === 'trainer' ? kind : null;
+    const categoryId = String(req.query.category_id || '').trim() || null;
+    const format = String(req.query.format || 'any').toLowerCase();
+    const areaId = String(req.query.area_id || '').trim() || null;
 
     const lat = parseFloatQ(req.query.lat);
     const lng = parseFloatQ(req.query.lng);
@@ -74,6 +79,36 @@ const getInstructorsInMapView = async (req, res) => {
       kindSql = ` AND ip.map_profile_kind = $${params.length}`;
     }
 
+    let categorySql = '';
+    if (categoryId) {
+      const categoryIds = await getCategorySubtreeIds(categoryId);
+      if (categoryIds.length) {
+        params.push(categoryIds);
+        categorySql = ` AND EXISTS (
+          SELECT 1 FROM instructor_categories ic
+          WHERE ic.user_id = u.id AND ic.category_id = ANY($${params.length}::varchar[])
+        )`;
+      }
+    }
+
+    let formatSql = '';
+    if (['online', 'teacher_place', 'student_place'].includes(format)) {
+      params.push(format);
+      formatSql = ` AND EXISTS (
+        SELECT 1 FROM instructor_delivery_formats df
+        WHERE df.user_id = u.id AND df.format = $${params.length}::delivery_format
+      )`;
+    }
+
+    let areaSql = '';
+    if (areaId) {
+      params.push(areaId);
+      areaSql = ` AND EXISTS (
+        SELECT 1 FROM instructor_service_areas isa
+        WHERE isa.user_id = u.id AND isa.area_id = $${params.length}
+      )`;
+    }
+
     const userLat = parseFloatQ(req.query.user_lat);
     const userLng = parseFloatQ(req.query.user_lng);
     const sortLat = userLat != null ? userLat : lat;
@@ -121,6 +156,9 @@ const getInstructorsInMapView = async (req, res) => {
          AND ip.latitude BETWEEN $2 AND $1
          AND ip.longitude BETWEEN LEAST($3::float8, $4::float8) AND GREATEST($3::float8, $4::float8)
          ${kindSql}
+         ${categorySql}
+         ${formatSql}
+         ${areaSql}
        ${orderSql}
        LIMIT 200`,
       params

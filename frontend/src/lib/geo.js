@@ -17,12 +17,26 @@ export function formatDistanceKm(km) {
   return `${Math.round(km)} km`
 }
 
-export const BAKU_CENTER = [40.4093, 49.8671]
+/** Badamdar / mərkəz — icazə rədd ediləndə default */
+export const BAKU_CENTER = [40.3628, 49.8056]
 
-/** İlk yükləmə / Bakı default bbox */
+/** İlk yükləmə / Bakı default bbox (Badamdar ətrafı) */
 export const BAKU_BBOX = {
-  north: 40.52,
-  south: 40.3,
-  east: 50.08,
-  west: 49.68,
+  north: 40.48,
+  south: 40.28,
+  east: 49.92,
+  west: 49.72,
+}
+
+export function bboxFromCenter(lat, lng, radiusKm = 10) {
+  const r = Math.min(200, Math.max(0.5, Number(radiusKm) || 10))
+  const latDelta = r / 111
+  const cosLat = Math.cos((lat * Math.PI) / 180) || 1e-6
+  const lngDelta = r / (111 * cosLat)
+  return {
+    north: Math.min(85, lat + latDelta),
+    south: Math.max(-85, lat - latDelta),
+    east: Math.min(180, lng + lngDelta),
+    west: Math.max(-180, lng - lngDelta),
+  }
 }

@@ -39,8 +39,11 @@ export default function GoogleInstructorSearchMap({
   nearestId,
   flyTarget,
   radiusMode,
+  mapCenter,
+  mapZoom = 11,
   onBounds,
   onSelect,
+  onMapReady,
   className = 'h-full w-full',
 }) {
   const containerRef = useRef(null)
@@ -72,9 +75,10 @@ export default function GoogleInstructorSearchMap({
     loadGoogleMaps()
       .then((maps) => {
         if (cancelled || !containerRef.current) return
+        const c = mapCenter || { lat: BAKU_CENTER[0], lng: BAKU_CENTER[1] }
         const map = new maps.Map(containerRef.current, {
-          center: { lat: BAKU_CENTER[0], lng: BAKU_CENTER[1] },
-          zoom: 11,
+          center: { lat: c.lat, lng: c.lng },
+          zoom: mapZoom,
           styles: DARK_MAP_STYLES,
           gestureHandling: 'greedy',
           mapTypeControl: false,
@@ -85,6 +89,7 @@ export default function GoogleInstructorSearchMap({
         mapRef.current = map
         map.addListener('idle', emitBounds)
         setReady(true)
+        onMapReady?.(map)
       })
       .catch((e) => {
         if (!cancelled) setLoadErr(e?.message || 'Xəritə yüklənmədi')
@@ -101,6 +106,17 @@ export default function GoogleInstructorSearchMap({
       mapRef.current = null
     }
   }, [emitBounds])
+
+  useEffect(() => {
+    if (!ready || !mapRef.current || !mapCenter) return
+    skipBoundsRef.current = true
+    mapRef.current.setCenter({ lat: mapCenter.lat, lng: mapCenter.lng })
+    const t = window.setTimeout(() => {
+      skipBoundsRef.current = false
+      emitBounds()
+    }, 400)
+    return () => window.clearTimeout(t)
+  }, [ready, mapCenter?.lat, mapCenter?.lng, emitBounds])
 
   useEffect(() => {
     if (!ready || !mapRef.current || !flyTarget?.center) return
