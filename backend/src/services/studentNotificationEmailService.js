@@ -89,7 +89,85 @@ function escapeHtml(s) {
     .replace(/"/g, '&quot;');
 }
 
+/**
+ * İmtahan giriş sorğusu təsdiqlənəndə — tələbə tətbiqdə olmasa da Gmail xəbərdarlığı.
+ */
+async function sendExamAccessApprovedEmail({
+  userId,
+  examId,
+  examTitle,
+  instructorName,
+  emailOverride = null,
+}) {
+  const to =
+    emailOverride && String(emailOverride).includes('@')
+      ? String(emailOverride).trim()
+      : await userEmail(userId);
+  if (!to) return { ok: false, skipped: true, reason: 'no_email' };
+
+  const title = String(examTitle || 'İmtahan').trim();
+  const teacher = String(instructorName || 'Müəlliminiz').trim();
+  const examsUrl = examId
+    ? `${frontendBaseUrl()}/student/exams?exam=${encodeURIComponent(String(examId))}`
+    : `${frontendBaseUrl()}/student/exams`;
+  const subject = 'Mentorix — Müraciətiniz təsdiqləndi';
+  const text = [
+    'Salam!',
+    '',
+    `${teacher} «${title}» imtahanına girişinizi təsdiqlədi.`,
+    '',
+    'İmtahana başlamaq üçün Mentorix-də «İmtahanlar» bölməsinə daxil olun.',
+    '',
+    `Birbaşa keçid: ${examsUrl}`,
+    '',
+    'Bu e-poçtu hesabınıza daxil olduğunuz Gmail ünvanına göndərdik.',
+    '',
+    'Hörmətlə,',
+    'Mentorix',
+  ].join('\n');
+
+  const html = `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; line-height: 1.55; max-width: 520px; color: #111827;">
+      <p style="margin: 0 0 12px; font-size: 13px; color: #059669; font-weight: 600;">Müraciətiniz təsdiqləndi</p>
+      <p style="margin: 0 0 16px;">${escapeHtml(teacher)} <strong>«${escapeHtml(title)}»</strong> imtahanına girişinizi təsdiqlədi.</p>
+      <p style="margin: 0 0 20px; color: #4b5563;">Tətbiqə daxil olmadan da bu e-poçtu oxuya bilərsiniz — imtahana başlamaq üçün aşağıdakı düyməyə klik edin.</p>
+      <p style="margin: 0 0 20px;">
+        <a href="${examsUrl}" style="display: inline-block; background: #4f46e5; color: #fff; padding: 12px 20px; border-radius: 10px; text-decoration: none; font-weight: 600;">İmtahanlar bölməsinə keç</a>
+      </p>
+      <p style="margin: 0; font-size: 12px; color: #9ca3af;">Mentorix — tələbə paneli</p>
+    </div>
+  `;
+
+  if (resendReady()) {
+    try {
+      const client = new Resend(RESEND_API_KEY);
+      const { data, error } = await client.emails.send({
+        from: EMAIL_FROM,
+        to,
+        subject,
+        text,
+        html,
+      });
+      if (error) {
+        return { ok: false, error: error?.message || 'Resend xətası' };
+      }
+      return { ok: true, provider: 'resend', messageId: data?.id || null, examId };
+    } catch (err) {
+      return { ok: false, error: err?.message || 'Resend xətası' };
+    }
+  }
+
+  try {
+    const r = await sendEmail({ to, subject, text });
+    if (r?.skipped) return { ok: false, skipped: true, reason: 'smtp_not_configured' };
+    return { ok: true, provider: 'smtp', messageId: r?.messageId || null };
+  } catch (err) {
+    return { ok: false, error: err?.message || 'Email xətası' };
+  }
+}
+
 module.exports = {
   sendAssignmentNewEmail,
+  sendExamAccessApprovedEmail,
   frontendBaseUrl,
 };

@@ -732,6 +732,8 @@ async function enqueueExamPlacedEmails(exam, assignments, examLink) {
  */
 const sendExamPlacedNotifications = async (examId, options = {}) => {
   const sendSms = options.sendSms === true;
+  const skipPlacementEmail = options.skipPlacementEmail === true;
+  const skipPlacementInApp = options.skipPlacementInApp === true;
   const { sendStudentWhatsAppOrSms, pickStudentNotifyPhone } = require('./studentMessagingService');
   const { getWhatsAppConfig } = require('./whatsappService');
   const waCfg = sendSms ? getWhatsAppConfig() : { examTemplateName: null };
@@ -760,13 +762,15 @@ const sendExamPlacedNotifications = async (examId, options = {}) => {
   const examLink = buildStudentExamUrl(exam.id);
   const linkHint = examLink ? `\nLink: ${examLink}` : '';
 
-  const emails = await enqueueExamPlacedEmails(exam, assignments, examLink);
+  const emails = skipPlacementEmail ? 0 : await enqueueExamPlacedEmails(exam, assignments, examLink);
 
   let sent = 0;
   let skipped = 0;
 
-  for (const s of assignments) {
-    await insertStudentExamInAppNotification(s.student_id, exam, examLink);
+  if (!skipPlacementInApp) {
+    for (const s of assignments) {
+      await insertStudentExamInAppNotification(s.student_id, exam, examLink);
+    }
   }
 
   if (sendSms) {

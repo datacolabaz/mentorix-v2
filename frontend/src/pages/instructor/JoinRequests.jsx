@@ -245,8 +245,8 @@ export default function InstructorJoinRequests() {
                 : ''}
             </p>
             <p className="text-xs text-emerald-200/90">
-              Təsdiqdən sonra tələbəyə <strong>Gmail ünvanına</strong> imtahan bildirişi gedəcək (SMTP konfiqurasiya
-              olunubsa). Mentorix panelində də bildiriş görünəcək.
+              Təsdiqdən sonra tələbəyə <strong>Gmail-ə</strong> «Müraciətiniz təsdiqləndi» mesajı gedəcək (tətbiqdə
+              olmasa da görəcək). Paneldə də bildiriş olacaq.
             </p>
             <label className="flex items-start gap-3 rounded-xl border border-indigo-500/25 bg-indigo-500/10 p-3 cursor-pointer">
               <input

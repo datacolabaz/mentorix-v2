@@ -240,9 +240,10 @@ async function countPendingExamAccessRequests(instructorId) {
 async function approveExamAccessRequest(requestId, instructorId, options = {}) {
   const sendSms = options.sendSms === true;
   const { rows } = await db.query(
-    `SELECT ear.*, e.title AS exam_title
+    `SELECT ear.*, e.title AS exam_title, u.full_name AS instructor_name
      FROM exam_access_requests ear
      JOIN exams e ON e.id = ear.exam_id
+     JOIN users u ON u.id = ear.instructor_id
      WHERE ear.id = $1::uuid AND ear.instructor_id = $2::uuid
      LIMIT 1`,
     [requestId, instructorId],
@@ -276,6 +277,7 @@ async function approveExamAccessRequest(requestId, instructorId, options = {}) {
   });
 
   const examTitle = req.exam_title || 'İmtahan';
+  const instructorName = req.instructor_name || 'Müəlliminiz';
   await insertUserNotification(
     req.student_id,
     'İmtahana giriş təsdiqləndi',
@@ -284,21 +286,41 @@ async function approveExamAccessRequest(requestId, instructorId, options = {}) {
     { exam_id: req.exam_id },
   );
 
+  const { sendExamAccessApprovedEmail } = require('./studentNotificationEmailService');
+  const emailResult = await sendExamAccessApprovedEmail({
+    userId: req.student_id,
+    examId: req.exam_id,
+    examTitle,
+    instructorName,
+    emailOverride: req.student_email,
+  }).catch((e) => {
+    console.error('sendExamAccessApprovedEmail', e.message);
+    return { ok: false, error: e.message };
+  });
+
   const { sendExamPlacedNotifications } = require('./examService');
-  sendExamPlacedNotifications(req.exam_id, { studentIds: [req.student_id], sendSms }).catch((e) =>
-    console.error('sendExamPlacedNotifications(access)', e.message),
-  );
+  sendExamPlacedNotifications(req.exam_id, {
+    studentIds: [req.student_id],
+    sendSms,
+    skipPlacementEmail: true,
+    skipPlacementInApp: true,
+  }).catch((e) => console.error('sendExamPlacedNotifications(access)', e.message));
 
   const smsPart = sendSms
     ? ' SMS/WhatsApp göndərildi (nömrə varsa).'
-    : ' SMS göndərilmədi — yalnız Gmail və panel bildirişi.';
+    : ' SMS göndərilmədi.';
+  const emailPart = emailResult?.ok
+    ? ' Gmail-ə «Müraciətiniz təsdiqləndi» göndərildi.'
+    : emailResult?.skipped
+      ? ' Gmail yoxdur və ya email konfiqurasiya olunmayıb.'
+      : ' Gmail göndərilmədi (xəta).';
   return {
     exam_id: req.exam_id,
     student_id: req.student_id,
     enrollment_id: enrollmentId,
-    email_notified: true,
+    email_notified: Boolean(emailResult?.ok),
     sms_sent: sendSms,
-    message: `Tələbə təsdiqləndi: «${examTitle}». Gmail ünvanına bildiriş göndərilir.${smsPart}`,
+    message: `Tələbə təsdiqləndi: «${examTitle}».${emailPart}${smsPart}`,
   };
 }
 
