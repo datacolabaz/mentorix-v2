@@ -241,6 +241,18 @@ export default function Login() {
 
   const m = marketing
 
+  const marketplaceCtaLabel =
+    m.hero?.marketplace_cta_label || defaultLoginMarketingPayload().hero.marketplace_cta_label
+
+  const stepItems = useMemo(() => {
+    const items = Array.isArray(m.steps?.items) ? m.steps.items : []
+    const def = defaultLoginMarketingPayload().steps.items || []
+    const fourth = def[3]
+    if (items.length >= 4) return items
+    if (items.length === 3 && fourth) return [...items, fourth]
+    return items.length ? items : def
+  }, [m.steps?.items])
+
   useEffect(() => {
     if (!loginModalOpen || isAdmin) return undefined
     const onKey = (e) => {
@@ -281,33 +293,66 @@ export default function Login() {
                 {m.hero.headline}
               </h1>
               <p className="text-gray-400 text-sm sm:text-base leading-relaxed">{m.hero.subheadline}</p>
-              <div className="flex flex-col w-full max-w-xl gap-3 sm:flex-row sm:flex-wrap sm:gap-3">
-                <button
-                  type="button"
-                  onClick={() => openLoginModal('hero')}
-                  className="w-full sm:flex-1 sm:min-h-0 inline-flex justify-center items-center text-center rounded-xl bg-primary px-4 sm:px-5 py-3.5 min-h-[48px] text-xs sm:text-sm font-semibold text-[#041018] shadow-lg shadow-primary/20 hover:brightness-95 leading-snug"
-                >
-                  {m.hero.primary_cta_label}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    trackEvent('mx_landing_secondary_click', { action: 'how_it_works' })
-                    scrollToId('mx-steps')
-                  }}
-                  className="w-full sm:w-auto sm:flex-initial inline-flex justify-center items-center rounded-xl border border-white/15 bg-white/5 px-5 py-3.5 min-h-[48px] text-sm font-semibold text-gray-100 hover:bg-white/10"
-                >
-                  {m.hero.secondary_how}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => openDemoTracked('hero_demo_button')}
-                  className="w-full sm:w-auto sm:flex-initial inline-flex justify-center items-center rounded-xl border border-white/10 px-5 py-3.5 min-h-[48px] text-sm font-semibold text-gray-300 hover:border-white/20 hover:text-white"
-                >
-                  {m.hero.secondary_demo}
-                </button>
+              <div className="flex flex-col w-full max-w-xl gap-3">
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <button
+                    type="button"
+                    onClick={() => openLoginModal('hero')}
+                    className="w-full sm:flex-1 inline-flex justify-center items-center text-center rounded-xl bg-primary px-4 sm:px-5 py-3.5 min-h-[52px] text-sm sm:text-base font-bold text-[#041018] shadow-lg shadow-primary/25 hover:brightness-95 leading-snug"
+                  >
+                    {m.hero.primary_cta_label}
+                  </button>
+                  <Link
+                    to="/search"
+                    onClick={() =>
+                      trackEvent('mx_landing_marketplace_cta', { surface: 'hero', action: 'map_search' })
+                    }
+                    className={[
+                      'w-full sm:flex-1 inline-flex justify-center items-center gap-2.5 text-center',
+                      'rounded-xl border-2 border-primary bg-primary/10 px-4 sm:px-5 py-3.5 min-h-[52px]',
+                      'text-sm sm:text-base font-bold text-primary leading-snug',
+                      'shadow-[0_0_24px_rgba(0,229,176,0.3)] hover:bg-primary/20 hover:border-primary',
+                      'hover:shadow-[0_0_36px_rgba(0,229,176,0.45)] transition-all',
+                      'motion-safe:animate-[mx-marketplace-pulse_2.5s_ease-in-out_infinite]',
+                    ].join(' ')}
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      aria-hidden
+                      className="w-5 h-5 sm:w-6 sm:h-6 shrink-0"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.25"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <circle cx="11" cy="11" r="7" />
+                      <path d="M20 20l-3.5-3.5" />
+                    </svg>
+                    <span>{marketplaceCtaLabel}</span>
+                  </Link>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      trackEvent('mx_landing_secondary_click', { action: 'how_it_works' })
+                      scrollToId('mx-steps')
+                    }}
+                    className="w-full sm:flex-1 inline-flex justify-center items-center rounded-xl border border-white/15 bg-white/5 px-4 py-3 min-h-[44px] text-sm font-semibold text-gray-100 hover:bg-white/10"
+                  >
+                    {m.hero.secondary_how}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => openDemoTracked('hero_demo_button')}
+                    className="w-full sm:flex-1 inline-flex justify-center items-center rounded-xl border border-white/10 px-4 py-3 min-h-[44px] text-sm font-semibold text-gray-300 hover:border-white/20 hover:text-white"
+                  >
+                    {m.hero.secondary_demo}
+                  </button>
+                </div>
               </div>
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-1">
+              <div className="pt-1">
                 <button
                   type="button"
                   onClick={() => {
@@ -318,16 +363,6 @@ export default function Login() {
                 >
                   {m.hero.existing_account}
                 </button>
-                <Link
-                  to="/search"
-                  onClick={() => trackEvent('mx_landing_secondary_click', { action: 'instructor_map_search' })}
-                  className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:brightness-110"
-                >
-                  <span>Təlimçini xəritədə tap</span>
-                  <span aria-hidden className="text-sm leading-none">
-                    →
-                  </span>
-                </Link>
               </div>
             </div>
 
@@ -440,8 +475,8 @@ export default function Login() {
 
           <section id="mx-steps" className="space-y-4 scroll-mt-8">
             <div className="text-xs uppercase tracking-wider text-gray-500 font-semibold">{m.steps.heading}</div>
-            <div className="grid md:grid-cols-3 gap-3">
-              {(m.steps.items || []).map((x, i) => (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              {stepItems.map((x, i) => (
                 <div
                   key={`step-${i}-${String(x.step)}`}
                   className="rounded-2xl border border-primary/20 bg-gradient-to-b from-primary/10 to-[#101010] p-4 space-y-2"

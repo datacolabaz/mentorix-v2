@@ -22,6 +22,7 @@ function defaultLoginMarketingPayload() {
       subheadline:
         'Süni intellekt dəstəyi, avtomatik SMS xatırlatmaları və ödəniş izləmə — vaxtını dərsə qoy, idarəetməni platformaya burax',
       primary_cta_label: 'Pulsuz başla (ilk 5 tələbə ödənişsiz)',
+      marketplace_cta_label: 'Müəllim / Təlimçi tap (Xəritə ilə)',
       secondary_how: 'Necə işləyir?',
       secondary_demo: 'Demo bax',
       existing_account: 'Artıq hesabım var — girişə keç',
@@ -98,6 +99,12 @@ function defaultLoginMarketingPayload() {
           title: 'Avtomatik xatırlat',
           body:
             'Paket sonu və vacib hadisələr üçün SMS ilə valideyn/tələbəni xəbərdar et, əlavə manual izləmə azalsın.',
+        },
+        {
+          step: '4',
+          title: 'Yeni Tələbələr Qazan',
+          body:
+            'Profilinizi aktiv edin — valideynlər və tələbələr onlara ən yaxın formatda (onlayn və ya canlı) sizi birbaşa xəritədə tapsınlar.',
         },
       ],
     },
@@ -196,6 +203,7 @@ function mergeLoginMarketingFromDb(payloadFromDb) {
       ['headline', 600],
       ['subheadline', 600],
       ['primary_cta_label', 160],
+      ['marketplace_cta_label', 200],
       ['secondary_how', 600],
       ['secondary_demo', 600],
       ['existing_account', 600],
