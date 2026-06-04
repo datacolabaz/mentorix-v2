@@ -251,6 +251,7 @@ async function getAdminAnalyticsDashboard(periodRaw) {
       total_visitors: totalVisitors,
       unique_visitors: uniqueVisitors,
       registrations,
+      registrations_exceed_visitors: registrations > uniqueVisitors && registrations > 0,
       ...conversion,
     },
     traffic_sources,

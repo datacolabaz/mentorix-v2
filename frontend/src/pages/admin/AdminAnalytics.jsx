@@ -44,6 +44,20 @@ function fmtPct(n) {
   return `${Number(n).toLocaleString('az-Latn-AZ', { maximumFractionDigits: 1 })}%`
 }
 
+function formatRegistrations(ov) {
+  const regs = Number(ov?.registrations) || 0
+  const uv = Number(ov?.unique_visitors) || 0
+  const trackingGap = regs > uv && regs > 0
+  return {
+    value: fmt(regs),
+    sub: 'Yalnız bu dövrdə yaradılan hesablar',
+    note: trackingGap
+      ? 'Analitika aktiv edilməzdən əvvəl yaradılmış hesablar da ola bilər; bütün ziyarətlər hələ izlənmir.'
+      : null,
+    warn: trackingGap,
+  }
+}
+
 function formatConversion(ov) {
   if (ov?.conversion_display === 'insufficient_data') {
     return { value: 'Kifayət qədər məlumat yoxdur', sub: 'Qeydiyyat / unikal ziyarətçi', warn: true }
@@ -56,7 +70,7 @@ function formatConversion(ov) {
   }
 }
 
-function OverviewCard({ label, value, sub, warn }) {
+function OverviewCard({ label, value, sub, note, warn }) {
   return (
     <div
       className={[
@@ -68,12 +82,17 @@ function OverviewCard({ label, value, sub, warn }) {
       <div
         className={[
           'mt-2 font-display font-bold text-white tabular-nums',
-          warn ? 'text-lg leading-snug text-amber-100' : 'text-3xl',
+          warn && typeof value === 'string' && value.length > 8 ? 'text-lg leading-snug' : 'text-3xl',
         ].join(' ')}
       >
         {value}
       </div>
       {sub ? <div className="mt-1 text-xs text-gray-500">{sub}</div> : null}
+      {note ? (
+        <div className="mt-2 text-[11px] leading-snug text-amber-200/90 border-t border-amber-500/20 pt-2">
+          {note}
+        </div>
+      ) : null}
     </div>
   )
 }
@@ -150,6 +169,7 @@ export default function AdminAnalytics() {
   const ov = data?.overview || {}
   const monthly = data?.monthly || {}
   const conversionUi = formatConversion(ov)
+  const registrationsUi = formatRegistrations(ov)
 
   return (
     <div className="p-4 sm:p-6 max-w-[1400px] mx-auto space-y-6">
@@ -201,7 +221,13 @@ export default function AdminAnalytics() {
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
               <OverviewCard label="Toplam ziyarət" value={fmt(ov.total_visitors)} sub="Səhifə baxışları (dövr)" />
               <OverviewCard label="Unikal ziyarətçi" value={fmt(ov.unique_visitors)} sub="Sessiya üzrə (dövr)" />
-              <OverviewCard label="Qeydiyyatlar" value={fmt(ov.registrations)} sub="Yalnız bu dövrdə yaradılan hesablar" />
+              <OverviewCard
+                label="Qeydiyyatlar"
+                value={registrationsUi.value}
+                sub={registrationsUi.sub}
+                note={registrationsUi.note}
+                warn={registrationsUi.warn}
+              />
               <OverviewCard
                 label="Konversiya"
                 value={conversionUi.value}
