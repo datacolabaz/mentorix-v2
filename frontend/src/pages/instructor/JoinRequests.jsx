@@ -28,7 +28,6 @@ export default function InstructorJoinRequests() {
   const queryClient = useQueryClient()
   const [requests, setRequests] = useState([])
   const [warnings, setWarnings] = useState([])
-  const [diag, setDiag] = useState(null)
   const [loading, setLoading] = useState(true)
   const [actingId, setActingId] = useState(null)
   const [examApproveModal, setExamApproveModal] = useState(null)
@@ -49,19 +48,9 @@ export default function InstructorJoinRequests() {
     }
   }, [toast])
 
-  const loadDiag = useCallback(async () => {
-    try {
-      const d = await api.get('/instructor/join-requests/diagnostics')
-      setDiag(d)
-    } catch {
-      setDiag(null)
-    }
-  }, [])
-
   useEffect(() => {
     void load()
-    void loadDiag()
-  }, [load, loadDiag])
+  }, [load])
 
   const approve = async (requestId, kind = 'group_join', opts = {}) => {
     setActingId(requestId)
@@ -108,9 +97,7 @@ export default function InstructorJoinRequests() {
     <div className="p-4 sm:p-6 max-w-3xl mx-auto w-full">
       <h1 className="font-display font-bold text-xl sm:text-2xl text-token-textMain">Sorğular</h1>
       <p className="text-token-textMuted text-sm mt-1 mb-6">
-        İmtahan linki (<code className="text-xs opacity-80">/exam/…</code>): tələbə klik edəndə sorğu{' '}
-        <strong className="text-token-textMain font-medium">avtomatik</strong> buraya düşür. Qrup:{' '}
-        <code className="text-xs opacity-80">/join/KOD</code> + forma.
+        Tələbənin imtahan və ya qrup qoşulma sorğuları.
       </p>
 
       {warnings.length > 0 && (
@@ -124,28 +111,8 @@ export default function InstructorJoinRequests() {
       {loading ? (
         <ListSkeleton rows={4} />
       ) : !requests.length ? (
-        <Card className="p-8 text-center text-token-textMuted text-sm border border-[color:var(--border-subtle)] space-y-3">
+        <Card className="p-8 text-center text-token-textMuted text-sm border border-[color:var(--border-subtle)]">
           <p>Gözləyən sorğu yoxdur.</p>
-          <p className="text-xs text-left">
-            <strong className="text-token-textMain">Bəli — imtahan linkini yenidən kopyalayıb qrupa göndərin.</strong>{' '}
-            Linkdə mütləq <code className="text-primary">/exam/</code> olmalıdır (köhnə{' '}
-            <code>/student/exams?exam=</code> də işləyir, amma yenisi daha etibarlıdır).
-          </p>
-          <p className="text-xs text-left">
-            Qrup <code>/join/KOD</code> linki ayrıdır — orada tələbə formu doldurmalıdır; OTK5 imtahanı üçün{' '}
-            <strong className="text-token-textMain">İmtahanlar → OTK5 → link kopyala</strong> edin.
-          </p>
-          <p className="text-xs text-left">
-            Tələbə yalnız Gmail ilə qeydiyyat olubsa kifayət etmir — <strong>imtahan linkinə klik</strong> etməlidir.
-          </p>
-          {diag && !diag.exam_access_table_ok && (
-            <p className="text-xs text-amber-300 text-left">
-              Server: imtahan sorğuları cədvəli yoxdur — Railway-də deploy + migrate lazımdır.
-            </p>
-          )}
-          {diag?.exam_requests_total > 0 && diag.exam_requests_pending === 0 && (
-            <p className="text-xs text-left">Keçmiş sorğular var, gözləyən yoxdur (hamısı təsdiqlənib/rədd edilib).</p>
-          )}
         </Card>
       ) : (
         <ul className="space-y-3">
