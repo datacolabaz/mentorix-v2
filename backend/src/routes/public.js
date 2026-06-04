@@ -2,6 +2,15 @@ const express = require('express');
 const { getLandingStats } = require('../controllers/publicLandingController');
 const { getPublicLoginMarketing } = require('../controllers/siteMarketingController');
 const { getInstructorsInMapView } = require('../controllers/publicInstructorMapController');
+const { getInstructorDiscovery } = require('../controllers/publicInstructorDiscoverController');
+const {
+  getCategoriesTree,
+  getCategoriesSearch,
+  getCategoryBySlugHandler,
+  getPopularCategories,
+  getServiceAreas,
+} = require('../controllers/publicCategoriesController');
+const { postPublicInquiry } = require('../controllers/studentInquiryController');
 const { getActivePlansList } = require('../services/subscriptionPlansService');
 const { getPublicJoin } = require('../controllers/joinInvitationController');
 const { postAccessEvent } = require('../controllers/accessAnalyticsController');
@@ -14,6 +23,13 @@ router.post('/analytics/event', postAccessEvent);
 router.get('/landing-stats', getLandingStats);
 router.get('/marketing/login', getPublicLoginMarketing);
 router.get('/instructors-map', getInstructorsInMapView);
+router.get('/instructor-discovery', getInstructorDiscovery);
+router.get('/categories', getCategoriesTree);
+router.get('/categories/popular', getPopularCategories);
+router.get('/categories/search', getCategoriesSearch);
+router.get('/categories/:slug', getCategoryBySlugHandler);
+router.get('/service-areas', getServiceAreas);
+router.post('/inquiries', postPublicInquiry);
 router.get('/subscription-plans', async (_req, res) => {
   try {
     const list = await getActivePlansList();

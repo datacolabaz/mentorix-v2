@@ -31,6 +31,16 @@ const patchInstructorMapProfile = async (req, res) => {
       }
     }
 
+    let mapSearchRadius = req.body?.map_search_radius_km;
+    if (mapSearchRadius !== undefined && mapSearchRadius !== null) {
+      mapSearchRadius = Number.parseInt(mapSearchRadius, 10);
+      if (!Number.isFinite(mapSearchRadius) || mapSearchRadius < 1 || mapSearchRadius > 200) {
+        return res.status(400).json({ success: false, message: 'map_search_radius_km 1…200 olmalıdır' });
+      }
+    } else {
+      mapSearchRadius = undefined;
+    }
+
     let mapVisible = req.body?.map_visible;
     if (mapVisible !== undefined && mapVisible !== null) {
       mapVisible =
@@ -63,6 +73,10 @@ const patchInstructorMapProfile = async (req, res) => {
       sets.push(`map_visible = $${i++}`);
       vals.push(mapVisible);
     }
+    if (mapSearchRadius !== undefined) {
+      sets.push(`map_search_radius_km = $${i++}`);
+      vals.push(mapSearchRadius);
+    }
 
     if (!sets.length) {
       return res.status(400).json({ success: false, message: 'Yenilənən sahə yoxdur' });
@@ -70,7 +84,8 @@ const patchInstructorMapProfile = async (req, res) => {
 
     vals.push(uid);
     const { rows } = await db.query(
-      `UPDATE instructor_profiles SET ${sets.join(', ')} WHERE user_id = $${i} RETURNING latitude, longitude, map_profile_kind, map_visible`,
+      `UPDATE instructor_profiles SET ${sets.join(', ')} WHERE user_id = $${i}
+       RETURNING latitude, longitude, map_profile_kind, map_visible, map_search_radius_km`,
       vals
     );
 

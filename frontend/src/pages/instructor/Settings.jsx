@@ -15,6 +15,7 @@ import { SUBSCRIPTION_PLANS_QUERY_KEY } from '../../hooks/useSubscriptionPlans'
 import PricingBillingIntervalToggle from '../../components/instructor/PricingBillingIntervalToggle'
 import InstructorMapPinPicker from '../../components/instructor/InstructorMapPinPicker'
 import InstructorMapPreviewModal from '../../components/instructor/InstructorMapPreviewModal'
+import InstructorDiscoverSettings from '../../components/instructor/InstructorDiscoverSettings'
 import { reverseGeocodeLabel } from '../../lib/reverseGeocode'
 import { formatAzn, yearlyTotalAzn, YEARLY_DISCOUNT } from '../../lib/pricing'
 import { planDetailLines, planLimitsHeadline } from '../../lib/subscriptionPlanCopy'
@@ -100,6 +101,11 @@ export default function InstructorSettings() {
       setMapLng(m.longitude != null && Number.isFinite(Number(m.longitude)) ? String(m.longitude) : '')
       setMapKind(m.map_profile_kind === 'trainer' ? 'trainer' : 'teacher')
       setMapVisible(m.map_visible !== false)
+      const radius =
+        m.map_search_radius_km != null && Number.isFinite(Number(m.map_search_radius_km))
+          ? Number(m.map_search_radius_km)
+          : 10
+      setMapRadiusKm([5, 10, 25].includes(radius) ? radius : 10)
       const subs = Array.isArray(d.subjects) ? d.subjects : []
       setPrimarySubjectName(subs[0]?.name || '')
       savedMapRef.current = {
@@ -107,6 +113,7 @@ export default function InstructorSettings() {
         lng: m.longitude != null && Number.isFinite(Number(m.longitude)) ? String(m.longitude) : '',
         kind: m.map_profile_kind === 'trainer' ? 'trainer' : 'teacher',
         visible: m.map_visible !== false,
+        radius: [5, 10, 25].includes(radius) ? radius : 10,
       }
       setMapJustSaved(false)
     } catch (e) {
@@ -141,8 +148,14 @@ export default function InstructorSettings() {
   const mapDirty = useMemo(() => {
     const s = savedMapRef.current
     if (!s) return hasMapPin || mapVisible
-    return s.lat !== mapLat || s.lng !== mapLng || s.kind !== mapKind || s.visible !== mapVisible
-  }, [mapLat, mapLng, mapKind, mapVisible, hasMapPin])
+    return (
+      s.lat !== mapLat ||
+      s.lng !== mapLng ||
+      s.kind !== mapKind ||
+      s.visible !== mapVisible ||
+      s.radius !== mapRadiusKm
+    )
+  }, [mapLat, mapLng, mapKind, mapVisible, mapRadiusKm, hasMapPin])
 
   useEffect(() => {
     if (!hasMapPin) {
@@ -216,12 +229,14 @@ export default function InstructorSettings() {
         longitude: lng,
         map_profile_kind: mapKind,
         map_visible: mapVisible,
+        map_search_radius_km: mapRadiusKm,
       })
       savedMapRef.current = {
         lat: mapLat,
         lng: mapLng,
         kind: mapKind,
         visible: mapVisible,
+        radius: mapRadiusKm,
       }
       setMapJustSaved(true)
       if (mapVisible && lat != null && lng != null) {
@@ -1049,6 +1064,8 @@ export default function InstructorSettings() {
         mapVisible={mapVisible}
         radiusKm={mapRadiusKm}
       />
+
+      <InstructorDiscoverSettings mapVisible={mapVisible} theme={theme} inp={inp} />
 
       <p className={['text-xs', theme === 'dark' ? 'text-gray-600' : 'text-token-textMuted'].join(' ')}>
         Hesab:{' '}

@@ -9,6 +9,9 @@ import { isGoogleMapsConfigured } from '../../lib/googleMapsLoader'
 import { BAKU_BBOX, BAKU_CENTER, distanceKm, formatDistanceKm } from '../../lib/geo'
 import { reverseGeocodeLabel } from '../../lib/reverseGeocode'
 import { setPageSeo } from '../../lib/pageSeo'
+import DiscoverSearchFilters from '../../components/discover/DiscoverSearchFilters'
+import CategoryMegaMenu from '../../components/discover/CategoryMegaMenu'
+import InquiryFormModal from '../../components/discover/InquiryFormModal'
 
 const DARK_TILE = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
 
@@ -108,6 +111,15 @@ export default function InstructorMapSearch() {
   const loadSeqRef = useRef(0)
   const skipKindReloadRef = useRef(true)
   const autoNearestDoneRef = useRef(false)
+  const [discoverFilters, setDiscoverFilters] = useState({
+    format: 'any',
+    category_id: null,
+    category_slug: null,
+    category_name: null,
+    area_id: null,
+  })
+  const [discoverMode, setDiscoverMode] = useState(false)
+  const [inquiryTarget, setInquiryTarget] = useState(null)
 
   useEffect(() => {
     setPageSeo({
@@ -125,6 +137,7 @@ export default function InstructorMapSearch() {
       setFetchError('')
       lastBoundsRef.current = bbox
       setRadiusMode(false)
+      setDiscoverMode(false)
       try {
         const res = await api.get('/public/instructors-map', {
           params: {
@@ -157,6 +170,48 @@ export default function InstructorMapSearch() {
     },
     [kind, refPoint.lat, refPoint.lng],
   )
+
+  const loadDiscover = useCallback(async () => {
+    const seq = ++loadSeqRef.current
+    setLoading(true)
+    setFetchError('')
+    setDiscoverMode(true)
+    setRadiusMode(false)
+    try {
+      const res = await api.get('/public/instructor-discovery', {
+        params: {
+          category_id: discoverFilters.category_id || undefined,
+          category_slug: discoverFilters.category_slug || undefined,
+          format: discoverFilters.format || 'any',
+          lat: refPoint.lat,
+          lng: refPoint.lng,
+          area_id: discoverFilters.area_id || undefined,
+          kind,
+        },
+      })
+      if (seq !== loadSeqRef.current) return
+      if (res?.success) {
+        setInstructors(Array.isArray(res.instructors) ? res.instructors : [])
+      } else {
+        setInstructors([])
+        setFetchError(res?.message || 'Məlumat alınmadı')
+      }
+    } catch (e) {
+      if (seq !== loadSeqRef.current) return
+      setInstructors([])
+      setFetchError(e?.message || 'Şəbəkə xətası')
+    } finally {
+      if (seq === loadSeqRef.current) {
+        setLoading(false)
+        setHasFetched(true)
+      }
+    }
+  }, [discoverFilters, kind, refPoint.lat, refPoint.lng])
+
+  const hasDiscoverFilters =
+    Boolean(discoverFilters.category_id) ||
+    (discoverFilters.format && discoverFilters.format !== 'any') ||
+    Boolean(discoverFilters.area_id)
 
   const loadByRadius = useCallback(
     async (lat, lng, radius) => {
@@ -198,15 +253,21 @@ export default function InstructorMapSearch() {
 
   /** İlk giriş: Bakı + müəllimlər */
   useEffect(() => {
-    void loadByBbox(BAKU_BBOX)
-  }, [loadByBbox])
+    if (hasDiscoverFilters) void loadDiscover()
+    else void loadByBbox(BAKU_BBOX)
+  }, [loadByBbox, hasDiscoverFilters, loadDiscover])
+
+  useEffect(() => {
+    if (!hasDiscoverFilters) return
+    void loadDiscover()
+  }, [discoverFilters, hasDiscoverFilters, loadDiscover])
 
   const onBounds = useCallback(
     (bbox) => {
-      if (suppressBoundsRef.current) return
+      if (suppressBoundsRef.current || discoverMode) return
       void loadByBbox(bbox)
     },
-    [loadByBbox],
+    [loadByBbox, discoverMode],
   )
 
   useEffect(() => {
@@ -356,9 +417,9 @@ export default function InstructorMapSearch() {
           <div className="flex items-center gap-3 min-w-0">
             <Brand className="h-8 w-auto shrink-0" />
             <div className="min-w-0">
-              <h1 className="font-display font-bold text-lg sm:text-xl truncate">Təlimçini xəritədə tap</h1>
+              <h1 className="font-display font-bold text-lg sm:text-xl truncate">Müəllim tap — Mentorix</h1>
               <p className="text-xs text-gray-500 hidden sm:block">
-                Sizə ən yaxın müəllim və təlimçi · məsafəyə görə sıralanır
+                Fənn, format və məkan üzrə axtarış · premium müəllimlər üst sıradadır
               </p>
             </div>
           </div>
@@ -461,6 +522,17 @@ export default function InstructorMapSearch() {
 
         <aside className={`flex-1 flex flex-col min-h-0 bg-[#0b0b0b] ${listOnly ? 'w-full' : 'lg:w-[42%]'}`}>
           <div className="p-4 border-b border-white/10 space-y-3 shrink-0">
+            <CategoryMegaMenu
+              onPick={(pick) =>
+                setDiscoverFilters((f) => ({
+                  ...f,
+                  category_id: pick.category_id,
+                  category_slug: pick.category_slug,
+                  category_name: pick.category_name,
+                }))
+              }
+            />
+            <DiscoverSearchFilters value={discoverFilters} onChange={setDiscoverFilters} />
             <div className="flex flex-wrap gap-2">
               {[
                 ['all', 'Hamısı'],
@@ -574,48 +646,79 @@ export default function InstructorMapSearch() {
               const selected = selectedId === p.id
               const rank = idx + 1
               const isNearest = rank === 1
+              const cats = Array.isArray(p.category_names) ? p.category_names : []
               return (
-                <button
+                <div
                   key={String(p.id)}
-                  type="button"
-                  onClick={() => focusInstructor(p)}
-                  className={`w-full text-left rounded-xl border p-3 flex gap-3 items-start transition-colors ${
+                  className={`w-full rounded-xl border p-3 flex gap-3 items-start transition-colors ${
                     selected
                       ? 'border-primary/60 bg-primary/10 ring-1 ring-primary/30'
                       : isNearest
-                        ? 'border-amber-500/40 bg-amber-500/5 hover:border-amber-400/50'
-                        : 'border-white/10 bg-[#121212]/90 hover:border-white/20 hover:bg-[#161616]'
+                        ? 'border-amber-500/40 bg-amber-500/5'
+                        : 'border-white/10 bg-[#121212]/90'
                   }`}
                 >
-                  <span className="mt-0.5 w-6 shrink-0 text-center text-sm font-bold text-gray-500">{rank}.</span>
-                  <span
-                    className="mt-1.5 h-3.5 w-3.5 rounded-full shrink-0 ring-2 ring-white/25"
-                    style={{ backgroundColor: isTrainer ? '#f59e0b' : '#00E676' }}
-                  />
-                  <div className="min-w-0 flex-1">
-                    {isNearest ? (
-                      <span className="inline-block text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-amber-500/20 text-amber-400 mb-1">
-                        ⭐ Ən yaxın
-                      </span>
-                    ) : null}
-                    <div className="flex items-baseline justify-between gap-2">
-                      <span className="font-semibold text-white text-sm truncate">{p.full_name}</span>
-                      <span className="text-xs font-bold text-primary shrink-0 text-right">
-                        {formatDistanceKm(p.distanceKm)}
-                        <span className="block text-[10px] font-normal text-gray-500">
-                          {distanceOrigin === 'user' ? 'sizdən' : 'təxmini'}
+                  <button type="button" onClick={() => focusInstructor(p)} className="flex gap-3 flex-1 min-w-0 text-left">
+                    <span className="mt-0.5 w-6 shrink-0 text-center text-sm font-bold text-gray-500">{rank}.</span>
+                    <span
+                      className="mt-1.5 h-3.5 w-3.5 rounded-full shrink-0 ring-2 ring-white/25"
+                      style={{ backgroundColor: isTrainer ? '#f59e0b' : '#00E676' }}
+                    />
+                    <div className="min-w-0 flex-1">
+                      {p.is_premium_listing ? (
+                        <span className="inline-block text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-violet-500/20 text-violet-300 mb-1">
+                          TOP
                         </span>
-                      </span>
+                      ) : null}
+                      {p.discover_verified ? (
+                        <span className="inline-block text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-400 mb-1 ml-1">
+                          Təsdiqlənmiş
+                        </span>
+                      ) : null}
+                      {isNearest ? (
+                        <span className="inline-block text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-amber-500/20 text-amber-400 mb-1 ml-1">
+                          ⭐ Ən yaxın
+                        </span>
+                      ) : null}
+                      <div className="flex items-baseline justify-between gap-2">
+                        <span className="font-semibold text-white text-sm truncate">{p.full_name}</span>
+                        <span className="text-xs font-bold text-primary shrink-0 text-right">
+                          {formatDistanceKm(p.distanceKm)}
+                          <span className="block text-[10px] font-normal text-gray-500">
+                            {distanceOrigin === 'user' ? 'sizdən' : 'təxmini'}
+                          </span>
+                        </span>
+                      </div>
+                      <div className="text-xs text-gray-400 mt-0.5 truncate">
+                        {cats.length ? cats.join(', ') : p.subject}
+                      </div>
+                      {p.discover_hourly_rate != null ? (
+                        <div className="text-[11px] text-emerald-400/90 mt-0.5">{p.discover_hourly_rate} AZN/saat</div>
+                      ) : null}
+                      <div className="text-[11px] text-gray-500 mt-1">{kindLabel(p.map_profile_kind)}</div>
                     </div>
-                    <div className="text-xs text-gray-400 mt-0.5 truncate">{p.subject}</div>
-                    <div className="text-[11px] text-gray-500 mt-1">{kindLabel(p.map_profile_kind)}</div>
-                  </div>
-                </button>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setInquiryTarget(p)}
+                    className="shrink-0 text-[10px] font-bold px-2 py-1.5 rounded-lg border border-primary/40 text-primary hover:bg-primary/10 self-center"
+                  >
+                    Müraciət
+                  </button>
+                </div>
               )
             })}
           </div>
         </aside>
       </div>
+
+      <InquiryFormModal
+        open={Boolean(inquiryTarget)}
+        onClose={() => setInquiryTarget(null)}
+        instructor={inquiryTarget}
+        categoryId={discoverFilters.category_id}
+        categoryName={discoverFilters.category_name}
+      />
     </div>
   )
 }

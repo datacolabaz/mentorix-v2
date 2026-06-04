@@ -28,6 +28,7 @@ const NAV_SECTIONS = [
       { to: '/instructor/teaching-groups', label: 'Kurslar və qruplar', icon: <NavIcon name="courses" /> },
       { to: '/instructor/students', label: 'Tələbələrim', icon: <NavIcon name="students" /> },
       { to: '/instructor/join-requests', label: 'Sorğular', icon: <NavIcon name="notifications" />, badgeKey: 'join_requests' },
+      { to: '/instructor/inquiries', label: 'Tələbə sorğuları', icon: <NavIcon name="instructors" /> },
       { to: '/instructor/schedule', label: 'Cədvəlim', icon: <NavIcon name="schedule" /> },
       { to: '/instructor/attendance', label: 'Davamiyyət', icon: <NavIcon name="attendance" /> },
       { to: '/instructor/exams', label: 'İmtahanlar', icon: <NavIcon name="exams" /> },

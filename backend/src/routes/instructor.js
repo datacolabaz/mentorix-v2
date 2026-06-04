@@ -10,6 +10,8 @@ const {
   deleteGroup,
 } = require('../controllers/instructorTeachingController');
 const { patchInstructorMapProfile } = require('../controllers/instructorMapProfileController');
+const { getDiscoverProfile, patchDiscoverProfile } = require('../controllers/instructorDiscoverController');
+const { listInstructorInquiries, revealInquiryContact } = require('../controllers/studentInquiryController');
 const { listClasses, rotateJoinCode } = require('../controllers/instructorClassesController');
 const {
   listJoinRequests,
@@ -35,6 +37,10 @@ router.get('/classes', authenticate, authorize('instructor'), listClasses);
 router.post('/classes/:id/rotate-join-code', authenticate, authorize('instructor'), rotateJoinCode);
 router.patch('/profile-label', authenticate, authorize('instructor'), patchPublicLabel);
 router.patch('/map-profile', authenticate, authorize('instructor'), patchInstructorMapProfile);
+router.get('/discover-profile', authenticate, authorize('instructor'), getDiscoverProfile);
+router.patch('/discover-profile', authenticate, authorize('instructor'), patchDiscoverProfile);
+router.get('/inquiries', authenticate, authorize('instructor'), listInstructorInquiries);
+router.post('/inquiries/:id/reveal-contact', authenticate, authorize('instructor'), revealInquiryContact);
 router.post('/teaching/subjects', authenticate, authorize('instructor'), postSubject);
 router.delete('/teaching/subjects/:id', authenticate, authorize('instructor'), deleteSubject);
 router.post('/teaching/groups', authenticate, authorize('instructor'), postGroup);
