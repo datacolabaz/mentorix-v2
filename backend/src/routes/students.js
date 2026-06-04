@@ -5,6 +5,7 @@ const {
   getStudent,
   deleteStudent,
   createStudent,
+  attachStudentByEmail,
   getMySchedule,
   getInstructorMyLessonsCalendar,
   addMyPrepSlots,
@@ -448,6 +449,16 @@ router.post(
   attachEntitlements,
   enforceStudentsLimit,
   createStudent,
+);
+
+router.post(
+  '/attach-by-email',
+  authenticate,
+  authorize('instructor', 'admin'),
+  gateInstructorEnrollment,
+  attachEntitlements,
+  enforceStudentsLimit,
+  attachStudentByEmail,
 );
 
 router.delete('/enrollment/:enrollmentId', authenticate, authorize('admin', 'instructor'), deleteStudent);

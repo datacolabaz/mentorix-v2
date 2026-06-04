@@ -1,4 +1,7 @@
-/** Tələbə imtahan səhifəsinə dərin link (login tələb olunur). */
+/**
+ * Tələbə imtahan səhifəsinə dərin link (login tələb olunur).
+ * Link açılanda müəllimə avtomatik təsdiq sorğusu gedir (Sorğular bölməsi).
+ */
 export function studentExamShareUrl(examId) {
   if (!examId) return ''
   const origin = typeof window !== 'undefined' ? window.location.origin : ''

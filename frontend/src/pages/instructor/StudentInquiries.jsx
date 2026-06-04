@@ -51,9 +51,13 @@ export default function StudentInquiries() {
   return (
     <div className="space-y-4 max-w-3xl">
       <div>
-        <h1 className="text-xl font-display font-bold text-white">Tələbə sorğuları</h1>
+        <h1 className="text-xl font-display font-bold text-white">Xəritə müraciətləri</h1>
         <p className="text-sm text-gray-400 mt-1">
-          Valideyn və tələbələrdən gələn müraciətlər.{' '}
+          Mentorix axtarış/xəritədə profilinizi tapıb yazan valideyn və tələbələr. Qrup və imtahan təsdiqi üçün{' '}
+          <Link to="/instructor/join-requests" className="text-primary hover:underline">
+            Sorğular
+          </Link>
+          .{' '}
           <Link to="/instructor/settings#discover-profile" className="text-primary hover:underline">
             Axtarış profili
           </Link>
@@ -74,7 +78,19 @@ export default function StudentInquiries() {
             ))}
           </div>
         ) : inquiries.length === 0 ? (
-          <p className="text-sm text-gray-400">Hələ sorğu yoxdur. Axtarış profilini aktiv edin.</p>
+          <div className="text-sm text-gray-400 space-y-3">
+            <p>Burada yalnız xəritə/axtarışdan gələn müraciətlər görünür — Gmail və ya imtahan linki ilə qoşulan tələbələr burada deyil.</p>
+            <p>
+              Dəvət linki və ya imtahan paylaşımından gələn təsdiq sorğuları:{' '}
+              <Link to="/instructor/join-requests" className="text-primary hover:underline">
+                Sorğular
+              </Link>
+              .
+            </p>
+            <p className="text-xs text-gray-500">
+              Xəritədə görünmək üçün Tənzimləmələr → Axtarış profilini aktiv edin.
+            </p>
+          </div>
         ) : (
           <ul className="space-y-3">
             {inquiries.map((row) => (

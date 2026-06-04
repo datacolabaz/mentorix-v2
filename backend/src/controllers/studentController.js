@@ -11,7 +11,12 @@ const {
   enrichStudentsWithGroupSchedule,
   getGroupLessonSchedule,
   resolveEnrollmentScope,
+  applyGroupScheduleToEnrollment,
 } = require('../services/studentEnrollmentsService');
+
+function normInstructorHex(id) {
+  return id == null ? '' : String(id).trim().toLowerCase().replace(/-/g, '');
+}
 const { parseLessonEndTimes } = require('../utils/lessonScheduleTimes');
 const {
   STUDENT_CONTACT_PHONE_SQL,
@@ -773,6 +778,105 @@ const addMyPrepSlots = async (req, res) => {
 };
 
 /** Müəllim paneli: tələbə + profil telefonu (SMS/WhatsApp üçün). */
+/**
+ * POST /students/attach-by-email
+ * Gmail ilə artıq qeydiyyatdan keçmiş, amma join sorğusu göndərməyən tələbəni müəllim siyahısına əlavə edir.
+ */
+const attachStudentByEmail = async (req, res) => {
+  try {
+    const instructorId = req.user.role === 'admin' ? req.body?.instructor_id : req.user.id;
+    if (!instructorId) {
+      return res.status(400).json({ success: false, message: 'Müəllim identifikatoru tələb olunur' });
+    }
+    const emailCanon = normalizeStudentEmail(req.body?.email);
+    if (!emailCanon) {
+      return res.status(400).json({ success: false, message: 'Düzgün email daxil edin' });
+    }
+
+    const { rows: urows } = await db.query(
+      `SELECT id, full_name, email, role, is_active
+       FROM users
+       WHERE role = 'student'
+         AND is_active = TRUE
+         AND email IS NOT NULL
+         AND LOWER(TRIM(email)) = $1
+       ORDER BY created_at DESC
+       LIMIT 1`,
+      [emailCanon],
+    );
+    const student = urows[0];
+    if (!student) {
+      return res.status(404).json({
+        success: false,
+        message: 'Bu email ilə aktiv tələbə hesabı tapılmadı. Tələbə əvvəlcə Google ilə qeydiyyatdan keçməlidir.',
+      });
+    }
+
+    const ni = normInstructorHex(instructorId);
+    const { rows: existing } = await db.query(
+      `SELECT id, status FROM enrollments
+       WHERE student_id = $1::uuid
+         AND (deleted_at IS NULL)
+         AND REPLACE(LOWER(TRIM(instructor_id::text)), '-', '') = $2
+         AND COALESCE(LOWER(TRIM(status)), '') NOT IN ('rejected', 'left', 'archived')`,
+      [student.id, ni],
+    );
+    const prev = existing[0];
+    if (prev) {
+      const st = String(prev.status || '').toLowerCase();
+      if (st === 'active' || st === 'pending_setup' || st === 'pending_approval') {
+        return res.status(409).json({
+          success: false,
+          message: 'Bu tələbə artıq sizin siyahınızdadır (və ya gözləyən sorğudadır)',
+          enrollment_id: prev.id,
+        });
+      }
+    }
+
+    let groupId = req.body?.group_id || null;
+    let subjectId = req.body?.subject_id || null;
+    if (groupId) {
+      const { rows: grows } = await db.query(
+        `SELECT id, subject_id FROM instructor_groups
+         WHERE id = $1::uuid
+           AND REPLACE(LOWER(TRIM(instructor_id::text)), '-', '') = $2
+         LIMIT 1`,
+        [groupId, ni],
+      );
+      if (!grows[0]) {
+        return res.status(400).json({ success: false, message: 'Qrup tapılmadı' });
+      }
+      groupId = grows[0].id;
+      subjectId = subjectId || grows[0].subject_id || null;
+    }
+
+    const { rows: enr } = await db.query(
+      `INSERT INTO enrollments (instructor_id, student_id, status, enrolled_at, group_id, subject_id)
+       VALUES ($1::uuid, $2::uuid, 'pending_setup', NOW(), $3::uuid, $4::uuid)
+       RETURNING id`,
+      [instructorId, student.id, groupId, subjectId],
+    );
+    const enrollmentId = enr[0]?.id;
+    if (groupId && enrollmentId) {
+      await applyGroupScheduleToEnrollment(enrollmentId, groupId).catch(() => {});
+    }
+
+    return res.status(201).json({
+      success: true,
+      message: `${student.full_name || emailCanon} siyahınıza əlavə olundu. Qeydiyyatı tamamlayın və imtahana təyin edin.`,
+      enrollment_id: enrollmentId,
+      student: {
+        id: student.id,
+        full_name: student.full_name,
+        email: student.email,
+      },
+    });
+  } catch (err) {
+    const st = err.statusCode || 500;
+    res.status(st).json({ success: false, message: err.message });
+  }
+};
+
 const createStudent = async (req, res) => {
   try {
     const { first_name, last_name, phone_number, email } = req.body || {};
@@ -853,6 +957,7 @@ const deleteMyPrepSlot = async (req, res) => {
 
 module.exports = {
   listStudents,
+  attachStudentByEmail,
   createStudent,
   getReferralBreakdown,
   getStudent,

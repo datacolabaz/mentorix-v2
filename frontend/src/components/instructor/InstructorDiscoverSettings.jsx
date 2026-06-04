@@ -316,7 +316,7 @@ export default function InstructorDiscoverSettings({ mapVisible, theme, inp }) {
             to="/instructor/inquiries"
             className="text-sm font-semibold text-primary hover:underline self-center px-2"
           >
-            Tələbə sorğuları →
+            Xəritə müraciətləri →
           </Link>
         </div>
       </div>

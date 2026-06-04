@@ -56,6 +56,7 @@ export default function InstructorJoinRequests() {
       await load()
       queryClient.invalidateQueries({ queryKey: BILLING_STATUS_QUERY_KEY })
       window.dispatchEvent(new CustomEvent('mx:join-requests-changed'))
+      window.dispatchEvent(new CustomEvent('mx:students-changed'))
     } catch (err) {
       toast(err?.message || 'Xəta', 'error')
     } finally {
@@ -84,8 +85,8 @@ export default function InstructorJoinRequests() {
     <div className="p-4 sm:p-6 max-w-3xl mx-auto w-full">
       <h1 className="font-display font-bold text-xl sm:text-2xl text-token-textMain">Sorğular</h1>
       <p className="text-token-textMuted text-sm mt-1 mb-6">
-        Qrup dəvəti və imtahan paylaşım linki ilə gələn tələbə sorğuları. Təsdiqlədikdən sonra qrupa və ya imtahana
-        əlavə olunurlar.
+        Qrup dəvət linki (<code className="text-xs opacity-80">/join/KOD</code>) və imtahan paylaşım linki ilə gələn
+        təsdiq sorğuları. Xəritə/axtarış müraciətləri «Xəritə müraciətləri» bölməsindədir — burada yox.
       </p>
 
       {loading ? (

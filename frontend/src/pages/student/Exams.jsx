@@ -678,19 +678,36 @@ export default function StudentExams() {
             return
           }
           deepLinkHandledRef.current = targetId
-          if (d?.pending_request) {
-            setAccessPrompt({ exam: d.exam, pending: true })
-            return
-          }
           if (d?.exam) {
-            setAccessPrompt({ exam: d.exam, pending: false })
-            return
+            try {
+              const sub = await api.post(`/exams/${encodeURIComponent(targetId)}/access-from-link`)
+              if (sub?.already_assigned) {
+                deepLinkHandledRef.current = ''
+                await loadExams(true)
+                return
+              }
+              setAccessPrompt({
+                exam: d.exam,
+                pending: true,
+                autoSubmitted: Boolean(sub?.created || sub?.already_pending),
+              })
+              if (sub?.created) {
+                toast('Müəllimə sorğu göndərildi — təsdiq gözləyin', 'success')
+              }
+              return
+            } catch (subErr) {
+              if (subErr?.code === 'ALREADY_PENDING' || subErr?.message?.includes('artıq göndərilib')) {
+                setAccessPrompt({ exam: d.exam, pending: true })
+                return
+              }
+              throw subErr
+            }
           }
-        } catch {
+        } catch (err) {
           deepLinkHandledRef.current = targetId
+          toast(err?.message || 'Bu imtahan tapılmadı və ya sizə təyin edilməyib', 'error')
         }
         setSearchParams({}, { replace: true })
-        toast('Bu imtahan tapılmadı və ya sizə təyin edilməyib', 'error')
       })()
       return
     }
@@ -1262,16 +1279,16 @@ export default function StudentExams() {
         {accessPrompt?.exam && (
           <div className="space-y-4">
             <p className="text-sm text-gray-300 leading-relaxed">
-              «{accessPrompt.exam.title}» ({accessPrompt.exam.instructor_name || 'müəllim'}) imtahanına hələ
-              təyin edilməmisiniz.
+              «{accessPrompt.exam.title}» — {accessPrompt.exam.instructor_name || 'müəllim'}
             </p>
             {accessPrompt.pending ? (
               <p className="text-sm text-amber-200/90">
-                Sorğunuz göndərilib. Müəllim təsdiqlədikdən sonra imtahan siyahınızda görünəcək.
+                Müəllimə sorğu göndərilib. Təsdiqlədikdən sonra imtahana daxil ola bilərsiniz və müəllimin tələbəsi
+                sayılacaqsınız.
               </p>
             ) : (
               <p className="text-sm text-gray-400">
-                Müəllimə giriş sorğusu göndərin — təsdiqlədikdən sonra imtahana daxil ola bilərsiniz.
+                İmtahana giriş üçün müəllimin təsdiqi lazımdır.
               </p>
             )}
             <div className="flex flex-col-reverse sm:flex-row gap-2 sm:justify-end pt-1">
@@ -1291,7 +1308,7 @@ export default function StudentExams() {
                   loading={accessRequestBusy}
                   onClick={() => void submitExamAccessRequest()}
                 >
-                  Sorğu göndər
+                  Yenidən sorğu göndər
                 </Button>
               )}
             </div>

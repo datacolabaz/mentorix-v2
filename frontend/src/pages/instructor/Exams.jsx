@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import api from '../../lib/api'
 import Card from '../../components/common/Card'
@@ -517,7 +518,16 @@ export default function InstructorExams() {
   return (
     <div className="p-4 sm:p-6 min-w-0">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-        <h1 className="font-display font-bold text-xl sm:text-2xl">Imtahanlar</h1>
+        <div>
+          <h1 className="font-display font-bold text-xl sm:text-2xl">Imtahanlar</h1>
+          <p className={['text-xs mt-1 max-w-xl', theme === 'dark' ? 'text-gray-500' : 'text-token-textMuted'].join(' ')}>
+            Paylaşım linki ilə gələn tələbələr avtomatik sorğu göndərir —{' '}
+            <Link to="/instructor/join-requests" className="text-primary hover:underline">
+              Sorğular
+            </Link>
+            -dan təsdiqləyin; təsdiqdən sonra sizin tələbəniz sayılır.
+          </p>
+        </div>
         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
           <div
             className={[

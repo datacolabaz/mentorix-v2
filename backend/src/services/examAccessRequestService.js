@@ -4,6 +4,39 @@ const { sendEmail, userEmail } = require('./emailService');
 const normHex = (id) =>
   id == null ? '' : String(id).trim().toLowerCase().replace(/-/g, '');
 
+async function insertUserNotification(userId, title, body, type, meta = {}) {
+  await db
+    .query(
+      `INSERT INTO notifications (user_id, title, body, type, is_read, meta)
+       VALUES ($1, $2, $3, $4, FALSE, $5::jsonb)`,
+      [userId, title, body, type, JSON.stringify(meta)],
+    )
+    .catch((e) => console.error('insertUserNotification', type, e.message));
+}
+
+/** Təsdiqdən sonra müəllimin tələbə siyahısında görünsün */
+async function ensureInstructorStudentEnrollment(client, instructorId, studentId) {
+  const ni = normHex(instructorId);
+  const { rows: existing } = await client.query(
+    `SELECT id, status FROM enrollments
+     WHERE student_id = $1::uuid
+       AND (deleted_at IS NULL)
+       AND REPLACE(LOWER(TRIM(instructor_id::text)), '-', '') = $2
+       AND COALESCE(LOWER(TRIM(status)), '') NOT IN ('rejected', 'left', 'archived')
+     LIMIT 1`,
+    [studentId, ni],
+  );
+  if (existing[0]?.id) return existing[0].id;
+
+  const { rows: ins } = await client.query(
+    `INSERT INTO enrollments (instructor_id, student_id, status, enrolled_at)
+     VALUES ($1::uuid, $2::uuid, 'pending_setup', NOW())
+     RETURNING id`,
+    [instructorId, studentId],
+  );
+  return ins[0]?.id || null;
+}
+
 async function notifyInstructorExamAccessRequest(instructorId, studentName, examTitle, examId) {
   const title = 'İmtahana giriş sorğusu';
   const body = `${studentName} «${examTitle}» imtahanına qoşulmaq istəyir. Təsdiqləyin.`;
@@ -69,6 +102,14 @@ async function getStudentAccessStatus(studentId, examId) {
      LIMIT 1`,
     [examId, studentId],
   );
+  const { rows: rejected } = await db.query(
+    `SELECT id, created_at FROM exam_access_requests
+     WHERE exam_id = $1::uuid AND student_id = $2::uuid
+       AND UPPER(TRIM(status)) = 'REJECTED'
+     ORDER BY created_at DESC
+     LIMIT 1`,
+    [examId, studentId],
+  );
   return {
     exam: {
       id: exam.id,
@@ -77,6 +118,7 @@ async function getStudentAccessStatus(studentId, examId) {
     },
     assigned: Boolean(assigned[0]),
     pending_request: pending[0] || null,
+    rejected_request: rejected[0] || null,
   };
 }
 
@@ -126,9 +168,26 @@ async function createExamAccessRequest(studentId, examId) {
 
   return {
     request_id: rows[0].id,
-    message: 'Sorğunuz göndərildi. Müəllim təsdiqlədikdən sonra imtahana daxil ola bilərsiniz.',
+    message: 'Sorğunuz müəllimə göndərildi. Təsdiqlədikdən sonra imtahana daxil ola bilərsiniz.',
     code: 'PENDING_APPROVAL',
   };
+}
+
+/** İmtahan linki ilə gələn tələbə üçün avtomatik sorğu (təkrar yoxlanılır) */
+async function ensureExamAccessRequestFromLink(studentId, examId) {
+  const status = await getStudentAccessStatus(studentId, examId);
+  if (status.assigned) {
+    return { already_assigned: true, ...status };
+  }
+  if (status.pending_request) {
+    return { already_pending: true, request_id: status.pending_request.id, ...status };
+  }
+  if (status.rejected_request) {
+    const created = await createExamAccessRequest(studentId, examId);
+    return { created: true, re_requested: true, ...created, exam: status.exam };
+  }
+  const created = await createExamAccessRequest(studentId, examId);
+  return { created: true, ...created, exam: status.exam };
 }
 
 async function listPendingExamAccessRequests(instructorId) {
@@ -199,7 +258,9 @@ async function approveExamAccessRequest(requestId, instructorId) {
     throw err;
   }
 
+  let enrollmentId = null;
   await db.transaction(async (client) => {
+    enrollmentId = await ensureInstructorStudentEnrollment(client, instructorId, req.student_id);
     await client.query(
       `INSERT INTO exam_assignments (exam_id, student_id) VALUES ($1, $2)
        ON CONFLICT DO NOTHING`,
@@ -213,6 +274,15 @@ async function approveExamAccessRequest(requestId, instructorId) {
     );
   });
 
+  const examTitle = req.exam_title || 'İmtahan';
+  await insertUserNotification(
+    req.student_id,
+    'İmtahana giriş təsdiqləndi',
+    `«${examTitle}» üçün müəlliminiz icazə verdi. İndi imtahana başlaya bilərsiniz.`,
+    'exam_access_approved',
+    { exam_id: req.exam_id },
+  );
+
   const { sendExamPlacedNotifications } = require('./examService');
   sendExamPlacedNotifications(req.exam_id, { studentIds: [req.student_id] }).catch((e) =>
     console.error('sendExamPlacedNotifications(access)', e.message),
@@ -221,7 +291,8 @@ async function approveExamAccessRequest(requestId, instructorId) {
   return {
     exam_id: req.exam_id,
     student_id: req.student_id,
-    message: `«${req.exam_title || 'İmtahan'}» üçün tələbə təyin edildi.`,
+    enrollment_id: enrollmentId,
+    message: `Tələbə təsdiqləndi: «${examTitle}» imtahanı + sizin tələbə siyahınız.`,
   };
 }
 
@@ -243,18 +314,49 @@ async function rejectExamAccessRequest(requestId, instructorId) {
     err.statusCode = 400;
     throw err;
   }
+  const { rows: full } = await db.query(
+    `SELECT ear.student_id, ear.exam_id, e.title AS exam_title
+     FROM exam_access_requests ear
+     JOIN exams e ON e.id = ear.exam_id
+     WHERE ear.id = $1::uuid AND ear.instructor_id = $2::uuid`,
+    [requestId, instructorId],
+  );
+  const row = full[0];
+  if (!row) {
+    const err = new Error('Sorğu tapılmadı');
+    err.statusCode = 404;
+    throw err;
+  }
+  if (String(req.status || '').toUpperCase() !== 'PENDING') {
+    const err = new Error('Bu sorğu artıq həll olunub');
+    err.statusCode = 400;
+    throw err;
+  }
+
   await db.query(
     `UPDATE exam_access_requests
      SET status = 'REJECTED', resolved_at = NOW(), resolved_by = $2::uuid
      WHERE id = $1::uuid`,
     [requestId, instructorId],
   );
+
+  if (row.student_id) {
+    await insertUserNotification(
+      row.student_id,
+      'İmtahana giriş rədd edildi',
+      `«${row.exam_title || 'İmtahan'}» üçün müəllim sorğunuzu rədd etdi.`,
+      'exam_access_rejected',
+      { exam_id: row.exam_id },
+    );
+  }
+
   return { message: 'Sorğu rədd edildi' };
 }
 
 module.exports = {
   getStudentAccessStatus,
   createExamAccessRequest,
+  ensureExamAccessRequestFromLink,
   listPendingExamAccessRequests,
   countPendingExamAccessRequests,
   approveExamAccessRequest,

@@ -851,6 +851,8 @@ export default function InstructorStudents() {
   const [students, setStudents] = useState([])
   const [editModal, setEditModal] = useState(false)
   const [joinPendingCount, setJoinPendingCount] = useState(0)
+  const [attachEmail, setAttachEmail] = useState('')
+  const [attachBusy, setAttachBusy] = useState(false)
   const [setupModal, setSetupModal] = useState(false)
   const [setupForm, setSetupForm] = useState(emptyForm)
   const [setupEnrollmentId, setSetupEnrollmentId] = useState(null)
@@ -911,6 +913,23 @@ export default function InstructorStudents() {
       .then((d) => setReferralSources(Array.isArray(d.sources) ? d.sources : []))
       .catch(() => setReferralSources([]))
   }, [])
+
+  const attachExistingByEmail = async (e) => {
+    e?.preventDefault?.()
+    const email = String(attachEmail || '').trim().toLowerCase()
+    if (!email) return toast('Email daxil edin', 'error')
+    setAttachBusy(true)
+    try {
+      const r = await api.post('/students/attach-by-email', { email })
+      toast(r?.message || 'Əlavə olundu', 'success')
+      setAttachEmail('')
+      await load(true)
+    } catch (err) {
+      toast(err?.message || 'Əlavə olunmadı', 'error')
+    } finally {
+      setAttachBusy(false)
+    }
+  }
 
   const isPendingSetup = (s) =>
     String(s?.enrollment_status || '').toLowerCase() === 'pending_setup'
@@ -1565,7 +1584,7 @@ export default function InstructorStudents() {
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Axtar… (ad və ya telefon)"
+              placeholder="Axtar… (ad, telefon və ya email)"
               className={[
                 'w-full rounded-xl pl-9 pr-3 py-2.5 text-sm outline-none',
                 'bg-token-surfaceCard/55 border border-[color:var(--border-subtle)]',
@@ -1595,6 +1614,26 @@ export default function InstructorStudents() {
           ))}
         </select>
       </div>
+
+      <Card className="mb-4 p-4 border border-amber-500/25 bg-amber-500/5">
+        <p className="text-sm text-token-textMain font-medium mb-1">Gmail ilə qeydiyyat olub, siyahıda yoxdur?</p>
+        <p className="text-xs text-token-textMuted mb-3">
+          Admin paneldə görünən, amma join sorğusu göndərməyən tələbəni email ilə bura əlavə edin — sonra qeydiyyatı
+          tamamlayın və imtahana təyin edin.
+        </p>
+        <form className="flex flex-col sm:flex-row gap-2" onSubmit={(ev) => void attachExistingByEmail(ev)}>
+          <input
+            type="email"
+            className="flex-1 rounded-xl px-3 py-2.5 text-sm bg-token-surfaceCard/55 border border-[color:var(--border-subtle)] text-token-textMain"
+            placeholder="məs. hemayehesenli2@gmail.com"
+            value={attachEmail}
+            onChange={(e) => setAttachEmail(e.target.value)}
+          />
+          <Button type="submit" loading={attachBusy} className="shrink-0 justify-center">
+            Email ilə əlavə et
+          </Button>
+        </form>
+      </Card>
 
       {!listLoading && pendingStudents.length > 0 && (
         <Card className="mb-5 p-4 border border-amber-500/35 bg-amber-500/5">

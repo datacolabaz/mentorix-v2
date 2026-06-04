@@ -18,6 +18,7 @@ const {
   studentExams,
   getExamAccessStatus,
   postExamAccessRequest,
+  postExamAccessFromLink,
   getStudentExamReview,
   getExamQuestions,
   submitExam,
@@ -128,6 +129,7 @@ router.get('/student-progress', authenticate, authorize('instructor', 'admin'), 
 router.get('/my', authenticate, authorize('student'), studentExams);
 router.get('/:id/access-status', authenticate, authorize('student'), getExamAccessStatus);
 router.post('/:id/access-request', authenticate, authorize('student'), postExamAccessRequest);
+router.post('/:id/access-from-link', authenticate, authorize('student'), postExamAccessFromLink);
 router.post('/bulk-delete', authenticate, authorize('instructor', 'admin'), bulkHardDeleteExams);
 router.get('/:id/assignments', authenticate, authorize('instructor', 'admin'), getExamAssignments);
 router.post('/:id/late-access/:studentId', authenticate, authorize('instructor', 'admin'), grantLateAccess);

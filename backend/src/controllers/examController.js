@@ -2073,6 +2073,7 @@ const serveExamAttachmentByExam = async (req, res) => {
 const {
   getStudentAccessStatus,
   createExamAccessRequest,
+  ensureExamAccessRequestFromLink,
 } = require('../services/examAccessRequestService');
 
 const getExamAccessStatus = async (req, res) => {
@@ -2097,6 +2098,21 @@ const postExamAccessRequest = async (req, res) => {
   }
 };
 
+/** İmtahan paylaşım linki: sorğu avtomatik göndərilir, müəllim Sorğular-da görür */
+const postExamAccessFromLink = async (req, res) => {
+  try {
+    const result = await ensureExamAccessRequestFromLink(req.user.id, req.params.id);
+    const st = result.created ? 201 : 200;
+    res.status(st).json({ success: true, ...result });
+  } catch (err) {
+    res.status(err.statusCode || 500).json({
+      success: false,
+      message: err.message,
+      code: err.code,
+    });
+  }
+};
+
 module.exports = {
   createExam,
   listExams,
@@ -2110,6 +2126,7 @@ module.exports = {
   studentExams,
   getExamAccessStatus,
   postExamAccessRequest,
+  postExamAccessFromLink,
   getStudentExamReview,
   getExamQuestions,
   submitExam,

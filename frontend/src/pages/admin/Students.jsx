@@ -275,8 +275,12 @@ export default function AdminStudents() {
             </div>
 
             {detail.is_unassigned ? (
-              <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200">
-                Bu tələbə hələ join code ilə heç bir müəllimə/qrupla bağlanmayıb.
+              <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200 space-y-2 text-sm">
+                <p>Bu tələbə yalnız Google/email ilə qeydiyyatdan keçib — heç bir müəllimə/qrupla bağlı deyil.</p>
+                <p className="text-amber-100/80 text-xs">
+                  Müəllim onu görmür. Həll: tələbə qrup dəvət linkində formu tamamlasın və ya imtahan linkində «Sorğu
+                  göndər» etsin; müəllim də «Tələbələrim» → email ilə əlavə edə bilər.
+                </p>
               </div>
             ) : detail.link ? (
               <div className="p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/20 space-y-2">
