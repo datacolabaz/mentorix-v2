@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import api from '../../lib/api'
 import { resolveApiAssetUrl } from '../../lib/apiAssetUrl'
 import Button from '../common/Button'
@@ -19,8 +19,14 @@ export default function InstructorAvatarUpload({
   const [uploading, setUploading] = useState(false)
   const [removing, setRemoving] = useState(false)
   const [error, setError] = useState(null)
+  const [imgError, setImgError] = useState(false)
 
   const displaySrc = preview || (avatarUrl ? resolveApiAssetUrl(avatarUrl) : null)
+  const showPhoto = Boolean(displaySrc) && !imgError
+
+  useEffect(() => {
+    setImgError(false)
+  }, [displaySrc])
 
   const onPick = (e) => {
     const file = e.target.files?.[0]
@@ -76,18 +82,29 @@ export default function InstructorAvatarUpload({
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row gap-5 items-start">
-        <div className="relative shrink-0">
-          {displaySrc ? (
+        <div
+          className="relative shrink-0 h-28 w-28 rounded-full overflow-hidden ring-4 ring-primary/30 shadow-lg bg-[#1a1a1a]"
+          aria-label={showPhoto ? 'Profil şəkli' : 'Profil şəkli yoxdur'}
+        >
+          {showPhoto ? (
             <img
               src={displaySrc}
-              alt="Profil önizləməsi"
-              className="h-28 w-28 rounded-full object-cover ring-4 ring-primary/30 shadow-lg"
+              alt=""
+              className="h-full w-full object-cover"
+              onError={() => setImgError(true)}
             />
           ) : (
-            <InstructorAvatar fullName={fullName} avatarUrl={null} size="xl" kind={mapKind} ringClassName="ring-4 ring-white/15" />
+            <InstructorAvatar
+              fullName={fullName}
+              avatarUrl={null}
+              size="xl"
+              kind={mapKind}
+              className="!h-28 !w-28 !text-xl"
+              ringClassName="ring-0"
+            />
           )}
           {uploading ? (
-            <span className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center text-xs text-white font-semibold">
+            <span className="absolute inset-0 z-10 rounded-full bg-black/50 flex items-center justify-center text-xs text-white font-semibold">
               Yüklənir…
             </span>
           ) : null}
