@@ -50,6 +50,17 @@ export default function Login() {
   const [searchParams] = useSearchParams()
   const isAdmin = searchParams.get('admin') === 'true'
 
+  useEffect(() => {
+    const next = String(searchParams.get('next') || '').trim()
+    if (next.startsWith('/') && next !== '/login') {
+      try {
+        sessionStorage.setItem('mx_return_after_login', next)
+      } catch {
+        /* ignore */
+      }
+    }
+  }, [searchParams])
+
   const [adminIdentifier, setAdminIdentifier] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)

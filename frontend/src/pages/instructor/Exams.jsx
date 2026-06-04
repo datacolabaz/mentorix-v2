@@ -653,7 +653,10 @@ export default function InstructorExams() {
                           }
                           try {
                             await copyStudentExamLink(exam.id)
-                            toast('Link kopyalandı', 'success')
+                            toast(
+                              'Link kopyalandı — tələbə klik edəndə sorğu avtomatik Sorğular-a düşəcək',
+                              'success',
+                            )
                           } catch {
                             toast('Paylaşım alınmadı', 'error')
                           }
@@ -699,7 +702,10 @@ export default function InstructorExams() {
             if (createdExam?.id) {
               try {
                 const link = await copyStudentExamLink(createdExam.id)
-                toast(`İmtahan yaradıldı. Tələbə linki kopyalandı: ${link}`, 'success')
+                toast(
+                  'İmtahan yaradıldı. Link kopyalandı — tələbə klik edəndə sorğu avtomatik gələcək',
+                  'success',
+                )
               } catch {
                 toast('İmtahan yaradıldı', 'success')
               }

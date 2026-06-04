@@ -11,6 +11,7 @@ const {
   countPendingExamAccessRequests,
   approveExamAccessRequest,
   rejectExamAccessRequest,
+  isMissingExamAccessTableError,
 } = require('../services/examAccessRequestService');
 
 const getPublicJoin = async (req, res) => {
@@ -29,15 +30,25 @@ const getPublicJoin = async (req, res) => {
 
 const listJoinRequests = async (req, res) => {
   try {
-    const [groupRequests, examRequests] = await Promise.all([
-      listPendingJoinRequests(req.user.id),
-      listPendingExamAccessRequests(req.user.id),
-    ]);
+    const warnings = [];
+    const groupRequests = await listPendingJoinRequests(req.user.id);
+    let examRequests = [];
+    try {
+      examRequests = await listPendingExamAccessRequests(req.user.id);
+    } catch (e) {
+      if (isMissingExamAccessTableError(e)) {
+        warnings.push(
+          'İmtahan sorğuları aktiv deyil: serverdə «node scripts/migrate.js» (migrasiya 126) işə salın.',
+        );
+      } else {
+        warnings.push(e.message || 'İmtahan sorğuları yüklənmədi');
+      }
+    }
     const requests = [
       ...groupRequests.map((r) => ({ ...r, kind: 'group_join' })),
       ...examRequests,
     ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-    res.json({ success: true, requests });
+    res.json({ success: true, requests, warnings });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -45,10 +56,13 @@ const listJoinRequests = async (req, res) => {
 
 const joinRequestsCount = async (req, res) => {
   try {
-    const [groupCount, examCount] = await Promise.all([
-      countPendingJoinRequests(req.user.id),
-      countPendingExamAccessRequests(req.user.id),
-    ]);
+    const groupCount = await countPendingJoinRequests(req.user.id);
+    let examCount = 0;
+    try {
+      examCount = await countPendingExamAccessRequests(req.user.id);
+    } catch (e) {
+      if (!isMissingExamAccessTableError(e)) throw e;
+    }
     res.json({ success: true, count: groupCount + examCount });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

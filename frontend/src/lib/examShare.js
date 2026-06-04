@@ -5,8 +5,9 @@
 export function studentExamShareUrl(examId) {
   if (!examId) return ''
   const origin = typeof window !== 'undefined' ? window.location.origin : ''
-  if (!origin) return `/student/exams?exam=${encodeURIComponent(String(examId))}`
-  return `${origin}/student/exams?exam=${encodeURIComponent(String(examId))}`
+  const path = `/exam/${encodeURIComponent(String(examId))}`
+  if (!origin) return path
+  return `${origin}${path}`
 }
 
 export async function copyStudentExamLink(examId) {

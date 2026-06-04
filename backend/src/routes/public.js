@@ -13,12 +13,14 @@ const {
 const { postPublicInquiry } = require('../controllers/studentInquiryController');
 const { getActivePlansList } = require('../services/subscriptionPlansService');
 const { getPublicJoin } = require('../controllers/joinInvitationController');
+const { getPublicExamInvite } = require('../controllers/publicExamInviteController');
 const { postAccessEvent } = require('../controllers/accessAnalyticsController');
 const { getPublicInstructorProfile } = require('../controllers/publicInstructorProfileController');
 
 const router = express.Router();
 
 router.get('/join/:code', getPublicJoin);
+router.get('/exam-invite/:examId', getPublicExamInvite);
 
 router.post('/analytics/event', postAccessEvent);
 router.get('/landing-stats', getLandingStats);

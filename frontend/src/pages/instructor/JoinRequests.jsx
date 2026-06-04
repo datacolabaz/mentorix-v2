@@ -26,6 +26,7 @@ export default function InstructorJoinRequests() {
   const toast = useToast()
   const queryClient = useQueryClient()
   const [requests, setRequests] = useState([])
+  const [warnings, setWarnings] = useState([])
   const [loading, setLoading] = useState(true)
   const [actingId, setActingId] = useState(null)
 
@@ -34,9 +35,11 @@ export default function InstructorJoinRequests() {
     try {
       const d = await api.get('/instructor/join-requests')
       setRequests(Array.isArray(d?.requests) ? d.requests : [])
+      setWarnings(Array.isArray(d?.warnings) ? d.warnings : [])
     } catch (err) {
       toast(err?.message || 'Sorğular yüklənmədi', 'error')
       setRequests([])
+      setWarnings([])
     } finally {
       setLoading(false)
     }
@@ -85,15 +88,29 @@ export default function InstructorJoinRequests() {
     <div className="p-4 sm:p-6 max-w-3xl mx-auto w-full">
       <h1 className="font-display font-bold text-xl sm:text-2xl text-token-textMain">Sorğular</h1>
       <p className="text-token-textMuted text-sm mt-1 mb-6">
-        Qrup dəvət linki (<code className="text-xs opacity-80">/join/KOD</code>) və imtahan paylaşım linki ilə gələn
-        təsdiq sorğuları. Xəritə/axtarış müraciətləri «Xəritə müraciətləri» bölməsindədir — burada yox.
+        İmtahan linki (<code className="text-xs opacity-80">/exam/…</code>): tələbə klik edəndə sorğu{' '}
+        <strong className="text-token-textMain font-medium">avtomatik</strong> buraya düşür. Qrup:{' '}
+        <code className="text-xs opacity-80">/join/KOD</code> + forma.
       </p>
+
+      {warnings.length > 0 && (
+        <Card className="p-4 mb-4 border border-amber-500/40 bg-amber-500/10 text-amber-100 text-sm">
+          {warnings.map((w) => (
+            <p key={w}>{w}</p>
+          ))}
+        </Card>
+      )}
 
       {loading ? (
         <ListSkeleton rows={4} />
       ) : !requests.length ? (
-        <Card className="p-8 text-center text-token-textMuted text-sm border border-[color:var(--border-subtle)]">
-          Gözləyən sorğu yoxdur. Qrup dəvət linki və ya imtahan paylaşım linkini tələbələrə göndərin.
+        <Card className="p-8 text-center text-token-textMuted text-sm border border-[color:var(--border-subtle)] space-y-2">
+          <p>Gözləyən sorğu yoxdur.</p>
+          <p className="text-xs">
+            İmtahan üçün İmtahanlar səhifəsindən <strong className="text-token-textMain">linki kopyalayın</strong> və
+            tələbəyə göndərin. Tələbə linkə klik edib Google ilə daxil olanda sorğu avtomatik gələcək — email axtarmaq
+            lazım deyil.
+          </p>
         </Card>
       ) : (
         <ul className="space-y-3">

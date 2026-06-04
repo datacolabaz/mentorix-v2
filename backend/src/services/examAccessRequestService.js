@@ -353,12 +353,20 @@ async function rejectExamAccessRequest(requestId, instructorId) {
   return { message: 'Sorğu rədd edildi' };
 }
 
+function isMissingExamAccessTableError(err) {
+  const code = err?.code || '';
+  const msg = String(err?.message || '');
+  return code === '42P01' || /exam_access_requests/i.test(msg);
+}
+
 module.exports = {
   getStudentAccessStatus,
+  getExamForStudentRequest,
   createExamAccessRequest,
   ensureExamAccessRequestFromLink,
   listPendingExamAccessRequests,
   countPendingExamAccessRequests,
   approveExamAccessRequest,
   rejectExamAccessRequest,
+  isMissingExamAccessTableError,
 };
