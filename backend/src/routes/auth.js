@@ -10,6 +10,8 @@ const {
   resendVerificationEmail,
   googleLogin,
   googleComplete,
+  sendMyPhoneVerifyOtp,
+  verifyMyPhoneVerifyOtp,
   requestPasswordReset,
   resetPassword,
 } = require('../controllers/authController');
@@ -45,5 +47,7 @@ router.get('/me', authenticate, me);
 router.patch('/profile', authenticate, patchMyProfile);
 router.get('/instructor/phone-status', authenticate, instructorPhoneStatus);
 router.post('/instructor/bind-phone', authenticate, bindInstructorPhone);
+router.post('/phone/send-otp', authenticate, sendMyPhoneVerifyOtp);
+router.post('/phone/verify-otp', authenticate, verifyMyPhoneVerifyOtp);
 
 module.exports = router;

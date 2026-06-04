@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import api from '../../lib/api'
 import useAuthStore from '../../hooks/useAuth'
 import Modal from '../common/Modal'
@@ -7,54 +7,64 @@ import PhoneInput from '../auth/PhoneInput'
 import { useToast } from '../common/Toast'
 
 /**
- * Müəllim Google ilə daxil olandan sonra mütləq unikal mobil nömrə (anti-fraud).
+ * Müəllim: Google ilə daxil olandan sonra panel açılır; ilk SMS cəhdi zamanı OTP ilə telefon təsdiqi.
  */
 export default function InstructorPhoneGate() {
   const toast = useToast()
-  const { user, updateUser } = useAuthStore()
+  const { user, updateUser, setSession } = useAuthStore()
   const [open, setOpen] = useState(false)
+  const [step, setStep] = useState('phone') // phone | otp
   const [phone, setPhone] = useState('')
+  const [code, setCode] = useState('')
   const [busy, setBusy] = useState(false)
+  const [hint, setHint] = useState('')
+
+  const resetForm = useCallback(() => {
+    setStep('phone')
+    setCode('')
+    setHint('')
+  }, [])
 
   useEffect(() => {
-    if (user?.role !== 'instructor') {
-      setOpen(false)
-      return
+    const onRequired = (ev) => {
+      if (user?.role !== 'instructor') return
+      if (user?.phone_verified) return
+      setHint(ev?.detail?.message || '')
+      resetForm()
+      if (user?.phone) setPhone(user.phone)
+      setOpen(true)
     }
-    const needs =
-      user?.needs_instructor_phone === true ||
-      !user?.phone ||
-      !user?.phone_verified
-    setOpen(needs)
-    if (user?.phone && !phone) setPhone(user.phone)
-  }, [user, phone])
+    window.addEventListener('mx:phone-verification-required', onRequired)
+    return () => window.removeEventListener('mx:phone-verification-required', onRequired)
+  }, [user?.role, user?.phone_verified, user?.phone, resetForm])
 
-  useEffect(() => {
-    if (user?.role !== 'instructor' || !open) return
-    let cancelled = false
-    ;(async () => {
-      try {
-        const d = await api.get('/auth/instructor/phone-status')
-        if (!cancelled && d?.needs_instructor_phone) setOpen(true)
-        if (!cancelled && !d?.needs_instructor_phone) setOpen(false)
-      } catch {
-        /* ignore */
-      }
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [user?.role, open])
-
-  const submit = async () => {
+  const sendOtp = async () => {
     setBusy(true)
     try {
-      const r = await api.post('/auth/instructor/bind-phone', { phone })
-      if (r?.user) updateUser(r.user)
-      toast(r?.message || 'Mobil nömrə qeydə alındı', 'success')
-      setOpen(false)
+      const r = await api.post('/auth/phone/send-otp', { phone })
+      toast(r?.message || 'OTP göndərildi', 'success')
+      setStep('otp')
     } catch (err) {
-      toast(err?.message || 'Nömrə saxlanılmadı', 'error')
+      toast(err?.message || 'OTP göndərilmədi', 'error')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const verifyOtp = async () => {
+    setBusy(true)
+    try {
+      const r = await api.post('/auth/phone/verify-otp', { phone, code })
+      if (r?.token && r?.user) {
+        setSession(r.token, { ...r.user, needs_instructor_phone: false })
+      } else if (r?.user) {
+        updateUser({ ...r.user, needs_instructor_phone: false, phone_verified: true })
+      }
+      toast(r?.merged ? 'Hesablar birləşdirildi' : 'Mobil nömrə təsdiqləndi', 'success')
+      setOpen(false)
+      resetForm()
+    } catch (err) {
+      toast(err?.message || 'Kod yanlışdır', 'error')
     } finally {
       setBusy(false)
     }
@@ -66,27 +76,60 @@ export default function InstructorPhoneGate() {
     <Modal
       open={open}
       onClose={() => {}}
-      title="Mobil nömrənizi daxil edin"
+      title={step === 'phone' ? 'SMS üçün mobil nömrə' : 'OTP kodu'}
       size="sm"
       zIndex={10300}
       footer={
-        <Button type="button" className="w-full justify-center" loading={busy} onClick={() => void submit()}>
-          Təsdiqlə və davam et
-        </Button>
+        step === 'phone' ? (
+          <Button type="button" className="w-full justify-center" loading={busy} onClick={() => void sendOtp()}>
+            OTP göndər
+          </Button>
+        ) : (
+          <div className="flex flex-col gap-2 w-full">
+            <Button type="button" className="w-full justify-center" loading={busy} onClick={() => void verifyOtp()}>
+              Təsdiqlə
+            </Button>
+            <button
+              type="button"
+              className="text-xs text-zinc-500 hover:text-white text-center"
+              disabled={busy}
+              onClick={() => setStep('phone')}
+            >
+              Nömrəni dəyiş
+            </button>
+          </div>
+        )
       }
     >
-      <p className="text-sm text-zinc-300 leading-relaxed mb-4">
-        Mentorix-də hər müəllim hesabı yalnız <strong className="text-white">bir unikal mobil nömrə</strong> ilə
-        bağlana bilər. Bu, eyni şəxsin bir neçə Gmail ilə pulsuz limiti almasının qarşısını alır.
-      </p>
-      <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-2">
-        Mobil telefon *
-      </label>
-      <PhoneInput value={phone} onChange={setPhone} persistLoginDefaults={false} />
-      <p className="text-[11px] text-zinc-500 mt-3 leading-relaxed">
-        Bu nömrə artıq başqa müəllim hesabında qeydiyyatdadırsa, sistem xəbərdarlıq edəcək — ikinci hesab açıla
-        bilməz.
-      </p>
+      {hint ? (
+        <p className="text-sm text-amber-200/90 mb-3 leading-relaxed">{hint}</p>
+      ) : null}
+      {step === 'phone' ? (
+        <>
+          <p className="text-sm text-zinc-300 leading-relaxed mb-4">
+            SMS göndərmək üçün mobil nömrənizi <strong className="text-white">bir dəfə</strong> OTP ilə təsdiqləyin.
+            Bu nömrə Google hesabınıza bağlanacaq; eyni nömrə ilə ikinci müəllim hesabı açıla bilməz.
+          </p>
+          <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-2">
+            Mobil telefon *
+          </label>
+          <PhoneInput value={phone} onChange={setPhone} persistLoginDefaults={false} />
+        </>
+      ) : (
+        <>
+          <p className="text-sm text-zinc-300 mb-3">
+            <strong className="text-white">{phone}</strong> nömrəsinə göndərilən 6 rəqəmli kodu daxil edin.
+          </p>
+          <input
+            className="w-full bg-surface-1 border border-white/10 rounded-xl px-4 py-3 text-white text-center text-2xl font-bold tracking-[0.35em] outline-none focus:border-primary/40"
+            placeholder="000000"
+            maxLength={6}
+            inputMode="numeric"
+            value={code}
+            onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
+          />
+        </>
+      )}
     </Modal>
   )
 }

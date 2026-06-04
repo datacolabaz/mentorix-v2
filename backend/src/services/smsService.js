@@ -180,6 +180,19 @@ const sendRaw = async (phone, message) => {
 
 const sendSms = async ({ instructorId, phone, message, logType, studentId }) => {
   try {
+    if (instructorId) {
+      const { getInstructorPhoneVerificationBlock } = require('../utils/instructorPhone');
+      const block = await getInstructorPhoneVerificationBlock(db, instructorId);
+      if (block) {
+        return {
+          success: false,
+          error: block.body.message,
+          code: block.body.code,
+          needs_instructor_phone: true,
+        };
+      }
+    }
+
     // Enforce monthly reset source-of-truth on every SMS attempt (cron not required).
     if (instructorId) {
       await ensureSmsPeriodUpToDate(db, instructorId).catch(() => {});

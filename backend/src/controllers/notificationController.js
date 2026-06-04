@@ -359,6 +359,12 @@ const quickInstructorNotification = async (req, res) => {
       return res.json({ success: true, method: 'internal', sent: allowedIds.length });
     }
 
+    if (safeMethod === 'sms' || safeMethod === 'whatsapp') {
+      const { getInstructorPhoneVerificationBlock } = require('../utils/instructorPhone');
+      const block = await getInstructorPhoneVerificationBlock(db, instructorId);
+      if (block) return res.status(block.statusCode).json(block.body);
+    }
+
     const studentsWithPhones = allowedStudents.filter((s) => {
       const p = String(s.phone ?? '').trim();
       return !!p;
@@ -438,6 +444,14 @@ const quickInstructorNotification = async (req, res) => {
         continue;
       }
       const r = await sendSms({ instructorId, phone: s.phone, message: msg });
+      if (r.code === 'PHONE_VERIFICATION_REQUIRED') {
+        return res.status(403).json({
+          success: false,
+          message: r.error,
+          code: r.code,
+          needs_instructor_phone: true,
+        });
+      }
       if (r.success) {
         sent += 1;
         smsUsed += 1;

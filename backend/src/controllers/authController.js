@@ -1058,10 +1058,12 @@ const signup = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Şifrə ən azı 8 simvol olmalıdır' });
     }
 
-    let instructorPhoneCanon = null;
     if (initialRole === 'instructor') {
-      const { assertInstructorPhoneAvailable } = require('../utils/instructorPhone');
-      instructorPhoneCanon = await assertInstructorPhoneAvailable(db, req.body?.phone);
+      return res.status(400).json({
+        success: false,
+        message: 'Müəllim qeydiyyatı yalnız Google ilə mümkündür.',
+        code: 'INSTRUCTOR_GOOGLE_ONLY',
+      });
     }
 
     const hash = await bcrypt.hash(pass, 12);
@@ -1075,13 +1077,11 @@ const signup = async (req, res) => {
     }
 
     const user = await db.transaction(async (client) => {
-      const phoneVal = initialRole === 'instructor' ? instructorPhoneCanon : null;
-      const phoneVerified = initialRole === 'instructor' && phoneVal;
       const { rows } = await client.query(
         `INSERT INTO users (full_name, email, phone, password_hash, role, is_verified, account_status, role_selected, phone_verified)
-         VALUES ($1, $2, $3, $4, $5, FALSE, 'active', $6, $7)
+         VALUES ($1, $2, NULL, $3, $4, FALSE, 'active', $5, FALSE)
          RETURNING id, full_name, email, role, phone, phone_verified, role_selected`,
-        [name, emailCanon, phoneVal, hash, initialRole, roleSelected, phoneVerified],
+        [name, emailCanon, hash, initialRole, roleSelected],
       );
       const created = rows[0];
 
@@ -1292,6 +1292,18 @@ const sendMyPhoneVerifyOtp = async (req, res) => {
     const meUser = meRows[0];
     if (!meUser) return res.status(404).json({ success: false, message: 'Tapılmadı' });
 
+    if (sessionRole === 'instructor') {
+      if (meUser.phone_verified && canonicalPhone(meUser.phone)) {
+        return res.status(403).json({
+          success: false,
+          message: 'Mobil nömrəniz artıq təsdiqlənib və dəyişdirilə bilməz.',
+          code: 'PHONE_ALREADY_VERIFIED',
+        });
+      }
+      const { assertInstructorPhoneAvailable } = require('../utils/instructorPhone');
+      await assertInstructorPhoneAvailable(db, phoneCanon, req.user.id);
+    }
+
     const { rows: ownerRows } = await db.query(
       `SELECT id, email, role, google_sub, phone_verified, is_active
        FROM users
@@ -1462,6 +1474,11 @@ const verifyMyPhoneVerifyOtp = async (req, res) => {
           [owner.id]
         );
         return { user: linkedRows[0], linkedUserId: owner.id, merged: true };
+      }
+
+      if (sessionRole === 'instructor') {
+        const { assertInstructorPhoneAvailable } = require('../utils/instructorPhone');
+        await assertInstructorPhoneAvailable(client, phoneCanon, req.user.id);
       }
 
       await client.query(

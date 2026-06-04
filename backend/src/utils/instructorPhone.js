@@ -51,8 +51,34 @@ function instructorNeedsPhoneBinding(user) {
   return !phone || !Boolean(user.phone_verified);
 }
 
+/**
+ * SMS (və SMS fallback) göndərmədən əvvəl — bir dəfə OTP ilə təsdiq tələb olunur.
+ * @returns {null | { statusCode: number, body: object }}
+ */
+async function getInstructorPhoneVerificationBlock(dbConn, instructorId) {
+  if (!instructorId) return null;
+  const { rows } = await dbConn.query(
+    `SELECT id, role, phone, phone_verified FROM users WHERE id = $1::uuid AND is_active = TRUE LIMIT 1`,
+    [instructorId],
+  );
+  const u = rows[0];
+  if (!u || u.role !== 'instructor') return null;
+  if (!instructorNeedsPhoneBinding(u)) return null;
+  return {
+    statusCode: 403,
+    body: {
+      success: false,
+      message:
+        'SMS göndərmək üçün mobil nömrənizi bir dəfə OTP ilə təsdiqləyin. Google hesabınız ilə bağlanacaq.',
+      code: 'PHONE_VERIFICATION_REQUIRED',
+      needs_instructor_phone: true,
+    },
+  };
+}
+
 module.exports = {
   assertInstructorPhoneAvailable,
   instructorNeedsPhoneBinding,
+  getInstructorPhoneVerificationBlock,
   canonicalInstructorPhone: canonicalStudentPhone,
 };

@@ -1,18 +1,17 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import GoogleSignInButton from './GoogleSignInButton'
 import Button from '../common/Button'
 import useAuthStore from '../../hooks/useAuth'
 import { useToast } from '../common/Toast'
 import api from '../../lib/api'
 import { getAttributionPayload } from '../../lib/analytics'
-import PhoneInput from './PhoneInput'
-import { canonicalAzPhoneE164 } from '../../lib/azPhone'
 
 const inputClass =
   'w-full bg-surface-1 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-primary/40'
 
 /**
- * Email + şifrə ilə qeydiyyat / giriş / email təsdiqi (6 rəqəmli kod və ya link).
+ * Google OAuth (əsas) + köhnə email axını (tələbə/kurs üçün).
  */
 export default function InstructorEmailAuth({ onSuccess }) {
   const toast = useToast()
@@ -28,17 +27,41 @@ export default function InstructorEmailAuth({ onSuccess }) {
   const [password, setPassword] = useState('')
   const [verifyCode, setVerifyCode] = useState('')
   const [role, setRole] = useState('instructor') // student | instructor | course
-  const [phone, setPhone] = useState('')
+
+  const handleGoogleCredential = async (credential) => {
+    setLoading(true)
+    try {
+      let r = await api.post('/auth/google/login', { credential })
+      if (r?.needs_role) {
+        r = await api.post('/auth/google/complete', { credential, role })
+      }
+      if (r?.needs_phone_link) {
+        toast(
+          'Bu Google hesabı sistemdə yoxdur. Tələbə üçün join/imtahan linkindən qoşulun.',
+          'error',
+        )
+        return
+      }
+      if (!r?.token || !r?.user) {
+        toast(r?.message || 'Google girişi tamamlanmadı', 'error')
+        return
+      }
+      const u = {
+        ...r.user,
+        needs_instructor_phone: r.needs_instructor_phone ?? r.user?.needs_instructor_phone,
+      }
+      setSession(r.token, u)
+      toast('Daxil oldunuz', 'success')
+      onSuccess?.(u)
+    } catch (err) {
+      toast(err?.message || 'Google girişi uğursuz', 'error')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const handleSignup = async (e) => {
     e.preventDefault()
-    if (role === 'instructor') {
-      const phoneCanon = canonicalAzPhoneE164(phone)
-      if (!phoneCanon) {
-        toast('Müəllim üçün mobil nömrə tələb olunur (+994 …)', 'error')
-        return
-      }
-    }
     setLoading(true)
     try {
       const body = {
@@ -47,9 +70,6 @@ export default function InstructorEmailAuth({ onSuccess }) {
         password,
         role,
         ...getAttributionPayload(),
-      }
-      if (role === 'instructor') {
-        body.phone = canonicalAzPhoneE164(phone)
       }
       await signupWithEmail(body)
       setPhase('verify')
@@ -190,6 +210,8 @@ export default function InstructorEmailAuth({ onSuccess }) {
     )
   }
 
+  const isInstructor = role === 'instructor'
+
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-3 gap-2">
@@ -213,108 +235,119 @@ export default function InstructorEmailAuth({ onSuccess }) {
           </button>
         ))}
       </div>
-      <div className="flex rounded-xl border border-white/10 overflow-hidden text-sm font-semibold">
-        <button
-          type="button"
-          className={`flex-1 py-2.5 ${tab === 'signup' ? 'bg-primary text-[#041018]' : 'text-gray-400 hover:bg-white/5'}`}
-          onClick={() => setTab('signup')}
-        >
-          Qeydiyyat
-        </button>
-        <button
-          type="button"
-          className={`flex-1 py-2.5 ${tab === 'login' ? 'bg-primary text-[#041018]' : 'text-gray-400 hover:bg-white/5'}`}
-          onClick={() => setTab('login')}
-        >
-          Giriş
-        </button>
+
+      <div className="space-y-2">
+        <p className="text-[10px] text-center text-gray-500 uppercase tracking-wider">
+          Seçilmiş rol: {role === 'instructor' ? 'Müəllim' : role === 'course' ? 'Kurs' : 'Tələbə'}
+        </p>
+        <GoogleSignInButton onCredential={handleGoogleCredential} disabled={loading} />
+        {isInstructor ? (
+          <p className="text-[10px] text-gray-500 text-center leading-relaxed">
+            Müəllim hesabı yalnız Google ilə açılır. Panel açılır; ilk SMS göndərişində mobil nömrə OTP ilə təsdiqlənir.
+          </p>
+        ) : null}
       </div>
 
-      {tab === 'signup' ? (
-        <form onSubmit={handleSignup} className="space-y-3">
-          <input
-            className={inputClass}
-            placeholder="Ad Soyad"
-            value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
-            required
-          />
-          <input
-            type="email"
-            className={inputClass}
-            placeholder="E-poçt ünvanınız"
-            autoComplete="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-          <input
-            type="password"
-            className={inputClass}
-            placeholder="Şifrə (min. 8 simvol)"
-            autoComplete="new-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            minLength={8}
-            required
-          />
-          {role === 'instructor' ? (
-            <div className="space-y-1.5">
-              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                Mobil nömrə *
-              </label>
-              <PhoneInput value={phone} onChange={setPhone} persistLoginDefaults={false} required />
-              <p className="text-[10px] text-gray-500 leading-relaxed">
-                Hər müəllim hesabı yalnız bir unikal nömrə ilə bağlana bilər — eyni nömrə ilə ikinci Gmail
-                hesabı açıla bilməz.
-              </p>
-            </div>
-          ) : null}
-          <Button type="submit" loading={loading} className="w-full justify-center">
-            Qeydiyyatdan keç
-          </Button>
-        </form>
-      ) : (
-        <form onSubmit={handleLogin} className="space-y-3">
-          <input
-            type="email"
-            className={inputClass}
-            placeholder="E-poçt ünvanınız"
-            autoComplete="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-          <input
-            type="password"
-            className={inputClass}
-            placeholder="Şifrə"
-            autoComplete="current-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-          <Button type="submit" loading={loading} className="w-full justify-center">
-            Daxil ol
-          </Button>
-          <button
-            type="button"
-            className="w-full text-xs font-semibold text-primary hover:text-primary/90 text-center"
-            disabled={loading}
-            onClick={handleForgotPassword}
-          >
-            Şifrəmi unutmuşam
-          </button>
-          <button
-            type="button"
-            className="w-full text-xs text-gray-500 hover:text-white text-center"
-            onClick={() => {
-              setPhase('verify')
-            }}
-          >
-            Email təsdiq kodunu daxil et
-          </button>
-        </form>
+      {isInstructor ? null : (
+        <>
+          <div className="flex items-center gap-3 text-xs text-gray-500">
+            <span className="flex-1 h-px bg-white/10" />
+            <span>və ya email ilə</span>
+            <span className="flex-1 h-px bg-white/10" />
+          </div>
+
+          <div className="flex rounded-xl border border-white/10 overflow-hidden text-sm font-semibold">
+            <button
+              type="button"
+              className={`flex-1 py-2.5 ${tab === 'signup' ? 'bg-primary text-[#041018]' : 'text-gray-400 hover:bg-white/5'}`}
+              onClick={() => setTab('signup')}
+            >
+              Qeydiyyat
+            </button>
+            <button
+              type="button"
+              className={`flex-1 py-2.5 ${tab === 'login' ? 'bg-primary text-[#041018]' : 'text-gray-400 hover:bg-white/5'}`}
+              onClick={() => setTab('login')}
+            >
+              Giriş
+            </button>
+          </div>
+
+          {tab === 'signup' ? (
+            <form onSubmit={handleSignup} className="space-y-3">
+              <input
+                className={inputClass}
+                placeholder="Ad Soyad"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                required
+              />
+              <input
+                type="email"
+                className={inputClass}
+                placeholder="E-poçt ünvanınız"
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+              <input
+                type="password"
+                className={inputClass}
+                placeholder="Şifrə (min. 8 simvol)"
+                autoComplete="new-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                minLength={8}
+                required
+              />
+              <Button type="submit" loading={loading} className="w-full justify-center">
+                Qeydiyyatdan keç
+              </Button>
+            </form>
+          ) : (
+            <form onSubmit={handleLogin} className="space-y-3">
+              <input
+                type="email"
+                className={inputClass}
+                placeholder="E-poçt ünvanınız"
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+              <input
+                type="password"
+                className={inputClass}
+                placeholder="Şifrə"
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+              <Button type="submit" loading={loading} className="w-full justify-center">
+                Daxil ol
+              </Button>
+              <button
+                type="button"
+                className="w-full text-xs font-semibold text-primary hover:text-primary/90 text-center"
+                disabled={loading}
+                onClick={handleForgotPassword}
+              >
+                Şifrəmi unutmuşam
+              </button>
+              <button
+                type="button"
+                className="w-full text-xs text-gray-500 hover:text-white text-center"
+                onClick={() => {
+                  setPhase('verify')
+                }}
+              >
+                Email təsdiq kodunu daxil et
+              </button>
+            </form>
+          )}
+        </>
       )}
     </div>
   )

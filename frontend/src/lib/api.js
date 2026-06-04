@@ -106,6 +106,17 @@ api.interceptors.response.use(
         /* ignore */
       }
     }
+    if (status === 403 && code === 'PHONE_VERIFICATION_REQUIRED') {
+      try {
+        window.dispatchEvent(
+          new CustomEvent('mx:phone-verification-required', {
+            detail: { code, message: msg },
+          }),
+        )
+      } catch {
+        /* ignore */
+      }
+    }
     const wrapped =
       data && typeof data === 'object'
         ? { ...data, message: msg, status }
