@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import api from '../lib/api'
+import { trackLogout } from '../lib/analytics'
 
 const useAuthStore = create((set) => ({
   user: JSON.parse(localStorage.getItem('mx_user') || 'null'),
@@ -73,6 +74,7 @@ const useAuthStore = create((set) => ({
   },
 
   logout: () => {
+    trackLogout()
     localStorage.removeItem('mx_token')
     localStorage.removeItem('mx_user')
     set({ user: null, token: null })

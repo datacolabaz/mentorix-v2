@@ -4,11 +4,13 @@ const { getPublicLoginMarketing } = require('../controllers/siteMarketingControl
 const { getInstructorsInMapView } = require('../controllers/publicInstructorMapController');
 const { getActivePlansList } = require('../services/subscriptionPlansService');
 const { getPublicJoin } = require('../controllers/joinInvitationController');
+const { postAccessEvent } = require('../controllers/accessAnalyticsController');
 
 const router = express.Router();
 
 router.get('/join/:code', getPublicJoin);
 
+router.post('/analytics/event', postAccessEvent);
 router.get('/landing-stats', getLandingStats);
 router.get('/marketing/login', getPublicLoginMarketing);
 router.get('/instructors-map', getInstructorsInMapView);

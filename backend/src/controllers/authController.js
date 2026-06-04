@@ -16,6 +16,19 @@ const { getActiveRoles, grantUserRole, grantCourseRoleToUser } = require('../ser
 const { grantBasicTrialForInstructor } = require('../services/basicTrialIpService');
 const { clientIp } = require('../utils/clientIp');
 const { sendPasswordResetEmail } = require('../services/passwordResetEmailService');
+const { scheduleAccessEvent } = require('../services/accessEventService');
+
+function logAuthLogin(req, user, role) {
+  if (!user?.id) return;
+  scheduleAccessEvent(req, {
+    event_type: 'login',
+    user_id: user.id,
+    role: role || user.role,
+    path: req.originalUrl || req.path,
+    device_type: req.body?.device_type,
+    session_key: req.body?.session_key,
+  });
+}
 
 const PHONE_NORM = "regexp_replace(COALESCE(phone::text, ''), '[^0-9]', '', 'g')";
 const LOGIN_ROLES = new Set(['instructor', 'student', 'parent', 'course']);
@@ -514,6 +527,7 @@ const login = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Yalnız admin bu girişlə daxil ola bilər' });
     if (!guardEmailVerifiedBeforeToken(res, user)) return;
     const token = sign({ id: user.id, role: user.role });
+    logAuthLogin(req, user, user.role);
     res.json({
       success: true,
       token,
@@ -615,6 +629,7 @@ const verifyOtp = async (req, res) => {
     const token = signOTP({ id: user.id, role: user.role });
     const baseUser = { id: user.id, full_name: user.full_name, role: user.role, phone: user.phone };
     const userOut = await enrichUserForClient(baseUser);
+    logAuthLogin(req, user, user.role);
     res.json({
       success: true,
       token,
@@ -1013,6 +1028,7 @@ const selectOnboardingRole = async (req, res) => {
     const role = String(effectiveRole || fresh?.role || picked).trim().toLowerCase();
     const token = sign({ id: me.id, role });
     const userOut = await enrichUserForClient(fresh || me, role);
+    logAuthLogin(req, fresh || me, role);
     return res.json({ success: true, token, user: userOut });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -1165,6 +1181,7 @@ const loginWithEmail = async (req, res) => {
     const token = sign({ id: user.id, role });
     const baseUser = { id: user.id, full_name: user.full_name, role, email: user.email, phone: user.phone };
     const userOut = await enrichUserForClient(baseUser, role);
+    logAuthLogin(req, user, role);
     return res.json({ success: true, token, user: userOut });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -1445,6 +1462,7 @@ const verifyMyPhoneVerifyOtp = async (req, res) => {
     const sessionUser = out.user;
     const token = sign({ id: sessionUser.id, role: sessionUser.role });
     const userOut = await enrichUserForClient(sessionUser, sessionUser.role);
+    logAuthLogin(req, sessionUser, sessionUser.role);
     res.json({
       success: true,
       token,
@@ -1506,6 +1524,7 @@ const loginWithPin = async (req, res) => {
     const token = signOTP({ id: user.id, role });
     const baseUser = { id: user.id, full_name: user.full_name, role, phone: user.phone };
     const userOut = await enrichUserForClient(baseUser, role);
+    logAuthLogin(req, user, role);
     res.json({
       success: true,
       token,
@@ -1636,6 +1655,7 @@ const googleLogin = async (req, res) => {
     if (!guardEmailVerifiedBeforeToken(res, user)) return;
 
     const token = sign({ id: user.id, role: user.role });
+    logAuthLogin(req, user, user.role);
     return res.json({
       success: true,
       token,
@@ -1817,6 +1837,7 @@ const googleLinkVerify = async (req, res) => {
     const u = fresh[0];
     if (!u || !guardEmailVerifiedBeforeToken(res, u)) return;
     const token = sign({ id: u.id, role: u.role });
+    logAuthLogin(req, u, u.role);
     return res.json({
       success: true,
       token,
@@ -1937,6 +1958,7 @@ const googleComplete = async (req, res) => {
     if (!guardEmailVerifiedBeforeToken(res, user)) return;
 
     const token = sign({ id: user.id, role: user.role });
+    logAuthLogin(req, user, user.role);
     return res.json({
       success: true,
       token,
