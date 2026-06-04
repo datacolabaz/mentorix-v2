@@ -44,7 +44,7 @@ export default function InstructorEmailAuth({ onSuccess }) {
   const handleGoogleCredential = async (credential) => {
     setLoading(true)
     try {
-      let r = await api.post('/auth/google/login', { credential })
+      let r = await api.post('/auth/google/login', { credential, role })
       if (r?.needs_role || r?.needs_phone_link) {
         r = await api.post('/auth/google/complete', { credential, role })
       }
@@ -64,6 +64,8 @@ export default function InstructorEmailAuth({ onSuccess }) {
       setSession(r.token, u)
       if (u.needs_phone_verification) {
         toast('Müəllim hesabı üçün mobil təsdiq addımına yönləndirilirsiniz', 'success')
+      } else if (u.role === 'student') {
+        toast('Tələbə kimi daxil oldunuz', 'success')
       } else {
         toast('Daxil oldunuz', 'success')
       }

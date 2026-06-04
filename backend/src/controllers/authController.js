@@ -33,6 +33,25 @@ function logAuthLogin(req, user, role) {
 const PHONE_NORM = "regexp_replace(COALESCE(phone::text, ''), '[^0-9]', '', 'g')";
 const LOGIN_ROLES = new Set(['instructor', 'student', 'parent', 'course']);
 
+const ROLE_LABEL_AZ = {
+  student: 'tələbə',
+  instructor: 'müəllim',
+  course: 'kurs',
+  parent: 'valideyn',
+};
+
+function googleRoleMismatchResponse(existingRole, requestedRole) {
+  const have = ROLE_LABEL_AZ[existingRole] || existingRole;
+  const want = ROLE_LABEL_AZ[requestedRole] || requestedRole;
+  return {
+    success: false,
+    code: 'GOOGLE_ROLE_MISMATCH',
+    message: `Bu Google hesabı artıq «${have}» kimi qeydiyyatdadır. Siz «${want}» seçmisiniz — başqa Gmail istifadə edin və ya düzgün rol ilə daxil olun.`,
+    existing_role: existingRole,
+    requested_role: requestedRole,
+  };
+}
+
 const SIGNUP_ROLES = new Set(['instructor', 'course']);
 const ONBOARDING_ROLES = new Set(['instructor', 'student', 'course']);
 
@@ -1647,7 +1666,8 @@ async function verifyGoogleIdTokenOrThrow(credential) {
 
 const googleLogin = async (req, res) => {
   try {
-    const { credential } = req.body;
+    const { credential, role: roleHint } = req.body;
+    const expectedRole = String(roleHint || '').trim().toLowerCase();
     const g = await verifyGoogleIdTokenOrThrow(credential);
 
     const bySub = await db.query(
@@ -1718,6 +1738,10 @@ const googleLogin = async (req, res) => {
           google_sub: g.sub,
         },
       });
+    }
+
+    if (expectedRole && LOGIN_ROLES.has(expectedRole) && user.role !== expectedRole) {
+      return res.status(409).json(googleRoleMismatchResponse(user.role, expectedRole));
     }
 
     if (!guardEmailVerifiedBeforeToken(res, user)) return;
@@ -1969,10 +1993,7 @@ const googleComplete = async (req, res) => {
           return res.status(409).json({ success: false, message: 'Google email təsdiqlənməyib' });
         }
         if (user.role && user.role !== r) {
-          return res.status(409).json({
-            success: false,
-            message: 'Bu Google email artıq başqa rol üçün mövcuddur',
-          });
+          return res.status(409).json(googleRoleMismatchResponse(user.role, r));
         }
         if (user.google_sub && String(user.google_sub) !== String(g.sub)) {
           return res.status(409).json({ success: false, message: 'Bu email artıq başqa Google hesabına bağlıdır' });
