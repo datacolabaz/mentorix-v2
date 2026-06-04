@@ -415,28 +415,30 @@ export default function InstructorMapSearch() {
 
   return (
     <div className="min-h-[100svh] bg-[#0b0b0b] text-white flex flex-col">
-      <header className="border-b border-white/10 bg-[#0f0f0f]/95 backdrop-blur-sm z-[500]">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0">
-            <Brand className="h-8 w-auto shrink-0" />
-            <div className="min-w-0">
-              <h1 className="font-display font-bold text-lg sm:text-xl truncate">Müəllim tap — Mentorix</h1>
-              <p className="text-xs text-gray-500 hidden sm:block">
+      <header className="border-b border-white/10 bg-[#0f0f0f]/95 backdrop-blur-sm z-[500] shrink-0">
+        <div className="max-w-7xl mx-auto px-4 py-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-2 min-w-0 w-full sm:flex-row sm:items-center sm:gap-3 sm:flex-1">
+            <Brand className="h-7 w-auto shrink-0 self-start sm:h-8" />
+            <div className="min-w-0 w-full">
+              <h1 className="font-display font-bold text-base leading-snug sm:text-lg md:text-xl text-white break-words">
+                Müəllim tap — Mentorix
+              </h1>
+              <p className="text-[11px] sm:text-xs text-gray-500 mt-1 leading-snug">
                 Fənn, format və məkan üzrə axtarış · premium müəllimlər üst sıradadır
               </p>
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-row flex-wrap items-center gap-2 w-full sm:w-auto sm:shrink-0 sm:justify-end">
             <Link
               to="/login"
-              className="text-sm font-medium text-primary hover:brightness-110 px-2 py-1 rounded-lg border border-primary/30"
+              className="flex-1 sm:flex-initial text-center text-sm font-medium text-primary hover:brightness-110 px-3 py-2 rounded-lg border border-primary/30 min-h-[40px] inline-flex items-center justify-center"
             >
               Girişə qayıt
             </Link>
             <button
               type="button"
               onClick={() => setListOnly((v) => !v)}
-              className="text-xs sm:text-sm font-semibold rounded-xl border border-white/15 bg-white/5 px-3 py-2 hover:bg-white/10"
+              className="flex-1 sm:flex-initial text-xs sm:text-sm font-semibold rounded-xl border border-white/15 bg-white/5 px-3 py-2 min-h-[40px] hover:bg-white/10 whitespace-nowrap"
             >
               {listOnly ? 'Xəritə + siyahı' : 'Yalnız siyahı'}
             </button>
