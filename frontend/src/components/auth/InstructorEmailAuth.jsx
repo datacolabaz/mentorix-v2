@@ -5,6 +5,8 @@ import useAuthStore from '../../hooks/useAuth'
 import { useToast } from '../common/Toast'
 import api from '../../lib/api'
 import { getAttributionPayload } from '../../lib/analytics'
+import PhoneInput from './PhoneInput'
+import { canonicalAzPhoneE164 } from '../../lib/azPhone'
 
 const inputClass =
   'w-full bg-surface-1 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-primary/40'
@@ -26,18 +28,30 @@ export default function InstructorEmailAuth({ onSuccess }) {
   const [password, setPassword] = useState('')
   const [verifyCode, setVerifyCode] = useState('')
   const [role, setRole] = useState('instructor') // student | instructor | course
+  const [phone, setPhone] = useState('')
 
   const handleSignup = async (e) => {
     e.preventDefault()
+    if (role === 'instructor') {
+      const phoneCanon = canonicalAzPhoneE164(phone)
+      if (!phoneCanon) {
+        toast('Müəllim üçün mobil nömrə tələb olunur (+994 …)', 'error')
+        return
+      }
+    }
     setLoading(true)
     try {
-      await signupWithEmail({
+      const body = {
         full_name: fullName,
         email,
         password,
         role,
         ...getAttributionPayload(),
-      })
+      }
+      if (role === 'instructor') {
+        body.phone = canonicalAzPhoneE164(phone)
+      }
+      await signupWithEmail(body)
       setPhase('verify')
       toast('Təsdiq kodu və link emailinizə göndərildi', 'success')
     } catch (err) {
@@ -244,6 +258,18 @@ export default function InstructorEmailAuth({ onSuccess }) {
             minLength={8}
             required
           />
+          {role === 'instructor' ? (
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                Mobil nömrə *
+              </label>
+              <PhoneInput value={phone} onChange={setPhone} persistLoginDefaults={false} required />
+              <p className="text-[10px] text-gray-500 leading-relaxed">
+                Hər müəllim hesabı yalnız bir unikal nömrə ilə bağlana bilər — eyni nömrə ilə ikinci Gmail
+                hesabı açıla bilməz.
+              </p>
+            </div>
+          ) : null}
           <Button type="submit" loading={loading} className="w-full justify-center">
             Qeydiyyatdan keç
           </Button>

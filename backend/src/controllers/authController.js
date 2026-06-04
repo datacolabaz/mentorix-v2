@@ -1058,6 +1058,12 @@ const signup = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Şifrə ən azı 8 simvol olmalıdır' });
     }
 
+    let instructorPhoneCanon = null;
+    if (initialRole === 'instructor') {
+      const { assertInstructorPhoneAvailable } = require('../utils/instructorPhone');
+      instructorPhoneCanon = await assertInstructorPhoneAvailable(db, req.body?.phone);
+    }
+
     const hash = await bcrypt.hash(pass, 12);
 
     const { rows: existing } = await db.query(
@@ -1069,11 +1075,13 @@ const signup = async (req, res) => {
     }
 
     const user = await db.transaction(async (client) => {
+      const phoneVal = initialRole === 'instructor' ? instructorPhoneCanon : null;
+      const phoneVerified = initialRole === 'instructor' && phoneVal;
       const { rows } = await client.query(
-        `INSERT INTO users (full_name, email, phone, password_hash, role, is_verified, account_status, role_selected)
-         VALUES ($1, $2, NULL, $3, $4, FALSE, 'active', $5)
-         RETURNING id, full_name, email, role, phone, role_selected`,
-        [name, emailCanon, hash, initialRole, roleSelected],
+        `INSERT INTO users (full_name, email, phone, password_hash, role, is_verified, account_status, role_selected, phone_verified)
+         VALUES ($1, $2, $3, $4, $5, FALSE, 'active', $6, $7)
+         RETURNING id, full_name, email, role, phone, phone_verified, role_selected`,
+        [name, emailCanon, phoneVal, hash, initialRole, roleSelected, phoneVerified],
       );
       const created = rows[0];
 
@@ -1143,7 +1151,8 @@ const signup = async (req, res) => {
     if (err.code === '23505') {
       return res.status(409).json({ success: false, message: 'Bu email artıq qeydiyyatdadır' });
     }
-    res.status(500).json({ success: false, message: err.message });
+    const st = err.statusCode || 500;
+    res.status(st).json({ success: false, message: err.message, code: err.code });
   }
 };
 
