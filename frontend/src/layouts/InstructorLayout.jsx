@@ -19,6 +19,7 @@ import { isSmsMonthlyLimitReached, isStorageLimitReached } from '../lib/subscrip
 import { useQueryClient } from '@tanstack/react-query'
 import { BILLING_STATUS_QUERY_KEY } from '../hooks/useBillingStatus'
 import { useToast } from '../components/common/Toast'
+import InstructorPhoneGate from '../components/instructor/InstructorPhoneGate'
 
 const NAV_SECTIONS = [
   {
@@ -231,6 +232,7 @@ export default function InstructorLayout() {
 
   return (
     <>
+      <InstructorPhoneGate />
       <div
         className={`theme-${theme} flex flex-col min-h-screen lg:h-screen bg-token-surfaceMain text-token-textMain overflow-x-hidden lg:overflow-hidden`}
       >

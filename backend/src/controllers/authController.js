@@ -196,7 +196,11 @@ async function enrichUserForClient(userLite, sessionRole = null) {
         : [];
   const role = sessionRole || userLite.role;
   let out = { ...userLite, role, roles: legacyRoles };
-  if (role === 'instructor') out = await attachInstructorPublicLabel(out);
+  if (role === 'instructor') {
+    out = await attachInstructorPublicLabel(out);
+    const { instructorNeedsPhoneBinding } = require('../utils/instructorPhone');
+    out.needs_instructor_phone = instructorNeedsPhoneBinding(out);
+  }
   if (role === 'course') out = await attachCourseProfile(out);
   return out;
 }
@@ -1668,10 +1672,14 @@ const googleLogin = async (req, res) => {
 
     const token = sign({ id: user.id, role: user.role });
     logAuthLogin(req, user, user.role);
+    const payload = buildAuthUserPayload(user);
+    const { instructorNeedsPhoneBinding } = require('../utils/instructorPhone');
+    const needs_instructor_phone = instructorNeedsPhoneBinding(user);
     return res.json({
       success: true,
       token,
-      user: buildAuthUserPayload(user),
+      user: { ...payload, needs_instructor_phone },
+      needs_instructor_phone,
     });
   } catch (err) {
     const st = err.statusCode || 500;
@@ -1971,10 +1979,14 @@ const googleComplete = async (req, res) => {
 
     const token = sign({ id: user.id, role: user.role });
     logAuthLogin(req, user, user.role);
+    const payload = buildAuthUserPayload(user);
+    const { instructorNeedsPhoneBinding } = require('../utils/instructorPhone');
+    const needs_instructor_phone = instructorNeedsPhoneBinding(user);
     return res.json({
       success: true,
       token,
-      user: buildAuthUserPayload(user),
+      user: { ...payload, needs_instructor_phone },
+      needs_instructor_phone,
     });
   } catch (err) {
     const st = err.statusCode || 500;

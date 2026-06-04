@@ -14,6 +14,10 @@ const {
   resetPassword,
 } = require('../controllers/authController');
 const { patchMyProfile } = require('../controllers/authProfileController');
+const {
+  bindInstructorPhone,
+  instructorPhoneStatus,
+} = require('../controllers/instructorPhoneController');
 const { authenticate, authorize } = require('../middleware/auth');
 const { attachEntitlements, enforceStudentsLimit } = require('../middleware/entitlements');
 
@@ -39,5 +43,7 @@ router.post('/verify-email', verifyEmail);
 router.post('/onboarding/role', authenticate, selectOnboardingRole);
 router.get('/me', authenticate, me);
 router.patch('/profile', authenticate, patchMyProfile);
+router.get('/instructor/phone-status', authenticate, instructorPhoneStatus);
+router.post('/instructor/bind-phone', authenticate, bindInstructorPhone);
 
 module.exports = router;

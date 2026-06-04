@@ -29,10 +29,12 @@ function enforceStudentsLimit(req, _res, next) {
     const used = e.usage?.students ?? 0;
     if (lim != null && used >= lim) {
       void logBillingEvent(db, { user_id: req.user?.id || null, event: 'limit_reached_students', context: { used, limit: lim } });
+      const { notifyInstructorLimitBlocked } = require('../services/instructorStudentService');
+      void notifyInstructorLimitBlocked(req.user.id, lim);
       throw httpError(
         'STUDENT_LIMIT',
         429,
-        'Tələbə limitinə çatdınız — davam etmək üçün daha geniş paket seçin.',
+        `Tələbə limitiniz (${used}/${lim}) dolub! Yeni tələbələrin linklərinizə daxil ola bilməsi üçün paketinizi PRO və ya daha yüksək paketə keçirin.`,
       );
     }
     next();

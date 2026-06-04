@@ -243,6 +243,15 @@ async function createJoinRequest({
     accepted_at: new Date().toISOString(),
   };
 
+  const {
+    ensureInstructorCanAddStudent,
+    trackInstructorStudentLink,
+    STUDENT_LIMIT_MESSAGE,
+  } = require('./instructorStudentService');
+  await ensureInstructorCanAddStudent(g.instructor_id, studentId, {
+    studentMessage: STUDENT_LIMIT_MESSAGE,
+  });
+
   const result = await db.transaction(async (client) => {
     await client.query(`UPDATE users SET full_name = $1 WHERE id = $2`, [fullName, studentId]);
     await upsertStudentContactPhone(client, studentId, phoneCanon);
@@ -295,6 +304,13 @@ async function createJoinRequest({
         referralSourceId,
         referralNotes || null,
       ],
+    );
+
+    await trackInstructorStudentLink(
+      g.instructor_id,
+      studentId,
+      { verifiedPhone: phoneCanon, skipLimitCheck: true },
+      client,
     );
 
     return {

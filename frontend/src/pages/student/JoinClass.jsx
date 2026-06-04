@@ -153,7 +153,11 @@ export default function JoinClass() {
       setSubmitted(true)
       await refreshEnrollments()
     } catch (err) {
-      toast(err?.message || 'Xəta', 'error')
+      const msg =
+        err?.code === 'INSTRUCTOR_STUDENT_LIMIT'
+          ? err?.message || 'Bu müəllimin pulsuz tələbə limiti dolub.'
+          : err?.message || 'Xəta'
+      toast(msg, 'error')
     } finally {
       setBusy(false)
     }

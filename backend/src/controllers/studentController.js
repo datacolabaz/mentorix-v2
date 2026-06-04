@@ -850,6 +850,9 @@ const attachStudentByEmail = async (req, res) => {
       subjectId = subjectId || grows[0].subject_id || null;
     }
 
+    const { ensureInstructorCanAddStudent, trackInstructorStudentLink } = require('../services/instructorStudentService');
+    await ensureInstructorCanAddStudent(instructorId, student.id);
+
     const { rows: enr } = await db.query(
       `INSERT INTO enrollments (instructor_id, student_id, status, enrolled_at, group_id, subject_id)
        VALUES ($1::uuid, $2::uuid, 'pending_setup', NOW(), $3::uuid, $4::uuid)
@@ -857,6 +860,7 @@ const attachStudentByEmail = async (req, res) => {
       [instructorId, student.id, groupId, subjectId],
     );
     const enrollmentId = enr[0]?.id;
+    await trackInstructorStudentLink(instructorId, student.id, { skipLimitCheck: true });
     if (groupId && enrollmentId) {
       await applyGroupScheduleToEnrollment(enrollmentId, groupId).catch(() => {});
     }
@@ -925,6 +929,13 @@ const createStudent = async (req, res) => {
       );
       return { ...created, phone_number: phoneCanon, phone: phoneCanon };
     });
+
+    if (req.user?.role === 'instructor' && req.user?.id) {
+      const { trackInstructorStudentLink } = require('../services/instructorStudentService');
+      await trackInstructorStudentLink(req.user.id, user.id, {
+        verifiedPhone: user.phone,
+      }).catch(() => {});
+    }
 
     return res.status(201).json({
       success: true,

@@ -168,6 +168,15 @@ async function createExamAccessRequest(studentId, examId) {
   const u = urows[0] || {};
   const studentName = String(u.full_name || u.email || 'Tələbə').trim();
 
+  const {
+    ensureInstructorCanAddStudent,
+    trackInstructorStudentLink,
+    STUDENT_LIMIT_MESSAGE,
+  } = require('./instructorStudentService');
+  await ensureInstructorCanAddStudent(exam.instructor_id, studentId, {
+    studentMessage: STUDENT_LIMIT_MESSAGE,
+  });
+
   const { rows } = await db.query(
     `INSERT INTO exam_access_requests (
        exam_id, student_id, instructor_id, status, student_email, student_name
@@ -175,6 +184,8 @@ async function createExamAccessRequest(studentId, examId) {
      RETURNING id, status, created_at`,
     [examId, studentId, exam.instructor_id, u.email || null, studentName],
   );
+
+  await trackInstructorStudentLink(exam.instructor_id, studentId, { skipLimitCheck: true });
 
   await notifyInstructorExamAccessRequest(
     exam.instructor_id,
@@ -279,8 +290,10 @@ async function approveExamAccessRequest(requestId, instructorId, options = {}) {
   await assertStudentProfileComplete(req.student_id);
 
   let enrollmentId = null;
+  const { trackInstructorStudentLink } = require('./instructorStudentService');
   await db.transaction(async (client) => {
     enrollmentId = await ensureInstructorStudentEnrollment(client, instructorId, req.student_id);
+    await trackInstructorStudentLink(instructorId, req.student_id, { skipLimitCheck: true }, client);
     await client.query(
       `INSERT INTO exam_assignments (exam_id, student_id) VALUES ($1, $2)
        ON CONFLICT DO NOTHING`,

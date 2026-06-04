@@ -391,6 +391,9 @@ async function resolveEntitlements(userId) {
 
   const phone_verified = Boolean(basics.phone_verified);
 
+  const { syncUsageStudentsCount } = require('./instructorStudentService');
+  await syncUsageStudentsCount(userId);
+
   let usage = await ensureSmsPeriodUpToDate(db, userId);
   usage = await reconcileSmsUsageMonthly(db, userId);
   await ensureSubscriptionRow(db, userId);

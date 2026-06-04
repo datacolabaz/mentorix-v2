@@ -124,7 +124,11 @@ export default function ExamInvite() {
         setFieldErrors(collectMissing())
         return
       }
-      toast(err?.message || 'Sorğu göndərilmədi', 'error')
+      const msg =
+        err?.code === 'INSTRUCTOR_STUDENT_LIMIT'
+          ? err?.message || 'Bu müəllimin pulsuz tələbə limiti dolub.'
+          : err?.message || 'Sorğu göndərilmədi'
+      toast(msg, 'error')
     } finally {
       setRequestBusy(false)
     }
