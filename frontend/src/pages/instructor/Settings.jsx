@@ -91,7 +91,33 @@ export default function InstructorSettings() {
   const geocodeTimerRef = useRef(null)
   const [primarySubjectName, setPrimarySubjectName] = useState('')
   const [avatarUrl, setAvatarUrl] = useState(null)
+  const [accountName, setAccountName] = useState('')
+  const [savingAccountName, setSavingAccountName] = useState(false)
   const [billingInterval, setBillingInterval] = useState('yearly')
+
+  useEffect(() => {
+    setAccountName(user?.full_name || '')
+  }, [user?.full_name])
+
+  const saveAccountName = async () => {
+    const name = accountName.trim()
+    if (name.length < 2) {
+      toast('Ad və soyad ən azı 2 simvol olmalıdır', 'error')
+      return
+    }
+    setSavingAccountName(true)
+    try {
+      const res = await api.patch('/auth/profile', { full_name: name })
+      if (res?.user) {
+        updateUser(res.user)
+        toast('Ad yeniləndi', 'success')
+      }
+    } catch (e) {
+      toast(e?.message || 'Saxlanılmadı', 'error')
+    } finally {
+      setSavingAccountName(false)
+    }
+  }
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -878,6 +904,32 @@ export default function InstructorSettings() {
       </Card>
 
       <Card className={settingsCardCls}>
+        <h2 className={cardTitleCls}>Ad və soyad</h2>
+        <p className={cardTextCls}>
+          Xəritə axtarışında, profil səhifəsində və tələbələrə görünən adınız. Səhv yazmısınızsa buradan düzəldə bilərsiniz.
+        </p>
+        <div className="flex flex-col sm:flex-row gap-3 max-w-lg">
+          <input
+            type="text"
+            className={inp}
+            value={accountName}
+            onChange={(e) => setAccountName(e.target.value)}
+            placeholder="Ad Soyad"
+            maxLength={120}
+          />
+          <Button
+            type="button"
+            loading={savingAccountName}
+            disabled={!accountName.trim() || accountName.trim() === (user?.full_name || '').trim()}
+            onClick={() => void saveAccountName()}
+            className="justify-center shrink-0"
+          >
+            Adı saxla
+          </Button>
+        </div>
+      </Card>
+
+      <Card className={settingsCardCls}>
         <h2 className={cardTitleCls}>Profil şəkli</h2>
         <p className={cardTextCls}>
           Tələbə və valideynlər sizi axtarışda və profil səhifənizdə bu şəkil ilə görəcək. Yalnız müəllimlər üçün.
@@ -1084,11 +1136,6 @@ export default function InstructorSettings() {
       />
 
       <InstructorDiscoverSettings mapVisible={mapVisible} theme={theme} inp={inp} />
-
-      <p className={['text-xs', theme === 'dark' ? 'text-gray-600' : 'text-token-textMuted'].join(' ')}>
-        Hesab:{' '}
-        <span className={theme === 'dark' ? 'text-gray-400' : 'text-token-textMain'}>{user?.full_name}</span>
-      </p>
 
       <Modal
         open={Boolean(limitChoice?.open)}

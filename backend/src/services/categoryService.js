@@ -52,7 +52,7 @@ async function getCategoryBySlug(slug) {
   if (!s) return null;
   await ensureCategoriesSeeded();
   const { rows } = await db.query(
-    `SELECT id, parent_id, slug, name_az, icon, is_popular, is_virtual_category, target_category_id
+    `SELECT id, parent_id, slug, name_az, search_aliases, icon, is_popular, is_virtual_category, target_category_id
      FROM categories WHERE slug = $1 LIMIT 1`,
     [s],
   );
@@ -61,7 +61,7 @@ async function getCategoryBySlug(slug) {
 
 async function getCategoryById(id) {
   const { rows } = await db.query(
-    `SELECT id, parent_id, slug, name_az, icon, is_popular, is_virtual_category, target_category_id
+    `SELECT id, parent_id, slug, name_az, search_aliases, icon, is_popular, is_virtual_category, target_category_id
      FROM categories WHERE id = $1 LIMIT 1`,
     [id],
   );
@@ -93,15 +93,69 @@ async function searchCategories(query, limit = 20) {
   if (!q || q.length < 2) return [];
   await ensureCategoriesSeeded();
   const { rows } = await db.query(
-    `SELECT id, parent_id, slug, name_az, is_popular, is_virtual_category, target_category_id
+    `SELECT id, parent_id, slug, name_az, search_aliases, is_popular, is_virtual_category, target_category_id
      FROM categories
      WHERE is_virtual_category = FALSE
-       AND (name_az ILIKE $1 OR slug ILIKE $1 OR id ILIKE $1)
+       AND (
+         name_az ILIKE $1
+         OR slug ILIKE $1
+         OR id ILIKE $1
+         OR COALESCE(search_aliases, '') ILIKE $1
+       )
      ORDER BY is_popular DESC, name_az ASC
      LIMIT $2`,
     [`%${q}%`, Math.min(50, Math.max(1, limit))],
   );
   return rows;
+}
+
+async function listAllCategoriesFlat() {
+  await ensureCategoriesSeeded();
+  const { rows } = await db.query(
+    `SELECT c.id, c.parent_id, c.slug, c.name_az, c.search_aliases, c.is_popular, c.is_virtual_category,
+            c.sort_order, p.name_az AS parent_name_az
+     FROM categories c
+     LEFT JOIN categories p ON p.id = c.parent_id
+     ORDER BY c.is_virtual_category ASC, c.sort_order ASC, c.name_az ASC`,
+  );
+  return rows;
+}
+
+async function updateCategoryAdmin(id, { name_az, search_aliases, is_popular }) {
+  const cat = await getCategoryById(id);
+  if (!cat) {
+    const err = new Error('Kateqoriya tapılmadı');
+    err.statusCode = 404;
+    throw err;
+  }
+  const sets = [];
+  const vals = [];
+  let i = 1;
+  if (name_az !== undefined) {
+    const name = String(name_az || '').trim();
+    if (!name || name.length > 255) {
+      const err = new Error('Ad tələb olunur (max 255 simvol)');
+      err.statusCode = 400;
+      throw err;
+    }
+    sets.push(`name_az = $${i++}`);
+    vals.push(name);
+  }
+  if (search_aliases !== undefined) {
+    const aliases = String(search_aliases || '')
+      .trim()
+      .slice(0, 2000);
+    sets.push(`search_aliases = $${i++}`);
+    vals.push(aliases || null);
+  }
+  if (is_popular !== undefined) {
+    sets.push(`is_popular = $${i++}`);
+    vals.push(Boolean(is_popular));
+  }
+  if (!sets.length) return getCategoryById(id);
+  vals.push(id);
+  await db.query(`UPDATE categories SET ${sets.join(', ')} WHERE id = $${i}`, vals);
+  return getCategoryById(id);
 }
 
 async function listPopularLeaves(limit = 12) {
@@ -129,5 +183,7 @@ module.exports = {
   getCategoryById,
   getCategorySubtreeIds,
   searchCategories,
+  listAllCategoriesFlat,
+  updateCategoryAdmin,
   listPopularLeaves,
 };

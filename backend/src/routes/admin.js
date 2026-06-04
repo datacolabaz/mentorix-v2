@@ -27,6 +27,7 @@ const {
   syncOperatorInventoryFromLive,
 } = require('../services/adminBillingInventoryService');
 const { getAdminTraffic, getAdminAnalytics } = require('../controllers/accessAnalyticsController');
+const { listCategories, patchCategory } = require('../controllers/adminCategoryController');
 
 router.get('/stats', authenticate, authorize('admin'), getDashboardStats);
 router.get('/analytics/traffic', authenticate, authorize('admin'), getAdminTraffic);
@@ -38,6 +39,8 @@ router.delete('/students/:id', authenticate, authorize('admin'), deleteStudent);
 router.get('/classes', authenticate, authorize('admin'), getClasses);
 router.get('/marketing/login', authenticate, authorize('admin'), getAdminLoginMarketing);
 router.put('/marketing/login', authenticate, authorize('admin'), putAdminLoginMarketing);
+router.get('/categories', authenticate, authorize('admin'), listCategories);
+router.patch('/categories/:id', authenticate, authorize('admin'), patchCategory);
 router.get('/instructors', authenticate, authorize('admin'), getInstructors);
 router.patch('/instructors/:id/limits', authenticate, authorize('admin'), updateInstructorLimits);
 router.patch('/instructors/:id/plan', authenticate, authorize('admin'), updateInstructorPlan);

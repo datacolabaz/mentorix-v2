@@ -13,6 +13,7 @@ const {
   requestPasswordReset,
   resetPassword,
 } = require('../controllers/authController');
+const { patchMyProfile } = require('../controllers/authProfileController');
 const { authenticate, authorize } = require('../middleware/auth');
 const { attachEntitlements, enforceStudentsLimit } = require('../middleware/entitlements');
 
@@ -37,5 +38,6 @@ router.post('/resend-verification', resendVerificationEmail);
 router.post('/verify-email', verifyEmail);
 router.post('/onboarding/role', authenticate, selectOnboardingRole);
 router.get('/me', authenticate, me);
+router.patch('/profile', authenticate, patchMyProfile);
 
 module.exports = router;
