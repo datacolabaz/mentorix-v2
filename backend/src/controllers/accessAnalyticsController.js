@@ -1,5 +1,6 @@
 const { verify } = require('../utils/jwt');
 const { recordAccessEvent, getAdminTrafficStats, ALLOWED_EVENTS } = require('../services/accessEventService');
+const { getAdminAnalyticsDashboard } = require('../services/adminAnalyticsService');
 
 /** Token varsa user_id götürür; yoxdursa anon event (landing) */
 async function optionalUserFromToken(req) {
@@ -54,4 +55,16 @@ const getAdminTraffic = async (req, res) => {
   }
 };
 
-module.exports = { postAccessEvent, getAdminTraffic };
+const getAdminAnalytics = async (req, res) => {
+  try {
+    const data = await getAdminAnalyticsDashboard(req.query?.period);
+    res.json({ success: true, analytics: data });
+  } catch (err) {
+    if (err?.code === '42P01') {
+      return res.json({ success: true, analytics: null, needs_migration: true });
+    }
+    res.status(500).json({ success: false, message: err.message || 'Xəta' });
+  }
+};
+
+module.exports = { postAccessEvent, getAdminTraffic, getAdminAnalytics };

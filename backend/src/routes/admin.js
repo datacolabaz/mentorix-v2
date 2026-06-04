@@ -26,10 +26,11 @@ const {
   getAdminBillingInventory,
   syncOperatorInventoryFromLive,
 } = require('../services/adminBillingInventoryService');
-const { getAdminTraffic } = require('../controllers/accessAnalyticsController');
+const { getAdminTraffic, getAdminAnalytics } = require('../controllers/accessAnalyticsController');
 
 router.get('/stats', authenticate, authorize('admin'), getDashboardStats);
 router.get('/analytics/traffic', authenticate, authorize('admin'), getAdminTraffic);
+router.get('/analytics/dashboard', authenticate, authorize('admin'), getAdminAnalytics);
 router.get('/students', authenticate, authorize('admin'), getStudents);
 router.get('/students/:id', authenticate, authorize('admin'), getStudentById);
 router.patch('/students/:id/toggle', authenticate, authorize('admin'), toggleStudent);

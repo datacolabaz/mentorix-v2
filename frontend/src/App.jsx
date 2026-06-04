@@ -21,6 +21,8 @@ import AdminPayments from './pages/admin/Payments'
 import AdminNotifications from './pages/admin/Notifications'
 import AdminSettings from './pages/admin/Settings'
 import AdminMarketingLogin from './pages/admin/MarketingLogin'
+import AdminAnalytics from './pages/admin/AdminAnalytics'
+import AnalyticsPageTracker from './components/analytics/AnalyticsPageTracker'
 
 import InstructorDashboard from './pages/instructor/Dashboard'
 import InstructorStudents from './pages/instructor/Students'
@@ -97,7 +99,9 @@ export default function App() {
   }, [])
 
   return (
-    <Routes>
+    <>
+      <AnalyticsPageTracker />
+      <Routes>
       <Route path="/search" element={<InstructorMapSearch />} />
       <Route path="/login" element={user ? <Navigate to={user?.role ? `/${user.role}` : '/onboarding/role'} replace /> : <Login />} />
       <Route path="/verify-email" element={<VerifyEmail />} />
@@ -132,6 +136,7 @@ export default function App() {
         <Route path="notifications" element={<AdminNotifications />} />
         <Route path="settings" element={<AdminSettings />} />
         <Route path="marketing/login" element={<AdminMarketingLogin />} />
+        <Route path="analytics" element={<AdminAnalytics />} />
       </Route>
 
       <Route path="/courses" element={<Navigate to="/instructor/teaching-groups" replace />} />
@@ -195,5 +200,6 @@ export default function App() {
 
       <Route path="*" element={<Placeholder title="404 — Tapılmadı" />} />
     </Routes>
+    </>
   )
 }

@@ -6,7 +6,7 @@ import { useToast } from '../../components/common/Toast'
 import InstructorEmailAuth from '../../components/auth/InstructorEmailAuth'
 import Brand from '../../components/common/Brand'
 import api from '../../lib/api'
-import { trackEvent } from '../../lib/analytics'
+import { trackEvent, trackRegisterClick, trackPricingView } from '../../lib/analytics'
 import { defaultLoginMarketingPayload } from '../../constants/defaultLoginMarketing'
 import { setPageSeo } from '../../lib/pageSeo'
 
@@ -216,13 +216,15 @@ export default function Login() {
   const closeLoginModal = () => setLoginModalOpen(false)
 
   const openLoginModal = (surface) => {
-    trackEvent('mx_landing_cta_primary', { surface })
+    trackEvent('mx_landing_cta_primary', { surface, event_type: 'register_click' })
+    trackRegisterClick()
     setDemoOpen(false)
     setLoginModalOpen(true)
   }
 
   const openDemoTracked = (surface) => {
     trackEvent('mx_landing_demo_open', { surface })
+    trackPricingView()
     setDemoTab('overview')
     setDemoOpen(true)
   }

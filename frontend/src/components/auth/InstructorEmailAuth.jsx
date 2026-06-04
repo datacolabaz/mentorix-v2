@@ -4,6 +4,7 @@ import Button from '../common/Button'
 import useAuthStore from '../../hooks/useAuth'
 import { useToast } from '../common/Toast'
 import api from '../../lib/api'
+import { getAttributionPayload } from '../../lib/analytics'
 
 const inputClass =
   'w-full bg-surface-1 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-primary/40'
@@ -35,6 +36,7 @@ export default function InstructorEmailAuth({ onSuccess }) {
         email,
         password,
         role,
+        ...getAttributionPayload(),
       })
       setPhase('verify')
       toast('Təsdiq kodu və link emailinizə göndərildi', 'success')

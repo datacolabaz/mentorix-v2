@@ -1117,6 +1117,18 @@ const signup = async (req, res) => {
       });
     }
 
+    scheduleAccessEvent(req, {
+      event_type: 'signup_complete',
+      user_id: user.id,
+      role: user.role_selected ? user.role : initialRole,
+      path: '/auth/signup',
+      device_type: req.body?.device_type,
+      session_key: req.body?.session_key,
+      utm_source: req.body?.utm_source,
+      utm_medium: req.body?.utm_medium,
+      referrer_url: req.body?.referrer_url,
+    });
+
     return res.status(201).json({
       success: true,
       message: 'Qeydiyyat uğurludur. Email ünvanınıza təsdiq kodu və link göndərildi.',

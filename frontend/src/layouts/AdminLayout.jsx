@@ -12,6 +12,7 @@ const NAV_SECTIONS = [
     title: 'MANAGEMENT',
     items: [
       { to: '/admin', label: 'Dashboard', icon: <NavIcon name="dashboard" />, end: true },
+      { to: '/admin/analytics', label: 'Analitika', icon: <NavIcon name="analytics" /> },
       { to: '/admin/instructors', label: 'Müəllimlər', icon: <NavIcon name="instructors" /> },
       { to: '/admin/students', label: 'Tələbələr', icon: <NavIcon name="students" /> },
       { to: '/admin/classes', label: 'Kurslar / Qruplar', icon: <NavIcon name="courses" /> },

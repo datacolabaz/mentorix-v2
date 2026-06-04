@@ -1,7 +1,16 @@
 const db = require('../utils/db');
 const { deviceTypeFromRequest } = require('../utils/deviceType');
+const { resolveReferrerSource } = require('../utils/referrerSource');
 
-const ALLOWED_EVENTS = new Set(['login', 'logout', 'landing_view']);
+const ALLOWED_EVENTS = new Set([
+  'login',
+  'logout',
+  'landing_view',
+  'page_view',
+  'pricing_view',
+  'register_click',
+  'signup_complete',
+]);
 
 function clampDays(raw, fallback = 7) {
   const n = parseInt(String(raw), 10);
@@ -19,12 +28,44 @@ async function recordAccessEvent(req, payload = {}) {
   const path = payload.path != null ? String(payload.path).trim().slice(0, 512) : null;
   const sessionKey =
     payload.session_key != null ? String(payload.session_key).trim().slice(0, 64) : null;
+  const utmSource =
+    payload.utm_source != null ? String(payload.utm_source).trim().slice(0, 128) : null;
+  const utmMedium =
+    payload.utm_medium != null ? String(payload.utm_medium).trim().slice(0, 64) : null;
+  const referrerSource = resolveReferrerSource({
+    utm_source: utmSource || payload.utm_source,
+    utm_medium: utmMedium,
+    referrer_url: payload.referrer_url,
+    referer_header: req?.headers?.referer || req?.headers?.referrer,
+  });
 
-  await db.query(
-    `INSERT INTO access_events (event_type, user_id, role, path, device_type, session_key)
-     VALUES ($1, $2, $3, $4, $5, $6)`,
-    [eventType, userId, role, path, deviceType, sessionKey],
-  );
+  try {
+    await db.query(
+      `INSERT INTO access_events (
+         event_type, user_id, role, path, device_type, session_key,
+         referrer_source, utm_source, utm_medium
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+      [
+        eventType,
+        userId,
+        role,
+        path,
+        deviceType,
+        sessionKey,
+        referrerSource,
+        utmSource,
+        utmMedium,
+      ],
+    );
+  } catch (err) {
+    if (err?.code !== '42703') throw err;
+    await db.query(
+      `INSERT INTO access_events (event_type, user_id, role, path, device_type, session_key)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [eventType, userId, role, path, deviceType, sessionKey],
+    );
+  }
 }
 
 function scheduleAccessEvent(req, payload) {
