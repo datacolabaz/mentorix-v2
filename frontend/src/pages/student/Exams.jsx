@@ -482,6 +482,9 @@ export default function StudentExams() {
   const [leaderModal, setLeaderModal] = useState(null)
   /** Paylaşım linkindən gələndə imtahanı birbaşa açmırıq — təsdiq modalı */
   const [startConfirm, setStartConfirm] = useState(null) // { exam, mode: 'fresh' | 'continue' }
+  /** Təyinat yoxdursa müəllimə giriş sorğusu */
+  const [accessPrompt, setAccessPrompt] = useState(null)
+  const [accessRequestBusy, setAccessRequestBusy] = useState(false)
 
   useEffect(() => {
     loadExams(false)
@@ -641,6 +644,22 @@ export default function StudentExams() {
     }
   }
 
+  const submitExamAccessRequest = async () => {
+    const examId = accessPrompt?.exam?.id
+    if (!examId) return
+    setAccessRequestBusy(true)
+    try {
+      const r = await api.post(`/exams/${encodeURIComponent(examId)}/access-request`)
+      toast(r?.message || 'Sorğunuz göndərildi', 'success')
+      setAccessPrompt({ exam: accessPrompt.exam, pending: true })
+      setSearchParams({}, { replace: true })
+    } catch (err) {
+      toast(err?.message || 'Sorğu göndərilmədi', 'error')
+    } finally {
+      setAccessRequestBusy(false)
+    }
+  }
+
   /** Paylaşım linki: /student/exams?exam=uuid */
   useEffect(() => {
     const targetId = deepLinkExamId ? String(deepLinkExamId).trim() : ''
@@ -649,9 +668,30 @@ export default function StudentExams() {
 
     const exam = exams.find((e) => e?.id != null && String(e.id) === targetId)
     if (!exam) {
-      deepLinkHandledRef.current = targetId
-      setSearchParams({}, { replace: true })
-      toast('Bu imtahan tapılmadı və ya sizə təyin edilməyib', 'error')
+      void (async () => {
+        try {
+          const d = await api.get(`/exams/${encodeURIComponent(targetId)}/access-status`)
+          if (d?.assigned && d?.exam) {
+            deepLinkHandledRef.current = ''
+            toast('İmtahan siyahısı yenilənir…', 'info')
+            await loadExams(true)
+            return
+          }
+          deepLinkHandledRef.current = targetId
+          if (d?.pending_request) {
+            setAccessPrompt({ exam: d.exam, pending: true })
+            return
+          }
+          if (d?.exam) {
+            setAccessPrompt({ exam: d.exam, pending: false })
+            return
+          }
+        } catch {
+          deepLinkHandledRef.current = targetId
+        }
+        setSearchParams({}, { replace: true })
+        toast('Bu imtahan tapılmadı və ya sizə təyin edilməyib', 'error')
+      })()
       return
     }
 
@@ -1209,6 +1249,55 @@ export default function StudentExams() {
         )}
       </div>
       )}
+
+      <Modal
+        open={!!accessPrompt}
+        onClose={() => {
+          setAccessPrompt(null)
+          setSearchParams({}, { replace: true })
+        }}
+        title="İmtahana giriş"
+        size="sm"
+      >
+        {accessPrompt?.exam && (
+          <div className="space-y-4">
+            <p className="text-sm text-gray-300 leading-relaxed">
+              «{accessPrompt.exam.title}» ({accessPrompt.exam.instructor_name || 'müəllim'}) imtahanına hələ
+              təyin edilməmisiniz.
+            </p>
+            {accessPrompt.pending ? (
+              <p className="text-sm text-amber-200/90">
+                Sorğunuz göndərilib. Müəllim təsdiqlədikdən sonra imtahan siyahınızda görünəcək.
+              </p>
+            ) : (
+              <p className="text-sm text-gray-400">
+                Müəllimə giriş sorğusu göndərin — təsdiqlədikdən sonra imtahana daxil ola bilərsiniz.
+              </p>
+            )}
+            <div className="flex flex-col-reverse sm:flex-row gap-2 sm:justify-end pt-1">
+              <Button
+                variant="secondary"
+                className="w-full sm:w-auto"
+                onClick={() => {
+                  setAccessPrompt(null)
+                  setSearchParams({}, { replace: true })
+                }}
+              >
+                Bağla
+              </Button>
+              {!accessPrompt.pending && (
+                <Button
+                  className="w-full sm:w-auto"
+                  loading={accessRequestBusy}
+                  onClick={() => void submitExamAccessRequest()}
+                >
+                  Sorğu göndər
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
+      </Modal>
 
       <Modal
         open={!!startConfirm}

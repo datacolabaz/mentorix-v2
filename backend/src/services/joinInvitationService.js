@@ -104,6 +104,7 @@ async function getPublicJoinInfo(code) {
 }
 
 async function notifyInstructorJoinRequest(instructorId, studentName, groupName) {
+  const { sendEmail, userEmail } = require('./emailService');
   const title = 'Yeni qoşulma sorğusu';
   const body = `${studentName} «${groupName}» qrupunuza qoşulmaq istəyir. Təsdiqləyin.`;
   await db
@@ -112,7 +113,19 @@ async function notifyInstructorJoinRequest(instructorId, studentName, groupName)
        VALUES ($1, $2, $3, 'join_request', FALSE)`,
       [instructorId, title, body],
     )
-    .catch(() => {});
+    .catch((e) => console.error('notifyInstructorJoinRequest', e.message));
+  try {
+    const to = await userEmail(instructorId);
+    if (to) {
+      await sendEmail({
+        to,
+        subject: `Mentorix — ${title}`,
+        text: `${body}\n\nMentorix → Sorğular bölməsindən təsdiqləyin.`,
+      });
+    }
+  } catch (e) {
+    console.error('join request email', e.message);
+  }
 }
 
 async function createJoinRequest({

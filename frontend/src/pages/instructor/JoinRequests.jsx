@@ -46,10 +46,12 @@ export default function InstructorJoinRequests() {
     void load()
   }, [load])
 
-  const approve = async (requestId) => {
+  const approve = async (requestId, kind = 'group_join') => {
     setActingId(requestId)
     try {
-      const r = await api.post(`/instructor/join-requests/${encodeURIComponent(requestId)}/approve`)
+      const r = await api.post(`/instructor/join-requests/${encodeURIComponent(requestId)}/approve`, {
+        kind,
+      })
       toast(r?.message || 'Təsdiqləndi', 'success')
       await load()
       queryClient.invalidateQueries({ queryKey: BILLING_STATUS_QUERY_KEY })
@@ -61,11 +63,13 @@ export default function InstructorJoinRequests() {
     }
   }
 
-  const reject = async (requestId) => {
+  const reject = async (requestId, kind = 'group_join') => {
     if (!window.confirm('Bu sorğunu rədd etmək istəyirsiniz?')) return
     setActingId(requestId)
     try {
-      const r = await api.post(`/instructor/join-requests/${encodeURIComponent(requestId)}/reject`, {})
+      const r = await api.post(`/instructor/join-requests/${encodeURIComponent(requestId)}/reject`, {
+        kind,
+      })
       toast(r?.message || 'Rədd edildi', 'info')
       await load()
       window.dispatchEvent(new CustomEvent('mx:join-requests-changed'))
@@ -78,16 +82,17 @@ export default function InstructorJoinRequests() {
 
   return (
     <div className="p-4 sm:p-6 max-w-3xl mx-auto w-full">
-      <h1 className="font-display font-bold text-xl sm:text-2xl text-token-textMain">Qoşulma sorğuları</h1>
+      <h1 className="font-display font-bold text-xl sm:text-2xl text-token-textMain">Sorğular</h1>
       <p className="text-token-textMuted text-sm mt-1 mb-6">
-        Tələbələr dəvət linki ilə öz məlumatlarını doldurub sorğu göndərir. Təsdiqlədikdən sonra qrupa əlavə olunurlar.
+        Qrup dəvəti və imtahan paylaşım linki ilə gələn tələbə sorğuları. Təsdiqlədikdən sonra qrupa və ya imtahana
+        əlavə olunurlar.
       </p>
 
       {loading ? (
         <ListSkeleton rows={4} />
       ) : !requests.length ? (
         <Card className="p-8 text-center text-token-textMuted text-sm border border-[color:var(--border-subtle)]">
-          Gözləyən sorğu yoxdur. Qrup dəvət linkini tələbələrə göndərin.
+          Gözləyən sorğu yoxdur. Qrup dəvət linki və ya imtahan paylaşım linkini tələbələrə göndərin.
         </Card>
       ) : (
         <ul className="space-y-3">
@@ -96,7 +101,13 @@ export default function InstructorJoinRequests() {
               <Card className="p-4 border border-[color:var(--border-subtle)]">
                 <p className="text-token-textMain font-semibold">
                   <span className="text-primary">{req.student_name}</span>
-                  {req.group_name ? (
+                  {req.kind === 'exam_access' ? (
+                    <>
+                      {' '}
+                      <span className="text-token-textMuted font-normal">·</span> «{req.exam_title || 'İmtahan'}»
+                      imtahanına giriş istəyir
+                    </>
+                  ) : req.group_name ? (
                     <>
                       {' '}
                       <span className="text-token-textMuted font-normal">·</span> «{req.group_name}» qrupunuza
@@ -106,6 +117,9 @@ export default function InstructorJoinRequests() {
                     ' qrupunuza qoşulmaq istəyir'
                   )}
                 </p>
+                {req.kind === 'exam_access' && (
+                  <p className="text-[10px] uppercase tracking-wide text-amber-400/90 mt-1">İmtahan sorğusu</p>
+                )}
                 {req.subject_name && (
                   <p className="text-xs text-token-textMuted mt-1">Sahə: {req.subject_name}</p>
                 )}
@@ -116,7 +130,9 @@ export default function InstructorJoinRequests() {
                   </p>
                 )}
                 <div className="text-xs text-token-textMuted mt-2 space-y-0.5">
-                  {req.phone_number && <div>Telefon: {req.phone_number}</div>}
+                  {(req.phone_number || req.phone) && (
+                    <div>Telefon: {req.phone_number || req.phone}</div>
+                  )}
                   {req.student_email && <div>Email: {req.student_email}</div>}
                   {req.parent_name && (
                     <div>
@@ -137,7 +153,7 @@ export default function InstructorJoinRequests() {
                     size="sm"
                     className="flex-1 justify-center"
                     loading={actingId === req.request_id}
-                    onClick={() => approve(req.request_id)}
+                    onClick={() => approve(req.request_id, req.kind || 'group_join')}
                   >
                     Təsdiqlə
                   </Button>
@@ -146,7 +162,7 @@ export default function InstructorJoinRequests() {
                     variant="secondary"
                     className="flex-1 justify-center"
                     disabled={actingId === req.request_id}
-                    onClick={() => reject(req.request_id)}
+                    onClick={() => reject(req.request_id, req.kind || 'group_join')}
                   >
                     Rədd et
                   </Button>

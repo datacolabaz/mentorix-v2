@@ -6,6 +6,12 @@ const {
   approveJoinRequest,
   rejectJoinRequest,
 } = require('../services/joinInvitationService');
+const {
+  listPendingExamAccessRequests,
+  countPendingExamAccessRequests,
+  approveExamAccessRequest,
+  rejectExamAccessRequest,
+} = require('../services/examAccessRequestService');
 
 const getPublicJoin = async (req, res) => {
   try {
@@ -23,7 +29,14 @@ const getPublicJoin = async (req, res) => {
 
 const listJoinRequests = async (req, res) => {
   try {
-    const requests = await listPendingJoinRequests(req.user.id);
+    const [groupRequests, examRequests] = await Promise.all([
+      listPendingJoinRequests(req.user.id),
+      listPendingExamAccessRequests(req.user.id),
+    ]);
+    const requests = [
+      ...groupRequests.map((r) => ({ ...r, kind: 'group_join' })),
+      ...examRequests,
+    ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
     res.json({ success: true, requests });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -32,8 +45,11 @@ const listJoinRequests = async (req, res) => {
 
 const joinRequestsCount = async (req, res) => {
   try {
-    const count = await countPendingJoinRequests(req.user.id);
-    res.json({ success: true, count });
+    const [groupCount, examCount] = await Promise.all([
+      countPendingJoinRequests(req.user.id),
+      countPendingExamAccessRequests(req.user.id),
+    ]);
+    res.json({ success: true, count: groupCount + examCount });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -41,7 +57,11 @@ const joinRequestsCount = async (req, res) => {
 
 const approveRequest = async (req, res) => {
   try {
-    const result = await approveJoinRequest(req.params.id, req.user.id);
+    const kind = String(req.body?.kind || req.query?.kind || 'group_join').trim();
+    const result =
+      kind === 'exam_access'
+        ? await approveExamAccessRequest(req.params.id, req.user.id)
+        : await approveJoinRequest(req.params.id, req.user.id);
     res.json({ success: true, ...result });
   } catch (err) {
     res.status(err.statusCode || 500).json({ success: false, message: err.message });
@@ -50,11 +70,11 @@ const approveRequest = async (req, res) => {
 
 const rejectRequest = async (req, res) => {
   try {
-    const result = await rejectJoinRequest(
-      req.params.id,
-      req.user.id,
-      req.body?.reason,
-    );
+    const kind = String(req.body?.kind || req.query?.kind || 'group_join').trim();
+    const result =
+      kind === 'exam_access'
+        ? await rejectExamAccessRequest(req.params.id, req.user.id)
+        : await rejectJoinRequest(req.params.id, req.user.id, req.body?.reason);
     res.json({ success: true, ...result });
   } catch (err) {
     res.status(err.statusCode || 500).json({ success: false, message: err.message });

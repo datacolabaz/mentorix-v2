@@ -2070,6 +2070,33 @@ const serveExamAttachmentByExam = async (req, res) => {
   return sendExamMaterialFromDiskOrDb(res, filename);
 };
 
+const {
+  getStudentAccessStatus,
+  createExamAccessRequest,
+} = require('../services/examAccessRequestService');
+
+const getExamAccessStatus = async (req, res) => {
+  try {
+    const data = await getStudentAccessStatus(req.user.id, req.params.id);
+    res.json({ success: true, ...data });
+  } catch (err) {
+    res.status(err.statusCode || 500).json({ success: false, message: err.message });
+  }
+};
+
+const postExamAccessRequest = async (req, res) => {
+  try {
+    const result = await createExamAccessRequest(req.user.id, req.params.id);
+    res.status(201).json({ success: true, ...result });
+  } catch (err) {
+    res.status(err.statusCode || 500).json({
+      success: false,
+      message: err.message,
+      code: err.code,
+    });
+  }
+};
+
 module.exports = {
   createExam,
   listExams,
@@ -2081,6 +2108,8 @@ module.exports = {
   patchExam,
   instructorStudentExamProgress,
   studentExams,
+  getExamAccessStatus,
+  postExamAccessRequest,
   getStudentExamReview,
   getExamQuestions,
   submitExam,
