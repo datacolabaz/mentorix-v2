@@ -23,6 +23,8 @@ const getPublicInstructorProfile = async (req, res) => {
          ip.avatar_url,
          ip.discover_hourly_rate,
          ip.discover_bio,
+         ip.discover_education,
+         ip.discover_certifications,
          ip.discover_verified,
          ip.teacher_place_address,
          COALESCE(s.plan, 'basic') AS plan,

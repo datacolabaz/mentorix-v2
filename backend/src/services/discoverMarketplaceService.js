@@ -204,8 +204,8 @@ async function getInstructorDiscoverProfile(userId) {
 
   const { rows: prof } = await db.query(
     `SELECT latitude, longitude, map_profile_kind, map_visible, subject,
-            discover_hourly_rate, discover_bio, discover_verified, teacher_place_address,
-            map_search_radius_km
+            discover_hourly_rate, discover_bio, discover_education, discover_certifications,
+            discover_verified, teacher_place_address, map_search_radius_km
      FROM instructor_profiles WHERE user_id = $1 LIMIT 1`,
     [userId],
   );
@@ -286,6 +286,16 @@ async function upsertInstructorDiscoverProfile(userId, body) {
   if (body.discover_bio !== undefined) {
     sets.push(`discover_bio = $${pi++}`);
     vals.push(body.discover_bio == null ? null : String(body.discover_bio).slice(0, 2000));
+  }
+  if (body.discover_education !== undefined) {
+    sets.push(`discover_education = $${pi++}`);
+    vals.push(body.discover_education == null ? null : String(body.discover_education).slice(0, 1500));
+  }
+  if (body.discover_certifications !== undefined) {
+    sets.push(`discover_certifications = $${pi++}`);
+    vals.push(
+      body.discover_certifications == null ? null : String(body.discover_certifications).slice(0, 1500),
+    );
   }
   if (body.teacher_place_address !== undefined) {
     sets.push(`teacher_place_address = $${pi++}`);

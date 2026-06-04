@@ -23,6 +23,8 @@ export default function InstructorDiscoverSettings({ mapVisible, theme, inp }) {
   const [areaIds, setAreaIds] = useState([])
   const [hourlyRate, setHourlyRate] = useState('')
   const [bio, setBio] = useState('')
+  const [education, setEducation] = useState('')
+  const [certifications, setCertifications] = useState('')
   const [address, setAddress] = useState('')
   const [areas, setAreas] = useState([])
   const [catSearch, setCatSearch] = useState('')
@@ -55,6 +57,8 @@ export default function InstructorDiscoverSettings({ mapVisible, theme, inp }) {
       setAreaIds((disc?.service_areas || []).map((a) => a.id))
       setHourlyRate(disc?.profile?.discover_hourly_rate != null ? String(disc.profile.discover_hourly_rate) : '')
       setBio(disc?.profile?.discover_bio || '')
+      setEducation(disc?.profile?.discover_education || '')
+      setCertifications(disc?.profile?.discover_certifications || '')
       setAddress(disc?.profile?.teacher_place_address || '')
       if (areaRes?.success) setAreas(Array.isArray(areaRes.areas) ? areaRes.areas : [])
     } catch (e) {
@@ -125,6 +129,8 @@ export default function InstructorDiscoverSettings({ mapVisible, theme, inp }) {
       await api.patch('/instructor/discover-profile', {
         discover_hourly_rate: hourlyRate === '' ? null : hourlyRate,
         discover_bio: bio,
+        discover_education: education,
+        discover_certifications: certifications,
         teacher_place_address: address,
         category_ids: categoryIds,
         delivery_formats: formats.map((f) => ({
@@ -304,8 +310,34 @@ export default function InstructorDiscoverSettings({ mapVisible, theme, inp }) {
           </div>
         </div>
         <div>
-          <label className="text-xs text-gray-500 block mb-1">Qısa təqdimat</label>
-          <textarea value={bio} onChange={(e) => setBio(e.target.value)} rows={3} className={`${inp} resize-none`} />
+          <label className="text-xs text-gray-500 block mb-1">Haqqımda (ictimai profil)</label>
+          <textarea
+            value={bio}
+            onChange={(e) => setBio(e.target.value)}
+            rows={4}
+            placeholder="10 illik təcrübəyə malik… Python, SQL və Tableau dərsləri keçirəm."
+            className={`${inp} resize-y min-h-[5rem]`}
+          />
+        </div>
+        <div>
+          <label className="text-xs text-gray-500 block mb-1">Təhsil</label>
+          <textarea
+            value={education}
+            onChange={(e) => setEducation(e.target.value)}
+            rows={2}
+            placeholder="Məs: BDU — Tətbiqi riyaziyyat"
+            className={`${inp} resize-y`}
+          />
+        </div>
+        <div>
+          <label className="text-xs text-gray-500 block mb-1">Sertifikatlar</label>
+          <textarea
+            value={certifications}
+            onChange={(e) => setCertifications(e.target.value)}
+            rows={2}
+            placeholder="Məs: Microsoft Certified Data Analyst"
+            className={`${inp} resize-y`}
+          />
         </div>
 
         <div className="flex flex-wrap gap-2">
