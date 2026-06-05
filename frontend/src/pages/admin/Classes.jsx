@@ -50,7 +50,8 @@ export default function AdminClasses() {
       <div className="mb-6">
         <h1 className="font-display font-bold text-2xl">Kurslar / Qruplar</h1>
         <p className="text-gray-400 text-sm mt-1">
-          Yalnız real tədris qrupları — imtahan/tapşırıq iştirakçı qrupları ([System]) burada göstərilmir
+          Tədris qrupları və imtahan/tapşırıq iştirakçı qrupları (məs. OTK7 — Qonaq) — müəllim
+          paneli ilə eyni adlandırma
         </p>
       </div>
 
@@ -92,8 +93,23 @@ export default function AdminClasses() {
           </thead>
           <tbody>
             {classes.map((c) => (
-              <tr key={c.id} className="border-b border-indigo-500/10 hover:bg-indigo-500/5">
-                <td className="py-3 px-4 font-semibold text-white">{c.name}</td>
+              <tr
+                key={c.id}
+                className={[
+                  'border-b border-indigo-500/10 hover:bg-indigo-500/5',
+                  c.is_participant_cohort ? 'bg-indigo-500/[0.03]' : '',
+                ].join(' ')}
+              >
+                <td className="py-3 px-4 font-semibold text-white">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="truncate">{c.name}</span>
+                    {c.is_participant_cohort ? (
+                      <span className="shrink-0 text-[10px] uppercase tracking-wide font-bold px-1.5 py-0.5 rounded bg-violet-500/20 text-violet-200">
+                        Qonaq
+                      </span>
+                    ) : null}
+                  </div>
+                </td>
                 <td className="py-3 px-4 text-gray-300">
                   <div>{c.instructor_name}</div>
                   <div className="text-xs text-gray-500">{c.instructor_phone || ''}</div>

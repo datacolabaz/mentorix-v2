@@ -13,7 +13,7 @@ const {
   ACTIVE_STUDENT_USER_JOIN,
 } = require('../sql/activeEnrollments');
 const { SMS_LOGS_MONTHLY_COUNT_SUBQUERY } = require('../sql/adminSmsUsage');
-const { SQL_WHERE_TEACHING_GROUP_ONLY } = require('../services/systemGroupGuards');
+const { decorateAdminClassRow } = require('../lib/participantGroupLabels');
 
 // Butun muellimler
 const getInstructors = async (req, res) => {
@@ -224,11 +224,7 @@ const getDashboardStats = async (req, res) => {
          FROM enrollments e
          ${ACTIVE_ENROLLMENT_JOIN_INLINE}`
       ),
-      db.query(
-        `SELECT COUNT(*)::int AS count
-         FROM instructor_groups ig
-         WHERE ${SQL_WHERE_TEACHING_GROUP_ONLY}`,
-      ),
+      db.query(`SELECT COUNT(*)::int AS count FROM instructor_groups`),
       db.query(
         `SELECT COUNT(*)::int AS count
          FROM subscriptions
@@ -528,12 +524,8 @@ const getClasses = async (req, res) => {
       instructor: String(req.query.instructor || req.query.teacher || '').trim() || null,
     };
     const params = [];
-    const where = ['TRUE', SQL_WHERE_TEACHING_GROUP_ONLY];
+    const where = ['TRUE'];
 
-    if (filters.q) {
-      params.push(`%${filters.q}%`);
-      where.push(`ig.name ILIKE $${params.length}`);
-    }
     if (filters.instructor) {
       params.push(`%${filters.instructor}%`);
       where.push(`iu.full_name ILIKE $${params.length}`);
@@ -547,13 +539,20 @@ const getClasses = async (req, res) => {
          ig.join_code_expires_at,
          ig.created_at,
          ig.instructor_id,
+         COALESCE(ig.is_system, FALSE) AS is_system,
+         ig.system_kind,
+         ig.system_ref_id,
          iu.full_name AS instructor_name,
          iu.phone AS instructor_phone,
          COALESCE(NULLIF(TRIM(ist.name), ''), 'Sahəsiz') AS subject,
-         COALESCE(cnt.n, 0)::int AS student_count
+         COALESCE(cnt.n, 0)::int AS student_count,
+         e.title AS exam_title,
+         a.title AS assignment_title
        FROM instructor_groups ig
        JOIN users iu ON iu.id = ig.instructor_id AND iu.deleted_at IS NULL
        LEFT JOIN instructor_subjects ist ON ist.id = ig.subject_id
+       LEFT JOIN exams e ON ig.system_kind = 'exam_participants' AND e.id = ig.system_ref_id
+       LEFT JOIN assignments a ON ig.system_kind = 'assignment_participants' AND a.id = ig.system_ref_id
        LEFT JOIN (
          SELECT e.group_id, COUNT(DISTINCT e.student_id) AS n
          FROM enrollments e
@@ -564,10 +563,22 @@ const getClasses = async (req, res) => {
          GROUP BY e.group_id
        ) cnt ON cnt.group_id = ig.id
        WHERE ${where.join(' AND ')}
-       ORDER BY ig.created_at DESC NULLS LAST, ig.name ASC`,
+       ORDER BY ig.is_system ASC, ig.created_at DESC NULLS LAST, ig.name ASC`,
       params,
     );
-    res.json({ success: true, classes: rows });
+
+    let classes = rows.map(decorateAdminClassRow);
+    if (filters.q) {
+      const needle = filters.q.toLowerCase();
+      classes = classes.filter(
+        (c) =>
+          String(c.name || '').toLowerCase().includes(needle) ||
+          String(c.subject || '').toLowerCase().includes(needle) ||
+          String(c.instructor_name || '').toLowerCase().includes(needle),
+      );
+    }
+
+    res.json({ success: true, classes });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

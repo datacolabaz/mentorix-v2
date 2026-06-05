@@ -24,10 +24,64 @@ function participantKindFromSystemKind(system_kind) {
   return null;
 }
 
+function guestCohortDisplayFromRow(row) {
+  const sourceTitle = row?.exam_title || row?.assignment_title || null;
+  const baseTitle =
+    String(sourceTitle || '').trim() ||
+    friendlyParticipantLabel({ group_name: row?.name || row?.group_name }).replace(
+      /\s*\([^)]*\)\s*$/,
+      '',
+    );
+  const kind = participantKindFromSystemKind(row?.system_kind) || 'exam';
+  const name =
+    kind === 'task' ? `${baseTitle} — Qonaq (Tapşırıq)` : `${baseTitle} — Qonaq`;
+  const subject =
+    kind === 'task' ? 'Qonaq tapşırıq iştirakçıları' : 'Qonaq imtahan iştirakçıları';
+  return { name, subject, participant_kind: kind };
+}
+
+/** Admin /classes: sistem iştirakçı qrupunu müəllim UI ilə eyni adlandırma */
+function decorateAdminClassRow(row) {
+  if (!row || !row.is_system) {
+    return {
+      id: row.id,
+      name: row.name,
+      subject: row.subject,
+      join_code: row.join_code || null,
+      join_code_expires_at: row.join_code_expires_at || null,
+      created_at: row.created_at,
+      instructor_id: row.instructor_id,
+      instructor_name: row.instructor_name,
+      instructor_phone: row.instructor_phone,
+      student_count: row.student_count ?? 0,
+      is_participant_cohort: false,
+      is_system: false,
+    };
+  }
+  const guest = guestCohortDisplayFromRow(row);
+  return {
+    id: row.id,
+    name: guest.name,
+    subject: guest.subject,
+    join_code: null,
+    join_code_expires_at: null,
+    created_at: row.created_at,
+    instructor_id: row.instructor_id,
+    instructor_name: row.instructor_name,
+    instructor_phone: row.instructor_phone,
+    student_count: row.student_count ?? 0,
+    is_participant_cohort: true,
+    is_system: true,
+    participant_kind: guest.participant_kind,
+  };
+}
+
 module.exports = {
   SYSTEM_KIND_EXAM,
   SYSTEM_KIND_ASSIGNMENT,
   parseParticipantTitleFromGroupName,
   friendlyParticipantLabel,
   participantKindFromSystemKind,
+  guestCohortDisplayFromRow,
+  decorateAdminClassRow,
 };
