@@ -34,3 +34,16 @@ export function ratingStarsLine(instructor) {
   if (avg) return `⭐ ${avg}`
   return count
 }
+
+/** Tez baxış kartı: fənn altında qızıl ulduz sətri */
+export function teacherRatingParts(instructor) {
+  const avg = formatReviewAvg(instructor?.review_avg)
+  const count = Number(instructor?.review_count) || 0
+  if (avg && count > 0) {
+    return { avg, count, label: `${avg} (${count} rəy)` }
+  }
+  if (avg) {
+    return { avg, count: 0, label: avg }
+  }
+  return null
+}

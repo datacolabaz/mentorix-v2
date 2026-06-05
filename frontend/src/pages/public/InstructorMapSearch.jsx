@@ -550,7 +550,7 @@ export default function InstructorMapSearch() {
                 ))}
               </MapContainer>
             )}
-            {nearestInstructor && distanceOrigin === 'user' && !loading ? (
+            {nearestInstructor && distanceOrigin === 'user' && !loading && !selectedInstructor ? (
               <div className="absolute top-3 left-3 right-3 sm:right-auto sm:max-w-sm z-[400] pointer-events-auto">
                 <button
                   type="button"
@@ -658,7 +658,7 @@ export default function InstructorMapSearch() {
               </div>
             ) : null}
 
-            {nearestInstructor && distanceOrigin === 'user' && count > 0 && !loading ? (
+            {nearestInstructor && distanceOrigin === 'user' && count > 0 && !loading && !selectedInstructor ? (
               <div className="rounded-xl border border-amber-500/40 bg-gradient-to-r from-amber-500/15 to-emerald-500/10 p-3 mb-3">
                 <p className="text-[10px] font-bold text-amber-400 uppercase tracking-wide">Sizə ən yaxın</p>
                 <p className="text-sm font-semibold text-white mt-1">

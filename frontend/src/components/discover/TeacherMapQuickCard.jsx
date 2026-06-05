@@ -4,7 +4,7 @@ import { formatDistanceKm } from '../../lib/geo'
 import {
   deliveryFormatBadges,
   formatStudentCount,
-  ratingStarsLine,
+  teacherRatingParts,
 } from '../../lib/teacherMapCard'
 
 function kindLabel(k) {
@@ -25,7 +25,7 @@ export default function TeacherMapQuickCard({
     p.display_subject ||
     (Array.isArray(p.category_names) && p.category_names.length ? p.category_names.join(', ') : null) ||
     p.subject
-  const ratingLine = ratingStarsLine(p)
+  const rating = teacherRatingParts(p)
   const studentLine = formatStudentCount(p.active_student_count)
   const formats = deliveryFormatBadges(p)
 
@@ -55,6 +55,18 @@ export default function TeacherMapQuickCard({
             <div className="min-w-0">
               <h3 className="font-display font-bold text-base text-white truncate">{p.full_name}</h3>
               <p className="text-xs text-gray-400 mt-0.5 truncate">{subjectLine || 'Fənn göstərilməyib'}</p>
+              {rating ? (
+                <div className="mt-1.5 flex items-center gap-1.5">
+                  <span className="text-amber-400 text-sm leading-none" aria-hidden>
+                    ⭐
+                  </span>
+                  <span className="text-sm font-bold text-amber-300 tabular-nums">{rating.label}</span>
+                </div>
+              ) : (
+                <p className="mt-1.5 text-xs text-gray-500">
+                  <span className="text-amber-500/80">⭐</span> Hələ rəy yoxdur
+                </p>
+              )}
             </div>
             <span className="text-xs font-bold text-primary shrink-0 text-right">
               {formatDistanceKm(p.distanceKm ?? p.distance_km)}
@@ -69,11 +81,6 @@ export default function TeacherMapQuickCard({
           ) : null}
 
           <div className="mt-2 flex flex-wrap gap-1.5">
-            {ratingLine ? (
-              <span className="text-[11px] font-semibold px-2 py-0.5 rounded-lg bg-amber-500/15 text-amber-200 border border-amber-500/25">
-                {ratingLine}
-              </span>
-            ) : null}
             {studentLine ? (
               <span className="text-[11px] font-medium px-2 py-0.5 rounded-lg bg-white/5 text-gray-300 border border-white/10">
                 👥 {studentLine}
@@ -134,7 +141,12 @@ export default function TeacherMapQuickCard({
           type="button"
           disabled={whatsappBusy}
           onClick={() => onWhatsApp?.(p)}
-          className="w-full rounded-xl border border-emerald-500/40 bg-emerald-500/10 text-emerald-300 font-bold text-sm py-2.5 hover:bg-emerald-500/20 transition-colors disabled:opacity-50"
+          className={[
+            'w-full rounded-xl font-bold text-sm py-2.5 transition-all disabled:opacity-50',
+            'border-2 border-[#25D366]/70 bg-[#075E54]/35 text-[#DCF8C6]',
+            'hover:bg-[#128C7E]/45 hover:border-[#25D366] hover:shadow-[0_0_16px_rgba(37,211,102,0.25)]',
+            'active:scale-[0.99]',
+          ].join(' ')}
         >
           💬 WhatsApp-da yaz
         </button>
