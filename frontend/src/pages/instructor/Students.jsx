@@ -24,6 +24,32 @@ import {
 import { BILLING_STATUS_QUERY_KEY, useBillingStatus } from '../../hooks/useBillingStatus'
 import { canonicalAzPhoneE164 } from '../../lib/azPhone'
 
+const PENDING_SETUP_TOAST_KEY = 'mx_instructor_pending_setup_toast_v1'
+
+function studentHasContactPhone(s) {
+  return Boolean(canonicalAzPhoneE164(s?.phone || s?.phone_number || ''))
+}
+
+function readPendingSetupToastSeen() {
+  try {
+    const raw = sessionStorage.getItem(PENDING_SETUP_TOAST_KEY)
+    const parsed = raw ? JSON.parse(raw) : []
+    return Array.isArray(parsed) ? parsed.map(String) : []
+  } catch {
+    return []
+  }
+}
+
+function markPendingSetupToastSeen(enrollmentIds) {
+  try {
+    const prev = readPendingSetupToastSeen()
+    const merged = [...new Set([...prev, ...enrollmentIds.map(String)])]
+    sessionStorage.setItem(PENDING_SETUP_TOAST_KEY, JSON.stringify(merged))
+  } catch {
+    /* ignore */
+  }
+}
+
 function splitFullName(full) {
   const t = String(full || '').trim()
   if (!t) return { first_name: '', last_name: '' }
@@ -1005,55 +1031,65 @@ export default function InstructorStudents() {
     return () => window.removeEventListener('mx:join-requests-changed', refresh)
   }, [])
 
-  const openCompleteSetup = (s) => {
+  const openCompleteSetup = async (s) => {
     closeStudentMenu()
+    let row = s
+    try {
+      const d = await api.get('/students')
+      const next = d.students || []
+      setStudents(next)
+      writeCache(CACHE_KEY, { students: next })
+      row = next.find((x) => x.enrollment_id === s.enrollment_id) || s
+    } catch {
+      /* keep row */
+    }
     const pkgAnchor =
-      s.enrollment_start_date != null && s.enrollment_start_date !== ''
-        ? String(s.enrollment_start_date).slice(0, 10)
-        : s.enrolled_at
-          ? String(s.enrolled_at).slice(0, 10)
+      row.enrollment_start_date != null && row.enrollment_start_date !== ''
+        ? String(row.enrollment_start_date).slice(0, 10)
+        : row.enrolled_at
+          ? String(row.enrolled_at).slice(0, 10)
           : ''
-    const lwd = normalizeWeekdays(s.lesson_weekdays)
-    const lt = normalizeLessonTimes(s.lesson_times)
-    const let_ = normalizeLessonEndTimes(s.lesson_end_times, lt)
+    const lwd = normalizeWeekdays(row.lesson_weekdays)
+    const lt = normalizeLessonTimes(row.lesson_times)
+    const let_ = normalizeLessonEndTimes(row.lesson_end_times, lt)
     const firstFromApi =
-      s.first_lesson_date != null && String(s.first_lesson_date).trim() !== ''
-        ? String(s.first_lesson_date).slice(0, 10)
+      row.first_lesson_date != null && String(row.first_lesson_date).trim() !== ''
+        ? String(row.first_lesson_date).slice(0, 10)
         : ''
     const firstLesson =
       firstFromApi || (pkgAnchor ? alignFirstLessonYmd(pkgAnchor, lwd, lt) : '')
-    setSetupEnrollmentId(s.enrollment_id)
-    const phoneRaw = s.phone || s.phone_number || ''
-    setSetupPhoneLocked(!canonicalAzPhoneE164(phoneRaw))
-    const setupNames = splitFullName(s.full_name)
+    setSetupEnrollmentId(row.enrollment_id)
+    const phoneRaw = row.phone || row.phone_number || ''
+    setSetupPhoneLocked(!studentHasContactPhone(row))
+    const setupNames = splitFullName(row.full_name)
     setSetupForm({
       ...emptyForm,
       first_name: setupNames.first_name,
       last_name: setupNames.last_name,
-      full_name: s.full_name || '',
-      phone: s.phone || s.phone_number || '',
-      phone_number: s.phone_number || s.phone || '',
-      email: s.email || '',
-      billing_type: s.billing_type || '8_lessons',
-      subject_id: s.subject_id || '',
-      group_id: s.group_id || '',
-      referral_notes: s.referral_notes || '',
-      referral_source_id: s.referral_source_id || '',
-      initial_payment_status: s.initial_payment_status || 'unpaid',
-      payment_due_date: s.payment_due_date ? String(s.payment_due_date).slice(0, 10) : '',
-      discount_percent: s.discount_percent != null ? String(s.discount_percent) : '',
-      teacher_notes: s.teacher_notes || '',
-      monthly_fee: s.monthly_fee != null ? String(s.monthly_fee) : '',
-      parent_name: s.parent_name || '',
-      parent_phone: s.parent_phone || '',
+      full_name: row.full_name || '',
+      phone: row.phone || row.phone_number || '',
+      phone_number: row.phone_number || row.phone || '',
+      email: row.email || '',
+      billing_type: row.billing_type || '8_lessons',
+      subject_id: row.subject_id || '',
+      group_id: row.group_id || '',
+      referral_notes: row.referral_notes || '',
+      referral_source_id: row.referral_source_id || '',
+      initial_payment_status: row.initial_payment_status || 'unpaid',
+      payment_due_date: row.payment_due_date ? String(row.payment_due_date).slice(0, 10) : '',
+      discount_percent: row.discount_percent != null ? String(row.discount_percent) : '',
+      teacher_notes: row.teacher_notes || '',
+      monthly_fee: row.monthly_fee != null ? String(row.monthly_fee) : '',
+      parent_name: row.parent_name || '',
+      parent_phone: row.parent_phone || '',
       enrollment_date: pkgAnchor,
       first_lesson_date: firstLesson || pkgAnchor,
       lesson_weekdays: lwd,
       lesson_times: lt,
       lesson_end_times: let_,
-      billing_timing: s.billing_timing || 'postpaid',
-      payment_plan: s.payment_plan || 'full',
-      notifications_enabled: s.notifications_enabled !== false,
+      billing_timing: row.billing_timing || 'postpaid',
+      payment_plan: row.payment_plan || 'full',
+      notifications_enabled: row.notifications_enabled !== false,
     })
     setSetupModal(true)
   }
@@ -1125,7 +1161,7 @@ export default function InstructorStudents() {
       toast('Quraşdırma tamamlandı — tələbə aktivdir')
       setSetupModal(false)
       setSetupEnrollmentId(null)
-      load()
+      await load(true)
     } catch (err) {
       if (err?.code === 'PROFILE_INCOMPLETE' || err?.code === 'STUDENT_MUST_COMPLETE_PROFILE') {
         setSetupFieldErrors([
@@ -1298,20 +1334,43 @@ export default function InstructorStudents() {
     })
   }, [students, search])
 
-  const pendingToastShown = useRef(false)
   useEffect(() => {
-    if (listLoading || pendingToastShown.current) return
-    if (pendingStudents.length > 0) {
-      pendingToastShown.current = true
-      const needsPhone = pendingStudents.some((s) => !canonicalAzPhoneE164(s.phone || s.phone_number || ''))
-      toast(
-        needsPhone
-          ? `${pendingStudents.length} tələbə quraşdırma gözləyir. Telefonu yoxdursa «Quraşdırmanı tamamla» → «Profil tamamlama linki göndər (email)» düyməsinə basın; tələbə linkdən telefonunu doldurmalıdır.`
-          : `${pendingStudents.length} tələbə quraşdırma gözləyir — yuxarıdakı sarı blokdan «Quraşdırmanı tamamla» ilə paket və cədvəli təyin edin.`,
-        'info',
-      )
-    }
+    if (listLoading || pendingStudents.length === 0) return
+    const ids = pendingStudents.map((s) => String(s.enrollment_id)).filter(Boolean)
+    const seen = readPendingSetupToastSeen()
+    const newIds = ids.filter((id) => !seen.includes(id))
+    if (!newIds.length) return
+
+    const newPending = pendingStudents.filter((s) => newIds.includes(String(s.enrollment_id)))
+    const needsPhone = newPending.some((s) => !studentHasContactPhone(s))
+    toast(
+      needsPhone
+        ? `${newPending.length} yeni tələbə quraşdırma gözləyir. Telefonu yoxdursa profil linki göndərin; telefon tamam olanda «Quraşdırmanı tamamla» ilə paket/cədvəl təyin edin — sonra siyahıdan silinəcək.`
+        : `${newPending.length} tələbənin telefonu hazırdır — «Quraşdırmanı tamamla» ilə paket və cədvəli təyin edin; tamamladıqdan sonra bu xəbərdarlıq getməyəcək.`,
+      'info',
+    )
+    markPendingSetupToastSeen(newIds)
   }, [listLoading, pendingStudents, toast])
+
+  const awaitingStudentPhone = useMemo(
+    () => pendingStudents.some((s) => !studentHasContactPhone(s)),
+    [pendingStudents],
+  )
+
+  useEffect(() => {
+    if (!awaitingStudentPhone) return undefined
+    const poll = () => void load(true)
+    const id = window.setInterval(poll, 20000)
+    const onFocus = () => poll()
+    window.addEventListener('focus', onFocus)
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') poll()
+    })
+    return () => {
+      window.clearInterval(id)
+      window.removeEventListener('focus', onFocus)
+    }
+  }, [awaitingStudentPhone])
 
   const grouped = useMemo(() => {
     const byKey = new Map()
@@ -1705,9 +1764,9 @@ export default function InstructorStudents() {
                 Təyin gözləyən tələbələr
               </h2>
               <p className="text-xs text-amber-200/70 mt-1">
-                Tələbə qoşulub, lakin paket/cədvəl tamamlanmayıb. Telefonu yoxdursa əvvəlcə «Profil tamamlama
-                linki göndər (email)» ilə tələbəyə link göndərin — bu email təsdiqi deyil, mobil nömrə
-                doldurma linkidir.
+                Tələbə qoşulub; siz «Quraşdırmanı tamamla» edənə qədər burada qalır. Telefonu yoxdursa əvvəlcə
+                profil linki göndərin — tələbə dolduranda siyahı avtomatik yenilənir. Paket/cədvəl təyin etdikdən
+                sonra bu sətir yox olur.
               </p>
             </div>
             <StatusBadge variant="due">{pendingStudents.length} gözləyir</StatusBadge>
@@ -1721,13 +1780,23 @@ export default function InstructorStudents() {
                 <div className="min-w-0">
                   <div className="font-semibold text-token-textMain">{s.full_name}</div>
                   <div className="text-xs text-token-textMuted mt-0.5">
-                    {s.phone || '—'} • {s.track_group_name || 'Qrup'} •{' '}
+                    {studentHasContactPhone(s) ? s.phone || s.phone_number : 'Telefon gözlənilir'} •{' '}
+                    {s.track_group_name || 'Qrup'} •{' '}
                     {s.enrolled_at
                       ? new Date(s.enrolled_at).toLocaleDateString('az-AZ')
                       : '—'}
                   </div>
+                  {studentHasContactPhone(s) ? (
+                    <p className="text-[11px] text-emerald-300/90 mt-1">
+                      Telefon hazırdır — paket və cədvəli təyin edib tamamlayın.
+                    </p>
+                  ) : (
+                    <p className="text-[11px] text-amber-200/80 mt-1">
+                      Tələbə hələ telefonu doldurmayıb — profil linki göndərin.
+                    </p>
+                  )}
                 </div>
-                <Button size="sm" onClick={() => openCompleteSetup(s)}>
+                <Button size="sm" onClick={() => void openCompleteSetup(s)}>
                   Quraşdırmanı tamamla
                 </Button>
               </div>
