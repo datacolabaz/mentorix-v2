@@ -59,10 +59,18 @@ export default function InstructorTeachingGroups() {
   }, [load])
 
   const requestRemoveSubject = (subject) => {
+    if (subject?.is_system) {
+      toast('Sistem iştirakçı sahəsi silinə bilməz', 'info')
+      return
+    }
     setConfirmDelete({ type: 'subject', id: subject?.id, name: subject?.name || 'Sahə' })
   }
 
   const requestRemoveGroup = (group) => {
+    if (group?.is_system) {
+      toast('Sistem iştirakçı qrupu avtomatik idarə olunur — silinə bilməz', 'info')
+      return
+    }
     setConfirmDelete({ type: 'group', id: group?.id, name: group?.name || 'Qrup' })
   }
 
@@ -123,6 +131,10 @@ export default function InstructorTeachingGroups() {
   }
 
   const openEditGroupPackage = (subjectId, group) => {
+    if (group?.is_system) {
+      toast('Sistem iştirakçı qrupu dəyişdirilə bilməz', 'info')
+      return
+    }
     setGroupPkg(groupPackageFromApi(group))
     setGroupModalError('')
     setGroupModal({ mode: 'edit', subjectId, group })
@@ -292,15 +304,17 @@ export default function InstructorTeachingGroups() {
                         </span>
                       </div>
                     </div>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="danger"
-                      loading={busy[`dels-${s.id}`]}
-                      onClick={() => requestRemoveSubject(s)}
-                    >
-                      Sil
-                    </Button>
+                    {!s.is_system ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="danger"
+                        loading={busy[`dels-${s.id}`]}
+                        onClick={() => requestRemoveSubject(s)}
+                      >
+                        Sil
+                      </Button>
+                    ) : null}
                   </div>
                   <div
                     className={[
@@ -323,8 +337,20 @@ export default function InstructorTeachingGroups() {
                             ].join(' ')}
                           >
                             <div className="min-w-0">
-                              <div className="truncate">{g.name}</div>
-                              {g.join_code ? (
+                              <div className="truncate flex items-center gap-2 flex-wrap">
+                                <span>{g.name}</span>
+                                {g.is_system ? (
+                                  <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded-md border border-indigo-400/30 text-indigo-200/90">
+                                    Sistem
+                                  </span>
+                                ) : null}
+                              </div>
+                              {g.is_system ? (
+                                <div className="text-[11px] text-gray-500 mt-0.5">
+                                  İmtahan/tapşırıq linki ilə qoşulan iştirakçılar avtomatik əlavə olunur.
+                                </div>
+                              ) : null}
+                              {!g.is_system && g.join_code ? (
                                 <div className="text-[11px] text-gray-500 mt-0.5 space-y-0.5">
                                   <div>
                                     {g.invite_ready ? (
@@ -349,6 +375,7 @@ export default function InstructorTeachingGroups() {
                               ) : null}
                             </div>
                             <div className="flex flex-wrap items-center justify-end gap-2 shrink-0">
+                              {!g.is_system ? (
                               <button
                                 type="button"
                                 className={['text-xs', theme === 'dark' ? 'text-indigo-300' : 'text-indigo-700'].join(' ')}
@@ -356,7 +383,8 @@ export default function InstructorTeachingGroups() {
                               >
                                 Paket
                               </button>
-                              {g.join_code ? (
+                              ) : null}
+                              {!g.is_system && g.join_code ? (
                                 <>
                                   <button
                                     type="button"
@@ -454,6 +482,7 @@ export default function InstructorTeachingGroups() {
                                   </button>
                                 </>
                               ) : null}
+                              {!g.is_system ? (
                               <button
                                 type="button"
                                 className={[
@@ -465,11 +494,13 @@ export default function InstructorTeachingGroups() {
                               >
                                 Sil
                               </button>
+                              ) : null}
                             </div>
                           </li>
                         ))}
                       </ul>
                     )}
+                    {!s.is_system ? (
                     <div className="flex flex-col sm:flex-row gap-2 pt-1">
                       <input
                         className={inp + ' text-xs'}
@@ -492,6 +523,7 @@ export default function InstructorTeachingGroups() {
                         Qrup + paket
                       </Button>
                     </div>
+                    ) : null}
                   </div>
                 </li>
               ))}

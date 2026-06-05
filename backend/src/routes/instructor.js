@@ -8,6 +8,7 @@ const {
   postGroup,
   patchGroup,
   deleteGroup,
+  postPromoteParticipant,
 } = require('../controllers/instructorTeachingController');
 const { patchInstructorMapProfile } = require('../controllers/instructorMapProfileController');
 const { getDiscoverProfile, patchDiscoverProfile } = require('../controllers/instructorDiscoverController');
@@ -59,5 +60,6 @@ router.delete('/teaching/subjects/:id', authenticate, authorize('instructor'), d
 router.post('/teaching/groups', authenticate, authorize('instructor'), postGroup);
 router.patch('/teaching/groups/:id', authenticate, authorize('instructor'), patchGroup);
 router.delete('/teaching/groups/:id', authenticate, authorize('instructor'), deleteGroup);
+router.post('/teaching/promote-participant', authenticate, authorize('instructor'), postPromoteParticipant);
 
 module.exports = router;

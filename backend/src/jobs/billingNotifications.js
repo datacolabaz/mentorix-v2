@@ -1,6 +1,7 @@
 const db = require('../utils/db');
 const { computeMonthlyCycleProgress, getTodayBakuYmd, toYmd } = require('../services/subscriptionBilling');
 const { sendSms } = require('../services/smsService');
+const { SQL_EXCLUDE_SYSTEM_GROUP_ENROLLMENTS } = require('../services/systemGroupGuards');
 
 async function ensureNotificationOnce({ user_id, type, title, body }) {
   const { rows } = await db.query(
@@ -75,7 +76,7 @@ async function runMonthlyTwoDayNotifications() {
      LEFT JOIN student_profiles sp ON sp.user_id = e.student_id
      WHERE e.billing_type = 'monthly'
        AND (e.status IS NULL OR LOWER(TRIM(e.status)) = 'active')
-       AND COALESCE(e.enrollment_source, 'manual') IN ('group', 'manual')`
+       ${SQL_EXCLUDE_SYSTEM_GROUP_ENROLLMENTS}`
   );
 
   let sent = 0;
@@ -218,7 +219,7 @@ async function runLessonPackLastLessonNotifications() {
      LEFT JOIN student_profiles sp ON sp.user_id = e.student_id
      WHERE e.billing_type IN ('8_lessons','12_lessons')
        AND (e.status IS NULL OR LOWER(TRIM(e.status)) = 'active')
-       AND COALESCE(e.enrollment_source, 'manual') IN ('group', 'manual')`
+       ${SQL_EXCLUDE_SYSTEM_GROUP_ENROLLMENTS}`
   );
 
   let sent = 0;

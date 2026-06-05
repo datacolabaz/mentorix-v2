@@ -47,6 +47,8 @@ const rotateJoinCode = async (req, res) => {
     const iid = req.user.id;
     const gid = String(req.params.id || '').trim();
     if (!gid) return res.status(400).json({ success: false, message: 'ID tələb olunur' });
+    const { assertGroupMutable } = require('../services/systemGroupGuards');
+    await assertGroupMutable(gid, iid, 'rotate_join_code');
     const code = await generateUniqueJoinCode();
     const link = buildInvitationLink(code);
     const { rows } = await db.query(

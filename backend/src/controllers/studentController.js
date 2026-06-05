@@ -13,6 +13,7 @@ const {
   resolveEnrollmentScope,
   applyGroupScheduleToEnrollment,
 } = require('../services/studentEnrollmentsService');
+const { expandStudentsWithParticipantGroups } = require('../services/participantGroupService');
 
 function normInstructorHex(id) {
   return id == null ? '' : String(id).trim().toLowerCase().replace(/-/g, '');
@@ -145,7 +146,8 @@ const listStudents = async (req, res) => {
          ${group}`,
         [instructorId]
       );
-      const students = await enrichStudentsWithGroupSchedule(rows);
+      let students = await enrichStudentsWithGroupSchedule(rows);
+      students = await expandStudentsWithParticipantGroups(students, req.user.id);
       return res.json({ success: true, students });
     }
 

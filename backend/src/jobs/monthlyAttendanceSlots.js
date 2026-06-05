@@ -1,4 +1,5 @@
 const db = require('../utils/db');
+const { SQL_EXCLUDE_SYSTEM_GROUP_ENROLLMENTS } = require('../services/systemGroupGuards');
 const {
   enumerateLessonYmds,
   bakuTodayYmd,
@@ -20,7 +21,8 @@ async function extendMonthlyAttendanceSlots() {
             (SELECT MAX(s.lesson_date) FROM monthly_attendance_slots s WHERE s.enrollment_id = e.id) AS max_d
      FROM enrollments e
      WHERE e.billing_type = 'monthly'
-       AND (e.status IS NULL OR LOWER(TRIM(e.status)) = 'active')`
+       AND (e.status IS NULL OR LOWER(TRIM(e.status)) = 'active')
+       ${SQL_EXCLUDE_SYSTEM_GROUP_ENROLLMENTS}`
   );
 
   let totalInserted = 0;

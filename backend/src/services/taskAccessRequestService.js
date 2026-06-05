@@ -209,8 +209,7 @@ async function listPendingTaskAccessRequests(instructorId) {
         phone: phoneCanon || r.phone_number || r.user_phone,
         profile_complete: Boolean(phoneCanon),
       };
-    })
-    .filter((r) => r.profile_complete);
+    });
 }
 
 async function countPendingTaskAccessRequests(instructorId) {
@@ -242,6 +241,7 @@ async function approveTaskAccessRequest(requestId, instructorId) {
   await assertStudentProfileComplete(req.student_id);
 
   const { trackInstructorStudentLink } = require('./instructorStudentService');
+  const { addStudentToAssignmentParticipantGroup } = require('./participantGroupService');
   await db.transaction(async (client) => {
     await ensureLightInstructorEnrollment(client, instructorId, req.student_id, 'task', {
       activate: true,
@@ -253,6 +253,7 @@ async function approveTaskAccessRequest(requestId, instructorId) {
        ON CONFLICT (assignment_id, student_id) DO NOTHING`,
       [req.assignment_id, req.student_id],
     );
+    await addStudentToAssignmentParticipantGroup(client, req.assignment_id, req.student_id);
     await client.query(
       `UPDATE task_access_requests
        SET status = 'APPROVED', resolved_at = NOW(), resolved_by = $2::uuid

@@ -131,6 +131,9 @@ const createInstructorTask = async (req, res) => {
       );
       const task = trows[0];
 
+      const { ensureAssignmentParticipantGroup, addStudentToAssignmentParticipantGroup } = require('../services/participantGroupService');
+      await ensureAssignmentParticipantGroup(client, instructorId, task.id, task.title);
+
       const { rows: ok } = await client.query(
         `SELECT DISTINCT e.student_id
          FROM enrollments e
@@ -153,6 +156,10 @@ const createInstructorTask = async (req, res) => {
          ON CONFLICT (assignment_id, student_id) DO NOTHING`,
         [task.id, targets],
       );
+
+      for (const sid of targets) {
+        await addStudentToAssignmentParticipantGroup(client, task.id, sid);
+      }
 
       return { task, assignedCount: targets.length, studentIds: targets };
     });
@@ -467,6 +474,21 @@ const submitMyAssignment = async (req, res) => {
         `${inst[0].student_name} «${inst[0].title}» tapşırığını təslim etdi.`,
         'assignment_submitted',
       );
+    }
+
+    try {
+      const { rows: meta } = await db.query(
+        `SELECT assignment_id FROM student_assignments WHERE id = $1 LIMIT 1`,
+        [id],
+      );
+      if (meta[0]?.assignment_id) {
+        await db.transaction(async (client) => {
+          const { addStudentToAssignmentParticipantGroup } = require('../services/participantGroupService');
+          await addStudentToAssignmentParticipantGroup(client, meta[0].assignment_id, studentId);
+        });
+      }
+    } catch (e) {
+      console.error('addStudentToAssignmentParticipantGroup', e.message);
     }
 
     res.json({ success: true, assignment: rows[0] });

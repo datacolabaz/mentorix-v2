@@ -4,6 +4,12 @@ const {
   buildInvitationLink,
 } = require('../services/joinInvitationService');
 const { parseGroupDefaultsPayload, rowToDefaults } = require('../services/groupInviteDefaults');
+const {
+  assertGroupMutable,
+  assertSubjectMutable,
+  isReservedSystemSubjectName,
+} = require('../services/systemGroupGuards');
+const { promoteParticipantToCrmGroup } = require('../services/participantGroupService');
 
 function parsePublicLabel(v) {
   const s = String(v || '').trim().toLowerCase();
@@ -32,7 +38,7 @@ function instructorIdWhere(column, paramIndex = 1) {
 async function loadInstructorGroups(instructorUserId) {
   const iidNorm = normalizedInstructorId(instructorUserId);
   const baseCols = `id, subject_id, name, sort_order, join_code, join_code_expires_at,
-              invitation_code, invitation_link,
+              invitation_code, invitation_link, is_system, system_kind, system_ref_id,
               default_billing_type, default_package_fee, default_discount_percent,
               default_billing_timing, default_payment_plan, default_lesson_weekdays,
               default_lesson_times, default_notifications_enabled, default_initial_payment_status`;
@@ -114,7 +120,7 @@ const getTeaching = async (req, res) => {
     const public_label = parsePublicLabel(p?.public_label);
 
     const { rows: subjects } = await db.query(
-      `SELECT DISTINCT ist.id, ist.name, ist.sort_order
+      `SELECT DISTINCT ist.id, ist.name, ist.sort_order, COALESCE(ist.is_system, FALSE) AS is_system
        FROM instructor_subjects ist
        WHERE ${instructorIdWhere('ist.instructor_id', 1)}
           OR ist.id IN (
@@ -179,6 +185,7 @@ const getTeaching = async (req, res) => {
           id: s.id,
           name: s.name,
           sort_order: s.sort_order,
+          is_system: Boolean(s.is_system),
           student_count: st.student_count,
           income_this_month: st.income_this_month,
           groups: [],
@@ -190,7 +197,7 @@ const getTeaching = async (req, res) => {
       let bucket = byId.get(String(g.subject_id));
       if (!bucket && g.subject_id) {
         const { rows: subRows } = await db.query(
-          `SELECT id, name, sort_order FROM instructor_subjects WHERE id = $1 LIMIT 1`,
+          `SELECT id, name, sort_order, COALESCE(is_system, FALSE) AS is_system FROM instructor_subjects WHERE id = $1 LIMIT 1`,
           [g.subject_id],
         );
         if (subRows[0]) {
@@ -202,6 +209,7 @@ const getTeaching = async (req, res) => {
             id: subRows[0].id,
             name: subRows[0].name,
             sort_order: subRows[0].sort_order,
+            is_system: Boolean(subRows[0].is_system),
             student_count: st.student_count,
             income_this_month: st.income_this_month,
             groups: [],
@@ -215,7 +223,10 @@ const getTeaching = async (req, res) => {
           id: g.id,
           name: g.name,
           sort_order: g.sort_order,
-          join_code: g.join_code || null,
+          is_system: Boolean(g.is_system),
+          system_kind: g.system_kind || null,
+          system_ref_id: g.system_ref_id || null,
+          join_code: g.is_system ? null : g.join_code || null,
           join_code_expires_at: g.join_code_expires_at || null,
           invitation_code: g.invitation_code || null,
           invitation_link: g.invitation_link || null,
@@ -275,6 +286,12 @@ const postSubject = async (req, res) => {
     const name = req.body?.name != null ? String(req.body.name).trim() : '';
     if (!name) return res.status(400).json({ success: false, message: 'Sahə adı tələb olunur' });
     if (name.length > 200) return res.status(400).json({ success: false, message: 'Sahə adı çox uzundur' });
+    if (isReservedSystemSubjectName(name)) {
+      return res.status(400).json({
+        success: false,
+        message: '«[System]» adlı sahələr avtomatik yaradılır — əl ilə yaradıla bilməz.',
+      });
+    }
     const { rows: mx } = await db.query(
       `SELECT COALESCE(MAX(sort_order), 0) + 1 AS n FROM instructor_subjects WHERE instructor_id = $1`,
       [req.user.id]
@@ -297,6 +314,7 @@ const deleteSubject = async (req, res) => {
   try {
     const id = req.params.id;
     if (!looksUuid(id)) return res.status(400).json({ success: false, message: 'ID düzgün deyil' });
+    await assertSubjectMutable(id, req.user.id, 'delete');
     const { rowCount } = await db.query(
       `DELETE FROM instructor_subjects WHERE id = $1 AND instructor_id = $2`,
       [id, req.user.id]
@@ -382,6 +400,7 @@ const patchGroup = async (req, res) => {
   try {
     const id = req.params.id;
     if (!looksUuid(id)) return res.status(400).json({ success: false, message: 'ID düzgün deyil' });
+    await assertGroupMutable(id, req.user.id, 'rename_or_configure');
     const defs = parseGroupDefaultsPayload(req.body);
     const { rows } = await db.query(
       `UPDATE instructor_groups SET
@@ -434,6 +453,7 @@ const deleteGroup = async (req, res) => {
   try {
     const id = req.params.id;
     if (!looksUuid(id)) return res.status(400).json({ success: false, message: 'ID düzgün deyil' });
+    await assertGroupMutable(id, req.user.id, 'delete');
     const { rowCount } = await db.query(`DELETE FROM instructor_groups WHERE id = $1 AND instructor_id = $2`, [
       id,
       req.user.id,
@@ -445,6 +465,36 @@ const deleteGroup = async (req, res) => {
   }
 };
 
+const postPromoteParticipant = async (req, res) => {
+  try {
+    const studentId = req.body?.student_id;
+    const systemGroupId = req.body?.system_group_id;
+    const targetGroupId = req.body?.target_group_id;
+    if (!looksUuid(studentId) || !looksUuid(systemGroupId) || !looksUuid(targetGroupId)) {
+      return res.status(400).json({ success: false, message: 'Tələbə, sistem qrupu və hədəf qrup seçilməlidir' });
+    }
+    const result = await db.transaction(async (client) =>
+      promoteParticipantToCrmGroup(client, {
+        instructorId: req.user.id,
+        studentId,
+        systemGroupId,
+        targetGroupId,
+      }),
+    );
+    res.json({
+      success: true,
+      message: `${result.student_name} «${result.target_group_name}» qrupuna əlavə edildi — artıq daimi tələbədir.`,
+      ...result,
+    });
+  } catch (err) {
+    res.status(err.statusCode || 500).json({
+      success: false,
+      message: err.message,
+      code: err.code,
+    });
+  }
+};
+
 module.exports = {
   getTeaching,
   patchPublicLabel,
@@ -453,4 +503,5 @@ module.exports = {
   postGroup,
   patchGroup,
   deleteGroup,
+  postPromoteParticipant,
 };

@@ -239,8 +239,7 @@ async function listPendingExamAccessRequests(instructorId) {
         phone: phoneCanon || r.phone_number || r.user_phone,
         profile_complete: Boolean(phoneCanon),
       };
-    })
-    .filter((r) => r.profile_complete);
+    });
 }
 
 async function countPendingExamAccessRequests(instructorId) {
@@ -275,6 +274,7 @@ async function approveExamAccessRequest(requestId, instructorId, options = {}) {
 
   let enrollmentId = null;
   const { trackInstructorStudentLink } = require('./instructorStudentService');
+  const { addStudentToExamParticipantGroup } = require('./participantGroupService');
   await db.transaction(async (client) => {
     enrollmentId = await ensureLightInstructorEnrollment(client, instructorId, req.student_id, 'exam', {
       activate: true,
@@ -285,6 +285,7 @@ async function approveExamAccessRequest(requestId, instructorId, options = {}) {
        ON CONFLICT DO NOTHING`,
       [req.exam_id, req.student_id],
     );
+    await addStudentToExamParticipantGroup(client, req.exam_id, req.student_id);
     await client.query(
       `UPDATE exam_access_requests
        SET status = 'APPROVED', resolved_at = NOW(), resolved_by = $2::uuid

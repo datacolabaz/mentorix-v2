@@ -1,5 +1,6 @@
 const db = require('../utils/db');
 const { sendSms } = require('../services/smsService');
+const { SQL_EXCLUDE_SYSTEM_GROUP_ENROLLMENTS } = require('../services/systemGroupGuards');
 
 function billingLimit(billingType) {
   if (billingType === '8_lessons') return 8;
@@ -61,7 +62,7 @@ async function runPackReminders({ dryRun = false } = {}) {
        WHERE (e.status IS NULL OR LOWER(TRIM(e.status)) = 'active')
          AND u.is_active = TRUE
          AND e.billing_type IN ('8_lessons','12_lessons')
-         AND COALESCE(e.enrollment_source, 'manual') IN ('group', 'manual')
+         ${SQL_EXCLUDE_SYSTEM_GROUP_ENROLLMENTS}
      )
      SELECT *
      FROM prog

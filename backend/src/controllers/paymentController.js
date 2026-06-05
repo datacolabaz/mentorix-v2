@@ -20,6 +20,7 @@ const { sumInstructorExpectedPayments } = require('../services/instructorExpecte
 const { SQL_INSTRUCTOR_REVENUE_FROM } = require('../services/instructorRevenue');
 const { loadActiveEnrollmentForPayments } = require('../services/enrollmentGuards');
 const { getGroupLessonSchedule } = require('../services/studentEnrollmentsService');
+const { enrollmentHasSystemGroup } = require('../services/systemGroupGuards');
 
 /** Bu qeydlər balansı azaldır; ümumi gəlir statistikasına daxil edilmir */
 const SQL_EXCLUDE_BALANCE_ADJUSTMENT =
@@ -1353,7 +1354,8 @@ const listMyPayments = async (req, res) => {
         }
 
         // Monthly subscription: 2 calendar days remaining notification (student + instructor)
-        if (enrollmentOut.notifications_enabled === true && monthlyProgress?.days_remaining === 2) {
+        const billingOk = !(await enrollmentHasSystemGroup(enrollmentOut.id));
+        if (billingOk && enrollmentOut.notifications_enabled === true && monthlyProgress?.days_remaining === 2) {
           const msg =
             'Hörmətli tələbə, aylıq abunəliyinizin bitməsinə 2 gün qalıb. Davam etmək üçün ödənişi yeniləməyiniz xahiş olunur.';
 
@@ -1744,7 +1746,14 @@ const listMyPayments = async (req, res) => {
     }
 
     // Last-lesson notification (package): only if enabled (cron will do the time-based trigger)
-    if (enrollment && enrollment.notifications_enabled === true && limit != null && calendar_remaining_lessons === 1) {
+    const pkgBillingOk = enrollment?.id ? !(await enrollmentHasSystemGroup(enrollment.id)) : true;
+    if (
+      pkgBillingOk &&
+      enrollment &&
+      enrollment.notifications_enabled === true &&
+      limit != null &&
+      calendar_remaining_lessons === 1
+    ) {
       const instId = enrollment?.instructor_id || null;
       const studentBody =
         'Hörmətli tələbə, aylıq abunəliyinizin bitməsinə 2 gün qalıb. Davam etmək üçün ödənişi yeniləməyiniz xahiş olunur.';

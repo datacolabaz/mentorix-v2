@@ -32,6 +32,7 @@ export default function InstructorJoinRequests() {
   const [actingId, setActingId] = useState(null)
   const [examApproveModal, setExamApproveModal] = useState(null)
   const [examApproveSendSms, setExamApproveSendSms] = useState(false)
+  const [profileIncompleteModal, setProfileIncompleteModal] = useState(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -64,7 +65,14 @@ export default function InstructorJoinRequests() {
       window.dispatchEvent(new CustomEvent('mx:join-requests-changed'))
       window.dispatchEvent(new CustomEvent('mx:students-changed'))
     } catch (err) {
-      toast(err?.message || 'Xəta', 'error')
+      if (err?.code === 'STUDENT_PROFILE_INCOMPLETE' || err?.code === 'PROFILE_INCOMPLETE') {
+        setProfileIncompleteModal({
+          studentName: err?.student_name || 'Tələbə',
+          message: err?.message || 'Tələbənin profili tam deyil.',
+        })
+      } else {
+        toast(err?.message || 'Xəta', 'error')
+      }
     } finally {
       setActingId(null)
       setExamApproveModal(null)
@@ -72,8 +80,36 @@ export default function InstructorJoinRequests() {
   }
 
   const openExamApprove = (req) => {
+    if (!req?.profile_complete) {
+      setProfileIncompleteModal({
+        studentName: req.student_name || 'Tələbə',
+        message:
+          'Tələbə hələ mobil telefonunu doldurmayıb. Tələbə imtahan linkində ad, soyad və telefonu tamamlamalıdır — sonra buradan təsdiqləyə bilərsiniz.',
+      })
+      return
+    }
     setExamApproveSendSms(false)
     setExamApproveModal(req)
+  }
+
+  const tryApprove = (req) => {
+    if (req.kind === 'exam_access' || req.kind === 'task_access') {
+      if (!req.profile_complete) {
+        setProfileIncompleteModal({
+          studentName: req.student_name || 'Tələbə',
+          message:
+            req.kind === 'task_access'
+              ? 'Tələbə hələ mobil telefonunu doldurmayıb. Tapşırıq linkində ad, soyad və telefonu tamamlamalıdır.'
+              : 'Tələbə hələ mobil telefonunu doldurmayıb. İmtahan linkində ad, soyad və telefonu tamamlamalıdır.',
+        })
+        return
+      }
+      if (req.kind === 'exam_access') {
+        openExamApprove(req)
+        return
+      }
+    }
+    void approve(req.request_id, req.kind || 'group_join')
   }
 
   const reject = async (requestId, kind = 'group_join') => {
@@ -162,6 +198,11 @@ export default function InstructorJoinRequests() {
                   {(req.phone_number || req.phone) && (
                     <div>Telefon: {req.phone_number || req.phone}</div>
                   )}
+                  {req.profile_complete === false && (
+                    <div className="text-amber-200/90 font-medium">
+                      Telefon gözlənilir — tələbə linkdə profili tamamlamalıdır
+                    </div>
+                  )}
                   {req.student_email && <div>Email: {req.student_email}</div>}
                   {req.parent_name && (
                     <div>
@@ -182,11 +223,7 @@ export default function InstructorJoinRequests() {
                     size="sm"
                     className="flex-1 justify-center"
                     loading={actingId === req.request_id}
-                    onClick={() =>
-                      req.kind === 'exam_access'
-                        ? openExamApprove(req)
-                        : approve(req.request_id, req.kind || 'group_join')
-                    }
+                    onClick={() => tryApprove(req)}
                   >
                     Təsdiqlə
                   </Button>
@@ -205,6 +242,28 @@ export default function InstructorJoinRequests() {
           ))}
         </ul>
       )}
+
+      <Modal
+        open={Boolean(profileIncompleteModal)}
+        onClose={() => setProfileIncompleteModal(null)}
+        title="Profil tam deyil"
+        size="sm"
+        zIndex={10200}
+        footer={
+          <div className="flex justify-center">
+            <Button type="button" className="min-w-[120px] justify-center" onClick={() => setProfileIncompleteModal(null)}>
+              Tamam
+            </Button>
+          </div>
+        }
+      >
+        <p className="text-sm text-center text-zinc-300 leading-relaxed">
+          <strong className="text-white">{profileIncompleteModal?.studentName}</strong>
+        </p>
+        <p className="text-sm text-center text-amber-200/95 mt-3 leading-relaxed">
+          {profileIncompleteModal?.message}
+        </p>
+      </Modal>
 
       <Modal
         open={!!examApproveModal}

@@ -248,6 +248,9 @@ const createExam = async (req, res) => {
 
       const exam = rows[0];
 
+      const { ensureExamParticipantGroup } = require('../services/participantGroupService');
+      await ensureExamParticipantGroup(client, req.user.id, exam.id, exam.title);
+
       if (questions?.length) {
         for (let i = 0; i < questions.length; i++) {
           const q = questions[i];
@@ -312,12 +315,14 @@ const createExam = async (req, res) => {
           assignIds = enrolled.map((r) => r.id).filter(Boolean);
         }
       }
+      const { addStudentToExamParticipantGroup } = require('../services/participantGroupService');
       for (const sid of assignIds) {
         await client.query(
           `INSERT INTO exam_assignments (exam_id, student_id) VALUES ($1,$2)
            ON CONFLICT DO NOTHING`,
           [exam.id, sid]
         );
+        await addStudentToExamParticipantGroup(client, exam.id, sid);
       }
 
       return exam;
@@ -1065,6 +1070,15 @@ const submitExam = async (req, res) => {
       );
     }
 
+    try {
+      await db.transaction(async (client) => {
+        const { addStudentToExamParticipantGroup } = require('../services/participantGroupService');
+        await addStudentToExamParticipantGroup(client, exam_id, student_id);
+      });
+    } catch (e) {
+      console.error('addStudentToExamParticipantGroup', e.message);
+    }
+
     setImmediate(() => {
       notifyParentExamResultAfterSubmit(exam_id, student_id, score).catch((e) =>
         console.error('notifyParentExamResultAfterSubmit', e.message)
@@ -1222,7 +1236,10 @@ const getResults = async (req, res) => {
 const getExamGroups = async (req, res) => {
   try {
     const examId = req.params.id;
-    const { rows: [exam] } = await db.query('SELECT id, instructor_id FROM exams WHERE id = $1', [examId]);
+    const { rows: [exam] } = await db.query(
+      'SELECT id, instructor_id, participant_group_id FROM exams WHERE id = $1',
+      [examId],
+    );
     if (!exam) return res.status(404).json({ success: false, message: 'Tapılmadı' });
     if (req.user.role === 'instructor' && normStudentHex(exam.instructor_id) !== normStudentHex(req.user.id)) {
       return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
@@ -1285,7 +1302,11 @@ const getExamGroups = async (req, res) => {
        ORDER BY x.grade`,
       [examId]
     );
-    res.json({ success: true, groups: rows });
+    res.json({
+      success: true,
+      groups: rows,
+      participant_group_id: exam.participant_group_id || null,
+    });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

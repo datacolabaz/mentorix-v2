@@ -16,6 +16,7 @@ import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
 import ExamBreakdownList from '../../components/exam/ExamBreakdownList'
+import { useToast } from '../../components/common/Toast'
 import useUiStore from '../../hooks/useUi'
 
 const COLORS = ['#e1306c', '#1877f2', '#000', '#3b82f6', '#6366f1']
@@ -36,6 +37,7 @@ function studentPerformanceBal(s, examById) {
 }
 
 export default function InstructorAnalytics() {
+  const toast = useToast()
   const [students, setStudents] = useState([])
   const [examStats, setExamStats] = useState([])
   const [referralBreakdown, setReferralBreakdown] = useState([])
@@ -44,6 +46,10 @@ export default function InstructorAnalytics() {
   const [exams, setExams] = useState([])
   const [examId, setExamId] = useState('')
   const [groups, setGroups] = useState([])
+  const [participantGroupId, setParticipantGroupId] = useState(null)
+  const [crmGroups, setCrmGroups] = useState([])
+  const [promoteModal, setPromoteModal] = useState(null)
+  const [promoteBusy, setPromoteBusy] = useState(false)
 
   useEffect(() => {
     setStudentReviewModal(null)
@@ -85,6 +91,25 @@ export default function InstructorAnalytics() {
       .get('/exams')
       .then((d) => setExams(Array.isArray(d.exams) ? d.exams : []))
       .catch(() => setExams([]))
+    api
+      .get('/instructor/teaching')
+      .then((d) => {
+        const opts = []
+        for (const sub of Array.isArray(d?.subjects) ? d.subjects : []) {
+          if (sub?.is_system) continue
+          for (const g of Array.isArray(sub?.groups) ? sub.groups : []) {
+            if (g?.is_system) continue
+            opts.push({
+              id: g.id,
+              name: g.name,
+              subject_name: sub.name,
+              label: `${sub.name} → ${g.name}`,
+            })
+          }
+        }
+        setCrmGroups(opts)
+      })
+      .catch(() => setCrmGroups([]))
   }, [])
 
   const loadExamAnalytics = async (id, grade = null) => {
@@ -99,15 +124,43 @@ export default function InstructorAnalytics() {
       ])
       const gr = Array.isArray(g.groups) ? g.groups : []
       setGroups(gr)
+      setParticipantGroupId(g.participant_group_id || null)
       setTop10(Array.isArray(t.top10) ? t.top10 : [])
       setGroupResults(Array.isArray(r.results) ? r.results : [])
     } catch (e) {
       setExamErr(e?.message || 'Yüklənmədi')
       setGroups([])
+      setParticipantGroupId(null)
       setTop10([])
       setGroupResults([])
     } finally {
       setExamLoading(false)
+    }
+  }
+
+  const openPromoteModal = (studentId, studentName) => {
+    if (!participantGroupId) return
+    setPromoteModal({ studentId, studentName, targetGroupId: crmGroups[0]?.id || '' })
+  }
+
+  const submitPromote = async () => {
+    if (!promoteModal?.studentId || !participantGroupId || !promoteModal?.targetGroupId) return
+    setPromoteBusy(true)
+    try {
+      const r = await api.post('/instructor/teaching/promote-participant', {
+        student_id: promoteModal.studentId,
+        system_group_id: participantGroupId,
+        target_group_id: promoteModal.targetGroupId,
+      })
+      if (examId) await loadExamAnalytics(examId, selectedGrade || null)
+      const studentsRes = await api.get('/students').catch(() => ({ students: [] }))
+      setStudents(studentsRes.students || [])
+      setPromoteModal(null)
+      toast(r?.message || 'Tələbə CRM qrupuna əlavə edildi', 'success')
+    } catch (e) {
+      setPromoteModal((m) => (m ? { ...m, error: e?.message || 'Xəta' } : m))
+    } finally {
+      setPromoteBusy(false)
     }
   }
 
@@ -703,6 +756,16 @@ export default function InstructorAnalytics() {
                       >
                         Cavablar
                       </button>
+                      {participantGroupId && crmGroups.length > 0 ? (
+                        <button
+                          type="button"
+                          onClick={() => openPromoteModal(r.student_id, r.full_name)}
+                          className="text-[11px] font-semibold text-emerald-300 hover:text-emerald-200 border border-emerald-500/30 rounded-lg px-2 py-1 shrink-0"
+                          title="Daimi CRM qrupuna köçür"
+                        >
+                          + Qrupa
+                        </button>
+                      ) : null}
                       <div className="text-right shrink-0">
                         <p className="text-sm font-extrabold text-white">
                           {Math.round(Math.min(100, Math.max(0, Number(r.score_pct ?? r.score) || 0)))}%
@@ -716,6 +779,49 @@ export default function InstructorAnalytics() {
           </div>
         )}
       </Card>
+
+      {promoteModal != null && (
+        <Modal
+          open
+          onClose={() => !promoteBusy && setPromoteModal(null)}
+          title="Qrupa əlavə et"
+          size="sm"
+          footer={
+            <div className="flex gap-2 justify-end">
+              <Button variant="secondary" disabled={promoteBusy} onClick={() => setPromoteModal(null)}>
+                Ləğv et
+              </Button>
+              <Button loading={promoteBusy} onClick={() => void submitPromote()}>
+                Əlavə et
+              </Button>
+            </div>
+          }
+        >
+          <p className="text-sm text-token-textMuted mb-3">
+            <strong className="text-token-textMain">{promoteModal.studentName}</strong> iştirakçı qrupundan
+            daimi CRM qrupuna köçürüləcək — paket və cədvəl tətbiq olunacaq.
+          </p>
+          <label className="block text-xs font-semibold uppercase tracking-wider text-token-textMuted mb-1.5">
+            Hədəf qrup
+          </label>
+          <select
+            className="w-full border border-[color:var(--border-subtle)] rounded-xl px-3 py-2.5 text-sm bg-token-surfaceCard/55"
+            value={promoteModal.targetGroupId || ''}
+            onChange={(e) =>
+              setPromoteModal((m) => (m ? { ...m, targetGroupId: e.target.value, error: null } : m))
+            }
+          >
+            {crmGroups.map((g) => (
+              <option key={g.id} value={g.id}>
+                {g.label}
+              </option>
+            ))}
+          </select>
+          {promoteModal.error ? (
+            <p className="text-sm text-red-400 mt-2">{promoteModal.error}</p>
+          ) : null}
+        </Modal>
+      )}
 
       {studentReviewModal != null && (
         <Modal

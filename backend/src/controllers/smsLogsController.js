@@ -627,7 +627,12 @@ const getSmsPlan = async (req, res) => {
        LEFT JOIN student_profiles sp ON sp.user_id = e.student_id
        WHERE e.instructor_id = $1
          AND (e.status IS NULL OR LOWER(TRIM(e.status)) = 'active')
-         AND su.is_active = TRUE`,
+         AND su.is_active = TRUE
+         AND COALESCE(e.enrollment_source, 'manual') IN ('group', 'manual')
+         AND NOT EXISTS (
+           SELECT 1 FROM instructor_groups ig
+           WHERE ig.id = e.group_id AND COALESCE(ig.is_system, FALSE) = TRUE
+         )`,
       [instructorId]
     );
 
@@ -845,7 +850,12 @@ const catchupPackReminders = async (req, res) => {
        WHERE e.instructor_id = $1
          AND (e.status IS NULL OR LOWER(TRIM(e.status)) = 'active')
          AND u.is_active = TRUE
-         AND e.billing_type IN ('8_lessons','12_lessons')`,
+         AND e.billing_type IN ('8_lessons','12_lessons')
+         AND COALESCE(e.enrollment_source, 'manual') IN ('group', 'manual')
+         AND NOT EXISTS (
+           SELECT 1 FROM instructor_groups ig
+           WHERE ig.id = e.group_id AND COALESCE(ig.is_system, FALSE) = TRUE
+         )`,
       [instructorId]
     );
 
