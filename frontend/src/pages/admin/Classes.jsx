@@ -50,7 +50,7 @@ export default function AdminClasses() {
       <div className="mb-6">
         <h1 className="font-display font-bold text-2xl">Kurslar / Qruplar</h1>
         <p className="text-gray-400 text-sm mt-1">
-          Müəllim → Qrup → Tələbə strukturu • bütün join kodları
+          Yalnız real tədris qrupları — imtahan/tapşırıq iştirakçı qrupları ([System]) burada göstərilmir
         </p>
       </div>
 

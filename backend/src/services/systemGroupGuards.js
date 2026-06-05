@@ -9,6 +9,9 @@ const SYSTEM_GROUP_IMMUTABLE_MSG =
 const SYSTEM_SUBJECT_IMMUTABLE_MSG =
   'Sistem iştirakçı sahəsi dəyişdirilə bilməz.';
 
+/** SQL: yalnız real tədris qrupları (sistem iştirakçı qrupları istisna) */
+const SQL_WHERE_TEACHING_GROUP_ONLY = `COALESCE(ig.is_system, FALSE) = FALSE`;
+
 /** SQL: CRM ödəniş/bildirişlərə aid OLMAYAN enrollment-lar */
 const SQL_EXCLUDE_SYSTEM_GROUP_ENROLLMENTS = `
   AND COALESCE(e.enrollment_source, 'manual') IN ('group', 'manual')
@@ -116,6 +119,7 @@ module.exports = {
   SYSTEM_GROUP_IMMUTABLE_MSG,
   SYSTEM_SUBJECT_IMMUTABLE_MSG,
   SQL_EXCLUDE_SYSTEM_GROUP_ENROLLMENTS,
+  SQL_WHERE_TEACHING_GROUP_ONLY,
   fetchGroupGuard,
   fetchSubjectGuard,
   assertNotSystemGroup,

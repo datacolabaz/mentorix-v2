@@ -13,6 +13,7 @@ const {
   ACTIVE_STUDENT_USER_JOIN,
 } = require('../sql/activeEnrollments');
 const { SMS_LOGS_MONTHLY_COUNT_SUBQUERY } = require('../sql/adminSmsUsage');
+const { SQL_WHERE_TEACHING_GROUP_ONLY } = require('../services/systemGroupGuards');
 
 // Butun muellimler
 const getInstructors = async (req, res) => {
@@ -223,7 +224,11 @@ const getDashboardStats = async (req, res) => {
          FROM enrollments e
          ${ACTIVE_ENROLLMENT_JOIN_INLINE}`
       ),
-      db.query(`SELECT COUNT(*)::int AS count FROM instructor_groups`),
+      db.query(
+        `SELECT COUNT(*)::int AS count
+         FROM instructor_groups ig
+         WHERE ${SQL_WHERE_TEACHING_GROUP_ONLY}`,
+      ),
       db.query(
         `SELECT COUNT(*)::int AS count
          FROM subscriptions
@@ -523,7 +528,7 @@ const getClasses = async (req, res) => {
       instructor: String(req.query.instructor || req.query.teacher || '').trim() || null,
     };
     const params = [];
-    const where = ['TRUE'];
+    const where = ['TRUE', SQL_WHERE_TEACHING_GROUP_ONLY];
 
     if (filters.q) {
       params.push(`%${filters.q}%`);
