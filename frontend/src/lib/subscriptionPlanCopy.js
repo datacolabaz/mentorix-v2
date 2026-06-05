@@ -32,7 +32,24 @@ function formatStorageFromLimits(lim) {
   return null
 }
 
-export function planLimitFeatureLines(p) {
+function smsEffectiveLineForCurrentUser({ billing, planId, baseSms }) {
+  const effective = billing?.limits?.sms_monthly
+  if (effective == null || effective === '') return null
+  const e = Math.max(0, Math.round(Number(effective)))
+  if (!Number.isFinite(e)) return null
+  // If we have base plan SMS in billing payload, show breakdown.
+  const billingBase = billing?.limits?.sms_monthly_plan
+  const base = billingBase == null || billingBase === '' ? baseSms : Number(billingBase)
+  const b = Math.max(0, Math.round(Number(base || baseSms || 0)))
+  const extra = Math.max(0, e - b)
+  if (!extra) return `${e} SMS / ay`
+  // Keep it short so it doesn't overflow cards.
+  return `${e} SMS / ay (baza ${b} + əlavə ${extra})`
+}
+
+export function planLimitFeatureLines(p, opts = {}) {
+  const billing = opts?.billing || null
+  const isCurrent = Boolean(opts?.isCurrent)
   const items = Array.isArray(p?.items)
     ? p.items.map((x) => String(x || '').trim()).filter(Boolean)
     : []
@@ -51,7 +68,17 @@ export function planLimitFeatureLines(p) {
   else if (lim.storage_mb == null && lim.storage_limit_bytes === null) lines.push('Limitsiz Sənəd Yaddaşı')
 
   if (lim.sms_monthly == null) lines.push('Limitsiz SMS / ay')
-  else if (id === 'premium' || id === 'business') lines.push('200 SMS / Əlavə balans imkanı')
+  else if (id === 'premium' || id === 'business') {
+    const baseSms = Math.max(0, Math.round(Number(lim.sms_monthly)))
+    if (isCurrent) {
+      const effectiveLine = smsEffectiveLineForCurrentUser({ billing, planId: id, baseSms })
+      if (effectiveLine) lines.push(effectiveLine)
+      else lines.push(`${baseSms} SMS / ay (əlavə balans alına bilər)`)
+    } else {
+      // For other plans (not current user's active one), show base plan.
+      lines.push(`${baseSms} SMS / Əlavə balans imkanı`)
+    }
+  }
   else lines.push(`${Math.max(0, Math.round(Number(lim.sms_monthly)))} SMS / ay`)
 
   return lines
@@ -73,8 +100,8 @@ function mapFeatureForPlan(p) {
 }
 
 /** Qısa başlıq (kartın üstündəki birinci sətir). */
-export function planLimitsHeadline(p) {
-  const lines = planLimitFeatureLines(p)
+export function planLimitsHeadline(p, opts = {}) {
+  const lines = planLimitFeatureLines(p, opts)
   const mapLine = mapFeatureForPlan(p)
   const merged = lines.length ? [...lines, mapLine] : [mapLine]
   return merged.join(' · ')
@@ -89,10 +116,12 @@ const PLAN_DESCRIPTIONS = {
 }
 
 /** Kartda tam izah (bütün paketlər). */
-export function planDetailLines(p) {
+export function planDetailLines(p, opts = {}) {
+  const billing = opts?.billing || null
+  const isCurrent = Boolean(opts?.isCurrent)
   const id = String(p?.id || '').toLowerCase()
   const normId = id === 'business' ? 'premium' : id
-  const features = planLimitFeatureLines(p)
+  const features = planLimitFeatureLines(p, { ...opts, billing, isCurrent })
   const limitsText = features.length ? features.join(', ') : null
   const price = Number(p?.price_azn)
   const isPaid = normId !== 'basic' && Number.isFinite(price) && price > 0
@@ -118,7 +147,17 @@ export function planDetailLines(p) {
     ]
     if (limitsText) lines.push(`Paketə daxildir: ${limitsText}.`)
     if (normId === 'premium') {
-      lines.push('Limitsiz tələbə — SMS limiti 200/ay (əlavə balans alına bilər).')
+      if (isCurrent) {
+        const baseSms = Number(p?.limits?.sms_monthly ?? 200) // fallback
+        const effectiveLine = smsEffectiveLineForCurrentUser({ billing, planId: normId, baseSms })
+        if (effectiveLine) {
+          lines.push(`Limitsiz tələbə — SMS limiti ${effectiveLine.replace(' SMS / ay', '')}.`)
+        } else {
+          lines.push('Limitsiz tələbə — SMS limiti 200/ay (əlavə balans alına bilər).')
+        }
+      } else {
+        lines.push('Limitsiz tələbə — SMS limiti 200/ay (əlavə balans alına bilər).')
+      }
     } else {
       lines.push('Limitlərə çatdıqda paketi yüksəldin və ya əlavə SMS/yaddaş alın.')
     }

@@ -658,8 +658,8 @@ export default function InstructorSettings() {
             const limitsNote =
               typeof p?.limitsNote === 'string' && p.limitsNote.trim()
                 ? p.limitsNote.trim()
-                : planLimitsHeadline(p)
-            const detailLines = planDetailLines(p)
+                : planLimitsHeadline(p, { billing, isCurrent })
+            const detailLines = planDetailLines(p, { billing, isCurrent })
 
             function openLimitChoiceModal() {
               setLimitChoice({ open: true })
