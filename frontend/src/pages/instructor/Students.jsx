@@ -30,6 +30,11 @@ function studentHasContactPhone(s) {
   return Boolean(canonicalAzPhoneE164(s?.phone || s?.phone_number || ''))
 }
 
+function isLightEnrollmentSource(source) {
+  const s = String(source || '').trim().toLowerCase()
+  return s === 'exam' || s === 'task'
+}
+
 function readPendingSetupToastSeen() {
   try {
     const raw = sessionStorage.getItem(PENDING_SETUP_TOAST_KEY)
@@ -248,6 +253,7 @@ function StudentFormFields({
   lockStudentPhone = false,
   onSendProfileCompletionEmail,
   sendProfileEmailBusy = false,
+  lightSetup = false,
 }) {
   const [subjectDraft, setSubjectDraft] = useState('')
   const [groupDraft, setGroupDraft] = useState('')
@@ -423,6 +429,14 @@ function StudentFormFields({
         </div>
       ) : null}
 
+      {lightSetup ? (
+        <p className="text-xs text-indigo-200/90 rounded-xl border border-indigo-500/25 bg-indigo-500/10 px-3 py-2.5 leading-relaxed">
+          Bu tələbə imtahan və ya tapşırıq linki ilə qoşulub — yalnız ad, soyad və telefon kifayətdir. Paket/cədvəl
+          tələb olunmur; «Sorğular» bölməsindən təsdiqləyin.
+        </p>
+      ) : null}
+
+      {!lightSetup ? (
       <div className="rounded-xl border border-white/10 bg-surface-2/40 p-3 space-y-2">
         <p className="text-xs font-semibold text-gray-200 uppercase tracking-wider">1. Qeydiyyat növü *</p>
         <p className="text-[10px] text-gray-400 leading-relaxed">
@@ -446,7 +460,9 @@ function StudentFormFields({
           ))}
         </select>
       </div>
+      ) : null}
 
+      {!lightSetup ? (
       <label className="flex items-center gap-2 text-sm text-gray-200 select-none">
         <input
           type="checkbox"
@@ -456,7 +472,9 @@ function StudentFormFields({
         />
         Ödəniş bitməsi barədə bildiriş göndərilsin
       </label>
+      ) : null}
 
+      {!lightSetup ? (
       <>
         <div className="rounded-xl border border-indigo-500/20 bg-[#0f0c29]/60 p-3 space-y-2">
           <p className="text-xs font-semibold text-indigo-200/90 uppercase tracking-wider">2. Paket: ilk dərs tarixi *</p>
@@ -513,7 +531,10 @@ function StudentFormFields({
           <p className="text-[10px] text-gray-500 mt-1.5">Paket üzrə istinad məbləği; abunə tipli sabit ödəniş deyil.</p>
         </div>
       </>
+      ) : null}
 
+      {!lightSetup ? (
+      <>
       <div className="rounded-xl border border-indigo-500/20 bg-[#0f0c29]/60 p-3 space-y-2">
         <p className="text-xs font-semibold text-indigo-200/90 uppercase tracking-wider">Həftənin dərs günləri *</p>
         <p className="text-[10px] text-gray-500 leading-relaxed">
@@ -896,6 +917,8 @@ function StudentFormFields({
           </div>
         </div>
       </div>
+      </>
+      ) : null}
     </div>
   )
 }
@@ -974,9 +997,10 @@ export default function InstructorStudents() {
   const isPendingApproval = (s) =>
     String(s?.enrollment_status || '').toLowerCase() === 'pending_approval'
 
-  /** Join kodu və ya köhnə aktiv qeydiyyat — cədvəl/paket tamamlanmayıb */
+  /** Qrup/sahə (CRM) — cədvəl/paket tamamlanmayıb. İmtahan/tapşırıq: Sorğular bölməsi. */
   const needsSetup = (s) => {
     if (isPendingApproval(s)) return false
+    if (isLightEnrollmentSource(s?.enrollment_source)) return false
     if (isPendingSetup(s)) return true
     const days = normalizeWeekdays(s?.lesson_weekdays)
     if (!days.length) return true
@@ -1033,6 +1057,13 @@ export default function InstructorStudents() {
 
   const openCompleteSetup = async (s) => {
     closeStudentMenu()
+    if (isLightEnrollmentSource(s?.enrollment_source)) {
+      toast(
+        'Bu tələbə imtahan və ya tapşırıq linki ilə qoşulub — paket/cədvəl lazım deyil. «Sorğular» bölməsindən təsdiqləyin.',
+        'info',
+      )
+      return
+    }
     let row = s
     try {
       const d = await api.get('/students')
@@ -1040,6 +1071,13 @@ export default function InstructorStudents() {
       setStudents(next)
       writeCache(CACHE_KEY, { students: next })
       row = next.find((x) => x.enrollment_id === s.enrollment_id) || s
+      if (isLightEnrollmentSource(row?.enrollment_source)) {
+        toast(
+          'Bu tələbə imtahan və ya tapşırıq linki ilə qoşulub — paket/cədvəl lazım deyil. «Sorğular» bölməsindən təsdiqləyin.',
+          'info',
+        )
+        return
+      }
     } catch {
       /* keep row */
     }
@@ -1764,9 +1802,9 @@ export default function InstructorStudents() {
                 Təyin gözləyən tələbələr
               </h2>
               <p className="text-xs text-amber-200/70 mt-1">
-                Tələbə qoşulub; siz «Quraşdırmanı tamamla» edənə qədər burada qalır. Telefonu yoxdursa əvvəlcə
-                profil linki göndərin — tələbə dolduranda siyahı avtomatik yenilənir. Paket/cədvəl təyin etdikdən
-                sonra bu sətir yox olur.
+                Yalnız qrup/sahə linki ilə qoşulan tələbələr. İmtahan və tapşırıq linki ilə gələnlər «Sorğular»
+                bölməsindədir — paket/cədvəl lazım deyil. Telefonu yoxdursa profil linki göndərin; paket/cədvəl
+                təyin etdikdən sonra bu sətir yox olur.
               </p>
             </div>
             <StatusBadge variant="due">{pendingStudents.length} gözləyir</StatusBadge>

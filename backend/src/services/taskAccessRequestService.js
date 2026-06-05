@@ -134,19 +134,25 @@ async function createTaskAccessRequest(studentId, taskId) {
     studentMessage: STUDENT_LIMIT_MESSAGE,
   });
 
-  const { rows } = await db.query(
-    `INSERT INTO task_access_requests (
-       assignment_id, student_id, instructor_id, status, student_email, student_name
-     ) VALUES ($1, $2, $3, 'PENDING', $4, $5)
-     RETURNING id, status, created_at`,
-    [taskId, studentId, task.instructor_id, u.email || null, studentName],
-  );
-
-  await trackInstructorStudentLink(task.instructor_id, studentId, { skipLimitCheck: true });
+  let requestRow = null;
+  await db.transaction(async (client) => {
+    const { rows } = await client.query(
+      `INSERT INTO task_access_requests (
+         assignment_id, student_id, instructor_id, status, student_email, student_name
+       ) VALUES ($1, $2, $3, 'PENDING', $4, $5)
+       RETURNING id, status, created_at`,
+      [taskId, studentId, task.instructor_id, u.email || null, studentName],
+    );
+    requestRow = rows[0];
+    await ensureLightInstructorEnrollment(client, task.instructor_id, studentId, 'task', {
+      activate: false,
+    });
+    await trackInstructorStudentLink(task.instructor_id, studentId, { skipLimitCheck: true }, client);
+  });
   await notifyInstructorTaskAccessRequest(task.instructor_id, studentName, task.title, task.id);
 
   return {
-    request_id: rows[0].id,
+    request_id: requestRow.id,
     message: 'Sorğunuz müəllimə göndərildi. Təsdiqlədikdən sonra tapşırığa daxil ola bilərsiniz.',
     code: 'PENDING_APPROVAL',
   };
@@ -237,7 +243,9 @@ async function approveTaskAccessRequest(requestId, instructorId) {
 
   const { trackInstructorStudentLink } = require('./instructorStudentService');
   await db.transaction(async (client) => {
-    await ensureLightInstructorEnrollment(client, instructorId, req.student_id, 'task');
+    await ensureLightInstructorEnrollment(client, instructorId, req.student_id, 'task', {
+      activate: true,
+    });
     await trackInstructorStudentLink(instructorId, req.student_id, { skipLimitCheck: true }, client);
     await client.query(
       `INSERT INTO student_assignments (assignment_id, student_id, status)

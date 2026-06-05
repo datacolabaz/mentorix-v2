@@ -155,15 +155,21 @@ async function createExamAccessRequest(studentId, examId) {
     studentMessage: STUDENT_LIMIT_MESSAGE,
   });
 
-  const { rows } = await db.query(
-    `INSERT INTO exam_access_requests (
-       exam_id, student_id, instructor_id, status, student_email, student_name
-     ) VALUES ($1, $2, $3, 'PENDING', $4, $5)
-     RETURNING id, status, created_at`,
-    [examId, studentId, exam.instructor_id, u.email || null, studentName],
-  );
-
-  await trackInstructorStudentLink(exam.instructor_id, studentId, { skipLimitCheck: true });
+  let requestRow = null;
+  await db.transaction(async (client) => {
+    const { rows } = await client.query(
+      `INSERT INTO exam_access_requests (
+         exam_id, student_id, instructor_id, status, student_email, student_name
+       ) VALUES ($1, $2, $3, 'PENDING', $4, $5)
+       RETURNING id, status, created_at`,
+      [examId, studentId, exam.instructor_id, u.email || null, studentName],
+    );
+    requestRow = rows[0];
+    await ensureLightInstructorEnrollment(client, exam.instructor_id, studentId, 'exam', {
+      activate: false,
+    });
+    await trackInstructorStudentLink(exam.instructor_id, studentId, { skipLimitCheck: true }, client);
+  });
 
   await notifyInstructorExamAccessRequest(
     exam.instructor_id,
@@ -173,7 +179,7 @@ async function createExamAccessRequest(studentId, examId) {
   );
 
   return {
-    request_id: rows[0].id,
+    request_id: requestRow.id,
     message: 'Sorğunuz müəllimə göndərildi. Təsdiqlədikdən sonra imtahana daxil ola bilərsiniz.',
     code: 'PENDING_APPROVAL',
   };
@@ -270,7 +276,9 @@ async function approveExamAccessRequest(requestId, instructorId, options = {}) {
   let enrollmentId = null;
   const { trackInstructorStudentLink } = require('./instructorStudentService');
   await db.transaction(async (client) => {
-    enrollmentId = await ensureLightInstructorEnrollment(client, instructorId, req.student_id, 'exam');
+    enrollmentId = await ensureLightInstructorEnrollment(client, instructorId, req.student_id, 'exam', {
+      activate: true,
+    });
     await trackInstructorStudentLink(instructorId, req.student_id, { skipLimitCheck: true }, client);
     await client.query(
       `INSERT INTO exam_assignments (exam_id, student_id) VALUES ($1, $2)

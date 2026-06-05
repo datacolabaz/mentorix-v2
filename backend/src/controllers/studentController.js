@@ -82,6 +82,7 @@ const listStudents = async (req, res) => {
                 )
               END AS first_lesson_date,
               e.status AS enrollment_status,
+              COALESCE(e.enrollment_source, 'manual') AS enrollment_source,
               e.enrolled_at,
               e.configured_at,
               e.initial_payment_status,
@@ -107,7 +108,7 @@ const listStudents = async (req, res) => {
     const group = `GROUP BY u.id, u.full_name, u.email, u.phone, sp.phone_number, sp.parent_id, sp.grade,
                 sp.monthly_fee,
                 sp.parent_name, sp.parent_phone, pu.full_name, pu.phone,
-                e.id, e.billing_type, e.lesson_count, e.billing_cycle, e.lesson_weekdays, e.lesson_times, e.lesson_end_times, e.enrollment_start_date, e.billing_timing, e.payment_plan, e.status,
+                e.id, e.billing_type, e.lesson_count, e.billing_cycle, e.lesson_weekdays, e.lesson_times, e.lesson_end_times, e.enrollment_start_date, e.billing_timing, e.payment_plan, e.status, e.enrollment_source,
                 e.referral_notes, e.referral_source_id, e.instructor_id, e.subject_id, e.group_id,
                 e.enrolled_at, e.configured_at, e.initial_payment_status, e.payment_due_date, e.discount_percent,
                 ist.name, ig.name, iu.full_name, rs.name, sp.notes
@@ -137,6 +138,10 @@ const listStudents = async (req, res) => {
          WHERE u.role = 'student' AND u.is_active = TRUE
            AND e.id IS NOT NULL
            AND REPLACE(LOWER(TRIM(e.instructor_id::text)), '-', '') = $1
+           AND NOT (
+             COALESCE(LOWER(TRIM(e.status)), '') = 'pending_setup'
+             AND COALESCE(LOWER(TRIM(e.enrollment_source)), '') IN ('exam', 'task')
+           )
          ${group}`,
         [instructorId]
       );
@@ -854,8 +859,8 @@ const attachStudentByEmail = async (req, res) => {
     await ensureInstructorCanAddStudent(instructorId, student.id);
 
     const { rows: enr } = await db.query(
-      `INSERT INTO enrollments (instructor_id, student_id, status, enrolled_at, group_id, subject_id)
-       VALUES ($1::uuid, $2::uuid, 'pending_setup', NOW(), $3::uuid, $4::uuid)
+      `INSERT INTO enrollments (instructor_id, student_id, status, enrolled_at, group_id, subject_id, enrollment_source)
+       VALUES ($1::uuid, $2::uuid, 'pending_setup', NOW(), $3::uuid, $4::uuid, 'manual')
        RETURNING id`,
       [instructorId, student.id, groupId, subjectId],
     );

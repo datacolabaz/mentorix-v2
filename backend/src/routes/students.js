@@ -954,6 +954,20 @@ router.post(
         }
       }
 
+      const enrollmentSource = String(enr.enrollment_source || 'manual').trim().toLowerCase();
+      if (enrollmentSource === 'exam' || enrollmentSource === 'task') {
+        const { activateLightEnrollment } = require('../services/lightEnrollmentService');
+        await db.transaction(async (client) => {
+          await activateLightEnrollment(client, enrollmentId);
+        });
+        return res.json({
+          success: true,
+          message:
+            'İmtahan/tapşırıq tələbəsi aktivdir — paket və cədvəl tələb olunmur. Sorğular bölməsindən təsdiqləyin.',
+          light_enrollment: true,
+        });
+      }
+
       let lwd = parseLessonWeekdays(lesson_weekdays);
       let ltSource = lesson_times;
       if (lwd.length === 0) {
@@ -1611,8 +1625,8 @@ router.post('/my/join', authenticate, authorize('student'), async (req, res) => 
     }
 
     const { rows: enr } = await db.query(
-      `INSERT INTO enrollments (instructor_id, student_id, status, enrolled_at)
-       VALUES ($1, $2, 'pending_setup', NOW())
+      `INSERT INTO enrollments (instructor_id, student_id, status, enrolled_at, enrollment_source)
+       VALUES ($1, $2, 'pending_setup', NOW(), 'group')
        RETURNING id`,
       [g.instructor_id, req.user.id],
     );
