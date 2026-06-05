@@ -1,4 +1,8 @@
 const db = require('../utils/db');
+const {
+  friendlyParticipantLabel,
+  participantKindFromSystemKind,
+} = require('../lib/participantGroupLabels');
 
 const SYSTEM_SUBJECT_NAME = '[System] Participants';
 const SYSTEM_KIND_EXAM = 'exam_participants';
@@ -293,10 +297,14 @@ async function expandStudentsWithParticipantGroups(students, instructorId) {
   try {
     const { rows } = await db.query(
       `SELECT igm.student_id, igm.group_id, igm.subject_id, igm.joined_at, igm.membership_source,
-              ig.name AS track_group_name, ist.name AS track_subject_name, ig.is_system
+              ig.name AS track_group_name, ist.name AS track_subject_name, ig.is_system,
+              ig.system_kind, ig.system_ref_id,
+              e.title AS exam_title, a.title AS assignment_title
        FROM instructor_group_members igm
        JOIN instructor_groups ig ON ig.id = igm.group_id
        LEFT JOIN instructor_subjects ist ON ist.id = igm.subject_id
+       LEFT JOIN exams e ON ig.system_kind = 'exam_participants' AND e.id = ig.system_ref_id
+       LEFT JOIN assignments a ON ig.system_kind = 'assignment_participants' AND a.id = ig.system_ref_id
        WHERE REPLACE(LOWER(TRIM(igm.instructor_id::text)), '-', '') = $1`,
       [ni],
     );
@@ -319,17 +327,27 @@ async function expandStudentsWithParticipantGroups(students, instructorId) {
     ) {
       continue;
     }
+    const sourceTitle = m.exam_title || m.assignment_title || null;
+    const cohortLabel = friendlyParticipantLabel({
+      system_kind: m.system_kind,
+      source_title: sourceTitle,
+      group_name: m.track_group_name,
+    });
+    const participantKind = participantKindFromSystemKind(m.system_kind) || 'exam';
     extra.push({
       ...base,
       enrollment_id: `${base.enrollment_id || base.id}-pg-${m.group_id}`,
       group_id: m.group_id,
       subject_id: m.subject_id,
-      track_group_name: m.track_group_name,
-      track_subject_name: m.track_subject_name,
+      track_group_name: cohortLabel,
+      track_subject_name: participantKind === 'task' ? 'Tapşırıq iştirakçıları' : 'İmtahan iştirakçıları',
       enrollment_source: m.membership_source || base.enrollment_source,
       enrolled_at: m.joined_at || base.enrolled_at,
       is_participant_group_row: true,
       is_system_group: Boolean(m.is_system),
+      participant_kind: participantKind,
+      participant_cohort_label: cohortLabel,
+      participant_ref_id: m.system_ref_id || null,
     });
   }
   return extra.length ? [...students, ...extra] : students;
@@ -426,6 +444,48 @@ async function promoteParticipantToCrmGroup(client, {
   };
 }
 
+async function listParticipantCohorts(instructorId) {
+  if (!instructorId) return [];
+  const ni = normHex(instructorId);
+  try {
+    const { rows } = await db.query(
+      `SELECT ig.id AS group_id, ig.name AS group_name, ig.system_kind, ig.system_ref_id,
+              e.title AS exam_title, a.title AS assignment_title,
+              COUNT(DISTINCT igm.student_id)::int AS student_count
+       FROM instructor_groups ig
+       LEFT JOIN instructor_group_members igm ON igm.group_id = ig.id
+       LEFT JOIN exams e ON ig.system_kind = 'exam_participants' AND e.id = ig.system_ref_id
+       LEFT JOIN assignments a ON ig.system_kind = 'assignment_participants' AND a.id = ig.system_ref_id
+       WHERE REPLACE(LOWER(TRIM(ig.instructor_id::text)), '-', '') = $1
+         AND COALESCE(ig.is_system, FALSE) = TRUE
+       GROUP BY ig.id, ig.name, ig.system_kind, ig.system_ref_id, e.title, a.title
+       ORDER BY ig.name ASC`,
+      [ni],
+    );
+    return rows.map((r) => {
+      const sourceTitle = r.exam_title || r.assignment_title || null;
+      const label = friendlyParticipantLabel({
+        system_kind: r.system_kind,
+        source_title: sourceTitle,
+        group_name: r.group_name,
+      });
+      const kind = participantKindFromSystemKind(r.system_kind) || 'exam';
+      return {
+        group_id: r.group_id,
+        label,
+        kind,
+        ref_id: r.system_ref_id,
+        student_count: Number(r.student_count) || 0,
+        exam_title: r.exam_title || null,
+        assignment_title: r.assignment_title || null,
+      };
+    });
+  } catch (e) {
+    if (!/instructor_group_members|participant_group_id/i.test(String(e.message || ''))) return [];
+    throw e;
+  }
+}
+
 module.exports = {
   SYSTEM_SUBJECT_NAME,
   SYSTEM_KIND_EXAM,
@@ -439,5 +499,6 @@ module.exports = {
   resolveParticipantGroupForExam,
   resolveParticipantGroupForAssignment,
   expandStudentsWithParticipantGroups,
+  listParticipantCohorts,
   promoteParticipantToCrmGroup,
 };

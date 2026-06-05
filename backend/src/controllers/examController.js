@@ -346,11 +346,21 @@ const listExams = async (req, res) => {
     const isAdmin = req.user.role === 'admin';
     const { rows } = await db.query(
       `SELECT e.*, u.full_name AS instructor_name,
-        COUNT(ea.id) AS student_count
+        COUNT(DISTINCT ea.student_id)::int AS student_count,
+        COUNT(DISTINCT er.student_id) FILTER (WHERE er.submitted_at IS NOT NULL)::int AS results_count,
+        ROUND(AVG(er.score) FILTER (WHERE er.submitted_at IS NOT NULL))::int AS avg_score,
+        (
+          SELECT COUNT(DISTINCT igm.student_id)::int
+          FROM instructor_group_members igm
+          WHERE e.participant_group_id IS NOT NULL
+            AND igm.group_id = e.participant_group_id
+        ) AS participant_count
        FROM exams e
        JOIN users u ON u.id = e.instructor_id
        LEFT JOIN exam_assignments ea ON ea.exam_id = e.id
+       LEFT JOIN exam_results er ON er.exam_id = e.id
        WHERE ($1 OR e.instructor_id = $2)
+         AND COALESCE(e.is_deleted, FALSE) = FALSE
        GROUP BY e.id, u.full_name
        ORDER BY COALESCE(e.available_from, e.start_time) DESC NULLS LAST`,
       [isAdmin, req.user.id]

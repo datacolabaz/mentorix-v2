@@ -37,7 +37,10 @@ export default function InstructorTeachingGroups() {
   const [qrGroup, setQrGroup] = useState(null)
   const [confirmDelete, setConfirmDelete] = useState(null)
 
-  const safeSubjects = useMemo(() => normalizeTeachingSubjects(subjects), [subjects])
+  const safeSubjects = useMemo(
+    () => normalizeTeachingSubjects(subjects).filter((s) => !s.is_system),
+    [subjects],
+  )
 
   const load = useCallback(async (opts = {}) => {
     const silent = Boolean(opts.silent)
@@ -217,16 +220,16 @@ export default function InstructorTeachingGroups() {
     <div className="p-4 sm:p-6 min-w-0 max-w-6xl mx-auto w-full space-y-6">
       <div>
         <h1 className="font-display font-bold text-xl sm:text-2xl text-token-textMain tracking-tight">
-          Kurslar və qruplar
+          Tədris qrupları
         </h1>
         <p className="text-token-textMuted text-sm mt-1 max-w-2xl">
-          Tədris sahələri (məs. Python) və qruplar (məs. python1) yaradın, paket və dəvət linkini təyin edin. Tələbələr
-          linklə qoşulur — təsdiq «Sorğular» bölməsindədir.
+          Yalnız öz yaratdığınız sahə və qruplar (məs. Python1, DataAnalitika2). Paket, ödəniş və dəvət linki burada
+          idarə olunur. İmtahan və tapşırıq iştirakçıları «Tələbələr» və «İmtahanlar» bölmələrində görünür.
         </p>
       </div>
 
       <Card className="w-full p-5 border border-indigo-500/20 space-y-4">
-        <h2 className={cardTitleCls}>Tədris sahələri və qruplar</h2>
+        <h2 className={cardTitleCls}>📚 Tədris qrupları</h2>
         <p className={cardTextCls}>
           Qrup yaradarkən paket (8/12 dərs), qiymət və cədvəli bir dəfə təyin edin. Dəvət linki ilə qoşulan tələbə paketi
           görür və razılaşır; siz «Sorğular»da təsdiqləyirsiniz.

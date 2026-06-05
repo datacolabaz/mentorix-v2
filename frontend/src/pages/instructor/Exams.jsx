@@ -611,7 +611,15 @@ export default function InstructorExams() {
                       {exam.available_until ? ` → ${new Date(exam.available_until).toLocaleString('az-AZ')}` : ''}
                     </span>
                     <span>{exam.duration_minutes} deq</span>
-                    <span>{exam.student_count || 0} telebe</span>
+                    <span>
+                      {(exam.participant_count ?? exam.student_count) || 0} iştirakçı
+                    </span>
+                    {Number(exam.results_count) > 0 ? (
+                      <span>{exam.results_count} nəticə</span>
+                    ) : null}
+                    {exam.avg_score != null && Number.isFinite(Number(exam.avg_score)) ? (
+                      <span>Orta bal: {exam.avg_score}</span>
+                    ) : null}
                     {exam.subject && <span>{exam.subject}</span>}
                     {exam.topic && <span>· {exam.topic}</span>}
                   </div>

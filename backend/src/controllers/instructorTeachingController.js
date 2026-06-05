@@ -9,7 +9,7 @@ const {
   assertSubjectMutable,
   isReservedSystemSubjectName,
 } = require('../services/systemGroupGuards');
-const { promoteParticipantToCrmGroup } = require('../services/participantGroupService');
+const { promoteParticipantToCrmGroup, listParticipantCohorts } = require('../services/participantGroupService');
 
 function parsePublicLabel(v) {
   const s = String(v || '').trim().toLowerCase();
@@ -246,6 +246,16 @@ const getTeaching = async (req, res) => {
       );
     }
 
+    const teachingSubjects = [...byId.values()]
+      .filter((s) => !s.is_system)
+      .map((s) => ({
+        ...s,
+        groups: (s.groups || []).filter((g) => !g.is_system),
+      }))
+      .filter((s) => (s.groups || []).length > 0 || !/^\[System\]/i.test(String(s.name || '')));
+
+    const participant_cohorts = await listParticipantCohorts(iid);
+
     res.json({
       success: true,
       public_label,
@@ -258,7 +268,8 @@ const getTeaching = async (req, res) => {
         map_search_radius_km:
           p?.map_search_radius_km != null ? Number(p.map_search_radius_km) : 10,
       },
-      subjects: [...byId.values()],
+      subjects: teachingSubjects,
+      participant_cohorts,
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

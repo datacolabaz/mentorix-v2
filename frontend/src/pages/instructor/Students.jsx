@@ -23,6 +23,10 @@ import {
 } from '../../lib/teachingSubjects'
 import { BILLING_STATUS_QUERY_KEY, useBillingStatus } from '../../hooks/useBillingStatus'
 import { canonicalAzPhoneE164 } from '../../lib/azPhone'
+import {
+  isSystemTeachingSubjectName,
+  studentMatchesAudienceFilter,
+} from '../../lib/participantGroupLabels'
 
 const PENDING_SETUP_TOAST_KEY = 'mx_instructor_pending_setup_toast_v1'
 
@@ -950,6 +954,7 @@ export default function InstructorStudents() {
   const [teachingSubjects, setTeachingSubjects] = useState([])
   const toast = useToast()
   const [subjectFilter, setSubjectFilter] = useState('')
+  const [audienceFilter, setAudienceFilter] = useState('all')
   const [search, setSearch] = useState('')
   const [openGroups, setOpenGroups] = useState(() => new Set())
   const [actionMenuId, setActionMenuId] = useState(null)
@@ -1355,11 +1360,17 @@ export default function InstructorStudents() {
   const subjectOptions = useMemo(() => {
     const set = new Set()
     for (const s of students) {
+      if (!studentMatchesAudienceFilter(s, audienceFilter)) continue
       const name = String(s.track_subject_name || '').trim()
-      if (name) set.add(name)
+      if (name && !isSystemTeachingSubjectName(name)) set.add(name)
     }
     return [...set].sort((a, b) => a.localeCompare(b))
-  }, [students])
+  }, [students, audienceFilter])
+
+  const audienceStudents = useMemo(
+    () => students.filter((s) => studentMatchesAudienceFilter(s, audienceFilter)),
+    [students, audienceFilter],
+  )
 
   const pendingStudents = useMemo(() => {
     const q = String(search || '').trim().toLowerCase()
@@ -1412,10 +1423,12 @@ export default function InstructorStudents() {
 
   const grouped = useMemo(() => {
     const byKey = new Map()
-    for (const s of students) {
+    for (const s of audienceStudents) {
       if (needsSetup(s)) continue
       const subject = String(s.track_subject_name || 'Sahəsiz').trim() || 'Sahəsiz'
-      const group = String(s.track_group_name || 'Qrup yoxdur').trim() || 'Qrup yoxdur'
+      const group = String(
+        s.participant_cohort_label || s.track_group_name || 'Qrup yoxdur',
+      ).trim() || 'Qrup yoxdur'
       const key = `${subject}__${group}`
       if (!byKey.has(key)) {
         byKey.set(key, {
@@ -1456,7 +1469,7 @@ export default function InstructorStudents() {
       return `${a.subject}__${a.group}`.localeCompare(`${b.subject}__${b.group}`)
     })
     return arr
-  }, [students])
+  }, [audienceStudents])
 
   const visibleGroups = useMemo(() => {
     if (!subjectFilter) return grouped
@@ -1723,7 +1736,10 @@ export default function InstructorStudents() {
         <div className="min-w-0">
           <h1 className="font-display font-bold text-xl sm:text-2xl break-words">Tələbələrim</h1>
           <p className="text-gray-500 text-sm mt-1 max-w-xl">
-            {listLoading ? '…' : `${students.length} tələbə`} · İmtahan linki ilə gələnlər avtomatik{' '}
+            {listLoading
+              ? '…'
+              : `${audienceFilter === 'all' ? students.length : audienceStudents.length} tələbə`}{' '}
+            · İmtahan/tapşırıq iştirakçıları üçün filtr · Qrup qoşulması{' '}
             <Link to="/instructor/join-requests" className="text-primary hover:underline font-medium">
               Sorğular
             </Link>
@@ -1754,44 +1770,65 @@ export default function InstructorStudents() {
         </div>
       </div>
 
-      <div className="mb-4 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
-        <div className="flex-1 min-w-0">
-          <div className="relative">
-            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-token-textMuted">
-              ⌕
-            </span>
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Axtar… (ad, telefon və ya email)"
-              className={[
-                'w-full rounded-xl pl-9 pr-3 py-2.5 text-sm outline-none',
-                'bg-token-surfaceCard/55 border border-[color:var(--border-subtle)]',
-                'text-token-textMain placeholder:text-token-textMuted',
-                'focus:border-primary/40 focus:ring-2 focus:ring-primary/15',
-                'transition-[box-shadow,border-color] duration-200',
-              ].join(' ')}
-            />
+      <div className="mb-4 flex flex-col gap-3">
+        <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+          <div className="flex-1 min-w-0">
+            <div className="relative">
+              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-token-textMuted">
+                ⌕
+              </span>
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Axtar… (ad, telefon və ya email)"
+                className={[
+                  'w-full rounded-xl pl-9 pr-3 py-2.5 text-sm outline-none',
+                  'bg-token-surfaceCard/55 border border-[color:var(--border-subtle)]',
+                  'text-token-textMain placeholder:text-token-textMuted',
+                  'focus:border-primary/40 focus:ring-2 focus:ring-primary/15',
+                  'transition-[box-shadow,border-color] duration-200',
+                ].join(' ')}
+              />
+            </div>
           </div>
+          <select
+            className={[
+              'w-full sm:w-56 rounded-xl px-3 py-2.5 text-sm outline-none',
+              'bg-token-surfaceCard/55 border border-[color:var(--border-subtle)]',
+              'text-token-textMain',
+              'focus:border-primary/40 focus:ring-2 focus:ring-primary/15',
+              'transition-[box-shadow,border-color] duration-200',
+            ].join(' ')}
+            value={audienceFilter}
+            onChange={(e) => {
+              setAudienceFilter(e.target.value)
+              setSubjectFilter('')
+            }}
+          >
+            <option value="all">Bütün tələbələr</option>
+            <option value="group">Qrup tələbələri</option>
+            <option value="exam">İmtahan iştirakçıları</option>
+            <option value="task">Tapşırıq iştirakçıları</option>
+          </select>
+          <select
+            className={[
+              'w-full sm:w-56 rounded-xl px-3 py-2.5 text-sm outline-none',
+              'bg-token-surfaceCard/55 border border-[color:var(--border-subtle)]',
+              'text-token-textMain',
+              'focus:border-primary/40 focus:ring-2 focus:ring-primary/15',
+              'transition-[box-shadow,border-color] duration-200',
+            ].join(' ')}
+            value={subjectFilter}
+            onChange={(e) => setSubjectFilter(e.target.value)}
+          >
+            <option value="">Bütün sahələr</option>
+            {subjectOptions.map((n) => (
+              <option key={n} value={n}>
+                {n}
+              </option>
+            ))}
+          </select>
         </div>
-        <select
-          className={[
-            'w-full sm:w-72 rounded-xl px-3 py-2.5 text-sm outline-none',
-            'bg-token-surfaceCard/55 border border-[color:var(--border-subtle)]',
-            'text-token-textMain',
-            'focus:border-primary/40 focus:ring-2 focus:ring-primary/15',
-            'transition-[box-shadow,border-color] duration-200',
-          ].join(' ')}
-          value={subjectFilter}
-          onChange={(e) => setSubjectFilter(e.target.value)}
-        >
-          <option value="">Hamısı</option>
-          {subjectOptions.map((n) => (
-            <option key={n} value={n}>
-              {n}
-            </option>
-          ))}
-        </select>
       </div>
 
       {!listLoading && pendingStudents.length > 0 && (
