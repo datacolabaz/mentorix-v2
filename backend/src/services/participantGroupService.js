@@ -291,6 +291,28 @@ async function addStudentToAssignmentParticipantGroup(client, assignmentId, stud
   });
 }
 
+function guestCohortFieldsFromMember(m) {
+  const sourceTitle = m.exam_title || m.assignment_title || null;
+  const baseTitle =
+    sourceTitle ||
+    friendlyParticipantLabel({ group_name: m.track_group_name }).replace(/\s*\([^)]*\)\s*$/, '');
+  const participantKind = participantKindFromSystemKind(m.system_kind) || 'exam';
+  const cohortLabel =
+    participantKind === 'task' ? `${baseTitle} — Qonaq (Tapşırıq)` : `${baseTitle} — Qonaq`;
+  return {
+    track_group_name: cohortLabel,
+    track_subject_name:
+      participantKind === 'task' ? 'Qonaq tapşırıq iştirakçıları' : 'Qonaq imtahan iştirakçıları',
+    is_participant_group_row: true,
+    is_guest_participant_row: true,
+    is_crm_student: false,
+    is_system_group: Boolean(m.is_system),
+    participant_kind: participantKind,
+    participant_cohort_label: cohortLabel,
+    participant_ref_id: m.system_ref_id || null,
+  };
+}
+
 async function expandStudentsWithParticipantGroups(students, instructorId) {
   if (!Array.isArray(students) || !students.length || !instructorId) return students;
   const ni = normHex(instructorId);
@@ -316,44 +338,40 @@ async function expandStudentsWithParticipantGroups(students, instructorId) {
   }
   if (!memberRows.length) return students;
 
-  const crmIds = await batchCrmStudentIds(instructorId, memberRows.map((m) => m.student_id));
+  const crmIds = await batchCrmStudentIds(
+    instructorId,
+    students.map((s) => s.id).concat(memberRows.map((m) => m.student_id)),
+  );
   const byStudent = new Map(students.map((s) => [String(s.id), s]));
   const extra = [];
   for (const m of memberRows) {
     if (crmIds.has(String(m.student_id))) continue;
     const base = byStudent.get(String(m.student_id));
     if (!base) continue;
-    if (String(base.group_id || '') === String(m.group_id)) continue;
+
+    if (String(base.group_id || '') === String(m.group_id)) {
+      if (m.is_system) {
+        Object.assign(base, guestCohortFieldsFromMember(m), {
+          enrollment_source: m.membership_source || base.enrollment_source,
+          enrolled_at: m.joined_at || base.enrolled_at,
+        });
+      }
+      continue;
+    }
     if (
       String(base.track_group_name || '').trim() === String(m.track_group_name || '').trim() &&
       !base.is_participant_group_row
     ) {
       continue;
     }
-    const sourceTitle = m.exam_title || m.assignment_title || null;
-    const baseTitle =
-      sourceTitle || friendlyParticipantLabel({ group_name: m.track_group_name }).replace(/\s*\([^)]*\)\s*$/, '');
-    const cohortLabel =
-      participantKindFromSystemKind(m.system_kind) === 'task'
-        ? `${baseTitle} — Qonaq (Tapşırıq)`
-        : `${baseTitle} — Qonaq`;
-    const participantKind = participantKindFromSystemKind(m.system_kind) || 'exam';
     extra.push({
       ...base,
       enrollment_id: `${base.enrollment_id || base.id}-pg-${m.group_id}`,
       group_id: m.group_id,
       subject_id: m.subject_id,
-      track_group_name: cohortLabel,
-      track_subject_name: participantKind === 'task' ? 'Qonaq tapşırıq iştirakçıları' : 'Qonaq imtahan iştirakçıları',
       enrollment_source: m.membership_source || base.enrollment_source,
       enrolled_at: m.joined_at || base.enrolled_at,
-      is_participant_group_row: true,
-      is_guest_participant_row: true,
-      is_crm_student: false,
-      is_system_group: Boolean(m.is_system),
-      participant_kind: participantKind,
-      participant_cohort_label: cohortLabel,
-      participant_ref_id: m.system_ref_id || null,
+      ...guestCohortFieldsFromMember(m),
     });
   }
   return extra.length ? [...students, ...extra] : students;

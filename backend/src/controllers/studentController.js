@@ -52,8 +52,15 @@ const listStudents = async (req, res) => {
               e.billing_timing,
               COALESCE(e.payment_plan, 'full') AS payment_plan,
               e.subject_id, e.group_id,
-              ist.name AS track_subject_name,
-              ig.name AS track_group_name,
+              CASE
+                WHEN COALESCE(ig.is_system, FALSE) = TRUE THEN NULL
+                ELSE ist.name
+              END AS track_subject_name,
+              CASE
+                WHEN COALESCE(ig.is_system, FALSE) = TRUE THEN NULL
+                ELSE ig.name
+              END AS track_group_name,
+              COALESCE(ig.is_system, FALSE) AS is_system_group,
               CASE
                 WHEN e.billing_type IN ('8_lessons','12_lessons') THEN (
                   SELECT COUNT(*)::int

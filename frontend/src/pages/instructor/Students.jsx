@@ -25,6 +25,8 @@ import { BILLING_STATUS_QUERY_KEY, useBillingStatus } from '../../hooks/useBilli
 import { canonicalAzPhoneE164 } from '../../lib/azPhone'
 import {
   isSystemTeachingSubjectName,
+  resolveStudentGroupLabel,
+  resolveStudentSubjectLabel,
   studentMatchesAudienceFilter,
 } from '../../lib/participantGroupLabels'
 
@@ -1361,8 +1363,8 @@ export default function InstructorStudents() {
     const set = new Set()
     for (const s of students) {
       if (!studentMatchesAudienceFilter(s, audienceFilter)) continue
-      const name = String(s.track_subject_name || '').trim()
-      if (name && !isSystemTeachingSubjectName(name)) set.add(name)
+      const name = resolveStudentSubjectLabel(s)
+      if (name && name !== 'Sahəsiz' && !isSystemTeachingSubjectName(name)) set.add(name)
     }
     return [...set].sort((a, b) => a.localeCompare(b))
   }, [students, audienceFilter])
@@ -1425,10 +1427,8 @@ export default function InstructorStudents() {
     const byKey = new Map()
     for (const s of audienceStudents) {
       if (needsSetup(s)) continue
-      const subject = String(s.track_subject_name || 'Sahəsiz').trim() || 'Sahəsiz'
-      const group = String(
-        s.participant_cohort_label || s.track_group_name || 'Qrup yoxdur',
-      ).trim() || 'Qrup yoxdur'
+      const subject = resolveStudentSubjectLabel(s)
+      const group = resolveStudentGroupLabel(s)
       const key = `${subject}__${group}`
       if (!byKey.has(key)) {
         byKey.set(key, {
@@ -1856,7 +1856,7 @@ export default function InstructorStudents() {
                   <div className="font-semibold text-token-textMain">{s.full_name}</div>
                   <div className="text-xs text-token-textMuted mt-0.5">
                     {studentHasContactPhone(s) ? s.phone || s.phone_number : 'Telefon gözlənilir'} •{' '}
-                    {s.track_group_name || 'Qrup'} •{' '}
+                    {resolveStudentGroupLabel(s)} •{' '}
                     {s.enrolled_at
                       ? new Date(s.enrolled_at).toLocaleDateString('az-AZ')
                       : '—'}

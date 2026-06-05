@@ -32,7 +32,12 @@ export function isLightEnrollmentSource(source) {
 export function studentMatchesAudienceFilter(s, filter) {
   if (!filter || filter === 'all') return true
   if (filter === 'group') {
-    return Boolean(s?.is_crm_student) && !s?.is_guest_participant_row && !s?.is_participant_group_row
+    return (
+      Boolean(s?.is_crm_student) &&
+      !s?.is_guest_participant_row &&
+      !s?.is_participant_group_row &&
+      !s?.is_system_group
+    )
   }
   if (filter === 'exam') {
     return (
@@ -53,4 +58,31 @@ export function studentMatchesAudienceFilter(s, filter) {
 
 export function isSystemTeachingSubjectName(name) {
   return /^\[System\]/i.test(String(name || '').trim())
+}
+
+export function isSystemGroupName(name) {
+  return /^\[System\]/i.test(String(name || '').trim())
+}
+
+export function resolveStudentGroupLabel(s) {
+  if (s?.participant_cohort_label) return String(s.participant_cohort_label).trim()
+  const raw = String(s?.track_group_name || '').trim()
+  if (isSystemGroupName(raw)) {
+    const title = parseParticipantTitleFromGroupName(raw)
+    return title ? `${title} — Qonaq` : 'Qonaq iştirakçıları'
+  }
+  return raw || 'Qrup yoxdur'
+}
+
+export function resolveStudentSubjectLabel(s) {
+  const raw = String(s?.track_subject_name || '').trim()
+  if (isSystemTeachingSubjectName(raw) || s?.is_guest_participant_row || s?.is_participant_group_row) {
+    if (s?.participant_kind === 'task' || String(s?.enrollment_source || '').toLowerCase() === 'task') {
+      return 'Qonaq tapşırıq iştirakçıları'
+    }
+    if (s?.is_guest_participant_row || s?.is_participant_group_row || isLightEnrollmentSource(s?.enrollment_source)) {
+      return 'Qonaq imtahan iştirakçıları'
+    }
+  }
+  return raw || 'Sahəsiz'
 }
