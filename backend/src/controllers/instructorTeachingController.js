@@ -181,15 +181,18 @@ const getTeaching = async (req, res) => {
     const byId = new Map(
       subjects.map((s) => {
         const st = statsBySubject.get(String(s.id)) || { student_count: 0, income_this_month: 0 };
-        return {
-          id: s.id,
-          name: s.name,
-          sort_order: s.sort_order,
-          is_system: Boolean(s.is_system),
-          student_count: st.student_count,
-          income_this_month: st.income_this_month,
-          groups: [],
-        };
+        return [
+          String(s.id),
+          {
+            id: s.id,
+            name: s.name,
+            sort_order: s.sort_order,
+            is_system: Boolean(s.is_system),
+            student_count: st.student_count,
+            income_this_month: st.income_this_month,
+            groups: [],
+          },
+        ];
       }),
     );
     for (const g of groups) {
@@ -247,10 +250,10 @@ const getTeaching = async (req, res) => {
     }
 
     const teachingSubjects = [...byId.values()]
-      .filter((s) => !s.is_system)
+      .filter((s) => s && !s.is_system)
       .map((s) => ({
         ...s,
-        groups: (s.groups || []).filter((g) => !g.is_system),
+        groups: (s.groups || []).filter((g) => g && !g.is_system),
       }))
       .filter((s) => (s.groups || []).length > 0 || !/^\[System\]/i.test(String(s.name || '')));
 

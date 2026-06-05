@@ -38,7 +38,7 @@ export default function InstructorTeachingGroups() {
   const [confirmDelete, setConfirmDelete] = useState(null)
 
   const safeSubjects = useMemo(
-    () => normalizeTeachingSubjects(subjects).filter((s) => !s.is_system),
+    () => normalizeTeachingSubjects(subjects).filter((s) => s && !s.is_system),
     [subjects],
   )
 
@@ -331,7 +331,7 @@ export default function InstructorTeachingGroups() {
                       </p>
                     ) : (
                       <ul className="space-y-1">
-                        {(s?.groups || []).map((g) => (
+                        {(s?.groups || []).filter(Boolean).map((g) => (
                           <li
                             key={g.id}
                             className={[
@@ -342,18 +342,18 @@ export default function InstructorTeachingGroups() {
                             <div className="min-w-0">
                               <div className="truncate flex items-center gap-2 flex-wrap">
                                 <span>{g.name}</span>
-                                {g.is_system ? (
+                                {g?.is_system ? (
                                   <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded-md border border-indigo-400/30 text-indigo-200/90">
                                     Sistem
                                   </span>
                                 ) : null}
                               </div>
-                              {g.is_system ? (
+                              {g?.is_system ? (
                                 <div className="text-[11px] text-gray-500 mt-0.5">
                                   İmtahan/tapşırıq linki ilə qoşulan iştirakçılar avtomatik əlavə olunur.
                                 </div>
                               ) : null}
-                              {!g.is_system && g.join_code ? (
+                              {!g?.is_system && g.join_code ? (
                                 <div className="text-[11px] text-gray-500 mt-0.5 space-y-0.5">
                                   <div>
                                     {g.invite_ready ? (
@@ -378,7 +378,7 @@ export default function InstructorTeachingGroups() {
                               ) : null}
                             </div>
                             <div className="flex flex-wrap items-center justify-end gap-2 shrink-0">
-                              {!g.is_system ? (
+                              {!g?.is_system ? (
                               <button
                                 type="button"
                                 className={['text-xs', theme === 'dark' ? 'text-indigo-300' : 'text-indigo-700'].join(' ')}
@@ -387,7 +387,7 @@ export default function InstructorTeachingGroups() {
                                 Paket
                               </button>
                               ) : null}
-                              {!g.is_system && g.join_code ? (
+                              {!g?.is_system && g.join_code ? (
                                 <>
                                   <button
                                     type="button"
@@ -485,7 +485,7 @@ export default function InstructorTeachingGroups() {
                                   </button>
                                 </>
                               ) : null}
-                              {!g.is_system ? (
+                              {!g?.is_system ? (
                               <button
                                 type="button"
                                 className={[
