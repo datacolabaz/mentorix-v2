@@ -24,12 +24,30 @@ export function participantKindFromRow(s) {
   return 'group'
 }
 
+export function isLightEnrollmentSource(source) {
+  const v = String(source || '').trim().toLowerCase()
+  return v === 'exam' || v === 'task'
+}
+
 export function studentMatchesAudienceFilter(s, filter) {
   if (!filter || filter === 'all') return true
-  const kind = participantKindFromRow(s)
-  if (filter === 'group') return kind === 'group' && !s?.is_participant_group_row
-  if (filter === 'exam') return kind === 'exam'
-  if (filter === 'task') return kind === 'task'
+  if (filter === 'group') {
+    return Boolean(s?.is_crm_student) && !s?.is_guest_participant_row && !s?.is_participant_group_row
+  }
+  if (filter === 'exam') {
+    return (
+      s?.is_guest_participant_row === true ||
+      s?.participant_kind === 'exam' ||
+      (!s?.is_crm_student && isLightEnrollmentSource(s?.enrollment_source) && s?.enrollment_source === 'exam')
+    )
+  }
+  if (filter === 'task') {
+    return (
+      (s?.is_guest_participant_row === true && s?.participant_kind === 'task') ||
+      s?.participant_kind === 'task' ||
+      (!s?.is_crm_student && isLightEnrollmentSource(s?.enrollment_source) && s?.enrollment_source === 'task')
+    )
+  }
   return true
 }
 

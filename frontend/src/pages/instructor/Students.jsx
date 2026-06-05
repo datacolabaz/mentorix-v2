@@ -1806,9 +1806,9 @@ export default function InstructorStudents() {
             }}
           >
             <option value="all">Bütün tələbələr</option>
-            <option value="group">Qrup tələbələri</option>
-            <option value="exam">İmtahan iştirakçıları</option>
-            <option value="task">Tapşırıq iştirakçıları</option>
+            <option value="group">Daimi qrup tələbələri (CRM)</option>
+            <option value="exam">Qonaq imtahan iştirakçıları</option>
+            <option value="task">Qonaq tapşırıq iştirakçıları</option>
           </select>
           <select
             className={[

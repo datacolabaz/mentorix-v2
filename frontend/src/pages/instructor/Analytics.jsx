@@ -55,6 +55,8 @@ export default function InstructorAnalytics() {
     setStudentReviewModal(null)
   }, [examId])
   const [selectedGrade, setSelectedGrade] = useState('')
+  const [examAudienceFilter, setExamAudienceFilter] = useState('all')
+  const [examSummary, setExamSummary] = useState(null)
   const [selectedSubject, setSelectedSubject] = useState('')
   const [selectedGroup, setSelectedGroup] = useState('')
   const [groupResults, setGroupResults] = useState([])
@@ -112,19 +114,29 @@ export default function InstructorAnalytics() {
       .catch(() => setCrmGroups([]))
   }, [])
 
-  const loadExamAnalytics = async (id, grade = null) => {
+  const buildExamQuery = (grade, audience) => {
+    const params = new URLSearchParams()
+    if (grade) params.set('grade', grade)
+    if (audience && audience !== 'all') params.set('audience', audience)
+    const q = params.toString()
+    return q ? `?${q}` : ''
+  }
+
+  const loadExamAnalytics = async (id, grade = null, audience = examAudienceFilter) => {
     if (!id) return
     setExamErr(null)
     setExamLoading(true)
     try {
+      const q = buildExamQuery(grade, audience)
       const [g, t, r] = await Promise.all([
         api.get(`/exams/${encodeURIComponent(id)}/groups`),
-        api.get(`/exams/${encodeURIComponent(id)}/top10`),
-        api.get(`/exams/${encodeURIComponent(id)}/results${grade ? `?grade=${encodeURIComponent(grade)}` : ''}`),
+        api.get(`/exams/${encodeURIComponent(id)}/top10${q}`),
+        api.get(`/exams/${encodeURIComponent(id)}/results${q}`),
       ])
       const gr = Array.isArray(g.groups) ? g.groups : []
       setGroups(gr)
       setParticipantGroupId(g.participant_group_id || null)
+      setExamSummary(g.summary || null)
       setTop10(Array.isArray(t.top10) ? t.top10 : [])
       setGroupResults(Array.isArray(r.results) ? r.results : [])
     } catch (e) {
@@ -337,6 +349,16 @@ export default function InstructorAnalytics() {
     const arr = groups.map((g) => g.grade).filter(Boolean)
     return arr
   }, [groups])
+
+  const examAudiencePie = useMemo(() => {
+    if (!examSummary) return []
+    const crm = Number(examSummary.crm_count) || 0
+    const guest = Number(examSummary.guest_count) || 0
+    return [
+      { name: 'Daimi (CRM)', value: crm, key: 'crm' },
+      { name: 'Qonaq', value: guest, key: 'guest' },
+    ].filter((x) => x.value > 0)
+  }, [examSummary])
 
   return (
     <div className="p-6 min-w-0">
@@ -631,16 +653,50 @@ export default function InstructorAnalytics() {
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-4">
           <div className="min-w-0">
             <h2 className="font-display font-bold text-base text-token-textMain">İmtahan nəticələri</h2>
-            <p className="text-xs text-token-textMuted mt-1">Qruplara görə baxış və ümumi Top 10.</p>
+            <p className="text-xs text-token-textMuted mt-1">
+              Daimi qrup tələbələri və qonaq iştirakçılar ayrıca filtrlənir.
+            </p>
           </div>
           <Button
             variant="secondary"
             size="sm"
-            onClick={() => void loadExamAnalytics(examId, selectedGrade || null)}
+            onClick={() => void loadExamAnalytics(examId, selectedGrade || null, examAudienceFilter)}
             disabled={!examId || examLoading}
           >
             Yenilə
           </Button>
+        </div>
+
+        {examId && examSummary ? (
+          <p className="text-xs text-token-textMuted mb-3">
+            {examSummary.crm_count || 0} daimi · {examSummary.guest_count || 0} qonaq · cəmi{' '}
+            {examSummary.total_count || 0} nəticə
+          </p>
+        ) : null}
+
+        <div className="flex flex-wrap gap-2 mb-4">
+          {[
+            { id: 'all', label: 'Hamısı' },
+            { id: 'crm', label: 'Daimi Tələbələrim (CRM)' },
+            { id: 'guest', label: 'Qonaq İştirakçılar' },
+          ].map((opt) => (
+            <button
+              key={opt.id}
+              type="button"
+              onClick={() => {
+                setExamAudienceFilter(opt.id)
+                if (examId) void loadExamAnalytics(examId, selectedGrade || null, opt.id)
+              }}
+              className={[
+                'rounded-xl px-3 py-2 text-xs font-semibold border transition-colors',
+                examAudienceFilter === opt.id
+                  ? 'border-primary/50 bg-primary/15 text-primary'
+                  : 'border-indigo-500/20 bg-[#13112e]/60 text-gray-300 hover:border-indigo-500/35',
+              ].join(' ')}
+            >
+              {opt.label}
+            </button>
+          ))}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -653,10 +709,12 @@ export default function InstructorAnalytics() {
                 const id = e.target.value
                 setExamId(id)
                 setSelectedGrade('')
+                setExamAudienceFilter('all')
+                setExamSummary(null)
                 setGroups([])
                 setGroupResults([])
                 setTop10([])
-                if (id) await loadExamAnalytics(id, null)
+                if (id) await loadExamAnalytics(id, null, 'all')
               }}
             >
               <option value="">— İmtahan seçin —</option>
@@ -675,7 +733,7 @@ export default function InstructorAnalytics() {
               onChange={async (e) => {
                 const g = e.target.value
                 setSelectedGrade(g)
-                if (examId) await loadExamAnalytics(examId, g || null)
+                if (examId) await loadExamAnalytics(examId, g || null, examAudienceFilter)
               }}
               disabled={!examId || examLoading}
             >
@@ -691,6 +749,35 @@ export default function InstructorAnalytics() {
 
         {examErr && <p className="text-sm text-amber-200/90 mt-3">{examErr}</p>}
         {examLoading && <p className="text-xs text-token-textMuted mt-3">Yüklənir…</p>}
+
+        {examId && !examLoading && examAudiencePie.length > 0 ? (
+          <div className="rounded-xl border border-indigo-500/15 bg-[#0f0c29]/40 p-4 mt-4">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+              İştirakçı tərkibi
+            </p>
+            <div className="w-full h-[180px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={examAudiencePie}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius="42%"
+                    outerRadius="70%"
+                    dataKey="value"
+                    paddingAngle={2}
+                    label={({ name, value }) => `${name}: ${value}`}
+                  >
+                    {examAudiencePie.map((entry) => (
+                      <Cell key={entry.key} fill={entry.key === 'crm' ? '#22c55e' : '#6366f1'} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        ) : null}
 
         {examId && !examLoading && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
@@ -709,7 +796,10 @@ export default function InstructorAnalytics() {
                           {r.rank === 1 ? '🥇 ' : r.rank === 2 ? '🥈 ' : r.rank === 3 ? '🥉 ' : ''}
                           {r.rank}. {r.full_name}
                         </p>
-                        <p className="text-[11px] text-gray-500">{r.grade || '—'}</p>
+                        <p className="text-[11px] text-gray-500">
+                          {r.is_crm_student ? r.grade || 'CRM' : 'Qonaq'}
+                          {r.phone ? ` · ${r.phone}` : ''}
+                        </p>
                       </div>
                       <div className="text-right shrink-0">
                         <p className="text-sm font-extrabold text-white">
@@ -744,9 +834,11 @@ export default function InstructorAnalytics() {
                           {r.rank}. {r.full_name}
                         </p>
                         <p className="text-[11px] text-gray-500 font-mono tabular-nums">
+                          {r.is_crm_student ? r.grade || 'CRM' : 'Qonaq'}
+                          {r.phone ? ` · ${r.phone}` : ''}
                           {Number.isFinite(Number(r.duration_seconds))
-                            ? `${Math.round(Number(r.duration_seconds))}s`
-                            : '—'}
+                            ? ` · ${Math.round(Number(r.duration_seconds))}s`
+                            : ''}
                         </p>
                       </div>
                       <button
@@ -756,7 +848,7 @@ export default function InstructorAnalytics() {
                       >
                         Cavablar
                       </button>
-                      {participantGroupId && crmGroups.length > 0 ? (
+                      {participantGroupId && crmGroups.length > 0 && !r.is_crm_student ? (
                         <button
                           type="button"
                           onClick={() => openPromoteModal(r.student_id, r.full_name)}

@@ -612,7 +612,15 @@ export default function InstructorExams() {
                     </span>
                     <span>{exam.duration_minutes} deq</span>
                     <span>
-                      {(exam.participant_count ?? exam.student_count) || 0} iştirakçı
+                      {(Number(exam.crm_results_count) || 0) > 0 ||
+                      (Number(exam.guest_results_count) || 0) > 0 ? (
+                        <>
+                          {Number(exam.crm_results_count) || 0} daimi ·{' '}
+                          {Number(exam.guest_results_count) || 0} qonaq
+                        </>
+                      ) : (
+                        <>{(exam.participant_count ?? exam.student_count) || 0} iştirakçı</>
+                      )}
                     </span>
                     {Number(exam.results_count) > 0 ? (
                       <span>{exam.results_count} nəticə</span>

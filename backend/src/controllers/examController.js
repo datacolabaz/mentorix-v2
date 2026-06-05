@@ -1,6 +1,12 @@
 const fs = require('fs');
 const path = require('path');
 const db = require('../utils/db');
+const {
+  isCrmStudentForInstructor,
+  parseExamAudienceFilter,
+  sqlExamAudienceWhere,
+} = require('../services/crmStudentService');
+const { STUDENT_CONTACT_PHONE_SQL } = require('../utils/studentPhone');
 const { upsertStudentContactPhone } = require('../utils/studentPhone');
 const { normalizeExamStartTime } = require('../utils/examTime');
 const { recomputeInstructorStorageUsageMb } = require('../services/resourceUsageService');
@@ -348,12 +354,19 @@ const listExams = async (req, res) => {
       `SELECT e.*, u.full_name AS instructor_name,
         COUNT(DISTINCT ea.student_id)::int AS student_count,
         COUNT(DISTINCT er.student_id) FILTER (WHERE er.submitted_at IS NOT NULL)::int AS results_count,
+        COUNT(DISTINCT er.student_id) FILTER (
+          WHERE er.submitted_at IS NOT NULL AND COALESCE(er.is_crm_student, FALSE) = TRUE
+        )::int AS crm_results_count,
+        COUNT(DISTINCT er.student_id) FILTER (
+          WHERE er.submitted_at IS NOT NULL AND COALESCE(er.is_crm_student, FALSE) = FALSE
+        )::int AS guest_results_count,
         ROUND(AVG(er.score) FILTER (WHERE er.submitted_at IS NOT NULL))::int AS avg_score,
         (
           SELECT COUNT(DISTINCT igm.student_id)::int
           FROM instructor_group_members igm
           WHERE e.participant_group_id IS NOT NULL
             AND igm.group_id = e.participant_group_id
+            AND COALESCE(igm.membership_source, '') IN ('exam', 'task')
         ) AS participant_count
        FROM exams e
        JOIN users u ON u.id = e.instructor_id
@@ -1058,6 +1071,7 @@ const submitExam = async (req, res) => {
       }
     }
     const duration = Math.floor((now - startedAt) / 1000);
+    const isCrmStudent = await isCrmStudentForInstructor(exam.instructor_id, student_id);
 
     if (attempt?.id) {
       await db.query(
@@ -1068,15 +1082,38 @@ const submitExam = async (req, res) => {
              status = 'completed',
              started_at = COALESCE(started_at, $6),
              submitted_at = $7,
-             duration_seconds = $8
+             duration_seconds = $8,
+             is_crm_student = $9
          WHERE id = $1 AND exam_id = $2`,
-        [attempt.id, exam_id, score, JSON.stringify(answers), JSON.stringify(grading), startedAt, now, duration]
+        [
+          attempt.id,
+          exam_id,
+          score,
+          JSON.stringify(answers),
+          JSON.stringify(grading),
+          startedAt,
+          now,
+          duration,
+          isCrmStudent,
+        ],
       );
     } else {
       await db.query(
-        `INSERT INTO exam_results (exam_id, student_id, score, answers, grading, status, started_at, submitted_at, duration_seconds)
-         VALUES ($1,$2,$3,$4,$5,'completed',$6,$7,$8)`,
-        [exam_id, student_id, score, JSON.stringify(answers), JSON.stringify(grading), startedAt, now, duration]
+        `INSERT INTO exam_results (
+           exam_id, student_id, score, answers, grading, status,
+           started_at, submitted_at, duration_seconds, is_crm_student
+         ) VALUES ($1,$2,$3,$4,$5,'completed',$6,$7,$8,$9)`,
+        [
+          exam_id,
+          student_id,
+          score,
+          JSON.stringify(answers),
+          JSON.stringify(grading),
+          startedAt,
+          now,
+          duration,
+          isCrmStudent,
+        ],
       );
     }
 
@@ -1114,14 +1151,17 @@ const getResults = async (req, res) => {
         return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
       }
       const grade = req.query.grade != null && String(req.query.grade).trim() !== '' ? String(req.query.grade).trim() : null;
-    const { rows } = await db.query(
+      const audience = parseExamAudienceFilter(req.query.audience);
+      const { rows } = await db.query(
       `WITH emax AS (
          SELECT COALESCE(SUM(eq.points::numeric), 0) AS max_pts FROM exam_questions eq WHERE eq.exam_id = $1
        ),
        r AS (
          SELECT er.id, er.exam_id, er.student_id, u.full_name,
                 COALESCE(ig.name, NULLIF(TRIM(sp.grade), ''), '—') AS grade,
-                er.score, er.duration_seconds, er.submitted_at
+                er.score, er.duration_seconds, er.submitted_at,
+                COALESCE(er.is_crm_student, FALSE) AS is_crm_student,
+                ${STUDENT_CONTACT_PHONE_SQL} AS phone
          FROM exam_results er
          JOIN exams e ON e.id = er.exam_id
          JOIN users u ON u.id = er.student_id
@@ -1133,10 +1173,12 @@ const getResults = async (req, res) => {
            ORDER BY (en.group_id IS NOT NULL) DESC, en.id DESC
            LIMIT 1
          ) en ON true
-         LEFT JOIN instructor_groups ig ON ig.id = en.group_id
+         LEFT JOIN instructor_groups ig ON ig.id = en.group_id AND COALESCE(ig.is_system, FALSE) = FALSE
          WHERE er.exam_id = $1 AND er.submitted_at IS NOT NULL
+           AND ${sqlExamAudienceWhere('er', 3)}
        )
        SELECT r.id, r.exam_id, r.student_id, r.full_name, r.grade, r.score,
+              r.is_crm_student, r.phone,
               CASE
                 WHEN em.max_pts > 0 THEN LEAST(100, GREATEST(0, (r.score::numeric / em.max_pts) * 100))
                 ELSE 0::numeric
@@ -1150,9 +1192,9 @@ const getResults = async (req, res) => {
        CROSS JOIN emax em
        WHERE $2::text IS NULL OR r.grade = $2::text
        ORDER BY r.score DESC, r.duration_seconds ASC`,
-        [examId, grade]
+        [examId, grade, audience],
       );
-      return res.json({ success: true, results: rows, grade: grade || 'ALL' });
+      return res.json({ success: true, results: rows, grade: grade || 'ALL', audience });
     }
 
     // Student: yalnız öz enrollment qrupundakı (instructor_groups) yoldaşlarının reytinqi
@@ -1312,10 +1354,28 @@ const getExamGroups = async (req, res) => {
        ORDER BY x.grade`,
       [examId]
     );
+    const { rows: sumRows } = await db.query(
+      `SELECT
+         COUNT(DISTINCT er.student_id) FILTER (
+           WHERE er.submitted_at IS NOT NULL AND COALESCE(er.is_crm_student, FALSE) = TRUE
+         )::int AS crm_count,
+         COUNT(DISTINCT er.student_id) FILTER (
+           WHERE er.submitted_at IS NOT NULL AND COALESCE(er.is_crm_student, FALSE) = FALSE
+         )::int AS guest_count
+       FROM exam_results er
+       WHERE er.exam_id = $1::uuid`,
+      [examId],
+    );
+    const summary = sumRows[0] || { crm_count: 0, guest_count: 0 };
     res.json({
       success: true,
       groups: rows,
       participant_group_id: exam.participant_group_id || null,
+      summary: {
+        crm_count: Number(summary.crm_count) || 0,
+        guest_count: Number(summary.guest_count) || 0,
+        total_count: (Number(summary.crm_count) || 0) + (Number(summary.guest_count) || 0),
+      },
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -1335,6 +1395,7 @@ const getExamTop10 = async (req, res) => {
       return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
     }
 
+    const audience = parseExamAudienceFilter(req.query.audience);
     const { rows } = await db.query(
       `WITH emax AS (
          SELECT COALESCE(SUM(eq.points::numeric), 0) AS max_pts FROM exam_questions eq WHERE eq.exam_id = $1
@@ -1342,6 +1403,8 @@ const getExamTop10 = async (req, res) => {
        SELECT er.student_id, u.full_name,
               COALESCE(ig.name, NULLIF(TRIM(sp.grade), ''), '—') AS grade,
               er.score,
+              COALESCE(er.is_crm_student, FALSE) AS is_crm_student,
+              ${STUDENT_CONTACT_PHONE_SQL} AS phone,
               CASE
                 WHEN em.max_pts > 0 THEN LEAST(100, GREATEST(0, (er.score::numeric / em.max_pts) * 100))
                 ELSE 0::numeric
@@ -1359,14 +1422,15 @@ const getExamTop10 = async (req, res) => {
          ORDER BY (en.group_id IS NOT NULL) DESC, en.id DESC
          LIMIT 1
        ) en ON true
-       LEFT JOIN instructor_groups ig ON ig.id = en.group_id
+       LEFT JOIN instructor_groups ig ON ig.id = en.group_id AND COALESCE(ig.is_system, FALSE) = FALSE
        CROSS JOIN emax em
        WHERE er.exam_id = $1 AND er.submitted_at IS NOT NULL
+         AND ${sqlExamAudienceWhere('er', 2)}
        ORDER BY er.score DESC, er.duration_seconds ASC
        LIMIT 10`,
-      [examId]
+      [examId, audience],
     );
-    res.json({ success: true, top10: rows });
+    res.json({ success: true, top10: rows, audience });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

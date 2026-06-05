@@ -94,7 +94,11 @@ const listStudents = async (req, res) => {
               e.instructor_id, iu.full_name AS instructor_name,
               rs.name AS referral_source,
               sp.notes AS teacher_notes,
-              ROUND(AVG(a.session_score)) AS avg_score`;
+              ROUND(AVG(a.session_score)) AS avg_score,
+              CASE
+                WHEN e.group_id IS NOT NULL AND COALESCE(ig.is_system, FALSE) = FALSE THEN TRUE
+                ELSE FALSE
+              END AS is_crm_student`;
 
     const joins = `FROM users u
        LEFT JOIN student_profiles sp ON sp.user_id = u.id
@@ -112,7 +116,7 @@ const listStudents = async (req, res) => {
                 e.id, e.billing_type, e.lesson_count, e.billing_cycle, e.lesson_weekdays, e.lesson_times, e.lesson_end_times, e.enrollment_start_date, e.billing_timing, e.payment_plan, e.status, e.enrollment_source,
                 e.referral_notes, e.referral_source_id, e.instructor_id, e.subject_id, e.group_id,
                 e.enrolled_at, e.configured_at, e.initial_payment_status, e.payment_due_date, e.discount_percent,
-                ist.name, ig.name, iu.full_name, rs.name, sp.notes
+                ist.name, ig.name, ig.is_system, iu.full_name, rs.name, sp.notes
        ORDER BY u.full_name`;
 
     if (req.user.role === 'parent') {
