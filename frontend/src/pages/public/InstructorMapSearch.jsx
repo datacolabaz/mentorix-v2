@@ -13,10 +13,11 @@ import DiscoverSearchFilters from '../../components/discover/DiscoverSearchFilte
 import CategoryMegaMenu from '../../components/discover/CategoryMegaMenu'
 import InquiryFormModal from '../../components/discover/InquiryFormModal'
 import DiscoverAuthModal from '../../components/discover/DiscoverAuthModal'
-import InstructorAvatar from '../../components/common/InstructorAvatar'
+import TeacherMapQuickCard from '../../components/discover/TeacherMapQuickCard'
+import TeacherMapListCard from '../../components/discover/TeacherMapListCard'
 import useAuthStore from '../../hooks/useAuth'
+import { useToast } from '../../components/common/Toast'
 import { sortInstructorsForMapListing } from '../../lib/mapListingSort'
-import { instructorDisplaySubject } from '../../lib/instructorDisplay'
 
 const DARK_TILE = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
 
@@ -102,7 +103,12 @@ function mapFilterParams(filters) {
 export default function InstructorMapSearch() {
   const { user, token } = useAuthStore()
   const isAuthenticated = Boolean(token && user)
+  const toast = useToast()
   const [authModalOpen, setAuthModalOpen] = useState(false)
+  const [whatsappBusy, setWhatsappBusy] = useState(false)
+  const [highlightId, setHighlightId] = useState(null)
+  const cardRefs = useRef(new Map())
+  const listScrollRef = useRef(null)
   const [kind, setKind] = useState('all')
   const [instructors, setInstructors] = useState([])
   const [loading, setLoading] = useState(true)
@@ -388,19 +394,57 @@ export default function InstructorMapSearch() {
     setAuthModalOpen(true)
   }
 
-  const focusInstructor = (p) => {
-    setSelectedId(p.id)
-    setFlyTarget({ center: [p.latitude, p.longitude], zoom: 15, key: Date.now() })
-    if (listOnly) setListOnly(false)
-  }
+  const scrollToCard = useCallback((id) => {
+    const el = cardRefs.current.get(String(id))
+    el?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+  }, [])
+
+  const focusInstructor = useCallback(
+    (p, { fromMarker = false } = {}) => {
+      if (!p?.id) return
+      setSelectedId(p.id)
+      setFlyTarget({ center: [p.latitude, p.longitude], zoom: 15, key: Date.now() })
+      if (listOnly) setListOnly(false)
+      if (fromMarker) {
+        setHighlightId(p.id)
+        window.setTimeout(() => scrollToCard(p.id), 120)
+        window.setTimeout(() => setHighlightId(null), 2600)
+      }
+    },
+    [listOnly, scrollToCard],
+  )
 
   const onMarkerSelect = (p) => {
-    requireContactAuth(() => focusInstructor(p))
+    focusInstructor(p, { fromMarker: true })
   }
 
   const onInquiryClick = (p) => {
     requireContactAuth(() => setInquiryTarget(p))
   }
+
+  const onWhatsAppClick = (p) => {
+    requireContactAuth(async () => {
+      setWhatsappBusy(true)
+      try {
+        const d = await api.get(`/public/instructors/${encodeURIComponent(p.id)}/messaging`)
+        if (d?.whatsapp_available && d.whatsapp_url) {
+          window.open(d.whatsapp_url, '_blank', 'noopener,noreferrer')
+        } else {
+          toast('Müəllimin WhatsApp nömrəsi yoxdur — müraciət formunu doldurun.', 'info')
+          setInquiryTarget(p)
+        }
+      } catch (e) {
+        toast(e?.message || 'WhatsApp açılmadı', 'error')
+      } finally {
+        setWhatsappBusy(false)
+      }
+    })
+  }
+
+  const selectedInstructor = useMemo(
+    () => instructorsSorted.find((p) => p.id === selectedId) || null,
+    [instructorsSorted, selectedId],
+  )
 
   const handleCategoryPick = (pick) => {
     setDiscoverFilters((f) => ({
@@ -426,7 +470,7 @@ export default function InstructorMapSearch() {
                 Müəllim tap — Mentorix
               </h1>
               <p className="text-[11px] sm:text-xs text-gray-500 mt-1 leading-snug">
-                Fənn, format və məkan üzrə axtarış · premium müəllimlər üst sıradadır
+                Pinə klikləyin — sağda Tez baxış · reytinq · format · WhatsApp (qeydiyyatdan sonra)
               </p>
             </div>
           </div>
@@ -599,7 +643,20 @@ export default function InstructorMapSearch() {
             ) : null}
           </div>
 
-          <div className="flex-1 overflow-y-auto p-4 space-y-2">
+          <div ref={listScrollRef} className="flex-1 overflow-y-auto p-4 space-y-2">
+
+            {selectedInstructor ? (
+              <div className="mb-3 sticky top-0 z-10 pb-1 bg-[#0b0b0b]/95 backdrop-blur-sm">
+                <TeacherMapQuickCard
+                  instructor={selectedInstructor}
+                  distanceOrigin={distanceOrigin}
+                  onInquiry={onInquiryClick}
+                  onWhatsApp={onWhatsAppClick}
+                  onFocusMap={focusInstructor}
+                  whatsappBusy={whatsappBusy}
+                />
+              </div>
+            ) : null}
 
             {nearestInstructor && distanceOrigin === 'user' && count > 0 && !loading ? (
               <div className="rounded-xl border border-amber-500/40 bg-gradient-to-r from-amber-500/15 to-emerald-500/10 p-3 mb-3">
@@ -650,87 +707,24 @@ export default function InstructorMapSearch() {
             ) : null}
 
             {instructorsSorted.map((p, idx) => {
-              const isTrainer = p.map_profile_kind === 'trainer'
-              const selected = selectedId === p.id
               const rank = idx + 1
               const isNearest = rank === 1
-              const subjectLine = instructorDisplaySubject(p)
               return (
-                <div
+                <TeacherMapListCard
                   key={String(p.id)}
-                  className={`w-full rounded-xl border p-3 flex gap-3 items-start transition-colors ${
-                    selected
-                      ? 'border-primary/60 bg-primary/10 ring-1 ring-primary/30'
-                      : isNearest
-                        ? 'border-amber-500/40 bg-amber-500/5'
-                        : 'border-white/10 bg-[#121212]/90'
-                  }`}
-                >
-                  <button type="button" onClick={() => focusInstructor(p)} className="flex gap-3 flex-1 min-w-0 text-left">
-                    <span className="mt-1 w-6 shrink-0 text-center text-sm font-bold text-gray-500">{rank}.</span>
-                    <InstructorAvatar
-                      fullName={p.full_name}
-                      avatarUrl={p.avatar_url}
-                      size="sm"
-                      kind={p.map_profile_kind}
-                      className="mt-0.5"
-                    />
-                    <div className="min-w-0 flex-1">
-                      {p.is_top_listing ? (
-                        <span className="inline-block text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-violet-500/20 text-violet-300 mb-1">
-                          🔥 TOP
-                        </span>
-                      ) : null}
-                      {p.is_featured_listing ? (
-                        <span className="inline-block text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-amber-500/20 text-amber-300 mb-1 ml-1">
-                          ⭐ Önə çıxır
-                        </span>
-                      ) : null}
-                      {p.discover_verified ? (
-                        <span className="inline-block text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-400 mb-1 ml-1">
-                          Təsdiqlənmiş
-                        </span>
-                      ) : null}
-                      {isNearest ? (
-                        <span className="inline-block text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-amber-500/20 text-amber-400 mb-1 ml-1">
-                          ⭐ Ən yaxın
-                        </span>
-                      ) : null}
-                      <div className="flex items-baseline justify-between gap-2">
-                        <span className="font-semibold text-white text-sm truncate">{p.full_name}</span>
-                        <span className="text-xs font-bold text-primary shrink-0 text-right">
-                          {formatDistanceKm(p.distanceKm)}
-                          <span className="block text-[10px] font-normal text-gray-500">
-                            {distanceOrigin === 'user' ? 'sizdən' : 'təxmini'}
-                          </span>
-                        </span>
-                      </div>
-                      <div className="text-xs text-gray-400 mt-0.5 truncate">
-                        {subjectLine || 'Fənn göstərilməyib'}
-                      </div>
-                      {p.discover_hourly_rate != null ? (
-                        <div className="text-[11px] text-emerald-400/90 mt-0.5">{p.discover_hourly_rate} AZN/saat</div>
-                      ) : null}
-                      <div className="text-[11px] text-gray-500 mt-1">{kindLabel(p.map_profile_kind)}</div>
-                      <Link
-                        to={`/teachers/${p.id}`}
-                        onClick={(e) => e.stopPropagation()}
-                        className="inline-block text-[11px] font-semibold text-primary hover:underline mt-1"
-                      >
-                        Profilə bax →
-                      </Link>
-                    </div>
-                  </button>
-                  <div className="flex flex-col gap-1.5 shrink-0 self-center">
-                    <button
-                      type="button"
-                      onClick={() => onInquiryClick(p)}
-                      className="text-[10px] font-bold px-2 py-1.5 rounded-lg border border-primary/40 text-primary hover:bg-primary/10"
-                    >
-                      Müraciət
-                    </button>
-                  </div>
-                </div>
+                  instructor={p}
+                  rank={rank}
+                  selected={selectedId === p.id}
+                  highlighted={highlightId === p.id}
+                  isNearest={isNearest}
+                  distanceOrigin={distanceOrigin}
+                  cardRef={(el) => {
+                    if (el) cardRefs.current.set(String(p.id), el)
+                    else cardRefs.current.delete(String(p.id))
+                  }}
+                  onFocus={focusInstructor}
+                  onInquiry={onInquiryClick}
+                />
               )
             })}
           </div>

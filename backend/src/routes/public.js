@@ -17,6 +17,8 @@ const { getPublicExamInvite } = require('../controllers/publicExamInviteControll
 const { getPublicTaskInvite } = require('../controllers/publicTaskInviteController');
 const { postAccessEvent } = require('../controllers/accessAnalyticsController');
 const { getPublicInstructorProfile } = require('../controllers/publicInstructorProfileController');
+const { getInstructorMessagingLink } = require('../controllers/publicInstructorContactController');
+const { authenticate } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -29,6 +31,7 @@ router.get('/landing-stats', getLandingStats);
 router.get('/marketing/login', getPublicLoginMarketing);
 router.get('/instructors-map', getInstructorsInMapView);
 router.get('/instructors/:id', getPublicInstructorProfile);
+router.get('/instructors/:id/messaging', authenticate, getInstructorMessagingLink);
 router.get('/instructor-discovery', getInstructorDiscovery);
 router.get('/categories', getCategoriesTree);
 router.get('/categories/popular', getPopularCategories);

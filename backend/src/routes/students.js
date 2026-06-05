@@ -1777,6 +1777,23 @@ router.get(
   getInstructorMyLessonsCalendar
 );
 
+const {
+  postTeacherReview,
+  getTeacherReviewEligibility,
+} = require('../controllers/teacherReviewController');
+router.get(
+  '/teachers/:instructorId/reviews/eligibility',
+  authenticate,
+  authorize('student'),
+  getTeacherReviewEligibility,
+);
+router.post(
+  '/teachers/:instructorId/reviews',
+  authenticate,
+  authorize('student'),
+  postTeacherReview,
+);
+
 router.get('/:id', authenticate, getStudent);
 
 module.exports = router;

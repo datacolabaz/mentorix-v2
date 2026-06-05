@@ -3,9 +3,9 @@ const { getCategorySubtreeIds } = require('../services/categoryService');
 const {
   sqlPlanListingPriority,
   PUBLIC_DISCOVER_LISTING_SQL,
-  enrichInstructorListingRow,
 } = require('../services/mapListingPlanService');
 const { notifyMarketplaceSearchOpportunity } = require('../services/marketplaceSearchOpportunityService');
+const { enrichMapInstructorRows } = require('../services/instructorMapPreviewService');
 
 function parseFloatQ(v) {
   const n = Number.parseFloat(String(v ?? '').replace(',', '.'));
@@ -176,7 +176,7 @@ const getInstructorsInMapView = async (req, res) => {
       params
     );
 
-    const instructors = rows.map((r) => enrichInstructorListingRow(r));
+    const instructors = await enrichMapInstructorRows(rows);
 
     setImmediate(() => {
       notifyMarketplaceSearchOpportunity({
@@ -200,3 +200,4 @@ const getInstructorsInMapView = async (req, res) => {
 };
 
 module.exports = { getInstructorsInMapView };
+ { getInstructorsInMapView };

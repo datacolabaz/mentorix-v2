@@ -7,7 +7,10 @@ import { setPageSeo } from '../../lib/pageSeo'
 import { instructorDisplaySubject } from '../../lib/instructorDisplay'
 import InquiryFormModal from '../../components/discover/InquiryFormModal'
 import DiscoverAuthModal from '../../components/discover/DiscoverAuthModal'
+import TeacherReviewPanel from '../../components/discover/TeacherReviewPanel'
 import useAuthStore from '../../hooks/useAuth'
+import { useToast } from '../../components/common/Toast'
+import { ratingStarsLine, formatStudentCount, deliveryFormatBadges } from '../../lib/teacherMapCard'
 
 function kindLabel(k) {
   if (k === 'trainer') return 'Təlimçi'
@@ -51,11 +54,13 @@ export default function PublicInstructorProfile() {
   const { id } = useParams()
   const { user, token } = useAuthStore()
   const isAuthenticated = Boolean(token && user)
+  const toast = useToast()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [instructor, setInstructor] = useState(null)
   const [inquiryOpen, setInquiryOpen] = useState(false)
   const [authModalOpen, setAuthModalOpen] = useState(false)
+  const [whatsappBusy, setWhatsappBusy] = useState(false)
 
   useEffect(() => {
     if (!id) return
@@ -99,8 +104,33 @@ export default function PublicInstructorProfile() {
     else setAuthModalOpen(true)
   }
 
+  const onWhatsApp = async () => {
+    if (!instructor?.id) return
+    if (!isAuthenticated) {
+      setAuthModalOpen(true)
+      return
+    }
+    setWhatsappBusy(true)
+    try {
+      const d = await api.get(`/public/instructors/${encodeURIComponent(instructor.id)}/messaging`)
+      if (d?.whatsapp_available && d.whatsapp_url) {
+        window.open(d.whatsapp_url, '_blank', 'noopener,noreferrer')
+      } else {
+        toast('Müəllimin WhatsApp nömrəsi yoxdur — müraciət formunu doldurun.', 'info')
+        setInquiryOpen(true)
+      }
+    } catch (e) {
+      toast(e?.message || 'WhatsApp açılmadı', 'error')
+    } finally {
+      setWhatsappBusy(false)
+    }
+  }
+
+  const ratingLine = instructor ? ratingStarsLine(instructor) : null
+  const studentLine = instructor ? formatStudentCount(instructor.active_student_count) : null
+  const formatBadges = instructor ? deliveryFormatBadges(instructor) : []
+
   const subjectLine = instructor ? instructorDisplaySubject(instructor) : null
-  const formats = Array.isArray(instructor?.delivery_formats) ? instructor.delivery_formats : []
   const tags = useMemo(() => (instructor ? expertiseTags(instructor) : []), [instructor])
   const bio = String(instructor?.bio || instructor?.discover_bio || '').trim()
   const education = String(instructor?.education || instructor?.discover_education || '').trim()
@@ -175,6 +205,20 @@ export default function PublicInstructorProfile() {
                     {subjectLine || 'Fənn göstərilməyib'}
                   </p>
                   <p className="text-xs text-gray-500 mt-1">{kindLabel(instructor.map_profile_kind)}</p>
+                  {(ratingLine || studentLine) && (
+                    <div className="flex flex-wrap justify-center gap-2 mt-3">
+                      {ratingLine ? (
+                        <span className="text-sm font-semibold text-amber-200 px-3 py-1 rounded-full border border-amber-500/30 bg-amber-500/10">
+                          {ratingLine}
+                        </span>
+                      ) : null}
+                      {studentLine ? (
+                        <span className="text-sm font-medium text-gray-300 px-3 py-1 rounded-full border border-white/15 bg-white/5">
+                          👥 {studentLine}
+                        </span>
+                      ) : null}
+                    </div>
+                  )}
                   <div className="flex flex-wrap justify-center gap-2 mt-3">
                     {experienceYears != null && experienceYears > 0 ? (
                       <span className="text-sm font-semibold text-sky-300/95 px-3 py-1 rounded-full border border-sky-500/30 bg-sky-500/10">
@@ -188,38 +232,57 @@ export default function PublicInstructorProfile() {
                     ) : null}
                   </div>
                 </div>
-                <div className="w-full max-w-sm pt-1">
+                <div className="w-full max-w-sm pt-1 grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <button
                     type="button"
                     onClick={onInquiry}
                     className="w-full rounded-xl bg-primary text-[#0b0b0b] font-bold py-3.5 px-4 hover:brightness-110 transition shadow-lg shadow-primary/20"
                   >
-                    Müraciət göndər
+                    ⚡ Sınaq dərsi — müraciət
                   </button>
-                  <p className="text-[11px] sm:text-xs text-gray-500 mt-2 leading-relaxed px-1">
-                    Müraciətiniz təlimçiyə SMS və idarəetmə panelinə bildiriş olaraq göndəriləcək.
+                  <button
+                    type="button"
+                    disabled={whatsappBusy}
+                    onClick={onWhatsApp}
+                    className="w-full rounded-xl border border-emerald-500/40 bg-emerald-500/10 text-emerald-300 font-bold py-3.5 px-4 hover:bg-emerald-500/20 transition disabled:opacity-50"
+                  >
+                    💬 WhatsApp
+                  </button>
+                  <p className="text-[11px] sm:text-xs text-gray-500 mt-1 leading-relaxed px-1 sm:col-span-2">
+                    WhatsApp və müraciət üçün qeydiyyat tələb olunur. Müraciət SMS və panel bildirişi ilə
+                    çatdırılır.
                   </p>
                 </div>
               </div>
             </section>
 
-            {formats.length > 0 ? (
+            {formatBadges.length > 0 ? (
               <ProfileSection title="Dərs formatı">
                 <ul className="flex flex-wrap gap-2">
-                  {formats.map((f) => (
+                  {formatBadges.map((lab) => (
                     <li
-                      key={f.format}
+                      key={lab}
                       className="text-xs sm:text-sm font-medium px-3 py-2 rounded-xl border border-white/15 bg-white/5 text-gray-200"
                     >
-                      {formatDelivery(f.format)}
-                      {f.format === 'student_place' && f.travel_radius_km != null
-                        ? ` · ${f.travel_radius_km} km`
-                        : ''}
+                      {lab}
                     </li>
                   ))}
                 </ul>
+                {instructor.next_available_slot ? (
+                  <p className="text-sm text-gray-300 mt-3">
+                    📅 Növbəti boş vaxt:{' '}
+                    <span className="font-semibold text-white">{instructor.next_available_slot}</span>
+                  </p>
+                ) : null}
               </ProfileSection>
             ) : null}
+
+            <TeacherReviewPanel
+              instructorId={instructor.id}
+              instructor={instructor}
+              isAuthenticated={isAuthenticated}
+              onNeedAuth={() => setAuthModalOpen(true)}
+            />
 
             <ProfileSection title="Haqqımda">
               {bio ? (

@@ -1,5 +1,5 @@
 const db = require('../utils/db');
-const { enrichInstructorListingRow } = require('../services/mapListingPlanService');
+const { enrichMapInstructorRows } = require('../services/instructorMapPreviewService');
 
 /**
  * GET /api/public/instructors/:id
@@ -59,14 +59,12 @@ const getPublicInstructorProfile = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Müəllim tapılmadı və ya profil gizlidir' });
     }
 
+    const [enriched] = await enrichMapInstructorRows([row]);
+
     res.set('Cache-Control', 'public, max-age=60');
     res.json({
       success: true,
-      instructor: enrichInstructorListingRow({
-        ...row,
-        delivery_formats: Array.isArray(row.delivery_formats) ? row.delivery_formats : [],
-        category_names: Array.isArray(row.category_names) ? row.category_names : [],
-      }),
+      instructor: enriched,
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message || 'Xəta' });
