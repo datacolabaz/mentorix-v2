@@ -35,6 +35,7 @@ export default function InstructorTeachingGroups() {
   const [busy, setBusy] = useState({})
   const [qrOpen, setQrOpen] = useState(false)
   const [qrGroup, setQrGroup] = useState(null)
+  const [confirmDelete, setConfirmDelete] = useState(null)
 
   const safeSubjects = useMemo(() => normalizeTeachingSubjects(subjects), [subjects])
 
@@ -56,6 +57,14 @@ export default function InstructorTeachingGroups() {
   useEffect(() => {
     void load()
   }, [load])
+
+  const requestRemoveSubject = (subject) => {
+    setConfirmDelete({ type: 'subject', id: subject?.id, name: subject?.name || 'Sahə' })
+  }
+
+  const requestRemoveGroup = (group) => {
+    setConfirmDelete({ type: 'group', id: group?.id, name: group?.name || 'Qrup' })
+  }
 
   const addSubject = async () => {
     const name = newSubject.trim()
@@ -89,7 +98,6 @@ export default function InstructorTeachingGroups() {
   }
 
   const removeSubject = async (id) => {
-    if (!window.confirm('Bu sahəni və onun qruplarını silmək istəyirsiniz?')) return
     setBusy((b) => ({ ...b, [`dels-${id}`]: true }))
     try {
       await api.delete('/instructor/teaching/subjects/' + encodeURIComponent(id))
@@ -160,7 +168,6 @@ export default function InstructorTeachingGroups() {
   }
 
   const removeGroup = async (groupId) => {
-    if (!window.confirm('Qrup silinsin?')) return
     setBusy((b) => ({ ...b, [`delg-${groupId}`]: true }))
     try {
       await api.delete('/instructor/teaching/groups/' + encodeURIComponent(groupId))
@@ -290,7 +297,7 @@ export default function InstructorTeachingGroups() {
                       size="sm"
                       variant="danger"
                       loading={busy[`dels-${s.id}`]}
-                      onClick={() => void removeSubject(s.id)}
+                      onClick={() => requestRemoveSubject(s)}
                     >
                       Sil
                     </Button>
@@ -454,7 +461,7 @@ export default function InstructorTeachingGroups() {
                                   theme === 'dark' ? 'text-rose-300 hover:text-rose-200' : 'text-rose-700 hover:text-rose-800',
                                 ].join(' ')}
                                 disabled={busy[`delg-${g.id}`]}
-                                onClick={() => void removeGroup(g.id)}
+                                onClick={() => requestRemoveGroup(g)}
                               >
                                 Sil
                               </button>
@@ -491,6 +498,59 @@ export default function InstructorTeachingGroups() {
             </ul>
         )}
       </Card>
+
+      <Modal
+        open={Boolean(confirmDelete)}
+        onClose={() => setConfirmDelete(null)}
+        title="Təsdiq"
+        size="sm"
+        zIndex={10060}
+        footer={
+          <div className="flex justify-center gap-3">
+            <Button
+              type="button"
+              variant="secondary"
+              className="min-w-[120px] justify-center"
+              disabled={confirmDelete?.type ? false : true}
+              onClick={() => setConfirmDelete(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="danger"
+              className="min-w-[140px] justify-center"
+              loading={
+                confirmDelete?.type === 'subject'
+                  ? Boolean(busy[`dels-${confirmDelete.id}`])
+                  : confirmDelete?.type === 'group'
+                    ? Boolean(busy[`delg-${confirmDelete.id}`])
+                    : false
+              }
+              onClick={async () => {
+                const d = confirmDelete
+                setConfirmDelete(null)
+                if (!d?.id) return
+                if (d.type === 'subject') await removeSubject(d.id)
+                else await removeGroup(d.id)
+              }}
+            >
+              OK
+            </Button>
+          </div>
+        }
+      >
+        {confirmDelete ? (
+          <div className="space-y-3 text-center">
+            <p className="text-sm text-zinc-200 leading-relaxed">
+              {confirmDelete.type === 'subject'
+                ? `${confirmDelete.name} sahəsi və onun qrupları silinsin?`
+                : `"${confirmDelete.name}" qrup silinsin?`}
+            </p>
+            <p className="text-xs text-zinc-500">Əməliyyat geri qaytarılmır.</p>
+          </div>
+        ) : null}
+      </Modal>
 
       <Modal
         open={Boolean(groupModal)}
