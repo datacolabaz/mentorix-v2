@@ -514,7 +514,7 @@ export default function InstructorTeachingGroups() {
               disabled={confirmDelete?.type ? false : true}
               onClick={() => setConfirmDelete(null)}
             >
-              Cancel
+              Ləğv et
             </Button>
             <Button
               type="button"
@@ -535,7 +535,7 @@ export default function InstructorTeachingGroups() {
                 else await removeGroup(d.id)
               }}
             >
-              OK
+              Təsdiq et
             </Button>
           </div>
         }
