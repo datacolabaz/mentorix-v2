@@ -80,6 +80,25 @@ async function resolveProfileCompletionUrl(studentId, instructorId) {
     return `${frontendBaseUrl()}/join/${encodeURIComponent(code)}`;
   }
 
+  const { rows: enrRows } = await db.query(
+    `SELECT ig.invitation_code, ig.join_code
+     FROM enrollments e
+     LEFT JOIN instructor_groups ig ON ig.id = e.group_id
+     WHERE e.student_id = $1::uuid
+       AND e.instructor_id = $2::uuid
+       AND (e.deleted_at IS NULL)
+       AND COALESCE(LOWER(TRIM(e.status)), '') IN ('pending_setup', 'pending_approval', 'active')
+     ORDER BY e.enrolled_at DESC NULLS LAST
+     LIMIT 1`,
+    [studentId, instructorId],
+  );
+  const enrCode = String(enrRows[0]?.invitation_code || enrRows[0]?.join_code || '')
+    .trim()
+    .toUpperCase();
+  if (enrCode) {
+    return `${frontendBaseUrl()}/join/${encodeURIComponent(enrCode)}`;
+  }
+
   return `${frontendBaseUrl()}/student`;
 }
 
@@ -178,15 +197,37 @@ const sendEnrollmentProfileCompletionEmail = async (req, res) => {
     });
 
     if (!emailResult?.ok) {
+      const reason = emailResult?.reason || emailResult?.error || '';
+      const hint =
+        reason === 'smtp_not_configured'
+          ? 'Serverdə email (Resend/SMTP) konfiqurasiya olunmayıb — adminə müraciət edin.'
+          : reason === 'no_email'
+            ? 'Tələbənin email ünvanı tapılmadı.'
+            : emailResult?.error || 'Email göndərilmədi';
       return res.status(502).json({
         success: false,
-        message: emailResult?.error || 'Email göndərilmədi (konfiqurasiya yoxlanılsın)',
+        message: hint,
+        code: reason || 'EMAIL_SEND_FAILED',
       });
+    }
+
+    try {
+      await db.query(
+        `INSERT INTO notifications (user_id, title, body, type, is_read)
+         VALUES ($1, $2, $3, 'profile_completion', FALSE)`,
+        [
+          enr.student_id,
+          'Qeydiyyatı tamamlayın',
+          `Müəlliminiz profil məlumatlarınızı (ad, soyad, mobil telefon) tamamlamağınızı xahiş edir. Link: ${completionUrl}`,
+        ],
+      );
+    } catch {
+      /* ignore */
     }
 
     res.json({
       success: true,
-      message: `${email} ünvanına profil tamamlama linki göndərildi. Tələbə linkə daxil olub məlumatları doldurandan sonra sorğu müəllimə gedəcək.`,
+      message: `${email} ünvanına profil tamamlama linki göndərildi. Tələbə Gmail/Spam qovluğunu yoxlasın, linkə daxil olub telefonunu təsdiqləsin — sonra «Quraşdırmanı tamamla» davam edə bilərsiniz.`,
       completion_url: completionUrl,
     });
   } catch (err) {

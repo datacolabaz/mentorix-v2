@@ -284,7 +284,11 @@ export default function AdminStudents() {
               </div>
             ) : detail.link ? (
               <div className="p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/20 space-y-2">
-                <div className="text-xs text-gray-400 uppercase">Aktiv bağlantı</div>
+                <div className="text-xs text-gray-400 uppercase">
+                  {String(detail.link.status || '').toLowerCase() === 'active'
+                    ? 'Aktiv bağlantı'
+                    : 'Gözləyən bağlantı'}
+                </div>
                 <div>
                   <span className="text-gray-500">Müəllim: </span>
                   <span className="text-white font-medium">{detail.link.instructor_name}</span>
@@ -299,6 +303,12 @@ export default function AdminStudents() {
                     <span className="text-blue-300 font-mono">{detail.link.join_code}</span>
                   </div>
                 )}
+                {detail.link.status &&
+                String(detail.link.status).toLowerCase() !== 'active' ? (
+                  <div className="text-xs text-amber-200/90">
+                    Status: {detail.link.status} — müəllim quraşdırmanı tamamlamalıdır.
+                  </div>
+                ) : null}
               </div>
             ) : null}
 

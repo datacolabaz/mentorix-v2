@@ -1,5 +1,6 @@
 const { Resend } = require('resend');
 const { sendEmail, userEmail } = require('./emailService');
+const { enqueueNotification } = require('./notificationQueueService');
 
 const RESEND_API_KEY = String(process.env.RESEND_API_KEY || '').trim();
 const EMAIL_FROM = String(process.env.VERIFY_EMAIL_FROM || process.env.EMAIL_FROM || '').trim();
@@ -235,10 +236,40 @@ async function sendStudentProfileCompletionEmail({
 
   try {
     const r = await sendEmail({ to, subject, text });
-    if (r?.skipped) return { ok: false, skipped: true, reason: 'smtp_not_configured' };
+    if (r?.skipped) {
+      try {
+        await enqueueNotification({
+          channel: 'email',
+          event_type: 'student_profile_completion',
+          unique_key: `profile_completion_${userId}_${Date.now()}`,
+          user_id: userId,
+          to_addr: to,
+          subject,
+          body: text,
+          context: { completionUrl: url },
+        });
+        return { ok: true, provider: 'queue', queued: true };
+      } catch (queueErr) {
+        return { ok: false, skipped: true, reason: 'smtp_not_configured', error: queueErr?.message };
+      }
+    }
     return { ok: true, provider: 'smtp', messageId: r?.messageId || null };
   } catch (err) {
-    return { ok: false, error: err?.message || 'Email xətası' };
+    try {
+      await enqueueNotification({
+        channel: 'email',
+        event_type: 'student_profile_completion',
+        unique_key: `profile_completion_${userId}_${Date.now()}`,
+        user_id: userId,
+        to_addr: to,
+        subject,
+        body: text,
+        context: { completionUrl: url },
+      });
+      return { ok: true, provider: 'queue', queued: true };
+    } catch {
+      return { ok: false, error: err?.message || 'Email xətası' };
+    }
   }
 }
 

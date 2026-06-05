@@ -1303,12 +1303,15 @@ export default function InstructorStudents() {
     if (listLoading || pendingToastShown.current) return
     if (pendingStudents.length > 0) {
       pendingToastShown.current = true
+      const needsPhone = pendingStudents.some((s) => !canonicalAzPhoneE164(s.phone || s.phone_number || ''))
       toast(
-        `${pendingStudents.length} tələbə quraşdırma gözləyir — yuxarıdakı sarı blokdan tamamlayın`,
+        needsPhone
+          ? `${pendingStudents.length} tələbə quraşdırma gözləyir. Telefonu yoxdursa «Quraşdırmanı tamamla» → «Profil tamamlama linki göndər (email)» düyməsinə basın; tələbə linkdən telefonunu doldurmalıdır.`
+          : `${pendingStudents.length} tələbə quraşdırma gözləyir — yuxarıdakı sarı blokdan «Quraşdırmanı tamamla» ilə paket və cədvəli təyin edin.`,
         'info',
       )
     }
-  }, [listLoading, pendingStudents.length, toast])
+  }, [listLoading, pendingStudents, toast])
 
   const grouped = useMemo(() => {
     const byKey = new Map()
@@ -1702,7 +1705,9 @@ export default function InstructorStudents() {
                 Təyin gözləyən tələbələr
               </h2>
               <p className="text-xs text-amber-200/70 mt-1">
-                Join kodu ilə qoşulub — paket, cədvəl və ödəniş məlumatlarını tamamlayın.
+                Tələbə qoşulub, lakin paket/cədvəl tamamlanmayıb. Telefonu yoxdursa əvvəlcə «Profil tamamlama
+                linki göndər (email)» ilə tələbəyə link göndərin — bu email təsdiqi deyil, mobil nömrə
+                doldurma linkidir.
               </p>
             </div>
             <StatusBadge variant="due">{pendingStudents.length} gözləyir</StatusBadge>

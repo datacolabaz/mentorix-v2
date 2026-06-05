@@ -412,22 +412,28 @@ const getStudentById = async (req, res) => {
       [id],
     ).catch(() => ({ rows: [] }));
 
-    const active = enrollments.find((e) => String(e.status || 'active').toLowerCase() === 'active');
+    const normStatus = (s) => String(s || 'active').toLowerCase();
+    const active = enrollments.find((e) => normStatus(e.status) === 'active');
+    const pending = enrollments.find((e) =>
+      ['pending_setup', 'pending_approval'].includes(normStatus(e.status)),
+    );
+    const linkRow = active || pending;
     res.json({
       success: true,
       student: users[0],
       profile: profileRows[0] || null,
       enrollments,
-      link: active
+      link: linkRow
         ? {
-            instructor_id: active.instructor_id,
-            instructor_name: active.instructor_name,
-            group_id: active.group_id,
-            group_name: active.group_name,
-            join_code: active.group_join_code,
+            instructor_id: linkRow.instructor_id,
+            instructor_name: linkRow.instructor_name,
+            group_id: linkRow.group_id,
+            group_name: linkRow.group_name,
+            join_code: linkRow.group_join_code,
+            status: linkRow.status,
           }
         : null,
-      is_unassigned: !active,
+      is_unassigned: !linkRow,
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
