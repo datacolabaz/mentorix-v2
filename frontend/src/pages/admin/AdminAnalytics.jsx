@@ -458,4 +458,43 @@ export default function AdminAnalytics() {
             <h2 className="text-sm font-semibold text-white mb-4">Son qeydiyyatlar</h2>
             <div className="space-y-3">
               {(data.recent_registrations || []).map((u) => (
-       
+                <div
+                  key={u.id}
+                  className="flex flex-wrap items-center justify-between gap-2 py-3 border-b border-white/5 last:border-0"
+                >
+                  <div>
+                    <div className="text-sm font-semibold text-white">{u.full_name}</div>
+                    <div className="text-xs text-gray-500 capitalize">{u.role || '—'}</div>
+                  </div>
+                  <div className="text-right text-xs">
+                    <div className="text-gray-400">
+                      {u.created_at
+                        ? formatDistanceToNow(new Date(u.created_at), { addSuffix: true, locale: az })
+                        : '—'}
+                    </div>
+                    <div className="text-primary font-medium mt-0.5">Mənbə: {u.source_label}</div>
+                  </div>
+                </div>
+              ))}
+              {!data.recent_registrations?.length ? (
+                <p className="text-xs text-gray-500 text-center py-6">Bu dövrdə qeydiyyat yoxdur</p>
+              ) : null}
+            </div>
+          </Card>
+        </>
+      ) : null}
+
+      {!loading && !data && !err ? (
+        <p className="text-sm text-gray-500 text-center py-12">
+          Analitika boşdur. İstifadəçilər səhifəyə daxil olandan sonra məlumat toplanacaq.
+        </p>
+      ) : null}
+
+      <p className="text-xs text-gray-600 text-center">
+        <Link to="/admin" className="text-primary hover:underline">
+          ← Dashboard
+        </Link>
+      </p>
+    </div>
+  )
+}
