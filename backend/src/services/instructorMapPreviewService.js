@@ -133,6 +133,7 @@ async function getCompletedLessonsCountBatch(instructorIds) {
   return out;
 }
 
+async function getAddressBatch(instructorIds) {
   const ids = [...new Set((instructorIds || []).map(String).filter(Boolean))];
   const out = {};
   for (const id of ids) out[id] = null;
