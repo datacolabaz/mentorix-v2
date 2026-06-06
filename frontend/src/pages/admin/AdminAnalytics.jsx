@@ -46,6 +46,11 @@ function fmtPct(n) {
   return `${Number(n).toLocaleString('az-Latn-AZ', { maximumFractionDigits: 1 })}%`
 }
 
+function fmtMoney(n) {
+  if (n == null || !Number.isFinite(Number(n))) return '—'
+  return `₼${new Intl.NumberFormat('az-Latn-AZ', { maximumFractionDigits: 0 }).format(Number(n))}`
+}
+
 const AZ_MONTHS_SHORT = ['yan', 'fev', 'mar', 'apr', 'may', 'iyn', 'iyl', 'avq', 'sen', 'okt', 'noy', 'dek']
 
 function parseYmd(ymd) {
@@ -214,6 +219,10 @@ export default function AdminAnalytics() {
 
   const ov = data?.overview || {}
   const monthly = data?.monthly || {}
+  const platformHealth = data?.platform_health || {}
+  const financial = platformHealth.financial || {}
+  const engagement = platformHealth.engagement || {}
+  const hotLeads = platformHealth.hot_leads || []
   const conversionUi = formatConversion(ov)
   const registrationsUi = formatRegistrations(ov)
 
@@ -322,6 +331,149 @@ export default function AdminAnalytics() {
                 </div>
               ))}
             </div>
+          </section>
+
+          {platformHealth && !platformHealth.error ? (
+            <>
+              <section>
+                <div className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">
+                  Maliyyə və abunəlik · bu ay
+                </div>
+                <p className="text-[11px] text-gray-600 mb-3">MRR, churn və SMS paket satışları</p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <OverviewCard
+                    label="MRR"
+                    value={fmtMoney(financial.mrr_azn)}
+                    sub={`${fmt(financial.active_paid_instructors)} aktiv ödənişli müəllim`}
+                  />
+                  <OverviewCard
+                    label="Churn rate"
+                    value={fmtPct(financial.churn_rate_pct)}
+                    sub={`Bu ay ləğv: ${fmt(financial.churned_instructors_this_month)} müəllim`}
+                    warn={(financial.churn_rate_pct || 0) > 10}
+                  />
+                  <OverviewCard
+                    label="Add-on gəlir (SMS)"
+                    value={fmtMoney(financial.addon_sms_revenue_azn)}
+                    sub="Bu ay ödənilmiş SMS paketləri"
+                  />
+                </div>
+              </section>
+
+              <section>
+                <div className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">
+                  Platforma aktivliyi · bu ay
+                </div>
+                <p className="text-[11px] text-gray-600 mb-3">OTK imtahanlar, quiz iştirakçıları və davamiyyət</p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <OverviewCard
+                    label="OTK imtahanları"
+                    value={fmt(engagement.otk_exams_this_month)}
+                    sub="Sistem iştirakçı qrupu ilə keçirilən"
+                  />
+                  <OverviewCard
+                    label="Aktiv quiz iştirakçıları"
+                    value={fmt(engagement.active_quiz_participants)}
+                    sub="Bu ay imtahana başlayan unikal tələbə"
+                  />
+                  <OverviewCard
+                    label="Orta davamiyyət"
+                    value={
+                      engagement.avg_attendance_rate_pct != null
+                        ? fmtPct(engagement.avg_attendance_rate_pct)
+                        : '—'
+                    }
+                    sub="Qeydə alınmış dərslər üzrə (bu ay)"
+                  />
+                </div>
+              </section>
+            </>
+          ) : null}
+
+          <section>
+            <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2 mb-3">
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+                  Hot leads / limit xəbərdarlığı
+                </div>
+                <p className="text-[11px] text-gray-600 mt-1">
+                  SMS ≥ {platformHealth.thresholds?.sms_alert_pct ?? 85}% və ya yaddaş ≥{' '}
+                  {platformHealth.thresholds?.storage_alert_pct ?? 90}% — upsell fürsəti
+                </p>
+              </div>
+              <Link
+                to="/admin/instructors"
+                className="text-xs font-semibold text-primary hover:underline shrink-0"
+              >
+                Müəllimlər →
+              </Link>
+            </div>
+            <Card className="p-0 !bg-[#0f1218] border-white/10 overflow-hidden">
+              {hotLeads.length ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-left text-gray-500 border-b border-white/10 text-xs bg-white/[0.02]">
+                        <th className="px-4 py-3 font-semibold">Müəllim</th>
+                        <th className="px-4 py-3 font-semibold">Paket</th>
+                        <th className="px-4 py-3 font-semibold text-right">SMS</th>
+                        <th className="px-4 py-3 font-semibold text-right">Yaddaş</th>
+                        <th className="px-4 py-3 font-semibold">Siqnal</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {hotLeads.map((row) => (
+                        <tr key={row.id} className="border-b border-white/5 last:border-0">
+                          <td className="px-4 py-3">
+                            <div className="font-semibold text-white">{row.full_name}</div>
+                            <div className="text-[11px] text-gray-500">{row.email || row.phone || '—'}</div>
+                          </td>
+                          <td className="px-4 py-3 capitalize text-gray-300">{row.plan || '—'}</td>
+                          <td className="px-4 py-3 text-right tabular-nums">
+                            {row.sms_pct != null ? (
+                              <span className={row.sms_pct >= 85 ? 'text-amber-300 font-semibold' : 'text-gray-300'}>
+                                {fmtPct(row.sms_pct)} ({fmt(row.sms_used)}/{fmt(row.sms_cap)})
+                              </span>
+                            ) : (
+                              '—'
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-right tabular-nums">
+                            {row.storage_pct != null ? (
+                              <span
+                                className={row.storage_pct >= 90 ? 'text-amber-300 font-semibold' : 'text-gray-300'}
+                              >
+                                {fmtPct(row.storage_pct)} ({fmt(row.storage_used_mb)}/{fmt(row.storage_cap_mb)} MB)
+                              </span>
+                            ) : (
+                              '—'
+                            )}
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex flex-wrap gap-1">
+                              {row.alerts?.includes('sms') ? (
+                                <span className="text-[10px] font-bold uppercase tracking-wide rounded-md border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-amber-200">
+                                  SMS
+                                </span>
+                              ) : null}
+                              {row.alerts?.includes('storage') ? (
+                                <span className="text-[10px] font-bold uppercase tracking-wide rounded-md border border-violet-500/40 bg-violet-500/10 px-2 py-0.5 text-violet-200">
+                                  Yaddaş
+                                </span>
+                              ) : null}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="text-xs text-gray-500 text-center py-10 px-4">
+                  Hazırda limit həddinə yaxın müəllim yoxdur.
+                </p>
+              )}
+            </Card>
           </section>
 
           {trend.length > 0 ? (

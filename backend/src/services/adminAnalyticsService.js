@@ -1,5 +1,6 @@
 const db = require('../utils/db');
 const { labelForSource } = require('../utils/referrerSource');
+const { getAdminPlatformHealth } = require('./adminPlatformHealthService');
 
 const VISIT_EVENTS = ['page_view', 'landing_view'];
 const FUNNEL_STEPS = [
@@ -358,6 +359,18 @@ async function getAdminAnalyticsDashboard(periodRaw) {
 
   const m = monthlyRes.rows[0] || {};
 
+  let platform_health = null;
+  try {
+    platform_health = await getAdminPlatformHealth();
+  } catch (err) {
+    platform_health = {
+      financial: null,
+      hot_leads: [],
+      engagement: null,
+      error: err?.message || 'Platform health metrics unavailable',
+    };
+  }
+
   return {
     period,
     timezone: 'Asia/Baku',
@@ -412,6 +425,7 @@ async function getAdminAnalyticsDashboard(periodRaw) {
       revenue_azn: Math.round((Number(m.revenue_azn) || 0) * 100) / 100,
     },
     trend_daily: trendFilled,
+    platform_health,
   };
 }
 
