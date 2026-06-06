@@ -638,9 +638,9 @@ export default function Login() {
             {!isAdmin ? (
               loginModalOpen ? (
                 <div className="mb-4 shrink-0 px-1">
-                  <div className="grid grid-cols-[3rem_1fr_3rem] items-start gap-x-1">
-                    <div aria-hidden className="h-12 w-12" />
-                    <div className="space-y-1 text-center min-w-0">
+                  <div className="flex flex-col sm:grid sm:grid-cols-[3rem_1fr_3rem] sm:items-start sm:gap-x-1">
+                    <div aria-hidden className="hidden sm:block h-12 w-12" />
+                    <div className="order-2 sm:order-none space-y-1 text-center min-w-0 w-full">
                       <h2 id="mx-login-modal-title" className="text-lg font-semibold text-white sm:text-xl">
                         Mentorix-ə xoş gəlmisiniz
                       </h2>
@@ -648,16 +648,18 @@ export default function Login() {
                         Rol seçin, Google ilə daxil olun və ya köhnə email hesabınızdan istifadə edin.
                       </p>
                     </div>
-                    <button
-                      type="button"
-                      aria-label="Bağla"
-                      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-white/20 bg-white/5 text-gray-300 hover:bg-white/10 hover:text-white"
-                      onClick={closeLoginModal}
-                    >
-                      <span aria-hidden className="text-3xl font-light leading-none">
-                        ×
-                      </span>
-                    </button>
+                    <div className="order-1 sm:order-none flex justify-end mb-1.5 sm:mb-0">
+                      <button
+                        type="button"
+                        aria-label="Bağla"
+                        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-white/20 bg-white/5 text-gray-300 hover:bg-white/10 hover:text-white"
+                        onClick={closeLoginModal}
+                      >
+                        <span aria-hidden className="text-3xl font-light leading-none">
+                          ×
+                        </span>
+                      </button>
+                    </div>
                   </div>
                 </div>
               ) : (
