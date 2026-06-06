@@ -219,22 +219,28 @@ export default function AdminAnalytics() {
 
   return (
     <div className="p-4 sm:p-6 max-w-[1400px] mx-auto space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+      <div className="space-y-4">
         <div>
           <h1 className="font-display font-bold text-2xl text-white">Analitika</h1>
           <p className="text-sm text-gray-500 mt-1">
             Ziyarətçilər, konversiya, trafik mənbələri və funnel — Mentorix.io
           </p>
         </div>
-        <div className="flex flex-wrap sm:flex-nowrap rounded-xl border border-white/10 bg-[#0f1218] p-1 max-w-full overflow-x-auto">
+        <div
+          className="grid grid-cols-5 gap-1 w-full max-w-xl sm:max-w-2xl rounded-xl border border-white/10 bg-[#0f1218] p-1"
+          role="tablist"
+          aria-label="Analitika dövrü"
+        >
           {PERIODS.map((p) => (
             <button
               key={p.id}
               type="button"
+              role="tab"
+              aria-selected={period === p.id}
               disabled={loading}
               onClick={() => setPeriod(p.id)}
               className={[
-                'shrink-0 px-2.5 sm:px-3 py-2 rounded-lg text-[11px] sm:text-xs font-semibold transition-colors whitespace-nowrap',
+                'min-w-0 px-1 sm:px-2 py-2 rounded-lg text-[10px] sm:text-xs font-semibold transition-colors text-center leading-tight',
                 period === p.id ? 'bg-primary text-[#041018]' : 'text-gray-400 hover:text-white',
               ].join(' ')}
             >
