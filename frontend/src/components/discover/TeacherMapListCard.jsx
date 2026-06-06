@@ -9,7 +9,6 @@ import {
 
 export default function TeacherMapListCard({
   instructor: p,
-  rank,
   selected,
   highlighted,
   isNearest,
@@ -42,10 +41,7 @@ export default function TeacherMapListCard({
               : 'border-white/10 bg-[#121212]/90',
       ].join(' ')}
     >
-      <button type="button" onClick={() => onFocus?.(p)} className="flex gap-2 md:gap-3 flex-1 min-w-0 text-left">
-        <span className="hidden md:block mt-1 w-6 shrink-0 text-center text-sm font-bold text-gray-500">
-          {rank}.
-        </span>
+      <button type="button" onClick={() => onFocus?.(p)} className="flex gap-2 flex-1 min-w-0 text-left">
         <InstructorAvatar
           fullName={p.full_name}
           avatarUrl={p.avatar_url}

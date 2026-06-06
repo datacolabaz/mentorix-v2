@@ -715,7 +715,6 @@ export default function InstructorMapSearch() {
                 <TeacherMapListCard
                   key={String(p.id)}
                   instructor={p}
-                  rank={rank}
                   selected={selectedId === p.id}
                   highlighted={highlightId === p.id}
                   isNearest={isNearest}
