@@ -10,7 +10,7 @@ import DiscoverAuthModal from '../../components/discover/DiscoverAuthModal'
 import TeacherReviewPanel from '../../components/discover/TeacherReviewPanel'
 import useAuthStore from '../../hooks/useAuth'
 import { useToast } from '../../components/common/Toast'
-import { ratingStarsLine, formatStudentCount, deliveryFormatBadges } from '../../lib/teacherMapCard'
+import { ratingStarsLine, formatStudentCount, deliveryFormatBadges, showTopBadge } from '../../lib/teacherMapCard'
 
 function kindLabel(k) {
   if (k === 'trainer') return 'Təlimçi'
@@ -184,12 +184,12 @@ export default function PublicInstructorProfile() {
                 />
                 <div className="w-full">
                   <div className="flex flex-wrap justify-center gap-1.5 mb-2">
-                    {instructor.is_top_listing ? (
+                    {showTopBadge(instructor) ? (
                       <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-violet-500/20 text-violet-300">
                         🔥 TOP müəllim
                       </span>
                     ) : null}
-                    {instructor.is_featured_listing ? (
+                    {instructor.is_featured_listing && !showTopBadge(instructor) ? (
                       <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300">
                         ⭐ Önə çıxır
                       </span>

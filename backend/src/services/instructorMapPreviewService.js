@@ -83,7 +83,56 @@ async function getNextSlotBatch(instructorIds) {
   return out;
 }
 
-async function getAddressBatch(instructorIds) {
+const TOP_BADGE_MIN_RATING = 4.8;
+const TOP_BADGE_MIN_COMPLETED_LESSONS = 10;
+const TOP_BADGE_MIN_ACTIVE_STUDENTS = 10;
+
+function qualifiesForTopBadge({
+  review_avg,
+  review_count,
+  completed_lessons_count,
+  active_student_count,
+}) {
+  const avg = Number(review_avg);
+  const reviewCount = Number(review_count) || 0;
+  if (reviewCount <= 0 || !Number.isFinite(avg) || avg < TOP_BADGE_MIN_RATING) {
+    return false;
+  }
+  const lessons = Number(completed_lessons_count) || 0;
+  const students = Number(active_student_count) || 0;
+  return (
+    lessons >= TOP_BADGE_MIN_COMPLETED_LESSONS || students >= TOP_BADGE_MIN_ACTIVE_STUDENTS
+  );
+}
+
+async function getCompletedLessonsCountBatch(instructorIds) {
+  const ids = [...new Set((instructorIds || []).map(String).filter(Boolean))];
+  const out = {};
+  for (const id of ids) out[id] = 0;
+  if (!ids.length) return out;
+
+  try {
+    const { rows } = await db.query(
+      `SELECT e.instructor_id, COUNT(*)::int AS n
+       FROM lessons l
+       INNER JOIN enrollments e ON e.id = l.enrollment_id
+       LEFT JOIN instructor_groups ig ON ig.id = e.group_id
+       WHERE e.instructor_id = ANY($1::uuid[])
+         AND e.deleted_at IS NULL
+         AND COALESCE(ig.is_system, FALSE) = FALSE
+         AND l.lesson_date <= NOW()
+       GROUP BY e.instructor_id`,
+      [ids],
+    );
+    for (const r of rows) {
+      out[String(r.instructor_id)] = Number(r.n) || 0;
+    }
+  } catch {
+    /* lessons cədvəli yoxdursa */
+  }
+  return out;
+}
+
   const ids = [...new Set((instructorIds || []).map(String).filter(Boolean))];
   const out = {};
   for (const id of ids) out[id] = null;
@@ -105,12 +154,14 @@ async function enrichMapInstructorRows(rows) {
   if (!Array.isArray(rows) || !rows.length) return [];
   const ids = rows.map((r) => r.id);
 
-  const [reviewStats, formats, studentCounts, nextSlots, addresses] = await Promise.all([
+  const [reviewStats, formats, studentCounts, nextSlots, addresses, completedLessons] =
+    await Promise.all([
     getReviewStatsBatch(ids),
     getDeliveryFormatsBatch(ids),
     getActiveStudentCountsBatch(ids),
     getNextSlotBatch(ids),
     getAddressBatch(ids),
+    getCompletedLessonsCountBatch(ids),
   ]);
 
   return rows.map((row) => {
@@ -118,17 +169,30 @@ async function enrichMapInstructorRows(rows) {
     const stats = reviewStats[id] || {};
     const base = enrichInstructorListingRow(row);
     const delivery_formats = formats[id] || [];
+    const active_student_count = studentCounts[id] || 0;
+    const completed_lessons_count = completedLessons[id] || 0;
+    const review_avg = stats.review_avg ?? null;
+    const review_count = stats.review_count ?? 0;
+    const show_top_badge = qualifiesForTopBadge({
+      review_avg,
+      review_count,
+      completed_lessons_count,
+      active_student_count,
+    });
     return {
       ...base,
       delivery_formats,
       format_labels: delivery_formats.map((f) => f.label),
       teacher_place_address_short: addresses[id] || null,
       next_available_slot: nextSlots[id] || null,
-      active_student_count: studentCounts[id] || 0,
-      review_avg: stats.review_avg ?? null,
-      review_count: stats.review_count ?? 0,
+      active_student_count,
+      completed_lessons_count,
+      review_avg,
+      review_count,
       latest_review_snippet: stats.latest_review_snippet ?? null,
       latest_review_rating: stats.latest_review_rating ?? null,
+      show_top_badge,
+      is_top_listing: show_top_badge,
     };
   });
 }
@@ -136,4 +200,8 @@ async function enrichMapInstructorRows(rows) {
 module.exports = {
   enrichMapInstructorRows,
   FORMAT_LABELS,
+  qualifiesForTopBadge,
+  TOP_BADGE_MIN_RATING,
+  TOP_BADGE_MIN_COMPLETED_LESSONS,
+  TOP_BADGE_MIN_ACTIVE_STUDENTS,
 };

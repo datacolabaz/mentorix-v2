@@ -555,12 +555,14 @@ export default function InstructorMapSearch() {
                 <button
                   type="button"
                   onClick={() => focusInstructor(nearestInstructor)}
-                  className="w-full text-left rounded-xl border border-amber-500/50 bg-black/85 backdrop-blur-md px-3 py-2.5 shadow-lg hover:border-amber-400/70 transition-colors"
+                  className="w-full text-left rounded-xl border border-sky-500/45 bg-black/85 backdrop-blur-md px-3 py-2.5 shadow-lg hover:border-sky-400/65 transition-colors"
                 >
-                  <p className="text-[10px] font-bold text-amber-400 uppercase tracking-wide">Sizə ən yaxın</p>
+                  <p className="text-[10px] font-bold text-sky-400 uppercase tracking-wide">📍 Sizə ən yaxın</p>
                   <p className="text-sm font-semibold text-white mt-0.5 leading-snug">
                     {kindLabel(nearestInstructor.map_profile_kind)}: {nearestInstructor.full_name}
-                    <span className="text-primary ml-1">({formatDistanceKm(nearestInstructor.distanceKm)})</span>
+                    <span className="text-primary ml-1">
+                      ({formatDistanceKm(nearestInstructor.distanceKm)})
+                    </span>
                   </p>
                 </button>
               </div>
@@ -659,8 +661,8 @@ export default function InstructorMapSearch() {
             ) : null}
 
             {nearestInstructor && distanceOrigin === 'user' && count > 0 && !loading && !selectedInstructor ? (
-              <div className="rounded-xl border border-amber-500/40 bg-gradient-to-r from-amber-500/15 to-emerald-500/10 p-3 mb-3">
-                <p className="text-[10px] font-bold text-amber-400 uppercase tracking-wide">Sizə ən yaxın</p>
+              <div className="rounded-xl border border-sky-500/35 bg-gradient-to-r from-sky-500/10 to-emerald-500/10 p-3 mb-3">
+                <p className="text-[10px] font-bold text-sky-400 uppercase tracking-wide">📍 Sizə ən yaxın</p>
                 <p className="text-sm font-semibold text-white mt-1">
                   {kindLabel(nearestInstructor.map_profile_kind)}: {nearestInstructor.full_name}
                   <span className="text-primary ml-1">({formatDistanceKm(nearestInstructor.distanceKm)})</span>
@@ -724,6 +726,8 @@ export default function InstructorMapSearch() {
                   }}
                   onFocus={focusInstructor}
                   onInquiry={onInquiryClick}
+                  onWhatsApp={onWhatsAppClick}
+                  whatsappBusy={whatsappBusy}
                 />
               )
             })}

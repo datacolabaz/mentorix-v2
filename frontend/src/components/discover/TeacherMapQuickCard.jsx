@@ -4,6 +4,7 @@ import { formatDistanceKm } from '../../lib/geo'
 import {
   deliveryFormatBadges,
   formatStudentCount,
+  showTopBadge,
   teacherRatingParts,
 } from '../../lib/teacherMapCard'
 
@@ -28,11 +29,19 @@ export default function TeacherMapQuickCard({
   const rating = teacherRatingParts(p)
   const studentLine = formatStudentCount(p.active_student_count)
   const formats = deliveryFormatBadges(p)
+  const topBadge = showTopBadge(p)
 
   return (
     <div className="rounded-2xl border-2 border-emerald-500/50 bg-gradient-to-br from-emerald-500/10 via-[#121212] to-[#121212] p-4 shadow-[0_0_24px_rgba(52,211,153,0.12)]">
       <div className="flex items-center justify-between gap-2 mb-3">
-        <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">Tez baxış</p>
+        <div className="flex items-center gap-2 min-w-0">
+          <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">Tez baxış</p>
+          {topBadge ? (
+            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-violet-500/20 text-violet-300">
+              🔥 TOP
+            </span>
+          ) : null}
+        </div>
         <button
           type="button"
           onClick={() => onFocusMap?.(p)}
