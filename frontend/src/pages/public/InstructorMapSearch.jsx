@@ -645,19 +645,47 @@ export default function InstructorMapSearch() {
             ) : null}
           </div>
 
-          <div ref={listScrollRef} className="flex-1 overflow-y-auto p-4 space-y-2">
+          <div
+            ref={listScrollRef}
+            className={[
+              'flex-1 overflow-y-auto p-4 space-y-2',
+              selectedInstructor ? 'pb-52 lg:pb-4' : '',
+            ].join(' ')}
+          >
 
             {selectedInstructor ? (
-              <div className="mb-3 sticky top-0 z-10 pb-1 bg-[#0b0b0b]/95 backdrop-blur-sm">
-                <TeacherMapQuickCard
-                  instructor={selectedInstructor}
-                  distanceOrigin={distanceOrigin}
-                  onInquiry={onInquiryClick}
-                  onWhatsApp={onWhatsAppClick}
-                  onFocusMap={focusInstructor}
-                  whatsappBusy={whatsappBusy}
-                />
-              </div>
+              <>
+                <div className="hidden lg:block mb-3 sticky top-0 z-10 pb-1 bg-[#0b0b0b]/95 backdrop-blur-sm">
+                  <TeacherMapQuickCard
+                    instructor={selectedInstructor}
+                    distanceOrigin={distanceOrigin}
+                    onInquiry={onInquiryClick}
+                    onWhatsApp={onWhatsAppClick}
+                    onFocusMap={focusInstructor}
+                    whatsappBusy={whatsappBusy}
+                  />
+                </div>
+                <div
+                  className={[
+                    'lg:hidden fixed inset-x-0 bottom-0 z-[600]',
+                    'max-h-[min(78vh,560px)] overflow-y-auto',
+                    'border-t-2 border-emerald-500/45 bg-[#0b0b0b]/98 backdrop-blur-md',
+                    'px-3 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]',
+                    'shadow-[0_-12px_40px_rgba(0,0,0,0.65)]',
+                  ].join(' ')}
+                >
+                  <div className="mx-auto w-10 h-1 rounded-full bg-white/20 mb-2" aria-hidden />
+                  <TeacherMapQuickCard
+                    instructor={selectedInstructor}
+                    distanceOrigin={distanceOrigin}
+                    onInquiry={onInquiryClick}
+                    onWhatsApp={onWhatsAppClick}
+                    onFocusMap={focusInstructor}
+                    onClose={() => setSelectedId(null)}
+                    whatsappBusy={whatsappBusy}
+                  />
+                </div>
+              </>
             ) : null}
 
             {nearestInstructor && distanceOrigin === 'user' && count > 0 && !loading && !selectedInstructor ? (

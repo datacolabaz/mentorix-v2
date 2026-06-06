@@ -19,6 +19,7 @@ export default function TeacherMapQuickCard({
   onInquiry,
   onWhatsApp,
   onFocusMap,
+  onClose,
   whatsappBusy,
 }) {
   if (!p) return null
@@ -42,13 +43,25 @@ export default function TeacherMapQuickCard({
             </span>
           ) : null}
         </div>
-        <button
-          type="button"
-          onClick={() => onFocusMap?.(p)}
-          className="text-[11px] font-semibold text-primary hover:underline"
-        >
-          Xəritədə göstər →
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={() => onFocusMap?.(p)}
+            className="text-[11px] font-semibold text-primary hover:underline"
+          >
+            Xəritədə göstər →
+          </button>
+          {onClose ? (
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Bağla"
+              className="w-7 h-7 rounded-lg border border-white/15 text-gray-400 hover:text-white hover:bg-white/10 text-sm leading-none"
+            >
+              ×
+            </button>
+          ) : null}
+        </div>
       </div>
 
       <div className="flex gap-3">
@@ -72,9 +85,7 @@ export default function TeacherMapQuickCard({
                   <span className="text-sm font-bold text-amber-300 tabular-nums">{rating.label}</span>
                 </div>
               ) : (
-                <p className="mt-1.5 text-xs text-gray-500">
-                  <span className="text-amber-500/80">⭐</span> Hələ rəy yoxdur
-                </p>
+                <p className="mt-1.5 text-xs text-gray-500">Hələ rəy yoxdur</p>
               )}
             </div>
             <span className="text-xs font-bold text-primary shrink-0 text-right">
