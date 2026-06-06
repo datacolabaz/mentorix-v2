@@ -227,7 +227,7 @@ export default function AdminAnalytics() {
           </p>
         </div>
         <div
-          className="grid grid-cols-5 gap-1 w-full max-w-xl sm:max-w-2xl rounded-xl border border-white/10 bg-[#0f1218] p-1"
+          className="grid grid-cols-2 sm:grid-cols-5 gap-1.5 w-full rounded-xl border border-white/10 bg-[#0f1218] p-1.5"
           role="tablist"
           aria-label="Analitika dövrü"
         >
@@ -240,7 +240,7 @@ export default function AdminAnalytics() {
               disabled={loading}
               onClick={() => setPeriod(p.id)}
               className={[
-                'min-w-0 px-1 sm:px-2 py-2 rounded-lg text-[10px] sm:text-xs font-semibold transition-colors text-center leading-tight',
+                'min-w-0 px-2 py-2.5 rounded-lg text-xs sm:text-sm font-semibold transition-colors text-center leading-tight',
                 period === p.id ? 'bg-primary text-[#041018]' : 'text-gray-400 hover:text-white',
               ].join(' ')}
             >
