@@ -641,14 +641,14 @@ export default function Login() {
                   <button
                     type="button"
                     aria-label="Bağla"
-                    className="absolute right-0 top-0 z-10 flex h-11 w-11 items-center justify-center rounded-xl text-gray-400 hover:bg-white/10 hover:text-white"
+                    className="absolute right-0 top-0 z-10 flex h-12 w-12 sm:h-12 sm:w-12 items-center justify-center rounded-xl border border-white/20 bg-white/5 text-gray-300 hover:bg-white/10 hover:text-white"
                     onClick={closeLoginModal}
                   >
-                    <span aria-hidden className="text-xl leading-none">
+                    <span aria-hidden className="text-3xl font-light leading-none">
                       ×
                     </span>
                   </button>
-                  <h2 id="mx-login-modal-title" className="pr-10 text-lg font-semibold text-white sm:text-xl">
+                  <h2 id="mx-login-modal-title" className="pr-14 text-lg font-semibold text-white sm:text-xl">
                     Mentorix-ə xoş gəlmisiniz
                   </h2>
                   <p className="text-sm leading-snug text-gray-400">
