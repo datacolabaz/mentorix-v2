@@ -20,6 +20,8 @@ import api from '../../lib/api'
 import Card from '../../components/common/Card'
 
 const PERIODS = [
+  { id: 'today', label: 'Bu gün' },
+  { id: 'yesterday', label: 'Dünən' },
   { id: '7d', label: '7 gün' },
   { id: '30d', label: '30 gün' },
   { id: 'all', label: 'Hamısı' },
@@ -66,11 +68,16 @@ function fmtYmdRange(start, end) {
   const a = parseYmd(start)
   const b = parseYmd(end)
   if (!a || !b) return null
+  if (String(start).slice(0, 10) === String(end).slice(0, 10)) {
+    return fmtYmdShort(start, { withYear: true })
+  }
   const sameYear = a.y === b.y
   return `${fmtYmdShort(start, { withYear: !sameYear })} – ${fmtYmdShort(end, { withYear: true })}`
 }
 
 function periodLabel(id) {
+  if (id === 'today') return 'bu gün'
+  if (id === 'yesterday') return 'dünən'
   if (id === '7d') return 'son 7 gün'
   if (id === '30d') return 'son 30 gün'
   return 'bütün dövr'
@@ -219,7 +226,7 @@ export default function AdminAnalytics() {
             Ziyarətçilər, konversiya, trafik mənbələri və funnel — Mentorix.io
           </p>
         </div>
-        <div className="flex rounded-xl border border-white/10 bg-[#0f1218] p-1">
+        <div className="flex flex-wrap sm:flex-nowrap rounded-xl border border-white/10 bg-[#0f1218] p-1 max-w-full overflow-x-auto">
           {PERIODS.map((p) => (
             <button
               key={p.id}
@@ -227,7 +234,7 @@ export default function AdminAnalytics() {
               disabled={loading}
               onClick={() => setPeriod(p.id)}
               className={[
-                'px-4 py-2 rounded-lg text-xs font-semibold transition-colors',
+                'shrink-0 px-2.5 sm:px-3 py-2 rounded-lg text-[11px] sm:text-xs font-semibold transition-colors whitespace-nowrap',
                 period === p.id ? 'bg-primary text-[#041018]' : 'text-gray-400 hover:text-white',
               ].join(' ')}
             >

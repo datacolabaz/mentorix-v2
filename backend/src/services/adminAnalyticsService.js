@@ -11,12 +11,20 @@ const FUNNEL_STEPS = [
 
 function normalizePeriod(raw) {
   const p = String(raw || '30d').trim().toLowerCase();
+  if (p === 'today' || p === '1d' || p === 'bu_gun') return 'today';
+  if (p === 'yesterday' || p === 'dunen' || p === 'dünən') return 'yesterday';
   if (p === '7d' || p === '7') return '7d';
   if (p === 'all' || p === 'lifetime') return 'all';
   return '30d';
 }
 
+function bakuTodaySql() {
+  return `(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Baku')::date`;
+}
+
 function periodDaysBack(period) {
+  if (period === 'today') return 0;
+  if (period === 'yesterday') return 1;
   if (period === '7d') return 6;
   if (period === '30d') return 29;
   return null;
@@ -30,13 +38,21 @@ function periodIntervalSql(period) {
 
 /** Baku gün təqvimi üzrə müqayisə — server timezone-dan asılı olmur. */
 function periodWhere(period, alias = 'e') {
+  const col = `(${alias}.created_at AT TIME ZONE 'Asia/Baku')::date`;
+  const today = bakuTodaySql();
   if (period === 'all') return 'TRUE';
-  return `(${alias}.created_at AT TIME ZONE 'Asia/Baku')::date >= (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Baku')::date - ${periodIntervalSql(period)}`;
+  if (period === 'today') return `${col} = ${today}`;
+  if (period === 'yesterday') return `${col} = ${today} - INTERVAL '1 day'`;
+  return `${col} >= ${today} - ${periodIntervalSql(period)}`;
 }
 
 function userPeriodWhere(period) {
+  const col = `(u.created_at AT TIME ZONE 'Asia/Baku')::date`;
+  const today = bakuTodaySql();
   if (period === 'all') return 'TRUE';
-  return `(u.created_at AT TIME ZONE 'Asia/Baku')::date >= (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Baku')::date - ${periodIntervalSql(period)}`;
+  if (period === 'today') return `${col} = ${today}`;
+  if (period === 'yesterday') return `${col} = ${today} - INTERVAL '1 day'`;
+  return `${col} >= ${today} - ${periodIntervalSql(period)}`;
 }
 
 function ymdFromDateValue(v) {
@@ -77,6 +93,10 @@ function fillTrendDaily(rows, period, todayYmd) {
       cur = addDaysYmd(cur, 1);
       if (dayKeys.length > 400) break;
     }
+  } else if (period === 'today') {
+    dayKeys = [todayYmd];
+  } else if (period === 'yesterday') {
+    dayKeys = [addDaysYmd(todayYmd, -1)];
   } else {
     const count = period === '7d' ? 7 : 30;
     dayKeys = [];
@@ -102,6 +122,13 @@ function computePeriodBounds(period, todayYmd, trackingSinceYmd) {
       period_start: trackingSinceYmd || todayYmd,
       period_end: todayYmd,
     };
+  }
+  if (period === 'today') {
+    return { period_start: todayYmd, period_end: todayYmd };
+  }
+  if (period === 'yesterday') {
+    const y = addDaysYmd(todayYmd, -1);
+    return { period_start: y, period_end: y };
   }
   const daysBack = periodDaysBack(period);
   return {
