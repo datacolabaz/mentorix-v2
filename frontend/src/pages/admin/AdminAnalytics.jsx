@@ -44,13 +44,30 @@ function fmtPct(n) {
   return `${Number(n).toLocaleString('az-Latn-AZ', { maximumFractionDigits: 1 })}%`
 }
 
-function fmtYmdShort(ymd) {
-  if (!ymd) return '—'
-  const s = String(ymd).slice(0, 10)
-  const [y, mo, d] = s.split('-').map(Number)
-  if (!y || !mo || !d) return s
-  const dt = new Date(Date.UTC(y, mo - 1, d, 12))
-  return dt.toLocaleDateString('az-AZ', { day: 'numeric', month: 'short', timeZone: 'UTC' })
+const AZ_MONTHS_SHORT = ['yan', 'fev', 'mar', 'apr', 'may', 'iyn', 'iyl', 'avq', 'sen', 'okt', 'noy', 'dek']
+
+function parseYmd(ymd) {
+  if (!ymd) return null
+  const m = String(ymd).slice(0, 10).match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (!m) return null
+  return { y: Number(m[1]), mo: Number(m[2]), d: Number(m[3]) }
+}
+
+/** Oxunaqlı tarix: 8 may, 4 iyn */
+function fmtYmdShort(ymd, { withYear = false } = {}) {
+  const p = parseYmd(ymd)
+  if (!p) return '—'
+  const month = AZ_MONTHS_SHORT[p.mo - 1]
+  if (!month) return String(ymd).slice(0, 10)
+  return withYear ? `${p.d} ${month} ${p.y}` : `${p.d} ${month}`
+}
+
+function fmtYmdRange(start, end) {
+  const a = parseYmd(start)
+  const b = parseYmd(end)
+  if (!a || !b) return null
+  const sameYear = a.y === b.y
+  return `${fmtYmdShort(start, { withYear: !sameYear })} – ${fmtYmdShort(end, { withYear: true })}`
 }
 
 function periodLabel(id) {
@@ -186,9 +203,7 @@ export default function AdminAnalytics() {
 
   const activePeriod = data?.period || period
   const periodRangeLabel =
-    data?.period_start && data?.period_end
-      ? `${fmtYmdShort(data.period_start)} – ${fmtYmdShort(data.period_end)}`
-      : null
+    data?.period_start && data?.period_end ? fmtYmdRange(data.period_start, data.period_end) : null
 
   const ov = data?.overview || {}
   const monthly = data?.monthly || {}
@@ -314,7 +329,14 @@ export default function AdminAnalytics() {
                       </linearGradient>
                     </defs>
                     <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
-                    <XAxis dataKey="day" tick={{ fill: '#94a3b8', fontSize: 10 }} axisLine={false} tickLine={false} />
+                    <XAxis
+                      dataKey="day"
+                      tick={{ fill: '#94a3b8', fontSize: 10 }}
+                      axisLine={false}
+                      tickLine={false}
+                      minTickGap={24}
+                      interval="preserveStartEnd"
+                    />
                     <YAxis tick={{ fill: '#94a3b8', fontSize: 10 }} axisLine={false} tickLine={false} width={36} />
                     <Tooltip content={<ChartTooltip />} />
                     <Area type="monotone" dataKey="Ziyarətçi" stroke="#22e0b8" fill="url(#visGrad)" strokeWidth={2} />
