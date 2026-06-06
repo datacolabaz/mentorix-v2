@@ -13,7 +13,6 @@ import DiscoverSearchFilters from '../../components/discover/DiscoverSearchFilte
 import CategoryMegaMenu from '../../components/discover/CategoryMegaMenu'
 import InquiryFormModal from '../../components/discover/InquiryFormModal'
 import DiscoverAuthModal from '../../components/discover/DiscoverAuthModal'
-import TeacherMapQuickCard from '../../components/discover/TeacherMapQuickCard'
 import TeacherMapListCard from '../../components/discover/TeacherMapListCard'
 import useAuthStore from '../../hooks/useAuth'
 import { useToast } from '../../components/common/Toast'
@@ -409,9 +408,7 @@ export default function InstructorMapSearch() {
         setHighlightId(p.id)
         window.setTimeout(() => {
           scrollToCard(p.id)
-          if (window.matchMedia('(max-width: 1023px)').matches) {
-            cardRefs.current.get(String(p.id))?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-          }
+          cardRefs.current.get(String(p.id))?.scrollIntoView({ behavior: 'smooth', block: 'center' })
         }, 120)
         window.setTimeout(() => setHighlightId(null), 2600)
       }
@@ -475,8 +472,7 @@ export default function InstructorMapSearch() {
                 Müəllim tap — Mentorix
               </h1>
               <p className="text-[11px] sm:text-xs text-gray-500 mt-1 leading-snug">
-                <span className="hidden lg:inline">Pinə klikləyin — sağda Tez baxış · </span>
-                reytinq · format · WhatsApp (qeydiyyatdan sonra)
+                Pinə klikləyin — siyahıda vurğulanır · reytinq · format · WhatsApp (qeydiyyatdan sonra)
               </p>
             </div>
           </div>
@@ -652,19 +648,6 @@ export default function InstructorMapSearch() {
           </div>
 
           <div ref={listScrollRef} className="flex-1 overflow-y-auto p-4 space-y-2">
-
-            {selectedInstructor ? (
-              <div className="hidden lg:block mb-3 sticky top-0 z-10 pb-1 bg-[#0b0b0b]/95 backdrop-blur-sm">
-                <TeacherMapQuickCard
-                  instructor={selectedInstructor}
-                  distanceOrigin={distanceOrigin}
-                  onInquiry={onInquiryClick}
-                  onWhatsApp={onWhatsAppClick}
-                  onFocusMap={focusInstructor}
-                  whatsappBusy={whatsappBusy}
-                />
-              </div>
-            ) : null}
 
             {nearestInstructor && distanceOrigin === 'user' && count > 0 && !loading && !selectedInstructor ? (
               <div className="rounded-xl border border-sky-500/35 bg-gradient-to-r from-sky-500/10 to-emerald-500/10 p-3 mb-3">
