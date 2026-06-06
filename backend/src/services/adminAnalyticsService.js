@@ -299,4 +299,100 @@ async function getAdminAnalyticsDashboard(periodRaw) {
   const todayYmd = ymdFromDateValue(ov.today_baku);
   const trackingSinceYmd = ymdFromDateValue(ov.tracking_since);
   const { period_start, period_end } = computePeriodBounds(period, todayYmd, trackingSinceYmd);
-  const registrations = Number(ov.re
+  const registrations = Number(ov.registrations_in_period) || 0;
+  const uniqueVisitors = Number(ov.unique_visitors) || 0;
+  const totalVisitors = Number(ov.total_visitors) || 0;
+  const conversion = computeConversionMetrics(registrations, uniqueVisitors);
+  const trendFilled = fillTrendDaily(trendRes.rows || [], period, todayYmd);
+  const trackingSpanDays =
+    trackingSinceYmd && todayYmd
+      ? Math.max(1, Math.round((Date.parse(`${todayYmd}T12:00:00Z`) - Date.parse(`${trackingSinceYmd}T12:00:00Z`)) / 86400000) + 1)
+      : null;
+
+  const funnelMap = Object.fromEntries(
+    (funnelRes.rows || []).map((r) => [r.step, Number(r.count) || 0]),
+  );
+  const funnelTop = funnelMap.landing_view || funnelMap.page_view || uniqueVisitors || 1;
+
+  const traffic_sources = withShares(
+    (sourcesRes.rows || []).map((r) => ({
+      source: r.source,
+      label: labelForSource(r.source),
+      count: Number(r.count) || 0,
+    })),
+  );
+
+  const devices = withShares(
+    (devicesRes.rows || []).map((r) => ({
+      device_type: r.device_type,
+      count: Number(r.count) || 0,
+    })),
+  );
+
+  const m = monthlyRes.rows[0] || {};
+
+  return {
+    period,
+    timezone: 'Asia/Baku',
+    period_start,
+    period_end,
+    tracking_since: trackingSinceYmd,
+    tracking_span_days: trackingSpanDays,
+    tracking_note:
+      period === 'all' && trackingSpanDays != null && trackingSpanDays <= 7
+        ? `Bütün izləmə məlumatı cəmi ${trackingSpanDays} günə aiddir (analitika yeni aktivdir).`
+        : null,
+    overview: {
+      total_visitors: totalVisitors,
+      unique_visitors: uniqueVisitors,
+      registrations,
+      registrations_exceed_visitors: registrations > uniqueVisitors && registrations > 0,
+      ...conversion,
+    },
+    traffic_sources,
+    top_pages: (pagesRes.rows || []).map((r) => ({
+      path: r.path,
+      views: Number(r.views) || 0,
+    })),
+    devices,
+    funnel: FUNNEL_STEPS.map((s, i) => {
+      const count = funnelMap[s.key] || 0;
+      const prev = i > 0 ? funnelMap[FUNNEL_STEPS[i - 1].key] || 0 : funnelTop;
+      return {
+        step: s.key,
+        label: s.label,
+        count,
+        pct_of_top: pct(count, funnelTop),
+        drop_from_prev_pct: i > 0 && prev > 0 ? pct(prev - count, prev) : null,
+      };
+    }),
+    recent_registrations: (recentRes.rows || []).map((r) => ({
+      id: r.id,
+      full_name: r.full_name,
+      role: r.role,
+      created_at: r.created_at,
+      source: r.source,
+      source_label: labelForSource(r.source),
+    })),
+    monthly: {
+      scope: 'calendar_month',
+      registrations: Number(m.registrations) || 0,
+      instructors: Number(m.instructors) || 0,
+      students: Number(m.students) || 0,
+      exams: Number(m.exams) || 0,
+      assignments: Number(m.assignments) || 0,
+      sms_sent: Number(m.sms_sent) || 0,
+      revenue_azn: Math.round((Number(m.revenue_azn) || 0) * 100) / 100,
+    },
+    trend_daily: trendFilled,
+  };
+}
+
+module.exports = {
+  getAdminAnalyticsDashboard,
+  normalizePeriod,
+  periodWhere,
+  userPeriodWhere,
+  fillTrendDaily,
+  ymdFromDateValue,
+};
