@@ -296,7 +296,7 @@ export default function InstructorMapSearch() {
       }
       if (fallback) {
         setUserLocationLabel('Bakı (Badamdar / mərkəz)')
-        setLocationHint('Mövqe icazəsi verilməyib — Bakı mərkəzi göstərilir.')
+        setLocationHint('')
       } else {
         setLocationHint('')
         void resolveUserLabel(lat, lng)

@@ -32,7 +32,7 @@ export default function TeacherMapListCard({
     <div
       ref={cardRef}
       className={[
-        'w-full rounded-xl border p-3 flex gap-3 items-start transition-all duration-500',
+        'w-full rounded-xl border p-3 flex gap-2 md:gap-3 items-start transition-all duration-500',
         highlighted
           ? 'border-emerald-400/70 bg-emerald-500/10 ring-2 ring-emerald-400/50 shadow-[0_0_18px_rgba(52,211,153,0.35)]'
           : selected
@@ -42,8 +42,10 @@ export default function TeacherMapListCard({
               : 'border-white/10 bg-[#121212]/90',
       ].join(' ')}
     >
-      <button type="button" onClick={() => onFocus?.(p)} className="flex gap-3 flex-1 min-w-0 text-left">
-        <span className="mt-1 w-6 shrink-0 text-center text-sm font-bold text-gray-500">{rank}.</span>
+      <button type="button" onClick={() => onFocus?.(p)} className="flex gap-2 md:gap-3 flex-1 min-w-0 text-left">
+        <span className="hidden md:block mt-1 w-6 shrink-0 text-center text-sm font-bold text-gray-500">
+          {rank}.
+        </span>
         <InstructorAvatar
           fullName={p.full_name}
           avatarUrl={p.avatar_url}
@@ -121,7 +123,7 @@ export default function TeacherMapListCard({
           </Link>
         </div>
       </button>
-      <div className="flex flex-col gap-1.5 shrink-0 self-center min-w-[7.5rem]">
+      <div className="flex flex-col gap-1.5 shrink-0 self-center min-w-[6.5rem] sm:min-w-[7.5rem]">
         <button
           type="button"
           onClick={() => onInquiry?.(p)}
