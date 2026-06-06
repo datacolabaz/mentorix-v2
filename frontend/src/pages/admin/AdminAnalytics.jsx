@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { formatDistanceToNow } from 'date-fns'
 import { az } from 'date-fns/locale'
@@ -42,6 +42,21 @@ function fmt(n) {
 function fmtPct(n) {
   if (n == null || !Number.isFinite(Number(n))) return '—'
   return `${Number(n).toLocaleString('az-Latn-AZ', { maximumFractionDigits: 1 })}%`
+}
+
+function fmtYmdShort(ymd) {
+  if (!ymd) return '—'
+  const s = String(ymd).slice(0, 10)
+  const [y, mo, d] = s.split('-').map(Number)
+  if (!y || !mo || !d) return s
+  const dt = new Date(Date.UTC(y, mo - 1, d, 12))
+  return dt.toLocaleDateString('az-AZ', { day: 'numeric', month: 'short', timeZone: 'UTC' })
+}
+
+function periodLabel(id) {
+  if (id === '7d') return 'son 7 gün'
+  if (id === '30d') return 'son 30 gün'
+  return 'bütün dövr'
 }
 
 function formatRegistrations(ov) {
@@ -117,11 +132,12 @@ export default function AdminAnalytics() {
   const [loading, setLoading] = useState(true)
   const [err, setErr] = useState(null)
 
-  const load = useCallback(() => {
+  useEffect(() => {
+    const ac = new AbortController()
     setLoading(true)
     setErr(null)
     api
-      .get('/admin/analytics/dashboard', { params: { period } })
+      .get('/admin/analytics/dashboard', { params: { period }, signal: ac.signal })
       .then((r) => {
         if (r?.needs_migration) {
           setData(null)
@@ -130,13 +146,15 @@ export default function AdminAnalytics() {
         }
         setData(r.analytics || null)
       })
-      .catch((e) => setErr(e?.message || 'Yüklənmədi'))
-      .finally(() => setLoading(false))
+      .catch((e) => {
+        if (e?.code === 'ERR_CANCELED' || e?.name === 'CanceledError') return
+        setErr(e?.message || 'Yüklənmədi')
+      })
+      .finally(() => {
+        if (!ac.signal.aborted) setLoading(false)
+      })
+    return () => ac.abort()
   }, [period])
-
-  useEffect(() => {
-    load()
-  }, [load])
 
   const devicePie = useMemo(() => {
     const rows = data?.devices || []
@@ -160,11 +178,17 @@ export default function AdminAnalytics() {
 
   const trend = useMemo(() => {
     return (data?.trend_daily || []).map((r) => ({
-      day: r.day ? new Date(r.day).toLocaleDateString('az-AZ', { day: 'numeric', month: 'short' }) : '',
+      day: fmtYmdShort(r.day),
       Ziyarətçi: r.visitors,
       Qeydiyyat: r.registrations,
     }))
   }, [data])
+
+  const activePeriod = data?.period || period
+  const periodRangeLabel =
+    data?.period_start && data?.period_end
+      ? `${fmtYmdShort(data.period_start)} – ${fmtYmdShort(data.period_end)}`
+      : null
 
   const ov = data?.overview || {}
   const monthly = data?.monthly || {}
@@ -185,6 +209,7 @@ export default function AdminAnalytics() {
             <button
               key={p.id}
               type="button"
+              disabled={loading}
               onClick={() => setPeriod(p.id)}
               className={[
                 'px-4 py-2 rounded-lg text-xs font-semibold transition-colors',
@@ -210,15 +235,25 @@ export default function AdminAnalytics() {
       {!loading && data ? (
         <>
           <section>
-            <div className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3">
-              Ümumi vəziyyət · {period === '7d' ? 'son 7 gün' : period === '30d' ? 'son 30 gün' : 'bütün dövr'}
+            <div className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">
+              Ümumi vəziyyət · {periodLabel(activePeriod)}
             </div>
+            {periodRangeLabel ? (
+              <p className="text-[11px] text-gray-500 mb-3">Tarix aralığı: {periodRangeLabel} (Bakı vaxtı)</p>
+            ) : (
+              <div className="mb-3" />
+            )}
+            {data.tracking_note ? (
+              <div className="mb-3 rounded-xl border border-sky-500/30 bg-sky-500/10 px-4 py-3 text-xs text-sky-100 leading-relaxed">
+                {data.tracking_note}
+              </div>
+            ) : null}
             {ov.conversion_message ? (
               <div className="mb-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-xs text-amber-100 leading-relaxed">
                 {ov.conversion_message}
               </div>
             ) : null}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3" key={activePeriod}>
               <OverviewCard label="Toplam ziyarət" value={fmt(ov.total_visitors)} sub="Səhifə baxışları (dövr)" />
               <OverviewCard label="Unikal ziyarətçi" value={fmt(ov.unique_visitors)} sub="Sessiya üzrə (dövr)" />
               <OverviewCard
@@ -238,7 +273,8 @@ export default function AdminAnalytics() {
           </section>
 
           <section>
-            <div className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3">Bu ay (platforma)</div>
+            <div className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">Bu ay (platforma)</div>
+            <p className="text-[11px] text-gray-600 mb-3">Cari təqvim ayı — yuxarıdakı dövr filterindən asılı deyil</p>
             <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
               {[
                 ['Qeydiyyatlar', monthly.registrations],
@@ -260,9 +296,14 @@ export default function AdminAnalytics() {
             </div>
           </section>
 
-          {trend.length > 1 ? (
+          {trend.length > 0 ? (
             <Card className="p-5 !bg-[#0f1218] border-white/10">
-              <h2 className="text-sm font-semibold text-white mb-4">Trend</h2>
+              <h2 className="text-sm font-semibold text-white mb-1">Trend</h2>
+              {periodRangeLabel ? (
+                <p className="text-[11px] text-gray-500 mb-4">{periodLabel(activePeriod)} · {periodRangeLabel}</p>
+              ) : (
+                <div className="mb-4" />
+              )}
               <div className="h-56">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={trend}>
@@ -417,43 +458,4 @@ export default function AdminAnalytics() {
             <h2 className="text-sm font-semibold text-white mb-4">Son qeydiyyatlar</h2>
             <div className="space-y-3">
               {(data.recent_registrations || []).map((u) => (
-                <div
-                  key={u.id}
-                  className="flex flex-wrap items-center justify-between gap-2 py-3 border-b border-white/5 last:border-0"
-                >
-                  <div>
-                    <div className="text-sm font-semibold text-white">{u.full_name}</div>
-                    <div className="text-xs text-gray-500 capitalize">{u.role || '—'}</div>
-                  </div>
-                  <div className="text-right text-xs">
-                    <div className="text-gray-400">
-                      {u.created_at
-                        ? formatDistanceToNow(new Date(u.created_at), { addSuffix: true, locale: az })
-                        : '—'}
-                    </div>
-                    <div className="text-primary font-medium mt-0.5">Mənbə: {u.source_label}</div>
-                  </div>
-                </div>
-              ))}
-              {!data.recent_registrations?.length ? (
-                <p className="text-xs text-gray-500 text-center py-6">Bu dövrdə qeydiyyat yoxdur</p>
-              ) : null}
-            </div>
-          </Card>
-        </>
-      ) : null}
-
-      {!loading && !data && !err ? (
-        <p className="text-sm text-gray-500 text-center py-12">
-          Analitika boşdur. İstifadəçilər səhifəyə daxil olandan sonra məlumat toplanacaq.
-        </p>
-      ) : null}
-
-      <p className="text-xs text-gray-600 text-center">
-        <Link to="/admin" className="text-primary hover:underline">
-          ← Dashboard
-        </Link>
-      </p>
-    </div>
-  )
-}
+       

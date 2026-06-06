@@ -16,21 +16,98 @@ function normalizePeriod(raw) {
   return '30d';
 }
 
-function periodIntervalSql(period) {
-  if (period === 'all') return null;
-  if (period === '7d') return "INTERVAL '6 days'";
-  return "INTERVAL '29 days'";
+function periodDaysBack(period) {
+  if (period === '7d') return 6;
+  if (period === '30d') return 29;
+  return null;
 }
 
+function periodIntervalSql(period) {
+  const daysBack = periodDaysBack(period);
+  if (daysBack == null) return null;
+  return `INTERVAL '${daysBack} days'`;
+}
+
+/** Baku gün təqvimi üzrə müqayisə — server timezone-dan asılı olmur. */
 function periodWhere(period, alias = 'e') {
-  const col = `${alias}.created_at`;
   if (period === 'all') return 'TRUE';
-  return `${col} >= (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Baku')::date - ${periodIntervalSql(period)}`;
+  return `(${alias}.created_at AT TIME ZONE 'Asia/Baku')::date >= (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Baku')::date - ${periodIntervalSql(period)}`;
 }
 
 function userPeriodWhere(period) {
   if (period === 'all') return 'TRUE';
-  return `u.created_at >= (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Baku')::date - ${periodIntervalSql(period)}`;
+  return `(u.created_at AT TIME ZONE 'Asia/Baku')::date >= (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Baku')::date - ${periodIntervalSql(period)}`;
+}
+
+function ymdFromDateValue(v) {
+  if (v == null) return null;
+  if (v instanceof Date && !Number.isNaN(v.getTime())) {
+    return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Baku' }).format(v);
+  }
+  const s = String(v);
+  const m = s.match(/^(\d{4}-\d{2}-\d{2})/);
+  return m ? m[1] : null;
+}
+
+function addDaysYmd(ymd, delta) {
+  const [y, mo, d] = ymd.split('-').map(Number);
+  const dt = new Date(Date.UTC(y, mo - 1, d + delta, 12));
+  return dt.toISOString().slice(0, 10);
+}
+
+function fillTrendDaily(rows, period, todayYmd) {
+  const map = new Map();
+  for (const r of rows || []) {
+    const key = ymdFromDateValue(r.day);
+    if (!key) continue;
+    map.set(key, {
+      visitors: Number(r.visitors) || 0,
+      registrations: Number(r.registrations) || 0,
+    });
+  }
+
+  let dayKeys;
+  if (period === 'all') {
+    if (!map.size) return [];
+    const sorted = [...map.keys()].sort();
+    dayKeys = [];
+    let cur = sorted[0];
+    while (cur <= todayYmd) {
+      dayKeys.push(cur);
+      cur = addDaysYmd(cur, 1);
+      if (dayKeys.length > 400) break;
+    }
+  } else {
+    const count = period === '7d' ? 7 : 30;
+    dayKeys = [];
+    for (let i = count - 1; i >= 0; i -= 1) {
+      dayKeys.push(addDaysYmd(todayYmd, -i));
+    }
+  }
+
+  return dayKeys.map((day) => {
+    const hit = map.get(day);
+    return {
+      day,
+      visitors: hit?.visitors || 0,
+      registrations: hit?.registrations || 0,
+    };
+  });
+}
+
+function computePeriodBounds(period, todayYmd, trackingSinceYmd) {
+  if (!todayYmd) return { period_start: null, period_end: null };
+  if (period === 'all') {
+    return {
+      period_start: trackingSinceYmd || todayYmd,
+      period_end: todayYmd,
+    };
+  }
+  const daysBack = periodDaysBack(period);
+  return {
+    period_start: addDaysYmd(todayYmd, -daysBack),
+    period_end: todayYmd,
+  };
 }
 
 function monthStartSql() {
@@ -121,6 +198,8 @@ async function getAdminAnalyticsDashboard(periodRaw) {
   ] = await Promise.all([
     db.query(
       `SELECT
+         (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Baku')::date AS today_baku,
+         (SELECT MIN((created_at AT TIME ZONE 'Asia/Baku')::date) FROM access_events) AS tracking_since,
          (SELECT COUNT(*)::int FROM access_events e WHERE ${periodFilter}
             AND e.event_type IN (${visitTypes})) AS total_visitors,
          (SELECT COUNT(DISTINCT COALESCE(e.session_key, e.id::text))::int FROM access_events e
@@ -217,83 +296,7 @@ async function getAdminAnalyticsDashboard(periodRaw) {
   ]);
 
   const ov = overviewRes.rows[0] || {};
-  const registrations = Number(ov.registrations_in_period) || 0;
-  const uniqueVisitors = Number(ov.unique_visitors) || 0;
-  const totalVisitors = Number(ov.total_visitors) || 0;
-  const conversion = computeConversionMetrics(registrations, uniqueVisitors);
-
-  const funnelMap = Object.fromEntries(
-    (funnelRes.rows || []).map((r) => [r.step, Number(r.count) || 0]),
-  );
-  const funnelTop = funnelMap.landing_view || funnelMap.page_view || uniqueVisitors || 1;
-
-  const traffic_sources = withShares(
-    (sourcesRes.rows || []).map((r) => ({
-      source: r.source,
-      label: labelForSource(r.source),
-      count: Number(r.count) || 0,
-    })),
-  );
-
-  const devices = withShares(
-    (devicesRes.rows || []).map((r) => ({
-      device_type: r.device_type,
-      count: Number(r.count) || 0,
-    })),
-  );
-
-  const m = monthlyRes.rows[0] || {};
-
-  return {
-    period,
-    timezone: 'Asia/Baku',
-    overview: {
-      total_visitors: totalVisitors,
-      unique_visitors: uniqueVisitors,
-      registrations,
-      registrations_exceed_visitors: registrations > uniqueVisitors && registrations > 0,
-      ...conversion,
-    },
-    traffic_sources,
-    top_pages: (pagesRes.rows || []).map((r) => ({
-      path: r.path,
-      views: Number(r.views) || 0,
-    })),
-    devices,
-    funnel: FUNNEL_STEPS.map((s, i) => {
-      const count = funnelMap[s.key] || 0;
-      const prev = i > 0 ? funnelMap[FUNNEL_STEPS[i - 1].key] || 0 : funnelTop;
-      return {
-        step: s.key,
-        label: s.label,
-        count,
-        pct_of_top: pct(count, funnelTop),
-        drop_from_prev_pct: i > 0 && prev > 0 ? pct(prev - count, prev) : null,
-      };
-    }),
-    recent_registrations: (recentRes.rows || []).map((r) => ({
-      id: r.id,
-      full_name: r.full_name,
-      role: r.role,
-      created_at: r.created_at,
-      source: r.source,
-      source_label: labelForSource(r.source),
-    })),
-    monthly: {
-      registrations: Number(m.registrations) || 0,
-      instructors: Number(m.instructors) || 0,
-      students: Number(m.students) || 0,
-      exams: Number(m.exams) || 0,
-      assignments: Number(m.assignments) || 0,
-      sms_sent: Number(m.sms_sent) || 0,
-      revenue_azn: Math.round((Number(m.revenue_azn) || 0) * 100) / 100,
-    },
-    trend_daily: (trendRes.rows || []).map((r) => ({
-      day: r.day,
-      visitors: Number(r.visitors) || 0,
-      registrations: Number(r.registrations) || 0,
-    })),
-  };
-}
-
-module.exports = { getAdminAnalyticsDashboard, normalizePeriod };
+  const todayYmd = ymdFromDateValue(ov.today_baku);
+  const trackingSinceYmd = ymdFromDateValue(ov.tracking_since);
+  const { period_start, period_end } = computePeriodBounds(period, todayYmd, trackingSinceYmd);
+  const registrations = Number(ov.re
