@@ -13,11 +13,11 @@ export function defaultLoginMarketingPayload() {
   return {
     version: 1,
     hero: {
-      pill: 'Mentorix — müəllimlər və təlimçilər üçün idarəetmə',
-      headline: 'Kursunu və tələbələrini ağıllı sistemlə idarə et',
+      pill: 'Mentorix.io — müəllimlər, təlimçilər və kurslar üçün',
+      headline: 'Təhsil idarəetmə platforması — tələbə, imtahan, ödəniş bir yerdə',
       subheadline:
-        'Süni intellekt dəstəyi, avtomatik SMS xatırlatmaları və ödəniş izləmə — vaxtını dərsə qoy, idarəetməni platformaya burax',
-      primary_cta_label: 'Pulsuz başla (ilk 5 tələbə ödənişsiz)',
+        'Tələbə analizləri, avtomatik ödəniş bildirişləri, imtahanlar və ictimai xəritə profili. SADƏ paket pulsuz — 14 günlük tam sınaq.',
+      primary_cta_label: 'Pulsuz başla (14 günlük sınaq)',
       marketplace_cta_label: 'Müəllim / Təlimçi tap (Xəritə ilə)',
       secondary_how: 'Necə işləyir?',
       secondary_demo: 'Demo bax',
@@ -101,22 +101,27 @@ export function defaultLoginMarketingPayload() {
       ],
     },
     features: {
-      heading: 'İmkanlar',
+      heading: 'Mentorix.io ilə',
       items: [
         {
-          title: 'Dərs cədvəli',
-          body: 'Həftəlik planı bir ekrandan idarə edin və dərsi təqib edin.',
+          title: 'Tələbə və qruplar',
+          body: 'Tələbələrinizi və qruplarınızı rahat idarə edin — bir paneldə.',
           accent: 'from-sky-500/15',
         },
         {
-          title: 'Ödəniş sistemi',
-          body: 'Paket və aylıq ödəniş axınlarını strukturlaşdırın, gecikmələri əvvəlcədən görün.',
+          title: 'İmtahan və analiz',
+          body: 'QR/link ilə imtahan paylaşın; nəticələri avtomatik qiymətləndirin və diaqramlarla izləyin.',
           accent: 'from-emerald-500/15',
         },
         {
-          title: 'SMS xatırlatma',
-          body: 'Valideyn/tələbə üçün avtomatik xəbərdarlıq — əlavə yükləmə olmadan.',
+          title: 'Ödəniş və SMS',
+          body: 'Ödəniş tarixlərini idarə edin; avtomatik xatırlatmalar və imtahan nəticəsi SMS-ləri göndərin.',
           accent: 'from-amber-500/15',
+        },
+        {
+          title: 'Valideyn əlaqəsi',
+          body: 'Valideynlərlə tələbənin nəticələrini paylaşın; davamiyyət və zəif mövzuları bir yerdə görün.',
+          accent: 'from-purple-500/15',
         },
       ],
     },

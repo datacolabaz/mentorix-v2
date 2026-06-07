@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from 'react-leaflet'
 import api from '../../lib/api'
 import Brand from '../../components/common/Brand'
@@ -9,6 +9,7 @@ import { isGoogleMapsConfigured } from '../../lib/googleMapsLoader'
 import { BAKU_BBOX, BAKU_CENTER, bboxFromCenter, distanceKm, formatDistanceKm } from '../../lib/geo'
 import { reverseGeocodeLabel } from '../../lib/reverseGeocode'
 import { setPageSeo } from '../../lib/pageSeo'
+import PublicSeoFooter from '../../components/public/PublicSeoFooter'
 import DiscoverSearchFilters from '../../components/discover/DiscoverSearchFilters'
 import CategoryMegaMenu from '../../components/discover/CategoryMegaMenu'
 import InquiryFormModal from '../../components/discover/InquiryFormModal'
@@ -142,15 +143,53 @@ export default function InstructorMapSearch() {
   const [inquiryTarget, setInquiryTarget] = useState(null)
   const [mapCenter, setMapCenter] = useState({ lat: BAKU_CENTER[0], lng: BAKU_CENTER[1] })
   const geoResolvedRef = useRef(false)
+  const [searchParams] = useSearchParams()
+  const categoryFromUrl = searchParams.get('category')
 
   useEffect(() => {
+    const slug = String(categoryFromUrl || '').trim()
+    if (!slug) return
+    let cancelled = false
+    void (async () => {
+      try {
+        const res = await api.get(`/public/categories/${encodeURIComponent(slug)}`)
+        if (cancelled || !res?.success || !res?.category) return
+        const c = res.category
+        setDiscoverFilters((f) => ({
+          ...f,
+          category_id: c.id,
+          category_slug: c.slug,
+          category_name: c.name_az,
+        }))
+      } catch {
+        /* ignore — axtarış filteri olmadan davam */
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [categoryFromUrl])
+
+  useEffect(() => {
+    if (discoverFilters.category_name) {
+      const slug = discoverFilters.category_slug || discoverFilters.category_id
+      setPageSeo({
+        title: `${discoverFilters.category_name} müəllimi tap — Mentorix | Bakı`,
+        description: `${discoverFilters.category_name} repetitoru və müəllimi axtarırsınız? Mentorix xəritəsində yaxınlığınızdakı təlimçiləri reytinq və formatla müqayisə edin.`,
+        canonicalPath: slug ? `/search?category=${encodeURIComponent(slug)}` : '/search',
+        keywords: `${discoverFilters.category_name}, repetitor, müəllim tap, Bakı, Mentorix`,
+      })
+      return
+    }
     setPageSeo({
-      title: 'Müəllim və təlimçi axtarışı — Mentorix xəritəsi | Bakı',
+      title: 'Müəllim və repetitor axtarışı — Mentorix xəritəsi | Bakı',
       description:
-        'Yaxınlığınızdakı repetitor, müəllim və təlimçiləri xəritədə tapın. Mentorix ictimai axtarış — Bakı və Azərbaycan.',
+        'Yaxınlığınızdakı repetitor, fərdi müəllim və təlimçiləri xəritədə tapın. Mentorix həm ictimai axtarış, həm də tələbə analizləri və avtomatik ödəniş bildirişləri olan müəllim panelidir.',
       canonicalPath: '/search',
+      keywords:
+        'repetitor axtarışı, müəllim tap, təlimçi, repetitor Bakı, tələbə analizləri, avtomatik ödəniş bildirişləri, Mentorix',
     })
-  }, [])
+  }, [discoverFilters.category_name, discoverFilters.category_slug, discoverFilters.category_id])
 
   const loadByBbox = useCallback(
     async (bbox) => {
@@ -732,6 +771,8 @@ export default function InstructorMapSearch() {
       />
 
       <DiscoverAuthModal open={authModalOpen} onClose={() => setAuthModalOpen(false)} />
+
+      <PublicSeoFooter className="shrink-0" />
     </div>
   )
 }

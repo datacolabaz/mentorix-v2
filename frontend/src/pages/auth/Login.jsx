@@ -9,6 +9,7 @@ import api from '../../lib/api'
 import { trackEvent, trackRegisterClick, trackPricingView } from '../../lib/analytics'
 import { defaultLoginMarketingPayload } from '../../constants/defaultLoginMarketing'
 import { setPageSeo } from '../../lib/pageSeo'
+import PublicSeoFooter from '../../components/public/PublicSeoFooter'
 import { postAuthNavigate } from '../../lib/postAuth'
 
 const TRUST_STUDENTS_FLOOR = 100
@@ -83,10 +84,14 @@ export default function Login() {
     setPageSeo({
       title: isAdmin
         ? 'Mentorix — admin girişi'
-        : 'Mentorix — müəllim və tələbə girişi | repetitor paneli',
-      description:
-        'Mentorix ilə müəllim, tələbə və tədris mərkəzi hesabına daxil olun. Tələbə idarəetməsi, ödənişlər, davamiyyət və imtahanlar bir paneldə.',
+        : 'Mentorix — repetitor və müəllim paneli | tələbə idarəetməsi Bakı',
+      description: isAdmin
+        ? 'Mentorix admin panelinə daxil olun.'
+        : 'Mentorix ilə fərdi repetitor, müəllim və təlimçi hesabına daxil olun. Tələbə analizləri, avtomatik ödəniş bildirişləri, davamiyyət, imtahan — bir paneldə.',
       canonicalPath: isAdmin ? '/login?admin=true' : '/login',
+      keywords: isAdmin
+        ? undefined
+        : 'Mentorix, müəllim paneli, tələbə analizləri, avtomatik ödəniş bildirişləri, repetitor paneli, təlimçi, repetitor Bakı',
     })
   }, [isAdmin])
 
@@ -590,6 +595,8 @@ export default function Login() {
               </button>
             </div>
           </section>
+
+          <PublicSeoFooter className="-mx-4 sm:mx-0 rounded-none sm:rounded-2xl overflow-hidden" />
         </div>
       ) : null}
 

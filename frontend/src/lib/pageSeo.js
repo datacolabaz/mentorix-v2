@@ -2,23 +2,43 @@ const SITE_ORIGIN = 'https://mentorix.io'
 
 const DEFAULT_TITLE = 'Mentorix — müəllimlər üçün tələbə, ödəniş və davamiyyət paneli'
 const DEFAULT_DESCRIPTION =
-  'Mentorix: fərdi müəllim və təlimçilər üçün tələbə idarəetməsi, dərs cədvəli, ödənişlər, davamiyyət, imtahan və analitika. Azərbaycanda repetitor axtarışı.'
+  'Mentorix: müəllim və təlimçilər üçün tələbə analizləri, avtomatik ödəniş bildirişləri, davamiyyət, imtahan və ictimai repetitor axtarışı. Azərbaycanda repetitor Bakı.'
+
+function upsertMeta(name, content) {
+  if (!content) return
+  let el = document.querySelector(`meta[name="${name}"]`)
+  if (!el) {
+    el = document.createElement('meta')
+    el.setAttribute('name', name)
+    document.head.appendChild(el)
+  }
+  el.setAttribute('content', content)
+}
+
+function upsertOg(property, content) {
+  if (!content) return
+  let el = document.querySelector(`meta[property="${property}"]`)
+  if (!el) {
+    el = document.createElement('meta')
+    el.setAttribute('property', property)
+    document.head.appendChild(el)
+  }
+  el.setAttribute('content', content)
+}
 
 /**
  * SPA səhifələri üçün title, description, canonical (Google indeksi).
  */
-export function setPageSeo({ title, description, canonicalPath }) {
+export function setPageSeo({ title, description, canonicalPath, keywords }) {
   if (typeof document === 'undefined') return
 
-  document.title = title || DEFAULT_TITLE
+  const nextTitle = title || DEFAULT_TITLE
+  const nextDescription = description || DEFAULT_DESCRIPTION
 
-  let meta = document.querySelector('meta[name="description"]')
-  if (!meta) {
-    meta = document.createElement('meta')
-    meta.setAttribute('name', 'description')
-    document.head.appendChild(meta)
-  }
-  meta.setAttribute('content', description || DEFAULT_DESCRIPTION)
+  document.title = nextTitle
+
+  upsertMeta('description', nextDescription)
+  if (keywords) upsertMeta('keywords', keywords)
 
   const path = canonicalPath != null ? String(canonicalPath) : '/'
   const href = path.startsWith('http') ? path : `${SITE_ORIGIN}${path.startsWith('/') ? path : `/${path}`}`
@@ -30,6 +50,10 @@ export function setPageSeo({ title, description, canonicalPath }) {
     document.head.appendChild(link)
   }
   link.setAttribute('href', href)
+
+  upsertOg('og:title', nextTitle)
+  upsertOg('og:description', nextDescription)
+  upsertOg('og:url', href)
 }
 
 export function resetPageSeo() {

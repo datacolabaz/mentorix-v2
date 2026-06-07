@@ -3,6 +3,10 @@ User-agent: *
 Allow: /
 Allow: /login
 Allow: /search
+Allow: /repetitor-baki
+Allow: /riyaziyyat-repetitoru
+Allow: /ingilis-dili-repetitoru
+Allow: /muellim-paneli
 Disallow: /admin
 Disallow: /instructor
 Disallow: /student
