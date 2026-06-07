@@ -21,6 +21,7 @@ import {
   assignmentFileOpenUrl,
   isAssignmentPreviewable,
 } from '../../lib/assignmentFileUrl'
+import { fmtAzBakuField } from '../../lib/azDatetime'
 
 function fmtDue(d) {
   if (!d) return ''
@@ -42,14 +43,6 @@ function renderPreview(url) {
     )
   }
   return null
-}
-
-function fmtCreated(iso) {
-  if (!iso) return ''
-  const s = String(iso)
-  const d = s.slice(0, 10)
-  const t = s.slice(11, 16)
-  return t ? `${d} ${t}` : d
 }
 
 export default function StudentAssignments() {
@@ -333,7 +326,7 @@ export default function StudentAssignments() {
                         <>
                           {' '}
                           · Yaradılıb:{' '}
-                          <span className="text-token-textMain font-mono">{fmtCreated(t.assignment_created_at)}</span>
+                          <span className="text-token-textMain font-mono">{fmtAzBakuField(t, 'assignment_created_at')}</span>
                         </>
                       ) : null}
                       {t.due_date ? (
@@ -422,7 +415,7 @@ export default function StudentAssignments() {
                 {detail.assignment_created_at ? (
                   <>
                     {' '}
-                    · Yaradılıb: <span className="text-gray-300 font-mono">{fmtCreated(detail.assignment_created_at)}</span>
+                    · Yaradılıb: <span className="text-gray-300 font-mono">{fmtAzBakuField(detail, 'assignment_created_at')}</span>
                   </>
                 ) : null}
                 {detail.due_date ? (
@@ -434,13 +427,13 @@ export default function StudentAssignments() {
                 {detail.submitted_at ? (
                   <>
                     {' '}
-                    · Təslim: <span className="text-gray-300 font-mono">{fmtCreated(detail.submitted_at)}</span>
+                    · Təslim: <span className="text-gray-300 font-mono">{fmtAzBakuField(detail, 'submitted_at')}</span>
                   </>
                 ) : null}
                 {detail.reviewed_at ? (
                   <>
                     {' '}
-                    · Yoxlama: <span className="text-gray-300 font-mono">{fmtCreated(detail.reviewed_at)}</span>
+                    · Yoxlama: <span className="text-gray-300 font-mono">{fmtAzBakuField(detail, 'reviewed_at')}</span>
                   </>
                 ) : null}
               </p>

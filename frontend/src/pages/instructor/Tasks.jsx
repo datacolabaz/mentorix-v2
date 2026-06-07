@@ -10,18 +10,11 @@ import { useToast } from '../../components/common/Toast'
 import { BILLING_STATUS_QUERY_KEY, useBillingStatus } from '../../hooks/useBillingStatus'
 import { assignmentStatusClass, assignmentStatusLabel } from '../../lib/assignmentHelpers'
 import { assignmentFileLabel, assignmentFileOpenUrl, isAssignmentPreviewable } from '../../lib/assignmentFileUrl'
+import { fmtAzBakuField } from '../../lib/azDatetime'
 
 function fmtDue(d) {
   if (!d) return ''
   return String(d).slice(0, 10)
-}
-
-function fmtCreated(iso) {
-  if (!iso) return ''
-  const s = String(iso)
-  const d = s.slice(0, 10)
-  const t = s.slice(11, 16)
-  return t ? `${d} ${t}` : d
 }
 
 function isPreviewable(url) {
@@ -459,7 +452,7 @@ export default function InstructorTasks() {
                       <p className="text-sm text-token-textMuted mt-1 break-words">Mövzu: {t.topic}</p>
                     ) : null}
                     <p className="text-xs text-token-textMuted mt-1">
-                      Yaradılıb: <span className="text-token-textMain font-mono">{fmtCreated(t.created_at)}</span>
+                      Yaradılıb: <span className="text-token-textMain font-mono">{fmtAzBakuField(t, 'created_at')}</span>
                       {t.due_date ? (
                         <>
                           {' '}
@@ -748,7 +741,7 @@ export default function InstructorTasks() {
                 </p>
               ) : null}
               <p className="text-xs text-gray-500 mt-1 font-mono tabular-nums">
-                {review.submitted_at ? `Təslim: ${fmtCreated(review.submitted_at)}` : 'Təslim edilməyib'}
+                {review.submitted_at ? `Təslim: ${fmtAzBakuField(review, 'submitted_at')}` : 'Təslim edilməyib'}
               </p>
             </div>
 

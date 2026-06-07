@@ -4,16 +4,16 @@ import api from '../../lib/api'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
 import { assignmentStatusClass, assignmentStatusLabel } from '../../lib/assignmentHelpers'
+import { fmtAzBakuField } from '../../lib/azDatetime'
 
 function fmtDate(d) {
   if (!d) return '—'
   return String(d).slice(0, 10)
 }
 
-function fmtDt(iso) {
-  if (!iso) return '—'
-  const s = String(iso)
-  return `${s.slice(0, 10)} ${s.slice(11, 16)}`.trim()
+function fmtDt(row, key) {
+  if (!row?.[key]) return '—'
+  return fmtAzBakuField(row, key) || '—'
 }
 
 export default function ParentAssignments() {
@@ -145,11 +145,11 @@ export default function ParentAssignments() {
                     <dl className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                       <div>
                         <dt className="text-token-textMuted">Təslim tarixi</dt>
-                        <dd className="text-token-textMain font-mono">{fmtDt(it.submitted_at)}</dd>
+                        <dd className="text-token-textMain font-mono">{fmtDt(it, 'submitted_at')}</dd>
                       </div>
                       <div>
                         <dt className="text-token-textMuted">Yoxlama tarixi</dt>
-                        <dd className="text-token-textMain font-mono">{fmtDt(it.reviewed_at)}</dd>
+                        <dd className="text-token-textMain font-mono">{fmtDt(it, 'reviewed_at')}</dd>
                       </div>
                       {it.score != null && (
                         <div>

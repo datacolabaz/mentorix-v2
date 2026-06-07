@@ -9,6 +9,7 @@ const {
 } = require('../services/assignmentHomeworkService');
 const { upsertStudentContactPhone } = require('../utils/studentPhone');
 const { autoGrantTaskAccessForStudent } = require('../services/guestAccessService');
+const { withBakuDisplayTimes } = require('../utils/azDatetime');
 
 function parseDate(v) {
   if (v === undefined || v === null || v === '') return null;
@@ -88,7 +89,10 @@ const listInstructorTasks = async (req, res) => {
        ORDER BY t.created_at DESC`,
       [instructorId],
     );
-    res.json({ success: true, tasks: rows });
+    res.json({
+      success: true,
+      tasks: rows.map((r) => withBakuDisplayTimes(r, ['created_at'])),
+    });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -163,7 +167,11 @@ const createInstructorTask = async (req, res) => {
       await notifyStudentsOfNewAssignment(out.task, out.studentIds, iu[0]?.full_name || '');
     }
 
-    res.status(201).json({ success: true, task: out.task, assignedCount: out.assignedCount });
+    res.status(201).json({
+      success: true,
+      task: withBakuDisplayTimes(out.task, ['created_at']),
+      assignedCount: out.assignedCount,
+    });
   } catch (err) {
     const msg = err.message || 'Xəta';
     if (msg.includes('aktiv siyahısında')) {
@@ -288,7 +296,7 @@ const listMyTasks = async (req, res) => {
     );
 
     const tasks = rows.map((r) => ({
-      ...r,
+      ...withBakuDisplayTimes(r, ['assignment_created_at', 'submitted_at', 'reviewed_at', 'assigned_at']),
       display_status: normalizeStatus(r),
     }));
 
@@ -373,7 +381,7 @@ const getMyAssignment = async (req, res) => {
       .catch(() => {});
 
     const assignment = {
-      ...rows[0],
+      ...withBakuDisplayTimes(rows[0], ['assignment_created_at', 'submitted_at', 'reviewed_at']),
       seen_at: seenRows[0]?.seen_at || rows[0].seen_at,
       display_status: normalizeStatus(rows[0]),
     };
@@ -574,7 +582,10 @@ const getInstructorStudentAssignment = async (req, res) => {
       [id, instructorId],
     );
     if (!rows[0]) return res.status(404).json({ success: false, message: 'Tapılmadı' });
-    res.json({ success: true, review: rows[0] });
+    res.json({
+      success: true,
+      review: withBakuDisplayTimes(rows[0], ['assignment_created_at', 'submitted_at', 'reviewed_at']),
+    });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -684,7 +695,7 @@ const listParentAssignments = async (req, res) => {
     );
 
     const items = rows.map((r) => ({
-      ...r,
+      ...withBakuDisplayTimes(r, ['assignment_created_at', 'submitted_at', 'reviewed_at']),
       display_status: normalizeStatus(r),
     }));
 
