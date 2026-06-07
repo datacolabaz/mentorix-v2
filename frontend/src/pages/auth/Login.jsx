@@ -10,6 +10,12 @@ import { trackEvent, trackRegisterClick, trackPricingView } from '../../lib/anal
 import { defaultLoginMarketingPayload } from '../../constants/defaultLoginMarketing'
 import { setPageSeo } from '../../lib/pageSeo'
 import PublicSeoFooter from '../../components/public/PublicSeoFooter'
+import {
+  MENTORIX_SEO_DESCRIPTION,
+  MENTORIX_SEO_HOMEPAGE_LINE,
+  MENTORIX_SEO_KEYWORDS,
+  MENTORIX_SEO_TITLE,
+} from '../../lib/mentorixPublicMarketing'
 import { postAuthNavigate } from '../../lib/postAuth'
 
 const TRUST_STUDENTS_FLOOR = 100
@@ -82,16 +88,10 @@ export default function Login() {
 
   useEffect(() => {
     setPageSeo({
-      title: isAdmin
-        ? 'Mentorix — admin girişi'
-        : 'Mentorix — repetitor və müəllim paneli | tələbə idarəetməsi Bakı',
-      description: isAdmin
-        ? 'Mentorix admin panelinə daxil olun.'
-        : 'Mentorix ilə fərdi repetitor, müəllim və təlimçi hesabına daxil olun. Tələbə analizləri, avtomatik ödəniş bildirişləri, davamiyyət, imtahan — bir paneldə.',
+      title: isAdmin ? 'Mentorix — admin girişi' : MENTORIX_SEO_TITLE,
+      description: isAdmin ? 'Mentorix admin panelinə daxil olun.' : MENTORIX_SEO_DESCRIPTION,
       canonicalPath: isAdmin ? '/login?admin=true' : '/login',
-      keywords: isAdmin
-        ? undefined
-        : 'Mentorix, müəllim paneli, tələbə analizləri, avtomatik ödəniş bildirişləri, repetitor paneli, təlimçi, repetitor Bakı',
+      keywords: isAdmin ? undefined : MENTORIX_SEO_KEYWORDS,
     })
   }, [isAdmin])
 
@@ -304,6 +304,9 @@ export default function Login() {
               </h1>
               <p className="text-gray-400 text-sm sm:text-base leading-relaxed w-full max-w-md sm:max-w-none">
                 {m.hero.subheadline}
+              </p>
+              <p className="text-gray-500 text-xs sm:text-sm leading-relaxed w-full max-w-xl">
+                {MENTORIX_SEO_HOMEPAGE_LINE}
               </p>
               <div className="flex flex-col w-full max-w-xl gap-3">
                 <div className="flex flex-col sm:flex-row gap-3">

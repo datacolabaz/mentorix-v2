@@ -1,8 +1,14 @@
+import {
+  MENTORIX_SEO_DESCRIPTION,
+  MENTORIX_SEO_KEYWORDS,
+  MENTORIX_SEO_TITLE,
+} from './mentorixPublicMarketing'
+
 const SITE_ORIGIN = 'https://mentorix.io'
 
-const DEFAULT_TITLE = 'Mentorix — müəllimlər üçün tələbə, ödəniş və davamiyyət paneli'
-const DEFAULT_DESCRIPTION =
-  'Mentorix: müəllim və təlimçilər üçün tələbə analizləri, avtomatik ödəniş bildirişləri, davamiyyət, imtahan və ictimai repetitor axtarışı. Azərbaycanda repetitor Bakı.'
+const DEFAULT_TITLE = MENTORIX_SEO_TITLE
+const DEFAULT_DESCRIPTION = MENTORIX_SEO_DESCRIPTION
+const DEFAULT_KEYWORDS = MENTORIX_SEO_KEYWORDS
 
 function upsertMeta(name, content) {
   if (!content) return
@@ -34,11 +40,12 @@ export function setPageSeo({ title, description, canonicalPath, keywords }) {
 
   const nextTitle = title || DEFAULT_TITLE
   const nextDescription = description || DEFAULT_DESCRIPTION
+  const nextKeywords = keywords || DEFAULT_KEYWORDS
 
   document.title = nextTitle
 
   upsertMeta('description', nextDescription)
-  if (keywords) upsertMeta('keywords', keywords)
+  upsertMeta('keywords', nextKeywords)
 
   const path = canonicalPath != null ? String(canonicalPath) : '/'
   const href = path.startsWith('http') ? path : `${SITE_ORIGIN}${path.startsWith('/') ? path : `/${path}`}`
@@ -57,7 +64,12 @@ export function setPageSeo({ title, description, canonicalPath, keywords }) {
 }
 
 export function resetPageSeo() {
-  setPageSeo({ title: DEFAULT_TITLE, description: DEFAULT_DESCRIPTION, canonicalPath: '/' })
+  setPageSeo({
+    title: DEFAULT_TITLE,
+    description: DEFAULT_DESCRIPTION,
+    canonicalPath: '/',
+    keywords: DEFAULT_KEYWORDS,
+  })
 }
 
-export { DEFAULT_TITLE, DEFAULT_DESCRIPTION, SITE_ORIGIN }
+export { DEFAULT_TITLE, DEFAULT_DESCRIPTION, DEFAULT_KEYWORDS, SITE_ORIGIN }

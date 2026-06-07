@@ -308,8 +308,8 @@ const createExam = async (req, res) => {
       let assignIds = Array.isArray(student_ids)
         ? [...new Set(student_ids.filter((x) => x != null && String(x).trim() !== ''))]
         : [];
-      /** Addım 3 atlananda boş array gəlirdi — heç bir təyinat olmur, İmtahanlarım boş qalırdı */
-      if (assignIds.length === 0 && req.user.role === 'instructor') {
+      /** Boş array = müəllim heç kimi seçməyib (yalnız link/QR qonaqları). undefined/null = köhnə addım atlama. */
+      if (assignIds.length === 0 && student_ids == null && req.user.role === 'instructor') {
         const instHex = normStudentHex(req.user.id);
         if (instHex) {
           const { rows: enrolled } = await client.query(
@@ -2169,8 +2169,8 @@ const serveExamAttachmentByExam = async (req, res) => {
 const {
   getStudentAccessStatus,
   createExamAccessRequest,
-  ensureExamAccessRequestFromLink,
 } = require('../services/examAccessRequestService');
+const { autoGrantExamAccessForStudent } = require('../services/guestAccessService');
 
 const getExamAccessStatus = async (req, res) => {
   try {
@@ -2194,15 +2194,14 @@ const postExamAccessRequest = async (req, res) => {
   }
 };
 
-/** İmtahan paylaşım linki: sorğu avtomatik göndərilir, müəllim Sorğular-da görür */
+/** İmtahan paylaşım linki: avtomatik icazə (qonaq / CRM olmayan tələbə) */
 const postExamAccessFromLink = async (req, res) => {
   try {
     if (req.body?.phone != null && String(req.body.phone).trim() !== '') {
       await upsertStudentContactPhone(db, req.user.id, req.body.phone);
     }
-    const result = await ensureExamAccessRequestFromLink(req.user.id, req.params.id);
-    const st = result.created ? 201 : 200;
-    res.status(st).json({ success: true, ...result });
+    const result = await autoGrantExamAccessForStudent(req.user.id, req.params.id);
+    res.status(200).json({ success: true, ...result });
   } catch (err) {
     res.status(err.statusCode || 500).json({
       success: false,

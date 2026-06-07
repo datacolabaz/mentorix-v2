@@ -189,10 +189,6 @@ export default function InstructorTasks() {
       toast('Tapşırığın adı tələb olunur', 'error')
       return
     }
-    if (!editingId && !form.selectedStudentIds.length) {
-      toast('Ən azı bir tələbə seçin', 'error')
-      return
-    }
     setSaving(true)
     try {
       if (editingId) {
@@ -216,7 +212,12 @@ export default function InstructorTasks() {
           group_id: form.group_id || null,
           student_ids: form.selectedStudentIds,
         })
-        toast(`Göndərildi (${d.assignedCount || 0} tələbə)`, 'success')
+        toast(
+          d.assignedCount
+            ? `Göndərildi (${d.assignedCount} tələbə)`
+            : 'Tapşırıq yaradıldı — link/QR ilə qonaqlara paylaşın',
+          'success',
+        )
       }
       setOpen(false)
       resetForm()
@@ -672,12 +673,15 @@ export default function InstructorTasks() {
                 </div>
                 <div className="border-t border-indigo-500/20 pt-3 mt-4">
                   <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
-                    Tələbələr * (bir və ya bir neçə)
+                    CRM tələbələri (istəyə bağlı)
                   </label>
+                  <p className="text-xs text-gray-500 mb-2 leading-relaxed">
+                    Heç kimi seçməsəniz belə tapşırığı link/QR ilə qonaqlara göndərə bilərsiniz — ad, soyad və telefon kifayətdir.
+                  </p>
                   {studentsLoading ? (
                     <p className="text-sm text-gray-500">Tələbələr yüklənir…</p>
                   ) : !students.length ? (
-                    <p className="text-sm text-amber-200/90">Aktiv tələbə yoxdur — əvvəlcə «Tələbələrim»dən əlavə edin.</p>
+                    <p className="text-sm text-amber-200/90">CRM tələbə yoxdur — yalnız link ilə qonaqlara paylaşın.</p>
                   ) : !students.filter((s) => (s.enrollment_status || 'active') === 'active').length ? (
                     <p className="text-sm text-amber-200/90">Aktiv qeydiyyatlı tələbə yoxdur.</p>
                   ) : (

@@ -8,7 +8,7 @@ const {
   resolveGroupStudentIds,
 } = require('../services/assignmentHomeworkService');
 const { upsertStudentContactPhone } = require('../utils/studentPhone');
-const { ensureTaskAccessRequestFromLink } = require('../services/taskAccessRequestService');
+const { autoGrantTaskAccessForStudent } = require('../services/guestAccessService');
 
 function parseDate(v) {
   if (v === undefined || v === null || v === '') return null;
@@ -115,10 +115,6 @@ const createInstructorTask = async (req, res) => {
       student_ids = [...new Set([...student_ids, ...fromGroup])];
     }
 
-    if (!student_ids.length) {
-      return res.status(400).json({ success: false, message: 'Ən azı bir tələbə və ya qrup seçin' });
-    }
-
     const out = await db.transaction(async (client) => {
       const { rows: trows } = await client.query(
         `INSERT INTO assignments (
@@ -145,27 +141,27 @@ const createInstructorTask = async (req, res) => {
       );
       const targets = ok.map((r) => r.student_id).filter(Boolean);
 
-      if (!targets.length) {
-        throw new Error('Seçilmiş tələbələrdən heç biri bu müəllimin aktiv siyahısında deyil');
-      }
+      if (targets.length) {
+        await client.query(
+          `INSERT INTO student_assignments (assignment_id, student_id, status)
+           SELECT $1::uuid, x::uuid, 'pending'
+           FROM UNNEST($2::uuid[]) AS x
+           ON CONFLICT (assignment_id, student_id) DO NOTHING`,
+          [task.id, targets],
+        );
 
-      await client.query(
-        `INSERT INTO student_assignments (assignment_id, student_id, status)
-         SELECT $1::uuid, x::uuid, 'pending'
-         FROM UNNEST($2::uuid[]) AS x
-         ON CONFLICT (assignment_id, student_id) DO NOTHING`,
-        [task.id, targets],
-      );
-
-      for (const sid of targets) {
-        await addStudentToAssignmentParticipantGroup(client, task.id, sid);
+        for (const sid of targets) {
+          await addStudentToAssignmentParticipantGroup(client, task.id, sid);
+        }
       }
 
       return { task, assignedCount: targets.length, studentIds: targets };
     });
 
     const { rows: iu } = await db.query(`SELECT full_name FROM users WHERE id = $1 LIMIT 1`, [instructorId]);
-    await notifyStudentsOfNewAssignment(out.task, out.studentIds, iu[0]?.full_name || '');
+    if (out.studentIds?.length) {
+      await notifyStudentsOfNewAssignment(out.task, out.studentIds, iu[0]?.full_name || '');
+    }
 
     res.status(201).json({ success: true, task: out.task, assignedCount: out.assignedCount });
   } catch (err) {
@@ -872,15 +868,14 @@ const listInstructorGroups = async (req, res) => {
   }
 };
 
-/** Tapşırıq paylaşım linki — yalnız ad/soyad/telefon profili */
+/** Tapşırıq paylaşım linki — avtomatik icazə (qonaq / CRM olmayan tələbə) */
 const postTaskAccessFromLink = async (req, res) => {
   try {
     if (req.body?.phone != null && String(req.body.phone).trim() !== '') {
       await upsertStudentContactPhone(db, req.user.id, req.body.phone);
     }
-    const result = await ensureTaskAccessRequestFromLink(req.user.id, req.params.id);
-    const st = result.created ? 201 : 200;
-    res.status(st).json({ success: true, ...result });
+    const result = await autoGrantTaskAccessForStudent(req.user.id, req.params.id);
+    res.status(200).json({ success: true, ...result });
   } catch (err) {
     res.status(err.statusCode || 500).json({
       success: false,

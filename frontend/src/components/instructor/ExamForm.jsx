@@ -657,8 +657,8 @@ export default function ExamForm({ students, studentsLoading = false, onCreated 
             </button>
           </div>
           <p className="text-xs text-amber-200/85 leading-relaxed">
-            Heç kim seçilməsə, imtahan saxlananda server avtomatik olaraq sizin <strong className="text-amber-100">bütün aktiv qeydiyyatlı</strong> tələbələrinizi təyin edir.
-            Yenə də &quot;Hamısını seç&quot; etmək daha aydındır.
+            CRM tələbələri seçə bilərsiniz — və ya heç kim seçməyib yalnız <strong className="text-amber-100">link/QR</strong>{' '}
+            paylaşın: qonaqlar ad, soyad və telefonla qeydiyyatsız qoşula bilər.
           </p>
  
           <div className="max-h-64 overflow-y-auto space-y-1 rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard/40 p-3">

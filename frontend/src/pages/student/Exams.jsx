@@ -718,8 +718,9 @@ export default function StudentExams() {
           if (d?.exam) {
             try {
               const sub = await api.post(`/exams/${encodeURIComponent(targetId)}/access-from-link`)
-              if (sub?.already_assigned) {
+              if (sub?.assigned || sub?.already_assigned) {
                 deepLinkHandledRef.current = ''
+                toast(sub?.message || 'İmtahana daxil ola bilərsiniz', 'success')
                 await loadExams(true)
                 return
               }

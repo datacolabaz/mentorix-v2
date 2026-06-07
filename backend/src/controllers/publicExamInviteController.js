@@ -1,4 +1,5 @@
 const { getExamForStudentRequest } = require('../services/examAccessRequestService');
+const { joinExamAsGuest } = require('../services/guestAccessService');
 
 /** GET /api/public/exam-invite/:examId — login olmadan imtahan adı (paylaşım səhifəsi) */
 async function getPublicExamInvite(req, res) {
@@ -21,4 +22,18 @@ async function getPublicExamInvite(req, res) {
   }
 }
 
-module.exports = { getPublicExamInvite };
+/** POST /api/public/exam-invite/:examId/join — qonaq: ad, soyad, telefon; hesab yox, avtomatik icazə */
+async function postPublicExamGuestJoin(req, res) {
+  try {
+    const result = await joinExamAsGuest(req.params.examId, req.body || {});
+    res.status(result.already_assigned ? 200 : 201).json({ success: true, ...result });
+  } catch (err) {
+    res.status(err.statusCode || 500).json({
+      success: false,
+      message: err.message,
+      code: err.code,
+    });
+  }
+}
+
+module.exports = { getPublicExamInvite, postPublicExamGuestJoin };

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import api from '../../lib/api'
 import useAuthStore from '../../hooks/useAuth'
 import Button from '../../components/common/Button'
@@ -24,6 +24,7 @@ function splitFullName(full) {
 
 export default function ExamInvite() {
   const { examId } = useParams()
+  const navigate = useNavigate()
   const toast = useToast()
   const { user, setSession, updateUser } = useAuthStore()
   const id = useMemo(() => String(examId || '').trim(), [examId])
@@ -32,12 +33,12 @@ export default function ExamInvite() {
   const [infoLoading, setInfoLoading] = useState(Boolean(id))
   const [infoError, setInfoError] = useState('')
   const [authBusy, setAuthBusy] = useState(false)
-  const [requestBusy, setRequestBusy] = useState(false)
-  const [requestState, setRequestState] = useState(null)
+  const [joinBusy, setJoinBusy] = useState(false)
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [phone, setPhone] = useState('')
   const [fieldErrors, setFieldErrors] = useState(null)
+  const [showLoginOptions, setShowLoginOptions] = useState(false)
 
   useEffect(() => {
     if (!id) {
@@ -86,8 +87,19 @@ export default function ExamInvite() {
     return missing
   }, [firstName, lastName, phone])
 
-  const submitAccessRequest = useCallback(async () => {
-    if (!id || !user) return
+  const finishJoin = useCallback(
+    (payload) => {
+      if (payload?.token && payload?.user) {
+        setSession(payload.token, { ...payload.user, needs_phone_verification: false })
+      }
+      toast(payload?.message || 'İmtahana daxil ola bilərsiniz', 'success')
+      navigate(`/student/exams?exam=${encodeURIComponent(id)}`, { replace: true })
+    },
+    [id, navigate, setSession, toast],
+  )
+
+  const submitGuestJoin = useCallback(async () => {
+    if (!id) return
     const missing = collectMissing()
     if (missing.length) {
       setFieldErrors(missing)
@@ -95,44 +107,34 @@ export default function ExamInvite() {
     }
     setFieldErrors(null)
     const phoneCanon = canonicalAzPhoneE164(phone)
-    setRequestBusy(true)
+    setJoinBusy(true)
     try {
-      const prof = await api.patch('/students/my/contact-profile', {
+      if (user?.role === 'student') {
+        const prof = await api.patch('/students/my/contact-profile', {
+          first_name: String(firstName).trim(),
+          last_name: String(lastName).trim(),
+          phone: phoneCanon,
+        })
+        if (prof?.user) updateUser(prof.user)
+        const sub = await api.post(`/exams/${encodeURIComponent(id)}/access-from-link`, {
+          phone: phoneCanon,
+        })
+        finishJoin(sub)
+        return
+      }
+
+      const sub = await api.post(`/public/exam-invite/${encodeURIComponent(id)}/join`, {
         first_name: String(firstName).trim(),
         last_name: String(lastName).trim(),
         phone: phoneCanon,
       })
-      if (prof?.user) updateUser(prof.user)
-
-      const sub = await api.post(`/exams/${encodeURIComponent(id)}/access-from-link`, {
-        phone: phoneCanon,
-      })
-      if (sub?.already_assigned) {
-        setRequestState('assigned')
-        toast('İmtahan sizə təyin edilib', 'success')
-        return
-      }
-      setRequestState('pending')
-      toast(sub?.message || 'Müraciət müəllimə göndərildi', 'success')
+      finishJoin(sub)
     } catch (err) {
-      setRequestState('error')
-      if (err?.code === 'ALREADY_PENDING' || String(err?.message || '').includes('artıq göndərilib')) {
-        setRequestState('pending')
-        return
-      }
-      if (err?.code === 'PROFILE_INCOMPLETE' || err?.code === 'PHONE_REQUIRED') {
-        setFieldErrors(collectMissing())
-        return
-      }
-      const msg =
-        err?.code === 'INSTRUCTOR_STUDENT_LIMIT'
-          ? err?.message || 'Bu müəllimin pulsuz tələbə limiti dolub.'
-          : err?.message || 'Sorğu göndərilmədi'
-      toast(msg, 'error')
+      toast(err?.message || 'Qoşulma alınmadı', 'error')
     } finally {
-      setRequestBusy(false)
+      setJoinBusy(false)
     }
-  }, [id, user, firstName, lastName, phone, collectMissing, toast, updateUser])
+  }, [id, user, firstName, lastName, phone, collectMissing, finishJoin, toast, updateUser])
 
   const handleGoogleCredential = async (credential) => {
     setAuthBusy(true)
@@ -142,7 +144,7 @@ export default function ExamInvite() {
         r = await api.post('/auth/google/complete', { credential, role: 'student' })
       }
       if (r?.needs_phone_link) {
-        toast('Bu Google hesabı mövcud telefon hesabına bağlanmalıdır — müəllimlə əlaqə saxlayın.', 'error')
+        toast('Bu Google hesabı mövcud telefon hesabına bağlanmalıdır.', 'error')
         return
       }
       if (!r?.token || !r?.user) {
@@ -159,7 +161,7 @@ export default function ExamInvite() {
       if (n.first_name) setFirstName(n.first_name)
       if (n.last_name) setLastName(n.last_name)
       if (u.phone) setPhone(u.phone)
-      toast('İndi ad, soyad və telefonu doldurub müraciət göndərin', 'success')
+      toast('Ad və telefonu yoxlayıb «İmtahana başla» düyməsinə basın', 'success')
     } catch (err) {
       toast(err?.message || 'Google girişi uğursuz', 'error')
     } finally {
@@ -168,15 +170,13 @@ export default function ExamInvite() {
   }
 
   const loginHref = `/login?next=${encodeURIComponent(id ? `/exam/${id}` : '/student')}`
-  const showProfileForm =
-    user?.role === 'student' && requestState !== 'pending' && requestState !== 'assigned'
 
   return (
     <div className="p-4 sm:p-6 max-w-lg mx-auto w-full min-h-[70vh]">
       <h1 className="font-display font-bold text-2xl text-token-textMain">İmtahana qoşul</h1>
       <p className="text-sm text-token-textMuted mt-1 mb-6">
-        Yalnız <strong className="text-token-textMain">ad, soyad və mobil nömrə</strong> — qrup paketi və CRM məlumatları
-        tələb olunmur.
+        Mentorix-də qeydiyyat olmaq <strong className="text-token-textMain">məcburi deyil</strong>. Ad, soyad və
+        mobil nömrənizi daxil edib birbaşa imtahana başlayın.
       </p>
 
       {infoLoading && <p className="text-sm text-token-textMuted">Yüklənir…</p>}
@@ -205,9 +205,6 @@ export default function ExamInvite() {
           </div>
         }
       >
-        <p className="text-sm text-center text-zinc-300 mb-3 leading-relaxed">
-          Müraciət müəllimə yalnız bu məlumatlar doldurulduqdan sonra gedəcək:
-        </p>
         <ul className="text-sm text-amber-200/95 space-y-1.5 list-disc pl-5">
           {fieldErrors?.map((label) => (
             <li key={label}>{label}</li>
@@ -215,76 +212,52 @@ export default function ExamInvite() {
         </ul>
       </Modal>
 
-      {user?.role === 'student' ? (
-        <Card className="p-4 space-y-4">
-          {showProfileForm && (
-            <>
-              <p className="text-sm text-token-textMuted leading-relaxed">
-                Bütün sahələri doldurun. Boş və ya natamam müraciət müəllimə <strong>göndərilmir</strong>.
-              </p>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-token-textMuted mb-1.5">
-                    Ad *
-                  </label>
-                  <input className={inp} value={firstName} onChange={(e) => setFirstName(e.target.value)} />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-token-textMuted mb-1.5">
-                    Soyad *
-                  </label>
-                  <input className={inp} value={lastName} onChange={(e) => setLastName(e.target.value)} />
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-token-textMuted mb-1.5">
-                  Mobil telefon *
-                </label>
-                <PhoneInput value={phone} onChange={setPhone} />
-              </div>
-              <Button type="button" loading={requestBusy} onClick={() => void submitAccessRequest()}>
-                Müraciəti müəllimə göndər
-              </Button>
-            </>
-          )}
-          {requestState === 'pending' && (
-            <p className="text-sm text-amber-200/90">
-              Müraciət müəllimə göndərilib. Təsdiqdən sonra bildiriş <strong>Gmail</strong> ünvanınıza gedəcək.{' '}
-              <Link to="/student/exams" className="text-primary hover:underline">
-                İmtahanlarım
-              </Link>
-            </p>
-          )}
-          {requestState === 'assigned' && (
-            <p className="text-sm text-emerald-300/90">
-              Sizə təyin edilib.{' '}
-              <Link to={`/student/exams?exam=${encodeURIComponent(id)}`} className="text-primary hover:underline">
-                İmtahana keç
-              </Link>
-            </p>
-          )}
-          {requestState === 'error' && (
-            <Button type="button" loading={requestBusy} onClick={() => void submitAccessRequest()}>
-              Yenidən cəhd et
-            </Button>
-          )}
-        </Card>
-      ) : user ? (
-        <Card className="p-4 text-sm text-amber-200/90">Bu hesab tələbə deyil. Tələbə hesabı ilə daxil olun.</Card>
-      ) : (
-        <Card className="p-4 space-y-4">
-          <p className="text-sm text-token-textMuted">
-            Əvvəlcə tələbə kimi Google ilə daxil olun. Sonra ad, soyad və telefonu doldurub müraciət göndərin.
-          </p>
-          <GoogleSignInButton onCredential={handleGoogleCredential} disabled={authBusy} />
-          <Link
-            to={loginHref}
-            className="block text-center text-sm text-primary hover:underline font-medium"
-          >
-            Email ilə giriş
-          </Link>
-        </Card>
-      )}
+      <Card className="p-4 space-y-4">
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-token-textMuted mb-1.5">
+              Ad *
+            </label>
+            <input className={inp} value={firstName} onChange={(e) => setFirstName(e.target.value)} />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-token-textMuted mb-1.5">
+              Soyad *
+            </label>
+            <input className={inp} value={lastName} onChange={(e) => setLastName(e.target.value)} />
+          </div>
+        </div>
+        <div>
+          <label className="block text-xs font-semibold uppercase tracking-wider text-token-textMuted mb-1.5">
+            Mobil telefon *
+          </label>
+          <PhoneInput value={phone} onChange={setPhone} />
+        </div>
+        <Button type="button" loading={joinBusy} onClick={() => void submitGuestJoin()}>
+          İmtahana başla
+        </Button>
+        <p className="text-xs text-token-textMuted leading-relaxed">
+          CRM-də olmayan qonaq iştirakçı kimi qeydə alınacaqsınız. Müəllim sizə ayrıca qeydiyyat tələb etmir.
+        </p>
+      </Card>
+
+      <div className="mt-6">
+        <button
+          type="button"
+          onClick={() => setShowLoginOptions((v) => !v)}
+          className="text-sm text-primary hover:underline font-medium"
+        >
+          {showLoginOptions ? 'Giriş seçimlərini gizlət' : 'Artıq Mentorix hesabım var'}
+        </button>
+        {showLoginOptions ? (
+          <Card className="p-4 space-y-3 mt-3">
+            <GoogleSignInButton onCredential={handleGoogleCredential} disabled={authBusy} />
+            <Link to={loginHref} className="block text-center text-sm text-primary hover:underline font-medium">
+              Email ilə giriş
+            </Link>
+          </Card>
+        ) : null}
+      </div>
     </div>
   )
 }

@@ -1,7 +1,19 @@
 /** İctimai SEO və landing səhifələri üçün rəsmi marketinq mətni */
 
-export const MENTORIX_TAGLINE =
-  'Mentorix.io müəllimlər, təlimçilər və kurslar üçün hazırlanmış təhsil idarəetmə platformasıdır.'
+export const MENTORIX_SEO_TITLE =
+  'Mentorix.io – Müəllimlər üçün Tələbə İdarəetməsi, İmtahan və Analitika Platforması'
+
+export const MENTORIX_SEO_DESCRIPTION =
+  'Mentorix.io müəllim və təlimçilər üçün tələbə idarəetməsi, imtahan və tapşırıqların hazırlanması, nəticələrin analizi, ödəniş xatırlatmaları və repetitor axtarışı imkanları təqdim edən platformadır.'
+
+export const MENTORIX_SEO_KEYWORDS =
+  'müəllim paneli, tələbə idarəetmə sistemi, kurs idarəetmə proqramı, repetitor proqramı, davamiyyət sistemi, imtahan platforması, onlayn test sistemi, ödəniş izləmə proqramı, kurs proqramı, hazırlıq kursu proqramı, Mentorix'
+
+/** Ana səhifədə təbii formada — Google açar sözləri */
+export const MENTORIX_SEO_HOMEPAGE_LINE =
+  'Mentorix.io müəllimlər, repetitorlar, hazırlıq mərkəzləri və kurslar üçün tələbə idarəetmə sistemi, imtahan platforması və ödəniş izləmə proqramıdır.'
+
+export const MENTORIX_TAGLINE = MENTORIX_SEO_HOMEPAGE_LINE
 
 export const MENTORIX_PRICING_PLANS = [
   {
@@ -55,19 +67,23 @@ export const MENTORIX_PLATFORM_BENEFITS = [
 /** Qısa SEO blokları (kartlar) */
 export const MENTORIX_PLATFORM_FEATURES = [
   {
-    title: 'Tələbə analizləri',
-    text: 'Diaqramlar və statistik göstəricilər ilə nəticələri izləyin; zəif mövzuları analiz edin.',
+    title: 'Tələbə idarəetməsi',
+    text: 'Tələbə və qrupları bir paneldə idarə edin — müəllim paneli və davamiyyət sistemi.',
   },
   {
-    title: 'Avtomatik ödəniş bildirişləri',
-    text: 'Ödəniş tarixlərini idarə edin — gecikmə və yaxınlaşan ödənişlər üçün SMS xatırlatmaları.',
+    title: 'İmtahan və tapşırıqlar',
+    text: 'Onlayn test sistemi: imtahan və tapşırıqları QR kod və ya linklə paylaşın.',
   },
   {
-    title: 'Müəllim və təlimçilər',
-    text: 'Fərdi müəllim, repetitor və kurs profilləri — ictimai xəritədə axtarışa açıq.',
+    title: 'AI yoxlama və analitika',
+    text: 'Avtomatik qiymətləndirmə, nəticə analizi, diaqramlar və zəif mövzuların izlənməsi.',
   },
   {
-    title: 'İmtahan və davamiyyət',
-    text: 'QR/link ilə imtahan paylaşımı, avtomatik qiymətləndirmə, dərs cədvəli və iştirak izləməsi.',
+    title: 'Ödəniş xatırlatmaları',
+    text: 'Ödəniş izləmə proqramı — avtomatik SMS xatırlatmaları və valideynlə nəticə paylaşımı.',
+  },
+  {
+    title: 'Repetitor axtarışı',
+    text: 'Müəllim və təlimçi profilləri ictimai xəritədə — repetitor proqramı və kurs proqramı.',
   },
 ]

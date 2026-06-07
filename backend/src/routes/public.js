@@ -13,8 +13,8 @@ const {
 const { postPublicInquiry } = require('../controllers/studentInquiryController');
 const { getActivePlansList } = require('../services/subscriptionPlansService');
 const { getPublicJoin } = require('../controllers/joinInvitationController');
-const { getPublicExamInvite } = require('../controllers/publicExamInviteController');
-const { getPublicTaskInvite } = require('../controllers/publicTaskInviteController');
+const { getPublicExamInvite, postPublicExamGuestJoin } = require('../controllers/publicExamInviteController');
+const { getPublicTaskInvite, postPublicTaskGuestJoin } = require('../controllers/publicTaskInviteController');
 const { postAccessEvent } = require('../controllers/accessAnalyticsController');
 const { getPublicInstructorProfile } = require('../controllers/publicInstructorProfileController');
 const { getInstructorMessagingLink } = require('../controllers/publicInstructorContactController');
@@ -24,7 +24,9 @@ const router = express.Router();
 
 router.get('/join/:code', getPublicJoin);
 router.get('/exam-invite/:examId', getPublicExamInvite);
+router.post('/exam-invite/:examId/join', postPublicExamGuestJoin);
 router.get('/task-invite/:taskId', getPublicTaskInvite);
+router.post('/task-invite/:taskId/join', postPublicTaskGuestJoin);
 
 router.post('/analytics/event', postAccessEvent);
 router.get('/landing-stats', getLandingStats);

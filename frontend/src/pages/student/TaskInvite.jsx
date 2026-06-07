@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import api from '../../lib/api'
 import useAuthStore from '../../hooks/useAuth'
 import Button from '../../components/common/Button'
@@ -24,6 +24,7 @@ function splitFullName(full) {
 
 export default function TaskInvite() {
   const { taskId } = useParams()
+  const navigate = useNavigate()
   const toast = useToast()
   const { user, setSession, updateUser } = useAuthStore()
   const id = useMemo(() => String(taskId || '').trim(), [taskId])
@@ -32,12 +33,12 @@ export default function TaskInvite() {
   const [infoLoading, setInfoLoading] = useState(Boolean(id))
   const [infoError, setInfoError] = useState('')
   const [authBusy, setAuthBusy] = useState(false)
-  const [requestBusy, setRequestBusy] = useState(false)
-  const [requestState, setRequestState] = useState(null)
+  const [joinBusy, setJoinBusy] = useState(false)
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [phone, setPhone] = useState('')
   const [fieldErrors, setFieldErrors] = useState(null)
+  const [showLoginOptions, setShowLoginOptions] = useState(false)
 
   useEffect(() => {
     if (!id) {
@@ -86,8 +87,19 @@ export default function TaskInvite() {
     return missing
   }, [firstName, lastName, phone])
 
-  const submitAccessRequest = useCallback(async () => {
-    if (!id || !user) return
+  const finishJoin = useCallback(
+    (payload) => {
+      if (payload?.token && payload?.user) {
+        setSession(payload.token, { ...payload.user, needs_phone_verification: false })
+      }
+      toast(payload?.message || 'Tapşırığa daxil ola bilərsiniz', 'success')
+      navigate('/student/assignments', { replace: true })
+    },
+    [navigate, setSession, toast],
+  )
+
+  const submitGuestJoin = useCallback(async () => {
+    if (!id) return
     const missing = collectMissing()
     if (missing.length) {
       setFieldErrors(missing)
@@ -95,40 +107,34 @@ export default function TaskInvite() {
     }
     setFieldErrors(null)
     const phoneCanon = canonicalAzPhoneE164(phone)
-    setRequestBusy(true)
+    setJoinBusy(true)
     try {
-      const prof = await api.patch('/students/my/contact-profile', {
+      if (user?.role === 'student') {
+        const prof = await api.patch('/students/my/contact-profile', {
+          first_name: String(firstName).trim(),
+          last_name: String(lastName).trim(),
+          phone: phoneCanon,
+        })
+        if (prof?.user) updateUser(prof.user)
+        const sub = await api.post(`/tasks/${encodeURIComponent(id)}/access-from-link`, {
+          phone: phoneCanon,
+        })
+        finishJoin(sub)
+        return
+      }
+
+      const sub = await api.post(`/public/task-invite/${encodeURIComponent(id)}/join`, {
         first_name: String(firstName).trim(),
         last_name: String(lastName).trim(),
         phone: phoneCanon,
       })
-      if (prof?.user) updateUser(prof.user)
-
-      const sub = await api.post(`/tasks/${encodeURIComponent(id)}/access-from-link`, {
-        phone: phoneCanon,
-      })
-      if (sub?.already_assigned) {
-        setRequestState('assigned')
-        toast('Tapşırıq sizə təyin edilib', 'success')
-        return
-      }
-      setRequestState('pending')
-      toast(sub?.message || 'Müraciət müəllimə göndərildi', 'success')
+      finishJoin(sub)
     } catch (err) {
-      setRequestState('error')
-      if (err?.code === 'ALREADY_PENDING' || String(err?.message || '').includes('artıq göndərilib')) {
-        setRequestState('pending')
-        return
-      }
-      if (err?.code === 'PROFILE_INCOMPLETE' || err?.code === 'PHONE_REQUIRED') {
-        setFieldErrors(collectMissing())
-        return
-      }
-      toast(err?.message || 'Sorğu göndərilmədi', 'error')
+      toast(err?.message || 'Qoşulma alınmadı', 'error')
     } finally {
-      setRequestBusy(false)
+      setJoinBusy(false)
     }
-  }, [id, user, firstName, lastName, phone, collectMissing, toast, updateUser])
+  }, [id, user, firstName, lastName, phone, collectMissing, finishJoin, toast, updateUser])
 
   const handleGoogleCredential = async (credential) => {
     setAuthBusy(true)
@@ -145,9 +151,8 @@ export default function TaskInvite() {
         toast('Bu hesab tələbə deyil', 'error')
         return
       }
-      const u = { ...r.user, needs_phone_verification: false }
-      setSession(r.token, u)
-      toast('Ad, soyad və mobil nömrəni doldurub müraciət göndərin', 'success')
+      setSession(r.token, { ...r.user, needs_phone_verification: false })
+      toast('Ad və telefonu yoxlayıb «Tapşırığa başla» düyməsinə basın', 'success')
     } catch (err) {
       toast(err?.message || 'Google girişi uğursuz', 'error')
     } finally {
@@ -156,15 +161,13 @@ export default function TaskInvite() {
   }
 
   const loginHref = `/login?next=${encodeURIComponent(id ? `/task/${id}` : '/student')}`
-  const showProfileForm =
-    user?.role === 'student' && requestState !== 'pending' && requestState !== 'assigned'
 
   return (
     <div className="p-4 sm:p-6 max-w-lg mx-auto w-full min-h-[70vh]">
       <h1 className="font-display font-bold text-2xl text-token-textMain">Tapşırığa qoşul</h1>
       <p className="text-sm text-token-textMuted mt-1 mb-6">
-        Yalnız <strong className="text-token-textMain">ad, soyad və mobil nömrə</strong> tələb olunur — valideyn, paket
-        və ya CRM məlumatları yoxdur.
+        Qeydiyyat olmadan <strong className="text-token-textMain">ad, soyad və telefon</strong> ilə birbaşa tapşırığı
+        işləyə bilərsiniz.
       </p>
 
       {infoLoading && <p className="text-sm text-token-textMuted">Yüklənir…</p>}
@@ -200,68 +203,49 @@ export default function TaskInvite() {
         </ul>
       </Modal>
 
-      {user?.role === 'student' ? (
-        <Card className="p-4 space-y-4">
-          {showProfileForm && (
-            <>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-token-textMuted mb-1.5">
-                    Ad *
-                  </label>
-                  <input className={inp} value={firstName} onChange={(e) => setFirstName(e.target.value)} />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-token-textMuted mb-1.5">
-                    Soyad *
-                  </label>
-                  <input className={inp} value={lastName} onChange={(e) => setLastName(e.target.value)} />
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-token-textMuted mb-1.5">
-                  Mobil telefon *
-                </label>
-                <PhoneInput value={phone} onChange={setPhone} />
-              </div>
-              <Button type="button" loading={requestBusy} onClick={() => void submitAccessRequest()}>
-                Müraciəti müəllimə göndər
-              </Button>
-            </>
-          )}
-          {requestState === 'pending' && (
-            <p className="text-sm text-amber-200/90">
-              Müraciət göndərilib. Təsdiqdən sonra{' '}
-              <Link to="/student/assignments" className="text-primary hover:underline">
-                tapşırıqlarım
-              </Link>
-              bölməsində görünəcək.
-            </p>
-          )}
-          {requestState === 'assigned' && (
-            <p className="text-sm text-emerald-300/90">
-              Sizə təyin edilib.{' '}
-              <Link to="/student/assignments" className="text-primary hover:underline">
-                Tapşırığa keç
-              </Link>
-            </p>
-          )}
-          {requestState === 'error' && (
-            <Button type="button" loading={requestBusy} onClick={() => void submitAccessRequest()}>
-              Yenidən cəhd et
-            </Button>
-          )}
-        </Card>
-      ) : user ? (
-        <Card className="p-4 text-sm text-amber-200/90">Bu hesab tələbə deyil.</Card>
-      ) : (
-        <Card className="p-4 space-y-4">
-          <GoogleSignInButton onCredential={handleGoogleCredential} disabled={authBusy} />
-          <Link to={loginHref} className="block text-center text-sm text-primary hover:underline font-medium">
-            Email ilə giriş
-          </Link>
-        </Card>
-      )}
+      <Card className="p-4 space-y-4">
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-token-textMuted mb-1.5">
+              Ad *
+            </label>
+            <input className={inp} value={firstName} onChange={(e) => setFirstName(e.target.value)} />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-token-textMuted mb-1.5">
+              Soyad *
+            </label>
+            <input className={inp} value={lastName} onChange={(e) => setLastName(e.target.value)} />
+          </div>
+        </div>
+        <div>
+          <label className="block text-xs font-semibold uppercase tracking-wider text-token-textMuted mb-1.5">
+            Mobil telefon *
+          </label>
+          <PhoneInput value={phone} onChange={setPhone} />
+        </div>
+        <Button type="button" loading={joinBusy} onClick={() => void submitGuestJoin()}>
+          Tapşırığa başla
+        </Button>
+      </Card>
+
+      <div className="mt-6">
+        <button
+          type="button"
+          onClick={() => setShowLoginOptions((v) => !v)}
+          className="text-sm text-primary hover:underline font-medium"
+        >
+          {showLoginOptions ? 'Giriş seçimlərini gizlət' : 'Artıq Mentorix hesabım var'}
+        </button>
+        {showLoginOptions ? (
+          <Card className="p-4 space-y-3 mt-3">
+            <GoogleSignInButton onCredential={handleGoogleCredential} disabled={authBusy} />
+            <Link to={loginHref} className="block text-center text-sm text-primary hover:underline font-medium">
+              Email ilə giriş
+            </Link>
+          </Card>
+        ) : null}
+      </div>
     </div>
   )
 }

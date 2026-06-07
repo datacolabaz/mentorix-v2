@@ -40,8 +40,8 @@ export default function PublicSeoFooter({ className = '' }) {
           </div>
         </div>
         <p className="text-xs text-gray-500 leading-relaxed">
-          Mentorix — tələbə analizləri, avtomatik ödəniş bildirişləri, müəllim və təlimçi idarəetməsi, ictimai
-          repetitor axtarışı.
+          Mentorix.io — müəllim paneli, tələbə idarəetmə sistemi, imtahan platforması, onlayn test sistemi və ödəniş
+          izləmə proqramı. Repetitor proqramı və kurs idarəetmə həlli.
         </p>
       </div>
     </footer>

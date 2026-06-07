@@ -1,6 +1,7 @@
 import {
-  MENTORIX_PLATFORM_FEATURES,
-  MENTORIX_TAGLINE,
+  MENTORIX_SEO_DESCRIPTION,
+  MENTORIX_SEO_KEYWORDS,
+  MENTORIX_SEO_TITLE,
 } from './mentorixPublicMarketing'
 
 /** İctimai SEO landing səhifələri — Google sitelink və axtarış sorğuları üçün */
@@ -71,11 +72,10 @@ export const PUBLIC_SEO_LANDINGS = [
   {
     kind: 'panel',
     path: '/muellim-paneli',
-    title: 'Mentorix — müəllim, təlimçi və kurs idarəetmə platforması | paketlər',
-    description:
-      'Mentorix.io: tələbə analizləri, avtomatik ödəniş bildirişləri, imtahanlar, davamiyyət. SADƏ (pulsuz), PRO, GROWTH və PREMIUM paketlər — fərdi müəllim və kurslar üçün.',
-    h1: 'Müəllim, təlimçi və kurslar üçün Mentorix',
-    intro: [MENTORIX_TAGLINE],
+    title: MENTORIX_SEO_TITLE,
+    description: MENTORIX_SEO_DESCRIPTION,
+    h1: 'Müəllim, təlimçi və kurslar üçün Mentorix.io',
+    intro: [MENTORIX_SEO_DESCRIPTION],
     bullets: [],
     showPlatformFeatures: true,
     showPricingPlans: true,
@@ -83,12 +83,11 @@ export const PUBLIC_SEO_LANDINGS = [
     searchCategorySlug: null,
     ctaHref: '/login',
     ctaLabel: 'Pulsuz başla — 14 günlük sınaq',
-    keywords:
-      'müəllim paneli, təhsil idarəetmə, tələbə analizləri, avtomatik ödəniş bildirişləri, repetitor proqramı, təlimçi, kurs, Mentorix paketlər',
+    keywords: MENTORIX_SEO_KEYWORDS,
   },
 ]
 
-export { MENTORIX_PLATFORM_FEATURES }
+export { MENTORIX_PLATFORM_FEATURES } from './mentorixPublicMarketing'
 
 export function landingByPath(path) {
   const p = String(path || '').replace(/\/+$/, '') || '/'
