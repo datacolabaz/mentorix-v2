@@ -21,13 +21,17 @@ export default function PublicSeoLanding() {
       description: landing.description,
       canonicalPath: landing.path,
       keywords: landing.keywords || 'repetitor, müəllim tap, Bakı, Mentorix',
+      breadcrumbs: [
+        { name: 'Mentorix', path: '/' },
+        { name: landing.h1, path: landing.path },
+      ],
     })
   }, [landing])
 
   if (!landing) return <Navigate to="/search" replace />
 
   const ctaHref = ctaHrefForLanding(landing)
-  const isPanel = landing.kind === 'panel'
+  const isPanel = landing.kind === 'panel' || landing.kind === 'feature'
 
   return (
     <div className="min-h-[100svh] bg-[#0b0b0b] text-white flex flex-col">
@@ -139,12 +143,23 @@ export default function PublicSeoLanding() {
           </section>
         ) : null}
 
-        <Link
-          to={ctaHref}
-          className="inline-flex w-full sm:w-auto justify-center items-center rounded-xl bg-primary px-6 py-4 min-h-[52px] text-sm sm:text-base font-bold text-[#041018] shadow-lg shadow-primary/25 hover:brightness-95"
-        >
-          {landing.ctaLabel}
-        </Link>
+        {landing.ctaExternal ? (
+          <a
+            href={ctaHref}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex w-full sm:w-auto justify-center items-center rounded-xl bg-primary px-6 py-4 min-h-[52px] text-sm sm:text-base font-bold text-[#041018] shadow-lg shadow-primary/25 hover:brightness-95"
+          >
+            {landing.ctaLabel}
+          </a>
+        ) : (
+          <Link
+            to={ctaHref}
+            className="inline-flex w-full sm:w-auto justify-center items-center rounded-xl bg-primary px-6 py-4 min-h-[52px] text-sm sm:text-base font-bold text-[#041018] shadow-lg shadow-primary/25 hover:brightness-95"
+          >
+            {landing.ctaLabel}
+          </Link>
+        )}
 
         <p className="text-xs text-gray-500 leading-relaxed">
           {isPanel ? (
@@ -157,8 +172,7 @@ export default function PublicSeoLanding() {
             </>
           ) : (
             <>
-              Mentorix həm müəllimlər üçün idarəetmə paneli, həm də valideyn və tələbələr üçün repetitor axtarış
-              platformasıdır.{' '}
+              Mentorix təhsil idarəetmə və müəllim marketplace platformasıdır.{' '}
               <Link to="/login" className="text-primary hover:underline">
                 Pulsuz qeydiyyat
               </Link>{' '}

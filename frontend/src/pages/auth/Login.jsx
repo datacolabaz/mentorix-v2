@@ -92,6 +92,15 @@ export default function Login() {
       description: isAdmin ? 'Mentorix admin panelinə daxil olun.' : MENTORIX_SEO_DESCRIPTION,
       canonicalPath: isAdmin ? '/login?admin=true' : '/login',
       keywords: isAdmin ? undefined : MENTORIX_SEO_KEYWORDS,
+      breadcrumbs: isAdmin
+        ? [
+            { name: 'Mentorix', path: '/' },
+            { name: 'Admin girişi', path: '/login' },
+          ]
+        : [
+            { name: 'Mentorix', path: '/' },
+            { name: 'Giriş', path: '/login' },
+          ],
     })
   }, [isAdmin])
 

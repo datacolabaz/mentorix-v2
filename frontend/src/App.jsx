@@ -10,6 +10,7 @@ import RoleOnboarding from './pages/auth/RoleOnboarding'
 import { dashboardPathForRole, userNeedsPhoneVerificationPage } from './lib/postAuth'
 import InstructorMapSearch from './pages/public/InstructorMapSearch'
 import PublicSeoLanding from './pages/public/PublicSeoLanding'
+import { PUBLIC_SEO_LANDINGS } from './lib/publicSeoLandings'
 import PublicInstructorProfile from './pages/public/PublicInstructorProfile'
 import AdminLayout from './layouts/AdminLayout'
 import InstructorLayout from './layouts/InstructorLayout'
@@ -120,10 +121,10 @@ export default function App() {
       <AnalyticsPageTracker />
       <Routes>
       <Route path="/search" element={<InstructorMapSearch />} />
-      <Route path="/repetitor-baki" element={<PublicSeoLanding />} />
-      <Route path="/riyaziyyat-repetitoru" element={<PublicSeoLanding />} />
-      <Route path="/ingilis-dili-repetitoru" element={<PublicSeoLanding />} />
-      <Route path="/muellim-paneli" element={<PublicSeoLanding />} />
+      {PUBLIC_SEO_LANDINGS.map((l) => (
+        <Route key={l.path} path={l.path} element={<PublicSeoLanding />} />
+      ))}
+      <Route path="/muellim-paneli" element={<Navigate to="/muellimler-ucun" replace />} />
       <Route path="/teachers/:id" element={<PublicInstructorProfile />} />
       <Route path="/login" element={user ? <Navigate to={postLoginPath(user)} replace /> : <Login />} />
       <Route path="/verify-email" element={<VerifyEmail />} />

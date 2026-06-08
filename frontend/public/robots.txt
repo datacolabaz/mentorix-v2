@@ -3,10 +3,18 @@ User-agent: *
 Allow: /
 Allow: /login
 Allow: /search
+Allow: /imtahanlar
+Allow: /tapshiriqlar
+Allow: /kurslar-ve-qruplar
+Allow: /qiymetler
+Allow: /muellimler-ucun
+Allow: /telebeler-ucun
+Allow: /haqqimizda
+Allow: /elaqe
 Allow: /repetitor-baki
 Allow: /riyaziyyat-repetitoru
 Allow: /ingilis-dili-repetitoru
-Allow: /muellim-paneli
+Allow: /teachers/
 Disallow: /admin
 Disallow: /instructor
 Disallow: /student
@@ -14,5 +22,6 @@ Disallow: /parent
 Disallow: /payment
 Disallow: /courses
 Disallow: /api
+Disallow: /muellim-paneli
 
 Sitemap: https://mentorix.io/sitemap.xml

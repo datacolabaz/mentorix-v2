@@ -1,8 +1,12 @@
 import {
+  MENTORIX_CONTACT,
   MENTORIX_SEO_DESCRIPTION,
   MENTORIX_SEO_KEYWORDS,
   MENTORIX_SEO_TITLE,
 } from './mentorixPublicMarketing'
+
+const FEATURE_KEYWORDS =
+  'təhsil idarəetmə platforması, müəllim paneli, imtahan platforması, tapşırıq sistemi, Mentorix'
 
 /** İctimai SEO landing səhifələri — Google sitelink və axtarış sorğuları üçün */
 export const PUBLIC_SEO_LANDINGS = [
@@ -70,11 +74,88 @@ export const PUBLIC_SEO_LANDINGS = [
     keywords: 'ingilis dili repetitoru, ingilis dili müəllimi, IELTS, Mentorix Bakı',
   },
   {
+    kind: 'feature',
+    path: '/imtahanlar',
+    title: 'İmtahan və test sistemi — Mentorix',
+    description:
+      'Mentorix imtahan platforması: onlayn testlər hazırlayın, QR kod və ya linklə paylaşın, nəticələri avtomatik qiymətləndirin və analiz edin.',
+    h1: 'İmtahan və onlayn test sistemi',
+    intro: [
+      'Müəllimlər və kurslar üçün tam funksional imtahan platforması — sual bankı, vaxt limiti, avtomatik yoxlama və nəticə analitikası.',
+      'Tələbələr link və ya QR kod ilə qoşula bilər; qonaq iştirakı dəstəklənir.',
+    ],
+    bullets: [
+      'Çoxseçimli, açıq cavab və fayl yükləmə sualları',
+      'Avtomatik bal hesablanması və AI dəstəkli yoxlama',
+      'Qrup və fərdi imtahan paylaşımı',
+    ],
+    ctaHref: '/muellimler-ucun',
+    ctaLabel: 'Müəllim kimi başla',
+    keywords: `${FEATURE_KEYWORDS}, imtahan platforması, onlayn test sistemi`,
+  },
+  {
+    kind: 'feature',
+    path: '/tapshiriqlar',
+    title: 'Tapşırıq sistemi — Mentorix',
+    description:
+      'Ev tapşırıqları təyin edin, tələbələr onlayn təslim etsin, müəllim yoxlasın və rəy yazsın. Fayl, mətn və link paylaşımı.',
+    h1: 'Tapşırıq və ev işi sistemi',
+    intro: [
+      'Tapşırıqları qruplara və ya fərdi tələbələrə təyin edin, son tarix qoyun və təslimləri bir paneldə izləyin.',
+      'Link ilə qonaq tələbələr də qoşula bilər.',
+    ],
+    bullets: [
+      'Tapşırıq faylı və təsvir paylaşımı',
+      'Təslim, gecikmə və müəllim rəyi',
+      'Valideyn kabinetində nəticə görünüşü',
+    ],
+    ctaHref: '/muellimler-ucun',
+    ctaLabel: 'Tapşırıq yarat',
+    keywords: `${FEATURE_KEYWORDS}, ev tapşırığı, tapşırıq sistemi`,
+  },
+  {
+    kind: 'feature',
+    path: '/kurslar-ve-qruplar',
+    title: 'Kurslar və qruplar idarəetməsi — Mentorix',
+    description:
+      'Tədris qrupları, paketlər (8/12 dərs), dərs cədvəli və tələbə qoşulma linkləri — kurs və təlim mərkəzləri üçün idarəetmə.',
+    h1: 'Kurslar və tədris qrupları',
+    intro: [
+      'Qrup yaradın, paket və qiymət təyin edin, dəvət linki ilə tələbələri qoşun.',
+      'Hər qrup üçün ayrıca cədvəl, ödəniş və davamiyyət izləməsi.',
+    ],
+    bullets: [
+      '8 və 12 dərs paketləri',
+      'Join link və QR ilə tələbə qəbulu',
+      'Qrup üzrə imtahan və tapşırıq təyini',
+    ],
+    ctaHref: '/muellimler-ucun',
+    ctaLabel: 'Qrup yarat',
+    keywords: `${FEATURE_KEYWORDS}, kurs idarəetmə proqramı, tədris qrupları`,
+  },
+  {
     kind: 'panel',
-    path: '/muellim-paneli',
+    path: '/qiymetler',
+    title: 'Qiymətlər və paketlər — Mentorix',
+    description:
+      'Mentorix paketləri: SADƏ (pulsuz), PRO, GROWTH və PREMIUM. Tələbə limiti, SMS balansı və xəritədə görünmə imkanları.',
+    h1: 'Qiymətlər və abunəlik paketləri',
+    intro: [MENTORIX_SEO_DESCRIPTION],
+    bullets: [],
+    showPlatformFeatures: true,
+    showPricingPlans: true,
+    showBenefitsList: false,
+    searchCategorySlug: null,
+    ctaHref: '/login',
+    ctaLabel: '14 günlük pulsuz sınaq',
+    keywords: `${MENTORIX_SEO_KEYWORDS}, qiymətlər, abunəlik paketləri`,
+  },
+  {
+    kind: 'panel',
+    path: '/muellimler-ucun',
     title: MENTORIX_SEO_TITLE,
     description: MENTORIX_SEO_DESCRIPTION,
-    h1: 'Müəllim, təlimçi və kurslar üçün Mentorix.io',
+    h1: 'Müəllimlər, kurslar və təlim mərkəzləri üçün Mentorix',
     intro: [MENTORIX_SEO_DESCRIPTION],
     bullets: [],
     showPlatformFeatures: true,
@@ -84,6 +165,68 @@ export const PUBLIC_SEO_LANDINGS = [
     ctaHref: '/login',
     ctaLabel: 'Pulsuz başla — 14 günlük sınaq',
     keywords: MENTORIX_SEO_KEYWORDS,
+  },
+  {
+    kind: 'info',
+    path: '/telebeler-ucun',
+    title: 'Tələbələr üçün Mentorix — imtahan, tapşırıq, cədvəl',
+    description:
+      'Tələbə kabineti: imtahanlara qoşulun, tapşırıqları təslim edin, dərs cədvəlini və ödəniş tarixlərini izləyin. Müəlliminiz sizi dəvət edir.',
+    h1: 'Tələbələr üçün Mentorix',
+    intro: [
+      'Müəlliminiz və ya kursunuz sizi Mentorix-ə dəvət edəndə imtahan, tapşırıq və cədvəl bir kabinetdə toplanır.',
+      'Link və ya QR kod ilə imtahana və tapşırığa qoşula bilərsiniz.',
+    ],
+    bullets: [
+      'İmtahan və tapşırıq təslimi',
+      'Dərs cədvəli və bildirişlər',
+      'Ödəniş tarixləri və nəticələr',
+    ],
+    ctaHref: '/login',
+    ctaLabel: 'Tələbə girişi',
+    keywords: 'tələbə kabineti, imtahan, tapşırıq, Mentorix tələbə',
+  },
+  {
+    kind: 'info',
+    path: '/haqqimizda',
+    title: 'Haqqımızda — Mentorix təhsil idarəetmə platforması',
+    description:
+      'Mentorix Azərbaycanda müəllimlər, kurslar və təlim mərkəzləri üçün rəqəmsal tədris və idarəetmə platformasıdır. Tələbə CRM, imtahan, ödəniş və müəllim axtarışı bir yerdə.',
+    h1: 'Mentorix haqqında',
+    intro: [
+      'Mentorix sadəcə repetitor paneli deyil — təhsil idarəetmə və müəllim marketplace platformasıdır.',
+      'Müəllimlər tələbələrini idarə edir, imtahan və tapşırıq yaradır, ödənişləri izləyir; tələbələr isə xəritədən müəllim tapa bilir.',
+    ],
+    bullets: [
+      'Tələbə idarəetməsi və analitika',
+      'İmtahan, tapşırıq və davamiyyət',
+      'Ödəniş izləmə və SMS bildirişləri',
+      'İctimai müəllim axtarış xəritəsi',
+    ],
+    ctaHref: '/muellimler-ucun',
+    ctaLabel: 'Platformanı kəşf et',
+    keywords: MENTORIX_SEO_KEYWORDS,
+  },
+  {
+    kind: 'info',
+    path: '/elaqe',
+    title: 'Əlaqə — Mentorix dəstək',
+    description:
+      `Mentorix ilə əlaqə: WhatsApp ${MENTORIX_CONTACT.phoneDisplay}, e-poçt ${MENTORIX_CONTACT.email}. Platforma, paketlər və qoşulma barədə suallarınız üçün yazın.`,
+    h1: 'Bizimlə əlaqə',
+    intro: [
+      'Mentorix haqqında sualınız, texniki dəstək və ya paket seçimi üçün bizimlə əlaqə saxlayın.',
+      'Komanda Azərbaycan dilində dəstək göstərir.',
+    ],
+    bullets: [
+      `WhatsApp: ${MENTORIX_CONTACT.phoneDisplay}`,
+      `E-poçt: ${MENTORIX_CONTACT.email}`,
+      'Müəllim və kurs qoşulması üçün pulsuz 14 günlük sınaq',
+    ],
+    ctaHref: MENTORIX_CONTACT.whatsappUrl,
+    ctaLabel: 'WhatsApp ilə yazın',
+    ctaExternal: true,
+    keywords: 'Mentorix əlaqə, dəstək, WhatsApp',
   },
 ]
 
@@ -102,6 +245,14 @@ export function panelLandings() {
   return PUBLIC_SEO_LANDINGS.filter((l) => l.kind === 'panel')
 }
 
+export function featureLandings() {
+  return PUBLIC_SEO_LANDINGS.filter((l) => l.kind === 'feature')
+}
+
+export function infoLandings() {
+  return PUBLIC_SEO_LANDINGS.filter((l) => l.kind === 'info')
+}
+
 export function ctaHrefForLanding(landing) {
   if (landing?.ctaHref) return landing.ctaHref
   return searchHrefForLanding(landing)
@@ -113,6 +264,9 @@ export function searchHrefForLanding(landing) {
 }
 
 export function footerLabelForLanding(landing) {
-  if (landing.kind === 'panel') return 'Müəllim paneli'
+  if (landing.kind === 'panel' && landing.path === '/muellimler-ucun') return 'Müəllimlər üçün'
+  if (landing.kind === 'panel' && landing.path === '/qiymetler') return 'Qiymətlər'
+  if (landing.kind === 'feature') return landing.h1.split(' ').slice(0, 2).join(' ')
+  if (landing.kind === 'info') return landing.h1.replace(' üçün Mentorix', '').replace('Mentorix haqqında', 'Haqqımızda')
   return landing.h1.replace(' tap', '')
 }

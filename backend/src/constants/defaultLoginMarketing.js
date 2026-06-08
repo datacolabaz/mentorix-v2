@@ -17,10 +17,10 @@ function defaultLoginMarketingPayload() {
   return {
     version: 1,
     hero: {
-      pill: 'Mentorix.io — müəllim paneli və imtahan platforması',
+      pill: 'Mentorix — müəllim və kurs idarəetmə platforması',
       headline: 'Tələbə idarəetməsi, imtahan, tapşırıq və analitika — bir yerdə',
       subheadline:
-        'Tələbələri idarə edin, imtahanlar hazırlayın, AI ilə yoxlayın, nəticələri analiz edin və ödənişləri izləyin. QR/link paylaşımı və repetitor axtarışı daxildir.',
+        'Tələbələri idarə edin, imtahanlar hazırlayın, AI ilə yoxlayın, nəticələri analiz edin və ödənişləri izləyin. SMS bildirişləri, müəllim axtarışı və kurs idarəetməsi daxildir.',
       primary_cta_label: 'Pulsuz başla (14 günlük sınaq)',
       marketplace_cta_label: 'Müəllim / Təlimçi tap (Xəritə ilə)',
       secondary_how: 'Necə işləyir?',

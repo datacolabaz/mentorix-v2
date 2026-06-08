@@ -1,19 +1,24 @@
 /** İctimai SEO və landing səhifələri üçün rəsmi marketinq mətni */
 
-export const MENTORIX_SEO_TITLE =
-  'Mentorix.io – Müəllimlər üçün Tələbə İdarəetməsi, İmtahan və Analitika Platforması'
+export const MENTORIX_SEO_TITLE = 'Mentorix — Müəllim və Kurs İdarəetmə Platforması'
 
 export const MENTORIX_SEO_DESCRIPTION =
-  'Mentorix.io müəllim və təlimçilər üçün tələbə idarəetməsi, imtahan və tapşırıqların hazırlanması, nəticələrin analizi, ödəniş xatırlatmaları və repetitor axtarışı imkanları təqdim edən platformadır.'
+  'Mentorix müəllimlər, kurslar və təlim mərkəzləri üçün tələbə idarəetməsi, dərs cədvəli, davamiyyət, ödəniş izləmə, SMS bildirişləri, imtahan və tapşırıq sistemi, analitika və müəllim axtarışı platformasıdır.'
 
 export const MENTORIX_SEO_KEYWORDS =
-  'müəllim paneli, tələbə idarəetmə sistemi, kurs idarəetmə proqramı, repetitor proqramı, davamiyyət sistemi, imtahan platforması, onlayn test sistemi, ödəniş izləmə proqramı, kurs proqramı, hazırlıq kursu proqramı, Mentorix'
+  'təhsil idarəetmə platforması, müəllim və kurs idarəetməsi, tələbə idarəetmə sistemi, kurs idarəetmə proqramı, dərs cədvəli, davamiyyət sistemi, ödəniş izləmə, SMS bildirişləri, imtahan platforması, tapşırıq sistemi, müəllim axtarışı, təlim mərkəzi proqramı, Mentorix'
 
 /** Ana səhifədə təbii formada — Google açar sözləri */
 export const MENTORIX_SEO_HOMEPAGE_LINE =
-  'Mentorix.io müəllimlər, repetitorlar, hazırlıq mərkəzləri və kurslar üçün tələbə idarəetmə sistemi, imtahan platforması və ödəniş izləmə proqramıdır.'
+  'Mentorix müəllimlər, kurslar və təlim mərkəzləri üçün tələbə idarəetməsi, imtahan və tapşırıq sistemi, ödəniş izləmə, SMS bildirişləri və müəllim axtarışını birləşdirən rəqəmsal tədris platformasıdır.'
 
 export const MENTORIX_TAGLINE = MENTORIX_SEO_HOMEPAGE_LINE
+
+export const MENTORIX_CONTACT = {
+  whatsappUrl: 'https://wa.me/994503066626',
+  phoneDisplay: '+994 50 306 66 26',
+  email: 'support@mentorix.io',
+}
 
 export const MENTORIX_PRICING_PLANS = [
   {
@@ -68,22 +73,22 @@ export const MENTORIX_PLATFORM_BENEFITS = [
 export const MENTORIX_PLATFORM_FEATURES = [
   {
     title: 'Tələbə idarəetməsi',
-    text: 'Tələbə və qrupları bir paneldə idarə edin — müəllim paneli və davamiyyət sistemi.',
+    text: 'Tələbə və qrupları bir paneldə idarə edin — CRM səviyyəsində müəllim kabineti.',
   },
   {
     title: 'İmtahan və tapşırıqlar',
-    text: 'Onlayn test sistemi: imtahan və tapşırıqları QR kod və ya linklə paylaşın.',
+    text: 'Onlayn imtahan və tapşırıq sistemi: QR kod və ya linklə paylaşın, nəticələri izləyin.',
   },
   {
     title: 'AI yoxlama və analitika',
     text: 'Avtomatik qiymətləndirmə, nəticə analizi, diaqramlar və zəif mövzuların izlənməsi.',
   },
   {
-    title: 'Ödəniş xatırlatmaları',
-    text: 'Ödəniş izləmə proqramı — avtomatik SMS xatırlatmaları və valideynlə nəticə paylaşımı.',
+    title: 'Ödəniş və SMS',
+    text: 'Ödəniş izləmə, avtomatik SMS xatırlatmaları və valideynlə nəticə paylaşımı.',
   },
   {
-    title: 'Repetitor axtarışı',
-    text: 'Müəllim və təlimçi profilləri ictimai xəritədə — repetitor proqramı və kurs proqramı.',
+    title: 'Müəllim marketplace',
+    text: 'Müəllim və təlimçi profilləri ictimai xəritədə — tələbələr üçün axtarış platforması.',
   },
 ]

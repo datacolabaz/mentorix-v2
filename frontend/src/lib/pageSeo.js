@@ -3,8 +3,9 @@ import {
   MENTORIX_SEO_KEYWORDS,
   MENTORIX_SEO_TITLE,
 } from './mentorixPublicMarketing'
+import { SITE_ORIGIN, buildBreadcrumbSchema } from './mentorixSeoSchema'
 
-const SITE_ORIGIN = 'https://mentorix.io'
+const DEFAULT_OG_IMAGE = `${SITE_ORIGIN}/og.svg?v=5`
 
 const DEFAULT_TITLE = MENTORIX_SEO_TITLE
 const DEFAULT_DESCRIPTION = MENTORIX_SEO_DESCRIPTION
@@ -32,23 +33,52 @@ function upsertOg(property, content) {
   el.setAttribute('content', content)
 }
 
+function upsertJsonLd(id, data) {
+  if (!data) {
+    const existing = document.getElementById(id)
+    if (existing) existing.remove()
+    return
+  }
+  let el = document.getElementById(id)
+  if (!el) {
+    el = document.createElement('script')
+    el.type = 'application/ld+json'
+    el.id = id
+    document.head.appendChild(el)
+  }
+  el.textContent = JSON.stringify(data)
+}
+
+function absoluteHref(path) {
+  const p = path != null ? String(path) : '/'
+  return p.startsWith('http') ? p : `${SITE_ORIGIN}${p.startsWith('/') ? p : `/${p}`}`
+}
+
 /**
- * SPA səhifələri üçün title, description, canonical (Google indeksi).
+ * SPA səhifələri üçün title, description, canonical, OG/Twitter və breadcrumb schema.
  */
-export function setPageSeo({ title, description, canonicalPath, keywords }) {
+export function setPageSeo({
+  title,
+  description,
+  canonicalPath,
+  keywords,
+  ogImage,
+  ogType = 'website',
+  breadcrumbs,
+}) {
   if (typeof document === 'undefined') return
 
   const nextTitle = title || DEFAULT_TITLE
   const nextDescription = description || DEFAULT_DESCRIPTION
   const nextKeywords = keywords || DEFAULT_KEYWORDS
+  const href = absoluteHref(canonicalPath)
+  const image = ogImage || DEFAULT_OG_IMAGE
 
   document.title = nextTitle
 
   upsertMeta('description', nextDescription)
   upsertMeta('keywords', nextKeywords)
-
-  const path = canonicalPath != null ? String(canonicalPath) : '/'
-  const href = path.startsWith('http') ? path : `${SITE_ORIGIN}${path.startsWith('/') ? path : `/${path}`}`
+  upsertMeta('robots', 'index, follow')
 
   let link = document.querySelector('link[rel="canonical"]')
   if (!link) {
@@ -58,9 +88,23 @@ export function setPageSeo({ title, description, canonicalPath, keywords }) {
   }
   link.setAttribute('href', href)
 
+  upsertOg('og:site_name', 'Mentorix.io')
   upsertOg('og:title', nextTitle)
   upsertOg('og:description', nextDescription)
   upsertOg('og:url', href)
+  upsertOg('og:type', ogType)
+  upsertOg('og:image', image)
+  upsertOg('og:image:type', 'image/svg+xml')
+  upsertOg('og:image:width', '1200')
+  upsertOg('og:image:height', '630')
+  upsertOg('og:locale', 'az_AZ')
+
+  upsertMeta('twitter:card', 'summary_large_image')
+  upsertMeta('twitter:title', nextTitle)
+  upsertMeta('twitter:description', nextDescription)
+  upsertMeta('twitter:image', image)
+
+  upsertJsonLd('mx-breadcrumb-ld', buildBreadcrumbSchema(breadcrumbs))
 }
 
 export function resetPageSeo() {
@@ -69,6 +113,7 @@ export function resetPageSeo() {
     description: DEFAULT_DESCRIPTION,
     canonicalPath: '/',
     keywords: DEFAULT_KEYWORDS,
+    breadcrumbs: [{ name: 'Mentorix', path: '/' }],
   })
 }
 

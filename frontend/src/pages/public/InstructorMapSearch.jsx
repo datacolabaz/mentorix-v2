@@ -178,16 +178,25 @@ export default function InstructorMapSearch() {
         description: `${discoverFilters.category_name} repetitoru və müəllimi axtarırsınız? Mentorix xəritəsində yaxınlığınızdakı təlimçiləri reytinq və formatla müqayisə edin.`,
         canonicalPath: slug ? `/search?category=${encodeURIComponent(slug)}` : '/search',
         keywords: `${discoverFilters.category_name}, repetitor, müəllim tap, Bakı, Mentorix`,
+        breadcrumbs: [
+          { name: 'Mentorix', path: '/' },
+          { name: 'Müəllim tap', path: '/search' },
+          { name: discoverFilters.category_name, path: slug ? `/search?category=${encodeURIComponent(slug)}` : '/search' },
+        ],
       })
       return
     }
     setPageSeo({
-      title: 'Müəllim və repetitor axtarışı — Mentorix xəritəsi | Bakı',
+      title: 'Müəllim tap — xəritədə axtarış | Mentorix',
       description:
-        'Yaxınlığınızdakı repetitor, fərdi müəllim və təlimçiləri xəritədə tapın. Mentorix həm ictimai axtarış, həm də tələbə analizləri və avtomatik ödəniş bildirişləri olan müəllim panelidir.',
+        'Yaxınlığınızdakı müəllim, repetitor və təlimçiləri xəritədə tapın. Mentorix təhsil idarəetmə platformasının ictimai müəllim axtarış bölməsidir.',
       canonicalPath: '/search',
       keywords:
-        'repetitor axtarışı, müəllim tap, təlimçi, repetitor Bakı, tələbə analizləri, avtomatik ödəniş bildirişləri, Mentorix',
+        'müəllim tap, repetitor axtarışı, təlimçi, müəllim xəritəsi, Bakı, təhsil idarəetmə platforması, Mentorix',
+      breadcrumbs: [
+        { name: 'Mentorix', path: '/' },
+        { name: 'Müəllim tap', path: '/search' },
+      ],
     })
   }, [discoverFilters.category_name, discoverFilters.category_slug, discoverFilters.category_id])
 
