@@ -216,6 +216,13 @@ export default function InstructorTeachingGroups() {
       : '!border-slate-200 !text-slate-800 hover:!text-slate-900 hover:!border-slate-300 hover:bg-slate-500/10',
   ].join(' ')
 
+  const groupActionBtnCls = [
+    'text-xs px-2.5 py-2 rounded-lg border min-h-[40px] inline-flex items-center justify-center',
+    theme === 'dark'
+      ? 'border-white/10 text-gray-200 hover:bg-white/[0.06]'
+      : 'border-slate-200 text-token-textMain hover:bg-slate-50',
+  ].join(' ')
+
   return (
     <div className="p-4 sm:p-6 min-w-0 max-w-6xl mx-auto w-full space-y-6">
       <div>
@@ -289,7 +296,7 @@ export default function InstructorTeachingGroups() {
                       </div>
                       <div
                         className={[
-                          'mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-xs tabular-nums',
+                          'mt-1.5 flex flex-col gap-1 sm:flex-row sm:flex-wrap sm:gap-x-4 sm:gap-y-1 text-xs tabular-nums',
                           theme === 'dark' ? 'text-gray-400' : 'text-token-textMuted',
                         ].join(' ')}
                       >
@@ -321,8 +328,8 @@ export default function InstructorTeachingGroups() {
                   </div>
                   <div
                     className={[
-                      'pl-2 border-l space-y-2',
-                      theme === 'dark' ? 'border-indigo-500/20' : 'border-[color:var(--border-subtle)]',
+                      'space-y-3 sm:pl-3 sm:border-l',
+                      theme === 'dark' ? 'sm:border-indigo-500/20' : 'sm:border-[color:var(--border-subtle)]',
                     ].join(' ')}
                   >
                     {(s.groups || []).length === 0 ? (
@@ -330,183 +337,175 @@ export default function InstructorTeachingGroups() {
                         Qrup yoxdur
                       </p>
                     ) : (
-                      <ul className="space-y-1">
+                      <ul className="space-y-2">
                         {(s?.groups || []).filter(Boolean).map((g) => (
                           <li
                             key={g.id}
                             className={[
-                              'flex items-center justify-between gap-2 text-sm',
-                              theme === 'dark' ? 'text-gray-300' : 'text-token-textMain',
+                              'rounded-xl border p-3 space-y-2.5 text-sm',
+                              theme === 'dark'
+                                ? 'border-white/10 bg-white/[0.02] text-gray-300'
+                                : 'border-slate-200 bg-white text-token-textMain',
                             ].join(' ')}
                           >
-                            <div className="min-w-0">
-                              <div className="truncate flex items-center gap-2 flex-wrap">
-                                <span>{g.name}</span>
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2 flex-wrap font-medium">
+                                  <span className="break-words">{g.name}</span>
+                                  {g?.is_system ? (
+                                    <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded-md border border-indigo-400/30 text-indigo-200/90 shrink-0">
+                                      Sistem
+                                    </span>
+                                  ) : null}
+                                </div>
                                 {g?.is_system ? (
-                                  <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded-md border border-indigo-400/30 text-indigo-200/90">
-                                    Sistem
-                                  </span>
+                                  <div className="text-[11px] text-gray-500 mt-1 leading-relaxed">
+                                    İmtahan/tapşırıq linki ilə qoşulan iştirakçılar avtomatik əlavə olunur.
+                                  </div>
                                 ) : null}
                               </div>
-                              {g?.is_system ? (
-                                <div className="text-[11px] text-gray-500 mt-0.5">
-                                  İmtahan/tapşırıq linki ilə qoşulan iştirakçılar avtomatik əlavə olunur.
-                                </div>
-                              ) : null}
-                              {!g?.is_system && g.join_code ? (
-                                <div className="text-[11px] text-gray-500 mt-0.5 space-y-0.5">
-                                  <div>
-                                    {g.invite_ready ? (
-                                      <span className="text-emerald-400/90 font-medium">Paket hazır · </span>
-                                    ) : (
-                                      <span className="text-amber-400/90 font-medium">Paket təyin edin · </span>
-                                    )}
-                                    {g.default_billing_type === '12_lessons' ? '12 dərs' : '8 dərs'}
-                                    {g.default_package_fee != null ? ` · ${g.default_package_fee} ₼` : ''}
-                                  </div>
-                                  <div>
-                                    Kod:{' '}
-                                    <span
-                                      className={
-                                        theme === 'dark' ? 'text-gray-300 font-semibold' : 'text-token-textMain font-semibold'
-                                      }
-                                    >
-                                      {g.join_code}
-                                    </span>
-                                  </div>
-                                </div>
-                              ) : null}
                             </div>
-                            <div className="flex flex-wrap items-center justify-end gap-2 shrink-0">
-                              {!g?.is_system ? (
-                              <button
-                                type="button"
-                                className={['text-xs', theme === 'dark' ? 'text-indigo-300' : 'text-indigo-700'].join(' ')}
-                                onClick={() => openEditGroupPackage(s.id, g)}
-                              >
-                                Paket
-                              </button>
-                              ) : null}
-                              {!g?.is_system && g.join_code ? (
-                                <>
-                                  <button
-                                    type="button"
-                                    className={[
-                                      'text-xs',
-                                      theme === 'dark' ? 'text-primary hover:brightness-110' : 'text-primary hover:brightness-110',
-                                    ].join(' ')}
-                                    onClick={async () => {
-                                      try {
-                                        await navigator.clipboard.writeText(String(g.join_code))
-                                        toast('Kod kopyalandı', 'success')
-                                      } catch {
-                                        toast('Kopyalanmadı', 'error')
-                                      }
-                                    }}
-                                  >
-                                    Kod
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className={[
-                                      'text-xs',
-                                      theme === 'dark' ? 'text-primary hover:brightness-110' : 'text-primary hover:brightness-110',
-                                    ].join(' ')}
-                                    onClick={async () => {
-                                      const link = groupInvitationLink(g)
-                                      try {
-                                        await navigator.clipboard.writeText(link)
-                                        toast('Link kopyalandı', 'success')
-                                      } catch {
-                                        toast('Link kopyalanmadı', 'error')
-                                      }
-                                    }}
-                                  >
-                                    Link
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className={[
-                                      'text-xs font-semibold',
-                                      theme === 'dark' ? 'text-emerald-300 hover:brightness-110' : 'text-emerald-700 hover:brightness-110',
-                                    ].join(' ')}
-                                    title="WhatsApp üçün hazır mətn"
-                                    onClick={async () => {
-                                      const link = groupInvitationLink(g)
-                                      const text = buildWhatsAppInviteMessage(link)
-                                      try {
-                                        await navigator.clipboard.writeText(text)
-                                        toast('WhatsApp mətni kopyalandı', 'success')
-                                      } catch {
-                                        toast('Kopyalanmadı', 'error')
-                                      }
-                                    }}
-                                  >
-                                    Linki Kopyala
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className={[
-                                      'text-xs',
-                                      theme === 'dark' ? 'text-primary hover:brightness-110' : 'text-primary hover:brightness-110',
-                                    ].join(' ')}
-                                    onClick={async () => {
-                                      const link = `${window.location.origin}/join/${encodeURIComponent(String(g.join_code))}`
-                                      try {
-                                        if (navigator.share) {
-                                          await navigator.share({ title: 'Mentorix invite', text: 'Qrupa qoşul', url: link })
-                                          return
-                                        }
-                                      } catch {
-                                        /* ignore */
-                                      }
-                                      try {
-                                        await navigator.clipboard.writeText(link)
-                                        toast('Link kopyalandı', 'success')
-                                      } catch {
-                                        toast('Link kopyalanmadı', 'error')
-                                      }
-                                    }}
-                                  >
-                                    Paylaş
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className={[
-                                      'text-xs',
-                                      theme === 'dark' ? 'text-primary hover:brightness-110' : 'text-primary hover:brightness-110',
-                                    ].join(' ')}
-                                    onClick={() => {
-                                      setQrGroup({ ...g, subjectName: s.name })
-                                      setQrOpen(true)
-                                    }}
-                                  >
-                                    QR
-                                  </button>
-                                </>
-                              ) : null}
-                              {!g?.is_system ? (
-                              <button
-                                type="button"
+                            {!g?.is_system && g.join_code ? (
+                              <div
                                 className={[
-                                  'text-xs disabled:opacity-40',
-                                  theme === 'dark' ? 'text-rose-300 hover:text-rose-200' : 'text-rose-700 hover:text-rose-800',
+                                  'text-xs rounded-lg px-2.5 py-2 space-y-1',
+                                  theme === 'dark' ? 'bg-white/[0.03] text-gray-400' : 'bg-slate-50 text-token-textMuted',
                                 ].join(' ')}
-                                disabled={busy[`delg-${g.id}`]}
-                                onClick={() => requestRemoveGroup(g)}
                               >
-                                Sil
-                              </button>
-                              ) : null}
-                            </div>
+                                <p>
+                                  {g.invite_ready ? (
+                                    <span className="text-emerald-500 font-medium">Paket hazır</span>
+                                  ) : (
+                                    <span className="text-amber-600 dark:text-amber-400/90 font-medium">Paket təyin edin</span>
+                                  )}
+                                  <span className="mx-1.5">·</span>
+                                  {g.default_billing_type === '12_lessons' ? '12 dərs' : '8 dərs'}
+                                  {g.default_package_fee != null ? ` · ${g.default_package_fee} ₼` : ''}
+                                </p>
+                                <p>
+                                  Kod:{' '}
+                                  <span className="font-mono font-semibold text-token-textMain">{g.join_code}</span>
+                                </p>
+                              </div>
+                            ) : null}
+                            {!g?.is_system ? (
+                              <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
+                                <button
+                                  type="button"
+                                  className={[groupActionBtnCls, theme === 'dark' ? 'text-indigo-300' : 'text-indigo-700'].join(' ')}
+                                  onClick={() => openEditGroupPackage(s.id, g)}
+                                >
+                                  Paket
+                                </button>
+                                {g.join_code ? (
+                                  <>
+                                    <button
+                                      type="button"
+                                      className={[groupActionBtnCls, 'text-primary'].join(' ')}
+                                      onClick={async () => {
+                                        try {
+                                          await navigator.clipboard.writeText(String(g.join_code))
+                                          toast('Kod kopyalandı', 'success')
+                                        } catch {
+                                          toast('Kopyalanmadı', 'error')
+                                        }
+                                      }}
+                                    >
+                                      Kod
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className={[groupActionBtnCls, 'text-primary'].join(' ')}
+                                      onClick={async () => {
+                                        const link = groupInvitationLink(g)
+                                        try {
+                                          await navigator.clipboard.writeText(link)
+                                          toast('Link kopyalandı', 'success')
+                                        } catch {
+                                          toast('Link kopyalanmadı', 'error')
+                                        }
+                                      }}
+                                    >
+                                      Link
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className={[
+                                        groupActionBtnCls,
+                                        'col-span-2 sm:col-span-1 font-semibold',
+                                        theme === 'dark' ? 'text-emerald-300' : 'text-emerald-700',
+                                      ].join(' ')}
+                                      title="WhatsApp üçün hazır mətn"
+                                      onClick={async () => {
+                                        const link = groupInvitationLink(g)
+                                        const text = buildWhatsAppInviteMessage(link)
+                                        try {
+                                          await navigator.clipboard.writeText(text)
+                                          toast('WhatsApp mətni kopyalandı', 'success')
+                                        } catch {
+                                          toast('Kopyalanmadı', 'error')
+                                        }
+                                      }}
+                                    >
+                                      Linki Kopyala
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className={[groupActionBtnCls, 'text-primary'].join(' ')}
+                                      onClick={async () => {
+                                        const link = `${window.location.origin}/join/${encodeURIComponent(String(g.join_code))}`
+                                        try {
+                                          if (navigator.share) {
+                                            await navigator.share({ title: 'Mentorix invite', text: 'Qrupa qoşul', url: link })
+                                            return
+                                          }
+                                        } catch {
+                                          /* ignore */
+                                        }
+                                        try {
+                                          await navigator.clipboard.writeText(link)
+                                          toast('Link kopyalandı', 'success')
+                                        } catch {
+                                          toast('Link kopyalanmadı', 'error')
+                                        }
+                                      }}
+                                    >
+                                      Paylaş
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className={[groupActionBtnCls, 'text-primary'].join(' ')}
+                                      onClick={() => {
+                                        setQrGroup({ ...g, subjectName: s.name })
+                                        setQrOpen(true)
+                                      }}
+                                    >
+                                      QR
+                                    </button>
+                                  </>
+                                ) : null}
+                                <button
+                                  type="button"
+                                  className={[
+                                    groupActionBtnCls,
+                                    'disabled:opacity-40',
+                                    theme === 'dark' ? 'text-rose-300' : 'text-rose-700',
+                                  ].join(' ')}
+                                  disabled={busy[`delg-${g.id}`]}
+                                  onClick={() => requestRemoveGroup(g)}
+                                >
+                                  Sil
+                                </button>
+                              </div>
+                            ) : null}
                           </li>
                         ))}
                       </ul>
                     )}
                     {!s.is_system ? (
-                    <div className="flex flex-col sm:flex-row gap-2 pt-1">
+                    <div className="flex flex-col gap-2 pt-1">
                       <input
-                        className={inp + ' text-xs'}
+                        className={inp + ' text-sm'}
                         placeholder="Yeni qrup adı"
                         value={newGroupBySubject[s.id] || ''}
                         onChange={(e) =>
@@ -521,7 +520,7 @@ export default function InstructorTeachingGroups() {
                         size="sm"
                         variant="secondary"
                         onClick={() => openCreateGroup(s.id)}
-                        className={secondaryBtnCls}
+                        className={[secondaryBtnCls, 'w-full sm:w-auto justify-center'].join(' ')}
                       >
                         Qrup + paket
                       </Button>
