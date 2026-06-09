@@ -148,17 +148,47 @@ export default function InstructorDiscoverSettings({ mapVisible, theme, inp }) {
     }
   }
 
+  const sectionTitleCls = [
+    'text-[11px] font-bold uppercase tracking-wider mb-2.5',
+    theme === 'dark' ? 'text-gray-400' : 'text-token-textMuted',
+  ].join(' ')
+
+  const fieldLabelCls = ['text-xs block mb-1.5', theme === 'dark' ? 'text-gray-400' : 'text-token-textMuted'].join(' ')
+
+  const chipBaseCls = [
+    'text-xs rounded-xl border text-left transition-colors min-h-[44px] px-3 py-2.5 leading-snug',
+    theme === 'dark' ? 'border-white/10' : 'border-slate-200 bg-white',
+  ].join(' ')
+
+  const chipActiveCls =
+    theme === 'dark'
+      ? 'border-primary/50 bg-primary/15 text-primary font-medium'
+      : 'border-primary/40 bg-primary/5 text-token-textMain font-medium'
+
+  const chipIdleCls =
+    theme === 'dark' ? 'text-gray-300 hover:border-white/20' : 'text-token-textMuted hover:border-slate-300'
+
   if (loading) {
     return (
-      <Card className="animate-pulse h-32" title="Tələbə tapma profili">
-        <div className="h-20 bg-white/5 rounded-lg" />
+      <Card className="animate-pulse h-32 p-5">
+        <div className="h-20 bg-black/5 dark:bg-white/5 rounded-lg" />
       </Card>
     )
   }
 
   return (
-    <Card id="discover-profile" title="Valideynlər / Tələbələr məni tapa bilsin">
-      <p className={['text-sm mb-4', theme === 'dark' ? 'text-gray-400' : 'text-token-textMuted'].join(' ')}>
+    <Card id="discover-profile" className="p-4 sm:p-5 space-y-4 border border-indigo-500/20">
+      <div>
+        <h2
+          className={[
+            'text-sm font-semibold uppercase tracking-wider',
+            theme === 'dark' ? 'text-indigo-200/90' : 'text-token-textMain',
+          ].join(' ')}
+        >
+          Valideynlər / Tələbələr məni tapa bilsin
+        </h2>
+      </div>
+      <p className={['text-sm', theme === 'dark' ? 'text-gray-400' : 'text-token-textMuted'].join(' ')}>
         Axtarışda görünmək üçün xəritə pinini aktiv edin və fənn, format və rayonları seçin.
         {!mapVisible ? (
           <span className="block text-amber-400/90 mt-1 text-xs">Xəritə görünürlüyü hal-hazırda bağlıdır.</span>
@@ -179,26 +209,46 @@ export default function InstructorDiscoverSettings({ mapVisible, theme, inp }) {
         </div>
       )}
 
-      <div className="space-y-4">
-        <div>
-          <p className="text-xs font-bold text-gray-500 uppercase mb-2">Dərs formatları</p>
-          <div className="flex flex-col gap-2">
-            {FORMAT_OPTS.map((opt) => (
-              <label key={opt.id} className="flex items-center gap-2 text-sm text-gray-200 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={formats.includes(opt.id)}
-                  onChange={() => toggleFormat(opt.id)}
-                  className="accent-indigo-500 rounded"
-                />
-                {opt.label}
-              </label>
-            ))}
+      <div className="space-y-5">
+        <section>
+          <p className={sectionTitleCls}>Dərs formatları</p>
+          <div className="grid gap-2">
+            {FORMAT_OPTS.map((opt) => {
+              const active = formats.includes(opt.id)
+              return (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => toggleFormat(opt.id)}
+                  className={[
+                    'w-full flex items-center gap-3 rounded-xl border px-3 py-3 text-sm text-left min-h-[48px]',
+                    theme === 'dark' ? 'transition-colors' : 'transition-colors shadow-sm',
+                    active ? chipActiveCls : chipIdleCls,
+                    theme === 'dark' && !active ? 'bg-white/[0.03]' : '',
+                  ].join(' ')}
+                >
+                  <span
+                    className={[
+                      'shrink-0 w-5 h-5 rounded-md border flex items-center justify-center text-[11px]',
+                      active
+                        ? 'border-primary bg-primary text-[#041018] font-bold'
+                        : theme === 'dark'
+                          ? 'border-white/20 text-transparent'
+                          : 'border-slate-300 text-transparent',
+                    ].join(' ')}
+                    aria-hidden
+                  >
+                    ✓
+                  </span>
+                  <span className="min-w-0 break-words">{opt.label}</span>
+                </button>
+              )
+            })}
           </div>
-        </div>
+        </section>
 
-        <div>
-          <p className="text-xs font-bold text-gray-500 uppercase mb-2">Tədris etdiyiniz fənlər</p>
+        <section>
+          <p className={sectionTitleCls}>Tədris etdiyiniz fənlər</p>
           <input
             type="search"
             value={catSearch}
@@ -207,12 +257,20 @@ export default function InstructorDiscoverSettings({ mapVisible, theme, inp }) {
             className={inp}
           />
           {catSuggestions.length > 0 ? (
-            <ul className="mt-1 rounded-lg border border-white/10 bg-[#1a1a2e] max-h-36 overflow-y-auto">
+            <ul
+              className={[
+                'mt-2 rounded-xl border max-h-40 overflow-y-auto',
+                theme === 'dark' ? 'border-white/10 bg-[#1a1a2e]' : 'border-slate-200 bg-white shadow-md',
+              ].join(' ')}
+            >
               {catSuggestions.map((c) => (
-                <li key={c.id}>
+                <li key={c.id} className="border-b last:border-b-0 border-black/5 dark:border-white/5">
                   <button
                     type="button"
-                    className="w-full text-left px-3 py-2 text-sm hover:bg-primary/10"
+                    className={[
+                      'w-full text-left px-3 py-3 text-sm min-h-[44px]',
+                      theme === 'dark' ? 'hover:bg-primary/10 text-gray-100' : 'hover:bg-primary/5 text-token-textMain',
+                    ].join(' ')}
                     onClick={() => addCategory(c)}
                   >
                     {c.name_az}
@@ -221,41 +279,61 @@ export default function InstructorDiscoverSettings({ mapVisible, theme, inp }) {
               ))}
             </ul>
           ) : null}
-          <div className="flex flex-wrap gap-1.5 mt-2">
-            {pickedCats.map((c) => (
-              <span
-                key={c.id}
-                className="text-xs px-2 py-1 rounded-lg bg-primary/15 border border-primary/30 text-primary"
-              >
-                {c.name_az}
-                <button
-                  type="button"
-                  className="ml-1 opacity-70 hover:opacity-100"
-                  onClick={() => {
-                    setCategoryIds((ids) => ids.filter((id) => id !== c.id))
-                    setPickedCats((list) => list.filter((x) => x.id !== c.id))
-                  }}
+          {pickedCats.length > 0 ? (
+            <div className="flex flex-wrap gap-2 mt-3">
+              {pickedCats.map((c) => (
+                <span
+                  key={c.id}
+                  className={[
+                    'inline-flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-xl border max-w-full',
+                    theme === 'dark'
+                      ? 'bg-primary/15 border-primary/30 text-primary'
+                      : 'bg-primary/5 border-primary/25 text-token-textMain',
+                  ].join(' ')}
                 >
-                  ×
-                </button>
-              </span>
-            ))}
-          </div>
-        </div>
+                  <span className="truncate">{c.name_az}</span>
+                  <button
+                    type="button"
+                    className="shrink-0 w-5 h-5 rounded-md opacity-70 hover:opacity-100 leading-none"
+                    aria-label={`${c.name_az} sil`}
+                    onClick={() => {
+                      setCategoryIds((ids) => ids.filter((id) => id !== c.id))
+                      setPickedCats((list) => list.filter((x) => x.id !== c.id))
+                    }}
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p className={['text-xs mt-2', theme === 'dark' ? 'text-gray-500' : 'text-token-textMuted'].join(' ')}>
+              Ən azı bir fənn əlavə edin.
+            </p>
+          )}
+        </section>
 
         {formats.includes('student_place') || formats.includes('teacher_place') ? (
-          <div>
-            <p className="text-xs font-bold text-gray-500 uppercase mb-2">
-              Rayon / şəhər / metro (canlı dərs)
-            </p>
+          <section>
+            <div className="flex items-center justify-between gap-2 mb-2.5">
+              <p className={[sectionTitleCls, 'mb-0'].join(' ')}>Rayon / şəhər / metro (canlı dərs)</p>
+              {areaIds.length > 0 ? (
+                <span className="text-[10px] font-semibold text-primary shrink-0">{areaIds.length} seçilib</span>
+              ) : null}
+            </div>
             <input
               type="search"
               value={areaFilter}
               onChange={(e) => setAreaFilter(e.target.value)}
               placeholder="Rayon axtar… (məs. Gəncə, Lənkəran)"
-              className={`${inp} mb-2`}
+              className={inp}
             />
-            <div className="max-h-52 overflow-y-auto space-y-3 pr-1">
+            <div
+              className={[
+                'mt-3 max-h-56 overflow-y-auto space-y-4 rounded-xl border p-3',
+                theme === 'dark' ? 'border-white/10 bg-white/[0.02]' : 'border-slate-200 bg-slate-50/80',
+              ].join(' ')}
+            >
               {[
                 ['Populyar', areaGroups.popular],
                 ['Bakı rayonları', areaGroups.bakuDistricts],
@@ -266,18 +344,17 @@ export default function InstructorDiscoverSettings({ mapVisible, theme, inp }) {
                 if (!shown.length) return null
                 return (
                   <div key={label}>
-                    <p className="text-[10px] font-bold text-gray-500 uppercase mb-1.5">{label}</p>
-                    <div className="flex flex-wrap gap-1.5">
+                    <p className={[sectionTitleCls, 'mb-2 text-[10px]'].join(' ')}>{label}</p>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                       {shown.map((a) => (
                         <button
                           key={a.id}
                           type="button"
                           onClick={() => toggleArea(a.id)}
-                          className={`text-xs px-2 py-1 rounded-lg border ${
-                            areaIds.includes(a.id)
-                              ? 'border-primary/50 bg-primary/15 text-primary'
-                              : 'border-white/10 text-gray-400'
-                          }`}
+                          className={[
+                            chipBaseCls,
+                            areaIds.includes(a.id) ? chipActiveCls : chipIdleCls,
+                          ].join(' ')}
                         >
                           {a.name_az}
                         </button>
@@ -287,30 +364,29 @@ export default function InstructorDiscoverSettings({ mapVisible, theme, inp }) {
                 )
               })}
             </div>
-          </div>
+          </section>
         ) : null}
 
         {formats.includes('teacher_place') ? (
-          <div>
-            <label className="text-xs text-gray-500 block mb-1">Dərs keçdiyiniz ünvan (qısa)</label>
+          <section>
+            <label className={fieldLabelCls}>Dərs keçdiyiniz ünvan (qısa)</label>
             <input value={address} onChange={(e) => setAddress(e.target.value)} className={inp} />
-          </div>
+          </section>
         ) : null}
 
-        <div className="grid sm:grid-cols-2 gap-3">
-          <div>
-            <label className="text-xs text-gray-500 block mb-1">Saatlıq qiymət (AZN)</label>
-            <input
-              type="number"
-              min="0"
-              value={hourlyRate}
-              onChange={(e) => setHourlyRate(e.target.value)}
-              className={inp}
-            />
-          </div>
-        </div>
-        <div>
-          <label className="text-xs text-gray-500 block mb-1">Haqqımda (ictimai profil)</label>
+        <section>
+          <label className={fieldLabelCls}>Saatlıq qiymət (AZN)</label>
+          <input
+            type="number"
+            min="0"
+            value={hourlyRate}
+            onChange={(e) => setHourlyRate(e.target.value)}
+            className={inp}
+            inputMode="decimal"
+          />
+        </section>
+        <section>
+          <label className={fieldLabelCls}>Haqqımda (ictimai profil)</label>
           <textarea
             value={bio}
             onChange={(e) => setBio(e.target.value)}
@@ -318,9 +394,9 @@ export default function InstructorDiscoverSettings({ mapVisible, theme, inp }) {
             placeholder="10 illik təcrübəyə malik… Python, SQL və Tableau dərsləri keçirəm."
             className={`${inp} resize-y min-h-[5rem]`}
           />
-        </div>
-        <div>
-          <label className="text-xs text-gray-500 block mb-1">Təhsil</label>
+        </section>
+        <section>
+          <label className={fieldLabelCls}>Təhsil</label>
           <textarea
             value={education}
             onChange={(e) => setEducation(e.target.value)}
@@ -328,9 +404,9 @@ export default function InstructorDiscoverSettings({ mapVisible, theme, inp }) {
             placeholder="Məs: BDU — Tətbiqi riyaziyyat"
             className={`${inp} resize-y`}
           />
-        </div>
-        <div>
-          <label className="text-xs text-gray-500 block mb-1">Sertifikatlar</label>
+        </section>
+        <section>
+          <label className={fieldLabelCls}>Sertifikatlar</label>
           <textarea
             value={certifications}
             onChange={(e) => setCertifications(e.target.value)}
@@ -338,15 +414,15 @@ export default function InstructorDiscoverSettings({ mapVisible, theme, inp }) {
             placeholder="Məs: Microsoft Certified Data Analyst"
             className={`${inp} resize-y`}
           />
-        </div>
+        </section>
 
-        <div className="flex flex-wrap gap-2">
-          <Button type="button" loading={saving} onClick={() => void save()}>
+        <div className="flex flex-col sm:flex-row gap-3 pt-1">
+          <Button type="button" loading={saving} onClick={() => void save()} className="w-full sm:w-auto justify-center">
             Axtarış profilini saxla
           </Button>
           <Link
             to="/instructor/inquiries"
-            className="text-sm font-semibold text-primary hover:underline self-center px-2"
+            className="text-sm font-semibold text-primary hover:underline self-center text-center px-2 py-2"
           >
             Xəritə müraciətləri →
           </Link>
