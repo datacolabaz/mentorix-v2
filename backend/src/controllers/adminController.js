@@ -499,6 +499,8 @@ const deleteStudent = async (req, res) => {
       await client.query('DELETE FROM exam_assignments WHERE student_id = $1', [studentId]).catch(() => {});
       await client.query('DELETE FROM notifications WHERE user_id = $1', [studentId]).catch(() => {});
       await client.query('DELETE FROM student_profiles WHERE user_id = $1', [studentId]).catch(() => {});
+      // SMS tarixçəsi müəllim üçün qalsın; student_id FK bloklamasın
+      await client.query('UPDATE sms_logs SET student_id = NULL WHERE student_id = $1', [studentId]).catch(() => {});
 
       // Billing/subscription artifacts linked by user_id (optional, but requested: delete everything)
       await client.query('DELETE FROM subscriptions WHERE user_id = $1', [studentId]).catch(() => {});
