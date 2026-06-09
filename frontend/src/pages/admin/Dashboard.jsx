@@ -4,13 +4,17 @@ import api from '../../lib/api'
 import Card from '../../components/common/Card'
 
 const StatCard = ({ label, value, icon }) => (
-  <Card className="p-5 !bg-[#F0F4F8] border-gray-200 shadow-[0_10px_30px_rgba(34,224,136,0.1)]">
-    <div className="flex items-start justify-between">
-      <div>
-        <div className="text-xs font-semibold text-[#003366] uppercase tracking-wider mb-2">{label}</div>
-        <div className="font-display font-extrabold text-3xl text-[#003366]">{value}</div>
+  <Card className="p-4 sm:p-5 !bg-[#F0F4F8] border-gray-200 shadow-[0_10px_30px_rgba(34,224,136,0.1)] overflow-hidden">
+    <div className="flex items-start gap-3">
+      <div className="min-w-0 flex-1">
+        <div className="text-[10px] sm:text-xs font-semibold text-[#003366] uppercase tracking-wider mb-2 leading-snug">
+          {label}
+        </div>
+        <div className="font-display font-extrabold text-lg sm:text-2xl xl:text-3xl text-[#003366] tabular-nums leading-tight break-words">
+          {value}
+        </div>
       </div>
-      <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl bg-gray-100 border border-gray-200">
+      <div className="w-10 h-10 sm:w-12 sm:h-12 shrink-0 rounded-2xl flex items-center justify-center text-xl sm:text-2xl bg-gray-100 border border-gray-200">
         {icon}
       </div>
     </div>
@@ -69,7 +73,7 @@ export default function AdminDashboard() {
         </div>
       ) : null}
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
         <StatCard
           label="SMS — qalan (provayder)"
           value={smsHas ? (display.sms_remaining ?? 0).toLocaleString('az-AZ') : 'Oxunmur'}
