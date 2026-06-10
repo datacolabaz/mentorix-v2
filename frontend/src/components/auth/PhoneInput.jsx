@@ -308,7 +308,6 @@ export default function PhoneInput({
           placeholder={placeholder || (countryId === 'AZ' ? (compactMobileDisplay ? '501234567' : '50 123 45 67') : 'Telefon')}
           value={masked}
           onChange={(e) => setFromRawInput(e.target.value, e.target)}
-          onInput={(e) => setFromRawInput(e.currentTarget.value, e.currentTarget)}
           maxLength={compactMobileDisplay ? (countryId === 'AZ' ? 9 : COUNTRIES.find((c) => c.id === countryId)?.max) : countryId === 'AZ' ? 13 : undefined}
         />
       </div>

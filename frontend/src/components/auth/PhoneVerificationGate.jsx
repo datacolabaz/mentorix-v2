@@ -3,7 +3,7 @@ import api from '../../lib/api'
 import useAuthStore from '../../hooks/useAuth'
 import Modal from '../common/Modal'
 import Button from '../common/Button'
-import PhoneInput from './PhoneInput'
+import AzMobilePhoneField from './AzMobilePhoneField'
 import { useToast } from '../common/Toast'
 
 const VERIFY_ROLES = new Set(['instructor'])
@@ -121,11 +121,10 @@ export default function PhoneVerificationGate() {
           <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-2">
             Mobil telefon *
           </label>
-          <PhoneInput
+          <AzMobilePhoneField
             inputId="gate-phone-input"
-            value={phone}
-            onChange={setPhone}
-            persistLoginDefaults={false}
+            defaultE164={phone}
+            onE164Change={setPhone}
           />
         </>
       ) : (

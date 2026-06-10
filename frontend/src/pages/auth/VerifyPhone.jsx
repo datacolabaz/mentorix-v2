@@ -5,7 +5,7 @@ import useAuthStore from '../../hooks/useAuth'
 import { postAuthNavigate, userNeedsPhoneVerificationPage } from '../../lib/postAuth'
 import Brand from '../../components/common/Brand'
 import Button from '../../components/common/Button'
-import PhoneInput from '../../components/auth/PhoneInput'
+import AzMobilePhoneField from '../../components/auth/AzMobilePhoneField'
 import { useToast } from '../../components/common/Toast'
 
 /**
@@ -89,7 +89,7 @@ export default function VerifyPhone() {
   }
 
   return (
-    <div className="min-h-screen bg-[#041018] flex flex-col items-center justify-center p-4">
+    <div className="theme-dark min-h-screen bg-[#041018] flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-md space-y-6">
         <div className="flex justify-center">
           <Brand />
@@ -110,11 +110,10 @@ export default function VerifyPhone() {
               >
                 Mobil telefon *
               </label>
-              <PhoneInput
+              <AzMobilePhoneField
                 inputId="verify-phone-input"
-                value={phone}
-                onChange={setPhone}
-                persistLoginDefaults={false}
+                defaultE164={user?.phone || phone}
+                onE164Change={setPhone}
               />
               <p className="text-[11px] text-zinc-500 leading-relaxed">
                 Bu mobil nömrə başqa müəllim hesabında qeydiyyatdadırsa, sistem xəbərdarlıq edəcək. Təsdiqdən sonra

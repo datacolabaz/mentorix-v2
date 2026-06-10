@@ -221,7 +221,8 @@
 /* Mobil (iOS): maximum-scale=1 + 14px input = klaviatura açılmır */
 .theme-light input.mx-phone-input-native,
 .theme-dark input.mx-phone-input-native,
-.mx-phone-input-shell input.mx-phone-input-native {
+.mx-phone-input-shell input.mx-phone-input-native,
+.mx-az-mobile-field input.mx-phone-input-native {
   font-size: 16px !important;
   min-height: 48px;
   touch-action: manipulation;
@@ -235,7 +236,8 @@
 
 .theme-light input.mx-phone-input-native::placeholder,
 .theme-dark input.mx-phone-input-native::placeholder,
-.mx-phone-input-shell input.mx-phone-input-native::placeholder {
+.mx-phone-input-shell input.mx-phone-input-native::placeholder,
+.mx-az-mobile-field input.mx-phone-input-native::placeholder {
   color: #6b7280 !important;
   -webkit-text-fill-color: #6b7280 !important;
   opacity: 1;
