@@ -94,6 +94,15 @@ function caretAfterDigitIndex(masked, digitIndex) {
   return masked.length
 }
 
+function isCoarsePointerDevice() {
+  if (typeof window === 'undefined') return false
+  try {
+    return window.matchMedia('(pointer: coarse)').matches
+  } catch {
+    return 'ontouchstart' in window
+  }
+}
+
 export default function PhoneInput({
   value,
   onChange,
@@ -123,6 +132,7 @@ export default function PhoneInput({
 
   const [country, setCountry] = useState(initialCountry)
   const [national, setNational] = useState('')
+  const compactMobileDisplay = useMemo(() => isCoarsePointerDevice(), [])
 
   useEffect(() => {
     if (didHydrateFromStorage.current) return
@@ -202,7 +212,11 @@ export default function PhoneInput({
 
   const countryId = country?.id || COUNTRIES[0]?.id || 'AZ'
 
-  const masked = useMemo(() => formatNationalDisplay(countryId, national), [countryId, national])
+  const masked = useMemo(() => {
+    const digits = onlyDigits(national)
+    if (compactMobileDisplay) return digits
+    return formatNationalDisplay(countryId, national)
+  }, [countryId, national, compactMobileDisplay])
 
   const outboundE164 = useMemo(
     () => outboundFromNational(countryId, country, national),
@@ -249,6 +263,8 @@ export default function PhoneInput({
     setCountry(nextCountry)
     setNational(nextNational)
 
+    if (compactMobileDisplay || !el) return
+
     const nextMasked = formatNationalDisplay(nextCountry?.id || countryId, nextNational)
     requestAnimationFrame(() => {
       if (!el) return
@@ -280,16 +296,20 @@ export default function PhoneInput({
           id={inputId}
           name={inputId}
           type="tel"
-          inputMode="tel"
-          autoComplete="tel"
+          inputMode="numeric"
+          autoComplete="tel-national"
+          autoCorrect="off"
+          autoCapitalize="off"
+          spellCheck={false}
           autoFocus={autoFocus}
           required={required}
-          className="mx-phone-input-native flex-1 min-w-0 bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-3 text-white font-mono tabular-nums tracking-wide outline-none focus:border-blue-500 min-h-[48px]"
+          className="mx-phone-input-native flex-1 min-w-0 bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-3 text-white font-mono tabular-nums tracking-wide outline-none focus:border-blue-500 min-h-[48px] touch-manipulation"
           style={{ fontSize: '16px' }}
-          placeholder={placeholder || (countryId === 'AZ' ? '50 123 45 67' : 'Telefon')}
+          placeholder={placeholder || (countryId === 'AZ' ? (compactMobileDisplay ? '501234567' : '50 123 45 67') : 'Telefon')}
           value={masked}
           onChange={(e) => setFromRawInput(e.target.value, e.target)}
-          maxLength={countryId === 'AZ' ? 13 : undefined}
+          onInput={(e) => setFromRawInput(e.currentTarget.value, e.currentTarget)}
+          maxLength={compactMobileDisplay ? (countryId === 'AZ' ? 9 : COUNTRIES.find((c) => c.id === countryId)?.max) : countryId === 'AZ' ? 13 : undefined}
         />
       </div>
       <div className="min-h-[1.35rem] mt-1.5">
