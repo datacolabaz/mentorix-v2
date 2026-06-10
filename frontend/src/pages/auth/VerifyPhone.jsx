@@ -115,7 +115,6 @@ export default function VerifyPhone() {
                 value={phone}
                 onChange={setPhone}
                 persistLoginDefaults={false}
-                autoFocus
               />
               <p className="text-[11px] text-zinc-500 leading-relaxed">
                 Bu mobil nömrə başqa müəllim hesabında qeydiyyatdadırsa, sistem xəbərdarlıq edəcək. Təsdiqdən sonra

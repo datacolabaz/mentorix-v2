@@ -16,7 +16,7 @@ import {
   MENTORIX_SEO_KEYWORDS,
   MENTORIX_SEO_TITLE,
 } from '../../lib/mentorixPublicMarketing'
-import { postAuthNavigate } from '../../lib/postAuth'
+import { postAuthNavigate, userNeedsPhoneVerificationPage } from '../../lib/postAuth'
 
 const TRUST_STUDENTS_FLOOR = 100
 const TRUST_INSTRUCTORS_FLOOR = 15
@@ -109,9 +109,15 @@ export default function Login() {
     [marketing],
   )
 
-  const { login } = useAuthStore()
+  const { login, logout } = useAuthStore()
   const navigate = useNavigate()
   const toast = useToast()
+
+  /** Yarımçıq Google sessiyası verify-phone-a kilidləyir — login səhifəsində təmizlə */
+  useEffect(() => {
+    const u = useAuthStore.getState().user
+    if (userNeedsPhoneVerificationPage(u)) logout()
+  }, [logout])
   const roleMap = { admin: '/admin', instructor: '/instructor', student: '/student', parent: '/parent', course: '/course' }
 
   const goDashboard = (roleOrUser) => {

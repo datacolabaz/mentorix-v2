@@ -126,7 +126,6 @@ export default function PhoneVerificationGate() {
             value={phone}
             onChange={setPhone}
             persistLoginDefaults={false}
-            autoFocus
           />
         </>
       ) : (

@@ -176,26 +176,12 @@ export default function PhoneInput({
       if (e.key === 'Escape') setOpen(false)
     }
     document.addEventListener('mousedown', onDoc)
-    document.addEventListener('touchstart', onDoc, { passive: true })
     document.addEventListener('keydown', onKey)
     return () => {
       document.removeEventListener('mousedown', onDoc)
-      document.removeEventListener('touchstart', onDoc)
       document.removeEventListener('keydown', onKey)
     }
   }, [])
-
-  useEffect(() => {
-    if (!autoFocus || !inputRef.current) return undefined
-    const t = window.setTimeout(() => {
-      try {
-        inputRef.current?.focus({ preventScroll: true })
-      } catch {
-        inputRef.current?.focus()
-      }
-    }, 350)
-    return () => window.clearTimeout(t)
-  }, [autoFocus])
 
   useEffect(() => {
     if (!open) return undefined
@@ -275,14 +261,6 @@ export default function PhoneInput({
     })
   }
 
-  const focusPhoneInput = () => {
-    try {
-      inputRef.current?.focus({ preventScroll: true })
-    } catch {
-      inputRef.current?.focus()
-    }
-  }
-
   return (
     <div ref={rootRef} className={['mx-phone-input-shell relative z-10', className].filter(Boolean).join(' ')}>
       <div className="flex items-stretch gap-2">
@@ -302,23 +280,15 @@ export default function PhoneInput({
           id={inputId}
           name={inputId}
           type="tel"
-          inputMode="numeric"
-          autoComplete="tel-national"
-          autoCorrect="off"
-          autoCapitalize="off"
-          spellCheck={false}
+          inputMode="tel"
+          autoComplete="tel"
           autoFocus={autoFocus}
           required={required}
-          className="mx-phone-input-native flex-1 min-w-0 bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-3 text-white text-base font-mono tabular-nums tracking-wide outline-none focus:border-blue-500 min-h-[48px] touch-manipulation"
+          className="mx-phone-input-native flex-1 min-w-0 bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-3 text-white font-mono tabular-nums tracking-wide outline-none focus:border-blue-500 min-h-[48px]"
           style={{ fontSize: '16px' }}
           placeholder={placeholder || (countryId === 'AZ' ? '50 123 45 67' : 'Telefon')}
           value={masked}
           onChange={(e) => setFromRawInput(e.target.value, e.target)}
-          onClick={focusPhoneInput}
-          onTouchEnd={(e) => {
-            e.stopPropagation()
-            focusPhoneInput()
-          }}
           maxLength={countryId === 'AZ' ? 13 : undefined}
         />
       </div>

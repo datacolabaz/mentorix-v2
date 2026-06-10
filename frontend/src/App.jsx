@@ -126,7 +126,16 @@ export default function App() {
       ))}
       <Route path="/muellim-paneli" element={<Navigate to="/muellimler-ucun" replace />} />
       <Route path="/teachers/:id" element={<PublicInstructorProfile />} />
-      <Route path="/login" element={user ? <Navigate to={postLoginPath(user)} replace /> : <Login />} />
+      <Route
+        path="/login"
+        element={
+          user && !userNeedsPhoneVerificationPage(user) ? (
+            <Navigate to={postLoginPath(user)} replace />
+          ) : (
+            <Login />
+          )
+        }
+      />
       <Route path="/verify-email" element={<VerifyEmail />} />
       <Route
         path="/verify-phone"
@@ -149,7 +158,15 @@ export default function App() {
           </ProtectedRoute>
         }
       />
-      <Route path="/" element={<Navigate to={user ? postLoginPath(user) : '/login'} />} />
+      <Route
+        path="/"
+        element={
+          <Navigate
+            to={user && !userNeedsPhoneVerificationPage(user) ? postLoginPath(user) : '/login'}
+            replace
+          />
+        }
+      />
 
       <Route
         path="/join/:code"
