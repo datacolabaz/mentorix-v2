@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../../lib/api'
 import useAuthStore from '../../hooks/useAuth'
+import { applyDocumentTheme } from '../../hooks/useUi'
 import { postAuthNavigate, userNeedsPhoneVerificationPage } from '../../lib/postAuth'
 import Brand from '../../components/common/Brand'
 import Button from '../../components/common/Button'
@@ -19,13 +20,21 @@ export default function VerifyPhone() {
   const [phone, setPhone] = useState(user?.phone || '')
   const [code, setCode] = useState('')
   const [busy, setBusy] = useState(false)
+  const sessionChecked = useRef(false)
 
   useEffect(() => {
-    if (!user) return
-    if (user.role !== 'instructor') {
-      postAuthNavigate(user, navigate)
+    applyDocumentTheme('dark')
+  }, [])
+
+  useEffect(() => {
+    if (sessionChecked.current) return
+    const current = useAuthStore.getState().user
+    if (!current) return
+    if (current.role !== 'instructor') {
+      postAuthNavigate(current, navigate)
       return
     }
+    sessionChecked.current = true
     void (async () => {
       try {
         const data = await api.get('/auth/me')
@@ -36,10 +45,10 @@ export default function VerifyPhone() {
           }
         }
       } catch {
-        /* ignore */
+        sessionChecked.current = false
       }
     })()
-  }, [user, navigate, setSession])
+  }, [navigate, setSession])
 
   const sendOtp = async () => {
     setBusy(true)
@@ -129,13 +138,13 @@ export default function VerifyPhone() {
                 <strong className="text-white">{phone}</strong> nömrəsinə göndərilən 6 rəqəmli kodu daxil edin.
               </p>
               <input
-                className="w-full bg-surface-1 border border-white/10 rounded-xl px-4 py-3 text-white text-center text-2xl font-bold tracking-[0.35em] outline-none focus:border-primary/40 min-h-[48px] touch-manipulation"
-                style={{ fontSize: '16px' }}
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                autoComplete="one-time-code"
+                className="mx-auth-tel-input w-full text-center text-2xl font-bold tracking-[0.35em] min-h-[48px]"
                 placeholder="000000"
                 maxLength={6}
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                autoFocus
                 value={code}
                 onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
               />

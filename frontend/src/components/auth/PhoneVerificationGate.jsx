@@ -122,6 +122,7 @@ export default function PhoneVerificationGate() {
             Mobil telefon *
           </label>
           <AzMobilePhoneField
+            key={`gate-phone-${open ? 'open' : 'closed'}`}
             inputId="gate-phone-input"
             defaultE164={phone}
             onE164Change={setPhone}
@@ -133,13 +134,13 @@ export default function PhoneVerificationGate() {
             <strong className="text-white">{phone}</strong> nömrəsinə göndərilən 6 rəqəmli kodu daxil edin.
           </p>
           <input
-            className="w-full bg-surface-1 border border-white/10 rounded-xl px-4 py-3 text-white text-center text-2xl font-bold tracking-[0.35em] outline-none focus:border-primary/40 min-h-[48px] touch-manipulation"
-            style={{ fontSize: '16px' }}
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            autoComplete="one-time-code"
+            className="mx-auth-tel-input w-full text-center text-2xl font-bold tracking-[0.35em] min-h-[48px]"
             placeholder="000000"
             maxLength={6}
-            inputMode="numeric"
-            autoComplete="one-time-code"
-            autoFocus
             value={code}
             onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
           />

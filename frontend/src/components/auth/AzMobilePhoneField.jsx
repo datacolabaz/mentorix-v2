@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { canonicalAzPhoneE164, isValidAzMobileNational, nationalFromE164, onlyDigits } from '../../lib/azPhone'
 
 function digitsFromE164(value) {
@@ -11,9 +11,15 @@ function e164FromDigits(digits) {
   return canonicalAzPhoneE164(`+994${d}`) || `+994${d}`
 }
 
+function isIosLike() {
+  if (typeof navigator === 'undefined') return false
+  const ua = navigator.userAgent || ''
+  if (/iPad|iPhone|iPod/i.test(ua)) return true
+  return navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1
+}
+
 /**
- * OTP / təsdiq axınları üçün sadə AZ mobil input.
- * PhoneInput maskası iOS Safari-də controlled input-u pozur — burada yalnız 9 rəqəm.
+ * OTP / təsdiq axınları — iOS Safari üçün uncontrolled input + readOnly unlock.
  */
 export default function AzMobilePhoneField({
   defaultE164 = '',
@@ -21,24 +27,40 @@ export default function AzMobilePhoneField({
   inputId = 'az-mobile-phone',
   className,
 }) {
-  const [digits, setDigits] = useState(() => digitsFromE164(defaultE164))
+  const inputRef = useRef(null)
+  const [displayDigits, setDisplayDigits] = useState(() => digitsFromE164(defaultE164))
+  const [iosLocked, setIosLocked] = useState(() => isIosLike())
 
-  const emit = useCallback(
-    (nextDigits) => {
-      const d = onlyDigits(nextDigits).slice(0, 9)
-      setDigits(d)
+  const unlockAndFocus = useCallback(() => {
+    setIosLocked(false)
+    const el = inputRef.current
+    if (!el) return
+    window.setTimeout(() => {
+      try {
+        el.focus({ preventScroll: true })
+      } catch {
+        el.focus()
+      }
+    }, 0)
+  }, [])
+
+  const handleInput = useCallback(
+    (e) => {
+      const d = onlyDigits(e.target.value).slice(0, 9)
+      if (e.target.value !== d) e.target.value = d
+      setDisplayDigits(d)
       onE164Change?.(e164FromDigits(d))
     },
     [onE164Change],
   )
 
-  const invalid = digits.length > 0 && (digits.length !== 9 || !isValidAzMobileNational(digits))
+  const invalid = displayDigits.length > 0 && (displayDigits.length !== 9 || !isValidAzMobileNational(displayDigits))
 
   return (
     <div className={['mx-az-mobile-field', className].filter(Boolean).join(' ')}>
       <div className="flex items-stretch gap-2">
         <div
-          className="shrink-0 flex items-center gap-1.5 px-2.5 sm:px-3 min-h-[48px] rounded-xl bg-[#13112e] border border-indigo-500/20 text-gray-200 text-sm"
+          className="shrink-0 flex items-center gap-1.5 px-2.5 sm:px-3 min-h-[48px] rounded-xl bg-[#13112e] border border-indigo-500/20 text-gray-200 text-sm select-none"
           aria-hidden
         >
           <span className="text-base leading-none">🇦🇿</span>
@@ -46,9 +68,10 @@ export default function AzMobilePhoneField({
         </div>
 
         <input
+          ref={inputRef}
           id={inputId}
           name={inputId}
-          type="tel"
+          type="text"
           inputMode="numeric"
           pattern="[0-9]*"
           autoComplete="tel-national"
@@ -57,12 +80,16 @@ export default function AzMobilePhoneField({
           spellCheck={false}
           enterKeyHint="done"
           required
-          className="mx-phone-input-native flex-1 min-w-0 bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-3 text-white font-mono tabular-nums outline-none focus:border-blue-500 min-h-[48px]"
-          style={{ fontSize: '16px', WebkitAppearance: 'none', appearance: 'none' }}
+          readOnly={iosLocked}
+          defaultValue={digitsFromE164(defaultE164)}
+          className="mx-auth-tel-input flex-1 min-w-0 rounded-xl px-4 py-3 font-mono tabular-nums outline-none min-h-[48px]"
           placeholder="501234567"
-          value={digits}
           maxLength={9}
-          onChange={(e) => emit(e.target.value)}
+          onTouchStart={unlockAndFocus}
+          onClick={unlockAndFocus}
+          onFocus={unlockAndFocus}
+          onInput={handleInput}
+          onChange={handleInput}
         />
       </div>
       <div className="min-h-[1.35rem] mt-1.5">

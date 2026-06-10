@@ -143,10 +143,10 @@
 }
 
 /* Form controls: gündüz = ağ fon + tünd mətn (bütün panel) */
-.theme-light input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='color']):not([type='file']):not([type='button']):not([type='submit']):not([type='reset']):not([type='hidden']):not([type='image']),
+.theme-light input:not(.mx-auth-tel-input):not([type='checkbox']):not([type='radio']):not([type='range']):not([type='color']):not([type='file']):not([type='button']):not([type='submit']):not([type='reset']):not([type='hidden']):not([type='image']),
 .theme-light textarea,
 .theme-light select,
-.theme-dark input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='color']):not([type='file']):not([type='button']):not([type='submit']):not([type='reset']):not([type='hidden']):not([type='image']),
+.theme-dark input:not(.mx-auth-tel-input):not([type='checkbox']):not([type='radio']):not([type='range']):not([type='color']):not([type='file']):not([type='button']):not([type='submit']):not([type='reset']):not([type='hidden']):not([type='image']),
 .theme-dark textarea,
 .theme-dark select {
   color: rgb(var(--field-text)) !important;
@@ -218,28 +218,51 @@
 }
 .animate-fade-up { animation: fade-up 0.3s ease forwards; }
 
-/* Mobil (iOS): maximum-scale=1 + 14px input = klaviatura açılmır */
+/* Mobil (iOS): minimum 16px; -webkit-text-fill-color inputda klaviaturanı pozur */
 .theme-light input.mx-phone-input-native,
 .theme-dark input.mx-phone-input-native,
-.mx-phone-input-shell input.mx-phone-input-native,
-.mx-az-mobile-field input.mx-phone-input-native {
+.mx-phone-input-shell input.mx-phone-input-native {
   font-size: 16px !important;
   min-height: 48px;
   touch-action: manipulation;
   -webkit-user-select: text;
   user-select: text;
   color: #fff !important;
-  -webkit-text-fill-color: #fff !important;
   background-color: #13112e !important;
   caret-color: #fff;
 }
 
 .theme-light input.mx-phone-input-native::placeholder,
 .theme-dark input.mx-phone-input-native::placeholder,
-.mx-phone-input-shell input.mx-phone-input-native::placeholder,
-.mx-az-mobile-field input.mx-phone-input-native::placeholder {
+.mx-phone-input-shell input.mx-phone-input-native::placeholder {
   color: #6b7280 !important;
-  -webkit-text-fill-color: #6b7280 !important;
+  opacity: 1;
+}
+
+/* OTP / verify-phone — theme-light html altında da işləsin */
+input.mx-auth-tel-input,
+.mx-auth-tel-input {
+  font-size: 16px !important;
+  min-height: 48px;
+  line-height: 1.25;
+  touch-action: manipulation;
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-appearance: none;
+  appearance: none;
+  color: #ffffff;
+  background-color: #13112e;
+  border: 1px solid rgba(99, 102, 241, 0.28);
+  caret-color: #ffffff;
+}
+
+input.mx-auth-tel-input:focus {
+  border-color: rgba(59, 130, 246, 0.65);
+  outline: none;
+}
+
+input.mx-auth-tel-input::placeholder {
+  color: #6b7280;
   opacity: 1;
 }
 
