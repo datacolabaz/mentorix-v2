@@ -121,7 +121,13 @@ export default function PhoneVerificationGate() {
           <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-2">
             Mobil telefon *
           </label>
-          <PhoneInput value={phone} onChange={setPhone} persistLoginDefaults={false} />
+          <PhoneInput
+            inputId="gate-phone-input"
+            value={phone}
+            onChange={setPhone}
+            persistLoginDefaults={false}
+            autoFocus
+          />
         </>
       ) : (
         <>
@@ -129,10 +135,13 @@ export default function PhoneVerificationGate() {
             <strong className="text-white">{phone}</strong> nömrəsinə göndərilən 6 rəqəmli kodu daxil edin.
           </p>
           <input
-            className="w-full bg-surface-1 border border-white/10 rounded-xl px-4 py-3 text-white text-center text-2xl font-bold tracking-[0.35em] outline-none focus:border-primary/40"
+            className="w-full bg-surface-1 border border-white/10 rounded-xl px-4 py-3 text-white text-center text-2xl font-bold tracking-[0.35em] outline-none focus:border-primary/40 min-h-[48px] touch-manipulation"
+            style={{ fontSize: '16px' }}
             placeholder="000000"
             maxLength={6}
             inputMode="numeric"
+            autoComplete="one-time-code"
+            autoFocus
             value={code}
             onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
           />

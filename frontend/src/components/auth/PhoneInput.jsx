@@ -102,6 +102,7 @@ export default function PhoneInput({
   autoFocus,
   required,
   persistLoginDefaults = true,
+  inputId = 'mx-phone-input',
 }) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
@@ -175,12 +176,26 @@ export default function PhoneInput({
       if (e.key === 'Escape') setOpen(false)
     }
     document.addEventListener('mousedown', onDoc)
+    document.addEventListener('touchstart', onDoc, { passive: true })
     document.addEventListener('keydown', onKey)
     return () => {
       document.removeEventListener('mousedown', onDoc)
+      document.removeEventListener('touchstart', onDoc)
       document.removeEventListener('keydown', onKey)
     }
   }, [])
+
+  useEffect(() => {
+    if (!autoFocus || !inputRef.current) return undefined
+    const t = window.setTimeout(() => {
+      try {
+        inputRef.current?.focus({ preventScroll: true })
+      } catch {
+        inputRef.current?.focus()
+      }
+    }, 350)
+    return () => window.clearTimeout(t)
+  }, [autoFocus])
 
   useEffect(() => {
     if (!open) return undefined
@@ -260,13 +275,21 @@ export default function PhoneInput({
     })
   }
 
+  const focusPhoneInput = () => {
+    try {
+      inputRef.current?.focus({ preventScroll: true })
+    } catch {
+      inputRef.current?.focus()
+    }
+  }
+
   return (
-    <div ref={rootRef} className={className}>
+    <div ref={rootRef} className={['mx-phone-input-shell relative z-10', className].filter(Boolean).join(' ')}>
       <div className="flex items-stretch gap-2">
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
-          className="shrink-0 flex items-center gap-2 px-3 rounded-xl bg-[#13112e] border border-indigo-500/20 hover:border-indigo-500/40 text-gray-200 text-sm"
+          className="shrink-0 flex items-center gap-1.5 px-2.5 sm:px-3 min-h-[48px] rounded-xl bg-[#13112e] border border-indigo-500/20 hover:border-indigo-500/40 text-gray-200 text-sm touch-manipulation"
           aria-label="Ölkə kodu seç"
         >
           <span className="text-base leading-none">{country.flag}</span>
@@ -276,15 +299,26 @@ export default function PhoneInput({
 
         <input
           ref={inputRef}
+          id={inputId}
+          name={inputId}
           type="tel"
-          inputMode="tel"
-          autoComplete="tel"
+          inputMode="numeric"
+          autoComplete="tel-national"
+          autoCorrect="off"
+          autoCapitalize="off"
+          spellCheck={false}
           autoFocus={autoFocus}
           required={required}
-          className="flex-1 min-w-0 bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-3 text-white text-sm font-mono tabular-nums tracking-wide outline-none focus:border-blue-500"
+          className="mx-phone-input-native flex-1 min-w-0 bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-3 text-white text-base font-mono tabular-nums tracking-wide outline-none focus:border-blue-500 min-h-[48px] touch-manipulation"
+          style={{ fontSize: '16px' }}
           placeholder={placeholder || (countryId === 'AZ' ? '50 123 45 67' : 'Telefon')}
           value={masked}
           onChange={(e) => setFromRawInput(e.target.value, e.target)}
+          onClick={focusPhoneInput}
+          onTouchEnd={(e) => {
+            e.stopPropagation()
+            focusPhoneInput()
+          }}
           maxLength={countryId === 'AZ' ? 13 : undefined}
         />
       </div>

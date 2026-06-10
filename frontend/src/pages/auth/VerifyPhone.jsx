@@ -104,10 +104,19 @@ export default function VerifyPhone() {
 
           {step === 'phone' ? (
             <>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-400">
+              <label
+                htmlFor="verify-phone-input"
+                className="block text-xs font-semibold uppercase tracking-wider text-zinc-400"
+              >
                 Mobil telefon *
               </label>
-              <PhoneInput value={phone} onChange={setPhone} persistLoginDefaults={false} />
+              <PhoneInput
+                inputId="verify-phone-input"
+                value={phone}
+                onChange={setPhone}
+                persistLoginDefaults={false}
+                autoFocus
+              />
               <p className="text-[11px] text-zinc-500 leading-relaxed">
                 Bu mobil nömrə başqa müəllim hesabında qeydiyyatdadırsa, sistem xəbərdarlıq edəcək. Təsdiqdən sonra
                 yenidən soruşulmayacaq.
@@ -122,10 +131,13 @@ export default function VerifyPhone() {
                 <strong className="text-white">{phone}</strong> nömrəsinə göndərilən 6 rəqəmli kodu daxil edin.
               </p>
               <input
-                className="w-full bg-surface-1 border border-white/10 rounded-xl px-4 py-3 text-white text-center text-2xl font-bold tracking-[0.35em] outline-none focus:border-primary/40"
+                className="w-full bg-surface-1 border border-white/10 rounded-xl px-4 py-3 text-white text-center text-2xl font-bold tracking-[0.35em] outline-none focus:border-primary/40 min-h-[48px] touch-manipulation"
+                style={{ fontSize: '16px' }}
                 placeholder="000000"
                 maxLength={6}
                 inputMode="numeric"
+                autoComplete="one-time-code"
+                autoFocus
                 value={code}
                 onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
               />
