@@ -21,6 +21,22 @@ const StatCard = ({ label, value, icon }) => (
   </Card>
 )
 
+const ROLE_ONLINE_LABELS = {
+  instructor: 'müəllim',
+  student: 'tələbə',
+  admin: 'admin',
+  parent: 'valideyn',
+  course: 'kurs',
+}
+
+function formatOnlineBreakdown(byRole) {
+  if (!byRole || typeof byRole !== 'object') return null
+  const parts = Object.entries(byRole)
+    .filter(([, n]) => Number(n) > 0)
+    .map(([role, n]) => `${n} ${ROLE_ONLINE_LABELS[role] || role}`)
+  return parts.length ? parts.join(' · ') : null
+}
+
 export default function AdminDashboard() {
   const [stats, setStats] = useState(null)
   const [instructors, setInstructors] = useState([])
@@ -28,18 +44,34 @@ export default function AdminDashboard() {
   const [inventory, setInventory] = useState(null)
 
   useEffect(() => {
-    api.get('/admin/stats').then((d) => setStats(d.stats))
-    api.get('/admin/instructors').then((d) => setInstructors(d.instructors?.slice(0, 5) || []))
-    api
-      .get('/admin/billing/inventory')
-      .then((d) => {
-        setInventory(d.inventory || null)
-        setInventoryAlerts(d.inventory?.alerts || [])
-      })
-      .catch(() => {
-        setInventory(null)
-        setInventoryAlerts([])
-      })
+    let cancelled = false
+
+    const load = async () => {
+      try {
+        const [statsRes, instructorsRes, inventoryRes] = await Promise.all([
+          api.get('/admin/stats'),
+          api.get('/admin/instructors'),
+          api.get('/admin/billing/inventory').catch(() => ({ inventory: null })),
+        ])
+        if (cancelled) return
+        setStats(statsRes.stats)
+        setInstructors(instructorsRes.instructors?.slice(0, 5) || [])
+        setInventory(inventoryRes.inventory || null)
+        setInventoryAlerts(inventoryRes.inventory?.alerts || [])
+      } catch {
+        if (!cancelled) {
+          setInventory(null)
+          setInventoryAlerts([])
+        }
+      }
+    }
+
+    void load()
+    const timer = window.setInterval(() => void load(), 30_000)
+    return () => {
+      cancelled = true
+      window.clearInterval(timer)
+    }
   }, [])
 
   const display = inventory?.display
@@ -131,6 +163,11 @@ export default function AdminDashboard() {
       </Link>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
+        <StatCard
+          label={`Hal-hazırda online (${stats?.online_window_minutes ?? 5} dəq)`}
+          value={stats?.online_total ?? '—'}
+          icon="🟢"
+        />
         <StatCard label="Müəllimlər" value={stats?.instructors ?? '—'} icon="👨‍🏫" />
         <StatCard label="Tələbələr" value={stats?.students ?? '—'} icon="🎓" />
         <StatCard label="Qruplar" value={stats?.classes ?? '—'} icon="📚" />
@@ -148,6 +185,15 @@ export default function AdminDashboard() {
         <StatCard label="Bağlı tələbə" value={stats?.students_enrolled ?? '—'} icon="🔗" />
         <StatCard label="Təyin olunmamış" value={stats?.students_unassigned ?? '—'} icon="⚠️" />
       </div>
+
+      {stats?.online_total != null ? (
+        <p className="text-sm text-gray-400 mb-6 -mt-3">
+          {stats.online_users ?? 0} daxil olmuş
+          {(stats.online_guests ?? 0) > 0 ? ` · ${stats.online_guests} qonaq ziyarətçi` : ''}
+          {formatOnlineBreakdown(stats.online_by_role) ? ` — ${formatOnlineBreakdown(stats.online_by_role)}` : ''}
+          <span className="text-gray-500"> · hər 30 saniyədə yenilənir</span>
+        </p>
+      ) : null}
 
       <Card className="p-5">
         <h2 className="font-display font-bold text-base mb-4">Son Müəllimlər</h2>

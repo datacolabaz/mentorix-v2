@@ -46,6 +46,8 @@ function combinedPath(config) {
 /** Giriş cəhdində köhnə Bearer token göndərmə (bəzi proxy/middleware qarışıqlığı) */
 function isPublicAuthPath(config) {
   const path = combinedPath(config)
+  // presence_ping: token varsa user_id qeydə alınsın (online say)
+  if (path.includes('/public/analytics/event')) return false
   return (
     path.includes('/auth/login') ||
     path.includes('/auth/verify-email') ||

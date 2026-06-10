@@ -29,6 +29,7 @@ import AdminMarketingLogin from './pages/admin/MarketingLogin'
 import AdminCategories from './pages/admin/AdminCategories'
 import AdminAnalytics from './pages/admin/AdminAnalytics'
 import AnalyticsPageTracker from './components/analytics/AnalyticsPageTracker'
+import PresenceHeartbeat from './components/analytics/PresenceHeartbeat'
 
 import InstructorDashboard from './pages/instructor/Dashboard'
 import InstructorStudents from './pages/instructor/Students'
@@ -119,6 +120,7 @@ export default function App() {
   return (
     <>
       <AnalyticsPageTracker />
+      <PresenceHeartbeat />
       <Routes>
       <Route path="/search" element={<InstructorMapSearch />} />
       {PUBLIC_SEO_LANDINGS.map((l) => (

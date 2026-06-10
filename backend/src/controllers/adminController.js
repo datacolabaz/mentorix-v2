@@ -12,6 +12,7 @@ const {
   ACTIVE_ENROLLMENT_WHERE,
   ACTIVE_STUDENT_USER_JOIN,
 } = require('../sql/activeEnrollments');
+const { getOnlinePresenceStats } = require('../services/accessEventService');
 const { SMS_LOGS_MONTHLY_COUNT_SUBQUERY } = require('../sql/adminSmsUsage');
 const { decorateAdminClassRow } = require('../lib/participantGroupLabels');
 
@@ -264,6 +265,19 @@ const getDashboardStats = async (req, res) => {
     const tuition = parseFloat(tuitionRevenue.rows[0].total) || 0;
     const platform = (Number(platformRevenue.rows[0].total_cents) || 0) / 100;
 
+    let online = {
+      window_minutes: 5,
+      online_users: 0,
+      online_guests: 0,
+      online_total: 0,
+      by_role: {},
+    };
+    try {
+      online = await getOnlinePresenceStats();
+    } catch (presenceErr) {
+      if (presenceErr?.code !== '42P01') throw presenceErr;
+    }
+
     res.json({
       success: true,
       stats: {
@@ -277,6 +291,11 @@ const getDashboardStats = async (req, res) => {
         revenue: tuition + platform,
         revenue_tuition: tuition,
         revenue_platform: platform,
+        online_total: online.online_total,
+        online_users: online.online_users,
+        online_guests: online.online_guests,
+        online_window_minutes: online.window_minutes,
+        online_by_role: online.by_role,
       },
     });
   } catch (err) {

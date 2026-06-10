@@ -10,7 +10,10 @@ const ALLOWED_EVENTS = new Set([
   'pricing_view',
   'register_click',
   'signup_complete',
+  'presence_ping',
 ]);
+
+const ONLINE_WINDOW_MINUTES = 5;
 
 function clampDays(raw, fallback = 7) {
   const n = parseInt(String(raw), 10);
@@ -195,9 +198,50 @@ async function getAdminTrafficStats(daysRaw) {
   };
 }
 
+/** Son N dəqiqədə aktiv istifadəçi / qonaq sayı (presence_ping) */
+async function getOnlinePresenceStats() {
+  const { rows } = await db.query(
+    `SELECT
+       COUNT(DISTINCT user_id) FILTER (WHERE user_id IS NOT NULL)::int AS online_users,
+       COUNT(DISTINCT session_key) FILTER (WHERE user_id IS NULL AND session_key IS NOT NULL)::int AS online_guests
+     FROM access_events
+     WHERE event_type = 'presence_ping'
+       AND created_at >= NOW() - ($1::int * INTERVAL '1 minute')`,
+    [ONLINE_WINDOW_MINUTES],
+  );
+
+  const { rows: roleRows } = await db.query(
+    `SELECT COALESCE(NULLIF(TRIM(role), ''), 'unknown') AS role, COUNT(DISTINCT user_id)::int AS n
+     FROM access_events
+     WHERE event_type = 'presence_ping'
+       AND user_id IS NOT NULL
+       AND created_at >= NOW() - ($1::int * INTERVAL '1 minute')
+     GROUP BY 1
+     ORDER BY n DESC`,
+    [ONLINE_WINDOW_MINUTES],
+  );
+
+  const byRole = {};
+  for (const r of roleRows || []) {
+    byRole[String(r.role)] = Number(r.n) || 0;
+  }
+
+  const onlineUsers = Number(rows[0]?.online_users) || 0;
+  const onlineGuests = Number(rows[0]?.online_guests) || 0;
+
+  return {
+    window_minutes: ONLINE_WINDOW_MINUTES,
+    online_users: onlineUsers,
+    online_guests: onlineGuests,
+    online_total: onlineUsers + onlineGuests,
+    by_role: byRole,
+  };
+}
+
 module.exports = {
   recordAccessEvent,
   scheduleAccessEvent,
   getAdminTrafficStats,
+  getOnlinePresenceStats,
   ALLOWED_EVENTS,
 };

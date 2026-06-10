@@ -115,3 +115,12 @@ export function trackLogout() {
     path: typeof window !== 'undefined' ? window.location.pathname : null,
   })
 }
+
+/** Admin paneldə "online" sayı üçün — hər 60 saniyə */
+export function trackPresencePing(role) {
+  sendEvent({
+    event_type: 'presence_ping',
+    path: typeof window !== 'undefined' ? window.location.pathname : null,
+    role: role || null,
+  })
+}
