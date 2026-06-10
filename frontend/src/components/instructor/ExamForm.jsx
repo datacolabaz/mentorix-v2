@@ -300,13 +300,27 @@ export default function ExamForm({ students, studentsLoading = false, onCreated 
               PDF / şəkil — bir və ya bir neçə fayl (Ctrl/Cmd ilə seç)
             </label>
             <input
+              id="exam-material-upload"
               type="file"
               multiple
               accept=".pdf,.jpg,.jpeg,.png"
               disabled={pdfBusy}
-              className="w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-blue-500/20 file:text-blue-400 hover:file:bg-blue-500/30 cursor-pointer disabled:opacity-50"
+              className="hidden"
               onChange={handleMaterialsChange}
             />
+            <div className="flex flex-wrap items-center gap-3">
+              <label
+                htmlFor="exam-material-upload"
+                className={`inline-flex items-center rounded-xl px-4 py-2 text-sm font-semibold bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 cursor-pointer ${
+                  pdfBusy ? 'opacity-50 pointer-events-none' : ''
+                }`}
+              >
+                fayl seçin
+              </label>
+              {materialFiles.length === 0 ? (
+                <span className="text-sm text-gray-400">fayl seçilmeyib</span>
+              ) : null}
+            </div>
             {pdfBusy && <p className="text-xs text-amber-400">Yüklənir…</p>}
             {materialFiles.length > 0 && (
               <ul className="space-y-2 mt-2">
