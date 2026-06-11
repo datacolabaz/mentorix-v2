@@ -14,6 +14,7 @@ const SUBJECT_ALIASES = [
   { keys: ['azerbaycan', 'az dili', 'dilbilgisi'], categoryId: 'az-lang' },
   { keys: ['rus dili', 'rusca'], categoryId: 'rus-school' },
   { keys: ['informatika', 'proqram', 'kod'], categoryId: 'cs-school' },
+  { keys: ['python', 'javascript', 'java', 'react', 'node'], categoryId: 'python' },
   { keys: ['tarix', 'history'], categoryId: 'history' },
   { keys: ['cografiya', 'coğrafiya', 'geografiya'], categoryId: 'geography' },
   { keys: ['abituriyent', 'buraxilis', 'buraxılış'], categoryId: 'abituriyent' },
@@ -168,6 +169,56 @@ function buildPricing(instructors) {
   };
 }
 
+function buildEmptyState({ area, subjectName, searcherRole }) {
+  const locationPhrase = area?.name_az ? `${area.name_az} ərazisində` : 'Bu axtarış üzrə';
+
+  if (searcherRole === 'parent') {
+    return {
+      title: 'AI filtrinə tam uyğun profil tapılmadı',
+      message: `${locationPhrase} ${subjectName} üçün dəqiq uyğun profil yoxdur. Aşağıdakı xəritə və siyahıda digər müəllim və təlimçilər ola bilər — onlara müraciət edə bilərsiniz.`,
+      instructor_cta: null,
+    };
+  }
+
+  return {
+    title: 'Bu parametrlərlə müəllim tapılmadı',
+    message: `${locationPhrase} ${subjectName} üzrə aktiv profil yoxdur.`,
+    instructor_cta: {
+      label: 'Müəllim kimi qeydiyyatdan keç',
+      path: '/login?role=instructor',
+    },
+  };
+}
+
+async function fetchAiInstructorMatches({ categoryId, areaId, raw, lat, lng, limit }) {
+  const base = {
+    format: 'any',
+    lat,
+    lng,
+    areaId: areaId || null,
+    requireFormatReachability: false,
+    limit: Math.max(limit, 6),
+  };
+
+  let instructors = await searchDiscoverInstructors({
+    ...base,
+    categoryId: categoryId || null,
+    q: categoryId ? null : raw.slice(0, 80),
+    kind: null,
+  });
+
+  if (!instructors.length && categoryId) {
+    instructors = await searchDiscoverInstructors({
+      ...base,
+      categoryId: null,
+      q: raw.slice(0, 80),
+      kind: null,
+    });
+  }
+
+  return instructors;
+}
+
 function publicInstructorCard(row) {
   return {
     id: row.id,
@@ -204,15 +255,13 @@ async function runMarketplaceAiSearch({ query, forChild = false, lat = null, lng
   const studentLevel = parseStudentLevel(raw);
   const searcherRole = detectSearcherRole(raw, forChild);
 
-  const instructors = await searchDiscoverInstructors({
+  const instructors = await fetchAiInstructorMatches({
     categoryId: category?.id || null,
-    format: 'any',
+    areaId: area?.id || null,
+    raw,
     lat,
     lng,
-    areaId: area?.id || null,
-    q: category ? null : raw.slice(0, 80),
-    kind: 'teacher',
-    limit: Math.max(limit, 6),
+    limit,
   });
 
   const top = instructors.slice(0, limit).map(publicInstructorCard);
@@ -259,14 +308,7 @@ async function runMarketplaceAiSearch({ query, forChild = false, lat = null, lng
       },
       empty_state:
         top.length === 0
-          ? {
-              title: 'Bu parametrlərlə müəllim tapılmadı',
-              message: `${area?.name_az || 'Seçilmiş ərazi'} üzrə ${subjectName} üzrə aktiv müəllim profili yoxdur.`,
-              instructor_cta: {
-                label: 'Müəllim kimi qeydiyyatdan keç',
-                path: '/login?role=instructor',
-              },
-            }
+          ? buildEmptyState({ area, subjectName, searcherRole })
           : null,
     },
     step2_pricing: buildPricing(instructors),

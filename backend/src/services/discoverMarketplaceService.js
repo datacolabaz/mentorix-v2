@@ -48,6 +48,8 @@ async function searchDiscoverInstructors({
   q,
   kind,
   limit = 50,
+  /** false = yalnız məsafə sıralaması; xəritə kimi çatışımlılıq filtri tətbiq etmə */
+  requireFormatReachability = true,
 }) {
   const params = [];
   let i = 1;
@@ -143,7 +145,9 @@ async function searchDiscoverInstructors({
         )
       )`;
     }
-    where.push(formatMatchSql);
+    if (requireFormatReachability) {
+      where.push(formatMatchSql);
+    }
   }
 
   params.push(Math.min(100, Math.max(1, limit)));

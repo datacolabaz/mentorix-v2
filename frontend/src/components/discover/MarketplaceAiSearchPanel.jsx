@@ -204,17 +204,19 @@ export default function MarketplaceAiSearchPanel({
                   <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 space-y-2">
                     <p className="text-sm font-semibold text-white">{tutors.empty_state.title}</p>
                     <p className="text-xs text-gray-400 leading-relaxed">{tutors.empty_state.message}</p>
-                    <Link
-                      to={tutors.empty_state.instructor_cta?.path || '/login?role=instructor'}
-                      className="inline-block text-xs font-bold text-primary hover:underline"
-                    >
-                      {tutors.empty_state.instructor_cta?.label || 'Müəllim kimi qeydiyyatdan keç'} →
-                    </Link>
+                    {tutors.empty_state.instructor_cta ? (
+                      <Link
+                        to={tutors.empty_state.instructor_cta.path}
+                        className="inline-block text-xs font-bold text-primary hover:underline"
+                      >
+                        {tutors.empty_state.instructor_cta.label} →
+                      </Link>
+                    ) : null}
                   </div>
                 ) : (
                   <div className="space-y-2">
                     <p className="text-[11px] text-gray-500">
-                      {tutors?.count ?? 0} müəllimdən ən yaxşı {tutors?.matches?.length ?? 0}
+                      {tutors?.count ?? 0} nəticədən ən yaxşı {tutors?.matches?.length ?? 0}
                     </p>
                     {(tutors?.matches || []).map((t) => (
                       <TutorMiniCard
