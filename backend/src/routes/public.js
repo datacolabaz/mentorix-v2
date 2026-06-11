@@ -16,6 +16,7 @@ const { getPublicJoin } = require('../controllers/joinInvitationController');
 const { getPublicExamInvite, postPublicExamGuestJoin } = require('../controllers/publicExamInviteController');
 const { getPublicTaskInvite, postPublicTaskGuestJoin } = require('../controllers/publicTaskInviteController');
 const { postAccessEvent } = require('../controllers/accessAnalyticsController');
+const { postMarketplaceAiSearch } = require('../controllers/marketplaceAiSearchController');
 const { getPublicInstructorProfile } = require('../controllers/publicInstructorProfileController');
 const { getInstructorMessagingLink } = require('../controllers/publicInstructorContactController');
 const { authenticate } = require('../middleware/auth');
@@ -41,6 +42,7 @@ router.get('/categories/search', getCategoriesSearch);
 router.get('/categories/:slug', getCategoryBySlugHandler);
 router.get('/service-areas', getServiceAreas);
 router.post('/inquiries', postPublicInquiry);
+router.post('/marketplace/ai-search', postMarketplaceAiSearch);
 router.get('/subscription-plans', async (_req, res) => {
   try {
     const list = await getActivePlansList();

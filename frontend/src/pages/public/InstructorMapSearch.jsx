@@ -15,6 +15,7 @@ import CategoryMegaMenu from '../../components/discover/CategoryMegaMenu'
 import InquiryFormModal from '../../components/discover/InquiryFormModal'
 import DiscoverAuthModal from '../../components/discover/DiscoverAuthModal'
 import TeacherMapListCard from '../../components/discover/TeacherMapListCard'
+import MarketplaceAiSearchPanel from '../../components/discover/MarketplaceAiSearchPanel'
 import useAuthStore from '../../hooks/useAuth'
 import { useToast } from '../../components/common/Toast'
 import { sortInstructorsForMapListing } from '../../lib/mapListingSort'
@@ -505,6 +506,28 @@ export default function InstructorMapSearch() {
     }))
   }
 
+  const handleAiApplyFilters = useCallback((patch) => {
+    if (!patch) return
+    setDiscoverFilters((f) => ({
+      ...f,
+      ...patch,
+    }))
+  }, [])
+
+  const handleAiFocusTutor = useCallback(
+    (tutor) => {
+      if (!tutor?.latitude || !tutor?.longitude) return
+      focusInstructor({
+        id: tutor.id,
+        latitude: tutor.latitude,
+        longitude: tutor.longitude,
+        full_name: tutor.full_name,
+        map_profile_kind: tutor.map_profile_kind,
+      })
+    },
+    [focusInstructor],
+  )
+
   const count = instructorsSorted.length
   const isEmpty = hasFetched && !loading && count === 0 && !fetchError
   const useGoogleMap = isGoogleMapsConfigured()
@@ -627,6 +650,15 @@ export default function InstructorMapSearch() {
 
         <aside className={`flex-1 flex flex-col min-h-0 bg-[#0b0b0b] ${listOnly ? 'w-full' : 'lg:w-[42%]'}`}>
           <div className="p-4 border-b border-white/10 space-y-3 shrink-0">
+            <MarketplaceAiSearchPanel
+              userLat={refPoint.lat}
+              userLng={refPoint.lng}
+              onApplyFilters={handleAiApplyFilters}
+              onInquiry={onInquiryClick}
+              onWhatsApp={onWhatsAppClick}
+              onFocusTutor={handleAiFocusTutor}
+              whatsappBusy={whatsappBusy}
+            />
             <CategoryMegaMenu
               activeCategoryId={discoverFilters.category_id}
               onPick={handleCategoryPick}
