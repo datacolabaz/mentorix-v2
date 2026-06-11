@@ -45,11 +45,12 @@ export default function AdminLayout() {
 
   return (
     <div
-      className={`theme-${theme} flex flex-col min-h-screen md:h-screen bg-token-surfaceMain text-token-textMain overflow-x-hidden md:overflow-hidden`}
+      className={`theme-${theme} flex flex-col min-h-screen md:h-screen bg-token-surfaceMain text-token-textMain md:overflow-hidden`}
     >
       <header
         className={[
-          'md:hidden fixed top-0 left-0 right-0 z-[1000] min-h-[72px] flex items-center justify-between gap-2 px-3 overflow-visible',
+          'md:hidden fixed top-0 left-0 right-0 z-[1000] min-h-[72px] grid grid-cols-[auto_1fr_auto] items-center gap-3 overflow-visible',
+          'px-4 pl-[max(1rem,env(safe-area-inset-left,0px))] pr-[max(1rem,env(safe-area-inset-right,0px))]',
           'pt-[env(safe-area-inset-top,0px)] bg-token-surfaceMain border-b border-[color:var(--border-subtle)] text-token-textMain shadow-sm',
         ].join(' ')}
       >
@@ -57,7 +58,7 @@ export default function AdminLayout() {
           type="button"
           aria-label="Menyu"
           className={[
-            'w-11 h-11 rounded-2xl shrink-0 flex items-center justify-center text-xl font-bold border-2 shadow-md',
+            'w-11 h-11 rounded-2xl shrink-0 flex items-center justify-center text-xl font-bold border-2 shadow-md justify-self-start',
             theme === 'dark'
               ? 'text-white bg-white/10 hover:bg-white/15 border-white/20'
               : 'text-[#003366] bg-white hover:bg-gray-50 border-[#003366]/25',
@@ -66,10 +67,10 @@ export default function AdminLayout() {
         >
           ☰
         </button>
-        <div className="flex-1 flex justify-center min-w-0 overflow-visible">
+        <div className="flex justify-center min-w-0 overflow-visible justify-self-center">
           <Brand size="md" />
         </div>
-        <div className="w-11 shrink-0" />
+        <div className="w-11 shrink-0 justify-self-end" aria-hidden />
       </header>
 
       {navOpen && (
@@ -85,13 +86,16 @@ export default function AdminLayout() {
         <aside
           className={[
             theme === 'dark' ? 'theme-dark' : 'theme-light',
-            'w-[min(17rem,88vw)] max-w-[280px] md:w-60 flex flex-col flex-shrink-0',
+            'w-[min(17rem,calc(100vw-env(safe-area-inset-left,0px)-1rem))] max-w-[280px] md:w-60 flex flex-col flex-shrink-0',
             theme === 'dark'
               ? 'bg-gradient-to-b from-[#0c0f0d] to-[#070a08] border-r border-white/10'
               : 'bg-[#F8FAFC] border-r border-black/[0.06]',
-            'fixed md:static inset-y-0 left-0 z-[1100] md:z-auto h-full max-h-[100dvh] md:max-h-none',
-            'transition-transform duration-200 ease-out shadow-2xl md:shadow-none',
-            navOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
+            'fixed md:static inset-y-0 z-[1100] md:z-auto h-full max-h-[100dvh] md:max-h-none',
+            'left-[env(safe-area-inset-left,0px)] md:left-auto',
+            'transition-[transform,visibility] duration-200 ease-out shadow-2xl md:shadow-none',
+            navOpen
+              ? 'translate-x-0 visible'
+              : '-translate-x-[calc(100%+env(safe-area-inset-left,0px))] invisible md:visible md:translate-x-0',
           ].join(' ')}
         >
         <div
@@ -118,7 +122,7 @@ export default function AdminLayout() {
 
         <div
           className={[
-            'md:hidden px-4 pt-4 pb-4 shrink-0',
+            'md:hidden px-5 pt-4 pb-4 shrink-0',
             theme === 'dark' ? 'border-b border-white/10' : 'border-b border-black/[0.06]',
           ].join(' ')}
         >
@@ -146,10 +150,10 @@ export default function AdminLayout() {
           </div>
         </div>
 
-        <nav className="flex-1 p-4 space-y-2 overflow-y-auto min-h-0 overscroll-contain">
+        <nav className="flex-1 px-5 py-4 space-y-2 overflow-y-auto min-h-0 overscroll-contain">
           {NAV_SECTIONS.map((section) => (
             <div key={section.title} className="space-y-2">
-              <div className="px-4 pt-2">
+              <div className="px-1 pt-2">
                 <div className={`text-xs uppercase tracking-wider ${theme === 'dark' ? 'text-token-textMuted/80' : 'text-slate-400'}`}>
                   {section.title}
                 </div>
@@ -173,7 +177,12 @@ export default function AdminLayout() {
           ))}
         </nav>
 
-        <div className={['p-4', theme === 'dark' ? 'border-t border-white/10' : 'border-t border-gray-200'].join(' ')}>
+        <div
+          className={[
+            'px-5 py-4 pb-[max(1rem,env(safe-area-inset-bottom,0px))]',
+            theme === 'dark' ? 'border-t border-white/10' : 'border-t border-gray-200',
+          ].join(' ')}
+        >
           <button
             type="button"
             onClick={toggleTheme}
@@ -223,7 +232,8 @@ export default function AdminLayout() {
         <main
           className={[
             // Mobile: fixed viewport panel under header (72px).
-            'fixed left-0 right-0 bottom-0 top-[calc(72px+env(safe-area-inset-top,0px))] z-[1] w-full min-w-0 overflow-x-hidden overflow-y-auto bg-token-surfaceMain',
+            'fixed left-0 right-0 bottom-0 top-[calc(72px+env(safe-area-inset-top,0px))] z-[1] w-full min-w-0 overflow-y-auto bg-token-surfaceMain',
+            'pl-[env(safe-area-inset-left,0px)] pr-[env(safe-area-inset-right,0px)]',
             // Desktop: normal flow next to sidebar.
             'md:static md:inset-auto md:flex-1 md:min-h-0 md:pt-0',
           ].join(' ')}
