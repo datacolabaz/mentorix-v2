@@ -365,15 +365,15 @@ export default function InstructorAnalytics() {
       <h1 className="font-display font-bold text-xl sm:text-2xl mb-6">Analitika</h1>
 
       <Card className="p-4 sm:p-5 mb-4">
-        <div className="flex flex-col lg:flex-row lg:items-end gap-3">
-          <div className="min-w-0 flex-1">
+        <div className="flex flex-col gap-3 sm:gap-4">
+          <div className="min-w-0">
             <div className="text-sm font-semibold text-token-textMain">Filtrlə</div>
-            <div className="text-xs text-token-textMuted mt-1">
+            <div className="text-xs text-token-textMuted mt-1 leading-relaxed max-w-2xl">
               Sahə və qrup seçin — qrafiklər yalnız həmin tələbələrə görə göstəriləcək.
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full lg:w-auto">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full lg:max-w-xl">
             <div>
               <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Sahə</label>
               <select
