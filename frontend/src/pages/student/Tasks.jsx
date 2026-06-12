@@ -217,7 +217,7 @@ export default function StudentAssignments() {
   return (
     <div className="p-4 sm:p-6 w-full min-w-0 max-w-4xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-4">
-        <div className="flex flex-col sm:flex-row sm:items-end gap-3 flex-1 min-w-0 pl-14 sm:pl-0">
+        <div className="flex flex-col sm:flex-row sm:items-end gap-3 flex-1 min-w-0">
           <div className="min-w-0">
             <h1 className="font-display font-bold text-xl sm:text-2xl text-token-textMain">Tapşırıqlarım</h1>
             {activeEnrollment && (

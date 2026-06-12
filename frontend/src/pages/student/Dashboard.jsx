@@ -60,7 +60,7 @@ function ExamPieTooltip({ active, payload, theme }) {
 }
 
 const StatMini = ({ label, value, hint }) => (
-  <div className="rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard/50 p-4">
+  <div className="rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard/50 p-4 min-w-0 overflow-hidden box-border">
     <div className="text-[10px] font-bold uppercase tracking-wider text-token-textMuted">{label}</div>
     <div className="font-display font-extrabold text-2xl text-token-textMain mt-1">{value}</div>
     {hint && <div className="text-[11px] text-token-textMuted mt-1">{hint}</div>}
@@ -131,9 +131,9 @@ export default function StudentDashboard() {
   }, [exams])
 
   return (
-    <div className="p-4 sm:p-6 w-full min-w-0 max-w-6xl mx-auto">
-      <div className="mb-6 pl-14 sm:pl-0">
-        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+    <div className="p-4 sm:p-6 w-full min-w-0 max-w-full box-border overflow-x-hidden">
+      <div className="mb-6 min-w-0">
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 min-w-0">
           <div>
             <h1 className="font-display font-bold text-2xl break-words text-token-textMain">
               Salam, {user?.full_name?.split(' ')[0]}! 👋
@@ -144,7 +144,7 @@ export default function StudentDashboard() {
                 : 'Proqresinizə baxın'}
             </p>
           </div>
-          <GroupSwitcher className="w-full sm:w-auto sm:min-w-[220px]" />
+          <GroupSwitcher className="w-full sm:w-auto sm:max-w-full min-w-0" />
         </div>
       </div>
 
@@ -160,7 +160,7 @@ export default function StudentDashboard() {
         </Card>
       )}
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6 w-full min-w-0 [&>*]:min-w-0">
         <StatMini
           label="Qruplarım"
           value={overview?.groups_count ?? enrollments.length ?? '—'}
@@ -193,7 +193,7 @@ export default function StudentDashboard() {
           <div className="text-xs font-semibold uppercase tracking-wider text-token-textMuted mb-3">
             Qruplarınız
           </div>
-          <div className="grid sm:grid-cols-2 gap-2">
+          <div className="grid sm:grid-cols-2 gap-2 w-full min-w-0 [&>*]:min-w-0">
             {enrollments.map((g) => (
               <Link
                 key={g.enrollment_id}
@@ -229,8 +229,8 @@ export default function StudentDashboard() {
           Seçilmiş qrupun tamamlanmış imtahanları
         </p>
         {pieData.length ? (
-          <div className="w-full h-[min(360px,55vw)] min-h-[260px] max-w-md mx-auto">
-            <ResponsiveContainer width="100%" height="100%">
+          <div className="w-full min-w-0 h-[min(360px,55vw)] min-h-[260px] max-w-full mx-auto overflow-hidden">
+            <ResponsiveContainer width="100%" height="100%" minWidth={0}>
               <PieChart>
                 <Pie
                   data={pieData}

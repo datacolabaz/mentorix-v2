@@ -19,7 +19,10 @@ try {
       meta.setAttribute('name', 'viewport')
       head.appendChild(meta)
     }
-    meta.setAttribute('content', 'width=device-width, initial-scale=1, viewport-fit=cover')
+    meta.setAttribute(
+      'content',
+      'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover',
+    )
   }
   ensureViewport()
 } catch {}

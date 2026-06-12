@@ -52,7 +52,7 @@ export default function MyGroups() {
 
   return (
     <div className="p-4 sm:p-6 w-full min-w-0 max-w-4xl mx-auto">
-      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-6 pl-14 sm:pl-0">
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-6 min-w-0">
         <div>
           <h1 className="font-display font-bold text-2xl text-token-textMain">Qruplarım</h1>
           <p className="text-token-textMuted text-sm mt-1">
