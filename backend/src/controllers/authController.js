@@ -12,7 +12,13 @@ const {
 } = require('../services/emailVerificationIssue');
 const { resolveLoginUserOrError, resolveSmsBillingInstructorId: resolveSmsBillingForLogin } = require('../services/authService');
 const { guardEmailVerifiedBeforeToken } = require('../services/emailVerificationGuard');
-const { getActiveRoles, grantUserRole, grantCourseRoleToUser } = require('../services/userRolesService');
+const {
+  getActiveRoles,
+  getLoginEligibleRoles,
+  ensureLoginRoleGranted,
+  grantUserRole,
+  grantCourseRoleToUser,
+} = require('../services/userRolesService');
 const { grantBasicTrialForInstructor } = require('../services/basicTrialIpService');
 const { clientIp } = require('../utils/clientIp');
 const { sendPasswordResetEmail } = require('../services/passwordResetEmailService');
@@ -1226,11 +1232,16 @@ const loginWithEmail = async (req, res) => {
       return res.status(401).json({ success: false, message: 'Email və ya şifrə yanlışdır' });
     }
 
-    const roles = await getActiveRoles(user.id);
-    const allowed = roles.length ? roles : user.role ? [user.role] : [];
-    const loginAllowed = allowed.filter((r) => LOGIN_ROLES.has(r));
-
     if (!guardEmailVerifiedBeforeToken(res, user)) return;
+
+    if (!requestedRole || !LOGIN_ROLES.has(requestedRole)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Giriş üçün rol seçin: müəllim, tələbə, kurs və ya valideyn',
+      });
+    }
+
+    const loginAllowed = await getLoginEligibleRoles(user.id);
 
     if (loginAllowed.length === 0) {
       const token = sign({ id: user.id, role: null });
@@ -1242,23 +1253,17 @@ const loginWithEmail = async (req, res) => {
       });
     }
 
-    if (loginAllowed.length > 1 && !requestedRole) {
-      return res.json({
-        success: true,
-        needs_role_choice: true,
-        available_roles: loginAllowed,
-        message: 'Hansı profilinizlə davam etmək istəyirsiniz?',
-        user: { id: user.id, full_name: user.full_name, email: user.email },
+    const role = requestedRole;
+    if (!loginAllowed.includes(role)) {
+      const wanted = ROLE_LABEL_AZ[role] || role;
+      const actualLabels = loginAllowed.map((r) => ROLE_LABEL_AZ[r] || r).join(', ');
+      return res.status(403).json({
+        success: false,
+        message: `Bu email «${actualLabels}» hesabıdır. «${wanted}» kimi daxil ola bilməzsiniz — düzgün rolu seçin.`,
       });
     }
 
-    const role = requestedRole || String(loginAllowed[0] || '').trim().toLowerCase();
-    if (!role || !LOGIN_ROLES.has(role)) {
-      return res.status(400).json({ success: false, message: 'Rol seçin: müəllim, tələbə, kurs və ya valideyn' });
-    }
-    if (!loginAllowed.includes(role)) {
-      return res.status(403).json({ success: false, message: `Bu hesab "${role}" rolu ilə giriş üçün uyğun deyil` });
-    }
+    await ensureLoginRoleGranted(user.id, role);
 
     const token = sign({ id: user.id, role });
     const baseUser = {

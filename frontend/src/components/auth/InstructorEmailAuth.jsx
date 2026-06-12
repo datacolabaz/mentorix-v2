@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import GoogleSignInButton from './GoogleSignInButton'
 import Button from '../common/Button'
-import Modal from '../common/Modal'
 import useAuthStore from '../../hooks/useAuth'
 import { useToast } from '../common/Toast'
 import api from '../../lib/api'
@@ -12,62 +11,18 @@ import { postAuthNavigate } from '../../lib/postAuth'
 const inputClass =
   'w-full bg-surface-1 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-primary/40'
 
-const ROLES = [
+const SIGNUP_ROLES = [
   { key: 'student', label: 'Tələbə' },
   { key: 'instructor', label: 'Müəllim' },
   { key: 'course', label: 'Kurs' },
 ]
 
-const LOGIN_ROLE_META = {
-  instructor: { label: 'Müəllim', hint: 'Müəllim paneli' },
-  student: { label: 'Tələbə', hint: 'Tələbə paneli' },
-  course: { label: 'Kurs', hint: 'Kurs paneli' },
-  parent: { label: 'Valideyn', hint: 'Valideyn paneli' },
-}
-
-function RoleChoiceModal({ open, roles, email, busy, onPick, onClose }) {
-  const choices = (Array.isArray(roles) ? roles : []).filter((r) => LOGIN_ROLE_META[r])
-  return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title="Profil seçimi"
-      size="sm"
-      zIndex={10050}
-    >
-      <p className="text-sm text-gray-300 leading-relaxed">
-        {email ? (
-          <>
-            <span className="font-semibold text-white">{email}</span> üçün hansı profilinizlə davam etmək istəyirsiniz?
-          </>
-        ) : (
-          'Hansı profilinizlə davam etmək istəyirsiniz?'
-        )}
-      </p>
-      <div className="mt-4 grid grid-cols-1 gap-2.5">
-        {choices.map((roleKey) => {
-          const meta = LOGIN_ROLE_META[roleKey]
-          return (
-            <button
-              key={roleKey}
-              type="button"
-              disabled={busy}
-              onClick={() => onPick(roleKey)}
-              className={[
-                'w-full rounded-xl border px-4 py-3.5 text-left transition-colors',
-                'border-white/10 bg-surface-1 text-gray-100 hover:border-primary/45 hover:bg-primary/10',
-                'disabled:opacity-60 disabled:pointer-events-none',
-              ].join(' ')}
-            >
-              <div className="font-semibold text-white">{meta.label}</div>
-              <div className="text-xs text-gray-400 mt-0.5">{meta.hint}</div>
-            </button>
-          )
-        })}
-      </div>
-    </Modal>
-  )
-}
+const LOGIN_ROLES = [
+  { key: 'instructor', label: 'Müəllim' },
+  { key: 'student', label: 'Tələbə' },
+  { key: 'course', label: 'Kurs' },
+  { key: 'parent', label: 'Valideyn' },
+]
 
 function AuthDivider() {
   return (
@@ -104,12 +59,16 @@ function AuthModeTabs({ tab, onTab }) {
   )
 }
 
-function RolePills({ role, onRole }) {
+function RolePills({ roles, role, onRole, label = 'Rolunuzu seçin' }) {
   return (
     <div className="space-y-2">
-      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Rolunuzu seçin</p>
-      <div className="flex gap-2" role="radiogroup" aria-label="Rol seçimi">
-        {ROLES.map((r) => {
+      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{label}</p>
+      <div
+        className={`grid gap-2 ${roles.length > 3 ? 'grid-cols-2' : 'grid-cols-3'}`}
+        role="radiogroup"
+        aria-label="Rol seçimi"
+      >
+        {roles.map((r) => {
           const selected = role === r.key
           return (
             <button
@@ -119,7 +78,7 @@ function RolePills({ role, onRole }) {
               aria-checked={selected}
               onClick={() => onRole(r.key)}
               className={[
-                'flex-1 rounded-xl border px-2 py-2.5 text-xs font-semibold transition-colors text-center',
+                'rounded-xl border px-2 py-2.5 text-xs font-semibold transition-colors text-center min-h-[44px]',
                 selected
                   ? 'border-primary/50 bg-primary/10 text-primary'
                   : 'border-white/10 bg-white/[0.03] text-gray-400 hover:border-white/20',
@@ -135,7 +94,7 @@ function RolePills({ role, onRole }) {
 }
 
 /**
- * 3 ssenari: Müəllim/Tələbə → Google | Köhnə hesab → Email
+ * Email/Google giriş və qeydiyyat (girişdə rol seçimi mütləqdir).
  */
 export default function InstructorEmailAuth({ onSuccess }) {
   const toast = useToast()
@@ -146,15 +105,19 @@ export default function InstructorEmailAuth({ onSuccess }) {
   const [phase, setPhase] = useState('form')
   const [loading, setLoading] = useState(false)
 
-  const [fullName, setFullName] = useState('')
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
+  const [loginEmail, setLoginEmail] = useState('')
+  const [loginPassword, setLoginPassword] = useState('')
+  const [loginRole, setLoginRole] = useState('instructor')
+  const [loginPasswordReady, setLoginPasswordReady] = useState(false)
+
+  const [signupFullName, setSignupFullName] = useState('')
+  const [signupEmail, setSignupEmail] = useState('')
+  const [signupPassword, setSignupPassword] = useState('')
+  const [signupRole, setSignupRole] = useState('student')
   const [verifyCode, setVerifyCode] = useState('')
-  const [role, setRole] = useState('student')
-  const [roleChoiceOpen, setRoleChoiceOpen] = useState(false)
-  const [availableRoles, setAvailableRoles] = useState([])
 
   const handleGoogleCredential = async (credential) => {
+    const role = tab === 'login' ? loginRole : signupRole
     setLoading(true)
     try {
       let r = await api.post('/auth/google/login', { credential, role })
@@ -196,10 +159,10 @@ export default function InstructorEmailAuth({ onSuccess }) {
     setLoading(true)
     try {
       await signupWithEmail({
-        full_name: fullName,
-        email,
-        password,
-        role,
+        full_name: signupFullName,
+        email: signupEmail,
+        password: signupPassword,
+        role: signupRole,
         ...getAttributionPayload(),
       })
       setPhase('verify')
@@ -225,18 +188,17 @@ export default function InstructorEmailAuth({ onSuccess }) {
 
   const handleLogin = async (e) => {
     e.preventDefault()
+    if (!loginRole) {
+      toast('Giriş üçün rol seçin', 'error')
+      return
+    }
     setLoading(true)
     try {
-      const data = await api.post('/auth/login/email', { email, password })
-      if (
-        data?.needs_role_choice &&
-        Array.isArray(data.available_roles) &&
-        data.available_roles.length > 1
-      ) {
-        setAvailableRoles(data.available_roles)
-        setRoleChoiceOpen(true)
-        return
-      }
+      const data = await api.post('/auth/login/email', {
+        email: loginEmail,
+        password: loginPassword,
+        role: loginRole,
+      })
       finishEmailLogin(data)
     } catch (err) {
       const code = err?.code || err?.response?.data?.code
@@ -251,25 +213,11 @@ export default function InstructorEmailAuth({ onSuccess }) {
     }
   }
 
-  const handleRoleChoice = async (pickedRole) => {
-    setLoading(true)
-    try {
-      const data = await api.post('/auth/login/email', { email, password, role: pickedRole })
-      setRoleChoiceOpen(false)
-      setAvailableRoles([])
-      finishEmailLogin(data)
-    } catch (err) {
-      toast(err.message || 'Giriş xətası', 'error')
-    } finally {
-      setLoading(false)
-    }
-  }
-
   const handleVerifyCode = async (e) => {
     e.preventDefault()
     setLoading(true)
     try {
-      const r = await verifyEmailCode({ email, code: verifyCode })
+      const r = await verifyEmailCode({ email: signupEmail, code: verifyCode })
       if (r?.token && r?.user) {
         setSession(r.token, r.user)
         if (r?.needs_role) {
@@ -294,13 +242,13 @@ export default function InstructorEmailAuth({ onSuccess }) {
   }
 
   const handleResend = async () => {
-    if (!email.trim()) {
+    if (!signupEmail.trim()) {
       toast('Email daxil edin', 'error')
       return
     }
     setLoading(true)
     try {
-      const r = await resendVerificationEmail(email)
+      const r = await resendVerificationEmail(signupEmail)
       toast(r?.message || 'Email yenidən göndərildi', 'success')
     } catch (err) {
       toast(err.message || 'Göndərilmədi', 'error')
@@ -310,7 +258,7 @@ export default function InstructorEmailAuth({ onSuccess }) {
   }
 
   const handleForgotPassword = async () => {
-    const em = String(email || '').trim()
+    const em = String(loginEmail || '').trim()
     if (!em) {
       toast('Email daxil edin', 'error')
       return
@@ -330,14 +278,15 @@ export default function InstructorEmailAuth({ onSuccess }) {
     return (
       <div className="space-y-4">
         <p className="text-sm text-gray-300 text-center leading-relaxed">
-          <strong className="text-white">{email}</strong> ünvanına 6 rəqəmli kod və təsdiq linki göndərildi.
+          <strong className="text-white">{signupEmail}</strong> ünvanına 6 rəqəmli kod və təsdiq linki göndərildi.
         </p>
-        <form onSubmit={handleVerifyCode} className="space-y-3">
+        <form onSubmit={handleVerifyCode} className="space-y-3" autoComplete="off">
           <input
             className={`${inputClass} text-center text-2xl font-bold tracking-[0.4em]`}
             placeholder="000000"
             maxLength={6}
             inputMode="numeric"
+            autoComplete="one-time-code"
             value={verifyCode}
             onChange={(e) => setVerifyCode(e.target.value.replace(/\D/g, ''))}
             required
@@ -370,29 +319,31 @@ export default function InstructorEmailAuth({ onSuccess }) {
 
   return (
     <div className="space-y-4">
-      <RoleChoiceModal
-        open={roleChoiceOpen}
-        roles={availableRoles}
-        email={email}
-        busy={loading}
-        onPick={handleRoleChoice}
-        onClose={() => {
-          if (loading) return
-          setRoleChoiceOpen(false)
-          setAvailableRoles([])
-        }}
-      />
       <AuthModeTabs tab={tab} onTab={setTab} />
 
       {tab === 'login' ? (
-        <div className="space-y-4">
+        <div className="space-y-4" key="login-panel">
+          <RolePills
+            roles={LOGIN_ROLES}
+            role={loginRole}
+            onRole={setLoginRole}
+            label="Hansı hesabla daxil olursunuz?"
+          />
+
           <GoogleSignInButton onCredential={handleGoogleCredential} disabled={loading} label="Google ilə daxil ol" />
 
           <AuthDivider />
 
-          <form onSubmit={handleLogin} className="space-y-3" autoComplete="on">
+          <form
+            key="mentorix-login-form"
+            onSubmit={handleLogin}
+            className="space-y-3"
+            autoComplete="on"
+            method="post"
+            action="/login"
+          >
             <input
-              id="login-username"
+              id="mx-login-username"
               name="username"
               type="email"
               inputMode="email"
@@ -402,19 +353,25 @@ export default function InstructorEmailAuth({ onSuccess }) {
               className={inputClass}
               placeholder="E-poçt"
               autoComplete="username"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              value={loginEmail}
+              onChange={(e) => setLoginEmail(e.target.value)}
               required
             />
             <input
-              id="login-password"
+              id="mx-login-password"
               name="password"
               type="password"
               className={inputClass}
               placeholder="Şifrə"
               autoComplete="current-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              enterKeyHint="go"
+              readOnly={!loginPasswordReady}
+              onFocus={() => setLoginPasswordReady(true)}
+              value={loginPassword}
+              onChange={(e) => setLoginPassword(e.target.value)}
               required
             />
             <Button type="submit" loading={loading} className="w-full justify-center">
@@ -438,26 +395,33 @@ export default function InstructorEmailAuth({ onSuccess }) {
           </p>
         </div>
       ) : (
-        <div className="space-y-4">
-          <RolePills role={role} onRole={setRole} />
+        <div className="space-y-4" key="signup-panel">
+          <RolePills roles={SIGNUP_ROLES} role={signupRole} onRole={setSignupRole} />
 
           <GoogleSignInButton onCredential={handleGoogleCredential} disabled={loading} label="Google ilə davam et" />
 
           <AuthDivider />
 
-          <form onSubmit={handleSignup} className="space-y-3" autoComplete="on">
+          <form
+            key="mentorix-signup-form"
+            onSubmit={handleSignup}
+            className="space-y-3"
+            autoComplete="on"
+            method="post"
+            action="/signup"
+          >
             <input
-              id="signup-fullname"
+              id="mx-signup-fullname"
               name="name"
               className={inputClass}
               placeholder="Ad Soyad"
               autoComplete="name"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
+              value={signupFullName}
+              onChange={(e) => setSignupFullName(e.target.value)}
               required
             />
             <input
-              id="signup-email"
+              id="mx-signup-email"
               name="email"
               type="email"
               inputMode="email"
@@ -467,19 +431,22 @@ export default function InstructorEmailAuth({ onSuccess }) {
               className={inputClass}
               placeholder="E-poçt"
               autoComplete="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              value={signupEmail}
+              onChange={(e) => setSignupEmail(e.target.value)}
               required
             />
             <input
-              id="signup-password"
+              id="mx-signup-password"
               name="new-password"
               type="password"
               className={inputClass}
               placeholder="Şifrə (min. 8 simvol)"
               autoComplete="new-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              value={signupPassword}
+              onChange={(e) => setSignupPassword(e.target.value)}
               minLength={8}
               required
             />

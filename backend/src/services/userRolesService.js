@@ -85,9 +85,72 @@ async function ensureCourseRoleIfInstructor(userId, courseName = null) {
   return true;
 }
 
+const LOGIN_ROLE_ORDER = ['instructor', 'course', 'student', 'parent'];
+
+/**
+ * Email/telefon girişində göstəriləcək rollar: user_roles + köhnə users.role +
+ * aktiv enrollment (tələbə), valideyn əlaqəsi, müəllim → kurs paneli.
+ */
+async function getLoginEligibleRoles(userId) {
+  await ensureCourseRoleIfInstructor(userId);
+
+  const eligible = new Set(await getActiveRoles(userId));
+
+  const { rows: userRows } = await db.query(
+    `SELECT role FROM users WHERE id = $1 AND COALESCE(is_active, TRUE) = TRUE LIMIT 1`,
+    [userId],
+  );
+  const legacyRole = userRows[0]?.role;
+  if (legacyRole && LOGIN_ROLES.includes(legacyRole)) eligible.add(legacyRole);
+
+  if (await isInstructorAccount(userId)) eligible.add('instructor');
+
+  const { rows: studentProfile } = await db.query(
+    `SELECT 1 FROM student_profiles WHERE user_id = $1 LIMIT 1`,
+    [userId],
+  );
+  if (studentProfile.length) eligible.add('student');
+
+  const { rows: activeEnrollment } = await db.query(
+    `SELECT 1 FROM enrollments e
+     WHERE e.student_id = $1
+       AND e.status = 'active'
+       AND e.deleted_at IS NULL
+     LIMIT 1`,
+    [userId],
+  );
+  if (activeEnrollment.length) eligible.add('student');
+
+  const { rows: parentLink } = await db.query(
+    `SELECT 1 FROM student_profiles sp
+     INNER JOIN users u ON u.id = sp.user_id AND COALESCE(u.is_active, TRUE) = TRUE
+     WHERE sp.parent_id = $1
+     LIMIT 1`,
+    [userId],
+  );
+  if (parentLink.length) eligible.add('parent');
+
+  return LOGIN_ROLE_ORDER.filter((r) => eligible.has(r));
+}
+
+/** Seçilmiş rol hələ user_roles-da yoxdursa, girişdə saxla (infer edilmiş rollar). */
+async function ensureLoginRoleGranted(userId, role) {
+  if (!role || !LOGIN_ROLES.includes(role)) return;
+  if (role === 'course') {
+    await ensureCourseRoleIfInstructor(userId);
+    return;
+  }
+  if (!(await userHasRole(userId, role))) {
+    await grantUserRole(userId, role);
+  }
+}
+
 module.exports = {
   LOGIN_ROLES,
+  LOGIN_ROLE_ORDER,
   getActiveRoles,
+  getLoginEligibleRoles,
+  ensureLoginRoleGranted,
   userHasRole,
   grantUserRole,
   findUserByPhone,
