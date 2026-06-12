@@ -161,7 +161,7 @@ export default function InstructorEmailAuth({ onSuccess }) {
     e.preventDefault()
     setLoading(true)
     try {
-      const data = await api.post('/auth/login/email', { email, password, role })
+      const data = await api.post('/auth/login/email', { email, password })
       if (data?.needs_role && data?.token && data?.user) {
         setSession(data.token, data.user)
         navigate('/onboarding/role', { replace: true })
@@ -328,22 +328,6 @@ export default function InstructorEmailAuth({ onSuccess }) {
               Şifrəmi unutmuşam
             </button>
           </form>
-
-          <p className="text-[11px] text-center text-gray-500">
-            {role === 'instructor' ? (
-              <>
-                Müəllim email hesabı
-                {' · '}
-                <button type="button" className="text-gray-400 hover:text-white" onClick={() => setRole('student')}>
-                  Tələbə/Kurs
-                </button>
-              </>
-            ) : (
-              <button type="button" className="text-gray-400 hover:text-white" onClick={() => setRole('instructor')}>
-                Müəllim email hesabı?
-              </button>
-            )}
-          </p>
 
           <p className="text-xs text-center text-gray-500">
             Hesabınız yoxdur?{' '}
