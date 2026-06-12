@@ -41,7 +41,7 @@
     min-width: 0;
     max-width: 100%;
     height: 100%;
-    overflow-x: clip;
+    overflow-x: hidden;
   }
 
   body {
@@ -102,6 +102,10 @@
   .instructor-panel-main .recharts-surface {
     max-width: 100% !important;
     min-width: 0 !important;
+    width: 100% !important;
+  }
+  .instructor-panel-main svg {
+    max-width: 100%;
   }
   .instructor-panel-main .grid > * {
     min-width: 0;

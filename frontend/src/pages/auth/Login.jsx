@@ -305,9 +305,9 @@ export default function Login() {
   }, [loginModalOpen, isAdmin])
 
   return (
-    <div className="min-h-[100svh] bg-[#0b0b0b]">
+    <div className="min-h-[100svh] w-full min-w-0 max-w-full overflow-x-hidden bg-[#0b0b0b]">
       {!isAdmin ? (
-        <div className="w-full max-w-5xl mx-auto px-4 pt-10 sm:pt-14 pb-8 space-y-12 sm:space-y-16">
+        <div className="w-full max-w-5xl mx-auto px-4 pt-10 sm:pt-14 pb-8 space-y-12 sm:space-y-16 min-w-0 box-border overflow-x-hidden">
           <header className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-8 sm:gap-10">
             <div className="max-w-xl w-full space-y-4 flex flex-col items-center text-center sm:items-start sm:text-left">
               <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] text-gray-300">
@@ -614,7 +614,7 @@ export default function Login() {
             </div>
           </section>
 
-          <PublicSeoFooter className="-mx-4 sm:mx-0 rounded-none sm:rounded-2xl overflow-hidden" />
+          <PublicSeoFooter className="rounded-none sm:rounded-2xl overflow-hidden" />
         </div>
       ) : null}
 
@@ -629,7 +629,7 @@ export default function Login() {
       ) : null}
 
       <div
-        className={`flex justify-center ${
+        className={`flex w-full min-w-0 max-w-full justify-center overflow-x-hidden ${
           isAdmin
             ? 'min-h-[100svh] items-start px-4 pb-10 pt-8 sm:items-center sm:pt-4'
             : loginModalOpen

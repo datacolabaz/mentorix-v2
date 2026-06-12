@@ -234,7 +234,7 @@ export default function InstructorLayout() {
     <>
       <PhoneVerificationGate />
       <div
-        className={`theme-${theme} flex flex-col min-h-screen lg:h-screen w-full max-w-[100dvw] bg-token-surfaceMain text-token-textMain overflow-x-clip lg:overflow-hidden`}
+        className={`theme-${theme} flex flex-col min-h-screen lg:h-screen w-full min-w-0 bg-token-surfaceMain text-token-textMain overflow-x-hidden lg:overflow-hidden`}
       >
       {focusMode && (
         <button
@@ -248,8 +248,8 @@ export default function InstructorLayout() {
       )}
       <header
         className={[
-          'lg:hidden fixed top-0 left-0 right-0 z-[1100] min-h-[72px] grid grid-cols-[2.75rem_1fr_2.75rem] items-center gap-2 overflow-hidden',
-          'px-3 pl-[max(0.75rem,env(safe-area-inset-left,0px))] pr-[max(0.75rem,env(safe-area-inset-right,0px))]',
+          'lg:hidden fixed top-0 left-0 right-0 z-[1100] min-h-[72px] grid grid-cols-[auto_1fr_auto] items-center gap-3 overflow-hidden',
+          'px-4 pl-[max(1rem,env(safe-area-inset-left,0px))] pr-[max(1rem,env(safe-area-inset-right,0px))]',
           'pt-[env(safe-area-inset-top,0px)] pb-2 bg-token-surfaceMain border-b border-[color:var(--border-subtle)] text-token-textMain shadow-sm',
         ].join(' ')}
       >
@@ -281,7 +281,7 @@ export default function InstructorLayout() {
         />
       )}
 
-      <div className="flex flex-col flex-1 min-h-0 lg:flex-row">
+      <div className="flex flex-col flex-1 min-h-0 min-w-0 w-full overflow-x-hidden lg:flex-row">
         <aside
           className={[
             theme === 'dark' ? 'theme-dark' : 'theme-light',
@@ -490,13 +490,13 @@ export default function InstructorLayout() {
         <main
           className={[
             'fixed left-0 right-0 bottom-0 top-[calc(72px+env(safe-area-inset-top,0px))] z-[1]',
-            'w-full max-w-[100dvw] min-w-0 overflow-x-clip overflow-y-auto bg-token-surfaceMain',
+            'w-full min-w-0 overflow-x-hidden overflow-y-auto bg-token-surfaceMain',
             'pl-[env(safe-area-inset-left,0px)] pr-[env(safe-area-inset-right,0px)]',
-            'lg:static lg:inset-auto lg:flex-1 lg:min-h-0 lg:max-w-none lg:pt-0 lg:pl-0 lg:pr-0',
+            'lg:static lg:inset-auto lg:flex-1 lg:min-h-0 lg:pt-0 lg:pl-0 lg:pr-0',
           ].join(' ')}
         >
-        <div className="min-h-full flex flex-col min-w-0 w-full max-w-full overflow-x-clip">
-          <div className="mx-3 sm:mx-6 mt-3 sm:mt-4 min-w-0 max-w-full overflow-x-clip">
+        <div className="min-h-full flex flex-col min-w-0 w-full max-w-full overflow-x-hidden">
+          <div className="px-3 sm:px-6 mt-3 sm:mt-4 min-w-0 max-w-full box-border">
             <BillingBanner
               status={billing?.status}
               tone={billing?.messages?.tone || null}
@@ -513,7 +513,7 @@ export default function InstructorLayout() {
           </div>
           {limitStatus.level && !billing?.messages?.suppress_limit_bar && !billing?.messages?.banner ? (
             <div
-              className={`mx-4 sm:mx-6 mt-4 rounded-2xl border px-4 py-3 text-sm ${
+              className={`mx-3 sm:mx-6 mt-4 rounded-2xl border px-4 py-3 text-sm box-border max-w-full ${
                 limitStatus.level === 'critical'
                   ? theme === 'dark'
                     ? 'border-red-500/40 bg-red-500/10 text-red-200'

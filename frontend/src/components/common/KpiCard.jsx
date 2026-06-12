@@ -1,4 +1,4 @@
-import { useId } from 'react'
+import { useEffect, useId, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ResponsiveContainer, AreaChart, Area } from 'recharts'
 import Card from './Card'
@@ -43,6 +43,20 @@ function DeltaBadge({ deltaPct, theme }) {
   )
 }
 
+function useMinSm() {
+  const [minSm, setMinSm] = useState(() =>
+    typeof window !== 'undefined' ? window.matchMedia('(min-width: 640px)').matches : false,
+  )
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 640px)')
+    const onChange = () => setMinSm(mq.matches)
+    onChange()
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [])
+  return minSm
+}
+
 export default function KpiCard({
   title,
   value,
@@ -55,8 +69,9 @@ export default function KpiCard({
   ariaLabel,
 }) {
   const theme = useUiStore((s) => s.theme)
+  const minSm = useMinSm()
   const sparkFillId = useId().replace(/:/g, '')
-  const hasSpark = Array.isArray(sparkline) && sparkline.length >= 2
+  const hasSpark = minSm && Array.isArray(sparkline) && sparkline.length >= 2
   const data = hasSpark ? sparkline.map((v, i) => ({ i, v: Number(v) || 0 })) : []
 
   const label =
@@ -94,8 +109,8 @@ export default function KpiCard({
           ) : null}
         </div>
 
-        <div className="hidden sm:block w-[120px] h-[34px] shrink-0 overflow-hidden min-w-0 max-w-[38%]">
-          {hasSpark ? (
+        {hasSpark ? (
+          <div className="w-[120px] h-[34px] shrink-0 overflow-hidden min-w-0 max-w-[38%]">
             <ResponsiveContainer width="100%" height="100%" minWidth={0}>
               <AreaChart data={data} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
                 <defs>
@@ -115,15 +130,8 @@ export default function KpiCard({
                 />
               </AreaChart>
             </ResponsiveContainer>
-          ) : (
-            <div
-              className={[
-                'h-full rounded-xl border',
-                theme === 'dark' ? 'border-white/10 bg-white/5' : 'border-slate-200/80 bg-slate-100/80',
-              ].join(' ')}
-            />
-          )}
-        </div>
+          </div>
+        ) : null}
       </div>
     </>
   )
@@ -135,7 +143,7 @@ export default function KpiCard({
       <Link
         to={to}
         aria-label={label}
-        className="block h-full min-w-0 max-w-full rounded-2xl no-underline text-inherit focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/55"
+        className="block h-full w-full min-w-0 max-w-full rounded-2xl no-underline text-inherit focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/55"
       >
         <Card hover className={`${cardClass} h-full`}>
           {inner}
