@@ -94,9 +94,9 @@ export default function KpiCard({
           ) : null}
         </div>
 
-        <div className="w-[120px] h-[34px] shrink-0">
+        <div className="w-[92px] sm:w-[120px] h-[34px] shrink-0 overflow-hidden min-w-0 max-w-[38%]">
           {hasSpark ? (
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minWidth={0}>
               <AreaChart data={data} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id={sparkFillId} x1="0" y1="0" x2="1" y2="0">
@@ -135,7 +135,7 @@ export default function KpiCard({
       <Link
         to={to}
         aria-label={label}
-        className="block h-full rounded-2xl no-underline text-inherit focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/55"
+        className="block h-full min-w-0 max-w-full rounded-2xl no-underline text-inherit focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/55"
       >
         <Card hover className={`${cardClass} h-full`}>
           {inner}

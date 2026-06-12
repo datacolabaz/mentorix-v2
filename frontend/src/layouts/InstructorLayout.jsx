@@ -234,7 +234,7 @@ export default function InstructorLayout() {
     <>
       <PhoneVerificationGate />
       <div
-        className={`theme-${theme} flex flex-col min-h-screen lg:h-screen bg-token-surfaceMain text-token-textMain overflow-x-hidden lg:overflow-hidden`}
+        className={`theme-${theme} flex flex-col min-h-screen lg:h-screen w-full max-w-[100dvw] bg-token-surfaceMain text-token-textMain overflow-x-clip lg:overflow-hidden`}
       >
       {focusMode && (
         <button
@@ -248,17 +248,16 @@ export default function InstructorLayout() {
       )}
       <header
         className={[
-          'lg:hidden fixed top-0 left-0 right-0 z-[1000] h-[72px] flex items-center justify-between gap-2 px-3 overflow-visible',
-          theme === 'dark'
-            ? 'bg-token-surfaceMain border-b border-[color:var(--border-subtle)] text-token-textMain'
-            : 'bg-token-surfaceMain border-b border-[color:var(--border-subtle)] text-token-textMain',
+          'lg:hidden fixed top-0 left-0 right-0 z-[1000] min-h-[72px] grid grid-cols-[auto_1fr_auto] items-center gap-2 overflow-hidden',
+          'px-3 pl-[max(0.75rem,env(safe-area-inset-left,0px))] pr-[max(0.75rem,env(safe-area-inset-right,0px))]',
+          'pt-[env(safe-area-inset-top,0px)] bg-token-surfaceMain border-b border-[color:var(--border-subtle)] text-token-textMain',
         ].join(' ')}
       >
         <button
           type="button"
           aria-label="Menyu"
           className={[
-            'w-11 h-11 rounded-2xl shrink-0 flex items-center justify-center text-xl border',
+            'w-11 h-11 rounded-2xl shrink-0 flex items-center justify-center text-xl border justify-self-start',
             theme === 'dark'
               ? 'text-white bg-white/5 hover:bg-white/10 border-white/10'
               : 'text-[#003366] bg-gray-100 hover:bg-gray-200 border-gray-200',
@@ -267,10 +266,10 @@ export default function InstructorLayout() {
         >
           ☰
         </button>
-        <div className="flex-1 flex justify-center min-w-0 overflow-visible">
-          <Brand size="md" />
+        <div className="flex justify-center min-w-0 overflow-hidden justify-self-center">
+          <Brand size="md" imgClassName="h-10 max-h-11 w-auto max-w-[min(180px,46vw)] sm:h-[56px] sm:max-h-[62px] sm:max-w-full" />
         </div>
-        <div className="w-11 shrink-0" />
+        <div className="w-11 shrink-0 justify-self-end" aria-hidden />
       </header>
 
       {navOpen && (
@@ -490,13 +489,13 @@ export default function InstructorLayout() {
         <main
           className={[
             // Mobile: make content a fixed viewport panel under header (prevents iOS/WebKit height/flow quirks).
-            'fixed left-0 right-0 bottom-0 top-[72px] z-[1] w-full min-w-0 overflow-x-hidden overflow-y-auto',
+            'fixed left-0 right-0 bottom-0 top-[72px] z-[1] w-full max-w-[100dvw] min-w-0 overflow-x-clip overflow-y-auto',
             // Desktop: normal flow next to sidebar.
-            'lg:static lg:inset-auto lg:flex-1 lg:min-h-0 lg:pt-0',
+            'lg:static lg:inset-auto lg:flex-1 lg:min-h-0 lg:max-w-none lg:pt-0',
           ].join(' ')}
         >
-        <div className="min-h-full flex flex-col">
-          <div className="mx-4 sm:mx-6 mt-4">
+        <div className="min-h-full flex flex-col min-w-0 w-full max-w-full">
+          <div className="mx-3 sm:mx-6 mt-3 sm:mt-4 min-w-0 max-w-full">
             <BillingBanner
               status={billing?.status}
               tone={billing?.messages?.tone || null}

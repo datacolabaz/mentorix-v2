@@ -377,7 +377,7 @@ export default function InstructorDashboard() {
         <MarketplaceOpportunityCard theme={theme} />
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4 mb-4 sm:mb-6 min-w-0 w-full">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4 mb-4 sm:mb-6 min-w-0 w-full [&>*]:min-w-0">
         <KpiCard
           title="Tələbə"
           to="/instructor/students"
@@ -409,7 +409,7 @@ export default function InstructorDashboard() {
           sparkline={sparkIncome}
         />
       </div>
-      <div className="grid grid-cols-1 gap-3 sm:gap-4 mb-6">
+      <div className="grid grid-cols-1 gap-3 sm:gap-4 mb-6 min-w-0 w-full [&>*]:min-w-0">
         <KpiCard
           title="Bu ay ödəniş (nağd)"
           to="/instructor/payments"
@@ -422,7 +422,7 @@ export default function InstructorDashboard() {
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 min-w-0">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 min-w-0 w-full [&>*]:min-w-0">
         <div className="lg:col-span-2 min-w-0">
           <Card hover className="p-4 sm:p-5 min-w-0 overflow-hidden">
             <h2 className="font-display font-bold text-base text-token-textMain">Tələbə Proqresi (imtahan)</h2>
