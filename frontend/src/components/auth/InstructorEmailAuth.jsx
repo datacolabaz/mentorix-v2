@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import GoogleSignInButton from './GoogleSignInButton'
 import Button from '../common/Button'
@@ -59,6 +59,38 @@ function AuthModeTabs({ tab, onTab }) {
   )
 }
 
+/** iOS Safari: type=password + controlled state Keychain popup-u hər hərfdə bloklayır. */
+function SafariLoginPasswordInput({ inputRef }) {
+  return (
+    <input
+      ref={inputRef}
+      id="mx-login-password"
+      name="password"
+      type="text"
+      inputMode="text"
+      className={`${inputClass} mx-login-password-mask touch-manipulation`}
+      placeholder="Şifrə"
+      autoComplete="current-password"
+      autoCapitalize="off"
+      autoCorrect="off"
+      spellCheck={false}
+      enterKeyHint="go"
+      data-1p-ignore="true"
+      data-lpignore="true"
+      defaultValue=""
+      onFocus={(e) => {
+        window.setTimeout(() => {
+          try {
+            e.target.scrollIntoView({ block: 'center', behavior: 'smooth' })
+          } catch {
+            /* ignore */
+          }
+        }, 400)
+      }}
+    />
+  )
+}
+
 function RolePills({ roles, role, onRole, label = 'Rolunuzu seçin' }) {
   return (
     <div className="space-y-2">
@@ -106,9 +138,8 @@ export default function InstructorEmailAuth({ onSuccess }) {
   const [loading, setLoading] = useState(false)
 
   const [loginEmail, setLoginEmail] = useState('')
-  const [loginPassword, setLoginPassword] = useState('')
   const [loginRole, setLoginRole] = useState('instructor')
-  const [loginPasswordReady, setLoginPasswordReady] = useState(false)
+  const loginPasswordRef = useRef(null)
 
   const [signupFullName, setSignupFullName] = useState('')
   const [signupEmail, setSignupEmail] = useState('')
@@ -192,11 +223,16 @@ export default function InstructorEmailAuth({ onSuccess }) {
       toast('Giriş üçün rol seçin', 'error')
       return
     }
+    const password = String(loginPasswordRef.current?.value || '')
+    if (!password) {
+      toast('Şifrə daxil edin', 'error')
+      return
+    }
     setLoading(true)
     try {
       const data = await api.post('/auth/login/email', {
         email: loginEmail,
-        password: loginPassword,
+        password,
         role: loginRole,
       })
       finishEmailLogin(data)
@@ -338,9 +374,7 @@ export default function InstructorEmailAuth({ onSuccess }) {
             key="mentorix-login-form"
             onSubmit={handleLogin}
             className="space-y-3"
-            autoComplete="on"
-            method="post"
-            action="/login"
+            autoComplete="off"
           >
             <input
               id="mx-login-username"
@@ -350,30 +384,14 @@ export default function InstructorEmailAuth({ onSuccess }) {
               autoCapitalize="none"
               autoCorrect="off"
               spellCheck={false}
-              className={inputClass}
+              className={`${inputClass} touch-manipulation`}
               placeholder="E-poçt"
               autoComplete="username"
               value={loginEmail}
               onChange={(e) => setLoginEmail(e.target.value)}
               required
             />
-            <input
-              id="mx-login-password"
-              name="password"
-              type="password"
-              className={inputClass}
-              placeholder="Şifrə"
-              autoComplete="current-password"
-              autoCapitalize="none"
-              autoCorrect="off"
-              spellCheck={false}
-              enterKeyHint="go"
-              readOnly={!loginPasswordReady}
-              onFocus={() => setLoginPasswordReady(true)}
-              value={loginPassword}
-              onChange={(e) => setLoginPassword(e.target.value)}
-              required
-            />
+            <SafariLoginPasswordInput inputRef={loginPasswordRef} />
             <Button type="submit" loading={loading} className="w-full justify-center">
               Daxil ol
             </Button>

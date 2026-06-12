@@ -656,7 +656,7 @@ export default function Login() {
           <div
             className={`flex min-h-0 flex-1 flex-col bg-surface-2 ${
               !isAdmin && loginModalOpen
-                ? 'min-h-[100dvh] overflow-y-auto overscroll-y-contain rounded-none border-0 p-5 shadow-2xl sm:min-h-0 sm:rounded-2xl sm:border sm:border-white/10 sm:p-6'
+                ? 'min-h-[100dvh] overflow-y-auto overscroll-y-contain rounded-none border-0 p-5 pb-[max(11rem,env(safe-area-inset-bottom,0px))] shadow-2xl sm:min-h-0 sm:pb-6 sm:rounded-2xl sm:border sm:border-white/10 sm:p-6'
                 : 'rounded-2xl border border-white/10 p-5 sm:p-6'
             }`}
           >

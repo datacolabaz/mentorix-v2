@@ -60,6 +60,11 @@
 @layer utilities {
   .font-body { font-family: 'DM Sans', sans-serif; }
   .font-display { font-family: 'Syne', sans-serif; }
+  /* iOS Safari: type=password Keychain overlay — mətn kimi maskalanır */
+  .mx-login-password-mask {
+    -webkit-text-security: disc;
+    text-security: disc;
+  }
   /* Logo blending for removing faint white box (sidebar/header) */
   .mentorix-logo { mix-blend-mode: normal; }
   .theme-light .mentorix-logo:not(.mentorix-logo--login) { mix-blend-mode: multiply; }
