@@ -84,6 +84,8 @@ export default function InstructorLayout() {
   })
   const toast = useToast()
   const lastTrackedRef = useRef({ warning: false, blocked: false })
+  const mainRef = useRef(null)
+  const showMobileSidebar = navOpen && !sidebarHidden
 
   const notifUnread = useMemo(() => {
     if (!hasAlerts || !notifFetchAt) return false
@@ -97,6 +99,13 @@ export default function InstructorLayout() {
 
   useEffect(() => {
     setNavOpen(false)
+  }, [location.pathname])
+
+  useEffect(() => {
+    const el = mainRef.current
+    if (!el) return
+    el.scrollLeft = 0
+    el.scrollTop = 0
   }, [location.pathname])
 
   useEffect(() => {
@@ -285,21 +294,15 @@ export default function InstructorLayout() {
         <aside
           className={[
             theme === 'dark' ? 'theme-dark' : 'theme-light',
-            'w-[min(17rem,calc(100vw-env(safe-area-inset-left,0px)-1rem))] max-w-[280px] flex flex-col flex-shrink-0',
+            'w-[min(17rem,88vw)] max-w-[280px] flex-col flex-shrink-0',
             theme === 'dark'
               ? 'bg-gradient-to-b from-[#0c0f0d] to-[#070a08] border-r border-[color:var(--border-subtle)]'
               : 'bg-[#F8FAFC] border-r border-black/[0.06]',
-            sidebarHidden
-              ? 'fixed inset-y-0 z-[1100]'
-              : 'fixed lg:static inset-y-0 z-[1100] lg:z-auto',
+            sidebarHidden ? 'hidden' : showMobileSidebar ? 'flex' : 'hidden lg:flex',
+            'fixed lg:static inset-y-0 z-[1100] lg:z-auto',
             'left-[env(safe-area-inset-left,0px)] lg:left-auto',
             'h-full max-h-[100dvh] lg:max-h-none',
-            'transition-[transform,visibility] duration-200 ease-out shadow-2xl lg:shadow-none',
-            sidebarHidden
-              ? '-translate-x-full pointer-events-none invisible'
-              : navOpen
-                ? 'translate-x-0 visible'
-                : '-translate-x-[calc(100%+env(safe-area-inset-left,0px))] invisible lg:visible lg:translate-x-0',
+            'shadow-2xl lg:shadow-none',
             'relative',
           ].join(' ')}
         >
@@ -488,15 +491,16 @@ export default function InstructorLayout() {
       </aside>
 
         <main
+          ref={mainRef}
           className={[
             'fixed left-0 right-0 bottom-0 top-[calc(72px+env(safe-area-inset-top,0px))] z-[1]',
-            'w-full min-w-0 overflow-x-hidden overflow-y-auto bg-token-surfaceMain',
-            'pl-[env(safe-area-inset-left,0px)] pr-[env(safe-area-inset-right,0px)]',
-            'lg:static lg:inset-auto lg:flex-1 lg:min-h-0 lg:pt-0 lg:pl-0 lg:pr-0',
+            'w-full min-w-0 overflow-x-hidden overflow-y-auto overscroll-x-none bg-token-surfaceMain',
+            'px-4 pl-[max(1rem,env(safe-area-inset-left,0px))] pr-[max(1rem,env(safe-area-inset-right,0px))]',
+            'lg:static lg:inset-auto lg:flex-1 lg:min-h-0 lg:pt-0 lg:px-6',
           ].join(' ')}
         >
-        <div className="min-h-full flex flex-col min-w-0 w-full max-w-full overflow-x-hidden">
-          <div className="px-3 sm:px-6 mt-3 sm:mt-4 min-w-0 max-w-full box-border">
+        <div className="min-h-full flex flex-col min-w-0 w-full max-w-full overflow-x-hidden box-border">
+          <div className="mt-3 sm:mt-4 min-w-0 max-w-full box-border">
             <BillingBanner
               status={billing?.status}
               tone={billing?.messages?.tone || null}
@@ -513,7 +517,7 @@ export default function InstructorLayout() {
           </div>
           {limitStatus.level && !billing?.messages?.suppress_limit_bar && !billing?.messages?.banner ? (
             <div
-              className={`mx-3 sm:mx-6 mt-4 rounded-2xl border px-4 py-3 text-sm box-border max-w-full ${
+              className={`mt-4 rounded-2xl border px-4 py-3 text-sm box-border max-w-full w-full ${
                 limitStatus.level === 'critical'
                   ? theme === 'dark'
                     ? 'border-red-500/40 bg-red-500/10 text-red-200'

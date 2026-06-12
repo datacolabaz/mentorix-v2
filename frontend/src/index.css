@@ -110,10 +110,22 @@
   .instructor-panel-main .grid > * {
     min-width: 0;
   }
-  .instructor-panel-main,
+  .instructor-panel-main {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: hidden;
+    contain: inline-size;
+  }
   .instructor-panel-main > * {
     max-width: 100%;
     min-width: 0;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .instructor-panel-main .grid {
+    width: 100%;
+    max-width: 100%;
   }
   /* Bu kod bütün mobil brauzerlərdəki o xətalı daşmanı kəsir */
   .date-input-class {

@@ -143,7 +143,7 @@ export default function KpiCard({
       <Link
         to={to}
         aria-label={label}
-        className="block h-full w-full min-w-0 max-w-full rounded-2xl no-underline text-inherit focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/55"
+        className="contents min-w-0 max-w-full no-underline text-inherit focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/55 [&>*]:w-full"
       >
         <Card hover className={`${cardClass} h-full`}>
           {inner}

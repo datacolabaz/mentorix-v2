@@ -4,7 +4,7 @@ export default function Card({ children, className = '', hover = false, ...rest 
       {...rest}
       className={`
         rounded-2xl
-        min-w-0 max-w-full box-border
+        w-full min-w-0 max-w-full box-border
         bg-token-surfaceCard/75 backdrop-blur-[10px]
         text-token-textMain
         border border-[color:var(--border-subtle)]
