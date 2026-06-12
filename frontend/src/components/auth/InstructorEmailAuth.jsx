@@ -18,7 +18,68 @@ const ROLES = [
 ]
 
 function AuthDivider() {
-  return <div className="border-t border-white/10" aria-hidden />
+  return (
+    <div className="flex items-center gap-3">
+      <div className="flex-1 border-t border-white/10" aria-hidden />
+      <span className="text-[11px] text-gray-500 shrink-0">və ya</span>
+      <div className="flex-1 border-t border-white/10" aria-hidden />
+    </div>
+  )
+}
+
+function AuthModeTabs({ tab, onTab }) {
+  return (
+    <div className="flex rounded-xl border border-white/10 overflow-hidden text-sm font-semibold">
+      <button
+        type="button"
+        className={`flex-1 py-2.5 transition-colors ${
+          tab === 'login' ? 'bg-primary/15 text-primary' : 'text-gray-400 hover:bg-white/5 hover:text-gray-200'
+        }`}
+        onClick={() => onTab('login')}
+      >
+        Daxil ol
+      </button>
+      <button
+        type="button"
+        className={`flex-1 py-2.5 transition-colors ${
+          tab === 'signup' ? 'bg-primary/15 text-primary' : 'text-gray-400 hover:bg-white/5 hover:text-gray-200'
+        }`}
+        onClick={() => onTab('signup')}
+      >
+        Yeni qeydiyyat
+      </button>
+    </div>
+  )
+}
+
+function RolePills({ role, onRole }) {
+  return (
+    <div className="space-y-2">
+      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Rolunuzu seçin</p>
+      <div className="flex gap-2" role="radiogroup" aria-label="Rol seçimi">
+        {ROLES.map((r) => {
+          const selected = role === r.key
+          return (
+            <button
+              key={r.key}
+              type="button"
+              role="radio"
+              aria-checked={selected}
+              onClick={() => onRole(r.key)}
+              className={[
+                'flex-1 rounded-xl border px-2 py-2.5 text-xs font-semibold transition-colors text-center',
+                selected
+                  ? 'border-primary/50 bg-primary/10 text-primary'
+                  : 'border-white/10 bg-white/[0.03] text-gray-400 hover:border-white/20',
+              ].join(' ')}
+            >
+              {r.label}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
 }
 
 /**
@@ -38,8 +99,6 @@ export default function InstructorEmailAuth({ onSuccess }) {
   const [password, setPassword] = useState('')
   const [verifyCode, setVerifyCode] = useState('')
   const [role, setRole] = useState('student')
-
-  const isInstructor = role === 'instructor'
 
   const handleGoogleCredential = async (credential) => {
     setLoading(true)
@@ -230,68 +289,19 @@ export default function InstructorEmailAuth({ onSuccess }) {
 
   return (
     <div className="space-y-4">
-      {/* 1. Rol */}
-      <div className="space-y-2">
-        <p className="text-sm font-medium text-gray-200">Rolunuzu seçin:</p>
-        <div className="space-y-2" role="radiogroup" aria-label="Rol seçimi">
-          {ROLES.map((r) => {
-            const selected = role === r.key
-            return (
-              <button
-                key={r.key}
-                type="button"
-                role="radio"
-                aria-checked={selected}
-                onClick={() => setRole(r.key)}
-                className={[
-                  'w-full flex items-center gap-3 rounded-xl border px-4 py-3 text-left text-sm font-medium transition-colors',
-                  selected
-                    ? 'border-primary/50 bg-primary/10 text-white'
-                    : 'border-white/10 bg-white/[0.03] text-gray-300 hover:border-white/20 hover:bg-white/[0.06]',
-                ].join(' ')}
-              >
-                <span
-                  className={[
-                    'flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2',
-                    selected ? 'border-primary' : 'border-gray-500',
-                  ].join(' ')}
-                  aria-hidden
-                >
-                  {selected ? <span className="h-2 w-2 rounded-full bg-primary" /> : null}
-                </span>
-                {r.label}
-              </button>
-            )
-          })}
-        </div>
-      </div>
+      <AuthModeTabs tab={tab} onTab={setTab} />
 
-      {/* 2. Google — əsas yol */}
-      <div className="space-y-2 rounded-2xl border border-white/10 bg-white/[0.03] p-3.5">
-        <p className="text-sm font-semibold text-white text-center">Google ilə davam edin</p>
-        <p className="text-xs text-gray-500 text-center leading-snug">
-          Yeni hesab avtomatik yaradılır; köhnə email hesabınız varsa, aşağıdan email ilə daxil olun.
-        </p>
-        <GoogleSignInButton onCredential={handleGoogleCredential} disabled={loading} />
-      </div>
+      {tab === 'login' ? (
+        <div className="space-y-4">
+          <GoogleSignInButton onCredential={handleGoogleCredential} disabled={loading} label="Google ilə daxil ol" />
 
-      <AuthDivider />
+          <AuthDivider />
 
-      {/* 3. Köhnə email hesabı */}
-      <div className="space-y-3">
-        <div className="space-y-1">
-          <p className="text-sm font-semibold text-white">Köhnə hesabınız var?</p>
-          <p className="text-xs text-gray-400 leading-relaxed">
-            Əgər əvvəllər Mentorix-də email və şifrə ilə qeydiyyatdan keçmisinizsə, aşağıdan daxil olun.
-          </p>
-        </div>
-
-        {isInstructor ? (
           <form onSubmit={handleLogin} className="space-y-3">
             <input
               type="email"
               className={inputClass}
-              placeholder="E-poçt ünvanı"
+              placeholder="E-poçt"
               autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -306,7 +316,7 @@ export default function InstructorEmailAuth({ onSuccess }) {
               onChange={(e) => setPassword(e.target.value)}
               required
             />
-            <Button type="submit" loading={loading} variant="secondary" className="w-full justify-center">
+            <Button type="submit" loading={loading} className="w-full justify-center">
               Daxil ol
             </Button>
             <button
@@ -318,93 +328,78 @@ export default function InstructorEmailAuth({ onSuccess }) {
               Şifrəmi unutmuşam
             </button>
           </form>
-        ) : (
-          <>
-            <div className="flex rounded-xl border border-white/10 overflow-hidden text-xs font-semibold">
-              <button
-                type="button"
-                className={`flex-1 py-2.5 ${tab === 'login' ? 'bg-white/10 text-white' : 'text-gray-400 hover:bg-white/5'}`}
-                onClick={() => setTab('login')}
-              >
-                Daxil ol
-              </button>
-              <button
-                type="button"
-                className={`flex-1 py-2.5 ${tab === 'signup' ? 'bg-white/10 text-white' : 'text-gray-400 hover:bg-white/5'}`}
-                onClick={() => setTab('signup')}
-              >
-                Yeni qeydiyyat
-              </button>
-            </div>
 
-            {tab === 'login' ? (
-              <form onSubmit={handleLogin} className="space-y-3">
-                <input
-                  type="email"
-                  className={inputClass}
-                  placeholder="E-poçt ünvanı"
-                  autoComplete="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-                <input
-                  type="password"
-                  className={inputClass}
-                  placeholder="Şifrə"
-                  autoComplete="current-password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-                <Button type="submit" loading={loading} variant="secondary" className="w-full justify-center">
-                  Daxil ol
-                </Button>
-                <button
-                  type="button"
-                  className="w-full text-xs font-semibold text-primary hover:text-primary/90 text-center"
-                  disabled={loading}
-                  onClick={handleForgotPassword}
-                >
-                  Şifrəmi unutmuşam
+          <p className="text-[11px] text-center text-gray-500">
+            {role === 'instructor' ? (
+              <>
+                Müəllim email hesabı
+                {' · '}
+                <button type="button" className="text-gray-400 hover:text-white" onClick={() => setRole('student')}>
+                  Tələbə/Kurs
                 </button>
-              </form>
+              </>
             ) : (
-              <form onSubmit={handleSignup} className="space-y-3">
-                <input
-                  className={inputClass}
-                  placeholder="Ad Soyad"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  required
-                />
-                <input
-                  type="email"
-                  className={inputClass}
-                  placeholder="E-poçt ünvanı"
-                  autoComplete="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-                <input
-                  type="password"
-                  className={inputClass}
-                  placeholder="Şifrə (min. 8 simvol)"
-                  autoComplete="new-password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  minLength={8}
-                  required
-                />
-                <Button type="submit" loading={loading} variant="secondary" className="w-full justify-center">
-                  Qeydiyyatdan keç
-                </Button>
-              </form>
+              <button type="button" className="text-gray-400 hover:text-white" onClick={() => setRole('instructor')}>
+                Müəllim email hesabı?
+              </button>
             )}
-          </>
-        )}
-      </div>
+          </p>
+
+          <p className="text-xs text-center text-gray-500">
+            Hesabınız yoxdur?{' '}
+            <button type="button" className="font-semibold text-primary hover:brightness-110" onClick={() => setTab('signup')}>
+              Qeydiyyatdan keçin
+            </button>
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <RolePills role={role} onRole={setRole} />
+
+          <GoogleSignInButton onCredential={handleGoogleCredential} disabled={loading} label="Google ilə davam et" />
+
+          <AuthDivider />
+
+          <form onSubmit={handleSignup} className="space-y-3">
+            <input
+              className={inputClass}
+              placeholder="Ad Soyad"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              required
+            />
+            <input
+              type="email"
+              className={inputClass}
+              placeholder="E-poçt"
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+            <input
+              type="password"
+              className={inputClass}
+              placeholder="Şifrə (min. 8 simvol)"
+              autoComplete="new-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              minLength={8}
+              required
+            />
+            <Button type="submit" loading={loading} variant="secondary" className="w-full justify-center">
+              Qeydiyyatdan keç
+            </Button>
+          </form>
+
+          <p className="text-xs text-center text-gray-500">
+            Hesabınız var?{' '}
+            <button type="button" className="font-semibold text-primary hover:brightness-110" onClick={() => setTab('login')}>
+              Daxil olun
+            </button>
+          </p>
+        </div>
+      )}
     </div>
   )
 }

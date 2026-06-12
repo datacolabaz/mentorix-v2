@@ -665,13 +665,10 @@ export default function Login() {
                 <div className="mb-4 shrink-0 px-1">
                   <div className="flex flex-col sm:grid sm:grid-cols-[3rem_1fr_3rem] sm:items-start sm:gap-x-1">
                     <div aria-hidden className="hidden sm:block h-12 w-12" />
-                    <div className="order-2 sm:order-none space-y-1 text-center min-w-0 w-full">
+                    <div className="order-2 sm:order-none text-center min-w-0 w-full">
                       <h2 id="mx-login-modal-title" className="text-lg font-semibold text-white sm:text-xl">
-                        Mentorix-ə xoş gəlmisiniz
+                        Xoş gəlmisiniz!
                       </h2>
-                      <p className="text-sm leading-snug text-gray-400">
-                        Rol seçin, Google ilə daxil olun və ya köhnə email hesabınızdan istifadə edin.
-                      </p>
                     </div>
                     <div className="order-1 sm:order-none flex justify-end mb-1.5 sm:mb-0">
                       <button
@@ -688,15 +685,11 @@ export default function Login() {
                   </div>
                 </div>
               ) : (
-                <div className="mb-3 text-center space-y-1.5">
-                  <div className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">Giriş</div>
-                  <div className="text-sm font-semibold text-gray-200">Hesabına daxil ol</div>
-                  <p className="text-xs text-gray-500 leading-snug max-w-[18rem] mx-auto">
-                    Əvvəlcə məhsulu yuxarıda gör — sonra email ilə qeydiyyatı keç.
-                  </p>
-                  <div className="flex justify-center pt-0.5">
+                <div className="mb-3 text-center space-y-2">
+                  <div className="flex justify-center">
                     <Brand size="login" />
                   </div>
+                  <div className="text-sm font-semibold text-gray-200">Xoş gəlmisiniz!</div>
                 </div>
               )
             ) : (
