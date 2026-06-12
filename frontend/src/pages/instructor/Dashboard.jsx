@@ -355,7 +355,7 @@ export default function InstructorDashboard() {
           </Button>
         </div>
       </Modal>
-      <div className="p-3 sm:p-6 min-w-0 w-full max-w-full box-border overflow-x-hidden">
+      <div className="p-3 sm:p-6 min-w-0 w-full max-w-full box-border overflow-x-clip">
       <div className="mb-4 sm:mb-6">
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 min-w-0">
           <div className="min-w-0">
@@ -435,8 +435,8 @@ export default function InstructorDashboard() {
               .
             </p>
             {students.length ? (
-              <div className="w-full overflow-x-auto">
-                <div className="min-w-[520px] h-[280px] min-h-[240px]">
+              <div className="w-full max-w-full min-w-0 overflow-x-auto">
+                <div className="min-w-[min(520px,100%)] sm:min-w-[520px] h-[280px] min-h-[240px]">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={chartRows} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
                     <defs>

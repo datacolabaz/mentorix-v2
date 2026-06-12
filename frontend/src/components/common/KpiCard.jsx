@@ -94,7 +94,7 @@ export default function KpiCard({
           ) : null}
         </div>
 
-        <div className="w-[92px] sm:w-[120px] h-[34px] shrink-0 overflow-hidden min-w-0 max-w-[38%]">
+        <div className="hidden sm:block w-[120px] h-[34px] shrink-0 overflow-hidden min-w-0 max-w-[38%]">
           {hasSpark ? (
             <ResponsiveContainer width="100%" height="100%" minWidth={0}>
               <AreaChart data={data} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>

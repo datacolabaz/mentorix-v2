@@ -248,26 +248,26 @@ export default function InstructorLayout() {
       )}
       <header
         className={[
-          'lg:hidden fixed top-0 left-0 right-0 z-[1000] min-h-[72px] grid grid-cols-[auto_1fr_auto] items-center gap-2 overflow-hidden',
+          'lg:hidden fixed top-0 left-0 right-0 z-[1100] min-h-[72px] grid grid-cols-[2.75rem_1fr_2.75rem] items-center gap-2 overflow-hidden',
           'px-3 pl-[max(0.75rem,env(safe-area-inset-left,0px))] pr-[max(0.75rem,env(safe-area-inset-right,0px))]',
-          'pt-[env(safe-area-inset-top,0px)] bg-token-surfaceMain border-b border-[color:var(--border-subtle)] text-token-textMain',
+          'pt-[env(safe-area-inset-top,0px)] pb-2 bg-token-surfaceMain border-b border-[color:var(--border-subtle)] text-token-textMain shadow-sm',
         ].join(' ')}
       >
         <button
           type="button"
           aria-label="Menyu"
           className={[
-            'w-11 h-11 rounded-2xl shrink-0 flex items-center justify-center text-xl border justify-self-start',
+            'w-11 h-11 rounded-2xl shrink-0 flex items-center justify-center text-xl font-bold border-2 shadow-md justify-self-start',
             theme === 'dark'
-              ? 'text-white bg-white/5 hover:bg-white/10 border-white/10'
-              : 'text-[#003366] bg-gray-100 hover:bg-gray-200 border-gray-200',
+              ? 'text-white bg-white/10 hover:bg-white/15 border-white/20'
+              : 'text-[#003366] bg-white hover:bg-gray-50 border-[#003366]/25',
           ].join(' ')}
           onClick={() => setNavOpen(true)}
         >
           ☰
         </button>
-        <div className="flex justify-center min-w-0 overflow-hidden justify-self-center">
-          <Brand size="md" imgClassName="h-10 max-h-11 w-auto max-w-[min(180px,46vw)] sm:h-[56px] sm:max-h-[62px] sm:max-w-full" />
+        <div className="flex justify-center min-w-0 overflow-hidden justify-self-center px-1">
+          <Brand size="md" imgClassName="h-9 max-h-10 w-auto max-w-[min(160px,42vw)] sm:h-[56px] sm:max-h-[62px] sm:max-w-full" />
         </div>
         <div className="w-11 shrink-0 justify-self-end" aria-hidden />
       </header>
@@ -276,7 +276,7 @@ export default function InstructorLayout() {
         <button
           type="button"
           aria-label="Menyunu bağla"
-          className="lg:hidden fixed inset-0 z-[70] bg-black/60"
+          className="lg:hidden fixed inset-0 z-[1090] bg-black/60"
           onClick={() => setNavOpen(false)}
         />
       )}
@@ -285,20 +285,21 @@ export default function InstructorLayout() {
         <aside
           className={[
             theme === 'dark' ? 'theme-dark' : 'theme-light',
-            'w-[min(17rem,88vw)] max-w-[280px] flex flex-col flex-shrink-0',
+            'w-[min(17rem,calc(100vw-env(safe-area-inset-left,0px)-1rem))] max-w-[280px] flex flex-col flex-shrink-0',
             theme === 'dark'
               ? 'bg-gradient-to-b from-[#0c0f0d] to-[#070a08] border-r border-[color:var(--border-subtle)]'
               : 'bg-[#F8FAFC] border-r border-black/[0.06]',
-            // Modal açıq olanda lg:static saxlamırıq — yoxsa sidebar yer tutur və modalın altında qalır.
             sidebarHidden
-              ? 'fixed inset-y-0 left-0 z-[80]'
-              : 'fixed lg:static inset-y-0 left-0 z-[80]',
-            'transition-transform duration-200 ease-out',
+              ? 'fixed inset-y-0 z-[1100]'
+              : 'fixed lg:static inset-y-0 z-[1100] lg:z-auto',
+            'left-[env(safe-area-inset-left,0px)] lg:left-auto',
+            'h-full max-h-[100dvh] lg:max-h-none',
+            'transition-[transform,visibility] duration-200 ease-out shadow-2xl lg:shadow-none',
             sidebarHidden
-              ? '-translate-x-full pointer-events-none'
+              ? '-translate-x-full pointer-events-none invisible'
               : navOpen
-                ? 'translate-x-0'
-                : '-translate-x-full lg:translate-x-0',
+                ? 'translate-x-0 visible'
+                : '-translate-x-[calc(100%+env(safe-area-inset-left,0px))] invisible lg:visible lg:translate-x-0',
             'relative',
           ].join(' ')}
         >
@@ -488,14 +489,14 @@ export default function InstructorLayout() {
 
         <main
           className={[
-            // Mobile: make content a fixed viewport panel under header (prevents iOS/WebKit height/flow quirks).
-            'fixed left-0 right-0 bottom-0 top-[72px] z-[1] w-full max-w-[100dvw] min-w-0 overflow-x-clip overflow-y-auto',
-            // Desktop: normal flow next to sidebar.
-            'lg:static lg:inset-auto lg:flex-1 lg:min-h-0 lg:max-w-none lg:pt-0',
+            'fixed left-0 right-0 bottom-0 top-[calc(72px+env(safe-area-inset-top,0px))] z-[1]',
+            'w-full max-w-[100dvw] min-w-0 overflow-x-clip overflow-y-auto bg-token-surfaceMain',
+            'pl-[env(safe-area-inset-left,0px)] pr-[env(safe-area-inset-right,0px)]',
+            'lg:static lg:inset-auto lg:flex-1 lg:min-h-0 lg:max-w-none lg:pt-0 lg:pl-0 lg:pr-0',
           ].join(' ')}
         >
-        <div className="min-h-full flex flex-col min-w-0 w-full max-w-full">
-          <div className="mx-3 sm:mx-6 mt-3 sm:mt-4 min-w-0 max-w-full">
+        <div className="min-h-full flex flex-col min-w-0 w-full max-w-full overflow-x-clip">
+          <div className="mx-3 sm:mx-6 mt-3 sm:mt-4 min-w-0 max-w-full overflow-x-clip">
             <BillingBanner
               status={billing?.status}
               tone={billing?.messages?.tone || null}

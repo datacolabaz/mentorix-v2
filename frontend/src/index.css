@@ -97,11 +97,18 @@
     color: rgb(71 85 105) !important;
   }
   /* Recharts mobil overflow — KPI sparkline */
-  .instructor-panel-main .recharts-responsive-container {
+  .instructor-panel-main .recharts-responsive-container,
+  .instructor-panel-main .recharts-wrapper,
+  .instructor-panel-main .recharts-surface {
     max-width: 100% !important;
     min-width: 0 !important;
   }
   .instructor-panel-main .grid > * {
+    min-width: 0;
+  }
+  .instructor-panel-main,
+  .instructor-panel-main > * {
+    max-width: 100%;
     min-width: 0;
   }
   /* Bu kod bütün mobil brauzerlərdəki o xətalı daşmanı kəsir */
