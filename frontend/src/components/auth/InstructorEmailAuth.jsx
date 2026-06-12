@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import GoogleSignInButton from './GoogleSignInButton'
 import Button from '../common/Button'
+import Modal from '../common/Modal'
 import useAuthStore from '../../hooks/useAuth'
 import { useToast } from '../common/Toast'
 import api from '../../lib/api'
@@ -16,6 +17,57 @@ const ROLES = [
   { key: 'instructor', label: 'Müəllim' },
   { key: 'course', label: 'Kurs' },
 ]
+
+const LOGIN_ROLE_META = {
+  instructor: { label: 'Müəllim', hint: 'Müəllim paneli' },
+  student: { label: 'Tələbə', hint: 'Tələbə paneli' },
+  course: { label: 'Kurs', hint: 'Kurs paneli' },
+  parent: { label: 'Valideyn', hint: 'Valideyn paneli' },
+}
+
+function RoleChoiceModal({ open, roles, email, busy, onPick, onClose }) {
+  const choices = (Array.isArray(roles) ? roles : []).filter((r) => LOGIN_ROLE_META[r])
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="Profil seçimi"
+      size="sm"
+      zIndex={10050}
+    >
+      <p className="text-sm text-gray-300 leading-relaxed">
+        {email ? (
+          <>
+            <span className="font-semibold text-white">{email}</span> üçün hansı profilinizlə davam etmək istəyirsiniz?
+          </>
+        ) : (
+          'Hansı profilinizlə davam etmək istəyirsiniz?'
+        )}
+      </p>
+      <div className="mt-4 grid grid-cols-1 gap-2.5">
+        {choices.map((roleKey) => {
+          const meta = LOGIN_ROLE_META[roleKey]
+          return (
+            <button
+              key={roleKey}
+              type="button"
+              disabled={busy}
+              onClick={() => onPick(roleKey)}
+              className={[
+                'w-full rounded-xl border px-4 py-3.5 text-left transition-colors',
+                'border-white/10 bg-surface-1 text-gray-100 hover:border-primary/45 hover:bg-primary/10',
+                'disabled:opacity-60 disabled:pointer-events-none',
+              ].join(' ')}
+            >
+              <div className="font-semibold text-white">{meta.label}</div>
+              <div className="text-xs text-gray-400 mt-0.5">{meta.hint}</div>
+            </button>
+          )
+        })}
+      </div>
+    </Modal>
+  )
+}
 
 function AuthDivider() {
   return (
@@ -99,6 +151,8 @@ export default function InstructorEmailAuth({ onSuccess }) {
   const [password, setPassword] = useState('')
   const [verifyCode, setVerifyCode] = useState('')
   const [role, setRole] = useState('student')
+  const [roleChoiceOpen, setRoleChoiceOpen] = useState(false)
+  const [availableRoles, setAvailableRoles] = useState([])
 
   const handleGoogleCredential = async (credential) => {
     setLoading(true)
@@ -157,20 +211,33 @@ export default function InstructorEmailAuth({ onSuccess }) {
     }
   }
 
+  const finishEmailLogin = (data) => {
+    if (data?.needs_role && data?.token && data?.user) {
+      setSession(data.token, data.user)
+      navigate('/onboarding/role', { replace: true })
+      return
+    }
+    if (!data?.token || !data?.user) throw new Error(data?.message || 'Server cavabı etibarsızdır')
+    setSession(data.token, data.user)
+    if (onSuccess) onSuccess(data.user)
+    else postAuthNavigate(data.user, navigate)
+  }
+
   const handleLogin = async (e) => {
     e.preventDefault()
     setLoading(true)
     try {
       const data = await api.post('/auth/login/email', { email, password })
-      if (data?.needs_role && data?.token && data?.user) {
-        setSession(data.token, data.user)
-        navigate('/onboarding/role', { replace: true })
+      if (
+        data?.needs_role_choice &&
+        Array.isArray(data.available_roles) &&
+        data.available_roles.length > 1
+      ) {
+        setAvailableRoles(data.available_roles)
+        setRoleChoiceOpen(true)
         return
       }
-      if (!data?.token || !data?.user) throw new Error(data?.message || 'Server cavabı etibarsızdır')
-      setSession(data.token, data.user)
-      if (onSuccess) onSuccess(data.user)
-      else postAuthNavigate(data.user, navigate)
+      finishEmailLogin(data)
     } catch (err) {
       const code = err?.code || err?.response?.data?.code
       if (code === 'EMAIL_NOT_VERIFIED') {
@@ -179,6 +246,20 @@ export default function InstructorEmailAuth({ onSuccess }) {
       } else {
         toast(err.message || 'Giriş xətası', 'error')
       }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleRoleChoice = async (pickedRole) => {
+    setLoading(true)
+    try {
+      const data = await api.post('/auth/login/email', { email, password, role: pickedRole })
+      setRoleChoiceOpen(false)
+      setAvailableRoles([])
+      finishEmailLogin(data)
+    } catch (err) {
+      toast(err.message || 'Giriş xətası', 'error')
     } finally {
       setLoading(false)
     }
@@ -289,6 +370,18 @@ export default function InstructorEmailAuth({ onSuccess }) {
 
   return (
     <div className="space-y-4">
+      <RoleChoiceModal
+        open={roleChoiceOpen}
+        roles={availableRoles}
+        email={email}
+        busy={loading}
+        onPick={handleRoleChoice}
+        onClose={() => {
+          if (loading) return
+          setRoleChoiceOpen(false)
+          setAvailableRoles([])
+        }}
+      />
       <AuthModeTabs tab={tab} onTab={setTab} />
 
       {tab === 'login' ? (
@@ -297,17 +390,25 @@ export default function InstructorEmailAuth({ onSuccess }) {
 
           <AuthDivider />
 
-          <form onSubmit={handleLogin} className="space-y-3">
+          <form onSubmit={handleLogin} className="space-y-3" autoComplete="on">
             <input
+              id="login-username"
+              name="username"
               type="email"
+              inputMode="email"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
               className={inputClass}
               placeholder="E-poçt"
-              autoComplete="email"
+              autoComplete="username"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
             />
             <input
+              id="login-password"
+              name="password"
               type="password"
               className={inputClass}
               placeholder="Şifrə"
@@ -344,16 +445,25 @@ export default function InstructorEmailAuth({ onSuccess }) {
 
           <AuthDivider />
 
-          <form onSubmit={handleSignup} className="space-y-3">
+          <form onSubmit={handleSignup} className="space-y-3" autoComplete="on">
             <input
+              id="signup-fullname"
+              name="name"
               className={inputClass}
               placeholder="Ad Soyad"
+              autoComplete="name"
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
               required
             />
             <input
+              id="signup-email"
+              name="email"
               type="email"
+              inputMode="email"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
               className={inputClass}
               placeholder="E-poçt"
               autoComplete="email"
@@ -362,6 +472,8 @@ export default function InstructorEmailAuth({ onSuccess }) {
               required
             />
             <input
+              id="signup-password"
+              name="new-password"
               type="password"
               className={inputClass}
               placeholder="Şifrə (min. 8 simvol)"

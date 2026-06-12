@@ -702,17 +702,21 @@ export default function Login() {
             )}
 
             {isAdmin && (
-              <form onSubmit={handleEmailLogin} className="space-y-4">
+              <form onSubmit={handleEmailLogin} className="space-y-4" autoComplete="on">
                 <div className="text-center text-red-400 text-xs py-2 px-3 bg-red-500/10 border border-red-500/20 rounded-xl mb-4">
                   Admin panel
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                  <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2" htmlFor="admin-username">
                     Telefon və ya email
                   </label>
                   <input
+                    id="admin-username"
+                    name="username"
                     className="w-full bg-surface-1 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-primary/40"
                     type="text"
+                    inputMode="email"
+                    autoComplete="username"
                     placeholder="+994XXXXXXXXX və ya admin email"
                     value={adminIdentifier}
                     onChange={(e) => setAdminIdentifier(e.target.value)}
@@ -720,12 +724,15 @@ export default function Login() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                  <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2" htmlFor="admin-password">
                     Şifrə
                   </label>
                   <input
+                    id="admin-password"
+                    name="password"
                     className="w-full bg-surface-1 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-primary/40"
                     type="password"
+                    autoComplete="current-password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
