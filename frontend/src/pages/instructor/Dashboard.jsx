@@ -355,29 +355,29 @@ export default function InstructorDashboard() {
           </Button>
         </div>
       </Modal>
-      <div className="p-4 sm:p-6 min-w-0">
-      <div className="mb-6">
-        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
-          <div>
-            <h1 className="font-display font-bold text-xl sm:text-2xl break-words">
+      <div className="p-3 sm:p-6 min-w-0 w-full max-w-full box-border overflow-x-hidden">
+      <div className="mb-4 sm:mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 min-w-0">
+          <div className="min-w-0">
+            <h1 className="font-display font-bold text-xl sm:text-2xl break-words text-token-textMain">
               {greeting}, {user?.full_name?.split(' ')[0]}! 👋
             </h1>
-            <p className="text-gray-400 text-sm mt-1">Bugünün xülasəsi</p>
+            <p className="text-token-textMuted text-sm mt-1">Bugünün xülasəsi</p>
           </div>
 
-          <div className="sm:shrink-0">
-            <Button variant="secondary" size="sm" onClick={openQuick}>
+          <div className="w-full sm:w-auto sm:shrink-0">
+            <Button variant="secondary" size="sm" className="w-full sm:w-auto justify-center" onClick={openQuick}>
               Sürətli Bildiriş
             </Button>
           </div>
         </div>
       </div>
 
-      <div className="mb-6">
+      <div className="mb-4 sm:mb-6 min-w-0 w-full">
         <MarketplaceOpportunityCard theme={theme} />
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4 mb-4 sm:mb-6 min-w-0 w-full">
         <KpiCard
           title="Tələbə"
           to="/instructor/students"

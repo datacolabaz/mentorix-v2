@@ -556,7 +556,7 @@ export default function InstructorLayout() {
             </div>
           ) : null}
 
-          <div className="flex-1 min-h-0">
+          <div className="instructor-panel-main flex-1 min-h-0 min-w-0 w-full max-w-full overflow-x-hidden">
             <Outlet />
           </div>
 

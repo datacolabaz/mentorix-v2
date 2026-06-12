@@ -84,6 +84,17 @@
   .theme-light .recharts-tooltip-label {
     color: #0f172a !important;
   }
+  /* Müəllim paneli — gündüz rejimində solğun boz mətnləri tündləşdir */
+  .theme-light .instructor-panel-main .text-gray-200 {
+    color: rgb(30 41 59) !important;
+  }
+  .theme-light .instructor-panel-main .text-gray-300 {
+    color: rgb(51 65 85) !important;
+  }
+  .theme-light .instructor-panel-main .text-gray-400,
+  .theme-light .instructor-panel-main .text-gray-500 {
+    color: rgb(71 85 105) !important;
+  }
   /* Bu kod bütün mobil brauzerlərdəki o xətalı daşmanı kəsir */
   .date-input-class {
     width: 100% !important;
@@ -135,7 +146,7 @@
   --primary-accent: 0 230 118;
   --border-subtle: rgba(15, 23, 42, 0.08);
   --text-main: 11 18 32;
-  --text-muted: 100 116 139;
+  --text-muted: 71 85 105; /* slate-600 — daha oxunaqlı */
   --field-bg: 255 255 255;
   --field-text: 11 18 32;
   --field-border: rgba(15, 23, 42, 0.14);

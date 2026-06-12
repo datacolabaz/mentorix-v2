@@ -2,12 +2,21 @@ import { useId } from 'react'
 import { Link } from 'react-router-dom'
 import { ResponsiveContainer, AreaChart, Area } from 'recharts'
 import Card from './Card'
+import useUiStore from '../../hooks/useUi'
 
-function DeltaBadge({ deltaPct }) {
+function DeltaBadge({ deltaPct, theme }) {
   const n = Number(deltaPct)
+  const light = theme !== 'dark'
   if (!Number.isFinite(n) || n === 0) {
     return (
-      <span className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-2 py-1 text-[11px] font-semibold text-gray-200/90">
+      <span
+        className={[
+          'inline-flex items-center rounded-full border px-2 py-1 text-[11px] font-semibold',
+          light
+            ? 'border-slate-300/80 bg-slate-100 text-slate-700'
+            : 'border-white/10 bg-white/5 text-gray-200/90',
+        ].join(' ')}
+      >
         0%
       </span>
     )
@@ -17,7 +26,13 @@ function DeltaBadge({ deltaPct }) {
     <span
       className={[
         'inline-flex items-center gap-1 rounded-full border px-2 py-1 text-[11px] font-semibold tabular-nums',
-        up ? 'border-emerald-400/20 bg-emerald-500/12 text-emerald-200' : 'border-red-400/20 bg-red-500/12 text-red-200',
+        up
+          ? light
+            ? 'border-emerald-600/25 bg-emerald-50 text-emerald-800'
+            : 'border-emerald-400/20 bg-emerald-500/12 text-emerald-200'
+          : light
+            ? 'border-red-500/25 bg-red-50 text-red-800'
+            : 'border-red-400/20 bg-red-500/12 text-red-200',
       ].join(' ')}
     >
       <span aria-hidden className="text-[12px] leading-none">
@@ -39,6 +54,7 @@ export default function KpiCard({
   to,
   ariaLabel,
 }) {
+  const theme = useUiStore((s) => s.theme)
   const sparkFillId = useId().replace(/:/g, '')
   const hasSpark = Array.isArray(sparkline) && sparkline.length >= 2
   const data = hasSpark ? sparkline.map((v, i) => ({ i, v: Number(v) || 0 })) : []
@@ -60,7 +76,7 @@ export default function KpiCard({
         </div>
 
         <div className="shrink-0 flex items-center gap-2">
-          {deltaPct != null ? <DeltaBadge deltaPct={deltaPct} /> : null}
+          {deltaPct != null ? <DeltaBadge deltaPct={deltaPct} theme={theme} /> : null}
           {icon ? (
             <div className="w-11 h-11 rounded-2xl bg-token-surfaceCard/55 border border-[color:var(--border-subtle)] flex items-center justify-center text-xl">
               {icon}
@@ -100,14 +116,19 @@ export default function KpiCard({
               </AreaChart>
             </ResponsiveContainer>
           ) : (
-            <div className="h-full rounded-xl border border-white/10 bg-white/5" />
+            <div
+              className={[
+                'h-full rounded-xl border',
+                theme === 'dark' ? 'border-white/10 bg-white/5' : 'border-slate-200/80 bg-slate-100/80',
+              ].join(' ')}
+            />
           )}
         </div>
       </div>
     </>
   )
 
-  const cardClass = ['p-5 min-w-0 overflow-hidden', className].join(' ')
+  const cardClass = ['p-4 sm:p-5 min-w-0 w-full max-w-full overflow-hidden box-border', className].join(' ')
 
   if (to) {
     return (
