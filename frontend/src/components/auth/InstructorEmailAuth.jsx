@@ -59,34 +59,57 @@ function AuthModeTabs({ tab, onTab }) {
   )
 }
 
-/** iOS Safari: type=password + controlled state Keychain popup-u hər hərfdə bloklayır. */
-function SafariLoginPasswordInput({ inputRef }) {
+function isIosLike() {
+  if (typeof navigator === 'undefined') return false
+  const ua = navigator.userAgent || ''
+  if (/iPad|iPhone|iPod/i.test(ua)) return true
+  return navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1
+}
+
+/**
+ * Desktop: type=password + standart id/name — Chrome/Edge autofill cütü tanıyır.
+ * iOS Safari: type=text + mask — Keychain overlay hər hərfdə bloklamasın.
+ */
+function LoginPasswordInput({ inputRef }) {
+  const ios = isIosLike()
+  const shared = {
+    ref: inputRef,
+    id: 'password',
+    name: 'password',
+    placeholder: 'Şifrə',
+    autoComplete: 'current-password',
+    autoCapitalize: 'off',
+    autoCorrect: 'off',
+    spellCheck: false,
+    enterKeyHint: 'go',
+    defaultValue: '',
+    onFocus: (e) => {
+      window.setTimeout(() => {
+        try {
+          e.target.scrollIntoView({ block: 'center', behavior: 'smooth' })
+        } catch {
+          /* ignore */
+        }
+      }, 400)
+    },
+  }
+
+  if (ios) {
+    return (
+      <input
+        {...shared}
+        type="text"
+        inputMode="text"
+        className={`${inputClass} mx-login-password-mask touch-manipulation`}
+      />
+    )
+  }
+
   return (
     <input
-      ref={inputRef}
-      id="mx-login-password"
-      name="password"
-      type="text"
-      inputMode="text"
-      className={`${inputClass} mx-login-password-mask touch-manipulation`}
-      placeholder="Şifrə"
-      autoComplete="current-password"
-      autoCapitalize="off"
-      autoCorrect="off"
-      spellCheck={false}
-      enterKeyHint="go"
-      data-1p-ignore="true"
-      data-lpignore="true"
-      defaultValue=""
-      onFocus={(e) => {
-        window.setTimeout(() => {
-          try {
-            e.target.scrollIntoView({ block: 'center', behavior: 'smooth' })
-          } catch {
-            /* ignore */
-          }
-        }, 400)
-      }}
+      {...shared}
+      type="password"
+      className={`${inputClass} touch-manipulation`}
     />
   )
 }
@@ -223,7 +246,14 @@ export default function InstructorEmailAuth({ onSuccess }) {
       toast('Giriş üçün rol seçin', 'error')
       return
     }
-    const password = String(loginPasswordRef.current?.value || '')
+    const form = e.currentTarget
+    const fd = new FormData(form)
+    const email = String(fd.get('email') || loginEmail || '').trim()
+    const password = String(fd.get('password') || loginPasswordRef.current?.value || '')
+    if (!email) {
+      toast('Email daxil edin', 'error')
+      return
+    }
     if (!password) {
       toast('Şifrə daxil edin', 'error')
       return
@@ -231,7 +261,7 @@ export default function InstructorEmailAuth({ onSuccess }) {
     setLoading(true)
     try {
       const data = await api.post('/auth/login/email', {
-        email: loginEmail,
+        email,
         password,
         role: loginRole,
       })
@@ -357,28 +387,18 @@ export default function InstructorEmailAuth({ onSuccess }) {
     <div className="space-y-4">
       <AuthModeTabs tab={tab} onTab={setTab} />
 
-      {tab === 'login' ? (
-        <div className="space-y-4" key="login-panel">
-          <RolePills
-            roles={LOGIN_ROLES}
-            role={loginRole}
-            onRole={setLoginRole}
-            label="Hansı hesabla daxil olursunuz?"
-          />
-
-          <GoogleSignInButton onCredential={handleGoogleCredential} disabled={loading} label="Google ilə daxil ol" />
-
-          <AuthDivider />
-
+      <div className={tab === 'login' ? 'space-y-4' : 'hidden'} aria-hidden={tab !== 'login'}>
           <form
-            key="mentorix-login-form"
+            id="mentorix-login-form"
             onSubmit={handleLogin}
+            method="post"
+            action="/login"
             className="space-y-3"
-            autoComplete="off"
+            autoComplete="on"
           >
             <input
-              id="mx-login-username"
-              name="username"
+              id="email"
+              name="email"
               type="email"
               inputMode="email"
               autoCapitalize="none"
@@ -391,7 +411,7 @@ export default function InstructorEmailAuth({ onSuccess }) {
               onChange={(e) => setLoginEmail(e.target.value)}
               required
             />
-            <SafariLoginPasswordInput inputRef={loginPasswordRef} />
+            <LoginPasswordInput inputRef={loginPasswordRef} />
             <Button type="submit" loading={loading} className="w-full justify-center">
               Daxil ol
             </Button>
@@ -405,15 +425,26 @@ export default function InstructorEmailAuth({ onSuccess }) {
             </button>
           </form>
 
+          <RolePills
+            roles={LOGIN_ROLES}
+            role={loginRole}
+            onRole={setLoginRole}
+            label="Hansı hesabla daxil olursunuz?"
+          />
+
+          <AuthDivider />
+
+          <GoogleSignInButton onCredential={handleGoogleCredential} disabled={loading} label="Google ilə daxil ol" />
+
           <p className="text-xs text-center text-gray-500">
             Hesabınız yoxdur?{' '}
             <button type="button" className="font-semibold text-primary hover:brightness-110" onClick={() => setTab('signup')}>
               Qeydiyyatdan keçin
             </button>
           </p>
-        </div>
-      ) : (
-        <div className="space-y-4" key="signup-panel">
+      </div>
+
+      <div className={tab === 'signup' ? 'space-y-4' : 'hidden'} aria-hidden={tab !== 'signup'}>
           <RolePills roles={SIGNUP_ROLES} role={signupRole} onRole={setSignupRole} />
 
           <GoogleSignInButton onCredential={handleGoogleCredential} disabled={loading} label="Google ilə davam et" />
@@ -479,8 +510,7 @@ export default function InstructorEmailAuth({ onSuccess }) {
               Daxil olun
             </button>
           </p>
-        </div>
-      )}
+      </div>
     </div>
   )
 }
