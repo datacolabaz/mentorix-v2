@@ -6,8 +6,8 @@ import { useToast } from '../../components/common/Toast'
 import api from '../../lib/api'
 
 const inp =
-  'w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500'
-const lbl = 'block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2'
+  'w-full border border-[color:var(--border-subtle)] rounded-xl px-4 py-2.5 text-token-textMain text-sm outline-none focus:border-primary/40 bg-token-surfaceCard/60'
+const lbl = 'block text-xs font-semibold text-token-textMuted uppercase tracking-wider mb-2'
 
 export default function AdminCategories() {
   const toast = useToast()
@@ -80,8 +80,8 @@ export default function AdminCategories() {
   return (
     <div className="p-4 sm:p-6 min-w-0 space-y-6">
       <div>
-        <h1 className="font-display font-bold text-xl sm:text-2xl text-white">Axtarış kateqoriyaları</h1>
-        <p className="text-sm text-gray-400 mt-1 max-w-2xl leading-relaxed">
+        <h1 className="font-display font-bold text-xl sm:text-2xl text-token-textMain">Axtarış kateqoriyaları</h1>
+        <p className="text-sm text-token-textMuted mt-1 max-w-2xl leading-relaxed">
           Tələbə axtarışında görünən fənn adları və sinonimlər (məs. «data analysis» → Data Analitika). Yalnız
           real kateqoriyaları redaktə edin; virtual qovluqlara toxunmayın.
         </p>
@@ -96,12 +96,12 @@ export default function AdminCategories() {
           className={inp}
         />
         {loading ? (
-          <p className="text-sm text-gray-500">Yüklənir…</p>
+          <p className="text-sm text-token-textMuted">Yüklənir…</p>
         ) : (
           <div className="overflow-x-auto -mx-1">
-            <table className="w-full text-sm text-left min-w-[640px]">
+            <table className="w-full text-sm text-left min-w-[640px] text-token-textMain">
               <thead>
-                <tr className="text-xs text-gray-500 uppercase border-b border-white/10">
+                <tr className="text-xs text-token-textMuted uppercase border-b border-[color:var(--border-subtle)]">
                   <th className="py-2 pr-3">Ad (AZ)</th>
                   <th className="py-2 pr-3">Sinonimlər</th>
                   <th className="py-2 pr-3">Populyar</th>
@@ -110,19 +110,19 @@ export default function AdminCategories() {
               </thead>
               <tbody>
                 {filtered.map((c) => (
-                  <tr key={c.id} className="border-b border-white/5 hover:bg-white/[0.02]">
+                  <tr key={c.id} className="border-b border-[color:var(--border-subtle)] hover:bg-black/[0.03] dark:hover:bg-white/[0.04]">
                     <td className="py-2.5 pr-3">
-                      <div className="font-medium text-white">{c.name_az}</div>
-                      <div className="text-[11px] text-gray-500">
+                      <div className="font-medium text-token-textMain">{c.name_az}</div>
+                      <div className="text-[11px] text-token-textMuted">
                         {c.parent_name_az ? `${c.parent_name_az} · ` : ''}
                         {c.id}
                         {c.is_virtual_category ? ' · virtual' : ''}
                       </div>
                     </td>
-                    <td className="py-2.5 pr-3 text-gray-400 text-xs max-w-[240px] truncate">
+                    <td className="py-2.5 pr-3 text-token-textMuted text-xs max-w-[240px] truncate">
                       {c.search_aliases || '—'}
                     </td>
-                    <td className="py-2.5 pr-3">{c.is_popular ? '✓' : '—'}</td>
+                    <td className="py-2.5 pr-3 text-token-textMain">{c.is_popular ? '✓' : '—'}</td>
                     <td className="py-2.5 text-right">
                       {!c.is_virtual_category ? (
                         <button
@@ -133,7 +133,7 @@ export default function AdminCategories() {
                           Redaktə
                         </button>
                       ) : (
-                        <span className="text-xs text-gray-600">—</span>
+                        <span className="text-xs text-token-textMuted">—</span>
                       )}
                     </td>
                   </tr>
@@ -141,7 +141,7 @@ export default function AdminCategories() {
               </tbody>
             </table>
             {!filtered.length ? (
-              <p className="text-sm text-gray-500 py-4 text-center">Nəticə yoxdur</p>
+              <p className="text-sm text-token-textMuted py-4 text-center">Nəticə yoxdur</p>
             ) : null}
           </div>
         )}
@@ -151,8 +151,8 @@ export default function AdminCategories() {
         {edit ? (
           <div className="space-y-4">
             {edit.parent_name_az ? (
-              <p className="text-xs text-gray-500">
-                Qrup: <span className="text-gray-300">{edit.parent_name_az}</span> · ID: {edit.id}
+              <p className="text-xs text-token-textMuted">
+                Qrup: <span className="text-token-textMain">{edit.parent_name_az}</span> · ID: {edit.id}
               </p>
             ) : null}
             <div>
@@ -171,11 +171,11 @@ export default function AdminCategories() {
                 onChange={(e) => setEdit((x) => ({ ...x, search_aliases: e.target.value }))}
                 placeholder="data analysis, data analitika, data analytics"
               />
-              <p className="text-[11px] text-gray-500 mt-1.5">
+              <p className="text-[11px] text-token-textMuted mt-1.5">
                 Vergüllə ayırın. Tələbə ingiliscə yazanda da bu kateqoriya tapılacaq.
               </p>
             </div>
-            <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+            <label className="flex items-center gap-2 text-sm text-token-textMain cursor-pointer">
               <input
                 type="checkbox"
                 checked={edit.is_popular}
