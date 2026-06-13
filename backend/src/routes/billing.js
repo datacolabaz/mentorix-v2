@@ -1,5 +1,6 @@
 const router = require('express').Router();
 const { authenticate, authorize } = require('../middleware/auth');
+const { requireInstructorPhoneVerification } = require('../middleware/requireInstructorPhoneVerification');
 const db = require('../utils/db');
 const {
   resolveEntitlements,
@@ -186,7 +187,12 @@ router.post('/select-basic', authenticate, authorize('instructor'), async (req, 
   }
 })
 
-router.post('/create-payment', authenticate, authorize('instructor'), async (req, res) => {
+router.post(
+  '/create-payment',
+  authenticate,
+  authorize('instructor'),
+  requireInstructorPhoneVerification({ trigger: 'billing' }),
+  async (req, res) => {
   try {
     try {
       const { rows: p } = await db.query(

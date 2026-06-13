@@ -108,7 +108,10 @@ api.interceptors.response.use(
         /* ignore */
       }
     }
-    if (status === 403 && code === 'PHONE_VERIFICATION_REQUIRED') {
+    if (
+      status === 403 &&
+      (code === 'PHONE_VERIFICATION_REQUIRED' || code === 'PHONE_NOT_VERIFIED')
+    ) {
       try {
         window.dispatchEvent(
           new CustomEvent('mx:phone-verification-required', {

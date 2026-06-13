@@ -338,12 +338,11 @@ function buildAuthUserPayload(user) {
 }
 
 function attachPhoneVerificationFlags(userLite) {
-  const { userNeedsPhoneVerification } = require('../utils/instructorPhone');
-  const needs = userNeedsPhoneVerification(userLite);
   return {
     ...userLite,
-    needs_phone_verification: needs,
-    needs_instructor_phone: userLite?.role === 'instructor' && needs,
+    needs_phone_verification: false,
+    needs_instructor_phone: false,
+    phone_verified: Boolean(userLite?.phone_verified),
   };
 }
 

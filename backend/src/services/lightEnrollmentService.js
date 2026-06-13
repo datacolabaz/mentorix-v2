@@ -42,7 +42,7 @@ async function ensureLightInstructorEnrollment(client, instructorId, studentId, 
      ORDER BY
        CASE WHEN group_id IS NOT NULL THEN 0 ELSE 1 END,
        CASE WHEN COALESCE(enrollment_source, 'manual') = 'group' THEN 0 ELSE 1 END,
-       created_at DESC NULLS LAST
+       enrolled_at DESC NULLS LAST
      LIMIT 1`,
     [studentId, ni],
   );

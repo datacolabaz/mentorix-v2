@@ -1,6 +1,6 @@
 const { canonicalStudentPhone, normalizePhoneDigits } = require('./studentPhone');
 
-/** Google OTP telefon təsdiqi — yalnız müəllim (tələbə telefon tələb etmir). */
+/** OTP telefon təsdiqi — yalnız müəllim (lazy: girişdə yox, ciddi əməliyyatda). */
 const PHONE_VERIFY_ROLES = new Set(['instructor']);
 
 function isGoogleAccountUser(user) {
@@ -9,16 +9,32 @@ function isGoogleAccountUser(user) {
   return String(user.auth_provider || '').toLowerCase() === 'google';
 }
 
-/** Google ilə giriş: bir dəfə OTP telefon təsdiqi (yalnız müəllim). */
+/** Müəllim telefonu təsdiqlənməyibsə ciddi əməliyyatlar bloklanır. */
 function userNeedsPhoneVerification(user) {
   if (!user || !PHONE_VERIFY_ROLES.has(user.role)) return false;
-  if (!isGoogleAccountUser(user)) return false;
   const phone = canonicalStudentPhone(user.phone);
   return !phone || !Boolean(user.phone_verified);
 }
 
 function instructorNeedsPhoneBinding(user) {
   return user?.role === 'instructor' && userNeedsPhoneVerification(user);
+}
+
+function blockMessageForTrigger(trigger) {
+  switch (trigger) {
+    case 'sms':
+      return 'SMS göndərmək üçün mobil nömrənizi bir dəfə OTP ilə təsdiqləyin.';
+    case 'group':
+      return 'Qrup yaratmaq üçün mobil nömrənizi OTP ilə təsdiqləyin.';
+    case 'exam':
+      return 'İmtahan yaratmaq üçün mobil nömrənizi OTP ilə təsdiqləyin.';
+    case 'student':
+      return 'Tələbə əlavə etmək üçün mobil nömrənizi OTP ilə təsdiqləyin.';
+    case 'billing':
+      return 'Paket almaq üçün mobil nömrənizi OTP ilə təsdiqləyin.';
+    default:
+      return 'Bu əməliyyat üçün mobil nömrənizi OTP ilə təsdiqləyin.';
+  }
 }
 
 /**
@@ -35,17 +51,12 @@ async function getPhoneVerificationBlock(dbConn, userId, opts = {}) {
   const u = rows[0];
   if (!u || !userNeedsPhoneVerification(u)) return null;
 
-  const message =
-    u.role === 'instructor' && trigger === 'sms'
-      ? 'SMS göndərmək üçün mobil nömrənizi bir dəfə OTP ilə təsdiqləyin.'
-      : 'Google ilə daxil oldunuz. Davam etmək üçün mobil nömrənizi OTP ilə təsdiqləyin.';
-
   return {
     statusCode: 403,
     body: {
       success: false,
-      message,
-      code: 'PHONE_VERIFICATION_REQUIRED',
+      message: blockMessageForTrigger(trigger),
+      code: 'PHONE_NOT_VERIFIED',
       needs_phone_verification: true,
       needs_instructor_phone: u.role === 'instructor',
     },

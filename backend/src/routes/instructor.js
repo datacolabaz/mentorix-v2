@@ -26,6 +26,7 @@ const {
   rejectRequest,
 } = require('../controllers/joinInvitationController');
 const { attachEntitlements, enforceStudentsLimit } = require('../middleware/entitlements');
+const { requireInstructorPhoneVerification } = require('../middleware/requireInstructorPhoneVerification');
 const { postInstructorAvatar, deleteInstructorAvatar } = require('../controllers/instructorAvatarController');
 const { getMarketplaceOpportunity } = require('../controllers/instructorMarketplaceController');
 
@@ -57,7 +58,13 @@ router.get('/inquiries', authenticate, authorize('instructor'), listInstructorIn
 router.post('/inquiries/:id/reveal-contact', authenticate, authorize('instructor'), revealInquiryContact);
 router.post('/teaching/subjects', authenticate, authorize('instructor'), postSubject);
 router.delete('/teaching/subjects/:id', authenticate, authorize('instructor'), deleteSubject);
-router.post('/teaching/groups', authenticate, authorize('instructor'), postGroup);
+router.post(
+  '/teaching/groups',
+  authenticate,
+  authorize('instructor'),
+  requireInstructorPhoneVerification({ trigger: 'group' }),
+  postGroup,
+);
 router.patch('/teaching/groups/:id', authenticate, authorize('instructor'), patchGroup);
 router.delete('/teaching/groups/:id', authenticate, authorize('instructor'), deleteGroup);
 router.post('/teaching/promote-participant', authenticate, authorize('instructor'), postPromoteParticipant);

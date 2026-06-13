@@ -9,7 +9,7 @@ import { useToast } from '../common/Toast'
 const VERIFY_ROLES = new Set(['instructor'])
 
 /**
- * Google hesabı: panel / sorğu / SMS ilk cəhdi — bir dəfə OTP telefon təsdiqi.
+ * Lazy OTP: ciddi əməliyyat (qrup, imtahan, tələbə, paket, SMS) zamanı modal açılır.
  */
 export default function PhoneVerificationGate() {
   const toast = useToast()
@@ -115,8 +115,8 @@ export default function PhoneVerificationGate() {
       {step === 'phone' ? (
         <>
           <p className="text-sm text-zinc-300 leading-relaxed mb-4">
-            SMS və ya panel üçün mobil nömrənizi <strong className="text-white">bir dəfə</strong> OTP ilə təsdiqləyin.
-            Eyni nömrə başqa müəllim hesabında ola bilməz.
+            Bu əməliyyatı tamamlamaq üçün mobil nömrənizi <strong className="text-white">bir dəfə</strong> OTP ilə
+            təsdiqləyin. Eyni nömrə başqa müəllim hesabında ola bilməz.
           </p>
           <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-2">
             Mobil telefon *

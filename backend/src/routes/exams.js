@@ -30,6 +30,7 @@ const {
   serveExamAttachmentByExam,
 } = require('../controllers/examController');
 const { authenticate, authorize } = require('../middleware/auth');
+const { requireInstructorPhoneVerification } = require('../middleware/requireInstructorPhoneVerification');
 const { enforceStorageLimitAfterUpload } = require('../middleware/storageLimit');
 
 const uploadsExamsDir = path.join(__dirname, '../../uploads/exams');
@@ -123,7 +124,13 @@ router.get(
   serveExamAttachmentByExam
 );
 
-router.post('/', authenticate, authorize('instructor', 'admin'), createExam);
+router.post(
+  '/',
+  authenticate,
+  authorize('instructor', 'admin'),
+  requireInstructorPhoneVerification({ trigger: 'exam' }),
+  createExam,
+);
 router.get('/', authenticate, authorize('instructor', 'admin'), listExams);
 router.get('/student-progress', authenticate, authorize('instructor', 'admin'), instructorStudentExamProgress);
 router.get('/my', authenticate, authorize('student'), studentExams);

@@ -10,26 +10,14 @@ export function dashboardPathForRole(role) {
   return ROLE_HOME[role] || '/login'
 }
 
-function isGoogleAccountUser(user) {
-  if (Boolean(String(user.google_id || user.google_sub || '').trim())) return true
-  return String(user.auth_provider || '').toLowerCase() === 'google'
-}
-
-/** Yalnız Google ilə giriş edən müəllim: bir dəfə OTP telefon təsdiqi. */
-export function userNeedsPhoneVerificationPage(user) {
-  if (!user || user.role !== 'instructor') return false
-  if (!isGoogleAccountUser(user)) return false
-  if (user.phone_verified === true && String(user.phone || '').trim()) return false
-  return true
+/** Lazy OTP: girişdə yox, ciddi əməliyyat API 403 → PhoneVerificationGate modal. */
+export function userNeedsPhoneVerificationPage(_user) {
+  return false
 }
 
 export function postAuthNavigate(user, navigate) {
   if (!user?.role) {
     navigate('/onboarding/role', { replace: true })
-    return
-  }
-  if (userNeedsPhoneVerificationPage(user)) {
-    navigate('/verify-phone', { replace: true })
     return
   }
   try {

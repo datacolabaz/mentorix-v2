@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import api from '../../lib/api'
 import useAuthStore from '../../hooks/useAuth'
 import { applyDocumentTheme } from '../../hooks/useUi'
-import { postAuthNavigate, userNeedsPhoneVerificationPage } from '../../lib/postAuth'
+import { postAuthNavigate } from '../../lib/postAuth'
 import Brand from '../../components/common/Brand'
 import Button from '../../components/common/Button'
 import AzMobilePhoneField from '../../components/auth/AzMobilePhoneField'
@@ -35,20 +35,7 @@ export default function VerifyPhone() {
       return
     }
     sessionChecked.current = true
-    void (async () => {
-      try {
-        const data = await api.get('/auth/me')
-        if (data?.user) {
-          setSession(localStorage.getItem('mx_token'), data.user)
-          if (!userNeedsPhoneVerificationPage(data.user)) {
-            postAuthNavigate(data.user, navigate)
-          }
-        }
-      } catch {
-        sessionChecked.current = false
-      }
-    })()
-  }, [navigate, setSession])
+  }, [navigate])
 
   const sendOtp = async () => {
     setBusy(true)
@@ -107,7 +94,8 @@ export default function VerifyPhone() {
           <div className="text-center space-y-1">
             <h1 className="text-xl font-display font-bold text-white">Mobil nömrə təsdiqi</h1>
             <p className="text-sm text-zinc-400 leading-relaxed">
-              Google hesabınız təsdiqləndi. Müəllim panelinə keçmək üçün mobil nömrənizi bir dəfə OTP ilə təsdiqləyin.
+              Müəllim panelində bəzi əməliyyatlar (qrup, imtahan, tələbə, paket) üçün mobil nömrənizi bir dəfə OTP ilə
+              təsdiqləyin.
             </p>
           </div>
 

@@ -184,17 +184,11 @@ export default function InstructorEmailAuth({ onSuccess }) {
       }
       const u = {
         ...r.user,
-        needs_phone_verification:
-          r.user?.role === 'instructor'
-            ? Boolean(r.needs_phone_verification ?? r.user?.needs_phone_verification ?? r.needs_instructor_phone)
-            : false,
-        needs_instructor_phone:
-          r.user?.role === 'instructor' ? Boolean(r.needs_instructor_phone ?? r.user?.needs_instructor_phone) : false,
+        needs_phone_verification: false,
+        needs_instructor_phone: false,
       }
       setSession(r.token, u)
-      if (u.needs_phone_verification) {
-        toast('Müəllim hesabı üçün mobil təsdiq addımına yönləndirilirsiniz', 'success')
-      } else if (u.role === 'student') {
+      if (u.role === 'student') {
         toast('Tələbə kimi daxil oldunuz', 'success')
       } else {
         toast('Daxil oldunuz', 'success')
