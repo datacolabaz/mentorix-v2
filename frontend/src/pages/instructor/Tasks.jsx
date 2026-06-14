@@ -8,6 +8,7 @@ import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
 import { useToast } from '../../components/common/Toast'
 import { BILLING_STATUS_QUERY_KEY, useBillingStatus } from '../../hooks/useBillingStatus'
+import { isInstructorBillingBlocked } from '../../lib/subscriptionPlanGuards'
 import { assignmentStatusClass, assignmentStatusLabel } from '../../lib/assignmentHelpers'
 import { assignmentFileLabel, assignmentFileOpenUrl, isAssignmentPreviewable } from '../../lib/assignmentFileUrl'
 import { fmtAzBakuField } from '../../lib/azDatetime'
@@ -59,7 +60,10 @@ export default function InstructorTasks() {
   const queryClient = useQueryClient()
   const billingQ = useBillingStatus()
   const billing = billingQ.data || null
-  const blocked = Boolean(billing?.should_block)
+  const blocked = isInstructorBillingBlocked(billing)
+  const blockMessage =
+    billing?.messages?.banner ||
+    '14 günlük SADƏ sınaq müddəti bitib. Davam etmək üçün PRO və ya daha yüksək paket seçin.'
 
   const [form, setForm] = useState({
     title: '',
@@ -153,11 +157,19 @@ export default function InstructorTasks() {
   }
 
   const openCreate = () => {
+    if (blocked) {
+      toast(blockMessage, 'error')
+      return
+    }
     resetForm()
     setOpen(true)
   }
 
   const openEdit = (task) => {
+    if (blocked) {
+      toast(blockMessage, 'error')
+      return
+    }
     setEditingId(task.id)
     setForm({
       title: task.title || '',
@@ -174,7 +186,7 @@ export default function InstructorTasks() {
 
   const submit = async () => {
     if (blocked) {
-      toast(billing?.messages?.banner || 'Məhdudiyyətə görə bu əməliyyat deaktivdir', 'error')
+      toast(blockMessage, 'error')
       return
     }
     const title = String(form.title || '').trim()
@@ -225,7 +237,7 @@ export default function InstructorTasks() {
 
   const uploadQuestionFile = async (file) => {
     if (blocked) {
-      toast(billing?.messages?.banner || 'Məhdudiyyətə görə bu əməliyyat deaktivdir', 'error')
+      toast(blockMessage, 'error')
       return
     }
     if (!file) return
@@ -265,6 +277,10 @@ export default function InstructorTasks() {
   }
 
   const removeTask = async (id, title) => {
+    if (blocked) {
+      toast(blockMessage, 'error')
+      return
+    }
     if (!window.confirm(`«${title}» silinsin? Tələbə siyahısından da silinəcək.`)) return
     setDeletingId(id)
     try {
@@ -396,7 +412,7 @@ export default function InstructorTasks() {
           <Button variant="secondary" size="sm" onClick={() => void load()} disabled={loading}>
             Yenilə
           </Button>
-          <Button size="sm" onClick={openCreate}>
+          <Button size="sm" disabled={blocked} onClick={openCreate}>
             + Yeni tapşırıq
           </Button>
         </div>
@@ -492,12 +508,13 @@ export default function InstructorTasks() {
                     >
                       Link
                     </Button>
-                    <Button size="sm" variant="secondary" onClick={() => openEdit(t)}>
+                    <Button size="sm" variant="secondary" disabled={blocked} onClick={() => openEdit(t)}>
                       Redaktə
                     </Button>
                     <Button
                       size="sm"
                       variant="danger"
+                      disabled={blocked}
                       loading={deletingId === t.id}
                       onClick={() => void removeTask(t.id, t.title)}
                     >
@@ -552,7 +569,7 @@ export default function InstructorTasks() {
             <Button variant="secondary" onClick={closeTaskModal} disabled={saving || fileUploading}>
               Ləğv et
             </Button>
-            <Button onClick={() => void submit()} loading={saving} disabled={fileUploading}>
+            <Button onClick={() => void submit()} loading={saving} disabled={blocked || fileUploading}>
               {editingId ? 'Saxla' : 'Göndər'}
             </Button>
           </div>

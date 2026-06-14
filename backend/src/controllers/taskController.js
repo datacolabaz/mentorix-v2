@@ -10,6 +10,23 @@ const {
 const { upsertStudentContactPhone } = require('../utils/studentPhone');
 const { autoGrantTaskAccessForStudent } = require('../services/guestAccessService');
 const { withBakuDisplayTimes } = require('../utils/azDatetime');
+const { resolveEntitlements } = require('../services/billingEntitlements');
+
+function subscriptionInactiveError(ent) {
+  const err = new Error(
+    ent?.messages?.banner ||
+      '14 günlük SADƏ sınaq müddəti bitib. Davam etmək üçün PRO və ya daha yüksək paket seçin.',
+  );
+  err.code = 'SUBSCRIPTION_INACTIVE';
+  err.statusCode = 403;
+  return err;
+}
+
+async function assertInstructorSubscriptionActive(instructorId) {
+  const ent = await resolveEntitlements(instructorId);
+  if (ent.should_block) throw subscriptionInactiveError(ent);
+  return ent;
+}
 
 function parseDate(v) {
   if (v === undefined || v === null || v === '') return null;
@@ -101,6 +118,7 @@ const listInstructorTasks = async (req, res) => {
 const createInstructorTask = async (req, res) => {
   try {
     const instructorId = req.user.id;
+    await assertInstructorSubscriptionActive(instructorId);
     const title = String(req.body.title || '').trim();
     const topic = req.body.topic != null ? String(req.body.topic).trim() : '';
     const question_file_url = normalizeUrl(req.body.question_file_url);
@@ -173,6 +191,9 @@ const createInstructorTask = async (req, res) => {
       assignedCount: out.assignedCount,
     });
   } catch (err) {
+    if (err.code === 'SUBSCRIPTION_INACTIVE') {
+      return res.status(403).json({ success: false, code: err.code, message: err.message });
+    }
     const msg = err.message || 'Xəta';
     if (msg.includes('aktiv siyahısında')) {
       return res.status(400).json({ success: false, message: msg });
@@ -184,6 +205,7 @@ const createInstructorTask = async (req, res) => {
 const deleteInstructorAssignment = async (req, res) => {
   try {
     const instructorId = req.user.id;
+    await assertInstructorSubscriptionActive(instructorId);
     const id = req.params.id;
     const { rowCount } = await db.query(`DELETE FROM assignments WHERE id = $1 AND instructor_id = $2`, [
       id,
@@ -193,6 +215,9 @@ const deleteInstructorAssignment = async (req, res) => {
     await recomputeInstructorStorageUsageMb(instructorId, { persist: true });
     res.json({ success: true });
   } catch (err) {
+    if (err.code === 'SUBSCRIPTION_INACTIVE') {
+      return res.status(403).json({ success: false, code: err.code, message: err.message });
+    }
     res.status(500).json({ success: false, message: err.message });
   }
 };
@@ -200,6 +225,7 @@ const deleteInstructorAssignment = async (req, res) => {
 const updateInstructorAssignment = async (req, res) => {
   try {
     const instructorId = req.user.id;
+    await assertInstructorSubscriptionActive(instructorId);
     const id = req.params.id;
 
     const { rows: cur } = await db.query(
@@ -258,6 +284,9 @@ const updateInstructorAssignment = async (req, res) => {
 
     res.json({ success: true, task: rows[0] });
   } catch (err) {
+    if (err.code === 'SUBSCRIPTION_INACTIVE') {
+      return res.status(403).json({ success: false, code: err.code, message: err.message });
+    }
     res.status(500).json({ success: false, message: err.message });
   }
 };

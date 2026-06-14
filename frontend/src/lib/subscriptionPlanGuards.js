@@ -189,6 +189,14 @@ export function isBasicTrialExpired(billing) {
   return isBasicPlan(billing) && !isBasicTrialActive(billing)
 }
 
+/** SADƏ sınaq bitib və ya limit/abunə bloklanıbsa — yaratma/redaktə dayansın. */
+export function isInstructorBillingBlocked(billing) {
+  if (!billing) return false
+  if (billing.should_block) return true
+  if (isBasicPlan(billing) && isBasicTrialExpired(billing)) return true
+  return false
+}
+
 /** Əlavə SMS/yaddaş yalnız ödənişli paketlərdə (SADƏ-də yox). */
 export function canBuySmsOnCurrentPlan(billing, smsPacksCount = 0) {
   if (isBasicPlan(billing)) return false
