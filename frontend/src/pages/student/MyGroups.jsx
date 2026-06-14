@@ -62,9 +62,6 @@ export default function MyGroups() {
         </div>
         <div className="flex flex-wrap gap-2">
           <GroupSwitcher />
-          <Button size="sm" onClick={() => navigate('/student/join')}>
-            + Dəvət linki
-          </Button>
         </div>
       </div>
 
@@ -77,12 +74,8 @@ export default function MyGroups() {
           <div className="text-4xl mb-3">📚</div>
           <h2 className="font-display font-bold text-lg text-token-textMain">Hələ qrup yoxdur</h2>
           <p className="text-sm text-token-textMuted mt-2 max-w-md mx-auto">
-            Müəllimin verdiyi join kodu ilə qrupa qoşulun. Eyni hesabla bir neçə qrupa və müəllimə
-            qoşula bilərsiniz.
+            Müəllimin WhatsApp-dan göndərdiyi linkə toxunun. Eyni hesabla bir neçə qrupa qoşula bilərsiniz.
           </p>
-          <Button className="mt-5" onClick={() => navigate('/student/join')}>
-            Dəvət linki ilə qoşul
-          </Button>
         </Card>
       )}
 
@@ -186,11 +179,7 @@ export default function MyGroups() {
 
       {enrollments.length > 0 && (
         <p className="text-center text-xs text-token-textMuted mt-6">
-          Başqa qrupa qoşulmaq üçün{' '}
-          <Link to="/student/join" className="text-primary font-semibold hover:underline">
-            join kod
-          </Link>{' '}
-          daxil edin
+          Başqa qrupa qoşulmaq üçün müəllimin göndərdiyi dəvət linkinə toxunun.
         </p>
       )}
     </div>

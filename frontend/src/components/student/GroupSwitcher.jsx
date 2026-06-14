@@ -25,12 +25,9 @@ export default function GroupSwitcher({ className = '' }) {
 
   if (!enrollments.length) {
     return (
-      <Link
-        to="/student/join"
-        className={`inline-flex items-center gap-2 text-sm font-semibold text-primary hover:underline ${className}`}
-      >
-        + Qrupa qoşul
-      </Link>
+      <span className={`text-xs text-token-textMuted leading-snug ${className}`}>
+        Müəllimin göndərdiyi linki açın
+      </span>
     )
   }
 
@@ -111,13 +108,7 @@ export default function GroupSwitcher({ className = '' }) {
             >
               Bütün qruplar
             </Link>
-            <Link
-              to="/student/join"
-              onClick={() => setOpen(false)}
-              className="flex-1 text-center text-xs font-semibold py-2 rounded-lg text-primary hover:bg-primary/10"
-            >
-              + Qoşul
-            </Link>
+
           </div>
         </div>
       )}

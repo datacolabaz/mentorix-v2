@@ -58,6 +58,7 @@ import StudentSchedule from './pages/student/Schedule'
 import StudentTasks from './pages/student/Tasks'
 import StudentNotifications from './pages/student/Notifications'
 import StudentJoinClass from './pages/student/JoinClass'
+import StudentJoinRedirect from './pages/student/StudentJoinRedirect'
 import StudentExamInvite from './pages/student/ExamInvite'
 import StudentTaskInvite from './pages/student/TaskInvite'
 import StudentMyGroups from './pages/student/MyGroups'
@@ -201,7 +202,7 @@ export default function App() {
       <Route path="/student" element={<ProtectedRoute roles={['student']}><StudentLayout /></ProtectedRoute>}>
         <Route index element={<StudentDashboard />} />
         <Route path="groups" element={<StudentMyGroups />} />
-        <Route path="join" element={<StudentJoinClass />} />
+        <Route path="join" element={<StudentJoinRedirect />} />
         <Route path="schedule" element={<StudentSchedule />} />
         <Route path="exams" element={<StudentExams />} />
         <Route path="assignments" element={<StudentTasks />} />

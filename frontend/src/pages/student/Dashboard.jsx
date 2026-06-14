@@ -154,11 +154,9 @@ export default function StudentDashboard() {
         <Card className="p-6 mb-6 border border-dashed border-primary/30 bg-primary/5">
           <h2 className="font-display font-bold text-base text-token-textMain">Hələ qrupa qoşulmamısınız</h2>
           <p className="text-sm text-token-textMuted mt-2">
-            Müəllimin verdiyi join kodu ilə qrupa qoşulun (məs: MX-97762).
+            Müəllimin WhatsApp-dan göndərdiyi linkə toxunun — qrup şərtləri açılacaq, qoşulma sorğusu
+            göndərə bilərsiniz.
           </p>
-          <Button className="mt-4" onClick={() => navigate('/student/join')}>
-            Dəvət linki ilə qoşul
-          </Button>
         </Card>
       )}
 
