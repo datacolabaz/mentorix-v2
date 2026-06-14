@@ -19,7 +19,7 @@ const { requireInstructorPhoneVerified } = require('../middleware/trial');
 const { attachEntitlements, enforceStudentsLimit, enforceActiveSubscription } = require('../middleware/entitlements');
 const { requireInstructorPhoneVerification } = require('../middleware/requireInstructorPhoneVerification');
 const { createJoinRequest } = require('../services/joinInvitationService');
-const { submitJoinWithProfile } = require('../controllers/joinInvitationController');
+const { submitJoinWithProfile, getStudentJoinState } = require('../controllers/joinInvitationController');
 const {
   patchMyContactProfile,
   sendEnrollmentProfileCompletionEmail,
@@ -1545,6 +1545,8 @@ router.get('/my/link', authenticate, authorize('student'), async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   }
 });
+
+router.get('/my/join-state/:code', authenticate, authorize('student'), getStudentJoinState);
 
 router.post('/my/join-request', authenticate, authorize('student'), submitJoinWithProfile);
 

@@ -119,6 +119,66 @@ async function getPublicJoinInfo(code) {
   };
 }
 
+/** Daxil olmuş tələbə bu qrupa artıq qoşulubmu? */
+async function getStudentJoinStateForInvite(studentId, code) {
+  const g = await findGroupByInvitationCode(code);
+  if (!g) {
+    const err = new Error('Dəvət kodu tapılmadı');
+    err.statusCode = 409;
+    err.code = 'INVALID_CODE';
+    throw err;
+  }
+  const { rows } = await db.query(
+    `SELECT e.id AS enrollment_id,
+            e.status,
+            sjr.status AS request_status
+     FROM enrollments e
+     LEFT JOIN student_join_requests sjr ON sjr.enrollment_id = e.id
+     WHERE e.student_id = $1
+       AND e.group_id = $2
+       AND (e.deleted_at IS NULL)
+       AND COALESCE(LOWER(TRIM(e.status)), '') NOT IN ('rejected', 'left', 'archived')
+     ORDER BY e.enrolled_at DESC NULLS LAST, e.id DESC
+     LIMIT 1`,
+    [studentId, g.group_id],
+  );
+  const r = rows[0];
+  if (!r) {
+    return {
+      state: 'none',
+      group_id: g.group_id,
+      group_name: g.group_name,
+    };
+  }
+  const st = String(r.status || '').toLowerCase();
+  const reqSt = String(r.request_status || '').toUpperCase();
+  if (st === 'active') {
+    return { state: 'active', enrollment_id: r.enrollment_id, group_id: g.group_id, group_name: g.group_name };
+  }
+  if (st === 'pending_approval' && reqSt === 'PENDING') {
+    return {
+      state: 'pending_approval',
+      enrollment_id: r.enrollment_id,
+      group_id: g.group_id,
+      group_name: g.group_name,
+    };
+  }
+  if (st === 'pending_setup') {
+    return {
+      state: 'pending_setup',
+      enrollment_id: r.enrollment_id,
+      group_id: g.group_id,
+      group_name: g.group_name,
+    };
+  }
+  return {
+    state: st || 'unknown',
+    enrollment_id: r.enrollment_id,
+    group_id: g.group_id,
+    group_name: g.group_name,
+  };
+}
+
 async function notifyInstructorJoinRequest(instructorId, studentName, groupName) {
   const { sendEmail, userEmail } = require('./emailService');
   const title = 'Yeni qoşulma sorğusu';
@@ -569,6 +629,7 @@ module.exports = {
   syncInvitationFieldsForGroup,
   findGroupByInvitationCode,
   getPublicJoinInfo,
+  getStudentJoinStateForInvite,
   createJoinRequest,
   listPendingJoinRequests,
   countPendingJoinRequests,

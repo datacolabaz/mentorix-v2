@@ -5,6 +5,7 @@ const {
   countPendingJoinRequests,
   approveJoinRequest,
   rejectJoinRequest,
+  getStudentJoinStateForInvite,
 } = require('../services/joinInvitationService');
 const {
   listPendingExamAccessRequests,
@@ -26,6 +27,19 @@ const getPublicJoin = async (req, res) => {
     const code = req.params.code;
     const info = await getPublicJoinInfo(code);
     res.json({ success: true, ...info });
+  } catch (err) {
+    res.status(err.statusCode || 500).json({
+      success: false,
+      message: err.message,
+      code: err.code,
+    });
+  }
+};
+
+const getStudentJoinState = async (req, res) => {
+  try {
+    const state = await getStudentJoinStateForInvite(req.user.id, req.params.code);
+    res.json({ success: true, ...state });
   } catch (err) {
     res.status(err.statusCode || 500).json({
       success: false,
@@ -216,6 +230,7 @@ const submitJoinWithProfile = async (req, res) => {
 
 module.exports = {
   getPublicJoin,
+  getStudentJoinState,
   listJoinRequests,
   joinRequestsDiagnostics,
   joinRequestsCount,

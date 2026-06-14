@@ -60,6 +60,8 @@ export default function JoinClass() {
   const [termsAccepted, setTermsAccepted] = useState(false)
   const [referralSourceId, setReferralSourceId] = useState('')
   const [referralNotes, setReferralNotes] = useState('')
+  const [joinState, setJoinState] = useState(null)
+  const [joinStateLoading, setJoinStateLoading] = useState(false)
 
   useEffect(() => {
     if (!initialCode) {
@@ -85,6 +87,29 @@ export default function JoinClass() {
       cancelled = true
     }
   }, [initialCode])
+
+  useEffect(() => {
+    if (!user?.id || user.role !== 'student' || !initialCode || !joinInfo) {
+      setJoinState(null)
+      setJoinStateLoading(false)
+      return
+    }
+    let cancelled = false
+    ;(async () => {
+      setJoinStateLoading(true)
+      try {
+        const d = await api.get(`/students/my/join-state/${encodeURIComponent(initialCode)}`)
+        if (!cancelled) setJoinState(d)
+      } catch {
+        if (!cancelled) setJoinState(null)
+      } finally {
+        if (!cancelled) setJoinStateLoading(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [user?.id, user?.role, initialCode, joinInfo])
 
   useEffect(() => {
     if (!user) return
@@ -180,6 +205,11 @@ export default function JoinClass() {
   }
 
   const loginHref = `/login?next=${encodeURIComponent(initialCode ? `/join/${initialCode}` : '/student/groups')}`
+  const memberState = joinState?.state
+  const showJoinForm =
+    Boolean(initialCode && joinInfo && !infoError) &&
+    !submitted &&
+    (memberState === 'none' || (!joinStateLoading && !memberState && user?.role === 'student'))
 
   return (
     <div className="p-4 sm:p-6 max-w-lg mx-auto w-full">
@@ -226,7 +256,40 @@ export default function JoinClass() {
             Qruplarıma get
           </Button>
         </Card>
-      ) : initialCode && joinInfo && !infoError ? (
+      ) : memberState === 'active' ? (
+        <Card className="p-5 border border-emerald-500/25 bg-emerald-500/10">
+          <p className="text-token-textMain font-semibold">Artıq bu qrupdasınız</p>
+          <p className="text-sm text-token-textMuted mt-2">
+            «{joinState?.group_name || joinInfo?.group_name}» qrupuna artıq qoşulmusunuz. Yenidən anket doldurmağa ehtiyac
+            yoxdur.
+          </p>
+          <Button className="w-full justify-center mt-4" onClick={() => navigate('/student/groups')}>
+            Qruplarıma get
+          </Button>
+        </Card>
+      ) : memberState === 'pending_approval' ? (
+        <Card className="p-5 border border-sky-500/25 bg-sky-500/10">
+          <p className="text-token-textMain font-semibold">Sorğunuz gözləyir</p>
+          <p className="text-sm text-token-textMuted mt-2">
+            Bu qrupa qoşulma sorğunuz artıq göndərilib. Müəllimin təsdiqini gözləyin.
+          </p>
+          <Button className="w-full justify-center mt-4" onClick={() => navigate('/student/groups')}>
+            Qruplarıma get
+          </Button>
+        </Card>
+      ) : memberState === 'pending_setup' ? (
+        <Card className="p-5 border border-amber-500/25 bg-amber-500/10">
+          <p className="text-token-textMain font-semibold">Qrup quraşdırılır</p>
+          <p className="text-sm text-token-textMuted mt-2">
+            Müəllim sizi qrupa əlavə edib. Qeydiyyat tezliklə tamamlanacaq.
+          </p>
+          <Button className="w-full justify-center mt-4" onClick={() => navigate('/student')}>
+            Panelə get
+          </Button>
+        </Card>
+      ) : joinStateLoading && user?.role === 'student' ? (
+        <p className="text-sm text-token-textMuted mb-4">Hesabınız yoxlanılır…</p>
+      ) : showJoinForm ? (
         <>
           {!user ? (
             <Card className="p-5 mb-4 border border-[color:var(--border-subtle)] space-y-4">
