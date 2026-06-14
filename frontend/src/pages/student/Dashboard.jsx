@@ -157,7 +157,7 @@ export default function StudentDashboard() {
             Müəllimin verdiyi join kodu ilə qrupa qoşulun (məs: MX-97762).
           </p>
           <Button className="mt-4" onClick={() => navigate('/student/join')}>
-            Join kod daxil et
+            Dəvət linki ilə qoşul
           </Button>
         </Card>
       )}

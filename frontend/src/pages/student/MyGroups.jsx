@@ -63,7 +63,7 @@ export default function MyGroups() {
         <div className="flex flex-wrap gap-2">
           <GroupSwitcher />
           <Button size="sm" onClick={() => navigate('/student/join')}>
-            + Join kod
+            + Dəvət linki
           </Button>
         </div>
       </div>
@@ -81,7 +81,7 @@ export default function MyGroups() {
             qoşula bilərsiniz.
           </p>
           <Button className="mt-5" onClick={() => navigate('/student/join')}>
-            Join kod daxil et
+            Dəvət linki ilə qoşul
           </Button>
         </Card>
       )}

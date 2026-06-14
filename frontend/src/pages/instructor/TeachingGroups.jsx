@@ -462,6 +462,21 @@ export default function InstructorTeachingGroups() {
                                       title="WhatsApp üçün hazır mətn"
                                       onClick={async () => {
                                         const link = groupInvitationLink(g)
+                                        try {
+                                          await navigator.clipboard.writeText(link)
+                                          toast('Qrup linki kopyalandı — tələbəyə göndərin', 'success')
+                                        } catch {
+                                          toast('Kopyalanmadı', 'error')
+                                        }
+                                      }}
+                                    >
+                                      Linki kopyala
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className={[groupActionBtnCls, 'text-primary'].join(' ')}
+                                      onClick={async () => {
+                                        const link = groupInvitationLink(g)
                                         const text = buildWhatsAppInviteMessage(link)
                                         try {
                                           await navigator.clipboard.writeText(text)
@@ -471,13 +486,13 @@ export default function InstructorTeachingGroups() {
                                         }
                                       }}
                                     >
-                                      Linki Kopyala
+                                      WhatsApp
                                     </button>
                                     <button
                                       type="button"
                                       className={[groupActionBtnCls, 'text-primary'].join(' ')}
                                       onClick={async () => {
-                                        const link = `${window.location.origin}/join/${encodeURIComponent(String(g.join_code))}`
+                                        const link = groupInvitationLink(g)
                                         try {
                                           if (navigator.share) {
                                             await navigator.share({ title: 'Mentorix invite', text: 'Qrupa qoşul', url: link })

@@ -11,6 +11,7 @@ import { useStudentGroupsOptional } from '../../contexts/StudentGroupContext'
 import { formatAzn } from '../../lib/groupPaymentTerms'
 import { canonicalAzPhoneE164 } from '../../lib/azPhone'
 import JoinGroupTermsOverview from '../../components/student/JoinGroupTermsOverview'
+import { parseJoinInviteInput } from '../../lib/joinInvite'
 
 const inp =
   'w-full border border-[color:var(--border-subtle)] rounded-xl px-4 py-3 text-token-textMain text-sm outline-none focus:border-primary/40 bg-token-surfaceCard/55'
@@ -24,10 +25,7 @@ function splitFullName(full) {
 }
 
 function normalizeJoinCode(raw) {
-  return String(raw || '')
-    .trim()
-    .toUpperCase()
-    .replace(/\s+/g, '')
+  return parseJoinInviteInput(raw)
 }
 
 export default function JoinClass() {
@@ -40,13 +38,19 @@ export default function JoinClass() {
   const [searchParams] = useSearchParams()
 
   const initialCode = useMemo(() => {
-    return normalizeJoinCode(params.code || searchParams.get('code') || '')
+    return parseJoinInviteInput(
+      params.code ||
+        searchParams.get('code') ||
+        searchParams.get('link') ||
+        searchParams.get('url') ||
+        '',
+    )
   }, [params.code, searchParams])
 
   const [joinInfo, setJoinInfo] = useState(null)
   const [infoLoading, setInfoLoading] = useState(Boolean(initialCode))
   const [infoError, setInfoError] = useState('')
-  const [joinCodeDraft, setJoinCodeDraft] = useState('')
+  const [joinLinkDraft, setJoinLinkDraft] = useState('')
 
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
@@ -84,6 +88,13 @@ export default function JoinClass() {
       cancelled = true
     }
   }, [initialCode])
+
+  useEffect(() => {
+    const hasQueryInvite =
+      searchParams.get('code') || searchParams.get('link') || searchParams.get('url')
+    if (!hasQueryInvite || !initialCode || params.code) return
+    navigate(`/join/${encodeURIComponent(initialCode)}`, { replace: true })
+  }, [initialCode, params.code, navigate, searchParams])
 
   useEffect(() => {
     if (!user) return
@@ -135,13 +146,21 @@ export default function JoinClass() {
     }
   }
 
-  const goToInviteCode = () => {
-    const code = normalizeJoinCode(joinCodeDraft)
+  const goToInviteLink = () => {
+    const code = parseJoinInviteInput(joinLinkDraft)
     if (!code) {
-      toast('Dəvət kodu daxil edin', 'error')
+      toast('Müəllimin göndərdiyi linki yapışdırın', 'error')
       return
     }
     navigate(`/join/${encodeURIComponent(code)}`)
+  }
+
+  const handleLinkPaste = (value) => {
+    setJoinLinkDraft(value)
+    const code = parseJoinInviteInput(value)
+    if (code && (value.includes('/join/') || value.startsWith('http'))) {
+      navigate(`/join/${encodeURIComponent(code)}`)
+    }
   }
 
   const submitRequest = async (e) => {
@@ -192,29 +211,43 @@ export default function JoinClass() {
     <div className="p-4 sm:p-6 max-w-lg mx-auto w-full min-h-[70vh]">
       <h1 className="font-display font-bold text-2xl text-token-textMain">Qrupa qoşul</h1>
       <p className="text-sm text-token-textMuted mt-1 mb-4">
-        Müəllimin dəvət linki və ya join kodu ilə qrup şərtlərinə baxın, sonra qoşulma sorğusu göndərin.
+        Müəllimin WhatsApp-dan göndərdiyi linkə toxunun — qrup şərtləri birbaşa açılır. Kod yazmağa ehtiyac yoxdur.
       </p>
 
       {!initialCode && !submitted && (
         <Card className="p-4 mb-4 border border-[color:var(--border-subtle)]">
           <p className="text-xs font-semibold uppercase tracking-wider text-token-textMuted mb-2">
-            Dəvət kodu
+            Dəvət linki
           </p>
           <p className="text-sm text-token-textMuted mb-3">
-            Müəllimin verdiyi join kodu (məs. MX-97762) və ya linkdəki kodu daxil edin.
+            Linki aça bilmirsinizsə, müəllimin göndərdiyi tam linki bura yapışdırın (məs.{' '}
+            <span className="font-mono text-xs text-primary/90">https://mentorix.io/join/MX-97762</span>
+            ).
           </p>
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             <input
               className={inp}
-              value={joinCodeDraft}
-              onChange={(e) => setJoinCodeDraft(e.target.value)}
-              placeholder="MX-XXXXX"
+              value={joinLinkDraft}
+              onChange={(e) => handleLinkPaste(e.target.value)}
+              onPaste={(e) => {
+                const text = e.clipboardData?.getData('text') || ''
+                if (text) {
+                  e.preventDefault()
+                  handleLinkPaste(text)
+                }
+              }}
+              placeholder="https://mentorix.io/join/MX-..."
               autoComplete="off"
+              inputMode="url"
             />
-            <Button type="button" onClick={goToInviteCode}>
-              Bax
+            <Button type="button" className="shrink-0" onClick={goToInviteLink}>
+              Aç
             </Button>
           </div>
+          <p className="text-xs text-token-textMuted mt-3 leading-relaxed">
+            Ən asan yol: müəllimdən gələn mesajdakı linkə birbaşa toxunmaq — bu səhifəyə kod daxil
+            etməyə ehtiyac qalmır.
+          </p>
         </Card>
       )}
 
