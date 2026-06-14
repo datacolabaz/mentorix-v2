@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useStudentGroups } from '../../contexts/StudentGroupContext'
+import { studentEnrollmentDisplay } from '../../lib/participantGroupLabels'
 
 export default function GroupSwitcher({ className = '' }) {
   const { enrollments, activeEnrollmentId, activeEnrollment, setActiveEnrollmentId, loading } =
@@ -33,8 +34,9 @@ export default function GroupSwitcher({ className = '' }) {
     )
   }
 
-  const label = activeEnrollment?.group_name || activeEnrollment?.subject_name || 'Qrup seçin'
-  const sub = activeEnrollment?.instructor_name
+  const activeDisplay = studentEnrollmentDisplay(activeEnrollment)
+  const label = activeDisplay.title || 'Qrup seçin'
+  const sub = activeDisplay.subtitle
 
   return (
     <div ref={ref} className={`relative ${className}`}>
@@ -72,6 +74,7 @@ export default function GroupSwitcher({ className = '' }) {
           </div>
           {enrollments.map((g) => {
             const active = String(g.enrollment_id) === String(activeEnrollmentId)
+            const display = studentEnrollmentDisplay(g)
             return (
               <button
                 key={g.enrollment_id}
@@ -91,11 +94,11 @@ export default function GroupSwitcher({ className = '' }) {
                 />
                 <span className="min-w-0">
                   <span className="block text-sm font-semibold text-token-textMain truncate">
-                    {g.group_name || g.subject_name || 'Qrup'}
+                    {display.title}
                   </span>
-                  <span className="block text-xs text-token-textMuted truncate">
-                    {g.instructor_name} • {g.subject_name}
-                  </span>
+                  {display.subtitle ? (
+                    <span className="block text-xs text-token-textMuted truncate">{display.subtitle}</span>
+                  ) : null}
                 </span>
               </button>
             )

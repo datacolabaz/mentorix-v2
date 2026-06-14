@@ -14,6 +14,7 @@ import Button from '../../components/common/Button'
 import useAuthStore from '../../hooks/useAuth'
 import useUiStore from '../../hooks/useUi'
 import GroupSwitcher from '../../components/student/GroupSwitcher'
+import { studentEnrollmentDisplay } from '../../lib/participantGroupLabels'
 import { useStudentGroups } from '../../contexts/StudentGroupContext'
 import { withEnrollmentQuery } from '../../lib/studentGroupQuery'
 
@@ -72,6 +73,7 @@ export default function StudentDashboard() {
   const theme = useUiStore((s) => s.theme)
   const navigate = useNavigate()
   const { activeEnrollmentId, activeEnrollment, enrollments, hasGroups } = useStudentGroups()
+  const activeDisplay = studentEnrollmentDisplay(activeEnrollment)
   const [exams, setExams] = useState([])
   const [overview, setOverview] = useState(null)
 
@@ -140,7 +142,7 @@ export default function StudentDashboard() {
             </h1>
             <p className="text-token-textMuted text-sm mt-1">
               {activeEnrollment
-                ? `${activeEnrollment.group_name} • ${activeEnrollment.instructor_name}`
+                ? [activeDisplay.title, activeDisplay.subtitle].filter(Boolean).join(' · ')
                 : 'Proqresinizə baxın'}
             </p>
           </div>
@@ -194,7 +196,9 @@ export default function StudentDashboard() {
             Qruplarınız
           </div>
           <div className="grid sm:grid-cols-2 gap-2 w-full min-w-0 [&>*]:min-w-0">
-            {enrollments.map((g) => (
+            {enrollments.map((g) => {
+              const display = studentEnrollmentDisplay(g)
+              return (
               <Link
                 key={g.enrollment_id}
                 to="/student/groups"
@@ -206,12 +210,15 @@ export default function StudentDashboard() {
                 />
                 <div className="min-w-0">
                   <div className="text-sm font-semibold text-token-textMain truncate">
-                    {g.group_name}
+                    {display.title}
                   </div>
-                  <div className="text-xs text-token-textMuted truncate">{g.instructor_name}</div>
+                  {display.subtitle ? (
+                    <div className="text-xs text-token-textMuted truncate">{display.subtitle}</div>
+                  ) : null}
                 </div>
               </Link>
-            ))}
+              )
+            })}
           </div>
         </Card>
       )}
@@ -219,9 +226,9 @@ export default function StudentDashboard() {
       <Card hover className="p-5 min-w-0 overflow-hidden border border-[color:var(--border-subtle)] hover:border-primary/20">
         <h2 className="font-display font-bold text-base mb-1 text-token-textMain">
           📊 İmtahan balları
-          {activeEnrollment?.group_name && (
+          {activeDisplay.title && (
             <span className="text-token-textMuted font-normal text-sm ml-2">
-              — {activeEnrollment.group_name}
+              — {activeDisplay.title}
             </span>
           )}
         </h2>

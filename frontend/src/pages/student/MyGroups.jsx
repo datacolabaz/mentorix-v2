@@ -6,6 +6,7 @@ import Button from '../../components/common/Button'
 import { useToast } from '../../components/common/Toast'
 import { useStudentGroups } from '../../contexts/StudentGroupContext'
 import GroupSwitcher from '../../components/student/GroupSwitcher'
+import { studentEnrollmentDisplay } from '../../lib/participantGroupLabels'
 
 function fmtDate(d) {
   if (!d) return '—'
@@ -88,6 +89,7 @@ export default function MyGroups() {
       <div className="space-y-4">
         {enrollments.map((g) => {
           const st = statsFor(g.enrollment_id)
+          const display = studentEnrollmentDisplay(g)
           return (
             <Card
               key={g.enrollment_id}
@@ -102,11 +104,11 @@ export default function MyGroups() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <h2 className="font-display font-bold text-lg text-token-textMain truncate">
-                    {g.group_name || 'Qrup'}
+                    {display.title}
                   </h2>
-                  <p className="text-sm text-token-textMuted mt-0.5">
-                    {g.instructor_name} • {g.subject_name}
-                  </p>
+                  {display.subtitle ? (
+                    <p className="text-sm text-token-textMuted mt-0.5">{display.subtitle}</p>
+                  ) : null}
                   {String(g.status || '').toLowerCase() === 'pending_approval' && (
                     <span className="inline-block mt-2 text-[10px] font-semibold uppercase tracking-wide text-sky-300 bg-sky-500/10 border border-sky-500/30 rounded-lg px-2 py-0.5">
                       Sorğu göndərildi — müəllim təsdiqi gözlənilir
@@ -172,7 +174,7 @@ export default function MyGroups() {
                   size="sm"
                   variant="ghost"
                   loading={leaveBusy === g.enrollment_id}
-                  onClick={() => leaveGroup(g.enrollment_id, g.group_name)}
+                  onClick={() => leaveGroup(g.enrollment_id, display.title)}
                 >
                   Qrupdan ayrıl
                 </Button>

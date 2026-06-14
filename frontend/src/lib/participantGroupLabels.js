@@ -5,14 +5,52 @@ export function parseParticipantTitleFromGroupName(name) {
     .trim()
 }
 
-export function friendlyParticipantLabel({ system_kind, source_title, group_name }) {
+export function isSystemTeachingSubjectName(name) {
+  return /^\[System\]/i.test(String(name || '').trim())
+}
+
+export function isSystemGroupName(name) {
+  return /^\[System\]/i.test(String(name || '').trim())
+}
+
+export function friendlyParticipantLabel({ system_kind, source_title, group_name, subject_name } = {}) {
   const title =
     String(source_title || '').trim() ||
     parseParticipantTitleFromGroupName(group_name) ||
+    parseParticipantTitleFromGroupName(subject_name) ||
     'İştirakçılar'
   if (system_kind === 'assignment_participants') return `${title} (Tapşırıq)`
   if (system_kind === 'exam_participants') return `${title} (İmtahan)`
+  if (isSystemGroupName(group_name) || isSystemTeachingSubjectName(subject_name)) {
+    return `${title} — Qonaq`
+  }
   return title
+}
+
+/** Tələbə paneli: qrup / iştirakçı qrupu üçün göstərilən ad. */
+export function studentEnrollmentDisplay(e) {
+  if (!e) return { title: 'Qrup', subtitle: '' }
+  const instructor = String(e.instructor_name || '').trim()
+  const rawGroup = String(e.group_name || '').trim()
+  const rawSubject = String(e.subject_name || '').trim()
+  const isSystem =
+    Boolean(e.is_system_group) ||
+    isSystemGroupName(rawGroup) ||
+    isSystemTeachingSubjectName(rawSubject)
+
+  if (isSystem) {
+    const title = friendlyParticipantLabel({
+      system_kind: e.system_kind,
+      group_name: rawGroup,
+      subject_name: rawSubject,
+    })
+    return { title, subtitle: instructor }
+  }
+
+  const title = rawGroup || rawSubject || 'Qrup'
+  const parts = [instructor]
+  if (rawSubject && rawSubject !== title) parts.push(rawSubject)
+  return { title, subtitle: parts.filter(Boolean).join(' · ') }
 }
 
 export function participantKindFromRow(s) {
@@ -54,14 +92,6 @@ export function studentMatchesAudienceFilter(s, filter) {
     )
   }
   return true
-}
-
-export function isSystemTeachingSubjectName(name) {
-  return /^\[System\]/i.test(String(name || '').trim())
-}
-
-export function isSystemGroupName(name) {
-  return /^\[System\]/i.test(String(name || '').trim())
 }
 
 export function resolveStudentGroupLabel(s) {

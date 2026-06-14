@@ -220,11 +220,6 @@ export default function StudentAssignments() {
         <div className="flex flex-col sm:flex-row sm:items-end gap-3 flex-1 min-w-0">
           <div className="min-w-0">
             <h1 className="font-display font-bold text-xl sm:text-2xl text-token-textMain">Tapşırıqlarım</h1>
-            {activeEnrollment && (
-              <p className="text-sm text-token-textMuted mt-1">
-                {activeEnrollment.group_name} • {activeEnrollment.instructor_name}
-              </p>
-            )}
             <p className="text-token-textMuted text-sm mt-1">Müəllimin sizə göndərdiyi tapşırıqlar.</p>
           </div>
           <GroupSwitcher className="w-full sm:w-auto sm:min-w-[200px] shrink-0" />
