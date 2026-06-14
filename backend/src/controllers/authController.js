@@ -20,6 +20,7 @@ const {
   grantCourseRoleToUser,
 } = require('../services/userRolesService');
 const { grantBasicTrialForInstructor } = require('../services/basicTrialIpService');
+const { BASIC_TRIAL_DAYS } = require('../config/billingTrial');
 const { clientIp } = require('../utils/clientIp');
 const { sendPasswordResetEmail } = require('../services/passwordResetEmailService');
 const { scheduleAccessEvent } = require('../services/accessEventService');
@@ -179,6 +180,20 @@ async function provisionInstructorBasicTrial(client, userId, req) {
   if (!result.granted) {
     await logRisk(userId, req, { kind: 'basic_trial_ip_denied', reason: result.reason }, 35);
   }
+  await client.query(
+    `INSERT INTO subscriptions (user_id, plan, status, current_period_start, current_period_end, updated_at)
+     VALUES ($1, 'basic', 'active', NOW(), NOW() + ($2 || ' days')::interval, NOW())
+     ON CONFLICT (user_id) DO UPDATE SET
+       plan = CASE WHEN subscriptions.plan IS NULL OR LOWER(TRIM(subscriptions.plan)) = 'basic'
+              THEN 'basic' ELSE subscriptions.plan END,
+       current_period_start = COALESCE(subscriptions.current_period_start, NOW()),
+       current_period_end = COALESCE(
+         subscriptions.current_period_end,
+         NOW() + ($2 || ' days')::interval
+       ),
+       updated_at = NOW()`,
+    [userId, String(BASIC_TRIAL_DAYS)]
+  );
   return result;
 }
 

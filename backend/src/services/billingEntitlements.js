@@ -1,7 +1,8 @@
 const db = require('../utils/db');
 const { normalizePlanSlug } = require('../config/plans');
 const { BASIC_TRIAL_DAYS } = require('../config/billingTrial');
-const { isBasicTrialGranted, hasBasicTrialIpDenial } = require('./basicTrialIpService');
+const { hasBasicTrialIpDenial } = require('./basicTrialIpService');
+const { resolveBasicTrialWindow } = require('./basicTrialPeriod');
 const getCurrentPlan = require('./billingGetCurrentPlan');
 const { getActivePlansMap } = require('./subscriptionPlansService');
 const {
@@ -66,14 +67,36 @@ async function ensureSubscriptionRow(dbConn, userId) {
   );
   if (rows[0]) return rows[0];
 
-  // Permanent free (BASIC): no subscription end date — limits come from subscription_plans only.
   const { rows: ins } = await dbConn.query(
     `INSERT INTO subscriptions (user_id, plan, status, current_period_start, current_period_end, updated_at)
-     VALUES ($1, 'basic', 'active', NOW(), NULL, NOW())
+     VALUES ($1, 'basic', 'active', NOW(), NOW() + ($2 || ' days')::interval, NOW())
      RETURNING user_id, plan, status`,
-    [userId]
+    [userId, String(BASIC_TRIAL_DAYS)]
   );
   return ins[0] || { user_id: userId, plan: 'basic', status: 'active' };
+}
+
+/** Köhnə SADƏ sətirlərində period_end NULL olanda 14 günlük sınağı DB-yə yazır. */
+async function backfillBasicTrialPeriodIfMissing(dbConn, userId) {
+  const { rows } = await dbConn.query(
+    `SELECT plan, current_period_start, current_period_end, created_at
+     FROM subscriptions
+     WHERE user_id = $1
+     LIMIT 1`,
+    [userId]
+  );
+  const row = rows[0];
+  if (!row || normalizePlanSlug(row.plan) !== 'basic') return;
+  if (row.current_period_end) return;
+  const trial = resolveBasicTrialWindow(row);
+  await dbConn.query(
+    `UPDATE subscriptions
+     SET current_period_start = COALESCE(current_period_start, $2),
+         current_period_end = $3,
+         updated_at = NOW()
+     WHERE user_id = $1`,
+    [userId, trial.current_period_start, trial.current_period_end]
+  );
 }
 
 async function ensureUsageRow(dbConn, userId) {
@@ -398,6 +421,7 @@ async function resolveEntitlements(userId) {
   usage = await reconcileSmsUsageMonthly(db, userId);
   await ensureSubscriptionRow(db, userId);
   await reconcileSubscriptionPlanFromLastPaidPlan(db, userId);
+  await backfillBasicTrialPeriodIfMissing(db, userId);
   const sub2 = await getCurrentPlan(db, userId);
   // IMPORTANT:
   // Limits are plan-driven only (subscriptions + subscription_plans).

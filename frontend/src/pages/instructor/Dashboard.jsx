@@ -13,6 +13,7 @@ import { useToast } from '../../components/common/Toast'
 import { writeCache } from '../../lib/cache'
 import { BILLING_STATUS_QUERY_KEY, useBillingStatus } from '../../hooks/useBillingStatus'
 import MarketplaceOpportunityCard from '../../components/instructor/MarketplaceOpportunityCard'
+import BasicTrialCountdownBanner from '../../components/instructor/BasicTrialCountdownBanner'
 
 const DEFAULT_DASH = {
   income_this_month: 0,
@@ -372,6 +373,12 @@ export default function InstructorDashboard() {
           </div>
         </div>
       </div>
+
+      {billing ? (
+        <div className="mb-4 sm:mb-6 min-w-0 w-full">
+          <BasicTrialCountdownBanner billing={billing} theme={theme} />
+        </div>
+      ) : null}
 
       <div className="mb-4 sm:mb-6 min-w-0 w-full">
         <MarketplaceOpportunityCard theme={theme} />

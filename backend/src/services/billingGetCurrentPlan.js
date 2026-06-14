@@ -1,4 +1,5 @@
 const { normalizePlanSlug } = require('../config/plans');
+const { resolveBasicTrialWindow, basicTrialExpired } = require('./basicTrialPeriod');
 
 /**
  * Abunəlik sətri + müddət bitibsə request-time past_due keçidi.
@@ -7,7 +8,7 @@ const { normalizePlanSlug } = require('../config/plans');
  */
 async function getCurrentPlan(dbConn, userId) {
   const { rows } = await dbConn.query(
-    `SELECT plan, status, current_period_start, current_period_end, pending_plan, pending_effective_at, grace_until
+    `SELECT plan, status, current_period_start, current_period_end, pending_plan, pending_effective_at, grace_until, created_at
      FROM subscriptions
      WHERE user_id = $1
      LIMIT 1`,
@@ -15,26 +16,18 @@ async function getCurrentPlan(dbConn, userId) {
   );
   const r = rows[0] || null;
   const planSlug = String(r?.plan || '').toLowerCase().trim();
-  // BASIC / free tier: no subscription end date → never auto-expire by time.
   if (planSlug === 'basic') {
-    return r
-      ? {
-          plan: normalizePlanSlug(r.plan),
-          status: 'active',
-          current_period_start: r.current_period_start || null,
-          current_period_end: null,
-          pending_plan: r.pending_plan ? normalizePlanSlug(r.pending_plan) : null,
-          pending_effective_at: r.pending_effective_at || null,
-          grace_until: null,
-        }
-      : {
-          plan: 'basic',
-          status: 'active',
-          current_period_start: null,
-          current_period_end: null,
-          pending_plan: null,
-          pending_effective_at: null,
-        };
+    const trial = resolveBasicTrialWindow(r || {});
+    const expired = basicTrialExpired(trial.current_period_end);
+    return {
+      plan: 'basic',
+      status: expired ? 'expired' : String(r?.status || 'active'),
+      current_period_start: trial.current_period_start,
+      current_period_end: trial.current_period_end,
+      pending_plan: r?.pending_plan ? normalizePlanSlug(r.pending_plan) : null,
+      pending_effective_at: r?.pending_effective_at || null,
+      grace_until: null,
+    };
   }
   if (r && String(r.status || 'active') === 'active' && r.current_period_end && new Date(r.current_period_end).getTime() < Date.now()) {
     try {

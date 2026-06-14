@@ -1,5 +1,6 @@
 import { useEffect, useId, useState } from 'react'
 import { smsUsageDisplay, storageUsageFromBilling } from '../../lib/billingUsageDisplay'
+import { basicTrialCountdownText } from '../../lib/basicTrialCopy'
 
 function fmtStorageMbPair(billing) {
   const lim = billing?.limits || {}
@@ -111,6 +112,7 @@ export default function BillingUsagePills({ billing, planTitle = '', collapsible
 
   const planLabel = String(planTitle || '').trim() || 'Paket'
   const summary = compactSummary(billing)
+  const trialLine = basicTrialCountdownText(billing)
 
   const header = (
     <>
@@ -147,12 +149,17 @@ export default function BillingUsagePills({ billing, planTitle = '', collapsible
 
       {!collapsible || expanded ? (
         <div id={panelId} className={collapsible ? 'px-3 pb-3 pt-0 space-y-2.5 border-t border-white/5' : 'p-3 pt-0 space-y-2.5'}>
+          {trialLine ? (
+            <p className="text-[11px] font-medium text-amber-600 dark:text-amber-200/90 leading-snug">{trialLine}</p>
+          ) : null}
           <UsageRow icon="👥" label="Tələbələr" value={fmtStudentsLine(billing)} warn={studentsWarn} />
           <UsageRow icon="💾" label="Sənəd yaddaşı" value={fmtStorageMbPair(billing)} warn={storageWarn} />
           <UsageRow icon="📱" label="SMS" value={fmtSmsRemainingLine(billing)} warn={smsWarn} />
         </div>
       ) : (
-        <p className="px-3 pb-2.5 text-[10px] text-token-textMuted leading-snug truncate">{summary}</p>
+        <p className="px-3 pb-2.5 text-[10px] text-token-textMuted leading-snug truncate">
+          {trialLine ? `${trialLine} · ${summary}` : summary}
+        </p>
       )}
     </div>
   )
