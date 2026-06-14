@@ -5,6 +5,10 @@ const {
   assertGroupDefaultsReady,
 } = require('./groupInviteDefaults');
 const { buildPackagePreview } = require('../utils/groupPaymentTerms');
+const {
+  buildGroupTermsPreview,
+  lessonFormatFromDeliveryFormats,
+} = require('../utils/joinGroupPreview');
 const { activateEnrollmentFromGroupDefaults } = require('./enrollmentActivationService');
 const {
   canonicalStudentPhone,
@@ -87,6 +91,15 @@ async function getPublicJoinInfo(code) {
   const invitation_link = g.invitation_link || buildInvitationLink(inviteCode);
   const defaults = await getGroupInviteDefaults(g.group_id);
   const package_offer = buildPackagePreview(defaults);
+  const group_terms_preview = buildGroupTermsPreview(defaults, package_offer);
+
+  const { rows: deliveryRows } = await db.query(
+    `SELECT format FROM instructor_delivery_formats WHERE user_id = $1 ORDER BY format`,
+    [g.instructor_id],
+  );
+  const delivery_formats = (deliveryRows || []).map((r) => String(r.format || '').trim()).filter(Boolean);
+  const lesson_format_label = lessonFormatFromDeliveryFormats(delivery_formats);
+
   const { rows: referralRows } = await db.query(
     `SELECT id, name, icon FROM referral_sources ORDER BY name ASC`,
   );
@@ -98,6 +111,9 @@ async function getPublicJoinInfo(code) {
     invitation_code: inviteCode,
     invitation_link,
     package_offer,
+    group_terms_preview,
+    delivery_formats,
+    lesson_format_label,
     invite_ready: Boolean(package_offer),
     referral_sources: referralRows || [],
   };

@@ -8,9 +8,9 @@ import { useToast } from '../../components/common/Toast'
 import PhoneInput from '../../components/auth/PhoneInput'
 import GoogleSignInButton from '../../components/auth/GoogleSignInButton'
 import { useStudentGroupsOptional } from '../../contexts/StudentGroupContext'
-import { formatAzn, billingTypeLabel } from '../../lib/groupPaymentTerms'
+import { formatAzn } from '../../lib/groupPaymentTerms'
 import { canonicalAzPhoneE164 } from '../../lib/azPhone'
-import { WEEKDAYS } from '../instructor/Schedule'
+import JoinGroupTermsOverview from '../../components/student/JoinGroupTermsOverview'
 
 const inp =
   'w-full border border-[color:var(--border-subtle)] rounded-xl px-4 py-3 text-token-textMain text-sm outline-none focus:border-primary/40 bg-token-surfaceCard/55'
@@ -23,6 +23,13 @@ function splitFullName(full) {
   return { first_name: t.slice(0, i), last_name: t.slice(i + 1).trim() }
 }
 
+function normalizeJoinCode(raw) {
+  return String(raw || '')
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, '')
+}
+
 export default function JoinClass() {
   const toast = useToast()
   const navigate = useNavigate()
@@ -33,15 +40,13 @@ export default function JoinClass() {
   const [searchParams] = useSearchParams()
 
   const initialCode = useMemo(() => {
-    return String(params.code || searchParams.get('code') || '')
-      .trim()
-      .toUpperCase()
-      .replace(/\s+/g, '')
+    return normalizeJoinCode(params.code || searchParams.get('code') || '')
   }, [params.code, searchParams])
 
   const [joinInfo, setJoinInfo] = useState(null)
   const [infoLoading, setInfoLoading] = useState(Boolean(initialCode))
   const [infoError, setInfoError] = useState('')
+  const [joinCodeDraft, setJoinCodeDraft] = useState('')
 
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
@@ -57,7 +62,9 @@ export default function JoinClass() {
 
   useEffect(() => {
     if (!initialCode) {
+      setJoinInfo(null)
       setInfoLoading(false)
+      setInfoError('')
       return
     }
     let cancelled = false
@@ -84,7 +91,7 @@ export default function JoinClass() {
     if (!firstName && n.first_name) setFirstName(n.first_name)
     if (!lastName && n.last_name) setLastName(n.last_name)
     if (!phone && user.phone) setPhone(user.phone)
-  }, [user])
+  }, [user, firstName, lastName, phone])
 
   const persistAuth = useCallback(
     (token, authUser) => {
@@ -115,7 +122,7 @@ export default function JoinClass() {
       const u = { ...r.user, needs_phone_verification: false }
       persistAuth(r.token, u)
       try {
-        const path = code ? `/join/${code}` : '/student/join'
+        const path = initialCode ? `/join/${encodeURIComponent(initialCode)}` : '/student/join'
         sessionStorage.setItem('mx_return_after_login', path)
       } catch {
         /* ignore */
@@ -126,6 +133,15 @@ export default function JoinClass() {
     } finally {
       setAuthBusy(false)
     }
+  }
+
+  const goToInviteCode = () => {
+    const code = normalizeJoinCode(joinCodeDraft)
+    if (!code) {
+      toast('Dəvət kodu daxil edin', 'error')
+      return
+    }
+    navigate(`/join/${encodeURIComponent(code)}`)
   }
 
   const submitRequest = async (e) => {
@@ -170,83 +186,46 @@ export default function JoinClass() {
     }
   }
 
-  const loginHref = `/login?next=${encodeURIComponent(`/join/${initialCode || ''}`)}`
+  const loginHref = `/login?next=${encodeURIComponent(initialCode ? `/join/${initialCode}` : '/student/join')}`
 
   return (
     <div className="p-4 sm:p-6 max-w-lg mx-auto w-full min-h-[70vh]">
       <h1 className="font-display font-bold text-2xl text-token-textMain">Qrupa qoşul</h1>
-      <p className="text-sm text-token-textMuted mt-1 mb-6">
-        Qrup dəvət linki — paket, valideyn və yönləndirmə məlumatlarını doldurun. Ödəniş xatırlatmaları bu qrup
-        tələbələrinə gedəcək.
+      <p className="text-sm text-token-textMuted mt-1 mb-4">
+        Müəllimin dəvət linki və ya join kodu ilə qrup şərtlərinə baxın, sonra qoşulma sorğusu göndərin.
       </p>
 
-      {infoLoading && <p className="text-sm text-token-textMuted">Yüklənir…</p>}
+      {!initialCode && !submitted && (
+        <Card className="p-4 mb-4 border border-[color:var(--border-subtle)]">
+          <p className="text-xs font-semibold uppercase tracking-wider text-token-textMuted mb-2">
+            Dəvət kodu
+          </p>
+          <p className="text-sm text-token-textMuted mb-3">
+            Müəllimin verdiyi join kodu (məs. MX-97762) və ya linkdəki kodu daxil edin.
+          </p>
+          <div className="flex gap-2">
+            <input
+              className={inp}
+              value={joinCodeDraft}
+              onChange={(e) => setJoinCodeDraft(e.target.value)}
+              placeholder="MX-XXXXX"
+              autoComplete="off"
+            />
+            <Button type="button" onClick={goToInviteCode}>
+              Bax
+            </Button>
+          </div>
+        </Card>
+      )}
+
+      {infoLoading && initialCode && (
+        <p className="text-sm text-token-textMuted mb-4">Qrup məlumatları yüklənir…</p>
+      )}
       {infoError && (
         <Card className="p-4 border border-red-500/30 text-red-300 text-sm mb-4">{infoError}</Card>
       )}
-      {joinInfo && (
-        <>
-          <Card className="p-4 mb-4 border border-[color:var(--border-subtle)]">
-            <p className="text-xs uppercase tracking-wider text-token-textMuted mb-1">Qrup</p>
-            <p className="text-lg font-semibold text-token-textMain">{joinInfo.group_name}</p>
-            <p className="text-sm text-token-textMuted mt-1">
-              {joinInfo.subject_name} · {joinInfo.instructor_name}
-            </p>
-          </Card>
-          {joinInfo.package_offer ? (
-            <Card className="p-4 mb-4 border border-emerald-500/25 bg-emerald-500/5 space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-wider text-emerald-200/90">Paket və ödəniş</p>
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div>
-                  <p className="text-token-textMuted text-xs">Paket</p>
-                  <p className="text-token-textMain font-medium">
-                    {joinInfo.package_offer.billing_type_label ||
-                      billingTypeLabel(joinInfo.package_offer.billing_type)}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-token-textMuted text-xs">Ödəniş vaxtı</p>
-                  <p className="text-token-textMain font-medium">
-                    {joinInfo.package_offer.payment_timing_short}
-                  </p>
-                </div>
-                <div className="col-span-2">
-                  <p className="text-token-textMuted text-xs">Məbləğ</p>
-                  <p className="text-xl font-bold text-emerald-300 tabular-nums">
-                    {formatAzn(joinInfo.package_offer.final_price)}
-                  </p>
-                  {joinInfo.package_offer.discount_percent ? (
-                    <p className="text-xs text-token-textMuted mt-0.5">
-                      Əsas qiymət {formatAzn(joinInfo.package_offer.package_fee)} · endirim{' '}
-                      {joinInfo.package_offer.discount_percent}%
-                    </p>
-                  ) : null}
-                </div>
-              </div>
-              <p className="text-xs text-token-textMuted leading-relaxed">
-                {joinInfo.package_offer.payment_timing_label}
-              </p>
-              {(joinInfo.package_offer.lesson_weekdays || []).length > 0 ? (
-                <p className="text-xs text-token-textMuted">
-                  Cədvəl:{' '}
-                  {(joinInfo.package_offer.lesson_weekdays || [])
-                    .map((d) => {
-                      const wd = WEEKDAYS.find((w) => w.v === d)
-                      const t = joinInfo.package_offer.lesson_times?.[String(d)]
-                      return wd ? `${wd.short} ${t || ''}`.trim() : null
-                    })
-                    .filter(Boolean)
-                    .join(' · ')}
-                </p>
-              ) : null}
-            </Card>
-          ) : (
-            <Card className="p-4 mb-4 border border-amber-500/30 bg-amber-500/10 text-sm text-amber-100/95">
-              Müəllim qrup paketini hələ tamamlamayıb. Qoşulmaq üçün ondan dəvət linkini yeniləməsini xahiş edin.
-            </Card>
-          )}
-        </>
-      )}
+
+      {joinInfo && !submitted && <JoinGroupTermsOverview joinInfo={joinInfo} />}
 
       {submitted ? (
         <Card className="p-5 border border-emerald-500/25 bg-emerald-500/10">
@@ -260,127 +239,148 @@ export default function JoinClass() {
         </Card>
       ) : (
         <>
-          {!user ? (
-            <Card className="p-5 mb-4 border border-[color:var(--border-subtle)] space-y-4">
-              <p className="text-sm text-token-textMuted">
-                Davam etmək üçün Gmail hesabınızla daxil olun (tələbə hesabı yaradılacaq).
-              </p>
-              <GoogleSignInButton onCredential={handleGoogleCredential} disabled={authBusy} />
-              <p className="text-center text-xs text-token-textMuted">
-                və ya{' '}
-                <a href={loginHref} className="text-primary font-semibold hover:underline">
-                  email ilə daxil ol
-                </a>
-              </p>
-            </Card>
-          ) : (
-            <p className="text-xs text-emerald-300/90 mb-3">
-              Daxil: <span className="font-medium">{user.email || user.full_name}</span>
-            </p>
-          )}
-
-          <Card className="p-5 border border-[color:var(--border-subtle)]">
-            <form className="space-y-3" onSubmit={submitRequest}>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-token-textMuted uppercase mb-1.5">
-                    Ad *
-                  </label>
-                  <input className={inp} value={firstName} onChange={(e) => setFirstName(e.target.value)} required />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-token-textMuted uppercase mb-1.5">
-                    Soyad *
-                  </label>
-                  <input className={inp} value={lastName} onChange={(e) => setLastName(e.target.value)} required />
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-token-textMuted uppercase mb-1.5">
-                  Telefon *
-                </label>
-                <PhoneInput value={phone} onChange={setPhone} required />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-token-textMuted uppercase mb-1.5">
-                  Valideyn adı (ixtiyari)
-                </label>
-                <input
-                  className={inp}
-                  value={parentName}
-                  onChange={(e) => setParentName(e.target.value)}
-                  placeholder="Valideynin adı"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-token-textMuted uppercase mb-1.5">
-                  Valideyn telefonu (ixtiyari)
-                </label>
-                <PhoneInput value={parentPhone} onChange={setParentPhone} />
-              </div>
-              <div className="rounded-xl border border-indigo-500/20 bg-indigo-500/5 p-3 space-y-3">
-                <p className="text-xs font-semibold text-indigo-200/90 uppercase tracking-wider">
-                  Kim yönləndirdi?
+          {initialCode && (
+            <>
+              {!user ? (
+                <Card className="p-5 mb-4 border border-[color:var(--border-subtle)] space-y-4">
+                  <p className="text-sm text-token-textMuted">
+                    Qoşulma sorğusu göndərmək üçün Gmail ilə daxil olun.
+                  </p>
+                  <GoogleSignInButton onCredential={handleGoogleCredential} disabled={authBusy} />
+                  <p className="text-center text-xs text-token-textMuted">
+                    və ya{' '}
+                    <a href={loginHref} className="text-primary font-semibold hover:underline">
+                      email ilə daxil ol
+                    </a>
+                  </p>
+                </Card>
+              ) : (
+                <p className="text-xs text-emerald-300/90 mb-3">
+                  Daxil: <span className="font-medium">{user.email || user.full_name}</span>
                 </p>
-                {(joinInfo?.referral_sources || []).length > 0 ? (
-                  <div>
-                    <label className="block text-xs text-token-textMuted mb-1.5">Mənbə (ixtiyari)</label>
-                    <select
-                      className={inp}
-                      value={referralSourceId}
-                      onChange={(e) => setReferralSourceId(e.target.value)}
-                    >
-                      <option value="">— Seçin —</option>
-                      {(joinInfo.referral_sources || []).map((rs) => (
-                        <option key={rs.id} value={rs.id}>
-                          {rs.name}
-                        </option>
-                      ))}
-                    </select>
+              )}
+
+              <Card className="p-5 border border-[color:var(--border-subtle)]">
+                <p className="text-xs font-semibold uppercase tracking-wider text-token-textMuted mb-3">
+                  Şəxsi məlumatlar və qoşulma
+                </p>
+                <form className="space-y-3" onSubmit={submitRequest}>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-token-textMuted uppercase mb-1.5">
+                        Ad *
+                      </label>
+                      <input
+                        className={inp}
+                        value={firstName}
+                        onChange={(e) => setFirstName(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-token-textMuted uppercase mb-1.5">
+                        Soyad *
+                      </label>
+                      <input
+                        className={inp}
+                        value={lastName}
+                        onChange={(e) => setLastName(e.target.value)}
+                        required
+                      />
+                    </div>
                   </div>
-                ) : null}
-                <div>
-                  <label className="block text-xs text-token-textMuted mb-1.5">
-                    Ətraflı (məs. hansı müəllim tövsiyə etdi)
-                  </label>
-                  <input
-                    className={inp}
-                    value={referralNotes}
-                    onChange={(e) => setReferralNotes(e.target.value)}
-                    placeholder="Məs: Rəşad müəllim, Instagram, dost..."
-                    maxLength={500}
-                  />
-                </div>
-              </div>
-              {joinInfo?.package_offer ? (
-                <label className="flex items-start gap-3 text-sm cursor-pointer rounded-xl border border-white/10 p-3 bg-white/[0.03]">
-                  <input
-                    type="checkbox"
-                    className="mt-1 rounded border-white/20"
-                    checked={termsAccepted}
-                    onChange={(e) => setTermsAccepted(e.target.checked)}
-                  />
-                  <span className="text-token-textMuted leading-relaxed">
-                    Paket qiyməti ({formatAzn(joinInfo.package_offer.final_price)}), ödəniş vaxtı (
-                    <strong className="text-token-textMain">
-                      {joinInfo.package_offer.payment_timing_short}
-                    </strong>
-                    ) və cədvəllə razıyam; müəllimin təsdiqindən sonra bu şərtlər tətbiq olunacaq.
-                  </span>
-                </label>
-              ) : null}
-              <Button
-                className="w-full justify-center"
-                loading={busy}
-                type="submit"
-                disabled={
-                  !user || !initialCode || infoError || !joinInfo?.package_offer || !termsAccepted
-                }
-              >
-                Qoşul
-              </Button>
-            </form>
-          </Card>
+                  <div>
+                    <label className="block text-xs font-semibold text-token-textMuted uppercase mb-1.5">
+                      Telefon *
+                    </label>
+                    <PhoneInput value={phone} onChange={setPhone} required />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-token-textMuted uppercase mb-1.5">
+                      Valideyn adı (ixtiyari)
+                    </label>
+                    <input
+                      className={inp}
+                      value={parentName}
+                      onChange={(e) => setParentName(e.target.value)}
+                      placeholder="Valideynin adı"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-token-textMuted uppercase mb-1.5">
+                      Valideyn telefonu (ixtiyari)
+                    </label>
+                    <PhoneInput value={parentPhone} onChange={setParentPhone} />
+                  </div>
+                  <div className="rounded-xl border border-indigo-500/20 bg-indigo-500/5 p-3 space-y-3">
+                    <p className="text-xs font-semibold text-indigo-200/90 uppercase tracking-wider">
+                      Kim yönləndirdi?
+                    </p>
+                    {(joinInfo?.referral_sources || []).length > 0 ? (
+                      <div>
+                        <label className="block text-xs text-token-textMuted mb-1.5">Mənbə (ixtiyari)</label>
+                        <select
+                          className={inp}
+                          value={referralSourceId}
+                          onChange={(e) => setReferralSourceId(e.target.value)}
+                        >
+                          <option value="">— Seçin —</option>
+                          {(joinInfo.referral_sources || []).map((rs) => (
+                            <option key={rs.id} value={rs.id}>
+                              {rs.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    ) : null}
+                    <div>
+                      <label className="block text-xs text-token-textMuted mb-1.5">
+                        Ətraflı (məs. hansı müəllim tövsiyə etdi)
+                      </label>
+                      <input
+                        className={inp}
+                        value={referralNotes}
+                        onChange={(e) => setReferralNotes(e.target.value)}
+                        placeholder="Məs: Rəşad müəllim, Instagram, dost..."
+                        maxLength={500}
+                      />
+                    </div>
+                  </div>
+                  {joinInfo?.package_offer ? (
+                    <label className="flex items-start gap-3 text-sm cursor-pointer rounded-xl border border-white/10 p-3 bg-white/[0.03]">
+                      <input
+                        type="checkbox"
+                        className="mt-1 rounded border-white/20"
+                        checked={termsAccepted}
+                        onChange={(e) => setTermsAccepted(e.target.checked)}
+                      />
+                      <span className="text-token-textMuted leading-relaxed">
+                        Paket qiyməti ({formatAzn(joinInfo.package_offer.final_price)}), ödəniş vaxtı (
+                        <strong className="text-token-textMain">
+                          {joinInfo.package_offer.payment_timing_short}
+                        </strong>
+                        ) və cədvəllə razıyam; müəllimin təsdiqindən sonra bu şərtlər tətbiq olunacaq.
+                      </span>
+                    </label>
+                  ) : null}
+                  <Button
+                    className="w-full justify-center"
+                    loading={busy}
+                    type="submit"
+                    disabled={
+                      !user ||
+                      !initialCode ||
+                      infoError ||
+                      !joinInfo?.package_offer ||
+                      !termsAccepted
+                    }
+                  >
+                    Qoşul
+                  </Button>
+                </form>
+              </Card>
+            </>
+          )}
         </>
       )}
     </div>
