@@ -5,6 +5,7 @@ const multer = require('multer');
 const { verify } = require('../utils/jwt');
 const { authenticate, authorize } = require('../middleware/auth');
 const { enforceStorageLimitAfterUpload } = require('../middleware/storageLimit');
+const { enforceActiveSubscription } = require('../middleware/entitlements');
 const {
   listInstructorTasks,
   createInstructorTask,
@@ -68,9 +69,9 @@ router.get('/', authenticate, authorize('instructor'), listInstructorTasks);
 router.get('/analytics', authenticate, authorize('instructor'), getAssignmentAnalytics);
 router.get('/groups', authenticate, authorize('instructor'), listInstructorGroups);
 router.get('/parent', authenticate, authorize('parent'), listParentAssignments);
-router.post('/', authenticate, authorize('instructor'), createInstructorTask);
-router.patch('/:id', authenticate, authorize('instructor'), updateInstructorAssignment);
-router.delete('/:id', authenticate, authorize('instructor'), deleteInstructorAssignment);
+router.post('/', authenticate, authorize('instructor'), enforceActiveSubscription, createInstructorTask);
+router.patch('/:id', authenticate, authorize('instructor'), enforceActiveSubscription, updateInstructorAssignment);
+router.delete('/:id', authenticate, authorize('instructor'), enforceActiveSubscription, deleteInstructorAssignment);
 router.post('/:id/access-from-link', authenticate, authorize('student'), postTaskAccessFromLink);
 
 router.get('/assignment-file/:filename', authenticateAssignmentFile, serveAssignmentFile);
@@ -151,6 +152,7 @@ router.post(
   '/instructor/upload',
   authenticate,
   authorize('instructor'),
+  enforceActiveSubscription,
   (req, res, next) => {
     uploadInstructorQuestionFile.single('file')(req, res, (err) => {
       if (err) return res.status(400).json({ success: false, message: err.message || 'Fayl qəbul edilmədi' });

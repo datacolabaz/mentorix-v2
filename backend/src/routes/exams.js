@@ -32,6 +32,7 @@ const {
 const { authenticate, authorize } = require('../middleware/auth');
 const { requireInstructorPhoneVerification } = require('../middleware/requireInstructorPhoneVerification');
 const { enforceStorageLimitAfterUpload } = require('../middleware/storageLimit');
+const { enforceActiveSubscription } = require('../middleware/entitlements');
 
 const uploadsExamsDir = path.join(__dirname, '../../uploads/exams');
 const storage = multer.diskStorage({
@@ -62,6 +63,7 @@ router.post(
   '/upload',
   authenticate,
   authorize('instructor', 'admin'),
+  enforceActiveSubscription,
   (req, res, next) => {
     uploadExamFile.single('file')(req, res, (err) => {
       if (err) return res.status(400).json({ success: false, message: err.message || 'Fayl qebul edilmedi' });
@@ -129,6 +131,7 @@ router.post(
   authenticate,
   authorize('instructor', 'admin'),
   requireInstructorPhoneVerification({ trigger: 'exam' }),
+  enforceActiveSubscription,
   createExam,
 );
 router.get('/', authenticate, authorize('instructor', 'admin'), listExams);
@@ -137,7 +140,13 @@ router.get('/my', authenticate, authorize('student'), studentExams);
 router.get('/:id/access-status', authenticate, authorize('student'), getExamAccessStatus);
 router.post('/:id/access-request', authenticate, authorize('student'), postExamAccessRequest);
 router.post('/:id/access-from-link', authenticate, authorize('student'), postExamAccessFromLink);
-router.post('/bulk-delete', authenticate, authorize('instructor', 'admin'), bulkHardDeleteExams);
+router.post(
+  '/bulk-delete',
+  authenticate,
+  authorize('instructor', 'admin'),
+  enforceActiveSubscription,
+  bulkHardDeleteExams,
+);
 router.get('/:id/assignments', authenticate, authorize('instructor', 'admin'), getExamAssignments);
 router.post('/:id/late-access/:studentId', authenticate, authorize('instructor', 'admin'), grantLateAccess);
 router.get('/:id/review', authenticate, getStudentExamReview);
@@ -146,12 +155,36 @@ router.post('/submit', authenticate, authorize('student'), submitExam);
 router.get('/:id/results', authenticate, getResults);
 router.get('/:id/groups', authenticate, authorize('instructor', 'admin'), getExamGroups);
 router.get('/:id/top10', authenticate, authorize('instructor', 'admin'), getExamTop10);
-router.post('/:id/regrade', authenticate, authorize('instructor', 'admin'), regradeExamResults);
+router.post(
+  '/:id/regrade',
+  authenticate,
+  authorize('instructor', 'admin'),
+  enforceActiveSubscription,
+  regradeExamResults,
+);
 // DELETE default: hard delete (full cleanup). Soft delete is available separately.
-router.delete('/:id', authenticate, authorize('instructor', 'admin'), hardDeleteExam);
-router.delete('/:id/soft', authenticate, authorize('instructor', 'admin'), softDeleteExam);
+router.delete(
+  '/:id',
+  authenticate,
+  authorize('instructor', 'admin'),
+  enforceActiveSubscription,
+  hardDeleteExam,
+);
+router.delete(
+  '/:id/soft',
+  authenticate,
+  authorize('instructor', 'admin'),
+  enforceActiveSubscription,
+  softDeleteExam,
+);
 
-router.patch('/:id', authenticate, authorize('instructor', 'admin'), patchExam);
+router.patch(
+  '/:id',
+  authenticate,
+  authorize('instructor', 'admin'),
+  enforceActiveSubscription,
+  patchExam,
+);
 
 module.exports = router;
  

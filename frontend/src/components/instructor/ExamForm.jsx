@@ -28,7 +28,7 @@ export function deriveMatchingKey(options) {
   return key
 }
  
-export default function ExamForm({ students, studentsLoading = false, onCreated }) {
+export default function ExamForm({ students, studentsLoading = false, onCreated, blocked = false, blockMessage = '' }) {
   const [step, setStep] = useState(1)
   const [loading, setLoading] = useState(false)
   const [pdfBusy, setPdfBusy] = useState(false)
@@ -104,6 +104,11 @@ export default function ExamForm({ students, studentsLoading = false, onCreated 
   }
 
   const handleMaterialsChange = async (e) => {
+    if (blocked) {
+      toast(blockMessage || 'Məhdudiyyətə görə bu əməliyyat deaktivdir', 'error')
+      e.target.value = ''
+      return
+    }
     const files = Array.from(e.target.files || [])
     if (!files.length) return
     setPdfBusy(true)
@@ -131,6 +136,10 @@ export default function ExamForm({ students, studentsLoading = false, onCreated 
   }
 
   const submit = async () => {
+    if (blocked) {
+      toast(blockMessage || 'Məhdudiyyətə görə bu əməliyyat deaktivdir', 'error')
+      return
+    }
     if (!meta.title || !meta.available_from || !meta.available_until) {
       toast('Ad və aktivlik vaxtları tələb olunur', 'error')
       return
@@ -714,7 +723,7 @@ export default function ExamForm({ students, studentsLoading = false, onCreated 
  
           <div className="flex gap-3">
             <Button variant="secondary" onClick={() => setStep(2)} className="flex-1 justify-center">← Geri</Button>
-            <Button onClick={submit} loading={loading} className="flex-1 justify-center">Imtahan Yarat</Button>
+            <Button onClick={submit} loading={loading} disabled={blocked} className="flex-1 justify-center">Imtahan Yarat</Button>
           </div>
         </div>
       )}

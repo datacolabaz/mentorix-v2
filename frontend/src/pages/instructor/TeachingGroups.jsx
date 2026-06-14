@@ -14,6 +14,7 @@ import GroupPackageFields, {
 } from '../../components/instructor/GroupPackageFields'
 import { formatAzn } from '../../lib/pricing'
 import { normalizeTeachingSubjects } from '../../lib/teachingSubjects'
+import { useBillingStatus } from '../../hooks/useBillingStatus'
 
 function formatIncomeAzn(n) {
   const v = Number(n)
@@ -24,6 +25,12 @@ function formatIncomeAzn(n) {
 export default function InstructorTeachingGroups() {
   const toast = useToast()
   const { theme } = useUiStore()
+  const billingQ = useBillingStatus()
+  const billing = billingQ.data || null
+  const blocked = Boolean(billing?.should_block)
+  const blockMessage =
+    billing?.messages?.banner ||
+    '14 günlük SADƏ sınaq müddəti bitib. Davam etmək üçün PRO və ya daha yüksək paket seçin.'
   const [initialLoading, setInitialLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [subjects, setSubjects] = useState([])
@@ -78,6 +85,10 @@ export default function InstructorTeachingGroups() {
   }
 
   const addSubject = async () => {
+    if (blocked) {
+      toast(blockMessage, 'error')
+      return
+    }
     const name = newSubject.trim()
     if (!name) {
       toast('Sahə adı daxil edin', 'error')
@@ -122,6 +133,10 @@ export default function InstructorTeachingGroups() {
   }
 
   const openCreateGroup = (subjectId) => {
+    if (blocked) {
+      toast(blockMessage, 'error')
+      return
+    }
     const raw = newGroupBySubject[subjectId] || ''
     const name = String(raw).trim()
     if (!name) {
@@ -134,6 +149,10 @@ export default function InstructorTeachingGroups() {
   }
 
   const openEditGroupPackage = (subjectId, group) => {
+    if (blocked) {
+      toast(blockMessage, 'error')
+      return
+    }
     if (group?.is_system) {
       toast('Sistem iştirakçı qrupu dəyişdirilə bilməz', 'info')
       return
@@ -144,6 +163,10 @@ export default function InstructorTeachingGroups() {
   }
 
   const saveGroupModal = async () => {
+    if (blocked) {
+      toast(blockMessage, 'error')
+      return
+    }
     if (!groupModal) return
     const lwd = groupPkg.default_lesson_weekdays || []
     if (!lwd.length) {
@@ -253,12 +276,13 @@ export default function InstructorTeachingGroups() {
                 void addSubject()
               }
             }}
-            disabled={busy.addSub}
+            disabled={busy.addSub || blocked}
           />
           <Button
             type="button"
             variant="secondary"
             loading={busy.addSub}
+            disabled={blocked}
             onClick={() => void addSubject()}
             className={['w-full sm:w-auto justify-center', secondaryBtnCls].join(' ')}
           >
@@ -519,6 +543,7 @@ export default function InstructorTeachingGroups() {
                         type="button"
                         size="sm"
                         variant="secondary"
+                        disabled={blocked}
                         onClick={() => openCreateGroup(s.id)}
                         className={[secondaryBtnCls, 'w-full sm:w-auto justify-center'].join(' ')}
                       >

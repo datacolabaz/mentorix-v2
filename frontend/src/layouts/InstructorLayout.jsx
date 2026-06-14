@@ -239,6 +239,20 @@ export default function InstructorLayout() {
     return () => window.removeEventListener('mx:usage-limit', onUsageLimit)
   }, [billing?.is_highest_tier])
 
+  useEffect(() => {
+    const onSubscriptionInactive = (ev) => {
+      const message = ev?.detail?.message || ''
+      setLimitModal({
+        open: true,
+        message,
+        primaryLabel: 'Paketlərə bax',
+        action: 'OPEN_SETTINGS_PLANS',
+      })
+    }
+    window.addEventListener('mx:subscription-inactive', onSubscriptionInactive)
+    return () => window.removeEventListener('mx:subscription-inactive', onSubscriptionInactive)
+  }, [])
+
   return (
     <>
       <PhoneVerificationGate />

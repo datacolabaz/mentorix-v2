@@ -16,7 +16,7 @@ const db = require('../utils/db');
 const { patchStudentEmail } = require('../controllers/studentEmailController');
 const { deliverPermanentPinSms } = require('../controllers/authController');
 const { requireInstructorPhoneVerified } = require('../middleware/trial');
-const { attachEntitlements, enforceStudentsLimit } = require('../middleware/entitlements');
+const { attachEntitlements, enforceStudentsLimit, enforceActiveSubscription } = require('../middleware/entitlements');
 const { requireInstructorPhoneVerification } = require('../middleware/requireInstructorPhoneVerification');
 const { createJoinRequest } = require('../services/joinInvitationService');
 const { submitJoinWithProfile } = require('../controllers/joinInvitationController');
@@ -456,6 +456,7 @@ router.post(
   authorize('instructor', 'admin'),
   requireInstructorPhoneVerification({ trigger: 'student' }),
   gateInstructorEnrollment,
+  enforceActiveSubscription,
   attachEntitlements,
   enforceStudentsLimit,
   createStudent,
@@ -467,6 +468,7 @@ router.post(
   authorize('instructor', 'admin'),
   requireInstructorPhoneVerification({ trigger: 'student' }),
   gateInstructorEnrollment,
+  enforceActiveSubscription,
   attachEntitlements,
   enforceStudentsLimit,
   attachStudentByEmail,
@@ -480,6 +482,7 @@ router.post(
   authorize('instructor', 'admin'),
   requireInstructorPhoneVerification({ trigger: 'student' }),
   gateInstructorEnrollment,
+  enforceActiveSubscription,
   attachEntitlements,
   enforceStudentsLimit,
   async (req, res) => {

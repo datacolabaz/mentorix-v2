@@ -569,7 +569,17 @@ export default function InstructorExams() {
           >
             Seçilənləri sil
           </Button>
-          <Button onClick={() => setAddModal(true)} className="w-full sm:w-auto shrink-0 justify-center">
+          <Button
+            disabled={blocked}
+            onClick={() => {
+              if (blocked) {
+                toast(billing?.messages?.banner || 'Məhdudiyyətə görə bu əməliyyat deaktivdir', 'error')
+                return
+              }
+              setAddModal(true)
+            }}
+            className="w-full sm:w-auto shrink-0 justify-center"
+          >
             + Yeni Imtahan
           </Button>
         </div>
@@ -712,6 +722,8 @@ export default function InstructorExams() {
         <ExamForm
           students={students}
           studentsLoading={studentsLoading}
+          blocked={blocked}
+          blockMessage={billing?.messages?.banner || ''}
           onCreated={async (createdExam) => {
             setAddModal(false)
             loadExams()

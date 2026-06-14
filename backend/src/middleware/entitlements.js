@@ -101,10 +101,41 @@ function enforceSmsLimit(req, _res, next) {
   }
 }
 
+/** SADƏ sınaq bitib və ya abunəlik aktiv deyilsə — yaratma/redaktə əməliyyatlarını blokla. */
+async function enforceActiveSubscription(req, res, next) {
+  try {
+    if (!req.user?.id || req.user.role === 'admin') return next();
+    if (req.user.role !== 'instructor') return next();
+
+    const e = req.entitlements || (await resolveEntitlements(req.user.id));
+    req.entitlements = e;
+
+    if (e.should_block) {
+      void logBillingEvent(db, {
+        user_id: req.user.id,
+        event: 'subscription_blocked_action',
+        context: { status: e.status, plan: e.plan },
+      });
+      return res.status(403).json({
+        success: false,
+        code: 'SUBSCRIPTION_INACTIVE',
+        message:
+          e.messages?.banner ||
+          '14 günlük SADƏ sınaq müddəti bitib. Davam etmək üçün PRO və ya daha yüksək paket seçin.',
+        status: e.status,
+      });
+    }
+    next();
+  } catch (e) {
+    next(e);
+  }
+}
+
 module.exports = {
   attachEntitlements,
   enforceStudentsLimit,
   enforceStorageLimit,
   enforceSmsLimit,
+  enforceActiveSubscription,
 };
 

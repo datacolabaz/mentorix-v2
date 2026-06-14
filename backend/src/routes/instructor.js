@@ -25,7 +25,11 @@ const {
   approveRequest,
   rejectRequest,
 } = require('../controllers/joinInvitationController');
-const { attachEntitlements, enforceStudentsLimit } = require('../middleware/entitlements');
+const {
+  attachEntitlements,
+  enforceStudentsLimit,
+  enforceActiveSubscription,
+} = require('../middleware/entitlements');
 const { requireInstructorPhoneVerification } = require('../middleware/requireInstructorPhoneVerification');
 const { postInstructorAvatar, deleteInstructorAvatar } = require('../controllers/instructorAvatarController');
 const { getMarketplaceOpportunity } = require('../controllers/instructorMarketplaceController');
@@ -56,17 +60,48 @@ router.get('/discover-profile', authenticate, authorize('instructor'), getDiscov
 router.patch('/discover-profile', authenticate, authorize('instructor'), patchDiscoverProfile);
 router.get('/inquiries', authenticate, authorize('instructor'), listInstructorInquiries);
 router.post('/inquiries/:id/reveal-contact', authenticate, authorize('instructor'), revealInquiryContact);
-router.post('/teaching/subjects', authenticate, authorize('instructor'), postSubject);
-router.delete('/teaching/subjects/:id', authenticate, authorize('instructor'), deleteSubject);
+router.post(
+  '/teaching/subjects',
+  authenticate,
+  authorize('instructor'),
+  enforceActiveSubscription,
+  postSubject,
+);
+router.delete(
+  '/teaching/subjects/:id',
+  authenticate,
+  authorize('instructor'),
+  enforceActiveSubscription,
+  deleteSubject,
+);
 router.post(
   '/teaching/groups',
   authenticate,
   authorize('instructor'),
   requireInstructorPhoneVerification({ trigger: 'group' }),
+  enforceActiveSubscription,
   postGroup,
 );
-router.patch('/teaching/groups/:id', authenticate, authorize('instructor'), patchGroup);
-router.delete('/teaching/groups/:id', authenticate, authorize('instructor'), deleteGroup);
-router.post('/teaching/promote-participant', authenticate, authorize('instructor'), postPromoteParticipant);
+router.patch(
+  '/teaching/groups/:id',
+  authenticate,
+  authorize('instructor'),
+  enforceActiveSubscription,
+  patchGroup,
+);
+router.delete(
+  '/teaching/groups/:id',
+  authenticate,
+  authorize('instructor'),
+  enforceActiveSubscription,
+  deleteGroup,
+);
+router.post(
+  '/teaching/promote-participant',
+  authenticate,
+  authorize('instructor'),
+  enforceActiveSubscription,
+  postPromoteParticipant,
+);
 
 module.exports = router;
