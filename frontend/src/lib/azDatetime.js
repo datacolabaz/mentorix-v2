@@ -32,6 +32,20 @@ export function fmtAzBakuYmdHm(iso) {
   return `${date} ${time}`
 }
 
+/** Qrupa qoşulma tarixi — dd.MM.yyyy (Bakı). */
+export function fmtAzJoinDate(value) {
+  const d = parseUtcInstant(value)
+  if (!d) return '—'
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: TZ,
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  }).formatToParts(d)
+  const get = (t) => parts.find((p) => p.type === t)?.value || ''
+  return `${get('day')}.${get('month')}.${get('year')}`
+}
+
 /** API `*_az` sahəsi varsa onu, yoxdursa UTC-dən çevir. */
 export function fmtAzBakuField(row, key) {
   const az = row?.[`${key}_az`]

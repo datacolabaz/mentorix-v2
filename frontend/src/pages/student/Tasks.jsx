@@ -3,6 +3,7 @@ import api from '../../lib/api'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
+import ConfirmDialog from '../../components/common/ConfirmDialog'
 import { useToast } from '../../components/common/Toast'
 import ErrorBoundary from '../../components/common/ErrorBoundary'
 import AssignmentAnswerEditor from '../../components/student/AssignmentAnswerEditor'
@@ -59,6 +60,7 @@ export default function StudentAssignments() {
   const [editorHtml, setEditorHtml] = useState('')
   const [attachments, setAttachments] = useState([])
   const [tab, setTab] = useState('active')
+  const [submitConfirmOpen, setSubmitConfirmOpen] = useState(false)
 
   const filteredTasks = useMemo(() => filterTasksByTab(tasks, tab), [tasks, tab])
 
@@ -160,7 +162,7 @@ export default function StudentAssignments() {
 
   const submitWork = async () => {
     if (!openId) return
-    if (!window.confirm('Təslim edilsin? Təslim etdikdən sonra dəyişiklik etmək mümkün olmayacaq.')) return
+    setSubmitConfirmOpen(false)
     setBusyId('submit')
     try {
       const d = await api.patch('/tasks/assignments/' + encodeURIComponent(openId) + '/submit', {
@@ -216,6 +218,16 @@ export default function StudentAssignments() {
 
   return (
     <div className="p-4 sm:p-6 w-full min-w-0 max-w-4xl mx-auto">
+      <ConfirmDialog
+        open={submitConfirmOpen}
+        onClose={() => setSubmitConfirmOpen(false)}
+        onConfirm={() => void submitWork()}
+        title="Tapşırığı təslim et"
+        message="Təslim edilsin? Təslim etdikdən sonra dəyişiklik etmək mümkün olmayacaq."
+        confirmLabel="Təslim et"
+        cancelLabel="Ləğv et"
+        loading={busyId === 'submit'}
+      />
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-4">
         <div className="flex flex-col sm:flex-row sm:items-end gap-3 flex-1 min-w-0">
           <div className="min-w-0">
@@ -373,7 +385,7 @@ export default function StudentAssignments() {
               >
                 Qaralama kimi saxla
               </Button>
-              <Button onClick={() => void submitWork()} loading={busyId === 'submit'} disabled={locked}>
+              <Button onClick={() => setSubmitConfirmOpen(true)} loading={busyId === 'submit'} disabled={locked}>
                 Təslim et
               </Button>
             </div>

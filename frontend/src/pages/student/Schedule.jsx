@@ -3,6 +3,7 @@ import api from '../../lib/api'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
+import ConfirmDialog from '../../components/common/ConfirmDialog'
 import { useToast } from '../../components/common/Toast'
 import GroupSwitcher from '../../components/student/GroupSwitcher'
 import { useStudentGroups } from '../../contexts/StudentGroupContext'
@@ -73,6 +74,7 @@ export default function StudentSchedule() {
   const [saving, setSaving] = useState(false)
   const [conflictOpen, setConflictOpen] = useState(false)
   const [conflictMsg, setConflictMsg] = useState('')
+  const [deleteSlotId, setDeleteSlotId] = useState(null)
   const toast = useToast()
 
   // Default: heç bir gün seçilməsin (qarışdırmasın)
@@ -257,11 +259,13 @@ export default function StudentSchedule() {
     }
   }
 
-  const delSlot = async (id) => {
-    if (!window.confirm('Bu slot silinsin?')) return
+  const delSlot = async () => {
+    if (!deleteSlotId) return
+    const id = deleteSlotId
     try {
       await api.delete('/students/my/prep-slots/' + encodeURIComponent(id))
       toast('Silindi', 'success')
+      setDeleteSlotId(null)
       await load()
     } catch (e) {
       toast(e?.message || 'Xəta', 'error')
@@ -270,6 +274,16 @@ export default function StudentSchedule() {
 
   return (
     <div className="p-4 sm:p-6 w-full min-w-0 max-w-4xl mx-auto">
+      <ConfirmDialog
+        open={Boolean(deleteSlotId)}
+        onClose={() => setDeleteSlotId(null)}
+        onConfirm={() => void delSlot()}
+        title="Slotu sil"
+        message="Bu hazırlıq slotu silinsin?"
+        confirmLabel="Sil"
+        cancelLabel="Ləğv et"
+        danger
+      />
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-4">
         <div className="flex flex-col sm:flex-row sm:items-end gap-3 flex-1 min-w-0">
           <div className="min-w-0">
@@ -459,7 +473,7 @@ export default function StudentSchedule() {
                 </div>
                 <button
                   type="button"
-                  onClick={() => void delSlot(s.id)}
+                  onClick={() => setDeleteSlotId(s.id)}
                   className="text-xs text-red-400 hover:text-red-300 px-2 py-1"
                 >
                   Sil

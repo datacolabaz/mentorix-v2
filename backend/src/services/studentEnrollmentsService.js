@@ -250,7 +250,7 @@ async function listActiveEnrollmentsForStudent(studentId) {
       lesson_weekdays,
       lesson_times,
       lesson_end_times: let_,
-      join_date: r.enrollment_start_date || r.enrolled_at,
+      join_date: r.enrolled_at || r.enrollment_start_date,
       color: colorForGroup(r.group_id || r.enrollment_id),
     });
   }

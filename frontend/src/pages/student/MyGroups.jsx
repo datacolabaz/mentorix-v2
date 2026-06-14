@@ -1,22 +1,20 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import api from '../../lib/api'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
+import ConfirmDialog from '../../components/common/ConfirmDialog'
 import { useToast } from '../../components/common/Toast'
 import { useStudentGroups } from '../../contexts/StudentGroupContext'
 import GroupSwitcher from '../../components/student/GroupSwitcher'
 import { studentEnrollmentDisplay } from '../../lib/participantGroupLabels'
-
-function fmtDate(d) {
-  if (!d) return '—'
-  return new Date(d).toLocaleDateString('az-AZ', { day: 'numeric', month: 'short', year: 'numeric' })
-}
+import { fmtAzJoinDate } from '../../lib/azDatetime'
 
 export default function MyGroups() {
   const { enrollments, loading, setActiveEnrollmentId, refreshEnrollments } = useStudentGroups()
   const [overview, setOverview] = useState(null)
   const [leaveBusy, setLeaveBusy] = useState(null)
+  const [leaveConfirm, setLeaveConfirm] = useState(null)
   const toast = useToast()
   const navigate = useNavigate()
 
@@ -35,12 +33,18 @@ export default function MyGroups() {
     navigate('/student')
   }
 
-  const leaveGroup = async (enrollmentId, name) => {
-    if (!window.confirm(`"${name}" qrupundan ayrılmaq istəyirsiniz?`)) return
+  const confirmLeaveGroup = (enrollmentId, name) => {
+    setLeaveConfirm({ enrollmentId, name })
+  }
+
+  const leaveGroup = async () => {
+    if (!leaveConfirm) return
+    const { enrollmentId } = leaveConfirm
     setLeaveBusy(enrollmentId)
     try {
       await api.post(`/students/my/leave/${enrollmentId}`)
       toast('Qrupdan ayrıldınız')
+      setLeaveConfirm(null)
       await refreshEnrollments()
       const d = await api.get('/students/my/overview')
       setOverview(d)
@@ -53,6 +57,22 @@ export default function MyGroups() {
 
   return (
     <div className="p-4 sm:p-6 w-full min-w-0 max-w-4xl mx-auto">
+      <ConfirmDialog
+        open={Boolean(leaveConfirm)}
+        onClose={() => !leaveBusy && setLeaveConfirm(null)}
+        onConfirm={leaveGroup}
+        title="Qrupdan ayrıl"
+        message={
+          leaveConfirm
+            ? `«${leaveConfirm.name}» qrupundan ayrılmaq istəyirsiniz? Bu qrup siyahınızdan silinəcək.`
+            : ''
+        }
+        confirmLabel="Ayrıl"
+        cancelLabel="Ləğv et"
+        loading={Boolean(leaveBusy)}
+        danger
+      />
+
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-6 min-w-0">
         <div>
           <h1 className="font-display font-bold text-2xl text-token-textMain">Qruplarım</h1>
@@ -83,6 +103,7 @@ export default function MyGroups() {
         {enrollments.map((g) => {
           const st = statsFor(g.enrollment_id)
           const display = studentEnrollmentDisplay(g)
+          const joinedAt = g.enrolled_at || g.join_date
           return (
             <Card
               key={g.enrollment_id}
@@ -114,7 +135,7 @@ export default function MyGroups() {
                   )}
                   <div className="flex flex-wrap gap-3 mt-3 text-xs text-token-textMuted">
                     <span>👥 {g.student_count ?? 0} tələbə</span>
-                    <span>📅 Qoşulma: {fmtDate(g.join_date)}</span>
+                    <span>📅 Qoşulma: {fmtAzJoinDate(joinedAt)}</span>
                     {g.join_code && (
                       <span className="font-mono text-primary/90">{g.join_code}</span>
                     )}
@@ -167,7 +188,7 @@ export default function MyGroups() {
                   size="sm"
                   variant="ghost"
                   loading={leaveBusy === g.enrollment_id}
-                  onClick={() => leaveGroup(g.enrollment_id, display.title)}
+                  onClick={() => confirmLeaveGroup(g.enrollment_id, display.title)}
                 >
                   Qrupdan ayrıl
                 </Button>
