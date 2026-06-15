@@ -124,10 +124,10 @@ export default function MarketplaceAiSearchPanel({
   const tutors = result?.step1_tutors
   const tutorMatches = tutors?.matches || []
   const hasTutorMatches = tutorMatches.length > 0
-  const pricing = hasTutorMatches ? result?.step2_pricing : null
-  const curriculum = hasTutorMatches ? result?.step3_curriculum : null
-  const cta = result?.step4_cta
-  const emptyCta = !hasTutorMatches ? cta : null
+  const isEmptyResult = Boolean(result) && (Boolean(tutors?.empty_state) || !hasTutorMatches)
+  const pricing = !isEmptyResult ? result?.step2_pricing : null
+  const curriculum = !isEmptyResult ? result?.step3_curriculum : null
+  const cta = !isEmptyResult ? result?.step4_cta : null
 
   return (
     <section className="rounded-2xl border border-violet-500/25 bg-gradient-to-br from-violet-500/10 via-[#14101f] to-[#0f0f0f] overflow-hidden">
@@ -203,11 +203,19 @@ export default function MarketplaceAiSearchPanel({
             <div className="space-y-4 pt-1">
               <div className="space-y-2">
                 <StepBadge n={1} label="Uyğun müəllimlər" />
-                {tutors?.empty_state ? (
+                {isEmptyResult ? (
                   <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 space-y-2">
-                    <p className="text-sm font-semibold text-white">{tutors.empty_state.title}</p>
-                    <p className="text-xs text-gray-400 leading-relaxed">{tutors.empty_state.message}</p>
-                    {tutors.empty_state.instructor_cta ? (
+                    <p className="text-sm font-semibold text-white">
+                      {tutors?.empty_state?.title || 'Uyğun müəllim tapılmadı'}
+                    </p>
+                    <p className="text-xs text-gray-400 leading-relaxed">
+                      {tutors?.empty_state?.message ||
+                        'Bu axtarış üzrə dəqiq uyğun profil yoxdur. Aşağıdakı xəritə və siyahıdan digər müəllimlərə baxa bilərsiniz.'}
+                    </p>
+                    <p className="text-xs text-primary/90 font-medium pt-1">
+                      ↓ Aşağıdakı xəritə və siyahıdan müəllim seçin
+                    </p>
+                    {tutors?.empty_state?.instructor_cta ? (
                       <Link
                         to={tutors.empty_state.instructor_cta.path}
                         className="inline-block text-xs font-bold text-primary hover:underline"
@@ -288,51 +296,25 @@ export default function MarketplaceAiSearchPanel({
                 </div>
               ) : null}
 
-              {cta && hasTutorMatches ? (
+              {cta && tutorMatches[0] ? (
                 <div className="space-y-2">
                   <StepBadge n={4} label="Növbəti addım" />
                   <div className="flex flex-wrap gap-2">
-                    {tutorMatches[0] ? (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() => onInquiry?.(tutorMatches[0])}
-                          className="text-xs font-bold px-3 py-2 rounded-xl bg-primary/20 border border-primary/40 text-primary"
-                        >
-                          {cta.trial_lesson?.label}
-                        </button>
-                        <button
-                          type="button"
-                          disabled={whatsappBusy}
-                          onClick={() => onWhatsApp?.(tutorMatches[0])}
-                          className="text-xs font-bold px-3 py-2 rounded-xl border border-emerald-500/35 text-emerald-400 hover:bg-emerald-500/10 disabled:opacity-50"
-                        >
-                          {cta.whatsapp?.label}
-                        </button>
-                      </>
-                    ) : null}
-                  </div>
-                </div>
-              ) : null}
-
-              {emptyCta && !hasTutorMatches ? (
-                <div className="space-y-2">
-                  <StepBadge n={2} label="Növbəti addım" />
-                  <div className="rounded-xl border border-white/10 bg-[#121212]/80 p-3 space-y-2">
-                    <p className="text-xs text-gray-300 leading-relaxed">
-                      {emptyCta.browse_map?.label || 'Aşağıdakı xəritə və siyahıdan müəllim seçin'}.
-                      {emptyCta.browse_map?.hint ? ` ${emptyCta.browse_map.hint}` : ''}
-                    </p>
-                    {emptyCta.support_whatsapp?.url ? (
-                      <a
-                        href={emptyCta.support_whatsapp.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-block text-xs font-bold px-3 py-2 rounded-xl border border-white/15 text-gray-400 hover:border-white/30"
-                      >
-                        {emptyCta.support_whatsapp.label}
-                      </a>
-                    ) : null}
+                    <button
+                      type="button"
+                      onClick={() => onInquiry?.(tutorMatches[0])}
+                      className="text-xs font-bold px-3 py-2 rounded-xl bg-primary/20 border border-primary/40 text-primary"
+                    >
+                      {cta.trial_lesson?.label || 'Sınaq dərsi təyin et'}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={whatsappBusy}
+                      onClick={() => onWhatsApp?.(tutorMatches[0])}
+                      className="text-xs font-bold px-3 py-2 rounded-xl border border-emerald-500/35 text-emerald-400 hover:bg-emerald-500/10 disabled:opacity-50"
+                    >
+                      {cta.whatsapp?.label || 'WhatsApp ilə əlaqə'}
+                    </button>
                   </div>
                 </div>
               ) : null}
