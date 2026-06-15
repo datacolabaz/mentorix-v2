@@ -19,6 +19,7 @@ import {
 import { postAuthNavigate } from '../../lib/postAuth'
 import LandingDemoActivityChart from '../../components/landing/LandingDemoActivityChart'
 import { DEFAULT_SUBSCRIPTION_PLANS, planPriceLabel } from '../../constants/subscriptionPlans'
+import { defaultPlatformContact } from '../../lib/platformContact'
 
 function scrollToId(id) {
   const el = document.getElementById(id)
@@ -53,6 +54,7 @@ export default function Login() {
   const loginSectionRef = useRef(null)
   const landingSectionSeenRef = useRef(new Set())
   const [publicPlans, setPublicPlans] = useState(DEFAULT_SUBSCRIPTION_PLANS)
+  const [platformContact, setPlatformContact] = useState(() => defaultPlatformContact())
   const [demoOpen, setDemoOpen] = useState(false)
   const [demoTab, setDemoTab] = useState('overview')
   const [demoPaneBusy, setDemoPaneBusy] = useState(false)
@@ -118,6 +120,22 @@ export default function Login() {
         if (!cancelled && plans.length) setPublicPlans(plans)
       } catch {
         /* default plans */
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [isAdmin])
+
+  useEffect(() => {
+    if (isAdmin) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const d = await api.get('/public/contact')
+        if (!cancelled && d?.success && d?.contact) setPlatformContact(d.contact)
+      } catch {
+        /* default contact */
       }
     })()
     return () => {
@@ -756,7 +774,7 @@ export default function Login() {
             )}
 
             <a
-              href="https://wa.me/994503066626"
+              href={platformContact.whatsapp_url}
               target="_blank"
               rel="noreferrer"
               className={`flex items-center justify-center gap-2 rounded-xl border border-primary/50 bg-transparent text-primary font-semibold transition-colors hover:bg-primary/10 ${

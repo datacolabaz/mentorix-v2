@@ -91,7 +91,7 @@ export function buildOrganizationSchema() {
       '@type': 'ContactPoint',
       contactType: 'customer support',
       telephone: '+994-50-306-66-26',
-      url: 'https://wa.me/994503066626',
+      url: 'https://wa.me/994553775770',
       availableLanguage: ['az'],
     },
   }

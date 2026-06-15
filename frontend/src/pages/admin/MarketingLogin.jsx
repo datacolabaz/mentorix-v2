@@ -21,6 +21,9 @@ export default function MarketingLogin() {
   const toast = useToast()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [contactPhone, setContactPhone] = useState('')
+  const [contactPreview, setContactPreview] = useState(null)
+  const [contactSaving, setContactSaving] = useState(false)
   const [landing, setLanding] = useState(() => deepClone(defaultLoginMarketingPayload()))
   const [defaults, setDefaults] = useState(null)
 
@@ -29,11 +32,20 @@ export default function MarketingLogin() {
     ;(async () => {
       setLoading(true)
       try {
-        const data = await api.get('/admin/marketing/login')
+        const [marketingRes, contactRes] = await Promise.all([
+          api.get('/admin/marketing/login'),
+          api.get('/admin/platform/contact'),
+        ])
         if (cancelled) return
-        if (data?.success && data.landing) {
-          setLanding(deepClone(data.landing))
-          setDefaults(data.defaults ? deepClone(data.defaults) : deepClone(defaultLoginMarketingPayload()))
+        if (marketingRes?.success && marketingRes.landing) {
+          setLanding(deepClone(marketingRes.landing))
+          setDefaults(
+            marketingRes.defaults ? deepClone(marketingRes.defaults) : deepClone(defaultLoginMarketingPayload()),
+          )
+        }
+        if (contactRes?.success && contactRes.contact) {
+          setContactPhone(contactRes.contact.phone_display || '')
+          setContactPreview(contactRes.contact)
         }
       } catch (e) {
         if (!cancelled) toast(e?.message || 'Yüklənmədi', 'error')
@@ -69,6 +81,24 @@ export default function MarketingLogin() {
     toast('Defolt məzmun yükləndi (hələ saxlamamısınız)', 'success')
   }
 
+  const saveContact = async () => {
+    setContactSaving(true)
+    try {
+      const data = await api.put('/admin/platform/contact', { whatsapp_phone: contactPhone })
+      if (data?.success && data.contact) {
+        setContactPreview(data.contact)
+        setContactPhone(data.contact.phone_display || contactPhone)
+        toast('Əlaqə nömrəsi saxlanıldı', 'success')
+      } else {
+        toast('Naməlum cavab', 'error')
+      }
+    } catch (e) {
+      toast(e?.message || 'Saxlanılmadı', 'error')
+    } finally {
+      setContactSaving(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="p-6 flex items-center justify-center min-h-[40vh] text-gray-400 text-sm">Yüklənir…</div>
@@ -91,6 +121,38 @@ export default function MarketingLogin() {
           </Button>
         </div>
       </div>
+
+      <Card className="p-4 sm:p-6 space-y-4">
+        <h2 className="font-display font-bold text-base">Platform əlaqə (WhatsApp)</h2>
+        <p className="text-xs text-gray-500 leading-relaxed">
+          Login modalındakı «Bizimlə əlaqə» düyməsi və ictimai dəstək linkləri bu nömrəyə gedir.
+        </p>
+        <div>
+          <label className={lbl}>WhatsApp nömrəsi</label>
+          <input
+            className={inp}
+            placeholder="+994553775770"
+            value={contactPhone}
+            onChange={(e) => setContactPhone(e.target.value)}
+          />
+        </div>
+        {contactPreview?.whatsapp_url ? (
+          <p className="text-xs text-gray-400">
+            Link:{' '}
+            <a
+              href={contactPreview.whatsapp_url}
+              target="_blank"
+              rel="noreferrer"
+              className="text-primary hover:brightness-110 break-all"
+            >
+              {contactPreview.whatsapp_url}
+            </a>
+          </p>
+        ) : null}
+        <Button type="button" loading={contactSaving} className="justify-center" onClick={() => void saveContact()}>
+          Əlaqə nömrəsini saxla
+        </Button>
+      </Card>
 
       <Card className="p-4 sm:p-6 space-y-4">
         <h2 className="font-display font-bold text-base">Hero</h2>

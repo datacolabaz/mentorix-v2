@@ -1,5 +1,7 @@
 /** İctimai SEO və landing səhifələri üçün rəsmi marketinq mətni */
 
+import { defaultPlatformContact } from './platformContact'
+
 export const MENTORIX_SEO_TITLE = 'Mentorix — Müəllim və Kurs İdarəetmə Platforması'
 
 export const MENTORIX_SEO_DESCRIPTION =
@@ -14,9 +16,12 @@ export const MENTORIX_SEO_HOMEPAGE_LINE =
 
 export const MENTORIX_TAGLINE = MENTORIX_SEO_HOMEPAGE_LINE
 
+const _contact = defaultPlatformContact()
+
 export const MENTORIX_CONTACT = {
-  whatsappUrl: 'https://wa.me/994503066626',
-  phoneDisplay: '+994 50 306 66 26',
+  ..._contact,
+  whatsappUrl: _contact.whatsapp_url,
+  phoneDisplay: _contact.phone_display,
   email: 'support@mentorix.io',
 }
 

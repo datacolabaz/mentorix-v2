@@ -17,6 +17,7 @@ const { getPublicExamInvite, postPublicExamGuestJoin } = require('../controllers
 const { getPublicTaskInvite, postPublicTaskGuestJoin } = require('../controllers/publicTaskInviteController');
 const { postAccessEvent } = require('../controllers/accessAnalyticsController');
 const { postMarketplaceAiSearch } = require('../controllers/marketplaceAiSearchController');
+const { getPublicContact } = require('../controllers/platformContactController');
 const { getPublicInstructorProfile } = require('../controllers/publicInstructorProfileController');
 const { getInstructorMessagingLink } = require('../controllers/publicInstructorContactController');
 const { authenticate } = require('../middleware/auth');
@@ -31,6 +32,7 @@ router.post('/task-invite/:taskId/join', postPublicTaskGuestJoin);
 
 router.post('/analytics/event', postAccessEvent);
 router.get('/landing-stats', getLandingStats);
+router.get('/contact', getPublicContact);
 router.get('/marketing/login', getPublicLoginMarketing);
 router.get('/instructors-map', getInstructorsInMapView);
 router.get('/instructors/:id', getPublicInstructorProfile);

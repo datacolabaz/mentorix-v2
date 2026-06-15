@@ -2,8 +2,7 @@ const db = require('../utils/db');
 const { flattenTeachingCategories } = require('../data/teachingCategories');
 const { searchDiscoverInstructors } = require('./discoverMarketplaceService');
 const { notifyMarketplaceSearchOpportunity } = require('./marketplaceSearchOpportunityService');
-
-const WHATSAPP_URL = 'https://wa.me/994503066626';
+const { getPublicPlatformContact } = require('./platformContactService');
 
 const SUBJECT_ALIASES = [
   { keys: ['riyaziyyat', 'riyazi', 'mat', 'math', 'algebra', 'geometriya'], categoryId: 'math' },
@@ -303,6 +302,7 @@ async function runMarketplaceAiSearch({ query, forChild = false, lat = null, lng
     grade,
     level: studentLevel,
   });
+  const platformContact = await getPublicPlatformContact();
 
   return {
     extracted: {
@@ -351,7 +351,7 @@ async function runMarketplaceAiSearch({ query, forChild = false, lat = null, lng
           },
           support_whatsapp: {
             action: 'whatsapp',
-            url: WHATSAPP_URL,
+            url: platformContact.whatsapp_url,
             label: 'Mentorix dəstəyi (WhatsApp)',
           },
         },
