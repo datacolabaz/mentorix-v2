@@ -43,3 +43,20 @@ export function billingPaymentTitle(p) {
   const interval = p?.billing_interval === 'yearly' ? ' (illik)' : p?.billing_interval === 'monthly' ? ' (aylıq)' : ''
   return `Paket: ${plan}${interval}`
 }
+
+/** Köçürmə qəbzini qəbul edən WhatsApp */
+export const BILLING_RECEIPT_WHATSAPP_MSISDN = '994553775770'
+
+export function billingReceiptWhatsAppUrl({ amountAzn, product } = {}) {
+  const productAz =
+    product === 'sms' ? 'SMS paketi' : product === 'storage' ? 'yaddaş paketi' : 'paket'
+  let text = 'Salam, Mentorix paket ödənişi ilə bağlı qəbzi göndərirəm.'
+  if (amountAzn != null && Number.isFinite(Number(amountAzn))) {
+    text = `Salam, Mentorix ${productAz} ödənişi ilə bağlı qəbzi göndərirəm. Məbləğ: ${amountAzn} AZN`
+  }
+  return `https://wa.me/${BILLING_RECEIPT_WHATSAPP_MSISDN}?text=${encodeURIComponent(text)}`
+}
+
+export function openBillingReceiptWhatsApp(opts) {
+  window.open(billingReceiptWhatsAppUrl(opts), '_blank', 'noopener,noreferrer')
+}

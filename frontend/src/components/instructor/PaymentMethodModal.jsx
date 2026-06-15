@@ -3,6 +3,7 @@ import Modal from '../common/Modal'
 import Button from '../common/Button'
 import { formatAzn } from '../../lib/pricing'
 import { formatBankCardDisplay } from '../../lib/billingPaymentLabels'
+import BillingReceiptWhatsAppButton from './BillingReceiptWhatsAppButton'
 
 export default function PaymentMethodModal({
   open,
@@ -14,6 +15,7 @@ export default function PaymentMethodModal({
   busy = false,
   manualAccount = '',
   payriffEnabled = false,
+  product = 'plan',
 }) {
   const defaultMethod = 'cash'
   const [method, setMethod] = useState(defaultMethod)
@@ -80,13 +82,16 @@ export default function PaymentMethodModal({
         </div>
 
         {method === 'cash' && manualAccount ? (
-          <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 space-y-2">
-            <p className="text-xs text-token-textMuted">
-              Aşağıdakı 16 rəqəmli bank kartına köçürün və adminə müraciət edin. Təsdiq gözləyən statusda qalacaq.
+          <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 space-y-3">
+            <p className="text-xs text-token-textMuted leading-relaxed">
+              <span className="font-semibold text-token-textMain">Təlimat:</span> Aşağıdakı kart nömrəsinə ödəniş
+              etdikdən sonra qəbzi WhatsApp vasitəsilə bizə göndərin. Yoxlanıldıqdan sonra paketiniz
+              aktivləşdiriləcək.
             </p>
             <div className="font-mono text-lg tracking-widest font-bold text-token-textMain select-all">
               {formatBankCardDisplay(manualAccount)}
             </div>
+            <BillingReceiptWhatsAppButton amountAzn={amountAzn} product={product} />
           </div>
         ) : null}
 

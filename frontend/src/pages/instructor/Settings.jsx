@@ -47,7 +47,7 @@ import PaymentMethodModal from '../../components/instructor/PaymentMethodModal'
 import StorageAddonModal from '../../components/instructor/StorageAddonModal'
 import { formatStorageBytesHuman } from '../../lib/storageAddonDisplay'
 import { useBillingConfig } from '../../hooks/useBillingConfig'
-import { billingPaymentStatusLabel, billingPaymentTitle } from '../../lib/billingPaymentLabels'
+import { billingPaymentStatusLabel, billingPaymentTitle, openBillingReceiptWhatsApp } from '../../lib/billingPaymentLabels'
 import Modal from '../../components/common/Modal'
 
 export default function InstructorSettings() {
@@ -422,12 +422,14 @@ export default function InstructorSettings() {
         const pay = r?.payment
         setCheckout(null)
         if (paymentMethod === 'cash') {
+          const amount = String((Number(pay?.amount_cents || 0) / 100).toFixed(2))
           const qs = new URLSearchParams({
             account: pay?.manual_transfer_account || manualAccount,
-            amount: String((Number(pay?.amount_cents || 0) / 100).toFixed(2)),
+            amount,
             product: 'plan',
           })
           navigate(`/payment/pending?${qs}`)
+          openBillingReceiptWhatsApp({ amountAzn: amount, product: 'plan' })
           return
         }
         const url = pay?.payment_url
@@ -443,12 +445,14 @@ export default function InstructorSettings() {
         const pay = r?.payment
         setCheckout(null)
         if (paymentMethod === 'cash') {
+          const amount = String((Number(pay?.amount_cents || 0) / 100).toFixed(2))
           const qs = new URLSearchParams({
             account: pay?.manual_transfer_account || manualAccount,
-            amount: String((Number(pay?.amount_cents || 0) / 100).toFixed(2)),
+            amount,
             product: 'storage',
           })
           navigate(`/payment/pending?${qs}`)
+          openBillingReceiptWhatsApp({ amountAzn: amount, product: 'storage' })
           return
         }
         const url = pay?.payment_url
@@ -463,12 +467,14 @@ export default function InstructorSettings() {
       const pay = r?.payment
       setCheckout(null)
       if (paymentMethod === 'cash') {
+        const amount = String((Number(pay?.amount_cents || 0) / 100).toFixed(2))
         const qs = new URLSearchParams({
           account: pay?.manual_transfer_account || manualAccount,
-          amount: String((Number(pay?.amount_cents || 0) / 100).toFixed(2)),
+          amount,
           product: 'sms',
         })
         navigate(`/payment/pending?${qs}`)
+        openBillingReceiptWhatsApp({ amountAzn: amount, product: 'sms' })
         return
       }
       const url = pay?.payment_url
@@ -1343,6 +1349,7 @@ export default function InstructorSettings() {
         amountAzn={checkout?.amountAzn}
         manualAccount={manualAccount}
         payriffEnabled={payriffEnabled}
+        product={checkout?.type === 'sms' ? 'sms' : checkout?.type === 'storage' ? 'storage' : 'plan'}
         busy={planBusy}
         onConfirm={confirmCheckout}
       />

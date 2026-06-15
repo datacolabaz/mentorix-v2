@@ -8,6 +8,7 @@ import { useBillingConfig } from '../../hooks/useBillingConfig'
 import useUiStore from '../../hooks/useUi'
 import PricingBillingIntervalToggle from './PricingBillingIntervalToggle'
 import PaymentMethodModal from './PaymentMethodModal'
+import { openBillingReceiptWhatsApp } from '../../lib/billingPaymentLabels'
 import { formatAzn, yearlyTotalAzn, YEARLY_DISCOUNT } from '../../lib/pricing'
 import { planRank } from '../../lib/subscriptionPlanGuards'
 
@@ -74,12 +75,14 @@ export default function UpgradeModal({ open, onClose, onSelectPlan, currentPlan 
       onSelectPlan?.(checkout.planId)
       if (paymentMethod === 'cash') {
         onClose?.()
+        const amount = String((Number(pay?.amount_cents || 0) / 100).toFixed(2))
         const qs = new URLSearchParams({
           account: pay?.manual_transfer_account || manualAccount,
-          amount: String((Number(pay?.amount_cents || 0) / 100).toFixed(2)),
+          amount,
           product: 'plan',
         })
         navigate(`/payment/pending?${qs}`)
+        openBillingReceiptWhatsApp({ amountAzn: amount, product: 'plan' })
         return
       }
       const url = pay?.payment_url
