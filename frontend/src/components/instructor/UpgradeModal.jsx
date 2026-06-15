@@ -15,7 +15,7 @@ export default function UpgradeModal({ open, onClose, onSelectPlan, currentPlan 
   const navigate = useNavigate()
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState(null)
-  const [billingInterval, setBillingInterval] = useState('yearly')
+  const [billingInterval, setBillingInterval] = useState('monthly')
   const [checkout, setCheckout] = useState(null)
   const { theme } = useUiStore()
   const plansQ = useSubscriptionPlans()

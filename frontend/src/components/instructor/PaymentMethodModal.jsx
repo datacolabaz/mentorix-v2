@@ -15,7 +15,7 @@ export default function PaymentMethodModal({
   manualAccount = '',
   payriffEnabled = false,
 }) {
-  const defaultMethod = payriffEnabled ? 'card' : 'cash'
+  const defaultMethod = 'cash'
   const [method, setMethod] = useState(defaultMethod)
 
   useEffect(() => {

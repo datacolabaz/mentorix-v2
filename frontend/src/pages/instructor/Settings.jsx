@@ -98,7 +98,7 @@ export default function InstructorSettings() {
   const [profExperienceYears, setProfExperienceYears] = useState('')
   const [profBio, setProfBio] = useState('')
   const [savingProfessional, setSavingProfessional] = useState(false)
-  const [billingInterval, setBillingInterval] = useState('yearly')
+  const [billingInterval, setBillingInterval] = useState('monthly')
 
   useEffect(() => {
     setAccountName(user?.full_name || '')
