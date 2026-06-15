@@ -341,22 +341,29 @@ input.mx-auth-tel-input::placeholder {
   opacity: 1;
 }
 
-/* Google Sign-In — öz dizaynımız görünür; rəsmi düymə yalnız klik üçün gizlidir */
+/* Google Sign-In — öz dizaynımız görünür; rəsmi düymə toxunuş üçün üstdə */
+.mx-google-signin__decor {
+  pointer-events: none;
+}
 .mx-google-signin__hit {
-  opacity: 0;
+  /* iOS Safari opacity:0 iframe toxunuşu qəbul etmir */
+  opacity: 0.01;
   cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 .mx-google-signin__hit iframe {
   width: 100% !important;
-  height: 48px !important;
-  min-height: 48px !important;
+  height: 52px !important;
+  min-height: 52px !important;
   margin: 0 !important;
   border: 0 !important;
   border-radius: 12px !important;
+  pointer-events: auto;
 }
 .mx-google-signin__hit > div,
 .mx-google-signin__hit > div > div {
   width: 100% !important;
   height: 100% !important;
-  min-height: 48px !important;
+  min-height: 52px !important;
 }

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
 
@@ -26,7 +26,7 @@ function GoogleGIcon({ className = 'h-5 w-5' }) {
   )
 }
 
-function renderHiddenGoogleButton(container, width) {
+function renderGoogleButton(container, width, context) {
   if (!window.google?.accounts?.id || !container) return
   container.innerHTML = ''
   window.google.accounts.id.renderButton(container, {
@@ -34,18 +34,49 @@ function renderHiddenGoogleButton(container, width) {
     theme: 'outline',
     size: 'large',
     shape: 'rectangular',
-    width: Math.max(280, Math.floor(width)),
-    text: 'signin_with',
+    width: Math.max(280, Math.floor(width || 280)),
+    text: context === 'signup' ? 'signup_with' : 'signin_with',
     locale: 'az',
     logo_alignment: 'left',
   })
 }
 
-export default function GoogleSignInButton({ onCredential, disabled, label = 'Google ilə davam et' }) {
+function clickEmbeddedGoogleButton(hitEl) {
+  if (!hitEl) return false
+  const inner =
+    hitEl.querySelector('[role="button"]') ||
+    hitEl.querySelector('div[tabindex="0"]') ||
+    hitEl.querySelector('iframe')
+  if (!inner) return false
+  try {
+    inner.click()
+    return true
+  } catch {
+    return false
+  }
+}
+
+export default function GoogleSignInButton({
+  onCredential,
+  disabled,
+  label = 'Google ilə davam et',
+  context = 'signin',
+}) {
   const wrapRef = useRef(null)
   const hitRef = useRef(null)
+  const onCredentialRef = useRef(onCredential)
   const [ready, setReady] = useState(false)
   const [err, setErr] = useState('')
+
+  onCredentialRef.current = onCredential
+
+  const paintButton = useCallback(() => {
+    if (!hitRef.current || !wrapRef.current) return
+    const w = wrapRef.current.offsetWidth
+    if (w < 40) return
+    renderGoogleButton(hitRef.current, w, context)
+    setReady(true)
+  }, [context])
 
   useEffect(() => {
     if (!CLIENT_ID) {
@@ -59,9 +90,9 @@ export default function GoogleSignInButton({ onCredential, disabled, label = 'Go
       window.google.accounts.id.initialize({
         client_id: CLIENT_ID,
         callback: (resp) => {
-          if (resp?.credential) onCredential?.(resp.credential)
+          if (resp?.credential) onCredentialRef.current?.(resp.credential)
         },
-        context: 'signin',
+        context: context === 'signup' ? 'signup' : 'signin',
         auto_select: false,
         cancel_on_tap_outside: true,
         itp_support: true,
@@ -75,8 +106,7 @@ export default function GoogleSignInButton({ onCredential, disabled, label = 'Go
         /* One Tap bağla */
       }
 
-      renderHiddenGoogleButton(hitRef.current, wrapRef.current.offsetWidth)
-      setReady(true)
+      paintButton()
     }
 
     if (window.google?.accounts?.id) {
@@ -101,17 +131,34 @@ export default function GoogleSignInButton({ onCredential, disabled, label = 'Go
     return () => {
       s.onload = null
     }
-  }, [onCredential])
+  }, [context, paintButton])
 
   useEffect(() => {
-    if (!ready || !wrapRef.current) return
-    const ro = new ResizeObserver(() => {
-      if (!hitRef.current || !wrapRef.current) return
-      renderHiddenGoogleButton(hitRef.current, wrapRef.current.offsetWidth)
-    })
+    if (!wrapRef.current) return
+    const ro = new ResizeObserver(() => paintButton())
     ro.observe(wrapRef.current)
     return () => ro.disconnect()
-  }, [ready])
+  }, [paintButton])
+
+  /** Tab/modal gizli olanda en=0 olur — görünəndə yenidən render */
+  useEffect(() => {
+    if (!wrapRef.current || typeof IntersectionObserver === 'undefined') return
+    const obs = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          window.requestAnimationFrame(() => paintButton())
+        }
+      },
+      { threshold: 0.01 },
+    )
+    obs.observe(wrapRef.current)
+    return () => obs.disconnect()
+  }, [paintButton])
+
+  const handleProxyTap = () => {
+    if (disabled) return
+    clickEmbeddedGoogleButton(hitRef.current)
+  }
 
   if (!CLIENT_ID) {
     return (
@@ -128,12 +175,19 @@ export default function GoogleSignInButton({ onCredential, disabled, label = 'Go
   return (
     <div
       ref={wrapRef}
-      className={['mx-google-signin relative w-full min-h-[48px]', disabled ? 'opacity-50 pointer-events-none' : ''].join(
+      className={['mx-google-signin relative w-full min-h-[52px]', disabled ? 'opacity-50 pointer-events-none' : ''].join(
         ' ',
       )}
+      onClick={handleProxyTap}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          handleProxyTap()
+        }
+      }}
     >
       <div
-        className="flex w-full min-h-[48px] items-center justify-center gap-3 rounded-xl border border-white/12 bg-[#141414] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-colors hover:border-white/20 hover:bg-[#1a1a1a]"
+        className="mx-google-signin__decor flex w-full min-h-[52px] items-center justify-center gap-3 rounded-xl border border-white/12 bg-[#141414] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-colors"
         aria-hidden
       >
         <GoogleGIcon />
@@ -147,8 +201,6 @@ export default function GoogleSignInButton({ onCredential, disabled, label = 'Go
         ref={hitRef}
         className="mx-google-signin__hit absolute inset-0 z-10 overflow-hidden rounded-xl"
         aria-label={label}
-        role="button"
-        tabIndex={disabled ? -1 : 0}
       />
     </div>
   )

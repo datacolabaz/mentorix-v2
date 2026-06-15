@@ -381,7 +381,8 @@ export default function InstructorEmailAuth({ onSuccess }) {
     <div className="space-y-4">
       <AuthModeTabs tab={tab} onTab={setTab} />
 
-      <div className={tab === 'login' ? 'space-y-4' : 'hidden'} aria-hidden={tab !== 'login'}>
+      {tab === 'login' ? (
+      <div className="space-y-4">
           <form
             id="mentorix-login-form"
             onSubmit={handleLogin}
@@ -428,7 +429,13 @@ export default function InstructorEmailAuth({ onSuccess }) {
 
           <AuthDivider />
 
-          <GoogleSignInButton onCredential={handleGoogleCredential} disabled={loading} label="Google ilə daxil ol" />
+          <GoogleSignInButton
+            key="login-google"
+            onCredential={handleGoogleCredential}
+            disabled={loading}
+            label="Google ilə daxil ol"
+            context="signin"
+          />
 
           <p className="text-xs text-center text-gray-500">
             Hesabınız yoxdur?{' '}
@@ -437,11 +444,17 @@ export default function InstructorEmailAuth({ onSuccess }) {
             </button>
           </p>
       </div>
-
-      <div className={tab === 'signup' ? 'space-y-4' : 'hidden'} aria-hidden={tab !== 'signup'}>
+      ) : (
+      <div className="space-y-4">
           <RolePills roles={SIGNUP_ROLES} role={signupRole} onRole={setSignupRole} />
 
-          <GoogleSignInButton onCredential={handleGoogleCredential} disabled={loading} label="Google ilə davam et" />
+          <GoogleSignInButton
+            key="signup-google"
+            onCredential={handleGoogleCredential}
+            disabled={loading}
+            label="Google ilə davam et"
+            context="signup"
+          />
 
           <AuthDivider />
 
@@ -505,6 +518,7 @@ export default function InstructorEmailAuth({ onSuccess }) {
             </button>
           </p>
       </div>
+      )}
     </div>
   )
 }
