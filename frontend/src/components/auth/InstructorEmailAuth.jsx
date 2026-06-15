@@ -161,7 +161,7 @@ export default function InstructorEmailAuth({ onSuccess }) {
   const [signupFullName, setSignupFullName] = useState('')
   const [signupEmail, setSignupEmail] = useState('')
   const [signupPassword, setSignupPassword] = useState('')
-  const [signupRole, setSignupRole] = useState('student')
+  const [signupRole, setSignupRole] = useState('instructor')
   const [verifyCode, setVerifyCode] = useState('')
 
   const handleGoogleCredential = async (credential) => {
