@@ -233,9 +233,6 @@ export default function Login() {
   const stepItems = useMemo(() => {
     const items = Array.isArray(m.steps?.items) ? m.steps.items : []
     const def = defaultLoginMarketingPayload().steps.items || []
-    const fourth = def[3]
-    if (items.length >= 4) return items
-    if (items.length === 3 && fourth) return [...items, fourth]
     return items.length ? items : def
   }, [m.steps?.items])
 

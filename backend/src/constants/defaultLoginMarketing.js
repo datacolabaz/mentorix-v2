@@ -272,11 +272,22 @@ function mergeLoginMarketingFromDb(payloadFromDb) {
 
   function mergeSteps(raw, fallback) {
     if (!Array.isArray(raw) || raw.length === 0) return fallback
-    return raw.slice(0, 12).map((row, i) => ({
+    const merged = raw.slice(0, 12).map((row, i) => ({
       step: trimStr(row.step, 4) || String(i + 1),
       title: trimStr(row.title, 200) || '—',
       body: trimStr(row.body, 2000) || '',
     }))
+    // DB-də köhnə 3 addım qalıbsa, defoltda əlavə olunan yeni addımları da göstər (admin redaktə edə bilsin)
+    if (merged.length < fallback.length) {
+      for (let i = merged.length; i < fallback.length && i < 12; i++) {
+        merged.push({
+          step: fallback[i].step,
+          title: fallback[i].title,
+          body: fallback[i].body,
+        })
+      }
+    }
+    return merged
   }
 
   function mergeFeatures(raw, fallback) {
