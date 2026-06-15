@@ -2,6 +2,16 @@ import { create } from 'zustand'
 import api from '../lib/api'
 import { trackLogout } from '../lib/analytics'
 
+function clearDiscoverReminderOnAuth(user) {
+  const id = user?.id
+  if (!id) return
+  try {
+    sessionStorage.removeItem(`mx_discover_modal_v1_${id}`)
+  } catch {
+    /* ignore */
+  }
+}
+
 const useAuthStore = create((set) => ({
   user: JSON.parse(localStorage.getItem('mx_user') || 'null'),
   token: localStorage.getItem('mx_token'),
@@ -39,6 +49,7 @@ const useAuthStore = create((set) => ({
     }
     localStorage.setItem('mx_token', data.token)
     localStorage.setItem('mx_user', JSON.stringify(data.user))
+    clearDiscoverReminderOnAuth(data.user)
     set({ user: data.user, token: data.token })
     return data.user
   },
@@ -54,6 +65,7 @@ const useAuthStore = create((set) => ({
     }
     localStorage.setItem('mx_token', data.token)
     localStorage.setItem('mx_user', JSON.stringify(data.user))
+    clearDiscoverReminderOnAuth(data.user)
     set({ user: data.user, token: data.token })
     return data.user
   },
@@ -70,11 +82,20 @@ const useAuthStore = create((set) => ({
     if (!token || !user) return
     localStorage.setItem('mx_token', token)
     localStorage.setItem('mx_user', JSON.stringify(user))
+    clearDiscoverReminderOnAuth(user)
     set({ user, token })
   },
 
   logout: () => {
     trackLogout()
+    const uid = JSON.parse(localStorage.getItem('mx_user') || 'null')?.id
+    if (uid) {
+      try {
+        sessionStorage.removeItem(`mx_discover_modal_v1_${uid}`)
+      } catch {
+        /* ignore */
+      }
+    }
     localStorage.removeItem('mx_token')
     localStorage.removeItem('mx_user')
     set({ user: null, token: null })

@@ -20,6 +20,9 @@ import { useQueryClient } from '@tanstack/react-query'
 import { BILLING_STATUS_QUERY_KEY } from '../hooks/useBillingStatus'
 import { useToast } from '../components/common/Toast'
 import PhoneVerificationGate from '../components/auth/PhoneVerificationGate'
+import ConfirmDialog from '../components/common/ConfirmDialog'
+
+const DISCOVER_MODAL_SESSION_PREFIX = 'mx_discover_modal_v1_'
 
 const NAV_SECTIONS = [
   {
@@ -60,6 +63,8 @@ export default function InstructorLayout() {
   const { focusMode, setFocusMode, overlayLock, theme, toggleTheme } = useUiStore()
   const sidebarHidden = focusMode || overlayLock
   const [limitStatus, setLimitStatus] = useState({ level: null, message: null })
+  const [discoverProfileAlert, setDiscoverProfileAlert] = useState(null)
+  const [discoverModalOpen, setDiscoverModalOpen] = useState(false)
   const [notifFetchAt, setNotifFetchAt] = useState(0)
   const [hasAlerts, setHasAlerts] = useState(false)
   const [joinRequestsCount, setJoinRequestsCount] = useState(0)
@@ -145,6 +150,10 @@ export default function InstructorLayout() {
       navigate('/instructor/settings', { state: { scrollTo: 'billing-payments' } })
       return
     }
+    if (act === 'OPEN_DISCOVER_PROFILE') {
+      navigate('/instructor/settings', { state: { scrollTo: 'discover-profile' } })
+      return
+    }
     if (act === 'OPEN_SETTINGS_STORAGE') {
       navigate('/instructor/exams')
       return
@@ -154,30 +163,64 @@ export default function InstructorLayout() {
 
   useEffect(() => {
     let cancelled = false
-    api
-      .get('/notifications/instructor')
-      .then((d) => {
-        if (cancelled) return
-        const alerts = d.alerts || []
-        setHasAlerts(Array.isArray(alerts) && alerts.length > 0)
-        setNotifFetchAt(Date.now())
-        if (d.billing_messages?.suppress_limit_bar) {
-          setLimitStatus({ level: null, message: null })
-          return
-        }
-        const critical = alerts.find((a) => a.level === 'critical')
-        const warning = alerts.find((a) => a.level === 'warning')
-        if (critical) setLimitStatus({ level: 'critical', message: critical.message })
-        else if (warning) setLimitStatus({ level: 'warning', message: warning.message })
-        else setLimitStatus({ level: null, message: null })
-      })
-      .catch(() => {
-        if (!cancelled) setLimitStatus({ level: null, message: null })
-      })
+    const fetchNotifications = () => {
+      api
+        .get('/notifications/instructor')
+        .then((d) => {
+          if (cancelled) return
+          const alerts = d.alerts || []
+          setHasAlerts(Array.isArray(alerts) && alerts.length > 0)
+          setNotifFetchAt(Date.now())
+          const discoverAlert = alerts.find((a) => a.type === 'discover_profile') || null
+          setDiscoverProfileAlert(discoverAlert)
+          if (!discoverAlert) setDiscoverModalOpen(false)
+          if (d.billing_messages?.suppress_limit_bar) {
+            setLimitStatus({ level: null, message: null })
+            return
+          }
+          const billingAlerts = alerts.filter((a) => a.type !== 'discover_profile')
+          const critical = billingAlerts.find((a) => a.level === 'critical')
+          const warning = billingAlerts.find((a) => a.level === 'warning')
+          if (critical) setLimitStatus({ level: 'critical', message: critical.message })
+          else if (warning) setLimitStatus({ level: 'warning', message: warning.message })
+          else setLimitStatus({ level: null, message: null })
+        })
+        .catch(() => {
+          if (!cancelled) setLimitStatus({ level: null, message: null })
+        })
+    }
+    fetchNotifications()
+    const onDiscoverUpdated = () => fetchNotifications()
+    window.addEventListener('mx:discover-profile-updated', onDiscoverUpdated)
     return () => {
       cancelled = true
+      window.removeEventListener('mx:discover-profile-updated', onDiscoverUpdated)
     }
   }, [billing?.messages?.suppress_limit_bar])
+
+  useEffect(() => {
+    if (!user?.id || !discoverProfileAlert) {
+      setDiscoverModalOpen(false)
+      return
+    }
+    try {
+      if (sessionStorage.getItem(`${DISCOVER_MODAL_SESSION_PREFIX}${user.id}`)) return
+    } catch {
+      /* ignore */
+    }
+    setDiscoverModalOpen(true)
+  }, [user?.id, discoverProfileAlert])
+
+  const closeDiscoverModal = (rememberSession = true) => {
+    setDiscoverModalOpen(false)
+    if (rememberSession && user?.id) {
+      try {
+        sessionStorage.setItem(`${DISCOVER_MODAL_SESSION_PREFIX}${user.id}`, '1')
+      } catch {
+        /* ignore */
+      }
+    }
+  }
 
   const fetchJoinRequestsCount = () => {
     api
@@ -574,6 +617,28 @@ export default function InstructorLayout() {
             </div>
           ) : null}
 
+          {discoverProfileAlert ? (
+            <div
+              className={`mt-4 rounded-2xl border px-4 py-3 text-sm box-border max-w-full w-full ${
+                theme === 'dark'
+                  ? 'border-indigo-500/40 bg-indigo-500/10 text-indigo-100'
+                  : 'border-indigo-600/30 bg-indigo-50 text-indigo-950'
+              }`}
+            >
+              <div className="min-w-0">
+                <div className="font-semibold">Sizi axtarışda daha asan tapmaq üçün fənninizi daxil edin</div>
+                <div className="break-words mt-0.5 opacity-90">{discoverProfileAlert.message}</div>
+                <button
+                  type="button"
+                  onClick={() => runBillingAction('OPEN_DISCOVER_PROFILE')}
+                  className="mt-2 text-xs font-bold text-primary hover:underline"
+                >
+                  {discoverProfileAlert.cta?.label || 'Fənn əlavə et'} →
+                </button>
+              </div>
+            </div>
+          ) : null}
+
           <div className="instructor-panel-main flex-1 min-h-0 min-w-0 w-full max-w-full overflow-x-hidden">
             <Outlet />
           </div>
@@ -620,6 +685,20 @@ export default function InstructorLayout() {
         setUpgradeOpen(false)
       }}
     />
+      <ConfirmDialog
+        open={discoverModalOpen}
+        onClose={() => closeDiscoverModal(true)}
+        onConfirm={() => {
+          closeDiscoverModal(true)
+          runBillingAction('OPEN_DISCOVER_PROFILE')
+        }}
+        title="Fənninizi daxil edin"
+        message={
+          'Valideynlər və tələbələr axtarışda sizi tapsın deyə, tədris etdiyiniz fənnləri (məs. Fizika, Riyaziyyat) profilinizə əlavə edin.\n\nBu addımı tamamlayana qədər hər girişdə xatırladacağıq.'
+        }
+        confirmLabel="Fənn əlavə et"
+        cancelLabel="Sonra"
+      />
     </>
   )
 }

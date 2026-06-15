@@ -140,6 +140,7 @@ export default function InstructorDiscoverSettings({ mapVisible, theme, inp }) {
         service_area_ids: areaIds,
       })
       toast('Axtarış profili saxlanıldı')
+      window.dispatchEvent(new CustomEvent('mx:discover-profile-updated'))
       await load()
     } catch (e) {
       toast(e?.message || 'Xəta', 'error')
@@ -188,12 +189,22 @@ export default function InstructorDiscoverSettings({ mapVisible, theme, inp }) {
           Valideynlər / Tələbələr məni tapa bilsin
         </h2>
       </div>
-      <p className={['text-sm', theme === 'dark' ? 'text-gray-400' : 'text-token-textMuted'].join(' ')}>
+          <p className={['text-sm', theme === 'dark' ? 'text-gray-400' : 'text-token-textMuted'].join(' ')}>
         Axtarışda görünmək üçün xəritə pinini aktiv edin və fənn, format və rayonları seçin.
         {!mapVisible ? (
           <span className="block text-amber-400/90 mt-1 text-xs">Xəritə görünürlüyü hal-hazırda bağlıdır.</span>
         ) : null}
       </p>
+
+      {categoryIds.length === 0 ? (
+        <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-3 text-sm text-amber-100/95 space-y-1">
+          <p className="font-semibold text-amber-200">Fənn əlavə edin — sizi axtarışda tapa bilmirlər</p>
+          <p className="text-xs text-amber-100/80 leading-relaxed">
+            Valideynlər &quot;fizika&quot;, &quot;riyaziyyat&quot; və s. axtardıqda profiliniz çıxması üçün ən azı bir
+            fənn seçin və saxlayın.
+          </p>
+        </div>
+      ) : null}
 
       {!premium ? (
         <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs text-amber-200/90 mb-4">

@@ -50,6 +50,8 @@ async function searchDiscoverInstructors({
   limit = 50,
   /** false = yalnız məsafə sıralaması; xəritə kimi çatışımlılıq filtri tətbiq etmə */
   requireFormatReachability = true,
+  /** false = koordinatsız profillər də siyahıya daxil olur (AI fallback) */
+  requireCoordinates = true,
 }) {
   const params = [];
   let i = 1;
@@ -58,9 +60,11 @@ async function searchDiscoverInstructors({
     `COALESCE(u.is_active, TRUE) = TRUE`,
     `u.deleted_at IS NULL`,
     `COALESCE(ip.map_visible, TRUE) = TRUE`,
-    `ip.latitude IS NOT NULL`,
-    `ip.longitude IS NOT NULL`,
   ];
+
+  if (requireCoordinates) {
+    where.push(`ip.latitude IS NOT NULL`, `ip.longitude IS NOT NULL`);
+  }
 
   if (kind === 'teacher' || kind === 'trainer') {
     where.push(`ip.map_profile_kind = $${i++}`);

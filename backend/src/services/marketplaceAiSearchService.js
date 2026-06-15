@@ -175,7 +175,7 @@ function buildEmptyState({ area, subjectName, searcherRole }) {
   if (searcherRole === 'parent') {
     return {
       title: 'AI filtrinə tam uyğun profil tapılmadı',
-      message: `${locationPhrase} ${subjectName} üçün dəqiq uyğun profil yoxdur. Aşağıdakı xəritə və siyahıda digər müəllim və təlimçilər ola bilər — onlara müraciət edə bilərsiniz.`,
+      message: `${locationPhrase} ${subjectName} üçün dəqiq uyğun profil yoxdur. Qiymət və dərs planı yalnız müəllim tapılanda göstərilir. Aşağıdakı xəritə və siyahıdan digər müəllimlərə baxa və birbaşa müraciət edə bilərsiniz.`,
       instructor_cta: null,
     };
   }
@@ -205,18 +205,36 @@ async function fetchAiInstructorMatches({ categoryId, areaId, raw, lat, lng, lim
     categoryId: categoryId || null,
     q: categoryId ? null : raw.slice(0, 80),
     kind: null,
+    requireCoordinates: true,
   });
+
+  let matchTier = instructors.length ? 'exact' : null;
+
+  if (!instructors.length && categoryId) {
+    instructors = await searchDiscoverInstructors({
+      ...base,
+      categoryId,
+      areaId: null,
+      q: null,
+      kind: null,
+      requireCoordinates: false,
+    });
+    if (instructors.length) matchTier = 'category_relaxed';
+  }
 
   if (!instructors.length && categoryId) {
     instructors = await searchDiscoverInstructors({
       ...base,
       categoryId: null,
+      areaId: null,
       q: raw.slice(0, 80),
       kind: null,
+      requireCoordinates: false,
     });
+    if (instructors.length) matchTier = 'text_relaxed';
   }
 
-  return instructors;
+  return { instructors, matchTier: matchTier || (instructors.length ? 'exact' : 'none') };
 }
 
 function publicInstructorCard(row) {
@@ -255,7 +273,7 @@ async function runMarketplaceAiSearch({ query, forChild = false, lat = null, lng
   const studentLevel = parseStudentLevel(raw);
   const searcherRole = detectSearcherRole(raw, forChild);
 
-  const instructors = await fetchAiInstructorMatches({
+  const { instructors, matchTier } = await fetchAiInstructorMatches({
     categoryId: category?.id || null,
     areaId: area?.id || null,
     raw,
@@ -266,8 +284,9 @@ async function runMarketplaceAiSearch({ query, forChild = false, lat = null, lng
 
   const top = instructors.slice(0, limit).map(publicInstructorCard);
   const subjectName = category?.name_az || 'Müəllim';
+  const hasInstructors = top.length > 0;
 
-  if (top.length === 0) {
+  if (!hasInstructors) {
     setImmediate(() => {
       notifyMarketplaceSearchOpportunity({
         categoryId: category?.id || null,
@@ -301,23 +320,41 @@ async function runMarketplaceAiSearch({ query, forChild = false, lat = null, lng
     step1_tutors: {
       count: instructors.length,
       matches: top,
+      match_tier: matchTier,
+      match_note:
+        matchTier === 'category_relaxed'
+          ? `${subjectName} üzrə tapılan müəllimlər — lokasiya filtrinə tam uyğun olmaya bilər.`
+          : matchTier === 'text_relaxed'
+            ? 'Axtarış mətninə uyğun profillər — fənn filtrinə tam uyğun olmaya bilər.'
+            : null,
       filters_applied: {
         category_id: category?.id || null,
         area_id: area?.id || null,
         format: 'any',
       },
-      empty_state:
-        top.length === 0
-          ? buildEmptyState({ area, subjectName, searcherRole })
-          : null,
+      empty_state: hasInstructors ? null : buildEmptyState({ area, subjectName, searcherRole }),
     },
-    step2_pricing: buildPricing(instructors),
-    step3_curriculum: curriculum,
-    step4_cta: {
-      trial_lesson: { action: 'inquiry', label: 'Sınaq dərsi təyin et' },
-      message: { action: 'inquiry', label: 'Müəllimə mesaj yaz' },
-      whatsapp: { action: 'whatsapp', url: WHATSAPP_URL, label: 'WhatsApp ilə əlaqə' },
-    },
+    step2_pricing: hasInstructors
+      ? { ...buildPricing(instructors), source: 'instructors' }
+      : null,
+    step3_curriculum: hasInstructors ? { ...curriculum, source: 'instructors' } : null,
+    step4_cta: hasInstructors
+      ? {
+          trial_lesson: { action: 'inquiry', label: 'Sınaq dərsi təyin et' },
+          message: { action: 'inquiry', label: 'Müəllimə mesaj yaz' },
+          whatsapp: { action: 'whatsapp', label: 'WhatsApp ilə əlaqə' },
+        }
+      : {
+          browse_map: {
+            label: 'Aşağıdakı xəritə və siyahıdan müəllim seçin',
+            hint: 'Uyğun müəllim tapdıqda profilindən WhatsApp və ya müraciət göndərə bilərsiniz.',
+          },
+          support_whatsapp: {
+            action: 'whatsapp',
+            url: WHATSAPP_URL,
+            label: 'Mentorix dəstəyi (WhatsApp)',
+          },
+        },
   };
 }
 

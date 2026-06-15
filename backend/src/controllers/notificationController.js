@@ -8,6 +8,10 @@ const {
   pickLimitCta,
   isHighestTierPlan,
 } = require('../services/billingAlertHelpers');
+const {
+  getDiscoverProfileCompleteness,
+  buildDiscoverProfileAlert,
+} = require('../services/discoverProfileCompletenessService');
 const { getActivePlansMap } = require('../services/subscriptionPlansService');
 
 const getAdminNotifications = async (req, res) => {
@@ -149,8 +153,16 @@ const getInstructorNotifications = async (req, res) => {
       }
     }
 
+    const discoverCompleteness = await getDiscoverProfileCompleteness(req.user.id);
+    const discoverAlert = buildDiscoverProfileAlert(discoverCompleteness);
+    if (discoverAlert) alerts.unshift(discoverAlert);
+
     const smsLim = lim.sms_monthly;
     const smsUsed = Number(used.sms_monthly || 0) || 0;
+    const stLimMb = lim.storage_mb ?? null;
+    const stLimBytes = stLimMb != null ? Number(stLimMb) * 1024 * 1024 : null;
+    const stUsedBytes = Number(used.storage_bytes ?? 0) || 0;
+    const stUsedMb = stUsedBytes / (1024 * 1024);
 
     res.json({
       success: true,
@@ -174,6 +186,7 @@ const getInstructorNotifications = async (req, res) => {
         whatsapp_production_style: Boolean(String(process.env.WHATSAPP_TEMPLATE_NAME || '').trim()),
         whatsapp_template_name: String(process.env.WHATSAPP_TEMPLATE_NAME || '').trim() || null,
       },
+      discover_profile: discoverCompleteness,
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

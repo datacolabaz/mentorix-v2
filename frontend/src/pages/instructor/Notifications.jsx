@@ -872,7 +872,13 @@ export default function InstructorNotifications() {
                   </span>
                   <p className="text-sm text-token-textMain break-words">{alert.message}</p>
                   <p className="text-xs text-token-textMuted mt-1">
-                    {alert.type === 'sms' ? '📱 SMS' : alert.type === 'ram' ? '🧠 RAM' : '💾 Storage'}
+                    {alert.type === 'sms'
+                      ? '📱 SMS'
+                      : alert.type === 'storage' || alert.type === 'ram'
+                        ? '💾 Storage'
+                        : alert.type === 'discover_profile'
+                          ? '🔍 Axtarış profili'
+                          : '⚙️ Sistem'}
                   </p>
                   {alert.cta?.label ? (
                     <Button
@@ -888,6 +894,10 @@ export default function InstructorNotifications() {
                         }
                         if (act === 'OPEN_SETTINGS_STORAGE' || act === 'OPEN_STORAGE_TOPUP') {
                           navigate('/instructor/settings', { state: { openStorageAddon: true } })
+                          return
+                        }
+                        if (act === 'OPEN_DISCOVER_PROFILE') {
+                          navigate('/instructor/settings', { state: { scrollTo: 'discover-profile' } })
                           return
                         }
                         navigate('/instructor/settings')
