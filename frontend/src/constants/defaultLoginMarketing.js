@@ -27,6 +27,7 @@ export function defaultLoginMarketingPayload() {
       title: 'İdarə paneli (prevyu)',
       badge: 'bu gün',
       col1_label: 'Platformada tələbə',
+      col1_value: '24',
       col2_label: 'Bu ay',
       col2_value: 'Ödənişlər',
       col3_label: 'SMS',
@@ -37,7 +38,7 @@ export function defaultLoginMarketingPayload() {
       slot2_time: '19:45',
     },
     trust: {
-      section_enabled: true,
+      section_enabled: false,
       heading: 'İnam göstəriciləri',
       students_suffix: 'tələbə idarə olunur',
       instructors_suffix: 'müəllim istifadə edir',

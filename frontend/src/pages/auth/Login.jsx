@@ -20,39 +20,10 @@ import { postAuthNavigate } from '../../lib/postAuth'
 import LandingDemoActivityChart from '../../components/landing/LandingDemoActivityChart'
 import { DEFAULT_SUBSCRIPTION_PLANS, planPriceLabel } from '../../constants/subscriptionPlans'
 
-const TRUST_STUDENTS_FLOOR = 100
-const TRUST_INSTRUCTORS_FLOOR = 15
-
 function scrollToId(id) {
   const el = document.getElementById(id)
   if (!el) return
   el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-}
-
-function formatAzInt(n) {
-  if (n == null || !Number.isFinite(Number(n))) return '—'
-  return new Intl.NumberFormat('az-Latn-AZ').format(Number(n))
-}
-
-/** İnam blokunda həmişə konkret mərtəbə — real rəqəm yoxdursa belə minimum göstəririk */
-function trustCountWithFloor(raw, floor) {
-  const v = Number(raw)
-  const base = Number.isFinite(v) ? v : 0
-  return Math.max(floor, base)
-}
-
-/** Marketinqdə “+500” kimi — “500+” yox */
-function trustPlusCount(n) {
-  return `+${formatAzInt(n)}`
-}
-
-function upliftLine(pct, loading) {
-  if (loading) return '+30% daha yaxşı davamiyyət'
-  if (pct == null || !Number.isFinite(Number(pct))) return '+30% daha yaxşı davamiyyət'
-  const rounded = Math.round(Number(pct))
-  if (rounded > 0) return `+${formatAzInt(rounded)}% daha yaxşı davamiyyət`
-  if (rounded < 0) return `${formatAzInt(rounded)}% davamiyyət (əvvəlki aya nisbətən)`
-  return '+30% daha yaxşı davamiyyət'
 }
 
 /** Email qeydiyyat/giriş + admin email girişi */
@@ -81,8 +52,6 @@ export default function Login() {
 
   const loginSectionRef = useRef(null)
   const landingSectionSeenRef = useRef(new Set())
-  const [landingLoading, setLandingLoading] = useState(!isAdmin)
-  const [landingStats, setLandingStats] = useState(null)
   const [publicPlans, setPublicPlans] = useState(DEFAULT_SUBSCRIPTION_PLANS)
   const [demoOpen, setDemoOpen] = useState(false)
   const [demoTab, setDemoTab] = useState('overview')
@@ -138,25 +107,6 @@ export default function Login() {
       setLoading(false)
     }
   }
-
-  useEffect(() => {
-    if (isAdmin) return
-    let cancelled = false
-    ;(async () => {
-      setLandingLoading(true)
-      try {
-        const data = await api.get('/public/landing-stats', { params: { top: 0 } })
-        if (!cancelled && data?.success && data?.stats) setLandingStats(data.stats)
-      } catch {
-        if (!cancelled) setLandingStats(null)
-      } finally {
-        if (!cancelled) setLandingLoading(false)
-      }
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [isAdmin])
 
   useEffect(() => {
     if (isAdmin) return
@@ -223,7 +173,6 @@ export default function Login() {
     )
 
     const ids = ['mx-demo-mini']
-    if (marketing?.trust?.section_enabled !== false) ids.push('mx-trust')
     if (whyCardsForLanding.length > 0) ids.push('mx-why')
     ids.push('mx-steps', 'mx-features')
     if (marketing?.use_case?.section_enabled !== false) {
@@ -248,10 +197,7 @@ export default function Login() {
       }
       obs.disconnect()
     }
-  }, [isAdmin, marketing.use_case?.section_enabled, marketing.trust?.section_enabled, whyCardsForLanding.length])
-
-  const trustStudentsShown = trustCountWithFloor(landingStats?.students_managed, TRUST_STUDENTS_FLOOR)
-  const trustTeachersShown = trustCountWithFloor(landingStats?.instructor_count, TRUST_INSTRUCTORS_FLOOR)
+  }, [isAdmin, marketing.use_case?.section_enabled, whyCardsForLanding.length])
 
   const closeLoginModal = () => setLoginModalOpen(false)
 
@@ -434,10 +380,8 @@ export default function Login() {
                 <div className="grid grid-cols-3 gap-2">
                   <div className="rounded-xl bg-black/35 border border-white/10 px-2 py-2">
                     <div className="text-[10px] text-gray-500">{m.mini_preview.col1_label}</div>
-                    <div
-                      className={`text-sm font-semibold text-white tabular-nums ${landingLoading ? 'motion-safe:animate-pulse' : ''}`}
-                    >
-                      {trustPlusCount(trustStudentsShown)}
+                    <div className="text-sm font-semibold text-white tabular-nums">
+                      {m.mini_preview.col1_value || '24'}
                     </div>
                   </div>
                   <div className="rounded-xl bg-black/35 border border-white/10 px-2 py-2">
@@ -516,36 +460,6 @@ export default function Login() {
               {marketplaceCtaLabel}
             </Link>
           </section>
-
-          {m.trust?.section_enabled !== false ? (
-          <section id="mx-trust" className="space-y-4 scroll-mt-8">
-            <div className="text-xs uppercase tracking-wider text-gray-500 font-semibold">{m.trust.heading}</div>
-            <div className="grid sm:grid-cols-3 gap-3">
-              <div className="rounded-2xl border border-white/10 bg-surface-2/80 backdrop-blur-sm p-4 sm:p-5">
-                <div
-                  className={`text-sm text-gray-200 leading-snug font-medium tabular-nums ${landingLoading ? 'motion-safe:animate-pulse' : ''}`}
-                >
-                  {trustPlusCount(trustStudentsShown)} {m.trust.students_suffix}
-                </div>
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-surface-2/80 backdrop-blur-sm p-4 sm:p-5">
-                <div
-                  className={`text-sm text-gray-200 leading-snug font-medium tabular-nums ${landingLoading ? 'motion-safe:animate-pulse' : ''}`}
-                >
-                  {trustPlusCount(trustTeachersShown)} {m.trust.instructors_suffix}
-                </div>
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-surface-2/80 backdrop-blur-sm p-4 sm:p-5">
-                <div
-                  className={`text-sm text-gray-200 leading-snug font-medium ${landingLoading ? 'motion-safe:animate-pulse' : ''}`}
-                >
-                  {upliftLine(landingStats?.attendance_uplift_percent, landingLoading)}
-                </div>
-                <div className="text-[11px] text-gray-500 mt-1">{m.trust.attendance_footnote}</div>
-              </div>
-            </div>
-          </section>
-          ) : null}
 
           {whyCardsForLanding.length > 0 ? (
           <section id="mx-why" className="space-y-4 scroll-mt-8">
