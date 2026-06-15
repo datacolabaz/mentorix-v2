@@ -22,7 +22,6 @@ import { DEFAULT_SUBSCRIPTION_PLANS, planPriceLabel } from '../../constants/subs
 
 const TRUST_STUDENTS_FLOOR = 100
 const TRUST_INSTRUCTORS_FLOOR = 15
-const TRUST_SMS_FLOOR = 500
 
 function scrollToId(id) {
   const el = document.getElementById(id)
@@ -253,7 +252,6 @@ export default function Login() {
 
   const trustStudentsShown = trustCountWithFloor(landingStats?.students_managed, TRUST_STUDENTS_FLOOR)
   const trustTeachersShown = trustCountWithFloor(landingStats?.instructor_count, TRUST_INSTRUCTORS_FLOOR)
-  const trustSmsShown = trustCountWithFloor(landingStats?.sms_sent, TRUST_SMS_FLOOR)
 
   const closeLoginModal = () => setLoginModalOpen(false)
 
@@ -483,30 +481,6 @@ export default function Login() {
               </div>
             </div>
           </header>
-
-          <div
-            className={`rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs sm:text-sm text-gray-400 ${landingLoading ? 'motion-safe:animate-pulse' : ''}`}
-            aria-label="Platform statistikası"
-          >
-            <span>
-              <span className="font-semibold text-white tabular-nums">{trustPlusCount(trustTeachersShown)}</span>{' '}
-              müəllim
-            </span>
-            <span className="text-gray-600 hidden sm:inline" aria-hidden>
-              ·
-            </span>
-            <span>
-              <span className="font-semibold text-white tabular-nums">{trustPlusCount(trustStudentsShown)}</span>{' '}
-              tələbə idarə edilir
-            </span>
-            <span className="text-gray-600 hidden sm:inline" aria-hidden>
-              ·
-            </span>
-            <span>
-              <span className="font-semibold text-white tabular-nums">{trustPlusCount(trustSmsShown)}</span> SMS
-              göndərildi
-            </span>
-          </div>
 
           <section
             id="mx-marketplace"
