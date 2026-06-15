@@ -11,13 +11,7 @@ import { postAuthNavigate } from '../../lib/postAuth'
 const inputClass =
   'w-full bg-surface-1 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-primary/40'
 
-const SIGNUP_ROLES = [
-  { key: 'student', label: 'Tələbə' },
-  { key: 'instructor', label: 'Müəllim' },
-  { key: 'course', label: 'Kurs' },
-]
-
-const LOGIN_ROLES = [
+const AUTH_ROLE_OPTIONS = [
   { key: 'instructor', label: 'Müəllim' },
   { key: 'student', label: 'Tələbə' },
   { key: 'course', label: 'Kurs' },
@@ -421,7 +415,7 @@ export default function InstructorEmailAuth({ onSuccess }) {
           </form>
 
           <RolePills
-            roles={LOGIN_ROLES}
+            roles={AUTH_ROLE_OPTIONS}
             role={loginRole}
             onRole={setLoginRole}
             label="Hansı hesabla daxil olursunuz?"
@@ -446,7 +440,12 @@ export default function InstructorEmailAuth({ onSuccess }) {
       </div>
       ) : (
       <div className="space-y-4">
-          <RolePills roles={SIGNUP_ROLES} role={signupRole} onRole={setSignupRole} />
+          <RolePills
+            roles={AUTH_ROLE_OPTIONS}
+            role={signupRole}
+            onRole={setSignupRole}
+            label="Hansı rol ilə qeydiyyatdan keçirsiniz?"
+          />
 
           <GoogleSignInButton
             key="signup-google"
