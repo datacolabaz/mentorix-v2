@@ -148,6 +148,17 @@ async function getOperatorInventoryFromSettings() {
   };
 }
 
+function isPayriffConfigured() {
+  return Boolean(
+    String(
+      process.env.PAYRIFF_SECRET_KEY ||
+        process.env.PAYRIFF_API_SECRET ||
+        process.env.PAYRIFF_KEY ||
+        '',
+    ).trim(),
+  );
+}
+
 async function getBillingConfig() {
   const [manual_transfer_account, sms_packs, storage_packs, operator] = await Promise.all([
     getManualTransferAccount(),
@@ -155,7 +166,13 @@ async function getBillingConfig() {
     getStoragePacks(),
     getOperatorInventoryFromSettings(),
   ]);
-  return { manual_transfer_account, sms_packs, storage_packs, ...operator };
+  return {
+    manual_transfer_account,
+    sms_packs,
+    storage_packs,
+    payriff_enabled: isPayriffConfigured(),
+    ...operator,
+  };
 }
 
 async function adminGetBillingSettings() {

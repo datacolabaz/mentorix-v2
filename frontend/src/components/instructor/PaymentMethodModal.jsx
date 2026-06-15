@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Modal from '../common/Modal'
 import Button from '../common/Button'
 import { formatAzn } from '../../lib/pricing'
@@ -13,8 +13,14 @@ export default function PaymentMethodModal({
   onConfirm,
   busy = false,
   manualAccount = '',
+  payriffEnabled = false,
 }) {
-  const [method, setMethod] = useState('card')
+  const defaultMethod = payriffEnabled ? 'card' : 'cash'
+  const [method, setMethod] = useState(defaultMethod)
+
+  useEffect(() => {
+    if (open) setMethod(defaultMethod)
+  }, [open, defaultMethod])
 
   async function handleConfirm() {
     await onConfirm?.(method)
@@ -39,9 +45,11 @@ export default function PaymentMethodModal({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <button
             type="button"
-            onClick={() => setMethod('card')}
+            disabled={!payriffEnabled}
+            onClick={() => payriffEnabled && setMethod('card')}
             className={[
               'rounded-2xl border p-4 text-left transition-colors',
+              !payriffEnabled ? 'opacity-50 cursor-not-allowed' : '',
               method === 'card'
                 ? 'border-primary/50 bg-primary/10 ring-1 ring-primary/30'
                 : 'border-[color:var(--border-subtle)] hover:border-primary/25',
@@ -49,7 +57,9 @@ export default function PaymentMethodModal({
           >
             <div className="text-sm font-bold text-token-textMain">Onlayn kart</div>
             <p className="mt-1 text-[11px] leading-relaxed text-token-textMuted">
-              Payriff ilə təhlükəsiz ödəniş. Uğurlu ödənişdən sonra avtomatik aktivləşir.
+              {payriffEnabled
+                ? 'Payriff ilə təhlükəsiz ödəniş. Uğurlu ödənişdən sonra avtomatik aktivləşir.'
+                : 'Hazırda aktiv deyil — köçürmə ilə ödəyin.'}
             </p>
           </button>
           <button

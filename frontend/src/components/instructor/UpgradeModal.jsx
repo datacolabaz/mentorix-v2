@@ -21,6 +21,7 @@ export default function UpgradeModal({ open, onClose, onSelectPlan, currentPlan 
   const plansQ = useSubscriptionPlans()
   const billingConfigQ = useBillingConfig()
   const manualAccount = billingConfigQ.data?.manual_transfer_account || ''
+  const payriffEnabled = Boolean(billingConfigQ.data?.payriff_enabled)
   const plans = Array.isArray(plansQ.data) ? plansQ.data : []
   const curRank = planRank(currentPlan)
 
@@ -167,6 +168,7 @@ export default function UpgradeModal({ open, onClose, onSelectPlan, currentPlan 
         subtitle={checkout?.title ? `Seçim: ${checkout.title}` : undefined}
         amountAzn={checkout?.amountAzn}
         manualAccount={manualAccount}
+        payriffEnabled={payriffEnabled}
         busy={busy}
         onConfirm={confirmCheckout}
       />

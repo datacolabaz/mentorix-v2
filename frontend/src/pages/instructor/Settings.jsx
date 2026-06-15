@@ -65,6 +65,7 @@ export default function InstructorSettings() {
   const billing = billingQ.data || null
   const billingConfigQ = useBillingConfig()
   const manualAccount = billingConfigQ.data?.manual_transfer_account || ''
+  const payriffEnabled = Boolean(billingConfigQ.data?.payriff_enabled)
   const smsPacks = Array.isArray(billingConfigQ.data?.sms_packs) ? billingConfigQ.data.sms_packs : []
   const storagePacks = Array.isArray(billingConfigQ.data?.storage_packs)
     ? billingConfigQ.data.storage_packs
@@ -1341,6 +1342,7 @@ export default function InstructorSettings() {
         subtitle={checkout?.title ? `Seçim: ${checkout.title}` : undefined}
         amountAzn={checkout?.amountAzn}
         manualAccount={manualAccount}
+        payriffEnabled={payriffEnabled}
         busy={planBusy}
         onConfirm={confirmCheckout}
       />
