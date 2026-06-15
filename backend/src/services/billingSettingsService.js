@@ -233,6 +233,7 @@ async function adminUpdateBillingSettings({
 
 module.exports = {
   getSetting,
+  setSetting,
   getManualTransferAccount,
   getSmsPacks,
   findSmsPack,
