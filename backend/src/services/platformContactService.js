@@ -1,7 +1,21 @@
-const { getSetting, setSetting } = require('./billingSettingsService');
+const db = require('../utils/db');
 
 const SETTING_KEY = 'public_whatsapp_msisdn';
 const DEFAULT_MSISDN = '994553775770';
+
+async function readSetting(key) {
+  const { rows } = await db.query(`SELECT value FROM billing_settings WHERE key = $1 LIMIT 1`, [key]);
+  return rows[0]?.value ?? null;
+}
+
+async function writeSetting(key, value) {
+  await db.query(
+    `INSERT INTO billing_settings (key, value, updated_at)
+     VALUES ($1, $2, NOW())
+     ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()`,
+    [key, String(value)],
+  );
+}
 
 function normalizeMsisdn(raw) {
   let d = String(raw || '').replace(/\D/g, '');
@@ -23,7 +37,7 @@ function buildWhatsAppUrl(msisdn) {
 }
 
 async function resolveMsisdn() {
-  const raw = await getSetting(SETTING_KEY);
+  const raw = await readSetting(SETTING_KEY);
   const d = normalizeMsisdn(raw);
   return d.length >= 12 ? d : DEFAULT_MSISDN;
 }
@@ -38,7 +52,7 @@ async function getPublicPlatformContact() {
 }
 
 async function adminGetPlatformContact() {
-  const stored = await getSetting(SETTING_KEY);
+  const stored = await readSetting(SETTING_KEY);
   const contact = await getPublicPlatformContact();
   return {
     whatsapp_phone: formatPhoneDisplay(contact.whatsapp_msisdn),
@@ -58,7 +72,7 @@ async function adminUpdatePlatformContact({ whatsapp_phone, whatsapp_msisdn }) {
     err.statusCode = 400;
     throw err;
   }
-  await setSetting(SETTING_KEY, d);
+  await writeSetting(SETTING_KEY, d);
   return adminGetPlatformContact();
 }
 
