@@ -13,10 +13,10 @@ export function defaultLoginMarketingPayload() {
   return {
     version: 1,
     hero: {
-      pill: 'Mentorix — müəllim və kurs idarəetmə platforması',
-      headline: 'Tələbə idarəetməsi, imtahan, tapşırıq və analitika — bir yerdə',
+      pill: 'Müəllimlər üçün — Mentorix',
+      headline: 'Tələbə idarəetməsi, imtahan və ödəniş — bir paneldə',
       subheadline:
-        'Tələbələri idarə edin, imtahanlar hazırlayın, AI ilə yoxlayın, nəticələri analiz edin və ödənişləri izləyin. SMS bildirişləri, müəllim axtarışı və kurs idarəetməsi daxildir.',
+        'Müəllimlər üçün tələbə idarəetmə sistemi — ödənişi izlə, SMS göndər, qrafiki qur',
       primary_cta_label: 'Pulsuz başla (14 günlük sınaq)',
       marketplace_cta_label: 'Müəllim / Təlimçi tap (Xəritə ilə)',
       secondary_how: 'Necə işləyir?',
@@ -26,7 +26,7 @@ export function defaultLoginMarketingPayload() {
     mini_preview: {
       title: 'İdarə paneli (prevyu)',
       badge: 'bu gün',
-      col1_label: 'Tələbələr',
+      col1_label: 'Platformada tələbə',
       col2_label: 'Bu ay',
       col2_value: 'Ödənişlər',
       col3_label: 'SMS',

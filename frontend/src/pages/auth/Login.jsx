@@ -17,9 +17,12 @@ import {
   MENTORIX_SEO_TITLE,
 } from '../../lib/mentorixPublicMarketing'
 import { postAuthNavigate } from '../../lib/postAuth'
+import LandingDemoActivityChart from '../../components/landing/LandingDemoActivityChart'
+import { DEFAULT_SUBSCRIPTION_PLANS, planPriceLabel } from '../../constants/subscriptionPlans'
 
 const TRUST_STUDENTS_FLOOR = 100
 const TRUST_INSTRUCTORS_FLOOR = 15
+const TRUST_SMS_FLOOR = 500
 
 function scrollToId(id) {
   const el = document.getElementById(id)
@@ -81,6 +84,7 @@ export default function Login() {
   const landingSectionSeenRef = useRef(new Set())
   const [landingLoading, setLandingLoading] = useState(!isAdmin)
   const [landingStats, setLandingStats] = useState(null)
+  const [publicPlans, setPublicPlans] = useState(DEFAULT_SUBSCRIPTION_PLANS)
   const [demoOpen, setDemoOpen] = useState(false)
   const [demoTab, setDemoTab] = useState('overview')
   const [demoPaneBusy, setDemoPaneBusy] = useState(false)
@@ -148,6 +152,23 @@ export default function Login() {
         if (!cancelled) setLandingStats(null)
       } finally {
         if (!cancelled) setLandingLoading(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [isAdmin])
+
+  useEffect(() => {
+    if (isAdmin) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const d = await api.get('/public/subscription-plans')
+        const plans = (Array.isArray(d?.plans) ? d.plans : []).filter(Boolean)
+        if (!cancelled && plans.length) setPublicPlans(plans)
+      } catch {
+        /* default plans */
       }
     })()
     return () => {
@@ -232,6 +253,7 @@ export default function Login() {
 
   const trustStudentsShown = trustCountWithFloor(landingStats?.students_managed, TRUST_STUDENTS_FLOOR)
   const trustTeachersShown = trustCountWithFloor(landingStats?.instructor_count, TRUST_INSTRUCTORS_FLOOR)
+  const trustSmsShown = trustCountWithFloor(landingStats?.sms_sent, TRUST_SMS_FLOOR)
 
   const closeLoginModal = () => setLoginModalOpen(false)
 
@@ -302,7 +324,46 @@ export default function Login() {
   return (
     <div className="min-h-[100svh] w-full min-w-0 max-w-full overflow-x-hidden bg-[#0b0b0b]">
       {!isAdmin ? (
-        <div className="w-full max-w-5xl mx-auto px-4 pt-10 sm:pt-14 pb-8 space-y-12 sm:space-y-16 min-w-0 box-border overflow-x-hidden">
+        <>
+          <nav
+            className="sticky top-0 z-50 border-b border-white/10 bg-[#0b0b0b]/92 backdrop-blur-md supports-[backdrop-filter]:bg-[#0b0b0b]/80"
+            aria-label="Əsas naviqasiya"
+          >
+            <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                className="shrink-0 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+              >
+                <Brand size="md" imgClassName="h-8 w-auto max-w-[120px]" />
+              </button>
+              <div className="flex items-center gap-1 sm:gap-5 text-xs sm:text-sm font-semibold">
+                <button
+                  type="button"
+                  onClick={() => scrollToId('mx-features')}
+                  className="text-gray-300 hover:text-white px-2 py-1.5 rounded-lg hover:bg-white/5"
+                >
+                  Xüsusiyyətlər
+                </button>
+                <button
+                  type="button"
+                  onClick={() => scrollToId('mx-pricing')}
+                  className="text-gray-300 hover:text-white px-2 py-1.5 rounded-lg hover:bg-white/5"
+                >
+                  Qiymət
+                </button>
+                <button
+                  type="button"
+                  onClick={() => openLoginModal('nav')}
+                  className="rounded-lg bg-primary/15 border border-primary/35 text-primary px-3 py-1.5 hover:bg-primary/25"
+                >
+                  Daxil ol
+                </button>
+              </div>
+            </div>
+          </nav>
+
+        <div className="w-full max-w-5xl mx-auto px-4 pt-8 sm:pt-10 pb-8 space-y-12 sm:space-y-16 min-w-0 box-border overflow-x-hidden">
           <header className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-8 sm:gap-10">
             <div className="max-w-xl w-full space-y-4 flex flex-col items-center text-center sm:items-start sm:text-left">
               <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] text-gray-300">
@@ -319,44 +380,13 @@ export default function Login() {
                 {MENTORIX_SEO_HOMEPAGE_LINE}
               </p>
               <div className="flex flex-col w-full max-w-xl gap-3">
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <button
-                    type="button"
-                    onClick={() => openLoginModal('hero')}
-                    className="w-full sm:flex-1 inline-flex justify-center items-center text-center rounded-xl bg-primary px-4 sm:px-5 py-3.5 min-h-[52px] text-sm sm:text-base font-bold text-[#041018] shadow-lg shadow-primary/25 hover:brightness-95 leading-snug"
-                  >
-                    {m.hero.primary_cta_label}
-                  </button>
-                  <Link
-                    to="/search"
-                    onClick={() =>
-                      trackEvent('mx_landing_marketplace_cta', { surface: 'hero', action: 'map_search' })
-                    }
-                    className={[
-                      'w-full sm:flex-1 inline-flex justify-center items-center gap-2.5 text-center',
-                      'rounded-xl border-2 border-primary bg-primary/10 px-4 sm:px-5 py-3.5 min-h-[52px]',
-                      'text-sm sm:text-base font-bold text-primary leading-snug',
-                      'shadow-[0_0_24px_rgba(0,229,176,0.3)] hover:bg-primary/20 hover:border-primary',
-                      'hover:shadow-[0_0_36px_rgba(0,229,176,0.45)] transition-all',
-                      'motion-safe:animate-[mx-marketplace-pulse_2.5s_ease-in-out_infinite]',
-                    ].join(' ')}
-                  >
-                    <svg
-                      viewBox="0 0 24 24"
-                      aria-hidden
-                      className="w-5 h-5 sm:w-6 sm:h-6 shrink-0"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2.25"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <circle cx="11" cy="11" r="7" />
-                      <path d="M20 20l-3.5-3.5" />
-                    </svg>
-                    <span>{marketplaceCtaLabel}</span>
-                  </Link>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => openLoginModal('hero')}
+                  className="w-full inline-flex justify-center items-center text-center rounded-xl bg-primary px-4 sm:px-5 py-3.5 min-h-[52px] text-sm sm:text-base font-bold text-[#041018] shadow-lg shadow-primary/25 hover:brightness-95 leading-snug"
+                >
+                  {m.hero.primary_cta_label}
+                </button>
                 <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                   <button
                     type="button"
@@ -453,6 +483,65 @@ export default function Login() {
               </div>
             </div>
           </header>
+
+          <div
+            className={`rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs sm:text-sm text-gray-400 ${landingLoading ? 'motion-safe:animate-pulse' : ''}`}
+            aria-label="Platform statistikası"
+          >
+            <span>
+              <span className="font-semibold text-white tabular-nums">{trustPlusCount(trustTeachersShown)}</span>{' '}
+              müəllim
+            </span>
+            <span className="text-gray-600 hidden sm:inline" aria-hidden>
+              ·
+            </span>
+            <span>
+              <span className="font-semibold text-white tabular-nums">{trustPlusCount(trustStudentsShown)}</span>{' '}
+              tələbə idarə edilir
+            </span>
+            <span className="text-gray-600 hidden sm:inline" aria-hidden>
+              ·
+            </span>
+            <span>
+              <span className="font-semibold text-white tabular-nums">{trustPlusCount(trustSmsShown)}</span> SMS
+              göndərildi
+            </span>
+          </div>
+
+          <section
+            id="mx-marketplace"
+            className="scroll-mt-24 rounded-2xl border border-primary/25 bg-gradient-to-br from-primary/10 via-[#0e1412] to-[#0b0b0b] p-6 sm:p-8 space-y-4"
+          >
+            <div className="text-xs uppercase tracking-wider text-primary/90 font-semibold">
+              Valideynlər və tələbələr üçün
+            </div>
+            <h2 className="text-lg sm:text-xl font-semibold text-white">Müəllim və təlimçi tapın</h2>
+            <p className="text-sm text-gray-400 leading-relaxed max-w-2xl">
+              Fənn, rayon və dərs formatına görə xəritədə axtarış edin — uyğun müəllimlə birbaşa əlaqə saxlayın.
+            </p>
+            <Link
+              to="/search"
+              onClick={() =>
+                trackEvent('mx_landing_marketplace_cta', { surface: 'marketplace_section', action: 'map_search' })
+              }
+              className="inline-flex w-full sm:w-auto justify-center items-center gap-2 rounded-xl border-2 border-primary bg-primary/10 px-5 py-3.5 min-h-[48px] text-sm font-bold text-primary hover:bg-primary/20 transition-colors"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                aria-hidden
+                className="w-5 h-5 shrink-0"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.25"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <circle cx="11" cy="11" r="7" />
+                <path d="M20 20l-3.5-3.5" />
+              </svg>
+              {marketplaceCtaLabel}
+            </Link>
+          </section>
 
           {m.trust?.section_enabled !== false ? (
           <section id="mx-trust" className="space-y-4 scroll-mt-8">
@@ -559,6 +648,43 @@ export default function Login() {
           </section>
           ) : null}
 
+          <section id="mx-pricing" className="space-y-4 scroll-mt-24">
+            <div className="text-xs uppercase tracking-wider text-gray-500 font-semibold">Qiymət</div>
+            <p className="text-sm text-gray-400 max-w-2xl">
+              14 günlük pulsuz sınaq ilə başlayın. Paketlər aylıq qiymətlə göstərilir; illik ödənişdə 20% endirim.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              {publicPlans.map((p) => (
+                <div
+                  key={p.id}
+                  className={[
+                    'rounded-2xl border p-4 space-y-2',
+                    p.highlight
+                      ? 'border-primary/40 bg-primary/5 shadow-[0_0_40px_-12px_rgba(0,229,176,0.35)]'
+                      : 'border-white/10 bg-[#121212]/90',
+                  ].join(' ')}
+                >
+                  <div className="text-sm font-bold text-white">{p.title}</div>
+                  <div className="text-lg font-semibold text-primary tabular-nums">
+                    {Number(p.price_azn) > 0 ? planPriceLabel(p) : 'Pulsuz'}
+                  </div>
+                  <ul className="text-[11px] text-gray-400 space-y-1">
+                    {(p.items || []).slice(0, 3).map((line) => (
+                      <li key={line}>• {line}</li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={() => openLoginModal('pricing')}
+              className="inline-flex rounded-xl bg-primary px-5 py-3 text-sm font-bold text-[#041018] hover:brightness-95"
+            >
+              {m.hero.primary_cta_label}
+            </button>
+          </section>
+
           <section id="mx-faq" className="space-y-4 scroll-mt-8">
             <div className="text-xs uppercase tracking-wider text-gray-500 font-semibold">{m.faq.heading}</div>
             <div className="rounded-2xl border border-white/10 bg-surface-2/70 divide-y divide-white/10">
@@ -611,6 +737,7 @@ export default function Login() {
 
           <PublicSeoFooter className="rounded-none sm:rounded-2xl overflow-hidden" />
         </div>
+        </>
       ) : null}
 
       {!isAdmin && loginModalOpen ? (
@@ -835,24 +962,7 @@ export default function Login() {
                           </div>
                         ))}
                       </div>
-                      <div className="rounded-xl border border-white/10 bg-[#151515] p-3 space-y-2 overflow-hidden">
-                        <div className="text-xs font-semibold text-gray-200">Bu ay — yüklənmə ritmi</div>
-                        <div className="flex items-end gap-1.5 h-24 pt-2">
-                          {[40, 65, 35, 80, 55, 90, 48].map((h, i) => (
-                            <div key={i} className="flex-1 flex flex-col justify-end group">
-                              <div
-                                className="w-full rounded-t-md bg-gradient-to-t from-primary/40 to-primary motion-safe:transition-all motion-safe:duration-500 motion-safe:group-hover:brightness-110 min-h-[10px]"
-                                style={{ height: `${h}%` }}
-                              />
-                            </div>
-                          ))}
-                        </div>
-                        <div className="flex justify-between text-[10px] text-gray-500">
-                          <span>Həftə 1</span>
-                          <span>aktivlik</span>
-                          <span>Həftə 7</span>
-                        </div>
-                      </div>
+                      <LandingDemoActivityChart />
                     </>
                   ) : null}
 
