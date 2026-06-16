@@ -3,7 +3,6 @@ const { getActivePlansMap } = require('./subscriptionPlansService');
 const { higherPaidPlansLabel } = require('./billingAlertHelpers');
 const { normalizePlanSlug } = require('../config/plans');
 const getCurrentPlan = require('./billingGetCurrentPlan');
-const { getActivePlansMap } = require('./subscriptionPlansService');
 const { canonicalStudentPhone, STUDENT_CONTACT_PHONE_SQL } = require('../utils/studentPhone');
 
 const STUDENT_LIMIT_MESSAGE = 'Bu müəllimin pulsuz tələbə limiti dolub.';
