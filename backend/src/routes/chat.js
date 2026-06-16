@@ -1,6 +1,5 @@
 const router = require('express').Router();
 const { authenticate, authorize } = require('../middleware/auth');
-const { enforceActiveSubscription } = require('../middleware/entitlements');
 const {
   postOpenRoom,
   getMessages,
@@ -15,11 +14,11 @@ router.get(
   getCapabilities,
 );
 
+// Qrup və tapşırıq çatı bütün paketlərdə (SADƏ daxil) aktivdir; fərdi çat plan yoxlaması chatService-dədir.
 router.post(
   '/rooms/open',
   authenticate,
   authorize('instructor', 'student'),
-  enforceActiveSubscription,
   postOpenRoom,
 );
 
@@ -27,7 +26,6 @@ router.get(
   '/rooms/:roomId/messages',
   authenticate,
   authorize('instructor', 'student'),
-  enforceActiveSubscription,
   getMessages,
 );
 
@@ -35,7 +33,6 @@ router.post(
   '/rooms/:roomId/messages',
   authenticate,
   authorize('instructor', 'student'),
-  enforceActiveSubscription,
   postMessage,
 );
 

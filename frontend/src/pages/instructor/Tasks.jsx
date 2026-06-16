@@ -510,7 +510,6 @@ export default function InstructorTasks() {
                     <Button
                       size="sm"
                       variant="secondary"
-                      disabled={blocked}
                       onClick={() =>
                         setChatTarget({
                           kind: 'assignment',

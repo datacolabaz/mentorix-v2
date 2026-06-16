@@ -18,6 +18,13 @@ function fmtTime(iso) {
   }
 }
 
+function mergeMessage(list, nextMsg, replaceId = null) {
+  if (!nextMsg) return list
+  const without = replaceId ? list.filter((m) => m.id !== replaceId) : list
+  if (without.some((m) => m.id === nextMsg.id)) return without
+  return [...without, nextMsg]
+}
+
 /**
  * Slack-style contextual chat panel (group / assignment / direct).
  */
@@ -39,6 +46,7 @@ export default function ChatPanel({
   const [sending, setSending] = useState(false)
   const [err, setErr] = useState(null)
   const listRef = useRef(null)
+  const inputRef = useRef(null)
   const pollRef = useRef(null)
 
   const scrollToBottom = useCallback(() => {
@@ -114,25 +122,62 @@ export default function ChatPanel({
     scrollToBottom()
   }, [messages.length, scrollToBottom])
 
-  async function onSend(e) {
-    e?.preventDefault?.()
-    const body = draft.trim()
-    if (!body || !room?.id || sending) return
-    setSending(true)
-    setErr(null)
-    try {
-      const msg = await sendChatMessage(room.id, body)
+  const onSend = useCallback(
+    async (e) => {
+      e?.preventDefault?.()
+      const body = draft.trim()
+      if (!body || !room?.id || sending) return
+
+      const optimisticId = `optimistic-${Date.now()}`
+      const optimisticMsg = {
+        id: optimisticId,
+        room_id: room.id,
+        sender_id: user?.id,
+        sender_name: user?.full_name || null,
+        sender_role: user?.role || null,
+        body,
+        created_at: new Date().toISOString(),
+      }
+
       setDraft('')
-      if (msg) setMessages((prev) => [...prev, msg])
-      else await loadMessages(room.id, { silent: true })
-    } catch (e2) {
-      setErr(e2?.message || 'Göndərilmədi')
-    } finally {
-      setSending(false)
-    }
-  }
+      setErr(null)
+      setMessages((prev) => mergeMessage(prev, optimisticMsg))
+      requestAnimationFrame(() => scrollToBottom())
+      setSending(true)
+
+      try {
+        const msg = await sendChatMessage(room.id, body)
+        const serverMsg = msg?.id
+          ? msg
+          : {
+              ...optimisticMsg,
+              id: msg?.id || optimisticId,
+            }
+        setMessages((prev) => mergeMessage(prev, serverMsg, optimisticId))
+        requestAnimationFrame(() => scrollToBottom())
+      } catch (e2) {
+        setMessages((prev) => prev.filter((m) => m.id !== optimisticId))
+        setDraft(body)
+        setErr(e2?.message || 'Göndərilmədi')
+      } finally {
+        setSending(false)
+        inputRef.current?.focus()
+      }
+    },
+    [draft, room?.id, sending, scrollToBottom, user?.full_name, user?.id, user?.role],
+  )
+
+  const onInputKeyDown = useCallback(
+    (e) => {
+      if (e.key !== 'Enter' || e.shiftKey) return
+      e.preventDefault()
+      void onSend(e)
+    },
+    [onSend],
+  )
 
   const panelTitle = title || room?.title || 'Çat'
+  const hasMessages = messages.length > 0
 
   return (
     <Modal open={open} onClose={onClose} title={panelTitle} size="lg" scrollBody>
@@ -147,10 +192,10 @@ export default function ChatPanel({
           ref={listRef}
           className="flex-1 min-h-[280px] max-h-[min(52vh,480px)] overflow-y-auto rounded-xl border border-white/10 bg-black/20 px-3 py-3 space-y-3"
         >
-          {loading && !messages.length ? (
+          {loading && !hasMessages ? (
             <p className="text-sm text-gray-500 text-center py-8">Yüklənir…</p>
           ) : null}
-          {!loading && !messages.length ? (
+          {!loading && !hasMessages ? (
             <p className="text-sm text-gray-500 text-center py-8">Hələ mesaj yoxdur. İlk mesajı siz yazın.</p>
           ) : null}
           {messages.map((m) => {
@@ -180,14 +225,16 @@ export default function ChatPanel({
 
         <form onSubmit={onSend} className="mt-4 flex gap-2 items-end">
           <textarea
+            ref={inputRef}
             className="flex-1 min-h-[44px] max-h-32 resize-y rounded-xl border border-white/10 bg-[#13112e] px-3 py-2.5 text-sm text-white outline-none focus:border-primary/40"
             placeholder="Mesaj yazın…"
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={onInputKeyDown}
             rows={2}
             disabled={!room?.id || loading}
           />
-          <Button type="submit" loading={sending} disabled={!room?.id || loading || !draft.trim()}>
+          <Button type="submit" loading={sending} disabled={!room?.id || loading || sending || !draft.trim()}>
             Göndər
           </Button>
         </form>

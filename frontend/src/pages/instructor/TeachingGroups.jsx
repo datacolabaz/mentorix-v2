@@ -421,7 +421,6 @@ export default function InstructorTeachingGroups() {
                                 <button
                                   type="button"
                                   className={[groupActionBtnCls, 'text-emerald-400'].join(' ')}
-                                  disabled={blocked}
                                   onClick={() =>
                                     setChatTarget({
                                       kind: 'group',
@@ -559,7 +558,6 @@ export default function InstructorTeachingGroups() {
                                 <button
                                   type="button"
                                   className={[groupActionBtnCls, 'text-emerald-400'].join(' ')}
-                                  disabled={blocked}
                                   onClick={() =>
                                     setChatTarget({
                                       kind: 'group',

@@ -21,5 +21,7 @@ export async function fetchChatMessages(roomId, { before, limit } = {}) {
 
 export async function sendChatMessage(roomId, body) {
   const d = await api.post(`/chat/rooms/${roomId}/messages`, { body })
-  return d?.message || null
+  if (d?.message && typeof d.message === 'object') return d.message
+  if (d?.id && d?.body) return d
+  return null
 }
