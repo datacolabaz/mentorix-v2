@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import api from '../../lib/api'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
@@ -17,7 +18,6 @@ import { normalizeTeachingSubjects } from '../../lib/teachingSubjects'
 import { useBillingStatus } from '../../hooks/useBillingStatus'
 import { useSubscriptionPlans } from '../../hooks/useSubscriptionPlans'
 import { basicTrialExpiredMessage } from '../../lib/subscriptionPlanGuards'
-import ChatPanel from '../../components/chat/ChatPanel'
 
 function formatIncomeAzn(n) {
   const v = Number(n)
@@ -27,6 +27,7 @@ function formatIncomeAzn(n) {
 
 export default function InstructorTeachingGroups() {
   const toast = useToast()
+  const navigate = useNavigate()
   const { theme } = useUiStore()
   const billingQ = useBillingStatus()
   const billing = billingQ.data || null
@@ -45,7 +46,6 @@ export default function InstructorTeachingGroups() {
   const [busy, setBusy] = useState({})
   const [qrOpen, setQrOpen] = useState(false)
   const [qrGroup, setQrGroup] = useState(null)
-  const [chatTarget, setChatTarget] = useState(null)
   const [confirmDelete, setConfirmDelete] = useState(null)
 
   const safeSubjects = useMemo(
@@ -422,11 +422,7 @@ export default function InstructorTeachingGroups() {
                                   type="button"
                                   className={[groupActionBtnCls, 'text-emerald-400'].join(' ')}
                                   onClick={() =>
-                                    setChatTarget({
-                                      kind: 'group',
-                                      groupId: g.id,
-                                      title: `${g.name} — qrup çatı`,
-                                    })
+                                    navigate(`/instructor/chat?groupId=${encodeURIComponent(g.id)}`)
                                   }
                                 >
                                   Çat
@@ -559,11 +555,7 @@ export default function InstructorTeachingGroups() {
                                   type="button"
                                   className={[groupActionBtnCls, 'text-emerald-400'].join(' ')}
                                   onClick={() =>
-                                    setChatTarget({
-                                      kind: 'group',
-                                      groupId: g.id,
-                                      title: `${g.name} — qrup çatı`,
-                                    })
+                                    navigate(`/instructor/chat?groupId=${encodeURIComponent(g.id)}`)
                                   }
                                 >
                                   Çat
@@ -757,17 +749,6 @@ export default function InstructorTeachingGroups() {
           ) : null}
         </div>
       </Modal>
-
-      <ChatPanel
-        open={Boolean(chatTarget)}
-        onClose={() => setChatTarget(null)}
-        kind={chatTarget?.kind}
-        groupId={chatTarget?.groupId}
-        assignmentId={chatTarget?.assignmentId}
-        studentId={chatTarget?.studentId}
-        studentName={chatTarget?.studentName}
-        title={chatTarget?.title}
-      />
     </div>
   )
 }

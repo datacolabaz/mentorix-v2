@@ -62,6 +62,7 @@ export default function InstructorLayout() {
   const [navOpen, setNavOpen] = useState(false)
   const { focusMode, setFocusMode, overlayLock, theme, toggleTheme } = useUiStore()
   const sidebarHidden = focusMode || overlayLock
+  const isChatPage = location.pathname === '/instructor/chat'
   const [limitStatus, setLimitStatus] = useState({ level: null, message: null })
   const [discoverProfileAlert, setDiscoverProfileAlert] = useState(null)
   const [discoverModalOpen, setDiscoverModalOpen] = useState(false)
@@ -639,11 +640,11 @@ export default function InstructorLayout() {
             </div>
           ) : null}
 
-          <div className="instructor-panel-main flex-1 min-h-0 min-w-0 w-full max-w-full overflow-x-hidden">
+          <div className={['instructor-panel-main flex-1 min-h-0 min-w-0 w-full max-w-full overflow-x-hidden', isChatPage ? 'flex flex-col' : ''].join(' ')}>
             <Outlet />
           </div>
 
-          <Footer />
+          {!isChatPage ? <Footer /> : null}
         </div>
       </main>
       </div>

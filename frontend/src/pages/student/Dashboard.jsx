@@ -14,7 +14,6 @@ import Button from '../../components/common/Button'
 import useAuthStore from '../../hooks/useAuth'
 import useUiStore from '../../hooks/useUi'
 import GroupSwitcher from '../../components/student/GroupSwitcher'
-import ChatPanel from '../../components/chat/ChatPanel'
 import { studentEnrollmentDisplay } from '../../lib/participantGroupLabels'
 import { useStudentGroups } from '../../contexts/StudentGroupContext'
 import { withEnrollmentQuery } from '../../lib/studentGroupQuery'
@@ -77,7 +76,6 @@ export default function StudentDashboard() {
   const activeDisplay = studentEnrollmentDisplay(activeEnrollment)
   const [exams, setExams] = useState([])
   const [overview, setOverview] = useState(null)
-  const [chatTarget, setChatTarget] = useState(null)
 
   const pieLabelStyle = useMemo(
     () => ({
@@ -156,11 +154,7 @@ export default function StudentDashboard() {
               variant="secondary"
               className="shrink-0"
               onClick={() =>
-                setChatTarget({
-                  kind: 'group',
-                  groupId: activeEnrollment.group_id,
-                  title: `${activeEnrollment.group_name || activeDisplay.title} — qrup çatı`,
-                })
+                navigate(`/student/chat?groupId=${encodeURIComponent(activeEnrollment.group_id)}`)
               }
             >
               Qrup çatı
@@ -297,14 +291,6 @@ export default function StudentDashboard() {
           </div>
         )}
       </Card>
-
-      <ChatPanel
-        open={Boolean(chatTarget)}
-        onClose={() => setChatTarget(null)}
-        kind={chatTarget?.kind}
-        groupId={chatTarget?.groupId}
-        title={chatTarget?.title}
-      />
     </div>
   )
 }

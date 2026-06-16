@@ -6,7 +6,17 @@ const {
   postMessage,
   getCapabilities,
   streamRoom,
+  getGroups,
+  postAttachment,
 } = require('../controllers/chatController');
+const { uploadChatAttachment } = require('../services/chatAttachmentStorage');
+
+router.get(
+  '/groups',
+  authenticate,
+  authorize('instructor', 'student'),
+  getGroups,
+);
 
 router.get(
   '/capabilities',
@@ -35,6 +45,14 @@ router.post(
   authenticate,
   authorize('instructor', 'student'),
   postMessage,
+);
+
+router.post(
+  '/rooms/:roomId/attachments',
+  authenticate,
+  authorize('instructor', 'student'),
+  uploadChatAttachment.single('file'),
+  postAttachment,
 );
 
 router.get(

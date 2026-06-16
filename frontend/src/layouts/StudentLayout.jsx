@@ -27,6 +27,7 @@ const NAV_GROUPS = [
       { to: '/student', label: 'Proqresim', icon: <NavIcon name="progress" />, end: true },
       { to: '/student/groups', label: 'Qruplarım', icon: <NavIcon name="courses" /> },
       { to: '/student/schedule', label: 'Cədvəlim', icon: <NavIcon name="schedule" /> },
+      { to: '/student/chat', label: 'Çat', icon: <NavIcon name="chat" /> },
       { to: '/student/exams', label: 'İmtahanlarım', icon: <NavIcon name="exams" /> },
       { to: '/student/assignments', label: 'Tapşırıqlarım', icon: <NavIcon name="tasks" />, badgeKey: 'tasks' },
     ],
@@ -63,6 +64,7 @@ function StudentLayoutInner() {
   const { tasksBadge, notifBadge } = useStudentAlerts({ enrollmentId: activeEnrollmentId })
   const mainRef = useRef(null)
   const showMobileSidebar = navOpen && !focusMode
+  const isChatPage = location.pathname === '/student/chat'
 
   const closeNav = () => setNavOpen(false)
 
@@ -311,11 +313,11 @@ function StudentLayoutInner() {
                 <Outlet />
               </div>
             ) : (
-              <div className="min-h-full flex flex-col min-w-0 w-full max-w-full overflow-x-hidden box-border">
-                <div className="student-panel-main flex-1 min-h-0 min-w-0 w-full max-w-full overflow-x-hidden">
+              <div className={['min-h-full flex flex-col min-w-0 w-full max-w-full overflow-x-hidden box-border', isChatPage ? 'h-full' : ''].join(' ')}>
+                <div className={['student-panel-main flex-1 min-h-0 min-w-0 w-full max-w-full overflow-x-hidden', isChatPage ? 'flex flex-col' : ''].join(' ')}>
                   <Outlet />
                 </div>
-                <Footer />
+                {!isChatPage ? <Footer /> : null}
               </div>
             )}
           </main>

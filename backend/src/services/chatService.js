@@ -5,6 +5,7 @@ const { getActivePlansMap } = require('./subscriptionPlansService');
 const { higherPaidPlansLabel } = require('./billingAlertHelpers');
 const { ACTIVE_ENROLLMENT_WHERE } = require('../sql/activeEnrollments');
 const { publishChatMessage } = require('./chatRealtimeHub');
+const { touchUserActivity } = require('./userPresenceService');
 
 const MAX_BODY_LEN = 4000;
 const DEFAULT_LIMIT = 50;
@@ -59,6 +60,8 @@ function serializeMessage(row) {
     sender_name: row.sender_name || null,
     sender_role: row.sender_role || null,
     body: row.body,
+    attachment_url: row.attachment_url || null,
+    attachment_type: row.attachment_type || null,
     created_at: row.created_at ? new Date(row.created_at).toISOString() : null,
   };
 }
@@ -311,7 +314,7 @@ async function listRoomMessages({ roomId, userId, role, before, limitRaw }) {
   params.push(limit);
 
   const { rows } = await db.query(
-    `SELECT m.id, m.room_id, m.sender_id, m.body, m.created_at,
+    `SELECT m.id, m.room_id, m.sender_id, m.body, m.attachment_url, m.attachment_type, m.created_at,
             u.full_name AS sender_name, u.role AS sender_role
      FROM chat_messages m
      JOIN users u ON u.id = m.sender_id
@@ -325,9 +328,21 @@ async function listRoomMessages({ roomId, userId, role, before, limitRaw }) {
   return (rows || []).reverse().map(serializeMessage);
 }
 
-async function sendRoomMessage({ roomId, userId, role, bodyRaw }) {
+async function sendRoomMessage({
+  roomId,
+  userId,
+  role,
+  bodyRaw,
+  attachmentUrl,
+  attachmentType,
+}) {
   const body = String(bodyRaw || '').trim();
-  if (!body) throw httpError('CHAT_BODY_REQUIRED', 400, 'Mesaj boş ola bilməz');
+  const attachment_url = attachmentUrl ? String(attachmentUrl).trim() : null;
+  const attachment_type = attachmentType ? String(attachmentType).trim() : null;
+
+  if (!body && !attachment_url) {
+    throw httpError('CHAT_BODY_REQUIRED', 400, 'Mesaj və ya fayl tələb olunur');
+  }
   if (body.length > MAX_BODY_LEN) {
     throw httpError('CHAT_BODY_TOO_LONG', 400, `Mesaj çox uzundur (maks. ${MAX_BODY_LEN} simvol)`);
   }
@@ -336,10 +351,10 @@ async function sendRoomMessage({ roomId, userId, role, bodyRaw }) {
   await assertRoomAccess(userId, role, room);
 
   const { rows } = await db.query(
-    `INSERT INTO chat_messages (room_id, sender_id, body)
-     VALUES ($1::uuid, $2::uuid, $3)
-     RETURNING id, room_id, sender_id, body, created_at`,
-    [roomId, userId, body],
+    `INSERT INTO chat_messages (room_id, sender_id, body, attachment_url, attachment_type)
+     VALUES ($1::uuid, $2::uuid, $3, $4, $5)
+     RETURNING id, room_id, sender_id, body, attachment_url, attachment_type, created_at`,
+    [roomId, userId, body, attachment_url, attachment_type],
   );
 
   await db.query(`UPDATE chat_rooms SET updated_at = NOW() WHERE id = $1::uuid`, [roomId]);
@@ -357,6 +372,74 @@ async function sendRoomMessage({ roomId, userId, role, bodyRaw }) {
   });
   publishChatMessage(roomId, serialized);
   return serialized;
+}
+
+const GROUP_MEMBER_COUNT_SQL = `
+  (
+    SELECT COUNT(DISTINCT e.student_id)::int
+    FROM enrollments e
+    WHERE e.group_id = ig.id
+      AND e.deleted_at IS NULL
+      AND COALESCE(LOWER(TRIM(e.status)), 'active') = 'active'
+  ) + 1
+`;
+
+const GROUP_ONLINE_COUNT_SQL = `
+  (
+    SELECT COUNT(DISTINCT u.id)::int
+    FROM (
+      SELECT e.student_id AS uid
+      FROM enrollments e
+      WHERE e.group_id = ig.id
+        AND e.deleted_at IS NULL
+        AND COALESCE(LOWER(TRIM(e.status)), 'active') = 'active'
+      UNION
+      SELECT ig.instructor_id AS uid
+    ) members
+    JOIN users u ON u.id = members.uid
+    WHERE u.deleted_at IS NULL
+      AND u.last_activity_at >= NOW() - INTERVAL '5 minutes'
+  )
+`;
+
+async function listGroupChatsForUser(userId, role) {
+  if (role === 'instructor') {
+    const { rows } = await db.query(
+      `SELECT ig.id AS group_id,
+              ig.name AS group_name,
+              ig.join_code,
+              ${GROUP_MEMBER_COUNT_SQL} AS member_count,
+              ${GROUP_ONLINE_COUNT_SQL} AS online_count
+       FROM instructor_groups ig
+       WHERE ig.instructor_id = $1::uuid
+         AND COALESCE(ig.is_system, false) = false
+       ORDER BY ig.name ASC`,
+      [userId],
+    );
+    return rows || [];
+  }
+
+  if (role === 'student') {
+    const { rows } = await db.query(
+      `SELECT ig.id AS group_id,
+              ig.name AS group_name,
+              ig.join_code,
+              u.full_name AS instructor_name,
+              ${GROUP_MEMBER_COUNT_SQL} AS member_count,
+              ${GROUP_ONLINE_COUNT_SQL} AS online_count
+       FROM enrollments e
+       JOIN instructor_groups ig ON ig.id = e.group_id
+       JOIN users u ON u.id = e.instructor_id
+       WHERE e.student_id = $1::uuid
+         AND e.deleted_at IS NULL
+         AND COALESCE(LOWER(TRIM(e.status)), 'active') = 'active'
+       ORDER BY ig.name ASC`,
+      [userId],
+    );
+    return rows || [];
+  }
+
+  return [];
 }
 
 async function getChatCapabilities(instructorId) {
@@ -380,8 +463,10 @@ module.exports = {
   openRoomForUser,
   listRoomMessages,
   sendRoomMessage,
+  listGroupChatsForUser,
   getChatCapabilities,
   assertInstructorDirectChatAllowed,
   getRoomById,
   assertRoomAccess,
+  touchUserActivity,
 };

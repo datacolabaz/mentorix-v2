@@ -133,7 +133,7 @@ export default function ChatPanel({
 
     pollRef.current = setInterval(() => {
       void loadMessages(room.id, { silent: true })
-    }, 15000)
+    }, 3000)
 
     return () => {
       unsubscribe()
@@ -204,20 +204,20 @@ export default function ChatPanel({
     <Modal open={open} onClose={onClose} title={panelTitle} size="lg" scrollBody>
       <div className="flex flex-col min-h-[min(60vh,520px)]">
         {err ? (
-          <div className="mb-3 rounded-xl border border-rose-500/30 bg-rose-500/10 text-rose-100 px-3 py-2 text-sm">
+          <div className="mb-3 rounded-xl border border-rose-500/30 bg-rose-500/10 text-rose-700 dark:text-rose-200 px-3 py-2 text-sm">
             {err}
           </div>
         ) : null}
 
         <div
           ref={listRef}
-          className="flex-1 min-h-[280px] max-h-[min(52vh,480px)] overflow-y-auto rounded-xl border border-white/10 bg-black/20 px-3 py-3 space-y-3"
+          className="flex-1 min-h-[280px] max-h-[min(52vh,480px)] overflow-y-auto rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceMain px-3 py-3 space-y-3"
         >
           {loading && !hasMessages ? (
-            <p className="text-sm text-gray-500 text-center py-8">Yüklənir…</p>
+            <p className="text-sm text-token-textMuted text-center py-8">Yüklənir…</p>
           ) : null}
           {!loading && !hasMessages ? (
-            <p className="text-sm text-gray-500 text-center py-8">Hələ mesaj yoxdur. İlk mesajı siz yazın.</p>
+            <p className="text-sm text-token-textMuted text-center py-8">Hələ mesaj yoxdur. İlk mesajı siz yazın.</p>
           ) : null}
           {messages.map((m) => {
             const mine = String(m.sender_id) === String(user?.id)
@@ -227,18 +227,18 @@ export default function ChatPanel({
                   className={[
                     'max-w-[85%] rounded-2xl px-3 py-2 text-sm leading-relaxed',
                     mine
-                      ? 'bg-primary/20 border border-primary/25 text-gray-100'
-                      : 'bg-white/5 border border-white/10 text-gray-200',
+                      ? 'bg-primary/20 border border-primary/30 text-token-textMain'
+                      : 'bg-token-surfaceCard border border-[color:var(--border-subtle)] text-token-textMain',
                     m._pending ? 'opacity-80' : '',
                   ].join(' ')}
                 >
                   {!mine ? (
-                    <div className="text-[10px] font-semibold text-gray-400 mb-1 truncate">
+                    <div className="text-[10px] font-semibold text-token-textMuted mb-1 truncate">
                       {m.sender_name || 'İstifadəçi'}
                     </div>
                   ) : null}
                   <div className="whitespace-pre-wrap break-words">{m.body}</div>
-                  <div className="text-[10px] text-gray-500 mt-1 tabular-nums">
+                  <div className="text-[10px] text-token-textMuted mt-1 tabular-nums">
                     {m._pending ? 'Göndərilir…' : fmtTime(m.created_at)}
                   </div>
                 </div>
@@ -250,7 +250,7 @@ export default function ChatPanel({
         <form onSubmit={onSend} className="mt-4 flex gap-2 items-end">
           <textarea
             ref={inputRef}
-            className="flex-1 min-h-[44px] max-h-32 resize-y rounded-xl border border-white/10 bg-[#13112e] px-3 py-2.5 text-sm text-white outline-none focus:border-primary/40"
+            className="flex-1 min-h-[44px] max-h-32 resize-y rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceMain px-3 py-2.5 text-sm text-token-textMain placeholder:text-token-textMuted outline-none focus:border-primary/40"
             placeholder="Mesaj yazın…"
             value={draft}
             onChange={(e) => setDraft(e.target.value)}

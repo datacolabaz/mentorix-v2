@@ -5,6 +5,11 @@ export async function fetchChatCapabilities() {
   return d?.capabilities || null
 }
 
+export async function fetchChatGroups() {
+  const d = await api.get('/chat/groups')
+  return Array.isArray(d?.groups) ? d.groups : []
+}
+
 export async function openChatRoom(payload) {
   const d = await api.post('/chat/rooms/open', payload)
   return d?.room || null
@@ -19,9 +24,22 @@ export async function fetchChatMessages(roomId, { before, limit } = {}) {
   return Array.isArray(d?.messages) ? d.messages : []
 }
 
-export async function sendChatMessage(roomId, body) {
-  const d = await api.post(`/chat/rooms/${roomId}/messages`, { body })
+export async function sendChatMessage(roomId, bodyOrPayload) {
+  const payload =
+    typeof bodyOrPayload === 'string' ? { body: bodyOrPayload } : bodyOrPayload || {}
+  const d = await api.post(`/chat/rooms/${roomId}/messages`, payload)
   if (d?.message && typeof d.message === 'object') return d.message
-  if (d?.id && d?.body) return d
+  if (d?.id) return d
   return null
 }
+
+export async function uploadChatAttachment(roomId, file) {
+  const fd = new FormData()
+  fd.append('file', file)
+  const d = await api.post(`/chat/rooms/${roomId}/attachments`, fd, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+  return d || null
+}
+
+export const CHAT_MAX_FILE_BYTES = 5 * 1024 * 1024

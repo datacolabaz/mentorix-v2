@@ -4,7 +4,6 @@ import api from '../../lib/api'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
 import ConfirmDialog from '../../components/common/ConfirmDialog'
-import ChatPanel from '../../components/chat/ChatPanel'
 import { useToast } from '../../components/common/Toast'
 import { useStudentGroups } from '../../contexts/StudentGroupContext'
 import GroupSwitcher from '../../components/student/GroupSwitcher'
@@ -16,7 +15,6 @@ export default function MyGroups() {
   const [overview, setOverview] = useState(null)
   const [leaveBusy, setLeaveBusy] = useState(null)
   const [leaveConfirm, setLeaveConfirm] = useState(null)
-  const [chatTarget, setChatTarget] = useState(null)
   const toast = useToast()
   const navigate = useNavigate()
 
@@ -168,11 +166,7 @@ export default function MyGroups() {
                     size="sm"
                     variant="secondary"
                     onClick={() =>
-                      setChatTarget({
-                        kind: 'group',
-                        groupId: g.group_id,
-                        title: `${g.group_name || display.title} — qrup çatı`,
-                      })
+                      navigate(`/student/chat?groupId=${encodeURIComponent(g.group_id)}`)
                     }
                   >
                     Qrup çatı
@@ -221,13 +215,6 @@ export default function MyGroups() {
         </p>
       )}
 
-      <ChatPanel
-        open={Boolean(chatTarget)}
-        onClose={() => setChatTarget(null)}
-        kind={chatTarget?.kind}
-        groupId={chatTarget?.groupId}
-        title={chatTarget?.title}
-      />
     </div>
   )
 }

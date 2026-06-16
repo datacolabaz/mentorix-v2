@@ -5,11 +5,29 @@ const {
   getChatCapabilities,
   getRoomById,
   assertRoomAccess,
+  listGroupChatsForUser,
+  touchUserActivity,
 } = require('../services/chatService');
 const { subscribeRoom, unsubscribeRoom } = require('../services/chatRealtimeHub');
+const { publicChatAttachmentPath } = require('../services/chatAttachmentStorage');
+
+async function getGroups(req, res) {
+  try {
+    void touchUserActivity(req.user.id);
+    const groups = await listGroupChatsForUser(req.user.id, req.user.role);
+    res.json({ success: true, groups });
+  } catch (err) {
+    res.status(err.statusCode || err.status || 500).json({
+      success: false,
+      message: err.message,
+      code: err.code || 'CHAT_ERROR',
+    });
+  }
+}
 
 async function postOpenRoom(req, res) {
   try {
+    void touchUserActivity(req.user.id);
     const { kind, group_id, assignment_id, student_id, student_name } = req.body || {};
     const room = await openRoomForUser({
       userId: req.user.id,
@@ -32,6 +50,7 @@ async function postOpenRoom(req, res) {
 
 async function getMessages(req, res) {
   try {
+    void touchUserActivity(req.user.id);
     const messages = await listRoomMessages({
       roomId: req.params.roomId,
       userId: req.user.id,
@@ -51,11 +70,14 @@ async function getMessages(req, res) {
 
 async function postMessage(req, res) {
   try {
+    void touchUserActivity(req.user.id);
     const message = await sendRoomMessage({
       roomId: req.params.roomId,
       userId: req.user.id,
       role: req.user.role,
       bodyRaw: req.body?.body,
+      attachmentUrl: req.body?.attachment_url,
+      attachmentType: req.body?.attachment_type,
     });
     res.json({ success: true, message });
   } catch (err) {
@@ -80,10 +102,43 @@ async function getCapabilities(req, res) {
   }
 }
 
+async function postAttachment(req, res) {
+  try {
+    void touchUserActivity(req.user.id);
+    const room = await getRoomById(req.params.roomId);
+    await assertRoomAccess(req.user.id, req.user.role, room);
+
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'Fayl seçilməyib',
+        code: 'CHAT_FILE_REQUIRED',
+      });
+    }
+
+    const url = publicChatAttachmentPath(req.file.filename);
+    const attachment_type = String(req.file.mimetype || '').toLowerCase();
+    res.json({
+      success: true,
+      url,
+      attachment_type,
+      filename: req.file.originalname || req.file.filename,
+    });
+  } catch (err) {
+    const status = err.statusCode || err.status || 500;
+    res.status(status).json({
+      success: false,
+      message: err.message || 'Fayl yüklənmədi',
+      code: err.code || 'CHAT_UPLOAD_ERROR',
+    });
+  }
+}
+
 async function streamRoom(req, res) {
   let listener = null;
   let ping = null;
   try {
+    void touchUserActivity(req.user.id);
     const room = await getRoomById(req.params.roomId);
     await assertRoomAccess(req.user.id, req.user.role, room);
 
@@ -130,9 +185,11 @@ async function streamRoom(req, res) {
 }
 
 module.exports = {
+  getGroups,
   postOpenRoom,
   getMessages,
   postMessage,
+  postAttachment,
   getCapabilities,
   streamRoom,
 };

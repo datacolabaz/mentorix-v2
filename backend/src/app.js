@@ -19,6 +19,7 @@ const { reconcileStorageUsage } = require('./jobs/storageUsageReconciler');
 const { runOrphanFilesReaper } = require('./jobs/orphanFilesReaper');
 
 const { ensureAssignmentsUploadDir } = require('./services/assignmentFileStorage');
+const { CHAT_UPLOAD_DIR } = require('./services/chatAttachmentStorage');
 const uploadsExamsDir = path.join(__dirname, '../uploads/exams');
 const uploadsAssignmentsDir = ensureAssignmentsUploadDir();
 const uploadsCourseLogosDir = path.join(__dirname, '../uploads/course-logos');
@@ -27,6 +28,7 @@ const uploadsInstructorAvatarsDir = path.join(__dirname, '../uploads/instructor-
 fs.mkdirSync(uploadsExamsDir, { recursive: true });
 fs.mkdirSync(uploadsCourseLogosDir, { recursive: true });
 fs.mkdirSync(uploadsInstructorAvatarsDir, { recursive: true });
+fs.mkdirSync(CHAT_UPLOAD_DIR, { recursive: true });
 
 const app = express();
 
@@ -45,6 +47,7 @@ app.use(express.json());
 
 app.use('/api/uploads/exams', express.static(uploadsExamsDir));
 app.use('/api/uploads/assignments', express.static(uploadsAssignmentsDir));
+app.use('/api/uploads/chat', express.static(CHAT_UPLOAD_DIR));
 app.use('/api/uploads/course-logos', express.static(uploadsCourseLogosDir));
 app.get('/api/uploads/instructor-avatars/:filename', servePublicInstructorAvatar);
 
