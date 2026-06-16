@@ -4,6 +4,7 @@ const {
   respondEmailNotVerified,
   isUserEmailVerified,
 } = require('../services/emailVerificationGuard');
+const { touchUserActivity } = require('../services/userPresenceService');
 
 const authenticate = async (req, res, next) => {
   const token = req.headers.authorization?.split(' ')[1];
@@ -21,6 +22,7 @@ const authenticate = async (req, res, next) => {
     }
     const effectiveRole = row?.role_selected === false ? null : (payload.role || row.role);
     req.user = { ...payload, role: effectiveRole };
+    touchUserActivity(payload.id).catch(() => {});
     next();
   } catch {
     res.status(401).json({ success: false, message: 'Token etibarsızdır' });

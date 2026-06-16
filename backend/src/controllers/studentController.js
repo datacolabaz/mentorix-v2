@@ -13,6 +13,7 @@ const {
   resolveEnrollmentScope,
   applyGroupScheduleToEnrollment,
 } = require('../services/studentEnrollmentsService');
+const { mapRowsWithPresence } = require('../services/userPresenceService');
 const { expandStudentsWithParticipantGroups } = require('../services/participantGroupService');
 
 function normInstructorHex(id) {
@@ -39,7 +40,7 @@ const listStudents = async (req, res) => {
     const instructorId =
       req.user.id != null ? String(req.user.id).trim().toLowerCase().replace(/-/g, '') : '';
 
-    const select = `SELECT u.id, u.full_name, u.email,
+    const select = `SELECT u.id, u.full_name, u.email, u.last_activity_at,
               ${STUDENT_CONTACT_PHONE_SQL} AS phone,
               sp.phone_number,
               sp.parent_id, sp.grade,
@@ -117,7 +118,7 @@ const listStudents = async (req, res) => {
        LEFT JOIN referral_sources rs ON rs.id = e.referral_source_id
        LEFT JOIN attendance a ON a.enrollment_id = e.id AND a.attended = TRUE`;
 
-    const group = `GROUP BY u.id, u.full_name, u.email, u.phone, sp.phone_number, sp.parent_id, sp.grade,
+    const group = `GROUP BY u.id, u.full_name, u.email, u.phone, u.last_activity_at, sp.phone_number, sp.parent_id, sp.grade,
                 sp.monthly_fee,
                 sp.parent_name, sp.parent_phone, pu.full_name, pu.phone,
                 e.id, e.billing_type, e.lesson_count, e.billing_cycle, e.lesson_weekdays, e.lesson_times, e.lesson_end_times, e.enrollment_start_date, e.billing_timing, e.payment_plan, e.status, e.enrollment_source,
@@ -136,7 +137,7 @@ const listStudents = async (req, res) => {
          ${group}`,
         [req.user.id],
       );
-      const students = await enrichStudentsWithGroupSchedule(rows);
+      const students = mapRowsWithPresence(await enrichStudentsWithGroupSchedule(rows));
       return res.json({ success: true, students });
     }
 
@@ -157,7 +158,7 @@ const listStudents = async (req, res) => {
          ${group}`,
         [instructorId]
       );
-      let students = await enrichStudentsWithGroupSchedule(rows);
+      let students = mapRowsWithPresence(await enrichStudentsWithGroupSchedule(rows));
       students = await expandStudentsWithParticipantGroups(students, req.user.id);
       return res.json({ success: true, students });
     }
@@ -168,7 +169,7 @@ const listStudents = async (req, res) => {
        WHERE u.role = 'student' AND u.is_active = TRUE
        ${group}`
     );
-    const students = await enrichStudentsWithGroupSchedule(rows);
+    const students = mapRowsWithPresence(await enrichStudentsWithGroupSchedule(rows));
     res.json({ success: true, students });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

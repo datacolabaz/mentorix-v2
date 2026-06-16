@@ -1337,7 +1337,7 @@ const me = async (req, res) => {
   try {
     const { rows } = await db.query(
       `SELECT id, full_name, email, phone, role, phone_verified, phone_verified_at,
-              google_sub, auth_provider, is_active, is_verified, role_selected
+              google_sub, auth_provider, is_active, is_verified, role_selected, last_activity_at
        FROM users WHERE id = $1`,
       [req.user.id],
     );
@@ -1347,7 +1347,8 @@ const me = async (req, res) => {
     const sessionRole = u.role_selected === false ? null : req.user.role;
     const userOut = await enrichUserForClient(u, sessionRole);
     if (u.role_selected === false) userOut.role = null;
-    res.json({ success: true, user: userOut });
+    const { withPresence } = require('../services/userPresenceService');
+    res.json({ success: true, user: withPresence({ ...userOut, last_activity_at: u.last_activity_at }) });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

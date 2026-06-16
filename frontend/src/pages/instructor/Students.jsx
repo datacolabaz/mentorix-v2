@@ -8,6 +8,7 @@ import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
 import ListSkeleton from '../../components/common/ListSkeleton'
 import StatusBadge from '../../components/common/StatusBadge'
+import PresenceDot from '../../components/common/PresenceDot'
 import { useToast } from '../../components/common/Toast'
 import { WEEKDAYS } from './Schedule'
 import { addMinutesToHm, fmtAzBakuLessonRow } from '../../lib/lessonWeekGrid'
@@ -1853,7 +1854,10 @@ export default function InstructorStudents() {
                 className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-amber-500/25 bg-black/20 px-3 py-3"
               >
                 <div className="min-w-0">
-                  <div className="font-semibold text-token-textMain">{s.full_name}</div>
+                  <div className="font-semibold text-token-textMain flex items-center gap-2">
+                    <PresenceDot user={s} size="md" />
+                    {s.full_name}
+                  </div>
                   <div className="text-xs text-token-textMuted mt-0.5">
                     {studentHasContactPhone(s) ? s.phone || s.phone_number : 'Telefon gözlənilir'} •{' '}
                     {resolveStudentGroupLabel(s)} •{' '}
@@ -2048,6 +2052,7 @@ export default function InstructorStudents() {
                             </div>
                             <div className="min-w-0">
                               <div className="font-semibold text-token-textMain truncate flex items-center gap-2">
+                                <PresenceDot user={s} />
                                 {s.full_name}
                                 {isPendingApproval(s) && (
                                   <StatusBadge variant="pending" className="text-[10px]">

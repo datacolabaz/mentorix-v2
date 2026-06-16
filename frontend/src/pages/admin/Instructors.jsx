@@ -4,6 +4,7 @@ import Card from "../../components/common/Card"
 import Button from "../../components/common/Button"
 import Modal from "../../components/common/Modal"
 import { useToast } from "../../components/common/Toast"
+import PresenceDot from "../../components/common/PresenceDot"
 
 const inputClass =
   "w-full border border-[color:var(--border-subtle)] rounded-xl px-4 py-2.5 text-token-textMain text-sm outline-none focus:border-primary/40 bg-token-surfaceCard/60"
@@ -110,7 +111,7 @@ export default function AdminInstructors() {
           <tbody>
             {instructors.map(i => (
               <tr key={i.id} className="border-b border-[color:var(--border-subtle)] hover:bg-black/[0.03] dark:hover:bg-white/[0.04]">
-                <td className="py-3 px-4"><div className="font-semibold text-token-textMain">{i.full_name}</div></td>
+                <td className="py-3 px-4"><div className="font-semibold text-token-textMain flex items-center gap-2"><PresenceDot user={i} />{i.full_name}</div></td>
                 <td className="py-3 px-4 text-token-textMuted text-xs">{i.email || "-"}</td>
                 <td className="py-3 px-4 text-token-textMuted">{i.subject || "-"}</td>
                 <td className="py-3 px-4 text-token-textMuted text-xs">{i.phone || "-"}</td>

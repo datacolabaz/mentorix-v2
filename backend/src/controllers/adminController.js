@@ -16,11 +16,13 @@ const { getOnlinePresenceStats } = require('../services/accessEventService');
 const { SMS_LOGS_MONTHLY_COUNT_SUBQUERY } = require('../sql/adminSmsUsage');
 const { decorateAdminClassRow } = require('../lib/participantGroupLabels');
 
+const { mapRowsWithPresence } = require('../services/userPresenceService');
+
 // Butun muellimler
 const getInstructors = async (req, res) => {
   try {
     const { rows } = await db.query(
-      `SELECT u.id, u.full_name, u.email, u.phone, u.is_active, u.is_verified, u.created_at,
+      `SELECT u.id, u.full_name, u.email, u.phone, u.is_active, u.is_verified, u.created_at, u.last_activity_at,
               (u.password_hash IS NOT NULL) AS has_password,
               (COALESCE(TRIM(u.google_sub::text), '') <> '') AS has_google,
               ip.subject, ip.billing_type,
@@ -49,11 +51,13 @@ const getInstructors = async (req, res) => {
        WHERE u.role = 'instructor' AND u.is_active = TRUE AND u.deleted_at IS NULL
        ORDER BY u.created_at DESC NULLS LAST, u.full_name`
     );
-    const instructors = (rows || []).map((r) => ({
-      ...r,
-      sms_used: Number(r.sms_used_monthly) || 0,
-      sms_limit: r.sms_limit_monthly,
-    }));
+    const instructors = mapRowsWithPresence(
+      (rows || []).map((r) => ({
+        ...r,
+        sms_used: Number(r.sms_used_monthly) || 0,
+        sms_limit: r.sms_limit_monthly,
+      })),
+    );
     res.json({ success: true, instructors });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -345,6 +349,7 @@ const buildStudentListQuery = (filters) => {
       u.is_active,
       u.is_verified,
       u.created_at,
+      u.last_activity_at,
       e.id AS enrollment_id,
       e.status AS enrollment_status,
       e.instructor_id,
@@ -383,7 +388,7 @@ const getStudents = async (req, res) => {
     };
     const { sql, params } = buildStudentListQuery(filters);
     const { rows } = await db.query(sql, params);
-    res.json({ success: true, students: rows });
+    res.json({ success: true, students: mapRowsWithPresence(rows) });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

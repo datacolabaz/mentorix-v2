@@ -14,6 +14,7 @@ import { writeCache } from '../../lib/cache'
 import { BILLING_STATUS_QUERY_KEY, useBillingStatus } from '../../hooks/useBillingStatus'
 import MarketplaceOpportunityCard from '../../components/instructor/MarketplaceOpportunityCard'
 import BasicTrialCountdownBanner from '../../components/instructor/BasicTrialCountdownBanner'
+import PresenceDot from '../../components/common/PresenceDot'
 
 const DEFAULT_DASH = {
   income_this_month: 0,
@@ -501,7 +502,10 @@ export default function InstructorDashboard() {
                 <div key={s.enrollment_id || s.id} className="flex items-center gap-2 sm:gap-3 min-w-0">
                   <span className="text-sm font-bold text-token-textMuted w-5 shrink-0">{i + 1}</span>
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-semibold truncate text-token-textMain">{s.full_name}</div>
+                    <div className="text-sm font-semibold truncate text-token-textMain flex items-center gap-2">
+                      <PresenceDot user={s} />
+                      {s.full_name}
+                    </div>
                     <div className="h-1.5 bg-white/5 border border-[color:var(--border-subtle)] rounded-full mt-1 overflow-hidden">
                       <div
                         className="h-full bg-blue-500 rounded-full transition-all"
@@ -579,7 +583,10 @@ export default function InstructorDashboard() {
                     >
                       <input type="checkbox" checked={quickSelectedIds.includes(String(s.id))} onChange={() => toggleSelected(s.id)} />
                       <div className="min-w-0">
-                        <div className="text-sm font-semibold truncate">{s.full_name}</div>
+                        <div className="text-sm font-semibold truncate flex items-center gap-2">
+                          <PresenceDot user={s} />
+                          {s.full_name}
+                        </div>
                         <div className="text-xs text-gray-500">{s.grade ? `Sinif: ${s.grade}` : '—'}</div>
                       </div>
                     </label>

@@ -1,6 +1,7 @@
 const db = require('../utils/db');
 const { deviceTypeFromRequest } = require('../utils/deviceType');
 const { resolveReferrerSource } = require('../utils/referrerSource');
+const { touchUserActivity } = require('./userPresenceService');
 
 const ALLOWED_EVENTS = new Set([
   'login',
@@ -68,6 +69,10 @@ async function recordAccessEvent(req, payload = {}) {
        VALUES ($1, $2, $3, $4, $5, $6)`,
       [eventType, userId, role, path, deviceType, sessionKey],
     );
+  }
+
+  if (userId && (eventType === 'presence_ping' || eventType === 'login')) {
+    touchUserActivity(userId).catch(() => {});
   }
 }
 
