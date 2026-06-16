@@ -18,6 +18,25 @@ function gbToMb(gb) {
   return Math.max(0, Math.ceil(n * 1024));
 }
 
+function parseMarketingFeatures(raw) {
+  if (Array.isArray(raw)) {
+    return raw.map((x) => String(x || '').trim()).filter(Boolean);
+  }
+  if (typeof raw === 'string') {
+    const s = raw.trim();
+    if (!s) return [];
+    try {
+      const parsed = JSON.parse(s);
+      if (Array.isArray(parsed)) {
+        return parsed.map((x) => String(x || '').trim()).filter(Boolean);
+      }
+    } catch {
+      return s.split('\n').map((x) => x.trim()).filter(Boolean);
+    }
+  }
+  return [];
+}
+
 function normalizeRow(r) {
   const slug = normalizePlanSlug(r.slug);
   const price_azn = Number(r.price_azn || 0) || 0;
@@ -35,6 +54,17 @@ function normalizeRow(r) {
   const documents = r.document_limit == null ? null : Number(r.document_limit);
   const ram_limit_mb = r.ram_limit_mb == null ? null : Number(r.ram_limit_mb);
   const features = Array.isArray(r.features) ? r.features : r.features ? r.features : null;
+  const marketing_features = parseMarketingFeatures(r.marketing_features);
+  const plan_subtitle =
+    r.plan_subtitle == null || String(r.plan_subtitle).trim() === ''
+      ? null
+      : String(r.plan_subtitle).trim();
+  const plan_cta =
+    r.plan_cta == null || String(r.plan_cta).trim() === '' ? null : String(r.plan_cta).trim();
+  const popular_label =
+    r.popular_label == null || String(r.popular_label).trim() === ''
+      ? null
+      : String(r.popular_label).trim();
   return {
     slug,
     title: String(r.title || slug).trim() || slug.toUpperCase(),
@@ -43,13 +73,17 @@ function normalizeRow(r) {
     highlight: Boolean(r.highlight),
     is_active: Boolean(r.is_active),
     features,
+    marketing_features,
+    plan_subtitle,
+    plan_cta,
+    popular_label,
     updated_at: r.updated_at ? new Date(r.updated_at).toISOString() : null,
   };
 }
 
 async function loadPlansFromDb() {
   const { rows } = await db.query(
-    `SELECT slug, title, price_azn, student_limit, document_limit, storage_gb, storage_limit_bytes, sms_limit, exam_limit, homework_limit, ram_limit_mb, features, highlight, is_active, updated_at
+    `SELECT slug, title, price_azn, student_limit, document_limit, storage_gb, storage_limit_bytes, sms_limit, exam_limit, homework_limit, ram_limit_mb, features, marketing_features, plan_subtitle, plan_cta, popular_label, highlight, is_active, updated_at
      FROM subscription_plans
      WHERE is_active = TRUE
      ORDER BY CASE slug WHEN 'basic' THEN 1 WHEN 'pro' THEN 2 WHEN 'growth' THEN 3 WHEN 'premium' THEN 4 WHEN 'business' THEN 4 ELSE 99 END, slug`
@@ -198,7 +232,7 @@ function resolveLimitsFromAdminPayload(payload) {
 
 async function adminListPlans() {
   const { rows } = await db.query(
-    `SELECT slug, title, price_azn, student_limit, document_limit, storage_gb, storage_limit_bytes, sms_limit, exam_limit, homework_limit, ram_limit_mb, features, highlight, is_active, updated_at
+    `SELECT slug, title, price_azn, student_limit, document_limit, storage_gb, storage_limit_bytes, sms_limit, exam_limit, homework_limit, ram_limit_mb, features, marketing_features, plan_subtitle, plan_cta, popular_label, highlight, is_active, updated_at
      FROM subscription_plans
      ORDER BY CASE slug WHEN 'basic' THEN 1 WHEN 'pro' THEN 2 WHEN 'growth' THEN 3 WHEN 'premium' THEN 4 WHEN 'business' THEN 4 ELSE 99 END, slug`
   );
@@ -215,6 +249,10 @@ async function adminListPlans() {
     document_limit: r.document_limit == null ? null : Number(r.document_limit),
     ram_limit_mb: r.ram_limit_mb == null ? null : Number(r.ram_limit_mb),
     features: r.features ?? null,
+    marketing_features: parseMarketingFeatures(r.marketing_features),
+    plan_subtitle: r.plan_subtitle == null ? null : String(r.plan_subtitle),
+    plan_cta: r.plan_cta == null ? null : String(r.plan_cta),
+    popular_label: r.popular_label == null ? null : String(r.popular_label),
     highlight: Boolean(r.highlight),
     is_active: Boolean(r.is_active),
     updated_at: r.updated_at ? new Date(r.updated_at).toISOString() : null,
@@ -347,9 +385,53 @@ async function adminUpsertPlan(payload) {
     }
   }
 
+  let marketing_features;
+  if (Object.prototype.hasOwnProperty.call(payload || {}, 'marketing_features')) {
+    marketing_features = parseMarketingFeatures(payload.marketing_features);
+  } else {
+    const { rows: curMkt } = await db.query(
+      `SELECT marketing_features FROM subscription_plans WHERE slug = $1 LIMIT 1`,
+      [slug]
+    );
+    marketing_features = parseMarketingFeatures(curMkt[0]?.marketing_features);
+  }
+
+  const textOrNull = (v) => {
+    if (v == null || String(v).trim() === '') return null;
+    return String(v).trim();
+  };
+
+  let plan_subtitle;
+  let plan_cta;
+  let popular_label;
+  if (Object.prototype.hasOwnProperty.call(payload || {}, 'plan_subtitle')) {
+    plan_subtitle = textOrNull(payload.plan_subtitle);
+  } else {
+    const { rows: cur } = await db.query(
+      `SELECT plan_subtitle FROM subscription_plans WHERE slug = $1 LIMIT 1`,
+      [slug]
+    );
+    plan_subtitle = textOrNull(cur[0]?.plan_subtitle);
+  }
+  if (Object.prototype.hasOwnProperty.call(payload || {}, 'plan_cta')) {
+    plan_cta = textOrNull(payload.plan_cta);
+  } else {
+    const { rows: cur } = await db.query(`SELECT plan_cta FROM subscription_plans WHERE slug = $1 LIMIT 1`, [slug]);
+    plan_cta = textOrNull(cur[0]?.plan_cta);
+  }
+  if (Object.prototype.hasOwnProperty.call(payload || {}, 'popular_label')) {
+    popular_label = textOrNull(payload.popular_label);
+  } else {
+    const { rows: cur } = await db.query(
+      `SELECT popular_label FROM subscription_plans WHERE slug = $1 LIMIT 1`,
+      [slug]
+    );
+    popular_label = textOrNull(cur[0]?.popular_label);
+  }
+
   await db.query(
-    `INSERT INTO subscription_plans (slug, title, price_azn, student_limit, document_limit, storage_gb, storage_limit_bytes, sms_limit, exam_limit, homework_limit, ram_limit_mb, features, highlight, is_active, updated_at)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12::jsonb,$13,$14,NOW())
+    `INSERT INTO subscription_plans (slug, title, price_azn, student_limit, document_limit, storage_gb, storage_limit_bytes, sms_limit, exam_limit, homework_limit, ram_limit_mb, features, marketing_features, plan_subtitle, plan_cta, popular_label, highlight, is_active, updated_at)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12::jsonb,$13::jsonb,$14,$15,$16,$17,$18,NOW())
      ON CONFLICT (slug) DO UPDATE SET
        title=EXCLUDED.title,
        price_azn=EXCLUDED.price_azn,
@@ -362,6 +444,10 @@ async function adminUpsertPlan(payload) {
        homework_limit=EXCLUDED.homework_limit,
        ram_limit_mb=EXCLUDED.ram_limit_mb,
        features=EXCLUDED.features,
+       marketing_features=EXCLUDED.marketing_features,
+       plan_subtitle=EXCLUDED.plan_subtitle,
+       plan_cta=EXCLUDED.plan_cta,
+       popular_label=EXCLUDED.popular_label,
        highlight=EXCLUDED.highlight,
        is_active=EXCLUDED.is_active,
        updated_at=NOW()`,
@@ -378,6 +464,10 @@ async function adminUpsertPlan(payload) {
       homework_limit == null ? null : Number(homework_limit),
       ram_limit_mb == null ? null : Number(ram_limit_mb),
       features ? JSON.stringify(features) : null,
+      marketing_features.length ? JSON.stringify(marketing_features) : null,
+      plan_subtitle,
+      plan_cta,
+      popular_label,
       highlight,
       is_active,
     ]

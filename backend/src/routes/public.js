@@ -55,6 +55,10 @@ router.get('/subscription-plans', async (_req, res) => {
       highlight: p.highlight,
       items: Array.isArray(p.features) ? p.features : null,
       limits: p.limits,
+      marketing_features: p.marketing_features,
+      plan_subtitle: p.plan_subtitle,
+      plan_cta: p.plan_cta,
+      popular_label: p.popular_label,
     }));
     res.json({ success: true, plans });
   } catch (e) {

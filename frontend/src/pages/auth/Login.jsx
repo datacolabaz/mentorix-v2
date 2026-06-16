@@ -580,7 +580,7 @@ export default function Login() {
                     {meta.subtitle ? (
                       <p className="text-[11px] text-gray-400 mt-0.5">{meta.subtitle}</p>
                     ) : null}
-                    {p.highlight && meta.popularLabel ? (
+                    {meta.popularLabel ? (
                       <p className="text-[11px] font-semibold text-primary mt-1">{meta.popularLabel}</p>
                     ) : null}
                   </div>

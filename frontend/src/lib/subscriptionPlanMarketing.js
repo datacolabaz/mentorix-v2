@@ -1,39 +1,40 @@
-/** Landing və paket kartları üçün marketinq mətnləri (slug: basic, pro, growth, premium). */
+/** Landing və paket kartları üçün marketinq mətnləri (admin paneldən idarə olunur). */
 
 import { planPricingLimitLines } from './subscriptionPlanCopy'
 
-export const PLAN_COMMON_FEATURES = [
-  'Ödəniş izləmə',
-  'İmtahan sistemi',
-  'Tapşırıq sistemi',
-  'Valideyn bildirişləri',
-  'Xəritədə görünmə',
-]
+const FALLBACK_MARKETING_BY_SLUG = {
+  basic: ['Ödəniş izləmə', 'Valideyn bildirişləri', 'Xəritədə görünmə'],
+  pro: ['Ödəniş izləmə', 'Valideyn bildirişləri', 'Xəritədə görünmə'],
+  growth: ['Ödəniş izləmə', 'Valideyn bildirişləri', 'Xəritədə görünmə', 'Ətraflı hesabatlar'],
+  premium: [
+    'Ödəniş izləmə',
+    'Valideyn bildirişləri',
+    'Xəritədə görünmə',
+    'Ətraflı hesabatlar',
+    'Prioritet texniki dəstək',
+  ],
+}
 
-const PLAN_META = {
+const FALLBACK_META_BY_SLUG = {
   basic: {
     subtitle: '14 günlük pulsuz sınaq',
     popularLabel: null,
     cta: '14 günlük sınağa başla',
-    extraFeatures: [],
   },
   pro: {
     subtitle: null,
     popularLabel: '⭐ Ən populyar',
     cta: 'Standart seç',
-    extraFeatures: [],
   },
   growth: {
     subtitle: null,
     popularLabel: null,
     cta: 'Professional seç',
-    extraFeatures: ['Ətraflı hesabatlar'],
   },
   premium: {
     subtitle: null,
     popularLabel: null,
     cta: 'Premium seç',
-    extraFeatures: ['Ətraflı hesabatlar', 'Prioritet texniki dəstək'],
   },
 }
 
@@ -45,15 +46,34 @@ export function normalizePlanId(p) {
   return id || 'basic'
 }
 
-export function getPlanMarketingMeta(p) {
+export function planMarketingFeatures(p) {
+  const fromApi = Array.isArray(p?.marketing_features) ? p.marketing_features : null
+  if (fromApi?.length) {
+    return fromApi.map((x) => String(x || '').trim()).filter(Boolean)
+  }
   const id = normalizePlanId(p)
-  return PLAN_META[id] || PLAN_META.basic
+  return FALLBACK_MARKETING_BY_SLUG[id] || FALLBACK_MARKETING_BY_SLUG.basic
 }
 
-/** Landing qiymət kartı üçün tam siyahı (limitlər + platforma imkanları). */
+export function getPlanMarketingMeta(p) {
+  const id = normalizePlanId(p)
+  const fallback = FALLBACK_META_BY_SLUG[id] || FALLBACK_META_BY_SLUG.basic
+  const subtitle =
+    p?.plan_subtitle != null && String(p.plan_subtitle).trim() !== ''
+      ? String(p.plan_subtitle).trim()
+      : fallback.subtitle
+  const popularLabel =
+    p?.popular_label != null && String(p.popular_label).trim() !== ''
+      ? String(p.popular_label).trim()
+      : fallback.popularLabel
+  const cta =
+    p?.plan_cta != null && String(p.plan_cta).trim() !== '' ? String(p.plan_cta).trim() : fallback.cta
+  return { subtitle, popularLabel, cta }
+}
+
+/** Landing qiymət kartı üçün tam siyahı (limitlər + admin imkanları). */
 export function landingPlanFeatureLines(p) {
-  const meta = getPlanMarketingMeta(p)
-  return [...planPricingLimitLines(p), ...PLAN_COMMON_FEATURES, ...meta.extraFeatures]
+  return [...planPricingLimitLines(p), ...planMarketingFeatures(p)]
 }
 
 export function landingPlanPriceLabel(p) {

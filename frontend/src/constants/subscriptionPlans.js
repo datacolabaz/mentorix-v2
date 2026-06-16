@@ -13,6 +13,10 @@ export const DEFAULT_SUBSCRIPTION_PLANS = [
       exams_monthly: 2,
       homeworks_monthly: 5,
     },
+    marketing_features: ['Ödəniş izləmə', 'Valideyn bildirişləri', 'Xəritədə görünmə'],
+    plan_subtitle: '14 günlük pulsuz sınaq',
+    plan_cta: '14 günlük sınağa başla',
+    popular_label: null,
   },
   {
     id: 'pro',
@@ -28,6 +32,10 @@ export const DEFAULT_SUBSCRIPTION_PLANS = [
       exams_monthly: 20,
       homeworks_monthly: 40,
     },
+    marketing_features: ['Ödəniş izləmə', 'Valideyn bildirişləri', 'Xəritədə görünmə'],
+    plan_subtitle: null,
+    plan_cta: 'Standart seç',
+    popular_label: '⭐ Ən populyar',
   },
   {
     id: 'growth',
@@ -43,6 +51,10 @@ export const DEFAULT_SUBSCRIPTION_PLANS = [
       exams_monthly: 50,
       homeworks_monthly: 120,
     },
+    marketing_features: ['Ödəniş izləmə', 'Valideyn bildirişləri', 'Xəritədə görünmə', 'Ətraflı hesabatlar'],
+    plan_subtitle: null,
+    plan_cta: 'Professional seç',
+    popular_label: null,
   },
   {
     id: 'premium',
@@ -58,6 +70,16 @@ export const DEFAULT_SUBSCRIPTION_PLANS = [
       exams_monthly: null,
       homeworks_monthly: null,
     },
+    marketing_features: [
+      'Ödəniş izləmə',
+      'Valideyn bildirişləri',
+      'Xəritədə görünmə',
+      'Ətraflı hesabatlar',
+      'Prioritet texniki dəstək',
+    ],
+    plan_subtitle: null,
+    plan_cta: 'Premium seç',
+    popular_label: null,
   },
 ]
 

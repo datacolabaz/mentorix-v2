@@ -49,6 +49,21 @@ function previewFeatures(p) {
   return lines
 }
 
+function parseMarketingFeatures(raw) {
+  if (Array.isArray(raw)) return raw.map((x) => String(x || '').trim()).filter(Boolean)
+  if (typeof raw === 'string') {
+    const s = raw.trim()
+    if (!s) return []
+    try {
+      const parsed = JSON.parse(s)
+      if (Array.isArray(parsed)) return parsed.map((x) => String(x || '').trim()).filter(Boolean)
+    } catch {
+      return s.split('\n').map((x) => x.trim()).filter(Boolean)
+    }
+  }
+  return []
+}
+
 function dbRowToEditor(p) {
   const slug = String(p.slug || 'basic').toLowerCase()
   const preset = PRESETS[slug] || PRESETS.basic
@@ -98,6 +113,14 @@ function dbRowToEditor(p) {
     unlimited_storage,
     storage_value: unlimited_storage ? '' : String(storage_value),
     storage_unit,
+    marketing_features: (() => {
+      const fromDb = parseMarketingFeatures(p.marketing_features)
+      if (fromDb.length) return fromDb
+      return [...(preset.marketing_features || [])]
+    })(),
+    plan_subtitle: p.plan_subtitle ?? preset.plan_subtitle ?? '',
+    plan_cta: p.plan_cta ?? preset.plan_cta ?? '',
+    popular_label: p.popular_label ?? preset.popular_label ?? '',
   }
 }
 
@@ -122,6 +145,10 @@ function editorToPayload(p) {
     unlimited_storage: Boolean(p.unlimited_storage),
     storage_value: p.unlimited_storage ? null : Number(p.storage_value),
     storage_unit: p.unlimited_storage ? null : p.storage_unit,
+    marketing_features: (p.marketing_features || []).map((x) => String(x || '').trim()).filter(Boolean),
+    plan_subtitle: String(p.plan_subtitle || '').trim(),
+    plan_cta: String(p.plan_cta || '').trim(),
+    popular_label: String(p.popular_label || '').trim(),
   }
 }
 
@@ -144,6 +171,10 @@ const PRESETS = {
     homework_count: '5',
     highlight: false,
     ram_limit_mb: '',
+    marketing_features: ['Ödəniş izləmə', 'Valideyn bildirişləri', 'Xəritədə görünmə'],
+    plan_subtitle: '14 günlük pulsuz sınaq',
+    plan_cta: '14 günlük sınağa başla',
+    popular_label: '',
   },
   pro: {
     title: 'STANDART',
@@ -163,6 +194,10 @@ const PRESETS = {
     homework_count: '40',
     highlight: true,
     ram_limit_mb: '',
+    marketing_features: ['Ödəniş izləmə', 'Valideyn bildirişləri', 'Xəritədə görünmə'],
+    plan_subtitle: '',
+    plan_cta: 'Standart seç',
+    popular_label: '⭐ Ən populyar',
   },
   growth: {
     title: 'PROFESSİONAL',
@@ -182,6 +217,10 @@ const PRESETS = {
     homework_count: '120',
     highlight: false,
     ram_limit_mb: '',
+    marketing_features: ['Ödəniş izləmə', 'Valideyn bildirişləri', 'Xəritədə görünmə', 'Ətraflı hesabatlar'],
+    plan_subtitle: '',
+    plan_cta: 'Professional seç',
+    popular_label: '',
   },
   premium: {
     title: 'PREMİUM',
@@ -201,6 +240,16 @@ const PRESETS = {
     homework_count: '',
     highlight: false,
     ram_limit_mb: '',
+    marketing_features: [
+      'Ödəniş izləmə',
+      'Valideyn bildirişləri',
+      'Xəritədə görünmə',
+      'Ətraflı hesabatlar',
+      'Prioritet texniki dəstək',
+    ],
+    plan_subtitle: '',
+    plan_cta: 'Premium seç',
+    popular_label: '',
   },
 }
 
@@ -541,20 +590,106 @@ export default function AdminSettings() {
                       </div>
                     </div>
 
+                    <div className="sm:col-span-2 rounded-xl border border-white/10 bg-black/20 p-3 space-y-3">
+                      <div className="text-[11px] font-bold uppercase tracking-wider text-indigo-200">
+                        Kart imkanları (landing)
+                      </div>
+                      <p className="text-[10px] text-gray-500 leading-relaxed">
+                        Limit sətirləri avtomatik yaradılır. Buradan platforma imkanlarını, alt başlığı, populyar etiketi və düymə mətnini idarə edin.
+                      </p>
+                      {(p.marketing_features || []).map((line, lineIdx) => (
+                        <div key={`${p.slug}-mkt-${lineIdx}`} className="flex gap-2">
+                          <input
+                            className={inp}
+                            value={line}
+                            placeholder="Məs: Ödəniş izləmə"
+                            onChange={(e) => {
+                              const next = [...(p.marketing_features || [])]
+                              next[lineIdx] = e.target.value
+                              patch(idx, { marketing_features: next })
+                            }}
+                          />
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            size="sm"
+                            className="shrink-0"
+                            onClick={() => {
+                              const next = [...(p.marketing_features || [])]
+                              next.splice(lineIdx, 1)
+                              patch(idx, { marketing_features: next })
+                            }}
+                          >
+                            Sil
+                          </Button>
+                        </div>
+                      ))}
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => patch(idx, { marketing_features: [...(p.marketing_features || []), ''] })}
+                      >
+                        + Sətir əlavə et
+                      </Button>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Alt başlıq</label>
+                          <input
+                            className={inp}
+                            value={p.plan_subtitle}
+                            onChange={(e) => patch(idx, { plan_subtitle: e.target.value })}
+                            placeholder="Məs: 14 günlük pulsuz sınaq"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Populyar etiket</label>
+                          <input
+                            className={inp}
+                            value={p.popular_label}
+                            onChange={(e) => patch(idx, { popular_label: e.target.value })}
+                            placeholder="Məs: ⭐ Ən populyar"
+                          />
+                        </div>
+                        <div className="sm:col-span-2">
+                          <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Kart düyməsi (CTA)</label>
+                          <input
+                            className={inp}
+                            value={p.plan_cta}
+                            onChange={(e) => patch(idx, { plan_cta: e.target.value })}
+                            placeholder="Məs: Standart seç"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
                     <div className="sm:col-span-2">
                       <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer">
                         <input type="checkbox" className="accent-indigo-500" checked={p.highlight} onChange={(e) => patch(idx, { highlight: e.target.checked })} />
-                        Vurğula (Ən populyar)
+                        Vurğula (kartda xüsusi çərçivə)
                       </label>
                     </div>
 
                     <div className="sm:col-span-2 rounded-xl border border-white/10 bg-black/20 px-3 py-2">
-                      <div className="text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">Avtomatik xüsusiyyətlər</div>
-                      <ul className="text-xs text-gray-300 space-y-0.5 list-disc list-inside">
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">Avtomatik limit sətirləri</div>
+                      <ul className="text-xs text-gray-300 space-y-0.5 list-disc list-inside mb-3">
                         {prevLines.map((line, li) => (
                           <li key={`${p.slug}-${li}`}>{line}</li>
                         ))}
                       </ul>
+                      {(p.marketing_features || []).filter((x) => String(x || '').trim()).length > 0 ? (
+                        <>
+                          <div className="text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">Kart imkanları (önizləmə)</div>
+                          <ul className="text-xs text-gray-300 space-y-0.5 list-disc list-inside">
+                            {(p.marketing_features || [])
+                              .map((x) => String(x || '').trim())
+                              .filter(Boolean)
+                              .map((line, li) => (
+                                <li key={`${p.slug}-mkt-prev-${li}`}>{line}</li>
+                              ))}
+                          </ul>
+                        </>
+                      ) : null}
                     </div>
                   </div>
                 </div>
