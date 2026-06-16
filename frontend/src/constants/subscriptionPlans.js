@@ -1,12 +1,13 @@
 export const DEFAULT_SUBSCRIPTION_PLANS = [
   {
     id: 'basic',
-    title: 'SADƏ',
+    title: 'Başlanğıc',
     price_azn: 0,
     highlight: false,
-    items: ['5 tələbə', '5 SMS / ay', '5 MB Sənəd Yaddaşı'],
+    items: [],
     limits: {
       students: 5,
+      documents: 50,
       storage_limit_bytes: 5 * 1024 * 1024,
       sms_monthly: 5,
       exams_monthly: 2,
@@ -15,41 +16,44 @@ export const DEFAULT_SUBSCRIPTION_PLANS = [
   },
   {
     id: 'pro',
-    title: 'PRO',
-    price_azn: 10,
+    title: 'Standart',
+    price_azn: 5,
     highlight: true,
-    items: ['50 tələbə', '50 SMS / ay', '256 MB Sənəd Yaddaşı'],
+    items: [],
     limits: {
-      students: 50,
-      storage_limit_bytes: 256 * 1024 * 1024,
-      sms_monthly: 50,
+      students: 20,
+      documents: 1250,
+      storage_limit_bytes: 128 * 1024 * 1024,
+      sms_monthly: 20,
       exams_monthly: 20,
       homeworks_monthly: 40,
     },
   },
   {
     id: 'growth',
-    title: 'GROWTH',
-    price_azn: 20,
+    title: 'Professional',
+    price_azn: 10,
     highlight: false,
-    items: ['100 tələbə', '100 SMS / ay', '1 GB Sənəd Yaddaşı'],
+    items: [],
     limits: {
-      students: 100,
-      storage_limit_bytes: 1024 * 1024 * 1024,
-      sms_monthly: 100,
+      students: 50,
+      documents: 5000,
+      storage_limit_bytes: 512 * 1024 * 1024,
+      sms_monthly: 50,
       exams_monthly: 50,
       homeworks_monthly: 120,
     },
   },
   {
     id: 'premium',
-    title: 'PREMIUM',
-    price_azn: 30,
+    title: 'Premium',
+    price_azn: 19,
     highlight: false,
-    items: ['Limitsiz tələbə', '200 SMS / Əlavə balans imkanı', '2 GB Sənəd Yaddaşı'],
+    items: [],
     limits: {
       students: null,
-      storage_limit_bytes: 2048 * 1024 * 1024,
+      documents: null,
+      storage_limit_bytes: null,
       sms_monthly: 200,
       exams_monthly: null,
       homeworks_monthly: null,
@@ -59,6 +63,6 @@ export const DEFAULT_SUBSCRIPTION_PLANS = [
 
 export function planPriceLabel(p) {
   const v = Number(p?.price_azn)
-  if (!Number.isFinite(v)) return '—'
-  return `${v} AZN/ay`
+  if (!Number.isFinite(v) || v <= 0) return 'Pulsuz'
+  return `${v} AZN / ay`
 }

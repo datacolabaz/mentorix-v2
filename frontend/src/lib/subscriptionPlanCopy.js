@@ -1,5 +1,17 @@
 /** Paket kartlarında limit sətirləri (API: items və ya limits). */
 
+function fmtAzNum(n) {
+  const v = Math.max(0, Math.round(Number(n) || 0))
+  return new Intl.NumberFormat('az-AZ').format(v)
+}
+
+function documentLineFromLimits(lim) {
+  if (!lim) return null
+  const docs = lim.documents ?? lim.document_limit
+  if (docs == null) return 'Limitsiz sənəd'
+  return `${fmtAzNum(docs)} sənəd`
+}
+
 function storageLabelFromBytes(bytes) {
   const b = Number(bytes)
   if (!Number.isFinite(b) || b <= 0) return null
@@ -47,25 +59,56 @@ function smsEffectiveLineForCurrentUser({ billing, planId, baseSms }) {
   return `${e} SMS / ay (baza ${b} + əlavə ${extra})`
 }
 
-const CONTENT_LIMIT_RE = /\b(imtahan|tapşırıq)\s*\/\s*ay\b/i
+const CONTENT_LIMIT_RE = /\b(imtahan|tapşırıq|sənəd)\b/i
 
-function monthlyContentLimitLines(lim) {
+function monthlyContentLimitLines(lim, planId = '') {
   if (!lim) return []
+  const isTrial = String(planId).toLowerCase() === 'basic'
   const lines = []
-  if (lim.exams_monthly == null) lines.push('Limitsiz imtahan / ay')
-  else lines.push(`${Math.max(0, Math.round(Number(lim.exams_monthly)))} imtahan / ay`)
-  if (lim.homeworks_monthly == null) lines.push('Limitsiz tapşırıq / ay')
-  else lines.push(`${Math.max(0, Math.round(Number(lim.homeworks_monthly)))} tapşırıq / ay`)
+  if (lim.exams_monthly == null) lines.push(isTrial || String(planId).toLowerCase() === 'premium' ? 'Limitsiz imtahan' : 'Limitsiz imtahan / ay')
+  else if (isTrial) lines.push(`${fmtAzNum(lim.exams_monthly)} imtahan`)
+  else lines.push(`${fmtAzNum(lim.exams_monthly)} imtahan / ay`)
+  if (lim.homeworks_monthly == null) lines.push(isTrial || String(planId).toLowerCase() === 'premium' ? 'Limitsiz tapşırıq' : 'Limitsiz tapşırıq / ay')
+  else if (isTrial) lines.push(`${fmtAzNum(lim.homeworks_monthly)} tapşırıq`)
+  else lines.push(`${fmtAzNum(lim.homeworks_monthly)} tapşırıq / ay`)
+  return lines
+}
+
+/** Landing qiymət kartları üçün limit sətirləri (istifadəçi spec). */
+export function planPricingLimitLines(p) {
+  const lim = p?.limits
+  if (!lim) return []
+  const id = String(p?.id || p?.slug || '').toLowerCase()
+  const isTrial = id === 'basic'
+  const lines = []
+
+  if (lim.students == null) lines.push('Limitsiz tələbə')
+  else lines.push(`${fmtAzNum(lim.students)} tələbə`)
+
+  const docLine = documentLineFromLimits(lim)
+  if (docLine) lines.push(docLine)
+  else {
+    const storage = formatStorageFromLimits(lim)
+    if (storage) lines.push(storage.replace(/Sənəd Yaddaşı/gi, 'sənəd').replace(/yaddaş/gi, 'sənəd'))
+    else if (lim.storage_mb == null && lim.storage_limit_bytes == null) lines.push('Limitsiz sənəd')
+  }
+
+  if (lim.sms_monthly == null) lines.push('Limitsiz SMS / ay')
+  else if (isTrial) lines.push(`${fmtAzNum(lim.sms_monthly)} SMS`)
+  else lines.push(`${fmtAzNum(lim.sms_monthly)} SMS / ay`)
+
+  lines.push(...monthlyContentLimitLines(lim, id))
   return lines
 }
 
 export function planLimitFeatureLines(p, opts = {}) {
   const billing = opts?.billing || null
   const isCurrent = Boolean(opts?.isCurrent)
+  const planId = String(p?.id || p?.slug || '').toLowerCase()
   const items = Array.isArray(p?.items)
     ? p.items.map((x) => String(x || '').trim()).filter(Boolean)
     : []
-  const contentLimits = monthlyContentLimitLines(p?.limits)
+  const contentLimits = monthlyContentLimitLines(p?.limits, planId)
   if (items.length) {
     const base = items.filter((line) => !CONTENT_LIMIT_RE.test(String(line)))
     return [...base, ...contentLimits]
@@ -74,14 +117,18 @@ export function planLimitFeatureLines(p, opts = {}) {
   const lim = p?.limits
   if (!lim) return []
 
-  const id = String(p?.id || '').toLowerCase()
+  const id = planId
   const lines = []
   if (lim.students == null) lines.push('Limitsiz tələbə')
-  else lines.push(`${Math.max(0, Math.round(Number(lim.students)))} tələbə`)
+  else lines.push(`${fmtAzNum(lim.students)} tələbə`)
 
-  const storage = formatStorageFromLimits(lim)
-  if (storage) lines.push(storage)
-  else if (lim.storage_mb == null && lim.storage_limit_bytes === null) lines.push('Limitsiz Sənəd Yaddaşı')
+  const docLine = documentLineFromLimits(lim)
+  if (docLine) lines.push(docLine)
+  else {
+    const storage = formatStorageFromLimits(lim)
+    if (storage) lines.push(storage)
+    else if (lim.storage_mb == null && lim.storage_limit_bytes === null) lines.push('Limitsiz sənəd')
+  }
 
   if (lim.sms_monthly == null) lines.push('Limitsiz SMS / ay')
   else if (id === 'premium' || id === 'business') {
@@ -95,14 +142,9 @@ export function planLimitFeatureLines(p, opts = {}) {
       lines.push(`${baseSms} SMS / Əlavə balans imkanı`)
     }
   }
-  else lines.push(`${Math.max(0, Math.round(Number(lim.sms_monthly)))} SMS / ay`)
+  else lines.push(`${fmtAzNum(lim.sms_monthly)} SMS / ay`)
 
-  if (lim.exams_monthly == null) lines.push('Limitsiz imtahan / ay')
-  else lines.push(`${Math.max(0, Math.round(Number(lim.exams_monthly)))} imtahan / ay`)
-
-  if (lim.homeworks_monthly == null) lines.push('Limitsiz tapşırıq / ay')
-  else lines.push(`${Math.max(0, Math.round(Number(lim.homeworks_monthly)))} tapşırıq / ay`)
-
+  lines.push(...monthlyContentLimitLines(lim, id))
   return lines
 }
 
@@ -130,11 +172,10 @@ export function planLimitsHeadline(p, opts = {}) {
 }
 
 const PLAN_DESCRIPTIONS = {
-  basic:
-    '14 günlük pulsuz sınaq — platformanı kifayət qədər sınamaq üçün. Əlavə SMS/yaddaş yalnız ödənişli paketlərdə.',
-  pro: 'Fərdi repetitorlar və kiçik qrupları olan təlimçilər üçün ən populyar seçim.',
-  growth: 'Tədris fəaliyyətini böyüdən və daha çox qrupu olan peşəkar müəllimlər üçün.',
-  premium: 'Böyük auditoriyası olan kurslar və limitsiz tələbə bazası idarə etmək istəyənlər üçün tam paket.',
+  basic: '14 günlük pulsuz sınaq — platformanı risksiz sınayın.',
+  pro: 'Kiçik və orta qruplar üçün ən populyar Standart paket.',
+  growth: 'Professional paket — böyüyən tədris biznesi və ətraflı hesabatlar.',
+  premium: 'Premium paket — limitsiz tələbə/sənəd və prioritet dəstək.',
 }
 
 /** Kartda tam izah (bütün paketlər). */
@@ -155,9 +196,9 @@ export function planDetailLines(p, opts = {}) {
     return [
       desc || '14 günlük pulsuz sınaq paketi.',
       mapLine,
-      limitsText ? `Sınaq müddətində: ${limitsText}.` : 'Limitlər SADƏ paketinə uyğun tətbiq olunur.',
-      'Əlavə SMS və yaddaş alına bilməz — limit dolanda PRO və ya daha yüksək paket seçin.',
-      'SADƏ paketi yenilənmir; 14 gün bitəndən sonra ödənişli paket tələb olunur.',
+      limitsText ? `Sınaq müddətində: ${limitsText}.` : 'Limitlər Başlanğıc paketinə uyğun tətbiq olunur.',
+      'Əlavə SMS və yaddaş alına bilməz — limit dolanda Standart və ya daha yüksək paket seçin.',
+      'Başlanğıc paketi yenilənmir; 14 gün bitəndən sonra ödənişli paket tələb olunur.',
       'Hər cihazdan (IP) yalnız bir dəfə pulsuz sınaq verilir.',
     ]
   }

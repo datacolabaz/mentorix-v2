@@ -18,8 +18,12 @@ import {
 } from '../../lib/mentorixPublicMarketing'
 import { postAuthNavigate } from '../../lib/postAuth'
 import LandingDemoActivityChart from '../../components/landing/LandingDemoActivityChart'
-import { DEFAULT_SUBSCRIPTION_PLANS, planPriceLabel } from '../../constants/subscriptionPlans'
-import { planLimitFeatureLines } from '../../lib/subscriptionPlanCopy'
+import { DEFAULT_SUBSCRIPTION_PLANS } from '../../constants/subscriptionPlans'
+import {
+  getPlanMarketingMeta,
+  landingPlanFeatureLines,
+  landingPlanPriceLabel,
+} from '../../lib/subscriptionPlanMarketing'
 import { defaultPlatformContact } from '../../lib/platformContact'
 
 function scrollToId(id) {
@@ -558,35 +562,51 @@ export default function Login() {
               14 günlük pulsuz sınaq ilə başlayın. Paketlər aylıq qiymətlə göstərilir; illik ödənişdə 20% endirim.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              {publicPlans.map((p) => (
+              {publicPlans.map((p) => {
+                const meta = getPlanMarketingMeta(p)
+                const bullets = landingPlanFeatureLines(p)
+                return (
                 <div
                   key={p.id}
                   className={[
-                    'rounded-2xl border p-4 space-y-2',
+                    'rounded-2xl border p-4 space-y-3 flex flex-col',
                     p.highlight
                       ? 'border-primary/40 bg-primary/5 shadow-[0_0_40px_-12px_rgba(0,229,176,0.35)]'
                       : 'border-white/10 bg-[#121212]/90',
                   ].join(' ')}
                 >
-                  <div className="text-sm font-bold text-white">{p.title}</div>
-                  <div className="text-lg font-semibold text-primary tabular-nums">
-                    {Number(p.price_azn) > 0 ? planPriceLabel(p) : 'Pulsuz'}
+                  <div>
+                    <div className="text-sm font-bold text-white">{p.title}</div>
+                    {meta.subtitle ? (
+                      <p className="text-[11px] text-gray-400 mt-0.5">{meta.subtitle}</p>
+                    ) : null}
+                    {p.highlight && meta.popularLabel ? (
+                      <p className="text-[11px] font-semibold text-primary mt-1">{meta.popularLabel}</p>
+                    ) : null}
                   </div>
-                  <ul className="text-[11px] text-gray-400 space-y-1">
-                    {planLimitFeatureLines(p).map((line) => (
-                      <li key={line}>• {line}</li>
+                  <div className="text-lg font-semibold text-primary tabular-nums">
+                    {landingPlanPriceLabel(p)}
+                  </div>
+                  <ul className="text-[11px] text-gray-400 space-y-1 flex-1">
+                    {bullets.map((line) => (
+                      <li key={`${p.id}-${line}`}>• {line}</li>
                     ))}
                   </ul>
+                  <button
+                    type="button"
+                    onClick={() => openLoginModal('pricing')}
+                    className={[
+                      'w-full rounded-xl px-4 py-2.5 text-xs font-bold transition',
+                      p.highlight
+                        ? 'bg-primary text-[#041018] hover:brightness-95'
+                        : 'border border-white/15 text-gray-100 hover:bg-white/5',
+                    ].join(' ')}
+                  >
+                    {meta.cta}
+                  </button>
                 </div>
-              ))}
+              )})}
             </div>
-            <button
-              type="button"
-              onClick={() => openLoginModal('pricing')}
-              className="inline-flex rounded-xl bg-primary px-5 py-3 text-sm font-bold text-[#041018] hover:brightness-95"
-            >
-              {m.hero.primary_cta_label}
-            </button>
           </section>
 
           <section id="mx-faq" className="space-y-4 scroll-mt-8">

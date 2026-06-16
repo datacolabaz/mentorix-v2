@@ -40,6 +40,8 @@ function previewFeatures(p) {
   } else lines.push(`${Number(storage_gb)} GB yaddaş`)
   if (sms_limit == null) lines.push('Limitsiz SMS / ay')
   else lines.push(`${sms_limit} SMS / ay`)
+  if (p.unlimited_documents) lines.push('Limitsiz sənəd')
+  else lines.push(`${Math.max(0, Math.round(Number(p.document_count) || 0))} sənəd`)
   if (p.unlimited_exams) lines.push('Limitsiz imtahan / ay')
   else lines.push(`${Math.max(0, Math.round(Number(p.exam_count) || 0))} imtahan / ay`)
   if (p.unlimited_homeworks) lines.push('Limitsiz tapşırıq / ay')
@@ -52,10 +54,12 @@ function dbRowToEditor(p) {
   const preset = PRESETS[slug] || PRESETS.basic
   const hasExamLimit = Object.prototype.hasOwnProperty.call(p, 'exam_limit')
   const hasHomeworkLimit = Object.prototype.hasOwnProperty.call(p, 'homework_limit')
+  const hasDocumentLimit = Object.prototype.hasOwnProperty.call(p, 'document_limit')
   const unlimited_students = p.student_limit == null
   const unlimited_sms = p.sms_limit == null
   const unlimited_exams = hasExamLimit ? p.exam_limit == null : Boolean(preset.unlimited_exams)
   const unlimited_homeworks = hasHomeworkLimit ? p.homework_limit == null : Boolean(preset.unlimited_homeworks)
+  const unlimited_documents = hasDocumentLimit ? p.document_limit == null : Boolean(preset.unlimited_documents)
   const unlimited_storage = p.storage_gb == null && p.storage_limit_bytes == null
   let storage_value = 1
   let storage_unit = 'GB'
@@ -87,6 +91,10 @@ function dbRowToEditor(p) {
     homework_count: unlimited_homeworks
       ? ''
       : String(hasHomeworkLimit ? (p.homework_limit ?? '') : (preset.homework_count ?? '')),
+    unlimited_documents,
+    document_count: unlimited_documents
+      ? ''
+      : String(hasDocumentLimit ? (p.document_limit ?? '') : (preset.document_count ?? '')),
     unlimited_storage,
     storage_value: unlimited_storage ? '' : String(storage_value),
     storage_unit,
@@ -109,6 +117,8 @@ function editorToPayload(p) {
     exam_count: p.unlimited_exams ? null : Number(p.exam_count),
     unlimited_homeworks: Boolean(p.unlimited_homeworks),
     homework_count: p.unlimited_homeworks ? null : Number(p.homework_count),
+    unlimited_documents: Boolean(p.unlimited_documents),
+    document_count: p.unlimited_documents ? null : Number(p.document_count),
     unlimited_storage: Boolean(p.unlimited_storage),
     storage_value: p.unlimited_storage ? null : Number(p.storage_value),
     storage_unit: p.unlimited_storage ? null : p.storage_unit,
@@ -117,10 +127,12 @@ function editorToPayload(p) {
 
 const PRESETS = {
   basic: {
-    title: 'SADƏ',
+    title: 'Başlanğıc',
     price_azn: 0,
     unlimited_students: false,
     student_count: '5',
+    unlimited_documents: false,
+    document_count: '50',
     unlimited_storage: false,
     storage_value: '5',
     storage_unit: 'MB',
@@ -134,15 +146,17 @@ const PRESETS = {
     ram_limit_mb: '',
   },
   pro: {
-    title: 'PRO',
-    price_azn: 10,
+    title: 'Standart',
+    price_azn: 5,
     unlimited_students: false,
-    student_count: '50',
+    student_count: '20',
+    unlimited_documents: false,
+    document_count: '1250',
     unlimited_storage: false,
-    storage_value: '256',
+    storage_value: '128',
     storage_unit: 'MB',
     unlimited_sms: false,
-    sms_count: '50',
+    sms_count: '20',
     unlimited_exams: false,
     exam_count: '20',
     unlimited_homeworks: false,
@@ -151,15 +165,17 @@ const PRESETS = {
     ram_limit_mb: '',
   },
   growth: {
-    title: 'GROWTH',
-    price_azn: 20,
+    title: 'Professional',
+    price_azn: 10,
     unlimited_students: false,
-    student_count: '100',
+    student_count: '50',
+    unlimited_documents: false,
+    document_count: '5000',
     unlimited_storage: false,
-    storage_value: '1024',
+    storage_value: '512',
     storage_unit: 'MB',
     unlimited_sms: false,
-    sms_count: '100',
+    sms_count: '50',
     unlimited_exams: false,
     exam_count: '50',
     unlimited_homeworks: false,
@@ -168,12 +184,14 @@ const PRESETS = {
     ram_limit_mb: '',
   },
   premium: {
-    title: 'PREMIUM',
-    price_azn: 30,
+    title: 'Premium',
+    price_azn: 19,
     unlimited_students: true,
     student_count: '',
-    unlimited_storage: false,
-    storage_value: '2048',
+    unlimited_documents: true,
+    document_count: '',
+    unlimited_storage: true,
+    storage_value: '',
     storage_unit: 'MB',
     unlimited_sms: false,
     sms_count: '200',
@@ -242,6 +260,10 @@ export default function AdminSettings() {
       const n = Number(p.homework_count)
       if (!Number.isFinite(n) || n < 0) return 'Tapşırıq sayı düzgün deyil'
     }
+    if (!p.unlimited_documents) {
+      const n = Number(p.document_count)
+      if (!Number.isFinite(n) || n < 0) return 'Sənəd sayı düzgün deyil'
+    }
     if (!p.unlimited_storage) {
       const n = Number(p.storage_value)
       if (!Number.isFinite(n) || n < 0) return 'Yaddaş həcmi düzgün deyil'
@@ -258,7 +280,7 @@ export default function AdminSettings() {
     const pr = PRESETS[key]
     if (!pr) return
     patch(idx, { ...pr })
-    toast(`Şablon: ${key === 'basic' ? 'SADƏ' : key === 'pro' ? 'PRO' : 'BİZNES'}`)
+    toast(`Şablon: ${PRESETS[key]?.title || key}`)
   }, [patch, toast])
 
   return (
@@ -357,16 +379,16 @@ export default function AdminSettings() {
 
                   <div className="flex flex-wrap gap-2">
                     <Button type="button" variant="secondary" size="sm" onClick={() => applyPreset(idx, 'basic')}>
-                      Şablon: SADƏ
+                      Şablon: Başlanğıc
                     </Button>
                     <Button type="button" variant="secondary" size="sm" onClick={() => applyPreset(idx, 'pro')}>
-                      Şablon: PRO
+                      Şablon: Standart
                     </Button>
                     <Button type="button" variant="secondary" size="sm" onClick={() => applyPreset(idx, 'growth')}>
-                      Şablon: GROWTH
+                      Şablon: Professional
                     </Button>
                     <Button type="button" variant="secondary" size="sm" onClick={() => applyPreset(idx, 'premium')}>
-                      Şablon: PREMIUM
+                      Şablon: Premium
                     </Button>
                   </div>
 
@@ -407,6 +429,26 @@ export default function AdminSettings() {
                           disabled={p.unlimited_sms}
                           value={p.sms_count}
                           onChange={(e) => patch(idx, { sms_count: e.target.value })}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Toggle
+                        id={`udoc-${p.slug}`}
+                        label="Limitsiz sənəd"
+                        checked={p.unlimited_documents}
+                        onChange={(v) => patch(idx, { unlimited_documents: v })}
+                      />
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Sənəd limiti</label>
+                        <input
+                          type="number"
+                          min={0}
+                          className={inp}
+                          disabled={p.unlimited_documents}
+                          value={p.document_count}
+                          onChange={(e) => patch(idx, { document_count: e.target.value })}
                         />
                       </div>
                     </div>
