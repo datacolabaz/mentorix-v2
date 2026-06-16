@@ -4,6 +4,58 @@ function isHighestTierPlan(planSlug, plansMap) {
   return planRank(planSlug) >= planRank(highestPlanSlug(plansMap));
 }
 
+function planTitleOrSlug(plan, slugFallback = '') {
+  if (!plan) return String(slugFallback || '').toUpperCase() || 'ödənişli';
+  return String(plan.title || plan.slug || slugFallback).trim() || String(slugFallback).toUpperCase();
+}
+
+function nextPlanInMap(plansMap, currentSlug) {
+  const fromRank = planRank(currentSlug);
+  let best = null;
+  let bestRank = Infinity;
+  for (const [slug, plan] of Object.entries(plansMap || {})) {
+    const r = planRank(slug);
+    if (r > fromRank && r < bestRank) {
+      best = { slug, ...(plan || {}) };
+      bestRank = r;
+    }
+  }
+  return best;
+}
+
+function higherPaidPlansLabel(plansMap, currentSlug = 'basic') {
+  const next = nextPlanInMap(plansMap, currentSlug);
+  const name = next ? planTitleOrSlug(next, next.slug) : 'ödənişli';
+  return `${name} və ya daha yüksək paket`;
+}
+
+function higherPaidPlansSuffix(plansMap, currentSlug = 'basic') {
+  const next = nextPlanInMap(plansMap, currentSlug);
+  const name = next ? planTitleOrSlug(next, next.slug) : 'ödənişli';
+  return `${name} və yuxarı paketlərdə`;
+}
+
+function azSwitchToPlanLabel(plansMap, currentSlug) {
+  const next = nextPlanInMap(plansMap, currentSlug);
+  if (!next) return null;
+  return `${planTitleOrSlug(next, next.slug)}-ə keç`;
+}
+
+function buildUpgradeLabels(plansMap, currentSlug = 'basic') {
+  const next = nextPlanInMap(plansMap, currentSlug);
+  const nextSlug = next?.slug ? normalizePlanSlug(next.slug) : null;
+  const nextTitle = next ? planTitleOrSlug(next, nextSlug || '') : null;
+  const switchLabel = azSwitchToPlanLabel(plansMap, currentSlug);
+  return {
+    next_plan_slug: nextSlug,
+    next_plan_title: nextTitle,
+    higher_paid_label: higherPaidPlansLabel(plansMap, currentSlug),
+    higher_paid_suffix: higherPaidPlansSuffix(plansMap, currentSlug),
+    switch_label: switchLabel,
+    upgrade_button_label: switchLabel ? `Paketi yüksəlt (${switchLabel})` : 'Paketi yüksəlt',
+  };
+}
+
 /** (used / effectiveLimit) — effectiveLimit = cari paket + əlavə SMS balansı */
 function usageRatio(used, effectiveLimit) {
   const u = Math.max(0, Number(used) || 0);
@@ -123,4 +175,8 @@ module.exports = {
   storageUsageLine,
   fetchPendingTopups,
   pickLimitCta,
+  higherPaidPlansLabel,
+  higherPaidPlansSuffix,
+  azSwitchToPlanLabel,
+  buildUpgradeLabels,
 };

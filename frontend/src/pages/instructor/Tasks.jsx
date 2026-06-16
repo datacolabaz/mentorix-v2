@@ -8,7 +8,8 @@ import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
 import { useToast } from '../../components/common/Toast'
 import { BILLING_STATUS_QUERY_KEY, useBillingStatus } from '../../hooks/useBillingStatus'
-import { isInstructorBillingBlocked, HOMEWORK_MONTHLY_LIMIT_MESSAGE, isHomeworksMonthlyLimitReached } from '../../lib/subscriptionPlanGuards'
+import { isInstructorBillingBlocked, HOMEWORK_MONTHLY_LIMIT_MESSAGE, isHomeworksMonthlyLimitReached, basicTrialExpiredMessage } from '../../lib/subscriptionPlanGuards'
+import { useSubscriptionPlans } from '../../hooks/useSubscriptionPlans'
 import { assignmentStatusClass, assignmentStatusLabel } from '../../lib/assignmentHelpers'
 import { assignmentFileLabel, assignmentFileOpenUrl, isAssignmentPreviewable } from '../../lib/assignmentFileUrl'
 import { fmtAzBakuField } from '../../lib/azDatetime'
@@ -60,12 +61,12 @@ export default function InstructorTasks() {
   const queryClient = useQueryClient()
   const billingQ = useBillingStatus()
   const billing = billingQ.data || null
+  const plansQ = useSubscriptionPlans()
+  const plans = Array.isArray(plansQ.data) ? plansQ.data : []
   const blocked = isInstructorBillingBlocked(billing)
   const homeworksLimitReached = isHomeworksMonthlyLimitReached(billing)
   const createBlocked = blocked || homeworksLimitReached
-  const blockMessage =
-    billing?.messages?.banner ||
-    '14 günlük SADƏ sınaq müddəti bitib. Davam etmək üçün PRO və ya daha yüksək paket seçin.'
+  const blockMessage = billing?.messages?.banner || basicTrialExpiredMessage(plans)
 
   const [form, setForm] = useState({
     title: '',

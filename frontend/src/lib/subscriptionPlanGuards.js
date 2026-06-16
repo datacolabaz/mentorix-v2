@@ -257,3 +257,56 @@ export function shouldOfferLimitTopUpChoice(
   const storage = isStorageLimitReached(billing) && canBuyStorageOnCurrentPlan(billing, storagePacksCount)
   return sms || storage
 }
+
+export function planTitleOrSlug(plan, slugFallback = '') {
+  if (!plan) return String(slugFallback || '').toUpperCase() || '—'
+  return String(plan.title || plan.id || slugFallback).trim() || String(slugFallback).toUpperCase()
+}
+
+/** Cari paketdən bir addım yuxarı paket (aktiv siyahıdan). */
+export function nextPlanInList(plans, currentSlug) {
+  const fromRank = planRank(currentSlug)
+  let best = null
+  let bestRank = Infinity
+  for (const p of plans || []) {
+    const r = planRank(p?.id)
+    if (r > fromRank && r < bestRank) {
+      best = p
+      bestRank = r
+    }
+  }
+  return best
+}
+
+export function nextPlanId(plans, currentSlug) {
+  const next = nextPlanInList(plans, currentSlug)
+  return next ? String(next.id).toLowerCase() : null
+}
+
+export function azSwitchToPlanLabel(plans, currentSlug) {
+  const next = nextPlanInList(plans, currentSlug)
+  if (!next) return null
+  return `${planTitleOrSlug(next)}-ə keç`
+}
+
+export function upgradeButtonLabel(plans, currentSlug) {
+  const switchLabel = azSwitchToPlanLabel(plans, currentSlug)
+  if (!switchLabel) return 'Paketi yüksəlt'
+  return `Paketi yüksəlt (${switchLabel})`
+}
+
+export function higherPaidPlansLabel(plans, currentSlug = 'basic') {
+  const next = nextPlanInList(plans, currentSlug)
+  const name = next ? planTitleOrSlug(next) : 'ödənişli'
+  return `${name} və ya daha yüksək paket`
+}
+
+export function higherPaidPlansSuffix(plans, currentSlug = 'basic') {
+  const next = nextPlanInList(plans, currentSlug)
+  const name = next ? planTitleOrSlug(next) : 'ödənişli'
+  return `${name} və yuxarı paketlərdə`
+}
+
+export function basicTrialExpiredMessage(plans) {
+  return `14 günlük SADƏ sınaq müddəti bitib. Davam etmək üçün ${higherPaidPlansLabel(plans, 'basic')} seçin.`
+}

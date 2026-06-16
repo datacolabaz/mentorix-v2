@@ -15,6 +15,8 @@ import GroupPackageFields, {
 import { formatAzn } from '../../lib/pricing'
 import { normalizeTeachingSubjects } from '../../lib/teachingSubjects'
 import { useBillingStatus } from '../../hooks/useBillingStatus'
+import { useSubscriptionPlans } from '../../hooks/useSubscriptionPlans'
+import { basicTrialExpiredMessage } from '../../lib/subscriptionPlanGuards'
 
 function formatIncomeAzn(n) {
   const v = Number(n)
@@ -27,10 +29,10 @@ export default function InstructorTeachingGroups() {
   const { theme } = useUiStore()
   const billingQ = useBillingStatus()
   const billing = billingQ.data || null
+  const plansQ = useSubscriptionPlans()
+  const plans = Array.isArray(plansQ.data) ? plansQ.data : []
   const blocked = Boolean(billing?.should_block)
-  const blockMessage =
-    billing?.messages?.banner ||
-    '14 günlük SADƏ sınaq müddəti bitib. Davam etmək üçün PRO və ya daha yüksək paket seçin.'
+  const blockMessage = billing?.messages?.banner || basicTrialExpiredMessage(plans)
   const [initialLoading, setInitialLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [subjects, setSubjects] = useState([])

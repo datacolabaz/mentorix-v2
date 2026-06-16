@@ -1,11 +1,10 @@
 const db = require('../utils/db');
 const { normalizePlanSlug, planRank } = require('../config/plans');
 
-function assertAddonsAllowed(planSlug) {
+function assertAddonsAllowed(planSlug, plansMap) {
   if (normalizePlanSlug(planSlug) === 'basic') {
-    const err = new Error(
-      'SADƏ paketində əlavə SMS və yaddaş alına bilməz. PRO, GROWTH və ya PREMIUM paketinə keçin.',
-    );
+    const hint = higherPaidPlansLabel(plansMap, 'basic');
+    const err = new Error(`SADƏ paketində əlavə SMS və yaddaş alına bilməz. ${hint} seçin.`);
     err.code = 'ADDON_NOT_ON_BASIC';
     err.statusCode = 403;
     throw err;
@@ -13,6 +12,7 @@ function assertAddonsAllowed(planSlug) {
 }
 const getCurrentPlan = require('./billingGetCurrentPlan');
 const { getPlanOrThrow, getActivePlansMap } = require('./subscriptionPlansService');
+const { higherPaidPlansLabel } = require('./billingAlertHelpers');
 const { createOrder } = require('./payriffService');
 const {
   getManualTransferAccount,
@@ -48,6 +48,7 @@ async function createPlanCheckout({
   const plan = normalizePlanSlug(planRaw);
   const picked = await getPlanOrThrow(plan);
   const paymentMethod = normalizePaymentMethod(paymentMethodRaw);
+  const plansMap = await getActivePlansMap();
 
   const cur = await getCurrentPlan(db, userId);
   const from = normalizePlanSlug(cur.plan);
@@ -65,7 +66,7 @@ async function createPlanCheckout({
     throw err;
   } else if (normalizePlanSlug(plan) === 'basic') {
     const err = new Error(
-      'SADƏ paketi yenilənmir — yalnız 14 günlük sınaqdır. PRO və ya daha yüksək paket seçin.',
+      `SADƏ paketi yenilənmir — yalnız 14 günlük sınaqdır. ${higherPaidPlansLabel(plansMap, 'basic')} seçin.`,
     );
     err.code = 'BASIC_NOT_RENEWABLE';
     err.statusCode = 400;
@@ -216,7 +217,8 @@ async function createSmsCheckout({ userId, smsQuantity, paymentMethod: paymentMe
 
   const cur = await getCurrentPlan(db, userId);
   const planSlug = normalizePlanSlug(cur.plan);
-  assertAddonsAllowed(planSlug);
+  const plansMap = await getActivePlansMap();
+  assertAddonsAllowed(planSlug, plansMap);
 
   const finalPriceAzn = Number(pack.price_azn) || 0;
   const amountCents = Math.round(finalPriceAzn * 100);
@@ -329,7 +331,8 @@ async function createStorageCheckout({ userId, storageMb, paymentMethod: payment
 
   const cur = await getCurrentPlan(db, userId);
   const planSlug = normalizePlanSlug(cur.plan);
-  assertAddonsAllowed(planSlug);
+  const plansMap = await getActivePlansMap();
+  assertAddonsAllowed(planSlug, plansMap);
 
   const finalPriceAzn = Number(pack.price_azn) || 0;
   const amountCents = Math.round(finalPriceAzn * 100);

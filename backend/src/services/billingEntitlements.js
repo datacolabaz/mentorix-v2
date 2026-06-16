@@ -12,6 +12,8 @@ const {
   storageUsageLine,
   fetchPendingTopups,
   pickLimitCta,
+  higherPaidPlansLabel,
+  buildUpgradeLabels,
 } = require('./billingAlertHelpers');
 const { countBillableSmsForPeriod } = require('../utils/smsBillableLog');
 const { countInstructorExamsThisMonth, countInstructorHomeworksThisMonth } = require('./examLimitService');
@@ -349,8 +351,7 @@ function buildMessages(status, ctx) {
     }
     if (onBasic && (details?.reachedSms || details?.reachedStorage)) {
       return {
-        banner:
-          'SADƏ sınaq limitinə çatdınız. Əlavə SMS/yaddaş bu paketdə mövcud deyil — PRO və ya daha yüksək paket seçin.',
+        banner: `SADƏ sınaq limitinə çatdınız. Əlavə SMS/yaddaş bu paketdə mövcud deyil — ${higherPaidPlansLabel(plansMap, plan)} seçin.`,
         cta: { label: 'Paketlərə bax', action: 'OPEN_SETTINGS_PLANS' },
       };
     }
@@ -376,8 +377,8 @@ function buildMessages(status, ctx) {
     return {
       banner: onBasic
         ? ipDenied
-          ? 'Bu cihazdan artıq pulsuz SADƏ sınaq istifadə olunub. Davam etmək üçün PRO və ya daha yüksək paket seçin.'
-          : '14 günlük SADƏ sınaq müddəti bitib. Davam etmək üçün PRO və ya daha yüksək paket seçin.'
+          ? `Bu cihazdan artıq pulsuz SADƏ sınaq istifadə olunub. Davam etmək üçün ${higherPaidPlansLabel(plansMap, plan)} seçin.`
+          : `14 günlük SADƏ sınaq müddəti bitib. Davam etmək üçün ${higherPaidPlansLabel(plansMap, plan)} seçin.`
         : 'Abunəlik aktiv deyil və ya ödəniş müddəti keçib. Davam etmək üçün paket seçin.',
       cta: { label: 'Paketlərə bax', action: 'OPEN_SETTINGS_PLANS' },
     };
@@ -545,6 +546,7 @@ async function resolveEntitlements(userId) {
   const pendingTopup = await fetchPendingTopups(db, userId);
   const periodMeta = downgradePeriodMeta(sub2?.current_period_start);
   const basic_trial_ip_denied = planSlug === 'basic' ? await hasBasicTrialIpDenial(db, userId) : false;
+  const upgrade_labels = buildUpgradeLabels(plansMap, planSlug);
   const messages = buildMessages(status2, {
     phone_verified,
     limits,
@@ -565,6 +567,7 @@ async function resolveEntitlements(userId) {
     can_buy_addons,
     can_renew_basic,
     basic_trial_ip_denied,
+    upgrade_labels,
     is_highest_tier: isHighestTierPlan(planSlug, plansMap),
     pending_topup: pendingTopup,
     pending_plan_slug: pendingTopup?.pending_plan_slug || null,

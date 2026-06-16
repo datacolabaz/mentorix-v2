@@ -15,7 +15,7 @@ const { resolveEntitlements } = require('../services/billingEntitlements');
 function subscriptionInactiveError(ent) {
   const err = new Error(
     ent?.messages?.banner ||
-      '14 günlük SADƏ sınaq müddəti bitib. Davam etmək üçün PRO və ya daha yüksək paket seçin.',
+      `14 günlük SADƏ sınaq müddəti bitib. Davam etmək üçün ${ent?.upgrade_labels?.higher_paid_label || 'ödənişli paket'} seçin.`,
   );
   err.code = 'SUBSCRIPTION_INACTIVE';
   err.statusCode = 403;

@@ -1,4 +1,6 @@
 const db = require('../utils/db');
+const { getActivePlansMap } = require('./subscriptionPlansService');
+const { higherPaidPlansLabel } = require('./billingAlertHelpers');
 const { normalizePlanSlug } = require('../config/plans');
 const getCurrentPlan = require('./billingGetCurrentPlan');
 const { getActivePlansMap } = require('./subscriptionPlansService');
@@ -81,7 +83,9 @@ async function getInstructorStudentLimit(instructorId) {
 async function notifyInstructorLimitBlocked(instructorId, limit) {
   const lim = limit == null ? '∞' : String(limit);
   const title = 'Tələbə limiti dolub';
-  const body = `Tələbə limitiniz (${lim}/${lim}) dolub! Yeni tələbələrin linklərinizə daxil ola bilməsi üçün paketinizi PRO və ya daha yüksək paketə keçirin.`;
+  const plansMap = await getActivePlansMap().catch(() => ({}));
+  const hint = higherPaidPlansLabel(plansMap, 'basic');
+  const body = `Tələbə limitiniz (${lim}/${lim}) dolub! Yeni tələbələrin linklərinizə daxil ola bilməsi üçün paketinizi ${hint} keçirin.`;
   const { rows } = await db.query(
     `SELECT 1 FROM notifications
      WHERE user_id = $1::uuid

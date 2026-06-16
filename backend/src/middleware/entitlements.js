@@ -34,7 +34,7 @@ function enforceStudentsLimit(req, _res, next) {
       throw httpError(
         'STUDENT_LIMIT',
         429,
-        `Tələbə limitiniz (${used}/${lim}) dolub! Yeni tələbələrin linklərinizə daxil ola bilməsi üçün paketinizi PRO və ya daha yüksək paketə keçirin.`,
+        `Tələbə limitiniz (${used}/${lim}) dolub! Yeni tələbələrin linklərinizə daxil ola bilməsi üçün paketinizi ${e.upgrade_labels?.higher_paid_label || 'ödənişli paketə'} keçirin.`,
       );
     }
     next();
@@ -175,7 +175,7 @@ async function enforceActiveSubscription(req, res, next) {
         code: 'SUBSCRIPTION_INACTIVE',
         message:
           e.messages?.banner ||
-          '14 günlük SADƏ sınaq müddəti bitib. Davam etmək üçün PRO və ya daha yüksək paket seçin.',
+          `14 günlük SADƏ sınaq müddəti bitib. Davam etmək üçün ${e.upgrade_labels?.higher_paid_label || 'ödənişli paket'} seçin.`,
         status: e.status,
       });
     }

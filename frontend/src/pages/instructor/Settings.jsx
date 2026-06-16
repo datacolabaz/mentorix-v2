@@ -32,6 +32,11 @@ import {
   planDowngradeGuard,
   planRank,
   shouldOfferLimitTopUpChoice,
+  nextPlanId,
+  azSwitchToPlanLabel,
+  upgradeButtonLabel,
+  higherPaidPlansLabel,
+  higherPaidPlansSuffix,
 } from '../../lib/subscriptionPlanGuards'
 import {
   extraSmsBalance,
@@ -327,6 +332,11 @@ export default function InstructorSettings() {
   const currentPlanId = String(billing?.plan || 'basic').toLowerCase()
   const currentPlanObj = plans.find((p) => String(p?.id || '').toLowerCase() === currentPlanId) || null
   const currentPlanTitle = currentPlanObj?.title || String(currentPlanId || '').toUpperCase()
+  const basicUpgradePlanId = useMemo(() => nextPlanId(plans, 'basic') || 'pro', [plans])
+  const basicUpgradeBtnLabel = useMemo(() => upgradeButtonLabel(plans, 'basic'), [plans])
+  const basicHigherPlansHint = useMemo(() => higherPaidPlansLabel(plans, 'basic'), [plans])
+  const basicHigherPlansSuffix = useMemo(() => higherPaidPlansSuffix(plans, 'basic'), [plans])
+  const basicSwitchLabel = useMemo(() => azSwitchToPlanLabel(plans, 'basic') || 'Paketi yüksəlt', [plans])
   const pendingPlanSlug = String(
     billing?.pending_plan_slug || billing?.pending_topup?.pending_plan_slug || '',
   ).toLowerCase()
@@ -367,13 +377,13 @@ export default function InstructorSettings() {
       if (String(billing?.status || '') === 'expired') {
         return 'SADƏ sınaq müddəti bitib — davam üçün ödənişli paket seçin'
       }
-      return '14 günlük pulsuz sınaq — əlavə limit yalnız PRO və yuxarı paketlərdə'
+      return `14 günlük pulsuz sınaq — əlavə limit yalnız ${basicHigherPlansSuffix}`
     }
     const m = Number(currentPlanObj.price_azn)
     if (!Number.isFinite(m) || m <= 0) return planPriceLabel(currentPlanObj)
     if (billingInterval === 'monthly') return `${formatAzn(m)} AZN/ay`
     return `${formatAzn(yearlyTotalAzn(m))} AZN/il (təxm. ${formatAzn(m)} AZN/ay)`
-  }, [billingInterval, currentPlanObj])
+  }, [basicHigherPlansSuffix, billing?.status, billing?.subscription?.days_left, billingInterval, currentPlanObj])
 
   useEffect(() => {
     api
@@ -587,7 +597,7 @@ export default function InstructorSettings() {
                 {currentPlanId === 'basic' ? (
                   <>
                     SADƏ paketində əlavə SMS/yaddaş alına bilməz. Limit dolubsa{' '}
-                    <span className="font-medium text-white">PRO və ya daha yüksək paket</span> seçin.
+                    <span className="font-medium text-white">{basicHigherPlansHint}</span> seçin.
                   </>
                 ) : (
                   <>
@@ -632,7 +642,7 @@ export default function InstructorSettings() {
             let btnLabel = 'Başla'
             if (isCurrent) {
               if (isFree) {
-                btnLabel = basicTrialExpired ? 'Paketi yüksəlt (PRO-ya keç)' : 'Aktiv paket'
+                btnLabel = basicTrialExpired ? basicUpgradeBtnLabel : 'Aktiv paket'
               } else if (limitChoiceOffer) {
                 btnLabel = 'Limit həlli'
               } else if (
@@ -683,7 +693,7 @@ export default function InstructorSettings() {
               setPlanErr(null)
               if (isCurrent) {
                 if (isFree) {
-                  if (basicTrialExpired) return openPlanCheckout('pro')
+                  if (basicTrialExpired) return openPlanCheckout(basicUpgradePlanId)
                   return
                 }
                 if (limitChoiceOffer) {
@@ -1256,7 +1266,7 @@ export default function InstructorSettings() {
               {currentPlanId === 'basic' ? (
                 <>
                   SADƏ paketində əlavə SMS/yaddaş alına bilməz. Limit dolubsa{' '}
-                  <span className="text-white font-medium">PRO və ya daha yüksək paket</span> seçin.
+                  <span className="text-white font-medium">{basicHigherPlansHint}</span> seçin.
                 </>
               ) : (
                 <>
@@ -1299,10 +1309,10 @@ export default function InstructorSettings() {
                     disabled={planBusy}
                     onClick={() => {
                       setLimitChoice(null)
-                      openPlanCheckout('pro')
+                      openPlanCheckout(basicUpgradePlanId)
                     }}
                   >
-                    PRO-ya keç
+                    {basicSwitchLabel}
                   </Button>
                 ) : (
                   <Button
