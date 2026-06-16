@@ -30,13 +30,15 @@ function normalizeRow(r) {
       ? null
       : gbToMb(r.storage_gb);
   const sms_monthly = r.sms_limit == null ? null : Number(r.sms_limit);
+  const exams_monthly = r.exam_limit == null ? null : Number(r.exam_limit);
+  const homeworks_monthly = r.homework_limit == null ? null : Number(r.homework_limit);
   const ram_limit_mb = r.ram_limit_mb == null ? null : Number(r.ram_limit_mb);
   const features = Array.isArray(r.features) ? r.features : r.features ? r.features : null;
   return {
     slug,
     title: String(r.title || slug).trim() || slug.toUpperCase(),
     price_azn,
-    limits: { students, storage_mb, storage_limit_bytes, sms_monthly, ram_limit_mb },
+    limits: { students, storage_mb, storage_limit_bytes, sms_monthly, exams_monthly, homeworks_monthly, ram_limit_mb },
     highlight: Boolean(r.highlight),
     is_active: Boolean(r.is_active),
     features,
@@ -46,7 +48,7 @@ function normalizeRow(r) {
 
 async function loadPlansFromDb() {
   const { rows } = await db.query(
-    `SELECT slug, title, price_azn, student_limit, storage_gb, storage_limit_bytes, sms_limit, ram_limit_mb, features, highlight, is_active, updated_at
+    `SELECT slug, title, price_azn, student_limit, storage_gb, storage_limit_bytes, sms_limit, exam_limit, homework_limit, ram_limit_mb, features, highlight, is_active, updated_at
      FROM subscription_plans
      WHERE is_active = TRUE
      ORDER BY CASE slug WHEN 'basic' THEN 1 WHEN 'pro' THEN 2 WHEN 'growth' THEN 3 WHEN 'premium' THEN 4 WHEN 'business' THEN 4 ELSE 99 END, slug`
@@ -101,7 +103,15 @@ function storageLabelForBytes(bytes) {
 }
 
 /** Admin UI + billing üçün plan xüsusiyyətləri (manual mətn yox). */
-function buildPlanFeaturesFromLimits({ slug, student_limit, sms_limit, storage_gb, storage_limit_bytes }) {
+function buildPlanFeaturesFromLimits({
+  slug,
+  student_limit,
+  sms_limit,
+  exam_limit,
+  homework_limit,
+  storage_gb,
+  storage_limit_bytes,
+}) {
   const lines = [];
   const planSlug = normalizePlanSlug(slug);
   if (student_limit == null) lines.push('Limitsiz tələbə');
@@ -121,6 +131,12 @@ function buildPlanFeaturesFromLimits({ slug, student_limit, sms_limit, storage_g
   if (sms_limit == null) lines.push('Limitsiz SMS / ay');
   else if (planSlug === 'premium') lines.push('200 SMS / Əlavə balans imkanı');
   else lines.push(`${Math.max(0, Math.round(Number(sms_limit)))} SMS / ay`);
+
+  if (exam_limit == null) lines.push('Limitsiz imtahan / ay');
+  else lines.push(`${Math.max(0, Math.round(Number(exam_limit)))} imtahan / ay`);
+
+  if (homework_limit == null) lines.push('Limitsiz tapşırıq / ay');
+  else lines.push(`${Math.max(0, Math.round(Number(homework_limit)))} tapşırıq / ay`);
   return lines;
 }
 
@@ -129,12 +145,18 @@ function resolveLimitsFromAdminPayload(payload) {
     Object.prototype.hasOwnProperty.call(payload || {}, 'unlimited_students') ||
     Object.prototype.hasOwnProperty.call(payload || {}, 'unlimited_storage') ||
     Object.prototype.hasOwnProperty.call(payload || {}, 'unlimited_sms') ||
+    Object.prototype.hasOwnProperty.call(payload || {}, 'unlimited_exams') ||
+    Object.prototype.hasOwnProperty.call(payload || {}, 'unlimited_homeworks') ||
     Object.prototype.hasOwnProperty.call(payload || {}, 'storage_unit');
 
   if (!usesV2) return null;
 
   const student_limit = payload.unlimited_students ? null : Math.max(0, Math.round(Number(payload.student_count ?? 0)));
   const sms_limit = payload.unlimited_sms ? null : Math.max(0, Math.round(Number(payload.sms_count ?? 0)));
+  const exam_limit = payload.unlimited_exams ? null : Math.max(0, Math.round(Number(payload.exam_count ?? 0)));
+  const homework_limit = payload.unlimited_homeworks
+    ? null
+    : Math.max(0, Math.round(Number(payload.homework_count ?? 0)));
 
   let storage_gb = null;
   let storage_limit_bytes = null;
@@ -158,12 +180,12 @@ function resolveLimitsFromAdminPayload(payload) {
     }
   }
 
-  return { student_limit, sms_limit, storage_gb, storage_limit_bytes, usesV2: true };
+  return { student_limit, sms_limit, exam_limit, homework_limit, storage_gb, storage_limit_bytes, usesV2: true };
 }
 
 async function adminListPlans() {
   const { rows } = await db.query(
-    `SELECT slug, title, price_azn, student_limit, storage_gb, storage_limit_bytes, sms_limit, ram_limit_mb, features, highlight, is_active, updated_at
+    `SELECT slug, title, price_azn, student_limit, storage_gb, storage_limit_bytes, sms_limit, exam_limit, homework_limit, ram_limit_mb, features, highlight, is_active, updated_at
      FROM subscription_plans
      ORDER BY CASE slug WHEN 'basic' THEN 1 WHEN 'pro' THEN 2 WHEN 'growth' THEN 3 WHEN 'premium' THEN 4 WHEN 'business' THEN 4 ELSE 99 END, slug`
   );
@@ -175,6 +197,8 @@ async function adminListPlans() {
     storage_gb: r.storage_gb == null ? null : Number(r.storage_gb),
     storage_limit_bytes: r.storage_limit_bytes == null ? null : Number(r.storage_limit_bytes),
     sms_limit: r.sms_limit == null ? null : Number(r.sms_limit),
+    exam_limit: r.exam_limit == null ? null : Number(r.exam_limit),
+    homework_limit: r.homework_limit == null ? null : Number(r.homework_limit),
     ram_limit_mb: r.ram_limit_mb == null ? null : Number(r.ram_limit_mb),
     features: r.features ?? null,
     highlight: Boolean(r.highlight),
@@ -196,12 +220,34 @@ async function adminUpsertPlan(payload) {
   let storage_gb;
   let storage_limit_bytes;
   let sms_limit;
+  let exam_limit;
+  let homework_limit;
   let ram_limit_mb;
   let features;
 
   if (v2) {
     student_limit = v2.student_limit;
     sms_limit = v2.sms_limit;
+    if (Object.prototype.hasOwnProperty.call(payload || {}, 'unlimited_exams')) {
+      exam_limit = v2.exam_limit;
+    } else {
+      const { rows: curEx } = await db.query(
+        `SELECT exam_limit FROM subscription_plans WHERE slug = $1 LIMIT 1`,
+        [slug]
+      );
+      exam_limit = curEx[0]?.exam_limit == null ? null : Number(curEx[0].exam_limit);
+      if (!Number.isFinite(exam_limit)) exam_limit = null;
+    }
+    if (Object.prototype.hasOwnProperty.call(payload || {}, 'unlimited_homeworks')) {
+      homework_limit = v2.homework_limit;
+    } else {
+      const { rows: curHw } = await db.query(
+        `SELECT homework_limit FROM subscription_plans WHERE slug = $1 LIMIT 1`,
+        [slug]
+      );
+      homework_limit = curHw[0]?.homework_limit == null ? null : Number(curHw[0].homework_limit);
+      if (!Number.isFinite(homework_limit)) homework_limit = null;
+    }
     storage_gb = v2.storage_gb;
     storage_limit_bytes = v2.storage_limit_bytes;
     if (Object.prototype.hasOwnProperty.call(payload || {}, 'ram_limit_mb')) {
@@ -216,6 +262,8 @@ async function adminUpsertPlan(payload) {
       slug,
       student_limit,
       sms_limit,
+      exam_limit,
+      homework_limit,
       storage_gb,
       storage_limit_bytes,
     });
@@ -236,6 +284,26 @@ async function adminUpsertPlan(payload) {
       if (!Number.isFinite(storage_limit_bytes)) storage_limit_bytes = null;
     }
     sms_limit = payload?.sms_limit === '' ? null : payload?.sms_limit;
+    if (Object.prototype.hasOwnProperty.call(payload || {}, 'exam_limit')) {
+      exam_limit = payload?.exam_limit === '' ? null : payload?.exam_limit;
+    } else {
+      const { rows: curEx } = await db.query(
+        `SELECT exam_limit FROM subscription_plans WHERE slug = $1 LIMIT 1`,
+        [slug]
+      );
+      exam_limit = curEx[0]?.exam_limit == null ? null : Number(curEx[0].exam_limit);
+      if (!Number.isFinite(exam_limit)) exam_limit = null;
+    }
+    if (Object.prototype.hasOwnProperty.call(payload || {}, 'homework_limit')) {
+      homework_limit = payload?.homework_limit === '' ? null : payload?.homework_limit;
+    } else {
+      const { rows: curHw } = await db.query(
+        `SELECT homework_limit FROM subscription_plans WHERE slug = $1 LIMIT 1`,
+        [slug]
+      );
+      homework_limit = curHw[0]?.homework_limit == null ? null : Number(curHw[0].homework_limit);
+      if (!Number.isFinite(homework_limit)) homework_limit = null;
+    }
     ram_limit_mb = payload?.ram_limit_mb === '' ? null : payload?.ram_limit_mb;
 
     features = payload?.features ?? null;
@@ -254,8 +322,8 @@ async function adminUpsertPlan(payload) {
   }
 
   await db.query(
-    `INSERT INTO subscription_plans (slug, title, price_azn, student_limit, storage_gb, storage_limit_bytes, sms_limit, ram_limit_mb, features, highlight, is_active, updated_at)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb,$10,$11,NOW())
+    `INSERT INTO subscription_plans (slug, title, price_azn, student_limit, storage_gb, storage_limit_bytes, sms_limit, exam_limit, homework_limit, ram_limit_mb, features, highlight, is_active, updated_at)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11::jsonb,$12,$13,NOW())
      ON CONFLICT (slug) DO UPDATE SET
        title=EXCLUDED.title,
        price_azn=EXCLUDED.price_azn,
@@ -263,6 +331,8 @@ async function adminUpsertPlan(payload) {
        storage_gb=EXCLUDED.storage_gb,
        storage_limit_bytes=EXCLUDED.storage_limit_bytes,
        sms_limit=EXCLUDED.sms_limit,
+       exam_limit=EXCLUDED.exam_limit,
+       homework_limit=EXCLUDED.homework_limit,
        ram_limit_mb=EXCLUDED.ram_limit_mb,
        features=EXCLUDED.features,
        highlight=EXCLUDED.highlight,
@@ -276,6 +346,8 @@ async function adminUpsertPlan(payload) {
       storage_gb == null ? null : Number(storage_gb),
       storage_limit_bytes,
       sms_limit == null ? null : Number(sms_limit),
+      exam_limit == null ? null : Number(exam_limit),
+      homework_limit == null ? null : Number(homework_limit),
       ram_limit_mb == null ? null : Number(ram_limit_mb),
       features ? JSON.stringify(features) : null,
       highlight,

@@ -32,7 +32,7 @@ const {
 const { authenticate, authorize } = require('../middleware/auth');
 const { requireInstructorPhoneVerification } = require('../middleware/requireInstructorPhoneVerification');
 const { enforceStorageLimitAfterUpload } = require('../middleware/storageLimit');
-const { enforceActiveSubscription } = require('../middleware/entitlements');
+const { enforceActiveSubscription, enforceExamsLimit } = require('../middleware/entitlements');
 
 const uploadsExamsDir = path.join(__dirname, '../../uploads/exams');
 const storage = multer.diskStorage({
@@ -132,6 +132,7 @@ router.post(
   authorize('instructor', 'admin'),
   requireInstructorPhoneVerification({ trigger: 'exam' }),
   enforceActiveSubscription,
+  enforceExamsLimit,
   createExam,
 );
 router.get('/', authenticate, authorize('instructor', 'admin'), listExams);

@@ -40,12 +40,22 @@ function previewFeatures(p) {
   } else lines.push(`${Number(storage_gb)} GB yaddaş`)
   if (sms_limit == null) lines.push('Limitsiz SMS / ay')
   else lines.push(`${sms_limit} SMS / ay`)
+  if (p.unlimited_exams) lines.push('Limitsiz imtahan / ay')
+  else lines.push(`${Math.max(0, Math.round(Number(p.exam_count) || 0))} imtahan / ay`)
+  if (p.unlimited_homeworks) lines.push('Limitsiz tapşırıq / ay')
+  else lines.push(`${Math.max(0, Math.round(Number(p.homework_count) || 0))} tapşırıq / ay`)
   return lines
 }
 
 function dbRowToEditor(p) {
+  const slug = String(p.slug || 'basic').toLowerCase()
+  const preset = PRESETS[slug] || PRESETS.basic
+  const hasExamLimit = Object.prototype.hasOwnProperty.call(p, 'exam_limit')
+  const hasHomeworkLimit = Object.prototype.hasOwnProperty.call(p, 'homework_limit')
   const unlimited_students = p.student_limit == null
   const unlimited_sms = p.sms_limit == null
+  const unlimited_exams = hasExamLimit ? p.exam_limit == null : Boolean(preset.unlimited_exams)
+  const unlimited_homeworks = hasHomeworkLimit ? p.homework_limit == null : Boolean(preset.unlimited_homeworks)
   const unlimited_storage = p.storage_gb == null && p.storage_limit_bytes == null
   let storage_value = 1
   let storage_unit = 'GB'
@@ -69,6 +79,14 @@ function dbRowToEditor(p) {
     student_count: unlimited_students ? '' : String(p.student_limit ?? ''),
     unlimited_sms,
     sms_count: unlimited_sms ? '' : String(p.sms_limit ?? ''),
+    unlimited_exams,
+    exam_count: unlimited_exams
+      ? ''
+      : String(hasExamLimit ? (p.exam_limit ?? '') : (preset.exam_count ?? '')),
+    unlimited_homeworks,
+    homework_count: unlimited_homeworks
+      ? ''
+      : String(hasHomeworkLimit ? (p.homework_limit ?? '') : (preset.homework_count ?? '')),
     unlimited_storage,
     storage_value: unlimited_storage ? '' : String(storage_value),
     storage_unit,
@@ -87,6 +105,10 @@ function editorToPayload(p) {
     student_count: p.unlimited_students ? null : Number(p.student_count),
     unlimited_sms: Boolean(p.unlimited_sms),
     sms_count: p.unlimited_sms ? null : Number(p.sms_count),
+    unlimited_exams: Boolean(p.unlimited_exams),
+    exam_count: p.unlimited_exams ? null : Number(p.exam_count),
+    unlimited_homeworks: Boolean(p.unlimited_homeworks),
+    homework_count: p.unlimited_homeworks ? null : Number(p.homework_count),
     unlimited_storage: Boolean(p.unlimited_storage),
     storage_value: p.unlimited_storage ? null : Number(p.storage_value),
     storage_unit: p.unlimited_storage ? null : p.storage_unit,
@@ -104,6 +126,10 @@ const PRESETS = {
     storage_unit: 'MB',
     unlimited_sms: false,
     sms_count: '5',
+    unlimited_exams: false,
+    exam_count: '2',
+    unlimited_homeworks: false,
+    homework_count: '5',
     highlight: false,
     ram_limit_mb: '',
   },
@@ -117,6 +143,10 @@ const PRESETS = {
     storage_unit: 'MB',
     unlimited_sms: false,
     sms_count: '50',
+    unlimited_exams: false,
+    exam_count: '20',
+    unlimited_homeworks: false,
+    homework_count: '40',
     highlight: true,
     ram_limit_mb: '',
   },
@@ -130,6 +160,10 @@ const PRESETS = {
     storage_unit: 'MB',
     unlimited_sms: false,
     sms_count: '100',
+    unlimited_exams: false,
+    exam_count: '50',
+    unlimited_homeworks: false,
+    homework_count: '120',
     highlight: false,
     ram_limit_mb: '',
   },
@@ -143,6 +177,10 @@ const PRESETS = {
     storage_unit: 'MB',
     unlimited_sms: false,
     sms_count: '200',
+    unlimited_exams: true,
+    exam_count: '',
+    unlimited_homeworks: true,
+    homework_count: '',
     highlight: false,
     ram_limit_mb: '',
   },
@@ -196,6 +234,14 @@ export default function AdminSettings() {
       const n = Number(p.sms_count)
       if (!Number.isFinite(n) || n < 0) return 'SMS sayı düzgün deyil'
     }
+    if (!p.unlimited_exams) {
+      const n = Number(p.exam_count)
+      if (!Number.isFinite(n) || n < 0) return 'İmtahan sayı düzgün deyil'
+    }
+    if (!p.unlimited_homeworks) {
+      const n = Number(p.homework_count)
+      if (!Number.isFinite(n) || n < 0) return 'Tapşırıq sayı düzgün deyil'
+    }
     if (!p.unlimited_storage) {
       const n = Number(p.storage_value)
       if (!Number.isFinite(n) || n < 0) return 'Yaddaş həcmi düzgün deyil'
@@ -223,8 +269,8 @@ export default function AdminSettings() {
         <h2 className="font-display font-bold text-base mb-1">Paketlər</h2>
         <p className="text-xs text-gray-500 mb-4 leading-relaxed">
           Limitlər üçün <strong className="text-gray-300">Limitsiz</strong> keçidlərini açın. Yaddaş üçün rəqəm +{' '}
-          <strong className="text-gray-300">MB</strong> və ya <strong className="text-gray-300">GB</strong> — server avtomatik saxlayır. Xüsusiyyətlər
-          limitlərdən avtomatik yaradılır.
+          <strong className="text-gray-300">MB</strong> və ya <strong className="text-gray-300">GB</strong> — server avtomatik saxlayır.
+          Aylıq <strong className="text-gray-300">imtahan</strong> və <strong className="text-gray-300">tapşırıq</strong> limitlərini də buradan tənzimləyin; xüsusiyyətlər limitlərdən avtomatik yaradılır.
         </p>
 
         <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
@@ -362,6 +408,53 @@ export default function AdminSettings() {
                           value={p.sms_count}
                           onChange={(e) => patch(idx, { sms_count: e.target.value })}
                         />
+                      </div>
+                    </div>
+
+                    <div className="sm:col-span-2 rounded-xl border border-indigo-500/25 bg-indigo-500/5 p-3 space-y-3">
+                      <div className="text-[11px] font-bold uppercase tracking-wider text-indigo-200">
+                        Aylıq məzmun limitləri
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="space-y-2">
+                          <Toggle
+                            id={`uex-${p.slug}`}
+                            label="Limitsiz imtahan (aylıq)"
+                            checked={p.unlimited_exams}
+                            onChange={(v) => patch(idx, { unlimited_exams: v })}
+                          />
+                          <div>
+                            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">İmtahan / ay</label>
+                            <input
+                              type="number"
+                              min={0}
+                              className={inp}
+                              disabled={p.unlimited_exams}
+                              value={p.exam_count}
+                              onChange={(e) => patch(idx, { exam_count: e.target.value })}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Toggle
+                            id={`uhw-${p.slug}`}
+                            label="Limitsiz tapşırıq (aylıq)"
+                            checked={p.unlimited_homeworks}
+                            onChange={(v) => patch(idx, { unlimited_homeworks: v })}
+                          />
+                          <div>
+                            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Tapşırıq / ay</label>
+                            <input
+                              type="number"
+                              min={0}
+                              className={inp}
+                              disabled={p.unlimited_homeworks}
+                              value={p.homework_count}
+                              onChange={(e) => patch(idx, { homework_count: e.target.value })}
+                            />
+                          </div>
+                        </div>
                       </div>
                     </div>
 

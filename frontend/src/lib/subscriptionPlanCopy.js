@@ -47,13 +47,29 @@ function smsEffectiveLineForCurrentUser({ billing, planId, baseSms }) {
   return `${e} SMS / ay (baza ${b} + əlavə ${extra})`
 }
 
+const CONTENT_LIMIT_RE = /\b(imtahan|tapşırıq)\s*\/\s*ay\b/i
+
+function monthlyContentLimitLines(lim) {
+  if (!lim) return []
+  const lines = []
+  if (lim.exams_monthly == null) lines.push('Limitsiz imtahan / ay')
+  else lines.push(`${Math.max(0, Math.round(Number(lim.exams_monthly)))} imtahan / ay`)
+  if (lim.homeworks_monthly == null) lines.push('Limitsiz tapşırıq / ay')
+  else lines.push(`${Math.max(0, Math.round(Number(lim.homeworks_monthly)))} tapşırıq / ay`)
+  return lines
+}
+
 export function planLimitFeatureLines(p, opts = {}) {
   const billing = opts?.billing || null
   const isCurrent = Boolean(opts?.isCurrent)
   const items = Array.isArray(p?.items)
     ? p.items.map((x) => String(x || '').trim()).filter(Boolean)
     : []
-  if (items.length) return items
+  const contentLimits = monthlyContentLimitLines(p?.limits)
+  if (items.length) {
+    const base = items.filter((line) => !CONTENT_LIMIT_RE.test(String(line)))
+    return [...base, ...contentLimits]
+  }
 
   const lim = p?.limits
   if (!lim) return []
@@ -80,6 +96,12 @@ export function planLimitFeatureLines(p, opts = {}) {
     }
   }
   else lines.push(`${Math.max(0, Math.round(Number(lim.sms_monthly)))} SMS / ay`)
+
+  if (lim.exams_monthly == null) lines.push('Limitsiz imtahan / ay')
+  else lines.push(`${Math.max(0, Math.round(Number(lim.exams_monthly)))} imtahan / ay`)
+
+  if (lim.homeworks_monthly == null) lines.push('Limitsiz tapşırıq / ay')
+  else lines.push(`${Math.max(0, Math.round(Number(lim.homeworks_monthly)))} tapşırıq / ay`)
 
   return lines
 }

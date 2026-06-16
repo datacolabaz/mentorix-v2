@@ -22,12 +22,28 @@ export function planSmsMonthlyLimit(p) {
   return Number.isFinite(v) ? Math.max(0, Math.round(v)) : null
 }
 
+export function planExamsMonthlyLimit(p) {
+  const n = p?.limits?.exams_monthly
+  if (n == null || n === '') return null
+  const v = Number(n)
+  return Number.isFinite(v) ? Math.max(0, Math.round(v)) : null
+}
+
+export function planHomeworksMonthlyLimit(p) {
+  const n = p?.limits?.homeworks_monthly
+  if (n == null || n === '') return null
+  const v = Number(n)
+  return Number.isFinite(v) ? Math.max(0, Math.round(v)) : null
+}
+
 export function usageFromBilling(billing) {
   const u = billing?.usage || {}
   return {
     students: Number(u.students) || 0,
     storage_bytes: Number(u.storage_bytes) || 0,
     sms_monthly: Number(u.sms_monthly) || 0,
+    exams_monthly: Number(u.exams_monthly) || 0,
+    homeworks_monthly: Number(u.homeworks_monthly) || 0,
   }
 }
 
@@ -147,6 +163,26 @@ export function isSmsMonthlyLimitReached(billing) {
   if (pending > 0 && used < effective + pending) return false
   return used >= effective
 }
+
+export function isExamsMonthlyLimitReached(billing) {
+  const lim = billing?.limits?.exams_monthly
+  if (lim == null) return false
+  const used = Number(billing?.usage?.exams_monthly) || 0
+  return used >= Number(lim)
+}
+
+export function isHomeworksMonthlyLimitReached(billing) {
+  const lim = billing?.limits?.homeworks_monthly
+  if (lim == null) return false
+  const used = Number(billing?.usage?.homeworks_monthly) || 0
+  return used >= Number(lim)
+}
+
+export const EXAM_MONTHLY_LIMIT_MESSAGE =
+  'Aylıq imtahan limitinizə çatdınız. Zəhmət olmasa paketinizi yeniləyin.'
+
+export const HOMEWORK_MONTHLY_LIMIT_MESSAGE =
+  'Aylıq tapşırıq limitinizə çatdınız. Zəhmət olmasa paketinizi yeniləyin.'
 
 export function hasPendingSmsTopup(billing) {
   return pendingSmsQuantity(billing) > 0

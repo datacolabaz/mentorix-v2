@@ -8,7 +8,7 @@ import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
 import { useToast } from '../../components/common/Toast'
 import { BILLING_STATUS_QUERY_KEY, useBillingStatus } from '../../hooks/useBillingStatus'
-import { isInstructorBillingBlocked } from '../../lib/subscriptionPlanGuards'
+import { isInstructorBillingBlocked, HOMEWORK_MONTHLY_LIMIT_MESSAGE, isHomeworksMonthlyLimitReached } from '../../lib/subscriptionPlanGuards'
 import { assignmentStatusClass, assignmentStatusLabel } from '../../lib/assignmentHelpers'
 import { assignmentFileLabel, assignmentFileOpenUrl, isAssignmentPreviewable } from '../../lib/assignmentFileUrl'
 import { fmtAzBakuField } from '../../lib/azDatetime'
@@ -61,6 +61,8 @@ export default function InstructorTasks() {
   const billingQ = useBillingStatus()
   const billing = billingQ.data || null
   const blocked = isInstructorBillingBlocked(billing)
+  const homeworksLimitReached = isHomeworksMonthlyLimitReached(billing)
+  const createBlocked = blocked || homeworksLimitReached
   const blockMessage =
     billing?.messages?.banner ||
     '14 günlük SADƏ sınaq müddəti bitib. Davam etmək üçün PRO və ya daha yüksək paket seçin.'
@@ -161,6 +163,10 @@ export default function InstructorTasks() {
       toast(blockMessage, 'error')
       return
     }
+    if (homeworksLimitReached) {
+      toast(HOMEWORK_MONTHLY_LIMIT_MESSAGE, 'error')
+      return
+    }
     resetForm()
     setOpen(true)
   }
@@ -187,6 +193,10 @@ export default function InstructorTasks() {
   const submit = async () => {
     if (blocked) {
       toast(blockMessage, 'error')
+      return
+    }
+    if (!editingId && homeworksLimitReached) {
+      toast(HOMEWORK_MONTHLY_LIMIT_MESSAGE, 'error')
       return
     }
     const title = String(form.title || '').trim()
@@ -412,7 +422,7 @@ export default function InstructorTasks() {
           <Button variant="secondary" size="sm" onClick={() => void load()} disabled={loading}>
             Yenilə
           </Button>
-          <Button size="sm" disabled={blocked} onClick={openCreate}>
+          <Button size="sm" disabled={createBlocked} onClick={openCreate}>
             + Yeni tapşırıq
           </Button>
         </div>
@@ -569,7 +579,7 @@ export default function InstructorTasks() {
             <Button variant="secondary" onClick={closeTaskModal} disabled={saving || fileUploading}>
               Ləğv et
             </Button>
-            <Button onClick={() => void submit()} loading={saving} disabled={blocked || fileUploading}>
+            <Button onClick={() => void submit()} loading={saving} disabled={createBlocked || fileUploading}>
               {editingId ? 'Saxla' : 'Göndər'}
             </Button>
           </div>

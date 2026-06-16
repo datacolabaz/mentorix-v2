@@ -6,6 +6,8 @@ const PLANS = {
     storage_limit_bytes: 5 * 1024 * 1024,
     storage_mb: null,
     sms_monthly: 5,
+    exams_monthly: 2,
+    homeworks_monthly: 5,
   },
   pro: {
     price_azn: 10,
@@ -13,6 +15,8 @@ const PLANS = {
     storage_limit_bytes: 256 * 1024 * 1024,
     storage_mb: null,
     sms_monthly: 50,
+    exams_monthly: 20,
+    homeworks_monthly: 40,
   },
   growth: {
     price_azn: 20,
@@ -20,6 +24,8 @@ const PLANS = {
     storage_limit_bytes: 1024 * 1024 * 1024,
     storage_mb: null,
     sms_monthly: 100,
+    exams_monthly: 50,
+    homeworks_monthly: 120,
   },
   premium: {
     price_azn: 30,
@@ -27,6 +33,8 @@ const PLANS = {
     storage_limit_bytes: 2048 * 1024 * 1024,
     storage_mb: null,
     sms_monthly: 200,
+    exams_monthly: null,
+    homeworks_monthly: null,
   },
 };
 

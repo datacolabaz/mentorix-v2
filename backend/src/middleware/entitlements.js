@@ -101,6 +101,60 @@ function enforceSmsLimit(req, _res, next) {
   }
 }
 
+function enforceExamsLimit(req, _res, next) {
+  try {
+    if (!req.user?.id || req.user.role === 'admin') return next();
+    if (req.user.role !== 'instructor') return next();
+
+    const e = req.entitlements;
+    if (!e) return next();
+    const lim = e.limits?.exams_monthly;
+    const used = e.usage?.exams_monthly ?? 0;
+    if (lim != null && used >= lim) {
+      void logBillingEvent(db, {
+        user_id: req.user?.id || null,
+        event: 'limit_reached_exams',
+        context: { used, limit: lim },
+      });
+      throw httpError(
+        'EXAM_LIMIT',
+        429,
+        'Aylıq imtahan limitinizə çatdınız. Zəhmət olmasa paketinizi yeniləyin.',
+      );
+    }
+    next();
+  } catch (e) {
+    next(e);
+  }
+}
+
+function enforceHomeworksLimit(req, _res, next) {
+  try {
+    if (!req.user?.id || req.user.role === 'admin') return next();
+    if (req.user.role !== 'instructor') return next();
+
+    const e = req.entitlements;
+    if (!e) return next();
+    const lim = e.limits?.homeworks_monthly;
+    const used = e.usage?.homeworks_monthly ?? 0;
+    if (lim != null && used >= lim) {
+      void logBillingEvent(db, {
+        user_id: req.user?.id || null,
+        event: 'limit_reached_homeworks',
+        context: { used, limit: lim },
+      });
+      throw httpError(
+        'HOMEWORK_LIMIT',
+        429,
+        'Aylıq tapşırıq limitinizə çatdınız. Zəhmət olmasa paketinizi yeniləyin.',
+      );
+    }
+    next();
+  } catch (e) {
+    next(e);
+  }
+}
+
 /** SADƏ sınaq bitib və ya abunəlik aktiv deyilsə — yaratma/redaktə əməliyyatlarını blokla. */
 async function enforceActiveSubscription(req, res, next) {
   try {
@@ -136,6 +190,8 @@ module.exports = {
   enforceStudentsLimit,
   enforceStorageLimit,
   enforceSmsLimit,
+  enforceExamsLimit,
+  enforceHomeworksLimit,
   enforceActiveSubscription,
 };
 

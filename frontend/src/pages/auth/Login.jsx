@@ -19,6 +19,7 @@ import {
 import { postAuthNavigate } from '../../lib/postAuth'
 import LandingDemoActivityChart from '../../components/landing/LandingDemoActivityChart'
 import { DEFAULT_SUBSCRIPTION_PLANS, planPriceLabel } from '../../constants/subscriptionPlans'
+import { planLimitFeatureLines } from '../../lib/subscriptionPlanCopy'
 import { defaultPlatformContact } from '../../lib/platformContact'
 
 function scrollToId(id) {
@@ -572,7 +573,7 @@ export default function Login() {
                     {Number(p.price_azn) > 0 ? planPriceLabel(p) : 'Pulsuz'}
                   </div>
                   <ul className="text-[11px] text-gray-400 space-y-1">
-                    {(p.items || []).slice(0, 3).map((line) => (
+                    {planLimitFeatureLines(p).map((line) => (
                       <li key={line}>• {line}</li>
                     ))}
                   </ul>

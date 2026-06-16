@@ -12,6 +12,7 @@ import { localDatetimeInputToUtcIso, utcInstantToDatetimeLocalValue } from '../.
 import useUiStore from '../../hooks/useUi'
 import { BILLING_STATUS_QUERY_KEY, useBillingStatus } from '../../hooks/useBillingStatus'
 import { copyStudentExamLink, studentExamShareUrl } from '../../lib/examShare'
+import { EXAM_MONTHLY_LIMIT_MESSAGE, isExamsMonthlyLimitReached } from '../../lib/subscriptionPlanGuards'
 
 function initEditQuestion(q) {
   const type = String(q.question_type || '').trim()
@@ -178,6 +179,8 @@ export default function InstructorExams() {
   const billingQ = useBillingStatus()
   const billing = billingQ.data || null
   const blocked = Boolean(billing?.should_block)
+  const examsLimitReached = isExamsMonthlyLimitReached(billing)
+  const createBlocked = blocked || examsLimitReached
 
   const loadExams = async () => {
     setExamsError(null)
@@ -570,10 +573,14 @@ export default function InstructorExams() {
             Seçilənləri sil
           </Button>
           <Button
-            disabled={blocked}
+            disabled={createBlocked}
             onClick={() => {
               if (blocked) {
                 toast(billing?.messages?.banner || 'Məhdudiyyətə görə bu əməliyyat deaktivdir', 'error')
+                return
+              }
+              if (examsLimitReached) {
+                toast(EXAM_MONTHLY_LIMIT_MESSAGE, 'error')
                 return
               }
               setAddModal(true)
@@ -722,8 +729,12 @@ export default function InstructorExams() {
         <ExamForm
           students={students}
           studentsLoading={studentsLoading}
-          blocked={blocked}
-          blockMessage={billing?.messages?.banner || ''}
+          blocked={createBlocked}
+          blockMessage={
+            examsLimitReached
+              ? EXAM_MONTHLY_LIMIT_MESSAGE
+              : billing?.messages?.banner || ''
+          }
           onCreated={async (createdExam) => {
             setAddModal(false)
             loadExams()

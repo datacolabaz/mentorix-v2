@@ -14,6 +14,7 @@ const {
   pickLimitCta,
 } = require('./billingAlertHelpers');
 const { countBillableSmsForPeriod } = require('../utils/smsBillableLog');
+const { countInstructorExamsThisMonth, countInstructorHomeworksThisMonth } = require('./examLimitService');
 
 const TZ = 'Asia/Baku';
 /** Aşağı paketə keçid: cari abunəlik dövrü ən azı 30 gün aktiv olmalıdır */
@@ -293,6 +294,18 @@ function buildMessages(status, ctx) {
     if (smsLine && limits.sms_monthly != null && isWarnPercent(remainingObj.sms_monthly, limits.sms_monthly, 0.2)) {
       parts.push(smsLine.warnMessage);
     }
+    if (
+      limits.exams_monthly != null &&
+      isWarnPercent(remainingObj.exams_monthly, limits.exams_monthly, 0.2)
+    ) {
+      parts.push(`Aylıq imtahan limitinə yaxınlaşırsınız (${used.exams_monthly}/${limits.exams_monthly})`);
+    }
+    if (
+      limits.homeworks_monthly != null &&
+      isWarnPercent(remainingObj.homeworks_monthly, limits.homeworks_monthly, 0.2)
+    ) {
+      parts.push(`Aylıq tapşırıq limitinə yaxınlaşırsınız (${used.homeworks_monthly}/${limits.homeworks_monthly})`);
+    }
     const stLine = storageUsageLine(used, limits);
     if (stLine) {
       const cap = limits.storage_limit_bytes;
@@ -432,7 +445,18 @@ async function resolveEntitlements(userId) {
   const planLimits =
     plansMap[planSlug]?.limits ||
     plansMap.basic?.limits ||
-    { students: 5, storage_mb: null, storage_limit_bytes: 5 * 1024 * 1024, sms_monthly: 5, ram_limit_mb: null };
+    {
+      students: 5,
+      storage_mb: null,
+      storage_limit_bytes: 5 * 1024 * 1024,
+      sms_monthly: 5,
+      exams_monthly: 2,
+      homeworks_monthly: 5,
+      ram_limit_mb: null,
+    };
+
+  const examsUsed = await countInstructorExamsThisMonth(db, userId);
+  const homeworksUsed = await countInstructorHomeworksThisMonth(db, userId);
 
   const extraSmsBalance = Number(usage?.extra_sms_balance || 0) || 0;
   const baseSmsLimit = planLimits.sms_monthly;
@@ -455,6 +479,8 @@ async function resolveEntitlements(userId) {
     sms_monthly_plan: baseSmsLimit,
     extra_sms_balance: extraSmsBalance,
     ram_limit_mb: planLimits.ram_limit_mb ?? null,
+    exams_monthly: planLimits.exams_monthly ?? null,
+    homeworks_monthly: planLimits.homeworks_monthly ?? null,
   };
 
   const used = {
@@ -462,6 +488,8 @@ async function resolveEntitlements(userId) {
     storage_mb: Number(usage?.storage_used_mb || 0) || 0,
     storage_bytes: Number(usage?.storage_used_bytes ?? 0) || 0,
     sms_monthly: Number(usage?.sms_used_monthly || 0) || 0,
+    exams_monthly: examsUsed,
+    homeworks_monthly: homeworksUsed,
     extra_sms_balance: extraSmsBalance,
     extra_storage_bytes: extraStorageBytes,
   };
@@ -470,6 +498,8 @@ async function resolveEntitlements(userId) {
     students: remaining(limits.students, used.students),
     storage_mb: remaining(limits.storage_mb, used.storage_mb),
     sms_monthly: remaining(limits.sms_monthly, used.sms_monthly),
+    exams_monthly: remaining(limits.exams_monthly, used.exams_monthly),
+    homeworks_monthly: remaining(limits.homeworks_monthly, used.homeworks_monthly),
     storage_bytes:
       limits.storage_limit_bytes == null
         ? null
@@ -505,6 +535,9 @@ async function resolveEntitlements(userId) {
     limits.storage_limit_bytes != null && used.storage_bytes >= Number(limits.storage_limit_bytes);
   const reachedStorage = reachedStorageMb || reachedStorageBytes;
   const reachedSms = limits.sms_monthly != null && used.sms_monthly >= limits.sms_monthly;
+  const reachedExams = limits.exams_monthly != null && used.exams_monthly >= limits.exams_monthly;
+  const reachedHomeworks =
+    limits.homeworks_monthly != null && used.homeworks_monthly >= limits.homeworks_monthly;
 
   const should_warn = status === 'warning';
   const should_block = (status2 === 'blocked' || status2 === 'expired'); // grace is NOT blocking
@@ -517,7 +550,7 @@ async function resolveEntitlements(userId) {
     limits,
     used,
     remainingObj: rem,
-    details: { reachedStudents, reachedStorage, reachedSms },
+    details: { reachedStudents, reachedStorage, reachedSms, reachedExams, reachedHomeworks },
     plan: planSlug,
     plansMap,
     pendingTopup,

@@ -5,7 +5,7 @@ const multer = require('multer');
 const { verify } = require('../utils/jwt');
 const { authenticate, authorize } = require('../middleware/auth');
 const { enforceStorageLimitAfterUpload } = require('../middleware/storageLimit');
-const { enforceActiveSubscription } = require('../middleware/entitlements');
+const { enforceActiveSubscription, enforceHomeworksLimit } = require('../middleware/entitlements');
 const {
   listInstructorTasks,
   createInstructorTask,
@@ -69,7 +69,7 @@ router.get('/', authenticate, authorize('instructor'), listInstructorTasks);
 router.get('/analytics', authenticate, authorize('instructor'), getAssignmentAnalytics);
 router.get('/groups', authenticate, authorize('instructor'), listInstructorGroups);
 router.get('/parent', authenticate, authorize('parent'), listParentAssignments);
-router.post('/', authenticate, authorize('instructor'), enforceActiveSubscription, createInstructorTask);
+router.post('/', authenticate, authorize('instructor'), enforceActiveSubscription, enforceHomeworksLimit, createInstructorTask);
 router.patch('/:id', authenticate, authorize('instructor'), enforceActiveSubscription, updateInstructorAssignment);
 router.delete('/:id', authenticate, authorize('instructor'), enforceActiveSubscription, deleteInstructorAssignment);
 router.post('/:id/access-from-link', authenticate, authorize('student'), postTaskAccessFromLink);
