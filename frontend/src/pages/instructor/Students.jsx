@@ -25,6 +25,8 @@ import {
 import { BILLING_STATUS_QUERY_KEY, useBillingStatus } from '../../hooks/useBillingStatus'
 import { canUseDirectChat } from '../../lib/subscriptionPlanGuards'
 import ChatPanel from '../../components/chat/ChatPanel'
+import StudentDirectChatButton from '../../components/chat/StudentDirectChatButton'
+import DirectChatUpgradeModal from '../../components/chat/DirectChatUpgradeModal'
 import { canonicalAzPhoneE164 } from '../../lib/azPhone'
 import {
   isSystemTeachingSubjectName,
@@ -964,12 +966,14 @@ export default function InstructorStudents() {
   const [openGroups, setOpenGroups] = useState(() => new Set())
   const [actionMenuId, setActionMenuId] = useState(null)
   const [chatTarget, setChatTarget] = useState(null)
+  const [directChatUpgrade, setDirectChatUpgrade] = useState(null)
   const { theme } = useUiStore()
   const actionAnchorsRef = useRef(new Map())
   const queryClient = useQueryClient()
   const billingQ = useBillingStatus()
   const billing = billingQ.data || null
   const blocked = Boolean(billing?.should_block)
+  const directChatActive = canUseDirectChat(billing) && !blocked
 
   const CACHE_KEY = 'instructor_students_v1'
   const CACHE_TTL_MS = 60000
@@ -1543,18 +1547,15 @@ export default function InstructorStudents() {
 
   const openDirectChat = (s) => {
     closeStudentMenu()
+    if (!s?.id) return
     if (blocked) {
       toast(billing?.messages?.banner || 'Məhdudiyyətə görə çat deaktivdir', 'error')
       return
     }
     if (!canUseDirectChat(billing)) {
-      toast(
-        'Fərdi çat funksiyası yalnız ödənişli paketlərdə aktivdir. Zəhmət olmasa paketinizi yeniləyin.',
-        'error',
-      )
+      setDirectChatUpgrade({ studentName: s.full_name || 'Tələbə' })
       return
     }
-    if (!s?.id) return
     setChatTarget({
       kind: 'direct',
       studentId: s.id,
@@ -2057,14 +2058,14 @@ export default function InstructorStudents() {
                         <div
                           key={s.enrollment_id}
                           className={[
-                            'group flex items-center justify-between gap-3 rounded-xl px-3 py-2',
+                            'group flex flex-wrap sm:flex-nowrap items-center gap-x-3 gap-y-2 rounded-xl px-3 py-2.5',
                             'border border-[color:var(--border-subtle)]',
                             'bg-token-surfaceCard/40 hover:bg-token-surfaceCard/55',
                             'transition-[background-color,transform,border-color] duration-200',
                             'hover:-translate-y-[1px] hover:border-primary/15',
                           ].join(' ')}
                         >
-                          <div className="min-w-0 flex items-center gap-3">
+                          <div className="min-w-0 flex items-center gap-3 flex-[1_1_200px]">
                             <div
                               className={[
                                 'w-9 h-9 rounded-full shrink-0 flex items-center justify-center text-xs font-extrabold',
@@ -2075,7 +2076,7 @@ export default function InstructorStudents() {
                             >
                               {initials(s.full_name)}
                             </div>
-                            <div className="min-w-0">
+                            <div className="min-w-0 flex-1">
                               <div className="font-semibold text-token-textMain truncate flex items-center gap-2">
                                 <PresenceDot user={s} />
                                 {s.full_name}
@@ -2090,7 +2091,7 @@ export default function InstructorStudents() {
                                   </StatusBadge>
                                 )}
                               </div>
-                              <div className="text-xs text-token-textMuted flex flex-wrap gap-x-3 gap-y-1 mt-0.5">
+                              <div className="text-xs text-token-textMuted flex flex-wrap items-center gap-x-3 gap-y-1 mt-0.5">
                                 {s.phone && <span className="break-all">{s.phone}</span>}
                                 {lessonDaysShort(s.lesson_weekdays) ? (
                                   <span className="w-full sm:w-auto">Dərslər: {lessonDaysShort(s.lesson_weekdays)}</span>
@@ -2099,7 +2100,35 @@ export default function InstructorStudents() {
                             </div>
                           </div>
 
-                          <div className="flex items-center gap-2 shrink-0">
+                          <StudentDirectChatButton
+                            active={directChatActive}
+                            locked={!directChatActive}
+                            disabled={blocked}
+                            onClick={() => openDirectChat(s)}
+                            title={
+                              blocked
+                                ? 'Çat deaktivdir'
+                                : directChatActive
+                                  ? `${s.full_name || 'Tələbə'} ilə fərdi çat`
+                                  : 'Fərdi çat — paket tələb olunur'
+                            }
+                          />
+
+                          <div className="hidden sm:flex items-center flex-[1_1_120px] min-w-[110px] max-w-[180px]">
+                            <div className="w-full">
+                              <div className="h-2 rounded-full bg-white/5 border border-white/10 overflow-hidden">
+                                <div
+                                  className="h-full bg-primary/70 transition-[width] duration-300"
+                                  style={{ width: `${p ? p.pct : 92}%` }}
+                                />
+                              </div>
+                              <div className="mt-1 text-[11px] text-token-textMuted text-right tabular-nums">
+                                {p ? `${p.pct}% (${p.used}/${p.total})` : '—'}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 shrink-0 ml-auto sm:ml-0">
                             {needsSetup(s) && (
                               <Button
                                 size="sm"
@@ -2112,20 +2141,6 @@ export default function InstructorStudents() {
                             <div className="hidden sm:flex items-center gap-2">
                               <StatusBadge variant={pay.variant}>{pay.label}</StatusBadge>
                               <StatusBadge variant="neutral">{packLabel}</StatusBadge>
-                            </div>
-
-                            <div className="hidden md:flex items-center gap-2 w-[140px]">
-                              <div className="flex-1">
-                                <div className="h-2 rounded-full bg-white/5 border border-white/10 overflow-hidden">
-                                  <div
-                                    className="h-full bg-primary/70"
-                                    style={{ width: `${p ? p.pct : 92}%` }}
-                                  />
-                                </div>
-                                <div className="mt-1 text-[11px] text-token-textMuted text-right tabular-nums">
-                                  {p ? `${p.pct}% (${p.used}/${p.total})` : '—'}
-                                </div>
-                              </div>
                             </div>
 
                             <div className="relative">
@@ -2169,13 +2184,6 @@ export default function InstructorStudents() {
                                       Quraşdırmanı tamamla
                                     </button>
                                   )}
-                                  <button
-                                    type="button"
-                                    className="w-full text-left px-3 py-2 text-sm hover:bg-white/5"
-                                    onClick={() => openDirectChat(s)}
-                                  >
-                                    Fərdi çat
-                                  </button>
                                   <button
                                     type="button"
                                     className="w-full text-left px-3 py-2 text-sm hover:bg-white/5"
@@ -2501,6 +2509,12 @@ export default function InstructorStudents() {
           </div>
         )}
       </Modal>
+
+      <DirectChatUpgradeModal
+        open={Boolean(directChatUpgrade)}
+        onClose={() => setDirectChatUpgrade(null)}
+        studentName={directChatUpgrade?.studentName}
+      />
 
       <ChatPanel
         open={Boolean(chatTarget)}
