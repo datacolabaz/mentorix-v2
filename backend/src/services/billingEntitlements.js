@@ -17,6 +17,7 @@ const {
 } = require('./billingAlertHelpers');
 const { countBillableSmsForPeriod } = require('../utils/smsBillableLog');
 const { countInstructorExamsThisMonth, countInstructorHomeworksThisMonth } = require('./examLimitService');
+const { syncUsageStudentsCount } = require('./usageStudentsSync');
 
 const TZ = 'Asia/Baku';
 /** Aşağı paketə keçid: cari abunəlik dövrü ən azı 30 gün aktiv olmalıdır */
@@ -428,7 +429,6 @@ async function resolveEntitlements(userId) {
 
   const phone_verified = Boolean(basics.phone_verified);
 
-  const { syncUsageStudentsCount } = require('./instructorStudentService');
   await syncUsageStudentsCount(userId);
 
   let usage = await ensureSmsPeriodUpToDate(db, userId);
