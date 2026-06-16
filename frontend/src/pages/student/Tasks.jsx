@@ -23,6 +23,7 @@ import {
   isAssignmentPreviewable,
 } from '../../lib/assignmentFileUrl'
 import { fmtAzBakuField } from '../../lib/azDatetime'
+import ChatPanel from '../../components/chat/ChatPanel'
 
 function fmtDue(d) {
   if (!d) return ''
@@ -61,6 +62,7 @@ export default function StudentAssignments() {
   const [attachments, setAttachments] = useState([])
   const [tab, setTab] = useState('active')
   const [submitConfirmOpen, setSubmitConfirmOpen] = useState(false)
+  const [chatTarget, setChatTarget] = useState(null)
 
   const filteredTasks = useMemo(() => filterTasksByTab(tasks, tab), [tasks, tab])
 
@@ -348,6 +350,19 @@ export default function StudentAssignments() {
                     <span className={`text-xs font-bold px-2.5 py-1 rounded-lg border ${assignmentStatusClass(t.status, st)}`}>
                       {assignmentStatusLabel(t.status, st)}
                     </span>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() =>
+                        setChatTarget({
+                          kind: 'assignment',
+                          assignmentId: t.assignment_id,
+                          title: `${t.title || 'Tapşırıq'} — çat`,
+                        })
+                      }
+                    >
+                      Çat
+                    </Button>
                     <Button size="sm" variant="secondary" onClick={() => void openWorkspace(t.assignment_id)}>
                       Aç
                     </Button>
@@ -582,6 +597,14 @@ export default function StudentAssignments() {
           </div>
         ) : null}
       </Modal>
+
+      <ChatPanel
+        open={Boolean(chatTarget)}
+        onClose={() => setChatTarget(null)}
+        kind={chatTarget?.kind}
+        assignmentId={chatTarget?.assignmentId}
+        title={chatTarget?.title}
+      />
     </div>
   )
 }

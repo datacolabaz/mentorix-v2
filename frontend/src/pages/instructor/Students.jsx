@@ -23,6 +23,8 @@ import {
   normalizeTeachingSubjects,
 } from '../../lib/teachingSubjects'
 import { BILLING_STATUS_QUERY_KEY, useBillingStatus } from '../../hooks/useBillingStatus'
+import { canUseDirectChat } from '../../lib/subscriptionPlanGuards'
+import ChatPanel from '../../components/chat/ChatPanel'
 import { canonicalAzPhoneE164 } from '../../lib/azPhone'
 import {
   isSystemTeachingSubjectName,
@@ -961,6 +963,7 @@ export default function InstructorStudents() {
   const [search, setSearch] = useState('')
   const [openGroups, setOpenGroups] = useState(() => new Set())
   const [actionMenuId, setActionMenuId] = useState(null)
+  const [chatTarget, setChatTarget] = useState(null)
   const { theme } = useUiStore()
   const actionAnchorsRef = useRef(new Map())
   const queryClient = useQueryClient()
@@ -1537,6 +1540,28 @@ export default function InstructorStudents() {
   }
 
   const closeStudentMenu = () => setActionMenuId(null)
+
+  const openDirectChat = (s) => {
+    closeStudentMenu()
+    if (blocked) {
+      toast(billing?.messages?.banner || 'Məhdudiyyətə görə çat deaktivdir', 'error')
+      return
+    }
+    if (!canUseDirectChat(billing)) {
+      toast(
+        'Fərdi çat funksiyası yalnız ödənişli paketlərdə aktivdir. Zəhmət olmasa paketinizi yeniləyin.',
+        'error',
+      )
+      return
+    }
+    if (!s?.id) return
+    setChatTarget({
+      kind: 'direct',
+      studentId: s.id,
+      studentName: s.full_name || 'Tələbə',
+      title: `${s.full_name || 'Tələbə'} — fərdi çat`,
+    })
+  }
 
   const saveEdit = async () => {
     if (!editId) {
@@ -2147,6 +2172,13 @@ export default function InstructorStudents() {
                                   <button
                                     type="button"
                                     className="w-full text-left px-3 py-2 text-sm hover:bg-white/5"
+                                    onClick={() => openDirectChat(s)}
+                                  >
+                                    Fərdi çat
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="w-full text-left px-3 py-2 text-sm hover:bg-white/5"
                                     onClick={() => {
                                       closeStudentMenu()
                                       openEdit(s)
@@ -2469,6 +2501,17 @@ export default function InstructorStudents() {
           </div>
         )}
       </Modal>
+
+      <ChatPanel
+        open={Boolean(chatTarget)}
+        onClose={() => setChatTarget(null)}
+        kind={chatTarget?.kind}
+        groupId={chatTarget?.groupId}
+        assignmentId={chatTarget?.assignmentId}
+        studentId={chatTarget?.studentId}
+        studentName={chatTarget?.studentName}
+        title={chatTarget?.title}
+      />
     </div>
   )
 }

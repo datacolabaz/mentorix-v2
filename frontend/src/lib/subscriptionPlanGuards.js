@@ -200,6 +200,12 @@ export function isStorageLimitReached(billing) {
   return usedMb >= Number(limMb)
 }
 
+export function canUseDirectChat(billing) {
+  if (billing?.can_direct_chat === true) return true
+  if (billing?.can_direct_chat === false) return false
+  return planRank(billing?.plan) >= planRank('pro')
+}
+
 export function isBasicPlan(billing) {
   return String(billing?.plan || '').toLowerCase() === 'basic'
 }

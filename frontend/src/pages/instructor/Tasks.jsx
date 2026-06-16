@@ -13,6 +13,7 @@ import { useSubscriptionPlans } from '../../hooks/useSubscriptionPlans'
 import { assignmentStatusClass, assignmentStatusLabel } from '../../lib/assignmentHelpers'
 import { assignmentFileLabel, assignmentFileOpenUrl, isAssignmentPreviewable } from '../../lib/assignmentFileUrl'
 import { fmtAzBakuField } from '../../lib/azDatetime'
+import ChatPanel from '../../components/chat/ChatPanel'
 
 function fmtDue(d) {
   if (!d) return ''
@@ -53,6 +54,7 @@ export default function InstructorTasks() {
   const [reviewScore, setReviewScore] = useState('')
   const [reviewFeedback, setReviewFeedback] = useState('')
   const [reviewSaving, setReviewSaving] = useState(false)
+  const [chatTarget, setChatTarget] = useState(null)
   const [aiLoading, setAiLoading] = useState(false)
   const [aiMeta, setAiMeta] = useState(null)
   const [groups, setGroups] = useState([])
@@ -508,6 +510,20 @@ export default function InstructorTasks() {
                     <Button
                       size="sm"
                       variant="secondary"
+                      disabled={blocked}
+                      onClick={() =>
+                        setChatTarget({
+                          kind: 'assignment',
+                          assignmentId: t.id,
+                          title: `${t.title || 'Tapşırıq'} — çat`,
+                        })
+                      }
+                    >
+                      Çat
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="secondary"
                       onClick={async () => {
                         try {
                           await copyStudentTaskLink(t.id)
@@ -958,6 +974,14 @@ export default function InstructorTasks() {
           </div>
         ) : null}
       </Modal>
+
+      <ChatPanel
+        open={Boolean(chatTarget)}
+        onClose={() => setChatTarget(null)}
+        kind={chatTarget?.kind}
+        assignmentId={chatTarget?.assignmentId}
+        title={chatTarget?.title}
+      />
     </div>
   )
 }

@@ -8,7 +8,7 @@ const {
   assertDowngradeAllowed,
 } = require('../services/billingEntitlements');
 const getCurrentPlan = require('../services/billingGetCurrentPlan');
-const { normalizePlanSlug } = require('../config/plans');
+const { normalizePlanSlug, planRank } = require('../config/plans');
 const { getOrderInfo } = require('../services/payriffService');
 const { sendPaymentEmail } = require('../services/emailService');
 const { enqueueNotification } = require('../services/notificationQueueService');
@@ -71,6 +71,7 @@ router.get('/status', authenticate, authorize('instructor'), async (req, res) =>
       messages: out.messages,
       timezone: out.timezone,
       requirements: out.requirements,
+      can_direct_chat: planRank(out.plan) >= planRank('pro'),
     });
   } catch (err) {
     res.status(err.statusCode || err.status || 500).json({ success: false, message: err.message, code: err.code });

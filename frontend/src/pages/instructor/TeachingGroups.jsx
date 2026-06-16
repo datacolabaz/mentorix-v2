@@ -17,6 +17,7 @@ import { normalizeTeachingSubjects } from '../../lib/teachingSubjects'
 import { useBillingStatus } from '../../hooks/useBillingStatus'
 import { useSubscriptionPlans } from '../../hooks/useSubscriptionPlans'
 import { basicTrialExpiredMessage } from '../../lib/subscriptionPlanGuards'
+import ChatPanel from '../../components/chat/ChatPanel'
 
 function formatIncomeAzn(n) {
   const v = Number(n)
@@ -44,6 +45,7 @@ export default function InstructorTeachingGroups() {
   const [busy, setBusy] = useState({})
   const [qrOpen, setQrOpen] = useState(false)
   const [qrGroup, setQrGroup] = useState(null)
+  const [chatTarget, setChatTarget] = useState(null)
   const [confirmDelete, setConfirmDelete] = useState(null)
 
   const safeSubjects = useMemo(
@@ -418,6 +420,20 @@ export default function InstructorTeachingGroups() {
                               <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
                                 <button
                                   type="button"
+                                  className={[groupActionBtnCls, 'text-emerald-400'].join(' ')}
+                                  disabled={blocked}
+                                  onClick={() =>
+                                    setChatTarget({
+                                      kind: 'group',
+                                      groupId: g.id,
+                                      title: `${g.name} — qrup çatı`,
+                                    })
+                                  }
+                                >
+                                  Çat
+                                </button>
+                                <button
+                                  type="button"
                                   className={[groupActionBtnCls, theme === 'dark' ? 'text-indigo-300' : 'text-indigo-700'].join(' ')}
                                   onClick={() => openEditGroupPackage(s.id, g)}
                                 >
@@ -538,7 +554,24 @@ export default function InstructorTeachingGroups() {
                                   Sil
                                 </button>
                               </div>
-                            ) : null}
+                            ) : (
+                              <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
+                                <button
+                                  type="button"
+                                  className={[groupActionBtnCls, 'text-emerald-400'].join(' ')}
+                                  disabled={blocked}
+                                  onClick={() =>
+                                    setChatTarget({
+                                      kind: 'group',
+                                      groupId: g.id,
+                                      title: `${g.name} — qrup çatı`,
+                                    })
+                                  }
+                                >
+                                  Çat
+                                </button>
+                              </div>
+                            )}
                           </li>
                         ))}
                       </ul>
@@ -726,6 +759,17 @@ export default function InstructorTeachingGroups() {
           ) : null}
         </div>
       </Modal>
+
+      <ChatPanel
+        open={Boolean(chatTarget)}
+        onClose={() => setChatTarget(null)}
+        kind={chatTarget?.kind}
+        groupId={chatTarget?.groupId}
+        assignmentId={chatTarget?.assignmentId}
+        studentId={chatTarget?.studentId}
+        studentName={chatTarget?.studentName}
+        title={chatTarget?.title}
+      />
     </div>
   )
 }
