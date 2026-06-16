@@ -36,4 +36,12 @@ const authorize = (...roles) => (req, res, next) => {
   next();
 };
 
-module.exports = { authenticate, authorize };
+/** EventSource cannot send Authorization header — allow ?access_token= for SSE only. */
+const authenticateSse = async (req, res, next) => {
+  if (!req.headers.authorization?.split(' ')[1] && req.query?.access_token) {
+    req.headers.authorization = `Bearer ${String(req.query.access_token).trim()}`;
+  }
+  return authenticate(req, res, next);
+};
+
+module.exports = { authenticate, authenticateSse, authorize };

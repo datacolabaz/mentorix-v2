@@ -4,6 +4,7 @@ const { resolveEntitlements } = require('./billingEntitlements');
 const { getActivePlansMap } = require('./subscriptionPlansService');
 const { higherPaidPlansLabel } = require('./billingAlertHelpers');
 const { ACTIVE_ENROLLMENT_WHERE } = require('../sql/activeEnrollments');
+const { publishChatMessage } = require('./chatRealtimeHub');
 
 const MAX_BODY_LEN = 4000;
 const DEFAULT_LIMIT = 50;
@@ -23,7 +24,9 @@ function canUseDirectChat(planSlug) {
 async function directChatDeniedMessage() {
   const plansMap = await getActivePlansMap();
   const label = higherPaidPlansLabel(plansMap, 'basic');
-  const tier = String(label).replace(/\s+və ya daha yüksək paket$/i, '').trim() || 'STANDART';
+  const tier =
+    String(label).replace(/\s+və ya daha yüksək paket$/i, '').trim() ||
+    String(plansMap?.pro?.title || plansMap?.pro?.slug || 'STANDART').trim();
   return `Fərdi çat funksiyası yalnız ${tier} və daha yüksək paketlərdə aktivdir. Zəhmət olmasa paketinizi yeniləyin.`;
 }
 
@@ -347,11 +350,13 @@ async function sendRoomMessage({ roomId, userId, role, bodyRaw }) {
   );
   const sender = senderRows[0] || {};
 
-  return serializeMessage({
+  const serialized = serializeMessage({
     ...rows[0],
     sender_name: sender.full_name,
     sender_role: sender.role,
   });
+  publishChatMessage(roomId, serialized);
+  return serialized;
 }
 
 async function getChatCapabilities(instructorId) {
@@ -377,4 +382,6 @@ module.exports = {
   sendRoomMessage,
   getChatCapabilities,
   assertInstructorDirectChatAllowed,
+  getRoomById,
+  assertRoomAccess,
 };

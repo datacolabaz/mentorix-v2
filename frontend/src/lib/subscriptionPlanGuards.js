@@ -316,3 +316,17 @@ export function higherPaidPlansSuffix(plans, currentSlug = 'basic') {
 export function basicTrialExpiredMessage(plans) {
   return `14 günlük SADƏ sınaq müddəti bitib. Davam etmək üçün ${higherPaidPlansLabel(plans, 'basic')} seçin.`
 }
+
+/** Fərdi çat üçün minimum paket adı (admin `title`: STANDART və s.). */
+export function directChatMinimumPlanLabel(plans) {
+  const next = nextPlanInList(plans, 'basic')
+  if (next) return planTitleOrSlug(next)
+  const pro = (plans || []).find((p) => String(p?.id || '').toLowerCase() === 'pro')
+  return planTitleOrSlug(pro, 'pro')
+}
+
+/** Cari pulsuz paketin göstərilən adı (admin `title`: SADƏ). */
+export function basicPlanDisplayTitle(plans) {
+  const basic = (plans || []).find((p) => String(p?.id || '').toLowerCase() === 'basic')
+  return planTitleOrSlug(basic, 'basic')
+}

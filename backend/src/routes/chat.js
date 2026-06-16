@@ -1,10 +1,11 @@
 const router = require('express').Router();
-const { authenticate, authorize } = require('../middleware/auth');
+const { authenticate, authenticateSse, authorize } = require('../middleware/auth');
 const {
   postOpenRoom,
   getMessages,
   postMessage,
   getCapabilities,
+  streamRoom,
 } = require('../controllers/chatController');
 
 router.get(
@@ -34,6 +35,13 @@ router.post(
   authenticate,
   authorize('instructor', 'student'),
   postMessage,
+);
+
+router.get(
+  '/rooms/:roomId/stream',
+  authenticateSse,
+  authorize('instructor', 'student'),
+  streamRoom,
 );
 
 module.exports = router;

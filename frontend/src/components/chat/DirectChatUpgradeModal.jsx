@@ -4,17 +4,15 @@ import Modal from '../common/Modal'
 import Button from '../common/Button'
 import { ChatBubbleIcon, LockMiniIcon } from './ChatIcons'
 import { useSubscriptionPlans } from '../../hooks/useSubscriptionPlans'
-import { higherPaidPlansLabel } from '../../lib/subscriptionPlanGuards'
+import { basicPlanDisplayTitle, directChatMinimumPlanLabel } from '../../lib/subscriptionPlanGuards'
 
 export default function DirectChatUpgradeModal({ open, onClose, studentName }) {
   const navigate = useNavigate()
   const plansQ = useSubscriptionPlans()
   const plans = Array.isArray(plansQ.data) ? plansQ.data : []
 
-  const upgradeTier = useMemo(() => {
-    const hint = higherPaidPlansLabel(plans, 'basic')
-    return String(hint).replace(/\s+və ya daha yüksək paket$/i, '').trim() || 'STANDART'
-  }, [plans])
+  const upgradeTier = useMemo(() => directChatMinimumPlanLabel(plans), [plans])
+  const currentPlanTitle = useMemo(() => basicPlanDisplayTitle(plans), [plans])
 
   const studentLabel = String(studentName || '').trim()
 
@@ -30,9 +28,14 @@ export default function DirectChatUpgradeModal({ open, onClose, studentName }) {
 
         <div className="space-y-2">
           <p className="text-sm text-gray-400 leading-relaxed max-w-sm mx-auto">
-            Fərdi çat funksiyası yalnız{' '}
-            <span className="font-semibold text-gray-200">{upgradeTier}</span> və daha yüksək paketlərdə
-            aktivdir.
+            Bu funksiya{' '}
+            <span className="font-semibold text-gray-200">{upgradeTier}</span> paketdən başlayaraq mövcuddur.
+            {currentPlanTitle ? (
+              <>
+                {' '}
+                Hazırda <span className="text-gray-300">{currentPlanTitle}</span> paketindəsiniz.
+              </>
+            ) : null}
             {studentLabel ? (
               <>
                 {' '}

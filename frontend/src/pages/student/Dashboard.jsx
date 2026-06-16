@@ -14,6 +14,7 @@ import Button from '../../components/common/Button'
 import useAuthStore from '../../hooks/useAuth'
 import useUiStore from '../../hooks/useUi'
 import GroupSwitcher from '../../components/student/GroupSwitcher'
+import ChatPanel from '../../components/chat/ChatPanel'
 import { studentEnrollmentDisplay } from '../../lib/participantGroupLabels'
 import { useStudentGroups } from '../../contexts/StudentGroupContext'
 import { withEnrollmentQuery } from '../../lib/studentGroupQuery'
@@ -76,6 +77,7 @@ export default function StudentDashboard() {
   const activeDisplay = studentEnrollmentDisplay(activeEnrollment)
   const [exams, setExams] = useState([])
   const [overview, setOverview] = useState(null)
+  const [chatTarget, setChatTarget] = useState(null)
 
   const pieLabelStyle = useMemo(
     () => ({
@@ -147,6 +149,23 @@ export default function StudentDashboard() {
             </p>
           </div>
           <GroupSwitcher className="w-full sm:w-auto sm:max-w-full min-w-0" />
+          {activeEnrollment?.group_id &&
+          String(activeEnrollment.status || '').toLowerCase() === 'active' ? (
+            <Button
+              size="sm"
+              variant="secondary"
+              className="shrink-0"
+              onClick={() =>
+                setChatTarget({
+                  kind: 'group',
+                  groupId: activeEnrollment.group_id,
+                  title: `${activeEnrollment.group_name || activeDisplay.title} — qrup çatı`,
+                })
+              }
+            >
+              Qrup çatı
+            </Button>
+          ) : null}
         </div>
       </div>
 
@@ -278,6 +297,14 @@ export default function StudentDashboard() {
           </div>
         )}
       </Card>
+
+      <ChatPanel
+        open={Boolean(chatTarget)}
+        onClose={() => setChatTarget(null)}
+        kind={chatTarget?.kind}
+        groupId={chatTarget?.groupId}
+        title={chatTarget?.title}
+      />
     </div>
   )
 }

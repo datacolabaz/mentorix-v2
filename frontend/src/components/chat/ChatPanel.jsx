@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import Modal from '../common/Modal'
 import Button from '../common/Button'
 import { fetchChatMessages, openChatRoom, sendChatMessage } from '../../lib/chatApi'
+import { subscribeChatRoom } from '../../lib/chatRealtime'
 import useAuthStore from '../../hooks/useAuth'
 
 function fmtTime(iso) {
@@ -23,6 +24,18 @@ function mergeMessage(list, nextMsg, replaceId = null) {
   const without = replaceId ? list.filter((m) => m.id !== replaceId) : list
   if (without.some((m) => m.id === nextMsg.id)) return without
   return [...without, nextMsg]
+}
+
+function absorbIncomingMessage(prev, msg) {
+  const withoutPendingDupes = prev.filter(
+    (m) =>
+      !(
+        m._pending &&
+        String(m.sender_id) === String(msg?.sender_id) &&
+        m.body === msg?.body
+      ),
+  )
+  return mergeMessage(withoutPendingDupes, { ...msg, _pending: false })
 }
 
 /**
@@ -60,7 +73,7 @@ export default function ChatPanel({
       if (!roomId) return
       if (!silent) setLoading(true)
       try {
-        const list = await fetchChatMessages(roomId, { limit: 80 })
+        const list = await fetchChatMessages(roomId, { limit: 50 })
         setMessages(list)
         if (!silent) setTimeout(scrollToBottom, 0)
       } catch (e) {
@@ -110,13 +123,23 @@ export default function ChatPanel({
 
   useEffect(() => {
     if (!open || !room?.id) return undefined
+
+    const unsubscribe = subscribeChatRoom(room.id, {
+      onMessage: (msg) => {
+        setMessages((prev) => absorbIncomingMessage(prev, msg))
+        requestAnimationFrame(() => scrollToBottom())
+      },
+    })
+
     pollRef.current = setInterval(() => {
       void loadMessages(room.id, { silent: true })
-    }, 8000)
+    }, 15000)
+
     return () => {
+      unsubscribe()
       if (pollRef.current) clearInterval(pollRef.current)
     }
-  }, [open, room?.id, loadMessages])
+  }, [open, room?.id, loadMessages, scrollToBottom])
 
   useEffect(() => {
     scrollToBottom()
@@ -137,6 +160,7 @@ export default function ChatPanel({
         sender_role: user?.role || null,
         body,
         created_at: new Date().toISOString(),
+        _pending: true,
       }
 
       setDraft('')
@@ -148,11 +172,8 @@ export default function ChatPanel({
       try {
         const msg = await sendChatMessage(room.id, body)
         const serverMsg = msg?.id
-          ? msg
-          : {
-              ...optimisticMsg,
-              id: msg?.id || optimisticId,
-            }
+          ? { ...msg, _pending: false }
+          : { ...optimisticMsg, id: msg?.id || optimisticId, _pending: false }
         setMessages((prev) => mergeMessage(prev, serverMsg, optimisticId))
         requestAnimationFrame(() => scrollToBottom())
       } catch (e2) {
@@ -208,6 +229,7 @@ export default function ChatPanel({
                     mine
                       ? 'bg-primary/20 border border-primary/25 text-gray-100'
                       : 'bg-white/5 border border-white/10 text-gray-200',
+                    m._pending ? 'opacity-80' : '',
                   ].join(' ')}
                 >
                   {!mine ? (
@@ -216,7 +238,9 @@ export default function ChatPanel({
                     </div>
                   ) : null}
                   <div className="whitespace-pre-wrap break-words">{m.body}</div>
-                  <div className="text-[10px] text-gray-500 mt-1 tabular-nums">{fmtTime(m.created_at)}</div>
+                  <div className="text-[10px] text-gray-500 mt-1 tabular-nums">
+                    {m._pending ? 'Göndərilir…' : fmtTime(m.created_at)}
+                  </div>
                 </div>
               </div>
             )

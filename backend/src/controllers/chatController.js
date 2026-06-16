@@ -3,7 +3,10 @@ const {
   listRoomMessages,
   sendRoomMessage,
   getChatCapabilities,
+  getRoomById,
+  assertRoomAccess,
 } = require('../services/chatService');
+const { subscribeRoom, unsubscribeRoom } = require('../services/chatRealtimeHub');
 
 async function postOpenRoom(req, res) {
   try {
@@ -77,9 +80,59 @@ async function getCapabilities(req, res) {
   }
 }
 
+async function streamRoom(req, res) {
+  let listener = null;
+  let ping = null;
+  try {
+    const room = await getRoomById(req.params.roomId);
+    await assertRoomAccess(req.user.id, req.user.role, room);
+
+    res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache, no-transform');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+    if (typeof res.flushHeaders === 'function') res.flushHeaders();
+
+    res.write(`data: ${JSON.stringify({ type: 'connected', room_id: room.id })}\n\n`);
+
+    listener = (message) => {
+      try {
+        res.write(`data: ${JSON.stringify({ type: 'message', message })}\n\n`);
+      } catch {
+        /* client disconnected */
+      }
+    };
+    subscribeRoom(room.id, listener);
+
+    ping = setInterval(() => {
+      try {
+        res.write(': keepalive\n\n');
+      } catch {
+        if (ping) clearInterval(ping);
+      }
+    }, 20000);
+
+    req.on('close', () => {
+      if (ping) clearInterval(ping);
+      if (listener) unsubscribeRoom(room.id, listener);
+    });
+  } catch (err) {
+    if (!res.headersSent) {
+      res.status(err.statusCode || err.status || 500).json({
+        success: false,
+        message: err.message,
+        code: err.code || 'CHAT_ERROR',
+      });
+    } else {
+      res.end();
+    }
+  }
+}
+
 module.exports = {
   postOpenRoom,
   getMessages,
   postMessage,
   getCapabilities,
+  streamRoom,
 };

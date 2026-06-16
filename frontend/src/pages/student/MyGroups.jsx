@@ -4,6 +4,7 @@ import api from '../../lib/api'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
 import ConfirmDialog from '../../components/common/ConfirmDialog'
+import ChatPanel from '../../components/chat/ChatPanel'
 import { useToast } from '../../components/common/Toast'
 import { useStudentGroups } from '../../contexts/StudentGroupContext'
 import GroupSwitcher from '../../components/student/GroupSwitcher'
@@ -15,6 +16,7 @@ export default function MyGroups() {
   const [overview, setOverview] = useState(null)
   const [leaveBusy, setLeaveBusy] = useState(null)
   const [leaveConfirm, setLeaveConfirm] = useState(null)
+  const [chatTarget, setChatTarget] = useState(null)
   const toast = useToast()
   const navigate = useNavigate()
 
@@ -161,6 +163,21 @@ export default function MyGroups() {
                 </div>
               </div>
               <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-[color:var(--border-subtle)]">
+                {g.group_id && String(g.status || '').toLowerCase() === 'active' ? (
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() =>
+                      setChatTarget({
+                        kind: 'group',
+                        groupId: g.group_id,
+                        title: `${g.group_name || display.title} — qrup çatı`,
+                      })
+                    }
+                  >
+                    Qrup çatı
+                  </Button>
+                ) : null}
                 <Button size="sm" onClick={() => openGroup(g.enrollment_id)}>
                   Panelə keç
                 </Button>
@@ -203,6 +220,14 @@ export default function MyGroups() {
           Başqa qrupa qoşulmaq üçün müəllimin göndərdiyi dəvət linkinə toxunun.
         </p>
       )}
+
+      <ChatPanel
+        open={Boolean(chatTarget)}
+        onClose={() => setChatTarget(null)}
+        kind={chatTarget?.kind}
+        groupId={chatTarget?.groupId}
+        title={chatTarget?.title}
+      />
     </div>
   )
 }
