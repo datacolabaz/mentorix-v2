@@ -1,7 +1,7 @@
 export const DEFAULT_SUBSCRIPTION_PLANS = [
   {
     id: 'basic',
-    title: 'Başlanğıc',
+    title: 'SADƏ',
     price_azn: 0,
     highlight: false,
     items: [],
@@ -16,7 +16,7 @@ export const DEFAULT_SUBSCRIPTION_PLANS = [
   },
   {
     id: 'pro',
-    title: 'Standart',
+    title: 'STANDART',
     price_azn: 5,
     highlight: true,
     items: [],
@@ -31,7 +31,7 @@ export const DEFAULT_SUBSCRIPTION_PLANS = [
   },
   {
     id: 'growth',
-    title: 'Professional',
+    title: 'PROFESSİONAL',
     price_azn: 10,
     highlight: false,
     items: [],
@@ -46,7 +46,7 @@ export const DEFAULT_SUBSCRIPTION_PLANS = [
   },
   {
     id: 'premium',
-    title: 'Premium',
+    title: 'PREMİUM',
     price_azn: 19,
     highlight: false,
     items: [],

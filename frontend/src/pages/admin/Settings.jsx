@@ -127,7 +127,7 @@ function editorToPayload(p) {
 
 const PRESETS = {
   basic: {
-    title: 'Başlanğıc',
+    title: 'SADƏ',
     price_azn: 0,
     unlimited_students: false,
     student_count: '5',
@@ -146,7 +146,7 @@ const PRESETS = {
     ram_limit_mb: '',
   },
   pro: {
-    title: 'Standart',
+    title: 'STANDART',
     price_azn: 5,
     unlimited_students: false,
     student_count: '20',
@@ -165,7 +165,7 @@ const PRESETS = {
     ram_limit_mb: '',
   },
   growth: {
-    title: 'Professional',
+    title: 'PROFESSİONAL',
     price_azn: 10,
     unlimited_students: false,
     student_count: '50',
@@ -184,7 +184,7 @@ const PRESETS = {
     ram_limit_mb: '',
   },
   premium: {
-    title: 'Premium',
+    title: 'PREMİUM',
     price_azn: 19,
     unlimited_students: true,
     student_count: '',
@@ -244,6 +244,7 @@ export default function AdminSettings() {
   }, [fetchPlans])
 
   const validatePlan = (p) => {
+    if (!String(p.title || '').trim()) return 'Görünən ad boş ola bilməz'
     if (!p.unlimited_students) {
       const n = Number(p.student_count)
       if (!Number.isFinite(n) || n < 0) return 'Tələbə sayı düzgün deyil'
@@ -352,8 +353,13 @@ export default function AdminSettings() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="sm:col-span-2">
-                      <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Plan adı</label>
+                      <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                        Görünən ad (müəllim paneli + landing)
+                      </label>
                       <input className={inp} value={p.title} onChange={(e) => patch(idx, { title: e.target.value })} />
+                      <p className="text-[10px] text-gray-500 mt-1.5">
+                        Texniki kod: <span className="font-mono text-gray-400">{p.slug}</span> — kartlarda yuxarıdakı ad göstərilir.
+                      </p>
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Qiymət (AZN / ay)</label>
@@ -379,16 +385,16 @@ export default function AdminSettings() {
 
                   <div className="flex flex-wrap gap-2">
                     <Button type="button" variant="secondary" size="sm" onClick={() => applyPreset(idx, 'basic')}>
-                      Şablon: Başlanğıc
+                      Şablon: SADƏ
                     </Button>
                     <Button type="button" variant="secondary" size="sm" onClick={() => applyPreset(idx, 'pro')}>
-                      Şablon: Standart
+                      Şablon: STANDART
                     </Button>
                     <Button type="button" variant="secondary" size="sm" onClick={() => applyPreset(idx, 'growth')}>
-                      Şablon: Professional
+                      Şablon: PROFESSİONAL
                     </Button>
                     <Button type="button" variant="secondary" size="sm" onClick={() => applyPreset(idx, 'premium')}>
-                      Şablon: Premium
+                      Şablon: PREMİUM
                     </Button>
                   </div>
 

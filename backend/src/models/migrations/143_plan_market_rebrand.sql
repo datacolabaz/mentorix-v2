@@ -7,7 +7,7 @@ ALTER TABLE subscription_plans
 
 UPDATE subscription_plans
 SET
-  title = 'Başlanğıc',
+  title = 'SADƏ',
   price_azn = 0,
   student_limit = 5,
   document_limit = 50,
@@ -23,7 +23,7 @@ WHERE slug = 'basic';
 
 UPDATE subscription_plans
 SET
-  title = 'Standart',
+  title = 'STANDART',
   price_azn = 5,
   student_limit = 20,
   document_limit = 1250,
@@ -39,7 +39,7 @@ WHERE slug = 'pro';
 
 UPDATE subscription_plans
 SET
-  title = 'Professional',
+  title = 'PROFESSİONAL',
   price_azn = 10,
   student_limit = 50,
   document_limit = 5000,
@@ -55,7 +55,7 @@ WHERE slug = 'growth';
 
 UPDATE subscription_plans
 SET
-  title = 'Premium',
+  title = 'PREMİUM',
   price_azn = 19,
   student_limit = NULL,
   document_limit = NULL,
