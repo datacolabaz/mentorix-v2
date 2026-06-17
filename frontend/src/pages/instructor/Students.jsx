@@ -26,6 +26,7 @@ import { BILLING_STATUS_QUERY_KEY, useBillingStatus } from '../../hooks/useBilli
 import { canUseDirectChat } from '../../lib/subscriptionPlanGuards'
 import StudentDirectChatButton from '../../components/chat/StudentDirectChatButton'
 import DirectChatUpgradeModal from '../../components/chat/DirectChatUpgradeModal'
+import StudentGroupTransferModal from '../../components/instructor/StudentGroupTransferModal'
 import { canonicalAzPhoneE164 } from '../../lib/azPhone'
 import {
   isSystemTeachingSubjectName,
@@ -43,6 +44,16 @@ function studentHasContactPhone(s) {
 function isLightEnrollmentSource(source) {
   const s = String(source || '').trim().toLowerCase()
   return s === 'exam' || s === 'task'
+}
+
+function findTeachingGroupMeta(subjects, groupId) {
+  const id = String(groupId || '')
+  if (!id) return null
+  for (const subj of normalizeTeachingSubjects(subjects)) {
+    const group = findGroupById(subj, id)
+    if (group) return { subject: subj, group }
+  }
+  return null
 }
 
 function readPendingSetupToastSeen() {
@@ -966,6 +977,9 @@ export default function InstructorStudents() {
   const [openGroups, setOpenGroups] = useState(() => new Set())
   const [actionMenuId, setActionMenuId] = useState(null)
   const [directChatUpgrade, setDirectChatUpgrade] = useState(null)
+  const [transferModal, setTransferModal] = useState(null)
+  const [dragOverGroupKey, setDragOverGroupKey] = useState(null)
+  const [draggingStudentId, setDraggingStudentId] = useState(null)
   const { theme } = useUiStore()
   const actionAnchorsRef = useRef(new Map())
   const queryClient = useQueryClient()
@@ -1442,6 +1456,9 @@ export default function InstructorStudents() {
           key,
           subject,
           group,
+          group_id: s.group_id || null,
+          subject_id: s.subject_id || null,
+          is_system_group: Boolean(s.is_system_group),
           students: [],
           nextDistMin: Number.POSITIVE_INFINITY,
           avgScore: null,
@@ -1543,6 +1560,108 @@ export default function InstructorStudents() {
   }
 
   const closeStudentMenu = () => setActionMenuId(null)
+
+  const canDragStudent = (s) => {
+    if (blocked) return false
+    if (isLightEnrollmentSource(s?.enrollment_source)) return false
+    if (isPendingApproval(s)) return false
+    if (Boolean(s?.is_system_group)) return false
+    if (!s?.enrollment_id || !s?.group_id) return false
+    return audienceFilter === 'all' || audienceFilter === 'group'
+  }
+
+  const canDropOnGroup = (g, student) => {
+    if (!student || !g?.group_id) return false
+    if (g.is_system_group) return false
+    if (String(g.group_id) === String(student.group_id || '')) return false
+    return true
+  }
+
+  const handleStudentDragStart = (e, student) => {
+    if (!canDragStudent(student)) {
+      e.preventDefault()
+      return
+    }
+    closeStudentMenu()
+    setDraggingStudentId(student.enrollment_id)
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', String(student.enrollment_id))
+    try {
+      e.dataTransfer.setData(
+        'application/x-mentorix-student',
+        JSON.stringify({ enrollment_id: student.enrollment_id }),
+      )
+    } catch {
+      /* ignore */
+    }
+  }
+
+  const handleStudentDragEnd = () => {
+    setDraggingStudentId(null)
+    setDragOverGroupKey(null)
+  }
+
+  const handleGroupDragOver = (e, g, studentHint = null) => {
+    const enrollmentId = studentHint?.enrollment_id || draggingStudentId
+    if (!enrollmentId) return
+    const student =
+      studentHint ||
+      audienceStudents.find((s) => String(s.enrollment_id) === String(enrollmentId))
+    if (!student || !canDropOnGroup(g, student)) return
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    setDragOverGroupKey(g.key)
+  }
+
+  const handleGroupDragLeave = (e, g) => {
+    if (e.currentTarget.contains(e.relatedTarget)) return
+    if (dragOverGroupKey === g.key) setDragOverGroupKey(null)
+  }
+
+  const openTransferModal = (student, targetGroupMeta, sourceGroupLabel) => {
+    if (!student || !targetGroupMeta?.group) return
+    setTransferModal({
+      student,
+      sourceGroupId: student.group_id,
+      sourceGroupLabel: sourceGroupLabel || resolveStudentGroupLabel(student),
+      targetGroupId: targetGroupMeta.group.id,
+      targetGroupLabel: targetGroupMeta.group.name,
+      targetGroup: targetGroupMeta.group,
+      targetSubjectId: targetGroupMeta.subject?.id,
+    })
+  }
+
+  const handleGroupDrop = (e, g) => {
+    e.preventDefault()
+    setDragOverGroupKey(null)
+    setDraggingStudentId(null)
+    const enrollmentId =
+      e.dataTransfer.getData('text/plain') ||
+      (() => {
+        try {
+          const raw = e.dataTransfer.getData('application/x-mentorix-student')
+          return raw ? JSON.parse(raw)?.enrollment_id : null
+        } catch {
+          return null
+        }
+      })()
+    const student = audienceStudents.find((s) => String(s.enrollment_id) === String(enrollmentId))
+    if (!student || !canDropOnGroup(g, student)) return
+    const meta = findTeachingGroupMeta(teachingSubjects, g.group_id)
+    if (!meta) {
+      toast('Hədəf qrup tapılmadı', 'error')
+      return
+    }
+    openTransferModal(student, meta, resolveStudentGroupLabel(student))
+    if (!openGroups.has(g.key)) {
+      setOpenGroups((prev) => new Set(prev).add(g.key))
+    }
+  }
+
+  const handleTransferSuccess = () => {
+    toast('Tələbə uğurla köçürüldü', 'success')
+    void load(true)
+  }
 
   const openDirectChat = (s) => {
     closeStudentMenu()
@@ -1910,6 +2029,14 @@ export default function InstructorStudents() {
       )}
 
       <div className="space-y-2.5">
+        {!listLoading && !listError && filteredGroups.length > 0 && (audienceFilter === 'all' || audienceFilter === 'group') ? (
+          <p className="text-xs text-token-textMuted px-1 flex items-center gap-2">
+            <span className="text-primary/80" aria-hidden>
+              ⠿
+            </span>
+            Tələbəni başqa qrupun üzərinə sürükləyib buraxın — köçürmə təsdiq pəncərəsi açılacaq.
+          </p>
+        ) : null}
         {listLoading && <ListSkeleton message="Tələbələr yüklənir…" />}
         {!listLoading && listError && (
           <Card className="p-6 text-center border border-amber-500/30 bg-amber-500/5">
@@ -1946,11 +2073,17 @@ export default function InstructorStudents() {
               <Card
                 key={g.key}
                 hover
+                onDragOver={(e) => handleGroupDragOver(e, g)}
+                onDragLeave={(e) => handleGroupDragLeave(e, g)}
+                onDrop={(e) => handleGroupDrop(e, g)}
                 className={[
                   // NOTE: dropdown needs to escape card bounds (no clipping)
-                  'p-0 overflow-visible border relative z-10',
+                  'p-0 overflow-visible border relative z-10 transition-[box-shadow,border-color,transform] duration-200',
                   'border-[color:var(--border-subtle)] hover:border-primary/20',
                   isOpen ? 'border-primary/25 bg-token-surfaceCard/20 z-20' : '',
+                  dragOverGroupKey === g.key
+                    ? 'border-primary/60 ring-2 ring-primary/35 scale-[1.01] shadow-lg shadow-primary/10'
+                    : '',
                 ].join(' ')}
               >
                 <div className="relative">
@@ -2043,7 +2176,11 @@ export default function InstructorStudents() {
                 </div>
 
                 {isOpen && (
-                  <div className="p-2.5 sm:p-3 space-y-2 bg-token-surfaceMain/40">
+                  <div
+                    className="p-2.5 sm:p-3 space-y-2 bg-token-surfaceMain/40"
+                    onDragOver={(e) => handleGroupDragOver(e, g)}
+                    onDrop={(e) => handleGroupDrop(e, g)}
+                  >
                     {g.students.map((s) => {
                       const p = lessonProgress(s)
                       const pay = paymentBadge(s)
@@ -2053,17 +2190,33 @@ export default function InstructorStudents() {
                             : s.billing_type === '12_lessons'
                               ? '12 dərs'
                               : s.billing_type
+                      const draggable = canDragStudent(s)
+                      const isDragging = draggingStudentId === s.enrollment_id
                       return (
                         <div
                           key={s.enrollment_id}
+                          draggable={draggable}
+                          onDragStart={(e) => handleStudentDragStart(e, s)}
+                          onDragEnd={handleStudentDragEnd}
                           className={[
                             'group flex flex-wrap sm:flex-nowrap items-center gap-x-3 gap-y-2 rounded-xl px-3 py-2.5',
                             'border border-[color:var(--border-subtle)]',
                             'bg-token-surfaceCard/40 hover:bg-token-surfaceCard/55',
-                            'transition-[background-color,transform,border-color] duration-200',
+                            'transition-[background-color,transform,border-color,opacity,box-shadow] duration-200',
                             'hover:-translate-y-[1px] hover:border-primary/15',
+                            draggable ? 'cursor-grab active:cursor-grabbing' : '',
+                            isDragging ? 'opacity-45 scale-[0.98] shadow-inner' : '',
                           ].join(' ')}
                         >
+                          {draggable ? (
+                            <span
+                              className="hidden sm:flex shrink-0 w-5 items-center justify-center text-token-textMuted/50 group-hover:text-primary/70 select-none"
+                              aria-hidden
+                              title="Başqa qrupa sürükləyin"
+                            >
+                              ⠿
+                            </span>
+                          ) : null}
                           <div className="min-w-0 flex items-center gap-3 flex-[1_1_200px]">
                             <div
                               className={[
@@ -2508,6 +2661,14 @@ export default function InstructorStudents() {
           </div>
         )}
       </Modal>
+
+      <StudentGroupTransferModal
+        open={Boolean(transferModal)}
+        onClose={() => setTransferModal(null)}
+        transfer={transferModal}
+        onSuccess={handleTransferSuccess}
+        theme={theme}
+      />
 
       <DirectChatUpgradeModal
         open={Boolean(directChatUpgrade)}

@@ -291,4 +291,9 @@ async function activateEnrollmentFromGroupDefaults(client, opts) {
 module.exports = {
   activateEnrollmentFromGroupDefaults,
   alignFirstLessonYmd,
+  appendPackageHistory,
+  billingLimit,
+  bakuTodayYmdDb,
+  generateLessonStarts,
+  reserveGroupSlots,
 };

@@ -68,6 +68,7 @@ app.use('/api/trial', require('./routes/trial'));
 app.use('/api/billing', require('./routes/billing'));
 app.use('/api/public', require('./routes/public'));
 app.use('/api/course', require('./routes/course'));
+app.use('/api/groups', require('./routes/groups'));
 app.use('/api/chat', require('./routes/chat'));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
