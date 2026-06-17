@@ -28,6 +28,14 @@ router.get(
 );
 
 router.get(
+  '/assignment-chats',
+  authenticate,
+  authorize('instructor', 'student'),
+  getAssignments,
+);
+
+/** @deprecated use /assignment-chats */
+router.get(
   '/assignments',
   authenticate,
   authorize('instructor', 'student'),

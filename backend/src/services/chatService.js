@@ -517,7 +517,7 @@ async function listAssignmentChatsForUser(userId, role) {
        LEFT JOIN chat_rooms cr
          ON cr.assignment_id = a.id AND cr.room_kind = 'assignment'
        WHERE a.instructor_id = $1::uuid
-       ORDER BY COALESCE(cr.updated_at, a.created_at) DESC NULLS LAST, a.title ASC`,
+       ORDER BY cr.updated_at DESC NULLS LAST, a.title ASC`,
       [userId],
     );
     return rows || [];
@@ -538,7 +538,7 @@ async function listAssignmentChatsForUser(userId, role) {
        LEFT JOIN chat_rooms cr
          ON cr.assignment_id = a.id AND cr.room_kind = 'assignment'
        WHERE sa.student_id = $1::uuid
-       ORDER BY COALESCE(cr.updated_at, sa.created_at) DESC NULLS LAST, a.title ASC`,
+       ORDER BY cr.updated_at DESC NULLS LAST, a.title ASC`,
       [userId],
     );
     return rows || [];

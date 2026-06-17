@@ -245,7 +245,7 @@ function MessageGroup({ group, currentUserId }) {
 /**
  * Full-panel chat workspace (group or direct) — sidebar + conversation.
  */
-export default function ChatWorkspace({ role, mode = 'group' }) {
+export default function ChatWorkspace({ role, mode = 'group', enrollmentId = null }) {
   const copy = MODE_COPY[mode] || MODE_COPY.group
   const isDirect = mode === 'direct'
   const isAssignment = mode === 'assignment'
@@ -307,14 +307,14 @@ export default function ChatWorkspace({ role, mode = 'group' }) {
       return list
     }
     if (isAssignment) {
-      const list = await fetchChatAssignments()
+      const list = await fetchChatAssignments({ role, enrollmentId })
       setItems(list)
       return list
     }
     const list = await fetchChatGroups()
     setItems(list)
     return list
-  }, [isDirect, isAssignment])
+  }, [isDirect, isAssignment, role, enrollmentId])
 
   const selectItem = useCallback(
     (item) => {
@@ -460,6 +460,7 @@ export default function ChatWorkspace({ role, mode = 'group' }) {
           }
           if (cancelled || !r?.id) return
           setRoom(r)
+          setErr(null)
           await loadMessages(r.id)
         } catch (e) {
           if (!cancelled) setErr(e?.message || 'Çat açılmadı')
@@ -485,12 +486,25 @@ export default function ChatWorkspace({ role, mode = 'group' }) {
         setLoading(true)
         setErr(null)
         try {
-          const r = await openChatRoom({
-            kind: 'assignment',
-            assignment_id: activeItem.assignment_id,
-          })
-          if (cancelled) return
+          let r
+          if (activeItem.room_id) {
+            r = { id: activeItem.room_id, title: activeItem.assignment_title || activeItem.title }
+          } else {
+            r = await openChatRoom({
+              kind: 'assignment',
+              assignment_id: activeItem.assignment_id,
+            })
+            if (!cancelled) {
+              const updated = await refreshList()
+              const match = updated.find(
+                (i) => String(i.assignment_id) === String(activeItem.assignment_id),
+              )
+              if (match) setActiveItem(match)
+            }
+          }
+          if (cancelled || !r?.id) return
           setRoom(r)
+          setErr(null)
           await loadMessages(r.id)
         } catch (e) {
           if (!cancelled) setErr(e?.message || 'Çat açılmadı')
@@ -518,6 +532,7 @@ export default function ChatWorkspace({ role, mode = 'group' }) {
         const r = await openChatRoom({ kind: 'group', group_id: activeItem.group_id })
         if (cancelled) return
         setRoom(r)
+        setErr(null)
         await loadMessages(r.id)
       } catch (e) {
         if (!cancelled) setErr(e?.message || 'Çat açılmadı')
