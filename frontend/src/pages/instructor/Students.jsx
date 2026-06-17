@@ -1955,10 +1955,39 @@ export default function InstructorStudents() {
     if (!deleteConfirm?.enrollmentId || deleteBusy) return
     setDeleteBusy(true)
     try {
+      const deleted = students.find((s) => String(s?.enrollment_id) === String(deleteConfirm.enrollmentId)) || null
       await api.delete('/students/enrollment/' + deleteConfirm.enrollmentId)
       toast('Tələbə silindi', 'success')
       setDeleteConfirm(null)
-      load()
+      // Refresh list immediately so we can decide whether the group is now empty.
+      let nextStudents = []
+      try {
+        const d = await api.get('/students')
+        nextStudents = d.students || []
+        setStudents(nextStudents)
+        writeCache(CACHE_KEY, { students: nextStudents })
+      } catch {
+        // fallback: best-effort
+        await load(true)
+      }
+
+      const gid = deleted?.group_id ? String(deleted.group_id) : ''
+      const isSystem = Boolean(deleted?.is_system_group)
+      if (gid && !isSystem) {
+        const remaining = (Array.isArray(nextStudents) ? nextStudents : [])
+          .filter((s) => String(s?.group_id || '') === gid)
+          .filter((s) => {
+            const st = String(s?.enrollment_status || '').toLowerCase()
+            return st !== 'rejected' && st !== 'left' && st !== 'archived'
+          }).length
+        if (remaining === 0) {
+          const meta = findTeachingGroupMeta(teachingSubjects, gid)
+          setEmptyGroupPrompt({
+            groupId: gid,
+            groupName: meta?.group?.name || resolveStudentGroupLabel(deleted) || 'Qrup',
+          })
+        }
+      }
     } catch (err) {
       toast(err.message || 'Silinmədi', 'error')
     } finally {
