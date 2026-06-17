@@ -352,6 +352,27 @@ const postGroup = async (req, res) => {
       req.user.id,
     ]);
     if (!sub[0]) return res.status(403).json({ success: false, message: 'Bu sahəyə icazə yoxdur' });
+
+    const { rows: existing } = await db.query(
+      `SELECT *
+       FROM instructor_groups
+       WHERE subject_id = $1::uuid
+         AND instructor_id = $2::uuid
+         AND LOWER(TRIM(name)) = LOWER(TRIM($3))
+         AND COALESCE(is_system, FALSE) = FALSE
+       ORDER BY sort_order ASC NULLS LAST, created_at ASC NULLS LAST
+       LIMIT 1`,
+      [subject_id, req.user.id, name],
+    );
+    if (existing[0]) {
+      const g = decorateGroupInvitationFields(existing[0]);
+      return res.json({
+        success: true,
+        reused: true,
+        group: { ...g, invite_ready: Boolean(rowToDefaults(existing[0])) },
+      });
+    }
+
     const { rows: mxg } = await db.query(
       `SELECT COALESCE(MAX(sort_order), 0) + 1 AS n FROM instructor_groups WHERE subject_id = $1`,
       [subject_id]

@@ -157,6 +157,20 @@ async function syncGroupMembership(client, { instructorId, studentId, sourceGrou
   }
 }
 
+async function countGroupEnrollments(client, groupId, instructorId) {
+  if (!groupId) return 0;
+  const { rows } = await client.query(
+    `SELECT COUNT(*)::int AS n
+     FROM enrollments e
+     WHERE e.group_id = $1::uuid
+       AND e.instructor_id = $2::uuid
+       AND e.deleted_at IS NULL
+       AND COALESCE(LOWER(TRIM(e.status)), 'active') NOT IN ('rejected', 'left', 'archived')`,
+    [groupId, instructorId],
+  );
+  return Number(rows[0]?.n) || 0;
+}
+
 async function getTransferPreview(instructorId, targetGroupId) {
   const grp = await fetchGroupGuard(null, targetGroupId, instructorId);
   if (!grp) throw httpError('Hədəf qrup tapılmadı', 404);
@@ -376,11 +390,24 @@ async function transferStudentBetweenGroups({
       subjectId: targetGrp.subject_id,
     });
 
+    let sourceGroupPayload = null;
+    if (effSource && sourceGrp && !sourceGrp.is_system) {
+      const remaining = await countGroupEnrollments(client, effSource, instructorId);
+      sourceGroupPayload = {
+        id: effSource,
+        name: sourceGrp.name,
+        is_empty: remaining === 0,
+        remaining_students: remaining,
+      };
+    }
+
     return {
       enrollment: updatedRows[0],
       student_id: enr.student_id,
       student_name: enr.student_name,
       source_group_id: effSource,
+      source_group_name: sourceGrp?.name || null,
+      source_group: sourceGroupPayload,
       target_group_id: targetGroupId,
       target_group_name: targetGrp.name,
       pricing_mode,

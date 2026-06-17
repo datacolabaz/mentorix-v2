@@ -24,3 +24,32 @@ export function findGroupById(subject, groupId) {
     (g) => g && String(g.id) === id,
   ) || null
 }
+
+export function normalizeTeachingName(name) {
+  return String(name || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+}
+
+/** Eyni sahədə adı uyğun gələn ilk qrup (dublikatın qarşısını almaq üçün). */
+export function findGroupByName(subject, name) {
+  if (!subject || !name) return null
+  const needle = normalizeTeachingName(name)
+  if (!needle) return null
+  return (
+    (Array.isArray(subject.groups) ? subject.groups : []).find(
+      (g) => g && normalizeTeachingName(g.name) === needle,
+    ) || null
+  )
+}
+
+export function findTeachingGroupById(subjects, groupId) {
+  const id = String(groupId || '')
+  if (!id) return null
+  for (const subject of normalizeTeachingSubjects(subjects)) {
+    const group = findGroupById(subject, id)
+    if (group) return { subject, group }
+  }
+  return null
+}

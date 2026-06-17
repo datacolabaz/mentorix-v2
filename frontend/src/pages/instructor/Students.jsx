@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { format, isValid, parseISO } from 'date-fns'
@@ -19,7 +19,9 @@ import PortalMenu from '../../components/common/PortalMenu'
 import PhoneInput from '../../components/auth/PhoneInput'
 import {
   findGroupById,
+  findGroupByName,
   findSubjectById,
+  findTeachingGroupById,
   normalizeTeachingSubjects,
 } from '../../lib/teachingSubjects'
 import { BILLING_STATUS_QUERY_KEY, useBillingStatus } from '../../hooks/useBillingStatus'
@@ -47,13 +49,7 @@ function isLightEnrollmentSource(source) {
 }
 
 function findTeachingGroupMeta(subjects, groupId) {
-  const id = String(groupId || '')
-  if (!id) return null
-  for (const subj of normalizeTeachingSubjects(subjects)) {
-    const group = findGroupById(subj, id)
-    if (group) return { subject: subj, group }
-  }
-  return null
+  return findTeachingGroupById(subjects, groupId)
 }
 
 function readPendingSetupToastSeen() {
@@ -704,7 +700,7 @@ function StudentFormFields({
                       const v = e.target.value
                       setGroupDraft(v)
                       const groups = selectedSubject?.groups || []
-                      const match = groups.find((g) => g && normName(g.name) === normName(v))
+                      const match = findGroupByName(selectedSubject, v) || groups.find((g) => g && normName(g.name) === normName(v))
                       if (match) {
                         setGroupDraft('')
                         setData((p) => ({ ...p, group_id: match.id }))
@@ -980,6 +976,8 @@ export default function InstructorStudents() {
   const [transferModal, setTransferModal] = useState(null)
   const [dragOverGroupKey, setDragOverGroupKey] = useState(null)
   const [draggingStudentId, setDraggingStudentId] = useState(null)
+  const [emptyGroupPrompt, setEmptyGroupPrompt] = useState(null)
+  const [emptyGroupDeleteBusy, setEmptyGroupDeleteBusy] = useState(false)
   const { theme } = useUiStore()
   const actionAnchorsRef = useRef(new Map())
   const queryClient = useQueryClient()
@@ -1047,15 +1045,21 @@ export default function InstructorStudents() {
   }
 
   const createTeachingGroup = async (subjectId, name) => {
-    const d = await api.post('/instructor/teaching/groups', { subject_id: subjectId, name })
+    const trimmed = String(name || '').trim()
+    if (!trimmed) throw new Error('Qrup adı boş ola bilməz')
+    const subject = findSubjectById(teachingSubjects, subjectId)
+    const existing = findGroupByName(subject, trimmed)
+    if (existing?.id) return existing
+    const d = await api.post('/instructor/teaching/groups', { subject_id: subjectId, name: trimmed })
     const g = d?.group
     if (!g?.id) throw new Error(d?.message || 'Qrup yaradılmadı')
     setTeachingSubjects((prev) =>
       normalizeTeachingSubjects(prev).map((s) => {
         if (String(s.id) !== String(subjectId)) return s
         const groups = (Array.isArray(s.groups) ? s.groups : []).filter(Boolean)
-        return { ...s, groups: [...groups, g] }
-      })
+        const already = groups.some((x) => String(x.id) === String(g.id))
+        return already ? s : { ...s, groups: [...groups, g] }
+      }),
     )
     return g
   }
@@ -1450,13 +1454,14 @@ export default function InstructorStudents() {
       if (needsSetup(s)) continue
       const subject = resolveStudentSubjectLabel(s)
       const group = resolveStudentGroupLabel(s)
-      const key = `${subject}__${group}`
+      const gid = s.group_id ? String(s.group_id) : ''
+      const key = gid ? `gid:${gid}` : `legacy:${subject}__${group}`
       if (!byKey.has(key)) {
         byKey.set(key, {
           key,
           subject,
           group,
-          group_id: s.group_id || null,
+          group_id: gid || null,
           subject_id: s.subject_id || null,
           is_system_group: Boolean(s.is_system_group),
           students: [],
@@ -1647,9 +1652,18 @@ export default function InstructorStudents() {
       })()
     const student = audienceStudents.find((s) => String(s.enrollment_id) === String(enrollmentId))
     if (!student || !canDropOnGroup(g, student)) return
-    const meta = findTeachingGroupMeta(teachingSubjects, g.group_id)
+    const targetGroupId = g.group_id
+    if (!targetGroupId) {
+      toast('Hədəf qrupun identifikatoru tapılmadı', 'error')
+      return
+    }
+    const meta = findTeachingGroupMeta(teachingSubjects, targetGroupId)
     if (!meta) {
-      toast('Hədəf qrup tapılmadı', 'error')
+      toast('Hədəf qrup tapılmadı — siyahını yeniləyin', 'error')
+      return
+    }
+    if (String(meta.group.id) !== String(targetGroupId)) {
+      toast('Qrup uyğunsuzluğu — səhifəni yeniləyin', 'error')
       return
     }
     openTransferModal(student, meta, resolveStudentGroupLabel(student))
@@ -1658,9 +1672,41 @@ export default function InstructorStudents() {
     }
   }
 
-  const handleTransferSuccess = () => {
+  const reloadTeachingSubjects = useCallback(async () => {
+    try {
+      const d = await api.get('/instructor/teaching')
+      setTeachingSubjects(normalizeTeachingSubjects(d.subjects))
+    } catch {
+      /* ignore */
+    }
+  }, [])
+
+  const handleTransferSuccess = (res) => {
     toast('Tələbə uğurla köçürüldü', 'success')
     void load(true)
+    const empty = res?.source_group?.is_empty ? res.source_group : null
+    if (empty?.id) {
+      setEmptyGroupPrompt({
+        groupId: empty.id,
+        groupName: empty.name || res?.source_group_name || 'Qrup',
+      })
+    }
+  }
+
+  const confirmDeleteEmptyGroup = async () => {
+    if (!emptyGroupPrompt?.groupId) return
+    setEmptyGroupDeleteBusy(true)
+    try {
+      await api.delete(`/instructor/teaching/groups/${encodeURIComponent(emptyGroupPrompt.groupId)}`)
+      toast(`«${emptyGroupPrompt.groupName}» qrupu silindi`, 'success')
+      setEmptyGroupPrompt(null)
+      await reloadTeachingSubjects()
+      await load(true)
+    } catch (e) {
+      toast(e?.message || 'Qrup silinmədi', 'error')
+    } finally {
+      setEmptyGroupDeleteBusy(false)
+    }
   }
 
   const openDirectChat = (s) => {
@@ -2669,6 +2715,47 @@ export default function InstructorStudents() {
         onSuccess={handleTransferSuccess}
         theme={theme}
       />
+
+      <Modal
+        open={Boolean(emptyGroupPrompt)}
+        onClose={() => !emptyGroupDeleteBusy && setEmptyGroupPrompt(null)}
+        title="Boş qrup"
+        size="sm"
+        zIndex={400}
+      >
+        {emptyGroupPrompt ? (
+          <div className="space-y-5 text-sm">
+            <p className="text-gray-300 leading-relaxed">
+              <span className="font-semibold text-white">«{emptyGroupPrompt.groupName}»</span> qrupunda artıq
+              tələbə qalmayıb. Bu qrupu silmək istəyirsiniz?
+            </p>
+            <p className="text-xs text-gray-500 leading-relaxed">
+              Qrup silinərsə, dəvət linki və qrup paket şablonu da silinir. Tələbənin köçürüldüyü qrup və ödəniş
+              tarixçəsi dəyişməz qalır.
+            </p>
+            <div className="flex flex-col-reverse sm:flex-row gap-2 sm:justify-end pt-1">
+              <Button
+                type="button"
+                variant="secondary"
+                className="sm:min-w-[7.5rem] justify-center"
+                disabled={emptyGroupDeleteBusy}
+                onClick={() => setEmptyGroupPrompt(null)}
+              >
+                Saxla
+              </Button>
+              <Button
+                type="button"
+                variant="danger"
+                className="sm:min-w-[7.5rem] justify-center"
+                loading={emptyGroupDeleteBusy}
+                onClick={() => void confirmDeleteEmptyGroup()}
+              >
+                Qrupu sil
+              </Button>
+            </div>
+          </div>
+        ) : null}
+      </Modal>
 
       <DirectChatUpgradeModal
         open={Boolean(directChatUpgrade)}
