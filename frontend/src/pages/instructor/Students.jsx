@@ -1584,6 +1584,11 @@ export default function InstructorStudents() {
     return null
   }
 
+  const STUDENT_LIST_GRID =
+    'sm:grid sm:gap-x-3 sm:gap-y-2 sm:grid-cols-[1.25rem_minmax(0,1fr)_2.25rem_9rem_5.5rem_4.5rem_2.25rem]'
+  const STUDENT_ROW_GRID =
+    'grid grid-cols-[minmax(0,1fr)_auto] sm:col-span-full sm:grid-cols-subgrid items-center gap-x-2 sm:gap-x-0'
+
   const badgeTone = (variant) => {
     if (theme === 'dark') return ''
     // Light theme: make badges readable on white surfaces
@@ -2382,7 +2387,10 @@ export default function InstructorStudents() {
 
                 {isOpen && (
                   <div
-                    className="p-2.5 sm:p-3 space-y-2 bg-token-surfaceMain/40"
+                    className={[
+                      'p-2.5 sm:p-3 bg-token-surfaceMain/40',
+                      g.students.length ? STUDENT_LIST_GRID : '',
+                    ].join(' ')}
                     onDragOver={(e) => handleGroupDragOver(e, g)}
                     onDrop={(e) => handleGroupDrop(e, g)}
                   >
@@ -2415,7 +2423,9 @@ export default function InstructorStudents() {
                           onDragStart={(e) => handleStudentDragStart(e, s)}
                           onDragEnd={handleStudentDragEnd}
                           className={[
-                            'group grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[1.25rem_minmax(0,1fr)_auto] items-center gap-x-2 sm:gap-x-3 rounded-xl px-3 py-2.5',
+                            'group',
+                            STUDENT_ROW_GRID,
+                            'rounded-xl px-3 py-2.5 mb-2 sm:mb-0',
                             'border border-[color:var(--border-subtle)]',
                             'bg-token-surfaceCard/40 hover:bg-token-surfaceCard/55',
                             'transition-[background-color,transform,border-color,opacity,box-shadow] duration-200',
@@ -2426,14 +2436,14 @@ export default function InstructorStudents() {
                         >
                           {draggable ? (
                             <span
-                              className="hidden sm:flex shrink-0 w-5 items-center justify-center text-token-textMuted/50 group-hover:text-primary/70 select-none sm:col-start-1"
+                              className="hidden sm:flex shrink-0 w-5 items-center justify-center text-token-textMuted/50 group-hover:text-primary/70 select-none"
                               aria-hidden
                               title="Başqa qrupa sürükləyin"
                             >
                               ⠿
                             </span>
                           ) : (
-                            <span className="hidden sm:block sm:col-start-1 w-5 shrink-0" aria-hidden />
+                            <span className="hidden sm:block w-5 shrink-0" aria-hidden />
                           )}
                           <div className="min-w-0 flex items-center gap-3 col-start-1 sm:col-start-2 row-start-1">
                             <div
@@ -2470,8 +2480,8 @@ export default function InstructorStudents() {
                             </div>
                           </div>
 
-                          <div className="col-start-2 sm:col-start-3 row-start-1 flex items-center gap-2 sm:gap-3 justify-end shrink-0">
-                            <div className="w-9 shrink-0 flex justify-center">
+                          <div className="col-start-2 row-start-1 flex items-center justify-end gap-2 sm:contents">
+                            <div className="sm:col-start-3 flex justify-center shrink-0">
                               <StudentDirectChatButton
                                 active={directChatActive}
                                 locked={!directChatActive}
@@ -2487,7 +2497,7 @@ export default function InstructorStudents() {
                               />
                             </div>
 
-                            <div className="hidden sm:flex w-36 shrink-0 flex-col justify-center">
+                            <div className="hidden sm:flex sm:col-start-4 flex-col justify-center min-h-[1.625rem]">
                               {p ? (
                                 <>
                                   <div className="h-2 rounded-full bg-white/5 border border-white/10 overflow-hidden">
@@ -2503,25 +2513,21 @@ export default function InstructorStudents() {
                               ) : null}
                             </div>
 
-                            {needsSetup(s) && (
-                              <Button
-                                size="sm"
-                                className="hidden sm:inline-flex shrink-0"
-                                onClick={() => openCompleteSetup(s)}
-                              >
-                                Quraşdır
-                              </Button>
-                            )}
-                            <div className="hidden sm:flex items-center gap-2 shrink-0">
+                            <div className="hidden sm:flex sm:col-start-5 items-center justify-center">
                               <StatusBadge variant={pay.variant}>{pay.label}</StatusBadge>
+                            </div>
+
+                            <div className="hidden sm:flex sm:col-start-6 items-center justify-center">
                               {packLabel ? (
                                 <StatusBadge variant="neutral">{packLabel}</StatusBadge>
                               ) : (
-                                <span className="inline-block w-[4.5rem] shrink-0" aria-hidden />
+                                <span className="invisible pointer-events-none" aria-hidden>
+                                  <StatusBadge variant="neutral">8 dərs</StatusBadge>
+                                </span>
                               )}
                             </div>
 
-                            <div className="relative w-9 shrink-0">
+                            <div className="relative sm:col-start-7 w-9 shrink-0 justify-self-center">
                               <button
                                 type="button"
                                 className={[
