@@ -1450,6 +1450,29 @@ export default function InstructorStudents() {
 
   const grouped = useMemo(() => {
     const byKey = new Map()
+
+    // Ensure group list matches "Kurslar və qruplar" (includes empty groups).
+    for (const subj of normalizeTeachingSubjects(teachingSubjects)) {
+      for (const gr of Array.isArray(subj.groups) ? subj.groups : []) {
+        if (!gr?.id) continue
+        const gid = String(gr.id)
+        const key = `gid:${gid}`
+        if (byKey.has(key)) continue
+        byKey.set(key, {
+          key,
+          subject: String(subj.name || '').trim() || 'Sahəsiz',
+          group: String(gr.name || '').trim() || 'Qrup',
+          group_id: gid,
+          subject_id: subj.id || null,
+          is_system_group: false,
+          students: [],
+          nextDistMin: Number.POSITIVE_INFINITY,
+          avgScore: null,
+          payMix: { prepaid: 0, installment: 0, postpaid: 0 },
+        })
+      }
+    }
+
     for (const s of audienceStudents) {
       if (needsSetup(s)) continue
       const subject = resolveStudentSubjectLabel(s)
@@ -1498,7 +1521,7 @@ export default function InstructorStudents() {
       return `${a.subject}__${a.group}`.localeCompare(`${b.subject}__${b.group}`)
     })
     return arr
-  }, [audienceStudents])
+  }, [audienceStudents, teachingSubjects])
 
   const visibleGroups = useMemo(() => {
     if (!subjectFilter) return grouped
@@ -1510,15 +1533,19 @@ export default function InstructorStudents() {
     if (!q) return visibleGroups
     return visibleGroups
       .map((g) => {
+        const groupMatch =
+          String(g.group || '').toLowerCase().includes(q) ||
+          String(g.subject || '').toLowerCase().includes(q)
         const next = (Array.isArray(g.students) ? g.students : []).filter((s) => {
           const name = String(s?.full_name || '').toLowerCase()
           const phone = String(s?.phone || '').toLowerCase()
           const email = String(s?.email || '').toLowerCase()
           return name.includes(q) || phone.includes(q) || email.includes(q)
         })
-        return { ...g, students: next }
+        return { ...g, students: groupMatch ? g.students : next, _groupMatch: groupMatch }
       })
-      .filter((g) => g.students.length > 0)
+      .filter((g) => (g._groupMatch ? true : g.students.length > 0))
+      .map(({ _groupMatch, ...rest }) => rest)
   }, [visibleGroups, search])
 
   const initials = (name) =>
