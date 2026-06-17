@@ -8,6 +8,7 @@ const {
   streamRoom,
   getGroups,
   getDirect,
+  getAssignments,
   postAttachment,
 } = require('../controllers/chatController');
 const { uploadChatAttachment } = require('../services/chatAttachmentStorage');
@@ -24,6 +25,13 @@ router.get(
   authenticate,
   authorize('instructor', 'student'),
   getDirect,
+);
+
+router.get(
+  '/assignments',
+  authenticate,
+  authorize('instructor', 'student'),
+  getAssignments,
 );
 
 router.get(

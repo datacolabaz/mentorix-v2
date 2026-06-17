@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { copyStudentTaskLink } from '../../lib/taskShare'
 import api from '../../lib/api'
@@ -13,7 +13,6 @@ import { useSubscriptionPlans } from '../../hooks/useSubscriptionPlans'
 import { assignmentStatusClass, assignmentStatusLabel } from '../../lib/assignmentHelpers'
 import { assignmentFileLabel, assignmentFileOpenUrl, isAssignmentPreviewable } from '../../lib/assignmentFileUrl'
 import { fmtAzBakuField } from '../../lib/azDatetime'
-import ChatPanel from '../../components/chat/ChatPanel'
 
 function fmtDue(d) {
   if (!d) return ''
@@ -54,12 +53,12 @@ export default function InstructorTasks() {
   const [reviewScore, setReviewScore] = useState('')
   const [reviewFeedback, setReviewFeedback] = useState('')
   const [reviewSaving, setReviewSaving] = useState(false)
-  const [chatTarget, setChatTarget] = useState(null)
   const [aiLoading, setAiLoading] = useState(false)
   const [aiMeta, setAiMeta] = useState(null)
   const [groups, setGroups] = useState([])
   const [analytics, setAnalytics] = useState(null)
   const toast = useToast()
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const billingQ = useBillingStatus()
   const billing = billingQ.data || null
@@ -510,13 +509,14 @@ export default function InstructorTasks() {
                     <Button
                       size="sm"
                       variant="secondary"
-                      onClick={() =>
-                        setChatTarget({
-                          kind: 'assignment',
+                      onClick={() => {
+                        const title = t.title || 'Tapşırıq'
+                        const qs = new URLSearchParams({
                           assignmentId: t.id,
-                          title: `${t.title || 'Tapşırıq'} — çat`,
+                          assignmentTitle: title,
                         })
-                      }
+                        navigate(`/instructor/assignment-chat?${qs.toString()}`)
+                      }}
                     >
                       Çat
                     </Button>
@@ -973,14 +973,6 @@ export default function InstructorTasks() {
           </div>
         ) : null}
       </Modal>
-
-      <ChatPanel
-        open={Boolean(chatTarget)}
-        onClose={() => setChatTarget(null)}
-        kind={chatTarget?.kind}
-        assignmentId={chatTarget?.assignmentId}
-        title={chatTarget?.title}
-      />
     </div>
   )
 }

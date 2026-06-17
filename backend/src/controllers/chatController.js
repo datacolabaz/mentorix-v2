@@ -7,6 +7,7 @@ const {
   assertRoomAccess,
   listGroupChatsForUser,
   listDirectChatsForUser,
+  listAssignmentChatsForUser,
   touchUserActivity,
 } = require('../services/chatService');
 const { subscribeRoom, unsubscribeRoom } = require('../services/chatRealtimeHub');
@@ -17,6 +18,20 @@ async function getGroups(req, res) {
     void touchUserActivity(req.user.id);
     const groups = await listGroupChatsForUser(req.user.id, req.user.role);
     res.json({ success: true, groups });
+  } catch (err) {
+    res.status(err.statusCode || err.status || 500).json({
+      success: false,
+      message: err.message,
+      code: err.code || 'CHAT_ERROR',
+    });
+  }
+}
+
+async function getAssignments(req, res) {
+  try {
+    void touchUserActivity(req.user.id);
+    const assignments = await listAssignmentChatsForUser(req.user.id, req.user.role);
+    res.json({ success: true, assignments });
   } catch (err) {
     res.status(err.statusCode || err.status || 500).json({
       success: false,
@@ -202,6 +217,7 @@ async function streamRoom(req, res) {
 module.exports = {
   getGroups,
   getDirect,
+  getAssignments,
   postOpenRoom,
   getMessages,
   postMessage,

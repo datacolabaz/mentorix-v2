@@ -62,7 +62,10 @@ export default function InstructorLayout() {
   const [navOpen, setNavOpen] = useState(false)
   const { focusMode, setFocusMode, overlayLock, theme, toggleTheme } = useUiStore()
   const sidebarHidden = focusMode || overlayLock
-  const isChatPage = location.pathname === '/instructor/chat' || location.pathname === '/instructor/direct-chat'
+  const isChatPage =
+    location.pathname === '/instructor/chat' ||
+    location.pathname === '/instructor/direct-chat' ||
+    location.pathname === '/instructor/assignment-chat'
   const [limitStatus, setLimitStatus] = useState({ level: null, message: null })
   const [discoverProfileAlert, setDiscoverProfileAlert] = useState(null)
   const [discoverModalOpen, setDiscoverModalOpen] = useState(false)

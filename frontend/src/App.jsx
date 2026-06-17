@@ -64,6 +64,7 @@ import StudentTaskInvite from './pages/student/TaskInvite'
 import StudentMyGroups from './pages/student/MyGroups'
 import GroupChatPage from './pages/chat/GroupChatPage'
 import DirectChatPage from './pages/chat/DirectChatPage'
+import AssignmentChatPage from './pages/chat/AssignmentChatPage'
 import { StudentGroupProvider } from './contexts/StudentGroupContext'
 import ParentDashboard from './pages/parent/Dashboard'
 import ParentAssignments from './pages/parent/Assignments'
@@ -183,6 +184,7 @@ export default function App() {
         <Route path="teaching-groups" element={<InstructorTeachingGroups />} />
         <Route path="chat" element={<GroupChatPage role="instructor" basePath="/instructor/chat" />} />
         <Route path="direct-chat" element={<DirectChatPage role="instructor" />} />
+        <Route path="assignment-chat" element={<AssignmentChatPage role="instructor" />} />
         <Route path="join-requests" element={<InstructorJoinRequests />} />
         <Route path="inquiries" element={<StudentInquiries />} />
         <Route path="schedule" element={<InstructorSchedule />} />
@@ -210,6 +212,7 @@ export default function App() {
         <Route path="schedule" element={<StudentSchedule />} />
         <Route path="chat" element={<GroupChatPage role="student" basePath="/student/chat" />} />
         <Route path="direct-chat" element={<DirectChatPage role="student" />} />
+        <Route path="assignment-chat" element={<AssignmentChatPage role="student" />} />
         <Route path="exams" element={<StudentExams />} />
         <Route path="assignments" element={<StudentTasks />} />
         <Route path="tasks" element={<Navigate to="/student/assignments" replace />} />

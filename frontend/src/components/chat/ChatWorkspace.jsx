@@ -5,6 +5,7 @@ import useAuthStore from '../../hooks/useAuth'
 import {
   CHAT_MAX_FILE_BYTES,
   fetchChatDirects,
+  fetchChatAssignments,
   fetchChatGroups,
   fetchChatMessages,
   openChatRoom,
@@ -92,6 +93,43 @@ const MODE_COPY = {
       ),
     itemKey: (item) => item.peer_id || item.room_id,
     isActive: (item, active) => String(item.peer_id) === String(active?.peer_id),
+  },
+  assignment: {
+    sidebarTitle: 'Tapşırıq çatı',
+    sidebarSubtitle: 'Tapşırıq söhbətləri',
+    emptyList: 'Hələ tapşırıq çatınız yoxdur.',
+    listError: 'Tapşırıqlar yüklənmədi',
+    headerFallback: 'Tapşırıq çatı',
+    peerLabel: (item) => item?.assignment_title || 'Tapşırıq',
+    peerMeta: (item) => (
+      <>
+        <span>{item?.member_count ?? '—'} iştirakçı</span>
+        {Number(item?.online_count) > 0 ? (
+          <span className="inline-flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" aria-hidden />
+            {item.online_count} onlayn
+          </span>
+        ) : null}
+      </>
+    ),
+    headerMeta: (item) => (
+      <>
+        <span>{item?.member_count ?? '—'} iştirakçı</span>
+        {Number(item?.online_count) > 0 ? (
+          <span className="inline-flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" aria-hidden />
+            <span>{item.online_count} onlayn</span>
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-token-textMuted/40" aria-hidden />
+            <span>Offlayn</span>
+          </span>
+        )}
+      </>
+    ),
+    itemKey: (item) => item.assignment_id,
+    isActive: (item, active) => String(item.assignment_id) === String(active?.assignment_id),
   },
 }
 
@@ -210,6 +248,7 @@ function MessageGroup({ group, currentUserId }) {
 export default function ChatWorkspace({ role, mode = 'group' }) {
   const copy = MODE_COPY[mode] || MODE_COPY.group
   const isDirect = mode === 'direct'
+  const isAssignment = mode === 'assignment'
   const { user } = useAuthStore()
   const [searchParams, setSearchParams] = useSearchParams()
 
@@ -235,6 +274,8 @@ export default function ChatWorkspace({ role, mode = 'group' }) {
   const selectedGroupId = searchParams.get('groupId')
   const selectedPeerId = searchParams.get('peerId') || searchParams.get('studentId')
   const selectedPeerName = searchParams.get('peerName') || searchParams.get('studentName') || ''
+  const selectedAssignmentId = searchParams.get('assignmentId')
+  const selectedAssignmentTitle = searchParams.get('assignmentTitle') || ''
 
   const scrollToBottom = useCallback(() => {
     const el = listRef.current
@@ -265,10 +306,15 @@ export default function ChatWorkspace({ role, mode = 'group' }) {
       setItems(list)
       return list
     }
+    if (isAssignment) {
+      const list = await fetchChatAssignments()
+      setItems(list)
+      return list
+    }
     const list = await fetchChatGroups()
     setItems(list)
     return list
-  }, [isDirect])
+  }, [isDirect, isAssignment])
 
   const selectItem = useCallback(
     (item) => {
@@ -280,11 +326,17 @@ export default function ChatWorkspace({ role, mode = 'group' }) {
         setSearchParams(next, { replace: true })
         return
       }
+      if (isAssignment) {
+        if (!item?.assignment_id) return
+        setActiveItem(item)
+        setSearchParams({ assignmentId: item.assignment_id }, { replace: true })
+        return
+      }
       if (!item?.group_id) return
       setActiveItem(item)
       setSearchParams({ groupId: item.group_id }, { replace: true })
     },
-    [isDirect, setSearchParams],
+    [isDirect, isAssignment, setSearchParams],
   )
 
   useEffect(() => {
@@ -336,6 +388,32 @@ export default function ChatWorkspace({ role, mode = 'group' }) {
       return
     }
 
+    if (isAssignment) {
+      if (!items.length && !selectedAssignmentId) {
+        setActiveItem(null)
+        return
+      }
+      const fromUrl = selectedAssignmentId
+        ? items.find((i) => String(i.assignment_id) === String(selectedAssignmentId))
+        : null
+      if (fromUrl) {
+        setActiveItem(fromUrl)
+        return
+      }
+      if (selectedAssignmentId) {
+        setActiveItem({
+          assignment_id: selectedAssignmentId,
+          assignment_title: selectedAssignmentTitle || 'Tapşırıq',
+        })
+        return
+      }
+      if (items[0]) {
+        setActiveItem(items[0])
+        setSearchParams({ assignmentId: items[0].assignment_id }, { replace: true })
+      }
+      return
+    }
+
     if (!items.length) {
       setActiveItem(null)
       return
@@ -348,7 +426,7 @@ export default function ChatWorkspace({ role, mode = 'group' }) {
     const first = items[0]
     setActiveItem(first)
     setSearchParams({ groupId: first.group_id }, { replace: true })
-  }, [items, selectedGroupId, selectedPeerId, selectedPeerName, isDirect, role, setSearchParams])
+  }, [items, selectedGroupId, selectedPeerId, selectedPeerName, selectedAssignmentId, selectedAssignmentTitle, isDirect, isAssignment, role, setSearchParams])
 
   useEffect(() => {
     if (isDirect) {
@@ -395,6 +473,37 @@ export default function ChatWorkspace({ role, mode = 'group' }) {
       }
     }
 
+    if (isAssignment) {
+      if (!activeItem?.assignment_id) {
+        setRoom(null)
+        setMessages([])
+        return undefined
+      }
+
+      let cancelled = false
+      ;(async () => {
+        setLoading(true)
+        setErr(null)
+        try {
+          const r = await openChatRoom({
+            kind: 'assignment',
+            assignment_id: activeItem.assignment_id,
+          })
+          if (cancelled) return
+          setRoom(r)
+          await loadMessages(r.id)
+        } catch (e) {
+          if (!cancelled) setErr(e?.message || 'Çat açılmadı')
+        } finally {
+          if (!cancelled) setLoading(false)
+        }
+      })()
+
+      return () => {
+        cancelled = true
+      }
+    }
+
     if (!activeItem?.group_id) {
       setRoom(null)
       setMessages([])
@@ -420,7 +529,7 @@ export default function ChatWorkspace({ role, mode = 'group' }) {
     return () => {
       cancelled = true
     }
-  }, [isDirect, activeItem?.peer_id, activeItem?.room_id, activeItem?.group_id, activeItem?.peer_name, role, loadMessages, refreshList])
+  }, [isDirect, isAssignment, activeItem?.peer_id, activeItem?.room_id, activeItem?.group_id, activeItem?.assignment_id, activeItem?.peer_name, role, loadMessages, refreshList])
 
   useEffect(() => {
     if (!room?.id) return undefined

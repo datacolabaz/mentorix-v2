@@ -65,7 +65,10 @@ function StudentLayoutInner() {
   const { tasksBadge, notifBadge } = useStudentAlerts({ enrollmentId: activeEnrollmentId })
   const mainRef = useRef(null)
   const showMobileSidebar = navOpen && !focusMode
-  const isChatPage = location.pathname === '/student/chat' || location.pathname === '/student/direct-chat'
+  const isChatPage =
+    location.pathname === '/student/chat' ||
+    location.pathname === '/student/direct-chat' ||
+    location.pathname === '/student/assignment-chat'
 
   const closeNav = () => setNavOpen(false)
 

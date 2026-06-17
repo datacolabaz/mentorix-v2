@@ -15,6 +15,11 @@ export async function fetchChatDirects() {
   return Array.isArray(d?.conversations) ? d.conversations : []
 }
 
+export async function fetchChatAssignments() {
+  const d = await api.get('/chat/assignments')
+  return Array.isArray(d?.assignments) ? d.assignments : []
+}
+
 export async function openChatRoom(payload) {
   const d = await api.post('/chat/rooms/open', payload)
   return d?.room || null

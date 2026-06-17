@@ -480,6 +480,73 @@ async function listDirectChatsForUser(userId, role) {
   return [];
 }
 
+const ASSIGNMENT_MEMBER_COUNT_SQL = `
+  (
+    SELECT COUNT(DISTINCT sa.student_id)::int
+    FROM student_assignments sa
+    WHERE sa.assignment_id = a.id
+  ) + 1
+`;
+
+const ASSIGNMENT_ONLINE_COUNT_SQL = `
+  (
+    SELECT COUNT(DISTINCT u.id)::int
+    FROM (
+      SELECT sa.student_id AS uid
+      FROM student_assignments sa
+      WHERE sa.assignment_id = a.id
+      UNION
+      SELECT a.instructor_id AS uid
+    ) members
+    JOIN users u ON u.id = members.uid
+    WHERE u.deleted_at IS NULL
+      AND u.last_activity_at >= NOW() - INTERVAL '5 minutes'
+  )
+`;
+
+async function listAssignmentChatsForUser(userId, role) {
+  if (role === 'instructor') {
+    const { rows } = await db.query(
+      `SELECT a.id AS assignment_id,
+              a.title AS assignment_title,
+              cr.id AS room_id,
+              cr.updated_at AS last_activity,
+              ${ASSIGNMENT_MEMBER_COUNT_SQL} AS member_count,
+              ${ASSIGNMENT_ONLINE_COUNT_SQL} AS online_count
+       FROM assignments a
+       LEFT JOIN chat_rooms cr
+         ON cr.assignment_id = a.id AND cr.room_kind = 'assignment'
+       WHERE a.instructor_id = $1::uuid
+       ORDER BY COALESCE(cr.updated_at, a.created_at) DESC NULLS LAST, a.title ASC`,
+      [userId],
+    );
+    return rows || [];
+  }
+
+  if (role === 'student') {
+    const { rows } = await db.query(
+      `SELECT a.id AS assignment_id,
+              a.title AS assignment_title,
+              cr.id AS room_id,
+              u.full_name AS instructor_name,
+              cr.updated_at AS last_activity,
+              ${ASSIGNMENT_MEMBER_COUNT_SQL} AS member_count,
+              ${ASSIGNMENT_ONLINE_COUNT_SQL} AS online_count
+       FROM student_assignments sa
+       JOIN assignments a ON a.id = sa.assignment_id
+       JOIN users u ON u.id = a.instructor_id
+       LEFT JOIN chat_rooms cr
+         ON cr.assignment_id = a.id AND cr.room_kind = 'assignment'
+       WHERE sa.student_id = $1::uuid
+       ORDER BY COALESCE(cr.updated_at, sa.created_at) DESC NULLS LAST, a.title ASC`,
+      [userId],
+    );
+    return rows || [];
+  }
+
+  return [];
+}
+
 async function getChatCapabilities(instructorId) {
   const ent = await resolveEntitlements(instructorId);
   const can_direct_chat = canUseDirectChat(ent.plan);
@@ -503,6 +570,7 @@ module.exports = {
   sendRoomMessage,
   listGroupChatsForUser,
   listDirectChatsForUser,
+  listAssignmentChatsForUser,
   getChatCapabilities,
   assertInstructorDirectChatAllowed,
   getRoomById,

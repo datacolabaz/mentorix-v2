@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import api from '../../lib/api'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
@@ -23,7 +24,6 @@ import {
   isAssignmentPreviewable,
 } from '../../lib/assignmentFileUrl'
 import { fmtAzBakuField } from '../../lib/azDatetime'
-import ChatPanel from '../../components/chat/ChatPanel'
 
 function fmtDue(d) {
   if (!d) return ''
@@ -62,7 +62,7 @@ export default function StudentAssignments() {
   const [attachments, setAttachments] = useState([])
   const [tab, setTab] = useState('active')
   const [submitConfirmOpen, setSubmitConfirmOpen] = useState(false)
-  const [chatTarget, setChatTarget] = useState(null)
+  const navigate = useNavigate()
 
   const filteredTasks = useMemo(() => filterTasksByTab(tasks, tab), [tasks, tab])
 
@@ -353,13 +353,14 @@ export default function StudentAssignments() {
                     <Button
                       size="sm"
                       variant="secondary"
-                      onClick={() =>
-                        setChatTarget({
-                          kind: 'assignment',
+                      onClick={() => {
+                        const title = t.title || 'Tapşırıq'
+                        const qs = new URLSearchParams({
                           assignmentId: t.assignment_id,
-                          title: `${t.title || 'Tapşırıq'} — çat`,
+                          assignmentTitle: title,
                         })
-                      }
+                        navigate(`/student/assignment-chat?${qs.toString()}`)
+                      }}
                     >
                       Çat
                     </Button>
@@ -597,14 +598,6 @@ export default function StudentAssignments() {
           </div>
         ) : null}
       </Modal>
-
-      <ChatPanel
-        open={Boolean(chatTarget)}
-        onClose={() => setChatTarget(null)}
-        kind={chatTarget?.kind}
-        assignmentId={chatTarget?.assignmentId}
-        title={chatTarget?.title}
-      />
     </div>
   )
 }
