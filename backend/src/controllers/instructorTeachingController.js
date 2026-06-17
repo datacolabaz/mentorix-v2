@@ -436,6 +436,60 @@ const patchGroup = async (req, res) => {
     const id = req.params.id;
     if (!looksUuid(id)) return res.status(400).json({ success: false, message: 'ID düzgün deyil' });
     await assertGroupMutable(id, req.user.id, 'rename_or_configure');
+
+    const packageKeys = [
+      'default_billing_type',
+      'default_package_fee',
+      'default_discount_percent',
+      'default_billing_timing',
+      'default_payment_plan',
+      'default_lesson_weekdays',
+      'default_lesson_times',
+      'default_lesson_end_times',
+      'default_notifications_enabled',
+      'default_initial_payment_status',
+      'billing_type',
+      'package_fee',
+      'lesson_weekdays',
+      'lesson_times',
+    ];
+    const hasPackagePatch = packageKeys.some((k) => req.body?.[k] !== undefined);
+    const nameOnly =
+      req.body?.name != null &&
+      String(req.body.name).trim() !== '' &&
+      !hasPackagePatch;
+
+    if (nameOnly) {
+      const newName = String(req.body.name).trim();
+      if (newName.length > 200) {
+        return res.status(400).json({ success: false, message: 'Qrup adı çox uzundur' });
+      }
+      const { rows: cur } = await db.query(
+        `SELECT subject_id FROM instructor_groups WHERE id = $1 AND instructor_id = $2 LIMIT 1`,
+        [id, req.user.id],
+      );
+      if (!cur[0]) return res.status(404).json({ success: false, message: 'Tapılmadı' });
+      const { rows: dup } = await db.query(
+        `SELECT id FROM instructor_groups
+         WHERE subject_id = $1::uuid
+           AND instructor_id = $2::uuid
+           AND LOWER(TRIM(name)) = LOWER(TRIM($3))
+           AND id <> $4::uuid
+           AND COALESCE(is_system, FALSE) = FALSE
+         LIMIT 1`,
+        [cur[0].subject_id, req.user.id, newName, id],
+      );
+      if (dup[0]) {
+        return res.status(409).json({ success: false, message: 'Bu sahədə eyni adlı qrup artıq mövcuddur' });
+      }
+      const { rows } = await db.query(
+        `UPDATE instructor_groups SET name = $3 WHERE id = $1 AND instructor_id = $2 RETURNING *`,
+        [id, req.user.id, newName],
+      );
+      const g = decorateGroupInvitationFields(rows[0]);
+      return res.json({ success: true, group: { ...g, invite_ready: Boolean(rowToDefaults(rows[0])) } });
+    }
+
     const defs = parseGroupDefaultsPayload(req.body);
     const { rows } = await db.query(
       `UPDATE instructor_groups SET
@@ -489,6 +543,24 @@ const deleteGroup = async (req, res) => {
     const id = req.params.id;
     if (!looksUuid(id)) return res.status(400).json({ success: false, message: 'ID düzgün deyil' });
     await assertGroupMutable(id, req.user.id, 'delete');
+
+    const { rows: cntRows } = await db.query(
+      `SELECT COUNT(*)::int AS n
+       FROM enrollments e
+       WHERE e.group_id = $1::uuid
+         AND e.instructor_id = $2::uuid
+         AND e.deleted_at IS NULL
+         AND COALESCE(LOWER(TRIM(e.status)), 'active') NOT IN ('rejected', 'left', 'archived')`,
+      [id, req.user.id],
+    );
+    const activeCount = Number(cntRows[0]?.n) || 0;
+    if (activeCount > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Qrupda hələ tələbə var — əvvəlcə tələbələri başqa qrupa köçürün və ya silin',
+      });
+    }
+
     const { rowCount } = await db.query(`DELETE FROM instructor_groups WHERE id = $1 AND instructor_id = $2`, [
       id,
       req.user.id,

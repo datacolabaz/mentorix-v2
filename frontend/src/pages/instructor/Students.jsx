@@ -29,6 +29,7 @@ import { canUseDirectChat } from '../../lib/subscriptionPlanGuards'
 import StudentDirectChatButton from '../../components/chat/StudentDirectChatButton'
 import DirectChatUpgradeModal from '../../components/chat/DirectChatUpgradeModal'
 import StudentGroupTransferModal from '../../components/instructor/StudentGroupTransferModal'
+import { groupPackagePayload } from '../../components/instructor/GroupPackageFields'
 import { canonicalAzPhoneE164 } from '../../lib/azPhone'
 import {
   isSystemTeachingSubjectName,
@@ -978,6 +979,8 @@ export default function InstructorStudents() {
   const [draggingStudentId, setDraggingStudentId] = useState(null)
   const [emptyGroupPrompt, setEmptyGroupPrompt] = useState(null)
   const [emptyGroupDeleteBusy, setEmptyGroupDeleteBusy] = useState(false)
+  const [groupRenameModal, setGroupRenameModal] = useState(null)
+  const [groupRenameBusy, setGroupRenameBusy] = useState(false)
   const { theme } = useUiStore()
   const actionAnchorsRef = useRef(new Map())
   const queryClient = useQueryClient()
@@ -1727,12 +1730,71 @@ export default function InstructorStudents() {
       await api.delete(`/instructor/teaching/groups/${encodeURIComponent(emptyGroupPrompt.groupId)}`)
       toast(`«${emptyGroupPrompt.groupName}» qrupu silindi`, 'success')
       setEmptyGroupPrompt(null)
+      setOpenGroups((prev) => {
+        const next = new Set(prev)
+        next.delete(`gid:${emptyGroupPrompt.groupId}`)
+        return next
+      })
       await reloadTeachingSubjects()
       await load(true)
     } catch (e) {
       toast(e?.message || 'Qrup silinmədi', 'error')
     } finally {
       setEmptyGroupDeleteBusy(false)
+    }
+  }
+
+  const canManageEmptyGroup = (g) =>
+    Boolean(g?.group_id) &&
+    !g?.is_system_group &&
+    (g.students?.length || 0) === 0 &&
+    (audienceFilter === 'all' || audienceFilter === 'group')
+
+  const openRenameGroup = (g) => {
+    if (!g?.group_id) return
+    const meta = findTeachingGroupMeta(teachingSubjects, g.group_id)
+    setGroupRenameModal({
+      groupId: g.group_id,
+      groupName: g.group,
+      groupRecord: meta?.group || null,
+    })
+  }
+
+  const promptDeleteGroup = (g) => {
+    if (!g?.group_id) return
+    setEmptyGroupPrompt({
+      groupId: g.group_id,
+      groupName: g.group || 'Qrup',
+    })
+  }
+
+  const saveGroupRename = async () => {
+    if (!groupRenameModal?.groupId) return
+    const trimmed = String(groupRenameModal.groupName || '').trim()
+    if (!trimmed) {
+      toast('Qrup adı boş ola bilməz', 'error')
+      return
+    }
+    const meta = findTeachingGroupMeta(teachingSubjects, groupRenameModal.groupId)
+    const dup = findGroupByName(meta?.subject, trimmed)
+    if (dup && String(dup.id) !== String(groupRenameModal.groupId)) {
+      toast('Bu sahədə eyni adlı qrup artıq mövcuddur', 'error')
+      return
+    }
+    setGroupRenameBusy(true)
+    try {
+      const body = groupRenameModal.groupRecord
+        ? groupPackagePayload(groupRenameModal.groupRecord, trimmed)
+        : { name: trimmed }
+      await api.patch(`/instructor/teaching/groups/${encodeURIComponent(groupRenameModal.groupId)}`, body)
+      toast('Qrup adı yeniləndi', 'success')
+      setGroupRenameModal(null)
+      await reloadTeachingSubjects()
+      await load(true)
+    } catch (e) {
+      toast(e?.message || 'Qrup adı yenilənmədi', 'error')
+    } finally {
+      setGroupRenameBusy(false)
     }
   }
 
@@ -2232,6 +2294,39 @@ export default function InstructorStudents() {
                         {groupStatus.label}
                       </StatusBadge>
 
+                      {canManageEmptyGroup(g) ? (
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            title="Qrup adını dəyiş"
+                            className={[
+                              'h-9 px-2.5 rounded-xl border text-xs font-semibold transition-colors',
+                              'border-[color:var(--border-subtle)] bg-token-surfaceCard/35 hover:bg-token-surfaceCard/60 text-token-textMain',
+                            ].join(' ')}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              openRenameGroup(g)
+                            }}
+                          >
+                            Ad
+                          </button>
+                          <button
+                            type="button"
+                            title="Boş qrupu sil"
+                            className={[
+                              'h-9 px-2.5 rounded-xl border text-xs font-semibold transition-colors',
+                              'border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-300',
+                            ].join(' ')}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              promptDeleteGroup(g)
+                            }}
+                          >
+                            Sil
+                          </button>
+                        </div>
+                      ) : null}
+
                       <button
                         type="button"
                         className={[
@@ -2254,6 +2349,22 @@ export default function InstructorStudents() {
                     onDragOver={(e) => handleGroupDragOver(e, g)}
                     onDrop={(e) => handleGroupDrop(e, g)}
                   >
+                    {g.students.length === 0 ? (
+                      <div className="rounded-xl border border-dashed border-[color:var(--border-subtle)] bg-token-surfaceCard/25 px-4 py-5 text-center space-y-2">
+                        <p className="text-sm text-token-textMuted">
+                          Bu qrupda hələ tələbə yoxdur.
+                        </p>
+                        {canManageEmptyGroup(g) ? (
+                          <p className="text-xs text-token-textMuted/90">
+                            Başqa qrupdan tələbəni buraya sürükləyib buraxa, qrup adını dəyişə və ya qrupu silə bilərsiniz.
+                          </p>
+                        ) : (
+                          <p className="text-xs text-token-textMuted/90">
+                            Başqa qrupdan tələbəni buraya sürükləyib buraxa bilərsiniz.
+                          </p>
+                        )}
+                      </div>
+                    ) : null}
                     {g.students.map((s) => {
                       const p = lessonProgress(s)
                       const pay = paymentBadge(s)
@@ -2742,6 +2853,46 @@ export default function InstructorStudents() {
         onSuccess={handleTransferSuccess}
         theme={theme}
       />
+
+      <Modal
+        open={Boolean(groupRenameModal)}
+        onClose={() => !groupRenameBusy && setGroupRenameModal(null)}
+        title="Qrup adını dəyiş"
+        size="sm"
+        zIndex={400}
+        footer={
+          <div className="flex flex-col-reverse sm:flex-row gap-2 sm:justify-end w-full">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setGroupRenameModal(null)}
+              disabled={groupRenameBusy}
+            >
+              Ləğv et
+            </Button>
+            <Button type="button" onClick={() => void saveGroupRename()} loading={groupRenameBusy}>
+              Yadda saxla
+            </Button>
+          </div>
+        }
+      >
+        {groupRenameModal ? (
+          <div className="space-y-3">
+            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider">
+              Qrup adı
+            </label>
+            <input
+              className="w-full rounded-xl px-4 py-2.5 text-sm outline-none focus:border-primary border border-white/10 bg-white/[0.03] text-white"
+              value={groupRenameModal.groupName}
+              onChange={(e) =>
+                setGroupRenameModal((prev) => (prev ? { ...prev, groupName: e.target.value } : prev))
+              }
+              placeholder="məs. DataAnalitika2"
+              autoFocus
+            />
+          </div>
+        ) : null}
+      </Modal>
 
       <Modal
         open={Boolean(emptyGroupPrompt)}
