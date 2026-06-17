@@ -3,14 +3,17 @@ const { getCategoryById } = require('./categoryService');
 const { getCategorySubtreeIds } = require('./categoryService');
 const { normalizePlanSlug } = require('../config/plans');
 const { shouldReceiveSearchOpportunityAlerts } = require('./mapListingPlanService');
+const { getActivePlansMap } = require('./subscriptionPlansService');
+const { mapSearchUpgradePlansLabel } = require('./billingAlertHelpers');
 
 const NOTIFY_TYPE = 'marketplace_opportunity';
 const DEDUPE_HOURS = 24;
 
-function buildOpportunityBody(areaLabel, subjectLabel) {
+function buildOpportunityBody(areaLabel, subjectLabel, plansMap) {
   const area = areaLabel || 'seçilmiş ərazidə';
   const subject = subjectLabel || 'müəllim';
-  return `🔥 Yeni tələbə fürsəti: ${area} rayonunda ${subject} axtarılır. Profilinizi Premium və ya Growth paketə yüksəldin və axtarış nəticələrində həmişə ən yuxarıda görünün.`;
+  const upgradeLabel = mapSearchUpgradePlansLabel(plansMap, 'pro');
+  return `🔥 Yeni tələbə fürsəti: ${area} rayonunda ${subject} axtarılır. Profilinizi ${upgradeLabel} paketə yüksəldin və axtarış nəticələrində həmişə ən yuxarıda görünün.`;
 }
 
 async function resolveAreaName(areaId) {
@@ -123,6 +126,7 @@ async function notifyMarketplaceSearchOpportunity({
 
   if (!instructors.length) return { notified: 0 };
 
+  const plansMap = await getActivePlansMap();
   const searchKey = [
     categoryId || '',
     areaId || '',
@@ -132,7 +136,7 @@ async function notifyMarketplaceSearchOpportunity({
   ].join('|');
 
   const title = '🔥 Yeni tələbə fürsəti';
-  const body = buildOpportunityBody(areaLabel, subjectLabel);
+  const body = buildOpportunityBody(areaLabel, subjectLabel, plansMap);
   let notified = 0;
 
   for (const row of instructors) {
@@ -197,13 +201,17 @@ async function getLatestMarketplaceOpportunity(userId) {
   const row = rows[0];
   if (!row) return { eligible: true, plan, opportunity: null };
 
+  const plansMap = await getActivePlansMap();
+  const meta = row.meta && typeof row.meta === 'object' ? row.meta : {};
+  const body = buildOpportunityBody(meta.area_name, meta.category_name, plansMap);
+
   return {
     eligible: true,
     plan,
     opportunity: {
       id: row.id,
       title: row.title,
-      body: row.body,
+      body,
       is_read: row.is_read,
       created_at: row.created_at,
       meta: row.meta,

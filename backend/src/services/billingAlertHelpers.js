@@ -9,6 +9,41 @@ function planTitleOrSlug(plan, slugFallback = '') {
   return String(plan.title || plan.slug || slugFallback).trim() || String(slugFallback).toUpperCase();
 }
 
+function joinAzOr(names) {
+  const clean = (names || []).map((n) => String(n || '').trim()).filter(Boolean);
+  if (!clean.length) return 'ödənişli';
+  if (clean.length === 1) return clean[0];
+  if (clean.length === 2) return `${clean[0]} və ya ${clean[1]}`;
+  return `${clean.slice(0, -1).join(', ')} və ya ${clean[clean.length - 1]}`;
+}
+
+function sortedActivePlans(plansMap) {
+  return Object.entries(plansMap || {})
+    .filter(([, plan]) => plan?.is_active !== false)
+    .map(([slug, plan]) => ({ slug: normalizePlanSlug(slug), plan: plan || {} }))
+    .sort((a, b) => planRank(a.slug) - planRank(b.slug));
+}
+
+/** Axtarışda ön sıralama üçün tövsiyə olunan paketlər (cari səviyyədən yuxarı). */
+function mapSearchUpgradePlansLabel(plansMap, aboveSlug = 'pro') {
+  const minRank = planRank(aboveSlug);
+  const names = sortedActivePlans(plansMap)
+    .filter(({ slug }) => planRank(slug) > minRank)
+    .map(({ slug, plan }) => planTitleOrSlug(plan, slug));
+  return joinAzOr(names);
+}
+
+function allActivePlanTitlesList(plansMap) {
+  const names = sortedActivePlans(plansMap).map(({ slug, plan }) => {
+    const title = planTitleOrSlug(plan, slug);
+    return slug === 'basic' ? `${title} (pulsuz)` : title;
+  });
+  if (!names.length) return 'SADƏ, STANDART, PROFESSIONAL və PREMIUM';
+  if (names.length === 1) return names[0];
+  if (names.length === 2) return `${names[0]} və ${names[1]}`;
+  return `${names.slice(0, -1).join(', ')} və ${names[names.length - 1]}`;
+}
+
 function nextPlanInMap(plansMap, currentSlug) {
   const fromRank = planRank(currentSlug);
   let best = null;
@@ -179,4 +214,7 @@ module.exports = {
   higherPaidPlansSuffix,
   azSwitchToPlanLabel,
   buildUpgradeLabels,
+  joinAzOr,
+  mapSearchUpgradePlansLabel,
+  allActivePlanTitlesList,
 };

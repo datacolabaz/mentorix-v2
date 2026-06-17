@@ -1,4 +1,5 @@
 import { MENTORIX_SEO_DESCRIPTION, MENTORIX_SEO_TITLE } from './mentorixPublicMarketing'
+import { PLAN_TITLES_SEO_FALLBACK } from './subscriptionPlanGuards'
 
 export const SITE_ORIGIN = 'https://mentorix.io'
 
@@ -27,7 +28,7 @@ export const MENTORIX_SITE_NAV = [
   {
     name: 'Qiymətlər',
     path: '/qiymetler',
-    description: 'SADƏ, PRO, GROWTH və PREMIUM paketlər',
+    description: `${PLAN_TITLES_SEO_FALLBACK} paketlər`,
   },
   {
     name: 'Müəllimlər üçün',

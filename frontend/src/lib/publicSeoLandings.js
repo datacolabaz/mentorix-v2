@@ -4,6 +4,7 @@ import {
   MENTORIX_SEO_KEYWORDS,
   MENTORIX_SEO_TITLE,
 } from './mentorixPublicMarketing'
+import { PLAN_TITLES_SEO_FALLBACK } from './subscriptionPlanGuards'
 
 const FEATURE_KEYWORDS =
   'təhsil idarəetmə platforması, müəllim paneli, imtahan platforması, tapşırıq sistemi, Mentorix'
@@ -138,7 +139,7 @@ export const PUBLIC_SEO_LANDINGS = [
     path: '/qiymetler',
     title: 'Qiymətlər və paketlər — Mentorix',
     description:
-      'Mentorix paketləri: SADƏ (pulsuz), PRO, GROWTH və PREMIUM. Tələbə limiti, SMS balansı və xəritədə görünmə imkanları.',
+      `Mentorix paketləri: ${PLAN_TITLES_SEO_FALLBACK}. Tələbə limiti, SMS balansı və xəritədə görünmə imkanları.`,
     h1: 'Qiymətlər və abunəlik paketləri',
     intro: [MENTORIX_SEO_DESCRIPTION],
     bullets: [],

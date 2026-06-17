@@ -1,5 +1,8 @@
 /** Paket kartlarında limit sətirləri (API: items və ya limits). */
 
+import { planTitleOrSlug } from './subscriptionPlanGuards'
+import { normalizePlanId } from './subscriptionPlanMarketing'
+
 function fmtAzNum(n) {
   const v = Math.max(0, Math.round(Number(n) || 0))
   return new Intl.NumberFormat('az-AZ').format(v)
@@ -171,11 +174,16 @@ export function planLimitsHeadline(p, opts = {}) {
   return merged.join(' · ')
 }
 
-const PLAN_DESCRIPTIONS = {
-  basic: '14 günlük pulsuz sınaq — platformanı risksiz sınayın.',
-  pro: 'Kiçik və orta qruplar üçün ən populyar Standart paket.',
-  growth: 'Professional paket — böyüyən tədris biznesi və ətraflı hesabatlar.',
-  premium: 'Premium paket — limitsiz tələbə/sənəd və prioritet dəstək.',
+function planDescription(p) {
+  const custom = p?.plan_description ?? p?.description
+  if (custom != null && String(custom).trim() !== '') return String(custom).trim()
+  const id = normalizePlanId(p)
+  const title = planTitleOrSlug(p, id)
+  if (id === 'basic') return '14 günlük pulsuz sınaq — platformanı risksiz sınayın.'
+  if (id === 'pro') return `Kiçik və orta qruplar üçün ən populyar ${title} paket.`
+  if (id === 'growth') return `${title} paket — böyüyən tədris biznesi və ətraflı hesabatlar.`
+  if (id === 'premium') return `${title} paket — limitsiz tələbə/sənəd və prioritet dəstək.`
+  return null
 }
 
 /** Kartda tam izah (bütün paketlər). */
@@ -188,7 +196,7 @@ export function planDetailLines(p, opts = {}) {
   const limitsText = features.length ? features.join(', ') : null
   const price = Number(p?.price_azn)
   const isPaid = normId !== 'basic' && Number.isFinite(price) && price > 0
-  const desc = PLAN_DESCRIPTIONS[normId]
+  const desc = planDescription(p)
 
   const mapLine = mapFeatureForPlan(p)
 

@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { Link, Navigate, useLocation } from 'react-router-dom'
 import Brand from '../../components/common/Brand'
 import PublicSeoFooter from '../../components/public/PublicSeoFooter'
@@ -9,16 +9,25 @@ import {
   MENTORIX_PRICING_PLANS,
 } from '../../lib/mentorixPublicMarketing'
 import { setPageSeo } from '../../lib/pageSeo'
+import { useSubscriptionPlans } from '../../hooks/useSubscriptionPlans'
+import { allActivePlanTitlesList } from '../../lib/subscriptionPlanGuards'
 
 export default function PublicSeoLanding() {
   const { pathname } = useLocation()
   const landing = landingByPath(pathname)
+  const plansQ = useSubscriptionPlans()
+  const plans = Array.isArray(plansQ.data) ? plansQ.data : []
+  const planTitlesLabel = useMemo(() => allActivePlanTitlesList(plans), [plans])
 
   useEffect(() => {
     if (!landing) return
+    const description =
+      landing.showPricingPlans && plans.length
+        ? `Mentorix paketləri: ${planTitlesLabel}. Tələbə limiti, SMS balansı və xəritədə görünmə imkanları.`
+        : landing.description
     setPageSeo({
       title: landing.title,
-      description: landing.description,
+      description,
       canonicalPath: landing.path,
       keywords: landing.keywords || 'repetitor, müəllim tap, Bakı, Mentorix',
       breadcrumbs: [
@@ -26,7 +35,7 @@ export default function PublicSeoLanding() {
         { name: landing.h1, path: landing.path },
       ],
     })
-  }, [landing])
+  }, [landing, planTitlesLabel, plans.length])
 
   if (!landing) return <Navigate to="/search" replace />
 

@@ -5,6 +5,8 @@ import Card from '../common/Card'
 import Button from '../common/Button'
 import { useToast } from '../common/Toast'
 import { groupServiceAreas } from '../../lib/serviceAreaGroups'
+import { useSubscriptionPlans } from '../../hooks/useSubscriptionPlans'
+import { higherPaidPlansSuffix, planTitleOrSlug } from '../../lib/subscriptionPlanGuards'
 
 const FORMAT_OPTS = [
   { id: 'online', label: '💻 Onlayn' },
@@ -14,6 +16,13 @@ const FORMAT_OPTS = [
 
 export default function InstructorDiscoverSettings({ mapVisible, theme, inp }) {
   const toast = useToast()
+  const plansQ = useSubscriptionPlans()
+  const plans = Array.isArray(plansQ.data) ? plansQ.data : []
+  const proPlanTitle = useMemo(() => {
+    const pro = plans.find((p) => String(p?.id || '').toLowerCase() === 'pro')
+    return planTitleOrSlug(pro, 'pro')
+  }, [plans])
+  const paidDiscoverLabel = useMemo(() => higherPaidPlansSuffix(plans, 'basic'), [plans])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [premium, setPremium] = useState(false)
@@ -210,13 +219,13 @@ export default function InstructorDiscoverSettings({ mapVisible, theme, inp }) {
         <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs text-amber-200/90 mb-4">
           Pulsuz: 1 format, 1 rayon, ayda 2 sorğu nömrəsi.{' '}
           <Link to="/instructor/settings#billing" className="text-primary font-semibold hover:underline">
-            PRO paket
+            {proPlanTitle} paket
           </Link>{' '}
           — limitsiz format, rayon və sorğular + TOP sıralama.
         </div>
       ) : (
         <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 px-3 py-2 text-xs text-emerald-300/90 mb-4">
-          ✓ Premium axtarış imkanları aktivdir
+          ✓ {paidDiscoverLabel} aktiv axtarış imkanları
         </div>
       )}
 

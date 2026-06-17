@@ -269,6 +269,41 @@ export function planTitleOrSlug(plan, slugFallback = '') {
   return String(plan.title || plan.id || slugFallback).trim() || String(slugFallback).toUpperCase()
 }
 
+export function joinAzOr(names) {
+  const clean = (names || []).map((n) => String(n || '').trim()).filter(Boolean)
+  if (!clean.length) return 'ödənişli'
+  if (clean.length === 1) return clean[0]
+  if (clean.length === 2) return `${clean[0]} və ya ${clean[1]}`
+  return `${clean.slice(0, -1).join(', ')} və ya ${clean[clean.length - 1]}`
+}
+
+export function mapSearchUpgradePlansLabel(plans, aboveSlug = 'pro') {
+  const minRank = planRank(aboveSlug)
+  const names = (plans || [])
+    .slice()
+    .sort((a, b) => planRank(a?.id) - planRank(b?.id))
+    .filter((p) => planRank(p?.id) > minRank)
+    .map((p) => planTitleOrSlug(p))
+  return joinAzOr(names)
+}
+
+export const PLAN_TITLES_SEO_FALLBACK = 'SADƏ, STANDART, PROFESSIONAL və PREMIUM'
+
+export function allActivePlanTitlesList(plans) {
+  const names = (plans || [])
+    .slice()
+    .sort((a, b) => planRank(a?.id) - planRank(b?.id))
+    .map((p) => {
+      const id = String(p?.id || '').toLowerCase()
+      const title = planTitleOrSlug(p, id)
+      return id === 'basic' ? `${title} (pulsuz)` : title
+    })
+  if (!names.length) return PLAN_TITLES_SEO_FALLBACK
+  if (names.length === 1) return names[0]
+  if (names.length === 2) return `${names[0]} və ${names[1]}`
+  return `${names.slice(0, -1).join(', ')} və ${names[names.length - 1]}`
+}
+
 /** Cari paketdən bir addım yuxarı paket (aktiv siyahıdan). */
 export function nextPlanInList(plans, currentSlug) {
   const fromRank = planRank(currentSlug)
