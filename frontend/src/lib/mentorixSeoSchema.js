@@ -142,6 +142,87 @@ export function buildBreadcrumbSchema(items) {
   }
 }
 
+/** Ana naviqasiya — Google sitelink ipucları üçün (/, /search, /login, /qiymetler) */
+export function buildPrimarySiteNavigationSchema() {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'SiteNavigationElement',
+    name: 'Mentorix əsas naviqasiya',
+    hasPart: [
+      { '@type': 'WebPage', name: 'Ana səhifə', url: absoluteUrl('/') },
+      { '@type': 'WebPage', name: 'Müəllim Tap', url: absoluteUrl('/search') },
+      { '@type': 'WebPage', name: 'Giriş', url: absoluteUrl('/login') },
+      { '@type': 'WebPage', name: 'Qiymətlər', url: absoluteUrl('/qiymetler') },
+      ...MENTORIX_SITE_NAV.filter((item) => !['/search', '/qiymetler'].includes(item.path)).map((item) => ({
+        '@type': 'WebPage',
+        name: item.name,
+        url: absoluteUrl(item.path),
+      })),
+    ],
+  }
+}
+
+export function buildPersonSchema({ name, description, url, image, jobTitle }) {
+  const personName = String(name || '').trim()
+  if (!personName) return null
+  const pageUrl = absoluteUrl(url || '/search')
+  const out = {
+    '@context': 'https://schema.org',
+    '@type': 'Person',
+    name: personName,
+    url: pageUrl,
+  }
+  const desc = String(description || '').trim()
+  if (desc) out.description = desc.slice(0, 500)
+  const img = String(image || '').trim()
+  if (img) out.image = img.startsWith('http') ? img : absoluteUrl(img)
+  const title = String(jobTitle || '').trim()
+  if (title) out.jobTitle = title
+  return out
+}
+
+const PRICING_PLAN_OFFERS = [
+  { name: 'Sadə', price: '0', description: 'Pulsuz paket — 5 tələbə limiti' },
+  { name: 'Standart', price: '5', description: '50 tələbə limiti, xəritədə görünmə' },
+  { name: 'Professional', price: '10', description: '100 tələbə limiti, axtarışda önə çıxma' },
+  { name: 'Premium', price: '19', description: 'Limitsiz tələbə, TOP görünmə' },
+]
+
+export function buildPricingProductSchema() {
+  const pricingUrl = absoluteUrl('/qiymetler')
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: 'Mentorix abunəlik paketləri',
+    description: 'Mentorix müəllim və kurs idarəetmə platforması üçün aylıq abunəlik paketləri.',
+    brand: {
+      '@type': 'Brand',
+      name: 'Mentorix',
+    },
+    url: pricingUrl,
+    offers: PRICING_PLAN_OFFERS.map((plan) => ({
+      '@type': 'Offer',
+      name: plan.name,
+      description: plan.description,
+      price: plan.price,
+      priceCurrency: 'AZN',
+      priceSpecification: {
+        '@type': 'UnitPriceSpecification',
+        price: plan.price,
+        priceCurrency: 'AZN',
+        unitText: 'MONTH',
+        referenceQuantity: {
+          '@type': 'QuantitativeValue',
+          value: '1',
+          unitCode: 'MON',
+        },
+      },
+      availability: 'https://schema.org/InStock',
+      url: pricingUrl,
+    })),
+  }
+}
+
 export function buildDefaultStructuredData() {
   return [
     buildWebSiteSchema(),

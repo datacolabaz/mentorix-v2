@@ -19,12 +19,26 @@ async function loadRawPayload() {
   return { payload: rows[0].payload || {}, updated_at: rows[0].updated_at };
 }
 
+async function loadInstructorNavForClient() {
+  const { payload, updated_at } = await loadRawPayload();
+  return { nav: serializeNavForClient(payload), updated_at };
+}
+
 const getPublicInstructorNav = async (req, res) => {
   try {
-    const { payload } = await loadRawPayload();
-    const nav = serializeNavForClient(payload);
-    res.set('Cache-Control', 'public, max-age=0, must-revalidate');
-    res.json({ success: true, slug: INSTRUCTOR_NAV_SLUG, nav });
+    const { nav, updated_at } = await loadInstructorNavForClient();
+    res.set('Cache-Control', 'no-store, max-age=0');
+    res.json({ success: true, slug: INSTRUCTOR_NAV_SLUG, nav, updated_at });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message || 'Xəta' });
+  }
+};
+
+const getInstructorNavSections = async (req, res) => {
+  try {
+    const { nav, updated_at } = await loadInstructorNavForClient();
+    res.set('Cache-Control', 'no-store, max-age=0');
+    res.json({ success: true, slug: INSTRUCTOR_NAV_SLUG, nav, updated_at });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message || 'Xəta' });
   }
@@ -77,6 +91,7 @@ const putAdminInstructorNav = async (req, res) => {
 
 module.exports = {
   getPublicInstructorNav,
+  getInstructorNavSections,
   getAdminInstructorNav,
   putAdminInstructorNav,
 };

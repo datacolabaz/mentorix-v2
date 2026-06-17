@@ -34,6 +34,7 @@ export default function PublicSeoLanding() {
         { name: 'Mentorix', path: '/' },
         { name: landing.h1, path: landing.path },
       ],
+      pricingProduct: Boolean(landing.showPricingPlans),
     })
   }, [landing, planTitlesLabel, plans.length])
 

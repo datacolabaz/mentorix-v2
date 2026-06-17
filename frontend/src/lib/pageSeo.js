@@ -3,7 +3,7 @@ import {
   MENTORIX_SEO_KEYWORDS,
   MENTORIX_SEO_TITLE,
 } from './mentorixPublicMarketing'
-import { SITE_ORIGIN, buildBreadcrumbSchema } from './mentorixSeoSchema'
+import { SITE_ORIGIN, buildBreadcrumbSchema, buildPersonSchema, buildPricingProductSchema } from './mentorixSeoSchema'
 
 const DEFAULT_OG_IMAGE = `${SITE_ORIGIN}/og.svg?v=5`
 
@@ -65,6 +65,8 @@ export function setPageSeo({
   ogImage,
   ogType = 'website',
   breadcrumbs,
+  person,
+  pricingProduct = false,
 }) {
   if (typeof document === 'undefined') return
 
@@ -105,9 +107,19 @@ export function setPageSeo({
   upsertMeta('twitter:image', image)
 
   upsertJsonLd('mx-breadcrumb-ld', buildBreadcrumbSchema(breadcrumbs))
+  upsertJsonLd('mx-person-ld', person ? buildPersonSchema(person) : null)
+  upsertJsonLd('mx-pricing-ld', pricingProduct ? buildPricingProductSchema() : null)
+}
+
+export function clearPageStructuredData() {
+  if (typeof document === 'undefined') return
+  upsertJsonLd('mx-person-ld', null)
+  upsertJsonLd('mx-pricing-ld', null)
+  upsertJsonLd('mx-breadcrumb-ld', null)
 }
 
 export function resetPageSeo() {
+  clearPageStructuredData()
   setPageSeo({
     title: DEFAULT_TITLE,
     description: DEFAULT_DESCRIPTION,

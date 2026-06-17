@@ -21,6 +21,7 @@ const { postMarketplaceAiSearch } = require('../controllers/marketplaceAiSearchC
 const { getPublicContact } = require('../controllers/platformContactController');
 const { getPublicInstructorProfile } = require('../controllers/publicInstructorProfileController');
 const { getInstructorMessagingLink } = require('../controllers/publicInstructorContactController');
+const { getPublicSitemapXml } = require('../controllers/publicSitemapController');
 const { authenticate } = require('../middleware/auth');
 
 const router = express.Router();
@@ -34,6 +35,7 @@ router.post('/task-invite/:taskId/join', postPublicTaskGuestJoin);
 router.post('/analytics/event', postAccessEvent);
 router.get('/landing-stats', getLandingStats);
 router.get('/contact', getPublicContact);
+router.get('/sitemap.xml', getPublicSitemapXml);
 router.get('/marketing/login', getPublicLoginMarketing);
 router.get('/instructor-nav', getPublicInstructorNav);
 router.get('/instructors-map', getInstructorsInMapView);

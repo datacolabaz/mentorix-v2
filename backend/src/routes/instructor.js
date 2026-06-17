@@ -33,7 +33,9 @@ const {
 const { requireInstructorPhoneVerification } = require('../middleware/requireInstructorPhoneVerification');
 const { postInstructorAvatar, deleteInstructorAvatar } = require('../controllers/instructorAvatarController');
 const { getMarketplaceOpportunity } = require('../controllers/instructorMarketplaceController');
+const { getInstructorNavSections } = require('../controllers/instructorNavController');
 
+router.get('/nav-sections', authenticate, authorize('instructor'), getInstructorNavSections);
 router.get('/teaching', authenticate, authorize('instructor'), getTeaching);
 router.get('/marketplace-opportunity', authenticate, authorize('instructor'), getMarketplaceOpportunity);
 router.post('/avatar', authenticate, authorize('instructor'), postInstructorAvatar);

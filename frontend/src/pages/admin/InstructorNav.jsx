@@ -7,6 +7,7 @@ import {
   defaultInstructorNavSections,
   INSTRUCTOR_NAV_ITEM_DEFS,
 } from '../../constants/instructorNav'
+import { notifyInstructorNavUpdated } from '../../hooks/useInstructorNavSections'
 
 const inp =
   'w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500'
@@ -128,6 +129,7 @@ export default function AdminInstructorNav() {
       })
       if (data?.success && data?.nav?.sections) {
         setSections(cloneSections(data.nav.sections))
+        notifyInstructorNavUpdated()
         toast('Müəllim menyusu saxlanıldı', 'success')
       } else {
         toast('Naməlum cavab', 'error')

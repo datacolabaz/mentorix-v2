@@ -4,6 +4,7 @@ import api from '../../lib/api'
 import Brand from '../../components/common/Brand'
 import InstructorAvatar from '../../components/common/InstructorAvatar'
 import { setPageSeo } from '../../lib/pageSeo'
+import { resolveApiAssetUrl } from '../../lib/apiAssetUrl'
 import { instructorDisplaySubject } from '../../lib/instructorDisplay'
 import InquiryFormModal from '../../components/discover/InquiryFormModal'
 import DiscoverAuthModal from '../../components/discover/DiscoverAuthModal'
@@ -72,13 +73,28 @@ export default function PublicInstructorProfile() {
       .then((res) => {
         if (cancelled) return
         if (res?.success && res.instructor) {
-          setInstructor(res.instructor)
+          const inst = res.instructor
+          const profilePath = `/teachers/${id}`
+          const bio =
+            inst.discover_bio?.slice(0, 160) ||
+            `${inst.full_name} — ${inst.subject}. Mentorix üzərində müəllim profili.`
+          setInstructor(inst)
           setPageSeo({
-            title: `${res.instructor.full_name} — Mentorix müəllim profili`,
-            description:
-              res.instructor.discover_bio?.slice(0, 160) ||
-              `${res.instructor.full_name} — ${res.instructor.subject}. Mentorix üzərində müəllim profili.`,
-            canonicalPath: `/teachers/${id}`,
+            title: `${inst.full_name} — Mentorix müəllim profili`,
+            description: bio,
+            canonicalPath: profilePath,
+            breadcrumbs: [
+              { name: 'Ana səhifə', path: '/' },
+              { name: 'Müəllimlər', path: '/search' },
+              { name: inst.full_name, path: profilePath },
+            ],
+            person: {
+              name: inst.full_name,
+              description: inst.discover_bio || `${inst.full_name} — ${inst.subject}`,
+              url: profilePath,
+              image: inst.avatar_url ? resolveApiAssetUrl(inst.avatar_url) : undefined,
+              jobTitle: inst.subject || kindLabel(inst.kind),
+            },
           })
         } else {
           setInstructor(null)
