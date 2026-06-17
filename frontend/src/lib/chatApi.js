@@ -10,6 +10,11 @@ export async function fetchChatGroups() {
   return Array.isArray(d?.groups) ? d.groups : []
 }
 
+export async function fetchChatDirects() {
+  const d = await api.get('/chat/direct')
+  return Array.isArray(d?.conversations) ? d.conversations : []
+}
+
 export async function openChatRoom(payload) {
   const d = await api.post('/chat/rooms/open', payload)
   return d?.room || null

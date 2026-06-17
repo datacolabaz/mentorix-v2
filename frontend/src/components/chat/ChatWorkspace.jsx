@@ -4,6 +4,7 @@ import Button from '../common/Button'
 import useAuthStore from '../../hooks/useAuth'
 import {
   CHAT_MAX_FILE_BYTES,
+  fetchChatDirects,
   fetchChatGroups,
   fetchChatMessages,
   openChatRoom,
@@ -22,6 +23,77 @@ import {
 
 const POLL_MS = 3000
 const EMOJI_QUICK = ['👍', '😊', '🙏', '✅', '❤️', '🎉']
+
+const MODE_COPY = {
+  group: {
+    sidebarTitle: 'Çat',
+    sidebarSubtitle: 'Qrup söhbətləri',
+    emptyList: 'Hələ aktiv qrup çatınız yoxdur.',
+    listError: 'Qruplar yüklənmədi',
+    headerFallback: 'Qrup çatı',
+    peerLabel: (item) => item?.group_name || 'Qrup',
+    peerMeta: (item) => (
+      <>
+        <span>{item?.member_count ?? '—'} üzv</span>
+        {Number(item?.online_count) > 0 ? (
+          <span className="inline-flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" aria-hidden />
+            {item.online_count} onlayn
+          </span>
+        ) : null}
+      </>
+    ),
+    headerMeta: (item) => (
+      <>
+        <span>{item?.member_count ?? '—'} üzv</span>
+        {Number(item?.online_count) > 0 ? (
+          <span className="inline-flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" aria-hidden />
+            <span>{item.online_count} onlayn</span>
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-token-textMuted/40" aria-hidden />
+            <span>Offlayn</span>
+          </span>
+        )}
+      </>
+    ),
+    itemKey: (item) => item.group_id,
+    isActive: (item, active) => String(item.group_id) === String(active?.group_id),
+  },
+  direct: {
+    sidebarTitle: 'Fərdi çat',
+    sidebarSubtitle: 'Təkbətək söhbətlər',
+    emptyList: 'Hələ fərdi çatınız yoxdur.',
+    listError: 'Söhbətlər yüklənmədi',
+    headerFallback: 'Fərdi çat',
+    peerLabel: (item) => item?.peer_name || 'İstifadəçi',
+    peerMeta: (item) =>
+      item?.is_online ? (
+        <span className="inline-flex items-center gap-1">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" aria-hidden />
+          onlayn
+        </span>
+      ) : (
+        <span>offlayn</span>
+      ),
+    headerMeta: (item) =>
+      item?.is_online ? (
+        <span className="inline-flex items-center gap-1.5">
+          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" aria-hidden />
+          <span>Onlayn</span>
+        </span>
+      ) : (
+        <span className="inline-flex items-center gap-1.5">
+          <span className="w-2 h-2 rounded-full bg-token-textMuted/40" aria-hidden />
+          <span>Offlayn</span>
+        </span>
+      ),
+    itemKey: (item) => item.peer_id || item.room_id,
+    isActive: (item, active) => String(item.peer_id) === String(active?.peer_id),
+  },
+}
 
 function mergeMessage(list, nextMsg, replaceId = null) {
   if (!nextMsg) return list
@@ -114,11 +186,7 @@ function MessageGroup({ group, currentUserId }) {
             >
               {m.body ? <div className="whitespace-pre-wrap break-words">{m.body}</div> : null}
               {m.attachment_url ? (
-                <AttachmentBubble
-                  url={m.attachment_url}
-                  type={m.attachment_type}
-                  name={m.attachment_name}
-                />
+                <AttachmentBubble url={m.attachment_url} type={m.attachment_type} name={m.attachment_name} />
               ) : null}
             </div>
             <div
@@ -137,16 +205,18 @@ function MessageGroup({ group, currentUserId }) {
 }
 
 /**
- * Full-panel group chat workspace (sidebar + conversation).
+ * Full-panel chat workspace (group or direct) — sidebar + conversation.
  */
-export default function ChatWorkspace({ role, basePath = '/student/chat' }) {
+export default function ChatWorkspace({ role, mode = 'group' }) {
+  const copy = MODE_COPY[mode] || MODE_COPY.group
+  const isDirect = mode === 'direct'
   const { user } = useAuthStore()
   const [searchParams, setSearchParams] = useSearchParams()
 
-  const [groups, setGroups] = useState([])
-  const [groupsLoading, setGroupsLoading] = useState(true)
+  const [items, setItems] = useState([])
+  const [listLoading, setListLoading] = useState(true)
   const [room, setRoom] = useState(null)
-  const [activeGroup, setActiveGroup] = useState(null)
+  const [activeItem, setActiveItem] = useState(null)
   const [messages, setMessages] = useState([])
   const [draft, setDraft] = useState('')
   const [pendingFile, setPendingFile] = useState(null)
@@ -163,6 +233,8 @@ export default function ChatWorkspace({ role, basePath = '/student/chat' }) {
   const previewUrlRef = useRef(null)
 
   const selectedGroupId = searchParams.get('groupId')
+  const selectedPeerId = searchParams.get('peerId') || searchParams.get('studentId')
+  const selectedPeerName = searchParams.get('peerName') || searchParams.get('studentName') || ''
 
   const scrollToBottom = useCallback(() => {
     const el = listRef.current
@@ -187,54 +259,143 @@ export default function ChatWorkspace({ role, basePath = '/student/chat' }) {
     [scrollToBottom],
   )
 
-  const selectGroup = useCallback(
-    (group) => {
-      if (!group?.group_id) return
-      setActiveGroup(group)
-      setSearchParams({ groupId: group.group_id }, { replace: true })
+  const refreshList = useCallback(async () => {
+    if (isDirect) {
+      const list = await fetchChatDirects()
+      setItems(list)
+      return list
+    }
+    const list = await fetchChatGroups()
+    setItems(list)
+    return list
+  }, [isDirect])
+
+  const selectItem = useCallback(
+    (item) => {
+      if (isDirect) {
+        if (!item?.peer_id) return
+        setActiveItem(item)
+        const next = { peerId: item.peer_id }
+        if (item.peer_name) next.peerName = item.peer_name
+        setSearchParams(next, { replace: true })
+        return
+      }
+      if (!item?.group_id) return
+      setActiveItem(item)
+      setSearchParams({ groupId: item.group_id }, { replace: true })
     },
-    [setSearchParams],
+    [isDirect, setSearchParams],
   )
 
   useEffect(() => {
     let cancelled = false
     ;(async () => {
-      setGroupsLoading(true)
+      setListLoading(true)
       setErr(null)
       try {
-        const list = await fetchChatGroups()
+        const list = await refreshList()
         if (cancelled) return
-        setGroups(list)
+        setItems(list)
       } catch (e) {
-        if (!cancelled) setErr(e?.message || 'Qruplar yüklənmədi')
+        if (!cancelled) setErr(e?.message || copy.listError)
       } finally {
-        if (!cancelled) setGroupsLoading(false)
+        if (!cancelled) setListLoading(false)
       }
     })()
     return () => {
       cancelled = true
     }
-  }, [role])
+  }, [role, mode, refreshList, copy.listError])
 
   useEffect(() => {
-    if (!groups.length) {
-      setActiveGroup(null)
+    if (isDirect) {
+      if (!items.length && !selectedPeerId) {
+        setActiveItem(null)
+        return
+      }
+      const fromUrl = selectedPeerId ? items.find((i) => String(i.peer_id) === String(selectedPeerId)) : null
+      if (fromUrl) {
+        setActiveItem(fromUrl)
+        return
+      }
+      if (selectedPeerId && role === 'instructor') {
+        setActiveItem({
+          peer_id: selectedPeerId,
+          peer_name: selectedPeerName || 'Tələbə',
+          room_id: null,
+          is_online: false,
+        })
+        return
+      }
+      if (items[0]) {
+        setActiveItem(items[0])
+        const next = { peerId: items[0].peer_id }
+        if (items[0].peer_name) next.peerName = items[0].peer_name
+        setSearchParams(next, { replace: true })
+      }
       return
     }
-    const fromUrl = selectedGroupId
-      ? groups.find((g) => String(g.group_id) === String(selectedGroupId))
-      : null
+
+    if (!items.length) {
+      setActiveItem(null)
+      return
+    }
+    const fromUrl = selectedGroupId ? items.find((g) => String(g.group_id) === String(selectedGroupId)) : null
     if (fromUrl) {
-      setActiveGroup(fromUrl)
+      setActiveItem(fromUrl)
       return
     }
-    const first = groups[0]
-    setActiveGroup(first)
+    const first = items[0]
+    setActiveItem(first)
     setSearchParams({ groupId: first.group_id }, { replace: true })
-  }, [groups, selectedGroupId, setSearchParams])
+  }, [items, selectedGroupId, selectedPeerId, selectedPeerName, isDirect, role, setSearchParams])
 
   useEffect(() => {
-    if (!activeGroup?.group_id) {
+    if (isDirect) {
+      if (!activeItem?.peer_id) {
+        setRoom(null)
+        setMessages([])
+        return undefined
+      }
+
+      let cancelled = false
+      ;(async () => {
+        setLoading(true)
+        setErr(null)
+        try {
+          let r
+          if (activeItem.room_id) {
+            r = { id: activeItem.room_id, title: activeItem.peer_name }
+          } else if (role === 'instructor') {
+            r = await openChatRoom({
+              kind: 'direct',
+              student_id: activeItem.peer_id,
+              student_name: activeItem.peer_name,
+            })
+            if (!cancelled) {
+              const updated = await refreshList()
+              const match = updated.find((i) => String(i.peer_id) === String(activeItem.peer_id))
+              if (match) setActiveItem(match)
+            }
+          } else {
+            throw new Error('Fərdi çat tapılmadı')
+          }
+          if (cancelled || !r?.id) return
+          setRoom(r)
+          await loadMessages(r.id)
+        } catch (e) {
+          if (!cancelled) setErr(e?.message || 'Çat açılmadı')
+        } finally {
+          if (!cancelled) setLoading(false)
+        }
+      })()
+
+      return () => {
+        cancelled = true
+      }
+    }
+
+    if (!activeItem?.group_id) {
       setRoom(null)
       setMessages([])
       return undefined
@@ -245,7 +406,7 @@ export default function ChatWorkspace({ role, basePath = '/student/chat' }) {
       setLoading(true)
       setErr(null)
       try {
-        const r = await openChatRoom({ kind: 'group', group_id: activeGroup.group_id })
+        const r = await openChatRoom({ kind: 'group', group_id: activeItem.group_id })
         if (cancelled) return
         setRoom(r)
         await loadMessages(r.id)
@@ -259,7 +420,7 @@ export default function ChatWorkspace({ role, basePath = '/student/chat' }) {
     return () => {
       cancelled = true
     }
-  }, [activeGroup?.group_id, loadMessages])
+  }, [isDirect, activeItem?.peer_id, activeItem?.room_id, activeItem?.group_id, activeItem?.peer_name, role, loadMessages, refreshList])
 
   useEffect(() => {
     if (!room?.id) return undefined
@@ -401,31 +562,28 @@ export default function ChatWorkspace({ role, basePath = '/student/chat' }) {
 
   const timeline = useMemo(() => buildChatTimeline(messages), [messages])
   const canSend = Boolean(room?.id) && !sending && (draft.trim() || pendingFile)
-  const headerOnline = Number(activeGroup?.online_count) > 0
 
   return (
     <div className="flex flex-col md:flex-row h-[calc(100dvh-72px-env(safe-area-inset-top,0px))] md:h-full min-h-0 w-full max-w-full overflow-hidden rounded-none md:rounded-2xl border-0 md:border border-[color:var(--border-subtle)] bg-token-surfaceMain text-token-textMain">
       <aside className="w-full md:w-72 lg:w-80 shrink-0 flex flex-col border-b md:border-b-0 md:border-r border-[color:var(--border-subtle)] bg-token-surfaceCard/40 min-h-0">
         <div className="px-4 py-3 border-b border-[color:var(--border-subtle)]">
-          <h1 className="text-base font-bold text-token-textMain">Çat</h1>
-          <p className="text-xs text-token-textMuted mt-0.5">Qrup söhbətləri</p>
+          <h1 className="text-base font-bold text-token-textMain">{copy.sidebarTitle}</h1>
+          <p className="text-xs text-token-textMuted mt-0.5">{copy.sidebarSubtitle}</p>
         </div>
         <div className="flex-1 overflow-y-auto min-h-0 p-2 space-y-1">
-          {groupsLoading ? (
+          {listLoading ? (
             <p className="text-sm text-token-textMuted text-center py-6">Yüklənir…</p>
           ) : null}
-          {!groupsLoading && !groups.length ? (
-            <p className="text-sm text-token-textMuted text-center py-6 px-3">
-              Hələ aktiv qrup çatınız yoxdur.
-            </p>
+          {!listLoading && !items.length ? (
+            <p className="text-sm text-token-textMuted text-center py-6 px-3">{copy.emptyList}</p>
           ) : null}
-          {groups.map((g) => {
-            const active = String(g.group_id) === String(activeGroup?.group_id)
+          {items.map((item) => {
+            const active = copy.isActive(item, activeItem)
             return (
               <button
-                key={g.group_id}
+                key={copy.itemKey(item)}
                 type="button"
-                onClick={() => selectGroup(g)}
+                onClick={() => selectItem(item)}
                 className={[
                   'w-full text-left rounded-xl px-3 py-2.5 transition-colors border',
                   active
@@ -433,15 +591,9 @@ export default function ChatWorkspace({ role, basePath = '/student/chat' }) {
                     : 'border-transparent hover:bg-token-surfaceCard/70 text-token-textMain',
                 ].join(' ')}
               >
-                <div className="font-semibold text-sm truncate">{g.group_name || 'Qrup'}</div>
+                <div className="font-semibold text-sm truncate">{copy.peerLabel(item)}</div>
                 <div className="text-[11px] text-token-textMuted mt-0.5 flex items-center gap-2">
-                  <span>{g.member_count ?? '—'} üzv</span>
-                  {Number(g.online_count) > 0 ? (
-                    <span className="inline-flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" aria-hidden />
-                      {g.online_count} onlayn
-                    </span>
-                  ) : null}
+                  {copy.peerMeta(item)}
                 </div>
               </button>
             )
@@ -452,20 +604,11 @@ export default function ChatWorkspace({ role, basePath = '/student/chat' }) {
       <section className="flex-1 flex flex-col min-w-0 min-h-0">
         <header className="shrink-0 px-4 py-3 border-b border-[color:var(--border-subtle)] bg-token-surfaceCard/30 flex items-center gap-3">
           <div className="min-w-0 flex-1">
-            <h2 className="text-base font-bold truncate">{activeGroup?.group_name || 'Qrup çatı'}</h2>
+            <h2 className="text-base font-bold truncate">
+              {activeItem ? copy.peerLabel(activeItem) : copy.headerFallback}
+            </h2>
             <div className="text-xs text-token-textMuted flex items-center gap-2 mt-0.5">
-              <span>{activeGroup?.member_count ?? '—'} üzv</span>
-              {headerOnline ? (
-                <span className="inline-flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" aria-hidden />
-                  <span>{activeGroup.online_count} onlayn</span>
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-token-textMuted/40" aria-hidden />
-                  <span>Offlayn</span>
-                </span>
-              )}
+              {activeItem ? copy.headerMeta(activeItem) : null}
             </div>
           </div>
         </header>
@@ -476,17 +619,12 @@ export default function ChatWorkspace({ role, basePath = '/student/chat' }) {
           </div>
         ) : null}
 
-        <div
-          ref={listRef}
-          className="flex-1 min-h-0 overflow-y-auto px-4 py-4 space-y-4 bg-token-surfaceMain"
-        >
+        <div ref={listRef} className="flex-1 min-h-0 overflow-y-auto px-4 py-4 space-y-4 bg-token-surfaceMain">
           {loading && !messages.length ? (
             <p className="text-sm text-token-textMuted text-center py-10">Mesajlar yüklənir…</p>
           ) : null}
           {!loading && !messages.length ? (
-            <p className="text-sm text-token-textMuted text-center py-10">
-              Hələ mesaj yoxdur. İlk mesajı siz yazın.
-            </p>
+            <p className="text-sm text-token-textMuted text-center py-10">Hələ mesaj yoxdur. İlk mesajı siz yazın.</p>
           ) : null}
 
           {timeline.map((item) =>

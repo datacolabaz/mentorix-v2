@@ -5,7 +5,7 @@ const { getActivePlansMap } = require('./subscriptionPlansService');
 const { higherPaidPlansLabel } = require('./billingAlertHelpers');
 const { ACTIVE_ENROLLMENT_WHERE } = require('../sql/activeEnrollments');
 const { publishChatMessage } = require('./chatRealtimeHub');
-const { touchUserActivity } = require('./userPresenceService');
+const { touchUserActivity, mapRowsWithPresence } = require('./userPresenceService');
 
 const MAX_BODY_LEN = 4000;
 const DEFAULT_LIMIT = 50;
@@ -442,6 +442,44 @@ async function listGroupChatsForUser(userId, role) {
   return [];
 }
 
+async function listDirectChatsForUser(userId, role) {
+  if (role === 'instructor') {
+    const { rows } = await db.query(
+      `SELECT cr.id AS room_id,
+              cr.student_id AS peer_id,
+              u.full_name AS peer_name,
+              u.last_activity_at,
+              cr.updated_at AS last_activity
+       FROM chat_rooms cr
+       JOIN users u ON u.id = cr.student_id
+       WHERE cr.room_kind = 'direct'
+         AND cr.instructor_id = $1::uuid
+       ORDER BY cr.updated_at DESC NULLS LAST, u.full_name ASC`,
+      [userId],
+    );
+    return mapRowsWithPresence(rows || []);
+  }
+
+  if (role === 'student') {
+    const { rows } = await db.query(
+      `SELECT cr.id AS room_id,
+              cr.instructor_id AS peer_id,
+              u.full_name AS peer_name,
+              u.last_activity_at,
+              cr.updated_at AS last_activity
+       FROM chat_rooms cr
+       JOIN users u ON u.id = cr.instructor_id
+       WHERE cr.room_kind = 'direct'
+         AND cr.student_id = $1::uuid
+       ORDER BY cr.updated_at DESC NULLS LAST, u.full_name ASC`,
+      [userId],
+    );
+    return mapRowsWithPresence(rows || []);
+  }
+
+  return [];
+}
+
 async function getChatCapabilities(instructorId) {
   const ent = await resolveEntitlements(instructorId);
   const can_direct_chat = canUseDirectChat(ent.plan);
@@ -464,6 +502,7 @@ module.exports = {
   listRoomMessages,
   sendRoomMessage,
   listGroupChatsForUser,
+  listDirectChatsForUser,
   getChatCapabilities,
   assertInstructorDirectChatAllowed,
   getRoomById,

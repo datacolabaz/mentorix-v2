@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { format, isValid, parseISO } from 'date-fns'
 import api from '../../lib/api'
@@ -24,7 +24,6 @@ import {
 } from '../../lib/teachingSubjects'
 import { BILLING_STATUS_QUERY_KEY, useBillingStatus } from '../../hooks/useBillingStatus'
 import { canUseDirectChat } from '../../lib/subscriptionPlanGuards'
-import ChatPanel from '../../components/chat/ChatPanel'
 import StudentDirectChatButton from '../../components/chat/StudentDirectChatButton'
 import DirectChatUpgradeModal from '../../components/chat/DirectChatUpgradeModal'
 import { canonicalAzPhoneE164 } from '../../lib/azPhone'
@@ -960,12 +959,12 @@ export default function InstructorStudents() {
   const [enrollMeta] = useState({ loading: false, requiresScheduleSlot: false, availableSlots: [] })
   const [teachingSubjects, setTeachingSubjects] = useState([])
   const toast = useToast()
+  const navigate = useNavigate()
   const [subjectFilter, setSubjectFilter] = useState('')
   const [audienceFilter, setAudienceFilter] = useState('all')
   const [search, setSearch] = useState('')
   const [openGroups, setOpenGroups] = useState(() => new Set())
   const [actionMenuId, setActionMenuId] = useState(null)
-  const [chatTarget, setChatTarget] = useState(null)
   const [directChatUpgrade, setDirectChatUpgrade] = useState(null)
   const { theme } = useUiStore()
   const actionAnchorsRef = useRef(new Map())
@@ -1556,12 +1555,12 @@ export default function InstructorStudents() {
       setDirectChatUpgrade({ studentName: s.full_name || 'Tələbə' })
       return
     }
-    setChatTarget({
-      kind: 'direct',
-      studentId: s.id,
-      studentName: s.full_name || 'Tələbə',
-      title: `${s.full_name || 'Tələbə'} — fərdi çat`,
+    const name = s.full_name || 'Tələbə'
+    const qs = new URLSearchParams({
+      peerId: s.id,
+      peerName: name,
     })
+    navigate(`/instructor/direct-chat?${qs.toString()}`)
   }
 
   const saveEdit = async () => {
@@ -2514,17 +2513,6 @@ export default function InstructorStudents() {
         open={Boolean(directChatUpgrade)}
         onClose={() => setDirectChatUpgrade(null)}
         studentName={directChatUpgrade?.studentName}
-      />
-
-      <ChatPanel
-        open={Boolean(chatTarget)}
-        onClose={() => setChatTarget(null)}
-        kind={chatTarget?.kind}
-        groupId={chatTarget?.groupId}
-        assignmentId={chatTarget?.assignmentId}
-        studentId={chatTarget?.studentId}
-        studentName={chatTarget?.studentName}
-        title={chatTarget?.title}
       />
     </div>
   )
