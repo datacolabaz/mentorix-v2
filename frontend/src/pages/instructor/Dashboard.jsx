@@ -375,11 +375,11 @@ export default function InstructorDashboard() {
         </div>
       </div>
 
-      {billing ? (
-        <div className="mb-4 sm:mb-6 min-w-0 w-full">
-          <BasicTrialCountdownBanner billing={billing} theme={theme} />
-        </div>
-      ) : null}
+      <BasicTrialCountdownBanner
+        billing={billing}
+        theme={theme}
+        className="mb-4 sm:mb-6 min-w-0 w-full"
+      />
 
       <div className="mb-4 sm:mb-6 min-w-0 w-full">
         <MarketplaceOpportunityCard theme={theme} />
