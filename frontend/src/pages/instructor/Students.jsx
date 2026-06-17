@@ -1576,6 +1576,14 @@ export default function InstructorStudents() {
     return { used, total, pct }
   }
 
+  const packLabelForStudent = (s) => {
+    const bt = String(s?.billing_type || '').trim()
+    if (bt === '8_lessons') return '8 dərs'
+    if (bt === '12_lessons') return '12 dərs'
+    if (bt === 'monthly') return 'Aylıq'
+    return null
+  }
+
   const badgeTone = (variant) => {
     if (theme === 'dark') return ''
     // Light theme: make badges readable on white surfaces
@@ -2397,12 +2405,7 @@ export default function InstructorStudents() {
                     {g.students.map((s) => {
                       const p = lessonProgress(s)
                       const pay = paymentBadge(s)
-                      const packLabel =
-                        s.billing_type === '8_lessons'
-                            ? '8 dərs'
-                            : s.billing_type === '12_lessons'
-                              ? '12 dərs'
-                              : s.billing_type
+                      const packLabel = packLabelForStudent(s)
                       const draggable = canDragStudent(s)
                       const isDragging = draggingStudentId === s.enrollment_id
                       return (
@@ -2412,7 +2415,7 @@ export default function InstructorStudents() {
                           onDragStart={(e) => handleStudentDragStart(e, s)}
                           onDragEnd={handleStudentDragEnd}
                           className={[
-                            'group flex flex-wrap sm:flex-nowrap items-center gap-x-3 gap-y-2 rounded-xl px-3 py-2.5',
+                            'group grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[1.25rem_minmax(0,1fr)_auto] items-center gap-x-2 sm:gap-x-3 rounded-xl px-3 py-2.5',
                             'border border-[color:var(--border-subtle)]',
                             'bg-token-surfaceCard/40 hover:bg-token-surfaceCard/55',
                             'transition-[background-color,transform,border-color,opacity,box-shadow] duration-200',
@@ -2423,14 +2426,16 @@ export default function InstructorStudents() {
                         >
                           {draggable ? (
                             <span
-                              className="hidden sm:flex shrink-0 w-5 items-center justify-center text-token-textMuted/50 group-hover:text-primary/70 select-none"
+                              className="hidden sm:flex shrink-0 w-5 items-center justify-center text-token-textMuted/50 group-hover:text-primary/70 select-none sm:col-start-1"
                               aria-hidden
                               title="Başqa qrupa sürükləyin"
                             >
                               ⠿
                             </span>
-                          ) : null}
-                          <div className="min-w-0 flex items-center gap-3 flex-[1_1_200px]">
+                          ) : (
+                            <span className="hidden sm:block sm:col-start-1 w-5 shrink-0" aria-hidden />
+                          )}
+                          <div className="min-w-0 flex items-center gap-3 col-start-1 sm:col-start-2 row-start-1">
                             <div
                               className={[
                                 'w-9 h-9 rounded-full shrink-0 flex items-center justify-center text-xs font-extrabold',
@@ -2465,50 +2470,58 @@ export default function InstructorStudents() {
                             </div>
                           </div>
 
-                          <StudentDirectChatButton
-                            active={directChatActive}
-                            locked={!directChatActive}
-                            disabled={blocked}
-                            onClick={() => openDirectChat(s)}
-                            title={
-                              blocked
-                                ? 'Çat deaktivdir'
-                                : directChatActive
-                                  ? `${s.full_name || 'Tələbə'} ilə fərdi çat`
-                                  : 'Fərdi çat — paket tələb olunur'
-                            }
-                          />
-
-                          <div className="hidden sm:flex items-center flex-[1_1_120px] min-w-[110px] max-w-[180px]">
-                            <div className="w-full">
-                              <div className="h-2 rounded-full bg-white/5 border border-white/10 overflow-hidden">
-                                <div
-                                  className="h-full bg-primary/70 transition-[width] duration-300"
-                                  style={{ width: `${p ? p.pct : 92}%` }}
-                                />
-                              </div>
-                              <div className="mt-1 text-[11px] text-token-textMuted text-right tabular-nums">
-                                {p ? `${p.pct}% (${p.used}/${p.total})` : '—'}
-                              </div>
+                          <div className="col-start-2 sm:col-start-3 row-start-1 flex items-center gap-2 sm:gap-3 justify-end shrink-0">
+                            <div className="w-9 shrink-0 flex justify-center">
+                              <StudentDirectChatButton
+                                active={directChatActive}
+                                locked={!directChatActive}
+                                disabled={blocked}
+                                onClick={() => openDirectChat(s)}
+                                title={
+                                  blocked
+                                    ? 'Çat deaktivdir'
+                                    : directChatActive
+                                      ? `${s.full_name || 'Tələbə'} ilə fərdi çat`
+                                      : 'Fərdi çat — paket tələb olunur'
+                                }
+                              />
                             </div>
-                          </div>
 
-                          <div className="flex items-center gap-2 shrink-0 ml-auto sm:ml-0">
+                            <div className="hidden sm:flex w-36 shrink-0 flex-col justify-center">
+                              {p ? (
+                                <>
+                                  <div className="h-2 rounded-full bg-white/5 border border-white/10 overflow-hidden">
+                                    <div
+                                      className="h-full bg-primary/70 transition-[width] duration-300"
+                                      style={{ width: `${p.pct}%` }}
+                                    />
+                                  </div>
+                                  <div className="mt-1 text-[11px] text-token-textMuted text-right tabular-nums">
+                                    {`${p.pct}% (${p.used}/${p.total})`}
+                                  </div>
+                                </>
+                              ) : null}
+                            </div>
+
                             {needsSetup(s) && (
                               <Button
                                 size="sm"
-                                className="hidden sm:inline-flex"
+                                className="hidden sm:inline-flex shrink-0"
                                 onClick={() => openCompleteSetup(s)}
                               >
                                 Quraşdır
                               </Button>
                             )}
-                            <div className="hidden sm:flex items-center gap-2">
+                            <div className="hidden sm:flex items-center gap-2 shrink-0">
                               <StatusBadge variant={pay.variant}>{pay.label}</StatusBadge>
-                              <StatusBadge variant="neutral">{packLabel}</StatusBadge>
+                              {packLabel ? (
+                                <StatusBadge variant="neutral">{packLabel}</StatusBadge>
+                              ) : (
+                                <span className="inline-block w-[4.5rem] shrink-0" aria-hidden />
+                              )}
                             </div>
 
-                            <div className="relative">
+                            <div className="relative w-9 shrink-0">
                               <button
                                 type="button"
                                 className={[
