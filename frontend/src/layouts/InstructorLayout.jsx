@@ -7,7 +7,6 @@ import { instructorRoleAz } from '../lib/instructorLabel'
 import Brand from '../components/common/Brand'
 import Footer from '../components/common/Footer'
 import { sidebarNavClass } from '../lib/sidebarNavClass'
-import NavIcon from '../components/common/NavIcon'
 import BillingBanner from '../components/common/BillingBanner'
 import BillingUsagePills from '../components/common/BillingUsagePills'
 import { useBillingStatus } from '../hooks/useBillingStatus'
@@ -21,39 +20,9 @@ import { BILLING_STATUS_QUERY_KEY } from '../hooks/useBillingStatus'
 import { useToast } from '../components/common/Toast'
 import PhoneVerificationGate from '../components/auth/PhoneVerificationGate'
 import ConfirmDialog from '../components/common/ConfirmDialog'
+import { useInstructorNavSections } from '../hooks/useInstructorNavSections'
 
 const DISCOVER_MODAL_SESSION_PREFIX = 'mx_discover_modal_v1_'
-
-const NAV_SECTIONS = [
-  {
-    title: 'MANAGEMENT',
-    items: [
-      { to: '/instructor', label: 'Dashboard', icon: <NavIcon name="dashboard" />, end: true },
-      { to: '/instructor/teaching-groups', label: 'Kurslar və qruplar', icon: <NavIcon name="courses" /> },
-      { to: '/instructor/students', label: 'Tələbələrim', icon: <NavIcon name="students" /> },
-      { to: '/instructor/join-requests', label: 'Sorğular', icon: <NavIcon name="notifications" />, badgeKey: 'join_requests' },
-      { to: '/instructor/inquiries', label: 'Xəritə müraciətləri', icon: <NavIcon name="instructors" /> },
-      { to: '/instructor/schedule', label: 'Cədvəlim', icon: <NavIcon name="schedule" /> },
-      { to: '/instructor/attendance', label: 'Davamiyyət', icon: <NavIcon name="attendance" /> },
-      { to: '/instructor/exams', label: 'İmtahanlar', icon: <NavIcon name="exams" /> },
-      { to: '/instructor/tasks', label: 'Tapşırıqlar', icon: <NavIcon name="tasks" /> },
-    ],
-  },
-  {
-    title: 'ANALYTICS',
-    items: [
-      { to: '/instructor/analytics', label: 'Analitika', icon: <NavIcon name="analytics" /> },
-      { to: '/instructor/payments', label: 'Ödənişlər', icon: <NavIcon name="payments" /> },
-    ],
-  },
-  {
-    title: 'SYSTEM',
-    items: [
-      { to: '/instructor/notifications', label: 'Bildirişlər', icon: <NavIcon name="notifications" /> },
-      { to: '/instructor/settings', label: 'Tənzimləmələr', icon: <NavIcon name="settings" /> },
-    ],
-  },
-]
 
 export default function InstructorLayout() {
   const { user, logout, updateUser } = useAuthStore()
@@ -95,6 +64,7 @@ export default function InstructorLayout() {
   const lastTrackedRef = useRef({ warning: false, blocked: false })
   const mainRef = useRef(null)
   const showMobileSidebar = navOpen && !sidebarHidden
+  const { sections: navSections } = useInstructorNavSections()
 
   const notifUnread = useMemo(() => {
     if (!hasAlerts || !notifFetchAt) return false
@@ -461,8 +431,8 @@ export default function InstructorLayout() {
 
         <nav className="flex-1 p-4 overflow-y-auto min-h-0">
           <div className="space-y-4">
-            {NAV_SECTIONS.map((section) => (
-              <div key={section.title} className="space-y-2">
+            {navSections.map((section) => (
+              <div key={section.id || section.title} className="space-y-2">
                 <div className="px-4 pt-2">
                   <div className={`text-xs uppercase tracking-wider ${theme === 'dark' ? 'text-token-textMuted/80' : 'text-slate-400'}`}>
                     {section.title}

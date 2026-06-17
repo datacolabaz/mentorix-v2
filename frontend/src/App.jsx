@@ -26,6 +26,7 @@ import AdminPayments from './pages/admin/Payments'
 import AdminNotifications from './pages/admin/Notifications'
 import AdminSettings from './pages/admin/Settings'
 import AdminMarketingLogin from './pages/admin/MarketingLogin'
+import AdminInstructorNav from './pages/admin/InstructorNav'
 import AdminCategories from './pages/admin/AdminCategories'
 import AdminAnalytics from './pages/admin/AdminAnalytics'
 import AnalyticsPageTracker from './components/analytics/AnalyticsPageTracker'
@@ -171,6 +172,7 @@ export default function App() {
         <Route path="notifications" element={<AdminNotifications />} />
         <Route path="settings" element={<AdminSettings />} />
         <Route path="marketing/login" element={<AdminMarketingLogin />} />
+        <Route path="instructor-nav" element={<AdminInstructorNav />} />
         <Route path="categories" element={<AdminCategories />} />
         <Route path="analytics" element={<AdminAnalytics />} />
       </Route>

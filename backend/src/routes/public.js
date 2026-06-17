@@ -1,6 +1,7 @@
 const express = require('express');
 const { getLandingStats } = require('../controllers/publicLandingController');
 const { getPublicLoginMarketing } = require('../controllers/siteMarketingController');
+const { getPublicInstructorNav } = require('../controllers/instructorNavController');
 const { getInstructorsInMapView } = require('../controllers/publicInstructorMapController');
 const { getInstructorDiscovery } = require('../controllers/publicInstructorDiscoverController');
 const {
@@ -34,6 +35,7 @@ router.post('/analytics/event', postAccessEvent);
 router.get('/landing-stats', getLandingStats);
 router.get('/contact', getPublicContact);
 router.get('/marketing/login', getPublicLoginMarketing);
+router.get('/instructor-nav', getPublicInstructorNav);
 router.get('/instructors-map', getInstructorsInMapView);
 router.get('/instructors/:id', getPublicInstructorProfile);
 router.get('/instructors/:id/messaging', authenticate, getInstructorMessagingLink);

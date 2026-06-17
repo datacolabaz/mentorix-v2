@@ -16,6 +16,10 @@ const {
   getAdminLoginMarketing,
   putAdminLoginMarketing,
 } = require('../controllers/siteMarketingController');
+const {
+  getAdminInstructorNav,
+  putAdminInstructorNav,
+} = require('../controllers/instructorNavController');
 const { authenticate, authorize } = require('../middleware/auth');
 const db = require('../utils/db');
 const { grantCourseRoleToUser } = require('../services/userRolesService');
@@ -43,6 +47,8 @@ router.delete('/students/:id', authenticate, authorize('admin'), deleteStudent);
 router.get('/classes', authenticate, authorize('admin'), getClasses);
 router.get('/marketing/login', authenticate, authorize('admin'), getAdminLoginMarketing);
 router.put('/marketing/login', authenticate, authorize('admin'), putAdminLoginMarketing);
+router.get('/instructor-nav', authenticate, authorize('admin'), getAdminInstructorNav);
+router.put('/instructor-nav', authenticate, authorize('admin'), putAdminInstructorNav);
 router.get('/platform/contact', authenticate, authorize('admin'), getAdminPlatformContact);
 router.put('/platform/contact', authenticate, authorize('admin'), putAdminPlatformContact);
 router.get('/categories', authenticate, authorize('admin'), listCategories);

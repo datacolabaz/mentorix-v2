@@ -26,6 +26,7 @@ const NAV_SECTIONS = [
     items: [
       { to: '/admin/notifications', label: 'Bildirişlər', icon: <NavIcon name="notifications" /> },
       { to: '/admin/marketing/login', label: 'Landing məzmunu', icon: <NavIcon name="analytics" /> },
+      { to: '/admin/instructor-nav', label: 'Müəllim menyusu', icon: <NavIcon name="settings" /> },
       { to: '/admin/categories', label: 'Axtarış kateqoriyaları', icon: <NavIcon name="courses" /> },
       { to: '/admin/settings', label: 'Tənzimləmələr', icon: <NavIcon name="settings" /> },
     ],
