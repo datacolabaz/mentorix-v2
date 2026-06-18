@@ -22,6 +22,19 @@ function isSafeCourseMaterialFilename(name) {
   return /^[a-f0-9-]{36}\.(pdf|png|jpe?g|gif|webp|docx?|xlsx?|pptx?|csv|txt)$/i.test(String(name || ''));
 }
 
+function resolveUploadedFileBytes(file) {
+  const cached = Number(file?.byteSize ?? file?.size);
+  if (Number.isFinite(cached) && cached > 0) return Math.round(cached);
+  if (file?.path && fs.existsSync(file.path)) {
+    try {
+      return fs.statSync(file.path).size;
+    } catch {
+      return 0;
+    }
+  }
+  return 0;
+}
+
 function contentTypeForFilename(filename) {
   const ext = path.extname(filename).toLowerCase();
   const map = {
@@ -55,6 +68,8 @@ async function persistCourseMaterialBlob(file) {
     return;
   }
   const ct = file.mimetype || contentTypeForFilename(filename);
+  file.size = buf.length;
+  file.byteSize = buf.length;
   await db.query(
     `INSERT INTO course_material_blobs (filename, content_type, data, byte_size)
      VALUES ($1, $2, $3, $4)
@@ -110,6 +125,7 @@ module.exports = {
   getCourseMaterialsUploadDir,
   ensureCourseMaterialsUploadDir,
   isSafeCourseMaterialFilename,
+  resolveUploadedFileBytes,
   contentTypeForFilename,
   persistCourseMaterialBlob,
   readCourseMaterialBuffer,

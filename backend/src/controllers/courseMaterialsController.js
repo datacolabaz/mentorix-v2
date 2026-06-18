@@ -15,8 +15,9 @@ const {
   readCourseMaterialBuffer,
   deleteCourseMaterialBlob,
   contentTypeForFilename,
+  resolveUploadedFileBytes,
 } = require('../services/courseMaterialStorage');
-const { STORAGE_LIMIT_MESSAGE } = require('../constants/materialsPlanLimits');
+const { STORAGE_LIMIT_MESSAGE, MATERIALS_MAX_SINGLE_FILE_BYTES } = require('../constants/materialsPlanLimits');
 
 function mapMaterialRow(row) {
   if (!row) return null;
@@ -77,7 +78,19 @@ const postMaterial = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Fayl tələb olunur' });
     }
 
-    await assertMaterialsUploadAllowed(req.user.id, req.file.size || 0);
+    const fileSize = resolveUploadedFileBytes(req.file);
+    if (!fileSize) {
+      return res.status(400).json({ success: false, message: 'Fayl ölçüsü oxunmadı — yenidən cəhd edin' });
+    }
+    if (fileSize > MATERIALS_MAX_SINGLE_FILE_BYTES) {
+      return res.status(400).json({
+        success: false,
+        code: 'MATERIALS_FILE_TOO_LARGE',
+        message: 'Tək fayl ölçüsü 25 MB-dan çox ola bilməz.',
+      });
+    }
+
+    await assertMaterialsUploadAllowed(req.user.id, fileSize);
 
     const title = String(req.body.title || req.file.originalname || 'Material').trim().slice(0, 200);
     const rel = `/api/materials/file/${req.file.filename}`;
@@ -89,7 +102,7 @@ const postMaterial = async (req, res) => {
       fileUrl: rel,
       storageFilename: req.file.filename,
       fileType,
-      fileSize: req.file.size || 0,
+      fileSize,
       originalFilename: req.file.originalname || null,
       groupId: req.body.group_id || null,
       subjectId: req.body.subject_id || null,
@@ -100,6 +113,13 @@ const postMaterial = async (req, res) => {
     const quota = await getMaterialsQuota(req.user.id);
     res.json({ success: true, material: mapMaterialRow(row), quota });
   } catch (e) {
+    if (e.code === '23514' && /course_materials_file_size/i.test(String(e.constraint || e.message || ''))) {
+      return res.status(400).json({
+        success: false,
+        code: 'MATERIALS_FILE_TOO_LARGE',
+        message: 'Tək fayl ölçüsü 25 MB-dan çox ola bilməz.',
+      });
+    }
     const status = e.status || (e.code?.startsWith('MATERIALS_') ? 429 : 500);
     res.status(status).json({
       success: false,

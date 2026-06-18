@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS course_materials (
   file_url TEXT NOT NULL,
   storage_filename TEXT NOT NULL,
   file_type TEXT NOT NULL,
-  file_size INTEGER NOT NULL CHECK (file_size > 0),
+  file_size BIGINT NOT NULL CHECK (file_size > 0 AND file_size <= 27262976),
   original_filename TEXT,
   group_id UUID NULL REFERENCES instructor_groups(id) ON DELETE SET NULL,
   subject_id UUID NULL REFERENCES instructor_subjects(id) ON DELETE SET NULL,
@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS course_material_blobs (
   filename TEXT PRIMARY KEY,
   content_type TEXT NOT NULL,
   data BYTEA NOT NULL,
-  byte_size INTEGER NOT NULL DEFAULT 0,
+  byte_size BIGINT NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
