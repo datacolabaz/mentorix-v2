@@ -107,6 +107,11 @@ export default function InstructorMaterialsLibrary() {
     return filterableGroups
   }, [allGroups, filterGroup, filterableGroups])
 
+  const selectedFilterGroup = useMemo(() => {
+    if (!filterGroup) return null
+    return shareGroups.find((g) => String(g.id) === String(filterGroup)) || null
+  }, [filterGroup, shareGroups])
+
   const copyGroupLink = async (group) => {
     const url = libraryInviteUrl(group.id)
     try {
@@ -162,6 +167,8 @@ export default function InstructorMaterialsLibrary() {
         quota={quota}
         fields={fields}
         fieldsLoading={fieldsLoading}
+        presetSubjectId={filterSubject}
+        presetGroupId={filterGroup}
         onUpgrade={() => navigate('/instructor/settings?tab=plans')}
       />
 
@@ -270,6 +277,20 @@ export default function InstructorMaterialsLibrary() {
             </select>
           </div>
         </div>
+        {selectedFilterGroup ? (
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 pt-1">
+            <p className="text-[10px] text-token-textMuted/80 truncate font-mono flex-1 min-w-0">
+              {libraryInviteUrl(selectedFilterGroup.id)}
+            </p>
+            <Button
+              variant="secondary"
+              className="shrink-0 text-xs w-full sm:w-auto"
+              onClick={() => void copyGroupLink(selectedFilterGroup)}
+            >
+              Linki kopyala
+            </Button>
+          </div>
+        ) : null}
         {fieldsError ? <p className="text-xs text-red-300/90">{fieldsError}</p> : null}
         {!fieldsLoading && !allGroups.length ? (
           <p className="text-xs text-amber-300/90">
@@ -281,7 +302,7 @@ export default function InstructorMaterialsLibrary() {
         ) : null}
       </Card>
 
-      {!fieldsLoading && shareGroups.length > 0 ? (
+      {!fieldsLoading && !filterGroup && shareGroups.length > 0 ? (
         <Card className="p-4 sm:p-5 border border-[color:var(--border-subtle)] space-y-4">
           <div>
             <h2 className="text-sm font-semibold text-token-textMain">Qrup linki ilə giriş</h2>
@@ -325,11 +346,8 @@ export default function InstructorMaterialsLibrary() {
           <div className="text-4xl mb-3">📁</div>
           <h2 className="font-display font-bold text-lg">Hələ material yoxdur</h2>
           <p className="text-sm text-token-textMuted mt-2 max-w-md mx-auto">
-            «Fayl yüklə» düyməsi ilə material əlavə edin — qrup və ya tapşırıqla əlaqələndirə bilərsiniz.
+            Yuxarıdakı «Fayl yüklə» düyməsi ilə material əlavə edin — istəsəniz dərs və ya tapşırıqla da əlaqələndirə bilərsiniz.
           </p>
-          <Button className="mt-4" onClick={() => setUploadOpen(true)} disabled={quota?.limit_reached}>
-            Fayl yüklə
-          </Button>
         </Card>
       ) : (
         <div className="space-y-8">

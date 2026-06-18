@@ -35,6 +35,8 @@ export default function MaterialUploadModal({
   onUpgrade,
   fields = [],
   fieldsLoading = false,
+  presetSubjectId = '',
+  presetGroupId = '',
 }) {
   const toast = useToast()
   const inputRef = useRef(null)
@@ -55,23 +57,47 @@ export default function MaterialUploadModal({
   const limitReached = isMaterialsQuotaFull(quota)
   const groupsInField = useMemo(() => groupsForField(fields, subjectId), [fields, subjectId])
 
+  const presetGroup = useMemo(() => {
+    if (!presetGroupId) return null
+    for (const field of fields) {
+      const group = (field.groups || []).find((g) => String(g.id) === String(presetGroupId))
+      if (group) {
+        return { ...group, subject_id: field.id, subject_name: field.name }
+      }
+    }
+    return null
+  }, [fields, presetGroupId])
+
+  const presetSubject = useMemo(() => {
+    if (presetGroup) {
+      return fields.find((f) => String(f.id) === String(presetGroup.subject_id)) || null
+    }
+    if (!presetSubjectId) return null
+    return fields.find((f) => String(f.id) === String(presetSubjectId)) || null
+  }, [fields, presetGroup, presetSubjectId])
+
+  const groupLocked = Boolean(presetGroupId && presetGroup)
+  const subjectLocked = Boolean(presetSubject && !groupLocked)
+
   const resetForm = useCallback(() => {
     setFile(null)
     setTitle('')
-    setSubjectId('')
-    setGroupId('')
+    setSubjectId(presetSubject?.id ? String(presetSubject.id) : '')
+    setGroupId(presetGroup?.id ? String(presetGroup.id) : '')
     setLessonId('')
     setAssignmentId('')
     setProgress(0)
     setDragOver(false)
     if (inputRef.current) inputRef.current.value = ''
-  }, [])
+  }, [presetGroup, presetSubject])
 
   useEffect(() => {
     if (!open) {
       resetForm()
       return
     }
+    setSubjectId(presetSubject?.id ? String(presetSubject.id) : '')
+    setGroupId(presetGroup?.id ? String(presetGroup.id) : '')
     setQuota(quotaProp || null)
     setLoadingExtras(true)
     Promise.all([
@@ -86,7 +112,7 @@ export default function MaterialUploadModal({
       })
       .catch(() => toast('Dərs və tapşırıq siyahısı yüklənmədi', 'error'))
       .finally(() => setLoadingExtras(false))
-  }, [open, quotaProp, resetForm, toast])
+  }, [open, presetGroup, presetSubject, quotaProp, resetForm, toast])
 
   const pickFile = (f) => {
     if (!f) return
@@ -232,54 +258,76 @@ export default function MaterialUploadModal({
             />
           </label>
 
-          <label className="block space-y-1.5">
-            <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Sahə</span>
-            <select
-              value={subjectId}
-              onChange={(e) => {
-                setSubjectId(e.target.value)
-                setGroupId('')
-                setLessonId('')
-              }}
-              disabled={uploading || fieldsLoading}
-              className={SELECT_CLS}
-            >
-              <option value="">— Seçin —</option>
-              {fields.map((f) => (
-                <option key={f.id} value={f.id}>
-                  {f.name}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="block space-y-1.5">
-            <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Qrup</span>
-            <select
-              value={groupId}
-              onChange={(e) => {
-                setGroupId(e.target.value)
-                setLessonId('')
-              }}
-              disabled={uploading || fieldsLoading || !subjectId}
-              className={SELECT_CLS}
-            >
-              {!subjectId ? (
-                <option value="">Əvvəlcə sahə seçin</option>
-              ) : !groupsInField.length ? (
-                <option value="">Bu sahədə qrup yoxdur</option>
+          {groupLocked ? (
+            <div className="sm:col-span-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5">
+              <p className="text-[10px] font-bold uppercase tracking-wide text-gray-500">Yükləmə hədəfi</p>
+              <p className="text-sm text-white mt-1">
+                {presetGroup.name}
+                {presetGroup.subject_name ? (
+                  <span className="text-gray-400"> · {presetGroup.subject_name}</span>
+                ) : null}
+              </p>
+              <p className="text-[11px] text-gray-500 mt-1">Kitabxana filtrindən götürülüb — dəyişmək üçün səhifədə filtri yeniləyin.</p>
+            </div>
+          ) : (
+            <>
+              {!subjectLocked ? (
+                <label className="block space-y-1.5">
+                  <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Sahə</span>
+                  <select
+                    value={subjectId}
+                    onChange={(e) => {
+                      setSubjectId(e.target.value)
+                      setGroupId('')
+                      setLessonId('')
+                    }}
+                    disabled={uploading || fieldsLoading}
+                    className={SELECT_CLS}
+                  >
+                    <option value="">— Seçin —</option>
+                    {fields.map((f) => (
+                      <option key={f.id} value={f.id}>
+                        {f.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
               ) : (
-                <>
-                  <option value="">— Seçin —</option>
-                  {groupsInField.map((g) => (
-                    <option key={g.id} value={g.id}>
-                      {g.name}
-                    </option>
-                  ))}
-                </>
+                <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5">
+                  <p className="text-[10px] font-bold uppercase tracking-wide text-gray-500">Sahə</p>
+                  <p className="text-sm text-white mt-1">{presetSubject.name}</p>
+                </div>
               )}
-            </select>
-          </label>
+
+              <label className="block space-y-1.5">
+                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Qrup</span>
+                <select
+                  value={groupId}
+                  onChange={(e) => {
+                    setGroupId(e.target.value)
+                    setLessonId('')
+                  }}
+                  disabled={uploading || fieldsLoading || !subjectId}
+                  className={SELECT_CLS}
+                >
+                  {!subjectId ? (
+                    <option value="">Əvvəlcə sahə seçin</option>
+                  ) : !groupsInField.length ? (
+                    <option value="">Bu sahədə qrup yoxdur</option>
+                  ) : (
+                    <>
+                      <option value="">— Seçin —</option>
+                      {groupsInField.map((g) => (
+                        <option key={g.id} value={g.id}>
+                          {g.name}
+                        </option>
+                      ))}
+                    </>
+                  )}
+                </select>
+              </label>
+            </>
+          )}
 
           <label className="block space-y-1.5">
             <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Dərs (ixtiyari)</span>
@@ -336,7 +384,7 @@ export default function MaterialUploadModal({
             Ləğv et
           </Button>
           <Button onClick={submit} disabled={!file || uploading || limitReached}>
-            {uploading ? 'Yüklənir…' : 'Yüklə'}
+            {uploading ? 'Yüklənir…' : 'Saxla'}
           </Button>
         </div>
       </div>
