@@ -54,6 +54,12 @@ export default function ProgramCard({ program, onDetails, onApply }) {
         </div>
       </div>
 
+      {program.mentor?.display_name ? (
+        <div className="rounded-xl border border-violet-500/25 bg-violet-500/10 px-3 py-2 text-xs text-violet-200">
+          Bu proqram üzrə mentor: <span className="font-semibold text-white">{program.mentor.display_name}</span>
+        </div>
+      ) : null}
+
       <div className="flex flex-wrap gap-2 mt-auto">
         <Button type="button" variant="secondary" className="text-xs" onClick={() => onDetails?.(program)}>
           Ətraflı

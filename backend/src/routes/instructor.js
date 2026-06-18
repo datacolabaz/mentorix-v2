@@ -33,7 +33,10 @@ const {
 const { requireInstructorPhoneVerification } = require('../middleware/requireInstructorPhoneVerification');
 const { postInstructorAvatar, deleteInstructorAvatar } = require('../controllers/instructorAvatarController');
 const { getMarketplaceOpportunity } = require('../controllers/instructorMarketplaceController');
-const { getInstructorNavSections } = require('../controllers/instructorNavController');
+const {
+  postContribution,
+  getMyContributions,
+} = require('../controllers/universityProgramMentorController');
 
 router.get('/nav-sections', authenticate, authorize('instructor'), getInstructorNavSections);
 router.get('/teaching', authenticate, authorize('instructor'), getTeaching);
@@ -105,5 +108,8 @@ router.post(
   enforceActiveSubscription,
   postPromoteParticipant,
 );
+
+router.post('/university-programs', authenticate, authorize('instructor'), postContribution);
+router.get('/university-programs/mine', authenticate, authorize('instructor'), getMyContributions);
 
 module.exports = router;

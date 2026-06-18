@@ -101,6 +101,13 @@ function mapProgramRow(row) {
     requirements: row.requirements || {},
     apply_link: row.apply_link,
     portal_source: row.portal_source,
+    source_type: row.source_type || 'seed',
+    mentor: row.contributor_user_id
+      ? {
+          user_id: row.contributor_user_id,
+          display_name: row.mentor_display_name || 'Mentor',
+        }
+      : null,
     university: {
       id: row.uni_id,
       name: row.uni_name,
@@ -158,7 +165,11 @@ function appendFieldFilter(where, params, fieldSlug) {
 
 async function queryProgramsFromDatabase(filters) {
   const params = [];
-  const where = ['p.is_active = true', 'u.is_active = true'];
+  const where = [
+    'p.is_active = true',
+    'u.is_active = true',
+    "(p.review_status = 'approved' OR p.source_type = 'seed')",
+  ];
 
   if (filters.degreeLevel) {
     params.push(filters.degreeLevel);
@@ -229,6 +240,9 @@ async function queryProgramsFromDatabase(filters) {
       p.requirements,
       p.apply_link,
       p.portal_source,
+      p.source_type,
+      p.contributor_user_id,
+      p.mentor_display_name,
       u.name AS uni_name,
       u.country AS uni_country,
       u.city AS uni_city,
@@ -301,6 +315,9 @@ async function getProgramById(programId) {
       p.requirements,
       p.apply_link,
       p.portal_source,
+      p.source_type,
+      p.contributor_user_id,
+      p.mentor_display_name,
       u.name AS uni_name,
       u.country AS uni_country,
       u.city AS uni_city,

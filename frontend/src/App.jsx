@@ -31,6 +31,7 @@ import AdminSettings from './pages/admin/Settings'
 import AdminMarketingLogin from './pages/admin/MarketingLogin'
 import AdminInstructorNav from './pages/admin/InstructorNav'
 import AdminCategories from './pages/admin/AdminCategories'
+import AdminUniversityPrograms from './pages/admin/AdminUniversityPrograms'
 import AdminAnalytics from './pages/admin/AdminAnalytics'
 import AnalyticsPageTracker from './components/analytics/AnalyticsPageTracker'
 import PresenceHeartbeat from './components/analytics/PresenceHeartbeat'
@@ -49,6 +50,7 @@ import InstructorJoinRequests from './pages/instructor/JoinRequests'
 import StudentInquiries from './pages/instructor/StudentInquiries'
 import InstructorTasks from './pages/instructor/Tasks'
 import InstructorMaterialsLibrary from './pages/instructor/MaterialsLibrary'
+import InstructorUniversityPrograms from './pages/instructor/InstructorUniversityPrograms'
 import PaymentSuccess from './pages/instructor/PaymentSuccess'
 import PaymentFail from './pages/instructor/PaymentFail'
 import PaymentPending from './pages/instructor/PaymentPending'
@@ -182,6 +184,7 @@ export default function App() {
         <Route path="marketing/login" element={<AdminMarketingLogin />} />
         <Route path="instructor-nav" element={<AdminInstructorNav />} />
         <Route path="categories" element={<AdminCategories />} />
+        <Route path="university-programs" element={<AdminUniversityPrograms />} />
         <Route path="analytics" element={<AdminAnalytics />} />
       </Route>
 
@@ -203,6 +206,7 @@ export default function App() {
         <Route path="analytics" element={<InstructorAnalytics />} />
         <Route path="tasks" element={<InstructorTasks />} />
         <Route path="materials" element={<InstructorMaterialsLibrary />} />
+        <Route path="university-programs" element={<InstructorUniversityPrograms />} />
         <Route path="materials/upload" element={<Navigate to="/instructor/materials" replace />} />
         <Route path="tasks/analytics" element={<AssignmentAnalytics />} />
         <Route path="assignments" element={<InstructorTasks />} />

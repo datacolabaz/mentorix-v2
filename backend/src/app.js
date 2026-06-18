@@ -17,6 +17,7 @@ const { runNotificationQueueOnce } = require('./jobs/notificationQueueWorker');
 const { runAssignmentNotifications } = require('./jobs/assignmentNotifications');
 const { reconcileStorageUsage } = require('./jobs/storageUsageReconciler');
 const { runOrphanFilesReaper } = require('./jobs/orphanFilesReaper');
+const { runUniversityProgramScraper } = require('./jobs/universityProgramScraper');
 
 const { ensureAssignmentsUploadDir } = require('./services/assignmentFileStorage');
 const { CHAT_UPLOAD_DIR } = require('./services/chatAttachmentStorage');
@@ -153,6 +154,11 @@ cron.schedule('0 */6 * * *', () => {
 // Orphan files cleanup: daily at 03:30
 cron.schedule('30 3 * * *', () => {
   runOrphanFilesReaper().catch((e) => console.error('orphan files reaper cron', e.message));
+});
+
+// University program AI scraper: weekly Sunday 04:00
+cron.schedule('0 4 * * 0', () => {
+  runUniversityProgramScraper().catch((e) => console.error('university program scraper cron', e.message));
 });
 
 module.exports = app;

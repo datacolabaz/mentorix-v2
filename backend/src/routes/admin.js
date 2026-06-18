@@ -33,9 +33,12 @@ const {
 const { getAdminTraffic, getAdminAnalytics } = require('../controllers/accessAnalyticsController');
 const { listCategories, patchCategory } = require('../controllers/adminCategoryController');
 const {
-  getAdminPlatformContact,
-  putAdminPlatformContact,
-} = require('../controllers/platformContactController');
+  runBatch,
+  listTargets,
+  runOne,
+  listPending,
+  patchReview,
+} = require('../controllers/universityProgramAdminController');
 
 router.get('/stats', authenticate, authorize('admin'), getDashboardStats);
 router.get('/analytics/traffic', authenticate, authorize('admin'), getAdminTraffic);
@@ -232,5 +235,11 @@ router.put('/plans', authenticate, authorize('admin'), async (req, res) => {
     res.status(err.statusCode || 500).json({ success: false, message: err.message });
   }
 });
+
+router.get('/university-programs/pending', authenticate, authorize('admin'), listPending);
+router.patch('/university-programs/:id/review', authenticate, authorize('admin'), patchReview);
+router.get('/university-scrape-targets', authenticate, authorize('admin'), listTargets);
+router.post('/university-scrape/run', authenticate, authorize('admin'), runBatch);
+router.post('/university-scrape/targets/:id/run', authenticate, authorize('admin'), runOne);
 
 module.exports = router;
