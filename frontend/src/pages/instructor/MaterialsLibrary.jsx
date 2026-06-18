@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import api from '../../lib/api'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
@@ -11,6 +11,9 @@ import { materialFileKind, materialFileOpenUrl } from '../../lib/materialFileUrl
 import { formatMaterialsBytes, materialsUsagePercent } from '../../lib/materialsPlanLimits'
 import useUiStore from '../../hooks/useUi'
 
+const selectCls =
+  'rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard text-token-textMain px-3 py-2.5 text-sm min-w-[min(100%,200px)] appearance-none cursor-pointer'
+
 function fileEmoji(material) {
   const kind = materialFileKind(material.file_type, material.file_url)
   if (kind === 'PDF') return '📄'
@@ -21,21 +24,41 @@ function fileEmoji(material) {
   return '📎'
 }
 
+function libraryInviteUrl(groupId) {
+  if (typeof window === 'undefined') return `/library/${groupId}`
+  return `${window.location.origin}/library/${groupId}`
+}
+
 export default function InstructorMaterialsLibrary() {
   const toast = useToast()
   const navigate = useNavigate()
-  const location = useLocation()
   const { theme } = useUiStore()
   const isDark = theme === 'dark'
 
   const [loading, setLoading] = useState(true)
+  const [optionsLoading, setOptionsLoading] = useState(true)
   const [materials, setMaterials] = useState([])
+  const [options, setOptions] = useState({ subjects: [], groups: [], assignments: [], lessons: [] })
   const [quota, setQuota] = useState(null)
   const [filterGroup, setFilterGroup] = useState('')
   const [filterSubject, setFilterSubject] = useState('')
   const [uploadOpen, setUploadOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [deleteBusy, setDeleteBusy] = useState(false)
+
+  const loadOptions = useCallback(async () => {
+    setOptionsLoading(true)
+    try {
+      const res = await api.get('/materials/options')
+      if (res?.success) {
+        setOptions(res.options || { subjects: [], groups: [], assignments: [], lessons: [] })
+      }
+    } catch {
+      toast('Kurs və qrup siyahısı yüklənmədi', 'error')
+    } finally {
+      setOptionsLoading(false)
+    }
+  }, [toast])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -58,47 +81,43 @@ export default function InstructorMaterialsLibrary() {
   }, [filterGroup, filterSubject, toast])
 
   useEffect(() => {
+    void loadOptions()
+  }, [loadOptions])
+
+  useEffect(() => {
     void load()
   }, [load])
 
+  const filterableGroups = useMemo(() => {
+    const all = Array.isArray(options.groups) ? options.groups : []
+    if (!filterSubject) return all
+    return all.filter((g) => String(g.subject_id) === String(filterSubject))
+  }, [options.groups, filterSubject])
+
   useEffect(() => {
-    if (location.pathname.endsWith('/upload')) setUploadOpen(true)
-  }, [location.pathname])
-
-  const subjects = useMemo(() => {
-    const map = new Map()
-    for (const m of materials) {
-      if (m.subject_id && m.subject_name) map.set(m.subject_id, m.subject_name)
-    }
-    return [...map.entries()].map(([id, name]) => ({ id, name }))
-  }, [materials])
-
-  const groups = useMemo(() => {
-    const map = new Map()
-    for (const m of materials) {
-      if (m.group_id && m.group_name) map.set(m.group_id, m.group_name)
-    }
-    return [...map.entries()].map(([id, name]) => ({ id, name }))
-  }, [materials])
+    if (!filterGroup) return
+    const ok = filterableGroups.some((g) => String(g.id) === String(filterGroup))
+    if (!ok) setFilterGroup('')
+  }, [filterGroup, filterableGroups])
 
   const grouped = useMemo(() => {
     const bySubject = new Map()
     for (const m of materials) {
-      const key = m.subject_name || 'Ümumi'
+      const key = m.subject_name || m.group_name || 'Ümumi'
       if (!bySubject.has(key)) bySubject.set(key, [])
       bySubject.get(key).push(m)
     }
     return [...bySubject.entries()]
   }, [materials])
 
-  const openUpload = () => {
-    navigate('/instructor/materials/upload')
-    setUploadOpen(true)
-  }
-
-  const closeUpload = () => {
-    setUploadOpen(false)
-    if (location.pathname.endsWith('/upload')) navigate('/instructor/materials', { replace: true })
+  const copyGroupLink = async (group) => {
+    const url = libraryInviteUrl(group.id)
+    try {
+      await navigator.clipboard.writeText(url)
+      toast(`«${group.name}» kitabxana linki kopyalandı`)
+    } catch {
+      toast(url, 'info')
+    }
   }
 
   const onUploadSuccess = (_material, nextQuota) => {
@@ -141,7 +160,7 @@ export default function InstructorMaterialsLibrary() {
 
       <MaterialUploadModal
         open={uploadOpen}
-        onClose={closeUpload}
+        onClose={() => setUploadOpen(false)}
         onSuccess={onUploadSuccess}
         quota={quota}
         onUpgrade={() => navigate('/instructor/settings?tab=plans')}
@@ -152,15 +171,15 @@ export default function InstructorMaterialsLibrary() {
           <p className="text-[11px] font-bold uppercase tracking-wider text-primary">MATERİALLAR</p>
           <h1 className="font-display font-bold text-2xl text-token-textMain mt-1">Tədris materialları kitabxanası</h1>
           <p className="text-sm text-token-textMuted mt-1">
-            PDF, Word, Excel və şəkillər — yalnız qrup üzvləri görə bilər
+            PDF, Word, Excel və şəkillər — qrup üzvləri və linklə qoşulan qonaqlar görə bilər
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="secondary" onClick={() => void load()} disabled={loading}>
             Yenilə
           </Button>
-          <Button onClick={openUpload} disabled={quota?.limit_reached}>
-            📎 Fayl yüklə
+          <Button onClick={() => setUploadOpen(true)} disabled={quota?.limit_reached}>
+            Fayl yüklə
           </Button>
         </div>
       </div>
@@ -197,32 +216,81 @@ export default function InstructorMaterialsLibrary() {
 
       <MaterialsStorageBanner quota={quota} onUpgrade={() => navigate('/instructor/settings?tab=plans')} />
 
-      <div className="flex flex-wrap gap-2">
-        <select
-          value={filterSubject}
-          onChange={(e) => setFilterSubject(e.target.value)}
-          className="rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard px-3 py-2 text-sm"
-        >
-          <option value="">Bütün fənnlər</option>
-          {subjects.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.name}
-            </option>
-          ))}
-        </select>
-        <select
-          value={filterGroup}
-          onChange={(e) => setFilterGroup(e.target.value)}
-          className="rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard px-3 py-2 text-sm"
-        >
-          <option value="">Bütün qruplar</option>
-          {groups.map((g) => (
-            <option key={g.id} value={g.id}>
-              {g.name}
-            </option>
-          ))}
-        </select>
-      </div>
+      <Card className="p-4 sm:p-5 border border-[color:var(--border-subtle)] space-y-4">
+        <div>
+          <h2 className="text-sm font-semibold text-token-textMain">Filtr</h2>
+          <p className="text-xs text-token-textMuted mt-1">Kurslar və qruplarınızdan seçin</p>
+        </div>
+        <div className="flex flex-wrap gap-3">
+          <label className="space-y-1.5">
+            <span className="text-[10px] font-bold uppercase tracking-wide text-token-textMuted">Fənn / kurs</span>
+            <select
+              value={filterSubject}
+              onChange={(e) => {
+                setFilterSubject(e.target.value)
+                setFilterGroup('')
+              }}
+              disabled={optionsLoading}
+              className={selectCls}
+            >
+              <option value="">Hamısı</option>
+              {(options.subjects || []).map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="space-y-1.5">
+            <span className="text-[10px] font-bold uppercase tracking-wide text-token-textMuted">Qrup</span>
+            <select
+              value={filterGroup}
+              onChange={(e) => setFilterGroup(e.target.value)}
+              disabled={optionsLoading || !filterableGroups.length}
+              className={selectCls}
+            >
+              <option value="">Hamısı</option>
+              {filterableGroups.map((g) => (
+                <option key={g.id} value={g.id}>
+                  {g.subject_name ? `${g.subject_name} · ` : ''}
+                  {g.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        {!optionsLoading && !options.groups?.length ? (
+          <p className="text-xs text-amber-300/90">
+            Hələ tədris qrupunuz yoxdur.{' '}
+            <Link to="/instructor/teaching-groups" className="text-primary underline">
+              Kurs və qrup yaradın
+            </Link>
+          </p>
+        ) : null}
+      </Card>
+
+      {!optionsLoading && filterableGroups.length > 0 ? (
+        <Card className="p-4 sm:p-5 border border-[color:var(--border-subtle)] space-y-3">
+          <div>
+            <h2 className="text-sm font-semibold text-token-textMain">Qrup linki paylaş</h2>
+            <p className="text-xs text-token-textMuted mt-1">
+              CRM-də olmayan tələbə ad, soyad, e-poçt və telefonla qeydiyyat keçib materiallara baxa bilər
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {filterableGroups.map((g) => (
+              <button
+                key={g.id}
+                type="button"
+                onClick={() => void copyGroupLink(g)}
+                className="text-xs font-medium px-3 py-2 rounded-lg border border-primary/25 text-primary hover:bg-primary/10"
+              >
+                {g.name} — link kopyala
+              </button>
+            ))}
+          </div>
+        </Card>
+      ) : null}
 
       {loading ? (
         <div className="text-center py-16 text-token-textMuted text-sm">Yüklənir…</div>
@@ -231,9 +299,9 @@ export default function InstructorMaterialsLibrary() {
           <div className="text-4xl mb-3">📁</div>
           <h2 className="font-display font-bold text-lg">Hələ material yoxdur</h2>
           <p className="text-sm text-token-textMuted mt-2 max-w-md mx-auto">
-            İlk faylınızı yükləyin — qrup və ya tapşırıqla əlaqələndirə bilərsiniz.
+            «Fayl yüklə» düyməsi ilə material əlavə edin — qrup və ya tapşırıqla əlaqələndirə bilərsiniz.
           </p>
-          <Button className="mt-4" onClick={openUpload} disabled={quota?.limit_reached}>
+          <Button className="mt-4" onClick={() => setUploadOpen(true)} disabled={quota?.limit_reached}>
             Fayl yüklə
           </Button>
         </Card>
@@ -262,9 +330,6 @@ export default function InstructorMaterialsLibrary() {
                         ) : null}
                         {m.assignment_title ? (
                           <p className="text-[11px] text-violet-300/90 mt-0.5 truncate">Tapşırıq: {m.assignment_title}</p>
-                        ) : null}
-                        {m.lesson_number ? (
-                          <p className="text-[11px] text-token-textMuted mt-0.5">Dərs #{m.lesson_number}</p>
                         ) : null}
                       </div>
                     </div>

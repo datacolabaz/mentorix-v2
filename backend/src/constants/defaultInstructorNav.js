@@ -16,8 +16,7 @@ const INSTRUCTOR_NAV_ITEM_DEFS = {
   attendance: { to: '/instructor/attendance', label: 'Davamiyyət', icon: 'attendance' },
   exams: { to: '/instructor/exams', label: 'İmtahanlar', icon: 'exams' },
   tasks: { to: '/instructor/tasks', label: 'Tapşırıqlar', icon: 'tasks' },
-  materials_library: { to: '/instructor/materials', label: '📁 Kitabxana', icon: 'materials' },
-  materials_upload: { to: '/instructor/materials/upload', label: '📎 Fayl yüklə', icon: 'materials_upload' },
+  materials_library: { to: '/instructor/materials', label: 'Kitabxana', icon: 'materials' },
   analytics: { to: '/instructor/analytics', label: 'Analitika', icon: 'analytics' },
   payments: { to: '/instructor/payments', label: 'Ödənişlər', icon: 'payments' },
   notifications: { to: '/instructor/notifications', label: 'Bildirişlər', icon: 'notifications' },
@@ -54,7 +53,7 @@ function defaultInstructorNavPayload() {
         id: 'materials',
         title: 'MATERİALLAR',
         enabled: true,
-        itemKeys: ['materials_library', 'materials_upload'],
+        itemKeys: ['materials_library'],
       },
       {
         id: 'analytics',
@@ -107,7 +106,7 @@ function normalizePutPayload(raw) {
     const sec = normalizeSection(source[i], i);
     const uniqueKeys = [];
     for (const key of sec.itemKeys) {
-      if (usedKeys.has(key)) continue;
+      if (usedKeys.has(key) || key === 'materials_upload') continue;
       usedKeys.add(key);
       uniqueKeys.push(key);
     }

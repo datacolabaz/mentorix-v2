@@ -34,7 +34,7 @@ async function findStudentIdByContactPhone(dbConn, phoneCanon) {
   return rows[0] || null;
 }
 
-async function findOrCreateGuestStudent({ first_name, last_name, phone }, client = null) {
+async function findOrCreateGuestStudent({ first_name, last_name, phone, email: emailRaw }, client = null) {
   const q = client ? client.query.bind(client) : db.query.bind(db);
   const phoneCanon = canonicalStudentPhone(phone);
   if (!phoneCanon) {
@@ -50,6 +50,7 @@ async function findOrCreateGuestStudent({ first_name, last_name, phone }, client
     throw err;
   }
   const fullName = `${firstName} ${lastName}`.trim();
+  const email = String(emailRaw || '').trim();
 
   const existing = await findStudentIdByContactPhone(client || db, phoneCanon);
   if (existing?.id) {
@@ -62,15 +63,21 @@ async function findOrCreateGuestStudent({ first_name, last_name, phone }, client
       throw err;
     }
     await q(`UPDATE users SET full_name = $1 WHERE id = $2::uuid`, [fullName, existing.id]);
+    if (email) {
+      await q(
+        `UPDATE users SET email = $1 WHERE id = $2::uuid AND (email IS NULL OR TRIM(email) = '')`,
+        [email, existing.id],
+      );
+    }
     await upsertStudentContactPhone(client || db, existing.id, phoneCanon, { full_name: fullName });
     return existing.id;
   }
 
   const { rows: ins } = await q(
-    `INSERT INTO users (full_name, phone, role, is_verified, account_status, is_active)
-     VALUES ($1, $2, 'student', TRUE, 'active', TRUE)
+    `INSERT INTO users (full_name, phone, email, role, is_verified, account_status, is_active)
+     VALUES ($1, $2, $3, 'student', TRUE, 'active', TRUE)
      RETURNING id`,
-    [fullName, phoneCanon],
+    [fullName, phoneCanon, email || null],
   );
   const studentId = ins[0]?.id;
   if (!studentId) {
@@ -225,11 +232,68 @@ async function joinTaskAsGuest(taskId, profile) {
   return { ...grant, ...session, guest: true };
 }
 
+async function getGroupForMaterialsInvite(groupId) {
+  const { rows } = await db.query(
+    `SELECT ig.id, ig.name, ig.subject_id, ig.instructor_id,
+            u.full_name AS instructor_name,
+            isub.name AS subject_name
+     FROM instructor_groups ig
+     JOIN users u ON u.id = ig.instructor_id
+     JOIN instructor_subjects isub ON isub.id = ig.subject_id
+     WHERE ig.id = $1::uuid
+     LIMIT 1`,
+    [groupId],
+  );
+  return rows[0] || null;
+}
+
+async function joinGroupMaterialsAsGuest(groupId, profile) {
+  const group = await getGroupForMaterialsInvite(groupId);
+  if (!group) {
+    const err = new Error('Qrup tapılmadı');
+    err.statusCode = 404;
+    throw err;
+  }
+
+  const studentId = await findOrCreateGuestStudent(profile);
+  const { trackInstructorStudentLink } = require('./instructorStudentService');
+  const { ensureStudentInParticipantGroup } = require('./participantGroupService');
+
+  await db.transaction(async (client) => {
+    await ensureLightInstructorEnrollment(client, group.instructor_id, studentId, 'group', {
+      activate: true,
+    });
+    await trackInstructorStudentLink(group.instructor_id, studentId, { skipLimitCheck: true }, client);
+    await ensureStudentInParticipantGroup(client, {
+      instructorId: group.instructor_id,
+      studentId,
+      groupId: group.id,
+      subjectId: group.subject_id,
+      enrollmentSource: 'group',
+    });
+  });
+
+  const session = await buildGuestSessionPayload(studentId);
+  return {
+    ...session,
+    guest: true,
+    group: {
+      id: group.id,
+      name: group.name,
+      subject_name: group.subject_name,
+      instructor_name: group.instructor_name,
+    },
+    message: 'Kitabxanaya daxil ola bilərsiniz.',
+  };
+}
+
 module.exports = {
   findOrCreateGuestStudent,
   autoGrantExamAccessForStudent,
   autoGrantTaskAccessForStudent,
   joinExamAsGuest,
   joinTaskAsGuest,
+  getGroupForMaterialsInvite,
+  joinGroupMaterialsAsGuest,
   buildGuestSessionPayload,
 };

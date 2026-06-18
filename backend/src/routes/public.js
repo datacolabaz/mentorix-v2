@@ -16,6 +16,7 @@ const { getActivePlansList } = require('../services/subscriptionPlansService');
 const { getPublicJoin } = require('../controllers/joinInvitationController');
 const { getPublicExamInvite, postPublicExamGuestJoin } = require('../controllers/publicExamInviteController');
 const { getPublicTaskInvite, postPublicTaskGuestJoin } = require('../controllers/publicTaskInviteController');
+const { getPublicLibraryInvite, postPublicLibraryGuestJoin } = require('../controllers/publicLibraryInviteController');
 const { postAccessEvent } = require('../controllers/accessAnalyticsController');
 const { postMarketplaceAiSearch } = require('../controllers/marketplaceAiSearchController');
 const { getPublicContact } = require('../controllers/platformContactController');
@@ -31,6 +32,8 @@ router.get('/exam-invite/:examId', getPublicExamInvite);
 router.post('/exam-invite/:examId/join', postPublicExamGuestJoin);
 router.get('/task-invite/:taskId', getPublicTaskInvite);
 router.post('/task-invite/:taskId/join', postPublicTaskGuestJoin);
+router.get('/library-invite/:groupId', getPublicLibraryInvite);
+router.post('/library-invite/:groupId/join', postPublicLibraryGuestJoin);
 
 router.post('/analytics/event', postAccessEvent);
 router.get('/landing-stats', getLandingStats);

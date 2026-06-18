@@ -281,6 +281,11 @@ async function listUploadOptions(instructorId) {
   ]);
 
   return {
+    subjects: [...new Map(
+      (groupsRes.rows || [])
+        .filter((g) => g.subject_id)
+        .map((g) => [g.subject_id, { id: g.subject_id, name: g.subject_name }]),
+    ).values()],
     groups: groupsRes.rows || [],
     assignments: assignmentsRes.rows || [],
     lessons: lessonsRes.rows || [],

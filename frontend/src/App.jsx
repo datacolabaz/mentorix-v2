@@ -12,6 +12,7 @@ import InstructorMapSearch from './pages/public/InstructorMapSearch'
 import PublicSeoLanding from './pages/public/PublicSeoLanding'
 import { PUBLIC_SEO_LANDINGS } from './lib/publicSeoLandings'
 import PublicInstructorProfile from './pages/public/PublicInstructorProfile'
+import LibraryInvite from './pages/public/LibraryInvite'
 import AdminLayout from './layouts/AdminLayout'
 import InstructorLayout from './layouts/InstructorLayout'
 import StudentLayout from './layouts/StudentLayout'
@@ -162,6 +163,7 @@ export default function App() {
       />
       <Route path="/exam/:examId" element={<StudentExamInvite />} />
       <Route path="/task/:taskId" element={<StudentTaskInvite />} />
+      <Route path="/library/:groupId" element={<LibraryInvite />} />
 
       <Route path="/admin" element={<ProtectedRoute roles={['admin']}><AdminLayout /></ProtectedRoute>}>
         <Route index element={<AdminDashboard />} />
@@ -197,7 +199,7 @@ export default function App() {
         <Route path="analytics" element={<InstructorAnalytics />} />
         <Route path="tasks" element={<InstructorTasks />} />
         <Route path="materials" element={<InstructorMaterialsLibrary />} />
-        <Route path="materials/upload" element={<InstructorMaterialsLibrary />} />
+        <Route path="materials/upload" element={<Navigate to="/instructor/materials" replace />} />
         <Route path="tasks/analytics" element={<AssignmentAnalytics />} />
         <Route path="assignments" element={<InstructorTasks />} />
         <Route path="payments" element={<InstructorPayments />} />

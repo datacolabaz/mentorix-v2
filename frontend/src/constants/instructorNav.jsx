@@ -16,8 +16,7 @@ export const INSTRUCTOR_NAV_ITEM_DEFS = {
   attendance: { to: '/instructor/attendance', label: 'Davamiyyət', icon: 'attendance' },
   exams: { to: '/instructor/exams', label: 'İmtahanlar', icon: 'exams' },
   tasks: { to: '/instructor/tasks', label: 'Tapşırıqlar', icon: 'tasks' },
-  materials_library: { to: '/instructor/materials', label: '📁 Kitabxana', icon: 'materials' },
-  materials_upload: { to: '/instructor/materials/upload', label: '📎 Fayl yüklə', icon: 'materials_upload' },
+  materials_library: { to: '/instructor/materials', label: 'Kitabxana', icon: 'materials' },
   analytics: { to: '/instructor/analytics', label: 'Analitika', icon: 'analytics' },
   payments: { to: '/instructor/payments', label: 'Ödənişlər', icon: 'payments' },
   notifications: { to: '/instructor/notifications', label: 'Bildirişlər', icon: 'notifications' },
@@ -46,7 +45,7 @@ export function defaultInstructorNavSections() {
       id: 'materials',
       title: 'MATERİALLAR',
       enabled: true,
-      itemKeys: ['materials_library', 'materials_upload'],
+      itemKeys: ['materials_library'],
     },
     {
       id: 'analytics',
@@ -84,7 +83,10 @@ export function buildInstructorNavSections(navPayload) {
     .filter((s) => s && s.enabled !== false)
     .map((section) => {
       const keys = Array.isArray(section.itemKeys) ? section.itemKeys : []
-      const items = keys.map(itemFromKey).filter(Boolean)
+      const items = keys
+        .filter((key) => key !== 'materials_upload')
+        .map(itemFromKey)
+        .filter(Boolean)
       return {
         id: section.id,
         title: String(section.title || '').trim() || 'Bölmə',
@@ -102,6 +104,7 @@ export function buildInstructorNavSectionsFromClient(nav) {
       id: section.id,
       title: String(section.title || '').trim() || 'Bölmə',
       items: (section.items || [])
+        .filter((item) => item?.key !== 'materials_upload')
         .map((item) => {
           const def = INSTRUCTOR_NAV_ITEM_DEFS[item.key] || item
           if (!def?.to) return null
