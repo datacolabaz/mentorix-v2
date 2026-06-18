@@ -3,10 +3,10 @@ import Button from '../common/Button'
 import {
   BUDGET_OPTIONS,
   DURATION_OPTIONS,
-  FIELD_OPTIONS,
   MVP_COUNTRIES,
   wizardToSearchParams,
 } from '../../lib/universitySearch'
+import { FIELD_GROUPS, fieldLabel } from '../../lib/universityFieldCatalog'
 
 const STEPS = [
   { id: 1, title: 'Dərəcə' },
@@ -45,7 +45,7 @@ export default function UniversitySearchWizard({ initialState, onSubmit, onCance
   const reviewSummary = useMemo(
     () => [
       { label: 'Dərəcə', value: state.degreeLevel || '—' },
-      { label: 'İxtisas', value: FIELD_OPTIONS.find((f) => f.value === state.field)?.label || state.field || '—' },
+      { label: 'İxtisas', value: state.field ? fieldLabel(state.field) : '—' },
       { label: 'GPA', value: state.gpa !== '' ? state.gpa : '—' },
       {
         label: 'Dil balı',
@@ -127,10 +127,14 @@ export default function UniversitySearchWizard({ initialState, onSubmit, onCance
             className={inputCls}
           >
             <option value="">— Seçin —</option>
-            {FIELD_OPTIONS.map((f) => (
-              <option key={f.value} value={f.value}>
-                {f.label}
-              </option>
+            {FIELD_GROUPS.map((group) => (
+              <optgroup key={group.id} label={group.label}>
+                {group.options.map((f) => (
+                  <option key={f.value} value={f.value}>
+                    {f.label}
+                  </option>
+                ))}
+              </optgroup>
             ))}
           </select>
         </div>

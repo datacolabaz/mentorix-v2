@@ -4,14 +4,19 @@ const {
   upsertApplicantProfile,
   saveSearch,
   MVP_COUNTRIES,
+  FIELD_GROUPS,
+  flatFieldOptions,
 } = require('../services/universityProgramService');
+const { buildMockSearchResponse } = require('../constants/universityMockPrograms');
 
-const getPrograms = async (req, res, next) => {
+const getPrograms = async (req, res) => {
   try {
     const result = await searchPrograms(req.query);
-    res.json(result);
+    return res.json(result);
   } catch (err) {
-    next(err);
+    console.error('[programs] GET /programs failed:', err?.message || err);
+    const filters = require('../services/universityProgramService').normalizeFilters(req.query);
+    return res.json(buildMockSearchResponse(filters));
   }
 };
 
@@ -32,7 +37,8 @@ const getProgramMeta = async (_req, res) => {
     success: true,
     countries: MVP_COUNTRIES,
     degree_levels: ['BSc', 'MSc', 'PhD'],
-    fields: ['CS', 'Business', 'Engineering', 'Life Sciences'],
+    field_groups: FIELD_GROUPS,
+    fields: flatFieldOptions(),
     sort_options: [
       { value: 'ranking', label: 'Reytinq' },
       { value: 'tuition_asc', label: 'Ödəniş (aşağı)' },
@@ -65,7 +71,8 @@ const postWizardProfile = async (req, res, next) => {
 
     let savedSearch = null;
     if (body.save_search !== false) {
-      savedSearch = await saveSearch(userId, filters, searchResult.programs.slice(0, 12));
+      const rows = searchResult.data || searchResult.programs || [];
+      savedSearch = await saveSearch(userId, filters, rows.slice(0, 12));
     }
 
     return res.json({

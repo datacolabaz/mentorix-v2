@@ -4,6 +4,8 @@ const {
   cacheGet,
   cacheSet,
 } = require('./universityProgramCache');
+const { fieldMeta, fieldSearchTerms, FIELD_GROUPS, flatFieldOptions } = require('../constants/universityFieldCatalog');
+const { buildMockSearchResponse } = require('../constants/universityMockPrograms');
 
 const MVP_COUNTRIES = ['Almaniya', 'Polşa', 'Türkiyə', 'Macarıstan', 'İtaliya'];
 const DEFAULT_LIMIT = 24;
@@ -112,12 +114,49 @@ function mapProgramRow(row) {
   };
 }
 
-async function searchPrograms(rawQuery = {}) {
-  const filters = normalizeFilters(rawQuery);
-  const cacheKey = buildProgramsSearchCacheKey(filters);
-  const cached = await cacheGet(cacheKey);
-  if (cached) return { ...cached, cached: true };
+function formatSearchResult(programs, filters, { source = 'database', total, cached = false, fallback = false } = {}) {
+  const count = total != null ? total : programs.length;
+  return {
+    success: true,
+    count,
+    data: programs,
+    programs,
+    source,
+    pagination: {
+      page: filters.page,
+      limit: filters.limit,
+      total: count,
+      total_pages: Math.max(1, Math.ceil(count / filters.limit)),
+    },
+    filters,
+    meta: {
+      mvp_countries: MVP_COUNTRIES,
+      fallback: Boolean(fallback),
+    },
+    cached: Boolean(cached),
+  };
+}
 
+function appendFieldFilter(where, params, fieldSlug) {
+  if (!fieldSlug) return;
+  const terms = fieldSearchTerms(fieldSlug);
+  const patterns = terms.map((t) => `%${t}%`);
+
+  params.push(fieldSlug);
+  const slugIdx = params.length;
+  params.push(patterns);
+  const patIdx = params.length;
+
+  where.push(`(
+    p.field = $${slugIdx}
+    OR EXISTS (
+      SELECT 1 FROM unnest($${patIdx}::text[]) pat
+      WHERE p.name ILIKE pat OR p.field ILIKE pat
+    )
+  )`);
+}
+
+async function queryProgramsFromDatabase(filters) {
   const params = [];
   const where = ['p.is_active = true', 'u.is_active = true'];
 
@@ -125,10 +164,7 @@ async function searchPrograms(rawQuery = {}) {
     params.push(filters.degreeLevel);
     where.push(`p.degree_level = $${params.length}`);
   }
-  if (filters.field) {
-    params.push(`%${filters.field}%`);
-    where.push(`p.field ILIKE $${params.length}`);
-  }
+  appendFieldFilter(where, params, filters.field);
   if (filters.countries.length) {
     params.push(filters.countries);
     where.push(`u.country = ANY($${params.length}::text[])`);
@@ -213,30 +249,42 @@ async function searchPrograms(rawQuery = {}) {
   `;
 
   const { rows } = await db.query(dataSql, params);
-  const programs = rows.map(mapProgramRow);
+  return { programs: rows.map(mapProgramRow), total };
+}
 
-  const result = {
-    success: true,
-    programs,
-    pagination: {
-      page: filters.page,
-      limit: filters.limit,
-      total,
-      total_pages: Math.max(1, Math.ceil(total / filters.limit)),
-    },
-    filters,
-    meta: {
-      mvp_countries: MVP_COUNTRIES,
-    },
-    cached: false,
-  };
+async function searchPrograms(rawQuery = {}) {
+  const filters = normalizeFilters(rawQuery);
+  const cacheKey = buildProgramsSearchCacheKey(filters);
+  const cached = await cacheGet(cacheKey);
+  if (cached) {
+    return {
+      ...cached,
+      data: cached.data || cached.programs || [],
+      count: cached.count != null ? cached.count : (cached.programs || []).length,
+      cached: true,
+    };
+  }
 
-  await cacheSet(cacheKey, result);
-  return result;
+  try {
+    const { programs, total } = await queryProgramsFromDatabase(filters);
+    if (total > 0) {
+      const result = formatSearchResult(programs, filters, { source: 'database', total });
+      await cacheSet(cacheKey, result);
+      return result;
+    }
+    console.warn('[programs] database empty for filters, using mock fallback');
+  } catch (err) {
+    console.error('[programs] database search failed, using mock fallback:', err?.message || err);
+  }
+
+  const mockResult = buildMockSearchResponse(filters);
+  await cacheSet(cacheKey, mockResult);
+  return mockResult;
 }
 
 async function getProgramById(programId) {
-  const { rows } = await db.query(
+  try {
+    const { rows } = await db.query(
     `
     SELECT
       p.id,
@@ -271,9 +319,14 @@ async function getProgramById(programId) {
     LIMIT 1
     `,
     [programId],
-  );
-  if (!rows.length) return null;
-  return mapProgramRow(rows[0]);
+    );
+    if (rows.length) return mapProgramRow(rows[0]);
+  } catch (err) {
+    console.error('[programs] getProgramById db failed:', err?.message || err);
+  }
+
+  const { MOCK_PROGRAMS } = require('../constants/universityMockPrograms');
+  return MOCK_PROGRAMS.find((p) => p.id === programId) || null;
 }
 
 async function upsertApplicantProfile(userId, payload = {}) {
@@ -339,6 +392,8 @@ async function saveSearch(userId, filtersJson, recommendationsJson = []) {
 
 module.exports = {
   MVP_COUNTRIES,
+  FIELD_GROUPS,
+  flatFieldOptions,
   normalizeFilters,
   searchPrograms,
   getProgramById,

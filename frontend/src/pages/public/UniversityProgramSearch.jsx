@@ -16,6 +16,7 @@ import {
   filtersToSearchParams,
   parseWizardFromSearchParams,
 } from '../../lib/universitySearch'
+import { searchProgramsWithFallback } from '../../lib/universityProgramsApi'
 
 function defaultFilters(searchParams) {
   const countries = searchParams.get('countries')
@@ -46,6 +47,7 @@ export default function UniversityProgramSearch() {
   const [pagination, setPagination] = useState({ page: 1, total: 0, total_pages: 1 })
   const [loading, setLoading] = useState(false)
   const [selectedProgram, setSelectedProgram] = useState(null)
+  const [usedFallback, setUsedFallback] = useState(false)
 
   useEffect(() => {
     setPageSeo({
@@ -63,12 +65,12 @@ export default function UniversityProgramSearch() {
       if (nextFilters.min_gpa) params.min_gpa = nextFilters.min_gpa
       if (nextFilters.max_tuition) params.max_tuition = nextFilters.max_tuition
 
-      const res = await api.get('/programs', { params })
-      if (res?.success) {
-        setPrograms(res.programs || [])
-        setPagination(res.pagination || { page: 1, total: 0, total_pages: 1 })
-      }
+      const result = await searchProgramsWithFallback(params, nextFilters)
+      setPrograms(result.programs || [])
+      setPagination(result.pagination || { page: 1, total: 0, total_pages: 1 })
+      setUsedFallback(Boolean(result.usedFallback))
     } catch (e) {
+      setUsedFallback(true)
       toast(e?.message || 'Axtarış uğursuz oldu', 'error')
     } finally {
       setLoading(false)
@@ -219,6 +221,11 @@ export default function UniversityProgramSearch() {
             />
 
             <section className="space-y-4 min-w-0">
+              {usedFallback ? (
+                <p className="text-xs text-amber-300/90 rounded-xl border border-amber-500/25 bg-amber-500/10 px-3 py-2">
+                  Canlı kataloq hazırda əlçatan deyil — nümunə (demo) proqramlar göstərilir. Müraciət linkləri realdır.
+                </p>
+              ) : null}
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <p className="text-sm text-gray-400">{resultLabel}</p>
                 {pagination.total_pages > 1 ? (

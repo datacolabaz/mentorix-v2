@@ -12,14 +12,9 @@
  * @property {number | ''} durationYears
  */
 
-export const MVP_COUNTRIES = ['Almaniya', 'Polşa', 'Türkiyə', 'Macarıstan', 'İtaliya'];
+export { FIELD_GROUPS, fieldLabel, fieldSearchTerms } from './universityFieldCatalog'
 
-export const FIELD_OPTIONS = [
-  { value: 'CS', label: 'Kompüter Elmləri' },
-  { value: 'Business', label: 'Biznes / İdarəetmə' },
-  { value: 'Engineering', label: 'Mühəndislik' },
-  { value: 'Life Sciences', label: 'Həyat Elmləri' },
-];
+export const MVP_COUNTRIES = ['Almaniya', 'Polşa', 'Türkiyə', 'Macarıstan', 'İtaliya'];
 
 export const BUDGET_OPTIONS = [
   { value: '0-3000', label: '0 – 3 000 € / il' },
