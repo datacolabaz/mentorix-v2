@@ -9,6 +9,7 @@ import ResetPassword from './pages/auth/ResetPassword'
 import RoleOnboarding from './pages/auth/RoleOnboarding'
 import { dashboardPathForRole } from './lib/postAuth'
 import InstructorMapSearch from './pages/public/InstructorMapSearch'
+import UniversityProgramSearch from './pages/public/UniversityProgramSearch'
 import PublicSeoLanding from './pages/public/PublicSeoLanding'
 import { PUBLIC_SEO_LANDINGS } from './lib/publicSeoLandings'
 import PublicInstructorProfile from './pages/public/PublicInstructorProfile'
@@ -128,6 +129,7 @@ export default function App() {
       <PresenceHeartbeat />
       <Routes>
       <Route path="/search" element={<InstructorMapSearch />} />
+      <Route path="/universities" element={<UniversityProgramSearch />} />
       {PUBLIC_SEO_LANDINGS.map((l) => (
         <Route key={l.path} path={l.path} element={<PublicSeoLanding />} />
       ))}
