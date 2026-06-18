@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Modal from '../common/Modal'
 import Button from '../common/Button'
 import api from '../../lib/api'
 import { useToast } from '../common/Toast'
+import { groupsForField } from '../../hooks/useTeachingFields'
 import {
   MATERIALS_MAX_SINGLE_FILE_BYTES,
   MATERIALS_STORAGE_LIMIT_MESSAGE,
@@ -12,6 +13,9 @@ import MaterialsStorageBanner from './MaterialsStorageBanner'
 
 const ACCEPT =
   '.pdf,.png,.jpg,.jpeg,.gif,.webp,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.csv,.txt,application/pdf,image/*'
+
+const SELECT_CLS =
+  'w-full rounded-xl border border-white/10 bg-[#1c1c1c] px-3 py-2.5 text-sm text-white cursor-pointer [color-scheme:dark] focus:outline-none focus:border-primary/50 disabled:opacity-50 disabled:cursor-not-allowed'
 
 function fileIcon(type) {
   const t = String(type || '').toLowerCase()
@@ -23,26 +27,38 @@ function fileIcon(type) {
   return '📎'
 }
 
-export default function MaterialUploadModal({ open, onClose, onSuccess, quota: quotaProp, onUpgrade }) {
+export default function MaterialUploadModal({
+  open,
+  onClose,
+  onSuccess,
+  quota: quotaProp,
+  onUpgrade,
+  fields = [],
+  fieldsLoading = false,
+}) {
   const toast = useToast()
   const inputRef = useRef(null)
   const [file, setFile] = useState(null)
   const [title, setTitle] = useState('')
+  const [subjectId, setSubjectId] = useState('')
   const [groupId, setGroupId] = useState('')
   const [lessonId, setLessonId] = useState('')
   const [assignmentId, setAssignmentId] = useState('')
-  const [options, setOptions] = useState({ groups: [], lessons: [], assignments: [] })
+  const [lessons, setLessons] = useState([])
+  const [assignments, setAssignments] = useState([])
   const [quota, setQuota] = useState(quotaProp || null)
-  const [loadingOpts, setLoadingOpts] = useState(false)
+  const [loadingExtras, setLoadingExtras] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [progress, setProgress] = useState(0)
   const [dragOver, setDragOver] = useState(false)
 
   const limitReached = isMaterialsQuotaFull(quota)
+  const groupsInField = useMemo(() => groupsForField(fields, subjectId), [fields, subjectId])
 
   const resetForm = useCallback(() => {
     setFile(null)
     setTitle('')
+    setSubjectId('')
     setGroupId('')
     setLessonId('')
     setAssignmentId('')
@@ -57,17 +73,19 @@ export default function MaterialUploadModal({ open, onClose, onSuccess, quota: q
       return
     }
     setQuota(quotaProp || null)
-    setLoadingOpts(true)
+    setLoadingExtras(true)
     Promise.all([
       api.get('/materials/options'),
       quotaProp ? Promise.resolve(null) : api.get('/materials/quota'),
     ])
       .then(([optRes, quotaRes]) => {
-        if (optRes?.success) setOptions(optRes.options || { groups: [], lessons: [], assignments: [] })
+        const opts = optRes?.options || {}
+        setLessons(Array.isArray(opts.lessons) ? opts.lessons : [])
+        setAssignments(Array.isArray(opts.assignments) ? opts.assignments : [])
         if (quotaRes?.success) setQuota(quotaRes.quota)
       })
-      .catch(() => toast('Seçimlər yüklənmədi', 'error'))
-      .finally(() => setLoadingOpts(false))
+      .catch(() => toast('Dərs və tapşırıq siyahısı yüklənmədi', 'error'))
+      .finally(() => setLoadingExtras(false))
   }, [open, quotaProp, resetForm, toast])
 
   const pickFile = (f) => {
@@ -100,12 +118,10 @@ export default function MaterialUploadModal({ open, onClose, onSuccess, quota: q
     const fd = new FormData()
     fd.append('file', file)
     fd.append('title', title.trim() || file.name)
+    if (subjectId) fd.append('subject_id', subjectId)
     if (groupId) fd.append('group_id', groupId)
     if (lessonId) fd.append('enrollment_lesson_id', lessonId)
     if (assignmentId) fd.append('assignment_id', assignmentId)
-
-    const selectedGroup = options.groups.find((g) => String(g.id) === String(groupId))
-    if (selectedGroup?.subject_id) fd.append('subject_id', selectedGroup.subject_id)
 
     setUploading(true)
     setProgress(8)
@@ -134,15 +150,21 @@ export default function MaterialUploadModal({ open, onClose, onSuccess, quota: q
   }
 
   const filteredLessons = groupId
-    ? options.lessons.filter((l) => String(l.group_id) === String(groupId))
-    : options.lessons
+    ? lessons.filter((l) => String(l.group_id) === String(groupId))
+    : []
 
   const filteredAssignments = groupId
-    ? options.assignments.filter((a) => !a.group_id || String(a.group_id) === String(groupId))
-    : options.assignments
+    ? assignments.filter((a) => !a.group_id || String(a.group_id) === String(groupId))
+    : assignments
 
   return (
-    <Modal open={open} onClose={() => !uploading && onClose?.()} title="Fayl yüklə" size="lg">
+    <Modal
+      open={open}
+      onClose={() => !uploading && onClose?.()}
+      title="Fayl yüklə"
+      size="lg"
+      scrollBody
+    >
       <div className="space-y-5">
         {limitReached ? <MaterialsStorageBanner quota={quota} onUpgrade={onUpgrade} /> : null}
 
@@ -205,29 +227,57 @@ export default function MaterialUploadModal({ open, onClose, onSuccess, quota: q
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               disabled={uploading}
-              className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2.5 text-sm text-white"
+              className="w-full rounded-xl border border-white/10 bg-[#1c1c1c] px-3 py-2.5 text-sm text-white [color-scheme:dark]"
               placeholder="Material adı"
             />
           </label>
 
           <label className="block space-y-1.5">
-            <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Qrup (ixtiyari)</span>
+            <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Sahə</span>
+            <select
+              value={subjectId}
+              onChange={(e) => {
+                setSubjectId(e.target.value)
+                setGroupId('')
+                setLessonId('')
+              }}
+              disabled={uploading || fieldsLoading}
+              className={SELECT_CLS}
+            >
+              <option value="">— Seçin —</option>
+              {fields.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.name}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="block space-y-1.5">
+            <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Qrup</span>
             <select
               value={groupId}
               onChange={(e) => {
                 setGroupId(e.target.value)
                 setLessonId('')
               }}
-              disabled={uploading || loadingOpts}
-              className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2.5 text-sm text-white"
+              disabled={uploading || fieldsLoading || !subjectId}
+              className={SELECT_CLS}
             >
-              <option value="">— Seçilməyib —</option>
-              {options.groups.map((g) => (
-                <option key={g.id} value={g.id}>
-                  {g.subject_name ? `${g.subject_name} · ` : ''}
-                  {g.name}
-                </option>
-              ))}
+              {!subjectId ? (
+                <option value="">Əvvəlcə sahə seçin</option>
+              ) : !groupsInField.length ? (
+                <option value="">Bu sahədə qrup yoxdur</option>
+              ) : (
+                <>
+                  <option value="">— Seçin —</option>
+                  {groupsInField.map((g) => (
+                    <option key={g.id} value={g.id}>
+                      {g.name}
+                    </option>
+                  ))}
+                </>
+              )}
             </select>
           </label>
 
@@ -236,25 +286,34 @@ export default function MaterialUploadModal({ open, onClose, onSuccess, quota: q
             <select
               value={lessonId}
               onChange={(e) => setLessonId(e.target.value)}
-              disabled={uploading || loadingOpts || !filteredLessons.length}
-              className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2.5 text-sm text-white"
+              disabled={uploading || loadingExtras || !groupId}
+              className={SELECT_CLS}
             >
-              <option value="">— Seçilməyib —</option>
-              {filteredLessons.map((l) => (
-                <option key={l.id} value={l.id}>
-                  {l.group_name ? `${l.group_name} · ` : ''}Dərs #{l.lesson_number}
-                </option>
-              ))}
+              {!groupId ? (
+                <option value="">Əvvəlcə qrup seçin</option>
+              ) : !filteredLessons.length ? (
+                <option value="">Bu qrupda planlaşdırılmış dərs yoxdur</option>
+              ) : (
+                <>
+                  <option value="">— Seçilməyib —</option>
+                  {filteredLessons.map((l) => (
+                    <option key={l.id} value={l.id}>
+                      Dərs #{l.lesson_number}
+                      {l.starts_at ? ` · ${new Date(l.starts_at).toLocaleDateString('az-AZ')}` : ''}
+                    </option>
+                  ))}
+                </>
+              )}
             </select>
           </label>
 
-          <label className="block sm:col-span-2 space-y-1.5">
+          <label className="block space-y-1.5">
             <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Tapşırıq (ixtiyari)</span>
             <select
               value={assignmentId}
               onChange={(e) => setAssignmentId(e.target.value)}
-              disabled={uploading || loadingOpts}
-              className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2.5 text-sm text-white"
+              disabled={uploading || loadingExtras}
+              className={SELECT_CLS}
             >
               <option value="">— Seçilməyib —</option>
               {filteredAssignments.map((a) => (
@@ -265,6 +324,12 @@ export default function MaterialUploadModal({ open, onClose, onSuccess, quota: q
             </select>
           </label>
         </div>
+
+        {!fieldsLoading && !fields.length ? (
+          <p className="text-xs text-amber-300/90">
+            Hələ sahə və qrup yaratmamısınız. Əvvəlcə «Kurslar və qruplar» bölməsində yaradın.
+          </p>
+        ) : null}
 
         <div className="flex flex-wrap gap-2 justify-end pt-2">
           <Button variant="ghost" onClick={() => onClose?.()} disabled={uploading}>

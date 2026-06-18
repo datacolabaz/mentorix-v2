@@ -10,9 +10,10 @@ import MaterialsStorageBanner from '../../components/instructor/MaterialsStorage
 import { materialFileKind, materialFileOpenUrl } from '../../lib/materialFileUrl'
 import { formatMaterialsBytes, materialsUsagePercent } from '../../lib/materialsPlanLimits'
 import useUiStore from '../../hooks/useUi'
+import { groupsForField, useTeachingFields } from '../../hooks/useTeachingFields'
 
 const selectCls =
-  'rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard text-token-textMain px-3 py-2.5 text-sm min-w-[min(100%,200px)] appearance-none cursor-pointer'
+  'rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard text-token-textMain px-3 py-2.5 text-sm min-w-[min(100%,200px)] cursor-pointer [color-scheme:dark] focus:outline-none focus:border-primary/50 disabled:opacity-50'
 
 function fileEmoji(material) {
   const kind = materialFileKind(material.file_type, material.file_url)
@@ -35,30 +36,16 @@ export default function InstructorMaterialsLibrary() {
   const { theme } = useUiStore()
   const isDark = theme === 'dark'
 
+  const { fields, allGroups, loading: fieldsLoading, error: fieldsError } = useTeachingFields()
+
   const [loading, setLoading] = useState(true)
-  const [optionsLoading, setOptionsLoading] = useState(true)
   const [materials, setMaterials] = useState([])
-  const [options, setOptions] = useState({ subjects: [], groups: [], assignments: [], lessons: [] })
   const [quota, setQuota] = useState(null)
   const [filterGroup, setFilterGroup] = useState('')
   const [filterSubject, setFilterSubject] = useState('')
   const [uploadOpen, setUploadOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [deleteBusy, setDeleteBusy] = useState(false)
-
-  const loadOptions = useCallback(async () => {
-    setOptionsLoading(true)
-    try {
-      const res = await api.get('/materials/options')
-      if (res?.success) {
-        setOptions(res.options || { subjects: [], groups: [], assignments: [], lessons: [] })
-      }
-    } catch {
-      toast('Kurs və qrup siyahısı yüklənmədi', 'error')
-    } finally {
-      setOptionsLoading(false)
-    }
-  }, [toast])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -81,18 +68,20 @@ export default function InstructorMaterialsLibrary() {
   }, [filterGroup, filterSubject, toast])
 
   useEffect(() => {
-    void loadOptions()
-  }, [loadOptions])
-
-  useEffect(() => {
     void load()
   }, [load])
 
   const filterableGroups = useMemo(() => {
-    const all = Array.isArray(options.groups) ? options.groups : []
-    if (!filterSubject) return all
-    return all.filter((g) => String(g.subject_id) === String(filterSubject))
-  }, [options.groups, filterSubject])
+    if (filterSubject) {
+      const field = fields.find((f) => String(f.id) === String(filterSubject))
+      return groupsForField(fields, filterSubject).map((g) => ({
+        ...g,
+        subject_id: field?.id,
+        subject_name: field?.name,
+      }))
+    }
+    return allGroups
+  }, [fields, allGroups, filterSubject])
 
   useEffect(() => {
     if (!filterGroup) return
@@ -163,6 +152,8 @@ export default function InstructorMaterialsLibrary() {
         onClose={() => setUploadOpen(false)}
         onSuccess={onUploadSuccess}
         quota={quota}
+        fields={fields}
+        fieldsLoading={fieldsLoading}
         onUpgrade={() => navigate('/instructor/settings?tab=plans')}
       />
 
@@ -219,22 +210,22 @@ export default function InstructorMaterialsLibrary() {
       <Card className="p-4 sm:p-5 border border-[color:var(--border-subtle)] space-y-4">
         <div>
           <h2 className="text-sm font-semibold text-token-textMain">Filtr</h2>
-          <p className="text-xs text-token-textMuted mt-1">Kurslar və qruplarınızdan seçin</p>
+          <p className="text-xs text-token-textMuted mt-1">Profilinizdəki sahə və qruplar</p>
         </div>
         <div className="flex flex-wrap gap-3">
           <label className="space-y-1.5">
-            <span className="text-[10px] font-bold uppercase tracking-wide text-token-textMuted">Fənn / kurs</span>
+            <span className="text-[10px] font-bold uppercase tracking-wide text-token-textMuted">Sahə</span>
             <select
               value={filterSubject}
               onChange={(e) => {
                 setFilterSubject(e.target.value)
                 setFilterGroup('')
               }}
-              disabled={optionsLoading}
+              disabled={fieldsLoading}
               className={selectCls}
             >
               <option value="">Hamısı</option>
-              {(options.subjects || []).map((s) => (
+              {fields.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.name}
                 </option>
@@ -246,30 +237,31 @@ export default function InstructorMaterialsLibrary() {
             <select
               value={filterGroup}
               onChange={(e) => setFilterGroup(e.target.value)}
-              disabled={optionsLoading || !filterableGroups.length}
+              disabled={fieldsLoading || (Boolean(filterSubject) && !filterableGroups.length)}
               className={selectCls}
             >
               <option value="">Hamısı</option>
               {filterableGroups.map((g) => (
                 <option key={g.id} value={g.id}>
-                  {g.subject_name ? `${g.subject_name} · ` : ''}
+                  {!filterSubject && g.subject_name ? `${g.subject_name} · ` : ''}
                   {g.name}
                 </option>
               ))}
             </select>
           </label>
         </div>
-        {!optionsLoading && !options.groups?.length ? (
+        {fieldsError ? <p className="text-xs text-red-300/90">{fieldsError}</p> : null}
+        {!fieldsLoading && !allGroups.length ? (
           <p className="text-xs text-amber-300/90">
-            Hələ tədris qrupunuz yoxdur.{' '}
+            Hələ sahə və qrup yoxdur.{' '}
             <Link to="/instructor/teaching-groups" className="text-primary underline">
-              Kurs və qrup yaradın
+              Kurslar və qruplarda yaradın
             </Link>
           </p>
         ) : null}
       </Card>
 
-      {!optionsLoading && filterableGroups.length > 0 ? (
+      {!fieldsLoading && filterableGroups.length > 0 ? (
         <Card className="p-4 sm:p-5 border border-[color:var(--border-subtle)] space-y-3">
           <div>
             <h2 className="text-sm font-semibold text-token-textMain">Qrup linki paylaş</h2>
