@@ -76,6 +76,7 @@ export default function MaterialUploadModal({
 }) {
   const toast = useToast()
   const inputRef = useRef(null)
+  const fileRef = useRef(null)
   const [file, setFile] = useState(null)
   const [title, setTitle] = useState('')
   const [forGroupStudents, setForGroupStudents] = useState(true)
@@ -93,6 +94,7 @@ export default function MaterialUploadModal({
   const groupsInField = useMemo(() => groupsForField(fields, subjectId), [fields, subjectId])
 
   const resetForm = useCallback(() => {
+    fileRef.current = null
     setFile(null)
     setTitle('')
     setForGroupStudents(true)
@@ -127,6 +129,9 @@ export default function MaterialUploadModal({
     try {
       const f = await normalizePickedFile(raw)
       if (!f) {
+        fileRef.current = null
+        setFile(null)
+        if (inputRef.current) inputRef.current.value = ''
         toast('Fayl boşdur və ya oxunmadı — başqa fayl seçin', 'error')
         return
       }
@@ -134,13 +139,35 @@ export default function MaterialUploadModal({
         toast('Tək fayl ölçüsü 25 MB-dan çox ola bilməz.', 'error')
         return
       }
+      fileRef.current = f
       setFile(f)
-      if (!title.trim()) setTitle(f.name.replace(/\.[^.]+$/, '') || f.name)
+      setTitle((prev) => prev.trim() || f.name.replace(/\.[^.]+$/, '') || f.name)
     } catch {
+      fileRef.current = null
+      setFile(null)
+      if (inputRef.current) inputRef.current.value = ''
       toast('Fayl oxunmadı — yenidən seçin', 'error')
     } finally {
       setPickingFile(false)
     }
+  }
+
+  const clearPickedFile = () => {
+    fileRef.current = null
+    setFile(null)
+    if (inputRef.current) inputRef.current.value = ''
+  }
+
+  const resolveUploadFile = async () => {
+    let candidate = fileRef.current || file
+    if (!candidate) return null
+    if (!candidate.size) {
+      candidate = await normalizePickedFile(candidate)
+    }
+    if (!candidate?.size) return null
+    fileRef.current = candidate
+    setFile(candidate)
+    return candidate
   }
 
   const onDrop = (e) => {
@@ -167,12 +194,24 @@ export default function MaterialUploadModal({
   }
 
   const submit = async () => {
-    if (!file) {
-      toast('Fayl seçin', 'error')
+    if (uploading || pickingFile) return
+
+    let uploadFile
+    try {
+      uploadFile = await resolveUploadFile()
+    } catch {
+      clearPickedFile()
+      toast('Fayl oxunmadı — yenidən seçin', 'error')
       return
     }
-    if (!file.size) {
-      toast('Fayl boşdur — başqa fayl seçin', 'error')
+
+    if (!uploadFile) {
+      toast('Əvvəlcə fayl seçin', 'error')
+      return
+    }
+    if (!uploadFile.size) {
+      clearPickedFile()
+      toast('Fayl boşdur — yenidən seçin', 'error')
       return
     }
     if (!forGroupStudents && !shareExternalLink) {
@@ -195,8 +234,8 @@ export default function MaterialUploadModal({
     }
 
     const fd = new FormData()
-    fd.append('file', file, file.name)
-    fd.append('title', title.trim() || file.name)
+    fd.append('file', uploadFile, uploadFile.name)
+    fd.append('title', title.trim() || uploadFile.name)
     if (forGroupStudents) {
       fd.append('subject_id', subjectId)
       fd.append('group_id', groupId)
@@ -219,8 +258,7 @@ export default function MaterialUploadModal({
           title: material?.title || title,
           links,
         })
-        setFile(null)
-        if (inputRef.current) inputRef.current.value = ''
+        clearPickedFile()
       } else {
         toast(res?.message || 'Yükləmə uğursuz', 'error')
       }
@@ -277,20 +315,18 @@ export default function MaterialUploadModal({
             {limitReached ? <MaterialsStorageBanner quota={quota} onUpgrade={onUpgrade} /> : null}
 
             <div
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => e.key === 'Enter' && !limitReached && !pickingFile && inputRef.current?.click()}
+              role="presentation"
               onDragOver={(e) => {
                 e.preventDefault()
                 if (!limitReached) setDragOver(true)
               }}
               onDragLeave={() => setDragOver(false)}
               onDrop={onDrop}
-              onClick={() => !limitReached && !pickingFile && inputRef.current?.click()}
               className={[
-                'rounded-2xl border-2 border-dashed p-8 text-center transition-colors cursor-pointer',
+                'rounded-2xl border-2 border-dashed p-8 text-center transition-colors',
                 dragOver ? 'border-primary bg-primary/10' : 'border-white/15 bg-white/[0.02]',
-                limitReached || pickingFile ? 'opacity-50 pointer-events-none' : 'hover:border-primary/50',
+                !file && title.trim() ? 'border-amber-500/40' : '',
+                limitReached || pickingFile ? 'opacity-50' : '',
               ].join(' ')}
             >
               <input
@@ -299,24 +335,49 @@ export default function MaterialUploadModal({
                 accept={ACCEPT}
                 className="hidden"
                 disabled={limitReached || uploading || pickingFile}
-                onChange={(e) => void pickFile(e.target.files?.[0])}
+                onChange={(e) => {
+                  void pickFile(e.target.files?.[0])
+                  e.target.value = ''
+                }}
               />
               {file ? (
                 <div className="space-y-2">
                   <div className="text-3xl">{fileIcon(file.type)}</div>
                   <p className="text-sm font-medium text-white truncate">{file.name}</p>
                   <p className="text-xs text-gray-400">{fileSizeLabel || '—'} · max 25 MB</p>
+                  <button
+                    type="button"
+                    onClick={clearPickedFile}
+                    disabled={uploading || pickingFile}
+                    className="text-xs text-gray-400 hover:text-white underline"
+                  >
+                    Başqa fayl seç
+                  </button>
                 </div>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   <div className="text-3xl">📎</div>
                   <p className="text-sm text-gray-300">
-                    {pickingFile ? 'Fayl oxunur…' : 'Faylı buraya sürüşdürün və ya klikləyin'}
+                    {pickingFile ? 'Fayl oxunur…' : 'Material yükləmək üçün fayl seçin'}
                   </p>
                   <p className="text-xs text-gray-500">PDF, Word, Excel, PowerPoint, şəkil (video yox)</p>
+                  {!pickingFile && !limitReached ? (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="text-xs"
+                      onClick={() => inputRef.current?.click()}
+                    >
+                      Fayl seç
+                    </Button>
+                  ) : null}
                 </div>
               )}
             </div>
+
+            {!file && title.trim() ? (
+              <p className="text-xs text-amber-300/90">Başlıq var, amma fayl seçilməyib — əvvəlcə fayl əlavə edin.</p>
+            ) : null}
 
             {uploading ? (
               <div className="space-y-2">
@@ -438,7 +499,12 @@ export default function MaterialUploadModal({
               <Button type="button" variant="ghost" onClick={closeModal} disabled={uploading}>
                 Ləğv et
               </Button>
-              <Button type="button" onClick={() => void submit()} disabled={!file || uploading || pickingFile || limitReached}>
+              <Button
+                type="button"
+                onClick={() => void submit()}
+                disabled={uploading || pickingFile || limitReached}
+                loading={uploading}
+              >
                 {uploading ? 'Yüklənir…' : 'Saxla'}
               </Button>
             </div>
