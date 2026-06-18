@@ -25,6 +25,42 @@ const INSTRUCTOR_NAV_ITEM_DEFS = {
 
 const ALL_ITEM_KEYS = Object.keys(INSTRUCTOR_NAV_ITEM_DEFS);
 
+/** Sidebar linkləri yalnız bu bölmədə görünsün (təkrarların qarşısını alır). */
+const ITEM_CANONICAL_SECTION = {
+  materials_library: 'materials',
+};
+
+function enforceItemSectionPlacement(sections) {
+  const list = Array.isArray(sections) ? sections : [];
+
+  for (const [key, sectionId] of Object.entries(ITEM_CANONICAL_SECTION)) {
+    const hadKey = list.some((s) => (s.itemKeys || []).includes(key));
+
+    for (const sec of list) {
+      sec.itemKeys = (sec.itemKeys || []).filter((k) => k !== key);
+    }
+
+    if (!hadKey) continue;
+
+    let target = list.find((s) => s.id === sectionId);
+    if (!target) {
+      const fallback = defaultInstructorNavPayload().sections.find((s) => s.id === sectionId);
+      target = {
+        id: sectionId,
+        title: fallback?.title || 'MATERİALLAR',
+        enabled: true,
+        itemKeys: [],
+      };
+      const mgmtIdx = list.findIndex((s) => s.id === 'management');
+      if (mgmtIdx >= 0) list.splice(mgmtIdx + 1, 0, target);
+      else list.push(target);
+    }
+    if (!target.itemKeys.includes(key)) target.itemKeys.push(key);
+  }
+
+  return list;
+}
+
 function deepClone(v) {
   return JSON.parse(JSON.stringify(v));
 }
@@ -113,9 +149,12 @@ function normalizePutPayload(raw) {
     sections.push({ ...sec, itemKeys: uniqueKeys });
   }
 
+  enforceItemSectionPlacement(sections);
+
   for (const key of ALL_ITEM_KEYS) {
     if (usedKeys.has(key)) continue;
-    const target = sections.find((s) => s.id === 'management') || sections[0];
+    const preferredSectionId = ITEM_CANONICAL_SECTION[key] || 'management';
+    const target = sections.find((s) => s.id === preferredSectionId) || sections[0];
     if (!target) break;
     target.itemKeys.push(key);
     usedKeys.add(key);
@@ -157,7 +196,7 @@ function mergeInstructorNavFromDb(dbPayload) {
 
 function serializeNavForClient(payload) {
   const merged = mergeInstructorNavFromDb(payload);
-  const sections = merged.sections
+  const sections = enforceItemSectionPlacement(merged.sections.map((s) => ({ ...s, itemKeys: [...(s.itemKeys || [])] })))
     .filter((s) => s.enabled !== false)
     .map((section) => ({
       id: section.id,
