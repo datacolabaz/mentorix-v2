@@ -37,15 +37,30 @@ function formatFileSize(bytes) {
 
 async function normalizePickedFile(raw) {
   if (!raw) return null
-  if (raw.size > 0) return raw
 
-  const buf = await raw.arrayBuffer()
-  if (!buf.byteLength) return null
+  const name = raw.name || 'material'
+  const type = raw.type || 'application/octet-stream'
+  const lastModified = raw.lastModified || Date.now()
 
-  return new File([buf], raw.name, {
-    type: raw.type || 'application/octet-stream',
-    lastModified: raw.lastModified,
-  })
+  if (raw.size > 0) {
+    try {
+      const buf = await raw.arrayBuffer()
+      if (buf.byteLength > 0) {
+        return new File([buf], name, { type, lastModified })
+      }
+    } catch {
+      // Fall back to the original File when the browser still exposes bytes via upload.
+    }
+    return raw
+  }
+
+  try {
+    const buf = await raw.arrayBuffer()
+    if (!buf.byteLength) return null
+    return new File([buf], name, { type, lastModified })
+  } catch {
+    return null
+  }
 }
 
 function buildShareLinks({ material, forGroupStudents, shareExternalLink }) {
@@ -77,6 +92,7 @@ export default function MaterialUploadModal({
   const toast = useToast()
   const inputRef = useRef(null)
   const fileRef = useRef(null)
+  const ignoreInputChangeRef = useRef(false)
   const [file, setFile] = useState(null)
   const [title, setTitle] = useState('')
   const [forGroupStudents, setForGroupStudents] = useState(true)
@@ -105,7 +121,7 @@ export default function MaterialUploadModal({
     setDragOver(false)
     setPickingFile(false)
     setShareResult(null)
-    if (inputRef.current) inputRef.current.value = ''
+    resetFileInput()
   }, [])
 
   useEffect(() => {
@@ -123,29 +139,40 @@ export default function MaterialUploadModal({
       .catch(() => {})
   }, [open, quotaProp, resetForm])
 
+  const resetFileInput = () => {
+    const input = inputRef.current
+    if (!input) return
+    ignoreInputChangeRef.current = true
+    input.value = ''
+    ignoreInputChangeRef.current = false
+  }
+
   const pickFile = async (raw) => {
-    if (!raw || pickingFile) return
+    if (!raw) return
+    if (pickingFile) return
     setPickingFile(true)
     try {
       const f = await normalizePickedFile(raw)
       if (!f) {
         fileRef.current = null
         setFile(null)
-        if (inputRef.current) inputRef.current.value = ''
+        resetFileInput()
         toast('Fayl boşdur və ya oxunmadı — başqa fayl seçin', 'error')
         return
       }
       if (f.size > MATERIALS_MAX_SINGLE_FILE_BYTES) {
+        resetFileInput()
         toast('Tək fayl ölçüsü 25 MB-dan çox ola bilməz.', 'error')
         return
       }
       fileRef.current = f
       setFile(f)
       setTitle((prev) => prev.trim() || f.name.replace(/\.[^.]+$/, '') || f.name)
+      resetFileInput()
     } catch {
       fileRef.current = null
       setFile(null)
-      if (inputRef.current) inputRef.current.value = ''
+      resetFileInput()
       toast('Fayl oxunmadı — yenidən seçin', 'error')
     } finally {
       setPickingFile(false)
@@ -155,7 +182,7 @@ export default function MaterialUploadModal({
   const clearPickedFile = () => {
     fileRef.current = null
     setFile(null)
-    if (inputRef.current) inputRef.current.value = ''
+    resetFileInput()
   }
 
   const resolveUploadFile = async () => {
@@ -336,8 +363,10 @@ export default function MaterialUploadModal({
                 className="hidden"
                 disabled={limitReached || uploading || pickingFile}
                 onChange={(e) => {
-                  void pickFile(e.target.files?.[0])
-                  e.target.value = ''
+                  if (ignoreInputChangeRef.current) return
+                  const raw = e.target.files?.[0]
+                  if (!raw) return
+                  void pickFile(raw)
                 }}
               />
               {file ? (
