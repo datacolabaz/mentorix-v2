@@ -39,6 +39,10 @@ const {
   listPending,
   patchReview,
 } = require('../controllers/universityProgramAdminController');
+const {
+  getAdminPlatformContact,
+  putAdminPlatformContact,
+} = require('../controllers/platformContactController');
 
 router.get('/stats', authenticate, authorize('admin'), getDashboardStats);
 router.get('/analytics/traffic', authenticate, authorize('admin'), getAdminTraffic);
