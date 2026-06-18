@@ -627,7 +627,7 @@ function StudentFormFields({
             <p className="text-[11px] text-gray-500">
               Hələ tədris sahəsi yoxdur — aşağıdan «+ Yeni» ilə yaradın və ya{' '}
               <a href="/instructor/teaching-groups" className="text-blue-300 hover:underline">
-                Kurslar və qruplar
+                Sahələr və qruplar
               </a>{' '}
               səhifəsinə keçin.
             </p>
@@ -1454,7 +1454,7 @@ export default function InstructorStudents() {
   const grouped = useMemo(() => {
     const byKey = new Map()
 
-    // Ensure group list matches "Kurslar və qruplar" (includes empty groups).
+    // Ensure group list matches "Sahələr və qruplar" (includes empty groups).
     for (const subj of normalizeTeachingSubjects(teachingSubjects)) {
       for (const gr of Array.isArray(subj.groups) ? subj.groups : []) {
         if (!gr?.id) continue

@@ -13,7 +13,7 @@ import useUiStore from '../../hooks/useUi'
 import { groupsForField, useTeachingFields } from '../../hooks/useTeachingFields'
 
 const selectCls =
-  'rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard text-token-textMain px-3 py-2.5 text-sm min-w-[min(100%,200px)] cursor-pointer [color-scheme:dark] focus:outline-none focus:border-primary/50 disabled:opacity-50'
+  'w-full rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard text-token-textMain px-3 py-2.5 text-sm cursor-pointer [color-scheme:dark] focus:outline-none focus:border-primary/50 disabled:opacity-50'
 
 function fileEmoji(material) {
   const kind = materialFileKind(material.file_type, material.file_url)
@@ -98,6 +98,14 @@ export default function InstructorMaterialsLibrary() {
     }
     return [...bySubject.entries()]
   }, [materials])
+
+  const shareGroups = useMemo(() => {
+    if (filterGroup) {
+      const g = allGroups.find((x) => String(x.id) === String(filterGroup))
+      return g ? [g] : []
+    }
+    return filterableGroups
+  }, [allGroups, filterGroup, filterableGroups])
 
   const copyGroupLink = async (group) => {
     const url = libraryInviteUrl(group.id)
@@ -210,12 +218,18 @@ export default function InstructorMaterialsLibrary() {
       <Card className="p-4 sm:p-5 border border-[color:var(--border-subtle)] space-y-4">
         <div>
           <h2 className="text-sm font-semibold text-token-textMain">Filtr</h2>
-          <p className="text-xs text-token-textMuted mt-1">Profilinizdəki sahə və qruplar</p>
+          <p className="text-xs text-token-textMuted mt-1">Profilinizdəki sahələr və qruplar</p>
         </div>
-        <div className="flex flex-wrap gap-3">
-          <label className="space-y-1.5">
-            <span className="text-[10px] font-bold uppercase tracking-wide text-token-textMuted">Sahə</span>
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 w-full">
+          <div className="min-w-0">
+            <label
+              htmlFor="materials-filter-subject"
+              className="block text-[10px] font-bold uppercase tracking-wide text-token-textMuted mb-1.5"
+            >
+              Sahə
+            </label>
             <select
+              id="materials-filter-subject"
               value={filterSubject}
               onChange={(e) => {
                 setFilterSubject(e.target.value)
@@ -231,10 +245,16 @@ export default function InstructorMaterialsLibrary() {
                 </option>
               ))}
             </select>
-          </label>
-          <label className="space-y-1.5">
-            <span className="text-[10px] font-bold uppercase tracking-wide text-token-textMuted">Qrup</span>
+          </div>
+          <div className="min-w-0">
+            <label
+              htmlFor="materials-filter-group"
+              className="block text-[10px] font-bold uppercase tracking-wide text-token-textMuted mb-1.5"
+            >
+              Qrup
+            </label>
             <select
+              id="materials-filter-group"
               value={filterGroup}
               onChange={(e) => setFilterGroup(e.target.value)}
               disabled={fieldsLoading || (Boolean(filterSubject) && !filterableGroups.length)}
@@ -248,37 +268,51 @@ export default function InstructorMaterialsLibrary() {
                 </option>
               ))}
             </select>
-          </label>
+          </div>
         </div>
         {fieldsError ? <p className="text-xs text-red-300/90">{fieldsError}</p> : null}
         {!fieldsLoading && !allGroups.length ? (
           <p className="text-xs text-amber-300/90">
             Hələ sahə və qrup yoxdur.{' '}
             <Link to="/instructor/teaching-groups" className="text-primary underline">
-              Kurslar və qruplarda yaradın
+              Sahələr və qruplarda yaradın
             </Link>
           </p>
         ) : null}
       </Card>
 
-      {!fieldsLoading && filterableGroups.length > 0 ? (
-        <Card className="p-4 sm:p-5 border border-[color:var(--border-subtle)] space-y-3">
+      {!fieldsLoading && shareGroups.length > 0 ? (
+        <Card className="p-4 sm:p-5 border border-[color:var(--border-subtle)] space-y-4">
           <div>
-            <h2 className="text-sm font-semibold text-token-textMain">Qrup linki paylaş</h2>
-            <p className="text-xs text-token-textMuted mt-1">
-              CRM-də olmayan tələbə ad, soyad, e-poçt və telefonla qeydiyyat keçib materiallara baxa bilər
+            <h2 className="text-sm font-semibold text-token-textMain">Qrup linki ilə giriş</h2>
+            <p className="text-xs text-token-textMuted mt-1 leading-relaxed">
+              Hər qrupun ayrıca linki var. Linki tələbəyə göndərin — CRM-də olmasa belə ad, soyad, e-poçt və
+              telefonla qeydiyyat keçib yalnız həmin qrupun materiallarına baxa bilər.
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {filterableGroups.map((g) => (
-              <button
+          <div className="space-y-2">
+            {shareGroups.map((g) => (
+              <div
                 key={g.id}
-                type="button"
-                onClick={() => void copyGroupLink(g)}
-                className="text-xs font-medium px-3 py-2 rounded-lg border border-primary/25 text-primary hover:bg-primary/10"
+                className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 rounded-xl border border-[color:var(--border-subtle)] bg-black/10"
               >
-                {g.name} — link kopyala
-              </button>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-token-textMain truncate">{g.name}</p>
+                  {g.subject_name ? (
+                    <p className="text-[11px] text-token-textMuted mt-0.5 truncate">Sahə: {g.subject_name}</p>
+                  ) : null}
+                  <p className="text-[10px] text-token-textMuted/80 mt-1 truncate font-mono">
+                    {libraryInviteUrl(g.id)}
+                  </p>
+                </div>
+                <Button
+                  variant="secondary"
+                  className="shrink-0 text-xs"
+                  onClick={() => void copyGroupLink(g)}
+                >
+                  Linki kopyala
+                </Button>
+              </div>
             ))}
           </div>
         </Card>

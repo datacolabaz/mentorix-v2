@@ -327,7 +327,7 @@ export default function MaterialUploadModal({
 
         {!fieldsLoading && !fields.length ? (
           <p className="text-xs text-amber-300/90">
-            Hələ sahə və qrup yaratmamısınız. Əvvəlcə «Kurslar və qruplar» bölməsində yaradın.
+            Hələ sahə və qrup yaratmamısınız. Əvvəlcə «Sahələr və qruplar» bölməsində yaradın.
           </p>
         ) : null}
 

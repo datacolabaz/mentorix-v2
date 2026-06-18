@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import api from '../lib/api'
 import { normalizeTeachingSubjects } from '../lib/teachingSubjects'
 
-/** Müəllimin Kurslar və qruplar (/instructor/teaching) məlumatı */
+/** Müəllimin Sahələr və qruplar (/instructor/teaching-groups) məlumatı */
 export function useTeachingFields() {
   const [subjects, setSubjects] = useState([])
   const [loading, setLoading] = useState(true)

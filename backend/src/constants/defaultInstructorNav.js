@@ -3,7 +3,7 @@ const INSTRUCTOR_NAV_SLUG = 'instructor_nav';
 /** Sidebar link registry — route/icon sabit qalır, admin yalnız bölmə başlıqlarını və qrup strukturunu dəyişir. */
 const INSTRUCTOR_NAV_ITEM_DEFS = {
   dashboard: { to: '/instructor', label: 'Dashboard', icon: 'dashboard', end: true },
-  teaching_groups: { to: '/instructor/teaching-groups', label: 'Kurslar və qruplar', icon: 'courses' },
+  teaching_groups: { to: '/instructor/teaching-groups', label: 'Sahələr və qruplar', icon: 'courses' },
   students: { to: '/instructor/students', label: 'Tələbələrim', icon: 'students' },
   join_requests: {
     to: '/instructor/join-requests',

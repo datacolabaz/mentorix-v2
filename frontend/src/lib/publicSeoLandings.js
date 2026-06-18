@@ -117,7 +117,7 @@ export const PUBLIC_SEO_LANDINGS = [
   {
     kind: 'feature',
     path: '/kurslar-ve-qruplar',
-    title: 'Kurslar və qruplar idarəetməsi — Mentorix',
+    title: 'Sahələr və qruplar idarəetməsi — Mentorix',
     description:
       'Tədris qrupları, paketlər (8/12 dərs), dərs cədvəli və tələbə qoşulma linkləri — kurs və təlim mərkəzləri üçün idarəetmə.',
     h1: 'Kurslar və tədris qrupları',
