@@ -287,6 +287,74 @@ async function joinGroupMaterialsAsGuest(groupId, profile) {
   };
 }
 
+async function getMaterialForInvite(materialId) {
+  const { rows } = await db.query(
+    `SELECT cm.id, cm.title, cm.group_id, cm.instructor_id,
+            u.full_name AS instructor_name,
+            isub.name AS subject_name,
+            ig.name AS group_name
+     FROM course_materials cm
+     JOIN users u ON u.id = cm.instructor_id
+     LEFT JOIN instructor_subjects isub ON isub.id = cm.subject_id
+     LEFT JOIN instructor_groups ig ON ig.id = cm.group_id
+     WHERE cm.id = $1::uuid
+     LIMIT 1`,
+    [materialId],
+  );
+  return rows[0] || null;
+}
+
+async function joinMaterialAsGuest(materialId, profile) {
+  const material = await getMaterialForInvite(materialId);
+  if (!material) {
+    const err = new Error('Material tapılmadı');
+    err.statusCode = 404;
+    throw err;
+  }
+
+  const studentId = await findOrCreateGuestStudent(profile);
+  const { trackInstructorStudentLink } = require('./instructorStudentService');
+  const { ensureStudentInParticipantGroup } = require('./participantGroupService');
+
+  await db.transaction(async (client) => {
+    await ensureLightInstructorEnrollment(client, material.instructor_id, studentId, 'material', {
+      activate: true,
+    });
+    await trackInstructorStudentLink(material.instructor_id, studentId, { skipLimitCheck: true }, client);
+    await client.query(
+      `INSERT INTO course_material_guest_students (material_id, student_id)
+       VALUES ($1::uuid, $2::uuid)
+       ON CONFLICT DO NOTHING`,
+      [materialId, studentId],
+    );
+    if (material.group_id) {
+      const { rows: grows } = await client.query(
+        `SELECT subject_id FROM instructor_groups WHERE id = $1::uuid`,
+        [material.group_id],
+      );
+      await ensureStudentInParticipantGroup(client, {
+        instructorId: material.instructor_id,
+        studentId,
+        groupId: material.group_id,
+        subjectId: grows[0]?.subject_id,
+        enrollmentSource: 'group',
+      });
+    }
+  });
+
+  const session = await buildGuestSessionPayload(studentId);
+  return {
+    ...session,
+    guest: true,
+    material: {
+      id: material.id,
+      title: material.title,
+      instructor_name: material.instructor_name,
+    },
+    message: 'Materiala daxil ola bilərsiniz.',
+  };
+}
+
 module.exports = {
   findOrCreateGuestStudent,
   autoGrantExamAccessForStudent,
@@ -295,5 +363,7 @@ module.exports = {
   joinTaskAsGuest,
   getGroupForMaterialsInvite,
   joinGroupMaterialsAsGuest,
+  getMaterialForInvite,
+  joinMaterialAsGuest,
   buildGuestSessionPayload,
 };

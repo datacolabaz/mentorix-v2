@@ -8,12 +8,10 @@ import { useToast } from '../../components/common/Toast'
 import MaterialUploadModal from '../../components/instructor/MaterialUploadModal'
 import MaterialsStorageBanner from '../../components/instructor/MaterialsStorageBanner'
 import { materialFileKind, materialFileOpenUrl } from '../../lib/materialFileUrl'
+import { materialShareUrlForRow } from '../../lib/materialShareUrl'
 import { formatMaterialsBytes } from '../../lib/materialsPlanLimits'
 import useUiStore from '../../hooks/useUi'
-import { groupsForField, useTeachingFields } from '../../hooks/useTeachingFields'
-
-const selectCls =
-  'w-full rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard text-token-textMain px-3 py-2.5 text-sm cursor-pointer [color-scheme:dark] focus:outline-none focus:border-primary/50 disabled:opacity-50'
+import { useTeachingFields } from '../../hooks/useTeachingFields'
 
 function fileEmoji(material) {
   const kind = materialFileKind(material.file_type, material.file_url)
@@ -36,8 +34,6 @@ export default function InstructorMaterialsLibrary() {
   const [loading, setLoading] = useState(true)
   const [materials, setMaterials] = useState([])
   const [quota, setQuota] = useState(null)
-  const [filterGroup, setFilterGroup] = useState('')
-  const [filterSubject, setFilterSubject] = useState('')
   const [uploadOpen, setUploadOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [deleteBusy, setDeleteBusy] = useState(false)
@@ -45,14 +41,7 @@ export default function InstructorMaterialsLibrary() {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const params = new URLSearchParams()
-      if (filterGroup) params.set('group_id', filterGroup)
-      if (filterSubject) params.set('subject_id', filterSubject)
-      const qs = params.toString()
-      const [listRes, quotaRes] = await Promise.all([
-        api.get(`/materials${qs ? `?${qs}` : ''}`),
-        api.get('/materials/quota'),
-      ])
+      const [listRes, quotaRes] = await Promise.all([api.get('/materials'), api.get('/materials/quota')])
       if (listRes?.success) setMaterials(listRes.materials || [])
       if (quotaRes?.success) setQuota(quotaRes.quota)
     } catch (e) {
@@ -60,29 +49,11 @@ export default function InstructorMaterialsLibrary() {
     } finally {
       setLoading(false)
     }
-  }, [filterGroup, filterSubject, toast])
+  }, [toast])
 
   useEffect(() => {
     void load()
   }, [load])
-
-  const filterableGroups = useMemo(() => {
-    if (filterSubject) {
-      const field = fields.find((f) => String(f.id) === String(filterSubject))
-      return groupsForField(fields, filterSubject).map((g) => ({
-        ...g,
-        subject_id: field?.id,
-        subject_name: field?.name,
-      }))
-    }
-    return allGroups
-  }, [fields, allGroups, filterSubject])
-
-  useEffect(() => {
-    if (!filterGroup) return
-    const ok = filterableGroups.some((g) => String(g.id) === String(filterGroup))
-    if (!ok) setFilterGroup('')
-  }, [filterGroup, filterableGroups])
 
   const grouped = useMemo(() => {
     const bySubject = new Map()
@@ -97,6 +68,17 @@ export default function InstructorMaterialsLibrary() {
   const onUploadSuccess = (_material, nextQuota) => {
     if (nextQuota) setQuota(nextQuota)
     void load()
+  }
+
+  const copyShareLink = async (material) => {
+    const url = materialShareUrlForRow(material)
+    if (!url) return
+    try {
+      await navigator.clipboard.writeText(url)
+      toast('Paylaşım linki kopyalandı')
+    } catch {
+      toast(url, 'info')
+    }
   }
 
   const confirmDelete = async () => {
@@ -137,8 +119,6 @@ export default function InstructorMaterialsLibrary() {
         quota={quota}
         fields={fields}
         fieldsLoading={fieldsLoading}
-        presetSubjectId={filterSubject}
-        presetGroupId={filterGroup}
         onUpgrade={() => navigate('/instructor/settings?tab=plans')}
       />
 
@@ -158,57 +138,6 @@ export default function InstructorMaterialsLibrary() {
       </div>
 
       <MaterialsStorageBanner quota={quota} onUpgrade={() => navigate('/instructor/settings?tab=plans')} />
-
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 max-w-xl">
-        <div className="min-w-0">
-          <label
-            htmlFor="materials-filter-subject"
-            className="block text-[10px] font-bold uppercase tracking-wide text-token-textMuted mb-1.5"
-          >
-            Sahə
-          </label>
-          <select
-            id="materials-filter-subject"
-            value={filterSubject}
-            onChange={(e) => {
-              setFilterSubject(e.target.value)
-              setFilterGroup('')
-            }}
-            disabled={fieldsLoading}
-            className={selectCls}
-          >
-            <option value="">Hamısı</option>
-            {fields.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="min-w-0">
-          <label
-            htmlFor="materials-filter-group"
-            className="block text-[10px] font-bold uppercase tracking-wide text-token-textMuted mb-1.5"
-          >
-            Qrup
-          </label>
-          <select
-            id="materials-filter-group"
-            value={filterGroup}
-            onChange={(e) => setFilterGroup(e.target.value)}
-            disabled={fieldsLoading || (Boolean(filterSubject) && !filterableGroups.length)}
-            className={selectCls}
-          >
-            <option value="">Hamısı</option>
-            {filterableGroups.map((g) => (
-              <option key={g.id} value={g.id}>
-                {!filterSubject && g.subject_name ? `${g.subject_name} · ` : ''}
-                {g.name}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
 
       {fieldsError ? <p className="text-xs text-red-300/90">{fieldsError}</p> : null}
       {!fieldsLoading && !allGroups.length ? (
@@ -250,9 +179,6 @@ export default function InstructorMaterialsLibrary() {
                         {m.group_name ? (
                           <p className="text-[11px] text-primary/90 mt-1 truncate">Qrup: {m.group_name}</p>
                         ) : null}
-                        {m.assignment_title ? (
-                          <p className="text-[11px] text-violet-300/90 mt-0.5 truncate">Tapşırıq: {m.assignment_title}</p>
-                        ) : null}
                       </div>
                     </div>
                     <div className="flex gap-2 mt-4">
@@ -264,6 +190,14 @@ export default function InstructorMaterialsLibrary() {
                       >
                         Aç
                       </a>
+                      <button
+                        type="button"
+                        onClick={() => void copyShareLink(m)}
+                        className="px-3 py-2 rounded-lg text-xs text-token-textMain border border-[color:var(--border-subtle)] hover:bg-white/5"
+                        title="WhatsApp və s. üçün link"
+                      >
+                        Link
+                      </button>
                       <button
                         type="button"
                         onClick={() => setDeleteTarget(m)}

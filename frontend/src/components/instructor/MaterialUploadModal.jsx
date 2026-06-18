@@ -4,6 +4,7 @@ import Button from '../common/Button'
 import api from '../../lib/api'
 import { useToast } from '../common/Toast'
 import { groupsForField } from '../../hooks/useTeachingFields'
+import { groupLibraryShareUrl, materialShareUrl } from '../../lib/materialShareUrl'
 import {
   MATERIALS_MAX_SINGLE_FILE_BYTES,
   MATERIALS_STORAGE_LIMIT_MESSAGE,
@@ -55,13 +56,12 @@ export default function MaterialUploadModal({
   onUpgrade,
   fields = [],
   fieldsLoading = false,
-  presetSubjectId = '',
-  presetGroupId = '',
 }) {
   const toast = useToast()
   const inputRef = useRef(null)
   const [file, setFile] = useState(null)
   const [title, setTitle] = useState('')
+  const [shareMode, setShareMode] = useState('group')
   const [subjectId, setSubjectId] = useState('')
   const [groupId, setGroupId] = useState('')
   const [quota, setQuota] = useState(quotaProp || null)
@@ -69,50 +69,29 @@ export default function MaterialUploadModal({
   const [progress, setProgress] = useState(0)
   const [dragOver, setDragOver] = useState(false)
   const [pickingFile, setPickingFile] = useState(false)
+  const [shareResult, setShareResult] = useState(null)
 
   const limitReached = isMaterialsQuotaFull(quota)
   const groupsInField = useMemo(() => groupsForField(fields, subjectId), [fields, subjectId])
 
-  const presetGroup = useMemo(() => {
-    if (!presetGroupId) return null
-    for (const field of fields) {
-      const group = (field.groups || []).find((g) => String(g.id) === String(presetGroupId))
-      if (group) {
-        return { ...group, subject_id: field.id, subject_name: field.name }
-      }
-    }
-    return null
-  }, [fields, presetGroupId])
-
-  const presetSubject = useMemo(() => {
-    if (presetGroup) {
-      return fields.find((f) => String(f.id) === String(presetGroup.subject_id)) || null
-    }
-    if (!presetSubjectId) return null
-    return fields.find((f) => String(f.id) === String(presetSubjectId)) || null
-  }, [fields, presetGroup, presetSubjectId])
-
-  const groupLocked = Boolean(presetGroupId && presetGroup)
-  const subjectLocked = Boolean(presetSubject && !groupLocked)
-
   const resetForm = useCallback(() => {
     setFile(null)
     setTitle('')
-    setSubjectId(presetSubject?.id ? String(presetSubject.id) : '')
-    setGroupId(presetGroup?.id ? String(presetGroup.id) : '')
+    setShareMode('group')
+    setSubjectId('')
+    setGroupId('')
     setProgress(0)
     setDragOver(false)
     setPickingFile(false)
+    setShareResult(null)
     if (inputRef.current) inputRef.current.value = ''
-  }, [presetGroup, presetSubject])
+  }, [])
 
   useEffect(() => {
     if (!open) {
       resetForm()
       return
     }
-    setSubjectId(presetSubject?.id ? String(presetSubject.id) : '')
-    setGroupId(presetGroup?.id ? String(presetGroup.id) : '')
     setQuota(quotaProp || null)
     if (quotaProp) return
     void api
@@ -121,7 +100,7 @@ export default function MaterialUploadModal({
         if (quotaRes?.success) setQuota(quotaRes.quota)
       })
       .catch(() => {})
-  }, [open, presetGroup, presetSubject, quotaProp, resetForm])
+  }, [open, quotaProp, resetForm])
 
   const pickFile = async (raw) => {
     if (!raw || pickingFile) return
@@ -152,6 +131,22 @@ export default function MaterialUploadModal({
     void pickFile(e.dataTransfer?.files?.[0])
   }
 
+  const copyShareLink = async () => {
+    if (!shareResult?.url) return
+    try {
+      await navigator.clipboard.writeText(shareResult.url)
+      toast('Link kopyalandı')
+    } catch {
+      toast(shareResult.url, 'info')
+    }
+  }
+
+  const closeModal = () => {
+    if (uploading) return
+    resetForm()
+    onClose?.()
+  }
+
   const submit = async () => {
     if (!file) {
       toast('Fayl seçin', 'error')
@@ -161,6 +156,16 @@ export default function MaterialUploadModal({
       toast('Fayl boşdur — başqa fayl seçin', 'error')
       return
     }
+    if (shareMode === 'group') {
+      if (!subjectId) {
+        toast('Sahə seçin', 'error')
+        return
+      }
+      if (!groupId) {
+        toast('Qrup seçin', 'error')
+        return
+      }
+    }
     if (limitReached) {
       toast(MATERIALS_STORAGE_LIMIT_MESSAGE, 'error')
       return
@@ -169,8 +174,10 @@ export default function MaterialUploadModal({
     const fd = new FormData()
     fd.append('file', file, file.name)
     fd.append('title', title.trim() || file.name)
-    if (subjectId) fd.append('subject_id', subjectId)
-    if (groupId) fd.append('group_id', groupId)
+    if (shareMode === 'group') {
+      if (subjectId) fd.append('subject_id', subjectId)
+      if (groupId) fd.append('group_id', groupId)
+    }
 
     setUploading(true)
     setProgress(8)
@@ -182,10 +189,19 @@ export default function MaterialUploadModal({
       })
       setProgress(100)
       if (res?.success) {
-        toast('Material yükləndi')
         onSuccess?.(res.material, res.quota)
-        resetForm()
-        onClose?.()
+        const material = res.material
+        const url =
+          shareMode === 'group' && material?.group_id
+            ? groupLibraryShareUrl(material.group_id)
+            : materialShareUrl(material?.id)
+        setShareResult({
+          url,
+          title: material?.title || title,
+          mode: shareMode,
+        })
+        setFile(null)
+        if (inputRef.current) inputRef.current.value = ''
       } else {
         toast(res?.message || 'Yükləmə uğursuz', 'error')
       }
@@ -203,163 +219,204 @@ export default function MaterialUploadModal({
   return (
     <Modal
       open={open}
-      onClose={() => !uploading && onClose?.()}
-      title="Fayl yüklə"
+      onClose={closeModal}
+      title={shareResult ? 'Material yükləndi' : 'Fayl yüklə'}
       size="lg"
       scrollBody
     >
       <div className="space-y-5">
-        {limitReached ? <MaterialsStorageBanner quota={quota} onUpgrade={onUpgrade} /> : null}
-
-        <div
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => e.key === 'Enter' && !limitReached && !pickingFile && inputRef.current?.click()}
-          onDragOver={(e) => {
-            e.preventDefault()
-            if (!limitReached) setDragOver(true)
-          }}
-          onDragLeave={() => setDragOver(false)}
-          onDrop={onDrop}
-          onClick={() => !limitReached && !pickingFile && inputRef.current?.click()}
-          className={[
-            'rounded-2xl border-2 border-dashed p-8 text-center transition-colors cursor-pointer',
-            dragOver ? 'border-primary bg-primary/10' : 'border-white/15 bg-white/[0.02]',
-            limitReached || pickingFile ? 'opacity-50 pointer-events-none' : 'hover:border-primary/50',
-          ].join(' ')}
-        >
-          <input
-            ref={inputRef}
-            type="file"
-            accept={ACCEPT}
-            className="hidden"
-            disabled={limitReached || uploading || pickingFile}
-            onChange={(e) => void pickFile(e.target.files?.[0])}
-          />
-          {file ? (
-            <div className="space-y-2">
-              <div className="text-3xl">{fileIcon(file.type)}</div>
-              <p className="text-sm font-medium text-white truncate">{file.name}</p>
-              <p className="text-xs text-gray-400">
-                {fileSizeLabel || '—'} · max 25 MB
-              </p>
+        {shareResult ? (
+          <div className="space-y-4">
+            <p className="text-sm text-gray-300">
+              «{shareResult.title}» yükləndi. Linki WhatsApp və ya digər kanallarda paylaşa bilərsiniz.
+            </p>
+            <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3 space-y-2">
+              <p className="text-[10px] font-bold uppercase tracking-wide text-gray-500">Paylaşım linki</p>
+              <p className="text-xs text-gray-300 break-all font-mono">{shareResult.url}</p>
             </div>
-          ) : (
-            <div className="space-y-2">
-              <div className="text-3xl">📎</div>
-              <p className="text-sm text-gray-300">
-                {pickingFile ? 'Fayl oxunur…' : 'Faylı buraya sürüşdürün və ya klikləyin'}
-              </p>
-              <p className="text-xs text-gray-500">PDF, Word, Excel, PowerPoint, şəkil (video yox)</p>
-            </div>
-          )}
-        </div>
-
-        {uploading ? (
-          <div className="space-y-2">
-            <div className="flex justify-between text-xs text-gray-400">
-              <span>Yüklənir…</span>
-              <span>{progress}%</span>
-            </div>
-            <div className="h-2 rounded-full bg-white/10 overflow-hidden">
-              <div className="h-full bg-primary transition-all duration-300" style={{ width: `${progress}%` }} />
+            <div className="flex flex-wrap gap-2 justify-end">
+              <Button variant="secondary" onClick={() => void copyShareLink()}>
+                Linki kopyala
+              </Button>
+              <Button onClick={closeModal}>Bağla</Button>
             </div>
           </div>
-        ) : null}
+        ) : (
+          <>
+            {limitReached ? <MaterialsStorageBanner quota={quota} onUpgrade={onUpgrade} /> : null}
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <label className="block sm:col-span-2 space-y-1.5">
-            <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Başlıq</span>
-            <input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              disabled={uploading}
-              className="w-full rounded-xl border border-white/10 bg-[#1c1c1c] px-3 py-2.5 text-sm text-white [color-scheme:dark]"
-              placeholder="Material adı"
-            />
-          </label>
-
-          {groupLocked ? (
-            <div className="sm:col-span-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5">
-              <p className="text-[10px] font-bold uppercase tracking-wide text-gray-500">Yükləmə hədəfi</p>
-              <p className="text-sm text-white mt-1">
-                {presetGroup.name}
-                {presetGroup.subject_name ? (
-                  <span className="text-gray-400"> · {presetGroup.subject_name}</span>
-                ) : null}
-              </p>
-            </div>
-          ) : (
-            <>
-              {!subjectLocked ? (
-                <label className="block space-y-1.5">
-                  <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Sahə</span>
-                  <select
-                    value={subjectId}
-                    onChange={(e) => {
-                      setSubjectId(e.target.value)
-                      setGroupId('')
-                    }}
-                    disabled={uploading || fieldsLoading}
-                    className={SELECT_CLS}
-                  >
-                    <option value="">— Seçin —</option>
-                    {fields.map((f) => (
-                      <option key={f.id} value={f.id}>
-                        {f.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+            <div
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => e.key === 'Enter' && !limitReached && !pickingFile && inputRef.current?.click()}
+              onDragOver={(e) => {
+                e.preventDefault()
+                if (!limitReached) setDragOver(true)
+              }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={onDrop}
+              onClick={() => !limitReached && !pickingFile && inputRef.current?.click()}
+              className={[
+                'rounded-2xl border-2 border-dashed p-8 text-center transition-colors cursor-pointer',
+                dragOver ? 'border-primary bg-primary/10' : 'border-white/15 bg-white/[0.02]',
+                limitReached || pickingFile ? 'opacity-50 pointer-events-none' : 'hover:border-primary/50',
+              ].join(' ')}
+            >
+              <input
+                ref={inputRef}
+                type="file"
+                accept={ACCEPT}
+                className="hidden"
+                disabled={limitReached || uploading || pickingFile}
+                onChange={(e) => void pickFile(e.target.files?.[0])}
+              />
+              {file ? (
+                <div className="space-y-2">
+                  <div className="text-3xl">{fileIcon(file.type)}</div>
+                  <p className="text-sm font-medium text-white truncate">{file.name}</p>
+                  <p className="text-xs text-gray-400">{fileSizeLabel || '—'} · max 25 MB</p>
+                </div>
               ) : (
-                <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5">
-                  <p className="text-[10px] font-bold uppercase tracking-wide text-gray-500">Sahə</p>
-                  <p className="text-sm text-white mt-1">{presetSubject.name}</p>
+                <div className="space-y-2">
+                  <div className="text-3xl">📎</div>
+                  <p className="text-sm text-gray-300">
+                    {pickingFile ? 'Fayl oxunur…' : 'Faylı buraya sürüşdürün və ya klikləyin'}
+                  </p>
+                  <p className="text-xs text-gray-500">PDF, Word, Excel, PowerPoint, şəkil (video yox)</p>
                 </div>
               )}
+            </div>
 
-              <label className="block space-y-1.5">
-                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Qrup</span>
-                <select
-                  value={groupId}
-                  onChange={(e) => setGroupId(e.target.value)}
-                  disabled={uploading || fieldsLoading || !subjectId}
-                  className={SELECT_CLS}
+            {uploading ? (
+              <div className="space-y-2">
+                <div className="flex justify-between text-xs text-gray-400">
+                  <span>Yüklənir…</span>
+                  <span>{progress}%</span>
+                </div>
+                <div className="h-2 rounded-full bg-white/10 overflow-hidden">
+                  <div className="h-full bg-primary transition-all duration-300" style={{ width: `${progress}%` }} />
+                </div>
+              </div>
+            ) : null}
+
+            <div className="space-y-3">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Kim üçün</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShareMode('group')}
+                  disabled={uploading}
+                  className={[
+                    'rounded-xl border px-3 py-2.5 text-left text-sm transition-colors',
+                    shareMode === 'group'
+                      ? 'border-primary/50 bg-primary/10 text-white'
+                      : 'border-white/10 text-gray-400 hover:border-white/20',
+                  ].join(' ')}
                 >
-                  {!subjectId ? (
-                    <option value="">Əvvəlcə sahə seçin</option>
-                  ) : !groupsInField.length ? (
-                    <option value="">Bu sahədə qrup yoxdur</option>
-                  ) : (
-                    <>
+                  Qrup tələbəsi
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShareMode('external')
+                    setSubjectId('')
+                    setGroupId('')
+                  }}
+                  disabled={uploading}
+                  className={[
+                    'rounded-xl border px-3 py-2.5 text-left text-sm transition-colors',
+                    shareMode === 'external'
+                      ? 'border-primary/50 bg-primary/10 text-white'
+                      : 'border-white/10 text-gray-400 hover:border-white/20',
+                  ].join(' ')}
+                >
+                  Xarici tələbə (link)
+                </button>
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="block sm:col-span-2 space-y-1.5">
+                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Başlıq</span>
+                <input
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  disabled={uploading}
+                  className="w-full rounded-xl border border-white/10 bg-[#1c1c1c] px-3 py-2.5 text-sm text-white [color-scheme:dark]"
+                  placeholder="Material adı"
+                />
+              </label>
+
+              {shareMode === 'group' ? (
+                <>
+                  <label className="block space-y-1.5">
+                    <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Sahə</span>
+                    <select
+                      value={subjectId}
+                      onChange={(e) => {
+                        setSubjectId(e.target.value)
+                        setGroupId('')
+                      }}
+                      disabled={uploading || fieldsLoading}
+                      className={SELECT_CLS}
+                    >
                       <option value="">— Seçin —</option>
-                      {groupsInField.map((g) => (
-                        <option key={g.id} value={g.id}>
-                          {g.name}
+                      {fields.map((f) => (
+                        <option key={f.id} value={f.id}>
+                          {f.name}
                         </option>
                       ))}
-                    </>
-                  )}
-                </select>
-              </label>
-            </>
-          )}
-        </div>
+                    </select>
+                  </label>
 
-        {!fieldsLoading && !fields.length ? (
-          <p className="text-xs text-amber-300/90">
-            Hələ sahə və qrup yaratmamısınız. Əvvəlcə «Sahələr və qruplar» bölməsində yaradın.
-          </p>
-        ) : null}
+                  <label className="block space-y-1.5">
+                    <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Qrup</span>
+                    <select
+                      value={groupId}
+                      onChange={(e) => setGroupId(e.target.value)}
+                      disabled={uploading || fieldsLoading || !subjectId}
+                      className={SELECT_CLS}
+                    >
+                      {!subjectId ? (
+                        <option value="">Əvvəlcə sahə seçin</option>
+                      ) : !groupsInField.length ? (
+                        <option value="">Bu sahədə qrup yoxdur</option>
+                      ) : (
+                        <>
+                          <option value="">— Seçin —</option>
+                          {groupsInField.map((g) => (
+                            <option key={g.id} value={g.id}>
+                              {g.name}
+                            </option>
+                          ))}
+                        </>
+                      )}
+                    </select>
+                  </label>
+                </>
+              ) : (
+                <p className="sm:col-span-2 text-xs text-gray-500 leading-relaxed">
+                  Xarici tələbə CRM-də və ya qrupda olmaya bilər. Yüklədikdən sonra fərdi paylaşım linki alacaqsınız.
+                </p>
+              )}
+            </div>
 
-        <div className="flex flex-wrap gap-2 justify-end pt-2">
-          <Button variant="ghost" onClick={() => onClose?.()} disabled={uploading}>
-            Ləğv et
-          </Button>
-          <Button onClick={() => void submit()} disabled={!file || uploading || pickingFile || limitReached}>
-            {uploading ? 'Yüklənir…' : 'Saxla'}
-          </Button>
-        </div>
+            {!fieldsLoading && !fields.length && shareMode === 'group' ? (
+              <p className="text-xs text-amber-300/90">
+                Hələ sahə və qrup yaratmamısınız. Əvvəlcə «Sahələr və qruplar» bölməsində yaradın.
+              </p>
+            ) : null}
+
+            <div className="flex flex-wrap gap-2 justify-end pt-2">
+              <Button variant="ghost" onClick={closeModal} disabled={uploading}>
+                Ləğv et
+              </Button>
+              <Button onClick={() => void submit()} disabled={!file || uploading || pickingFile || limitReached}>
+                {uploading ? 'Yüklənir…' : 'Saxla'}
+              </Button>
+            </div>
+          </>
+        )}
       </div>
     </Modal>
   )

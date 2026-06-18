@@ -159,6 +159,14 @@ async function deleteCourseMaterial(instructorId, materialId) {
 async function studentCanAccessMaterial(studentId, material) {
   if (!material || !studentId) return false;
 
+  const { rows: guestRows } = await db.query(
+    `SELECT 1 FROM course_material_guest_students
+     WHERE material_id = $1::uuid AND student_id = $2::uuid
+     LIMIT 1`,
+    [material.id, studentId],
+  );
+  if (guestRows[0]) return true;
+
   if (material.assignment_id) {
     const { rows } = await db.query(
       `SELECT 1 FROM student_assignments sa
@@ -222,8 +230,10 @@ async function listStudentMaterials(studentId, { groupId, enrollmentId } = {}) {
      LEFT JOIN enrollments e ON e.group_id = cm.group_id AND e.student_id = $1
          AND e.status IN ('active','pending_setup')
      LEFT JOIN student_assignments sa ON sa.assignment_id = cm.assignment_id AND sa.student_id = $1
+     LEFT JOIN course_material_guest_students cmgs ON cmgs.material_id = cm.id AND cmgs.student_id = $1
      WHERE (
-       (cm.group_id IS NOT NULL AND (igm.student_id IS NOT NULL OR e.id IS NOT NULL))
+       cmgs.material_id IS NOT NULL
+       OR (cm.group_id IS NOT NULL AND (igm.student_id IS NOT NULL OR e.id IS NOT NULL))
        OR (cm.assignment_id IS NOT NULL AND sa.id IS NOT NULL)
        OR (cm.group_id IS NULL AND cm.assignment_id IS NULL AND EXISTS (
          SELECT 1 FROM enrollments ex

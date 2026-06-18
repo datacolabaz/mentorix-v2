@@ -17,6 +17,7 @@ const { getPublicJoin } = require('../controllers/joinInvitationController');
 const { getPublicExamInvite, postPublicExamGuestJoin } = require('../controllers/publicExamInviteController');
 const { getPublicTaskInvite, postPublicTaskGuestJoin } = require('../controllers/publicTaskInviteController');
 const { getPublicLibraryInvite, postPublicLibraryGuestJoin } = require('../controllers/publicLibraryInviteController');
+const { getPublicMaterialInvite, postPublicMaterialGuestJoin } = require('../controllers/publicMaterialInviteController');
 const { postAccessEvent } = require('../controllers/accessAnalyticsController');
 const { postMarketplaceAiSearch } = require('../controllers/marketplaceAiSearchController');
 const { getPublicContact } = require('../controllers/platformContactController');
@@ -34,6 +35,8 @@ router.get('/task-invite/:taskId', getPublicTaskInvite);
 router.post('/task-invite/:taskId/join', postPublicTaskGuestJoin);
 router.get('/library-invite/:groupId', getPublicLibraryInvite);
 router.post('/library-invite/:groupId/join', postPublicLibraryGuestJoin);
+router.get('/material-invite/:materialId', getPublicMaterialInvite);
+router.post('/material-invite/:materialId/join', postPublicMaterialGuestJoin);
 
 router.post('/analytics/event', postAccessEvent);
 router.get('/landing-stats', getLandingStats);

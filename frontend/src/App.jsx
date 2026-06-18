@@ -13,6 +13,7 @@ import PublicSeoLanding from './pages/public/PublicSeoLanding'
 import { PUBLIC_SEO_LANDINGS } from './lib/publicSeoLandings'
 import PublicInstructorProfile from './pages/public/PublicInstructorProfile'
 import LibraryInvite from './pages/public/LibraryInvite'
+import MaterialInvite from './pages/public/MaterialInvite'
 import AdminLayout from './layouts/AdminLayout'
 import InstructorLayout from './layouts/InstructorLayout'
 import StudentLayout from './layouts/StudentLayout'
@@ -163,6 +164,7 @@ export default function App() {
       />
       <Route path="/exam/:examId" element={<StudentExamInvite />} />
       <Route path="/task/:taskId" element={<StudentTaskInvite />} />
+      <Route path="/library/material/:materialId" element={<MaterialInvite />} />
       <Route path="/library/:groupId" element={<LibraryInvite />} />
 
       <Route path="/admin" element={<ProtectedRoute roles={['admin']}><AdminLayout /></ProtectedRoute>}>
