@@ -3,7 +3,13 @@ import { normalizeApiBaseUrl } from './apiBase'
 
 const parsedTimeout = Number(import.meta.env.VITE_API_TIMEOUT_MS)
 
-const USAGE_LIMIT_CODES = new Set(['STUDENT_LIMIT', 'STORAGE_LIMIT', 'SMS_LIMIT'])
+const USAGE_LIMIT_CODES = new Set([
+  'STUDENT_LIMIT',
+  'STORAGE_LIMIT',
+  'SMS_LIMIT',
+  'MATERIALS_STORAGE_LIMIT',
+  'MATERIALS_FILE_COUNT_LIMIT',
+])
 
 const api = axios.create({
   // Preferred:

@@ -16,6 +16,8 @@ const INSTRUCTOR_NAV_ITEM_DEFS = {
   attendance: { to: '/instructor/attendance', label: 'Davamiyyət', icon: 'attendance' },
   exams: { to: '/instructor/exams', label: 'İmtahanlar', icon: 'exams' },
   tasks: { to: '/instructor/tasks', label: 'Tapşırıqlar', icon: 'tasks' },
+  materials_library: { to: '/instructor/materials', label: '📁 Kitabxana', icon: 'materials' },
+  materials_upload: { to: '/instructor/materials/upload', label: '📎 Fayl yüklə', icon: 'materials_upload' },
   analytics: { to: '/instructor/analytics', label: 'Analitika', icon: 'analytics' },
   payments: { to: '/instructor/payments', label: 'Ödənişlər', icon: 'payments' },
   notifications: { to: '/instructor/notifications', label: 'Bildirişlər', icon: 'notifications' },
@@ -47,6 +49,12 @@ function defaultInstructorNavPayload() {
           'exams',
           'tasks',
         ],
+      },
+      {
+        id: 'materials',
+        title: 'MATERİALLAR',
+        enabled: true,
+        itemKeys: ['materials_library', 'materials_upload'],
       },
       {
         id: 'analytics',

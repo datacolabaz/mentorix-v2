@@ -23,6 +23,11 @@ import {
   assignmentFileOpenUrl,
   isAssignmentPreviewable,
 } from '../../lib/assignmentFileUrl'
+import {
+  materialFileKind,
+  materialFileOpenUrl,
+} from '../../lib/materialFileUrl'
+import { formatMaterialsBytes } from '../../lib/materialsPlanLimits'
 import { fmtAzBakuField } from '../../lib/azDatetime'
 
 function fmtDue(d) {
@@ -117,11 +122,13 @@ export default function StudentAssignments() {
   }, [load])
 
   const [previewOpen, setPreviewOpen] = useState(false)
+  const [assignmentMaterials, setAssignmentMaterials] = useState([])
 
   const openWorkspace = async (assignmentId) => {
     setOpenId(assignmentId)
     setPreviewOpen(false)
     setDetail(null)
+    setAssignmentMaterials([])
     setEditorHtml('')
     setAttachments([])
     setDetailErr(null)
@@ -132,6 +139,14 @@ export default function StudentAssignments() {
       setDetail(a)
       setEditorHtml(a?.answer_text || '')
       setAttachments(Array.isArray(a?.attachment_urls) ? a.attachment_urls : [])
+      if (a?.assignment_id) {
+        try {
+          const mRes = await api.get(`/materials/assignment/${encodeURIComponent(a.assignment_id)}`)
+          if (mRes?.success) setAssignmentMaterials(mRes.materials || [])
+        } catch {
+          setAssignmentMaterials([])
+        }
+      }
       bumpStudentAlerts()
     } catch (e) {
       setDetailErr(e?.message || 'Yüklənmədi')
@@ -431,6 +446,28 @@ export default function StudentAssignments() {
                     📎 {assignmentFileLabel(detail.question_file_url)}
                   </a>
                   <p className="text-[11px] text-gray-500 mt-1">Yeni pəncərədə açılır və ya yüklənir (Word/PDF).</p>
+                </div>
+              ) : null}
+              {assignmentMaterials.length > 0 ? (
+                <div className="mt-3 space-y-2">
+                  <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Əlavə materiallar</p>
+                  <div className="flex flex-col gap-2">
+                    {assignmentMaterials.map((m) => (
+                      <a
+                        key={m.id}
+                        href={materialFileOpenUrl(m.file_url)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex items-center gap-2 rounded-lg border border-violet-500/20 bg-violet-500/5 px-3 py-2 text-sm text-violet-200 hover:bg-violet-500/10"
+                      >
+                        <span>📎</span>
+                        <span className="flex-1 truncate font-medium">{m.title}</span>
+                        <span className="text-[10px] text-gray-500 shrink-0">
+                          {materialFileKind(m.file_type, m.file_url)} · {formatMaterialsBytes(m.file_size)}
+                        </span>
+                      </a>
+                    ))}
+                  </div>
                 </div>
               ) : null}
               <p className="text-xs text-gray-500 mt-1">

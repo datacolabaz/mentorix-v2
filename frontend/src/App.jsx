@@ -45,6 +45,7 @@ import InstructorTeachingGroups from './pages/instructor/TeachingGroups'
 import InstructorJoinRequests from './pages/instructor/JoinRequests'
 import StudentInquiries from './pages/instructor/StudentInquiries'
 import InstructorTasks from './pages/instructor/Tasks'
+import InstructorMaterialsLibrary from './pages/instructor/MaterialsLibrary'
 import PaymentSuccess from './pages/instructor/PaymentSuccess'
 import PaymentFail from './pages/instructor/PaymentFail'
 import PaymentPending from './pages/instructor/PaymentPending'
@@ -57,6 +58,7 @@ import StudentExams from './pages/student/Exams'
 import StudentPayments from './pages/student/Payments'
 import StudentSchedule from './pages/student/Schedule'
 import StudentTasks from './pages/student/Tasks'
+import StudentMaterials from './pages/student/Materials'
 import StudentNotifications from './pages/student/Notifications'
 import StudentJoinClass from './pages/student/JoinClass'
 import StudentJoinRedirect from './pages/student/StudentJoinRedirect'
@@ -194,6 +196,8 @@ export default function App() {
         <Route path="attendance" element={<InstructorAttendance />} />
         <Route path="analytics" element={<InstructorAnalytics />} />
         <Route path="tasks" element={<InstructorTasks />} />
+        <Route path="materials" element={<InstructorMaterialsLibrary />} />
+        <Route path="materials/upload" element={<InstructorMaterialsLibrary />} />
         <Route path="tasks/analytics" element={<AssignmentAnalytics />} />
         <Route path="assignments" element={<InstructorTasks />} />
         <Route path="payments" element={<InstructorPayments />} />
@@ -217,6 +221,7 @@ export default function App() {
         <Route path="assignment-chat" element={<AssignmentChatPage role="student" />} />
         <Route path="exams" element={<StudentExams />} />
         <Route path="assignments" element={<StudentTasks />} />
+        <Route path="materials" element={<StudentMaterials />} />
         <Route path="tasks" element={<Navigate to="/student/assignments" replace />} />
         <Route path="payments" element={<StudentPayments />} />
         {/* backward-compatible alias */}

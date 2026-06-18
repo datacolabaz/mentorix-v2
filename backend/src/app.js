@@ -70,6 +70,7 @@ app.use('/api/public', require('./routes/public'));
 app.use('/api/course', require('./routes/course'));
 app.use('/api/groups', require('./routes/groups'));
 app.use('/api/chat', require('./routes/chat'));
+app.use('/api/materials', require('./routes/materials'));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 app.get('/api/meta', (req, res) =>

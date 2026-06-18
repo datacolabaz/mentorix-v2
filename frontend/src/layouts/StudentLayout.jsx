@@ -31,6 +31,7 @@ const NAV_GROUPS = [
       { to: '/student/direct-chat', label: 'Fərdi çat', icon: <NavIcon name="chat" /> },
       { to: '/student/exams', label: 'İmtahanlarım', icon: <NavIcon name="exams" /> },
       { to: '/student/assignments', label: 'Tapşırıqlarım', icon: <NavIcon name="tasks" />, badgeKey: 'tasks' },
+      { to: '/student/materials', label: 'Materiallar', icon: <NavIcon name="materials" /> },
     ],
   },
   {
