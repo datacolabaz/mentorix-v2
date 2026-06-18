@@ -27,6 +27,26 @@ function fileIcon(type) {
   return '📎'
 }
 
+function formatFileSize(bytes) {
+  const n = Number(bytes)
+  if (!Number.isFinite(n) || n <= 0) return null
+  if (n < 1024) return `${n} B`
+  return `${(n / (1024 * 1024)).toFixed(2)} MB`
+}
+
+async function normalizePickedFile(raw) {
+  if (!raw) return null
+  if (raw.size > 0) return raw
+
+  const buf = await raw.arrayBuffer()
+  if (!buf.byteLength) return null
+
+  return new File([buf], raw.name, {
+    type: raw.type || 'application/octet-stream',
+    lastModified: raw.lastModified,
+  })
+}
+
 export default function MaterialUploadModal({
   open,
   onClose,
@@ -44,15 +64,11 @@ export default function MaterialUploadModal({
   const [title, setTitle] = useState('')
   const [subjectId, setSubjectId] = useState('')
   const [groupId, setGroupId] = useState('')
-  const [lessonId, setLessonId] = useState('')
-  const [assignmentId, setAssignmentId] = useState('')
-  const [lessons, setLessons] = useState([])
-  const [assignments, setAssignments] = useState([])
   const [quota, setQuota] = useState(quotaProp || null)
-  const [loadingExtras, setLoadingExtras] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [progress, setProgress] = useState(0)
   const [dragOver, setDragOver] = useState(false)
+  const [pickingFile, setPickingFile] = useState(false)
 
   const limitReached = isMaterialsQuotaFull(quota)
   const groupsInField = useMemo(() => groupsForField(fields, subjectId), [fields, subjectId])
@@ -84,10 +100,9 @@ export default function MaterialUploadModal({
     setTitle('')
     setSubjectId(presetSubject?.id ? String(presetSubject.id) : '')
     setGroupId(presetGroup?.id ? String(presetGroup.id) : '')
-    setLessonId('')
-    setAssignmentId('')
     setProgress(0)
     setDragOver(false)
+    setPickingFile(false)
     if (inputRef.current) inputRef.current.value = ''
   }, [presetGroup, presetSubject])
 
@@ -99,41 +114,51 @@ export default function MaterialUploadModal({
     setSubjectId(presetSubject?.id ? String(presetSubject.id) : '')
     setGroupId(presetGroup?.id ? String(presetGroup.id) : '')
     setQuota(quotaProp || null)
-    setLoadingExtras(true)
-    Promise.all([
-      api.get('/materials/options'),
-      quotaProp ? Promise.resolve(null) : api.get('/materials/quota'),
-    ])
-      .then(([optRes, quotaRes]) => {
-        const opts = optRes?.options || {}
-        setLessons(Array.isArray(opts.lessons) ? opts.lessons : [])
-        setAssignments(Array.isArray(opts.assignments) ? opts.assignments : [])
+    if (quotaProp) return
+    void api
+      .get('/materials/quota')
+      .then((quotaRes) => {
         if (quotaRes?.success) setQuota(quotaRes.quota)
       })
-      .catch(() => toast('Dərs və tapşırıq siyahısı yüklənmədi', 'error'))
-      .finally(() => setLoadingExtras(false))
-  }, [open, presetGroup, presetSubject, quotaProp, resetForm, toast])
+      .catch(() => {})
+  }, [open, presetGroup, presetSubject, quotaProp, resetForm])
 
-  const pickFile = (f) => {
-    if (!f) return
-    if (f.size > MATERIALS_MAX_SINGLE_FILE_BYTES) {
-      toast('Tək fayl ölçüsü 25 MB-dan çox ola bilməz.', 'error')
-      return
+  const pickFile = async (raw) => {
+    if (!raw || pickingFile) return
+    setPickingFile(true)
+    try {
+      const f = await normalizePickedFile(raw)
+      if (!f) {
+        toast('Fayl boşdur və ya oxunmadı — başqa fayl seçin', 'error')
+        return
+      }
+      if (f.size > MATERIALS_MAX_SINGLE_FILE_BYTES) {
+        toast('Tək fayl ölçüsü 25 MB-dan çox ola bilməz.', 'error')
+        return
+      }
+      setFile(f)
+      if (!title.trim()) setTitle(f.name.replace(/\.[^.]+$/, '') || f.name)
+    } catch {
+      toast('Fayl oxunmadı — yenidən seçin', 'error')
+    } finally {
+      setPickingFile(false)
     }
-    setFile(f)
-    if (!title.trim()) setTitle(f.name.replace(/\.[^.]+$/, '') || f.name)
   }
 
   const onDrop = (e) => {
     e.preventDefault()
     setDragOver(false)
-    if (limitReached) return
-    pickFile(e.dataTransfer?.files?.[0])
+    if (limitReached || pickingFile) return
+    void pickFile(e.dataTransfer?.files?.[0])
   }
 
   const submit = async () => {
     if (!file) {
       toast('Fayl seçin', 'error')
+      return
+    }
+    if (!file.size) {
+      toast('Fayl boşdur — başqa fayl seçin', 'error')
       return
     }
     if (limitReached) {
@@ -142,12 +167,10 @@ export default function MaterialUploadModal({
     }
 
     const fd = new FormData()
-    fd.append('file', file)
+    fd.append('file', file, file.name)
     fd.append('title', title.trim() || file.name)
     if (subjectId) fd.append('subject_id', subjectId)
     if (groupId) fd.append('group_id', groupId)
-    if (lessonId) fd.append('enrollment_lesson_id', lessonId)
-    if (assignmentId) fd.append('assignment_id', assignmentId)
 
     setUploading(true)
     setProgress(8)
@@ -175,13 +198,7 @@ export default function MaterialUploadModal({
     }
   }
 
-  const filteredLessons = groupId
-    ? lessons.filter((l) => String(l.group_id) === String(groupId))
-    : []
-
-  const filteredAssignments = groupId
-    ? assignments.filter((a) => !a.group_id || String(a.group_id) === String(groupId))
-    : assignments
+  const fileSizeLabel = file ? formatFileSize(file.size) : null
 
   return (
     <Modal
@@ -197,18 +214,18 @@ export default function MaterialUploadModal({
         <div
           role="button"
           tabIndex={0}
-          onKeyDown={(e) => e.key === 'Enter' && !limitReached && inputRef.current?.click()}
+          onKeyDown={(e) => e.key === 'Enter' && !limitReached && !pickingFile && inputRef.current?.click()}
           onDragOver={(e) => {
             e.preventDefault()
             if (!limitReached) setDragOver(true)
           }}
           onDragLeave={() => setDragOver(false)}
           onDrop={onDrop}
-          onClick={() => !limitReached && inputRef.current?.click()}
+          onClick={() => !limitReached && !pickingFile && inputRef.current?.click()}
           className={[
             'rounded-2xl border-2 border-dashed p-8 text-center transition-colors cursor-pointer',
             dragOver ? 'border-primary bg-primary/10' : 'border-white/15 bg-white/[0.02]',
-            limitReached ? 'opacity-50 pointer-events-none' : 'hover:border-primary/50',
+            limitReached || pickingFile ? 'opacity-50 pointer-events-none' : 'hover:border-primary/50',
           ].join(' ')}
         >
           <input
@@ -216,19 +233,23 @@ export default function MaterialUploadModal({
             type="file"
             accept={ACCEPT}
             className="hidden"
-            disabled={limitReached || uploading}
-            onChange={(e) => pickFile(e.target.files?.[0])}
+            disabled={limitReached || uploading || pickingFile}
+            onChange={(e) => void pickFile(e.target.files?.[0])}
           />
           {file ? (
             <div className="space-y-2">
               <div className="text-3xl">{fileIcon(file.type)}</div>
               <p className="text-sm font-medium text-white truncate">{file.name}</p>
-              <p className="text-xs text-gray-400">{(file.size / (1024 * 1024)).toFixed(2)} MB · max 25 MB</p>
+              <p className="text-xs text-gray-400">
+                {fileSizeLabel || '—'} · max 25 MB
+              </p>
             </div>
           ) : (
             <div className="space-y-2">
               <div className="text-3xl">📎</div>
-              <p className="text-sm text-gray-300">Faylı buraya sürüşdürün və ya klikləyin</p>
+              <p className="text-sm text-gray-300">
+                {pickingFile ? 'Fayl oxunur…' : 'Faylı buraya sürüşdürün və ya klikləyin'}
+              </p>
               <p className="text-xs text-gray-500">PDF, Word, Excel, PowerPoint, şəkil (video yox)</p>
             </div>
           )}
@@ -267,7 +288,6 @@ export default function MaterialUploadModal({
                   <span className="text-gray-400"> · {presetGroup.subject_name}</span>
                 ) : null}
               </p>
-              <p className="text-[11px] text-gray-500 mt-1">Kitabxana filtrindən götürülüb — dəyişmək üçün səhifədə filtri yeniləyin.</p>
             </div>
           ) : (
             <>
@@ -279,7 +299,6 @@ export default function MaterialUploadModal({
                     onChange={(e) => {
                       setSubjectId(e.target.value)
                       setGroupId('')
-                      setLessonId('')
                     }}
                     disabled={uploading || fieldsLoading}
                     className={SELECT_CLS}
@@ -303,10 +322,7 @@ export default function MaterialUploadModal({
                 <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Qrup</span>
                 <select
                   value={groupId}
-                  onChange={(e) => {
-                    setGroupId(e.target.value)
-                    setLessonId('')
-                  }}
+                  onChange={(e) => setGroupId(e.target.value)}
                   disabled={uploading || fieldsLoading || !subjectId}
                   className={SELECT_CLS}
                 >
@@ -328,49 +344,6 @@ export default function MaterialUploadModal({
               </label>
             </>
           )}
-
-          <label className="block space-y-1.5">
-            <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Dərs (ixtiyari)</span>
-            <select
-              value={lessonId}
-              onChange={(e) => setLessonId(e.target.value)}
-              disabled={uploading || loadingExtras || !groupId}
-              className={SELECT_CLS}
-            >
-              {!groupId ? (
-                <option value="">Əvvəlcə qrup seçin</option>
-              ) : !filteredLessons.length ? (
-                <option value="">Bu qrupda planlaşdırılmış dərs yoxdur</option>
-              ) : (
-                <>
-                  <option value="">— Seçilməyib —</option>
-                  {filteredLessons.map((l) => (
-                    <option key={l.id} value={l.id}>
-                      Dərs #{l.lesson_number}
-                      {l.starts_at ? ` · ${new Date(l.starts_at).toLocaleDateString('az-AZ')}` : ''}
-                    </option>
-                  ))}
-                </>
-              )}
-            </select>
-          </label>
-
-          <label className="block space-y-1.5">
-            <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Tapşırıq (ixtiyari)</span>
-            <select
-              value={assignmentId}
-              onChange={(e) => setAssignmentId(e.target.value)}
-              disabled={uploading || loadingExtras}
-              className={SELECT_CLS}
-            >
-              <option value="">— Seçilməyib —</option>
-              {filteredAssignments.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.title}
-                </option>
-              ))}
-            </select>
-          </label>
         </div>
 
         {!fieldsLoading && !fields.length ? (
@@ -383,7 +356,7 @@ export default function MaterialUploadModal({
           <Button variant="ghost" onClick={() => onClose?.()} disabled={uploading}>
             Ləğv et
           </Button>
-          <Button onClick={submit} disabled={!file || uploading || limitReached}>
+          <Button onClick={() => void submit()} disabled={!file || uploading || pickingFile || limitReached}>
             {uploading ? 'Yüklənir…' : 'Saxla'}
           </Button>
         </div>

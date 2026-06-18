@@ -15,7 +15,7 @@ const {
   readCourseMaterialBuffer,
   deleteCourseMaterialBlob,
   contentTypeForFilename,
-  resolveUploadedFileBytes,
+  resolveUploadedFileBytesAsync,
 } = require('../services/courseMaterialStorage');
 const { STORAGE_LIMIT_MESSAGE, MATERIALS_MAX_SINGLE_FILE_BYTES } = require('../constants/materialsPlanLimits');
 
@@ -78,9 +78,12 @@ const postMaterial = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Fayl tələb olunur' });
     }
 
-    const fileSize = resolveUploadedFileBytes(req.file);
+    const fileSize = await resolveUploadedFileBytesAsync(req.file);
     if (!fileSize) {
-      return res.status(400).json({ success: false, message: 'Fayl ölçüsü oxunmadı — yenidən cəhd edin' });
+      return res.status(400).json({
+        success: false,
+        message: 'Fayl boşdur və ya oxunmadı — başqa fayl seçib yenidən cəhd edin',
+      });
     }
     if (fileSize > MATERIALS_MAX_SINGLE_FILE_BYTES) {
       return res.status(400).json({

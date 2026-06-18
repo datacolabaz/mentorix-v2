@@ -27,10 +27,34 @@ function resolveUploadedFileBytes(file) {
   if (Number.isFinite(cached) && cached > 0) return Math.round(cached);
   if (file?.path && fs.existsSync(file.path)) {
     try {
-      return fs.statSync(file.path).size;
+      const statSize = fs.statSync(file.path).size;
+      if (statSize > 0) return statSize;
     } catch {
-      return 0;
+      /* fall through */
     }
+  }
+  if (file?.buffer && Buffer.isBuffer(file.buffer) && file.buffer.length > 0) {
+    return file.buffer.length;
+  }
+  return 0;
+}
+
+async function resolveUploadedFileBytesAsync(file) {
+  const direct = resolveUploadedFileBytes(file);
+  if (direct > 0) return direct;
+
+  const filename = path.basename(String(file?.filename || ''));
+  if (!isSafeCourseMaterialFilename(filename)) return 0;
+
+  const { rows } = await db.query(
+    'SELECT byte_size FROM course_material_blobs WHERE filename = $1 LIMIT 1',
+    [filename],
+  );
+  const dbSize = Number(rows[0]?.byte_size);
+  if (Number.isFinite(dbSize) && dbSize > 0) {
+    file.byteSize = dbSize;
+    file.size = dbSize;
+    return Math.round(dbSize);
   }
   return 0;
 }
@@ -126,6 +150,7 @@ module.exports = {
   ensureCourseMaterialsUploadDir,
   isSafeCourseMaterialFilename,
   resolveUploadedFileBytes,
+  resolveUploadedFileBytesAsync,
   contentTypeForFilename,
   persistCourseMaterialBlob,
   readCourseMaterialBuffer,
