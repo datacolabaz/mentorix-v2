@@ -8,7 +8,7 @@ import { useToast } from '../../components/common/Toast'
 import MaterialUploadModal from '../../components/instructor/MaterialUploadModal'
 import MaterialsStorageBanner from '../../components/instructor/MaterialsStorageBanner'
 import { materialFileKind, materialFileOpenUrl } from '../../lib/materialFileUrl'
-import { formatMaterialsBytes, materialsUsagePercent } from '../../lib/materialsPlanLimits'
+import { formatMaterialsBytes } from '../../lib/materialsPlanLimits'
 import useUiStore from '../../hooks/useUi'
 import { groupsForField, useTeachingFields } from '../../hooks/useTeachingFields'
 
@@ -23,11 +23,6 @@ function fileEmoji(material) {
   if (kind === 'PowerPoint') return '📽️'
   if (kind === 'Şəkil') return '🖼️'
   return '📎'
-}
-
-function libraryInviteUrl(groupId) {
-  if (typeof window === 'undefined') return `/library/${groupId}`
-  return `${window.location.origin}/library/${groupId}`
 }
 
 export default function InstructorMaterialsLibrary() {
@@ -99,29 +94,6 @@ export default function InstructorMaterialsLibrary() {
     return [...bySubject.entries()]
   }, [materials])
 
-  const shareGroups = useMemo(() => {
-    if (filterGroup) {
-      const g = allGroups.find((x) => String(x.id) === String(filterGroup))
-      return g ? [g] : []
-    }
-    return filterableGroups
-  }, [allGroups, filterGroup, filterableGroups])
-
-  const selectedFilterGroup = useMemo(() => {
-    if (!filterGroup) return null
-    return shareGroups.find((g) => String(g.id) === String(filterGroup)) || null
-  }, [filterGroup, shareGroups])
-
-  const copyGroupLink = async (group) => {
-    const url = libraryInviteUrl(group.id)
-    try {
-      await navigator.clipboard.writeText(url)
-      toast(`«${group.name}» kitabxana linki kopyalandı`)
-    } catch {
-      toast(url, 'info')
-    }
-  }
-
   const onUploadSuccess = (_material, nextQuota) => {
     if (nextQuota) setQuota(nextQuota)
     void load()
@@ -145,10 +117,8 @@ export default function InstructorMaterialsLibrary() {
     }
   }
 
-  const usagePct = materialsUsagePercent(quota)
-
   return (
-    <div className="p-4 sm:p-6 max-w-6xl mx-auto space-y-6">
+    <div className="p-4 sm:p-6 max-w-6xl mx-auto space-y-5">
       <ConfirmDialog
         open={Boolean(deleteTarget)}
         onClose={() => !deleteBusy && setDeleteTarget(null)}
@@ -172,171 +142,82 @@ export default function InstructorMaterialsLibrary() {
         onUpgrade={() => navigate('/instructor/settings?tab=plans')}
       />
 
-      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <p className="text-[11px] font-bold uppercase tracking-wider text-primary">MATERİALLAR</p>
-          <h1 className="font-display font-bold text-2xl text-token-textMain mt-1">Tədris materialları kitabxanası</h1>
-          <p className="text-sm text-token-textMuted mt-1">
-            PDF, Word, Excel və şəkillər — qrup üzvləri və linklə qoşulan qonaqlar görə bilər
-          </p>
+          <h1 className="font-display font-bold text-xl sm:text-2xl text-token-textMain">Kitabxana</h1>
+          {quota ? (
+            <p className="text-xs text-token-textMuted mt-1">
+              {quota.labels?.used} / {quota.labels?.limit}
+              {quota.usage?.file_count != null ? ` · ${quota.usage.file_count} fayl` : ''}
+            </p>
+          ) : null}
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="secondary" onClick={() => void load()} disabled={loading}>
-            Yenilə
-          </Button>
-          <Button onClick={() => setUploadOpen(true)} disabled={quota?.limit_reached}>
-            Fayl yüklə
-          </Button>
-        </div>
+        <Button onClick={() => setUploadOpen(true)} disabled={quota?.limit_reached}>
+          Fayl yüklə
+        </Button>
       </div>
-
-      {quota ? (
-        <Card className="p-4 sm:p-5 border border-[color:var(--border-subtle)]">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-            <div className="flex-1 space-y-2">
-              <div className="flex justify-between text-xs text-token-textMuted">
-                <span>
-                  Yaddaş: {quota.labels?.used} / {quota.labels?.limit}
-                </span>
-                {quota.limits?.max_files != null ? (
-                  <span>
-                    Fayllar: {quota.usage?.file_count}/{quota.limits.max_files}
-                  </span>
-                ) : (
-                  <span>{quota.usage?.file_count || 0} fayl</span>
-                )}
-              </div>
-              {quota.limits?.storage_bytes != null ? (
-                <div className="h-2 rounded-full bg-black/20 overflow-hidden">
-                  <div
-                    className={`h-full rounded-full transition-all ${usagePct >= 95 ? 'bg-amber-400' : 'bg-primary'}`}
-                    style={{ width: `${Math.max(usagePct, 2)}%` }}
-                  />
-                </div>
-              ) : null}
-            </div>
-            <p className="text-[11px] text-token-textMuted shrink-0">Tək fayl max 25 MB</p>
-          </div>
-        </Card>
-      ) : null}
 
       <MaterialsStorageBanner quota={quota} onUpgrade={() => navigate('/instructor/settings?tab=plans')} />
 
-      <Card className="p-4 sm:p-5 border border-[color:var(--border-subtle)] space-y-4">
-        <div>
-          <h2 className="text-sm font-semibold text-token-textMain">Filtr</h2>
-          <p className="text-xs text-token-textMuted mt-1">Profilinizdəki sahələr və qruplar</p>
-        </div>
-        <div className="grid grid-cols-2 gap-3 sm:gap-4 w-full">
-          <div className="min-w-0">
-            <label
-              htmlFor="materials-filter-subject"
-              className="block text-[10px] font-bold uppercase tracking-wide text-token-textMuted mb-1.5"
-            >
-              Sahə
-            </label>
-            <select
-              id="materials-filter-subject"
-              value={filterSubject}
-              onChange={(e) => {
-                setFilterSubject(e.target.value)
-                setFilterGroup('')
-              }}
-              disabled={fieldsLoading}
-              className={selectCls}
-            >
-              <option value="">Hamısı</option>
-              {fields.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="min-w-0">
-            <label
-              htmlFor="materials-filter-group"
-              className="block text-[10px] font-bold uppercase tracking-wide text-token-textMuted mb-1.5"
-            >
-              Qrup
-            </label>
-            <select
-              id="materials-filter-group"
-              value={filterGroup}
-              onChange={(e) => setFilterGroup(e.target.value)}
-              disabled={fieldsLoading || (Boolean(filterSubject) && !filterableGroups.length)}
-              className={selectCls}
-            >
-              <option value="">Hamısı</option>
-              {filterableGroups.map((g) => (
-                <option key={g.id} value={g.id}>
-                  {!filterSubject && g.subject_name ? `${g.subject_name} · ` : ''}
-                  {g.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-        {selectedFilterGroup ? (
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 pt-1">
-            <p className="text-[10px] text-token-textMuted/80 truncate font-mono flex-1 min-w-0">
-              {libraryInviteUrl(selectedFilterGroup.id)}
-            </p>
-            <Button
-              variant="secondary"
-              className="shrink-0 text-xs w-full sm:w-auto"
-              onClick={() => void copyGroupLink(selectedFilterGroup)}
-            >
-              Linki kopyala
-            </Button>
-          </div>
-        ) : null}
-        {fieldsError ? <p className="text-xs text-red-300/90">{fieldsError}</p> : null}
-        {!fieldsLoading && !allGroups.length ? (
-          <p className="text-xs text-amber-300/90">
-            Hələ sahə və qrup yoxdur.{' '}
-            <Link to="/instructor/teaching-groups" className="text-primary underline">
-              Sahələr və qruplarda yaradın
-            </Link>
-          </p>
-        ) : null}
-      </Card>
-
-      {!fieldsLoading && !filterGroup && shareGroups.length > 0 ? (
-        <Card className="p-4 sm:p-5 border border-[color:var(--border-subtle)] space-y-4">
-          <div>
-            <h2 className="text-sm font-semibold text-token-textMain">Qrup linki ilə giriş</h2>
-            <p className="text-xs text-token-textMuted mt-1 leading-relaxed">
-              Hər qrupun ayrıca linki var. Linki tələbəyə göndərin — CRM-də olmasa belə ad, soyad, e-poçt və
-              telefonla qeydiyyat keçib yalnız həmin qrupun materiallarına baxa bilər.
-            </p>
-          </div>
-          <div className="space-y-2">
-            {shareGroups.map((g) => (
-              <div
-                key={g.id}
-                className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 rounded-xl border border-[color:var(--border-subtle)] bg-black/10"
-              >
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-token-textMain truncate">{g.name}</p>
-                  {g.subject_name ? (
-                    <p className="text-[11px] text-token-textMuted mt-0.5 truncate">Sahə: {g.subject_name}</p>
-                  ) : null}
-                  <p className="text-[10px] text-token-textMuted/80 mt-1 truncate font-mono">
-                    {libraryInviteUrl(g.id)}
-                  </p>
-                </div>
-                <Button
-                  variant="secondary"
-                  className="shrink-0 text-xs"
-                  onClick={() => void copyGroupLink(g)}
-                >
-                  Linki kopyala
-                </Button>
-              </div>
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 max-w-xl">
+        <div className="min-w-0">
+          <label
+            htmlFor="materials-filter-subject"
+            className="block text-[10px] font-bold uppercase tracking-wide text-token-textMuted mb-1.5"
+          >
+            Sahə
+          </label>
+          <select
+            id="materials-filter-subject"
+            value={filterSubject}
+            onChange={(e) => {
+              setFilterSubject(e.target.value)
+              setFilterGroup('')
+            }}
+            disabled={fieldsLoading}
+            className={selectCls}
+          >
+            <option value="">Hamısı</option>
+            {fields.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
             ))}
-          </div>
-        </Card>
+          </select>
+        </div>
+        <div className="min-w-0">
+          <label
+            htmlFor="materials-filter-group"
+            className="block text-[10px] font-bold uppercase tracking-wide text-token-textMuted mb-1.5"
+          >
+            Qrup
+          </label>
+          <select
+            id="materials-filter-group"
+            value={filterGroup}
+            onChange={(e) => setFilterGroup(e.target.value)}
+            disabled={fieldsLoading || (Boolean(filterSubject) && !filterableGroups.length)}
+            className={selectCls}
+          >
+            <option value="">Hamısı</option>
+            {filterableGroups.map((g) => (
+              <option key={g.id} value={g.id}>
+                {!filterSubject && g.subject_name ? `${g.subject_name} · ` : ''}
+                {g.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {fieldsError ? <p className="text-xs text-red-300/90">{fieldsError}</p> : null}
+      {!fieldsLoading && !allGroups.length ? (
+        <p className="text-xs text-amber-300/90">
+          Hələ sahə və qrup yoxdur.{' '}
+          <Link to="/instructor/teaching-groups" className="text-primary underline">
+            Sahələr və qruplarda yaradın
+          </Link>
+        </p>
       ) : null}
 
       {loading ? (
@@ -344,10 +225,7 @@ export default function InstructorMaterialsLibrary() {
       ) : !materials.length ? (
         <Card className="p-10 text-center border border-dashed border-[color:var(--border-subtle)]">
           <div className="text-4xl mb-3">📁</div>
-          <h2 className="font-display font-bold text-lg">Hələ material yoxdur</h2>
-          <p className="text-sm text-token-textMuted mt-2 max-w-md mx-auto">
-            Yuxarıdakı «Fayl yüklə» düyməsi ilə material əlavə edin — istəsəniz dərs və ya tapşırıqla da əlaqələndirə bilərsiniz.
-          </p>
+          <p className="text-sm text-token-textMuted">Hələ material yoxdur</p>
         </Card>
       ) : (
         <div className="space-y-8">
@@ -401,13 +279,6 @@ export default function InstructorMaterialsLibrary() {
           ))}
         </div>
       )}
-
-      <p className="text-xs text-token-textMuted">
-        Video fayllar qəbul edilmir (yaddaş qənaəti).{' '}
-        <Link to="/instructor/settings?tab=plans" className="text-primary hover:underline">
-          Paket limitləri
-        </Link>
-      </p>
     </div>
   )
 }
