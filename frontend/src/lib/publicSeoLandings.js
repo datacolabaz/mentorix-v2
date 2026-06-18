@@ -34,6 +34,27 @@ export const PUBLIC_SEO_LANDINGS = [
   },
   {
     kind: 'search',
+    path: '/universitet-axtarisi',
+    title: 'Universitet və proqram axtarışı — xaricdə təhsil | Mentorix',
+    description:
+      'Almaniya, Polşa, Türkiyə, Macarıstan və İtaliyada bakalavr, magistr və doktorantura proqramlarını tapın. Təqaüd, son tarix və ödənişə görə filtrləyin.',
+    h1: 'Universitet proqramı tap',
+    intro: [
+      'Mentorix Apply ilə xaricdə təhsil proqramlarını ölkə, sahə və büdcəyə görə müqayisə edin.',
+      'Uyğun proqramı seçib rəsmi universitet portallarına birbaşa keçid edin.',
+    ],
+    bullets: [
+      'BSc, MSc və PhD proqramları',
+      'Təqaüd və son müraciət tarixi filtrləri',
+      'Almaniya, Polşa, Türkiyə, Macarıstan, İtaliya (MVP)',
+    ],
+    searchCategorySlug: null,
+    ctaHref: '/universities',
+    ctaLabel: 'Proqramları axtar',
+    keywords: 'universitet axtarışı, xaricdə təhsil, magistr proqramları, təqaüd, Mentorix',
+  },
+  {
+    kind: 'search',
     path: '/riyaziyyat-repetitoru',
     title: 'Riyaziyyat repetitoru — Bakı və Azərbaycan | Mentorix',
     description:

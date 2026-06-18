@@ -22,6 +22,11 @@ export default function PublicSeoFooter({ className = '' }) {
                   Xəritədə axtar
                 </Link>
               </li>
+              <li>
+                <Link to="/universities" className="text-gray-300 hover:text-primary transition-colors">
+                  Universitet proqramları
+                </Link>
+              </li>
               {searchPages.map((l) => (
                 <li key={l.path}>
                   <Link to={l.path} className="text-gray-400 hover:text-primary transition-colors">

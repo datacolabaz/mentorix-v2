@@ -301,7 +301,19 @@ export default function Login() {
               >
                 <Brand size="md" imgClassName="h-8 w-auto max-w-[120px]" />
               </button>
-              <div className="flex items-center gap-1 sm:gap-5 text-xs sm:text-sm font-semibold">
+              <div className="flex items-center gap-1 sm:gap-3 text-xs sm:text-sm font-semibold">
+                <Link
+                  to="/search"
+                  className="hidden sm:inline text-gray-300 hover:text-white px-2 py-1.5 rounded-lg hover:bg-white/5"
+                >
+                  Müəllim tap
+                </Link>
+                <Link
+                  to="/universities"
+                  className="text-gray-300 hover:text-white px-2 py-1.5 rounded-lg hover:bg-white/5"
+                >
+                  Universitetlər
+                </Link>
                 <button
                   type="button"
                   onClick={() => scrollToId('mx-features')}
@@ -478,6 +490,29 @@ export default function Login() {
                 <path d="M20 20l-3.5-3.5" />
               </svg>
               {marketplaceCtaLabel}
+            </Link>
+          </section>
+
+          <section
+            id="mx-universities"
+            className="scroll-mt-24 rounded-2xl border border-violet-500/25 bg-gradient-to-br from-violet-500/10 via-[#0e1014] to-[#0b0b0b] p-6 sm:p-8 space-y-4"
+          >
+            <div className="text-xs uppercase tracking-wider text-violet-300/90 font-semibold">
+              Xaricdə təhsil
+            </div>
+            <h2 className="text-lg sm:text-xl font-semibold text-white">Universitet və proqram axtarışı</h2>
+            <p className="text-sm text-gray-400 leading-relaxed max-w-2xl">
+              Bakalavr, magistr və doktorantura proqramlarını ölkə, təqaüd və son müraciət tarixinə görə filtrləyin —
+              giriş tələb olunmur.
+            </p>
+            <Link
+              to="/universities"
+              onClick={() =>
+                trackEvent('mx_landing_universities_cta', { surface: 'universities_section', action: 'open_search' })
+              }
+              className="inline-flex w-full sm:w-auto justify-center items-center gap-2 rounded-xl border-2 border-violet-400/60 bg-violet-500/10 px-5 py-3.5 min-h-[48px] text-sm font-bold text-violet-200 hover:bg-violet-500/20 transition-colors"
+            >
+              Proqramları axtar
             </Link>
           </section>
 

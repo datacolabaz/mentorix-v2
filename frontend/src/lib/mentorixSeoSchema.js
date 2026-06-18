@@ -11,6 +11,11 @@ export const MENTORIX_SITE_NAV = [
     description: 'Xəritədə müəllim, təlimçi və repetitor axtarışı',
   },
   {
+    name: 'Universitetlər',
+    path: '/universities',
+    description: 'Xaricdə universitet və magistr proqramları axtarışı',
+  },
+  {
     name: 'İmtahanlar',
     path: '/imtahanlar',
     description: 'Onlayn imtahan və test sistemi — QR və linklə paylaşım',

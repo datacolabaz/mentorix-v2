@@ -62,7 +62,8 @@ function isPublicAuthPath(config) {
     path.includes('/auth/resend-verification') ||
     path.includes('/auth/google/login') ||
     path.includes('/auth/google/complete') ||
-    path.includes('/public/')
+    path.includes('/public/') ||
+    path.includes('/programs')
   )
 }
 
@@ -85,6 +86,7 @@ function isAuthAttemptConfig(config) {
     path.includes('/auth/google/login') ||
     path.includes('/auth/google/complete') ||
     path.includes('/public/') ||
+    path.includes('/programs') ||
     path.includes('/auth/me') ||
     path.includes('/exams/material-file') ||
     path.includes('/exams/by-exam/')

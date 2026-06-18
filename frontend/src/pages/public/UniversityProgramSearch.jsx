@@ -5,6 +5,7 @@ import Brand from '../../components/common/Brand'
 import Button from '../../components/common/Button'
 import { useToast } from '../../components/common/Toast'
 import useAuthStore from '../../hooks/useAuth'
+import { dashboardPathForRole } from '../../lib/postAuth'
 import { setPageSeo } from '../../lib/pageSeo'
 import UniversitySearchWizard from '../../components/university/UniversitySearchWizard'
 import ProgramFiltersSidebar from '../../components/university/ProgramFiltersSidebar'
@@ -174,7 +175,7 @@ export default function UniversityProgramSearch() {
     <div className="min-h-screen bg-[#0a0a0a] text-white">
       <header className="border-b border-white/10 bg-black/40 backdrop-blur-md sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between gap-4">
-          <Link to="/" className="shrink-0">
+          <Link to={user ? dashboardPathForRole(user.role) : '/login'} className="shrink-0">
             <Brand />
           </Link>
           <div className="flex items-center gap-2">
