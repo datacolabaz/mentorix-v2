@@ -48,6 +48,23 @@ async function normalizePickedFile(raw) {
   })
 }
 
+function buildShareLinks({ material, forGroupStudents, shareExternalLink }) {
+  const links = []
+  if (shareExternalLink && material?.id) {
+    links.push({
+      label: 'Xarici tələbə linki',
+      url: materialShareUrl(material.id),
+    })
+  }
+  if (forGroupStudents && material?.group_id) {
+    links.push({
+      label: 'Qrup kitabxanası linki',
+      url: groupLibraryShareUrl(material.group_id),
+    })
+  }
+  return links
+}
+
 export default function MaterialUploadModal({
   open,
   onClose,
@@ -61,7 +78,8 @@ export default function MaterialUploadModal({
   const inputRef = useRef(null)
   const [file, setFile] = useState(null)
   const [title, setTitle] = useState('')
-  const [shareMode, setShareMode] = useState('group')
+  const [forGroupStudents, setForGroupStudents] = useState(true)
+  const [shareExternalLink, setShareExternalLink] = useState(true)
   const [subjectId, setSubjectId] = useState('')
   const [groupId, setGroupId] = useState('')
   const [quota, setQuota] = useState(quotaProp || null)
@@ -77,7 +95,8 @@ export default function MaterialUploadModal({
   const resetForm = useCallback(() => {
     setFile(null)
     setTitle('')
-    setShareMode('group')
+    setForGroupStudents(true)
+    setShareExternalLink(true)
     setSubjectId('')
     setGroupId('')
     setProgress(0)
@@ -131,13 +150,13 @@ export default function MaterialUploadModal({
     void pickFile(e.dataTransfer?.files?.[0])
   }
 
-  const copyShareLink = async () => {
-    if (!shareResult?.url) return
+  const copyLink = async (url) => {
+    if (!url) return
     try {
-      await navigator.clipboard.writeText(shareResult.url)
+      await navigator.clipboard.writeText(url)
       toast('Link kopyalandı')
     } catch {
-      toast(shareResult.url, 'info')
+      toast(url, 'info')
     }
   }
 
@@ -156,7 +175,11 @@ export default function MaterialUploadModal({
       toast('Fayl boşdur — başqa fayl seçin', 'error')
       return
     }
-    if (shareMode === 'group') {
+    if (!forGroupStudents && !shareExternalLink) {
+      toast('Ən azı bir paylaşım növü seçin', 'error')
+      return
+    }
+    if (forGroupStudents) {
       if (!subjectId) {
         toast('Sahə seçin', 'error')
         return
@@ -174,9 +197,9 @@ export default function MaterialUploadModal({
     const fd = new FormData()
     fd.append('file', file, file.name)
     fd.append('title', title.trim() || file.name)
-    if (shareMode === 'group') {
-      if (subjectId) fd.append('subject_id', subjectId)
-      if (groupId) fd.append('group_id', groupId)
+    if (forGroupStudents) {
+      fd.append('subject_id', subjectId)
+      fd.append('group_id', groupId)
     }
 
     setUploading(true)
@@ -191,14 +214,10 @@ export default function MaterialUploadModal({
       if (res?.success) {
         onSuccess?.(res.material, res.quota)
         const material = res.material
-        const url =
-          shareMode === 'group' && material?.group_id
-            ? groupLibraryShareUrl(material.group_id)
-            : materialShareUrl(material?.id)
+        const links = buildShareLinks({ material, forGroupStudents, shareExternalLink })
         setShareResult({
-          url,
           title: material?.title || title,
-          mode: shareMode,
+          links,
         })
         setFile(null)
         if (inputRef.current) inputRef.current.value = ''
@@ -228,16 +247,28 @@ export default function MaterialUploadModal({
         {shareResult ? (
           <div className="space-y-4">
             <p className="text-sm text-gray-300">
-              «{shareResult.title}» yükləndi. Linki WhatsApp və ya digər kanallarda paylaşa bilərsiniz.
+              «{shareResult.title}» yükləndi.
+              {shareResult.links?.length
+                ? ' Linkləri WhatsApp və ya digər kanallarda paylaşa bilərsiniz.'
+                : ' Qrup tələbələri materialı kitabxanada görə bilər.'}
             </p>
-            <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3 space-y-2">
-              <p className="text-[10px] font-bold uppercase tracking-wide text-gray-500">Paylaşım linki</p>
-              <p className="text-xs text-gray-300 break-all font-mono">{shareResult.url}</p>
-            </div>
+            {shareResult.links?.length ? (
+              <div className="space-y-2">
+                {shareResult.links.map((link) => (
+                  <div
+                    key={link.url}
+                    className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3 space-y-2"
+                  >
+                    <p className="text-[10px] font-bold uppercase tracking-wide text-gray-500">{link.label}</p>
+                    <p className="text-xs text-gray-300 break-all font-mono">{link.url}</p>
+                    <Button variant="secondary" className="text-xs" onClick={() => void copyLink(link.url)}>
+                      Kopyala
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            ) : null}
             <div className="flex flex-wrap gap-2 justify-end">
-              <Button variant="secondary" onClick={() => void copyShareLink()}>
-                Linki kopyala
-              </Button>
               <Button onClick={closeModal}>Bağla</Button>
             </div>
           </div>
@@ -299,125 +330,25 @@ export default function MaterialUploadModal({
               </div>
             ) : null}
 
-            <div className="space-y-3">
+            <div className="space-y-3" onClick={(e) => e.stopPropagation()}>
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Kim üçün</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setShareMode('group')}
-                  disabled={uploading}
-                  className={[
-                    'rounded-xl border px-3 py-2.5 text-left text-sm transition-colors',
-                    shareMode === 'group'
-                      ? 'border-primary/50 bg-primary/10 text-white'
-                      : 'border-white/10 text-gray-400 hover:border-white/20',
-                  ].join(' ')}
-                >
-                  Qrup tələbəsi
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShareMode('external')
-                    setSubjectId('')
-                    setGroupId('')
-                  }}
-                  disabled={uploading}
-                  className={[
-                    'rounded-xl border px-3 py-2.5 text-left text-sm transition-colors',
-                    shareMode === 'external'
-                      ? 'border-primary/50 bg-primary/10 text-white'
-                      : 'border-white/10 text-gray-400 hover:border-white/20',
-                  ].join(' ')}
-                >
-                  Xarici tələbə (link)
-                </button>
-              </div>
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <label className="block sm:col-span-2 space-y-1.5">
-                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Başlıq</span>
-                <input
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  disabled={uploading}
-                  className="w-full rounded-xl border border-white/10 bg-[#1c1c1c] px-3 py-2.5 text-sm text-white [color-scheme:dark]"
-                  placeholder="Material adı"
-                />
-              </label>
-
-              {shareMode === 'group' ? (
-                <>
-                  <label className="block space-y-1.5">
-                    <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Sahə</span>
-                    <select
-                      value={subjectId}
-                      onChange={(e) => {
-                        setSubjectId(e.target.value)
-                        setGroupId('')
-                      }}
-                      disabled={uploading || fieldsLoading}
-                      className={SELECT_CLS}
-                    >
-                      <option value="">— Seçin —</option>
-                      {fields.map((f) => (
-                        <option key={f.id} value={f.id}>
-                          {f.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-
-                  <label className="block space-y-1.5">
-                    <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Qrup</span>
-                    <select
-                      value={groupId}
-                      onChange={(e) => setGroupId(e.target.value)}
-                      disabled={uploading || fieldsLoading || !subjectId}
-                      className={SELECT_CLS}
-                    >
-                      {!subjectId ? (
-                        <option value="">Əvvəlcə sahə seçin</option>
-                      ) : !groupsInField.length ? (
-                        <option value="">Bu sahədə qrup yoxdur</option>
-                      ) : (
-                        <>
-                          <option value="">— Seçin —</option>
-                          {groupsInField.map((g) => (
-                            <option key={g.id} value={g.id}>
-                              {g.name}
-                            </option>
-                          ))}
-                        </>
-                      )}
-                    </select>
-                  </label>
-                </>
-              ) : (
-                <p className="sm:col-span-2 text-xs text-gray-500 leading-relaxed">
-                  Xarici tələbə CRM-də və ya qrupda olmaya bilər. Yüklədikdən sonra fərdi paylaşım linki alacaqsınız.
-                </p>
-              )}
-            </div>
-
-            {!fieldsLoading && !fields.length && shareMode === 'group' ? (
-              <p className="text-xs text-amber-300/90">
-                Hələ sahə və qrup yaratmamısınız. Əvvəlcə «Sahələr və qruplar» bölməsində yaradın.
-              </p>
-            ) : null}
-
-            <div className="flex flex-wrap gap-2 justify-end pt-2">
-              <Button variant="ghost" onClick={closeModal} disabled={uploading}>
-                Ləğv et
-              </Button>
-              <Button onClick={() => void submit()} disabled={!file || uploading || pickingFile || limitReached}>
-                {uploading ? 'Yüklənir…' : 'Saxla'}
-              </Button>
-            </div>
-          </>
-        )}
-      </div>
-    </Modal>
-  )
-}
+              <div className="space-y-2">
+                <label className="flex items-start gap-3 rounded-xl border border-white/10 px-3 py-2.5 cursor-pointer hover:border-white/20">
+                  <input
+                    type="checkbox"
+                    className="mt-1 accent-primary"
+                    checked={forGroupStudents}
+                    onChange={(e) => setForGroupStudents(e.target.checked)}
+                    disabled={uploading}
+                  />
+                  <span>
+                    <span className="block text-sm text-white">Qrup tələbəsi</span>
+                    <span className="block text-xs text-gray-500 mt-0.5">Sahə və qrup seçin — daxili tələbələr görəcək</span>
+                  </span>
+                </label>
+                <label className="flex items-start gap-3 rounded-xl border border-white/10 px-3 py-2.5 cursor-pointer hover:border-white/20">
+                  <input
+                    type="checkbox"
+                    className="mt-1 accent-primary"
+                    checked={shareExternalLink}
+                    onChange={(e) => setSha

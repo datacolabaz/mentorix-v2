@@ -5,7 +5,7 @@ const multer = require('multer');
 const { verify } = require('../utils/jwt');
 const { authenticate, authorize } = require('../middleware/auth');
 const { enforceActiveSubscription } = require('../middleware/entitlements');
-const { ensureCourseMaterialsUploadDir, persistCourseMaterialBlob } = require('../services/courseMaterialStorage');
+const { ensureCourseMaterialsUploadDir, persistCourseMaterialBlob, resolveUploadedFileBytes } = require('../services/courseMaterialStorage');
 const { MATERIALS_MAX_SINGLE_FILE_BYTES } = require('../constants/materialsPlanLimits');
 const {
   getQuota,
@@ -111,18 +111,19 @@ router.post(
   },
   async (req, res, next) => {
     try {
-      if (req.file) await persistCourseMaterialBlob(req.file);
+      if (req.file?.path && require('fs').existsSync(req.file.path)) {
+        const diskSize = resolveUploadedFileBytes(req.file);
+        if (diskSize > 0) {
+          req.file.byteSize = diskSize;
+          req.file.size = diskSize;
+        }
+      }
+      if (req.file) {
+        try {
+          await persistCourseMaterialBlob(req.file);
+        } catch (blobErr) {
+          console.error('[materials] blob persist failed:', blobErr?.message || blobErr);
+        }
+      }
       next();
-    } catch (e) {
-      next(e);
-    }
-  },
-  postMaterial,
-);
-router.delete('/:id', authenticate, authorize('instructor'), enforceActiveSubscription, removeMaterial);
-
-router.get('/my', authenticate, authorize('student'), listMyMaterials);
-router.get('/assignment/:assignmentId', authenticate, authorize('student'), listAssignmentMaterials);
-router.get('/file/:filename', authenticateMaterialFile, serveMaterialFile);
-
-module.exports = router;
+   

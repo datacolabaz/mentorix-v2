@@ -46,15 +46,19 @@ async function resolveUploadedFileBytesAsync(file) {
   const filename = path.basename(String(file?.filename || ''));
   if (!isSafeCourseMaterialFilename(filename)) return 0;
 
-  const { rows } = await db.query(
-    'SELECT byte_size FROM course_material_blobs WHERE filename = $1 LIMIT 1',
-    [filename],
-  );
-  const dbSize = Number(rows[0]?.byte_size);
-  if (Number.isFinite(dbSize) && dbSize > 0) {
-    file.byteSize = dbSize;
-    file.size = dbSize;
-    return Math.round(dbSize);
+  try {
+    const { rows } = await db.query(
+      'SELECT byte_size FROM course_material_blobs WHERE filename = $1 LIMIT 1',
+      [filename],
+    );
+    const dbSize = Number(rows[0]?.byte_size);
+    if (Number.isFinite(dbSize) && dbSize > 0) {
+      file.byteSize = dbSize;
+      file.size = dbSize;
+      return Math.round(dbSize);
+    }
+  } catch {
+    /* blob table may be unavailable — fall back to disk size above */
   }
   return 0;
 }
@@ -126,33 +130,4 @@ async function readCourseMaterialBuffer(filename) {
     [safe],
   );
   if (!rows[0]?.data) return null;
-  return {
-    buffer: Buffer.isBuffer(rows[0].data) ? rows[0].data : Buffer.from(rows[0].data),
-    content_type: rows[0].content_type || contentTypeForFilename(safe),
-  };
-}
-
-async function deleteCourseMaterialBlob(filename) {
-  const safe = path.basename(String(filename || ''));
-  if (!isSafeCourseMaterialFilename(safe)) return;
-  const dir = getCourseMaterialsUploadDir();
-  const abs = path.join(dir, safe);
-  try {
-    if (abs.startsWith(dir) && fs.existsSync(abs)) fs.unlinkSync(abs);
-  } catch {
-    /* ignore */
-  }
-  await db.query('DELETE FROM course_material_blobs WHERE filename = $1', [safe]).catch(() => {});
-}
-
-module.exports = {
-  getCourseMaterialsUploadDir,
-  ensureCourseMaterialsUploadDir,
-  isSafeCourseMaterialFilename,
-  resolveUploadedFileBytes,
-  resolveUploadedFileBytesAsync,
-  contentTypeForFilename,
-  persistCourseMaterialBlob,
-  readCourseMaterialBuffer,
-  deleteCourseMaterialBlob,
-};
+  return

@@ -12,6 +12,8 @@ export function materialShareUrl(materialId) {
 
 export function materialShareUrlForRow(material) {
   if (!material?.id) return ''
-  if (material.group_id) return groupLibraryShareUrl(material.group_id)
   return materialShareUrl(material.id)
 }
+
+export function materialShareLinksForRow(material) {
+  const links = []
