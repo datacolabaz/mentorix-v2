@@ -126,4 +126,16 @@ router.post(
         }
       }
       next();
-   
+    } catch (e) {
+      next(e);
+    }
+  },
+  postMaterial,
+);
+router.delete('/:id', authenticate, authorize('instructor'), enforceActiveSubscription, removeMaterial);
+
+router.get('/my', authenticate, authorize('student'), listMyMaterials);
+router.get('/assignment/:assignmentId', authenticate, authorize('student'), listAssignmentMaterials);
+router.get('/file/:filename', authenticateMaterialFile, serveMaterialFile);
+
+module.exports = router;
