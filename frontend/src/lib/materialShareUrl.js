@@ -17,3 +17,11 @@ export function materialShareUrlForRow(material) {
 
 export function materialShareLinksForRow(material) {
   const links = []
+  if (material?.id) {
+    links.push({ label: 'Xarici link', url: materialShareUrl(material.id) })
+  }
+  if (material?.group_id) {
+    links.push({ label: 'Qrup linki', url: groupLibraryShareUrl(material.group_id) })
+  }
+  return links
+}

@@ -351,4 +351,100 @@ export default function MaterialUploadModal({
                     type="checkbox"
                     className="mt-1 accent-primary"
                     checked={shareExternalLink}
-                    onChange={(e) => setSha
+                    onChange={(e) => setShareExternalLink(e.target.checked)}
+                    disabled={uploading}
+                  />
+                  <span>
+                    <span className="block text-sm text-white">Xarici tələbə (link)</span>
+                    <span className="block text-xs text-gray-500 mt-0.5">CRM-də olmayan üçün paylaşım linki</span>
+                  </span>
+                </label>
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2" onClick={(e) => e.stopPropagation()}>
+              <label className="block sm:col-span-2 space-y-1.5">
+                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Başlıq</span>
+                <input
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  disabled={uploading}
+                  className="w-full rounded-xl border border-white/10 bg-[#1c1c1c] px-3 py-2.5 text-sm text-white [color-scheme:dark]"
+                  placeholder="Material adı"
+                />
+              </label>
+
+              {forGroupStudents ? (
+                <>
+                  <label className="block space-y-1.5">
+                    <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Sahə</span>
+                    <select
+                      value={subjectId}
+                      onChange={(e) => {
+                        setSubjectId(e.target.value)
+                        setGroupId('')
+                      }}
+                      disabled={uploading || fieldsLoading}
+                      className={SELECT_CLS}
+                    >
+                      <option value="">— Seçin —</option>
+                      {fields.map((f) => (
+                        <option key={f.id} value={f.id}>
+                          {f.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="block space-y-1.5">
+                    <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Qrup</span>
+                    <select
+                      value={groupId}
+                      onChange={(e) => setGroupId(e.target.value)}
+                      disabled={uploading || fieldsLoading || !subjectId}
+                      className={SELECT_CLS}
+                    >
+                      {!subjectId ? (
+                        <option value="">Əvvəlcə sahə seçin</option>
+                      ) : !groupsInField.length ? (
+                        <option value="">Bu sahədə qrup yoxdur</option>
+                      ) : (
+                        <>
+                          <option value="">— Seçin —</option>
+                          {groupsInField.map((g) => (
+                            <option key={g.id} value={g.id}>
+                              {g.name}
+                            </option>
+                          ))}
+                        </>
+                      )}
+                    </select>
+                  </label>
+                </>
+              ) : (
+                <p className="sm:col-span-2 text-xs text-gray-500 leading-relaxed">
+                  Yalnız xarici link seçildi — material qrupa bağlanmayacaq, yüklədikdən sonra fərdi link alacaqsınız.
+                </p>
+              )}
+            </div>
+
+            {!fieldsLoading && !fields.length && forGroupStudents ? (
+              <p className="text-xs text-amber-300/90">
+                Hələ sahə və qrup yaratmamısınız. Əvvəlcə «Sahələr və qruplar» bölməsində yaradın.
+              </p>
+            ) : null}
+
+            <div className="flex flex-wrap gap-2 justify-end pt-2">
+              <Button type="button" variant="ghost" onClick={closeModal} disabled={uploading}>
+                Ləğv et
+              </Button>
+              <Button type="button" onClick={() => void submit()} disabled={!file || uploading || pickingFile || limitReached}>
+                {uploading ? 'Yüklənir…' : 'Saxla'}
+              </Button>
+            </div>
+          </>
+        )}
+      </div>
+    </Modal>
+  )
+}
