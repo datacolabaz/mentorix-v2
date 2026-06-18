@@ -4,7 +4,13 @@ const {
   cacheGet,
   cacheSet,
 } = require('./universityProgramCache');
-const { fieldMeta, fieldSearchTerms, relatedFieldSlugs } = require('../constants/universityFieldCatalog');
+const {
+  fieldMeta,
+  fieldSearchTerms,
+  relatedFieldSlugs,
+  FIELD_GROUPS,
+  flatFieldOptions,
+} = require('../constants/universityFieldCatalog');
 const { buildMockSearchResponse } = require('../constants/universityMockPrograms');
 
 const MVP_COUNTRIES = ['Almaniya', 'Polşa', 'Türkiyə', 'Macarıstan', 'İtaliya'];
