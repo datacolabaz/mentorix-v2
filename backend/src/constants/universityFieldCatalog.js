@@ -85,7 +85,7 @@ const FIELD_MATCH_TERMS = {
   civil_engineering: ['Civil', 'Construction', 'Engineering'],
   industrial_engineering: ['Industrial', 'Engineering', 'Management'],
   petroleum_engineering: ['Petroleum', 'Oil', 'Gas', 'Engineering'],
-  chemistry: ['Chemistry', 'Chemical', 'Life Sciences'],
+  chemistry: ['Chemistry', 'Chemical', 'Kimya', 'Life Sciences'],
   biology: ['Biology', 'Life Sciences', 'Biological'],
   biochemistry: ['Biochemistry', 'Biology', 'Chemistry'],
   biotechnology: ['Biotechnology', 'Biology', 'Life Sciences'],
@@ -93,6 +93,21 @@ const FIELD_MATCH_TERMS = {
   medicine: ['Medicine', 'Medical', 'MBBS', 'Life Sciences'],
   environmental_science: ['Environment', 'Environmental', 'Ecology', 'Life Sciences'],
 };
+
+/** Eyni sahə üzrə yaxın ixtisaslar (məs: Kimya ↔ Kimya mühəndisliyi) */
+const FIELD_RELATED_SLUGS = {
+  chemistry: ['chemistry', 'chemical_engineering', 'biochemistry', 'pharmacy'],
+  chemical_engineering: ['chemical_engineering', 'chemistry', 'biochemistry'],
+  biochemistry: ['biochemistry', 'chemistry', 'biology', 'biotechnology'],
+  biology: ['biology', 'biochemistry', 'biotechnology', 'medicine'],
+  pharmacy: ['pharmacy', 'chemistry', 'biochemistry'],
+};
+
+function relatedFieldSlugs(slug) {
+  const key = String(slug || '').trim();
+  if (!key) return [];
+  return [...new Set([key, ...(FIELD_RELATED_SLUGS[key] || [])])];
+}
 
 function fieldMeta(slug) {
   return FIELD_BY_VALUE.get(String(slug || '').trim()) || null;
@@ -124,8 +139,10 @@ function flatFieldOptions() {
 module.exports = {
   FIELD_GROUPS,
   FIELD_BY_VALUE,
+  FIELD_RELATED_SLUGS,
   fieldMeta,
   fieldSearchTerms,
+  relatedFieldSlugs,
   allFieldValues,
   flatFieldOptions,
 };

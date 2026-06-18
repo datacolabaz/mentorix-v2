@@ -37,6 +37,7 @@ const {
   postContribution,
   getMyContributions,
 } = require('../controllers/universityProgramMentorController');
+const { getInstructorNavSections } = require('../controllers/instructorNavController');
 
 router.get('/nav-sections', authenticate, authorize('instructor'), getInstructorNavSections);
 router.get('/teaching', authenticate, authorize('instructor'), getTeaching);

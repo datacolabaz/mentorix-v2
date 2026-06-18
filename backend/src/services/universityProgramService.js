@@ -4,7 +4,7 @@ const {
   cacheGet,
   cacheSet,
 } = require('./universityProgramCache');
-const { fieldMeta, fieldSearchTerms, FIELD_GROUPS, flatFieldOptions } = require('../constants/universityFieldCatalog');
+const { fieldMeta, fieldSearchTerms, relatedFieldSlugs } = require('../constants/universityFieldCatalog');
 const { buildMockSearchResponse } = require('../constants/universityMockPrograms');
 
 const MVP_COUNTRIES = ['Almaniya', 'Polşa', 'Türkiyə', 'Macarıstan', 'İtaliya'];
@@ -146,16 +146,20 @@ function formatSearchResult(programs, filters, { source = 'database', total, cac
 
 function appendFieldFilter(where, params, fieldSlug) {
   if (!fieldSlug) return;
+  const slugs = relatedFieldSlugs(fieldSlug);
   const terms = fieldSearchTerms(fieldSlug);
   const patterns = terms.map((t) => `%${t}%`);
 
+  params.push(slugs);
+  const slugsIdx = params.length;
   params.push(fieldSlug);
   const slugIdx = params.length;
   params.push(patterns);
   const patIdx = params.length;
 
   where.push(`(
-    p.field = $${slugIdx}
+    p.field = ANY($${slugsIdx}::text[])
+    OR p.field = $${slugIdx}
     OR EXISTS (
       SELECT 1 FROM unnest($${patIdx}::text[]) pat
       WHERE p.name ILIKE pat OR p.field ILIKE pat

@@ -81,13 +81,27 @@ const FIELD_MATCH_TERMS = {
   civil_engineering: ['Civil', 'Construction', 'Engineering'],
   industrial_engineering: ['Industrial', 'Engineering', 'Management'],
   petroleum_engineering: ['Petroleum', 'Oil', 'Gas', 'Engineering'],
-  chemistry: ['Chemistry', 'Chemical', 'Life Sciences'],
+  chemistry: ['Chemistry', 'Chemical', 'Kimya', 'Life Sciences'],
   biology: ['Biology', 'Life Sciences', 'Biological'],
   biochemistry: ['Biochemistry', 'Biology', 'Chemistry'],
   biotechnology: ['Biotechnology', 'Biology', 'Life Sciences'],
   pharmacy: ['Pharmacy', 'Pharmaceutical', 'Life Sciences'],
   medicine: ['Medicine', 'Medical', 'MBBS', 'Life Sciences'],
   environmental_science: ['Environment', 'Environmental', 'Ecology', 'Life Sciences'],
+}
+
+const FIELD_RELATED_SLUGS = {
+  chemistry: ['chemistry', 'chemical_engineering', 'biochemistry', 'pharmacy'],
+  chemical_engineering: ['chemical_engineering', 'chemistry', 'biochemistry'],
+  biochemistry: ['biochemistry', 'chemistry', 'biology', 'biotechnology'],
+  biology: ['biology', 'biochemistry', 'biotechnology', 'medicine'],
+  pharmacy: ['pharmacy', 'chemistry', 'biochemistry'],
+}
+
+export function relatedFieldSlugs(slug) {
+  const key = String(slug || '').trim()
+  if (!key) return []
+  return [...new Set([key, ...(FIELD_RELATED_SLUGS[key] || [])])]
 }
 
 export function fieldLabel(slug) {
