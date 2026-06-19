@@ -1,0 +1,10 @@
+-- Mentorix.io — Avropa Universitetləri Seed Data
+-- Mənbə: QS World Rankings 2025, Times Higher Education 2025
+--
+-- QEYD: Bu SQL fayl orijinal sxemadan fərqlidir (UUID, uni_id, degree_level).
+-- Schema-uyğun import üçün:
+--   cd backend && npm run import:europe
+--
+-- JSON/CSV mənbə:
+--   backend/data/europe_universities.json
+--   backend/data/europe_universities.csv

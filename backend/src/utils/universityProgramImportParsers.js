@@ -25,6 +25,8 @@ const EXTRA_COUNTRY_MAP = {
   india: 'Hindistan',
   singapore: 'Sinqapur',
   switzerland: 'İsveçrə',
+  netherlands: 'Niderlandiya',
+  holland: 'Niderlandiya',
   'new zealand': 'Yeni Zelandiya',
   brazil: 'Braziliya',
   mexico: 'Meksika',

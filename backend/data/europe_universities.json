@@ -1,0 +1,1343 @@
+{
+  "meta": {
+    "description": "Mentorix.io üçün Avropa universitetləri kataloqu",
+    "source": "QS World Rankings 2025, Times Higher Education 2025",
+    "last_updated": "2026-06",
+    "total_universities": 58,
+    "total_countries": 20
+  },
+  "countries": [
+    {
+      "country": "Almaniya",
+      "country_en": "Germany",
+      "flag": "🇩🇪",
+      "universities": [
+        {
+          "name": "Technical University of Munich (TUM)",
+          "city": "Munich",
+          "qs_rank_2025": 37,
+          "apply_link": "https://www.tum.de/en/studies/apply",
+          "programs_link": "https://www.tum.de/en/studies/degree-programs",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "German/English",
+          "ielts_min": 6.5,
+          "fields": [
+            "Engineering",
+            "Computer Science",
+            "Natural Sciences",
+            "Business",
+            "Medicine"
+          ]
+        },
+        {
+          "name": "Ludwig Maximilian University of Munich (LMU)",
+          "city": "Munich",
+          "qs_rank_2025": 58,
+          "apply_link": "https://www.lmu.de/en/study/international-applicants/applying-to-lmu/index.html",
+          "programs_link": "https://www.lmu.de/en/study/degree-programs/index.html",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "German/English",
+          "ielts_min": 6.5,
+          "fields": [
+            "Medicine",
+            "Law",
+            "Natural Sciences",
+            "Humanities",
+            "Business"
+          ]
+        },
+        {
+          "name": "Heidelberg University",
+          "city": "Heidelberg",
+          "qs_rank_2025": 80,
+          "apply_link": "https://www.uni-heidelberg.de/en/study/how-to-apply",
+          "programs_link": "https://www.uni-heidelberg.de/en/study/programs",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "German/English",
+          "ielts_min": 6.0,
+          "fields": [
+            "Medicine",
+            "Life Sciences",
+            "Natural Sciences",
+            "Humanities"
+          ]
+        },
+        {
+          "name": "Freie Universität Berlin",
+          "city": "Berlin",
+          "qs_rank_2025": 88,
+          "apply_link": "https://www.fu-berlin.de/en/studium/bewerbung/index.html",
+          "programs_link": "https://www.fu-berlin.de/en/studium/studienangebot/index.html",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "German/English",
+          "ielts_min": 6.0,
+          "fields": [
+            "Social Sciences",
+            "Humanities",
+            "Natural Sciences",
+            "Law",
+            "Medicine"
+          ]
+        },
+        {
+          "name": "Karlsruhe Institute of Technology (KIT)",
+          "city": "Karlsruhe",
+          "qs_rank_2025": 98,
+          "apply_link": "https://www.kit.edu/english/study/applying.php",
+          "programs_link": "https://www.kit.edu/english/study/studying.php",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "German/English",
+          "ielts_min": 6.5,
+          "fields": [
+            "Engineering",
+            "Computer Science",
+            "Physics",
+            "Chemistry",
+            "Economics"
+          ]
+        },
+        {
+          "name": "RWTH Aachen University",
+          "city": "Aachen",
+          "qs_rank_2025": 106,
+          "apply_link": "https://www.rwth-aachen.de/cms/root/studium/vor-dem-studium/bewerbung/~bsc/international-applicants/",
+          "programs_link": "https://www.rwth-aachen.de/cms/root/studium/im-studium/studienangebot/",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "German/English",
+          "ielts_min": 6.5,
+          "fields": [
+            "Engineering",
+            "Computer Science",
+            "Architecture",
+            "Business",
+            "Natural Sciences"
+          ]
+        },
+        {
+          "name": "Humboldt University of Berlin",
+          "city": "Berlin",
+          "qs_rank_2025": 120,
+          "apply_link": "https://www.hu-berlin.de/en/studies/admission",
+          "programs_link": "https://www.hu-berlin.de/en/studies/counselling/course-catalogue",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "German/English",
+          "ielts_min": 6.0,
+          "fields": [
+            "Humanities",
+            "Social Sciences",
+            "Natural Sciences",
+            "Law",
+            "Medicine"
+          ]
+        }
+      ]
+    },
+    {
+      "country": "Böyük Britaniya",
+      "country_en": "United Kingdom",
+      "flag": "🇬🇧",
+      "universities": [
+        {
+          "name": "University of Oxford",
+          "city": "Oxford",
+          "qs_rank_2025": 3,
+          "apply_link": "https://www.ox.ac.uk/admissions/graduate/applying-to-oxford",
+          "programs_link": "https://www.ox.ac.uk/admissions/graduate/courses/courses-a-z-listing",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "English",
+          "ielts_min": 7.0,
+          "fields": [
+            "All fields"
+          ]
+        },
+        {
+          "name": "University of Cambridge",
+          "city": "Cambridge",
+          "qs_rank_2025": 5,
+          "apply_link": "https://www.postgraduate.study.cam.ac.uk/application-process",
+          "programs_link": "https://www.postgraduate.study.cam.ac.uk/courses",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "English",
+          "ielts_min": 7.0,
+          "fields": [
+            "All fields"
+          ]
+        },
+        {
+          "name": "Imperial College London",
+          "city": "London",
+          "qs_rank_2025": 2,
+          "apply_link": "https://www.imperial.ac.uk/study/apply/",
+          "programs_link": "https://www.imperial.ac.uk/study/courses/",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "English",
+          "ielts_min": 6.5,
+          "fields": [
+            "Engineering",
+            "Medicine",
+            "Natural Sciences",
+            "Business"
+          ]
+        },
+        {
+          "name": "University College London (UCL)",
+          "city": "London",
+          "qs_rank_2025": 9,
+          "apply_link": "https://www.ucl.ac.uk/prospective-students/graduate/applying-ucl",
+          "programs_link": "https://www.ucl.ac.uk/prospective-students/graduate/taught-degrees",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "English",
+          "ielts_min": 6.5,
+          "fields": [
+            "All fields"
+          ]
+        },
+        {
+          "name": "University of Edinburgh",
+          "city": "Edinburgh",
+          "qs_rank_2025": 27,
+          "apply_link": "https://www.ed.ac.uk/studying/postgraduate/applying",
+          "programs_link": "https://www.ed.ac.uk/studying/postgraduate/degrees",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "English",
+          "ielts_min": 6.5,
+          "fields": [
+            "Medicine",
+            "Engineering",
+            "Informatics",
+            "Social Sciences",
+            "Arts"
+          ]
+        },
+        {
+          "name": "King's College London",
+          "city": "London",
+          "qs_rank_2025": 40,
+          "apply_link": "https://www.kcl.ac.uk/study/postgraduate-taught/how-to-apply",
+          "programs_link": "https://www.kcl.ac.uk/study/postgraduate-taught",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "English",
+          "ielts_min": 6.5,
+          "fields": [
+            "Medicine",
+            "Law",
+            "Humanities",
+            "Natural Sciences",
+            "Social Sciences"
+          ]
+        },
+        {
+          "name": "University of Manchester",
+          "city": "Manchester",
+          "qs_rank_2025": 34,
+          "apply_link": "https://www.manchester.ac.uk/study/postgraduate/applying/",
+          "programs_link": "https://www.manchester.ac.uk/study/postgraduate/courses/",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "English",
+          "ielts_min": 6.5,
+          "fields": [
+            "All fields"
+          ]
+        },
+        {
+          "name": "London School of Economics (LSE)",
+          "city": "London",
+          "qs_rank_2025": 45,
+          "apply_link": "https://www.lse.ac.uk/study-at-lse/Graduate/applying-to-lse",
+          "programs_link": "https://www.lse.ac.uk/study-at-lse/Graduate/degree-programmes",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "English",
+          "ielts_min": 7.0,
+          "fields": [
+            "Economics",
+            "Finance",
+            "Law",
+            "Political Science",
+            "Social Sciences"
+          ]
+        }
+      ]
+    },
+    {
+      "country": "İsveçrə",
+      "country_en": "Switzerland",
+      "flag": "🇨🇭",
+      "universities": [
+        {
+          "name": "ETH Zurich",
+          "city": "Zurich",
+          "qs_rank_2025": 7,
+          "apply_link": "https://ethz.ch/en/studies/registration-application.html",
+          "programs_link": "https://ethz.ch/en/studies/master/application/master-degree-programmes.html",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "German/English",
+          "ielts_min": 7.0,
+          "fields": [
+            "Engineering",
+            "Computer Science",
+            "Natural Sciences",
+            "Architecture",
+            "Mathematics"
+          ]
+        },
+        {
+          "name": "EPFL (École Polytechnique Fédérale de Lausanne)",
+          "city": "Lausanne",
+          "qs_rank_2025": 36,
+          "apply_link": "https://www.epfl.ch/education/master/admission/",
+          "programs_link": "https://www.epfl.ch/education/master/programs/",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "French/English",
+          "ielts_min": 7.0,
+          "fields": [
+            "Engineering",
+            "Computer Science",
+            "Life Sciences",
+            "Physics",
+            "Architecture"
+          ]
+        },
+        {
+          "name": "University of Zurich",
+          "city": "Zurich",
+          "qs_rank_2025": 83,
+          "apply_link": "https://www.uzh.ch/en/studies/application.html",
+          "programs_link": "https://www.uzh.ch/en/studies/courses.html",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "German/English",
+          "ielts_min": 6.5,
+          "fields": [
+            "Medicine",
+            "Law",
+            "Economics",
+            "Natural Sciences",
+            "Humanities"
+          ]
+        }
+      ]
+    },
+    {
+      "country": "Niderlandiya",
+      "country_en": "Netherlands",
+      "flag": "🇳🇱",
+      "universities": [
+        {
+          "name": "Delft University of Technology (TU Delft)",
+          "city": "Delft",
+          "qs_rank_2025": 47,
+          "apply_link": "https://www.tudelft.nl/en/education/admission-and-application",
+          "programs_link": "https://www.tudelft.nl/en/education/programmes/masters",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "English",
+          "ielts_min": 6.5,
+          "fields": [
+            "Engineering",
+            "Architecture",
+            "Computer Science",
+            "Applied Sciences"
+          ]
+        },
+        {
+          "name": "University of Amsterdam",
+          "city": "Amsterdam",
+          "qs_rank_2025": 53,
+          "apply_link": "https://www.uva.nl/en/education/graduate/admission-and-application",
+          "programs_link": "https://www.uva.nl/en/education/graduate/masters",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "English",
+          "ielts_min": 6.5,
+          "fields": [
+            "Social Sciences",
+            "Economics",
+            "Law",
+            "Natural Sciences",
+            "Humanities"
+          ]
+        },
+        {
+          "name": "Wageningen University & Research",
+          "city": "Wageningen",
+          "qs_rank_2025": 67,
+          "apply_link": "https://www.wur.nl/en/education/master-programmes/applying.htm",
+          "programs_link": "https://www.wur.nl/en/education/master-programmes.htm",
+          "degrees": [
+            "MSc",
+            "PhD"
+          ],
+          "language": "English",
+          "ielts_min": 6.5,
+          "fields": [
+            "Life Sciences",
+            "Environmental Sciences",
+            "Food Sciences",
+            "Biotechnology"
+          ]
+        },
+        {
+          "name": "Eindhoven University of Technology (TU/e)",
+          "city": "Eindhoven",
+          "qs_rank_2025": 124,
+          "apply_link": "https://www.tue.nl/en/education/graduate-school/application-and-admission",
+          "programs_link": "https://www.tue.nl/en/education/graduate-school/masters-programs",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "English",
+          "ielts_min": 6.5,
+          "fields": [
+            "Engineering",
+            "Computer Science",
+            "Industrial Design",
+            "Physics",
+            "Chemistry"
+          ]
+        }
+      ]
+    },
+    {
+      "country": "İsveç",
+      "country_en": "Sweden",
+      "flag": "🇸🇪",
+      "universities": [
+        {
+          "name": "Lund University",
+          "city": "Lund",
+          "qs_rank_2025": 78,
+          "apply_link": "https://www.lunduniversity.lu.se/admissions/apply-lund-university",
+          "programs_link": "https://www.lunduniversity.lu.se/admissions/programmes-courses/masters-programmes",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "English",
+          "ielts_min": 6.5,
+          "fields": [
+            "Engineering",
+            "Medicine",
+            "Social Sciences",
+            "Law",
+            "Humanities"
+          ]
+        },
+        {
+          "name": "Uppsala University",
+          "city": "Uppsala",
+          "qs_rank_2025": 90,
+          "apply_link": "https://www.uu.se/en/admissions/master",
+          "programs_link": "https://www.uu.se/en/admissions/master/selma",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "English",
+          "ielts_min": 6.5,
+          "fields": [
+            "Natural Sciences",
+            "Medicine",
+            "Humanities",
+            "Social Sciences",
+            "Law"
+          ]
+        },
+        {
+          "name": "KTH Royal Institute of Technology",
+          "city": "Stockholm",
+          "qs_rank_2025": 95,
+          "apply_link": "https://www.kth.se/en/studies/master/applying",
+          "programs_link": "https://www.kth.se/en/studies/master",
+          "degrees": [
+            "MSc",
+            "PhD"
+          ],
+          "language": "English",
+          "ielts_min": 6.5,
+          "fields": [
+            "Engineering",
+            "Computer Science",
+            "Architecture",
+            "Natural Sciences",
+            "Mathematics"
+          ]
+        }
+      ]
+    },
+    {
+      "country": "Fransa",
+      "country_en": "France",
+      "flag": "🇫🇷",
+      "universities": [
+        {
+          "name": "PSL Research University Paris",
+          "city": "Paris",
+          "qs_rank_2025": 24,
+          "apply_link": "https://psl.eu/en/education/admissions",
+          "programs_link": "https://psl.eu/en/education/find-your-curriculum",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "French/English",
+          "ielts_min": 6.5,
+          "fields": [
+            "Natural Sciences",
+            "Humanities",
+            "Social Sciences",
+            "Engineering",
+            "Arts"
+          ]
+        },
+        {
+          "name": "Université Paris-Saclay",
+          "city": "Paris",
+          "qs_rank_2025": 15,
+          "apply_link": "https://www.universite-paris-saclay.fr/en/admission",
+          "programs_link": "https://www.universite-paris-saclay.fr/en/education",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "French/English",
+          "ielts_min": 6.5,
+          "fields": [
+            "Engineering",
+            "Natural Sciences",
+            "Mathematics",
+            "Computer Science",
+            "Medicine"
+          ]
+        },
+        {
+          "name": "École Polytechnique",
+          "city": "Paris",
+          "qs_rank_2025": 56,
+          "apply_link": "https://www.polytechnique.edu/en/admissions",
+          "programs_link": "https://www.polytechnique.edu/en/education-programs",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "French/English",
+          "ielts_min": 7.0,
+          "fields": [
+            "Engineering",
+            "Mathematics",
+            "Physics",
+            "Computer Science",
+            "Economics"
+          ]
+        }
+      ]
+    },
+    {
+      "country": "Belçika",
+      "country_en": "Belgium",
+      "flag": "🇧🇪",
+      "universities": [
+        {
+          "name": "KU Leuven",
+          "city": "Leuven",
+          "qs_rank_2025": 73,
+          "apply_link": "https://www.kuleuven.be/english/admissions",
+          "programs_link": "https://www.kuleuven.be/english/education/programmes",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "Dutch/English",
+          "ielts_min": 6.5,
+          "fields": [
+            "Engineering",
+            "Medicine",
+            "Law",
+            "Natural Sciences",
+            "Social Sciences"
+          ]
+        },
+        {
+          "name": "Ghent University",
+          "city": "Ghent",
+          "qs_rank_2025": 150,
+          "apply_link": "https://www.ugent.be/en/education/degree/application",
+          "programs_link": "https://www.ugent.be/en/education/degree/overview",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "Dutch/English",
+          "ielts_min": 6.5,
+          "fields": [
+            "Engineering",
+            "Natural Sciences",
+            "Veterinary",
+            "Medicine",
+            "Arts"
+          ]
+        }
+      ]
+    },
+    {
+      "country": "Avstriya",
+      "country_en": "Austria",
+      "flag": "🇦🇹",
+      "universities": [
+        {
+          "name": "University of Vienna",
+          "city": "Vienna",
+          "qs_rank_2025": 137,
+          "apply_link": "https://www.univie.ac.at/en/studies/applying-and-enrolling/",
+          "programs_link": "https://www.univie.ac.at/en/studies/studying-in-vienna/degree-programmes/",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "German/English",
+          "ielts_min": 6.5,
+          "fields": [
+            "Medicine",
+            "Law",
+            "Humanities",
+            "Natural Sciences",
+            "Social Sciences"
+          ]
+        },
+        {
+          "name": "Vienna University of Technology (TU Wien)",
+          "city": "Vienna",
+          "qs_rank_2025": 152,
+          "apply_link": "https://www.tuwien.at/en/studies/application-and-admission",
+          "programs_link": "https://www.tuwien.at/en/studies/study-programmes",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "German/English",
+          "ielts_min": 6.0,
+          "fields": [
+            "Engineering",
+            "Computer Science",
+            "Architecture",
+            "Mathematics",
+            "Physics"
+          ]
+        }
+      ]
+    },
+    {
+      "country": "İtaliya",
+      "country_en": "Italy",
+      "flag": "🇮🇹",
+      "universities": [
+        {
+          "name": "University of Bologna",
+          "city": "Bologna",
+          "qs_rank_2025": 154,
+          "apply_link": "https://www.unibo.it/en/teaching/enrolment-transfer-and-final-exams/how-to-apply-for-degree-programmes",
+          "programs_link": "https://www.unibo.it/en/teaching/degree-programmes",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "Italian/English",
+          "ielts_min": 6.0,
+          "fields": [
+            "Engineering",
+            "Medicine",
+            "Law",
+            "Humanities",
+            "Natural Sciences"
+          ]
+        },
+        {
+          "name": "Politecnico di Milano",
+          "city": "Milan",
+          "qs_rank_2025": 139,
+          "apply_link": "https://www.polimi.it/en/programmes/applying-to-polimi",
+          "programs_link": "https://www.polimi.it/en/programmes/laurea-magistrale-equivalent-to-master-of-science",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "Italian/English",
+          "ielts_min": 6.5,
+          "fields": [
+            "Engineering",
+            "Architecture",
+            "Design",
+            "Computer Science"
+          ]
+        },
+        {
+          "name": "University of Milan",
+          "city": "Milan",
+          "qs_rank_2025": 225,
+          "apply_link": "https://www.unimi.it/en/education/how-enrol/enrolment-bachelor-degree",
+          "programs_link": "https://www.unimi.it/en/education",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "Italian/English",
+          "ielts_min": 6.0,
+          "fields": [
+            "Medicine",
+            "Law",
+            "Natural Sciences",
+            "Humanities",
+            "Agriculture"
+          ]
+        }
+      ]
+    },
+    {
+      "country": "İspaniya",
+      "country_en": "Spain",
+      "flag": "🇪🇸",
+      "universities": [
+        {
+          "name": "University of Barcelona",
+          "city": "Barcelona",
+          "qs_rank_2025": 154,
+          "apply_link": "https://www.ub.edu/web/ub/en/estudis/oferta-formativa/master-universitari/com-accedir.html",
+          "programs_link": "https://www.ub.edu/web/ub/en/estudis/oferta-formativa/master-universitari/",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "Spanish/English",
+          "ielts_min": 6.0,
+          "fields": [
+            "Natural Sciences",
+            "Medicine",
+            "Humanities",
+            "Social Sciences",
+            "Engineering"
+          ]
+        },
+        {
+          "name": "Universidad Autonoma de Madrid",
+          "city": "Madrid",
+          "qs_rank_2025": 236,
+          "apply_link": "https://www.uam.es/uam/en/estudios/grado/acceso-y-admision",
+          "programs_link": "https://www.uam.es/uam/en/estudios/masteres",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "Spanish/English",
+          "ielts_min": 6.0,
+          "fields": [
+            "Sciences",
+            "Engineering",
+            "Medicine",
+            "Humanities",
+            "Law"
+          ]
+        }
+      ]
+    },
+    {
+      "country": "Polşa",
+      "country_en": "Poland",
+      "flag": "🇵🇱",
+      "universities": [
+        {
+          "name": "University of Warsaw",
+          "city": "Warsaw",
+          "qs_rank_2025": 308,
+          "apply_link": "https://en.uw.edu.pl/admissions/",
+          "programs_link": "https://en.uw.edu.pl/education/",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "Polish/English",
+          "ielts_min": 6.0,
+          "fields": [
+            "Social Sciences",
+            "Humanities",
+            "Natural Sciences",
+            "Law",
+            "Economics"
+          ]
+        },
+        {
+          "name": "AGH University of Science and Technology",
+          "city": "Kraków",
+          "qs_rank_2025": 601,
+          "apply_link": "https://www.agh.edu.pl/en/applicants/",
+          "programs_link": "https://www.agh.edu.pl/en/education/",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "Polish/English",
+          "ielts_min": 5.5,
+          "fields": [
+            "Engineering",
+            "Mining",
+            "Computer Science",
+            "Physics",
+            "Geology"
+          ]
+        },
+        {
+          "name": "Jagiellonian University",
+          "city": "Kraków",
+          "qs_rank_2025": 358,
+          "apply_link": "https://en.uj.edu.pl/en_GB/admissions",
+          "programs_link": "https://en.uj.edu.pl/en_GB/education/programmes",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "Polish/English",
+          "ielts_min": 6.0,
+          "fields": [
+            "Medicine",
+            "Law",
+            "Humanities",
+            "Natural Sciences",
+            "Social Sciences"
+          ]
+        },
+        {
+          "name": "Warsaw University of Technology",
+          "city": "Warsaw",
+          "qs_rank_2025": 451,
+          "apply_link": "https://www.students.pw.edu.pl/How-to-Apply",
+          "programs_link": "https://www.pw.edu.pl/engl/Academics",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "Polish/English",
+          "ielts_min": 5.5,
+          "fields": [
+            "Engineering",
+            "Computer Science",
+            "Architecture",
+            "Mathematics",
+            "Physics"
+          ]
+        }
+      ]
+    },
+    {
+      "country": "Çexiya",
+      "country_en": "Czech Republic",
+      "flag": "🇨🇿",
+      "universities": [
+        {
+          "name": "Charles University",
+          "city": "Prague",
+          "qs_rank_2025": 279,
+          "apply_link": "https://cuni.cz/UKEN-178.html",
+          "programs_link": "https://cuni.cz/UKEN-143.html",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "Czech/English",
+          "ielts_min": 6.0,
+          "fields": [
+            "Medicine",
+            "Law",
+            "Humanities",
+            "Natural Sciences",
+            "Social Sciences"
+          ]
+        },
+        {
+          "name": "Czech Technical University in Prague (CTU)",
+          "city": "Prague",
+          "qs_rank_2025": 501,
+          "apply_link": "https://www.cvut.cz/en/applicants",
+          "programs_link": "https://www.cvut.cz/en/education",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "Czech/English",
+          "ielts_min": 5.5,
+          "fields": [
+            "Engineering",
+            "Computer Science",
+            "Architecture",
+            "Mathematics"
+          ]
+        }
+      ]
+    },
+    {
+      "country": "Macarıstan",
+      "country_en": "Hungary",
+      "flag": "🇭🇺",
+      "universities": [
+        {
+          "name": "Eötvös Loránd University (ELTE)",
+          "city": "Budapest",
+          "qs_rank_2025": 651,
+          "apply_link": "https://www.elte.hu/en/applying",
+          "programs_link": "https://www.elte.hu/en/courses",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "Hungarian/English",
+          "ielts_min": 5.5,
+          "fields": [
+            "Mathematics",
+            "Physics",
+            "Biology",
+            "Humanities",
+            "Law"
+          ]
+        },
+        {
+          "name": "University of Debrecen",
+          "city": "Debrecen",
+          "qs_rank_2025": 751,
+          "apply_link": "https://www.unideb.hu/en/international-applicants",
+          "programs_link": "https://www.unideb.hu/en/programs",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "Hungarian/English",
+          "ielts_min": 5.5,
+          "fields": [
+            "Medicine",
+            "Pharmacy",
+            "Dentistry",
+            "Engineering",
+            "Natural Sciences"
+          ]
+        }
+      ]
+    },
+    {
+      "country": "Danimarka",
+      "country_en": "Denmark",
+      "flag": "🇩🇰",
+      "universities": [
+        {
+          "name": "University of Copenhagen",
+          "city": "Copenhagen",
+          "qs_rank_2025": 97,
+          "apply_link": "https://www.ku.dk/english/apply/",
+          "programs_link": "https://www.ku.dk/english/programmes/",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "Danish/English",
+          "ielts_min": 6.5,
+          "fields": [
+            "Medicine",
+            "Natural Sciences",
+            "Humanities",
+            "Social Sciences",
+            "Law"
+          ]
+        },
+        {
+          "name": "Technical University of Denmark (DTU)",
+          "city": "Copenhagen",
+          "qs_rank_2025": 141,
+          "apply_link": "https://www.dtu.dk/english/education/how-to-apply",
+          "programs_link": "https://www.dtu.dk/english/education/msc",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "English",
+          "ielts_min": 6.5,
+          "fields": [
+            "Engineering",
+            "Computer Science",
+            "Natural Sciences",
+            "Architecture"
+          ]
+        }
+      ]
+    },
+    {
+      "country": "Finlandiya",
+      "country_en": "Finland",
+      "flag": "🇫🇮",
+      "universities": [
+        {
+          "name": "University of Helsinki",
+          "city": "Helsinki",
+          "qs_rank_2025": 107,
+          "apply_link": "https://www.helsinki.fi/en/admissions-and-education/apply-bachelor-and-masters-programmes",
+          "programs_link": "https://www.helsinki.fi/en/admissions-and-education/apply-bachelor-and-masters-programmes/masters-programmes",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "Finnish/English",
+          "ielts_min": 6.5,
+          "fields": [
+            "Medicine",
+            "Natural Sciences",
+            "Humanities",
+            "Social Sciences",
+            "Law"
+          ]
+        },
+        {
+          "name": "Aalto University",
+          "city": "Helsinki",
+          "qs_rank_2025": 115,
+          "apply_link": "https://www.aalto.fi/en/admission-services/applying-to-master-of-science-programmes",
+          "programs_link": "https://www.aalto.fi/en/programmes/masters-programmes",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "English",
+          "ielts_min": 6.5,
+          "fields": [
+            "Engineering",
+            "Business",
+            "Arts & Design",
+            "Computer Science",
+            "Architecture"
+          ]
+        }
+      ]
+    },
+    {
+      "country": "Norveç",
+      "country_en": "Norway",
+      "flag": "🇳🇴",
+      "universities": [
+        {
+          "name": "University of Oslo",
+          "city": "Oslo",
+          "qs_rank_2025": 121,
+          "apply_link": "https://www.uio.no/english/studies/admission/",
+          "programs_link": "https://www.uio.no/english/studies/programmes/",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "Norwegian/English",
+          "ielts_min": 6.0,
+          "fields": [
+            "Natural Sciences",
+            "Medicine",
+            "Humanities",
+            "Social Sciences",
+            "Law"
+          ]
+        },
+        {
+          "name": "Norwegian University of Science and Technology (NTNU)",
+          "city": "Trondheim",
+          "qs_rank_2025": 296,
+          "apply_link": "https://www.ntnu.edu/studies/application",
+          "programs_link": "https://www.ntnu.edu/studies/msintl",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "Norwegian/English",
+          "ielts_min": 6.0,
+          "fields": [
+            "Engineering",
+            "Computer Science",
+            "Natural Sciences",
+            "Medicine"
+          ]
+        }
+      ]
+    },
+    {
+      "country": "Portuqaliya",
+      "country_en": "Portugal",
+      "flag": "🇵🇹",
+      "universities": [
+        {
+          "name": "University of Porto",
+          "city": "Porto",
+          "qs_rank_2025": 330,
+          "apply_link": "https://sigarra.up.pt/up/en/web_base.gera_pagina?p_pagina=1001064",
+          "programs_link": "https://www.up.pt/portal/en/education/masters/",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "Portuguese/English",
+          "ielts_min": 6.0,
+          "fields": [
+            "Engineering",
+            "Medicine",
+            "Natural Sciences",
+            "Humanities",
+            "Architecture"
+          ]
+        },
+        {
+          "name": "University of Lisbon (ULisboa)",
+          "city": "Lisbon",
+          "qs_rank_2025": 345,
+          "apply_link": "https://www.ulisboa.pt/en/info/apply",
+          "programs_link": "https://www.ulisboa.pt/en/curso",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "Portuguese/English",
+          "ielts_min": 6.0,
+          "fields": [
+            "Engineering",
+            "Medicine",
+            "Law",
+            "Social Sciences",
+            "Arts"
+          ]
+        }
+      ]
+    },
+    {
+      "country": "Türkiyə",
+      "country_en": "Turkey",
+      "flag": "🇹🇷",
+      "universities": [
+        {
+          "name": "Middle East Technical University (METU/ODTÜ)",
+          "city": "Ankara",
+          "qs_rank_2025": 399,
+          "apply_link": "https://oidb.metu.edu.tr/en/graduate-application",
+          "programs_link": "https://www.metu.edu.tr/en/academics/graduate-programs",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "English",
+          "ielts_min": 6.0,
+          "fields": [
+            "Engineering",
+            "Natural Sciences",
+            "Architecture",
+            "Education",
+            "Economics"
+          ]
+        },
+        {
+          "name": "Boğaziçi University",
+          "city": "Istanbul",
+          "qs_rank_2025": 467,
+          "apply_link": "https://registration.boun.edu.tr/",
+          "programs_link": "https://www.boun.edu.tr/en_US/Content/Academic/Graduate_Programs",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "English",
+          "ielts_min": 6.0,
+          "fields": [
+            "Engineering",
+            "Computer Science",
+            "Economics",
+            "Social Sciences",
+            "Natural Sciences"
+          ]
+        },
+        {
+          "name": "Istanbul Technical University (İTÜ)",
+          "city": "Istanbul",
+          "qs_rank_2025": 501,
+          "apply_link": "https://www.itu.edu.tr/en/academics/graduate/apply",
+          "programs_link": "https://www.itu.edu.tr/en/academics/graduate",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "Turkish/English",
+          "ielts_min": 5.5,
+          "fields": [
+            "Engineering",
+            "Architecture",
+            "Maritime",
+            "Natural Sciences",
+            "Management"
+          ]
+        }
+      ]
+    },
+    {
+      "country": "Rusiya",
+      "country_en": "Russia",
+      "flag": "🇷🇺",
+      "universities": [
+        {
+          "name": "Lomonosov Moscow State University",
+          "city": "Moscow",
+          "qs_rank_2025": 87,
+          "apply_link": "https://www.msu.ru/en/admission/",
+          "programs_link": "https://www.msu.ru/en/study/",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "Russian/English",
+          "ielts_min": 6.0,
+          "fields": [
+            "Natural Sciences",
+            "Humanities",
+            "Mathematics",
+            "Engineering",
+            "Medicine"
+          ]
+        }
+      ]
+    },
+    {
+      "country": "Estoniya",
+      "country_en": "Estonia",
+      "flag": "🇪🇪",
+      "universities": [
+        {
+          "name": "University of Tartu",
+          "city": "Tartu",
+          "qs_rank_2025": 351,
+          "apply_link": "https://www.ut.ee/en/apply",
+          "programs_link": "https://www.ut.ee/en/studying/programmes",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "Estonian/English",
+          "ielts_min": 6.0,
+          "fields": [
+            "Computer Science",
+            "Medicine",
+            "Natural Sciences",
+            "Social Sciences",
+            "Humanities"
+          ]
+        }
+      ]
+    }
+  ]
+}

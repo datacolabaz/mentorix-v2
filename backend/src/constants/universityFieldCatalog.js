@@ -1,5 +1,11 @@
 /** İxtisas kataloqu — UI, DB filtri və mock fallback üçün vahid mənbə */
 
+const {
+  EUROPE_FIELD_GROUPS,
+  EUROPE_FIELD_MATCH_TERMS,
+  EUROPE_FIELD_RELATED_SLUGS,
+} = require('./europeFieldCatalogAdditions');
+
 const FIELD_GROUPS = [
   {
     id: 'cs',
@@ -53,12 +59,15 @@ const FIELD_GROUPS = [
       { value: 'environmental_science', label: 'Ətraf Mühit Elmləri' },
     ],
   },
+  ...EUROPE_FIELD_GROUPS,
 ];
 
 const FIELD_BY_VALUE = new Map();
 for (const group of FIELD_GROUPS) {
   for (const opt of group.options) {
-    FIELD_BY_VALUE.set(opt.value, { ...opt, category: group.id });
+    if (!FIELD_BY_VALUE.has(opt.value)) {
+      FIELD_BY_VALUE.set(opt.value, { ...opt, category: group.id });
+    }
   }
 }
 
@@ -92,15 +101,17 @@ const FIELD_MATCH_TERMS = {
   pharmacy: ['Pharmacy', 'Pharmaceutical', 'Life Sciences'],
   medicine: ['Medicine', 'Medical', 'MBBS', 'Life Sciences'],
   environmental_science: ['Environment', 'Environmental', 'Ecology', 'Life Sciences'],
+  ...EUROPE_FIELD_MATCH_TERMS,
 };
 
 /** Eyni sahə üzrə yaxın ixtisaslar (məs: Kimya ↔ Kimya mühəndisliyi) */
 const FIELD_RELATED_SLUGS = {
-  chemistry: ['chemistry', 'chemical_engineering', 'biochemistry', 'pharmacy'],
+  chemistry: ['chemistry', 'chemical_engineering', 'biochemistry', 'pharmacy', 'natural_sciences', 'life_sciences', 'physics', 'sciences'],
   chemical_engineering: ['chemical_engineering', 'chemistry', 'biochemistry'],
   biochemistry: ['biochemistry', 'chemistry', 'biology', 'biotechnology'],
-  biology: ['biology', 'biochemistry', 'biotechnology', 'medicine'],
+  biology: ['biology', 'biochemistry', 'biotechnology', 'medicine', 'life_sciences'],
   pharmacy: ['pharmacy', 'chemistry', 'biochemistry'],
+  ...EUROPE_FIELD_RELATED_SLUGS,
 };
 
 function relatedFieldSlugs(slug) {

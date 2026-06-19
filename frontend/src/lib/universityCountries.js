@@ -2,6 +2,9 @@
 
 export const UNIVERSITY_COUNTRIES = [
   'Almaniya',
+  'Böyük Britaniya',
+  'İsveçrə',
+  'Niderlandiya',
   'Polşa',
   'İtaliya',
   'Macarıstan',
@@ -13,7 +16,6 @@ export const UNIVERSITY_COUNTRIES = [
   'Slovakiya',
   'Rumıniya',
   'Bolqarıstan',
-  'Hollandiya',
   'Belçika',
   'Avstriya',
   'Fransa',
@@ -23,6 +25,7 @@ export const UNIVERSITY_COUNTRIES = [
   'Finlandiya',
   'Norveç',
   'Danimarka',
+  'Rusiya',
   'İrlandiya',
 ]
 
@@ -30,6 +33,9 @@ export const MVP_COUNTRIES = UNIVERSITY_COUNTRIES
 
 export const COUNTRY_FLAGS = {
   Almaniya: '🇩🇪',
+  'Böyük Britaniya': '🇬🇧',
+  İsveçrə: '🇨🇭',
+  Niderlandiya: '🇳🇱',
   Polşa: '🇵🇱',
   İtaliya: '🇮🇹',
   Macarıstan: '🇭🇺',
@@ -51,11 +57,15 @@ export const COUNTRY_FLAGS = {
   Finlandiya: '🇫🇮',
   Norveç: '🇳🇴',
   Danimarka: '🇩🇰',
+  Rusiya: '🇷🇺',
   İrlandiya: '🇮🇪',
 }
 
 const COUNTRY_SEARCH_ALIASES = {
   Almaniya: ['germany', 'deutschland', 'almanya'],
+  'Böyük Britaniya': ['uk', 'united kingdom', 'england', 'britain', 'great britain', 'boyuk britaniya'],
+  İsveçrə: ['switzerland', 'swiss', 'isvecra'],
+  Niderlandiya: ['netherlands', 'holland', 'nederland', 'hollandiya'],
   Polşa: ['poland', 'polska', 'polsa'],
   İtaliya: ['italy', 'italiya'],
   Macarıstan: ['hungary', 'magyar', 'macaristan'],
@@ -67,7 +77,7 @@ const COUNTRY_SEARCH_ALIASES = {
   Slovakiya: ['slovakia', 'slovensko'],
   Rumıniya: ['romania', 'românia'],
   Bolqarıstan: ['bulgaria', 'bolqaristan'],
-  Hollandiya: ['netherlands', 'holland', 'nederland'],
+  Hollandiya: ['netherlands', 'holland', 'nederland', 'niderlandiya'],
   Belçika: ['belgium', 'belgie', 'belçika'],
   Avstriya: ['austria', 'österreich', 'osterreich'],
   Fransa: ['france', 'fransa'],
@@ -77,6 +87,7 @@ const COUNTRY_SEARCH_ALIASES = {
   Finlandiya: ['finland', 'suomi'],
   Norveç: ['norway', 'norge', 'norvec'],
   Danimarka: ['denmark', 'danmark'],
+  Rusiya: ['russia', 'russian federation', 'moscow'],
   İrlandiya: ['ireland', 'eire', 'irlandiya'],
 }
 
