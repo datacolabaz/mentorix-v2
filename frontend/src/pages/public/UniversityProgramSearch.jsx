@@ -13,6 +13,7 @@ import ProgramCard from '../../components/university/ProgramCard'
 import ProgramDetailModal from '../../components/university/ProgramDetailModal'
 import ProgramResultsSummary from '../../components/university/ProgramResultsSummary'
 import ProgramResultsByCountry from '../../components/university/ProgramResultsByCountry'
+import UniversityAiSearch from '../../components/university/UniversityAiSearch'
 import {
   emptyWizardState,
   filtersToSearchParams,
@@ -27,6 +28,11 @@ function defaultFilters(searchParams) {
     q: searchParams.get('q') || '',
     countries: countries ? countries.split(',').filter(Boolean) : [],
     scholarship: searchParams.get('scholarship') === 'true',
+    english_only: searchParams.get('language') === 'English',
+    language: searchParams.get('language') || '',
+    no_ielts: searchParams.get('no_ielts') === 'true',
+    no_motivation: searchParams.get('no_motivation') === 'true',
+    max_ranking: searchParams.get('max_ranking') || '',
     deadline_before: searchParams.get('deadline_before') || '',
     sort: searchParams.get('sort') || 'ranking',
     degree_level: searchParams.get('degree_level') || '',
@@ -34,6 +40,25 @@ function defaultFilters(searchParams) {
     max_tuition: searchParams.get('max_tuition') || '',
     min_gpa: searchParams.get('min_gpa') || '',
     page: Number(searchParams.get('page') || 1) || 1,
+  }
+}
+
+function aiFiltersToUi(base, ai = {}) {
+  return {
+    ...base,
+    degree_level: ai.degreeLevel || '',
+    field: ai.field || '',
+    countries: ai.countries?.length ? ai.countries : base.countries,
+    scholarship: Boolean(ai.scholarship),
+    max_tuition: ai.maxTuition != null ? String(ai.maxTuition) : '',
+    min_gpa: ai.minGpa != null ? String(ai.minGpa) : '',
+    language: ai.language || '',
+    english_only: ai.language === 'English',
+    max_ranking: ai.maxRanking != null ? String(ai.maxRanking) : '',
+    no_ielts: Boolean(ai.noIelts),
+    no_motivation: Boolean(ai.noMotivation),
+    q: ai.q || '',
+    page: 1,
   }
 }
 
@@ -46,6 +71,7 @@ export default function UniversityProgramSearch() {
   const view = searchParams.get('view') || 'wizard'
   const [wizardState, setWizardState] = useState(() => parseWizardFromSearchParams(searchParams))
   const [filters, setFilters] = useState(() => defaultFilters(searchParams))
+  const [qDraft, setQDraft] = useState(() => searchParams.get('q') || '')
   const [programs, setPrograms] = useState([])
   const [pagination, setPagination] = useState({ page: 1, total: 0, total_pages: 1 })
   const [loading, setLoading] = useState(false)
@@ -80,11 +106,6 @@ export default function UniversityProgramSearch() {
     }
   }, [toast])
 
-  useEffect(() => {
-    if (view !== 'results') return
-    void fetchPrograms(filters)
-  }, [view, filters, fetchPrograms])
-
   const syncUrl = useCallback(
     (nextView, nextFilters) => {
       const params = new URLSearchParams()
@@ -99,6 +120,24 @@ export default function UniversityProgramSearch() {
     },
     [setSearchParams],
   )
+
+  useEffect(() => {
+    if (view !== 'results') return
+    void fetchPrograms(filters)
+  }, [view, filters, fetchPrograms])
+
+  useEffect(() => {
+    if (view !== 'results') return undefined
+    const timer = setTimeout(() => {
+      setFilters((prev) => {
+        if (prev.q === qDraft) return prev
+        const next = { ...prev, q: qDraft, page: 1 }
+        syncUrl('results', next)
+        return next
+      })
+    }, 400)
+    return () => clearTimeout(timer)
+  }, [qDraft, view, syncUrl])
 
   const handleWizardSubmit = async ({ state, params }) => {
     setWizardState(state)
@@ -159,6 +198,11 @@ export default function UniversityProgramSearch() {
       q: '',
       countries: [],
       scholarship: false,
+      english_only: false,
+      language: '',
+      no_ielts: false,
+      no_motivation: false,
+      max_ranking: '',
       deadline_before: '',
       sort: 'ranking',
       degree_level: '',
@@ -167,8 +211,16 @@ export default function UniversityProgramSearch() {
       min_gpa: '',
       page: 1,
     }
+    setQDraft('')
     setFilters(next)
     syncUrl('results', next)
+  }
+
+  const handleAiResults = (result) => {
+    const nextFilters = aiFiltersToUi(filters, result.filters || {})
+    setQDraft(nextFilters.q)
+    setFilters(nextFilters)
+    syncUrl('results', nextFilters)
   }
 
   const resultLabel = useMemo(() => {
@@ -182,6 +234,7 @@ export default function UniversityProgramSearch() {
   )
 
   const showCountryBreakdown = filters.countries.length > 0 && !loading
+  const useGroupedResults = countryResultsMeta.groups.length > 1
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white">
@@ -223,8 +276,11 @@ export default function UniversityProgramSearch() {
           <div className="grid lg:grid-cols-[280px_1fr] gap-6 items-start">
             <ProgramFiltersSidebar
               filters={filters}
+              qDraft={qDraft}
+              onQDraftChange={setQDraft}
               countryCounts={showCountryBreakdown ? countryResultsMeta.countryCounts : null}
               onChange={(next) => {
+                setQDraft(next.q || '')
                 setFilters(next)
                 syncUrl('results', next)
               }}
@@ -232,6 +288,10 @@ export default function UniversityProgramSearch() {
             />
 
             <section className="space-y-4 min-w-0">
+              <UniversityAiSearch
+                onResults={handleAiResults}
+                onError={(msg) => toast(msg, 'error')}
+              />
               {usedFallback ? (
                 <p className="text-xs text-amber-300/90 rounded-xl border border-amber-500/25 bg-amber-500/10 px-3 py-2">
                   Canlı kataloq hazırda əlçatan deyil — nümunə (demo) proqramlar göstərilir. Müraciət linkləri realdır.
@@ -288,7 +348,7 @@ export default function UniversityProgramSearch() {
                   ))}
                 </div>
               ) : programs.length ? (
-                filters.countries.length > 1 ? (
+                useGroupedResults ? (
                   <ProgramResultsByCountry
                     groups={countryResultsMeta.groups}
                     onDetails={setSelectedProgram}

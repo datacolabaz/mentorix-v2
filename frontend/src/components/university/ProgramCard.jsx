@@ -1,8 +1,20 @@
 import Button from '../common/Button'
-import { countryFlag, formatDeadline, formatTuition, universityInitials } from '../../lib/universitySearch'
+import { countryFlag, extractProgramIelts, formatDeadline, formatTuition, universityInitials } from '../../lib/universitySearch'
+
+function InfoRow({ label, value, highlight = false }) {
+  if (value == null || value === '' || value === '—') return null
+  return (
+    <div className="rounded-xl bg-black/20 px-3 py-2">
+      <p className="text-gray-500">{label}</p>
+      <p className={highlight ? 'text-primary font-medium' : 'text-white font-medium'}>{value}</p>
+    </div>
+  )
+}
 
 export default function ProgramCard({ program, onDetails, onApply, showCountryBadge = false }) {
   const uni = program.university || {}
+  const ielts = extractProgramIelts(program.requirements)
+  const appFee = program.requirements?.application_fee
 
   return (
     <article className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:p-5 flex flex-col gap-4 hover:border-white/20 transition-colors">
@@ -40,24 +52,21 @@ export default function ProgramCard({ program, onDetails, onApply, showCountryBa
       </div>
 
       <div className="grid grid-cols-2 gap-2 text-xs">
-        <div className="rounded-xl bg-black/20 px-3 py-2">
-          <p className="text-gray-500">Dərəcə</p>
-          <p className="text-white font-medium">{program.degree_level}</p>
-        </div>
-        <div className="rounded-xl bg-black/20 px-3 py-2">
-          <p className="text-gray-500">Ödəniş</p>
-          <p className="text-white font-medium">{formatTuition(program.tuition_fee)}</p>
-        </div>
-        <div className="rounded-xl bg-black/20 px-3 py-2">
-          <p className="text-gray-500">Son tarix</p>
-          <p className="text-white font-medium">{formatDeadline(program.next_deadline)}</p>
-        </div>
-        <div className="rounded-xl bg-black/20 px-3 py-2">
-          <p className="text-gray-500">Təqaüd</p>
-          <p className={program.scholarship_available ? 'text-primary font-medium' : 'text-gray-400'}>
-            {program.scholarship_available ? 'Var' : 'Yox'}
-          </p>
-        </div>
+        <InfoRow label="Dərəcə" value={program.degree_level} />
+        <InfoRow label="QS reytinqi" value={uni.world_ranking ? `#${uni.world_ranking}` : null} />
+        <InfoRow label="İllik haqq" value={formatTuition(program.tuition_fee)} />
+        <InfoRow
+          label="Müraciət haqqı"
+          value={appFee != null ? `€${Number(appFee).toLocaleString('en-US')}` : null}
+        />
+        <InfoRow label="Dil" value={program.language || '—'} />
+        <InfoRow label="IELTS" value={ielts != null ? String(ielts) : 'Tələb yoxdur'} />
+        <InfoRow label="Son tarix" value={formatDeadline(program.next_deadline)} />
+        <InfoRow
+          label="Təqaüd"
+          value={program.scholarship_available ? 'Mövcuddur' : 'Yoxdur'}
+          highlight={program.scholarship_available}
+        />
       </div>
 
       {program.mentor?.display_name ? (

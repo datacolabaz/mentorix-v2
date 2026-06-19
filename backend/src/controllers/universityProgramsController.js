@@ -6,7 +6,9 @@ const {
   MVP_COUNTRIES,
   FIELD_GROUPS,
   flatFieldOptions,
+  normalizeFilters,
 } = require('../services/universityProgramService');
+const { UNIVERSITY_COUNTRIES } = require('../constants/universityCountries');
 const { buildMockSearchResponse } = require('../constants/universityMockPrograms');
 
 const getPrograms = async (req, res) => {
@@ -35,7 +37,8 @@ const getProgram = async (req, res, next) => {
 const getProgramMeta = async (_req, res) => {
   res.json({
     success: true,
-    countries: MVP_COUNTRIES,
+    countries: UNIVERSITY_COUNTRIES,
+    mvp_countries: MVP_COUNTRIES,
     degree_levels: ['BSc', 'MSc', 'PhD'],
     field_groups: FIELD_GROUPS,
     fields: flatFieldOptions(),

@@ -155,7 +155,7 @@ const MOCK_PROGRAMS = [
     intake_months: ['September'],
     deadline_dates: [futureDeadline(2)],
     next_deadline: futureDeadline(2),
-    requirements: { min_gpa: 3.1, min_language: { ielts: 6.5 }, documents: ['Motivation letter'] },
+    requirements: { min_gpa: 3.1, min_language: { ielts: 6.5 }, documents: ['Motivation letter'], application_fee: 75 },
     apply_link: 'https://www.polimi.it/en',
     portal_source: 'mock',
     university: {
@@ -236,7 +236,7 @@ const MOCK_PROGRAMS = [
     intake_months: ['September'],
     deadline_dates: [futureDeadline(3)],
     next_deadline: futureDeadline(3),
-    requirements: { min_gpa: 2.8, min_language: { toefl: 75 }, documents: ['Transcript'] },
+    requirements: { min_gpa: 2.8, min_language: { toefl: 75 }, documents: ['Transcript'], application_fee: 50 },
     apply_link: 'https://www.metu.edu.tr',
     portal_source: 'mock',
     university: {
@@ -545,12 +545,42 @@ function filterMockPrograms(filters = {}) {
       return !Number.isFinite(min) || min <= filters.minGpa;
     });
   }
+  if (filters.language) {
+    const lang = String(filters.language).toLowerCase();
+    rows = rows.filter((p) => String(p.language || '').toLowerCase().includes(lang));
+  }
+  if (filters.noIelts === true) {
+    rows = rows.filter((p) => {
+      const req = Number(p.requirements?.min_language?.ielts);
+      return !Number.isFinite(req) || req <= 0;
+    });
+  }
+  if (filters.userIelts != null) {
+    rows = rows.filter((p) => {
+      const req = Number(p.requirements?.min_language?.ielts);
+      return !Number.isFinite(req) || req <= filters.userIelts;
+    });
+  }
+  if (filters.noMotivation === true) {
+    rows = rows.filter((p) => {
+      const docs = Array.isArray(p.requirements?.documents) ? p.requirements.documents : [];
+      return !docs.some((d) => String(d).toLowerCase().includes('motivation'));
+    });
+  }
+  if (filters.maxRanking != null) {
+    rows = rows.filter((p) => {
+      const rank = Number(p.university?.world_ranking);
+      return Number.isFinite(rank) && rank <= filters.maxRanking;
+    });
+  }
   if (filters.q) {
     const q = filters.q.toLowerCase();
     rows = rows.filter(
       (p) =>
         textIncludes(p.name, q) ||
         textIncludes(p.university?.name, q) ||
+        textIncludes(p.university?.city, q) ||
+        textIncludes(p.university?.country, q) ||
         textIncludes(p.field, q),
     );
   }

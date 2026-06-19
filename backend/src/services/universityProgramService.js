@@ -12,8 +12,9 @@ const {
   flatFieldOptions,
 } = require('../constants/universityFieldCatalog');
 const { buildMockSearchResponse } = require('../constants/universityMockPrograms');
+const { UNIVERSITY_COUNTRIES } = require('../constants/universityCountries');
 
-const MVP_COUNTRIES = ['Almaniya', 'Polşa', 'Türkiyə', 'Macarıstan', 'İtaliya'];
+const MVP_COUNTRIES = UNIVERSITY_COUNTRIES;
 const DEFAULT_LIMIT = 24;
 const MAX_LIMIT = 100;
 
@@ -53,6 +54,10 @@ function normalizeFilters(query = {}) {
     ? query.sort
     : 'ranking';
   const q = query.q ? String(query.q).trim().slice(0, 120) : null;
+  const noIelts = parseBool(query.no_ielts);
+  const noMotivation = parseBool(query.no_motivation);
+  const maxRanking = parseNumber(query.max_ranking);
+  const userIelts = parseNumber(query.user_ielts);
 
   return {
     page,
@@ -68,6 +73,10 @@ function normalizeFilters(query = {}) {
     deadlineBefore,
     sort,
     q,
+    noIelts,
+    noMotivation,
+    maxRanking,
+    userIelts,
   };
 }
 
@@ -202,8 +211,33 @@ async function queryProgramsFromDatabase(filters) {
     where.push(`COALESCE((p.requirements->>'min_gpa')::numeric, 0) <= $${params.length}`);
   }
   if (filters.language) {
-    params.push(filters.language);
+    params.push(`%${filters.language}%`);
     where.push(`p.language ILIKE $${params.length}`);
+  }
+  if (filters.noIelts === true) {
+    where.push(`(
+      p.requirements->'min_language'->>'ielts' IS NULL
+      OR TRIM(p.requirements->'min_language'->>'ielts') = ''
+      OR (p.requirements->'min_language'->>'ielts')::numeric <= 0
+    )`);
+  }
+  if (filters.userIelts != null) {
+    params.push(filters.userIelts);
+    where.push(`(
+      p.requirements->'min_language'->>'ielts' IS NULL
+      OR TRIM(p.requirements->'min_language'->>'ielts') = ''
+      OR (p.requirements->'min_language'->>'ielts')::numeric <= $${params.length}
+    )`);
+  }
+  if (filters.noMotivation === true) {
+    where.push(`NOT EXISTS (
+      SELECT 1 FROM jsonb_array_elements_text(COALESCE(p.requirements->'documents', '[]'::jsonb)) doc
+      WHERE doc ILIKE '%motivation%'
+    )`);
+  }
+  if (filters.maxRanking != null) {
+    params.push(filters.maxRanking);
+    where.push(`u.world_ranking IS NOT NULL AND u.world_ranking <= $${params.length}`);
   }
   if (filters.deadlineBefore) {
     params.push(filters.deadlineBefore);
@@ -214,7 +248,7 @@ async function queryProgramsFromDatabase(filters) {
   if (filters.q) {
     params.push(`%${filters.q}%`);
     const idx = params.length;
-    where.push(`(p.name ILIKE $${idx} OR u.name ILIKE $${idx} OR p.field ILIKE $${idx})`);
+    where.push(`(p.name ILIKE $${idx} OR u.name ILIKE $${idx} OR u.city ILIKE $${idx} OR p.field ILIKE $${idx})`);
   }
 
   const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';

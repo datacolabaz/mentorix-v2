@@ -13,19 +13,72 @@
  */
 
 export { FIELD_GROUPS, fieldLabel, fieldSearchTerms } from './universityFieldCatalog'
+export {
+  UNIVERSITY_COUNTRIES,
+  MVP_COUNTRIES,
+  COUNTRY_FLAGS,
+  countryFlag,
+  filterCountriesByQuery,
+} from './universityCountries'
 
-export const MVP_COUNTRIES = ['Almaniya', 'Polşa', 'Türkiyə', 'Macarıstan', 'İtaliya'];
+import { FIELD_GROUPS, fieldSearchTerms } from './universityFieldCatalog'
 
-export const COUNTRY_FLAGS = {
-  Almaniya: '🇩🇪',
-  Polşa: '🇵🇱',
-  Türkiyə: '🇹🇷',
-  Macarıstan: '🇭🇺',
-  İtaliya: '🇮🇹',
-};
+function foldAz(s) {
+  return String(s || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/ə/g, 'e')
+    .replace(/ı/g, 'i')
+    .replace(/ö/g, 'o')
+    .replace(/ü/g, 'u')
+    .replace(/ş/g, 's')
+    .replace(/ç/g, 'c')
+    .replace(/ğ/g, 'g')
+}
 
-export function countryFlag(country) {
-  return COUNTRY_FLAGS[country] || '🌍';
+const FIELD_QUERY_ALIASES = [
+  { keys: ['computer science', 'kompüter elmləri', 'informatika', 'cs'], value: 'computer_science' },
+  { keys: ['data science', 'data'], value: 'data_science' },
+  { keys: ['artificial intelligence', 'suni intellekt', ' ai ', 'machine learning'], value: 'artificial_intelligence' },
+  { keys: ['software engineering', 'proqram mühəndisliyi'], value: 'software_engineering' },
+  { keys: ['business', 'biznes', 'mba'], value: 'business_administration' },
+  { keys: ['finance', 'maliyyə'], value: 'finance' },
+  { keys: ['chemistry', 'kimya'], value: 'chemistry' },
+  { keys: ['medicine', 'tibb'], value: 'medicine' },
+  { keys: ['cybersecurity', 'kibertəhlükəsizlik'], value: 'cybersecurity' },
+]
+
+export function resolveFieldFromQuery(query) {
+  const folded = foldAz(query).trim()
+  if (!folded || folded.length < 2) return null
+
+  for (const alias of FIELD_QUERY_ALIASES) {
+    if (alias.keys.some((k) => folded.includes(foldAz(k)))) return alias.value
+  }
+
+  for (const group of FIELD_GROUPS) {
+    for (const opt of group.options) {
+      const labelFolded = foldAz(opt.label)
+      const valueFolded = foldAz(opt.value.replace(/_/g, ' '))
+      if (labelFolded.includes(folded) || folded.includes(labelFolded) || valueFolded.includes(folded)) {
+        return opt.value
+      }
+      const terms = fieldSearchTerms(opt.value)
+      if (terms.some((t) => {
+        const tf = foldAz(t)
+        return tf.length >= 3 && (folded.includes(tf) || tf.includes(folded))
+      })) {
+        return opt.value
+      }
+    }
+  }
+  return null
+}
+
+export function extractProgramIelts(requirements) {
+  const score = requirements?.min_language?.ielts
+  return score != null && score !== '' ? Number(score) : null
 }
 
 export function countProgramsByCountry(programs = []) {
@@ -131,7 +184,13 @@ export function filtersToSearchParams(filters) {
   if (filters.field) params.field = filters.field;
   if (filters.countries?.length) params.countries = filters.countries.join(',');
   if (filters.scholarship) params.scholarship = 'true';
-  if (filters.max_tuition != null) params.max_tuition = filters.max_tuition;
+  if (filters.max_tuition != null && filters.max_tuition !== '') params.max_tuition = filters.max_tuition;
+  if (filters.min_gpa != null && filters.min_gpa !== '') params.min_gpa = filters.min_gpa;
+  if (filters.language) params.language = filters.language;
+  if (filters.max_ranking) params.max_ranking = filters.max_ranking;
+  if (filters.no_ielts) params.no_ielts = 'true';
+  if (filters.no_motivation) params.no_motivation = 'true';
+  if (filters.user_ielts != null && filters.user_ielts !== '') params.user_ielts = filters.user_ielts;
   if (filters.sort) params.sort = filters.sort;
   if (filters.q) params.q = filters.q;
   if (filters.page) params.page = filters.page;

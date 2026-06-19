@@ -3,10 +3,10 @@ import Button from '../common/Button'
 import {
   BUDGET_OPTIONS,
   DURATION_OPTIONS,
-  MVP_COUNTRIES,
   wizardToSearchParams,
 } from '../../lib/universitySearch'
 import { FIELD_GROUPS, fieldLabel } from '../../lib/universityFieldCatalog'
+import CountrySearchPicker from './CountrySearchPicker'
 
 const STEPS = [
   { id: 1, title: 'Dərəcə' },
@@ -77,15 +77,6 @@ export default function UniversitySearchWizard({ initialState, onSubmit, onCance
 
   const next = () => setStep((s) => Math.min(5, s + 1))
   const back = () => setStep((s) => Math.max(1, s - 1))
-
-  const toggleCountry = (country) => {
-    setState((prev) => ({
-      ...prev,
-      countries: prev.countries.includes(country)
-        ? prev.countries.filter((c) => c !== country)
-        : [...prev.countries, country],
-    }))
-  }
 
   return (
     <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 sm:p-8 space-y-6">
@@ -204,26 +195,11 @@ export default function UniversitySearchWizard({ initialState, onSubmit, onCance
 
       {step === 4 ? (
         <div className="max-w-2xl mx-auto space-y-5">
-          <div className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">Ölkə seçimi (MVP)</p>
-            <div className="flex flex-wrap gap-2">
-              {MVP_COUNTRIES.map((country) => (
-                <button
-                  key={country}
-                  type="button"
-                  onClick={() => toggleCountry(country)}
-                  className={[
-                    'rounded-full px-4 py-2 text-sm border transition-colors',
-                    state.countries.includes(country)
-                      ? 'border-primary bg-primary/15 text-white'
-                      : 'border-white/10 text-gray-300 hover:border-white/25',
-                  ].join(' ')}
-                >
-                  {country}
-                </button>
-              ))}
-            </div>
-          </div>
+          <CountrySearchPicker
+            selected={state.countries}
+            onChange={(countries) => setState((p) => ({ ...p, countries }))}
+            label="Ölkə seçimi"
+          />
 
           <div className="grid sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
