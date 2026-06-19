@@ -1,49 +1,96 @@
 import Modal from '../common/Modal'
 import Button from '../common/Button'
-import { formatDeadline, formatTuition } from '../../lib/universitySearch'
+import { formatDeadline, formatTuition, fieldLabel } from '../../lib/universitySearch'
+
+const LANGUAGE_EXAM_LABELS = {
+  ielts: 'IELTS',
+  toefl: 'TOEFL',
+  duolingo: 'Duolingo',
+  telc: 'TELC',
+  goethe: 'Goethe',
+}
+
+const REQUIREMENT_LABELS = {
+  min_gpa: 'Minimum GPA',
+  min_language: 'Dil imtahanı',
+  documents: 'Sənədlər',
+  work_experience_years: 'İş təcrübəsi',
+  portfolio_required: 'Portfolio',
+  entrance_exam: 'Qəbul imtahanı',
+  interview: 'Müsahibə',
+  notes: 'Qeyd',
+}
+
+const DOCUMENT_LABELS = {
+  CV: 'CV (resümə)',
+  Transcript: 'Transkript',
+  'Motivation letter': 'Motivasiya məktubu',
+  'Research proposal': 'Tədqiqat planı',
+  Passport: 'Pasport',
+  Diploma: 'Diplom',
+}
+
+function formatRequirementValue(key, value) {
+  if (value == null || value === '') return null
+  if (key === 'min_language' && typeof value === 'object') {
+    const parts = Object.entries(value)
+      .filter(([, score]) => score != null && score !== '')
+      .map(([exam, score]) => `${LANGUAGE_EXAM_LABELS[exam] || exam.toUpperCase()} ${score}`)
+    return parts.length ? parts.join(', ') : null
+  }
+  if (key === 'documents' && Array.isArray(value)) {
+    return value.map((doc) => DOCUMENT_LABELS[doc] || doc)
+  }
+  if (typeof value === 'boolean') return value ? 'Bəli' : 'Xeyr'
+  if (Array.isArray(value)) return value.map((item) => String(item))
+  if (typeof value === 'object') {
+    return Object.entries(value)
+      .map(([k, v]) => `${REQUIREMENT_LABELS[k] || k}: ${v}`)
+      .join(', ')
+  }
+  return String(value)
+}
 
 function RequirementsBlock({ requirements }) {
   if (!requirements || typeof requirements !== 'object') {
     return <p className="text-sm text-gray-400">Tələblər göstərilməyib.</p>
   }
 
-  const docs = Array.isArray(requirements.documents) ? requirements.documents : []
-  const lang = requirements.min_language || {}
+  const entries = Object.entries(requirements)
+    .map(([key, value]) => {
+      const formatted = formatRequirementValue(key, value)
+      if (formatted == null) return null
+      return { key, label: REQUIREMENT_LABELS[key] || key.replace(/_/g, ' '), formatted }
+    })
+    .filter(Boolean)
+
+  if (!entries.length) {
+    return <p className="text-sm text-gray-400">Tələblər göstərilməyib.</p>
+  }
 
   return (
     <div className="space-y-3 text-sm">
-      {requirements.min_gpa != null ? (
-        <p>
-          <span className="text-gray-500">Min GPA:</span>{' '}
-          <span className="text-white">{requirements.min_gpa}</span>
-        </p>
-      ) : null}
-      {Object.keys(lang).length ? (
-        <p>
-          <span className="text-gray-500">Dil:</span>{' '}
-          <span className="text-white">
-            {Object.entries(lang)
-              .map(([k, v]) => `${k.toUpperCase()} ${v}`)
-              .join(', ')}
-          </span>
-        </p>
-      ) : null}
-      {docs.length ? (
-        <div>
-          <p className="text-gray-500 mb-1">Sənədlər</p>
-          <ul className="list-disc list-inside text-gray-200 space-y-0.5">
-            {docs.map((d) => (
-              <li key={d}>{d}</li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
-      <details className="rounded-xl border border-white/10 bg-black/20 p-3">
-        <summary className="cursor-pointer text-xs text-gray-400">JSON (tam tələblər)</summary>
-        <pre className="mt-2 text-[11px] text-gray-300 overflow-x-auto whitespace-pre-wrap">
-          {JSON.stringify(requirements, null, 2)}
-        </pre>
-      </details>
+      {entries.map(({ key, label, formatted }) => {
+        if (key === 'documents' && Array.isArray(formatted)) {
+          return (
+            <div key={key}>
+              <p className="text-gray-500 mb-1">{label}</p>
+              <ul className="list-disc list-inside text-gray-200 space-y-0.5">
+                {formatted.map((doc) => (
+                  <li key={doc}>{doc}</li>
+                ))}
+              </ul>
+            </div>
+          )
+        }
+
+        return (
+          <p key={key}>
+            <span className="text-gray-500">{label}:</span>{' '}
+            <span className="text-white">{formatted}</span>
+          </p>
+        )
+      })}
     </div>
   )
 }
@@ -71,7 +118,7 @@ export default function ProgramDetailModal({ program, open, onClose, onApply }) 
           </div>
           <div>
             <p className="text-gray-500">Sahə</p>
-            <p className="text-white">{program.field}</p>
+            <p className="text-white">{fieldLabel(program.field)}</p>
           </div>
           <div>
             <p className="text-gray-500">Ödəniş</p>
