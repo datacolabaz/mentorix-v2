@@ -20,6 +20,8 @@ const {
   appendDegreeFilter,
   appendUserIeltsFilter,
   appendTextSearchFilter,
+  normalizeFieldList,
+  buildEmptyResultsMessage,
   resolveFieldFromText,
 } = require('../utils/universityProgramFilters');
 
@@ -52,10 +54,10 @@ function normalizeFilters(query = {}) {
   const offset = (page - 1) * limit;
 
   const countries = parseArray(query.countries || query.country);
-  const fields = [...new Set([
+  const fields = normalizeFieldList([
     ...parseFilterArray(query.fields),
     ...parseFilterArray(query.field),
-  ])];
+  ]);
   const field = fields[0] || null;
   const degreeLevel = query.degree_level ? String(query.degree_level).trim() : null;
   const scholarship = parseBool(query.scholarship);
@@ -329,10 +331,136 @@ async function searchPrograms(rawQuery = {}) {
   }
 
   const mockResult = buildMockSearchResponse(filters);
+  if (!mockResult.count) {
+    mockResult.meta = {
+      ...(mockResult.meta || {}),
+      empty: true,
+      empty_message: buildEmptyResultsMessage(filters),
+      suggest_degree_level: filters.degreeLevel === 'PhD' ? 'MSc' : null,
+    };
+  }
   await cacheSet(cacheKey, mockResult);
   return mockResult;
 }
 
 async function getProgramById(programId) {
   try {
- 
+    const { rows } = await db.query(
+    `
+    SELECT
+      p.id,
+      p.uni_id,
+      p.degree_level,
+      p.name,
+      p.field,
+      p.duration_years,
+      p.tuition_fee,
+      p.scholarship_available,
+      p.language,
+      p.intake_months,
+      p.deadline_dates,
+      p.requirements,
+      p.apply_link,
+      p.portal_source,
+      p.source_type,
+      p.contributor_user_id,
+      p.mentor_display_name,
+      u.name AS uni_name,
+      u.country AS uni_country,
+      u.city AS uni_city,
+      u.world_ranking,
+      u.logo_url,
+      u.housing_info,
+      u.funding_info,
+      (
+        SELECT MIN(d)
+        FROM unnest(p.deadline_dates) d
+        WHERE d >= CURRENT_DATE
+      ) AS next_deadline
+    FROM programs p
+    INNER JOIN universities u ON u.id = p.uni_id
+    WHERE p.id = $1 AND p.is_active = true AND u.is_active = true
+    LIMIT 1
+    `,
+    [programId],
+    );
+    if (rows.length) return mapProgramRow(rows[0]);
+  } catch (err) {
+    console.error('[programs] getProgramById db failed:', err?.message || err);
+  }
+
+  const { MOCK_PROGRAMS } = require('../constants/universityMockPrograms');
+  return MOCK_PROGRAMS.find((p) => p.id === programId) || null;
+}
+
+async function upsertApplicantProfile(userId, payload = {}) {
+  const {
+    full_name,
+    nationality,
+    current_degree,
+    gpa,
+    language_scores,
+    work_exp,
+    research_exp,
+    budget_range,
+    preferred_countries,
+  } = payload;
+
+  const { rows } = await db.query(
+    `
+    INSERT INTO university_applicant_profiles (
+      user_id, full_name, nationality, current_degree, gpa,
+      language_scores, work_exp, research_exp, budget_range, preferred_countries, updated_at
+    )
+    VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7, $8, $9, $10::text[], NOW())
+    ON CONFLICT (user_id) DO UPDATE SET
+      full_name = COALESCE(EXCLUDED.full_name, university_applicant_profiles.full_name),
+      nationality = COALESCE(EXCLUDED.nationality, university_applicant_profiles.nationality),
+      current_degree = COALESCE(EXCLUDED.current_degree, university_applicant_profiles.current_degree),
+      gpa = COALESCE(EXCLUDED.gpa, university_applicant_profiles.gpa),
+      language_scores = COALESCE(EXCLUDED.language_scores, university_applicant_profiles.language_scores),
+      work_exp = COALESCE(EXCLUDED.work_exp, university_applicant_profiles.work_exp),
+      research_exp = COALESCE(EXCLUDED.research_exp, university_applicant_profiles.research_exp),
+      budget_range = COALESCE(EXCLUDED.budget_range, university_applicant_profiles.budget_range),
+      preferred_countries = COALESCE(EXCLUDED.preferred_countries, university_applicant_profiles.preferred_countries),
+      updated_at = NOW()
+    RETURNING *
+    `,
+    [
+      userId,
+      full_name || null,
+      nationality || null,
+      current_degree || null,
+      gpa != null ? Number(gpa) : null,
+      JSON.stringify(language_scores || {}),
+      work_exp || null,
+      research_exp || null,
+      budget_range || null,
+      Array.isArray(preferred_countries) ? preferred_countries : [],
+    ],
+  );
+  return rows[0];
+}
+
+async function saveSearch(userId, filtersJson, recommendationsJson = []) {
+  const { rows } = await db.query(
+    `
+    INSERT INTO university_saved_searches (user_id, filters_json, recommendations_json)
+    VALUES ($1, $2::jsonb, $3::jsonb)
+    RETURNING *
+    `,
+    [userId, JSON.stringify(filtersJson || {}), JSON.stringify(recommendationsJson || [])],
+  );
+  return rows[0];
+}
+
+module.exports = {
+  MVP_COUNTRIES,
+  FIELD_GROUPS,
+  flatFieldOptions,
+  normalizeFilters,
+  searchPrograms,
+  getProgramById,
+  upsertApplicantProfile,
+  saveSearch,
+};

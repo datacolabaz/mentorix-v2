@@ -44,9 +44,35 @@ function normalizeApiPayload(res) {
     },
     source: res?.source || 'api',
     usedFallback: Boolean(res?.meta?.fallback || res?.source === 'mock'),
+    emptyMessage: res?.meta?.empty_message || null,
+    suggestDegreeLevel: res?.meta?.suggest_degree_level || null,
   }
 }
 
 export async function searchProgramsWithFallback(params, uiFilters) {
+  let apiEmptyMessage = null
+  let apiSuggestDegree = null
+
   try {
-    const res = await api.get('/programs', { pa
+    const res = await api.get('/programs', { params })
+    const normalized = normalizeApiPayload(res)
+    if (normalized.programs.length) return normalized
+    apiEmptyMessage = normalized.emptyMessage
+    apiSuggestDegree = normalized.suggestDegreeLevel
+  } catch (err) {
+    console.warn('[universities] API search failed, using client mock:', err?.message || err)
+  }
+
+  const mock = buildMockSearchResponse(apiFiltersFromUi(uiFilters))
+  const programs = mock.data || mock.programs || []
+  return {
+    success: true,
+    programs,
+    count: mock.count || 0,
+    pagination: mock.pagination,
+    source: programs.length ? 'mock-client' : 'mock-client-empty',
+    usedFallback: true,
+    emptyMessage: programs.length ? null : (mock.meta?.empty_message || apiEmptyMessage),
+    suggestDegreeLevel: programs.length ? null : (mock.meta?.suggest_degree_level || apiSuggestDegree),
+  }
+}

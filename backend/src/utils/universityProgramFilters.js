@@ -1,12 +1,21 @@
 const {
   fieldSearchTerms,
   relatedFieldSlugs,
+  fieldMeta,
+  FIELD_BY_VALUE,
 } = require('../constants/universityFieldCatalog');
 
 const DEGREE_ALIASES = {
   BSc: ['BSc', 'Bachelor', 'Bakalavr', 'BA', 'BS', 'Undergraduate'],
   MSc: ['MSc', 'Master', 'Magistr', 'MA', 'MS', 'MBA', 'Graduate'],
-  PhD: ['PhD', 'Doctorate', 'Doktorantura', 'Doctor', 'Doctoral'],
+  PhD: ['PhD', 'Ph.D', 'Doctorate', 'Doktorantura', 'Doctor', 'Doctoral'],
+};
+
+/** LOWER(degree_level) üçün kanonik tokenlər */
+const DEGREE_CANONICAL = {
+  BSc: ['bsc', 'bs', 'ba', 'bachelor', 'bakalavr', 'undergraduate'],
+  MSc: ['msc', 'ms', 'ma', 'mba', 'master', 'magistr', 'graduate'],
+  PhD: ['phd', 'doctorate', 'doctoral', 'doctor', 'doktorantura', 'doktor'],
 };
 
 function parseArray(v) {
@@ -71,13 +80,39 @@ function resolveFieldFromText(text) {
   return null;
 }
 
+function normalizeFieldSlug(raw) {
+  const token = String(raw || '').trim();
+  if (!token) return null;
+  if (fieldMeta(token)) return token;
+
+  const fromText = resolveFieldFromText(token);
+  if (fromText) return fromText;
+
+  const folded = foldAz(token);
+  for (const [value, meta] of FIELD_BY_VALUE.entries()) {
+    const labelFolded = foldAz(meta.label);
+    const valueFolded = foldAz(value.replace(/_/g, ' '));
+    if (labelFolded === folded || labelFolded.includes(folded) || folded.includes(labelFolded)) {
+      return value;
+    }
+    if (valueFolded === folded || valueFolded.includes(folded)) return value;
+  }
+  return token;
+}
+
+function normalizeFieldList(values = []) {
+  return [...new Set(values.map(normalizeFieldSlug).filter(Boolean))];
+}
+
 function collectFieldSlugs(rawQuery = {}, filters = {}) {
-  const slugs = new Set([
-    ...parseArray(rawQuery.fields),
-    ...parseArray(rawQuery.field),
-    ...parseArray(filters.fields),
-    ...parseArray(filters.field),
-  ]);
+  const slugs = new Set(
+    normalizeFieldList([
+      ...parseArray(rawQuery.fields),
+      ...parseArray(rawQuery.field),
+      ...parseArray(filters.fields),
+      ...parseArray(filters.field),
+    ]),
+  );
 
   if (filters.q) {
     const resolved = resolveFieldFromText(filters.q);
@@ -87,10 +122,26 @@ function collectFieldSlugs(rawQuery = {}, filters = {}) {
   return [...slugs];
 }
 
-function degreePatterns(degreeLevel) {
-  if (!degreeLevel) return [];
-  const aliases = DEGREE_ALIASES[degreeLevel] || [degreeLevel];
-  return aliases.map((a) => `%${a}%`);
+function fieldPatternsForSlug(slug) {
+  const patterns = new Set();
+  for (const s of relatedFieldSlugs(slug)) {
+    patterns.add(`%${s.replace(/_/g, ' ')}%`);
+    patterns.add(`%${s}%`);
+  }
+  for (const term of fieldSearchTerms(slug)) {
+    patterns.add(`%${term}%`);
+  }
+  const meta = fieldMeta(slug);
+  if (meta?.label) {
+    patterns.add(`%${meta.label}%`);
+    meta.label
+      .replace(/\([^)]*\)/g, '')
+      .split(/[/,]/)
+      .map((part) => part.trim())
+      .filter(Boolean)
+      .forEach((part) => patterns.add(`%${part}%`));
+  }
+  return [...patterns];
 }
 
 function appendFieldsFilter(where, params, fieldSlugs) {
@@ -100,9 +151,10 @@ function appendFieldsFilter(where, params, fieldSlugs) {
   const allPatterns = new Set();
 
   for (const slug of fieldSlugs) {
-    relatedFieldSlugs(slug).forEach((s) => allSlugs.add(s));
-    fieldSearchTerms(slug).forEach((t) => allPatterns.add(`%${t}%`));
-    allPatterns.add(`%${slug.replace(/_/g, ' ')}%`);
+    const normalized = normalizeFieldSlug(slug);
+    if (!normalized) continue;
+    relatedFieldSlugs(normalized).forEach((s) => allSlugs.add(s));
+    fieldPatternsForSlug(normalized).forEach((p) => allPatterns.add(p));
   }
 
   params.push([...allSlugs]);
@@ -121,9 +173,42 @@ function appendFieldsFilter(where, params, fieldSlugs) {
 
 function appendDegreeFilter(where, params, degreeLevel) {
   if (!degreeLevel) return;
-  const patterns = degreePatterns(degreeLevel);
+  const canonical = DEGREE_CANONICAL[degreeLevel] || [String(degreeLevel).toLowerCase()];
+  const patterns = (DEGREE_ALIASES[degreeLevel] || [degreeLevel]).map((a) => `%${a}%`);
+  params.push(canonical);
+  const canonIdx = params.length;
   params.push(patterns);
-  where.push(`p.degree_level ILIKE ANY($${params.length}::text[])`);
+  const patIdx = params.length;
+  where.push(`(
+    LOWER(REPLACE(p.degree_level, '.', '')) = ANY($${canonIdx}::text[])
+    OR EXISTS (
+      SELECT 1 FROM unnest($${patIdx}::text[]) pat
+      WHERE LOWER(p.degree_level) LIKE LOWER(pat)
+    )
+  )`);
+}
+
+function buildEmptyResultsMessage(filters = {}) {
+  const slugs = collectFieldSlugs({}, filters);
+  const labels = slugs.map((slug) => fieldMeta(slug)?.label || slug.replace(/_/g, ' '));
+  const fieldLabel = labels.length ? labels.join(', ') : 'seçilmiş ixtisas';
+  const degree = filters.degreeLevel || '';
+  const degreeAz = {
+    BSc: 'Bakalavr (BSc)',
+    MSc: 'Magistr (MSc)',
+    PhD: 'Doktorantura (PhD)',
+  }[degree];
+
+  if (degree === 'PhD') {
+    return `${fieldLabel} üzrə PhD proqramları hazırda yüklənir. Nümunə üçün "Magistr (MSc)" dərəcəsini seçib yoxlaya bilərsiniz.`;
+  }
+  if (degree && degreeAz) {
+    return `${fieldLabel} üzrə ${degreeAz} proqramları hazırda məhduddur. Filtrləri genişləndirin və ya başqa dərəcə sınayın.`;
+  }
+  if (slugs.length) {
+    return `${fieldLabel} üzrə uyğun proqram hazırda tapılmadı. Ölkə və ya dərəcə filtrini dəyişməyi sınayın.`;
+  }
+  return 'Uyğun proqram tapılmadı. Filtrləri dəyişdirin.';
 }
 
 function appendUserIeltsFilter(where, params, userIelts) {
@@ -156,23 +241,26 @@ function programMatchesAnyField(program, fieldSlugs) {
 
 function programMatchesSingleField(program, fieldSlug) {
   if (!fieldSlug) return true;
-  if (relatedFieldSlugs(fieldSlug).includes(program.field)) return true;
+  const slug = normalizeFieldSlug(fieldSlug);
+  if (relatedFieldSlugs(slug).includes(program.field)) return true;
 
-  const terms = fieldSearchTerms(fieldSlug);
+  const patterns = fieldPatternsForSlug(slug).map((p) => p.replace(/%/g, '').toLowerCase());
   const blob = [program.field, program.field_category, program.name, program.university?.name]
     .filter(Boolean)
     .join(' ')
     .toLowerCase();
 
-  if (program.field === fieldSlug) return true;
-  return terms.some((t) => blob.includes(String(t).toLowerCase()));
+  if (program.field === slug) return true;
+  return patterns.some((p) => p.length >= 2 && blob.includes(p));
 }
 
 function programMatchesDegree(program, degreeLevel) {
   if (!degreeLevel) return true;
-  const level = String(program.degree_level || '').toLowerCase();
+  const level = String(program.degree_level || '').toLowerCase().replace(/\./g, '');
+  const canonical = DEGREE_CANONICAL[degreeLevel] || [String(degreeLevel).toLowerCase()];
+  if (canonical.includes(level)) return true;
   const patterns = (DEGREE_ALIASES[degreeLevel] || [degreeLevel]).map((a) => a.toLowerCase());
-  return patterns.some((p) => level.includes(p.toLowerCase()) || p.toLowerCase().includes(level));
+  return patterns.some((p) => level.includes(p) || p.includes(level));
 }
 
 function programMatchesUserIelts(program, userIelts) {
@@ -183,9 +271,13 @@ function programMatchesUserIelts(program, userIelts) {
 
 module.exports = {
   DEGREE_ALIASES,
+  DEGREE_CANONICAL,
   parseArray,
   resolveFieldFromText,
+  normalizeFieldSlug,
+  normalizeFieldList,
   collectFieldSlugs,
+  fieldPatternsForSlug,
   appendFieldsFilter,
   appendDegreeFilter,
   appendUserIeltsFilter,
@@ -193,4 +285,5 @@ module.exports = {
   programMatchesAnyField,
   programMatchesDegree,
   programMatchesUserIelts,
+  buildEmptyResultsMessage,
 };

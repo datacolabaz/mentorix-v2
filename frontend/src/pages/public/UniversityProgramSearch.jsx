@@ -21,6 +21,7 @@ import {
   buildCountryResultsMeta,
 } from '../../lib/universitySearch'
 import { searchProgramsWithFallback } from '../../lib/universityProgramsApi'
+import { buildEmptyResultsMessage } from '../../lib/universityProgramFilters'
 
 function defaultFilters(searchParams) {
   const countries = searchParams.get('countries')
@@ -84,6 +85,8 @@ export default function UniversityProgramSearch() {
   const [loading, setLoading] = useState(false)
   const [selectedProgram, setSelectedProgram] = useState(null)
   const [usedFallback, setUsedFallback] = useState(false)
+  const [emptyMessage, setEmptyMessage] = useState(null)
+  const [suggestDegreeLevel, setSuggestDegreeLevel] = useState(null)
 
   useEffect(() => {
     setPageSeo({
@@ -106,6 +109,8 @@ export default function UniversityProgramSearch() {
       setPrograms(result.programs || [])
       setPagination(result.pagination || { page: 1, total: 0, total_pages: 1 })
       setUsedFallback(Boolean(result.usedFallback))
+      setEmptyMessage(result.emptyMessage || null)
+      setSuggestDegreeLevel(result.suggestDegreeLevel || null)
     } catch (e) {
       setUsedFallback(true)
       toast(e?.message || 'Axtarış uğursuz oldu', 'error')
@@ -242,10 +247,24 @@ export default function UniversityProgramSearch() {
     return `${pagination.total || 0} proqram tapıldı`
   }, [loading, pagination.total])
 
+  const displayEmptyMessage = useMemo(() => {
+    if (programs.length) return null
+    return (
+      emptyMessage ||
+      buildEmptyResultsMessage({
+        ...filters,
+        degreeLevel: filters.degree_level,
+        fields: filters.fields?.length ? filters.fields : filters.field ? [filters.field] : [],
+      })
+    )
+  }, [programs.length, emptyMessage, filters])
+
   const countryResultsMeta = useMemo(
     () => buildCountryResultsMeta(programs, filters.countries),
     [programs, filters.countries],
   )
+
+  const displaySuggestDegree = suggestDegreeLevel || (!programs.length && filters.degree_level === 'PhD' ? 'MSc' : null)
 
   const showCountryBreakdown = filters.countries.length > 0 && !loading
   const useGroupedResults = countryResultsMeta.groups.length > 1
@@ -285,4 +304,144 @@ export default function UniversityProgramSearch() {
           <UniversitySearchWizard
             initialState={wizardState || emptyWizardState()}
             onSubmit={handleWizardSubmit}
-     
+          />
+        ) : (
+          <div className="grid lg:grid-cols-[280px_1fr] gap-6 items-start">
+            <ProgramFiltersSidebar
+              filters={filters}
+              qDraft={qDraft}
+              onQDraftChange={setQDraft}
+              countryCounts={showCountryBreakdown ? countryResultsMeta.countryCounts : null}
+              onChange={(next) => {
+                setQDraft(next.q || '')
+                setFilters(next)
+                syncUrl('results', next)
+              }}
+              onReset={resetFilters}
+            />
+
+            <section className="space-y-4 min-w-0">
+              <UniversityAiSearch
+                onResults={handleAiResults}
+                onError={(msg) => toast(msg, 'error')}
+              />
+              {usedFallback ? (
+                <p className="text-xs text-amber-300/90 rounded-xl border border-amber-500/25 bg-amber-500/10 px-3 py-2">
+                  Canlı kataloq hazırda əlçatan deyil — nümunə (demo) proqramlar göstərilir. Müraciət linkləri realdır.
+                </p>
+              ) : null}
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <p className="text-sm text-white font-medium">{resultLabel}</p>
+                {pagination.total_pages > 1 ? (
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="text-xs"
+                      disabled={filters.page <= 1 || loading}
+                      onClick={() => {
+                        const next = { ...filters, page: filters.page - 1 }
+                        setFilters(next)
+                        syncUrl('results', next)
+                      }}
+                    >
+                      Əvvəlki
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="text-xs"
+                      disabled={filters.page >= pagination.total_pages || loading}
+                      onClick={() => {
+                        const next = { ...filters, page: filters.page + 1 }
+                        setFilters(next)
+                        syncUrl('results', next)
+                      }}
+                    >
+                      Növbəti
+                    </Button>
+                  </div>
+                ) : null}
+              </div>
+
+              {showCountryBreakdown ? (
+                <ProgramResultsSummary
+                  total={pagination.total || 0}
+                  selectedCountries={countryResultsMeta.selectedCountries}
+                  countryCounts={countryResultsMeta.countryCounts}
+                  coverageMessage={countryResultsMeta.coverageMessage}
+                  countriesWithResults={countryResultsMeta.countriesWithResults}
+                />
+              ) : null}
+
+              {loading ? (
+                <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <div key={i} className="h-56 rounded-2xl bg-white/5 animate-pulse" />
+                  ))}
+                </div>
+              ) : programs.length ? (
+                useGroupedResults ? (
+                  <ProgramResultsByCountry
+                    groups={countryResultsMeta.groups}
+                    onDetails={setSelectedProgram}
+                    onApply={handleApply}
+                  />
+                ) : (
+                  <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                    {programs.map((program) => (
+                      <ProgramCard
+                        key={program.id}
+                        program={program}
+                        onDetails={setSelectedProgram}
+                        onApply={handleApply}
+                      />
+                    ))}
+                  </div>
+                )
+              ) : (
+                <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-10 text-center">
+                  <p className="text-gray-300">
+                    {displayEmptyMessage || 'Uyğun proqram tapılmadı.'}
+                  </p>
+                  {displaySuggestDegree ? (
+                    <Button
+                      type="button"
+                      className="mt-4"
+                      onClick={() => {
+                        const next = { ...filters, degree_level: displaySuggestDegree, page: 1 }
+                        setFilters(next)
+                        syncUrl('results', next)
+                        fetchPrograms(next)
+                      }}
+                    >
+                      Magistr (MSc) ilə yoxla
+                    </Button>
+                  ) : null}
+                  <Button
+                    type="button"
+                    variant={displaySuggestDegree ? 'ghost' : 'primary'}
+                    className={displaySuggestDegree ? 'mt-3' : 'mt-4'}
+                    onClick={() => navigate('/universities?view=wizard')}
+                  >
+                    Filtrləri dəyiş
+                  </Button>
+                </div>
+              )}
+            </section>
+          </div>
+        )}
+      </main>
+
+      <ProgramDetailModal
+        program={selectedProgram}
+        open={Boolean(selectedProgram)}
+        onClose={() => setSelectedProgram(null)}
+        onApply={(p) => {
+          handleApply(p)
+          setSelectedProgram(null)
+        }}
+      />
+    </div>
+  )
+}
