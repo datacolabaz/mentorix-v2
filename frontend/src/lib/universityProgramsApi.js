@@ -2,12 +2,18 @@ import api from './api'
 import { buildMockSearchResponse } from './universityMockPrograms'
 
 function apiFiltersFromUi(uiFilters) {
+  const fields = Array.isArray(uiFilters.fields)
+    ? uiFilters.fields
+    : uiFilters.field
+      ? String(uiFilters.field).split(',').map((s) => s.trim()).filter(Boolean)
+      : [];
   return {
     page: uiFilters.page || 1,
     limit: 24,
     offset: ((uiFilters.page || 1) - 1) * 24,
     degreeLevel: uiFilters.degree_level || null,
-    field: uiFilters.field || null,
+    field: fields[0] || null,
+    fields,
     countries: uiFilters.countries || [],
     scholarship: uiFilters.scholarship ? true : null,
     maxTuition: uiFilters.max_tuition ? Number(uiFilters.max_tuition) : null,
@@ -43,20 +49,4 @@ function normalizeApiPayload(res) {
 
 export async function searchProgramsWithFallback(params, uiFilters) {
   try {
-    const res = await api.get('/programs', { params })
-    const normalized = normalizeApiPayload(res)
-    if (normalized.programs.length) return normalized
-  } catch (err) {
-    console.warn('[universities] API search failed, using client mock:', err?.message || err)
-  }
-
-  const mock = buildMockSearchResponse(apiFiltersFromUi(uiFilters))
-  return {
-    success: true,
-    programs: mock.data || mock.programs || [],
-    count: mock.count || 0,
-    pagination: mock.pagination,
-    source: 'mock-client',
-    usedFallback: true,
-  }
-}
+    const res = await api.get('/programs', { pa

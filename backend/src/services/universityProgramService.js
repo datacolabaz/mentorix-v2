@@ -13,6 +13,15 @@ const {
 } = require('../constants/universityFieldCatalog');
 const { buildMockSearchResponse } = require('../constants/universityMockPrograms');
 const { UNIVERSITY_COUNTRIES } = require('../constants/universityCountries');
+const {
+  parseArray: parseFilterArray,
+  collectFieldSlugs,
+  appendFieldsFilter,
+  appendDegreeFilter,
+  appendUserIeltsFilter,
+  appendTextSearchFilter,
+  resolveFieldFromText,
+} = require('../utils/universityProgramFilters');
 
 const MVP_COUNTRIES = UNIVERSITY_COUNTRIES;
 const DEFAULT_LIMIT = 24;
@@ -43,8 +52,12 @@ function normalizeFilters(query = {}) {
   const offset = (page - 1) * limit;
 
   const countries = parseArray(query.countries || query.country);
+  const fields = [...new Set([
+    ...parseFilterArray(query.fields),
+    ...parseFilterArray(query.field),
+  ])];
+  const field = fields[0] || null;
   const degreeLevel = query.degree_level ? String(query.degree_level).trim() : null;
-  const field = query.field ? String(query.field).trim() : null;
   const scholarship = parseBool(query.scholarship);
   const maxTuition = parseNumber(query.max_tuition);
   const minGpa = parseNumber(query.min_gpa);
@@ -64,8 +77,9 @@ function normalizeFilters(query = {}) {
     limit,
     offset,
     countries,
-    degreeLevel,
+    fields,
     field,
+    degreeLevel,
     scholarship,
     maxTuition,
     minGpa,
@@ -160,29 +174,10 @@ function formatSearchResult(programs, filters, { source = 'database', total, cac
 }
 
 function appendFieldFilter(where, params, fieldSlug) {
-  if (!fieldSlug) return;
-  const slugs = relatedFieldSlugs(fieldSlug);
-  const terms = fieldSearchTerms(fieldSlug);
-  const patterns = terms.map((t) => `%${t}%`);
-
-  params.push(slugs);
-  const slugsIdx = params.length;
-  params.push(fieldSlug);
-  const slugIdx = params.length;
-  params.push(patterns);
-  const patIdx = params.length;
-
-  where.push(`(
-    p.field = ANY($${slugsIdx}::text[])
-    OR p.field = $${slugIdx}
-    OR EXISTS (
-      SELECT 1 FROM unnest($${patIdx}::text[]) pat
-      WHERE p.name ILIKE pat OR p.field ILIKE pat
-    )
-  )`);
+  appendFieldsFilter(where, params, fieldSlug ? [fieldSlug] : []);
 }
 
-async function queryProgramsFromDatabase(filters) {
+async function queryProgramsFromDatabase(filters, rawQuery = {}) {
   const params = [];
   const where = [
     'p.is_active = true',
@@ -190,11 +185,13 @@ async function queryProgramsFromDatabase(filters) {
     "(p.review_status = 'approved' OR p.source_type = 'seed')",
   ];
 
-  if (filters.degreeLevel) {
-    params.push(filters.degreeLevel);
-    where.push(`p.degree_level = $${params.length}`);
+  const fieldSlugs = collectFieldSlugs(rawQuery, filters);
+  const qResolvesToField = filters.q && resolveFieldFromText(filters.q);
+
+  appendDegreeFilter(where, params, filters.degreeLevel);
+  if (fieldSlugs.length) {
+    appendFieldsFilter(where, params, fieldSlugs);
   }
-  appendFieldFilter(where, params, filters.field);
   if (filters.countries.length) {
     params.push(filters.countries);
     where.push(`u.country = ANY($${params.length}::text[])`);
@@ -208,26 +205,24 @@ async function queryProgramsFromDatabase(filters) {
   }
   if (filters.minGpa != null) {
     params.push(filters.minGpa);
-    where.push(`COALESCE((p.requirements->>'min_gpa')::numeric, 0) <= $${params.length}`);
+    where.push(`(
+      p.requirements->>'min_gpa' IS NULL
+      OR TRIM(COALESCE(p.requirements->>'min_gpa', '')) = ''
+      OR (p.requirements->>'min_gpa')::numeric <= $${params.length}
+    )`);
   }
   if (filters.language) {
     params.push(`%${filters.language}%`);
-    where.push(`p.language ILIKE $${params.length}`);
+    where.push(`(p.language IS NULL OR p.language ILIKE $${params.length})`);
   }
   if (filters.noIelts === true) {
     where.push(`(
       p.requirements->'min_language'->>'ielts' IS NULL
-      OR TRIM(p.requirements->'min_language'->>'ielts') = ''
+      OR TRIM(COALESCE(p.requirements->'min_language'->>'ielts', '')) = ''
       OR (p.requirements->'min_language'->>'ielts')::numeric <= 0
     )`);
-  }
-  if (filters.userIelts != null) {
-    params.push(filters.userIelts);
-    where.push(`(
-      p.requirements->'min_language'->>'ielts' IS NULL
-      OR TRIM(p.requirements->'min_language'->>'ielts') = ''
-      OR (p.requirements->'min_language'->>'ielts')::numeric <= $${params.length}
-    )`);
+  } else if (filters.userIelts != null) {
+    appendUserIeltsFilter(where, params, filters.userIelts);
   }
   if (filters.noMotivation === true) {
     where.push(`NOT EXISTS (
@@ -237,7 +232,7 @@ async function queryProgramsFromDatabase(filters) {
   }
   if (filters.maxRanking != null) {
     params.push(filters.maxRanking);
-    where.push(`u.world_ranking IS NOT NULL AND u.world_ranking <= $${params.length}`);
+    where.push(`(u.world_ranking IS NULL OR u.world_ranking <= $${params.length})`);
   }
   if (filters.deadlineBefore) {
     params.push(filters.deadlineBefore);
@@ -245,10 +240,8 @@ async function queryProgramsFromDatabase(filters) {
       `EXISTS (SELECT 1 FROM unnest(p.deadline_dates) d WHERE d <= $${params.length}::date AND d >= CURRENT_DATE)`,
     );
   }
-  if (filters.q) {
-    params.push(`%${filters.q}%`);
-    const idx = params.length;
-    where.push(`(p.name ILIKE $${idx} OR u.name ILIKE $${idx} OR u.city ILIKE $${idx} OR p.field ILIKE $${idx})`);
+  if (filters.q && !qResolvesToField) {
+    appendTextSearchFilter(where, params, filters.q, { skipFieldLike: fieldSlugs.length > 0 });
   }
 
   const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
@@ -324,7 +317,7 @@ async function searchPrograms(rawQuery = {}) {
   }
 
   try {
-    const { programs, total } = await queryProgramsFromDatabase(filters);
+    const { programs, total } = await queryProgramsFromDatabase(filters, rawQuery);
     if (total > 0) {
       const result = formatSearchResult(programs, filters, { source: 'database', total });
       await cacheSet(cacheKey, result);
@@ -342,122 +335,4 @@ async function searchPrograms(rawQuery = {}) {
 
 async function getProgramById(programId) {
   try {
-    const { rows } = await db.query(
-    `
-    SELECT
-      p.id,
-      p.uni_id,
-      p.degree_level,
-      p.name,
-      p.field,
-      p.duration_years,
-      p.tuition_fee,
-      p.scholarship_available,
-      p.language,
-      p.intake_months,
-      p.deadline_dates,
-      p.requirements,
-      p.apply_link,
-      p.portal_source,
-      p.source_type,
-      p.contributor_user_id,
-      p.mentor_display_name,
-      u.name AS uni_name,
-      u.country AS uni_country,
-      u.city AS uni_city,
-      u.world_ranking,
-      u.logo_url,
-      u.housing_info,
-      u.funding_info,
-      (
-        SELECT MIN(d)
-        FROM unnest(p.deadline_dates) d
-        WHERE d >= CURRENT_DATE
-      ) AS next_deadline
-    FROM programs p
-    INNER JOIN universities u ON u.id = p.uni_id
-    WHERE p.id = $1 AND p.is_active = true AND u.is_active = true
-    LIMIT 1
-    `,
-    [programId],
-    );
-    if (rows.length) return mapProgramRow(rows[0]);
-  } catch (err) {
-    console.error('[programs] getProgramById db failed:', err?.message || err);
-  }
-
-  const { MOCK_PROGRAMS } = require('../constants/universityMockPrograms');
-  return MOCK_PROGRAMS.find((p) => p.id === programId) || null;
-}
-
-async function upsertApplicantProfile(userId, payload = {}) {
-  const {
-    full_name,
-    nationality,
-    current_degree,
-    gpa,
-    language_scores,
-    work_exp,
-    research_exp,
-    budget_range,
-    preferred_countries,
-  } = payload;
-
-  const { rows } = await db.query(
-    `
-    INSERT INTO university_applicant_profiles (
-      user_id, full_name, nationality, current_degree, gpa,
-      language_scores, work_exp, research_exp, budget_range, preferred_countries, updated_at
-    )
-    VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7, $8, $9, $10::text[], NOW())
-    ON CONFLICT (user_id) DO UPDATE SET
-      full_name = COALESCE(EXCLUDED.full_name, university_applicant_profiles.full_name),
-      nationality = COALESCE(EXCLUDED.nationality, university_applicant_profiles.nationality),
-      current_degree = COALESCE(EXCLUDED.current_degree, university_applicant_profiles.current_degree),
-      gpa = COALESCE(EXCLUDED.gpa, university_applicant_profiles.gpa),
-      language_scores = COALESCE(EXCLUDED.language_scores, university_applicant_profiles.language_scores),
-      work_exp = COALESCE(EXCLUDED.work_exp, university_applicant_profiles.work_exp),
-      research_exp = COALESCE(EXCLUDED.research_exp, university_applicant_profiles.research_exp),
-      budget_range = COALESCE(EXCLUDED.budget_range, university_applicant_profiles.budget_range),
-      preferred_countries = COALESCE(EXCLUDED.preferred_countries, university_applicant_profiles.preferred_countries),
-      updated_at = NOW()
-    RETURNING *
-    `,
-    [
-      userId,
-      full_name || null,
-      nationality || null,
-      current_degree || null,
-      gpa != null ? Number(gpa) : null,
-      JSON.stringify(language_scores || {}),
-      work_exp || null,
-      research_exp || null,
-      budget_range || null,
-      Array.isArray(preferred_countries) ? preferred_countries : [],
-    ],
-  );
-  return rows[0];
-}
-
-async function saveSearch(userId, filtersJson, recommendationsJson = []) {
-  const { rows } = await db.query(
-    `
-    INSERT INTO university_saved_searches (user_id, filters_json, recommendations_json)
-    VALUES ($1, $2::jsonb, $3::jsonb)
-    RETURNING *
-    `,
-    [userId, JSON.stringify(filtersJson || {}), JSON.stringify(recommendationsJson || [])],
-  );
-  return rows[0];
-}
-
-module.exports = {
-  MVP_COUNTRIES,
-  FIELD_GROUPS,
-  flatFieldOptions,
-  normalizeFilters,
-  searchPrograms,
-  getProgramById,
-  upsertApplicantProfile,
-  saveSearch,
-};
+ 

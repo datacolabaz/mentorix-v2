@@ -1,75 +1,74 @@
-import { useMemo, useState } from 'react'
 import { FIELD_GROUPS } from '../../lib/universityFieldCatalog'
 import { resolveFieldFromQuery } from '../../lib/universitySearch'
 
 const inputCls =
   'w-full rounded-xl border border-white/10 bg-[#1c1c1c] px-3 py-2.5 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:border-primary/50'
 
+function parseFields(value) {
+  if (Array.isArray(value)) return value.filter(Boolean)
+  if (typeof value === 'string' && value.trim()) {
+    return value.split(',').map((s) => s.trim()).filter(Boolean)
+  }
+  return []
+}
+
 export default function FieldSearchPicker({ value, onChange, label = 'İxtisas' }) {
-  const [query, setQuery] = useState('')
+  const selected = parseFields(value)
 
-  const options = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    const flat = FIELD_GROUPS.flatMap((group) =>
-      group.options.map((opt) => ({ ...opt, groupLabel: group.label })),
-    )
-    if (!q) return flat
-    return flat.filter(
-      (opt) =>
-        opt.label.toLowerCase().includes(q) ||
-        opt.value.replace(/_/g, ' ').toLowerCase().includes(q) ||
-        opt.groupLabel.toLowerCase().includes(q),
-    )
-  }, [query])
+  const toggleField = (slug) => {
+    if (!slug) return
+    const next = selected.includes(slug)
+      ? selected.filter((f) => f !== slug)
+      : [...selected, slug]
+    onChange?.(next)
+  }
 
-  const handleQueryChange = (nextQuery) => {
-    setQuery(nextQuery)
-    const resolved = resolveFieldFromQuery(nextQuery)
-    if (resolved && nextQuery.trim().length >= 3) {
-      onChange?.(resolved)
+  const handleQueryKeyDown = (e) => {
+    if (e.key !== 'Enter') return
+    e.preventDefault()
+    const resolved = resolveFieldFromQuery(e.currentTarget.value)
+    if (resolved) {
+      toggleField(resolved)
+      e.currentTarget.value = ''
     }
   }
 
   return (
     <div className="space-y-2">
       <label className="text-[10px] font-bold uppercase tracking-wide text-gray-500">{label}</label>
+
+      {selected.length ? (
+        <div className="flex flex-wrap gap-1.5">
+          {selected.map((slug) => {
+            const labelText =
+              FIELD_GROUPS.flatMap((g) => g.options).find((o) => o.value === slug)?.label || slug
+            return (
+              <button
+                key={slug}
+                type="button"
+                onClick={() => toggleField(slug)}
+                className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2.5 py-1 text-xs text-white"
+              >
+                {labelText}
+                <span className="text-gray-400">×</span>
+              </button>
+            )
+          })}
+        </div>
+      ) : null}
+
       <input
-        value={query}
-        onChange={(e) => handleQueryChange(e.target.value)}
+        onKeyDown={handleQueryKeyDown}
         className={inputCls}
-        placeholder="Computer Science, Data Science, AI…"
+        placeholder="Computer Science + Enter (bir neçə ixtisas — OR)"
       />
+
       <select
-        value={value || ''}
-        onChange={(e) => onChange?.(e.target.value)}
+        value=""
+        onChange={(e) => toggleField(e.target.value)}
         className={inputCls}
       >
-        <option value="">— Bütün ixtisaslar —</option>
+        <option value="">+ İxtisas əlavə et</option>
         {FIELD_GROUPS.map((group) => (
           <optgroup key={group.id} label={group.label}>
-            {(query.trim()
-              ? options.filter((o) => o.groupLabel === group.label)
-              : group.options
-            ).map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </optgroup>
-        ))}
-      </select>
-      {value ? (
-        <button
-          type="button"
-          onClick={() => {
-            onChange?.('')
-            setQuery('')
-          }}
-          className="text-xs text-gray-400 hover:text-white underline"
-        >
-          İxtisas filtrini təmizlə
-        </button>
-      ) : null}
-    </div>
-  )
-}
+          

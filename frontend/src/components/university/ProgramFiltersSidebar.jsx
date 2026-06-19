@@ -43,7 +43,10 @@ export default function ProgramFiltersSidebar({
         <p className="text-[11px] text-gray-500">Universitet və ya proqram adının bir hissəsini yazın.</p>
       </div>
 
-      <FieldSearchPicker value={filters.field} onChange={(field) => patch({ field })} />
+      <FieldSearchPicker
+        value={filters.fields?.length ? filters.fields : filters.field}
+        onChange={(fields) => patch({ fields: Array.isArray(fields) ? fields : [], field: '' })}
+      />
 
       <CountrySearchPicker
         selected={filters.countries}
@@ -85,50 +88,4 @@ export default function ProgramFiltersSidebar({
             label="IELTS tələb etmir"
           />
           <FilterCheckbox
-            checked={filters.no_motivation}
-            onChange={(e) => patch({ no_motivation: e.target.checked })}
-            label="Motivasiya məktubu tələb etmir"
-          />
-          <FilterCheckbox
-            checked={filters.max_ranking === '500'}
-            onChange={(e) => patch({ max_ranking: e.target.checked ? '500' : '' })}
-            label="QS top 500"
-          />
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <label className="text-[10px] font-bold uppercase tracking-wide text-gray-500">Max təhsil haqqı (€/il)</label>
-        <input
-          type="number"
-          min="0"
-          step="100"
-          value={filters.max_tuition}
-          onChange={(e) => patch({ max_tuition: e.target.value })}
-          className={inputCls}
-          placeholder="Məs: 5000"
-        />
-      </div>
-
-      <div className="space-y-2">
-        <label className="text-[10px] font-bold uppercase tracking-wide text-gray-500">Son müraciət tarixi</label>
-        <input
-          type="date"
-          value={filters.deadline_before}
-          onChange={(e) => patch({ deadline_before: e.target.value })}
-          className={inputCls}
-        />
-      </div>
-
-      <div className="space-y-2">
-        <label className="text-[10px] font-bold uppercase tracking-wide text-gray-500">Sıralama</label>
-        <select value={filters.sort} onChange={(e) => patch({ sort: e.target.value })} className={inputCls}>
-          <option value="ranking">Dünya reytinqi</option>
-          <option value="tuition_asc">Ödəniş (aşağı)</option>
-          <option value="tuition_desc">Ödəniş (yuxarı)</option>
-          <option value="deadline">Son tarix</option>
-        </select>
-      </div>
-    </aside>
-  )
-}
+            checked={filters.no_motivation

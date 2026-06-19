@@ -162,7 +162,8 @@ async function runUniversityProgramAiSearch({ query, limit = 24 } = {}) {
 
   const searchFilters = normalizeFilters({
     degree_level: parsed.filters.degreeLevel,
-    field: parsed.filters.field,
+    fields: parsed.filters.fields || (parsed.filters.field ? [parsed.filters.field] : undefined),
+    field: parsed.filters.fields?.[0] || parsed.filters.field,
     countries: parsed.filters.countries,
     scholarship: parsed.filters.scholarship,
     max_tuition: parsed.filters.maxTuition,
@@ -186,12 +187,4 @@ async function runUniversityProgramAiSearch({ query, limit = 24 } = {}) {
     summary: parsed.summary,
     count: result.count || programs.length,
     programs: programs.slice(0, limit),
-    pagination: result.pagination,
-    source: result.source,
-  };
-}
-
-module.exports = {
-  parseUniversityAiQuery,
-  runUniversityProgramAiSearch,
-};
+    pagination: result
