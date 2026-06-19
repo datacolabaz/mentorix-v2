@@ -187,4 +187,12 @@ async function runUniversityProgramAiSearch({ query, limit = 24 } = {}) {
     summary: parsed.summary,
     count: result.count || programs.length,
     programs: programs.slice(0, limit),
-    pagination: result
+    pagination: result.pagination,
+    source: result.source,
+  };
+}
+
+module.exports = {
+  parseUniversityAiQuery,
+  runUniversityProgramAiSearch,
+};
