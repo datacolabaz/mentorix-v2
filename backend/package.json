@@ -5,6 +5,7 @@
   "scripts": {
     "migrate": "node scripts/migrate.js",
     "seed:categories": "node scripts/seed-teaching-categories.js",
+    "generate:scrape-targets": "node scripts/generateScrapeTargets.js",
     "start": "node scripts/migrate.js && node src/app.js",
     "dev": "nodemon src/app.js"
   },

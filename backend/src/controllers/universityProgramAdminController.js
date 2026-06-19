@@ -10,8 +10,9 @@ const {
 
 const runBatch = async (req, res) => {
   try {
-    const limit = Number(req.body?.limit || req.query?.limit || 3);
-    const result = await runScraperBatch({ limit });
+    const catalogLimit = Number(req.body?.catalog_limit || req.query?.catalog_limit || 10);
+    const uniLimit = Number(req.body?.limit || req.query?.limit || 3);
+    const result = await runScraperBatch({ catalogLimit, uniLimit });
     return res.json(result);
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message || 'Xəta' });

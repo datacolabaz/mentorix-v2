@@ -1,5 +1,5 @@
 const db = require('../utils/db');
-const { fieldMeta } = require('../constants/universityFieldCatalog');
+const { resolveFieldSlug } = require('../utils/fieldSlugNormalizer');
 
 function slugifyUni(name) {
   return String(name || '')
@@ -51,17 +51,8 @@ function normalizeDegree(level) {
 }
 
 function normalizeFieldSlug(raw, hint) {
-  const v = String(raw || hint || '').trim();
-  if (fieldMeta(v)) return v;
-  const lower = v.toLowerCase();
-  if (lower.includes('computer') || lower.includes('informatics')) return 'computer_science';
-  if (lower.includes('data')) return 'data_science';
-  if (lower.includes('business') || lower.includes('management')) return 'business_administration';
-  if (lower.includes('finance')) return 'finance';
-  if (lower.includes('electrical')) return 'electrical_engineering';
-  if (lower.includes('mechanical')) return 'mechanical_engineering';
-  if (lower.includes('biology') || lower.includes('life')) return 'biology';
-  return hint || 'computer_science';
+  const { slug } = resolveFieldSlug(raw, hint);
+  return slug;
 }
 
 async function upsertProgram({
@@ -110,7 +101,7 @@ async function upsertProgram({
       ai_extracted_at = NOW(),
       ai_raw_json = COALESCE(EXCLUDED.ai_raw_json, programs.ai_raw_json),
       updated_at = NOW()
-    RETURNING *
+    RETURNING *, (xmax = 0) AS was_inserted
     `,
     [
       uni_id,
@@ -136,7 +127,12 @@ async function upsertProgram({
     ],
   );
 
-  if (rows.length) return rows[0];
+  if (rows.length) {
+    return {
+      ...rows[0],
+      was_inserted: Boolean(rows[0].was_inserted),
+    };
+  }
   return null;
 }
 
