@@ -3,7 +3,7 @@ import { MVP_COUNTRIES } from '../../lib/universitySearch'
 const inputCls =
   'w-full rounded-xl border border-white/10 bg-[#1c1c1c] px-3 py-2.5 text-sm text-white [color-scheme:dark] focus:outline-none focus:border-primary/50'
 
-export default function ProgramFiltersSidebar({ filters, onChange, onReset }) {
+export default function ProgramFiltersSidebar({ filters, onChange, onReset, countryCounts = null }) {
   const toggleCountry = (country) => {
     const next = filters.countries.includes(country)
       ? filters.countries.filter((c) => c !== country)
@@ -33,21 +33,31 @@ export default function ProgramFiltersSidebar({ filters, onChange, onReset }) {
       <div className="space-y-2">
         <label className="text-[10px] font-bold uppercase tracking-wide text-gray-500">Ölkələr</label>
         <div className="flex flex-wrap gap-2">
-          {MVP_COUNTRIES.map((country) => (
+          {MVP_COUNTRIES.map((country) => {
+            const active = filters.countries.includes(country)
+            const count = countryCounts?.[country]
+            const showCount = countryCounts && active
+            return (
             <button
               key={country}
               type="button"
               onClick={() => toggleCountry(country)}
               className={[
                 'rounded-full px-3 py-1.5 text-xs border transition-colors',
-                filters.countries.includes(country)
+                active
                   ? 'border-primary bg-primary/15 text-white'
                   : 'border-white/10 text-gray-400 hover:border-white/25',
               ].join(' ')}
             >
               {country}
+              {showCount ? (
+                <span className={count > 0 ? ' text-primary font-semibold' : ' text-gray-500'}>
+                  {' '}({count})
+                </span>
+              ) : null}
             </button>
-          ))}
+            )
+          })}
         </div>
       </div>
 

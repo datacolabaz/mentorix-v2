@@ -16,6 +16,73 @@ export { FIELD_GROUPS, fieldLabel, fieldSearchTerms } from './universityFieldCat
 
 export const MVP_COUNTRIES = ['Almaniya', 'Polşa', 'Türkiyə', 'Macarıstan', 'İtaliya'];
 
+export const COUNTRY_FLAGS = {
+  Almaniya: '🇩🇪',
+  Polşa: '🇵🇱',
+  Türkiyə: '🇹🇷',
+  Macarıstan: '🇭🇺',
+  İtaliya: '🇮🇹',
+};
+
+export function countryFlag(country) {
+  return COUNTRY_FLAGS[country] || '🌍';
+}
+
+export function countProgramsByCountry(programs = []) {
+  const counts = {};
+  for (const program of programs) {
+    const country = program?.university?.country;
+    if (!country) continue;
+    counts[country] = (counts[country] || 0) + 1;
+  }
+  return counts;
+}
+
+export function groupProgramsByCountry(programs = [], countryOrder = []) {
+  const groups = new Map();
+  for (const program of programs) {
+    const country = program?.university?.country || 'Digər';
+    if (!groups.has(country)) groups.set(country, []);
+    groups.get(country).push(program);
+  }
+
+  const ordered = [];
+  const seen = new Set();
+  for (const country of countryOrder) {
+    if (!groups.has(country)) continue;
+    ordered.push({ country, programs: groups.get(country) });
+    seen.add(country);
+  }
+  for (const [country, countryPrograms] of groups) {
+    if (seen.has(country)) continue;
+    ordered.push({ country, programs: countryPrograms });
+  }
+  return ordered;
+}
+
+export function buildCountryResultsMeta(programs = [], selectedCountries = []) {
+  const countryCounts = countProgramsByCountry(programs);
+  const selected = selectedCountries?.length ? selectedCountries : Object.keys(countryCounts);
+  const countriesWithResults = selected.filter((country) => (countryCounts[country] || 0) > 0);
+
+  let coverageMessage = null;
+  if (selected.length > 1) {
+    if (countriesWithResults.length === 0) {
+      coverageMessage = `Seçilmiş ${selected.length} ölkədə uyğun proqram tapılmadı.`;
+    } else if (countriesWithResults.length < selected.length) {
+      coverageMessage = `Seçilmiş ${selected.length} ölkədən yalnız ${countriesWithResults.length} ölkədə uyğun proqram tapıldı.`;
+    }
+  }
+
+  return {
+    countryCounts,
+    selectedCountries: selected,
+    countriesWithResults,
+    coverageMessage,
+    groups: groupProgramsByCountry(programs, selected),
+  };
+}
+
 export const BUDGET_OPTIONS = [
   { value: '0-3000', label: '0 – 3 000 € / il' },
   { value: '3000-8000', label: '3 000 – 8 000 € / il' },

@@ -11,10 +11,13 @@ import UniversitySearchWizard from '../../components/university/UniversitySearch
 import ProgramFiltersSidebar from '../../components/university/ProgramFiltersSidebar'
 import ProgramCard from '../../components/university/ProgramCard'
 import ProgramDetailModal from '../../components/university/ProgramDetailModal'
+import ProgramResultsSummary from '../../components/university/ProgramResultsSummary'
+import ProgramResultsByCountry from '../../components/university/ProgramResultsByCountry'
 import {
   emptyWizardState,
   filtersToSearchParams,
   parseWizardFromSearchParams,
+  buildCountryResultsMeta,
 } from '../../lib/universitySearch'
 import { searchProgramsWithFallback } from '../../lib/universityProgramsApi'
 
@@ -173,6 +176,13 @@ export default function UniversityProgramSearch() {
     return `${pagination.total || 0} proqram tapıldı`
   }, [loading, pagination.total])
 
+  const countryResultsMeta = useMemo(
+    () => buildCountryResultsMeta(programs, filters.countries),
+    [programs, filters.countries],
+  )
+
+  const showCountryBreakdown = filters.countries.length > 0 && !loading
+
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white">
       <header className="border-b border-white/10 bg-black/40 backdrop-blur-md sticky top-0 z-40">
@@ -213,6 +223,7 @@ export default function UniversityProgramSearch() {
           <div className="grid lg:grid-cols-[280px_1fr] gap-6 items-start">
             <ProgramFiltersSidebar
               filters={filters}
+              countryCounts={showCountryBreakdown ? countryResultsMeta.countryCounts : null}
               onChange={(next) => {
                 setFilters(next)
                 syncUrl('results', next)
@@ -227,7 +238,7 @@ export default function UniversityProgramSearch() {
                 </p>
               ) : null}
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <p className="text-sm text-gray-400">{resultLabel}</p>
+                <p className="text-sm text-white font-medium">{resultLabel}</p>
                 {pagination.total_pages > 1 ? (
                   <div className="flex gap-2">
                     <Button
@@ -260,6 +271,16 @@ export default function UniversityProgramSearch() {
                 ) : null}
               </div>
 
+              {showCountryBreakdown ? (
+                <ProgramResultsSummary
+                  total={pagination.total || 0}
+                  selectedCountries={countryResultsMeta.selectedCountries}
+                  countryCounts={countryResultsMeta.countryCounts}
+                  coverageMessage={countryResultsMeta.coverageMessage}
+                  countriesWithResults={countryResultsMeta.countriesWithResults}
+                />
+              ) : null}
+
               {loading ? (
                 <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
                   {Array.from({ length: 6 }).map((_, i) => (
@@ -267,16 +288,24 @@ export default function UniversityProgramSearch() {
                   ))}
                 </div>
               ) : programs.length ? (
-                <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
-                  {programs.map((program) => (
-                    <ProgramCard
-                      key={program.id}
-                      program={program}
-                      onDetails={setSelectedProgram}
-                      onApply={handleApply}
-                    />
-                  ))}
-                </div>
+                filters.countries.length > 1 ? (
+                  <ProgramResultsByCountry
+                    groups={countryResultsMeta.groups}
+                    onDetails={setSelectedProgram}
+                    onApply={handleApply}
+                  />
+                ) : (
+                  <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                    {programs.map((program) => (
+                      <ProgramCard
+                        key={program.id}
+                        program={program}
+                        onDetails={setSelectedProgram}
+                        onApply={handleApply}
+                      />
+                    ))}
+                  </div>
+                )
               ) : (
                 <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-10 text-center">
                   <p className="text-gray-300">Uyğun proqram tapılmadı.</p>

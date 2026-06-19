@@ -1,11 +1,17 @@
 import Button from '../common/Button'
-import { formatDeadline, formatTuition, universityInitials } from '../../lib/universitySearch'
+import { countryFlag, formatDeadline, formatTuition, universityInitials } from '../../lib/universitySearch'
 
-export default function ProgramCard({ program, onDetails, onApply }) {
+export default function ProgramCard({ program, onDetails, onApply, showCountryBadge = false }) {
   const uni = program.university || {}
 
   return (
     <article className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:p-5 flex flex-col gap-4 hover:border-white/20 transition-colors">
+      {showCountryBadge && uni.country ? (
+        <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-white/10 bg-black/30 px-2.5 py-1 text-[11px] text-gray-200">
+          <span aria-hidden>{countryFlag(uni.country)}</span>
+          <span>{uni.country}</span>
+        </span>
+      ) : null}
       <div className="flex items-start gap-3">
         {uni.logo_url ? (
           <img
