@@ -12,6 +12,7 @@
     "update:america-apply-links": "node scripts/updateUsaCanadaApplyLinks.js",
     "update:europe-apply-links": "node scripts/updateEuropeApplyLinks.js",
     "dedupe:universities": "node scripts/dedupeUniversities.js",
+    "fix:apply-links-fuzzy": "node scripts/fixApplyLinksFuzzyMatch.js",
     "build:america-data": "node scripts/buildAmericaCanadaData.js",
     "start": "node scripts/migrate.js && node src/app.js",
     "dev": "nodemon src/app.js"
