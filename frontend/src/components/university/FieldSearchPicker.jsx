@@ -71,4 +71,15 @@ export default function FieldSearchPicker({ value, onChange, label = 'İxtisas' 
         <option value="">+ İxtisas əlavə et</option>
         {FIELD_GROUPS.map((group) => (
           <optgroup key={group.id} label={group.label}>
-          
+            {group.options.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </optgroup>
+        ))}
+      </select>
+      <p className="text-[11px] text-gray-500">Seçilmiş ixtisaslar OR ilə birləşir (hər hansı biri uyğun gəlir).</p>
+    </div>
+  )
+}

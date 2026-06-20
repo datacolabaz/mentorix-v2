@@ -26,6 +26,8 @@ const UNIVERSITY_COUNTRIES = [
   'Danimarka',
   'Rusiya',
   'İrlandiya',
+  'Amerika Birləşmiş Ştatları',
+  'Kanada',
 ];
 
 const COUNTRY_FLAGS = {
@@ -56,6 +58,8 @@ const COUNTRY_FLAGS = {
   Danimarka: '🇩🇰',
   Rusiya: '🇷🇺',
   İrlandiya: '🇮🇪',
+  'Amerika Birləşmiş Ştatları': '🇺🇸',
+  Kanada: '🇨🇦',
 };
 
 const COUNTRY_SEARCH_ALIASES = {
@@ -86,6 +90,8 @@ const COUNTRY_SEARCH_ALIASES = {
   Danimarka: ['denmark', 'danmark'],
   Rusiya: ['russia', 'russian federation', 'moscow'],
   İrlandiya: ['ireland', 'eire', 'irlandiya'],
+  'Amerika Birləşmiş Ştatları': ['usa', 'us', 'united states', 'america', 'abs', 'amerika birlesmis statlari'],
+  Kanada: ['canada', 'kanada'],
 };
 
 function foldAz(s) {

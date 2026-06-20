@@ -10,9 +10,10 @@ for (const [az, aliases] of Object.entries(COUNTRY_SEARCH_ALIASES)) {
 }
 
 const EXTRA_COUNTRY_MAP = {
-  usa: 'ABŞ',
-  'united states': 'ABŞ',
-  'united states of america': 'ABŞ',
+  usa: 'Amerika Birləşmiş Ştatları',
+  'united states': 'Amerika Birləşmiş Ştatları',
+  'united states of america': 'Amerika Birləşmiş Ştatları',
+  abs: 'Amerika Birləşmiş Ştatları',
   uk: 'Böyük Britaniya',
   'united kingdom': 'Böyük Britaniya',
   england: 'Böyük Britaniya',

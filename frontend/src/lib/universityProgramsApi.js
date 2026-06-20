@@ -23,6 +23,8 @@ function apiFiltersFromUi(uiFilters) {
     noIelts: uiFilters.no_ielts ? true : null,
     noMotivation: uiFilters.no_motivation ? true : null,
     userIelts: uiFilters.user_ielts ? Number(uiFilters.user_ielts) : null,
+    userToefl: uiFilters.user_toefl ? Number(uiFilters.user_toefl) : null,
+    universityType: uiFilters.university_type || null,
     deadlineBefore: uiFilters.deadline_before || null,
     sort: uiFilters.sort || 'ranking',
     q: uiFilters.q || null,

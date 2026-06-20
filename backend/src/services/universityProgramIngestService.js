@@ -10,12 +10,24 @@ function slugifyUni(name) {
     .slice(0, 80);
 }
 
-async function upsertUniversity({ name, country, city, world_ranking, logo_url, housing_info, funding_info }) {
+async function upsertUniversity({
+  name,
+  country,
+  city,
+  world_ranking,
+  logo_url,
+  housing_info,
+  funding_info,
+  university_type,
+}) {
   const slug = slugifyUni(name);
   const { rows } = await db.query(
     `
-    INSERT INTO universities (name, country, city, world_ranking, logo_url, housing_info, funding_info, slug, is_active)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true)
+    INSERT INTO universities (
+      name, country, city, world_ranking, logo_url, housing_info, funding_info,
+      university_type, slug, is_active
+    )
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, true)
     ON CONFLICT (slug) DO UPDATE SET
       name = EXCLUDED.name,
       country = COALESCE(EXCLUDED.country, universities.country),
@@ -23,6 +35,7 @@ async function upsertUniversity({ name, country, city, world_ranking, logo_url, 
       world_ranking = COALESCE(EXCLUDED.world_ranking, universities.world_ranking),
       housing_info = COALESCE(EXCLUDED.housing_info, universities.housing_info),
       funding_info = COALESCE(EXCLUDED.funding_info, universities.funding_info),
+      university_type = COALESCE(EXCLUDED.university_type, universities.university_type),
       is_active = true
     RETURNING *
     `,
@@ -34,6 +47,7 @@ async function upsertUniversity({ name, country, city, world_ranking, logo_url, 
       logo_url || null,
       housing_info || null,
       funding_info || null,
+      university_type || null,
       slug,
     ],
   );

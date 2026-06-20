@@ -91,8 +91,27 @@ export function programMatchesAnyField(program, fieldSlugs) {
 
 export function programMatchesUserIelts(program, userIelts) {
   if (userIelts == null) return true
-  const req = Number(program.requirements?.min_language?.ielts ?? program.requirements?.min_ielts)
+  const req = Number(
+    program.requirements?.min_language?.ielts
+    ?? program.requirements?.min_ielts
+    ?? program.requirements?.ielts,
+  )
   return !Number.isFinite(req) || req <= userIelts
+}
+
+export function programMatchesUserToefl(program, userToefl) {
+  if (userToefl == null) return true
+  const req = Number(
+    program.requirements?.min_language?.toefl
+    ?? program.requirements?.min_toefl
+    ?? program.requirements?.toefl,
+  )
+  return !Number.isFinite(req) || req <= userToefl
+}
+
+export function programMatchesUniversityType(program, universityType) {
+  if (!universityType) return true
+  return program.university?.university_type === universityType
 }
 
 export function buildEmptyResultsMessage(filters = {}) {

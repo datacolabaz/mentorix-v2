@@ -19,6 +19,8 @@ const {
   appendFieldsFilter,
   appendDegreeFilter,
   appendUserIeltsFilter,
+  appendUserToeflFilter,
+  appendUniversityTypeFilter,
   appendTextSearchFilter,
   normalizeFieldList,
   buildEmptyResultsMessage,
@@ -73,6 +75,10 @@ function normalizeFilters(query = {}) {
   const noMotivation = parseBool(query.no_motivation);
   const maxRanking = parseNumber(query.max_ranking);
   const userIelts = parseNumber(query.user_ielts);
+  const userToefl = parseNumber(query.user_toefl);
+  const universityType = ['Private', 'Public'].includes(query.university_type)
+    ? query.university_type
+    : null;
 
   return {
     page,
@@ -93,6 +99,8 @@ function normalizeFilters(query = {}) {
     noMotivation,
     maxRanking,
     userIelts,
+    userToefl,
+    universityType,
   };
 }
 
@@ -148,6 +156,7 @@ function mapProgramRow(row) {
       logo_url: row.logo_url,
       housing_info: row.housing_info,
       funding_info: row.funding_info,
+      university_type: row.university_type || null,
     },
   };
 }
@@ -226,6 +235,12 @@ async function queryProgramsFromDatabase(filters, rawQuery = {}) {
   } else if (filters.userIelts != null) {
     appendUserIeltsFilter(where, params, filters.userIelts);
   }
+  if (filters.userToefl != null) {
+    appendUserToeflFilter(where, params, filters.userToefl);
+  }
+  if (filters.universityType) {
+    appendUniversityTypeFilter(where, params, filters.universityType);
+  }
   if (filters.noMotivation === true) {
     where.push(`NOT EXISTS (
       SELECT 1 FROM jsonb_array_elements_text(COALESCE(p.requirements->'documents', '[]'::jsonb)) doc
@@ -289,6 +304,7 @@ async function queryProgramsFromDatabase(filters, rawQuery = {}) {
       u.logo_url,
       u.housing_info,
       u.funding_info,
+      u.university_type,
       (
         SELECT MIN(d)
         FROM unnest(p.deadline_dates) d
@@ -372,6 +388,7 @@ async function getProgramById(programId) {
       u.logo_url,
       u.housing_info,
       u.funding_info,
+      u.university_type,
       (
         SELECT MIN(d)
         FROM unnest(p.deadline_dates) d

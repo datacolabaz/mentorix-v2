@@ -45,6 +45,8 @@ function defaultFilters(searchParams) {
     max_tuition: searchParams.get('max_tuition') || '',
     min_gpa: searchParams.get('min_gpa') || '',
     user_ielts: searchParams.get('user_ielts') || '',
+    user_toefl: searchParams.get('user_toefl') || '',
+    university_type: searchParams.get('university_type') || '',
     page: Number(searchParams.get('page') || 1) || 1,
   }
 }
@@ -104,6 +106,8 @@ export default function UniversityProgramSearch() {
       if (nextFilters.min_gpa) params.min_gpa = nextFilters.min_gpa
       if (nextFilters.max_tuition) params.max_tuition = nextFilters.max_tuition
       if (nextFilters.user_ielts) params.user_ielts = nextFilters.user_ielts
+      if (nextFilters.user_toefl) params.user_toefl = nextFilters.user_toefl
+      if (nextFilters.university_type) params.university_type = nextFilters.university_type
 
       const result = await searchProgramsWithFallback(params, nextFilters)
       setPrograms(result.programs || [])
@@ -130,6 +134,8 @@ export default function UniversityProgramSearch() {
       if (nextFilters.min_gpa) params.set('min_gpa', nextFilters.min_gpa)
       if (nextFilters.max_tuition) params.set('max_tuition', nextFilters.max_tuition)
       if (nextFilters.user_ielts) params.set('user_ielts', nextFilters.user_ielts)
+      if (nextFilters.user_toefl) params.set('user_toefl', nextFilters.user_toefl)
+      if (nextFilters.university_type) params.set('university_type', nextFilters.university_type)
       setSearchParams(params, { replace: true })
     },
     [setSearchParams],
@@ -165,6 +171,8 @@ export default function UniversityProgramSearch() {
       min_gpa: params.min_gpa || '',
       user_ielts:
         state.languageType === 'ielts' && state.languageScore !== '' ? String(state.languageScore) : '',
+      user_toefl:
+        state.languageType === 'toefl' && state.languageScore !== '' ? String(state.languageScore) : '',
       page: 1,
     }
     setFilters(nextFilters)

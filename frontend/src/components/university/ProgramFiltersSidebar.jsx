@@ -56,6 +56,19 @@ export default function ProgramFiltersSidebar({
       />
 
       <div className="space-y-2">
+        <label className="text-[10px] font-bold uppercase tracking-wide text-gray-500">Universitet tipi</label>
+        <select
+          value={filters.university_type || ''}
+          onChange={(e) => patch({ university_type: e.target.value })}
+          className={inputCls}
+        >
+          <option value="">Hamısı</option>
+          <option value="Private">Xüsusi</option>
+          <option value="Public">Dövlət</option>
+        </select>
+      </div>
+
+      <div className="space-y-2">
         <label className="text-[10px] font-bold uppercase tracking-wide text-gray-500">Dərəcə</label>
         <select
           value={filters.degree_level}
@@ -88,4 +101,78 @@ export default function ProgramFiltersSidebar({
             label="IELTS tələb etmir"
           />
           <FilterCheckbox
-            checked={filters.no_motivation
+            checked={filters.no_motivation}
+            onChange={(e) => patch({ no_motivation: e.target.checked })}
+            label="Motivasiya məktubu tələb etmir"
+          />
+          <FilterCheckbox
+            checked={filters.max_ranking === '500'}
+            onChange={(e) => patch({ max_ranking: e.target.checked ? '500' : '' })}
+            label="QS top 500"
+          />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-[10px] font-bold uppercase tracking-wide text-gray-500">Min IELTS balınız</label>
+        <input
+          type="number"
+          min="0"
+          max="9"
+          step="0.5"
+          value={filters.user_ielts}
+          onChange={(e) => patch({ user_ielts: e.target.value, no_ielts: false })}
+          className={inputCls}
+          placeholder="Məs: 6.5"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-[10px] font-bold uppercase tracking-wide text-gray-500">Min TOEFL balınız</label>
+        <input
+          type="number"
+          min="0"
+          max="120"
+          step="1"
+          value={filters.user_toefl}
+          onChange={(e) => patch({ user_toefl: e.target.value })}
+          className={inputCls}
+          placeholder="Məs: 90"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-[10px] font-bold uppercase tracking-wide text-gray-500">Max təhsil haqqı (€/il)</label>
+        <input
+          type="number"
+          min="0"
+          step="100"
+          value={filters.max_tuition}
+          onChange={(e) => patch({ max_tuition: e.target.value })}
+          className={inputCls}
+          placeholder="Məs: 5000"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-[10px] font-bold uppercase tracking-wide text-gray-500">Son müraciət tarixi</label>
+        <input
+          type="date"
+          value={filters.deadline_before}
+          onChange={(e) => patch({ deadline_before: e.target.value })}
+          className={inputCls}
+        />
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-[10px] font-bold uppercase tracking-wide text-gray-500">Sıralama</label>
+        <select value={filters.sort} onChange={(e) => patch({ sort: e.target.value })} className={inputCls}>
+          <option value="ranking">Dünya reytinqi</option>
+          <option value="tuition_asc">Ödəniş (aşağı)</option>
+          <option value="tuition_desc">Ödəniş (yuxarı)</option>
+          <option value="deadline">Son tarix</option>
+        </select>
+      </div>
+    </aside>
+  )
+}

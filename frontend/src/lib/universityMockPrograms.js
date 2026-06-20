@@ -4,6 +4,8 @@ import {
   programMatchesAnyField,
   programMatchesDegree,
   programMatchesUserIelts,
+  programMatchesUserToefl,
+  programMatchesUniversityType,
   resolveFieldFromText,
   buildEmptyResultsMessage,
 } from './universityProgramFilters'
@@ -624,6 +626,12 @@ function filterMockPrograms(filters = {}) {
     });
   } else if (filters.userIelts != null) {
     rows = rows.filter((p) => programMatchesUserIelts(p, filters.userIelts));
+  }
+  if (filters.userToefl != null) {
+    rows = rows.filter((p) => programMatchesUserToefl(p, filters.userToefl));
+  }
+  if (filters.universityType) {
+    rows = rows.filter((p) => programMatchesUniversityType(p, filters.universityType));
   }
   if (filters.noMotivation === true) {
     rows = rows.filter((p) => {

@@ -5,6 +5,11 @@ import {
   EUROPE_FIELD_MATCH_TERMS,
   EUROPE_FIELD_RELATED_SLUGS,
 } from './europeFieldCatalogAdditions'
+import {
+  AMERICA_FIELD_GROUPS,
+  AMERICA_FIELD_MATCH_TERMS,
+  AMERICA_FIELD_RELATED_SLUGS,
+} from './americaFieldCatalogAdditions'
 
 export const FIELD_GROUPS = [
   {
@@ -60,6 +65,7 @@ export const FIELD_GROUPS = [
     ],
   },
   ...EUROPE_FIELD_GROUPS,
+  ...AMERICA_FIELD_GROUPS,
 ]
 
 const FIELD_BY_VALUE = new Map()
@@ -101,6 +107,7 @@ const FIELD_MATCH_TERMS = {
   medicine: ['Medicine', 'Medical', 'MBBS', 'Life Sciences'],
   environmental_science: ['Environment', 'Environmental', 'Ecology', 'Life Sciences'],
   ...EUROPE_FIELD_MATCH_TERMS,
+  ...AMERICA_FIELD_MATCH_TERMS,
 }
 
 const FIELD_RELATED_SLUGS = {
@@ -110,6 +117,7 @@ const FIELD_RELATED_SLUGS = {
   biology: ['biology', 'biochemistry', 'biotechnology', 'medicine', 'life_sciences'],
   pharmacy: ['pharmacy', 'chemistry', 'biochemistry'],
   ...EUROPE_FIELD_RELATED_SLUGS,
+  ...AMERICA_FIELD_RELATED_SLUGS,
 }
 
 export function relatedFieldSlugs(slug) {

@@ -8,6 +8,8 @@
     "generate:scrape-targets": "node scripts/generateScrapeTargets.js",
     "import:programs": "node scripts/importUniversityPrograms.js",
     "import:europe": "node scripts/importEuropeUniversities.js",
+    "import:america": "node scripts/importAmericaCanadaUniversities.js",
+    "build:america-data": "node scripts/buildAmericaCanadaData.js",
     "start": "node scripts/migrate.js && node src/app.js",
     "dev": "nodemon src/app.js"
   },

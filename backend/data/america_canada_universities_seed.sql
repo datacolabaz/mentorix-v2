@@ -1,0 +1,2 @@
+-- Reference only — use: npm run import:america
+-- Raw integer-ID SQL from legacy seed does not match UUID schema.

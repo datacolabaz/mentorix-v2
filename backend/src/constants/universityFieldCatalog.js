@@ -5,6 +5,11 @@ const {
   EUROPE_FIELD_MATCH_TERMS,
   EUROPE_FIELD_RELATED_SLUGS,
 } = require('./europeFieldCatalogAdditions');
+const {
+  AMERICA_FIELD_GROUPS,
+  AMERICA_FIELD_MATCH_TERMS,
+  AMERICA_FIELD_RELATED_SLUGS,
+} = require('./americaFieldCatalogAdditions');
 
 const FIELD_GROUPS = [
   {
@@ -60,6 +65,7 @@ const FIELD_GROUPS = [
     ],
   },
   ...EUROPE_FIELD_GROUPS,
+  ...AMERICA_FIELD_GROUPS,
 ];
 
 const FIELD_BY_VALUE = new Map();
@@ -102,6 +108,7 @@ const FIELD_MATCH_TERMS = {
   medicine: ['Medicine', 'Medical', 'MBBS', 'Life Sciences'],
   environmental_science: ['Environment', 'Environmental', 'Ecology', 'Life Sciences'],
   ...EUROPE_FIELD_MATCH_TERMS,
+  ...AMERICA_FIELD_MATCH_TERMS,
 };
 
 /** Eyni sahə üzrə yaxın ixtisaslar (məs: Kimya ↔ Kimya mühəndisliyi) */
@@ -112,6 +119,7 @@ const FIELD_RELATED_SLUGS = {
   biology: ['biology', 'biochemistry', 'biotechnology', 'medicine', 'life_sciences'],
   pharmacy: ['pharmacy', 'chemistry', 'biochemistry'],
   ...EUROPE_FIELD_RELATED_SLUGS,
+  ...AMERICA_FIELD_RELATED_SLUGS,
 };
 
 function relatedFieldSlugs(slug) {

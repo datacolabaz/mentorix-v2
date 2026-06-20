@@ -1,0 +1,949 @@
+{
+  "meta": {
+    "description": "Mentorix.io üçün Amerika və Kanada universitetləri kataloqu",
+    "source": "QS World Rankings 2025",
+    "last_updated": "2026-06",
+    "total_universities": 42,
+    "total_countries": 2
+  },
+  "countries": [
+    {
+      "country": "Amerika Birləşmiş Ştatları",
+      "country_en": "United States",
+      "flag": "🇺🇸",
+      "universities": [
+        {
+          "name": "Massachusetts Institute of Technology (MIT)",
+          "city": "Cambridge, MA",
+          "qs_rank_2025": 1,
+          "type": "Private",
+          "apply_link": "https://apply.mit.edu/apply/",
+          "programs_link": "https://www.mit.edu/education/",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "English",
+          "toefl_min": 90,
+          "ielts_min": 7,
+          "fields": [
+            "Engineering",
+            "Computer Science",
+            "Physics",
+            "Mathematics"
+          ]
+        },
+        {
+          "name": "Stanford University",
+          "city": "Stanford, CA",
+          "qs_rank_2025": 5,
+          "type": "Private",
+          "apply_link": "https://gradadmissions.stanford.edu/apply",
+          "programs_link": "https://gradadmissions.stanford.edu/programs",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "English",
+          "toefl_min": 89,
+          "ielts_min": 7,
+          "fields": [
+            "Computer Science",
+            "Engineering",
+            "Business",
+            "Medicine"
+          ]
+        },
+        {
+          "name": "Harvard University",
+          "city": "Cambridge, MA",
+          "qs_rank_2025": 4,
+          "type": "Private",
+          "apply_link": "https://www.gsas.harvard.edu/apply",
+          "programs_link": "https://www.gsas.harvard.edu/programs",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "English",
+          "toefl_min": 80,
+          "ielts_min": 6.5,
+          "fields": [
+            "Law",
+            "Medicine",
+            "Business",
+            "Natural Sciences"
+          ]
+        },
+        {
+          "name": "California Institute of Technology (Caltech)",
+          "city": "Pasadena, CA",
+          "qs_rank_2025": 10,
+          "type": "Private",
+          "apply_link": "https://www.admissions.caltech.edu/apply",
+          "programs_link": "https://www.caltech.edu/academics",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "English",
+          "toefl_min": 100,
+          "ielts_min": 7,
+          "fields": [
+            "Physics",
+            "Chemistry",
+            "Engineering",
+            "Computer Science"
+          ]
+        },
+        {
+          "name": "Princeton University",
+          "city": "Princeton, NJ",
+          "qs_rank_2025": 14,
+          "type": "Private",
+          "apply_link": "https://gradschool.princeton.edu/admission/applying-princeton",
+          "programs_link": "https://gradschool.princeton.edu/academics/fields-study",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "English",
+          "toefl_min": 100,
+          "ielts_min": 7,
+          "fields": [
+            "Engineering",
+            "Natural Sciences",
+            "Humanities",
+            "Social Sciences"
+          ]
+        },
+        {
+          "name": "Yale University",
+          "city": "New Haven, CT",
+          "qs_rank_2025": 16,
+          "type": "Private",
+          "apply_link": "https://gsas.yale.edu/admissions/how-apply",
+          "programs_link": "https://gsas.yale.edu/programs-of-study",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "English",
+          "toefl_min": 100,
+          "ielts_min": 7,
+          "fields": [
+            "Law",
+            "Medicine",
+            "Drama",
+            "Music"
+          ]
+        },
+        {
+          "name": "Columbia University",
+          "city": "New York, NY",
+          "qs_rank_2025": 22,
+          "type": "Private",
+          "apply_link": "https://apply.gsas.columbia.edu/apply/",
+          "programs_link": "https://gsas.columbia.edu/degree-programs",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "English",
+          "toefl_min": 100,
+          "ielts_min": 7,
+          "fields": [
+            "Engineering",
+            "Business",
+            "Law",
+            "Journalism"
+          ]
+        },
+        {
+          "name": "University of Pennsylvania (UPenn)",
+          "city": "Philadelphia, PA",
+          "qs_rank_2025": 13,
+          "type": "Private",
+          "apply_link": "https://gradadm.upenn.edu/how-to-apply/",
+          "programs_link": "https://www.upenn.edu/academics/graduate-professional",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "English",
+          "toefl_min": 100,
+          "ielts_min": 7,
+          "fields": [
+            "Business (Wharton)",
+            "Medicine",
+            "Law",
+            "Engineering"
+          ]
+        },
+        {
+          "name": "Cornell University",
+          "city": "Ithaca, NY",
+          "qs_rank_2025": 19,
+          "type": "Private",
+          "apply_link": "https://gradschool.cornell.edu/admissions/apply/",
+          "programs_link": "https://gradschool.cornell.edu/academics/fields-of-study/",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "English",
+          "toefl_min": 77,
+          "ielts_min": 7,
+          "fields": [
+            "Engineering",
+            "Agriculture",
+            "Hotel Management",
+            "Computer Science"
+          ]
+        },
+        {
+          "name": "Johns Hopkins University",
+          "city": "Baltimore, MD",
+          "qs_rank_2025": 31,
+          "type": "Private",
+          "apply_link": "https://apply.jhu.edu/apply/graduate/",
+          "programs_link": "https://www.jhu.edu/academics/graduate/",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "English",
+          "toefl_min": 100,
+          "ielts_min": 7,
+          "fields": [
+            "Medicine",
+            "Public Health",
+            "Engineering",
+            "Arts & Sciences"
+          ]
+        },
+        {
+          "name": "Duke University",
+          "city": "Durham, NC",
+          "qs_rank_2025": 52,
+          "type": "Private",
+          "apply_link": "https://gradschool.duke.edu/admissions/apply/",
+          "programs_link": "https://gradschool.duke.edu/academics/programs/",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "English",
+          "toefl_min": 90,
+          "ielts_min": 7,
+          "fields": [
+            "Medicine",
+            "Law",
+            "Engineering",
+            "Business"
+          ]
+        },
+        {
+          "name": "Northwestern University",
+          "city": "Evanston, IL",
+          "qs_rank_2025": 43,
+          "type": "Private",
+          "apply_link": "https://www.tgs.northwestern.edu/admission/how-to-apply.html",
+          "programs_link": "https://www.tgs.northwestern.edu/programs/",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "English",
+          "toefl_min": 90,
+          "ielts_min": 7,
+          "fields": [
+            "Engineering",
+            "Journalism",
+            "Medicine",
+            "Law"
+          ]
+        },
+        {
+          "name": "University of Chicago",
+          "city": "Chicago, IL",
+          "qs_rank_2025": 21,
+          "type": "Private",
+          "apply_link": "https://grad.uchicago.edu/admissions/",
+          "programs_link": "https://grad.uchicago.edu/programs/",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "English",
+          "toefl_min": 104,
+          "ielts_min": 7,
+          "fields": [
+            "Economics",
+            "Law",
+            "Social Sciences",
+            "Humanities"
+          ]
+        },
+        {
+          "name": "Carnegie Mellon University (CMU)",
+          "city": "Pittsburgh, PA",
+          "qs_rank_2025": 53,
+          "type": "Private",
+          "apply_link": "https://apply.cmu.edu/apply/",
+          "programs_link": "https://www.cmu.edu/academics/graduate-programs.html",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "English",
+          "toefl_min": 100,
+          "ielts_min": 7.5,
+          "fields": [
+            "Computer Science",
+            "Engineering",
+            "Business",
+            "Fine Arts"
+          ]
+        },
+        {
+          "name": "New York University (NYU)",
+          "city": "New York, NY",
+          "qs_rank_2025": 39,
+          "type": "Private",
+          "apply_link": "https://apply.grad.nyu.edu/apply/",
+          "programs_link": "https://www.nyu.edu/admissions/graduate-admissions/programs.html",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "English",
+          "toefl_min": 100,
+          "ielts_min": 7,
+          "fields": [
+            "Business",
+            "Law",
+            "Medicine",
+            "Arts"
+          ]
+        },
+        {
+          "name": "University of California, Berkeley (UC Berkeley)",
+          "city": "Berkeley, CA",
+          "qs_rank_2025": 28,
+          "type": "Public",
+          "apply_link": "https://grad.berkeley.edu/admissions/apply/",
+          "programs_link": "https://grad.berkeley.edu/programs/",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "English",
+          "toefl_min": 90,
+          "ielts_min": 7,
+          "fields": [
+            "Computer Science",
+            "Engineering",
+            "Natural Sciences",
+            "Business"
+          ]
+        },
+        {
+          "name": "University of California, Los Angeles (UCLA)",
+          "city": "Los Angeles, CA",
+          "qs_rank_2025": 44,
+          "type": "Public",
+          "apply_link": "https://grad.ucla.edu/admissions/",
+          "programs_link": "https://grad.ucla.edu/programs/",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "English",
+          "toefl_min": 87,
+          "ielts_min": 7,
+          "fields": [
+            "Medicine",
+            "Engineering",
+            "Business",
+            "Film"
+          ]
+        },
+        {
+          "name": "University of Michigan, Ann Arbor",
+          "city": "Ann Arbor, MI",
+          "qs_rank_2025": 23,
+          "type": "Public",
+          "apply_link": "https://rackham.umich.edu/admissions/applying/",
+          "programs_link": "https://rackham.umich.edu/programs/",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "English",
+          "toefl_min": 84,
+          "ielts_min": 6.5,
+          "fields": [
+            "Engineering",
+            "Business",
+            "Medicine",
+            "Law"
+          ]
+        },
+        {
+          "name": "Georgia Institute of Technology (Georgia Tech)",
+          "city": "Atlanta, GA",
+          "qs_rank_2025": 93,
+          "type": "Public",
+          "apply_link": "https://grad.gatech.edu/admissions",
+          "programs_link": "https://grad.gatech.edu/degree-programs",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "English",
+          "toefl_min": 79,
+          "ielts_min": 6.5,
+          "fields": [
+            "Engineering",
+            "Computer Science",
+            "Architecture",
+            "Business"
+          ]
+        },
+        {
+          "name": "University of Washington",
+          "city": "Seattle, WA",
+          "qs_rank_2025": 69,
+          "type": "Public",
+          "apply_link": "https://grad.uw.edu/admissions/",
+          "programs_link": "https://grad.uw.edu/programs-and-degrees/",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "English",
+          "toefl_min": 92,
+          "ielts_min": 7,
+          "fields": [
+            "Computer Science",
+            "Medicine",
+            "Engineering",
+            "Social Sciences"
+          ]
+        },
+        {
+          "name": "University of Texas at Austin (UT Austin)",
+          "city": "Austin, TX",
+          "qs_rank_2025": 136,
+          "type": "Public",
+          "apply_link": "https://gradschool.utexas.edu/admissions/apply",
+          "programs_link": "https://gradschool.utexas.edu/degrees",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "English",
+          "toefl_min": 79,
+          "ielts_min": 6.5,
+          "fields": [
+            "Engineering",
+            "Business",
+            "Law",
+            "Computer Science"
+          ]
+        },
+        {
+          "name": "University of Illinois Urbana-Champaign (UIUC)",
+          "city": "Champaign, IL",
+          "qs_rank_2025": 82,
+          "type": "Public",
+          "apply_link": "https://grad.illinois.edu/admissions/apply",
+          "programs_link": "https://grad.illinois.edu/admissions/programs",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "English",
+          "toefl_min": 79,
+          "ielts_min": 6.5,
+          "fields": [
+            "Computer Science",
+            "Engineering",
+            "Agriculture",
+            "Business"
+          ]
+        },
+        {
+          "name": "Purdue University",
+          "city": "West Lafayette, IN",
+          "qs_rank_2025": 109,
+          "type": "Public",
+          "apply_link": "https://www.purdue.edu/gradschool/admissions/apply.html",
+          "programs_link": "https://www.purdue.edu/gradschool/programs/",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "English",
+          "toefl_min": 77,
+          "ielts_min": 6.5,
+          "fields": [
+            "Engineering",
+            "Agriculture",
+            "Computer Science",
+            "Pharmacy"
+          ]
+        },
+        {
+          "name": "University of California, San Diego (UCSD)",
+          "city": "San Diego, CA",
+          "qs_rank_2025": 67,
+          "type": "Public",
+          "apply_link": "https://grad.ucsd.edu/admissions/",
+          "programs_link": "https://grad.ucsd.edu/academics/",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "English",
+          "toefl_min": 85,
+          "ielts_min": 7,
+          "fields": [
+            "Medicine",
+            "Engineering",
+            "Computer Science",
+            "Natural Sciences"
+          ]
+        },
+        {
+          "name": "Boston University",
+          "city": "Boston, MA",
+          "qs_rank_2025": 112,
+          "type": "Private",
+          "apply_link": "https://www.bu.edu/admissions/graduate/",
+          "programs_link": "https://www.bu.edu/academics/programs/graduate/",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "English",
+          "toefl_min": 84,
+          "ielts_min": 7,
+          "fields": [
+            "Medicine",
+            "Law",
+            "Engineering",
+            "Business"
+          ]
+        },
+        {
+          "name": "University of Wisconsin-Madison",
+          "city": "Madison, WI",
+          "qs_rank_2025": 90,
+          "type": "Public",
+          "apply_link": "https://grad.wisc.edu/apply/",
+          "programs_link": "https://grad.wisc.edu/academics/programs/",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "English",
+          "toefl_min": 92,
+          "ielts_min": 6.5,
+          "fields": [
+            "Engineering",
+            "Agriculture",
+            "Business",
+            "Education"
+          ]
+        },
+        {
+          "name": "Ohio State University",
+          "city": "Columbus, OH",
+          "qs_rank_2025": 171,
+          "type": "Public",
+          "apply_link": "https://gradadmissions.osu.edu/apply",
+          "programs_link": "https://gradadmissions.osu.edu/programs",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "English",
+          "toefl_min": 79,
+          "ielts_min": 6.5,
+          "fields": [
+            "Engineering",
+            "Agriculture",
+            "Business",
+            "Education"
+          ]
+        },
+        {
+          "name": "Arizona State University (ASU)",
+          "city": "Tempe, AZ",
+          "qs_rank_2025": 216,
+          "type": "Public",
+          "apply_link": "https://apply.asu.edu/apply/",
+          "programs_link": "https://graduate.asu.edu/programs",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "English",
+          "toefl_min": 61,
+          "ielts_min": 6.5,
+          "fields": [
+            "Engineering",
+            "Business",
+            "Social Sciences",
+            "Natural Sciences"
+          ]
+        },
+        {
+          "name": "Dartmouth College",
+          "city": "Hanover, NH",
+          "qs_rank_2025": 250,
+          "type": "Private",
+          "apply_link": "https://graduate.dartmouth.edu/academics/admissions",
+          "programs_link": "https://graduate.dartmouth.edu/academics/programs",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "English",
+          "toefl_min": 100,
+          "ielts_min": 7,
+          "fields": [
+            "Engineering",
+            "Medicine",
+            "Business",
+            "Arts & Sciences"
+          ]
+        },
+        {
+          "name": "Brown University",
+          "city": "Providence, RI",
+          "qs_rank_2025": 201,
+          "type": "Private",
+          "apply_link": "https://www.brown.edu/academics/gradschool/application-process",
+          "programs_link": "https://www.brown.edu/academics/gradschool/programs",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "English",
+          "toefl_min": 90,
+          "ielts_min": 7,
+          "fields": [
+            "Engineering",
+            "Natural Sciences",
+            "Social Sciences",
+            "Humanities"
+          ]
+        }
+      ]
+    },
+    {
+      "country": "Kanada",
+      "country_en": "Canada",
+      "flag": "🇨🇦",
+      "universities": [
+        {
+          "name": "University of Toronto",
+          "city": "Toronto, ON",
+          "qs_rank_2025": 25,
+          "type": "Public",
+          "apply_link": "https://www.sgs.utoronto.ca/apply/",
+          "programs_link": "https://www.sgs.utoronto.ca/programs/",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "English",
+          "toefl_min": 93,
+          "ielts_min": 6.5,
+          "fields": [
+            "Medicine",
+            "Engineering",
+            "Computer Science",
+            "Business"
+          ]
+        },
+        {
+          "name": "University of British Columbia (UBC)",
+          "city": "Vancouver, BC",
+          "qs_rank_2025": 34,
+          "type": "Public",
+          "apply_link": "https://www.grad.ubc.ca/prospective-students/application-admission",
+          "programs_link": "https://www.grad.ubc.ca/prospective-students/graduate-degree-programs",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "English",
+          "toefl_min": 90,
+          "ielts_min": 6.5,
+          "fields": [
+            "Engineering",
+            "Forestry",
+            "Medicine",
+            "Business"
+          ]
+        },
+        {
+          "name": "McGill University",
+          "city": "Montreal, QC",
+          "qs_rank_2025": 29,
+          "type": "Public",
+          "apply_link": "https://www.mcgill.ca/applying/graduate",
+          "programs_link": "https://www.mcgill.ca/gradapplicants/programs",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "English",
+          "toefl_min": 86,
+          "ielts_min": 6.5,
+          "fields": [
+            "Medicine",
+            "Law",
+            "Engineering",
+            "Arts"
+          ]
+        },
+        {
+          "name": "University of Alberta",
+          "city": "Edmonton, AB",
+          "qs_rank_2025": 111,
+          "type": "Public",
+          "apply_link": "https://www.ualberta.ca/graduate-studies/prospective-students/how-to-apply.html",
+          "programs_link": "https://www.ualberta.ca/programs/index.html",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "English",
+          "toefl_min": 90,
+          "ielts_min": 6.5,
+          "fields": [
+            "Engineering",
+            "Medicine",
+            "Natural Sciences",
+            "Business"
+          ]
+        },
+        {
+          "name": "University of Waterloo",
+          "city": "Waterloo, ON",
+          "qs_rank_2025": 112,
+          "type": "Public",
+          "apply_link": "https://uwaterloo.ca/graduate-studies-postdoctoral-affairs/future-students/how-apply",
+          "programs_link": "https://uwaterloo.ca/graduate-studies-postdoctoral-affairs/future-students/programs",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "English",
+          "toefl_min": 90,
+          "ielts_min": 6.5,
+          "fields": [
+            "Computer Science",
+            "Engineering",
+            "Mathematics",
+            "Business"
+          ]
+        },
+        {
+          "name": "McMaster University",
+          "city": "Hamilton, ON",
+          "qs_rank_2025": 189,
+          "type": "Public",
+          "apply_link": "https://gs.mcmaster.ca/app/uploads/2019/10/how-to-apply.pdf",
+          "programs_link": "https://gs.mcmaster.ca/programs/",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "English",
+          "toefl_min": 92,
+          "ielts_min": 6.5,
+          "fields": [
+            "Medicine",
+            "Engineering",
+            "Business",
+            "Social Sciences"
+          ]
+        },
+        {
+          "name": "University of Calgary",
+          "city": "Calgary, AB",
+          "qs_rank_2025": 182,
+          "type": "Public",
+          "apply_link": "https://grad.ucalgary.ca/future-students/explore-programs",
+          "programs_link": "https://grad.ucalgary.ca/future-students/explore-programs",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "English",
+          "toefl_min": 86,
+          "ielts_min": 6.5,
+          "fields": [
+            "Engineering",
+            "Medicine",
+            "Business",
+            "Law"
+          ]
+        },
+        {
+          "name": "Université de Montréal",
+          "city": "Montreal, QC",
+          "qs_rank_2025": 141,
+          "type": "Public",
+          "apply_link": "https://admission.umontreal.ca/en/apply/",
+          "programs_link": "https://admission.umontreal.ca/en/programs/",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "English",
+          "toefl_min": 86,
+          "ielts_min": 6.5,
+          "fields": [
+            "Medicine",
+            "Law",
+            "Pharmacy",
+            "Veterinary"
+          ]
+        },
+        {
+          "name": "Western University",
+          "city": "London, ON",
+          "qs_rank_2025": 114,
+          "type": "Public",
+          "apply_link": "https://grad.uwo.ca/admissions/",
+          "programs_link": "https://grad.uwo.ca/admissions/programs/index.cfm",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "English",
+          "toefl_min": 86,
+          "ielts_min": 6.5,
+          "fields": [
+            "Business (Ivey)",
+            "Medicine",
+            "Engineering",
+            "Law"
+          ]
+        },
+        {
+          "name": "Queen's University",
+          "city": "Kingston, ON",
+          "qs_rank_2025": 246,
+          "type": "Public",
+          "apply_link": "https://queensu.ca/sgs/prospective-students/applying-queens",
+          "programs_link": "https://queensu.ca/sgs/prospective-students/programs",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "English",
+          "toefl_min": 88,
+          "ielts_min": 6.5,
+          "fields": [
+            "Engineering",
+            "Business",
+            "Law",
+            "Medicine"
+          ]
+        },
+        {
+          "name": "Dalhousie University",
+          "city": "Halifax, NS",
+          "qs_rank_2025": 298,
+          "type": "Public",
+          "apply_link": "https://www.dal.ca/academics/graduate_studies/how-to-apply.html",
+          "programs_link": "https://www.dal.ca/academics/graduate_studies/programs-az.html",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "English",
+          "toefl_min": 80,
+          "ielts_min": 6.5,
+          "fields": [
+            "Medicine",
+            "Engineering",
+            "Law",
+            "Architecture"
+          ]
+        },
+        {
+          "name": "Simon Fraser University (SFU)",
+          "city": "Burnaby, BC",
+          "qs_rank_2025": 318,
+          "type": "Public",
+          "apply_link": "https://www.sfu.ca/gradstudies/apply.html",
+          "programs_link": "https://www.sfu.ca/gradstudies/programs.html",
+          "degrees": [
+            "BSc",
+            "MSc",
+            "PhD"
+          ],
+          "language": "English",
+          "toefl_min": 93,
+          "ielts_min": 6.5,
+          "fields": [
+            "Computer Science",
+            "Engineering",
+            "Business",
+            "Social Sciences"
+          ]
+        }
+      ]
+    }
+  ]
+}

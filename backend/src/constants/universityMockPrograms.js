@@ -4,6 +4,8 @@ const {
   programMatchesAnyField,
   programMatchesDegree,
   programMatchesUserIelts,
+  programMatchesUserToefl,
+  programMatchesUniversityType,
   resolveFieldFromText,
   buildEmptyResultsMessage,
 } = require('../utils/universityProgramFilters');
@@ -620,6 +622,12 @@ function filterMockPrograms(filters = {}, rawQuery = {}) {
     });
   } else if (filters.userIelts != null) {
     rows = rows.filter((p) => programMatchesUserIelts(p, filters.userIelts));
+  }
+  if (filters.userToefl != null) {
+    rows = rows.filter((p) => programMatchesUserToefl(p, filters.userToefl));
+  }
+  if (filters.universityType) {
+    rows = rows.filter((p) => programMatchesUniversityType(p, filters.universityType));
   }
   if (filters.noMotivation === true) {
     rows = rows.filter((p) => {

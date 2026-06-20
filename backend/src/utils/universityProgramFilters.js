@@ -220,7 +220,27 @@ function appendUserIeltsFilter(where, params, userIelts) {
     OR TRIM(COALESCE(p.requirements->'min_language'->>'ielts', '')) = ''
     OR (p.requirements->'min_language'->>'ielts')::numeric <= $${idx}
     OR (p.requirements->>'min_ielts')::numeric <= $${idx}
+    OR (p.requirements->>'ielts')::numeric <= $${idx}
   )`);
+}
+
+function appendUserToeflFilter(where, params, userToefl) {
+  if (userToefl == null) return;
+  params.push(userToefl);
+  const idx = params.length;
+  where.push(`(
+    p.requirements->'min_language'->>'toefl' IS NULL
+    OR TRIM(COALESCE(p.requirements->'min_language'->>'toefl', '')) = ''
+    OR (p.requirements->'min_language'->>'toefl')::numeric <= $${idx}
+    OR (p.requirements->>'min_toefl')::numeric <= $${idx}
+    OR (p.requirements->>'toefl')::numeric <= $${idx}
+  )`);
+}
+
+function appendUniversityTypeFilter(where, params, universityType) {
+  if (!universityType) return;
+  params.push(universityType);
+  where.push(`u.university_type = $${params.length}`);
 }
 
 function appendTextSearchFilter(where, params, q, { skipFieldLike = false } = {}) {
@@ -265,8 +285,27 @@ function programMatchesDegree(program, degreeLevel) {
 
 function programMatchesUserIelts(program, userIelts) {
   if (userIelts == null) return true;
-  const req = Number(program.requirements?.min_language?.ielts ?? program.requirements?.min_ielts);
+  const req = Number(
+    program.requirements?.min_language?.ielts
+    ?? program.requirements?.min_ielts
+    ?? program.requirements?.ielts,
+  );
   return !Number.isFinite(req) || req <= userIelts;
+}
+
+function programMatchesUserToefl(program, userToefl) {
+  if (userToefl == null) return true;
+  const req = Number(
+    program.requirements?.min_language?.toefl
+    ?? program.requirements?.min_toefl
+    ?? program.requirements?.toefl,
+  );
+  return !Number.isFinite(req) || req <= userToefl;
+}
+
+function programMatchesUniversityType(program, universityType) {
+  if (!universityType) return true;
+  return program.university?.university_type === universityType;
 }
 
 module.exports = {
@@ -281,9 +320,13 @@ module.exports = {
   appendFieldsFilter,
   appendDegreeFilter,
   appendUserIeltsFilter,
+  appendUserToeflFilter,
+  appendUniversityTypeFilter,
   appendTextSearchFilter,
   programMatchesAnyField,
   programMatchesDegree,
   programMatchesUserIelts,
+  programMatchesUserToefl,
+  programMatchesUniversityType,
   buildEmptyResultsMessage,
 };
