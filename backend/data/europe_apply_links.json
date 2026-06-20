@@ -1,0 +1,299 @@
+{
+  "meta": {
+    "description": "Avropa universitetləri üçün BSc və MSc/PhD ayrı apply linkləri",
+    "note": "Bəzi universitetlərdə (məs. Almaniya) tək portal var, bu halda eyni link təkrarlanır",
+    "last_updated": "2026-06"
+  },
+  "universities": [
+    {
+      "name": "Technical University of Munich (TUM)",
+      "undergrad_apply_link": "https://www.tum.de/en/studies/application/bachelor/application-bachelor",
+      "graduate_apply_link": "https://www.tum.de/en/studies/application/master/application-master"
+    },
+    {
+      "name": "Ludwig Maximilian University of Munich (LMU)",
+      "undergrad_apply_link": "https://www.lmu.de/en/study/degree-students/applications-for-admission/index.html",
+      "graduate_apply_link": "https://www.lmu.de/en/study/degree-students/applications-for-admission/index.html"
+    },
+    {
+      "name": "Heidelberg University",
+      "undergrad_apply_link": "https://www.uni-heidelberg.de/en/study/how-to-apply/bachelors-degree-application",
+      "graduate_apply_link": "https://www.uni-heidelberg.de/en/study/how-to-apply/masters-degree-application"
+    },
+    {
+      "name": "Freie Universität Berlin",
+      "undergrad_apply_link": "https://www.fu-berlin.de/en/studium/bewerbung/bachelor/index.html",
+      "graduate_apply_link": "https://www.fu-berlin.de/en/studium/bewerbung/master/index.html"
+    },
+    {
+      "name": "Karlsruhe Institute of Technology (KIT)",
+      "undergrad_apply_link": "https://www.sle.kit.edu/english/4034.php",
+      "graduate_apply_link": "https://www.sle.kit.edu/english/4035.php"
+    },
+    {
+      "name": "RWTH Aachen University",
+      "undergrad_apply_link": "https://www.rwth-aachen.de/cms/root/studium/vor-dem-studium/bewerbung/~bsc/international-applicants/",
+      "graduate_apply_link": "https://www.rwth-aachen.de/cms/root/studium/vor-dem-studium/bewerbung/~bsd/international-applicants-master/"
+    },
+    {
+      "name": "Humboldt University of Berlin",
+      "undergrad_apply_link": "https://www.hu-berlin.de/en/studies/counselling/application/bachelor",
+      "graduate_apply_link": "https://www.hu-berlin.de/en/studies/counselling/application/master"
+    },
+    {
+      "name": "University of Oxford",
+      "undergrad_apply_link": "https://www.ox.ac.uk/admissions/undergraduate/applying-to-oxford",
+      "graduate_apply_link": "https://www.ox.ac.uk/admissions/graduate/applying-to-oxford"
+    },
+    {
+      "name": "University of Cambridge",
+      "undergrad_apply_link": "https://www.undergraduate.study.cam.ac.uk/applying",
+      "graduate_apply_link": "https://www.postgraduate.study.cam.ac.uk/application-process"
+    },
+    {
+      "name": "Imperial College London",
+      "undergrad_apply_link": "https://www.imperial.ac.uk/study/ug/apply/",
+      "graduate_apply_link": "https://www.imperial.ac.uk/study/apply/"
+    },
+    {
+      "name": "University College London (UCL)",
+      "undergrad_apply_link": "https://www.ucl.ac.uk/prospective-students/undergraduate/application-essentials",
+      "graduate_apply_link": "https://www.ucl.ac.uk/prospective-students/graduate/applying-ucl"
+    },
+    {
+      "name": "University of Edinburgh",
+      "undergrad_apply_link": "https://www.ed.ac.uk/studying/undergraduate/applying",
+      "graduate_apply_link": "https://www.ed.ac.uk/studying/postgraduate/applying"
+    },
+    {
+      "name": "King's College London",
+      "undergrad_apply_link": "https://www.kcl.ac.uk/study/undergraduate/how-to-apply",
+      "graduate_apply_link": "https://www.kcl.ac.uk/study/postgraduate-taught/how-to-apply"
+    },
+    {
+      "name": "University of Manchester",
+      "undergrad_apply_link": "https://www.manchester.ac.uk/study/undergraduate/applying/",
+      "graduate_apply_link": "https://www.manchester.ac.uk/study/postgraduate/applying/"
+    },
+    {
+      "name": "London School of Economics (LSE)",
+      "undergrad_apply_link": "https://www.lse.ac.uk/study-at-lse/Undergraduate/Applying-to-LSE",
+      "graduate_apply_link": "https://www.lse.ac.uk/study-at-lse/Graduate/applying-to-lse"
+    },
+    {
+      "name": "ETH Zurich",
+      "undergrad_apply_link": "https://ethz.ch/en/studies/bachelor/application.html",
+      "graduate_apply_link": "https://ethz.ch/en/studies/master/application/master-degree-programmes.html"
+    },
+    {
+      "name": "EPFL (École Polytechnique Fédérale de Lausanne)",
+      "undergrad_apply_link": "https://www.epfl.ch/education/bachelor/admission-bachelor/",
+      "graduate_apply_link": "https://www.epfl.ch/education/master/admission/"
+    },
+    {
+      "name": "University of Zurich",
+      "undergrad_apply_link": "https://www.uzh.ch/en/studies/application/bachelor.html",
+      "graduate_apply_link": "https://www.uzh.ch/en/studies/application/master.html"
+    },
+    {
+      "name": "Delft University of Technology (TU Delft)",
+      "undergrad_apply_link": "https://www.tudelft.nl/en/education/admission-and-application/msc-admission/apply-for-a-bachelors-programme",
+      "graduate_apply_link": "https://www.tudelft.nl/en/education/admission-and-application/msc-admission"
+    },
+    {
+      "name": "University of Amsterdam",
+      "undergrad_apply_link": "https://www.uva.nl/en/education/bachelor-s/admission-and-application/admission-and-application.html",
+      "graduate_apply_link": "https://www.uva.nl/en/education/graduate/admission-and-application"
+    },
+    {
+      "name": "Wageningen University & Research",
+      "undergrad_apply_link": "https://www.wur.nl/en/education/bachelor-programmes/applying.htm",
+      "graduate_apply_link": "https://www.wur.nl/en/education/master-programmes/applying.htm"
+    },
+    {
+      "name": "Eindhoven University of Technology (TU/e)",
+      "undergrad_apply_link": "https://www.tue.nl/en/education/bachelor-college/admission-and-application",
+      "graduate_apply_link": "https://www.tue.nl/en/education/graduate-school/application-and-admission"
+    },
+    {
+      "name": "Lund University",
+      "undergrad_apply_link": "https://www.lunduniversity.lu.se/admissions/apply-lund-university",
+      "graduate_apply_link": "https://www.lunduniversity.lu.se/admissions/apply-lund-university"
+    },
+    {
+      "name": "Uppsala University",
+      "undergrad_apply_link": "https://www.uu.se/en/admissions/bachelor",
+      "graduate_apply_link": "https://www.uu.se/en/admissions/master"
+    },
+    {
+      "name": "KTH Royal Institute of Technology",
+      "undergrad_apply_link": "https://www.kth.se/en/studies/bachelor",
+      "graduate_apply_link": "https://www.kth.se/en/studies/master/applying"
+    },
+    {
+      "name": "PSL Research University Paris",
+      "undergrad_apply_link": "https://psl.eu/en/education/admissions",
+      "graduate_apply_link": "https://psl.eu/en/education/admissions"
+    },
+    {
+      "name": "Université Paris-Saclay",
+      "undergrad_apply_link": "https://www.universite-paris-saclay.fr/en/education/bachelors-degree-licence/how-apply",
+      "graduate_apply_link": "https://www.universite-paris-saclay.fr/en/admission"
+    },
+    {
+      "name": "École Polytechnique",
+      "undergrad_apply_link": "https://www.polytechnique.edu/en/admissions/bachelor-program",
+      "graduate_apply_link": "https://www.polytechnique.edu/en/admissions"
+    },
+    {
+      "name": "KU Leuven",
+      "undergrad_apply_link": "https://www.kuleuven.be/english/admissions/bachelor",
+      "graduate_apply_link": "https://www.kuleuven.be/english/admissions"
+    },
+    {
+      "name": "Ghent University",
+      "undergrad_apply_link": "https://www.ugent.be/en/education/degree/application",
+      "graduate_apply_link": "https://www.ugent.be/en/education/degree/application"
+    },
+    {
+      "name": "University of Vienna",
+      "undergrad_apply_link": "https://www.univie.ac.at/en/studies/applying-and-enrolling/",
+      "graduate_apply_link": "https://www.univie.ac.at/en/studies/applying-and-enrolling/"
+    },
+    {
+      "name": "Vienna University of Technology (TU Wien)",
+      "undergrad_apply_link": "https://www.tuwien.at/en/studies/application-and-admission",
+      "graduate_apply_link": "https://www.tuwien.at/en/studies/application-and-admission"
+    },
+    {
+      "name": "University of Bologna",
+      "undergrad_apply_link": "https://www.unibo.it/en/teaching/enrolment-transfer-and-final-exams/how-to-apply-for-degree-programmes",
+      "graduate_apply_link": "https://www.unibo.it/en/teaching/enrolment-transfer-and-final-exams/how-to-apply-for-degree-programmes"
+    },
+    {
+      "name": "Politecnico di Milano",
+      "undergrad_apply_link": "https://www.polimi.it/en/programmes/applying-to-polimi/bachelor-of-science",
+      "graduate_apply_link": "https://www.polimi.it/en/programmes/applying-to-polimi/master-of-science"
+    },
+    {
+      "name": "University of Milan",
+      "undergrad_apply_link": "https://www.unimi.it/en/education/how-enrol/enrolment-bachelor-degree",
+      "graduate_apply_link": "https://www.unimi.it/en/education/how-enrol/enrolment-master-degree"
+    },
+    {
+      "name": "University of Barcelona",
+      "undergrad_apply_link": "https://www.ub.edu/web/ub/en/estudis/oferta_formativa/graus/accesUB.html",
+      "graduate_apply_link": "https://www.ub.edu/web/ub/en/estudis/oferta-formativa/master-universitari/com-accedir.html"
+    },
+    {
+      "name": "Universidad Autonoma de Madrid",
+      "undergrad_apply_link": "https://www.uam.es/uam/en/estudios/grado/acceso-y-admision",
+      "graduate_apply_link": "https://www.uam.es/uam/en/estudios/masteres"
+    },
+    {
+      "name": "University of Warsaw",
+      "undergrad_apply_link": "https://en.uw.edu.pl/admissions/",
+      "graduate_apply_link": "https://en.uw.edu.pl/admissions/"
+    },
+    {
+      "name": "AGH University of Science and Technology",
+      "undergrad_apply_link": "https://www.agh.edu.pl/en/applicants/",
+      "graduate_apply_link": "https://www.agh.edu.pl/en/applicants/"
+    },
+    {
+      "name": "Jagiellonian University",
+      "undergrad_apply_link": "https://en.uj.edu.pl/en_GB/admissions",
+      "graduate_apply_link": "https://en.uj.edu.pl/en_GB/admissions"
+    },
+    {
+      "name": "Warsaw University of Technology",
+      "undergrad_apply_link": "https://www.students.pw.edu.pl/How-to-Apply",
+      "graduate_apply_link": "https://www.students.pw.edu.pl/How-to-Apply"
+    },
+    {
+      "name": "Charles University",
+      "undergrad_apply_link": "https://cuni.cz/UKEN-178.html",
+      "graduate_apply_link": "https://cuni.cz/UKEN-178.html"
+    },
+    {
+      "name": "Czech Technical University in Prague (CTU)",
+      "undergrad_apply_link": "https://www.cvut.cz/en/applicants",
+      "graduate_apply_link": "https://www.cvut.cz/en/applicants"
+    },
+    {
+      "name": "Eötvös Loránd University (ELTE)",
+      "undergrad_apply_link": "https://www.elte.hu/en/applying",
+      "graduate_apply_link": "https://www.elte.hu/en/applying"
+    },
+    {
+      "name": "University of Debrecen",
+      "undergrad_apply_link": "https://www.unideb.hu/en/international-applicants",
+      "graduate_apply_link": "https://www.unideb.hu/en/international-applicants"
+    },
+    {
+      "name": "University of Copenhagen",
+      "undergrad_apply_link": "https://studier.ku.dk/bachelor/ansoegning-og-optagelse/",
+      "graduate_apply_link": "https://www.ku.dk/english/apply/"
+    },
+    {
+      "name": "Technical University of Denmark (DTU)",
+      "undergrad_apply_link": "https://www.dtu.dk/english/education/bachelor/how-to-apply",
+      "graduate_apply_link": "https://www.dtu.dk/english/education/how-to-apply"
+    },
+    {
+      "name": "University of Helsinki",
+      "undergrad_apply_link": "https://www.helsinki.fi/en/admissions-and-education/apply-bachelor-and-masters-programmes/bachelors-programmes",
+      "graduate_apply_link": "https://www.helsinki.fi/en/admissions-and-education/apply-bachelor-and-masters-programmes/masters-programmes"
+    },
+    {
+      "name": "Aalto University",
+      "undergrad_apply_link": "https://www.aalto.fi/en/admission-services/bachelors-programmes",
+      "graduate_apply_link": "https://www.aalto.fi/en/admission-services/applying-to-master-of-science-programmes"
+    },
+    {
+      "name": "University of Oslo",
+      "undergrad_apply_link": "https://www.uio.no/english/studies/admission/",
+      "graduate_apply_link": "https://www.uio.no/english/studies/admission/"
+    },
+    {
+      "name": "Norwegian University of Science and Technology (NTNU)",
+      "undergrad_apply_link": "https://www.ntnu.edu/studies/application",
+      "graduate_apply_link": "https://www.ntnu.edu/studies/application"
+    },
+    {
+      "name": "University of Porto",
+      "undergrad_apply_link": "https://sigarra.up.pt/up/en/web_base.gera_pagina?p_pagina=1001064",
+      "graduate_apply_link": "https://sigarra.up.pt/up/en/web_base.gera_pagina?p_pagina=1001064"
+    },
+    {
+      "name": "University of Lisbon (ULisboa)",
+      "undergrad_apply_link": "https://www.ulisboa.pt/en/info/apply",
+      "graduate_apply_link": "https://www.ulisboa.pt/en/info/apply"
+    },
+    {
+      "name": "Middle East Technical University (METU/ODTÜ)",
+      "undergrad_apply_link": "https://oidb.metu.edu.tr/en/foreign-national-student-admission",
+      "graduate_apply_link": "https://oidb.metu.edu.tr/en/graduate-application"
+    },
+    {
+      "name": "Boğaziçi University",
+      "undergrad_apply_link": "https://registration.boun.edu.tr/",
+      "graduate_apply_link": "https://registration.boun.edu.tr/"
+    },
+    {
+      "name": "Istanbul Technical University (İTÜ)",
+      "undergrad_apply_link": "https://www.itu.edu.tr/en/academics/undergraduate/apply",
+      "graduate_apply_link": "https://www.itu.edu.tr/en/academics/graduate/apply"
+    },
+    {
+      "name": "Lomonosov Moscow State University",
+      "undergrad_apply_link": "https://www.msu.ru/en/admission/",
+      "graduate_apply_link": "https://www.msu.ru/en/admission/"
+    },
+    {
+      "name": "University of Tartu",
+      "undergrad_apply_link": "https://www.ut.ee/en/apply/bachelor-studies",
+      "graduate_apply_link": "https://www.ut.ee/en/apply/masters-studies"
+    }
+  ]
+}

@@ -23,6 +23,58 @@ async function upsertUniversity({
   graduate_apply_link,
 }) {
   const slug = slugifyUni(name);
+  const params = [
+    name,
+    country,
+    city || null,
+    world_ranking != null ? Number(world_ranking) : null,
+    logo_url || null,
+    housing_info || null,
+    funding_info || null,
+    university_type || null,
+    undergrad_apply_link || null,
+    graduate_apply_link || null,
+    slug,
+  ];
+
+  const { rows: existing } = await db.query(
+    'SELECT id FROM universities WHERE name = $1 AND country = $2',
+    [name, country],
+  );
+
+  if (existing.length > 0) {
+    const { rows } = await db.query(
+      `
+      UPDATE universities SET
+        city = COALESCE($2, city),
+        world_ranking = COALESCE($3, world_ranking),
+        logo_url = COALESCE($4, logo_url),
+        housing_info = COALESCE($5, housing_info),
+        funding_info = COALESCE($6, funding_info),
+        university_type = COALESCE($7, university_type),
+        undergrad_apply_link = COALESCE($8, undergrad_apply_link),
+        graduate_apply_link = COALESCE($9, graduate_apply_link),
+        slug = COALESCE(slug, $10),
+        is_active = true
+      WHERE id = $1
+      RETURNING *
+      `,
+      [
+        existing[0].id,
+        city || null,
+        world_ranking != null ? Number(world_ranking) : null,
+        logo_url || null,
+        housing_info || null,
+        funding_info || null,
+        university_type || null,
+        undergrad_apply_link || null,
+        graduate_apply_link || null,
+        slug,
+      ],
+    );
+    return rows[0];
+  }
+
   const { rows } = await db.query(
     `
     INSERT INTO universities (
@@ -43,19 +95,7 @@ async function upsertUniversity({
       is_active = true
     RETURNING *
     `,
-    [
-      name,
-      country,
-      city || null,
-      world_ranking != null ? Number(world_ranking) : null,
-      logo_url || null,
-      housing_info || null,
-      funding_info || null,
-      university_type || null,
-      undergrad_apply_link || null,
-      graduate_apply_link || null,
-      slug,
-    ],
+    params,
   );
   return rows[0];
 }
