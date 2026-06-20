@@ -1,0 +1,2 @@
+-- Reference only — use: npm run update:america-apply-links
+-- Legacy SQL used integer university_id / degree_type; current schema uses uni_id / degree_level UUIDs.

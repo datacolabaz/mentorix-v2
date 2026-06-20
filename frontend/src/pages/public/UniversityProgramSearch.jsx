@@ -20,6 +20,7 @@ import {
   parseWizardFromSearchParams,
   buildCountryResultsMeta,
 } from '../../lib/universitySearch'
+import { resolveProgramApplyLink } from '../../lib/programApplyLink'
 import { searchProgramsWithFallback } from '../../lib/universityProgramsApi'
 import { buildEmptyResultsMessage } from '../../lib/universityProgramFilters'
 
@@ -211,8 +212,9 @@ export default function UniversityProgramSearch() {
       }
     }
 
-    if (program.apply_link) {
-      window.open(program.apply_link, '_blank', 'noopener,noreferrer')
+    const applyUrl = resolveProgramApplyLink(program)
+    if (applyUrl) {
+      window.open(applyUrl, '_blank', 'noopener,noreferrer')
     } else {
       toast('Rəsmi apply linki mövcud deyil', 'error')
     }

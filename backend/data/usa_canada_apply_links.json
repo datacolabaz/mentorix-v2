@@ -1,0 +1,219 @@
+{
+  "meta": {
+    "description": "Amerika/Kanada universitetləri üçün BSc/MSc/PhD ayrı apply linkləri",
+    "note": "BSc = undergraduate admissions; MSc/PhD = graduate school admissions",
+    "last_updated": "2026-06"
+  },
+  "universities": [
+    {
+      "name": "Massachusetts Institute of Technology (MIT)",
+      "undergrad_apply_link": "https://mitadmissions.org/apply/",
+      "graduate_apply_link": "https://oge.mit.edu/admissions/"
+    },
+    {
+      "name": "Stanford University",
+      "undergrad_apply_link": "https://admission.stanford.edu/apply/",
+      "graduate_apply_link": "https://gradadmissions.stanford.edu/apply"
+    },
+    {
+      "name": "Harvard University",
+      "undergrad_apply_link": "https://college.harvard.edu/admissions/apply",
+      "graduate_apply_link": "https://www.gsas.harvard.edu/apply"
+    },
+    {
+      "name": "California Institute of Technology (Caltech)",
+      "undergrad_apply_link": "https://www.admissions.caltech.edu/apply",
+      "graduate_apply_link": "https://www.gradoffice.caltech.edu/admissions/apply"
+    },
+    {
+      "name": "Princeton University",
+      "undergrad_apply_link": "https://admission.princeton.edu/apply",
+      "graduate_apply_link": "https://gradschool.princeton.edu/admission-onboarding/apply"
+    },
+    {
+      "name": "Yale University",
+      "undergrad_apply_link": "https://admissions.yale.edu/apply",
+      "graduate_apply_link": "https://gsas.yale.edu/admissions/how-apply"
+    },
+    {
+      "name": "Columbia University",
+      "undergrad_apply_link": "https://undergrad.admissions.columbia.edu/apply",
+      "graduate_apply_link": "https://apply.gsas.columbia.edu/apply/"
+    },
+    {
+      "name": "University of Pennsylvania (UPenn)",
+      "undergrad_apply_link": "https://admissions.upenn.edu/admission-process/apply",
+      "graduate_apply_link": "https://gradadm.upenn.edu/how-to-apply/"
+    },
+    {
+      "name": "Cornell University",
+      "undergrad_apply_link": "https://admissions.cornell.edu/how-to-apply/first-year-applicants",
+      "graduate_apply_link": "https://gradschool.cornell.edu/admissions/applying/"
+    },
+    {
+      "name": "Johns Hopkins University",
+      "undergrad_apply_link": "https://apply.jhu.edu/apply/",
+      "graduate_apply_link": "https://apply.jhu.edu/apply/graduate/"
+    },
+    {
+      "name": "Duke University",
+      "undergrad_apply_link": "https://admissions.duke.edu/application-process/",
+      "graduate_apply_link": "https://gradschool.duke.edu/admissions/apply/"
+    },
+    {
+      "name": "Northwestern University",
+      "undergrad_apply_link": "https://admissions.northwestern.edu/apply/index.html",
+      "graduate_apply_link": "https://www.tgs.northwestern.edu/admission/how-to-apply.html"
+    },
+    {
+      "name": "University of Chicago",
+      "undergrad_apply_link": "https://college.uchicago.edu/admissions/apply-uchicago",
+      "graduate_apply_link": "https://grad.uchicago.edu/admissions/"
+    },
+    {
+      "name": "Carnegie Mellon University (CMU)",
+      "undergrad_apply_link": "https://www.cmu.edu/admission/apply/",
+      "graduate_apply_link": "https://www.cmu.edu/graduate/admission/index.html"
+    },
+    {
+      "name": "New York University (NYU)",
+      "undergrad_apply_link": "https://www.nyu.edu/admissions/undergraduate-admissions/how-to-apply.html",
+      "graduate_apply_link": "https://apply.grad.nyu.edu/apply/"
+    },
+    {
+      "name": "University of California, Berkeley (UC Berkeley)",
+      "undergrad_apply_link": "https://admissions.berkeley.edu/apply/",
+      "graduate_apply_link": "https://grad.berkeley.edu/admissions/apply/"
+    },
+    {
+      "name": "University of California, Los Angeles (UCLA)",
+      "undergrad_apply_link": "https://admission.ucla.edu/apply",
+      "graduate_apply_link": "https://grad.ucla.edu/admissions/"
+    },
+    {
+      "name": "University of Michigan, Ann Arbor",
+      "undergrad_apply_link": "https://admissions.umich.edu/apply",
+      "graduate_apply_link": "https://rackham.umich.edu/admissions/applying/"
+    },
+    {
+      "name": "Georgia Institute of Technology (Georgia Tech)",
+      "undergrad_apply_link": "https://admission.gatech.edu/apply",
+      "graduate_apply_link": "https://grad.gatech.edu/admissions"
+    },
+    {
+      "name": "University of Washington",
+      "undergrad_apply_link": "https://admit.washington.edu/apply/freshman/",
+      "graduate_apply_link": "https://grad.uw.edu/admissions/"
+    },
+    {
+      "name": "University of Texas at Austin (UT Austin)",
+      "undergrad_apply_link": "https://admissions.utexas.edu/apply/",
+      "graduate_apply_link": "https://gradschool.utexas.edu/admissions/apply"
+    },
+    {
+      "name": "University of Illinois Urbana-Champaign (UIUC)",
+      "undergrad_apply_link": "https://admissions.illinois.edu/Apply/index",
+      "graduate_apply_link": "https://grad.illinois.edu/admissions/apply"
+    },
+    {
+      "name": "Purdue University",
+      "undergrad_apply_link": "https://www.purdue.edu/admissions/apply/",
+      "graduate_apply_link": "https://www.purdue.edu/gradschool/admissions/apply.html"
+    },
+    {
+      "name": "University of California, San Diego (UCSD)",
+      "undergrad_apply_link": "https://admissions.ucsd.edu/apply/index.html",
+      "graduate_apply_link": "https://grad.ucsd.edu/admissions/"
+    },
+    {
+      "name": "Boston University",
+      "undergrad_apply_link": "https://www.bu.edu/admissions/apply/",
+      "graduate_apply_link": "https://www.bu.edu/admissions/graduate/"
+    },
+    {
+      "name": "University of Wisconsin-Madison",
+      "undergrad_apply_link": "https://admissions.wisc.edu/apply/",
+      "graduate_apply_link": "https://grad.wisc.edu/apply/"
+    },
+    {
+      "name": "Ohio State University",
+      "undergrad_apply_link": "https://undergrad.osu.edu/apply",
+      "graduate_apply_link": "https://gradadmissions.osu.edu/apply"
+    },
+    {
+      "name": "Arizona State University (ASU)",
+      "undergrad_apply_link": "https://admission.asu.edu/apply",
+      "graduate_apply_link": "https://apply.asu.edu/apply/"
+    },
+    {
+      "name": "Dartmouth College",
+      "undergrad_apply_link": "https://admissions.dartmouth.edu/apply",
+      "graduate_apply_link": "https://graduate.dartmouth.edu/academics/admissions"
+    },
+    {
+      "name": "Brown University",
+      "undergrad_apply_link": "https://admission.brown.edu/apply",
+      "graduate_apply_link": "https://www.brown.edu/academics/gradschool/application-process"
+    },
+    {
+      "name": "University of Toronto",
+      "undergrad_apply_link": "https://future.utoronto.ca/apply/",
+      "graduate_apply_link": "https://www.sgs.utoronto.ca/apply/"
+    },
+    {
+      "name": "University of British Columbia (UBC)",
+      "undergrad_apply_link": "https://you.ubc.ca/applying-ubc/",
+      "graduate_apply_link": "https://www.grad.ubc.ca/prospective-students/application-admission"
+    },
+    {
+      "name": "McGill University",
+      "undergrad_apply_link": "https://www.mcgill.ca/undergraduate-admissions/applying",
+      "graduate_apply_link": "https://www.mcgill.ca/applying/graduate"
+    },
+    {
+      "name": "University of Alberta",
+      "undergrad_apply_link": "https://www.ualberta.ca/en/admissions/undergraduate/apply/index.html",
+      "graduate_apply_link": "https://www.ualberta.ca/graduate-studies/prospective-students/how-to-apply.html"
+    },
+    {
+      "name": "University of Waterloo",
+      "undergrad_apply_link": "https://uwaterloo.ca/future-students/apply",
+      "graduate_apply_link": "https://uwaterloo.ca/graduate-studies-postdoctoral-affairs/future-students/how-apply"
+    },
+    {
+      "name": "McMaster University",
+      "undergrad_apply_link": "https://future.mcmaster.ca/apply/",
+      "graduate_apply_link": "https://gs.mcmaster.ca/admissions/"
+    },
+    {
+      "name": "University of Calgary",
+      "undergrad_apply_link": "https://www.ucalgary.ca/future-students/undergraduate/apply",
+      "graduate_apply_link": "https://grad.ucalgary.ca/future-students/explore-programs"
+    },
+    {
+      "name": "Université de Montréal",
+      "undergrad_apply_link": "https://admission.umontreal.ca/en/apply/",
+      "graduate_apply_link": "https://admission.umontreal.ca/en/apply/"
+    },
+    {
+      "name": "Western University",
+      "undergrad_apply_link": "https://welcome.uwo.ca/admissions/how_to_apply/",
+      "graduate_apply_link": "https://grad.uwo.ca/admissions/"
+    },
+    {
+      "name": "Queen's University",
+      "undergrad_apply_link": "https://www.queensu.ca/admission/how-apply",
+      "graduate_apply_link": "https://queensu.ca/sgs/prospective-students/applying-queens"
+    },
+    {
+      "name": "Dalhousie University",
+      "undergrad_apply_link": "https://www.dal.ca/admissions/apply.html",
+      "graduate_apply_link": "https://www.dal.ca/academics/graduate_studies/how-to-apply.html"
+    },
+    {
+      "name": "Simon Fraser University (SFU)",
+      "undergrad_apply_link": "https://www.sfu.ca/students/admission.html",
+      "graduate_apply_link": "https://www.sfu.ca/gradstudies/apply.html"
+    }
+  ]
+}

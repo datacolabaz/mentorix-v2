@@ -4,6 +4,8 @@ const db = require('../utils/db');
 const { upsertUniversity, normalizeDegree } = require('./universityProgramIngestService');
 const { resolveFieldSlug } = require('../utils/fieldSlugNormalizer');
 const { parseCsv } = require('../utils/universityProgramImportParsers');
+const { resolveApplyLinkForDegree } = require('../utils/programApplyLink');
+const { loadApplyLinks } = require('./usaCanadaApplyLinksService');
 
 const COUNTRY_DB_CANONICAL = {
   ABŞ: 'Amerika Birləşmiş Ştatları',
@@ -131,9 +133,13 @@ function buildProgramRows(row) {
   const degrees = parseDegrees(row.degree_types || row.degrees);
   const ielts = parseScore(row.ielts_min);
   const toefl = parseScore(row.toefl_min);
-  const applyLink = row.apply_link || null;
   const language = row.language || 'English';
   const requirements = buildLanguageRequirements(ielts, toefl);
+  const linkContext = {
+    undergrad_apply_link: row.undergrad_apply_link,
+    graduate_apply_link: row.graduate_apply_link,
+    apply_link: row.apply_link,
+  };
   const programs = [];
 
   for (const fieldLabel of fields) {
@@ -145,12 +151,38 @@ function buildProgramRows(row) {
         field: fieldSlug,
         field_hint: fieldSlug,
         language,
-        apply_link: applyLink,
+        apply_link: resolveApplyLinkForDegree(degree, linkContext),
         requirements,
       });
     }
   }
   return programs;
+}
+
+function enrichRowsWithApplyLinks(rows, applyLinksByName) {
+  return rows.map((row) => {
+    const uniName = String(row.university_name || row.name || '').trim();
+    const links = applyLinksByName.get(uniName);
+    if (!links) return row;
+    return {
+      ...row,
+      undergrad_apply_link: links.undergrad_apply_link,
+      graduate_apply_link: links.graduate_apply_link,
+    };
+  });
+}
+
+function buildApplyLinksMap(entries = []) {
+  const map = new Map();
+  for (const entry of entries) {
+    const name = String(entry.name || '').trim();
+    if (!name) continue;
+    map.set(name, {
+      undergrad_apply_link: entry.undergrad_apply_link || null,
+      graduate_apply_link: entry.graduate_apply_link || null,
+    });
+  }
+  return map;
 }
 
 async function importAmericaCanadaUniversities({
@@ -165,6 +197,11 @@ async function importAmericaCanadaUniversities({
   const sourceFile = file || (fs.existsSync(jsonPath) ? jsonPath : csvPath);
   const ext = path.extname(sourceFile).toLowerCase();
   let rows = ext === '.json' ? loadJsonRecords(sourceFile) : loadCsvRecords(sourceFile);
+
+  const applyLinksPath = path.join(dataDir, 'usa_canada_apply_links.json');
+  if (fs.existsSync(applyLinksPath)) {
+    rows = enrichRowsWithApplyLinks(rows, buildApplyLinksMap(loadApplyLinks(applyLinksPath)));
+  }
 
   if (limit != null && Number.isFinite(Number(limit))) {
     rows = rows.slice(0, Number(limit));
@@ -200,6 +237,8 @@ async function importAmericaCanadaUniversities({
         city: row.city || null,
         world_ranking: row.qs_rank_2025 != null ? Number(row.qs_rank_2025) : null,
         university_type: normalizeUniversityType(row.type),
+        undergrad_apply_link: row.undergrad_apply_link || null,
+        graduate_apply_link: row.graduate_apply_link || null,
       };
 
       if (dryRun) {

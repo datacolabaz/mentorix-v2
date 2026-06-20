@@ -157,6 +157,8 @@ function mapProgramRow(row) {
       housing_info: row.housing_info,
       funding_info: row.funding_info,
       university_type: row.university_type || null,
+      undergrad_apply_link: row.undergrad_apply_link || null,
+      graduate_apply_link: row.graduate_apply_link || null,
     },
   };
 }
@@ -305,6 +307,8 @@ async function queryProgramsFromDatabase(filters, rawQuery = {}) {
       u.housing_info,
       u.funding_info,
       u.university_type,
+      u.undergrad_apply_link,
+      u.graduate_apply_link,
       (
         SELECT MIN(d)
         FROM unnest(p.deadline_dates) d
@@ -389,6 +393,8 @@ async function getProgramById(programId) {
       u.housing_info,
       u.funding_info,
       u.university_type,
+      u.undergrad_apply_link,
+      u.graduate_apply_link,
       (
         SELECT MIN(d)
         FROM unnest(p.deadline_dates) d
