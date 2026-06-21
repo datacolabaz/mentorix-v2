@@ -229,6 +229,13 @@ export default function InstructorNotifications() {
       return false
     }
   }, [])
+  const apiBaseUrl = useMemo(() => {
+    try {
+      return api?.defaults?.baseURL || ''
+    } catch {
+      return ''
+    }
+  }, [])
 
   useEffect(() => {
     try {
@@ -323,6 +330,8 @@ export default function InstructorNotifications() {
         setSmsDbItems(deduped)
         if (debugSms) {
           // eslint-disable-next-line no-console
+          console.log('[sms-logs] api baseURL:', apiBaseUrl)
+          // eslint-disable-next-line no-console
           console.log('[sms-logs] raw items:', rawItems)
           // eslint-disable-next-line no-console
           console.log('[sms-logs/plan] raw items:', rawPlan)
@@ -337,6 +346,8 @@ export default function InstructorNotifications() {
           setSmsDbItems([])
           setSmsStudents([])
           if (debugSms) {
+            // eslint-disable-next-line no-console
+            console.log('[sms-logs] api baseURL:', apiBaseUrl)
             // eslint-disable-next-line no-console
             console.log('[sms-logs] error:', e)
           }
@@ -659,6 +670,9 @@ export default function InstructorNotifications() {
                 <div className="mt-3 rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceMain/30 p-3">
                   <p className="text-[11px] font-semibold text-token-textMuted uppercase tracking-wider mb-2">
                     Debug: API-dən gələn data (filterdən əvvəl, ilk 2)
+                  </p>
+                  <p className="text-[11px] text-token-textMuted mb-2">
+                    API baseURL: <span className="text-token-textMain font-semibold">{apiBaseUrl || '—'}</span>
                   </p>
                   <pre className="text-[11px] leading-relaxed text-token-textMain overflow-auto max-h-56">
                     {JSON.stringify(smsBaseList.slice(0, 2), null, 2)}
