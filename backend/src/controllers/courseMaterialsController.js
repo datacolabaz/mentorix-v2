@@ -7,6 +7,7 @@ const {
   getMaterialById,
   deleteCourseMaterial,
   studentCanAccessMaterial,
+  parentCanAccessMaterial,
   listStudentMaterials,
   listMaterialsForAssignment,
   listUploadOptions,
@@ -167,6 +168,11 @@ const serveMaterialFile = async (req, res) => {
 
     if (user.role === 'student') {
       const ok = await studentCanAccessMaterial(user.id, material);
+      if (!ok) return res.status(403).json({ success: false, message: 'Bu materiala giriş yoxdur' });
+    }
+
+    if (user.role === 'parent') {
+      const ok = await parentCanAccessMaterial(user.id, material);
       if (!ok) return res.status(403).json({ success: false, message: 'Bu materiala giriş yoxdur' });
     }
 

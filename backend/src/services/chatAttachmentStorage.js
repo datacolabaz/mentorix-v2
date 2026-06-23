@@ -17,9 +17,16 @@ const storage = multer.diskStorage({
 
 function chatFileFilter(_req, file, cb) {
   const mime = String(file.mimetype || '').toLowerCase();
-  const ok = mime.startsWith('image/') || mime === 'application/pdf';
+  const blocked = new Set(['image/svg+xml', 'text/html', 'application/javascript']);
+  if (blocked.has(mime)) {
+    const err = new Error('Bu fayl tipi qəbul olunmur');
+    err.code = 'CHAT_FILE_TYPE';
+    err.statusCode = 400;
+    return cb(err);
+  }
+  const ok = mime === 'image/jpeg' || mime === 'image/png' || mime === 'image/webp' || mime === 'application/pdf';
   if (!ok) {
-    const err = new Error('Yalnız şəkil və PDF faylları qəbul olunur');
+    const err = new Error('Yalnız JPEG, PNG, WebP və PDF faylları qəbul olunur');
     err.code = 'CHAT_FILE_TYPE';
     err.statusCode = 400;
     return cb(err);
@@ -34,7 +41,20 @@ const uploadChatAttachment = multer({
 });
 
 function publicChatAttachmentPath(filename) {
-  return `/api/uploads/chat/${filename}`;
+  return `/api/chat/attachments/${filename}`;
+}
+
+function isAllowedChatAttachmentUrl(url) {
+  if (!url) return true;
+  const u = String(url).trim();
+  return /^\/api\/chat\/attachments\/[A-Za-z0-9._-]+$/.test(u)
+    || /^\/api\/uploads\/chat\/[A-Za-z0-9._-]+$/.test(u);
+}
+
+function extractChatAttachmentFilename(url) {
+  const u = String(url || '').trim();
+  const m = u.match(/\/(?:chat\/attachments|uploads\/chat)\/([^/?#]+)$/);
+  return m ? m[1] : null;
 }
 
 module.exports = {
@@ -42,4 +62,6 @@ module.exports = {
   MAX_BYTES,
   uploadChatAttachment,
   publicChatAttachmentPath,
+  isAllowedChatAttachmentUrl,
+  extractChatAttachmentFilename,
 };

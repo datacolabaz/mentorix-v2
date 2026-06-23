@@ -22,7 +22,7 @@ const { runUniversityProgramScraper } = require('./jobs/universityProgramScraper
 const { ensureAssignmentsUploadDir } = require('./services/assignmentFileStorage');
 const { CHAT_UPLOAD_DIR } = require('./services/chatAttachmentStorage');
 const uploadsExamsDir = path.join(__dirname, '../uploads/exams');
-const uploadsAssignmentsDir = ensureAssignmentsUploadDir();
+ensureAssignmentsUploadDir();
 const uploadsCourseLogosDir = path.join(__dirname, '../uploads/course-logos');
 const { servePublicInstructorAvatar } = require('./controllers/instructorAvatarController');
 const uploadsInstructorAvatarsDir = path.join(__dirname, '../uploads/instructor-avatars');
@@ -46,10 +46,12 @@ app.use(
 );
 app.use(express.json());
 
-app.use('/api/uploads/exams', express.static(uploadsExamsDir));
-app.use('/api/uploads/assignments', express.static(uploadsAssignmentsDir));
-app.use('/api/uploads/chat', express.static(CHAT_UPLOAD_DIR));
-app.use('/api/uploads/course-logos', express.static(uploadsCourseLogosDir));
+// Upload faylları yalnız autentifikasiyalı route-lar vasitəsilə verilir:
+// - exams: GET /api/exams/material-file/:filename
+// - assignments: GET /api/tasks/assignment-file/:filename
+// - materials: GET /api/materials/file/:filename
+// - chat: GET /api/chat/attachments/:filename
+// - course logos: GET /api/course/logo/:filename
 app.get('/api/uploads/instructor-avatars/:filename', servePublicInstructorAvatar);
 
 app.use('/api/auth', require('./routes/auth'));

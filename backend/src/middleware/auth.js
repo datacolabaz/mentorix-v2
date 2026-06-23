@@ -20,8 +20,8 @@ const authenticate = async (req, res, next) => {
     if (!isUserEmailVerified(row)) {
       return respondEmailNotVerified(res);
     }
-    const effectiveRole = row?.role_selected === false ? null : (payload.role || row.role);
-    req.user = { ...payload, role: effectiveRole };
+    const effectiveRole = row?.role_selected === false ? null : row.role;
+    req.user = { ...payload, id: row.id, role: effectiveRole };
     touchUserActivity(payload.id).catch(() => {});
     next();
   } catch {
@@ -44,4 +44,12 @@ const authenticateSse = async (req, res, next) => {
   return authenticate(req, res, next);
 };
 
-module.exports = { authenticate, authenticateSse, authorize };
+/** File/img src cannot send Authorization — allow ?token= for authenticated downloads. */
+const authenticateWithQueryToken = async (req, res, next) => {
+  if (!req.headers.authorization?.split(' ')[1] && req.query?.token) {
+    req.headers.authorization = `Bearer ${String(req.query.token).trim()}`;
+  }
+  return authenticate(req, res, next);
+};
+
+module.exports = { authenticate, authenticateSse, authenticateWithQueryToken, authorize };

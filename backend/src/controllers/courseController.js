@@ -129,13 +129,41 @@ const postLogo = (req, res) => {
       return res.status(400).json({ success: false, message: 'Loqo faylı seçin' });
     }
     try {
-      const rel = `/api/uploads/course-logos/${req.file.filename}`;
+      const rel = `/api/course/logo/${req.file.filename}`;
       const settings = await updateOrgLogo(req.user.id, rel);
       res.json({ success: true, settings, logo_url: rel });
     } catch (e) {
       res.status(e.statusCode || 500).json({ success: false, message: e.message });
     }
   });
+};
+
+const serveCourseLogo = (req, res) => {
+  try {
+    const filename = path.basename(String(req.params.filename || ''));
+    if (!filename.startsWith('course-')) {
+      return res.status(404).json({ success: false, message: 'Fayl tapılmadı' });
+    }
+
+    const ownerPrefix = `course-${req.user.id}`;
+    const isOwner = filename.startsWith(ownerPrefix);
+    const isAdmin = req.user.role === 'admin';
+    if (!isOwner && !isAdmin) {
+      return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
+    }
+
+    const filePath = path.join(uploadsCourseLogosDir, filename);
+    const resolved = path.resolve(filePath);
+    const root = path.resolve(uploadsCourseLogosDir);
+    if (!resolved.startsWith(root) || !fs.existsSync(resolved)) {
+      return res.status(404).json({ success: false, message: 'Fayl tapılmadı' });
+    }
+
+    res.setHeader('Cache-Control', 'private, max-age=300');
+    return res.sendFile(resolved);
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
+  }
 };
 
 module.exports = {
@@ -152,5 +180,6 @@ module.exports = {
   getSettings,
   patchSettings,
   postLogo,
+  serveCourseLogo,
   LEAD_STATUSES,
 };

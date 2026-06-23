@@ -6,6 +6,7 @@ const { higherPaidPlansLabel } = require('./billingAlertHelpers');
 const { ACTIVE_ENROLLMENT_WHERE } = require('../sql/activeEnrollments');
 const { publishChatMessage } = require('./chatRealtimeHub');
 const { touchUserActivity, mapRowsWithPresence } = require('./userPresenceService');
+const { isAllowedChatAttachmentUrl } = require('./chatAttachmentStorage');
 
 const MAX_BODY_LEN = 4000;
 const DEFAULT_LIMIT = 50;
@@ -342,6 +343,9 @@ async function sendRoomMessage({
 
   if (!body && !attachment_url) {
     throw httpError('CHAT_BODY_REQUIRED', 400, 'Mesaj və ya fayl tələb olunur');
+  }
+  if (attachment_url && !isAllowedChatAttachmentUrl(attachment_url)) {
+    throw httpError('CHAT_ATTACHMENT_INVALID', 400, 'Etibarsız fayl linki');
   }
   if (body.length > MAX_BODY_LEN) {
     throw httpError('CHAT_BODY_TOO_LONG', 400, `Mesaj çox uzundur (maks. ${MAX_BODY_LEN} simvol)`);

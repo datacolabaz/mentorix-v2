@@ -13,7 +13,7 @@ import {
   uploadChatAttachment,
 } from '../../lib/chatApi'
 import { subscribeChatRoom } from '../../lib/chatRealtime'
-import { resolveApiAssetUrl } from '../../lib/apiBase'
+import { chatAttachmentOpenUrl } from '../../lib/chatAttachmentUrl'
 import {
   buildChatTimeline,
   formatChatTime,
@@ -154,7 +154,7 @@ function absorbIncomingMessage(prev, msg) {
 }
 
 function AttachmentBubble({ url, type, name }) {
-  const resolved = resolveApiAssetUrl(url)
+  const resolved = chatAttachmentOpenUrl(url)
   if (isImageAttachment(type)) {
     return (
       <a href={resolved} target="_blank" rel="noopener noreferrer" className="block mt-1">

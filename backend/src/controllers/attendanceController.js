@@ -1,5 +1,6 @@
 const db = require('../utils/db');
 const { sendSms } = require('../services/smsService');
+const { assertEnrollmentReadAccess } = require('../utils/enrollmentAccessGuard');
 
 function normUuid(id) {
   return String(id || '').trim().toLowerCase().replace(/-/g, '');
@@ -202,17 +203,7 @@ const getAttendancePeriod = async (req, res) => {
     const enrollment = enRows[0];
     if (!enrollment) return res.status(404).json({ success: false, message: 'Tapılmadı' });
 
-    const enStudent = enrollment.student_id;
-    const enInstr = enrollment.instructor_id;
-    if (req.user.role === 'student' && String(enStudent) !== String(req.user.id)) {
-      return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
-    }
-    if (
-      req.user.role === 'instructor' &&
-      String(enInstr).replace(/-/g, '').toLowerCase() !== String(req.user.id).replace(/-/g, '').toLowerCase()
-    ) {
-      return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
-    }
+    await assertEnrollmentReadAccess(req.user, enrollment);
 
     const cycle = Number(enrollment.billing_cycle) || 1;
     const limit = billingLimit(enrollment.billing_type);
@@ -251,7 +242,7 @@ const getAttendancePeriod = async (req, res) => {
       lessons,
     });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    res.status(err.statusCode || 500).json({ success: false, message: err.message });
   }
 };
 
@@ -550,16 +541,7 @@ const getAttendance = async (req, res) => {
       [enrollment_id]
     );
     if (!enRows[0]) return res.status(404).json({ success: false, message: 'Tapılmadı' });
-    const { student_id: enStudent, instructor_id: enInstr } = enRows[0];
-    if (req.user.role === 'student' && String(enStudent) !== String(req.user.id)) {
-      return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
-    }
-    if (
-      req.user.role === 'instructor' &&
-      String(enInstr).replace(/-/g, '').toLowerCase() !== String(req.user.id).replace(/-/g, '').toLowerCase()
-    ) {
-      return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
-    }
+    await assertEnrollmentReadAccess(req.user, enRows[0]);
 
     const { rows } = await db.query(
       'SELECT * FROM attendance WHERE enrollment_id=$1 ORDER BY billing_cycle, lesson_number',
@@ -567,7 +549,7 @@ const getAttendance = async (req, res) => {
     );
     res.json({ success: true, attendance: rows });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    res.status(err.statusCode || 500).json({ success: false, message: err.message });
   }
 };
 

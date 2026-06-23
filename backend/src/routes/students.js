@@ -3,6 +3,7 @@ const {
   listStudents,
   getReferralBreakdown,
   getStudent,
+  patchStudentPhone,
   deleteStudent,
   createStudent,
   attachStudentByEmail,
@@ -1496,13 +1497,7 @@ router.get('/enrollment/:enrollmentId/lessons', authenticate, authorize('admin',
   }
 });
 
-router.patch('/:id/phone', authenticate, authorize('admin', 'instructor'), async (req, res) => {
-  try {
-    const { phone } = req.body;
-    await db.query('UPDATE users SET phone = $1 WHERE id = $2', [phone, req.params.id]);
-    res.json({ success: true });
-  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
-});
+router.patch('/:id/phone', authenticate, authorize('admin', 'instructor'), patchStudentPhone);
 
 router.patch('/:id/email', authenticate, authorize('admin', 'instructor'), patchStudentEmail);
 

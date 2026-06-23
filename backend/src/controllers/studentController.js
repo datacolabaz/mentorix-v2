@@ -2,6 +2,11 @@ const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const db = require('../utils/db');
 const {
+  assertStudentReadAccess,
+  assertInstructorMayEditStudent,
+  stripSensitiveUserFields,
+} = require('../utils/studentAccessGuard');
+const {
   bakuTodayYmd,
   parseLessonWeekdaysJson,
   parseYmdUtcNoon,
@@ -277,9 +282,7 @@ const getReferralBreakdown = async (req, res) => {
 
 const getStudent = async (req, res) => {
   try {
-    if (req.user.role === 'student' && String(req.params.id) !== String(req.user.id)) {
-      return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
-    }
+    await assertStudentReadAccess(req.user, req.params.id);
 
     const { rows } = await db.query(
       `SELECT u.*, sp.parent_id, sp.grade, sp.notes,
@@ -313,9 +316,34 @@ const getStudent = async (req, res) => {
       [req.params.id]
     );
     if (!rows[0]) return res.status(404).json({ success: false, message: 'Tapılmadı' });
-    res.json({ success: true, student: rows[0] });
+    res.json({ success: true, student: stripSensitiveUserFields(rows[0]) });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    res.status(err.statusCode || 500).json({ success: false, message: err.message });
+  }
+};
+
+const patchStudentPhone = async (req, res) => {
+  try {
+    const studentId = req.params.id;
+    const { phone } = req.body;
+    if (!phone) {
+      return res.status(400).json({ success: false, message: 'Telefon tələb olunur' });
+    }
+
+    if (req.user.role === 'instructor') {
+      await assertInstructorMayEditStudent(req.user, studentId);
+    } else if (req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
+    }
+
+    const { rows } = await db.query(
+      `UPDATE users SET phone = $1 WHERE id = $2 AND role = 'student' RETURNING id, phone`,
+      [phone, studentId],
+    );
+    if (!rows[0]) return res.status(404).json({ success: false, message: 'Tələbə tapılmadı' });
+    res.json({ success: true, user: rows[0] });
+  } catch (err) {
+    res.status(err.statusCode || 500).json({ success: false, message: err.message });
   }
 };
 
@@ -327,6 +355,14 @@ const deleteStudent = async (req, res) => {
       [enrId],
     );
     if (!enr[0]) return res.status(404).json({ success: false, message: 'Enrollment tapılmadı' });
+
+    if (
+      req.user.role === 'instructor'
+      && String(enr[0].instructor_id) !== String(req.user.id)
+    ) {
+      return res.status(403).json({ success: false, message: 'Bu enrollment üzrə icazə yoxdur' });
+    }
+
     const studentId = enr[0].student_id;
     const instructorIdForUsage = enr[0].instructor_id;
 
@@ -991,6 +1027,7 @@ module.exports = {
   createStudent,
   getReferralBreakdown,
   getStudent,
+  patchStudentPhone,
   deleteStudent,
   getMySchedule,
   getInstructorMyLessonsCalendar,

@@ -302,6 +302,19 @@ async function listUploadOptions(instructorId) {
   };
 }
 
+async function parentCanAccessMaterial(parentId, material) {
+  if (!material || !parentId) return false;
+  const { rows } = await db.query(
+    `SELECT user_id FROM student_profiles WHERE parent_id = $1::uuid`,
+    [parentId],
+  );
+  for (const row of rows) {
+    // eslint-disable-next-line no-await-in-loop
+    if (await studentCanAccessMaterial(row.user_id, material)) return true;
+  }
+  return false;
+}
+
 module.exports = {
   getInstructorMaterialsUsage,
   getMaterialsQuota,
@@ -311,6 +324,7 @@ module.exports = {
   getMaterialById,
   deleteCourseMaterial,
   studentCanAccessMaterial,
+  parentCanAccessMaterial,
   listStudentMaterials,
   listMaterialsForAssignment,
   listUploadOptions,

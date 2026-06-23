@@ -718,7 +718,27 @@ const register = async (req, res) => {
     const { full_name, email, phone, password, role, subject, billing_type, parent_id } = req.body;
     const phoneCanon = canonicalPhone(phone);
     if (!phoneCanon) return res.status(400).json({ success: false, message: 'Telefon tələb olunur' });
-    const hash = await bcrypt.hash(password || 'Pass@123', 12);
+
+    const REGISTER_ROLE_ALLOWLIST = {
+      admin: new Set(['student', 'instructor', 'parent', 'course']),
+      instructor: new Set(['student']),
+    };
+    const allowedRoles = REGISTER_ROLE_ALLOWLIST[req.user.role];
+    if (!allowedRoles || !role || !allowedRoles.has(role)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Bu rol ilə istifadəçi yarada bilməzsiniz',
+      });
+    }
+
+    const pass = String(password || '');
+    if (pass.length < 8) {
+      return res.status(400).json({
+        success: false,
+        message: 'Şifrə ən azı 8 simvol olmalıdır',
+      });
+    }
+    const hash = await bcrypt.hash(pass, 12);
     const emailCanon = role === 'student' ? canonicalStudentEmail(email) : email?.toLowerCase() || null;
     if (role === 'student' && email && !emailCanon) {
       return res.status(400).json({ success: false, message: 'Email formatı düzgün deyil' });

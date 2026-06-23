@@ -1,5 +1,5 @@
 const router = require('express').Router();
-const { authenticate, authenticateSse, authorize } = require('../middleware/auth');
+const { authenticate, authenticateSse, authenticateWithQueryToken, authorize } = require('../middleware/auth');
 const {
   postOpenRoom,
   getMessages,
@@ -10,6 +10,7 @@ const {
   getDirect,
   getAssignments,
   postAttachment,
+  serveChatAttachment,
 } = require('../controllers/chatController');
 const { uploadChatAttachment } = require('../services/chatAttachmentStorage');
 
@@ -77,6 +78,13 @@ router.post(
   authorize('instructor', 'student'),
   uploadChatAttachment.single('file'),
   postAttachment,
+);
+
+router.get(
+  '/attachments/:filename',
+  authenticateWithQueryToken,
+  authorize('instructor', 'student'),
+  serveChatAttachment,
 );
 
 router.get(

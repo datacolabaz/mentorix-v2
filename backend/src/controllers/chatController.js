@@ -11,7 +11,14 @@ const {
   touchUserActivity,
 } = require('../services/chatService');
 const { subscribeRoom, unsubscribeRoom } = require('../services/chatRealtimeHub');
-const { publicChatAttachmentPath } = require('../services/chatAttachmentStorage');
+const {
+  publicChatAttachmentPath,
+  CHAT_UPLOAD_DIR,
+  extractChatAttachmentFilename,
+} = require('../services/chatAttachmentStorage');
+const path = require('path');
+const fs = require('fs');
+const db = require('../utils/db');
 
 async function getGroups(req, res) {
   try {
@@ -214,6 +221,47 @@ async function streamRoom(req, res) {
   }
 }
 
+async function serveChatAttachment(req, res) {
+  try {
+    const filename = path.basename(String(req.params.filename || ''));
+    if (!filename) {
+      return res.status(400).json({ success: false, message: 'Fayl adı tələb olunur' });
+    }
+
+    const attachmentPath = `/api/chat/attachments/${filename}`;
+    const legacyPath = `/api/uploads/chat/${filename}`;
+    const { rows } = await db.query(
+      `SELECT room_id FROM chat_messages
+       WHERE attachment_url IN ($1, $2)
+       LIMIT 1`,
+      [attachmentPath, legacyPath],
+    );
+    if (!rows[0]) {
+      return res.status(404).json({ success: false, message: 'Fayl tapılmadı' });
+    }
+
+    const room = await getRoomById(rows[0].room_id);
+    await assertRoomAccess(req.user.id, req.user.role, room);
+
+    const filePath = path.join(CHAT_UPLOAD_DIR, filename);
+    const resolved = path.resolve(filePath);
+    const root = path.resolve(CHAT_UPLOAD_DIR);
+    if (!resolved.startsWith(root) || !fs.existsSync(resolved)) {
+      return res.status(404).json({ success: false, message: 'Fayl tapılmadı' });
+    }
+
+    res.setHeader('Cache-Control', 'private, max-age=300');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    return res.sendFile(resolved);
+  } catch (err) {
+    res.status(err.statusCode || err.status || 500).json({
+      success: false,
+      message: err.message,
+      code: err.code || 'CHAT_ERROR',
+    });
+  }
+}
+
 module.exports = {
   getGroups,
   getDirect,
@@ -224,4 +272,5 @@ module.exports = {
   postAttachment,
   getCapabilities,
   streamRoom,
+  serveChatAttachment,
 };
