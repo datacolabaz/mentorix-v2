@@ -1,13 +1,17 @@
 const jwt = require('jsonwebtoken');
 
-const SECRET = process.env.JWT_SECRET;
+const SECRET = String(process.env.JWT_SECRET || '').trim();
 
-if (!SECRET || String(SECRET).length < 32) {
-  const msg = 'JWT_SECRET təyin olunmalıdır və ən azı 32 simvol olmalıdır';
+if (!SECRET) {
+  const msg = 'JWT_SECRET təyin olunmalıdır';
   if (process.env.NODE_ENV === 'production') {
     throw new Error(msg);
   }
   console.warn(`[jwt] WARNING: ${msg}`);
+} else if (SECRET.length < 32) {
+  console.warn(
+    '[jwt] WARNING: JWT_SECRET ən azı 32 simvol olmalıdır — Railway Variables-da güclü secret təyin edin',
+  );
 }
 
 module.exports = {
