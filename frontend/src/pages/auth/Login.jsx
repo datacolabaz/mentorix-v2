@@ -544,14 +544,14 @@ export default function Login() {
           {featureItemsForLanding.length > 0 ? (
           <section id="mx-features" className="space-y-4 scroll-mt-8">
             <div className="text-xs uppercase tracking-wider text-gray-500 font-semibold">{m.features.heading}</div>
-            <div className="grid md:grid-cols-3 gap-3">
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-2.5">
               {featureItemsForLanding.map((x, i) => (
                 <div
                   key={`feat-${i}`}
-                  className={`rounded-2xl border border-white/10 bg-gradient-to-br ${x.accent || 'from-sky-500/15'} to-[#101010] p-4 space-y-2`}
+                  className={`sm:flex-1 sm:min-w-0 rounded-2xl border border-white/10 bg-gradient-to-br ${x.accent || 'from-sky-500/15'} to-[#101010] p-3 sm:p-3.5 space-y-1.5`}
                 >
-                  <div className="text-sm font-semibold text-white">{x.title}</div>
-                  <p className="text-xs text-gray-400 leading-relaxed">{x.body}</p>
+                  <div className="text-xs sm:text-sm font-semibold text-white leading-snug">{x.title}</div>
+                  <p className="text-[10px] sm:text-[11px] text-gray-400 leading-relaxed">{x.body}</p>
                 </div>
               ))}
             </div>
