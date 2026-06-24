@@ -3,6 +3,24 @@ import { normalizeApiBaseUrl } from './apiBase'
 
 const parsedTimeout = Number(import.meta.env.VITE_API_TIMEOUT_MS)
 
+export const AUTH_REQUEST_TIMEOUT_MS = 90000
+
+function formatApiErrorMessage(err, serverMessage) {
+  const code = err?.code
+  const raw = String(serverMessage || err?.message || '').trim()
+
+  if (code === 'ECONNABORTED' || /timeout/i.test(raw)) {
+    return 'Server cavab vermədi. İnternet bağlantınızı yoxlayıb yenidən cəhd edin.'
+  }
+  if (!err?.response) {
+    if (/network error/i.test(raw) || !raw) {
+      return 'Şəbəkə xətası. İnternet bağlantınızı yoxlayıb yenidən cəhd edin.'
+    }
+    return raw
+  }
+  return raw || 'Xəta'
+}
+
 const USAGE_LIMIT_CODES = new Set([
   'STUDENT_LIMIT',
   'STORAGE_LIMIT',
@@ -103,7 +121,7 @@ api.interceptors.response.use(
     }
     const data = err.response?.data
     const status = err.response?.status
-    const msg = data?.message || err.message || 'Xəta'
+    const msg = formatApiErrorMessage(err, data?.message)
     const code = data?.code
     if (status === 429 && typeof code === 'string' && USAGE_LIMIT_CODES.has(code)) {
       try {

@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import api from '../lib/api'
+import api, { AUTH_REQUEST_TIMEOUT_MS } from '../lib/api'
 import { trackLogout } from '../lib/analytics'
 
 function clearDiscoverReminderOnAuth(user) {
@@ -54,10 +54,11 @@ const useAuthStore = create((set) => ({
     return data.user
   },
 
-  signupWithEmail: async (body) => api.post('/auth/signup', body),
+  signupWithEmail: async (body) =>
+    api.post('/auth/signup', body, { timeout: AUTH_REQUEST_TIMEOUT_MS }),
 
   loginWithEmail: async ({ email, password, role = 'instructor' }) => {
-    const data = await api.post('/auth/login/email', { email, password, role })
+    const data = await api.post('/auth/login/email', { email, password, role }, { timeout: AUTH_REQUEST_TIMEOUT_MS })
     if (!data?.token || !data?.user) {
       const err = new Error(data?.message || 'Server cavabı etibarsızdır')
       err.code = data?.code
@@ -72,7 +73,8 @@ const useAuthStore = create((set) => ({
 
   verifyEmailCode: async ({ email, code }) => api.post('/auth/verify-email', { email, code }),
 
-  resendVerificationEmail: async (email) => api.post('/auth/resend-verification', { email }),
+  resendVerificationEmail: async (email) =>
+    api.post('/auth/resend-verification', { email }, { timeout: AUTH_REQUEST_TIMEOUT_MS }),
 
   requestPasswordReset: async (email) => api.post('/auth/password/forgot', { email }),
 

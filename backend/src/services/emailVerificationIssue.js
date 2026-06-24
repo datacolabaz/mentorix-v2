@@ -34,6 +34,27 @@ async function issueEmailVerification(userId, email) {
   return { token, code, expiry, mail };
 }
 
+/** Cavabı gecikdirməmək üçün email göndərməni arxa planda işlədir */
+function queueEmailVerification(userId, email) {
+  void issueEmailVerification(userId, email)
+    .then(({ mail }) => {
+      if (!mail?.ok) {
+        console.error('[email-verification] send failed', {
+          userId,
+          email,
+          error: mail?.error,
+        });
+      }
+    })
+    .catch((err) => {
+      console.error('[email-verification] queue error', {
+        userId,
+        email,
+        message: err?.message,
+      });
+    });
+}
+
 async function clearVerificationFields(userId) {
   await db.query(
     `UPDATE users
@@ -82,6 +103,7 @@ function isVerificationExpired(user) {
 
 module.exports = {
   issueEmailVerification,
+  queueEmailVerification,
   clearVerificationFields,
   findUserForVerification,
   isVerificationExpired,

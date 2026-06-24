@@ -5,7 +5,7 @@ import AuthAccountExistsModal from './AuthAccountExistsModal'
 import Button from '../common/Button'
 import useAuthStore from '../../hooks/useAuth'
 import { useToast } from '../common/Toast'
-import api from '../../lib/api'
+import api, { AUTH_REQUEST_TIMEOUT_MS } from '../../lib/api'
 import { getAttributionPayload } from '../../lib/analytics'
 import { postAuthNavigate } from '../../lib/postAuth'
 
@@ -271,21 +271,15 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
       const r =
         tab === 'login'
           ? await googleAuthWithAutoRole(credential, loginRoleFallback ? loginRole : null)
-          : await (async () => {
-              let out = await api.post('/auth/google/login', {
+          : await api.post(
+              '/auth/google/complete',
+              {
                 credential,
                 role: signupRole,
                 intent: 'signup',
-              })
-              if (out?.needs_role || out?.needs_phone_link) {
-                out = await api.post('/auth/google/complete', {
-                  credential,
-                  role: signupRole,
-                  intent: 'signup',
-                })
-              }
-              return out
-            })()
+              },
+              { timeout: AUTH_REQUEST_TIMEOUT_MS },
+            )
       if (!r?.token || !r?.user) {
         toast(r?.message || 'Google girişi tamamlanmadı', 'error')
         return

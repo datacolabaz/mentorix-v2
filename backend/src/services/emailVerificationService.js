@@ -25,22 +25,22 @@ function buildVerificationUrl(token) {
 }
 
 async function sendVerificationEmail({ email, token, code }) {
-  const to = String(email || '').trim();
-  if (!to) return { ok: false, error: 'Email boşdur' };
+  const to = String(email || '').trim()
+  if (!to) return { ok: false, error: 'Email boşdur' }
 
-  const client = resendClient();
+  const client = resendClient()
   if (!client) {
     return {
       ok: false,
       error: 'Resend konfiqurasiya olunmayıb (RESEND_API_KEY və VERIFY_EMAIL_FROM təyin edin)',
-    };
+    }
   }
 
-  const verifyUrl = buildVerificationUrl(token);
-  const codeStr = code != null ? String(code).trim() : '';
-  const ref = crypto.randomBytes(4).toString('hex');
+  const verifyUrl = buildVerificationUrl(token)
+  const codeStr = code != null ? String(code).trim() : ''
+  const ref = crypto.randomBytes(4).toString('hex')
 
-  const subject = 'Mentorix — e-poçt təsdiqi';
+  const subject = 'Mentorix — e-poçt təsdiqi'
 
   const text = [
     'Salam!',
@@ -53,7 +53,7 @@ async function sendVerificationEmail({ email, token, code }) {
     'Əgər bu müraciəti siz etməmisinizsə, bu e-məktubu nəzərə almayın.',
   ]
     .filter(Boolean)
-    .join('\n');
+    .join('\n')
 
   const html = `
     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; line-height: 1.5; max-width: 520px;">
@@ -73,28 +73,39 @@ async function sendVerificationEmail({ email, token, code }) {
       <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 16px 0;">
       <p style="margin: 0; color: #6b7280; font-size: 12px;">Əgər bu müraciəti siz etməmisinizsə, bu e-məktubu nəzərə almayın. Ref: ${ref}</p>
     </div>
-  `;
+  `
+
+  const SEND_TIMEOUT_MS = Number(process.env.EMAIL_SEND_TIMEOUT_MS || 25000)
 
   try {
-    const { data, error } = await client.emails.send({
+    const sendPromise = client.emails.send({
       from: EMAIL_FROM,
       to,
       subject,
       text,
       html,
-    });
+    })
+
+    const raced = await Promise.race([
+      sendPromise,
+      new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Email göndərmə vaxtı bitdi')), SEND_TIMEOUT_MS)
+      }),
+    ])
+
+    const { data, error } = raced
 
     if (error) {
       const msg =
         error?.message ||
         (typeof error === 'string' ? error : null) ||
-        'Resend email göndərmədi';
-      return { ok: false, error: msg };
+        'Resend email göndərmədi'
+      return { ok: false, error: msg }
     }
 
-    return { ok: true, messageId: data?.id || null };
+    return { ok: true, messageId: data?.id || null }
   } catch (err) {
-    return { ok: false, error: err?.message || 'Resend xətası' };
+    return { ok: false, error: err?.message || 'Resend xətası' }
   }
 }
 

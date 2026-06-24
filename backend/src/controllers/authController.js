@@ -6,6 +6,7 @@ const { sendSms, sendOtpSms } = require('../services/smsService');
 const { checkSmsQuota } = require('../services/smsQuotaService');
 const {
   issueEmailVerification,
+  queueEmailVerification,
   clearVerificationFields,
   findUserForVerification,
   isVerificationExpired,
@@ -1211,13 +1212,7 @@ const signup = async (req, res) => {
       return created;
     });
 
-    const { mail } = await issueEmailVerification(user.id, emailCanon);
-    if (!mail?.ok) {
-      return res.status(500).json({
-        success: false,
-        message: mail?.error || 'Təsdiq emaili göndərilə bilmədi',
-      });
-    }
+    queueEmailVerification(user.id, emailCanon);
 
     scheduleAccessEvent(req, {
       event_type: 'signup_complete',
@@ -1349,12 +1344,12 @@ const resendVerificationEmail = async (req, res) => {
       return res.json({ success: true, code: 'ALREADY_VERIFIED', message: 'Email artıq təsdiqlənib' });
     }
 
-    const { mail } = await issueEmailVerification(user.id, user.email);
-    if (!mail?.ok) {
-      return res.status(500).json({ success: false, message: mail?.error || 'Email göndərilə bilmədi' });
-    }
+    queueEmailVerification(user.id, user.email);
 
-    return res.json({ success: true, message: 'Təsdiq emaili yenidən göndərildi' });
+    return res.json({
+      success: true,
+      message: 'Təsdiq emaili göndərilir. Bir neçə dəqiqə ərzində yoxlayın.',
+    });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -1735,7 +1730,17 @@ async function verifyGoogleIdTokenOrThrow(credential) {
     throw err;
   }
   const cid = String(process.env.GOOGLE_CLIENT_ID || '').trim();
-  const ticket = await client.verifyIdToken({ idToken: token, audience: cid });
+  const VERIFY_TIMEOUT_MS = Number(process.env.GOOGLE_VERIFY_TIMEOUT_MS || 15000);
+  const ticket = await Promise.race([
+    client.verifyIdToken({ idToken: token, audience: cid }),
+    new Promise((_, reject) => {
+      setTimeout(() => {
+        const err = new Error('Google təsdiqi vaxtı bitdi. Yenidən cəhd edin.');
+        err.statusCode = 504;
+        reject(err);
+      }, VERIFY_TIMEOUT_MS);
+    }),
+  ]);
   const payload = ticket.getPayload() || {};
   const sub = payload.sub ? String(payload.sub) : '';
   const email = payload.email ? String(payload.email).trim().toLowerCase() : '';
