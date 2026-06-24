@@ -26,6 +26,11 @@ import {
   landingPlanPriceLabel,
 } from '../../lib/subscriptionPlanMarketing'
 import { defaultPlatformContact } from '../../lib/platformContact'
+import {
+  isMarketingSectionVisible,
+  visibleMarketingItems,
+  visibleWhyCards,
+} from '../../lib/loginMarketingVisibility'
 
 function scrollToId(id) {
   const el = document.getElementById(id)
@@ -84,10 +89,35 @@ export default function Login() {
     })
   }, [isAdmin])
 
-  const whyCardsForLanding = useMemo(
-    () => (marketing?.why?.cards || []).filter((c) => c.card_enabled !== false),
-    [marketing],
-  )
+  const whyCardsForLanding = useMemo(() => {
+    if (!isMarketingSectionVisible(marketing?.why)) return []
+    return visibleWhyCards(marketing?.why?.cards)
+  }, [marketing])
+
+  const stepItemsForLanding = useMemo(() => {
+    const items = Array.isArray(marketing.steps?.items) ? marketing.steps.items : []
+    const def = defaultLoginMarketingPayload().steps.items || []
+    const base = items.length ? items : def
+    if (!isMarketingSectionVisible(marketing.steps)) return []
+    return visibleMarketingItems(base)
+  }, [marketing.steps])
+
+  const featureItemsForLanding = useMemo(() => {
+    if (!isMarketingSectionVisible(marketing.features)) return []
+    return visibleMarketingItems(marketing.features?.items || [])
+  }, [marketing.features])
+
+  const faqItemsForLanding = useMemo(() => {
+    if (!isMarketingSectionVisible(marketing.faq)) return []
+    return visibleMarketingItems(marketing.faq?.items || [])
+  }, [marketing.faq])
+
+  const showMiniPreview = isMarketingSectionVisible(marketing.mini_preview)
+  const showMarketplace = isMarketingSectionVisible(marketing.marketplace)
+  const showUniversities = isMarketingSectionVisible(marketing.universities)
+  const showPricing = isMarketingSectionVisible(marketing.pricing)
+  const showPricingAudience =
+    showPricing && marketing.pricing?.audience_explainer_enabled !== false
 
   const { login } = useAuthStore()
   const navigate = useNavigate()
@@ -198,11 +228,14 @@ export default function Login() {
 
     const ids = ['mx-demo-mini']
     if (whyCardsForLanding.length > 0) ids.push('mx-why')
-    ids.push('mx-steps', 'mx-features')
+    if (stepItemsForLanding.length > 0) ids.push('mx-steps')
+    if (featureItemsForLanding.length > 0) ids.push('mx-features')
     if (marketing?.use_case?.section_enabled !== false) {
       ids.push('mx-use-case')
     }
-    ids.push('mx-faq', 'mx-cta', 'mx-login')
+    if (faqItemsForLanding.length > 0) ids.push('mx-faq')
+    if (isMarketingSectionVisible(marketing.cta_band)) ids.push('mx-cta')
+    ids.push('mx-login')
     for (const id of ids) {
       const el = typeof document !== 'undefined' ? document.getElementById(id) : null
       if (el) {
@@ -221,7 +254,15 @@ export default function Login() {
       }
       obs.disconnect()
     }
-  }, [isAdmin, marketing.use_case?.section_enabled, whyCardsForLanding.length])
+  }, [
+    isAdmin,
+    marketing.use_case?.section_enabled,
+    marketing.cta_band,
+    whyCardsForLanding.length,
+    stepItemsForLanding.length,
+    featureItemsForLanding.length,
+    faqItemsForLanding.length,
+  ])
 
   const closeLoginModal = () => setLoginModalOpen(false)
 
@@ -254,11 +295,7 @@ export default function Login() {
   const marketplaceCtaLabel =
     m.hero?.marketplace_cta_label || defaultLoginMarketingPayload().hero.marketplace_cta_label
 
-  const stepItems = useMemo(() => {
-    const items = Array.isArray(m.steps?.items) ? m.steps.items : []
-    const def = defaultLoginMarketingPayload().steps.items || []
-    return items.length ? items : def
-  }, [m.steps?.items])
+  const stepItems = stepItemsForLanding
 
   useEffect(() => {
     if (!loginModalOpen || isAdmin) return undefined
@@ -317,11 +354,12 @@ export default function Login() {
                 </Link>
                 <button
                   type="button"
-                  onClick={() => scrollToId('mx-features')}
+                  onClick={() => scrollToId(featureItemsForLanding.length ? 'mx-features' : 'mx-steps')}
                   className="text-gray-300 hover:text-white px-2 py-1.5 rounded-lg hover:bg-white/5"
                 >
                   Xüsusiyyətlər
                 </button>
+                {showPricing ? (
                 <button
                   type="button"
                   onClick={() => scrollToId('mx-pricing')}
@@ -329,6 +367,7 @@ export default function Login() {
                 >
                   Qiymət
                 </button>
+                ) : null}
                 <button
                   type="button"
                   onClick={() => openLoginModal('nav')}
@@ -398,6 +437,7 @@ export default function Login() {
               </div>
             </div>
 
+            {showMiniPreview ? (
             <div
               id="mx-demo-mini"
               className="relative w-full sm:w-[340px] shrink-0 rounded-2xl border border-white/10 bg-gradient-to-br from-[#131313] to-[#0a0f12] p-4 shadow-[0_0_80px_-20px_rgba(0,229,176,0.35)] overflow-hidden"
@@ -457,8 +497,10 @@ export default function Login() {
                 </div>
               </div>
             </div>
+            ) : null}
           </header>
 
+          {showMarketplace ? (
           <section
             id="mx-marketplace"
             className="scroll-mt-24 rounded-2xl border border-primary/25 bg-gradient-to-br from-primary/10 via-[#0e1412] to-[#0b0b0b] p-6 sm:p-8 space-y-4"
@@ -494,7 +536,9 @@ export default function Login() {
               {marketplaceCtaLabel}
             </Link>
           </section>
+          ) : null}
 
+          {showUniversities ? (
           <section
             id="mx-universities"
             className="scroll-mt-24 rounded-2xl border border-violet-500/25 bg-gradient-to-br from-violet-500/10 via-[#0e1014] to-[#0b0b0b] p-6 sm:p-8 space-y-4"
@@ -517,6 +561,7 @@ export default function Login() {
               Proqramları axtar
             </Link>
           </section>
+          ) : null}
 
           {whyCardsForLanding.length > 0 ? (
           <section id="mx-why" className="space-y-4 scroll-mt-8">
@@ -532,6 +577,7 @@ export default function Login() {
           </section>
           ) : null}
 
+          {stepItems.length > 0 ? (
           <section id="mx-steps" className="space-y-4 scroll-mt-8">
             <div className="text-xs uppercase tracking-wider text-gray-500 font-semibold">{m.steps.heading}</div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -551,11 +597,13 @@ export default function Login() {
               ))}
             </div>
           </section>
+          ) : null}
 
+          {featureItemsForLanding.length > 0 ? (
           <section id="mx-features" className="space-y-4 scroll-mt-8">
             <div className="text-xs uppercase tracking-wider text-gray-500 font-semibold">{m.features.heading}</div>
             <div className="grid md:grid-cols-3 gap-3">
-              {(m.features.items || []).map((x, i) => (
+              {featureItemsForLanding.map((x, i) => (
                 <div
                   key={`feat-${i}`}
                   className={`rounded-2xl border border-white/10 bg-gradient-to-br ${x.accent || 'from-sky-500/15'} to-[#101010] p-4 space-y-2`}
@@ -566,6 +614,7 @@ export default function Login() {
               ))}
             </div>
           </section>
+          ) : null}
 
           {m.use_case?.section_enabled !== false ? (
           <section id="mx-use-case" className="space-y-4 scroll-mt-8">
@@ -593,9 +642,10 @@ export default function Login() {
           </section>
           ) : null}
 
+          {showPricing ? (
           <section id="mx-pricing" className="space-y-4 scroll-mt-24">
             <div className="text-xs uppercase tracking-wider text-gray-500 font-semibold">Qiymət</div>
-            <PricingAudienceExplainer variant="strip" />
+            {showPricingAudience ? <PricingAudienceExplainer variant="strip" /> : null}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               {publicPlans.map((p) => {
                 const meta = getPlanMarketingMeta(p)
@@ -643,11 +693,13 @@ export default function Login() {
               )})}
             </div>
           </section>
+          ) : null}
 
+          {faqItemsForLanding.length > 0 ? (
           <section id="mx-faq" className="space-y-4 scroll-mt-8">
             <div className="text-xs uppercase tracking-wider text-gray-500 font-semibold">{m.faq.heading}</div>
             <div className="rounded-2xl border border-white/10 bg-surface-2/70 divide-y divide-white/10">
-              {(m.faq.items || []).map((it, i) => (
+              {faqItemsForLanding.map((it, i) => (
                 <details key={`faq-${i}`} className="group p-4 sm:p-5">
                   <summary className="cursor-pointer text-sm font-semibold text-gray-100 list-none flex items-center justify-between gap-3 [&::-webkit-details-marker]:hidden">
                     <span>{it.q}</span>
@@ -660,7 +712,9 @@ export default function Login() {
               ))}
             </div>
           </section>
+          ) : null}
 
+          {isMarketingSectionVisible(m.cta_band) ? (
           <section id="mx-cta" className="rounded-2xl border border-primary/25 bg-gradient-to-br from-primary/15 via-[#0e1412] to-[#0b0b0b] p-6 sm:p-8 scroll-mt-8">
             <div className="space-y-2 max-w-xl">
               <div className="text-lg sm:text-xl font-semibold text-white">{m.cta_band.heading}</div>
@@ -693,6 +747,7 @@ export default function Login() {
               </button>
             </div>
           </section>
+          ) : null}
 
           <PublicSeoFooter className="rounded-none sm:rounded-2xl overflow-hidden" />
         </div>

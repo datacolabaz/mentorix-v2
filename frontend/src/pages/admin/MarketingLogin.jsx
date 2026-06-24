@@ -9,6 +9,41 @@ const inp =
   'w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500'
 const lbl = 'block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2'
 
+function LandingSectionToggle({ checked, onChange, hint }) {
+  return (
+    <label className="flex items-start gap-3 cursor-pointer select-none rounded-xl border border-indigo-500/20 bg-[#13112e]/80 px-3 py-2.5">
+      <input
+        type="checkbox"
+        className="mt-0.5 rounded border-indigo-500/40 text-primary focus:ring-primary/40"
+        checked={checked !== false}
+        onChange={(e) => onChange(e.target.checked)}
+      />
+      <span className="text-sm text-gray-200 leading-snug">
+        <span className="font-semibold text-white">Login landingində göstər</span>
+        <span className="block text-xs text-gray-500 mt-0.5">
+          {hint || 'Söndürülsə, bölmə tam gizlənir; məzmun admin-də saxlanılır.'}
+        </span>
+      </span>
+    </label>
+  )
+}
+
+function LandingItemToggle({ checked, onChange }) {
+  return (
+    <label className="flex items-start gap-2.5 cursor-pointer select-none rounded-lg border border-indigo-500/15 bg-[#13112e]/60 px-2.5 py-2">
+      <input
+        type="checkbox"
+        className="mt-0.5 rounded border-indigo-500/40 text-primary focus:ring-primary/40 shrink-0"
+        checked={checked !== false}
+        onChange={(e) => onChange(e.target.checked)}
+      />
+      <span className="text-xs text-gray-300 leading-snug">
+        <span className="font-semibold text-white">Landingdə göstər</span>
+      </span>
+    </label>
+  )
+}
+
 function parseCalendarDays(text) {
   return String(text || '')
     .split(/[\n,]+/)
@@ -180,6 +215,16 @@ export default function MarketingLogin() {
 
       <Card className="p-4 sm:p-6 space-y-4">
         <h2 className="font-display font-bold text-base">Mini prevyu paneli</h2>
+        <LandingSectionToggle
+          checked={landing.mini_preview?.section_enabled}
+          onChange={(v) =>
+            setLanding((L) => ({
+              ...L,
+              mini_preview: { ...L.mini_preview, section_enabled: v },
+            }))
+          }
+          hint="Söndürülsə, hero sağındakı prevyu paneli gizlənir."
+        />
         {[
           ['title', 'Başlıq'],
           ['badge', 'Nişan'],
@@ -299,6 +344,10 @@ export default function MarketingLogin() {
             Kart əlavə et
           </Button>
         </div>
+        <LandingSectionToggle
+          checked={landing.why?.section_enabled}
+          onChange={(v) => setLanding((L) => ({ ...L, why: { ...L.why, section_enabled: v } }))}
+        />
         <div>
           <label className={lbl}>Bölmə başlığı</label>
           <input
@@ -382,6 +431,12 @@ export default function MarketingLogin() {
 
       <Card className="p-4 sm:p-6 space-y-4">
         <h2 className="font-display font-bold text-base">Top müəllimlər</h2>
+        <LandingSectionToggle
+          checked={landing.top_teachers?.section_enabled}
+          onChange={(v) =>
+            setLanding((L) => ({ ...L, top_teachers: { ...L.top_teachers, section_enabled: v } }))
+          }
+        />
         <div>
           <label className={lbl}>Başlıq</label>
           <input
@@ -439,16 +494,20 @@ export default function MarketingLogin() {
             onClick={() =>
               setLanding((L) => ({
                 ...L,
-                steps: {
-                  ...L.steps,
-                  items: [...L.steps.items, { step: String(L.steps.items.length + 1), title: '', body: '' }],
-                },
+                  steps: {
+                    ...L.steps,
+                    items: [...L.steps.items, { item_enabled: true, step: String(L.steps.items.length + 1), title: '', body: '' }],
+                  },
               }))
             }
           >
             Addım əlavə et
           </Button>
         </div>
+        <LandingSectionToggle
+          checked={landing.steps?.section_enabled}
+          onChange={(v) => setLanding((L) => ({ ...L, steps: { ...L.steps, section_enabled: v } }))}
+        />
         <div>
           <label className={lbl}>Bölmə başlığı</label>
           <input
@@ -476,6 +535,20 @@ export default function MarketingLogin() {
                 Sil
               </button>
             </div>
+            <LandingItemToggle
+              checked={it.item_enabled}
+              onChange={(v) =>
+                setLanding((L) => ({
+                  ...L,
+                  steps: {
+                    ...L.steps,
+                    items: L.steps.items.map((row, j) =>
+                      j === i ? { ...row, item_enabled: v } : row,
+                    ),
+                  },
+                }))
+              }
+            />
             <input
               className={inp}
               placeholder="№"
@@ -542,7 +615,7 @@ export default function MarketingLogin() {
                   ...L.features,
                   items: [
                     ...L.features.items,
-                    { title: '', body: '', accent: ACCENT_OPTIONS[0] },
+                    { item_enabled: true, title: '', body: '', accent: ACCENT_OPTIONS[0] },
                   ],
                 },
               }))
@@ -551,6 +624,10 @@ export default function MarketingLogin() {
             Sətir əlavə et
           </Button>
         </div>
+        <LandingSectionToggle
+          checked={landing.features?.section_enabled}
+          onChange={(v) => setLanding((L) => ({ ...L, features: { ...L.features, section_enabled: v } }))}
+        />
         <div>
           <label className={lbl}>Bölmə başlığı</label>
           <input
@@ -578,6 +655,20 @@ export default function MarketingLogin() {
                 Sil
               </button>
             </div>
+            <LandingItemToggle
+              checked={it.item_enabled}
+              onChange={(v) =>
+                setLanding((L) => ({
+                  ...L,
+                  features: {
+                    ...L.features,
+                    items: L.features.items.map((row, j) =>
+                      j === i ? { ...row, item_enabled: v } : row,
+                    ),
+                  },
+                }))
+              }
+            />
             <input
               className={inp}
               placeholder="Başlıq"
@@ -789,13 +880,17 @@ export default function MarketingLogin() {
             onClick={() =>
               setLanding((L) => ({
                 ...L,
-                faq: { ...L.faq, items: [...L.faq.items, { q: '', a: '' }] },
+                faq: { ...L.faq, items: [...L.faq.items, { item_enabled: true, q: '', a: '' }] },
               }))
             }
           >
             Sual əlavə et
           </Button>
         </div>
+        <LandingSectionToggle
+          checked={landing.faq?.section_enabled}
+          onChange={(v) => setLanding((L) => ({ ...L, faq: { ...L.faq, section_enabled: v } }))}
+        />
         <div>
           <label className={lbl}>Başlıq</label>
           <input
@@ -823,6 +918,20 @@ export default function MarketingLogin() {
                 Sil
               </button>
             </div>
+            <LandingItemToggle
+              checked={it.item_enabled}
+              onChange={(v) =>
+                setLanding((L) => ({
+                  ...L,
+                  faq: {
+                    ...L.faq,
+                    items: L.faq.items.map((row, j) =>
+                      j === i ? { ...row, item_enabled: v } : row,
+                    ),
+                  },
+                }))
+              }
+            />
             <input
               className={inp}
               placeholder="Sual"
@@ -861,6 +970,12 @@ export default function MarketingLogin() {
 
       <Card className="p-4 sm:p-6 space-y-4">
         <h2 className="font-display font-bold text-base">Alt CTA zolağı</h2>
+        <LandingSectionToggle
+          checked={landing.cta_band?.section_enabled}
+          onChange={(v) =>
+            setLanding((L) => ({ ...L, cta_band: { ...L.cta_band, section_enabled: v } }))
+          }
+        />
         <div>
           <label className={lbl}>Başlıq</label>
           <input
@@ -887,6 +1002,58 @@ export default function MarketingLogin() {
             }
           />
         </div>
+      </Card>
+
+      <Card className="p-4 sm:p-6 space-y-4">
+        <h2 className="font-display font-bold text-base">Marketplace bloku</h2>
+        <LandingSectionToggle
+          checked={landing.marketplace?.section_enabled}
+          onChange={(v) =>
+            setLanding((L) => ({
+              ...L,
+              marketplace: { ...(L.marketplace || {}), section_enabled: v },
+            }))
+          }
+          hint="Valideynlər və tələbələr üçün — müəllim axtarışı kartı."
+        />
+      </Card>
+
+      <Card className="p-4 sm:p-6 space-y-4">
+        <h2 className="font-display font-bold text-base">Universitetlər bloku</h2>
+        <LandingSectionToggle
+          checked={landing.universities?.section_enabled}
+          onChange={(v) =>
+            setLanding((L) => ({
+              ...L,
+              universities: { ...(L.universities || {}), section_enabled: v },
+            }))
+          }
+          hint="Xaricdə təhsil — universitet proqram axtarışı kartı."
+        />
+      </Card>
+
+      <Card className="p-4 sm:p-6 space-y-4">
+        <h2 className="font-display font-bold text-base">Qiymət bloku</h2>
+        <LandingSectionToggle
+          checked={landing.pricing?.section_enabled}
+          onChange={(v) =>
+            setLanding((L) => ({
+              ...L,
+              pricing: { ...(L.pricing || {}), section_enabled: v },
+            }))
+          }
+          hint="Paket kartları və qiymət bölməsi."
+        />
+        <LandingSectionToggle
+          checked={landing.pricing?.audience_explainer_enabled}
+          onChange={(v) =>
+            setLanding((L) => ({
+              ...L,
+              pricing: { ...(L.pricing || {}), audience_explainer_enabled: v },
+            }))
+          }
+          hint="«Kimlər üçün?» — pulsuz istifadəçilər siyahısı (qiymət kartlarından əvvəl)."
+        />
       </Card>
 
       <div className="flex justify-end pb-8">

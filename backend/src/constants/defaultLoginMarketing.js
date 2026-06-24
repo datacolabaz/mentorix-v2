@@ -28,6 +28,7 @@ function defaultLoginMarketingPayload() {
       existing_account: 'Artıq hesabım var — girişə keç',
     },
     mini_preview: {
+      section_enabled: true,
       title: 'İdarə paneli (prevyu)',
       badge: 'bu gün',
       col1_label: 'Platformada tələbə',
@@ -49,6 +50,7 @@ function defaultLoginMarketingPayload() {
       attendance_footnote: 'Son ay vs əvvəlki ay — qeydə alınmış dərslər üzrə',
     },
     why: {
+      section_enabled: true,
       heading: 'Niyə Mentorix?',
       cards: [
         {
@@ -69,6 +71,7 @@ function defaultLoginMarketingPayload() {
       ],
     },
     top_teachers: {
+      section_enabled: true,
       heading: 'Top müəllimlər',
       preview_before:
         'Hal-hazırda ilk müəllimlər qoşulur.',
@@ -81,27 +84,32 @@ function defaultLoginMarketingPayload() {
       pupil_suffix: 'şagird',
     },
     steps: {
+      section_enabled: true,
       heading: 'Necə işləyir?',
       items: [
         {
+          item_enabled: true,
           step: '1',
           title: 'Qoşul və qrafiki qur',
           body:
             'Google ilə başla, şagirdləri və həftəlik dərs slotlarını bir neçə dəqiqəyə əlavə et.',
         },
         {
+          item_enabled: true,
           step: '2',
           title: 'Ödəniş və davamiyyəti izlə',
           body:
             'Ödənişləri və dəftər qeydlərini unudun. Kimin nə vaxt ödədiyini tək ekranda görün.',
         },
         {
+          item_enabled: true,
           step: '3',
           title: 'Avtomatik xatırlat',
           body:
             'Paket sonu və vacib hadisələr üçün SMS ilə valideyn/tələbəni xəbərdar et, əlavə manual izləmə azalsın.',
         },
         {
+          item_enabled: true,
           step: '4',
           title: 'Yeni Tələbələr Qazan',
           body:
@@ -110,29 +118,35 @@ function defaultLoginMarketingPayload() {
       ],
     },
     features: {
+      section_enabled: true,
       heading: 'Mentorix.io ilə',
       items: [
         {
+          item_enabled: true,
           title: 'Tapşırıq idarəetməsi',
           body: 'Ev işi təyini, onlayn təslim və müəllim rəyi — tələbə və valideyn kabinetində görünür.',
           accent: 'from-sky-500/15',
         },
         {
+          item_enabled: true,
           title: 'İmtahan və analiz',
           body: 'QR/link ilə imtahan paylaşın; nəticələri avtomatik qiymətləndirin və diaqramlarla izləyin.',
           accent: 'from-emerald-500/15',
         },
         {
+          item_enabled: true,
           title: 'Çat və ünsiyyət',
           body: 'Qrup və fərdi çat — müəllim, tələbə və valideyn arasında sürətli ünsiyyət.',
           accent: 'from-cyan-500/15',
         },
         {
+          item_enabled: true,
           title: 'Ödəniş və valideyn bildirişləri',
           body: 'Ödəniş tarixlərini idarə edin; avtomatik SMS xatırlatmaları və valideynlə nəticə paylaşımı.',
           accent: 'from-amber-500/15',
         },
         {
+          item_enabled: true,
           title: 'Müəllim marketplace',
           body: 'Profilinizi xəritədə paylaşın — tələbələr və valideynlər uyğun müəllimi tapsın.',
           accent: 'from-purple-500/15',
@@ -163,19 +177,23 @@ function defaultLoginMarketingPayload() {
       faq_link: 'FAQ-ya keç →',
     },
     faq: {
+      section_enabled: true,
       heading: 'FAQ',
       items: [
         {
+          item_enabled: true,
           q: 'Mentorix məktəb üçün də uyğundur?',
           a:
             'Əsasən fərdi və kiçik qruplarla işləyən müəllimlər üçündür: təqvim, ödəniş izi və davamiyyət bir yerdə toplanır. Böyük strukturlar üçün “əlaqə” ilə konkret ssenariyə uyğunlaşdıra bilərik.',
         },
         {
+          item_enabled: true,
           q: 'Mobiltelefonda rahatdırmı?',
           a:
             'Əksər müəllimlər telefondan işləyir: qısa süzmə ilə dərslərə baxıb qeydləri təsdiqləyib SMS xatırlatmasını aktiv saxlayırlar.',
         },
         {
+          item_enabled: true,
           q: 'Ödənişlər və mövsümi paketlər necə?',
           a:
             'Paket əsaslı və ya aylıq qeydə alınan modellərlə tarix və status izləmə — “kim, nə zaman, ödənildi / gözləmədə” qarışığı azaldır.',
@@ -183,9 +201,20 @@ function defaultLoginMarketingPayload() {
       ],
     },
     cta_band: {
+      section_enabled: true,
       heading: 'Təhsil bir ekosistem kimi işləsin.',
       subtitle:
         'Müəllim idarə etsin, tələbə öyrənsin, valideyn izləsin — əvvəl dəyəri gör, sonra 14 günlük sınaqla başla.',
+    },
+    marketplace: {
+      section_enabled: true,
+    },
+    universities: {
+      section_enabled: true,
+    },
+    pricing: {
+      section_enabled: true,
+      audience_explainer_enabled: true,
     },
   }
 }
@@ -257,6 +286,28 @@ function mergeLoginMarketingFromDb(payloadFromDb) {
     return defaultTrue
   }
 
+  function parseSectionEnabled(v, defaultTrue = true) {
+    return parseCardEnabled(v, defaultTrue)
+  }
+
+  function patchSectionToggle(orig, raw) {
+    const origShown = orig?.section_enabled !== false
+    let section_enabled = origShown
+    if (raw && typeof raw === 'object' && Object.prototype.hasOwnProperty.call(raw, 'section_enabled')) {
+      section_enabled = parseSectionEnabled(raw.section_enabled, origShown)
+    }
+    return { section_enabled }
+  }
+
+  function patchPricingSection(orig, raw) {
+    const base = patchSectionToggle(orig, raw)
+    let audience_explainer_enabled = orig?.audience_explainer_enabled !== false
+    if (raw && typeof raw === 'object' && Object.prototype.hasOwnProperty.call(raw, 'audience_explainer_enabled')) {
+      audience_explainer_enabled = parseSectionEnabled(raw.audience_explainer_enabled, audience_explainer_enabled)
+    }
+    return { ...base, audience_explainer_enabled }
+  }
+
   /** @returns {typeof d.why.cards} */
   function mergeWhyCards(cardsRaw, fallback) {
     if (!Array.isArray(cardsRaw) || cardsRaw.length === 0) return fallback
@@ -279,6 +330,9 @@ function mergeLoginMarketingFromDb(payloadFromDb) {
   function mergeSteps(raw, fallback) {
     if (!Array.isArray(raw) || raw.length === 0) return fallback
     const merged = raw.slice(0, 12).map((row, i) => ({
+      item_enabled: Object.prototype.hasOwnProperty.call(row, 'item_enabled')
+        ? parseCardEnabled(row.item_enabled, true)
+        : true,
       step: trimStr(row.step, 4) || String(i + 1),
       title: trimStr(row.title, 200) || '—',
       body: trimStr(row.body, 2000) || '',
@@ -287,6 +341,7 @@ function mergeLoginMarketingFromDb(payloadFromDb) {
     if (merged.length < fallback.length) {
       for (let i = merged.length; i < fallback.length && i < 12; i++) {
         merged.push({
+          item_enabled: fallback[i].item_enabled !== false,
           step: fallback[i].step,
           title: fallback[i].title,
           body: fallback[i].body,
@@ -303,6 +358,9 @@ function mergeLoginMarketingFromDb(payloadFromDb) {
         ? row.accent
         : 'from-sky-500/15'
       return {
+        item_enabled: Object.prototype.hasOwnProperty.call(row, 'item_enabled')
+          ? parseCardEnabled(row.item_enabled, true)
+          : true,
         title: trimStr(row.title, 200) || '—',
         body: trimStr(row.body, 2000) || '',
         accent,
@@ -313,6 +371,9 @@ function mergeLoginMarketingFromDb(payloadFromDb) {
   function mergeFaq(raw, fallback) {
     if (!Array.isArray(raw) || raw.length === 0) return fallback
     return raw.slice(0, 50).map((row) => ({
+      item_enabled: Object.prototype.hasOwnProperty.call(row, 'item_enabled')
+        ? parseCardEnabled(row.item_enabled, true)
+        : true,
       q: trimStr(row.q, 300) || '—',
       a: trimStr(row.a, 8000) || '',
     }))
@@ -326,6 +387,7 @@ function mergeLoginMarketingFromDb(payloadFromDb) {
       days = raw.calendar_days.slice(0, 14).map((x) => trimStr(String(x), 12) || '—')
     }
     return {
+      section_enabled: patchSectionToggle(orig, raw).section_enabled,
       title: trimStr(raw.title ?? orig.title, 120) || orig.title,
       badge: trimStr(raw.badge ?? orig.badge, 80) || orig.badge,
       col1_label: trimStr(raw.col1_label ?? orig.col1_label, 80) || orig.col1_label,
@@ -376,6 +438,7 @@ function mergeLoginMarketingFromDb(payloadFromDb) {
   function mergeTop(orig, raw) {
     if (!raw || typeof raw !== 'object') return orig
     return {
+      section_enabled: patchSectionToggle(orig, raw).section_enabled,
       heading: trimStr(raw.heading ?? orig.heading, 160) || orig.heading,
       preview_before: trimStr(raw.preview_before ?? orig.preview_before ?? '', 600) || orig.preview_before,
       preview_emphasis:
@@ -398,17 +461,20 @@ function mergeLoginMarketingFromDb(payloadFromDb) {
     mini_preview: mergeMini(d.mini_preview, p.mini_preview),
     trust: patchTrust(d.trust, p.trust),
     why: {
+      section_enabled: patchSectionToggle(d.why, p.why).section_enabled,
       heading: trimStr(p.why?.heading ?? d.why.heading, 160) || d.why.heading,
       cards: mergeWhyCards(p.why?.cards, d.why.cards),
     },
     top_teachers: mergeTop(d.top_teachers, p.top_teachers),
     steps: {
+      section_enabled: patchSectionToggle(d.steps, p.steps).section_enabled,
       heading:
         trimStr(p.steps?.heading ?? d.steps.heading, 160) ||
         d.steps.heading,
       items: mergeSteps(p.steps?.items, d.steps.items),
     },
     features: {
+      section_enabled: patchSectionToggle(d.features, p.features).section_enabled,
       heading:
         trimStr(p.features?.heading ?? d.features.heading, 160) ||
         d.features.heading,
@@ -416,10 +482,12 @@ function mergeLoginMarketingFromDb(payloadFromDb) {
     },
     use_case: mergeUseCase(d.use_case, p.use_case),
     faq: {
+      section_enabled: patchSectionToggle(d.faq, p.faq).section_enabled,
       heading: trimStr(p.faq?.heading ?? d.faq.heading, 160) || d.faq.heading,
       items: mergeFaq(p.faq?.items, d.faq.items),
     },
     cta_band: {
+      section_enabled: patchSectionToggle(d.cta_band, p.cta_band).section_enabled,
       heading:
         trimStr(p.cta_band?.heading ?? d.cta_band.heading, 300) ||
         d.cta_band.heading,
@@ -427,6 +495,9 @@ function mergeLoginMarketingFromDb(payloadFromDb) {
         trimStr(p.cta_band?.subtitle ?? d.cta_band.subtitle, 600) ||
         d.cta_band.subtitle,
     },
+    marketplace: patchSectionToggle(d.marketplace, p.marketplace),
+    universities: patchSectionToggle(d.universities, p.universities),
+    pricing: patchPricingSection(d.pricing, p.pricing),
   }
 }
 
