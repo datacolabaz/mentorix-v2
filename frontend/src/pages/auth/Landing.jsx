@@ -36,6 +36,9 @@ function scrollToId(id) {
 const LANDING_NAV_LINK =
   'mx-landing-nav-link text-gray-300 hover:text-white px-2 py-1.5 rounded-lg'
 
+const LANDING_LOGIN_BTN =
+  'shrink-0 whitespace-nowrap rounded-lg bg-primary/15 border border-primary/35 text-primary px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm font-semibold hover:bg-primary/25'
+
 /** Ana səhifə — marketinq landing (/). */
 export default function Landing() {
   const landingSectionSeenRef = useRef(new Set())
@@ -43,6 +46,7 @@ export default function Landing() {
   const [demoOpen, setDemoOpen] = useState(false)
   const [demoTab, setDemoTab] = useState('overview')
   const [demoPaneBusy, setDemoPaneBusy] = useState(false)
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const [marketing, setMarketing] = useState(() => defaultLoginMarketingPayload())
   const navigate = useNavigate()
 
@@ -57,6 +61,17 @@ export default function Landing() {
       ],
     })
   }, [])
+
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 640px)')
+    const onChange = () => {
+      if (mq.matches) setMobileNavOpen(false)
+    }
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [])
+
+  const closeMobileNav = () => setMobileNavOpen(false)
 
   const whyCardsForLanding = useMemo(() => {
     if (!isMarketingSectionVisible(marketing?.why)) return []
@@ -227,46 +242,97 @@ export default function Landing() {
             className="sticky top-0 z-50 border-b border-white/10 bg-[#0b0b0b]/92 backdrop-blur-md supports-[backdrop-filter]:bg-[#0b0b0b]/80"
             aria-label="Əsas naviqasiya"
           >
-            <div className="max-w-5xl mx-auto pl-2 sm:pl-3 pr-4 py-3 flex items-center justify-between gap-3">
+            <div className="max-w-5xl mx-auto pl-2 sm:pl-3 pr-3 sm:pr-4 py-3 flex items-center justify-between gap-2 min-w-0">
               <button
                 type="button"
                 onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                className="shrink-0 rounded-lg transition-opacity duration-200 hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                className="shrink-0 min-w-0 rounded-lg transition-opacity duration-200 hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
               >
                 <Brand size="nav" />
               </button>
-              <div className="flex items-center gap-1 sm:gap-3 text-xs sm:text-sm font-semibold">
-                <Link to="/search" className={`hidden sm:inline ${LANDING_NAV_LINK}`}>
-                  Müəllim tap
-                </Link>
-                <Link to="/universities" className={LANDING_NAV_LINK}>
-                  Universitetlər
-                </Link>
+              <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+                <div className="hidden sm:flex items-center gap-1 sm:gap-3 text-xs sm:text-sm font-semibold">
+                  <Link to="/search" className={LANDING_NAV_LINK}>
+                    Müəllim tap
+                  </Link>
+                  <Link to="/universities" className={LANDING_NAV_LINK}>
+                    Universitetlər
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => scrollToId(featureItemsForLanding.length ? 'mx-features' : 'mx-steps')}
+                    className={LANDING_NAV_LINK}
+                  >
+                    Xüsusiyyətlər
+                  </button>
+                  {showPricing ? (
+                    <button
+                      type="button"
+                      onClick={() => scrollToId('mx-planlar')}
+                      className={LANDING_NAV_LINK}
+                    >
+                      Planlar
+                    </button>
+                  ) : null}
+                </div>
                 <button
                   type="button"
-                  onClick={() => scrollToId(featureItemsForLanding.length ? 'mx-features' : 'mx-steps')}
-                  className={LANDING_NAV_LINK}
+                  className="sm:hidden inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 text-gray-300 hover:bg-white/5 hover:text-white"
+                  aria-expanded={mobileNavOpen}
+                  aria-controls="mx-landing-mobile-nav"
+                  aria-label={mobileNavOpen ? 'Menyunu bağla' : 'Menyunu aç'}
+                  onClick={() => setMobileNavOpen((open) => !open)}
                 >
-                  Xüsusiyyətlər
+                  {mobileNavOpen ? (
+                    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                      <path strokeLinecap="round" d="M6 6l12 12M18 6L6 18" />
+                    </svg>
+                  ) : (
+                    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                      <path strokeLinecap="round" d="M4 7h16M4 12h16M4 17h16" />
+                    </svg>
+                  )}
                 </button>
-                {showPricing ? (
-                <button
-                  type="button"
-                  onClick={() => scrollToId('mx-planlar')}
-                  className={LANDING_NAV_LINK}
-                >
-                  Planlar
-                </button>
-                ) : null}
-                <button
-                  type="button"
-                  onClick={() => goLogin('nav')}
-                  className="rounded-lg bg-primary/15 border border-primary/35 text-primary px-3 py-1.5 hover:bg-primary/25"
-                >
+                <button type="button" onClick={() => goLogin('nav')} className={LANDING_LOGIN_BTN}>
                   Daxil ol
                 </button>
               </div>
             </div>
+            {mobileNavOpen ? (
+              <div
+                id="mx-landing-mobile-nav"
+                className="sm:hidden border-t border-white/10 bg-[#0b0b0b]/98 px-3 py-2 space-y-0.5"
+              >
+                <Link to="/search" onClick={closeMobileNav} className={`block w-full ${LANDING_NAV_LINK}`}>
+                  Müəllim tap
+                </Link>
+                <Link to="/universities" onClick={closeMobileNav} className={`block w-full ${LANDING_NAV_LINK}`}>
+                  Universitetlər
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => {
+                    closeMobileNav()
+                    scrollToId(featureItemsForLanding.length ? 'mx-features' : 'mx-steps')
+                  }}
+                  className={`block w-full text-left ${LANDING_NAV_LINK}`}
+                >
+                  Xüsusiyyətlər
+                </button>
+                {showPricing ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      closeMobileNav()
+                      scrollToId('mx-planlar')
+                    }}
+                    className={`block w-full text-left ${LANDING_NAV_LINK}`}
+                  >
+                    Planlar
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
           </nav>
 
         <div className="w-full max-w-5xl mx-auto px-4 pt-8 sm:pt-10 pb-8 space-y-12 sm:space-y-16 min-w-0 box-border overflow-x-hidden">

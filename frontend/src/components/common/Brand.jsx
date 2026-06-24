@@ -16,7 +16,7 @@ export default function Brand({
     return (
       <div className={`flex items-center gap-1.5 min-w-0 ${className}`}>
         <span
-          className={`font-display font-bold tracking-[-0.02em] text-white text-xl sm:text-2xl leading-none ${textClassName}`}
+          className={`font-display font-bold tracking-[-0.02em] text-white text-lg sm:text-2xl leading-none ${textClassName}`}
         >
           Mentorix
           <span className="opacity-50 text-[0.75em] font-semibold">.io</span>
