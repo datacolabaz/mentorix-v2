@@ -31,7 +31,7 @@ export const MENTORIX_SITE_NAV = [
     description: 'Tədris qrupları, dərs paketləri və cədvəl idarəetməsi',
   },
   {
-    name: 'Qiymətlər',
+    name: 'Planlar',
     path: '/qiymetler',
     description: `${PLAN_TITLES_SEO_FALLBACK} paketlər`,
   },
@@ -157,7 +157,7 @@ export function buildPrimarySiteNavigationSchema() {
       { '@type': 'WebPage', name: 'Ana səhifə', url: absoluteUrl('/') },
       { '@type': 'WebPage', name: 'Müəllim Tap', url: absoluteUrl('/search') },
       { '@type': 'WebPage', name: 'Giriş', url: absoluteUrl('/login') },
-      { '@type': 'WebPage', name: 'Qiymətlər', url: absoluteUrl('/qiymetler') },
+      { '@type': 'WebPage', name: 'Planlar', url: absoluteUrl('/qiymetler') },
       ...MENTORIX_SITE_NAV.filter((item) => !['/search', '/qiymetler'].includes(item.path)).map((item) => ({
         '@type': 'WebPage',
         name: item.name,

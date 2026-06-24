@@ -252,10 +252,10 @@ export default function Landing() {
                 {showPricing ? (
                 <button
                   type="button"
-                  onClick={() => scrollToId('mx-pricing')}
+                  onClick={() => scrollToId('mx-planlar')}
                   className={LANDING_NAV_LINK}
                 >
-                  Qiymət
+                  Planlar
                 </button>
                 ) : null}
                 <button
@@ -475,8 +475,8 @@ export default function Landing() {
           ) : null}
 
           {showPricing ? (
-          <section id="mx-pricing" className="space-y-4 scroll-mt-24">
-            <div className="text-xs uppercase tracking-wider text-gray-500 font-semibold">Qiymət</div>
+          <section id="mx-planlar" className="space-y-4 scroll-mt-24">
+            <div className="text-xs uppercase tracking-wider text-gray-500 font-semibold">Planlar</div>
             {showPricingAudience ? <PricingAudienceExplainer variant="strip" /> : null}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               {publicPlans.map((p) => {

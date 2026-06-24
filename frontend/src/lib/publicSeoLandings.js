@@ -158,10 +158,10 @@ export const PUBLIC_SEO_LANDINGS = [
   {
     kind: 'panel',
     path: '/qiymetler',
-    title: 'Qiymətlər və paketlər — Mentorix',
+    title: 'Planlar və paketlər — Mentorix',
     description:
       `Mentorix paketləri: ${PLAN_TITLES_SEO_FALLBACK}. Müəllimlər və təhsil xidməti təminatçıları üçün — tələbə limiti, SMS və xəritədə görünmə.`,
-    h1: 'Qiymətlər və abunəlik paketləri',
+    h1: 'Planlar və abunəlik paketləri',
     intro: [
       'Paketlər müəllimlər və təhsil xidməti təminatçıları üçündür. Tələbə və valideyn hesabları pulsuzdur.',
       MENTORIX_SEO_DESCRIPTION,
@@ -293,7 +293,7 @@ export function searchHrefForLanding(landing) {
 
 export function footerLabelForLanding(landing) {
   if (landing.kind === 'panel' && landing.path === '/muellimler-ucun') return 'Müəllimlər üçün'
-  if (landing.kind === 'panel' && landing.path === '/qiymetler') return 'Qiymətlər'
+  if (landing.kind === 'panel' && landing.path === '/qiymetler') return 'Planlar'
   if (landing.kind === 'feature') return landing.h1.split(' ').slice(0, 2).join(' ')
   if (landing.kind === 'info') return landing.h1.replace(' üçün Mentorix', '').replace('Mentorix haqqında', 'Haqqımızda')
   return landing.h1.replace(' tap', '')
