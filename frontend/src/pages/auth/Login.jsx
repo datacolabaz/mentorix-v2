@@ -26,7 +26,6 @@ import {
   landingPlanFeatureLines,
   landingPlanPriceLabel,
 } from '../../lib/subscriptionPlanMarketing'
-import { defaultPlatformContact } from '../../lib/platformContact'
 import {
   isMarketingSectionVisible,
   visibleMarketingItems,
@@ -69,7 +68,6 @@ export default function Login() {
   const loginSectionRef = useRef(null)
   const landingSectionSeenRef = useRef(new Set())
   const [publicPlans, setPublicPlans] = useState(DEFAULT_SUBSCRIPTION_PLANS)
-  const [platformContact, setPlatformContact] = useState(() => defaultPlatformContact())
   const [demoOpen, setDemoOpen] = useState(false)
   const [demoTab, setDemoTab] = useState('overview')
   const [demoPaneBusy, setDemoPaneBusy] = useState(false)
@@ -159,22 +157,6 @@ export default function Login() {
         if (!cancelled && plans.length) setPublicPlans(plans)
       } catch {
         /* default plans */
-      }
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [isAdmin])
-
-  useEffect(() => {
-    if (isAdmin) return
-    let cancelled = false
-    ;(async () => {
-      try {
-        const d = await api.get('/public/contact')
-        if (!cancelled && d?.success && d?.contact) setPlatformContact(d.contact)
-      } catch {
-        /* default contact */
       }
     })()
     return () => {
@@ -327,7 +309,7 @@ export default function Login() {
   }, [loginModalOpen, isAdmin])
 
   return (
-    <div className="min-h-[100svh] w-full min-w-0 max-w-full overflow-x-hidden bg-[#0b0b0b]">
+    <div className="min-h-[100svh] w-full min-w-0 max-w-full overflow-x-hidden mx-login-bg">
       {!isAdmin ? (
         <>
           <nav
@@ -731,32 +713,31 @@ export default function Login() {
           <div
             className={`flex min-h-0 flex-1 flex-col bg-surface-2 ${
               !isAdmin && loginModalOpen
-                ? 'min-h-[100dvh] overflow-y-auto overscroll-y-contain rounded-none border-0 p-5 pb-[max(11rem,env(safe-area-inset-bottom,0px))] shadow-2xl sm:min-h-0 sm:pb-6 sm:rounded-2xl sm:border sm:border-white/10 sm:p-6'
-                : 'rounded-2xl border border-white/10 p-5 sm:p-6'
+                ? 'min-h-[100dvh] overflow-y-auto overscroll-y-contain rounded-none border-0 p-5 pb-[max(11rem,env(safe-area-inset-bottom,0px))] shadow-2xl sm:min-h-0 sm:pb-6 sm:rounded-2xl sm:border sm:border-white/20 sm:p-6'
+                : 'rounded-2xl border border-white/20 p-5 sm:p-6'
             }`}
           >
             {!isAdmin ? (
               loginModalOpen ? (
                 <div className="mb-4 shrink-0 px-1">
-                  <div className="flex flex-col sm:grid sm:grid-cols-[3rem_1fr_3rem] sm:items-start sm:gap-x-1">
-                    <div aria-hidden className="hidden sm:block h-12 w-12" />
-                    <div className="order-2 sm:order-none text-center min-w-0 w-full">
-                      <h2 id="mx-login-modal-title" className="text-lg font-semibold text-white sm:text-xl">
-                        Xoş gəlmisiniz!
-                      </h2>
-                    </div>
-                    <div className="order-1 sm:order-none flex justify-end mb-1.5 sm:mb-0">
-                      <button
-                        type="button"
-                        aria-label="Bağla"
-                        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-white/20 bg-white/5 text-gray-300 hover:bg-white/10 hover:text-white"
-                        onClick={closeLoginModal}
-                      >
-                        <span aria-hidden className="text-3xl font-light leading-none">
-                          ×
-                        </span>
-                      </button>
-                    </div>
+                  <div className="flex justify-end mb-2">
+                    <button
+                      type="button"
+                      aria-label="Bağla"
+                      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-white/20 bg-white/5 text-gray-300 hover:bg-white/10 hover:text-white"
+                      onClick={closeLoginModal}
+                    >
+                      <span aria-hidden className="text-3xl font-light leading-none">
+                        ×
+                      </span>
+                    </button>
+                  </div>
+                  <div className="text-center space-y-2 min-w-0 w-full">
+                    <Brand size="login" />
+                    <div className="h-0.5 w-14 mx-auto rounded-full bg-primary" aria-hidden />
+                    <h2 id="mx-login-modal-title" className="text-sm font-semibold text-gray-200">
+                      Xoş gəldin, Mentorix
+                    </h2>
                   </div>
                 </div>
               ) : (
@@ -764,15 +745,17 @@ export default function Login() {
                   <div className="flex justify-center">
                     <Brand size="login" />
                   </div>
-                  <div className="text-sm font-semibold text-gray-200">Xoş gəlmisiniz!</div>
+                  <div className="h-0.5 w-14 mx-auto rounded-full bg-primary" aria-hidden />
+                  <div className="text-sm font-semibold text-gray-200">Xoş gəldin, Mentorix</div>
                 </div>
               )
             ) : (
               <div className="text-center mb-6 sm:mb-8">
-                <div className="flex justify-center pt-1 pb-3 bg-transparent">
+                <div className="flex justify-center pt-1 pb-2 bg-transparent">
                   <Brand size="login" />
                 </div>
-                <div className="text-gray-400 text-sm mt-1">Hesabınıza daxil olun</div>
+                <div className="h-0.5 w-14 mx-auto rounded-full bg-primary mb-3" aria-hidden />
+                <div className="text-gray-400 text-sm">Hesabınıza daxil olun</div>
               </div>
             )}
 
@@ -788,7 +771,7 @@ export default function Login() {
                   <input
                     id="admin-username"
                     name="username"
-                    className="w-full bg-surface-1 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-primary/40"
+                    className="mx-auth-input w-full bg-surface-1 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none"
                     type="text"
                     inputMode="email"
                     autoComplete="username"
@@ -805,7 +788,7 @@ export default function Login() {
                   <input
                     id="admin-password"
                     name="password"
-                    className="w-full bg-surface-1 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-primary/40"
+                    className="mx-auth-input w-full bg-surface-1 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none"
                     type="password"
                     autoComplete="current-password"
                     value={password}
@@ -822,18 +805,6 @@ export default function Login() {
             {!isAdmin && (
               <InstructorEmailAuth onSuccess={(u) => goDashboard(u)} />
             )}
-
-            <a
-              href={platformContact.whatsapp_url}
-              target="_blank"
-              rel="noreferrer"
-              className={`flex items-center justify-center gap-2 rounded-xl border border-primary/50 bg-transparent text-primary font-semibold transition-colors hover:bg-primary/10 ${
-                !isAdmin && loginModalOpen ? 'mt-8 min-h-[52px] px-4 py-4 text-base' : 'mt-6 px-4 py-3 text-sm'
-              }`}
-              onClick={() => trackEvent('mx_landing_whatsapp_click')}
-            >
-              Bizimlə əlaqə
-            </a>
           </div>
         </div>
       </div>

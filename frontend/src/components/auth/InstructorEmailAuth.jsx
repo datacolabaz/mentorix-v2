@@ -9,7 +9,7 @@ import { getAttributionPayload } from '../../lib/analytics'
 import { postAuthNavigate } from '../../lib/postAuth'
 
 const inputClass =
-  'w-full bg-surface-1 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-primary/40'
+  'mx-auth-input w-full bg-surface-1 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none'
 
 const AUTH_ROLE_OPTIONS = [
   { key: 'instructor', label: 'Müəllim' },
@@ -17,6 +17,52 @@ const AUTH_ROLE_OPTIONS = [
   { key: 'course', label: 'Kurs' },
   { key: 'parent', label: 'Valideyn' },
 ]
+
+const LOGIN_ROLE_TRY_ORDER = ['instructor', 'course', 'student', 'parent']
+
+async function loginEmailWithAutoRole(email, password, forcedRole) {
+  const roles = forcedRole ? [forcedRole] : LOGIN_ROLE_TRY_ORDER
+  let lastRoleError = null
+  for (const role of roles) {
+    try {
+      const data = await api.post('/auth/login/email', { email, password, role })
+      return data
+    } catch (err) {
+      const status = err?.status
+      if (status === 401 || err?.code === 'EMAIL_NOT_VERIFIED') throw err
+      if (status === 403) {
+        lastRoleError = err
+        continue
+      }
+      throw err
+    }
+  }
+  throw lastRoleError || new Error('Giriş üçün hesab növünü seçin')
+}
+
+async function googleAuthWithAutoRole(credential, forcedRole) {
+  const roles = forcedRole ? [forcedRole] : LOGIN_ROLE_TRY_ORDER
+  let lastRoleError = null
+  for (const role of roles) {
+    try {
+      let r = await api.post('/auth/google/login', { credential, role })
+      if (r?.needs_role || r?.needs_phone_link) {
+        r = await api.post('/auth/google/complete', { credential, role })
+      }
+      if (r?.token && r?.user) return r
+      lastRoleError = new Error(r?.message || 'Google girişi tamamlanmadı')
+    } catch (err) {
+      const status = err?.status
+      if (status === 401) throw err
+      if (status === 403) {
+        lastRoleError = err
+        continue
+      }
+      throw err
+    }
+  }
+  throw lastRoleError || new Error('Google girişi üçün hesab növünü seçin')
+}
 
 function AuthDivider() {
   return (
@@ -143,7 +189,7 @@ function RolePills({ roles, role, onRole, label = 'Rolunuzu seçin' }) {
 }
 
 /**
- * Email/Google giriş və qeydiyyat (girişdə rol seçimi mütləqdir).
+ * Email/Google giriş və qeydiyyat (girişdə rol avtomatik tapılır; yalnız uğursuzluqda dropdown).
  */
 export default function InstructorEmailAuth({ onSuccess }) {
   const toast = useToast()
@@ -156,6 +202,7 @@ export default function InstructorEmailAuth({ onSuccess }) {
 
   const [loginEmail, setLoginEmail] = useState('')
   const [loginRole, setLoginRole] = useState('instructor')
+  const [loginRoleFallback, setLoginRoleFallback] = useState(false)
   const loginPasswordRef = useRef(null)
 
   const [signupFullName, setSignupFullName] = useState('')
@@ -165,13 +212,18 @@ export default function InstructorEmailAuth({ onSuccess }) {
   const [verifyCode, setVerifyCode] = useState('')
 
   const handleGoogleCredential = async (credential) => {
-    const role = tab === 'login' ? loginRole : signupRole
     setLoading(true)
     try {
-      let r = await api.post('/auth/google/login', { credential, role })
-      if (r?.needs_role || r?.needs_phone_link) {
-        r = await api.post('/auth/google/complete', { credential, role })
-      }
+      const r =
+        tab === 'login'
+          ? await googleAuthWithAutoRole(credential, loginRoleFallback ? loginRole : null)
+          : await (async () => {
+              let out = await api.post('/auth/google/login', { credential, role: signupRole })
+              if (out?.needs_role || out?.needs_phone_link) {
+                out = await api.post('/auth/google/complete', { credential, role: signupRole })
+              }
+              return out
+            })()
       if (!r?.token || !r?.user) {
         toast(r?.message || 'Google girişi tamamlanmadı', 'error')
         return
@@ -190,7 +242,12 @@ export default function InstructorEmailAuth({ onSuccess }) {
       if (onSuccess) onSuccess(u)
       else postAuthNavigate(u, navigate)
     } catch (err) {
-      toast(err?.message || 'Google girişi uğursuz', 'error')
+      if (tab === 'login' && !loginRoleFallback && err?.status === 403) {
+        setLoginRoleFallback(true)
+        toast('Hesab növünü seçib yenidən cəhd edin', 'error')
+      } else {
+        toast(err?.message || 'Google girişi uğursuz', 'error')
+      }
     } finally {
       setLoading(false)
     }
@@ -230,10 +287,6 @@ export default function InstructorEmailAuth({ onSuccess }) {
 
   const handleLogin = async (e) => {
     e.preventDefault()
-    if (!loginRole) {
-      toast('Giriş üçün rol seçin', 'error')
-      return
-    }
     const form = e.currentTarget
     const fd = new FormData(form)
     const email = String(fd.get('email') || loginEmail || '').trim()
@@ -248,17 +301,21 @@ export default function InstructorEmailAuth({ onSuccess }) {
     }
     setLoading(true)
     try {
-      const data = await api.post('/auth/login/email', {
+      const data = await loginEmailWithAutoRole(
         email,
         password,
-        role: loginRole,
-      })
+        loginRoleFallback ? loginRole : null,
+      )
+      setLoginRoleFallback(false)
       finishEmailLogin(data)
     } catch (err) {
       const code = err?.code || err?.response?.data?.code
       if (code === 'EMAIL_NOT_VERIFIED') {
         setPhase('verify')
         toast('Əvvəlcə emaili təsdiqləyin (kod və ya link)', 'error')
+      } else if (!loginRoleFallback && err?.status === 403) {
+        setLoginRoleFallback(true)
+        toast('Hesab növünü seçib yenidən cəhd edin', 'error')
       } else {
         toast(err.message || 'Giriş xətası', 'error')
       }
@@ -414,12 +471,25 @@ export default function InstructorEmailAuth({ onSuccess }) {
             </button>
           </form>
 
-          <RolePills
-            roles={AUTH_ROLE_OPTIONS}
-            role={loginRole}
-            onRole={setLoginRole}
-            label="Hansı hesabla daxil olursunuz?"
-          />
+          {loginRoleFallback ? (
+            <div className="space-y-1.5">
+              <label htmlFor="mx-login-role-fallback" className="text-xs font-medium text-gray-400">
+                Hesab növü
+              </label>
+              <select
+                id="mx-login-role-fallback"
+                value={loginRole}
+                onChange={(e) => setLoginRole(e.target.value)}
+                className={`${inputClass} py-2.5`}
+              >
+                {AUTH_ROLE_OPTIONS.map((r) => (
+                  <option key={r.key} value={r.key}>
+                    {r.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : null}
 
           <AuthDivider />
 

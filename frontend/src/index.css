@@ -130,6 +130,19 @@
     -webkit-text-security: disc;
     text-security: disc;
   }
+  .mx-login-bg {
+    background:
+      radial-gradient(ellipse at 60% 40%, rgba(0, 230, 118, 0.06) 0%, transparent 60%),
+      #0d0d0d;
+  }
+  .mx-auth-input {
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+  .mx-auth-input:focus {
+    border-color: rgb(var(--primary-accent));
+    box-shadow: 0 0 0 3px rgba(var(--primary-accent), 0.12);
+    outline: none;
+  }
   /* Logo blending for removing faint white box (sidebar/header) */
   .mentorix-logo { mix-blend-mode: normal; }
   .theme-light .mentorix-logo:not(.mentorix-logo--login) { mix-blend-mode: multiply; }

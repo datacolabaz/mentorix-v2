@@ -1,10 +1,8 @@
-import logoLogin from '../../assets/mentorix-login.png'
 import logoSidebar from '../../assets/mentorix-sidebar.png'
 import logoSidebarLight from '../../assets/mentorix-sidebar-light.png'
 
 const imgBase = 'object-contain select-none bg-transparent shrink-0'
 const onDarkBoost = 'drop-shadow-[0_6px_18px_rgba(34,224,136,0.18)]'
-const loginBoost = 'drop-shadow-[0_0_16px_rgba(34,224,136,0.22)]'
 
 export default function Brand({
   className = '',
@@ -31,19 +29,12 @@ export default function Brand({
   if (size === 'login') {
     return (
       <div className={`flex flex-col items-center justify-center min-w-0 ${className}`}>
-        <img
-          src={logoLogin}
-          alt="Mentorix"
-          className={`mentorix-logo mentorix-logo--login w-[200px] max-w-[min(200px,78vw)] h-auto ${imgBase} ${loginBoost} ${imgClassName}`}
-          draggable={false}
-        />
-        {showText ? (
-          <div
-            className={`mt-2 font-display font-extrabold tracking-wide text-[#003366] ${textClassName}`}
-          >
-            Mentorix
-          </div>
-        ) : null}
+        <span
+          className={`font-display font-bold tracking-[-0.02em] text-white text-[1.65rem] sm:text-[1.85rem] leading-none ${textClassName}`}
+        >
+          Mentorix
+          <span className="opacity-45 text-[0.72em] font-semibold">.io</span>
+        </span>
       </div>
     )
   }
