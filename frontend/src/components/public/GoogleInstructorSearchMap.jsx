@@ -29,9 +29,19 @@ function pinIconUrl({ initial, kind, isNearest, selected }) {
   return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`
 }
 
-/**
- * Axtarış səhifəsi — çoxlu müəllim pinləri (Google Maps).
- */
+function boundsPayloadFromGoogle(bounds) {
+  if (!bounds) return null
+  const ne = bounds.getNorthEast?.()
+  const sw = bounds.getSouthWest?.()
+  if (!ne || !sw) return null
+  return {
+    north: ne.lat(),
+    south: sw.lat(),
+    east: ne.lng(),
+    west: sw.lng(),
+  }
+}
+
 export default function GoogleInstructorSearchMap({
   instructors,
   refPoint,
@@ -59,13 +69,8 @@ export default function GoogleInstructorSearchMap({
   const emitBounds = useCallback(() => {
     if (radiusMode || skipBoundsRef.current || !mapRef.current) return
     const b = mapRef.current.getBounds()
-    if (!b) return
-    const payload = {
-      north: b.getNorth(),
-      south: b.getSouth(),
-      east: b.getEast(),
-      west: b.getWest(),
-    }
+    const payload = boundsPayloadFromGoogle(b)
+    if (!payload) return
     if (boundsDebounceRef.current) window.clearTimeout(boundsDebounceRef.current)
     boundsDebounceRef.current = window.setTimeout(() => onBounds?.(payload), 320)
   }, [radiusMode, onBounds])

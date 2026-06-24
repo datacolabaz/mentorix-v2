@@ -35,7 +35,7 @@ export function loadGoogleMaps() {
     script.id = id
     script.async = true
     script.defer = true
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&v=weekly&language=az&region=AZ`
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&loading=async&v=weekly&language=az&region=AZ`
     script.onload = () => {
       if (window.google?.maps) resolve(window.google.maps)
       else reject(new Error('Google Maps yüklənmədi'))
