@@ -2,7 +2,8 @@ import { useEffect } from 'react'
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import useAuthStore from './hooks/useAuth'
 
-import Login from './pages/auth/Login'
+import AuthPage from './pages/auth/AuthPage'
+import Landing from './pages/auth/Landing'
 import VerifyEmail from './pages/auth/VerifyEmail'
 import VerifyPhone from './pages/auth/VerifyPhone'
 import ResetPassword from './pages/auth/ResetPassword'
@@ -101,7 +102,7 @@ const ProtectedRoute = ({ children, roles }) => {
   if (!user) {
     try {
       const path = `${location.pathname || ''}${location.search || ''}`
-      if (path && path !== '/login') sessionStorage.setItem(RETURN_AFTER_LOGIN_KEY, path)
+      if (path && path !== '/login' && path !== '/register') sessionStorage.setItem(RETURN_AFTER_LOGIN_KEY, path)
     } catch {
       /* ignore */
     }
@@ -137,7 +138,8 @@ export default function App() {
       ))}
       <Route path="/muellim-paneli" element={<Navigate to="/muellimler-ucun" replace />} />
       <Route path="/teachers/:id" element={<PublicInstructorProfile />} />
-      <Route path="/login" element={user ? <Navigate to={postLoginPath(user)} replace /> : <Login />} />
+      <Route path="/login" element={user ? <Navigate to={postLoginPath(user)} replace /> : <AuthPage />} />
+      <Route path="/register" element={user ? <Navigate to={postLoginPath(user)} replace /> : <AuthPage />} />
       <Route path="/verify-email" element={<VerifyEmail />} />
       <Route
         path="/verify-phone"
@@ -156,7 +158,7 @@ export default function App() {
           </ProtectedRoute>
         }
       />
-      <Route path="/" element={<Navigate to={user ? postLoginPath(user) : '/login'} replace />} />
+      <Route path="/" element={user ? <Navigate to={postLoginPath(user)} replace /> : <Landing />} />
 
       <Route
         path="/join/:code"

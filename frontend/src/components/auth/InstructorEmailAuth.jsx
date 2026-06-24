@@ -223,16 +223,21 @@ function RolePills({ roles, role, onRole, label = 'Rolunuzu seçin', variant = '
 /**
  * Email/Google giriş və qeydiyyat (girişdə rol avtomatik tapılır; yalnız uğursuzluqda dropdown).
  */
-export default function InstructorEmailAuth({ onSuccess, onTabChange }) {
+export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab = 'login' }) {
   const toast = useToast()
   const { signupWithEmail, verifyEmailCode, resendVerificationEmail, requestPasswordReset, setSession } = useAuthStore()
   const navigate = useNavigate()
 
-  const [tab, setTab] = useState('login')
+  const [tab, setTab] = useState(initialTab)
   const pickTab = (next) => {
     setTab(next)
     onTabChange?.(next)
   }
+
+  useEffect(() => {
+    setTab(initialTab)
+    onTabChange?.(initialTab)
+  }, [initialTab])
   const [phase, setPhase] = useState('form')
   const [loading, setLoading] = useState(false)
 

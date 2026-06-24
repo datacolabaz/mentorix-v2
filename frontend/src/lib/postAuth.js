@@ -22,7 +22,7 @@ export function postAuthNavigate(user, navigate) {
   }
   try {
     const ret = sessionStorage.getItem('mx_return_after_login')
-    if (ret && ret.startsWith('/') && ret !== '/login' && ret !== '/verify-phone') {
+    if (ret && ret.startsWith('/') && ret !== '/login' && ret !== '/register' && ret !== '/verify-phone') {
       sessionStorage.removeItem('mx_return_after_login')
       navigate(ret, { replace: true })
       return

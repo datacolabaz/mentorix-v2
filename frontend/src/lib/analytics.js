@@ -3,7 +3,7 @@ import api from './api'
 const SESSION_KEY = 'mx_analytics_session'
 const UTM_KEY = 'mx_utm_attribution'
 
-const PUBLIC_TRACK_PREFIXES = ['/login', '/search', '/verify-email', '/reset-password', '/join']
+const PUBLIC_TRACK_PREFIXES = ['/', '/login', '/register', '/search', '/verify-email', '/reset-password', '/join']
 
 export function getClientDeviceType() {
   if (typeof navigator === 'undefined') return 'unknown'

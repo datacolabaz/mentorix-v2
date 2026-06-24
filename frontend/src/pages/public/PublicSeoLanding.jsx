@@ -67,7 +67,7 @@ export default function PublicSeoLanding() {
     <div className="min-h-[100svh] bg-[#0b0b0b] text-white flex flex-col">
       <header className="border-b border-white/10 bg-[#0f0f0f]/95">
         <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
-          <Link to="/login" className="shrink-0" aria-label="Mentorix ana səhifə">
+          <Link to="/" className="shrink-0" aria-label="Mentorix ana səhifə">
             <Brand className="h-7 w-auto" />
           </Link>
           <Link
