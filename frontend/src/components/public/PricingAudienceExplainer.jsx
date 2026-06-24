@@ -35,25 +35,18 @@ export default function PricingAudienceExplainer({ variant = 'strip' }) {
       <h2 id="mx-pricing-audience-strip" className="text-sm font-semibold text-white">
         {a.sectionTitle}
       </h2>
-      <div className="grid sm:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <div className="text-[11px] font-bold uppercase tracking-wider text-emerald-400/90">{a.freeTitle}</div>
-          <ul className="space-y-1.5 text-xs sm:text-sm text-gray-300">
-            {(a.freeItems || []).map((item) => (
-              <li key={item} className="flex gap-2">
-                <span className="text-emerald-400 shrink-0" aria-hidden>
-                  ✓
-                </span>
-                <span>{item}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-        <div className="space-y-2">
-          <div className="text-[11px] font-bold uppercase tracking-wider text-primary/90">{a.paidTitle}</div>
-          <p className="text-xs sm:text-sm text-gray-300 leading-relaxed">{a.paidAudience}</p>
-          <p className="text-xs text-gray-500">{a.paidHint}</p>
-        </div>
+      <div className="space-y-2">
+        <div className="text-[11px] font-bold uppercase tracking-wider text-emerald-400/90">{a.freeTitle}</div>
+        <ul className="space-y-1.5 text-xs sm:text-sm text-gray-300">
+          {(a.freeItems || []).map((item) => (
+            <li key={item} className="flex gap-2">
+              <span className="text-emerald-400 shrink-0" aria-hidden>
+                ✓
+              </span>
+              <span>{item}</span>
+            </li>
+          ))}
+        </ul>
       </div>
       <p className="text-xs text-gray-500 leading-relaxed border-t border-white/10 pt-3">{a.footnote}</p>
     </section>

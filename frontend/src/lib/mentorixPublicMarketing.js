@@ -62,21 +62,15 @@ export const MENTORIX_PRICING_PLANS = [
 
 export const MENTORIX_ANNUAL_DISCOUNT = 'İllik abunəlikdə əlavə 20% qənaət imkanı mövcuddur.'
 
-export const MENTORIX_PRICING_INTRO =
-  'Paketlər müəllimlər və təhsil xidməti təminatçıları üçündür. 14 günlük pulsuz sınaq ilə başlayın; aylıq qiymətlər göstərilir, illik ödənişdə 20% endirim.'
-
 export const MENTORIX_PRICING_AUDIENCE = {
   sectionTitle: 'Kimlər üçün?',
   freeTitle: 'Pulsuz',
-  paidTitle: 'Ödənişli paketlər',
   freeItems: [
     'Tələbə kabineti (müəllim dəvəti ilə)',
     'Valideyn kabineti',
     'Müəllim axtarışı (marketplace)',
     'Dəvət ilə imtahan və tapşırıq',
   ],
-  paidAudience: 'Müəllimlər və təhsil xidməti təminatçıları',
-  paidHint: 'Aşağıdakı paketlər tələbə limiti, SMS, xəritədə görünmə və çat imkanlarını açır.',
   footnote:
     'Paketlər yalnız müəllim və təhsil xidməti təminatçıları üçündür. Tələbə və valideyn hesabları həmişə pulsuzdur.',
   faq: [

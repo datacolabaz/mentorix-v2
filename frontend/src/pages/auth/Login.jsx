@@ -15,7 +15,6 @@ import {
   MENTORIX_SEO_HOMEPAGE_LINE,
   MENTORIX_SEO_KEYWORDS,
   MENTORIX_SEO_TITLE,
-  MENTORIX_PRICING_INTRO,
 } from '../../lib/mentorixPublicMarketing'
 import { postAuthNavigate } from '../../lib/postAuth'
 import LandingDemoActivityChart from '../../components/landing/LandingDemoActivityChart'
@@ -596,7 +595,6 @@ export default function Login() {
 
           <section id="mx-pricing" className="space-y-4 scroll-mt-24">
             <div className="text-xs uppercase tracking-wider text-gray-500 font-semibold">Qiymət</div>
-            <p className="text-sm text-gray-400 max-w-2xl">{MENTORIX_PRICING_INTRO}</p>
             <PricingAudienceExplainer variant="strip" />
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               {publicPlans.map((p) => {
