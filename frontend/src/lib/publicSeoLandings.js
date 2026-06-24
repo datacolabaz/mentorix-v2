@@ -7,7 +7,7 @@ import {
 import { PLAN_TITLES_SEO_FALLBACK } from './subscriptionPlanGuards'
 
 const FEATURE_KEYWORDS =
-  'təhsil idarəetmə platforması, müəllim paneli, imtahan platforması, tapşırıq sistemi, Mentorix'
+  'təhsil platforması, təhsil ekosistemi, müəllim paneli, imtahan sistemi, tapşırıq idarəetməsi, Mentorix'
 
 /** İctimai SEO landing səhifələri — Google sitelink və axtarış sorğuları üçün */
 export const PUBLIC_SEO_LANDINGS = [
@@ -103,7 +103,7 @@ export const PUBLIC_SEO_LANDINGS = [
       'Mentorix imtahan platforması: onlayn testlər hazırlayın, QR kod və ya linklə paylaşın, nəticələri avtomatik qiymətləndirin və analiz edin.',
     h1: 'İmtahan və onlayn test sistemi',
     intro: [
-      'Müəllimlər və kurslar üçün tam funksional imtahan platforması — sual bankı, vaxt limiti, avtomatik yoxlama və nəticə analitikası.',
+      'Müəllimlər və təhsil xidməti təminatçıları üçün tam funksional imtahan platforması — sual bankı, vaxt limiti, avtomatik yoxlama və nəticə analitikası.',
       'Tələbələr link və ya QR kod ilə qoşula bilər; qonaq iştirakı dəstəklənir.',
     ],
     bullets: [
@@ -138,10 +138,10 @@ export const PUBLIC_SEO_LANDINGS = [
   {
     kind: 'feature',
     path: '/kurslar-ve-qruplar',
-    title: 'Sahələr və qruplar idarəetməsi — Mentorix',
+    title: 'Qruplar və dərs paketləri — Mentorix',
     description:
-      'Tədris qrupları, paketlər (8/12 dərs), dərs cədvəli və tələbə qoşulma linkləri — kurs və təlim mərkəzləri üçün idarəetmə.',
-    h1: 'Kurslar və tədris qrupları',
+      'Tədris qrupları, dərs paketləri (8/12 dərs), cədvəl və tələbə qoşulma linkləri — müəllimlər və təhsil xidməti təminatçıları üçün.',
+    h1: 'Qruplar və dərs paketləri',
     intro: [
       'Qrup yaradın, paket və qiymət təyin edin, dəvət linki ilə tələbələri qoşun.',
       'Hər qrup üçün ayrıca cədvəl, ödəniş və davamiyyət izləməsi.',
@@ -153,16 +153,19 @@ export const PUBLIC_SEO_LANDINGS = [
     ],
     ctaHref: '/muellimler-ucun',
     ctaLabel: 'Qrup yarat',
-    keywords: `${FEATURE_KEYWORDS}, kurs idarəetmə proqramı, tədris qrupları`,
+    keywords: `${FEATURE_KEYWORDS}, tədris qrupları, dərs paketləri`,
   },
   {
     kind: 'panel',
     path: '/qiymetler',
     title: 'Qiymətlər və paketlər — Mentorix',
     description:
-      `Mentorix paketləri: ${PLAN_TITLES_SEO_FALLBACK}. Tələbə limiti, SMS balansı və xəritədə görünmə imkanları.`,
+      `Mentorix paketləri: ${PLAN_TITLES_SEO_FALLBACK}. Müəllimlər və təhsil xidməti təminatçıları üçün — tələbə limiti, SMS və xəritədə görünmə.`,
     h1: 'Qiymətlər və abunəlik paketləri',
-    intro: [MENTORIX_SEO_DESCRIPTION],
+    intro: [
+      'Paketlər müəllimlər və təhsil xidməti təminatçıları üçündür. Tələbə və valideyn hesabları pulsuzdur.',
+      MENTORIX_SEO_DESCRIPTION,
+    ],
     bullets: [],
     showPlatformFeatures: true,
     showPricingPlans: true,
@@ -177,8 +180,11 @@ export const PUBLIC_SEO_LANDINGS = [
     path: '/muellimler-ucun',
     title: MENTORIX_SEO_TITLE,
     description: MENTORIX_SEO_DESCRIPTION,
-    h1: 'Müəllimlər, kurslar və təlim mərkəzləri üçün Mentorix',
-    intro: [MENTORIX_SEO_DESCRIPTION],
+    h1: 'Müəllimlər və təhsil xidməti təminatçıları üçün Mentorix',
+    intro: [
+      'Tapşırıq və imtahan yaradın, çatla ünsiyyət qurun, ödənişləri izləyin və valideynlərə avtomatik bildiriş göndərin.',
+      MENTORIX_SEO_DESCRIPTION,
+    ],
     bullets: [],
     showPlatformFeatures: true,
     showPricingPlans: true,
@@ -196,8 +202,8 @@ export const PUBLIC_SEO_LANDINGS = [
       'Tələbə kabineti: imtahanlara qoşulun, tapşırıqları təslim edin, dərs cədvəlini və ödəniş tarixlərini izləyin. Müəlliminiz sizi dəvət edir.',
     h1: 'Tələbələr üçün Mentorix',
     intro: [
-      'Müəlliminiz və ya kursunuz sizi Mentorix-ə dəvət edəndə imtahan, tapşırıq və cədvəl bir kabinetdə toplanır.',
-      'Link və ya QR kod ilə imtahana və tapşırığa qoşula bilərsiniz.',
+      'Müəlliminiz sizi Mentorix-ə dəvət edəndə imtahan, tapşırıq və cədvəl bir kabinetdə toplanır.',
+      'Link və ya QR kod ilə imtahana və tapşırığa qoşula bilərsiniz — tələbə kabineti pulsuzdur.',
     ],
     bullets: [
       'İmtahan və tapşırıq təslimi',
@@ -211,17 +217,17 @@ export const PUBLIC_SEO_LANDINGS = [
   {
     kind: 'info',
     path: '/haqqimizda',
-    title: 'Haqqımızda — Mentorix təhsil idarəetmə platforması',
+    title: 'Haqqımızda — Mentorix təhsil ekosistemi',
     description:
-      'Mentorix Azərbaycanda müəllimlər, kurslar və təlim mərkəzləri üçün rəqəmsal tədris və idarəetmə platformasıdır. Tələbə CRM, imtahan, ödəniş və müəllim axtarışı bir yerdə.',
+      'Mentorix Azərbaycanda müəllim, tələbə və valideynləri birləşdirən təhsil ekosistemidir: tapşırıq, imtahan, çat, ödəniş izləmə və müəllim marketplace bir yerdə.',
     h1: 'Mentorix haqqında',
     intro: [
-      'Mentorix sadəcə repetitor paneli deyil — təhsil idarəetmə və müəllim marketplace platformasıdır.',
-      'Müəllimlər tələbələrini idarə edir, imtahan və tapşırıq yaradır, ödənişləri izləyir; tələbələr isə xəritədən müəllim tapa bilir.',
+      'Mentorix sadəcə müəllim paneli deyil — müəllim, tələbə və valideynləri birləşdirən təhsil ekosistemidir.',
+      'Müəllimlər tapşırıq və imtahan yaradır, ödənişləri izləyir, valideynlərə bildiriş göndərir; tələbələr və valideynlər isə pulsuz kabinet və marketplace-dən istifadə edir.',
     ],
     bullets: [
-      'Tələbə idarəetməsi və analitika',
-      'İmtahan, tapşırıq və davamiyyət',
+      'Tapşırıq və imtahan idarəetməsi',
+      'Çat, davamiyyət və analitika',
       'Ödəniş izləmə və SMS bildirişləri',
       'İctimai müəllim axtarış xəritəsi',
     ],
@@ -243,7 +249,7 @@ export const PUBLIC_SEO_LANDINGS = [
     bullets: [
       `WhatsApp: ${MENTORIX_CONTACT.phoneDisplay}`,
       `E-poçt: ${MENTORIX_CONTACT.email}`,
-      'Müəllim və kurs qoşulması üçün pulsuz 14 günlük sınaq',
+      'Müəllim və təhsil xidməti təminatçıları üçün pulsuz 14 günlük sınaq',
     ],
     ctaHref: MENTORIX_CONTACT.whatsappUrl,
     ctaLabel: 'WhatsApp ilə yazın',

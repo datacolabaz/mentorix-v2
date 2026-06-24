@@ -15,9 +15,11 @@ import {
   MENTORIX_SEO_HOMEPAGE_LINE,
   MENTORIX_SEO_KEYWORDS,
   MENTORIX_SEO_TITLE,
+  MENTORIX_PRICING_INTRO,
 } from '../../lib/mentorixPublicMarketing'
 import { postAuthNavigate } from '../../lib/postAuth'
 import LandingDemoActivityChart from '../../components/landing/LandingDemoActivityChart'
+import PricingAudienceExplainer from '../../components/public/PricingAudienceExplainer'
 import { DEFAULT_SUBSCRIPTION_PLANS } from '../../constants/subscriptionPlans'
 import {
   getPlanMarketingMeta,
@@ -467,7 +469,8 @@ export default function Login() {
             </div>
             <h2 className="text-lg sm:text-xl font-semibold text-white">Müəllim və təlimçi tapın</h2>
             <p className="text-sm text-gray-400 leading-relaxed max-w-2xl">
-              Fənn, rayon və dərs formatına görə xəritədə axtarış edin — uyğun müəllimlə birbaşa əlaqə saxlayın.
+              Xəritədən müəllim tapın, universitet proqramlarını müqayisə edin — tələbə və valideynlər üçün qeydiyyat
+              pulsuzdur.
             </p>
             <Link
               to="/search"
@@ -593,9 +596,8 @@ export default function Login() {
 
           <section id="mx-pricing" className="space-y-4 scroll-mt-24">
             <div className="text-xs uppercase tracking-wider text-gray-500 font-semibold">Qiymət</div>
-            <p className="text-sm text-gray-400 max-w-2xl">
-              14 günlük pulsuz sınaq ilə başlayın. Paketlər aylıq qiymətlə göstərilir; illik ödənişdə 20% endirim.
-            </p>
+            <p className="text-sm text-gray-400 max-w-2xl">{MENTORIX_PRICING_INTRO}</p>
+            <PricingAudienceExplainer variant="strip" />
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               {publicPlans.map((p) => {
                 const meta = getPlanMarketingMeta(p)

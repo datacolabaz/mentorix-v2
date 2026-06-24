@@ -17,10 +17,10 @@ function defaultLoginMarketingPayload() {
   return {
     version: 1,
     hero: {
-      pill: 'Müəllimlər üçün — Mentorix',
-      headline: 'Tələbə idarəetməsi, imtahan və ödəniş — bir paneldə',
+      pill: 'Təhsil ekosistemi — Mentorix',
+      headline: 'Müəllim, tələbə və valideyn — bir təhsil platformasında',
       subheadline:
-        'Müəllimlər üçün tələbə idarəetmə sistemi — ödənişi izlə, SMS göndər, qrafiki qur',
+        'Tapşırıq və imtahan, çat, ödəniş izləmə, valideyn bildirişləri və müəllim axtarışı — hamısı bir yerdə.',
       primary_cta_label: 'Pulsuz başla (14 günlük sınaq)',
       marketplace_cta_label: 'Müəllim / Təlimçi tap (Xəritə ilə)',
       secondary_how: 'Necə işləyir?',
@@ -113,8 +113,8 @@ function defaultLoginMarketingPayload() {
       heading: 'Mentorix.io ilə',
       items: [
         {
-          title: 'Tələbə və qruplar',
-          body: 'Tələbələrinizi və qruplarınızı rahat idarə edin — bir paneldə.',
+          title: 'Tapşırıq idarəetməsi',
+          body: 'Ev işi təyini, onlayn təslim və müəllim rəyi — tələbə və valideyn kabinetində görünür.',
           accent: 'from-sky-500/15',
         },
         {
@@ -123,13 +123,18 @@ function defaultLoginMarketingPayload() {
           accent: 'from-emerald-500/15',
         },
         {
-          title: 'Ödəniş və SMS',
-          body: 'Ödəniş tarixlərini idarə edin; avtomatik xatırlatmalar və imtahan nəticəsi SMS-ləri göndərin.',
+          title: 'Çat və ünsiyyət',
+          body: 'Qrup və fərdi çat — müəllim, tələbə və valideyn arasında sürətli ünsiyyət.',
+          accent: 'from-cyan-500/15',
+        },
+        {
+          title: 'Ödəniş və valideyn bildirişləri',
+          body: 'Ödəniş tarixlərini idarə edin; avtomatik SMS xatırlatmaları və valideynlə nəticə paylaşımı.',
           accent: 'from-amber-500/15',
         },
         {
-          title: 'Valideyn əlaqəsi',
-          body: 'Valideynlərlə tələbənin nəticələrini paylaşın; davamiyyət və zəif mövzuları bir yerdə görün.',
+          title: 'Müəllim marketplace',
+          body: 'Profilinizi xəritədə paylaşın — tələbələr və valideynlər uyğun müəllimi tapsın.',
           accent: 'from-purple-500/15',
         },
       ],
@@ -178,8 +183,9 @@ function defaultLoginMarketingPayload() {
       ],
     },
     cta_band: {
-      heading: 'Xaos yox. Nəzarət var.',
-      subtitle: 'Əvvəl dəyəri gör, sonra ilk 5 şagirdi əlavə edib qurulumu rahat keç.',
+      heading: 'Təhsil bir ekosistem kimi işləsin.',
+      subtitle:
+        'Müəllim idarə etsin, tələbə öyrənsin, valideyn izləsin — əvvəl dəyəri gör, sonra 14 günlük sınaqla başla.',
     },
   }
 }

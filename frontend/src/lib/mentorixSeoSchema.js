@@ -26,9 +26,9 @@ export const MENTORIX_SITE_NAV = [
     description: 'Ev tapşırığı təyini, təslim və müəllim yoxlaması',
   },
   {
-    name: 'Kurslar və Qruplar',
+    name: 'Qruplar və paketlər',
     path: '/kurslar-ve-qruplar',
-    description: 'Tədris qrupları, paketlər və dərs cədvəli idarəetməsi',
+    description: 'Tədris qrupları, dərs paketləri və cədvəl idarəetməsi',
   },
   {
     name: 'Qiymətlər',
@@ -38,7 +38,7 @@ export const MENTORIX_SITE_NAV = [
   {
     name: 'Müəllimlər üçün',
     path: '/muellimler-ucun',
-    description: 'Müəllim və kurs idarəetmə paneli',
+    description: 'Tapşırıq, imtahan, ödəniş, çat və müəllim marketplace',
   },
   {
     name: 'Tələbələr üçün',
@@ -48,7 +48,7 @@ export const MENTORIX_SITE_NAV = [
   {
     name: 'Haqqımızda',
     path: '/haqqimizda',
-    description: 'Mentorix təhsil idarəetmə platforması haqqında',
+    description: 'Mentorix təhsil ekosistemi haqqında',
   },
   {
     name: 'Əlaqə',
@@ -199,7 +199,7 @@ export function buildPricingProductSchema() {
     '@context': 'https://schema.org',
     '@type': 'Product',
     name: 'Mentorix abunəlik paketləri',
-    description: 'Mentorix müəllim və kurs idarəetmə platforması üçün aylıq abunəlik paketləri.',
+    description: 'Mentorix təhsil ekosistemi üçün aylıq abunəlik paketləri — müəllimlər və təhsil xidməti təminatçıları.',
     brand: {
       '@type': 'Brand',
       name: 'Mentorix',

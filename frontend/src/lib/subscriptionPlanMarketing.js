@@ -17,22 +17,22 @@ const FALLBACK_MARKETING_BY_SLUG = {
 
 const FALLBACK_META_BY_SLUG = {
   basic: {
-    subtitle: '14 günlük pulsuz sınaq',
+    subtitle: 'Müəllimlər üçün — 14 günlük pulsuz sınaq',
     popularLabel: null,
     cta: '14 günlük sınağa başla',
   },
   pro: {
-    subtitle: null,
+    subtitle: 'Müəllimlər və təhsil xidməti təminatçıları üçün',
     popularLabel: '⭐ Ən populyar',
     cta: 'Standart seç',
   },
   growth: {
-    subtitle: null,
+    subtitle: 'Müəllimlər və təhsil xidməti təminatçıları üçün',
     popularLabel: null,
     cta: 'Professional seç',
   },
   premium: {
-    subtitle: null,
+    subtitle: 'Müəllimlər və təhsil xidməti təminatçıları üçün',
     popularLabel: null,
     cta: 'Premium seç',
   },

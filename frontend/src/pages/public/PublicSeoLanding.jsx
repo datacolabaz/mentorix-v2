@@ -2,6 +2,7 @@ import { useEffect, useMemo } from 'react'
 import { Link, Navigate, useLocation } from 'react-router-dom'
 import Brand from '../../components/common/Brand'
 import PublicSeoFooter from '../../components/public/PublicSeoFooter'
+import PricingAudienceExplainer from '../../components/public/PricingAudienceExplainer'
 import { landingByPath, ctaHrefForLanding, MENTORIX_PLATFORM_FEATURES } from '../../lib/publicSeoLandings'
 import {
   MENTORIX_ANNUAL_DISCOUNT,
@@ -23,7 +24,7 @@ export default function PublicSeoLanding() {
     if (!landing) return
     const description =
       landing.showPricingPlans && plans.length
-        ? `Mentorix paketləri: ${planTitlesLabel}. Tələbə limiti, SMS balansı və xəritədə görünmə imkanları.`
+        ? `Mentorix paketləri: ${planTitlesLabel}. Müəllimlər və təhsil xidməti təminatçıları üçün — tələbə limiti, SMS və xəritədə görünmə.`
         : landing.description
     setPageSeo({
       title: landing.title,
@@ -62,7 +63,7 @@ export default function PublicSeoLanding() {
       <main className="flex-1 max-w-3xl mx-auto px-4 py-10 sm:py-14 w-full space-y-8">
         <div className="space-y-4">
           <p className="text-[11px] font-bold uppercase tracking-wider text-primary">
-            Mentorix · {isPanel ? 'təhsil idarəetmə platforması' : 'ictimai axtarış'}
+            Mentorix · {isPanel ? 'təhsil ekosistemi' : 'ictimai axtarış'}
           </p>
           <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight leading-tight">{landing.h1}</h1>
           {landing.intro.map((p) => (
@@ -87,6 +88,7 @@ export default function PublicSeoLanding() {
 
         {landing.showPricingPlans ? (
           <section className="space-y-4">
+            <PricingAudienceExplainer variant="faq" />
             <h2 className="text-lg font-semibold text-white">Paketlərimiz</h2>
             <div className="grid gap-3 sm:grid-cols-2">
               {MENTORIX_PRICING_PLANS.map((plan) => (
@@ -174,7 +176,7 @@ export default function PublicSeoLanding() {
         <p className="text-xs text-gray-500 leading-relaxed">
           {isPanel ? (
             <>
-              Fərdi müəllim, hazırlıq mərkəzi və ya kurs — sizə uyğun paketi seçin.{' '}
+              Fərdi müəllim və ya təhsil xidməti təminatçısı — sizə uyğun paketi seçin.{' '}
               <Link to="/search" className="text-primary hover:underline">
                 İctimai müəllim axtarışı
               </Link>
@@ -182,7 +184,7 @@ export default function PublicSeoLanding() {
             </>
           ) : (
             <>
-              Mentorix təhsil idarəetmə və müəllim marketplace platformasıdır.{' '}
+              Mentorix müəllim, tələbə və valideynləri birləşdirən təhsil ekosistemidir.{' '}
               <Link to="/login" className="text-primary hover:underline">
                 Pulsuz qeydiyyat
               </Link>{' '}
