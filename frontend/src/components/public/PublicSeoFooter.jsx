@@ -88,7 +88,7 @@ export default function PublicSeoFooter({ className = '' }) {
           </div>
         </nav>
 
-        <p className="text-xs text-gray-500 leading-relaxed">{MENTORIX_SEO_HOMEPAGE_LINE}</p>
+        <p className="text-sm text-gray-400 font-medium leading-relaxed">{MENTORIX_SEO_HOMEPAGE_LINE}</p>
 
         <div className="border-t border-white/10 pt-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div className="space-y-1 text-center sm:text-left">

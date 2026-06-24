@@ -8,7 +8,6 @@ import { setPageSeo } from '../../lib/pageSeo'
 import PublicSeoFooter from '../../components/public/PublicSeoFooter'
 import {
   MENTORIX_SEO_DESCRIPTION,
-  MENTORIX_SEO_HOMEPAGE_LINE,
   MENTORIX_SEO_KEYWORDS,
   MENTORIX_SEO_TITLE,
 } from '../../lib/mentorixPublicMarketing'
@@ -347,9 +346,6 @@ export default function Landing() {
               </h1>
               <p className="text-gray-400 text-sm sm:text-base leading-relaxed w-full max-w-md sm:max-w-none">
                 {m.hero.subheadline}
-              </p>
-              <p className="text-gray-500 text-xs sm:text-sm leading-relaxed w-full max-w-xl">
-                {MENTORIX_SEO_HOMEPAGE_LINE}
               </p>
               <div className="flex flex-col w-full max-w-xl gap-3">
                 <button

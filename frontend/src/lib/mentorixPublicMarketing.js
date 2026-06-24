@@ -12,7 +12,7 @@ export const MENTORIX_SEO_KEYWORDS =
 
 /** Ana səhifədə təbii formada — Google açar sözləri */
 export const MENTORIX_SEO_HOMEPAGE_LINE =
-  'Fərdi müəllimlər və təhsil xidməti təminatçıları üçün güclü alətlər; tələbə və valideynlər isə pulsuz kabinet və marketplace-dən istifadə edir.'
+  'Mentorix müəllimləri, tələbələri və valideynləri bir platformada birləşdirərək təhsil prosesini daha rahat və effektiv idarə etməyə kömək edir.'
 
 export const MENTORIX_TAGLINE = MENTORIX_SEO_HOMEPAGE_LINE
 
