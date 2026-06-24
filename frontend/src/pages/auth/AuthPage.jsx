@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import useAuthStore from '../../hooks/useAuth'
 import Button from '../../components/common/Button'
 import { useToast } from '../../components/common/Toast'
@@ -89,7 +89,13 @@ export default function AuthPage() {
   const authGreeting = authTab === 'signup' ? 'Hesab yaradın' : 'Xoş gəldiniz'
 
   return (
-    <div className="login-wrapper flex min-h-[100svh] w-full min-w-0 max-w-full items-center justify-center overflow-x-hidden px-4 py-8">
+    <div className="login-wrapper relative flex min-h-[100svh] w-full min-w-0 max-w-full items-center justify-center overflow-x-hidden px-4 py-8">
+      <Link
+        to="/"
+        className="absolute top-4 left-4 sm:top-6 sm:left-6 z-10 inline-flex items-center gap-1 text-xs sm:text-sm font-medium text-gray-400 hover:text-white transition-colors"
+      >
+        ← Ana səhifəyə qayıt
+      </Link>
       <div id="mx-login" className="w-full max-w-sm scroll-mt-6">
         <div className="mx-login-card rounded-2xl border border-white/20 bg-surface-2 p-5 sm:p-6">
           {!isAdmin ? (
