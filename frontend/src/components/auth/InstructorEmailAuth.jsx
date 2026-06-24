@@ -18,6 +18,13 @@ const AUTH_ROLE_OPTIONS = [
   { key: 'parent', label: 'Valideyn' },
 ]
 
+const SIGNUP_ROLE_OPTIONS = [
+  { key: 'instructor', label: 'Müəllim' },
+  { key: 'student', label: 'Tələbə' },
+  { key: 'parent', label: 'Valideyn' },
+  { key: 'course', label: 'Kurs' },
+]
+
 const LOGIN_ROLE_TRY_ORDER = ['instructor', 'course', 'student', 'parent']
 
 async function loginEmailWithAutoRole(email, password, forcedRole) {
@@ -154,7 +161,32 @@ function LoginPasswordInput({ inputRef }) {
   )
 }
 
-function RolePills({ roles, role, onRole, label = 'Rolunuzu seçin' }) {
+function RolePills({ roles, role, onRole, label = 'Rolunuzu seçin', variant = 'grid' }) {
+  if (variant === 'pill') {
+    return (
+      <div className="space-y-2">
+        <p className="text-sm text-gray-400">{label}</p>
+        <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Rol seçimi">
+          {roles.map((r) => {
+            const selected = role === r.key
+            return (
+              <button
+                key={r.key}
+                type="button"
+                role="radio"
+                aria-checked={selected}
+                onClick={() => onRole(r.key)}
+                className={`mx-role-btn${selected ? ' mx-role-btn--active' : ''}`}
+              >
+                {r.label}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-2">
       <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{label}</p>
@@ -191,12 +223,16 @@ function RolePills({ roles, role, onRole, label = 'Rolunuzu seçin' }) {
 /**
  * Email/Google giriş və qeydiyyat (girişdə rol avtomatik tapılır; yalnız uğursuzluqda dropdown).
  */
-export default function InstructorEmailAuth({ onSuccess }) {
+export default function InstructorEmailAuth({ onSuccess, onTabChange }) {
   const toast = useToast()
   const { signupWithEmail, verifyEmailCode, resendVerificationEmail, requestPasswordReset, setSession } = useAuthStore()
   const navigate = useNavigate()
 
   const [tab, setTab] = useState('login')
+  const pickTab = (next) => {
+    setTab(next)
+    onTabChange?.(next)
+  }
   const [phase, setPhase] = useState('form')
   const [loading, setLoading] = useState(false)
 
@@ -342,7 +378,7 @@ export default function InstructorEmailAuth({ onSuccess }) {
         return
       }
       toast('Email təsdiqləndi! İndi daxil ola bilərsiniz.', 'success')
-      setTab('login')
+      pickTab('login')
       setPhase('form')
       setVerifyCode('')
     } catch (err) {
@@ -418,7 +454,7 @@ export default function InstructorEmailAuth({ onSuccess }) {
           type="button"
           onClick={() => {
             setPhase('form')
-            setTab('login')
+            pickTab('login')
           }}
           className="w-full text-center text-xs text-gray-500 hover:text-white"
         >
@@ -430,7 +466,7 @@ export default function InstructorEmailAuth({ onSuccess }) {
 
   return (
     <div className="space-y-4">
-      <AuthModeTabs tab={tab} onTab={setTab} />
+      <AuthModeTabs tab={tab} onTab={pickTab} />
 
       {tab === 'login' ? (
       <div className="space-y-4">
@@ -503,7 +539,7 @@ export default function InstructorEmailAuth({ onSuccess }) {
 
           <p className="text-xs text-center text-gray-500">
             Hesabınız yoxdur?{' '}
-            <button type="button" className="font-semibold text-primary hover:brightness-110" onClick={() => setTab('signup')}>
+            <button type="button" className="font-semibold text-primary hover:brightness-110" onClick={() => pickTab('signup')}>
               Qeydiyyatdan keçin
             </button>
           </p>
@@ -511,10 +547,11 @@ export default function InstructorEmailAuth({ onSuccess }) {
       ) : (
       <div className="space-y-4">
           <RolePills
-            roles={AUTH_ROLE_OPTIONS}
+            roles={SIGNUP_ROLE_OPTIONS}
             role={signupRole}
             onRole={setSignupRole}
-            label="Hansı rol ilə qeydiyyatdan keçirsiniz?"
+            label="Siz kimsiniz?"
+            variant="pill"
           />
 
           <GoogleSignInButton
@@ -582,7 +619,7 @@ export default function InstructorEmailAuth({ onSuccess }) {
 
           <p className="text-xs text-center text-gray-500">
             Hesabınız var?{' '}
-            <button type="button" className="font-semibold text-primary hover:brightness-110" onClick={() => setTab('login')}>
+            <button type="button" className="font-semibold text-primary hover:brightness-110" onClick={() => pickTab('login')}>
               Daxil olun
             </button>
           </p>

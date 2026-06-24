@@ -63,6 +63,7 @@ export default function Login() {
 
   /** Əsas CTA — modal; səhifə yüklənəndə / avtomatik açılmır */
   const [loginModalOpen, setLoginModalOpen] = useState(false)
+  const [authTab, setAuthTab] = useState('login')
   const loginModalPanelRef = useRef(null)
 
   const loginSectionRef = useRef(null)
@@ -307,6 +308,8 @@ export default function Login() {
     })
     return () => window.cancelAnimationFrame(id)
   }, [loginModalOpen, isAdmin])
+
+  const authGreeting = authTab === 'signup' ? 'Hesab yaradın' : 'Xoş gəldiniz'
 
   return (
     <div className="min-h-[100svh] w-full min-w-0 max-w-full overflow-x-hidden mx-login-bg">
@@ -688,10 +691,10 @@ export default function Login() {
       <div
         className={`flex w-full min-w-0 max-w-full justify-center overflow-x-hidden ${
           isAdmin
-            ? 'min-h-[100svh] items-start px-4 pb-10 pt-8 sm:items-center sm:pt-4'
+            ? 'min-h-[100svh] items-center px-4 py-8'
             : loginModalOpen
-              ? 'pointer-events-none fixed inset-0 z-[101] items-stretch justify-center px-0 py-0 sm:items-center sm:px-4 sm:py-6'
-              : 'px-4 pb-14 pt-4'
+              ? 'pointer-events-none fixed inset-0 z-[101] min-h-[100svh] items-center justify-center px-4 py-6'
+              : 'min-h-[100svh] items-center justify-center px-4 py-8'
         }`}
       >
         <div
@@ -705,15 +708,13 @@ export default function Login() {
           aria-modal={!isAdmin && loginModalOpen ? true : undefined}
           aria-labelledby={!isAdmin && loginModalOpen ? 'mx-login-modal-title' : undefined}
           className={`w-full max-w-sm scroll-mt-6 ${
-            !isAdmin && loginModalOpen
-              ? 'pointer-events-auto flex h-full max-h-full min-h-0 flex-col sm:h-auto sm:max-h-[min(92dvh,680px)]'
-              : ''
+            !isAdmin && loginModalOpen ? 'pointer-events-auto flex max-h-[min(92dvh,680px)] min-h-0 flex-col' : ''
           }`}
         >
           <div
-            className={`flex min-h-0 flex-1 flex-col bg-surface-2 ${
+            className={`mx-login-card flex min-h-0 flex-col bg-surface-2 ${
               !isAdmin && loginModalOpen
-                ? 'min-h-[100dvh] overflow-y-auto overscroll-y-contain rounded-none border-0 p-5 pb-[max(11rem,env(safe-area-inset-bottom,0px))] shadow-2xl sm:min-h-0 sm:pb-6 sm:rounded-2xl sm:border sm:border-white/20 sm:p-6'
+                ? 'max-h-[min(92dvh,680px)] overflow-y-auto overscroll-y-contain rounded-2xl border border-white/20 p-5 pb-[max(1.25rem,env(safe-area-inset-bottom,0px))] shadow-2xl sm:p-6'
                 : 'rounded-2xl border border-white/20 p-5 sm:p-6'
             }`}
           >
@@ -734,9 +735,9 @@ export default function Login() {
                   </div>
                   <div className="text-center space-y-2 min-w-0 w-full">
                     <Brand size="login" />
-                    <div className="h-0.5 w-14 mx-auto rounded-full bg-primary" aria-hidden />
+                    <div className="h-0.5 w-10 mx-auto rounded-full bg-primary" aria-hidden />
                     <h2 id="mx-login-modal-title" className="text-sm font-semibold text-gray-200">
-                      Xoş gəldin, Mentorix
+                      {authGreeting}
                     </h2>
                   </div>
                 </div>
@@ -745,8 +746,8 @@ export default function Login() {
                   <div className="flex justify-center">
                     <Brand size="login" />
                   </div>
-                  <div className="h-0.5 w-14 mx-auto rounded-full bg-primary" aria-hidden />
-                  <div className="text-sm font-semibold text-gray-200">Xoş gəldin, Mentorix</div>
+                  <div className="h-0.5 w-10 mx-auto rounded-full bg-primary" aria-hidden />
+                  <div className="text-sm font-semibold text-gray-200">{authGreeting}</div>
                 </div>
               )
             ) : (
@@ -754,7 +755,7 @@ export default function Login() {
                 <div className="flex justify-center pt-1 pb-2 bg-transparent">
                   <Brand size="login" />
                 </div>
-                <div className="h-0.5 w-14 mx-auto rounded-full bg-primary mb-3" aria-hidden />
+                <div className="h-0.5 w-10 mx-auto rounded-full bg-primary mb-3" aria-hidden />
                 <div className="text-gray-400 text-sm">Hesabınıza daxil olun</div>
               </div>
             )}
@@ -803,7 +804,7 @@ export default function Login() {
             )}
 
             {!isAdmin && (
-              <InstructorEmailAuth onSuccess={(u) => goDashboard(u)} />
+              <InstructorEmailAuth onSuccess={(u) => goDashboard(u)} onTabChange={setAuthTab} />
             )}
           </div>
         </div>

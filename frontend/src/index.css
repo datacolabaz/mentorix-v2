@@ -131,8 +131,10 @@
     text-security: disc;
   }
   .mx-login-bg {
+    min-height: 100vh;
+    min-height: 100svh;
     background:
-      radial-gradient(ellipse at 60% 40%, rgba(0, 230, 118, 0.06) 0%, transparent 60%),
+      radial-gradient(ellipse at 50% 30%, rgba(var(--primary-accent), 0.05) 0%, transparent 65%),
       #0d0d0d;
   }
   .mx-auth-input {
@@ -142,6 +144,27 @@
     border-color: rgb(var(--primary-accent));
     box-shadow: 0 0 0 3px rgba(var(--primary-accent), 0.12);
     outline: none;
+  }
+  .mx-role-btn {
+    padding: 8px 16px;
+    border-radius: 999px;
+    font-size: 14px;
+    line-height: 1.25;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: transparent;
+    color: rgb(156 163 175);
+    cursor: pointer;
+    transition: border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+  }
+  .mx-role-btn:hover {
+    border-color: rgba(255, 255, 255, 0.2);
+    color: rgb(229 231 235);
+  }
+  .mx-role-btn--active {
+    background: rgb(var(--primary-accent));
+    border-color: rgb(var(--primary-accent));
+    color: #041018;
+    font-weight: 600;
   }
   /* Logo blending for removing faint white box (sidebar/header) */
   .mentorix-logo { mix-blend-mode: normal; }
