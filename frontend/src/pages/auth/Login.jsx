@@ -18,6 +18,7 @@ import {
 } from '../../lib/mentorixPublicMarketing'
 import { postAuthNavigate } from '../../lib/postAuth'
 import LandingDemoActivityChart from '../../components/landing/LandingDemoActivityChart'
+import LandingHeroSocialProof from '../../components/landing/LandingHeroSocialProof'
 import PricingAudienceExplainer from '../../components/public/PricingAudienceExplainer'
 import { DEFAULT_SUBSCRIPTION_PLANS } from '../../constants/subscriptionPlans'
 import {
@@ -438,65 +439,7 @@ export default function Login() {
             </div>
 
             {showMiniPreview ? (
-            <div
-              id="mx-demo-mini"
-              className="relative w-full sm:w-[340px] shrink-0 rounded-2xl border border-white/10 bg-gradient-to-br from-[#131313] to-[#0a0f12] p-4 shadow-[0_0_80px_-20px_rgba(0,229,176,0.35)] overflow-hidden"
-            >
-              <div className="absolute inset-x-8 -top-16 h-32 rounded-full bg-primary/25 blur-3xl" />
-              <div className="relative space-y-3">
-                <div className="flex items-center justify-between text-[11px] text-gray-400">
-                  <span>{m.mini_preview.title}</span>
-                  <span className="rounded-full bg-white/5 px-2 py-0.5 text-[10px] text-gray-300 border border-white/10">
-                    {m.mini_preview.badge}
-                  </span>
-                </div>
-                <div className="grid grid-cols-3 gap-2">
-                  <div className="rounded-xl bg-black/35 border border-white/10 px-2 py-2">
-                    <div className="text-[10px] text-gray-500">{m.mini_preview.col1_label}</div>
-                    <div className="text-sm font-semibold text-white tabular-nums">
-                      {m.mini_preview.col1_value || '24'}
-                    </div>
-                  </div>
-                  <div className="rounded-xl bg-black/35 border border-white/10 px-2 py-2">
-                    <div className="text-[10px] text-gray-500">{m.mini_preview.col2_label}</div>
-                    <div className="text-sm font-semibold text-primary">{m.mini_preview.col2_value}</div>
-                  </div>
-                  <div className="rounded-xl bg-black/35 border border-white/10 px-2 py-2">
-                    <div className="text-[10px] text-gray-500">{m.mini_preview.col3_label}</div>
-                    <div className="text-sm font-semibold text-amber-300/90">{m.mini_preview.col3_value}</div>
-                  </div>
-                </div>
-                <div className="rounded-xl bg-black/25 border border-white/10 p-3 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="text-xs font-semibold text-gray-100">{m.mini_preview.calendar_title}</div>
-                  </div>
-                  <div
-                    className={`grid gap-1 ${
-                      (m.mini_preview.calendar_days?.length || 5) <= 5
-                        ? 'grid-cols-5'
-                        : 'grid-cols-[repeat(auto-fill,minmax(2.25rem,1fr))]'
-                    }`}
-                  >
-                    {(m.mini_preview.calendar_days?.length ? m.mini_preview.calendar_days : ['Pn', 'Ç', 'Çr', 'Ca', 'Cm']).map((d) => (
-                      <div
-                        key={d}
-                        className="rounded-lg bg-white/5 border border-white/5 px-1 py-2 text-center text-[10px] text-gray-400"
-                      >
-                        {d}
-                      </div>
-                    ))}
-                  </div>
-                  <div className="flex gap-2">
-                    <div className="h-8 flex-1 rounded-lg bg-primary/15 border border-primary/25 text-[11px] text-primary px-2 flex items-center justify-center font-medium">
-                      {m.mini_preview.slot1_time}
-                    </div>
-                    <div className="h-8 flex-1 rounded-lg bg-white/5 border border-white/10 text-[11px] text-gray-400 px-2 flex items-center justify-center">
-                      {m.mini_preview.slot2_time}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <LandingHeroSocialProof onPrimaryCta={() => openLoginModal('hero_social_proof')} />
             ) : null}
           </header>
 
