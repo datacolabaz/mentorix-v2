@@ -117,8 +117,7 @@ export default function Login() {
   const showMarketplace = isMarketingSectionVisible(marketing.marketplace)
   const showUniversities = isMarketingSectionVisible(marketing.universities)
   const showPricing = isMarketingSectionVisible(marketing.pricing)
-  const showPricingAudience =
-    showPricing && marketing.pricing?.audience_explainer_enabled !== false
+  const showPricingAudience = showPricing && marketing.pricing?.audience_explainer_enabled === true
 
   const { login } = useAuthStore()
   const navigate = useNavigate()

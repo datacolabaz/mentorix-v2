@@ -1042,8 +1042,15 @@ export default function MarketingLogin() {
               pricing: { ...(L.pricing || {}), section_enabled: v },
             }))
           }
-          hint="Paket kartları və qiymət bölməsi."
+          hint="Paket kartları və «Qiymət» başlığı."
         />
+      </Card>
+
+      <Card className="p-4 sm:p-6 space-y-4">
+        <h2 className="font-display font-bold text-base">Kimlər üçün? (qiymət bölməsi)</h2>
+        <p className="text-xs text-gray-500 leading-relaxed">
+          Qiymət kartlarından əvvəl görünən «Kimlər üçün?» / «Pulsuz» bloku — şəkildəki kart.
+        </p>
         <LandingSectionToggle
           checked={landing.pricing?.audience_explainer_enabled}
           onChange={(v) =>
@@ -1052,7 +1059,7 @@ export default function MarketingLogin() {
               pricing: { ...(L.pricing || {}), audience_explainer_enabled: v },
             }))
           }
-          hint="«Kimlər üçün?» — pulsuz istifadəçilər siyahısı (qiymət kartlarından əvvəl)."
+          hint="Söndürülsə, kart tam gizlənir; paket kartları qala bilər."
         />
       </Card>
 

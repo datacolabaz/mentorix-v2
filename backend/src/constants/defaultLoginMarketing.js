@@ -214,7 +214,7 @@ function defaultLoginMarketingPayload() {
     },
     pricing: {
       section_enabled: true,
-      audience_explainer_enabled: true,
+      audience_explainer_enabled: false,
     },
   }
 }

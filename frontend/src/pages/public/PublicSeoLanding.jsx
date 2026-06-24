@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, useLocation } from 'react-router-dom'
 import Brand from '../../components/common/Brand'
 import PublicSeoFooter from '../../components/public/PublicSeoFooter'
@@ -12,6 +12,7 @@ import {
 import { setPageSeo } from '../../lib/pageSeo'
 import { useSubscriptionPlans } from '../../hooks/useSubscriptionPlans'
 import { allActivePlanTitlesList } from '../../lib/subscriptionPlanGuards'
+import api from '../../lib/api'
 
 export default function PublicSeoLanding() {
   const { pathname } = useLocation()
@@ -19,6 +20,24 @@ export default function PublicSeoLanding() {
   const plansQ = useSubscriptionPlans()
   const plans = Array.isArray(plansQ.data) ? plansQ.data : []
   const planTitlesLabel = useMemo(() => allActivePlanTitlesList(plans), [plans])
+  const [showPricingAudience, setShowPricingAudience] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const d = await api.get('/public/marketing/login', { params: { _: Date.now() } })
+        if (!cancelled) {
+          setShowPricingAudience(d?.landing?.pricing?.audience_explainer_enabled === true)
+        }
+      } catch {
+        if (!cancelled) setShowPricingAudience(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   useEffect(() => {
     if (!landing) return
@@ -88,7 +107,7 @@ export default function PublicSeoLanding() {
 
         {landing.showPricingPlans ? (
           <section className="space-y-4">
-            <PricingAudienceExplainer variant="faq" />
+            {showPricingAudience ? <PricingAudienceExplainer variant="faq" /> : null}
             <h2 className="text-lg font-semibold text-white">Paketlərimiz</h2>
             <div className="grid gap-3 sm:grid-cols-2">
               {MENTORIX_PRICING_PLANS.map((plan) => (
