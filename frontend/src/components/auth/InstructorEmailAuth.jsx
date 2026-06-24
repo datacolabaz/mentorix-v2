@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import GoogleSignInButton from './GoogleSignInButton'
 import Button from '../common/Button'
