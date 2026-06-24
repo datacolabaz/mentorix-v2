@@ -1159,7 +1159,11 @@ const signup = async (req, res) => {
       [emailCanon],
     );
     if (existing[0]) {
-      return res.status(409).json({ success: false, message: 'Bu email artıq qeydiyyatdadır' });
+      return res.status(409).json({
+        success: false,
+        message: 'Bu email artıq qeydiyyatdadır. Zəhmət olmasa «Daxil ol» bölməsindən giriş edin.',
+        code: 'ACCOUNT_ALREADY_EXISTS',
+      });
     }
 
     const user = await db.transaction(async (client) => {
@@ -1235,7 +1239,11 @@ const signup = async (req, res) => {
     });
   } catch (err) {
     if (err.code === '23505') {
-      return res.status(409).json({ success: false, message: 'Bu email artıq qeydiyyatdadır' });
+      return res.status(409).json({
+        success: false,
+        message: 'Bu email artıq qeydiyyatdadır. Zəhmət olmasa «Daxil ol» bölməsindən giriş edin.',
+        code: 'ACCOUNT_ALREADY_EXISTS',
+      });
     }
     const st = err.statusCode || 500;
     res.status(st).json({ success: false, message: err.message, code: err.code });
@@ -1696,6 +1704,23 @@ function googleClient() {
   return new OAuth2Client(cid);
 }
 
+function parseGoogleAuthIntent(body) {
+  const raw = String(body?.intent || body?.mode || 'signin').trim().toLowerCase();
+  return raw === 'signup' || raw === 'register';
+}
+
+function googleAccountExistsSignupResponse() {
+  return {
+    success: false,
+    message: 'Bu Google hesabı artıq qeydiyyatdadır. Zəhmət olmasa «Daxil ol» bölməsindən giriş edin.',
+    code: 'ACCOUNT_ALREADY_EXISTS',
+  };
+}
+
+function isActiveGoogleUser(user) {
+  return Boolean(user && user.is_active !== false);
+}
+
 async function verifyGoogleIdTokenOrThrow(credential) {
   const token = String(credential || '').trim();
   if (!token) {
@@ -1727,6 +1752,7 @@ async function verifyGoogleIdTokenOrThrow(credential) {
 const googleLogin = async (req, res) => {
   try {
     const { credential, role: roleHint } = req.body;
+    const isSignupIntent = parseGoogleAuthIntent(req.body);
     const expectedRole = String(roleHint || '').trim().toLowerCase();
     const g = await verifyGoogleIdTokenOrThrow(credential);
 
@@ -1739,6 +1765,10 @@ const googleLogin = async (req, res) => {
       [g.sub]
     );
     let user = bySub.rows[0] || null;
+
+    if (isSignupIntent && isActiveGoogleUser(user)) {
+      return res.status(409).json(googleAccountExistsSignupResponse());
+    }
 
     if (!user && g.email) {
       const byEmail = await db.query(
@@ -1755,6 +1785,9 @@ const googleLogin = async (req, res) => {
       );
       user = byEmail.rows[0] || null;
       if (user) {
+        if (isSignupIntent && isActiveGoogleUser(user)) {
+          return res.status(409).json(googleAccountExistsSignupResponse());
+        }
         if (!g.email_verified) {
           const err = new Error('Google email təsdiqlənməyib');
           err.statusCode = 409;
@@ -2019,6 +2052,7 @@ const googleLinkVerify = async (req, res) => {
 const googleComplete = async (req, res) => {
   try {
     const { credential, role } = req.body;
+    const isSignupIntent = parseGoogleAuthIntent(req.body);
     const g = await verifyGoogleIdTokenOrThrow(credential);
     const r = String(role || '').trim().toLowerCase();
     if (!r || !LOGIN_ROLES.has(r)) {
@@ -2035,6 +2069,10 @@ const googleComplete = async (req, res) => {
     );
     let user = existingBySub[0] || null;
 
+    if (isSignupIntent && isActiveGoogleUser(user)) {
+      return res.status(409).json(googleAccountExistsSignupResponse());
+    }
+
     if (!user && g.email) {
       const { rows: byEmail } = await db.query(
         `SELECT id, full_name, email, role, phone, phone_verified, google_sub, account_status, is_active, is_verified
@@ -2049,6 +2087,9 @@ const googleComplete = async (req, res) => {
       );
       user = byEmail[0] || null;
       if (user) {
+        if (isSignupIntent && isActiveGoogleUser(user)) {
+          return res.status(409).json(googleAccountExistsSignupResponse());
+        }
         if (!g.email_verified) {
           return res.status(409).json({ success: false, message: 'Google email təsdiqlənməyib' });
         }

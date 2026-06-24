@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import GoogleSignInButton from './GoogleSignInButton'
+import AuthAccountExistsModal from './AuthAccountExistsModal'
 import Button from '../common/Button'
 import useAuthStore from '../../hooks/useAuth'
 import { useToast } from '../common/Toast'
@@ -52,9 +53,9 @@ async function googleAuthWithAutoRole(credential, forcedRole) {
   let lastRoleError = null
   for (const role of roles) {
     try {
-      let r = await api.post('/auth/google/login', { credential, role })
+      let r = await api.post('/auth/google/login', { credential, role, intent: 'signin' })
       if (r?.needs_role || r?.needs_phone_link) {
-        r = await api.post('/auth/google/complete', { credential, role })
+        r = await api.post('/auth/google/complete', { credential, role, intent: 'signin' })
       }
       if (r?.token && r?.user) return r
       lastRoleError = new Error(r?.message || 'Google girişi tamamlanmadı')
@@ -251,6 +252,18 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
   const [signupPassword, setSignupPassword] = useState('')
   const [signupRole, setSignupRole] = useState('instructor')
   const [verifyCode, setVerifyCode] = useState('')
+  const [accountExistsOpen, setAccountExistsOpen] = useState(false)
+  const [accountExistsMessage, setAccountExistsMessage] = useState('')
+
+  const openAccountExistsModal = (message) => {
+    setAccountExistsMessage(
+      message || 'Bu email artıq qeydiyyatdadır. Zəhmət olmasa «Daxil ol» bölməsindən giriş edin.',
+    )
+    setAccountExistsOpen(true)
+  }
+
+  const isAccountExistsError = (err) =>
+    err?.status === 409 || err?.code === 'ACCOUNT_ALREADY_EXISTS'
 
   const handleGoogleCredential = async (credential) => {
     setLoading(true)
@@ -259,9 +272,17 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
         tab === 'login'
           ? await googleAuthWithAutoRole(credential, loginRoleFallback ? loginRole : null)
           : await (async () => {
-              let out = await api.post('/auth/google/login', { credential, role: signupRole })
+              let out = await api.post('/auth/google/login', {
+                credential,
+                role: signupRole,
+                intent: 'signup',
+              })
               if (out?.needs_role || out?.needs_phone_link) {
-                out = await api.post('/auth/google/complete', { credential, role: signupRole })
+                out = await api.post('/auth/google/complete', {
+                  credential,
+                  role: signupRole,
+                  intent: 'signup',
+                })
               }
               return out
             })()
@@ -283,7 +304,9 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
       if (onSuccess) onSuccess(u)
       else postAuthNavigate(u, navigate)
     } catch (err) {
-      if (tab === 'login' && !loginRoleFallback && err?.status === 403) {
+      if (tab === 'signup' && isAccountExistsError(err)) {
+        openAccountExistsModal(err?.message)
+      } else if (tab === 'login' && !loginRoleFallback && err?.status === 403) {
         setLoginRoleFallback(true)
         toast('Hesab növünü seçib yenidən cəhd edin', 'error')
       } else {
@@ -308,7 +331,11 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
       setPhase('verify')
       toast('Təsdiq kodu və link emailinizə göndərildi', 'success')
     } catch (err) {
-      toast(err.message || 'Qeydiyyat xətası', 'error')
+      if (isAccountExistsError(err)) {
+        openAccountExistsModal(err?.message)
+      } else {
+        toast(err.message || 'Qeydiyyat xətası', 'error')
+      }
     } finally {
       setLoading(false)
     }
@@ -630,6 +657,11 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
           </p>
       </div>
       )}
+      <AuthAccountExistsModal
+        open={accountExistsOpen}
+        onClose={() => setAccountExistsOpen(false)}
+        message={accountExistsMessage}
+      />
     </div>
   )
 }
