@@ -166,7 +166,7 @@ function RolePills({ roles, role, onRole, label = 'Rolunuzu seçin', variant = '
     return (
       <div className="space-y-2">
         <p className="text-sm text-gray-400">{label}</p>
-        <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Rol seçimi">
+        <div className="mx-role-selector" role="radiogroup" aria-label="Rol seçimi">
           {roles.map((r) => {
             const selected = role === r.key
             return (

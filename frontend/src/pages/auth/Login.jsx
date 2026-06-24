@@ -312,7 +312,7 @@ export default function Login() {
   const authGreeting = authTab === 'signup' ? 'Hesab yaradın' : 'Xoş gəldiniz'
 
   return (
-    <div className="min-h-[100svh] w-full min-w-0 max-w-full overflow-x-hidden mx-login-bg">
+    <div className="login-wrapper min-h-[100svh] w-full min-w-0 max-w-full overflow-x-hidden">
       {!isAdmin ? (
         <>
           <nav
@@ -681,7 +681,7 @@ export default function Login() {
       {!isAdmin && loginModalOpen ? (
         <div
           role="presentation"
-          className="fixed inset-0 z-[100] bg-black/65 backdrop-blur-md"
+          className="login-wrapper fixed inset-0 z-[100]"
           onMouseDown={(e) => {
             if (e.target === e.currentTarget) closeLoginModal()
           }}
@@ -691,10 +691,10 @@ export default function Login() {
       <div
         className={`flex w-full min-w-0 max-w-full justify-center overflow-x-hidden ${
           isAdmin
-            ? 'min-h-[100svh] items-center px-4 py-8'
+            ? 'login-wrapper min-h-[100svh] items-center px-4 py-8'
             : loginModalOpen
               ? 'pointer-events-none fixed inset-0 z-[101] min-h-[100svh] items-center justify-center px-4 py-6'
-              : 'min-h-[100svh] items-center justify-center px-4 py-8'
+              : 'login-wrapper min-h-[100svh] items-center justify-center px-4 py-8'
         }`}
       >
         <div
