@@ -39,6 +39,9 @@ function scrollToId(id) {
   el.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
+const LANDING_NAV_LINK =
+  'mx-landing-nav-link text-gray-300 hover:text-white px-2 py-1.5 rounded-lg'
+
 /** Email qeydiyyat/giriş + admin email girişi */
 export default function Login() {
   const [searchParams] = useSearchParams()
@@ -331,31 +334,25 @@ export default function Login() {
             className="sticky top-0 z-50 border-b border-white/10 bg-[#0b0b0b]/92 backdrop-blur-md supports-[backdrop-filter]:bg-[#0b0b0b]/80"
             aria-label="Əsas naviqasiya"
           >
-            <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+            <div className="max-w-5xl mx-auto pl-2 sm:pl-3 pr-4 py-3 flex items-center justify-between gap-3">
               <button
                 type="button"
                 onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                className="shrink-0 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                className="shrink-0 rounded-lg transition-opacity duration-200 hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
               >
-                <Brand size="md" imgClassName="h-8 w-auto max-w-[120px]" />
+                <Brand size="nav" />
               </button>
               <div className="flex items-center gap-1 sm:gap-3 text-xs sm:text-sm font-semibold">
-                <Link
-                  to="/search"
-                  className="hidden sm:inline text-gray-300 hover:text-white px-2 py-1.5 rounded-lg hover:bg-white/5"
-                >
+                <Link to="/search" className={`hidden sm:inline ${LANDING_NAV_LINK}`}>
                   Müəllim tap
                 </Link>
-                <Link
-                  to="/universities"
-                  className="text-gray-300 hover:text-white px-2 py-1.5 rounded-lg hover:bg-white/5"
-                >
+                <Link to="/universities" className={LANDING_NAV_LINK}>
                   Universitetlər
                 </Link>
                 <button
                   type="button"
                   onClick={() => scrollToId(featureItemsForLanding.length ? 'mx-features' : 'mx-steps')}
-                  className="text-gray-300 hover:text-white px-2 py-1.5 rounded-lg hover:bg-white/5"
+                  className={LANDING_NAV_LINK}
                 >
                   Xüsusiyyətlər
                 </button>
@@ -363,7 +360,7 @@ export default function Login() {
                 <button
                   type="button"
                   onClick={() => scrollToId('mx-pricing')}
-                  className="text-gray-300 hover:text-white px-2 py-1.5 rounded-lg hover:bg-white/5"
+                  className={LANDING_NAV_LINK}
                 >
                   Qiymət
                 </button>
@@ -383,7 +380,7 @@ export default function Login() {
           <header className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-8 sm:gap-10">
             <div className="max-w-xl w-full space-y-4 flex flex-col items-center text-center sm:items-start sm:text-left">
               <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] text-gray-300">
-                <span className="h-1.5 w-1.5 rounded-full bg-primary shadow-[0_0_12px_rgba(0,229,176,0.9)]" />
+                <span className="mx-nav-live-dot h-1.5 w-1.5 rounded-full bg-primary shadow-[0_0_12px_rgba(0,229,176,0.9)]" />
                 {m.hero.pill}
               </div>
               <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight text-white leading-tight w-full">

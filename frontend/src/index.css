@@ -54,6 +54,42 @@
   animation: mx-hero-live-pulse 1.6s ease-in-out infinite;
 }
 
+@keyframes mx-nav-dot-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(0.85);
+  }
+}
+
+.mx-nav-live-dot {
+  animation: mx-nav-dot-pulse 2s ease-in-out infinite;
+}
+
+.mx-landing-nav-link {
+  position: relative;
+  transition: color 0.2s ease;
+}
+
+.mx-landing-nav-link::after {
+  content: '';
+  position: absolute;
+  bottom: 0.35rem;
+  left: 0.5rem;
+  width: 0;
+  height: 1.5px;
+  background: rgb(var(--primary-accent));
+  transition: width 0.25s ease;
+}
+
+.mx-landing-nav-link:hover::after {
+  width: calc(100% - 1rem);
+}
+
 @layer base {
   :root {
     /* Light defaults (kept subtle, premium) */

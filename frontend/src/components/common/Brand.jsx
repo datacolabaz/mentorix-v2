@@ -14,6 +14,20 @@ export default function Brand({
   size = 'md', // md | sidebar | login
   tone = 'dark', // dark | light (for readability on sidebar)
 }) {
+  if (size === 'nav') {
+    return (
+      <div className={`flex items-center gap-1.5 min-w-0 ${className}`}>
+        <span
+          className={`font-display font-bold tracking-[-0.02em] text-white text-xl sm:text-2xl leading-none ${textClassName}`}
+        >
+          Mentorix
+          <span className="opacity-50 text-[0.75em] font-semibold">.io</span>
+        </span>
+        <span className="mx-nav-live-dot h-1.5 w-1.5 rounded-full bg-primary shrink-0" aria-hidden />
+      </div>
+    )
+  }
+
   if (size === 'login') {
     return (
       <div className={`flex flex-col items-center justify-center min-w-0 ${className}`}>
