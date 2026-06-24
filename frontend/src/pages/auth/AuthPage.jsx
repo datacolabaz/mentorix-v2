@@ -89,13 +89,16 @@ export default function AuthPage() {
   const authGreeting = authTab === 'signup' ? 'Hesab yaradın' : 'Xoş gəldiniz'
 
   return (
-    <div className="login-wrapper relative flex min-h-[100svh] w-full min-w-0 max-w-full items-center justify-center overflow-x-hidden px-4 py-8">
-      <Link
-        to="/"
-        className="absolute top-4 left-4 sm:top-6 sm:left-6 z-10 inline-flex items-center gap-1 text-xs sm:text-sm font-medium text-gray-400 hover:text-white transition-colors"
-      >
-        ← Ana səhifəyə qayıt
-      </Link>
+    <div className="login-wrapper flex min-h-[100svh] w-full min-w-0 max-w-full flex-col overflow-x-hidden">
+      <header className="shrink-0 w-full max-w-sm mx-auto px-4 pt-4 sm:pt-6 pb-3 sm:pb-4">
+        <Link
+          to="/"
+          className="inline-flex items-center gap-1 text-xs sm:text-sm font-medium text-gray-400 hover:text-white transition-colors"
+        >
+          ← Ana səhifəyə qayıt
+        </Link>
+      </header>
+      <main className="flex flex-1 items-start sm:items-center justify-center px-4 pb-8 sm:pb-10 min-h-0 overflow-y-auto">
       <div id="mx-login" className="w-full max-w-sm scroll-mt-6">
         <div className="mx-login-card rounded-2xl border border-white/20 bg-surface-2 p-5 sm:p-6">
           {!isAdmin ? (
@@ -173,6 +176,7 @@ export default function AuthPage() {
           )}
         </div>
       </div>
+      </main>
     </div>
   )
 }
