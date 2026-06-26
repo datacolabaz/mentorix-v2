@@ -38,7 +38,7 @@ const FALLBACK_META_BY_SLUG = {
     cta: 'Professional seç',
   },
   premium: {
-    subtitle: 'Təlim mərkəzləri üçün',
+    subtitle: 'Aktiv müəllimlər üçün',
     popularLabel: null,
     cta: 'Premium seç',
   },
