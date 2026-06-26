@@ -28,17 +28,17 @@ const FALLBACK_META_BY_SLUG = {
     cta: '14 günlük sınağa başla',
   },
   pro: {
-    subtitle: 'Müəllimlər və təhsil xidməti təminatçıları üçün',
+    subtitle: 'Fərdi müəllimlər üçün',
     popularLabel: '⭐ Ən populyar',
     cta: 'Standart seç',
   },
   growth: {
-    subtitle: 'Müəllimlər və təhsil xidməti təminatçıları üçün',
+    subtitle: 'Böyüyən müəllimlər üçün',
     popularLabel: null,
     cta: 'Professional seç',
   },
   premium: {
-    subtitle: 'Müəllimlər və təhsil xidməti təminatçıları üçün',
+    subtitle: 'Təlim mərkəzləri üçün',
     popularLabel: null,
     cta: 'Premium seç',
   },
