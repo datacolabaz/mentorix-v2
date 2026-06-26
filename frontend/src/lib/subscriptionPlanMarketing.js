@@ -2,6 +2,12 @@
 
 import { planPricingLimitLines } from './subscriptionPlanCopy'
 
+const BASIC_TRIAL_LANDING_LINES = [
+  'Bütün funksiyaları 14 gün tam sına',
+  'Kredit kartı tələb olunmur',
+  'İstənilən vaxt ləğv et',
+]
+
 const FALLBACK_MARKETING_BY_SLUG = {
   basic: ['Ödəniş izləmə', 'Valideyn bildirişləri', 'Xəritədə görünmə'],
   pro: ['Ödəniş izləmə', 'Valideyn bildirişləri', 'Xəritədə görünmə'],
@@ -73,6 +79,9 @@ export function getPlanMarketingMeta(p) {
 
 /** Landing qiymət kartı üçün tam siyahı (limitlər + admin imkanları). */
 export function landingPlanFeatureLines(p) {
+  if (normalizePlanId(p) === 'basic') {
+    return BASIC_TRIAL_LANDING_LINES
+  }
   return [...planPricingLimitLines(p), ...planMarketingFeatures(p)]
 }
 

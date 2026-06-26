@@ -19,6 +19,7 @@ import {
   getPlanMarketingMeta,
   landingPlanFeatureLines,
   landingPlanPriceLabel,
+  normalizePlanId,
 } from '../../lib/subscriptionPlanMarketing'
 import {
   isMarketingSectionVisible,
@@ -544,6 +545,7 @@ export default function Landing() {
               {publicPlans.map((p) => {
                 const meta = getPlanMarketingMeta(p)
                 const bullets = landingPlanFeatureLines(p)
+                const isBasicTrial = normalizePlanId(p) === 'basic'
                 return (
                 <div
                   key={p.id}
@@ -568,7 +570,19 @@ export default function Landing() {
                   </div>
                   <ul className="text-[11px] text-gray-400 space-y-1 flex-1">
                     {bullets.map((line) => (
-                      <li key={`${p.id}-${line}`}>• {line}</li>
+                      <li
+                        key={`${p.id}-${line}`}
+                        className={isBasicTrial ? 'flex items-start gap-1.5' : undefined}
+                      >
+                        {isBasicTrial ? (
+                          <>
+                            <span className="text-primary shrink-0 font-semibold leading-none mt-px">✓</span>
+                            <span>{line}</span>
+                          </>
+                        ) : (
+                          <>• {line}</>
+                        )}
+                      </li>
                     ))}
                   </ul>
                   <button
