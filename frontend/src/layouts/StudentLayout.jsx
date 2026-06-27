@@ -133,7 +133,7 @@ function StudentLayoutInner() {
               ☰
             </button>
             <div className="flex justify-center min-w-0 overflow-hidden justify-self-center px-1">
-              <Brand size="md" imgClassName="h-9 max-h-10 w-auto max-w-[min(160px,42vw)]" />
+              <Brand size="md" tone={theme === 'dark' ? 'dark' : 'light'} />
             </div>
             <div className="w-11 shrink-0 justify-self-end" aria-hidden />
           </header>

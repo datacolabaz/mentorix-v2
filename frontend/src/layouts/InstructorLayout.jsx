@@ -307,7 +307,7 @@ export default function InstructorLayout() {
           ☰
         </button>
         <div className="flex justify-center min-w-0 overflow-hidden justify-self-center px-1">
-          <Brand size="md" imgClassName="h-9 max-h-10 w-auto max-w-[min(160px,42vw)] sm:h-[56px] sm:max-h-[62px] sm:max-w-full" />
+          <Brand size="md" tone={theme === 'dark' ? 'dark' : 'light'} />
         </div>
         <div className="w-11 shrink-0 justify-self-end" aria-hidden />
       </header>
@@ -352,7 +352,6 @@ export default function InstructorLayout() {
                 size="sidebar"
                 tone={theme === 'dark' ? 'dark' : 'light'}
                 className="py-1"
-                imgClassName="h-[64px] max-h-[64px] sm:h-[68px] sm:max-h-[68px]"
               />
             </div>
             <div
@@ -399,7 +398,6 @@ export default function InstructorLayout() {
                 size="sidebar"
                 tone={theme === 'dark' ? 'dark' : 'light'}
                 className="py-1"
-                imgClassName="h-[64px] max-h-[64px] sm:h-[68px] sm:max-h-[68px]"
               />
             </div>
             <button

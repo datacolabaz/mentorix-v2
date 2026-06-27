@@ -69,7 +69,7 @@ export default function AdminLayout() {
           ☰
         </button>
         <div className="flex justify-center min-w-0 overflow-visible justify-self-center">
-          <Brand size="md" />
+          <Brand size="md" tone={theme === 'dark' ? 'dark' : 'light'} />
         </div>
         <div className="w-11 shrink-0 justify-self-end" aria-hidden />
       </header>

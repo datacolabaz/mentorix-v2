@@ -49,7 +49,7 @@ export default function ParentLayout() {
           ☰
         </button>
         <div className="flex-1 flex justify-center min-w-0 overflow-visible">
-          <Brand size="md" />
+          <Brand size="md" tone={theme === 'dark' ? 'dark' : 'light'} />
         </div>
         <div className="w-11 shrink-0" />
       </header>
