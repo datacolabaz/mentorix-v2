@@ -13,6 +13,7 @@ export default function TeacherMapListCard({
   highlighted,
   isNearest,
   distanceOrigin,
+  comfortable = false,
   cardRef,
   onFocus,
   onInquiry,
@@ -31,7 +32,8 @@ export default function TeacherMapListCard({
     <div
       ref={cardRef}
       className={[
-        'w-full rounded-xl border p-3 flex gap-2 md:gap-3 items-start transition-all duration-500',
+        'w-full rounded-xl border flex gap-2 md:gap-3 items-start transition-all duration-500',
+        comfortable ? 'p-4' : 'p-3',
         highlighted
           ? 'border-emerald-400/70 bg-emerald-500/10 ring-2 ring-emerald-400/50 shadow-[0_0_18px_rgba(52,211,153,0.35)]'
           : selected
@@ -69,7 +71,9 @@ export default function TeacherMapListCard({
           </div>
 
           <div className="flex items-baseline justify-between gap-2">
-            <span className="font-semibold text-white text-sm truncate">{p.full_name}</span>
+            <span className={`font-semibold text-white truncate ${comfortable ? 'text-base' : 'text-sm'}`}>
+              {p.full_name}
+            </span>
             <span className="text-xs font-bold text-primary shrink-0 text-right tabular-nums">
               📍 {formatDistanceKm(p.distanceKm ?? p.distance_km)}
               <span className="block text-[10px] font-normal text-gray-500">
@@ -78,7 +82,9 @@ export default function TeacherMapListCard({
             </span>
           </div>
 
-          <div className="text-xs text-gray-400 mt-0.5 truncate">{subjectLine || 'Fənn göstərilməyib'}</div>
+          <div className={`text-gray-400 mt-0.5 truncate ${comfortable ? 'text-sm' : 'text-xs'}`}>
+            {subjectLine || 'Fənn göstərilməyib'}
+          </div>
 
           {rating ? (
             <div className="mt-1 flex items-center gap-1">
