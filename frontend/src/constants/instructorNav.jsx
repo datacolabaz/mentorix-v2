@@ -4,6 +4,7 @@ import NavIcon from '../components/common/NavIcon'
 export const INSTRUCTOR_NAV_ITEM_DEFS = {
   dashboard: { to: '/instructor', label: 'Dashboard', icon: 'dashboard', end: true },
   teaching_groups: { to: '/instructor/teaching-groups', label: 'Sahələr və qruplar', icon: 'courses' },
+  live_history: { to: '/instructor/live/history', label: 'Canlı dərslər', icon: 'live' },
   students: { to: '/instructor/students', label: 'Tələbələrim', icon: 'students' },
   join_requests: {
     to: '/instructor/join-requests',
@@ -84,6 +85,7 @@ export function defaultInstructorNavSections() {
       itemKeys: [
         'dashboard',
         'teaching_groups',
+        'live_history',
         'students',
         'join_requests',
         'inquiries',

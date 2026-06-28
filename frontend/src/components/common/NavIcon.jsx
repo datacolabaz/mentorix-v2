@@ -139,6 +139,13 @@ export default function NavIcon({ name, className = 'w-5 h-5' }) {
           <path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4v8Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
         </IconBase>
       )
+    case 'live':
+      return (
+        <IconBase className={className}>
+          <circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="2" />
+          <circle cx="12" cy="12" r="3" fill="currentColor" />
+        </IconBase>
+      )
     default:
       return <span className={className} aria-hidden />
   }
