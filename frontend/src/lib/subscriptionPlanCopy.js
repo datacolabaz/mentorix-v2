@@ -64,6 +64,21 @@ function smsEffectiveLineForCurrentUser({ billing, planId, baseSms }) {
 
 const CONTENT_LIMIT_RE = /\b(imtahan|tapşırıq|sənəd)\b/i
 
+function liveClassLineFromLimits(lim, planId = '') {
+  const id = String(planId).toLowerCase()
+  const fallback =
+    id === 'premium' || id === 'business'
+      ? null
+      : id === 'growth'
+        ? 50
+        : id === 'pro'
+          ? 20
+          : 5
+  const raw = lim?.live_participants ?? fallback
+  if (raw == null) return 'Canlı dərs — Limitsiz iştirakçı · Record: ✓ (local)'
+  return `Canlı dərs — ${fmtAzNum(raw)} iştirakçı · Record: ✓ (local)`
+}
+
 function monthlyContentLimitLines(lim, planId = '') {
   if (!lim) return []
   const isTrial = String(planId).toLowerCase() === 'basic'
@@ -101,6 +116,7 @@ export function planPricingLimitLines(p) {
   else lines.push(`${fmtAzNum(lim.sms_monthly)} SMS / ay`)
 
   lines.push(...monthlyContentLimitLines(lim, id))
+  lines.push(liveClassLineFromLimits(lim, id))
   return lines
 }
 
@@ -148,6 +164,7 @@ export function planLimitFeatureLines(p, opts = {}) {
   else lines.push(`${fmtAzNum(lim.sms_monthly)} SMS / ay`)
 
   lines.push(...monthlyContentLimitLines(lim, id))
+  lines.push(liveClassLineFromLimits(lim, id))
   return lines
 }
 

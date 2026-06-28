@@ -9,15 +9,16 @@ const BASIC_TRIAL_LANDING_LINES = [
 ]
 
 const FALLBACK_MARKETING_BY_SLUG = {
-  basic: ['Ödəniş izləmə', 'Valideyn bildirişləri', 'Xəritədə görünmə'],
-  pro: ['Ödəniş izləmə', 'Valideyn bildirişləri', 'Xəritədə görünmə'],
-  growth: ['Ödəniş izləmə', 'Valideyn bildirişləri', 'Xəritədə görünmə', 'Ətraflı hesabatlar'],
+  basic: ['Ödəniş izləmə', 'Valideyn bildirişləri', 'Xəritədə görünmə', 'Mentorix Live (5 iştirakçı)'],
+  pro: ['Ödəniş izləmə', 'Valideyn bildirişləri', 'Xəritədə görünmə', 'Mentorix Live (20 iştirakçı)'],
+  growth: ['Ödəniş izləmə', 'Valideyn bildirişləri', 'Xəritədə görünmə', 'Ətraflı hesabatlar', 'Mentorix Live (50 iştirakçı)'],
   premium: [
     'Ödəniş izləmə',
     'Valideyn bildirişləri',
     'Xəritədə görünmə',
     'Ətraflı hesabatlar',
     'Prioritet texniki dəstək',
+    'Mentorix Live (limitsiz)',
   ],
 }
 

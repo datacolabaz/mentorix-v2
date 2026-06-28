@@ -222,6 +222,29 @@ export default function InstructorTeachingGroups() {
     }
   }
 
+  const startLiveClass = async (group, subjectName) => {
+    if (blocked) {
+      toast(blockMessage, 'error')
+      return
+    }
+    if (!group?.id) return
+    setBusy((b) => ({ ...b, [`live-${group.id}`]: true }))
+    try {
+      const res = await api.post('/live/create', {
+        groupId: group.id,
+        title: `${subjectName ? `${subjectName} · ` : ''}${group.name}`,
+      })
+      const code = res?.room?.room_code
+      if (!code) throw new Error('Otaq yaradılmadı')
+      toast('Canlı dərs başladı — tələbələrə SMS göndərilir', 'success')
+      navigate(`/live/${encodeURIComponent(code)}`)
+    } catch (e) {
+      toast(e?.message || 'Canlı dərs başlatmaq alınmadı', 'error')
+    } finally {
+      setBusy((b) => ({ ...b, [`live-${group.id}`]: false }))
+    }
+  }
+
   const cardTitleCls = [
     'text-sm font-semibold uppercase tracking-wider',
     theme === 'dark' ? 'text-indigo-200/90' : 'text-token-textMain',
@@ -426,6 +449,18 @@ export default function InstructorTeachingGroups() {
                                   }
                                 >
                                   Çat
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={Boolean(busy[`live-${g.id}`])}
+                                  className={[
+                                    groupActionBtnCls,
+                                    'col-span-2 sm:col-span-1 font-semibold text-red-400',
+                                    busy[`live-${g.id}`] ? 'opacity-60' : '',
+                                  ].join(' ')}
+                                  onClick={() => void startLiveClass(g, s.name)}
+                                >
+                                  {busy[`live-${g.id}`] ? 'Başlanır…' : '🔴 Canlı Dərs'}
                                 </button>
                                 <button
                                   type="button"

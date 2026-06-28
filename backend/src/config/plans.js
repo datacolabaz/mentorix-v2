@@ -9,6 +9,7 @@ const PLANS = {
     sms_monthly: 5,
     exams_monthly: 2,
     homeworks_monthly: 5,
+    live_participants: 5,
   },
   pro: {
     price_azn: 5,
@@ -19,6 +20,7 @@ const PLANS = {
     sms_monthly: 20,
     exams_monthly: 20,
     homeworks_monthly: 40,
+    live_participants: 20,
   },
   growth: {
     price_azn: 10,
@@ -29,6 +31,7 @@ const PLANS = {
     sms_monthly: 50,
     exams_monthly: 50,
     homeworks_monthly: 120,
+    live_participants: 50,
   },
   premium: {
     price_azn: 19,
@@ -39,6 +42,7 @@ const PLANS = {
     sms_monthly: 200,
     exams_monthly: null,
     homeworks_monthly: null,
+    live_participants: null,
   },
 };
 

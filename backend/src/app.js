@@ -76,6 +76,7 @@ app.use('/api/chat', require('./routes/chat'));
 app.use('/api/materials', require('./routes/materials'));
 app.use('/api/programs', require('./routes/programs'));
 app.use('/api/applications', require('./routes/applications'));
+app.use('/api/live', require('./routes/live'));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 app.get('/api/meta', (req, res) =>

@@ -17,6 +17,8 @@ import PublicInstructorProfile from './pages/public/PublicInstructorProfile'
 import LibraryInvite from './pages/public/LibraryInvite'
 import MaterialInvite from './pages/public/MaterialInvite'
 import MaterialPublicPreview from './pages/public/MaterialPublicPreview'
+import MentorixLive from './pages/live/MentorixLive'
+import InstructorLiveHistory from './pages/instructor/LiveHistory'
 import AdminLayout from './layouts/AdminLayout'
 import InstructorLayout from './layouts/InstructorLayout'
 import StudentLayout from './layouts/StudentLayout'
@@ -173,6 +175,14 @@ export default function App() {
       <Route path="/task/:taskId" element={<StudentTaskInvite />} />
       <Route path="/library/material/:materialId" element={<MaterialInvite />} />
       <Route path="/m/:shareToken" element={<MaterialPublicPreview />} />
+      <Route
+        path="/live/:roomCode"
+        element={
+          <ProtectedRoute roles={['instructor', 'student']}>
+            <MentorixLive />
+          </ProtectedRoute>
+        }
+      />
       <Route path="/library/:groupId" element={<LibraryInvite />} />
 
       <Route path="/admin" element={<ProtectedRoute roles={['admin']}><AdminLayout /></ProtectedRoute>}>
@@ -210,6 +220,7 @@ export default function App() {
         <Route path="analytics" element={<InstructorAnalytics />} />
         <Route path="tasks" element={<InstructorTasks />} />
         <Route path="materials" element={<InstructorMaterialsLibrary />} />
+        <Route path="live/history" element={<InstructorLiveHistory />} />
         <Route path="university-programs" element={<InstructorUniversityPrograms />} />
         <Route path="materials/upload" element={<Navigate to="/instructor/materials" replace />} />
         <Route path="tasks/analytics" element={<AssignmentAnalytics />} />
