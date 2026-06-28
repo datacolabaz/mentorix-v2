@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import api, { AUTH_REQUEST_TIMEOUT_MS } from '../../lib/api'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
+import { useToast } from '../../components/common/Toast'
 import { fmtAzBakuField } from '../../lib/azDatetime'
 
 function fmtDuration(minutes) {
@@ -34,9 +35,11 @@ async function downloadRecording(url, filename) {
 }
 
 export default function InstructorLiveHistory() {
+  const toast = useToast()
   const [loading, setLoading] = useState(true)
   const [sessions, setSessions] = useState([])
   const [downloadingId, setDownloadingId] = useState(null)
+  const [deletingId, setDeletingId] = useState(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -60,9 +63,39 @@ export default function InstructorLiveHistory() {
     try {
       await downloadRecording(session.recording_url, `mentorix-${session.room_code || 'ders'}.webm`)
     } catch {
-      /* ignore */
+      toast('Yazı yüklənmədi', 'error')
     } finally {
       setDownloadingId(null)
+    }
+  }
+
+  const handleShare = async (session) => {
+    if (!session?.share_url) {
+      toast('Paylaşım linki yoxdur — əvvəlcə iştirakçı yazı yükləməlidir', 'info')
+      return
+    }
+    const url = `${window.location.origin}${session.share_url}`
+    try {
+      await navigator.clipboard.writeText(url)
+      toast('Paylaşım linki kopyalandı')
+    } catch {
+      toast(url, 'info')
+    }
+  }
+
+  const handleDelete = async (session) => {
+    if (!session?.room_code) return
+    const ok = window.confirm(`«${session.title}» dərsini silmək istəyirsiniz? Yazı da silinəcək.`)
+    if (!ok) return
+    setDeletingId(session.id)
+    try {
+      await api.delete(`/live/history/${encodeURIComponent(session.room_code)}`)
+      setSessions((prev) => prev.filter((s) => s.id !== session.id))
+      toast('Dərs silindi')
+    } catch (e) {
+      toast(e?.message || 'Silinmədi', 'error')
+    } finally {
+      setDeletingId(null)
     }
   }
 
@@ -90,32 +123,52 @@ export default function InstructorLiveHistory() {
           {sessions.map((s) => (
             <Card
               key={s.id}
-              className="p-4 border border-[color:var(--border-subtle)] flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+              className="p-4 border border-[color:var(--border-subtle)] flex flex-col gap-3"
             >
-              <div className="min-w-0">
-                <h2 className="font-semibold text-sm text-token-textMain truncate">{s.title}</h2>
-                <p className="text-[11px] text-token-textMuted mt-1">
-                  {s.group_name || 'Ümumi'}
-                  {s.started_at ? ` · ${fmtAzBakuField(s, 'started_at')}` : ''}
-                </p>
+              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <h2 className="font-semibold text-sm text-token-textMain truncate">{s.title}</h2>
+                  <p className="text-[11px] text-token-textMuted mt-1">
+                    {s.group_name || 'Ümumi'}
+                    {s.started_at ? ` · ${fmtAzBakuField(s, 'started_at')}` : ''}
+                  </p>
+                  {s.recorded_by_name ? (
+                    <p className="text-[10px] text-primary/80 mt-1">Yazı: {s.recorded_by_name}</p>
+                  ) : null}
+                </div>
+                <div className="flex flex-wrap items-center gap-2 text-xs text-token-textMuted shrink-0">
+                  <span>{fmtDuration(s.duration_minutes)}</span>
+                  <span>{s.participant_count || 0} iştirakçı</span>
+                  <span className="font-mono text-primary/80">{s.room_code}</span>
+                </div>
               </div>
-              <div className="flex flex-wrap items-center gap-3 text-xs text-token-textMuted shrink-0">
-                <span>{fmtDuration(s.duration_minutes)}</span>
-                <span>{s.participant_count || 0} iştirakçı</span>
-                <span className="font-mono text-primary/80">{s.room_code}</span>
+              <div className="flex flex-wrap items-center gap-2">
                 {s.has_recording ? (
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    loading={downloadingId === s.id}
-                    onClick={() => void handleDownload(s)}
-                  >
-                    ⬇ Yazı
-                    {s.recording_duration_sec ? ` (${fmtRecordingDuration(s.recording_duration_sec)})` : ''}
-                  </Button>
+                  <>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      loading={downloadingId === s.id}
+                      onClick={() => void handleDownload(s)}
+                    >
+                      ⬇ Yazı
+                      {s.recording_duration_sec ? ` (${fmtRecordingDuration(s.recording_duration_sec)})` : ''}
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => void handleShare(s)}>
+                      🔗 Paylaş
+                    </Button>
+                  </>
                 ) : (
-                  <span className="text-[10px] text-token-textMuted/80">Yazı yoxdur</span>
+                  <span className="text-[10px] text-token-textMuted/80">Yazı yoxdur (iştirakçı Record etməyib)</span>
                 )}
+                <Button
+                  size="sm"
+                  variant="danger"
+                  loading={deletingId === s.id}
+                  onClick={() => void handleDelete(s)}
+                >
+                  Sil
+                </Button>
               </div>
             </Card>
           ))}

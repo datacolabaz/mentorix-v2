@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const db = require('../utils/db');
@@ -26,25 +27,54 @@ function getLiveRecordingFilePath(filename) {
   return path.join(getLiveRecordingsUploadDir(), path.basename(filename));
 }
 
-async function upsertLiveRecording({ roomId, instructorId, file, durationSec }) {
+function makeShareToken() {
+  return crypto.randomBytes(24).toString('base64url');
+}
+
+async function upsertLiveRecording({ roomId, instructorId, uploadedByUserId, file, durationSec }) {
   const filename = path.basename(file.filename);
   const byteSize = Number(file.size) || 0;
   const contentType = file.mimetype || 'video/webm';
   const duration = Number(durationSec) > 0 ? Math.round(Number(durationSec)) : null;
+  const shareToken = makeShareToken();
 
   const { rows } = await db.query(
-    `INSERT INTO live_recordings (room_id, instructor_id, filename, content_type, byte_size, duration_sec)
-     VALUES ($1, $2, $3, $4, $5, $6)
+    `INSERT INTO live_recordings (room_id, instructor_id, uploaded_by_user_id, filename, content_type, byte_size, duration_sec, share_token)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
      ON CONFLICT (room_id) DO UPDATE SET
+       uploaded_by_user_id = EXCLUDED.uploaded_by_user_id,
        filename = EXCLUDED.filename,
        content_type = EXCLUDED.content_type,
        byte_size = EXCLUDED.byte_size,
        duration_sec = EXCLUDED.duration_sec,
+       share_token = COALESCE(live_recordings.share_token, EXCLUDED.share_token),
        created_at = NOW()
      RETURNING *`,
-    [roomId, instructorId, filename, contentType, byteSize, duration],
+    [roomId, instructorId, uploadedByUserId || null, filename, contentType, byteSize, duration, shareToken],
   );
   return rows[0];
+}
+
+async function getLiveRecordingByShareToken(shareToken) {
+  const { rows } = await db.query(
+    `SELECT lr.*, rm.title AS room_title, rm.room_code
+     FROM live_recordings lr
+     JOIN live_rooms rm ON rm.id = lr.room_id
+     WHERE lr.share_token = $1
+     LIMIT 1`,
+    [shareToken],
+  );
+  return rows[0] || null;
+}
+
+async function deleteLiveRecordingFile(recording) {
+  if (!recording?.filename) return;
+  const filePath = getLiveRecordingFilePath(recording.filename);
+  try {
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+  } catch {
+    /* ignore */
+  }
 }
 
 async function getLiveRecordingForRoom(roomId) {
@@ -91,6 +121,8 @@ module.exports = {
   isSafeLiveRecordingFilename,
   upsertLiveRecording,
   getLiveRecordingForRoom,
+  getLiveRecordingByShareToken,
   userCanAccessLiveRecording,
   sendLiveRecordingToResponse,
+  deleteLiveRecordingFile,
 };

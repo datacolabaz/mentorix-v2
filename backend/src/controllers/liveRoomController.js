@@ -8,6 +8,7 @@ const {
   joinLiveSession,
   leaveLiveSession,
   endLiveRoom,
+  deleteLiveRoomForInstructor,
   listInstructorLiveHistory,
   jitsiRoomName,
   getInstructorLiveParticipantLimit,
@@ -17,6 +18,7 @@ const {
   upsertLiveRecording,
   userCanAccessLiveRecording,
   sendLiveRecordingToResponse,
+  getLiveRecordingByShareToken,
 } = require('../services/liveRecordingStorage');
 
 const liveRecordingsDir = ensureLiveRecordingsUploadDir();
@@ -181,6 +183,8 @@ const getHistory = async (req, res) => {
           ? `/live/recording-file/${encodeURIComponent(r.recording_filename)}`
           : null,
         recording_duration_sec: r.recording_duration_sec || null,
+        recorded_by_name: r.recorded_by_name || null,
+        share_url: r.recording_share_token ? `/lr/${r.recording_share_token}` : null,
       })),
     });
   } catch (e) {
@@ -191,19 +195,34 @@ const getHistory = async (req, res) => {
 const postRecording = async (req, res) => {
   try {
     const room = await getLiveRoomForUser(req.params.roomCode, req.user);
-    const isInstructor =
+    const isHostInstructor =
       req.user.role === 'instructor' && String(room.instructor_id) === String(req.user.id);
-    if (!isInstructor) {
-      return res.status(403).json({ success: false, message: 'Yalnız müəllim yazı yükləyə bilər' });
+    if (isHostInstructor) {
+      return res.status(403).json({
+        success: false,
+        message: 'Host yazı yükləyə bilməz — yazı iştirakçı tərəfindən edilir',
+      });
+    }
+    if (req.user.role !== 'student') {
+      return res.status(403).json({ success: false, message: 'Yalnız iştirakçı yazı yükləyə bilər' });
     }
     if (!req.file) {
       return res.status(400).json({ success: false, message: 'Yazı faylı tələb olunur' });
     }
 
+    const { rows: joined } = await db.query(
+      `SELECT 1 FROM live_sessions WHERE room_id = $1 AND user_id = $2 LIMIT 1`,
+      [room.id, req.user.id],
+    );
+    if (!joined[0]) {
+      return res.status(403).json({ success: false, message: 'Bu dərsə qoşulmamısınız' });
+    }
+
     const durationSec = Number(req.body?.duration_sec || req.body?.durationSec || 0) || null;
     const row = await upsertLiveRecording({
       roomId: room.id,
-      instructorId: req.user.id,
+      instructorId: room.instructor_id,
+      uploadedByUserId: req.user.id,
       file: req.file,
       durationSec,
     });
@@ -212,12 +231,54 @@ const postRecording = async (req, res) => {
       success: true,
       recording: {
         url: `/live/recording-file/${encodeURIComponent(row.filename)}`,
+        share_url: row.share_token ? `/lr/${row.share_token}` : null,
         duration_sec: row.duration_sec,
         byte_size: row.byte_size,
       },
     });
   } catch (e) {
     res.status(e.status || 500).json({ success: false, message: e.message || 'Xəta' });
+  }
+};
+
+const deleteRoom = async (req, res) => {
+  try {
+    const result = await deleteLiveRoomForInstructor(req.user.id, req.params.roomCode);
+    res.json({ success: true, room_code: result.room_code });
+  } catch (e) {
+    res.status(e.status || 500).json({ success: false, message: e.message || 'Xəta' });
+  }
+};
+
+const getPublicRecording = async (req, res) => {
+  try {
+    const recording = await getLiveRecordingByShareToken(String(req.params.shareToken || '').trim());
+    if (!recording?.filename) {
+      return res.status(404).json({ success: false, message: 'Yazı tapılmadı' });
+    }
+    return sendLiveRecordingToResponse(res, recording.filename);
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message || 'Xəta' });
+  }
+};
+
+const getPublicRecordingInfo = async (req, res) => {
+  try {
+    const recording = await getLiveRecordingByShareToken(String(req.params.shareToken || '').trim());
+    if (!recording) {
+      return res.status(404).json({ success: false, message: 'Yazı tapılmadı' });
+    }
+    res.json({
+      success: true,
+      recording: {
+        title: recording.room_title,
+        room_code: recording.room_code,
+        duration_sec: recording.duration_sec,
+        download_url: `/api/public/live-recording/${encodeURIComponent(recording.share_token)}`,
+      },
+    });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message || 'Xəta' });
   }
 };
 
@@ -249,5 +310,8 @@ module.exports = {
   getHistory,
   postRecording,
   getRecordingFile,
+  deleteRoom,
+  getPublicRecording,
+  getPublicRecordingInfo,
   uploadLiveRecording,
 };

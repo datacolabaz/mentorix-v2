@@ -266,6 +266,20 @@ async function endLiveRoom(instructorId, roomCode) {
   return rows[0];
 }
 
+async function deleteLiveRoomForInstructor(instructorId, roomCode) {
+  const room = await getLiveRoomRowByCode(roomCode);
+  if (!room || String(room.instructor_id) !== String(instructorId)) {
+    const err = new Error('Otaq tapılmadı');
+    err.status = 404;
+    throw err;
+  }
+  const { getLiveRecordingForRoom, deleteLiveRecordingFile } = require('./liveRecordingStorage');
+  const recording = await getLiveRecordingForRoom(room.id);
+  if (recording) await deleteLiveRecordingFile(recording);
+  await db.query(`DELETE FROM live_rooms WHERE id = $1`, [room.id]);
+  return { room_code: room.room_code };
+}
+
 async function listInstructorLiveHistory(instructorId, { limit = 50 } = {}) {
   const cap = Math.min(Math.max(Number(limit) || 50, 1), 100);
   const { rows } = await db.query(
@@ -273,11 +287,14 @@ async function listInstructorLiveHistory(instructorId, { limit = 50 } = {}) {
             ig.name AS group_name,
             lrec.filename AS recording_filename,
             lrec.duration_sec AS recording_duration_sec,
+            lrec.share_token AS recording_share_token,
+            uploader.full_name AS recorded_by_name,
             (SELECT COUNT(DISTINCT ls.user_id)::int FROM live_sessions ls WHERE ls.room_id = lr.id) AS total_participants,
             (SELECT COALESCE(SUM(ls.duration_minutes), 0)::int FROM live_sessions ls WHERE ls.room_id = lr.id AND ls.duration_minutes IS NOT NULL) AS total_minutes
      FROM live_rooms lr
      LEFT JOIN instructor_groups ig ON ig.id = lr.group_id
      LEFT JOIN live_recordings lrec ON lrec.room_id = lr.id
+     LEFT JOIN users uploader ON uploader.id = lrec.uploaded_by_user_id
      WHERE lr.instructor_id = $1
      ORDER BY COALESCE(lr.started_at, lr.created_at) DESC
      LIMIT $2`,
@@ -293,6 +310,7 @@ module.exports = {
   joinLiveSession,
   leaveLiveSession,
   endLiveRoom,
+  deleteLiveRoomForInstructor,
   listInstructorLiveHistory,
   jitsiRoomName,
   userCanAccessLiveRoom,

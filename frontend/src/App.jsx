@@ -18,6 +18,7 @@ import LibraryInvite from './pages/public/LibraryInvite'
 import MaterialInvite from './pages/public/MaterialInvite'
 import MaterialPublicPreview from './pages/public/MaterialPublicPreview'
 import MentorixLive from './pages/live/MentorixLive'
+import LiveRecordingShare from './pages/live/LiveRecordingShare'
 import InstructorLiveHistory from './pages/instructor/LiveHistory'
 import AdminLayout from './layouts/AdminLayout'
 import InstructorLayout from './layouts/InstructorLayout'
@@ -175,6 +176,7 @@ export default function App() {
       <Route path="/task/:taskId" element={<StudentTaskInvite />} />
       <Route path="/library/material/:materialId" element={<MaterialInvite />} />
       <Route path="/m/:shareToken" element={<MaterialPublicPreview />} />
+      <Route path="/lr/:shareToken" element={<LiveRecordingShare />} />
       <Route
         path="/live/:roomCode"
         element={
@@ -262,19 +264,4 @@ export default function App() {
       </Route>
 
       <Route path="/course" element={<ProtectedRoute roles={['course']}><CourseLayout /></ProtectedRoute>}>
-        <Route index element={<CourseDashboard />} />
-        <Route path="leads" element={<CourseLeads />} />
-        <Route path="teachers" element={<CourseTeachers />} />
-        <Route path="students" element={<CourseStudents />} />
-        <Route path="groups" element={<CourseGroups />} />
-        <Route path="schedule" element={<CourseSchedule />} />
-        <Route path="finance" element={<CourseFinance />} />
-        <Route path="notifications" element={<CourseNotifications />} />
-        <Route path="settings" element={<CourseSettings />} />
-      </Route>
-
-      <Route path="*" element={<Placeholder title="404 — Tapılmadı" />} />
-    </Routes>
-    </>
-  )
-}
+  

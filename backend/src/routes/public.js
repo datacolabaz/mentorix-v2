@@ -19,6 +19,7 @@ const { getPublicTaskInvite, postPublicTaskGuestJoin } = require('../controllers
 const { getPublicLibraryInvite, postPublicLibraryGuestJoin } = require('../controllers/publicLibraryInviteController');
 const { getPublicMaterialInvite, postPublicMaterialGuestJoin } = require('../controllers/publicMaterialInviteController');
 const { getPublicMaterialPreview, servePublicMaterialPreviewFile } = require('../controllers/publicMaterialPreviewController');
+const { getPublicRecording, getPublicRecordingInfo } = require('../controllers/liveRoomController');
 const { postAccessEvent } = require('../controllers/accessAnalyticsController');
 const { postMarketplaceAiSearch } = require('../controllers/marketplaceAiSearchController');
 const { getPublicContact } = require('../controllers/platformContactController');
@@ -40,6 +41,8 @@ router.get('/material-invite/:materialId', getPublicMaterialInvite);
 router.post('/material-invite/:materialId/join', postPublicMaterialGuestJoin);
 router.get('/material-preview/:token', getPublicMaterialPreview);
 router.get('/material-preview/:token/file', servePublicMaterialPreviewFile);
+router.get('/live-recording/:shareToken/info', getPublicRecordingInfo);
+router.get('/live-recording/:shareToken', getPublicRecording);
 
 router.post('/analytics/event', postAccessEvent);
 router.get('/landing-stats', getLandingStats);
