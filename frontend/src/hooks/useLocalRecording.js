@@ -134,4 +134,126 @@ export function useLocalRecording() {
     clearRecordingUrl()
 
     const confirmed = window.confirm(
-      'Record başlamaq üçün açılan pəncərədə
+      'Record başlamaq üçün açılan pəncərədə "Bu tab" və ya "Bütün ekran" seçin.\n\nJitsi-də ekran paylaşımı aktivdirsə, əvvəlcə onu dayandırın.',
+    )
+    if (!confirmed) return { status: 'cancelled' }
+
+    try {
+      const screenStream = await navigator.mediaDevices.getDisplayMedia({
+        video: { frameRate: 24 },
+        audio: true,
+      })
+
+      if (!screenStream?.getTracks?.().length) {
+        screenStream?.getTracks?.().forEach((t) => t.stop())
+        return { status: 'cancelled' }
+      }
+
+      let micStream = null
+      try {
+        micStream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      } catch {
+        /* mikrofon olmadan da ekran yazısı mümkündür */
+      }
+
+      streamsRef.current = [screenStream, micStream].filter(Boolean)
+
+      const videoTrack = screenStream.getVideoTracks()[0]
+      if (videoTrack) {
+        videoTrack.addEventListener('ended', () => {
+          void stopRecordingRef.current?.()
+        })
+      }
+
+      const streamVariants = buildStreamVariants(screenStream, micStream)
+      let mediaRecorder = null
+      let lastRecorderError = null
+      for (const stream of streamVariants) {
+        try {
+          mediaRecorder = createMediaRecorder(stream)
+          break
+        } catch (err) {
+          lastRecorderError = err
+        }
+      }
+
+      if (!mediaRecorder) {
+        stopStreams()
+        return {
+          status: 'error',
+          message: lastRecorderError?.message || 'Bu brauzer ekran yazısını dəstəkləmir',
+        }
+      }
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data?.size > 0) chunksRef.current.push(e.data)
+      }
+      startMediaRecorder(mediaRecorder)
+      mediaRecorderRef.current = mediaRecorder
+      setIsRecording(true)
+      setDurationSec(0)
+      timerRef.current = window.setInterval(() => setDurationSec((s) => s + 1), 1000)
+      return { status: 'started' }
+    } catch (err) {
+      stopStreams()
+      if (err?.name === 'NotAllowedError' || err?.name === 'AbortError') {
+        return { status: 'cancelled' }
+      }
+      return {
+        status: 'error',
+        message: err?.message || 'Yazılış başlamadı',
+      }
+    }
+  }, [supported, isRecording, clearRecordingUrl, stopStreams])
+
+  const downloadRecording = useCallback(
+    (blob = lastBlob, filename) => {
+      const target = blob || lastBlob
+      const href = recordingUrl || (target ? URL.createObjectURL(target) : null)
+      if (!href) return
+      const a = document.createElement('a')
+      a.href = href
+      a.download = filename || `mentorix-ders-${new Date().toISOString().slice(0, 10)}.webm`
+      a.click()
+      if (!recordingUrl && href) URL.revokeObjectURL(href)
+    },
+    [lastBlob, recordingUrl],
+  )
+
+  useEffect(
+    () => () => {
+      if (timerRef.current) clearInterval(timerRef.current)
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        try {
+          mediaRecorderRef.current.stop()
+        } catch {
+          /* ignore */
+        }
+      }
+      stopStreams()
+      if (recordingUrl) URL.revokeObjectURL(recordingUrl)
+    },
+    [stopStreams, recordingUrl],
+  )
+
+  return {
+    supported,
+    isRecording,
+    durationSec,
+    lastBlob,
+    recordingUrl,
+    startRecording,
+    stopRecording,
+    downloadRecording,
+    clearRecordingUrl,
+  }
+}
+
+export function formatRecordingDuration(totalSec) {
+  const s = Math.max(0, Number(totalSec) || 0)
+  const h = Math.floor(s / 3600)
+  const m = Math.floor((s % 3600) / 60)
+  const sec = s % 60
+  if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`
+  return `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`
+}
