@@ -50,7 +50,7 @@ router.post(
 router.post(
   '/rooms/:roomCode/recording',
   authenticate,
-  authorize('student'),
+  authorize('instructor', 'student'),
   (req, res, next) => {
     uploadLiveRecording.single('recording')(req, res, (err) => {
       if (err) return res.status(400).json({ success: false, message: err.message || 'Fayl qəbul edilmədi' });
@@ -75,7 +75,7 @@ router.post(
 router.post(
   '/:roomCode/recording',
   authenticate,
-  authorize('student'),
+  authorize('instructor', 'student'),
   (req, res, next) => {
     uploadLiveRecording.single('recording')(req, res, (err) => {
       if (err) return res.status(400).json({ success: false, message: err.message || 'Fayl qəbul edilmədi' });

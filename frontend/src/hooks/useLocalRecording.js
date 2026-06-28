@@ -1,5 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
+export const LIVE_MEDIA_RESTORE_EVENT = 'mentorix:restore-live-media'
+
+export function requestLiveMediaRestore() {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event(LIVE_MEDIA_RESTORE_EVENT))
+  }
+}
+
 export function canUseLocalRecording() {
   if (typeof window === 'undefined') return false
   if (typeof MediaRecorder === 'undefined') return false
@@ -15,16 +23,12 @@ const MIME_CANDIDATES = [
   'video/mp4',
 ]
 
-function buildStreamVariants(screenStream, micStream) {
+function buildStreamVariants(screenStream) {
   const screenVideo = screenStream.getVideoTracks()
   const screenAudio = screenStream.getAudioTracks()
-  const micAudio = micStream?.getAudioTracks() || []
 
   const variants = []
   if (screenVideo.length) {
-    if (screenAudio.length || micAudio.length) {
-      variants.push(new MediaStream([...screenVideo, ...screenAudio, ...micAudio]))
-    }
     if (screenAudio.length) {
       variants.push(new MediaStream([...screenVideo, ...screenAudio]))
     }
@@ -105,13 +109,15 @@ export function useLocalRecording() {
           const url = URL.createObjectURL(blob)
           setLastBlob(blob)
           setRecordingUrl(url)
-          setIsRecording(false)
-          resolve(blob)
-          return
-        }
-
         setIsRecording(false)
-        resolve(null)
+        requestLiveMediaRestore()
+        resolve(blob)
+        return
+      }
+
+      setIsRecording(false)
+      requestLiveMediaRestore()
+      resolve(null)
       }
 
       try {
@@ -149,14 +155,7 @@ export function useLocalRecording() {
         return { status: 'cancelled' }
       }
 
-      let micStream = null
-      try {
-        micStream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      } catch {
-        /* mikrofon olmadan da ekran yazısı mümkündür */
-      }
-
-      streamsRef.current = [screenStream, micStream].filter(Boolean)
+      streamsRef.current = [screenStream]
 
       const videoTrack = screenStream.getVideoTracks()[0]
       if (videoTrack) {
@@ -165,7 +164,7 @@ export function useLocalRecording() {
         })
       }
 
-      const streamVariants = buildStreamVariants(screenStream, micStream)
+      const streamVariants = buildStreamVariants(screenStream)
       let mediaRecorder = null
       let lastRecorderError = null
       for (const stream of streamVariants) {

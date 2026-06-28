@@ -7,8 +7,22 @@ import useAuthStore from '../../hooks/useAuth'
 import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
 import { useToast } from '../../components/common/Toast'
-import { formatRecordingDuration, useLocalRecording } from '../../hooks/useLocalRecording'
+import { formatRecordingDuration, useLocalRecording, LIVE_MEDIA_RESTORE_EVENT } from '../../hooks/useLocalRecording'
 
+function LiveMediaRestore() {
+  const room = useRoomContext()
+
+  useEffect(() => {
+    const restore = () => {
+      if (!room) return
+      void room.localParticipant.setCameraEnabled(true)
+      void room.localParticipant.setMicrophoneEnabled(true)
+    }
+    window.addEventListener(LIVE_MEDIA_RESTORE_EVENT, restore)
+    return () => window.removeEventListener(LIVE_MEDIA_RESTORE_EVENT, restore)
+  }, [room])
+
+  return null
 function LiveMediaEnsure({ onMicError }) {
   const room = useRoomContext()
 
@@ -51,8 +65,9 @@ export default function MentorixLive() {
   const [ending, setEnding] = useState(false)
 
   const recording = useLocalRecording()
+  const canRecord = recording.supported
+
   const isInstructor = Boolean(room?.is_instructor)
-  const canRecord = recording.supported && !isInstructor
 
   const code = String(roomCode || '').trim().toUpperCase()
 
@@ -83,14 +98,16 @@ export default function MentorixLive() {
 
   const uploadRecording = useCallback(
     async (blob) => {
-      if (!blob || !code || isInstructor) return null
+      if (!blob || !code) return null
       const form = new FormData()
       form.append('recording', blob, `mentorix-${code}.webm`)
       form.append('duration_sec', String(recording.durationSec || 0))
-      const res = await api.post(`/live/${encodeURIComponent(code)}/recording`, form)
+      const res = await api.post(`/live/${encodeURIComponent(code)}/recording`, form, {
+        timeout: 300000,
+      })
       return res?.recording || null
     },
-    [code, isInstructor, recording.durationSec],
+    [code, recording.durationSec],
   )
 
   const prepareMedia = useCallback(async () => {
@@ -113,17 +130,17 @@ export default function MentorixLive() {
     toast('Mikrofon aktivləşdirilmədi — LiveKit panelində mikrofon düyməsinə basın', 'error')
   }, [toast])
 
-  const finishStudentRecording = useCallback(
+  const finishRecording = useCallback(
     async (blob) => {
       if (!blob) return false
       try {
         await uploadRecording(blob)
-        toast('Yazı platformada saxlanıldı — müəllim dərs tarixçəsində görə bilər')
+        toast('Yazı platformada saxlanıldı')
         setRecordModalOpen(true)
         setAfterEndNavigate(true)
         return true
-      } catch {
-        toast('Yazı serverə yüklənmədi — kompüterə yükləyə bilərsiniz', 'error')
+      } catch (e) {
+        toast(e?.message || 'Yazı serverə yüklənmədi — kompüterə yükləyə bilərsiniz', 'error')
         setRecordModalOpen(true)
         return false
       }
@@ -135,24 +152,33 @@ export default function MentorixLive() {
     if (!code || !isInstructor) return
     setEnding(true)
     try {
+      let blob = null
+      if (canRecord && recording.isRecording) blob = await recording.stopRecording()
+      else if (canRecord && recording.lastBlob) blob = recording.lastBlob
+
+      if (blob) await finishRecording(blob)
+
       disconnectLiveKit()
       await api.post(`/live/${encodeURIComponent(code)}/end`)
       await leaveRoom()
       toast('Canlı dərs bitdi')
-      navigate('/instructor/live/history', { replace: true })
+
+      if (!blob) {
+        navigate('/instructor/live/history', { replace: true })
+      }
     } catch (e) {
       toast(e?.message || 'Bitirmək alınmadı', 'error')
     } finally {
       setEnding(false)
     }
-  }, [code, isInstructor, disconnectLiveKit, leaveRoom, navigate, toast])
+  }, [code, isInstructor, canRecord, recording, finishRecording, disconnectLiveKit, leaveRoom, navigate, toast])
 
   const exitRoom = useCallback(async () => {
     let blob = null
     if (canRecord && recording.isRecording) blob = await recording.stopRecording()
     else if (canRecord && recording.lastBlob) blob = recording.lastBlob
 
-    if (blob) await finishStudentRecording(blob)
+    if (blob) await finishRecording(blob)
 
     disconnectLiveKit()
     await leaveRoom()
@@ -160,7 +186,7 @@ export default function MentorixLive() {
     if (!blob) {
       navigate(user?.role === 'student' ? '/student' : '/instructor', { replace: true })
     }
-  }, [canRecord, recording, finishStudentRecording, disconnectLiveKit, leaveRoom, navigate, user?.role])
+  }, [canRecord, recording, finishRecording, disconnectLiveKit, leaveRoom, navigate, user?.role])
 
   useEffect(() => {
     if (!code) {
@@ -204,7 +230,7 @@ export default function MentorixLive() {
     if (!canRecord) return
     if (recording.isRecording) {
       const blob = await recording.stopRecording()
-      if (blob) await finishStudentRecording(blob)
+      if (blob) await finishRecording(blob)
       return
     }
     const result = await recording.startRecording()
@@ -315,13 +341,9 @@ export default function MentorixLive() {
         </div>
       </header>
 
-      {isInstructor ? (
-        <div className="shrink-0 px-4 py-2 bg-blue-500/10 border-b border-blue-500/20 text-[11px] text-blue-200 text-center">
-          Host olaraq siz yazı yükləmirsiniz — iştirakçılar <strong>Record</strong> ilə yazıb platformaya yükləyə bilər.
-        </div>
-      ) : canRecord && !recording.isRecording ? (
+      {canRecord && !recording.isRecording ? (
         <div className="shrink-0 px-4 py-2 bg-amber-500/10 border-b border-amber-500/20 text-[11px] text-amber-200 text-center">
-          <strong>Record</strong> ilə dərs yazısı sizin tərəfinizdən platformaya yüklənir — müəllim tarixçədə görə bilər.
+          <strong>Record</strong> ilə dərs yazısı platformaya yüklənir — «Canlı dərslər» səhifəsində saxlanılır.
         </div>
       ) : null}
 
@@ -340,6 +362,7 @@ export default function MentorixLive() {
           }}
         >
           <LiveMediaEnsure onMicError={handleMicError} />
+          <LiveMediaRestore />
           <VideoConference />
           <RoomAudioRenderer />
         </LiveKitRoom>
@@ -349,11 +372,7 @@ export default function MentorixLive() {
         <div className="space-y-4 text-center">
           <p className="text-sm text-gray-300">✅ Dərs uğurla yazıldı!</p>
           <p className="text-xs text-gray-500">Müddət: {formatRecordingDuration(recording.durationSec)}</p>
-          <p className="text-xs text-gray-500">
-            {isInstructor
-              ? 'Yazı iştirakçı tərəfindən platformaya yüklənir.'
-              : 'Yazı platformada saxlanıldı — müəllim «Canlı dərslər» səhifəsində görə bilər.'}
-          </p>
+          <p className="text-xs text-gray-500">Yazı platformada saxlanıldı — «Canlı dərslər» səhifəsindən yükləyə və paylaşa bilərsiniz.</p>
           <div className="flex flex-col gap-2">
             {recording.recordingUrl ? (
               <a

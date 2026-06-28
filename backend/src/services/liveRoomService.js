@@ -155,6 +155,31 @@ async function notifyGroupForLiveClass(instructorId, room, group) {
   return { sent };
 }
 
+async function getLiveRoomForRecordingUpload(roomCode, user) {
+  const room = await getLiveRoomRowByCode(roomCode);
+  if (!room) {
+    const err = new Error('Canlı dərs tapılmadı');
+    err.status = 404;
+    throw err;
+  }
+  const ok = await userCanAccessLiveRoom(user, room);
+  if (!ok) {
+    const err = new Error('Bu otağa giriş icazəniz yoxdur');
+    err.status = 403;
+    throw err;
+  }
+  const { rows } = await db.query(
+    `SELECT 1 FROM live_sessions WHERE room_id = $1 AND user_id = $2 LIMIT 1`,
+    [room.id, user.id],
+  );
+  if (!rows[0]) {
+    const err = new Error('Bu dərsə qoşulmamısınız');
+    err.status = 403;
+    throw err;
+  }
+  return room;
+}
+
 async function getLiveRoomForUser(roomCode, user) {
   const room = await getLiveRoomRowByCode(roomCode);
   if (!room) {
@@ -306,6 +331,7 @@ async function listInstructorLiveHistory(instructorId, { limit = 50 } = {}) {
 module.exports = {
   createLiveRoom,
   getLiveRoomForUser,
+  getLiveRoomForRecordingUpload,
   getLiveRoomRowByCode,
   joinLiveSession,
   leaveLiveSession,

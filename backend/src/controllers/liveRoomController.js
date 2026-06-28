@@ -5,6 +5,7 @@ const db = require('../utils/db');
 const {
   createLiveRoom,
   getLiveRoomForUser,
+  getLiveRoomForRecordingUpload,
   joinLiveSession,
   leaveLiveSession,
   endLiveRoom,
@@ -194,28 +195,9 @@ const getHistory = async (req, res) => {
 
 const postRecording = async (req, res) => {
   try {
-    const room = await getLiveRoomForUser(req.params.roomCode, req.user);
-    const isHostInstructor =
-      req.user.role === 'instructor' && String(room.instructor_id) === String(req.user.id);
-    if (isHostInstructor) {
-      return res.status(403).json({
-        success: false,
-        message: 'Host yazı yükləyə bilməz — yazı iştirakçı tərəfindən edilir',
-      });
-    }
-    if (req.user.role !== 'student') {
-      return res.status(403).json({ success: false, message: 'Yalnız iştirakçı yazı yükləyə bilər' });
-    }
+    const room = await getLiveRoomForRecordingUpload(req.params.roomCode, req.user);
     if (!req.file) {
       return res.status(400).json({ success: false, message: 'Yazı faylı tələb olunur' });
-    }
-
-    const { rows: joined } = await db.query(
-      `SELECT 1 FROM live_sessions WHERE room_id = $1 AND user_id = $2 LIMIT 1`,
-      [room.id, req.user.id],
-    );
-    if (!joined[0]) {
-      return res.status(403).json({ success: false, message: 'Bu dərsə qoşulmamısınız' });
     }
 
     const durationSec = Number(req.body?.duration_sec || req.body?.durationSec || 0) || null;
