@@ -92,14 +92,23 @@ const postEnd = async (req, res) => {
 
 const getToken = async (req, res) => {
   try {
-    const apiKey = process.env.LIVEKIT_API_KEY;
-    const apiSecret = process.env.LIVEKIT_API_SECRET;
-    const wsUrl = process.env.LIVEKIT_WS_URL;
+    const apiKey = String(process.env.LIVEKIT_API_KEY || '').trim();
+    const apiSecret = String(process.env.LIVEKIT_API_SECRET || '').trim();
+    const wsUrl = String(
+      process.env.LIVEKIT_WS_URL ||
+        process.env.LIVEKIT_URL ||
+        process.env.NEXT_PUBLIC_LIVEKIT_URL ||
+        '',
+    )
+      .trim()
+      .replace(/^https:\/\//i, 'wss://')
+      .replace(/^http:\/\//i, 'ws://');
 
     if (!apiKey || !apiSecret || !wsUrl) {
       return res.status(503).json({
         success: false,
-        message: 'LiveKit konfiqurasiya olunmayıb',
+        message:
+          'LiveKit konfiqurasiya olunmayıb. Backend service-də LIVEKIT_API_KEY, LIVEKIT_API_SECRET və LIVEKIT_WS_URL (wss://...) əlavə edin.',
       });
     }
 
