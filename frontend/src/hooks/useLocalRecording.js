@@ -134,7 +134,7 @@ export function useLocalRecording() {
     clearRecordingUrl()
 
     const confirmed = window.confirm(
-      'Record başlamaq üçün açılan pəncərədə "Bu tab" və ya "Bütün ekran" seçin.\n\nJitsi-də ekran paylaşımı aktivdirsə, əvvəlcə onu dayandırın.',
+      'Record başlamaq üçün açılan pəncərədə "Bu tab" və ya "Bütün ekran" seçin.\n\nEkran paylaşımı aktivdirsə, əvvəlcə onu dayandırın.',
     )
     if (!confirmed) return { status: 'cancelled' }
 

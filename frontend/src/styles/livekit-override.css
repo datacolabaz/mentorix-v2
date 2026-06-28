@@ -1,0 +1,23 @@
+:root {
+  --lk-bg: #0d0d0d;
+  --lk-bg2: #161616;
+  --lk-border-color: #2a2a2a;
+  --lk-accent: #00e07a;
+  --lk-accent-fg: #000000;
+  --lk-fg: #ffffff;
+  --lk-fg2: #888888;
+  --lk-control-bg: #1a1a1a;
+  --lk-control-hover-bg: #252525;
+  --lk-danger: #8b0000;
+  --lk-danger-fg: #ffffff;
+}
+
+.lk-room-container,
+.lk-video-conference {
+  background: #0d0d0d !important;
+}
+
+.lk-video-conference {
+  flex: 1;
+  min-height: 0;
+}

@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import { LiveKitRoom, RoomAudioRenderer, VideoConference } from '@livekit/components-react'
+import '@livekit/components-styles'
 import api from '../../lib/api'
 import useAuthStore from '../../hooks/useAuth'
 import Button from '../../components/common/Button'
@@ -7,74 +9,19 @@ import Modal from '../../components/common/Modal'
 import { useToast } from '../../components/common/Toast'
 import { formatRecordingDuration, useLocalRecording } from '../../hooks/useLocalRecording'
 
-const JITSI_SCRIPT = 'https://meet.jit.si/external_api.js'
-const JITSI_IFRAME_ALLOW =
-  'camera; microphone; display-capture; fullscreen; autoplay; clipboard-write; speaker-selection'
-
-function loadJitsiApi() {
-  if (typeof window === 'undefined') return Promise.reject(new Error('no window'))
-  if (window.JitsiMeetExternalAPI) return Promise.resolve(window.JitsiMeetExternalAPI)
-  return new Promise((resolve, reject) => {
-    const existing = document.querySelector(`script[src="${JITSI_SCRIPT}"]`)
-    if (existing) {
-      existing.addEventListener('load', () => resolve(window.JitsiMeetExternalAPI))
-      existing.addEventListener('error', reject)
-      return
-    }
-    const script = document.createElement('script')
-    script.src = JITSI_SCRIPT
-    script.async = true
-    script.onload = () => resolve(window.JitsiMeetExternalAPI)
-    script.onerror = reject
-    document.body.appendChild(script)
-  })
-}
-
-function applyJitsiIframePermissions(apiInstance) {
-  const iframe = apiInstance?.getIFrame?.()
-  if (!iframe) return
-  iframe.setAttribute('allow', JITSI_IFRAME_ALLOW)
-  iframe.allow = JITSI_IFRAME_ALLOW
-  iframe.setAttribute('allowfullscreen', 'true')
-}
-
-function watchJitsiIframePermissions(parentNode) {
-  const apply = () => {
-    const iframe = parentNode.querySelector('iframe')
-    if (!iframe) return
-    iframe.setAttribute('allow', JITSI_IFRAME_ALLOW)
-    iframe.allow = JITSI_IFRAME_ALLOW
-    iframe.setAttribute('allowfullscreen', 'true')
-  }
-
-  apply()
-  const observer = new MutationObserver(apply)
-  observer.observe(parentNode, { childList: true, subtree: true })
-  return () => observer.disconnect()
-}
-
-async function warmUpBrowserMediaAccess() {
-  if (!navigator.mediaDevices?.getUserMedia) return
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true })
-    stream.getTracks().forEach((track) => track.stop())
-  } catch {
-    /* Jitsi iframe öz icazəsini ayrıca soruşacaq */
-  }
-}
-
 export default function MentorixLive() {
   const { roomCode } = useParams()
   const navigate = useNavigate()
   const toast = useToast()
   const { user } = useAuthStore()
-  const containerRef = useRef(null)
-  const jitsiRef = useRef(null)
   const joinedRef = useRef(false)
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [room, setRoom] = useState(null)
+  const [token, setToken] = useState(null)
+  const [wsUrl, setWsUrl] = useState(null)
+  const [connectLiveKit, setConnectLiveKit] = useState(true)
   const [recordModalOpen, setRecordModalOpen] = useState(false)
   const [ending, setEnding] = useState(false)
 
@@ -92,14 +39,17 @@ export default function MentorixLive() {
     }
   }, [code])
 
+  const disconnectLiveKit = useCallback(() => {
+    setConnectLiveKit(false)
+  }, [])
+
   const endRoom = useCallback(async () => {
     if (!code || !room?.is_instructor) return
     setEnding(true)
     try {
       if (recording.isRecording) await recording.stopRecording()
+      disconnectLiveKit()
       await api.post(`/live/${encodeURIComponent(code)}/end`)
-      jitsiRef.current?.dispose?.()
-      jitsiRef.current = null
       await leaveRoom()
       toast('Canlı dərs bitdi')
       navigate('/instructor/live/history', { replace: true })
@@ -108,7 +58,13 @@ export default function MentorixLive() {
     } finally {
       setEnding(false)
     }
-  }, [code, room?.is_instructor, recording, leaveRoom, navigate, toast])
+  }, [code, room?.is_instructor, recording, disconnectLiveKit, leaveRoom, navigate, toast])
+
+  const exitRoom = useCallback(async () => {
+    disconnectLiveKit()
+    await leaveRoom()
+    navigate(user?.role === 'student' ? '/student' : '/instructor', { replace: true })
+  }, [disconnectLiveKit, leaveRoom, navigate, user?.role])
 
   useEffect(() => {
     if (!code) {
@@ -124,9 +80,16 @@ export default function MentorixLive() {
       try {
         await api.post(`/live/${encodeURIComponent(code)}/join`)
         joinedRef.current = true
-        const res = await api.get(`/live/${encodeURIComponent(code)}`)
+
+        const [roomRes, tokenRes] = await Promise.all([
+          api.get(`/live/${encodeURIComponent(code)}`),
+          api.get(`/live/${encodeURIComponent(code)}/token`),
+        ])
+
         if (cancelled) return
-        setRoom(res.room)
+        setRoom(roomRes.room)
+        setToken(tokenRes.token)
+        setWsUrl(tokenRes.wsUrl)
       } catch (e) {
         if (!cancelled) setError(e?.message || 'Otağa qoşulmaq alınmadı')
       } finally {
@@ -136,83 +99,10 @@ export default function MentorixLive() {
 
     return () => {
       cancelled = true
-      jitsiRef.current?.dispose?.()
-      jitsiRef.current = null
+      disconnectLiveKit()
       void leaveRoom()
     }
-  }, [code, leaveRoom])
-
-  useEffect(() => {
-    if (!room?.jitsi_room || !containerRef.current || jitsiRef.current) return
-
-    let cancelled = false
-    let stopWatchingIframe = null
-    ;(async () => {
-      try {
-        await warmUpBrowserMediaAccess()
-        const JitsiMeetExternalAPI = await loadJitsiApi()
-        if (cancelled || !containerRef.current) return
-
-        stopWatchingIframe = watchJitsiIframePermissions(containerRef.current)
-
-        const apiInstance = new JitsiMeetExternalAPI('meet.jit.si', {
-          roomName: room.jitsi_room,
-          parentNode: containerRef.current,
-          width: '100%',
-          height: '100%',
-          userInfo: {
-            displayName: user?.full_name || 'İştirakçı',
-            email: user?.email || '',
-          },
-          configOverwrite: {
-            startWithAudioMuted: false,
-            startWithVideoMuted: false,
-            disableDeepLinking: true,
-            prejoinPageEnabled: false,
-            prejoinConfig: { enabled: false },
-            enableWelcomePage: false,
-            requireDisplayName: false,
-            disableThirdPartyRequests: true,
-            disableInitialGUM: false,
-          },
-          interfaceConfigOverwrite: {
-            APP_NAME: 'Mentorix Live',
-            SHOW_JITSI_WATERMARK: false,
-            SHOW_WATERMARK_FOR_GUESTS: false,
-            SHOW_POWERED_BY: false,
-            SHOW_BRAND_WATERMARK: false,
-            BRAND_WATERMARK_LINK: '',
-            DEFAULT_LOGO_URL: '',
-            DEFAULT_WELCOME_PAGE_LOGO_URL: '',
-            HIDE_DEEP_LINKING_LOGO: true,
-            MOBILE_APP_PROMO: false,
-            DEFAULT_BACKGROUND: '#0b0b0b',
-            TOOLBAR_BUTTONS: [
-              'microphone',
-              'camera',
-              'chat',
-              'participants-pane',
-              'tileview',
-              'fullscreen',
-              'hangup',
-            ],
-          },
-        })
-        applyJitsiIframePermissions(apiInstance)
-        apiInstance.addListener('videoConferenceJoined', () => {
-          applyJitsiIframePermissions(apiInstance)
-        })
-        jitsiRef.current = apiInstance
-      } catch {
-        if (!cancelled) toast('Video otağı yüklənmədi', 'error')
-      }
-    })()
-
-    return () => {
-      cancelled = true
-      stopWatchingIframe?.()
-    }
-  }, [room?.jitsi_room, user?.full_name, user?.email, toast])
+  }, [code, leaveRoom, disconnectLiveKit])
 
   const toggleRecording = async () => {
     if (!recording.supported) return
@@ -244,6 +134,14 @@ export default function MentorixLive() {
         <Link to="/" className="text-primary hover:underline text-sm">
           Ana səhifə
         </Link>
+      </div>
+    )
+  }
+
+  if (!token || !wsUrl) {
+    return (
+      <div className="min-h-[100svh] bg-[#0b0b0b] text-white flex items-center justify-center">
+        <p className="text-gray-500">Dərsə qoşulunur…</p>
       </div>
     )
   }
@@ -288,27 +186,29 @@ export default function MentorixLive() {
               Bitir
             </Button>
           ) : (
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={() => {
-                jitsiRef.current?.dispose?.()
-                void leaveRoom()
-                navigate(user?.role === 'student' ? '/student' : '/instructor', { replace: true })
-              }}
-            >
+            <Button size="sm" variant="secondary" onClick={() => void exitRoom()}>
               Çıx
             </Button>
           )}
         </div>
       </header>
 
-      <div className="flex-1 min-h-0 relative">
-        <div
-          ref={containerRef}
-          className="absolute inset-0"
-          style={{ minHeight: '60vh' }}
-        />
+      <div className="flex-1 min-h-0 flex flex-col">
+        <LiveKitRoom
+          token={token}
+          serverUrl={wsUrl}
+          connect={connectLiveKit}
+          video
+          audio
+          data-lk-theme="default"
+          className="flex-1 min-h-0 flex flex-col"
+          onDisconnected={() => {
+            void leaveRoom()
+          }}
+        >
+          <VideoConference />
+          <RoomAudioRenderer />
+        </LiveKitRoom>
       </div>
 
       <Modal

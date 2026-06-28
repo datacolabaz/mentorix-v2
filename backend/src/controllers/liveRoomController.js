@@ -1,3 +1,4 @@
+const { AccessToken } = require('livekit-server-sdk');
 const {
   createLiveRoom,
   getLiveRoomForUser,
@@ -89,6 +90,45 @@ const postEnd = async (req, res) => {
   }
 };
 
+const getToken = async (req, res) => {
+  try {
+    const apiKey = process.env.LIVEKIT_API_KEY;
+    const apiSecret = process.env.LIVEKIT_API_SECRET;
+    const wsUrl = process.env.LIVEKIT_WS_URL;
+
+    if (!apiKey || !apiSecret || !wsUrl) {
+      return res.status(503).json({
+        success: false,
+        message: 'LiveKit konfiqurasiya olunmayıb',
+      });
+    }
+
+    const room = await getLiveRoomForUser(req.params.roomCode, req.user);
+    const isInstructor =
+      req.user.role === 'instructor' && String(room.instructor_id) === String(req.user.id);
+
+    const at = new AccessToken(apiKey, apiSecret, {
+      identity: String(req.user.id),
+      name: req.user.full_name || 'İştirakçı',
+      ttl: '4h',
+    });
+
+    at.addGrant({
+      roomJoin: true,
+      room: room.room_code,
+      canPublish: true,
+      canSubscribe: true,
+      canPublishData: true,
+      roomAdmin: isInstructor,
+    });
+
+    const token = await at.toJwt();
+    res.json({ success: true, token, wsUrl });
+  } catch (e) {
+    res.status(e.status || 500).json({ success: false, message: e.message || 'Xəta' });
+  }
+};
+
 const getHistory = async (req, res) => {
   try {
     const rows = await listInstructorLiveHistory(req.user.id, { limit: req.query.limit });
@@ -114,6 +154,7 @@ const getHistory = async (req, res) => {
 module.exports = {
   postCreateRoom,
   getRoom,
+  getToken,
   postJoin,
   postLeave,
   postEnd,

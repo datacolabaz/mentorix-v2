@@ -4,6 +4,7 @@ const { enforceActiveSubscription } = require('../middleware/entitlements');
 const {
   postCreateRoom,
   getRoom,
+  getToken,
   postJoin,
   postLeave,
   postEnd,
@@ -28,6 +29,7 @@ router.post(
   postCreateRoom,
 );
 
+router.get('/rooms/:roomCode/token', authenticate, authorize('instructor', 'student'), getToken);
 router.get('/rooms/:roomCode', authenticate, authorize('instructor', 'student'), getRoom);
 router.post('/rooms/:roomCode/join', authenticate, authorize('instructor', 'student'), postJoin);
 router.post('/rooms/:roomCode/leave', authenticate, authorize('instructor', 'student'), postLeave);
@@ -39,6 +41,7 @@ router.post(
   postEnd,
 );
 
+router.get('/:roomCode/token', authenticate, authorize('instructor', 'student'), getToken);
 router.get('/:roomCode', authenticate, authorize('instructor', 'student'), getRoom);
 router.post('/:roomCode/join', authenticate, authorize('instructor', 'student'), postJoin);
 router.post('/:roomCode/leave', authenticate, authorize('instructor', 'student'), postLeave);
