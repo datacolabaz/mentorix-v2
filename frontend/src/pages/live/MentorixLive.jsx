@@ -28,6 +28,15 @@ function loadJitsiApi() {
   })
 }
 
+function applyJitsiIframePermissions(apiInstance) {
+  const iframe = apiInstance?.getIFrame?.()
+  if (!iframe) return
+  const allow =
+    'camera; microphone; display-capture; fullscreen; autoplay; clipboard-write; speaker-selection'
+  iframe.setAttribute('allow', allow)
+  iframe.allow = allow
+}
+
 export default function MentorixLive() {
   const { roomCode } = useParams()
   const navigate = useNavigate()
@@ -130,22 +139,34 @@ export default function MentorixLive() {
             startWithVideoMuted: false,
             disableDeepLinking: true,
             prejoinPageEnabled: false,
+            enableWelcomePage: false,
+            disableThirdPartyRequests: true,
           },
           interfaceConfigOverwrite: {
             APP_NAME: 'Mentorix Live',
             SHOW_JITSI_WATERMARK: false,
             SHOW_WATERMARK_FOR_GUESTS: false,
+            SHOW_POWERED_BY: false,
+            SHOW_BRAND_WATERMARK: false,
+            BRAND_WATERMARK_LINK: '',
+            DEFAULT_LOGO_URL: '',
+            DEFAULT_WELCOME_PAGE_LOGO_URL: '',
+            HIDE_DEEP_LINKING_LOGO: true,
             DEFAULT_BACKGROUND: '#0b0b0b',
             TOOLBAR_BUTTONS: [
               'microphone',
               'camera',
-              'desktop',
               'chat',
               'participants-pane',
               'tileview',
+              'fullscreen',
               'hangup',
             ],
           },
+        })
+        applyJitsiIframePermissions(apiInstance)
+        apiInstance.addListener('videoConferenceJoined', () => {
+          applyJitsiIframePermissions(apiInstance)
         })
         jitsiRef.current = apiInstance
       } catch {
@@ -161,15 +182,17 @@ export default function MentorixLive() {
   const toggleRecording = async () => {
     if (!recording.supported) return
     if (recording.isRecording) {
-      await recording.stopRecording()
-      setRecordModalOpen(true)
+      const blob = await recording.stopRecording()
+      if (blob) setRecordModalOpen(true)
       return
     }
     try {
-      const ok = await recording.startRecording()
-      if (ok) toast('Yazılış başladı — ekran paylaşımını seçin')
-    } catch {
-      toast('Yazılış başlamadı', 'error')
+      const result = await recording.startRecording()
+      if (result?.status === 'started') {
+        toast('Yazılış başladı — ekran paylaşımını seçin')
+      }
+    } catch (e) {
+      toast(e?.message || 'Yazılış başlamadı', 'error')
     }
   }
 
@@ -248,7 +271,11 @@ export default function MentorixLive() {
       </header>
 
       <div className="flex-1 min-h-0 relative">
-        <div ref={containerRef} className="absolute inset-0" />
+        <div
+          ref={containerRef}
+          className="absolute inset-0"
+          style={{ minHeight: '60vh' }}
+        />
       </div>
 
       <Modal

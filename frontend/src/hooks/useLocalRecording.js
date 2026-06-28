@@ -7,11 +7,22 @@ export function canUseLocalRecording() {
   return !/iPhone|iPad|iPod|Android|Mobile/i.test(navigator.userAgent)
 }
 
+function pickVideoMimeType() {
+  if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')) {
+    return 'video/webm;codecs=vp9,opus'
+  }
+  if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8,opus')) {
+    return 'video/webm;codecs=vp8,opus'
+  }
+  return 'video/webm'
+}
+
 export function useLocalRecording() {
   const mediaRecorderRef = useRef(null)
   const chunksRef = useRef([])
   const streamsRef = useRef([])
   const timerRef = useRef(null)
+  const stopRecordingRef = useRef(null)
   const [isRecording, setIsRecording] = useState(false)
   const [durationSec, setDurationSec] = useState(0)
   const [lastBlob, setLastBlob] = useState(null)
@@ -30,41 +41,6 @@ export function useLocalRecording() {
     setRecordingUrl(null)
   }, [recordingUrl])
 
-  const startRecording = useCallback(async () => {
-    if (!supported || isRecording) return false
-    chunksRef.current = []
-    setLastBlob(null)
-    clearRecordingUrl()
-
-    const screenStream = await navigator.mediaDevices.getDisplayMedia({
-      video: { frameRate: 30 },
-      audio: true,
-    })
-    const micStream = await navigator.mediaDevices.getUserMedia({ audio: true })
-    streamsRef.current = [screenStream, micStream]
-
-    const combinedStream = new MediaStream([
-      ...screenStream.getVideoTracks(),
-      ...micStream.getAudioTracks(),
-      ...screenStream.getAudioTracks(),
-    ])
-
-    const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')
-      ? 'video/webm;codecs=vp9,opus'
-      : 'video/webm'
-
-    const mediaRecorder = new MediaRecorder(combinedStream, { mimeType })
-    mediaRecorder.ondataavailable = (e) => {
-      if (e.data?.size > 0) chunksRef.current.push(e.data)
-    }
-    mediaRecorder.start(1000)
-    mediaRecorderRef.current = mediaRecorder
-    setIsRecording(true)
-    setDurationSec(0)
-    timerRef.current = window.setInterval(() => setDurationSec((s) => s + 1), 1000)
-    return true
-  }, [supported, isRecording, clearRecordingUrl])
-
   const stopRecording = useCallback(() => {
     return new Promise((resolve) => {
       const mediaRecorder = mediaRecorderRef.current
@@ -72,28 +48,114 @@ export function useLocalRecording() {
         resolve(null)
         return
       }
+
       mediaRecorder.onstop = () => {
         if (timerRef.current) {
           clearInterval(timerRef.current)
           timerRef.current = null
         }
-        const blob = new Blob(chunksRef.current, { type: 'video/webm' })
+
+        const mimeType = mediaRecorder.mimeType || 'video/webm'
+        const blob =
+          chunksRef.current.length > 0 ? new Blob(chunksRef.current, { type: mimeType }) : null
         chunksRef.current = []
-        const url = URL.createObjectURL(blob)
-        setLastBlob(blob)
-        setRecordingUrl(url)
-        setIsRecording(false)
+
+        mediaRecorder.stream?.getTracks?.().forEach((t) => t.stop())
         stopStreams()
-        resolve(blob)
+
+        if (blob && blob.size > 0) {
+          const url = URL.createObjectURL(blob)
+          setLastBlob(blob)
+          setRecordingUrl(url)
+          setIsRecording(false)
+          resolve(blob)
+          return
+        }
+
+        setIsRecording(false)
+        resolve(null)
       }
-      mediaRecorder.stop()
+
+      try {
+        mediaRecorder.stop()
+      } catch {
+        setIsRecording(false)
+        resolve(null)
+      }
       mediaRecorderRef.current = null
     })
   }, [stopStreams])
 
+  stopRecordingRef.current = stopRecording
+
+  const startRecording = useCallback(async () => {
+    if (!supported || isRecording) return { status: 'busy' }
+
+    chunksRef.current = []
+    setLastBlob(null)
+    clearRecordingUrl()
+
+    const confirmed = window.confirm(
+      'Record başlamaq üçün açılan pəncərədə "Bu tab" və ya "Bütün ekran" seçin.\n\nJitsi-də ekran paylaşımı aktivdirsə, əvvəlcə onu dayandırın.',
+    )
+    if (!confirmed) return { status: 'cancelled' }
+
+    try {
+      const screenStream = await navigator.mediaDevices.getDisplayMedia({
+        video: { frameRate: 24 },
+        audio: true,
+      })
+
+      if (!screenStream?.getTracks?.().length) {
+        screenStream?.getTracks?.().forEach((t) => t.stop())
+        return { status: 'cancelled' }
+      }
+
+      let micStream = null
+      try {
+        micStream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      } catch {
+        /* mikrofon olmadan da ekran yazısı mümkündür */
+      }
+
+      streamsRef.current = [screenStream, micStream].filter(Boolean)
+
+      const combinedStream = new MediaStream([
+        ...screenStream.getVideoTracks(),
+        ...(micStream?.getAudioTracks() || []),
+        ...screenStream.getAudioTracks(),
+      ])
+
+      const videoTrack = screenStream.getVideoTracks()[0]
+      if (videoTrack) {
+        videoTrack.addEventListener('ended', () => {
+          void stopRecordingRef.current?.()
+        })
+      }
+
+      const mimeType = pickVideoMimeType()
+      const mediaRecorder = new MediaRecorder(combinedStream, { mimeType })
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data?.size > 0) chunksRef.current.push(e.data)
+      }
+      mediaRecorder.start(1000)
+      mediaRecorderRef.current = mediaRecorder
+      setIsRecording(true)
+      setDurationSec(0)
+      timerRef.current = window.setInterval(() => setDurationSec((s) => s + 1), 1000)
+      return { status: 'started' }
+    } catch (err) {
+      stopStreams()
+      if (err?.name === 'NotAllowedError' || err?.name === 'AbortError') {
+        return { status: 'cancelled' }
+      }
+      throw err
+    }
+  }, [supported, isRecording, clearRecordingUrl, stopStreams])
+
   const downloadRecording = useCallback(
     (blob = lastBlob, filename) => {
-      const target = blob || (recordingUrl ? lastBlob : null)
+      const target = blob || lastBlob
       const href = recordingUrl || (target ? URL.createObjectURL(target) : null)
       if (!href) return
       const a = document.createElement('a')
