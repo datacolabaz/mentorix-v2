@@ -1,4 +1,7 @@
 const { AccessToken } = require('livekit-server-sdk');
+const crypto = require('crypto');
+const multer = require('multer');
+const db = require('../utils/db');
 const {
   createLiveRoom,
   getLiveRoomForUser,
@@ -9,6 +12,26 @@ const {
   jitsiRoomName,
   getInstructorLiveParticipantLimit,
 } = require('../services/liveRoomService');
+const {
+  ensureLiveRecordingsUploadDir,
+  upsertLiveRecording,
+  userCanAccessLiveRecording,
+  sendLiveRecordingToResponse,
+} = require('../services/liveRecordingStorage');
+
+const liveRecordingsDir = ensureLiveRecordingsUploadDir();
+const uploadLiveRecording = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, liveRecordingsDir),
+    filename: (_req, _file, cb) => cb(null, `${crypto.randomUUID()}.webm`),
+  }),
+  limits: { fileSize: 500 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const ok = /video\/webm/i.test(file.mimetype || '') || /\.webm$/i.test(file.originalname || '');
+    if (!ok) return cb(new Error('Yalnız .webm yazı faylı qəbul edilir'));
+    cb(null, true);
+  },
+});
 
 async function mapRoom(row, user) {
   if (!row) return null;
@@ -153,8 +176,64 @@ const getHistory = async (req, res) => {
         ended_at: r.ended_at,
         participant_count: r.total_participants || r.participant_count || 0,
         duration_minutes: r.total_minutes || null,
+        has_recording: Boolean(r.recording_filename),
+        recording_url: r.recording_filename
+          ? `/live/recording-file/${encodeURIComponent(r.recording_filename)}`
+          : null,
+        recording_duration_sec: r.recording_duration_sec || null,
       })),
     });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message || 'Xəta' });
+  }
+};
+
+const postRecording = async (req, res) => {
+  try {
+    const room = await getLiveRoomForUser(req.params.roomCode, req.user);
+    const isInstructor =
+      req.user.role === 'instructor' && String(room.instructor_id) === String(req.user.id);
+    if (!isInstructor) {
+      return res.status(403).json({ success: false, message: 'Yalnız müəllim yazı yükləyə bilər' });
+    }
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'Yazı faylı tələb olunur' });
+    }
+
+    const durationSec = Number(req.body?.duration_sec || req.body?.durationSec || 0) || null;
+    const row = await upsertLiveRecording({
+      roomId: room.id,
+      instructorId: req.user.id,
+      file: req.file,
+      durationSec,
+    });
+
+    res.status(201).json({
+      success: true,
+      recording: {
+        url: `/live/recording-file/${encodeURIComponent(row.filename)}`,
+        duration_sec: row.duration_sec,
+        byte_size: row.byte_size,
+      },
+    });
+  } catch (e) {
+    res.status(e.status || 500).json({ success: false, message: e.message || 'Xəta' });
+  }
+};
+
+const getRecordingFile = async (req, res) => {
+  try {
+    const filename = String(req.params.filename || '').trim();
+    const { rows } = await db.query(`SELECT * FROM live_recordings WHERE filename = $1 LIMIT 1`, [filename]);
+    const recording = rows[0];
+    if (!recording) {
+      return res.status(404).json({ success: false, message: 'Yazı tapılmadı' });
+    }
+    const ok = await userCanAccessLiveRecording(req.user, recording);
+    if (!ok) {
+      return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
+    }
+    return sendLiveRecordingToResponse(res, filename);
   } catch (e) {
     res.status(500).json({ success: false, message: e.message || 'Xəta' });
   }
@@ -168,4 +247,7 @@ module.exports = {
   postLeave,
   postEnd,
   getHistory,
+  postRecording,
+  getRecordingFile,
+  uploadLiveRecording,
 };

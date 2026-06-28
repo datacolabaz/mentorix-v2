@@ -9,9 +9,13 @@ const {
   postLeave,
   postEnd,
   getHistory,
+  postRecording,
+  getRecordingFile,
+  uploadLiveRecording,
 } = require('../controllers/liveRoomController');
 
 router.get('/history', authenticate, authorize('instructor'), getHistory);
+router.get('/recording-file/:filename', authenticate, authorize('instructor', 'student'), getRecordingFile);
 
 router.post(
   '/create',
@@ -41,6 +45,20 @@ router.post(
   postEnd,
 );
 
+router.post(
+  '/rooms/:roomCode/recording',
+  authenticate,
+  authorize('instructor'),
+  enforceActiveSubscription,
+  (req, res, next) => {
+    uploadLiveRecording.single('recording')(req, res, (err) => {
+      if (err) return res.status(400).json({ success: false, message: err.message || 'Fayl qəbul edilmədi' });
+      next();
+    });
+  },
+  postRecording,
+);
+
 router.get('/:roomCode/token', authenticate, authorize('instructor', 'student'), getToken);
 router.get('/:roomCode', authenticate, authorize('instructor', 'student'), getRoom);
 router.post('/:roomCode/join', authenticate, authorize('instructor', 'student'), postJoin);
@@ -51,6 +69,20 @@ router.post(
   authorize('instructor'),
   enforceActiveSubscription,
   postEnd,
+);
+
+router.post(
+  '/:roomCode/recording',
+  authenticate,
+  authorize('instructor'),
+  enforceActiveSubscription,
+  (req, res, next) => {
+    uploadLiveRecording.single('recording')(req, res, (err) => {
+      if (err) return res.status(400).json({ success: false, message: err.message || 'Fayl qəbul edilmədi' });
+      next();
+    });
+  },
+  postRecording,
 );
 
 module.exports = router;

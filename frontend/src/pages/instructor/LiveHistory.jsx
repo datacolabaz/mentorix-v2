@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import api from '../../lib/api'
+import api, { AUTH_REQUEST_TIMEOUT_MS } from '../../lib/api'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
 import { fmtAzBakuField } from '../../lib/azDatetime'
@@ -13,9 +13,30 @@ function fmtDuration(minutes) {
   return rest ? `${h}:${String(rest).padStart(2, '0')}` : `${h} saat`
 }
 
+function fmtRecordingDuration(totalSec) {
+  const s = Math.max(0, Number(totalSec) || 0)
+  const m = Math.floor(s / 60)
+  const sec = s % 60
+  return `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`
+}
+
+async function downloadRecording(url, filename) {
+  const blob = await api.get(url, {
+    responseType: 'blob',
+    timeout: AUTH_REQUEST_TIMEOUT_MS,
+  })
+  const href = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = href
+  a.download = filename
+  a.click()
+  URL.revokeObjectURL(href)
+}
+
 export default function InstructorLiveHistory() {
   const [loading, setLoading] = useState(true)
   const [sessions, setSessions] = useState([])
+  const [downloadingId, setDownloadingId] = useState(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -33,12 +54,24 @@ export default function InstructorLiveHistory() {
     void load()
   }, [load])
 
+  const handleDownload = async (session) => {
+    if (!session?.recording_url) return
+    setDownloadingId(session.id)
+    try {
+      await downloadRecording(session.recording_url, `mentorix-${session.room_code || 'ders'}.webm`)
+    } catch {
+      /* ignore */
+    } finally {
+      setDownloadingId(null)
+    }
+  }
+
   return (
     <div className="p-4 sm:p-6 max-w-4xl mx-auto space-y-5">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="font-display font-bold text-xl sm:text-2xl text-token-textMain">Canlı dərslər</h1>
-          <p className="text-xs text-token-textMuted mt-1">Keçmiş Mentorix Live sessiyaları</p>
+          <p className="text-xs text-token-textMuted mt-1">Keçmiş Mentorix Live sessiyaları və yazılar</p>
         </div>
         <Link to="/instructor/teaching-groups">
           <Button variant="secondary">Qrupdan başlat</Button>
@@ -66,10 +99,23 @@ export default function InstructorLiveHistory() {
                   {s.started_at ? ` · ${fmtAzBakuField(s, 'started_at')}` : ''}
                 </p>
               </div>
-              <div className="flex items-center gap-4 text-xs text-token-textMuted shrink-0">
+              <div className="flex flex-wrap items-center gap-3 text-xs text-token-textMuted shrink-0">
                 <span>{fmtDuration(s.duration_minutes)}</span>
                 <span>{s.participant_count || 0} iştirakçı</span>
                 <span className="font-mono text-primary/80">{s.room_code}</span>
+                {s.has_recording ? (
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    loading={downloadingId === s.id}
+                    onClick={() => void handleDownload(s)}
+                  >
+                    ⬇ Yazı
+                    {s.recording_duration_sec ? ` (${fmtRecordingDuration(s.recording_duration_sec)})` : ''}
+                  </Button>
+                ) : (
+                  <span className="text-[10px] text-token-textMuted/80">Yazı yoxdur</span>
+                )}
               </div>
             </Card>
           ))}

@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { LiveKitRoom, RoomAudioRenderer, VideoConference } from '@livekit/components-react'
+import { LiveKitRoom, RoomAudioRenderer, useRoomContext, VideoConference } from '@livekit/components-react'
 import '@livekit/components-styles'
 import api from '../../lib/api'
 import useAuthStore from '../../hooks/useAuth'
@@ -8,6 +8,28 @@ import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
 import { useToast } from '../../components/common/Toast'
 import { formatRecordingDuration, useLocalRecording } from '../../hooks/useLocalRecording'
+
+function LiveMediaEnsure({ onMicError }) {
+  const room = useRoomContext()
+
+  useEffect(() => {
+    if (!room) return undefined
+    let cancelled = false
+    ;(async () => {
+      try {
+        await room.localParticipant.setMicrophoneEnabled(true)
+        await room.localParticipant.setCameraEnabled(true)
+      } catch {
+        if (!cancelled) onMicError?.()
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [room, onMicError])
+
+  return null
+}
 
 export default function MentorixLive() {
   const { roomCode } = useParams()
@@ -21,13 +43,27 @@ export default function MentorixLive() {
   const [room, setRoom] = useState(null)
   const [token, setToken] = useState(null)
   const [wsUrl, setWsUrl] = useState(null)
+  const [mediaReady, setMediaReady] = useState(false)
+  const [mediaPreparing, setMediaPreparing] = useState(false)
   const [connectLiveKit, setConnectLiveKit] = useState(true)
   const [recordModalOpen, setRecordModalOpen] = useState(false)
+  const [afterEndNavigate, setAfterEndNavigate] = useState(false)
   const [ending, setEnding] = useState(false)
 
   const recording = useLocalRecording()
 
   const code = String(roomCode || '').trim().toUpperCase()
+
+  const roomOptions = useMemo(
+    () => ({
+      audioCaptureDefaults: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+      },
+    }),
+    [],
+  )
 
   const leaveRoom = useCallback(async () => {
     if (!code || !joinedRef.current) return
@@ -43,22 +79,74 @@ export default function MentorixLive() {
     setConnectLiveKit(false)
   }, [])
 
+  const uploadRecording = useCallback(
+    async (blob) => {
+      if (!blob || !code) return null
+      const form = new FormData()
+      form.append('recording', blob, `mentorix-${code}.webm`)
+      form.append('duration_sec', String(recording.durationSec || 0))
+      const res = await api.post(`/live/${encodeURIComponent(code)}/recording`, form)
+      return res?.recording?.url || null
+    },
+    [code, recording.durationSec],
+  )
+
+  const prepareMedia = useCallback(async () => {
+    setMediaPreparing(true)
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+        video: true,
+      })
+      stream.getTracks().forEach((track) => track.stop())
+      setMediaReady(true)
+    } catch {
+      toast('Kamera və mikrofon icazəsi lazımdır — brauzerdə «İcazə ver» seçin', 'error')
+    } finally {
+      setMediaPreparing(false)
+    }
+  }, [toast])
+
+  const handleMicError = useCallback(() => {
+    toast('Mikrofon aktivləşdirilmədi — LiveKit panelində mikrofon düyməsinə basın', 'error')
+  }, [toast])
+
   const endRoom = useCallback(async () => {
     if (!code || !room?.is_instructor) return
     setEnding(true)
     try {
-      if (recording.isRecording) await recording.stopRecording()
+      let blob = null
+      if (recording.isRecording) blob = await recording.stopRecording()
+      else if (recording.lastBlob) blob = recording.lastBlob
+
+      if (blob) {
+        try {
+          await uploadRecording(blob)
+          toast('Yazı platformada saxlanıldı')
+        } catch {
+          toast('Yazı serverə yüklənmədi — kompüterə yükləyə bilərsiniz', 'error')
+        }
+      } else {
+        toast('Bu dərs yazılmayıb — Record düyməsi ilə yazın', 'info')
+      }
+
       disconnectLiveKit()
       await api.post(`/live/${encodeURIComponent(code)}/end`)
       await leaveRoom()
       toast('Canlı dərs bitdi')
-      navigate('/instructor/live/history', { replace: true })
+
+      if (blob) {
+        setRecordModalOpen(true)
+        setAfterEndNavigate(true)
+      } else {
+        navigate('/instructor/live/history', { replace: true })
+      }
     } catch (e) {
       toast(e?.message || 'Bitirmək alınmadı', 'error')
     } finally {
       setEnding(false)
     }
-  }, [code, room?.is_instructor, recording, disconnectLiveKit, leaveRoom, navigate, toast])
+  }, [code, room?.is_instructor, recording, uploadRecording, disconnectLiveKit, leaveRoom, navigate, toast])
 
   const exitRoom = useCallback(async () => {
     disconnectLiveKit()
@@ -108,7 +196,15 @@ export default function MentorixLive() {
     if (!recording.supported) return
     if (recording.isRecording) {
       const blob = await recording.stopRecording()
-      if (blob) setRecordModalOpen(true)
+      if (blob) {
+        try {
+          await uploadRecording(blob)
+          toast('Yazı platformada saxlanıldı')
+        } catch {
+          toast('Yazı serverə yüklənmədi', 'error')
+        }
+        setRecordModalOpen(true)
+      }
       return
     }
     const result = await recording.startRecording()
@@ -116,6 +212,15 @@ export default function MentorixLive() {
       toast('Yazılış başladı')
     } else if (result?.status === 'error') {
       toast(result.message || 'Yazılış başlamadı', 'error')
+    }
+  }
+
+  const closeRecordModal = () => {
+    setRecordModalOpen(false)
+    recording.clearRecordingUrl()
+    if (afterEndNavigate) {
+      setAfterEndNavigate(false)
+      navigate('/instructor/live/history', { replace: true })
     }
   }
 
@@ -142,6 +247,23 @@ export default function MentorixLive() {
     return (
       <div className="min-h-[100svh] bg-[#0b0b0b] text-white flex items-center justify-center">
         <p className="text-gray-500">Dərsə qoşulunur…</p>
+      </div>
+    )
+  }
+
+  if (!mediaReady) {
+    return (
+      <div className="min-h-[100svh] bg-[#0b0b0b] text-white flex flex-col items-center justify-center gap-5 p-6 text-center">
+        <div>
+          <p className="text-xs uppercase tracking-wider text-red-400 font-bold">Mentorix Live</p>
+          <h1 className="font-display font-bold text-xl mt-2">{room?.title}</h1>
+          <p className="text-sm text-gray-400 mt-2 max-w-md">
+            Dərsə qoşulmaq üçün kamera və mikrofon icazəsi lazımdır. Brauzer soruşanda «İcazə ver» seçin.
+          </p>
+        </div>
+        <Button onClick={() => void prepareMedia()} loading={mediaPreparing} className="min-w-[220px] justify-center">
+          Kamera və mikrofonu aktiv et
+        </Button>
       </div>
     )
   }
@@ -193,6 +315,12 @@ export default function MentorixLive() {
         </div>
       </header>
 
+      {room?.is_instructor && recording.supported && !recording.isRecording ? (
+        <div className="shrink-0 px-4 py-2 bg-amber-500/10 border-b border-amber-500/20 text-[11px] text-amber-200 text-center">
+          Dərs yazısı üçün <strong>Record</strong> düyməsinə basın — bitəndə «Canlı dərslər» səhifəsində yükləyə bilərsiniz.
+        </div>
+      ) : null}
+
       <div className="flex-1 min-h-0 flex flex-col">
         <LiveKitRoom
           token={token}
@@ -200,29 +328,24 @@ export default function MentorixLive() {
           connect={connectLiveKit}
           video
           audio
+          options={roomOptions}
           data-lk-theme="default"
           className="flex-1 min-h-0 flex flex-col"
           onDisconnected={() => {
             void leaveRoom()
           }}
         >
+          <LiveMediaEnsure onMicError={handleMicError} />
           <VideoConference />
           <RoomAudioRenderer />
         </LiveKitRoom>
       </div>
 
-      <Modal
-        open={recordModalOpen || Boolean(recording.recordingUrl)}
-        onClose={() => {
-          setRecordModalOpen(false)
-          recording.clearRecordingUrl()
-        }}
-        title="Yazılış hazırdır"
-        size="sm"
-      >
+      <Modal open={recordModalOpen || Boolean(recording.recordingUrl)} onClose={closeRecordModal} title="Yazılış hazırdır" size="sm">
         <div className="space-y-4 text-center">
           <p className="text-sm text-gray-300">✅ Dərs uğurla yazıldı!</p>
           <p className="text-xs text-gray-500">Müddət: {formatRecordingDuration(recording.durationSec)}</p>
+          <p className="text-xs text-gray-500">Yazı platformada saxlanıldı — «Canlı dərslər» səhifəsindən də yükləyə bilərsiniz.</p>
           <div className="flex flex-col gap-2">
             {recording.recordingUrl ? (
               <a
@@ -237,14 +360,7 @@ export default function MentorixLive() {
                 Kompüterə yüklə (.webm)
               </Button>
             )}
-            <Button
-              className="w-full justify-center"
-              variant="ghost"
-              onClick={() => {
-                setRecordModalOpen(false)
-                recording.clearRecordingUrl()
-              }}
-            >
+            <Button className="w-full justify-center" variant="ghost" onClick={closeRecordModal}>
               Bağla
             </Button>
           </div>
