@@ -5,7 +5,7 @@ import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
 import { useToast } from '../../components/common/Toast'
-import { buildWhatsAppInviteMessage, groupInvitationLink } from '../../lib/joinInvite'
+import { groupInvitationLink } from '../../lib/joinInvite'
 import useUiStore from '../../hooks/useUi'
 import { QRCodeCanvas } from 'qrcode.react'
 import GroupPackageFields, {
@@ -487,54 +487,22 @@ export default function InstructorTeachingGroups() {
                                     </button>
                                     <button
                                       type="button"
-                                      className={[groupActionBtnCls, 'text-primary'].join(' ')}
-                                      onClick={async () => {
-                                        const link = groupInvitationLink(g)
-                                        try {
-                                          await navigator.clipboard.writeText(link)
-                                          toast('Link kopyalandı', 'success')
-                                        } catch {
-                                          toast('Link kopyalanmadı', 'error')
-                                        }
-                                      }}
-                                    >
-                                      Link
-                                    </button>
-                                    <button
-                                      type="button"
                                       className={[
                                         groupActionBtnCls,
                                         'col-span-2 sm:col-span-1 font-semibold',
                                         theme === 'dark' ? 'text-emerald-300' : 'text-emerald-700',
                                       ].join(' ')}
-                                      title="WhatsApp üçün hazır mətn"
                                       onClick={async () => {
                                         const link = groupInvitationLink(g)
                                         try {
                                           await navigator.clipboard.writeText(link)
-                                          toast('Qrup linki kopyalandı — tələbəyə göndərin', 'success')
+                                          toast('Qrup linki kopyalandı', 'success')
                                         } catch {
                                           toast('Kopyalanmadı', 'error')
                                         }
                                       }}
                                     >
                                       Linki kopyala
-                                    </button>
-                                    <button
-                                      type="button"
-                                      className={[groupActionBtnCls, 'text-primary'].join(' ')}
-                                      onClick={async () => {
-                                        const link = groupInvitationLink(g)
-                                        const text = buildWhatsAppInviteMessage(link)
-                                        try {
-                                          await navigator.clipboard.writeText(text)
-                                          toast('WhatsApp mətni kopyalandı', 'success')
-                                        } catch {
-                                          toast('Kopyalanmadı', 'error')
-                                        }
-                                      }}
-                                    >
-                                      WhatsApp
                                     </button>
                                     <button
                                       type="button"
