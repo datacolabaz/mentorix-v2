@@ -273,9 +273,73 @@ async function sendStudentProfileCompletionEmail({
   }
 }
 
+/**
+ * Canlı dərs başlayanda — tələbəyə Gmail / qeydiyyat e-poçtu.
+ */
+async function sendLiveClassStartedEmail({ userId, instructorName, roomTitle, liveLink }) {
+  const to = await userEmail(userId);
+  if (!to) return { ok: false, skipped: true, reason: 'no_email' };
+
+  const link = String(liveLink || '').trim() || `${frontendBaseUrl()}/student`;
+  const title = String(roomTitle || 'Canlı dərs').trim();
+  const teacher = String(instructorName || 'Müəlliminiz').trim();
+  const subject = `Canlı dərs başladı — ${title}`;
+  const text = [
+    'Salam!',
+    '',
+    `${teacher} canlı dərsi başlatdı.`,
+    '',
+    `Dərs: ${title}`,
+    '',
+    `Qoşulmaq üçün: ${link}`,
+    '',
+    'Bu e-poçtu hesabınıza daxil olduğunuz Gmail ünvanına göndərdik.',
+  ].join('\n');
+
+  const html = `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; line-height: 1.55; max-width: 520px; color: #111827;">
+      <p style="margin: 0 0 12px; font-size: 13px; color: #dc2626; font-weight: 600;">Canlı dərs</p>
+      <h2 style="margin: 0 0 16px; font-size: 20px;">${escapeHtml(title)}</h2>
+      <p style="margin: 0 0 12px;">${escapeHtml(teacher)} canlı dərsi başlatdı. İndi qoşula bilərsiniz.</p>
+      <p style="margin: 0 0 20px;">
+        <a href="${escapeHtml(link)}" style="display: inline-block; background: #dc2626; color: #fff; padding: 12px 20px; border-radius: 10px; text-decoration: none; font-weight: 600;">Canlı dərsə qoşul</a>
+      </p>
+      <p style="margin: 0; font-size: 12px; color: #9ca3af;">Mentorix — tələbə paneli</p>
+    </div>
+  `;
+
+  if (resendReady()) {
+    try {
+      const client = new Resend(RESEND_API_KEY);
+      const { data, error } = await client.emails.send({
+        from: EMAIL_FROM,
+        to,
+        subject,
+        text,
+        html,
+      });
+      if (error) {
+        return { ok: false, error: error?.message || 'Resend xətası' };
+      }
+      return { ok: true, provider: 'resend', messageId: data?.id || null };
+    } catch (err) {
+      return { ok: false, error: err?.message || 'Resend xətası' };
+    }
+  }
+
+  try {
+    const r = await sendEmail({ to, subject, text });
+    if (r?.skipped) return { ok: false, skipped: true, reason: 'smtp_not_configured' };
+    return { ok: true, provider: 'smtp', messageId: r?.messageId || null };
+  } catch (err) {
+    return { ok: false, error: err?.message || 'Email xətası' };
+  }
+}
+
 module.exports = {
   sendAssignmentNewEmail,
   sendExamAccessApprovedEmail,
   sendStudentProfileCompletionEmail,
+  sendLiveClassStartedEmail,
   frontendBaseUrl,
 };

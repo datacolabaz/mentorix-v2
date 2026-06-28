@@ -110,6 +110,14 @@ function inferSmsLogSource(row) {
   if (typ === 'otp' || /\bkodunuz\b/i.test(msg) || /\bOTP\b/i.test(msg)) {
     return { source: 'otp', title: 'PIN / OTP', detail: 'Giriş kodu SMS-i', initiated_by: 'system' };
   }
+  if (typ === 'live_class' || /canlı dərsi başlatdı|canli dersi baslatdi/i.test(msg)) {
+    return {
+      source: 'live_class',
+      title: 'Canlı dərs bildirişi',
+      detail: 'Müəllim canlı dərs başlayanda seçilmiş SMS bildirişi.',
+      initiated_by: 'instructor',
+    };
+  }
   if (typ === 'payment' || typ === 'payment_reminder' || /ödəniş|odenis/i.test(msg)) {
     return { source: 'payment', title: 'Ödəniş xatırlatması', detail: null, initiated_by: 'system' };
   }

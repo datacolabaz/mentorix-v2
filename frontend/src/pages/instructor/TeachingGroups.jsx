@@ -47,6 +47,9 @@ export default function InstructorTeachingGroups() {
   const [qrOpen, setQrOpen] = useState(false)
   const [qrGroup, setQrGroup] = useState(null)
   const [confirmDelete, setConfirmDelete] = useState(null)
+  const [liveNotifyModal, setLiveNotifyModal] = useState(null)
+  const [liveNotifySms, setLiveNotifySms] = useState(false)
+  const [liveNotifyEmail, setLiveNotifyEmail] = useState(false)
 
   const safeSubjects = useMemo(
     () => normalizeTeachingSubjects(subjects).filter((s) => s && !s.is_system),
@@ -222,21 +225,42 @@ export default function InstructorTeachingGroups() {
     }
   }
 
-  const startLiveClass = async (group, subjectName) => {
+  const requestStartLiveClass = (group, subjectName) => {
     if (blocked) {
       toast(blockMessage, 'error')
       return
     }
+    if (!group?.id) return
+    setLiveNotifySms(false)
+    setLiveNotifyEmail(false)
+    setLiveNotifyModal({ group, subjectName })
+  }
+
+  const startLiveClass = async ({ group, subjectName, notifySms, notifyEmail }) => {
     if (!group?.id) return
     setBusy((b) => ({ ...b, [`live-${group.id}`]: true }))
     try {
       const res = await api.post('/live/create', {
         groupId: group.id,
         title: `${subjectName ? `${subjectName} · ` : ''}${group.name}`,
+        notifySms: Boolean(notifySms),
+        notifyEmail: Boolean(notifyEmail),
       })
       const code = res?.room?.room_code
       if (!code) throw new Error('Otaq yaradılmadı')
-      toast('Canlı dərs başladı — tələbələrə SMS göndərilir', 'success')
+      const n = res?.notifications || {}
+      const smsN = Number(n.sms) || 0
+      const emailN = Number(n.email) || 0
+      if (notifySms && notifyEmail) {
+        toast(`Canlı dərs başladı — ${smsN} SMS, ${emailN} e-poçt göndərildi`, 'success')
+      } else if (notifySms) {
+        toast(`Canlı dərs başladı — ${smsN} SMS göndərildi`, 'success')
+      } else if (notifyEmail) {
+        toast(`Canlı dərs başladı — ${emailN} e-poçt göndərildi`, 'success')
+      } else {
+        toast('Canlı dərs başladı', 'success')
+      }
+      setLiveNotifyModal(null)
       navigate(`/live/${encodeURIComponent(code)}`)
     } catch (e) {
       toast(e?.message || 'Canlı dərs başlatmaq alınmadı', 'error')
@@ -458,7 +482,7 @@ export default function InstructorTeachingGroups() {
                                     'col-span-2 sm:col-span-1 font-semibold text-red-400',
                                     busy[`live-${g.id}`] ? 'opacity-60' : '',
                                   ].join(' ')}
-                                  onClick={() => void startLiveClass(g, s.name)}
+                                  onClick={() => requestStartLiveClass(g, s.name)}
                                 >
                                   {busy[`live-${g.id}`] ? 'Başlanır…' : '🔴 Canlı Dərs'}
                                 </button>
@@ -600,6 +624,91 @@ export default function InstructorTeachingGroups() {
             </ul>
         )}
       </Card>
+
+      <Modal
+        open={Boolean(liveNotifyModal)}
+        onClose={() => setLiveNotifyModal(null)}
+        title="Canlı dərs — bildiriş"
+        size="sm"
+        zIndex={10055}
+        footer={
+          <div className="flex flex-wrap justify-center gap-3">
+            <Button
+              type="button"
+              variant="secondary"
+              className="min-w-[120px] justify-center"
+              onClick={() => setLiveNotifyModal(null)}
+            >
+              Ləğv et
+            </Button>
+            <Button
+              type="button"
+              className="min-w-[140px] justify-center"
+              loading={liveNotifyModal?.group?.id ? Boolean(busy[`live-${liveNotifyModal.group.id}`]) : false}
+              onClick={() => {
+                const m = liveNotifyModal
+                if (!m?.group) return
+                void startLiveClass({
+                  group: m.group,
+                  subjectName: m.subjectName,
+                  notifySms: liveNotifySms,
+                  notifyEmail: liveNotifyEmail,
+                })
+              }}
+            >
+              Dərsi başlat
+            </Button>
+          </div>
+        }
+      >
+        {liveNotifyModal ? (
+          <div className="space-y-4">
+            <p className="text-sm text-token-textMuted leading-relaxed">
+              <span className="font-semibold text-token-textMain">
+                {liveNotifyModal.subjectName ? `${liveNotifyModal.subjectName} · ` : ''}
+                {liveNotifyModal.group?.name}
+              </span>{' '}
+              qrupundakı tələbələrə bildiriş göndərilsin?
+            </p>
+            <p className="text-xs text-token-textMuted">
+              Heç birini seçməsəniz, dərs birbaşa başlayacaq — bildiriş getməyəcək.
+            </p>
+            <div className="space-y-3 rounded-xl border border-[color:var(--border-subtle)] p-4">
+              <label className="flex items-start gap-3 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  className="mt-0.5 h-4 w-4 accent-primary"
+                  checked={liveNotifySms}
+                  onChange={(e) => setLiveNotifySms(e.target.checked)}
+                />
+                <span>
+                  <span className="block text-sm font-medium text-token-textMain">SMS bildiriş</span>
+                  <span className="block text-xs text-token-textMuted mt-0.5">
+                    Tələbənin telefonuna SMS — SMS balansınızdan çıxır.
+                  </span>
+                </span>
+              </label>
+              <label className="flex items-start gap-3 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  className="mt-0.5 h-4 w-4 accent-primary"
+                  checked={liveNotifyEmail}
+                  onChange={(e) => setLiveNotifyEmail(e.target.checked)}
+                />
+                <span>
+                  <span className="block text-sm font-medium text-token-textMain">Gmail / e-poçt</span>
+                  <span className="block text-xs text-token-textMuted mt-0.5">
+                    Qeydiyyat e-poçtuna (adətən Gmail) — SMS balansından çıxmır.
+                  </span>
+                </span>
+              </label>
+            </div>
+            {liveNotifySms && liveNotifyEmail ? (
+              <p className="text-xs text-primary/90">Hər iki kanal seçildi — hər tələbəyə SMS və e-poçt gedə bilər.</p>
+            ) : null}
+          </div>
+        ) : null}
+      </Modal>
 
       <Modal
         open={Boolean(confirmDelete)}

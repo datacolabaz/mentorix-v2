@@ -1,4 +1,5 @@
 const { AccessToken } = require('livekit-server-sdk');
+const { checkSmsQuota } = require('../services/smsQuotaService');
 const crypto = require('crypto');
 const multer = require('multer');
 const db = require('../utils/db');
@@ -63,12 +64,28 @@ async function mapRoom(row, user) {
 
 const postCreateRoom = async (req, res) => {
   try {
-    const room = await createLiveRoom(req.user.id, {
+    const notifySms = Boolean(req.body?.notify_sms ?? req.body?.notifySms);
+    const notifyEmail = Boolean(req.body?.notify_email ?? req.body?.notifyEmail);
+
+    if (notifySms) {
+      const quota = await checkSmsQuota(req.user.id);
+      if (!quota.ok) {
+        return res.status(quota.statusCode || 429).json(quota.body);
+      }
+    }
+
+    const { room, notifications } = await createLiveRoom(req.user.id, {
       groupId: req.body?.group_id || req.body?.groupId || null,
       title: req.body?.title || null,
+      notifySms,
+      notifyEmail,
     });
     const full = await getLiveRoomForUser(room.room_code, req.user).catch(() => room);
-    res.status(201).json({ success: true, room: await mapRoom(full, req.user) });
+    res.status(201).json({
+      success: true,
+      room: await mapRoom(full, req.user),
+      notifications: notifications || { sms: 0, email: 0 },
+    });
   } catch (e) {
     res.status(e.status || 500).json({ success: false, message: e.message || 'Xəta' });
   }
