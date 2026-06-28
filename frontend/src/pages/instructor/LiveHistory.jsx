@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import api, { AUTH_REQUEST_TIMEOUT_MS } from '../../lib/api'
 import Card from '../../components/common/Card'
@@ -41,6 +41,13 @@ export default function InstructorLiveHistory() {
   const [downloadingId, setDownloadingId] = useState(null)
   const [deletingId, setDeletingId] = useState(null)
   const [sharingId, setSharingId] = useState(null)
+  const [selectedIds, setSelectedIds] = useState([])
+  const [bulkDeleting, setBulkDeleting] = useState(false)
+  const selectAllRef = useRef(null)
+
+  const selectedCount = selectedIds.length
+  const allSelected = sessions.length > 0 && selectedCount === sessions.length
+  const someSelected = selectedCount > 0 && !allSelected
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -57,6 +64,22 @@ export default function InstructorLiveHistory() {
   useEffect(() => {
     void load()
   }, [load])
+
+  useEffect(() => {
+    if (selectAllRef.current) selectAllRef.current.indeterminate = someSelected
+  }, [someSelected])
+
+  useEffect(() => {
+    setSelectedIds((prev) => prev.filter((id) => sessions.some((s) => s.id === id)))
+  }, [sessions])
+
+  const toggleOne = (id) => {
+    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
+  }
+
+  const toggleAll = () => {
+    setSelectedIds(allSelected ? [] : sessions.map((s) => s.id))
+  }
 
   const handleDownload = async (session) => {
     if (!session?.recording_url) return
@@ -110,11 +133,40 @@ export default function InstructorLiveHistory() {
     try {
       await api.delete(`/live/history/${encodeURIComponent(session.room_code)}`)
       setSessions((prev) => prev.filter((s) => s.id !== session.id))
+      setSelectedIds((prev) => prev.filter((id) => id !== session.id))
       toast('Dərs silindi')
     } catch (e) {
       toast(e?.message || 'Silinmədi', 'error')
     } finally {
       setDeletingId(null)
+    }
+  }
+
+  const handleBulkDelete = async () => {
+    if (!selectedCount) return
+    const selected = sessions.filter((s) => selectedIds.includes(s.id))
+    const ok = window.confirm(
+      `${selected.length} dərsi silmək istəyirsiniz? Yazılar da silinəcək.`,
+    )
+    if (!ok) return
+    setBulkDeleting(true)
+    try {
+      const results = await Promise.allSettled(
+        selected.map((s) => api.delete(`/live/history/${encodeURIComponent(s.room_code)}`)),
+      )
+      const deletedIds = []
+      let failed = 0
+      results.forEach((r, i) => {
+        if (r.status === 'fulfilled') deletedIds.push(selected[i].id)
+        else failed += 1
+      })
+      setSessions((prev) => prev.filter((s) => !deletedIds.includes(s.id)))
+      setSelectedIds((prev) => prev.filter((id) => !deletedIds.includes(id)))
+      if (failed === 0) toast(`${deletedIds.length} dərs silindi`)
+      else if (deletedIds.length === 0) toast('Heç biri silinmədi', 'error')
+      else toast(`${deletedIds.length} silindi, ${failed} silinmədi`, 'info')
+    } finally {
+      setBulkDeleting(false)
     }
   }
 
@@ -139,12 +191,51 @@ export default function InstructorLiveHistory() {
         </Card>
       ) : (
         <div className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-3 px-1">
+            <label className="flex items-center gap-2 text-sm text-token-textMuted cursor-pointer select-none">
+              <input
+                ref={selectAllRef}
+                type="checkbox"
+                className="h-4 w-4 accent-primary"
+                checked={allSelected}
+                onChange={toggleAll}
+              />
+              Hamısını seç
+              {selectedCount > 0 ? (
+                <span className="text-token-textMain font-medium">({selectedCount})</span>
+              ) : null}
+            </label>
+            {selectedCount > 0 ? (
+              <Button
+                size="sm"
+                variant="danger"
+                loading={bulkDeleting}
+                onClick={() => void handleBulkDelete()}
+              >
+                Seçilənləri sil ({selectedCount})
+              </Button>
+            ) : null}
+          </div>
+
           {sessions.map((s) => (
             <Card
               key={s.id}
-              className="p-4 border border-[color:var(--border-subtle)] flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+              className={`p-4 border flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                selectedIds.includes(s.id)
+                  ? 'border-primary/40 bg-primary/[0.04]'
+                  : 'border-[color:var(--border-subtle)]'
+              }`}
             >
-              <div className="min-w-0 flex-1">
+              <div className="flex items-start gap-3 min-w-0 flex-1">
+                <label className="shrink-0 cursor-pointer pt-0.5">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 accent-primary"
+                    checked={selectedIds.includes(s.id)}
+                    onChange={() => toggleOne(s.id)}
+                  />
+                </label>
+                <div className="min-w-0 flex-1">
                 <h2 className="font-semibold text-sm text-token-textMain truncate">{s.title}</h2>
                 <p className="text-[11px] text-token-textMuted mt-1">
                   {s.group_name || 'Ümumi'}
@@ -153,6 +244,7 @@ export default function InstructorLiveHistory() {
                 {s.recorded_by_name ? (
                   <p className="text-[10px] text-primary/80 mt-1">Yazı: {s.recorded_by_name}</p>
                 ) : null}
+                </div>
               </div>
 
               <div className="flex flex-col items-stretch sm:items-end gap-2 shrink-0">
