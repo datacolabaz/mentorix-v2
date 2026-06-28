@@ -23,6 +23,8 @@ function LiveMediaRestore() {
   }, [room])
 
   return null
+}
+
 function LiveMediaEnsure({ onMicError }) {
   const room = useRoomContext()
 
