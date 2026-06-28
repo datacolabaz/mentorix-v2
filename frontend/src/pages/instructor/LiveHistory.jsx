@@ -40,6 +40,7 @@ export default function InstructorLiveHistory() {
   const [sessions, setSessions] = useState([])
   const [downloadingId, setDownloadingId] = useState(null)
   const [deletingId, setDeletingId] = useState(null)
+  const [sharingId, setSharingId] = useState(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -62,6 +63,7 @@ export default function InstructorLiveHistory() {
     setDownloadingId(session.id)
     try {
       await downloadRecording(session.recording_url, `mentorix-${session.room_code || 'ders'}.webm`)
+      toast('Yazı yükləndi')
     } catch {
       toast('Yazı yüklənmədi', 'error')
     } finally {
@@ -70,16 +72,33 @@ export default function InstructorLiveHistory() {
   }
 
   const handleShare = async (session) => {
-    if (!session?.share_url) {
-      toast('Paylaşım linki yoxdur — əvvəlcə iştirakçı yazı yükləməlidir', 'info')
+    if (!session?.has_recording) {
+      toast('Bu dərsin yazısı yoxdur', 'info')
       return
     }
-    const url = `${window.location.origin}${session.share_url}`
+    setSharingId(session.id)
     try {
-      await navigator.clipboard.writeText(url)
-      toast('Paylaşım linki kopyalandı')
-    } catch {
-      toast(url, 'info')
+      let shareUrl = session.share_url
+      if (!shareUrl) {
+        const res = await api.get('/live/history')
+        const fresh = (res.sessions || []).find((s) => s.id === session.id)
+        shareUrl = fresh?.share_url || null
+      }
+      if (!shareUrl) {
+        toast('Paylaşım linki yaradıla bilmədi', 'error')
+        return
+      }
+      const url = `${window.location.origin}${shareUrl}`
+      try {
+        await navigator.clipboard.writeText(url)
+        toast('Paylaşım linki kopyalandı')
+      } catch {
+        window.prompt('Paylaşım linkini kopyalayın:', url)
+      }
+    } catch (e) {
+      toast(e?.message || 'Paylaşım alınmadı', 'error')
+    } finally {
+      setSharingId(null)
     }
   }
 
@@ -123,28 +142,27 @@ export default function InstructorLiveHistory() {
           {sessions.map((s) => (
             <Card
               key={s.id}
-              className="p-4 border border-[color:var(--border-subtle)] flex flex-col gap-3"
+              className="p-4 border border-[color:var(--border-subtle)] flex flex-col sm:flex-row sm:items-center justify-between gap-3"
             >
-              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <h2 className="font-semibold text-sm text-token-textMain truncate">{s.title}</h2>
-                  <p className="text-[11px] text-token-textMuted mt-1">
-                    {s.group_name || 'Ümumi'}
-                    {s.started_at ? ` · ${fmtAzBakuField(s, 'started_at')}` : ''}
-                  </p>
-                  {s.recorded_by_name ? (
-                    <p className="text-[10px] text-primary/80 mt-1">Yazı: {s.recorded_by_name}</p>
-                  ) : null}
-                </div>
-                <div className="flex flex-wrap items-center gap-2 text-xs text-token-textMuted shrink-0">
+              <div className="min-w-0 flex-1">
+                <h2 className="font-semibold text-sm text-token-textMain truncate">{s.title}</h2>
+                <p className="text-[11px] text-token-textMuted mt-1">
+                  {s.group_name || 'Ümumi'}
+                  {s.started_at ? ` · ${fmtAzBakuField(s, 'started_at')}` : ''}
+                </p>
+                {s.recorded_by_name ? (
+                  <p className="text-[10px] text-primary/80 mt-1">Yazı: {s.recorded_by_name}</p>
+                ) : null}
+              </div>
+
+              <div className="flex flex-col items-stretch sm:items-end gap-2 shrink-0">
+                <div className="flex flex-wrap items-center gap-2 text-xs text-token-textMuted sm:justify-end">
                   <span>{fmtDuration(s.duration_minutes)}</span>
                   <span>{s.participant_count || 0} iştirakçı</span>
                   <span className="font-mono text-primary/80">{s.room_code}</span>
                 </div>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                {s.has_recording ? (
-                  <>
+                <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                  {s.has_recording ? (
                     <Button
                       size="sm"
                       variant="secondary"
@@ -154,21 +172,27 @@ export default function InstructorLiveHistory() {
                       ⬇ Yazı
                       {s.recording_duration_sec ? ` (${fmtRecordingDuration(s.recording_duration_sec)})` : ''}
                     </Button>
-                    <Button size="sm" variant="ghost" onClick={() => void handleShare(s)}>
-                      🔗 Paylaş
-                    </Button>
-                  </>
-                ) : (
-                  <span className="text-[10px] text-token-textMuted/80">Yazı yoxdur (iştirakçı Record etməyib)</span>
-                )}
-                <Button
-                  size="sm"
-                  variant="danger"
-                  loading={deletingId === s.id}
-                  onClick={() => void handleDelete(s)}
-                >
-                  Sil
-                </Button>
+                  ) : (
+                    <span className="text-[10px] text-token-textMuted/80 px-1">Yazı yoxdur</span>
+                  )}
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    disabled={!s.has_recording}
+                    loading={sharingId === s.id}
+                    onClick={() => void handleShare(s)}
+                  >
+                    🔗 Paylaş
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="danger"
+                    loading={deletingId === s.id}
+                    onClick={() => void handleDelete(s)}
+                  >
+                    🗑 Sil
+                  </Button>
+                </div>
               </div>
             </Card>
           ))}

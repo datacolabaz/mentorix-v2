@@ -55,6 +55,19 @@ async function upsertLiveRecording({ roomId, instructorId, uploadedByUserId, fil
   return rows[0];
 }
 
+async function ensureRecordingShareTokenByRoomId(roomId) {
+  const { rows } = await db.query(
+    `SELECT id, share_token FROM live_recordings WHERE room_id = $1 LIMIT 1`,
+    [roomId],
+  );
+  const row = rows[0];
+  if (!row) return null;
+  if (row.share_token) return row.share_token;
+  const token = makeShareToken();
+  await db.query(`UPDATE live_recordings SET share_token = $2 WHERE id = $1`, [row.id, token]);
+  return token;
+}
+
 async function getLiveRecordingByShareToken(shareToken) {
   const { rows } = await db.query(
     `SELECT lr.*, rm.title AS room_title, rm.room_code
@@ -122,6 +135,7 @@ module.exports = {
   upsertLiveRecording,
   getLiveRecordingForRoom,
   getLiveRecordingByShareToken,
+  ensureRecordingShareTokenByRoomId,
   userCanAccessLiveRecording,
   sendLiveRecordingToResponse,
   deleteLiveRecordingFile,

@@ -264,4 +264,19 @@ export default function App() {
       </Route>
 
       <Route path="/course" element={<ProtectedRoute roles={['course']}><CourseLayout /></ProtectedRoute>}>
-  
+        <Route index element={<CourseDashboard />} />
+        <Route path="leads" element={<CourseLeads />} />
+        <Route path="teachers" element={<CourseTeachers />} />
+        <Route path="students" element={<CourseStudents />} />
+        <Route path="groups" element={<CourseGroups />} />
+        <Route path="schedule" element={<CourseSchedule />} />
+        <Route path="finance" element={<CourseFinance />} />
+        <Route path="notifications" element={<CourseNotifications />} />
+        <Route path="settings" element={<CourseSettings />} />
+      </Route>
+
+      <Route path="*" element={<Placeholder title="404 — Tapılmadı" />} />
+    </Routes>
+    </>
+  )
+}

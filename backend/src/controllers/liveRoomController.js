@@ -20,6 +20,7 @@ const {
   userCanAccessLiveRecording,
   sendLiveRecordingToResponse,
   getLiveRecordingByShareToken,
+  ensureRecordingShareTokenByRoomId,
 } = require('../services/liveRecordingStorage');
 
 const liveRecordingsDir = ensureLiveRecordingsUploadDir();
@@ -167,27 +168,33 @@ const getToken = async (req, res) => {
 const getHistory = async (req, res) => {
   try {
     const rows = await listInstructorLiveHistory(req.user.id, { limit: req.query.limit });
-    res.json({
-      success: true,
-      sessions: rows.map((r) => ({
-        id: r.id,
-        room_code: r.room_code,
-        title: r.title,
-        group_name: r.group_name,
-        status: r.status,
-        started_at: r.started_at,
-        ended_at: r.ended_at,
-        participant_count: r.total_participants || r.participant_count || 0,
-        duration_minutes: r.total_minutes || null,
-        has_recording: Boolean(r.recording_filename),
-        recording_url: r.recording_filename
-          ? `/live/recording-file/${encodeURIComponent(r.recording_filename)}`
-          : null,
-        recording_duration_sec: r.recording_duration_sec || null,
-        recorded_by_name: r.recorded_by_name || null,
-        share_url: r.recording_share_token ? `/lr/${r.recording_share_token}` : null,
-      })),
-    });
+    const sessions = await Promise.all(
+      rows.map(async (r) => {
+        let shareToken = r.recording_share_token || null;
+        if (r.recording_filename && !shareToken) {
+          shareToken = await ensureRecordingShareTokenByRoomId(r.id);
+        }
+        return {
+          id: r.id,
+          room_code: r.room_code,
+          title: r.title,
+          group_name: r.group_name,
+          status: r.status,
+          started_at: r.started_at,
+          ended_at: r.ended_at,
+          participant_count: r.total_participants || r.participant_count || 0,
+          duration_minutes: r.total_minutes || null,
+          has_recording: Boolean(r.recording_filename),
+          recording_url: r.recording_filename
+            ? `/live/recording-file/${encodeURIComponent(r.recording_filename)}`
+            : null,
+          recording_duration_sec: r.recording_duration_sec || null,
+          recorded_by_name: r.recorded_by_name || null,
+          share_url: shareToken ? `/lr/${shareToken}` : null,
+        };
+      }),
+    );
+    res.json({ success: true, sessions });
   } catch (e) {
     res.status(500).json({ success: false, message: e.message || 'Xəta' });
   }
