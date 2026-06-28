@@ -1,4 +1,15 @@
+const crypto = require('crypto');
 const db = require('../utils/db');
+
+function normalizeTags(raw) {
+  if (!raw) return [];
+  const list = Array.isArray(raw) ? raw : String(raw).split(/[,\s#]+/);
+  return [...new Set(list.map((t) => String(t || '').trim().replace(/^#/, '').toLowerCase()).filter(Boolean))].slice(0, 20);
+}
+
+function generateShareToken() {
+  return crypto.randomBytes(16).toString('base64url');
+}
 const getCurrentPlan = require('./billingGetCurrentPlan');
 const {
   materialsLimitsForPlan,
@@ -88,13 +99,28 @@ async function listInstructorMaterials(instructorId, filters = {}) {
     params.push(filters.assignment_id);
   }
 
+  const q = String(filters.q || '').trim();
+  if (q) {
+    clauses.push(`(
+      cm.title ILIKE $${i}
+      OR COALESCE(ig.name, '') ILIKE $${i}
+      OR EXISTS (SELECT 1 FROM unnest(cm.tags) AS t(tag) WHERE t.tag ILIKE $${i})
+    )`);
+    params.push(`%${q}%`);
+    i += 1;
+  }
+
   const { rows } = await db.query(
     `SELECT cm.id, cm.title, cm.file_url, cm.file_type, cm.file_size, cm.original_filename,
             cm.group_id, cm.subject_id, cm.enrollment_lesson_id, cm.assignment_id, cm.created_at,
+            cm.tags, cm.is_shared, cm.share_token, cm.view_count,
             ig.name AS group_name,
             isub.name AS subject_name,
             a.title AS assignment_title,
-            el.lesson_number, el.starts_at AS lesson_starts_at
+            el.lesson_number, el.starts_at AS lesson_starts_at,
+            (SELECT COUNT(*)::int FROM exam_material_links eml WHERE eml.material_id = cm.id) AS exam_link_count,
+            (SELECT COUNT(*)::int FROM assignment_material_links aml WHERE aml.material_id = cm.id) AS assignment_link_count,
+            (SELECT COUNT(*)::int FROM course_material_guest_students cmgs WHERE cmgs.material_id = cm.id) AS guest_student_count
      FROM course_materials cm
      LEFT JOIN instructor_groups ig ON ig.id = cm.group_id
      LEFT JOIN instructor_subjects isub ON isub.id = cm.subject_id
@@ -119,13 +145,15 @@ async function createCourseMaterial({
   subjectId,
   enrollmentLessonId,
   assignmentId,
+  tags,
 }) {
+  const tagList = normalizeTags(tags);
   const { rows } = await db.query(
     `INSERT INTO course_materials (
        instructor_id, title, file_url, storage_filename, file_type, file_size, original_filename,
-       group_id, subject_id, enrollment_lesson_id, assignment_id
+       group_id, subject_id, enrollment_lesson_id, assignment_id, tags
      )
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
      RETURNING *`,
     [
       instructorId,
@@ -139,6 +167,7 @@ async function createCourseMaterial({
       subjectId || null,
       enrollmentLessonId || null,
       assignmentId || null,
+      tagList,
     ],
   );
   return rows[0];
@@ -176,6 +205,24 @@ async function studentCanAccessMaterial(studentId, material) {
     );
     if (rows[0]) return true;
   }
+
+  const { rows: assignmentLinkRows } = await db.query(
+    `SELECT 1 FROM assignment_material_links aml
+     JOIN student_assignments sa ON sa.assignment_id = aml.assignment_id AND sa.student_id = $2
+     WHERE aml.material_id = $1
+     LIMIT 1`,
+    [material.id, studentId],
+  );
+  if (assignmentLinkRows[0]) return true;
+
+  const { rows: examLinkRows } = await db.query(
+    `SELECT 1 FROM exam_material_links eml
+     JOIN exam_assignments ea ON ea.exam_id = eml.exam_id AND ea.student_id = $2
+     WHERE eml.material_id = $1
+     LIMIT 1`,
+    [material.id, studentId],
+  );
+  if (examLinkRows[0]) return true;
 
   if (material.group_id) {
     const { rows } = await db.query(
@@ -252,8 +299,15 @@ async function listMaterialsForAssignment(assignmentId, studentId) {
   const { rows } = await db.query(
     `SELECT cm.id, cm.title, cm.file_url, cm.file_type, cm.file_size, cm.original_filename, cm.created_at
      FROM course_materials cm
-     JOIN student_assignments sa ON sa.assignment_id = cm.assignment_id AND sa.student_id = $2
-     WHERE cm.assignment_id = $1
+     JOIN student_assignments sa ON sa.student_id = $2
+     WHERE sa.assignment_id = $1
+       AND (
+         cm.assignment_id = $1
+         OR EXISTS (
+           SELECT 1 FROM assignment_material_links aml
+           WHERE aml.assignment_id = $1 AND aml.material_id = cm.id
+         )
+       )
      ORDER BY cm.created_at ASC`,
     [assignmentId, studentId],
   );
@@ -315,6 +369,167 @@ async function parentCanAccessMaterial(parentId, material) {
   return false;
 }
 
+async function updateCourseMaterialMeta(instructorId, materialId, { tags }) {
+  const row = await getMaterialById(materialId);
+  if (!row || String(row.instructor_id) !== String(instructorId)) return null;
+  const tagList = tags !== undefined ? normalizeTags(tags) : row.tags;
+  const { rows } = await db.query(
+    `UPDATE course_materials SET tags = $3 WHERE id = $1 AND instructor_id = $2 RETURNING *`,
+    [materialId, instructorId, tagList],
+  );
+  return rows[0] || null;
+}
+
+async function enableMaterialShare(instructorId, materialId) {
+  const row = await getMaterialById(materialId);
+  if (!row || String(row.instructor_id) !== String(instructorId)) return null;
+  const token = row.share_token || generateShareToken();
+  const { rows } = await db.query(
+    `UPDATE course_materials
+     SET is_shared = true, share_token = $3
+     WHERE id = $1 AND instructor_id = $2
+     RETURNING *`,
+    [materialId, instructorId, token],
+  );
+  return rows[0] || null;
+}
+
+async function getMaterialByShareToken(token) {
+  const t = String(token || '').trim();
+  if (!t) return null;
+  const { rows } = await db.query(
+    `SELECT cm.*, u.full_name AS instructor_name
+     FROM course_materials cm
+     JOIN users u ON u.id = cm.instructor_id
+     WHERE cm.share_token = $1 AND cm.is_shared = true
+     LIMIT 1`,
+    [t],
+  );
+  return rows[0] || null;
+}
+
+async function incrementMaterialViewCount(materialId) {
+  await db.query(
+    `UPDATE course_materials SET view_count = COALESCE(view_count, 0) + 1 WHERE id = $1`,
+    [materialId],
+  );
+}
+
+async function linkMaterialToTarget(instructorId, materialId, targetType, targetId) {
+  const material = await getMaterialById(materialId);
+  if (!material || String(material.instructor_id) !== String(instructorId)) {
+    const err = new Error('Material tapılmadı');
+    err.status = 404;
+    throw err;
+  }
+
+  const type = String(targetType || '').trim().toLowerCase();
+  const tid = String(targetId || '').trim();
+  if (!tid) {
+    const err = new Error('Hədəf seçilməyib');
+    err.status = 400;
+    throw err;
+  }
+
+  if (type === 'exam') {
+    const { rows } = await db.query(
+      `SELECT id FROM exams WHERE id = $1 AND instructor_id = $2 LIMIT 1`,
+      [tid, instructorId],
+    );
+    if (!rows[0]) {
+      const err = new Error('İmtahan tapılmadı');
+      err.status = 404;
+      throw err;
+    }
+    await db.query(
+      `INSERT INTO exam_material_links (exam_id, material_id) VALUES ($1, $2)
+       ON CONFLICT (exam_id, material_id) DO NOTHING`,
+      [tid, materialId],
+    );
+    return { target_type: 'exam', target_id: tid };
+  }
+
+  if (type === 'assignment') {
+    const { rows } = await db.query(
+      `SELECT id FROM assignments WHERE id = $1 AND instructor_id = $2 LIMIT 1`,
+      [tid, instructorId],
+    );
+    if (!rows[0]) {
+      const err = new Error('Tapşırıq tapılmadı');
+      err.status = 404;
+      throw err;
+    }
+    await db.query(
+      `INSERT INTO assignment_material_links (assignment_id, material_id) VALUES ($1, $2)
+       ON CONFLICT (assignment_id, material_id) DO NOTHING`,
+      [tid, materialId],
+    );
+    return { target_type: 'assignment', target_id: tid };
+  }
+
+  if (type === 'group') {
+    const { rows } = await db.query(
+      `SELECT id, subject_id FROM instructor_groups WHERE id = $1 AND instructor_id = $2 LIMIT 1`,
+      [tid, instructorId],
+    );
+    if (!rows[0]) {
+      const err = new Error('Qrup tapılmadı');
+      err.status = 404;
+      throw err;
+    }
+    await db.query(
+      `UPDATE course_materials SET group_id = $3, subject_id = $4 WHERE id = $1 AND instructor_id = $2`,
+      [materialId, instructorId, tid, rows[0].subject_id],
+    );
+    return { target_type: 'group', target_id: tid };
+  }
+
+  if (type === 'lesson') {
+    const { rows } = await db.query(
+      `SELECT el.id FROM enrollment_lessons el
+       JOIN enrollments e ON e.id = el.enrollment_id
+       WHERE el.id = $1 AND e.instructor_id = $2
+       LIMIT 1`,
+      [tid, instructorId],
+    );
+    if (!rows[0]) {
+      const err = new Error('Dərs tapılmadı');
+      err.status = 404;
+      throw err;
+    }
+    await db.query(
+      `UPDATE course_materials SET enrollment_lesson_id = $3 WHERE id = $1 AND instructor_id = $2`,
+      [materialId, instructorId, tid],
+    );
+    return { target_type: 'lesson', target_id: tid };
+  }
+
+  if (type === 'student') {
+    const { rows } = await db.query(
+      `SELECT u.id FROM users u
+       JOIN enrollments e ON e.student_id = u.id AND e.instructor_id = $1
+       WHERE u.id = $2 AND u.role = 'student' AND e.status IN ('active','pending_setup')
+       LIMIT 1`,
+      [instructorId, tid],
+    );
+    if (!rows[0]) {
+      const err = new Error('Tələbə tapılmadı');
+      err.status = 404;
+      throw err;
+    }
+    await db.query(
+      `INSERT INTO course_material_guest_students (material_id, student_id) VALUES ($1, $2)
+       ON CONFLICT DO NOTHING`,
+      [materialId, tid],
+    );
+    return { target_type: 'student', target_id: tid };
+  }
+
+  const err = new Error('Naməlum əlaqə növü');
+  err.status = 400;
+  throw err;
+}
+
 module.exports = {
   getInstructorMaterialsUsage,
   getMaterialsQuota,
@@ -328,4 +543,10 @@ module.exports = {
   listStudentMaterials,
   listMaterialsForAssignment,
   listUploadOptions,
+  updateCourseMaterialMeta,
+  enableMaterialShare,
+  getMaterialByShareToken,
+  incrementMaterialViewCount,
+  linkMaterialToTarget,
+  normalizeTags,
 };

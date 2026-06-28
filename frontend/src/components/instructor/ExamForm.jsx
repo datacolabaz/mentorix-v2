@@ -3,6 +3,7 @@ import api from '../../lib/api'
 import { localDatetimeInputToUtcIso } from '../../lib/examDatetime'
 import Button from '../common/Button'
 import { useToast } from '../common/Toast'
+import LibraryMaterialPickerModal, { libraryMaterialAsExamFile } from './LibraryMaterialPickerModal'
  
 const TYPES = {
   closed: 'Qapali (ABCDE)',
@@ -51,6 +52,7 @@ export default function ExamForm({ students, studentsLoading = false, onCreated,
 
   /** { id, name, url }[] — bir neçə PDF/şəkil */
   const [materialFiles, setMaterialFiles] = useState([])
+  const [libraryPickerOpen, setLibraryPickerOpen] = useState(false)
  
   const [questions, setQuestions] = useState([])
  
@@ -202,6 +204,15 @@ export default function ExamForm({ students, studentsLoading = false, onCreated,
         })),
       })
       toast('İmtahan yaradıldı!')
+      const examId = created?.exam?.id
+      const libraryIds = materialFiles.filter((f) => f.libraryId).map((f) => f.libraryId)
+      if (examId && libraryIds.length) {
+        await Promise.all(
+          libraryIds.map((id) =>
+            api.post(`/materials/${id}/link`, { target_type: 'exam', target_id: examId }).catch(() => null),
+          ),
+        )
+      }
       onCreated?.(created?.exam || null)
     } catch (err) { toast(err.message || 'Xeta', 'error') }
     finally { setLoading(false) }
@@ -326,10 +337,26 @@ export default function ExamForm({ students, studentsLoading = false, onCreated,
               >
                 fayl seçin
               </label>
+              <button
+                type="button"
+                onClick={() => setLibraryPickerOpen(true)}
+                className="inline-flex items-center rounded-xl px-4 py-2 text-sm font-semibold bg-primary/15 text-primary hover:bg-primary/25"
+              >
+                Kitabxanadan seç
+              </button>
               {materialFiles.length === 0 ? (
                 <span className="text-sm text-gray-400">fayl seçilmeyib</span>
               ) : null}
             </div>
+            <LibraryMaterialPickerModal
+              open={libraryPickerOpen}
+              onClose={() => setLibraryPickerOpen(false)}
+              selectedIds={materialFiles.filter((f) => f.libraryId).map((f) => f.libraryId)}
+              onSelect={(material) => {
+                setMaterialFiles((prev) => [...prev, libraryMaterialAsExamFile(material)])
+                toast(`«${material.title}» əlavə olundu`)
+              }}
+            />
             {pdfBusy && <p className="text-xs text-amber-400">Yüklənir…</p>}
             {materialFiles.length > 0 && (
               <ul className="space-y-2 mt-2">
@@ -340,6 +367,7 @@ export default function ExamForm({ students, studentsLoading = false, onCreated,
                   >
                     <span className="text-emerald-400 truncate" title={f.name}>
                       ✓ {f.name}
+                      {f.fromLibrary ? <span className="text-primary/80 ml-1">· kitabxana</span> : null}
                     </span>
                     <button
                       type="button"

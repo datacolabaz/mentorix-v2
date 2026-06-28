@@ -16,6 +16,9 @@ const {
   serveMaterialFile,
   listMyMaterials,
   listAssignmentMaterials,
+  patchMaterial,
+  shareMaterial,
+  linkMaterial,
 } = require('../controllers/courseMaterialsController');
 
 function authenticateMaterialFile(req, res, next) {
@@ -133,6 +136,9 @@ router.post(
   postMaterial,
 );
 router.delete('/:id', authenticate, authorize('instructor'), enforceActiveSubscription, removeMaterial);
+router.patch('/:id', authenticate, authorize('instructor'), enforceActiveSubscription, patchMaterial);
+router.post('/:id/share', authenticate, authorize('instructor'), enforceActiveSubscription, shareMaterial);
+router.post('/:id/link', authenticate, authorize('instructor'), enforceActiveSubscription, linkMaterial);
 
 router.get('/my', authenticate, authorize('student'), listMyMaterials);
 router.get('/assignment/:assignmentId', authenticate, authorize('student'), listAssignmentMaterials);

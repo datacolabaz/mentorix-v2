@@ -105,6 +105,7 @@ export default function MaterialUploadModal({
   const [dragOver, setDragOver] = useState(false)
   const [pickingFile, setPickingFile] = useState(false)
   const [shareResult, setShareResult] = useState(null)
+  const [tags, setTags] = useState('')
 
   const limitReached = isMaterialsQuotaFull(quota)
   const groupsInField = useMemo(() => groupsForField(fields, subjectId), [fields, subjectId])
@@ -121,6 +122,7 @@ export default function MaterialUploadModal({
     setDragOver(false)
     setPickingFile(false)
     setShareResult(null)
+    setTags('')
     resetFileInput()
   }, [])
 
@@ -266,6 +268,9 @@ export default function MaterialUploadModal({
     if (forGroupStudents) {
       fd.append('subject_id', subjectId)
       fd.append('group_id', groupId)
+    }
+    if (tags.trim()) {
+      fd.append('tags', tags.trim())
     }
 
     setUploading(true)
@@ -461,6 +466,17 @@ export default function MaterialUploadModal({
                   disabled={uploading}
                   className="w-full rounded-xl border border-white/10 bg-[#1c1c1c] px-3 py-2.5 text-sm text-white [color-scheme:dark]"
                   placeholder="Material adı"
+                />
+              </label>
+
+              <label className="block sm:col-span-2 space-y-1.5">
+                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Tag-lar (opsional)</span>
+                <input
+                  value={tags}
+                  onChange={(e) => setTags(e.target.value)}
+                  disabled={uploading}
+                  className="w-full rounded-xl border border-white/10 bg-[#1c1c1c] px-3 py-2.5 text-sm text-white [color-scheme:dark]"
+                  placeholder="#imtahan #python #9cuSinif"
                 />
               </label>
 

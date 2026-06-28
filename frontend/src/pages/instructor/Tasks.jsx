@@ -13,6 +13,7 @@ import { useSubscriptionPlans } from '../../hooks/useSubscriptionPlans'
 import { assignmentStatusClass, assignmentStatusLabel } from '../../lib/assignmentHelpers'
 import { assignmentFileLabel, assignmentFileOpenUrl, isAssignmentPreviewable } from '../../lib/assignmentFileUrl'
 import { fmtAzBakuField } from '../../lib/azDatetime'
+import LibraryMaterialPickerModal from '../../components/instructor/LibraryMaterialPickerModal'
 
 function fmtDue(d) {
   if (!d) return ''
@@ -45,6 +46,8 @@ export default function InstructorTasks() {
   const [editingId, setEditingId] = useState(null)
   const [saving, setSaving] = useState(false)
   const [fileUploading, setFileUploading] = useState(false)
+  const [libraryPickerOpen, setLibraryPickerOpen] = useState(false)
+  const [linkedLibraryIds, setLinkedLibraryIds] = useState([])
   const [deletingId, setDeletingId] = useState(null)
   const [reviewOpen, setReviewOpen] = useState(false)
   const [reviewLoading, setReviewLoading] = useState(false)
@@ -148,6 +151,7 @@ export default function InstructorTasks() {
 
   const resetForm = () => {
     setEditingId(null)
+    setLinkedLibraryIds([])
     setForm({
       title: '',
       topic: '',
@@ -179,6 +183,7 @@ export default function InstructorTasks() {
       return
     }
     setEditingId(task.id)
+    setLinkedLibraryIds([])
     setForm({
       title: task.title || '',
       topic: task.topic || '',
@@ -208,6 +213,15 @@ export default function InstructorTasks() {
     }
     setSaving(true)
     try {
+      const linkLibraryMaterials = async (assignmentId) => {
+        if (!assignmentId || !linkedLibraryIds.length) return
+        await Promise.all(
+          linkedLibraryIds.map((id) =>
+            api.post(`/materials/${id}/link`, { target_type: 'assignment', target_id: assignmentId }).catch(() => null),
+          ),
+        )
+      }
+
       if (editingId) {
         await api.patch('/tasks/' + encodeURIComponent(editingId), {
           title,
@@ -217,6 +231,7 @@ export default function InstructorTasks() {
           due_date: form.due_date || null,
           max_score: form.max_score ? Number(form.max_score) : null,
         })
+        await linkLibraryMaterials(editingId)
         toast('Tapşırıq yeniləndi', 'success')
       } else {
         const d = await api.post('/tasks', {
@@ -229,6 +244,8 @@ export default function InstructorTasks() {
           group_id: form.group_id || null,
           student_ids: form.selectedStudentIds,
         })
+        const assignmentId = d?.task?.id || d?.assignment?.id || d?.id
+        await linkLibraryMaterials(assignmentId)
         toast(
           d.assignedCount
             ? `Göndərildi (${d.assignedCount} tələbə)`
@@ -636,17 +653,42 @@ export default function InstructorTasks() {
           <div className="rounded-xl border border-indigo-500/15 bg-[#0f0c29]/40 p-3">
             <div className="flex items-center justify-between gap-2 mb-2">
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Tapşırıq faylı (PDF/Word/Excel/CSV/Şəkil)</p>
-              <label className="text-xs font-semibold text-blue-400 hover:text-blue-300 cursor-pointer">
-                + Yüklə
-                <input
-                  type="file"
-                  className="hidden"
-                  accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xlsx,.xls,.ppt,.pptx,.csv,.zip,application/pdf,image/png,image/jpeg,application/zip"
-                  onChange={(e) => void uploadQuestionFile(e.target.files?.[0])}
-                  disabled={blocked || fileUploading}
-                />
-              </label>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setLibraryPickerOpen(true)}
+                  disabled={blocked}
+                  className="text-xs font-semibold text-primary hover:text-primary/80"
+                >
+                  Kitabxana
+                </button>
+                <label className="text-xs font-semibold text-blue-400 hover:text-blue-300 cursor-pointer">
+                  + Yüklə
+                  <input
+                    type="file"
+                    className="hidden"
+                    accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xlsx,.xls,.ppt,.pptx,.csv,.zip,application/pdf,image/png,image/jpeg,application/zip"
+                    onChange={(e) => void uploadQuestionFile(e.target.files?.[0])}
+                    disabled={blocked || fileUploading}
+                  />
+                </label>
+              </div>
             </div>
+            <LibraryMaterialPickerModal
+              open={libraryPickerOpen}
+              onClose={() => setLibraryPickerOpen(false)}
+              selectedIds={linkedLibraryIds}
+              onSelect={(material) => {
+                setLinkedLibraryIds((prev) => (prev.includes(material.id) ? prev : [...prev, material.id]))
+                if (!form.question_file_url) {
+                  setForm((p) => ({ ...p, question_file_url: material.file_url }))
+                }
+                toast(`«${material.title}» kitabxanadan əlavə olundu`, 'success')
+              }}
+            />
+            {linkedLibraryIds.length > 0 ? (
+              <p className="text-[11px] text-primary/80 mb-2">{linkedLibraryIds.length} kitabxana materialı bağlanacaq</p>
+            ) : null}
             {fileUploading ? (
               <p className="text-sm text-gray-500">Fayl yüklənir…</p>
             ) : form.question_file_url ? (

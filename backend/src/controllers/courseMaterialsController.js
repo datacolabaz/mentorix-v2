@@ -11,6 +11,9 @@ const {
   listStudentMaterials,
   listMaterialsForAssignment,
   listUploadOptions,
+  updateCourseMaterialMeta,
+  enableMaterialShare,
+  linkMaterialToTarget,
 } = require('../services/courseMaterialsService');
 const {
   readCourseMaterialBuffer,
@@ -22,6 +25,9 @@ const { STORAGE_LIMIT_MESSAGE, MATERIALS_MAX_SINGLE_FILE_BYTES } = require('../c
 
 function mapMaterialRow(row) {
   if (!row) return null;
+  const examCount = Number(row.exam_link_count) || 0;
+  const assignmentCount = Number(row.assignment_link_count) || 0;
+  const guestCount = Number(row.guest_student_count) || 0;
   return {
     id: row.id,
     title: row.title,
@@ -34,11 +40,21 @@ function mapMaterialRow(row) {
     enrollment_lesson_id: row.enrollment_lesson_id,
     assignment_id: row.assignment_id,
     created_at: row.created_at,
+    tags: Array.isArray(row.tags) ? row.tags : [],
+    is_shared: Boolean(row.is_shared),
+    share_token: row.share_token || null,
+    view_count: Number(row.view_count) || 0,
     group_name: row.group_name || null,
     subject_name: row.subject_name || null,
     assignment_title: row.assignment_title || null,
     lesson_number: row.lesson_number ?? null,
     lesson_starts_at: row.lesson_starts_at || null,
+    usage: {
+      exam_count: examCount,
+      assignment_count: assignmentCount,
+      guest_student_count: guestCount,
+      linked_total: examCount + assignmentCount,
+    },
   };
 }
 
@@ -57,6 +73,7 @@ const listMaterials = async (req, res) => {
       group_id: req.query.group_id || null,
       subject_id: req.query.subject_id || null,
       assignment_id: req.query.assignment_id || null,
+      q: req.query.q || null,
     });
     res.json({ success: true, materials: rows.map(mapMaterialRow) });
   } catch (e) {
@@ -112,6 +129,7 @@ const postMaterial = async (req, res) => {
       subjectId: req.body.subject_id || null,
       enrollmentLessonId: req.body.enrollment_lesson_id || null,
       assignmentId: req.body.assignment_id || null,
+      tags: req.body.tags,
     });
 
     const quota = await getMaterialsQuota(req.user.id);
@@ -217,6 +235,53 @@ const listAssignmentMaterials = async (req, res) => {
   }
 };
 
+const patchMaterial = async (req, res) => {
+  try {
+    const row = await updateCourseMaterialMeta(req.user.id, req.params.id, {
+      tags: req.body?.tags,
+    });
+    if (!row) return res.status(404).json({ success: false, message: 'Material tapılmadı' });
+    const full = await listInstructorMaterials(req.user.id, {});
+    const mapped = full.find((r) => String(r.id) === String(row.id));
+    res.json({ success: true, material: mapMaterialRow(mapped || row) });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message || 'Xəta' });
+  }
+};
+
+const shareMaterial = async (req, res) => {
+  try {
+    const row = await enableMaterialShare(req.user.id, req.params.id);
+    if (!row) return res.status(404).json({ success: false, message: 'Material tapılmadı' });
+    res.json({
+      success: true,
+      material: {
+        id: row.id,
+        share_token: row.share_token,
+        is_shared: true,
+      },
+    });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message || 'Xəta' });
+  }
+};
+
+const linkMaterial = async (req, res) => {
+  try {
+    const result = await linkMaterialToTarget(
+      req.user.id,
+      req.params.id,
+      req.body?.target_type,
+      req.body?.target_id,
+    );
+    const full = await listInstructorMaterials(req.user.id, {});
+    const mapped = full.find((r) => String(r.id) === String(req.params.id));
+    res.json({ success: true, link: result, material: mapMaterialRow(mapped) });
+  } catch (e) {
+    res.status(e.status || 500).json({ success: false, message: e.message || 'Xəta' });
+  }
+};
+
 module.exports = {
   getQuota,
   listMaterials,
@@ -226,5 +291,8 @@ module.exports = {
   serveMaterialFile,
   listMyMaterials,
   listAssignmentMaterials,
+  patchMaterial,
+  shareMaterial,
+  linkMaterial,
   STORAGE_LIMIT_MESSAGE,
 };
