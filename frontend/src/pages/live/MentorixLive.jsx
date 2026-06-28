@@ -8,6 +8,8 @@ import { useToast } from '../../components/common/Toast'
 import { formatRecordingDuration, useLocalRecording } from '../../hooks/useLocalRecording'
 
 const JITSI_SCRIPT = 'https://meet.jit.si/external_api.js'
+const JITSI_IFRAME_ALLOW =
+  'camera; microphone; display-capture; fullscreen; autoplay; clipboard-write; speaker-selection'
 
 function loadJitsiApi() {
   if (typeof window === 'undefined') return Promise.reject(new Error('no window'))
@@ -31,10 +33,34 @@ function loadJitsiApi() {
 function applyJitsiIframePermissions(apiInstance) {
   const iframe = apiInstance?.getIFrame?.()
   if (!iframe) return
-  const allow =
-    'camera; microphone; display-capture; fullscreen; autoplay; clipboard-write; speaker-selection'
-  iframe.setAttribute('allow', allow)
-  iframe.allow = allow
+  iframe.setAttribute('allow', JITSI_IFRAME_ALLOW)
+  iframe.allow = JITSI_IFRAME_ALLOW
+  iframe.setAttribute('allowfullscreen', 'true')
+}
+
+function watchJitsiIframePermissions(parentNode) {
+  const apply = () => {
+    const iframe = parentNode.querySelector('iframe')
+    if (!iframe) return
+    iframe.setAttribute('allow', JITSI_IFRAME_ALLOW)
+    iframe.allow = JITSI_IFRAME_ALLOW
+    iframe.setAttribute('allowfullscreen', 'true')
+  }
+
+  apply()
+  const observer = new MutationObserver(apply)
+  observer.observe(parentNode, { childList: true, subtree: true })
+  return () => observer.disconnect()
+}
+
+async function warmUpBrowserMediaAccess() {
+  if (!navigator.mediaDevices?.getUserMedia) return
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true })
+    stream.getTracks().forEach((track) => track.stop())
+  } catch {
+    /* Jitsi iframe öz icazəsini ayrıca soruşacaq */
+  }
 }
 
 export default function MentorixLive() {
@@ -120,10 +146,14 @@ export default function MentorixLive() {
     if (!room?.jitsi_room || !containerRef.current || jitsiRef.current) return
 
     let cancelled = false
+    let stopWatchingIframe = null
     ;(async () => {
       try {
+        await warmUpBrowserMediaAccess()
         const JitsiMeetExternalAPI = await loadJitsiApi()
         if (cancelled || !containerRef.current) return
+
+        stopWatchingIframe = watchJitsiIframePermissions(containerRef.current)
 
         const apiInstance = new JitsiMeetExternalAPI('meet.jit.si', {
           roomName: room.jitsi_room,
@@ -139,8 +169,11 @@ export default function MentorixLive() {
             startWithVideoMuted: false,
             disableDeepLinking: true,
             prejoinPageEnabled: false,
+            prejoinConfig: { enabled: false },
             enableWelcomePage: false,
+            requireDisplayName: false,
             disableThirdPartyRequests: true,
+            disableInitialGUM: false,
           },
           interfaceConfigOverwrite: {
             APP_NAME: 'Mentorix Live',
@@ -152,6 +185,7 @@ export default function MentorixLive() {
             DEFAULT_LOGO_URL: '',
             DEFAULT_WELCOME_PAGE_LOGO_URL: '',
             HIDE_DEEP_LINKING_LOGO: true,
+            MOBILE_APP_PROMO: false,
             DEFAULT_BACKGROUND: '#0b0b0b',
             TOOLBAR_BUTTONS: [
               'microphone',
@@ -176,6 +210,7 @@ export default function MentorixLive() {
 
     return () => {
       cancelled = true
+      stopWatchingIframe?.()
     }
   }, [room?.jitsi_room, user?.full_name, user?.email, toast])
 
@@ -186,13 +221,11 @@ export default function MentorixLive() {
       if (blob) setRecordModalOpen(true)
       return
     }
-    try {
-      const result = await recording.startRecording()
-      if (result?.status === 'started') {
-        toast('Yazılış başladı — ekran paylaşımını seçin')
-      }
-    } catch (e) {
-      toast(e?.message || 'Yazılış başlamadı', 'error')
+    const result = await recording.startRecording()
+    if (result?.status === 'started') {
+      toast('Yazılış başladı')
+    } else if (result?.status === 'error') {
+      toast(result.message || 'Yazılış başlamadı', 'error')
     }
   }
 
