@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import api from '../../lib/api'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
@@ -62,12 +63,12 @@ function historyDateKey(p) {
   return formatDdMmYyyy(p.payment_date || p.paid_at)
 }
 
-function lessonStatusLabel(status) {
+function lessonStatusLabel(status, t) {
   const st = String(status || '').toLowerCase()
-  if (st === 'done') return { text: 'Keçib', cls: 'text-emerald-300' }
-  if (st === 'absent') return { text: 'Qayıb', cls: 'text-rose-300' }
-  if (st === 'cancelled') return { text: 'Ləğv', cls: 'text-gray-400' }
-  return { text: 'Gözləyir', cls: 'text-amber-200/90' }
+  if (st === 'done') return { text: t('payments.lessonStatus.done'), cls: 'text-emerald-300' }
+  if (st === 'absent') return { text: t('payments.lessonStatus.absent'), cls: 'text-rose-300' }
+  if (st === 'cancelled') return { text: t('payments.lessonStatus.cancelled'), cls: 'text-gray-400' }
+  return { text: t('payments.lessonStatus.pending'), cls: 'text-amber-200/90' }
 }
 
 /** Ad və telefon üzrə (case-insensitive, +994 / boşluq tolerant) */
@@ -100,6 +101,7 @@ function SearchIcon({ className = 'w-4 h-4' }) {
 }
 
 export default function InstructorPayments() {
+  const { t } = useTranslation()
   const [loading, setLoading] = useState(true)
   const [err, setErr] = useState(null)
   const [totalEarnings, setTotalEarnings] = useState(0)
@@ -155,12 +157,12 @@ export default function InstructorPayments() {
       setPackConfirmations(packs)
       if (packs.length > 0) setPackConfirmOpen(true)
     } catch (e) {
-      setErr(e?.message || 'Məlumat yüklənmədi')
+      setErr(e?.message || t('payments.toasts.loadFailed'))
       setStudents([])
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [t])
 
   useEffect(() => {
     void load()
@@ -178,7 +180,7 @@ export default function InstructorPayments() {
     if (!adjustRow?.enrollment_id) return
     const amt = Number(adjustAmount)
     if (!Number.isFinite(amt) || amt <= 0) {
-      toast('Məbləği düzgün daxil edin', 'error')
+      toast(t('payments.toasts.invalidAmount'), 'error')
       return
     }
     setAdjustSaving(true)
@@ -192,12 +194,12 @@ export default function InstructorPayments() {
         legacy_kind: 'balance_adjustment',
         notes: adjustNotes.trim() || undefined,
       })
-      toast('Balans düzəlişi qeydə alındı')
+      toast(t('payments.toasts.adjustSaved'))
       setAdjustOpen(false)
       setAdjustRow(null)
       await load()
     } catch (e) {
-      toast(e?.message || 'Xəta', 'error')
+      toast(e?.message || t('payments.toasts.error'), 'error')
     } finally {
       setAdjustSaving(false)
     }
@@ -227,9 +229,9 @@ export default function InstructorPayments() {
   const categorized = useMemo(() => {
     const list = Array.isArray(students) ? students : []
     const cats = [
-      { key: '8', label: '8 dərs paketləri', match: (s) => String(s.billing_type) === '8_lessons' },
-      { key: '12', label: '12 dərs paketləri', match: (s) => String(s.billing_type) === '12_lessons' },
-      { key: 'other', label: 'Digər', match: (s) => !['8_lessons', '12_lessons'].includes(String(s.billing_type)) },
+      { key: '8', label: t('payments.cat8'), match: (s) => String(s.billing_type) === '8_lessons' },
+      { key: '12', label: t('payments.cat12'), match: (s) => String(s.billing_type) === '12_lessons' },
+      { key: 'other', label: t('payments.catOther'), match: (s) => !['8_lessons', '12_lessons'].includes(String(s.billing_type)) },
     ]
     return cats
       .map((c) => {
@@ -241,7 +243,7 @@ export default function InstructorPayments() {
         return { ...c, items, totalCount: allItems.length }
       })
       .filter((c) => (c.key === '8' ? c.totalCount > 0 : c.items.length > 0))
-  }, [students, searchTerm])
+  }, [students, searchTerm, t])
 
   const submitQuickPay = async (keepOpen = false) => {
     void keepOpen
@@ -261,14 +263,14 @@ export default function InstructorPayments() {
         amount: item.amount,
         payment_date: item.due_ymd,
       })
-      toast('Paket ödənişi təsdiqləndi — tarixçəyə əlavə olundu', 'success')
+      toast(t('payments.toasts.packConfirmed'), 'success')
       if (opts.refreshHistory && historyRow?.enrollment_id === item.enrollment_id) {
         await fetchHistoryForEnrollment(item.enrollment_id, historyRow.billing_type, '8', historyRow)
       }
       setPackConfirmations((prev) => prev.filter((x) => packConfirmKey(x) !== key))
       await load()
     } catch (e) {
-      toast(e?.message || 'Təsdiq alınmadı', 'error')
+      toast(e?.message || t('payments.toasts.confirmFailed'), 'error')
       if (e?.status === 409) await load()
     } finally {
       setConfirmingKey(null)
@@ -284,13 +286,13 @@ export default function InstructorPayments() {
         due_ymd: item.due_ymd,
         amount: item.amount,
       })
-      toast('Ödəniş təsdiqləndi — tarixçəyə əlavə olundu', 'success')
+      toast(t('payments.toasts.dueConfirmed'), 'success')
       if (opts.refreshHistory && historyRow?.enrollment_id === item.enrollment_id) {
         await fetchHistoryForEnrollment(item.enrollment_id, historyRow.billing_type, '8', historyRow)
       }
       await load()
     } catch (e) {
-      toast(e?.message || 'Təsdiq alınmadı', 'error')
+      toast(e?.message || t('payments.toasts.confirmFailed'), 'error')
       if (e?.status === 409) await load()
     } finally {
       setConfirmingKey(null)
@@ -364,10 +366,10 @@ export default function InstructorPayments() {
           if (legacyPkgs.length > 0 && Number.isFinite(fee) && fee > 0) {
             const name = studentRow
               ? `${studentRow.first_name || ''} ${studentRow.last_name || ''}`.trim()
-              : d.student_name || 'Tələbə'
+              : d.student_name || t('payments.defaultStudent')
             setLegacyRestorePrompt({
               enrollmentId,
-              studentName: name || 'Tələbə',
+              studentName: name || t('payments.defaultStudent'),
               packages: legacyPkgs,
               fee,
               totalAmount: roundMoney(legacyPkgs.length * fee),
@@ -382,7 +384,7 @@ export default function InstructorPayments() {
         setHistorySummary(d.balance_summary ?? null)
       }
     } catch (e) {
-      toast(e?.message || 'Tarixçə yüklənmədi', 'error')
+      toast(e?.message || t('payments.toasts.historyLoadFailed'), 'error')
     } finally {
       setHistoryLoading(false)
     }
@@ -414,8 +416,11 @@ export default function InstructorPayments() {
       const n = Number(d?.count) || 0
       toast(
         n > 0
-          ? `${n} keçmiş paket ödənişi sistemə əlavə olundu (${formatAzn(d?.total_amount ?? m.totalAmount)})`
-          : 'Əlavə olunacaq paket qalmayıb',
+          ? t('payments.toasts.legacyAdded', {
+              count: n,
+              amount: formatAzn(d?.total_amount ?? m.totalAmount),
+            })
+          : t('payments.toasts.noLegacyLeft'),
         n > 0 ? 'success' : 'info'
       )
       setLegacyRestorePrompt(null)
@@ -424,7 +429,7 @@ export default function InstructorPayments() {
       }
       await load()
     } catch (e) {
-      toast(e?.message || 'Qeydə alınmadı', 'error')
+      toast(e?.message || t('payments.toasts.recordFailed'), 'error')
     } finally {
       setLegacyRestoreBusy(false)
     }
@@ -432,9 +437,7 @@ export default function InstructorPayments() {
 
   const deleteHistoryPayment = async (paymentId) => {
     if (
-      !window.confirm(
-        'Bu ödəniş qeydini silmək istəyirsiniz? «Cəmi ödənilən» və borc bütün səhifələrdə (cədvəl, dashboard) yenidən hesablanacaq.'
-      )
+      !window.confirm(t('payments.confirmDelete'))
     )
       return
     const eid = historyRow?.enrollment_id
@@ -442,11 +445,11 @@ export default function InstructorPayments() {
     setDeletingPaymentId(paymentId)
     try {
       await api.delete('/payments/' + encodeURIComponent(paymentId))
-      toast('Ödəniş silindi')
+      toast(t('payments.toasts.deleted'))
       await fetchHistoryForEnrollment(eid, historyRow?.billing_type, '8', historyRow)
       await load()
     } catch (e) {
-      toast(e?.message || 'Silinmədi', 'error')
+      toast(e?.message || t('payments.toasts.deleteFailed'), 'error')
     } finally {
       setDeletingPaymentId(null)
     }
@@ -455,21 +458,20 @@ export default function InstructorPayments() {
   return (
     <div className="p-4 sm:p-6 min-w-0 max-w-6xl mx-auto w-full">
       <div className="mb-6">
-        <h1 className="font-display font-bold text-xl sm:text-2xl text-token-textMain tracking-tight">Ödənişlər</h1>
+        <h1 className="font-display font-bold text-xl sm:text-2xl text-token-textMain tracking-tight">{t('payments.title')}</h1>
         <p className="text-token-textMuted text-sm mt-1">
-          8/12 dərs paketləri tamamlananda təsdiq tələb olunur; aylıq ödənişlər isə cari aydan etibarən təsdiqlənir.
-          Təsdiqdən sonra tarixçə və tələbə profilində ödənişlər yenilənir.
+          {t('payments.subtitle')}
         </p>
       </div>
 
       <Modal
         open={packConfirmOpen && packConfirmations.length > 0}
         onClose={() => !confirmingKey && setPackConfirmOpen(false)}
-        title="Paket ödənişi təsdiqi"
+        title={t('payments.packConfirmTitle')}
         size="md"
       >
         <p className="text-xs text-token-textMuted mb-3 leading-relaxed">
-          Bu tələbələrin dərs paketi tamamlanıb, amma ödəniş hələ qeydə alınmayıb. Nağd alındısa təsdiqləyin.
+          {t('payments.packConfirmDesc')}
         </p>
         <ul className="space-y-2 max-h-[min(60vh,24rem)] overflow-y-auto pr-0.5">
           {packConfirmations.map((item) => {
@@ -484,10 +486,12 @@ export default function InstructorPayments() {
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-token-textMain">{name || '—'}</p>
                   <p className="text-xs text-emerald-200/90 mt-1">
-                    {item.period || `Paket #${item.package_number}`} tamamlanıb
-                    {item.overdue ? ' · gecikib' : ''}
+                    {t('payments.packCompleted', {
+                      period: item.period || t('payments.packNumber', { num: item.package_number }),
+                    })}
+                    {item.overdue ? t('payments.overdue') : ''}
                   </p>
-                  <p className="text-xs text-token-textMuted mt-1 tabular-nums">Məbləğ: {formatAzn(item.amount)}</p>
+                  <p className="text-xs text-token-textMuted mt-1 tabular-nums">{t('payments.amount', { amount: formatAzn(item.amount) })}</p>
                 </div>
                 <Button
                   type="button"
@@ -497,7 +501,7 @@ export default function InstructorPayments() {
                   onClick={() => void confirmPackPayment(item)}
                   className="shrink-0 w-full sm:w-auto justify-center"
                 >
-                  Təsdiqlə
+                  {t('payments.confirm')}
                 </Button>
               </li>
             )
@@ -505,29 +509,28 @@ export default function InstructorPayments() {
         </ul>
         <div className="flex justify-end pt-3">
           <Button type="button" variant="secondary" size="sm" disabled={!!confirmingKey} onClick={() => setPackConfirmOpen(false)}>
-            Sonra
+            {t('payments.later')}
           </Button>
         </div>
       </Modal>
 
       {!loading && packConfirmations.length > 0 ? (
         <Card hover className="p-4 sm:p-5 mb-6 border border-emerald-500/30 bg-emerald-500/5">
-          <h2 className="font-display font-bold text-sm text-emerald-200/95 mb-1">Paket ödənişi gözləyir</h2>
+          <h2 className="font-display font-bold text-sm text-emerald-200/95 mb-1">{t('payments.packPendingTitle')}</h2>
           <p className="text-xs text-token-textMuted mb-3 leading-relaxed">
-            {packConfirmations.length} tamamlanmış paket üçün ödəniş təsdiqi lazımdır.
+            {t('payments.packPendingDesc', { count: packConfirmations.length })}
           </p>
           <Button type="button" size="sm" onClick={() => setPackConfirmOpen(true)}>
-            Təsdiq pəncərəsini aç
+            {t('payments.openConfirmModal')}
           </Button>
         </Card>
       ) : null}
 
       {!loading && dueConfirmations.length > 0 ? (
         <Card hover className="p-4 sm:p-5 mb-6 border border-amber-500/30 bg-amber-500/5">
-          <h2 className="font-display font-bold text-sm text-amber-200/95 mb-1">Aylıq ödəniş xatırlatması</h2>
+          <h2 className="font-display font-bold text-sm text-amber-200/95 mb-1">{t('payments.monthlyReminderTitle')}</h2>
           <p className="text-xs text-token-textMuted mb-3 leading-relaxed">
-            Ödəniş vaxtı çatıb, amma hələ tarixçəyə düşməyib. Nağd alındısa təsdiqləyin — sonra «Tarixçə» və
-            bildirişlər bölməsində görünəcək.
+            {t('payments.monthlyReminderDesc')}
           </p>
           <ul className="space-y-2">
             {dueConfirmations.map((item) => {
@@ -543,11 +546,12 @@ export default function InstructorPayments() {
                   <div className="min-w-0">
                     <p className="text-sm font-semibold text-token-textMain">{name || '—'}</p>
                     <p className="text-xs text-amber-200/90 mt-1 leading-relaxed">
-                      <span className="font-medium">{dueLabel}</span> tarixli ödəniş vaxtı çatıb
-                      {item.overdue ? ' (gecikib)' : ''}. Ödənişi etmisinizsə təsdiqləyin.
+                      {t('payments.dueReached', { date: dueLabel })}
+                      {item.overdue ? t('payments.overdueParen') : ''}
+                      {t('payments.dueConfirmHint')}
                     </p>
                     <p className="text-xs text-token-textMuted mt-1 tabular-nums">
-                      Məbləğ: {formatAzn(item.amount)}
+                      {t('payments.amount', { amount: formatAzn(item.amount) })}
                       {item.period ? ` · ${item.period}` : ''}
                     </p>
                   </div>
@@ -559,7 +563,7 @@ export default function InstructorPayments() {
                     onClick={() => void confirmDuePayment(item)}
                     className="shrink-0 w-full sm:w-auto justify-center"
                   >
-                    Təsdiqlə
+                    {t('payments.confirm')}
                   </Button>
                 </li>
               )
@@ -571,39 +575,37 @@ export default function InstructorPayments() {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
         <Card hover className="p-5">
           <div className="text-[11px] font-semibold text-token-textMuted uppercase tracking-widest mb-2">
-            Total Earnings
+            {t('payments.totalEarnings')}
           </div>
           <div className="font-display font-extrabold text-2xl sm:text-3xl text-token-textMain tabular-nums">
             {loading ? '…' : formatAzn(totalEarnings)}
           </div>
-          <p className="text-xs text-token-textMuted mt-2">Təsdiqlənmiş ödənişlərin cəmi (bütün dövr)</p>
+          <p className="text-xs text-token-textMuted mt-2">{t('payments.totalEarningsDesc')}</p>
         </Card>
         <Card hover className="p-5">
           <div className="text-[11px] font-semibold text-token-textMuted uppercase tracking-widest mb-2">
-            Pending Payments
+            {t('payments.pendingPayments')}
           </div>
           <div className="font-display font-extrabold text-2xl sm:text-3xl text-amber-600 dark:text-amber-200/95 tabular-nums">
             {loading ? '…' : formatAzn(pendingAmount)}
           </div>
           <p className="text-xs text-token-textMuted mt-2">
-            {loading
-              ? '…'
-              : `${pendingCount} tələbə · qalıq borc cəmi`}
+            {loading ? '…' : t('payments.pendingDesc', { count: pendingCount })}
           </p>
         </Card>
       </div>
 
       <Card hover className="overflow-hidden border border-[color:var(--border-subtle)] mb-3">
         <div className="px-4 py-3 border-b border-[color:var(--border-subtle)] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-token-surfaceCard/45">
-          <h2 className="font-display font-bold text-sm text-token-textMain tracking-wide">Tələbələr</h2>
+          <h2 className="font-display font-bold text-sm text-token-textMain tracking-wide">{t('payments.students')}</h2>
           <Button type="button" variant="secondary" size="sm" onClick={() => void load()} disabled={loading}>
-            Yenilə
+            {t('payments.reload')}
           </Button>
         </div>
 
         {loading && (
           <div className="p-6">
-            <ListSkeleton message="Ödəniş məlumatları yüklənir…" />
+            <ListSkeleton message={t('payments.loadingMessage')} />
           </div>
         )}
 
@@ -611,7 +613,7 @@ export default function InstructorPayments() {
           <div className="p-6 text-center">
             <p className="text-amber-200/90 text-sm mb-3">{err}</p>
             <Button type="button" onClick={() => void load()}>
-              Yenidən yüklə
+              {t('payments.retry')}
             </Button>
           </div>
         )}
@@ -646,8 +648,8 @@ export default function InstructorPayments() {
                     <div className="font-semibold text-token-textMain truncate">{c.label}</div>
                     <div className="text-xs text-token-textMuted">
                       {c.key === '8' && searchTerm.trim()
-                        ? `${c.items.length} / ${c.totalCount} tələbə`
-                        : `${c.items.length} tələbə`}
+                        ? t('payments.studentCountFiltered', { shown: c.items.length, total: c.totalCount })
+                        : t('payments.studentCount', { count: c.items.length })}
                     </div>
                   </div>
                   <div className="text-token-textMuted text-sm font-mono">{isOpen ? '▴' : '▾'}</div>
@@ -658,7 +660,7 @@ export default function InstructorPayments() {
                     {c.key === '8' ? (
                       <div className="px-1 pb-1">
                         <label className="sr-only" htmlFor="pack-student-search">
-                          Tələbə axtarışı
+                          {t('payments.searchLabel')}
                         </label>
                         <div className="relative">
                           <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-token-textMuted pointer-events-none" />
@@ -667,7 +669,7 @@ export default function InstructorPayments() {
                             type="search"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            placeholder="Ad və ya telefon ilə axtar…"
+                            placeholder={t('payments.searchPlaceholder')}
                             className={[
                               'w-full rounded-xl border border-[color:var(--border-subtle)]',
                               'bg-token-surfaceCard/70 text-token-textMain text-sm',
@@ -681,7 +683,7 @@ export default function InstructorPayments() {
                       </div>
                     ) : null}
                     {c.key === '8' && searchTerm.trim() && c.items.length === 0 ? (
-                      <p className="text-sm text-token-textMuted text-center py-6 px-2">Şagird tapılmadı</p>
+                      <p className="text-sm text-token-textMuted text-center py-6 px-2">{t('payments.noStudentFound')}</p>
                     ) : null}
                     {c.items.map((s) => {
                       const isPartial = s.payment_plan === 'partial'
@@ -703,13 +705,13 @@ export default function InstructorPayments() {
                             </div>
                             <div className="text-xs text-token-textMuted flex flex-wrap gap-x-3 gap-y-1 mt-0.5">
                               <span className="font-mono text-[11px] tabular-nums truncate">{s.phone || '—'}</span>
-                              <span>Başlama:</span>
+                              <span>{t('payments.startDate')}</span>
                               <span className="font-mono text-token-textMain tabular-nums">
                                 {formatDdMmYyyy(s.lesson_start_date || s.payment_start_date)}
                               </span>
                             </div>
                             <div className="text-[11px] text-token-textMuted mt-1 truncate">
-                              Sahə: <span className="text-token-textMain">{s.track_subject_name || '—'}</span>
+                              {t('payments.subject')} <span className="text-token-textMain">{s.track_subject_name || '—'}</span>
                               {s.track_group_name ? <span> · {s.track_group_name}</span> : null}
                             </div>
                           </div>
@@ -717,7 +719,7 @@ export default function InstructorPayments() {
                           <div className="flex flex-col sm:items-end gap-2 shrink-0">
                             <div className="flex flex-wrap items-center gap-2 justify-between sm:justify-end">
                               <span className="inline-flex rounded-md bg-indigo-500/10 text-indigo-200/90 px-2 py-0.5 text-xs font-medium">
-                                {c.key === '8' ? '8 dərs' : c.key === '12' ? '12 dərs' : 'Paket'}
+                                {c.key === '8' ? t('payments.pack8') : c.key === '12' ? t('payments.pack12') : t('payments.packGeneric')}
                               </span>
                               {showDebt ? (
                                 <span
@@ -725,7 +727,7 @@ export default function InstructorPayments() {
                                     showDebtRed ? 'text-rose-300' : 'text-amber-200/90'
                                   }`}
                                 >
-                                  Qalıq borc: {formatAzn(s.pending_debt)}
+                                  {t('payments.remainingDebt', { amount: formatAzn(s.pending_debt) })}
                                 </span>
                               ) : null}
                             </div>
@@ -741,7 +743,7 @@ export default function InstructorPayments() {
                                     : undefined
                                 }
                               >
-                                Tarixçə
+                                {t('payments.history')}
                               </Button>
                             </div>
                           </div>
@@ -759,17 +761,16 @@ export default function InstructorPayments() {
       <Modal
         open={adjustOpen}
         onClose={() => !adjustSaving && setAdjustOpen(false)}
-        title="Balans düzəlişi"
+        title={t('payments.adjustTitle')}
         size="md"
       >
         {adjustRow && (
           <div className="space-y-4 text-sm">
             <p className="text-xs text-gray-500 leading-relaxed border border-indigo-500/15 rounded-xl px-3 py-2 bg-[#0f0c29]/80">
-              Ay ortasında dərsi kəsən və ya borcu azaltmaq lazım olan hallarda müsbət məbləğ daxil edin. Bu qeyd
-              borc–balans hesabına daxil olunur, amma ümumi gəlir rəqəminə <span className="text-indigo-300">daxil edilmir</span>.
+              {t('payments.adjustDesc')}
             </p>
             <p className="text-gray-400">
-              Tələbə:{' '}
+              {t('payments.studentLabel')}{' '}
               <span className="text-white font-medium">
                 {adjustRow.first_name} {adjustRow.last_name}
               </span>
@@ -777,7 +778,7 @@ export default function InstructorPayments() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
-                  Məbləğ (₼) *
+                  {t('payments.amountLabel')}
                 </label>
                 <input
                   type="number"
@@ -790,7 +791,7 @@ export default function InstructorPayments() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Tarix</label>
+                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">{t('payments.date')}</label>
                 <input
                   type="date"
                   className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white outline-none focus:border-blue-500"
@@ -801,10 +802,10 @@ export default function InstructorPayments() {
               </div>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Qeyd</label>
+              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">{t('payments.notes')}</label>
               <input
                 className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white outline-none focus:border-blue-500"
-                placeholder="İstəyə bağlı"
+                placeholder={t('payments.notesOptional')}
                 value={adjustNotes}
                 onChange={(e) => setAdjustNotes(e.target.value)}
                 disabled={adjustSaving}
@@ -812,10 +813,10 @@ export default function InstructorPayments() {
             </div>
             <div className="flex justify-end gap-2 pt-2">
               <Button type="button" variant="secondary" disabled={adjustSaving} onClick={() => setAdjustOpen(false)}>
-                Ləğv
+                {t('payments.cancel')}
               </Button>
               <Button type="button" loading={adjustSaving} onClick={() => void submitAdjust()}>
-                Qeydə al
+                {t('payments.record')}
               </Button>
             </div>
           </div>
@@ -831,28 +832,28 @@ export default function InstructorPayments() {
             setQuickLines([])
           }
         }}
-        title="Ödəniş əlavə et"
+        title={t('payments.quickPayTitle')}
         size="lg"
       >
         {quickRow && (
           <div className="space-y-4 text-sm">
             <p className="text-gray-400">
-              Tələbə:{' '}
+              {t('payments.studentLabel')}{' '}
               <span className="text-white font-medium">
                 {quickRow.first_name} {quickRow.last_name}
               </span>
             </p>
             <p className="text-xs text-gray-500 leading-relaxed">
-              Sətir əlavə edin; hər sətirdə ödəniş tarixi, məbləğ və istəyə bağlı qeyd.
+              {t('payments.quickPayDesc')}
             </p>
 
             {/* quick preview removed */}
 
             <div className="space-y-2">
               <div className="hidden sm:grid grid-cols-[1fr_7rem_7rem_2.25rem] gap-2 text-[10px] font-semibold text-gray-500 uppercase tracking-wider px-1">
-                <span>Tarix</span>
-                <span className="text-right">Məbləğ ₼</span>
-                <span>Qeyd</span>
+                <span>{t('payments.colDate')}</span>
+                <span className="text-right">{t('payments.colAmount')}</span>
+                <span>{t('payments.colNotes')}</span>
                 <span />
               </div>
               {quickLines.map((ln, idx) => (
@@ -887,7 +888,7 @@ export default function InstructorPayments() {
                   />
                   <input
                     className="w-full bg-[#13112e] border border-indigo-500/20 rounded-lg px-2 py-2 text-white text-xs outline-none focus:border-blue-500"
-                    placeholder="Qeyd (ixt.)"
+                    placeholder={t('payments.notesShort')}
                     value={ln.notes}
                     onChange={(e) =>
                       setQuickLines((rows) =>
@@ -899,7 +900,7 @@ export default function InstructorPayments() {
                   <div className="flex justify-end sm:justify-center">
                     <button
                       type="button"
-                      title="Sətiri sil"
+                      title={t('payments.removeRow')}
                       disabled={!!markingId || quickLines.length <= 1}
                       onClick={() => setQuickLines((rows) => (rows.length <= 1 ? rows : rows.filter((r) => r.id !== ln.id)))}
                       className="p-2 rounded-lg text-gray-500 hover:text-rose-300 hover:bg-rose-500/10 disabled:opacity-30 disabled:hover:text-gray-500 disabled:hover:bg-transparent transition-colors"
@@ -912,7 +913,7 @@ export default function InstructorPayments() {
                       </svg>
                     </button>
                   </div>
-                  <div className="sm:col-span-4 text-[10px] text-gray-600 sm:hidden">Sətir {idx + 1}</div>
+                  <div className="sm:col-span-4 text-[10px] text-gray-600 sm:hidden">{t('payments.rowN', { n: idx + 1 })}</div>
                 </div>
               ))}
             </div>
@@ -925,12 +926,12 @@ export default function InstructorPayments() {
               disabled={!!markingId}
               onClick={() => setQuickLines((rows) => [...rows, newQuickLine()])}
             >
-              + Daha bir sətir əlavə et
+              {t('payments.addRow')}
             </Button>
 
             <div className="flex flex-col-reverse sm:flex-row flex-wrap justify-end gap-2 pt-2">
               <Button type="button" variant="secondary" disabled={!!markingId} onClick={() => setQuickOpen(false)}>
-                Ləğv
+                {t('payments.cancel')}
               </Button>
               <Button
                 type="button"
@@ -939,10 +940,10 @@ export default function InstructorPayments() {
                 disabled={!!markingId}
                 onClick={() => void submitQuickPay(true)}
               >
-                Yadda saxla və davam et
+                {t('payments.saveAndContinue')}
               </Button>
               <Button type="button" loading={!!markingId} onClick={() => void submitQuickPay(false)}>
-                Hamısını yadda saxla
+                {t('payments.saveAll')}
               </Button>
             </div>
           </div>
@@ -959,7 +960,7 @@ export default function InstructorPayments() {
             setLegacyRestorePrompt(null)
           }
         }}
-        title="Ödəniş tarixçəsi"
+        title={t('payments.historyTitle')}
         size={historyViewMode === 'packages' ? 'lg' : 'md'}
       >
         {historyRow && (
@@ -971,14 +972,13 @@ export default function InstructorPayments() {
               legacyRestorePrompt?.enrollmentId === historyRow?.enrollment_id &&
               legacyRestorePrompt.packages?.length > 0 && (
                 <div className="rounded-xl border border-amber-500/45 bg-amber-500/15 p-4 space-y-3">
-                  <p className="text-amber-100 font-semibold text-sm">Keçmiş paket ödənişləri</p>
+                  <p className="text-amber-100 font-semibold text-sm">{t('payments.legacyTitle')}</p>
                   <p className="text-amber-50/90 text-xs leading-relaxed">
-                    Bu tələbə sistemə əvvəl qeydiyyatdan əlavə olunub.{' '}
-                    <span className="font-medium">{legacyRestorePrompt.packages.length} tamamlanmış paket</span> üçün
-                    ödənişlər hələ sistemdə yoxdur. Təsdiq etsəniz, hər paket üçün{' '}
-                    <span className="font-mono tabular-nums">{formatAzn(legacyRestorePrompt.fee)}</span> yazılacaq (cəmi{' '}
-                    <span className="font-mono tabular-nums font-medium">{formatAzn(legacyRestorePrompt.totalAmount)}</span>
-                    ).
+                    {t('payments.legacyDesc', {
+                      count: legacyRestorePrompt.packages.length,
+                      fee: formatAzn(legacyRestorePrompt.fee),
+                      total: formatAzn(legacyRestorePrompt.totalAmount),
+                    })}
                   </p>
                   <div className="flex flex-col sm:flex-row gap-2">
                     <Button
@@ -987,7 +987,7 @@ export default function InstructorPayments() {
                       loading={legacyRestoreBusy}
                       onClick={() => void confirmAllLegacyPackPayments()}
                     >
-                      Bütün əvvəlki ödənişləri qeydə al
+                      {t('payments.legacyConfirmAll')}
                     </Button>
                     <Button
                       type="button"
@@ -996,7 +996,7 @@ export default function InstructorPayments() {
                       disabled={legacyRestoreBusy}
                       onClick={() => setLegacyRestorePrompt(null)}
                     >
-                      Sonra
+                      {t('payments.later')}
                     </Button>
                   </div>
                 </div>
@@ -1004,13 +1004,13 @@ export default function InstructorPayments() {
             {!historyLoading && historyViewMode === 'packages' && historyPackSummary && (
               <div className="rounded-xl border border-indigo-500/20 bg-[#13112e]/70 p-3 space-y-1.5 text-xs">
                 <p className="text-gray-500">
-                  Paket:{' '}
+                  {t('payments.packLabel')}{' '}
                   <span className="text-gray-300">
-                    {historyPackSummary.billing_type === '12_lessons' ? '12 dərs' : '8 dərs'}
+                    {historyPackSummary.billing_type === '12_lessons' ? t('payments.lessons12') : t('payments.lessons8')}
                   </span>
                 </p>
                 <p className="text-gray-500">
-                  Qeydə alınmış cəmi:{' '}
+                  {t('payments.recordedTotal')}{' '}
                   <span className="text-emerald-200/95 font-mono tabular-nums">
                     {formatAzn(historyPackSummary.total_paid)}
                   </span>
@@ -1018,7 +1018,7 @@ export default function InstructorPayments() {
                 {historyPackSummary.pre_system_enrollment ? (
                   <div className="pt-1 border-t border-indigo-500/15 space-y-2">
                     <p className="text-amber-200/80 leading-relaxed">
-                      Sistemdən əvvəlki qeydiyyat — paketlər qeydiyyat tarixindən hesablanır.
+                      {t('payments.preSystemNote')}
                     </p>
                   </div>
                 ) : null}
@@ -1028,25 +1028,24 @@ export default function InstructorPayments() {
               <div className="rounded-xl border border-indigo-500/20 bg-[#13112e]/70 p-3 space-y-2 text-xs">
                 {historySummary.billing_anchor_future ? (
                   <p className="text-sky-200/90 leading-relaxed">
-                    Ankor başlama tarixi bu gündən sonradır — dövr borcu hələ sıfır sayılır; ödənişlər növbəti
-                    dövrlərə düşəcək.
+                    {t('payments.anchorFuture')}
                   </p>
                 ) : null}
                 {historySummary.payment_plan === 'partial' ? (
-                  <p className="text-amber-200/90 font-semibold">Ödəniş planı: hissəli</p>
+                  <p className="text-amber-200/90 font-semibold">{t('payments.partialPlan')}</p>
                 ) : null}
                 <p className="text-gray-500">
-                  Ödəniş növü (qeydiyyat):{' '}
+                  {t('payments.billingTiming')}{' '}
                   <span className="text-gray-300">
-                    {historySummary.billing_timing === 'prepaid' ? 'əvvəlcədən' : 'sonradan'}
+                    {historySummary.billing_timing === 'prepaid' ? t('payments.prepaid') : t('payments.postpaid')}
                   </span>
                 </p>
                 <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 tabular-nums pt-1 border-t border-indigo-500/15">
-                  <span className="text-gray-500">Ankor dövr sayı</span>
+                  <span className="text-gray-500">{t('payments.anchorMonths')}</span>
                   <span className="text-right text-white font-medium">{historySummary.subscription_months ?? 0}</span>
                   {historySummary.last_paid_due_ymd ? (
                     <>
-                      <span className="text-gray-500">Son ödənilmiş dövr</span>
+                      <span className="text-gray-500">{t('payments.lastPaidPeriod')}</span>
                       <span className="text-right text-emerald-200/95 tabular-nums">
                         {formatDdMmYyyy(historySummary.last_paid_due_ymd)}
                       </span>
@@ -1054,17 +1053,17 @@ export default function InstructorPayments() {
                   ) : null}
                   {historySummary.schedule_last_due_ymd ? (
                     <>
-                      <span className="text-gray-500">Cari dövr son tarixi</span>
+                      <span className="text-gray-500">{t('payments.currentPeriodEnd')}</span>
                       <span className="text-right text-white tabular-nums">
                         {formatDdMmYyyy(historySummary.schedule_last_due_ymd)}
                       </span>
                     </>
                   ) : null}
-                  <span className="text-gray-500">Yaranan borc</span>
+                  <span className="text-gray-500">{t('payments.accruedDebt')}</span>
                   <span className="text-right text-white">{formatAzn(historySummary.accrued_total)}</span>
-                  <span className="text-gray-500">Cəmi ödənilən</span>
+                  <span className="text-gray-500">{t('payments.totalPaid')}</span>
                   <span className="text-right text-emerald-200/95">{formatAzn(historySummary.total_payments)}</span>
-                  <span className="text-gray-500">Qalıq borc</span>
+                  <span className="text-gray-500">{t('payments.remainingDebtShort')}</span>
                   <span
                     className={`text-right font-semibold ${
                       Number(historySummary.pending_debt) > 0.005 ? 'text-rose-200' : 'text-gray-400'
@@ -1074,7 +1073,7 @@ export default function InstructorPayments() {
                   </span>
                   {Number(historySummary.net_balance) > 0.005 && !historySummary.billing_anchor_future ? (
                     <>
-                      <span className="text-gray-500">Artıq balans</span>
+                      <span className="text-gray-500">{t('payments.extraBalance')}</span>
                       <span className="text-right text-emerald-200 font-medium">
                         {formatAzn(historySummary.net_balance)}
                       </span>
@@ -1083,12 +1082,11 @@ export default function InstructorPayments() {
                 </div>
               </div>
             )}
-            {historyLoading && <p className="text-gray-500 text-xs">Yüklənir…</p>}
+            {historyLoading && <p className="text-gray-500 text-xs">{t('payments.loadingMessage')}</p>}
             {!historyLoading && historyViewMode === 'packages' && historyPackages.length > 0 && (
               <div>
                 <p className="text-[10px] text-gray-500 mb-2 leading-snug">
-                  Paketi açın — ödəniş və dərs tarixləri görünür. Tamamlanmış, ödənilməmiş paketlər üçün «Təsdiqlə»
-                  düyməsi var.
+                  {t('payments.packagesHint')}
                 </p>
                 <ul className="space-y-2 max-h-[min(55vh,22rem)] overflow-y-auto pr-0.5">
                   {historyPackages.map((pkg) => {
@@ -1110,14 +1108,14 @@ export default function InstructorPayments() {
                         : null
                     const paidLabel =
                       paid > 0.005
-                        ? `Ödəniş: ${formatAzn(paid)}`
+                        ? t('payments.paymentPaid', { amount: formatAzn(paid) })
                         : legacyConfirmed
                           ? legacyFee != null
-                            ? `Ödəniş: ${formatAzn(legacyFee)} (keçmiş paket)`
-                            : 'Ödənilib (keçmiş paket)'
+                            ? t('payments.paymentLegacy', { amount: formatAzn(legacyFee) })
+                            : t('payments.paymentLegacyDone')
                           : needsConfirm
-                            ? 'Ödəniş gözləyir'
-                            : 'Ödəniş: —'
+                            ? t('payments.paymentPending')
+                            : t('payments.paymentDash')
                     const confirmItem =
                       needsConfirm && historyRow?.enrollment_id
                         ? {
@@ -1125,7 +1123,7 @@ export default function InstructorPayments() {
                             package_number: cyc,
                             amount: historyPackSummary?.monthly_fee,
                             due_ymd: pkg.end_ymd ? String(pkg.end_ymd).slice(0, 10) : todayBaku,
-                            period: `Paket #${cyc}`,
+                            period: t('payments.packNumber', { num: cyc }),
                           }
                         : null
                     const rowKey = packConfirmKey(confirmItem || { enrollment_id: '', package_number: cyc })
@@ -1143,15 +1141,16 @@ export default function InstructorPayments() {
                         >
                           <div className="min-w-0">
                             <p className="text-sm font-medium text-white">
-                              Paket #{cyc}
-                              {isDone ? ' · Tamamlanıb' : ''}
+                              {t('payments.packageN', { num: cyc })}
+                              {isDone ? t('payments.completed') : ''}
                             </p>
                             <p className="text-[11px] text-gray-500 mt-0.5">
-                              {formatDdMmYyyy(pkg.start_ymd)} — {formatDdMmYyyy(pkg.end_ymd)} · {completed}/{total}{' '}
-                              dərs ·{' '}
-                              <span className={paid > 0.005 || legacyConfirmed ? 'text-emerald-300' : needsConfirm ? 'text-amber-200/90' : ''}>
-                                {paidLabel}
-                              </span>
+                              {formatDdMmYyyy(pkg.start_ymd)} — {formatDdMmYyyy(pkg.end_ymd)} ·{' '}
+                              {t('payments.lessonsProgress', {
+                                completed,
+                                total,
+                                payment: paidLabel,
+                              })}
                             </p>
                           </div>
                           <span className="text-gray-500 text-xs shrink-0">{isOpen ? '▴' : '▾'}</span>
@@ -1170,7 +1169,7 @@ export default function InstructorPayments() {
                                     {p.id ? (
                                       <button
                                         type="button"
-                                        title="Sil"
+                                        title={t('payments.delete')}
                                         disabled={!!deletingPaymentId || !!confirmingKey}
                                         onClick={() => void deleteHistoryPayment(p.id)}
                                         className="p-1 text-gray-500 hover:text-rose-300"
@@ -1182,21 +1181,21 @@ export default function InstructorPayments() {
                                 ))}
                               </ul>
                             ) : legacyConfirmed ? (
-                              <p className="text-xs text-emerald-300/90 pt-2">Keçmiş paket — təsdiqlənib.</p>
+                              <p className="text-xs text-emerald-300/90 pt-2">{t('payments.legacyConfirmed')}</p>
                             ) : (
-                              <p className="text-xs text-gray-500 pt-2">Bu paket üçün ödəniş qeydi yoxdur.</p>
+                              <p className="text-xs text-gray-500 pt-2">{t('payments.noPaymentRecord')}</p>
                             )}
                             {(pkg.lessons || []).length > 0 ? (
                               <ul className="space-y-1 pt-1">
                                 {(pkg.lessons || []).map((ls) => {
-                                  const st = lessonStatusLabel(ls.status)
+                                  const st = lessonStatusLabel(ls.status, t)
                                   return (
                                     <li
                                       key={`${cyc}-${ls.lesson_number}`}
                                       className="flex justify-between text-[11px] rounded-lg border border-indigo-500/10 px-2 py-1"
                                     >
                                       <span className="text-gray-400">
-                                        Dərs {ls.lesson_number}: {formatDdMmYyyy(ls.ymd)}
+                                        {t('payments.lessonN', { num: ls.lesson_number, date: formatDdMmYyyy(ls.ymd) })}
                                       </span>
                                       <span className={st.cls}>{st.text}</span>
                                     </li>
@@ -1213,7 +1212,7 @@ export default function InstructorPayments() {
                                 onClick={() => void confirmPackPayment(confirmItem, { refreshHistory: true })}
                                 className="w-full justify-center mt-1"
                               >
-                                Paket ödənişini təsdiqlə
+                                {t('payments.confirmPackPayment')}
                               </Button>
                             ) : null}
                           </div>
@@ -1225,20 +1224,18 @@ export default function InstructorPayments() {
               </div>
             )}
             {!historyLoading && historyViewMode === 'packages' && !historyPackages.length && (
-              <p className="text-gray-500 text-xs">Paket məlumatı tapılmadı.</p>
+              <p className="text-gray-500 text-xs">{t('payments.noPackageData')}</p>
             )}
             {!historyLoading && historyViewMode === 'monthly' && !historyPayments.length && (
               <p className="text-gray-500 text-xs">
-                Bu qeydiyyat üçün (və eyni müəllim altında digər qeydiyyatlar üçün) sistemdə ödəniş sətri tapılmadı.
-                Əvvəl əl ilə qeyd edilməyibsə və ya köhnə hesab silinibsə, tarixçə boş ola bilər.
+                {t('payments.noMonthlyPayments')}
               </p>
             )}
             {!historyLoading && historyViewMode === 'monthly' && historyPayments.length > 0 && (
               <div>
-                <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">Əməliyyatlar</p>
+                <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">{t('payments.operations')}</p>
                 <p className="text-[10px] text-gray-600 mb-2 leading-snug">
-                  Boz «gözləyir» = həmin ay üçün qeyd yoxdur. Cari aydan etibarən «Təsdiqlə» ilə əlavə edin; keçmiş
-                  aylar üçün əl ilə ödəniş qeydi və ya bərpa istifadə edin.
+                  {t('payments.operationsHint')}
                 </p>
                 <ul className="space-y-2 max-h-56 overflow-y-auto pr-0.5">
                   {(() => {
@@ -1302,11 +1299,11 @@ export default function InstructorPayments() {
                           </span>
                           {isUnpaid ? (
                             <span className="text-[9px] font-semibold uppercase tracking-wide text-amber-300/90">
-                              gözləyir
+                              {t('payments.waiting')}
                             </span>
                           ) : null}
                           {dupDate ? (
-                            <span className="text-[9px] text-sky-300/90">eyni gün — #{String(p.id || '').slice(0, 8)}</span>
+                            <span className="text-[9px] text-sky-300/90">{t('payments.sameDay', { id: String(p.id || '').slice(0, 8) })}</span>
                           ) : null}
                           {p.period ? (
                             <span className="text-[9px] text-gray-500 leading-tight truncate max-w-[9rem]">
@@ -1315,7 +1312,7 @@ export default function InstructorPayments() {
                           ) : null}
                           {p.from_other_enrollment ? (
                             <span className="text-[9px] font-semibold uppercase tracking-wide text-amber-300/90">
-                              köhnə qeyd.
+                              {t('payments.oldRecord')}
                             </span>
                           ) : null}
                         </div>
@@ -1329,7 +1326,7 @@ export default function InstructorPayments() {
                         {p.id ? (
                           <button
                             type="button"
-                            title="Ödənişi sil"
+                            title={t('payments.deletePayment')}
                             disabled={busy}
                             onClick={() => void deleteHistoryPayment(p.id)}
                             className="ml-auto p-1.5 rounded-lg text-gray-500 hover:text-rose-300 hover:bg-rose-500/15 disabled:opacity-40 shrink-0 transition-colors"
@@ -1354,11 +1351,11 @@ export default function InstructorPayments() {
                             onClick={() => void confirmDuePayment(confirmItem, { refreshHistory: true })}
                             className="ml-auto shrink-0 !px-3 !py-1.5 text-xs"
                           >
-                            Təsdiqlə
+                            {t('payments.confirm')}
                           </Button>
                         ) : isUnpaid ? (
                           <span className="ml-auto text-[10px] text-gray-500 shrink-0 text-right max-w-[5rem] leading-tight">
-                            keçmiş ay
+                            {t('payments.pastMonth')}
                           </span>
                         ) : null}
                       </li>

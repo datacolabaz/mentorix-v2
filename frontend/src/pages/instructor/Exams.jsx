@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { useQueryClient } from '@tanstack/react-query'
 import api from '../../lib/api'
 import Card from '../../components/common/Card'
@@ -13,6 +14,21 @@ import useUiStore from '../../hooks/useUi'
 import { BILLING_STATUS_QUERY_KEY, useBillingStatus } from '../../hooks/useBillingStatus'
 import { copyStudentExamLink, studentExamShareUrl } from '../../lib/examShare'
 import { EXAM_MONTHLY_LIMIT_MESSAGE, isExamsMonthlyLimitReached } from '../../lib/subscriptionPlanGuards'
+
+function fmtDateLocale(iso, locale) {
+  if (!iso) return ''
+  try {
+    return new Date(iso).toLocaleString(locale === 'ru' ? 'ru-RU' : 'az-AZ', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+  } catch {
+    return ''
+  }
+}
 
 function initEditQuestion(q) {
   const type = String(q.question_type || '').trim()
@@ -139,15 +155,8 @@ function serializeEditQuestion(eq) {
   return base
 }
 
-const EDIT_TYPE_AZ = {
-  closed: 'Qapalı',
-  multiple: 'Çoxseçimli',
-  matching: 'Uyğunluq',
-  sequence: 'Ardıcıllıq',
-  open: 'Açıq',
-}
-
 export default function InstructorExams() {
+  const { t, i18n } = useTranslation()
   const [exams, setExams] = useState([])
   const [students, setStudents] = useState([])
   const [studentsLoading, setStudentsLoading] = useState(true)
@@ -189,7 +198,7 @@ export default function InstructorExams() {
       const d = await api.get('/exams')
       setExams(d.exams || [])
     } catch (err) {
-      setExamsError(err?.message || 'İmtahanlar yüklənmədi')
+      setExamsError(err?.message || t('exams.loadFailed'))
       setExams([])
     } finally {
       setExamsLoading(false)
@@ -214,10 +223,10 @@ export default function InstructorExams() {
     const until = untilRaw ? new Date(untilRaw) : null
     const okFrom = from && !Number.isNaN(from.getTime()) ? from : null
     const okUntil = until && !Number.isNaN(until.getTime()) ? until : null
-    if (!okFrom || !okUntil) return { label: 'Vaxt yoxdur', cls: 'bg-amber-500/15 text-amber-300' }
-    if (now > okUntil) return { label: 'Baglidir', cls: 'bg-gray-500/20 text-gray-400' }
-    if (now >= okFrom) return { label: 'Aktiv', cls: 'bg-emerald-500/20 text-emerald-400' }
-    return { label: 'Gozlenilir', cls: 'bg-blue-500/20 text-blue-400' }
+    if (!okFrom || !okUntil) return { label: t('exams.status.noTime'), cls: 'bg-amber-500/15 text-amber-300' }
+    if (now > okUntil) return { label: t('exams.status.closed'), cls: 'bg-gray-500/20 text-gray-400' }
+    if (now >= okFrom) return { label: t('exams.status.active'), cls: 'bg-emerald-500/20 text-emerald-400' }
+    return { label: t('exams.status.pending'), cls: 'bg-blue-500/20 text-blue-400' }
   }
  
   const normalizeExamFiles = (exam) => {
@@ -234,11 +243,11 @@ export default function InstructorExams() {
       .filter((x) => x && typeof x === 'object' && x.url)
       .map((x, i) => ({
         id: `${x.url}-${i}`,
-        name: x.name || `Fayl ${i + 1}`,
+        name: x.name || t('exams.fileDefault', { num: i + 1 }),
         url: x.url,
       }))
     if (mapped.length === 0 && exam?.pdf_url) {
-      return [{ id: `${exam.pdf_url}-0`, name: 'PDF', url: exam.pdf_url }]
+      return [{ id: `${exam.pdf_url}-0`, name: t('exams.pdf'), url: exam.pdf_url }]
     }
     return mapped
   }
@@ -306,11 +315,11 @@ export default function InstructorExams() {
         payload.questions = editQuestions.map(serializeEditQuestion)
       }
       await api.patch('/exams/' + editExam.id, payload)
-      toast('Imtahan yenilendi!')
+      toast(t('exams.toasts.updated'))
       setEditModal(false)
       loadExams()
     } catch (err) {
-      toast(err.message || 'Xeta', 'error')
+      toast(err.message || t('exams.toasts.error'), 'error')
     } finally { setLoading(false) }
   }
 
@@ -324,21 +333,25 @@ export default function InstructorExams() {
           ? { until: localDatetimeInputToUtcIso(lateAccessCustomUntil) }
           : { minutes: Number(preset) || 120 }
       await api.post(`/exams/${editExam.id}/late-access/${studentId}`, payload)
-      toast(preset === 'custom' ? 'Giris icazesi verildi (custom)' : `Giris icazesi verildi (${payload.minutes} deq)`)
+      toast(
+        preset === 'custom'
+          ? t('exams.toasts.lateAccessCustom')
+          : t('exams.toasts.lateAccessMinutes', { minutes: payload.minutes }),
+      )
     } catch (err) {
-      toast(err?.message || 'Xeta', 'error')
+      toast(err?.message || t('exams.toasts.error'), 'error')
     } finally {
       setLateBusyStudentId(null)
     }
   }
 
   const deleteExam = async (exam) => {
-    const ok = window.confirm(`"${exam?.title || 'İmtahan'}" silinsin? Bu əməliyyat geri qaytarılmır.`)
+    const ok = window.confirm(t('exams.deleteConfirm', { title: exam?.title || t('exams.defaultTitle') }))
     if (!ok) return
     setDeletingId(exam.id)
     try {
       await api.delete('/exams/' + exam.id)
-      toast('İmtahan silindi')
+      toast(t('exams.toasts.deleted'))
       setSelectedIds((prev) => {
         const next = new Set(prev)
         next.delete(exam.id)
@@ -346,7 +359,7 @@ export default function InstructorExams() {
       })
       await loadExams()
     } catch (err) {
-      toast(err?.message || 'Silinmədi', 'error')
+      toast(err?.message || t('exams.toasts.deleteFailed'), 'error')
     } finally {
       setDeletingId(null)
     }
@@ -371,16 +384,16 @@ export default function InstructorExams() {
   const bulkDelete = async () => {
     const ids = [...selectedIds]
     if (ids.length === 0) return
-    const ok = window.confirm(`${ids.length} imtahan birdən silinsin? Bu əməliyyat geri qaytarılmır.`)
+    const ok = window.confirm(t('exams.bulkDeleteConfirm', { count: ids.length }))
     if (!ok) return
     setBulkDeleting(true)
     try {
       await api.post('/exams/bulk-delete', { exam_ids: ids })
-      toast(`${ids.length} imtahan silindi`)
+      toast(t('exams.toasts.bulkDeleted', { count: ids.length }))
       setSelectedIds(new Set())
       await loadExams()
     } catch (err) {
-      toast(err?.message || 'Toplu silinmədi', 'error')
+      toast(err?.message || t('exams.toasts.bulkDeleteFailed'), 'error')
     } finally {
       setBulkDeleting(false)
     }
@@ -428,7 +441,7 @@ export default function InstructorExams() {
 
   const handleEditMaterialsChange = async (e) => {
     if (blocked) {
-      toast(billing?.messages?.banner || 'Məhdudiyyətə görə bu əməliyyat deaktivdir', 'error')
+      toast(billing?.messages?.banner || t('exams.toasts.blocked'), 'error')
       e.target.value = ''
       return
     }
@@ -449,10 +462,10 @@ export default function InstructorExams() {
         })
       )
       setEditMaterialFiles((prev) => [...prev, ...results])
-      toast(`${results.length} fayl serverə yükləndi`)
+      toast(t('exams.toasts.filesUploaded', { count: results.length }))
       queryClient.invalidateQueries({ queryKey: BILLING_STATUS_QUERY_KEY })
     } catch (err) {
-      toast(err.message || 'Fayl yüklənmədi (yalnız PDF, JPG, PNG)', 'error')
+      toast(err.message || t('exams.toasts.fileUploadFailed'), 'error')
     } finally {
       setEditMaterialBusy(false)
       e.target.value = ''
@@ -487,7 +500,7 @@ export default function InstructorExams() {
           (qDigits.startsWith('0') && phoneDigits.endsWith(qDigits.slice(1)))
         )
       })
-      .sort((a, b) => String(a.full_name || '').localeCompare(String(b.full_name || ''), 'az'))
+      .sort((a, b) => String(a.full_name || '').localeCompare(String(b.full_name || ''), i18n.language === 'ru' ? 'ru' : 'az'))
   }, [students, studentPickerQuery, showAllStudentsInPicker, baselineAssignedSet])
 
   const toggleStudent = (id, checked) => {
@@ -522,13 +535,13 @@ export default function InstructorExams() {
     <div className="p-4 sm:p-6 min-w-0">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="font-display font-bold text-xl sm:text-2xl">Imtahanlar</h1>
+          <h1 className="font-display font-bold text-xl sm:text-2xl">{t('exams.title')}</h1>
           <p className={['text-xs mt-1 max-w-xl', theme === 'dark' ? 'text-gray-500' : 'text-token-textMuted'].join(' ')}>
-            Paylaşım linki ilə gələn tələbələr avtomatik sorğu göndərir —{' '}
+            {t('exams.subtitle')}{' '}
             <Link to="/instructor/join-requests" className="text-primary hover:underline">
-              Sorğular
+              {t('exams.joinRequestsLink')}
             </Link>
-            -dan təsdiqləyin; təsdiqdən sonra sizin tələbəniz sayılır.
+            {t('exams.subtitleRest')}
           </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
@@ -552,10 +565,10 @@ export default function InstructorExams() {
                 checked={allSelected}
                 onChange={(e) => toggleAll(e.target.checked)}
               />
-              Hamısını seç
+              {t('exams.selectAll')}
             </label>
             <span className={['text-[11px]', theme === 'dark' ? 'text-gray-500' : 'text-token-textMuted'].join(' ')}>
-              {selectedIds.size} seçildi
+              {t('exams.selectedCount', { count: selectedIds.size })}
             </span>
           </div>
           <Button
@@ -570,13 +583,13 @@ export default function InstructorExams() {
                 : '!border-slate-200 !text-slate-700 hover:!text-rose-700 hover:!border-rose-300 hover:bg-rose-500/10',
             ].join(' ')}
           >
-            Seçilənləri sil
+            {t('exams.deleteSelected')}
           </Button>
           <Button
             disabled={createBlocked}
             onClick={() => {
               if (blocked) {
-                toast(billing?.messages?.banner || 'Məhdudiyyətə görə bu əməliyyat deaktivdir', 'error')
+                toast(billing?.messages?.banner || t('exams.toasts.blocked'), 'error')
                 return
               }
               if (examsLimitReached) {
@@ -587,19 +600,19 @@ export default function InstructorExams() {
             }}
             className="w-full sm:w-auto shrink-0 justify-center"
           >
-            + Yeni Imtahan
+            {t('exams.newExam')}
           </Button>
         </div>
       </div>
  
       <div className="space-y-4">
-        {examsLoading && <ListSkeleton message="İmtahanlar yüklənir…" />}
+        {examsLoading && <ListSkeleton message={t('exams.loading')} />}
         {!examsLoading && examsError && (
           <Card className="p-6 text-center border border-amber-500/30 bg-amber-500/5">
             <p className="text-amber-200/90 text-sm mb-3">{examsError}</p>
-            <p className="text-gray-500 text-xs mb-4">Şəbəkə və ya server gecikməsi ola bilər.</p>
+            <p className="text-gray-500 text-xs mb-4">{t('exams.networkHint')}</p>
             <Button type="button" variant="secondary" onClick={() => void loadExams()}>
-              Yenidən yüklə
+              {t('exams.reload')}
             </Button>
           </Card>
         )}
@@ -624,26 +637,26 @@ export default function InstructorExams() {
                   </div>
                   <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-400">
                     <span>
-                      {new Date(exam.available_from || exam.start_time).toLocaleString('az-AZ')}
-                      {exam.available_until ? ` → ${new Date(exam.available_until).toLocaleString('az-AZ')}` : ''}
+                      {fmtDateLocale(exam.available_from || exam.start_time, i18n.language)}
+                      {exam.available_until ? ` → ${fmtDateLocale(exam.available_until, i18n.language)}` : ''}
                     </span>
-                    <span>{exam.duration_minutes} deq</span>
+                    <span>{t('exams.durationMin', { count: exam.duration_minutes })}</span>
                     <span>
                       {(Number(exam.crm_results_count) || 0) > 0 ||
                       (Number(exam.guest_results_count) || 0) > 0 ? (
                         <>
-                          {Number(exam.crm_results_count) || 0} daimi ·{' '}
-                          {Number(exam.guest_results_count) || 0} qonaq
+                          {t('exams.participantsPermanent', { count: Number(exam.crm_results_count) || 0 })} ·{' '}
+                          {t('exams.participantsGuest', { count: Number(exam.guest_results_count) || 0 })}
                         </>
                       ) : (
-                        <>{(exam.participant_count ?? exam.student_count) || 0} iştirakçı</>
+                        <>{t('exams.participantsCount', { count: (exam.participant_count ?? exam.student_count) || 0 })}</>
                       )}
                     </span>
                     {Number(exam.results_count) > 0 ? (
-                      <span>{exam.results_count} nəticə</span>
+                      <span>{t('exams.resultsCount', { count: exam.results_count })}</span>
                     ) : null}
                     {exam.avg_score != null && Number.isFinite(Number(exam.avg_score)) ? (
-                      <span>Orta bal: {exam.avg_score}</span>
+                      <span>{t('exams.avgScore', { score: exam.avg_score })}</span>
                     ) : null}
                     {exam.subject && <span>{exam.subject}</span>}
                     {exam.topic && <span>· {exam.topic}</span>}
@@ -659,13 +672,13 @@ export default function InstructorExams() {
                         onClick={async () => {
                           try {
                             await copyStudentExamLink(exam.id)
-                            toast('Tələbə linki kopyalandı', 'success')
+                            toast(t('exams.toasts.linkCopied'), 'success')
                           } catch {
-                            toast('Link kopyalanmadı', 'error')
+                            toast(t('exams.toasts.linkCopyFailed'), 'error')
                           }
                         }}
                       >
-                        Link
+                        {t('exams.link')}
                       </Button>
                       <Button
                         size="sm"
@@ -675,8 +688,8 @@ export default function InstructorExams() {
                           try {
                             if (navigator.share) {
                               await navigator.share({
-                                title: exam.title || 'İmtahan',
-                                text: 'Yeni imtahan — Mentorix',
+                                title: exam.title || t('exams.defaultTitle'),
+                                text: t('exams.shareTitle'),
                                 url: link,
                               })
                               return
@@ -686,21 +699,18 @@ export default function InstructorExams() {
                           }
                           try {
                             await copyStudentExamLink(exam.id)
-                            toast(
-                              'Link kopyalandı — tələbə klik edəndə sorğu avtomatik Sorğular-a düşəcək',
-                              'success',
-                            )
+                            toast(t('exams.toasts.shareLinkCopied'), 'success')
                           } catch {
-                            toast('Paylaşım alınmadı', 'error')
+                            toast(t('exams.toasts.shareFailed'), 'error')
                           }
                         }}
                       >
-                        Paylaş
+                        {t('exams.share')}
                       </Button>
                     </>
                   )}
                   <Button size="sm" variant="secondary" onClick={() => openEdit(exam)}>
-                    Redakte
+                    {t('exams.edit')}
                   </Button>
                   <Button
                     size="sm"
@@ -713,7 +723,7 @@ export default function InstructorExams() {
                     loading={deletingId === exam.id}
                     onClick={() => deleteExam(exam)}
                   >
-                    Sil
+                    {t('exams.delete')}
                   </Button>
                 </div>
               </div>
@@ -721,11 +731,11 @@ export default function InstructorExams() {
           )
         })}
         {!examsLoading && !examsError && !exams.length && (
-          <div className="text-center py-16 text-gray-500">Hele imtahan yoxdur</div>
+          <div className="text-center py-16 text-gray-500">{t('exams.empty')}</div>
         )}
       </div>
  
-      <Modal open={addModal} onClose={() => setAddModal(false)} title="Yeni Imtahan Yarat" size="lg">
+      <Modal open={addModal} onClose={() => setAddModal(false)} title={t('exams.modal.createTitle')} size="lg">
         <ExamForm
           students={students}
           studentsLoading={studentsLoading}
@@ -741,12 +751,9 @@ export default function InstructorExams() {
             if (createdExam?.id) {
               try {
                 const link = await copyStudentExamLink(createdExam.id)
-                toast(
-                  'İmtahan yaradıldı. Link kopyalandı — tələbə klik edəndə sorğu avtomatik gələcək',
-                  'success',
-                )
+                toast(t('exams.toasts.createdWithLink'), 'success')
               } catch {
-                toast('İmtahan yaradıldı', 'success')
+                toast(t('exams.toasts.created'), 'success')
               }
             }
           }}
@@ -754,28 +761,28 @@ export default function InstructorExams() {
       </Modal>
  
       {editExam && (
-        <Modal open={editModal} onClose={() => setEditModal(false)} title="Imtahani Redakte Et" size="xl">
+        <Modal open={editModal} onClose={() => setEditModal(false)} title={t('exams.modal.editTitle')} size="xl">
           <div className="space-y-4">
             <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Imtahan Adi</label>
+              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">{t('exams.form.examName')}</label>
               <input className={inp} value={editExam.title}
                 onChange={e => setEditExam(p => ({ ...p, title: e.target.value }))} />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Fenn</label>
-                <input className={inp} placeholder="Riyaziyyat" value={editExam.subject || ''}
+                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">{t('exams.form.subject')}</label>
+                <input className={inp} placeholder={t('exams.form.subjectPh')} value={editExam.subject || ''}
                   onChange={e => setEditExam(p => ({ ...p, subject: e.target.value }))} />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Movzu</label>
-                <input className={inp} placeholder="Inteqral" value={editExam.topic || ''}
+                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">{t('exams.form.topic')}</label>
+                <input className={inp} placeholder={t('exams.form.topicPh')} value={editExam.topic || ''}
                   onChange={e => setEditExam(p => ({ ...p, topic: e.target.value }))} />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Aktivlik baslangici</label>
+                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">{t('exams.form.availableFrom')}</label>
                 <input
                   type="datetime-local"
                   className={inp}
@@ -784,7 +791,7 @@ export default function InstructorExams() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Son giris vaxti</label>
+                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">{t('exams.form.availableUntil')}</label>
                 <input
                   type="datetime-local"
                   className={inp}
@@ -803,13 +810,13 @@ export default function InstructorExams() {
                 onChange={(e) => setEditExam((p) => ({ ...p, allow_finish_after_until: e.target.checked }))}
               />
               <label htmlFor="edit_allow_finish_after_until" className="text-sm text-gray-300">
-                Son giriş vaxtı bitəndə yeni giriş bağlansın, amma daxil olan tələbə müddətini tamamlaya bilsin
+                {t('exams.form.allowFinishAfterUntil')}
               </label>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Muddet (deq)</label>
+                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">{t('exams.form.duration')}</label>
                 <input
                   type="number"
                   min={1}
@@ -828,22 +835,22 @@ export default function InstructorExams() {
             </div>
             <div className="p-4 bg-[#13112e] rounded-xl border border-indigo-500/20 space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold">Xatırlatma / nəticə SMS</span>
+                <span className="text-sm font-semibold">{t('exams.form.notifySms')}</span>
                 <input type="checkbox" checked={editExam.notify_students || false}
                   onChange={e => setEditExam(p => ({ ...p, notify_students: e.target.checked }))}
                   className="w-4 h-4 accent-blue-500" />
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold">Neticeni telebeye goster</span>
+                <span className="text-sm font-semibold">{t('exams.form.showResults')}</span>
                 <input type="checkbox" checked={editExam.show_results || false}
                   onChange={e => setEditExam(p => ({ ...p, show_results: e.target.checked }))}
                   className="w-4 h-4 accent-blue-500" />
               </div>
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <span className="text-sm font-semibold">Səhv düzü aparsın (0.25 cərimə)</span>
+                  <span className="text-sm font-semibold">{t('exams.form.wrongPenalty')}</span>
                   <p className="text-xs text-gray-500 mt-1 max-w-[min(100%,280px)]">
-                    Yalnız qapalı (ABCDE) suallarda səhv cavab üçün 0.25 bal çıxılır. Digər sual tipləri cəriməsizdir.
+                    {t('exams.form.wrongPenaltyHint')}
                   </p>
                 </div>
                 <input
@@ -858,23 +865,23 @@ export default function InstructorExams() {
             <div className="p-4 bg-[#13112e] rounded-xl border border-indigo-500/20 space-y-3">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <div className="text-sm font-semibold">Suallar və ballar</div>
+                  <div className="text-sm font-semibold">{t('exams.questions.title')}</div>
                   <div className="text-xs text-gray-500 mt-1">
-                    Sual mətni, bal, düzgün cavab və variantları düzəldə bilərsiniz (PDF-də səhv olanları buradan düzəltmək üçün).
+                    {t('exams.questions.hint')}
                   </div>
                 </div>
                 <div className="text-xs text-gray-500 whitespace-nowrap">
-                  {editQuestionsLoading ? 'Yüklənir…' : `${editQuestions.length} sual`}
+                  {editQuestionsLoading ? t('exams.loadingShort') : t('exams.questions.count', { count: editQuestions.length })}
                 </div>
               </div>
               {editQuestionsLoading ? (
-                <p className="text-xs text-gray-500 py-2">Suallar yüklənir…</p>
+                <p className="text-xs text-gray-500 py-2">{t('exams.questions.loading')}</p>
               ) : editQuestions.length === 0 ? (
-                <p className="text-xs text-gray-500 py-2">Sual tapılmadı.</p>
+                <p className="text-xs text-gray-500 py-2">{t('exams.questions.empty')}</p>
               ) : (
                 <div className="space-y-3 max-h-[min(55vh,420px)] overflow-y-auto pr-1">
                   {editQuestions.map((q, idx) => {
-                    const t = String(q.question_type || '').trim()
+                    const qType = String(q.question_type || '').trim()
                     return (
                       <div
                         key={q.id || idx}
@@ -882,10 +889,10 @@ export default function InstructorExams() {
                       >
                         <div className="flex flex-wrap items-center justify-between gap-2">
                           <span className="text-xs font-bold text-indigo-300">
-                            Sual {q.order_num ?? idx + 1} · {EDIT_TYPE_AZ[t] || t}
+                            {t('exams.questions.number', { num: q.order_num ?? idx + 1 })} · {t(`exams.questionTypes.${qType}`, { defaultValue: qType })}
                           </span>
                           <label className="flex items-center gap-1.5 text-[11px] text-gray-400">
-                            Bal
+                            {t('exams.questions.points')}
                             <input
                               type="number"
                               min={0.01}
@@ -914,11 +921,11 @@ export default function InstructorExams() {
                           rows={2}
                           value={String(q.question_text ?? '')}
                           onChange={(e) => patchEditQuestion(idx, { question_text: e.target.value })}
-                          placeholder="Sual mətni"
+                          placeholder={t('exams.questions.textPh')}
                         />
-                        {t === 'closed' && (
+                        {qType === 'closed' && (
                           <label className="block text-[11px] text-gray-500">
-                            Mənfi bal (qapalı sual cəriməsi, məs. -0.25)
+                            {t('exams.questions.negativeMarking')}
                             <input
                               type="number"
                               step="0.01"
@@ -933,9 +940,9 @@ export default function InstructorExams() {
                             />
                           </label>
                         )}
-                        {t === 'closed' && (
+                        {qType === 'closed' && (
                           <div className="space-y-1.5">
-                            <label className="text-[11px] text-gray-500">Düzgün cavab (A–E)</label>
+                            <label className="text-[11px] text-gray-500">{t('exams.questions.correctClosed')}</label>
                             <select
                               className={inp + ' cursor-pointer'}
                               value={(() => {
@@ -951,7 +958,7 @@ export default function InstructorExams() {
                                 })
                               }
                             >
-                              <option value="">— Seçilməyib (dəyişməz / təyin et) —</option>
+                              <option value="">{t('exams.questions.notSelected')}</option>
                               {['A', 'B', 'C', 'D', 'E'].map((letter) => (
                                 <option key={letter} value={letter}>
                                   {letter}
@@ -959,12 +966,12 @@ export default function InstructorExams() {
                               ))}
                             </select>
                             <p className="text-[10px] text-gray-600 leading-snug">
-                              Yalnız hərf seçəndə serverə düzgün cavab yazılır; boş saxlasanız əvvəlki dəyər silinmir.
+                              {t('exams.questions.correctClosedHint')}
                             </p>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                               {(q._closedTexts || ['', '', '', '', '']).map((txt, oi) => (
                                 <label key={oi} className="block text-[11px] text-gray-500">
-                                  Variant {String.fromCharCode(65 + oi)}
+                                  {t('exams.questions.option', { letter: String.fromCharCode(65 + oi) })}
                                   <input
                                     className={inp + ' mt-0.5'}
                                     value={txt}
@@ -975,9 +982,9 @@ export default function InstructorExams() {
                             </div>
                           </div>
                         )}
-                        {t === 'multiple' && (
+                        {qType === 'multiple' && (
                           <div className="space-y-1.5">
-                            <label className="text-[11px] text-gray-500">Düzgün variantlar (rəqəmlər, məs. 13)</label>
+                            <label className="text-[11px] text-gray-500">{t('exams.questions.correctMultiple')}</label>
                             <input
                               className={inp}
                               value={String(q.correct_answer ?? '').replace(/\D/g, '')}
@@ -991,7 +998,7 @@ export default function InstructorExams() {
                             <div className="grid grid-cols-2 gap-2">
                               {(q._multTexts || ['', '', '', '']).map((txt, oi) => (
                                 <label key={oi} className="block text-[11px] text-gray-500">
-                                  Variant {oi + 1}
+                                  {t('exams.questions.optionNum', { num: oi + 1 })}
                                   <input
                                     className={inp + ' mt-0.5'}
                                     value={txt}
@@ -1002,9 +1009,9 @@ export default function InstructorExams() {
                             </div>
                           </div>
                         )}
-                        {t === 'matching' && (
+                        {qType === 'matching' && (
                           <div className="space-y-2">
-                            <label className="text-[11px] text-gray-500">Düzgün açar (məs. 1a2b3c)</label>
+                            <label className="text-[11px] text-gray-500">{t('exams.questions.correctMatching')}</label>
                             <input
                               className={inp + ' font-mono text-xs'}
                               value={String(q.correct_answer ?? '')}
@@ -1019,13 +1026,13 @@ export default function InstructorExams() {
                               <div key={ri} className="grid grid-cols-2 gap-2">
                                 <input
                                   className={inp}
-                                  placeholder="Sol"
+                                  placeholder={t('exams.questions.left')}
                                   value={row.left}
                                   onChange={(e) => setMatchCell(idx, ri, 'left', e.target.value)}
                                 />
                                 <input
                                   className={inp}
-                                  placeholder="Sağ"
+                                  placeholder={t('exams.questions.right')}
                                   value={row.right}
                                   onChange={(e) => setMatchCell(idx, ri, 'right', e.target.value)}
                                 />
@@ -1033,9 +1040,9 @@ export default function InstructorExams() {
                             ))}
                           </div>
                         )}
-                        {t === 'sequence' && (
+                        {qType === 'sequence' && (
                           <div className="space-y-2">
-                            <label className="text-[11px] text-gray-500">Bəndlər (hər sətir bir bənd)</label>
+                            <label className="text-[11px] text-gray-500">{t('exams.questions.seqItems')}</label>
                             <div className="space-y-2">
                               {(q._seqItems || []).map((txt, oi) => (
                                 <label key={oi} className="block text-[11px] text-gray-500">
@@ -1058,10 +1065,10 @@ export default function InstructorExams() {
                               className="text-xs font-semibold text-indigo-300 hover:text-indigo-200"
                               onClick={() => patchEditQuestion(idx, { _seqItems: [...(q._seqItems || []), ''] })}
                             >
-                              + Bənd əlavə et
+                              {t('exams.questions.addClause')}
                             </button>
                             <label className="block text-[11px] text-gray-500">
-                              Düzgün ardıcıllıq (bitişik rəqəmlər, məs. 231)
+                              {t('exams.questions.correctSequence')}
                               <input
                                 className={inp + ' mt-1 font-mono text-xs'}
                                 value={String(q.correct_answer ?? '').replace(/\D/g, '')}
@@ -1074,7 +1081,7 @@ export default function InstructorExams() {
                               />
                             </label>
                             <label className="block text-[11px] text-gray-500">
-                              Tələbəyə nümunə (placeholder)
+                              {t('exams.questions.templateHint')}
                               <input
                                 className={inp + ' mt-1 font-mono text-xs'}
                                 value={String(q.template_hint ?? '').replace(/\D/g, '')}
@@ -1088,14 +1095,14 @@ export default function InstructorExams() {
                             </label>
                           </div>
                         )}
-                        {t === 'open' && (
+                        {qType === 'open' && (
                           <div className="space-y-1.5">
-                            <label className="text-[11px] text-gray-500">Şablon / gözlənti (avtomatik yoxlama üçün)</label>
+                            <label className="text-[11px] text-gray-500">{t('exams.questions.openTemplate')}</label>
                             <input
                               className={inp}
                               value={String(q.template_hint ?? '')}
                               onChange={(e) => patchEditQuestion(idx, { template_hint: e.target.value })}
-                              placeholder="məs. 4.5"
+                              placeholder={t('exams.questions.openTemplatePh')}
                             />
                           </div>
                         )}
@@ -1109,9 +1116,9 @@ export default function InstructorExams() {
             <div className="p-4 bg-[#13112e] rounded-xl border border-indigo-500/20 space-y-3">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <div className="text-sm font-semibold">Material fayllar</div>
+                  <div className="text-sm font-semibold">{t('exams.materials.title')}</div>
                   <div className="text-xs text-gray-500 mt-1">
-                    PDF/JPG/PNG əlavə edin və ya mövcud faylı silin. Yadda saxlayanda köhnə fayllar avtomatik silinəcək.
+                    {t('exams.materials.hint')}
                   </div>
                 </div>
                 <Button
@@ -1122,7 +1129,7 @@ export default function InstructorExams() {
                   disabled={blocked}
                   onClick={() => editMaterialsInputRef.current?.click()}
                 >
-                  Faylı yenilə
+                  {t('exams.materials.update')}
                 </Button>
               </div>
               <input
@@ -1135,7 +1142,7 @@ export default function InstructorExams() {
                 disabled={blocked}
               />
               {editMaterialFiles.length === 0 ? (
-                <div className="text-xs text-gray-500">Hələ material seçilməyib.</div>
+                <div className="text-xs text-gray-500">{t('exams.materials.empty')}</div>
               ) : (
                 <div className="space-y-2">
                   {editMaterialFiles.map((f) => (
@@ -1148,7 +1155,7 @@ export default function InstructorExams() {
                         <div className="text-[11px] text-gray-500 truncate">{f.url}</div>
                       </div>
                       <Button type="button" size="sm" variant="secondary" onClick={() => removeEditMaterial(f.id)}>
-                        Sil
+                        {t('exams.delete')}
                       </Button>
                     </div>
                   ))}
@@ -1159,36 +1166,35 @@ export default function InstructorExams() {
             <div className="p-4 bg-[#13112e] rounded-xl border border-indigo-500/20 space-y-3">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <div className="text-sm font-semibold">Tələbələri seç</div>
+                  <div className="text-sm font-semibold">{t('exams.students.title')}</div>
                   <div className="text-xs text-gray-500 mt-1">
-                    Defolt olaraq yalnız bu imtahana hələ təyin olunmamış tələbələr göstərilir. Mövcud təyinləri
-                    çıxarmaq üçün “Bütün tələbələri göstər”i açın.
+                    {t('exams.students.hint')}
                   </div>
                 </div>
                 <div className="text-xs text-gray-500 whitespace-nowrap">
-                  {editAssignmentsLoading ? 'Yüklənir…' : `${editStudentIds.length} seçildi`}
+                  {editAssignmentsLoading ? t('exams.loadingShort') : t('exams.students.selectedCount', { count: editStudentIds.length })}
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="sm:col-span-1">
                   <label className="block text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">
-                    Gecikən giriş icazəsi
+                    {t('exams.lateAccess.title')}
                   </label>
                   <select
                     className={inp}
                     value={lateAccessPreset}
                     onChange={(e) => setLateAccessPreset(e.target.value)}
                   >
-                    <option value="30">30 dəq</option>
-                    <option value="60">60 dəq</option>
-                    <option value="120">120 dəq</option>
-                    <option value="custom">Custom (tarix-saat)</option>
+                    <option value="30">{t('exams.lateAccess.min30')}</option>
+                    <option value="60">{t('exams.lateAccess.min60')}</option>
+                    <option value="120">{t('exams.lateAccess.min120')}</option>
+                    <option value="custom">{t('exams.lateAccess.custom')}</option>
                   </select>
                 </div>
                 <div className="sm:col-span-2">
                   <label className="block text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">
-                    Custom bitmə vaxtı
+                    {t('exams.lateAccess.customUntil')}
                   </label>
                   <input
                     type="datetime-local"
@@ -1202,7 +1208,7 @@ export default function InstructorExams() {
 
               <input
                 className={inp}
-                placeholder="Ad və ya telefon ilə axtar…"
+                placeholder={t('exams.students.searchPh')}
                 value={studentPickerQuery}
                 onChange={(e) => setStudentPickerQuery(e.target.value)}
               />
@@ -1214,7 +1220,7 @@ export default function InstructorExams() {
                   checked={showAllStudentsInPicker}
                   onChange={(e) => setShowAllStudentsInPicker(e.target.checked)}
                 />
-                Bütün tələbələri göstər (mövcud təyinlər daxil)
+                {t('exams.students.showAll')}
               </label>
 
               <label className="flex items-center gap-2 text-xs font-semibold text-gray-300 select-none">
@@ -1224,12 +1230,12 @@ export default function InstructorExams() {
                   checked={allPickerSelected}
                   onChange={(e) => toggleSelectAllPicker(e.target.checked)}
                 />
-                Hamısını seç (yeni təyinlər üçün)
+                {t('exams.students.selectAllNew')}
               </label>
 
               <div className="max-h-56 overflow-auto rounded-lg border border-indigo-500/15">
                 {pickerStudents.length === 0 ? (
-                  <div className="p-3 text-xs text-gray-500">Tələbə tapılmadı.</div>
+                  <div className="p-3 text-xs text-gray-500">{t('exams.students.notFound')}</div>
                 ) : (
                   pickerStudents.map((s) => {
                     const sid = String(s.id)
@@ -1244,14 +1250,14 @@ export default function InstructorExams() {
                         className="flex items-center justify-between gap-3 px-3 py-2 border-b border-indigo-500/10 last:border-b-0 cursor-pointer hover:bg-[#0f0e24]"
                       >
                         <div className="min-w-0">
-                          <div className="text-sm text-token-textMain font-medium truncate">{s.full_name || 'Telebe'}</div>
+                          <div className="text-sm text-token-textMain font-medium truncate">{s.full_name || t('exams.students.defaultName')}</div>
                           <div className="text-[11px] text-token-textMuted truncate">{s.phone || ''}</div>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
                           {wasAssigned ? (
-                            <span className="text-[10px] text-gray-400">Təyin</span>
+                            <span className="text-[10px] text-gray-400">{t('exams.students.assigned')}</span>
                           ) : (
-                            <span className="text-[10px] text-emerald-300">Yeni</span>
+                            <span className="text-[10px] text-emerald-300">{t('exams.students.new')}</span>
                           )}
                           {wasAssigned && checked && windowClosed && (
                             <Button
@@ -1265,7 +1271,7 @@ export default function InstructorExams() {
                                 grantLateAccess(sid)
                               }}
                             >
-                              Giris icazesi ver
+                              {t('exams.students.grantLateAccess')}
                             </Button>
                           )}
                           <input
@@ -1283,8 +1289,8 @@ export default function InstructorExams() {
             </div>
 
             <div className="flex gap-3">
-              <Button onClick={saveEdit} loading={loading} className="flex-1 justify-center">Yadda Saxla</Button>
-              <Button variant="secondary" onClick={() => setEditModal(false)} className="flex-1 justify-center">Legv et</Button>
+              <Button onClick={saveEdit} loading={loading} className="flex-1 justify-center">{t('exams.save')}</Button>
+              <Button variant="secondary" onClick={() => setEditModal(false)} className="flex-1 justify-center">{t('exams.cancel')}</Button>
             </div>
           </div>
         </Modal>

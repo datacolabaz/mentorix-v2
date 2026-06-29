@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import api from '../../lib/api'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
@@ -6,17 +7,17 @@ import Modal from '../../components/common/Modal'
 import { useToast } from '../../components/common/Toast'
 import useUiStore from '../../hooks/useUi'
 
-function billingLabel(t) {
-  if (t === '8_lessons') return '8 dərs'
-  if (t === '12_lessons') return '12 dərs'
-  return t || '—'
+function billingLabel(type, t) {
+  if (type === '8_lessons') return t('attendance.pack8')
+  if (type === '12_lessons') return t('attendance.pack12')
+  return type || t('attendance.dash')
 }
 
-function fmtAzBakuDateTime(dt) {
+function fmtLocaleBakuDateTime(dt, locale) {
   if (!dt) return '—'
   const d = new Date(dt)
   if (Number.isNaN(d.getTime())) return '—'
-  const parts = new Intl.DateTimeFormat('az-AZ', {
+  const parts = new Intl.DateTimeFormat(locale, {
     timeZone: 'Asia/Baku',
     day: '2-digit',
     month: '2-digit',
@@ -125,6 +126,8 @@ function fmtDdMmFromYmd(ymd) {
 }
 
 export default function InstructorAttendance() {
+  const { t, i18n } = useTranslation()
+  const dateLocale = i18n.language.startsWith('ru') ? 'ru-RU' : 'az-AZ'
   const [students, setStudents] = useState([])
   const [enrollmentId, setEnrollmentId] = useState('')
   const [date, setDate] = useState(() => ymdTodayBaku())
@@ -212,7 +215,7 @@ export default function InstructorAttendance() {
     } catch (err) {
       setPeriod(null)
       setMonthlyRows([])
-      toast(err.message || 'Yüklənmədi', 'error')
+      toast(err.message || t('attendance.loadFailed'), 'error')
     } finally {
       setLoading(false)
     }
@@ -258,16 +261,16 @@ export default function InstructorAttendance() {
   const submitBulk = async () => {
     if (!enrollmentId) return
     if (!bulkFrom || !bulkTo) {
-      toast('Tarix aralığını seçin', 'error')
+      toast(t('attendance.selectDateRange'), 'error')
       return
     }
     if (bulkFrom > bulkTo) {
-      toast('Başlanğıc tarixi bitirmə tarixindən sonra ola bilməz', 'error')
+      toast(t('attendance.startAfterEnd'), 'error')
       return
     }
     const today = ymdTodayBaku()
     if (bulkFrom > today) {
-      toast('Gələcək tarix üçün toplu qeyd mümkün deyil', 'error')
+      toast(t('attendance.futureBulk'), 'error')
       return
     }
     setBulkSaving(true)
@@ -280,12 +283,12 @@ export default function InstructorAttendance() {
         notes: bulkNotes.trim() || undefined,
       })
       const n = d?.updated ?? 0
-      toast(n ? `${n} dərs üçün qeyd yaradıldı` : d?.message || 'Dərs tapılmadı', n ? 'success' : 'info')
+      toast(n ? t('attendance.bulkCreated', { count: n }) : d?.message || t('attendance.noLessonsFound'), n ? 'success' : 'info')
       setBulkOpen(false)
       setBulkNotes('')
       await loadPeriod(enrollmentId)
     } catch (err) {
-      toast(err?.message || 'Xəta', 'error')
+      toast(err?.message || t('attendance.error'), 'error')
     } finally {
       setBulkSaving(false)
     }
@@ -322,11 +325,11 @@ export default function InstructorAttendance() {
       })
       setNotes('')
       await loadPeriod(enrollmentId)
-      toast('Yadda saxlandı', 'success')
+      toast(t('attendance.saved'), 'success')
     } catch (err) {
       // rollback by reloading server state
       await loadPeriod(enrollmentId)
-      toast(err.message || 'Xəta', 'error')
+      toast(err.message || t('attendance.error'), 'error')
     } finally {
       setSaving(false)
     }
@@ -353,12 +356,12 @@ export default function InstructorAttendance() {
 
   return (
     <div className="p-4 sm:p-6 min-w-0">
-      <h1 className="font-display font-bold text-xl sm:text-2xl mb-6 break-words">Davamiyyət Qeydi</h1>
+      <h1 className="font-display font-bold text-xl sm:text-2xl mb-6 break-words">{t('attendance.title')}</h1>
 
       <div className="max-w-4xl w-full min-w-0">
         <Card className="p-4 sm:p-6 space-y-4 min-w-0 overflow-hidden">
           <div className="min-w-0">
-            <label className={labelCls}>Tələbə</label>
+            <label className={labelCls}>{t('attendance.studentLabel')}</label>
             <select
               className={selectCls}
               value={enrollmentId} onChange={async (e) => {
@@ -367,7 +370,7 @@ export default function InstructorAttendance() {
                 setPeriod(null)
                 if (id) await loadPeriod(id)
               }}>
-              <option value="">— Tələbə seçin —</option>
+              <option value="">{t('attendance.selectStudent')}</option>
               {students.map(s => (
                 <option key={s.enrollment_id} value={s.enrollment_id}>{s.full_name}</option>
               ))}
@@ -376,7 +379,7 @@ export default function InstructorAttendance() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className={labelCls}>Tarix</label>
+              <label className={labelCls}>{t('attendance.dateLabel')}</label>
               <input
                 type="date"
                 className={['date-input-class', inputCls].join(' ')}
@@ -387,9 +390,9 @@ export default function InstructorAttendance() {
               />
             </div>
             <div>
-              <label className={labelCls}>Qeyd (opsional)</label>
+              <label className={labelCls}>{t('attendance.notesLabel')}</label>
               <input
-                placeholder="Əlavə qeyd..."
+                placeholder={t('attendance.notesPlaceholder')}
                 className={inputCls}
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
@@ -400,7 +403,7 @@ export default function InstructorAttendance() {
 
           {loading && (
             <p className={['text-xs', theme === 'dark' ? 'text-gray-500' : 'text-token-textMuted'].join(' ')}>
-              Yüklənir…
+              {t('attendance.loading')}
             </p>
           )}
 
@@ -414,18 +417,21 @@ export default function InstructorAttendance() {
               ].join(' ')}
             >
               <p className={['text-xs', theme === 'dark' ? 'text-gray-400' : 'text-token-textMuted'].join(' ')}>
-                <span className={theme === 'dark' ? 'text-gray-500' : 'text-token-textMuted'}>Paket:</span>{' '}
+                <span className={theme === 'dark' ? 'text-gray-500' : 'text-token-textMuted'}>{t('attendance.packLabel')}</span>{' '}
                 <span className={['font-semibold', theme === 'dark' ? 'text-white' : 'text-token-textMain'].join(' ')}>
-                  {billingLabel(period.enrollment.billing_type)}
+                  {billingLabel(period.enrollment.billing_type, t)}
                 </span>{' '}
-                · <span className={theme === 'dark' ? 'text-gray-500' : 'text-token-textMuted'}>Dövr:</span>{' '}
+                · <span className={theme === 'dark' ? 'text-gray-500' : 'text-token-textMuted'}>{t('attendance.cycleLabel')}</span>{' '}
                 <span className={['font-semibold', theme === 'dark' ? 'text-white' : 'text-token-textMain'].join(' ')}>
                   #{period.enrollment.billing_cycle}
                 </span>
               </p>
               {period.enrollment.lesson_limit != null && (
                 <p className={['text-xs mt-1', theme === 'dark' ? 'text-gray-500' : 'text-token-textMuted'].join(' ')}>
-                  Dərslər: {period.enrollment.lesson_count || 0} / {period.enrollment.lesson_limit}
+                  {t('attendance.lessonsProgress', {
+                    done: period.enrollment.lesson_count || 0,
+                    limit: period.enrollment.lesson_limit,
+                  })}
                 </p>
               )}
             </div>
@@ -435,11 +441,10 @@ export default function InstructorAttendance() {
             <div className="space-y-2">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="text-[11px] text-gray-500 leading-snug">
-                  Keçmiş tarixlər üçün planlaşdırılmış dərsləri bir dəfədə &quot;Gəldi&quot; kimi qeyd edin (cari dövr,
-                  dərs günləri cədvəldəki tarixlər əsasında).
+                  {t('attendance.bulkHint')}
                 </p>
                 <Button type="button" size="sm" variant="secondary" disabled={!enrollmentId} onClick={() => setBulkOpen(true)}>
-                  Toplu qeyd
+                  {t('attendance.bulkButton')}
                 </Button>
               </div>
               {Array.from({ length: period.enrollment.lesson_limit }, (_, i) => i + 1).map((n) => {
@@ -447,7 +452,7 @@ export default function InstructorAttendance() {
                 const row = (period.attendance || []).find((a) => Number(a.lesson_number) === n)
                 const status = row ? (row.attended ? 'attended' : 'absent') : 'empty'
                 const planned = (period.lessons || []).find((l) => Number(l.lesson_number) === n)
-                const plannedStr = planned?.starts_at ? fmtAzBakuDateTime(planned.starts_at) : '—'
+                const plannedStr = planned?.starts_at ? fmtLocaleBakuDateTime(planned.starts_at, dateLocale) : t('attendance.dash')
                 const lessonYmd = planned?.starts_at ? lessonYmdFromStartsAt(planned.starts_at) : null
                 const isFutureBySchedule = lessonYmd != null && lessonYmd > todayYmd
                 const isFutureByCount = lessonYmd == null && n > currentLessonNumber
@@ -483,7 +488,7 @@ export default function InstructorAttendance() {
                     <div className={['text-sm min-w-0', theme === 'dark' ? 'text-gray-200' : 'text-token-textMain'].join(' ')}>
                       <div className="flex items-center gap-2 min-w-0">
                         <span className={['shrink-0', theme === 'dark' ? 'text-gray-400' : 'text-token-textMuted'].join(' ')}>
-                          Dərs {n}
+                          {t('attendance.lessonN', { n })}
                         </span>
                         {isCurrent && (
                           <span
@@ -494,7 +499,7 @@ export default function InstructorAttendance() {
                                 : 'bg-emerald-500/10 border-emerald-500/25 text-emerald-700',
                             ].join(' ')}
                           >
-                            Cari
+                            {t('attendance.current')}
                           </span>
                         )}
                         {status === 'attended' && (
@@ -506,7 +511,7 @@ export default function InstructorAttendance() {
                                 : 'bg-emerald-500/10 border-emerald-500/25 text-emerald-700',
                             ].join(' ')}
                           >
-                            Gəldi
+                            {t('attendance.attended')}
                           </span>
                         )}
                         {status === 'absent' && (
@@ -518,7 +523,7 @@ export default function InstructorAttendance() {
                                 : 'bg-rose-500/10 border-rose-500/25 text-rose-700',
                             ].join(' ')}
                           >
-                            Gəlmədi
+                            {t('attendance.absent')}
                           </span>
                         )}
                         {isFuture && (
@@ -530,7 +535,7 @@ export default function InstructorAttendance() {
                                 : 'bg-slate-500/10 border-slate-500/20 text-slate-700',
                             ].join(' ')}
                           >
-                            Növbəti
+                            {t('attendance.next')}
                           </span>
                         )}
                       </div>
@@ -551,7 +556,7 @@ export default function InstructorAttendance() {
                         loading={saving}
                         disabled={disabled}
                       >
-                        ✓ Gəldi
+                        {t('attendance.btnAttended')}
                       </Button>
                       <Button
                         size="sm"
@@ -560,15 +565,14 @@ export default function InstructorAttendance() {
                         loading={saving}
                         disabled={disabled}
                       >
-                        ✗ Gəlmədi
+                        {t('attendance.btnAbsent')}
                       </Button>
                     </div>
                   </div>
                 )
               })}
               <p className="text-[11px] text-gray-500">
-                Yalnız bu gün və ya keçmiş planlaşdırılmış dərslər üçün “Gəldi/Gəlmədi” seçə bilərsiniz. Gələcək tarixlər
-                bağlıdır.
+                {t('attendance.futureHint')}
               </p>
             </div>
           ) : false ? (
@@ -582,11 +586,9 @@ export default function InstructorAttendance() {
             >
               <p className={['text-xs leading-relaxed', theme === 'dark' ? 'text-gray-300' : 'text-token-textMuted'].join(' ')}>
                 <span className={['font-semibold', theme === 'dark' ? 'text-indigo-200' : 'text-token-textMain'].join(' ')}>
-                  Paket:
+                  {t('attendance.packLabel')}
                 </span>{' '}
-                davamiyyət yalnız izləmə və
-                hesabat üçündür; <strong>ödəniş borcu</strong> yalnız Ödənişlər bölməsində təqvim ankoruna görə
-                hesablanır (dərs sayından asılı deyil). Gələcək tarixlər üçün düymələr deaktivdir.
+                {t('attendance.monthlyPackNote')}
               </p>
               {monthlyMeta.next && (
                 <div
@@ -597,7 +599,7 @@ export default function InstructorAttendance() {
                       : 'border-emerald-500/25 bg-emerald-500/10 text-emerald-800',
                   ].join(' ')}
                 >
-                  <span className="font-semibold">Növbəti dərs:</span>{' '}
+                  <span className="font-semibold">{t('attendance.nextLesson')}</span>{' '}
                   <span className="font-mono">{fmtDdMmFromYmd(monthlyMeta.next)}</span>
                   {monthlyMeta.next_status && monthlyMeta.next_status !== 'pending' && (
                     <span className={theme === 'dark' ? 'text-emerald-200/80' : 'text-emerald-700'}>
@@ -615,7 +617,7 @@ export default function InstructorAttendance() {
                   loading={monthlyFetching}
                   onClick={() => void monthlyGenerateFuture()}
                 >
-                  Slotları yenilə (gələcək)
+                  {t('attendance.refreshSlots')}
                 </Button>
                 <Button
                   type="button"
@@ -624,14 +626,14 @@ export default function InstructorAttendance() {
                   disabled={monthlyFetching}
                   onClick={() => void monthlyArchiveAllPast()}
                 >
-                  Bütün keçmişi arxivlə
+                  {t('attendance.archivePast')}
                 </Button>
               </div>
               {monthlyLessonStats && (
                 <>
                   <div className="flex flex-col sm:flex-row sm:items-end gap-3">
                     <div className="flex-1 min-w-0">
-                      <label className={smallLabelCls}>Hesab intervalının sonu (Bakı tarixi)</label>
+                      <label className={smallLabelCls}>{t('attendance.rangeEndLabel')}</label>
                       <input
                         type="date"
                         className={smallInputCls}
@@ -643,7 +645,7 @@ export default function InstructorAttendance() {
                     </div>
                   </div>
                   <p className={['text-xs', theme === 'dark' ? 'text-gray-400' : 'text-token-textMuted'].join(' ')}>
-                    Ödəniş başlanğıcı:{' '}
+                    {t('attendance.paymentAnchor')}{' '}
                     <span className={['font-mono', theme === 'dark' ? 'text-white' : 'text-token-textMain'].join(' ')}>
                       {monthlyLessonStats.anchor}
                     </span>
@@ -652,8 +654,8 @@ export default function InstructorAttendance() {
                       {monthlyLessonStats.end}
                     </span>
                     {' · '}
-                    <span className="text-emerald-300 font-semibold">{monthlyLessonStats.count}</span> dərs günü
-                    (seçilmiş həftəlik cədvələ uyğun)
+                    <span className="text-emerald-300 font-semibold">{monthlyLessonStats.count}</span>{' '}
+                    {t('attendance.lessonDaysCount')}
                   </p>
                 </>
               )}
@@ -666,12 +668,12 @@ export default function InstructorAttendance() {
                 ].join(' ')}
               >
                 <p className={['text-[11px] font-semibold uppercase tracking-wider', theme === 'dark' ? 'text-gray-400' : 'text-token-textMain'].join(' ')}>
-                  Toplu əməliyyat aralığı
+                  {t('attendance.bulkRangeTitle')}
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className={['block text-[10px] mb-1', theme === 'dark' ? 'text-gray-500' : 'text-token-textMuted'].join(' ')}>
-                      Başlanğıc
+                      {t('attendance.startLabel')}
                     </label>
                     <input
                       type="date"
@@ -685,7 +687,7 @@ export default function InstructorAttendance() {
                   </div>
                   <div>
                     <label className={['block text-[10px] mb-1', theme === 'dark' ? 'text-gray-500' : 'text-token-textMuted'].join(' ')}>
-                      Son
+                      {t('attendance.endLabel')}
                     </label>
                     <input
                       type="date"
@@ -704,7 +706,7 @@ export default function InstructorAttendance() {
                     loading={monthlyFetching}
                     onClick={() => void monthlyBulkAction('attended')}
                   >
-                    Aralığı &quot;Gəldi&quot; et
+                    {t('attendance.markRangeAttended')}
                   </Button>
                   <Button
                     type="button"
@@ -713,7 +715,7 @@ export default function InstructorAttendance() {
                     loading={monthlyFetching}
                     onClick={() => void monthlyBulkAction('absent')}
                   >
-                    Aralığı &quot;Gəlmədi&quot; et
+                    {t('attendance.markRangeAbsent')}
                   </Button>
                   <Button
                     type="button"
@@ -722,7 +724,7 @@ export default function InstructorAttendance() {
                     loading={monthlyFetching}
                     onClick={() => void monthlyBulkAction('archived')}
                   >
-                    Aralığı arxivlə
+                    {t('attendance.markRangeArchive')}
                   </Button>
                 </div>
               </div>
@@ -739,9 +741,9 @@ export default function InstructorAttendance() {
                     ].join(' ')}
                   >
                     <tr>
-                      <th className="text-left px-3 py-2 font-semibold">Tarix</th>
-                      <th className="text-left px-3 py-2 font-semibold">Status</th>
-                      <th className="text-right px-3 py-2 font-semibold">Əməliyyat</th>
+                      <th className="text-left px-3 py-2 font-semibold">{t('attendance.tableDate')}</th>
+                      <th className="text-left px-3 py-2 font-semibold">{t('attendance.tableStatus')}</th>
+                      <th className="text-right px-3 py-2 font-semibold">{t('attendance.tableAction')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -751,7 +753,7 @@ export default function InstructorAttendance() {
                           colSpan={3}
                           className={['px-3 py-4 text-center', theme === 'dark' ? 'text-gray-500' : 'text-token-textMuted'].join(' ')}
                         >
-                          Slot yoxdur. &quot;Slotları yenilə&quot; düyməsini sıxın.
+                          {t('attendance.noSlots')}
                         </td>
                       </tr>
                     )}
@@ -781,7 +783,7 @@ export default function InstructorAttendance() {
                                 theme === 'dark' ? 'text-gray-500' : 'text-token-textMuted',
                               ].join(' ')}
                             >
-                              gələcək
+                              {t('attendance.future')}
                             </span>
                           )}
                         </td>
@@ -796,7 +798,7 @@ export default function InstructorAttendance() {
                               disabled={rowActionsDisabled}
                               onClick={() => void putMonthlySlot(row.lesson_date, 'attended')}
                             >
-                              Gəldi
+                              {t('attendance.attended')}
                             </Button>
                             <Button
                               type="button"
@@ -805,7 +807,7 @@ export default function InstructorAttendance() {
                               disabled={rowActionsDisabled}
                               onClick={() => void putMonthlySlot(row.lesson_date, 'absent')}
                             >
-                              Gəlmədi
+                              {t('attendance.absent')}
                             </Button>
                             <Button
                               type="button"
@@ -814,7 +816,7 @@ export default function InstructorAttendance() {
                               disabled={rowActionsDisabled}
                               onClick={() => void putMonthlySlot(row.lesson_date, 'archived')}
                             >
-                              Arxiv
+                              {t('attendance.archive')}
                             </Button>
                           </div>
                         </td>
@@ -826,7 +828,7 @@ export default function InstructorAttendance() {
               </div>
             </div>
           ) : enrollmentId ? (
-            <p className="text-xs text-gray-500">Bu paket üçün məlumat yüklənmədi.</p>
+            <p className="text-xs text-gray-500">{t('attendance.noPackData')}</p>
           ) : null}
         </Card>
       </div>
@@ -834,17 +836,16 @@ export default function InstructorAttendance() {
       <Modal
         open={bulkOpen}
         onClose={() => !bulkSaving && setBulkOpen(false)}
-        title="Toplu davamiyyət (Gəldi)"
+        title={t('attendance.bulkModalTitle')}
         size="md"
       >
         <div className="space-y-4 text-sm">
           <p className={['text-xs leading-relaxed', theme === 'dark' ? 'text-gray-400' : 'text-token-textMuted'].join(' ')}>
-            Seçilmiş tarix aralığında cədvəldə olan hər dərs üçün (cari dövr) davamiyyət &quot;Gəldi&quot; kimi yazılır.
-            Yalnız bu dövrə aid planlaşdırılmış tarixlər nəzərə alınır.
+            {t('attendance.bulkModalDesc')}
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className={labelCls}>Başlanğıc</label>
+              <label className={labelCls}>{t('attendance.startLabel')}</label>
               <input
                 type="date"
                 className={inputCls}
@@ -855,7 +856,7 @@ export default function InstructorAttendance() {
               />
             </div>
             <div>
-              <label className={labelCls}>Son</label>
+              <label className={labelCls}>{t('attendance.endLabel')}</label>
               <input
                 type="date"
                 className={inputCls}
@@ -867,10 +868,10 @@ export default function InstructorAttendance() {
             </div>
           </div>
           <div>
-            <label className={labelCls}>Qeyd (istəyə bağlı)</label>
+            <label className={labelCls}>{t('attendance.notesOptionalLabel')}</label>
             <input
               className={inputCls}
-              placeholder="Məs: köhnə dövr köçürməsi"
+              placeholder={t('attendance.notesBulkPlaceholder')}
               value={bulkNotes}
               onChange={(e) => setBulkNotes(e.target.value)}
               disabled={bulkSaving}
@@ -878,10 +879,10 @@ export default function InstructorAttendance() {
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="secondary" disabled={bulkSaving} onClick={() => setBulkOpen(false)}>
-              Ləğv
+              {t('attendance.cancel')}
             </Button>
             <Button type="button" loading={bulkSaving} onClick={() => void submitBulk()}>
-              Tətbiq et
+              {t('attendance.apply')}
             </Button>
           </div>
         </div>

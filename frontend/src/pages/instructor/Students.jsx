@@ -11,7 +11,7 @@ import ListSkeleton from '../../components/common/ListSkeleton'
 import StatusBadge from '../../components/common/StatusBadge'
 import PresenceDot from '../../components/common/PresenceDot'
 import { useToast } from '../../components/common/Toast'
-import { WEEKDAYS } from './Schedule'
+import { getWeekdays } from '../../lib/weekdays'
 import { addMinutesToHm, fmtAzBakuLessonRow } from '../../lib/lessonWeekGrid'
 import { alignFirstLessonYmd } from '../../lib/firstLessonDate'
 import { readCache, writeCache } from '../../lib/cache'
@@ -278,15 +278,7 @@ function StudentFormFields({
   lightSetup = false,
 }) {
   const { t } = useTranslation()
-  const localizedWeekdays = useMemo(
-    () =>
-      WEEKDAYS.map((d) => ({
-        ...d,
-        short: t(`students.form.weekdays.${d.v}.short`),
-        full: t(`students.form.weekdays.${d.v}.full`),
-      })),
-    [t],
-  )
+  const localizedWeekdays = useMemo(() => getWeekdays(t), [t])
   const [subjectDraft, setSubjectDraft] = useState('')
   const [groupDraft, setGroupDraft] = useState('')
   const [createOpen, setCreateOpen] = useState(null) // 'subject' | 'group' | null

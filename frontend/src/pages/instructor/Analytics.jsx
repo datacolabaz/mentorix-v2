@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   BarChart,
   Bar,
@@ -37,6 +38,7 @@ function studentPerformanceBal(s, examById) {
 }
 
 export default function InstructorAnalytics() {
+  const { t, i18n } = useTranslation()
   const toast = useToast()
   const [students, setStudents] = useState([])
   const [examStats, setExamStats] = useState([])
@@ -128,7 +130,7 @@ export default function InstructorAnalytics() {
     setExamLoading(true)
     try {
       const q = buildExamQuery(grade, audience)
-      const [g, t, r] = await Promise.all([
+      const [g, topRes, r] = await Promise.all([
         api.get(`/exams/${encodeURIComponent(id)}/groups`),
         api.get(`/exams/${encodeURIComponent(id)}/top10${q}`),
         api.get(`/exams/${encodeURIComponent(id)}/results${q}`),
@@ -137,10 +139,10 @@ export default function InstructorAnalytics() {
       setGroups(gr)
       setParticipantGroupId(g.participant_group_id || null)
       setExamSummary(g.summary || null)
-      setTop10(Array.isArray(t.top10) ? t.top10 : [])
+      setTop10(Array.isArray(topRes.top10) ? topRes.top10 : [])
       setGroupResults(Array.isArray(r.results) ? r.results : [])
     } catch (e) {
-      setExamErr(e?.message || 'Yüklənmədi')
+      setExamErr(e?.message || t('analytics.loadFailed'))
       setGroups([])
       setParticipantGroupId(null)
       setTop10([])
@@ -168,9 +170,9 @@ export default function InstructorAnalytics() {
       const studentsRes = await api.get('/students').catch(() => ({ students: [] }))
       setStudents(studentsRes.students || [])
       setPromoteModal(null)
-      toast(r?.message || 'Tələbə CRM qrupuna əlavə edildi', 'success')
+      toast(r?.message || t('analytics.promoted'), 'success')
     } catch (e) {
-      setPromoteModal((m) => (m ? { ...m, error: e?.message || 'Xəta' } : m))
+      setPromoteModal((m) => (m ? { ...m, error: e?.message || t('analytics.error') } : m))
     } finally {
       setPromoteBusy(false)
     }
@@ -181,7 +183,7 @@ export default function InstructorAnalytics() {
     setStudentReviewModal({
       loading: true,
       error: null,
-      title: displayName || 'Tələbə',
+      title: displayName || t('analytics.student'),
       score: null,
       submitted_at: null,
       breakdown: [],
@@ -193,7 +195,7 @@ export default function InstructorAnalytics() {
       setStudentReviewModal({
         loading: false,
         error: null,
-        title: d.student_name || displayName || 'Tələbə',
+        title: d.student_name || displayName || t('analytics.student'),
         score: d.score,
         submitted_at: d.submitted_at,
         breakdown: Array.isArray(d.breakdown) ? d.breakdown : [],
@@ -201,8 +203,8 @@ export default function InstructorAnalytics() {
     } catch (e) {
       setStudentReviewModal({
         loading: false,
-        error: e?.message || 'Yüklənmədi',
-        title: displayName || 'Tələbə',
+        error: e?.message || t('analytics.loadFailed'),
+        title: displayName || t('analytics.student'),
         score: null,
         submitted_at: null,
         breakdown: [],
@@ -292,8 +294,8 @@ export default function InstructorAnalytics() {
     /** subject -> group -> students[] */
     const subjMap = new Map()
     for (const s of src) {
-      const subject = String(s.track_subject_name || 'Sahəsiz').trim() || 'Sahəsiz'
-      const group = String(s.track_group_name || 'Qrup yoxdur').trim() || 'Qrup yoxdur'
+      const subject = String(s.track_subject_name || t('analytics.noSubject')).trim() || t('analytics.noSubject')
+      const group = String(s.track_group_name || t('analytics.noGroup')).trim() || t('analytics.noGroup')
       if (!subjMap.has(subject)) subjMap.set(subject, new Map())
       const gMap = subjMap.get(subject)
       if (!gMap.has(group)) gMap.set(group, [])
@@ -328,7 +330,7 @@ export default function InstructorAnalytics() {
       .sort((a, b) => a.subject.localeCompare(b.subject))
 
     return subjects
-  }, [filteredStudents, examById])
+  }, [filteredStudents, examById, t])
 
   const barData = useMemo(() => {
     return filteredStudents.map((s) => {
@@ -355,27 +357,38 @@ export default function InstructorAnalytics() {
     const crm = Number(examSummary.crm_count) || 0
     const guest = Number(examSummary.guest_count) || 0
     return [
-      { name: 'Daimi (CRM)', value: crm, key: 'crm' },
-      { name: 'Qonaq', value: guest, key: 'guest' },
+      { name: t('analytics.crm'), value: crm, key: 'crm' },
+      { name: t('analytics.guest'), value: guest, key: 'guest' },
     ].filter((x) => x.value > 0)
-  }, [examSummary])
+  }, [examSummary, t])
+
+  const examAudienceOptions = useMemo(
+    () => [
+      { id: 'all', label: t('analytics.audienceAll') },
+      { id: 'crm', label: t('analytics.audienceCrm') },
+      { id: 'guest', label: t('analytics.audienceGuest') },
+    ],
+    [t],
+  )
+
+  const dateLocale = i18n.language === 'ru' ? 'ru-RU' : 'az-AZ'
 
   return (
     <div className="p-6 min-w-0">
-      <h1 className="font-display font-bold text-xl sm:text-2xl mb-6">Analitika</h1>
+      <h1 className="font-display font-bold text-xl sm:text-2xl mb-6">{t('analytics.title')}</h1>
 
       <Card className="p-4 sm:p-5 mb-4">
         <div className="flex flex-col gap-3 sm:gap-4">
           <div className="min-w-0">
-            <div className="text-sm font-semibold text-token-textMain">Filtrlə</div>
+            <div className="text-sm font-semibold text-token-textMain">{t('analytics.filterTitle')}</div>
             <div className="text-xs text-token-textMuted mt-1 leading-relaxed max-w-2xl">
-              Sahə və qrup seçin — qrafiklər yalnız həmin tələbələrə görə göstəriləcək.
+              {t('analytics.filterDesc')}
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full lg:max-w-xl">
             <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Sahə</label>
+              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">{t('analytics.subject')}</label>
               <select
                 className="w-full bg-token-surfaceMain border border-[color:var(--border-subtle)] rounded-xl px-4 py-2.5 text-token-textMain text-sm outline-none focus:border-blue-500"
                 value={selectedSubject}
@@ -385,7 +398,7 @@ export default function InstructorAnalytics() {
                   setSelectedGroup('')
                 }}
               >
-                <option value="">Hamısı</option>
+                <option value="">{t('analytics.all')}</option>
                 {subjectOptions.map((n) => (
                   <option key={n} value={n}>
                     {n}
@@ -395,14 +408,14 @@ export default function InstructorAnalytics() {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Qrup</label>
+              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">{t('analytics.group')}</label>
               <select
                 className="w-full bg-token-surfaceMain border border-[color:var(--border-subtle)] rounded-xl px-4 py-2.5 text-token-textMain text-sm outline-none focus:border-blue-500 disabled:opacity-60"
                 value={selectedGroup}
                 disabled={!selectedSubject || groupOptions.length === 0}
                 onChange={(e) => setSelectedGroup(e.target.value)}
               >
-                <option value="">Hamısı</option>
+                <option value="">{t('analytics.all')}</option>
                 {groupOptions.map((n) => (
                   <option key={n} value={n}>
                     {n}
@@ -414,18 +427,18 @@ export default function InstructorAnalytics() {
         </div>
 
         <div className="mt-3 text-xs text-token-textMuted">
-          Göstərilən tələbə sayı:{' '}
+          {t('analytics.studentCount')}{' '}
           <span className="text-token-textMain font-semibold">{uniqueStudents.length}</span>
           {selectedSubject ? (
             <>
               {' '}
-              · Sahə: <span className="text-token-textMain font-semibold">{selectedSubject}</span>
+              · {t('analytics.subjectLabel')} <span className="text-token-textMain font-semibold">{selectedSubject}</span>
             </>
           ) : null}
           {selectedGroup ? (
             <>
               {' '}
-              · Qrup: <span className="text-token-textMain font-semibold">{selectedGroup}</span>
+              · {t('analytics.groupLabel')} <span className="text-token-textMain font-semibold">{selectedGroup}</span>
             </>
           ) : null}
         </div>
@@ -433,9 +446,9 @@ export default function InstructorAnalytics() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4 min-w-0">
         <Card hover className="p-4 sm:p-5 min-w-0 overflow-hidden">
-          <h2 className="font-display font-bold text-base text-token-textMain">Tələbə Performansı</h2>
+          <h2 className="font-display font-bold text-base text-token-textMain">{t('analytics.performanceTitle')}</h2>
           <p className="text-xs text-token-textMuted mb-4">
-            Təqdim olunmuş imtahanlar üzrə orta faiz (0–100). İmtahan yoxdursa — davamiyyət balı.
+            {t('analytics.performanceDesc')}
           </p>
           <div className="w-full h-[240px] min-h-[200px]">
             <ResponsiveContainer width="100%" height="100%">
@@ -468,23 +481,23 @@ export default function InstructorAnalytics() {
                   formatter={(value, _name, item) => {
                     const n = Math.round(Number(value) * 10) / 10
                     const taken = item?.payload?.examsTaken
-                    if (taken > 0) return [`${n}%`, `Orta bal (${taken} imtahan)`]
-                    return [`${n}%`, 'Orta bal (davamiyyət)']
+                    if (taken > 0) return [`${n}%`, t('analytics.avgScoreExams', { count: taken })]
+                    return [`${n}%`, t('analytics.avgScoreAttendance')]
                   }}
                 />
-                <Bar dataKey="bal" fill="#3b82f6" radius={[6, 6, 0, 0]} name="Orta Bal" />
+                <Bar dataKey="bal" fill="#3b82f6" radius={[6, 6, 0, 0]} name={t('analytics.avgScore')} />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </Card>
 
         <Card hover className="p-4 sm:p-5 min-w-0 overflow-hidden">
-          <h2 className="font-display font-bold text-base text-token-textMain">Yönləndirmə Mənbəyi</h2>
+          <h2 className="font-display font-bold text-base text-token-textMain">{t('analytics.referralTitle')}</h2>
           <p className="text-xs text-token-textMuted mt-1 mb-4">
-            Seqmentə klik edin — həmin mənbədən gələn tələbələrin siyahısı açılır.
+            {t('analytics.referralDesc')}
           </p>
           {referralLoading ? (
-            <div className="h-52 flex items-center justify-center text-token-textMuted text-sm">Yüklənir…</div>
+            <div className="h-52 flex items-center justify-center text-token-textMuted text-sm">{t('analytics.loading')}</div>
           ) : pieData.length ? (
             <div className="w-full h-[240px] min-h-[200px]">
               <ResponsiveContainer width="100%" height="100%">
@@ -537,13 +550,13 @@ export default function InstructorAnalytics() {
               </ResponsiveContainer>
             </div>
           ) : (
-            <div className="h-52 flex items-center justify-center text-token-textMuted">Məlumat yoxdur</div>
+            <div className="h-52 flex items-center justify-center text-token-textMuted">{t('analytics.noData')}</div>
           )}
         </Card>
       </div>
 
       <Card hover className="p-4 sm:p-5 min-w-0 overflow-hidden">
-        <h2 className="font-display font-bold text-base mb-4 text-token-textMain">Dərs Sayı</h2>
+        <h2 className="font-display font-bold text-base mb-4 text-token-textMain">{t('analytics.lessonCountTitle')}</h2>
         <div className="w-full h-[200px] min-h-[180px]">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={barData} margin={{ top: 12, right: 12, left: 6, bottom: 8 }}>
@@ -566,7 +579,7 @@ export default function InstructorAnalytics() {
                   color: '#fff',
                 }}
               />
-              <Bar dataKey="ders" fill="#10b981" radius={[6, 6, 0, 0]} name="Dərs sayı" />
+              <Bar dataKey="ders" fill="#10b981" radius={[6, 6, 0, 0]} name={t('analytics.lessonCount')} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -576,14 +589,14 @@ export default function InstructorAnalytics() {
 
       <Card hover className="p-4 sm:p-5 min-w-0 overflow-hidden">
         <div className="mb-3">
-          <h2 className="font-display font-bold text-base text-token-textMain">Sahələr üzrə izləmə</h2>
+          <h2 className="font-display font-bold text-base text-token-textMain">{t('analytics.trackTitle')}</h2>
           <p className="text-xs text-token-textMuted mt-1">
-            Sahəni açın → qrupları görün → qrupun içində tələbələri izləyin.
+            {t('analytics.trackDesc')}
           </p>
         </div>
 
         {!groupedByTrack.length ? (
-          <div className="h-28 flex items-center justify-center text-token-textMuted">Məlumat yoxdur</div>
+          <div className="h-28 flex items-center justify-center text-token-textMuted">{t('analytics.noData')}</div>
         ) : (
           <div className="space-y-3">
             {groupedByTrack.map((subj) => (
@@ -595,10 +608,14 @@ export default function InstructorAnalytics() {
                   <div className="min-w-0">
                     <div className="font-semibold text-token-textMain truncate">{subj.subject}</div>
                     <div className="text-xs text-token-textMuted mt-0.5">
-                      {subj.count} tələbə · Orta bal: {Math.round(subj.avgScore)} · Dərs cəmi: {subj.totalLessons}
+                      {t('analytics.studentsSummary', {
+                        count: subj.count,
+                        avg: Math.round(subj.avgScore),
+                        lessons: subj.totalLessons,
+                      })}
                     </div>
                   </div>
-                  <div className="text-xs text-token-textMuted shrink-0">Aç / Bağla</div>
+                  <div className="text-xs text-token-textMuted shrink-0">{t('analytics.toggle')}</div>
                 </summary>
 
                 <div className="px-4 pb-4 space-y-2">
@@ -611,10 +628,14 @@ export default function InstructorAnalytics() {
                         <div className="min-w-0">
                           <div className="text-sm font-semibold text-token-textMain truncate">{g.group}</div>
                           <div className="text-xs text-token-textMuted mt-0.5">
-                            {g.count} tələbə · Orta bal: {Math.round(g.avgScore)} · Dərs cəmi: {g.totalLessons}
+                            {t('analytics.studentsSummary', {
+                              count: g.count,
+                              avg: Math.round(g.avgScore),
+                              lessons: g.totalLessons,
+                            })}
                           </div>
                         </div>
-                        <div className="text-xs text-token-textMuted shrink-0">Aç / Bağla</div>
+                        <div className="text-xs text-token-textMuted shrink-0">{t('analytics.toggle')}</div>
                       </summary>
 
                       <div className="px-3 pb-3">
@@ -624,11 +645,11 @@ export default function InstructorAnalytics() {
                               <div className="min-w-0">
                                 <div className="text-sm text-token-textMain truncate">{s.full_name || '—'}</div>
                                 <div className="text-xs text-token-textMuted mt-0.5">
-                                  Bal: {Math.round(studentPerformanceBal(s, examById))}
+                                  {t('analytics.score', { score: Math.round(studentPerformanceBal(s, examById)) })}
                                   {examById[String(s.id)]?.exams_taken
-                                    ? ` · ${examById[String(s.id)].exams_taken} imtahan`
+                                    ? ` · ${t('analytics.examsTaken', { count: examById[String(s.id)].exams_taken })}`
                                     : ''}{' '}
-                                  · Dərs: {safeNum(s.lesson_count)}
+                                  · {t('analytics.lesson', { count: safeNum(s.lesson_count) })}
                                 </div>
                               </div>
                               <div className="text-xs text-token-textMuted shrink-0">
@@ -652,9 +673,9 @@ export default function InstructorAnalytics() {
       <Card hover className="p-4 sm:p-5 min-w-0 overflow-hidden">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-4">
           <div className="min-w-0">
-            <h2 className="font-display font-bold text-base text-token-textMain">İmtahan nəticələri</h2>
+            <h2 className="font-display font-bold text-base text-token-textMain">{t('analytics.examResultsTitle')}</h2>
             <p className="text-xs text-token-textMuted mt-1">
-              Daimi qrup tələbələri və qonaq iştirakçılar ayrıca filtrlənir.
+              {t('analytics.examResultsDesc')}
             </p>
           </div>
           <Button
@@ -663,23 +684,22 @@ export default function InstructorAnalytics() {
             onClick={() => void loadExamAnalytics(examId, selectedGrade || null, examAudienceFilter)}
             disabled={!examId || examLoading}
           >
-            Yenilə
+            {t('analytics.refresh')}
           </Button>
         </div>
 
         {examId && examSummary ? (
           <p className="text-xs text-token-textMuted mb-3">
-            {examSummary.crm_count || 0} daimi · {examSummary.guest_count || 0} qonaq · cəmi{' '}
-            {examSummary.total_count || 0} nəticə
+            {t('analytics.examSummary', {
+              crm: examSummary.crm_count || 0,
+              guest: examSummary.guest_count || 0,
+              total: examSummary.total_count || 0,
+            })}
           </p>
         ) : null}
 
         <div className="flex flex-wrap gap-2 mb-4">
-          {[
-            { id: 'all', label: 'Hamısı' },
-            { id: 'crm', label: 'Daimi Tələbələrim (CRM)' },
-            { id: 'guest', label: 'Qonaq İştirakçılar' },
-          ].map((opt) => (
+          {examAudienceOptions.map((opt) => (
             <button
               key={opt.id}
               type="button"
@@ -701,7 +721,7 @@ export default function InstructorAnalytics() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div>
-            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">İmtahan</label>
+            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">{t('analytics.exam')}</label>
             <select
               className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500"
               value={examId}
@@ -717,16 +737,16 @@ export default function InstructorAnalytics() {
                 if (id) await loadExamAnalytics(id, null, 'all')
               }}
             >
-              <option value="">— İmtahan seçin —</option>
+              <option value="">{t('analytics.selectExam')}</option>
               {exams.map((ex) => (
                 <option key={ex.id} value={ex.id}>
-                  {ex.title || 'İmtahan'}
+                  {ex.title || t('analytics.examDefault')}
                 </option>
               ))}
             </select>
           </div>
           <div>
-            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Qrup</label>
+            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">{t('analytics.group')}</label>
             <select
               className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500"
               value={selectedGrade}
@@ -737,7 +757,7 @@ export default function InstructorAnalytics() {
               }}
               disabled={!examId || examLoading}
             >
-              <option value="">Ümumi (hamısı)</option>
+              <option value="">{t('analytics.overall')}</option>
               {gradeOptions.map((g) => (
                 <option key={g} value={g}>
                   {g}
@@ -748,12 +768,12 @@ export default function InstructorAnalytics() {
         </div>
 
         {examErr && <p className="text-sm text-amber-200/90 mt-3">{examErr}</p>}
-        {examLoading && <p className="text-xs text-token-textMuted mt-3">Yüklənir…</p>}
+        {examLoading && <p className="text-xs text-token-textMuted mt-3">{t('analytics.loading')}</p>}
 
         {examId && !examLoading && examAudiencePie.length > 0 ? (
           <div className="rounded-xl border border-indigo-500/15 bg-[#0f0c29]/40 p-4 mt-4">
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
-              İştirakçı tərkibi
+              {t('analytics.audienceMix')}
             </p>
             <div className="w-full h-[180px]">
               <ResponsiveContainer width="100%" height="100%">
@@ -783,10 +803,10 @@ export default function InstructorAnalytics() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
             <div className="rounded-xl border border-indigo-500/15 bg-[#0f0c29]/40 p-4">
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
-                Ümumi Top 10
+                {t('analytics.top10')}
               </p>
               {!top10.length ? (
-                <p className="text-sm text-gray-500">Nəticə yoxdur.</p>
+                <p className="text-sm text-gray-500">{t('analytics.noResults')}</p>
               ) : (
                 <div className="space-y-2">
                   {top10.map((r) => (
@@ -797,7 +817,7 @@ export default function InstructorAnalytics() {
                           {r.rank}. {r.full_name}
                         </p>
                         <p className="text-[11px] text-gray-500">
-                          {r.is_crm_student ? r.grade || 'CRM' : 'Qonaq'}
+                          {r.is_crm_student ? r.grade || t('analytics.crm') : t('analytics.guest')}
                           {r.phone ? ` · ${r.phone}` : ''}
                         </p>
                       </div>
@@ -817,10 +837,10 @@ export default function InstructorAnalytics() {
 
             <div className="rounded-xl border border-indigo-500/15 bg-[#0f0c29]/40 p-4">
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
-                {selectedGrade ? `${selectedGrade} qrupu nəticələri` : 'Nəticələr (hamısı)'}
+                {selectedGrade ? t('analytics.groupResults', { grade: selectedGrade }) : t('analytics.allResults')}
               </p>
               {!groupResults.length ? (
-                <p className="text-sm text-gray-500">Nəticə yoxdur.</p>
+                <p className="text-sm text-gray-500">{t('analytics.noResults')}</p>
               ) : (
                 <div className="space-y-2 max-h-[420px] overflow-y-auto pr-1">
                   {groupResults.map((r) => (
@@ -834,7 +854,7 @@ export default function InstructorAnalytics() {
                           {r.rank}. {r.full_name}
                         </p>
                         <p className="text-[11px] text-gray-500 font-mono tabular-nums">
-                          {r.is_crm_student ? r.grade || 'CRM' : 'Qonaq'}
+                          {r.is_crm_student ? r.grade || t('analytics.crm') : t('analytics.guest')}
                           {r.phone ? ` · ${r.phone}` : ''}
                           {Number.isFinite(Number(r.duration_seconds))
                             ? ` · ${Math.round(Number(r.duration_seconds))}s`
@@ -846,16 +866,16 @@ export default function InstructorAnalytics() {
                         onClick={() => void openStudentExamAnswers(r.student_id, r.full_name)}
                         className="text-[11px] font-semibold text-sky-300 hover:text-sky-200 border border-sky-500/30 rounded-lg px-2 py-1 shrink-0"
                       >
-                        Cavablar
+                        {t('analytics.answers')}
                       </button>
                       {participantGroupId && crmGroups.length > 0 && !r.is_crm_student ? (
                         <button
                           type="button"
                           onClick={() => openPromoteModal(r.student_id, r.full_name)}
                           className="text-[11px] font-semibold text-emerald-300 hover:text-emerald-200 border border-emerald-500/30 rounded-lg px-2 py-1 shrink-0"
-                          title="Daimi CRM qrupuna köçür"
+                          title={t('analytics.addToGroupTitle')}
                         >
-                          + Qrupa
+                          {t('analytics.addToGroup')}
                         </button>
                       ) : null}
                       <div className="text-right shrink-0">
@@ -876,25 +896,24 @@ export default function InstructorAnalytics() {
         <Modal
           open
           onClose={() => !promoteBusy && setPromoteModal(null)}
-          title="Qrupa əlavə et"
+          title={t('analytics.promoteTitle')}
           size="sm"
           footer={
             <div className="flex gap-2 justify-end">
               <Button variant="secondary" disabled={promoteBusy} onClick={() => setPromoteModal(null)}>
-                Ləğv et
+                {t('analytics.cancel')}
               </Button>
               <Button loading={promoteBusy} onClick={() => void submitPromote()}>
-                Əlavə et
+                {t('analytics.add')}
               </Button>
             </div>
           }
         >
           <p className="text-sm text-token-textMuted mb-3">
-            <strong className="text-token-textMain">{promoteModal.studentName}</strong> iştirakçı qrupundan
-            daimi CRM qrupuna köçürüləcək — paket və cədvəl tətbiq olunacaq.
+            {t('analytics.promoteDesc', { name: promoteModal.studentName })}
           </p>
           <label className="block text-xs font-semibold uppercase tracking-wider text-token-textMuted mb-1.5">
-            Hədəf qrup
+            {t('analytics.targetGroup')}
           </label>
           <select
             className="w-full border border-[color:var(--border-subtle)] rounded-xl px-3 py-2.5 text-sm bg-token-surfaceCard/55"
@@ -919,11 +938,11 @@ export default function InstructorAnalytics() {
         <Modal
           open
           onClose={() => setStudentReviewModal(null)}
-          title={`${studentReviewModal.title || 'Tələbə'} — cavablar`}
+          title={t('analytics.studentAnswers', { name: studentReviewModal.title || t('analytics.student') })}
           size="lg"
         >
           {studentReviewModal.loading ? (
-            <p className="text-gray-500 text-center py-10">Yüklənir…</p>
+            <p className="text-gray-500 text-center py-10">{t('analytics.loading')}</p>
           ) : studentReviewModal.error ? (
             <p className="text-red-400 text-sm text-center py-6">{studentReviewModal.error}</p>
           ) : (
@@ -933,17 +952,19 @@ export default function InstructorAnalytics() {
                   {Number.isFinite(Number(studentReviewModal.score))
                     ? Math.round(Number(studentReviewModal.score) * 100) / 100
                     : '—'}{' '}
-                  bal
+                  {t('analytics.scoreLabel')}
                 </div>
                 {studentReviewModal.submitted_at && (
                   <p className="text-xs text-gray-500 mt-2">
-                    Təqdim: {new Date(studentReviewModal.submitted_at).toLocaleString('az-AZ')}
+                    {t('analytics.submitted', {
+                      date: new Date(studentReviewModal.submitted_at).toLocaleString(dateLocale),
+                    })}
                   </p>
                 )}
               </div>
               <ExamBreakdownList
                 rows={studentReviewModal.breakdown}
-                answerHeading="Tələbənin cavabı"
+                answerHeading={t('analytics.studentAnswer')}
               />
             </>
           )}
@@ -954,11 +975,14 @@ export default function InstructorAnalytics() {
         <Modal
           open
           onClose={() => setReferralModal(null)}
-          title={`${referralModal.source} — ${referralModalStudents.length} tələbə`}
+          title={t('analytics.referralStudents', {
+            source: referralModal.source,
+            count: referralModalStudents.length,
+          })}
           size="md"
         >
           {referralModalStudents.length === 0 ? (
-            <p className="text-sm text-token-textMuted text-center py-8">Bu mənbə üçün tələbə tapılmadı.</p>
+            <p className="text-sm text-token-textMuted text-center py-8">{t('analytics.noReferralStudents')}</p>
           ) : (
             <ul className="space-y-2 max-h-[min(420px,60vh)] overflow-y-auto pr-1">
               {referralModalStudents.map((s) => {
@@ -983,7 +1007,7 @@ export default function InstructorAnalytics() {
           )}
           <div className="flex justify-end pt-4">
             <Button variant="secondary" onClick={() => setReferralModal(null)}>
-              Bağla
+              {t('analytics.close')}
             </Button>
           </div>
         </Modal>

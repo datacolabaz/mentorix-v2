@@ -1,21 +1,25 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import api from '../../lib/api'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
 import { useToast } from '../../components/common/Toast'
 
-const FORMAT_LABELS = {
-  online: 'Onlayn',
-  teacher_place: 'Müəllimin yanında',
-  student_place: 'Tələbənin evində',
-}
-
 export default function StudentInquiries() {
+  const { t, i18n } = useTranslation()
   const toast = useToast()
   const [loading, setLoading] = useState(true)
   const [inquiries, setInquiries] = useState([])
   const [usage, setUsage] = useState(null)
+
+  const formatLabels = {
+    online: t('studentInquiries.format.online'),
+    teacher_place: t('studentInquiries.format.teacherPlace'),
+    student_place: t('studentInquiries.format.studentPlace'),
+  }
+
+  const dateLocale = i18n.language?.startsWith('ru') ? 'ru-RU' : 'az-AZ'
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -26,11 +30,11 @@ export default function StudentInquiries() {
         setUsage(res.usage || null)
       }
     } catch (e) {
-      toast(e?.message || 'Yüklənmədi', 'error')
+      toast(e?.message || t('studentInquiries.loadFailed'), 'error')
     } finally {
       setLoading(false)
     }
-  }, [toast])
+  }, [toast, t])
 
   useEffect(() => {
     void load()
@@ -40,37 +44,40 @@ export default function StudentInquiries() {
     try {
       const res = await api.post(`/instructor/inquiries/${id}/reveal-contact`)
       if (res?.success) {
-        toast(`Telefon: ${res.phone}`)
+        toast(t('studentInquiries.phoneRevealed', { phone: res.phone }))
         await load()
       }
     } catch (e) {
-      toast(e?.message || 'Xəta', 'error')
+      toast(e?.message || t('common.error'), 'error')
     }
   }
 
   return (
     <div className="space-y-4 max-w-3xl">
       <div>
-        <h1 className="text-xl font-display font-bold text-white">Xəritə müraciətləri</h1>
+        <h1 className="text-xl font-display font-bold text-white">{t('studentInquiries.title')}</h1>
         <p className="text-sm text-gray-400 mt-1">
-          Mentorix axtarış/xəritədə profilinizi tapıb yazan valideyn və tələbələr. Qrup və imtahan təsdiqi üçün{' '}
+          {t('studentInquiries.subtitleBefore')}{' '}
           <Link to="/instructor/join-requests" className="text-primary hover:underline">
-            Sorğular
+            {t('studentInquiries.joinRequestsLink')}
           </Link>
           .{' '}
           <Link to="/instructor/settings#discover-profile" className="text-primary hover:underline">
-            Axtarış profili
+            {t('studentInquiries.searchProfileLink')}
           </Link>
         </p>
       </div>
 
       {usage && !usage.premium ? (
         <p className="text-xs text-amber-400/90">
-          Bu ay {usage.contacts_viewed_this_month}/{usage.monthly_limit} sorğu nömrəsi açılıb.
+          {t('studentInquiries.usageLimit', {
+            viewed: usage.contacts_viewed_this_month,
+            limit: usage.monthly_limit,
+          })}
         </p>
       ) : null}
 
-      <Card title="Son müraciətlər">
+      <Card title={t('studentInquiries.recentTitle')}>
         {loading ? (
           <div className="space-y-2">
             {[1, 2, 3].map((i) => (
@@ -79,17 +86,15 @@ export default function StudentInquiries() {
           </div>
         ) : inquiries.length === 0 ? (
           <div className="text-sm text-gray-400 space-y-3">
-            <p>Burada yalnız xəritə/axtarışdan gələn müraciətlər görünür — Gmail və ya imtahan linki ilə qoşulan tələbələr burada deyil.</p>
+            <p>{t('studentInquiries.emptyMain')}</p>
             <p>
-              Dəvət linki və ya imtahan paylaşımından gələn təsdiq sorğuları:{' '}
+              {t('studentInquiries.emptyInviteBefore')}{' '}
               <Link to="/instructor/join-requests" className="text-primary hover:underline">
-                Sorğular
+                {t('studentInquiries.joinRequestsLink')}
               </Link>
               .
             </p>
-            <p className="text-xs text-gray-500">
-              Xəritədə görünmək üçün Tənzimləmələr → Axtarış profilini aktiv edin.
-            </p>
+            <p className="text-xs text-gray-500">{t('studentInquiries.emptyHint')}</p>
           </div>
         ) : (
           <ul className="space-y-3">
@@ -98,7 +103,7 @@ export default function StudentInquiries() {
                 <div className="flex flex-wrap justify-between gap-2">
                   <span className="font-semibold text-white">{row.requester_name}</span>
                   <span className="text-xs text-gray-500">
-                    {new Date(row.created_at).toLocaleString('az-AZ')}
+                    {new Date(row.created_at).toLocaleString(dateLocale)}
                   </span>
                 </div>
                 {row.category_name ? (
@@ -106,7 +111,7 @@ export default function StudentInquiries() {
                 ) : null}
                 {row.delivery_format ? (
                   <p className="text-xs text-gray-400">
-                    Format: {FORMAT_LABELS[row.delivery_format] || row.delivery_format}
+                    {t('studentInquiries.formatLabel')}: {formatLabels[row.delivery_format] || row.delivery_format}
                     {row.student_level ? ` · ${row.student_level}` : ''}
                   </p>
                 ) : null}
@@ -116,7 +121,7 @@ export default function StudentInquiries() {
                 </p>
                 {row.can_reveal_contact ? (
                   <Button type="button" variant="secondary" className="text-xs" onClick={() => void reveal(row.id)}>
-                    Nömrəni göstər
+                    {t('studentInquiries.revealPhone')}
                   </Button>
                 ) : null}
               </li>

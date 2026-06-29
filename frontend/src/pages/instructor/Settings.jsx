@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { useQueryClient } from '@tanstack/react-query'
 import api from '../../lib/api'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
 import { useToast } from '../../components/common/Toast'
 import useAuthStore from '../../hooks/useAuth'
-import { instructorRoleAz } from '../../lib/instructorLabel'
+import { planTitleOrSlug, nextPlanInList } from '../../lib/subscriptionPlanGuards'
 import useUiStore from '../../hooks/useUi'
 import { planPriceLabel } from '../../constants/subscriptionPlans'
 import { useSubscriptionPlans } from '../../hooks/useSubscriptionPlans'
@@ -33,10 +34,6 @@ import {
   planRank,
   shouldOfferLimitTopUpChoice,
   nextPlanId,
-  azSwitchToPlanLabel,
-  upgradeButtonLabel,
-  higherPaidPlansLabel,
-  higherPaidPlansSuffix,
 } from '../../lib/subscriptionPlanGuards'
 import {
   extraSmsBalance,
@@ -52,10 +49,95 @@ import PaymentMethodModal from '../../components/instructor/PaymentMethodModal'
 import StorageAddonModal from '../../components/instructor/StorageAddonModal'
 import { formatStorageBytesHuman } from '../../lib/storageAddonDisplay'
 import { useBillingConfig } from '../../hooks/useBillingConfig'
-import { billingPaymentStatusLabel, billingPaymentTitle, openBillingReceiptWhatsApp } from '../../lib/billingPaymentLabels'
+import { openBillingReceiptWhatsApp } from '../../lib/billingPaymentLabels'
 import Modal from '../../components/common/Modal'
 
+function billingPaymentTitleLocalized(p, t) {
+  if (p?.product_type === 'sms') return t('settings.billingTitle.sms', { count: p.sms_quantity || 0 })
+  if (p?.product_type === 'storage') {
+    const mb = Math.round(Number(p.storage_mb) || 0)
+    if (mb >= 1024 && mb % 1024 === 0) {
+      return t('settings.billingTitle.storageGb', { size: mb / 1024 })
+    }
+    return t('settings.billingTitle.storageMb', { size: mb })
+  }
+  const plan = String(p?.plan || '').toUpperCase()
+  const interval =
+    p?.billing_interval === 'yearly'
+      ? t('settings.billingInterval.yearly')
+      : p?.billing_interval === 'monthly'
+        ? t('settings.billingInterval.monthly')
+        : ''
+  return t('settings.billingTitle.plan', { plan, interval })
+}
+
+function billingStatusLocalized(status, t) {
+  const s = String(status || '').toLowerCase()
+  if (['pending', 'paid', 'rejected', 'failed', 'expired'].includes(s)) {
+    return t(`settings.billingStatus.${s}`)
+  }
+  return status || '—'
+}
+
+function buildSmsUsageDetail(billing, t) {
+  const info = smsUsageDisplay(billing)
+  const parts = []
+  if (info.planBase != null) parts.push(t('settings.smsUsage.plan', { count: info.planBase }))
+  if (info.extra > 0) parts.push(t('settings.smsUsage.extra', { count: info.extra }))
+  if (info.pending > 0) parts.push(t('settings.smsUsage.pending', { count: info.pending }))
+  let detail = parts.length ? parts.join(', ') : null
+  if (info.pending > 0 && info.effective != null) {
+    const after = info.effective + info.pending
+    detail = detail
+      ? t('settings.smsUsage.limitAfter', { detail, count: after })
+      : t('settings.smsUsage.afterConfirm', { count: after })
+  }
+  return detail
+}
+
+function buildStorageUsageDetail(billing, t) {
+  const info = storageUsageDisplay(billing)
+  if (!info.detail) return null
+  const parts = []
+  if (info.planBaseB != null) {
+    const mb = Number(info.planBaseB) / (1024 * 1024)
+    const size =
+      mb >= 1024
+        ? t('settings.storageUsage.sizeGb', { size: mb / 1024 })
+        : t('settings.storageUsage.sizeMb', { size: Math.round(mb) })
+    parts.push(t('settings.storageUsage.plan', { size }))
+  }
+  if (info.extraB > 0) {
+    const mb = Number(info.extraB) / (1024 * 1024)
+    const size =
+      mb >= 1024
+        ? t('settings.storageUsage.sizeGb', { size: mb / 1024 })
+        : t('settings.storageUsage.sizeMb', { size: Math.round(mb * 10) / 10 })
+    parts.push(t('settings.storageUsage.extra', { size }))
+  }
+  if (info.pendingMb > 0) {
+    const size =
+      info.pendingMb >= 1024 && info.pendingMb % 1024 === 0
+        ? t('settings.storageUsage.sizeGb', { size: info.pendingMb / 1024 })
+        : t('settings.storageUsage.sizeMb', { size: info.pendingMb })
+    parts.push(t('settings.storageUsage.pending', { size }))
+  }
+  let detail = parts.length ? parts.join(', ') : null
+  if (info.pendingMb > 0 && info.limit != null) {
+    const afterMb = Number(info.limit) / (1024 * 1024) + info.pendingMb
+    const after =
+      afterMb >= 1024
+        ? t('settings.storageUsage.sizeGb', { size: afterMb / 1024 })
+        : t('settings.storageUsage.sizeMb', { size: Math.round(afterMb) })
+    detail = detail
+      ? t('settings.storageUsage.limitAfter', { detail, size: after })
+      : t('settings.storageUsage.afterConfirm', { size: after })
+  }
+  return detail
+}
+
 export default function InstructorSettings() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const location = useLocation()
   const qc = useQueryClient()
@@ -112,7 +194,7 @@ export default function InstructorSettings() {
   const saveAccountName = async () => {
     const name = accountName.trim()
     if (name.length < 2) {
-      toast('Ad və soyad ən azı 2 simvol olmalıdır', 'error')
+      toast(t('settings.toasts.nameMin'), 'error')
       return
     }
     setSavingAccountName(true)
@@ -120,10 +202,10 @@ export default function InstructorSettings() {
       const res = await api.patch('/auth/profile', { full_name: name })
       if (res?.user) {
         updateUser(res.user)
-        toast('Ad yeniləndi', 'success')
+        toast(t('settings.toasts.nameSaved'), 'success')
       }
     } catch (e) {
-      toast(e?.message || 'Saxlanılmadı', 'error')
+      toast(e?.message || t('settings.toasts.saveFailed'), 'error')
     } finally {
       setSavingAccountName(false)
     }
@@ -132,7 +214,7 @@ export default function InstructorSettings() {
   const saveProfessionalDetails = async () => {
     const bio = profBio.trim()
     if (bio.length > 300) {
-      toast('Haqqımda ən çox 300 simvol ola bilər', 'error')
+      toast(t('settings.toasts.bioMax'), 'error')
       return
     }
     setSavingProfessional(true)
@@ -149,9 +231,9 @@ export default function InstructorSettings() {
           : '',
       )
       setProfBio(res?.bio || '')
-      toast(res?.message || 'Məlumatlar saxlanıldı', 'success')
+      toast(res?.message || t('settings.toasts.saved'), 'success')
     } catch (e) {
-      toast(e?.message || 'Saxlanılmadı', 'error')
+      toast(e?.message || t('settings.toasts.saveFailed'), 'error')
     } finally {
       setSavingProfessional(false)
     }
@@ -194,7 +276,7 @@ export default function InstructorSettings() {
       }
       setMapJustSaved(false)
     } catch (e) {
-      toast(e?.message || 'Yüklənmədi', 'error')
+      toast(e?.message || t('settings.toasts.loadFailed'), 'error')
     } finally {
       setLoading(false)
     }
@@ -244,7 +326,7 @@ export default function InstructorSettings() {
     geocodeTimerRef.current = window.setTimeout(() => {
       void (async () => {
         const label = await reverseGeocodeLabel(mapLat, mapLng)
-        setLocationLabel(label || 'Mövqe seçildi')
+        setLocationLabel(label || t('settings.locationSelected'))
         setLocationLoading(false)
       })()
     }, 450)
@@ -258,9 +340,9 @@ export default function InstructorSettings() {
     try {
       await api.patch('/instructor/profile-label', { public_label: publicLabel })
       updateUser({ public_label: publicLabel })
-      toast('Görünən ad saxlanıldı')
+      toast(t('settings.toasts.labelSaved'))
     } catch (e) {
-      toast(e?.message || 'Xəta', 'error')
+      toast(e?.message || t('settings.toasts.error'), 'error')
     } finally {
       setSavingLabel(false)
     }
@@ -268,7 +350,7 @@ export default function InstructorSettings() {
 
   const fillMapFromGeolocation = () => {
     if (!navigator.geolocation) {
-      toast('Brauzer mövqeni dəstəkləmir', 'error')
+      toast(t('settings.toasts.geoUnsupported'), 'error')
       return
     }
     navigator.geolocation.getCurrentPosition(
@@ -277,9 +359,9 @@ export default function InstructorSettings() {
         setMapLng(String(pos.coords.longitude.toFixed(6)))
         setMapFlyKey((k) => k + 1)
         setMapJustSaved(false)
-        toast('📍 Mövqeyiniz xəritədə işarələndi — indi saxlayın', 'info')
+        toast(t('settings.toasts.geoMarked'), 'info')
       },
-      () => toast('Mövqe alınmadı', 'error'),
+      () => toast(t('settings.toasts.geoFailed'), 'error'),
       { enableHighAccuracy: true, timeout: 12000 },
     )
   }
@@ -290,15 +372,15 @@ export default function InstructorSettings() {
       const lat = mapLat.trim() === '' ? null : Number(String(mapLat).replace(',', '.'))
       const lng = mapLng.trim() === '' ? null : Number(String(mapLng).replace(',', '.'))
       if (lat != null && (!Number.isFinite(lat) || lat < -90 || lat > 90)) {
-        toast('Enlik düzgün deyil', 'error')
+        toast(t('settings.toasts.latInvalid'), 'error')
         return
       }
       if (lng != null && (!Number.isFinite(lng) || lng < -180 || lng > 180)) {
-        toast('Uzunluq düzgün deyil', 'error')
+        toast(t('settings.toasts.lngInvalid'), 'error')
         return
       }
       if (mapVisible && (lat == null || lng == null)) {
-        toast('Xəritədə görünmək üçün əvvəlcə pin qoyun', 'error')
+        toast(t('settings.toasts.pinRequired'), 'error')
         return
       }
       await api.patch('/instructor/map-profile', {
@@ -317,26 +399,45 @@ export default function InstructorSettings() {
       }
       setMapJustSaved(true)
       if (mapVisible && lat != null && lng != null) {
-        toast('✓ Uğurla saxlanıldı — tələbələr sizi xəritədə tapa bilər', 'success')
+        toast(t('settings.toasts.mapSavedVisible'), 'success')
       } else {
-        toast('✓ Saxlanıldı — hazırda xəritədə gizlisiniz', 'success')
+        toast(t('settings.toasts.mapSavedHidden'), 'success')
       }
     } catch (e) {
-      toast(e?.message || 'Xəta', 'error')
+      toast(e?.message || t('settings.toasts.error'), 'error')
     } finally {
       setSavingMap(false)
     }
   }
 
-  const roleWord = instructorRoleAz(publicLabel)
+  const roleWord = publicLabel === 'trainer' ? t('settings.trainer') : t('settings.teacher')
   const currentPlanId = String(billing?.plan || 'basic').toLowerCase()
   const currentPlanObj = plans.find((p) => String(p?.id || '').toLowerCase() === currentPlanId) || null
   const currentPlanTitle = currentPlanObj?.title || String(currentPlanId || '').toUpperCase()
   const basicUpgradePlanId = useMemo(() => nextPlanId(plans, 'basic') || 'pro', [plans])
-  const basicUpgradeBtnLabel = useMemo(() => upgradeButtonLabel(plans, 'basic'), [plans])
-  const basicHigherPlansHint = useMemo(() => higherPaidPlansLabel(plans, 'basic'), [plans])
-  const basicHigherPlansSuffix = useMemo(() => higherPaidPlansSuffix(plans, 'basic'), [plans])
-  const basicSwitchLabel = useMemo(() => azSwitchToPlanLabel(plans, 'basic') || 'Paketi yüksəlt', [plans])
+  const basicUpgradeBtnLabel = useMemo(() => {
+    const next = nextPlanInList(plans, 'basic')
+    const switchLabel = next ? t('settings.switchToPlan', { plan: planTitleOrSlug(next) }) : null
+    return switchLabel ? t('settings.btnUpgradeWithSwitch', { switch: switchLabel }) : t('settings.btnUpgrade')
+  }, [plans, t])
+  const basicHigherPlansHint = useMemo(() => {
+    const next = nextPlanInList(plans, 'basic')
+    const name = next ? planTitleOrSlug(next) : t('settings.paidPlanFallback')
+    return t('settings.higherPlansLabel', { plan: name })
+  }, [plans, t])
+  const basicHigherPlansSuffix = useMemo(() => {
+    const next = nextPlanInList(plans, 'basic')
+    const name = next ? planTitleOrSlug(next) : t('settings.paidPlanFallback')
+    return t('settings.higherPlansSuffix', { plan: name })
+  }, [plans, t])
+  const basicSwitchLabel = useMemo(
+    () =>
+      (() => {
+        const next = nextPlanInList(plans, 'basic')
+        return next ? t('settings.switchToPlan', { plan: planTitleOrSlug(next) }) : t('settings.btnSwitchPlan')
+      })(),
+    [plans, t],
+  )
   const pendingPlanSlug = String(
     billing?.pending_plan_slug || billing?.pending_topup?.pending_plan_slug || '',
   ).toLowerCase()
@@ -351,20 +452,25 @@ export default function InstructorSettings() {
       const isPaid = pid !== 'basic' && Number.isFinite(monthly) && monthly > 0
       if (!isPaid) return { main: null, suffix: '', hint: null, isPaid: false }
       if (billingInterval === 'monthly')
-        return { main: `${formatAzn(monthly)} AZN`, suffix: '/ay', hint: null, isPaid: true }
+        return { main: `${formatAzn(monthly)} AZN`, suffix: t('settings.pricing.perMonth'), hint: null, isPaid: true }
       const y = yearlyTotalAzn(monthly, YEARLY_DISCOUNT)
       return {
         main: `${formatAzn(y)} AZN`,
-        suffix: '/il',
-        hint: `≈ ${formatAzn(monthly)} AZN/ay qarşılığında (12 ay, −${Math.round(YEARLY_DISCOUNT * 100)}%)`,
+        suffix: t('settings.pricing.perYear'),
+        hint: t('settings.pricing.yearlyHint', {
+          monthly: formatAzn(monthly),
+          pct: Math.round(YEARLY_DISCOUNT * 100),
+        }),
         isPaid: true,
       }
     },
-    [billingInterval],
+    [billingInterval, t],
   )
 
   const smsUsageInfo = useMemo(() => smsUsageDisplay(billing), [billing])
   const storageUsageInfo = useMemo(() => storageUsageDisplay(billing), [billing])
+  const localizedSmsDetail = useMemo(() => buildSmsUsageDetail(billing, t), [billing, t])
+  const localizedStorageDetail = useMemo(() => buildStorageUsageDetail(billing, t), [billing, t])
 
   const currentPlanPricingLine = useMemo(() => {
     if (!currentPlanObj) return '—'
@@ -372,18 +478,18 @@ export default function InstructorSettings() {
     if (pid === 'basic') {
       const days = billing?.subscription?.days_left
       if (days != null && days > 0) {
-        return `14 günlük pulsuz sınaq — ${days} gün qalıb (əlavə SMS/yaddaş yalnız ödənişli paketlərdə)`
+        return t('settings.pricing.trialDaysLeft', { days })
       }
       if (String(billing?.status || '') === 'expired') {
-        return 'SADƏ sınaq müddəti bitib — davam üçün ödənişli paket seçin'
+        return t('settings.pricing.trialExpired')
       }
-      return `14 günlük pulsuz sınaq — əlavə limit yalnız ${basicHigherPlansSuffix}`
+      return t('settings.pricing.trialExtraOnly', { plans: basicHigherPlansSuffix })
     }
     const m = Number(currentPlanObj.price_azn)
     if (!Number.isFinite(m) || m <= 0) return planPriceLabel(currentPlanObj)
-    if (billingInterval === 'monthly') return `${formatAzn(m)} AZN/ay`
-    return `${formatAzn(yearlyTotalAzn(m))} AZN/il (təxm. ${formatAzn(m)} AZN/ay)`
-  }, [basicHigherPlansSuffix, billing?.status, billing?.subscription?.days_left, billingInterval, currentPlanObj])
+    if (billingInterval === 'monthly') return t('settings.pricing.monthly', { amount: formatAzn(m) })
+    return t('settings.pricing.yearly', { amount: formatAzn(yearlyTotalAzn(m)), monthly: formatAzn(m) })
+  }, [basicHigherPlansSuffix, billing?.status, billing?.subscription?.days_left, billingInterval, currentPlanObj, t])
 
   useEffect(() => {
     api
@@ -443,7 +549,7 @@ export default function InstructorSettings() {
           return
         }
         const url = pay?.payment_url
-        if (!url) throw new Error('Ödəniş linki alınmadı')
+        if (!url) throw new Error(t('settings.toasts.paymentLinkFailed'))
         window.location.href = url
         return
       }
@@ -466,7 +572,7 @@ export default function InstructorSettings() {
           return
         }
         const url = pay?.payment_url
-        if (!url) throw new Error('Ödəniş linki alınmadı')
+        if (!url) throw new Error(t('settings.toasts.paymentLinkFailed'))
         window.location.href = url
         return
       }
@@ -488,15 +594,15 @@ export default function InstructorSettings() {
         return
       }
       const url = pay?.payment_url
-      if (!url) throw new Error('Ödəniş linki alınmadı')
+      if (!url) throw new Error(t('settings.toasts.paymentLinkFailed'))
       window.location.href = url
     } catch (e) {
       const msg =
         e?.code === 'PLAN_USAGE_EXCEEDS' || /limitini aşır/i.test(String(e?.message || ''))
-          ? e?.message || 'Cari istifadəniz bu paketin limitini aşır'
+          ? e?.message || t('settings.toasts.usageExceeds')
           : e?.code === 'PLAN_NOT_UPGRADE'
-            ? 'Bu paketə keçid üçün ödəniş axını hazır deyil — daha aşağı paket seçin və ya dəstək.'
-            : e?.message || 'Ödəniş yaradılmadı'
+            ? t('settings.toasts.notUpgrade')
+            : e?.message || t('settings.toasts.paymentFailed')
       setPlanErr(msg)
     } finally {
       setPlanBusy(false)
@@ -529,64 +635,61 @@ export default function InstructorSettings() {
   return (
     <div className="p-4 sm:p-6 min-w-0 max-w-6xl mx-auto w-full space-y-6">
       <div>
-        <h1 className="font-display font-bold text-xl sm:text-2xl text-token-textMain tracking-tight">Tənzimləmələr</h1>
+        <h1 className="font-display font-bold text-xl sm:text-2xl text-token-textMain tracking-tight">{t('settings.title')}</h1>
         <p className="text-token-textMuted text-sm mt-1">
-          İnterfeysdə və tələbə tərəfində sizin rolunuz <span className="text-indigo-300">{roleWord}</span> kimi görünəcək.
+          {t('settings.subtitle', { role: roleWord })}
         </p>
       </div>
 
       <Card id="billing-plans" className={settingsCardCls}>
-        <h2 className={cardTitleCls}>Paketini dəyiş</h2>
+        <h2 className={cardTitleCls}>{t('settings.changePlan')}</h2>
         <p className={cardTextCls}>
-          <span className={theme === 'dark' ? 'text-gray-200' : 'text-token-textMuted'}>Aktiv paket:</span>{' '}
+          <span className={theme === 'dark' ? 'text-gray-200' : 'text-token-textMuted'}>{t('settings.activePlan')}</span>{' '}
           <span className="font-semibold text-token-textMain">
             {currentPlanObj?.title || String(currentPlanId || '').toUpperCase()}
           </span>
           <span className={theme === 'dark' ? 'text-gray-500' : 'text-token-textMuted'}> — {currentPlanPricingLine}</span>
         </p>
         <p className={cardTextCls}>
-          Aşağı paketə keçid yalnız cari paket dövrü <span className="font-medium">ən azı 1 ay</span> tamamlandıqdan
-          sonra mümkündür və yalnız tələbə sayı, SMS və yaddaş hər üçü hədəf paket limitinə uyğun olduqda icazə
-          verilir. Limit dolubsa cari paketdə əlavə SMS alın və ya yaddaşı idarə edin.
+          {t('settings.downgradeNote')}
         </p>
         {billing?.subscription?.downgrade_period_met === false &&
         billing?.subscription?.days_until_downgrade != null ? (
           <p className="text-[11px] text-token-textMuted">
-            Aşağı paketə keçid təxminən {billing.subscription.days_until_downgrade} gün sonra açıla bilər.
+            {t('settings.downgradeInDays', { days: billing.subscription.days_until_downgrade })}
           </p>
         ) : null}
         {billing ? (
           <div className="space-y-2">
             {smsUsageInfo.effective != null ? (
               <p className="text-[11px] text-token-textMuted leading-relaxed">
-                SMS limiti:{' '}
-                <span className="text-token-textMain font-medium">{smsUsageInfo.label}</span>
-                {smsUsageInfo.detail ? (
-                  <span className="text-token-textMuted"> — {smsUsageInfo.detail}</span>
-                ) : null}
-                . {currentPlanTitle} paketində qalmaq üçün effektiv limit (paket + təsdiqlənmiş əlavə SMS) istifadənizdən
-                böyük və ya bərabər olmalıdır.
+                {t('settings.smsLimitLine', {
+                  label: smsUsageInfo.label,
+                  detail: localizedSmsDetail ? ` — ${localizedSmsDetail}` : '',
+                  plan: currentPlanTitle,
+                })}
               </p>
             ) : null}
             {smsUsageInfo.smsShortfall > 0 ? (
               <p className="text-[11px] text-amber-300/95 rounded-lg border border-amber-500/25 bg-amber-500/10 px-3 py-2 leading-relaxed">
-                Bu ay {smsUsageInfo.used} SMS istifadə olunub, cari effektiv limit {smsUsageInfo.effective}. {currentPlanTitle}{' '}
-                paketində qalmaq üçün ən azı{' '}
-                <span className="font-medium text-white">+{smsUsageInfo.smsShortfall} SMS</span> əlavə paketi lazımdır.
+                {t('settings.smsShortfall', {
+                  used: smsUsageInfo.used,
+                  effective: smsUsageInfo.effective,
+                  plan: currentPlanTitle,
+                  shortfall: smsUsageInfo.smsShortfall,
+                })}
               </p>
             ) : null}
             {hasPendingSmsTopup(billing) ? (
               <p className="text-[11px] text-sky-300/95 rounded-lg border border-sky-500/25 bg-sky-500/10 px-3 py-2 leading-relaxed">
-                Gözləyən SMS ödənişi təsdiqlənənə qədər limit artmayıb görünə bilər. Təsdiqdən sonra effektiv limit artır
-                və {currentPlanTitle} paketində qalırsınız.
+                {t('settings.pendingSmsPayment', { plan: currentPlanTitle })}
               </p>
             ) : null}
             {pendingPlanSlug && pendingPlanSlug !== currentPlanId ? (
               <p className="text-[11px] text-sky-300/95 rounded-lg border border-sky-500/25 bg-sky-500/10 px-3 py-2 leading-relaxed">
-                <span className="font-medium text-white">
-                  {pendingPlanObj?.title || pendingPlanSlug.toUpperCase()}
-                </span>{' '}
-                paketi üçün ödəniş admin təsdiqi gözləyir. Təsdiqdən sonra aktiv paket və limitlər yenilənəcək.
+                {t('settings.pendingPlan', {
+                  plan: pendingPlanObj?.title || pendingPlanSlug.toUpperCase(),
+                })}
               </p>
             ) : null}
             {shouldOfferLimitTopUpChoice(billing, {
@@ -595,17 +698,9 @@ export default function InstructorSettings() {
             }) ? (
               <p className="text-[11px] text-indigo-300/90 rounded-lg border border-indigo-500/25 bg-indigo-500/10 px-3 py-2 leading-relaxed">
                 {currentPlanId === 'basic' ? (
-                  <>
-                    SADƏ paketində əlavə SMS/yaddaş alına bilməz. Limit dolubsa{' '}
-                    <span className="font-medium text-white">{basicHigherPlansHint}</span> seçin.
-                  </>
+                  t('settings.basicLimitHint', { plans: basicHigherPlansHint })
                 ) : (
-                  <>
-                    Limit dolubsa: cari paketdə{' '}
-                    <span className="font-medium text-white">əlavə SMS</span> və ya{' '}
-                    <span className="font-medium text-white">əlavə yaddaş</span> ala bilərsiniz. Aşağı paketə keçid
-                    yalnız 1 ay sonra və istifadə uyğun olduqda mümkündür.
-                  </>
+                  t('settings.paidLimitHint')
                 )}
               </p>
             ) : null}
@@ -639,35 +734,35 @@ export default function InstructorSettings() {
             const basicTrialActive = isCurrent && isFree && isBasicTrialActive(billing)
             const basicTrialExpired = isCurrent && isFree && isBasicTrialExpired(billing)
 
-            let btnLabel = 'Başla'
+            let btnLabel = t('settings.btnStart')
             if (isCurrent) {
               if (isFree) {
-                btnLabel = basicTrialExpired ? basicUpgradeBtnLabel : 'Aktiv paket'
+                btnLabel = basicTrialExpired ? basicUpgradeBtnLabel : t('settings.btnActivePlan')
               } else if (limitChoiceOffer) {
-                btnLabel = 'Limit həlli'
+                btnLabel = t('settings.btnLimitSolution')
               } else if (
                 (canBuySmsOnCurrentPlan(billing, smsPacks.length) ||
                   canBuyStorageOnCurrentPlan(billing, storagePacks.length)) &&
                 (smsPacks.length || storagePacks.length)
               )
-                btnLabel = 'Əlavə limit al'
-              else if (canRenewBasicPlan(billing)) btnLabel = 'Paketi yenilə'
-              else btnLabel = 'Cari paket'
+                btnLabel = t('settings.btnBuyExtra')
+              else if (canRenewBasicPlan(billing)) btnLabel = t('settings.btnRenew')
+              else btnLabel = t('settings.btnCurrent')
             } else if (usageGuard.blocked) {
               btnLabel =
                 usageGuard.reason === 'period'
-                  ? '1 ay gözləyin'
+                  ? t('settings.btnWaitMonth')
                   : isFree
-                    ? 'Pulsuz başla'
-                    : 'Keçid mümkün deyil'
+                    ? t('settings.btnFreeStart')
+                    : t('settings.btnSwitchBlocked')
             } else if (isFree) {
-              btnLabel = 'Pulsuz başla'
+              btnLabel = t('settings.btnFreeStart')
             } else if (isPendingPlan) {
-              btnLabel = 'Təsdiq gözləyir'
+              btnLabel = t('settings.btnPending')
             } else if (isUpgrade) {
-              btnLabel = 'Upgrade et'
+              btnLabel = t('settings.btnUpgrade')
             } else {
-              btnLabel = 'Paketə keç'
+              btnLabel = t('settings.btnSwitchPlan')
             }
 
             const priceBox = displayPriceForPlan(p)
@@ -723,7 +818,7 @@ export default function InstructorSettings() {
               const title = p?.title || pid.toUpperCase()
               if (
                 !window.confirm(
-                  `${title} paketinə keçmək üçün ödəniş tələb olunur. Cari istifadəniz yeni paket limitlərinə uyğundursa davam edə bilərsiniz.`,
+                  t('settings.confirmPlanSwitch', { title }),
                 )
               ) {
                 return
@@ -786,21 +881,21 @@ export default function InstructorSettings() {
                   <div className="flex min-h-[22px] min-w-0 flex-1 flex-wrap items-center gap-2">
                     {isCurrent ? (
                       <span className="rounded-full bg-emerald-500/25 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-900 dark:text-emerald-100 ring-1 ring-emerald-500/40">
-                        Aktiv paket
+                        {t('settings.badgeActive')}
                       </span>
                     ) : isPendingPlan ? (
                       <span className="rounded-full bg-sky-500/20 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-sky-900 dark:text-sky-100 ring-1 ring-sky-500/35">
-                        Təsdiq gözləyir
+                        {t('settings.badgePending')}
                       </span>
                     ) : isProHighlight ? (
                       <span className="rounded-full bg-primary/30 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-indigo-900 dark:text-indigo-100 ring-1 ring-primary/35">
-                        Ən populyar
+                        {t('settings.badgePopular')}
                       </span>
                     ) : null}
                   </div>
                   {billingInterval === 'yearly' && priceBox?.isPaid ? (
                     <span className="shrink-0 rounded-full bg-emerald-500/18 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-emerald-800 dark:text-emerald-100">
-                      −20%
+                      {t('settings.yearlyDiscount')}
                     </span>
                   ) : null}
                 </div>
@@ -816,7 +911,7 @@ export default function InstructorSettings() {
                       <span className="text-xs font-medium text-token-textMuted">{priceBox.suffix}</span>
                     </>
                   ) : (
-                    <span className="text-xl font-display font-bold tracking-tight text-token-textMain">Pulsuz</span>
+                    <span className="text-xl font-display font-bold tracking-tight text-token-textMain">{t('settings.free')}</span>
                   )}
                 </div>
 
@@ -824,7 +919,7 @@ export default function InstructorSettings() {
                   <p className="mt-1 shrink-0 text-[11px] leading-snug text-token-textMuted">{priceBox.hint}</p>
                 ) : billingInterval === 'yearly' && priceBox?.isPaid ? (
                   <p className="mt-1 shrink-0 text-[11px] leading-snug text-emerald-600/95 dark:text-emerald-300/90">
-                    İllik seçərək 20% qənaət edin
+                    {t('settings.yearlySave')}
                   </p>
                 ) : null}
 
@@ -852,19 +947,22 @@ export default function InstructorSettings() {
 
       {smsPacks.length && canBuySmsOnCurrentPlan(billing, smsPacks.length) ? (
         <Card id="billing-sms-addons" className={settingsCardCls}>
-          <h2 className={cardTitleCls}>Əlavə SMS al</h2>
+          <h2 className={cardTitleCls}>{t('settings.buySmsTitle')}</h2>
           <p className={cardTextCls}>
-            Paket limitinizə əlavə SMS balansı. Kartla dərhal, köçürmə ilə admin təsdiqindən sonra aktivləşir.
+            {t('settings.buySmsDesc')}
           </p>
           {extraSmsBalance(billing) > 0 ? (
             <p className="text-xs text-emerald-400/90">
-              Təsdiqlənmiş əlavə SMS: +{extraSmsBalance(billing)} (paket {planSmsMonthlyLimit(billing) ?? '—'} + əlavə ={' '}
-              {billing?.limits?.sms_monthly ?? '—'} limit)
+              {t('settings.confirmedExtraSms', {
+                count: extraSmsBalance(billing),
+                base: planSmsMonthlyLimit(billing) ?? '—',
+                limit: billing?.limits?.sms_monthly ?? '—',
+              })}
             </p>
           ) : null}
           {pendingSmsQuantity(billing) > 0 ? (
             <p className="text-xs text-sky-400/90">
-              Gözləyən əlavə SMS: +{pendingSmsQuantity(billing)} (admin təsdiqindən sonra limitə əlavə olunacaq)
+              {t('settings.pendingExtraSms', { count: pendingSmsQuantity(billing) })}
             </p>
           ) : null}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -882,7 +980,7 @@ export default function InstructorSettings() {
                   disabled={planBusy}
                   onClick={() => openSmsCheckout(pack)}
                 >
-                  Al
+                  {t('settings.buy')}
                 </Button>
               </div>
             ))}
@@ -892,26 +990,28 @@ export default function InstructorSettings() {
 
       {storagePacks.length && canBuyStorageOnCurrentPlan(billing, storagePacks.length) ? (
         <Card id="billing-storage-addons" className={settingsCardCls}>
-          <h2 className={cardTitleCls}>Əlavə yaddaş</h2>
+          <h2 className={cardTitleCls}>{t('settings.storageTitle')}</h2>
           <p className={cardTextCls}>
-            +1 GB, +5 GB və ya +15 GB paketləri — aylıq ödənişlə paket limitinizə əlavə olunur. Kartla dərhal, köçürmə
-            ilə admin təsdiqindən sonra aktivləşir.
+            {t('settings.storageDesc')}
           </p>
-          {storageUsageInfo.detail ? (
-            <p className="text-xs text-token-textMuted">{storageUsageInfo.detail}</p>
+          {localizedStorageDetail ? (
+            <p className="text-xs text-token-textMuted">{localizedStorageDetail}</p>
           ) : null}
           {extraStorageBytes(billing) > 0 ? (
             <p className="text-xs text-emerald-400/90">
-              Təsdiqlənmiş əlavə: +{formatStorageBytesHuman(extraStorageBytes(billing))}
+              {t('settings.confirmedExtraStorage', {
+                size: formatStorageBytesHuman(extraStorageBytes(billing)),
+              })}
             </p>
           ) : null}
           {pendingStorageMb(billing) > 0 ? (
             <p className="text-xs text-sky-400/90">
-              Gözləyən əlavə: +
-              {pendingStorageMb(billing) >= 1024 && pendingStorageMb(billing) % 1024 === 0
-                ? `${pendingStorageMb(billing) / 1024} GB`
-                : `${pendingStorageMb(billing)} MB`}{' '}
-              (təsdiqdən sonra)
+              {t('settings.pendingExtraStorage', {
+                size:
+                  pendingStorageMb(billing) >= 1024 && pendingStorageMb(billing) % 1024 === 0
+                    ? `${pendingStorageMb(billing) / 1024} GB`
+                    : `${pendingStorageMb(billing)} MB`,
+              })}
             </p>
           ) : null}
           <Button
@@ -921,19 +1021,18 @@ export default function InstructorSettings() {
             disabled={planBusy}
             onClick={() => setStorageAddonOpen(true)}
           >
-            Əlavə yaddaş seç
+            {t('settings.chooseStorage')}
           </Button>
         </Card>
       ) : null}
 
       <Card id="billing-payments" className={settingsCardCls}>
-        <h2 className={cardTitleCls}>Ödəniş tarixçəsi</h2>
+        <h2 className={cardTitleCls}>{t('settings.billingHistory')}</h2>
         <p className={cardTextCls}>
-          Yalnız real ödənişlər (gözləyən, ödənilmiş, rədd edilmiş) göstərilir. Kartla ödənişə başlayıb
-          bitirmədən bağlasanız, sistemdə «tamamlanmayıb» qeydi yaranır — burada görünmür.
+          {t('settings.billingHistoryDesc')}
         </p>
         {!billingPayments.length ? (
-          <p className="text-sm text-token-textMuted">Hələ ödəniş yoxdur.</p>
+          <p className="text-sm text-token-textMuted">{t('settings.noPayments')}</p>
         ) : (
           <ul className="space-y-2 max-h-64 overflow-y-auto">
             {billingPayments.slice(0, 20).map((p) => (
@@ -942,7 +1041,7 @@ export default function InstructorSettings() {
                 className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[color:var(--border-subtle)] px-3 py-2 text-sm"
               >
                 <span className="text-token-textMain">
-                  {billingPaymentTitle(p)} · {Number(p.amount || 0).toFixed(2)} ₼
+                  {billingPaymentTitleLocalized(p, t)} · {Number(p.amount || 0).toFixed(2)} ₼
                 </span>
                 <span
                   className={[
@@ -954,7 +1053,8 @@ export default function InstructorSettings() {
                         : 'text-token-textMuted',
                   ].join(' ')}
                 >
-                  {p.payment_method === 'cash' ? 'Köçürmə' : 'Kart'} · {billingPaymentStatusLabel(p.status)}
+                  {p.payment_method === 'cash' ? t('settings.transfer') : t('settings.card')} ·{' '}
+                  {billingStatusLocalized(p.status, t)}
                 </span>
               </li>
             ))}
@@ -963,9 +1063,9 @@ export default function InstructorSettings() {
       </Card>
 
       <Card className={settingsCardCls}>
-        <h2 className={cardTitleCls}>Ad və soyad</h2>
+        <h2 className={cardTitleCls}>{t('settings.nameTitle')}</h2>
         <p className={cardTextCls}>
-          Xəritə axtarışında, profil səhifəsində və tələbələrə görünən adınız. Səhv yazmısınızsa buradan düzəldə bilərsiniz.
+          {t('settings.nameDesc')}
         </p>
         <div className="flex flex-col sm:flex-row gap-3 max-w-lg">
           <input
@@ -973,7 +1073,7 @@ export default function InstructorSettings() {
             className={inp}
             value={accountName}
             onChange={(e) => setAccountName(e.target.value)}
-            placeholder="Ad Soyad"
+            placeholder={t('settings.namePlaceholder')}
             maxLength={120}
           />
           <Button
@@ -983,15 +1083,15 @@ export default function InstructorSettings() {
             onClick={() => void saveAccountName()}
             className="justify-center shrink-0"
           >
-            Adı saxla
+            {t('settings.saveName')}
           </Button>
         </div>
       </Card>
 
       <Card className={settingsCardCls}>
-        <h2 className={cardTitleCls}>Profil şəkli</h2>
+        <h2 className={cardTitleCls}>{t('settings.avatarTitle')}</h2>
         <p className={cardTextCls}>
-          Tələbə və valideynlər sizi axtarışda və profil səhifənizdə bu şəkil ilə görəcək. Yalnız müəllimlər üçün.
+          {t('settings.avatarDesc')}
         </p>
         <InstructorAvatarUpload
           fullName={user?.full_name}
@@ -1003,27 +1103,27 @@ export default function InstructorSettings() {
       </Card>
 
       <Card className={settingsCardCls}>
-        <h2 className={cardTitleCls}>Peşəkar məlumatlar</h2>
+        <h2 className={cardTitleCls}>{t('settings.professionalTitle')}</h2>
         <p className={cardTextCls}>
-          Tələbə və valideynlər profil səhifənizdə təhsilinizi, təcrübənizi və qısa bio-nuzu görəcək.
+          {t('settings.professionalDesc')}
         </p>
         <div className="space-y-4 max-w-xl">
           <div>
             <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1.5">
-              Təhsil / Ali məktəb
+              {t('settings.education')}
             </label>
             <input
               type="text"
               className={inp}
               value={profEducation}
               onChange={(e) => setProfEducation(e.target.value)}
-              placeholder="Məsələn: BDU - Tətbiqi Riyaziyyat"
+              placeholder={t('settings.educationPh')}
               maxLength={500}
             />
           </div>
           <div>
             <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1.5">
-              Təcrübə (il ilə)
+              {t('settings.experience')}
             </label>
             <input
               type="number"
@@ -1032,18 +1132,18 @@ export default function InstructorSettings() {
               className={inp}
               value={profExperienceYears}
               onChange={(e) => setProfExperienceYears(e.target.value)}
-              placeholder="Məsələn: 5"
+              placeholder={t('settings.experiencePh')}
             />
           </div>
           <div>
             <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1.5">
-              Haqqımda (qısa bio)
+              {t('settings.bio')}
             </label>
             <textarea
               className={`${inp} resize-y min-h-[6rem]`}
               value={profBio}
               onChange={(e) => setProfBio(e.target.value.slice(0, 300))}
-              placeholder="Tələbələrə metodologiyanız və dərsləri necə keçdiyiniz barədə qısa məlumat yazın. Maksimum 300 simvol."
+              placeholder={t('settings.bioPh')}
               maxLength={300}
               rows={4}
             />
@@ -1055,15 +1155,15 @@ export default function InstructorSettings() {
             onClick={() => void saveProfessionalDetails()}
             className="w-full sm:w-auto justify-center"
           >
-            Məlumatları yadda saxla
+            {t('settings.saveProfessional')}
           </Button>
         </div>
       </Card>
 
       <Card className={settingsCardCls}>
-        <h2 className={cardTitleCls}>Görünən ad</h2>
+        <h2 className={cardTitleCls}>{t('settings.displayNameTitle')}</h2>
         <p className={cardTextCls}>
-          Dashboard və naviqasiyada, həmçinin tələbə ödəniş/tapşırıq ekranlarında göstərilən titul.
+          {t('settings.displayNameDesc')}
         </p>
         <div className="flex flex-col sm:flex-row gap-3">
           <label className={['flex items-center gap-2 cursor-pointer text-sm', theme === 'dark' ? 'text-gray-200' : 'text-token-textMain'].join(' ')}>
@@ -1074,7 +1174,7 @@ export default function InstructorSettings() {
               onChange={() => setPublicLabel('instructor')}
               className="accent-indigo-500"
             />
-            Müəllim
+            {t('settings.teacher')}
           </label>
           <label className={['flex items-center gap-2 cursor-pointer text-sm', theme === 'dark' ? 'text-gray-200' : 'text-token-textMain'].join(' ')}>
             <input
@@ -1084,18 +1184,18 @@ export default function InstructorSettings() {
               onChange={() => setPublicLabel('trainer')}
               className="accent-indigo-500"
             />
-            Təlimçi
+            {t('settings.trainer')}
           </label>
         </div>
         <Button type="button" loading={savingLabel} onClick={() => void saveLabel()} className="w-full sm:w-auto justify-center">
-          Saxla
+          {t('settings.save')}
         </Button>
       </Card>
 
       <Card className={settingsCardCls}>
-        <h2 className={cardTitleCls}>Xəritədə tap</h2>
+        <h2 className={cardTitleCls}>{t('settings.mapTitle')}</h2>
         <p className={cardTextCls}>
-          Tələbələr mentorix.io/search səhifəsində sizi xəritədə axtarır. Pin qoyun, saxlayın — hazırsınız.
+          {t('settings.mapDesc')}
         </p>
 
         <label
@@ -1115,9 +1215,9 @@ export default function InstructorSettings() {
             className="accent-indigo-500 rounded mt-0.5"
           />
           <span className="text-sm leading-snug">
-            <span className="font-semibold text-white block">Tələbələr sizi xəritədə tapa bilsin</span>
+            <span className="font-semibold text-white block">{t('settings.mapVisibleTitle')}</span>
             <span className="text-xs text-token-textMuted">
-              {mapVisible ? 'Aktiv — saxladıqdan sonra axtarışda görünəcəksiniz' : 'Deaktiv — heç kim sizi xəritədə görməyəcək'}
+              {mapVisible ? t('settings.mapVisibleOn') : t('settings.mapVisibleOff')}
             </span>
           </span>
         </label>
@@ -1130,25 +1230,25 @@ export default function InstructorSettings() {
             ].join(' ')}
           >
             <p className="text-sm font-semibold text-white">
-              {locationLoading ? '📍 Ünvan müəyyən edilir…' : `📍 ${locationLabel || 'Mövqe seçildi'}`}
+              {locationLoading ? t('settings.locating') : `📍 ${locationLabel || t('settings.locationSelected')}`}
             </p>
             {mapVisible ? (
-              <p className="text-xs text-emerald-400/90">✓ Pin düzgün qoyulub — saxladıqdan sonra tələbələr sizi burada görəcək</p>
+              <p className="text-xs text-emerald-400/90">{t('settings.pinOk')}</p>
             ) : (
-              <p className="text-xs text-amber-400/90">Pin var, amma görünmə bağlıdır — yuxarıdakı seçimi aktiv edin</p>
+              <p className="text-xs text-amber-400/90">{t('settings.pinHidden')}</p>
             )}
             <p className="text-xs text-token-textMuted">
-              Tələbələr sizi təxminən <span className="text-primary font-semibold">{mapRadiusKm} km</span> radiusda axtarışda görə bilər
+              {t('settings.searchRadius', { km: mapRadiusKm })}
             </p>
             {mapDirty ? (
-              <p className="text-xs text-amber-300 font-medium pt-1">● Dəyişikliklər hələ saxlanmayıb</p>
+              <p className="text-xs text-amber-300 font-medium pt-1">{t('settings.unsaved')}</p>
             ) : mapJustSaved ? (
-              <p className="text-xs text-emerald-400 font-medium pt-1">● Son dəfə uğurla saxlanıldı</p>
+              <p className="text-xs text-emerald-400 font-medium pt-1">{t('settings.savedOk')}</p>
             ) : null}
           </div>
         ) : (
           <div className="rounded-xl border border-dashed border-white/15 px-4 py-3 text-xs text-token-textMuted">
-            Hələ pin yoxdur — aşağıdakı xəritədə iş yerinizə klik edin
+            {t('settings.noPin')}
           </div>
         )}
 
@@ -1169,7 +1269,7 @@ export default function InstructorSettings() {
         ) : null}
 
         <div className="flex flex-wrap items-center gap-3 text-sm">
-          <span className="text-xs text-token-textMuted">Pin növü:</span>
+          <span className="text-xs text-token-textMuted">{t('settings.pinType')}</span>
           <label className={['flex items-center gap-2 cursor-pointer', theme === 'dark' ? 'text-gray-200' : 'text-token-textMain'].join(' ')}>
             <input
               type="radio"
@@ -1181,7 +1281,7 @@ export default function InstructorSettings() {
               }}
               className="accent-indigo-500"
             />
-            👨‍🏫 Müəllim
+            {t('settings.pinTeacher')}
           </label>
           <label className={['flex items-center gap-2 cursor-pointer', theme === 'dark' ? 'text-gray-200' : 'text-token-textMain'].join(' ')}>
             <input
@@ -1194,16 +1294,16 @@ export default function InstructorSettings() {
               }}
               className="accent-indigo-500"
             />
-            🥊 Təlimçi
+            {t('settings.pinTrainer')}
           </label>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-2 flex-wrap items-center">
           <Button type="button" variant="secondary" onClick={() => fillMapFromGeolocation()} className="justify-center">
-            Mövqeyimdən doldur
+            {t('settings.fillFromLocation')}
           </Button>
           <label className="text-xs text-token-textMuted flex items-center gap-1.5">
-            Görünürlük radiusu (tələbə üçün)
+            {t('settings.visibilityRadius')}
             <select
               className={`${inp} !py-1 !px-2 !w-auto text-xs`}
               value={mapRadiusKm}
@@ -1218,7 +1318,7 @@ export default function InstructorSettings() {
 
         <div className="flex flex-col sm:flex-row gap-2">
           <Button type="button" loading={savingMap} onClick={() => void saveMapProfile()} className="flex-1 justify-center">
-            {mapDirty ? 'Dəyişiklikləri saxla' : 'Xəritə məlumatını saxla'}
+            {mapDirty ? t('settings.saveChanges') : t('settings.saveMap')}
           </Button>
           <Button
             type="button"
@@ -1227,13 +1327,13 @@ export default function InstructorSettings() {
             onClick={() => setMapPreviewOpen(true)}
             className="flex-1 justify-center"
           >
-            Axtarışda necə görünürəm?
+            {t('settings.previewSearch')}
           </Button>
         </div>
 
         {mapJustSaved && mapVisible && hasMapPin ? (
           <Link to="/search" className="block text-center text-sm font-semibold text-primary hover:underline py-1">
-            → Canlı xəritədə bax
+            {t('settings.viewLiveMap')}
           </Link>
         ) : null}
       </Card>
@@ -1257,26 +1357,18 @@ export default function InstructorSettings() {
       <Modal
         open={Boolean(limitChoice?.open)}
         onClose={() => setLimitChoice(null)}
-        title={`${currentPlanTitle} — limit həlli`}
+        title={t('settings.limitModalTitle', { plan: currentPlanTitle })}
         size="md"
       >
         {limitChoice?.open ? (
           <div className="space-y-4">
             <p className="text-sm text-gray-400 leading-relaxed">
-              {currentPlanId === 'basic' ? (
-                <>
-                  SADƏ paketində əlavə SMS/yaddaş alına bilməz. Limit dolubsa{' '}
-                  <span className="text-white font-medium">{basicHigherPlansHint}</span> seçin.
-                </>
-              ) : (
-                <>
-                  Hansı limitə ehtiyacınız var? Aşağı paketə keçmək lazım deyil — cari{' '}
-                  <span className="text-white font-medium">{currentPlanTitle}</span> paketində qalın.
-                </>
-              )}
+              {currentPlanId === 'basic'
+                ? t('settings.limitModalBasic', { plans: basicHigherPlansHint })
+                : t('settings.limitModalPaid', { plan: currentPlanTitle })}
             </p>
-            {smsUsageInfo.detail ? (
-              <p className="text-xs text-gray-500 rounded-lg bg-white/5 px-3 py-2">{smsUsageInfo.detail}</p>
+            {localizedSmsDetail ? (
+              <p className="text-xs text-gray-500 rounded-lg bg-white/5 px-3 py-2">{localizedSmsDetail}</p>
             ) : null}
             <div className="flex flex-col gap-2">
               {canBuySmsOnCurrentPlan(billing, smsPacks.length) ? (
@@ -1288,7 +1380,7 @@ export default function InstructorSettings() {
                     document.getElementById('billing-sms-addons')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
                   }}
                 >
-                  Əlavə SMS al
+                  {t('settings.buyExtraSms')}
                 </Button>
               ) : null}
               <Button
@@ -1299,7 +1391,7 @@ export default function InstructorSettings() {
                   navigate('/instructor/exams')
                 }}
               >
-                Yaddaşı idarə et (faylları azalt)
+                {t('settings.manageStorage')}
               </Button>
               {!billing?.is_highest_tier ? (
                 currentPlanId === 'basic' ? (
@@ -1324,7 +1416,7 @@ export default function InstructorSettings() {
                       openPlanCheckout(currentPlanId)
                     }}
                   >
-                    Paketi yenilə
+                    {t('settings.renewPlan')}
                   </Button>
                 )
               ) : null}
@@ -1350,12 +1442,12 @@ export default function InstructorSettings() {
         onClose={() => setCheckout(null)}
         title={
           checkout?.type === 'sms'
-            ? 'SMS ödənişi'
+            ? t('settings.checkoutSms')
             : checkout?.type === 'storage'
-              ? 'Əlavə yaddaş ödənişi'
-              : 'Paket ödənişi'
+              ? t('settings.checkoutStorage')
+              : t('settings.checkoutPlan')
         }
-        subtitle={checkout?.title ? `Seçim: ${checkout.title}` : undefined}
+        subtitle={checkout?.title ? t('settings.checkoutChoice', { title: checkout.title }) : undefined}
         amountAzn={checkout?.amountAzn}
         manualAccount={manualAccount}
         payriffEnabled={payriffEnabled}

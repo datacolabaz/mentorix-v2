@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import api from '../../lib/api'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
@@ -16,28 +17,28 @@ import { formatMaterialsBytes } from '../../lib/materialsPlanLimits'
 import useUiStore from '../../hooks/useUi'
 import { useTeachingFields } from '../../hooks/useTeachingFields'
 
+function fileKindKey(kind) {
+  if (kind === 'PDF') return 'pdf'
+  if (kind === 'Word') return 'word'
+  if (kind === 'Excel') return 'excel'
+  if (kind === 'PowerPoint') return 'powerpoint'
+  if (kind === 'Şəkil' || kind === 'Image') return 'image'
+  if (kind === 'Fayl' || kind === 'File') return 'file'
+  return 'file'
+}
+
 function fileEmoji(material) {
   const kind = materialFileKind(material.file_type, material.file_url)
   if (kind === 'PDF') return '📄'
   if (kind === 'Word') return '📝'
   if (kind === 'Excel') return '📊'
   if (kind === 'PowerPoint') return '📽️'
-  if (kind === 'Şəkil') return '🖼️'
+  if (kind === 'Şəkil' || kind === 'Image') return '🖼️'
   return '📎'
 }
 
-function usageLine(material) {
-  const parts = []
-  const exams = material.usage?.exam_count || 0
-  const assignments = material.usage?.assignment_count || 0
-  const views = material.view_count || 0
-  if (exams > 0) parts.push(`${exams} imtahanda`)
-  if (assignments > 0) parts.push(`${assignments} tapşırıqda`)
-  if (views > 0) parts.push(`${views} baxış`)
-  return parts.join(' · ')
-}
-
 export default function InstructorMaterialsLibrary() {
+  const { t } = useTranslation()
   const toast = useToast()
   const navigate = useNavigate()
   const { theme } = useUiStore()
@@ -57,6 +58,28 @@ export default function InstructorMaterialsLibrary() {
   const [tagInput, setTagInput] = useState('')
   const [tagSaving, setTagSaving] = useState(false)
 
+  const localizedFileKind = useCallback(
+    (fileType, fileUrl) => {
+      const raw = materialFileKind(fileType, fileUrl)
+      return t(`materials.fileKinds.${fileKindKey(raw)}`, { defaultValue: raw })
+    },
+    [t],
+  )
+
+  const usageLine = useCallback(
+    (material) => {
+      const parts = []
+      const exams = material.usage?.exam_count || 0
+      const assignments = material.usage?.assignment_count || 0
+      const views = material.view_count || 0
+      if (exams > 0) parts.push(t('materials.usageExams', { count: exams }))
+      if (assignments > 0) parts.push(t('materials.usageAssignments', { count: assignments }))
+      if (views > 0) parts.push(t('materials.usageViews', { count: views }))
+      return parts.join(' · ')
+    },
+    [t],
+  )
+
   const load = useCallback(async () => {
     setLoading(true)
     try {
@@ -66,26 +89,26 @@ export default function InstructorMaterialsLibrary() {
       if (listRes?.success) setMaterials(listRes.materials || [])
       if (quotaRes?.success) setQuota(quotaRes.quota)
     } catch (e) {
-      toast(e?.message || 'Yüklənmədi', 'error')
+      toast(e?.message || t('materials.toasts.loadFailed'), 'error')
     } finally {
       setLoading(false)
     }
-  }, [toast, search])
+  }, [toast, search, t])
 
   useEffect(() => {
-    const t = setTimeout(() => void load(), search ? 250 : 0)
-    return () => clearTimeout(t)
+    const timer = setTimeout(() => void load(), search ? 250 : 0)
+    return () => clearTimeout(timer)
   }, [load, search])
 
   const grouped = useMemo(() => {
     const bySubject = new Map()
     for (const m of materials) {
-      const key = m.subject_name || m.group_name || 'Ümumi'
+      const key = m.subject_name || m.group_name || t('materials.general')
       if (!bySubject.has(key)) bySubject.set(key, [])
       bySubject.get(key).push(m)
     }
     return [...bySubject.entries()]
-  }, [materials])
+  }, [materials, t])
 
   const totalUsage = useMemo(() => {
     const exams = materials.reduce((s, m) => s + (m.usage?.exam_count || 0), 0)
@@ -103,7 +126,7 @@ export default function InstructorMaterialsLibrary() {
     if (!url) return
     try {
       await navigator.clipboard.writeText(url)
-      toast('Paylaşım linki kopyalandı')
+      toast(t('materials.toasts.linkCopied'))
     } catch {
       toast(url, 'info')
     }
@@ -115,13 +138,13 @@ export default function InstructorMaterialsLibrary() {
     try {
       const res = await api.delete(`/materials/${deleteTarget.id}`)
       if (res?.success) {
-        toast('Material silindi')
+        toast(t('materials.toasts.deleted'))
         if (res.quota) setQuota(res.quota)
         setDeleteTarget(null)
         void load()
       }
     } catch (e) {
-      toast(e?.message || 'Silinmədi', 'error')
+      toast(e?.message || t('materials.toasts.deleteFailed'), 'error')
     } finally {
       setDeleteBusy(false)
     }
@@ -129,22 +152,22 @@ export default function InstructorMaterialsLibrary() {
 
   const openTagEditor = (material) => {
     setTagMaterial(material)
-    setTagInput((material.tags || []).map((t) => `#${t}`).join(' '))
+    setTagInput((material.tags || []).map((tag) => `#${tag}`).join(' '))
   }
 
   const saveTags = async () => {
     if (!tagMaterial) return
     setTagSaving(true)
     try {
-      const tags = tagInput.split(/[\s,#]+/).map((t) => t.trim()).filter(Boolean)
+      const tags = tagInput.split(/[\s,#]+/).map((tag) => tag.trim()).filter(Boolean)
       const res = await api.patch(`/materials/${tagMaterial.id}`, { tags })
       if (res?.success) {
-        toast('Tag-lar yeniləndi')
+        toast(t('materials.toasts.tagsUpdated'))
         setTagMaterial(null)
         void load()
       }
     } catch (e) {
-      toast(e?.message || 'Saxlanmadı', 'error')
+      toast(e?.message || t('materials.toasts.saveFailed'), 'error')
     } finally {
       setTagSaving(false)
     }
@@ -164,9 +187,9 @@ export default function InstructorMaterialsLibrary() {
         open={Boolean(deleteTarget)}
         onClose={() => !deleteBusy && setDeleteTarget(null)}
         onConfirm={confirmDelete}
-        title="Materialı sil"
-        message={deleteTarget ? `«${deleteTarget.title}» silinsin?` : ''}
-        confirmLabel="Sil"
+        title={t('materials.deleteTitle')}
+        message={deleteTarget ? t('materials.deleteConfirm', { title: deleteTarget.title }) : ''}
+        confirmLabel={t('materials.delete')}
         loading={deleteBusy}
         danger
       />
@@ -183,21 +206,21 @@ export default function InstructorMaterialsLibrary() {
 
       <MaterialQrModal open={Boolean(qrMaterial)} onClose={() => setQrMaterial(null)} material={qrMaterial} />
 
-      <Modal open={Boolean(tagMaterial)} onClose={() => !tagSaving && setTagMaterial(null)} title="Tag-lar" size="sm">
+      <Modal open={Boolean(tagMaterial)} onClose={() => !tagSaving && setTagMaterial(null)} title={t('materials.tagsTitle')} size="sm">
         <div className="space-y-3">
-          <p className="text-xs text-gray-400">Boşluqla ayırın: #imtahan #python #9cuSinif</p>
+          <p className="text-xs text-gray-400">{t('materials.tagsHint')}</p>
           <input
             value={tagInput}
             onChange={(e) => setTagInput(e.target.value)}
             className="w-full rounded-xl border border-white/10 bg-[#1c1c1c] px-3 py-2.5 text-sm text-white"
-            placeholder="#imtahan #python"
+            placeholder={t('materials.tagsPlaceholder')}
           />
           <div className="flex justify-end gap-2">
             <Button variant="ghost" onClick={() => setTagMaterial(null)} disabled={tagSaving}>
-              Ləğv et
+              {t('materials.cancel')}
             </Button>
             <Button onClick={() => void saveTags()} loading={tagSaving}>
-              Saxla
+              {t('materials.save')}
             </Button>
           </div>
         </div>
@@ -205,18 +228,18 @@ export default function InstructorMaterialsLibrary() {
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="font-display font-bold text-xl sm:text-2xl text-token-textMain">Kitabxana</h1>
+          <h1 className="font-display font-bold text-xl sm:text-2xl text-token-textMain">{t('materials.title')}</h1>
           {quota ? (
             <p className="text-xs text-token-textMuted mt-1">
               {quota.labels?.used} / {quota.labels?.limit}
-              {quota.usage?.file_count != null ? ` · ${quota.usage.file_count} fayl` : ''}
-              {totalUsage.exams > 0 ? ` · ${totalUsage.exams} imtahanda istifadə` : ''}
-              {totalUsage.views > 0 ? ` · ${totalUsage.views} baxış` : ''}
+              {quota.usage?.file_count != null ? ` · ${t('materials.fileCount', { count: quota.usage.file_count })}` : ''}
+              {totalUsage.exams > 0 ? ` · ${t('materials.usageInExams', { count: totalUsage.exams })}` : ''}
+              {totalUsage.views > 0 ? ` · ${t('materials.usageViews', { count: totalUsage.views })}` : ''}
             </p>
           ) : null}
         </div>
         <Button onClick={() => setUploadOpen(true)} disabled={quota?.limit_reached}>
-          Fayl yüklə
+          {t('materials.upload')}
         </Button>
       </div>
 
@@ -224,7 +247,7 @@ export default function InstructorMaterialsLibrary() {
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Ad, tag və ya qrup ilə axtar…"
+          placeholder={t('materials.searchPlaceholder')}
           className="flex-1 rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard/40 px-4 py-2.5 text-sm text-token-textMain outline-none focus:border-primary/40"
         />
       </div>
@@ -234,19 +257,19 @@ export default function InstructorMaterialsLibrary() {
       {fieldsError ? <p className="text-xs text-red-300/90">{fieldsError}</p> : null}
       {!fieldsLoading && !allGroups.length ? (
         <p className="text-xs text-amber-300/90">
-          Hələ sahə və qrup yoxdur.{' '}
+          {t('materials.noFields')}{' '}
           <Link to="/instructor/teaching-groups" className="text-primary underline">
-            Sahələr və qruplarda yaradın
+            {t('materials.createInTeachingGroups')}
           </Link>
         </p>
       ) : null}
 
       {loading ? (
-        <div className="text-center py-16 text-token-textMuted text-sm">Yüklənir…</div>
+        <div className="text-center py-16 text-token-textMuted text-sm">{t('materials.loading')}</div>
       ) : !materials.length ? (
         <Card className="p-10 text-center border border-dashed border-[color:var(--border-subtle)]">
           <div className="text-4xl mb-3">📁</div>
-          <p className="text-sm text-token-textMuted">{search.trim() ? 'Nəticə tapılmadı' : 'Hələ material yoxdur'}</p>
+          <p className="text-sm text-token-textMuted">{search.trim() ? t('materials.noResults') : t('materials.empty')}</p>
         </Card>
       ) : (
         <div className="space-y-8">
@@ -266,21 +289,21 @@ export default function InstructorMaterialsLibrary() {
                       <div className="flex-1 min-w-0">
                         <h3 className="font-semibold text-sm text-token-textMain truncate">{m.title}</h3>
                         <p className="text-[11px] text-token-textMuted mt-1">
-                          {materialFileKind(m.file_type, m.file_url)} · {formatMaterialsBytes(m.file_size)}
+                          {localizedFileKind(m.file_type, m.file_url)} · {formatMaterialsBytes(m.file_size)}
                         </p>
                         {m.group_name ? (
-                          <p className="text-[11px] text-primary/90 mt-1 truncate">Qrup: {m.group_name}</p>
+                          <p className="text-[11px] text-primary/90 mt-1 truncate">{t('materials.group', { name: m.group_name })}</p>
                         ) : null}
                         {usageLine(m) ? (
                           <p className="text-[10px] text-token-textMuted mt-1">{usageLine(m)}</p>
                         ) : null}
                         <div className="flex flex-wrap gap-1 mt-2">
-                          {(m.tags || []).map((t) => (
+                          {(m.tags || []).map((tag) => (
                             <span
-                              key={t}
+                              key={tag}
                               className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary/90"
                             >
-                              #{t}
+                              #{tag}
                             </span>
                           ))}
                           <button
@@ -288,7 +311,7 @@ export default function InstructorMaterialsLibrary() {
                             onClick={() => openTagEditor(m)}
                             className="text-[10px] px-1.5 py-0.5 rounded-full border border-dashed border-white/20 text-token-textMuted hover:text-primary"
                           >
-                            + tag
+                            {t('materials.addTag')}
                           </button>
                         </div>
                       </div>
@@ -300,23 +323,23 @@ export default function InstructorMaterialsLibrary() {
                         rel="noopener noreferrer"
                         className="flex-1 min-w-[4rem] text-center text-xs font-semibold py-2 rounded-lg border border-primary/30 text-primary hover:bg-primary/10"
                       >
-                        Aç
+                        {t('materials.open')}
                       </a>
                       <button
                         type="button"
                         onClick={() => void copyShareLink(m)}
                         className="px-3 py-2 rounded-lg text-xs text-token-textMain border border-[color:var(--border-subtle)] hover:bg-white/5"
-                        title="WhatsApp və s. üçün link"
+                        title={t('materials.linkTitle')}
                       >
-                        Link
+                        {t('materials.link')}
                       </button>
                       <button
                         type="button"
                         onClick={() => setQrMaterial(m)}
                         className="px-3 py-2 rounded-lg text-xs text-token-textMain border border-[color:var(--border-subtle)] hover:bg-white/5"
-                        title="QR kod"
+                        title={t('materials.qrTitle')}
                       >
-                        QR
+                        {t('materials.qr')}
                       </button>
                       <MaterialLinkMenu material={m} onLinked={onMaterialLinked} />
                       <button
@@ -324,7 +347,7 @@ export default function InstructorMaterialsLibrary() {
                         onClick={() => setDeleteTarget(m)}
                         className="px-3 py-2 rounded-lg text-xs text-red-300 border border-red-500/25 hover:bg-red-500/10"
                       >
-                        Sil
+                        {t('materials.delete')}
                       </button>
                     </div>
                   </Card>

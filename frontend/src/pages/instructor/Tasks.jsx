@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { useQueryClient } from '@tanstack/react-query'
 import { copyStudentTaskLink } from '../../lib/taskShare'
 import api from '../../lib/api'
@@ -10,14 +11,42 @@ import { useToast } from '../../components/common/Toast'
 import { BILLING_STATUS_QUERY_KEY, useBillingStatus } from '../../hooks/useBillingStatus'
 import { isInstructorBillingBlocked, HOMEWORK_MONTHLY_LIMIT_MESSAGE, isHomeworksMonthlyLimitReached, basicTrialExpiredMessage } from '../../lib/subscriptionPlanGuards'
 import { useSubscriptionPlans } from '../../hooks/useSubscriptionPlans'
-import { assignmentStatusClass, assignmentStatusLabel } from '../../lib/assignmentHelpers'
+import { assignmentStatusClass } from '../../lib/assignmentHelpers'
 import { assignmentFileLabel, assignmentFileOpenUrl, isAssignmentPreviewable } from '../../lib/assignmentFileUrl'
-import { fmtAzBakuField } from '../../lib/azDatetime'
 import LibraryMaterialPickerModal from '../../components/instructor/LibraryMaterialPickerModal'
 
-function fmtDue(d) {
+const BAKU_TZ = 'Asia/Baku'
+
+function fmtLocaleField(row, key, locale) {
+  const iso = row?.[key]
+  if (!iso) return ''
+  try {
+    return new Date(iso).toLocaleString(locale === 'ru' ? 'ru-RU' : 'az-AZ', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: BAKU_TZ,
+    })
+  } catch {
+    return ''
+  }
+}
+
+function fmtDue(d, locale) {
   if (!d) return ''
-  return String(d).slice(0, 10)
+  const s = String(d).slice(0, 10)
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return s
+  try {
+    return new Date(`${s}T12:00:00`).toLocaleDateString(locale === 'ru' ? 'ru-RU' : 'az-AZ', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    })
+  } catch {
+    return s
+  }
 }
 
 function isPreviewable(url) {
@@ -37,6 +66,9 @@ function renderPreview(url) {
 }
 
 export default function InstructorTasks() {
+  const { t, i18n } = useTranslation()
+  const taskStatusLabel = (status) =>
+    t(`tasks.status.${status}`, { defaultValue: status || t('tasks.status.pending') })
   const [loading, setLoading] = useState(true)
   const [studentsLoading, setStudentsLoading] = useState(true)
   const [tasks, setTasks] = useState([])
@@ -90,12 +122,12 @@ export default function InstructorTasks() {
       const d = await api.get('/tasks')
       setTasks(Array.isArray(d.tasks) ? d.tasks : [])
     } catch (e) {
-      setErr(e?.message || 'Yüklənmədi')
+      setErr(e?.message || t('tasks.loadFailed'))
       setTasks([])
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [t])
 
   const loadStudents = useCallback(async () => {
     setStudentsLoading(true)
@@ -208,7 +240,7 @@ export default function InstructorTasks() {
     }
     const title = String(form.title || '').trim()
     if (!title) {
-      toast('Tapşırığın adı tələb olunur', 'error')
+      toast(t('tasks.toasts.titleRequired'), 'error')
       return
     }
     setSaving(true)
@@ -232,7 +264,7 @@ export default function InstructorTasks() {
           max_score: form.max_score ? Number(form.max_score) : null,
         })
         await linkLibraryMaterials(editingId)
-        toast('Tapşırıq yeniləndi', 'success')
+        toast(t('tasks.toasts.updated'), 'success')
       } else {
         const d = await api.post('/tasks', {
           title,
@@ -248,8 +280,8 @@ export default function InstructorTasks() {
         await linkLibraryMaterials(assignmentId)
         toast(
           d.assignedCount
-            ? `Göndərildi (${d.assignedCount} tələbə)`
-            : 'Tapşırıq yaradıldı — link/QR ilə qonaqlara paylaşın',
+            ? t('tasks.toasts.sent', { count: d.assignedCount })
+            : t('tasks.toasts.created'),
           'success',
         )
       }
@@ -258,7 +290,7 @@ export default function InstructorTasks() {
       await load()
       queryClient.invalidateQueries({ queryKey: BILLING_STATUS_QUERY_KEY })
     } catch (e) {
-      toast(e?.message || 'Xəta', 'error')
+      toast(e?.message || t('tasks.toasts.error'), 'error')
     } finally {
       setSaving(false)
     }
@@ -277,11 +309,11 @@ export default function InstructorTasks() {
       const r = await api.post('/tasks/instructor/upload', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
       if (r?.url) {
         setForm((p) => ({ ...p, question_file_url: r.url }))
-        toast('Fayl yükləndi', 'success')
+        toast(t('tasks.toasts.fileUploaded'), 'success')
         queryClient.invalidateQueries({ queryKey: BILLING_STATUS_QUERY_KEY })
       }
     } catch (e) {
-      toast(e?.message || 'Fayl yüklənmədi', 'error')
+      toast(e?.message || t('tasks.toasts.fileUploadFailed'), 'error')
     } finally {
       setFileUploading(false)
     }
@@ -310,14 +342,14 @@ export default function InstructorTasks() {
       toast(blockMessage, 'error')
       return
     }
-    if (!window.confirm(`«${title}» silinsin? Tələbə siyahısından da silinəcək.`)) return
+    if (!window.confirm(t('tasks.deleteConfirm', { title }))) return
     setDeletingId(id)
     try {
       await api.delete('/tasks/' + encodeURIComponent(id))
-      toast('Silindi', 'success')
+      toast(t('tasks.toasts.deleted'), 'success')
       await load()
     } catch (e) {
-      toast(e?.message || 'Xəta', 'error')
+      toast(e?.message || t('tasks.toasts.error'), 'error')
     } finally {
       setDeletingId(null)
     }
@@ -353,7 +385,7 @@ export default function InstructorTasks() {
       setReviewFeedback(r?.feedback || '')
       setAiMeta(r?.ai_metadata && typeof r.ai_metadata === 'object' ? r.ai_metadata : null)
     } catch (e) {
-      setReviewErr(e?.message || 'Yüklənmədi')
+      setReviewErr(e?.message || t('tasks.loadFailed'))
     } finally {
       setReviewLoading(false)
     }
@@ -369,11 +401,11 @@ export default function InstructorTasks() {
       }
       const d = await api.patch('/tasks/instructor/review/' + encodeURIComponent(review.student_assignment_id), body)
       setReview(d.review || review)
-      toast('Rəy saxlanıldı', 'success')
+      toast(t('tasks.toasts.reviewSaved'), 'success')
       await load()
       await loadAnalytics()
     } catch (e) {
-      toast(e?.message || 'Xəta', 'error')
+      toast(e?.message || t('tasks.toasts.error'), 'error')
     } finally {
       setReviewSaving(false)
     }
@@ -389,10 +421,10 @@ export default function InstructorTasks() {
       const ai = d.ai || null
       setAiMeta(ai)
       setReview((prev) => (prev ? { ...prev, ai_metadata: ai } : prev))
-      toast('AI təklifi hazırdır', 'success')
+      toast(t('tasks.toasts.aiReady'), 'success')
     } catch (e) {
       if (e?.ai) setAiMeta(e.ai)
-      toast(e?.message || 'AI xətası', 'error')
+      toast(e?.message || t('tasks.toasts.aiError'), 'error')
     } finally {
       setAiLoading(false)
     }
@@ -402,7 +434,7 @@ export default function InstructorTasks() {
     if (!aiMeta || aiMeta.status !== 'ready') return
     if (aiMeta.suggested_score != null) setReviewScore(String(aiMeta.suggested_score))
     if (aiMeta.draft_feedback) setReviewFeedback(aiMeta.draft_feedback)
-    toast('Təklif formaya köçürüldü — yoxlayıb saxlayın', 'success')
+    toast(t('tasks.toasts.aiApplied'), 'success')
   }
 
   const decideLate = async (decision) => {
@@ -413,10 +445,10 @@ export default function InstructorTasks() {
         late_decision: decision,
       })
       setReview(d.review || review)
-      toast(decision === 'accepted' ? 'Gecikmiş təslim qəbul edildi' : 'Gecikmiş təslim rədd edildi', 'success')
+      toast(decision === 'accepted' ? t('tasks.toasts.lateAccepted') : t('tasks.toasts.lateRejected'), 'success')
       await load()
     } catch (e) {
-      toast(e?.message || 'Xəta', 'error')
+      toast(e?.message || t('tasks.toasts.error'), 'error')
     } finally {
       setReviewSaving(false)
     }
@@ -426,9 +458,9 @@ export default function InstructorTasks() {
     <div className="p-4 sm:p-6 w-full min-w-0 max-w-5xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-4">
         <div className="min-w-0">
-          <h1 className="font-display font-bold text-xl sm:text-2xl text-token-textMain">Tapşırıqlar</h1>
+          <h1 className="font-display font-bold text-xl sm:text-2xl text-token-textMain">{t('tasks.title')}</h1>
           <p className="text-token-textMuted text-sm mt-1">
-            Ev tapşırığı verin, təslimləri yoxlayın, bal və rəy yazın.
+            {t('tasks.subtitle')}
           </p>
         </div>
         <div className="flex flex-wrap gap-2 shrink-0">
@@ -436,13 +468,13 @@ export default function InstructorTasks() {
             to="/instructor/tasks/analytics"
             className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold border border-indigo-500/30 text-indigo-200 hover:bg-indigo-500/10"
           >
-            Analitika
+            {t('tasks.analytics')}
           </Link>
           <Button variant="secondary" size="sm" onClick={() => void load()} disabled={loading}>
-            Yenilə
+            {t('tasks.refresh')}
           </Button>
           <Button size="sm" disabled={createBlocked} onClick={openCreate}>
-            + Yeni tapşırıq
+            {t('tasks.newTask')}
           </Button>
         </div>
       </div>
@@ -455,21 +487,21 @@ export default function InstructorTasks() {
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
         <Card hover className="p-4">
-          <p className="text-xs text-token-textMuted">Tapşırıqlar</p>
+          <p className="text-xs text-token-textMuted">{t('tasks.stats.tasks')}</p>
           <p className="text-lg font-bold text-token-textMain mt-1">{tasks.length}</p>
         </Card>
         <Card hover className="p-4">
-          <p className="text-xs text-token-textMuted">Təyinat (cəmi)</p>
+          <p className="text-xs text-token-textMuted">{t('tasks.stats.assignments')}</p>
           <p className="text-lg font-bold text-token-textMain mt-1">{stats.total}</p>
         </Card>
         <Card hover className="p-4">
-          <p className="text-xs text-token-textMuted">Təslim nisbəti</p>
+          <p className="text-xs text-token-textMuted">{t('tasks.stats.submissionRate')}</p>
           <p className="text-lg font-bold text-token-textMain mt-1">
             {analytics?.submission_rate != null ? `${analytics.submission_rate}%` : '—'}
           </p>
         </Card>
         <Card hover className="p-4">
-          <p className="text-xs text-token-textMuted">Orta bal</p>
+          <p className="text-xs text-token-textMuted">{t('tasks.stats.avgScore')}</p>
           <p className="text-lg font-bold text-token-textMain mt-1">
             {analytics?.average_score != null ? analytics.average_score : '—'}
           </p>
@@ -478,47 +510,46 @@ export default function InstructorTasks() {
 
       {loading ? (
         <Card hover className="p-5 text-sm text-token-textMuted">
-          Yüklənir…
+          {t('tasks.loading')}
         </Card>
       ) : tasks.length === 0 ? (
         <Card hover className="p-5 text-sm text-token-textMuted">
-          Hələ tapşırıq yoxdur.
+          {t('tasks.empty')}
         </Card>
       ) : (
         <div className="space-y-3">
-          {tasks.map((t) => {
-            const recipients = parseRecipients(t)
+          {tasks.map((task) => {
+            const recipients = parseRecipients(task)
             return (
-              <Card key={t.id} hover className="p-5">
+              <Card key={task.id} hover className="p-5">
                 <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
-                    <p className="text-token-textMain font-semibold break-words">{t.title}</p>
-                    {t.topic ? (
-                      <p className="text-sm text-token-textMuted mt-1 break-words">Mövzu: {t.topic}</p>
+                    <p className="text-token-textMain font-semibold break-words">{task.title}</p>
+                    {task.topic ? (
+                      <p className="text-sm text-token-textMuted mt-1 break-words">{t('tasks.card.topic', { topic: task.topic })}</p>
                     ) : null}
                     <p className="text-xs text-token-textMuted mt-1">
-                      Yaradılıb: <span className="text-token-textMain font-mono">{fmtAzBakuField(t, 'created_at')}</span>
-                      {t.due_date ? (
+                      {t('tasks.card.created')} <span className="text-token-textMain font-mono">{fmtLocaleField(task, 'created_at', i18n.language)}</span>
+                      {task.due_date ? (
                         <>
                           {' '}
-                          · Son tarix: <span className="text-token-textMain font-mono">{fmtDue(t.due_date)}</span>
+                          · {t('tasks.card.dueDate')} <span className="text-token-textMain font-mono">{fmtDue(task.due_date, i18n.language)}</span>
                         </>
                       ) : null}
-                      {t.group_name ? (
+                      {task.group_name ? (
                         <>
                           {' '}
-                          · Qrup: <span className="text-token-textMain">{t.group_name}</span>
+                          · {t('tasks.card.group')} <span className="text-token-textMain">{task.group_name}</span>
                         </>
                       ) : null}
-                      {t.max_score ? (
+                      {task.max_score ? (
                         <>
                           {' '}
-                          · Max: <span className="text-token-textMain">{t.max_score}</span>
+                          · {t('tasks.card.maxScore')} <span className="text-token-textMain">{task.max_score}</span>
                         </>
                       ) : null}
                       <span className="block sm:inline sm:ml-1 mt-0.5 sm:mt-0">
-                        · Təyin: {t.assigned_count || 0} · Təslim: {t.submitted_count || 0} · Gözləyir:{' '}
-                        {t.pending_count || 0}
+                        {t('tasks.card.assignments', { assigned: task.assigned_count || 0, submitted: task.submitted_count || 0, pending: task.pending_count || 0 })}
                       </span>
                     </p>
                   </div>
@@ -527,66 +558,66 @@ export default function InstructorTasks() {
                       size="sm"
                       variant="secondary"
                       onClick={() => {
-                        const title = t.title || 'Tapşırıq'
+                        const title = task.title || t('tasks.defaultTitle')
                         const qs = new URLSearchParams({
-                          assignmentId: t.id,
+                          assignmentId: task.id,
                           assignmentTitle: title,
                         })
                         navigate(`/instructor/assignment-chat?${qs.toString()}`)
                       }}
                     >
-                      Çat
+                      {t('tasks.chat')}
                     </Button>
                     <Button
                       size="sm"
                       variant="secondary"
                       onClick={async () => {
                         try {
-                          await copyStudentTaskLink(t.id)
-                          toast('Tapşırıq linki kopyalandı', 'success')
+                          await copyStudentTaskLink(task.id)
+                          toast(t('tasks.toasts.linkCopied'), 'success')
                         } catch {
-                          toast('Link kopyalanmadı', 'error')
+                          toast(t('tasks.toasts.linkCopyFailed'), 'error')
                         }
                       }}
                     >
-                      Link
+                      {t('tasks.link')}
                     </Button>
-                    <Button size="sm" variant="secondary" disabled={blocked} onClick={() => openEdit(t)}>
-                      Redaktə
+                    <Button size="sm" variant="secondary" disabled={blocked} onClick={() => openEdit(task)}>
+                      {t('tasks.edit')}
                     </Button>
                     <Button
                       size="sm"
                       variant="danger"
                       disabled={blocked}
-                      loading={deletingId === t.id}
-                      onClick={() => void removeTask(t.id, t.title)}
+                      loading={deletingId === task.id}
+                      onClick={() => void removeTask(task.id, task.title)}
                     >
-                      Sil
+                      {t('tasks.delete')}
                     </Button>
                   </div>
                 </div>
-                {t.description ? (
+                {task.description ? (
                   <div className="mt-3 text-sm text-token-textMain whitespace-pre-wrap leading-relaxed border-t border-[color:var(--border-subtle)] pt-3">
-                    <span className="text-xs font-semibold text-token-textMuted uppercase tracking-wider">Müəllim qeydi</span>
-                    <div className="mt-1">{t.description}</div>
+                    <span className="text-xs font-semibold text-token-textMuted uppercase tracking-wider">{t('tasks.card.teacherNote')}</span>
+                    <div className="mt-1">{task.description}</div>
                   </div>
                 ) : null}
                 {recipients.length > 0 ? (
                   <div className="mt-3 rounded-xl border border-indigo-500/15 bg-[#0f0c29]/50 p-3">
-                    <p className="text-[10px] font-semibold text-token-textMuted uppercase tracking-wider mb-2">Tələbələr və status</p>
+                    <p className="text-[10px] font-semibold text-token-textMuted uppercase tracking-wider mb-2">{t('tasks.card.studentsStatus')}</p>
                     <ul className="space-y-1.5">
                       {recipients.map((r) => (
                         <li key={r.student_id} className="flex items-center justify-between gap-2 text-sm min-w-0">
-                          <span className="text-token-textMain truncate">{r.full_name || 'Tələbə'}</span>
+                          <span className="text-token-textMain truncate">{r.full_name || t('tasks.defaultStudent')}</span>
                           <div className="flex items-center gap-2 shrink-0">
                             <span
                               className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border ${assignmentStatusClass(r.status)}`}
                             >
-                              {assignmentStatusLabel(r.status)}
+                              {taskStatusLabel(r.status)}
                             </span>
                             {['submitted', 'late', 'reviewed', 'completed'].includes(r.status) ? (
                               <Button size="sm" variant="secondary" onClick={() => void openReview(r.student_assignment_id)}>
-                                Yoxla
+                                {t('tasks.review')}
                               </Button>
                             ) : null}
                           </div>
@@ -604,16 +635,16 @@ export default function InstructorTasks() {
       <Modal
         open={open}
         onClose={closeTaskModal}
-        title={editingId ? 'Tapşırığı redaktə et' : 'Yeni tapşırıq'}
+        title={editingId ? t('tasks.modal.editTitle') : t('tasks.modal.createTitle')}
         size="lg"
         scrollBody
         footer={
           <div className="flex gap-2 justify-end">
             <Button variant="secondary" onClick={closeTaskModal} disabled={saving || fileUploading}>
-              Ləğv et
+              {t('tasks.cancel')}
             </Button>
             <Button onClick={() => void submit()} loading={saving} disabled={createBlocked || fileUploading}>
-              {editingId ? 'Saxla' : 'Göndər'}
+              {editingId ? t('tasks.save') : t('tasks.send')}
             </Button>
           </div>
         }
@@ -623,36 +654,36 @@ export default function InstructorTasks() {
           onFocusCapture={focusFieldNearest}
         >
           <div>
-            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Ad (başlıq) *</label>
+            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">{t('tasks.form.title')}</label>
             <input
               className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500"
               value={form.title}
               onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))}
-              placeholder="Məsələn: Ev tapşırığı — trigonometriya"
+              placeholder={t('tasks.form.titlePh')}
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Mövzu</label>
+            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">{t('tasks.form.topic')}</label>
             <input
               className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500"
               value={form.topic}
               onChange={(e) => setForm((p) => ({ ...p, topic: e.target.value }))}
-              placeholder="Məsələn: Dairə və çevrə"
+              placeholder={t('tasks.form.topicPh')}
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Müəllim qeydi</label>
+            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">{t('tasks.form.description')}</label>
             <textarea
               rows={4}
               className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-blue-500 resize-none"
               value={form.description}
               onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
-              placeholder="Tapşırıq haqqında qeyd…"
+              placeholder={t('tasks.form.descriptionPh')}
             />
           </div>
           <div className="rounded-xl border border-indigo-500/15 bg-[#0f0c29]/40 p-3">
             <div className="flex items-center justify-between gap-2 mb-2">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Tapşırıq faylı (PDF/Word/Excel/CSV/Şəkil)</p>
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{t('tasks.form.fileSection')}</p>
               <div className="flex items-center gap-2">
                 <button
                   type="button"
@@ -660,10 +691,10 @@ export default function InstructorTasks() {
                   disabled={blocked}
                   className="text-xs font-semibold text-primary hover:text-primary/80"
                 >
-                  Kitabxana
+                  {t('tasks.library')}
                 </button>
                 <label className="text-xs font-semibold text-blue-400 hover:text-blue-300 cursor-pointer">
-                  + Yüklə
+                  {t('tasks.upload')}
                   <input
                     type="file"
                     className="hidden"
@@ -683,14 +714,14 @@ export default function InstructorTasks() {
                 if (!form.question_file_url) {
                   setForm((p) => ({ ...p, question_file_url: material.file_url }))
                 }
-                toast(`«${material.title}» kitabxanadan əlavə olundu`, 'success')
+                toast(t('tasks.toasts.libraryAdded', { title: material.title }), 'success')
               }}
             />
             {linkedLibraryIds.length > 0 ? (
-              <p className="text-[11px] text-primary/80 mb-2">{linkedLibraryIds.length} kitabxana materialı bağlanacaq</p>
+              <p className="text-[11px] text-primary/80 mb-2">{t('tasks.form.libraryLinked', { count: linkedLibraryIds.length })}</p>
             ) : null}
             {fileUploading ? (
-              <p className="text-sm text-gray-500">Fayl yüklənir…</p>
+              <p className="text-sm text-gray-500">{t('tasks.form.fileUploading')}</p>
             ) : form.question_file_url ? (
               <a
                 className="text-sm text-blue-300 hover:text-blue-200 break-all"
@@ -701,12 +732,12 @@ export default function InstructorTasks() {
                 {assignmentFileLabel(form.question_file_url)}
               </a>
             ) : (
-              <p className="text-sm text-gray-500">Fayl yoxdur.</p>
+              <p className="text-sm text-gray-500">{t('tasks.form.noFile')}</p>
             )}
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Son tarix</label>
+              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">{t('tasks.form.dueDate')}</label>
               <input
                 type="date"
                 className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500"
@@ -715,7 +746,7 @@ export default function InstructorTasks() {
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Max bal (ixtiyari)</label>
+              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">{t('tasks.form.maxScore')}</label>
               <input
                 type="number"
                 min={1}
@@ -729,18 +760,18 @@ export default function InstructorTasks() {
           <div className="min-h-[13.5rem]">
             {editingId ? (
               <p className="text-xs text-amber-200/90 rounded-xl border border-amber-500/25 bg-amber-500/10 px-3 py-2">
-                Təyin olunmuş tələbələr dəyişdirilmir. Başlıq, qeyd, fayl və son tarixi yeniləyə bilərsiniz.
+                {t('tasks.form.editLocked')}
               </p>
             ) : (
               <>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Qrup (hamısına təyin)</label>
+                  <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">{t('tasks.form.group')}</label>
                   <select
                     className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500"
                     value={form.group_id}
                     onChange={(e) => setForm((p) => ({ ...p, group_id: e.target.value }))}
                   >
-                    <option value="">— Qrup seçin (ixtiyari) —</option>
+                    <option value="">{t('tasks.form.groupPlaceholder')}</option>
                     {groups.map((g) => (
                       <option key={g.id} value={g.id}>
                         {g.subject_name ? `${g.subject_name} · ` : ''}
@@ -751,17 +782,17 @@ export default function InstructorTasks() {
                 </div>
                 <div className="border-t border-indigo-500/20 pt-3 mt-4">
                   <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
-                    CRM tələbələri (istəyə bağlı)
+                    {t('tasks.form.crmStudents')}
                   </label>
                   <p className="text-xs text-gray-500 mb-2 leading-relaxed">
-                    Heç kimi seçməsəniz belə tapşırığı link/QR ilə qonaqlara göndərə bilərsiniz — ad, soyad və telefon kifayətdir.
+                    {t('tasks.form.crmHint')}
                   </p>
                   {studentsLoading ? (
-                    <p className="text-sm text-gray-500">Tələbələr yüklənir…</p>
+                    <p className="text-sm text-gray-500">{t('tasks.form.studentsLoading')}</p>
                   ) : !students.length ? (
-                    <p className="text-sm text-amber-200/90">CRM tələbə yoxdur — yalnız link ilə qonaqlara paylaşın.</p>
+                    <p className="text-sm text-amber-200/90">{t('tasks.form.noCrmStudents')}</p>
                   ) : !students.filter((s) => (s.enrollment_status || 'active') === 'active').length ? (
-                    <p className="text-sm text-amber-200/90">Aktiv qeydiyyatlı tələbə yoxdur.</p>
+                    <p className="text-sm text-amber-200/90">{t('tasks.form.noActiveStudents')}</p>
                   ) : (
                     <ul className="max-h-48 overflow-y-auto overscroll-contain space-y-2 rounded-xl border border-indigo-500/15 p-2 bg-[#0f0c29]/40">
                       {students
@@ -800,21 +831,21 @@ export default function InstructorTasks() {
           setReviewOpen(false)
         }}
         scrollBody
-        title={review?.student_name ? `Yoxla — ${review.student_name}` : 'Yoxla'}
+        title={review?.student_name ? t('tasks.review.titleWithName', { name: review.student_name }) : t('tasks.review.title')}
         size="xl"
       >
         {reviewLoading ? (
-          <p className="text-sm text-gray-500">Yüklənir…</p>
+          <p className="text-sm text-gray-500">{t('tasks.loading')}</p>
         ) : reviewErr ? (
           <p className="text-sm text-amber-200/90">{reviewErr}</p>
         ) : review ? (
           <div className="space-y-4">
             <div className="rounded-xl border border-indigo-500/15 bg-[#0f0c29]/50 p-3">
               <p className="text-sm text-white font-semibold break-words">{review.title}</p>
-              {review.topic ? <p className="text-sm text-indigo-200/90 mt-1">Mövzu: {review.topic}</p> : null}
+              {review.topic ? <p className="text-sm text-indigo-200/90 mt-1">{t('tasks.review.topic', { topic: review.topic })}</p> : null}
               {review.question_file_url ? (
                 <p className="text-xs text-gray-500 mt-1">
-                  Tapşırıq faylı:{' '}
+                  {t('tasks.review.taskFile')}{' '}
                   <a
                     className="text-blue-300 hover:text-blue-200 font-semibold"
                     href={assignmentFileOpenUrl(review.question_file_url)}
@@ -826,24 +857,24 @@ export default function InstructorTasks() {
                 </p>
               ) : null}
               <p className="text-xs text-gray-500 mt-1 font-mono tabular-nums">
-                {review.submitted_at ? `Təslim: ${fmtAzBakuField(review, 'submitted_at')}` : 'Təslim edilməyib'}
+                {review.submitted_at ? t('tasks.review.submitted', { date: fmtLocaleField(review, 'submitted_at', i18n.language) }) : t('tasks.review.notSubmitted')}
               </p>
             </div>
 
             <div className="rounded-xl border border-indigo-500/15 bg-[#0f0c29]/40 p-3">
-              <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-2">Tələbənin cavabı</p>
+              <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-2">{t('tasks.review.studentAnswer')}</p>
               {review.answer_text ? (
                 <div
                   className="prose prose-invert max-w-none text-sm"
                   dangerouslySetInnerHTML={{ __html: review.answer_text }}
                 />
               ) : (
-                <p className="text-sm text-gray-500">Cavab yoxdur.</p>
+                <p className="text-sm text-gray-500">{t('tasks.review.noAnswer')}</p>
               )}
             </div>
 
             <div className="rounded-xl border border-indigo-500/15 bg-[#0f0c29]/40 p-3">
-              <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-2">Fayllar</p>
+              <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-2">{t('tasks.review.files')}</p>
               {Array.isArray(review.attachment_urls) && review.attachment_urls.length ? (
                 <ul className="space-y-2">
                   {review.attachment_urls.map((u) => (
@@ -860,13 +891,13 @@ export default function InstructorTasks() {
                   ))}
                 </ul>
               ) : (
-                <p className="text-sm text-gray-500">Fayl yoxdur.</p>
+                <p className="text-sm text-gray-500">{t('tasks.review.noFiles')}</p>
               )}
             </div>
 
             {Array.isArray(review.attachment_urls) && review.attachment_urls.some(isPreviewable) && (
               <div className="rounded-xl border border-indigo-500/15 bg-[#0f0c29]/40 p-3">
-                <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-2">Ön baxış (PDF / şəkil)</p>
+                <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-2">{t('tasks.review.preview')}</p>
                 <div className="space-y-4">
                   {review.attachment_urls
                     .filter((u) => isPreviewable(u))
@@ -890,7 +921,7 @@ export default function InstructorTasks() {
             {review.question_file_url && isAssignmentPreviewable(review.question_file_url) && (
               <div className="rounded-xl border border-indigo-500/15 bg-[#0f0c29]/40 p-3">
                 <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                  Tapşırıq faylı — ön baxış
+                  {t('tasks.review.taskFilePreview')}
                 </p>
                 <div className="mt-2">{renderPreview(assignmentFileOpenUrl(review.question_file_url))}</div>
               </div>
@@ -898,12 +929,12 @@ export default function InstructorTasks() {
 
             {review.status === 'late' && !review.late_decision ? (
               <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 p-3 flex flex-wrap gap-2">
-                <p className="text-sm text-amber-100 w-full">Gecikmiş təslim — qəbul və ya rədd edin.</p>
+                <p className="text-sm text-amber-100 w-full">{t('tasks.review.lateTitle')}</p>
                 <Button size="sm" onClick={() => void decideLate('accepted')} loading={reviewSaving}>
-                  Gecikməni qəbul et
+                  {t('tasks.review.acceptLate')}
                 </Button>
                 <Button size="sm" variant="danger" onClick={() => void decideLate('rejected')} loading={reviewSaving}>
-                  Rədd et
+                  {t('tasks.review.rejectLate')}
                 </Button>
               </div>
             ) : null}
@@ -912,33 +943,33 @@ export default function InstructorTasks() {
               <div className="rounded-xl border border-violet-500/25 bg-violet-500/5 p-3 space-y-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="text-[10px] font-semibold text-violet-300 uppercase tracking-wider">
-                    AI köməkçi (təklif)
+                    {t('tasks.review.aiTitle')}
                   </p>
                   <div className="flex flex-wrap gap-2">
                     <Button size="sm" variant="secondary" onClick={() => void runAiSuggest()} loading={aiLoading}>
-                      {aiMeta?.status === 'ready' ? 'Yenidən analiz et' : 'AI təklifi'}
+                      {aiMeta?.status === 'ready' ? t('tasks.review.aiReanalyze') : t('tasks.review.aiSuggest')}
                     </Button>
                     {aiMeta?.status === 'ready' ? (
                       <Button size="sm" onClick={applyAiSuggestion}>
-                        Tətbiq et
+                        {t('tasks.review.aiApply')}
                       </Button>
                     ) : null}
                   </div>
                 </div>
                 <p className="text-xs text-gray-500">
-                  AI yalnız köməkçidir; final bal və rəyi müəllim təsdiq edir.
+                  {t('tasks.review.aiHint')}
                 </p>
                 {aiLoading || aiMeta?.status === 'pending' ? (
-                  <p className="text-sm text-violet-200/90">Analiz edilir…</p>
+                  <p className="text-sm text-violet-200/90">{t('tasks.review.aiAnalyzing')}</p>
                 ) : null}
                 {aiMeta?.status === 'error' ? (
-                  <p className="text-sm text-amber-200/90">{aiMeta.error || 'AI xətası'}</p>
+                  <p className="text-sm text-amber-200/90">{aiMeta.error || t('tasks.review.aiError')}</p>
                 ) : null}
                 {aiMeta?.status === 'ready' ? (
                   <div className="space-y-2 text-sm text-gray-200">
                     {aiMeta.suggested_score != null ? (
                       <p>
-                        <span className="text-gray-500">Tövsiyə olunan bal:</span>{' '}
+                        <span className="text-gray-500">{t('tasks.review.suggestedScore')}</span>{' '}
                         <span className="font-semibold text-white">
                           {aiMeta.suggested_score}
                           {review.max_score != null ? ` / ${review.max_score}` : ''}
@@ -948,7 +979,7 @@ export default function InstructorTasks() {
                     {aiMeta.summary ? <p className="text-indigo-100/90">{aiMeta.summary}</p> : null}
                     {Array.isArray(aiMeta.strengths) && aiMeta.strengths.length ? (
                       <div>
-                        <p className="text-[10px] font-semibold text-emerald-400/90 uppercase">Güclü tərəflər</p>
+                        <p className="text-[10px] font-semibold text-emerald-400/90 uppercase">{t('tasks.review.strengths')}</p>
                         <ul className="list-disc list-inside text-emerald-100/80 mt-1 space-y-0.5">
                           {aiMeta.strengths.map((s) => (
                             <li key={s}>{s}</li>
@@ -958,7 +989,7 @@ export default function InstructorTasks() {
                     ) : null}
                     {Array.isArray(aiMeta.weaknesses) && aiMeta.weaknesses.length ? (
                       <div>
-                        <p className="text-[10px] font-semibold text-amber-400/90 uppercase">Zəif tərəflər</p>
+                        <p className="text-[10px] font-semibold text-amber-400/90 uppercase">{t('tasks.review.weaknesses')}</p>
                         <ul className="list-disc list-inside text-amber-100/80 mt-1 space-y-0.5">
                           {aiMeta.weaknesses.map((s) => (
                             <li key={s}>{s}</li>
@@ -968,7 +999,7 @@ export default function InstructorTasks() {
                     ) : null}
                     {aiMeta.recommendations ? (
                       <div>
-                        <p className="text-[10px] font-semibold text-violet-300/90 uppercase">Tövsiyə</p>
+                        <p className="text-[10px] font-semibold text-violet-300/90 uppercase">{t('tasks.review.recommendations')}</p>
                         <p className="text-gray-300 mt-1 whitespace-pre-wrap">{aiMeta.recommendations}</p>
                       </div>
                     ) : null}
@@ -978,7 +1009,7 @@ export default function InstructorTasks() {
             ) : null}
 
             <div className="rounded-xl border border-indigo-500/15 bg-[#0f0c29]/40 p-3 space-y-3">
-              <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Qiymət və rəy</p>
+              <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">{t('tasks.review.gradeTitle')}</p>
               <div className="flex items-center gap-2">
                 <input
                   type="number"
@@ -987,7 +1018,7 @@ export default function InstructorTasks() {
                   className="w-28 bg-[#13112e] border border-indigo-500/20 rounded-lg px-3 py-2 text-white text-sm"
                   value={reviewScore}
                   onChange={(e) => setReviewScore(e.target.value)}
-                  placeholder={review.max_score ? `0–${review.max_score}` : 'Bal'}
+                  placeholder={review.max_score ? t('tasks.review.scoreRange', { max: review.max_score }) : t('tasks.review.scorePlaceholder')}
                 />
                 {review.max_score ? (
                   <span className="text-sm text-gray-400">/ {review.max_score}</span>
@@ -998,10 +1029,10 @@ export default function InstructorTasks() {
                 className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-3 py-2 text-white text-sm resize-none"
                 value={reviewFeedback}
                 onChange={(e) => setReviewFeedback(e.target.value)}
-                placeholder="Rəy (məs: Loops hissəsində səhvlər var)"
+                placeholder={t('tasks.review.feedbackPh')}
               />
               <Button onClick={() => void saveReview()} loading={reviewSaving}>
-                Rəyi saxla
+                {t('tasks.review.saveFeedback')}
               </Button>
             </div>
 
@@ -1010,7 +1041,7 @@ export default function InstructorTasks() {
               className="w-full justify-center"
               onClick={() => setReviewOpen(false)}
             >
-              Bağla
+              {t('tasks.close')}
             </Button>
           </div>
         ) : null}
