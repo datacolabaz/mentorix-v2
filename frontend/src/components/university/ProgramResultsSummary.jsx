@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { countryFlag } from '../../lib/universitySearch'
 
 export default function ProgramResultsSummary({
@@ -7,6 +8,8 @@ export default function ProgramResultsSummary({
   coverageMessage,
   countriesWithResults = [],
 }) {
+  const { t } = useTranslation()
+
   if (!selectedCountries.length) return null
 
   return (
@@ -16,7 +19,9 @@ export default function ProgramResultsSummary({
       ) : null}
 
       <div className="space-y-2">
-        <p className="text-[10px] font-bold uppercase tracking-wide text-gray-500">Seçilmiş ölkələr</p>
+        <p className="text-[10px] font-bold uppercase tracking-wide text-gray-500">
+          {t('universitySearch.results.selectedCountries')}
+        </p>
         <div className="flex flex-wrap gap-2">
           {selectedCountries.map((country) => {
             const count = countryCounts[country] || 0
@@ -42,7 +47,9 @@ export default function ProgramResultsSummary({
 
       {countriesWithResults.length ? (
         <div className="space-y-1">
-          <p className="text-[10px] font-bold uppercase tracking-wide text-gray-500">Uyğun nəticə tapılan ölkələr</p>
+          <p className="text-[10px] font-bold uppercase tracking-wide text-gray-500">
+            {t('universitySearch.results.countriesWithResults')}
+          </p>
           <p className="text-sm text-gray-300">
             {countriesWithResults.map((country) => `${countryFlag(country)} ${country}`).join(' · ')}
           </p>
@@ -50,9 +57,7 @@ export default function ProgramResultsSummary({
       ) : null}
 
       {total > 0 ? (
-        <p className="text-xs text-gray-500">
-          Filtr işləyir — bəzi ölkələrdə seçdiyiniz kriteriyalara uyğun proqram hazırda yoxdur.
-        </p>
+        <p className="text-xs text-gray-500">{t('universitySearch.results.filterPartialNote')}</p>
       ) : null}
     </div>
   )

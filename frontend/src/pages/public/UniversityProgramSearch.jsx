@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import api from '../../lib/api'
-import Brand from '../../components/common/Brand'
 import Button from '../../components/common/Button'
 import { useToast } from '../../components/common/Toast'
 import useAuthStore from '../../hooks/useAuth'
-import { dashboardPathForRole } from '../../lib/postAuth'
 import { setPageSeo } from '../../lib/pageSeo'
+import PublicPageTopBar from '../../components/public/PublicPageTopBar'
 import UniversitySearchWizard from '../../components/university/UniversitySearchWizard'
 import ProgramFiltersSidebar from '../../components/university/ProgramFiltersSidebar'
 import ProgramCard from '../../components/university/ProgramCard'
@@ -20,9 +20,9 @@ import {
   parseWizardFromSearchParams,
   buildCountryResultsMeta,
 } from '../../lib/universitySearch'
+import { fieldLabel } from '../../lib/universityFieldCatalog'
 import { resolveProgramApplyLink } from '../../lib/programApplyLink'
 import { searchProgramsWithFallback } from '../../lib/universityProgramsApi'
-import { buildEmptyResultsMessage } from '../../lib/universityProgramFilters'
 
 function defaultFilters(searchParams) {
   const countries = searchParams.get('countries')
@@ -73,7 +73,44 @@ function aiFiltersToUi(base, ai = {}) {
   }
 }
 
+function translateEmptyMessage(t, filters) {
+  const slugs = filters.fields?.length ? filters.fields : filters.field ? [filters.field] : []
+  const labels = slugs.map((slug) => fieldLabel(slug) || slug.replace(/_/g, ' '))
+  const field = labels.length ? labels.join(', ') : t('universitySearch.empty.selectedField')
+  const degree = filters.degreeLevel || filters.degree_level || ''
+  const degreeLong = {
+    BSc: t('universitySearch.degrees.bscLong'),
+    MSc: t('universitySearch.degrees.mscLong'),
+    PhD: t('universitySearch.degrees.phdLong'),
+  }[degree]
+
+  if (degree === 'PhD') {
+    return t('universitySearch.empty.phd', { field })
+  }
+  if (degree && degreeLong) {
+    return t('universitySearch.empty.degreeLimited', { field, degree: degreeLong })
+  }
+  if (slugs.length) {
+    return t('universitySearch.empty.fieldNoMatch', { field })
+  }
+  return t('universitySearch.empty.generic')
+}
+
+function translateCoverageMessage(t, meta) {
+  const selected = meta.selectedCountries?.length || 0
+  const withResults = meta.countriesWithResults?.length || 0
+  if (selected <= 1) return null
+  if (withResults === 0) {
+    return t('universitySearch.results.coverageNone', { total: selected })
+  }
+  if (withResults < selected) {
+    return t('universitySearch.results.coveragePartial', { total: selected, withResults })
+  }
+  return null
+}
+
 export default function UniversityProgramSearch() {
+  const { t } = useTranslation()
   const toast = useToast()
   const navigate = useNavigate()
   const { user } = useAuthStore()
@@ -93,11 +130,10 @@ export default function UniversityProgramSearch() {
 
   useEffect(() => {
     setPageSeo({
-      title: 'Universitet və Proqram Axtarışı | Mentorix',
-      description:
-        'Bakalavr, magistr və doktorantura proqramlarını ölkə, təqaüd və son tarixə görə filtrləyin.',
+      title: t('universitySearch.seo.title'),
+      description: t('universitySearch.seo.description'),
     })
-  }, [])
+  }, [t])
 
   const fetchPrograms = useCallback(async (nextFilters) => {
     setLoading(true)
@@ -118,11 +154,11 @@ export default function UniversityProgramSearch() {
       setSuggestDegreeLevel(result.suggestDegreeLevel || null)
     } catch (e) {
       setUsedFallback(true)
-      toast(e?.message || 'Axtarış uğursuz oldu', 'error')
+      toast(e?.message || t('universitySearch.toasts.searchFailed'), 'error')
     } finally {
       setLoading(false)
     }
-  }, [toast])
+  }, [toast, t])
 
   const syncUrl = useCallback(
     (nextView, nextFilters) => {
@@ -206,9 +242,9 @@ export default function UniversityProgramSearch() {
           program_id: program.id,
           status: 'submitted',
         })
-        toast('Müraciət qeydə alındı')
+        toast(t('universitySearch.toasts.applicationRecorded'))
       } catch (e) {
-        toast(e?.message || 'Müraciət qeydə alınmadı', 'error')
+        toast(e?.message || t('universitySearch.toasts.applicationFailed'), 'error')
       }
     }
 
@@ -216,7 +252,7 @@ export default function UniversityProgramSearch() {
     if (applyUrl) {
       window.open(applyUrl, '_blank', 'noopener,noreferrer')
     } else {
-      toast('Rəsmi apply linki mövcud deyil', 'error')
+      toast(t('universitySearch.toasts.noApplyLink'), 'error')
     }
   }
 
@@ -253,25 +289,24 @@ export default function UniversityProgramSearch() {
   }
 
   const resultLabel = useMemo(() => {
-    if (loading) return 'Axtarılır…'
-    return `${pagination.total || 0} proqram tapıldı`
-  }, [loading, pagination.total])
+    if (loading) return t('universitySearch.results.searching')
+    return t('universitySearch.results.programsFound', { count: pagination.total || 0 })
+  }, [loading, pagination.total, t])
 
   const displayEmptyMessage = useMemo(() => {
     if (programs.length) return null
-    return (
-      emptyMessage ||
-      buildEmptyResultsMessage({
-        ...filters,
-        degreeLevel: filters.degree_level,
-        fields: filters.fields?.length ? filters.fields : filters.field ? [filters.field] : [],
-      })
-    )
-  }, [programs.length, emptyMessage, filters])
+    if (emptyMessage) return emptyMessage
+    return translateEmptyMessage(t, filters)
+  }, [programs.length, emptyMessage, filters, t])
 
   const countryResultsMeta = useMemo(
     () => buildCountryResultsMeta(programs, filters.countries),
     [programs, filters.countries],
+  )
+
+  const coverageMessage = useMemo(
+    () => translateCoverageMessage(t, countryResultsMeta),
+    [t, countryResultsMeta],
   )
 
   const displaySuggestDegree = suggestDegreeLevel || (!programs.length && filters.degree_level === 'PhD' ? 'MSc' : null)
@@ -280,35 +315,35 @@ export default function UniversityProgramSearch() {
   const useGroupedResults = countryResultsMeta.groups.length > 1
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white">
-      <header className="border-b border-white/10 bg-black/40 backdrop-blur-md sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between gap-4">
-          <Link to={user ? dashboardPathForRole(user.role) : '/login'} className="shrink-0">
-            <Brand />
+    <div className="min-h-screen bg-[#0a0a0a] text-white flex flex-col">
+      <PublicPageTopBar
+        backTo="/"
+        title={t('universitySearch.page.title')}
+        subtitle={t('universitySearch.page.subtitle')}
+      >
+        {view === 'results' ? (
+          <Button type="button" variant="secondary" className="text-xs" onClick={() => syncUrl('wizard', filters)}>
+            {t('universitySearch.actions.newSearch')}
+          </Button>
+        ) : null}
+        {!user ? (
+          <Link
+            to="/login"
+            className="inline-flex items-center justify-center min-h-[40px] px-3 text-sm font-semibold text-gray-300 hover:text-white rounded-lg hover:bg-white/5 transition-colors"
+          >
+            {t('universitySearch.actions.login')}
           </Link>
-          <div className="flex items-center gap-2">
-            {view === 'results' ? (
-              <Button type="button" variant="secondary" className="text-xs" onClick={() => syncUrl('wizard', filters)}>
-                Yeni axtarış
-              </Button>
-            ) : null}
-            {!user ? (
-              <Link to="/login" className="text-sm text-gray-300 hover:text-white">
-                Daxil ol
-              </Link>
-            ) : null}
-          </div>
-        </div>
-      </header>
+        ) : null}
+      </PublicPageTopBar>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-10 space-y-8">
-        <div className="space-y-2 text-center max-w-2xl mx-auto">
-          <p className="text-xs font-semibold uppercase tracking-widest text-primary">Mentorix Apply</p>
-          <h1 className="font-display text-2xl sm:text-4xl font-bold">Universitet və Proqram Axtarışı</h1>
-          <p className="text-sm text-gray-400">
-            Profilinizi doldurun, uyğun proqramları tapın və rəsmi portala birbaşa keçid edin.
-          </p>
-        </div>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10 space-y-8 w-full flex-1">
+        {view === 'wizard' ? (
+          <div className="space-y-2 text-center max-w-2xl mx-auto">
+            <p className="text-xs font-semibold uppercase tracking-widest text-primary">
+              {t('universitySearch.page.badge')}
+            </p>
+          </div>
+        ) : null}
 
         {view === 'wizard' ? (
           <UniversitySearchWizard
@@ -337,7 +372,7 @@ export default function UniversityProgramSearch() {
               />
               {usedFallback ? (
                 <p className="text-xs text-amber-300/90 rounded-xl border border-amber-500/25 bg-amber-500/10 px-3 py-2">
-                  Canlı kataloq hazırda əlçatan deyil — nümunə (demo) proqramlar göstərilir. Müraciət linkləri realdır.
+                  {t('universitySearch.results.fallbackNotice')}
                 </p>
               ) : null}
               <div className="flex flex-wrap items-center justify-between gap-3">
@@ -355,7 +390,7 @@ export default function UniversityProgramSearch() {
                         syncUrl('results', next)
                       }}
                     >
-                      Əvvəlki
+                      {t('universitySearch.actions.previous')}
                     </Button>
                     <Button
                       type="button"
@@ -368,7 +403,7 @@ export default function UniversityProgramSearch() {
                         syncUrl('results', next)
                       }}
                     >
-                      Növbəti
+                      {t('universitySearch.actions.next')}
                     </Button>
                   </div>
                 ) : null}
@@ -379,7 +414,7 @@ export default function UniversityProgramSearch() {
                   total={pagination.total || 0}
                   selectedCountries={countryResultsMeta.selectedCountries}
                   countryCounts={countryResultsMeta.countryCounts}
-                  coverageMessage={countryResultsMeta.coverageMessage}
+                  coverageMessage={coverageMessage}
                   countriesWithResults={countryResultsMeta.countriesWithResults}
                 />
               ) : null}
@@ -412,7 +447,7 @@ export default function UniversityProgramSearch() {
               ) : (
                 <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-10 text-center">
                   <p className="text-gray-300">
-                    {displayEmptyMessage || 'Uyğun proqram tapılmadı.'}
+                    {displayEmptyMessage || t('universitySearch.results.noResults')}
                   </p>
                   {displaySuggestDegree ? (
                     <Button
@@ -425,7 +460,7 @@ export default function UniversityProgramSearch() {
                         fetchPrograms(next)
                       }}
                     >
-                      Magistr (MSc) ilə yoxla
+                      {t('universitySearch.actions.tryMsc')}
                     </Button>
                   ) : null}
                   <Button
@@ -434,7 +469,7 @@ export default function UniversityProgramSearch() {
                     className={displaySuggestDegree ? 'mt-3' : 'mt-4'}
                     onClick={() => navigate('/universities?view=wizard')}
                   >
-                    Filtrləri dəyiş
+                    {t('universitySearch.actions.changeFilters')}
                   </Button>
                 </div>
               )}

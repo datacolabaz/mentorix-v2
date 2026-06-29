@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import Modal from '../common/Modal'
 import Button from '../common/Button'
 import { formatDeadline, formatTuition, fieldLabel } from '../../lib/universitySearch'
@@ -10,27 +11,31 @@ const LANGUAGE_EXAM_LABELS = {
   goethe: 'Goethe',
 }
 
-const REQUIREMENT_LABELS = {
-  min_gpa: 'Minimum GPA',
-  min_language: 'Dil imtahanı',
-  documents: 'Sənədlər',
-  work_experience_years: 'İş təcrübəsi',
-  portfolio_required: 'Portfolio',
-  entrance_exam: 'Qəbul imtahanı',
-  interview: 'Müsahibə',
-  notes: 'Qeyd',
+function useRequirementLabels(t) {
+  return {
+    min_gpa: t('universitySearch.detail.req.minGpa'),
+    min_language: t('universitySearch.detail.req.minLanguage'),
+    documents: t('universitySearch.detail.req.documents'),
+    work_experience_years: t('universitySearch.detail.req.workExperience'),
+    portfolio_required: t('universitySearch.detail.req.portfolio'),
+    entrance_exam: t('universitySearch.detail.req.entranceExam'),
+    interview: t('universitySearch.detail.req.interview'),
+    notes: t('universitySearch.detail.req.notes'),
+  }
 }
 
-const DOCUMENT_LABELS = {
-  CV: 'CV (resümə)',
-  Transcript: 'Transkript',
-  'Motivation letter': 'Motivasiya məktubu',
-  'Research proposal': 'Tədqiqat planı',
-  Passport: 'Pasport',
-  Diploma: 'Diplom',
+function useDocumentLabels(t) {
+  return {
+    CV: t('universitySearch.detail.doc.cv'),
+    Transcript: t('universitySearch.detail.doc.transcript'),
+    'Motivation letter': t('universitySearch.detail.doc.motivation'),
+    'Research proposal': t('universitySearch.detail.doc.research'),
+    Passport: t('universitySearch.detail.doc.passport'),
+    Diploma: t('universitySearch.detail.doc.diploma'),
+  }
 }
 
-function formatRequirementValue(key, value) {
+function formatRequirementValue(key, value, { documentLabels, yes, no }) {
   if (value == null || value === '') return null
   if (key === 'min_language' && typeof value === 'object') {
     const parts = Object.entries(value)
@@ -39,33 +44,40 @@ function formatRequirementValue(key, value) {
     return parts.length ? parts.join(', ') : null
   }
   if (key === 'documents' && Array.isArray(value)) {
-    return value.map((doc) => DOCUMENT_LABELS[doc] || doc)
+    return value.map((doc) => documentLabels[doc] || doc)
   }
-  if (typeof value === 'boolean') return value ? 'Bəli' : 'Xeyr'
+  if (typeof value === 'boolean') return value ? yes : no
   if (Array.isArray(value)) return value.map((item) => String(item))
   if (typeof value === 'object') {
     return Object.entries(value)
-      .map(([k, v]) => `${REQUIREMENT_LABELS[k] || k}: ${v}`)
+      .map(([k, v]) => `${k}: ${v}`)
       .join(', ')
   }
   return String(value)
 }
 
 function RequirementsBlock({ requirements }) {
+  const { t } = useTranslation()
+  const requirementLabels = useRequirementLabels(t)
+  const documentLabels = useDocumentLabels(t)
+  const noReq = t('universitySearch.detail.noRequirements')
+  const yes = t('universitySearch.detail.yes')
+  const no = t('universitySearch.detail.no')
+
   if (!requirements || typeof requirements !== 'object') {
-    return <p className="text-sm text-gray-400">Tələblər göstərilməyib.</p>
+    return <p className="text-sm text-gray-400">{noReq}</p>
   }
 
   const entries = Object.entries(requirements)
     .map(([key, value]) => {
-      const formatted = formatRequirementValue(key, value)
+      const formatted = formatRequirementValue(key, value, { documentLabels, yes, no })
       if (formatted == null) return null
-      return { key, label: REQUIREMENT_LABELS[key] || key.replace(/_/g, ' '), formatted }
+      return { key, label: requirementLabels[key] || key.replace(/_/g, ' '), formatted }
     })
     .filter(Boolean)
 
   if (!entries.length) {
-    return <p className="text-sm text-gray-400">Tələblər göstərilməyib.</p>
+    return <p className="text-sm text-gray-400">{noReq}</p>
   }
 
   return (
@@ -96,6 +108,7 @@ function RequirementsBlock({ requirements }) {
 }
 
 export default function ProgramDetailModal({ program, open, onClose, onApply }) {
+  const { t } = useTranslation()
   if (!program) return null
   const uni = program.university || {}
 
@@ -107,68 +120,78 @@ export default function ProgramDetailModal({ program, open, onClose, onApply }) 
           <p className="text-sm text-gray-400">
             {uni.country}
             {uni.city ? ` · ${uni.city}` : ''}
-            {uni.world_ranking ? ` · Reytinq #${uni.world_ranking}` : ''}
+            {uni.world_ranking ? ` · ${t('universitySearch.detail.ranking', { rank: uni.world_ranking })}` : ''}
           </p>
         </div>
 
         <div className="grid sm:grid-cols-2 gap-3 text-sm">
           <div>
-            <p className="text-gray-500">Dərəcə</p>
+            <p className="text-gray-500">{t('universitySearch.card.degree')}</p>
             <p className="text-white">{program.degree_level}</p>
           </div>
           <div>
-            <p className="text-gray-500">Sahə</p>
+            <p className="text-gray-500">{t('universitySearch.detail.field')}</p>
             <p className="text-white">{fieldLabel(program.field)}</p>
           </div>
           <div>
-            <p className="text-gray-500">Ödəniş</p>
+            <p className="text-gray-500">{t('universitySearch.detail.tuition')}</p>
             <p className="text-white">{formatTuition(program.tuition_fee)}</p>
           </div>
           <div>
-            <p className="text-gray-500">Müddət</p>
-            <p className="text-white">{program.duration_years ? `${program.duration_years} il` : '—'}</p>
+            <p className="text-gray-500">{t('universitySearch.wizard.review.duration')}</p>
+            <p className="text-white">
+              {program.duration_years
+                ? t('universitySearch.detail.years', { count: program.duration_years })
+                : '—'}
+            </p>
           </div>
           <div>
-            <p className="text-gray-500">Dil</p>
+            <p className="text-gray-500">{t('universitySearch.card.language')}</p>
             <p className="text-white">{program.language || '—'}</p>
           </div>
           <div>
-            <p className="text-gray-500">Son tarix</p>
+            <p className="text-gray-500">{t('universitySearch.card.deadline')}</p>
             <p className="text-white">{formatDeadline(program.next_deadline)}</p>
           </div>
         </div>
 
         {uni.housing_info ? (
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Yataqxana</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">
+              {t('universitySearch.detail.housing')}
+            </p>
             <p className="text-sm text-gray-300">{uni.housing_info}</p>
           </div>
         ) : null}
 
         {uni.funding_info ? (
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Maliyyələşdirmə</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">
+              {t('universitySearch.detail.funding')}
+            </p>
             <p className="text-sm text-gray-300">{uni.funding_info}</p>
           </div>
         ) : null}
 
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Qəbul tələbləri</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">
+            {t('universitySearch.detail.admissionRequirements')}
+          </p>
           <RequirementsBlock requirements={program.requirements} />
         </div>
 
         {program.mentor?.display_name ? (
           <div className="rounded-xl border border-violet-500/25 bg-violet-500/10 p-4 space-y-2">
-            <p className="text-sm text-white font-medium">Mentor: {program.mentor.display_name}</p>
-            <p className="text-xs text-gray-400">
-              Bu proqram üzrə qəbul və müraciət prosesində pullu konsultasiya ala bilərsiniz.
+            <p className="text-sm text-white font-medium">
+              {t('universitySearch.detail.mentorTitle', { name: program.mentor.display_name })}
             </p>
+            <p className="text-xs text-gray-400">{t('universitySearch.detail.mentorDesc')}</p>
             {program.mentor.user_id ? (
               <a
                 href={`/teachers/${program.mentor.user_id}`}
                 className="inline-flex text-xs font-semibold text-violet-300 hover:text-white underline"
               >
-                Mentor profilinə keç
+                {t('universitySearch.detail.mentorProfile')}
               </a>
             ) : null}
           </div>
@@ -176,10 +199,10 @@ export default function ProgramDetailModal({ program, open, onClose, onApply }) 
 
         <div className="flex flex-wrap gap-2 justify-end pt-2">
           <Button type="button" variant="ghost" onClick={onClose}>
-            Bağla
+            {t('universitySearch.actions.close')}
           </Button>
           <Button type="button" onClick={() => onApply?.(program)}>
-            Apply — rəsmi sayt
+            {t('universitySearch.detail.applyOfficial')}
           </Button>
         </div>
       </div>

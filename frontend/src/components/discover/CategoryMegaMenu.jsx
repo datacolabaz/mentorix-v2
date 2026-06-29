@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import api from '../../lib/api'
 
 function GoldStar({ className = '' }) {
@@ -75,6 +76,7 @@ function CategoryList({ nodes, activeId, onHover, onPick, emptyLabel }) {
 }
 
 export default function CategoryMegaMenu({ onPick, activeCategoryId }) {
+  const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const [tree, setTree] = useState([])
   const [popular, setPopular] = useState([])
@@ -112,7 +114,7 @@ export default function CategoryMegaMenu({ onPick, activeCategoryId }) {
     }
   }, [])
 
-  const rootNode = tree.find((t) => t.id === hoverRoot)
+  const rootNode = tree.find((node) => node.id === hoverRoot)
   const childNode = rootNode?.subcategories?.find((c) => c.id === hoverChild)
   const grandChildren = childNode?.subcategories || []
 
@@ -160,7 +162,7 @@ export default function CategoryMegaMenu({ onPick, activeCategoryId }) {
           onClick={() => setOpen((o) => !o)}
           className="text-[11px] font-bold px-2.5 py-1 rounded-lg border border-primary/40 text-primary bg-primary/10"
         >
-          Bütün fənlər ▾
+          {t('marketplace.categories.allSubjects')}
         </button>
       </div>
 
@@ -169,12 +171,14 @@ export default function CategoryMegaMenu({ onPick, activeCategoryId }) {
           <button
             type="button"
             className="fixed inset-0 z-[600] bg-black/50 backdrop-blur-[1px]"
-            aria-label="Bağla"
+            aria-label={t('marketplace.categories.close')}
             onClick={() => setOpen(false)}
           />
           <div className="absolute left-0 right-0 sm:right-auto z-[700] mt-2 flex rounded-xl border border-white/15 bg-[#12121f] shadow-2xl overflow-hidden max-w-[min(100vw-1rem,860px)]">
             <div className="border-r border-white/10 bg-[#0f0f18]">
-              <p className="px-3 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Kateqoriya</p>
+              <p className="px-3 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider">
+                {t('marketplace.categories.category')}
+              </p>
               <CategoryList
                 nodes={tree}
                 activeId={hoverRoot}
@@ -188,27 +192,17 @@ export default function CategoryMegaMenu({ onPick, activeCategoryId }) {
             </div>
             <div className="border-r border-white/10 min-w-[200px]">
               <p className="px-3 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider truncate">
-                {rootNode?.name_az || 'Alt qrup'}
+                {rootNode?.name_az || t('marketplace.categories.subgroup')}
               </p>
               <CategoryList
                 nodes={rootNode?.subcategories || []}
                 activeId={hoverChild}
                 onHover={(n) => setHoverChild(n.id)}
                 onPick={handlePick}
-                emptyLabel="Alt kateqoriya yoxdur"
+                emptyLabel={t('marketplace.categories.noSubcategories')}
               />
             </div>
             {grandChildren.length > 0 ? (
               <div className="min-w-[200px]">
                 <p className="px-3 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider truncate">
-                  {childNode?.name_az}
-                </p>
-                <CategoryList nodes={grandChildren} onPick={handlePick} emptyLabel="—" />
-              </div>
-            ) : null}
-          </div>
-        </>
-      ) : null}
-    </div>
-  )
-}
+               

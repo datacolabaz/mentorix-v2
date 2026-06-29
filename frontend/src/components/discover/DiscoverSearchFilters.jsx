@@ -1,19 +1,34 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import api from '../../lib/api'
-import { areaKindLabel, groupServiceAreas } from '../../lib/serviceAreaGroups'
+import { groupServiceAreas } from '../../lib/serviceAreaGroups'
 
-const FORMAT_OPTIONS = [
-  { value: 'any', label: 'Fərq etmir' },
-  { value: 'online', label: 'Onlayn' },
-  { value: 'teacher_place', label: 'Canlı (Müəllimin yanında)' },
-  { value: 'student_place', label: 'Canlı (Mənim evimdə)' },
-]
+const FORMAT_VALUES = ['any', 'online', 'teacher_place', 'student_place']
 
 export default function DiscoverSearchFilters({ value, onChange }) {
+  const { t } = useTranslation()
   const [categoryQuery, setCategoryQuery] = useState('')
   const [suggestions, setSuggestions] = useState([])
   const [areas, setAreas] = useState([])
   const [searching, setSearching] = useState(false)
+
+  const formatOptions = useMemo(
+    () =>
+      FORMAT_VALUES.map((valueKey) => ({
+        value: valueKey,
+        label: t(`marketplace.filters.format.${valueKey === 'teacher_place' ? 'teacherPlace' : valueKey === 'student_place' ? 'studentPlace' : valueKey}`),
+      })),
+    [t],
+  )
+
+  const areaKindLabel = useCallback(
+    (kind) => {
+      if (kind === 'metro') return t('marketplace.filters.areaKind.metro')
+      if (kind === 'region') return t('marketplace.filters.areaKind.region')
+      return t('marketplace.filters.areaKind.baku')
+    },
+    [t],
+  )
 
   const v = value || {}
   const showLocation = v.format === 'teacher_place' || v.format === 'student_place'
@@ -51,8 +66,8 @@ export default function DiscoverSearchFilters({ value, onChange }) {
   }, [])
 
   useEffect(() => {
-    const t = window.setTimeout(() => void runSearch(categoryQuery), 280)
-    return () => window.clearTimeout(t)
+    const timer = window.setTimeout(() => void runSearch(categoryQuery), 280)
+    return () => window.clearTimeout(timer)
   }, [categoryQuery, runSearch])
 
   const areaGroups = useMemo(() => groupServiceAreas(areas), [areas])
@@ -69,7 +84,7 @@ export default function DiscoverSearchFilters({ value, onChange }) {
     <div className="space-y-3">
       <div>
         <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wide block mb-1.5">
-          Nə öyrənmək istəyirsiniz?
+          {t('marketplace.filters.categoryQuestion')}
         </label>
         <div className="relative">
           <input
@@ -79,7 +94,7 @@ export default function DiscoverSearchFilters({ value, onChange }) {
               setCategoryQuery(e.target.value)
               if (!e.target.value.trim()) patch({ category_id: null, category_slug: null, category_name: null })
             }}
-            placeholder="Riyaziyyat, Python, IELTS…"
+            placeholder={t('marketplace.filters.categoryPlaceholder')}
             className="w-full rounded-xl border border-white/15 bg-[#13112e] px-3 py-2.5 text-sm text-white placeholder:text-gray-500 focus:border-primary/50 focus:outline-none"
           />
           {searching ? (
@@ -103,7 +118,9 @@ export default function DiscoverSearchFilters({ value, onChange }) {
                     }}
                   >
                     {s.name_az}
-                    {s.is_popular ? <span className="ml-2 text-[10px] text-amber-400">Populyar</span> : null}
+                    {s.is_popular ? (
+                      <span className="ml-2 text-[10px] text-amber-400">{t('marketplace.filters.popular')}</span>
+                    ) : null}
                   </button>
                 </li>
               ))}
@@ -116,17 +133,17 @@ export default function DiscoverSearchFilters({ value, onChange }) {
             className="mt-1 text-[11px] text-primary hover:underline"
             onClick={() => patch({ category_id: null, category_slug: null, category_name: null })}
           >
-            Seçimi sil: {selectedLabel}
+            {t('marketplace.filters.clearSelection', { name: selectedLabel })}
           </button>
         ) : null}
       </div>
 
       <div>
         <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wide block mb-1.5">
-          Dərs formatı
+          {t('marketplace.filters.formatTitle')}
         </label>
         <div className="flex flex-wrap gap-1.5">
-          {FORMAT_OPTIONS.map((opt) => (
+          {formatOptions.map((opt) => (
             <button
               key={opt.value}
               type="button"
@@ -151,16 +168,16 @@ export default function DiscoverSearchFilters({ value, onChange }) {
       {showLocation ? (
         <div>
           <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wide block mb-1.5">
-            Harada?
+            {t('marketplace.filters.locationTitle')}
           </label>
           <select
             className="w-full rounded-xl border border-white/15 bg-[#13112e] px-3 py-2 text-sm text-white"
             value={v.area_id || ''}
             onChange={(e) => patch({ area_id: e.target.value || null })}
           >
-            <option value="">Rayon, şəhər və ya metro seçin</option>
+            <option value="">{t('marketplace.filters.locationPlaceholder')}</option>
             {areaGroups.popular.length ? (
-              <optgroup label="Populyar">
+              <optgroup label={t('marketplace.filters.areaGroups.popular')}>
                 {areaGroups.popular.map((a) => (
                   <option key={a.id} value={a.id}>
                     {a.name_az} ({areaKindLabel(a.kind)})
@@ -169,35 +186,10 @@ export default function DiscoverSearchFilters({ value, onChange }) {
               </optgroup>
             ) : null}
             {areaGroups.bakuDistricts.length ? (
-              <optgroup label="Bakı rayonları">
+              <optgroup label={t('marketplace.filters.areaGroups.bakuDistricts')}>
                 {areaGroups.bakuDistricts.map((a) => (
                   <option key={a.id} value={a.id}>
                     {a.name_az}
                   </option>
                 ))}
-              </optgroup>
-            ) : null}
-            {areaGroups.metros.length ? (
-              <optgroup label="Metro">
-                {areaGroups.metros.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.name_az}
-                  </option>
-                ))}
-              </optgroup>
-            ) : null}
-            {areaGroups.regions.length ? (
-              <optgroup label="Azərbaycan rayonları">
-                {areaGroups.regions.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.name_az}
-                  </option>
-                ))}
-              </optgroup>
-            ) : null}
-          </select>
-        </div>
-      ) : null}
-    </div>
-  )
-}
+     

@@ -1840,6 +1840,365 @@
       }
     }
   },
+  "publicNav": {
+    "backHome": "Ana səhifə"
+  },
+  "universitySearch": {
+    "seo": {
+      "title": "Universitet və Proqram Axtarışı | Mentorix",
+      "description": "Bakalavr, magistr və doktorantura proqramlarını ölkə, təqaüd və son tarixə görə filtrləyin."
+    },
+    "page": {
+      "badge": "Mentorix Apply",
+      "title": "Universitet və Proqram Axtarışı",
+      "subtitle": "Profilinizi doldurun, uyğun proqramları tapın və rəsmi portala birbaşa keçid edin."
+    },
+    "actions": {
+      "newSearch": "Yeni axtarış",
+      "login": "Daxil ol",
+      "previous": "Əvvəlki",
+      "next": "Növbəti",
+      "back": "Geri",
+      "close": "Bağla",
+      "searchPrograms": "Proqramları axtar",
+      "reset": "Sıfırla",
+      "details": "Ətraflı",
+      "apply": "Apply",
+      "changeFilters": "Filtrləri dəyiş",
+      "tryMsc": "Magistr (MSc) ilə yoxla"
+    },
+    "toasts": {
+      "searchFailed": "Axtarış uğursuz oldu",
+      "applicationRecorded": "Müraciət qeydə alındı",
+      "applicationFailed": "Müraciət qeydə alınmadı",
+      "noApplyLink": "Rəsmi apply linki mövcud deyil"
+    },
+    "results": {
+      "searching": "Axtarılır…",
+      "programsFound": "{{count}} proqram tapıldı",
+      "fallbackNotice": "Canlı kataloq hazırda əlçatan deyil — nümunə (demo) proqramlar göstərilir. Müraciət linkləri realdır.",
+      "noResults": "Uyğun proqram tapılmadı.",
+      "coverageNone": "Seçilmiş {{total}} ölkədə uyğun proqram tapılmadı.",
+      "coveragePartial": "Seçilmiş {{total}} ölkədən yalnız {{withResults}} ölkədə uyğun proqram tapıldı.",
+      "selectedCountries": "Seçilmiş ölkələr",
+      "countriesWithResults": "Uyğun nəticə tapılan ölkələr",
+      "filterPartialNote": "Filtr işləyir — bəzi ölkələrdə seçdiyiniz kriteriyalara uyğun proqram hazırda yoxdur."
+    },
+    "empty": {
+      "selectedField": "seçilmiş ixtisas",
+      "phd": "{{field}} üzrə PhD proqramları hazırda yüklənir. Nümunə üçün \"Magistr (MSc)\" dərəcəsini seçib yoxlaya bilərsiniz.",
+      "degreeLimited": "{{field}} üzrə {{degree}} proqramları hazırda məhduddur. Filtrləri genişləndirin və ya başqa dərəcə sınayın.",
+      "fieldNoMatch": "{{field}} üzrə uyğun proqram hazırda tapılmadı. Ölkə və ya dərəcə filtrini dəyişməyi sınayın.",
+      "generic": "Uyğun proqram tapılmadı. Filtrləri dəyişdirin."
+    },
+    "degrees": {
+      "bsc": "Bakalavr",
+      "msc": "Magistr",
+      "phd": "Doktorantura",
+      "bscFull": "BSc (Bakalavr)",
+      "mscFull": "MSc (Magistr)",
+      "phdFull": "PhD",
+      "bscLong": "Bakalavr (BSc)",
+      "mscLong": "Magistr (MSc)",
+      "phdLong": "Doktorantura (PhD)"
+    },
+    "wizard": {
+      "stepOf": "Addım {{step}} / {{total}}",
+      "steps": {
+        "degree": "Dərəcə",
+        "field": "İxtisas",
+        "academic": "Akademik",
+        "preferences": "Üstünlüklər",
+        "review": "Yoxlama"
+      },
+      "fieldLabel": "İxtisas sahəsi",
+      "selectPlaceholder": "— Seçin —",
+      "gpaScale": "GPA (4.0 şkalası)",
+      "gpaPlaceholder": "Məs: 3.2",
+      "languageExam": "Dil imtahanı",
+      "score": "Bal",
+      "countryPicker": "Ölkə seçimi",
+      "budget": "Büdcə",
+      "durationPreference": "Müddət üstünlüyü",
+      "durationAny": "Fərq etmir",
+      "durationYears": "{{count}} il",
+      "reviewHint": "Məlumatlarınız əsasında uyğun proqramlar axtarılacaq.",
+      "review": {
+        "degree": "Dərəcə",
+        "field": "İxtisas",
+        "gpa": "GPA",
+        "languageScore": "Dil balı",
+        "countries": "Ölkələr",
+        "budget": "Büdcə",
+        "duration": "Müddət",
+        "allCountries": "Hamısı"
+      }
+    },
+    "budget": {
+      "0-3000": "0 – 3 000 € / il",
+      "3000-8000": "3 000 – 8 000 € / il",
+      "8000+": "8 000 €+ / il",
+      "any": "Fərq etmir"
+    },
+    "duration": {
+      "1": "1 il",
+      "2": "2 il",
+      "3": "3 il",
+      "4": "4+ il"
+    },
+    "filters": {
+      "title": "Filtrlər",
+      "universityProgram": "Universitet / proqram",
+      "universityProgramPlaceholder": "Məs: Politecnico, Warsaw, Informatics",
+      "universityProgramHint": "Universitet və ya proqram adının bir hissəsini yazın.",
+      "field": "İxtisas",
+      "countries": "Ölkələr",
+      "universityType": "Universitet tipi",
+      "all": "Hamısı",
+      "private": "Xüsusi",
+      "public": "Dövlət",
+      "degree": "Dərəcə",
+      "powerFilters": "Güclü filtrlər",
+      "scholarship": "Təqaüd var",
+      "englishOnly": "İngilis dili",
+      "noIelts": "IELTS tələb etmir",
+      "noMotivation": "Motivasiya məktubu tələb etmir",
+      "qsTop500": "QS top 500",
+      "minIelts": "Min IELTS balınız",
+      "minToefl": "Min TOEFL balınız",
+      "maxTuition": "Max təhsil haqqı (€/il)",
+      "deadline": "Son müraciət tarixi",
+      "sort": "Sıralama",
+      "sortRanking": "Dünya reytinqi",
+      "sortTuitionAsc": "Ödəniş (aşağı)",
+      "sortTuitionDesc": "Ödəniş (yuxarı)",
+      "sortDeadline": "Son tarix",
+      "placeholderIelts": "Məs: 6.5",
+      "placeholderToefl": "Məs: 90",
+      "placeholderTuition": "Məs: 5000"
+    },
+    "card": {
+      "degree": "Dərəcə",
+      "qsRanking": "QS reytinqi",
+      "annualFee": "İllik haqq",
+      "applicationFee": "Müraciət haqqı",
+      "language": "Dil",
+      "ielts": "IELTS",
+      "ieltsNotRequired": "Tələb yoxdur",
+      "deadline": "Son tarix",
+      "scholarship": "Təqaüd",
+      "scholarshipYes": "Mövcuddur",
+      "scholarshipNo": "Yoxdur",
+      "mentor": "Bu proqram üzrə mentor: {{name}}"
+    },
+    "ai": {
+      "title": "AI uyğunluq axtarışı",
+      "description": "GPA, IELTS, büdcə və ixtisası bir cümlədə yazın — sistem uyğun proqramları tapır.",
+      "placeholder": "Məs: GPA 3.2, IELTS 6.5, büdcəm 4000 avro. AI üzrə magistr istəyirəm. Polşa və Estoniya.",
+      "hint": "Məs: QS top 500, təqaüd var, ingilis dili",
+      "searching": "Axtarılır…",
+      "search": "AI ilə tap",
+      "failed": "AI axtarış uğursuz oldu"
+    },
+    "detail": {
+      "noRequirements": "Tələblər göstərilməyib.",
+      "yes": "Bəli",
+      "no": "Xeyr",
+      "field": "Sahə",
+      "tuition": "Ödəniş",
+      "years": "{{count}} il",
+      "ranking": "Reytinq #{{rank}}",
+      "housing": "Yataqxana",
+      "funding": "Maliyyələşdirmə",
+      "admissionRequirements": "Qəbul tələbləri",
+      "mentorTitle": "Mentor: {{name}}",
+      "mentorDesc": "Bu proqram üzrə qəbul və müraciət prosesində pullu konsultasiya ala bilərsiniz.",
+      "mentorProfile": "Mentor profilinə keç",
+      "applyOfficial": "Apply — rəsmi sayt",
+      "req": {
+        "minGpa": "Minimum GPA",
+        "minLanguage": "Dil imtahanı",
+        "documents": "Sənədlər",
+        "workExperience": "İş təcrübəsi",
+        "portfolio": "Portfolio",
+        "entranceExam": "Qəbul imtahanı",
+        "interview": "Müsahibə",
+        "notes": "Qeyd"
+      },
+      "doc": {
+        "cv": "CV (resümə)",
+        "transcript": "Transkript",
+        "motivation": "Motivasiya məktubu",
+        "research": "Tədqiqat planı",
+        "passport": "Pasport",
+        "diploma": "Diplom"
+      }
+    }
+  },
+  "marketplace": {
+    "title": "Müəllim tap — Mentorix",
+    "subtitle": "Məsafəyə görə sıralanmış müəllimlər · reytinq · format · WhatsApp (qeydiyyatdan sonra)",
+    "backToLogin": "Girişə qayıt",
+    "kind": {
+      "all": "Hamısı",
+      "teacher": "Müəllim",
+      "trainer": "Təlimçi"
+    },
+    "results": {
+      "noneFound": "Müəllim tapılmadı",
+      "nearestTeachers": "Sizə ən yaxın {{count}} müəllim tapıldı",
+      "nearestTrainers": "Sizə ən yaxın {{count}} təlimçi tapıldı",
+      "nearestAll": "Sizə ən yaxın {{count}} nəticə tapıldı",
+      "teachersFound": "{{count}} müəllim tapıldı",
+      "trainersFound": "{{count}} təlimçi tapıldı",
+      "allFound": "{{count}} nəticə tapıldı"
+    },
+    "distance": {
+      "label": "Məsafə",
+      "fromYouWithLabel": "Sizdən ({{label}})",
+      "fromYou": "Sizdən",
+      "locating": "Mövqe axtarılır…",
+      "fromBakuCenter": "Bakı mərkəzindən (təxmini)",
+      "refreshing": "Yenilənir…",
+      "currentPosition": "Cari mövqeyiniz",
+      "bakuCenter": "Bakı (Badamdar / mərkəz)",
+      "locatingHint": "Mövqəniz müəyyən edilir…"
+    },
+    "searching": "Müəllimlər axtarılır…",
+    "nearestBadge": "📍 Sizə ən yaxın",
+    "nearestKindName": "{{kind}}: {{name}}",
+    "empty": {
+      "title": "Bu ərazidə müəllim yoxdur",
+      "hint": "Radiusu artırın və ya filteri dəyişin.",
+      "retryNearMe": "Mənim yaxınlığımda yenidən yoxla"
+    },
+    "nearMe": "Mənim yaxınlığımda",
+    "radius": "Radius",
+    "radiusKm": "{{km}} km",
+    "errors": {
+      "fetchFailed": "Məlumat alınmadı",
+      "network": "Şəbəkə xətası",
+      "whatsappNoNumber": "Müəllimin WhatsApp nömrəsi yoxdur — müraciət formunu doldurun.",
+      "whatsappOpenFailed": "WhatsApp açılmadı"
+    },
+    "seo": {
+      "brand": "Mentorix",
+      "searchTitle": "Müəllim tap",
+      "defaultTitle": "Müəllim tap — axtarış | Mentorix",
+      "defaultDescription": "Yaxınlığınızdakı müəllim, repetitor və təlimçiləri məsafəyə görə tapın. Mentorix təhsil idarəetmə platformasının ictimai müəllim axtarış bölməsidir.",
+      "defaultKeywords": "müəllim tap, repetitor axtarışı, təlimçi, Bakı, təhsil idarəetmə platforması, Mentorix",
+      "categoryTitle": "{{category}} müəllimi tap — Mentorix | Bakı",
+      "categoryDescription": "{{category}} repetitoru və müəllimi axtarırsınız? Mentorix-də yaxınlığınızdakı təlimçiləri reytinq və formatla müqayisə edin.",
+      "categoryKeywords": "{{category}}, repetitor, müəllim tap, Bakı, Mentorix"
+    },
+    "filters": {
+      "categoryQuestion": "Nə öyrənmək istəyirsiniz?",
+      "categoryPlaceholder": "Riyaziyyat, Python, IELTS…",
+      "popular": "Populyar",
+      "clearSelection": "Seçimi sil: {{name}}",
+      "formatTitle": "Dərs formatı",
+      "format": {
+        "any": "Fərq etmir",
+        "online": "Onlayn",
+        "teacherPlace": "Canlı (Müəllimin yanında)",
+        "studentPlace": "Canlı (Mənim evimdə)"
+      },
+      "locationTitle": "Harada?",
+      "locationPlaceholder": "Rayon, şəhər və ya metro seçin",
+      "areaGroups": {
+        "popular": "Populyar",
+        "bakuDistricts": "Bakı rayonları",
+        "metros": "Metro",
+        "regions": "Azərbaycan rayonları"
+      },
+      "areaKind": {
+        "metro": "Metro",
+        "region": "Rayon",
+        "baku": "Bakı"
+      }
+    },
+    "categories": {
+      "allSubjects": "Bütün fənlər ▾",
+      "close": "Bağla",
+      "category": "Kateqoriya",
+      "subgroup": "Alt qrup",
+      "noSubcategories": "Alt kateqoriya yoxdur"
+    },
+    "ai": {
+      "title": "AI ilə müəllim tap",
+      "subtitle": "Təbii dildə yazın — uyğun müəllim, qiymət və dərs planı",
+      "forChild": "Övladım üçün axtarıram",
+      "examplePlaceholder": "Məs: Övladım riyaziyyatdan zəifdir, 8-ci sinifdir, Yasamaldadır",
+      "search": "Axtar",
+      "analyzing": "Analiz edilir…",
+      "minChars": "Ən azı 6 simvol yazın.",
+      "searchFailed": "Axtarış alınmadı",
+      "error": "Xəta",
+      "steps": {
+        "tutors": "Uyğun müəllimlər",
+        "pricing": "Təxmini qiymət",
+        "curriculum": "4 həftəlik plan",
+        "cta": "Növbəti addım"
+      },
+      "emptyTitle": "Uyğun müəllim tapılmadı",
+      "emptyMessage": "Bu axtarış üzrə dəqiq uyğun profil yoxdur. Aşağıdakı xəritə və siyahıdan digər müəllimlərə baxa bilərsiniz.",
+      "emptyHint": "↓ Aşağıdakı xəritə və siyahıdan müəllim seçin",
+      "resultsSummary": "{{total}} nəticədən ən yaxşı {{top}}",
+      "trialLesson": "Sınaq dərsi",
+      "message": "Mesaj",
+      "whatsapp": "WhatsApp",
+      "pricingBasedOnOne": "{{name}} profilinə əsasən",
+      "pricingBasedOnMany": "{{count}} uyğun müəllimin tarifinə əsasən",
+      "perLesson": "Dərs başına:",
+      "typical": "(orta ~{{amount}} ₼)",
+      "weekLabel": "Həftə {{week}}: {{title}}",
+      "scheduleTrial": "Sınaq dərsi təyin et",
+      "contactWhatsapp": "WhatsApp ilə əlaqə",
+      "ratePerHour": "{{rate}} ₼/saat"
+    },
+    "card": {
+      "topBadge": "🔥 TOP",
+      "nearest": "📍 Ən yaxın",
+      "featured": "Önə çıxır",
+      "fromYou": "sizdən",
+      "approximate": "təxmini",
+      "noSubject": "Fənn göstərilməyib",
+      "noReviews": "Hələ rəy yoxdur",
+      "ratingLabel": "{{avg}} ({{count}} rəy)",
+      "ratePerHour": "{{rate}} AZN/saat",
+      "viewProfile": "Profilə bax →",
+      "trialLesson": "⚡ Sınaq dərsi",
+      "whatsapp": "💬 WhatsApp"
+    },
+    "inquiry": {
+      "title": "Müraciət et",
+      "successBefore": "Müraciətiniz",
+      "successAfter": "müəlliminə çatdırıldı.",
+      "close": "Bağla",
+      "nameLabel": "Adınız",
+      "phoneLabel": "Telefon",
+      "formatLabel": "Dərs formatı",
+      "levelLabel": "Səviyyə (istəyə görə)",
+      "levelPlaceholder": "Məs: 5-ci sinif, başlanğıc…",
+      "messageLabel": "Qısa mesaj",
+      "cancel": "Ləğv",
+      "submit": "Göndər",
+      "sendFailed": "Göndərilmədi",
+      "error": "Xəta",
+      "format": {
+        "online": "Onlayn",
+        "teacherPlace": "Müəllimin yanında",
+        "studentPlace": "Mənim evimdə"
+      }
+    },
+    "authModal": {
+      "title": "Müəllimlə əlaqə qurmaq üçün qeydiyyatdan keçin",
+      "desc": "Müraciət göndərmək və müəllim profilinə baxmaq üçün pulsuz hesab yaradın və ya daxil olun.",
+      "registerLogin": "Qeydiyyat / Giriş",
+      "later": "Sonra",
+      "footer": "Valideyn və ya tələbə kimi qeydiyyatdan keçə bilərsiniz."
+    }
+  },
   "studentInquiries": {
     "title": "Xəritə müraciətləri",
     "subtitleBefore": "Mentorix axtarış/xəritədə profilinizi tapıb yazan valideyn və tələbələr. Qrup və imtahan təsdiqi üçün",

@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import InstructorAvatar from '../common/InstructorAvatar'
 import { formatDistanceKm } from '../../lib/geo'
 import {
@@ -20,6 +21,7 @@ export default function TeacherMapListCard({
   onWhatsApp,
   whatsappBusy,
 }) {
+  const { t } = useTranslation()
   const subjectLine =
     p.display_subject ||
     (Array.isArray(p.category_names) && p.category_names.length ? p.category_names.join(', ') : null) ||
@@ -27,6 +29,11 @@ export default function TeacherMapListCard({
   const rating = teacherRatingParts(p)
   const formats = deliveryFormatBadges(p)
   const topBadge = showTopBadge(p)
+
+  const ratingLabel =
+    rating && rating.count > 0
+      ? t('marketplace.card.ratingLabel', { avg: rating.avg, count: rating.count })
+      : rating?.label
 
   return (
     <div
@@ -55,17 +62,17 @@ export default function TeacherMapListCard({
           <div className="flex flex-wrap gap-1 mb-1">
             {topBadge ? (
               <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-violet-500/20 text-violet-300">
-                🔥 TOP
+                {t('marketplace.card.topBadge')}
               </span>
             ) : null}
             {isNearest ? (
               <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-sky-500/15 text-sky-300 border border-sky-500/25">
-                📍 Ən yaxın
+                {t('marketplace.card.nearest')}
               </span>
             ) : null}
             {p.is_featured_listing && !topBadge ? (
               <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-amber-500/15 text-amber-300">
-                Önə çıxır
+                {t('marketplace.card.featured')}
               </span>
             ) : null}
           </div>
@@ -77,22 +84,22 @@ export default function TeacherMapListCard({
             <span className="text-xs font-bold text-primary shrink-0 text-right tabular-nums">
               📍 {formatDistanceKm(p.distanceKm ?? p.distance_km)}
               <span className="block text-[10px] font-normal text-gray-500">
-                {distanceOrigin === 'user' ? 'sizdən' : 'təxmini'}
+                {distanceOrigin === 'user' ? t('marketplace.card.fromYou') : t('marketplace.card.approximate')}
               </span>
             </span>
           </div>
 
           <div className={`text-gray-400 mt-0.5 truncate ${comfortable ? 'text-sm' : 'text-xs'}`}>
-            {subjectLine || 'Fənn göstərilməyib'}
+            {subjectLine || t('marketplace.card.noSubject')}
           </div>
 
           {rating ? (
             <div className="mt-1 flex items-center gap-1">
               <span className="text-amber-400 text-xs">⭐</span>
-              <span className="text-[11px] text-amber-200/90 font-semibold tabular-nums">{rating.label}</span>
+              <span className="text-[11px] text-amber-200/90 font-semibold tabular-nums">{ratingLabel}</span>
             </div>
           ) : (
-            <p className="text-[11px] text-gray-500 mt-1">Hələ rəy yoxdur</p>
+            <p className="text-[11px] text-gray-500 mt-1">{t('marketplace.card.noReviews')}</p>
           )}
 
           {formats.length ? (
@@ -109,7 +116,9 @@ export default function TeacherMapListCard({
           ) : null}
 
           {p.discover_hourly_rate != null ? (
-            <div className="text-[11px] text-emerald-400/90 mt-1">{p.discover_hourly_rate} AZN/saat</div>
+            <div className="text-[11px] text-emerald-400/90 mt-1">
+              {t('marketplace.card.ratePerHour', { rate: p.discover_hourly_rate })}
+            </div>
           ) : null}
 
           {p.next_available_slot ? (
@@ -121,7 +130,7 @@ export default function TeacherMapListCard({
             onClick={(e) => e.stopPropagation()}
             className="inline-block text-[11px] font-semibold text-primary hover:underline mt-1.5"
           >
-            Profilə bax →
+            {t('marketplace.card.viewProfile')}
           </Link>
         </div>
       </button>
@@ -131,7 +140,7 @@ export default function TeacherMapListCard({
           onClick={() => onInquiry?.(p)}
           className="text-[10px] font-bold px-2.5 py-2 rounded-lg bg-primary text-black hover:brightness-110 whitespace-nowrap"
         >
-          ⚡ Sınaq dərsi
+          {t('marketplace.card.trialLesson')}
         </button>
         <button
           type="button"
@@ -143,7 +152,7 @@ export default function TeacherMapListCard({
             'hover:bg-[#128C7E]/40 hover:border-[#25D366]',
           ].join(' ')}
         >
-          💬 WhatsApp
+          {t('marketplace.card.whatsapp')}
         </button>
       </div>
     </div>

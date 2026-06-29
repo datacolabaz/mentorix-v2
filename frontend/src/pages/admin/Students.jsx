@@ -347,4 +347,7 @@ export default function AdminStudents() {
             </Button>
           </div>
         )}
-      </Mod
+      </Modal>
+    </div>
+  )
+}

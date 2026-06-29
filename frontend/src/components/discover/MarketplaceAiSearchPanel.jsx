@@ -1,11 +1,9 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import api from '../../lib/api'
 import InstructorAvatar from '../common/InstructorAvatar'
 import { formatDistanceKm } from '../../lib/geo'
-
-const EXAMPLE =
-  'Məs: Övladım riyaziyyatdan zəifdir, 8-ci sinifdir, Yasamaldadır'
 
 function StepBadge({ n, label }) {
   return (
@@ -18,8 +16,11 @@ function StepBadge({ n, label }) {
   )
 }
 
-function TutorMiniCard({ tutor, onInquiry, onWhatsApp, onFocus, whatsappBusy }) {
-  const rate = tutor.discover_hourly_rate != null ? `${tutor.discover_hourly_rate} ₼/saat` : null
+function TutorMiniCard({ tutor, onInquiry, onWhatsApp, onFocus, whatsappBusy, t }) {
+  const rate =
+    tutor.discover_hourly_rate != null
+      ? t('marketplace.ai.ratePerHour', { rate: tutor.discover_hourly_rate })
+      : null
   return (
     <div className="rounded-xl border border-white/10 bg-[#121212]/90 p-3 space-y-2">
       <button type="button" onClick={() => onFocus?.(tutor)} className="flex w-full gap-2.5 text-left min-w-0">
@@ -45,14 +46,14 @@ function TutorMiniCard({ tutor, onInquiry, onWhatsApp, onFocus, whatsappBusy }) 
           onClick={() => onInquiry?.(tutor)}
           className="text-[11px] font-bold px-2.5 py-1.5 rounded-lg bg-primary/20 border border-primary/40 text-primary hover:bg-primary/30"
         >
-          Sınaq dərsi
+          {t('marketplace.ai.trialLesson')}
         </button>
         <button
           type="button"
           onClick={() => onInquiry?.(tutor)}
           className="text-[11px] font-bold px-2.5 py-1.5 rounded-lg border border-white/15 text-gray-300 hover:border-white/30"
         >
-          Mesaj
+          {t('marketplace.ai.message')}
         </button>
         <button
           type="button"
@@ -60,7 +61,7 @@ function TutorMiniCard({ tutor, onInquiry, onWhatsApp, onFocus, whatsappBusy }) 
           onClick={() => onWhatsApp?.(tutor)}
           className="text-[11px] font-bold px-2.5 py-1.5 rounded-lg border border-emerald-500/35 text-emerald-400 hover:bg-emerald-500/10 disabled:opacity-50"
         >
-          WhatsApp
+          {t('marketplace.ai.whatsapp')}
         </button>
       </div>
     </div>
@@ -76,6 +77,7 @@ export default function MarketplaceAiSearchPanel({
   onFocusTutor,
   whatsappBusy,
 }) {
+  const { t } = useTranslation()
   const [query, setQuery] = useState('')
   const [forChild, setForChild] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -86,7 +88,7 @@ export default function MarketplaceAiSearchPanel({
   const runSearch = async () => {
     const q = query.trim()
     if (q.length < 6) {
-      setError('Ən azı 6 simvol yazın.')
+      setError(t('marketplace.ai.minChars'))
       return
     }
     setError('')
@@ -99,7 +101,7 @@ export default function MarketplaceAiSearchPanel({
         lng: userLng ?? null,
       })
       if (!res?.success) {
-        setError(res?.message || 'Axtarış alınmadı')
+        setError(res?.message || t('marketplace.ai.searchFailed'))
         setResult(null)
         return
       }
@@ -113,7 +115,7 @@ export default function MarketplaceAiSearchPanel({
         area_id: ex.area_id || null,
       })
     } catch (e) {
-      setError(e?.message || 'Xəta')
+      setError(e?.message || t('marketplace.ai.error'))
       setResult(null)
     } finally {
       setLoading(false)
@@ -137,8 +139,8 @@ export default function MarketplaceAiSearchPanel({
         className="w-full flex items-center justify-between gap-2 px-4 py-3 text-left hover:bg-white/[0.03]"
       >
         <div>
-          <p className="text-sm font-bold text-white">AI ilə müəllim tap</p>
-          <p className="text-[11px] text-gray-400 mt-0.5">Təbii dildə yazın — uyğun müəllim, qiymət və dərs planı</p>
+          <p className="text-sm font-bold text-white">{t('marketplace.ai.title')}</p>
+          <p className="text-[11px] text-gray-400 mt-0.5">{t('marketplace.ai.subtitle')}</p>
         </div>
         <span className="text-gray-500 text-xs shrink-0">{expanded ? '▲' : '▼'}</span>
       </button>
@@ -152,13 +154,13 @@ export default function MarketplaceAiSearchPanel({
               onChange={(e) => setForChild(e.target.checked)}
               className="rounded border-white/20 bg-[#1a1a1a] text-primary focus:ring-primary/40"
             />
-            <span className="text-xs text-gray-300">Övladım üçün axtarıram</span>
+            <span className="text-xs text-gray-300">{t('marketplace.ai.forChild')}</span>
           </label>
 
           <textarea
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder={EXAMPLE}
+            placeholder={t('marketplace.ai.examplePlaceholder')}
             rows={3}
             className="w-full rounded-xl border border-white/15 bg-[#0b0b0b]/80 px-3 py-2.5 text-sm text-white placeholder:text-gray-600 focus:border-primary/50 focus:outline-none resize-none"
           />
@@ -169,7 +171,7 @@ export default function MarketplaceAiSearchPanel({
             onClick={() => void runSearch()}
             className="w-full rounded-xl bg-primary hover:brightness-110 disabled:opacity-60 text-[#0b0b0b] font-bold text-sm py-2.5 transition-all"
           >
-            {loading ? 'Analiz edilir…' : 'Axtar'}
+            {loading ? t('marketplace.ai.analyzing') : t('marketplace.ai.search')}
           </button>
 
           {error ? <p className="text-xs text-red-400">{error}</p> : null}
@@ -202,19 +204,16 @@ export default function MarketplaceAiSearchPanel({
           {result ? (
             <div className="space-y-4 pt-1">
               <div className="space-y-2">
-                <StepBadge n={1} label="Uyğun müəllimlər" />
+                <StepBadge n={1} label={t('marketplace.ai.steps.tutors')} />
                 {isEmptyResult ? (
                   <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 space-y-2">
                     <p className="text-sm font-semibold text-white">
-                      {tutors?.empty_state?.title || 'Uyğun müəllim tapılmadı'}
+                      {tutors?.empty_state?.title || t('marketplace.ai.emptyTitle')}
                     </p>
                     <p className="text-xs text-gray-400 leading-relaxed">
-                      {tutors?.empty_state?.message ||
-                        'Bu axtarış üzrə dəqiq uyğun profil yoxdur. Aşağıdakı xəritə və siyahıdan digər müəllimlərə baxa bilərsiniz.'}
+                      {tutors?.empty_state?.message || t('marketplace.ai.emptyMessage')}
                     </p>
-                    <p className="text-xs text-primary/90 font-medium pt-1">
-                      ↓ Aşağıdakı xəritə və siyahıdan müəllim seçin
-                    </p>
+                    <p className="text-xs text-primary/90 font-medium pt-1">{t('marketplace.ai.emptyHint')}</p>
                     {tutors?.empty_state?.instructor_cta ? (
                       <Link
                         to={tutors.empty_state.instructor_cta.path}
@@ -230,16 +229,20 @@ export default function MarketplaceAiSearchPanel({
                       <p className="text-[11px] text-amber-300/90 leading-relaxed">{tutors.match_note}</p>
                     ) : null}
                     <p className="text-[11px] text-gray-500">
-                      {tutors?.count ?? 0} nəticədən ən yaxşı {tutors?.matches?.length ?? 0}
+                      {t('marketplace.ai.resultsSummary', {
+                        total: tutors?.count ?? 0,
+                        top: tutors?.matches?.length ?? 0,
+                      })}
                     </p>
-                    {(tutors?.matches || []).map((t) => (
+                    {(tutors?.matches || []).map((tutor) => (
                       <TutorMiniCard
-                        key={String(t.id)}
-                        tutor={t}
+                        key={String(tutor.id)}
+                        tutor={tutor}
                         onInquiry={onInquiry}
                         onWhatsApp={onWhatsApp}
                         onFocus={onFocusTutor}
                         whatsappBusy={whatsappBusy}
+                        t={t}
                       />
                     ))}
                   </div>
@@ -248,17 +251,21 @@ export default function MarketplaceAiSearchPanel({
 
               {pricing ? (
                 <div className="space-y-2">
-                  <StepBadge n={2} label="Təxmini qiymət" />
+                  <StepBadge n={2} label={t('marketplace.ai.steps.pricing')} />
                   <div className="rounded-xl border border-white/10 bg-[#121212]/80 p-3 text-xs space-y-2">
                     <p className="text-[10px] text-emerald-400/90 font-semibold">
                       {tutorMatches.length === 1
-                        ? `${tutorMatches[0].full_name} profilinə əsasən`
-                        : `${tutorMatches.length} uyğun müəllimin tarifinə əsasən`}
+                        ? t('marketplace.ai.pricingBasedOnOne', { name: tutorMatches[0].full_name })
+                        : t('marketplace.ai.pricingBasedOnMany', { count: tutorMatches.length })}
                     </p>
                     <p className="text-white font-semibold">
-                      Dərs başına: <span className="text-primary">{pricing.per_lesson_azn_range} ₼</span>
+                      {t('marketplace.ai.perLesson')}{' '}
+                      <span className="text-primary">{pricing.per_lesson_azn_range} ₼</span>
                       {pricing.per_lesson_typical_azn ? (
-                        <span className="text-gray-400 font-normal"> (orta ~{pricing.per_lesson_typical_azn} ₼)</span>
+                        <span className="text-gray-400 font-normal">
+                          {' '}
+                          {t('marketplace.ai.typical', { amount: pricing.per_lesson_typical_azn })}
+                        </span>
                       ) : null}
                     </p>
                     <ul className="space-y-1 text-gray-400">
@@ -275,17 +282,20 @@ export default function MarketplaceAiSearchPanel({
 
               {curriculum ? (
                 <div className="space-y-2">
-                  <StepBadge n={3} label="4 həftəlik plan" />
+                  <StepBadge n={3} label={t('marketplace.ai.steps.curriculum')} />
                   <div className="rounded-xl border border-white/10 bg-[#121212]/80 p-3 space-y-3">
                     <p className="text-xs font-semibold text-white">{curriculum.title}</p>
                     {(curriculum.weeks || []).map((w) => (
                       <div key={w.week}>
                         <p className="text-[11px] font-bold text-primary">
-                          Həftə {w.week}: {w.title}
+                          {t('marketplace.ai.weekLabel', { week: w.week, title: w.title })}
                         </p>
                         <ul className="mt-1 space-y-0.5">
                           {(w.topics || []).map((topic) => (
-                            <li key={topic} className="text-[11px] text-gray-400 pl-3 relative before:content-['•'] before:absolute before:left-0 before:text-gray-600">
+                            <li
+                              key={topic}
+                              className="text-[11px] text-gray-400 pl-3 relative before:content-['•'] before:absolute before:left-0 before:text-gray-600"
+                            >
                               {topic}
                             </li>
                           ))}
@@ -298,30 +308,16 @@ export default function MarketplaceAiSearchPanel({
 
               {cta && tutorMatches[0] ? (
                 <div className="space-y-2">
-                  <StepBadge n={4} label="Növbəti addım" />
+                  <StepBadge n={4} label={t('marketplace.ai.steps.cta')} />
                   <div className="flex flex-wrap gap-2">
                     <button
                       type="button"
                       onClick={() => onInquiry?.(tutorMatches[0])}
                       className="text-xs font-bold px-3 py-2 rounded-xl bg-primary/20 border border-primary/40 text-primary"
                     >
-                      {cta.trial_lesson?.label || 'Sınaq dərsi təyin et'}
+                      {cta.trial_lesson?.label || t('marketplace.ai.scheduleTrial')}
                     </button>
                     <button
                       type="button"
                       disabled={whatsappBusy}
-                      onClick={() => onWhatsApp?.(tutorMatches[0])}
-                      className="text-xs font-bold px-3 py-2 rounded-xl border border-emerald-500/35 text-emerald-400 hover:bg-emerald-500/10 disabled:opacity-50"
-                    >
-                      {cta.whatsapp?.label || 'WhatsApp ilə əlaqə'}
-                    </button>
-                  </div>
-                </div>
-              ) : null}
-            </div>
-          ) : null}
-        </div>
-      ) : null}
-    </section>
-  )
-}
+                      

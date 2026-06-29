@@ -1,15 +1,13 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import api from '../../lib/api'
 import Modal from '../common/Modal'
 import Button from '../common/Button'
 
-const FORMAT_OPTIONS = [
-  { value: 'online', label: 'Onlayn' },
-  { value: 'teacher_place', label: 'Müəllimin yanında' },
-  { value: 'student_place', label: 'Mənim evimdə' },
-]
+const FORMAT_VALUES = ['online', 'teacher_place', 'student_place']
 
 export default function InquiryFormModal({ open, onClose, instructor, categoryId, categoryName }) {
+  const { t } = useTranslation()
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [format, setFormat] = useState('online')
@@ -18,6 +16,17 @@ export default function InquiryFormModal({ open, onClose, instructor, categoryId
   const [loading, setLoading] = useState(false)
   const [done, setDone] = useState(false)
   const [error, setError] = useState('')
+
+  const formatOptions = useMemo(
+    () =>
+      FORMAT_VALUES.map((valueKey) => ({
+        value: valueKey,
+        label: t(
+          `marketplace.inquiry.format.${valueKey === 'teacher_place' ? 'teacherPlace' : valueKey === 'student_place' ? 'studentPlace' : valueKey}`,
+        ),
+      })),
+    [t],
+  )
 
   const submit = async (e) => {
     e.preventDefault()
@@ -36,10 +45,10 @@ export default function InquiryFormModal({ open, onClose, instructor, categoryId
       if (res?.success) {
         setDone(true)
       } else {
-        setError(res?.message || 'Göndərilmədi')
+        setError(res?.message || t('marketplace.inquiry.sendFailed'))
       }
     } catch (err) {
-      setError(err?.message || 'Xəta')
+      setError(err?.message || t('marketplace.inquiry.error'))
     } finally {
       setLoading(false)
     }
@@ -56,14 +65,16 @@ export default function InquiryFormModal({ open, onClose, instructor, categoryId
   }
 
   return (
-    <Modal open={open} onClose={resetAndClose} title="Müraciət et" size="md">
+    <Modal open={open} onClose={resetAndClose} title={t('marketplace.inquiry.title')} size="md">
       {done ? (
         <div className="space-y-4 text-center py-2">
           <p className="text-sm text-gray-300 leading-relaxed">
-            Müraciətiniz <strong className="text-white">{instructor?.full_name}</strong> müəlliminə çatdırıldı.
+            {t('marketplace.inquiry.successBefore')}{' '}
+            <strong className="text-white">{instructor?.full_name}</strong>
+            {t('marketplace.inquiry.successAfter')}
           </p>
           <Button type="button" onClick={resetAndClose}>
-            Bağla
+            {t('marketplace.inquiry.close')}
           </Button>
         </div>
       ) : (
@@ -73,7 +84,7 @@ export default function InquiryFormModal({ open, onClose, instructor, categoryId
             {categoryName ? <> · {categoryName}</> : null}
           </p>
           <div>
-            <label className="text-xs text-gray-500 block mb-1">Adınız</label>
+            <label className="text-xs text-gray-500 block mb-1">{t('marketplace.inquiry.nameLabel')}</label>
             <input
               required
               value={name}
@@ -82,7 +93,7 @@ export default function InquiryFormModal({ open, onClose, instructor, categoryId
             />
           </div>
           <div>
-            <label className="text-xs text-gray-500 block mb-1">Telefon</label>
+            <label className="text-xs text-gray-500 block mb-1">{t('marketplace.inquiry.phoneLabel')}</label>
             <input
               required
               type="tel"
@@ -93,13 +104,13 @@ export default function InquiryFormModal({ open, onClose, instructor, categoryId
             />
           </div>
           <div>
-            <label className="text-xs text-gray-500 block mb-1">Dərs formatı</label>
+            <label className="text-xs text-gray-500 block mb-1">{t('marketplace.inquiry.formatLabel')}</label>
             <select
               value={format}
               onChange={(e) => setFormat(e.target.value)}
               className="w-full rounded-lg border border-white/15 bg-[#13112e] px-3 py-2 text-sm text-white"
             >
-              {FORMAT_OPTIONS.map((o) => (
+              {formatOptions.map((o) => (
                 <option key={o.value} value={o.value}>
                   {o.label}
                 </option>
@@ -107,34 +118,18 @@ export default function InquiryFormModal({ open, onClose, instructor, categoryId
             </select>
           </div>
           <div>
-            <label className="text-xs text-gray-500 block mb-1">Səviyyə (istəyə görə)</label>
+            <label className="text-xs text-gray-500 block mb-1">{t('marketplace.inquiry.levelLabel')}</label>
             <input
               value={level}
               onChange={(e) => setLevel(e.target.value)}
-              placeholder="Məs: 5-ci sinif, başlanğıc…"
+              placeholder={t('marketplace.inquiry.levelPlaceholder')}
               className="w-full rounded-lg border border-white/15 bg-[#13112e] px-3 py-2 text-sm text-white"
             />
           </div>
           <div>
-            <label className="text-xs text-gray-500 block mb-1">Qısa mesaj</label>
+            <label className="text-xs text-gray-500 block mb-1">{t('marketplace.inquiry.messageLabel')}</label>
             <textarea
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               rows={3}
-              className="w-full rounded-lg border border-white/15 bg-[#13112e] px-3 py-2 text-sm text-white resize-none"
-            />
-          </div>
-          {error ? <p className="text-xs text-red-400">{error}</p> : null}
-          <div className="flex gap-2">
-            <Button type="button" variant="secondary" className="flex-1" onClick={resetAndClose}>
-              Ləğv
-            </Button>
-            <Button type="submit" loading={loading} className="flex-1">
-              Göndər
-            </Button>
-          </div>
-        </form>
-      )}
-    </Modal>
-  )
-}
+              className="w

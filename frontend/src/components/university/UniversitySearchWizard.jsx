@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import Button from '../common/Button'
 import {
   BUDGET_OPTIONS,
@@ -8,63 +9,79 @@ import {
 import { FIELD_GROUPS, fieldLabel } from '../../lib/universityFieldCatalog'
 import CountrySearchPicker from './CountrySearchPicker'
 
-const STEPS = [
-  { id: 1, title: 'Dərəcə' },
-  { id: 2, title: 'İxtisas' },
-  { id: 3, title: 'Akademik' },
-  { id: 4, title: 'Üstünlüklər' },
-  { id: 5, title: 'Yoxlama' },
-]
-
+const STEP_KEYS = ['degree', 'field', 'academic', 'preferences', 'review']
 const DEGREE_OPTIONS = ['BSc', 'MSc', 'PhD']
 
 const inputCls =
   'w-full rounded-xl border border-white/10 bg-[#1c1c1c] px-3 py-2.5 text-sm text-white [color-scheme:dark] focus:outline-none focus:border-primary/50'
 
-function StepDots({ step }) {
+function StepDots({ step, stepTitles }) {
   return (
     <div className="flex flex-wrap gap-2 justify-center">
-      {STEPS.map((s) => (
-        <div
-          key={s.id}
-          className={[
-            'h-2 rounded-full transition-all',
-            s.id === step ? 'w-8 bg-primary' : s.id < step ? 'w-2 bg-primary/60' : 'w-2 bg-white/15',
-          ].join(' ')}
-          title={s.title}
-        />
-      ))}
+      {stepTitles.map((title, index) => {
+        const id = index + 1
+        return (
+          <div
+            key={id}
+            className={[
+              'h-2 rounded-full transition-all',
+              id === step ? 'w-8 bg-primary' : id < step ? 'w-2 bg-primary/60' : 'w-2 bg-white/15',
+            ].join(' ')}
+            title={title}
+          />
+        )
+      })}
     </div>
   )
 }
 
 export default function UniversitySearchWizard({ initialState, onSubmit, onCancel }) {
+  const { t } = useTranslation()
   const [step, setStep] = useState(1)
   const [state, setState] = useState(initialState)
 
+  const stepTitles = STEP_KEYS.map((key) => t(`universitySearch.wizard.steps.${key}`))
+
+  const degreeLabel = (deg) => {
+    if (deg === 'BSc') return t('universitySearch.degrees.bsc')
+    if (deg === 'MSc') return t('universitySearch.degrees.msc')
+    return t('universitySearch.degrees.phd')
+  }
+
+  const budgetLabel = (value) => t(`universitySearch.budget.${value}`, { defaultValue: '—' })
+
+  const durationLabel = (years) => {
+    if (!years) return t('universitySearch.wizard.durationAny')
+    const key = years >= 4 ? '4' : String(years)
+    return t(`universitySearch.duration.${key}`, { defaultValue: t('universitySearch.wizard.durationYears', { count: years }) })
+  }
+
   const reviewSummary = useMemo(
     () => [
-      { label: 'Dərəcə', value: state.degreeLevel || '—' },
-      { label: 'İxtisas', value: state.field ? fieldLabel(state.field) : '—' },
-      { label: 'GPA', value: state.gpa !== '' ? state.gpa : '—' },
+      { label: t('universitySearch.wizard.review.degree'), value: state.degreeLevel || '—' },
+      { label: t('universitySearch.wizard.review.field'), value: state.field ? fieldLabel(state.field) : '—' },
+      { label: t('universitySearch.wizard.review.gpa'), value: state.gpa !== '' ? state.gpa : '—' },
       {
-        label: 'Dil balı',
+        label: t('universitySearch.wizard.review.languageScore'),
         value:
           state.languageScore !== ''
             ? `${state.languageType.toUpperCase()} ${state.languageScore}`
             : '—',
       },
-      { label: 'Ölkələr', value: state.countries.length ? state.countries.join(', ') : 'Hamısı' },
       {
-        label: 'Büdcə',
-        value: BUDGET_OPTIONS.find((b) => b.value === state.budgetRange)?.label || '—',
+        label: t('universitySearch.wizard.review.countries'),
+        value: state.countries.length ? state.countries.join(', ') : t('universitySearch.wizard.review.allCountries'),
       },
       {
-        label: 'Müddət',
-        value: state.durationYears ? `${state.durationYears} il` : 'Fərq etmir',
+        label: t('universitySearch.wizard.review.budget'),
+        value: state.budgetRange ? budgetLabel(state.budgetRange) : '—',
+      },
+      {
+        label: t('universitySearch.wizard.review.duration'),
+        value: state.durationYears ? durationLabel(state.durationYears) : t('universitySearch.wizard.durationAny'),
       },
     ],
-    [state],
+    [state, t],
   )
 
   const canNext = () => {
@@ -81,9 +98,11 @@ export default function UniversitySearchWizard({ initialState, onSubmit, onCance
   return (
     <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 sm:p-8 space-y-6">
       <div className="text-center space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-widest text-primary">Addım {step} / 5</p>
-        <h2 className="font-display text-xl sm:text-2xl font-bold text-white">{STEPS[step - 1].title}</h2>
-        <StepDots step={step} />
+        <p className="text-xs font-semibold uppercase tracking-widest text-primary">
+          {t('universitySearch.wizard.stepOf', { step, total: STEP_KEYS.length })}
+        </p>
+        <h2 className="font-display text-xl sm:text-2xl font-bold text-white">{stepTitles[step - 1]}</h2>
+        <StepDots step={step} stepTitles={stepTitles} />
       </div>
 
       {step === 1 ? (
@@ -101,9 +120,7 @@ export default function UniversitySearchWizard({ initialState, onSubmit, onCance
               ].join(' ')}
             >
               <div className="text-2xl font-bold">{deg}</div>
-              <div className="text-[10px] uppercase tracking-wide text-gray-500 mt-1">
-                {deg === 'BSc' ? 'Bakalavr' : deg === 'MSc' ? 'Magistr' : 'Doktorantura'}
-              </div>
+              <div className="text-[10px] uppercase tracking-wide text-gray-500 mt-1">{degreeLabel(deg)}</div>
             </button>
           ))}
         </div>
@@ -111,13 +128,15 @@ export default function UniversitySearchWizard({ initialState, onSubmit, onCance
 
       {step === 2 ? (
         <div className="max-w-lg mx-auto space-y-3">
-          <label className="block text-xs font-semibold uppercase tracking-wide text-gray-400">İxtisas sahəsi</label>
+          <label className="block text-xs font-semibold uppercase tracking-wide text-gray-400">
+            {t('universitySearch.wizard.fieldLabel')}
+          </label>
           <select
             value={state.field}
             onChange={(e) => setState((p) => ({ ...p, field: e.target.value }))}
             className={inputCls}
           >
-            <option value="">— Seçin —</option>
+            <option value="">{t('universitySearch.wizard.selectPlaceholder')}</option>
             {FIELD_GROUPS.map((group) => (
               <optgroup key={group.id} label={group.label}>
                 {group.options.map((f) => (
@@ -135,7 +154,7 @@ export default function UniversitySearchWizard({ initialState, onSubmit, onCance
         <div className="max-w-lg mx-auto space-y-5">
           <div className="space-y-2">
             <div className="flex justify-between text-xs text-gray-400">
-              <span>GPA (4.0 şkalası)</span>
+              <span>{t('universitySearch.wizard.gpaScale')}</span>
               <span className="text-white font-medium">{state.gpa !== '' ? state.gpa : '—'}</span>
             </div>
             <input
@@ -155,13 +174,15 @@ export default function UniversitySearchWizard({ initialState, onSubmit, onCance
               value={state.gpa}
               onChange={(e) => setState((p) => ({ ...p, gpa: e.target.value === '' ? '' : Number(e.target.value) }))}
               className={inputCls}
-              placeholder="Məs: 3.2"
+              placeholder={t('universitySearch.wizard.gpaPlaceholder')}
             />
           </div>
 
           <div className="grid sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold uppercase tracking-wide text-gray-400">Dil imtahanı</label>
+              <label className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+                {t('universitySearch.wizard.languageExam')}
+              </label>
               <select
                 value={state.languageType}
                 onChange={(e) => setState((p) => ({ ...p, languageType: e.target.value }))}
@@ -172,7 +193,9 @@ export default function UniversitySearchWizard({ initialState, onSubmit, onCance
               </select>
             </div>
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold uppercase tracking-wide text-gray-400">Bal</label>
+              <label className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+                {t('universitySearch.wizard.score')}
+              </label>
               <input
                 type="number"
                 min="0"
@@ -198,12 +221,14 @@ export default function UniversitySearchWizard({ initialState, onSubmit, onCance
           <CountrySearchPicker
             selected={state.countries}
             onChange={(countries) => setState((p) => ({ ...p, countries }))}
-            label="Ölkə seçimi"
+            label={t('universitySearch.wizard.countryPicker')}
           />
 
           <div className="grid sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold uppercase tracking-wide text-gray-400">Büdcə</label>
+              <label className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+                {t('universitySearch.wizard.budget')}
+              </label>
               <select
                 value={state.budgetRange}
                 onChange={(e) => setState((p) => ({ ...p, budgetRange: e.target.value }))}
@@ -211,13 +236,15 @@ export default function UniversitySearchWizard({ initialState, onSubmit, onCance
               >
                 {BUDGET_OPTIONS.map((b) => (
                   <option key={b.value} value={b.value}>
-                    {b.label}
+                    {budgetLabel(b.value)}
                   </option>
                 ))}
               </select>
             </div>
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold uppercase tracking-wide text-gray-400">Müddət üstünlüyü</label>
+              <label className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+                {t('universitySearch.wizard.durationPreference')}
+              </label>
               <select
                 value={state.durationYears}
                 onChange={(e) =>
@@ -228,10 +255,10 @@ export default function UniversitySearchWizard({ initialState, onSubmit, onCance
                 }
                 className={inputCls}
               >
-                <option value="">Fərq etmir</option>
+                <option value="">{t('universitySearch.wizard.durationAny')}</option>
                 {DURATION_OPTIONS.map((d) => (
                   <option key={d.value} value={d.value}>
-                    {d.label}
+                    {durationLabel(d.value)}
                   </option>
                 ))}
               </select>
@@ -242,9 +269,7 @@ export default function UniversitySearchWizard({ initialState, onSubmit, onCance
 
       {step === 5 ? (
         <div className="max-w-lg mx-auto space-y-4">
-          <p className="text-sm text-gray-400 text-center">
-            Məlumatlarınız əsasında uyğun proqramlar axtarılacaq.
-          </p>
+          <p className="text-sm text-gray-400 text-center">{t('universitySearch.wizard.reviewHint')}</p>
           <dl className="rounded-xl border border-white/10 divide-y divide-white/10">
             {reviewSummary.map((row) => (
               <div key={row.label} className="flex justify-between gap-4 px-4 py-3 text-sm">
@@ -260,26 +285,26 @@ export default function UniversitySearchWizard({ initialState, onSubmit, onCance
         <div className="flex gap-2">
           {onCancel ? (
             <Button type="button" variant="ghost" onClick={onCancel}>
-              Bağla
+              {t('universitySearch.actions.close')}
             </Button>
           ) : null}
           {step > 1 ? (
             <Button type="button" variant="secondary" onClick={back}>
-              Geri
+              {t('universitySearch.actions.back')}
             </Button>
           ) : null}
         </div>
         <div className="flex gap-2">
           {step < 5 ? (
             <Button type="button" onClick={next} disabled={!canNext()}>
-              Növbəti
+              {t('universitySearch.actions.next')}
             </Button>
           ) : (
             <Button
               type="button"
               onClick={() => onSubmit?.({ state, params: wizardToSearchParams(state) })}
             >
-              Proqramları axtar
+              {t('universitySearch.actions.searchPrograms')}
             </Button>
           )}
         </div>

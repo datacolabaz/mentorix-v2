@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import api from '../../lib/api'
-import Brand from '../../components/common/Brand'
 import { BAKU_CENTER, distanceKm, formatDistanceKm } from '../../lib/geo'
 import { reverseGeocodeLabel } from '../../lib/reverseGeocode'
 import { setPageSeo } from '../../lib/pageSeo'
 import PublicSeoFooter from '../../components/public/PublicSeoFooter'
+import PublicPageTopBar from '../../components/public/PublicPageTopBar'
 import DiscoverSearchFilters from '../../components/discover/DiscoverSearchFilters'
 import CategoryMegaMenu from '../../components/discover/CategoryMegaMenu'
 import InquiryFormModal from '../../components/discover/InquiryFormModal'
@@ -16,24 +17,6 @@ import useAuthStore from '../../hooks/useAuth'
 import { useToast } from '../../components/common/Toast'
 import { sortInstructorsForMapListing } from '../../lib/mapListingSort'
 
-function kindLabel(k) {
-  if (k === 'trainer') return 'Təlimçi'
-  return 'Müəllim'
-}
-
-function resultCountLabel(count, kind) {
-  if (kind === 'teacher') return `${count} müəllim tapıldı`
-  if (kind === 'trainer') return `${count} təlimçi tapıldı`
-  return `${count} nəticə tapıldı`
-}
-
-function nearestResultsHeadline(count, kind) {
-  if (count === 0) return 'Müəllim tapılmadı'
-  if (kind === 'teacher') return `Sizə ən yaxın ${count} müəllim tapıldı`
-  if (kind === 'trainer') return `Sizə ən yaxın ${count} təlimçi tapıldı`
-  return `Sizə ən yaxın ${count} nəticə tapıldı`
-}
-
 function mapFilterParams(filters) {
   const p = {}
   if (filters?.category_id) p.category_id = filters.category_id
@@ -43,6 +26,7 @@ function mapFilterParams(filters) {
 }
 
 export default function InstructorMapSearch() {
+  const { t } = useTranslation()
   const { user, token } = useAuthStore()
   const isAuthenticated = Boolean(token && user)
   const toast = useToast()
@@ -82,6 +66,30 @@ export default function InstructorMapSearch() {
   const [searchParams] = useSearchParams()
   const categoryFromUrl = searchParams.get('category')
 
+  const kindLabel = useCallback(
+    (k) => (k === 'trainer' ? t('marketplace.kind.trainer') : t('marketplace.kind.teacher')),
+    [t],
+  )
+
+  const resultCountLabel = useCallback(
+    (count, k) => {
+      if (k === 'teacher') return t('marketplace.results.teachersFound', { count })
+      if (k === 'trainer') return t('marketplace.results.trainersFound', { count })
+      return t('marketplace.results.allFound', { count })
+    },
+    [t],
+  )
+
+  const nearestResultsHeadline = useCallback(
+    (count, k) => {
+      if (count === 0) return t('marketplace.results.noneFound')
+      if (k === 'teacher') return t('marketplace.results.nearestTeachers', { count })
+      if (k === 'trainer') return t('marketplace.results.nearestTrainers', { count })
+      return t('marketplace.results.nearestAll', { count })
+    },
+    [t],
+  )
+
   useEffect(() => {
     const slug = String(categoryFromUrl || '').trim()
     if (!slug) return
@@ -109,32 +117,31 @@ export default function InstructorMapSearch() {
   useEffect(() => {
     if (discoverFilters.category_name) {
       const slug = discoverFilters.category_slug || discoverFilters.category_id
+      const category = discoverFilters.category_name
       setPageSeo({
-        title: `${discoverFilters.category_name} müəllimi tap — Mentorix | Bakı`,
-        description: `${discoverFilters.category_name} repetitoru və müəllimi axtarırsınız? Mentorix-də yaxınlığınızdakı təlimçiləri reytinq və formatla müqayisə edin.`,
+        title: t('marketplace.seo.categoryTitle', { category }),
+        description: t('marketplace.seo.categoryDescription', { category }),
         canonicalPath: slug ? `/search?category=${encodeURIComponent(slug)}` : '/search',
-        keywords: `${discoverFilters.category_name}, repetitor, müəllim tap, Bakı, Mentorix`,
+        keywords: t('marketplace.seo.categoryKeywords', { category }),
         breadcrumbs: [
-          { name: 'Mentorix', path: '/' },
-          { name: 'Müəllim tap', path: '/search' },
-          { name: discoverFilters.category_name, path: slug ? `/search?category=${encodeURIComponent(slug)}` : '/search' },
+          { name: t('marketplace.seo.brand'), path: '/' },
+          { name: t('marketplace.seo.searchTitle'), path: '/search' },
+          { name: category, path: slug ? `/search?category=${encodeURIComponent(slug)}` : '/search' },
         ],
       })
       return
     }
     setPageSeo({
-      title: 'Müəllim tap — axtarış | Mentorix',
-      description:
-        'Yaxınlığınızdakı müəllim, repetitor və təlimçiləri məsafəyə görə tapın. Mentorix təhsil idarəetmə platformasının ictimai müəllim axtarış bölməsidir.',
+      title: t('marketplace.seo.defaultTitle'),
+      description: t('marketplace.seo.defaultDescription'),
       canonicalPath: '/search',
-      keywords:
-        'müəllim tap, repetitor axtarışı, təlimçi, Bakı, təhsil idarəetmə platforması, Mentorix',
+      keywords: t('marketplace.seo.defaultKeywords'),
       breadcrumbs: [
-        { name: 'Mentorix', path: '/' },
-        { name: 'Müəllim tap', path: '/search' },
+        { name: t('marketplace.seo.brand'), path: '/' },
+        { name: t('marketplace.seo.searchTitle'), path: '/search' },
       ],
     })
-  }, [discoverFilters.category_name, discoverFilters.category_slug, discoverFilters.category_id])
+  }, [discoverFilters.category_name, discoverFilters.category_slug, discoverFilters.category_id, t])
 
   const loadByRadius = useCallback(
     async (lat, lng, radius, userLat = refPoint.lat, userLng = refPoint.lng) => {
@@ -158,12 +165,12 @@ export default function InstructorMapSearch() {
           setInstructors(Array.isArray(res.instructors) ? res.instructors : [])
         } else {
           setInstructors([])
-          setFetchError(res?.message || 'Məlumat alınmadı')
+          setFetchError(res?.message || t('marketplace.errors.fetchFailed'))
         }
       } catch (e) {
         if (seq !== loadSeqRef.current) return
         setInstructors([])
-        setFetchError(e?.message || 'Şəbəkə xətası')
+        setFetchError(e?.message || t('marketplace.errors.network'))
       } finally {
         if (seq === loadSeqRef.current) {
           setLoading(false)
@@ -171,7 +178,7 @@ export default function InstructorMapSearch() {
         }
       }
     },
-    [kind, refPoint.lat, refPoint.lng, discoverFilters],
+    [kind, refPoint.lat, refPoint.lng, discoverFilters, t],
   )
 
   const reloadSearch = useCallback(() => {
@@ -186,10 +193,13 @@ export default function InstructorMapSearch() {
     reloadSearch()
   }, [kind, discoverFilters, refPoint.lat, refPoint.lng, radiusKm, reloadSearch])
 
-  const resolveUserLabel = useCallback(async (lat, lng) => {
-    const label = await reverseGeocodeLabel(lat, lng)
-    setUserLocationLabel(label || 'Cari mövqeyiniz')
-  }, [])
+  const resolveUserLabel = useCallback(
+    async (lat, lng) => {
+      const label = await reverseGeocodeLabel(lat, lng)
+      setUserLocationLabel(label || t('marketplace.distance.currentPosition'))
+    },
+    [t],
+  )
 
   const applyCenter = useCallback(
     (lat, lng, { fallback = false, loadSearch = true } = {}) => {
@@ -201,14 +211,14 @@ export default function InstructorMapSearch() {
         void loadByRadius(lat, lng, radiusKm, lat, lng)
       }
       if (fallback) {
-        setUserLocationLabel('Bakı (Badamdar / mərkəz)')
+        setUserLocationLabel(t('marketplace.distance.bakuCenter'))
         setLocationHint('')
       } else {
         setLocationHint('')
         void resolveUserLabel(lat, lng)
       }
     },
-    [loadByRadius, radiusKm, resolveUserLabel],
+    [loadByRadius, radiusKm, resolveUserLabel, t],
   )
 
   const requestUserLocation = useCallback(
@@ -220,7 +230,7 @@ export default function InstructorMapSearch() {
       }
       setLocating(true)
       setDistanceOrigin('loading')
-      if (!silent) setLocationHint('Mövqəniz müəyyən edilir…')
+      if (!silent) setLocationHint(t('marketplace.distance.locatingHint'))
       navigator.geolocation.getCurrentPosition(
         (pos) => {
           setLocating(false)
@@ -238,7 +248,7 @@ export default function InstructorMapSearch() {
         { enableHighAccuracy: true, timeout: 20000, maximumAge: 60000 },
       )
     },
-    [applyCenter],
+    [applyCenter, t],
   )
 
   const geoBootRef = useRef(false)
@@ -262,11 +272,11 @@ export default function InstructorMapSearch() {
   const distanceFromLabel =
     distanceOrigin === 'user'
       ? userLocationLabel
-        ? `Sizdən (${userLocationLabel})`
-        : 'Sizdən'
+        ? t('marketplace.distance.fromYouWithLabel', { label: userLocationLabel })
+        : t('marketplace.distance.fromYou')
       : distanceOrigin === 'loading'
-        ? 'Mövqe axtarılır…'
-        : 'Bakı mərkəzindən (təxmini)'
+        ? t('marketplace.distance.locating')
+        : t('marketplace.distance.fromBakuCenter')
 
   const instructorsSorted = useMemo(() => {
     const withDist = instructors.map((p) => {
@@ -325,11 +335,11 @@ export default function InstructorMapSearch() {
         if (d?.whatsapp_available && d.whatsapp_url) {
           window.open(d.whatsapp_url, '_blank', 'noopener,noreferrer')
         } else {
-          toast('Müəllimin WhatsApp nömrəsi yoxdur — müraciət formunu doldurun.', 'info')
+          toast(t('marketplace.errors.whatsappNoNumber'), 'info')
           setInquiryTarget(p)
         }
       } catch (e) {
-        toast(e?.message || 'WhatsApp açılmadı', 'error')
+        toast(e?.message || t('marketplace.errors.whatsappOpenFailed'), 'error')
       } finally {
         setWhatsappBusy(false)
       }
@@ -364,31 +374,29 @@ export default function InstructorMapSearch() {
   const count = instructorsSorted.length
   const isEmpty = hasFetched && !loading && count === 0 && !fetchError
 
+  const kindOptions = useMemo(
+    () => [
+      ['all', t('marketplace.kind.all')],
+      ['teacher', t('marketplace.kind.teacher')],
+      ['trainer', t('marketplace.kind.trainer')],
+    ],
+    [t],
+  )
+
   return (
     <div className="min-h-[100svh] bg-[#0b0b0b] text-white flex flex-col">
-      <header className="border-b border-white/10 bg-[#0f0f0f]/95 backdrop-blur-sm z-[500] shrink-0">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex flex-col gap-2 min-w-0 w-full sm:flex-row sm:items-center sm:gap-3 sm:flex-1">
-            <Brand className="h-7 w-auto shrink-0 self-start sm:h-8" />
-            <div className="min-w-0 w-full">
-              <h1 className="font-display font-bold text-base leading-snug sm:text-lg md:text-xl text-white break-words">
-                Müəllim tap — Mentorix
-              </h1>
-              <p className="text-[11px] sm:text-xs text-gray-500 mt-1 leading-snug">
-                Məsafəyə görə sıralanmış müəllimlər · reytinq · format · WhatsApp (qeydiyyatdan sonra)
-              </p>
-            </div>
-          </div>
-          <div className="flex flex-row flex-wrap items-center gap-2 w-full sm:w-auto sm:shrink-0 sm:justify-end">
-            <Link
-              to="/login"
-              className="flex-1 sm:flex-initial text-center text-sm font-medium text-primary hover:brightness-110 px-3 py-2 rounded-lg border border-primary/30 min-h-[40px] inline-flex items-center justify-center"
-            >
-              Girişə qayıt
-            </Link>
-          </div>
-        </div>
-      </header>
+      <PublicPageTopBar
+        backTo="/"
+        title={t('marketplace.title')}
+        subtitle={t('marketplace.subtitle')}
+      >
+        <Link
+          to="/login"
+          className="flex-1 sm:flex-initial text-center text-sm font-medium text-primary hover:brightness-110 px-3 py-2 rounded-lg border border-primary/30 min-h-[40px] inline-flex items-center justify-center"
+        >
+          {t('marketplace.backToLogin')}
+        </Link>
+      </PublicPageTopBar>
 
       <div className="flex-1 flex flex-col lg:flex-row min-h-0">
         <main className="order-2 lg:order-1 flex-1 flex flex-col min-h-0 lg:w-[58%] lg:border-r border-white/10 min-h-[50vh] lg:min-h-0">
@@ -399,12 +407,14 @@ export default function InstructorMapSearch() {
                   {nearestResultsHeadline(count, kind)}
                 </p>
                 <p className="text-xs text-gray-500">
-                  Məsafə: {distanceFromLabel}
-                  {loading ? <span className="text-gray-400"> · Yenilənir…</span> : null}
+                  {t('marketplace.distance.label')}: {distanceFromLabel}
+                  {loading ? (
+                    <span className="text-gray-400"> · {t('marketplace.distance.refreshing')}</span>
+                  ) : null}
                 </p>
               </>
             ) : loading ? (
-              <p className="text-sm text-gray-400">Müəllimlər axtarılır…</p>
+              <p className="text-sm text-gray-400">{t('marketplace.searching')}</p>
             ) : null}
             {fetchError ? <p className="text-xs text-red-400 mt-1">{fetchError}</p> : null}
           </div>
@@ -412,9 +422,14 @@ export default function InstructorMapSearch() {
           <div ref={listScrollRef} className="flex-1 overflow-y-auto p-4">
             {nearestInstructor && distanceOrigin === 'user' && count > 0 && !loading ? (
               <div className="rounded-xl border border-sky-500/35 bg-gradient-to-r from-sky-500/10 to-emerald-500/10 p-3 mb-4">
-                <p className="text-[10px] font-bold text-sky-400 uppercase tracking-wide">📍 Sizə ən yaxın</p>
+                <p className="text-[10px] font-bold text-sky-400 uppercase tracking-wide">
+                  {t('marketplace.nearestBadge')}
+                </p>
                 <p className="text-sm font-semibold text-white mt-1">
-                  {kindLabel(nearestInstructor.map_profile_kind)}: {nearestInstructor.full_name}
+                  {t('marketplace.nearestKindName', {
+                    kind: kindLabel(nearestInstructor.map_profile_kind),
+                    name: nearestInstructor.full_name,
+                  })}
                   <span className="text-primary ml-1">({formatDistanceKm(nearestInstructor.distanceKm)})</span>
                 </p>
               </div>
@@ -430,16 +445,14 @@ export default function InstructorMapSearch() {
 
             {isEmpty ? (
               <div className="rounded-xl border border-white/10 bg-[#121212]/80 p-6 text-center space-y-2 max-w-lg mx-auto">
-                <p className="text-sm font-semibold text-white">Bu ərazidə müəllim yoxdur</p>
-                <p className="text-xs text-gray-400 leading-relaxed">
-                  Radiusu artırın və ya filteri dəyişin.
-                </p>
+                <p className="text-sm font-semibold text-white">{t('marketplace.empty.title')}</p>
+                <p className="text-xs text-gray-400 leading-relaxed">{t('marketplace.empty.hint')}</p>
                 <button
                   type="button"
                   onClick={nearMe}
                   className="mt-2 text-xs font-bold text-primary hover:underline"
                 >
-                  Mənim yaxınlığımda yenidən yoxla
+                  {t('marketplace.empty.retryNearMe')}
                 </button>
               </div>
             ) : null}
@@ -495,11 +508,7 @@ export default function InstructorMapSearch() {
               }}
             />
             <div className="flex flex-wrap gap-2">
-              {[
-                ['all', 'Hamısı'],
-                ['teacher', 'Müəllim'],
-                ['trainer', 'Təlimçi'],
-              ].map(([k, lab]) => (
+              {kindOptions.map(([k, lab]) => (
                 <button
                   key={k}
                   type="button"
@@ -525,18 +534,20 @@ export default function InstructorMapSearch() {
                     : 'bg-white/5 border-white/15 text-gray-300 hover:border-white/25'
                 }`}
               >
-                {locating ? 'Mövqe axtarılır…' : 'Mənim yaxınlığımda'}
+                {locating ? t('marketplace.distance.locating') : t('marketplace.nearMe')}
               </button>
               <label className="text-xs text-gray-500 flex items-center gap-1.5">
-                <span className="text-gray-400">Radius</span>
+                <span className="text-gray-400">{t('marketplace.radius')}</span>
                 <select
                   className="bg-[#13112e] border border-white/15 rounded-lg px-2 py-1 text-gray-200 text-xs"
                   value={radiusKm}
                   onChange={(e) => setRadiusKm(Number(e.target.value))}
                 >
-                  <option value={5}>5 km</option>
-                  <option value={10}>10 km</option>
-                  <option value={25}>25 km</option>
+                  {[5, 10, 25].map((km) => (
+                    <option key={km} value={km}>
+                      {t('marketplace.radiusKm', { km })}
+                    </option>
+                  ))}
                 </select>
               </label>
             </div>

@@ -2014,6 +2014,365 @@
       }
     }
   },
+  "publicNav": {
+    "backHome": "На главную"
+  },
+  "universitySearch": {
+    "seo": {
+      "title": "Поиск университетов и программ | Mentorix",
+      "description": "Фильтруйте программы бакалавриата, магистратуры и докторантуры по стране, стипендии и срокам подачи."
+    },
+    "page": {
+      "badge": "Mentorix Apply",
+      "title": "Поиск университетов и программ",
+      "subtitle": "Заполните профиль, найдите подходящие программы и перейдите на официальный портал."
+    },
+    "actions": {
+      "newSearch": "Новый поиск",
+      "login": "Войти",
+      "previous": "Назад",
+      "next": "Далее",
+      "back": "Назад",
+      "close": "Закрыть",
+      "searchPrograms": "Искать программы",
+      "reset": "Сбросить",
+      "details": "Подробнее",
+      "apply": "Apply",
+      "changeFilters": "Изменить фильтры",
+      "tryMsc": "Попробовать магистратуру (MSc)"
+    },
+    "toasts": {
+      "searchFailed": "Поиск не удался",
+      "applicationRecorded": "Заявка зарегистрирована",
+      "applicationFailed": "Не удалось зарегистрировать заявку",
+      "noApplyLink": "Официальная ссылка для подачи недоступна"
+    },
+    "results": {
+      "searching": "Поиск…",
+      "programsFound": "Найдено программ: {{count}}",
+      "fallbackNotice": "Живой каталог сейчас недоступен — показаны демо-программы. Ссылки для подачи реальные.",
+      "noResults": "Подходящие программы не найдены.",
+      "coverageNone": "В выбранных {{total}} странах подходящих программ не найдено.",
+      "coveragePartial": "В {{withResults}} из {{total}} выбранных стран найдены подходящие программы.",
+      "selectedCountries": "Выбранные страны",
+      "countriesWithResults": "Страны с подходящими результатами",
+      "filterPartialNote": "Фильтр работает — в некоторых странах нет программ по вашим критериям."
+    },
+    "empty": {
+      "selectedField": "выбранная специальность",
+      "phd": "Программы PhD по {{field}} пока загружаются. Для примера попробуйте степень «Магистратура (MSc)».",
+      "degreeLimited": "Программы {{degree}} по {{field}} сейчас ограничены. Расширьте фильтры или попробуйте другую степень.",
+      "fieldNoMatch": "По {{field}} подходящих программ пока нет. Попробуйте изменить страну или степень.",
+      "generic": "Подходящие программы не найдены. Измените фильтры."
+    },
+    "degrees": {
+      "bsc": "Бакалавриат",
+      "msc": "Магистратура",
+      "phd": "Докторантура",
+      "bscFull": "BSc (Бакалавриат)",
+      "mscFull": "MSc (Магистратура)",
+      "phdFull": "PhD",
+      "bscLong": "Бакалавриат (BSc)",
+      "mscLong": "Магистратура (MSc)",
+      "phdLong": "Докторантура (PhD)"
+    },
+    "wizard": {
+      "stepOf": "Шаг {{step}} / {{total}}",
+      "steps": {
+        "degree": "Степень",
+        "field": "Специальность",
+        "academic": "Академические",
+        "preferences": "Предпочтения",
+        "review": "Проверка"
+      },
+      "fieldLabel": "Область специальности",
+      "selectPlaceholder": "— Выберите —",
+      "gpaScale": "GPA (шкала 4.0)",
+      "gpaPlaceholder": "Напр.: 3.2",
+      "languageExam": "Языковой экзамен",
+      "score": "Балл",
+      "countryPicker": "Выбор страны",
+      "budget": "Бюджет",
+      "durationPreference": "Предпочтение по сроку",
+      "durationAny": "Не важно",
+      "durationYears": "{{count}} лет",
+      "reviewHint": "На основе ваших данных будут найдены подходящие программы.",
+      "review": {
+        "degree": "Степень",
+        "field": "Специальность",
+        "gpa": "GPA",
+        "languageScore": "Языковой балл",
+        "countries": "Страны",
+        "budget": "Бюджет",
+        "duration": "Срок",
+        "allCountries": "Все"
+      }
+    },
+    "budget": {
+      "0-3000": "0 – 3 000 € / год",
+      "3000-8000": "3 000 – 8 000 € / год",
+      "8000+": "8 000 €+ / год",
+      "any": "Не важно"
+    },
+    "duration": {
+      "1": "1 год",
+      "2": "2 года",
+      "3": "3 года",
+      "4": "4+ года"
+    },
+    "filters": {
+      "title": "Фильтры",
+      "universityProgram": "Университет / программа",
+      "universityProgramPlaceholder": "Напр.: Politecnico, Warsaw, Informatics",
+      "universityProgramHint": "Введите часть названия университета или программы.",
+      "field": "Специальность",
+      "countries": "Страны",
+      "universityType": "Тип университета",
+      "all": "Все",
+      "private": "Частный",
+      "public": "Государственный",
+      "degree": "Степень",
+      "powerFilters": "Сильные фильтры",
+      "scholarship": "Есть стипендия",
+      "englishOnly": "Английский язык",
+      "noIelts": "IELTS не требуется",
+      "noMotivation": "Мотивационное письмо не требуется",
+      "qsTop500": "QS top 500",
+      "minIelts": "Ваш мин. балл IELTS",
+      "minToefl": "Ваш мин. балл TOEFL",
+      "maxTuition": "Макс. плата за обучение (€/год)",
+      "deadline": "Крайний срок подачи",
+      "sort": "Сортировка",
+      "sortRanking": "Мировой рейтинг",
+      "sortTuitionAsc": "Плата (ниже)",
+      "sortTuitionDesc": "Плата (выше)",
+      "sortDeadline": "Срок подачи",
+      "placeholderIelts": "Напр.: 6.5",
+      "placeholderToefl": "Напр.: 90",
+      "placeholderTuition": "Напр.: 5000"
+    },
+    "card": {
+      "degree": "Степень",
+      "qsRanking": "Рейтинг QS",
+      "annualFee": "Годовая плата",
+      "applicationFee": "Плата за подачу",
+      "language": "Язык",
+      "ielts": "IELTS",
+      "ieltsNotRequired": "Не требуется",
+      "deadline": "Срок",
+      "scholarship": "Стипендия",
+      "scholarshipYes": "Доступна",
+      "scholarshipNo": "Нет",
+      "mentor": "Ментор по программе: {{name}}"
+    },
+    "ai": {
+      "title": "AI-поиск по соответствию",
+      "description": "Напишите GPA, IELTS, бюджет и специальность в одном предложении — система найдёт подходящие программы.",
+      "placeholder": "Напр.: GPA 3.2, IELTS 6.5, бюджет 4000 евро. Хочу магистратуру по AI. Польша и Эстония.",
+      "hint": "Напр.: QS top 500, есть стипендия, английский язык",
+      "searching": "Поиск…",
+      "search": "Найти с AI",
+      "failed": "AI-поиск не удался"
+    },
+    "detail": {
+      "noRequirements": "Требования не указаны.",
+      "yes": "Да",
+      "no": "Нет",
+      "field": "Специальность",
+      "tuition": "Плата",
+      "years": "{{count}} лет",
+      "ranking": "Рейтинг #{{rank}}",
+      "housing": "Общежитие",
+      "funding": "Финансирование",
+      "admissionRequirements": "Требования для поступления",
+      "mentorTitle": "Ментор: {{name}}",
+      "mentorDesc": "Вы можете получить платную консультацию по поступлению и подаче заявки на эту программу.",
+      "mentorProfile": "Перейти к профилю ментора",
+      "applyOfficial": "Apply — официальный сайт",
+      "req": {
+        "minGpa": "Минимальный GPA",
+        "minLanguage": "Языковой экзамен",
+        "documents": "Документы",
+        "workExperience": "Опыт работы",
+        "portfolio": "Портфолио",
+        "entranceExam": "Вступительный экзамен",
+        "interview": "Собеседование",
+        "notes": "Примечание"
+      },
+      "doc": {
+        "cv": "CV (резюме)",
+        "transcript": "Транскрипт",
+        "motivation": "Мотивационное письмо",
+        "research": "Исследовательский план",
+        "passport": "Паспорт",
+        "diploma": "Диплом"
+      }
+    }
+  },
+  "marketplace": {
+    "title": "Найти учителя — Mentorix",
+    "subtitle": "Учителя по расстоянию · рейтинг · формат · WhatsApp (после регистрации)",
+    "backToLogin": "Вернуться к входу",
+    "kind": {
+      "all": "Все",
+      "teacher": "Учитель",
+      "trainer": "Тренер"
+    },
+    "results": {
+      "noneFound": "Учителя не найдены",
+      "nearestTeachers": "Найдено {{count}} ближайших учителей",
+      "nearestTrainers": "Найдено {{count}} ближайших тренеров",
+      "nearestAll": "Найдено {{count}} ближайших результатов",
+      "teachersFound": "Найдено {{count}} учителей",
+      "trainersFound": "Найдено {{count}} тренеров",
+      "allFound": "Найдено {{count}} результатов"
+    },
+    "distance": {
+      "label": "Расстояние",
+      "fromYouWithLabel": "От вас ({{label}})",
+      "fromYou": "От вас",
+      "locating": "Определение местоположения…",
+      "fromBakuCenter": "От центра Баку (приблизительно)",
+      "refreshing": "Обновление…",
+      "currentPosition": "Ваше текущее местоположение",
+      "bakuCenter": "Баку (Бадамдар / центр)",
+      "locatingHint": "Определяем ваше местоположение…"
+    },
+    "searching": "Поиск учителей…",
+    "nearestBadge": "📍 Ближайший к вам",
+    "nearestKindName": "{{kind}}: {{name}}",
+    "empty": {
+      "title": "В этой области нет учителей",
+      "hint": "Увеличьте радиус или измените фильтр.",
+      "retryNearMe": "Проверить снова рядом со мной"
+    },
+    "nearMe": "Рядом со мной",
+    "radius": "Радиус",
+    "radiusKm": "{{km}} км",
+    "errors": {
+      "fetchFailed": "Не удалось получить данные",
+      "network": "Ошибка сети",
+      "whatsappNoNumber": "У учителя нет номера WhatsApp — заполните форму заявки.",
+      "whatsappOpenFailed": "Не удалось открыть WhatsApp"
+    },
+    "seo": {
+      "brand": "Mentorix",
+      "searchTitle": "Найти учителя",
+      "defaultTitle": "Найти учителя — поиск | Mentorix",
+      "defaultDescription": "Найдите учителей, репетиторов и тренеров рядом с вами по расстоянию. Публичный раздел поиска учителей платформы Mentorix.",
+      "defaultKeywords": "найти учителя, поиск репетитора, тренер, Баку, платформа управления образованием, Mentorix",
+      "categoryTitle": "Найти учителя {{category}} — Mentorix | Баку",
+      "categoryDescription": "Ищете репетитора или учителя по {{category}}? Сравните ближайших преподавателей на Mentorix по рейтингу и формату.",
+      "categoryKeywords": "{{category}}, репетитор, найти учителя, Баку, Mentorix"
+    },
+    "filters": {
+      "categoryQuestion": "Чему хотите научиться?",
+      "categoryPlaceholder": "Математика, Python, IELTS…",
+      "popular": "Популярное",
+      "clearSelection": "Снять выбор: {{name}}",
+      "formatTitle": "Формат урока",
+      "format": {
+        "any": "Не важно",
+        "online": "Онлайн",
+        "teacherPlace": "Очно (у учителя)",
+        "studentPlace": "Очно (у меня дома)"
+      },
+      "locationTitle": "Где?",
+      "locationPlaceholder": "Выберите район, город или метро",
+      "areaGroups": {
+        "popular": "Популярное",
+        "bakuDistricts": "Районы Баку",
+        "metros": "Метро",
+        "regions": "Районы Азербайджана"
+      },
+      "areaKind": {
+        "metro": "Метро",
+        "region": "Район",
+        "baku": "Баку"
+      }
+    },
+    "categories": {
+      "allSubjects": "Все предметы ▾",
+      "close": "Закрыть",
+      "category": "Категория",
+      "subgroup": "Подгруппа",
+      "noSubcategories": "Нет подкатегорий"
+    },
+    "ai": {
+      "title": "Найти учителя с AI",
+      "subtitle": "Опишите запрос — подберём учителя, цену и план уроков",
+      "forChild": "Ищу для ребёнка",
+      "examplePlaceholder": "Напр.: Ребёнок слаб в математике, 8 класс, Ясамал",
+      "search": "Искать",
+      "analyzing": "Анализ…",
+      "minChars": "Введите не менее 6 символов.",
+      "searchFailed": "Поиск не удался",
+      "error": "Ошибка",
+      "steps": {
+        "tutors": "Подходящие учителя",
+        "pricing": "Примерная цена",
+        "curriculum": "План на 4 недели",
+        "cta": "Следующий шаг"
+      },
+      "emptyTitle": "Подходящий учитель не найден",
+      "emptyMessage": "Точного совпадения по этому запросу нет. Посмотрите других учителей на карте и в списке ниже.",
+      "emptyHint": "↓ Выберите учителя на карте и в списке ниже",
+      "resultsSummary": "Лучшие {{top}} из {{total}} результатов",
+      "trialLesson": "Пробный урок",
+      "message": "Сообщение",
+      "whatsapp": "WhatsApp",
+      "pricingBasedOnOne": "На основе профиля {{name}}",
+      "pricingBasedOnMany": "На основе тарифов {{count}} подходящих учителей",
+      "perLesson": "За урок:",
+      "typical": "(в среднем ~{{amount}} ₼)",
+      "weekLabel": "Неделя {{week}}: {{title}}",
+      "scheduleTrial": "Записаться на пробный урок",
+      "contactWhatsapp": "Связаться в WhatsApp",
+      "ratePerHour": "{{rate}} ₼/час"
+    },
+    "card": {
+      "topBadge": "🔥 TOP",
+      "nearest": "📍 Ближайший",
+      "featured": "В топе",
+      "fromYou": "от вас",
+      "approximate": "приблизит.",
+      "noSubject": "Предмет не указан",
+      "noReviews": "Пока нет отзывов",
+      "ratingLabel": "{{avg}} ({{count}} отз.)",
+      "ratePerHour": "{{rate}} AZN/час",
+      "viewProfile": "Смотреть профиль →",
+      "trialLesson": "⚡ Пробный урок",
+      "whatsapp": "💬 WhatsApp"
+    },
+    "inquiry": {
+      "title": "Отправить заявку",
+      "successBefore": "Ваша заявка доставлена учителю",
+      "successAfter": ".",
+      "close": "Закрыть",
+      "nameLabel": "Ваше имя",
+      "phoneLabel": "Телефон",
+      "formatLabel": "Формат урока",
+      "levelLabel": "Уровень (необязательно)",
+      "levelPlaceholder": "Напр.: 5 класс, начальный…",
+      "messageLabel": "Краткое сообщение",
+      "cancel": "Отмена",
+      "submit": "Отправить",
+      "sendFailed": "Не удалось отправить",
+      "error": "Ошибка",
+      "format": {
+        "online": "Онлайн",
+        "teacherPlace": "У учителя",
+        "studentPlace": "У меня дома"
+      }
+    },
+    "authModal": {
+      "title": "Зарегистрируйтесь, чтобы связаться с учителем",
+      "desc": "Создайте бесплатный аккаунт или войдите, чтобы отправить заявку и просмотреть профиль учителя.",
+      "registerLogin": "Регистрация / Вход",
+      "later": "Позже",
+      "footer": "Вы можете зарегистрироваться как родитель или ученик."
+    }
+  },
   "studentInquiries": {
     "title": "Заявки с карты",
     "subtitleBefore": "Родители и ученики, нашедшие ваш профиль в поиске/на карте Mentorix. Для подтверждения группы и экзамена —",

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import Button from '../common/Button'
 import api from '../../lib/api'
 
@@ -6,6 +7,7 @@ const inputCls =
   'w-full rounded-xl border border-violet-500/30 bg-[#141414] px-4 py-3 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:border-violet-400/60'
 
 export default function UniversityAiSearch({ onResults, onError }) {
+  const { t } = useTranslation()
   const [query, setQuery] = useState('')
   const [loading, setLoading] = useState(false)
   const [lastSummary, setLastSummary] = useState([])
@@ -22,7 +24,7 @@ export default function UniversityAiSearch({ onResults, onError }) {
         aiSummary: res.summary || [],
       })
     } catch (e) {
-      onError?.(e?.response?.data?.message || e?.message || 'AI axtarış uğursuz oldu')
+      onError?.(e?.response?.data?.message || e?.message || t('universitySearch.ai.failed'))
     } finally {
       setLoading(false)
     }
@@ -31,24 +33,22 @@ export default function UniversityAiSearch({ onResults, onError }) {
   return (
     <div className="rounded-2xl border border-violet-500/25 bg-gradient-to-br from-violet-500/10 to-transparent p-4 sm:p-5 space-y-3">
       <div className="space-y-1">
-        <p className="text-xs font-semibold uppercase tracking-widest text-violet-300">AI uyğunluq axtarışı</p>
-        <p className="text-sm text-gray-400">
-          GPA, IELTS, büdcə və ixtisası bir cümlədə yazın — sistem uyğun proqramları tapır.
+        <p className="text-xs font-semibold uppercase tracking-widest text-violet-300">
+          {t('universitySearch.ai.title')}
         </p>
+        <p className="text-sm text-gray-400">{t('universitySearch.ai.description')}</p>
       </div>
       <textarea
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         rows={3}
         className={inputCls}
-        placeholder={
-          'Məs: GPA 3.2, IELTS 6.5, büdcəm 4000 avro. AI üzrə magistr istəyirəm. Polşa və Estoniya.'
-        }
+        placeholder={t('universitySearch.ai.placeholder')}
       />
       <div className="flex flex-wrap gap-2 justify-between items-center">
-        <p className="text-[11px] text-gray-500">Məs: QS top 500, təqaüd var, ingilis dili</p>
+        <p className="text-[11px] text-gray-500">{t('universitySearch.ai.hint')}</p>
         <Button type="button" onClick={runSearch} disabled={loading || !query.trim()}>
-          {loading ? 'Axtarılır…' : 'AI ilə tap'}
+          {loading ? t('universitySearch.ai.searching') : t('universitySearch.ai.search')}
         </Button>
       </div>
       {lastSummary.length ? (

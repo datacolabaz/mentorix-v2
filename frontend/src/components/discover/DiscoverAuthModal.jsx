@@ -1,7 +1,10 @@
 import { Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import Modal from '../common/Modal'
 
 export default function DiscoverAuthModal({ open, onClose }) {
+  const { t } = useTranslation()
+
   const saveReturn = () => {
     try {
       sessionStorage.setItem('mx_return_after_login', '/search')
@@ -18,10 +21,10 @@ export default function DiscoverAuthModal({ open, onClose }) {
         </div>
         <div className="space-y-2">
           <h3 className="font-display text-xl font-bold text-white leading-snug">
-            Müəllimlə əlaqə qurmaq üçün qeydiyyatdan keçin
+            {t('marketplace.authModal.title')}
           </h3>
           <p className="text-sm text-gray-400 leading-relaxed max-w-sm mx-auto">
-            Müraciət göndərmək və müəllim profilinə baxmaq üçün pulsuz hesab yaradın və ya daxil olun.
+            {t('marketplace.authModal.desc')}
           </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2.5 justify-center">
@@ -30,19 +33,17 @@ export default function DiscoverAuthModal({ open, onClose }) {
             onClick={saveReturn}
             className="inline-flex justify-center items-center rounded-xl bg-primary px-5 py-3 text-sm font-bold text-[#041018] hover:brightness-95 shadow-lg shadow-primary/20"
           >
-            Qeydiyyat / Giriş
+            {t('marketplace.authModal.registerLogin')}
           </Link>
           <button
             type="button"
             onClick={onClose}
             className="inline-flex justify-center items-center rounded-xl border border-white/15 bg-white/5 px-5 py-3 text-sm font-semibold text-gray-300 hover:bg-white/10"
           >
-            Sonra
+            {t('marketplace.authModal.later')}
           </button>
         </div>
-        <p className="text-[11px] text-gray-500">
-          Valideyn və ya tələbə kimi qeydiyyatdan keçə bilərsiniz.
-        </p>
+        <p className="text-[11px] text-gray-500">{t('marketplace.authModal.footer')}</p>
       </div>
     </Modal>
   )

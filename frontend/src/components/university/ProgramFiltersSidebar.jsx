@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import CountrySearchPicker from './CountrySearchPicker'
 import FieldSearchPicker from './FieldSearchPicker'
 
@@ -21,31 +22,35 @@ export default function ProgramFiltersSidebar({
   qDraft,
   onQDraftChange,
 }) {
+  const { t } = useTranslation()
   const patch = (partial) => onChange({ ...filters, ...partial, page: 1 })
 
   return (
     <aside className="lg:sticky lg:top-6 space-y-5 rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:p-5 h-fit max-h-[calc(100vh-2rem)] overflow-y-auto">
       <div className="flex items-center justify-between gap-2">
-        <h3 className="font-display font-bold text-white">Filtrlər</h3>
+        <h3 className="font-display font-bold text-white">{t('universitySearch.filters.title')}</h3>
         <button type="button" onClick={onReset} className="text-xs text-gray-400 hover:text-white underline">
-          Sıfırla
+          {t('universitySearch.actions.reset')}
         </button>
       </div>
 
       <div className="space-y-2">
-        <label className="text-[10px] font-bold uppercase tracking-wide text-gray-500">Universitet / proqram</label>
+        <label className="text-[10px] font-bold uppercase tracking-wide text-gray-500">
+          {t('universitySearch.filters.universityProgram')}
+        </label>
         <input
           value={qDraft}
           onChange={(e) => onQDraftChange?.(e.target.value)}
           className={inputCls}
-          placeholder="Məs: Politecnico, Warsaw, Informatics"
+          placeholder={t('universitySearch.filters.universityProgramPlaceholder')}
         />
-        <p className="text-[11px] text-gray-500">Universitet və ya proqram adının bir hissəsini yazın.</p>
+        <p className="text-[11px] text-gray-500">{t('universitySearch.filters.universityProgramHint')}</p>
       </div>
 
       <FieldSearchPicker
         value={filters.fields?.length ? filters.fields : filters.field}
         onChange={(fields) => patch({ fields: Array.isArray(fields) ? fields : [], field: '' })}
+        label={t('universitySearch.filters.field')}
       />
 
       <CountrySearchPicker
@@ -53,68 +58,77 @@ export default function ProgramFiltersSidebar({
         onChange={(countries) => patch({ countries })}
         countryCounts={countryCounts}
         compact
+        label={t('universitySearch.filters.countries')}
       />
 
       <div className="space-y-2">
-        <label className="text-[10px] font-bold uppercase tracking-wide text-gray-500">Universitet tipi</label>
+        <label className="text-[10px] font-bold uppercase tracking-wide text-gray-500">
+          {t('universitySearch.filters.universityType')}
+        </label>
         <select
           value={filters.university_type || ''}
           onChange={(e) => patch({ university_type: e.target.value })}
           className={inputCls}
         >
-          <option value="">Hamısı</option>
-          <option value="Private">Xüsusi</option>
-          <option value="Public">Dövlət</option>
+          <option value="">{t('universitySearch.filters.all')}</option>
+          <option value="Private">{t('universitySearch.filters.private')}</option>
+          <option value="Public">{t('universitySearch.filters.public')}</option>
         </select>
       </div>
 
       <div className="space-y-2">
-        <label className="text-[10px] font-bold uppercase tracking-wide text-gray-500">Dərəcə</label>
+        <label className="text-[10px] font-bold uppercase tracking-wide text-gray-500">
+          {t('universitySearch.filters.degree')}
+        </label>
         <select
           value={filters.degree_level}
           onChange={(e) => patch({ degree_level: e.target.value })}
           className={inputCls}
         >
-          <option value="">Hamısı</option>
-          <option value="BSc">BSc (Bakalavr)</option>
-          <option value="MSc">MSc (Magistr)</option>
-          <option value="PhD">PhD</option>
+          <option value="">{t('universitySearch.filters.all')}</option>
+          <option value="BSc">{t('universitySearch.degrees.bscFull')}</option>
+          <option value="MSc">{t('universitySearch.degrees.mscFull')}</option>
+          <option value="PhD">{t('universitySearch.degrees.phdFull')}</option>
         </select>
       </div>
 
       <div className="space-y-2">
-        <p className="text-[10px] font-bold uppercase tracking-wide text-gray-500">Güclü filtrlər</p>
+        <p className="text-[10px] font-bold uppercase tracking-wide text-gray-500">
+          {t('universitySearch.filters.powerFilters')}
+        </p>
         <div className="space-y-2">
           <FilterCheckbox
             checked={filters.scholarship}
             onChange={(e) => patch({ scholarship: e.target.checked })}
-            label="Təqaüd var"
+            label={t('universitySearch.filters.scholarship')}
           />
           <FilterCheckbox
             checked={filters.english_only}
             onChange={(e) => patch({ english_only: e.target.checked, language: e.target.checked ? 'English' : '' })}
-            label="İngilis dili"
+            label={t('universitySearch.filters.englishOnly')}
           />
           <FilterCheckbox
             checked={filters.no_ielts}
             onChange={(e) => patch({ no_ielts: e.target.checked })}
-            label="IELTS tələb etmir"
+            label={t('universitySearch.filters.noIelts')}
           />
           <FilterCheckbox
             checked={filters.no_motivation}
             onChange={(e) => patch({ no_motivation: e.target.checked })}
-            label="Motivasiya məktubu tələb etmir"
+            label={t('universitySearch.filters.noMotivation')}
           />
           <FilterCheckbox
             checked={filters.max_ranking === '500'}
             onChange={(e) => patch({ max_ranking: e.target.checked ? '500' : '' })}
-            label="QS top 500"
+            label={t('universitySearch.filters.qsTop500')}
           />
         </div>
       </div>
 
       <div className="space-y-2">
-        <label className="text-[10px] font-bold uppercase tracking-wide text-gray-500">Min IELTS balınız</label>
+        <label className="text-[10px] font-bold uppercase tracking-wide text-gray-500">
+          {t('universitySearch.filters.minIelts')}
+        </label>
         <input
           type="number"
           min="0"
@@ -123,12 +137,14 @@ export default function ProgramFiltersSidebar({
           value={filters.user_ielts}
           onChange={(e) => patch({ user_ielts: e.target.value, no_ielts: false })}
           className={inputCls}
-          placeholder="Məs: 6.5"
+          placeholder={t('universitySearch.filters.placeholderIelts')}
         />
       </div>
 
       <div className="space-y-2">
-        <label className="text-[10px] font-bold uppercase tracking-wide text-gray-500">Min TOEFL balınız</label>
+        <label className="text-[10px] font-bold uppercase tracking-wide text-gray-500">
+          {t('universitySearch.filters.minToefl')}
+        </label>
         <input
           type="number"
           min="0"
@@ -137,12 +153,14 @@ export default function ProgramFiltersSidebar({
           value={filters.user_toefl}
           onChange={(e) => patch({ user_toefl: e.target.value })}
           className={inputCls}
-          placeholder="Məs: 90"
+          placeholder={t('universitySearch.filters.placeholderToefl')}
         />
       </div>
 
       <div className="space-y-2">
-        <label className="text-[10px] font-bold uppercase tracking-wide text-gray-500">Max təhsil haqqı (€/il)</label>
+        <label className="text-[10px] font-bold uppercase tracking-wide text-gray-500">
+          {t('universitySearch.filters.maxTuition')}
+        </label>
         <input
           type="number"
           min="0"
@@ -150,12 +168,14 @@ export default function ProgramFiltersSidebar({
           value={filters.max_tuition}
           onChange={(e) => patch({ max_tuition: e.target.value })}
           className={inputCls}
-          placeholder="Məs: 5000"
+          placeholder={t('universitySearch.filters.placeholderTuition')}
         />
       </div>
 
       <div className="space-y-2">
-        <label className="text-[10px] font-bold uppercase tracking-wide text-gray-500">Son müraciət tarixi</label>
+        <label className="text-[10px] font-bold uppercase tracking-wide text-gray-500">
+          {t('universitySearch.filters.deadline')}
+        </label>
         <input
           type="date"
           value={filters.deadline_before}
@@ -165,12 +185,14 @@ export default function ProgramFiltersSidebar({
       </div>
 
       <div className="space-y-2">
-        <label className="text-[10px] font-bold uppercase tracking-wide text-gray-500">Sıralama</label>
+        <label className="text-[10px] font-bold uppercase tracking-wide text-gray-500">
+          {t('universitySearch.filters.sort')}
+        </label>
         <select value={filters.sort} onChange={(e) => patch({ sort: e.target.value })} className={inputCls}>
-          <option value="ranking">Dünya reytinqi</option>
-          <option value="tuition_asc">Ödəniş (aşağı)</option>
-          <option value="tuition_desc">Ödəniş (yuxarı)</option>
-          <option value="deadline">Son tarix</option>
+          <option value="ranking">{t('universitySearch.filters.sortRanking')}</option>
+          <option value="tuition_asc">{t('universitySearch.filters.sortTuitionAsc')}</option>
+          <option value="tuition_desc">{t('universitySearch.filters.sortTuitionDesc')}</option>
+          <option value="deadline">{t('universitySearch.filters.sortDeadline')}</option>
         </select>
       </div>
     </aside>

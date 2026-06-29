@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import Button from '../common/Button'
 import { countryFlag, extractProgramIelts, formatDeadline, formatTuition, universityInitials } from '../../lib/universitySearch'
 
@@ -12,6 +13,7 @@ function InfoRow({ label, value, highlight = false }) {
 }
 
 export default function ProgramCard({ program, onDetails, onApply, showCountryBadge = false }) {
+  const { t } = useTranslation()
   const uni = program.university || {}
   const ielts = extractProgramIelts(program.requirements)
   const appFee = program.requirements?.application_fee
@@ -52,35 +54,45 @@ export default function ProgramCard({ program, onDetails, onApply, showCountryBa
       </div>
 
       <div className="grid grid-cols-2 gap-2 text-xs">
-        <InfoRow label="Dərəcə" value={program.degree_level} />
-        <InfoRow label="QS reytinqi" value={uni.world_ranking ? `#${uni.world_ranking}` : null} />
-        <InfoRow label="İllik haqq" value={formatTuition(program.tuition_fee)} />
+        <InfoRow label={t('universitySearch.card.degree')} value={program.degree_level} />
         <InfoRow
-          label="Müraciət haqqı"
+          label={t('universitySearch.card.qsRanking')}
+          value={uni.world_ranking ? `#${uni.world_ranking}` : null}
+        />
+        <InfoRow label={t('universitySearch.card.annualFee')} value={formatTuition(program.tuition_fee)} />
+        <InfoRow
+          label={t('universitySearch.card.applicationFee')}
           value={appFee != null ? `€${Number(appFee).toLocaleString('en-US')}` : null}
         />
-        <InfoRow label="Dil" value={program.language || '—'} />
-        <InfoRow label="IELTS" value={ielts != null ? String(ielts) : 'Tələb yoxdur'} />
-        <InfoRow label="Son tarix" value={formatDeadline(program.next_deadline)} />
+        <InfoRow label={t('universitySearch.card.language')} value={program.language || '—'} />
         <InfoRow
-          label="Təqaüd"
-          value={program.scholarship_available ? 'Mövcuddur' : 'Yoxdur'}
+          label={t('universitySearch.card.ielts')}
+          value={ielts != null ? String(ielts) : t('universitySearch.card.ieltsNotRequired')}
+        />
+        <InfoRow label={t('universitySearch.card.deadline')} value={formatDeadline(program.next_deadline)} />
+        <InfoRow
+          label={t('universitySearch.card.scholarship')}
+          value={
+            program.scholarship_available
+              ? t('universitySearch.card.scholarshipYes')
+              : t('universitySearch.card.scholarshipNo')
+          }
           highlight={program.scholarship_available}
         />
       </div>
 
       {program.mentor?.display_name ? (
         <div className="rounded-xl border border-violet-500/25 bg-violet-500/10 px-3 py-2 text-xs text-violet-200">
-          Bu proqram üzrə mentor: <span className="font-semibold text-white">{program.mentor.display_name}</span>
+          {t('universitySearch.card.mentor', { name: program.mentor.display_name })}
         </div>
       ) : null}
 
       <div className="flex flex-wrap gap-2 mt-auto">
         <Button type="button" variant="secondary" className="text-xs" onClick={() => onDetails?.(program)}>
-          Ətraflı
+          {t('universitySearch.actions.details')}
         </Button>
         <Button type="button" className="text-xs" onClick={() => onApply?.(program)}>
-          Apply
+          {t('universitySearch.actions.apply')}
         </Button>
       </div>
     </article>
