@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { useQueryClient } from '@tanstack/react-query'
 import { format, isValid, parseISO } from 'date-fns'
 import api from '../../lib/api'
@@ -942,6 +943,7 @@ function StudentFormFields({
 }
 
 export default function InstructorStudents() {
+  const { t, i18n } = useTranslation()
   const [students, setStudents] = useState([])
   const [editModal, setEditModal] = useState(false)
   const [joinPendingCount, setJoinPendingCount] = useState(0)
@@ -1002,7 +1004,7 @@ export default function InstructorStudents() {
       writeCache(CACHE_KEY, { students: next })
     } catch (err) {
       if (!quiet) {
-        setListError(err?.message || 'Siyahı yüklənmədi')
+        setListError(err?.message || t('students.listLoadFailed'))
         setStudents([])
       }
     } finally {
@@ -1093,10 +1095,7 @@ export default function InstructorStudents() {
   const openCompleteSetup = async (s) => {
     closeStudentMenu()
     if (isLightEnrollmentSource(s?.enrollment_source)) {
-      toast(
-        'Bu tələbə imtahan və ya tapşırıq linki ilə qoşulub — paket/cədvəl lazım deyil. «Sorğular» bölməsindən təsdiqləyin.',
-        'info',
-      )
+      toast(t('students.toasts.lightEnrollment'), 'info')
       return
     }
     let row = s
@@ -1107,10 +1106,7 @@ export default function InstructorStudents() {
       writeCache(CACHE_KEY, { students: next })
       row = next.find((x) => x.enrollment_id === s.enrollment_id) || s
       if (isLightEnrollmentSource(row?.enrollment_source)) {
-        toast(
-          'Bu tələbə imtahan və ya tapşırıq linki ilə qoşulub — paket/cədvəl lazım deyil. «Sorğular» bölməsindən təsdiqləyin.',
-          'info',
-        )
+        toast(t('students.toasts.lightEnrollment'), 'info')
         return
       }
     } catch {
@@ -1231,7 +1227,7 @@ export default function InstructorStudents() {
       }
       if (setupPhone && !setupPhoneLocked) body.phone = setupPhone
       await api.post(`/students/enrollment/${encodeURIComponent(setupEnrollmentId)}/complete-setup`, body)
-      toast('Quraşdırma tamamlandı — tələbə aktivdir')
+      toast(t('students.toasts.setupComplete'))
       setSetupModal(false)
       setSetupEnrollmentId(null)
       await load(true)
@@ -1241,7 +1237,7 @@ export default function InstructorStudents() {
           err?.message || 'Tələbə profili tam deyil — email ilə link göndərin.',
         ])
       } else {
-        toast(err?.message || 'Xəta', 'error')
+        toast(err?.message || t('students.toasts.error'), 'error')
       }
     } finally {
       setLoading(false)
@@ -1255,7 +1251,7 @@ export default function InstructorStudents() {
       const r = await api.post(
         `/students/enrollment/${encodeURIComponent(setupEnrollmentId)}/send-profile-completion-email`,
       )
-      toast(r?.message || 'Email göndərildi', 'success')
+      toast(r?.message || t('students.toasts.emailSent'), 'success')
       try {
         const d = await api.get('/students')
         const next = d.students || []
@@ -1271,7 +1267,7 @@ export default function InstructorStudents() {
         /* ignore refresh */
       }
     } catch (err) {
-      toast(err?.message || 'Email göndərilmədi', 'error')
+      toast(err?.message || t('students.toasts.emailFailed'), 'error')
     } finally {
       setSendProfileEmailBusy(false)
     }
@@ -1424,8 +1420,8 @@ export default function InstructorStudents() {
     const needsPhone = newPending.some((s) => !studentHasContactPhone(s))
     toast(
       needsPhone
-        ? `${newPending.length} yeni tələbə quraşdırma gözləyir. Telefonu yoxdursa profil linki göndərin; telefon tamam olanda «Quraşdırmanı tamamla» ilə paket/cədvəl təyin edin — sonra siyahıdan silinəcək.`
-        : `${newPending.length} tələbənin telefonu hazırdır — «Quraşdırmanı tamamla» ilə paket və cədvəli təyin edin; tamamladıqdan sonra bu xəbərdarlıq getməyəcək.`,
+        ? t('students.toasts.pendingNeedPhone', { count: newPending.length })
+        : t('students.toasts.pendingPhoneReady', { count: newPending.length }),
       'info',
     )
     markPendingSetupToastSeen(newIds)
@@ -1563,9 +1559,9 @@ export default function InstructorStudents() {
   const paymentBadge = (s) => {
     const plan = s?.payment_plan === 'partial' ? 'installment' : 'full'
     const timing = s?.billing_timing === 'prepaid' ? 'prepaid' : 'postpaid'
-    if (plan === 'installment') return { variant: 'due', label: 'Hissəli' }
-    if (timing === 'prepaid') return { variant: 'paid', label: 'Öncədən' }
-    return { variant: 'pending', label: 'Sonradan' }
+    if (plan === 'installment') return { variant: 'due', label: t('students.payInstallment') }
+    if (timing === 'prepaid') return { variant: 'paid', label: t('students.payPrepaid') }
+    return { variant: 'pending', label: t('students.payPostpaid') }
   }
 
   const lessonProgress = (s) => {
@@ -1578,9 +1574,9 @@ export default function InstructorStudents() {
 
   const packLabelForStudent = (s) => {
     const bt = String(s?.billing_type || '').trim()
-    if (bt === '8_lessons') return '8 dərs'
-    if (bt === '12_lessons') return '12 dərs'
-    if (bt === 'monthly') return 'Aylıq'
+    if (bt === '8_lessons') return t('students.pack8')
+    if (bt === '12_lessons') return t('students.pack12')
+    if (bt === 'monthly') return t('students.packMonthly')
     return null
   }
 
@@ -1601,10 +1597,10 @@ export default function InstructorStudents() {
 
   const fmtNextLesson = (distMin) => {
     if (!Number.isFinite(distMin) || distMin === Number.POSITIVE_INFINITY) return '—'
-    if (distMin < 60) return `${distMin} dəq`
+    if (distMin < 60) return `${distMin} ${t('live.minuteShort')}`
     const h = Math.floor(distMin / 60)
     const m = distMin % 60
-    return m ? `${h}s ${m}dəq` : `${h}s`
+    return m ? `${h}${t('live.hourShort')} ${m}${t('live.minuteShort')}` : `${h}${t('live.hourShort')}`
   }
 
   const closeStudentMenu = () => setActionMenuId(null)
@@ -1697,16 +1693,16 @@ export default function InstructorStudents() {
     if (!student || !canDropOnGroup(g, student)) return
     const targetGroupId = g.group_id
     if (!targetGroupId) {
-      toast('Hədəf qrupun identifikatoru tapılmadı', 'error')
+      toast(t('students.toasts.targetGroupNotFound'), 'error')
       return
     }
     const meta = findTeachingGroupMeta(teachingSubjects, targetGroupId)
     if (!meta) {
-      toast('Hədəf qrup tapılmadı — siyahını yeniləyin', 'error')
+      toast(t('students.toasts.targetGroupMissing'), 'error')
       return
     }
     if (String(meta.group.id) !== String(targetGroupId)) {
-      toast('Qrup uyğunsuzluğu — səhifəni yeniləyin', 'error')
+      toast(t('students.toasts.groupMismatch'), 'error')
       return
     }
     openTransferModal(student, meta, resolveStudentGroupLabel(student))
@@ -1725,7 +1721,7 @@ export default function InstructorStudents() {
   }, [])
 
   const handleTransferSuccess = (res) => {
-    toast('Tələbə uğurla köçürüldü', 'success')
+    toast(t('students.toasts.transferOk'), 'success')
     void load(true)
     const empty = res?.source_group?.is_empty ? res.source_group : null
     if (empty?.id) {
@@ -1741,7 +1737,7 @@ export default function InstructorStudents() {
     setEmptyGroupDeleteBusy(true)
     try {
       await api.delete(`/instructor/teaching/groups/${encodeURIComponent(emptyGroupPrompt.groupId)}`)
-      toast(`«${emptyGroupPrompt.groupName}» qrupu silindi`, 'success')
+      toast(t('students.toasts.groupDeleted', { name: emptyGroupPrompt.groupName }), 'success')
       setEmptyGroupPrompt(null)
       setOpenGroups((prev) => {
         const next = new Set(prev)
@@ -1751,7 +1747,7 @@ export default function InstructorStudents() {
       await reloadTeachingSubjects()
       await load(true)
     } catch (e) {
-      toast(e?.message || 'Qrup silinmədi', 'error')
+      toast(e?.message || t('students.toasts.groupDeleteFailed'), 'error')
     } finally {
       setEmptyGroupDeleteBusy(false)
     }
@@ -1785,13 +1781,13 @@ export default function InstructorStudents() {
     if (!groupRenameModal?.groupId) return
     const trimmed = String(groupRenameModal.groupName || '').trim()
     if (!trimmed) {
-      toast('Qrup adı boş ola bilməz', 'error')
+      toast(t('students.toasts.groupNameRequired'), 'error')
       return
     }
     const meta = findTeachingGroupMeta(teachingSubjects, groupRenameModal.groupId)
     const dup = findGroupByName(meta?.subject, trimmed)
     if (dup && String(dup.id) !== String(groupRenameModal.groupId)) {
-      toast('Bu sahədə eyni adlı qrup artıq mövcuddur', 'error')
+      toast(t('students.toasts.groupNameExists'), 'error')
       return
     }
     setGroupRenameBusy(true)
@@ -1800,12 +1796,12 @@ export default function InstructorStudents() {
         ? groupPackagePayload(groupRenameModal.groupRecord, trimmed)
         : { name: trimmed }
       await api.patch(`/instructor/teaching/groups/${encodeURIComponent(groupRenameModal.groupId)}`, body)
-      toast('Qrup adı yeniləndi', 'success')
+      toast(t('students.toasts.groupRenamed'), 'success')
       setGroupRenameModal(null)
       await reloadTeachingSubjects()
       await load(true)
     } catch (e) {
-      toast(e?.message || 'Qrup adı yenilənmədi', 'error')
+      toast(e?.message || t('students.toasts.groupRenameFailed'), 'error')
     } finally {
       setGroupRenameBusy(false)
     }
@@ -1815,7 +1811,7 @@ export default function InstructorStudents() {
     closeStudentMenu()
     if (!s?.id) return
     if (blocked) {
-      toast(billing?.messages?.banner || 'Məhdudiyyətə görə çat deaktivdir', 'error')
+      toast(billing?.messages?.banner || t('students.toasts.chatBlocked'), 'error')
       return
     }
     if (!canUseDirectChat(billing)) {
@@ -1832,19 +1828,19 @@ export default function InstructorStudents() {
 
   const saveEdit = async () => {
     if (!editId) {
-      toast('Qeydiyyat tapılmadı — səhifəni yeniləyin', 'error')
+      toast(t('students.toasts.enrollmentNotFound'), 'error')
       return
     }
     const editFirst = String(editForm.first_name || splitFullName(editForm.full_name).first_name).trim()
     const editLast = String(editForm.last_name || splitFullName(editForm.full_name).last_name).trim()
     const editPhone = String(editForm.phone_number || editForm.phone || '').trim()
     if (!editFirst || !editLast || !editPhone) {
-      toast('Ad, soyad və telefon mütləqdir', 'error')
+      toast(t('students.toasts.namePhoneRequired'), 'error')
       return
     }
     const editFullName = joinFullName(editFirst, editLast)
     if (!editForm.lesson_weekdays?.length) {
-      toast('Ən azı bir dərs günü seçin', 'error')
+      toast(t('students.toasts.lessonDayRequired'), 'error')
       return
     }
     const original = editOriginal || {}
@@ -1855,7 +1851,7 @@ export default function InstructorStudents() {
     const effectiveFirstLesson =
       editForm.first_lesson_date || original.first_lesson_date || ''
     if (editPkg && !effectiveFirstLesson) {
-      toast('Paket üçün ilk dərs tarixini seçin', 'error')
+      toast(t('students.toasts.firstLessonRequired'), 'error')
       return
     }
 
@@ -1864,7 +1860,7 @@ export default function InstructorStudents() {
     if (emailTrim !== origEmailTrim) {
       if (emailTrim) {
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailTrim)) {
-          toast('Email formatı düzgün deyil', 'error')
+          toast(t('students.toasts.invalidEmail'), 'error')
           return
         }
       }
@@ -1874,7 +1870,7 @@ export default function InstructorStudents() {
 
     if (emailTrim !== origEmailTrim) {
       if (!editStudentId) {
-        toast('Tələbə ID tapılmadı — səhifəni yeniləyib yenidən cəhd edin', 'error')
+        toast(t('students.toasts.studentIdMissing'), 'error')
         return
       }
     }
@@ -1917,18 +1913,18 @@ export default function InstructorStudents() {
         if (effectiveEnrollment) setIfChanged('first_lesson_date', effectiveEnrollment, original.first_lesson_date || null)
       }
       if (!Object.keys(patchBody).length) {
-        toast('Dəyişiklik yoxdur', 'info')
+        toast(t('students.toasts.noChanges'), 'info')
         setEditModal(false)
         setEditStudentId(null)
         return
       }
       await api.patch('/students/enrollment/' + encodeURIComponent(editId), patchBody)
-      toast('Melumatlari yenilendi!')
+      toast(t('students.toasts.updated'))
       setEditModal(false)
       setEditStudentId(null)
       load()
     } catch (err) {
-      toast(err.message || 'Xeta', 'error')
+      toast(err.message || t('students.toasts.error'), 'error')
     } finally {
       setLoading(false)
     }
@@ -1970,7 +1966,7 @@ export default function InstructorStudents() {
     try {
       const deleted = students.find((s) => String(s?.enrollment_id) === String(deleteConfirm.enrollmentId)) || null
       await api.delete('/students/enrollment/' + deleteConfirm.enrollmentId)
-      toast('Tələbə silindi', 'success')
+      toast(t('students.toasts.studentDeleted'), 'success')
       setDeleteConfirm(null)
       // Refresh list immediately so we can decide whether the group is now empty.
       let nextStudents = []
@@ -2002,7 +1998,7 @@ export default function InstructorStudents() {
         }
       }
     } catch (err) {
-      toast(err.message || 'Silinmədi', 'error')
+      toast(err.message || t('students.toasts.deleteFailed'), 'error')
     } finally {
       setDeleteBusy(false)
     }
@@ -2037,14 +2033,14 @@ export default function InstructorStudents() {
   const confirmRestore = async () => {
     if (!restoreModal?.enrollmentId) return
     const ids = [...(restoreModal.selected || new Set())]
-    if (!ids.length) return toast('Heç nə seçilməyib', 'error')
+    if (!ids.length) return toast(t('students.toasts.nothingSelected'), 'error')
     setRestoreModal((p) => (p ? { ...p, loading: true, error: null } : p))
     try {
       const d = await api.post(
         `/payments/enrollment/${encodeURIComponent(restoreModal.enrollmentId)}/restore-confirm`,
         { ids }
       )
-      toast(`Əlavə olundu: ${d?.count || 0} ödəniş`, 'success')
+      toast(t('students.toasts.paymentsAdded', { count: d?.count || 0 }), 'success')
       setRestoreModal(null)
       load(true)
     } catch (e) {
@@ -2056,18 +2052,20 @@ export default function InstructorStudents() {
     <div className="p-4 sm:p-6 min-w-0">
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-5">
         <div className="min-w-0">
-          <h1 className="font-display font-bold text-xl sm:text-2xl break-words">Tələbələrim</h1>
+          <h1 className="font-display font-bold text-xl sm:text-2xl break-words">{t('students.title')}</h1>
           <p className="text-gray-500 text-sm mt-1 max-w-xl">
             {listLoading
               ? '…'
-              : `${audienceFilter === 'all' ? students.length : audienceStudents.length} tələbə`}{' '}
-            · İmtahan/tapşırıq iştirakçıları üçün filtr · Qrup qoşulması{' '}
+              : t('students.countStudents', {
+                  count: audienceFilter === 'all' ? students.length : audienceStudents.length,
+                })}{' '}
+            · {t('students.subtitleFilter')}{' '}
             <Link to="/instructor/join-requests" className="text-primary hover:underline font-medium">
-              Sorğular
+              {t('students.joinRequests')}
             </Link>
-            -da görünür; qrup üçün{' '}
+            {t('students.subtitleAfterJoin')}{' '}
             <Link to="/instructor/teaching-groups" className="text-primary hover:underline font-medium">
-              dəvət linki
+              {t('students.inviteLinkShort')}
             </Link>
           </p>
         </div>
@@ -2076,7 +2074,7 @@ export default function InstructorStudents() {
             to="/instructor/join-requests"
             className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold border border-primary/35 text-primary hover:bg-primary/10 transition-colors"
           >
-            Sorğular
+            {t('students.joinRequests')}
             {joinPendingCount > 0 ? (
               <span className="min-w-[1.25rem] h-5 px-1.5 rounded-full bg-primary text-black text-xs font-bold inline-flex items-center justify-center">
                 {joinPendingCount > 99 ? '99+' : joinPendingCount}
@@ -2087,7 +2085,7 @@ export default function InstructorStudents() {
             to="/instructor/teaching-groups"
             className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold bg-primary text-black hover:brightness-110 transition-colors"
           >
-            Dəvət linki
+            {t('students.inviteLink')}
           </Link>
         </div>
       </div>
@@ -2102,7 +2100,7 @@ export default function InstructorStudents() {
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Axtar… (ad, telefon və ya email)"
+                placeholder={t('students.searchPlaceholder')}
                 className={[
                   'w-full rounded-xl pl-9 pr-3 py-2.5 text-sm outline-none',
                   'bg-token-surfaceCard/55 border border-[color:var(--border-subtle)]',
@@ -2127,10 +2125,10 @@ export default function InstructorStudents() {
               setSubjectFilter('')
             }}
           >
-            <option value="all">Bütün tələbələr</option>
-            <option value="group">Daimi qrup tələbələri (CRM)</option>
-            <option value="exam">Qonaq imtahan iştirakçıları</option>
-            <option value="task">Qonaq tapşırıq iştirakçıları</option>
+            <option value="all">{t('students.filterAll')}</option>
+            <option value="group">{t('students.filterGroup')}</option>
+            <option value="exam">{t('students.filterExam')}</option>
+            <option value="task">{t('students.filterTask')}</option>
           </select>
           <select
             className={[
@@ -2143,7 +2141,7 @@ export default function InstructorStudents() {
             value={subjectFilter}
             onChange={(e) => setSubjectFilter(e.target.value)}
           >
-            <option value="">Bütün sahələr</option>
+            <option value="">{t('students.filterAllSubjects')}</option>
             {subjectOptions.map((n) => (
               <option key={n} value={n}>
                 {n}
@@ -2158,15 +2156,11 @@ export default function InstructorStudents() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
             <div>
               <h2 className="font-display font-bold text-base text-amber-100">
-                Təyin gözləyən tələbələr
+                {t('students.pendingTitle')}
               </h2>
-              <p className="text-xs text-amber-200/70 mt-1">
-                Yalnız qrup/sahə linki ilə qoşulan tələbələr. İmtahan və tapşırıq linki ilə gələnlər «Sorğular»
-                bölməsindədir — paket/cədvəl lazım deyil. Telefonu yoxdursa profil linki göndərin; paket/cədvəl
-                təyin etdikdən sonra bu sətir yox olur.
-              </p>
+              <p className="text-xs text-amber-200/70 mt-1">{t('students.pendingDesc')}</p>
             </div>
-            <StatusBadge variant="due">{pendingStudents.length} gözləyir</StatusBadge>
+            <StatusBadge variant="due">{t('students.pendingCount', { count: pendingStudents.length })}</StatusBadge>
           </div>
           <div className="space-y-2">
             {pendingStudents.map((s) => (
@@ -2180,24 +2174,20 @@ export default function InstructorStudents() {
                     {s.full_name}
                   </div>
                   <div className="text-xs text-token-textMuted mt-0.5">
-                    {studentHasContactPhone(s) ? s.phone || s.phone_number : 'Telefon gözlənilir'} •{' '}
+                    {studentHasContactPhone(s) ? s.phone || s.phone_number : t('students.phonePending')} •{' '}
                     {resolveStudentGroupLabel(s)} •{' '}
                     {s.enrolled_at
-                      ? new Date(s.enrolled_at).toLocaleDateString('az-AZ')
+                      ? new Date(s.enrolled_at).toLocaleDateString(i18n.language === 'ru' ? 'ru-RU' : 'az-AZ')
                       : '—'}
                   </div>
                   {studentHasContactPhone(s) ? (
-                    <p className="text-[11px] text-emerald-300/90 mt-1">
-                      Telefon hazırdır — paket və cədvəli təyin edib tamamlayın.
-                    </p>
+                    <p className="text-[11px] text-emerald-300/90 mt-1">{t('students.phoneReady')}</p>
                   ) : (
-                    <p className="text-[11px] text-amber-200/80 mt-1">
-                      Tələbə hələ telefonu doldurmayıb — profil linki göndərin.
-                    </p>
+                    <p className="text-[11px] text-amber-200/80 mt-1">{t('students.phoneMissing')}</p>
                   )}
                 </div>
                 <Button size="sm" onClick={() => void openCompleteSetup(s)}>
-                  Quraşdırmanı tamamla
+                  {t('students.completeSetup')}
                 </Button>
               </div>
             ))}
@@ -2211,16 +2201,16 @@ export default function InstructorStudents() {
             <span className="text-primary/80" aria-hidden>
               ⠿
             </span>
-            Tələbəni başqa qrupun üzərinə sürükləyib buraxın — köçürmə təsdiq pəncərəsi açılacaq.
+            {t('students.dragHint')}
           </p>
         ) : null}
-        {listLoading && <ListSkeleton message="Tələbələr yüklənir…" />}
+        {listLoading && <ListSkeleton message={t('students.loading')} />}
         {!listLoading && listError && (
           <Card className="p-6 text-center border border-amber-500/30 bg-amber-500/5">
             <p className="text-amber-200/90 text-sm mb-3">{listError}</p>
-            <p className="text-gray-500 text-xs mb-4">Şəbəkə və ya server gecikməsi ola bilər.</p>
+            <p className="text-gray-500 text-xs mb-4">{t('students.networkHint')}</p>
             <Button type="button" variant="secondary" onClick={() => void load()}>
-              Yenidən yüklə
+              {t('students.reload')}
             </Button>
           </Card>
         )}
@@ -2228,14 +2218,16 @@ export default function InstructorStudents() {
           !listError &&
           filteredGroups.map((g) => {
             const isOpen = openGroups.has(g.key)
-            const groupStatus = isOpen ? { variant: 'paid', label: 'Aktiv' } : { variant: 'neutral', label: 'Bağlı' }
+            const groupStatus = isOpen
+              ? { variant: 'paid', label: t('students.groupOpen') }
+              : { variant: 'neutral', label: t('students.groupClosed') }
             const total = g.students.length
             const payTop =
               g.payMix.installment
-                ? { variant: 'due', label: `Hissəli · ${g.payMix.installment}/${total}` }
+                ? { variant: 'due', label: t('students.payInstallmentGroup', { n: g.payMix.installment, total }) }
                 : g.payMix.prepaid
-                  ? { variant: 'paid', label: `Öncədən · ${g.payMix.prepaid}/${total}` }
-                  : { variant: 'pending', label: `Sonradan · ${g.payMix.postpaid}/${total}` }
+                  ? { variant: 'paid', label: t('students.payPrepaidGroup', { n: g.payMix.prepaid, total }) }
+                  : { variant: 'pending', label: t('students.payPostpaidGroup', { n: g.payMix.postpaid, total }) }
 
             const toggleGroup = () => {
               closeStudentMenu()
@@ -2285,7 +2277,7 @@ export default function InstructorStudents() {
                           {g.group}
                         </div>
                         <div className="text-xs text-token-textMuted truncate">
-                          {g.subject} · {g.students.length} tələbə
+                          {g.subject} · {t('students.groupStudents', { count: g.students.length })}
                         </div>
                       </div>
 
@@ -2295,7 +2287,7 @@ export default function InstructorStudents() {
                           variant="neutral"
                           className={['shrink-0', badgeTone('neutral')].join(' ')}
                         >
-                          Növbəti dərs:{' '}
+                          {t('students.nextLesson')}{' '}
                           <span
                             className={[
                               'ml-1 tabular-nums',
@@ -2316,7 +2308,7 @@ export default function InstructorStudents() {
                             variant="pending"
                             className={['shrink-0', badgeTone('pending')].join(' ')}
                           >
-                            Avg bal:{' '}
+                            {t('students.avgScore')}{' '}
                             <span
                               className={[
                                 'ml-1 tabular-nums',
@@ -2340,7 +2332,7 @@ export default function InstructorStudents() {
                         <div className="flex items-center gap-1.5">
                           <button
                             type="button"
-                            title="Qrup adını dəyiş"
+                            title={t('students.renameGroup')}
                             className={[
                               'h-9 px-2.5 rounded-xl border text-xs font-semibold transition-colors',
                               'border-[color:var(--border-subtle)] bg-token-surfaceCard/35 hover:bg-token-surfaceCard/60 text-token-textMain',
@@ -2350,11 +2342,11 @@ export default function InstructorStudents() {
                               openRenameGroup(g)
                             }}
                           >
-                            Ad
+                            {t('students.renameShort')}
                           </button>
                           <button
                             type="button"
-                            title="Boş qrupu sil"
+                            title={t('students.deleteEmptyGroup')}
                             className={[
                               'h-9 px-2.5 rounded-xl border text-xs font-semibold transition-colors',
                               'border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-300',
@@ -2364,7 +2356,7 @@ export default function InstructorStudents() {
                               promptDeleteGroup(g)
                             }}
                           >
-                            Sil
+                            {t('students.delete')}
                           </button>
                         </div>
                       ) : null}
@@ -2376,7 +2368,7 @@ export default function InstructorStudents() {
                           'border-[color:var(--border-subtle)] bg-token-surfaceCard/35 hover:bg-token-surfaceCard/60',
                           isOpen ? 'rotate-180' : 'rotate-0',
                         ].join(' ')}
-                        aria-label={isOpen ? 'Qrupu bağla' : 'Qrupu aç'}
+                        aria-label={isOpen ? t('students.closeGroup') : t('students.openGroup')}
                         onClick={toggleGroup}
                       >
                         <span className="text-token-textMain/80">⌄</span>
@@ -2396,17 +2388,11 @@ export default function InstructorStudents() {
                   >
                     {g.students.length === 0 ? (
                       <div className="rounded-xl border border-dashed border-[color:var(--border-subtle)] bg-token-surfaceCard/25 px-4 py-5 text-center space-y-2">
-                        <p className="text-sm text-token-textMuted">
-                          Bu qrupda hələ tələbə yoxdur.
-                        </p>
+                        <p className="text-sm text-token-textMuted">{t('students.emptyGroup')}</p>
                         {canManageEmptyGroup(g) ? (
-                          <p className="text-xs text-token-textMuted/90">
-                            Başqa qrupdan tələbəni buraya sürükləyib buraxa, qrup adını dəyişə və ya qrupu silə bilərsiniz.
-                          </p>
+                          <p className="text-xs text-token-textMuted/90">{t('students.emptyGroupManage')}</p>
                         ) : (
-                          <p className="text-xs text-token-textMuted/90">
-                            Başqa qrupdan tələbəni buraya sürükləyib buraxa bilərsiniz.
-                          </p>
+                          <p className="text-xs text-token-textMuted/90">{t('students.emptyGroupDrag')}</p>
                         )}
                       </div>
                     ) : null}
@@ -2438,7 +2424,7 @@ export default function InstructorStudents() {
                             <span
                               className="hidden sm:flex shrink-0 w-5 items-center justify-center text-token-textMuted/50 group-hover:text-primary/70 select-none"
                               aria-hidden
-                              title="Başqa qrupa sürükləyin"
+                              title={t('students.dragToGroup')}
                             >
                               ⠿
                             </span>
@@ -2565,7 +2551,7 @@ export default function InstructorStudents() {
                                       className="w-full text-left px-3 py-2 text-sm text-amber-200 hover:bg-amber-500/10 font-semibold"
                                       onClick={() => openCompleteSetup(s)}
                                     >
-                                      Quraşdırmanı tamamla
+                                      {t('students.completeSetup')}
                                     </button>
                                   )}
                                   <button
@@ -2576,7 +2562,7 @@ export default function InstructorStudents() {
                                       openEdit(s)
                                     }}
                                   >
-                                    Redaktə
+                                    {t('students.edit')}
                                   </button>
                                   <button
                                     type="button"
@@ -2586,7 +2572,7 @@ export default function InstructorStudents() {
                                       openLessonsModal(s)
                                     }}
                                   >
-                                    Dərslər
+                                    {t('students.lessons')}
                                   </button>
                                   <button
                                     type="button"
@@ -2596,7 +2582,7 @@ export default function InstructorStudents() {
                                       openRestoreModal(s)
                                     }}
                                   >
-                                    Köhnə ödənişlər
+                                    {t('students.oldPayments')}
                                   </button>
                                   <button
                                     type="button"
@@ -2606,7 +2592,7 @@ export default function InstructorStudents() {
                                       openDeleteConfirm(s)
                                     }}
                                   >
-                                    Sil
+                                    {t('students.delete')}
                                   </button>
                                 </div>
                               </PortalMenu>
@@ -2622,8 +2608,8 @@ export default function InstructorStudents() {
           })}
         {!listLoading && !listError && !students.length && (
           <div className="text-center py-16 text-token-textMuted">
-            <p className="text-lg mb-2 text-token-textMain">Tələbə yoxdur</p>
-            <p className="text-sm">Yuxarıdan tələbə əlavə edin</p>
+            <p className="text-lg mb-2 text-token-textMain">{t('students.emptyTitle')}</p>
+            <p className="text-sm">{t('students.emptyHint')}</p>
           </div>
         )}
       </div>
@@ -2631,20 +2617,18 @@ export default function InstructorStudents() {
       <Modal
         open={Boolean(setupFieldErrors?.length)}
         onClose={() => setSetupFieldErrors(null)}
-        title="Tələb olunan sahələr"
+        title={t('students.requiredFieldsTitle')}
         size="sm"
         zIndex={10200}
         footer={
           <div className="flex justify-center">
             <Button type="button" className="min-w-[120px] justify-center" onClick={() => setSetupFieldErrors(null)}>
-              Tamam
+              {t('students.ok')}
             </Button>
           </div>
         }
       >
-        <p className="text-sm text-center text-zinc-300 mb-3 leading-relaxed">
-          Zəhmət olmasa quraşdırma formasında aşağıdakı sahələri doldurun:
-        </p>
+        <p className="text-sm text-center text-zinc-300 mb-3 leading-relaxed">{t('students.requiredFieldsDesc')}</p>
         <ul className="text-sm text-amber-200/95 space-y-1.5 list-disc pl-5">
           {setupFieldErrors?.map((label) => (
             <li key={label}>{label}</li>
@@ -2659,13 +2643,13 @@ export default function InstructorStudents() {
           setSetupModal(false)
           setSetupEnrollmentId(null)
         }}
-        title="Quraşdırmanı tamamla"
+        title={t('students.setupTitle')}
         size="lg"
         scrollBody
         footer={
           <div className="flex gap-3">
             <Button onClick={saveCompleteSetup} loading={loading} className="flex-1 justify-center">
-              Tamamla və aktiv et
+              {t('students.setupFinish')}
             </Button>
             <Button
               variant="secondary"
@@ -2676,7 +2660,7 @@ export default function InstructorStudents() {
               disabled={loading}
               className="flex-1 justify-center"
             >
-              Legv et
+              {t('common.cancel')}
             </Button>
           </div>
         }
@@ -2685,10 +2669,7 @@ export default function InstructorStudents() {
           className="min-h-[min(52vh,28rem)] [overflow-anchor:none]"
           onFocusCapture={focusFieldNearest}
         >
-          <p className="text-xs text-gray-400 mb-4">
-            Tələbə qoşulub, lakin qeydiyyat tam deyil. Paket, cədvəl, ödəniş və{' '}
-            <strong className="text-gray-300">mobil telefon</strong> mütləqdir — sonra aktiv tələbə olacaq.
-          </p>
+          <p className="text-xs text-gray-400 mb-4">{t('students.setupDesc')}</p>
           <StudentFormFields
             data={setupForm}
             setData={setSetupForm}
@@ -2712,13 +2693,13 @@ export default function InstructorStudents() {
           setEditModal(false)
           setEditStudentId(null)
         }}
-        title="Tələbəni redaktə et"
+        title={t('students.editTitle')}
         size="lg"
         scrollBody
         footer={
           <div className="flex gap-3">
             <Button onClick={saveEdit} loading={loading} className="flex-1 justify-center">
-              Yadda saxla
+              {t('students.save')}
             </Button>
             <Button
               variant="secondary"
@@ -2729,7 +2710,7 @@ export default function InstructorStudents() {
               disabled={loading}
               className="flex-1 justify-center"
             >
-              Ləğv et
+              {t('common.cancel')}
             </Button>
           </div>
         }
@@ -2754,19 +2735,19 @@ export default function InstructorStudents() {
       <Modal
         open={Boolean(lessonsModal)}
         onClose={() => setLessonsModal(null)}
-        title={lessonsModal ? `${lessonsModal.studentName} — tarixlər üzrə` : 'Dərslər'}
+        title={lessonsModal ? t('students.lessonsByDate', { name: lessonsModal.studentName }) : t('students.lessonsTitle')}
         size="sm"
       >
         {lessonsModal?.loading ? (
-          <ListSkeleton message="Dərslər yüklənir…" />
+          <ListSkeleton message={t('students.lessonsLoading')} />
         ) : lessonsModal?.error ? (
           <p className="text-sm text-amber-200/90">{lessonsModal.error}</p>
         ) : !lessonsModal?.lessons?.length ? (
-          <p className="text-sm text-gray-500">Hələ tarixli dərs qeydi yoxdur.</p>
+          <p className="text-sm text-gray-500">{t('students.lessonsEmpty')}</p>
         ) : (
           <>
             <p className="text-xs text-gray-500 mb-3">
-              Cəmi <span className="text-indigo-200 font-semibold">{lessonsModal.lessons.length}</span> dərs
+              {t('students.lessonsTotal', { count: lessonsModal.lessons.length })}
             </p>
             <ul className="space-y-2 max-h-[50vh] overflow-y-auto">
               {lessonsModal.lessons.map((l) => (
@@ -2786,27 +2767,23 @@ export default function InstructorStudents() {
           className="w-full mt-5 justify-center"
           onClick={() => setLessonsModal(null)}
         >
-          Bağla
+          {t('common.close')}
         </Button>
       </Modal>
 
       <Modal
         open={Boolean(deleteConfirm)}
         onClose={() => !deleteBusy && setDeleteConfirm(null)}
-        title="Tələbəni sil"
+        title={t('students.deleteTitle')}
         size="sm"
         zIndex={400}
       >
         {deleteConfirm ? (
           <div className="space-y-5 text-sm">
             <p className="text-gray-300 leading-relaxed text-center px-1">
-              <span className="font-semibold text-white">{deleteConfirm.studentName}</span> adlı tələbəni silmək
-              istədiyinizdən əminsiniz?
+              {t('students.deleteConfirm', { name: deleteConfirm.studentName })}
             </p>
-            <p className="text-xs text-gray-500 text-center leading-relaxed">
-              Bu əməliyyat geri qaytarıla bilməz. Tələbə siyahıdan çıxacaq; qeydə alınmış nağd ödənişlər aylıq və illik
-              hesabatda qalacaq.
-            </p>
+            <p className="text-xs text-gray-500 text-center leading-relaxed">{t('students.deleteWarning')}</p>
             <div className="flex flex-col-reverse sm:flex-row gap-2 sm:justify-center pt-1">
               <Button
                 type="button"
@@ -2815,7 +2792,7 @@ export default function InstructorStudents() {
                 disabled={deleteBusy}
                 onClick={() => setDeleteConfirm(null)}
               >
-                Ləğv et
+                {t('common.cancel')}
               </Button>
               <Button
                 type="button"
@@ -2824,7 +2801,7 @@ export default function InstructorStudents() {
                 loading={deleteBusy}
                 onClick={() => void confirmDeleteStudent()}
               >
-                Sil
+                {t('students.delete')}
               </Button>
             </div>
           </div>
@@ -2834,20 +2811,18 @@ export default function InstructorStudents() {
       <Modal
         open={Boolean(restoreModal)}
         onClose={() => setRestoreModal(null)}
-        title={restoreModal ? `${restoreModal.studentName} — köhnə ödənişlər` : 'Köhnə ödənişlər'}
+        title={restoreModal ? t('students.restoreByStudent', { name: restoreModal.studentName }) : t('students.restoreTitle')}
         size="sm"
       >
         {restoreModal?.loading ? (
-          <ListSkeleton message="Hesablanır…" />
+          <ListSkeleton message={t('students.restoreCalculating')} />
         ) : restoreModal?.error ? (
           <p className="text-sm text-amber-200/90">{restoreModal.error}</p>
         ) : !restoreModal?.items?.length ? (
-          <p className="text-sm text-gray-500">Bərpa ediləcək köhnə dövr tapılmadı.</p>
+          <p className="text-sm text-gray-500">{t('students.restoreEmpty')}</p>
         ) : (
           <div className="space-y-2">
-            <p className="text-xs text-gray-500">
-              Aşağıdakı dövrləri seçin. Təsdiqləyərkən sistem onları tarixçəyə “completed” kimi əlavə edəcək.
-            </p>
+            <p className="text-xs text-gray-500">{t('students.restoreDesc')}</p>
             <ul className="space-y-2 max-h-[45vh] overflow-y-auto pr-1">
               {restoreModal.items.map((it) => {
                 const checked = restoreModal.selected?.has(it.id)
@@ -2888,7 +2863,7 @@ export default function InstructorStudents() {
               loading={restoreModal.loading}
               className="w-full justify-center mt-3"
             >
-              Seçilənləri təsdiqlə
+              {t('students.restoreConfirm')}
             </Button>
           </div>
         )}
