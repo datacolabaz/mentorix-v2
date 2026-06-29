@@ -20,6 +20,7 @@ import { BILLING_STATUS_QUERY_KEY } from '../hooks/useBillingStatus'
 import { useToast } from '../components/common/Toast'
 import PhoneVerificationGate from '../components/auth/PhoneVerificationGate'
 import ConfirmDialog from '../components/common/ConfirmDialog'
+import SidebarPreferences from '../components/common/SidebarPreferences'
 import { useInstructorNavSections } from '../hooks/useInstructorNavSections'
 
 const DISCOVER_MODAL_SESSION_PREFIX = 'mx_discover_modal_v1_'
@@ -29,7 +30,7 @@ export default function InstructorLayout() {
   const navigate = useNavigate()
   const location = useLocation()
   const [navOpen, setNavOpen] = useState(false)
-  const { focusMode, setFocusMode, overlayLock, theme, toggleTheme } = useUiStore()
+  const { focusMode, setFocusMode, overlayLock, theme } = useUiStore()
   const sidebarHidden = focusMode || overlayLock
   const isChatPage =
     location.pathname === '/instructor/chat' ||
@@ -467,55 +468,13 @@ export default function InstructorLayout() {
         </nav>
 
         <div className="p-4 border-t border-[color:var(--border-subtle)]">
-          <button
-            type="button"
-            onClick={toggleTheme}
-            className={[
-              'w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl border transition-colors',
-              theme === 'dark'
-                ? 'border-[color:var(--border-subtle)] bg-token-surfaceCard/45 hover:bg-token-surfaceCard/60'
-                : 'border-[color:var(--border-subtle)] bg-token-surfaceCard/70 hover:bg-token-surfaceCard/90',
-            ].join(' ')}
-          >
-            <span className="text-sm font-medium text-token-textMain">
-              Tema
-            </span>
-            <span className="flex items-center gap-2">
-              <span className="text-xs text-token-textMuted">
-                {theme === 'dark' ? 'Gecə' : 'Gündüz'}
-              </span>
-              <span
-                aria-hidden
-                className={[
-                  'relative inline-flex h-6 w-11 items-center rounded-full transition-colors',
-                  theme === 'dark' ? 'bg-primary/40' : 'bg-gray-300',
-                ].join(' ')}
-              >
-                <span
-                  className={[
-                    'inline-block h-5 w-5 transform rounded-full bg-white transition-transform',
-                    theme === 'dark' ? 'translate-x-5' : 'translate-x-1',
-                  ].join(' ')}
-                />
-              </span>
-            </span>
-          </button>
-
-          <button
-            onClick={() => {
+          <SidebarPreferences
+            onLogout={() => {
               setFocusMode(false)
               logout()
               navigate('/login')
             }}
-            className={[
-              'mt-3 flex items-center gap-2 text-sm font-medium transition-colors w-full px-4 py-3 rounded-xl',
-              theme === 'dark'
-                ? 'text-red-300 hover:text-red-200 hover:bg-red-500/10'
-                : 'text-red-600 hover:text-red-700 hover:bg-red-50',
-            ].join(' ')}
-          >
-            → Çıxış
-          </button>
+          />
         </div>
       </aside>
 

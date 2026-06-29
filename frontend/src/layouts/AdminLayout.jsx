@@ -1,44 +1,63 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import useAuthStore from '../hooks/useAuth'
 import Brand from '../components/common/Brand'
 import Footer from '../components/common/Footer'
 import { sidebarNavClass } from '../lib/sidebarNavClass'
 import useUiStore from '../hooks/useUi'
 import NavIcon from '../components/common/NavIcon'
+import SidebarPreferences from '../components/common/SidebarPreferences'
 
-const NAV_SECTIONS = [
+const NAV_SECTION_DEFS = [
   {
+    id: 'management',
+    titleKey: 'nav.sections.management',
     title: 'MANAGEMENT',
     items: [
-      { to: '/admin', label: 'Dashboard', icon: <NavIcon name="dashboard" />, end: true },
-      { to: '/admin/analytics', label: 'Analitika', icon: <NavIcon name="analytics" /> },
-      { to: '/admin/instructors', label: 'Müəllimlər', icon: <NavIcon name="instructors" /> },
-      { to: '/admin/students', label: 'Tələbələr', icon: <NavIcon name="students" /> },
-      { to: '/admin/classes', label: 'Kurslar / Qruplar', icon: <NavIcon name="courses" /> },
-      { to: '/admin/payments', label: 'Ödənişlər', icon: <NavIcon name="payments" /> },
-      { to: '/admin/inventory', label: 'SMS & Ehtiyat', icon: <NavIcon name="notifications" /> },
-      { to: '/admin/billing', label: 'Platform ödənişləri', icon: <NavIcon name="payments" /> },
+      { to: '/admin', key: 'dashboard', labelKey: 'nav.admin.dashboard', label: 'Dashboard', icon: 'dashboard', end: true },
+      { to: '/admin/analytics', key: 'analytics', labelKey: 'nav.admin.analytics', label: 'Analitika', icon: 'analytics' },
+      { to: '/admin/instructors', key: 'instructors', labelKey: 'nav.admin.instructors', label: 'Müəllimlər', icon: 'instructors' },
+      { to: '/admin/students', key: 'students', labelKey: 'nav.admin.students', label: 'Tələbələr', icon: 'students' },
+      { to: '/admin/classes', key: 'classes', labelKey: 'nav.admin.classes', label: 'Kurslar / Qruplar', icon: 'courses' },
+      { to: '/admin/payments', key: 'payments', labelKey: 'nav.admin.payments', label: 'Ödənişlər', icon: 'payments' },
+      { to: '/admin/inventory', key: 'inventory', labelKey: 'nav.admin.inventory', label: 'SMS & Ehtiyat', icon: 'notifications' },
+      { to: '/admin/billing', key: 'billing', labelKey: 'nav.admin.billing', label: 'Platform ödənişləri', icon: 'payments' },
     ],
   },
   {
+    id: 'system',
+    titleKey: 'nav.sections.system',
     title: 'SYSTEM',
     items: [
-      { to: '/admin/notifications', label: 'Bildirişlər', icon: <NavIcon name="notifications" /> },
-      { to: '/admin/marketing/login', label: 'Landing məzmunu', icon: <NavIcon name="analytics" /> },
-      { to: '/admin/instructor-nav', label: 'Müəllim menyusu', icon: <NavIcon name="settings" /> },
-      { to: '/admin/categories', label: 'Axtarış kateqoriyaları', icon: <NavIcon name="courses" /> },
-      { to: '/admin/settings', label: 'Tənzimləmələr', icon: <NavIcon name="settings" /> },
+      { to: '/admin/notifications', key: 'notifications', labelKey: 'nav.admin.notifications', label: 'Bildirişlər', icon: 'notifications' },
+      { to: '/admin/marketing/login', key: 'marketingLogin', labelKey: 'nav.admin.marketingLogin', label: 'Landing məzmunu', icon: 'analytics' },
+      { to: '/admin/instructor-nav', key: 'instructorNav', labelKey: 'nav.admin.instructorNav', label: 'Müəllim menyusu', icon: 'settings' },
+      { to: '/admin/categories', key: 'categories', labelKey: 'nav.admin.categories', label: 'Axtarış kateqoriyaları', icon: 'courses' },
+      { to: '/admin/settings', key: 'settings', labelKey: 'nav.admin.settings', label: 'Tənzimləmələr', icon: 'settings' },
     ],
   },
 ]
 
 export default function AdminLayout() {
+  const { t, i18n } = useTranslation()
   const { user, logout } = useAuthStore()
   const navigate = useNavigate()
   const location = useLocation()
-  const { theme, toggleTheme } = useUiStore()
+  const { theme } = useUiStore()
   const [navOpen, setNavOpen] = useState(false)
+  const navSections = useMemo(
+    () =>
+      NAV_SECTION_DEFS.map((section) => ({
+        title: t(section.titleKey, { defaultValue: section.title }),
+        items: section.items.map((item) => ({
+          ...item,
+          label: t(item.labelKey, { defaultValue: item.label }),
+          icon: <NavIcon name={item.icon} />,
+        })),
+      })),
+    [t, i18n.language],
+  )
 
   useEffect(() => {
     setNavOpen(false)
@@ -152,7 +171,7 @@ export default function AdminLayout() {
         </div>
 
         <nav className="flex-1 px-5 py-4 space-y-2 overflow-y-auto min-h-0 overscroll-contain">
-          {NAV_SECTIONS.map((section) => (
+          {navSections.map((section) => (
             <div key={section.title} className="space-y-2">
               <div className="px-1 pt-2">
                 <div className={`text-xs uppercase tracking-wider ${theme === 'dark' ? 'text-token-textMuted/80' : 'text-slate-400'}`}>
@@ -184,49 +203,12 @@ export default function AdminLayout() {
             theme === 'dark' ? 'border-t border-white/10' : 'border-t border-gray-200',
           ].join(' ')}
         >
-          <button
-            type="button"
-            onClick={toggleTheme}
-            className={[
-              'w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl border transition-colors',
-              theme === 'dark'
-                ? 'border-white/10 bg-white/5 hover:bg-white/10'
-                : 'border-gray-200 bg-gray-50 hover:bg-gray-100',
-            ].join(' ')}
-          >
-            <span className={`text-sm font-medium ${theme === 'dark' ? 'text-gray-200' : 'text-gray-700'}`}>
-              Tema
-            </span>
-            <span className="flex items-center gap-2">
-              <span className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
-                {theme === 'dark' ? 'Gecə' : 'Gündüz'}
-              </span>
-              <span
-                aria-hidden
-                className={[
-                  'relative inline-flex h-6 w-11 items-center rounded-full transition-colors',
-                  theme === 'dark' ? 'bg-primary/40' : 'bg-gray-300',
-                ].join(' ')}
-              >
-                <span
-                  className={[
-                    'inline-block h-5 w-5 transform rounded-full bg-white transition-transform',
-                    theme === 'dark' ? 'translate-x-5' : 'translate-x-1',
-                  ].join(' ')}
-                />
-              </span>
-            </span>
-          </button>
-
-          <button onClick={() => { logout(); navigate('/login') }}
-            className={[
-              'mt-3 flex items-center gap-2 text-sm font-medium transition-colors w-full px-4 py-3 rounded-xl',
-              theme === 'dark'
-                ? 'text-red-300 hover:text-red-200 hover:bg-red-500/10'
-                : 'text-red-600 hover:text-red-700 hover:bg-red-50',
-            ].join(' ')}>
-            → Çıxış
-          </button>
+          <SidebarPreferences
+            onLogout={() => {
+              logout()
+              navigate('/login')
+            }}
+          />
         </div>
         </aside>
 

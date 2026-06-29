@@ -1,15 +1,18 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import useAuthStore from '../../hooks/useAuth'
 import Button from '../../components/common/Button'
 import { useToast } from '../../components/common/Toast'
 import InstructorEmailAuth from '../../components/auth/InstructorEmailAuth'
 import Brand from '../../components/common/Brand'
+import LanguageToggle from '../../components/common/LanguageToggle'
 import { setPageSeo } from '../../lib/pageSeo'
 import { postAuthNavigate } from '../../lib/postAuth'
 
 /** Tam səhifə giriş / qeydiyyat (/login, /register) */
 export default function AuthPage() {
+  const { t } = useTranslation()
   const location = useLocation()
   const [searchParams] = useSearchParams()
   const isAdmin = searchParams.get('admin') === 'true'
@@ -58,7 +61,7 @@ export default function AuthPage() {
       const user = await login(adminIdentifier, password)
       goDashboard(user.role)
     } catch (err) {
-      toast(err.message || 'Giriş xətası', 'error')
+      toast(err.message || t('auth.loginError'), 'error')
     } finally {
       setLoading(false)
     }
@@ -86,17 +89,18 @@ export default function AuthPage() {
     })
   }, [isAdmin, location.pathname])
 
-  const authGreeting = authTab === 'signup' ? 'Hesab yaradın' : 'Xoş gəldiniz'
+  const authGreeting = authTab === 'signup' ? t('auth.createAccount') : t('auth.welcome')
 
   return (
     <div className="login-wrapper flex min-h-[100svh] w-full min-w-0 max-w-full flex-col overflow-x-hidden">
-      <header className="shrink-0 w-full max-w-sm mx-auto px-4 pt-4 sm:pt-6 pb-3 sm:pb-4">
+      <header className="shrink-0 w-full max-w-sm mx-auto px-4 pt-4 sm:pt-6 pb-3 sm:pb-4 space-y-3">
         <Link
           to="/"
           className="inline-flex items-center gap-1 text-xs sm:text-sm font-medium text-gray-400 hover:text-white transition-colors"
         >
-          ← Ana səhifəyə qayıt
+          ← {t('auth.backHome')}
         </Link>
+        <LanguageToggle />
       </header>
       <main className="flex flex-1 items-start sm:items-center justify-center px-4 pb-8 sm:pb-10 min-h-0 overflow-y-auto">
       <div id="mx-login" className="w-full max-w-sm scroll-mt-6">
@@ -115,14 +119,14 @@ export default function AuthPage() {
                 <Brand size="login" />
               </div>
               <div className="h-0.5 w-10 mx-auto rounded-full bg-primary mb-3" aria-hidden />
-              <div className="text-gray-400 text-sm">Hesabınıza daxil olun</div>
+              <div className="text-gray-400 text-sm">{t('auth.loginToAccount')}</div>
             </div>
           )}
 
           {isAdmin ? (
             <form onSubmit={handleEmailLogin} className="space-y-4" autoComplete="on">
               <div className="text-center text-red-400 text-xs py-2 px-3 bg-red-500/10 border border-red-500/20 rounded-xl mb-4">
-                Admin panel
+                {t('auth.adminPanel')}
               </div>
               <div>
                 <label

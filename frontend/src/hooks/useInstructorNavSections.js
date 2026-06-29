@@ -1,9 +1,11 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import api from '../lib/api'
 import {
   buildInstructorNavSectionsFromClient,
   buildInstructorNavSections,
 } from '../constants/instructorNav'
+import { localizeInstructorNavSections } from '../lib/localizeNav'
 
 const NAV_REFRESH_EVENT = 'mx:instructor-nav-updated'
 
@@ -28,17 +30,23 @@ export function notifyInstructorNavUpdated() {
 }
 
 export function useInstructorNavSections() {
-  const [sections, setSections] = useState(() => buildInstructorNavSections())
+  const { t, i18n } = useTranslation()
+  const [rawSections, setRawSections] = useState(() => buildInstructorNavSections())
   const [loading, setLoading] = useState(true)
+
+  const sections = useMemo(
+    () => localizeInstructorNavSections(rawSections, t),
+    [rawSections, t, i18n.language],
+  )
 
   const refresh = useCallback(async () => {
     try {
       const nav = await fetchInstructorNavConfig()
       if (nav?.sections?.length) {
-        setSections(buildInstructorNavSectionsFromClient(nav))
+        setRawSections(buildInstructorNavSectionsFromClient(nav))
       }
     } catch {
-      setSections(buildInstructorNavSections())
+      setRawSections(buildInstructorNavSections())
     } finally {
       setLoading(false)
     }

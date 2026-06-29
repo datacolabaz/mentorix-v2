@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import i18n, { readStoredLocale, writeStoredLocale, applyDocumentLocale } from '../i18n'
 
 const THEME_KEY = 'mentorix_theme_v1'
 const readTheme = () => {
@@ -46,6 +47,15 @@ const useUiStore = create((set, get) => ({
     writeTheme(next)
     applyDocumentTheme(next)
     set({ theme: next })
+  },
+
+  locale: readStoredLocale(), // az | ru
+  setLocale: (locale) => {
+    const next = locale === 'ru' ? 'ru' : 'az'
+    writeStoredLocale(next)
+    applyDocumentLocale(next)
+    void i18n.changeLanguage(next)
+    set({ locale: next })
   },
 }))
 

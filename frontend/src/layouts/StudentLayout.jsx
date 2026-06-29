@@ -1,11 +1,13 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import useAuthStore from '../hooks/useAuth'
 import useUiStore from '../hooks/useUi'
 import Brand from '../components/common/Brand'
 import Footer from '../components/common/Footer'
 import { sidebarNavClass } from '../lib/sidebarNavClass'
 import NavIcon from '../components/common/NavIcon'
+import SidebarPreferences from '../components/common/SidebarPreferences'
 import { StudentGroupProvider, useStudentGroups } from '../contexts/StudentGroupContext'
 import { useStudentAlerts } from '../hooks/useStudentAlerts'
 import StudentAssignmentAlertModal from '../components/student/StudentAssignmentAlertModal'
@@ -20,31 +22,32 @@ function NavBadge({ count }) {
   )
 }
 
-const NAV_GROUPS = [
+const NAV_GROUP_DEFS = [
   {
+    labelKey: 'nav.sections.management',
     label: 'MANAGEMENT',
     items: [
-      { to: '/student', label: 'Proqresim', icon: <NavIcon name="progress" />, end: true },
-      { to: '/student/groups', label: 'Qruplarım', icon: <NavIcon name="courses" /> },
-      { to: '/student/schedule', label: 'Cədvəlim', icon: <NavIcon name="schedule" /> },
-      { to: '/student/chat', label: 'Qrup çatı', icon: <NavIcon name="chat" /> },
-      { to: '/student/direct-chat', label: 'Fərdi çat', icon: <NavIcon name="chat" /> },
-      { to: '/student/exams', label: 'İmtahanlarım', icon: <NavIcon name="exams" /> },
-      { to: '/student/assignments', label: 'Tapşırıqlarım', icon: <NavIcon name="tasks" />, badgeKey: 'tasks' },
-      { to: '/student/materials', label: 'Materiallar', icon: <NavIcon name="materials" /> },
-      { to: '/universities', label: 'Universitetlər', icon: <NavIcon name="courses" /> },
+      { to: '/student', key: 'progress', labelKey: 'nav.student.progress', label: 'Proqresim', icon: 'progress', end: true },
+      { to: '/student/groups', key: 'groups', labelKey: 'nav.student.groups', label: 'Qruplarım', icon: 'courses' },
+      { to: '/student/schedule', key: 'schedule', labelKey: 'nav.student.schedule', label: 'Cədvəlim', icon: 'schedule' },
+      { to: '/student/chat', key: 'groupChat', labelKey: 'nav.student.groupChat', label: 'Qrup çatı', icon: 'chat' },
+      { to: '/student/direct-chat', key: 'directChat', labelKey: 'nav.student.directChat', label: 'Fərdi çat', icon: 'chat' },
+      { to: '/student/exams', key: 'exams', labelKey: 'nav.student.exams', label: 'İmtahanlarım', icon: 'exams' },
+      { to: '/student/assignments', key: 'assignments', labelKey: 'nav.student.assignments', label: 'Tapşırıqlarım', icon: 'tasks', badgeKey: 'tasks' },
+      { to: '/student/materials', key: 'materials', labelKey: 'nav.student.materials', label: 'Materiallar', icon: 'materials' },
+      { to: '/universities', key: 'universities', labelKey: 'nav.student.universities', label: 'Universitetlər', icon: 'courses' },
     ],
   },
   {
+    labelKey: 'nav.sections.billing',
     label: 'BILLING',
-    items: [
-      { to: '/student/payments', label: 'Ödəniş', icon: <NavIcon name="payments" /> },
-    ],
+    items: [{ to: '/student/payments', key: 'payments', labelKey: 'nav.student.payments', label: 'Ödəniş', icon: 'payments' }],
   },
   {
+    labelKey: 'nav.sections.communication',
     label: 'COMMUNICATION',
     items: [
-      { to: '/student/notifications', label: 'Bildirişlər', icon: <NavIcon name="notifications" />, badgeKey: 'notifications' },
+      { to: '/student/notifications', key: 'notifications', labelKey: 'nav.student.notifications', label: 'Bildirişlər', icon: 'notifications', badgeKey: 'notifications' },
     ],
   },
 ]
@@ -58,11 +61,24 @@ export default function StudentLayout() {
 }
 
 function StudentLayoutInner() {
+  const { t, i18n } = useTranslation()
   const { user, logout } = useAuthStore()
   const navigate = useNavigate()
   const location = useLocation()
   const [navOpen, setNavOpen] = useState(false)
-  const { focusMode, setFocusMode, theme, toggleTheme } = useUiStore()
+  const { focusMode, setFocusMode, theme } = useUiStore()
+  const navGroups = useMemo(
+    () =>
+      NAV_GROUP_DEFS.map((g) => ({
+        label: t(g.labelKey, { defaultValue: g.label }),
+        items: g.items.map((item) => ({
+          ...item,
+          label: t(item.labelKey, { defaultValue: item.label }),
+          icon: <NavIcon name={item.icon} />,
+        })),
+      })),
+    [t, i18n.language],
+  )
   const { activeEnrollmentId } = useStudentGroups()
   const { tasksBadge, notifBadge } = useStudentAlerts({ enrollmentId: activeEnrollmentId })
   const mainRef = useRef(null)
@@ -221,7 +237,7 @@ function StudentLayoutInner() {
             </div>
 
             <nav className="flex-1 px-4 py-4 space-y-5 overflow-y-auto min-h-0">
-              {NAV_GROUPS.map((g) => (
+              {navGroups.map((g) => (
                 <div key={g.label} className="space-y-2">
                   <div
                     className={`px-2 text-xs uppercase tracking-wider ${theme === 'dark' ? 'text-token-textMuted/80' : 'text-slate-400'}`}
@@ -250,54 +266,13 @@ function StudentLayoutInner() {
             </nav>
 
             <div className={['p-4', theme === 'dark' ? 'border-t border-white/10' : 'border-t border-black/[0.06]'].join(' ')}>
-              <button
-                type="button"
-                onClick={toggleTheme}
-                className={[
-                  'w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl border transition-colors',
-                  theme === 'dark'
-                    ? 'border-white/10 bg-white/5 hover:bg-white/10'
-                    : 'border-black/[0.06] bg-white/70 hover:bg-white',
-                ].join(' ')}
-              >
-                <span className={`text-sm font-medium ${theme === 'dark' ? 'text-gray-200' : 'text-slate-900'}`}>
-                  Tema
-                </span>
-                <span className="flex items-center gap-2">
-                  <span className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-slate-600'}`}>
-                    {theme === 'dark' ? 'Gecə' : 'Gündüz'}
-                  </span>
-                  <span
-                    aria-hidden
-                    className={[
-                      'relative inline-flex h-6 w-11 items-center rounded-full transition-colors',
-                      theme === 'dark' ? 'bg-primary/40' : 'bg-gray-300',
-                    ].join(' ')}
-                  >
-                    <span
-                      className={[
-                        'inline-block h-5 w-5 transform rounded-full bg-white transition-transform',
-                        theme === 'dark' ? 'translate-x-5' : 'translate-x-1',
-                      ].join(' ')}
-                    />
-                  </span>
-                </span>
-              </button>
-              <button
-                onClick={() => {
+              <SidebarPreferences
+                onLogout={() => {
                   setFocusMode(false)
                   logout()
                   navigate('/login')
                 }}
-                className={[
-                  'mt-3 flex items-center gap-2 text-sm font-medium transition-colors w-full px-4 py-3 rounded-xl',
-                  theme === 'dark'
-                    ? 'text-red-300 hover:text-red-200 hover:bg-red-500/10'
-                    : 'text-red-600 hover:text-red-700 hover:bg-red-50',
-                ].join(' ')}
-              >
-                → Çıxış
-              </button>
+              />
             </div>
           </aside>
 

@@ -1,25 +1,37 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import useAuthStore from '../hooks/useAuth'
 import Brand from '../components/common/Brand'
 import Footer from '../components/common/Footer'
 import { sidebarNavClass } from '../lib/sidebarNavClass'
 import useUiStore from '../hooks/useUi'
 import NavIcon from '../components/common/NavIcon'
+import SidebarPreferences from '../components/common/SidebarPreferences'
 
-const NAV = [
-  { to: '/parent', label: 'Uşaqlarım', icon: <NavIcon name="children" />, end: true },
-  { to: '/parent/assignments', label: 'Ev tapşırıqları', icon: <NavIcon name="tasks" /> },
-  { to: '/parent/payments', label: 'Ödəniş', icon: <NavIcon name="payments" /> },
-  { to: '/parent/notifications', label: 'Bildirişlər', icon: <NavIcon name="notifications" /> },
+const NAV_DEFS = [
+  { to: '/parent', key: 'children', labelKey: 'nav.parent.children', label: 'Uşaqlarım', icon: 'children', end: true },
+  { to: '/parent/assignments', key: 'assignments', labelKey: 'nav.parent.assignments', label: 'Ev tapşırıqları', icon: 'tasks' },
+  { to: '/parent/payments', key: 'payments', labelKey: 'nav.parent.payments', label: 'Ödəniş', icon: 'payments' },
+  { to: '/parent/notifications', key: 'notifications', labelKey: 'nav.parent.notifications', label: 'Bildirişlər', icon: 'notifications' },
 ]
 
 export default function ParentLayout() {
+  const { t, i18n } = useTranslation()
   const { user, logout } = useAuthStore()
   const navigate = useNavigate()
   const location = useLocation()
-  const { theme, toggleTheme } = useUiStore()
+  const { theme } = useUiStore()
   const [navOpen, setNavOpen] = useState(false)
+  const nav = useMemo(
+    () =>
+      NAV_DEFS.map((item) => ({
+        ...item,
+        label: t(item.labelKey, { defaultValue: item.label }),
+        icon: <NavIcon name={item.icon} />,
+      })),
+    [t, i18n.language],
+  )
 
   useEffect(() => {
     setNavOpen(false)
@@ -86,7 +98,7 @@ export default function ParentLayout() {
           </div>
         </div>
         <nav className="flex-1 p-4 space-y-2">
-          {NAV.map((item) => (
+          {nav.map((item) => (
             <NavLink key={item.to} to={item.to} end={item.end}
               className={({ isActive }) => sidebarNavClass(isActive, theme)}>
               <span className="shrink-0">{item.icon}</span>
@@ -95,49 +107,12 @@ export default function ParentLayout() {
           ))}
         </nav>
         <div className={['p-4', theme === 'dark' ? 'border-t border-white/10' : 'border-t border-black/[0.06]'].join(' ')}>
-          <button
-            type="button"
-            onClick={toggleTheme}
-            className={[
-              'w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl border transition-colors',
-              theme === 'dark'
-                ? 'border-white/10 bg-white/5 hover:bg-white/10'
-                : 'border-black/[0.06] bg-white/70 hover:bg-white',
-            ].join(' ')}
-          >
-            <span className={`text-sm font-medium ${theme === 'dark' ? 'text-gray-200' : 'text-slate-900'}`}>
-              Tema
-            </span>
-            <span className="flex items-center gap-2">
-              <span className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-slate-600'}`}>
-                {theme === 'dark' ? 'Gecə' : 'Gündüz'}
-              </span>
-              <span
-                aria-hidden
-                className={[
-                  'relative inline-flex h-6 w-11 items-center rounded-full transition-colors',
-                  theme === 'dark' ? 'bg-primary/40' : 'bg-gray-300',
-                ].join(' ')}
-              >
-                <span
-                  className={[
-                    'inline-block h-5 w-5 transform rounded-full bg-white transition-transform',
-                    theme === 'dark' ? 'translate-x-5' : 'translate-x-1',
-                  ].join(' ')}
-                />
-              </span>
-            </span>
-          </button>
-
-          <button onClick={() => { logout(); navigate('/login') }}
-            className={[
-              'mt-3 flex items-center gap-2 text-sm font-medium transition-colors w-full px-4 py-3 rounded-xl',
-              theme === 'dark'
-                ? 'text-red-300 hover:text-red-200 hover:bg-red-500/10'
-                : 'text-red-600 hover:text-red-700 hover:bg-red-50',
-            ].join(' ')}>
-            → Çıxış
-          </button>
+          <SidebarPreferences
+            onLogout={() => {
+              logout()
+              navigate('/login')
+            }}
+          />
         </div>
         </aside>
         <main

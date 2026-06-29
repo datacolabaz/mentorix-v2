@@ -1,17 +1,20 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import api, { AUTH_REQUEST_TIMEOUT_MS } from '../../lib/api'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
 import { useToast } from '../../components/common/Toast'
 import { fmtAzBakuField } from '../../lib/azDatetime'
 
-function fmtDuration(minutes) {
+function fmtDuration(minutes, t) {
   const m = Number(minutes) || 0
-  if (m < 60) return `${m} dəq`
+  if (m < 60) return `${m} ${t('live.minuteShort')}`
   const h = Math.floor(m / 60)
   const rest = m % 60
-  return rest ? `${h}:${String(rest).padStart(2, '0')}` : `${h} saat`
+  return rest
+    ? t('live.hourFormat', { h, m: String(rest).padStart(2, '0') })
+    : `${h} ${t('live.hourShort')}`
 }
 
 function fmtRecordingDuration(totalSec) {
@@ -35,6 +38,7 @@ async function downloadRecording(url, filename) {
 }
 
 export default function InstructorLiveHistory() {
+  const { t } = useTranslation()
   const toast = useToast()
   const [loading, setLoading] = useState(true)
   const [sessions, setSessions] = useState([])
@@ -86,9 +90,9 @@ export default function InstructorLiveHistory() {
     setDownloadingId(session.id)
     try {
       await downloadRecording(session.recording_url, `mentorix-${session.room_code || 'ders'}.webm`)
-      toast('Yazı yükləndi')
+      toast(t('live.downloadOk'))
     } catch {
-      toast('Yazı yüklənmədi', 'error')
+      toast(t('live.downloadFailed'), 'error')
     } finally {
       setDownloadingId(null)
     }
@@ -96,7 +100,7 @@ export default function InstructorLiveHistory() {
 
   const handleShare = async (session) => {
     if (!session?.has_recording) {
-      toast('Bu dərsin yazısı yoxdur', 'info')
+      toast(t('live.shareNoRecording'), 'info')
       return
     }
     setSharingId(session.id)
@@ -114,12 +118,12 @@ export default function InstructorLiveHistory() {
       const url = `${window.location.origin}${shareUrl}`
       try {
         await navigator.clipboard.writeText(url)
-        toast('Paylaşım linki kopyalandı')
+        toast(t('live.shareCopied'))
       } catch {
         window.prompt('Paylaşım linkini kopyalayın:', url)
       }
     } catch (e) {
-      toast(e?.message || 'Paylaşım alınmadı', 'error')
+      toast(e?.message || t('live.shareFailed'), 'error')
     } finally {
       setSharingId(null)
     }
@@ -127,16 +131,16 @@ export default function InstructorLiveHistory() {
 
   const handleDelete = async (session) => {
     if (!session?.room_code) return
-    const ok = window.confirm(`«${session.title}» dərsini silmək istəyirsiniz? Yazı da silinəcək.`)
+    const ok = window.confirm(t('live.confirmDeleteOne', { title: session.title }))
     if (!ok) return
     setDeletingId(session.id)
     try {
       await api.delete(`/live/history/${encodeURIComponent(session.room_code)}`)
       setSessions((prev) => prev.filter((s) => s.id !== session.id))
       setSelectedIds((prev) => prev.filter((id) => id !== session.id))
-      toast('Dərs silindi')
+      toast(t('live.deletedOne'))
     } catch (e) {
-      toast(e?.message || 'Silinmədi', 'error')
+      toast(e?.message || t('live.deleteFailed'), 'error')
     } finally {
       setDeletingId(null)
     }
@@ -145,9 +149,7 @@ export default function InstructorLiveHistory() {
   const handleBulkDelete = async () => {
     if (!selectedCount) return
     const selected = sessions.filter((s) => selectedIds.includes(s.id))
-    const ok = window.confirm(
-      `${selected.length} dərsi silmək istəyirsiniz? Yazılar da silinəcək.`,
-    )
+    const ok = window.confirm(t('live.confirmDeleteMany', { n: selected.length }))
     if (!ok) return
     setBulkDeleting(true)
     try {
@@ -162,9 +164,9 @@ export default function InstructorLiveHistory() {
       })
       setSessions((prev) => prev.filter((s) => !deletedIds.includes(s.id)))
       setSelectedIds((prev) => prev.filter((id) => !deletedIds.includes(id)))
-      if (failed === 0) toast(`${deletedIds.length} dərs silindi`)
-      else if (deletedIds.length === 0) toast('Heç biri silinmədi', 'error')
-      else toast(`${deletedIds.length} silindi, ${failed} silinmədi`, 'info')
+      if (failed === 0) toast(t('live.bulkDeleted', { n: deletedIds.length }))
+      else if (deletedIds.length === 0) toast(t('live.bulkNone'), 'error')
+      else toast(t('live.bulkPartial', { ok: deletedIds.length, fail: failed }), 'info')
     } finally {
       setBulkDeleting(false)
     }
@@ -174,20 +176,20 @@ export default function InstructorLiveHistory() {
     <div className="p-4 sm:p-6 max-w-4xl mx-auto space-y-5">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="font-display font-bold text-xl sm:text-2xl text-token-textMain">Canlı dərslər</h1>
-          <p className="text-xs text-token-textMuted mt-1">Keçmiş Mentorix Live sessiyaları və yazılar</p>
+          <h1 className="font-display font-bold text-xl sm:text-2xl text-token-textMain">{t('live.historyTitle')}</h1>
+          <p className="text-xs text-token-textMuted mt-1">{t('live.historySubtitle')}</p>
         </div>
         <Link to="/instructor/teaching-groups">
-          <Button variant="secondary">Qrupdan başlat</Button>
+          <Button variant="secondary">{t('live.startFromGroup')}</Button>
         </Link>
       </div>
 
       {loading ? (
-        <p className="text-sm text-token-textMuted py-12 text-center">Yüklənir…</p>
+        <p className="text-sm text-token-textMuted py-12 text-center">{t('live.loading')}</p>
       ) : !sessions.length ? (
         <Card className="p-10 text-center border border-dashed border-[color:var(--border-subtle)]">
           <div className="text-4xl mb-3">🔴</div>
-          <p className="text-sm text-token-textMuted">Hələ canlı dərs yoxdur</p>
+          <p className="text-sm text-token-textMuted">{t('live.noSessions')}</p>
         </Card>
       ) : (
         <div className="space-y-3">
@@ -200,7 +202,7 @@ export default function InstructorLiveHistory() {
                 checked={allSelected}
                 onChange={toggleAll}
               />
-              Hamısını seç
+              {t('live.selectAll')}
               {selectedCount > 0 ? (
                 <span className="text-token-textMain font-medium">({selectedCount})</span>
               ) : null}
@@ -212,7 +214,7 @@ export default function InstructorLiveHistory() {
                 loading={bulkDeleting}
                 onClick={() => void handleBulkDelete()}
               >
-                Seçilənləri sil ({selectedCount})
+                {t('live.deleteSelected')} ({selectedCount})
               </Button>
             ) : null}
           </div>
@@ -238,19 +240,19 @@ export default function InstructorLiveHistory() {
                 <div className="min-w-0 flex-1">
                 <h2 className="font-semibold text-sm text-token-textMain truncate">{s.title}</h2>
                 <p className="text-[11px] text-token-textMuted mt-1">
-                  {s.group_name || 'Ümumi'}
+                  {s.group_name || t('live.general')}
                   {s.started_at ? ` · ${fmtAzBakuField(s, 'started_at')}` : ''}
                 </p>
                 {s.recorded_by_name ? (
-                  <p className="text-[10px] text-primary/80 mt-1">Yazı: {s.recorded_by_name}</p>
+                  <p className="text-[10px] text-primary/80 mt-1">{t('live.recordingBy')} {s.recorded_by_name}</p>
                 ) : null}
                 </div>
               </div>
 
               <div className="flex flex-col items-stretch sm:items-end gap-2 shrink-0">
                 <div className="flex flex-wrap items-center gap-2 text-xs text-token-textMuted sm:justify-end">
-                  <span>{fmtDuration(s.duration_minutes)}</span>
-                  <span>{s.participant_count || 0} iştirakçı</span>
+                  <span>{fmtDuration(s.duration_minutes, t)}</span>
+                  <span>{s.participant_count || 0} {t('live.participants')}</span>
                   <span className="font-mono text-primary/80">{s.room_code}</span>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 sm:justify-end">
@@ -261,11 +263,11 @@ export default function InstructorLiveHistory() {
                       loading={downloadingId === s.id}
                       onClick={() => void handleDownload(s)}
                     >
-                      ⬇ Yazı
+                      ⬇ {t('live.downloadRecording')}
                       {s.recording_duration_sec ? ` (${fmtRecordingDuration(s.recording_duration_sec)})` : ''}
                     </Button>
                   ) : (
-                    <span className="text-[10px] text-token-textMuted/80 px-1">Yazı yoxdur</span>
+                    <span className="text-[10px] text-token-textMuted/80 px-1">{t('live.noRecording')}</span>
                   )}
                   <Button
                     size="sm"
@@ -274,7 +276,7 @@ export default function InstructorLiveHistory() {
                     loading={sharingId === s.id}
                     onClick={() => void handleShare(s)}
                   >
-                    🔗 Paylaş
+                    🔗 {t('live.share')}
                   </Button>
                   <Button
                     size="sm"
@@ -282,7 +284,7 @@ export default function InstructorLiveHistory() {
                     loading={deletingId === s.id}
                     onClick={() => void handleDelete(s)}
                   >
-                    🗑 Sil
+                    🗑 {t('common.delete')}
                   </Button>
                 </div>
               </div>

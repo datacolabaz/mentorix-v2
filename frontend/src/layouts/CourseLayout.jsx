@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import useAuthStore from '../hooks/useAuth'
 import api from '../lib/api'
 import useUiStore from '../hooks/useUi'
@@ -8,38 +9,58 @@ import { resolveApiAssetUrl } from '../lib/apiAssetUrl'
 import Footer from '../components/common/Footer'
 import { sidebarNavClass } from '../lib/sidebarNavClass'
 import NavIcon from '../components/common/NavIcon'
+import SidebarPreferences from '../components/common/SidebarPreferences'
 
-const NAV_SECTIONS = [
+const NAV_SECTION_DEFS = [
   {
+    id: 'management',
+    titleKey: 'nav.sections.management',
     title: 'İDARƏETMƏ',
     items: [
-      { to: '/course', label: 'Dashboard', icon: <NavIcon name="dashboard" />, end: true },
-      { to: '/course/leads', label: 'Lidlər', icon: <NavIcon name="notifications" /> },
-      { to: '/course/teachers', label: 'Müəllimlər', icon: <NavIcon name="instructors" /> },
-      { to: '/course/students', label: 'Tələbələr', icon: <NavIcon name="students" /> },
-      { to: '/course/groups', label: 'Qruplar / Siniflər', icon: <NavIcon name="groups" /> },
-      { to: '/course/schedule', label: 'Ümumi Cədvəl', icon: <NavIcon name="schedule" /> },
+      { to: '/course', key: 'dashboard', labelKey: 'nav.course.dashboard', label: 'Dashboard', icon: 'dashboard', end: true },
+      { to: '/course/leads', key: 'leads', labelKey: 'nav.course.leads', label: 'Lidlər', icon: 'notifications' },
+      { to: '/course/teachers', key: 'teachers', labelKey: 'nav.course.teachers', label: 'Müəllimlər', icon: 'instructors' },
+      { to: '/course/students', key: 'students', labelKey: 'nav.course.students', label: 'Tələbələr', icon: 'students' },
+      { to: '/course/groups', key: 'groups', labelKey: 'nav.course.groups', label: 'Qruplar / Siniflər', icon: 'groups' },
+      { to: '/course/schedule', key: 'schedule', labelKey: 'nav.course.schedule', label: 'Ümumi Cədvəl', icon: 'schedule' },
     ],
   },
   {
+    id: 'billing',
+    titleKey: 'nav.sections.billing',
     title: 'MALİYYƏ',
-    items: [{ to: '/course/finance', label: 'Ödənişlər', icon: <NavIcon name="payments" /> }],
+    items: [{ to: '/course/finance', key: 'finance', labelKey: 'nav.course.finance', label: 'Ödənişlər', icon: 'payments' }],
   },
   {
+    id: 'system',
+    titleKey: 'nav.sections.system',
     title: 'SİSTEM',
     items: [
-      { to: '/course/notifications', label: 'SMS / Bildirişlər', icon: <NavIcon name="notifications" /> },
-      { to: '/course/settings', label: 'Parametrlər', icon: <NavIcon name="settings" /> },
+      { to: '/course/notifications', key: 'notifications', labelKey: 'nav.course.notifications', label: 'SMS / Bildirişlər', icon: 'notifications' },
+      { to: '/course/settings', key: 'settings', labelKey: 'nav.course.settings', label: 'Parametrlər', icon: 'settings' },
     ],
   },
 ]
 
 export default function CourseLayout() {
+  const { t, i18n } = useTranslation()
   const { user, logout, updateUser } = useAuthStore()
   const navigate = useNavigate()
   const location = useLocation()
-  const { theme, toggleTheme } = useUiStore()
+  const { theme } = useUiStore()
   const [navOpen, setNavOpen] = useState(false)
+  const navSections = useMemo(
+    () =>
+      NAV_SECTION_DEFS.map((section) => ({
+        title: t(section.titleKey, { defaultValue: section.title }),
+        items: section.items.map((item) => ({
+          ...item,
+          label: t(item.labelKey, { defaultValue: item.label }),
+          icon: <NavIcon name={item.icon} />,
+        })),
+      })),
+    [t, i18n.language],
+  )
 
   const courseName = user?.course_name || user?.full_name || 'Kurs'
   const courseLogo = user?.course_logo_url ? resolveApiAssetUrl(user.course_logo_url) : null
@@ -164,7 +185,7 @@ export default function CourseLayout() {
 
           <nav className="flex-1 p-4 overflow-y-auto">
             <div className="space-y-4">
-              {NAV_SECTIONS.map((section) => (
+              {navSections.map((section) => (
                 <div key={section.title} className="space-y-2">
                   <div className="px-4 pt-2">
                     <div
@@ -193,36 +214,12 @@ export default function CourseLayout() {
           </nav>
 
           <div className={['p-4', theme === 'dark' ? 'border-t border-white/10' : 'border-t border-black/[0.06]'].join(' ')}>
-            <button
-              type="button"
-              onClick={toggleTheme}
-              className={[
-                'w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl border transition-colors',
-                theme === 'dark'
-                  ? 'border-white/10 bg-white/5 hover:bg-white/10'
-                  : 'border-black/[0.06] bg-white/70 hover:bg-white',
-              ].join(' ')}
-            >
-              <span className={`text-sm font-medium ${theme === 'dark' ? 'text-gray-200' : 'text-slate-900'}`}>Tema</span>
-              <span className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-slate-600'}`}>
-                {theme === 'dark' ? 'Gecə' : 'Gündüz'}
-              </span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
+            <SidebarPreferences
+              onLogout={() => {
                 logout()
                 navigate('/login')
               }}
-              className={[
-                'mt-3 flex items-center gap-2 text-sm font-medium transition-colors w-full px-4 py-3 rounded-xl',
-                theme === 'dark'
-                  ? 'text-red-300 hover:text-red-200 hover:bg-red-500/10'
-                  : 'text-red-600 hover:text-red-700 hover:bg-red-50',
-              ].join(' ')}
-            >
-              → Çıxış
-            </button>
+            />
           </div>
         </aside>
 
