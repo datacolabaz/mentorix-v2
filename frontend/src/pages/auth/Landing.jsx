@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import Brand from '../../components/common/Brand'
@@ -18,17 +18,12 @@ import LandingHeroSocialProof from '../../components/landing/LandingHeroSocialPr
 import PricingAudienceExplainer from '../../components/public/PricingAudienceExplainer'
 import { DEFAULT_SUBSCRIPTION_PLANS } from '../../constants/subscriptionPlans'
 import {
-  getPlanMarketingMeta,
-  landingPlanFeatureLines,
-  landingPlanPriceLabel,
   normalizePlanId,
 } from '../../lib/subscriptionPlanMarketing'
 import {
   isMarketingSectionVisible,
-  visibleMarketingItems,
-  visibleWhyCards,
 } from '../../lib/loginMarketingVisibility'
-import { useLandingHero } from '../../lib/landingCopy'
+import { useLandingHero, useLandingWhy, useLandingSteps, useLandingFeatures, useLandingFaq, useLandingUseCase, useLandingCtaBand, useLandingPlanDisplay } from '../../lib/landingCopy'
 
 function scrollToId(id) {
   const el = document.getElementById(id)
@@ -41,6 +36,62 @@ const LANDING_NAV_LINK =
 
 const LANDING_LOGIN_BTN =
   'shrink-0 whitespace-nowrap rounded-lg bg-primary/15 border border-primary/35 text-primary px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm font-semibold hover:bg-primary/25'
+
+function LandingPlanCard({ plan, onCta }) {
+  const { t, i18n } = useTranslation()
+  const display = useLandingPlanDisplay(plan, t, i18n)
+  const isBasicTrial = normalizePlanId(plan) === 'basic'
+  return (
+    <div
+      className={[
+        'rounded-2xl border p-4 space-y-3 flex flex-col',
+        plan.highlight
+          ? 'border-primary/40 bg-primary/5 shadow-[0_0_40px_-12px_rgba(0,229,176,0.35)]'
+          : 'border-white/10 bg-[#121212]/90',
+      ].join(' ')}
+    >
+      <div>
+        <div className="text-sm font-bold text-white">{display.title}</div>
+        {display.meta.subtitle ? (
+          <p className="text-[11px] text-gray-400 mt-0.5">{display.meta.subtitle}</p>
+        ) : null}
+        {display.meta.popularLabel ? (
+          <p className="text-[11px] font-semibold text-primary mt-1">{display.meta.popularLabel}</p>
+        ) : null}
+      </div>
+      <div className="text-lg font-semibold text-primary tabular-nums">{display.priceLabel}</div>
+      <ul className="text-[11px] text-gray-400 space-y-1 flex-1">
+        {display.bullets.map((line) => (
+          <li
+            key={`${plan.id}-${line}`}
+            className={isBasicTrial ? 'flex items-start gap-1.5' : undefined}
+          >
+            {isBasicTrial ? (
+              <>
+                <span className="text-primary shrink-0 font-semibold leading-none mt-px">✓</span>
+                <span>{line}</span>
+              </>
+            ) : (
+              <>• {line}</>
+            )}
+          </li>
+        ))}
+      </ul>
+      <button
+        type="button"
+        onClick={onCta}
+        className={[
+          'w-full rounded-xl px-4 py-2.5 text-xs font-bold transition',
+          plan.highlight
+            ? 'bg-primary text-[#041018] hover:brightness-95'
+            : 'border border-white/15 text-gray-100 hover:bg-white/5',
+        ].join(' ')}
+      >
+        {display.meta.cta}
+      </button>
+    </div>
+  )
+}
 
 /** Ana səhifə — marketinq landing (/). */
 export default function Landing() {
@@ -77,28 +128,12 @@ export default function Landing() {
 
   const closeMobileNav = () => setMobileNavOpen(false)
 
-  const whyCardsForLanding = useMemo(() => {
-    if (!isMarketingSectionVisible(marketing?.why)) return []
-    return visibleWhyCards(marketing?.why?.cards)
-  }, [marketing])
-
-  const stepItemsForLanding = useMemo(() => {
-    const items = Array.isArray(marketing.steps?.items) ? marketing.steps.items : []
-    const def = defaultLoginMarketingPayload().steps.items || []
-    const base = items.length ? items : def
-    if (!isMarketingSectionVisible(marketing.steps)) return []
-    return visibleMarketingItems(base)
-  }, [marketing.steps])
-
-  const featureItemsForLanding = useMemo(() => {
-    if (!isMarketingSectionVisible(marketing.features)) return []
-    return visibleMarketingItems(marketing.features?.items || [])
-  }, [marketing.features])
-
-  const faqItemsForLanding = useMemo(() => {
-    if (!isMarketingSectionVisible(marketing.faq)) return []
-    return visibleMarketingItems(marketing.faq?.items || [])
-  }, [marketing.faq])
+  const why = useLandingWhy(marketing, t, i18n)
+  const steps = useLandingSteps(marketing, t, i18n)
+  const features = useLandingFeatures(marketing, t, i18n)
+  const faq = useLandingFaq(marketing, t, i18n)
+  const useCase = useLandingUseCase(marketing, t, i18n)
+  const ctaBand = useLandingCtaBand(marketing, t, i18n)
 
   const showMiniPreview = isMarketingSectionVisible(marketing.mini_preview)
   const showMarketplace = isMarketingSectionVisible(marketing.marketplace)
@@ -181,14 +216,14 @@ export default function Landing() {
     )
 
     const ids = ['mx-demo-mini']
-    if (whyCardsForLanding.length > 0) ids.push('mx-why')
-    if (stepItemsForLanding.length > 0) ids.push('mx-steps')
-    if (featureItemsForLanding.length > 0) ids.push('mx-features')
-    if (marketing?.use_case?.section_enabled !== false) {
+    if (isMarketingSectionVisible(marketing?.why) && why.cards.length > 0) ids.push('mx-why')
+    if (isMarketingSectionVisible(marketing.steps) && steps.items.length > 0) ids.push('mx-steps')
+    if (isMarketingSectionVisible(marketing.features) && features.items.length > 0) ids.push('mx-features')
+    if (useCase?.section_enabled !== false) {
       ids.push('mx-use-case')
     }
-    if (faqItemsForLanding.length > 0) ids.push('mx-faq')
-    if (isMarketingSectionVisible(marketing.cta_band)) ids.push('mx-cta')
+    if (isMarketingSectionVisible(marketing.faq) && faq.items.length > 0) ids.push('mx-faq')
+    if (isMarketingSectionVisible(ctaBand)) ids.push('mx-cta')
     for (const id of ids) {
       const el = typeof document !== 'undefined' ? document.getElementById(id) : null
       if (el) {
@@ -208,12 +243,16 @@ export default function Landing() {
       obs.disconnect()
     }
   }, [
-    marketing.use_case?.section_enabled,
-    marketing.cta_band,
-    whyCardsForLanding.length,
-    stepItemsForLanding.length,
-    featureItemsForLanding.length,
-    faqItemsForLanding.length,
+    marketing?.why,
+    marketing.steps,
+    marketing.features,
+    marketing.faq,
+    useCase?.section_enabled,
+    ctaBand,
+    why.cards.length,
+    steps.items.length,
+    features.items.length,
+    faq.items.length,
   ])
 
   const openDemoTracked = (surface) => {
@@ -233,12 +272,9 @@ export default function Landing() {
     setDemoOpen(false)
   }
 
-  const m = marketing
   const hero = useLandingHero(marketing, t, i18n)
 
   const marketplaceCtaLabel = hero.marketplace_cta_label
-
-  const stepItems = stepItemsForLanding
 
   return (
     <div className="min-h-[100svh] w-full min-w-0 max-w-full overflow-x-hidden bg-[#0b0b0b]">
@@ -264,7 +300,7 @@ export default function Landing() {
                   </Link>
                   <button
                     type="button"
-                    onClick={() => scrollToId(featureItemsForLanding.length ? 'mx-features' : 'mx-steps')}
+                    onClick={() => scrollToId(features.items.length ? 'mx-features' : 'mx-steps')}
                     className={LANDING_NAV_LINK}
                   >
                     {t('landing.nav.features')}
@@ -320,7 +356,7 @@ export default function Landing() {
                   type="button"
                   onClick={() => {
                     closeMobileNav()
-                    scrollToId(featureItemsForLanding.length ? 'mx-features' : 'mx-steps')
+                    scrollToId(features.items.length ? 'mx-features' : 'mx-steps')
                   }}
                   className={`block w-full text-left ${LANDING_NAV_LINK}`}
                 >
@@ -462,11 +498,11 @@ export default function Landing() {
           </section>
           ) : null}
 
-          {whyCardsForLanding.length > 0 ? (
+          {isMarketingSectionVisible(marketing?.why) && why.cards.length > 0 ? (
           <section id="mx-why" className="space-y-4 scroll-mt-8">
-            <div className="text-xs uppercase tracking-wider text-gray-500 font-semibold">{m.why.heading}</div>
+            <div className="text-xs uppercase tracking-wider text-gray-500 font-semibold">{why.heading}</div>
             <div className="grid md:grid-cols-3 gap-3">
-              {whyCardsForLanding.map((x, i) => (
+              {why.cards.map((x, i) => (
                 <div key={`why-${i}-${String(x.title).slice(0, 24)}`} className="rounded-2xl border border-white/10 bg-[#121212]/90 p-4 space-y-2">
                   <div className="text-sm font-semibold text-white">{x.title}</div>
                   <p className="text-xs text-gray-400 leading-relaxed">{x.body}</p>
@@ -476,11 +512,11 @@ export default function Landing() {
           </section>
           ) : null}
 
-          {stepItems.length > 0 ? (
+          {isMarketingSectionVisible(marketing.steps) && steps.items.length > 0 ? (
           <section id="mx-steps" className="space-y-4 scroll-mt-8">
-            <div className="text-xs uppercase tracking-wider text-gray-500 font-semibold">{m.steps.heading}</div>
+            <div className="text-xs uppercase tracking-wider text-gray-500 font-semibold">{steps.heading}</div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              {stepItems.map((x, i) => (
+              {steps.items.map((x, i) => (
                 <div
                   key={`step-${i}-${String(x.step)}`}
                   className="rounded-2xl border border-primary/20 bg-gradient-to-b from-primary/10 to-[#101010] p-4 space-y-2"
@@ -498,11 +534,11 @@ export default function Landing() {
           </section>
           ) : null}
 
-          {featureItemsForLanding.length > 0 ? (
+          {isMarketingSectionVisible(marketing.features) && features.items.length > 0 ? (
           <section id="mx-features" className="space-y-4 scroll-mt-8">
-            <div className="text-xs uppercase tracking-wider text-gray-500 font-semibold">{m.features.heading}</div>
+            <div className="text-xs uppercase tracking-wider text-gray-500 font-semibold">{features.heading}</div>
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-2.5">
-              {featureItemsForLanding.map((x, i) => (
+              {features.items.map((x, i) => (
                 <div
                   key={`feat-${i}`}
                   className={`sm:flex-1 sm:min-w-0 rounded-2xl border border-white/10 bg-gradient-to-br ${x.accent || 'from-sky-500/15'} to-[#101010] p-3 sm:p-3.5 space-y-1.5`}
@@ -515,13 +551,13 @@ export default function Landing() {
           </section>
           ) : null}
 
-          {m.use_case?.section_enabled !== false ? (
+          {useCase?.section_enabled !== false ? (
           <section id="mx-use-case" className="space-y-4 scroll-mt-8">
-            <div className="text-xs uppercase tracking-wider text-gray-500 font-semibold">{m.use_case.heading}</div>
+            <div className="text-xs uppercase tracking-wider text-gray-500 font-semibold">{useCase.heading}</div>
             <div className="rounded-2xl border border-white/10 bg-[#121212]/90 p-5 sm:p-6 space-y-4">
-              <p className="text-sm text-gray-200 font-medium">{m.use_case.title_line}</p>
+              <p className="text-sm text-gray-200 font-medium">{useCase.title_line}</p>
               <ul className="space-y-2 text-sm text-gray-400 leading-relaxed list-disc pl-5">
-                {(m.use_case.bullets || []).map((b, i) => (
+                {(useCase.bullets || []).map((b, i) => (
                   <li key={i}>
                     <span className="text-gray-200">{b.lead}</span> {b.rest}
                   </li>
@@ -535,7 +571,7 @@ export default function Landing() {
                 }}
                 className="text-xs text-primary hover:brightness-110 font-semibold"
               >
-                {m.use_case.faq_link}
+                {useCase.faq_link}
               </button>
             </div>
           </section>
@@ -546,72 +582,18 @@ export default function Landing() {
             <div className="text-xs uppercase tracking-wider text-gray-500 font-semibold">{t('landing.plansHeading')}</div>
             {showPricingAudience ? <PricingAudienceExplainer variant="strip" /> : null}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              {publicPlans.map((p) => {
-                const meta = getPlanMarketingMeta(p)
-                const bullets = landingPlanFeatureLines(p)
-                const isBasicTrial = normalizePlanId(p) === 'basic'
-                return (
-                <div
-                  key={p.id}
-                  className={[
-                    'rounded-2xl border p-4 space-y-3 flex flex-col',
-                    p.highlight
-                      ? 'border-primary/40 bg-primary/5 shadow-[0_0_40px_-12px_rgba(0,229,176,0.35)]'
-                      : 'border-white/10 bg-[#121212]/90',
-                  ].join(' ')}
-                >
-                  <div>
-                    <div className="text-sm font-bold text-white">{p.title}</div>
-                    {meta.subtitle ? (
-                      <p className="text-[11px] text-gray-400 mt-0.5">{meta.subtitle}</p>
-                    ) : null}
-                    {meta.popularLabel ? (
-                      <p className="text-[11px] font-semibold text-primary mt-1">{meta.popularLabel}</p>
-                    ) : null}
-                  </div>
-                  <div className="text-lg font-semibold text-primary tabular-nums">
-                    {landingPlanPriceLabel(p)}
-                  </div>
-                  <ul className="text-[11px] text-gray-400 space-y-1 flex-1">
-                    {bullets.map((line) => (
-                      <li
-                        key={`${p.id}-${line}`}
-                        className={isBasicTrial ? 'flex items-start gap-1.5' : undefined}
-                      >
-                        {isBasicTrial ? (
-                          <>
-                            <span className="text-primary shrink-0 font-semibold leading-none mt-px">✓</span>
-                            <span>{line}</span>
-                          </>
-                        ) : (
-                          <>• {line}</>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                  <button
-                    type="button"
-                    onClick={() => goRegister('pricing')}
-                    className={[
-                      'w-full rounded-xl px-4 py-2.5 text-xs font-bold transition',
-                      p.highlight
-                        ? 'bg-primary text-[#041018] hover:brightness-95'
-                        : 'border border-white/15 text-gray-100 hover:bg-white/5',
-                    ].join(' ')}
-                  >
-                    {meta.cta}
-                  </button>
-                </div>
-              )})}
+              {publicPlans.map((p) => (
+                <LandingPlanCard key={p.id} plan={p} onCta={() => goRegister('pricing')} />
+              ))}
             </div>
           </section>
           ) : null}
 
-          {faqItemsForLanding.length > 0 ? (
+          {isMarketingSectionVisible(marketing.faq) && faq.items.length > 0 ? (
           <section id="mx-faq" className="space-y-4 scroll-mt-8">
-            <div className="text-xs uppercase tracking-wider text-gray-500 font-semibold">{m.faq.heading}</div>
+            <div className="text-xs uppercase tracking-wider text-gray-500 font-semibold">{faq.heading}</div>
             <div className="rounded-2xl border border-white/10 bg-surface-2/70 divide-y divide-white/10">
-              {faqItemsForLanding.map((it, i) => (
+              {faq.items.map((it, i) => (
                 <details key={`faq-${i}`} className="group p-4 sm:p-5">
                   <summary className="cursor-pointer text-sm font-semibold text-gray-100 list-none flex items-center justify-between gap-3 [&::-webkit-details-marker]:hidden">
                     <span>{it.q}</span>
@@ -626,11 +608,11 @@ export default function Landing() {
           </section>
           ) : null}
 
-          {isMarketingSectionVisible(m.cta_band) ? (
+          {isMarketingSectionVisible(ctaBand) ? (
           <section id="mx-cta" className="rounded-2xl border border-primary/25 bg-gradient-to-br from-primary/15 via-[#0e1412] to-[#0b0b0b] p-6 sm:p-8 scroll-mt-8">
             <div className="space-y-2 max-w-xl">
-              <div className="text-lg sm:text-xl font-semibold text-white">{m.cta_band.heading}</div>
-              <p className="text-sm text-gray-300 leading-relaxed">{m.cta_band.subtitle}</p>
+              <div className="text-lg sm:text-xl font-semibold text-white">{ctaBand.heading}</div>
+              <p className="text-sm text-gray-300 leading-relaxed">{ctaBand.subtitle}</p>
             </div>
             <div className="flex flex-col w-full max-w-xl gap-3 mt-5 sm:flex-row sm:flex-wrap">
               <button
