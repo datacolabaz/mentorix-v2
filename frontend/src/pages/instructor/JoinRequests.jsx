@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import api from '../../lib/api'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
@@ -8,10 +9,10 @@ import { useToast } from '../../components/common/Toast'
 import { useQueryClient } from '@tanstack/react-query'
 import { BILLING_STATUS_QUERY_KEY } from '../../hooks/useBillingStatus'
 
-function fmtDate(iso) {
+function fmtDate(iso, locale) {
   if (!iso) return '—'
   try {
-    return new Date(iso).toLocaleString('az-AZ', {
+    return new Date(iso).toLocaleString(locale === 'ru' ? 'ru-RU' : 'az-AZ', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
@@ -24,6 +25,7 @@ function fmtDate(iso) {
 }
 
 export default function InstructorJoinRequests() {
+  const { t, i18n } = useTranslation()
   const toast = useToast()
   const queryClient = useQueryClient()
   const [requests, setRequests] = useState([])
@@ -41,13 +43,13 @@ export default function InstructorJoinRequests() {
       setRequests(Array.isArray(d?.requests) ? d.requests : [])
       setWarnings(Array.isArray(d?.warnings) ? d.warnings : [])
     } catch (err) {
-      toast(err?.message || 'Sorğular yüklənmədi', 'error')
+      toast(err?.message || t('joinRequests.loadFailed'), 'error')
       setRequests([])
       setWarnings([])
     } finally {
       setLoading(false)
     }
-  }, [toast])
+  }, [toast, t])
 
   useEffect(() => {
     void load()
@@ -59,7 +61,7 @@ export default function InstructorJoinRequests() {
       const body = { kind }
       if (kind === 'exam_access') body.send_sms = Boolean(opts.sendSms)
       const r = await api.post(`/instructor/join-requests/${encodeURIComponent(requestId)}/approve`, body)
-      toast(r?.message || 'Təsdiqləndi', 'success')
+      toast(r?.message || t('joinRequests.approved'), 'success')
       await load()
       queryClient.invalidateQueries({ queryKey: BILLING_STATUS_QUERY_KEY })
       window.dispatchEvent(new CustomEvent('mx:join-requests-changed'))
@@ -67,11 +69,11 @@ export default function InstructorJoinRequests() {
     } catch (err) {
       if (err?.code === 'STUDENT_PROFILE_INCOMPLETE' || err?.code === 'PROFILE_INCOMPLETE') {
         setProfileIncompleteModal({
-          studentName: err?.student_name || 'Tələbə',
-          message: err?.message || 'Tələbənin profili tam deyil.',
+          studentName: err?.student_name || t('joinRequests.defaultStudent'),
+          message: err?.message || t('joinRequests.profileIncomplete'),
         })
       } else {
-        toast(err?.message || 'Xəta', 'error')
+        toast(err?.message || t('joinRequests.error'), 'error')
       }
     } finally {
       setActingId(null)
@@ -82,9 +84,8 @@ export default function InstructorJoinRequests() {
   const openExamApprove = (req) => {
     if (!req?.profile_complete) {
       setProfileIncompleteModal({
-        studentName: req.student_name || 'Tələbə',
-        message:
-          'Tələbə hələ mobil telefonunu doldurmayıb. Tələbə imtahan linkində ad, soyad və telefonu tamamlamalıdır — sonra buradan təsdiqləyə bilərsiniz.',
+        studentName: req.student_name || t('joinRequests.defaultStudent'),
+        message: t('joinRequests.profileIncompleteExam'),
       })
       return
     }
@@ -96,11 +97,11 @@ export default function InstructorJoinRequests() {
     if (req.kind === 'exam_access' || req.kind === 'task_access') {
       if (!req.profile_complete) {
         setProfileIncompleteModal({
-          studentName: req.student_name || 'Tələbə',
+          studentName: req.student_name || t('joinRequests.defaultStudent'),
           message:
             req.kind === 'task_access'
-              ? 'Tələbə hələ mobil telefonunu doldurmayıb. Tapşırıq linkində ad, soyad və telefonu tamamlamalıdır.'
-              : 'Tələbə hələ mobil telefonunu doldurmayıb. İmtahan linkində ad, soyad və telefonu tamamlamalıdır.',
+              ? t('joinRequests.profileIncompleteTask')
+              : t('joinRequests.profileIncompleteExam'),
         })
         return
       }
@@ -113,28 +114,43 @@ export default function InstructorJoinRequests() {
   }
 
   const reject = async (requestId, kind = 'group_join') => {
-    if (!window.confirm('Bu sorğunu rədd etmək istəyirsiniz?')) return
+    if (!window.confirm(t('joinRequests.rejectConfirm'))) return
     setActingId(requestId)
     try {
       const r = await api.post(`/instructor/join-requests/${encodeURIComponent(requestId)}/reject`, {
         kind,
       })
-      toast(r?.message || 'Rədd edildi', 'info')
+      toast(r?.message || t('joinRequests.rejected'), 'info')
       await load()
       window.dispatchEvent(new CustomEvent('mx:join-requests-changed'))
     } catch (err) {
-      toast(err?.message || 'Xəta', 'error')
+      toast(err?.message || t('joinRequests.error'), 'error')
     } finally {
       setActingId(null)
     }
   }
 
+  const requestActionText = (req) => {
+    if (req.kind === 'exam_access') {
+      return t('joinRequests.examAccessSuffix', {
+        title: req.exam_title || t('joinRequests.defaultExam'),
+      })
+    }
+    if (req.kind === 'task_access') {
+      return t('joinRequests.taskAccessSuffix', {
+        title: req.task_title || t('joinRequests.defaultTask'),
+      })
+    }
+    if (req.group_name) {
+      return t('joinRequests.groupJoinSuffix', { name: req.group_name })
+    }
+    return t('joinRequests.groupJoinFallback')
+  }
+
   return (
     <div className="p-4 sm:p-6 max-w-3xl mx-auto w-full">
-      <h1 className="font-display font-bold text-xl sm:text-2xl text-token-textMain">Sorğular</h1>
-      <p className="text-token-textMuted text-sm mt-1 mb-6">
-        Tələbənin imtahan, tapşırıq və ya qrup qoşulma sorğuları.
-      </p>
+      <h1 className="font-display font-bold text-xl sm:text-2xl text-token-textMain">{t('joinRequests.title')}</h1>
+      <p className="text-token-textMuted text-sm mt-1 mb-6">{t('joinRequests.subtitle')}</p>
 
       {warnings.length > 0 && (
         <Card className="p-4 mb-4 border border-amber-500/40 bg-amber-500/10 text-amber-100 text-sm">
@@ -148,7 +164,7 @@ export default function InstructorJoinRequests() {
         <ListSkeleton rows={4} />
       ) : !requests.length ? (
         <Card className="p-8 text-center text-token-textMuted text-sm border border-[color:var(--border-subtle)]">
-          <p>Gözləyən sorğu yoxdur.</p>
+          <p>{t('joinRequests.empty')}</p>
         </Card>
       ) : (
         <ul className="space-y-3">
@@ -156,67 +172,52 @@ export default function InstructorJoinRequests() {
             <li key={req.request_id}>
               <Card className="p-4 border border-[color:var(--border-subtle)]">
                 <p className="text-token-textMain font-semibold">
-                  <span className="text-primary">{req.student_name}</span>
-                  {req.kind === 'exam_access' ? (
-                    <>
-                      {' '}
-                      <span className="text-token-textMuted font-normal">·</span> «{req.exam_title || 'İmtahan'}»
-                      imtahanına giriş istəyir
-                    </>
-                  ) : req.kind === 'task_access' ? (
-                    <>
-                      {' '}
-                      <span className="text-token-textMuted font-normal">·</span> «{req.task_title || 'Tapşırıq'}»
-                      tapşırığına giriş istəyir
-                    </>
-                  ) : req.group_name ? (
-                    <>
-                      {' '}
-                      <span className="text-token-textMuted font-normal">·</span> «{req.group_name}» qrupunuza
-                      qoşulmaq istəyir
-                    </>
-                  ) : (
-                    ' qrupunuza qoşulmaq istəyir'
-                  )}
+                  <span className="text-primary">{req.student_name}</span> {requestActionText(req)}
                 </p>
                 {req.kind === 'exam_access' && (
-                  <p className="text-[10px] uppercase tracking-wide text-amber-400/90 mt-1">İmtahan sorğusu</p>
+                  <p className="text-[10px] uppercase tracking-wide text-amber-400/90 mt-1">{t('joinRequests.badgeExam')}</p>
                 )}
                 {req.kind === 'task_access' && (
-                  <p className="text-[10px] uppercase tracking-wide text-violet-400/90 mt-1">Tapşırıq sorğusu</p>
+                  <p className="text-[10px] uppercase tracking-wide text-violet-400/90 mt-1">{t('joinRequests.badgeTask')}</p>
                 )}
                 {req.subject_name && (
-                  <p className="text-xs text-token-textMuted mt-1">Sahə: {req.subject_name}</p>
+                  <p className="text-xs text-token-textMuted mt-1">
+                    {t('joinRequests.subject')} {req.subject_name}
+                  </p>
                 )}
                 {(req.package_label || req.package_fee) && (
                   <p className="text-xs text-primary/90 mt-1">
-                    Qrup paketi: {req.package_label}
+                    {t('joinRequests.groupPackage')} {req.package_label}
                     {req.package_fee ? ` · ${req.package_fee}` : ''}
                   </p>
                 )}
                 <div className="text-xs text-token-textMuted mt-2 space-y-0.5">
                   {(req.phone_number || req.phone) && (
-                    <div>Telefon: {req.phone_number || req.phone}</div>
-                  )}
-                  {req.profile_complete === false && (
-                    <div className="text-amber-200/90 font-medium">
-                      Telefon gözlənilir — tələbə linkdə profili tamamlamalıdır
+                    <div>
+                      {t('joinRequests.phone')} {req.phone_number || req.phone}
                     </div>
                   )}
-                  {req.student_email && <div>Email: {req.student_email}</div>}
+                  {req.profile_complete === false && (
+                    <div className="text-amber-200/90 font-medium">{t('joinRequests.phonePending')}</div>
+                  )}
+                  {req.student_email && (
+                    <div>
+                      {t('joinRequests.email')} {req.student_email}
+                    </div>
+                  )}
                   {req.parent_name && (
                     <div>
-                      Valideyn: {req.parent_name}
+                      {t('joinRequests.parent')} {req.parent_name}
                       {req.parent_phone ? ` · ${req.parent_phone}` : ''}
                     </div>
                   )}
                   {(req.referral_source_name || req.referral_notes) && (
                     <div>
-                      Yönləndirmə:{' '}
+                      {t('joinRequests.referral')}{' '}
                       {[req.referral_source_name, req.referral_notes].filter(Boolean).join(' · ')}
                     </div>
                   )}
-                  <div className="text-[10px] opacity-70">{fmtDate(req.created_at)}</div>
+                  <div className="text-[10px] opacity-70">{fmtDate(req.created_at, i18n.language)}</div>
                 </div>
                 <div className="flex gap-2 mt-4">
                   <Button
@@ -225,7 +226,7 @@ export default function InstructorJoinRequests() {
                     loading={actingId === req.request_id}
                     onClick={() => tryApprove(req)}
                   >
-                    Təsdiqlə
+                    {t('joinRequests.approve')}
                   </Button>
                   <Button
                     size="sm"
@@ -234,7 +235,7 @@ export default function InstructorJoinRequests() {
                     disabled={actingId === req.request_id}
                     onClick={() => reject(req.request_id, req.kind || 'group_join')}
                   >
-                    Rədd et
+                    {t('joinRequests.reject')}
                   </Button>
                 </div>
               </Card>
@@ -246,13 +247,13 @@ export default function InstructorJoinRequests() {
       <Modal
         open={Boolean(profileIncompleteModal)}
         onClose={() => setProfileIncompleteModal(null)}
-        title="Profil tam deyil"
+        title={t('joinRequests.profileModalTitle')}
         size="sm"
         zIndex={10200}
         footer={
           <div className="flex justify-center">
             <Button type="button" className="min-w-[120px] justify-center" onClick={() => setProfileIncompleteModal(null)}>
-              Tamam
+              {t('joinRequests.ok')}
             </Button>
           </div>
         }
@@ -268,21 +269,16 @@ export default function InstructorJoinRequests() {
       <Modal
         open={!!examApproveModal}
         onClose={() => setExamApproveModal(null)}
-        title="İmtahan sorğusunu təsdiqlə"
+        title={t('joinRequests.examApproveTitle')}
         size="sm"
       >
         {examApproveModal && (
           <div className="space-y-4 text-sm text-gray-300">
             <p>
               <strong className="text-white">{examApproveModal.student_name}</strong>
-              {examApproveModal.exam_title
-                ? ` — «${examApproveModal.exam_title}»`
-                : ''}
+              {examApproveModal.exam_title ? ` — «${examApproveModal.exam_title}»` : ''}
             </p>
-            <p className="text-xs text-emerald-200/90">
-              Təsdiqdən sonra tələbəyə <strong>Gmail-ə</strong> «Müraciətiniz təsdiqləndi» mesajı gedəcək (tətbiqdə
-              olmasa da görəcək). Paneldə də bildiriş olacaq.
-            </p>
+            <p className="text-xs text-emerald-200/90">{t('joinRequests.examApproveEmailHint')}</p>
             <label className="flex items-start gap-3 rounded-xl border border-indigo-500/25 bg-indigo-500/10 p-3 cursor-pointer">
               <input
                 type="checkbox"
@@ -291,15 +287,13 @@ export default function InstructorJoinRequests() {
                 onChange={(e) => setExamApproveSendSms(e.target.checked)}
               />
               <span>
-                <span className="font-semibold text-white block">SMS / WhatsApp da göndər</span>
-                <span className="text-xs text-gray-400">
-                  Yalnız tələbənin profilində telefon varsa. Gmail qeydiyyatlı tələbələrə əvvəlcə email kifayətdir.
-                </span>
+                <span className="font-semibold text-white block">{t('joinRequests.examApproveSmsLabel')}</span>
+                <span className="text-xs text-gray-400">{t('joinRequests.examApproveSmsHint')}</span>
               </span>
             </label>
             <div className="flex flex-col-reverse sm:flex-row gap-2 sm:justify-end pt-1">
               <Button variant="secondary" onClick={() => setExamApproveModal(null)}>
-                Ləğv et
+                {t('common.cancel')}
               </Button>
               <Button
                 loading={actingId === examApproveModal.request_id}
@@ -307,7 +301,7 @@ export default function InstructorJoinRequests() {
                   approve(examApproveModal.request_id, 'exam_access', { sendSms: examApproveSendSms })
                 }
               >
-                Təsdiqlə
+                {t('joinRequests.approve')}
               </Button>
             </div>
           </div>

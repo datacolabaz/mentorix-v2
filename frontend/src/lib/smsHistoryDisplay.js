@@ -1,30 +1,22 @@
-const AZ_MONTHS = [
-  'yanvar',
-  'fevral',
-  'mart',
-  'aprel',
-  'may',
-  'iyun',
-  'iyul',
-  'avqust',
-  'sentyabr',
-  'oktyabr',
-  'noyabr',
-  'dekabr',
-]
+import i18n from '../i18n'
 
 export const SMS_STATUS_UI = {
-  sent: { icon: '✓', label: 'Göndərildi', badge: 'paid' },
-  logged: { icon: '📝', label: 'Yalnız qeyd', badge: 'due' },
-  whatsapp: { icon: '💬', label: 'WhatsApp', badge: 'due' },
-  failed: { icon: '✕', label: 'Uğursuz', badge: 'danger' },
-  scheduled: { icon: '📅', label: 'Planlaşdırılıb', badge: 'due' },
-  pending: { icon: '🕒', label: 'Gözləyir', badge: 'due' },
+  sent: { icon: '✓', badge: 'paid' },
+  logged: { icon: '📝', badge: 'due' },
+  whatsapp: { icon: '💬', badge: 'due' },
+  failed: { icon: '✕', badge: 'danger' },
+  scheduled: { icon: '📅', badge: 'due' },
+  pending: { icon: '🕒', badge: 'due' },
+}
+
+function statusLabel(status) {
+  const key = String(status || '').toLowerCase()
+  return i18n.t(`notifications.smsStatus.${key}`, { defaultValue: String(status || '—') })
 }
 
 export function smsStatusLabel(status) {
   const st = SMS_STATUS_UI[String(status || '').toLowerCase()]
-  return st ? `${st.icon} ${st.label}` : String(status || '—')
+  return st ? `${st.icon} ${statusLabel(status)}` : String(status || '—')
 }
 
 export function smsMessageLength(message) {
@@ -56,17 +48,22 @@ function startOfDay(d) {
   return x
 }
 
+function monthName(monthIndex) {
+  return i18n.t(`notifications.months.${monthIndex}`, { defaultValue: '' })
+}
+
 export function formatSmsDateTime(iso, now = new Date()) {
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return '—'
   const today = startOfDay(now)
   const that = startOfDay(d)
   const diffDays = Math.round((today - that) / 86400000)
-  const time = d.toLocaleTimeString('az-AZ', { hour: '2-digit', minute: '2-digit' })
-  if (diffDays === 0) return `Bu gün • ${time}`
-  if (diffDays === 1) return `Dünən • ${time}`
+  const locale = i18n.language === 'ru' ? 'ru-RU' : 'az-AZ'
+  const time = d.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })
+  if (diffDays === 0) return i18n.t('notifications.dateToday', { time })
+  if (diffDays === 1) return i18n.t('notifications.dateYesterday', { time })
   const day = d.getDate()
-  const month = AZ_MONTHS[d.getMonth()] || ''
+  const month = monthName(d.getMonth())
   const year = d.getFullYear()
   return `${day} ${month} ${year} • ${time}`
 }
@@ -74,10 +71,11 @@ export function formatSmsDateTime(iso, now = new Date()) {
 export function formatSmsDateTimeLong(iso) {
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return '—'
+  const locale = i18n.language === 'ru' ? 'ru-RU' : 'az-AZ'
   const day = d.getDate()
-  const month = AZ_MONTHS[d.getMonth()] || ''
+  const month = monthName(d.getMonth())
   const year = d.getFullYear()
-  const time = d.toLocaleTimeString('az-AZ', { hour: '2-digit', minute: '2-digit' })
+  const time = d.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })
   return `${day} ${month} ${year}, ${time}`
 }
 
@@ -86,25 +84,25 @@ export function formatRelativeAz(iso, now = new Date()) {
   if (Number.isNaN(d.getTime())) return '—'
   const ms = Math.max(0, now.getTime() - d.getTime())
   const s = Math.floor(ms / 1000)
-  if (s < 60) return `${s} saniyə əvvəl`
+  if (s < 60) return i18n.t('notifications.relative.seconds', { count: s })
   const m = Math.floor(s / 60)
-  if (m < 60) return `${m} dəqiqə əvvəl`
+  if (m < 60) return i18n.t('notifications.relative.minutes', { count: m })
   const h = Math.floor(m / 60)
-  if (h < 48) return `${h} saat əvvəl`
+  if (h < 48) return i18n.t('notifications.relative.hours', { count: h })
   const days = Math.floor(h / 24)
-  if (days < 14) return `${days} gün əvvəl`
+  if (days < 14) return i18n.t('notifications.relative.days', { count: days })
   return formatSmsDateTimeLong(iso)
 }
 
 export function humanizeSmsFailure(reason) {
   const r = String(reason || '').trim()
-  if (!r) return 'Səbəb qeyd olunmayıb'
+  if (!r) return i18n.t('notifications.smsFailure.unknown')
   const low = r.toLowerCase()
-  if (/limit|quota|dolub/i.test(low)) return 'SMS limiti bitib'
-  if (/phone|nömrə|msisdn|invalid.*number/i.test(low)) return 'Nömrə yanlışdır və ya format uyğun deyil'
-  if (/credential|login|password|auth/i.test(low)) return 'SMS provayder giriş məlumatları səhvdir'
-  if (/provider|responsecode|smxml|sendsms/i.test(low)) return 'SMS provayder xətası'
-  if (/http|network|fetch|timeout/i.test(low)) return 'Şəbəkə və ya server xətası'
+  if (/limit|quota|dolub/i.test(low)) return i18n.t('notifications.smsFailure.quota')
+  if (/phone|nömrə|msisdn|invalid.*number/i.test(low)) return i18n.t('notifications.smsFailure.phone')
+  if (/credential|login|password|auth/i.test(low)) return i18n.t('notifications.smsFailure.credentials')
+  if (/provider|responsecode|smxml|sendsms/i.test(low)) return i18n.t('notifications.smsFailure.provider')
+  if (/http|network|fetch|timeout/i.test(low)) return i18n.t('notifications.smsFailure.network')
   return r
 }
 
@@ -113,8 +111,7 @@ export function countSmsByStatus(rows, status) {
 }
 
 export function currentMonthLabelAz(now = new Date()) {
-  const month = AZ_MONTHS[now.getMonth()] || ''
-  return month ? month.charAt(0).toUpperCase() + month.slice(1) : ''
+  return monthName(now.getMonth())
 }
 
 export function exportSmsHistoryCsv(rows, filename = 'sms-tarixcesi.csv') {
@@ -122,8 +119,21 @@ export function exportSmsHistoryCsv(rows, filename = 'sms-tarixcesi.csv') {
     const s = String(v ?? '').replace(/"/g, '""')
     return `"${s}"`
   }
+  const h = i18n.getResourceBundle(i18n.language, 'translation')?.notifications?.csvHeaders || {}
   const lines = [
-    ['Tarix', 'Status', 'Növ', 'Tələbə', 'Telefon', 'Simvol', 'Hissə', 'Səbəb', 'Mesaj'].map(esc).join(','),
+    [
+      h.date || 'Tarix',
+      h.status || 'Status',
+      h.type || 'Növ',
+      h.student || 'Tələbə',
+      h.phone || 'Telefon',
+      h.chars || 'Simvol',
+      h.parts || 'Hissə',
+      h.reason || 'Səbəb',
+      h.message || 'Mesaj',
+    ]
+      .map(esc)
+      .join(','),
   ]
   for (const x of rows || []) {
     lines.push(

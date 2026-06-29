@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next'
+import i18n from '../../i18n'
 import StatusBadge from '../common/StatusBadge'
 import {
   SMS_STATUS_UI,
@@ -8,83 +10,85 @@ import {
   smsStatusLabel,
 } from '../../lib/smsHistoryDisplay'
 
-const TYPE_MAP = {
-  payment: { icon: '💰', title: 'Ödəniş xatırlatması', tone: 'payment' },
-  payment_reminder: { icon: '💰', title: 'Ödəniş xatırlatması', tone: 'payment' },
-  otp: { icon: '🔐', title: 'PIN kod SMS-i', tone: 'otp' },
-}
-
 function resolveCardPresentation(item) {
   const status = String(item?.status || '').toLowerCase()
   const source = String(item?.source || '').toLowerCase()
   const sourceTitle = item?.source_title ? String(item.source_title) : null
   const sourceDetail = item?.source_detail ? String(item.source_detail) : null
   const isExamAuto = source === 'exam_placed' || source === 'exam_result' || source === 'exam_reminder'
+  const c = (key) => i18n.t(`notifications.card.${key}`)
 
   if (status === 'logged') {
     if (isExamAuto || source === 'exam_result') {
       return {
         icon: '📝',
-        title: sourceTitle || 'Avtomatik imtahan qeydi',
-        subtitle: sourceDetail || 'SMS göndərilməyib · müəllim əl ilə göndərməyib',
+        title: sourceTitle || c('examAutoLog'),
+        subtitle: sourceDetail || c('loggedNoSms'),
         tone: 'note',
       }
     }
     if (/ödəniş təsdiqləndi|odenis tesdiqlendi/i.test(String(item?.message || ''))) {
       return {
         icon: '📝',
-        title: 'Ödəniş qeydi',
-        subtitle: 'SMS göndərilməyib · limitdən çıxılmır',
+        title: c('paymentRecord'),
+        subtitle: c('noQuota'),
         tone: 'note',
       }
     }
-    return { icon: '📝', title: 'Sistem qeydi', subtitle: 'SMS göndərilməyib · limitdən çıxılmır', tone: 'note' }
+    return { icon: '📝', title: c('systemNote'), subtitle: c('noQuota'), tone: 'note' }
   }
   if (status === 'whatsapp') {
     return {
       icon: '💬',
-      title: sourceTitle || 'WhatsApp mesajı',
-      subtitle: sourceDetail || (isExamAuto ? 'İmtahan bildirişi · SMS limitindən çıxılmır' : 'SMS limitindən çıxılmır'),
+      title: sourceTitle || c('whatsappMessage'),
+      subtitle: sourceDetail || (isExamAuto ? c('examNotify') : c('noSmsQuota')),
       tone: 'whatsapp',
     }
   }
-  const tp = TYPE_MAP[item?.type] || TYPE_MAP.payment
+  const typeKey = item?.type === 'otp' ? 'otpPin' : 'paymentReminder'
+  const typeTitle = c(typeKey)
   if (status === 'sent' && isExamAuto) {
     return {
       icon: '🤖',
-      title: sourceTitle || 'Avtomatik imtahan SMS-i',
-      subtitle:
-        sourceDetail ||
-        'İmtahan yaradılanda sistem göndərib — Bildirişlər səhifəsindən əl ilə deyil.',
+      title: sourceTitle || c('examAutoSms'),
+      subtitle: sourceDetail || c('examAutoSent'),
       tone: 'exam_auto',
     }
   }
   if (status === 'sent') {
     return {
       icon: '📱',
-      title: tp.title === TYPE_MAP.payment.title ? 'SMS göndərildi' : tp.title,
-      subtitle: item?.counts_toward_quota === false ? null : 'Paket limitinə daxildir',
+      title: item?.type === 'payment' || item?.type === 'payment_reminder' ? c('smsSent') : typeTitle,
+      subtitle: item?.counts_toward_quota === false ? null : c('inPackage'),
       tone: 'system',
     }
   }
   if (status === 'scheduled') {
-    return { icon: '📅', title: 'Planlaşdırılmış SMS', subtitle: 'Hələ göndərilməyib', tone: 'scheduled' }
+    return { icon: '📅', title: c('scheduledSms'), subtitle: c('notSentYet'), tone: 'scheduled' }
   }
   if (status === 'pending') {
-    return { icon: '🕒', title: 'Gözləyir', subtitle: 'Provayder təsdiqi gözlənilir', tone: 'pending' }
+    return { icon: '🕒', title: c('pending'), subtitle: c('providerPending'), tone: 'pending' }
   }
   if (status === 'failed') {
-    return { icon: '✕', title: 'SMS göndərilmədi', subtitle: item?.reason || null, tone: 'failed' }
+    return { icon: '✕', title: c('smsFailed'), subtitle: item?.reason || null, tone: 'failed' }
   }
-  return { ...tp, subtitle: null }
+  return { icon: '💰', title: typeTitle, subtitle: null, tone: 'payment' }
 }
 
 export default function NotificationCard({ item, onDetails }) {
+  const { t } = useTranslation()
   const statusKey = String(item?.status || 'logged').toLowerCase()
   const st = SMS_STATUS_UI[statusKey] || SMS_STATUS_UI.logged
   const tp = resolveCardPresentation(item)
   const pkgRaw = item.package_type ? String(item.package_type) : ''
-  const pkg = pkgRaw === '8' ? '8 dərs' : pkgRaw === '12' ? '12 dərs' : pkgRaw === 'monthly' ? 'monthly' : null
+  const pkg =
+    pkgRaw === '8'
+      ? t('notifications.card.pack8')
+      : pkgRaw === '12'
+        ? t('notifications.card.pack12')
+        : pkgRaw === 'monthly'
+          ? 'monthly'
+          : null
   const phoneCount = Array.isArray(item.phones) ? item.phones.length : 0
   const primaryText = item.student_name
     ? String(item.student_name)
@@ -121,7 +125,9 @@ export default function NotificationCard({ item, onDetails }) {
           </p>
           <p className="text-xs text-token-textMuted mt-1 truncate">
             {primaryText}
-            {phoneCount > 1 ? <span className="text-token-textMuted"> · +{phoneCount - 1} nömrə</span> : null}
+            {phoneCount > 1 ? (
+              <span className="text-token-textMuted"> {t('notifications.card.morePhones', { count: phoneCount - 1 })}</span>
+            ) : null}
             {pkg ? <span className="text-token-textMuted"> · {pkg}</span> : null}
           </p>
           {tp.subtitle ? <p className="text-[11px] text-amber-700/90 dark:text-amber-200/80 mt-1">{tp.subtitle}</p> : null}
@@ -132,13 +138,17 @@ export default function NotificationCard({ item, onDetails }) {
       {showSmsMeta && phoneLine ? (
         <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-token-textMuted">
           <span>
-            Telefon: <span className="text-token-textMain font-medium tabular-nums">{phoneLine}</span>
+            {t('notifications.card.phone')}{' '}
+            <span className="text-token-textMain font-medium tabular-nums">{phoneLine}</span>
           </span>
           <span>
-            Uzunluq: <span className="text-token-textMain font-medium tabular-nums">{msgLen}</span> simvol
+            {t('notifications.card.length')}{' '}
+            <span className="text-token-textMain font-medium tabular-nums">{msgLen}</span>{' '}
+            {t('notifications.card.charsShort')}
           </span>
           <span>
-            Hissə: <span className="text-token-textMain font-medium tabular-nums">{parts || '—'}</span>
+            {t('notifications.card.parts')}{' '}
+            <span className="text-token-textMain font-medium tabular-nums">{parts || '—'}</span>
           </span>
         </div>
       ) : null}
@@ -146,7 +156,9 @@ export default function NotificationCard({ item, onDetails }) {
       <div className="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="min-w-0">
           <p className="text-xs font-medium text-token-textMain/90">
-            {item.status === 'scheduled' ? `${formatSmsDateTime(createdAt)} (təxmini)` : formatSmsDateTime(createdAt)}
+            {item.status === 'scheduled'
+              ? t('notifications.card.approxTime', { time: formatSmsDateTime(createdAt) })
+              : formatSmsDateTime(createdAt)}
           </p>
           <p className="text-xs text-token-textMuted mt-2 line-clamp-2">{item.message || '—'}</p>
         </div>
@@ -160,7 +172,7 @@ export default function NotificationCard({ item, onDetails }) {
             'whitespace-nowrap',
           ].join(' ')}
         >
-          Ətraflı bax
+          {t('notifications.card.viewDetails')}
         </button>
       </div>
     </div>

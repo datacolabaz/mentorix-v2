@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import api from '../../lib/api'
 import Card from '../../components/common/Card'
 import Modal from '../../components/common/Modal'
@@ -197,6 +198,7 @@ function DetailRow({ label, value, mono }) {
 }
 
 export default function InstructorNotifications() {
+  const { t, i18n } = useTranslation()
   const navigate = useNavigate()
   const { theme } = useUiStore()
   const LEVEL = useMemo(() => alertLevelStyles(theme), [theme])
@@ -341,7 +343,7 @@ export default function InstructorNotifications() {
             console.log('[sms-logs] error:', e)
           }
           const st = e?.status ? ` (${e.status})` : ''
-          setSmsErr(`SMS tarixçəsi hazırda əlçatan deyil${st}`)
+          setSmsErr(t('notifications.historyUnavailable', { status: st }))
         }
       })
       .finally(() => {
@@ -350,7 +352,7 @@ export default function InstructorNotifications() {
     return () => {
       cancelled = true
     }
-  }, [tab, debugSms])
+  }, [tab, debugSms, t])
 
   useEffect(() => {
     if (tab !== 'sms') return
@@ -470,21 +472,24 @@ export default function InstructorNotifications() {
     const rows = [...smsBaseList]
       .filter((x) => x.createdAt)
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-    if (!rows.length) return 'Son SMS: hələ göndərilməyib'
+    if (!rows.length) return t('notifications.lastSmsNone')
     const lastSent = rows.find((x) => x.status === 'sent')
     const target = lastSent || rows[0]
     if (target.status === 'sent') {
-      return `Son SMS: ${formatRelativeAz(target.createdAt)} · ${formatSmsDateTimeLong(target.createdAt)}`
+      return t('notifications.lastSms', {
+        relative: formatRelativeAz(target.createdAt),
+        datetime: formatSmsDateTimeLong(target.createdAt),
+      })
     }
-    return `Son aktivlik: ${formatRelativeAz(target.createdAt)}`
-  }, [smsBaseList])
+    return t('notifications.lastActivity', { relative: formatRelativeAz(target.createdAt) })
+  }, [smsBaseList, t, i18n.language])
 
   const tabItems = useMemo(
     () => [
-      { id: 'all', label: 'Bütün bildirişlər' },
-      { id: 'sms', label: 'SMS tarixçəsi' },
+      { id: 'all', label: t('notifications.tabAll') },
+      { id: 'sms', label: t('notifications.tabSms') },
     ],
-    []
+    [t],
   )
 
   const smsTimeTabs = useMemo(() => {
@@ -494,12 +499,12 @@ export default function InstructorNotifications() {
     const week = smsBaseList.filter((x) => isThisWeek(x.createdAt, now)).length
     const month = smsBaseList.filter((x) => isThisMonth(x.createdAt, now)).length
     return [
-      { id: 'all', label: 'Hamısı', count: all },
-      { id: 'today', label: 'Bu gün', count: today },
-      { id: 'week', label: 'Bu həftə', count: week },
-      { id: 'month', label: 'Bu ay', count: month },
+      { id: 'all', label: t('notifications.filterAll'), count: all },
+      { id: 'today', label: t('notifications.filterToday'), count: today },
+      { id: 'week', label: t('notifications.filterWeek'), count: week },
+      { id: 'month', label: t('notifications.filterMonth'), count: month },
     ]
-  }, [smsBaseList])
+  }, [smsBaseList, t])
 
   const smsStatusTabs = useMemo(() => {
     const all = smsTimeRows.length
@@ -508,13 +513,13 @@ export default function InstructorNotifications() {
     const failed = smsTimeRows.filter((x) => x.status === 'failed').length
     const scheduled = smsTimeRows.filter((x) => x.status === 'scheduled').length
     return [
-      { id: 'all', label: 'Hamısı', count: all },
-      { id: 'sent', label: `${SMS_STATUS_UI.sent.icon} Göndərildi`, count: sent },
-      { id: 'logged', label: `${SMS_STATUS_UI.logged.icon} Yalnız qeyd`, count: logged },
-      { id: 'failed', label: `${SMS_STATUS_UI.failed.icon} Uğursuz`, count: failed },
-      { id: 'scheduled', label: `${SMS_STATUS_UI.scheduled.icon} Planlaşdırılıb`, count: scheduled },
+      { id: 'all', label: t('notifications.filterAll'), count: all },
+      { id: 'sent', label: `${SMS_STATUS_UI.sent.icon} ${t('notifications.statusSent')}`, count: sent },
+      { id: 'logged', label: `${SMS_STATUS_UI.logged.icon} ${t('notifications.statusLogged')}`, count: logged },
+      { id: 'failed', label: `${SMS_STATUS_UI.failed.icon} ${t('notifications.statusFailed')}`, count: failed },
+      { id: 'scheduled', label: `${SMS_STATUS_UI.scheduled.icon} ${t('notifications.statusScheduled')}`, count: scheduled },
     ]
-  }, [smsTimeRows])
+  }, [smsTimeRows, t])
 
   const smsQuotaLine = useMemo(() => {
     if (!billing) return null
@@ -545,27 +550,34 @@ export default function InstructorNotifications() {
 
   const monthName = currentMonthLabelAz()
 
+  const alertTypeLabel = (type) => {
+    if (type === 'sms') return t('notifications.alertSms')
+    if (type === 'storage' || type === 'ram') return t('notifications.alertStorage')
+    if (type === 'discover_profile') return t('notifications.alertDiscover')
+    return t('notifications.alertSystem')
+  }
+
   return (
     <div className="p-4 sm:p-6 min-w-0 flex flex-col gap-6">
       <div className="mb-6">
-        <h1 className="font-display font-bold text-2xl break-words">Bildirişlər</h1>
-        <p className="text-token-textMuted text-sm mt-1">SMS və saxlama limitləri</p>
+        <h1 className="font-display font-bold text-2xl break-words">{t('notifications.title')}</h1>
+        <p className="text-token-textMuted text-sm mt-1">{t('notifications.subtitle')}</p>
       </div>
 
       <Card hover className="p-5 rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard shadow-[0_10px_30px_rgba(0,0,0,0.10)]">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <h2 className="font-display font-bold text-base text-token-textMain">Sistem vəziyyəti</h2>
+            <h2 className="font-display font-bold text-base text-token-textMain">{t('notifications.systemStatus')}</h2>
             <p className="text-xs text-token-textMuted mt-1">{lastSmsActivityLabel}</p>
           </div>
           <StatusBadge variant={usageTone(Math.max(systemPercent.sms, systemPercent.storage))}>
-            {Math.max(systemPercent.sms, systemPercent.storage) >= 80 ? 'Diqqət' : 'Stabil'}
+            {Math.max(systemPercent.sms, systemPercent.storage) >= 80 ? t('notifications.attention') : t('notifications.stable')}
           </StatusBadge>
         </div>
 
         <div className="mt-4 space-y-4">
           <div className="grid grid-cols-[92px_1fr_auto] items-center gap-x-4 gap-y-2">
-            <div className="text-sm font-semibold text-token-textMain">Aylıq SMS</div>
+            <div className="text-sm font-semibold text-token-textMain">{t('notifications.monthlySms')}</div>
             <div className={`h-2.5 rounded-full overflow-hidden ${progressTrackCls}`}>
               <div className={`h-full ${barTone(systemPercent.sms)}`} style={{ width: `${Math.min(100, systemPercent.sms)}%` }} />
             </div>
@@ -575,7 +587,7 @@ export default function InstructorNotifications() {
           </div>
 
           <div className="grid grid-cols-[92px_1fr_auto] items-center gap-x-4 gap-y-2">
-            <div className="text-sm font-semibold text-token-textMain">Storage</div>
+            <div className="text-sm font-semibold text-token-textMain">{t('notifications.storage')}</div>
             <div className={`h-2.5 rounded-full overflow-hidden ${progressTrackCls}`}>
               <div className={`h-full ${barTone(systemPercent.storage)}`} style={{ width: `${Math.min(100, systemPercent.storage)}%` }} />
             </div>
@@ -585,7 +597,7 @@ export default function InstructorNotifications() {
           </div>
 
           <div className="grid grid-cols-[92px_1fr_auto] items-center gap-x-4 gap-y-2">
-            <div className="text-sm font-semibold text-token-textMain">Bildirişlər</div>
+            <div className="text-sm font-semibold text-token-textMain">{t('notifications.alerts')}</div>
             <div className={`h-2.5 rounded-full overflow-hidden ${progressTrackCls}`}>
               <div
                 className={`h-full ${alerts.length ? 'bg-amber-500' : 'bg-emerald-500'}`}
@@ -593,7 +605,7 @@ export default function InstructorNotifications() {
               />
             </div>
             <div className="text-sm text-token-textMuted tabular-nums text-right whitespace-nowrap">
-              {loading ? '—' : `${alerts.length} aktiv`}
+              {loading ? '—' : t('notifications.activeCount', { count: alerts.length })}
             </div>
           </div>
         </div>
@@ -605,50 +617,48 @@ export default function InstructorNotifications() {
         <div className="space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="min-w-0">
-              <h2 className="font-display font-bold text-base text-token-textMain">SMS tarixçəsi</h2>
-              <p className="text-xs text-token-textMuted mt-1">
-                Real SMS göndərişləri, sistem qeydləri və planlaşdırılmış xatırlatmalar — audit üçün metadata ilə.
-              </p>
-              {smsLoading ? <p className="text-xs text-token-textMuted mt-2">Tarixçə yüklənir…</p> : null}
+              <h2 className="font-display font-bold text-base text-token-textMain">{t('notifications.smsHistory')}</h2>
+              <p className="text-xs text-token-textMuted mt-1">{t('notifications.smsHistoryDesc')}</p>
+              {smsLoading ? <p className="text-xs text-token-textMuted mt-2">{t('notifications.historyLoading')}</p> : null}
               {!smsLoading ? (
                 <Card className="mt-4 p-4 border border-[color:var(--border-subtle)] bg-token-surfaceMain/30">
                   <p className="text-xs font-semibold text-token-textMain">
-                    Bu ay ({monthName})
+                    {t('notifications.thisMonth', { month: monthName })}
                   </p>
                   <ul className="mt-2 space-y-1.5 text-sm text-token-textMain">
                     <li className="flex items-center gap-2">
                       <span className="text-emerald-500">{SMS_STATUS_UI.sent.icon}</span>
                       <span>
-                        <span className="font-semibold tabular-nums">{smsMonthStats.sent}</span> SMS göndərilib
-                        <span className="text-token-textMuted text-xs"> (paket limitinə daxil)</span>
+                        {t('notifications.sentCount', { count: smsMonthStats.sent })}
+                        <span className="text-token-textMuted text-xs"> {t('notifications.sentQuotaNote')}</span>
                       </span>
                     </li>
                     <li className="flex items-center gap-2">
                       <span>{SMS_STATUS_UI.logged.icon}</span>
                       <span>
-                        <span className="font-semibold tabular-nums">{smsMonthStats.logged}</span> sistem qeydi
-                        <span className="text-token-textMuted text-xs"> (SMS göndərilməyib)</span>
+                        {t('notifications.loggedCount', { count: smsMonthStats.logged })}
+                        <span className="text-token-textMuted text-xs"> {t('notifications.loggedQuotaNote')}</span>
                       </span>
                     </li>
                     {smsMonthStats.whatsapp > 0 ? (
                       <li className="flex items-center gap-2">
                         <span>{SMS_STATUS_UI.whatsapp.icon}</span>
                         <span>
-                          <span className="font-semibold tabular-nums">{smsMonthStats.whatsapp}</span> WhatsApp
+                          {t('notifications.whatsappCount', { count: smsMonthStats.whatsapp })}
                         </span>
                       </li>
                     ) : null}
                     <li className="flex items-center gap-2">
                       <span className="text-rose-500">{SMS_STATUS_UI.failed.icon}</span>
                       <span>
-                        <span className="font-semibold tabular-nums">{smsMonthStats.failed}</span> uğursuz SMS
+                        {t('notifications.failedCount', { count: smsMonthStats.failed })}
                       </span>
                     </li>
                     {smsMonthStats.scheduled > 0 ? (
                       <li className="flex items-center gap-2">
                         <span>{SMS_STATUS_UI.scheduled.icon}</span>
                         <span>
-                          <span className="font-semibold tabular-nums">{smsMonthStats.scheduled}</span> planlaşdırılıb
+                          {t('notifications.scheduledCount', { count: smsMonthStats.scheduled })}
                         </span>
                       </li>
                     ) : null}
@@ -658,7 +668,7 @@ export default function InstructorNotifications() {
               {debugSms && !smsLoading ? (
                 <div className="mt-3 rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceMain/30 p-3">
                   <p className="text-[11px] font-semibold text-token-textMuted uppercase tracking-wider mb-2">
-                    Debug: API-dən gələn data (filterdən əvvəl, ilk 2)
+                    {t('notifications.debugTitle')}
                   </p>
                   <pre className="text-[11px] leading-relaxed text-token-textMain overflow-auto max-h-56">
                     {JSON.stringify(smsBaseList.slice(0, 2), null, 2)}
@@ -667,14 +677,17 @@ export default function InstructorNotifications() {
               ) : null}
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <span className="inline-flex items-center gap-2 rounded-full border border-[color:var(--border-subtle)] bg-token-surfaceCard/50 px-3 py-1.5 text-[11px] text-token-textMain">
-                  <span className="text-token-textMuted">Ümumi tarixçə:</span>
+                  <span className="text-token-textMuted">{t('notifications.totalHistory')}</span>
                   <span className="font-semibold tabular-nums">{smsLoading ? '—' : smsHistoryTotal}</span>
                 </span>
                 {smsQuotaLine ? (
                   <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5 text-[11px] text-token-textMain">
-                    <span className="text-token-textMuted">Paket limiti (bu ay):</span>
+                    <span className="text-token-textMuted">{t('notifications.packageLimit')}</span>
                     <span className="font-semibold tabular-nums">
-                      {smsQuotaLine.used}/{smsQuotaLine.limLabel} istifadə
+                      {t('notifications.packageUsed', {
+                        used: smsQuotaLine.used,
+                        limit: smsQuotaLine.limLabel,
+                      })}
                     </span>
                   </span>
                 ) : null}
@@ -689,16 +702,16 @@ export default function InstructorNotifications() {
                   disabled={!smsRows.length || smsLoading}
                   onClick={handleExportCsv}
                 >
-                  CSV export
+                  {t('notifications.csvExport')}
                 </Button>
               </div>
               <input
                 type="search"
                 value={smsSearch}
                 onChange={(e) => setSmsSearch(e.target.value)}
-                placeholder="Ad və ya telefon (məs: Gözel / 559815866)"
+                placeholder={t('notifications.searchPh')}
                 className="mx-field w-full sm:w-72"
-                aria-label="SMS tarixçəsində axtarış"
+                aria-label={t('notifications.searchAria')}
               />
               <FilterTabs tabs={smsTimeTabs} activeId={smsTimeFilter} onChange={(id) => setSmsTimeFilter(id)} />
               <FilterTabs tabs={smsStatusTabs} activeId={smsStatusFilter} onChange={(id) => setSmsStatusFilter(id)} />
@@ -709,21 +722,25 @@ export default function InstructorNotifications() {
             <Card className="p-8 sm:p-10 text-center">
               <div className="text-3xl mb-3">📭</div>
               <div className="text-sm font-semibold text-token-textMain">
-                {smsErr ? 'SMS tarixçəsi yüklənmədi' : smsSearchDebounced ? 'Axtarışa uyğun SMS tapılmadı' : 'Bu filter üçün SMS yoxdur'}
+                {smsErr
+                  ? t('notifications.historyLoadFailed')
+                  : smsSearchDebounced
+                    ? t('notifications.noSearchResults')
+                    : t('notifications.noFilterResults')}
               </div>
               <p className="text-xs text-token-textMuted mt-1">
                 {smsErr
-                  ? 'Bir az sonra yenidən yoxlayın.'
+                  ? t('notifications.retryLater')
                   : smsSearchDebounced
-                    ? 'Ad və ya telefonu yoxlayın (ən azı 2 simvol).'
-                    : 'Filtrləri dəyişin və ya yeni SMS göndərin.'}
+                    ? t('notifications.searchHint')
+                    : t('notifications.filterHint')}
               </p>
             </Card>
           ) : (
             <div className="space-y-3">
               <div className="flex items-center justify-between gap-3">
                 <div className="text-xs text-token-textMuted">
-                  Göstərilir:{' '}
+                  {t('notifications.showing')}{' '}
                   <span className="text-token-textMain font-semibold tabular-nums">
                     {Math.min(smsRows.length, smsShowCount)}
                   </span>{' '}
@@ -735,7 +752,7 @@ export default function InstructorNotifications() {
                     className="text-xs font-semibold text-primary hover:text-primary/90"
                     onClick={() => setSmsShowCount((n) => Math.min(smsRows.length, n + 40))}
                   >
-                    Daha çox göstər
+                    {t('notifications.showMore')}
                   </button>
                 ) : null}
               </div>
@@ -750,7 +767,7 @@ export default function InstructorNotifications() {
           <Modal
             open={detailsOpen}
             onClose={() => setDetailsOpen(false)}
-            title="SMS detalları"
+            title={t('notifications.detailsTitle')}
             size="md"
           >
             {detailsItem ? (
@@ -766,27 +783,23 @@ export default function InstructorNotifications() {
 
                 {detailsItem.source_detail || detailsStatus === 'logged' ? (
                   <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 p-3 text-xs text-token-textMain leading-relaxed">
-                    {detailsItem.source_detail ||
-                      'Bu qeyd SMS provayderinə göndərilməyib və paket limitinizdən çıxılmır.'}
+                    {detailsItem.source_detail || t('notifications.loggedDetailDefault')}
                     {detailsItem.initiated_by === 'system' ? (
-                      <span className="block mt-1 text-token-textMuted">
-                        Müəllim «Bildirişlər»dən əl ilə göndərməyib — sistem avtomatik qeyd edib.
-                      </span>
+                      <span className="block mt-1 text-token-textMuted">{t('notifications.loggedSystemNote')}</span>
                     ) : null}
                   </div>
                 ) : null}
 
                 {detailsItem.source === 'exam_placed' && detailsStatus === 'sent' ? (
                   <div className="rounded-xl border border-sky-500/25 bg-sky-500/10 p-3 text-xs text-token-textMain leading-relaxed">
-                    Bu SMS imtahan yaradılanda və ya tələbə imtahana təyin ediləndə avtomatik göndərilib. İmtahan silinsə
-                    belə, tarixçədə qala bilər.
+                    {t('notifications.examAutoNote')}
                   </div>
                 ) : null}
 
                 {detailsItem.status === 'failed' ? (
                   <div className="rounded-xl border border-rose-500/25 bg-rose-500/10 p-3">
                     <p className="text-xs font-semibold text-rose-700 dark:text-rose-200/90 uppercase tracking-wider mb-2">
-                      Uğursuzluq səbəbi
+                      {t('notifications.failureReason')}
                     </p>
                     <p className="text-sm text-token-textMain leading-relaxed">
                       {humanizeSmsFailure(detailsItem.reason)}
@@ -798,39 +811,45 @@ export default function InstructorNotifications() {
                 ) : null}
 
                 <dl className="rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceMain/40 px-3 py-1">
-                  <DetailRow label="Mənbə" value={detailsItem.source_title || '—'} />
-                  <DetailRow label="Status" value={detailsLabel} />
-                  <DetailRow label="Göndərilmə vaxtı" value={formatSmsDateTimeLong(detailsItem.createdAt)} />
+                  <DetailRow label={t('notifications.detailSource')} value={detailsItem.source_title || '—'} />
+                  <DetailRow label={t('notifications.detailStatus')} value={detailsLabel} />
+                  <DetailRow label={t('notifications.detailSentAt')} value={formatSmsDateTimeLong(detailsItem.createdAt)} />
                   <DetailRow
-                    label="Alıcı"
+                    label={t('notifications.detailRecipient')}
                     value={detailsItem.student_name || (detailsItem.students || []).join(', ') || '—'}
                   />
-                  <DetailRow label="Telefon" value={formatPhoneDisplay(detailsItem.phone)} mono />
+                  <DetailRow label={t('notifications.detailPhone')} value={formatPhoneDisplay(detailsItem.phone)} mono />
                   <DetailRow
-                    label="Mesaj uzunluğu"
-                    value={`${detailsItem.message_length ?? smsMessageLength(detailsItem.message)} simvol`}
+                    label={t('notifications.detailLength')}
+                    value={t('notifications.chars', {
+                      count: detailsItem.message_length ?? smsMessageLength(detailsItem.message),
+                    })}
                   />
                   <DetailRow
-                    label="SMS hissə"
+                    label={t('notifications.detailParts')}
                     value={String(detailsItem.sms_parts ?? smsPartCount(detailsItem.message) ?? '—')}
                   />
                   {detailsStatus === 'sent' || detailsStatus === 'failed' ? (
                     <>
-                      <DetailRow label="SMS provayder" value={detailsItem.provider_label || 'sendsms.az'} />
-                      <DetailRow label="Message ID" value={detailsItem.message_id || detailsItem.msisdn || '—'} mono />
+                      <DetailRow label={t('notifications.detailProvider')} value={detailsItem.provider_label || 'sendsms.az'} />
+                      <DetailRow label={t('notifications.detailMessageId')} value={detailsItem.message_id || detailsItem.msisdn || '—'} mono />
                       {detailsItem.http_status != null ? (
-                        <DetailRow label="HTTP status" value={String(detailsItem.http_status)} mono />
+                        <DetailRow label={t('notifications.detailHttpStatus')} value={String(detailsItem.http_status)} mono />
                       ) : null}
                     </>
                   ) : null}
                   <DetailRow
-                    label="Limitə təsir"
-                    value={detailsItem.counts_toward_quota ? 'Bəli — paketdən çıxır' : 'Xeyr — yalnız qeyd'}
+                    label={t('notifications.detailQuotaImpact')}
+                    value={
+                      detailsItem.counts_toward_quota ? t('notifications.quotaYes') : t('notifications.quotaNo')
+                    }
                   />
                 </dl>
 
                 <div className="rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceMain/40 p-3">
-                  <p className="text-xs font-semibold text-token-textMuted uppercase tracking-wider mb-2">Mesaj mətni</p>
+                  <p className="text-xs font-semibold text-token-textMuted uppercase tracking-wider mb-2">
+                    {t('notifications.messageText')}
+                  </p>
                   <p className="text-sm text-token-textMain leading-relaxed whitespace-pre-wrap break-words">
                     {detailsItem.message || '—'}
                   </p>
@@ -838,10 +857,10 @@ export default function InstructorNotifications() {
 
                 <div className="flex flex-wrap justify-end gap-2 pt-1">
                   <Button variant="secondary" size="sm" onClick={() => exportSmsHistoryCsv([detailsItem], 'sms-detay.csv')}>
-                    Bu sətiri export et
+                    {t('notifications.exportRow')}
                   </Button>
                   <Button variant="secondary" onClick={() => setDetailsOpen(false)}>
-                    Bağla
+                    {t('notifications.close')}
                   </Button>
                 </div>
               </div>
@@ -849,16 +868,14 @@ export default function InstructorNotifications() {
           </Modal>
         </div>
       ) : loading ? (
-        <div className="text-center py-12 text-token-textMuted">Yüklənir...</div>
+        <div className="text-center py-12 text-token-textMuted">{t('notifications.loading')}</div>
       ) : alerts.length === 0 ? (
         <Card className="p-8 sm:p-12 text-center max-w-lg mx-auto">
           <div className="text-4xl mb-4">✅</div>
           <div className="font-display font-bold text-lg text-token-textMain break-words px-2">
-            Hər şey qaydasındadır
+            {t('notifications.allGoodTitle')}
           </div>
-          <p className="text-token-textMuted text-sm mt-2 px-2">
-            Limitləriniz 80%-dən çox dolmayıb
-          </p>
+          <p className="text-token-textMuted text-sm mt-2 px-2">{t('notifications.allGoodDesc')}</p>
         </Card>
       ) : (
         <div className="space-y-4 max-w-2xl">
@@ -868,17 +885,10 @@ export default function InstructorNotifications() {
                 <span className="text-2xl shrink-0">{LEVEL[alert.level].icon}</span>
                 <div className="flex-1 min-w-0">
                   <span className={`inline-block px-2 py-0.5 rounded-lg text-xs font-semibold mb-2 ${LEVEL[alert.level].badge}`}>
-                    {alert.level === 'critical' ? 'Kritik' : 'Xəbərdarlıq'}
+                    {alert.level === 'critical' ? t('notifications.critical') : t('notifications.warning')}
                   </span>
                   <p className="text-sm text-token-textMain break-words">{alert.message}</p>
-                  <p className="text-xs text-token-textMuted mt-1">
-                    {alert.type === 'sms'
-                      ? '📱 SMS'
-                      : alert.type === 'storage' || alert.type === 'ram'
-                        ? '💾 Storage'
-                        : alert.type === 'discover_profile'
-                          ? '🔍 Axtarış profili'
-                          : '⚙️ Sistem'}
+                  <p className="text-xs text-token-textMuted mt-1">{alertTypeLabel(alert.type)}
                   </p>
                   {alert.cta?.label ? (
                     <Button
