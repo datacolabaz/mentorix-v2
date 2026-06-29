@@ -132,4 +132,20 @@ export default function InquiryFormModal({ open, onClose, instructor, categoryId
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               rows={3}
-              className="w
+              className="w-full rounded-lg border border-white/15 bg-[#13112e] px-3 py-2 text-sm text-white resize-none"
+            />
+          </div>
+          {error ? <p className="text-xs text-red-400">{error}</p> : null}
+          <div className="flex gap-2">
+            <Button type="button" variant="secondary" className="flex-1" onClick={resetAndClose}>
+              {t('marketplace.inquiry.cancel')}
+            </Button>
+            <Button type="submit" loading={loading} className="flex-1">
+              {t('marketplace.inquiry.submit')}
+            </Button>
+          </div>
+        </form>
+      )}
+    </Modal>
+  )
+}

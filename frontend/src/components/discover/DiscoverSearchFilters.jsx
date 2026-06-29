@@ -192,4 +192,29 @@ export default function DiscoverSearchFilters({ value, onChange }) {
                     {a.name_az}
                   </option>
                 ))}
-     
+              </optgroup>
+            ) : null}
+            {areaGroups.metros.length ? (
+              <optgroup label={t('marketplace.filters.areaGroups.metros')}>
+                {areaGroups.metros.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.name_az}
+                  </option>
+                ))}
+              </optgroup>
+            ) : null}
+            {areaGroups.regions.length ? (
+              <optgroup label={t('marketplace.filters.areaGroups.regions')}>
+                {areaGroups.regions.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.name_az}
+                  </option>
+                ))}
+              </optgroup>
+            ) : null}
+          </select>
+        </div>
+      ) : null}
+    </div>
+  )
+}

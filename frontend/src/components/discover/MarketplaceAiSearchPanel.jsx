@@ -320,4 +320,18 @@ export default function MarketplaceAiSearchPanel({
                     <button
                       type="button"
                       disabled={whatsappBusy}
-                      
+                      onClick={() => onWhatsApp?.(tutorMatches[0])}
+                      className="text-xs font-bold px-3 py-2 rounded-xl border border-emerald-500/35 text-emerald-400 hover:bg-emerald-500/10 disabled:opacity-50"
+                    >
+                      {cta.whatsapp?.label || t('marketplace.ai.contactWhatsapp')}
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+    </section>
+  )
+}
