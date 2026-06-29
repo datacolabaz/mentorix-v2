@@ -21,7 +21,7 @@ export default function LanguageSwitcher({ className = '', tone = 'auto' }) {
         type="button"
         onClick={() => pick(code)}
         className={[
-          'flex-1 px-2 py-1.5 rounded-lg text-xs font-bold transition-colors',
+          'px-2.5 py-1 sm:px-3 sm:py-1.5 text-[11px] sm:text-xs font-bold transition-colors rounded-full whitespace-nowrap',
           on
             ? isDark
               ? 'bg-primary/25 text-primary border border-primary/40'
@@ -40,7 +40,7 @@ export default function LanguageSwitcher({ className = '', tone = 'auto' }) {
   return (
     <div
       className={[
-        'w-full flex items-center gap-1 p-1 rounded-xl border',
+        'lang-switcher inline-flex w-fit max-w-none shrink-0 items-center gap-0.5 p-0.5 rounded-full border overflow-hidden',
         isDark ? 'border-[color:var(--border-subtle)] bg-token-surfaceCard/45' : 'border-[color:var(--border-subtle)] bg-white/70',
         className,
       ].join(' ')}

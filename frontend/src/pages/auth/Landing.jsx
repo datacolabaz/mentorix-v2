@@ -315,9 +315,7 @@ export default function Landing() {
                     </button>
                   ) : null}
                 </div>
-                <div className="w-[5.5rem] sm:w-[5.75rem] shrink-0">
-                  <LanguageSwitcher tone="dark" className="p-0.5" />
-                </div>
+                <LanguageSwitcher tone="dark" className="h-8 sm:h-auto" />
                 <button
                   type="button"
                   className="sm:hidden inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 text-gray-300 hover:bg-white/5 hover:text-white"
@@ -374,9 +372,6 @@ export default function Landing() {
                     {t('landing.nav.plans')}
                   </button>
                 ) : null}
-                <div className="pt-2">
-                  <LanguageSwitcher tone="dark" />
-                </div>
               </div>
             ) : null}
           </nav>

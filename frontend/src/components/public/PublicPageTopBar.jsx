@@ -1,9 +1,8 @@
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import Brand from '../common/Brand'
-import LanguageSwitcher from '../LanguageSwitcher'
 
-/** İctimai marketinq səhifələri — geri, dil, başlıq (mobil uyğun). */
+/** İctimai marketinq səhifələri — geri, başlıq (mobil uyğun). Dil keçidi yalnız landing navbar-da. */
 export default function PublicPageTopBar({ backTo = '/', title, subtitle, children }) {
   const { t } = useTranslation()
 
@@ -20,7 +19,6 @@ export default function PublicPageTopBar({ backTo = '/', title, subtitle, childr
             </span>
             <span className="truncate max-w-[min(100%,14rem)] sm:max-w-none">{t('publicNav.backHome')}</span>
           </Link>
-          <LanguageSwitcher tone="dark" className="w-[5.5rem] shrink-0" />
         </div>
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
