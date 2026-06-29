@@ -186,7 +186,7 @@ export default function AdminStudents() {
               <tr
                 key={s.id}
                 className={`border-b border-[color:var(--border-subtle)] hover:bg-black/[0.03] dark:hover:bg-white/[0.04] ${
-                  s.is_unassigned ? 'bg-amber-500/10' : ''
+                  s.is_unassigned ? 'border-l-[3px] border-l-amber-500/70' : ''
                 }`}
               >
                 <td className="py-3 px-4">
@@ -347,7 +347,4 @@ export default function AdminStudents() {
             </Button>
           </div>
         )}
-      </Modal>
-    </div>
-  )
-}
+      </Mod
