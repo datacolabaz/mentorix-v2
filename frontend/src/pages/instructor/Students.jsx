@@ -16,6 +16,7 @@ import { addMinutesToHm, fmtAzBakuLessonRow } from '../../lib/lessonWeekGrid'
 import { alignFirstLessonYmd } from '../../lib/firstLessonDate'
 import { readCache, writeCache } from '../../lib/cache'
 import useUiStore from '../../hooks/useUi'
+import i18n from '../../i18n'
 import PortalMenu from '../../components/common/PortalMenu'
 import PhoneInput from '../../components/auth/PhoneInput'
 import {
@@ -169,7 +170,9 @@ function normalizeWeekdays(raw) {
 function lessonDaysShort(raw) {
   const ids = normalizeWeekdays(raw)
   if (!ids.length) return null
-  return ids.map((v) => WEEKDAYS.find((d) => d.v === v)?.short || v).join(' · ')
+  return ids
+    .map((v) => i18n.t(`students.form.weekdays.${v}.short`, { defaultValue: String(v) }))
+    .join(' · ')
 }
 
 /** API JSONB / string → { "1": "11:00", ... } */
@@ -274,6 +277,16 @@ function StudentFormFields({
   sendProfileEmailBusy = false,
   lightSetup = false,
 }) {
+  const { t } = useTranslation()
+  const localizedWeekdays = useMemo(
+    () =>
+      WEEKDAYS.map((d) => ({
+        ...d,
+        short: t(`students.form.weekdays.${d.v}.short`),
+        full: t(`students.form.weekdays.${d.v}.full`),
+      })),
+    [t],
+  )
   const [subjectDraft, setSubjectDraft] = useState('')
   const [groupDraft, setGroupDraft] = useState('')
   const [createOpen, setCreateOpen] = useState(null) // 'subject' | 'group' | null
@@ -321,27 +334,27 @@ function StudentFormFields({
 
   const saveCreate = async () => {
     const name = String(createName || '').trim()
-    if (!name) return toast('Ad boş ola bilməz', 'error')
+    if (!name) return toast(t('students.toasts.nameRequired'), 'error')
     try {
       if (createOpen === 'subject') {
-        if (typeof onCreateSubject !== 'function') throw new Error('create subject handler yoxdur')
+        if (typeof onCreateSubject !== 'function') throw new Error(t('students.form.errors.subjectHandler'))
         const created = await onCreateSubject(name)
         setData((p) => ({ ...p, subject_id: created?.id || '', group_id: '' }))
         setSubjectDraft('')
         setGroupDraft('')
-        toast('Yeni sahə əlavə edildi')
+        toast(t('students.toasts.subjectCreated'))
       } else if (createOpen === 'group') {
-        if (!data.subject_id) return toast('Əvvəl sahə seçin', 'error')
-        if (typeof onCreateGroup !== 'function') throw new Error('create group handler yoxdur')
+        if (!data.subject_id) return toast(t('students.toasts.selectSubjectFirst'), 'error')
+        if (typeof onCreateGroup !== 'function') throw new Error(t('students.form.errors.groupHandler'))
         const created = await onCreateGroup(data.subject_id, name)
         setData((p) => ({ ...p, group_id: created?.id || '' }))
         setGroupDraft('')
-        toast('Yeni qrup əlavə edildi')
+        toast(t('students.toasts.groupCreated'))
       }
       setCreateOpen(null)
       setCreateName('')
     } catch (e) {
-      toast(e?.message || 'Yaradılmadı', 'error')
+      toast(e?.message || t('students.toasts.createFailed'), 'error')
     }
   }
 
@@ -349,10 +362,10 @@ function StudentFormFields({
     <div className="space-y-3">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
-          <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Ad *</label>
+          <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">{t('students.form.firstName')}</label>
           <input
             className={inp}
-            placeholder="Əli"
+            placeholder={t('students.form.firstNamePh')}
             value={data.first_name ?? splitFullName(data.full_name).first_name}
             onChange={(e) => {
               const first_name = e.target.value
@@ -365,10 +378,10 @@ function StudentFormFields({
           />
         </div>
         <div>
-          <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Soyad *</label>
+          <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">{t('students.form.lastName')}</label>
           <input
             className={inp}
-            placeholder="Hüseynov"
+            placeholder={t('students.form.lastNamePh')}
             value={data.last_name ?? splitFullName(data.full_name).last_name}
             onChange={(e) => {
               const last_name = e.target.value
@@ -383,15 +396,11 @@ function StudentFormFields({
       </div>
       <div>
         <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
-          Tələbə telefonu *
+          {t('students.form.phone')}
         </label>
         {lockStudentPhone ? (
           <div className="rounded-xl border border-amber-500/35 bg-amber-500/10 p-3 space-y-3">
-            <p className="text-xs text-amber-100/95 leading-relaxed">
-              Telefon tələbənin özü link vasitəsilə təsdiqləməlidir — müəllim daxil edə bilməz. Gmail ünvanına
-              tamamlama linki göndərin; tələbə ad, soyad və telefonu doldurduqdan sonra quraşdırmanı davam edə
-              bilərsiniz.
-            </p>
+            <p className="text-xs text-amber-100/95 leading-relaxed">{t('students.form.phoneLocked')}</p>
             {onSendProfileCompletionEmail ? (
               <Button
                 type="button"
@@ -399,7 +408,7 @@ function StudentFormFields({
                 loading={sendProfileEmailBusy}
                 onClick={() => void onSendProfileCompletionEmail()}
               >
-                Profil tamamlama linki göndər (email)
+                {t('students.form.sendProfileLink')}
               </Button>
             ) : null}
           </div>
@@ -411,10 +420,7 @@ function StudentFormFields({
               persistLoginDefaults={false}
               required
             />
-            <p className="text-[10px] text-gray-500 mt-1.5">
-              Ödəniş xatırlatması və qrup kodları bu nömrəyə SMS/WhatsApp ilə göndərilir (müəllim hesabından
-              ayrıdır).
-            </p>
+            <p className="text-[10px] text-gray-500 mt-1.5">{t('students.form.phoneHint')}</p>
           </>
         )}
       </div>
@@ -422,26 +428,24 @@ function StudentFormFields({
       {mode === 'add' || mode === 'edit' ? (
         <div>
           <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
-            Email (istəyə bağlı)
+            {t('students.form.emailOptional')}
           </label>
           <input
             className={inp}
             type="email"
             inputMode="email"
             autoComplete="email"
-            placeholder="student@gmail.com"
+            placeholder={t('students.form.emailPh')}
             value={data.email || ''}
             onChange={(e) => setData((p) => ({ ...p, email: e.target.value }))}
           />
           <p className="text-[10px] text-gray-500 mt-1.5">
-            <span className="text-indigo-200/90 font-medium">İstəyə bağlı:</span> tələbə panelinə email ilə daxil ola
-            bilsin. Boş buraxılsa, yalnız müəllim tərəfindən idarə olunur.
+            <span className="text-indigo-200/90 font-medium">{t('students.form.optionalLabel')}</span>{' '}
+            {t('students.form.emailHint')}
             {mode === 'edit' ? (
               <>
                 {' '}
-                <span className="text-gray-400">
-                  Qeyd: tələbə Google ilə artıq giriş edibsə, email dəyişikliyi server tərəfindən bloklanır.
-                </span>
+                <span className="text-gray-400">{t('students.form.emailGoogleNote')}</span>
               </>
             ) : null}
           </p>
@@ -450,16 +454,16 @@ function StudentFormFields({
 
       {lightSetup ? (
         <p className="text-xs text-indigo-200/90 rounded-xl border border-indigo-500/25 bg-indigo-500/10 px-3 py-2.5 leading-relaxed">
-          Bu tələbə imtahan və ya tapşırıq linki ilə qoşulub — yalnız ad, soyad və telefon kifayətdir. Paket/cədvəl
-          tələb olunmur; «Sorğular» bölməsindən təsdiqləyin.
+          {t('students.form.lightSetup')}
         </p>
       ) : null}
 
       {!lightSetup ? (
       <div className="rounded-xl border border-white/10 bg-surface-2/40 p-3 space-y-2">
-        <p className="text-xs font-semibold text-gray-200 uppercase tracking-wider">1. Qeydiyyat növü *</p>
+        <p className="text-xs font-semibold text-gray-200 uppercase tracking-wider">{t('students.form.registrationType')}</p>
         <p className="text-[10px] text-gray-400 leading-relaxed">
-          <span className="text-gray-200">Dərs sayı ilə</span> — 8 və ya 12 dərsli paket, tarixlər paket üzrə avtomatik planlanır.
+          <span className="text-gray-200">{t('students.form.registrationTypeDesc')}</span>{' '}
+          {t('students.form.registrationTypeDescRest')}
         </p>
         <select
           className={inp}
@@ -474,7 +478,7 @@ function StudentFormFields({
         >
           {BILLING_OPTS.map((o) => (
             <option key={o.value} value={o.value}>
-              {o.value === '8_lessons' ? '8 dərs paketi (dərs sayı ilə)' : '12 dərs paketi (dərs sayı ilə)'}
+              {o.value === '8_lessons' ? t('students.form.pack8Option') : t('students.form.pack12Option')}
             </option>
           ))}
         </select>
@@ -489,30 +493,26 @@ function StudentFormFields({
           checked={Boolean(data.notifications_enabled)}
           onChange={(e) => setData((p) => ({ ...p, notifications_enabled: e.target.checked }))}
         />
-        Ödəniş bitməsi barədə bildiriş göndərilsin
+        {t('students.form.notifyPaymentEnd')}
       </label>
       ) : null}
 
       {!lightSetup ? (
       <>
         <div className="rounded-xl border border-indigo-500/20 bg-[#0f0c29]/60 p-3 space-y-2">
-          <p className="text-xs font-semibold text-indigo-200/90 uppercase tracking-wider">2. Paket: ilk dərs tarixi *</p>
+          <p className="text-xs font-semibold text-indigo-200/90 uppercase tracking-wider">{t('students.form.firstLessonDate')}</p>
           {mode === 'setup' && data.enrollment_date && paymentDateHint(data.enrollment_date) ? (
             <p className="text-[10px] text-gray-500 leading-relaxed">
-              Qoşulma tarixi:{' '}
-              <span className="text-gray-300 font-medium">{paymentDateHint(data.enrollment_date)}</span> — dərs günü
-              olmaya bilər; ilk dərs avtomatik növbəti uyğun dərs gününə keçirilir.
+              {t('students.form.enrollmentDateHint')}{' '}
+              <span className="text-gray-300 font-medium">{paymentDateHint(data.enrollment_date)}</span>{' '}
+              {t('students.form.enrollmentDateRest')}
             </p>
           ) : (
-            <p className="text-[10px] text-gray-500 leading-relaxed">
-              Paket qeydiyyatında təqvim bir tarixdən başlayır. Tarix dərs günü deyilsə, sistem ən yaxın uyğun dərs
-              gününə keçirir və 8 və ya 12 dərs sırası qurur.
-            </p>
+            <p className="text-[10px] text-gray-500 leading-relaxed">{t('students.form.calendarStartHint')}</p>
           )}
           {mode !== 'setup' ? (
             <p className="text-[10px] text-amber-200/90 rounded-lg border border-amber-500/25 bg-amber-500/10 px-2 py-1.5 leading-relaxed">
-              Redaktədə dəyişəndə yalnız 1-ci dövrün planı və həmin dövrün davamiyyəti yenilənir. Artıq növbəti paket
-              dövrünə keçilibsə, tarix dəyişməyi server bloklaya bilər.
+              {t('students.form.editDateWarning')}
             </p>
           ) : null}
           <input
@@ -532,12 +532,13 @@ function StudentFormFields({
           />
           {paymentDateHint(data.first_lesson_date) && (
             <p className="text-[11px] text-indigo-300/80 mt-1.5 tabular-nums">
-              Seçilmiş tarix: <span className="text-white font-medium">{paymentDateHint(data.first_lesson_date)}</span>
+              {t('students.form.selectedDate')}{' '}
+              <span className="text-white font-medium">{paymentDateHint(data.first_lesson_date)}</span>
             </p>
           )}
         </div>
         <div>
-          <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Məbləğ qeydi (₼) — ixtiyari</label>
+          <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">{t('students.form.amountNote')}</label>
           <input
             className={inp}
             type="number"
@@ -547,7 +548,7 @@ function StudentFormFields({
             value={data.monthly_fee}
             onChange={(e) => setData((p) => ({ ...p, monthly_fee: e.target.value }))}
           />
-          <p className="text-[10px] text-gray-500 mt-1.5">Paket üzrə istinad məbləği; abunə tipli sabit ödəniş deyil.</p>
+          <p className="text-[10px] text-gray-500 mt-1.5">{t('students.form.amountHint')}</p>
         </div>
       </>
       ) : null}
@@ -555,12 +556,10 @@ function StudentFormFields({
       {!lightSetup ? (
       <>
       <div className="rounded-xl border border-indigo-500/20 bg-[#0f0c29]/60 p-3 space-y-2">
-        <p className="text-xs font-semibold text-indigo-200/90 uppercase tracking-wider">Həftənin dərs günləri *</p>
-        <p className="text-[10px] text-gray-500 leading-relaxed">
-          Paketdə tarixlər bu günlərə və aşağıdakı saatlara uyğun avtomatik düzülür.
-        </p>
+        <p className="text-xs font-semibold text-indigo-200/90 uppercase tracking-wider">{t('students.form.weekdaysTitle')}</p>
+        <p className="text-[10px] text-gray-500 leading-relaxed">{t('students.form.weekdaysHint')}</p>
         <div className="flex flex-wrap gap-2">
-          {WEEKDAYS.map((d) => {
+          {localizedWeekdays.map((d) => {
             const active = Array.isArray(data.lesson_weekdays) && data.lesson_weekdays.includes(d.v)
             return (
               <button
@@ -601,41 +600,41 @@ function StudentFormFields({
         </div>
       </div>
       <div className="rounded-xl border border-indigo-500/20 bg-[#0f0c29]/60 p-3 space-y-3">
-        <p className="text-xs font-semibold text-indigo-200/90 uppercase tracking-wider">Ödəniş sxemi</p>
+        <p className="text-xs font-semibold text-indigo-200/90 uppercase tracking-wider">{t('students.form.paymentScheme')}</p>
         <div>
           <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
-            Ödəniş modeli *
+            {t('students.form.paymentModel')}
           </label>
           <select
             className={inp}
             value={paymentSchemeFromForm(data)}
             onChange={(e) => setData((p) => applyPaymentScheme(p, e.target.value))}
           >
-            <option value="full_prepaid">Öncədən tam — məbləğ paket və ya ay başlamazdan əvvəl tam ödənilir</option>
-            <option value="installment">Hissəli — hissə-hissə ödəniş; qalıq borc avtomatik izlənir</option>
-            <option value="postpaid_full">Sonradan tam — dövr/paket üzrə sonradan bir dəfəyə tam məbləğ</option>
+            <option value="full_prepaid">{t('students.form.payFullPrepaid')}</option>
+            <option value="installment">{t('students.form.payInstallment')}</option>
+            <option value="postpaid_full">{t('students.form.payPostpaid')}</option>
           </select>
           <p className="text-[10px] text-gray-500 mt-2 leading-relaxed">
-            <span className="text-rose-200/90 font-medium">Hissəli</span> seçildikdə ödənilən məbləğ borcdan az olanda qalıq «Ödənişlər»
-            və tarixçədə qırmızı ilə göstərilir. Hissəlidə hər ödəniş ayrıca qeyd olunur və qalıq borc dərhal hesablanır.
+            <span className="text-rose-200/90 font-medium">{t('students.form.installmentHint')}</span>{' '}
+            {t('students.form.installmentHintRest')}
           </p>
         </div>
       </div>
       {Array.isArray(teachingSubjects) && (
         <div className="rounded-xl border border-indigo-500/20 bg-[#0f0c29]/60 p-3 space-y-3">
-          <p className="text-xs font-semibold text-indigo-200/90 uppercase tracking-wider">Sahə və qrup</p>
+          <p className="text-xs font-semibold text-indigo-200/90 uppercase tracking-wider">{t('students.form.subjectGroup')}</p>
           {!teachingSubjects.length ? (
             <p className="text-[11px] text-gray-500">
-              Hələ tədris sahəsi yoxdur — aşağıdan «+ Yeni» ilə yaradın və ya{' '}
+              {t('students.form.noSubjectsYet')}{' '}
               <a href="/instructor/teaching-groups" className="text-blue-300 hover:underline">
-                Sahələr və qruplar
+                {t('students.form.teachingGroupsLink')}
               </a>{' '}
-              səhifəsinə keçin.
+              {t('students.form.noSubjectsPage')}
             </p>
           ) : null}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Tədris sahəsi</label>
+              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">{t('students.form.teachingSubject')}</label>
               <div className="flex gap-2">
                 <div className="flex-1 min-w-0">
                   <input
@@ -656,7 +655,7 @@ function StudentFormFields({
                         setData((p) => ({ ...p, subject_id: '', group_id: '' }))
                       }
                     }}
-                    placeholder="Yazın və ya seçin…"
+                    placeholder={t('students.form.typeOrSelect')}
                   />
                   <datalist id="mx_subjects">
                     {subjectNames.map((n) => (
@@ -671,7 +670,7 @@ function StudentFormFields({
                   onClick={() => openCreate('subject', subjectDraft)}
                   className="shrink-0"
                 >
-                  + Yeni
+                  {t('students.form.newBtn')}
                 </Button>
               </div>
               {subjectDraft && !data.subject_id && (
@@ -680,12 +679,12 @@ function StudentFormFields({
                   onClick={() => openCreate('subject', subjectDraft)}
                   className="mt-2 text-[11px] text-blue-300 hover:text-blue-200 underline"
                 >
-                  “{subjectDraft.trim()}” üçün yeni sahə yarat
+                  {t('students.form.createSubjectFor', { name: subjectDraft.trim() })}
                 </button>
               )}
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Qrup</label>
+              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">{t('students.form.group')}</label>
               <div className="flex gap-2">
                 <div className="flex-1 min-w-0">
                   <input
@@ -710,7 +709,7 @@ function StudentFormFields({
                         setData((p) => ({ ...p, group_id: '' }))
                       }
                     }}
-                    placeholder={data.subject_id ? 'Yazın və ya seçin…' : 'Əvvəl sahə seçin'}
+                    placeholder={data.subject_id ? t('students.form.typeOrSelect') : t('students.form.selectSubjectFirst')}
                   />
                   <datalist id="mx_groups">
                     {groupNames.map((n) => (
@@ -726,7 +725,7 @@ function StudentFormFields({
                   onClick={() => openCreate('group', groupDraft)}
                   className="shrink-0"
                 >
-                  + Yeni
+                  {t('students.form.newBtn')}
                 </Button>
               </div>
               {data.subject_id && groupDraft && !data.group_id && (
@@ -735,12 +734,12 @@ function StudentFormFields({
                   onClick={() => openCreate('group', groupDraft)}
                   className="mt-2 text-[11px] text-blue-300 hover:text-blue-200 underline"
                 >
-                  “{groupDraft.trim()}” üçün yeni qrup yarat
+                  {t('students.form.createGroupFor', { name: groupDraft.trim() })}
                 </button>
               )}
             </div>
           </div>
-          <p className="text-[10px] text-gray-500">Siyahı «Tənzimləmələr» səhifəsindən idarə olunur.</p>
+          <p className="text-[10px] text-gray-500">{t('students.form.listManagedInSettings')}</p>
         </div>
       )}
 
@@ -750,17 +749,17 @@ function StudentFormFields({
           setCreateOpen(null)
           setCreateName('')
         }}
-        title={createOpen === 'group' ? 'Yeni qrup əlavə et' : 'Yeni tədris sahəsi əlavə et'}
+        title={createOpen === 'group' ? t('students.form.modalNewGroup') : t('students.form.modalNewSubject')}
         size="sm"
       >
         <div className="space-y-3">
           <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider">
-            Ad
+            {t('students.form.name')}
           </label>
-          <input className={inp} value={createName} onChange={(e) => setCreateName(e.target.value)} placeholder="məs. Cyber Security" />
+          <input className={inp} value={createName} onChange={(e) => setCreateName(e.target.value)} placeholder={t('students.form.namePh')} />
           <div className="flex gap-2 pt-2">
             <Button type="button" onClick={saveCreate} className="flex-1 justify-center">
-              Yadda saxla
+              {t('students.save')}
             </Button>
             <Button
               type="button"
@@ -771,29 +770,27 @@ function StudentFormFields({
               }}
               className="flex-1 justify-center"
             >
-              Ləğv et
+              {t('common.cancel')}
             </Button>
           </div>
         </div>
       </Modal>
       {(mode === 'add' || mode === 'edit') && (
         <div className="rounded-xl border border-indigo-500/20 bg-[#0f0c29]/60 p-3 space-y-2">
-          <p className="text-xs font-semibold text-indigo-200/90 uppercase tracking-wider">Dərs vaxtı (slot)</p>
+          <p className="text-xs font-semibold text-indigo-200/90 uppercase tracking-wider">{t('students.form.lessonSlot')}</p>
           {data.billing_type === '8_lessons' && (
-            <p className="text-[10px] text-gray-500">Paket: 8 dərs (qeydiyyatdan sonra sayğac 8-dən geri sayacaq)</p>
+            <p className="text-[10px] text-gray-500">{t('students.form.pack8Counter')}</p>
           )}
           {data.billing_type === '12_lessons' && (
-            <p className="text-[10px] text-gray-500">Paket: 12 dərs (qeydiyyatdan sonra sayğac 12-dən geri sayacaq)</p>
+            <p className="text-[10px] text-gray-500">{t('students.form.pack12Counter')}</p>
           )}
-          <p className="text-[10px] text-gray-500">
-            Seçilmiş dərs günləri üçün saatları qeyd edin. Paket qeydiyyatında yuxarıdakı ilk dərs tarixindən başlayaraq 8 və ya 12 tarixli dərs sırası avtomatik yaradılacaq.
-          </p>
+          <p className="text-[10px] text-gray-500">{t('students.form.slotHint')}</p>
           <div className="space-y-2">
-            {WEEKDAYS.filter((d) => (data.lesson_weekdays?.length ? data.lesson_weekdays.includes(d.v) : false)).map((d) => (
+            {localizedWeekdays.filter((d) => (data.lesson_weekdays?.length ? data.lesson_weekdays.includes(d.v) : false)).map((d) => (
               <div key={d.v} className="flex items-center justify-between gap-3 rounded-xl border border-indigo-500/15 bg-[#13112e]/60 px-3 py-2">
                 <div className="text-xs text-gray-300 font-semibold shrink-0">{d.full}</div>
                 <div className="flex items-center gap-2">
-                  <label className="text-[10px] text-gray-500">Başlanğıc</label>
+                  <label className="text-[10px] text-gray-500">{t('students.form.startTime')}</label>
                   <input
                     type="time"
                     className="bg-[#13112e] border border-indigo-500/20 rounded-xl px-2 py-2 text-white text-sm outline-none focus:border-indigo-400"
@@ -815,7 +812,7 @@ function StudentFormFields({
                       })
                     }}
                   />
-                  <label className="text-[10px] text-gray-500">Bitmə</label>
+                  <label className="text-[10px] text-gray-500">{t('students.form.endTime')}</label>
                   <input
                     type="time"
                     className="bg-[#13112e] border border-indigo-500/20 rounded-xl px-2 py-2 text-white text-sm outline-none focus:border-indigo-400"
@@ -829,22 +826,22 @@ function StudentFormFields({
               </div>
             ))}
             {!data.lesson_weekdays?.length && (
-              <p className="text-xs text-gray-500">Əvvəlcə dərs günlərini seçin.</p>
+              <p className="text-xs text-gray-500">{t('students.form.pickWeekdaysFirst')}</p>
             )}
           </div>
         </div>
       )}
       <div className="rounded-xl border border-indigo-500/20 bg-[#0f0c29]/60 p-3 space-y-3">
-        <p className="text-xs font-semibold text-indigo-200/90 uppercase tracking-wider">Marketinq</p>
+        <p className="text-xs font-semibold text-indigo-200/90 uppercase tracking-wider">{t('students.form.marketing')}</p>
         {referralSources.length > 0 && (
           <div>
-            <label className="block text-xs text-gray-500 mb-1">Mənbə</label>
+            <label className="block text-xs text-gray-500 mb-1">{t('students.form.source')}</label>
             <select
               className={inp}
               value={data.referral_source_id || ''}
               onChange={(e) => setData((p) => ({ ...p, referral_source_id: e.target.value }))}
             >
-              <option value="">— Seçin —</option>
+              <option value="">{t('students.form.selectOption')}</option>
               {referralSources.filter(Boolean).map((rs) => (
                 <option key={rs.id} value={rs.id}>
                   {rs?.name ?? '—'}
@@ -854,10 +851,10 @@ function StudentFormFields({
           </div>
         )}
         <div>
-          <label className="block text-xs text-gray-500 mb-1">Qeyd (ixtiyari)</label>
+          <label className="block text-xs text-gray-500 mb-1">{t('students.form.noteOptional')}</label>
           <input
             className={inp}
-            placeholder="Instagram, tövsiyə..."
+            placeholder={t('students.form.notePh')}
             value={data.referral_notes}
             onChange={(e) => setData((p) => ({ ...p, referral_notes: e.target.value }))}
           />
@@ -866,18 +863,18 @@ function StudentFormFields({
 
       {(mode === 'setup' || mode === 'add' || mode === 'edit') && (
         <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3 space-y-3">
-          <p className="text-xs font-semibold text-emerald-200/90 uppercase tracking-wider">Ödəniş statusu</p>
+          <p className="text-xs font-semibold text-emerald-200/90 uppercase tracking-wider">{t('students.form.paymentStatus')}</p>
           <select
             className={inp}
             value={data.initial_payment_status || 'unpaid'}
             onChange={(e) => setData((p) => ({ ...p, initial_payment_status: e.target.value }))}
           >
-            <option value="unpaid">Ödənilməyib</option>
-            <option value="partial">Hissəli</option>
-            <option value="paid">Ödənilib</option>
+            <option value="unpaid">{t('students.form.statusUnpaid')}</option>
+            <option value="partial">{t('students.form.statusPartial')}</option>
+            <option value="paid">{t('students.form.statusPaid')}</option>
           </select>
           <div>
-            <label className="block text-xs text-gray-500 mb-1">Ödəniş son tarixi (ixtiyari)</label>
+            <label className="block text-xs text-gray-500 mb-1">{t('students.form.paymentDueDate')}</label>
             <input
               type="date"
               className={inp}
@@ -886,7 +883,7 @@ function StudentFormFields({
             />
           </div>
           <div>
-            <label className="block text-xs text-gray-500 mb-1">Endirim % (ixtiyari)</label>
+            <label className="block text-xs text-gray-500 mb-1">{t('students.form.discount')}</label>
             <input
               type="number"
               min={0}
@@ -903,33 +900,33 @@ function StudentFormFields({
       {(mode === 'setup' || mode === 'edit') && (
         <div>
           <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
-            Müəllim qeydi (ixtiyari)
+            {t('students.form.teacherNotes')}
           </label>
           <textarea
             className={`${inp} min-h-[72px] resize-y`}
-            placeholder="Daxili qeydlər..."
+            placeholder={t('students.form.teacherNotesPh')}
             value={data.teacher_notes || ''}
             onChange={(e) => setData((p) => ({ ...p, teacher_notes: e.target.value }))}
           />
         </div>
       )}
       <div className="pt-2 border-t border-indigo-500/20">
-        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Valideyn (ixtiyari)</p>
+        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">{t('students.form.parentOptional')}</p>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-xs text-gray-500 mb-1">Ad Soyad</label>
+            <label className="block text-xs text-gray-500 mb-1">{t('students.form.parentName')}</label>
             <input
               className={inp}
-              placeholder="Valideyn adi"
+              placeholder={t('students.form.parentNamePh')}
               value={data.parent_name}
               onChange={(e) => setData((p) => ({ ...p, parent_name: e.target.value }))}
             />
           </div>
           <div>
-            <label className="block text-xs text-gray-500 mb-1">Telefon</label>
+            <label className="block text-xs text-gray-500 mb-1">{t('students.form.parentPhone')}</label>
             <input
               className={inp}
-              placeholder="+994XXXXXXXXX"
+              placeholder={t('students.form.parentPhonePh')}
               value={data.parent_phone}
               onChange={(e) => setData((p) => ({ ...p, parent_phone: e.target.value }))}
             />
@@ -1044,20 +1041,20 @@ export default function InstructorStudents() {
   const createTeachingSubject = async (name) => {
     const d = await api.post('/instructor/teaching/subjects', { name })
     const s = d?.subject
-    if (!s?.id) throw new Error(d?.message || 'Sahə yaradılmadı')
+    if (!s?.id) throw new Error(d?.message || t('students.form.errors.subjectCreateFailed'))
     setTeachingSubjects((prev) => normalizeTeachingSubjects([...(Array.isArray(prev) ? prev : []), { ...s, groups: [] }]))
     return s
   }
 
   const createTeachingGroup = async (subjectId, name) => {
     const trimmed = String(name || '').trim()
-    if (!trimmed) throw new Error('Qrup adı boş ola bilməz')
+    if (!trimmed) throw new Error(t('students.toasts.groupNameRequired'))
     const subject = findSubjectById(teachingSubjects, subjectId)
     const existing = findGroupByName(subject, trimmed)
     if (existing?.id) return existing
     const d = await api.post('/instructor/teaching/groups', { subject_id: subjectId, name: trimmed })
     const g = d?.group
-    if (!g?.id) throw new Error(d?.message || 'Qrup yaradılmadı')
+    if (!g?.id) throw new Error(d?.message || t('students.form.errors.groupCreateFailed'))
     setTeachingSubjects((prev) =>
       normalizeTeachingSubjects(prev).map((s) => {
         if (String(s.id) !== String(subjectId)) return s
@@ -1168,20 +1165,20 @@ export default function InstructorStudents() {
     const setupFirst = String(setupForm.first_name || splitFullName(setupForm.full_name).first_name).trim()
     const setupLast = String(setupForm.last_name || splitFullName(setupForm.full_name).last_name).trim()
     const setupPhoneRaw = String(setupForm.phone_number || setupForm.phone || '').trim()
-    if (!setupFirst) missing.push('Ad')
-    if (!setupLast) missing.push('Soyad')
+    if (!setupFirst) missing.push(t('students.validation.firstName'))
+    if (!setupLast) missing.push(t('students.validation.lastName'))
     if (!canonicalAzPhoneE164(setupPhoneRaw)) {
       missing.push(
         setupPhoneLocked
-          ? 'Tələbə telefonu (email ilə profil linki göndərin — tələbə özü doldurmalıdır)'
-          : 'Tələbə telefonu (düzgün AZ mobil, məs. +994 50 123 45 67)',
+          ? t('students.validation.phoneLocked')
+          : t('students.validation.phoneInvalid'),
       )
     }
     if (!String(setupForm.first_lesson_date || '').trim()) {
-      missing.push('Paket: ilk dərs tarixi')
+      missing.push(t('students.validation.firstLesson'))
     }
     if (!Array.isArray(setupForm.lesson_weekdays) || setupForm.lesson_weekdays.length === 0) {
-      missing.push('Ən azı bir dərs günü')
+      missing.push(t('students.validation.weekday'))
     }
     return missing
   }
@@ -1234,7 +1231,7 @@ export default function InstructorStudents() {
     } catch (err) {
       if (err?.code === 'PROFILE_INCOMPLETE' || err?.code === 'STUDENT_MUST_COMPLETE_PROFILE') {
         setSetupFieldErrors([
-          err?.message || 'Tələbə profili tam deyil — email ilə link göndərin.',
+          err?.message || t('students.profileIncomplete'),
         ])
       } else {
         toast(err?.message || t('students.toasts.error'), 'error')
@@ -1459,8 +1456,8 @@ export default function InstructorStudents() {
         if (byKey.has(key)) continue
         byKey.set(key, {
           key,
-          subject: String(subj.name || '').trim() || 'Sahəsiz',
-          group: String(gr.name || '').trim() || 'Qrup',
+          subject: String(subj.name || '').trim() || t('students.noSubject'),
+          group: String(gr.name || '').trim() || t('students.defaultGroup'),
           group_id: gid,
           subject_id: subj.id || null,
           is_system_group: false,
@@ -1520,7 +1517,7 @@ export default function InstructorStudents() {
       return `${a.subject}__${a.group}`.localeCompare(`${b.subject}__${b.group}`)
     })
     return arr
-  }, [audienceStudents, teachingSubjects])
+  }, [audienceStudents, teachingSubjects, i18n.language])
 
   const visibleGroups = useMemo(() => {
     if (!subjectFilter) return grouped
@@ -1727,7 +1724,7 @@ export default function InstructorStudents() {
     if (empty?.id) {
       setEmptyGroupPrompt({
         groupId: empty.id,
-        groupName: empty.name || res?.source_group_name || 'Qrup',
+        groupName: empty.name || res?.source_group_name || t('students.defaultGroup'),
       })
     }
   }
@@ -1773,7 +1770,7 @@ export default function InstructorStudents() {
     if (!g?.group_id) return
     setEmptyGroupPrompt({
       groupId: g.group_id,
-      groupName: g.group || 'Qrup',
+      groupName: g.group || t('students.defaultGroup'),
     })
   }
 
@@ -1815,10 +1812,10 @@ export default function InstructorStudents() {
       return
     }
     if (!canUseDirectChat(billing)) {
-      setDirectChatUpgrade({ studentName: s.full_name || 'Tələbə' })
+      setDirectChatUpgrade({ studentName: s.full_name || t('students.defaultStudent') })
       return
     }
-    const name = s.full_name || 'Tələbə'
+    const name = s.full_name || t('students.defaultStudent')
     const qs = new URLSearchParams({
       peerId: s.id,
       peerName: name,
@@ -1932,7 +1929,7 @@ export default function InstructorStudents() {
 
   const openLessonsModal = (s) => {
     const eid = s.enrollment_id
-    const name = s.full_name || 'Tələbə'
+    const name = s.full_name || t('students.defaultStudent')
     setLessonsModal({ studentName: name, enrollmentId: eid, lessons: [], loading: true, error: null })
     void (async () => {
       try {
@@ -1945,7 +1942,7 @@ export default function InstructorStudents() {
       } catch (err) {
         setLessonsModal((prev) =>
           prev?.enrollmentId === eid
-            ? { ...prev, lessons: [], loading: false, error: err?.message || 'Yüklənmədi' }
+            ? { ...prev, lessons: [], loading: false, error: err?.message || t('students.loadFailed') }
             : prev
         )
       }
@@ -1956,7 +1953,7 @@ export default function InstructorStudents() {
     closeStudentMenu()
     setDeleteConfirm({
       enrollmentId: s.enrollment_id,
-      studentName: String(s.full_name || 'Tələbə').trim() || 'Tələbə',
+      studentName: String(s.full_name || t('students.defaultStudent')).trim() || t('students.defaultStudent'),
     })
   }
 
@@ -1993,7 +1990,7 @@ export default function InstructorStudents() {
           const meta = findTeachingGroupMeta(teachingSubjects, gid)
           setEmptyGroupPrompt({
             groupId: gid,
-            groupName: meta?.group?.name || resolveStudentGroupLabel(deleted) || 'Qrup',
+            groupName: meta?.group?.name || resolveStudentGroupLabel(deleted) || t('students.defaultGroup'),
           })
         }
       }
@@ -2006,7 +2003,7 @@ export default function InstructorStudents() {
 
   const openRestoreModal = (s) => {
     const eid = s.enrollment_id
-    const name = s.full_name || 'Tələbə'
+    const name = s.full_name || t('students.defaultStudent')
     setRestoreModal({
       enrollmentId: eid,
       studentName: name,
@@ -2024,7 +2021,7 @@ export default function InstructorStudents() {
         )
       } catch (e) {
         setRestoreModal((prev) =>
-          prev?.enrollmentId === eid ? { ...prev, items: [], loading: false, error: e?.message || 'Yüklənmədi' } : prev
+          prev?.enrollmentId === eid ? { ...prev, items: [], loading: false, error: e?.message || t('students.loadFailed') } : prev
         )
       }
     })()
@@ -2044,7 +2041,7 @@ export default function InstructorStudents() {
       setRestoreModal(null)
       load(true)
     } catch (e) {
-      setRestoreModal((p) => (p ? { ...p, loading: false, error: e?.message || 'Xəta' } : p))
+      setRestoreModal((p) => (p ? { ...p, loading: false, error: e?.message || t('students.toasts.error') } : p))
     }
   }
 
@@ -2448,19 +2445,19 @@ export default function InstructorStudents() {
                                 {s.full_name}
                                 {isPendingApproval(s) && (
                                   <StatusBadge variant="pending" className="text-[10px]">
-                                    Sorğu gözləyir
+                                    {t('students.pendingApprovalBadge')}
                                   </StatusBadge>
                                 )}
                                 {needsSetup(s) && (
                                   <StatusBadge variant="due" className="text-[10px]">
-                                    Quraşdırma lazım
+                                    {t('students.setupNeededBadge')}
                                   </StatusBadge>
                                 )}
                               </div>
                               <div className="text-xs text-token-textMuted flex flex-wrap items-center gap-x-3 gap-y-1 mt-0.5">
                                 {s.phone && <span className="break-all">{s.phone}</span>}
                                 {lessonDaysShort(s.lesson_weekdays) ? (
-                                  <span className="w-full sm:w-auto">Dərslər: {lessonDaysShort(s.lesson_weekdays)}</span>
+                                  <span className="w-full sm:w-auto">{t('students.lessonsLabel')} {lessonDaysShort(s.lesson_weekdays)}</span>
                                 ) : null}
                               </div>
                             </div>
@@ -2475,10 +2472,10 @@ export default function InstructorStudents() {
                                 onClick={() => openDirectChat(s)}
                                 title={
                                   blocked
-                                    ? 'Çat deaktivdir'
+                                    ? t('students.chatDisabled')
                                     : directChatActive
-                                      ? `${s.full_name || 'Tələbə'} ilə fərdi çat`
-                                      : 'Fərdi çat — paket tələb olunur'
+                                      ? t('students.chatWithStudent', { name: s.full_name || t('students.defaultStudent') })
+                                      : t('students.chatUpgradeRequired')
                                 }
                               />
                             </div>
@@ -2508,7 +2505,7 @@ export default function InstructorStudents() {
                                 <StatusBadge variant="neutral">{packLabel}</StatusBadge>
                               ) : (
                                 <span className="invisible pointer-events-none" aria-hidden>
-                                  <StatusBadge variant="neutral">8 dərs</StatusBadge>
+                                  <StatusBadge variant="neutral">{t('students.pack8')}</StatusBadge>
                                 </span>
                               )}
                             </div>
@@ -2880,7 +2877,7 @@ export default function InstructorStudents() {
       <Modal
         open={Boolean(groupRenameModal)}
         onClose={() => !groupRenameBusy && setGroupRenameModal(null)}
-        title="Qrup adını dəyiş"
+        title={t('students.renameGroup')}
         size="sm"
         zIndex={400}
         footer={
@@ -2891,10 +2888,10 @@ export default function InstructorStudents() {
               onClick={() => setGroupRenameModal(null)}
               disabled={groupRenameBusy}
             >
-              Ləğv et
+              {t('common.cancel')}
             </Button>
             <Button type="button" onClick={() => void saveGroupRename()} loading={groupRenameBusy}>
-              Yadda saxla
+              {t('students.save')}
             </Button>
           </div>
         }
@@ -2902,7 +2899,7 @@ export default function InstructorStudents() {
         {groupRenameModal ? (
           <div className="space-y-3">
             <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider">
-              Qrup adı
+              {t('students.form.group')}
             </label>
             <input
               className="w-full rounded-xl px-4 py-2.5 text-sm outline-none focus:border-primary border border-white/10 bg-white/[0.03] text-white"
@@ -2910,7 +2907,7 @@ export default function InstructorStudents() {
               onChange={(e) =>
                 setGroupRenameModal((prev) => (prev ? { ...prev, groupName: e.target.value } : prev))
               }
-              placeholder="məs. DataAnalitika2"
+              placeholder={t('students.form.namePh')}
               autoFocus
             />
           </div>
@@ -2920,19 +2917,17 @@ export default function InstructorStudents() {
       <Modal
         open={Boolean(emptyGroupPrompt)}
         onClose={() => !emptyGroupDeleteBusy && setEmptyGroupPrompt(null)}
-        title="Boş qrup"
+        title={t('students.emptyGroupModalTitle')}
         size="sm"
         zIndex={400}
       >
         {emptyGroupPrompt ? (
           <div className="space-y-5 text-sm">
             <p className="text-gray-300 leading-relaxed">
-              <span className="font-semibold text-white">«{emptyGroupPrompt.groupName}»</span> qrupunda artıq
-              tələbə qalmayıb. Bu qrupu silmək istəyirsiniz?
+              {t('students.emptyGroupDeletePrompt', { name: emptyGroupPrompt.groupName })}
             </p>
             <p className="text-xs text-gray-500 leading-relaxed">
-              Qrup silinərsə, dəvət linki və qrup paket şablonu da silinir. Tələbənin köçürüldüyü qrup və ödəniş
-              tarixçəsi dəyişməz qalır.
+              {t('students.emptyGroupDeleteWarning')}
             </p>
             <div className="flex flex-col-reverse sm:flex-row gap-2 sm:justify-end pt-1">
               <Button
@@ -2942,7 +2937,7 @@ export default function InstructorStudents() {
                 disabled={emptyGroupDeleteBusy}
                 onClick={() => setEmptyGroupPrompt(null)}
               >
-                Saxla
+                {t('students.keepGroup')}
               </Button>
               <Button
                 type="button"
@@ -2951,7 +2946,7 @@ export default function InstructorStudents() {
                 loading={emptyGroupDeleteBusy}
                 onClick={() => void confirmDeleteEmptyGroup()}
               >
-                Qrupu sil
+                {t('students.deleteGroup')}
               </Button>
             </div>
           </div>
