@@ -1518,6 +1518,13 @@
     "yearlyDiscount": "−20%",
     "free": "Pulsuz",
     "yearlySave": "İllik seçərək 20% qənaət edin",
+    "billingToggle": {
+      "ariaLabel": "Ödəniş dövrü",
+      "monthly": "Aylıq",
+      "yearly": "İllik",
+      "bestValue": "Ən sərfəli seçim",
+      "yearlyHint": "İllik seçərək 20% qənaət edin"
+    },
     "btnStart": "Başla",
     "btnActivePlan": "Aktiv paket",
     "btnLimitSolution": "Limit həlli",
@@ -1767,6 +1774,71 @@
     "noSlots": "Slot yoxdur. \"Slotları yenilə\" düyməsini sıxın.",
     "future": "gələcək",
     "archive": "Arxiv"
+  },
+  "planCopy": {
+    "limits": {
+      "studentsUnlimited": "Limitsiz tələbə",
+      "students": "{{count}} tələbə",
+      "documentsUnlimited": "Limitsiz sənəd",
+      "documents": "{{count}} sənəd",
+      "storage5mb": "5 MB Sənəd Yaddaşı",
+      "storage256mb": "256 MB Sənəd Yaddaşı",
+      "storage1gb": "1 GB Sənəd Yaddaşı",
+      "storage2gb": "2 GB Sənəd Yaddaşı",
+      "storageKb": "{{size}} KB Sənəd Yaddaşı",
+      "storageMb": "{{size}} MB Sənəd Yaddaşı",
+      "storageGb": "{{size}} GB Sənəd Yaddaşı",
+      "storageUnlimited": "Limitsiz Sənəd Yaddaşı",
+      "smsUnlimited": "Limitsiz SMS / ay",
+      "smsTrial": "{{count}} SMS",
+      "smsMonthly": "{{count}} SMS / ay",
+      "smsEffective": "{{effective}} SMS / ay (baza {{base}} + əlavə {{extra}})",
+      "smsPremiumCurrent": "{{count}} SMS / ay (əlavə balans alına bilər)",
+      "smsPremiumOther": "{{count}} SMS / Əlavə balans imkanı",
+      "examsUnlimited": "Limitsiz imtahan",
+      "examsUnlimitedMonthly": "Limitsiz imtahan / ay",
+      "examsTrial": "{{count}} imtahan",
+      "examsMonthly": "{{count}} imtahan / ay",
+      "homeworksUnlimited": "Limitsiz tapşırıq",
+      "homeworksUnlimitedMonthly": "Limitsiz tapşırıq / ay",
+      "homeworksTrial": "{{count}} tapşırıq",
+      "homeworksMonthly": "{{count}} tapşırıq / ay",
+      "liveUnlimited": "Canlı dərs — Limitsiz iştirakçı · Record: ✓ (local)",
+      "liveParticipants": "Canlı dərs — {{count}} iştirakçı · Record: ✓ (local)"
+    },
+    "map": {
+      "basic": "📍 Xəritədə görünür",
+      "pro": "📍 Xəritədə görünür",
+      "growth": "⭐ Axtarışda önə çıxır",
+      "premium": "🔥 Axtarışda həmişə ən yuxarıda (TOP)"
+    },
+    "desc": {
+      "basic": "14 günlük pulsuz sınaq — platformanı risksiz sınayın.",
+      "pro": "Kiçik və orta qruplar üçün ən populyar {{title}} paket.",
+      "growth": "{{title}} paket — böyüyən tədris biznesi və ətraflı hesabatlar.",
+      "premium": "{{title}} paket — limitsiz tələbə/sənəd və prioritet dəstək."
+    },
+    "detail": {
+      "basic": {
+        "trial": "14 günlük pulsuz sınaq paketi.",
+        "limitsPeriod": "Sınaq müddətində: {{limits}}.",
+        "limitsFallback": "Limitlər Başlanğıc paketinə uyğun tətbiq olunur.",
+        "noExtraSms": "Əlavə SMS və yaddaş alına bilməz — limit dolanda Standart və ya daha yüksək paket seçin.",
+        "noRenew": "Başlanğıc paketi yenilənmir; 14 gün bitəndən sonra ödənişli paket tələb olunur.",
+        "oneTrialPerIp": "Hər cihazdan (IP) yalnız bir dəfə pulsuz sınaq verilir."
+      },
+      "paid": {
+        "subscription": "Aylıq və ya illik ödənişlə aktiv abunədir; ödəniş təsdiqlənəndən sonra limitlər dərhal tətbiq olunur.",
+        "includes": "Paketə daxildir: {{limits}}.",
+        "premiumSmsEffective": "Limitsiz tələbə — SMS limiti {{sms}}.",
+        "premiumSmsDefault": "Limitsiz tələbə — SMS limiti 200/ay (əlavə balans alına bilər).",
+        "upgradeHint": "Limitlərə çatdıqda paketi yüksəldin və ya əlavə SMS/yaddaş alın."
+      },
+      "fallback": {
+        "limits": "{{limits}}.",
+        "default": "Limitlər mövcud paketə uyğun tətbiq olunur."
+      }
+    }
   },
   "studentInquiries": {
     "title": "Xəritə müraciətləri",

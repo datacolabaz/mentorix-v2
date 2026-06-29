@@ -1,6 +1,9 @@
+import { useTranslation } from 'react-i18next'
+
 /** Global monthly vs yearly toggle for pricing section */
 
 export default function PricingBillingIntervalToggle({ value, onChange, theme = 'dark' }) {
+  const { t } = useTranslation()
   const yearly = value === 'yearly'
   const track =
     theme === 'dark'
@@ -18,7 +21,7 @@ export default function PricingBillingIntervalToggle({ value, onChange, theme = 
 
   return (
     <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-between">
-      <div className={`inline-flex gap-1 ${track} transition-colors duration-300`} role="tablist" aria-label="Ödəniş dövrü">
+      <div className={`inline-flex gap-1 ${track} transition-colors duration-300`} role="tablist" aria-label={t('settings.billingToggle.ariaLabel')}>
         <button
           type="button"
           role="tab"
@@ -29,7 +32,7 @@ export default function PricingBillingIntervalToggle({ value, onChange, theme = 
           ].join(' ')}
           onClick={() => onChange('monthly')}
         >
-          Aylıq
+          {t('settings.billingToggle.monthly')}
         </button>
         <button
           type="button"
@@ -41,7 +44,7 @@ export default function PricingBillingIntervalToggle({ value, onChange, theme = 
           ].join(' ')}
           onClick={() => onChange('yearly')}
         >
-          İllik
+          {t('settings.billingToggle.yearly')}
           <span className="ml-1 inline-block rounded-full bg-emerald-500/22 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-emerald-900 dark:text-emerald-100">
             −20%
           </span>
@@ -49,10 +52,10 @@ export default function PricingBillingIntervalToggle({ value, onChange, theme = 
       </div>
       {yearly ? (
         <span className="rounded-full border border-emerald-500/35 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-200">
-          Ən sərfəli seçim
+          {t('settings.billingToggle.bestValue')}
         </span>
       ) : (
-        <span className="text-[11px] text-token-textMuted text-center sm:text-right">İllik seçərək 20% qənaət edin</span>
+        <span className="text-[11px] text-token-textMuted text-center sm:text-right">{t('settings.billingToggle.yearlyHint')}</span>
       )}
     </div>
   )

@@ -21,6 +21,7 @@ import InstructorAvatarUpload from '../../components/instructor/InstructorAvatar
 import { reverseGeocodeLabel } from '../../lib/reverseGeocode'
 import { formatAzn, yearlyTotalAzn, YEARLY_DISCOUNT } from '../../lib/pricing'
 import { planDetailLines, planLimitsHeadline } from '../../lib/subscriptionPlanCopy'
+import { normalizePlanId } from '../../lib/subscriptionPlanMarketing'
 import {
   canBuySmsOnCurrentPlan,
   canBuyStorageOnCurrentPlan,
@@ -137,7 +138,7 @@ function buildStorageUsageDetail(billing, t) {
 }
 
 export default function InstructorSettings() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const navigate = useNavigate()
   const location = useLocation()
   const qc = useQueryClient()
@@ -767,11 +768,19 @@ export default function InstructorSettings() {
 
             const priceBox = displayPriceForPlan(p)
 
+            const planCopyOpts = {
+              billing,
+              isCurrent,
+              t,
+              i18n,
+              planTitle: t(`landing.plans.${normalizePlanId(p)}.title`, { defaultValue: p.title }),
+            }
+
             const limitsNote =
               typeof p?.limitsNote === 'string' && p.limitsNote.trim()
                 ? p.limitsNote.trim()
-                : planLimitsHeadline(p, { billing, isCurrent })
-            const detailLines = planDetailLines(p, { billing, isCurrent })
+                : planLimitsHeadline(p, planCopyOpts)
+            const detailLines = planDetailLines(p, planCopyOpts)
 
             function openLimitChoiceModal() {
               setLimitChoice({ open: true })
@@ -901,7 +910,7 @@ export default function InstructorSettings() {
                 </div>
 
                 <div className="mt-3 shrink-0 text-base font-display font-bold tracking-tight text-token-textMain">
-                  {p.title}
+                  {t(`landing.plans.${normalizePlanId(p)}.title`, { defaultValue: p.title })}
                 </div>
 
                 <div className="mt-1 shrink-0 flex flex-wrap items-baseline gap-1">
