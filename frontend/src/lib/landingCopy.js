@@ -17,6 +17,12 @@ function arrayFromT(t, key) {
   return Array.isArray(v) ? v : []
 }
 
+function translateOptional(t, key) {
+  const value = t(key, { defaultValue: '' })
+  if (!value || value === key) return null
+  return value
+}
+
 /** AZ: admin/API marketing; RU: translation.json landing.hero */
 export function useLandingHero(marketing, t, i18n) {
   const isRu = isRuLang(i18n)
@@ -173,8 +179,8 @@ export function useLandingPlanDisplay(p, t, i18n) {
       !Number.isFinite(v) || v <= 0
         ? t('landing.plans.free')
         : t('landing.plans.pricePerMonth', { price: v })
-    const subtitle = t(`${prefix}.subtitle`, { defaultValue: '' })
-    const popular = t(`${prefix}.popular`, { defaultValue: '' })
+    const subtitle = translateOptional(t, `${prefix}.subtitle`)
+    const popular = translateOptional(t, `${prefix}.popular`)
     return {
       title: t(`${prefix}.title`),
       meta: {

@@ -592,6 +592,36 @@
       }
     }
   },
+  "publicFooter": {
+    "ariaLabel": "Mentorix ictimai səhifələr",
+    "navAriaLabel": "Platforma bölmələri",
+    "findTeacher": "Müəllim tap",
+    "platform": "Platforma",
+    "info": "Məlumat",
+    "mapSearch": "Xəritədə axtar",
+    "universityPrograms": "Universitet proqramları",
+    "loginRegister": "Giriş / qeydiyyat",
+    "tagline": "Mentorix müəllimləri, tələbələri və valideynləri bir platformada birləşdirərək təhsil prosesini daha rahat və effektiv idarə etməyə kömək edir.",
+    "copyright": "© 2026 Mentorix.io. Bütün hüquqlar qorunur.",
+    "byDatacolab": "Datacolab tərəfindən",
+    "links": {
+      "universities": "Universitetlər",
+      "imtahanlar": "İmtahanlar",
+      "tapshiriqlar": "Tapşırıqlar",
+      "kurslar-ve-qruplar": "Qruplar və paketlər",
+      "qiymetler": "Planlar",
+      "muellimler-ucun": "Müəllimlər üçün",
+      "telebeler-ucun": "Tələbələr üçün",
+      "haqqimizda": "Haqqımızda",
+      "elaqe": "Əlaqə"
+    },
+    "searchLinks": {
+      "repetitor-baki": "Bakıda repetitor və müəllim",
+      "universitet-axtarisi": "Universitet proqramı",
+      "riyaziyyat-repetitoru": "Riyaziyyat repetitoru",
+      "ingilis-dili-repetitoru": "İngilis dili repetitoru"
+    }
+  },
   "teachingGroups": {
     "title": "Tədris qrupları",
     "subtitle": "Yalnız öz yaratdığınız sahə və qruplar (məs. Python1, DataAnalitika2). Paket, ödəniş və dəvət linki burada idarə olunur. İmtahan və tapşırıq iştirakçıları «Tələbələr» və «İmtahanlar» bölmələrində görünür.",

@@ -692,7 +692,6 @@
       "basic": {
         "title": "ПРОСТОЙ",
         "subtitle": "14 дней бесплатного пробного периода",
-        "popular": "",
         "cta": "Начать 14-дневный пробный период",
         "trialLines": [
           "Полный доступ ко всем функциям 14 дней",
@@ -720,7 +719,6 @@
       "growth": {
         "title": "ПРОФЕССИОНАЛЬНЫЙ",
         "subtitle": "Для растущих учителей",
-        "popular": "",
         "cta": "Выбрать Профессиональный",
         "bullets": [
           "50 учеников",
@@ -738,7 +736,6 @@
       "premium": {
         "title": "ПРЕМИУМ",
         "subtitle": "Для активных учителей",
-        "popular": "",
         "cta": "Выбрать Премиум",
         "bullets": [
           "Безлимит учеников",
@@ -766,6 +763,36 @@
         "payments": "Платежи",
         "attendance": "Посещаемость"
       }
+    }
+  },
+  "publicFooter": {
+    "ariaLabel": "Публичные страницы Mentorix",
+    "navAriaLabel": "Разделы платформы",
+    "findTeacher": "Найти учителя",
+    "platform": "Платформа",
+    "info": "Информация",
+    "mapSearch": "Поиск на карте",
+    "universityPrograms": "Университетские программы",
+    "loginRegister": "Вход / регистрация",
+    "tagline": "Mentorix объединяет учителей, учеников и родителей на одной платформе, помогая управлять учебным процессом проще и эффективнее.",
+    "copyright": "© 2026 Mentorix.io. Все права защищены.",
+    "byDatacolab": "от Datacolab",
+    "links": {
+      "universities": "Университеты",
+      "imtahanlar": "Экзамены",
+      "tapshiriqlar": "Задания",
+      "kurslar-ve-qruplar": "Группы и пакеты",
+      "qiymetler": "Тарифы",
+      "muellimler-ucun": "Для учителей",
+      "telebeler-ucun": "Для учеников",
+      "haqqimizda": "О нас",
+      "elaqe": "Контакты"
+    },
+    "searchLinks": {
+      "repetitor-baki": "Репетиторы и учителя в Баку",
+      "universitet-axtarisi": "Университетская программа",
+      "riyaziyyat-repetitoru": "Репетитор по математике",
+      "ingilis-dili-repetitoru": "Репетитор по английскому"
     }
   },
   "teachingGroups": {

@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { MENTORIX_SITE_NAV } from '../../lib/mentorixSeoSchema'
-import { MENTORIX_SEO_HOMEPAGE_LINE } from '../../lib/mentorixPublicMarketing'
 import { searchLandings } from '../../lib/publicSeoLandings'
 
 const SOCIAL_LINKS = [
@@ -24,75 +24,97 @@ const SOCIAL_LINKS = [
   },
 ]
 
+function pathToKey(path) {
+  return String(path || '').replace(/^\//, '') || 'root'
+}
+
+function footerNavLabel(item, t) {
+  const key = pathToKey(item.path)
+  return t(`publicFooter.links.${key}`, { defaultValue: item.name })
+}
+
+function footerSearchLabel(landing, t) {
+  const key = pathToKey(landing.path)
+  const fallback = String(landing.h1 || '').replace(' tap', '')
+  return t(`publicFooter.searchLinks.${key}`, { defaultValue: fallback })
+}
+
 export default function PublicSeoFooter({ className = '' }) {
+  const { t } = useTranslation()
   const searchPages = searchLandings()
   const platformNav = MENTORIX_SITE_NAV.filter((n) => n.path !== '/search')
 
   return (
     <footer
       className={`border-t border-white/10 bg-[#080808] text-gray-500 ${className}`.trim()}
-      aria-label="Mentorix ictimai səhifələr"
+      aria-label={t('publicFooter.ariaLabel')}
     >
       <div className="max-w-5xl mx-auto px-4 py-8 sm:py-10 space-y-8">
-        <nav className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3" aria-label="Platforma bölmələri">
+        <nav className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3" aria-label={t('publicFooter.navAriaLabel')}>
           <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3">Müəllim tap</p>
+            <p className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3">
+              {t('publicFooter.findTeacher')}
+            </p>
             <ul className="space-y-2 text-sm">
               <li>
                 <Link to="/search" className="text-gray-300 hover:text-primary transition-colors">
-                  Xəritədə axtar
+                  {t('publicFooter.mapSearch')}
                 </Link>
               </li>
               <li>
                 <Link to="/universities" className="text-gray-300 hover:text-primary transition-colors">
-                  Universitet proqramları
+                  {t('publicFooter.universityPrograms')}
                 </Link>
               </li>
               {searchPages.map((l) => (
                 <li key={l.path}>
                   <Link to={l.path} className="text-gray-400 hover:text-primary transition-colors">
-                    {l.h1.replace(' tap', '')}
+                    {footerSearchLabel(l, t)}
                   </Link>
                 </li>
               ))}
             </ul>
           </div>
           <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3">Platforma</p>
+            <p className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3">
+              {t('publicFooter.platform')}
+            </p>
             <ul className="space-y-2 text-sm">
               {platformNav.slice(0, 5).map((item) => (
                 <li key={item.path}>
                   <Link to={item.path} className="text-gray-400 hover:text-primary transition-colors">
-                    {item.name}
+                    {footerNavLabel(item, t)}
                   </Link>
                 </li>
               ))}
             </ul>
           </div>
           <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3">Məlumat</p>
+            <p className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3">
+              {t('publicFooter.info')}
+            </p>
             <ul className="space-y-2 text-sm">
               {platformNav.slice(5).map((item) => (
                 <li key={item.path}>
                   <Link to={item.path} className="text-gray-400 hover:text-primary transition-colors">
-                    {item.name}
+                    {footerNavLabel(item, t)}
                   </Link>
                 </li>
               ))}
               <li>
                 <Link to="/login" className="text-gray-300 hover:text-primary transition-colors">
-                  Giriş / qeydiyyat
+                  {t('publicFooter.loginRegister')}
                 </Link>
               </li>
             </ul>
           </div>
         </nav>
 
-        <p className="text-sm text-gray-400 font-medium leading-relaxed">{MENTORIX_SEO_HOMEPAGE_LINE}</p>
+        <p className="text-sm text-gray-400 font-medium leading-relaxed">{t('publicFooter.tagline')}</p>
 
         <div className="border-t border-white/10 pt-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div className="space-y-1 text-center sm:text-left">
-            <p className="text-xs text-gray-400">© 2026 Mentorix.io. Bütün hüquqlar qorunur.</p>
+            <p className="text-xs text-gray-400">{t('publicFooter.copyright')}</p>
             <p className="text-[11px] text-gray-600">
               <a
                 href="https://datacolab.az"
@@ -100,7 +122,7 @@ export default function PublicSeoFooter({ className = '' }) {
                 rel="noreferrer"
                 className="hover:text-gray-400 transition-colors"
               >
-                Datacolab tərəfindən
+                {t('publicFooter.byDatacolab')}
               </a>
             </p>
           </div>
