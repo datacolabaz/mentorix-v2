@@ -6,7 +6,7 @@ import Button from '../../components/common/Button'
 import { useToast } from '../../components/common/Toast'
 import InstructorEmailAuth from '../../components/auth/InstructorEmailAuth'
 import Brand from '../../components/common/Brand'
-import LanguageToggle from '../../components/common/LanguageToggle'
+import LanguageSwitcher from '../../components/LanguageSwitcher'
 import { setPageSeo } from '../../lib/pageSeo'
 import { postAuthNavigate } from '../../lib/postAuth'
 
@@ -98,9 +98,9 @@ export default function AuthPage() {
           to="/"
           className="inline-flex items-center gap-1 text-xs sm:text-sm font-medium text-gray-400 hover:text-white transition-colors"
         >
-          ← {t('auth.backHome')}
+          {t('auth.backHome')}
         </Link>
-        <LanguageToggle />
+        <LanguageSwitcher />
       </header>
       <main className="flex flex-1 items-start sm:items-center justify-center px-4 pb-8 sm:pb-10 min-h-0 overflow-y-auto">
       <div id="mx-login" className="w-full max-w-sm scroll-mt-6">
@@ -133,7 +133,7 @@ export default function AuthPage() {
                   className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2"
                   htmlFor="admin-username"
                 >
-                  Telefon və ya email
+                  {t('auth.phoneOrEmail')}
                 </label>
                 <input
                   id="admin-username"
@@ -142,7 +142,7 @@ export default function AuthPage() {
                   type="text"
                   inputMode="email"
                   autoComplete="username"
-                  placeholder="+994XXXXXXXXX və ya admin email"
+                  placeholder={t('auth.phoneOrEmail')}
                   value={adminIdentifier}
                   onChange={(e) => setAdminIdentifier(e.target.value)}
                   required
@@ -153,7 +153,7 @@ export default function AuthPage() {
                   className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2"
                   htmlFor="admin-password"
                 >
-                  Şifrə
+                  {t('auth.password')}
                 </label>
                 <input
                   id="admin-password"
@@ -167,7 +167,7 @@ export default function AuthPage() {
                 />
               </div>
               <Button type="submit" loading={loading} className="w-full justify-center py-3">
-                Daxil ol
+                {t('auth.login')}
               </Button>
             </form>
           ) : (

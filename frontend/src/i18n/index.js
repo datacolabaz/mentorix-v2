@@ -1,13 +1,18 @@
 import i18n from 'i18next'
+import LanguageDetector from 'i18next-browser-languagedetector'
 import { initReactI18next } from 'react-i18next'
-import az from '../locales/az.json'
-import ru from '../locales/ru.json'
+import az from '../locales/az/translation.json'
+import ru from '../locales/ru/translation.json'
 
-const LOCALE_KEY = 'mentorix_locale_v1'
+export const LOCALE_KEY = 'mentorix_lang'
+const LEGACY_LOCALE_KEY = 'mentorix_locale_v1'
 
 export function readStoredLocale() {
   try {
-    const v = String(localStorage.getItem(LOCALE_KEY) || '').trim().toLowerCase()
+    const v =
+      String(localStorage.getItem(LOCALE_KEY) || localStorage.getItem(LEGACY_LOCALE_KEY) || '')
+        .trim()
+        .toLowerCase()
     return v === 'ru' ? 'ru' : 'az'
   } catch {
     return 'az'
@@ -16,7 +21,9 @@ export function readStoredLocale() {
 
 export function writeStoredLocale(locale) {
   try {
-    localStorage.setItem(LOCALE_KEY, locale === 'ru' ? 'ru' : 'az')
+    const next = locale === 'ru' ? 'ru' : 'az'
+    localStorage.setItem(LOCALE_KEY, next)
+    localStorage.removeItem(LEGACY_LOCALE_KEY)
   } catch {
     /* ignore */
   }
@@ -28,18 +35,29 @@ export function applyDocumentLocale(locale) {
   document.documentElement.lang = lang
 }
 
+const detector = new LanguageDetector()
+detector.init({
+  order: ['localStorage', 'navigator'],
+  lookupLocalStorage: LOCALE_KEY,
+  caches: ['localStorage'],
+})
+
 const initialLocale = readStoredLocale()
 applyDocumentLocale(initialLocale)
 
-i18n.use(initReactI18next).init({
-  resources: {
-    az: { translation: az },
-    ru: { translation: ru },
-  },
-  lng: initialLocale,
-  fallbackLng: 'az',
-  interpolation: { escapeValue: false },
-  returnEmptyString: false,
-})
+i18n
+  .use(detector)
+  .use(initReactI18next)
+  .init({
+    resources: {
+      az: { translation: az },
+      ru: { translation: ru },
+    },
+    lng: initialLocale,
+    fallbackLng: 'az',
+    supportedLngs: ['az', 'ru'],
+    interpolation: { escapeValue: false },
+    returnEmptyString: false,
+  })
 
 export default i18n

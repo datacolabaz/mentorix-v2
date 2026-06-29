@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import GoogleSignInButton from './GoogleSignInButton'
 import AuthAccountExistsModal from './AuthAccountExistsModal'
 import Button from '../common/Button'
@@ -8,25 +9,22 @@ import { useToast } from '../common/Toast'
 import api, { AUTH_REQUEST_TIMEOUT_MS } from '../../lib/api'
 import { getAttributionPayload } from '../../lib/analytics'
 import { postAuthNavigate } from '../../lib/postAuth'
+import i18n from '../../i18n'
 
 const inputClass =
   'mx-auth-input w-full bg-surface-1 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none'
 
-const AUTH_ROLE_OPTIONS = [
-  { key: 'instructor', label: 'Müəllim' },
-  { key: 'student', label: 'Tələbə' },
-  { key: 'course', label: 'Kurs' },
-  { key: 'parent', label: 'Valideyn' },
-]
-
-const SIGNUP_ROLE_OPTIONS = [
-  { key: 'instructor', label: 'Müəllim' },
-  { key: 'student', label: 'Tələbə' },
-  { key: 'parent', label: 'Valideyn' },
-  { key: 'course', label: 'Kurs' },
-]
-
+const AUTH_ROLE_KEYS = ['instructor', 'student', 'course', 'parent']
+const SIGNUP_ROLE_KEYS = ['instructor', 'student', 'parent', 'course']
 const LOGIN_ROLE_TRY_ORDER = ['instructor', 'course', 'student', 'parent']
+
+function useAuthRoles(keys) {
+  const { t } = useTranslation()
+  return useMemo(
+    () => keys.map((key) => ({ key, label: t(`auth.roles.${key}`) })),
+    [keys, t],
+  )
+}
 
 async function loginEmailWithAutoRole(email, password, forcedRole) {
   const roles = forcedRole ? [forcedRole] : LOGIN_ROLE_TRY_ORDER
@@ -45,7 +43,7 @@ async function loginEmailWithAutoRole(email, password, forcedRole) {
       throw err
     }
   }
-  throw lastRoleError || new Error('Giriş üçün hesab növünü seçin')
+  throw lastRoleError || new Error(i18n.t('auth.errors.selectAccountType'))
 }
 
 async function googleAuthWithAutoRole(credential, forcedRole) {
@@ -58,7 +56,7 @@ async function googleAuthWithAutoRole(credential, forcedRole) {
         r = await api.post('/auth/google/complete', { credential, role, intent: 'signin' })
       }
       if (r?.token && r?.user) return r
-      lastRoleError = new Error(r?.message || 'Google girişi tamamlanmadı')
+      lastRoleError = new Error(r?.message || i18n.t('auth.errors.googleIncomplete'))
     } catch (err) {
       const status = err?.status
       if (status === 401) throw err
@@ -69,20 +67,22 @@ async function googleAuthWithAutoRole(credential, forcedRole) {
       throw err
     }
   }
-  throw lastRoleError || new Error('Google girişi üçün hesab növünü seçin')
+  throw lastRoleError || new Error(i18n.t('auth.errors.googleSelectRole'))
 }
 
 function AuthDivider() {
+  const { t } = useTranslation()
   return (
     <div className="flex items-center gap-3">
       <div className="flex-1 border-t border-white/10" aria-hidden />
-      <span className="text-[11px] text-gray-500 shrink-0">və ya</span>
+      <span className="text-[11px] text-gray-500 shrink-0">{t('auth.or')}</span>
       <div className="flex-1 border-t border-white/10" aria-hidden />
     </div>
   )
 }
 
 function AuthModeTabs({ tab, onTab }) {
+  const { t } = useTranslation()
   return (
     <div className="flex rounded-xl border border-white/10 overflow-hidden text-sm font-semibold">
       <button
@@ -92,7 +92,7 @@ function AuthModeTabs({ tab, onTab }) {
         }`}
         onClick={() => onTab('login')}
       >
-        Daxil ol
+        {t('auth.loginTabAction')}
       </button>
       <button
         type="button"
@@ -101,7 +101,7 @@ function AuthModeTabs({ tab, onTab }) {
         }`}
         onClick={() => onTab('signup')}
       >
-        Yeni qeydiyyat
+        {t('auth.signupTabAction')}
       </button>
     </div>
   )
@@ -119,12 +119,13 @@ function isIosLike() {
  * iOS Safari: type=text + mask — Keychain overlay hər hərfdə bloklamasın.
  */
 function LoginPasswordInput({ inputRef }) {
+  const { t } = useTranslation()
   const ios = isIosLike()
   const shared = {
     ref: inputRef,
     id: 'password',
     name: 'password',
-    placeholder: 'Şifrə',
+    placeholder: t('auth.passwordPlaceholder'),
     autoComplete: 'current-password',
     autoCapitalize: 'off',
     autoCorrect: 'off',
@@ -162,12 +163,13 @@ function LoginPasswordInput({ inputRef }) {
   )
 }
 
-function RolePills({ roles, role, onRole, label = 'Rolunuzu seçin', variant = 'grid' }) {
+function RolePills({ roles, role, onRole, label, variant = 'grid' }) {
+  const { t } = useTranslation()
   if (variant === 'pill') {
     return (
       <div className="space-y-2">
         <p className="text-sm text-gray-400">{label}</p>
-        <div className="mx-role-selector" role="radiogroup" aria-label="Rol seçimi">
+        <div className="mx-role-selector" role="radiogroup" aria-label={t('auth.chooseRole')}>
           {roles.map((r) => {
             const selected = role === r.key
             return (
@@ -194,7 +196,7 @@ function RolePills({ roles, role, onRole, label = 'Rolunuzu seçin', variant = '
       <div
         className={`grid gap-2 ${roles.length > 3 ? 'grid-cols-2' : 'grid-cols-3'}`}
         role="radiogroup"
-        aria-label="Rol seçimi"
+        aria-label={t('auth.chooseRole')}
       >
         {roles.map((r) => {
           const selected = role === r.key
@@ -225,6 +227,9 @@ function RolePills({ roles, role, onRole, label = 'Rolunuzu seçin', variant = '
  * Email/Google giriş və qeydiyyat (girişdə rol avtomatik tapılır; yalnız uğursuzluqda dropdown).
  */
 export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab = 'login' }) {
+  const { t } = useTranslation()
+  const authRoleOptions = useAuthRoles(AUTH_ROLE_KEYS)
+  const signupRoleOptions = useAuthRoles(SIGNUP_ROLE_KEYS)
   const toast = useToast()
   const { signupWithEmail, verifyEmailCode, resendVerificationEmail, requestPasswordReset, setSession } = useAuthStore()
   const navigate = useNavigate()
@@ -256,9 +261,7 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
   const [accountExistsMessage, setAccountExistsMessage] = useState('')
 
   const openAccountExistsModal = (message) => {
-    setAccountExistsMessage(
-      message || 'Bu email artıq qeydiyyatdadır. Zəhmət olmasa «Daxil ol» bölməsindən giriş edin.',
-    )
+    setAccountExistsMessage(message || t('auth.errors.accountExists'))
     setAccountExistsOpen(true)
   }
 
@@ -281,7 +284,7 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
               { timeout: AUTH_REQUEST_TIMEOUT_MS },
             )
       if (!r?.token || !r?.user) {
-        toast(r?.message || 'Google girişi tamamlanmadı', 'error')
+        toast(r?.message || t('auth.errors.googleIncomplete'), 'error')
         return
       }
       const u = {
@@ -291,9 +294,9 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
       }
       setSession(r.token, u)
       if (u.role === 'student') {
-        toast('Tələbə kimi daxil oldunuz', 'success')
+        toast(t('auth.toasts.loggedInStudent'), 'success')
       } else {
-        toast('Daxil oldunuz', 'success')
+        toast(t('auth.toasts.loggedIn'), 'success')
       }
       if (onSuccess) onSuccess(u)
       else postAuthNavigate(u, navigate)
@@ -302,9 +305,9 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
         openAccountExistsModal(err?.message)
       } else if (tab === 'login' && !loginRoleFallback && err?.status === 403) {
         setLoginRoleFallback(true)
-        toast('Hesab növünü seçib yenidən cəhd edin', 'error')
+        toast(t('auth.toasts.selectRoleRetry'), 'error')
       } else {
-        toast(err?.message || 'Google girişi uğursuz', 'error')
+        toast(err?.message || t('auth.toasts.googleFailed'), 'error')
       }
     } finally {
       setLoading(false)
@@ -323,12 +326,12 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
         ...getAttributionPayload(),
       })
       setPhase('verify')
-      toast('Təsdiq kodu və link emailinizə göndərildi', 'success')
+      toast(t('auth.toasts.verifySent'), 'success')
     } catch (err) {
       if (isAccountExistsError(err)) {
         openAccountExistsModal(err?.message)
       } else {
-        toast(err.message || 'Qeydiyyat xətası', 'error')
+        toast(err.message || t('auth.toasts.signupError'), 'error')
       }
     } finally {
       setLoading(false)
@@ -341,7 +344,7 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
       navigate('/onboarding/role', { replace: true })
       return
     }
-    if (!data?.token || !data?.user) throw new Error(data?.message || 'Server cavabı etibarsızdır')
+    if (!data?.token || !data?.user) throw new Error(data?.message || t('auth.errors.invalidServer'))
     setSession(data.token, data.user)
     if (onSuccess) onSuccess(data.user)
     else postAuthNavigate(data.user, navigate)
@@ -354,11 +357,11 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
     const email = String(fd.get('email') || loginEmail || '').trim()
     const password = String(fd.get('password') || loginPasswordRef.current?.value || '')
     if (!email) {
-      toast('Email daxil edin', 'error')
+      toast(t('auth.toasts.enterEmail'), 'error')
       return
     }
     if (!password) {
-      toast('Şifrə daxil edin', 'error')
+      toast(t('auth.toasts.enterPassword'), 'error')
       return
     }
     setLoading(true)
@@ -374,12 +377,12 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
       const code = err?.code || err?.response?.data?.code
       if (code === 'EMAIL_NOT_VERIFIED') {
         setPhase('verify')
-        toast('Əvvəlcə emaili təsdiqləyin (kod və ya link)', 'error')
+        toast(t('auth.toasts.verifyEmailFirst'), 'error')
       } else if (!loginRoleFallback && err?.status === 403) {
         setLoginRoleFallback(true)
-        toast('Hesab növünü seçib yenidən cəhd edin', 'error')
+        toast(t('auth.toasts.selectRoleRetry'), 'error')
       } else {
-        toast(err.message || 'Giriş xətası', 'error')
+        toast(err.message || t('auth.toasts.loginError'), 'error')
       }
     } finally {
       setLoading(false)
@@ -394,21 +397,21 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
       if (r?.token && r?.user) {
         setSession(r.token, r.user)
         if (r?.needs_role) {
-          toast('Email təsdiqləndi! İndi rol seçin.', 'success')
+          toast(t('auth.toasts.emailVerifiedChooseRole'), 'success')
           navigate('/onboarding/role', { replace: true })
           return
         }
-        toast('Email təsdiqləndi! Daxil oldunuz.', 'success')
+        toast(t('auth.toasts.emailVerifiedLoggedIn'), 'success')
         if (onSuccess) onSuccess(r.user)
         else postAuthNavigate(r.user, navigate)
         return
       }
-      toast('Email təsdiqləndi! İndi daxil ola bilərsiniz.', 'success')
+      toast(t('auth.toasts.emailVerifiedCanLogin'), 'success')
       pickTab('login')
       setPhase('form')
       setVerifyCode('')
     } catch (err) {
-      toast(err.message || 'Kod yanlışdır və ya müddəti bitib', 'error')
+      toast(err.message || t('auth.toasts.invalidCode'), 'error')
     } finally {
       setLoading(false)
     }
@@ -416,15 +419,15 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
 
   const handleResend = async () => {
     if (!signupEmail.trim()) {
-      toast('Email daxil edin', 'error')
+      toast(t('auth.toasts.enterEmail'), 'error')
       return
     }
     setLoading(true)
     try {
       const r = await resendVerificationEmail(signupEmail)
-      toast(r?.message || 'Email yenidən göndərildi', 'success')
+      toast(r?.message || t('auth.toasts.resendOk'), 'success')
     } catch (err) {
-      toast(err.message || 'Göndərilmədi', 'error')
+      toast(err.message || t('auth.toasts.sendFailed'), 'error')
     } finally {
       setLoading(false)
     }
@@ -433,15 +436,15 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
   const handleForgotPassword = async () => {
     const em = String(loginEmail || '').trim()
     if (!em) {
-      toast('Email daxil edin', 'error')
+      toast(t('auth.toasts.enterEmail'), 'error')
       return
     }
     setLoading(true)
     try {
       const r = await requestPasswordReset(em)
-      toast(r?.message || 'Bərpa linki göndərildi (emaili yoxlayın)', 'success')
+      toast(r?.message || t('auth.toasts.recoverySent'), 'success')
     } catch (err) {
-      toast(err?.response?.data?.message || err?.message || 'Göndərilmədi', 'error')
+      toast(err?.response?.data?.message || err?.message || t('auth.toasts.sendFailed'), 'error')
     } finally {
       setLoading(false)
     }
@@ -451,7 +454,7 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
     return (
       <div className="space-y-4">
         <p className="text-sm text-gray-300 text-center leading-relaxed">
-          <strong className="text-white">{signupEmail}</strong> ünvanına 6 rəqəmli kod və təsdiq linki göndərildi.
+          {t('auth.verifySent', { email: signupEmail })}
         </p>
         <form onSubmit={handleVerifyCode} className="space-y-3" autoComplete="off">
           <input
@@ -465,7 +468,7 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
             required
           />
           <Button type="submit" loading={loading} className="w-full justify-center">
-            Kodu təsdiqlə
+            {t('auth.verifySubmit')}
           </Button>
         </form>
         <button
@@ -474,7 +477,7 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
           onClick={() => void handleResend()}
           className="w-full text-center text-xs text-primary hover:brightness-110 disabled:opacity-50"
         >
-          Emaili yenidən göndər
+          {t('auth.resendEmail')}
         </button>
         <button
           type="button"
@@ -484,7 +487,7 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
           }}
           className="w-full text-center text-xs text-gray-500 hover:text-white"
         >
-          Təsdiqlədikdən sonra giriş →
+          {t('auth.afterVerifyLogin')}
         </button>
       </div>
     )
@@ -513,7 +516,7 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
               autoCorrect="off"
               spellCheck={false}
               className={`${inputClass} touch-manipulation`}
-              placeholder="E-poçt"
+              placeholder={t('auth.email')}
               autoComplete="username"
               value={loginEmail}
               onChange={(e) => setLoginEmail(e.target.value)}
@@ -521,7 +524,7 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
             />
             <LoginPasswordInput inputRef={loginPasswordRef} />
             <Button type="submit" loading={loading} className="w-full justify-center">
-              Daxil ol
+              {t('auth.login')}
             </Button>
             <button
               type="button"
@@ -529,14 +532,14 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
               disabled={loading}
               onClick={handleForgotPassword}
             >
-              Şifrəmi unutmuşam
+              {t('auth.forgotPassword')}
             </button>
           </form>
 
           {loginRoleFallback ? (
             <div className="space-y-1.5">
               <label htmlFor="mx-login-role-fallback" className="text-xs font-medium text-gray-400">
-                Hesab növü
+                {t('auth.accountType')}
               </label>
               <select
                 id="mx-login-role-fallback"
@@ -544,7 +547,7 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
                 onChange={(e) => setLoginRole(e.target.value)}
                 className={`${inputClass} py-2.5`}
               >
-                {AUTH_ROLE_OPTIONS.map((r) => (
+                {authRoleOptions.map((r) => (
                   <option key={r.key} value={r.key}>
                     {r.label}
                   </option>
@@ -559,24 +562,24 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
             key="login-google"
             onCredential={handleGoogleCredential}
             disabled={loading}
-            label="Google ilə daxil ol"
+            label={t('auth.googleLogin')}
             context="signin"
           />
 
           <p className="text-xs text-center text-gray-500">
-            Hesabınız yoxdur?{' '}
+            {t('auth.noAccount')}{' '}
             <button type="button" className="font-semibold text-primary hover:brightness-110" onClick={() => pickTab('signup')}>
-              Qeydiyyatdan keçin
+              {t('auth.signupLink')}
             </button>
           </p>
       </div>
       ) : (
       <div className="space-y-4">
           <RolePills
-            roles={SIGNUP_ROLE_OPTIONS}
+            roles={signupRoleOptions}
             role={signupRole}
             onRole={setSignupRole}
-            label="Siz kimsiniz?"
+            label={t('auth.whoAreYou')}
             variant="pill"
           />
 
@@ -584,7 +587,7 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
             key="signup-google"
             onCredential={handleGoogleCredential}
             disabled={loading}
-            label="Google ilə davam et"
+            label={t('auth.googleContinue')}
             context="signup"
           />
 
@@ -602,7 +605,7 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
               id="mx-signup-fullname"
               name="name"
               className={inputClass}
-              placeholder="Ad Soyad"
+              placeholder={t('auth.fullName')}
               autoComplete="name"
               value={signupFullName}
               onChange={(e) => setSignupFullName(e.target.value)}
@@ -617,7 +620,7 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
               autoCorrect="off"
               spellCheck={false}
               className={inputClass}
-              placeholder="E-poçt"
+              placeholder={t('auth.email')}
               autoComplete="email"
               value={signupEmail}
               onChange={(e) => setSignupEmail(e.target.value)}
@@ -628,7 +631,7 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
               name="new-password"
               type="password"
               className={inputClass}
-              placeholder="Şifrə (min. 8 simvol)"
+              placeholder={t('auth.passwordMin')}
               autoComplete="new-password"
               autoCapitalize="none"
               autoCorrect="off"
@@ -639,14 +642,14 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
               required
             />
             <Button type="submit" loading={loading} variant="secondary" className="w-full justify-center">
-              Qeydiyyatdan keç
+              {t('auth.signupSubmit')}
             </Button>
           </form>
 
           <p className="text-xs text-center text-gray-500">
-            Hesabınız var?{' '}
+            {t('auth.hasAccount')}{' '}
             <button type="button" className="font-semibold text-primary hover:brightness-110" onClick={() => pickTab('login')}>
-              Daxil olun
+              {t('auth.loginLink')}
             </button>
           </p>
       </div>

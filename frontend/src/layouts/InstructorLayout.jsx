@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import useAuthStore from '../hooks/useAuth'
 import useUiStore from '../hooks/useUi'
 import api from '../lib/api'
-import { instructorRoleAz } from '../lib/instructorLabel'
 import Brand from '../components/common/Brand'
 import Footer from '../components/common/Footer'
 import { sidebarNavClass } from '../lib/sidebarNavClass'
@@ -26,6 +26,7 @@ import { useInstructorNavSections } from '../hooks/useInstructorNavSections'
 const DISCOVER_MODAL_SESSION_PREFIX = 'mx_discover_modal_v1_'
 
 export default function InstructorLayout() {
+  const { t } = useTranslation()
   const { user, logout, updateUser } = useAuthStore()
   const navigate = useNavigate()
   const location = useLocation()
@@ -66,6 +67,9 @@ export default function InstructorLayout() {
   const mainRef = useRef(null)
   const showMobileSidebar = navOpen && !sidebarHidden
   const { sections: navSections } = useInstructorNavSections()
+
+  const instructorRoleLabel =
+    user?.public_label === 'trainer' ? t('layout.trainer') : t('layout.teacher')
 
   const notifUnread = useMemo(() => {
     if (!hasAlerts || !notifFetchAt) return false
@@ -322,11 +326,11 @@ export default function InstructorLayout() {
         />
       )}
 
-      <div className="flex flex-col flex-1 min-h-0 min-w-0 w-full overflow-x-hidden lg:flex-row">
+      <div className="flex flex-1 min-h-0 min-w-0 w-full overflow-x-hidden lg:flex-row lg:overflow-hidden">
         <aside
           className={[
             theme === 'dark' ? 'theme-dark' : 'theme-light',
-            'w-[min(17rem,88vw)] max-w-[280px] flex-col flex-shrink-0',
+            'w-[260px] max-w-[min(260px,88vw)] flex-col shrink-0',
             theme === 'dark'
               ? 'bg-gradient-to-b from-[#0c0f0d] to-[#070a08] border-r border-[color:var(--border-subtle)]'
               : 'bg-[#F8FAFC] border-r border-black/[0.06]',
@@ -377,7 +381,7 @@ export default function InstructorLayout() {
                 {user?.full_name}
               </div>
               <div className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-slate-600'}`}>
-                {instructorRoleAz(user?.public_label)}
+                {instructorRoleLabel}
               </div>
             </div>
             {billing ? (
@@ -418,7 +422,7 @@ export default function InstructorLayout() {
               {user?.full_name}
             </div>
             <div className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
-              {instructorRoleAz(user?.public_label)}
+              {instructorRoleLabel}
             </div>
           </div>
           {billing ? (
@@ -482,9 +486,9 @@ export default function InstructorLayout() {
           ref={mainRef}
           className={[
             'fixed left-0 right-0 bottom-0 top-[calc(72px+env(safe-area-inset-top,0px))] z-[1]',
-            'w-full min-w-0 overflow-x-hidden overflow-y-auto overscroll-x-none bg-token-surfaceMain',
+            'w-full min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-x-none bg-token-surfaceMain',
             'px-4 pl-[max(1rem,env(safe-area-inset-left,0px))] pr-[max(1rem,env(safe-area-inset-right,0px))]',
-            'lg:static lg:inset-auto lg:flex-1 lg:min-h-0 lg:pt-0 lg:px-6',
+            'lg:static lg:inset-auto lg:flex-1 lg:min-h-0 lg:min-w-0 lg:pt-0 lg:px-6',
           ].join(' ')}
         >
         <div className="min-h-full flex flex-col min-w-0 w-full max-w-full overflow-x-hidden box-border">

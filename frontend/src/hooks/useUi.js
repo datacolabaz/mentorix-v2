@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import i18n, { readStoredLocale, writeStoredLocale, applyDocumentLocale } from '../i18n'
+import i18n, { readStoredLocale, writeStoredLocale, applyDocumentLocale, LOCALE_KEY } from '../i18n'
 
 const THEME_KEY = 'mentorix_theme_v1'
 const readTheme = () => {

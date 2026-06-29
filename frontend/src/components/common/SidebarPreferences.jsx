@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import useUiStore from '../../hooks/useUi'
-import LanguageToggle from './LanguageToggle'
+import LanguageSwitcher from '../LanguageSwitcher'
 
 export default function SidebarPreferences({ onLogout, className = '' }) {
   const { t } = useTranslation()
@@ -11,7 +11,7 @@ export default function SidebarPreferences({ onLogout, className = '' }) {
     <div className={className}>
       <div className="mb-3">
         <div className="text-xs font-semibold text-token-textMuted mb-2 px-1">{t('layout.language')}</div>
-        <LanguageToggle />
+        <LanguageSwitcher />
       </div>
       <button
         type="button"

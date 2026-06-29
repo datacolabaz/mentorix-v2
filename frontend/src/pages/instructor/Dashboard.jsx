@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate, Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import api from '../../lib/api'
 import Card from '../../components/common/Card'
@@ -32,6 +33,7 @@ const DEFAULT_DASH = {
 }
 
 export default function InstructorDashboard() {
+  const { t, i18n } = useTranslation()
   const { user } = useAuthStore()
   const navigate = useNavigate()
   const { theme, setOverlayLock } = useUiStore()
@@ -165,19 +167,19 @@ export default function InstructorDashboard() {
 
   async function submitQuickNotification() {
     const msg = String(quickMessage ?? '').trim()
-    if (!msg) return toast('Mesaj tələb olunur', 'error')
-    if (!quickSelectedIds.length) return toast('Tələbələr seçilməlidir', 'error')
+    if (!msg) return toast(t('dashboard.notify.messageRequired'), 'error')
+    if (!quickSelectedIds.length) return toast(t('dashboard.notify.selectStudents'), 'error')
 
     if (blocked) {
-      return toast(billing?.messages?.banner || 'Məhdudiyyətə görə bu əməliyyat deaktivdir', 'error')
+      return toast(billing?.messages?.banner || t('dashboard.notify.blocked'), 'error')
     }
 
     if (quickMethod === 'sms' && smsDisabled) {
-      return toast('Limitiniz bitib, artırmaq üçün adminlə əlaqə saxlayın', 'error')
+      return toast(t('dashboard.notify.smsLimit'), 'error')
     }
 
     if (quickMethod === 'whatsapp' && !whatsappConfigured) {
-      return toast('WhatsApp API serverdə konfiqurasiya olunmayıb (Railway WHATSAPP_* dəyişənləri)', 'error')
+      return toast(t('dashboard.notify.whatsappApiNotConfigured'), 'error')
     }
 
     setQuickBusy(true)
@@ -206,12 +208,12 @@ export default function InstructorDashboard() {
         const sent = Number(d?.sent ?? 0)
         const failed = Number(d?.failed ?? 0)
         if (failed > 0) {
-          toast(`WhatsApp: ${sent} göndərildi, ${failed} uğursuz`, sent > 0 ? 'success' : 'error')
+          toast(t('dashboard.notify.whatsappPartial', { sent, failed }), sent > 0 ? 'success' : 'error')
         } else {
-          toast(`WhatsApp: ${sent} tələbəyə göndərildi`, 'success')
+          toast(t('dashboard.notify.whatsappSent', { n: sent }), 'success')
         }
       } else {
-        toast(quickMethod === 'sms' ? 'SMS göndərildi' : 'Bildiriş göndərildi', 'success')
+        toast(quickMethod === 'sms' ? t('dashboard.notify.sentSms') : t('dashboard.notify.sent'), 'success')
       }
       queryClient.invalidateQueries({ queryKey: BILLING_STATUS_QUERY_KEY })
       closeQuick()
@@ -219,7 +221,7 @@ export default function InstructorDashboard() {
       setQuickSelectedIds([])
       // Keep smsProfile; next opening will use same cached value
     } catch (err) {
-      toast(err?.message || 'Göndərilmədi', 'error')
+      toast(err?.message || t('dashboard.notify.sendFailed'), 'error')
     } finally {
       setQuickBusy(false)
     }
@@ -237,8 +239,10 @@ export default function InstructorDashboard() {
   )
 
   const hrs = new Date().getHours()
-  const greeting = hrs < 12 ? 'Sabahınız xeyir' : hrs < 18 ? 'Günortanız xeyir' : 'Axşamınız xeyir'
-  const moneyFmt = new Intl.NumberFormat('en-US')
+  const greeting =
+    hrs < 12 ? t('dashboard.greetingMorning') : hrs < 18 ? t('dashboard.greetingAfternoon') : t('dashboard.greetingEvening')
+  const moneyLocale = i18n.language === 'ru' ? 'ru-RU' : 'az-Latn-AZ'
+  const moneyFmt = new Intl.NumberFormat(moneyLocale)
   const incomeThisMonthAz = `₼ ${moneyFmt.format(Math.round(Number(dash.income_this_month || 0)))}`
   const totalEarningsAz = `₼ ${moneyFmt.format(Math.round(Number(dash.total_earnings_all || 0)))}`
   const rosterWithExam = students.filter((s) => examById[String(s.id)]?.exam_avg_score != null)
@@ -297,11 +301,9 @@ export default function InstructorDashboard() {
     return (
       <div className="rounded-xl border border-white/10 bg-[#0b0b0b] px-3 py-2 text-xs shadow-lg max-w-[240px]">
         <div className="font-semibold text-white mb-1">{p.fullName || p.name}</div>
-        <div className="text-emerald-300">Orta faiz: {pct}%</div>
+        <div className="text-emerald-300">{t('dashboard.tooltipAvgPct', { pct })}</div>
         <div className="text-gray-400 mt-1 leading-snug">
-          {n > 0
-            ? `${n} təqdim olunmuş imtahanın ortalamasıdır (Dashboard ümumi göstərici).`
-            : 'Hələ təqdim olunmuş imtahan yoxdur — qrafikdə 0 göstərilir.'}
+          {n > 0 ? t('dashboard.tooltipAvgExams', { n }) : t('dashboard.tooltipNoExams')}
         </div>
       </div>
     )
@@ -337,12 +339,10 @@ export default function InstructorDashboard() {
 
   return (
     <>
-      <Modal open={onboardOpen} onClose={closeOnboard} title="Başlayaq" size="sm">
+      <Modal open={onboardOpen} onClose={closeOnboard} title={t('dashboard.onboardTitle')} size="sm">
         <div className="space-y-3">
-          <div className="text-sm text-gray-200 font-semibold">İlk tələbəni əlavə et</div>
-          <div className="text-xs text-gray-400">
-            Telefon təsdiqi tamamlandı. İndi ilk tələbənizi əlavə edə bilərsiniz.
-          </div>
+          <div className="text-sm text-gray-200 font-semibold">{t('dashboard.onboardHeading')}</div>
+          <div className="text-xs text-gray-400">{t('dashboard.onboardDesc')}</div>
           <Button
             className="w-full justify-center py-3"
             onClick={() => {
@@ -350,10 +350,10 @@ export default function InstructorDashboard() {
               navigate('/instructor/students')
             }}
           >
-            Tələbə əlavə et
+            {t('dashboard.onboardAdd')}
           </Button>
           <Button variant="ghost" className="w-full justify-center py-2" onClick={closeOnboard}>
-            Sonra
+            {t('dashboard.onboardLater')}
           </Button>
         </div>
       </Modal>
@@ -364,12 +364,12 @@ export default function InstructorDashboard() {
             <h1 className="font-display font-bold text-xl sm:text-2xl break-words text-token-textMain">
               {greeting}, {user?.full_name?.split(' ')[0]}! 👋
             </h1>
-            <p className="text-token-textMuted text-sm mt-1">Bugünün xülasəsi</p>
+            <p className="text-token-textMuted text-sm mt-1">{t('dashboard.todaySummary')}</p>
           </div>
 
           <div className="w-full sm:w-auto sm:shrink-0">
             <Button variant="secondary" size="sm" className="w-full sm:w-auto justify-center" onClick={openQuick}>
-              Sürətli Bildiriş
+              {t('dashboard.quickNotify')}
             </Button>
           </div>
         </div>
@@ -387,44 +387,44 @@ export default function InstructorDashboard() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4 mb-4 sm:mb-6 min-w-0 w-full [&>*]:min-w-0">
         <KpiCard
-          title="Tələbə"
+          title={t('dashboard.kpiStudents')}
           to="/instructor/students"
-          ariaLabel="Tələbələr səhifəsinə keç"
+          ariaLabel={t('dashboard.kpiStudentsAria')}
           value={loading ? '—' : activeStudentKpi}
           icon="🎓"
-          secondary="Aktiv tələbə sayı"
+          secondary={t('dashboard.kpiStudentsSecondary')}
           deltaPct={dash.enrollment_growth_delta_pct ?? 0}
           sparkline={sparkEnroll}
         />
         <KpiCard
-          title="Orta nəticə (faiz)"
+          title={t('dashboard.kpiExamAvg')}
           to="/instructor/analytics"
-          ariaLabel="Analitika səhifəsinə keç"
+          ariaLabel={t('dashboard.kpiExamAvgAria')}
           value={loading ? '—' : `${examPctKpi}%`}
           icon="📊"
-          secondary="İmtahan ortalaması"
+          secondary={t('dashboard.kpiExamAvgSecondary')}
           deltaPct={dash.exam_trend_delta_pct ?? 0}
           sparkline={sparkExamMonths}
         />
         <KpiCard
-          title="Ümumi gəlir"
+          title={t('dashboard.kpiTotalIncome')}
           to="/instructor/payments"
-          ariaLabel="Ödənişlər — ümumi gəlir"
+          ariaLabel={t('dashboard.kpiTotalIncomeAria')}
           value={loading ? '—' : totalEarningsAz}
           icon="💰"
-          secondary="Cəmi (indiyə qədər)"
+          secondary={t('dashboard.kpiTotalIncomeSecondary')}
           deltaPct={dash.total_income_flow_delta_pct ?? 0}
           sparkline={sparkIncome}
         />
       </div>
       <div className="grid grid-cols-1 gap-3 sm:gap-4 mb-6 min-w-0 w-full [&>*]:min-w-0">
         <KpiCard
-          title="Bu ay ödəniş (nağd)"
+          title={t('dashboard.kpiMonthCash')}
           to="/instructor/payments"
-          ariaLabel="Ödənişlər — bu ayın daxilolmaları"
+          ariaLabel={t('dashboard.kpiMonthCashAria')}
           value={loading ? '—' : incomeThisMonthAz}
           icon="📅"
-          secondary="Nağd daxilolma"
+          secondary={t('dashboard.kpiMonthCashSecondary')}
           deltaPct={dash.income_delta_pct ?? 0}
           sparkline={sparkIncome}
         />
@@ -433,12 +433,11 @@ export default function InstructorDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 min-w-0 w-full [&>*]:min-w-0">
         <div className="lg:col-span-2 min-w-0">
           <Card hover className="p-4 sm:p-5 min-w-0 overflow-hidden">
-            <h2 className="font-display font-bold text-base text-token-textMain">Tələbə Proqresi (imtahan)</h2>
+            <h2 className="font-display font-bold text-base text-token-textMain">{t('dashboard.progressTitle')}</h2>
             <p className="text-xs text-token-textMuted mt-1 mb-3 leading-relaxed">
-              Qrafikdə ilk 10 tələbə: hər biri üçün təqdim olunmuş bütün imtahanlar üzrə orta faiz. Tək imtahanın
-              cədvəli və qruplar üçün{' '}
+              {t('dashboard.progressDesc')}{' '}
               <Link to="/instructor/analytics" className="text-primary underline-offset-2 hover:underline font-medium">
-                Analitika
+                {t('dashboard.analytics')}
               </Link>
               .
             </p>
@@ -477,21 +476,17 @@ export default function InstructorDashboard() {
                 </div>
               </div>
             ) : (
-              <div className="h-52 flex items-center justify-center text-token-textMuted">Hələ məlumat yoxdur</div>
+              <div className="h-52 flex items-center justify-center text-token-textMuted">{t('dashboard.noData')}</div>
             )}
             {students.length > 0 && !rosterWithExam.length && (
-              <p className="text-token-textMuted text-xs mt-2">
-                Hələ təqdim olunmuş imtahan nəticəsi yoxdur — tələbə imtahanı bitirənə qədər orta bal 0 göstərilir.
-              </p>
+              <p className="text-token-textMuted text-xs mt-2">{t('dashboard.noExamResultsHint')}</p>
             )}
           </Card>
         </div>
 
         <Card hover className="p-4 sm:p-5 min-w-0">
-          <h2 className="font-display font-bold text-base text-token-textMain">Top Tələbələr (imtahan)</h2>
-          <p className="text-xs text-token-textMuted mt-1 mb-3">
-            Sıralama eyni mənbəyə əsasən: təqdim olunmuş imtahanların orta faizi; yanında imtahan sayı.
-          </p>
+          <h2 className="font-display font-bold text-base text-token-textMain">{t('dashboard.topStudentsTitle')}</h2>
+          <p className="text-xs text-token-textMuted mt-1 mb-3">{t('dashboard.topStudentsSort')}</p>
           <div className="space-y-3">
             {topSorted.slice(0, 5).map((s, i) => {
               const ex = examById[String(s.id)]
@@ -513,7 +508,7 @@ export default function InstructorDashboard() {
                       />
                     </div>
                     {hasScore && taken > 0 ? (
-                      <div className="text-[11px] text-token-textMuted mt-0.5">{taken} imtahanın ortası</div>
+                      <div className="text-[11px] text-token-textMuted mt-0.5">{t('dashboard.examAvgLine', { n: taken })}</div>
                     ) : null}
                   </div>
                   <span className="text-sm font-bold text-token-textMain shrink-0 tabular-nums">
@@ -523,36 +518,37 @@ export default function InstructorDashboard() {
               )
             })}
             {!students.length && (
-              <div className="text-center text-token-textMuted text-sm py-8">Hələ tələbə yoxdur</div>
+              <div className="text-center text-token-textMuted text-sm py-8">{t('dashboard.noStudents')}</div>
             )}
           </div>
         </Card>
       </div>
       </div>
 
-      <Modal open={quickOpen} onClose={closeQuick} title="Sürətli Bildiriş" size="xl">
+      <Modal open={quickOpen} onClose={closeQuick} title={t('dashboard.quickNotify')} size="xl">
         <div className="space-y-5">
           <div>
             <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
-              Mesaj
+              {t('dashboard.notify.message')}
             </label>
             <textarea
               value={quickMessage}
               onChange={(e) => setQuickMessage(e.target.value)}
               rows={3}
               className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-blue-500"
-              placeholder="Dərs saatı 15:00-a dəyişdirildi"
+              placeholder={t('dashboard.notify.messagePlaceholder')}
             />
           </div>
 
           <div>
             <div className="flex items-center justify-between gap-2 flex-wrap">
               <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
-                Tələbələr
+                {t('dashboard.notify.students')}
               </label>
               <div className="flex items-center gap-2 text-xs">
                 <span className="text-gray-500">
-                  Seçilən: <span className="text-white/80 font-semibold">{quickSelectedIds.length}</span>
+                  {t('dashboard.notify.selected')}{' '}
+                  <span className="text-white/80 font-semibold">{quickSelectedIds.length}</span>
                 </span>
                 <button
                   type="button"
@@ -560,7 +556,7 @@ export default function InstructorDashboard() {
                   onClick={selectAllStudents}
                   disabled={!students.length}
                 >
-                  Hamısını seç
+                  {t('dashboard.notify.selectAll')}
                 </button>
                 <button
                   type="button"
@@ -568,7 +564,7 @@ export default function InstructorDashboard() {
                   onClick={clearSelectedStudents}
                   disabled={!quickSelectedIds.length}
                 >
-                  Təmizlə
+                  {t('dashboard.notify.clear')}
                 </button>
               </div>
             </div>
@@ -587,19 +583,19 @@ export default function InstructorDashboard() {
                           <PresenceDot user={s} />
                           {s.full_name}
                         </div>
-                        <div className="text-xs text-gray-500">{s.grade ? `Sinif: ${s.grade}` : '—'}</div>
+                        <div className="text-xs text-gray-500">{s.grade ? t('dashboard.gradeLabel', { grade: s.grade }) : '—'}</div>
                       </div>
                     </label>
                   ))}
                 </div>
               ) : (
-                <div className="text-center text-gray-500 py-6">Tələbələr yüklənməyib</div>
+                <div className="text-center text-gray-500 py-6">{t('dashboard.notify.studentsNotLoaded')}</div>
               )}
             </div>
           </div>
 
           <div>
-            <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Göndərmə metodu</div>
+            <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">{t('dashboard.notify.methodTitle')}</div>
 
             <div className="space-y-3">
               <label className="flex items-center justify-between gap-3 px-3 py-2 rounded-xl border border-indigo-500/10 bg-white/0">
@@ -611,8 +607,8 @@ export default function InstructorDashboard() {
                     onChange={() => setQuickMethod('internal')}
                   />
                   <div className="min-w-0">
-                    <div className="text-sm font-semibold text-white/90">Yalnız Panel Daxili</div>
-                    <div className="text-xs text-gray-500">Pulsuz</div>
+                    <div className="text-sm font-semibold text-white/90">{t('dashboard.notify.internalTitle')}</div>
+                    <div className="text-xs text-gray-500">{t('dashboard.notify.free')}</div>
                   </div>
                 </div>
               </label>
@@ -631,14 +627,13 @@ export default function InstructorDashboard() {
                     onChange={() => setQuickMethod('sms')}
                   />
                   <div className="min-w-0">
-                    <div className="text-sm font-semibold text-white/90">SMS olaraq göndər</div>
+                    <div className="text-sm font-semibold text-white/90">{t('dashboard.notify.smsTitle')}</div>
                     {smsDisabled ? (
-                      <div className="text-xs text-amber-300">
-                        Limitiniz bitib, artırmaq üçün adminlə əlaqə saxlayın
-                      </div>
+                      <div className="text-xs text-amber-300">{t('dashboard.notify.smsLimit')}</div>
                     ) : (
                       <div className="text-xs text-gray-500">
-                        Qalıq: <span className="text-white/80 font-semibold">{Math.max(0, smsLimit - smsUsed)}</span>
+                        {t('dashboard.notify.smsRemaining')}{' '}
+                        <span className="text-white/80 font-semibold">{Math.max(0, smsLimit - smsUsed)}</span>
                       </div>
                     )}
                   </div>
@@ -659,17 +654,13 @@ export default function InstructorDashboard() {
                     onChange={() => setQuickMethod('whatsapp')}
                   />
                   <div className="min-w-0">
-                    <div className="text-sm font-semibold text-white/90">WhatsApp olaraq göndər</div>
+                    <div className="text-sm font-semibold text-white/90">{t('dashboard.notify.whatsappTitle')}</div>
                     {!whatsappConfigured ? (
-                      <div className="text-xs text-amber-300">Serverdə WHATSAPP_* dəyişənləri təyin edilməyib</div>
+                      <div className="text-xs text-amber-300">{t('dashboard.notify.whatsappNotConfigured')}</div>
                     ) : whatsappProductionStyle ? (
-                      <div className="text-xs text-gray-500">
-                        Təsdiqlənmiş şablon ilə bütün tələbə nömrələrinə (recipient siyahısı lazım deyil)
-                      </div>
+                      <div className="text-xs text-gray-500">{t('dashboard.notify.whatsappProduction')}</div>
                     ) : (
-                      <div className="text-xs text-amber-200/90">
-                        Test rejimi: yalnız Meta test recipient nömrələri. Prod üçün şablon + Step 2
-                      </div>
+                      <div className="text-xs text-amber-200/90">{t('dashboard.notify.whatsappTest')}</div>
                     )}
                   </div>
                 </div>
@@ -679,7 +670,7 @@ export default function InstructorDashboard() {
 
           <div className="flex items-center justify-end gap-3 pt-2">
             <Button variant="ghost" onClick={closeQuick} disabled={quickBusy}>
-              Ləğv et
+              {t('common.cancel')}
             </Button>
             <Button
               variant="primary"
@@ -687,7 +678,7 @@ export default function InstructorDashboard() {
               onClick={submitQuickNotification}
               disabled={quickSelectedIds.length === 0 || !quickMessage.trim()}
             >
-              Göndər
+              {t('dashboard.notify.send')}
             </Button>
           </div>
         </div>
