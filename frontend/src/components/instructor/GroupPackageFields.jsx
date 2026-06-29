@@ -1,3 +1,5 @@
+import { useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { WEEKDAYS } from '../../pages/instructor/Schedule'
 import { addMinutesToHm } from '../../lib/lessonWeekGrid'
 import {
@@ -55,8 +57,19 @@ export function groupPackageFromApi(g) {
 }
 
 export default function GroupPackageFields({ value, onChange, compact }) {
+  const { t } = useTranslation()
   const v = value || emptyGroupPackage()
   const set = (patch) => onChange({ ...v, ...patch })
+
+  const localizedWeekdays = useMemo(
+    () =>
+      WEEKDAYS.map((d) => ({
+        ...d,
+        short: t(`students.form.weekdays.${d.v}.short`),
+        full: t(`students.form.weekdays.${d.v}.full`),
+      })),
+    [t],
+  )
 
   const scheme = paymentSchemeFromForm(v)
   const baseFee = Number(v.default_package_fee)
@@ -86,25 +99,26 @@ export default function GroupPackageFields({ value, onChange, compact }) {
   return (
     <div className={compact ? 'space-y-3' : 'space-y-4 rounded-xl border border-indigo-500/20 bg-[#0f0c29]/40 p-3'}>
       {!compact && (
-        <p className="text-xs text-gray-400 leading-relaxed">
-          Dəvət linki ilə qoşulan tələbə paket qiymətini, ödəniş vaxtını və endirimi görür; «Razıyam» ilə təsdiq
-          edir. Təsdiqdən sonra eyni şərtlər tətbiq olunur.
-        </p>
+        <p className="text-xs text-gray-400 leading-relaxed">{t('teachingGroups.packageFields.inviteHint')}</p>
       )}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
-          <label className="block text-xs font-semibold text-gray-400 uppercase mb-1.5">Paket *</label>
+          <label className="block text-xs font-semibold text-gray-400 uppercase mb-1.5">
+            {t('teachingGroups.packageFields.package')}
+          </label>
           <select
             className={inp}
             value={v.default_billing_type}
             onChange={(e) => set({ default_billing_type: e.target.value })}
           >
-            <option value="8_lessons">8 dərs paketi</option>
-            <option value="12_lessons">12 dərs paketi</option>
+            <option value="8_lessons">{t('teachingGroups.packageFields.pack8')}</option>
+            <option value="12_lessons">{t('teachingGroups.packageFields.pack12')}</option>
           </select>
         </div>
         <div>
-          <label className="block text-xs font-semibold text-gray-400 uppercase mb-1.5">Əsas qiymət (₼) *</label>
+          <label className="block text-xs font-semibold text-gray-400 uppercase mb-1.5">
+            {t('teachingGroups.packageFields.basePrice')}
+          </label>
           <input
             className={inp}
             type="number"
@@ -120,7 +134,7 @@ export default function GroupPackageFields({ value, onChange, compact }) {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <label className="block text-xs font-semibold text-gray-400 uppercase mb-1.5">
-            Endirim % (ixtiyari)
+            {t('teachingGroups.packageFields.discount')}
           </label>
           <input
             className={inp}
@@ -134,7 +148,7 @@ export default function GroupPackageFields({ value, onChange, compact }) {
           />
         </div>
         <div className="flex flex-col justify-end">
-          <p className="text-xs text-gray-500 mb-1">Tələbəyə göstərilən məbləğ</p>
+          <p className="text-xs text-gray-500 mb-1">{t('teachingGroups.packageFields.shownAmount')}</p>
           <p className="text-lg font-bold text-emerald-300 tabular-nums">
             {finalFee != null ? formatAzn(finalFee) : '—'}
           </p>
@@ -145,23 +159,27 @@ export default function GroupPackageFields({ value, onChange, compact }) {
       </div>
 
       <div>
-        <label className="block text-xs font-semibold text-gray-400 uppercase mb-1.5">Ödəniş vaxtı *</label>
+        <label className="block text-xs font-semibold text-gray-400 uppercase mb-1.5">
+          {t('teachingGroups.packageFields.paymentTiming')}
+        </label>
         <select
           className={inp}
           value={scheme}
           onChange={(e) => onChange(applyPaymentScheme(v, e.target.value))}
         >
-          <option value="full_prepaid">Əvvəlcədən tam — paket başlamazdan əvvəl tam ödəniş</option>
-          <option value="postpaid_full">Sonradan tam — paket bitdikdən sonra tam məbləğ</option>
-          <option value="installment">Hissəli — paket müddətində hissə-hissə ödəniş</option>
+          <option value="full_prepaid">{t('teachingGroups.packageFields.payFullPrepaid')}</option>
+          <option value="postpaid_full">{t('teachingGroups.packageFields.payPostpaid')}</option>
+          <option value="installment">{t('teachingGroups.packageFields.payInstallment')}</option>
         </select>
         <p className="text-xs text-gray-500 mt-1.5">{paymentTimingLabel(scheme)}</p>
       </div>
 
       <div>
-        <label className="block text-xs font-semibold text-gray-400 uppercase mb-1.5">Dərs günləri və saatları *</label>
+        <label className="block text-xs font-semibold text-gray-400 uppercase mb-1.5">
+          {t('teachingGroups.packageFields.weekdays')}
+        </label>
         <div className="flex flex-wrap gap-2 mb-2">
-          {WEEKDAYS.map((d) => {
+          {localizedWeekdays.map((d) => {
             const active = (v.default_lesson_weekdays || []).includes(d.v)
             return (
               <button
@@ -180,13 +198,13 @@ export default function GroupPackageFields({ value, onChange, compact }) {
           })}
         </div>
         <div className="space-y-2">
-          {WEEKDAYS.filter((d) => (v.default_lesson_weekdays || []).includes(d.v)).map((d) => (
+          {localizedWeekdays.filter((d) => (v.default_lesson_weekdays || []).includes(d.v)).map((d) => (
             <div key={d.v} className="flex items-center justify-between gap-2 text-sm flex-wrap">
               <span className="text-gray-300 shrink-0">{d.full}</span>
               <div className="flex items-center gap-2">
                 <input
                   type="time"
-                  title="Başlanğıc"
+                  title={t('teachingGroups.packageFields.startTime')}
                   className="bg-[#13112e] border border-indigo-500/20 rounded-lg px-2 py-1 text-white text-sm"
                   value={v.default_lesson_times?.[String(d.v)] || ''}
                   onChange={(e) => {
@@ -203,7 +221,7 @@ export default function GroupPackageFields({ value, onChange, compact }) {
                 <span className="text-gray-600">–</span>
                 <input
                   type="time"
-                  title="Bitmə"
+                  title={t('teachingGroups.packageFields.endTime')}
                   className="bg-[#13112e] border border-indigo-500/20 rounded-lg px-2 py-1 text-white text-sm"
                   value={v.default_lesson_end_times?.[String(d.v)] || ''}
                   onChange={(e) =>

@@ -1,3 +1,5 @@
+import i18n from '../i18n'
+
 export function paymentSchemeFromForm(data) {
   if (data?.default_payment_plan === 'partial' || data?.payment_plan === 'partial') return 'installment'
   if ((data?.default_billing_timing || data?.billing_timing || 'postpaid') === 'prepaid') return 'full_prepaid'
@@ -36,12 +38,12 @@ export function formatAzn(n) {
 }
 
 export function paymentTimingLabel(scheme) {
-  if (scheme === 'full_prepaid') return 'Ödəniş paket başlamazdan əvvəl (tam məbləğ)'
-  if (scheme === 'installment') return 'Hissəli ödəniş (paket müddətində hissə-hissə)'
-  return 'Ödəniş paket bitdikdən sonra (tam məbləğ)'
+  if (scheme === 'full_prepaid') return i18n.t('teachingGroups.packageFields.timingPrepaid')
+  if (scheme === 'installment') return i18n.t('teachingGroups.packageFields.timingInstallment')
+  return i18n.t('teachingGroups.packageFields.timingPostpaid')
 }
 
 export function billingTypeLabel(bt) {
-  if (bt === '12_lessons') return '12 dərs paketi'
-  return '8 dərs paketi'
+  if (bt === '12_lessons') return i18n.t('teachingGroups.packageFields.pack12')
+  return i18n.t('teachingGroups.packageFields.pack8')
 }

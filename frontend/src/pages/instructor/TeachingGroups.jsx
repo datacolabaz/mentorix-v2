@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import api from '../../lib/api'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
@@ -26,6 +27,7 @@ function formatIncomeAzn(n) {
 }
 
 export default function InstructorTeachingGroups() {
+  const { t } = useTranslation()
   const toast = useToast()
   const navigate = useNavigate()
   const { theme } = useUiStore()
@@ -64,12 +66,12 @@ export default function InstructorTeachingGroups() {
       const d = await api.get('/instructor/teaching')
       setSubjects(Array.isArray(d.subjects) ? d.subjects : [])
     } catch (e) {
-      toast(e?.message || 'Yüklənmədi', 'error')
+      toast(e?.message || t('teachingGroups.toasts.loadFailed'), 'error')
     } finally {
       if (silent) setRefreshing(false)
       else setInitialLoading(false)
     }
-  }, [toast])
+  }, [toast, t])
 
   useEffect(() => {
     void load()
@@ -77,18 +79,18 @@ export default function InstructorTeachingGroups() {
 
   const requestRemoveSubject = (subject) => {
     if (subject?.is_system) {
-      toast('Sistem iştirakçı sahəsi silinə bilməz', 'info')
+      toast(t('teachingGroups.toasts.systemSubjectNoDelete'), 'info')
       return
     }
-    setConfirmDelete({ type: 'subject', id: subject?.id, name: subject?.name || 'Sahə' })
+    setConfirmDelete({ type: 'subject', id: subject?.id, name: subject?.name || t('teachingGroups.defaultSubject') })
   }
 
   const requestRemoveGroup = (group) => {
     if (group?.is_system) {
-      toast('Sistem iştirakçı qrupu avtomatik idarə olunur — silinə bilməz', 'info')
+      toast(t('teachingGroups.toasts.systemGroupNoDelete'), 'info')
       return
     }
-    setConfirmDelete({ type: 'group', id: group?.id, name: group?.name || 'Qrup' })
+    setConfirmDelete({ type: 'group', id: group?.id, name: group?.name || t('teachingGroups.defaultGroup') })
   }
 
   const addSubject = async () => {
@@ -98,7 +100,7 @@ export default function InstructorTeachingGroups() {
     }
     const name = newSubject.trim()
     if (!name) {
-      toast('Sahə adı daxil edin', 'error')
+      toast(t('teachingGroups.toasts.subjectNameRequired'), 'error')
       return
     }
     setBusy((b) => ({ ...b, addSub: true }))
@@ -117,10 +119,10 @@ export default function InstructorTeachingGroups() {
         ])
       }
       setNewSubject('')
-      toast('Sahə əlavə olundu')
+      toast(t('teachingGroups.toasts.subjectAdded'))
       await load({ silent: true })
     } catch (e) {
-      toast(e?.message || 'Xəta', 'error')
+      toast(e?.message || t('teachingGroups.toasts.error'), 'error')
     } finally {
       setBusy((b) => ({ ...b, addSub: false }))
     }
@@ -130,10 +132,10 @@ export default function InstructorTeachingGroups() {
     setBusy((b) => ({ ...b, [`dels-${id}`]: true }))
     try {
       await api.delete('/instructor/teaching/subjects/' + encodeURIComponent(id))
-      toast('Silindi')
+      toast(t('teachingGroups.toasts.deleted'))
       await load({ silent: true })
     } catch (e) {
-      toast(e?.message || 'Xəta', 'error')
+      toast(e?.message || t('teachingGroups.toasts.error'), 'error')
     } finally {
       setBusy((b) => ({ ...b, [`dels-${id}`]: false }))
     }
@@ -147,7 +149,7 @@ export default function InstructorTeachingGroups() {
     const raw = newGroupBySubject[subjectId] || ''
     const name = String(raw).trim()
     if (!name) {
-      toast('Qrup adı daxil edin', 'error')
+      toast(t('teachingGroups.toasts.groupNameRequired'), 'error')
       return
     }
     setGroupPkg(emptyGroupPackage())
@@ -161,7 +163,7 @@ export default function InstructorTeachingGroups() {
       return
     }
     if (group?.is_system) {
-      toast('Sistem iştirakçı qrupu dəyişdirilə bilməz', 'info')
+      toast(t('teachingGroups.toasts.systemGroupNoEdit'), 'info')
       return
     }
     setGroupPkg(groupPackageFromApi(group))
@@ -177,14 +179,14 @@ export default function InstructorTeachingGroups() {
     if (!groupModal) return
     const lwd = groupPkg.default_lesson_weekdays || []
     if (!lwd.length) {
-      const msg = 'Ən azı bir dərs günü seçin'
+      const msg = t('teachingGroups.toasts.weekdayRequired')
       setGroupModalError(msg)
       toast(msg, 'error')
       return
     }
     const fee = String(groupPkg.default_package_fee || '').trim()
     if (!fee) {
-      const msg = 'Paket qiyməti (₼) tələb olunur'
+      const msg = t('teachingGroups.toasts.feeRequired')
       setGroupModalError(msg)
       toast(msg, 'error')
       return
@@ -196,15 +198,15 @@ export default function InstructorTeachingGroups() {
       if (groupModal.mode === 'create') {
         await api.post('/instructor/teaching/groups', { subject_id: groupModal.subjectId, ...body })
         setNewGroupBySubject((p) => ({ ...p, [groupModal.subjectId]: '' }))
-        toast('Qrup və paket tənzimləri yaradıldı')
+        toast(t('teachingGroups.toasts.groupCreated'))
       } else if (groupModal.group?.id) {
         await api.patch(`/instructor/teaching/groups/${encodeURIComponent(groupModal.group.id)}`, body)
-        toast('Qrup paketi yeniləndi')
+        toast(t('teachingGroups.toasts.groupUpdated'))
       }
       setGroupModal(null)
       await load({ silent: true })
     } catch (e) {
-      const msg = e?.message || 'Xəta'
+      const msg = e?.message || t('teachingGroups.toasts.error')
       setGroupModalError(msg)
       toast(msg, 'error')
     } finally {
@@ -216,10 +218,10 @@ export default function InstructorTeachingGroups() {
     setBusy((b) => ({ ...b, [`delg-${groupId}`]: true }))
     try {
       await api.delete('/instructor/teaching/groups/' + encodeURIComponent(groupId))
-      toast('Silindi')
+      toast(t('teachingGroups.toasts.deleted'))
       await load({ silent: true })
     } catch (e) {
-      toast(e?.message || 'Xəta', 'error')
+      toast(e?.message || t('teachingGroups.toasts.error'), 'error')
     } finally {
       setBusy((b) => ({ ...b, [`delg-${groupId}`]: false }))
     }
@@ -247,23 +249,23 @@ export default function InstructorTeachingGroups() {
         notifyEmail: Boolean(notifyEmail),
       })
       const code = res?.room?.room_code
-      if (!code) throw new Error('Otaq yaradılmadı')
+      if (!code) throw new Error(t('teachingGroups.toasts.roomCreateFailed'))
       const n = res?.notifications || {}
       const smsN = Number(n.sms) || 0
       const emailN = Number(n.email) || 0
       if (notifySms && notifyEmail) {
-        toast(`Canlı dərs başladı — ${smsN} SMS, ${emailN} e-poçt göndərildi`, 'success')
+        toast(t('teachingGroups.toasts.liveStartedBoth', { sms: smsN, email: emailN }), 'success')
       } else if (notifySms) {
-        toast(`Canlı dərs başladı — ${smsN} SMS göndərildi`, 'success')
+        toast(t('teachingGroups.toasts.liveStartedSms', { sms: smsN }), 'success')
       } else if (notifyEmail) {
-        toast(`Canlı dərs başladı — ${emailN} e-poçt göndərildi`, 'success')
+        toast(t('teachingGroups.toasts.liveStartedEmail', { email: emailN }), 'success')
       } else {
-        toast('Canlı dərs başladı', 'success')
+        toast(t('teachingGroups.toasts.liveStarted'), 'success')
       }
       setLiveNotifyModal(null)
       navigate(`/live/${encodeURIComponent(code)}`)
     } catch (e) {
-      toast(e?.message || 'Canlı dərs başlatmaq alınmadı', 'error')
+      toast(e?.message || t('teachingGroups.toasts.liveStartFailed'), 'error')
     } finally {
       setBusy((b) => ({ ...b, [`live-${group.id}`]: false }))
     }
@@ -301,24 +303,18 @@ export default function InstructorTeachingGroups() {
     <div className="p-4 sm:p-6 min-w-0 max-w-6xl mx-auto w-full space-y-6">
       <div>
         <h1 className="font-display font-bold text-xl sm:text-2xl text-token-textMain tracking-tight">
-          Tədris qrupları
+          {t('teachingGroups.title')}
         </h1>
-        <p className="text-token-textMuted text-sm mt-1 max-w-2xl">
-          Yalnız öz yaratdığınız sahə və qruplar (məs. Python1, DataAnalitika2). Paket, ödəniş və dəvət linki burada
-          idarə olunur. İmtahan və tapşırıq iştirakçıları «Tələbələr» və «İmtahanlar» bölmələrində görünür.
-        </p>
+        <p className="text-token-textMuted text-sm mt-1 max-w-2xl">{t('teachingGroups.subtitle')}</p>
       </div>
 
       <Card className="w-full p-5 border border-indigo-500/20 space-y-4">
-        <h2 className={cardTitleCls}>📚 Tədris qrupları</h2>
-        <p className={cardTextCls}>
-          Qrup yaradarkən paket (8/12 dərs), qiymət və cədvəli bir dəfə təyin edin. Dəvət linki ilə qoşulan tələbə paketi
-          görür və razılaşır; siz «Sorğular»da təsdiqləyirsiniz.
-        </p>
+        <h2 className={cardTitleCls}>{t('teachingGroups.sectionTitle')}</h2>
+        <p className={cardTextCls}>{t('teachingGroups.sectionDesc')}</p>
         <div className="flex flex-col sm:flex-row gap-2">
           <input
             className={inp}
-            placeholder="Məs: Python"
+            placeholder={t('teachingGroups.subjectPh')}
             value={newSubject}
             onChange={(e) => setNewSubject(e.target.value)}
             onKeyDown={(e) => {
@@ -337,21 +333,23 @@ export default function InstructorTeachingGroups() {
             onClick={() => void addSubject()}
             className={['w-full sm:w-auto justify-center', secondaryBtnCls].join(' ')}
           >
-            Sahə əlavə et
+            {t('teachingGroups.addSubject')}
           </Button>
         </div>
         {refreshing ? (
           <p className={['text-xs', theme === 'dark' ? 'text-gray-500' : 'text-token-textMuted'].join(' ')}>
-            Siyahı yenilənir…
+            {t('teachingGroups.refreshing')}
           </p>
         ) : null}
         {initialLoading ? (
-          <p className={['text-sm', theme === 'dark' ? 'text-gray-500' : 'text-token-textMuted'].join(' ')}>Yüklənir…</p>
+          <p className={['text-sm', theme === 'dark' ? 'text-gray-500' : 'text-token-textMuted'].join(' ')}>
+            {t('teachingGroups.loading')}
+          </p>
         ) : (
           <ul className="space-y-4">
               {!safeSubjects.length ? (
                 <li className={['text-sm', theme === 'dark' ? 'text-gray-500' : 'text-token-textMuted'].join(' ')}>
-                  Hələ sahə yoxdur — yuxarıdan ilk sahənizi əlavə edin.
+                  {t('teachingGroups.emptySubjects')}
                 </li>
               ) : null}
               {safeSubjects.map((s) => (
@@ -375,18 +373,16 @@ export default function InstructorTeachingGroups() {
                           theme === 'dark' ? 'text-gray-400' : 'text-token-textMuted',
                         ].join(' ')}
                       >
-                        <span>
-                          <span className="font-medium text-token-textMain">{Number(s.student_count) || 0}</span> tələbə
+                        <span className="font-medium text-token-textMain">
+                          {t('teachingGroups.studentCount', { count: Number(s.student_count) || 0 })}
                         </span>
                         <span>
-                          Bu ay gəlir:{' '}
+                          {t('teachingGroups.incomeThisMonth')}{' '}
                           <span className="font-medium text-emerald-400/95">
                             {formatIncomeAzn(s.income_this_month)}
                           </span>
                         </span>
-                        <span>
-                          {(s.groups || []).length} qrup
-                        </span>
+                        <span>{t('teachingGroups.groupCount', { count: (s.groups || []).length })}</span>
                       </div>
                     </div>
                     {!s.is_system ? (
@@ -397,7 +393,7 @@ export default function InstructorTeachingGroups() {
                         loading={busy[`dels-${s.id}`]}
                         onClick={() => requestRemoveSubject(s)}
                       >
-                        Sil
+                        {t('teachingGroups.delete')}
                       </Button>
                     ) : null}
                   </div>
@@ -409,7 +405,7 @@ export default function InstructorTeachingGroups() {
                   >
                     {(s.groups || []).length === 0 ? (
                       <p className={['text-xs', theme === 'dark' ? 'text-gray-500' : 'text-token-textMuted'].join(' ')}>
-                        Qrup yoxdur
+                        {t('teachingGroups.noGroups')}
                       </p>
                     ) : (
                       <ul className="space-y-2">
@@ -429,13 +425,13 @@ export default function InstructorTeachingGroups() {
                                   <span className="break-words">{g.name}</span>
                                   {g?.is_system ? (
                                     <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded-md border border-indigo-400/30 text-indigo-200/90 shrink-0">
-                                      Sistem
+                                      {t('teachingGroups.system')}
                                     </span>
                                   ) : null}
                                 </div>
                                 {g?.is_system ? (
                                   <div className="text-[11px] text-gray-500 mt-1 leading-relaxed">
-                                    İmtahan/tapşırıq linki ilə qoşulan iştirakçılar avtomatik əlavə olunur.
+                                    {t('teachingGroups.systemGroupHint')}
                                   </div>
                                 ) : null}
                               </div>
@@ -449,16 +445,20 @@ export default function InstructorTeachingGroups() {
                               >
                                 <p>
                                   {g.invite_ready ? (
-                                    <span className="text-emerald-500 font-medium">Paket hazır</span>
+                                    <span className="text-emerald-500 font-medium">{t('teachingGroups.packageReady')}</span>
                                   ) : (
-                                    <span className="text-amber-600 dark:text-amber-400/90 font-medium">Paket təyin edin</span>
+                                    <span className="text-amber-600 dark:text-amber-400/90 font-medium">
+                                      {t('teachingGroups.packageMissing')}
+                                    </span>
                                   )}
                                   <span className="mx-1.5">·</span>
-                                  {g.default_billing_type === '12_lessons' ? '12 dərs' : '8 dərs'}
+                                  {g.default_billing_type === '12_lessons'
+                                    ? t('teachingGroups.pack12')
+                                    : t('teachingGroups.pack8')}
                                   {g.default_package_fee != null ? ` · ${g.default_package_fee} ₼` : ''}
                                 </p>
                                 <p>
-                                  Kod:{' '}
+                                  {t('teachingGroups.codeLabel')}{' '}
                                   <span className="font-mono font-semibold text-token-textMain">{g.join_code}</span>
                                 </p>
                               </div>
@@ -472,7 +472,7 @@ export default function InstructorTeachingGroups() {
                                     navigate(`/instructor/chat?groupId=${encodeURIComponent(g.id)}`)
                                   }
                                 >
-                                  Çat
+                                  {t('teachingGroups.chat')}
                                 </button>
                                 <button
                                   type="button"
@@ -484,14 +484,14 @@ export default function InstructorTeachingGroups() {
                                   ].join(' ')}
                                   onClick={() => requestStartLiveClass(g, s.name)}
                                 >
-                                  {busy[`live-${g.id}`] ? 'Başlanır…' : '🔴 Canlı Dərs'}
+                                  {busy[`live-${g.id}`] ? t('teachingGroups.liveStarting') : t('teachingGroups.liveClass')}
                                 </button>
                                 <button
                                   type="button"
                                   className={[groupActionBtnCls, theme === 'dark' ? 'text-indigo-300' : 'text-indigo-700'].join(' ')}
                                   onClick={() => openEditGroupPackage(s.id, g)}
                                 >
-                                  Paket
+                                  {t('teachingGroups.package')}
                                 </button>
                                 {g.join_code ? (
                                   <>
@@ -501,13 +501,13 @@ export default function InstructorTeachingGroups() {
                                       onClick={async () => {
                                         try {
                                           await navigator.clipboard.writeText(String(g.join_code))
-                                          toast('Kod kopyalandı', 'success')
+                                          toast(t('teachingGroups.toasts.codeCopied'), 'success')
                                         } catch {
-                                          toast('Kopyalanmadı', 'error')
+                                          toast(t('teachingGroups.toasts.copyFailed'), 'error')
                                         }
                                       }}
                                     >
-                                      Kod
+                                      {t('teachingGroups.code')}
                                     </button>
                                     <button
                                       type="button"
@@ -520,13 +520,13 @@ export default function InstructorTeachingGroups() {
                                         const link = groupInvitationLink(g)
                                         try {
                                           await navigator.clipboard.writeText(link)
-                                          toast('Qrup linki kopyalandı', 'success')
+                                          toast(t('teachingGroups.toasts.groupLinkCopied'), 'success')
                                         } catch {
-                                          toast('Kopyalanmadı', 'error')
+                                          toast(t('teachingGroups.toasts.copyFailed'), 'error')
                                         }
                                       }}
                                     >
-                                      Linki kopyala
+                                      {t('teachingGroups.copyLink')}
                                     </button>
                                     <button
                                       type="button"
@@ -535,7 +535,11 @@ export default function InstructorTeachingGroups() {
                                         const link = groupInvitationLink(g)
                                         try {
                                           if (navigator.share) {
-                                            await navigator.share({ title: 'Mentorix invite', text: 'Qrupa qoşul', url: link })
+                                            await navigator.share({
+                                              title: t('teachingGroups.shareTitle'),
+                                              text: t('teachingGroups.shareText'),
+                                              url: link,
+                                            })
                                             return
                                           }
                                         } catch {
@@ -543,13 +547,13 @@ export default function InstructorTeachingGroups() {
                                         }
                                         try {
                                           await navigator.clipboard.writeText(link)
-                                          toast('Link kopyalandı', 'success')
+                                          toast(t('teachingGroups.toasts.linkCopied'), 'success')
                                         } catch {
-                                          toast('Link kopyalanmadı', 'error')
+                                          toast(t('teachingGroups.toasts.linkCopyFailed'), 'error')
                                         }
                                       }}
                                     >
-                                      Paylaş
+                                      {t('teachingGroups.share')}
                                     </button>
                                     <button
                                       type="button"
@@ -559,7 +563,7 @@ export default function InstructorTeachingGroups() {
                                         setQrOpen(true)
                                       }}
                                     >
-                                      QR
+                                      {t('teachingGroups.qr')}
                                     </button>
                                   </>
                                 ) : null}
@@ -573,7 +577,7 @@ export default function InstructorTeachingGroups() {
                                   disabled={busy[`delg-${g.id}`]}
                                   onClick={() => requestRemoveGroup(g)}
                                 >
-                                  Sil
+                                  {t('teachingGroups.delete')}
                                 </button>
                               </div>
                             ) : (
@@ -585,7 +589,7 @@ export default function InstructorTeachingGroups() {
                                     navigate(`/instructor/chat?groupId=${encodeURIComponent(g.id)}`)
                                   }
                                 >
-                                  Çat
+                                  {t('teachingGroups.chat')}
                                 </button>
                               </div>
                             )}
@@ -597,7 +601,7 @@ export default function InstructorTeachingGroups() {
                     <div className="flex flex-col gap-2 pt-1">
                       <input
                         className={inp + ' text-sm'}
-                        placeholder="Yeni qrup adı"
+                        placeholder={t('teachingGroups.newGroupPh')}
                         value={newGroupBySubject[s.id] || ''}
                         onChange={(e) =>
                           setNewGroupBySubject((p) => ({
@@ -614,7 +618,7 @@ export default function InstructorTeachingGroups() {
                         onClick={() => openCreateGroup(s.id)}
                         className={[secondaryBtnCls, 'w-full sm:w-auto justify-center'].join(' ')}
                       >
-                        Qrup + paket
+                        {t('teachingGroups.groupPlusPackage')}
                       </Button>
                     </div>
                     ) : null}
@@ -628,7 +632,7 @@ export default function InstructorTeachingGroups() {
       <Modal
         open={Boolean(liveNotifyModal)}
         onClose={() => setLiveNotifyModal(null)}
-        title="Canlı dərs — bildiriş"
+        title={t('teachingGroups.liveModal.title')}
         size="sm"
         zIndex={10055}
         footer={
@@ -639,7 +643,7 @@ export default function InstructorTeachingGroups() {
               className="min-w-[120px] justify-center"
               onClick={() => setLiveNotifyModal(null)}
             >
-              Ləğv et
+              {t('common.cancel')}
             </Button>
             <Button
               type="button"
@@ -656,7 +660,7 @@ export default function InstructorTeachingGroups() {
                 })
               }}
             >
-              Dərsi başlat
+              {t('teachingGroups.liveModal.startLesson')}
             </Button>
           </div>
         }
@@ -664,15 +668,11 @@ export default function InstructorTeachingGroups() {
         {liveNotifyModal ? (
           <div className="space-y-4">
             <p className="text-sm text-token-textMuted leading-relaxed">
-              <span className="font-semibold text-token-textMain">
-                {liveNotifyModal.subjectName ? `${liveNotifyModal.subjectName} · ` : ''}
-                {liveNotifyModal.group?.name}
-              </span>{' '}
-              qrupundakı tələbələrə bildiriş göndərilsin?
+              {t('teachingGroups.liveModal.notifyPrompt', {
+                name: `${liveNotifyModal.subjectName ? `${liveNotifyModal.subjectName} · ` : ''}${liveNotifyModal.group?.name}`,
+              })}
             </p>
-            <p className="text-xs text-token-textMuted">
-              Heç birini seçməsəniz, dərs birbaşa başlayacaq — bildiriş getməyəcək.
-            </p>
+            <p className="text-xs text-token-textMuted">{t('teachingGroups.liveModal.noNotifyHint')}</p>
             <div className="space-y-3 rounded-xl border border-[color:var(--border-subtle)] p-4">
               <label className="flex items-start gap-3 cursor-pointer select-none">
                 <input
@@ -682,9 +682,11 @@ export default function InstructorTeachingGroups() {
                   onChange={(e) => setLiveNotifySms(e.target.checked)}
                 />
                 <span>
-                  <span className="block text-sm font-medium text-token-textMain">SMS bildiriş</span>
+                  <span className="block text-sm font-medium text-token-textMain">
+                    {t('teachingGroups.liveModal.smsLabel')}
+                  </span>
                   <span className="block text-xs text-token-textMuted mt-0.5">
-                    Tələbənin telefonuna SMS — SMS balansınızdan çıxır.
+                    {t('teachingGroups.liveModal.smsHint')}
                   </span>
                 </span>
               </label>
@@ -696,15 +698,17 @@ export default function InstructorTeachingGroups() {
                   onChange={(e) => setLiveNotifyEmail(e.target.checked)}
                 />
                 <span>
-                  <span className="block text-sm font-medium text-token-textMain">Gmail / e-poçt</span>
+                  <span className="block text-sm font-medium text-token-textMain">
+                    {t('teachingGroups.liveModal.emailLabel')}
+                  </span>
                   <span className="block text-xs text-token-textMuted mt-0.5">
-                    Qeydiyyat e-poçtuna (adətən Gmail) — SMS balansından çıxmır.
+                    {t('teachingGroups.liveModal.emailHint')}
                   </span>
                 </span>
               </label>
             </div>
             {liveNotifySms && liveNotifyEmail ? (
-              <p className="text-xs text-primary/90">Hər iki kanal seçildi — hər tələbəyə SMS və e-poçt gedə bilər.</p>
+              <p className="text-xs text-primary/90">{t('teachingGroups.liveModal.bothChannels')}</p>
             ) : null}
           </div>
         ) : null}
@@ -713,7 +717,7 @@ export default function InstructorTeachingGroups() {
       <Modal
         open={Boolean(confirmDelete)}
         onClose={() => setConfirmDelete(null)}
-        title="Təsdiq"
+        title={t('teachingGroups.confirmModal.title')}
         size="sm"
         zIndex={10060}
         footer={
@@ -725,7 +729,7 @@ export default function InstructorTeachingGroups() {
               disabled={confirmDelete?.type ? false : true}
               onClick={() => setConfirmDelete(null)}
             >
-              Ləğv et
+              {t('common.cancel')}
             </Button>
             <Button
               type="button"
@@ -746,7 +750,7 @@ export default function InstructorTeachingGroups() {
                 else await removeGroup(d.id)
               }}
             >
-              Təsdiq et
+              {t('teachingGroups.confirmModal.confirm')}
             </Button>
           </div>
         }
@@ -755,10 +759,10 @@ export default function InstructorTeachingGroups() {
           <div className="space-y-3 text-center">
             <p className="text-sm text-zinc-200 leading-relaxed">
               {confirmDelete.type === 'subject'
-                ? `${confirmDelete.name} sahəsi və onun qrupları silinsin?`
-                : `"${confirmDelete.name}" qrup silinsin?`}
+                ? t('teachingGroups.confirmModal.deleteSubject', { name: confirmDelete.name })
+                : t('teachingGroups.confirmModal.deleteGroup', { name: confirmDelete.name })}
             </p>
-            <p className="text-xs text-zinc-500">Əməliyyat geri qaytarılmır.</p>
+            <p className="text-xs text-zinc-500">{t('teachingGroups.confirmModal.irreversible')}</p>
           </div>
         ) : null}
       </Modal>
@@ -769,7 +773,7 @@ export default function InstructorTeachingGroups() {
           setGroupModal(null)
           setGroupModalError('')
         }}
-        title={groupModal?.mode === 'edit' ? 'Qrup paketi' : 'Yeni qrup və paket'}
+        title={groupModal?.mode === 'edit' ? t('teachingGroups.groupModal.editTitle') : t('teachingGroups.groupModal.createTitle')}
         size="lg"
         zIndex={10050}
       >
@@ -780,11 +784,14 @@ export default function InstructorTeachingGroups() {
                 className="rounded-xl border border-red-500/40 bg-red-500/15 px-4 py-3 text-sm text-red-100"
                 role="alert"
               >
-                <strong className="font-semibold text-red-200">Xəta:</strong> {groupModalError}
+                <strong className="font-semibold text-red-200">{t('teachingGroups.groupModal.errorLabel')}</strong>{' '}
+                {groupModalError}
               </div>
             ) : null}
             <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase mb-1.5">Qrup adı</label>
+              <label className="block text-xs font-semibold text-gray-400 uppercase mb-1.5">
+                {t('teachingGroups.groupModal.groupName')}
+              </label>
               <input
                 className={inp}
                 value={groupModal.mode === 'create' ? groupModal.name : groupModal.group?.name || ''}
@@ -803,7 +810,7 @@ export default function InstructorTeachingGroups() {
             <GroupPackageFields value={groupPkg} onChange={setGroupPkg} />
             <div className="flex gap-2">
               <Button className="flex-1 justify-center" loading={busy.groupModal} onClick={() => void saveGroupModal()}>
-                Yadda saxla
+                {t('students.save')}
               </Button>
               <Button
                 variant="secondary"
@@ -813,21 +820,22 @@ export default function InstructorTeachingGroups() {
                   setGroupModalError('')
                 }}
               >
-                Ləğv et
+                {t('common.cancel')}
               </Button>
             </div>
           </div>
         ) : null}
       </Modal>
 
-      <Modal open={qrOpen} onClose={() => setQrOpen(false)} title="QR ilə qoşul" size="sm">
+      <Modal open={qrOpen} onClose={() => setQrOpen(false)} title={t('teachingGroups.qrModal.title')} size="sm">
         <div className="space-y-4">
           <div className="text-sm text-gray-400 text-center">
             {qrGroup?.subjectName ? <div className="text-xs text-gray-500">{qrGroup.subjectName}</div> : null}
             <div className="text-white font-semibold">{qrGroup?.name}</div>
             {qrGroup?.join_code ? (
               <div className="mt-1">
-                Join code: <span className="text-gray-200 font-semibold">{qrGroup.join_code}</span>
+                {t('teachingGroups.qrModal.joinCode')}{' '}
+                <span className="text-gray-200 font-semibold">{qrGroup.join_code}</span>
               </div>
             ) : null}
           </div>
@@ -850,13 +858,13 @@ export default function InstructorTeachingGroups() {
                 const link = `${window.location.origin}/join/${encodeURIComponent(String(qrGroup.join_code))}`
                 try {
                   await navigator.clipboard.writeText(link)
-                  toast('Link kopyalandı', 'success')
+                  toast(t('teachingGroups.toasts.linkCopied'), 'success')
                 } catch {
-                  toast('Link kopyalanmadı', 'error')
+                  toast(t('teachingGroups.toasts.linkCopyFailed'), 'error')
                 }
               }}
             >
-              Linki kopyala
+              {t('teachingGroups.copyLink')}
             </Button>
           ) : null}
         </div>
