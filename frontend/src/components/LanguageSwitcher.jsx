@@ -1,11 +1,11 @@
 import { useTranslation } from 'react-i18next'
 import useUiStore from '../hooks/useUi'
 
-/** AZ | RU dil keçidi — auth və sidebar-da eyni komponent. */
-export default function LanguageSwitcher({ className = '' }) {
+/** AZ | RU dil keçidi — auth, sidebar və landing navbar. */
+export default function LanguageSwitcher({ className = '', tone = 'auto' }) {
   const { i18n, t } = useTranslation()
   const { locale, setLocale, theme } = useUiStore()
-  const isDark = theme === 'dark'
+  const isDark = tone === 'dark' || (tone === 'auto' && theme === 'dark')
   const active = locale || i18n.language || 'az'
 
   const pick = (code) => {

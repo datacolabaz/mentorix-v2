@@ -398,6 +398,81 @@
       "pendingPhoneReady": "{{count}} tələbənin telefonu hazırdır — «Quraşdırmanı tamamla» ilə paket və cədvəli təyin edin; tamamladıqdan sonra bu xəbərdarlıq getməyəcək."
     }
   },
+  "landing": {
+    "nav": {
+      "findTeacher": "Müəllim tap",
+      "universities": "Universitetlər",
+      "features": "Xüsusiyyətlər",
+      "plans": "Planlar",
+      "login": "Daxil ol",
+      "openMenu": "Menyunu aç",
+      "closeMenu": "Menyunu bağla",
+      "mainNav": "Əsas naviqasiya"
+    },
+    "hero": {
+      "pill": "Təhsil ekosistemi — Mentorix",
+      "title": "Müəllim, tələbə və valideyn — bir təhsil platformasında",
+      "subtitle": "Tapşırıq və imtahan, çat, ödəniş izləmə, valideyn bildirişləri və müəllim axtarışı — hamısı bir yerdə.",
+      "startFree": "Pulsuz başla (14 günlük sınaq)",
+      "howItWorks": "Necə işləyir?",
+      "demo": "Demo bax",
+      "haveAccount": "Artıq hesabım var — girişə keç",
+      "marketplaceCta": "Müəllim / Təlimçi tap (Xəritə ilə)"
+    },
+    "activity": {
+      "title": "Canlı fəaliyyət",
+      "now": "indi",
+      "events": [
+        { "actor": "Telman müəllim", "action": "imtahan yaratdı", "time": "indi" },
+        { "actor": "Arzu tələbə", "action": "ödəniş etdi (45 AZN)", "time": "2 dəq əvvəl" },
+        { "actor": "Valideyni", "action": "SMS aldı: \"Qiymət: 8/10\"", "time": "5 dəq əvvəl" },
+        { "actor": "Leyla müəllim", "action": "tapşırıq təyin etdi", "time": "1 dəq əvvəl" },
+        { "actor": "Rəşad tələbə", "action": "imtahana qoşuldu", "time": "3 dəq əvvəl" },
+        { "actor": "Valideyni", "action": "davamiyyət bildirişi aldı", "time": "7 dəq əvvəl" },
+        { "actor": "Nərgiz müəllim", "action": "yeni tələbə qəbul etdi", "time": "4 dəq əvvəl" },
+        { "actor": "Kamran tələbə", "action": "tapşırıq təslim etdi", "time": "6 dəq əvvəl" }
+      ]
+    },
+    "stats": {
+      "teachersCount": "340+",
+      "teachers": "müəllim",
+      "thisMonth": "bu ay",
+      "timeSavedValue": "6 saat",
+      "weekly": "həftəlik",
+      "timeSaved": "vaxt qənaəti",
+      "ratingValue": "4.8",
+      "avgRating": "orta reytinq",
+      "startFreeShort": "Pulsuz başla"
+    },
+    "testimonial": {
+      "quote": "Mentorix olmadan bu qədər tələbəni idarə edə bilməzdim.",
+      "author": "— Telman A., riyaziyyat müəllimi · Bakı"
+    },
+    "marketplace": {
+      "badge": "Valideynlər və tələbələr üçün",
+      "title": "Müəllim və təlimçi tapın",
+      "desc": "Xəritədən müəllim tapın, universitet proqramlarını müqayisə edin — tələbə və valideynlər üçün qeydiyyat pulsuzdur."
+    },
+    "universities": {
+      "badge": "Xaricdə təhsil",
+      "title": "Universitet və proqram axtarışı",
+      "desc": "Bakalavr, magistr və doktorantura proqramlarını ölkə, təqaüd və son müraciət tarixinə görə filtrləyin — giriş tələb olunmur.",
+      "cta": "Proqramları axtar"
+    },
+    "plansHeading": "Planlar",
+    "demo": {
+      "title": "Demo — idarə paneli",
+      "subtitle": "Nümunə vizual, real hesab deyil",
+      "close": "Bağla",
+      "dialogLabel": "İnteraktiv demo paneli",
+      "tabs": {
+        "overview": "Bülgə",
+        "schedule": "Təqvim",
+        "payments": "Ödənişlər",
+        "attendance": "Davamiyyət"
+      }
+    }
+  },
   "teachingGroups": {
     "chat": "Çat",
     "package": "Paket",

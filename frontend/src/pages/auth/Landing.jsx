@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import Brand from '../../components/common/Brand'
+import LanguageSwitcher from '../../components/LanguageSwitcher'
 import api from '../../lib/api'
 import { trackEvent, trackRegisterClick, trackPricingView } from '../../lib/analytics'
 import { defaultLoginMarketingPayload } from '../../constants/defaultLoginMarketing'
@@ -26,6 +28,7 @@ import {
   visibleMarketingItems,
   visibleWhyCards,
 } from '../../lib/loginMarketingVisibility'
+import { useLandingHero } from '../../lib/landingCopy'
 
 function scrollToId(id) {
   const el = document.getElementById(id)
@@ -41,6 +44,7 @@ const LANDING_LOGIN_BTN =
 
 /** Ana səhifə — marketinq landing (/). */
 export default function Landing() {
+  const { t, i18n } = useTranslation()
   const landingSectionSeenRef = useRef(new Set())
   const [publicPlans, setPublicPlans] = useState(DEFAULT_SUBSCRIPTION_PLANS)
   const [demoOpen, setDemoOpen] = useState(false)
@@ -230,9 +234,9 @@ export default function Landing() {
   }
 
   const m = marketing
+  const hero = useLandingHero(marketing, t, i18n)
 
-  const marketplaceCtaLabel =
-    m.hero?.marketplace_cta_label || defaultLoginMarketingPayload().hero.marketplace_cta_label
+  const marketplaceCtaLabel = hero.marketplace_cta_label
 
   const stepItems = stepItemsForLanding
 
@@ -240,7 +244,7 @@ export default function Landing() {
     <div className="min-h-[100svh] w-full min-w-0 max-w-full overflow-x-hidden bg-[#0b0b0b]">
       <nav
             className="sticky top-0 z-50 border-b border-white/10 bg-[#0b0b0b]/92 backdrop-blur-md supports-[backdrop-filter]:bg-[#0b0b0b]/80"
-            aria-label="Əsas naviqasiya"
+            aria-label={t('landing.nav.mainNav')}
           >
             <div className="max-w-5xl mx-auto pl-2 sm:pl-3 pr-3 sm:pr-4 py-3 flex items-center justify-between gap-2 min-w-0">
               <button
@@ -250,20 +254,20 @@ export default function Landing() {
               >
                 <Brand size="nav" />
               </button>
-              <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+              <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                 <div className="hidden sm:flex items-center gap-1 sm:gap-3 text-xs sm:text-sm font-semibold">
                   <Link to="/search" className={LANDING_NAV_LINK}>
-                    Müəllim tap
+                    {t('landing.nav.findTeacher')}
                   </Link>
                   <Link to="/universities" className={LANDING_NAV_LINK}>
-                    Universitetlər
+                    {t('landing.nav.universities')}
                   </Link>
                   <button
                     type="button"
                     onClick={() => scrollToId(featureItemsForLanding.length ? 'mx-features' : 'mx-steps')}
                     className={LANDING_NAV_LINK}
                   >
-                    Xüsusiyyətlər
+                    {t('landing.nav.features')}
                   </button>
                   {showPricing ? (
                     <button
@@ -271,16 +275,19 @@ export default function Landing() {
                       onClick={() => scrollToId('mx-planlar')}
                       className={LANDING_NAV_LINK}
                     >
-                      Planlar
+                      {t('landing.nav.plans')}
                     </button>
                   ) : null}
+                </div>
+                <div className="w-[5.5rem] sm:w-[5.75rem] shrink-0">
+                  <LanguageSwitcher tone="dark" className="p-0.5" />
                 </div>
                 <button
                   type="button"
                   className="sm:hidden inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 text-gray-300 hover:bg-white/5 hover:text-white"
                   aria-expanded={mobileNavOpen}
                   aria-controls="mx-landing-mobile-nav"
-                  aria-label={mobileNavOpen ? 'Menyunu bağla' : 'Menyunu aç'}
+                  aria-label={mobileNavOpen ? t('landing.nav.closeMenu') : t('landing.nav.openMenu')}
                   onClick={() => setMobileNavOpen((open) => !open)}
                 >
                   {mobileNavOpen ? (
@@ -294,7 +301,7 @@ export default function Landing() {
                   )}
                 </button>
                 <button type="button" onClick={() => goLogin('nav')} className={LANDING_LOGIN_BTN}>
-                  Daxil ol
+                  {t('landing.nav.login')}
                 </button>
               </div>
             </div>
@@ -304,10 +311,10 @@ export default function Landing() {
                 className="sm:hidden border-t border-white/10 bg-[#0b0b0b]/98 px-3 py-2 space-y-0.5"
               >
                 <Link to="/search" onClick={closeMobileNav} className={`block w-full ${LANDING_NAV_LINK}`}>
-                  Müəllim tap
+                  {t('landing.nav.findTeacher')}
                 </Link>
                 <Link to="/universities" onClick={closeMobileNav} className={`block w-full ${LANDING_NAV_LINK}`}>
-                  Universitetlər
+                  {t('landing.nav.universities')}
                 </Link>
                 <button
                   type="button"
@@ -317,7 +324,7 @@ export default function Landing() {
                   }}
                   className={`block w-full text-left ${LANDING_NAV_LINK}`}
                 >
-                  Xüsusiyyətlər
+                  {t('landing.nav.features')}
                 </button>
                 {showPricing ? (
                   <button
@@ -328,9 +335,12 @@ export default function Landing() {
                     }}
                     className={`block w-full text-left ${LANDING_NAV_LINK}`}
                   >
-                    Planlar
+                    {t('landing.nav.plans')}
                   </button>
                 ) : null}
+                <div className="pt-2">
+                  <LanguageSwitcher tone="dark" />
+                </div>
               </div>
             ) : null}
           </nav>
@@ -340,13 +350,13 @@ export default function Landing() {
             <div className="max-w-xl w-full space-y-4 flex flex-col items-center text-center sm:items-start sm:text-left">
               <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] text-gray-300">
                 <span className="mx-nav-live-dot h-1.5 w-1.5 rounded-full bg-primary shadow-[0_0_12px_rgba(0,229,176,0.9)]" />
-                {m.hero.pill}
+                {hero.pill}
               </div>
               <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight text-white leading-tight w-full">
-                {m.hero.headline}
+                {hero.headline}
               </h1>
               <p className="text-gray-400 text-sm sm:text-base leading-relaxed w-full max-w-md sm:max-w-none">
-                {m.hero.subheadline}
+                {hero.subheadline}
               </p>
               <div className="flex flex-col w-full max-w-xl gap-3">
                 <button
@@ -354,7 +364,7 @@ export default function Landing() {
                   onClick={() => goRegister('hero')}
                   className="w-full inline-flex justify-center items-center text-center rounded-xl bg-primary px-4 sm:px-5 py-3.5 min-h-[52px] text-sm sm:text-base font-bold text-[#041018] shadow-lg shadow-primary/25 hover:brightness-95 leading-snug"
                 >
-                  {m.hero.primary_cta_label}
+                  {hero.primary_cta_label}
                 </button>
                 <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                   <button
@@ -365,14 +375,14 @@ export default function Landing() {
                     }}
                     className="w-full sm:flex-1 inline-flex justify-center items-center rounded-xl border border-white/15 bg-white/5 px-4 py-3 min-h-[44px] text-sm font-semibold text-gray-100 hover:bg-white/10"
                   >
-                    {m.hero.secondary_how}
+                    {hero.secondary_how}
                   </button>
                   <button
                     type="button"
                     onClick={() => openDemoTracked('hero_demo_button')}
                     className="w-full sm:flex-1 inline-flex justify-center items-center rounded-xl border border-white/10 px-4 py-3 min-h-[44px] text-sm font-semibold text-gray-300 hover:border-white/20 hover:text-white"
                   >
-                    {m.hero.secondary_demo}
+                    {hero.secondary_demo}
                   </button>
                 </div>
               </div>
@@ -385,7 +395,7 @@ export default function Landing() {
                   }}
                   className="text-xs text-gray-500 hover:text-gray-300 underline underline-offset-4"
                 >
-                  {m.hero.existing_account}
+                  {hero.existing_account}
                 </button>
               </div>
             </div>
@@ -401,13 +411,10 @@ export default function Landing() {
             className="scroll-mt-24 rounded-2xl border border-primary/25 bg-gradient-to-br from-primary/10 via-[#0e1412] to-[#0b0b0b] p-6 sm:p-8 space-y-4"
           >
             <div className="text-xs uppercase tracking-wider text-primary/90 font-semibold">
-              Valideynlər və tələbələr üçün
+              {t('landing.marketplace.badge')}
             </div>
-            <h2 className="text-lg sm:text-xl font-semibold text-white">Müəllim və təlimçi tapın</h2>
-            <p className="text-sm text-gray-400 leading-relaxed max-w-2xl">
-              Xəritədən müəllim tapın, universitet proqramlarını müqayisə edin — tələbə və valideynlər üçün qeydiyyat
-              pulsuzdur.
-            </p>
+            <h2 className="text-lg sm:text-xl font-semibold text-white">{t('landing.marketplace.title')}</h2>
+            <p className="text-sm text-gray-400 leading-relaxed max-w-2xl">{t('landing.marketplace.desc')}</p>
             <Link
               to="/search"
               onClick={() =>
@@ -439,13 +446,10 @@ export default function Landing() {
             className="scroll-mt-24 rounded-2xl border border-violet-500/25 bg-gradient-to-br from-violet-500/10 via-[#0e1014] to-[#0b0b0b] p-6 sm:p-8 space-y-4"
           >
             <div className="text-xs uppercase tracking-wider text-violet-300/90 font-semibold">
-              Xaricdə təhsil
+              {t('landing.universities.badge')}
             </div>
-            <h2 className="text-lg sm:text-xl font-semibold text-white">Universitet və proqram axtarışı</h2>
-            <p className="text-sm text-gray-400 leading-relaxed max-w-2xl">
-              Bakalavr, magistr və doktorantura proqramlarını ölkə, təqaüd və son müraciət tarixinə görə filtrləyin —
-              giriş tələb olunmur.
-            </p>
+            <h2 className="text-lg sm:text-xl font-semibold text-white">{t('landing.universities.title')}</h2>
+            <p className="text-sm text-gray-400 leading-relaxed max-w-2xl">{t('landing.universities.desc')}</p>
             <Link
               to="/universities"
               onClick={() =>
@@ -453,7 +457,7 @@ export default function Landing() {
               }
               className="inline-flex w-full sm:w-auto justify-center items-center gap-2 rounded-xl border-2 border-violet-400/60 bg-violet-500/10 px-5 py-3.5 min-h-[48px] text-sm font-bold text-violet-200 hover:bg-violet-500/20 transition-colors"
             >
-              Proqramları axtar
+              {t('landing.universities.cta')}
             </Link>
           </section>
           ) : null}
@@ -539,7 +543,7 @@ export default function Landing() {
 
           {showPricing ? (
           <section id="mx-planlar" className="space-y-4 scroll-mt-24">
-            <div className="text-xs uppercase tracking-wider text-gray-500 font-semibold">Planlar</div>
+            <div className="text-xs uppercase tracking-wider text-gray-500 font-semibold">{t('landing.plansHeading')}</div>
             {showPricingAudience ? <PricingAudienceExplainer variant="strip" /> : null}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               {publicPlans.map((p) => {
@@ -634,7 +638,7 @@ export default function Landing() {
                 onClick={() => goRegister('cta_band')}
                 className="w-full sm:flex-1 inline-flex justify-center items-center text-center rounded-xl bg-primary px-4 sm:px-5 py-3.5 min-h-[48px] text-xs sm:text-sm font-semibold text-[#041018] shadow-lg shadow-primary/30 ring-2 ring-primary/25 hover:brightness-95 leading-snug"
               >
-                {m.hero.primary_cta_label}
+                {hero.primary_cta_label}
               </button>
               <button
                 type="button"
@@ -644,14 +648,14 @@ export default function Landing() {
                 }}
                 className="w-full sm:w-auto sm:flex-initial inline-flex justify-center items-center rounded-xl border border-white/20 bg-black/25 px-5 py-3.5 min-h-[48px] text-sm font-semibold text-gray-100 hover:bg-black/35"
               >
-                {m.hero.secondary_how}
+                {hero.secondary_how}
               </button>
               <button
                 type="button"
                 onClick={() => openDemoTracked('cta_band_demo_button')}
                 className="w-full sm:w-auto sm:flex-initial inline-flex justify-center items-center rounded-xl border border-white/15 px-5 py-3.5 min-h-[48px] text-sm font-semibold text-gray-100 hover:bg-white/5"
               >
-                {m.hero.secondary_demo}
+                {hero.secondary_demo}
               </button>
             </div>
           </section>
@@ -665,7 +669,7 @@ export default function Landing() {
           className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 p-3 sm:p-4"
           role="dialog"
           aria-modal="true"
-          aria-label="İnteraktiv demo paneli"
+          aria-label={t('landing.demo.dialogLabel')}
           onMouseDown={(e) => {
             if (e.target === e.currentTarget) closeDemoTracked()
           }}
@@ -673,24 +677,24 @@ export default function Landing() {
           <div className="w-full max-w-2xl max-h-[min(92dvh,800px)] flex flex-col rounded-2xl border border-white/10 bg-[#0d0d0d] shadow-2xl overflow-hidden shadow-black/50">
             <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-white/10 bg-[#111] shrink-0">
               <div className="min-w-0">
-                <div className="text-sm font-semibold text-white truncate">Demo — idarə paneli</div>
-                <div className="text-[11px] text-gray-500">Nümunə vizual, real hesab deyil</div>
+                <div className="text-sm font-semibold text-white truncate">{t('landing.demo.title')}</div>
+                <div className="text-[11px] text-gray-500">{t('landing.demo.subtitle')}</div>
               </div>
               <button
                 type="button"
                 className="text-xs text-gray-400 hover:text-white px-2 py-1 rounded-lg hover:bg-white/5 shrink-0 min-h-[44px] min-w-[44px]"
                 onClick={() => closeDemoTracked()}
               >
-                Bağla
+                {t('landing.demo.close')}
               </button>
             </div>
 
             <div className="flex gap-2 p-2 sm:p-2 border-b border-white/10 bg-[#101010] shrink-0 overflow-x-auto overscroll-x-contain touch-pan-x [-webkit-overflow-scrolling:touch]">
               {[
-                { id: 'overview', label: 'Bülgə' },
-                { id: 'schedule', label: 'Təqvim' },
-                { id: 'payments', label: 'Ödənişlər' },
-                { id: 'attendance', label: 'Davamiyyət' },
+                { id: 'overview', label: t('landing.demo.tabs.overview') },
+                { id: 'schedule', label: t('landing.demo.tabs.schedule') },
+                { id: 'payments', label: t('landing.demo.tabs.payments') },
+                { id: 'attendance', label: t('landing.demo.tabs.attendance') },
               ].map((tab) => (
                 <button
                   key={tab.id}
@@ -833,7 +837,7 @@ export default function Landing() {
                   className="w-full rounded-xl bg-primary px-4 py-4 min-h-[52px] text-xs sm:text-sm font-bold text-[#041018] shadow-lg shadow-primary/35 ring-2 ring-primary/30 hover:brightness-95 active:scale-[0.99] motion-safe:transition motion-safe:duration-150 leading-snug text-center"
                   onClick={() => goRegister('demo_modal_footer')}
                 >
-                  {m.hero.primary_cta_label}
+                  {hero.primary_cta_label}
                 </button>
               </div>
             </div>

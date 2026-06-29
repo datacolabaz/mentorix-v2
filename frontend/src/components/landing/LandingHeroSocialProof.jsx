@@ -1,18 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 const FEED_VISIBLE = 3
 const FEED_INTERVAL_MS = 3000
-
-const HERO_FEED_EVENTS = [
-  { actor: 'Telman müəllim', action: 'imtahan yaratdı', time: 'indi' },
-  { actor: 'Arzu tələbə', action: 'ödəniş etdi (45 AZN)', time: '2 dəq əvvəl' },
-  { actor: 'Valideyni', action: 'SMS aldı: "Qiymət: 8/10"', time: '5 dəq əvvəl' },
-  { actor: 'Leyla müəllim', action: 'tapşırıq təyin etdi', time: '1 dəq əvvəl' },
-  { actor: 'Rəşad tələbə', action: 'imtahana qoşuldu', time: '3 dəq əvvəl' },
-  { actor: 'Valideyni', action: 'davamiyyət bildirişi aldı', time: '7 dəq əvvəl' },
-  { actor: 'Nərgiz müəllim', action: 'yeni tələbə qəbul etdi', time: '4 dəq əvvəl' },
-  { actor: 'Kamran tələbə', action: 'tapşırıq təslim etdi', time: '6 dəq əvvəl' },
-]
 
 function FeedRow({ actor, action, time, animate }) {
   return (
@@ -37,21 +27,28 @@ function FeedRow({ actor, action, time, animate }) {
 
 /** Hero sağ sütun — canlı feed, statistika və rəy */
 export default function LandingHeroSocialProof({ onPrimaryCta }) {
+  const { t } = useTranslation()
   const [offset, setOffset] = useState(0)
   const [tick, setTick] = useState(0)
 
+  const feedEvents = useMemo(() => {
+    const raw = t('landing.activity.events', { returnObjects: true })
+    return Array.isArray(raw) ? raw : []
+  }, [t])
+
   useEffect(() => {
+    if (!feedEvents.length) return undefined
     const id = window.setInterval(() => {
-      setOffset((o) => (o + 1) % HERO_FEED_EVENTS.length)
-      setTick((t) => t + 1)
+      setOffset((o) => (o + 1) % feedEvents.length)
+      setTick((n) => n + 1)
     }, FEED_INTERVAL_MS)
     return () => window.clearInterval(id)
-  }, [])
+  }, [feedEvents.length])
 
   const visibleRows = useMemo(() => {
-    const n = HERO_FEED_EVENTS.length
-    return Array.from({ length: FEED_VISIBLE }, (_, i) => HERO_FEED_EVENTS[(offset + i) % n])
-  }, [offset])
+    const n = feedEvents.length || 1
+    return Array.from({ length: FEED_VISIBLE }, (_, i) => feedEvents[(offset + i) % n] || feedEvents[0])
+  }, [offset, feedEvents])
 
   return (
     <div
@@ -63,43 +60,54 @@ export default function LandingHeroSocialProof({ onPrimaryCta }) {
         <div className="rounded-xl border border-white/10 bg-black/30 px-3 py-2.5 space-y-0.5 overflow-hidden">
           <div className="flex items-center justify-between gap-2 mb-1.5">
             <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">
-              Canlı fəaliyyət
+              {t('landing.activity.title')}
             </span>
             <span className="inline-flex items-center gap-1 text-[10px] text-primary">
               <span className="mx-hero-live-dot h-1.5 w-1.5 rounded-full bg-primary" aria-hidden />
-              indi
+              {t('landing.activity.now')}
             </span>
           </div>
           <div className="space-y-0.5" key={tick}>
             {visibleRows.map((row, i) => (
-              <FeedRow key={`${tick}-${row.actor}-${row.action}`} {...row} animate={i === 0} />
+              <FeedRow
+                key={`${tick}-${row?.actor}-${row?.action}`}
+                actor={row?.actor}
+                action={row?.action}
+                time={row?.time}
+                animate={i === 0}
+              />
             ))}
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-2">
           <div className="rounded-xl border border-white/10 bg-black/35 px-3 py-2.5 space-y-0.5">
-            <div className="text-lg font-semibold text-white tabular-nums leading-none">340+</div>
-            <div className="text-[10px] text-gray-500">müəllim</div>
-            <div className="text-[10px] text-gray-400">bu ay</div>
+            <div className="text-lg font-semibold text-white tabular-nums leading-none">
+              {t('landing.stats.teachersCount')}
+            </div>
+            <div className="text-[10px] text-gray-500">{t('landing.stats.teachers')}</div>
+            <div className="text-[10px] text-gray-400">{t('landing.stats.thisMonth')}</div>
           </div>
           <div className="rounded-xl border border-white/10 bg-black/35 px-3 py-2.5 space-y-0.5">
-            <div className="text-lg font-semibold text-primary tabular-nums leading-none">6 saat</div>
-            <div className="text-[10px] text-gray-500">həftəlik</div>
-            <div className="text-[10px] text-gray-400">vaxt qənaəti</div>
+            <div className="text-lg font-semibold text-primary tabular-nums leading-none">
+              {t('landing.stats.timeSavedValue')}
+            </div>
+            <div className="text-[10px] text-gray-500">{t('landing.stats.weekly')}</div>
+            <div className="text-[10px] text-gray-400">{t('landing.stats.timeSaved')}</div>
           </div>
           <div className="rounded-xl border border-white/10 bg-black/35 px-3 py-2.5 space-y-0.5">
             <div className="text-lg font-semibold text-white tabular-nums leading-none">
-              4.8 <span className="text-primary text-sm">★</span>
+              {t('landing.stats.ratingValue')}{' '}
+              <span className="text-primary text-sm">★</span>
             </div>
-            <div className="text-[10px] text-gray-500">orta reytinq</div>
+            <div className="text-[10px] text-gray-500">{t('landing.stats.avgRating')}</div>
           </div>
           <button
             type="button"
             onClick={onPrimaryCta}
             className="rounded-xl border border-primary/40 bg-primary/15 px-3 py-2.5 text-left hover:bg-primary/25 transition-colors min-h-[4.5rem] flex flex-col justify-center gap-0.5"
           >
-            <span className="text-sm font-bold text-primary leading-tight">Pulsuz başla</span>
+            <span className="text-sm font-bold text-primary leading-tight">{t('landing.stats.startFreeShort')}</span>
             <span className="text-base text-primary leading-none" aria-hidden>
               →
             </span>
@@ -115,11 +123,9 @@ export default function LandingHeroSocialProof({ onPrimaryCta }) {
           </div>
           <div className="min-w-0 space-y-1">
             <p className="text-[11px] text-gray-300 leading-relaxed italic">
-              &ldquo;Mentorix olmadan bu qədər tələbəni idarə edə bilməzdim.&rdquo;
+              &ldquo;{t('landing.testimonial.quote')}&rdquo;
             </p>
-            <p className="text-[10px] text-gray-500">
-              — Telman A., riyaziyyat müəllimi · Bakı
-            </p>
+            <p className="text-[10px] text-gray-500">{t('landing.testimonial.author')}</p>
           </div>
         </div>
       </div>
