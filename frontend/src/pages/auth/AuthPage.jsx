@@ -93,14 +93,16 @@ export default function AuthPage() {
 
   return (
     <div className="login-wrapper flex min-h-[100svh] w-full min-w-0 max-w-full flex-col overflow-x-hidden">
-      <header className="shrink-0 w-full max-w-sm mx-auto px-4 pt-4 sm:pt-6 pb-3 sm:pb-4 space-y-3">
-        <Link
-          to="/"
-          className="inline-flex items-center gap-1 text-xs sm:text-sm font-medium text-gray-400 hover:text-white transition-colors"
-        >
-          {t('auth.backHome')}
-        </Link>
-        <LanguageSwitcher />
+      <header className="relative shrink-0 w-full px-4 py-3 sm:pt-6 sm:pb-4">
+        <div className="flex w-full items-center justify-between gap-3">
+          <Link
+            to="/"
+            className="inline-flex items-center gap-1 text-xs sm:text-sm font-medium text-gray-400 hover:text-white transition-colors whitespace-nowrap min-w-0"
+          >
+            {t('auth.backHome')}
+          </Link>
+          <LanguageSwitcher className="h-8 shrink-0" />
+        </div>
       </header>
       <main className="flex flex-1 items-start sm:items-center justify-center px-4 pb-8 sm:pb-10 min-h-0 overflow-y-auto">
       <div id="mx-login" className="w-full max-w-sm scroll-mt-6">
