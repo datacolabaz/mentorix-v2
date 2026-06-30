@@ -15,6 +15,7 @@ import {
 } from '../../lib/mentorixPublicMarketing'
 import LandingDemoActivityChart from '../../components/landing/LandingDemoActivityChart'
 import LandingHeroSocialProof from '../../components/landing/LandingHeroSocialProof'
+import PricingFeatureListItem from '../../components/landing/PricingFeatureListItem'
 import PricingAudienceExplainer from '../../components/public/PricingAudienceExplainer'
 import { DEFAULT_SUBSCRIPTION_PLANS } from '../../constants/subscriptionPlans'
 import {
@@ -60,21 +61,13 @@ function LandingPlanCard({ plan, onCta }) {
         ) : null}
       </div>
       <div className="text-lg font-semibold text-primary tabular-nums">{display.priceLabel}</div>
-      <ul className="text-[11px] text-gray-400 space-y-1 flex-1">
+      <ul className="pricing-feature text-[11px] text-gray-400 space-y-1 flex-1">
         {display.bullets.map((line) => (
-          <li
+          <PricingFeatureListItem
             key={`${plan.id}-${line}`}
-            className={isBasicTrial ? 'flex items-start gap-1.5' : undefined}
-          >
-            {isBasicTrial ? (
-              <>
-                <span className="text-primary shrink-0 font-semibold leading-none mt-px">✓</span>
-                <span>{line}</span>
-              </>
-            ) : (
-              <>• {line}</>
-            )}
-          </li>
+            line={line}
+            isBasicTrial={isBasicTrial}
+          />
         ))}
       </ul>
       <button
