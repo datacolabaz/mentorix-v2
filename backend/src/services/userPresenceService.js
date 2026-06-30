@@ -1,7 +1,7 @@
 const db = require('../utils/db');
 
 /** Same window as access_events online stats and product spec. */
-const ONLINE_WINDOW_MS = 5 * 60 * 1000;
+const ONLINE_WINDOW_MS = 60 * 1000;
 const TOUCH_THROTTLE_SECONDS = 60;
 
 function isUserOnline(lastActivityAt, nowMs = Date.now()) {

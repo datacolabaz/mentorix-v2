@@ -138,7 +138,7 @@ export default function Landing() {
     trackEvent('mx_landing_cta_primary', { surface, event_type: 'register_click' })
     trackRegisterClick()
     setDemoOpen(false)
-    navigate('/register')
+    navigate('/login')
   }
 
   const goLogin = (surface) => {

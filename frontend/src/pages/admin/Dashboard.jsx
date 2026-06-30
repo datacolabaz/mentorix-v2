@@ -164,7 +164,7 @@ export default function AdminDashboard() {
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
         <StatCard
-          label={`Hal-hazırda online (${stats?.online_window_minutes ?? 5} dəq)`}
+          label={`Hal-hazırda onlayn (${stats?.online_window_minutes ?? 1} dəq)`}
           value={stats?.online_total ?? '—'}
           icon="🟢"
         />

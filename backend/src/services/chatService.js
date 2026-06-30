@@ -402,7 +402,7 @@ const GROUP_ONLINE_COUNT_SQL = `
     ) members
     JOIN users u ON u.id = members.uid
     WHERE u.deleted_at IS NULL
-      AND u.last_activity_at >= NOW() - INTERVAL '5 minutes'
+      AND u.last_activity_at >= NOW() - INTERVAL '1 minute'
   )
 `;
 
@@ -504,7 +504,7 @@ const ASSIGNMENT_ONLINE_COUNT_SQL = `
     ) members
     JOIN users u ON u.id = members.uid
     WHERE u.deleted_at IS NULL
-      AND u.last_activity_at >= NOW() - INTERVAL '5 minutes'
+      AND u.last_activity_at >= NOW() - INTERVAL '1 minute'
   )
 `;
 

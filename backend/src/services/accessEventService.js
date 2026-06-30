@@ -14,7 +14,7 @@ const ALLOWED_EVENTS = new Set([
   'presence_ping',
 ]);
 
-const ONLINE_WINDOW_MINUTES = 5;
+const ONLINE_WINDOW_MINUTES = 1;
 
 function clampDays(raw, fallback = 7) {
   const n = parseInt(String(raw), 10);

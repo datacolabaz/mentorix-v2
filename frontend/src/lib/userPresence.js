@@ -1,6 +1,6 @@
-/** Online / active status helpers (5 minute window, matches backend). */
+/** Online / active status helpers (1 minute window, matches backend). */
 
-export const ONLINE_WINDOW_MS = 5 * 60 * 1000
+export const ONLINE_WINDOW_MS = 60 * 1000
 
 export function isUserOnline(lastActivityAt, nowMs = Date.now()) {
   if (!lastActivityAt) return false

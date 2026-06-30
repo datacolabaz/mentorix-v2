@@ -16,9 +16,10 @@ export default function AuthPage() {
   const location = useLocation()
   const [searchParams] = useSearchParams()
   const isAdmin = searchParams.get('admin') === 'true'
+  const tabParam = searchParams.get('tab')
   const initialTab = useMemo(
-    () => (location.pathname === '/register' ? 'signup' : 'login'),
-    [location.pathname],
+    () => (location.pathname === '/register' || tabParam === 'signup' ? 'signup' : 'login'),
+    [location.pathname, tabParam],
   )
 
   const [authTab, setAuthTab] = useState(initialTab)
@@ -68,7 +69,7 @@ export default function AuthPage() {
   }
 
   useEffect(() => {
-    const isRegister = location.pathname === '/register'
+    const isRegister = location.pathname === '/register' || tabParam === 'signup'
     setPageSeo({
       title: isAdmin ? 'Mentorix — admin girişi' : isRegister ? 'Mentorix — qeydiyyat' : 'Mentorix — giriş',
       description: isAdmin
@@ -87,7 +88,7 @@ export default function AuthPage() {
             { name: isRegister ? 'Qeydiyyat' : 'Giriş', path: isRegister ? '/register' : '/login' },
           ],
     })
-  }, [isAdmin, location.pathname])
+  }, [isAdmin, location.pathname, tabParam])
 
   const authGreeting = authTab === 'signup' ? t('auth.createAccount') : t('auth.welcome')
 

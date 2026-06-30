@@ -270,7 +270,7 @@ const getDashboardStats = async (req, res) => {
     const platform = (Number(platformRevenue.rows[0].total_cents) || 0) / 100;
 
     let online = {
-      window_minutes: 5,
+      window_minutes: 1,
       online_users: 0,
       online_guests: 0,
       online_total: 0,
