@@ -74,12 +74,16 @@ async function getInstructorLiveParticipantLimit(instructorId) {
 
 async function countActiveParticipants(roomId) {
   const { rows } = await db.query(
-    `SELECT COUNT(DISTINCT user_id)::int AS c
-     FROM live_sessions
-     WHERE room_id = $1 AND left_at IS NULL AND role = 'student'`,
+    `SELECT
+       (SELECT COUNT(DISTINCT user_id)::int FROM live_sessions
+        WHERE room_id = $1 AND left_at IS NULL AND role = 'student') AS students,
+       (SELECT COUNT(*)::int FROM live_guest_participants
+        WHERE room_id = $1 AND left_at IS NULL) AS guests`,
     [roomId],
   );
-  return Number(rows[0]?.c) || 0;
+  const students = Number(rows[0]?.students) || 0;
+  const guests = Number(rows[0]?.guests) || 0;
+  return students + guests;
 }
 
 async function getLiveRoomRowByCode(roomCode) {
@@ -260,6 +264,8 @@ async function joinLiveSession(roomId, userId, role = 'student') {
     `UPDATE live_rooms SET
        participant_count = (
          SELECT COUNT(DISTINCT user_id)::int FROM live_sessions WHERE room_id = $1 AND left_at IS NULL
+       ) + (
+         SELECT COUNT(*)::int FROM live_guest_participants WHERE room_id = $1 AND left_at IS NULL
        ),
        status = 'live',
        started_at = COALESCE(started_at, NOW())
@@ -281,6 +287,8 @@ async function leaveLiveSession(roomId, userId) {
   await db.query(
     `UPDATE live_rooms SET participant_count = (
        SELECT COUNT(DISTINCT user_id)::int FROM live_sessions WHERE room_id = $1 AND left_at IS NULL
+     ) + (
+       SELECT COUNT(*)::int FROM live_guest_participants WHERE room_id = $1 AND left_at IS NULL
      ) WHERE id = $1`,
     [roomId],
   );
@@ -296,6 +304,13 @@ async function endLiveRoom(instructorId, roomCode) {
   }
   await db.query(
     `UPDATE live_sessions
+     SET left_at = COALESCE(left_at, NOW()),
+         duration_minutes = COALESCE(duration_minutes, GREATEST(1, CEIL(EXTRACT(EPOCH FROM (COALESCE(left_at, NOW()) - joined_at)) / 60.0))::int)
+     WHERE room_id = $1 AND left_at IS NULL`,
+    [room.id],
+  );
+  await db.query(
+    `UPDATE live_guest_participants
      SET left_at = COALESCE(left_at, NOW()),
          duration_minutes = COALESCE(duration_minutes, GREATEST(1, CEIL(EXTRACT(EPOCH FROM (COALESCE(left_at, NOW()) - joined_at)) / 60.0))::int)
      WHERE room_id = $1 AND left_at IS NULL`,

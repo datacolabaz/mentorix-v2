@@ -50,8 +50,10 @@ export default function InstructorTeachingGroups() {
   const [qrGroup, setQrGroup] = useState(null)
   const [confirmDelete, setConfirmDelete] = useState(null)
   const [liveNotifyModal, setLiveNotifyModal] = useState(null)
+  const [liveModalStep, setLiveModalStep] = useState('choose')
   const [liveNotifySms, setLiveNotifySms] = useState(false)
   const [liveNotifyEmail, setLiveNotifyEmail] = useState(false)
+  const [guestLinkModal, setGuestLinkModal] = useState(null)
 
   const safeSubjects = useMemo(
     () => normalizeTeachingSubjects(subjects).filter((s) => s && !s.is_system),
@@ -235,6 +237,7 @@ export default function InstructorTeachingGroups() {
     if (!group?.id) return
     setLiveNotifySms(false)
     setLiveNotifyEmail(false)
+    setLiveModalStep('choose')
     setLiveNotifyModal({ group, subjectName })
   }
 
@@ -268,6 +271,49 @@ export default function InstructorTeachingGroups() {
       toast(e?.message || t('teachingGroups.toasts.liveStartFailed'), 'error')
     } finally {
       setBusy((b) => ({ ...b, [`live-${group.id}`]: false }))
+    }
+  }
+
+  const startLiveClassWithGuestLink = async ({ group, subjectName }) => {
+    if (!group?.id) return
+    setBusy((b) => ({ ...b, [`live-${group.id}`]: true }))
+    try {
+      const res = await api.post('/live/create', {
+        groupId: group.id,
+        title: `${subjectName ? `${subjectName} · ` : ''}${group.name}`,
+        notifySms: false,
+        notifyEmail: false,
+      })
+      const code = res?.room?.room_code
+      if (!code) throw new Error(t('teachingGroups.toasts.roomCreateFailed'))
+      const inviteRes = await api.post(`/live/rooms/${encodeURIComponent(code)}/guest-invite`)
+      const joinUrl =
+        inviteRes?.invite?.join_url ||
+        `${window.location.origin}${inviteRes?.invite?.join_path || `/live/join/${inviteRes?.invite?.token}`}`
+      setLiveNotifyModal(null)
+      setGuestLinkModal({
+        groupId: group.id,
+        roomCode: code,
+        joinUrl,
+        expiresAt: inviteRes?.invite?.expires_at,
+        title: `${subjectName ? `${subjectName} · ` : ''}${group.name}`,
+      })
+      toast(t('teachingGroups.toasts.guestLinkCreated'), 'success')
+    } catch (e) {
+      toast(e?.message || t('teachingGroups.toasts.liveStartFailed'), 'error')
+    } finally {
+      setBusy((b) => ({ ...b, [`live-${group.id}`]: false }))
+    }
+  }
+
+  const revokeGuestLink = async () => {
+    if (!guestLinkModal?.roomCode) return
+    try {
+      await api.delete(`/live/rooms/${encodeURIComponent(guestLinkModal.roomCode)}/guest-invite`)
+      toast(t('teachingGroups.toasts.guestLinkRevoked'), 'success')
+      setGuestLinkModal((m) => (m ? { ...m, revoked: true } : m))
+    } catch (e) {
+      toast(e?.message || t('teachingGroups.toasts.error'), 'error')
     }
   }
 
@@ -631,41 +677,105 @@ export default function InstructorTeachingGroups() {
 
       <Modal
         open={Boolean(liveNotifyModal)}
-        onClose={() => setLiveNotifyModal(null)}
+        onClose={() => {
+          setLiveNotifyModal(null)
+          setLiveModalStep('choose')
+        }}
         title={t('teachingGroups.liveModal.title')}
         size="sm"
         zIndex={10055}
         footer={
-          <div className="flex flex-wrap justify-center gap-3">
-            <Button
-              type="button"
-              variant="secondary"
-              className="min-w-[120px] justify-center"
-              onClick={() => setLiveNotifyModal(null)}
-            >
-              {t('common.cancel')}
-            </Button>
-            <Button
-              type="button"
-              className="min-w-[140px] justify-center"
-              loading={liveNotifyModal?.group?.id ? Boolean(busy[`live-${liveNotifyModal.group.id}`]) : false}
-              onClick={() => {
-                const m = liveNotifyModal
-                if (!m?.group) return
-                void startLiveClass({
-                  group: m.group,
-                  subjectName: m.subjectName,
-                  notifySms: liveNotifySms,
-                  notifyEmail: liveNotifyEmail,
-                })
-              }}
-            >
-              {t('teachingGroups.liveModal.startLesson')}
-            </Button>
-          </div>
+          liveModalStep === 'notify' ? (
+            <div className="flex flex-wrap justify-center gap-3">
+              <Button
+                type="button"
+                variant="secondary"
+                className="min-w-[120px] justify-center"
+                onClick={() => setLiveModalStep('choose')}
+              >
+                {t('common.back')}
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                className="min-w-[120px] justify-center"
+                onClick={() => setLiveNotifyModal(null)}
+              >
+                {t('common.cancel')}
+              </Button>
+              <Button
+                type="button"
+                className="min-w-[140px] justify-center"
+                loading={liveNotifyModal?.group?.id ? Boolean(busy[`live-${liveNotifyModal.group.id}`]) : false}
+                onClick={() => {
+                  const m = liveNotifyModal
+                  if (!m?.group) return
+                  void startLiveClass({
+                    group: m.group,
+                    subjectName: m.subjectName,
+                    notifySms: liveNotifySms,
+                    notifyEmail: liveNotifyEmail,
+                  })
+                }}
+              >
+                {t('teachingGroups.liveModal.startLesson')}
+              </Button>
+            </div>
+          ) : (
+            <div className="flex flex-wrap justify-center gap-3">
+              <Button
+                type="button"
+                variant="secondary"
+                className="min-w-[120px] justify-center"
+                onClick={() => setLiveNotifyModal(null)}
+              >
+                {t('common.cancel')}
+              </Button>
+            </div>
+          )
         }
       >
         {liveNotifyModal ? (
+          liveModalStep === 'choose' ? (
+            <div className="space-y-4">
+              <p className="text-sm text-token-textMuted leading-relaxed">
+                {t('teachingGroups.liveModal.choosePrompt', {
+                  name: `${liveNotifyModal.subjectName ? `${liveNotifyModal.subjectName} · ` : ''}${liveNotifyModal.group?.name}`,
+                })}
+              </p>
+              <div className="grid gap-2">
+                <button
+                  type="button"
+                  className={[
+                    groupActionBtnCls,
+                    'w-full text-left justify-start px-4 py-3 font-semibold text-red-400',
+                  ].join(' ')}
+                  onClick={() => setLiveModalStep('notify')}
+                >
+                  {t('teachingGroups.liveModal.startWithGroup')}
+                </button>
+                <button
+                  type="button"
+                  disabled={Boolean(busy[`live-${liveNotifyModal.group?.id}`])}
+                  className={[
+                    groupActionBtnCls,
+                    'w-full text-left justify-start px-4 py-3 font-semibold',
+                    theme === 'dark' ? 'text-emerald-300' : 'text-emerald-700',
+                    busy[`live-${liveNotifyModal.group?.id}`] ? 'opacity-60' : '',
+                  ].join(' ')}
+                  onClick={() => {
+                    const m = liveNotifyModal
+                    if (!m?.group) return
+                    void startLiveClassWithGuestLink({ group: m.group, subjectName: m.subjectName })
+                  }}
+                >
+                  {busy[`live-${liveNotifyModal.group?.id}`]
+                    ? t('teachingGroups.liveStarting')
+                    : t('teachingGroups.liveModal.createGuestLink')}
+                </button>
+              </div>
+            </div>
+          ) : (
           <div className="space-y-4">
             <p className="text-sm text-token-textMuted leading-relaxed">
               {t('teachingGroups.liveModal.notifyPrompt', {
@@ -710,6 +820,84 @@ export default function InstructorTeachingGroups() {
             {liveNotifySms && liveNotifyEmail ? (
               <p className="text-xs text-primary/90">{t('teachingGroups.liveModal.bothChannels')}</p>
             ) : null}
+          </div>
+          )
+        ) : null}
+      </Modal>
+
+      <Modal
+        open={Boolean(guestLinkModal)}
+        onClose={() => setGuestLinkModal(null)}
+        title={t('teachingGroups.guestLinkModal.title')}
+        size="sm"
+        zIndex={10056}
+        footer={
+          <div className="flex flex-wrap justify-center gap-2">
+            <Button type="button" variant="secondary" onClick={() => void revokeGuestLink()} disabled={guestLinkModal?.revoked}>
+              {t('teachingGroups.guestLinkModal.revoke')}
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                if (!guestLinkModal?.roomCode) return
+                navigate(`/live/${encodeURIComponent(guestLinkModal.roomCode)}`)
+              }}
+            >
+              {t('teachingGroups.guestLinkModal.enterLive')}
+            </Button>
+          </div>
+        }
+      >
+        {guestLinkModal ? (
+          <div className="space-y-4">
+            <p className="text-sm text-token-textMuted">{guestLinkModal.title}</p>
+            {guestLinkModal.revoked ? (
+              <p className="text-xs text-amber-400">{t('teachingGroups.guestLinkModal.revokedHint')}</p>
+            ) : (
+              <p className="text-xs text-token-textMuted">{t('teachingGroups.guestLinkModal.validHint')}</p>
+            )}
+            <div className="rounded-xl border border-[color:var(--border-subtle)] p-3 bg-black/20">
+              <p className="text-[11px] font-mono text-primary break-all">{guestLinkModal.joinUrl}</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                className={[groupActionBtnCls, 'text-primary font-semibold'].join(' ')}
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(guestLinkModal.joinUrl)
+                    toast(t('teachingGroups.toasts.guestLinkCopied'), 'success')
+                  } catch {
+                    toast(t('teachingGroups.toasts.copyFailed'), 'error')
+                  }
+                }}
+              >
+                {t('teachingGroups.copyLink')}
+              </button>
+              <button
+                type="button"
+                className={[groupActionBtnCls, theme === 'dark' ? 'text-emerald-300' : 'text-emerald-700'].join(' ')}
+                onClick={async () => {
+                  const text = `${guestLinkModal.title}\n${guestLinkModal.joinUrl}`
+                  if (navigator.share) {
+                    try {
+                      await navigator.share({ title: guestLinkModal.title, text, url: guestLinkModal.joinUrl })
+                      return
+                    } catch {
+                      /* fallback copy */
+                    }
+                  }
+                  try {
+                    await navigator.clipboard.writeText(text)
+                    toast(t('teachingGroups.toasts.guestLinkCopied'), 'success')
+                  } catch {
+                    toast(t('teachingGroups.toasts.copyFailed'), 'error')
+                  }
+                }}
+              >
+                {t('teachingGroups.share')}
+              </button>
+            </div>
           </div>
         ) : null}
       </Modal>

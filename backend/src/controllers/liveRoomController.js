@@ -23,6 +23,7 @@ const {
   getLiveRecordingByShareToken,
   ensureRecordingShareTokenByRoomId,
 } = require('../services/liveRecordingStorage');
+const { listGuestsForRoom } = require('../services/liveGuestService');
 
 const liveRecordingsDir = ensureLiveRecordingsUploadDir();
 const uploadLiveRecording = multer({
@@ -191,6 +192,7 @@ const getHistory = async (req, res) => {
         if (r.recording_filename && !shareToken) {
           shareToken = await ensureRecordingShareTokenByRoomId(r.id);
         }
+        const guests = await listGuestsForRoom(r.id);
         return {
           id: r.id,
           room_code: r.room_code,
@@ -200,6 +202,16 @@ const getHistory = async (req, res) => {
           started_at: r.started_at,
           ended_at: r.ended_at,
           participant_count: r.total_participants || r.participant_count || 0,
+          guest_count: guests.length,
+          guests: guests.map((g) => ({
+            id: g.id,
+            full_name: g.full_name,
+            email: g.email,
+            phone_number: g.phone_number,
+            joined_at: g.joined_at,
+            left_at: g.left_at,
+            duration_minutes: g.duration_minutes,
+          })),
           duration_minutes: r.total_minutes || null,
           has_recording: Boolean(r.recording_filename),
           recording_url: r.recording_filename

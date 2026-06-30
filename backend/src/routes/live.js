@@ -14,10 +14,36 @@ const {
   deleteRoom,
   uploadLiveRecording,
 } = require('../controllers/liveRoomController');
+const {
+  postGuestInvite,
+  deleteGuestInvite,
+  getGuestInvite,
+} = require('../controllers/publicLiveGuestController');
 
 router.get('/history', authenticate, authorize('instructor'), getHistory);
 router.delete('/history/:roomCode', authenticate, authorize('instructor'), deleteRoom);
 router.get('/recording-file/:filename', authenticate, authorize('instructor', 'student'), getRecordingFile);
+
+router.post(
+  '/rooms/:roomCode/guest-invite',
+  authenticate,
+  authorize('instructor'),
+  enforceActiveSubscription,
+  postGuestInvite,
+);
+router.delete(
+  '/rooms/:roomCode/guest-invite',
+  authenticate,
+  authorize('instructor'),
+  enforceActiveSubscription,
+  deleteGuestInvite,
+);
+router.get(
+  '/rooms/:roomCode/guest-invite',
+  authenticate,
+  authorize('instructor'),
+  getGuestInvite,
+);
 
 router.post(
   '/create',

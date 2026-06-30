@@ -20,6 +20,12 @@ const { getPublicLibraryInvite, postPublicLibraryGuestJoin } = require('../contr
 const { getPublicMaterialInvite, postPublicMaterialGuestJoin } = require('../controllers/publicMaterialInviteController');
 const { getPublicMaterialPreview, servePublicMaterialPreviewFile } = require('../controllers/publicMaterialPreviewController');
 const { getPublicRecording, getPublicRecordingInfo } = require('../controllers/liveRoomController');
+const {
+  getPublicLiveGuestInvite,
+  postPublicLiveGuestJoin,
+  postPublicLiveGuestLeave,
+} = require('../controllers/publicLiveGuestController');
+const { publicGuestJoinRateLimit } = require('../middleware/publicGuestJoinRateLimit');
 const { postAccessEvent } = require('../controllers/accessAnalyticsController');
 const { postMarketplaceAiSearch } = require('../controllers/marketplaceAiSearchController');
 const { getPublicContact } = require('../controllers/platformContactController');
@@ -43,6 +49,9 @@ router.get('/material-preview/:token', getPublicMaterialPreview);
 router.get('/material-preview/:token/file', servePublicMaterialPreviewFile);
 router.get('/live-recording/:shareToken/info', getPublicRecordingInfo);
 router.get('/live-recording/:shareToken', getPublicRecording);
+router.get('/live-guest/:token', getPublicLiveGuestInvite);
+router.post('/live-guest/:token/join', publicGuestJoinRateLimit, postPublicLiveGuestJoin);
+router.post('/live-guest/:token/leave', postPublicLiveGuestLeave);
 
 router.post('/analytics/event', postAccessEvent);
 router.get('/landing-stats', getLandingStats);

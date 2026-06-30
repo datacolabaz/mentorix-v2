@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { LiveKitRoom, RoomAudioRenderer, useRoomContext, VideoConference } from '@livekit/components-react'
+import { LiveKitRoom, RoomAudioRenderer, useRoomContext } from '@livekit/components-react'
 import '@livekit/components-styles'
 import api from '../../lib/api'
 import useAuthStore from '../../hooks/useAuth'
 import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
+import GuestAwareVideoConference from '../../components/live/GuestAwareVideoConference'
 import { useToast } from '../../components/common/Toast'
 import { formatRecordingDuration, useLocalRecording, LIVE_MEDIA_RESTORE_EVENT } from '../../hooks/useLocalRecording'
 
@@ -365,7 +366,7 @@ export default function MentorixLive() {
         >
           <LiveMediaEnsure onMicError={handleMicError} />
           <LiveMediaRestore />
-          <VideoConference />
+          <GuestAwareVideoConference />
           <RoomAudioRenderer />
         </LiveKitRoom>
       </div>

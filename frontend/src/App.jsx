@@ -18,6 +18,7 @@ import LibraryInvite from './pages/public/LibraryInvite'
 import MaterialInvite from './pages/public/MaterialInvite'
 import MaterialPublicPreview from './pages/public/MaterialPublicPreview'
 import MentorixLive from './pages/live/MentorixLive'
+import LiveGuestJoin from './pages/live/LiveGuestJoin'
 import LiveRecordingShare from './pages/live/LiveRecordingShare'
 import InstructorLiveHistory from './pages/instructor/LiveHistory'
 import AdminLayout from './layouts/AdminLayout'
@@ -177,6 +178,7 @@ export default function App() {
       <Route path="/library/material/:materialId" element={<MaterialInvite />} />
       <Route path="/m/:shareToken" element={<MaterialPublicPreview />} />
       <Route path="/lr/:shareToken" element={<LiveRecordingShare />} />
+      <Route path="/live/join/:token" element={<LiveGuestJoin />} />
       <Route
         path="/live/:roomCode"
         element={

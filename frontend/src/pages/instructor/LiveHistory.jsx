@@ -246,6 +246,17 @@ export default function InstructorLiveHistory() {
                 {s.recorded_by_name ? (
                   <p className="text-[10px] text-primary/80 mt-1">{t('live.recordingBy')} {s.recorded_by_name}</p>
                 ) : null}
+                {s.guests?.length ? (
+                  <ul className="text-[10px] text-token-textMuted mt-2 space-y-0.5">
+                    <li className="font-semibold text-gray-500">{t('live.guestParticipants')}</li>
+                    {s.guests.map((g) => (
+                      <li key={g.id}>
+                        👤 {g.full_name}{' '}
+                        <span className="text-gray-500">({t('live.guestLabel')})</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
                 </div>
               </div>
 
@@ -253,6 +264,9 @@ export default function InstructorLiveHistory() {
                 <div className="flex flex-wrap items-center gap-2 text-xs text-token-textMuted sm:justify-end">
                   <span>{fmtDuration(s.duration_minutes, t)}</span>
                   <span>{s.participant_count || 0} {t('live.participants')}</span>
+                  {s.guest_count ? (
+                    <span className="text-gray-500">· {s.guest_count} {t('live.guestLabel').toLowerCase()}</span>
+                  ) : null}
                   <span className="font-mono text-primary/80">{s.room_code}</span>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 sm:justify-end">

@@ -282,7 +282,9 @@
     "bulkPartial": "{{ok}} silindi, {{fail}} silinmədi",
     "bulkNone": "Heç biri silinmədi",
     "confirmDeleteOne": "«{{title}}» dərsini silmək istəyirsiniz? Yazı da silinəcək.",
-    "confirmDeleteMany": "{{n}} dərsi silmək istəyirsiniz? Yazılar da silinəcək."
+    "confirmDeleteMany": "{{n}} dərsi silmək istəyirsiniz? Yazılar da silinəcək.",
+    "guestLabel": "Qonaq",
+    "guestParticipants": "Qonaq iştirakçılar"
   },
   "students": {
     "title": "Tələbələrim",
@@ -717,6 +719,9 @@
     "defaultGroup": "Qrup",
     "liveModal": {
       "title": "Canlı dərs — bildiriş",
+      "choosePrompt": "«{{name}}» üçün canlı dərsə necə başlamaq istəyirsiniz?",
+      "startWithGroup": "Qrup üzvləri ilə başla",
+      "createGuestLink": "Qonaq linki yarat",
       "notifyPrompt": "«{{name}}» qrupundakı tələbələrə bildiriş göndərilsin?",
       "noNotifyHint": "Heç birini seçməsəniz, dərs birbaşa başlayacaq — bildiriş getməyəcək.",
       "smsLabel": "SMS bildiriş",
@@ -725,6 +730,13 @@
       "emailHint": "Qeydiyyat e-poçtuna (adətən Gmail) — SMS balansından çıxmır.",
       "bothChannels": "Hər iki kanal seçildi — hər tələbəyə SMS və e-poçt gedə bilər.",
       "startLesson": "Dərsi başlat"
+    },
+    "guestLinkModal": {
+      "title": "Qonaq dəvət linki",
+      "validHint": "Link 24 saat etibarlıdır. Kənar şəxslər qeydiyyatsız qoşula bilər.",
+      "revokedHint": "Link ləğv edilib — yeni qonaqlar qoşula bilməz.",
+      "revoke": "Linki ləğv et",
+      "enterLive": "Dərsə keç"
     },
     "confirmModal": {
       "title": "Təsdiq",
@@ -786,7 +798,10 @@
       "copyFailed": "Kopyalanmadı",
       "groupLinkCopied": "Qrup linki kopyalandı",
       "linkCopied": "Link kopyalandı",
-      "linkCopyFailed": "Link kopyalanmadı"
+      "linkCopyFailed": "Link kopyalanmadı",
+      "guestLinkCreated": "Qonaq linki yaradıldı",
+      "guestLinkCopied": "Qonaq linki kopyalandı",
+      "guestLinkRevoked": "Qonaq linki ləğv edildi"
     }
   },
   "joinRequests": {
