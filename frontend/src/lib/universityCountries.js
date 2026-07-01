@@ -65,7 +65,7 @@ export const COUNTRY_FLAGS = {
   Kanada: '🇨🇦',
 }
 
-const COUNTRY_SEARCH_ALIASES = {
+export const COUNTRY_SEARCH_ALIASES = {
   Almaniya: ['germany', 'deutschland', 'almanya'],
   'Böyük Britaniya': ['uk', 'united kingdom', 'england', 'britain', 'great britain', 'boyuk britaniya'],
   İsveçrə: ['switzerland', 'swiss', 'isvecra'],
