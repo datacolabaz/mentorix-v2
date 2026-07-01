@@ -6,11 +6,11 @@ import {
   DURATION_OPTIONS,
   wizardToSearchParams,
 } from '../../lib/universitySearch'
-import { FIELD_GROUPS } from '../../lib/universityFieldCatalog'
-import { fieldGroupLabel, fieldOptionLabel } from '../../lib/universityFieldI18n'
+import { fieldOptionLabel } from '../../lib/universityFieldI18n'
 import { countryDisplayName } from '../../lib/universityCountryI18n'
 import useActiveLocale from '../../hooks/useActiveLocale'
 import CountrySearchPicker from './CountrySearchPicker'
+import FieldOptionList from './FieldOptionList'
 
 const STEP_KEYS = ['degree', 'field', 'academic', 'preferences', 'review']
 const DEGREE_OPTIONS = ['BSc', 'MSc', 'PhD']
@@ -133,27 +133,32 @@ export default function UniversitySearchWizard({ initialState, onSubmit, onCance
       ) : null}
 
       {step === 2 ? (
-        <div className="max-w-lg mx-auto space-y-3">
+        <div className="max-w-lg mx-auto space-y-3" key={`wizard-field-step-${locale}`}>
           <label className="block text-xs font-semibold uppercase tracking-wide text-gray-400">
             {t('universitySearch.wizard.fieldLabel')}
           </label>
-          <select
-            key={`field-select-${locale}`}
-            value={state.field}
-            onChange={(e) => setState((p) => ({ ...p, field: e.target.value }))}
-            className={inputCls}
-          >
-            <option value="">{t('universitySearch.wizard.selectPlaceholder')}</option>
-            {FIELD_GROUPS.map((group) => (
-              <optgroup key={group.id} label={fieldGroupLabel(group.id, locale)}>
-                {group.options.map((f) => (
-                  <option key={f.value} value={f.value}>
-                    {fieldOptionLabel(f.value, locale)}
-                  </option>
-                ))}
-              </optgroup>
-            ))}
-          </select>
+          {state.field ? (
+            <div className="flex items-center justify-between gap-2 rounded-xl border border-primary/30 bg-primary/10 px-3 py-2 text-sm text-white">
+              <span>{fieldOptionLabel(state.field, locale)}</span>
+              <button
+                type="button"
+                className="text-xs text-gray-400 hover:text-white shrink-0"
+                onClick={() => setState((p) => ({ ...p, field: '' }))}
+              >
+                ×
+              </button>
+            </div>
+          ) : (
+            <p className="text-xs text-gray-500">{t('universitySearch.wizard.selectPlaceholder')}</p>
+          )}
+          <div className="rounded-xl border border-white/10 bg-[#1c1c1c] p-2">
+            <FieldOptionList
+              locale={locale}
+              value={state.field}
+              mode="single"
+              onChange={(slug) => setState((p) => ({ ...p, field: slug }))}
+            />
+          </div>
         </div>
       ) : null}
 

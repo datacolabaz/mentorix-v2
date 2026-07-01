@@ -1,8 +1,8 @@
 import { useTranslation } from 'react-i18next'
 import useActiveLocale from '../../hooks/useActiveLocale'
-import { FIELD_GROUPS } from '../../lib/universityFieldCatalog'
-import { fieldGroupLabel, fieldOptionLabel } from '../../lib/universityFieldI18n'
+import { fieldOptionLabel } from '../../lib/universityFieldI18n'
 import { resolveFieldFromQuery } from '../../lib/universitySearch'
+import FieldOptionList from './FieldOptionList'
 
 const inputCls =
   'w-full rounded-xl border border-white/10 bg-[#1c1c1c] px-3 py-2.5 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:border-primary/50'
@@ -66,22 +66,18 @@ export default function FieldSearchPicker({ value, onChange, label }) {
         placeholder={t('universitySearch.picker.fieldQueryPlaceholder')}
       />
 
-      <select
-        value=""
-        onChange={(e) => toggleField(e.target.value)}
-        className={inputCls}
-      >
-        <option value="">{t('universitySearch.picker.addField')}</option>
-        {FIELD_GROUPS.map((group) => (
-          <optgroup key={group.id} label={fieldGroupLabel(group.id, locale)}>
-            {group.options.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {fieldOptionLabel(opt.value, locale)}
-              </option>
-            ))}
-          </optgroup>
-        ))}
-      </select>
+      <div className="rounded-xl border border-white/10 bg-[#1c1c1c] p-2">
+        <p className="text-[10px] font-bold uppercase tracking-wide text-gray-500 mb-2 px-0.5">
+          {t('universitySearch.picker.addField')}
+        </p>
+        <FieldOptionList
+          locale={locale}
+          values={selected}
+          mode="multi"
+          maxHeight="max-h-52"
+          onChange={(next) => onChange?.(next)}
+        />
+      </div>
       <p className="text-[11px] text-gray-500">{t('universitySearch.picker.fieldsOrHint')}</p>
     </div>
   )
