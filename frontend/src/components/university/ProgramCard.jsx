@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import Button from '../common/Button'
 import { countryFlag, extractProgramIelts, formatDeadline, formatTuition, universityInitials } from '../../lib/universitySearch'
+import { countryDisplayName } from '../../lib/universityCountryI18n'
 
 function InfoRow({ label, value, highlight = false }) {
   if (value == null || value === '' || value === '—') return null
@@ -13,7 +14,8 @@ function InfoRow({ label, value, highlight = false }) {
 }
 
 export default function ProgramCard({ program, onDetails, onApply, showCountryBadge = false }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const lang = i18n.language
   const uni = program.university || {}
   const ielts = extractProgramIelts(program.requirements)
   const appFee = program.requirements?.application_fee
@@ -23,7 +25,7 @@ export default function ProgramCard({ program, onDetails, onApply, showCountryBa
       {showCountryBadge && uni.country ? (
         <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-white/10 bg-black/30 px-2.5 py-1 text-[11px] text-gray-200">
           <span aria-hidden>{countryFlag(uni.country)}</span>
-          <span>{uni.country}</span>
+          <span>{countryDisplayName(uni.country, lang)}</span>
         </span>
       ) : null}
       <div className="flex items-start gap-3">
@@ -40,7 +42,7 @@ export default function ProgramCard({ program, onDetails, onApply, showCountryBa
         )}
         <div className="min-w-0 flex-1">
           <p className="text-[10px] uppercase tracking-wide text-gray-500">
-            {uni.country}
+            {countryDisplayName(uni.country, lang)}
             {uni.city ? ` · ${uni.city}` : ''}
           </p>
           <h3 className="font-display font-bold text-white truncate">{uni.name}</h3>

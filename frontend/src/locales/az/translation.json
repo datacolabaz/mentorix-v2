@@ -1992,6 +1992,13 @@
       "placeholderToefl": "Məs: 90",
       "placeholderTuition": "Məs: 5000"
     },
+    "picker": {
+      "addField": "+ İxtisas əlavə et",
+      "fieldQueryPlaceholder": "Computer Science + Enter (bir neçə ixtisas — OR)",
+      "fieldsOrHint": "Seçilmiş ixtisaslar OR ilə birləşir (hər hansı biri uyğun gəlir).",
+      "countrySearchPlaceholder": "Ölkə axtar — məs: est, poland, almaniya",
+      "noCountryMatch": "Uyğun ölkə tapılmadı."
+    },
     "card": {
       "degree": "Dərəcə",
       "qsRanking": "QS reytinqi",

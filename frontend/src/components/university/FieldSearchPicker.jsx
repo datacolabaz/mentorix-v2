@@ -1,4 +1,6 @@
+import { useTranslation } from 'react-i18next'
 import { FIELD_GROUPS } from '../../lib/universityFieldCatalog'
+import { fieldGroupLabel, fieldOptionLabel } from '../../lib/universityFieldI18n'
 import { resolveFieldFromQuery } from '../../lib/universitySearch'
 
 const inputCls =
@@ -12,7 +14,9 @@ function parseFields(value) {
   return []
 }
 
-export default function FieldSearchPicker({ value, onChange, label = 'İxtisas' }) {
+export default function FieldSearchPicker({ value, onChange, label }) {
+  const { t, i18n } = useTranslation()
+  const lang = i18n.language
   const selected = parseFields(value)
 
   const toggleField = (slug) => {
@@ -33,34 +37,34 @@ export default function FieldSearchPicker({ value, onChange, label = 'İxtisas' 
     }
   }
 
+  const fieldLabel = (slug) => fieldOptionLabel(slug, lang)
+
   return (
     <div className="space-y-2">
-      <label className="text-[10px] font-bold uppercase tracking-wide text-gray-500">{label}</label>
+      {label ? (
+        <label className="text-[10px] font-bold uppercase tracking-wide text-gray-500">{label}</label>
+      ) : null}
 
       {selected.length ? (
         <div className="flex flex-wrap gap-1.5">
-          {selected.map((slug) => {
-            const labelText =
-              FIELD_GROUPS.flatMap((g) => g.options).find((o) => o.value === slug)?.label || slug
-            return (
-              <button
-                key={slug}
-                type="button"
-                onClick={() => toggleField(slug)}
-                className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2.5 py-1 text-xs text-white"
-              >
-                {labelText}
-                <span className="text-gray-400">×</span>
-              </button>
-            )
-          })}
+          {selected.map((slug) => (
+            <button
+              key={slug}
+              type="button"
+              onClick={() => toggleField(slug)}
+              className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2.5 py-1 text-xs text-white"
+            >
+              {fieldLabel(slug)}
+              <span className="text-gray-400">×</span>
+            </button>
+          ))}
         </div>
       ) : null}
 
       <input
         onKeyDown={handleQueryKeyDown}
         className={inputCls}
-        placeholder="Computer Science + Enter (bir neçə ixtisas — OR)"
+        placeholder={t('universitySearch.picker.fieldQueryPlaceholder')}
       />
 
       <select
@@ -68,18 +72,18 @@ export default function FieldSearchPicker({ value, onChange, label = 'İxtisas' 
         onChange={(e) => toggleField(e.target.value)}
         className={inputCls}
       >
-        <option value="">+ İxtisas əlavə et</option>
+        <option value="">{t('universitySearch.picker.addField')}</option>
         {FIELD_GROUPS.map((group) => (
-          <optgroup key={group.id} label={group.label}>
+          <optgroup key={group.id} label={fieldGroupLabel(group.id, lang)}>
             {group.options.map((opt) => (
               <option key={opt.value} value={opt.value}>
-                {opt.label}
+                {fieldOptionLabel(opt.value, lang)}
               </option>
             ))}
           </optgroup>
         ))}
       </select>
-      <p className="text-[11px] text-gray-500">Seçilmiş ixtisaslar OR ilə birləşir (hər hansı biri uyğun gəlir).</p>
+      <p className="text-[11px] text-gray-500">{t('universitySearch.picker.fieldsOrHint')}</p>
     </div>
   )
 }

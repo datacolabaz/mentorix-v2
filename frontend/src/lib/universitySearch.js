@@ -12,14 +12,15 @@
  * @property {number | ''} durationYears
  */
 
-export { FIELD_GROUPS, fieldLabel, fieldSearchTerms } from './universityFieldCatalog'
+export { FIELD_GROUPS, fieldSearchTerms } from './universityFieldCatalog'
+export { localizedFieldLabel as fieldLabel } from './universityFieldI18n'
 export {
   UNIVERSITY_COUNTRIES,
   MVP_COUNTRIES,
   COUNTRY_FLAGS,
   countryFlag,
-  filterCountriesByQuery,
 } from './universityCountries'
+export { filterCountriesByQuery, countryDisplayName } from './universityCountryI18n'
 
 import { FIELD_GROUPS, fieldSearchTerms } from './universityFieldCatalog'
 

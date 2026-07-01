@@ -1,4 +1,5 @@
-import { FIELD_GROUPS, fieldLabel, fieldSearchTerms, relatedFieldSlugs } from './universityFieldCatalog'
+import { FIELD_GROUPS, fieldSearchTerms, relatedFieldSlugs } from './universityFieldCatalog'
+import { localizedFieldLabel as fieldLabel } from './universityFieldI18n'
 import { resolveFieldFromQuery } from './universitySearch'
 
 const FIELD_BY_VALUE = new Map(FIELD_GROUPS.flatMap((g) => g.options.map((o) => [o.value, { ...o, category: g.id }])))

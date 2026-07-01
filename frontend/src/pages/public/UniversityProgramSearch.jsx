@@ -19,8 +19,8 @@ import {
   filtersToSearchParams,
   parseWizardFromSearchParams,
   buildCountryResultsMeta,
+  fieldLabel,
 } from '../../lib/universitySearch'
-import { fieldLabel } from '../../lib/universityFieldCatalog'
 import { resolveProgramApplyLink } from '../../lib/programApplyLink'
 import { searchProgramsWithFallback } from '../../lib/universityProgramsApi'
 

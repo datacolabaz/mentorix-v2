@@ -2166,6 +2166,13 @@
       "placeholderToefl": "Напр.: 90",
       "placeholderTuition": "Напр.: 5000"
     },
+    "picker": {
+      "addField": "+ Добавить специальность",
+      "fieldQueryPlaceholder": "Computer Science + Enter (несколько специальностей — ИЛИ)",
+      "fieldsOrHint": "Выбранные специальности объединяются по ИЛИ (подходит любая из них).",
+      "countrySearchPlaceholder": "Поиск страны — напр.: est, poland, германия",
+      "noCountryMatch": "Подходящая страна не найдена."
+    },
     "card": {
       "degree": "Степень",
       "qsRanking": "Рейтинг QS",

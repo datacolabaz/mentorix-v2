@@ -3,6 +3,20 @@ import LanguageDetector from 'i18next-browser-languagedetector'
 import { initReactI18next } from 'react-i18next'
 import az from '../locales/az/translation.json'
 import ru from '../locales/ru/translation.json'
+import { universityCatalogAz, universityCatalogRu } from '../locales/universityCatalog'
+
+function withUniversityCatalog(base, catalog) {
+  return {
+    ...base,
+    universitySearch: {
+      ...base.universitySearch,
+      catalog,
+    },
+  }
+}
+
+const azResources = withUniversityCatalog(az, universityCatalogAz)
+const ruResources = withUniversityCatalog(ru, universityCatalogRu)
 
 export const LOCALE_KEY = 'mentorix_lang'
 const LEGACY_LOCALE_KEY = 'mentorix_locale_v1'
@@ -50,8 +64,8 @@ i18n
   .use(initReactI18next)
   .init({
     resources: {
-      az: { translation: az },
-      ru: { translation: ru },
+      az: { translation: azResources },
+      ru: { translation: ruResources },
     },
     lng: initialLocale,
     fallbackLng: 'az',

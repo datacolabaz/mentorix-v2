@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react'
-import { countryFlag, filterCountriesByQuery } from '../../lib/universityCountries'
+import { useTranslation } from 'react-i18next'
+import { countryFlag } from '../../lib/universityCountries'
+import { countryDisplayName, filterCountriesByQuery } from '../../lib/universityCountryI18n'
 
 const inputCls =
   'w-full rounded-xl border border-white/10 bg-[#1c1c1c] px-3 py-2.5 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:border-primary/50'
@@ -8,12 +10,17 @@ export default function CountrySearchPicker({
   selected = [],
   onChange,
   countryCounts = null,
-  label = 'Ölkələr',
+  label = null,
   compact = false,
 }) {
+  const { t, i18n } = useTranslation()
+  const lang = i18n.language
   const [query, setQuery] = useState('')
 
-  const visibleCountries = useMemo(() => filterCountriesByQuery(query), [query])
+  const visibleCountries = useMemo(
+    () => filterCountriesByQuery(query, lang),
+    [query, lang],
+  )
 
   const toggle = (country) => {
     const next = selected.includes(country)
@@ -21,6 +28,8 @@ export default function CountrySearchPicker({
       : [...selected, country]
     onChange?.(next)
   }
+
+  const displayCountry = (country) => countryDisplayName(country, lang)
 
   return (
     <div className="space-y-2">
@@ -40,7 +49,7 @@ export default function CountrySearchPicker({
                 className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2.5 py-1 text-xs text-white"
               >
                 <span aria-hidden>{countryFlag(country)}</span>
-                <span>{country}</span>
+                <span>{displayCountry(country)}</span>
                 {count != null ? <span className="text-primary font-semibold">({count})</span> : null}
                 <span className="text-gray-400">×</span>
               </button>
@@ -53,7 +62,7 @@ export default function CountrySearchPicker({
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         className={inputCls}
-        placeholder="Ölkə axtar — məs: est, poland, almaniya"
+        placeholder={t('universitySearch.picker.countrySearchPlaceholder')}
       />
 
       <div className={compact ? 'max-h-40 overflow-y-auto space-y-1 pr-1' : 'max-h-52 overflow-y-auto space-y-1 pr-1'}>
@@ -73,7 +82,7 @@ export default function CountrySearchPicker({
               >
                 <span className="inline-flex items-center gap-2 min-w-0">
                   <span aria-hidden>{countryFlag(country)}</span>
-                  <span className="truncate">{country}</span>
+                  <span className="truncate">{displayCountry(country)}</span>
                 </span>
                 <span className="shrink-0 text-xs text-gray-500">
                   {active ? '✓' : null}
@@ -83,7 +92,7 @@ export default function CountrySearchPicker({
             )
           })
         ) : (
-          <p className="text-xs text-gray-500 px-1 py-2">Uyğun ölkə tapılmadı.</p>
+          <p className="text-xs text-gray-500 px-1 py-2">{t('universitySearch.picker.noCountryMatch')}</p>
         )}
       </div>
     </div>
