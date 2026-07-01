@@ -206,13 +206,16 @@ export default function JoinClass() {
 
   const loginHref = `/login?next=${encodeURIComponent(initialCode ? `/join/${initialCode}` : '/student/groups')}`
   const memberState = joinState?.state
+  const showMemberStatus = ['active', 'pending_approval', 'pending_setup'].includes(memberState)
   const showJoinForm =
     Boolean(initialCode && joinInfo && !infoError) &&
     !submitted &&
-    (memberState === 'none' || (!joinStateLoading && !memberState && user?.role === 'student'))
+    !showMemberStatus &&
+    !(joinStateLoading && user?.role === 'student') &&
+    (!user || user?.role === 'student')
 
   return (
-    <div className="p-4 sm:p-6 max-w-lg mx-auto w-full">
+    <div className="p-4 sm:p-6 pb-[max(2rem,env(safe-area-inset-bottom))] max-w-lg mx-auto w-full min-h-[100dvh]">
       <div className="mb-4">
         <Link
           to={backHref}
@@ -292,8 +295,12 @@ export default function JoinClass() {
       ) : showJoinForm ? (
         <>
           {!user ? (
-            <Card className="p-5 mb-4 border border-[color:var(--border-subtle)] space-y-4">
-              <p className="text-sm text-token-textMuted">Qoşulma sorğusu göndərmək üçün Gmail ilə daxil olun.</p>
+            <Card className="p-5 mb-4 border border-primary/30 bg-primary/5 space-y-4">
+              <p className="text-sm font-medium text-token-textMain">Davam etmək üçün daxil olun</p>
+              <p className="text-sm text-token-textMuted">
+                Qrupa qoşulmaq üçün Gmail və ya email ilə giriş edin — sonra məlumatlarınızı doldurub «Qoşul»
+                düyməsinə basın.
+              </p>
               <GoogleSignInButton onCredential={handleGoogleCredential} disabled={authBusy} />
               <p className="text-center text-xs text-token-textMuted">
                 və ya{' '}

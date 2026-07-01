@@ -116,6 +116,10 @@ export default function JoinGroupTermsOverview({ joinInfo }) {
         ) : null}
       </div>
 
+      <p className="text-xs text-center text-token-textMuted pt-1">
+        Aşağı sürüşdürün — giriş və «Qoşul» düyməsi aşağıdadır
+      </p>
+
       {showIncomplete ? (
         <p className="text-xs text-amber-200/95 leading-relaxed border border-amber-500/30 bg-amber-500/10 rounded-xl px-3 py-2">
           Müəllim qrup paketini (qiymət və tam cədvəl) hələ tamamlamayıb. Aşağıdakı məlumatları doldura bilərsiniz,
