@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import useActiveLocale from '../../hooks/useActiveLocale'
 import { FIELD_GROUPS } from '../../lib/universityFieldCatalog'
 import { fieldGroupLabel, fieldOptionLabel } from '../../lib/universityFieldI18n'
 import { resolveFieldFromQuery } from '../../lib/universitySearch'
@@ -15,8 +16,8 @@ function parseFields(value) {
 }
 
 export default function FieldSearchPicker({ value, onChange, label }) {
-  const { t, i18n } = useTranslation()
-  const uiLang = i18n.resolvedLanguage || i18n.language
+  const { t } = useTranslation()
+  const locale = useActiveLocale()
   const selected = parseFields(value)
 
   const toggleField = (slug) => {
@@ -38,7 +39,7 @@ export default function FieldSearchPicker({ value, onChange, label }) {
   }
 
   return (
-    <div className="space-y-2" key={`field-picker-${uiLang}`}>
+    <div className="space-y-2" key={`field-picker-${locale}`}>
       {label ? (
         <label className="text-[10px] font-bold uppercase tracking-wide text-gray-500">{label}</label>
       ) : null}
@@ -52,7 +53,7 @@ export default function FieldSearchPicker({ value, onChange, label }) {
               onClick={() => toggleField(slug)}
               className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2.5 py-1 text-xs text-white"
             >
-              {fieldOptionLabel(slug)}
+              {fieldOptionLabel(slug, locale)}
               <span className="text-gray-400">×</span>
             </button>
           ))}
@@ -72,10 +73,10 @@ export default function FieldSearchPicker({ value, onChange, label }) {
       >
         <option value="">{t('universitySearch.picker.addField')}</option>
         {FIELD_GROUPS.map((group) => (
-          <optgroup key={group.id} label={fieldGroupLabel(group.id)}>
+          <optgroup key={group.id} label={fieldGroupLabel(group.id, locale)}>
             {group.options.map((opt) => (
               <option key={opt.value} value={opt.value}>
-                {fieldOptionLabel(opt.value)}
+                {fieldOptionLabel(opt.value, locale)}
               </option>
             ))}
           </optgroup>

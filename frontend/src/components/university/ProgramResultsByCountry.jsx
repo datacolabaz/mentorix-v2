@@ -1,11 +1,11 @@
 import ProgramCard from './ProgramCard'
 import { useTranslation } from 'react-i18next'
+import useActiveLocale from '../../hooks/useActiveLocale'
 import { countryFlag } from '../../lib/universitySearch'
 import { countryDisplayName } from '../../lib/universityCountryI18n'
 
 export default function ProgramResultsByCountry({ groups, onDetails, onApply }) {
-  const { i18n } = useTranslation()
-  const uiLang = i18n.resolvedLanguage || i18n.language
+  const locale = useActiveLocale()
 
   if (!groups?.length) return null
 
@@ -18,7 +18,7 @@ export default function ProgramResultsByCountry({ groups, onDetails, onApply }) 
               {countryFlag(country)}
             </span>
             <h2 className="text-xs font-bold uppercase tracking-widest text-gray-300">
-              {countryDisplayName(country, uiLang)}
+              {countryDisplayName(country, locale)}
             </h2>
             <span className="text-xs text-gray-500">({programs.length})</span>
           </div>

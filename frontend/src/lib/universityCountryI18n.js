@@ -33,6 +33,17 @@ export const COUNTRY_ISO_CODES = {
   Kanada: 'CA',
 }
 
+/** Normalized lookup for RU names (handles NFC / key variants). */
+const COUNTRY_NAMES_RU_LOOKUP = (() => {
+  const map = new Map()
+  for (const [key, label] of Object.entries(COUNTRY_NAMES_RU)) {
+    map.set(key, label)
+    map.set(key.normalize('NFC'), label)
+    map.set(key.normalize('NFD'), label)
+  }
+  return map
+})()
+
 const displayNamesCache = new Map()
 
 function getDisplayNames(locale) {
@@ -50,24 +61,33 @@ export function resolveUiLocale(lang) {
   return String(lang || 'az').toLowerCase().startsWith('ru') ? 'ru' : 'az'
 }
 
+function ruCountryName(key) {
+  return (
+    COUNTRY_NAMES_RU_LOOKUP.get(key) ||
+    COUNTRY_NAMES_RU_LOOKUP.get(key.normalize('NFC')) ||
+    COUNTRY_NAMES_RU_LOOKUP.get(key.normalize('NFD')) ||
+    null
+  )
+}
+
 export function countryDisplayName(countryKey, lang = 'az') {
   const key = String(countryKey || '').trim()
   if (!key) return ''
   const locale = resolveUiLocale(lang)
 
   if (locale === 'ru') {
-    const manual = COUNTRY_NAMES_RU[key]
+    const manual = ruCountryName(key)
     if (manual) return manual
-  }
 
-  const iso = COUNTRY_ISO_CODES[key]
-  const dn = getDisplayNames(locale)
-  if (iso && dn) {
-    try {
-      const name = dn.of(iso)
-      if (name) return name
-    } catch {
-      /* ignore */
+    const iso = COUNTRY_ISO_CODES[key]
+    const dn = getDisplayNames('ru')
+    if (iso && dn) {
+      try {
+        const name = dn.of(iso)
+        if (name) return name
+      } catch {
+        /* ignore */
+      }
     }
   }
 

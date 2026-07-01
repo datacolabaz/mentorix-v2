@@ -1,5 +1,6 @@
 import { FIELD_GROUPS, fieldSearchTerms, relatedFieldSlugs } from './universityFieldCatalog'
 import { localizedFieldLabel as fieldLabel } from './universityFieldI18n'
+import { readStoredLocale } from '../i18n'
 import { resolveFieldFromQuery } from './universitySearch'
 
 const FIELD_BY_VALUE = new Map(FIELD_GROUPS.flatMap((g) => g.options.map((o) => [o.value, { ...o, category: g.id }])))
@@ -81,7 +82,7 @@ export function programMatchesAnyField(program, fieldSlugs) {
     const normalized = normalizeFieldSlug(slug)
     if (relatedFieldSlugs(normalized).includes(program.field)) return true
     const terms = fieldSearchTerms(normalized)
-    const label = fieldLabel(normalized)
+    const label = fieldLabel(normalized, readStoredLocale())
     const blob = [program.field, program.field_category, program.name, program.university?.name, label]
       .filter(Boolean)
       .join(' ')
@@ -117,7 +118,7 @@ export function programMatchesUniversityType(program, universityType) {
 
 export function buildEmptyResultsMessage(filters = {}) {
   const slugs = collectFieldSlugs(filters)
-  const labels = slugs.map((slug) => fieldLabel(slug) || slug.replace(/_/g, ' '))
+  const labels = slugs.map((slug) => fieldLabel(slug, readStoredLocale()) || slug.replace(/_/g, ' '))
   const fieldLabelText = labels.length ? labels.join(', ') : 'seçilmiş ixtisas'
   const degree = filters.degreeLevel || filters.degree_level || ''
   const degreeAz = {

@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import useActiveLocale from '../../hooks/useActiveLocale'
 import { countryFlag } from '../../lib/universityCountries'
 import { countryDisplayName, filterCountriesByQuery } from '../../lib/universityCountryI18n'
 
@@ -13,13 +14,13 @@ export default function CountrySearchPicker({
   label = null,
   compact = false,
 }) {
-  const { t, i18n } = useTranslation()
-  const uiLang = i18n.resolvedLanguage || i18n.language
+  const { t } = useTranslation()
+  const locale = useActiveLocale()
   const [query, setQuery] = useState('')
 
   const visibleCountries = useMemo(
-    () => filterCountriesByQuery(query, uiLang),
-    [query, uiLang],
+    () => filterCountriesByQuery(query, locale),
+    [query, locale],
   )
 
   const toggle = (country) => {
@@ -29,10 +30,10 @@ export default function CountrySearchPicker({
     onChange?.(next)
   }
 
-  const displayCountry = (country) => countryDisplayName(country, uiLang)
+  const displayCountry = (country) => countryDisplayName(country, locale)
 
   return (
-    <div className="space-y-2" key={`country-picker-${uiLang}`}>
+    <div className="space-y-2" key={`country-picker-${locale}`}>
       {label ? (
         <label className="text-[10px] font-bold uppercase tracking-wide text-gray-500">{label}</label>
       ) : null}

@@ -1,5 +1,6 @@
-import i18n from '../i18n'
 import { FIELD_GROUPS } from './universityFieldCatalog'
+import { universityCatalogAz, universityCatalogRu } from '../locales/universityCatalog'
+import { readStoredLocale } from '../i18n'
 
 const GROUP_FALLBACK = new Map()
 const FIELD_FALLBACK = new Map()
@@ -11,28 +12,29 @@ for (const group of FIELD_GROUPS) {
   }
 }
 
-function activeLang() {
-  return String(i18n.resolvedLanguage || i18n.language || 'az')
+export function resolveCatalogLocale(lang) {
+  return String(lang || 'az').toLowerCase().startsWith('ru') ? 'ru' : 'az'
 }
 
-export function fieldGroupLabel(groupId) {
+function catalogFor(lang) {
+  return resolveCatalogLocale(lang) === 'ru' ? universityCatalogRu : universityCatalogAz
+}
+
+export function fieldGroupLabel(groupId, lang = 'az') {
   const key = String(groupId || '').trim()
   if (!key) return ''
-  return i18n.t(`universitySearch.catalog.groups.${key}`, {
-    lng: activeLang(),
-    defaultValue: GROUP_FALLBACK.get(key) || key,
-  })
+  const cat = catalogFor(lang)
+  return cat.groups[key] || GROUP_FALLBACK.get(key) || key
 }
 
-export function fieldOptionLabel(value) {
+export function fieldOptionLabel(value, lang = 'az') {
   const key = String(value || '').trim()
   if (!key) return ''
-  return i18n.t(`universitySearch.catalog.fields.${key}`, {
-    lng: activeLang(),
-    defaultValue: FIELD_FALLBACK.get(key) || key,
-  })
+  const cat = catalogFor(lang)
+  return cat.fields[key] || FIELD_FALLBACK.get(key) || key
 }
 
-export function localizedFieldLabel(slug) {
-  return fieldOptionLabel(slug)
+export function localizedFieldLabel(slug, lang) {
+  const lng = lang ?? readStoredLocale()
+  return fieldOptionLabel(slug, lng)
 }

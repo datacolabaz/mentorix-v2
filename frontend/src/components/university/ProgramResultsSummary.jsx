@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import useActiveLocale from '../../hooks/useActiveLocale'
 import { countryFlag } from '../../lib/universitySearch'
 import { countryDisplayName } from '../../lib/universityCountryI18n'
 
@@ -9,8 +10,8 @@ export default function ProgramResultsSummary({
   coverageMessage,
   countriesWithResults = [],
 }) {
-  const { t, i18n } = useTranslation()
-  const uiLang = i18n.resolvedLanguage || i18n.language
+  const { t } = useTranslation()
+  const locale = useActiveLocale()
 
   if (!selectedCountries.length) return null
 
@@ -39,7 +40,7 @@ export default function ProgramResultsSummary({
                 ].join(' ')}
               >
                 <span aria-hidden>{countryFlag(country)}</span>
-                <span>{countryDisplayName(country, uiLang)}</span>
+                <span>{countryDisplayName(country, locale)}</span>
                 <span className={hasResults ? 'text-primary font-semibold' : 'text-gray-500'}>({count})</span>
               </span>
             )
@@ -54,7 +55,7 @@ export default function ProgramResultsSummary({
           </p>
           <p className="text-sm text-gray-300">
             {countriesWithResults
-              .map((country) => `${countryFlag(country)} ${countryDisplayName(country, uiLang)}`)
+              .map((country) => `${countryFlag(country)} ${countryDisplayName(country, locale)}`)
               .join(' · ')}
           </p>
         </div>

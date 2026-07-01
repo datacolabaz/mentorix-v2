@@ -9,6 +9,7 @@ import {
 import { FIELD_GROUPS } from '../../lib/universityFieldCatalog'
 import { fieldGroupLabel, fieldOptionLabel } from '../../lib/universityFieldI18n'
 import { countryDisplayName } from '../../lib/universityCountryI18n'
+import useActiveLocale from '../../hooks/useActiveLocale'
 import CountrySearchPicker from './CountrySearchPicker'
 
 const STEP_KEYS = ['degree', 'field', 'academic', 'preferences', 'review']
@@ -38,8 +39,8 @@ function StepDots({ step, stepTitles }) {
 }
 
 export default function UniversitySearchWizard({ initialState, onSubmit, onCancel }) {
-  const { t, i18n } = useTranslation()
-  const uiLang = i18n.resolvedLanguage || i18n.language
+  const { t } = useTranslation()
+  const locale = useActiveLocale()
   const [step, setStep] = useState(1)
   const [state, setState] = useState(initialState)
 
@@ -62,7 +63,7 @@ export default function UniversitySearchWizard({ initialState, onSubmit, onCance
   const reviewSummary = useMemo(
     () => [
       { label: t('universitySearch.wizard.review.degree'), value: state.degreeLevel || '—' },
-      { label: t('universitySearch.wizard.review.field'), value: state.field ? fieldOptionLabel(state.field) : '—' },
+      { label: t('universitySearch.wizard.review.field'), value: state.field ? fieldOptionLabel(state.field, locale) : '—' },
       { label: t('universitySearch.wizard.review.gpa'), value: state.gpa !== '' ? state.gpa : '—' },
       {
         label: t('universitySearch.wizard.review.languageScore'),
@@ -74,7 +75,7 @@ export default function UniversitySearchWizard({ initialState, onSubmit, onCance
       {
         label: t('universitySearch.wizard.review.countries'),
         value: state.countries.length
-          ? state.countries.map((c) => countryDisplayName(c, uiLang)).join(', ')
+          ? state.countries.map((c) => countryDisplayName(c, locale)).join(', ')
           : t('universitySearch.wizard.review.allCountries'),
       },
       {
@@ -86,7 +87,7 @@ export default function UniversitySearchWizard({ initialState, onSubmit, onCance
         value: state.durationYears ? durationLabel(state.durationYears) : t('universitySearch.wizard.durationAny'),
       },
     ],
-    [state, t, uiLang],
+    [state, t, locale],
   )
 
   const canNext = () => {
@@ -137,17 +138,17 @@ export default function UniversitySearchWizard({ initialState, onSubmit, onCance
             {t('universitySearch.wizard.fieldLabel')}
           </label>
           <select
-            key={`field-select-${uiLang}`}
+            key={`field-select-${locale}`}
             value={state.field}
             onChange={(e) => setState((p) => ({ ...p, field: e.target.value }))}
             className={inputCls}
           >
             <option value="">{t('universitySearch.wizard.selectPlaceholder')}</option>
             {FIELD_GROUPS.map((group) => (
-              <optgroup key={group.id} label={fieldGroupLabel(group.id)}>
+              <optgroup key={group.id} label={fieldGroupLabel(group.id, locale)}>
                 {group.options.map((f) => (
                   <option key={f.value} value={f.value}>
-                    {fieldOptionLabel(f.value)}
+                    {fieldOptionLabel(f.value, locale)}
                   </option>
                 ))}
               </optgroup>
