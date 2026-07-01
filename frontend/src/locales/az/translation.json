@@ -692,6 +692,7 @@
     "loading": "Yüklənir…",
     "emptySubjects": "Hələ sahə yoxdur — yuxarıdan ilk sahənizi əlavə edin.",
     "studentCount": "{{count}} tələbə",
+    "noStudentsYet": "Bu qrupda hələ tələbə yoxdur",
     "incomeThisMonth": "Bu ay gəlir:",
     "groupCount": "{{count}} qrup",
     "delete": "Sil",

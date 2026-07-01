@@ -865,6 +865,7 @@
     "loading": "Загрузка…",
     "emptySubjects": "Предметов пока нет — добавьте первый предмет сверху.",
     "studentCount": "{{count}} ученик(ов)",
+    "noStudentsYet": "В этой группе пока нет учеников",
     "incomeThisMonth": "Доход за месяц:",
     "groupCount": "{{count}} групп(а)",
     "delete": "Удалить",

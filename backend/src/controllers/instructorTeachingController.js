@@ -141,13 +141,15 @@ const getTeaching = async (req, res) => {
     );
     const { rows: subjectStats } = await db.query(
       `WITH students_by_subject AS (
-         SELECT e.subject_id, COUNT(DISTINCT e.student_id)::int AS student_count
+         SELECT COALESCE(ig.subject_id, e.subject_id) AS subject_id,
+                COUNT(DISTINCT e.student_id)::int AS student_count
          FROM enrollments e
+         LEFT JOIN instructor_groups ig ON ig.id = e.group_id
          WHERE ${instructorIdWhere('e.instructor_id', 1)}
            AND e.deleted_at IS NULL
-           AND e.subject_id IS NOT NULL
+           AND COALESCE(ig.subject_id, e.subject_id) IS NOT NULL
            AND COALESCE(LOWER(TRIM(e.status)), 'active') IN ('active', 'pending_setup', 'pending_approval')
-         GROUP BY e.subject_id
+         GROUP BY COALESCE(ig.subject_id, e.subject_id)
        ),
        income_by_subject AS (
          SELECT e.subject_id, COALESCE(SUM(p.amount), 0)::numeric AS income_this_month
@@ -167,6 +169,32 @@ const getTeaching = async (req, res) => {
        FROM students_by_subject s
        FULL OUTER JOIN income_by_subject i ON i.subject_id = s.subject_id`,
       [iidNorm],
+    );
+    const { rows: groupStats } = await db.query(
+      `SELECT e.group_id,
+              COUNT(DISTINCT e.student_id)::int AS student_count,
+              COALESCE(
+                array_agg(DISTINCT u.full_name ORDER BY u.full_name)
+                  FILTER (WHERE NULLIF(TRIM(u.full_name), '') IS NOT NULL),
+                ARRAY[]::text[]
+              ) AS student_names
+       FROM enrollments e
+       JOIN users u ON u.id = e.student_id AND u.deleted_at IS NULL AND u.is_active = TRUE
+       WHERE ${instructorIdWhere('e.instructor_id', 1)}
+         AND e.deleted_at IS NULL
+         AND e.group_id IS NOT NULL
+         AND COALESCE(LOWER(TRIM(e.status)), 'active') IN ('active', 'pending_setup', 'pending_approval')
+       GROUP BY e.group_id`,
+      [iidNorm],
+    );
+    const statsByGroup = new Map(
+      groupStats.map((r) => [
+        String(r.group_id),
+        {
+          student_count: Number(r.student_count) || 0,
+          student_names: Array.isArray(r.student_names) ? r.student_names.filter(Boolean) : [],
+        },
+      ]),
     );
     const statsBySubject = new Map(
       subjectStats.map((r) => [
@@ -221,11 +249,14 @@ const getTeaching = async (req, res) => {
         }
       }
       if (!bucket) continue;
+      const gst = statsByGroup.get(String(g.id)) || { student_count: 0, student_names: [] };
       bucket.groups.push(
         decorateGroupInvitationFields({
           id: g.id,
           name: g.name,
           sort_order: g.sort_order,
+          student_count: gst.student_count,
+          student_names: gst.student_names,
           is_system: Boolean(g.is_system),
           system_kind: g.system_kind || null,
           system_ref_id: g.system_ref_id || null,
@@ -251,10 +282,20 @@ const getTeaching = async (req, res) => {
 
     const teachingSubjects = [...byId.values()]
       .filter((s) => s && !s.is_system)
-      .map((s) => ({
-        ...s,
-        groups: (s.groups || []).filter((g) => g && !g.is_system),
-      }))
+      .map((s) => {
+        const groups = (s.groups || []).filter((g) => g && !g.is_system);
+        const nameSet = new Set();
+        for (const g of groups) {
+          for (const n of g.student_names || []) {
+            if (n) nameSet.add(String(n));
+          }
+        }
+        return {
+          ...s,
+          student_names: [...nameSet].sort((a, b) => a.localeCompare(b, 'az')),
+          groups,
+        };
+      })
       .filter((s) => (s.groups || []).length > 0 || !/^\[System\]/i.test(String(s.name || '')));
 
     const participant_cohorts = await listParticipantCohorts(iid);

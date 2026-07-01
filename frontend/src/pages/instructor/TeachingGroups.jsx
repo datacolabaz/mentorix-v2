@@ -26,6 +26,12 @@ function formatIncomeAzn(n) {
   return `${formatAzn(v)} ₼`
 }
 
+function studentNamesTitle(names, emptyLabel) {
+  const list = Array.isArray(names) ? names.map(String).filter(Boolean) : []
+  if (!list.length) return emptyLabel
+  return list.join(', ')
+}
+
 export default function InstructorTeachingGroups() {
   const { t } = useTranslation()
   const toast = useToast()
@@ -419,7 +425,10 @@ export default function InstructorTeachingGroups() {
                           theme === 'dark' ? 'text-gray-400' : 'text-token-textMuted',
                         ].join(' ')}
                       >
-                        <span className="font-medium text-token-textMain">
+                        <span
+                          className="font-medium text-token-textMain cursor-default"
+                          title={studentNamesTitle(s.student_names, t('teachingGroups.noStudentsYet'))}
+                        >
                           {t('teachingGroups.studentCount', { count: Number(s.student_count) || 0 })}
                         </span>
                         <span>
@@ -468,7 +477,21 @@ export default function InstructorTeachingGroups() {
                             <div className="flex items-start justify-between gap-2">
                               <div className="min-w-0 flex-1">
                                 <div className="flex items-center gap-2 flex-wrap font-medium">
-                                  <span className="break-words">{g.name}</span>
+                                  <span
+                                    className="break-words cursor-default"
+                                    title={studentNamesTitle(g.student_names, t('teachingGroups.noStudentsYet'))}
+                                  >
+                                    {g.name}
+                                  </span>
+                                  <span
+                                    className={[
+                                      'text-xs font-normal tabular-nums cursor-default',
+                                      theme === 'dark' ? 'text-gray-400' : 'text-token-textMuted',
+                                    ].join(' ')}
+                                    title={studentNamesTitle(g.student_names, t('teachingGroups.noStudentsYet'))}
+                                  >
+                                    · {t('teachingGroups.studentCount', { count: Number(g.student_count) || 0 })}
+                                  </span>
                                   {g?.is_system ? (
                                     <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded-md border border-indigo-400/30 text-indigo-200/90 shrink-0">
                                       {t('teachingGroups.system')}

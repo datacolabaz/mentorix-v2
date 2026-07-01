@@ -28,6 +28,31 @@ import {
 } from '../../lib/teachingSubjects'
 import { BILLING_STATUS_QUERY_KEY, useBillingStatus } from '../../hooks/useBillingStatus'
 import { canUseDirectChat } from '../../lib/subscriptionPlanGuards'
+
+function studentNamesLabel(students) {
+  return (Array.isArray(students) ? students : [])
+    .map((s) => String(s?.full_name || '').trim())
+    .filter(Boolean)
+    .join(', ')
+}
+
+function upsertGroupStudent(students, student) {
+  const id = student?.id != null ? String(student.id) : ''
+  if (!id) {
+    students.push(student)
+    return students
+  }
+  const idx = students.findIndex((x) => String(x.id) === id)
+  if (idx === -1) {
+    students.push(student)
+    return students
+  }
+  const cur = students[idx]
+  if (!cur?.configured_at && student?.configured_at) {
+    students[idx] = student
+  }
+  return students
+}
 import StudentDirectChatButton from '../../components/chat/StudentDirectChatButton'
 import DirectChatUpgradeModal from '../../components/chat/DirectChatUpgradeModal'
 import StudentGroupTransferModal from '../../components/instructor/StudentGroupTransferModal'
@@ -1482,7 +1507,7 @@ export default function InstructorStudents() {
         })
       }
       const g = byKey.get(key)
-      g.students.push(s)
+      upsertGroupStudent(g.students, s)
       g.nextDistMin = Math.min(g.nextDistMin, nextWeeklyDistanceMinutes(s))
       // lightweight “quick stats” (defensive; may be missing on backend)
       const scoreRaw = s?.avg_score ?? s?.exam_avg_score ?? s?.last_score_pct ?? s?.score_pct
@@ -2262,10 +2287,16 @@ export default function InstructorStudents() {
                     >
                       {/* LEFT */}
                       <div className="col-span-12 sm:col-span-7 min-w-0">
-                        <div className="text-[15px] sm:text-base font-semibold text-token-textMain truncate">
+                        <div
+                          className="text-[15px] sm:text-base font-semibold text-token-textMain truncate cursor-default"
+                          title={studentNamesLabel(g.students) || undefined}
+                        >
                           {g.group}
                         </div>
-                        <div className="text-xs text-token-textMuted truncate">
+                        <div
+                          className="text-xs text-token-textMuted truncate cursor-default"
+                          title={studentNamesLabel(g.students) || undefined}
+                        >
                           {g.subject} · {t('students.groupStudents', { count: g.students.length })}
                         </div>
                       </div>
