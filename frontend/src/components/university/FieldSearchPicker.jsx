@@ -16,7 +16,7 @@ function parseFields(value) {
 
 export default function FieldSearchPicker({ value, onChange, label }) {
   const { t, i18n } = useTranslation()
-  const lang = i18n.language
+  const uiLang = i18n.resolvedLanguage || i18n.language
   const selected = parseFields(value)
 
   const toggleField = (slug) => {
@@ -37,10 +37,8 @@ export default function FieldSearchPicker({ value, onChange, label }) {
     }
   }
 
-  const fieldLabel = (slug) => fieldOptionLabel(slug, lang)
-
   return (
-    <div className="space-y-2">
+    <div className="space-y-2" key={`field-picker-${uiLang}`}>
       {label ? (
         <label className="text-[10px] font-bold uppercase tracking-wide text-gray-500">{label}</label>
       ) : null}
@@ -54,7 +52,7 @@ export default function FieldSearchPicker({ value, onChange, label }) {
               onClick={() => toggleField(slug)}
               className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2.5 py-1 text-xs text-white"
             >
-              {fieldLabel(slug)}
+              {fieldOptionLabel(slug)}
               <span className="text-gray-400">×</span>
             </button>
           ))}
@@ -74,10 +72,10 @@ export default function FieldSearchPicker({ value, onChange, label }) {
       >
         <option value="">{t('universitySearch.picker.addField')}</option>
         {FIELD_GROUPS.map((group) => (
-          <optgroup key={group.id} label={fieldGroupLabel(group.id, lang)}>
+          <optgroup key={group.id} label={fieldGroupLabel(group.id)}>
             {group.options.map((opt) => (
               <option key={opt.value} value={opt.value}>
-                {fieldOptionLabel(opt.value, lang)}
+                {fieldOptionLabel(opt.value)}
               </option>
             ))}
           </optgroup>

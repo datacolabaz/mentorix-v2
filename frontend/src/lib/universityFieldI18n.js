@@ -11,24 +11,28 @@ for (const group of FIELD_GROUPS) {
   }
 }
 
-export function fieldGroupLabel(groupId, lang) {
+function activeLang() {
+  return String(i18n.resolvedLanguage || i18n.language || 'az')
+}
+
+export function fieldGroupLabel(groupId) {
   const key = String(groupId || '').trim()
   if (!key) return ''
-  const t = lang ? i18n.getFixedT(lang) : i18n.t.bind(i18n)
-  return t(`universitySearch.catalog.groups.${key}`, {
+  return i18n.t(`universitySearch.catalog.groups.${key}`, {
+    lng: activeLang(),
     defaultValue: GROUP_FALLBACK.get(key) || key,
   })
 }
 
-export function fieldOptionLabel(value, lang) {
+export function fieldOptionLabel(value) {
   const key = String(value || '').trim()
   if (!key) return ''
-  const t = lang ? i18n.getFixedT(lang) : i18n.t.bind(i18n)
-  return t(`universitySearch.catalog.fields.${key}`, {
+  return i18n.t(`universitySearch.catalog.fields.${key}`, {
+    lng: activeLang(),
     defaultValue: FIELD_FALLBACK.get(key) || key,
   })
 }
 
-export function localizedFieldLabel(slug, lang) {
-  return fieldOptionLabel(slug, lang)
+export function localizedFieldLabel(slug) {
+  return fieldOptionLabel(slug)
 }

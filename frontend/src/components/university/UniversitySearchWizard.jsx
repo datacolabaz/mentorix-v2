@@ -39,7 +39,7 @@ function StepDots({ step, stepTitles }) {
 
 export default function UniversitySearchWizard({ initialState, onSubmit, onCancel }) {
   const { t, i18n } = useTranslation()
-  const lang = i18n.language
+  const uiLang = i18n.resolvedLanguage || i18n.language
   const [step, setStep] = useState(1)
   const [state, setState] = useState(initialState)
 
@@ -62,7 +62,7 @@ export default function UniversitySearchWizard({ initialState, onSubmit, onCance
   const reviewSummary = useMemo(
     () => [
       { label: t('universitySearch.wizard.review.degree'), value: state.degreeLevel || '—' },
-      { label: t('universitySearch.wizard.review.field'), value: state.field ? fieldOptionLabel(state.field, lang) : '—' },
+      { label: t('universitySearch.wizard.review.field'), value: state.field ? fieldOptionLabel(state.field) : '—' },
       { label: t('universitySearch.wizard.review.gpa'), value: state.gpa !== '' ? state.gpa : '—' },
       {
         label: t('universitySearch.wizard.review.languageScore'),
@@ -74,7 +74,7 @@ export default function UniversitySearchWizard({ initialState, onSubmit, onCance
       {
         label: t('universitySearch.wizard.review.countries'),
         value: state.countries.length
-          ? state.countries.map((c) => countryDisplayName(c, lang)).join(', ')
+          ? state.countries.map((c) => countryDisplayName(c, uiLang)).join(', ')
           : t('universitySearch.wizard.review.allCountries'),
       },
       {
@@ -86,7 +86,7 @@ export default function UniversitySearchWizard({ initialState, onSubmit, onCance
         value: state.durationYears ? durationLabel(state.durationYears) : t('universitySearch.wizard.durationAny'),
       },
     ],
-    [state, t, lang],
+    [state, t, uiLang],
   )
 
   const canNext = () => {
@@ -137,16 +137,17 @@ export default function UniversitySearchWizard({ initialState, onSubmit, onCance
             {t('universitySearch.wizard.fieldLabel')}
           </label>
           <select
+            key={`field-select-${uiLang}`}
             value={state.field}
             onChange={(e) => setState((p) => ({ ...p, field: e.target.value }))}
             className={inputCls}
           >
             <option value="">{t('universitySearch.wizard.selectPlaceholder')}</option>
             {FIELD_GROUPS.map((group) => (
-              <optgroup key={group.id} label={fieldGroupLabel(group.id, lang)}>
+              <optgroup key={group.id} label={fieldGroupLabel(group.id)}>
                 {group.options.map((f) => (
                   <option key={f.value} value={f.value}>
-                    {fieldOptionLabel(f.value, lang)}
+                    {fieldOptionLabel(f.value)}
                   </option>
                 ))}
               </optgroup>

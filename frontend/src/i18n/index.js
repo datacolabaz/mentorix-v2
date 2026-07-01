@@ -73,5 +73,9 @@ i18n
     interpolation: { escapeValue: false },
     returnEmptyString: false,
   })
+  .then(() => {
+    i18n.addResourceBundle('az', 'translation', { universitySearch: { catalog: universityCatalogAz } }, true, true)
+    i18n.addResourceBundle('ru', 'translation', { universitySearch: { catalog: universityCatalogRu } }, true, true)
+  })
 
 export default i18n

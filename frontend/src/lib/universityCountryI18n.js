@@ -1,4 +1,5 @@
 import { COUNTRY_SEARCH_ALIASES, UNIVERSITY_COUNTRIES } from './universityCountries'
+import { COUNTRY_NAMES_RU } from '../locales/universityCountryNames.ru'
 
 /** Canonical filter/API country keys (AZ) → ISO 3166-1 alpha-2 */
 export const COUNTRY_ISO_CODES = {
@@ -52,8 +53,14 @@ export function resolveUiLocale(lang) {
 export function countryDisplayName(countryKey, lang = 'az') {
   const key = String(countryKey || '').trim()
   if (!key) return ''
-  const iso = COUNTRY_ISO_CODES[key]
   const locale = resolveUiLocale(lang)
+
+  if (locale === 'ru') {
+    const manual = COUNTRY_NAMES_RU[key]
+    if (manual) return manual
+  }
+
+  const iso = COUNTRY_ISO_CODES[key]
   const dn = getDisplayNames(locale)
   if (iso && dn) {
     try {
@@ -63,6 +70,7 @@ export function countryDisplayName(countryKey, lang = 'az') {
       /* ignore */
     }
   }
+
   return key
 }
 

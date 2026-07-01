@@ -14,12 +14,12 @@ export default function CountrySearchPicker({
   compact = false,
 }) {
   const { t, i18n } = useTranslation()
-  const lang = i18n.language
+  const uiLang = i18n.resolvedLanguage || i18n.language
   const [query, setQuery] = useState('')
 
   const visibleCountries = useMemo(
-    () => filterCountriesByQuery(query, lang),
-    [query, lang],
+    () => filterCountriesByQuery(query, uiLang),
+    [query, uiLang],
   )
 
   const toggle = (country) => {
@@ -29,10 +29,10 @@ export default function CountrySearchPicker({
     onChange?.(next)
   }
 
-  const displayCountry = (country) => countryDisplayName(country, lang)
+  const displayCountry = (country) => countryDisplayName(country, uiLang)
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2" key={`country-picker-${uiLang}`}>
       {label ? (
         <label className="text-[10px] font-bold uppercase tracking-wide text-gray-500">{label}</label>
       ) : null}
