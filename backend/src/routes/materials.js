@@ -7,6 +7,7 @@ const { authenticate, authorize } = require('../middleware/auth');
 const { enforceActiveSubscription } = require('../middleware/entitlements');
 const { ensureCourseMaterialsUploadDir, persistCourseMaterialBlob, resolveUploadedFileBytes } = require('../services/courseMaterialStorage');
 const { MATERIALS_MAX_SINGLE_FILE_BYTES } = require('../constants/materialsPlanLimits');
+const { postMaterialAccessFromLink } = require('../controllers/publicMaterialInviteController');
 const {
   getQuota,
   listMaterials,
@@ -140,6 +141,7 @@ router.patch('/:id', authenticate, authorize('instructor'), enforceActiveSubscri
 router.post('/:id/share', authenticate, authorize('instructor'), enforceActiveSubscription, shareMaterial);
 router.post('/:id/link', authenticate, authorize('instructor'), enforceActiveSubscription, linkMaterial);
 
+router.post('/:id/access-from-link', authenticate, authorize('student'), postMaterialAccessFromLink);
 router.get('/my', authenticate, authorize('student'), listMyMaterials);
 router.get('/assignment/:assignmentId', authenticate, authorize('student'), listAssignmentMaterials);
 router.get('/file/:filename', authenticateMaterialFile, serveMaterialFile);

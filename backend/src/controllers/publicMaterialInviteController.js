@@ -45,4 +45,18 @@ async function postPublicMaterialGuestJoin(req, res) {
   }
 }
 
-module.exports = { getPublicMaterialInvite, postPublicMaterialGuestJoin };
+
+
+
+const { joinMaterialAsAuthenticatedStudent } = require('../services/guestAccessService');
+
+async function postMaterialAccessFromLink(req, res) {
+  try {
+    const result = await joinMaterialAsAuthenticatedStudent(req.params.materialId, req.user.id);
+    res.status(200).json({ success: true, ...result });
+  } catch (err) {
+    res.status(err.statusCode || 500).json({ success: false, message: err.message, code: err.code });
+  }
+}
+
+module.exports = { getPublicMaterialInvite, postPublicMaterialGuestJoin, postMaterialAccessFromLink };

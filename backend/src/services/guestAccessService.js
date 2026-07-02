@@ -34,71 +34,114 @@ async function findStudentIdByContactPhone(dbConn, phoneCanon) {
   return rows[0] || null;
 }
 
-async function findOrCreateGuestStudent({ first_name, last_name, phone, email: emailRaw }, client = null) {
-  const q = client ? client.query.bind(client) : db.query.bind(db);
-  const phoneCanon = canonicalStudentPhone(phone);
-  if (!phoneCanon) {
-    const err = new Error('Telefon nömrəsi düzgün deyil (+994 XX XXX XX XX)');
-    err.statusCode = 400;
+async function findStudentIdByGoogleSub(dbConn, googleSub) {
+  const sub = String(googleSub || '').trim();
+  if (!sub) return null;
+  const { rows } = await dbConn.query(
+    `SELECT id, role FROM users
+     WHERE COALESCE(is_active, TRUE) = TRUE AND google_sub = $1 LIMIT 1`,
+    [sub],
+  );
+  return rows[0] || null;
+}
+
+async function findStudentIdByEmail(dbConn, emailRaw) {
+  const email = String(emailRaw || '').trim().toLowerCase();
+  if (!email || !email.includes('@')) return null;
+  const { rows } = await dbConn.query(
+    `SELECT id, role FROM users
+     WHERE COALESCE(is_active, TRUE) = TRUE AND LOWER(TRIM(email)) = $1 LIMIT 1`,
+    [email],
+  );
+  return rows[0] || null;
+}
+
+async function assertStudentRole(row, conflictMessage) {
+  if (!row?.id) return null;
+  if (String(row.role || '').toLowerCase() !== 'student') {
+    const err = new Error(conflictMessage);
+    err.statusCode = 409;
+    err.code = 'NOT_STUDENT';
     throw err;
   }
-  const firstName = String(first_name || '').trim();
-  const lastName = String(last_name || '').trim();
+  return row.id;
+}
+
+/** google_sub (stable auth id) > email > optional phone (legacy). Phone never required. */
+async function findOrCreateGuestStudent(profile, client = null) {
+  const q = client ? client.query.bind(client) : db.query.bind(db);
+  const conn = client || db;
+  const firstName = String(profile?.first_name || '').trim();
+  const lastName = String(profile?.last_name || '').trim();
   if (!firstName || !lastName) {
     const err = new Error('Ad və soyad tələb olunur');
     err.statusCode = 400;
     throw err;
   }
   const fullName = `${firstName} ${lastName}`.trim();
-  const email = String(emailRaw || '').trim();
+  const email = String(profile?.email || '').trim();
+  const googleSub = String(profile?.google_sub || '').trim();
+  const studentIdHint = profile?.student_id || profile?.user_id || null;
+  const phoneCanon = profile?.phone ? canonicalStudentPhone(profile.phone) : null;
 
-  const existing = await findStudentIdByContactPhone(client || db, phoneCanon);
-  if (existing?.id) {
-    if (String(existing.role || '').toLowerCase() !== 'student') {
-      const err = new Error(
-        'Bu telefon nömrəsi artıq başqa hesaba bağlıdır. Başqa nömrə istifadə edin və ya mövcud hesabla daxil olun.',
-      );
-      err.statusCode = 409;
-      err.code = 'PHONE_NOT_STUDENT';
-      throw err;
-    }
-    await q(`UPDATE users SET full_name = $1 WHERE id = $2::uuid`, [fullName, existing.id]);
+  if (studentIdHint) {
+    const { rows } = await q(
+      `SELECT id, role FROM users WHERE id = $1::uuid AND COALESCE(is_active, TRUE) = TRUE LIMIT 1`,
+      [studentIdHint],
+    );
+    const id = await assertStudentRole(rows[0], 'Bu hesab tələbə deyil');
+    await q(`UPDATE users SET full_name = $1 WHERE id = $2::uuid`, [fullName, id]);
     if (email) {
+      await q(`UPDATE users SET email = COALESCE(NULLIF(TRIM(email), ''), $1) WHERE id = $2::uuid`, [email, id]);
+    }
+    if (phoneCanon) await upsertStudentContactPhone(conn, id, phoneCanon, { full_name: fullName });
+    return id;
+  }
+
+  let existing = googleSub ? await findStudentIdByGoogleSub(conn, googleSub) : null;
+  if (!existing?.id && email) existing = await findStudentIdByEmail(conn, email);
+  if (!existing?.id && phoneCanon) existing = await findStudentIdByContactPhone(conn, phoneCanon);
+
+  if (existing?.id) {
+    const id = await assertStudentRole(existing, 'Bu hesab tələbə deyil — müəllim panelinə daxil olun.');
+    await q(`UPDATE users SET full_name = $1 WHERE id = $2::uuid`, [fullName, id]);
+    if (email) {
+      await q(`UPDATE users SET email = COALESCE(NULLIF(TRIM(email), ''), $1) WHERE id = $2::uuid`, [email, id]);
+    }
+    if (googleSub) {
       await q(
-        `UPDATE users SET email = $1 WHERE id = $2::uuid AND (email IS NULL OR TRIM(email) = '')`,
-        [email, existing.id],
+        `UPDATE users SET google_sub = $1, auth_provider = COALESCE(auth_provider, 'google')
+         WHERE id = $2::uuid AND (google_sub IS NULL OR TRIM(google_sub) = '')`,
+        [googleSub, id],
       );
     }
-    await upsertStudentContactPhone(client || db, existing.id, phoneCanon, { full_name: fullName });
-    return existing.id;
+    if (phoneCanon) await upsertStudentContactPhone(conn, id, phoneCanon, { full_name: fullName });
+    return id;
+  }
+
+  if (!email && !googleSub) {
+    const err = new Error('Google ilə daxil olun');
+    err.statusCode = 401;
+    err.code = 'AUTH_REQUIRED';
+    throw err;
   }
 
   const { rows: ins } = await q(
-    `INSERT INTO users (full_name, phone, email, role, is_verified, account_status, is_active)
-     VALUES ($1, $2, $3, 'student', TRUE, 'active', TRUE)
+    `INSERT INTO users (full_name, phone, email, google_sub, auth_provider, role, is_verified, account_status, is_active)
+     VALUES ($1, $2, $3, NULLIF($4, ''), CASE WHEN NULLIF($4, '') IS NOT NULL THEN 'google' ELSE NULL END,
+             'student', TRUE, 'active', TRUE)
      RETURNING id`,
-    [fullName, phoneCanon, email || null],
+    [fullName, phoneCanon, email || null, googleSub],
   );
   const studentId = ins[0]?.id;
-  if (!studentId) {
-    const err = new Error('Tələbə profili yaradılmadı');
-    err.statusCode = 500;
-    throw err;
-  }
+  if (!studentId) throw Object.assign(new Error('Tələbə profili yaradılmadı'), { statusCode: 500 });
   await grantUserRole(studentId, 'student', client);
-  const { rows: spRows } = await q(`SELECT id FROM student_profiles WHERE user_id = $1::uuid LIMIT 1`, [
-    studentId,
-  ]);
-  if (spRows[0]?.id) {
-    await q(`UPDATE student_profiles SET phone_number = $2 WHERE user_id = $1::uuid`, [
-      studentId,
-      phoneCanon,
-    ]);
-  } else {
-    await q(`INSERT INTO student_profiles (user_id, phone_number) VALUES ($1::uuid, $2)`, [
-      studentId,
-      phoneCanon,
-    ]);
+  const { rows: spRows } = await q(`SELECT id FROM student_profiles WHERE user_id = $1::uuid LIMIT 1`, [studentId]);
+  if (phoneCanon) {
+    if (spRows[0]?.id) await q(`UPDATE student_profiles SET phone_number = $2 WHERE user_id = $1::uuid`, [studentId, phoneCanon]);
+    else await q(`INSERT INTO student_profiles (user_id, phone_number) VALUES ($1::uuid, $2)`, [studentId, phoneCanon]);
+  } else if (!spRows[0]?.id) {
+    await q(`INSERT INTO student_profiles (user_id) VALUES ($1::uuid)`, [studentId]);
   }
   return studentId;
 }
@@ -304,35 +347,25 @@ async function getMaterialForInvite(materialId) {
   return rows[0] || null;
 }
 
-async function joinMaterialAsGuest(materialId, profile) {
+async function grantMaterialAccessForStudent(studentId, materialId, client = null) {
   const material = await getMaterialForInvite(materialId);
   if (!material) {
     const err = new Error('Material tapılmadı');
     err.statusCode = 404;
     throw err;
   }
-
-  const studentId = await findOrCreateGuestStudent(profile);
   const { trackInstructorStudentLink } = require('./instructorStudentService');
   const { ensureStudentInParticipantGroup } = require('./participantGroupService');
-
-  await db.transaction(async (client) => {
-    await ensureLightInstructorEnrollment(client, material.instructor_id, studentId, 'material', {
-      activate: true,
-    });
-    await trackInstructorStudentLink(material.instructor_id, studentId, { skipLimitCheck: true }, client);
-    await client.query(
-      `INSERT INTO course_material_guest_students (material_id, student_id)
-       VALUES ($1::uuid, $2::uuid)
-       ON CONFLICT DO NOTHING`,
+  const work = async (trx) => {
+    await ensureLightInstructorEnrollment(trx, material.instructor_id, studentId, 'material', { activate: true });
+    await trackInstructorStudentLink(material.instructor_id, studentId, { skipLimitCheck: true }, trx);
+    await trx.query(
+      `INSERT INTO course_material_guest_students (material_id, student_id) VALUES ($1::uuid, $2::uuid) ON CONFLICT DO NOTHING`,
       [materialId, studentId],
     );
     if (material.group_id) {
-      const { rows: grows } = await client.query(
-        `SELECT subject_id FROM instructor_groups WHERE id = $1::uuid`,
-        [material.group_id],
-      );
-      await ensureStudentInParticipantGroup(client, {
+      const { rows: grows } = await trx.query(`SELECT subject_id FROM instructor_groups WHERE id = $1::uuid`, [material.group_id]);
+      await ensureStudentInParticipantGroup(trx, {
         instructorId: material.instructor_id,
         studentId,
         groupId: material.group_id,
@@ -340,19 +373,25 @@ async function joinMaterialAsGuest(materialId, profile) {
         enrollmentSource: 'group',
       });
     }
-  });
-
-  const session = await buildGuestSessionPayload(studentId);
+  };
+  if (client) await work(client);
+  else await db.transaction(work);
   return {
-    ...session,
-    guest: true,
-    material: {
-      id: material.id,
-      title: material.title,
-      instructor_name: material.instructor_name,
-    },
+    material: { id: material.id, title: material.title, instructor_name: material.instructor_name },
     message: 'Materiala daxil ola bilərsiniz.',
   };
+}
+
+async function joinMaterialAsAuthenticatedStudent(materialId, studentId) {
+  const grant = await grantMaterialAccessForStudent(studentId, materialId);
+  return { ...grant, guest: false };
+}
+
+async function joinMaterialAsGuest(materialId, profile) {
+  const studentId = await findOrCreateGuestStudent(profile);
+  const grant = await grantMaterialAccessForStudent(studentId, materialId);
+  const session = await buildGuestSessionPayload(studentId);
+  return { ...session, ...grant, guest: true };
 }
 
 module.exports = {
@@ -364,6 +403,8 @@ module.exports = {
   getGroupForMaterialsInvite,
   joinGroupMaterialsAsGuest,
   getMaterialForInvite,
+  grantMaterialAccessForStudent,
+  joinMaterialAsAuthenticatedStudent,
   joinMaterialAsGuest,
   buildGuestSessionPayload,
 };
