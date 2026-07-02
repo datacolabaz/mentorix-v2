@@ -63,6 +63,20 @@ async function ensureLightInstructorEnrollment(client, instructorId, studentId, 
     `INSERT INTO enrollments (
        instructor_id, student_id, status, enrolled_at, enrollment_source, notifications_enabled
      ) VALUES ($1::uuid, $2::uuid, 'pending_setup', NOW(), $3, FALSE)
+     ON CONFLICT (instructor_id, student_id) DO UPDATE
+     SET deleted_at = NULL,
+         status = CASE
+           WHEN COALESCE(LOWER(TRIM(enrollments.status)), '') IN ('rejected', 'left', 'archived')
+             THEN 'pending_setup'
+           ELSE enrollments.status
+         END,
+         enrolled_at = COALESCE(enrollments.enrolled_at, NOW()),
+         enrollment_source = CASE
+           WHEN enrollments.group_id IS NOT NULL THEN enrollments.enrollment_source
+           WHEN COALESCE(LOWER(TRIM(enrollments.enrollment_source)), '') IN ('manual', 'group') THEN enrollments.enrollment_source
+           ELSE EXCLUDED.enrollment_source
+         END,
+         notifications_enabled = FALSE
      RETURNING id`,
     [instructorId, studentId, source],
   );
