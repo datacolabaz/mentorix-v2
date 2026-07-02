@@ -1,6 +1,7 @@
 const {
   getMaterialForInvite,
   joinMaterialAsGuest,
+  joinMaterialAsAuthenticatedStudent,
 } = require('../services/guestAccessService');
 
 /** GET /api/public/material-invite/:materialId */
@@ -47,12 +48,9 @@ async function postPublicMaterialGuestJoin(req, res) {
 
 
 
-
-const { joinMaterialAsAuthenticatedStudent } = require('../services/guestAccessService');
-
 async function postMaterialAccessFromLink(req, res) {
   try {
-    const result = await joinMaterialAsAuthenticatedStudent(req.params.materialId, req.user.id);
+    const result = await joinMaterialAsAuthenticatedStudent(req.params.id, req.user.id);
     res.status(200).json({ success: true, ...result });
   } catch (err) {
     res.status(err.statusCode || 500).json({ success: false, message: err.message, code: err.code });
