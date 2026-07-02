@@ -238,9 +238,10 @@ async function createJoinRequest({
     throw err;
   }
 
-  const phoneCanon = canonicalStudentPhone(phone_number);
-  if (!phoneCanon) {
-    const err = new Error('Telefon nömrəsi tələb olunur (+994 XX XXX XX XX)');
+  const phoneRaw = phone_number != null ? String(phone_number).trim() : '';
+  const phoneCanon = phoneRaw ? canonicalStudentPhone(phoneRaw) : null;
+  if (phoneRaw && !phoneCanon) {
+    const err = new Error('Telefon nömrəsi düzgün deyil (+994 XX XXX XX XX)');
     err.statusCode = 400;
     throw err;
   }
@@ -330,7 +331,7 @@ async function createJoinRequest({
 
   const result = await db.transaction(async (client) => {
     await client.query(`UPDATE users SET full_name = $1 WHERE id = $2`, [fullName, studentId]);
-    await upsertStudentContactPhone(client, studentId, phoneCanon);
+    if (phoneCanon) await upsertStudentContactPhone(client, studentId, phoneCanon);
 
     const pr = await client.query(
       `UPDATE student_profiles SET
@@ -385,7 +386,7 @@ async function createJoinRequest({
     await trackInstructorStudentLink(
       g.instructor_id,
       studentId,
-      { verifiedPhone: phoneCanon, skipLimitCheck: true },
+      { verifiedPhone: phoneCanon || undefined, skipLimitCheck: true },
       client,
     );
 

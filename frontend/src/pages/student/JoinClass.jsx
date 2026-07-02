@@ -5,11 +5,9 @@ import useAuthStore from '../../hooks/useAuth'
 import Button from '../../components/common/Button'
 import Card from '../../components/common/Card'
 import { useToast } from '../../components/common/Toast'
-import PhoneInput from '../../components/auth/PhoneInput'
 import GoogleSignInButton from '../../components/auth/GoogleSignInButton'
 import { useStudentGroupsOptional } from '../../contexts/StudentGroupContext'
 import { formatAzn } from '../../lib/groupPaymentTerms'
-import { canonicalAzPhoneE164 } from '../../lib/azPhone'
 import JoinGroupTermsOverview from '../../components/student/JoinGroupTermsOverview'
 import { parseJoinInviteInput } from '../../lib/joinInvite'
 
@@ -51,9 +49,7 @@ export default function JoinClass() {
 
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
-  const [phone, setPhone] = useState('')
   const [parentName, setParentName] = useState('')
-  const [parentPhone, setParentPhone] = useState('')
   const [busy, setBusy] = useState(false)
   const [authBusy, setAuthBusy] = useState(false)
   const [submitted, setSubmitted] = useState(false)
@@ -111,14 +107,6 @@ export default function JoinClass() {
     }
   }, [user?.id, user?.role, initialCode, joinInfo])
 
-  useEffect(() => {
-    if (!user) return
-    const n = splitFullName(user.full_name)
-    if (!firstName && n.first_name) setFirstName(n.first_name)
-    if (!lastName && n.last_name) setLastName(n.last_name)
-    if (!phone && user.phone) setPhone(user.phone)
-  }, [user, firstName, lastName, phone])
-
   const persistAuth = useCallback(
     (token, authUser) => {
       setSession(token, authUser)
@@ -169,10 +157,6 @@ export default function JoinClass() {
     const fn = String(firstName).trim()
     const ln = String(lastName).trim()
     if (!fn || !ln) return toast('Ad və soyad tələb olunur', 'error')
-    const phoneCanon = canonicalAzPhoneE164(phone)
-    if (!phoneCanon) {
-      return toast('Telefon düzgün deyil: +994 və 9 rəqəm (məs. 50 123 45 67)', 'error')
-    }
     if (!joinInfo?.package_offer) {
       return toast('Qrup paketi hələ hazır deyil — müəllimlə əlaqə saxlayın', 'error')
     }
@@ -183,9 +167,7 @@ export default function JoinClass() {
         code: initialCode,
         first_name: fn,
         last_name: ln,
-        phone_number: phoneCanon,
         parent_name: parentName || undefined,
-        parent_phone: parentPhone ? canonicalAzPhoneE164(parentPhone) || undefined : undefined,
         payment_terms_accepted: true,
         referral_source_id: referralSourceId || undefined,
         referral_notes: referralNotes.trim() || undefined,
@@ -298,8 +280,7 @@ export default function JoinClass() {
             <Card className="p-5 mb-4 border border-primary/30 bg-primary/5 space-y-4">
               <p className="text-sm font-medium text-token-textMain">Davam etmək üçün daxil olun</p>
               <p className="text-sm text-token-textMuted">
-                Qrupa qoşulmaq üçün Gmail və ya email ilə giriş edin — sonra məlumatlarınızı doldurub «Qoşul»
-                düyməsinə basın.
+                Qrupa qoşulmaq üçün Google ilə daxil olun — ad və soyadınızı yoxlayıb «Qoşul» düyməsinə basın. Telefon tələb olunmur.
               </p>
               <GoogleSignInButton onCredential={handleGoogleCredential} disabled={authBusy} />
               <p className="text-center text-xs text-token-textMuted">
@@ -331,10 +312,6 @@ export default function JoinClass() {
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-token-textMuted uppercase mb-1.5">Telefon *</label>
-                <PhoneInput value={phone} onChange={setPhone} required />
-              </div>
-              <div>
                 <label className="block text-xs font-semibold text-token-textMuted uppercase mb-1.5">
                   Valideyn adı (ixtiyari)
                 </label>
@@ -344,12 +321,6 @@ export default function JoinClass() {
                   onChange={(e) => setParentName(e.target.value)}
                   placeholder="Valideynin adı"
                 />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-token-textMuted uppercase mb-1.5">
-                  Valideyn telefonu (ixtiyari)
-                </label>
-                <PhoneInput value={parentPhone} onChange={setParentPhone} />
               </div>
               <div className="rounded-xl border border-indigo-500/20 bg-indigo-500/5 p-3 space-y-3">
                 <p className="text-xs font-semibold text-indigo-200/90 uppercase tracking-wider">Kim yönləndirdi?</p>

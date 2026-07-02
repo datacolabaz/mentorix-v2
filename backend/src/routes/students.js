@@ -1550,8 +1550,7 @@ router.post('/my/join', authenticate, authorize('student'), async (req, res) => 
   try {
     const hasProfile =
       req.body?.first_name != null &&
-      req.body?.last_name != null &&
-      req.body?.phone_number != null;
+      req.body?.last_name != null;
     if (hasProfile) {
       const result = await createJoinRequest({
         studentId: req.user.id,

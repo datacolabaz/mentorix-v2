@@ -43,7 +43,7 @@ export default function TaskInvite() {
     try {
       const sub = await api.post(`/tasks/${encodeURIComponent(id)}/access-from-link`, {})
       toast(sub?.message || 'Tapşırıqa daxil ola bilərsiniz', 'success')
-      navigate(`/student/tasks?task=${encodeURIComponent(id)}`, { replace: true })
+      navigate('/student/assignments', { replace: true })
     } catch (err) {
       toast(err?.message || 'Qoşulma alınmadı', 'error')
     } finally { setJoinBusy(false) }
