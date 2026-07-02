@@ -23,6 +23,7 @@ import {
   assignmentFileOpenUrl,
   isAssignmentPreviewable,
 } from '../../lib/assignmentFileUrl'
+import { ASSIGNMENT_ACCEPT, validateAssignmentFile } from '../../lib/assignmentFileLimits'
 import {
   materialFileKind,
   materialFileOpenUrl,
@@ -215,6 +216,11 @@ export default function StudentAssignments() {
     try {
       const next = [...attachments]
       for (const f of list) {
+        const check = validateAssignmentFile(f)
+        if (!check.ok) {
+          toast(check.message, 'error')
+          continue
+        }
         const fd = new FormData()
         fd.append('file', f)
         const r = await api.post('/tasks/upload', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
@@ -592,7 +598,7 @@ export default function StudentAssignments() {
                     <input
                       type="file"
                       multiple
-                      accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.zip,application/pdf,image/png,image/jpeg,application/zip"
+                      accept={ASSIGNMENT_ACCEPT}
                       className="hidden"
                       onChange={(e) => void uploadFiles(e.target.files)}
                     />

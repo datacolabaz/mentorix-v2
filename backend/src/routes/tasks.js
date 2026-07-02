@@ -40,29 +40,25 @@ function authenticateAssignmentFile(req, res, next) {
   }
 }
 
-const ASSIGNMENT_MIME_OK = new Set([
-  'application/pdf',
-  'image/png',
-  'image/jpeg',
-  'image/jpg',
-  'text/csv',
-  'application/msword',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'application/vnd.ms-excel',
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  'application/vnd.ms-powerpoint',
-  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-  'application/zip',
-  'application/x-zip-compressed',
-]);
+const {
+  ASSIGNMENT_MAX_UPLOAD_BYTES,
+  assignmentFileFilter,
+  validateAssignmentFileSize,
+} = require('../lib/assignmentFileLimits');
 
-function assignmentFileFilter(req, file, cb) {
-  const ext = path.extname(file.originalname || '').toLowerCase();
-  const extOk = ['.pdf', '.png', '.jpg', '.jpeg', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.csv', '.zip'].includes(
-    ext,
-  );
-  if (ASSIGNMENT_MIME_OK.has(file.mimetype) || extOk) return cb(null, true);
-  return cb(new Error('Fayl formatı dəstəklənmir (PDF, Word, Excel, PowerPoint, şəkil, ZIP)'));
+function rejectOversizedAssignmentFile(req, res, next) {
+  const check = validateAssignmentFileSize(req.file);
+  if (!check.ok) {
+    if (req.file?.path) {
+      try {
+        require('fs').unlinkSync(req.file.path);
+      } catch {
+        /* ignore */
+      }
+    }
+    return res.status(400).json({ success: false, message: check.message });
+  }
+  next();
 }
 
 router.get('/', authenticate, authorize('instructor'), listInstructorTasks);
@@ -106,6 +102,11 @@ const storage = multer.diskStorage({
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': '.xlsx',
         'application/msword': '.doc',
         'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '.docx',
+        'text/plain': '.txt',
+        'application/vnd.ms-powerpoint': '.ppt',
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation': '.pptx',
+        'application/zip': '.zip',
+        'application/x-zip-compressed': '.zip',
       };
       ext = map[mt] || '.bin';
     }
@@ -114,7 +115,7 @@ const storage = multer.diskStorage({
 });
 const uploadAssignmentFile = multer({
   storage,
-  limits: { fileSize: 20 * 1024 * 1024 },
+  limits: { fileSize: ASSIGNMENT_MAX_UPLOAD_BYTES },
   fileFilter: assignmentFileFilter,
 });
 
@@ -128,6 +129,7 @@ router.post(
       next();
     });
   },
+  rejectOversizedAssignmentFile,
   async (req, res) => {
     if (!req.file) return res.status(400).json({ success: false, message: 'Fayl tələb olunur' });
     try {
@@ -144,7 +146,7 @@ router.post(
 // Instructor question file upload
 const uploadInstructorQuestionFile = multer({
   storage,
-  limits: { fileSize: 20 * 1024 * 1024 },
+  limits: { fileSize: ASSIGNMENT_MAX_UPLOAD_BYTES },
   fileFilter: assignmentFileFilter,
 });
 
@@ -159,6 +161,7 @@ router.post(
       next();
     });
   },
+  rejectOversizedAssignmentFile,
   enforceStorageLimitAfterUpload,
   async (req, res) => {
     if (!req.file) return res.status(400).json({ success: false, message: 'Fayl teleb olunur' });

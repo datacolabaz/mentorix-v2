@@ -13,6 +13,7 @@ import { isInstructorBillingBlocked, HOMEWORK_MONTHLY_LIMIT_MESSAGE, isHomeworks
 import { useSubscriptionPlans } from '../../hooks/useSubscriptionPlans'
 import { assignmentStatusClass } from '../../lib/assignmentHelpers'
 import { assignmentFileLabel, assignmentFileOpenUrl, isAssignmentPreviewable } from '../../lib/assignmentFileUrl'
+import { ASSIGNMENT_ACCEPT, ASSIGNMENT_FORMAT_CHIPS, validateAssignmentFile } from '../../lib/assignmentFileLimits'
 import LibraryMaterialPickerModal from '../../components/instructor/LibraryMaterialPickerModal'
 
 const BAKU_TZ = 'Asia/Baku'
@@ -302,6 +303,11 @@ export default function InstructorTasks() {
       return
     }
     if (!file) return
+    const check = validateAssignmentFile(file, t)
+    if (!check.ok) {
+      toast(check.message, 'error')
+      return
+    }
     setFileUploading(true)
     try {
       const fd = new FormData()
@@ -682,28 +688,38 @@ export default function InstructorTasks() {
             />
           </div>
           <div className="rounded-xl border border-indigo-500/15 bg-[#0f0c29]/40 p-3">
-            <div className="flex items-center justify-between gap-2 mb-2">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{t('tasks.form.fileSection')}</p>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setLibraryPickerOpen(true)}
-                  disabled={blocked}
-                  className="text-xs font-semibold text-primary hover:text-primary/80"
-                >
-                  {t('tasks.library')}
-                </button>
-                <label className="text-xs font-semibold text-blue-400 hover:text-blue-300 cursor-pointer">
-                  {t('tasks.upload')}
-                  <input
-                    type="file"
-                    className="hidden"
-                    accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xlsx,.xls,.ppt,.pptx,.csv,.zip,application/pdf,image/png,image/jpeg,application/zip"
-                    onChange={(e) => void uploadQuestionFile(e.target.files?.[0])}
-                    disabled={blocked || fileUploading}
-                  />
-                </label>
-              </div>
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">{t('tasks.form.fileSection')}</p>
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mb-2 text-[11px] text-gray-400">
+              {ASSIGNMENT_FORMAT_CHIPS.map((chip, i) => (
+                <span key={chip.key} className="inline-flex items-center gap-0.5">
+                  {i > 0 ? <span className="text-gray-600 mr-1">•</span> : null}
+                  <span aria-hidden>{chip.icon}</span>
+                  <span>{t(`tasks.form.formats.${chip.key}`)}</span>
+                </span>
+              ))}
+            </div>
+            <p className="text-[11px] text-gray-500 mb-3">{t('tasks.form.fileSizeLimits')}</p>
+            <div className="flex flex-wrap items-center gap-2 mb-3">
+              <button
+                type="button"
+                onClick={() => setLibraryPickerOpen(true)}
+                disabled={blocked}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-primary/30 bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary hover:bg-primary/15 disabled:opacity-50"
+              >
+                <span aria-hidden>📚</span>
+                {t('tasks.pickFromLibrary')}
+              </button>
+              <label className="inline-flex items-center gap-1.5 rounded-lg border border-blue-500/30 bg-blue-500/10 px-3 py-1.5 text-xs font-semibold text-blue-300 hover:bg-blue-500/15 cursor-pointer disabled:opacity-50">
+                <span aria-hidden>📤</span>
+                {t('tasks.uploadFromComputer')}
+                <input
+                  type="file"
+                  className="hidden"
+                  accept={ASSIGNMENT_ACCEPT}
+                  onChange={(e) => void uploadQuestionFile(e.target.files?.[0])}
+                  disabled={blocked || fileUploading}
+                />
+              </label>
             </div>
             <LibraryMaterialPickerModal
               open={libraryPickerOpen}
