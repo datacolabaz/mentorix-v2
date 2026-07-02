@@ -13,6 +13,7 @@ const {
   ACTIVE_STUDENT_USER_JOIN,
 } = require('../sql/activeEnrollments');
 const { getOnlinePresenceStats } = require('../services/accessEventService');
+const { getCeoDashboard } = require('../services/adminCeoDashboardService');
 const { SMS_LOGS_MONTHLY_COUNT_SUBQUERY } = require('../sql/adminSmsUsage');
 const { decorateAdminClassRow } = require('../lib/participantGroupLabels');
 
@@ -201,6 +202,16 @@ const updateInstructorPlan = async (req, res) => {
 };
 
 // Admin dashboard stats
+/** CEO dashboard — biznes KPI, canlı online, pending actions */
+const getCeoDashboardHandler = async (req, res) => {
+  try {
+    const dashboard = await getCeoDashboard();
+    res.json({ success: true, dashboard });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 const getDashboardStats = async (req, res) => {
   try {
     const [
@@ -623,6 +634,7 @@ const toggleInstructor = async (req, res) => {
 };
 
 module.exports = {
+  getCeoDashboardHandler,
   getInstructors,
   patchInstructorProfile,
   updateInstructorLimits,

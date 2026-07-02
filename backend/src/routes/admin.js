@@ -4,6 +4,7 @@ const {
   patchInstructorProfile,
   updateInstructorLimits,
   getDashboardStats,
+  getCeoDashboardHandler,
   toggleInstructor,
   updateInstructorPlan,
   getStudents,
@@ -44,6 +45,7 @@ const {
   putAdminPlatformContact,
 } = require('../controllers/platformContactController');
 
+router.get('/ceo-dashboard', authenticate, authorize('admin'), getCeoDashboardHandler);
 router.get('/stats', authenticate, authorize('admin'), getDashboardStats);
 router.get('/analytics/traffic', authenticate, authorize('admin'), getAdminTraffic);
 router.get('/analytics/dashboard', authenticate, authorize('admin'), getAdminAnalytics);
