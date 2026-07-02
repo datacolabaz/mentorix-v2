@@ -1,6 +1,7 @@
 const {
   getGroupForMaterialsInvite,
   joinGroupMaterialsAsGuest,
+  joinGroupMaterialsAsAuthenticatedStudent,
 } = require('../services/guestAccessService');
 
 /** GET /api/public/library-invite/:groupId */
@@ -44,4 +45,15 @@ async function postPublicLibraryGuestJoin(req, res) {
   }
 }
 
-module.exports = { getPublicLibraryInvite, postPublicLibraryGuestJoin };
+module.exports = { getPublicLibraryInvite, postPublicLibraryGuestJoin, postLibraryAccessFromLink };
+
+
+/** POST /api/materials/library/:groupId/access-from-link — authenticated student */
+async function postLibraryAccessFromLink(req, res) {
+  try {
+    const result = await joinGroupMaterialsAsAuthenticatedStudent(req.params.groupId, req.user.id);
+    res.status(200).json({ success: true, ...result });
+  } catch (err) {
+    res.status(err.statusCode || 500).json({ success: false, message: err.message, code: err.code });
+  }
+}

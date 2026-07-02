@@ -290,36 +290,29 @@ async function getGroupForMaterialsInvite(groupId) {
   return rows[0] || null;
 }
 
-async function joinGroupMaterialsAsGuest(groupId, profile) {
+async function grantGroupMaterialsAccessForStudent(studentId, groupId, client = null) {
   const group = await getGroupForMaterialsInvite(groupId);
   if (!group) {
     const err = new Error('Qrup tapılmadı');
     err.statusCode = 404;
     throw err;
   }
-
-  const studentId = await findOrCreateGuestStudent(profile);
   const { trackInstructorStudentLink } = require('./instructorStudentService');
   const { ensureStudentInParticipantGroup } = require('./participantGroupService');
-
-  await db.transaction(async (client) => {
-    await ensureLightInstructorEnrollment(client, group.instructor_id, studentId, 'group', {
-      activate: true,
-    });
-    await trackInstructorStudentLink(group.instructor_id, studentId, { skipLimitCheck: true }, client);
-    await ensureStudentInParticipantGroup(client, {
+  const work = async (trx) => {
+    await ensureLightInstructorEnrollment(trx, group.instructor_id, studentId, 'group', { activate: true });
+    await trackInstructorStudentLink(group.instructor_id, studentId, { skipLimitCheck: true }, trx);
+    await ensureStudentInParticipantGroup(trx, {
       instructorId: group.instructor_id,
       studentId,
       groupId: group.id,
       subjectId: group.subject_id,
       enrollmentSource: 'group',
     });
-  });
-
-  const session = await buildGuestSessionPayload(studentId);
+  };
+  if (client) await work(client);
+  else await db.transaction(work);
   return {
-    ...session,
-    guest: true,
     group: {
       id: group.id,
       name: group.name,
@@ -328,6 +321,18 @@ async function joinGroupMaterialsAsGuest(groupId, profile) {
     },
     message: 'Kitabxanaya daxil ola bilərsiniz.',
   };
+}
+
+async function joinGroupMaterialsAsAuthenticatedStudent(groupId, studentId) {
+  const grant = await grantGroupMaterialsAccessForStudent(studentId, groupId);
+  return { ...grant, guest: false };
+}
+
+async function joinGroupMaterialsAsGuest(groupId, profile) {
+  const studentId = await findOrCreateGuestStudent(profile);
+  const grant = await grantGroupMaterialsAccessForStudent(studentId, groupId);
+  const session = await buildGuestSessionPayload(studentId);
+  return { ...session, ...grant, guest: true };
 }
 
 async function getMaterialForInvite(materialId) {
@@ -401,6 +406,8 @@ module.exports = {
   joinExamAsGuest,
   joinTaskAsGuest,
   getGroupForMaterialsInvite,
+  grantGroupMaterialsAccessForStudent,
+  joinGroupMaterialsAsAuthenticatedStudent,
   joinGroupMaterialsAsGuest,
   getMaterialForInvite,
   grantMaterialAccessForStudent,

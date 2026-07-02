@@ -5,19 +5,7 @@ import useAuthStore from '../../hooks/useAuth'
 import Button from '../../components/common/Button'
 import Card from '../../components/common/Card'
 import { useToast } from '../../components/common/Toast'
-import PhoneInput from '../../components/auth/PhoneInput'
-import { canonicalAzPhoneE164 } from '../../lib/azPhone'
-
-const inp =
-  'w-full border border-[color:var(--border-subtle)] rounded-xl px-4 py-3 text-token-textMain text-sm outline-none focus:border-primary/40 bg-token-surfaceCard/55'
-
-function splitFullName(full) {
-  const t = String(full || '').trim()
-  if (!t) return { first_name: '', last_name: '' }
-  const i = t.indexOf(' ')
-  if (i < 0) return { first_name: t, last_name: '' }
-  return { first_name: t.slice(0, i), last_name: t.slice(i + 1).trim() }
-}
+import GoogleSignInButton from '../../components/auth/GoogleSignInButton'
 
 export default function LibraryInvite() {
   const { groupId } = useParams()
@@ -25,97 +13,58 @@ export default function LibraryInvite() {
   const toast = useToast()
   const { user, setSession } = useAuthStore()
   const id = useMemo(() => String(groupId || '').trim(), [groupId])
-
   const [info, setInfo] = useState(null)
   const [infoLoading, setInfoLoading] = useState(Boolean(id))
   const [infoError, setInfoError] = useState('')
+  const [authBusy, setAuthBusy] = useState(false)
   const [joinBusy, setJoinBusy] = useState(false)
-  const [firstName, setFirstName] = useState('')
-  const [lastName, setLastName] = useState('')
-  const [email, setEmail] = useState('')
-  const [phone, setPhone] = useState('')
-  const [fieldErrors, setFieldErrors] = useState(null)
 
   useEffect(() => {
-    if (!id) {
-      setInfoLoading(false)
-      setInfoError('Kitabxana linki düzgün deyil')
-      return
-    }
+    if (!id) { setInfoLoading(false); setInfoError('Kitabxana linki düzgün deyil'); return }
     let cancelled = false
     ;(async () => {
-      setInfoLoading(true)
-      setInfoError('')
+      setInfoLoading(true); setInfoError('')
       try {
         const d = await api.get(`/public/library-invite/${encodeURIComponent(id)}`)
         if (!cancelled) setInfo(d)
       } catch (err) {
         if (!cancelled) setInfoError(err?.message || 'Qrup tapılmadı')
-      } finally {
-        if (!cancelled) setInfoLoading(false)
-      }
+      } finally { if (!cancelled) setInfoLoading(false) }
     })()
-    return () => {
-      cancelled = true
-    }
+    return () => { cancelled = true }
   }, [id])
 
-  useEffect(() => {
-    if (!user) return
-    const n = splitFullName(user.full_name)
-    if (!firstName && n.first_name) setFirstName(n.first_name)
-    if (!lastName && n.last_name) setLastName(n.last_name)
-    if (!email && user.email) setEmail(user.email)
-    if (!phone && user.phone) setPhone(user.phone)
-  }, [user, firstName, lastName, email, phone])
-
-  const collectMissing = useCallback(() => {
-    const missing = []
-    if (!String(firstName).trim()) missing.push('Ad')
-    if (!String(lastName).trim()) missing.push('Soyad')
-    if (!String(email).trim() || !String(email).includes('@')) missing.push('E-poçt')
-    if (!canonicalAzPhoneE164(phone)) {
-      missing.push('Mobil telefon (+994 və 9 rəqəm)')
-    }
-    return missing
-  }, [firstName, lastName, email, phone])
-
-  const finishJoin = useCallback(
-    (payload) => {
-      if (payload?.token && payload?.user) {
-        setSession(payload.token, { ...payload.user, needs_phone_verification: false })
-      }
-      toast(payload?.message || 'Kitabxanaya daxil ola bilərsiniz', 'success')
-      navigate('/student/materials', { replace: true })
-    },
-    [navigate, setSession, toast],
-  )
-
-  const submitGuestJoin = useCallback(async () => {
-    if (!id) return
-    const missing = collectMissing()
-    if (missing.length) {
-      setFieldErrors(missing)
-      return
-    }
-    setFieldErrors(null)
-    const phoneCanon = canonicalAzPhoneE164(phone)
+  const acceptInvite = useCallback(async () => {
+    if (!id || user?.role !== 'student') return
     setJoinBusy(true)
     try {
-      const sub = await api.post(`/public/library-invite/${encodeURIComponent(id)}/join`, {
-        first_name: String(firstName).trim(),
-        last_name: String(lastName).trim(),
-        email: String(email).trim(),
-        phone: phoneCanon,
-      })
-      finishJoin(sub)
+      const sub = await api.post(`/materials/library/${encodeURIComponent(id)}/access-from-link`, {})
+      toast(sub?.message || 'Kitabxanaya daxil ola bilərsiniz', 'success')
+      navigate('/student/materials', { replace: true })
     } catch (err) {
       toast(err?.message || 'Qoşulma alınmadı', 'error')
-    } finally {
-      setJoinBusy(false)
-    }
-  }, [id, firstName, lastName, email, phone, collectMissing, finishJoin, toast])
+    } finally { setJoinBusy(false) }
+  }, [id, user?.role, navigate, toast])
 
+  useEffect(() => {
+    if (user?.role === 'student' && id && info?.group && !infoLoading && !infoError) void acceptInvite()
+  }, [user?.role, id, info, infoLoading, infoError, acceptInvite])
+
+  const handleGoogleCredential = async (credential) => {
+    setAuthBusy(true)
+    try {
+      let r = await api.post('/auth/google/login', { credential })
+      if (r?.needs_role || r?.needs_phone_link) r = await api.post('/auth/google/complete', { credential, role: 'student' })
+      if (r?.needs_phone_link) return toast('Bu Google hesabı başqa telefon hesabına bağlıdır.', 'error')
+      if (!r?.token || !r?.user) return toast(r?.message || 'Google girişi tamamlanmadı', 'error')
+      if (r.user.role && r.user.role !== 'student') return toast('Bu hesab tələbə deyil', 'error')
+      setSession(r.token, { ...r.user, needs_phone_verification: false })
+      toast('Daxil oldunuz', 'success')
+    } catch (err) { toast(err?.message || 'Google girişi uğursuz', 'error') }
+    finally { setAuthBusy(false) }
+  }
+
+  const loginHref = `/login?next=${encodeURIComponent(id ? `/library/${id}` : '/student/materials')}`
   const group = info?.group
 
   return (
@@ -124,63 +73,26 @@ export default function LibraryInvite() {
         <div className="text-center space-y-2">
           <p className="text-[11px] font-bold uppercase tracking-wider text-primary">Mentorix · Materiallar</p>
           <h1 className="font-display font-bold text-xl">Tədris materialları kitabxanası</h1>
-          {infoLoading ? (
-            <p className="text-sm text-gray-400">Yüklənir…</p>
-          ) : infoError ? (
-            <p className="text-sm text-amber-300">{infoError}</p>
-          ) : group ? (
-            <p className="text-sm text-gray-400">
-              <span className="text-white font-medium">{group.instructor_name}</span>
-              {' · '}
-              {group.subject_name} — {group.name}
-            </p>
+          {infoLoading ? <p className="text-sm text-gray-400">Yüklənir…</p> : infoError ? <p className="text-sm text-amber-300">{infoError}</p> : group ? (
+            <p className="text-sm text-gray-400"><span className="text-white font-medium">{group.instructor_name}</span> · {group.subject_name} — {group.name}</p>
           ) : null}
         </div>
-
         {!infoLoading && !infoError && group ? (
-          <div className="space-y-3">
-            <p className="text-xs text-gray-400 text-center">
-              Materiallara baxmaq üçün qısa qeydiyyat keçin. Məlumatlarınız yalnız bu müəllimlə paylaşılır.
-            </p>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className="block space-y-1">
-                <span className="text-xs text-gray-500">Ad</span>
-                <input className={inp} value={firstName} onChange={(e) => setFirstName(e.target.value)} />
-              </label>
-              <label className="block space-y-1">
-                <span className="text-xs text-gray-500">Soyad</span>
-                <input className={inp} value={lastName} onChange={(e) => setLastName(e.target.value)} />
-              </label>
-            </div>
-            <label className="block space-y-1">
-              <span className="text-xs text-gray-500">E-poçt</span>
-              <input
-                type="email"
-                className={inp}
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="ornek@mail.com"
-              />
-            </label>
-            <label className="block space-y-1">
-              <span className="text-xs text-gray-500">Mobil telefon</span>
-              <PhoneInput value={phone} onChange={setPhone} />
-            </label>
-            {fieldErrors?.length ? (
-              <p className="text-xs text-amber-300">Çatışmayan: {fieldErrors.join(', ')}</p>
-            ) : null}
-            <Button className="w-full" onClick={submitGuestJoin} loading={joinBusy}>
-              Kitabxanaya daxil ol
-            </Button>
+          <div className="space-y-4">
+            <p className="text-xs text-gray-400 text-center">Materiallara baxmaq üçün Google ilə daxil olun. Telefon tələb olunmur.</p>
+            {user?.role === 'student' ? (
+              <div className="space-y-3 text-center">
+                <p className="text-sm text-emerald-300">Daxil: <span className="font-medium">{user.email || user.full_name}</span></p>
+                <Button className="w-full" onClick={() => void acceptInvite()} loading={joinBusy}>Kitabxanaya daxil ol</Button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <GoogleSignInButton onCredential={handleGoogleCredential} disabled={authBusy} />
+                <p className="text-center text-xs text-gray-500">və ya <Link to={loginHref} className="text-primary hover:underline">email ilə giriş</Link></p>
+              </div>
+            )}
           </div>
         ) : null}
-
-        <p className="text-center text-xs text-gray-500">
-          Artıq hesabınız var?{' '}
-          <Link to="/login" className="text-primary hover:underline">
-            Giriş
-          </Link>
-        </p>
       </Card>
     </div>
   )
