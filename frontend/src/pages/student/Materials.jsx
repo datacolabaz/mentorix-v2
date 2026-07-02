@@ -4,7 +4,7 @@ import Card from '../../components/common/Card'
 import GroupSwitcher from '../../components/student/GroupSwitcher'
 import { useStudentGroups } from '../../contexts/StudentGroupContext'
 import { withEnrollmentQuery } from '../../lib/studentGroupQuery'
-import { materialFileKind, materialFileOpenUrl } from '../../lib/materialFileUrl'
+import { materialFileDownloadUrl, materialFileKind, materialFileOpenUrl } from '../../lib/materialFileUrl'
 import { formatMaterialsBytes } from '../../lib/materialsPlanLimits'
 import { studentEnrollmentDisplay } from '../../lib/participantGroupLabels'
 
@@ -95,14 +95,22 @@ export default function StudentMaterials() {
                         ) : null}
                       </div>
                     </div>
-                    <a
-                      href={materialFileOpenUrl(m.file_url)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="mt-3 block text-center text-xs font-semibold py-2 rounded-lg border border-violet-500/30 text-violet-300 hover:bg-violet-500/10"
-                    >
-                      Yüklə / Bax
-                    </a>
+                    <div className="mt-3 grid grid-cols-2 gap-2">
+                      <a
+                        href={materialFileOpenUrl(m.file_url)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-center text-xs font-semibold py-2 rounded-lg border border-violet-500/30 text-violet-300 hover:bg-violet-500/10"
+                      >
+                        Bax
+                      </a>
+                      <a
+                        href={materialFileDownloadUrl(m.file_url)}
+                        className="text-center text-xs font-semibold py-2 rounded-lg border border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/10"
+                      >
+                        Yüklə
+                      </a>
+                    </div>
                   </Card>
                 ))}
               </div>

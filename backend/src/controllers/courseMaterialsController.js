@@ -204,8 +204,13 @@ const serveMaterialFile = async (req, res) => {
     }
 
     const downloadName = material.original_filename || material.title || filename;
+    const safeName = String(downloadName).replace(/["\r\n]/g, '');
+    const forceDownload = ['1', 'true', 'yes'].includes(String(req.query?.download || '').toLowerCase());
     res.setHeader('Content-Type', hit.content_type);
-    res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(downloadName)}"`);
+    res.setHeader(
+      'Content-Disposition',
+      `${forceDownload ? 'attachment' : 'inline'}; filename="${safeName}"; filename*=UTF-8''${encodeURIComponent(safeName)}`,
+    );
     res.setHeader('Cache-Control', 'private, max-age=300');
     res.setHeader('Referrer-Policy', 'no-referrer');
     return res.send(hit.buffer);

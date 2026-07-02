@@ -16,13 +16,24 @@ export function materialStoredFilename(url) {
   return m ? decodeURIComponent(m[1]) : null
 }
 
-export function materialFileOpenUrl(url) {
+function materialFileApiUrl(url, { download = false } = {}) {
   const fn = materialStoredFilename(url)
   if (!fn) return url || ''
   const token = typeof localStorage !== 'undefined' ? localStorage.getItem('mx_token') : ''
   const path = `/materials/file/${encodeURIComponent(fn)}`
-  const withToken = token ? `${path}?token=${encodeURIComponent(token)}` : path
-  return apiAbsoluteUrl(withToken)
+  const params = new URLSearchParams()
+  if (token) params.set('token', token)
+  if (download) params.set('download', '1')
+  const qs = params.toString()
+  return apiAbsoluteUrl(qs ? `${path}?${qs}` : path)
+}
+
+export function materialFileOpenUrl(url) {
+  return materialFileApiUrl(url, { download: false })
+}
+
+export function materialFileDownloadUrl(url) {
+  return materialFileApiUrl(url, { download: true })
 }
 
 export function materialFileKind(fileType, url) {
