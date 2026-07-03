@@ -1,5 +1,6 @@
-const { PDFDocument, rgb, StandardFonts } = require('pdf-lib');
+const { PDFDocument, rgb } = require('pdf-lib');
 const QRCode = require('qrcode');
+const { embedCertificateFonts } = require('./certificatePdfFonts');
 
 function getBaseUrl() {
   const base = String(process.env.FRONTEND_BASE_URL || process.env.FRONTEND_URL || 'https://mentorix.az').trim();
@@ -68,8 +69,7 @@ async function generateCertificatePdf(data) {
   const pdf = await PDFDocument.create();
   const page = pdf.addPage([842, 595]);
   const { width, height } = page.getSize();
-  const font = await pdf.embedFont(StandardFonts.Helvetica);
-  const fontBold = await pdf.embedFont(StandardFonts.HelveticaBold);
+  const { regular: font, bold: fontBold } = await embedCertificateFonts(pdf);
 
   page.drawRectangle({
     x: 28,

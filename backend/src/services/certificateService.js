@@ -298,7 +298,7 @@ async function maybeIssueCertificateAfterExamSubmit({ examId, studentId, examRes
       exam,
     });
   } catch (e) {
-    console.error('maybeIssueCertificateAfterExamSubmit', e.message);
+    console.error('maybeIssueCertificateAfterExamSubmit', e.message, e.stack);
     return null;
   }
 }

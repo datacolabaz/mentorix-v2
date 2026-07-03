@@ -19,6 +19,7 @@ const { reconcileStorageUsage } = require('./jobs/storageUsageReconciler');
 const { runOrphanFilesReaper } = require('./jobs/orphanFilesReaper');
 const { runUniversityProgramScraper } = require('./jobs/universityProgramScraper');
 const { ensureStarted: ensureCertificateIssueWorker } = require('./jobs/certificateIssueWorker');
+const { ensureCertificateFontsReady } = require('./services/certificatePdfFonts');
 
 const { ensureAssignmentsUploadDir } = require('./services/assignmentFileStorage');
 const { ensureCertificatesUploadDir } = require('./services/certificateFileStorage');
@@ -98,6 +99,7 @@ app.use(errorHandler);
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log('Mentorix API running on port', PORT);
+  ensureCertificateFontsReady().catch((e) => console.error('[certificates] font setup', e.message));
   ensureCertificateIssueWorker();
   processExamNotificationJobs().catch((e) => console.error('exam notification jobs startup', e.message));
   recomputeAllInstructorsUsage().catch((e) => console.error('usage sync startup', e.message));
