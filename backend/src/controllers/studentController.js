@@ -20,6 +20,7 @@ const {
 } = require('../services/studentEnrollmentsService');
 const { mapRowsWithPresence } = require('../services/userPresenceService');
 const { expandStudentsWithParticipantGroups } = require('../services/participantGroupService');
+const { displayGroupLabel } = require('../lib/participantGroupLabels');
 
 function normInstructorHex(id) {
   return id == null ? '' : String(id).trim().toLowerCase().replace(/-/g, '');
@@ -202,6 +203,7 @@ const getReferralBreakdown = async (req, res) => {
     const baseSql = `SELECT u.id, u.full_name, u.phone,
               ist.name AS track_subject_name,
               ig.name AS track_group_name,
+              COALESCE(ig.is_system, FALSE) AS is_system_group,
               rs.name AS referral_source,
               e.referral_notes
        FROM users u
@@ -258,7 +260,11 @@ const getReferralBreakdown = async (req, res) => {
         full_name: r.full_name,
         phone: r.phone,
         track_subject_name: r.track_subject_name,
-        track_group_name: r.track_group_name,
+        track_group_name: displayGroupLabel({
+          name: r.track_group_name,
+          is_system: r.is_system_group,
+        }),
+        is_system_group: Boolean(r.is_system_group),
         referral_source: r.referral_source,
         referral_notes: r.referral_notes,
       });

@@ -2,10 +2,11 @@ const db = require('../utils/db');
 const {
   friendlyParticipantLabel,
   participantKindFromSystemKind,
+  displayGroupLabel,
 } = require('../lib/participantGroupLabels');
 const { batchCrmStudentIds } = require('./crmStudentService');
 
-const SYSTEM_SUBJECT_NAME = '[System] Participants';
+const SYSTEM_SUBJECT_NAME = 'Link iştirakçıları';
 const SYSTEM_KIND_EXAM = 'exam_participants';
 const SYSTEM_KIND_ASSIGNMENT = 'assignment_participants';
 
@@ -13,12 +14,8 @@ const normHex = (id) => (id == null ? '' : String(id).trim().toLowerCase().repla
 
 function buildParticipantGroupName(title) {
   const base = String(title || '').trim() || 'İştirakçılar';
-  const prefix = '[System] ';
-  const suffix = ' Participants';
   const max = 200;
-  const room = Math.max(8, max - prefix.length - suffix.length);
-  const clipped = base.length > room ? `${base.slice(0, room - 1)}…` : base;
-  return `${prefix}${clipped}${suffix}`;
+  return base.length > max ? `${base.slice(0, max - 1)}…` : base;
 }
 
 async function ensureSystemParticipantSubject(client, instructorId) {
@@ -293,14 +290,18 @@ async function addStudentToAssignmentParticipantGroup(client, assignmentId, stud
 
 function guestCohortFieldsFromMember(m) {
   const sourceTitle = m.exam_title || m.assignment_title || null;
-  const baseTitle =
-    sourceTitle ||
-    friendlyParticipantLabel({ group_name: m.track_group_name }).replace(/\s*\([^)]*\)\s*$/, '');
+  const baseTitle = displayGroupLabel({
+    name: m.track_group_name,
+    is_system: true,
+    system_kind: m.system_kind,
+    exam_title: sourceTitle,
+    assignment_title: m.assignment_title,
+  });
   const participantKind = participantKindFromSystemKind(m.system_kind) || 'exam';
   const cohortLabel =
     participantKind === 'task' ? `${baseTitle} — Qonaq (Tapşırıq)` : `${baseTitle} — Qonaq`;
   return {
-    track_group_name: cohortLabel,
+    track_group_name: baseTitle,
     track_subject_name:
       participantKind === 'task' ? 'Qonaq tapşırıq iştirakçıları' : 'Qonaq imtahan iştirakçıları',
     is_participant_group_row: true,
@@ -310,6 +311,7 @@ function guestCohortFieldsFromMember(m) {
     participant_kind: participantKind,
     participant_cohort_label: cohortLabel,
     participant_ref_id: m.system_ref_id || null,
+    link_join_badge: true,
   };
 }
 

@@ -8,6 +8,21 @@ function parseParticipantTitleFromGroupName(name) {
     .trim();
 }
 
+function displayGroupLabel({
+  name,
+  is_system,
+  system_kind,
+  exam_title,
+  assignment_title,
+} = {}) {
+  if (!is_system) return String(name || '').trim() || '—';
+  const fromRef =
+    String(exam_title || '').trim() || String(assignment_title || '').trim();
+  if (fromRef) return fromRef;
+  const parsed = parseParticipantTitleFromGroupName(name);
+  return parsed || 'İştirakçılar';
+}
+
 function friendlyParticipantLabel({ system_kind, source_title, group_name }) {
   const title =
     String(source_title || '').trim() ||
@@ -80,6 +95,7 @@ module.exports = {
   SYSTEM_KIND_EXAM,
   SYSTEM_KIND_ASSIGNMENT,
   parseParticipantTitleFromGroupName,
+  displayGroupLabel,
   friendlyParticipantLabel,
   participantKindFromSystemKind,
   guestCohortDisplayFromRow,

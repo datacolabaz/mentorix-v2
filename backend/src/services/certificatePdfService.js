@@ -116,10 +116,22 @@ async function generateCertificatePdf(data) {
     `${L.date}: ${formatDate(data.issued_at, locale)}`,
     `${L.certId}: ${String(data.certificate_no || '—')}`,
   ];
+
+  const metaLineHeight = 22;
+  const disclaimerY = 40;
+  const disclaimerGap = 16;
+  const metaBaseY = disclaimerY + disclaimerGap + 8;
   meta.forEach((line, i) => {
-    page.drawText(line, { x: 72, y: 120 - i * 22, size: 11, font, color: rgb(0.35, 0.35, 0.4) });
+    const fromBottom = meta.length - 1 - i;
+    page.drawText(line, {
+      x: 72,
+      y: metaBaseY + fromBottom * metaLineHeight,
+      size: 11,
+      font,
+      color: rgb(0.35, 0.35, 0.4),
+    });
   });
-  page.drawText(L.disclaimer, { x: 72, y: 52, size: 8, font, color: rgb(0.55, 0.55, 0.6) });
+  page.drawText(L.disclaimer, { x: 72, y: disclaimerY, size: 8, font, color: rgb(0.55, 0.55, 0.6) });
 
   const url = verifyUrl(data.verification_token);
   const qrPng = await QRCode.toBuffer(url, { type: 'png', margin: 1, width: 140, errorCorrectionLevel: 'M' });

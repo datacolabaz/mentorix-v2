@@ -344,7 +344,7 @@ const postSubject = async (req, res) => {
     if (isReservedSystemSubjectName(name)) {
       return res.status(400).json({
         success: false,
-        message: '«[System]» adlı sahələr avtomatik yaradılır — əl ilə yaradıla bilməz.',
+        message: '«Link iştirakçıları» adlı sahələr avtomatik yaradılır — əl ilə yaradıla bilməz.',
       });
     }
     const { rows: mx } = await db.query(

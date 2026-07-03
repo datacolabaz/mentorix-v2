@@ -60,10 +60,35 @@ import { groupPackagePayload } from '../../components/instructor/GroupPackageFie
 import { canonicalAzPhoneE164 } from '../../lib/azPhone'
 import {
   isSystemTeachingSubjectName,
+  isSystemGeneratedGroup,
+  renderSystemGroupCell,
   resolveStudentGroupLabel,
   resolveStudentSubjectLabel,
   studentMatchesAudienceFilter,
 } from '../../lib/participantGroupLabels'
+
+function GroupColumnLabel({ group, students = [] }) {
+  const sample = Array.isArray(students) ? students.find((s) => isSystemGeneratedGroup(s)) : null
+  const system = group?.is_system_group || Boolean(sample)
+  if (!system) {
+    return <span className="truncate">{group?.group || '—'}</span>
+  }
+  const cell = renderSystemGroupCell({
+    ...sample,
+    group: group?.group,
+    track_group_name: group?.group,
+  })
+  return (
+    <span className="inline-flex flex-wrap items-center gap-2 min-w-0">
+      <span className="shrink-0 text-[11px] font-semibold px-2 py-0.5 rounded-full border border-violet-500/35 bg-violet-500/10 text-violet-200">
+        {cell.badge}
+      </span>
+      {cell.title ? (
+        <span className="truncate text-token-textMuted text-xs">{cell.title}</span>
+      ) : null}
+    </span>
+  )
+}
 
 const PENDING_SETUP_TOAST_KEY = 'mx_instructor_pending_setup_toast_v1'
 
@@ -2189,7 +2214,12 @@ export default function InstructorStudents() {
                   </div>
                   <div className="text-xs text-token-textMuted mt-0.5">
                     {studentHasContactPhone(s) ? s.phone || s.phone_number : t('students.phonePending')} •{' '}
-                    {resolveStudentGroupLabel(s)} •{' '}
+                    {isSystemGeneratedGroup(s) ? (
+                      <GroupColumnLabel group={{ group: resolveStudentGroupLabel(s), is_system_group: true }} students={[s]} />
+                    ) : (
+                      resolveStudentGroupLabel(s)
+                    )}{' '}
+                    •{' '}
                     {s.enrolled_at
                       ? new Date(s.enrolled_at).toLocaleDateString(i18n.language === 'ru' ? 'ru-RU' : 'az-AZ')
                       : '—'}
@@ -2291,7 +2321,7 @@ export default function InstructorStudents() {
                           className="text-[15px] sm:text-base font-semibold text-token-textMain truncate cursor-default"
                           title={studentNamesLabel(g.students) || undefined}
                         >
-                          {g.group}
+                          <GroupColumnLabel group={g} students={g.students} />
                         </div>
                         <div
                           className="text-xs text-token-textMuted truncate cursor-default"

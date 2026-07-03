@@ -13,6 +13,36 @@ export function isSystemGroupName(name) {
   return /^\[System\]/i.test(String(name || '').trim())
 }
 
+export function isSystemGeneratedGroup(row) {
+  return Boolean(
+    row?.is_system_group ||
+      row?.link_join_badge ||
+      row?.is_guest_participant_row ||
+      row?.is_participant_group_row ||
+      isSystemGroupName(row?.track_group_name || row?.group_name || row?.group),
+  )
+}
+
+export function systemGroupExamTitle(row) {
+  const fromRef = String(row?.exam_title || row?.assignment_title || '').trim()
+  if (fromRef) return fromRef
+  const parsed = parseParticipantTitleFromGroupName(
+    row?.track_group_name || row?.group_name || row?.group || row?.participant_cohort_label,
+  )
+  if (parsed && !/—\s*Qonaq/i.test(parsed)) return parsed.replace(/\s*\([^)]*\)\s*$/, '').trim()
+  return ''
+}
+
+/** CRM / cədvəl: sistem qrupu üçün badge + imtahan adı */
+export function renderSystemGroupCell(row) {
+  const title = systemGroupExamTitle(row)
+  return {
+    isSystem: true,
+    badge: '🔗 Link ilə qoşulub',
+    title: title || null,
+  }
+}
+
 export function friendlyParticipantLabel({ system_kind, source_title, group_name, subject_name } = {}) {
   const title =
     String(source_title || '').trim() ||
@@ -95,11 +125,15 @@ export function studentMatchesAudienceFilter(s, filter) {
 }
 
 export function resolveStudentGroupLabel(s) {
+  if (isSystemGeneratedGroup(s)) {
+    const title = systemGroupExamTitle(s)
+    return title || 'Link ilə qoşulub'
+  }
   if (s?.participant_cohort_label) return String(s.participant_cohort_label).trim()
   const raw = String(s?.track_group_name || '').trim()
   if (isSystemGroupName(raw)) {
     const title = parseParticipantTitleFromGroupName(raw)
-    return title ? `${title} — Qonaq` : 'Qonaq iştirakçıları'
+    return title || 'Link ilə qoşulub'
   }
   return raw || 'Qrup yoxdur'
 }

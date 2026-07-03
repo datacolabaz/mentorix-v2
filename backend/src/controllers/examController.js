@@ -12,6 +12,7 @@ const { normalizeExamStartTime } = require('../utils/examTime');
 const { recomputeInstructorStorageUsageMb } = require('../services/resourceUsageService');
 const { certificateFieldsFromBody } = require('../lib/examCertificateFields');
 const { instructorHasCertificateFeature } = require('../services/certificateService');
+const { displayGroupLabel } = require('../lib/participantGroupLabels');
 
 /** JWT / DB UUID format fərqi olanda exam_assignments uyğunlaşması */
 const normStudentHex = (id) =>
@@ -1371,12 +1372,12 @@ const getResults = async (req, res) => {
 const getExamGroups = async (req, res) => {
   try {
     const examId = req.params.id;
-    const { rows: [exam] } = await db.query(
-      'SELECT id, instructor_id, participant_group_id FROM exams WHERE id = $1',
+    const { rows: [examMeta] } = await db.query(
+      'SELECT id, instructor_id, participant_group_id, title FROM exams WHERE id = $1',
       [examId],
     );
-    if (!exam) return res.status(404).json({ success: false, message: 'Tapılmadı' });
-    if (req.user.role === 'instructor' && normStudentHex(exam.instructor_id) !== normStudentHex(req.user.id)) {
+    if (!examMeta) return res.status(404).json({ success: false, message: 'Tapılmadı' });
+    if (req.user.role === 'instructor' && normStudentHex(examMeta.instructor_id) !== normStudentHex(req.user.id)) {
       return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
     }
     if (req.user.role !== 'admin' && req.user.role !== 'instructor') {
@@ -1395,7 +1396,14 @@ const getExamGroups = async (req, res) => {
        ),
        labeled AS (
          SELECT s.student_id,
-                COALESCE(ig.name, NULLIF(TRIM(sp.grade), ''), '—') AS grade
+                COALESCE(
+                  CASE WHEN COALESCE(ig.is_system, FALSE) THEN NULLIF(TRIM(ex_link.title), '') END,
+                  CASE WHEN COALESCE(ig.is_system, FALSE) THEN NULLIF(TRIM(ig.name), '') END,
+                  ig.name,
+                  NULLIF(TRIM(sp.grade), ''),
+                  '—'
+                ) AS grade,
+                COALESCE(ig.is_system, FALSE) AS is_system_group
          FROM stu s
          CROSS JOIN em
          LEFT JOIN student_profiles sp ON sp.user_id = s.student_id
@@ -1407,6 +1415,7 @@ const getExamGroups = async (req, res) => {
            LIMIT 1
          ) en ON true
          LEFT JOIN instructor_groups ig ON ig.id = en.group_id
+         LEFT JOIN exams ex_link ON ig.system_kind = 'exam_participants' AND ex_link.id = ig.system_ref_id
        ),
        subm AS (
          SELECT DISTINCT student_id FROM exam_results
@@ -1414,12 +1423,13 @@ const getExamGroups = async (req, res) => {
        ),
        agg AS (
          SELECT l.grade,
+                BOOL_OR(l.is_system_group) AS is_system_group,
                 COUNT(DISTINCT CASE WHEN l.student_id IN (SELECT student_id FROM subm) THEN l.student_id END)::int AS taken
          FROM labeled l
          GROUP BY l.grade
        ),
        extras AS (
-         SELECT ig.name AS grade, 0 AS taken
+         SELECT ig.name AS grade, FALSE AS is_system_group, 0 AS taken
          FROM em
          JOIN exams e ON e.id = em.exam_id
          JOIN instructor_subjects ist ON ist.instructor_id = e.instructor_id
@@ -1427,7 +1437,7 @@ const getExamGroups = async (req, res) => {
            AND LOWER(TRIM(ist.name)) = LOWER(TRIM(e.subject))
          JOIN instructor_groups ig ON ig.subject_id = ist.id
        )
-       SELECT x.grade, SUM(x.taken)::int AS taken
+       SELECT x.grade, BOOL_OR(x.is_system_group) AS is_system_group, SUM(x.taken)::int AS taken
        FROM (
          SELECT * FROM agg
          UNION ALL
@@ -1437,6 +1447,15 @@ const getExamGroups = async (req, res) => {
        ORDER BY x.grade`,
       [examId]
     );
+    const groups = rows.map((r) => ({
+      grade: displayGroupLabel({
+        name: r.grade,
+        is_system: Boolean(r.is_system_group),
+        exam_title: examMeta.title,
+      }),
+      taken: r.taken,
+      is_system_group: Boolean(r.is_system_group),
+    }));
     const { rows: sumRows } = await db.query(
       `SELECT
          COUNT(DISTINCT er.student_id) FILTER (
@@ -1452,8 +1471,8 @@ const getExamGroups = async (req, res) => {
     const summary = sumRows[0] || { crm_count: 0, guest_count: 0 };
     res.json({
       success: true,
-      groups: rows,
-      participant_group_id: exam.participant_group_id || null,
+      groups,
+      participant_group_id: examMeta.participant_group_id || null,
       summary: {
         crm_count: Number(summary.crm_count) || 0,
         guest_count: Number(summary.guest_count) || 0,

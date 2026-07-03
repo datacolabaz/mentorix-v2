@@ -86,7 +86,7 @@ async function assertSubjectMutable(subjectId, instructorId, action = 'modify', 
 
 function isReservedSystemSubjectName(name) {
   const n = String(name || '').trim();
-  return n === '[System] Participants' || /^\[System\]/i.test(n);
+  return n === '[System] Participants' || n === 'Link iştirakçıları' || /^\[System\]/i.test(n);
 }
 
 async function enrollmentHasSystemGroup(enrollmentId, client = null) {
