@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Rnd } from 'react-rnd'
 import Button from '../common/Button'
@@ -8,28 +8,119 @@ import {
   defaultPanelGeometry,
   getPanelMode,
   loadStoredPanel,
+  maxContentHeight,
   maxPanelWidth,
   saveStoredPanel,
+  totalPanelHeight,
 } from './examMaterialPanelLayout'
 
 const Z_INDEX = 5200
 
-function PanelMedia({ title, src, isPdf }) {
-  return (
-    <div className="flex-1 min-h-0 overflow-hidden bg-black/40">
-      {isPdf ? (
+function measureIframeDocument(iframe) {
+  if (!iframe) return null
+  try {
+    const doc = iframe.contentDocument || iframe.contentWindow?.document
+    if (!doc) return null
+    const root = doc.documentElement
+    const body = doc.body
+    const candidates = [
+      root?.scrollHeight,
+      root?.offsetHeight,
+      body?.scrollHeight,
+      body?.offsetHeight,
+    ].filter((n) => Number.isFinite(n) && n > 0)
+    if (!candidates.length) return null
+    return Math.max(...candidates)
+  } catch {
+    return null
+  }
+}
+
+function PanelMedia({ title, src, isPdf, panelWidth, contentMaxHeight, onContentHeight }) {
+  const iframeRef = useRef(null)
+  const [displayHeight, setDisplayHeight] = useState(() =>
+    Math.min(Math.round((panelWidth || 400) * 1.35), contentMaxHeight),
+  )
+
+  const reportHeight = useCallback(
+    (raw) => {
+      if (!Number.isFinite(raw) || raw <= 0) return
+      const next = Math.max(120, Math.min(Math.round(raw), contentMaxHeight))
+      setDisplayHeight(next)
+      onContentHeight(next)
+    },
+    [contentMaxHeight, onContentHeight],
+  )
+
+  useEffect(() => {
+    const guess = Math.min(Math.round((panelWidth || 400) * 1.35), contentMaxHeight)
+    setDisplayHeight(guess)
+    onContentHeight(guess)
+  }, [src, panelWidth, contentMaxHeight, onContentHeight])
+
+  useEffect(() => {
+    if (!isPdf || !src) return undefined
+    let cancelled = false
+    let attempts = 0
+
+    const tryMeasure = () => {
+      if (cancelled) return
+      const measured = measureIframeDocument(iframeRef.current)
+      if (measured) {
+        reportHeight(measured)
+        return true
+      }
+      return false
+    }
+
+    const timer = window.setInterval(() => {
+      attempts += 1
+      if (tryMeasure() || attempts >= 25) {
+        window.clearInterval(timer)
+      }
+    }, 160)
+
+    return () => {
+      cancelled = true
+      window.clearInterval(timer)
+    }
+  }, [isPdf, src, panelWidth, reportHeight])
+
+  if (isPdf) {
+    return (
+      <div
+        className="shrink-0 overflow-y-auto overflow-x-hidden bg-black/40"
+        style={{ maxHeight: contentMaxHeight }}
+      >
         <iframe
+          ref={iframeRef}
           title={title || 'PDF'}
           src={src || undefined}
-          className="w-full h-full min-h-[200px] bg-white border-0"
+          onLoad={() => {
+            const measured = measureIframeDocument(iframeRef.current)
+            reportHeight(measured ?? Math.min(Math.round((panelWidth || 400) * 1.35), contentMaxHeight))
+          }}
+          className="w-full block bg-white border-0"
+          style={{ height: displayHeight, minHeight: 120 }}
         />
-      ) : (
-        <img
-          src={src || undefined}
-          alt={title || ''}
-          className="w-full h-full object-contain bg-black/50"
-        />
-      )}
+      </div>
+    )
+  }
+
+  return (
+    <div
+      className="shrink-0 overflow-y-auto overflow-x-hidden bg-black/40"
+      style={{ maxHeight: contentMaxHeight }}
+    >
+      <img
+        src={src || undefined}
+        alt={title || ''}
+        loading="eager"
+        decoding="async"
+        onLoad={(e) => reportHeight(e.currentTarget.naturalHeight)}
+        className="block w-full h-auto max-w-full object-contain object-top bg-black/30"
+        style={{ maxHeight: contentMaxHeight }}
+      />
     </div>
   )
 }
@@ -40,7 +131,34 @@ export default function ExamMaterialLightbox({ open, onClose, title, src, isPdf,
     const m = getPanelMode()
     return loadStoredPanel(m) || defaultPanelGeometry(m, window.innerWidth, window.innerHeight)
   })
+  const [contentHeight, setContentHeight] = useState(null)
+  const headerRef = useRef(null)
+  const footerRef = useRef(null)
   const openRef = useRef(open)
+
+  const chromeHeight =
+    (headerRef.current?.offsetHeight ?? 0) + (footerRef.current?.offsetHeight ?? 0) || 120
+  const contentMaxH = maxContentHeight(window.innerHeight, chromeHeight)
+
+  const syncPanelHeightFromContent = useCallback(
+    (mediaHeight) => {
+      if (mode === 'mobile') return
+      const headerH = headerRef.current?.offsetHeight ?? 72
+      const footerH = footerRef.current?.offsetHeight ?? 0
+      const chrome = headerH + footerH
+      const nextHeight = totalPanelHeight(chrome, mediaHeight, window.innerHeight, panel.y)
+      setPanel((prev) => clampPanelToViewport({ ...prev, height: nextHeight }, window.innerWidth, window.innerHeight))
+    },
+    [mode, panel.y],
+  )
+
+  const handleContentHeight = useCallback(
+    (h) => {
+      setContentHeight(h)
+      syncPanelHeightFromContent(h)
+    },
+    [syncPanelHeightFromContent],
+  )
 
   useEffect(() => {
     openRef.current = open
@@ -50,11 +168,17 @@ export default function ExamMaterialLightbox({ open, onClose, title, src, isPdf,
     if (!open) return
     const nextMode = getPanelMode(window.innerWidth)
     setMode(nextMode)
+    setContentHeight(null)
     if (nextMode !== 'mobile') {
       const stored = loadStoredPanel(nextMode)
       setPanel(stored || defaultPanelGeometry(nextMode, window.innerWidth, window.innerHeight))
     }
   }, [open])
+
+  useLayoutEffect(() => {
+    if (!open || mode === 'mobile' || contentHeight == null) return
+    syncPanelHeightFromContent(contentHeight)
+  }, [open, mode, contentHeight, syncPanelHeightFromContent, openInNewTabUrl])
 
   useEffect(() => {
     const onResize = () => {
@@ -62,10 +186,13 @@ export default function ExamMaterialLightbox({ open, onClose, title, src, isPdf,
       setMode(nextMode)
       if (!openRef.current || nextMode === 'mobile') return
       setPanel((prev) => clampPanelToViewport(prev, window.innerWidth, window.innerHeight))
+      if (contentHeight != null) {
+        syncPanelHeightFromContent(contentHeight)
+      }
     }
     window.addEventListener('resize', onResize)
     return () => window.removeEventListener('resize', onResize)
-  }, [])
+  }, [contentHeight, syncPanelHeightFromContent])
 
   useEffect(() => {
     if (!open) return undefined
@@ -87,7 +214,7 @@ export default function ExamMaterialLightbox({ open, onClose, title, src, isPdf,
   const commitPanel = useCallback(
     (next) => {
       const clamped = clampPanelToViewport(next, window.innerWidth, window.innerHeight)
-      const snapped = applySnapToLeft(clamped, mode, window.innerHeight)
+      const snapped = applySnapToLeft(clamped, mode)
       const finalPanel = clampPanelToViewport(snapped, window.innerWidth, window.innerHeight)
       setPanel(finalPanel)
       persistPanel(finalPanel)
@@ -125,8 +252,15 @@ export default function ExamMaterialLightbox({ open, onClose, title, src, isPdf,
           </p>
           {closeBtn}
         </div>
-        <div className="flex-1 min-h-0 flex flex-col">
-          <PanelMedia title={title} src={src} isPdf={isPdf} />
+        <div className="flex-1 min-h-0 overflow-y-auto">
+          <PanelMedia
+            title={title}
+            src={src}
+            isPdf={isPdf}
+            panelWidth={window.innerWidth}
+            contentMaxHeight={maxContentHeight(window.innerHeight, 72)}
+            onContentHeight={() => {}}
+          />
         </div>
         {openInNewTabUrl ? (
           <div className="shrink-0 px-4 py-3 border-t border-indigo-500/20 bg-[#13112e]/90 safe-area-bottom">
@@ -158,7 +292,8 @@ export default function ExamMaterialLightbox({ open, onClose, title, src, isPdf,
         bounds="window"
         minWidth={320}
         maxWidth={maxPanelWidth(window.innerWidth)}
-        minHeight={200}
+        minHeight={panel.height}
+        maxHeight={panel.height}
         dragHandleClassName="exam-material-panel-drag-handle"
         enableResizing={{
           top: false,
@@ -190,12 +325,16 @@ export default function ExamMaterialLightbox({ open, onClose, title, src, isPdf,
           })
         }}
         onResizeStop={(_e, _dir, ref, _delta, position) => {
+          const nextWidth = ref.offsetWidth
           commitPanel({
             x: position.x,
             y: position.y,
-            width: ref.offsetWidth,
-            height: ref.offsetHeight,
+            width: nextWidth,
+            height: panel.height,
           })
+          if (contentHeight != null) {
+            syncPanelHeightFromContent(contentHeight)
+          }
         }}
         className="!fixed flex flex-col overflow-hidden rounded-2xl border border-indigo-500/30 bg-[#13112e] shadow-2xl shadow-black/50"
         style={{ zIndex: Z_INDEX }}
@@ -203,7 +342,10 @@ export default function ExamMaterialLightbox({ open, onClose, title, src, isPdf,
         aria-modal="true"
         aria-label={title || 'Material'}
       >
-        <div className="exam-material-panel-drag-handle shrink-0 flex items-center justify-between gap-3 px-4 py-3 border-b border-indigo-500/20 bg-[#1a1740]/90 cursor-move select-none touch-none">
+        <div
+          ref={headerRef}
+          className="exam-material-panel-drag-handle shrink-0 flex items-center justify-between gap-3 px-4 py-3 border-b border-indigo-500/20 bg-[#1a1740]/90 cursor-move select-none touch-none"
+        >
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold text-white truncate" title={title || 'Material'}>
               {title || 'Material'}
@@ -213,17 +355,29 @@ export default function ExamMaterialLightbox({ open, onClose, title, src, isPdf,
           {closeBtn}
         </div>
 
-        <PanelMedia title={title} src={src} isPdf={isPdf} />
+        <PanelMedia
+          title={title}
+          src={src}
+          isPdf={isPdf}
+          panelWidth={panel.width}
+          contentMaxHeight={contentMaxH}
+          onContentHeight={handleContentHeight}
+        />
 
         {openInNewTabUrl ? (
-          <div className="shrink-0 px-3 py-2 border-t border-indigo-500/15 flex justify-end">
+          <div
+            ref={footerRef}
+            className="shrink-0 px-3 py-2 border-t border-indigo-500/15 flex justify-end bg-[#13112e]"
+          >
             <a href={openInNewTabUrl} target="_blank" rel="noopener noreferrer">
               <Button variant="secondary" size="sm">
                 Yeni pəncərədə aç
               </Button>
             </a>
           </div>
-        ) : null}
+        ) : (
+          <div ref={footerRef} className="hidden" aria-hidden />
+        )}
       </Rnd>
       <style>{`
         .exam-material-panel-resize-handle-tablet {
