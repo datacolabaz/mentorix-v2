@@ -1,5 +1,13 @@
 const db = require('../utils/db');
 const { LEVEL_RANK } = require('../lib/skillLevels');
+const { resolveCatalogLang, localizedField, parseTranslations } = require('../lib/catalogI18n');
+
+function localizedDescription(row, lang) {
+  const tr = parseTranslations(row?.translations);
+  if (lang === 'ru' && tr.description_ru) return String(tr.description_ru);
+  if (lang === 'az' && tr.description_az) return String(tr.description_az);
+  return row?.description || '';
+}
 
 const CATALOG_BASE_WHERE = `
   e.is_public = TRUE
@@ -8,10 +16,12 @@ const CATALOG_BASE_WHERE = `
   AND e.certificate_enabled = TRUE
 `;
 
-function mapExamRow(r) {
+function mapExamRow(r, lang) {
+  const titleRow = { translations: r.exam_translations, name: r.title, title: r.title };
+  const catRow = { translations: r.category_translations, name: r.category_name_raw };
   return {
     id: r.id,
-    title: r.title,
+    title: localizedField(titleRow, lang, 'title'),
     subject: r.subject,
     topic: r.topic,
     duration_minutes: Number(r.duration_minutes) || 0,
@@ -20,7 +30,7 @@ function mapExamRow(r) {
     certificate_type: r.certificate_type || 'professional',
     category_id: r.category_id,
     category_slug: r.category_slug,
-    category_name: r.category_name,
+    category_name: localizedField(catRow, lang, 'name'),
     instructor_name: r.instructor_name,
     question_count: Number(r.question_count) || 0,
     passed_count: Number(r.passed_count) || 0,
@@ -30,8 +40,8 @@ function mapExamRow(r) {
 
 const EXAM_SELECT = `
   e.id, e.title, e.subject, e.topic, e.duration_minutes, e.certificate_pass_pct,
-  e.level, e.certificate_type, e.category_id,
-  ec.slug AS category_slug, ec.name AS category_name,
+  e.level, e.certificate_type, e.category_id, e.translations AS exam_translations,
+  ec.slug AS category_slug, ec.name AS category_name_raw, ec.translations AS category_translations,
   COALESCE(NULLIF(TRIM(u.full_name), ''), NULLIF(TRIM(ip.public_label), ''), 'Müəllim') AS instructor_name,
   (SELECT COUNT(*)::int FROM exam_questions eq WHERE eq.exam_id = e.id) AS question_count,
   (
@@ -43,27 +53,41 @@ const EXAM_SELECT = `
   ) AS certificate_count
 `;
 
-async function listAllCatalogCategories(_req, res) {
+async function listAllCatalogCategories(req, res) {
   try {
+    const lang = resolveCatalogLang(req);
     const { rows } = await db.query(
-      `SELECT c.id, c.slug, c.name, c.icon, c.parent_id,
-              p.name AS parent_name, p.slug AS parent_slug, p.icon AS parent_icon
+      `SELECT c.id, c.slug, c.name, c.icon, c.parent_id, c.translations,
+              p.name AS parent_name, p.slug AS parent_slug, p.icon AS parent_icon, p.translations AS parent_translations
        FROM exam_categories c
        LEFT JOIN exam_categories p ON p.id = c.parent_id
        WHERE c.parent_id IS NOT NULL
        ORDER BY p.sort_order, c.sort_order, c.name`,
     );
-    res.json({ success: true, categories: rows });
+    res.json({
+      success: true,
+      categories: rows.map((r) => ({
+        id: r.id,
+        slug: r.slug,
+        name: localizedField(r, lang, 'name'),
+        icon: r.icon,
+        parent_id: r.parent_id,
+        parent_name: localizedField({ name: r.parent_name, translations: r.parent_translations }, lang, 'name'),
+        parent_slug: r.parent_slug,
+        parent_icon: r.parent_icon,
+      })),
+    });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message || 'Xəta' });
   }
 }
 
-async function listParentCategories(_req, res) {
+async function listParentCategories(req, res) {
   try {
+    const lang = resolveCatalogLang(req);
     const { rows } = await db.query(
       `SELECT
-         c.id, c.slug, c.name, c.icon, c.description, c.sort_order,
+         c.id, c.slug, c.name, c.icon, c.description, c.sort_order, c.translations,
          (
            SELECT COUNT(*)::int FROM exams e
            WHERE ${CATALOG_BASE_WHERE}
@@ -82,9 +106,9 @@ async function listParentCategories(_req, res) {
       categories: rows.map((r) => ({
         id: r.id,
         slug: r.slug,
-        name: r.name,
+        name: localizedField(r, lang, 'name'),
         icon: r.icon,
-        description: r.description,
+        description: localizedDescription(r, lang) || localizedField(r, lang, 'name'),
         assessment_count: Number(r.assessment_count) || 0,
       })),
     });
@@ -95,19 +119,27 @@ async function listParentCategories(_req, res) {
 
 async function getCategoryBySlug(req, res) {
   try {
+    const lang = resolveCatalogLang(req);
     const slug = String(req.params.slug || '').trim();
     const { rows: catRows } = await db.query(
-      `SELECT id, slug, name, icon, description, parent_id FROM exam_categories WHERE slug = $1 LIMIT 1`,
+      `SELECT id, slug, name, icon, description, parent_id, translations FROM exam_categories WHERE slug = $1 LIMIT 1`,
       [slug],
     );
     const category = catRows[0];
     if (!category) return res.status(404).json({ success: false, message: 'Kateqoriya tapılmadı' });
 
-    const rootId = category.parent_id || category.id;
+    const mapCategory = (row) => ({
+      id: row.id,
+      slug: row.slug,
+      name: localizedField(row, lang, 'name'),
+      icon: row.icon,
+      description: localizedDescription(row, lang) || row.description,
+    });
+
     const categoryIds = [category.id];
     if (!category.parent_id) {
       const { rows: children } = await db.query(
-        `SELECT id, slug, name, sort_order FROM exam_categories WHERE parent_id = $1 ORDER BY sort_order, name`,
+        `SELECT id, slug, name, sort_order, translations FROM exam_categories WHERE parent_id = $1 ORDER BY sort_order, name`,
         [category.id],
       );
       categoryIds.push(...children.map((c) => c.id));
@@ -128,12 +160,12 @@ async function getCategoryBySlug(req, res) {
       const groups = children.map((child) => ({
         id: child.id,
         slug: child.slug,
-        name: child.name,
-        exams: exams.filter((e) => e.category_id === child.id).map(mapExamRow),
+        name: localizedField(child, lang, 'name'),
+        exams: exams.filter((e) => e.category_id === child.id).map((r) => mapExamRow(r, lang)),
       }));
 
       const { rows: paths } = await db.query(
-        `SELECT id, slug, name, description, icon, sort_order
+        `SELECT id, slug, name, description, icon, sort_order, translations
          FROM career_paths WHERE category_id = $1 OR category_id = ANY(
            SELECT id FROM exam_categories WHERE parent_id = $1
          )
@@ -144,15 +176,16 @@ async function getCategoryBySlug(req, res) {
       res.set('Cache-Control', 'public, max-age=30, stale-while-revalidate=120');
       return res.json({
         success: true,
-        category: {
-          id: category.id,
-          slug: category.slug,
-          name: category.name,
-          icon: category.icon,
-          description: category.description,
-        },
+        category: mapCategory(category),
         child_groups: groups,
-        career_paths: paths,
+        career_paths: paths.map((p) => ({
+          id: p.id,
+          slug: p.slug,
+          name: localizedField(p, lang, 'name'),
+          description: localizedDescription(p, lang),
+          icon: p.icon,
+          sort_order: p.sort_order,
+        })),
       });
     }
 
@@ -167,16 +200,11 @@ async function getCategoryBySlug(req, res) {
       [category.id],
     );
 
+    const mapped = mapCategory(category);
     res.json({
       success: true,
-      category: {
-        id: category.id,
-        slug: category.slug,
-        name: category.name,
-        icon: category.icon,
-        description: category.description,
-      },
-      child_groups: [{ id: category.id, slug: category.slug, name: category.name, exams: exams.map(mapExamRow) }],
+      category: mapped,
+      child_groups: [{ id: category.id, slug: category.slug, name: mapped.name, exams: exams.map((r) => mapExamRow(r, lang)) }],
       career_paths: [],
     });
   } catch (err) {
@@ -186,11 +214,12 @@ async function getCategoryBySlug(req, res) {
 
 async function getCareerPathBySlug(req, res) {
   try {
+    const lang = resolveCatalogLang(req);
     const slug = String(req.params.slug || '').trim();
     const userId = req.user?.id || null;
 
     const { rows: pathRows } = await db.query(
-      `SELECT cp.*, ec.slug AS category_slug, ec.name AS category_name
+      `SELECT cp.*, ec.slug AS category_slug, ec.name AS category_name, ec.translations AS category_translations
        FROM career_paths cp
        LEFT JOIN exam_categories ec ON ec.id = cp.category_id
        WHERE cp.slug = $1 LIMIT 1`,
@@ -202,7 +231,7 @@ async function getCareerPathBySlug(req, res) {
     const { rows: steps } = await db.query(
       `SELECT
          cps.id, cps.step_order, cps.is_required,
-         e.id AS exam_id, e.title, e.level, e.duration_minutes, e.certificate_pass_pct
+         e.id AS exam_id, e.title, e.level, e.duration_minutes, e.certificate_pass_pct, e.translations AS exam_translations
        FROM career_path_steps cps
        JOIN exams e ON e.id = cps.exam_id
        WHERE cps.career_path_id = $1
@@ -236,7 +265,7 @@ async function getCareerPathBySlug(req, res) {
         step_order: s.step_order,
         is_required: s.is_required,
         exam_id: s.exam_id,
-        title: s.title,
+        title: localizedField({ translations: s.exam_translations, name: s.title, title: s.title }, lang, 'title'),
         level: s.level,
         duration_minutes: Number(s.duration_minutes) || 0,
         pass_pct: Number(s.certificate_pass_pct) || 70,
@@ -249,11 +278,11 @@ async function getCareerPathBySlug(req, res) {
       career_path: {
         id: path.id,
         slug: path.slug,
-        name: path.name,
-        description: path.description,
+        name: localizedField(path, lang, 'name'),
+        description: localizedDescription(path, lang),
         icon: path.icon,
         category_slug: path.category_slug,
-        category_name: path.category_name,
+        category_name: localizedField({ name: path.category_name, translations: path.category_translations }, lang, 'name'),
       },
       steps: mappedSteps,
     });
@@ -264,6 +293,7 @@ async function getCareerPathBySlug(req, res) {
 
 async function listPublicCertifiedExams(req, res) {
   try {
+    const lang = resolveCatalogLang(req);
     const categorySlug = String(req.query.category || req.query.category_slug || '').trim();
     const params = [];
     let filter = '';
@@ -290,7 +320,7 @@ async function listPublicCertifiedExams(req, res) {
     );
 
     res.set('Cache-Control', 'public, max-age=30, stale-while-revalidate=120');
-    res.json({ success: true, category: categorySlug || 'all', exams: rows.map(mapExamRow) });
+    res.json({ success: true, category: categorySlug || 'all', exams: rows.map((r) => mapExamRow(r, lang)) });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message || 'Xəta' });
   }
@@ -343,13 +373,14 @@ async function postWaitlistNotification(req, res) {
 
 async function getUserSkillProgress(req, res) {
   try {
+    const lang = resolveCatalogLang(req);
     const userId = req.user?.id;
     if (!userId) return res.status(401).json({ success: false, message: 'Auth tələb olunur' });
 
     const { rows } = await db.query(
       `SELECT usp.current_level, usp.updated_at,
-              ec.id AS category_id, ec.slug, ec.name, ec.icon,
-              parent.slug AS parent_slug, parent.name AS parent_name
+              ec.id AS category_id, ec.slug, ec.name, ec.icon, ec.translations,
+              parent.slug AS parent_slug, parent.name AS parent_name, parent.translations AS parent_translations
        FROM user_skill_progress usp
        JOIN exam_categories ec ON ec.id = usp.category_id
        LEFT JOIN exam_categories parent ON parent.id = ec.parent_id
@@ -363,10 +394,10 @@ async function getUserSkillProgress(req, res) {
       progress: rows.map((r) => ({
         category_id: r.category_id,
         slug: r.slug,
-        name: r.name,
+        name: localizedField(r, lang, 'name'),
         icon: r.icon,
         parent_slug: r.parent_slug,
-        parent_name: r.parent_name,
+        parent_name: localizedField({ name: r.parent_name, translations: r.parent_translations }, lang, 'name'),
         current_level: r.current_level,
         updated_at: r.updated_at,
       })),

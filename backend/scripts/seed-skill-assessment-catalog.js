@@ -6,22 +6,29 @@
 require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
 const db = require('../src/utils/db');
 const { PARENTS, CAREER_PATHS, inferExamMeta } = require('./skillAssessmentCatalogData');
+const {
+  translationsJsonForCategory,
+  translationsJsonForCareerPath,
+  translationsJsonForExamTitle,
+} = require('./catalogTranslationMap');
 
 const OFFICIAL_EMAIL = process.env.MENTORIX_OFFICIAL_EMAIL || 'mentorix.resmi@mentorix.local';
 const OFFICIAL_NAME = 'Mentorix Rəsmi';
 
 async function upsertCategory(client, { parentId, slug, name, icon, description, sortOrder }) {
+  const translations = translationsJsonForCategory(slug, name);
   const { rows } = await client.query(
-    `INSERT INTO exam_categories (parent_id, slug, name, icon, description, sort_order)
-     VALUES ($1, $2, $3, $4, $5, $6)
+    `INSERT INTO exam_categories (parent_id, slug, name, icon, description, sort_order, translations)
+     VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)
      ON CONFLICT (slug) DO UPDATE SET
        parent_id = EXCLUDED.parent_id,
        name = EXCLUDED.name,
        icon = EXCLUDED.icon,
        description = EXCLUDED.description,
-       sort_order = EXCLUDED.sort_order
+       sort_order = EXCLUDED.sort_order,
+       translations = EXCLUDED.translations
      RETURNING id, slug`,
-    [parentId, slug, name, icon || null, description || null, sortOrder || 0],
+    [parentId, slug, name, icon || null, description || null, sortOrder || 0, translations],
   );
   return rows[0];
 }
@@ -61,9 +68,10 @@ async function ensureExam(client, instructorId, { title, categoryId, parentSlug,
          is_verified = TRUE,
          certificate_enabled = TRUE,
          certificate_pass_pct = $5,
+         translations = $6::jsonb,
          updated_at = NOW()
        WHERE id = $1`,
-      [existing[0].id, categoryId, meta.level, meta.certificate_type, passPct],
+      [existing[0].id, categoryId, meta.level, meta.certificate_type, passPct, translationsJsonForExamTitle(title)],
     );
     return existing[0].id;
   }
@@ -75,9 +83,9 @@ async function ensureExam(client, instructorId, { title, categoryId, parentSlug,
        instructor_id, title, subject, topic, duration_minutes,
        start_time, available_from, available_until,
        show_results, certificate_enabled, certificate_pass_pct,
-       category_id, level, certificate_type, is_public, is_verified, status
+       category_id, level, certificate_type, is_public, is_verified, status, translations
      ) VALUES ($1,$2,$3,$4,$5,$6::timestamptz,$6::timestamptz,$7::timestamptz,
-       TRUE,TRUE,$8,$9,$10,$11,TRUE,TRUE,'scheduled')
+       TRUE,TRUE,$8,$9,$10,$11,TRUE,TRUE,'scheduled',$12::jsonb)
      RETURNING id`,
     [
       instructorId,
@@ -91,6 +99,7 @@ async function ensureExam(client, instructorId, { title, categoryId, parentSlug,
       categoryId,
       meta.level,
       meta.certificate_type,
+      translationsJsonForExamTitle(title),
     ],
   );
   const examId = rows[0].id;
@@ -158,16 +167,25 @@ async function main() {
     for (const path of CAREER_PATHS) {
       const categoryId = slugToId.get(path.categorySlug) || null;
       const { rows: cpRows } = await client.query(
-        `INSERT INTO career_paths (category_id, name, slug, description, icon, sort_order)
-         VALUES ($1, $2, $3, $4, $5, $6)
+        `INSERT INTO career_paths (category_id, name, slug, description, icon, sort_order, translations)
+         VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)
          ON CONFLICT (slug) DO UPDATE SET
            category_id = EXCLUDED.category_id,
            name = EXCLUDED.name,
            description = EXCLUDED.description,
            icon = EXCLUDED.icon,
-           sort_order = EXCLUDED.sort_order
+           sort_order = EXCLUDED.sort_order,
+           translations = EXCLUDED.translations
          RETURNING id`,
-        [categoryId, path.nameAz || path.name, path.slug, path.description, path.icon, 10],
+        [
+          categoryId,
+          path.nameAz || path.name,
+          path.slug,
+          path.description,
+          path.icon,
+          10,
+          translationsJsonForCareerPath(path.slug, path.nameAz || path.name, path.description),
+        ],
       );
       const careerPathId = cpRows[0].id;
 

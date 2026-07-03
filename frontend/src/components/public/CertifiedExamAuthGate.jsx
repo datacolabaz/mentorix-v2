@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { createPortal } from 'react-dom'
+import { useTranslation } from 'react-i18next'
 import useAuthStore from '../../hooks/useAuth'
 import api from '../../lib/api'
 import { useToast } from '../common/Toast'
@@ -9,6 +10,7 @@ import GoogleSignInButton from '../auth/GoogleSignInButton'
 const RETURN_KEY = 'mx_return_after_login'
 
 export default function CertifiedExamAuthGate({ open, exam, onClose }) {
+  const { t } = useTranslation()
   const { user, setSession } = useAuthStore()
   const navigate = useNavigate()
   const toast = useToast()
@@ -48,11 +50,11 @@ export default function CertifiedExamAuthGate({ open, exam, onClose }) {
           return
         }
         if (r.user.role && r.user.role !== 'student') {
-          toast('Bu hesab tələbə deyil. Tələbə hesabı ilə daxil olun.', 'error')
+          toast(t('certifiedExams.studentsOnly'), 'error')
           return
         }
         setSession(r.token, { ...r.user, needs_phone_verification: false })
-        toast('Daxil oldunuz', 'success')
+        toast('OK', 'success')
         onClose?.()
         navigate(`/exam/${encodeURIComponent(exam.id)}`, { replace: true })
       } catch (err) {
@@ -61,7 +63,7 @@ export default function CertifiedExamAuthGate({ open, exam, onClose }) {
         setAuthBusy(false)
       }
     },
-    [exam?.id, navigate, onClose, setSession, toast],
+    [exam?.id, navigate, onClose, setSession, t, toast],
   )
 
   if (!open || !exam) return null
@@ -74,7 +76,7 @@ export default function CertifiedExamAuthGate({ open, exam, onClose }) {
       className="fixed inset-0 z-[6000] flex items-end sm:items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
-      aria-label="Qeydiyyat tələb olunur"
+      aria-label={t('certifiedExams.authDialogLabel')}
       onClick={onClose}
     >
       <div
@@ -83,27 +85,32 @@ export default function CertifiedExamAuthGate({ open, exam, onClose }) {
       >
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-xs uppercase tracking-wider text-primary font-semibold">🎓 Sertifikatlı imtahan</p>
-            <h2 className="text-lg font-semibold text-white mt-1">Sertifikatını qazanmağa bir addım qalıb</h2>
+            <p className="text-xs uppercase tracking-wider text-primary font-semibold">{t('certifiedExams.authGateBadge')}</p>
+            <h2 className="text-lg font-semibold text-white mt-1">{t('certifiedExams.authGateTitle')}</h2>
           </div>
           <button
             type="button"
             onClick={onClose}
             className="shrink-0 text-gray-400 hover:text-white px-2 py-1 rounded-lg"
-            aria-label="Bağla"
+            aria-label={t('certifiedExams.authClose')}
           >
             ✕
           </button>
         </div>
         <p className="text-sm text-gray-400 leading-relaxed">
-          <span className="text-white font-medium">{exam.title}</span> üçün qeydiyyatdan keç, imtahana başla —
-          keçəndə sertifikatın avtomatik yaranacaq.
+          {t('certifiedExams.authGateDescription', { title: exam.title })}
         </p>
         <div className="rounded-xl border border-white/10 bg-black/25 p-3 text-xs text-gray-400 space-y-1">
           <p>
-            {exam.question_count} sual · {exam.duration_minutes} dəq · Keçid {exam.pass_pct}%
+            {t('certifiedExams.examMeta', {
+              questions: exam.question_count,
+              minutes: exam.duration_minutes,
+              pass: exam.pass_pct,
+            })}
           </p>
-          <p>Müəllim: {exam.instructor_name}</p>
+          <p>
+            {t('certifiedExams.instructor')}: {exam.instructor_name}
+          </p>
         </div>
         <div className="space-y-3">
           <GoogleSignInButton onCredential={handleGoogleCredential} disabled={authBusy} />
@@ -111,10 +118,10 @@ export default function CertifiedExamAuthGate({ open, exam, onClose }) {
             to={registerHref}
             className="block w-full text-center rounded-xl bg-primary px-4 py-3 text-sm font-bold text-[#041018] hover:brightness-95"
           >
-            Telefon / email ilə qeydiyyat
+            {t('certifiedExams.authRegister')}
           </Link>
           <Link to={loginHref} className="block text-center text-sm text-primary hover:underline font-medium">
-            Artıq hesabım var — daxil ol
+            {t('certifiedExams.authLogin')}
           </Link>
         </div>
       </div>

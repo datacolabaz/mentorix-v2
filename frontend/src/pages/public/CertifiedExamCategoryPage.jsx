@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import Brand from '../../components/common/Brand'
 import PublicSeoFooter from '../../components/public/PublicSeoFooter'
 import LevelBadge from '../../components/public/LevelBadge'
@@ -9,7 +10,7 @@ import { setPageSeo } from '../../lib/pageSeo'
 import useAuthStore from '../../hooks/useAuth'
 import { useToast } from '../../components/common/Toast'
 
-function ExamCard({ exam, onStart }) {
+function ExamCard({ exam, onStart, t }) {
   return (
     <article className="rounded-xl border border-white/10 bg-black/25 p-4 space-y-2 hover:border-primary/25 transition">
       <div className="flex items-start justify-between gap-2">
@@ -17,21 +18,28 @@ function ExamCard({ exam, onStart }) {
         <LevelBadge level={exam.level} />
       </div>
       <p className="text-xs text-gray-500">
-        {exam.question_count} sual · {exam.duration_minutes} dəq · Keçid {exam.pass_pct}%
+        {t('certifiedExams.examMeta', {
+          questions: exam.question_count,
+          minutes: exam.duration_minutes,
+          pass: exam.pass_pct,
+        })}
       </p>
-      <p className="text-xs text-gray-400">Müəllim: {exam.instructor_name}</p>
+      <p className="text-xs text-gray-400">
+        {t('certifiedExams.instructor')}: {exam.instructor_name}
+      </p>
       <button
         type="button"
         onClick={() => onStart(exam)}
         className="w-full rounded-lg bg-primary/15 border border-primary/35 text-primary px-3 py-2 text-xs font-bold hover:bg-primary/25"
       >
-        Bu imtahana başla →
+        {t('certifiedExams.startExam')}
       </button>
     </article>
   )
 }
 
-function CareerPathTimeline({ path, onOpen }) {
+function CareerPathTimeline({ path, onOpen, t }) {
+  const { i18n } = useTranslation()
   const [steps, setSteps] = useState([])
   const [loading, setLoading] = useState(true)
 
@@ -51,7 +59,7 @@ function CareerPathTimeline({ path, onOpen }) {
     return () => {
       cancelled = true
     }
-  }, [path.slug])
+  }, [path.slug, i18n.language])
 
   const statusIcon = { completed: '✅', ready: '🔓', locked: '🔒' }
 
@@ -67,7 +75,7 @@ function CareerPathTimeline({ path, onOpen }) {
         </div>
       </div>
       {loading ? (
-        <p className="text-xs text-gray-500">Yüklənir…</p>
+        <p className="text-xs text-gray-500">{t('certifiedExams.loading')}</p>
       ) : (
         <ol className="space-y-0 border-l border-primary/25 ml-3 pl-4">
           {steps.map((step) => (
@@ -82,13 +90,22 @@ function CareerPathTimeline({ path, onOpen }) {
               {step.status !== 'locked' ? (
                 <button
                   type="button"
-                  onClick={() => onOpen({ id: step.exam_id, title: step.title, question_count: 0, duration_minutes: step.duration_minutes, pass_pct: step.pass_pct, instructor_name: 'Mentorix' })}
+                  onClick={() =>
+                    onOpen({
+                      id: step.exam_id,
+                      title: step.title,
+                      question_count: 0,
+                      duration_minutes: step.duration_minutes,
+                      pass_pct: step.pass_pct,
+                      instructor_name: 'Mentorix',
+                    })
+                  }
                   className="mt-2 text-xs font-semibold text-primary hover:underline"
                 >
-                  Başla →
+                  {t('certifiedExams.startStep')}
                 </button>
               ) : (
-                <p className="text-[10px] text-gray-500 mt-1">Əvvəlki addımları tamamla</p>
+                <p className="text-[10px] text-gray-500 mt-1">{t('certifiedExams.completePreviousSteps')}</p>
               )}
             </li>
           ))}
@@ -103,6 +120,7 @@ export default function CertifiedExamCategoryPage() {
   const navigate = useNavigate()
   const toast = useToast()
   const { user } = useAuthStore()
+  const { t, i18n } = useTranslation()
   const [tab, setTab] = useState('exams')
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -117,8 +135,8 @@ export default function CertifiedExamCategoryPage() {
       const d = await api.get(`/public/certified-exams/categories/${encodeURIComponent(slug)}`)
       setData(d)
       setPageSeo({
-        title: `${d?.category?.name || 'Kateqoriya'} — Sertifikatlı imtahanlar`,
-        description: d?.category?.description || 'Mentorix sertifikatlı skill assessment kataloqu',
+        title: t('certifiedExams.seo.categoryTitle', { name: d?.category?.name || 'Kateqoriya' }),
+        description: d?.category?.description || t('certifiedExams.seo.categoryDescription'),
         canonicalPath: `/sertifikatli-imtahanlar/${slug}`,
       })
     } catch {
@@ -126,7 +144,7 @@ export default function CertifiedExamCategoryPage() {
     } finally {
       setLoading(false)
     }
-  }, [slug])
+  }, [slug, t, i18n.language])
 
   useEffect(() => {
     void load()
@@ -140,7 +158,7 @@ export default function CertifiedExamCategoryPage() {
       return
     }
     if (user?.role) {
-      toast('Bu imtahana yalnız tələbə hesabı ilə başlamaq olar.', 'error')
+      toast(t('certifiedExams.studentsOnly'), 'error')
       return
     }
     setGateExam(exam)
@@ -151,7 +169,7 @@ export default function CertifiedExamCategoryPage() {
     setWaitBusy(true)
     try {
       const d = await api.post('/public/certified-exams/waitlist', { email: waitEmail.trim(), category_slug: slug })
-      toast(d?.message || 'Bildiriş alındı', 'success')
+      toast(d?.message || 'OK', 'success')
       setWaitEmail('')
     } catch (err) {
       toast(err?.message || 'Xəta', 'error')
@@ -170,16 +188,16 @@ export default function CertifiedExamCategoryPage() {
             <Brand compact />
           </Link>
           <Link to="/sertifikatli-imtahanlar" className="text-sm text-primary hover:underline">
-            ← Kataloq
+            {t('certifiedExams.backToCatalog')}
           </Link>
         </div>
       </header>
 
       <main className="flex-1 w-full max-w-5xl mx-auto px-4 py-8 space-y-6">
         {loading ? (
-          <p className="text-sm text-gray-500">Yüklənir…</p>
+          <p className="text-sm text-gray-500">{t('certifiedExams.loading')}</p>
         ) : !category ? (
-          <p className="text-sm text-red-300">Kateqoriya tapılmadı</p>
+          <p className="text-sm text-red-300">{t('certifiedExams.categoryNotFound')}</p>
         ) : (
           <>
             <div className="space-y-2">
@@ -199,7 +217,7 @@ export default function CertifiedExamCategoryPage() {
                   tab === 'exams' ? 'text-primary border-b-2 border-primary' : 'text-gray-400',
                 ].join(' ')}
               >
-                Bütün İmtahanlar
+                {t('certifiedExams.tabExams')}
               </button>
               <button
                 type="button"
@@ -209,14 +227,14 @@ export default function CertifiedExamCategoryPage() {
                   tab === 'paths' ? 'text-primary border-b-2 border-primary' : 'text-gray-400',
                 ].join(' ')}
               >
-                Career Path-lər
+                {t('certifiedExams.tabPaths')}
               </button>
             </div>
 
             {tab === 'exams' ? (
               totalExams === 0 ? (
                 <div className="rounded-2xl border border-white/10 bg-[#121212]/90 p-6 space-y-3 max-w-lg">
-                  <p className="text-sm text-gray-300">Tezliklə yeni imtahanlar əlavə olunacaq.</p>
+                  <p className="text-sm text-gray-300">{t('certifiedExams.comingSoonExams')}</p>
                   <form onSubmit={submitWaitlist} className="flex flex-col sm:flex-row gap-2">
                     <input
                       type="email"
@@ -227,7 +245,7 @@ export default function CertifiedExamCategoryPage() {
                       className="flex-1 rounded-xl bg-[#0f0f0f] border border-white/10 px-3 py-2 text-sm"
                     />
                     <button type="submit" disabled={waitBusy} className="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-[#041018]">
-                      Bildiriş al
+                      {t('certifiedExams.waitlistNotify')}
                     </button>
                   </form>
                 </div>
@@ -239,7 +257,7 @@ export default function CertifiedExamCategoryPage() {
                         <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-400">{group.name}</h2>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                           {group.exams.map((exam) => (
-                            <ExamCard key={exam.id} exam={exam} onStart={startExam} />
+                            <ExamCard key={exam.id} exam={exam} onStart={startExam} t={t} />
                           ))}
                         </div>
                       </section>
@@ -248,11 +266,11 @@ export default function CertifiedExamCategoryPage() {
                 </div>
               )
             ) : (data.career_paths || []).length === 0 ? (
-              <p className="text-sm text-gray-500">Bu kateqoriya üçün career path tezliklə əlavə olunacaq.</p>
+              <p className="text-sm text-gray-500">{t('certifiedExams.comingSoonPaths')}</p>
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {(data.career_paths || []).map((path) => (
-                  <CareerPathTimeline key={path.id} path={path} onOpen={startExam} />
+                  <CareerPathTimeline key={path.id} path={path} onOpen={startExam} t={t} />
                 ))}
               </div>
             )}

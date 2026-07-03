@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next'
+
 const LEVEL_STYLES = {
   beginner: 'border-emerald-500/35 bg-emerald-500/10 text-emerald-300',
   intermediate: 'border-sky-500/35 bg-sky-500/10 text-sky-300',
@@ -5,15 +7,11 @@ const LEVEL_STYLES = {
   professional: 'border-amber-500/35 bg-amber-500/10 text-amber-200',
 };
 
-const LEVEL_LABELS = {
-  beginner: 'Beginner',
-  intermediate: 'Intermediate',
-  advanced: 'Advanced',
-  professional: 'Professional',
-};
-
 export default function LevelBadge({ level, className = '' }) {
+  const { t } = useTranslation()
   const key = String(level || 'beginner').toLowerCase();
+  const labelKey = `certifiedExams.levels.${key}`;
+  const label = t(labelKey, { defaultValue: level });
   return (
     <span
       className={[
@@ -22,9 +20,9 @@ export default function LevelBadge({ level, className = '' }) {
         className,
       ].join(' ')}
     >
-      {LEVEL_LABELS[key] || level}
+      {label}
     </span>
   );
 }
 
-export { LEVEL_LABELS, LEVEL_STYLES };
+export { LEVEL_STYLES };

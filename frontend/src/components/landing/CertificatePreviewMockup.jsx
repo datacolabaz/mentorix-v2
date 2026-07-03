@@ -1,5 +1,9 @@
+import { useTranslation } from 'react-i18next'
+
 /** Sertifikat mockup — landing/kataloq üçün vizual nümunə */
 export default function CertificatePreviewMockup({ className = '' }) {
+  const { t } = useTranslation()
+
   return (
     <div className={`relative ${className}`}>
       <div className="absolute -inset-3 rounded-2xl bg-primary/20 blur-2xl opacity-60" aria-hidden />
@@ -10,30 +14,30 @@ export default function CertificatePreviewMockup({ className = '' }) {
             <div className="h-8 w-8 rounded-lg bg-primary/20 border border-primary/30 flex items-center justify-center text-xs font-bold text-primary">
               M
             </div>
-            <span className="text-[9px] uppercase tracking-widest text-gray-500">Mentorix Certificate</span>
+            <span className="text-[9px] uppercase tracking-widest text-gray-500">{t('certifiedExams.mockupCertLabel')}</span>
           </div>
           <div className="text-center space-y-1 py-2">
-            <p className="text-[10px] uppercase tracking-wider text-primary/80">Sertifikat verilir</p>
-            <p className="text-lg sm:text-xl font-display font-bold text-white tracking-tight">Sənin Adın</p>
-            <p className="text-[11px] text-gray-400">Data Analytics Professional Certification</p>
+            <p className="text-[10px] uppercase tracking-wider text-primary/80">{t('certifiedExams.mockupIssued')}</p>
+            <p className="text-lg sm:text-xl font-display font-bold text-white tracking-tight">{t('certifiedExams.mockupStudentName')}</p>
+            <p className="text-[11px] text-gray-400">{t('certifiedExams.mockupCourse')}</p>
           </div>
           <div className="flex items-end justify-between gap-3 pt-2 border-t border-white/10">
             <div className="space-y-0.5">
-              <p className="text-[9px] text-gray-500 uppercase">Bal</p>
+              <p className="text-[9px] text-gray-500 uppercase">{t('certifiedExams.mockupScore')}</p>
               <p className="text-sm font-semibold text-primary tabular-nums">87%</p>
             </div>
             <div className="h-12 w-12 rounded-md border border-dashed border-white/20 bg-white/5 flex items-center justify-center">
               <span className="text-[8px] text-gray-500 text-center leading-tight">QR</span>
             </div>
             <div className="space-y-0.5 text-right">
-              <p className="text-[9px] text-gray-500 uppercase">Tarix</p>
+              <p className="text-[9px] text-gray-500 uppercase">{t('certifiedExams.mockupDate')}</p>
               <p className="text-[11px] text-gray-300 tabular-nums">2026</p>
             </div>
           </div>
         </div>
         <div className="absolute bottom-3 left-3 right-3 flex justify-center">
           <span className="inline-flex items-center gap-1 rounded-full border border-primary/35 bg-primary/10 px-2.5 py-1 text-[10px] font-semibold text-primary backdrop-blur-sm">
-            <span aria-hidden>🔒</span> QR kodu ilə doğrulanır
+            <span aria-hidden>🔒</span> {t('certifiedExams.mockupVerify')}
           </span>
         </div>
       </div>

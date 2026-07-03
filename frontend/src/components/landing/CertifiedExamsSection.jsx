@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import api from '../../lib/api'
 import { trackEvent } from '../../lib/analytics'
 import CertificatePreviewMockup from './CertificatePreviewMockup'
 
 export default function CertifiedExamsSection({ onHowItWorks }) {
+  const { t, i18n } = useTranslation()
   const navigate = useNavigate()
   const [categories, setCategories] = useState([])
   const [stats, setStats] = useState({ certificates_issued: 0, verified_exam_types: 0 })
@@ -28,7 +30,10 @@ export default function CertifiedExamsSection({ onHowItWorks }) {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [i18n.language])
+
+  const assessmentLabel = (count) =>
+    count === 1 ? t('certifiedExams.assessmentOne', { count }) : t('certifiedExams.assessmentOther', { count })
 
   return (
     <section
@@ -39,15 +44,10 @@ export default function CertifiedExamsSection({ onHowItWorks }) {
         <div className="flex-1 space-y-4 min-w-0">
           <div className="inline-flex items-center gap-2 rounded-full border border-primary/35 bg-primary/10 px-3 py-1 text-[11px] font-semibold text-primary">
             <span aria-hidden>🎓</span>
-            Sertifikatlı İmtahanlar
+            {t('certifiedExams.badge')}
           </div>
-          <h2 className="text-xl sm:text-2xl font-semibold text-white leading-tight">
-            Bilikini sertifikatla təsdiqlə
-          </h2>
-          <p className="text-sm text-gray-400 leading-relaxed max-w-xl">
-            Beynəlxalq imtahanlardan IT, Data Analytics, Cloud və digər peşəkar bacarıqlara qədər — sahəni seç,
-            imtahan ver, QR ilə doğrulanan sertifikat qazan.
-          </p>
+          <h2 className="text-xl sm:text-2xl font-semibold text-white leading-tight">{t('certifiedExams.title')}</h2>
+          <p className="text-sm text-gray-400 leading-relaxed max-w-xl">{t('certifiedExams.description')}</p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {categories.map((cat) => (
@@ -61,9 +61,7 @@ export default function CertifiedExamsSection({ onHowItWorks }) {
                   {cat.icon}
                 </div>
                 <p className="text-sm font-semibold text-white">{cat.name}</p>
-                <p className="text-[11px] text-primary/90 mt-1 tabular-nums">
-                  {cat.assessment_count} Assessment{cat.assessment_count === 1 ? '' : 's'}
-                </p>
+                <p className="text-[11px] text-primary/90 mt-1 tabular-nums">{assessmentLabel(cat.assessment_count)}</p>
               </Link>
             ))}
           </div>
@@ -71,11 +69,11 @@ export default function CertifiedExamsSection({ onHowItWorks }) {
           <div className="grid grid-cols-2 gap-2 max-w-md">
             <div className="rounded-xl border border-white/10 bg-black/35 px-3 py-2.5">
               <div className="text-lg font-semibold text-white tabular-nums">{stats.certificates_issued}+</div>
-              <div className="text-[10px] text-gray-500">sertifikat verilib</div>
+              <div className="text-[10px] text-gray-500">{t('certifiedExams.statsCertificates')}</div>
             </div>
             <div className="rounded-xl border border-white/10 bg-black/35 px-3 py-2.5">
               <div className="text-lg font-semibold text-primary tabular-nums">{stats.verified_exam_types}+</div>
-              <div className="text-[10px] text-gray-500">aktiv assessment</div>
+              <div className="text-[10px] text-gray-500">{t('certifiedExams.statsActive')}</div>
             </div>
           </div>
 
@@ -85,7 +83,7 @@ export default function CertifiedExamsSection({ onHowItWorks }) {
               onClick={() => trackEvent('mx_landing_certified_cta', { action: 'catalog' })}
               className="inline-flex justify-center items-center rounded-xl bg-primary px-5 py-3 min-h-[48px] text-sm font-bold text-[#041018] shadow-lg shadow-primary/25 hover:brightness-95"
             >
-              Pulsuz imtahan tap
+              {t('certifiedExams.ctaCatalog')}
             </Link>
             <button
               type="button"
@@ -96,7 +94,7 @@ export default function CertifiedExamsSection({ onHowItWorks }) {
               }}
               className="inline-flex justify-center items-center rounded-xl border border-white/15 bg-white/5 px-5 py-3 min-h-[48px] text-sm font-semibold text-gray-100 hover:bg-white/10"
             >
-              Necə işləyir?
+              {t('certifiedExams.ctaHowItWorks')}
             </button>
           </div>
         </div>

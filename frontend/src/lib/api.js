@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { readStoredLocale } from '../i18n'
 import { normalizeApiBaseUrl } from './apiBase'
 
 const parsedTimeout = Number(import.meta.env.VITE_API_TIMEOUT_MS)
@@ -89,6 +90,7 @@ api.interceptors.request.use((config) => {
   const token = isPublicAuthPath(config) ? null : localStorage.getItem('mx_token')
   if (token) config.headers.Authorization = `Bearer ${token}`
   else delete config.headers.Authorization
+  config.headers['Accept-Language'] = readStoredLocale()
   return config
 })
 
