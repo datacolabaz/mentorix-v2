@@ -1116,6 +1116,8 @@ const submitExam = async (req, res) => {
     const duration = Math.floor((now - startedAt) / 1000);
     const isCrmStudent = await isCrmStudentForInstructor(exam.instructor_id, student_id);
 
+    let examResultId = attempt?.id || null;
+
     if (attempt?.id) {
       await db.query(
         `UPDATE exam_results
@@ -1141,11 +1143,12 @@ const submitExam = async (req, res) => {
         ],
       );
     } else {
-      await db.query(
+      const { rows: inserted } = await db.query(
         `INSERT INTO exam_results (
            exam_id, student_id, score, answers, grading, status,
            started_at, submitted_at, duration_seconds, is_crm_student
-         ) VALUES ($1,$2,$3,$4,$5,'completed',$6,$7,$8,$9)`,
+         ) VALUES ($1,$2,$3,$4,$5,'completed',$6,$7,$8,$9)
+         RETURNING id`,
         [
           exam_id,
           student_id,
@@ -1158,6 +1161,27 @@ const submitExam = async (req, res) => {
           isCrmStudent,
         ],
       );
+      examResultId = inserted[0]?.id || null;
+    }
+
+    let certificate = null;
+    try {
+      const { maybeIssueCertificateAfterExamSubmit } = require('../services/certificateService');
+      const cert = await maybeIssueCertificateAfterExamSubmit({
+        examId: exam_id,
+        studentId: student_id,
+        examResultId,
+        score,
+      });
+      if (cert) {
+        certificate = {
+          id: cert.id,
+          certificate_no: cert.certificate_no,
+          verification_token: cert.verification_token,
+        };
+      }
+    } catch (certErr) {
+      console.error('certificate on submit', certErr.message);
     }
 
     try {
@@ -1175,7 +1199,7 @@ const submitExam = async (req, res) => {
       );
     });
 
-    res.json({ success: true, score, breakdown, type_summary: typeSummary, answers });
+    res.json({ success: true, score, breakdown, type_summary: typeSummary, answers, certificate });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

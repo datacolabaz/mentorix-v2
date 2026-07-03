@@ -104,6 +104,17 @@ export function resolveStudentGroupLabel(s) {
   return raw || 'Qrup yoxdur'
 }
 
+/** Reytinq / nəticə modalında [System] OTK5 Participants → təmiz ad */
+export function formatExamLeaderboardCohortLabel(raw) {
+  const s = String(raw || '').trim()
+  if (!s || s === '—') return 'Qrupum'
+  if (isSystemGroupName(s)) {
+    const title = parseParticipantTitleFromGroupName(s)
+    return title ? `${title} — İmtahan iştirakçıları` : 'İmtahan iştirakçıları'
+  }
+  return s
+}
+
 export function resolveStudentSubjectLabel(s) {
   const raw = String(s?.track_subject_name || '').trim()
   if (isSystemTeachingSubjectName(raw) || s?.is_guest_participant_row || s?.is_participant_group_row) {

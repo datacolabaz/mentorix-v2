@@ -6,6 +6,10 @@ import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
 import Countdown from '../../components/exam/Countdown'
 import ExamBreakdownList from '../../components/exam/ExamBreakdownList'
+import ExamMaterialPreview from '../../components/exam/ExamMaterialPreview'
+import ReviewExamFilesPanel from '../../components/exam/ReviewExamFilesPanel'
+import { formatExamLeaderboardCohortLabel } from '../../lib/participantGroupLabels'
+import { materialFileApiPath, useExamMaterialBlobs } from '../../hooks/useExamMaterialBlobs'
 import { useToast } from '../../components/common/Toast'
 import useUiStore from '../../hooks/useUi'
 import useAuthStore from '../../hooks/useAuth'
@@ -69,12 +73,6 @@ function examUploadsStoredFilename(url) {
   if (m) return decodeURIComponent(m[1])
   m = s.match(/uploads\/exams\/([^/?#]+)$/i)
   return m ? decodeURIComponent(m[1]) : null
-}
-
-function materialFileApiPath(url, examId) {
-  const fn = examUploadsStoredFilename(url)
-  if (!fn || !examId) return null
-  return `/exams/by-exam/${encodeURIComponent(examId)}/attachment/${encodeURIComponent(fn)}`
 }
 
 function apiAbsoluteUrl(pathnameWithLeadingSlash) {
@@ -392,9 +390,9 @@ export default function StudentExams() {
   const [result, setResult] = useState(null)
   const [resultBreakdown, setResultBreakdown] = useState(null)
   const [resultTypeSummary, setResultTypeSummary] = useState(null)
+  const [issuedCertificate, setIssuedCertificate] = useState(null)
   const [materialsOpen, setMaterialsOpen] = useState(true)
-  /** /api/uploads/exams/... üçün blob URL (JWT ilə GET /exams/material-file/...) */
-  const [materialBlobById, setMaterialBlobById] = useState({})
+  const materialBlobById = useExamMaterialBlobs(activeExam?.id, activeExam ? normalizeExamFiles(activeExam) : [])
   const [, bumpListUi] = useState(0)
   const activeExamRef = useRef(false)
   activeExamRef.current = !!activeExam
@@ -411,49 +409,6 @@ export default function StudentExams() {
   const [phonePromptOpen, setPhonePromptOpen] = useState(false)
   const [contactPhone, setContactPhone] = useState('')
   const [phonePromptBusy, setPhonePromptBusy] = useState(false)
-
-  const materialBlobLoadKey = useMemo(() => {
-    if (!activeExam) return ''
-    const files = normalizeExamFiles(activeExam)
-    return `${activeExam.id}\0${startedAt || ''}\0${files.map((f) => f.url).join('\0')}`
-  }, [activeExam, startedAt])
-
-  useEffect(() => {
-    if (!materialBlobLoadKey || !activeExam) {
-      setMaterialBlobById({})
-      return undefined
-    }
-    const files = normalizeExamFiles(activeExam)
-    const ac = new AbortController()
-    const toRevoke = []
-
-    ;(async () => {
-      const next = {}
-      for (const m of files) {
-        const apiPath = materialFileApiPath(m.url, activeExam.id)
-        if (!apiPath) {
-          next[m.id] = null
-          continue
-        }
-        try {
-          const blob = await api.get(apiPath, { responseType: 'blob', signal: ac.signal })
-          const u = URL.createObjectURL(blob)
-          toRevoke.push(u)
-          next[m.id] = u
-        } catch (e) {
-          if (e?.name === 'CanceledError' || e?.code === 'ERR_CANCELED') return
-          next[m.id] = null
-        }
-      }
-      if (!ac.signal.aborted) setMaterialBlobById(next)
-    })()
-
-    return () => {
-      ac.abort()
-      toRevoke.forEach((u) => URL.revokeObjectURL(u))
-      setMaterialBlobById({})
-    }
-  }, [materialBlobLoadKey, activeExam])
 
   /** Davam / yenidən yükləmə: materiallar paneli açılsın (sıfır enində PNG iframe/img sıradan çıxmasın) */
   useEffect(() => {
@@ -829,6 +784,7 @@ export default function StudentExams() {
       const br = Array.isArray(data?.breakdown) ? data.breakdown : []
       setResultBreakdown(mergeReviewBreakdownWithAnswers(br, data.answers))
       setResultTypeSummary(data?.type_summary ?? null)
+      setIssuedCertificate(data?.certificate || null)
       setActiveExam(null)
       setPersonalEndTime(null)
       setFocusMode(false)
@@ -926,50 +882,14 @@ export default function StudentExams() {
                         : blobEntry
                     : materialUrlDirect
                   const showPdfFrame = shouldUsePdfIframe(m)
-                  const mediaBoxClass = showPdfFrame
-                    ? 'min-h-[200px] lg:min-h-[280px] max-h-[min(38vh,420px)] lg:max-h-[calc(100vh-220px)]'
-                    : 'flex flex-col min-h-[120px] sm:min-h-[180px] lg:min-h-[260px] max-h-[min(34svh,360px)] sm:max-h-[min(38vh,420px)] lg:max-h-[calc(100vh-220px)] min-w-0'
                   return (
-                    <div
+                    <ExamMaterialPreview
                       key={m.id}
-                      className="rounded-xl border border-indigo-500/20 overflow-hidden bg-black/20 flex flex-col"
-                    >
-                      <p className="text-xs text-gray-500 px-2 py-1.5 truncate border-b border-indigo-500/10" title={m.name}>
-                        {m.name}
-                      </p>
-                      <div className={mediaBoxClass}>
-                        {showPdfFrame ? (
-                          <iframe
-                            key={`pdf-${m.id}-${startedAt || ''}-${blobEntry || ''}`}
-                            title={m.name}
-                            src={mediaSrc || undefined}
-                            className="w-full h-full min-h-[200px] lg:min-h-[300px] bg-white/5 border-0"
-                          />
-                        ) : (
-                          <div className="flex min-h-0 flex-1 flex-col gap-2 min-w-0">
-                            <img
-                              key={`img-${m.id}-${startedAt || ''}-${blobEntry || ''}`}
-                              src={mediaSrc || undefined}
-                              alt={m.name}
-                              loading="eager"
-                              decoding="async"
-                              sizes="(max-width: 1024px) 100vw, min(560px, 50vw)"
-                              className="h-auto w-full max-h-full min-h-[96px] flex-1 object-contain object-top bg-black/30"
-                            />
-                            {materialUrlDirect ? (
-                              <a
-                                href={materialOpenInNewTabUrl(m.url, activeExam.id)}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-center text-xs font-semibold text-blue-400 hover:text-blue-300 py-1"
-                              >
-                                Yeni pəncərədə aç
-                              </a>
-                            ) : null}
-                          </div>
-                        )}
-                      </div>
-                    </div>
+                      material={m}
+                      mediaSrc={mediaSrc}
+                      showPdfFrame={showPdfFrame}
+                      openInNewTabUrl={materialOpenInNewTabUrl(m.url, activeExam.id)}
+                    />
                   )
                 })}
               </div>
@@ -1184,6 +1104,32 @@ export default function StudentExams() {
             {formatScoreBal(result)}
           </div>
           <div className="text-token-textMuted mt-2">Son imtahan nəticəniz</div>
+          {issuedCertificate?.certificate_no && (
+            <div className="mt-5 pt-5 border-t border-indigo-500/25 text-left sm:text-center space-y-3">
+              <p className="text-sm text-emerald-300 font-semibold">
+                🎓 Təbrik edirik! Sertifikatınız hazırdır.
+              </p>
+              <p className="text-xs text-gray-400 font-mono">{issuedCertificate.certificate_no}</p>
+              <div className="flex flex-col sm:flex-row gap-2 justify-center">
+                <a href="/student/certificates">
+                  <Button size="sm" className="w-full sm:w-auto">
+                    Sertifikatı endir
+                  </Button>
+                </a>
+                {issuedCertificate.verification_token ? (
+                  <a
+                    href={`/c/${issuedCertificate.verification_token}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <Button variant="secondary" size="sm" className="w-full sm:w-auto">
+                      Doğrulama linki
+                    </Button>
+                  </a>
+                ) : null}
+              </div>
+            </div>
+          )}
         </Card>
       )}
 
@@ -1516,39 +1462,13 @@ export default function StudentExams() {
             )}
 
             {Array.isArray(reviewModal.exam_files) && reviewModal.exam_files.length > 0 && (
-              <div className="mt-6">
-                <h3 className="text-sm font-bold text-white mb-2">İmtahan sualları</h3>
-                <p className="text-xs text-gray-500 mb-3">
-                  Suallar bu imtahana əlavə edilmiş fayllardır. Şəkilləri böyütmək üçün üzərinə klikləyin.
-                </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {reviewModal.exam_files.map((f) => {
-                    const openUrl = materialOpenInNewTabUrl(f.url, reviewModal?.exam_id || null)
-                    return (
-                      <a
-                        key={f.id || f.url}
-                        href={openUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="rounded-xl border border-indigo-500/15 bg-black/20 overflow-hidden hover:border-primary/30 transition-colors"
-                      >
-                        <div className="px-3 py-2 text-xs text-gray-400 border-b border-indigo-500/10 truncate">
-                          {f.name || 'Fayl'}
-                        </div>
-                        <div className="p-2">
-                          <img
-                            src={openUrl}
-                            alt={f.name || 'İmtahan faylı'}
-                            className="w-full h-[280px] sm:h-[320px] object-contain bg-black/30 rounded-lg"
-                            loading="lazy"
-                            decoding="async"
-                          />
-                        </div>
-                      </a>
-                    )
-                  })}
-                </div>
-              </div>
+              <ReviewExamFilesPanel
+                examId={reviewModal.exam_id}
+                files={reviewModal.exam_files}
+                resolveMaterialUrl={resolveMaterialUrl}
+                materialOpenInNewTabUrl={materialOpenInNewTabUrl}
+                shouldUsePdfIframe={shouldUsePdfIframe}
+              />
             )}
           </>
         )}
@@ -1571,7 +1491,9 @@ export default function StudentExams() {
             <div className="rounded-xl border border-indigo-400/35 bg-indigo-500/10 px-4 py-3">
               <p className="text-sm text-indigo-50">
                 <span className="font-bold text-white">Sizin Qrupunuz:</span>{' '}
-                <span className="text-cyan-200 font-semibold">{leaderModal.grade || '—'}</span>
+                <span className="text-cyan-200 font-semibold">
+                  {formatExamLeaderboardCohortLabel(leaderModal.grade)}
+                </span>
               </p>
               <p className="text-[11px] text-gray-400 mt-1.5 leading-snug">
                 Bu siyahı yalnız öz qrupunuzdakı tələbələrin nəticələridir; digər qruplar göstərilmir.
