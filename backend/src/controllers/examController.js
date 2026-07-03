@@ -1770,6 +1770,8 @@ const patchExam = async (req, res) => {
     const nextPdf =
       pdfProvided && pdf_url != null && String(pdf_url).trim() !== '' ? String(pdf_url).trim().slice(0, 500) : null;
 
+    const certWasEnabled = before.certificate_enabled === true;
+
     let updatedExam = null;
     let assignmentSummary = null;
 
@@ -2125,6 +2127,16 @@ const patchExam = async (req, res) => {
     }
 
     res.json({ success: true, exam: updatedExam, assignments: assignmentSummary });
+
+    const certNowEnabled = updatedExam?.certificate_enabled === true;
+    if (certNowEnabled && !certWasEnabled) {
+      setImmediate(() => {
+        const { backfillCertificatesForExam } = require('../services/certificateService');
+        backfillCertificatesForExam(examId).catch((e) =>
+          console.error('backfillCertificatesForExam', examId, e.message),
+        );
+      });
+    }
 
     const newAssignees = assignmentSummary?.new_student_ids;
     if (Array.isArray(newAssignees) && newAssignees.length) {

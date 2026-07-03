@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import api from '../../lib/api'
 import { localDatetimeInputToUtcIso } from '../../lib/examDatetime'
 import Button from '../common/Button'
@@ -6,6 +6,7 @@ import { useToast } from '../common/Toast'
 import LibraryMaterialPickerModal, { libraryMaterialAsExamFile } from './LibraryMaterialPickerModal'
 import CertificateExamFields from './CertificateExamFields'
 import { useBillingStatus } from '../../hooks/useBillingStatus'
+import { planRank } from '../../lib/subscriptionPlanGuards'
  
 const TYPES = {
   closed: 'Qapali (ABCDE)',
@@ -49,6 +50,15 @@ export default function ExamForm({ students, studentsLoading = false, onCreated,
       }
     })()
   }, [])
+
+  const certDefaultApplied = useRef(false)
+  useEffect(() => {
+    if (certDefaultApplied.current) return
+    if (planRank(billing?.plan) >= planRank('pro')) {
+      certDefaultApplied.current = true
+      setMeta((p) => ({ ...p, certificate_enabled: true, certificate_pass_pct: p.certificate_pass_pct ?? 80 }))
+    }
+  }, [billing?.plan])
 
   const [meta, setMeta] = useState({
     title: '',

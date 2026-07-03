@@ -169,8 +169,77 @@ async function getOrIssueCertificateForStudentExam(studentId, examId) {
   });
   return {
     certificate: slimCertificateRow(cert),
-    eligibility,
+    eligibility: cert
+      ? eligibility
+      : { ...eligibility, eligible: true, reason: 'issue_failed' },
   };
+}
+
+async function backfillCertificatesForExam(examId) {
+  const exam = await loadExamCertificateConfig(examId);
+  if (!exam?.certificate_enabled) return { issued: 0, skipped: 0 };
+  if (!(await instructorHasCertificateFeature(exam.instructor_id))) {
+    return { issued: 0, skipped: 0, reason: 'instructor_plan' };
+  }
+
+  const { rows } = await db.query(
+    `SELECT id, student_id, score FROM exam_results
+     WHERE exam_id = $1 AND submitted_at IS NOT NULL`,
+    [examId],
+  );
+
+  let issued = 0;
+  let skipped = 0;
+  for (const row of rows) {
+    const eligibility = await evaluateCertificateEligibility(examId, row.score, exam);
+    if (!eligibility.eligible) {
+      skipped += 1;
+      continue;
+    }
+    const cert = await maybeIssueCertificateAfterExamSubmit({
+      examId,
+      studentId: row.student_id,
+      examResultId: row.id,
+      score: row.score,
+    });
+    if (cert) issued += 1;
+    else skipped += 1;
+  }
+  return { issued, skipped };
+}
+
+async function listPendingCertificatesForStudent(studentId) {
+  const { rows } = await db.query(
+    `SELECT e.id AS exam_id, e.title, er.score, er.submitted_at,
+            COALESCE(e.certificate_enabled, FALSE) AS certificate_enabled,
+            COALESCE(e.certificate_pass_pct, 70)::numeric AS certificate_pass_pct
+     FROM exam_results er
+     JOIN exams e ON e.id = er.exam_id AND COALESCE(e.is_deleted, FALSE) = FALSE
+     WHERE er.student_id = $1 AND er.submitted_at IS NOT NULL
+       AND NOT EXISTS (
+         SELECT 1 FROM certificates c
+         WHERE c.exam_id = er.exam_id AND c.student_id = er.student_id AND c.status = 'issued'
+       )
+     ORDER BY er.submitted_at DESC
+     LIMIT 12`,
+    [studentId],
+  );
+
+  const pending = [];
+  for (const row of rows) {
+    const eligibility = await evaluateCertificateEligibility(row.exam_id, row.score);
+    pending.push({
+      exam_id: row.exam_id,
+      title: row.title,
+      submitted_at: row.submitted_at,
+      certificate_enabled: eligibility.certificate_enabled,
+      score_pct: eligibility.score_pct,
+      pass_pct: eligibility.pass_pct,
+      eligible: eligibility.eligible,
+      reason: eligibility.reason,
+    });
+  }
+  return pending;
 }
 
 async function resolveTemplate(client, instructorId, templateId) {
@@ -498,6 +567,8 @@ module.exports = {
   maybeIssueCertificateAfterExamSubmit,
   evaluateCertificateEligibility,
   getOrIssueCertificateForStudentExam,
+  backfillCertificatesForExam,
+  listPendingCertificatesForStudent,
   slimCertificateRow,
   getPublicVerification,
   listStudentCertificates,

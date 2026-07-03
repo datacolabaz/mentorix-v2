@@ -345,7 +345,7 @@ function formatScoreBal(v) {
   return `${rounded} bal`
 }
 
-function ExamCertificateBanner({ certificate, meta }) {
+function ExamCertificateBanner({ certificate, meta, examId, onClaim, claimBusy = false }) {
   if (certificate?.certificate_no) {
     return (
       <div className="mt-5 pt-5 border-t border-indigo-500/25 text-left sm:text-center space-y-3">
@@ -374,7 +374,42 @@ function ExamCertificateBanner({ certificate, meta }) {
       </div>
     )
   }
-  if (!meta?.certificate_enabled) return null
+  if (!meta) return null
+  if (!meta.certificate_enabled) {
+    const passed =
+      meta.score_pct != null &&
+      meta.pass_pct != null &&
+      Number(meta.score_pct) >= Number(meta.pass_pct)
+    if (passed) {
+      return (
+        <div className="mt-5 pt-5 border-t border-amber-500/30 text-left sm:text-center space-y-2">
+          <p className="text-sm text-amber-100">
+            🎓 Keçid balını keçdiniz ({Math.round(Number(meta.score_pct))}%), amma bu imtahanda sertifikat
+            aktiv deyil.
+          </p>
+          <p className="text-xs text-gray-500">
+            Müəllim imtahanı redaktə edib «Keçənlərə sertifikat ver» seçimini aktiv etməlidir. Sonra sertifikatı
+            yarada bilərsiniz.
+          </p>
+          {examId && onClaim ? (
+            <div className="flex justify-center pt-1">
+              <Button size="sm" loading={claimBusy} onClick={() => onClaim(examId)}>
+                Sertifikatı yoxla
+              </Button>
+            </div>
+          ) : null}
+        </div>
+      )
+    }
+    return null
+  }
+  if (meta.reason === 'instructor_plan') {
+    return (
+      <div className="mt-5 pt-5 border-t border-amber-500/30 text-sm text-amber-200/90 text-left sm:text-center">
+        Bu sertifikatlı imtahandır və keçdiniz, amma müəllimin planı sertifikat vermir (Pro plan lazımdır).
+      </div>
+    )
+  }
   if (meta.reason === 'below_pass') {
     return (
       <div className="mt-5 pt-5 border-t border-indigo-500/25 text-sm text-amber-200/90">
@@ -383,14 +418,34 @@ function ExamCertificateBanner({ certificate, meta }) {
       </div>
     )
   }
-  if (meta.eligible) {
+  if (meta.eligible || meta.reason === 'issue_failed') {
     return (
-      <div className="mt-5 pt-5 border-t border-indigo-500/25 text-sm text-gray-400">
-        Sertifikat hazırlanır… Bir neçə saniyə sonra səhifəni yeniləyin və ya{' '}
-        <a href="/student/certificates" className="text-blue-400 hover:text-blue-300">
-          Sertifikatlarım
-        </a>{' '}
-        bölməsinə baxın.
+      <div className="mt-5 pt-5 border-t border-indigo-500/25 text-sm text-gray-400 text-left sm:text-center space-y-2">
+        <p>
+          {meta.reason === 'issue_failed'
+            ? 'Sertifikat yaradılarkən xəta baş verdi.'
+            : 'Sertifikat hazırlanır…'}
+        </p>
+        {examId && onClaim ? (
+          <div className="flex flex-wrap gap-2 justify-center">
+            <Button size="sm" loading={claimBusy} onClick={() => onClaim(examId)}>
+              Yenidən cəhd et
+            </Button>
+            <a href="/student/certificates">
+              <Button variant="secondary" size="sm">
+                Sertifikatlarım
+              </Button>
+            </a>
+          </div>
+        ) : (
+          <p>
+            Bir neçə saniyə sonra səhifəni yeniləyin və ya{' '}
+            <a href="/student/certificates" className="text-blue-400 hover:text-blue-300">
+              Sertifikatlarım
+            </a>{' '}
+            bölməsinə baxın.
+          </p>
+        )}
       </div>
     )
   }
@@ -444,6 +499,8 @@ export default function StudentExams() {
   const [resultTypeSummary, setResultTypeSummary] = useState(null)
   const [issuedCertificate, setIssuedCertificate] = useState(null)
   const [certificateMeta, setCertificateMeta] = useState(null)
+  const [latestResultExamId, setLatestResultExamId] = useState(null)
+  const [claimCertBusy, setClaimCertBusy] = useState(false)
   const [materialsOpen, setMaterialsOpen] = useState(true)
   const activeExamMaterials = useMemo(() => {
     if (!activeExam) return []
@@ -466,6 +523,29 @@ export default function StudentExams() {
   const [phonePromptOpen, setPhonePromptOpen] = useState(false)
   const [contactPhone, setContactPhone] = useState('')
   const [phonePromptBusy, setPhonePromptBusy] = useState(false)
+
+  const claimCertificate = useCallback(
+    async (examId) => {
+      if (!examId) return
+      setClaimCertBusy(true)
+      try {
+        const r = await api.post(`/certificates/my/claim/${encodeURIComponent(examId)}`)
+        if (r?.certificate) {
+          setIssuedCertificate(r.certificate)
+          setCertificateMeta(r.eligibility || certificateMeta)
+          toast('🎓 Sertifikatınız hazırdır!', 'success')
+        } else {
+          toast(r?.message || 'Sertifikat yaradıla bilmədi', 'error')
+          if (r?.eligibility) setCertificateMeta(r.eligibility)
+        }
+      } catch (err) {
+        toast(err?.message || 'Sertifikat yoxlanılmadı', 'error')
+      } finally {
+        setClaimCertBusy(false)
+      }
+    },
+    [certificateMeta, toast],
+  )
 
   /** Davam / yenidən yükləmə: materiallar paneli açılsın (sıfır enində PNG iframe/img sıradan çıxmasın) */
   useEffect(() => {
@@ -569,6 +649,7 @@ export default function StudentExams() {
       .get(`/exams/${latest.id}/review`, { signal: ac.signal })
       .then((d) => {
         lastListReviewKeyRef.current = key
+        setLatestResultExamId(latest.id)
         setResult(d.score ?? null)
         const br = Array.isArray(d.breakdown) ? d.breakdown : []
         setResultBreakdown(mergeReviewBreakdownWithAnswers(br, d.answers))
@@ -849,6 +930,7 @@ export default function StudentExams() {
       setResultTypeSummary(data?.type_summary ?? null)
       setIssuedCertificate(data?.certificate || null)
       setCertificateMeta(data?.certificate_meta || null)
+      if (examId) setLatestResultExamId(examId)
       setActiveExam(null)
       setPersonalEndTime(null)
       setFocusMode(false)
@@ -1177,7 +1259,13 @@ export default function StudentExams() {
               ({Math.round(Number(certificateMeta.score_pct))}%)
             </p>
           ) : null}
-          <ExamCertificateBanner certificate={issuedCertificate} meta={certificateMeta} />
+          <ExamCertificateBanner
+            certificate={issuedCertificate}
+            meta={certificateMeta}
+            examId={latestResultExamId}
+            onClaim={claimCertificate}
+            claimBusy={claimCertBusy}
+          />
         </Card>
       )}
 
@@ -1503,6 +1591,9 @@ export default function StudentExams() {
               <ExamCertificateBanner
                 certificate={reviewModal.certificate}
                 meta={reviewModal.certificate_meta}
+                examId={reviewModal.exam_id}
+                onClaim={claimCertificate}
+                claimBusy={claimCertBusy}
               />
             </div>
             <ExamTypeSummaryPanel summary={reviewModal.type_summary} />

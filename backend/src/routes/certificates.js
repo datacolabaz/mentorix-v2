@@ -4,6 +4,8 @@ const {
   rateLimitVerify,
   getPublicCertificateVerify,
   listMyCertificates,
+  listMyPendingCertificates,
+  claimMyCertificate,
   listInstructorCerts,
   getAdminStats,
   downloadCertificate,
@@ -15,6 +17,8 @@ const {
 router.get('/verify/:token', rateLimitVerify, getPublicCertificateVerify);
 
 router.get('/my', authenticate, authorize('student'), listMyCertificates);
+router.get('/my/pending', authenticate, authorize('student'), listMyPendingCertificates);
+router.post('/my/claim/:examId', authenticate, authorize('student'), claimMyCertificate);
 router.get('/my/:id/download', authenticate, authorize('student'), downloadCertificate);
 
 router.get('/instructor', authenticate, authorize('instructor'), listInstructorCerts);

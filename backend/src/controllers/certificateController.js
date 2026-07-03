@@ -8,6 +8,8 @@ const {
   listTemplates,
   upsertTemplate,
   instructorHasCertificateFeature,
+  getOrIssueCertificateForStudentExam,
+  listPendingCertificatesForStudent,
 } = require('../services/certificateService');
 const { readCertificateFileBuffer } = require('../services/certificateFileStorage');
 
@@ -45,6 +47,50 @@ const listMyCertificates = async (req, res) => {
   try {
     const rows = await listStudentCertificates(req.user.id);
     res.json({ success: true, certificates: rows });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+const listMyPendingCertificates = async (req, res) => {
+  try {
+    const pending = await listPendingCertificatesForStudent(req.user.id);
+    res.json({ success: true, pending });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+const claimMyCertificate = async (req, res) => {
+  try {
+    const examId = String(req.params.examId || '').trim();
+    if (!examId) {
+      return res.status(400).json({ success: false, message: 'İmtahan identifikatoru lazımdır' });
+    }
+    const outcome = await getOrIssueCertificateForStudentExam(req.user.id, examId);
+    const reason = outcome.eligibility?.reason || null;
+    const messages = {
+      disabled:
+        'Bu imtahanda sertifikat aktiv deyil. Müəllim imtahanı redaktə edib «Keçənlərə sertifikat ver» seçimini aktiv etməlidir.',
+      instructor_plan:
+        'Müəllimin cari planı sertifikat vermir (Pro plan lazımdır). Müəllimlə əlaqə saxlayın.',
+      below_pass: `Keçid balı ${Math.round(Number(outcome.eligibility?.pass_pct || 0))}% — sizin nəticə ${Math.round(Number(outcome.eligibility?.score_pct || 0))}%.`,
+      issue_failed: 'Sertifikat yaradılarkən texniki xəta baş verdi. Bir az sonra yenidən cəhd edin.',
+      not_submitted: 'İmtahan hələ təqdim olunmayıb.',
+    };
+    if (outcome.certificate) {
+      return res.json({
+        success: true,
+        certificate: outcome.certificate,
+        eligibility: outcome.eligibility,
+      });
+    }
+    return res.json({
+      success: false,
+      certificate: null,
+      eligibility: outcome.eligibility,
+      message: messages[reason] || 'Sertifikat mövcud deyil',
+    });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -125,6 +171,8 @@ module.exports = {
   rateLimitVerify,
   getPublicCertificateVerify,
   listMyCertificates,
+  listMyPendingCertificates,
+  claimMyCertificate,
   listInstructorCerts,
   getAdminStats,
   downloadCertificate,
