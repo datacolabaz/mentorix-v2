@@ -7,6 +7,7 @@ import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
 import ExamForm, { deriveMatchingKey } from '../../components/instructor/ExamForm'
+import CertificateExamFields from '../../components/instructor/CertificateExamFields'
 import ListSkeleton from '../../components/common/ListSkeleton'
 import { useToast } from '../../components/common/Toast'
 import { localDatetimeInputToUtcIso, utcInstantToDatetimeLocalValue } from '../../lib/examDatetime'
@@ -170,6 +171,7 @@ export default function InstructorExams() {
   const [editAssignmentsLoading, setEditAssignmentsLoading] = useState(false)
   const [editQuestions, setEditQuestions] = useState([])
   const [editQuestionsLoading, setEditQuestionsLoading] = useState(false)
+  const [certTemplates, setCertTemplates] = useState([])
   const [lateBusyStudentId, setLateBusyStudentId] = useState(null)
   const [lateAccessPreset, setLateAccessPreset] = useState('120')
   const [lateAccessCustomUntil, setLateAccessCustomUntil] = useState('')
@@ -213,6 +215,10 @@ export default function InstructorExams() {
       .then((d) => setStudents(d.students || []))
       .catch(() => setStudents([]))
       .finally(() => setStudentsLoading(false))
+    api
+      .get('/certificates/instructor/templates')
+      .then((r) => setCertTemplates(Array.isArray(r?.templates) ? r.templates : []))
+      .catch(() => setCertTemplates([]))
   }, [])
  
   const statusBadge = (e) => {
@@ -256,6 +262,9 @@ export default function InstructorExams() {
     setEditModal(true)
     setEditExam({
       ...exam,
+      certificate_enabled: !!exam.certificate_enabled,
+      certificate_pass_pct: exam.certificate_pass_pct ?? 70,
+      certificate_template_id: exam.certificate_template_id || null,
       available_from: utcInstantToDatetimeLocalValue(exam.available_from || exam.start_time),
       available_until: utcInstantToDatetimeLocalValue(exam.available_until),
       // keep for legacy UI pieces
@@ -310,6 +319,9 @@ export default function InstructorExams() {
         pdf_url: exam_files[0]?.url || null,
         exam_files,
         student_ids: editStudentIds,
+        certificate_enabled: !!editExam.certificate_enabled,
+        certificate_pass_pct: editExam.certificate_pass_pct ?? 70,
+        certificate_template_id: editExam.certificate_template_id || null,
       }
       if (editQuestions.length) {
         payload.questions = editQuestions.map(serializeEditQuestion)
@@ -861,6 +873,13 @@ export default function InstructorExams() {
                 />
               </div>
             </div>
+
+            <CertificateExamFields
+              meta={editExam}
+              setMeta={setEditExam}
+              billingPlan={billing?.plan}
+              templates={certTemplates}
+            />
 
             <div className="p-4 bg-[#13112e] rounded-xl border border-indigo-500/20 space-y-3">
               <div className="flex items-start justify-between gap-3">

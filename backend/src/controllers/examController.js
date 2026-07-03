@@ -844,6 +844,17 @@ const getStudentExamReview = async (req, res) => {
     const wrongPen = exam.wrong_penalty_enabled !== false;
     const typeSummary = buildExamTypeSummary(questions, answers, { wrongPenaltyEnabled: wrongPen });
 
+    let certificate = null;
+    let certificateMeta = null;
+    try {
+      const { getOrIssueCertificateForStudentExam } = require('../services/certificateService');
+      const certOutcome = await getOrIssueCertificateForStudentExam(req.user.id, examId);
+      certificate = certOutcome.certificate;
+      certificateMeta = certOutcome.eligibility;
+    } catch (certErr) {
+      console.error('review certificate', certErr.message);
+    }
+
     res.json({
       success: true,
       exam,
@@ -853,6 +864,8 @@ const getStudentExamReview = async (req, res) => {
       type_summary: typeSummary,
       /** Modalda breakdown.student_answer boş qalsa, birbaşa təqdim olunmuş cavab obyekti ilə doldurmaq üçün */
       answers,
+      certificate,
+      certificate_meta: certificateMeta,
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -1166,7 +1179,7 @@ const submitExam = async (req, res) => {
 
     let certificate = null;
     try {
-      const { maybeIssueCertificateAfterExamSubmit } = require('../services/certificateService');
+      const { maybeIssueCertificateAfterExamSubmit, evaluateCertificateEligibility, slimCertificateRow } = require('../services/certificateService');
       const cert = await maybeIssueCertificateAfterExamSubmit({
         examId: exam_id,
         studentId: student_id,
@@ -1174,14 +1187,17 @@ const submitExam = async (req, res) => {
         score,
       });
       if (cert) {
-        certificate = {
-          id: cert.id,
-          certificate_no: cert.certificate_no,
-          verification_token: cert.verification_token,
-        };
+        certificate = slimCertificateRow(cert);
       }
     } catch (certErr) {
       console.error('certificate on submit', certErr.message);
+    }
+
+    let certificateMeta = null;
+    try {
+      certificateMeta = await evaluateCertificateEligibility(exam_id, score);
+    } catch (metaErr) {
+      console.error('certificate meta on submit', metaErr.message);
     }
 
     try {
@@ -1199,7 +1215,7 @@ const submitExam = async (req, res) => {
       );
     });
 
-    res.json({ success: true, score, breakdown, type_summary: typeSummary, answers, certificate });
+    res.json({ success: true, score, breakdown, type_summary: typeSummary, answers, certificate, certificate_meta: certificateMeta });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

@@ -345,6 +345,58 @@ function formatScoreBal(v) {
   return `${rounded} bal`
 }
 
+function ExamCertificateBanner({ certificate, meta }) {
+  if (certificate?.certificate_no) {
+    return (
+      <div className="mt-5 pt-5 border-t border-indigo-500/25 text-left sm:text-center space-y-3">
+        <p className="text-sm text-emerald-300 font-semibold">🎓 Təbrik edirik! Sertifikatınız hazırdır.</p>
+        <p className="text-xs text-gray-400 font-mono">{certificate.certificate_no}</p>
+        {meta?.score_pct != null ? (
+          <p className="text-xs text-gray-500">
+            Nəticə: {Math.round(Number(meta.score_pct))}%
+            {meta.pass_pct != null ? ` · Keçid: ${Math.round(Number(meta.pass_pct))}%` : ''}
+          </p>
+        ) : null}
+        <div className="flex flex-col sm:flex-row gap-2 justify-center">
+          <a href="/student/certificates">
+            <Button size="sm" className="w-full sm:w-auto">
+              Sertifikatı endir
+            </Button>
+          </a>
+          {certificate.verification_token ? (
+            <a href={`/c/${certificate.verification_token}`} target="_blank" rel="noopener noreferrer">
+              <Button variant="secondary" size="sm" className="w-full sm:w-auto">
+                Doğrulama linki
+              </Button>
+            </a>
+          ) : null}
+        </div>
+      </div>
+    )
+  }
+  if (!meta?.certificate_enabled) return null
+  if (meta.reason === 'below_pass') {
+    return (
+      <div className="mt-5 pt-5 border-t border-indigo-500/25 text-sm text-amber-200/90">
+        Bu sertifikatlı imtahandır. Keçid balı: {Math.round(Number(meta.pass_pct || 0))}% — sizin nəticə:{' '}
+        {Math.round(Number(meta.score_pct || 0))}%.
+      </div>
+    )
+  }
+  if (meta.eligible) {
+    return (
+      <div className="mt-5 pt-5 border-t border-indigo-500/25 text-sm text-gray-400">
+        Sertifikat hazırlanır… Bir neçə saniyə sonra səhifəni yeniləyin və ya{' '}
+        <a href="/student/certificates" className="text-blue-400 hover:text-blue-300">
+          Sertifikatlarım
+        </a>{' '}
+        bölməsinə baxın.
+      </div>
+    )
+  }
+  return null
+}
+
 /** Backend `examWindowOrLegacy` ilə eyni: until boşdursa from + duration */
 function parseDateOrNull(v) {
   if (v == null || v === '') return null
@@ -391,6 +443,7 @@ export default function StudentExams() {
   const [resultBreakdown, setResultBreakdown] = useState(null)
   const [resultTypeSummary, setResultTypeSummary] = useState(null)
   const [issuedCertificate, setIssuedCertificate] = useState(null)
+  const [certificateMeta, setCertificateMeta] = useState(null)
   const [materialsOpen, setMaterialsOpen] = useState(true)
   const materialBlobById = useExamMaterialBlobs(activeExam?.id, activeExam ? normalizeExamFiles(activeExam) : [])
   const [, bumpListUi] = useState(0)
@@ -516,6 +569,8 @@ export default function StudentExams() {
         const br = Array.isArray(d.breakdown) ? d.breakdown : []
         setResultBreakdown(mergeReviewBreakdownWithAnswers(br, d.answers))
         setResultTypeSummary(d.type_summary ?? null)
+        setIssuedCertificate(d.certificate || null)
+        setCertificateMeta(d.certificate_meta || null)
       })
       .catch(() => {
         /* icazə yoxdursa və s. */
@@ -571,6 +626,8 @@ export default function StudentExams() {
         type_summary: d.type_summary || null,
         score: d.score,
         submitted_at: d.submitted_at,
+        certificate: d.certificate || null,
+        certificate_meta: d.certificate_meta || null,
         error: null,
       })
     } catch (err) {
@@ -657,6 +714,8 @@ export default function StudentExams() {
       setResult(null)
       setResultBreakdown(null)
       setResultTypeSummary(null)
+      setIssuedCertificate(null)
+      setCertificateMeta(null)
       setMaterialsOpen(true)
       setFocusMode(true)
     } catch (err) {
@@ -785,6 +844,7 @@ export default function StudentExams() {
       setResultBreakdown(mergeReviewBreakdownWithAnswers(br, data.answers))
       setResultTypeSummary(data?.type_summary ?? null)
       setIssuedCertificate(data?.certificate || null)
+      setCertificateMeta(data?.certificate_meta || null)
       setActiveExam(null)
       setPersonalEndTime(null)
       setFocusMode(false)
@@ -1104,32 +1164,12 @@ export default function StudentExams() {
             {formatScoreBal(result)}
           </div>
           <div className="text-token-textMuted mt-2">Son imtahan nəticəniz</div>
-          {issuedCertificate?.certificate_no && (
-            <div className="mt-5 pt-5 border-t border-indigo-500/25 text-left sm:text-center space-y-3">
-              <p className="text-sm text-emerald-300 font-semibold">
-                🎓 Təbrik edirik! Sertifikatınız hazırdır.
-              </p>
-              <p className="text-xs text-gray-400 font-mono">{issuedCertificate.certificate_no}</p>
-              <div className="flex flex-col sm:flex-row gap-2 justify-center">
-                <a href="/student/certificates">
-                  <Button size="sm" className="w-full sm:w-auto">
-                    Sertifikatı endir
-                  </Button>
-                </a>
-                {issuedCertificate.verification_token ? (
-                  <a
-                    href={`/c/${issuedCertificate.verification_token}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <Button variant="secondary" size="sm" className="w-full sm:w-auto">
-                      Doğrulama linki
-                    </Button>
-                  </a>
-                ) : null}
-              </div>
-            </div>
-          )}
+          {certificateMeta?.score_pct != null && !issuedCertificate?.certificate_no ? (
+            <p className="text-sm text-gray-400 mt-1">
+              ({Math.round(Number(certificateMeta.score_pct))}%)
+            </p>
+          ) : null}
+          <ExamCertificateBanner certificate={issuedCertificate} meta={certificateMeta} />
         </Card>
       )}
 
@@ -1452,6 +1492,10 @@ export default function StudentExams() {
                   Təqdim: {new Date(reviewModal.submitted_at).toLocaleString('az-AZ')}
                 </p>
               )}
+              <ExamCertificateBanner
+                certificate={reviewModal.certificate}
+                meta={reviewModal.certificate_meta}
+              />
             </div>
             <ExamTypeSummaryPanel summary={reviewModal.type_summary} />
             {reviewModal.breakdown?.length > 0 && (

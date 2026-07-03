@@ -43,6 +43,136 @@ function scoreToPct(score, maxPts) {
   return Math.round(Math.min(100, Math.max(0, (Number(score) / maxPts) * 100)) * 100) / 100;
 }
 
+function slimCertificateRow(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    certificate_no: row.certificate_no,
+    verification_token: row.verification_token,
+    score_pct: row.score_pct != null ? Number(row.score_pct) : null,
+    status: row.status,
+    issued_at: row.issued_at,
+  };
+}
+
+async function loadExamCertificateConfig(examId) {
+  const { rows } = await db.query(
+    `SELECT e.id, e.title, e.subject, e.topic, e.instructor_id,
+            COALESCE(e.certificate_enabled, FALSE) AS certificate_enabled,
+            COALESCE(e.certificate_pass_pct, 70)::numeric AS certificate_pass_pct,
+            e.certificate_template_id
+     FROM exams e
+     WHERE e.id = $1 AND COALESCE(e.is_deleted, FALSE) = FALSE`,
+    [examId],
+  );
+  return rows[0] || null;
+}
+
+async function evaluateCertificateEligibility(examId, score, examRow = null) {
+  const exam = examRow || (await loadExamCertificateConfig(examId));
+  if (!exam) {
+    return {
+      certificate_enabled: false,
+      pass_pct: null,
+      score_pct: null,
+      eligible: false,
+      reason: 'exam_not_found',
+    };
+  }
+  const maxPts = await getExamMaxPoints(db, examId);
+  const scorePct = scoreToPct(score, maxPts);
+  const passPct = Number(exam.certificate_pass_pct || 70);
+  if (!exam.certificate_enabled) {
+    return {
+      certificate_enabled: false,
+      pass_pct: passPct,
+      score_pct: scorePct,
+      eligible: false,
+      reason: 'disabled',
+    };
+  }
+  const allowed = await instructorHasCertificateFeature(exam.instructor_id);
+  if (!allowed) {
+    return {
+      certificate_enabled: true,
+      pass_pct: passPct,
+      score_pct: scorePct,
+      eligible: false,
+      reason: 'instructor_plan',
+    };
+  }
+  if (scorePct < passPct) {
+    return {
+      certificate_enabled: true,
+      pass_pct: passPct,
+      score_pct: scorePct,
+      eligible: false,
+      reason: 'below_pass',
+    };
+  }
+  return {
+    certificate_enabled: true,
+    pass_pct: passPct,
+    score_pct: scorePct,
+    eligible: true,
+    reason: null,
+  };
+}
+
+async function getOrIssueCertificateForStudentExam(studentId, examId) {
+  const { rows: existing } = await db.query(
+    `SELECT id, certificate_no, verification_token, score_pct, status, issued_at
+     FROM certificates
+     WHERE student_id = $1 AND exam_id = $2 AND status = 'issued'
+     ORDER BY issued_at DESC
+     LIMIT 1`,
+    [studentId, examId],
+  );
+  if (existing[0]) {
+    const { rows: results } = await db.query(
+      `SELECT score FROM exam_results
+       WHERE exam_id = $1 AND student_id = $2 AND submitted_at IS NOT NULL
+       ORDER BY submitted_at DESC LIMIT 1`,
+      [examId, studentId],
+    );
+    const eligibility = results[0]
+      ? await evaluateCertificateEligibility(examId, results[0].score)
+      : null;
+    return {
+      certificate: slimCertificateRow(existing[0]),
+      eligibility,
+    };
+  }
+
+  const { rows: results } = await db.query(
+    `SELECT id, score FROM exam_results
+     WHERE exam_id = $1 AND student_id = $2 AND submitted_at IS NOT NULL
+     ORDER BY submitted_at DESC
+     LIMIT 1`,
+    [examId, studentId],
+  );
+  const result = results[0];
+  if (!result) {
+    return { certificate: null, eligibility: { eligible: false, reason: 'not_submitted' } };
+  }
+
+  const eligibility = await evaluateCertificateEligibility(examId, result.score);
+  if (!eligibility.eligible) {
+    return { certificate: null, eligibility };
+  }
+
+  const cert = await maybeIssueCertificateAfterExamSubmit({
+    examId,
+    studentId,
+    examResultId: result.id,
+    score: result.score,
+  });
+  return {
+    certificate: slimCertificateRow(cert),
+    eligibility,
+  };
+}
+
 async function resolveTemplate(client, instructorId, templateId) {
   if (templateId) {
     const { rows } = await client.query(
@@ -366,6 +496,9 @@ async function upsertTemplate(instructorId, payload) {
 
 module.exports = {
   maybeIssueCertificateAfterExamSubmit,
+  evaluateCertificateEligibility,
+  getOrIssueCertificateForStudentExam,
+  slimCertificateRow,
   getPublicVerification,
   listStudentCertificates,
   listInstructorCertificates,
