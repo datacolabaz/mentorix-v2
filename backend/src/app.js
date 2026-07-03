@@ -97,25 +97,39 @@ app.get('/api/meta', (req, res) =>
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log('Mentorix API running on port', PORT);
-  ensureCertificateFontsReady().catch((e) => console.error('[certificates] font setup', e.message));
-  ensureCertificateIssueWorker();
-  processExamNotificationJobs().catch((e) => console.error('exam notification jobs startup', e.message));
-  recomputeAllInstructorsUsage().catch((e) => console.error('usage sync startup', e.message));
-  setTimeout(() => {
-    extendMonthlyAttendanceSlots().catch((e) => console.error('monthly attendance slots startup', e.message));
-  }, 15000);
 
-  // Kick off billing notifications on startup (non-blocking)
-  setTimeout(() => {
-    runBillingNotifications().catch((e) => console.error('billing notifications startup', e.message));
-  }, 30000);
+async function boot() {
+  try {
+    await ensureCertificateFontsReady();
+  } catch (e) {
+    console.error('[certificates] font setup failed:', e.message);
+    process.exit(1);
+  }
 
-  // Pack (8/12) "next lesson is last lesson" reminders (non-blocking)
-  setTimeout(() => {
-    runPackReminders().catch((e) => console.error('pack reminders startup', e.message));
-  }, 45000);
+  app.listen(PORT, () => {
+    console.log('Mentorix API running on port', PORT);
+    ensureCertificateIssueWorker();
+    processExamNotificationJobs().catch((e) => console.error('exam notification jobs startup', e.message));
+    recomputeAllInstructorsUsage().catch((e) => console.error('usage sync startup', e.message));
+    setTimeout(() => {
+      extendMonthlyAttendanceSlots().catch((e) => console.error('monthly attendance slots startup', e.message));
+    }, 15000);
+
+    // Kick off billing notifications on startup (non-blocking)
+    setTimeout(() => {
+      runBillingNotifications().catch((e) => console.error('billing notifications startup', e.message));
+    }, 30000);
+
+    // Pack (8/12) "next lesson is last lesson" reminders (non-blocking)
+    setTimeout(() => {
+      runPackReminders().catch((e) => console.error('pack reminders startup', e.message));
+    }, 45000);
+  });
+}
+
+boot().catch((e) => {
+  console.error('[boot]', e.message);
+  process.exit(1);
 });
 
 cron.schedule('* * * * *', () => {

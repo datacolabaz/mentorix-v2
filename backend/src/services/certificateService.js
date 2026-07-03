@@ -43,6 +43,27 @@ function scoreToPct(score, maxPts) {
   return Math.round(Math.min(100, Math.max(0, (Number(score) / maxPts) * 100)) * 100) / 100;
 }
 
+const AZ_CHARS = /[əğıöüşçƏĞIİÖÜŞÇ]/;
+
+function looksEnglishExamText(exam) {
+  const text = [exam?.title, exam?.subject, exam?.topic].filter(Boolean).join(' ').trim();
+  if (!text || !/[a-zA-Z]/.test(text)) return false;
+  return !AZ_CHARS.test(text);
+}
+
+function resolveCertificateLocale(exam, template) {
+  if (looksEnglishExamText(exam)) return 'en';
+  const tpl = String(template?.locale || '').trim().toLowerCase();
+  return tpl === 'en' ? 'en' : 'az';
+}
+
+function certificatePersonFallbacks(locale) {
+  if (locale === 'en') {
+    return { student: 'Student', instructor: 'Instructor', course: 'Exam' };
+  }
+  return { student: 'Tələbə', instructor: 'Müəllim', course: 'İmtahan' };
+}
+
 function slimCertificateRow(row) {
   if (!row) return null;
   return {
@@ -259,8 +280,8 @@ async function resolveTemplate(client, instructorId, templateId) {
   );
   if (rows[0]) return rows[0];
   const { rows: created } = await client.query(
-    `INSERT INTO certificate_templates (instructor_id, name, is_default)
-     VALUES ($1, 'Default', TRUE)
+    `INSERT INTO certificate_templates (instructor_id, name, is_default, locale)
+     VALUES ($1, 'Default', TRUE, 'en')
      RETURNING *`,
     [instructorId],
   );
@@ -312,12 +333,13 @@ async function issueCertificate({ examId, studentId, examResultId, scorePct, pas
          (SELECT email FROM users WHERE id = $1) AS student_email`,
       [studentId, exam.instructor_id],
     );
-    const studentName = people[0]?.student_name || 'Tələbə';
-    const instructorName = people[0]?.instructor_name || 'Müəllim';
-    const studentEmail = people[0]?.student_email || null;
-
     const template = await resolveTemplate(client, exam.instructor_id, exam.certificate_template_id);
-    const locale = template.locale === 'en' ? 'en' : 'az';
+    const locale = resolveCertificateLocale(exam, template);
+    const fallbacks = certificatePersonFallbacks(locale);
+
+    const studentName = people[0]?.student_name || fallbacks.student;
+    const instructorName = people[0]?.instructor_name || fallbacks.instructor;
+    const studentEmail = people[0]?.student_email || null;
 
     const { rows: prev } = await client.query(
       `SELECT id FROM certificates
@@ -334,7 +356,7 @@ async function issueCertificate({ examId, studentId, examResultId, scorePct, pas
     const verificationToken = generateVerificationToken();
     const pdfFilename = `${crypto.randomUUID()}.pdf`;
     const issuedAt = new Date().toISOString();
-    const courseTitle = exam.title || exam.subject || exam.topic || 'İmtahan';
+    const courseTitle = exam.title || exam.subject || exam.topic || fallbacks.course;
 
     const snapshot = {
       certificate_no: certificateNo,
@@ -528,7 +550,7 @@ async function upsertTemplate(instructorId, payload) {
     signature_url = null,
     background_url = null,
     accent_color = '#4f46e5',
-    locale = 'az',
+    locale = 'en',
     is_default = false,
   } = payload || {};
 
