@@ -290,18 +290,17 @@ function StudentLayoutInner() {
               'md:static md:inset-auto md:flex-1 md:min-h-0 md:pt-0 md:px-0',
             ].join(' ')}
           >
-            {focusMode ? (
-              <div className="student-panel-main flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden">
-                <Outlet />
-              </div>
-            ) : (
-              <div className={['min-h-full flex flex-col min-w-0 w-full max-w-full overflow-x-hidden box-border', isChatPage ? 'h-full' : ''].join(' ')}>
-                <div className={['student-panel-main flex-1 min-h-0 min-w-0 w-full max-w-full overflow-x-hidden', isChatPage ? 'flex flex-col' : ''].join(' ')}>
-                  <Outlet />
-                </div>
-                {!isChatPage ? <Footer /> : null}
-              </div>
-            )}
+            {/* Outlet həmişə eyni yerdə qalmalıdır — focusMode dəyişəndə remount olmasın (imtahan state itir) */}
+            <div
+              className={[
+                'student-panel-main flex-1 flex flex-col min-w-0 w-full max-w-full',
+                focusMode ? 'min-h-0 overflow-hidden' : 'min-h-0 overflow-x-hidden',
+                !focusMode && isChatPage ? 'h-full' : '',
+              ].join(' ')}
+            >
+              <Outlet />
+            </div>
+            {!focusMode && !isChatPage ? <Footer /> : null}
           </main>
         </div>
       </div>

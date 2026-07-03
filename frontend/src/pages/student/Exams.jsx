@@ -669,6 +669,18 @@ export default function StudentExams() {
         toast('Bu imtahanda sual yoxdur — müəllimə müraciət edin', 'error')
         return
       }
+      const saved =
+        data?.answers && typeof data.answers === 'object' && !Array.isArray(data.answers)
+          ? data.answers
+          : {}
+      const remaining = Number(data.remaining_seconds)
+      const durMin = Math.max(Number(data.exam?.duration_minutes) || 0, 1)
+      const secondsLeft =
+        Number.isFinite(remaining) && remaining > 0 ? remaining : durMin * 60
+      if (secondsLeft <= 0) {
+        toast('Vaxtınız bitib', 'error')
+        return
+      }
       setActiveExam(data.exam)
       setQuestions(
         qs.map((q) => {
@@ -684,18 +696,6 @@ export default function StudentExams() {
           return rest
         }),
       )
-      const saved =
-        data?.answers && typeof data.answers === 'object' && !Array.isArray(data.answers)
-          ? data.answers
-          : {}
-      const remaining = Number(data.remaining_seconds)
-      const durMin = Math.max(Number(data.exam?.duration_minutes) || 0, 1)
-      const secondsLeft =
-        Number.isFinite(remaining) && remaining > 0 ? remaining : durMin * 60
-      if (secondsLeft <= 0) {
-        toast('Vaxtınız bitib', 'error')
-        return
-      }
       setAnswers(saved)
       setStartedAt(data?.started_at || new Date().toISOString())
       setPersonalEndTime(new Date(Date.now() + secondsLeft * 1000))
