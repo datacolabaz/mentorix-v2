@@ -409,6 +409,9 @@ async function issueCertificate({ examId, studentId, examResultId, scorePct, pas
 
     const cert = rows[0];
 
+    const { upsertUserSkillProgressFromCertificate } = require('./skillProgressService');
+    await upsertUserSkillProgressFromCertificate(client, { userId: studentId, examId });
+
     setImmediate(() => {
       if (studentEmail) {
         sendCertificateIssuedEmail({

@@ -11,6 +11,7 @@ const { upsertStudentContactPhone } = require('../utils/studentPhone');
 const { normalizeExamStartTime } = require('../utils/examTime');
 const { recomputeInstructorStorageUsageMb } = require('../services/resourceUsageService');
 const { certificateFieldsFromBody } = require('../lib/examCertificateFields');
+const { parseCatalogFields } = require('../lib/examCatalogFields');
 const { instructorHasCertificateFeature } = require('../services/certificateService');
 const { displayGroupLabel } = require('../lib/participantGroupLabels');
 
@@ -229,6 +230,18 @@ const createExam = async (req, res) => {
       if (!certAllowed) certificateEnabled = false;
     }
 
+    const catalogParsed = parseCatalogFields(req.body);
+    let isPublic = catalogParsed.publicProvided ? !!catalogParsed.is_public : false;
+    let catalogCategoryId = catalogParsed.categoryIdProvided ? catalogParsed.category_id : null;
+    let catalogLevel = catalogParsed.levelProvided ? catalogParsed.level : 'beginner';
+    let catalogCertType = catalogParsed.certTypeProvided ? catalogParsed.certificate_type : 'professional';
+    if (!certificateEnabled) {
+      isPublic = false;
+      catalogCategoryId = null;
+    } else if (isPublic && !catalogCategoryId) {
+      isPublic = false;
+    }
+
     const startNorm = normalizeExamStartTime(start_time);
     const fromNorm = normalizeExamStartTime(available_from || start_time);
     const untilNorm = normalizeExamStartTime(available_until);
@@ -243,8 +256,9 @@ const createExam = async (req, res) => {
         `INSERT INTO exams (instructor_id, title, subject, topic, pdf_url, exam_files, duration_minutes, start_time,
           available_from, available_until, allow_finish_after_until,
           notify_enabled, notify_students, notify_before_hours, show_results, wrong_penalty_enabled,
-          certificate_enabled, certificate_pass_pct, certificate_template_id, status)
-         VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,'scheduled') RETURNING *`,
+          certificate_enabled, certificate_pass_pct, certificate_template_id,
+          category_id, level, certificate_type, is_public, is_verified, status)
+         VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,FALSE,'scheduled') RETURNING *`,
         [
           req.user.id,
           title,
@@ -265,6 +279,10 @@ const createExam = async (req, res) => {
           certificateEnabled,
           certificatePassPct,
           certificateTemplateId,
+          catalogCategoryId,
+          catalogLevel,
+          catalogCertType,
+          isPublic,
         ]
       );
 
@@ -1758,6 +1776,7 @@ const patchExam = async (req, res) => {
     const showResultsNorm = patchCoalesceBool(show_results);
     const wrongPenProvided = Object.prototype.hasOwnProperty.call(req.body || {}, 'wrong_penalty_enabled');
     const certParsed = certificateFieldsFromBody(req.body);
+    const catalogParsed = parseCatalogFields(req.body);
 
     const { rows: [before] } = await db.query('SELECT * FROM exams WHERE id = $1', [examId]);
     if (!before) return res.status(404).json({ success: false, message: 'Imtahan tapilmadi' });
@@ -1867,6 +1886,31 @@ const patchExam = async (req, res) => {
         ? certParsed.certificate_template_id
         : before.certificate_template_id;
 
+      let finalCategoryId = before.category_id || null;
+      if (catalogParsed.categoryIdProvided) finalCategoryId = catalogParsed.category_id;
+      let finalLevel = before.level || 'beginner';
+      if (catalogParsed.levelProvided) finalLevel = catalogParsed.level;
+      let finalCertType = before.certificate_type || 'professional';
+      if (catalogParsed.certTypeProvided) finalCertType = catalogParsed.certificate_type;
+      let finalIsPublic = before.is_public === true;
+      if (catalogParsed.publicProvided) finalIsPublic = !!catalogParsed.is_public;
+      if (!finalCertEnabled) {
+        finalIsPublic = false;
+        finalCategoryId = null;
+      } else if (finalIsPublic && !finalCategoryId) {
+        finalIsPublic = false;
+      }
+      const catalogChanged =
+        (catalogParsed.publicProvided && finalIsPublic !== (before.is_public === true)) ||
+        (catalogParsed.categoryIdProvided && finalCategoryId !== (before.category_id || null)) ||
+        (catalogParsed.levelProvided && finalLevel !== (before.level || 'beginner'));
+      const finalIsVerified =
+        isAdmin && req.body?.is_verified === true
+          ? true
+          : catalogChanged || (certParsed.enabledProvided && finalCertEnabled !== certWasEnabled)
+            ? false
+            : before.is_verified === true;
+
       const { rows } = await client.query(
         `UPDATE exams SET
           title = $1::varchar(255),
@@ -1886,8 +1930,13 @@ const patchExam = async (req, res) => {
           certificate_enabled = $15::boolean,
           certificate_pass_pct = $16::numeric,
           certificate_template_id = $17::uuid,
+          category_id = $18::uuid,
+          level = $19::varchar(32),
+          certificate_type = $20::varchar(32),
+          is_public = $21::boolean,
+          is_verified = $22::boolean,
           updated_at = NOW()
-        WHERE id = $18
+        WHERE id = $23
         RETURNING *`,
         [
           finalTitle,
@@ -1907,6 +1956,11 @@ const patchExam = async (req, res) => {
           finalCertEnabled,
           finalCertPassPct,
           finalCertTemplateId,
+          finalCategoryId,
+          finalLevel,
+          finalCertType,
+          finalIsPublic,
+          finalIsVerified,
           examId,
         ]
       );

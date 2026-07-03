@@ -15,6 +15,7 @@ import {
 } from '../../lib/mentorixPublicMarketing'
 import LandingDemoActivityChart from '../../components/landing/LandingDemoActivityChart'
 import LandingHeroSocialProof from '../../components/landing/LandingHeroSocialProof'
+import CertifiedExamsSection from '../../components/landing/CertifiedExamsSection'
 import PricingFeatureListItem from '../../components/landing/PricingFeatureListItem'
 import PricingAudienceExplainer from '../../components/public/PricingAudienceExplainer'
 import { DEFAULT_SUBSCRIPTION_PLANS } from '../../constants/subscriptionPlans'
@@ -428,6 +429,8 @@ export default function Landing() {
             <LandingHeroSocialProof onPrimaryCta={() => goRegister('hero_social_proof')} />
             ) : null}
           </header>
+
+          <CertifiedExamsSection onHowItWorks={() => scrollToId('mx-steps')} />
 
           {showMarketplace ? (
           <section

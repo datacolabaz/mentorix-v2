@@ -76,6 +76,10 @@ export default function ExamForm({ students, studentsLoading = false, onCreated,
     certificate_enabled: false,
     certificate_pass_pct: 70,
     certificate_template_id: null,
+    is_public: false,
+    category_id: null,
+    level: 'beginner',
+    certificate_type: 'professional',
   })
 
   /** { id, name, url }[] — bir neçə PDF/şəkil */
@@ -196,6 +200,10 @@ export default function ExamForm({ students, studentsLoading = false, onCreated,
         certificate_enabled: !!meta.certificate_enabled,
         certificate_pass_pct: meta.certificate_pass_pct ?? 70,
         certificate_template_id: meta.certificate_template_id || null,
+        is_public: !!meta.is_public && !!meta.certificate_enabled,
+        category_id: meta.is_public && meta.certificate_enabled ? meta.category_id || null : null,
+        level: meta.level || 'beginner',
+        certificate_type: meta.certificate_type || 'professional',
         questions: questions.map((q, i) => ({
           question_text: `Sual ${i + 1}`,
           question_type: q.question_type,

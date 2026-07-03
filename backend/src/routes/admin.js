@@ -21,6 +21,10 @@ const {
   getAdminInstructorNav,
   putAdminInstructorNav,
 } = require('../controllers/instructorNavController');
+const {
+  listPendingCertifiedExams,
+  reviewCertifiedExam,
+} = require('../controllers/adminCertifiedExamController');
 const { authenticate, authorize } = require('../middleware/auth');
 const db = require('../utils/db');
 const { grantCourseRoleToUser } = require('../services/userRolesService');
@@ -247,5 +251,8 @@ router.patch('/university-programs/:id/review', authenticate, authorize('admin')
 router.get('/university-scrape-targets', authenticate, authorize('admin'), listTargets);
 router.post('/university-scrape/run', authenticate, authorize('admin'), runBatch);
 router.post('/university-scrape/targets/:id/run', authenticate, authorize('admin'), runOne);
+
+router.get('/certified-exams/pending', authenticate, authorize('admin'), listPendingCertifiedExams);
+router.post('/certified-exams/:id/review', authenticate, authorize('admin'), reviewCertifiedExam);
 
 module.exports = router;

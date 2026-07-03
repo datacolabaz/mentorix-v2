@@ -31,8 +31,18 @@ const { postMarketplaceAiSearch } = require('../controllers/marketplaceAiSearchC
 const { getPublicContact } = require('../controllers/platformContactController');
 const { getPublicInstructorProfile } = require('../controllers/publicInstructorProfileController');
 const { getInstructorMessagingLink } = require('../controllers/publicInstructorContactController');
+const {
+  listPublicCertifiedExams,
+  getPublicCertifiedExamStats,
+  postWaitlistNotification,
+  listParentCategories,
+  listAllCatalogCategories,
+  getCategoryBySlug,
+  getCareerPathBySlug,
+  getUserSkillProgress,
+} = require('../controllers/publicCertifiedExamsController');
 const { getPublicSitemapXml } = require('../controllers/publicSitemapController');
-const { authenticate } = require('../middleware/auth');
+const { authenticate, optionalAuthenticate } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -56,6 +66,14 @@ router.post('/live-guest/:token/leave', postPublicLiveGuestLeave);
 router.post('/analytics/event', postAccessEvent);
 router.get('/landing-stats', getLandingStats);
 router.get('/contact', getPublicContact);
+router.get('/certified-exams/categories/all', listAllCatalogCategories);
+router.get('/certified-exams/categories', listParentCategories);
+router.get('/certified-exams/categories/:slug', getCategoryBySlug);
+router.get('/certified-exams/career-paths/:slug', optionalAuthenticate, getCareerPathBySlug);
+router.get('/certified-exams', listPublicCertifiedExams);
+router.get('/certified-exams/stats', getPublicCertifiedExamStats);
+router.post('/certified-exams/waitlist', postWaitlistNotification);
+router.get('/certified-exams/me/skill-progress', authenticate, getUserSkillProgress);
 router.get('/sitemap.xml', getPublicSitemapXml);
 router.get('/marketing/login', getPublicLoginMarketing);
 router.get('/instructor-nav', getPublicInstructorNav);

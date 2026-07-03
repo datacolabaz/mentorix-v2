@@ -39,6 +39,7 @@ import AdminInstructorNav from './pages/admin/InstructorNav'
 import AdminCategories from './pages/admin/AdminCategories'
 import AdminUniversityPrograms from './pages/admin/AdminUniversityPrograms'
 import AdminAnalytics from './pages/admin/AdminAnalytics'
+import AdminCertifiedExamVerifications from './pages/admin/AdminCertifiedExamVerifications'
 import AnalyticsPageTracker from './components/analytics/AnalyticsPageTracker'
 import PresenceHeartbeat from './components/analytics/PresenceHeartbeat'
 
@@ -61,6 +62,8 @@ import PaymentSuccess from './pages/instructor/PaymentSuccess'
 import PaymentFail from './pages/instructor/PaymentFail'
 import PaymentPending from './pages/instructor/PaymentPending'
 import CertificateVerify from './pages/public/CertificateVerify'
+import CertifiedExamsCatalog from './pages/public/CertifiedExamsCatalog'
+import CertifiedExamCategoryPage from './pages/public/CertifiedExamCategoryPage'
 import StudentCertificates from './pages/student/Certificates'
 import InstructorCertificates from './pages/instructor/Certificates'
 import AdminBilling from './pages/admin/AdminBilling'
@@ -183,6 +186,8 @@ export default function App() {
       <Route path="/lr/:shareToken" element={<LiveRecordingShare />} />
       <Route path="/live/join/:token" element={<LiveGuestJoin />} />
       <Route path="/c/:token" element={<CertificateVerify />} />
+      <Route path="/sertifikatli-imtahanlar" element={<CertifiedExamsCatalog />} />
+      <Route path="/sertifikatli-imtahanlar/:slug" element={<CertifiedExamCategoryPage />} />
       <Route
         path="/live/:roomCode"
         element={
@@ -208,6 +213,7 @@ export default function App() {
         <Route path="categories" element={<AdminCategories />} />
         <Route path="university-programs" element={<AdminUniversityPrograms />} />
         <Route path="analytics" element={<AdminAnalytics />} />
+        <Route path="certified-exams" element={<AdminCertifiedExamVerifications />} />
       </Route>
 
       <Route path="/courses" element={<Navigate to="/instructor/teaching-groups" replace />} />

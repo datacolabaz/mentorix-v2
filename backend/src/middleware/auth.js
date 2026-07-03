@@ -52,4 +52,20 @@ const authenticateWithQueryToken = async (req, res, next) => {
   return authenticate(req, res, next);
 };
 
-module.exports = { authenticate, authenticateSse, authenticateWithQueryToken, authorize };
+const optionalAuthenticate = async (req, res, next) => {
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token) return next();
+  try {
+    const payload = verify(token);
+    const row = await fetchUserAuthState(payload.id);
+    if (row && row.is_active !== false && isUserEmailVerified(row)) {
+      const effectiveRole = row?.role_selected === false ? null : row.role;
+      req.user = { ...payload, id: row.id, role: effectiveRole };
+    }
+  } catch {
+    /* ignore invalid token for public routes */
+  }
+  next();
+};
+
+module.exports = { authenticate, authenticateSse, authenticateWithQueryToken, authorize, optionalAuthenticate };

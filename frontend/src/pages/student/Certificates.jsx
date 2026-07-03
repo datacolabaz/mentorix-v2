@@ -5,6 +5,7 @@ import { normalizeApiBaseUrl } from '../../lib/apiBase'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
 import { useToast } from '../../components/common/Toast'
+import UserSkillProgressPanel from '../../components/student/UserSkillProgressPanel'
 
 function linkedInShareUrl({ courseTitle, verifyUrl, certNo }) {
   const params = new URLSearchParams({
@@ -114,6 +115,14 @@ export default function StudentCertificates() {
         <p className="text-sm text-token-textMuted mt-1">
           {t('certificates.subtitle', 'Keçdiyiniz imtahanlar üçün rəsmi tamamlama sertifikatları.')}
         </p>
+      </div>
+
+      <div className="mb-8">
+        <UserSkillProgressPanel />
+      </div>
+
+      <div className="mb-8">
+        <UserSkillProgressPanel />
       </div>
 
       {loading ? (
