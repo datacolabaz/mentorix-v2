@@ -1,25 +1,37 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 
 const useCountdown = (endTime, onExpire, onWarning) => {
   const [remaining, setRemaining] = useState(0)
   const [warned, setWarned] = useState(false)
+  const expiredRef = useRef(false)
+  const onExpireRef = useRef(onExpire)
+  const onWarningRef = useRef(onWarning)
+
+  onExpireRef.current = onExpire
+  onWarningRef.current = onWarning
 
   useEffect(() => {
+    expiredRef.current = false
+    setWarned(false)
     if (!endTime) return
+    const endMs = new Date(endTime).getTime()
+    if (!Number.isFinite(endMs)) return
 
     const tick = () => {
-      const diff = new Date(endTime) - new Date()
+      const diff = endMs - Date.now()
       if (diff <= 0) {
         setRemaining(0)
-        onExpire?.()
+        if (!expiredRef.current) {
+          expiredRef.current = true
+          onExpireRef.current?.()
+        }
         return
       }
       setRemaining(diff)
 
-      // 1 deqiqe qalanda xeberdar et
       if (!warned && diff <= 60000) {
         setWarned(true)
-        onWarning?.()
+        onWarningRef.current?.()
       }
     }
 

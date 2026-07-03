@@ -900,6 +900,7 @@ const getExamQuestions = async (req, res) => {
     const { from, until, allowFinish } = examWindowOrLegacy(exam);
 
     let startedAtForStudent = null;
+    let savedAnswers = null;
     if (req.user.role === 'student') {
       if (!from || !until) {
         return res.status(400).json({ success: false, message: 'İmtahan vaxtı təyin olunmayıb' });
@@ -922,7 +923,7 @@ const getExamQuestions = async (req, res) => {
       const canEnterExamWindow = () => inGlobalWindow() || inLateWindow();
 
       const { rows: rRows } = await db.query(
-        `SELECT id, started_at, submitted_at
+        `SELECT id, started_at, submitted_at, answers
          FROM exam_results
          WHERE exam_id = $1
            AND REPLACE(LOWER(TRIM(student_id::text)), '-', '') = $2
@@ -969,6 +970,15 @@ const getExamQuestions = async (req, res) => {
           }
         } else {
           startedAtForStudent = attempt.started_at;
+          if (attempt.answers && typeof attempt.answers === 'object') {
+            savedAnswers = attempt.answers;
+          } else if (typeof attempt.answers === 'string') {
+            try {
+              savedAnswers = JSON.parse(attempt.answers);
+            } catch {
+              savedAnswers = null;
+            }
+          }
         }
       } else {
         if (!canEnterExamWindow()) {
@@ -989,6 +999,17 @@ const getExamQuestions = async (req, res) => {
       }
     }
 
+    let remainingSeconds = null;
+    if (req.user.role === 'student' && startedAtForStudent) {
+      const s = new Date(startedAtForStudent);
+      const durMin = Math.max(Number(dur) || 0, 1);
+      const personalEndMs = s.getTime() + durMin * 60000;
+      remainingSeconds = Math.max(0, Math.ceil((personalEndMs - now.getTime()) / 1000));
+      if (remainingSeconds <= 0) {
+        return res.status(400).json({ success: false, message: 'Vaxtınız bitib' });
+      }
+    }
+
     const { rows: questions } = await db.query(
       'SELECT * FROM exam_questions WHERE exam_id = $1 ORDER BY order_num',
       [id]
@@ -1000,7 +1021,14 @@ const getExamQuestions = async (req, res) => {
         ? questions.map((q) => stripExamQuestionForStudent(q))
         : questions.map((q) => ({ ...q }));
 
-    res.json({ success: true, exam, questions: safe, started_at: startedAtForStudent });
+    res.json({
+      success: true,
+      exam,
+      questions: safe,
+      started_at: startedAtForStudent,
+      remaining_seconds: remainingSeconds,
+      answers: req.user.role === 'student' ? savedAnswers : undefined,
+    });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

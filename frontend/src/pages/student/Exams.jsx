@@ -387,6 +387,8 @@ export default function StudentExams() {
   const [questions, setQuestions] = useState([])
   const [answers, setAnswers] = useState({})
   const [startedAt, setStartedAt] = useState(null)
+  /** Server hesabladığı qalan saniyə əsasında — saat qurşağı səhvlərinin qarşısını alır */
+  const [personalEndTime, setPersonalEndTime] = useState(null)
   const [result, setResult] = useState(null)
   const [resultBreakdown, setResultBreakdown] = useState(null)
   const [resultTypeSummary, setResultTypeSummary] = useState(null)
@@ -396,6 +398,10 @@ export default function StudentExams() {
   const [, bumpListUi] = useState(0)
   const activeExamRef = useRef(false)
   activeExamRef.current = !!activeExam
+  const activeExamIdRef = useRef(null)
+  const answersRef = useRef({})
+  activeExamIdRef.current = activeExam?.id ?? null
+  answersRef.current = answers
   /** Siyahıdan avtomatik `/review` yükləməsinin təkrarlanmaması üçün */
   const lastListReviewKeyRef = useRef('')
   const toast = useToast()
@@ -487,6 +493,7 @@ export default function StudentExams() {
   const [leaderModal, setLeaderModal] = useState(null)
   /** Paylaşım linkindən gələndə imtahanı birbaşa açmırıq — təsdiq modalı */
   const [startConfirm, setStartConfirm] = useState(null) // { exam, mode: 'fresh' | 'continue' }
+  const [startExamLoading, setStartExamLoading] = useState(false)
   /** Təyinat yoxdursa müəllimə giriş sorğusu */
   const [accessPrompt, setAccessPrompt] = useState(null)
   const [accessRequestBusy, setAccessRequestBusy] = useState(false)
@@ -649,36 +656,63 @@ export default function StudentExams() {
   }
 
   const startExam = async (exam) => {
+    if (!exam?.id || startExamLoading) return
+    setStartExamLoading(true)
     try {
       const data = await api.get(`/exams/${exam.id}/questions`)
+      if (!data?.exam) {
+        toast('İmtahan məlumatı alınmadı', 'error')
+        return
+      }
+      const qs = Array.isArray(data.questions) ? data.questions : []
+      if (!qs.length) {
+        toast('Bu imtahanda sual yoxdur — müəllimə müraciət edin', 'error')
+        return
+      }
       setActiveExam(data.exam)
-      // Defense-in-depth: imtahan bitənə qədər düzgün cavablar UI-a buraxılmır
       setQuestions(
-        Array.isArray(data.questions)
-          ? data.questions.map((q) => {
-              if (!q || typeof q !== 'object') return q
-              const { correct_answer: _ca, ...rest } = q
-              if (rest.question_type === 'matching') {
-                return { ...rest, options: null }
-              }
-              if (rest.question_type === 'open') {
-                const { template_hint: _th, ...openRest } = rest
-                return openRest
-              }
-              return rest
-            })
-          : []
+        qs.map((q) => {
+          if (!q || typeof q !== 'object') return q
+          const { correct_answer: _ca, ...rest } = q
+          if (rest.question_type === 'matching') {
+            return { ...rest, options: null }
+          }
+          if (rest.question_type === 'open') {
+            const { template_hint: _th, ...openRest } = rest
+            return openRest
+          }
+          return rest
+        }),
       )
-      setAnswers({})
+      const saved =
+        data?.answers && typeof data.answers === 'object' && !Array.isArray(data.answers)
+          ? data.answers
+          : {}
+      const remaining = Number(data.remaining_seconds)
+      const durMin = Math.max(Number(data.exam?.duration_minutes) || 0, 1)
+      const secondsLeft =
+        Number.isFinite(remaining) && remaining > 0 ? remaining : durMin * 60
+      if (secondsLeft <= 0) {
+        toast('Vaxtınız bitib', 'error')
+        return
+      }
+      setAnswers(saved)
       setStartedAt(data?.started_at || new Date().toISOString())
+      setPersonalEndTime(new Date(Date.now() + secondsLeft * 1000))
       setResult(null)
       setResultBreakdown(null)
       setResultTypeSummary(null)
       setMaterialsOpen(true)
       setFocusMode(true)
     } catch (err) {
-      toast(err.message || 'Xəta', 'error')
+      toast(err.message || 'İmtahan açılmadı', 'error')
+    } finally {
+      setStartExamLoading(false)
     }
+  }
+
+  const openStartConfirm = (exam, mode) => {
+    setStartConfirm({ exam, mode })
   }
 
   const submitExamAccessRequest = async () => {
@@ -783,24 +817,27 @@ export default function StudentExams() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deepLinkExamId, exams, listLoading, activeExam, setSearchParams, toast])
 
-  const submitExam = async () => {
+  const submitExam = useCallback(async () => {
+    const examId = activeExamIdRef.current
+    if (!examId) return
     try {
       const data = await api.post('/exams/submit', {
-        exam_id: activeExam.id,
-        answers,
+        exam_id: examId,
+        answers: answersRef.current,
       })
       setResult(data?.score ?? null)
       const br = Array.isArray(data?.breakdown) ? data.breakdown : []
       setResultBreakdown(mergeReviewBreakdownWithAnswers(br, data.answers))
       setResultTypeSummary(data?.type_summary ?? null)
       setActiveExam(null)
+      setPersonalEndTime(null)
       setFocusMode(false)
       toast(`✓ İmtahan tamamlandı! Bal: ${formatScoreBal(data?.score)}`)
       loadExams(true)
     } catch (err) {
       toast(err.message || 'Xəta', 'error')
     }
-  }
+  }, [loadExams, setFocusMode, toast])
 
   useEffect(() => {
     return () => setFocusMode(false)
@@ -808,12 +845,8 @@ export default function StudentExams() {
 
   // Active exam UI
   if (activeExam) {
-    const startActive = startedAt ? new Date(startedAt) : null
-    const durActive = Number(activeExam.duration_minutes) || 0
-    const endTime =
-      startActive != null && !Number.isNaN(startActive.getTime())
-        ? new Date(startActive.getTime() + durActive * 60000)
-        : new Date(NaN)
+    const durActive = Math.max(Number(activeExam.duration_minutes) || 0, 1)
+    const endTime = personalEndTime
     const materials = normalizeExamFiles(activeExam)
     const materialKinds = materialsKinds(materials)
     const w = parseExamWindow(activeExam)
@@ -1191,8 +1224,11 @@ export default function StudentExams() {
           const inGlobalWindow = !!(start && until && now >= start && now <= until)
           const inExamWindow = !!(start && until && (inGlobalWindow || inLateWindow))
           const hasOpenAttempt = !!(exam.started_at && !exam.submitted_at)
-          /** Təqdim olunmayan cəhd varsa və müəllimin pəncərəsindədirsə — "Davam et" (köhnə şəxsi müddət bitibsə server yeniləyir) */
-          const showContinue = hasOpenAttempt && inExamWindow
+          const allowFinishAfterUntil = w.allowFinish
+          /** Davam: aktiv pəncərədə və ya şəxsi vaxt qalıbsa (allow_finish sonrası da) */
+          const showContinue =
+            hasOpenAttempt &&
+            (inExamWindow || (canResume && allowFinishAfterUntil && until && now > until))
           const canStartFresh = !hasOpenAttempt && inExamWindow
           const isDone = !!exam.submitted_at
 
@@ -1280,9 +1316,19 @@ export default function StudentExams() {
                       Müəllim vaxt təyin etməlidir
                     </span>
                   ) : showContinue ? (
-                    <Button onClick={() => startExam(exam)}>↩️ Davam et</Button>
+                    <Button
+                      loading={startExamLoading}
+                      onClick={() => openStartConfirm(exam, 'continue')}
+                    >
+                      ↩️ Davam et
+                    </Button>
                   ) : canStartFresh ? (
-                    <Button onClick={() => startExam(exam)}>🚀 Başla</Button>
+                    <Button
+                      loading={startExamLoading}
+                      onClick={() => openStartConfirm(exam, 'fresh')}
+                    >
+                      🚀 Başla
+                    </Button>
                   ) : (
                     <span className="text-xs text-token-textMuted bg-token-surfaceCard/50 border border-[color:var(--border-subtle)] px-3 py-2 rounded-xl inline-block">⛔ Aktiv deyil</span>
                   )}
@@ -1422,6 +1468,7 @@ export default function StudentExams() {
               </Button>
               <Button
                 className="w-full sm:w-auto"
+                loading={startExamLoading}
                 onClick={() => {
                   const ex = startConfirm.exam
                   setStartConfirm(null)
