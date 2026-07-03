@@ -1,9 +1,11 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import api from '../../lib/api'
 import { localDatetimeInputToUtcIso } from '../../lib/examDatetime'
 import Button from '../common/Button'
 import { useToast } from '../common/Toast'
 import LibraryMaterialPickerModal, { libraryMaterialAsExamFile } from './LibraryMaterialPickerModal'
+import CertificateExamFields from './CertificateExamFields'
+import { useBillingStatus } from '../../hooks/useBillingStatus'
  
 const TYPES = {
   closed: 'Qapali (ABCDE)',
@@ -34,6 +36,19 @@ export default function ExamForm({ students, studentsLoading = false, onCreated,
   const [loading, setLoading] = useState(false)
   const [pdfBusy, setPdfBusy] = useState(false)
   const toast = useToast()
+  const { data: billing } = useBillingStatus()
+  const [certTemplates, setCertTemplates] = useState([])
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const r = await api.get('/certificates/instructor/templates')
+        setCertTemplates(Array.isArray(r?.templates) ? r.templates : [])
+      } catch {
+        setCertTemplates([])
+      }
+    })()
+  }, [])
 
   const [meta, setMeta] = useState({
     title: '',
@@ -48,6 +63,9 @@ export default function ExamForm({ students, studentsLoading = false, onCreated,
     /** Yalnız qapalı sual üçün -0.25 cərimə (imtahan səviyyəsi) */
     wrong_penalty_enabled: true,
     student_ids: [],
+    certificate_enabled: false,
+    certificate_pass_pct: 70,
+    certificate_template_id: null,
   })
 
   /** { id, name, url }[] — bir neçə PDF/şəkil */
@@ -165,6 +183,9 @@ export default function ExamForm({ students, studentsLoading = false, onCreated,
         start_time: localDatetimeInputToUtcIso(meta.available_from),
         available_from: localDatetimeInputToUtcIso(meta.available_from),
         available_until: localDatetimeInputToUtcIso(meta.available_until),
+        certificate_enabled: !!meta.certificate_enabled,
+        certificate_pass_pct: meta.certificate_pass_pct ?? 70,
+        certificate_template_id: meta.certificate_template_id || null,
         questions: questions.map((q, i) => ({
           question_text: `Sual ${i + 1}`,
           question_type: q.question_type,
@@ -416,7 +437,14 @@ export default function ExamForm({ students, studentsLoading = false, onCreated,
               />
             </div>
           </div>
- 
+
+          <CertificateExamFields
+            meta={meta}
+            setMeta={setMeta}
+            billingPlan={billing?.plan}
+            templates={certTemplates}
+          />
+
           <Button onClick={() => setStep(2)} className="w-full justify-center">Novbeti → Suallar</Button>
         </div>
       )}

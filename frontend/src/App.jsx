@@ -60,6 +60,9 @@ import InstructorUniversityPrograms from './pages/instructor/InstructorUniversit
 import PaymentSuccess from './pages/instructor/PaymentSuccess'
 import PaymentFail from './pages/instructor/PaymentFail'
 import PaymentPending from './pages/instructor/PaymentPending'
+import CertificateVerify from './pages/public/CertificateVerify'
+import StudentCertificates from './pages/student/Certificates'
+import InstructorCertificates from './pages/instructor/Certificates'
 import AdminBilling from './pages/admin/AdminBilling'
 import AdminInventory from './pages/admin/AdminInventory'
 import ParentNotifications from './pages/parent/Notifications'
@@ -179,6 +182,7 @@ export default function App() {
       <Route path="/m/:shareToken" element={<MaterialPublicPreview />} />
       <Route path="/lr/:shareToken" element={<LiveRecordingShare />} />
       <Route path="/live/join/:token" element={<LiveGuestJoin />} />
+      <Route path="/c/:token" element={<CertificateVerify />} />
       <Route
         path="/live/:roomCode"
         element={
@@ -220,6 +224,7 @@ export default function App() {
         <Route path="inquiries" element={<StudentInquiries />} />
         <Route path="schedule" element={<InstructorSchedule />} />
         <Route path="exams" element={<InstructorExams />} />
+        <Route path="certificates" element={<InstructorCertificates />} />
         <Route path="attendance" element={<InstructorAttendance />} />
         <Route path="analytics" element={<InstructorAnalytics />} />
         <Route path="tasks" element={<InstructorTasks />} />
@@ -249,6 +254,7 @@ export default function App() {
         <Route path="direct-chat" element={<DirectChatPage role="student" />} />
         <Route path="assignment-chat" element={<AssignmentChatPage role="student" />} />
         <Route path="exams" element={<StudentExams />} />
+        <Route path="certificates" element={<StudentCertificates />} />
         <Route path="assignments" element={<StudentTasks />} />
         <Route path="materials" element={<StudentMaterials />} />
         <Route path="tasks" element={<Navigate to="/student/assignments" replace />} />

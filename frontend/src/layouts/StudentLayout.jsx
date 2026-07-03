@@ -33,6 +33,7 @@ const NAV_GROUP_DEFS = [
       { to: '/student/chat', key: 'groupChat', labelKey: 'nav.student.groupChat', label: 'Qrup çatı', icon: 'chat' },
       { to: '/student/direct-chat', key: 'directChat', labelKey: 'nav.student.directChat', label: 'Fərdi çat', icon: 'chat' },
       { to: '/student/exams', key: 'exams', labelKey: 'nav.student.exams', label: 'İmtahanlarım', icon: 'exams' },
+      { to: '/student/certificates', key: 'certificates', labelKey: 'nav.student.certificates', label: 'Sertifikatlarım', icon: 'exams' },
       { to: '/student/assignments', key: 'assignments', labelKey: 'nav.student.assignments', label: 'Tapşırıqlarım', icon: 'tasks', badgeKey: 'tasks' },
       { to: '/student/materials', key: 'materials', labelKey: 'nav.student.materials', label: 'Materiallar', icon: 'materials' },
       { to: '/universities', key: 'universities', labelKey: 'nav.student.universities', label: 'Universitetlər', icon: 'courses' },

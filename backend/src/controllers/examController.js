@@ -10,6 +10,8 @@ const { STUDENT_CONTACT_PHONE_SQL } = require('../utils/studentPhone');
 const { upsertStudentContactPhone } = require('../utils/studentPhone');
 const { normalizeExamStartTime } = require('../utils/examTime');
 const { recomputeInstructorStorageUsageMb } = require('../services/resourceUsageService');
+const { certificateFieldsFromBody } = require('../lib/examCertificateFields');
+const { instructorHasCertificateFeature } = require('../services/certificateService');
 
 /** JWT / DB UUID format fərqi olanda exam_assignments uyğunlaşması */
 const normStudentHex = (id) =>
@@ -217,6 +219,15 @@ const createExam = async (req, res) => {
 
     const wrongPenaltyOn = wrong_penalty_enabled !== false && wrong_penalty_enabled !== 'false' && wrong_penalty_enabled !== 0;
 
+    const certParsed = certificateFieldsFromBody(req.body);
+    let certificateEnabled = certParsed.enabledProvided ? !!certParsed.certificate_enabled : false;
+    let certificatePassPct = certParsed.passProvided ? certParsed.certificate_pass_pct : 70;
+    let certificateTemplateId = certParsed.templateProvided ? certParsed.certificate_template_id : null;
+    if (certificateEnabled && req.user.role === 'instructor') {
+      const certAllowed = await instructorHasCertificateFeature(req.user.id);
+      if (!certAllowed) certificateEnabled = false;
+    }
+
     const startNorm = normalizeExamStartTime(start_time);
     const fromNorm = normalizeExamStartTime(available_from || start_time);
     const untilNorm = normalizeExamStartTime(available_until);
@@ -230,8 +241,9 @@ const createExam = async (req, res) => {
       const { rows } = await client.query(
         `INSERT INTO exams (instructor_id, title, subject, topic, pdf_url, exam_files, duration_minutes, start_time,
           available_from, available_until, allow_finish_after_until,
-          notify_enabled, notify_students, notify_before_hours, show_results, wrong_penalty_enabled, status)
-         VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,'scheduled') RETURNING *`,
+          notify_enabled, notify_students, notify_before_hours, show_results, wrong_penalty_enabled,
+          certificate_enabled, certificate_pass_pct, certificate_template_id, status)
+         VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,'scheduled') RETURNING *`,
         [
           req.user.id,
           title,
@@ -249,6 +261,9 @@ const createExam = async (req, res) => {
           notifyHours,
           show_results !== false,
           wrongPenaltyOn,
+          certificateEnabled,
+          certificatePassPct,
+          certificateTemplateId,
         ]
       );
 
@@ -1655,6 +1670,7 @@ const patchExam = async (req, res) => {
     const durationNorm = patchCoalesceInt(duration_minutes);
     const showResultsNorm = patchCoalesceBool(show_results);
     const wrongPenProvided = Object.prototype.hasOwnProperty.call(req.body || {}, 'wrong_penalty_enabled');
+    const certParsed = certificateFieldsFromBody(req.body);
 
     const { rows: [before] } = await db.query('SELECT * FROM exams WHERE id = $1', [examId]);
     if (!before) return res.status(404).json({ success: false, message: 'Imtahan tapilmadi' });
@@ -1747,6 +1763,21 @@ const patchExam = async (req, res) => {
 
       const finalPdfUrl = pdfProvided ? nextPdf : before.pdf_url;
 
+      let finalCertEnabled = before.certificate_enabled === true;
+      if (certParsed.enabledProvided) {
+        finalCertEnabled = !!certParsed.certificate_enabled;
+        if (finalCertEnabled && req.user.role === 'instructor') {
+          const certAllowed = await instructorHasCertificateFeature(req.user.id);
+          if (!certAllowed) finalCertEnabled = false;
+        }
+      }
+      const finalCertPassPct = certParsed.passProvided
+        ? certParsed.certificate_pass_pct
+        : Number(before.certificate_pass_pct || 70);
+      const finalCertTemplateId = certParsed.templateProvided
+        ? certParsed.certificate_template_id
+        : before.certificate_template_id;
+
       const { rows } = await client.query(
         `UPDATE exams SET
           title = $1::varchar(255),
@@ -1763,8 +1794,11 @@ const patchExam = async (req, res) => {
           wrong_penalty_enabled = $12::boolean,
           exam_files = $13::jsonb,
           pdf_url = $14::varchar(500),
+          certificate_enabled = $15::boolean,
+          certificate_pass_pct = $16::numeric,
+          certificate_template_id = $17::uuid,
           updated_at = NOW()
-        WHERE id = $15
+        WHERE id = $18
         RETURNING *`,
         [
           finalTitle,
@@ -1781,6 +1815,9 @@ const patchExam = async (req, res) => {
           finalWrongPen,
           JSON.stringify(Array.isArray(examFilesArr) ? examFilesArr : []),
           finalPdfUrl,
+          finalCertEnabled,
+          finalCertPassPct,
+          finalCertTemplateId,
           examId,
         ]
       );

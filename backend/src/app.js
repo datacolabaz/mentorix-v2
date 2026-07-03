@@ -18,11 +18,14 @@ const { runAssignmentNotifications } = require('./jobs/assignmentNotifications')
 const { reconcileStorageUsage } = require('./jobs/storageUsageReconciler');
 const { runOrphanFilesReaper } = require('./jobs/orphanFilesReaper');
 const { runUniversityProgramScraper } = require('./jobs/universityProgramScraper');
+const { ensureStarted: ensureCertificateIssueWorker } = require('./jobs/certificateIssueWorker');
 
 const { ensureAssignmentsUploadDir } = require('./services/assignmentFileStorage');
+const { ensureCertificatesUploadDir } = require('./services/certificateFileStorage');
 const { CHAT_UPLOAD_DIR } = require('./services/chatAttachmentStorage');
 const uploadsExamsDir = path.join(__dirname, '../uploads/exams');
 ensureAssignmentsUploadDir();
+ensureCertificatesUploadDir();
 const uploadsCourseLogosDir = path.join(__dirname, '../uploads/course-logos');
 const { servePublicInstructorAvatar } = require('./controllers/instructorAvatarController');
 const uploadsInstructorAvatarsDir = path.join(__dirname, '../uploads/instructor-avatars');
@@ -77,6 +80,7 @@ app.use('/api/materials', require('./routes/materials'));
 app.use('/api/programs', require('./routes/programs'));
 app.use('/api/applications', require('./routes/applications'));
 app.use('/api/live', require('./routes/live'));
+app.use('/api/certificates', require('./routes/certificates'));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 app.get('/api/meta', (req, res) =>
@@ -94,6 +98,7 @@ app.use(errorHandler);
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log('Mentorix API running on port', PORT);
+  ensureCertificateIssueWorker();
   processExamNotificationJobs().catch((e) => console.error('exam notification jobs startup', e.message));
   recomputeAllInstructorsUsage().catch((e) => console.error('usage sync startup', e.message));
   setTimeout(() => {
