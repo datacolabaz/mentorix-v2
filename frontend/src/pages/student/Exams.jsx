@@ -445,7 +445,11 @@ export default function StudentExams() {
   const [issuedCertificate, setIssuedCertificate] = useState(null)
   const [certificateMeta, setCertificateMeta] = useState(null)
   const [materialsOpen, setMaterialsOpen] = useState(true)
-  const materialBlobById = useExamMaterialBlobs(activeExam?.id, activeExam ? normalizeExamFiles(activeExam) : [])
+  const activeExamMaterials = useMemo(() => {
+    if (!activeExam) return []
+    return normalizeExamFiles(activeExam)
+  }, [activeExam?.id, activeExam?.exam_files, activeExam?.pdf_url])
+  const materialBlobById = useExamMaterialBlobs(activeExam?.id, activeExamMaterials)
   const [, bumpListUi] = useState(0)
   const activeExamRef = useRef(false)
   activeExamRef.current = !!activeExam
@@ -465,10 +469,10 @@ export default function StudentExams() {
 
   /** Davam / yenidən yükləmə: materiallar paneli açılsın (sıfır enində PNG iframe/img sıradan çıxmasın) */
   useEffect(() => {
-    if (activeExam && normalizeExamFiles(activeExam).length > 0) {
+    if (activeExam && activeExamMaterials.length > 0) {
       setMaterialsOpen(true)
     }
-  }, [activeExam?.id, startedAt])
+  }, [activeExam?.id, startedAt, activeExamMaterials.length])
 
   /** quiet: arxa plan yeniləməsində tam səhifə “yüklənir” göstərmə */
   const { activeEnrollmentId, activeEnrollment } = useStudentGroups()
@@ -863,7 +867,7 @@ export default function StudentExams() {
   if (activeExam) {
     const durActive = Math.max(Number(activeExam.duration_minutes) || 0, 1)
     const endTime = personalEndTime
-    const materials = normalizeExamFiles(activeExam)
+    const materials = activeExamMaterials
     const materialKinds = materialsKinds(materials)
     const w = parseExamWindow(activeExam)
 
@@ -934,6 +938,8 @@ export default function StudentExams() {
                   const materialUrlDirect = resolveMaterialUrl(m.url)
                   const needsProtectedFetch = Boolean(materialFileApiPath(m.url, activeExam.id))
                   const blobEntry = materialBlobById[m.id]
+                  const materialLoading = needsProtectedFetch && !(m.id in materialBlobById)
+                  const materialFailed = needsProtectedFetch && m.id in materialBlobById && blobEntry === null
                   const mediaSrc = needsProtectedFetch
                     ? blobEntry === undefined
                       ? undefined
@@ -949,6 +955,8 @@ export default function StudentExams() {
                       mediaSrc={mediaSrc}
                       showPdfFrame={showPdfFrame}
                       openInNewTabUrl={materialOpenInNewTabUrl(m.url, activeExam.id)}
+                      loading={materialLoading}
+                      failed={materialFailed}
                     />
                   )
                 })}

@@ -10,6 +10,8 @@ export default function ExamMaterialPreview({
   showPdfFrame,
   openInNewTabUrl,
   compact = false,
+  loading = false,
+  failed = false,
 }) {
   const [lightbox, setLightbox] = useState(false)
   const name = material?.name || 'Fayl'
@@ -44,8 +46,27 @@ export default function ExamMaterialPreview({
           aria-label={`${name} — böyüt`}
         >
           {!mediaSrc ? (
-            <div className="flex items-center justify-center h-full min-h-[120px] text-xs text-gray-500">
-              Yüklənir…
+            <div className="flex flex-col items-center justify-center h-full min-h-[120px] text-xs text-gray-500 gap-2 px-3">
+              {loading ? (
+                'Yüklənir…'
+              ) : failed ? (
+                <>
+                  <span>Fayl yüklənmədi</span>
+                  {openInNewTabUrl ? (
+                    <a
+                      href={openInNewTabUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-400 hover:text-blue-300 font-semibold"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      Yeni pəncərədə aç
+                    </a>
+                  ) : null}
+                </>
+              ) : (
+                'Yüklənir…'
+              )}
             </div>
           ) : showPdfFrame ? (
             <iframe

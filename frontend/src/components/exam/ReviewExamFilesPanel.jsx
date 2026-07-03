@@ -22,6 +22,8 @@ export default function ReviewExamFilesPanel({
         {files.map((f) => {
           const needsProtectedFetch = Boolean(materialFileApiPath(f.url, examId))
           const blobEntry = blobById[f.id]
+          const materialLoading = needsProtectedFetch && !(f.id in blobById)
+          const materialFailed = needsProtectedFetch && f.id in blobById && blobEntry === null
           const mediaSrc = needsProtectedFetch
             ? blobEntry === undefined
               ? undefined
@@ -38,6 +40,8 @@ export default function ReviewExamFilesPanel({
               showPdfFrame={showPdfFrame}
               openInNewTabUrl={materialOpenInNewTabUrl(f.url, examId)}
               compact
+              loading={materialLoading}
+              failed={materialFailed}
             />
           )
         })}
