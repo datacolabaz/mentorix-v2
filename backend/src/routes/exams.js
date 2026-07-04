@@ -14,6 +14,7 @@ const {
   getExamAssignments,
   grantLateAccess,
   patchExam,
+  bulkPatchOpenModelAnswers,
   instructorStudentExamProgress,
   studentExams,
   getExamAccessStatus,
@@ -186,6 +187,13 @@ router.delete(
   softDeleteExam,
 );
 
+router.patch(
+  '/:id/open-model-answers',
+  authenticate,
+  authorize('instructor', 'admin'),
+  enforceActiveSubscription,
+  bulkPatchOpenModelAnswers,
+);
 router.patch(
   '/:id',
   authenticate,

@@ -172,6 +172,8 @@ export default function InstructorExams() {
   const [editAssignmentsLoading, setEditAssignmentsLoading] = useState(false)
   const [editQuestions, setEditQuestions] = useState([])
   const [editQuestionsLoading, setEditQuestionsLoading] = useState(false)
+  const [bulkModelImportText, setBulkModelImportText] = useState('')
+  const [bulkModelImportBusy, setBulkModelImportBusy] = useState(false)
   const [certTemplates, setCertTemplates] = useState([])
   const [lateBusyStudentId, setLateBusyStudentId] = useState(null)
   const [lateAccessPreset, setLateAccessPreset] = useState('120')
@@ -305,6 +307,43 @@ export default function InstructorExams() {
     }
   }
  
+  const applyBulkModelAnswers = async () => {
+    if (!editExam?.id || !bulkModelImportText.trim()) return
+    setBulkModelImportBusy(true)
+    try {
+      let entries = []
+      const raw = bulkModelImportText.trim()
+      try {
+        const parsed = JSON.parse(raw)
+        entries = Array.isArray(parsed) ? parsed : parsed?.entries || []
+      } catch {
+        entries = raw
+          .split('\n')
+          .map((line) => line.trim())
+          .filter(Boolean)
+          .map((line) => {
+            const m = line.match(/^(\d+)\s*[;,|]\s*(.+)$/)
+            if (m) return { order_num: Number(m[1]), model_answer: m[2].replace(/^["']|["']$/g, '') }
+            return null
+          })
+          .filter(Boolean)
+      }
+      if (!entries.length) {
+        toast('Format: JSON array və ya hər sətirdə `1; cavab mətni`', 'error')
+        return
+      }
+      const d = await api.patch(`/exams/${encodeURIComponent(editExam.id)}/open-model-answers`, { entries })
+      toast(`${d.updated || 0} model cavab yükləndi`)
+      setBulkModelImportText('')
+      const qs = await api.get(`/exams/${encodeURIComponent(editExam.id)}/questions`)
+      setEditQuestions((qs.questions || qs || []).map(initEditQuestion))
+    } catch (err) {
+      toast(err?.message || t('exams.toasts.error'), 'error')
+    } finally {
+      setBulkModelImportBusy(false)
+    }
+  }
+
   const saveEdit = async () => {
     setLoading(true)
     try {
@@ -902,6 +941,30 @@ export default function InstructorExams() {
                   {editQuestionsLoading ? t('exams.loadingShort') : t('exams.questions.count', { count: editQuestions.length })}
                 </div>
               </div>
+              {editQuestions.some((q) => q.question_type === 'open') ? (
+                <div className="rounded-lg border border-violet-500/25 bg-violet-500/5 p-3 space-y-2">
+                  <p className="text-xs font-semibold text-violet-200">Toplu model cavab import</p>
+                  <p className="text-[11px] text-gray-500 leading-relaxed">
+                    JSON: <code className="text-violet-300">[{`{"order_num":1,"model_answer":"..."}`}, …]</code>
+                    {' '}və ya hər sətirdə: <code className="text-violet-300">1; cavab mətni</code>
+                  </p>
+                  <textarea
+                    className={inp + ' min-h-[88px] resize-y font-mono text-xs'}
+                    placeholder={'1; temp = A, A = B, B = temp\n2; ikinci sualın cavabı'}
+                    value={bulkModelImportText}
+                    onChange={(e) => setBulkModelImportText(e.target.value)}
+                  />
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    loading={bulkModelImportBusy}
+                    disabled={!bulkModelImportText.trim()}
+                    onClick={() => void applyBulkModelAnswers()}
+                  >
+                    Model cavabları yüklə
+                  </Button>
+                </div>
+              ) : null}
               {editQuestionsLoading ? (
                 <p className="text-xs text-gray-500 py-2">{t('exams.questions.loading')}</p>
               ) : editQuestions.length === 0 ? (

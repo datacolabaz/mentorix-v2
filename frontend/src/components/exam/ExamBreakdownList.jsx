@@ -13,6 +13,7 @@ function statusBadgeClass(label) {
   if (label === 'Düzgün' || label === 'Doğru' || label === 'Qismən düzgün') return 'bg-emerald-500/20 text-emerald-300'
   if (label === 'Səhv') return 'bg-red-500/15 text-red-300'
   if (label === 'AI tövsiyəsi') return 'bg-violet-500/20 text-violet-200'
+  if (label === 'Qiymətləndirilir' || label === 'Nəticə gözlənilir') return 'bg-amber-500/20 text-amber-200'
   if (label === 'Cavabsız') return 'bg-amber-500/15 text-amber-200'
   return 'bg-gray-500/15 text-gray-400'
 }
@@ -94,6 +95,15 @@ export default function ExamBreakdownList({
                     ? 'AI tövsiyəsi gözləyir'
                     : row.status_label}
               </span>
+              {row.grading_pending && row.max_points != null ? (
+                <span className="ml-2 text-[11px] text-amber-300/90 tabular-nums">
+                  ({row.max_points} baldan — gözlənilir)
+                </span>
+              ) : row.points_display != null && Number.isFinite(Number(row.points_display)) ? (
+                <span className="ml-2 text-[11px] text-emerald-300/90 tabular-nums">
+                  (+{Math.round(Number(row.points_display) * 100) / 100} bal)
+                </span>
+              ) : null}
             </div>
             {typeof renderOpenGrading === 'function' ? renderOpenGrading(row) : null}
           </div>

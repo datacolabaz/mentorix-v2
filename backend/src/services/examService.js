@@ -669,8 +669,10 @@ const buildExamResultBreakdown = (questions, answers, opts = {}) => {
     }
 
     let statusLabel = 'Manual qiymətləndirmə';
+    const studentView = opts?.studentView === true;
     if (type === 'open') {
       const ge = grading[q.id];
+      const modelAnswerOpen = String(q.model_answer ?? '').trim();
       if (!given) statusLabel = 'Cavabsız';
       else if (ge?.grading_status === 'teacher_confirmed') {
         const fs = Number(ge.final_score);
@@ -678,6 +680,8 @@ const buildExamResultBreakdown = (questions, answers, opts = {}) => {
         if (fs >= maxPts && maxPts > 0) statusLabel = 'Düzgün';
         else if (fs > 0) statusLabel = 'Qismən düzgün';
         else statusLabel = 'Səhv';
+      } else if (studentView && modelAnswerOpen && given) {
+        statusLabel = ge?.grading_status === 'ai_suggested' ? 'Nəticə gözlənilir' : 'Qiymətləndirilir';
       } else if (ge?.grading_status === 'ai_suggested') statusLabel = 'AI tövsiyəsi';
       else if (isCorrect === true) statusLabel = 'Düzgün';
       else if (isCorrect === false) statusLabel = openAutoKey(q) == null ? 'Manual qiymətləndirmə' : 'Səhv';
@@ -699,6 +703,22 @@ const buildExamResultBreakdown = (questions, answers, opts = {}) => {
       status_label: statusLabel,
       max_points: Number(q.points || 0),
     };
+
+    if (type === 'open') {
+      const ge = grading[q.id];
+      const modelAnswerOpen = String(q.model_answer ?? '').trim();
+      if (
+        studentView &&
+        given &&
+        modelAnswerOpen &&
+        ge?.grading_status !== 'teacher_confirmed'
+      ) {
+        row.grading_pending = true;
+        row.points_display = null;
+      } else if (ge?.grading_status === 'teacher_confirmed') {
+        row.points_display = Number(ge.final_score);
+      }
+    }
 
     if (type === 'open' && showOpenGrading) {
       const ge = grading[q.id];

@@ -281,7 +281,7 @@ function mergeReviewBreakdownWithAnswers(breakdown, answers) {
 const SUMMARY_TYPE_KEYS = ['closed', 'multiple', 'matching', 'open']
 
 /** Backend `buildExamTypeSummary` cavabı */
-function ExamTypeSummaryPanel({ summary }) {
+function ExamTypeSummaryPanel({ summary, gradingPending = false }) {
   const bt = summary?.by_type
   if (!bt || typeof bt !== 'object') return null
   const rows = SUMMARY_TYPE_KEYS.map((k) => {
@@ -322,7 +322,11 @@ function ExamTypeSummaryPanel({ summary }) {
                 <td className="px-2 py-2 text-center tabular-nums">{row.u}</td>
                 <td className="px-2 py-2 text-center tabular-nums">{row.p}</td>
                 <td className="px-3 py-2 text-right font-mono tabular-nums text-cyan-200/95">
-                  {Number.isFinite(row.pts) ? `${row.pts}` : '—'}
+                  {gradingPending && row.k === 'open' && (row.p > 0 || row.pts === 0)
+                    ? 'Gözlənilir'
+                    : Number.isFinite(row.pts)
+                      ? `${row.pts}`
+                      : '—'}
                 </td>
               </tr>
             ))}
@@ -338,7 +342,8 @@ function ExamTypeSummaryPanel({ summary }) {
   )
 }
 
-function formatScoreBal(v) {
+function formatScoreBal(v, { pending = false } = {}) {
+  if (pending || v === 'pending') return 'Yekun nəticə gözlənilir'
   const n = Number(v)
   if (!Number.isFinite(n)) return '—'
   const rounded = Math.round(n * 100) / 100
@@ -407,6 +412,14 @@ function ExamCertificateBanner({ certificate, meta, examId, onClaim, claimBusy =
     return (
       <div className="mt-5 pt-5 border-t border-amber-500/30 text-sm text-amber-200/90 text-left sm:text-center">
         Bu sertifikatlı imtahandır və keçdiniz, amma müəllimin planı sertifikat vermir (Pro plan lazımdır).
+      </div>
+    )
+  }
+  if (meta.reason === 'grading_pending') {
+    return (
+      <div className="mt-5 pt-5 border-t border-amber-500/30 text-sm text-amber-200/90 text-left sm:text-center">
+        Açıq suallar hələ qiymətləndirilir. Yekun bal və sertifikat müəllim təsdiqlədikdən sonra
+        görünəcək.
       </div>
     )
   }
@@ -495,6 +508,7 @@ export default function StudentExams() {
   /** Server hesabladığı qalan saniyə əsasında — saat qurşağı səhvlərinin qarşısını alır */
   const [personalEndTime, setPersonalEndTime] = useState(null)
   const [result, setResult] = useState(null)
+  const [resultGradingPending, setResultGradingPending] = useState(false)
   const [resultBreakdown, setResultBreakdown] = useState(null)
   const [resultTypeSummary, setResultTypeSummary] = useState(null)
   const [issuedCertificate, setIssuedCertificate] = useState(null)
@@ -651,6 +665,7 @@ export default function StudentExams() {
         lastListReviewKeyRef.current = key
         setLatestResultExamId(latest.id)
         setResult(d.score ?? null)
+        setResultGradingPending(Boolean(d.grading_pending))
         const br = Array.isArray(d.breakdown) ? d.breakdown : []
         setResultBreakdown(mergeReviewBreakdownWithAnswers(br, d.answers))
         setResultTypeSummary(d.type_summary ?? null)
@@ -710,6 +725,7 @@ export default function StudentExams() {
         exam_id: d?.exam?.id || exam?.id || null,
         type_summary: d.type_summary || null,
         score: d.score,
+        grading_pending: Boolean(d.grading_pending),
         submitted_at: d.submitted_at,
         certificate: d.certificate || null,
         certificate_meta: d.certificate_meta || null,
@@ -797,6 +813,7 @@ export default function StudentExams() {
       setStartedAt(data?.started_at || new Date().toISOString())
       setPersonalEndTime(new Date(Date.now() + secondsLeft * 1000))
       setResult(null)
+      setResultGradingPending(false)
       setResultBreakdown(null)
       setResultTypeSummary(null)
       setIssuedCertificate(null)
@@ -925,6 +942,7 @@ export default function StudentExams() {
         answers: answersRef.current,
       })
       setResult(data?.score ?? null)
+      setResultGradingPending(Boolean(data?.grading_pending))
       const br = Array.isArray(data?.breakdown) ? data.breakdown : []
       setResultBreakdown(mergeReviewBreakdownWithAnswers(br, data.answers))
       setResultTypeSummary(data?.type_summary ?? null)
@@ -934,7 +952,11 @@ export default function StudentExams() {
       setActiveExam(null)
       setPersonalEndTime(null)
       setFocusMode(false)
-      toast(`✓ İmtahan tamamlandı! Bal: ${formatScoreBal(data?.score)}`)
+      toast(
+        data?.grading_pending
+          ? '✓ İmtahan tamamlandı! Açıq suallar qiymətləndirilir — yekun bal tezliklə.'
+          : `✓ İmtahan tamamlandı! Bal: ${formatScoreBal(data?.score)}`,
+      )
       loadExams(true)
     } catch (err) {
       toast(err.message || 'Xəta', 'error')
@@ -1249,12 +1271,16 @@ export default function StudentExams() {
 
       {result !== null && (
         <Card hover className="p-6 mb-6 text-center border-blue-500/40">
-          <div className="text-5xl mb-3">{result >= 75 ? '🏆' : result >= 60 ? '🥈' : '📚'}</div>
-          <div className="font-display font-extrabold text-4xl bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
-            {formatScoreBal(result)}
+          <div className="text-5xl mb-3">
+            {resultGradingPending ? '⏳' : result >= 75 ? '🏆' : result >= 60 ? '🥈' : '📚'}
           </div>
-          <div className="text-token-textMuted mt-2">Son imtahan nəticəniz</div>
-          {certificateMeta?.score_pct != null && !issuedCertificate?.certificate_no ? (
+          <div className="font-display font-extrabold text-4xl bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
+            {formatScoreBal(result, { pending: resultGradingPending })}
+          </div>
+          <div className="text-token-textMuted mt-2">
+            {resultGradingPending ? 'Açıq suallar qiymətləndirilir' : 'Son imtahan nəticəniz'}
+          </div>
+          {!resultGradingPending && certificateMeta?.score_pct != null && !issuedCertificate?.certificate_no ? (
             <p className="text-sm text-gray-400 mt-1">
               ({Math.round(Number(certificateMeta.score_pct))}%)
             </p>
@@ -1269,7 +1295,7 @@ export default function StudentExams() {
         </Card>
       )}
 
-      <ExamTypeSummaryPanel summary={resultTypeSummary} />
+      <ExamTypeSummaryPanel summary={resultTypeSummary} gradingPending={resultGradingPending} />
 
       {resultBreakdown?.length > 0 && (
         <Card hover className="p-6 mb-6 border-indigo-500/30">
@@ -1581,8 +1607,13 @@ export default function StudentExams() {
           <>
             <div className="text-center mb-6">
               <div className="font-display font-extrabold text-3xl bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
-                {formatScoreBal(reviewModal.score)}
+                {formatScoreBal(reviewModal.score, { pending: reviewModal.grading_pending })}
               </div>
+              {reviewModal.grading_pending ? (
+                <p className="text-xs text-amber-300 mt-2">
+                  Açıq suallar qiymətləndirilir — yekun bal müəllim təsdiqlədikdən sonra görünəcək.
+                </p>
+              ) : null}
               {reviewModal.submitted_at && (
                 <p className="text-xs text-gray-500 mt-2">
                   Təqdim: {new Date(reviewModal.submitted_at).toLocaleString('az-AZ')}
@@ -1596,7 +1627,7 @@ export default function StudentExams() {
                 claimBusy={claimCertBusy}
               />
             </div>
-            <ExamTypeSummaryPanel summary={reviewModal.type_summary} />
+            <ExamTypeSummaryPanel summary={reviewModal.type_summary} gradingPending={reviewModal.grading_pending} />
             {reviewModal.breakdown?.length > 0 && (
               <div>
                 <h3 className="text-sm font-bold text-token-textMain mb-2">Suallar üzrə</h3>

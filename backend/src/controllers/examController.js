@@ -838,7 +838,7 @@ const getStudentExamReview = async (req, res) => {
     }
 
     const { rows: resultRows } = await db.query(
-      `SELECT score, answers, submitted_at FROM exam_results
+      `SELECT score, answers, grading, submitted_at FROM exam_results
        WHERE exam_id = $1
          AND REPLACE(LOWER(TRIM(student_id::text)), '-', '') = $2
          AND submitted_at IS NOT NULL
@@ -880,11 +880,26 @@ const getStudentExamReview = async (req, res) => {
     }
     if (!answers || typeof answers !== 'object') answers = {};
 
+    let grading = result.grading;
+    if (typeof grading === 'string') {
+      try {
+        grading = JSON.parse(grading);
+      } catch {
+        grading = {};
+      }
+    }
+    if (!grading || typeof grading !== 'object') grading = {};
+
+    const { hasUnconfirmedOpenGrading } = require('../services/openExamGradingService');
+    const gradingPending = hasUnconfirmedOpenGrading(questions, answers, grading);
+
     const breakdown = buildExamResultBreakdown(questions, answers, {
       showCorrectAnswers: exam.show_results !== false,
+      grading,
+      studentView: true,
     });
     const wrongPen = exam.wrong_penalty_enabled !== false;
-    const typeSummary = buildExamTypeSummary(questions, answers, { wrongPenaltyEnabled: wrongPen });
+    const typeSummary = buildExamTypeSummary(questions, answers, { wrongPenaltyEnabled: wrongPen, grading });
 
     let certificate = null;
     let certificateMeta = null;
@@ -901,6 +916,8 @@ const getStudentExamReview = async (req, res) => {
       success: true,
       exam,
       score: result.score,
+      grading_pending: gradingPending,
+      score_display: gradingPending ? 'pending' : result.score,
       submitted_at: result.submitted_at,
       breakdown,
       type_summary: typeSummary,
@@ -1159,6 +1176,7 @@ const submitExam = async (req, res) => {
     const breakdown = buildExamResultBreakdown(questions, answers, {
       showCorrectAnswers: exam.show_results !== false,
       grading,
+      studentView: true,
     });
     const now = new Date();
     const startedAt = attempt?.started_at ? new Date(attempt.started_at) : now;
@@ -1249,7 +1267,10 @@ const submitExam = async (req, res) => {
     }
 
     let certificateMeta = null;
+    let gradingPending = false;
     try {
+      const { hasUnconfirmedOpenGrading } = require('../services/openExamGradingService');
+      gradingPending = hasUnconfirmedOpenGrading(questions, answers, grading);
       certificateMeta = await evaluateCertificateEligibility(exam_id, score, null, { examResultId });
     } catch (metaErr) {
       console.error('certificate meta on submit', metaErr.message);
@@ -1270,7 +1291,17 @@ const submitExam = async (req, res) => {
       );
     });
 
-    res.json({ success: true, score, breakdown, type_summary: typeSummary, answers, certificate, certificate_meta: certificateMeta });
+    res.json({
+      success: true,
+      score,
+      grading_pending: gradingPending,
+      score_display: gradingPending ? 'pending' : score,
+      breakdown,
+      type_summary: typeSummary,
+      answers,
+      certificate,
+      certificate_meta: certificateMeta,
+    });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -2459,6 +2490,63 @@ const postExamAccessFromLink = async (req, res) => {
   }
 };
 
+const bulkPatchOpenModelAnswers = async (req, res) => {
+  try {
+    const examId = req.params.id;
+    const isAdmin = req.user.role === 'admin';
+    const { entries } = req.body || {};
+    if (!Array.isArray(entries) || !entries.length) {
+      return res.status(400).json({ success: false, message: 'entries array tələb olunur' });
+    }
+
+    const { rows: [exam] } = await db.query(
+      'SELECT id, instructor_id FROM exams WHERE id = $1 AND COALESCE(is_deleted, FALSE) = FALSE',
+      [examId],
+    );
+    if (!exam) return res.status(404).json({ success: false, message: 'Tapılmadı' });
+    if (!isAdmin && normStudentHex(exam.instructor_id) !== normStudentHex(req.user.id)) {
+      return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
+    }
+
+    const { rows: questions } = await db.query(
+      `SELECT id, order_num, question_type FROM exam_questions WHERE exam_id = $1 ORDER BY order_num`,
+      [examId],
+    );
+    const byId = new Map(questions.map((q) => [String(q.id), q]));
+    const byOrder = new Map(questions.map((q) => [Number(q.order_num), q]));
+
+    let updated = 0;
+    const skipped = [];
+
+    await db.transaction(async (client) => {
+      for (const entry of entries) {
+        const text = entry?.model_answer != null ? String(entry.model_answer).trim() : '';
+        if (!text) continue;
+        let q = null;
+        if (entry?.question_id && byId.has(String(entry.question_id))) {
+          q = byId.get(String(entry.question_id));
+        } else if (entry?.order_num != null) {
+          const ord = Number(entry.order_num);
+          if (Number.isFinite(ord)) q = byOrder.get(ord);
+        }
+        if (!q || q.question_type !== 'open') {
+          skipped.push(entry?.order_num ?? entry?.question_id ?? '?');
+          continue;
+        }
+        await client.query(
+          `UPDATE exam_questions SET model_answer = $1 WHERE id = $2::uuid AND exam_id = $3::uuid`,
+          [text, q.id, examId],
+        );
+        updated += 1;
+      }
+    });
+
+    return res.json({ success: true, updated, skipped });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 const confirmOpenQuestionGrading = async (req, res) => {
   try {
     const examId = req.params.id;
@@ -2489,6 +2577,7 @@ module.exports = {
   getExamAssignments,
   grantLateAccess,
   patchExam,
+  bulkPatchOpenModelAnswers,
   instructorStudentExamProgress,
   studentExams,
   getExamAccessStatus,

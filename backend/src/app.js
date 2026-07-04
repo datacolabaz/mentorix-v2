@@ -20,6 +20,7 @@ const { runOrphanFilesReaper } = require('./jobs/orphanFilesReaper');
 const { runUniversityProgramScraper } = require('./jobs/universityProgramScraper');
 const { ensureStarted: ensureCertificateIssueWorker } = require('./jobs/certificateIssueWorker');
 const { ensureStarted: ensureOpenExamGradingWorker } = require('./jobs/openExamGradingWorker');
+const { runOpenGradingInstructorNotifications } = require('./jobs/openGradingInstructorNotifications');
 const { ensureCertificateFontsReady } = require('./services/certificatePdfFonts');
 
 const { ensureAssignmentsUploadDir } = require('./services/assignmentFileStorage');
@@ -185,6 +186,13 @@ cron.schedule('30 3 * * *', () => {
 // University program AI scraper: weekly Sunday 04:00
 cron.schedule('0 4 * * 0', () => {
   runUniversityProgramScraper().catch((e) => console.error('university program scraper cron', e.message));
+});
+
+// Open grading instructor reminders: daily 09:00 Baku (05:00 UTC)
+cron.schedule('0 5 * * *', () => {
+  runOpenGradingInstructorNotifications().catch((e) =>
+    console.error('open grading instructor notifications cron', e.message),
+  );
 });
 
 module.exports = app;
