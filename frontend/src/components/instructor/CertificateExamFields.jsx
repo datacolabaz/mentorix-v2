@@ -101,6 +101,25 @@ export default function CertificateExamFields({ meta, setMeta, billingPlan, temp
             </label>
           </div>
 
+          <label className="block text-sm">
+            <span className="text-gray-400 text-xs uppercase">Kateqoriya</span>
+            <select
+              className="mt-1 w-full rounded-xl bg-[#13112e] border border-indigo-500/20 px-3 py-2 text-white text-sm"
+              value={meta.category_id || ''}
+              onChange={(e) => setMeta((p) => ({ ...p, category_id: e.target.value || null }))}
+            >
+              <option value="">Kateqoriya seçin</option>
+              {catalogCategories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.parent_name ? `${c.parent_name} → ${c.name}` : c.name}
+                </option>
+              ))}
+            </select>
+            {meta.is_public && !meta.category_id ? (
+              <p className="mt-1 text-[11px] text-amber-300">Kataloqda göstərmək üçün kateqoriya seçməlisiniz.</p>
+            ) : null}
+          </label>
+
           {templates.length > 0 ? (
             <label className="block text-sm">
               <span className="text-gray-400 text-xs uppercase">{t('certificates.exam.template', 'Şablon')}</span>
@@ -119,7 +138,7 @@ export default function CertificateExamFields({ meta, setMeta, billingPlan, temp
             </label>
           ) : null}
 
-          <div className="rounded-lg border border-white/10 bg-black/20 p-3 space-y-3">
+          <div className="rounded-lg border border-white/10 bg-black/20 p-3 space-y-2">
             <label className="flex items-start gap-2 text-sm text-gray-300 cursor-pointer">
               <input
                 type="checkbox"
@@ -127,25 +146,13 @@ export default function CertificateExamFields({ meta, setMeta, billingPlan, temp
                 checked={!!meta.is_public}
                 onChange={(e) => setMeta((p) => ({ ...p, is_public: e.target.checked }))}
               />
-              <span>Kataloqda göstərilsin (admin təsdiqi tələb olunur)</span>
+              <span>
+                Bu imtahanı ictimai kataloqda göstər
+                <span className="block text-[11px] text-gray-500 mt-1 font-normal">
+                  Kataloqda görünməzdən əvvəl admin komandası imtahanı yoxlayacaq.
+                </span>
+              </span>
             </label>
-            {meta.is_public ? (
-              <label className="block text-sm">
-                <span className="text-gray-400 text-xs uppercase">Kateqoriya</span>
-                <select
-                  className="mt-1 w-full rounded-xl bg-[#13112e] border border-indigo-500/20 px-3 py-2 text-white text-sm"
-                  value={meta.category_id || ''}
-                  onChange={(e) => setMeta((p) => ({ ...p, category_id: e.target.value || null }))}
-                >
-                  <option value="">Kateqoriya seçin</option>
-                  {catalogCategories.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.parent_name ? `${c.parent_name} → ${c.name}` : c.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            ) : null}
           </div>
 
           <p className="text-[11px] text-gray-500">

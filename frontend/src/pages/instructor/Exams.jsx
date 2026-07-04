@@ -265,6 +265,10 @@ export default function InstructorExams() {
       certificate_enabled: !!exam.certificate_enabled,
       certificate_pass_pct: exam.certificate_pass_pct ?? 70,
       certificate_template_id: exam.certificate_template_id || null,
+      is_public: !!exam.is_public,
+      category_id: exam.category_id || null,
+      level: exam.level || 'beginner',
+      certificate_type: exam.certificate_type || 'professional',
       available_from: utcInstantToDatetimeLocalValue(exam.available_from || exam.start_time),
       available_until: utcInstantToDatetimeLocalValue(exam.available_until),
       // keep for legacy UI pieces
@@ -322,6 +326,10 @@ export default function InstructorExams() {
         certificate_enabled: !!editExam.certificate_enabled,
         certificate_pass_pct: editExam.certificate_pass_pct ?? 70,
         certificate_template_id: editExam.certificate_template_id || null,
+        is_public: !!editExam.is_public && !!editExam.certificate_enabled,
+        category_id: editExam.is_public && editExam.certificate_enabled ? editExam.category_id || null : null,
+        level: editExam.level || 'beginner',
+        certificate_type: editExam.certificate_type || 'professional',
       }
       if (editQuestions.length) {
         payload.questions = editQuestions.map(serializeEditQuestion)

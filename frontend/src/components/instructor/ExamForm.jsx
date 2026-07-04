@@ -178,6 +178,10 @@ export default function ExamForm({ students, studentsLoading = false, onCreated,
       toast('Ad və aktivlik vaxtları tələb olunur', 'error')
       return
     }
+    if (meta.certificate_enabled && meta.is_public && !meta.category_id) {
+      toast('Kataloqda göstərmək üçün kateqoriya seçin', 'error')
+      return
+    }
     setLoading(true)
     try {
       const exam_files = materialFiles.map(({ name, url }) => ({ name, url }))

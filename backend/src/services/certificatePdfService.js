@@ -1,17 +1,7 @@
-const path = require('path');
-const { pathToFileURL } = require('url');
 const { PDFDocument, rgb } = require('pdf-lib');
 const QRCode = require('qrcode');
 const { embedCertificateFonts } = require('./certificatePdfFonts');
-
-let layoutModulePromise;
-function loadCertificateLayout() {
-  if (!layoutModulePromise) {
-    const layoutPath = path.join(__dirname, '../../../shared/certificateLayout.mjs');
-    layoutModulePromise = import(pathToFileURL(layoutPath).href);
-  }
-  return layoutModulePromise;
-}
+const { buildCertificateViewModel, COLORS } = require('../lib/certificateLayout');
 
 const PRIMARY = rgb(0, 0.898, 0.463);
 const BG_DARK = rgb(0.075, 0.067, 0.18);
@@ -81,7 +71,6 @@ function drawDarkBackground(page, width, height, accent, templateKey) {
 }
 
 async function generateCertificatePdf(data) {
-  const { buildCertificateViewModel, COLORS } = await loadCertificateLayout();
   const locale = data.locale === 'ru' ? 'ru' : data.locale === 'en' ? 'en' : 'az';
   const vm = buildCertificateViewModel(data, locale);
   const accent = parseHexColor(vm.accentColor);
