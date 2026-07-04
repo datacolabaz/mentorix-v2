@@ -10,6 +10,10 @@ const {
   translationsJsonForCategory,
   translationsJsonForCareerPath,
   translationsJsonForExamTitle,
+  ruNameForCategory,
+  ruNameForCareerPath,
+  ruDescriptionForCareerPath,
+  ruTitleForExam,
 } = require('./catalogTranslationMap');
 
 const OFFICIAL_EMAIL = process.env.MENTORIX_OFFICIAL_EMAIL || 'mentorix.resmi@mentorix.local';
@@ -17,18 +21,20 @@ const OFFICIAL_NAME = 'Mentorix Rəsmi';
 
 async function upsertCategory(client, { parentId, slug, name, icon, description, sortOrder }) {
   const translations = translationsJsonForCategory(slug, name);
+  const nameRu = ruNameForCategory(slug, name);
   const { rows } = await client.query(
-    `INSERT INTO exam_categories (parent_id, slug, name, icon, description, sort_order, translations)
-     VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)
+    `INSERT INTO exam_categories (parent_id, slug, name, name_ru, icon, description, sort_order, translations)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb)
      ON CONFLICT (slug) DO UPDATE SET
        parent_id = EXCLUDED.parent_id,
        name = EXCLUDED.name,
+       name_ru = EXCLUDED.name_ru,
        icon = EXCLUDED.icon,
        description = EXCLUDED.description,
        sort_order = EXCLUDED.sort_order,
        translations = EXCLUDED.translations
      RETURNING id, slug`,
-    [parentId, slug, name, icon || null, description || null, sortOrder || 0, translations],
+    [parentId, slug, name, nameRu, icon || null, description || null, sortOrder || 0, translations],
   );
   return rows[0];
 }
@@ -69,9 +75,18 @@ async function ensureExam(client, instructorId, { title, categoryId, parentSlug,
          certificate_enabled = TRUE,
          certificate_pass_pct = $5,
          translations = $6::jsonb,
+         title_ru = $7,
          updated_at = NOW()
        WHERE id = $1`,
-      [existing[0].id, categoryId, meta.level, meta.certificate_type, passPct, translationsJsonForExamTitle(title)],
+      [
+        existing[0].id,
+        categoryId,
+        meta.level,
+        meta.certificate_type,
+        passPct,
+        translationsJsonForExamTitle(title),
+        ruTitleForExam(title),
+      ],
     );
     return existing[0].id;
   }
@@ -83,9 +98,9 @@ async function ensureExam(client, instructorId, { title, categoryId, parentSlug,
        instructor_id, title, subject, topic, duration_minutes,
        start_time, available_from, available_until,
        show_results, certificate_enabled, certificate_pass_pct,
-       category_id, level, certificate_type, is_public, is_verified, status, translations
+       category_id, level, certificate_type, is_public, is_verified, status, translations, title_ru
      ) VALUES ($1,$2,$3,$4,$5,$6::timestamptz,$6::timestamptz,$7::timestamptz,
-       TRUE,TRUE,$8,$9,$10,$11,TRUE,TRUE,'scheduled',$12::jsonb)
+       TRUE,TRUE,$8,$9,$10,$11,TRUE,TRUE,'scheduled',$12::jsonb,$13)
      RETURNING id`,
     [
       instructorId,
@@ -100,6 +115,7 @@ async function ensureExam(client, instructorId, { title, categoryId, parentSlug,
       meta.level,
       meta.certificate_type,
       translationsJsonForExamTitle(title),
+      ruTitleForExam(title),
     ],
   );
   const examId = rows[0].id;
@@ -167,12 +183,14 @@ async function main() {
     for (const path of CAREER_PATHS) {
       const categoryId = slugToId.get(path.categorySlug) || null;
       const { rows: cpRows } = await client.query(
-        `INSERT INTO career_paths (category_id, name, slug, description, icon, sort_order, translations)
-         VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)
+        `INSERT INTO career_paths (category_id, name, name_ru, slug, description, description_ru, icon, sort_order, translations)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb)
          ON CONFLICT (slug) DO UPDATE SET
            category_id = EXCLUDED.category_id,
            name = EXCLUDED.name,
+           name_ru = EXCLUDED.name_ru,
            description = EXCLUDED.description,
+           description_ru = EXCLUDED.description_ru,
            icon = EXCLUDED.icon,
            sort_order = EXCLUDED.sort_order,
            translations = EXCLUDED.translations
@@ -180,8 +198,10 @@ async function main() {
         [
           categoryId,
           path.nameAz || path.name,
+          ruNameForCareerPath(path.slug, path.nameAz || path.name),
           path.slug,
           path.description,
+          ruDescriptionForCareerPath(path.slug, path.description),
           path.icon,
           10,
           translationsJsonForCareerPath(path.slug, path.nameAz || path.name, path.description),

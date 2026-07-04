@@ -90,7 +90,12 @@ api.interceptors.request.use((config) => {
   const token = isPublicAuthPath(config) ? null : localStorage.getItem('mx_token')
   if (token) config.headers.Authorization = `Bearer ${token}`
   else delete config.headers.Authorization
-  config.headers['Accept-Language'] = readStoredLocale()
+  const locale = readStoredLocale()
+  config.headers['Accept-Language'] = locale
+  const reqPath = combinedPath(config)
+  if (reqPath.includes('/public/certified-exams/')) {
+    config.params = { ...(config.params || {}), lang: locale }
+  }
   return config
 })
 

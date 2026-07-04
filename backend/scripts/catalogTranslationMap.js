@@ -83,6 +83,26 @@ const EXAM_TITLE_TRANSLATIONS = {
   'First Aid Basics': { az: 'İlk Yardım Əsasları', ru: 'Основы первой помощи' },
 };
 
+function ruNameForCategory(slug, fallbackName) {
+  const m = CATEGORY_TRANSLATIONS[slug];
+  return m?.ru || fallbackName;
+}
+
+function ruNameForCareerPath(slug, fallbackName) {
+  const m = CAREER_PATH_TRANSLATIONS[slug];
+  return m?.ru || fallbackName;
+}
+
+function ruDescriptionForCareerPath(slug, fallbackDesc) {
+  const m = CAREER_PATH_TRANSLATIONS[slug];
+  return m?.descriptionRu || fallbackDesc;
+}
+
+function ruTitleForExam(title) {
+  const m = EXAM_TITLE_TRANSLATIONS[title];
+  return m?.ru || title;
+}
+
 function translationsJsonForCategory(slug, fallbackName) {
   const m = CATEGORY_TRANSLATIONS[slug];
   if (!m) return JSON.stringify({ az: fallbackName, ru: fallbackName });
@@ -110,6 +130,10 @@ module.exports = {
   CATEGORY_TRANSLATIONS,
   CAREER_PATH_TRANSLATIONS,
   EXAM_TITLE_TRANSLATIONS,
+  ruNameForCategory,
+  ruNameForCareerPath,
+  ruDescriptionForCareerPath,
+  ruTitleForExam,
   translationsJsonForCategory,
   translationsJsonForCareerPath,
   translationsJsonForExamTitle,

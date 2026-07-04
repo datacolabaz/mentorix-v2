@@ -20,7 +20,21 @@ function parseTranslations(raw) {
 }
 
 function localizedField(row, lang, field = 'name') {
-  const fallback = row?.[field] != null ? String(row[field]) : '';
+  const isTitle = field === 'title';
+  const baseKey = isTitle ? 'title' : 'name';
+  const ruKey = isTitle ? 'title_ru' : 'name_ru';
+  const fallback =
+    row?.[baseKey] != null
+      ? String(row[baseKey])
+      : row?.[field] != null
+        ? String(row[field])
+        : '';
+
+  if (lang === 'ru') {
+    const ruVal = row?.[ruKey];
+    if (ruVal != null && String(ruVal).trim()) return String(ruVal).trim();
+  }
+
   const tr = parseTranslations(row?.translations);
   if (lang === 'ru' && tr.ru) return String(tr.ru);
   if (lang === 'az' && tr.az) return String(tr.az);
@@ -28,4 +42,14 @@ function localizedField(row, lang, field = 'name') {
   return fallback;
 }
 
-module.exports = { resolveCatalogLang, localizedField, parseTranslations };
+function localizedDescription(row, lang) {
+  if (lang === 'ru' && row?.description_ru != null && String(row.description_ru).trim()) {
+    return String(row.description_ru).trim();
+  }
+  const tr = parseTranslations(row?.translations);
+  if (lang === 'ru' && tr.description_ru) return String(tr.description_ru);
+  if (lang === 'az' && tr.description_az) return String(tr.description_az);
+  return row?.description != null ? String(row.description) : '';
+}
+
+module.exports = { resolveCatalogLang, localizedField, localizedDescription, parseTranslations };
