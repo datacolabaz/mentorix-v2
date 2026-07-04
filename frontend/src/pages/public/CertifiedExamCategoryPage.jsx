@@ -6,7 +6,7 @@ import PublicSeoFooter from '../../components/public/PublicSeoFooter'
 import LevelBadge from '../../components/public/LevelBadge'
 import CertifiedExamAuthGate from '../../components/public/CertifiedExamAuthGate'
 import api from '../../lib/api'
-import { setPageSeo } from '../../lib/pageSeo'
+import { setPageSeo, SITE_ORIGIN } from '../../lib/pageSeo'
 import useAuthStore from '../../hooks/useAuth'
 import { useToast } from '../../components/common/Toast'
 
@@ -144,9 +144,12 @@ export default function CertifiedExamCategoryPage() {
       const d = await api.get(`/public/certified-exams/categories/${encodeURIComponent(slug)}`)
       setData(d)
       setPageSeo({
-        title: t('certifiedExams.seo.categoryTitle', { name: d?.category?.name || 'Kateqoriya' }),
-        description: d?.category?.description || t('certifiedExams.seo.categoryDescription'),
+        title: `${d?.category?.name || 'Kateqoriya'} — Sertifikatlı İmtahan | Mentorix`,
+        description: d?.category?.name
+          ? `${d.category.name} sahəsində biliyini sərtifikatla təsdiqlə. QR kodu ilə doğrulanan Mentorix sertifikatı qazan.`
+          : t('certifiedExams.seo.categoryDescription'),
         canonicalPath: `/sertifikatli-imtahanlar/${slug}`,
+        ogImage: `${SITE_ORIGIN}/og-certified.svg`,
       })
     } catch {
       setData(null)

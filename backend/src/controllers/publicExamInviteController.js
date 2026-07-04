@@ -15,6 +15,7 @@ async function getPublicExamInvite(req, res) {
         id: exam.id,
         title: exam.title,
         instructor_name: exam.instructor_name,
+        certificate_pass_pct: exam.certificate_pass_pct,
       },
     });
   } catch (err) {

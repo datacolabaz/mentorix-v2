@@ -53,7 +53,7 @@ async function notifyInstructorExamAccessRequest(instructorId, studentName, exam
 
 async function getExamForStudentRequest(examId) {
   const { rows } = await db.query(
-    `SELECT e.id, e.title, e.instructor_id, u.full_name AS instructor_name,
+    `SELECT e.id, e.title, e.instructor_id, e.certificate_pass_pct, u.full_name AS instructor_name,
             COALESCE(e.is_deleted, FALSE) AS is_deleted
      FROM exams e
      JOIN users u ON u.id = e.instructor_id

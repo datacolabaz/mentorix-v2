@@ -42,6 +42,7 @@ const {
 } = require('../controllers/publicCertifiedExamsController');
 const { getPublicSitemapXml } = require('../controllers/publicSitemapController');
 const { postPublicWaitlist } = require('../controllers/waitlistController');
+const { getCertifiedCategoryOg, getExamOg } = require('../controllers/publicOgController');
 const { authenticate, optionalAuthenticate } = require('../middleware/auth');
 
 const router = express.Router();
@@ -66,6 +67,8 @@ router.post('/live-guest/:token/leave', postPublicLiveGuestLeave);
 router.post('/analytics/event', postAccessEvent);
 router.get('/landing-stats', getLandingStats);
 router.get('/contact', getPublicContact);
+router.get('/og/certified-category/:slug', getCertifiedCategoryOg);
+router.get('/og/exam/:examId', getExamOg);
 router.get('/certified-exams/categories/all', listAllCatalogCategories);
 router.get('/certified-exams/categories', listParentCategories);
 router.get('/certified-exams/categories/:slug', getCategoryBySlug);

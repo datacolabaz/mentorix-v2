@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-label="Mentorix Sertifikatl1 0mtahanlar">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0b0b0b"/>
+      <stop offset="55%" stop-color="#13112e"/>
+      <stop offset="100%" stop-color="#1a1740"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#00E676"/>
+      <stop offset="100%" stop-color="#00c853"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect x="48" y="48" width="1104" height="534" rx="24" fill="none" stroke="url(#accent)" stroke-width="3" opacity="0.55"/>
+  <rect x="72" y="72" width="1056" height="486" rx="16" fill="#13112e" opacity="0.85"/>
+
+  <text x="96" y="150" fill="#00E676" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700" letter-spacing="6">MENTORIX</text>
+  <text x="96" y="220" fill="#F5F5FA" font-family="Arial, Helvetica, sans-serif" font-size="56" font-weight="700">Sertifikatl1 0mtahanlar</text>
+  <text x="96" y="285" fill="#9CA3AF" font-family="Arial, Helvetica, sans-serif" font-size="30">Biliyini sYrtifikatla tYsdiqlY · QR ilY dorula</text>
+
+  <rect x="96" y="340" width="420" height="140" rx="14" fill="#0b0b0b" stroke="#00E676" stroke-width="2" opacity="0.9"/>
+  <text x="130" y="395" fill="#6B7280" font-family="Arial, Helvetica, sans-serif" font-size="18" letter-spacing="3">CERTIFICATE</text>
+  <text x="130" y="440" fill="#F5F5FA" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="700">Keçid bal1 · QR kod</text>
+
+  <rect x="860" y="360" width="220" height="220" rx="12" fill="#0b0b0b" stroke="#ffffff" stroke-width="2" opacity="0.25"/>
+  <rect x="890" y="390" width="160" height="160" rx="8" fill="#ffffff" opacity="0.92"/>
+  <rect x="910" y="410" width="36" height="36" fill="#13112e"/>
+  <rect x="954" y="410" width="36" height="36" fill="#13112e"/>
+  <rect x="998" y="410" width="36" height="36" fill="#13112e"/>
+  <rect x="910" y="454" width="36" height="36" fill="#00E676"/>
+  <rect x="954" y="454" width="36" height="36" fill="#13112e"/>
+  <rect x="998" y="454" width="36" height="36" fill="#13112e"/>
+  <rect x="910" y="498" width="36" height="36" fill="#13112e"/>
+  <rect x="954" y="498" width="36" height="36" fill="#13112e"/>
+  <rect x="998" y="498" width="36" height="36" fill="#13112e"/>
+
+  <text x="96" y="560" fill="#6B7280" font-family="Arial, Helvetica, sans-serif" font-size="22">mentorix.io/sertifikatli-imtahanlar</text>
+</svg>

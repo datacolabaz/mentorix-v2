@@ -6,6 +6,7 @@ import Button from '../../components/common/Button'
 import Card from '../../components/common/Card'
 import { useToast } from '../../components/common/Toast'
 import GoogleSignInButton from '../../components/auth/GoogleSignInButton'
+import { setPageSeo, SITE_ORIGIN } from '../../lib/pageSeo'
 
 const RETURN_KEY = 'mx_return_after_login'
 
@@ -29,7 +30,19 @@ export default function ExamInvite() {
       setInfoLoading(true); setInfoError('')
       try {
         const d = await api.get(`/public/exam-invite/${encodeURIComponent(id)}`)
-        if (!cancelled) setInfo(d)
+        if (!cancelled) {
+          setInfo(d)
+          const examTitle = d?.exam?.title
+          if (examTitle) {
+            const pass = Number(d?.exam?.certificate_pass_pct) || 70
+            setPageSeo({
+              title: `${examTitle} — Sertifikatlı İmtahan | Mentorix`,
+              description: `${examTitle} imtahanını ver, keçid balını topla, QR kodu ilə doğrulanan sertifikat qazan. Keçid balı: ${pass}%`,
+              canonicalPath: `/exam/${encodeURIComponent(id)}`,
+              ogImage: `${SITE_ORIGIN}/og-certified.svg`,
+            })
+          }
+        }
       } catch (err) {
         if (!cancelled) setInfoError(err?.message || 'İmtahan tapılmadı')
       } finally { if (!cancelled) setInfoLoading(false) }

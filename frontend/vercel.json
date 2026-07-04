@@ -1,8 +1,23 @@
 {
+  "redirects": [
+    {
+      "source": "/cert/:slug",
+      "destination": "/sertifikatli-imtahanlar/:slug",
+      "permanent": true
+    }
+  ],
   "rewrites": [
     {
       "source": "/sitemap.xml",
       "destination": "/api/public/sitemap.xml"
+    },
+    {
+      "source": "/sertifikatli-imtahanlar/:slug",
+      "destination": "/api/share-html?kind=category&slug=:slug"
+    },
+    {
+      "source": "/exam/:examId",
+      "destination": "/api/share-html?kind=exam&examId=:examId"
     },
     {
       "source": "/((?!api/).*)",
