@@ -1,5 +1,5 @@
 const db = require('../utils/db');
-const { sendEmail, userEmail } = require('./emailService');
+const { sendEmail, userEmail } = require('../services/emailService');
 
 /**
  * Gündəlik batch: hər imtahan üçün bir dəfə müəllimə açıq sual təsdiq bildirişi.
