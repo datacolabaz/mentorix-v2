@@ -10,8 +10,9 @@ function questionTypeLabelAz(t) {
 }
 
 function statusBadgeClass(label) {
-  if (label === 'Düzgün' || label === 'Doğru') return 'bg-emerald-500/20 text-emerald-300'
+  if (label === 'Düzgün' || label === 'Doğru' || label === 'Qismən düzgün') return 'bg-emerald-500/20 text-emerald-300'
   if (label === 'Səhv') return 'bg-red-500/15 text-red-300'
+  if (label === 'AI tövsiyəsi') return 'bg-violet-500/20 text-violet-200'
   if (label === 'Cavabsız') return 'bg-amber-500/15 text-amber-200'
   return 'bg-gray-500/15 text-gray-400'
 }
@@ -19,7 +20,11 @@ function statusBadgeClass(label) {
 /**
  * İmtahan nəticəsi: hər sual üçün tələbə cavabı + (varsa) müqayisə sütunu + status.
  */
-export default function ExamBreakdownList({ rows, answerHeading = 'Sizin cavabınız' }) {
+export default function ExamBreakdownList({
+  rows,
+  answerHeading = 'Sizin cavabınız',
+  renderOpenGrading,
+}) {
   if (!Array.isArray(rows) || rows.length === 0) return null
   return (
     <div className="space-y-3 max-h-[min(60vh,520px)] overflow-y-auto pr-1">
@@ -83,9 +88,14 @@ export default function ExamBreakdownList({ rows, answerHeading = 'Sizin cavabı
                   'inline-flex text-xs font-bold px-2.5 py-1 rounded-lg ' + statusBadgeClass(row.status_label)
                 }
               >
-                {row.status_label === 'Manual qiymətləndirmə' ? 'Yoxlanılır' : row.status_label}
+                {row.status_label === 'Manual qiymətləndirmə'
+                  ? 'Yoxlanılır'
+                  : row.status_label === 'AI tövsiyəsi'
+                    ? 'AI tövsiyəsi gözləyir'
+                    : row.status_label}
               </span>
             </div>
+            {typeof renderOpenGrading === 'function' ? renderOpenGrading(row) : null}
           </div>
         )
       })}

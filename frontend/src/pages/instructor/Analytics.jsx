@@ -17,6 +17,7 @@ import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
 import ExamBreakdownList from '../../components/exam/ExamBreakdownList'
+import OpenQuestionGradingPanel from '../../components/exam/OpenQuestionGradingPanel'
 import { useToast } from '../../components/common/Toast'
 import useUiStore from '../../hooks/useUi'
 
@@ -187,6 +188,9 @@ export default function InstructorAnalytics() {
       score: null,
       submitted_at: null,
       breakdown: [],
+      result_id: null,
+      student_id: studentId,
+      grading_pending: false,
     })
     try {
       const d = await api.get(
@@ -199,6 +203,9 @@ export default function InstructorAnalytics() {
         score: d.score,
         submitted_at: d.submitted_at,
         breakdown: Array.isArray(d.breakdown) ? d.breakdown : [],
+        result_id: d.result_id || null,
+        student_id: studentId,
+        grading_pending: Boolean(d.grading_pending),
       })
     } catch (e) {
       setStudentReviewModal({
@@ -208,8 +215,22 @@ export default function InstructorAnalytics() {
         score: null,
         submitted_at: null,
         breakdown: [],
+        result_id: null,
+        student_id: studentId,
+        grading_pending: false,
       })
     }
+  }
+
+  const refreshStudentReviewAfterGrading = async (patchResult) => {
+    if (patchResult?.score != null) {
+      setStudentReviewModal((m) =>
+        m ? { ...m, score: patchResult.score, grading_pending: false } : m,
+      )
+    }
+    const sid = studentReviewModal?.student_id
+    const name = studentReviewModal?.title
+    if (sid) await openStudentExamAnswers(sid, name)
   }
 
   const subjectOptions = useMemo(() => {
@@ -961,10 +982,25 @@ export default function InstructorAnalytics() {
                     })}
                   </p>
                 )}
+                {studentReviewModal.grading_pending ? (
+                  <p className="text-xs text-amber-300 mt-2">
+                    Qiymətləndirmə gözlənilir — açıq suallar təsdiqlənənə qədər sertifikat verilməyəcək.
+                  </p>
+                ) : null}
               </div>
               <ExamBreakdownList
                 rows={studentReviewModal.breakdown}
                 answerHeading={t('analytics.studentAnswer')}
+                renderOpenGrading={(row) =>
+                  row.question_type === 'open' && row.open_grading ? (
+                    <OpenQuestionGradingPanel
+                      row={row}
+                      examId={examId}
+                      resultId={studentReviewModal.result_id}
+                      onUpdated={refreshStudentReviewAfterGrading}
+                    />
+                  ) : null
+                }
               />
             </>
           )}

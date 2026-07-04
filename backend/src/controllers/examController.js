@@ -321,9 +321,13 @@ const createExam = async (req, res) => {
                 : q.question_type === 'sequence'
                   ? (templateHint ? templateHint.replace(/\D/g, '').slice(0, 120) : null)
                 : templateHint;
+          const modelAnswer =
+            q.question_type === 'open' && q.model_answer != null && String(q.model_answer).trim() !== ''
+              ? String(q.model_answer).trim()
+              : null;
           await client.query(
-            `INSERT INTO exam_questions (exam_id, question_text, question_type, options, correct_answer, points, order_num, negative_marking, template_hint)
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+            `INSERT INTO exam_questions (exam_id, question_text, question_type, options, correct_answer, points, order_num, negative_marking, template_hint, model_answer)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
             [
               exam.id,
               qText,
@@ -334,6 +338,7 @@ const createExam = async (req, res) => {
               i + 1,
               neg,
               safeTemplateHint,
+              modelAnswer,
             ]
           );
         }
@@ -759,7 +764,7 @@ const getStudentExamReview = async (req, res) => {
         return res.status(400).json({ success: false, message: 'Yanlış tələbə identifikatoru' });
       }
       const { rows: resultRows } = await db.query(
-        `SELECT er.score, er.answers, er.submitted_at, u.full_name AS student_name
+        `SELECT er.id, er.score, er.answers, er.grading, er.submitted_at, u.full_name AS student_name
          FROM exam_results er
          JOIN users u ON u.id = er.student_id
          WHERE er.exam_id = $1
@@ -789,19 +794,37 @@ const getStudentExamReview = async (req, res) => {
       }
       if (!answers || typeof answers !== 'object') answers = {};
 
-      const breakdown = buildExamResultBreakdown(questions, answers, { showCorrectAnswers: true });
+      let grading = result.grading;
+      if (typeof grading === 'string') {
+        try {
+          grading = JSON.parse(grading);
+        } catch {
+          grading = {};
+        }
+      }
+      if (!grading || typeof grading !== 'object') grading = {};
+
+      const breakdown = buildExamResultBreakdown(questions, answers, {
+        showCorrectAnswers: true,
+        showOpenGrading: true,
+        grading,
+      });
       const wrongPen = exam.wrong_penalty_enabled !== false;
-      const typeSummary = buildExamTypeSummary(questions, answers, { wrongPenaltyEnabled: wrongPen });
+      const typeSummary = buildExamTypeSummary(questions, answers, { wrongPenaltyEnabled: wrongPen, grading });
+      const { hasUnconfirmedOpenGrading } = require('../services/openExamGradingService');
+      const grading_pending = hasUnconfirmedOpenGrading(questions, answers, grading);
 
       return res.json({
         success: true,
         exam,
+        result_id: result.id,
         score: result.score,
         submitted_at: result.submitted_at,
         breakdown,
         type_summary: typeSummary,
         student_name: result.student_name || null,
         student_id: targetStudentId,
+        grading_pending,
       });
     }
 
@@ -1130,12 +1153,13 @@ const submitExam = async (req, res) => {
     }
 
     const wrongPen = exam.wrong_penalty_enabled !== false;
-    const score = calculateScore(questions, answers, { wrongPenaltyEnabled: wrongPen });
-    const typeSummary = buildExamTypeSummary(questions, answers, { wrongPenaltyEnabled: wrongPen });
+    const grading = buildAutoGradingMap(questions, answers);
+    const score = calculateScore(questions, answers, { wrongPenaltyEnabled: wrongPen, grading });
+    const typeSummary = buildExamTypeSummary(questions, answers, { wrongPenaltyEnabled: wrongPen, grading });
     const breakdown = buildExamResultBreakdown(questions, answers, {
       showCorrectAnswers: exam.show_results !== false,
+      grading,
     });
-    const grading = buildAutoGradingMap(questions, answers);
     const now = new Date();
     const startedAt = attempt?.started_at ? new Date(attempt.started_at) : now;
     const durMin = Number(exam.duration_minutes) || 0;
@@ -1199,14 +1223,26 @@ const submitExam = async (req, res) => {
     let certificate = null;
     try {
       const { maybeIssueCertificateAfterExamSubmit, evaluateCertificateEligibility, slimCertificateRow } = require('../services/certificateService');
-      const cert = await maybeIssueCertificateAfterExamSubmit({
-        examId: exam_id,
-        studentId: student_id,
-        examResultId,
-        score,
-      });
-      if (cert) {
-        certificate = slimCertificateRow(cert);
+      const { hasUnconfirmedOpenGrading, hasOpenQuestionsNeedingAi, enqueueOpenGradingJob } = require('../services/openExamGradingService');
+
+      if (hasOpenQuestionsNeedingAi(questions, answers, grading) && examResultId) {
+        setImmediate(() => {
+          enqueueOpenGradingJob(examResultId).catch((e) =>
+            console.error('enqueueOpenGradingJob', e.message),
+          );
+        });
+      }
+
+      if (!hasUnconfirmedOpenGrading(questions, answers, grading)) {
+        const cert = await maybeIssueCertificateAfterExamSubmit({
+          examId: exam_id,
+          studentId: student_id,
+          examResultId,
+          score,
+        });
+        if (cert) {
+          certificate = slimCertificateRow(cert);
+        }
       }
     } catch (certErr) {
       console.error('certificate on submit', certErr.message);
@@ -1214,7 +1250,7 @@ const submitExam = async (req, res) => {
 
     let certificateMeta = null;
     try {
-      certificateMeta = await evaluateCertificateEligibility(exam_id, score);
+      certificateMeta = await evaluateCertificateEligibility(exam_id, score, null, { examResultId });
     } catch (metaErr) {
       console.error('certificate meta on submit', metaErr.message);
     }
@@ -1597,7 +1633,7 @@ const regradeExamResults = async (req, res) => {
     );
 
     const { rows: results } = await db.query(
-      `SELECT id, student_id, answers, submitted_at
+      `SELECT id, student_id, answers, grading, submitted_at
        FROM exam_results
        WHERE exam_id = $1
          AND submitted_at IS NOT NULL
@@ -1621,8 +1657,16 @@ const regradeExamResults = async (req, res) => {
         }
         if (!answers || typeof answers !== 'object') answers = {};
 
-        const score = calculateScore(questions, answers, { wrongPenaltyEnabled: wrongPen });
-        const grading = buildAutoGradingMap(questions, answers);
+        let existingGrading = r.grading;
+        if (typeof existingGrading === 'string') {
+          try {
+            existingGrading = JSON.parse(existingGrading);
+          } catch {
+            existingGrading = {};
+          }
+        }
+        const grading = buildAutoGradingMap(questions, answers, existingGrading || {});
+        const score = calculateScore(questions, answers, { wrongPenaltyEnabled: wrongPen, grading });
 
         await client.query(
           `UPDATE exam_results
@@ -2042,6 +2086,10 @@ const patchExam = async (req, res) => {
                 : row.question_type === 'sequence'
                   ? (hintRaw ? hintRaw.replace(/\D/g, '').slice(0, 120) : null)
                 : hintRaw || null;
+          const modelAnswer =
+            row.question_type === 'open' && q.model_answer != null
+              ? (String(q.model_answer).trim() || null)
+              : null;
 
           let negMark = 0;
           if (row.question_type === 'closed') {
@@ -2061,8 +2109,9 @@ const patchExam = async (req, res) => {
               correct_answer = $4,
               template_hint = $5,
               negative_marking = $6::numeric,
-              order_num = $7
-             WHERE id = $8::uuid AND exam_id = $9::uuid`,
+              order_num = $7,
+              model_answer = $8
+             WHERE id = $9::uuid AND exam_id = $10::uuid`,
             [
               qText,
               pts,
@@ -2071,6 +2120,7 @@ const patchExam = async (req, res) => {
               templateHint,
               negMark,
               orderNum,
+              modelAnswer,
               q.id,
               examId,
             ]
@@ -2086,7 +2136,7 @@ const patchExam = async (req, res) => {
         );
         const wrongPenaltyEnabled = finalWrongPen !== false;
         const { rows: resultRows } = await client.query(
-          `SELECT id, answers FROM exam_results
+          `SELECT id, answers, grading FROM exam_results
            WHERE exam_id = $1 AND submitted_at IS NOT NULL`,
           [examId]
         );
@@ -2100,8 +2150,16 @@ const patchExam = async (req, res) => {
             }
           }
           if (!answers || typeof answers !== 'object') answers = {};
-          const score = calculateScore(questionsFresh, answers, { wrongPenaltyEnabled });
-          const grading = buildAutoGradingMap(questionsFresh, answers);
+          let existingGrading = r.grading;
+          if (typeof existingGrading === 'string') {
+            try {
+              existingGrading = JSON.parse(existingGrading);
+            } catch {
+              existingGrading = {};
+            }
+          }
+          const grading = buildAutoGradingMap(questionsFresh, answers, existingGrading || {});
+          const score = calculateScore(questionsFresh, answers, { wrongPenaltyEnabled, grading });
           await client.query(
             `UPDATE exam_results
              SET score = $1,
@@ -2401,6 +2459,27 @@ const postExamAccessFromLink = async (req, res) => {
   }
 };
 
+const confirmOpenQuestionGrading = async (req, res) => {
+  try {
+    const examId = req.params.id;
+    const examResultId = req.params.resultId;
+    const questionId = req.params.questionId;
+    const { action, final_score: finalScore } = req.body || {};
+    const { confirmOpenGrading } = require('../services/openExamGradingService');
+    const result = await confirmOpenGrading({
+      examId,
+      examResultId,
+      questionId,
+      instructorId: req.user.id,
+      action,
+      finalScore,
+    });
+    return res.json({ success: true, ...result });
+  } catch (err) {
+    return res.status(err.status || 500).json({ success: false, message: err.message });
+  }
+};
+
 module.exports = {
   createExam,
   listExams,
@@ -2418,6 +2497,7 @@ module.exports = {
   getStudentExamReview,
   getExamQuestions,
   submitExam,
+  confirmOpenQuestionGrading,
   getResults,
   getExamGroups,
   getExamTop10,

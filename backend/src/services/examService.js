@@ -300,7 +300,8 @@ function stripExamQuestionForStudent(q) {
     return { ...rest, template_hint: '231' };
   }
   if (type === 'open') {
-    return { ...rest };
+    const { model_answer: _ma, ...openRest } = rest;
+    return { ...openRest };
   }
   // closed və digər: yalnız variantlar; düzgün hərf (A/B/…) göndərilmir
   return { ...rest };
@@ -323,8 +324,8 @@ function gradeMatching(given, correctStored, optionsForFallback) {
  * Submit-time auto-grading snapshot (DB üçün).
  * Hazırda ən kritik hissə: matching suallar dərhal correct/incorrect olsun.
  */
-function buildAutoGradingMap(questions, answers) {
-  const out = {};
+function buildAutoGradingMap(questions, answers, existingGrading) {
+  const out = { ...(existingGrading && typeof existingGrading === 'object' ? existingGrading : {}) };
   const fullOrder = orderedExamQuestions(questions);
   for (const q of questions || []) {
     if (!q?.id) continue;
@@ -333,6 +334,60 @@ function buildAutoGradingMap(questions, answers) {
     const iFull = indexOfQuestionInExamOrder(fullOrder, q);
     const raw = resolveAnswerRaw(answers, q, iFull);
     const given = normalizeAnswerPayload(raw);
+
+    if (type === 'open') {
+      const prev = out[id] && typeof out[id] === 'object' ? out[id] : {};
+      const maxPts = Number(q.points || 0);
+      const modelAnswer = String(q.model_answer ?? '').trim();
+
+      if (prev.grading_status === 'teacher_confirmed') {
+        const fs = Number(prev.final_score);
+        out[id] = {
+          type: 'open',
+          ...prev,
+          earned_points: Number.isFinite(fs) ? Math.min(maxPts, Math.max(0, fs)) : 0,
+        };
+        continue;
+      }
+
+      if (!given) {
+        out[id] = {
+          type: 'open',
+          grading_status: 'pending',
+          ai_suggested_score: null,
+          ai_score_percent: null,
+          ai_reasoning: null,
+          final_score: null,
+          earned_points: 0,
+        };
+        continue;
+      }
+
+      if (modelAnswer) {
+        out[id] = {
+          type: 'open',
+          grading_status: prev.grading_status === 'ai_suggested' ? 'ai_suggested' : 'pending',
+          ai_suggested_score: prev.ai_suggested_score ?? null,
+          ai_score_percent: prev.ai_score_percent ?? null,
+          ai_reasoning: prev.ai_reasoning ?? null,
+          final_score: null,
+          earned_points: 0,
+        };
+        continue;
+      }
+
+      const key = openAutoKey(q);
+      if (key != null) {
+        const gn = parseAzNumber(given);
+        const ok = gn != null && Math.abs(gn - key) < 1e-9;
+        out[id] = {
+          type: 'open',
+          grading_status: ok ? 'teacher_confirmed' : 'teacher_confirmed',
+          final_score: ok ? maxPts : 0,
+          earned_points: ok ? maxPts : 0,
+        };
+      }
+    }
 
     if (type === 'matching') {
       const correct = String(q.correct_answer ?? '');
@@ -378,7 +433,7 @@ function emptyTypeAgg() {
  * Hər sual üçün avtomatik bal hissəsi + xülasə üçün nəticə növü.
  * `wrongPenaltyEnabled` — `exams.wrong_penalty_enabled` (müəllim seçimi).
  */
-function scoreQuestionForAuto(q, answers, wrongPenaltyEnabled, indexInFullOrder) {
+function scoreQuestionForAuto(q, answers, wrongPenaltyEnabled, indexInFullOrder, gradingEntry) {
   const type = inferQuestionType(q);
   const rawAns = resolveAnswerRaw(answers, q, indexInFullOrder);
   const given = normalizeAnswerPayload(rawAns);
@@ -414,6 +469,18 @@ function scoreQuestionForAuto(q, answers, wrongPenaltyEnabled, indexInFullOrder)
   }
 
   if (type === 'open') {
+    const ge = gradingEntry;
+    if (ge?.grading_status === 'teacher_confirmed') {
+      const fs = Number(ge.final_score);
+      const delta = Number.isFinite(fs) ? Math.min(pts, Math.max(0, fs)) : 0;
+      if (delta >= pts && pts > 0) return { type, delta, outcome: 'correct' };
+      if (delta > 0) return { type, delta, outcome: 'partial' };
+      return { type, delta: 0, outcome: 'wrong' };
+    }
+    const modelAnswer = String(q.model_answer ?? '').trim();
+    if (modelAnswer && given) {
+      return { type, delta: 0, outcome: 'pending' };
+    }
     const key = openAutoKey(q);
     if (key == null) return { type, delta: 0, outcome: given ? 'pending' : 'unanswered' };
     const gn = parseAzNumber(given);
@@ -445,13 +512,14 @@ function scoreQuestionForAuto(q, answers, wrongPenaltyEnabled, indexInFullOrder)
  */
 const calculateScore = (questions, answers, opts = {}) => {
   const wrongPenaltyEnabled = opts.wrongPenaltyEnabled !== false;
+  const grading = opts.grading && typeof opts.grading === 'object' ? opts.grading : {};
   let earned = 0;
   const fullOrder = orderedExamQuestions(questions);
   const scored = fullOrder.filter((q) => TYPE_KEYS.includes(inferQuestionType(q)));
 
   for (const q of scored) {
     const idx = indexOfQuestionInExamOrder(fullOrder, q);
-    const r = scoreQuestionForAuto(q, answers, wrongPenaltyEnabled, idx);
+    const r = scoreQuestionForAuto(q, answers, wrongPenaltyEnabled, idx, grading[q.id]);
     earned += r.delta;
   }
 
@@ -464,6 +532,7 @@ const calculateScore = (questions, answers, opts = {}) => {
  */
 const buildExamTypeSummary = (questions, answers, opts = {}) => {
   const wrongPenaltyEnabled = opts.wrongPenaltyEnabled !== false;
+  const grading = opts.grading && typeof opts.grading === 'object' ? opts.grading : {};
   const byType = Object.fromEntries(TYPE_KEYS.map((k) => [k, emptyTypeAgg()]));
   const fullOrder = orderedExamQuestions(questions);
   const scored = fullOrder.filter((q) => TYPE_KEYS.includes(inferQuestionType(q)));
@@ -471,7 +540,7 @@ const buildExamTypeSummary = (questions, answers, opts = {}) => {
   let rawSum = 0;
   for (const q of scored) {
     const idx = indexOfQuestionInExamOrder(fullOrder, q);
-    const r = scoreQuestionForAuto(q, answers, wrongPenaltyEnabled, idx);
+    const r = scoreQuestionForAuto(q, answers, wrongPenaltyEnabled, idx, grading[q.id]);
     rawSum += r.delta;
     const bucket = byType[r.type];
     if (r.outcome === 'correct') bucket.correct += 1;
@@ -498,6 +567,8 @@ const buildExamTypeSummary = (questions, answers, opts = {}) => {
  */
 const buildExamResultBreakdown = (questions, answers, opts = {}) => {
   const showCorrectAnswers = opts?.showCorrectAnswers === true;
+  const grading = opts?.grading && typeof opts.grading === 'object' ? opts.grading : {};
+  const showOpenGrading = opts?.showOpenGrading === true;
   const order = orderedExamQuestions(questions);
   return order.map((q, idx) => {
     const raw = resolveAnswerRaw(answers, q, idx);
@@ -549,16 +620,27 @@ const buildExamResultBreakdown = (questions, answers, opts = {}) => {
     } else if (type === 'open') {
       const ca = String(q.correct_answer ?? '').trim();
       const hint = String(q.template_hint || '').trim();
+      const modelAnswer = String(q.model_answer ?? '').trim();
+      const ge = grading[q.id];
       if (showCorrectAnswers && ca) {
         correctLabel = 'Düzgün cavab';
         correctDisplay = ca;
+      } else if (showOpenGrading && modelAnswer) {
+        correctLabel = 'Model cavab (istinad)';
+        correctDisplay = modelAnswer;
       } else {
         correctLabel = 'Şablon / nümunə';
         correctDisplay = hint ? `Nümunə / gözlənti: ${hint}` : 'Müəllim qiymətləndirir';
       }
       const key = openAutoKey(q);
       if (!given) isCorrect = null;
-      else if (key == null) isCorrect = null;
+      else if (ge?.grading_status === 'teacher_confirmed') {
+        const fs = Number(ge.final_score);
+        const maxPts = Number(q.points || 0);
+        isCorrect = Number.isFinite(fs) && fs >= maxPts && maxPts > 0 ? true : fs > 0 ? null : false;
+      } else if (modelAnswer) {
+        isCorrect = null;
+      } else if (key == null) isCorrect = null;
       else {
         const gn = parseAzNumber(given);
         isCorrect = gn == null ? false : Math.abs(gn - key) < 1e-9;
@@ -588,7 +670,15 @@ const buildExamResultBreakdown = (questions, answers, opts = {}) => {
 
     let statusLabel = 'Manual qiymətləndirmə';
     if (type === 'open') {
+      const ge = grading[q.id];
       if (!given) statusLabel = 'Cavabsız';
+      else if (ge?.grading_status === 'teacher_confirmed') {
+        const fs = Number(ge.final_score);
+        const maxPts = Number(q.points || 0);
+        if (fs >= maxPts && maxPts > 0) statusLabel = 'Düzgün';
+        else if (fs > 0) statusLabel = 'Qismən düzgün';
+        else statusLabel = 'Səhv';
+      } else if (ge?.grading_status === 'ai_suggested') statusLabel = 'AI tövsiyəsi';
       else if (isCorrect === true) statusLabel = 'Düzgün';
       else if (isCorrect === false) statusLabel = openAutoKey(q) == null ? 'Manual qiymətləndirmə' : 'Səhv';
       else statusLabel = 'Manual qiymətləndirmə';
@@ -597,7 +687,7 @@ const buildExamResultBreakdown = (questions, answers, opts = {}) => {
     else if (isCorrect === true) statusLabel = type === 'matching' ? 'Doğru' : 'Düzgün';
     else if (isCorrect === false) statusLabel = 'Səhv';
 
-    return {
+    const row = {
       order: idx + 1,
       question_id: q.id,
       question_type: type,
@@ -607,7 +697,24 @@ const buildExamResultBreakdown = (questions, answers, opts = {}) => {
       correct_label: correctLabel,
       is_correct: isCorrect,
       status_label: statusLabel,
+      max_points: Number(q.points || 0),
     };
+
+    if (type === 'open' && showOpenGrading) {
+      const ge = grading[q.id];
+      if (ge && typeof ge === 'object') {
+        row.open_grading = {
+          grading_status: ge.grading_status || 'pending',
+          ai_suggested_score: ge.ai_suggested_score ?? null,
+          ai_score_percent: ge.ai_score_percent ?? null,
+          ai_reasoning: ge.ai_reasoning ?? null,
+          final_score: ge.final_score ?? null,
+          ai_error: ge.ai_error ?? null,
+        };
+      }
+    }
+
+    return row;
   });
 };
 

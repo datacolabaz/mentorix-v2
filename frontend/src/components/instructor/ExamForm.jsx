@@ -99,6 +99,7 @@ export default function ExamForm({ students, studentsLoading = false, onCreated,
               type === 'sequence' ? ['', '', ''] :
               type === 'matching' ? [{ left: '', right: '' }, { left: '', right: '' }] : [],
     template_hint: type === 'open' ? '' : type === 'matching' ? '' : type === 'multiple' ? '23' : type === 'sequence' ? '231' : '',
+    model_answer: type === 'open' ? '' : undefined,
   }])
  
   const upd = (idx, field, value) =>
@@ -244,6 +245,7 @@ export default function ExamForm({ students, studentsLoading = false, onCreated,
                   ? String(q.correct_answer || '').replace(/\D/g, '').slice(0, 120)
                 : q.correct_answer,
           template_hint: q.template_hint,
+          model_answer: q.question_type === 'open' ? String(q.model_answer || '').trim() : undefined,
         })),
       })
       toast('İmtahan yaradıldı!')
@@ -732,7 +734,16 @@ export default function ExamForm({ students, studentsLoading = false, onCreated,
                         placeholder="məs. Base Case" value={q.template_hint}
                         onChange={e => upd(idx, 'template_hint', e.target.value)} />
                     </div>
-                    <p className="text-xs text-gray-500">Aciq suallar muellim terefdinden qiymetlendirilir. Yanlis bala tesir etmir.</p>
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">Model cavab (AI qiymətləndirməsi üçün istinad):</label>
+                      <textarea
+                        className={inpSmFull + ' min-h-[72px] resize-y'}
+                        placeholder="Tam, düzgün cavab — tələbəyə göstərilmir, yalnız AI istinadı"
+                        value={q.model_answer || ''}
+                        onChange={(e) => upd(idx, 'model_answer', e.target.value)}
+                      />
+                    </div>
+                    <p className="text-xs text-gray-500">Açıq suallar müəllim tərəfindən təsdiqlənir; AI yalnız tövsiyə verir.</p>
                   </div>
                 )}
               </div>

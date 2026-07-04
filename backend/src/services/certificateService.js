@@ -89,7 +89,7 @@ async function loadExamCertificateConfig(examId) {
   return rows[0] || null;
 }
 
-async function evaluateCertificateEligibility(examId, score, examRow = null) {
+async function evaluateCertificateEligibility(examId, score, examRow = null, opts = {}) {
   const exam = examRow || (await loadExamCertificateConfig(examId));
   if (!exam) {
     return {
@@ -131,6 +131,47 @@ async function evaluateCertificateEligibility(examId, score, examRow = null) {
       reason: 'below_pass',
     };
   }
+
+  const examResultId = opts?.examResultId || null;
+  if (examResultId) {
+    const { rows: resultRows } = await db.query(
+      `SELECT answers, grading FROM exam_results WHERE id = $1 AND exam_id = $2`,
+      [examResultId, examId],
+    );
+    if (resultRows[0]) {
+      const { rows: questions } = await db.query(
+        'SELECT * FROM exam_questions WHERE exam_id = $1',
+        [examId],
+      );
+      let answers = resultRows[0].answers;
+      if (typeof answers === 'string') {
+        try {
+          answers = JSON.parse(answers);
+        } catch {
+          answers = {};
+        }
+      }
+      let grading = resultRows[0].grading;
+      if (typeof grading === 'string') {
+        try {
+          grading = JSON.parse(grading);
+        } catch {
+          grading = {};
+        }
+      }
+      const { hasUnconfirmedOpenGrading } = require('./openExamGradingService');
+      if (hasUnconfirmedOpenGrading(questions, answers || {}, grading || {})) {
+        return {
+          certificate_enabled: true,
+          pass_pct: passPct,
+          score_pct: scorePct,
+          eligible: false,
+          reason: 'grading_pending',
+        };
+      }
+    }
+  }
+
   return {
     certificate_enabled: true,
     pass_pct: passPct,
@@ -304,6 +345,37 @@ async function maybeIssueCertificateAfterExamSubmit({ examId, studentId, examRes
 
     const allowed = await instructorHasCertificateFeature(exam.instructor_id);
     if (!allowed) return null;
+
+    if (examResultId) {
+      const { rows: resultRows } = await db.query(
+        `SELECT answers, grading FROM exam_results WHERE id = $1`,
+        [examResultId],
+      );
+      const { rows: questions } = await db.query(
+        'SELECT * FROM exam_questions WHERE exam_id = $1',
+        [examId],
+      );
+      let answers = resultRows[0]?.answers;
+      if (typeof answers === 'string') {
+        try {
+          answers = JSON.parse(answers);
+        } catch {
+          answers = {};
+        }
+      }
+      let grading = resultRows[0]?.grading;
+      if (typeof grading === 'string') {
+        try {
+          grading = JSON.parse(grading);
+        } catch {
+          grading = {};
+        }
+      }
+      const { hasUnconfirmedOpenGrading } = require('./openExamGradingService');
+      if (hasUnconfirmedOpenGrading(questions, answers || {}, grading || {})) {
+        return null;
+      }
+    }
 
     const maxPts = await getExamMaxPoints(db, examId);
     const scorePct = scoreToPct(score, maxPts);

@@ -149,6 +149,7 @@ function serializeEditQuestion(eq) {
     template_hint: eq.template_hint,
     order_num: eq.order_num,
   }
+  if (type === 'open') base.model_answer = eq.model_answer ?? ''
   if (type === 'closed') base.negative_marking = eq.negative_marking
   else if (type === 'multiple') base.negative_marking = 0
   /** Boşdursa açarı göndərmə — PATCH köhnə `correct_answer`-ı saxlasın (təsadüfi silinməsin). */
@@ -1130,6 +1131,15 @@ export default function InstructorExams() {
                               value={String(q.template_hint ?? '')}
                               onChange={(e) => patchEditQuestion(idx, { template_hint: e.target.value })}
                               placeholder={t('exams.questions.openTemplatePh')}
+                            />
+                            <label className="text-[11px] text-gray-500 block pt-1">
+                              Model cavab (AI qiymətləndirməsi üçün)
+                            </label>
+                            <textarea
+                              className={inp + ' min-h-[72px] resize-y text-sm'}
+                              value={String(q.model_answer ?? '')}
+                              onChange={(e) => patchEditQuestion(idx, { model_answer: e.target.value })}
+                              placeholder="Tam düzgün cavab — tələbəyə göstərilmir"
                             />
                           </div>
                         )}

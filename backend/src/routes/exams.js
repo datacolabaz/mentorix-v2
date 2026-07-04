@@ -22,6 +22,7 @@ const {
   getStudentExamReview,
   getExamQuestions,
   submitExam,
+  confirmOpenQuestionGrading,
   getResults,
   getExamGroups,
   getExamTop10,
@@ -151,6 +152,12 @@ router.post(
 router.get('/:id/assignments', authenticate, authorize('instructor', 'admin'), getExamAssignments);
 router.post('/:id/late-access/:studentId', authenticate, authorize('instructor', 'admin'), grantLateAccess);
 router.get('/:id/review', authenticate, getStudentExamReview);
+router.patch(
+  '/:id/results/:resultId/open-grading/:questionId',
+  authenticate,
+  authorize('instructor', 'admin'),
+  confirmOpenQuestionGrading,
+);
 router.get('/:id/questions', authenticate, getExamQuestions);
 router.post('/submit', authenticate, authorize('student'), submitExam);
 router.get('/:id/results', authenticate, getResults);
