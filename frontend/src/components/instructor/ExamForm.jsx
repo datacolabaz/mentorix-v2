@@ -98,7 +98,7 @@ export default function ExamForm({ students, studentsLoading = false, onCreated,
               type === 'multiple' ? ['', '', '', ''] :
               type === 'sequence' ? ['', '', ''] :
               type === 'matching' ? [{ left: '', right: '' }, { left: '', right: '' }] : [],
-    template_hint: type === 'open' ? '3.5' : type === 'matching' ? '' : type === 'multiple' ? '23' : type === 'sequence' ? '231' : '',
+    template_hint: type === 'open' ? '' : type === 'matching' ? '' : type === 'multiple' ? '23' : type === 'sequence' ? '231' : '',
   }])
  
   const upd = (idx, field, value) =>
@@ -727,9 +727,9 @@ export default function ExamForm({ students, studentsLoading = false, onCreated,
                 {q.question_type === 'open' && (
                   <div className="space-y-2">
                     <div>
-                      <label className="block text-xs text-gray-500 mb-1">Cavab sahesin placeholder (telebe gore numunen):</label>
+                      <label className="block text-xs text-gray-500 mb-1">Cavab sahəsinin placeholder (tələbə görə nümunə, istəyə bağlı):</label>
                       <input className={inpSmFull}
-                        placeholder="3.5" value={q.template_hint}
+                        placeholder="məs. Base Case" value={q.template_hint}
                         onChange={e => upd(idx, 'template_hint', e.target.value)} />
                     </div>
                     <p className="text-xs text-gray-500">Aciq suallar muellim terefdinden qiymetlendirilir. Yanlis bala tesir etmir.</p>

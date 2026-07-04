@@ -1140,8 +1140,8 @@
       "addClause": "+ Bənd əlavə et",
       "correctSequence": "Düzgün ardıcıllıq (bitişik rəqəmlər, məs. 231)",
       "templateHint": "Tələbəyə nümunə (placeholder)",
-      "openTemplate": "Şablon / gözlənti (avtomatik yoxlama üçün)",
-      "openTemplatePh": "məs. 4.5"
+      "openTemplate": "Cavab sahəsinin placeholder (tələbə görə nümunə, istəyə bağlı)",
+      "openTemplatePh": "məs. Base Case"
     },
     "materials": {
       "title": "Material fayllar",

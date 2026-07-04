@@ -1790,8 +1790,8 @@
       "addClause": "+ Добавить пункт",
       "correctSequence": "Правильная последовательность (цифры подряд, напр. 231)",
       "templateHint": "Пример для ученика (placeholder)",
-      "openTemplate": "Шаблон / ожидание (для автопроверки)",
-      "openTemplatePh": "напр. 4.5"
+      "openTemplate": "Placeholder ответа (пример для ученика, необязательно)",
+      "openTemplatePh": "напр. Base Case"
     },
     "materials": {
       "title": "Материалы",
