@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import Button from '../ui/Button'
+import Button from '../common/Button'
 import api from '../../lib/api'
 
 function statusBadgeClass(label) {
