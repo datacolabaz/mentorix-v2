@@ -17,8 +17,8 @@ function makeOptions(correct) {
 async function findCategoryId(client) {
   const { rows } = await client.query(
     `SELECT id, name, slug FROM exam_categories
-     WHERE slug IN ('data-analytics', 'data-analytics-core')
-     ORDER BY CASE slug WHEN 'data-analytics' THEN 0 ELSE 1 END
+     WHERE slug IN ('data-analytics-core', 'data-analytics')
+     ORDER BY CASE slug WHEN 'data-analytics-core' THEN 0 ELSE 1 END
      LIMIT 1`,
   );
   return rows[0] || null;

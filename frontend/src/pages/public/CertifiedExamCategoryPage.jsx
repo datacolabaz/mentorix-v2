@@ -155,7 +155,7 @@ export default function CertifiedExamCategoryPage() {
     }
   }, [slug, t, i18n.language])
 
-  const totalExams = (data?.child_groups || []).reduce((n, g) => n + (g.exams?.length || 0), 0)
+  const totalExams = Number(data?.verified_exam_count) || (data?.child_groups || []).reduce((n, g) => n + (g.exams?.length || 0), 0)
 
   useEffect(() => {
     void load()
@@ -284,7 +284,9 @@ export default function CertifiedExamCategoryPage() {
                   {(data.child_groups || []).map((group) =>
                     group.exams?.length ? (
                       <section key={group.id} className="space-y-3">
-                        <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-400">{group.name}</h2>
+                        {group.is_parent_direct ? null : (
+                          <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-400">{group.name}</h2>
+                        )}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                           {group.exams.map((exam) => (
                             <ExamCard

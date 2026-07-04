@@ -25,7 +25,10 @@ async function main() {
     if (!instructor) throw new Error(`Instructor tapılmadı: ${TEST_EMAIL}`);
 
     const { rows: cats } = await client.query(
-      `SELECT id, name, slug FROM exam_categories WHERE slug = 'data-analytics' LIMIT 1`,
+      `SELECT id, name, slug FROM exam_categories
+       WHERE slug IN ('data-analytics-core', 'data-analytics')
+       ORDER BY CASE slug WHEN 'data-analytics-core' THEN 0 ELSE 1 END
+       LIMIT 1`,
     );
     const category = cats[0];
     if (!category) throw new Error('data-analytics kateqoriyası tapılmadı');

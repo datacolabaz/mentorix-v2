@@ -168,6 +168,21 @@ async function getCategoryBySlug(req, res) {
         exams: exams.filter((e) => e.category_id === child.id).map((r) => mapExamRow(r, lang)),
       }));
 
+      const directExams = exams
+        .filter((e) => e.category_id === category.id)
+        .map((r) => mapExamRow(r, lang));
+      if (directExams.length) {
+        groups.unshift({
+          id: category.id,
+          slug: category.slug,
+          name: localizedField(category, lang, 'name'),
+          exams: directExams,
+          is_parent_direct: true,
+        });
+      }
+
+      const verifiedExamCount = groups.reduce((n, g) => n + (g.exams?.length || 0), 0);
+
       const { rows: paths } = await db.query(
         `SELECT id, slug, name, name_ru, description, description_ru, icon, sort_order, translations
          FROM career_paths WHERE category_id = $1 OR category_id = ANY(
@@ -182,6 +197,7 @@ async function getCategoryBySlug(req, res) {
       return res.json({
         success: true,
         category: mapCategory(category),
+        verified_exam_count: verifiedExamCount,
         child_groups: groups,
         career_paths: paths.map((p) => ({
           id: p.id,
@@ -206,10 +222,12 @@ async function getCategoryBySlug(req, res) {
     );
 
     const mapped = mapCategory(category);
+    const mappedExams = exams.map((r) => mapExamRow(r, lang));
     res.json({
       success: true,
       category: mapped,
-      child_groups: [{ id: category.id, slug: category.slug, name: mapped.name, exams: exams.map((r) => mapExamRow(r, lang)) }],
+      verified_exam_count: mappedExams.length,
+      child_groups: [{ id: category.id, slug: category.slug, name: mapped.name, exams: mappedExams }],
       career_paths: [],
     });
   } catch (err) {
