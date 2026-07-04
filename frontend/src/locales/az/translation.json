@@ -2341,6 +2341,8 @@
     "tabPaths": "Career Path-lər",
     "comingSoonExams": "Tezliklə yeni imtahanlar əlavə olunacaq.",
     "waitlistNotify": "Bildiriş al",
+    "waitlistSuccess": "Qeydiyyat alındı — bu kateqoriyada yeni imtahan əlavə olunanda email göndərəcəyik.",
+    "waitlistHint": "Email-iniz yalnız bu kateqoriyada yeni imtahan bildirişi üçün istifadə olunacaq.",
     "comingSoonPaths": "Bu kateqoriya üçün career path tezliklə əlavə olunacaq.",
     "examMeta": "{{questions}} sual · {{minutes}} dəq · Keçid {{pass}}%",
     "instructor": "Müəllim",

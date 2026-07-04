@@ -25,6 +25,7 @@ const {
   listPendingCertifiedExams,
   reviewCertifiedExam,
 } = require('../controllers/adminCertifiedExamController');
+const { getAdminWaitlistDemand } = require('../controllers/waitlistController');
 const { authenticate, authorize } = require('../middleware/auth');
 const db = require('../utils/db');
 const { grantCourseRoleToUser } = require('../services/userRolesService');
@@ -253,6 +254,7 @@ router.post('/university-scrape/run', authenticate, authorize('admin'), runBatch
 router.post('/university-scrape/targets/:id/run', authenticate, authorize('admin'), runOne);
 
 router.get('/certified-exams/pending', authenticate, authorize('admin'), listPendingCertifiedExams);
+router.get('/certified-exams/waitlist-demand', authenticate, authorize('admin'), getAdminWaitlistDemand);
 router.post('/certified-exams/:id/review', authenticate, authorize('admin'), reviewCertifiedExam);
 
 module.exports = router;

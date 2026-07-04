@@ -1,4 +1,5 @@
 const db = require('../utils/db');
+const { notifyWaitlistForVerifiedExam } = require('../services/catalogWaitlistService');
 
 async function listPendingCertifiedExams(_req, res) {
   try {
@@ -56,10 +57,20 @@ async function reviewCertifiedExam(req, res) {
       [examId, approve],
     );
 
+    let waitlist = { sent: 0, skipped: 0, marked: 0 };
+    if (approve && updated?.is_verified) {
+      try {
+        waitlist = await notifyWaitlistForVerifiedExam(examId);
+      } catch (notifyErr) {
+        console.error('[waitlist] notify failed:', notifyErr?.message || notifyErr);
+      }
+    }
+
     res.json({
       success: true,
       message: approve ? 'İmtahan kataloqda təsdiqləndi' : 'Verifikasiya rədd edildi',
       exam: updated,
+      waitlist_notifications: waitlist,
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message || 'Xəta' });

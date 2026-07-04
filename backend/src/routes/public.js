@@ -34,7 +34,6 @@ const { getInstructorMessagingLink } = require('../controllers/publicInstructorC
 const {
   listPublicCertifiedExams,
   getPublicCertifiedExamStats,
-  postWaitlistNotification,
   listParentCategories,
   listAllCatalogCategories,
   getCategoryBySlug,
@@ -42,6 +41,7 @@ const {
   getUserSkillProgress,
 } = require('../controllers/publicCertifiedExamsController');
 const { getPublicSitemapXml } = require('../controllers/publicSitemapController');
+const { postPublicWaitlist } = require('../controllers/waitlistController');
 const { authenticate, optionalAuthenticate } = require('../middleware/auth');
 
 const router = express.Router();
@@ -72,7 +72,8 @@ router.get('/certified-exams/categories/:slug', getCategoryBySlug);
 router.get('/certified-exams/career-paths/:slug', optionalAuthenticate, getCareerPathBySlug);
 router.get('/certified-exams', listPublicCertifiedExams);
 router.get('/certified-exams/stats', getPublicCertifiedExamStats);
-router.post('/certified-exams/waitlist', postWaitlistNotification);
+router.post('/waitlist', postPublicWaitlist);
+router.post('/certified-exams/waitlist', postPublicWaitlist);
 router.get('/certified-exams/me/skill-progress', authenticate, getUserSkillProgress);
 router.get('/sitemap.xml', getPublicSitemapXml);
 router.get('/marketing/login', getPublicLoginMarketing);

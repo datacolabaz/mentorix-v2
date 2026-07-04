@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import Brand from '../../components/common/Brand'
 import PublicSeoFooter from '../../components/public/PublicSeoFooter'
@@ -10,9 +10,15 @@ import { setPageSeo } from '../../lib/pageSeo'
 import useAuthStore from '../../hooks/useAuth'
 import { useToast } from '../../components/common/Toast'
 
-function ExamCard({ exam, onStart, t }) {
+function ExamCard({ exam, onStart, t, highlighted = false }) {
   return (
-    <article className="rounded-xl border border-white/10 bg-black/25 p-4 space-y-2 hover:border-primary/25 transition">
+    <article
+      id={`exam-${exam.id}`}
+      className={[
+        'rounded-xl border bg-black/25 p-4 space-y-2 transition scroll-mt-24',
+        highlighted ? 'border-primary ring-2 ring-primary/40 shadow-[0_0_24px_-8px_rgba(0,229,176,0.45)]' : 'border-white/10 hover:border-primary/25',
+      ].join(' ')}
+    >
       <div className="flex items-start justify-between gap-2">
         <h3 className="text-sm font-semibold text-white leading-snug">{exam.title}</h3>
         <LevelBadge level={exam.level} />
@@ -117,6 +123,8 @@ function CareerPathTimeline({ path, onOpen, t }) {
 
 export default function CertifiedExamCategoryPage() {
   const { slug } = useParams()
+  const [searchParams] = useSearchParams()
+  const highlightExamId = searchParams.get('exam')
   const navigate = useNavigate()
   const toast = useToast()
   const { user } = useAuthStore()
@@ -127,6 +135,7 @@ export default function CertifiedExamCategoryPage() {
   const [gateExam, setGateExam] = useState(null)
   const [waitEmail, setWaitEmail] = useState('')
   const [waitBusy, setWaitBusy] = useState(false)
+  const [waitSuccess, setWaitSuccess] = useState(null)
 
   const load = useCallback(async () => {
     if (!slug) return
@@ -146,11 +155,19 @@ export default function CertifiedExamCategoryPage() {
     }
   }, [slug, t, i18n.language])
 
+  const totalExams = (data?.child_groups || []).reduce((n, g) => n + (g.exams?.length || 0), 0)
+
   useEffect(() => {
     void load()
   }, [load])
 
-  const totalExams = (data?.child_groups || []).reduce((n, g) => n + (g.exams?.length || 0), 0)
+  useEffect(() => {
+    if (!highlightExamId || loading || totalExams === 0) return
+    const timer = window.setTimeout(() => {
+      document.getElementById(`exam-${highlightExamId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }, 300)
+    return () => window.clearTimeout(timer)
+  }, [highlightExamId, loading, totalExams, data])
 
   const startExam = (exam) => {
     if (user?.role === 'student') {
@@ -167,9 +184,15 @@ export default function CertifiedExamCategoryPage() {
   const submitWaitlist = async (e) => {
     e.preventDefault()
     setWaitBusy(true)
+    setWaitSuccess(null)
     try {
-      const d = await api.post('/public/certified-exams/waitlist', { email: waitEmail.trim(), category_slug: slug })
-      toast(d?.message || 'OK', 'success')
+      const d = await api.post('/public/waitlist', {
+        email: waitEmail.trim(),
+        category_slug: slug,
+        category_id: data?.category?.id || null,
+      })
+      setWaitSuccess(d?.message || t('certifiedExams.waitlistSuccess'))
+      toast(d?.message || t('certifiedExams.waitlistSuccess'), 'success')
       setWaitEmail('')
     } catch (err) {
       toast(err?.message || 'Xəta', 'error')
@@ -235,19 +258,26 @@ export default function CertifiedExamCategoryPage() {
               totalExams === 0 ? (
                 <div className="rounded-2xl border border-white/10 bg-[#121212]/90 p-6 space-y-3 max-w-lg">
                   <p className="text-sm text-gray-300">{t('certifiedExams.comingSoonExams')}</p>
-                  <form onSubmit={submitWaitlist} className="flex flex-col sm:flex-row gap-2">
-                    <input
-                      type="email"
-                      required
-                      value={waitEmail}
-                      onChange={(e) => setWaitEmail(e.target.value)}
-                      placeholder="email@example.com"
-                      className="flex-1 rounded-xl bg-[#0f0f0f] border border-white/10 px-3 py-2 text-sm"
-                    />
-                    <button type="submit" disabled={waitBusy} className="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-[#041018]">
-                      {t('certifiedExams.waitlistNotify')}
-                    </button>
-                  </form>
+                  {waitSuccess ? (
+                    <div className="rounded-xl border border-primary/35 bg-primary/10 px-4 py-3 text-sm text-primary">
+                      {waitSuccess}
+                    </div>
+                  ) : (
+                    <form onSubmit={submitWaitlist} className="flex flex-col sm:flex-row gap-2">
+                      <input
+                        type="email"
+                        required
+                        value={waitEmail}
+                        onChange={(e) => setWaitEmail(e.target.value)}
+                        placeholder="email@example.com"
+                        className="flex-1 rounded-xl bg-[#0f0f0f] border border-white/10 px-3 py-2 text-sm"
+                      />
+                      <button type="submit" disabled={waitBusy} className="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-[#041018]">
+                        {t('certifiedExams.waitlistNotify')}
+                      </button>
+                    </form>
+                  )}
+                  <p className="text-[11px] text-gray-500">{t('certifiedExams.waitlistHint')}</p>
                 </div>
               ) : (
                 <div className="space-y-8">
@@ -257,7 +287,13 @@ export default function CertifiedExamCategoryPage() {
                         <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-400">{group.name}</h2>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                           {group.exams.map((exam) => (
-                            <ExamCard key={exam.id} exam={exam} onStart={startExam} t={t} />
+                            <ExamCard
+                              key={exam.id}
+                              exam={exam}
+                              onStart={startExam}
+                              t={t}
+                              highlighted={highlightExamId === exam.id}
+                            />
                           ))}
                         </div>
                       </section>

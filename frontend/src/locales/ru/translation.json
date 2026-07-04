@@ -2515,6 +2515,8 @@
     "tabPaths": "Career Path",
     "comingSoonExams": "Скоро будут добавлены новые экзамены.",
     "waitlistNotify": "Получить уведомление",
+    "waitlistSuccess": "Подписка оформлена — мы отправим email, когда в этой категории появится новый экзамен.",
+    "waitlistHint": "Email используется только для уведомлений о новых экзаменах в этой категории.",
     "comingSoonPaths": "Career path для этой категории скоро появится.",
     "examMeta": "{{questions}} вопросов · {{minutes}} мин · Проход {{pass}}%",
     "instructor": "Преподаватель",

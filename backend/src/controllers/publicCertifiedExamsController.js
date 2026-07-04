@@ -363,28 +363,6 @@ async function getPublicCertifiedExamStats(_req, res) {
   }
 }
 
-async function postWaitlistNotification(req, res) {
-  try {
-    const email = String(req.body?.email || '').trim().toLowerCase();
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return res.status(400).json({ success: false, message: 'Düzgün email daxil edin' });
-    }
-    const categorySlug = String(req.body?.category_slug || req.body?.category || '').trim() || null;
-    await db.query(
-      `INSERT INTO waitlist_notifications (email, category, category_slug, source)
-       VALUES ($1, $2, $3, 'certified_catalog')
-       ON CONFLICT (email, source) DO UPDATE SET
-         category = EXCLUDED.category,
-         category_slug = EXCLUDED.category_slug,
-         created_at = NOW()`,
-      [email.slice(0, 255), categorySlug, categorySlug],
-    );
-    res.json({ success: true, message: 'Bildiriş siyahısına əlavə olundu' });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message || 'Xəta' });
-  }
-}
-
 async function getUserSkillProgress(req, res) {
   try {
     const lang = resolveCatalogLang(req);
@@ -432,6 +410,5 @@ module.exports = {
   getCareerPathBySlug,
   listPublicCertifiedExams,
   getPublicCertifiedExamStats,
-  postWaitlistNotification,
   getUserSkillProgress,
 };
