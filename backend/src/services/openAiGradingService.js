@@ -1,5 +1,5 @@
 const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
-const DEFAULT_MODEL = process.env.ANTHROPIC_OPEN_GRADING_MODEL || 'claude-sonnet-4-20250514';
+const DEFAULT_MODEL = process.env.ANTHROPIC_OPEN_GRADING_MODEL || 'claude-sonnet-5';
 const REQUEST_TIMEOUT_MS = Number(process.env.ANTHROPIC_OPEN_GRADING_TIMEOUT_MS || 45000);
 
 function buildGradingPrompt({ questionText, modelAnswer, studentAnswer }) {
@@ -61,7 +61,6 @@ async function gradeOpenAnswerWithAi({ questionText, modelAnswer, studentAnswer,
       body: JSON.stringify({
         model: DEFAULT_MODEL,
         max_tokens: 512,
-        temperature: 0.2,
         messages: [
           {
             role: 'user',

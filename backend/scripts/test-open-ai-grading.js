@@ -44,7 +44,7 @@ async function runLive() {
     process.exit(1);
   }
 
-  const model = process.env.ANTHROPIC_OPEN_GRADING_MODEL || 'claude-sonnet-4-20250514';
+  const model = process.env.ANTHROPIC_OPEN_GRADING_MODEL || 'claude-sonnet-5';
   console.log('Model:', model);
   console.log('');
 
