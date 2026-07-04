@@ -5,8 +5,10 @@
  * Requires MENTORIX_API_ORIGIN (Railway backend origin, no /api suffix).
  */
 import { readFileSync } from 'fs'
-import { join } from 'path'
+import { join, dirname } from 'path'
+import { fileURLToPath } from 'url'
 
+const __dirname = dirname(fileURLToPath(import.meta.url))
 const SITE_ORIGIN = 'https://mentorix.io'
 
 function upstreamBase() {
@@ -81,18 +83,38 @@ async function fetchOgMeta(kind, params, base) {
   }
 }
 
-function readIndexHtml() {
+async function readIndexHtml() {
   const candidates = [
-    join(process.cwd(), 'index.html'),
     join(process.cwd(), 'dist', 'index.html'),
+    join(process.cwd(), 'index.html'),
+    join(__dirname, '..', 'dist', 'index.html'),
+    join(__dirname, '..', 'index.html'),
   ]
   for (const p of candidates) {
     try {
       return readFileSync(p, 'utf8')
     } catch {
-      /* try next */
+      /* try next path */
     }
   }
+
+  const fetchBases = [
+    SITE_ORIGIN,
+    process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null,
+  ].filter(Boolean)
+
+  for (const base of fetchBases) {
+    try {
+      const r = await fetch(`${String(base).replace(/\/+$/, '')}/index.html`, {
+        headers: { Accept: 'text/html' },
+        signal: AbortSignal.timeout(8000),
+      })
+      if (r.ok) return await r.text()
+    } catch {
+      /* try next origin */
+    }
+  }
+
   throw new Error('index.html tapılmadı')
 }
 
@@ -102,7 +124,7 @@ export default async function handler(req, res) {
     const slug = String(req.query?.slug || '').trim()
     const examId = String(req.query?.examId || '').trim()
 
-    let html = readIndexHtml()
+    let html = await readIndexHtml()
     const base = upstreamBase()
 
     if (base) {
@@ -118,6 +140,19 @@ export default async function handler(req, res) {
     res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600')
     return res.status(200).send(html)
   } catch (err) {
+    try {
+      const r = await fetch(`${SITE_ORIGIN}/index.html`, {
+        headers: { Accept: 'text/html' },
+        signal: AbortSignal.timeout(8000),
+      })
+      if (r.ok) {
+        res.setHeader('Content-Type', 'text/html; charset=utf-8')
+        res.setHeader('Cache-Control', 'public, s-maxage=60')
+        return res.status(200).send(await r.text())
+      }
+    } catch {
+      /* final fallback failed */
+    }
     return res.status(500).send(err?.message || 'share-html error')
   }
 }

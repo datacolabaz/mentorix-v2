@@ -6,6 +6,11 @@
       "permanent": true
     }
   ],
+  "functions": {
+    "api/share-html.js": {
+      "includeFiles": "dist/index.html"
+    }
+  },
   "rewrites": [
     {
       "source": "/sitemap.xml",
