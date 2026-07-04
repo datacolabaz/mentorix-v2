@@ -3,7 +3,15 @@ const DEFAULT_MODEL = process.env.ANTHROPIC_OPEN_GRADING_MODEL || 'claude-sonnet
 const REQUEST_TIMEOUT_MS = Number(process.env.ANTHROPIC_OPEN_GRADING_TIMEOUT_MS || 45000);
 
 function buildGradingPrompt({ questionText, modelAnswer, studentAnswer }) {
-  return `Sən imtahan qiymətləndirən köməkçisən. Aşağıda sual, müəllimin yazdığı model cavab, və tələbənin yazdığı cavab var. Tələbənin cavabının model cavabla KONSEPTUAL uyğunluğunu qiymətləndir (sözbəsöz eyni olması vacib deyil, məntiq düzgün olmalıdır). 0-100 arası faiz ver və 1-2 cümləlik qısa əsaslandırma yaz. YALNIZ bu JSON formatında cavab ver: {"score_percent": N, "reasoning": "..."}
+  return `Sən imtahan qiymətləndirən köməkçisən. Aşağıda sual, müəllimin yazdığı model cavab, və tələbənin yazdığı cavab var.
+
+Tələbənin cavabının model cavabla KONSEPTUAL (məntiqi/alqoritmik) uyğunluğunu qiymətləndir.
+- Sözbəsöz eyni olması vacib DEYİL.
+- Dəyişən adları (temp/x, A/a, B/b), simvol böyük/kiçik hərfi, yazı üslubu, cümlə quruluşu FƏRQLİ ola bilər — bunlara görə bal AŞAĞI SALMA.
+- Yalnız MƏNTİQ fərqlidirsə balı aşağı sal: əməliyyatların ardıcıllığı səhvdirsə, addım atlanıbsa, nəticədə dəyər itirilirsə, və ya alqoritm yanlışdırsa.
+- Eyni alqoritmi fərqli dəyişən adları ilə yazmışsa (məs. "temp=A,A=B,B=temp" vs "x=a,a=b,b=x") bu TAM düzgün sayılır.
+
+0-100 arası faiz ver və 1-2 cümləlik qısa əsaslandırma yaz. YALNIZ bu JSON formatında cavab ver: {"score_percent": N, "reasoning": "..."}
 
 Sual: ${String(questionText || '').trim()}
 Model cavab: ${String(modelAnswer || '').trim()}

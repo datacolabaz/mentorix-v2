@@ -1,70 +1,95 @@
 /**
- * Açıq sual AI qiymətləndirmə testi (mock və ya real API).
+ * Açıq sual AI qiymətləndirmə testi — dəyişən adı mübadiləsi ssenarisi.
+ *
  * Usage:
  *   node scripts/test-open-ai-grading.js
  *   node scripts/test-open-ai-grading.js --live   # ANTHROPIC_API_KEY lazımdır
  */
 require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
 
-const { percentToPoints, buildGradingPrompt, gradeOpenAnswerWithAi } = require('../src/services/openAiGradingService');
+const { gradeOpenAnswerWithAi } = require('../src/services/openAiGradingService');
 
-const TEMP_QUESTION = {
+const SWAP_QUESTION = {
   question_text:
-    'İki dəyişənin dəyərini bir-biri ilə necə dəyişirsiniz (swap)? temp dəyişəni olmadan hansı problem yaranır?',
-  model_answer:
-    'Əvvəlcə temp adlı boş qutuya A-nın dəyərini qoyuruq, sonra A-ya B-nin dəyərini veririk, B-yə isə temp-də olanı.',
+    'İki dəyişənin dəyərini bir-biri ilə necə dəyişirsiniz (swap)? Müvəqqəti (temp) dəyişənindən istifadə edin.',
+  model_answer: 'temp = A, A = B, B = temp',
   max_points: 10,
 };
 
-const GOOD_ANSWER =
-  'A-nın dəyərini müvəqqəti yadda saxlayırıq, sonra B-ni A-ya yazırıq, sonra müvəqqəti yaddaşdakı dəyəri B-yə qoyuruq. Temp olmadan bir dəyər itir.';
-const BAD_ANSWER = 'Sadəcə A = B yazırıq və bitiririk.';
+/** Eyni məntiq, tam fərqli dəyişən adları — TAM BAL gözlənilir (90-100%) */
+const CORRECT_DIFFERENT_NAMES = 'x = a, a = b, b = x';
 
-async function runMock() {
-  console.log('\n=== Mock test (prompt + percentToPoints) ===\n');
-  console.log(buildGradingPrompt({
-    questionText: TEMP_QUESTION.question_text,
-    modelAnswer: TEMP_QUESTION.model_answer,
-    studentAnswer: GOOD_ANSWER,
-  }).slice(0, 400) + '...\n');
+/** Sıra səhv — B-nin köhnə dəyəri itir — AŞAĞI BAL gözlənilir */
+const WRONG_ORDER = 'temp = A, B = temp, A = B';
 
-  const goodPts = percentToPoints(92, TEMP_QUESTION.max_points);
-  const badPts = percentToPoints(15, TEMP_QUESTION.max_points);
-  console.log('Gözlənilən (mock): düzgün məntiq → ~9.2/10, səhv → ~1.5/10');
-  console.log(`percentToPoints(92, 10) = ${goodPts}`);
-  console.log(`percentToPoints(15, 10) = ${badPts}`);
+function passHigh(scorePercent, label) {
+  const ok = scorePercent >= 90;
+  console.log(`${ok ? '✅ PASS' : '❌ FAIL'} — ${label}: ${scorePercent}% (gözlənilən ≥90%)`);
+  return ok;
+}
+
+function passLow(scorePercent, label) {
+  const ok = scorePercent <= 40;
+  console.log(`${ok ? '✅ PASS' : '❌ FAIL'} — ${label}: ${scorePercent}% (gözlənilən ≤40%)`);
+  return ok;
 }
 
 async function runLive() {
-  console.log('\n=== Live Anthropic test ===\n');
+  console.log('\n=== Swap ssenarisi — Live Anthropic test ===\n');
+  console.log('Model cavab:', SWAP_QUESTION.model_answer);
+  console.log('');
+
   if (!process.env.ANTHROPIC_API_KEY) {
-    console.error('ANTHROPIC_API_KEY yoxdur — yalnız mock test edildi.');
-    return;
+    console.error('ANTHROPIC_API_KEY yoxdur — Railway-də təyin edib yenidən işlədin.');
+    process.exit(1);
   }
 
-  const good = await gradeOpenAnswerWithAi({
-    questionText: TEMP_QUESTION.question_text,
-    modelAnswer: TEMP_QUESTION.model_answer,
-    studentAnswer: GOOD_ANSWER,
-    maxPoints: TEMP_QUESTION.max_points,
-  });
-  console.log('Düzgün məntiqli cavab:', good);
+  const model = process.env.ANTHROPIC_OPEN_GRADING_MODEL || 'claude-sonnet-4-20250514';
+  console.log('Model:', model);
+  console.log('');
 
-  const bad = await gradeOpenAnswerWithAi({
-    questionText: TEMP_QUESTION.question_text,
-    modelAnswer: TEMP_QUESTION.model_answer,
-    studentAnswer: BAD_ANSWER,
-    maxPoints: TEMP_QUESTION.max_points,
+  console.log('--- Test 1: Düzgün məntiq, fərqli dəyişən adları ---');
+  console.log('Tələbə:', CORRECT_DIFFERENT_NAMES);
+  const good = await gradeOpenAnswerWithAi({
+    questionText: SWAP_QUESTION.question_text,
+    modelAnswer: SWAP_QUESTION.model_answer,
+    studentAnswer: CORRECT_DIFFERENT_NAMES,
+    maxPoints: SWAP_QUESTION.max_points,
   });
-  console.log('Səhv cavab:', bad);
+  console.log('AI nəticəsi:', JSON.stringify(good, null, 2));
+  const t1 = passHigh(good.scorePercent, 'Düzgün/fərqli adlar');
+  console.log('');
+
+  console.log('--- Test 2: Səhv ardıcıllıq (məntiq xətası) ---');
+  console.log('Tələbə:', WRONG_ORDER);
+  const bad = await gradeOpenAnswerWithAi({
+    questionText: SWAP_QUESTION.question_text,
+    modelAnswer: SWAP_QUESTION.model_answer,
+    studentAnswer: WRONG_ORDER,
+    maxPoints: SWAP_QUESTION.max_points,
+  });
+  console.log('AI nəticəsi:', JSON.stringify(bad, null, 2));
+  const t2 = passLow(bad.scorePercent, 'Səhv sıra');
+  console.log('');
+
+  console.log('=== XÜLASƏ ===');
+  if (t1 && t2) {
+    console.log('✅ Hər iki test keçdi — AI məntiqə görə qiymətləndirir.');
+    process.exit(0);
+  }
+  console.log('❌ Test uğursuz — promptu yenidən tənzimləyin və ya modeli dəyişin.');
+  process.exit(1);
 }
 
 (async () => {
-  await runMock();
   if (process.argv.includes('--live')) {
     await runLive();
   } else {
-    console.log('\nReal API test üçün: node scripts/test-open-ai-grading.js --live\n');
+    console.log('Swap ssenarisi testi (--live olmadan yalnız təlimat):');
+    console.log('  node scripts/test-open-ai-grading.js --live');
+    console.log('');
+    console.log('Test 1:', CORRECT_DIFFERENT_NAMES, '→ gözlənilən ≥90%');
+    console.log('Test 2:', WRONG_ORDER, '→ gözlənilən ≤40%');
   }
 })().catch((e) => {
   console.error(e);
