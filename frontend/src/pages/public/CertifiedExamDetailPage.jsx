@@ -7,6 +7,7 @@ import LevelBadge from '../../components/public/LevelBadge'
 import CertifiedExamAuthGate from '../../components/public/CertifiedExamAuthGate'
 import api from '../../lib/api'
 import { setPageSeo, SITE_ORIGIN } from '../../lib/pageSeo'
+import { buildCertifiedExamShareUrl, copyCertifiedExamShareUrl } from '../../lib/certifiedExamShareUrl'
 import useAuthStore from '../../hooks/useAuth'
 import { useToast } from '../../components/common/Toast'
 
@@ -65,6 +66,17 @@ export default function CertifiedExamDetailPage() {
     setGateOpen(true)
   }
 
+  const shareUrl = buildCertifiedExamShareUrl(categorySlug, examSlug)
+
+  const copyShareLink = async () => {
+    try {
+      await copyCertifiedExamShareUrl(categorySlug, examSlug)
+      toast(t('certifiedExams.copyShareLinkSuccess'), 'success')
+    } catch {
+      toast(t('certifiedExams.copyShareLinkError'), 'error')
+    }
+  }
+
   return (
     <div className="min-h-screen bg-[#0b0b0b] text-gray-100 flex flex-col">
       <header className="border-b border-white/10 bg-[#0b0b0b]/95 sticky top-0 z-40">
@@ -113,6 +125,19 @@ export default function CertifiedExamDetailPage() {
               <p className="text-xs text-gray-400">
                 {t('certifiedExams.instructor')}: {exam.instructor_name}
               </p>
+              {shareUrl ? (
+                <div className="rounded-xl border border-white/10 bg-[#0f0f0f] px-3 py-2 space-y-2">
+                  <p className="text-[10px] uppercase tracking-wider text-gray-500">{t('certifiedExams.shareLinkLabel')}</p>
+                  <p className="text-xs text-gray-300 break-all">{shareUrl}</p>
+                  <button
+                    type="button"
+                    onClick={copyShareLink}
+                    className="w-full rounded-lg border border-white/15 text-gray-300 px-3 py-2 text-xs font-semibold hover:border-primary/35 hover:text-primary"
+                  >
+                    {t('certifiedExams.copyShareLink')}
+                  </button>
+                </div>
+              ) : null}
               <button
                 type="button"
                 onClick={startExam}

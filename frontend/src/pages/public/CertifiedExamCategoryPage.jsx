@@ -7,10 +7,13 @@ import LevelBadge from '../../components/public/LevelBadge'
 import CertifiedExamAuthGate from '../../components/public/CertifiedExamAuthGate'
 import api from '../../lib/api'
 import { setPageSeo, SITE_ORIGIN } from '../../lib/pageSeo'
+import { buildCertifiedExamSharePath, copyCertifiedExamShareUrl } from '../../lib/certifiedExamShareUrl'
 import useAuthStore from '../../hooks/useAuth'
 import { useToast } from '../../components/common/Toast'
 
-function ExamCard({ exam, onStart, t, highlighted = false }) {
+function ExamCard({ exam, categorySlug, onStart, onCopyLink, t, highlighted = false }) {
+  const detailPath = exam.slug && categorySlug ? buildCertifiedExamSharePath(categorySlug, exam.slug) : null
+
   return (
     <article
       id={`exam-${exam.id}`}
@@ -20,7 +23,13 @@ function ExamCard({ exam, onStart, t, highlighted = false }) {
       ].join(' ')}
     >
       <div className="flex items-start justify-between gap-2">
-        <h3 className="text-sm font-semibold text-white leading-snug">{exam.title}</h3>
+        {detailPath ? (
+          <Link to={detailPath} className="text-sm font-semibold text-white leading-snug hover:text-primary">
+            {exam.title}
+          </Link>
+        ) : (
+          <h3 className="text-sm font-semibold text-white leading-snug">{exam.title}</h3>
+        )}
         <LevelBadge level={exam.level} />
       </div>
       <p className="text-xs text-gray-500">
@@ -33,13 +42,24 @@ function ExamCard({ exam, onStart, t, highlighted = false }) {
       <p className="text-xs text-gray-400">
         {t('certifiedExams.instructor')}: {exam.instructor_name}
       </p>
-      <button
-        type="button"
-        onClick={() => onStart(exam)}
-        className="w-full rounded-lg bg-primary/15 border border-primary/35 text-primary px-3 py-2 text-xs font-bold hover:bg-primary/25"
-      >
-        {t('certifiedExams.startExam')}
-      </button>
+      <div className="flex flex-col gap-2">
+        <button
+          type="button"
+          onClick={() => onStart(exam)}
+          className="w-full rounded-lg bg-primary/15 border border-primary/35 text-primary px-3 py-2 text-xs font-bold hover:bg-primary/25"
+        >
+          {t('certifiedExams.startExam')}
+        </button>
+        {detailPath ? (
+          <button
+            type="button"
+            onClick={() => onCopyLink(exam)}
+            className="w-full rounded-lg border border-white/10 text-gray-400 px-3 py-2 text-xs font-semibold hover:border-white/20 hover:text-gray-200"
+          >
+            {t('certifiedExams.copyShareLink')}
+          </button>
+        ) : null}
+      </div>
     </article>
   )
 }
@@ -184,6 +204,16 @@ export default function CertifiedExamCategoryPage() {
     setGateExam(exam)
   }
 
+  const copyShareLink = async (exam) => {
+    if (!slug || !exam?.slug) return
+    try {
+      await copyCertifiedExamShareUrl(slug, exam.slug)
+      toast(t('certifiedExams.copyShareLinkSuccess'), 'success')
+    } catch {
+      toast(t('certifiedExams.copyShareLinkError'), 'error')
+    }
+  }
+
   const submitWaitlist = async (e) => {
     e.preventDefault()
     setWaitBusy(true)
@@ -295,7 +325,9 @@ export default function CertifiedExamCategoryPage() {
                             <ExamCard
                               key={exam.id}
                               exam={exam}
+                              categorySlug={slug}
                               onStart={startExam}
+                              onCopyLink={copyShareLink}
                               t={t}
                               highlighted={highlightExamId === exam.id}
                             />
