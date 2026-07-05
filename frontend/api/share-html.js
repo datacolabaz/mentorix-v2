@@ -2,7 +2,8 @@
  * Vercel serverless: inject Open Graph meta into index.html for shareable routes.
  * Rewritten from vercel.json for /sertifikatli-imtahanlar/:slug and /exam/:examId.
  *
- * Requires MENTORIX_API_ORIGIN (Railway backend origin, no /api suffix).
+ * Optional MENTORIX_API_ORIGIN (Railway backend origin, no /api suffix).
+ * Falls back to https://api.edupanel.co when unset.
  */
 import { readFileSync } from 'fs'
 import { join, dirname } from 'path'
@@ -10,9 +11,12 @@ import { fileURLToPath } from 'url'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const SITE_ORIGIN = 'https://mentorix.io'
+/** Production Railway API — fallback when MENTORIX_API_ORIGIN is unset on Vercel */
+const DEFAULT_API_ORIGIN = 'https://api.edupanel.co'
 
 function upstreamBase() {
-  return (process.env.MENTORIX_API_ORIGIN || '').trim().replace(/\/+$/, '')
+  const fromEnv = (process.env.MENTORIX_API_ORIGIN || '').trim().replace(/\/+$/, '')
+  return fromEnv || DEFAULT_API_ORIGIN
 }
 
 function escapeHtml(value) {
@@ -41,7 +45,7 @@ function replaceCanonical(html, href) {
   return html
 }
 
-function injectPageMeta(html, meta) {
+function injectPageMeta(html, meta, { keepImage = false } = {}) {
   if (!meta?.title) return html
   let out = html
   out = replaceTitle(out, meta.title)
@@ -49,11 +53,13 @@ function injectPageMeta(html, meta) {
   out = replaceMeta(out, 'property', 'og:title', meta.title)
   out = replaceMeta(out, 'property', 'og:description', meta.description)
   out = replaceMeta(out, 'property', 'og:url', meta.url)
-  out = replaceMeta(out, 'property', 'og:image', meta.image)
+  if (!keepImage && meta.image) {
+    out = replaceMeta(out, 'property', 'og:image', meta.image)
+    out = replaceMeta(out, 'name', 'twitter:image', meta.image)
+  }
   out = replaceMeta(out, 'property', 'og:type', meta.og_type || 'website')
   out = replaceMeta(out, 'name', 'twitter:title', meta.title)
   out = replaceMeta(out, 'name', 'twitter:description', meta.description)
-  out = replaceMeta(out, 'name', 'twitter:image', meta.image)
   out = replaceCanonical(out, meta.url)
   return out
 }
@@ -74,10 +80,19 @@ async function fetchOgMeta(kind, params, base) {
   if (!r.ok) return null
   const d = await r.json()
   if (!d?.success) return null
+
+  let url = d.url
+  if (kind === 'category') {
+    const canonicalPath = String(d.canonical_path || '').trim()
+    if (canonicalPath) {
+      url = `${SITE_ORIGIN}${canonicalPath.startsWith('/') ? canonicalPath : `/${canonicalPath}`}`
+    }
+  }
+
   return {
     title: d.title,
     description: d.description,
-    url: d.url,
+    url,
     image: d.image,
     og_type: d.og_type || 'website',
   }
@@ -127,13 +142,14 @@ export default async function handler(req, res) {
     let html = await readIndexHtml()
     const base = upstreamBase()
 
-    if (base) {
-      try {
-        const meta = await fetchOgMeta(kind, { slug, examId }, base)
-        if (meta) html = injectPageMeta(html, meta)
-      } catch {
-        /* fallback to default index.html meta */
+    try {
+      const meta = await fetchOgMeta(kind, { slug, examId }, base)
+      if (meta) {
+        const keepImage = kind === 'category'
+        html = injectPageMeta(html, meta, { keepImage })
       }
+    } catch {
+      /* fallback to default index.html meta */
     }
 
     res.setHeader('Content-Type', 'text/html; charset=utf-8')
