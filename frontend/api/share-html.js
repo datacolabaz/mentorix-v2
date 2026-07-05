@@ -1,6 +1,7 @@
 /**
  * Vercel serverless: inject Open Graph meta into index.html for shareable routes.
- * Rewritten from vercel.json for /sertifikatli-imtahanlar/:slug and /exam/:examId.
+ * Rewritten from vercel.json for /sertifikatli-imtahanlar/:slug,
+ * /sertifikatli-imtahanlar/:categorySlug/:examSlug, and /exam/:examId.
  *
  * Optional MENTORIX_API_ORIGIN (Railway backend origin, no /api suffix).
  * Falls back to https://api.edupanel.co when unset.
@@ -68,6 +69,8 @@ async function fetchOgMeta(kind, params, base) {
   let path = ''
   if (kind === 'category' && params.slug) {
     path = `/api/public/og/certified-category/${encodeURIComponent(params.slug)}`
+  } else if (kind === 'certified-exam' && params.categorySlug && params.examSlug) {
+    path = `/api/public/og/certified-exam/${encodeURIComponent(params.categorySlug)}/${encodeURIComponent(params.examSlug)}`
   } else if (kind === 'exam' && params.examId) {
     path = `/api/public/og/exam/${encodeURIComponent(params.examId)}`
   } else {
@@ -82,7 +85,7 @@ async function fetchOgMeta(kind, params, base) {
   if (!d?.success) return null
 
   let url = d.url
-  if (kind === 'category') {
+  if (kind === 'category' || kind === 'certified-exam') {
     const canonicalPath = String(d.canonical_path || '').trim()
     if (canonicalPath) {
       url = `${SITE_ORIGIN}${canonicalPath.startsWith('/') ? canonicalPath : `/${canonicalPath}`}`
@@ -139,13 +142,16 @@ export default async function handler(req, res) {
     const slug = String(req.query?.slug || '').trim()
     const examId = String(req.query?.examId || '').trim()
 
+    const categorySlug = String(req.query?.categorySlug || '').trim()
+    const examSlug = String(req.query?.examSlug || '').trim()
+
     let html = await readIndexHtml()
     const base = upstreamBase()
 
     try {
-      const meta = await fetchOgMeta(kind, { slug, examId }, base)
+      const meta = await fetchOgMeta(kind, { slug, examId, categorySlug, examSlug }, base)
       if (meta) {
-        const keepImage = kind === 'category'
+        const keepImage = kind === 'category' || kind === 'certified-exam'
         html = injectPageMeta(html, meta, { keepImage })
       }
     } catch {

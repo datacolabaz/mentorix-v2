@@ -64,6 +64,7 @@ import PaymentPending from './pages/instructor/PaymentPending'
 import CertificateVerify from './pages/public/CertificateVerify'
 import CertifiedExamsCatalog from './pages/public/CertifiedExamsCatalog'
 import CertifiedExamCategoryPage from './pages/public/CertifiedExamCategoryPage'
+import CertifiedExamDetailPage from './pages/public/CertifiedExamDetailPage'
 import StudentCertificates from './pages/student/Certificates'
 import InstructorCertificates from './pages/instructor/Certificates'
 import AdminBilling from './pages/admin/AdminBilling'
@@ -187,6 +188,7 @@ export default function App() {
       <Route path="/live/join/:token" element={<LiveGuestJoin />} />
       <Route path="/c/:token" element={<CertificateVerify />} />
       <Route path="/sertifikatli-imtahanlar" element={<CertifiedExamsCatalog />} />
+      <Route path="/sertifikatli-imtahanlar/:categorySlug/:examSlug" element={<CertifiedExamDetailPage />} />
       <Route path="/sertifikatli-imtahanlar/:slug" element={<CertifiedExamCategoryPage />} />
       <Route
         path="/live/:roomCode"

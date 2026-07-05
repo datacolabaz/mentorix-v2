@@ -17,6 +17,10 @@
       "destination": "/api/public/sitemap.xml"
     },
     {
+      "source": "/sertifikatli-imtahanlar/:categorySlug/:examSlug",
+      "destination": "/api/share-html?kind=certified-exam&categorySlug=:categorySlug&examSlug=:examSlug"
+    },
+    {
       "source": "/sertifikatli-imtahanlar/:slug",
       "destination": "/api/share-html?kind=category&slug=:slug"
     },

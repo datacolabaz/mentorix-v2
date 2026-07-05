@@ -2336,7 +2336,9 @@
     "loading": "Yüklənir…",
     "login": "Daxil ol",
     "backToCatalog": "← Kataloq",
+    "backToCategory": "← Kateqoriya",
     "categoryNotFound": "Kateqoriya tapılmadı",
+    "examNotFound": "İmtahan tapılmadı",
     "tabExams": "Bütün İmtahanlar",
     "tabPaths": "Career Path-lər",
     "comingSoonExams": "Tezliklə yeni imtahanlar əlavə olunacaq.",
@@ -2375,6 +2377,7 @@
       "catalogDescription": "Beynəlxalq, IT, Data Analytics, Cloud, Cyber Security və digər sahələrdə sertifikatlı skill assessment kataloqu.",
       "categoryTitle": "{{name}} — Sertifikatlı imtahanlar",
       "categoryDescription": "Mentorix sertifikatlı skill assessment kataloqu",
+      "examDescription": "Sertifikatlı imtahan — Mentorix",
       "breadcrumb": "Sertifikatlı imtahanlar"
     }
   }

@@ -12,6 +12,7 @@ const CATALOG_BASE_WHERE = `
 function mapExamRow(r, lang) {
   return {
     id: r.id,
+    slug: r.slug,
     title: localizedField(
       { title: r.title, title_ru: r.title_ru, translations: r.exam_translations },
       lang,
@@ -38,9 +39,9 @@ function mapExamRow(r, lang) {
 }
 
 const EXAM_SELECT = `
-  e.id, e.title, e.title_ru, e.subject, e.topic, e.duration_minutes, e.certificate_pass_pct,
+  e.id, e.slug, e.title, e.title_ru, e.subject, e.topic, e.duration_minutes, e.certificate_pass_pct,
   e.level, e.certificate_type, e.category_id, e.translations AS exam_translations,
-  ec.slug AS category_slug, ec.name AS category_name_raw, ec.name_ru AS category_name_ru, ec.translations AS category_translations,
+  ec.slug AS category_slug, ec.name AS category_name_raw, ec.name_ru AS category_name_ru, ec.icon AS category_icon, ec.translations AS category_translations,
   COALESCE(NULLIF(TRIM(u.full_name), ''), NULLIF(TRIM(ip.public_label), ''), 'Müəllim') AS instructor_name,
   (SELECT COUNT(*)::int FROM exam_questions eq WHERE eq.exam_id = e.id) AS question_count,
   (
@@ -421,11 +422,85 @@ async function getUserSkillProgress(req, res) {
   }
 }
 
+async function getCertifiedExamBySlug(req, res) {
+  try {
+    const lang = resolveCatalogLang(req);
+    const categorySlug = String(req.params.categorySlug || '').trim();
+    const examSlug = String(req.params.examSlug || '').trim();
+    if (!categorySlug || !examSlug) {
+      return res.status(404).json({ success: false, message: 'İmtahan tapılmadı' });
+    }
+
+    const { rows } = await db.query(
+      `SELECT ${EXAM_SELECT},
+              ec.parent_id AS category_parent_id,
+              parent.slug AS parent_category_slug,
+              parent.name AS parent_category_name_raw,
+              parent.name_ru AS parent_category_name_ru,
+              parent.translations AS parent_category_translations,
+              parent.icon AS parent_category_icon
+       FROM exams e
+       JOIN users u ON u.id = e.instructor_id
+       LEFT JOIN instructor_profiles ip ON ip.user_id = u.id
+       LEFT JOIN exam_categories ec ON ec.id = e.category_id
+       LEFT JOIN exam_categories parent ON parent.id = ec.parent_id
+       WHERE e.slug = $1
+         AND ${CATALOG_BASE_WHERE}
+         AND (
+           ec.slug = $2
+           OR parent.slug = $2
+         )
+       LIMIT 1`,
+      [examSlug, categorySlug],
+    );
+    const row = rows[0];
+    if (!row) return res.status(404).json({ success: false, message: 'İmtahan tapılmadı' });
+
+    const exam = mapExamRow(row, lang);
+    const description = [row.topic, row.subject].map((v) => String(v || '').trim()).find(Boolean) || null;
+    const categorySlugForUrl = categorySlug;
+    const sharePath = `/sertifikatli-imtahanlar/${encodeURIComponent(categorySlugForUrl)}/${encodeURIComponent(examSlug)}`;
+
+    res.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
+    res.set('Vary', 'Accept-Language');
+    res.json({
+      success: true,
+      exam: {
+        ...exam,
+        description,
+        share_path: sharePath,
+      },
+      category: {
+        slug: categorySlugForUrl,
+        name: localizedField(
+          row.category_parent_id
+            ? {
+                name: row.parent_category_name_raw,
+                name_ru: row.parent_category_name_ru,
+                translations: row.parent_category_translations,
+              }
+            : {
+                name: row.category_name_raw,
+                name_ru: row.category_name_ru,
+                translations: row.category_translations,
+              },
+          lang,
+          'name',
+        ),
+        icon: row.category_parent_id ? row.parent_category_icon : row.category_icon,
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message || 'Xəta' });
+  }
+}
+
 module.exports = {
   listParentCategories,
   listAllCatalogCategories,
   getCategoryBySlug,
   getCareerPathBySlug,
+  getCertifiedExamBySlug,
   listPublicCertifiedExams,
   getPublicCertifiedExamStats,
   getUserSkillProgress,

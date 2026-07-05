@@ -73,4 +73,54 @@ async function getExamOg(req, res) {
   }
 }
 
-module.exports = { getCertifiedCategoryOg, getExamOg };
+const CATALOG_EXAM_WHERE = `
+  e.is_public = TRUE
+  AND e.is_verified = TRUE
+  AND COALESCE(e.is_deleted, FALSE) = FALSE
+  AND e.certificate_enabled = TRUE
+`;
+
+async function getCertifiedExamOg(req, res) {
+  try {
+    const categorySlug = String(req.params.categorySlug || '').trim();
+    const examSlug = String(req.params.examSlug || '').trim();
+    const lang = resolveCatalogLang(req);
+
+    const { rows } = await db.query(
+      `SELECT e.id, e.title, e.title_ru, e.translations, e.certificate_pass_pct, e.slug
+       FROM exams e
+       LEFT JOIN exam_categories ec ON ec.id = e.category_id
+       LEFT JOIN exam_categories parent ON parent.id = ec.parent_id
+       WHERE e.slug = $1
+         AND ${CATALOG_EXAM_WHERE}
+         AND (ec.slug = $2 OR parent.slug = $2)
+       LIMIT 1`,
+      [examSlug, categorySlug],
+    );
+    const exam = rows[0];
+    if (!exam) return res.status(404).json({ success: false, message: 'İmtahan tapılmadı' });
+
+    const name = localizedField(exam, lang, 'title');
+    const pass = Number(exam.certificate_pass_pct) || 70;
+    const title = `${name} — Sertifikatlı İmtahan | Mentorix`;
+    const description =
+      `${name} imtahanını ver, keçid balını topla, QR kodu ilə doğrulanan sertifikat qazan. Keçid balı: ${pass}%`;
+    const canonicalPath = `/sertifikatli-imtahanlar/${encodeURIComponent(categorySlug)}/${encodeURIComponent(examSlug)}`;
+
+    res.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');
+    res.json({
+      success: true,
+      title,
+      description,
+      url: `${siteOrigin()}${canonicalPath}`,
+      canonical_path: canonicalPath,
+      image: `${siteOrigin()}${OG_CERT_IMAGE_PATH}`,
+      og_type: 'website',
+      pass_pct: pass,
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message || 'Xəta' });
+  }
+}
+
+module.exports = { getCertifiedCategoryOg, getExamOg, getCertifiedExamOg };

@@ -2510,7 +2510,9 @@
     "loading": "Загрузка…",
     "login": "Войти",
     "backToCatalog": "← Каталог",
+    "backToCategory": "← Категория",
     "categoryNotFound": "Категория не найдена",
+    "examNotFound": "Экзамен не найден",
     "tabExams": "Все экзамены",
     "tabPaths": "Career Path",
     "comingSoonExams": "Скоро будут добавлены новые экзамены.",
@@ -2549,6 +2551,7 @@
       "catalogDescription": "Каталог skill assessment: международные экзамены, IT, Data Analytics, Cloud, Cyber Security и другие области.",
       "categoryTitle": "{{name}} — Сертифицированные экзамены",
       "categoryDescription": "Каталог skill assessment Mentorix",
+      "examDescription": "Сертифицированный экзамен — Mentorix",
       "breadcrumb": "Сертифицированные экзамены"
     }
   }

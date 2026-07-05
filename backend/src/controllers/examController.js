@@ -12,6 +12,7 @@ const { normalizeExamStartTime } = require('../utils/examTime');
 const { recomputeInstructorStorageUsageMb } = require('../services/resourceUsageService');
 const { certificateFieldsFromBody } = require('../lib/examCertificateFields');
 const { parseCatalogFields } = require('../lib/examCatalogFields');
+const { generateUniqueExamSlug } = require('../lib/examSlug');
 const { instructorHasCertificateFeature } = require('../services/certificateService');
 const { displayGroupLabel } = require('../lib/participantGroupLabels');
 
@@ -252,13 +253,14 @@ const createExam = async (req, res) => {
         : 1;
 
     const result = await db.transaction(async (client) => {
+      const examSlug = await generateUniqueExamSlug(client, title);
       const { rows } = await client.query(
         `INSERT INTO exams (instructor_id, title, subject, topic, pdf_url, exam_files, duration_minutes, start_time,
           available_from, available_until, allow_finish_after_until,
           notify_enabled, notify_students, notify_before_hours, show_results, wrong_penalty_enabled,
           certificate_enabled, certificate_pass_pct, certificate_template_id,
-          category_id, level, certificate_type, is_public, is_verified, status)
-         VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,FALSE,'scheduled') RETURNING *`,
+          category_id, level, certificate_type, is_public, is_verified, slug, status)
+         VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,FALSE,'scheduled') RETURNING *`,
         [
           req.user.id,
           title,
@@ -283,6 +285,7 @@ const createExam = async (req, res) => {
           catalogLevel,
           catalogCertType,
           isPublic,
+          examSlug,
         ]
       );
 
@@ -1986,6 +1989,11 @@ const patchExam = async (req, res) => {
             ? false
             : before.is_verified === true;
 
+      let finalSlug = before.slug;
+      if (!finalSlug) {
+        finalSlug = await generateUniqueExamSlug(client, finalTitle, examId);
+      }
+
       const { rows } = await client.query(
         `UPDATE exams SET
           title = $1::varchar(255),
@@ -2010,8 +2018,9 @@ const patchExam = async (req, res) => {
           certificate_type = $20::varchar(32),
           is_public = $21::boolean,
           is_verified = $22::boolean,
+          slug = $23::varchar(160),
           updated_at = NOW()
-        WHERE id = $23
+        WHERE id = $24
         RETURNING *`,
         [
           finalTitle,
@@ -2036,6 +2045,7 @@ const patchExam = async (req, res) => {
           finalCertType,
           finalIsPublic,
           finalIsVerified,
+          finalSlug,
           examId,
         ]
       );

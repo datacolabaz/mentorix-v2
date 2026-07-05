@@ -39,10 +39,11 @@ const {
   getCategoryBySlug,
   getCareerPathBySlug,
   getUserSkillProgress,
+  getCertifiedExamBySlug,
 } = require('../controllers/publicCertifiedExamsController');
 const { getPublicSitemapXml } = require('../controllers/publicSitemapController');
 const { postPublicWaitlist } = require('../controllers/waitlistController');
-const { getCertifiedCategoryOg, getExamOg } = require('../controllers/publicOgController');
+const { getCertifiedCategoryOg, getExamOg, getCertifiedExamOg } = require('../controllers/publicOgController');
 const { authenticate, optionalAuthenticate } = require('../middleware/auth');
 
 const router = express.Router();
@@ -68,10 +69,12 @@ router.post('/analytics/event', postAccessEvent);
 router.get('/landing-stats', getLandingStats);
 router.get('/contact', getPublicContact);
 router.get('/og/certified-category/:slug', getCertifiedCategoryOg);
+router.get('/og/certified-exam/:categorySlug/:examSlug', getCertifiedExamOg);
 router.get('/og/exam/:examId', getExamOg);
 router.get('/certified-exams/categories/all', listAllCatalogCategories);
 router.get('/certified-exams/categories', listParentCategories);
 router.get('/certified-exams/categories/:slug', getCategoryBySlug);
+router.get('/certified-exams/:categorySlug/:examSlug', getCertifiedExamBySlug);
 router.get('/certified-exams/career-paths/:slug', optionalAuthenticate, getCareerPathBySlug);
 router.get('/certified-exams', listPublicCertifiedExams);
 router.get('/certified-exams/stats', getPublicCertifiedExamStats);
