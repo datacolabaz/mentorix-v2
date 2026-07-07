@@ -5,9 +5,11 @@ const { readCertificateFileBuffer } = require('./certificateFileStorage');
 const RESEND_API_KEY = String(process.env.RESEND_API_KEY || '').trim();
 const EMAIL_FROM = String(process.env.VERIFY_EMAIL_FROM || process.env.EMAIL_FROM || '').trim();
 
+// Keep certificate links on mentorix.io (QR + email links must be reachable).
+const CERT_SITE_ORIGIN = 'https://mentorix.io';
+
 function getBaseUrl() {
-  const base = String(process.env.FRONTEND_BASE_URL || process.env.FRONTEND_URL || 'https://mentorix.io').trim();
-  return base.replace(/\/+$/, '');
+  return CERT_SITE_ORIGIN;
 }
 
 function resendReady() {

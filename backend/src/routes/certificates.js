@@ -10,6 +10,7 @@ const {
   getAdminStats,
   downloadCertificate,
   emailMyCertificate,
+  refreshMyCertificatePdf,
   getTemplates,
   saveTemplate,
   getCertificateFeature,
@@ -22,6 +23,7 @@ router.get('/my/pending', authenticate, authorize('student'), listMyPendingCerti
 router.post('/my/claim/:examId', authenticate, authorize('student'), claimMyCertificate);
 router.get('/my/:id/download', authenticate, authorize('student'), downloadCertificate);
 router.post('/my/:id/email', authenticate, authorize('student'), emailMyCertificate);
+router.post('/my/:id/refresh', authenticate, authorize('student'), refreshMyCertificatePdf);
 
 router.get('/instructor', authenticate, authorize('instructor'), listInstructorCerts);
 router.get('/instructor/feature', authenticate, authorize('instructor'), getCertificateFeature);

@@ -11,9 +11,12 @@ const TEXT_DIM = rgb(0.55, 0.55, 0.6);
 const BORDER_LIGHT = rgb(0.85, 0.85, 0.88);
 const BG_WHITE = rgb(1, 1, 1);
 
+// IMPORTANT: QR scanners must be able to open the link.
+// mentorix.az may be unresolvable, so we always use mentorix.io here.
+const QR_SITE_ORIGIN = 'https://mentorix.io';
+
 function getBaseUrl() {
-  const base = String(process.env.FRONTEND_BASE_URL || process.env.FRONTEND_URL || 'https://mentorix.io').trim();
-  return base.replace(/\/+$/, '');
+  return QR_SITE_ORIGIN;
 }
 
 function verifyUrl(token) {

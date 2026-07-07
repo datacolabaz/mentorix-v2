@@ -2266,6 +2266,7 @@
     "empty": "Hələ sertifikat yoxdur. İmtahanı keçid balı ilə tamamlayın.",
     "score": "Bal",
     "download": "PDF yüklə",
+    "refreshPdf": "PDF-i yenilə",
     "verifyLink": "Doğrula",
     "superseded": "Köhnə versiya — yenisi buraxılıb",
     "loadFailed": "Yüklənmədi",

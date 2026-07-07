@@ -51,6 +51,7 @@ export default function StudentCertificates() {
   const [loading, setLoading] = useState(true)
   const [claimingId, setClaimingId] = useState(null)
   const [emailingId, setEmailingId] = useState(null)
+  const [refreshingId, setRefreshingId] = useState(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -121,6 +122,20 @@ export default function StudentCertificates() {
       toast(e?.message || 'Email göndərilmədi', 'error')
     } finally {
       setEmailingId(null)
+    }
+  }
+
+  const refreshPdf = async (id, certNo) => {
+    setRefreshingId(id)
+    try {
+      const r = await api.post(`/certificates/my/${encodeURIComponent(id)}/refresh`)
+      toast(r?.message || 'PDF yeniləndi', 'success')
+      // Immediately re-download the updated PDF for convenience.
+      await download(id, certNo)
+    } catch (e) {
+      toast(e?.message || 'PDF yenilənmədi', 'error')
+    } finally {
+      setRefreshingId(null)
     }
   }
 
@@ -213,6 +228,14 @@ export default function StudentCertificates() {
                           <>
                             <Button size="sm" onClick={() => void download(c.id, c.certificate_no)}>
                               {t('certificates.download', 'PDF yüklə')}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              loading={refreshingId === c.id}
+                              onClick={() => void refreshPdf(c.id, c.certificate_no)}
+                            >
+                              {t('certificates.refreshPdf', 'PDF-i yenilə')}
                             </Button>
                             <Button
                               size="sm"

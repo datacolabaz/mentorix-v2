@@ -11,6 +11,7 @@ const {
   getOrIssueCertificateForStudentExam,
   listPendingCertificatesForStudent,
   resendCertificateEmailToStudent,
+  regenerateCertificatePdfForExisting,
 } = require('../services/certificateService');
 const { readCertificateFileBuffer } = require('../services/certificateFileStorage');
 
@@ -160,6 +161,18 @@ const emailMyCertificate = async (req, res) => {
   }
 };
 
+const refreshMyCertificatePdf = async (req, res) => {
+  try {
+    const cert = await getCertificateForDownload({ certificateId: req.params.id, user: req.user });
+    if (!cert) return res.status(404).json({ success: false, message: 'Tapılmadı' });
+    const regen = await regenerateCertificatePdfForExisting(cert.id);
+    if (!regen) return res.status(404).json({ success: false, message: 'PDF yenilənmədi' });
+    return res.json({ success: true, message: 'PDF yeniləndi. İndi yenidən yükləyə bilərsiniz.' });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 const getTemplates = async (req, res) => {
   try {
     const enabled = await instructorHasCertificateFeature(req.user.id);
@@ -204,6 +217,7 @@ module.exports = {
   getAdminStats,
   downloadCertificate,
   emailMyCertificate,
+  refreshMyCertificatePdf,
   getTemplates,
   saveTemplate,
   getCertificateFeature,
