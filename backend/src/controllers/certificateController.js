@@ -75,6 +75,8 @@ const claimMyCertificate = async (req, res) => {
       instructor_plan:
         'Müəllimin cari planı sertifikat vermir (Pro plan lazımdır). Müəllimlə əlaqə saxlayın.',
       below_pass: `Keçid balı ${Math.round(Number(outcome.eligibility?.pass_pct || 0))}% — sizin nəticə ${Math.round(Number(outcome.eligibility?.score_pct || 0))}%.`,
+      grading_pending:
+        'Açıq sualların qiymətləndirilməsi gözlənilir — müəllim təsdiqlədikdən sonra sertifikat yaradıla bilər.',
       issue_failed: 'Sertifikat yaradılarkən texniki xəta baş verdi. Bir az sonra yenidən cəhd edin.',
       not_submitted: 'İmtahan hələ təqdim olunmayıb.',
     };

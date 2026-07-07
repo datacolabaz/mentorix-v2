@@ -31,6 +31,9 @@ function pendingMessage(item) {
   if (item.reason === 'below_pass') {
     return `Keçid balı ${Math.round(Number(item.pass_pct || 0))}% — sizin nəticə ${Math.round(Number(item.score_pct || 0))}%.`
   }
+  if (item.reason === 'grading_pending') {
+    return 'Açıq sualların qiymətləndirilməsi gözlənilir — müəllim təsdiqlədikdən sonra sertifikat yaradıla bilər.'
+  }
   if (item.reason === 'issue_failed') {
     return 'Sertifikat yaradılarkən xəta baş verdi.'
   }

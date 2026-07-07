@@ -218,7 +218,9 @@ async function getOrIssueCertificateForStudentExam(studentId, examId) {
     return { certificate: null, eligibility: { eligible: false, reason: 'not_submitted' } };
   }
 
-  const eligibility = await evaluateCertificateEligibility(examId, result.score);
+  const eligibility = await evaluateCertificateEligibility(examId, result.score, null, {
+    examResultId: result.id,
+  });
   if (!eligibility.eligible) {
     return { certificate: null, eligibility };
   }
@@ -233,7 +235,7 @@ async function getOrIssueCertificateForStudentExam(studentId, examId) {
     certificate: slimCertificateRow(cert),
     eligibility: cert
       ? eligibility
-      : { ...eligibility, eligible: true, reason: 'issue_failed' },
+      : { ...eligibility, eligible: false, reason: 'issue_failed' },
   };
 }
 
@@ -272,7 +274,7 @@ async function backfillCertificatesForExam(examId) {
 
 async function listPendingCertificatesForStudent(studentId) {
   const { rows } = await db.query(
-    `SELECT e.id AS exam_id, e.title, er.score, er.submitted_at,
+    `SELECT e.id AS exam_id, e.title, er.id AS result_id, er.score, er.submitted_at,
             COALESCE(e.certificate_enabled, FALSE) AS certificate_enabled,
             COALESCE(e.certificate_pass_pct, 70)::numeric AS certificate_pass_pct
      FROM exam_results er
@@ -289,7 +291,9 @@ async function listPendingCertificatesForStudent(studentId) {
 
   const pending = [];
   for (const row of rows) {
-    const eligibility = await evaluateCertificateEligibility(row.exam_id, row.score);
+    const eligibility = await evaluateCertificateEligibility(row.exam_id, row.score, null, {
+      examResultId: row.id,
+    });
     pending.push({
       exam_id: row.exam_id,
       title: row.title,
