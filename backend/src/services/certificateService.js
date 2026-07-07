@@ -203,6 +203,7 @@ async function getOrIssueCertificateForStudentExam(studentId, examId) {
     return {
       certificate: slimCertificateRow(existing[0]),
       eligibility,
+      newlyIssued: false,
     };
   }
 
@@ -215,14 +216,14 @@ async function getOrIssueCertificateForStudentExam(studentId, examId) {
   );
   const result = results[0];
   if (!result) {
-    return { certificate: null, eligibility: { eligible: false, reason: 'not_submitted' } };
+    return { certificate: null, eligibility: { eligible: false, reason: 'not_submitted' }, newlyIssued: false };
   }
 
   const eligibility = await evaluateCertificateEligibility(examId, result.score, null, {
     examResultId: result.id,
   });
   if (!eligibility.eligible) {
-    return { certificate: null, eligibility };
+    return { certificate: null, eligibility, newlyIssued: false };
   }
 
   const cert = await maybeIssueCertificateAfterExamSubmit({
@@ -236,6 +237,7 @@ async function getOrIssueCertificateForStudentExam(studentId, examId) {
     eligibility: cert
       ? eligibility
       : { ...eligibility, eligible: false, reason: 'issue_failed' },
+    newlyIssued: Boolean(cert),
   };
 }
 
@@ -401,7 +403,7 @@ async function maybeIssueCertificateAfterExamSubmit({ examId, studentId, examRes
 }
 
 async function issueCertificate({ examId, studentId, examResultId, scorePct, passPct, exam }) {
-  return db.transaction(async (client) => {
+  const issued = await db.transaction(async (client) => {
     const { rows: people } = await client.query(
       `SELECT
          (SELECT full_name FROM users WHERE id = $1) AS student_name,
@@ -488,20 +490,40 @@ async function issueCertificate({ examId, studentId, examResultId, scorePct, pas
     const { upsertUserSkillProgressFromCertificate } = require('./skillProgressService');
     await upsertUserSkillProgressFromCertificate(client, { userId: studentId, examId });
 
-    setImmediate(() => {
-      if (studentEmail) {
-        sendCertificateIssuedEmail({
-          email: studentEmail,
-          studentName,
-          courseTitle,
-          certificateNo,
-          verificationToken,
-        }).catch((err) => console.error('sendCertificateIssuedEmail', err.message));
-      }
-    });
-
-    return cert;
+    return {
+      cert,
+      studentId,
+      studentEmail,
+      studentName,
+      courseTitle,
+      certificateNo,
+      verificationToken,
+      pdfFilename,
+    };
   });
+
+  setImmediate(() => {
+    sendCertificateIssuedEmail({
+      userId: issued.studentId,
+      email: issued.studentEmail,
+      studentName: issued.studentName,
+      courseTitle: issued.courseTitle,
+      certificateNo: issued.certificateNo,
+      verificationToken: issued.verificationToken,
+      pdfFilename: issued.pdfFilename,
+    })
+      .then((result) => {
+        if (!result?.ok) {
+          console.error('sendCertificateIssuedEmail', result?.error || result?.reason || 'failed', {
+            to: result?.to,
+            cert: issued.certificateNo,
+          });
+        }
+      })
+      .catch((err) => console.error('sendCertificateIssuedEmail', err.message));
+  });
+
+  return issued.cert;
 }
 
 async function getPublicVerification(token) {
@@ -608,6 +630,29 @@ async function getCertificateForDownload({ certificateId, user }) {
   return null;
 }
 
+async function resendCertificateEmailToStudent(certificateId, studentId) {
+  const { rows } = await db.query(
+    `SELECT c.*, u.full_name AS student_name, u.email AS student_email
+     FROM certificates c
+     JOIN users u ON u.id = c.student_id
+     WHERE c.id = $1 AND c.student_id = $2 AND c.status = 'issued'
+     LIMIT 1`,
+    [certificateId, studentId],
+  );
+  const cert = rows[0];
+  if (!cert) return { ok: false, error: 'not_found' };
+
+  return sendCertificateIssuedEmail({
+    userId: studentId,
+    email: cert.student_email,
+    studentName: cert.student_name,
+    courseTitle: cert.title,
+    certificateNo: cert.certificate_no,
+    verificationToken: cert.verification_token,
+    pdfFilename: cert.pdf_filename,
+  });
+}
+
 async function listTemplates(instructorId) {
   const { rows } = await db.query(
     `SELECT id, name, template_key, logo_url, signature_url, background_url,
@@ -680,4 +725,5 @@ module.exports = {
   listTemplates,
   upsertTemplate,
   instructorHasCertificateFeature,
+  resendCertificateEmailToStudent,
 };

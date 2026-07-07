@@ -17,7 +17,7 @@ function transport() {
   return cachedTransport;
 }
 
-async function sendEmail({ to, subject, text }) {
+async function sendEmail({ to, subject, text, html, attachments }) {
   if (!smtpEnabled()) return { skipped: true };
   const from = process.env.SMTP_FROM || process.env.SMTP_USER;
   const info = await transport().sendMail({
@@ -25,6 +25,8 @@ async function sendEmail({ to, subject, text }) {
     to,
     subject,
     text,
+    html,
+    attachments,
   });
   return { skipped: false, messageId: info?.messageId || null };
 }

@@ -50,6 +50,7 @@ export default function StudentCertificates() {
   const [pending, setPending] = useState([])
   const [loading, setLoading] = useState(true)
   const [claimingId, setClaimingId] = useState(null)
+  const [emailingId, setEmailingId] = useState(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -111,6 +112,18 @@ export default function StudentCertificates() {
     }
   }
 
+  const emailCertificate = async (id) => {
+    setEmailingId(id)
+    try {
+      const r = await api.post(`/certificates/my/${encodeURIComponent(id)}/email`)
+      toast(r?.message || 'Sertifikat email ünvanınıza göndərildi', 'success')
+    } catch (e) {
+      toast(e?.message || 'Email göndərilmədi', 'error')
+    } finally {
+      setEmailingId(null)
+    }
+  }
+
   return (
     <div className="p-4 sm:p-6 max-w-4xl mx-auto w-full min-w-0">
       <div className="mb-6">
@@ -118,10 +131,6 @@ export default function StudentCertificates() {
         <p className="text-sm text-token-textMuted mt-1">
           {t('certificates.subtitle', 'Keçdiyiniz imtahanlar üçün rəsmi tamamlama sertifikatları.')}
         </p>
-      </div>
-
-      <div className="mb-8">
-        <UserSkillProgressPanel />
       </div>
 
       <div className="mb-8">
@@ -204,6 +213,14 @@ export default function StudentCertificates() {
                           <>
                             <Button size="sm" onClick={() => void download(c.id, c.certificate_no)}>
                               {t('certificates.download', 'PDF yüklə')}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              loading={emailingId === c.id}
+                              onClick={() => void emailCertificate(c.id)}
+                            >
+                              {t('certificates.email', 'Emailə göndər')}
                             </Button>
                             <a
                               href={linkedInShareUrl({

@@ -10,6 +10,7 @@ const {
   instructorHasCertificateFeature,
   getOrIssueCertificateForStudentExam,
   listPendingCertificatesForStudent,
+  resendCertificateEmailToStudent,
 } = require('../services/certificateService');
 const { readCertificateFileBuffer } = require('../services/certificateFileStorage');
 
@@ -135,6 +136,30 @@ const downloadCertificate = async (req, res) => {
   }
 };
 
+const emailMyCertificate = async (req, res) => {
+  try {
+    const result = await resendCertificateEmailToStudent(req.params.id, req.user.id);
+    if (result?.ok) {
+      return res.json({ success: true, message: 'Sertifikat email ünvanınıza göndərildi.' });
+    }
+    if (result?.skipped && result?.reason === 'no_email') {
+      return res.status(400).json({
+        success: false,
+        message: 'Hesabınızda email ünvanı yoxdur — əvvəlcə Gmail ilə qeydiyyatdan keçin və ya email əlavə edin.',
+      });
+    }
+    if (result?.error === 'not_found') {
+      return res.status(404).json({ success: false, message: 'Sertifikat tapılmadı' });
+    }
+    return res.status(502).json({
+      success: false,
+      message: result?.error || result?.reason || 'Email göndərilmədi',
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 const getTemplates = async (req, res) => {
   try {
     const enabled = await instructorHasCertificateFeature(req.user.id);
@@ -178,6 +203,7 @@ module.exports = {
   listInstructorCerts,
   getAdminStats,
   downloadCertificate,
+  emailMyCertificate,
   getTemplates,
   saveTemplate,
   getCertificateFeature,
