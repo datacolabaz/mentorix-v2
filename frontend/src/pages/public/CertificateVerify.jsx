@@ -9,27 +9,27 @@ import PublicPageTopBar from '../../components/public/PublicPageTopBar'
 function statusBadge(cert, t) {
   if (cert?.valid) {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 text-emerald-300 px-3 py-1 text-sm font-semibold">
-        ✓ {t('certificates.verify.valid', 'Valid')}
+      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 text-emerald-700 px-3 py-1 text-sm font-semibold">
+        ✓ {t('certificates.verify.valid', 'Etibarlı')}
       </span>
     )
   }
   if (cert?.status === 'superseded') {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 text-amber-200 px-3 py-1 text-sm font-semibold">
+      <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 text-amber-800 px-3 py-1 text-sm font-semibold">
         {t('certificates.verify.superseded', 'Yenilənib')}
       </span>
     )
   }
   if (cert?.status === 'revoked') {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-red-500/15 text-red-300 px-3 py-1 text-sm font-semibold">
+      <span className="inline-flex items-center gap-1 rounded-full bg-red-500/15 text-red-700 px-3 py-1 text-sm font-semibold">
         {t('certificates.verify.revoked', 'Ləğv edilib')}
       </span>
     )
   }
   return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-gray-500/15 text-gray-300 px-3 py-1 text-sm font-semibold">
+    <span className="inline-flex items-center gap-1 rounded-full bg-gray-500/15 text-gray-700 px-3 py-1 text-sm font-semibold">
       {t('certificates.verify.invalid', 'Etibarsız')}
     </span>
   )
@@ -61,45 +61,76 @@ export default function CertificateVerify() {
     }
   }, [token, t])
 
+  const modules = Array.isArray(cert?.assessed_modules) ? cert.assessed_modules : []
+
   return (
-    <div className="min-h-screen bg-[#07051a] text-white">
+    <div className="min-h-screen bg-[#f4f6fb] text-gray-900">
       <PublicPageTopBar />
       <div className="max-w-xl mx-auto px-4 py-10">
-        <Card className="p-6 sm:p-8">
+        <Card className="p-6 sm:p-8 bg-white border border-gray-200 shadow-sm">
           <div className="flex items-center justify-between gap-3 mb-6">
-            <h1 className="text-xl font-bold">{t('certificates.verify.title', 'Sertifikat doğrulama')}</h1>
+            <h1 className="text-xl font-bold text-gray-900">{t('certificates.verify.title', 'Sertifikat doğrulama')}</h1>
             {!loading && cert ? statusBadge(cert, t) : null}
           </div>
 
           {loading ? (
-            <p className="text-gray-400 text-sm">{t('common.loading', 'Yüklənir…')}</p>
+            <p className="text-gray-500 text-sm">{t('common.loading', 'Yüklənir…')}</p>
           ) : error ? (
-            <p className="text-red-300 text-sm">{error}</p>
+            <p className="text-red-600 text-sm">{error}</p>
           ) : cert ? (
             <div className="space-y-4 text-sm">
-              <p className="text-gray-400 text-xs uppercase tracking-wider">
-                {t('certificates.verify.issuedBy', 'Issued by Mentorix')}
+              <p className="text-gray-500 text-xs uppercase tracking-wider">
+                {t('certificates.verify.issuedBy', 'Mentorix tərəfindən verilib')}
               </p>
+
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+                <p className="text-gray-500 text-xs">{t('certificates.verify.serial', 'Seriya nömrəsi')}</p>
+                <p className="font-mono font-bold text-emerald-800 text-base break-all">
+                  {cert.serial_number || cert.certificate_no}
+                </p>
+              </div>
+
               <div>
                 <p className="text-gray-500 text-xs">{t('certificates.verify.student', 'Tələbə')}</p>
-                <p className="font-semibold text-white">{cert.student_name}</p>
+                <p className="font-semibold text-gray-900 text-lg">{cert.student_name}</p>
               </div>
+
+              <div>
+                <p className="text-gray-500 text-xs">{t('certificates.verify.course', 'İmtahan')}</p>
+                <p className="font-semibold text-gray-900">{cert.course_title}</p>
+              </div>
+
+              {modules.length > 0 ? (
+                <div>
+                  <p className="text-gray-500 text-xs mb-2">
+                    {t('certificates.verify.modules', 'Yoxlanılan modullar')}
+                  </p>
+                  <ul className="flex flex-wrap gap-2">
+                    {modules.map((mod) => (
+                      <li
+                        key={mod}
+                        className="rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-900"
+                      >
+                        {mod}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+
               <div>
                 <p className="text-gray-500 text-xs">{t('certificates.verify.instructor', 'Müəllim')}</p>
-                <p className="font-semibold text-white">{cert.instructor_name}</p>
+                <p className="font-semibold text-gray-900">{cert.instructor_name}</p>
               </div>
-              <div>
-                <p className="text-gray-500 text-xs">{t('certificates.verify.course', 'Kurs / İmtahan')}</p>
-                <p className="font-semibold text-white">{cert.course_title}</p>
-              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-gray-500 text-xs">{t('certificates.verify.score', 'Bal')}</p>
-                  <p className="font-semibold text-white">{Number(cert.score_pct || 0).toFixed(0)}%</p>
+                  <p className="font-semibold text-gray-900">{Number(cert.score_pct || 0).toFixed(0)}%</p>
                 </div>
                 <div>
                   <p className="text-gray-500 text-xs">{t('certificates.verify.date', 'Tarix')}</p>
-                  <p className="font-semibold text-white">
+                  <p className="font-semibold text-gray-900">
                     {cert.issued_at
                       ? new Date(cert.issued_at).toLocaleDateString('az-AZ', {
                           day: '2-digit',
@@ -110,19 +141,17 @@ export default function CertificateVerify() {
                   </p>
                 </div>
               </div>
-              <div>
-                <p className="text-gray-500 text-xs">{t('certificates.verify.certId', 'Sertifikat ID')}</p>
-                <p className="font-mono text-blue-200 break-all">{cert.certificate_no}</p>
-              </div>
+
               {cert.superseded ? (
-                <p className="text-amber-200/90 text-xs rounded-lg border border-amber-500/25 bg-amber-500/10 px-3 py-2">
+                <p className="text-amber-800 text-xs rounded-lg border border-amber-300 bg-amber-50 px-3 py-2">
                   {t(
                     'certificates.verify.supersededHint',
                     'Bu sertifikat yenilənib. Ən son versiya üçün müəllim və ya tələbə ilə əlaqə saxlayın.',
                   )}
                 </p>
               ) : null}
-              <p className="text-[11px] text-gray-500 pt-2 border-t border-white/10">
+
+              <p className="text-[11px] text-gray-500 pt-2 border-t border-gray-200">
                 {t('certificates.verify.disclaimer', 'Bu rəsmi dövlət akkreditasiyası deyil.')}
               </p>
             </div>

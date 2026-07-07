@@ -2,9 +2,19 @@ const crypto = require('crypto');
 const db = require('../utils/db');
 const getCurrentPlan = require('./billingGetCurrentPlan');
 const { planRank, normalizePlanSlug } = require('../config/plans');
-const { generateCertificatePdf } = require('./certificatePdfService');
+const { generateCertificatePdf, verifyUrl } = require('./certificatePdfService');
 const { persistCertificateFileBlob } = require('./certificateFileStorage');
 const { sendCertificateIssuedEmail } = require('./certificateEmailService');
+const { normalizeModulesList } = require('../lib/certificateLayout');
+
+function resolveAssessedModules(exam, categoryName, parentCategoryName) {
+  const parts = [];
+  if (parentCategoryName) parts.push(String(parentCategoryName).trim());
+  if (categoryName && categoryName !== parentCategoryName) parts.push(String(categoryName).trim());
+  if (exam?.subject) parts.push(String(exam.subject).trim());
+  if (exam?.topic) parts.push(...normalizeModulesList(exam.topic));
+  return [...new Set(parts.map((p) => p.trim()).filter(Boolean))];
+}
 
 function generateVerificationToken() {
   return crypto.randomBytes(18).toString('base64url');
@@ -341,8 +351,11 @@ async function maybeIssueCertificateAfterExamSubmit({ examId, studentId, examRes
       `SELECT e.id, e.title, e.subject, e.topic, e.instructor_id,
               COALESCE(e.certificate_enabled, FALSE) AS certificate_enabled,
               COALESCE(e.certificate_pass_pct, 70)::numeric AS certificate_pass_pct,
-              e.certificate_template_id
+              e.certificate_template_id,
+              ec.name AS category_name, parent.name AS parent_category_name
        FROM exams e
+       LEFT JOIN exam_categories ec ON ec.id = e.category_id
+       LEFT JOIN exam_categories parent ON parent.id = ec.parent_id
        WHERE e.id = $1 AND COALESCE(e.is_deleted, FALSE) = FALSE`,
       [examId],
     );
@@ -435,6 +448,11 @@ async function issueCertificate({ examId, studentId, examResultId, scorePct, pas
     const pdfFilename = `${crypto.randomUUID()}.pdf`;
     const issuedAt = new Date().toISOString();
     const courseTitle = exam.title || exam.subject || exam.topic || fallbacks.course;
+    const assessedModules = resolveAssessedModules(
+      exam,
+      exam.category_name,
+      exam.parent_category_name,
+    );
 
     const snapshot = {
       certificate_no: certificateNo,
@@ -444,6 +462,7 @@ async function issueCertificate({ examId, studentId, examResultId, scorePct, pas
       exam_title: exam.title,
       course_title: courseTitle,
       subject: exam.subject,
+      assessed_modules: assessedModules,
       score_pct: scorePct,
       pass_pct: passPct,
       issued_at: issuedAt,
@@ -535,10 +554,15 @@ async function getPublicVerification(token) {
             c.score_pct, c.pass_pct, c.status, c.issued_at, c.locale, c.snapshot_json,
             us.full_name AS student_name,
             ui.full_name AS instructor_name,
+            e.subject AS exam_subject, e.topic AS exam_topic,
+            ec.name AS category_name, parent.name AS parent_category_name,
             sup.id AS superseded_by_id
      FROM certificates c
      JOIN users us ON us.id = c.student_id
      JOIN users ui ON ui.id = c.instructor_id
+     LEFT JOIN exams e ON e.id = c.exam_id
+     LEFT JOIN exam_categories ec ON ec.id = e.category_id
+     LEFT JOIN exam_categories parent ON parent.id = ec.parent_id
      LEFT JOIN LATERAL (
        SELECT id FROM certificates n
        WHERE n.previous_certificate_id = c.id AND n.status = 'issued'
@@ -550,18 +574,38 @@ async function getPublicVerification(token) {
   );
   if (!rows[0]) return null;
   const row = rows[0];
+
+  let assessedModules = [];
+  try {
+    const snap =
+      typeof row.snapshot_json === 'string' ? JSON.parse(row.snapshot_json) : row.snapshot_json;
+    if (Array.isArray(snap?.assessed_modules)) assessedModules = snap.assessed_modules;
+  } catch {
+    /* ignore */
+  }
+  if (!assessedModules.length) {
+    assessedModules = resolveAssessedModules(
+      { subject: row.exam_subject || row.subject, topic: row.exam_topic },
+      row.category_name,
+      row.parent_category_name,
+    );
+  }
+
   return {
     valid: row.status === 'issued',
     status: row.status,
     certificate_no: row.certificate_no,
+    serial_number: row.certificate_no,
     student_name: row.student_name,
     instructor_name: row.instructor_name,
     course_title: row.title,
     subject: row.subject,
+    assessed_modules: assessedModules,
     score_pct: Number(row.score_pct),
     pass_pct: Number(row.pass_pct),
     issued_at: row.issued_at,
     locale: row.locale,
+    verify_url: verifyUrl(row.verification_token),
     superseded: row.status === 'superseded',
     superseded_by_id: row.superseded_by_id || null,
     issued_by: 'Mentorix',
@@ -628,6 +672,73 @@ async function getCertificateForDownload({ certificateId, user }) {
   if (role === 'student' && String(cert.student_id) === String(uid)) return cert;
   if (role === 'instructor' && String(cert.instructor_id) === String(uid)) return cert;
   return null;
+}
+
+async function regenerateCertificatePdfForExisting(certificateId) {
+  const { rows } = await db.query(
+    `SELECT c.*, us.full_name AS student_name, us.email AS student_email,
+            ui.full_name AS instructor_name,
+            e.subject AS exam_subject, e.topic AS exam_topic, e.title AS exam_title,
+            ec.name AS category_name, parent.name AS parent_category_name
+     FROM certificates c
+     JOIN users us ON us.id = c.student_id
+     JOIN users ui ON ui.id = c.instructor_id
+     LEFT JOIN exams e ON e.id = c.exam_id
+     LEFT JOIN exam_categories ec ON ec.id = e.category_id
+     LEFT JOIN exam_categories parent ON parent.id = ec.parent_id
+     WHERE c.id = $1 AND c.status = 'issued'
+     LIMIT 1`,
+    [certificateId],
+  );
+  const cert = rows[0];
+  if (!cert?.pdf_filename) return null;
+
+  let snap = cert.snapshot_json;
+  if (typeof snap === 'string') {
+    try {
+      snap = JSON.parse(snap);
+    } catch {
+      snap = {};
+    }
+  }
+  snap = snap && typeof snap === 'object' ? snap : {};
+
+  const assessedModules =
+    Array.isArray(snap.assessed_modules) && snap.assessed_modules.length
+      ? snap.assessed_modules
+      : resolveAssessedModules(
+          { subject: cert.exam_subject || cert.subject, topic: cert.exam_topic },
+          cert.category_name,
+          cert.parent_category_name,
+        );
+
+  const pdfPayload = {
+    ...snap,
+    certificate_no: cert.certificate_no,
+    verification_token: cert.verification_token,
+    student_name: snap.student_name || cert.student_name,
+    instructor_name: snap.instructor_name || cert.instructor_name,
+    course_title: snap.course_title || cert.title,
+    exam_title: snap.exam_title || cert.exam_title || cert.title,
+    score_pct: snap.score_pct ?? cert.score_pct,
+    pass_pct: snap.pass_pct ?? cert.pass_pct,
+    issued_at: snap.issued_at || cert.issued_at,
+    locale: snap.locale || cert.locale,
+    template_key: snap.template_key || 'classic',
+    accent_color: snap.accent_color || '#00E676',
+    assessed_modules: assessedModules,
+  };
+
+  const pdfBuffer = await generateCertificatePdf(pdfPayload);
+  await persistCertificateFileBlob(cert.pdf_filename, pdfBuffer);
+
+  const nextSnapshot = { ...snap, assessed_modules: assessedModules };
+  await db.query(`UPDATE certificates SET snapshot_json = $2::jsonb WHERE id = $1`, [
+    certificateId,
+    JSON.stringify(nextSnapshot),
+  ]);
+
+  return { cert, pdfPayload, student_email: cert.student_email, student_id: cert.student_id };
 }
 
 async function resendCertificateEmailToStudent(certificateId, studentId) {
@@ -726,4 +837,5 @@ module.exports = {
   upsertTemplate,
   instructorHasCertificateFeature,
   resendCertificateEmailToStudent,
+  regenerateCertificatePdfForExisting,
 };
