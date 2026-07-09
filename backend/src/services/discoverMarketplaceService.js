@@ -5,7 +5,7 @@ const {
   isValidRegion,
   isValidBakuDistrict,
   normalizeRegionName,
-} = require('../../../shared/azerbaijanRegions');
+} = require('../lib/azerbaijanRegions');
 const {
   sqlPlanListingPriority,
   enrichInstructorListingRow,

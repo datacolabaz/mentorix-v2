@@ -4,7 +4,7 @@ const {
   isValidRegion,
   isValidBakuDistrict,
   normalizeRegionName,
-} = require('../../../shared/azerbaijanRegions');
+} = require('../lib/azerbaijanRegions');
 
 function parseCoord(v) {
   if (v === null || v === '') return null;

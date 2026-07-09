@@ -13,7 +13,7 @@ const {
   resolveBakuDistrictsForSearch,
   isValidRegion,
   isValidBakuDistrict,
-} = require('../../../shared/azerbaijanRegions');
+} = require('../lib/azerbaijanRegions');
 
 function parseBoolQ(v) {
   if (v === true || v === 1 || v === '1' || v === 'true' || v === 'TRUE') return true;
