@@ -125,6 +125,7 @@ const getInstructorsInMapView = async (req, res) => {
          ip.longitude::float8 AS longitude,
          ip.region,
          ip.baku_district,
+         ip.region_user_set,
          ip.map_profile_kind,
          ip.avatar_url,
          COALESCE(s.plan, 'basic') AS plan,
@@ -136,6 +137,7 @@ const getInstructorsInMapView = async (req, res) => {
          AND COALESCE(u.is_active, TRUE) = TRUE
          AND u.deleted_at IS NULL
          AND COALESCE(ip.map_visible, TRUE) = TRUE
+         AND COALESCE(ip.region_user_set, FALSE) = TRUE
          AND ip.region IS NOT NULL
          ${regionSql}
          ${bakuDistrictSql}

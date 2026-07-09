@@ -27,7 +27,10 @@ export default function TeacherMapListCard({
   const rating = teacherRatingParts(p)
   const formats = deliveryFormatBadges(p)
   const topBadge = showTopBadge(p)
-  const districtLabel = locationBadge || p.baku_district || p.region || null
+  const districtLabel =
+    p.region_user_set && (locationBadge || p.baku_district || p.region)
+      ? locationBadge || p.baku_district || p.region
+      : null
 
   const ratingLabel =
     rating && rating.count > 0

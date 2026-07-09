@@ -111,6 +111,7 @@ const getTeaching = async (req, res) => {
               longitude,
               region,
               baku_district,
+              region_user_set,
               COALESCE(NULLIF(TRIM(map_profile_kind), ''), 'teacher') AS map_profile_kind,
               COALESCE(map_visible, TRUE) AS map_visible,
               COALESCE(map_search_radius_km, 10) AS map_search_radius_km,
@@ -311,6 +312,7 @@ const getTeaching = async (req, res) => {
         longitude: p?.longitude != null ? Number(p.longitude) : null,
         region: p?.region || null,
         baku_district: p?.baku_district || null,
+        region_user_set: Boolean(p?.region_user_set),
         map_profile_kind: p?.map_profile_kind === 'trainer' ? 'trainer' : 'teacher',
         map_visible: p?.map_visible !== false,
         map_search_radius_km:

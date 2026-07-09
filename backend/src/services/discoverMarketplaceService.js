@@ -330,6 +330,8 @@ async function upsertInstructorDiscoverProfile(userId, body) {
     }
     sets.push(`region = $${pi++}`);
     vals.push(region);
+    sets.push(`region_user_set = $${pi++}`);
+    vals.push(Boolean(region));
     if (!isBakuRegion(region)) {
       sets.push(`baku_district = $${pi++}`);
       vals.push(null);

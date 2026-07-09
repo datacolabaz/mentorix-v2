@@ -342,7 +342,11 @@ export default function InstructorMapSearch() {
                     comfortable
                     selected={selectedId === p.id}
                     highlighted={highlightId === p.id}
-                    locationBadge={instructorLocationBadge(p.region, p.baku_district)}
+                    locationBadge={
+                      p.region_user_set
+                        ? instructorLocationBadge(p.region, p.baku_district)
+                        : null
+                    }
                     cardRef={(el) => {
                       if (el) cardRefs.current.set(String(p.id), el)
                       else cardRefs.current.delete(String(p.id))
