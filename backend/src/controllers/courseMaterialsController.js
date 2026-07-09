@@ -22,6 +22,7 @@ const {
   resolveUploadedFileBytesAsync,
 } = require('../services/courseMaterialStorage');
 const { STORAGE_LIMIT_MESSAGE, MATERIALS_MAX_SINGLE_FILE_BYTES } = require('../constants/materialsPlanLimits');
+const { withUtf8Charset } = require('../lib/contentTypeCharset');
 
 function mapMaterialRow(row) {
   if (!row) return null;
@@ -206,7 +207,7 @@ const serveMaterialFile = async (req, res) => {
     const downloadName = material.original_filename || material.title || filename;
     const safeName = String(downloadName).replace(/["\r\n]/g, '');
     const forceDownload = ['1', 'true', 'yes'].includes(String(req.query?.download || '').toLowerCase());
-    res.setHeader('Content-Type', hit.content_type);
+    res.setHeader('Content-Type', withUtf8Charset(hit.content_type));
     res.setHeader(
       'Content-Disposition',
       `${forceDownload ? 'attachment' : 'inline'}; filename="${safeName}"; filename*=UTF-8''${encodeURIComponent(safeName)}`,

@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const db = require('../utils/db');
+const { withUtf8Charset } = require('../lib/contentTypeCharset');
 
 function getUploadsRoot() {
   const env = process.env.UPLOADS_DIR || process.env.RAILWAY_VOLUME_MOUNT_PATH;
@@ -19,7 +20,7 @@ function ensureAssignmentsUploadDir() {
 }
 
 function isSafeAssignmentFilename(name) {
-  return /^[a-f0-9-]{36}\.(pdf|png|jpe?g|docx?|xlsx?|pptx?|zip|csv)$/i.test(String(name || ''));
+  return /^[a-f0-9-]{36}\.(pdf|png|jpe?g|docx?|xlsx?|pptx?|zip|csv|txt)$/i.test(String(name || ''));
 }
 
 function contentTypeForFilename(filename) {
@@ -30,6 +31,8 @@ function contentTypeForFilename(filename) {
   if (ext === '.doc') return 'application/msword';
   if (ext === '.docx') return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
   if (ext === '.zip') return 'application/zip';
+  if (ext === '.csv') return 'text/csv';
+  if (ext === '.txt') return 'text/plain';
   return 'application/octet-stream';
 }
 
@@ -101,7 +104,7 @@ async function sendAssignmentFileToResponse(res, filename) {
   const buf = Buffer.isBuffer(hit) ? hit : hit.buffer;
   const ct = Buffer.isBuffer(hit) ? contentTypeForFilename(safe) : hit.content_type;
 
-  res.setHeader('Content-Type', ct);
+  res.setHeader('Content-Type', withUtf8Charset(ct));
   res.setHeader('Content-Disposition', `inline; filename="${safe}"`);
   res.setHeader('Cache-Control', 'private, max-age=300');
   res.setHeader('Referrer-Policy', 'no-referrer');

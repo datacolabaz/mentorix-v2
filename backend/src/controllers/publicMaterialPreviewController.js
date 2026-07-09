@@ -4,6 +4,7 @@ const {
   incrementMaterialViewCount,
 } = require('../services/courseMaterialsService');
 const { readCourseMaterialBuffer } = require('../services/courseMaterialStorage');
+const { withUtf8Charset } = require('../lib/contentTypeCharset');
 
 /** GET /api/public/material-preview/:token */
 async function getPublicMaterialPreview(req, res) {
@@ -45,7 +46,7 @@ async function servePublicMaterialPreviewFile(req, res) {
     }
 
     const downloadName = material.original_filename || material.title || filename;
-    res.setHeader('Content-Type', hit.content_type);
+    res.setHeader('Content-Type', withUtf8Charset(hit.content_type));
     res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(downloadName)}"`);
     res.setHeader('Cache-Control', 'public, max-age=300');
     return res.send(hit.buffer);
