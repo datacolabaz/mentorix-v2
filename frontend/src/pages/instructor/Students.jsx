@@ -991,6 +991,8 @@ export default function InstructorStudents() {
   const [setupEnrollmentId, setSetupEnrollmentId] = useState(null)
   const [setupFieldErrors, setSetupFieldErrors] = useState(null)
   const [setupPhoneLocked, setSetupPhoneLocked] = useState(false)
+  const [cancelPendingModal, setCancelPendingModal] = useState(null)
+  const [cancelPendingBusyId, setCancelPendingBusyId] = useState(null)
   const [sendProfileEmailBusy, setSendProfileEmailBusy] = useState(false)
   const [referralSources, setReferralSources] = useState([])
   const [editForm, setEditForm] = useState(emptyForm)
@@ -2230,9 +2232,27 @@ export default function InstructorStudents() {
                     <p className="text-[11px] text-amber-200/80 mt-1">{t('students.phoneMissing')}</p>
                   )}
                 </div>
-                <Button size="sm" onClick={() => void openCompleteSetup(s)}>
-                  {t('students.completeSetup')}
-                </Button>
+                <div className="flex items-center gap-2 justify-end">
+                  <button
+                    type="button"
+                    className={[
+                      'h-9 px-3 rounded-xl border text-xs font-semibold transition-colors',
+                      'border-red-500/25 bg-red-500/10 hover:bg-red-500/20 text-red-200',
+                    ].join(' ')}
+                    onClick={() =>
+                      setCancelPendingModal({
+                        enrollment_id: s.enrollment_id,
+                        full_name: s.full_name,
+                      })
+                    }
+                    title={t('students.cancelPending')}
+                  >
+                    ✕ {t('students.cancelPending')}
+                  </button>
+                  <Button size="sm" onClick={() => void openCompleteSetup(s)}>
+                    {t('students.completeSetup')}
+                  </Button>
+                </div>
               </div>
             ))}
           </div>
@@ -2684,6 +2704,61 @@ export default function InstructorStudents() {
             <li key={label}>{label}</li>
           ))}
         </ul>
+      </Modal>
+
+      <Modal
+        open={Boolean(cancelPendingModal?.enrollment_id)}
+        onClose={() => {
+          if (cancelPendingBusyId) return
+          setCancelPendingModal(null)
+        }}
+        title={t('students.cancelPendingTitle')}
+        size="sm"
+        zIndex={10200}
+        footer={
+          <div className="flex items-center justify-end gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={Boolean(cancelPendingBusyId)}
+              onClick={() => setCancelPendingModal(null)}
+            >
+              {t('students.cancel')}
+            </Button>
+            <Button
+              type="button"
+              className="bg-red-600 hover:bg-red-700"
+              loading={Boolean(cancelPendingBusyId)}
+              onClick={async () => {
+                const id = cancelPendingModal?.enrollment_id
+                if (!id) return
+                setCancelPendingBusyId(String(id))
+                try {
+                  const r = await api.post(`/students/enrollment/${encodeURIComponent(id)}/cancel-pending-setup`, {})
+                  toast(r?.message || t('students.cancelPendingSuccess'), 'success')
+                  setStudents((prev) => (Array.isArray(prev) ? prev.filter((x) => String(x.enrollment_id) !== String(id)) : prev))
+                  setCancelPendingModal(null)
+                  toast(t('students.cancelPendingHint'), 'info')
+                  window.dispatchEvent(new CustomEvent('mx:students-changed'))
+                  queryClient.invalidateQueries({ queryKey: BILLING_STATUS_QUERY_KEY })
+                } catch (err) {
+                  toast(err?.message || t('students.cancelPendingError'), 'error')
+                } finally {
+                  setCancelPendingBusyId(null)
+                }
+              }}
+            >
+              {t('students.deleteRow')}
+            </Button>
+          </div>
+        }
+      >
+        <p className="text-sm text-token-textMuted leading-relaxed">
+          {t('students.cancelPendingConfirm', { name: cancelPendingModal?.full_name || t('students.defaultStudent') })}
+        </p>
+        <p className="text-xs text-token-textMuted/80 mt-3">
+          {t('students.cancelPendingNoAccountDelete')}
+        </p>
       </Modal>
 
       <Modal

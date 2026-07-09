@@ -1167,6 +1167,54 @@ router.post(
   },
 );
 
+// Pending CRM join: müəllim sadəcə gözləmə qeydini ləğv edir (tələbə hesabı silinmir)
+router.post(
+  '/enrollment/:enrollmentId/cancel-pending-setup',
+  authenticate,
+  authorize('instructor', 'admin'),
+  gateInstructorEnrollment,
+  async (req, res) => {
+    try {
+      const { enrollmentId } = req.params;
+      const { rows } = await db.query(
+        `SELECT id, instructor_id, status, enrollment_source
+         FROM enrollments
+         WHERE id = $1 AND deleted_at IS NULL
+         LIMIT 1`,
+        [enrollmentId],
+      );
+      const enr = rows[0];
+      if (!enr) return res.status(404).json({ success: false, message: 'Qeydiyyat tapılmadı' });
+
+      if (req.user.role === 'instructor' && !sameUuid(enr.instructor_id, req.user.id)) {
+        return res.status(403).json({ success: false, message: 'Bu qeydiyyata icazəniz yoxdur' });
+      }
+
+      const src = String(enr.enrollment_source || '').trim().toLowerCase();
+      if (src === 'exam' || src === 'task') {
+        return res.status(400).json({ success: false, message: 'Bu qeydiyyat ləğv edilmir' });
+      }
+
+      const st = String(enr.status || '').trim().toLowerCase();
+      if (st !== 'pending_setup') {
+        return res.status(400).json({ success: false, message: 'Bu qeyd artıq gözləmədə deyil' });
+      }
+
+      await db.query(
+        `UPDATE enrollments
+         SET status = 'rejected',
+             deleted_at = NOW()
+         WHERE id = $1 AND deleted_at IS NULL`,
+        [enrollmentId],
+      );
+
+      return res.json({ success: true, message: 'Qeyd ləğv edildi' });
+    } catch (err) {
+      return res.status(500).json({ success: false, message: err.message });
+    }
+  },
+);
+
 router.patch(
   '/enrollment/:enrollmentId/status',
   authenticate,
