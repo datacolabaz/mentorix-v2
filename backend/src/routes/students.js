@@ -1202,8 +1202,7 @@ router.post(
 
       await db.query(
         `UPDATE enrollments
-         SET status = 'rejected',
-             deleted_at = NOW()
+         SET status = 'rejected'
          WHERE id = $1 AND deleted_at IS NULL`,
         [enrollmentId],
       );

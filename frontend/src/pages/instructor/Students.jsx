@@ -1069,8 +1069,14 @@ export default function InstructorStudents() {
   const isPendingApproval = (s) =>
     String(s?.enrollment_status || '').toLowerCase() === 'pending_approval'
 
+  const isTerminalEnrollmentStatus = (s) => {
+    const st = String(s?.enrollment_status || '').toLowerCase()
+    return st === 'rejected' || st === 'left' || st === 'archived'
+  }
+
   /** Qrup/sahə (CRM) — cədvəl/paket tamamlanmayıb. İmtahan/tapşırıq: Sorğular bölməsi. */
   const needsSetup = (s) => {
+    if (isTerminalEnrollmentStatus(s)) return false
     if (isPendingApproval(s)) return false
     if (isLightEnrollmentSource(s?.enrollment_source)) return false
     if (isPendingSetup(s)) return true
@@ -1442,7 +1448,8 @@ export default function InstructorStudents() {
   const pendingStudents = useMemo(() => {
     const q = String(search || '').trim().toLowerCase()
     return students.filter((s) => {
-      if (!needsSetup(s)) return false
+      // Only "pending_setup" shows in this section
+      if (!isPendingSetup(s)) return false
       if (!q) return true
       const name = String(s?.full_name || '').toLowerCase()
       const phone = String(s?.phone || '').toLowerCase()
