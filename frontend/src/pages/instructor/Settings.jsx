@@ -14,11 +14,10 @@ import { useSubscriptionPlans } from '../../hooks/useSubscriptionPlans'
 import { useBillingStatus, BILLING_STATUS_QUERY_KEY } from '../../hooks/useBillingStatus'
 import { SUBSCRIPTION_PLANS_QUERY_KEY } from '../../hooks/useSubscriptionPlans'
 import PricingBillingIntervalToggle from '../../components/instructor/PricingBillingIntervalToggle'
-import InstructorMapPinPicker from '../../components/instructor/InstructorMapPinPicker'
-import InstructorMapPreviewModal from '../../components/instructor/InstructorMapPreviewModal'
+import RegionProfileFields from '../../components/instructor/RegionProfileFields'
 import InstructorDiscoverSettings from '../../components/instructor/InstructorDiscoverSettings'
 import InstructorAvatarUpload from '../../components/instructor/InstructorAvatarUpload'
-import { reverseGeocodeLabel } from '../../lib/reverseGeocode'
+import { formatLocationLabel } from '@shared/azerbaijanRegions.mjs'
 import { formatAzn, yearlyTotalAzn, YEARLY_DISCOUNT } from '../../lib/pricing'
 import { planDetailLines, planLimitsHeadline } from '../../lib/subscriptionPlanCopy'
 import { normalizePlanId } from '../../lib/subscriptionPlanMarketing'
@@ -165,19 +164,13 @@ export default function InstructorSettings() {
   const plans = Array.isArray(plansQ.data) ? plansQ.data : []
   const [savingLabel, setSavingLabel] = useState(false)
   const [publicLabel, setPublicLabel] = useState('instructor')
-  const [mapLat, setMapLat] = useState('')
-  const [mapLng, setMapLng] = useState('')
+  const [mapRegion, setMapRegion] = useState('')
+  const [mapBakuDistrict, setMapBakuDistrict] = useState('')
   const [mapKind, setMapKind] = useState('teacher')
   const [mapVisible, setMapVisible] = useState(true)
   const [savingMap, setSavingMap] = useState(false)
-  const [mapFlyKey, setMapFlyKey] = useState(0)
-  const [mapRadiusKm, setMapRadiusKm] = useState(10)
-  const [locationLabel, setLocationLabel] = useState('')
-  const [locationLoading, setLocationLoading] = useState(false)
-  const [mapPreviewOpen, setMapPreviewOpen] = useState(false)
   const [mapJustSaved, setMapJustSaved] = useState(false)
   const savedMapRef = useRef(null)
-  const geocodeTimerRef = useRef(null)
   const [primarySubjectName, setPrimarySubjectName] = useState('')
   const [avatarUrl, setAvatarUrl] = useState(null)
   const [accountName, setAccountName] = useState('')
@@ -257,23 +250,17 @@ export default function InstructorSettings() {
       setProfBio(prof?.bio || '')
       setAvatarUrl(d.avatar_url || null)
       const m = d.map || {}
-      setMapLat(m.latitude != null && Number.isFinite(Number(m.latitude)) ? String(m.latitude) : '')
-      setMapLng(m.longitude != null && Number.isFinite(Number(m.longitude)) ? String(m.longitude) : '')
+      setMapRegion(m.region || '')
+      setMapBakuDistrict(m.baku_district || '')
       setMapKind(m.map_profile_kind === 'trainer' ? 'trainer' : 'teacher')
       setMapVisible(m.map_visible !== false)
-      const radius =
-        m.map_search_radius_km != null && Number.isFinite(Number(m.map_search_radius_km))
-          ? Number(m.map_search_radius_km)
-          : 10
-      setMapRadiusKm([5, 10, 25].includes(radius) ? radius : 10)
       const subs = Array.isArray(d.subjects) ? d.subjects : []
       setPrimarySubjectName(subs[0]?.name || '')
       savedMapRef.current = {
-        lat: m.latitude != null && Number.isFinite(Number(m.latitude)) ? String(m.latitude) : '',
-        lng: m.longitude != null && Number.isFinite(Number(m.longitude)) ? String(m.longitude) : '',
+        region: m.region || '',
+        bakuDistrict: m.baku_district || '',
         kind: m.map_profile_kind === 'trainer' ? 'trainer' : 'teacher',
         visible: m.map_visible !== false,
-        radius: [5, 10, 25].includes(radius) ? radius : 10,
       }
       setMapJustSaved(false)
     } catch (e) {
@@ -303,38 +290,22 @@ export default function InstructorSettings() {
     return () => window.clearTimeout(t)
   }, [location.state?.scrollTo])
 
-  const hasMapPin = mapLat.trim() !== '' && mapLng.trim() !== ''
+  const hasMapRegion = Boolean(String(mapRegion || '').trim())
+  const locationLabel = useMemo(
+    () => formatLocationLabel(mapRegion, mapBakuDistrict),
+    [mapRegion, mapBakuDistrict],
+  )
 
   const mapDirty = useMemo(() => {
     const s = savedMapRef.current
-    if (!s) return hasMapPin || mapVisible
+    if (!s) return hasMapRegion || mapVisible
     return (
-      s.lat !== mapLat ||
-      s.lng !== mapLng ||
+      s.region !== mapRegion ||
+      s.bakuDistrict !== mapBakuDistrict ||
       s.kind !== mapKind ||
-      s.visible !== mapVisible ||
-      s.radius !== mapRadiusKm
+      s.visible !== mapVisible
     )
-  }, [mapLat, mapLng, mapKind, mapVisible, mapRadiusKm, hasMapPin])
-
-  useEffect(() => {
-    if (!hasMapPin) {
-      setLocationLabel('')
-      return
-    }
-    if (geocodeTimerRef.current) window.clearTimeout(geocodeTimerRef.current)
-    setLocationLoading(true)
-    geocodeTimerRef.current = window.setTimeout(() => {
-      void (async () => {
-        const label = await reverseGeocodeLabel(mapLat, mapLng)
-        setLocationLabel(label || t('settings.locationSelected'))
-        setLocationLoading(false)
-      })()
-    }, 450)
-    return () => {
-      if (geocodeTimerRef.current) window.clearTimeout(geocodeTimerRef.current)
-    }
-  }, [mapLat, mapLng, hasMapPin])
+  }, [mapRegion, mapBakuDistrict, mapKind, mapVisible, hasMapRegion])
 
   const saveLabel = async () => {
     setSavingLabel(true)
@@ -349,57 +320,30 @@ export default function InstructorSettings() {
     }
   }
 
-  const fillMapFromGeolocation = () => {
-    if (!navigator.geolocation) {
-      toast(t('settings.toasts.geoUnsupported'), 'error')
-      return
-    }
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setMapLat(String(pos.coords.latitude.toFixed(6)))
-        setMapLng(String(pos.coords.longitude.toFixed(6)))
-        setMapFlyKey((k) => k + 1)
-        setMapJustSaved(false)
-        toast(t('settings.toasts.geoMarked'), 'info')
-      },
-      () => toast(t('settings.toasts.geoFailed'), 'error'),
-      { enableHighAccuracy: true, timeout: 12000 },
-    )
-  }
-
   const saveMapProfile = async () => {
     setSavingMap(true)
     try {
-      const lat = mapLat.trim() === '' ? null : Number(String(mapLat).replace(',', '.'))
-      const lng = mapLng.trim() === '' ? null : Number(String(mapLng).replace(',', '.'))
-      if (lat != null && (!Number.isFinite(lat) || lat < -90 || lat > 90)) {
-        toast(t('settings.toasts.latInvalid'), 'error')
-        return
-      }
-      if (lng != null && (!Number.isFinite(lng) || lng < -180 || lng > 180)) {
-        toast(t('settings.toasts.lngInvalid'), 'error')
-        return
-      }
-      if (mapVisible && (lat == null || lng == null)) {
-        toast(t('settings.toasts.pinRequired'), 'error')
+      const region = String(mapRegion || '').trim()
+      const bakuDistrict = String(mapBakuDistrict || '').trim()
+      if (mapVisible && !region) {
+        toast(t('settings.toasts.regionRequired'), 'error')
         return
       }
       await api.patch('/instructor/map-profile', {
-        latitude: lat,
-        longitude: lng,
+        region: region || null,
+        baku_district: region === 'Bakı' ? bakuDistrict || null : null,
         map_profile_kind: mapKind,
         map_visible: mapVisible,
-        map_search_radius_km: mapRadiusKm,
       })
       savedMapRef.current = {
-        lat: mapLat,
-        lng: mapLng,
+        region,
+        bakuDistrict,
         kind: mapKind,
         visible: mapVisible,
-        radius: mapRadiusKm,
       }
       setMapJustSaved(true)
-      if (mapVisible && lat != null && lng != null) {
+      window.dispatchEvent(new CustomEvent('mx:discover-profile-updated'))
+      if (mapVisible && region) {
         toast(t('settings.toasts.mapSavedVisible'), 'success')
       } else {
         toast(t('settings.toasts.mapSavedHidden'), 'success')
@@ -1231,24 +1175,19 @@ export default function InstructorSettings() {
           </span>
         </label>
 
-        {hasMapPin ? (
+        {hasMapRegion ? (
           <div
             className={[
               'rounded-xl border px-4 py-3 space-y-1',
               mapVisible ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-amber-500/25 bg-amber-500/5',
             ].join(' ')}
           >
-            <p className="text-sm font-semibold text-white">
-              {locationLoading ? t('settings.locating') : `📍 ${locationLabel || t('settings.locationSelected')}`}
-            </p>
+            <p className="text-sm font-semibold text-white">📍 {locationLabel}</p>
             {mapVisible ? (
-              <p className="text-xs text-emerald-400/90">{t('settings.pinOk')}</p>
+              <p className="text-xs text-emerald-400/90">{t('settings.regionOk')}</p>
             ) : (
-              <p className="text-xs text-amber-400/90">{t('settings.pinHidden')}</p>
+              <p className="text-xs text-amber-400/90">{t('settings.regionHidden')}</p>
             )}
-            <p className="text-xs text-token-textMuted">
-              {t('settings.searchRadius', { km: mapRadiusKm })}
-            </p>
             {mapDirty ? (
               <p className="text-xs text-amber-300 font-medium pt-1">{t('settings.unsaved')}</p>
             ) : mapJustSaved ? (
@@ -1257,25 +1196,21 @@ export default function InstructorSettings() {
           </div>
         ) : (
           <div className="rounded-xl border border-dashed border-white/15 px-4 py-3 text-xs text-token-textMuted">
-            {t('settings.noPin')}
+            {t('settings.noRegion')}
           </div>
         )}
 
-        {!loading ? (
-          <InstructorMapPinPicker
-            latitude={mapLat}
-            longitude={mapLng}
-            mapKind={mapKind}
-            flyKey={mapFlyKey}
-            displayName={user?.full_name || ''}
-            radiusKm={mapRadiusKm}
-            onChange={(lat, lng) => {
-              setMapLat(lat)
-              setMapLng(lng)
-              setMapJustSaved(false)
-            }}
-          />
-        ) : null}
+        <RegionProfileFields
+          region={mapRegion}
+          bakuDistrict={mapBakuDistrict}
+          inputClassName={inp}
+          labelClassName={['text-xs block mb-1.5', theme === 'dark' ? 'text-gray-400' : 'text-token-textMuted'].join(' ')}
+          onChange={({ region, bakuDistrict }) => {
+            setMapRegion(region || '')
+            setMapBakuDistrict(bakuDistrict || '')
+            setMapJustSaved(false)
+          }}
+        />
 
         <div className="flex flex-wrap items-center gap-3 text-sm">
           <span className="text-xs text-token-textMuted">{t('settings.pinType')}</span>
@@ -1307,59 +1242,26 @@ export default function InstructorSettings() {
           </label>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-2 flex-wrap items-center">
-          <Button type="button" variant="secondary" onClick={() => fillMapFromGeolocation()} className="justify-center">
-            {t('settings.fillFromLocation')}
-          </Button>
-          <label className="text-xs text-token-textMuted flex items-center gap-1.5">
-            {t('settings.visibilityRadius')}
-            <select
-              className={`${inp} !py-1 !px-2 !w-auto text-xs`}
-              value={mapRadiusKm}
-              onChange={(e) => setMapRadiusKm(Number(e.target.value))}
-            >
-              <option value={5}>5 km</option>
-              <option value={10}>10 km</option>
-              <option value={25}>25 km</option>
-            </select>
-          </label>
-        </div>
-
         <div className="flex flex-col sm:flex-row gap-2">
           <Button type="button" loading={savingMap} onClick={() => void saveMapProfile()} className="flex-1 justify-center">
             {mapDirty ? t('settings.saveChanges') : t('settings.saveMap')}
           </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            disabled={!hasMapPin}
-            onClick={() => setMapPreviewOpen(true)}
-            className="flex-1 justify-center"
-          >
-            {t('settings.previewSearch')}
-          </Button>
+          {hasMapRegion && mapVisible ? (
+            <Link
+              to="/search"
+              className="flex-1 inline-flex items-center justify-center text-sm font-semibold rounded-xl border border-primary/40 text-primary hover:bg-primary/10 px-4 py-2.5"
+            >
+              {t('settings.previewSearch')}
+            </Link>
+          ) : null}
         </div>
 
-        {mapJustSaved && mapVisible && hasMapPin ? (
+        {mapJustSaved && mapVisible && hasMapRegion ? (
           <Link to="/search" className="block text-center text-sm font-semibold text-primary hover:underline py-1">
-            {t('settings.viewLiveMap')}
+            {t('settings.viewLiveSearch')}
           </Link>
         ) : null}
       </Card>
-
-      <InstructorMapPreviewModal
-        open={mapPreviewOpen}
-        onClose={() => setMapPreviewOpen(false)}
-        fullName={user?.full_name}
-        avatarUrl={avatarUrl}
-        subject={primarySubjectName}
-        mapKind={mapKind}
-        latitude={mapLat}
-        longitude={mapLng}
-        locationLabel={locationLabel}
-        mapVisible={mapVisible}
-        radiusKm={mapRadiusKm}
-      />
 
       <InstructorDiscoverSettings mapVisible={mapVisible} theme={theme} inp={inp} />
 
