@@ -1,0 +1,185 @@
+/** Azərbaycan şəhər/rayonları — müəllim axtarışı və profil üçün */
+
+const BAKU = 'Bakı';
+
+/** Bakı istisna — digər şəhər və rayonlar (əlifba sırası) */
+const AZ_REGIONS = [
+  'Abşeron',
+  'Ağcabədi',
+  'Ağdam',
+  'Ağdaş',
+  'Ağstafa',
+  'Ağsu',
+  'Astara',
+  'Babək',
+  'Balakən',
+  BAKU,
+  'Beyləqan',
+  'Bərdə',
+  'Biləsuvar',
+  'Cəbrayıl',
+  'Cəlilabad',
+  'Culfa',
+  'Daşkəsən',
+  'Füzuli',
+  'Gədəbəy',
+  'Gəncə',
+  'Goranboy',
+  'Göyçay',
+  'Göygöl',
+  'Hacıqabul',
+  'Xaçmaz',
+  'Xızı',
+  'Xocalı',
+  'Xocavənd',
+  'İmişli',
+  'İsmayıllı',
+  'Kəlbəcər',
+  'Kəngərli',
+  'Kürdəmir',
+  'Laçın',
+  'Lerik',
+  'Lənkəran',
+  'Masallı',
+  'Mingəçevir',
+  'Naftalan',
+  'Naxçıvan',
+  'Neftçala',
+  'Oğuz',
+  'Ordubad',
+  'Qax',
+  'Qazax',
+  'Qəbələ',
+  'Qobustan',
+  'Quba',
+  'Qubadlı',
+  'Qusar',
+  'Saatlı',
+  'Sabirabad',
+  'Salyan',
+  'Samux',
+  'Sədərək',
+  'Siyəzən',
+  'Sumqayıt',
+  'Şabran',
+  'Şahbuz',
+  'Şamaxı',
+  'Şəki',
+  'Şəmkir',
+  'Şərur',
+  'Şirvan',
+  'Şuşa',
+  'Tərtər',
+  'Tovuz',
+  'Ucar',
+  'Yardımlı',
+  'Yevlax',
+  'Zaqatala',
+  'Zəngilan',
+  'Zərdab',
+];
+
+/** Bakı şəhərinin inzibati rayonları (əlifba sırası) */
+const BAKU_DISTRICTS = [
+  'Badamdar',
+  'Binəqədi',
+  'Nizami',
+  'Nərimanov',
+  'Nəsimi',
+  'Pirallahı',
+  'Qaradağ',
+  'Sabunçu',
+  'Səbail',
+  'Suraxanı',
+  'Xətai',
+  'Xəzər',
+  'Yasamal',
+];
+
+/** Qonşu rayonlar — yalnız Bakı rayonları üçün */
+const BAKU_DISTRICT_NEIGHBORS = {
+  Badamdar: ['Qaradağ', 'Səbail'],
+  Binəqədi: ['Nəsimi', 'Yasamal', 'Xəzər'],
+  Nizami: ['Yasamal', 'Xətai', 'Səbail'],
+  Nərimanov: ['Yasamal', 'Nəsimi', 'Xətai'],
+  Nəsimi: ['Yasamal', 'Nərimanov', 'Binəqədi'],
+  Pirallahı: ['Suraxanı', 'Sabunçu', 'Xəzər'],
+  Qaradağ: ['Badamdar', 'Səbail'],
+  Sabunçu: ['Suraxanı', 'Xəzər', 'Pirallahı'],
+  Səbail: ['Nizami', 'Xətai', 'Yasamal', 'Qaradağ'],
+  Suraxanı: ['Xəzər', 'Sabunçu', 'Pirallahı'],
+  Xətai: ['Nərimanov', 'Nizami', 'Səbail'],
+  Xəzər: ['Binəqədi', 'Suraxanı', 'Sabunçu'],
+  Yasamal: ['Nəsimi', 'Nərimanov', 'Nizami', 'Binəqədi'],
+};
+
+function isBakuRegion(region) {
+  return String(region || '').trim() === BAKU;
+}
+
+function normalizeRegionName(name) {
+  return String(name || '').trim();
+}
+
+/** Axtarış üçün rayon siyahısı (qonşular daxil) */
+function resolveBakuDistrictsForSearch(bakuDistrict, includeNeighbors) {
+  const district = normalizeRegionName(bakuDistrict);
+  if (!district) return null;
+  if (!includeNeighbors) return [district];
+  const neighbors = BAKU_DISTRICT_NEIGHBORS[district] || [];
+  return [...new Set([district, ...neighbors])];
+}
+
+/** UI üçün lokasiya etiketi */
+function formatLocationLabel(region, bakuDistrict) {
+  const r = normalizeRegionName(region);
+  const d = normalizeRegionName(bakuDistrict);
+  if (!r) return '';
+  if (isBakuRegion(r) && d) return `${d} rayonu`;
+  if (isBakuRegion(r)) return BAKU;
+  return r;
+}
+
+/** Nəticə başlığı üçün: "Yasamal rayonunda" */
+function formatResultsLocationPhrase(region, bakuDistrict) {
+  const r = normalizeRegionName(region);
+  const d = normalizeRegionName(bakuDistrict);
+  if (!r) return '';
+  if (isBakuRegion(r) && d) return `${d} rayonunda`;
+  if (isBakuRegion(r)) return `${BAKU} şəhərində`;
+  return `${r} rayonunda`;
+}
+
+/** Müəllim kartı üçün rayon badge */
+function instructorLocationBadge(region, bakuDistrict) {
+  const r = normalizeRegionName(region);
+  const d = normalizeRegionName(bakuDistrict);
+  if (isBakuRegion(r) && d) return d;
+  if (r) return r;
+  return null;
+}
+
+function isValidRegion(region) {
+  const r = normalizeRegionName(region);
+  return AZ_REGIONS.includes(r);
+}
+
+function isValidBakuDistrict(district) {
+  const d = normalizeRegionName(district);
+  return BAKU_DISTRICTS.includes(d);
+}
+
+module.exports = {
+  BAKU,
+  AZ_REGIONS,
+  BAKU_DISTRICTS,
+  BAKU_DISTRICT_NEIGHBORS,
+  isBakuRegion,
+  normalizeRegionName,
+  resolveBakuDistrictsForSearch,
+  formatLocationLabel,
+  formatResultsLocationPhrase,
+  instructorLocationBadge,
+  isValidRegion,
+  isValidBakuDistrict,
+};

@@ -6,19 +6,23 @@ const {
 } = require('../services/mapListingPlanService');
 const { notifyMarketplaceSearchOpportunity } = require('../services/marketplaceSearchOpportunityService');
 const { enrichMapInstructorRows } = require('../services/instructorMapPreviewService');
+const {
+  BAKU,
+  isBakuRegion,
+  normalizeRegionName,
+  resolveBakuDistrictsForSearch,
+  isValidRegion,
+  isValidBakuDistrict,
+} = require('../../../shared/azerbaijanRegions');
 
-function parseFloatQ(v) {
-  const n = Number.parseFloat(String(v ?? '').replace(',', '.'));
-  return Number.isFinite(n) ? n : null;
-}
-
-function clamp(n, min, max) {
-  return Math.min(max, Math.max(min, n));
+function parseBoolQ(v) {
+  if (v === true || v === 1 || v === '1' || v === 'true' || v === 'TRUE') return true;
+  return false;
 }
 
 /**
  * GET /api/public/instructors-map
- * Query: north, south, east, west (WGS84) OR lat, lng, radius_km (center + radius)
+ * Query: region, baku_district, include_neighbors
  *        kind = all | teacher | trainer
  *        category_id, format, area_id — optional discovery filters
  */
@@ -30,55 +34,36 @@ const getInstructorsInMapView = async (req, res) => {
     const format = String(req.query.format || 'any').toLowerCase();
     const areaId = String(req.query.area_id || '').trim() || null;
 
-    const lat = parseFloatQ(req.query.lat);
-    const lng = parseFloatQ(req.query.lng);
-    const radiusKm = parseFloatQ(req.query.radius_km);
+    const region = normalizeRegionName(req.query.region);
+    const bakuDistrict = normalizeRegionName(req.query.baku_district);
+    const includeNeighbors = parseBoolQ(req.query.include_neighbors);
 
-    const north = parseFloatQ(req.query.north);
-    const south = parseFloatQ(req.query.south);
-    const east = parseFloatQ(req.query.east);
-    const west = parseFloatQ(req.query.west);
-
-    let n = north;
-    let s = south;
-    let e = east;
-    let w = west;
-    let hasBounds = false;
-
-    if (lat != null && lng != null && radiusKm != null && radiusKm > 0 && radiusKm <= 200) {
-      const r = clamp(radiusKm, 0.5, 200);
-      const latDelta = r / 111;
-      const cosLat = Math.cos((lat * Math.PI) / 180) || 1e-6;
-      const lngDelta = r / (111 * cosLat);
-      n = clamp(lat + latDelta, -85, 85);
-      s = clamp(lat - latDelta, -85, 85);
-      e = clamp(lng + lngDelta, -180, 180);
-      w = clamp(lng - lngDelta, -180, 180);
-      hasBounds = true;
-    } else if (north != null && south != null && east != null && west != null) {
-      if (south >= north) {
-        return res.status(400).json({ success: false, message: 'south < north olmalıdır' });
-      }
-      const latSpan = Math.abs(north - south);
-      const lngSpan = Math.abs(east - west);
-      if (latSpan > 8 || lngSpan > 12) {
-        return res.status(400).json({ success: false, message: 'Xəritə sahəsi çox böyükdür' });
-      }
-      n = clamp(north, -90, 90);
-      s = clamp(south, -90, 90);
-      e = clamp(east, -180, 180);
-      w = clamp(west, -180, 180);
-      hasBounds = true;
-    }
-
-    if (!hasBounds) {
+    if (!region) {
       return res.status(400).json({
         success: false,
-        message: 'north,south,east,west və ya lat,lng,radius_km göndərin',
+        message: 'region parametri tələb olunur',
+      });
+    }
+    if (!isValidRegion(region)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Düzgün olmayan region',
+      });
+    }
+    if (bakuDistrict && !isBakuRegion(region)) {
+      return res.status(400).json({
+        success: false,
+        message: 'baku_district yalnız Bakı regionu üçün istifadə oluna bilər',
+      });
+    }
+    if (bakuDistrict && !isValidBakuDistrict(bakuDistrict)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Düzgün olmayan Bakı rayonu',
       });
     }
 
-    const params = [n, s, w, e];
+    const params = [];
     let kindSql = '';
     if (kindFilter) {
       params.push(kindFilter);
@@ -115,34 +100,21 @@ const getInstructorsInMapView = async (req, res) => {
       )`;
     }
 
-    const userLat = parseFloatQ(req.query.user_lat);
-    const userLng = parseFloatQ(req.query.user_lng);
-    const sortLat = userLat != null ? userLat : lat;
-    const sortLng = userLng != null ? userLng : lng;
+    let regionSql = '';
+    params.push(region);
+    const regionP = params.length;
+    regionSql = ` AND ip.region = $${regionP}`;
 
-    let distanceSql = '';
-    let orderSql = 'ORDER BY u.full_name ASC';
-    if (sortLat != null && sortLng != null) {
-      params.push(sortLat, sortLng);
-      const latP = params.length - 1;
-      const lngP = params.length;
-      distanceSql = `, (
-        6371 * acos(
-          LEAST(
-            1,
-            GREATEST(
-              -1,
-              cos(radians($${latP})) * cos(radians(ip.latitude::float8))
-                * cos(radians(ip.longitude::float8) - radians($${lngP}))
-                + sin(radians($${latP})) * sin(radians(ip.latitude::float8))
-            )
-          )
-        )
-      )::float8 AS distance_km`;
-      orderSql = `ORDER BY ${sqlPlanListingPriority()} ASC, distance_km ASC NULLS LAST, u.full_name ASC`;
-    } else {
-      orderSql = `ORDER BY ${sqlPlanListingPriority()} ASC, u.full_name ASC`;
+    let bakuDistrictSql = '';
+    if (isBakuRegion(region) && bakuDistrict) {
+      const districts = resolveBakuDistrictsForSearch(bakuDistrict, includeNeighbors);
+      if (districts?.length) {
+        params.push(districts);
+        bakuDistrictSql = ` AND ip.baku_district = ANY($${params.length}::varchar[])`;
+      }
     }
+
+    const orderSql = `ORDER BY ${sqlPlanListingPriority()} ASC, u.full_name ASC`;
 
     const { rows } = await db.query(
       `SELECT
@@ -151,11 +123,12 @@ const getInstructorsInMapView = async (req, res) => {
          COALESCE(NULLIF(TRIM(ip.subject), ''), '—') AS subject,
          ip.latitude::float8 AS latitude,
          ip.longitude::float8 AS longitude,
+         ip.region,
+         ip.baku_district,
          ip.map_profile_kind,
          ip.avatar_url,
          COALESCE(s.plan, 'basic') AS plan,
          ${PUBLIC_DISCOVER_LISTING_SQL}
-         ${distanceSql}
        FROM users u
        INNER JOIN instructor_profiles ip ON ip.user_id = u.id
        LEFT JOIN subscriptions s ON s.user_id = u.id AND s.status = 'active'
@@ -163,17 +136,16 @@ const getInstructorsInMapView = async (req, res) => {
          AND COALESCE(u.is_active, TRUE) = TRUE
          AND u.deleted_at IS NULL
          AND COALESCE(ip.map_visible, TRUE) = TRUE
-         AND ip.latitude IS NOT NULL
-         AND ip.longitude IS NOT NULL
-         AND ip.latitude BETWEEN $2 AND $1
-         AND ip.longitude BETWEEN LEAST($3::float8, $4::float8) AND GREATEST($3::float8, $4::float8)
+         AND ip.region IS NOT NULL
+         ${regionSql}
+         ${bakuDistrictSql}
          ${kindSql}
          ${categorySql}
          ${formatSql}
          ${areaSql}
        ${orderSql}
        LIMIT 200`,
-      params
+      params,
     );
 
     const instructors = await enrichMapInstructorRows(rows);
@@ -183,21 +155,27 @@ const getInstructorsInMapView = async (req, res) => {
         categoryId,
         areaId,
         searchQ: null,
-        north: n,
-        south: s,
-        east: e,
-        west: w,
+        region,
+        bakuDistrict,
+        includeNeighbors,
         kind: kindFilter || 'all',
         format,
       }).catch(() => {});
     });
 
     res.set('Cache-Control', 'public, max-age=30');
-    res.json({ success: true, instructors });
+    res.json({
+      success: true,
+      instructors,
+      meta: {
+        region,
+        baku_district: bakuDistrict || null,
+        include_neighbors: includeNeighbors,
+      },
+    });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message || 'Xəta' });
   }
 };
 
-module.exports = { getInstructorsInMapView };
- { getInstructorsInMapView };
+module.exports = { getInstructorsInMapView, BAKU };

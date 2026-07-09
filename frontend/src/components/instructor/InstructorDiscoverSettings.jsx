@@ -5,6 +5,7 @@ import Card from '../common/Card'
 import Button from '../common/Button'
 import { useToast } from '../common/Toast'
 import { groupServiceAreas } from '../../lib/serviceAreaGroups'
+import { AZ_REGIONS, BAKU_DISTRICTS, isBakuRegion } from '@shared/azerbaijanRegions.mjs'
 import { useSubscriptionPlans } from '../../hooks/useSubscriptionPlans'
 import { higherPaidPlansSuffix, planTitleOrSlug } from '../../lib/subscriptionPlanGuards'
 
@@ -35,6 +36,8 @@ export default function InstructorDiscoverSettings({ mapVisible, theme, inp }) {
   const [education, setEducation] = useState('')
   const [certifications, setCertifications] = useState('')
   const [address, setAddress] = useState('')
+  const [region, setRegion] = useState('')
+  const [bakuDistrict, setBakuDistrict] = useState('')
   const [areas, setAreas] = useState([])
   const [catSearch, setCatSearch] = useState('')
   const [catSuggestions, setCatSuggestions] = useState([])
@@ -69,6 +72,8 @@ export default function InstructorDiscoverSettings({ mapVisible, theme, inp }) {
       setEducation(disc?.profile?.discover_education || '')
       setCertifications(disc?.profile?.discover_certifications || '')
       setAddress(disc?.profile?.teacher_place_address || '')
+      setRegion(disc?.profile?.region || '')
+      setBakuDistrict(disc?.profile?.baku_district || '')
       if (areaRes?.success) setAreas(Array.isArray(areaRes.areas) ? areaRes.areas : [])
     } catch (e) {
       toast(e?.message || 'Yüklənmədi', 'error')
@@ -141,6 +146,8 @@ export default function InstructorDiscoverSettings({ mapVisible, theme, inp }) {
         discover_education: education,
         discover_certifications: certifications,
         teacher_place_address: address,
+        region: region || null,
+        baku_district: isBakuRegion(region) ? bakuDistrict || null : null,
         category_ids: categoryIds,
         delivery_formats: formats.map((f) => ({
           format: f,
@@ -199,9 +206,9 @@ export default function InstructorDiscoverSettings({ mapVisible, theme, inp }) {
         </h2>
       </div>
           <p className={['text-sm', theme === 'dark' ? 'text-gray-400' : 'text-token-textMuted'].join(' ')}>
-        Axtarışda görünmək üçün xəritə pinini aktiv edin və fənn, format və rayonları seçin.
+        Axtarışda görünmək üçün profili aktiv edin, şəhər/rayonunuzu və fənn, format seçimlərini doldurun.
         {!mapVisible ? (
-          <span className="block text-amber-400/90 mt-1 text-xs">Xəritə görünürlüyü hal-hazırda bağlıdır.</span>
+          <span className="block text-amber-400/90 mt-1 text-xs">Axtarış görünürlüyü hal-hazırda bağlıdır.</span>
         ) : null}
       </p>
 
@@ -230,6 +237,44 @@ export default function InstructorDiscoverSettings({ mapVisible, theme, inp }) {
       )}
 
       <div className="space-y-5">
+        <section>
+          <p className={sectionTitleCls}>Şəhər / Rayon</p>
+          <label className={fieldLabelCls}>Yaşadığınız şəhər və ya rayon</label>
+          <select
+            value={region}
+            onChange={(e) => {
+              const next = e.target.value
+              setRegion(next)
+              if (!isBakuRegion(next)) setBakuDistrict('')
+            }}
+            className={inp}
+          >
+            <option value="">Seçin…</option>
+            {AZ_REGIONS.map((r) => (
+              <option key={r} value={r}>
+                {r}
+              </option>
+            ))}
+          </select>
+          {isBakuRegion(region) ? (
+            <div className="mt-3">
+              <label className={fieldLabelCls}>Bakı rayonu</label>
+              <select
+                value={bakuDistrict}
+                onChange={(e) => setBakuDistrict(e.target.value)}
+                className={inp}
+              >
+                <option value="">Bütün Bakı (rayon seçmədən)</option>
+                {BAKU_DISTRICTS.map((d) => (
+                  <option key={d} value={d}>
+                    {d}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : null}
+        </section>
+
         <section>
           <p className={sectionTitleCls}>Dərs formatları</p>
           <div className="grid gap-2">
@@ -444,7 +489,7 @@ export default function InstructorDiscoverSettings({ mapVisible, theme, inp }) {
             to="/instructor/inquiries"
             className="text-sm font-semibold text-primary hover:underline self-center text-center px-2 py-2"
           >
-            Xəritə müraciətləri →
+            Axtarış müraciətləri →
           </Link>
         </div>
       </div>

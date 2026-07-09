@@ -1,4 +1,10 @@
 const db = require('../utils/db');
+const {
+  isBakuRegion,
+  isValidRegion,
+  isValidBakuDistrict,
+  normalizeRegionName,
+} = require('../../../shared/azerbaijanRegions');
 
 function parseCoord(v) {
   if (v === null || v === '') return null;
@@ -78,6 +84,28 @@ const patchInstructorMapProfile = async (req, res) => {
       vals.push(mapSearchRadius);
     }
 
+    if (req.body?.region !== undefined) {
+      const region = req.body.region == null ? null : normalizeRegionName(req.body.region);
+      if (region && !isValidRegion(region)) {
+        return res.status(400).json({ success: false, message: 'Düzgün olmayan region' });
+      }
+      sets.push(`region = $${i++}`);
+      vals.push(region);
+      if (!isBakuRegion(region)) {
+        sets.push(`baku_district = $${i++}`);
+        vals.push(null);
+      }
+    }
+    if (req.body?.baku_district !== undefined) {
+      const district =
+        req.body.baku_district == null ? null : normalizeRegionName(req.body.baku_district);
+      if (district && !isValidBakuDistrict(district)) {
+        return res.status(400).json({ success: false, message: 'Düzgün olmayan Bakı rayonu' });
+      }
+      sets.push(`baku_district = $${i++}`);
+      vals.push(district);
+    }
+
     if (!sets.length) {
       return res.status(400).json({ success: false, message: 'Yenilənən sahə yoxdur' });
     }
@@ -85,7 +113,7 @@ const patchInstructorMapProfile = async (req, res) => {
     vals.push(uid);
     const { rows } = await db.query(
       `UPDATE instructor_profiles SET ${sets.join(', ')} WHERE user_id = $${i}
-       RETURNING latitude, longitude, map_profile_kind, map_visible, map_search_radius_km`,
+       RETURNING latitude, longitude, map_profile_kind, map_visible, map_search_radius_km, region, baku_district`,
       vals
     );
 

@@ -1,6 +1,12 @@
 const db = require('../utils/db');
 const { normalizePlanSlug, planRank } = require('../config/plans');
 const {
+  isBakuRegion,
+  isValidRegion,
+  isValidBakuDistrict,
+  normalizeRegionName,
+} = require('../../../shared/azerbaijanRegions');
+const {
   sqlPlanListingPriority,
   enrichInstructorListingRow,
   normalizeCategoryNames,
@@ -213,7 +219,8 @@ async function getInstructorDiscoverProfile(userId) {
   const { rows: prof } = await db.query(
     `SELECT latitude, longitude, map_profile_kind, map_visible, subject,
             discover_hourly_rate, discover_bio, discover_education, discover_certifications,
-            discover_verified, teacher_place_address, map_search_radius_km
+            discover_verified, teacher_place_address, map_search_radius_km,
+            region, baku_district
      FROM instructor_profiles WHERE user_id = $1 LIMIT 1`,
     [userId],
   );
@@ -313,6 +320,30 @@ async function upsertInstructorDiscoverProfile(userId, body) {
     const r = Number.parseInt(body.map_search_radius_km, 10);
     sets.push(`map_search_radius_km = $${pi++}`);
     vals.push(Number.isFinite(r) ? Math.min(200, Math.max(1, r)) : 10);
+  }
+  if (body.region !== undefined) {
+    const region = body.region == null ? null : normalizeRegionName(body.region);
+    if (region && !isValidRegion(region)) {
+      const err = new Error('Düzgün olmayan region');
+      err.status = 400;
+      throw err;
+    }
+    sets.push(`region = $${pi++}`);
+    vals.push(region);
+    if (!isBakuRegion(region)) {
+      sets.push(`baku_district = $${pi++}`);
+      vals.push(null);
+    }
+  }
+  if (body.baku_district !== undefined) {
+    const district = body.baku_district == null ? null : normalizeRegionName(body.baku_district);
+    if (district && !isValidBakuDistrict(district)) {
+      const err = new Error('Düzgün olmayan Bakı rayonu');
+      err.status = 400;
+      throw err;
+    }
+    sets.push(`baku_district = $${pi++}`);
+    vals.push(district);
   }
 
   if (sets.length) {

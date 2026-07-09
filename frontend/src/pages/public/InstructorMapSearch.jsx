@@ -2,12 +2,16 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import api from '../../lib/api'
-import { BAKU_CENTER, distanceKm, formatDistanceKm } from '../../lib/geo'
-import { reverseGeocodeLabel } from '../../lib/reverseGeocode'
 import { setPageSeo } from '../../lib/pageSeo'
+import {
+  BAKU,
+  formatResultsLocationPhrase,
+  instructorLocationBadge,
+} from '@shared/azerbaijanRegions.mjs'
 import PublicSeoFooter from '../../components/public/PublicSeoFooter'
 import PublicPageTopBar from '../../components/public/PublicPageTopBar'
 import DiscoverSearchFilters from '../../components/discover/DiscoverSearchFilters'
+import RegionSearchFilter from '../../components/discover/RegionSearchFilter'
 import CategoryMegaMenu from '../../components/discover/CategoryMegaMenu'
 import InquiryFormModal from '../../components/discover/InquiryFormModal'
 import DiscoverAuthModal from '../../components/discover/DiscoverAuthModal'
@@ -40,20 +44,12 @@ export default function InstructorMapSearch() {
   const [loading, setLoading] = useState(true)
   const [hasFetched, setHasFetched] = useState(false)
   const [fetchError, setFetchError] = useState('')
-  const [locationHint, setLocationHint] = useState('')
-  const [radiusKm, setRadiusKm] = useState(10)
   const [selectedId, setSelectedId] = useState(null)
-  const [refPoint, setRefPoint] = useState({ lat: BAKU_CENTER[0], lng: BAKU_CENTER[1] })
-  /** user = GPS, baku = fallback/default, loading = sorğu gedir */
-  const [distanceOrigin, setDistanceOrigin] = useState('baku')
-  const [userLocationLabel, setUserLocationLabel] = useState('')
-  const [locating, setLocating] = useState(false)
-  const [nearMeActive, setNearMeActive] = useState(false)
-  const [userLocated, setUserLocated] = useState(false)
-  const geoWatchRef = useRef(null)
+  const [region, setRegion] = useState(BAKU)
+  const [bakuDistrict, setBakuDistrict] = useState(null)
+  const [includeNeighbors, setIncludeNeighbors] = useState(false)
   const loadSeqRef = useRef(0)
   const skipReloadRef = useRef(true)
-  const autoNearestDoneRef = useRef(false)
   const [discoverFilters, setDiscoverFilters] = useState({
     format: 'any',
     category_id: null,
@@ -62,13 +58,12 @@ export default function InstructorMapSearch() {
     area_id: null,
   })
   const [inquiryTarget, setInquiryTarget] = useState(null)
-  const geoResolvedRef = useRef(false)
   const [searchParams] = useSearchParams()
   const categoryFromUrl = searchParams.get('category')
 
-  const kindLabel = useCallback(
-    (k) => (k === 'trainer' ? t('marketplace.kind.trainer') : t('marketplace.kind.teacher')),
-    [t],
+  const locationPhrase = useMemo(
+    () => formatResultsLocationPhrase(region, bakuDistrict),
+    [region, bakuDistrict],
   )
 
   const resultCountLabel = useCallback(
@@ -80,12 +75,12 @@ export default function InstructorMapSearch() {
     [t],
   )
 
-  const nearestResultsHeadline = useCallback(
-    (count, k) => {
+  const regionResultsHeadline = useCallback(
+    (count, k, location) => {
       if (count === 0) return t('marketplace.results.noneFound')
-      if (k === 'teacher') return t('marketplace.results.nearestTeachers', { count })
-      if (k === 'trainer') return t('marketplace.results.nearestTrainers', { count })
-      return t('marketplace.results.nearestAll', { count })
+      if (k === 'teacher') return t('marketplace.results.regionTeachers', { count, location })
+      if (k === 'trainer') return t('marketplace.results.regionTrainers', { count, location })
+      return t('marketplace.results.regionAll', { count, location })
     },
     [t],
   )
@@ -106,7 +101,7 @@ export default function InstructorMapSearch() {
           category_name: c.name_az,
         }))
       } catch {
-        /* ignore — axtarış filteri olmadan davam */
+        /* ignore */
       }
     })()
     return () => {
@@ -143,20 +138,19 @@ export default function InstructorMapSearch() {
     })
   }, [discoverFilters.category_name, discoverFilters.category_slug, discoverFilters.category_id, t])
 
-  const loadByRadius = useCallback(
-    async (lat, lng, radius, userLat = refPoint.lat, userLng = refPoint.lng) => {
+  const loadByRegion = useCallback(
+    async (searchRegion, searchBakuDistrict, searchIncludeNeighbors) => {
+      if (!searchRegion) return
       const seq = ++loadSeqRef.current
       setLoading(true)
       setFetchError('')
       try {
         const res = await api.get('/public/instructors-map', {
           params: {
-            lat,
-            lng,
-            radius_km: radius,
+            region: searchRegion,
+            ...(searchBakuDistrict ? { baku_district: searchBakuDistrict } : {}),
+            ...(searchIncludeNeighbors ? { include_neighbors: '1' } : {}),
             kind,
-            user_lat: userLat,
-            user_lng: userLng,
             ...mapFilterParams(discoverFilters),
           },
         })
@@ -178,126 +172,25 @@ export default function InstructorMapSearch() {
         }
       }
     },
-    [kind, refPoint.lat, refPoint.lng, discoverFilters, t],
+    [kind, discoverFilters, t],
   )
 
   const reloadSearch = useCallback(() => {
-    void loadByRadius(refPoint.lat, refPoint.lng, radiusKm)
-  }, [loadByRadius, refPoint.lat, refPoint.lng, radiusKm])
+    void loadByRegion(region, bakuDistrict, includeNeighbors)
+  }, [loadByRegion, region, bakuDistrict, includeNeighbors])
 
   useEffect(() => {
     if (skipReloadRef.current) {
       skipReloadRef.current = false
+      void loadByRegion(region, bakuDistrict, includeNeighbors)
       return
     }
     reloadSearch()
-  }, [kind, discoverFilters, refPoint.lat, refPoint.lng, radiusKm, reloadSearch])
-
-  const resolveUserLabel = useCallback(
-    async (lat, lng) => {
-      const label = await reverseGeocodeLabel(lat, lng)
-      setUserLocationLabel(label || t('marketplace.distance.currentPosition'))
-    },
-    [t],
-  )
-
-  const applyCenter = useCallback(
-    (lat, lng, { fallback = false, loadSearch = true } = {}) => {
-      setRefPoint({ lat, lng })
-      setUserLocated(!fallback)
-      setDistanceOrigin(fallback ? 'baku' : 'user')
-      setNearMeActive(!fallback)
-      if (loadSearch) {
-        void loadByRadius(lat, lng, radiusKm, lat, lng)
-      }
-      if (fallback) {
-        setUserLocationLabel(t('marketplace.distance.bakuCenter'))
-        setLocationHint('')
-      } else {
-        setLocationHint('')
-        void resolveUserLabel(lat, lng)
-      }
-    },
-    [loadByRadius, radiusKm, resolveUserLabel, t],
-  )
-
-  const requestUserLocation = useCallback(
-    (opts = {}) => {
-      const { silent = false, forBoot = false } = opts
-      if (!navigator.geolocation) {
-        applyCenter(BAKU_CENTER[0], BAKU_CENTER[1], { fallback: true })
-        return
-      }
-      setLocating(true)
-      setDistanceOrigin('loading')
-      if (!silent) setLocationHint(t('marketplace.distance.locatingHint'))
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          setLocating(false)
-          geoResolvedRef.current = true
-          applyCenter(pos.coords.latitude, pos.coords.longitude, {
-            fallback: false,
-            loadSearch: forBoot || !silent,
-          })
-        },
-        () => {
-          setLocating(false)
-          geoResolvedRef.current = true
-          applyCenter(BAKU_CENTER[0], BAKU_CENTER[1], { fallback: true })
-        },
-        { enableHighAccuracy: true, timeout: 20000, maximumAge: 60000 },
-      )
-    },
-    [applyCenter, t],
-  )
-
-  const geoBootRef = useRef(false)
-  useEffect(() => {
-    if (geoBootRef.current) return
-    geoBootRef.current = true
-    requestUserLocation({ silent: true, forBoot: true })
-    return () => {
-      if (geoWatchRef.current != null) {
-        navigator.geolocation?.clearWatch(geoWatchRef.current)
-        geoWatchRef.current = null
-      }
-    }
-  }, [requestUserLocation])
-
-  const nearMe = () => {
-    setNearMeActive(true)
-    requestUserLocation({ silent: false })
-  }
-
-  const distanceFromLabel =
-    distanceOrigin === 'user'
-      ? userLocationLabel
-        ? t('marketplace.distance.fromYouWithLabel', { label: userLocationLabel })
-        : t('marketplace.distance.fromYou')
-      : distanceOrigin === 'loading'
-        ? t('marketplace.distance.locating')
-        : t('marketplace.distance.fromBakuCenter')
+  }, [kind, discoverFilters, region, bakuDistrict, includeNeighbors, reloadSearch, loadByRegion])
 
   const instructorsSorted = useMemo(() => {
-    const withDist = instructors.map((p) => {
-      const fromApi = p.distance_km != null ? Number(p.distance_km) : null
-      const distanceKmVal =
-        fromApi != null && Number.isFinite(fromApi)
-          ? fromApi
-          : distanceKm(refPoint.lat, refPoint.lng, p.latitude, p.longitude)
-      return { ...p, distanceKm: distanceKmVal }
-    })
-    return sortInstructorsForMapListing(withDist, (p) => p.distanceKm ?? Infinity)
-  }, [instructors, refPoint])
-
-  const nearestInstructor = instructorsSorted[0] ?? null
-
-  useEffect(() => {
-    if (autoNearestDoneRef.current || loading || !nearestInstructor) return
-    if (distanceOrigin !== 'user') return
-    autoNearestDoneRef.current = true
-    setSelectedId(nearestInstructor.id)
-  }, [distanceOrigin, loading, nearestInstructor])
+    return sortInstructorsForMapListing(instructors, () => 0)
+  }, [instructors])
 
   const requireContactAuth = (action) => {
     if (isAuthenticated) {
@@ -371,6 +264,12 @@ export default function InstructorMapSearch() {
     [focusInstructor],
   )
 
+  const handleRegionChange = useCallback(({ region: r, bakuDistrict: d, includeNeighbors: inc }) => {
+    setRegion(r)
+    setBakuDistrict(d)
+    setIncludeNeighbors(Boolean(inc))
+  }, [])
+
   const count = instructorsSorted.length
   const isEmpty = hasFetched && !loading && count === 0 && !fetchError
 
@@ -404,14 +303,13 @@ export default function InstructorMapSearch() {
             {hasFetched && !fetchError ? (
               <>
                 <p className="text-base sm:text-lg font-semibold text-white leading-snug">
-                  {nearestResultsHeadline(count, kind)}
+                  {regionResultsHeadline(count, kind, locationPhrase)}
                 </p>
-                <p className="text-xs text-gray-500">
-                  {t('marketplace.distance.label')}: {distanceFromLabel}
-                  {loading ? (
-                    <span className="text-gray-400"> · {t('marketplace.distance.refreshing')}</span>
-                  ) : null}
-                </p>
+                {loading ? (
+                  <p className="text-xs text-gray-500">
+                    {t('marketplace.distance.refreshing')}
+                  </p>
+                ) : null}
               </>
             ) : loading ? (
               <p className="text-sm text-gray-400">{t('marketplace.searching')}</p>
@@ -420,21 +318,6 @@ export default function InstructorMapSearch() {
           </div>
 
           <div ref={listScrollRef} className="flex-1 overflow-y-auto p-4">
-            {nearestInstructor && distanceOrigin === 'user' && count > 0 && !loading ? (
-              <div className="rounded-xl border border-sky-500/35 bg-gradient-to-r from-sky-500/10 to-emerald-500/10 p-3 mb-4">
-                <p className="text-[10px] font-bold text-sky-400 uppercase tracking-wide">
-                  {t('marketplace.nearestBadge')}
-                </p>
-                <p className="text-sm font-semibold text-white mt-1">
-                  {t('marketplace.nearestKindName', {
-                    kind: kindLabel(nearestInstructor.map_profile_kind),
-                    name: nearestInstructor.full_name,
-                  })}
-                  <span className="text-primary ml-1">({formatDistanceKm(nearestInstructor.distanceKm)})</span>
-                </p>
-              </div>
-            ) : null}
-
             {loading && !count ? (
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
                 {[1, 2, 3, 4].map((i) => (
@@ -447,40 +330,29 @@ export default function InstructorMapSearch() {
               <div className="rounded-xl border border-white/10 bg-[#121212]/80 p-6 text-center space-y-2 max-w-lg mx-auto">
                 <p className="text-sm font-semibold text-white">{t('marketplace.empty.title')}</p>
                 <p className="text-xs text-gray-400 leading-relaxed">{t('marketplace.empty.hint')}</p>
-                <button
-                  type="button"
-                  onClick={nearMe}
-                  className="mt-2 text-xs font-bold text-primary hover:underline"
-                >
-                  {t('marketplace.empty.retryNearMe')}
-                </button>
               </div>
             ) : null}
 
             {count > 0 ? (
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
-                {instructorsSorted.map((p, idx) => {
-                  const isNearest = idx === 0
-                  return (
-                    <TeacherMapListCard
-                      key={String(p.id)}
-                      instructor={p}
-                      comfortable
-                      selected={selectedId === p.id}
-                      highlighted={highlightId === p.id}
-                      isNearest={isNearest}
-                      distanceOrigin={distanceOrigin}
-                      cardRef={(el) => {
-                        if (el) cardRefs.current.set(String(p.id), el)
-                        else cardRefs.current.delete(String(p.id))
-                      }}
-                      onFocus={focusInstructor}
-                      onInquiry={onInquiryClick}
-                      onWhatsApp={onWhatsAppClick}
-                      whatsappBusy={whatsappBusy}
-                    />
-                  )
-                })}
+                {instructorsSorted.map((p) => (
+                  <TeacherMapListCard
+                    key={String(p.id)}
+                    instructor={p}
+                    comfortable
+                    selected={selectedId === p.id}
+                    highlighted={highlightId === p.id}
+                    locationBadge={instructorLocationBadge(p.region, p.baku_district)}
+                    cardRef={(el) => {
+                      if (el) cardRefs.current.set(String(p.id), el)
+                      else cardRefs.current.delete(String(p.id))
+                    }}
+                    onFocus={focusInstructor}
+                    onInquiry={onInquiryClick}
+                    onWhatsApp={onWhatsAppClick}
+                    whatsappBusy={whatsappBusy}
+                  />
+                ))}
               </div>
             ) : null}
           </div>
@@ -489,8 +361,8 @@ export default function InstructorMapSearch() {
         <aside className="order-1 lg:order-2 lg:w-[42%] flex flex-col min-h-0 bg-[#0b0b0b] border-b lg:border-b-0 border-white/10 shrink-0 lg:shrink">
           <div className="p-4 space-y-3 overflow-y-auto lg:max-h-none">
             <MarketplaceAiSearchPanel
-              userLat={refPoint.lat}
-              userLng={refPoint.lng}
+              userLat={null}
+              userLng={null}
               onApplyFilters={handleAiApplyFilters}
               onInquiry={onInquiryClick}
               onWhatsApp={onWhatsAppClick}
@@ -506,6 +378,12 @@ export default function InstructorMapSearch() {
               onChange={(next) => {
                 setDiscoverFilters(next)
               }}
+            />
+            <RegionSearchFilter
+              region={region}
+              bakuDistrict={bakuDistrict}
+              includeNeighbors={includeNeighbors}
+              onChange={handleRegionChange}
             />
             <div className="flex flex-wrap gap-2">
               {kindOptions.map(([k, lab]) => (
@@ -523,38 +401,9 @@ export default function InstructorMapSearch() {
                 </button>
               ))}
             </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={nearMe}
-                disabled={locating}
-                className={`text-xs font-bold rounded-xl border px-3 py-2 transition-colors ${
-                  nearMeActive && distanceOrigin === 'user'
-                    ? 'bg-primary/25 border-primary/50 text-primary'
-                    : 'bg-white/5 border-white/15 text-gray-300 hover:border-white/25'
-                }`}
-              >
-                {locating ? t('marketplace.distance.locating') : t('marketplace.nearMe')}
-              </button>
-              <label className="text-xs text-gray-500 flex items-center gap-1.5">
-                <span className="text-gray-400">{t('marketplace.radius')}</span>
-                <select
-                  className="bg-[#13112e] border border-white/15 rounded-lg px-2 py-1 text-gray-200 text-xs"
-                  value={radiusKm}
-                  onChange={(e) => setRadiusKm(Number(e.target.value))}
-                >
-                  {[5, 10, 25].map((km) => (
-                    <option key={km} value={km}>
-                      {t('marketplace.radiusKm', { km })}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-            {locationHint ? <p className="text-xs text-amber-400/90">{locationHint}</p> : null}
             {hasFetched && !fetchError && count > 0 ? (
               <p className="text-[11px] text-gray-500 pt-1 border-t border-white/10">
-                {resultCountLabel(count, kind)} · {distanceFromLabel}
+                {resultCountLabel(count, kind)} · {locationPhrase}
               </p>
             ) : null}
           </div>

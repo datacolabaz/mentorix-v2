@@ -51,7 +51,7 @@
       "live_history": "Canlı dərslər",
       "students": "Tələbələrim",
       "join_requests": "Sorğular",
-      "inquiries": "Xəritə müraciətləri",
+      "inquiries": "Axtarış müraciətləri",
       "schedule": "Cədvəlim",
       "attendance": "Davamiyyət",
       "exams": "İmtahanlar",
@@ -574,7 +574,7 @@
       "howItWorks": "Necə işləyir?",
       "demo": "Demo bax",
       "haveAccount": "Artıq hesabım var — girişə keç",
-      "marketplaceCta": "Müəllim / Təlimçi tap (Xəritə ilə)"
+      "marketplaceCta": "Müəllim / Təlimçi tap"
     },
     "activity": {
       "title": "Canlı fəaliyyət",
@@ -640,7 +640,7 @@
     "marketplace": {
       "badge": "Valideynlər və tələbələr üçün",
       "title": "Müəllim və təlimçi tapın",
-      "desc": "Xəritədən müəllim tapın, universitet proqramlarını müqayisə edin — tələbə və valideynlər üçün qeydiyyat pulsuzdur."
+      "desc": "Rayonunuza uyğun müəllim tapın, universitet proqramlarını müqayisə edin — tələbə və valideynlər üçün qeydiyyat pulsuzdur."
     },
     "universities": {
       "badge": "Xaricdə təhsil",
@@ -668,7 +668,7 @@
     "findTeacher": "Müəllim tap",
     "platform": "Platforma",
     "info": "Məlumat",
-    "mapSearch": "Xəritədə axtar",
+    "mapSearch": "Müəllim tap",
     "universityPrograms": "Universitet proqramları",
     "loginRegister": "Giriş / qeydiyyat",
     "tagline": "Mentorix müəllimləri, tələbələri və valideynləri bir platformada birləşdirərək təhsil prosesini daha rahat və effektiv idarə etməyə kömək edir.",
@@ -2087,7 +2087,7 @@
   },
   "marketplace": {
     "title": "Müəllim tap — Mentorix",
-    "subtitle": "Məsafəyə görə sıralanmış müəllimlər · reytinq · format · WhatsApp (qeydiyyatdan sonra)",
+    "subtitle": "Rayon üzrə müəllimlər · reytinq · format · WhatsApp (qeydiyyatdan sonra)",
     "backToLogin": "Girişə qayıt",
     "kind": {
       "all": "Hamısı",
@@ -2096,9 +2096,9 @@
     },
     "results": {
       "noneFound": "Müəllim tapılmadı",
-      "nearestTeachers": "Sizə ən yaxın {{count}} müəllim tapıldı",
-      "nearestTrainers": "Sizə ən yaxın {{count}} təlimçi tapıldı",
-      "nearestAll": "Sizə ən yaxın {{count}} nəticə tapıldı",
+      "regionTeachers": "{{location}} {{count}} müəllim tapıldı",
+      "regionTrainers": "{{location}} {{count}} təlimçi tapıldı",
+      "regionAll": "{{location}} {{count}} müəllim tapıldı",
       "teachersFound": "{{count}} müəllim tapıldı",
       "trainersFound": "{{count}} təlimçi tapıldı",
       "allFound": "{{count}} nəticə tapıldı"
@@ -2118,13 +2118,9 @@
     "nearestBadge": "📍 Sizə ən yaxın",
     "nearestKindName": "{{kind}}: {{name}}",
     "empty": {
-      "title": "Bu ərazidə müəllim yoxdur",
-      "hint": "Radiusu artırın və ya filteri dəyişin.",
-      "retryNearMe": "Mənim yaxınlığımda yenidən yoxla"
+      "title": "Bu rayonda müəllim yoxdur",
+      "hint": "Başqa rayon seçin, qonşu rayonları daxil edin və ya filteri dəyişin."
     },
-    "nearMe": "Mənim yaxınlığımda",
-    "radius": "Radius",
-    "radiusKm": "{{km}} km",
     "errors": {
       "fetchFailed": "Məlumat alınmadı",
       "network": "Şəbəkə xətası",
@@ -2135,10 +2131,10 @@
       "brand": "Mentorix",
       "searchTitle": "Müəllim tap",
       "defaultTitle": "Müəllim tap — axtarış | Mentorix",
-      "defaultDescription": "Yaxınlığınızdakı müəllim, repetitor və təlimçiləri məsafəyə görə tapın. Mentorix təhsil idarəetmə platformasının ictimai müəllim axtarış bölməsidir.",
+      "defaultDescription": "Rayonunuza uyğun müəllim, repetitor və təlimçiləri tapın. Mentorix təhsil idarəetmə platformasının ictimai müəllim axtarış bölməsidir.",
       "defaultKeywords": "müəllim tap, repetitor axtarışı, təlimçi, Bakı, təhsil idarəetmə platforması, Mentorix",
       "categoryTitle": "{{category}} müəllimi tap — Mentorix | Bakı",
-      "categoryDescription": "{{category}} repetitoru və müəllimi axtarırsınız? Mentorix-də yaxınlığınızdakı təlimçiləri reytinq və formatla müqayisə edin.",
+      "categoryDescription": "{{category}} repetitoru və müəllimi axtarırsınız? Mentorix-də rayonunuza uyğun təlimçiləri reytinq və formatla müqayisə edin.",
       "categoryKeywords": "{{category}}, repetitor, müəllim tap, Bakı, Mentorix"
     },
     "filters": {
@@ -2165,7 +2161,12 @@
         "metro": "Metro",
         "region": "Rayon",
         "baku": "Bakı"
-      }
+      },
+      "regionTitle": "Şəhər / Rayon",
+      "regionPlaceholder": "Rayon və ya şəhər seçin",
+      "bakuDistrictTitle": "Bakı rayonu",
+      "bakuDistrictPlaceholder": "Bütün Bakı (rayon seçmədən)",
+      "includeNeighbors": "Qonşu rayonları da göstər"
     },
     "categories": {
       "allSubjects": "Bütün fənlər ▾",
@@ -2250,15 +2251,15 @@
     }
   },
   "studentInquiries": {
-    "title": "Xəritə müraciətləri",
-    "subtitleBefore": "Mentorix axtarış/xəritədə profilinizi tapıb yazan valideyn və tələbələr. Qrup və imtahan təsdiqi üçün",
+    "title": "Axtarış müraciətləri",
+    "subtitleBefore": "Mentorix axtarışında profilinizi tapıb yazan valideyn və tələbələr. Qrup və imtahan təsdiqi üçün",
     "joinRequestsLink": "Sorğular",
     "searchProfileLink": "Axtarış profili",
     "usageLimit": "Bu ay {{viewed}}/{{limit}} sorğu nömrəsi açılıb.",
     "recentTitle": "Son müraciətlər",
-    "emptyMain": "Burada yalnız xəritə/axtarışdan gələn müraciətlər görünür — Gmail və ya imtahan linki ilə qoşulan tələbələr burada deyil.",
+    "emptyMain": "Burada yalnız axtarışdan gələn müraciətlər görünür — Gmail və ya imtahan linki ilə qoşulan tələbələr burada deyil.",
     "emptyInviteBefore": "Dəvət linki və ya imtahan paylaşımından gələn təsdiq sorğuları:",
-    "emptyHint": "Xəritədə görünmək üçün Tənzimləmələr → Axtarış profilini aktiv edin.",
+    "emptyHint": "Axtarışda görünmək üçün Tənzimləmələr → Axtarış profilini aktiv edin.",
     "formatLabel": "Format",
     "revealPhone": "Nömrəni göstər",
     "loadFailed": "Yüklənmədi",

@@ -13,7 +13,7 @@ export const INSTRUCTOR_NAV_ITEM_DEFS = {
     icon: 'notifications',
     badgeKey: 'join_requests',
   },
-  inquiries: { to: '/instructor/inquiries', labelKey: 'nav.instructor.inquiries', label: 'Xəritə müraciətləri', icon: 'instructors' },
+  inquiries: { to: '/instructor/inquiries', labelKey: 'nav.instructor.inquiries', label: 'Axtarış müraciətləri', icon: 'instructors' },
   schedule: { to: '/instructor/schedule', labelKey: 'nav.instructor.schedule', label: 'Cədvəlim', icon: 'schedule' },
   attendance: { to: '/instructor/attendance', labelKey: 'nav.instructor.attendance', label: 'Davamiyyət', icon: 'attendance' },
   exams: { to: '/instructor/exams', labelKey: 'nav.instructor.exams', label: 'İmtahanlar', icon: 'exams' },

@@ -1,7 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import InstructorAvatar from '../common/InstructorAvatar'
-import { formatDistanceKm } from '../../lib/geo'
 import {
   deliveryFormatBadges,
   showTopBadge,
@@ -12,8 +11,7 @@ export default function TeacherMapListCard({
   instructor: p,
   selected,
   highlighted,
-  isNearest,
-  distanceOrigin,
+  locationBadge,
   comfortable = false,
   cardRef,
   onFocus,
@@ -29,6 +27,7 @@ export default function TeacherMapListCard({
   const rating = teacherRatingParts(p)
   const formats = deliveryFormatBadges(p)
   const topBadge = showTopBadge(p)
+  const districtLabel = locationBadge || p.baku_district || p.region || null
 
   const ratingLabel =
     rating && rating.count > 0
@@ -45,9 +44,7 @@ export default function TeacherMapListCard({
           ? 'border-emerald-400/70 bg-emerald-500/10 ring-2 ring-emerald-400/50 shadow-[0_0_18px_rgba(52,211,153,0.35)]'
           : selected
             ? 'border-primary/60 bg-primary/10 ring-1 ring-primary/30'
-            : isNearest
-              ? 'border-sky-500/35 bg-sky-500/5'
-              : 'border-white/10 bg-[#121212]/90',
+            : 'border-white/10 bg-[#121212]/90',
       ].join(' ')}
     >
       <button type="button" onClick={() => onFocus?.(p)} className="flex gap-2 flex-1 min-w-0 text-left">
@@ -65,9 +62,9 @@ export default function TeacherMapListCard({
                 {t('marketplace.card.topBadge')}
               </span>
             ) : null}
-            {isNearest ? (
+            {districtLabel ? (
               <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-sky-500/15 text-sky-300 border border-sky-500/25">
-                {t('marketplace.card.nearest')}
+                📍 {districtLabel}
               </span>
             ) : null}
             {p.is_featured_listing && !topBadge ? (
@@ -80,12 +77,6 @@ export default function TeacherMapListCard({
           <div className="flex items-baseline justify-between gap-2">
             <span className={`font-semibold text-white truncate ${comfortable ? 'text-base' : 'text-sm'}`}>
               {p.full_name}
-            </span>
-            <span className="text-xs font-bold text-primary shrink-0 text-right tabular-nums">
-              📍 {formatDistanceKm(p.distanceKm ?? p.distance_km)}
-              <span className="block text-[10px] font-normal text-gray-500">
-                {distanceOrigin === 'user' ? t('marketplace.card.fromYou') : t('marketplace.card.approximate')}
-              </span>
             </span>
           </div>
 
