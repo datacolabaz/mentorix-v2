@@ -57,7 +57,6 @@ export default function InstructorMaterialsLibrary() {
   const [tagMaterial, setTagMaterial] = useState(null)
   const [tagInput, setTagInput] = useState('')
   const [tagSaving, setTagSaving] = useState(false)
-  const [openLinkMenuId, setOpenLinkMenuId] = useState(null)
   const [renamingId, setRenamingId] = useState(null)
   const [renameValue, setRenameValue] = useState('')
   const [renameSaving, setRenameSaving] = useState(false)
@@ -324,9 +323,9 @@ export default function InstructorMaterialsLibrary() {
             ...items.map((m) => (
               <Card
                 key={m.id}
-                className={`p-4 border border-[color:var(--border-subtle)] hover:border-primary/30 transition-colors overflow-visible ${
-                  openLinkMenuId === m.id ? 'relative z-[100]' : 'relative'
-                } ${isDark ? 'bg-[#121212]/80' : ''}`}
+                className={`p-4 border border-[color:var(--border-subtle)] hover:border-primary/30 transition-colors ${
+                  isDark ? 'bg-[#121212]/80' : ''
+                }`}
               >
                 <div className="flex items-start gap-3">
                   <div className="text-2xl shrink-0">{fileEmoji(m)}</div>
@@ -431,11 +430,7 @@ export default function InstructorMaterialsLibrary() {
                       >
                         {t('materials.qr')}
                       </button>
-                      <MaterialLinkMenu
-                        material={m}
-                        onLinked={onMaterialLinked}
-                        onOpenChange={(isOpen) => setOpenLinkMenuId(isOpen ? m.id : null)}
-                      />
+                      <MaterialLinkMenu material={m} onLinked={onMaterialLinked} />
                       <button
                         type="button"
                         onClick={() => setDeleteTarget(m)}

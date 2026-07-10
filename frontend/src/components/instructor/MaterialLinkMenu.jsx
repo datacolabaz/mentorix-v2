@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import Modal from '../common/Modal'
 import Button from '../common/Button'
 import api from '../../lib/api'
@@ -11,6 +12,9 @@ const LINK_ACTIONS = [
   { type: 'student', label: 'Tələbəyə göndər', icon: '👤' },
   { type: 'group', label: 'Qrupa göndər', icon: '👥' },
 ]
+
+const MENU_WIDTH = 220
+const MENU_Z_INDEX = 9999
 
 function targetLabel(type, item) {
   if (!item) return ''
@@ -27,21 +31,60 @@ function targetLabel(type, item) {
 
 export default function MaterialLinkMenu({ material, onLinked, onOpenChange, className = '' }) {
   const toast = useToast()
-  const rootRef = useRef(null)
+  const buttonRef = useRef(null)
+  const menuRef = useRef(null)
   const [open, setOpen] = useState(false)
+  const [menuStyle, setMenuStyle] = useState(null)
   const [picker, setPicker] = useState(null)
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(false)
   const [linking, setLinking] = useState(false)
 
+  const updateMenuPosition = useCallback(() => {
+    const el = buttonRef.current
+    if (!el) return
+    const rect = el.getBoundingClientRect()
+    let left = rect.right - MENU_WIDTH
+    left = Math.max(8, Math.min(left, window.innerWidth - MENU_WIDTH - 8))
+    const spaceBelow = window.innerHeight - rect.bottom - 8
+    const estimatedHeight = LINK_ACTIONS.length * 36 + 8
+    const openUp = spaceBelow < estimatedHeight && rect.top > estimatedHeight
+    setMenuStyle({
+      position: 'fixed',
+      left,
+      width: MENU_WIDTH,
+      zIndex: MENU_Z_INDEX,
+      ...(openUp
+        ? { bottom: window.innerHeight - rect.top + 4 }
+        : { top: rect.bottom + 4 }),
+    })
+  }, [])
+
   useEffect(() => {
     onOpenChange?.(open)
   }, [open, onOpenChange])
 
+  useLayoutEffect(() => {
+    if (!open) {
+      setMenuStyle(null)
+      return
+    }
+    updateMenuPosition()
+    const onReflow = () => updateMenuPosition()
+    window.addEventListener('resize', onReflow)
+    window.addEventListener('scroll', onReflow, true)
+    return () => {
+      window.removeEventListener('resize', onReflow)
+      window.removeEventListener('scroll', onReflow, true)
+    }
+  }, [open, updateMenuPosition])
+
   useEffect(() => {
     if (!open) return
     const onDoc = (e) => {
-      if (rootRef.current && !rootRef.current.contains(e.target)) setOpen(false)
+      const inButton = buttonRef.current?.contains(e.target)
+      const inMenu = menuRef.current?.contains(e.target)
+      if (!inButton && !inMenu) setOpen(false)
     }
     document.addEventListener('mousedown', onDoc)
     return () => document.removeEventListener('mousedown', onDoc)
@@ -99,32 +142,47 @@ export default function MaterialLinkMenu({ material, onLinked, onOpenChange, cla
 
   const pickerMeta = LINK_ACTIONS.find((a) => a.type === picker)
 
-  return (
-    <>
-      <div className={`relative ${className}`} ref={rootRef}>
-        <button
-          type="button"
-          onClick={() => setOpen((v) => !v)}
-          className="px-3 py-2 rounded-lg text-xs text-token-textMain border border-[color:var(--border-subtle)] hover:bg-white/5 whitespace-nowrap"
-        >
-          Bağla ▾
-        </button>
-        {open ? (
-          <div className="absolute right-0 top-full mt-1 z-[200] min-w-[200px] rounded-xl border border-[color:var(--border-subtle)] bg-[#1a1a1a] shadow-xl py-1">
+  const dropdown =
+    open && menuStyle
+      ? createPortal(
+          <div
+            ref={menuRef}
+            style={menuStyle}
+            className="rounded-xl border border-white/15 bg-[#1a1a1a] shadow-[0_16px_40px_rgba(0,0,0,0.55)] py-1"
+            role="menu"
+          >
             {LINK_ACTIONS.map((action) => (
               <button
                 key={action.type}
                 type="button"
+                role="menuitem"
                 onClick={() => openPicker(action.type)}
-                className="w-full text-left px-3 py-2 text-xs text-gray-200 hover:bg-white/5 flex items-center gap-2"
+                className="w-full text-left px-3 py-2 text-xs text-gray-100 hover:bg-white/10 flex items-center gap-2"
               >
                 <span>{action.icon}</span>
                 <span>{action.label}</span>
               </button>
             ))}
-          </div>
-        ) : null}
+          </div>,
+          document.body,
+        )
+      : null
+
+  return (
+    <>
+      <div className={className}>
+        <button
+          ref={buttonRef}
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
+          aria-haspopup="menu"
+          className="px-3 py-2 rounded-lg text-xs text-token-textMain border border-[color:var(--border-subtle)] hover:bg-white/5 whitespace-nowrap"
+        >
+          Bağla ▾
+        </button>
       </div>
+      {dropdown}
 
       <Modal
         open={Boolean(picker)}
