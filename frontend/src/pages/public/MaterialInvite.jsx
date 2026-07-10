@@ -6,6 +6,7 @@ import Button from '../../components/common/Button'
 import Card from '../../components/common/Card'
 import { useToast } from '../../components/common/Toast'
 import GoogleSignInButton from '../../components/auth/GoogleSignInButton'
+import { setPageSeo } from '../../lib/pageSeo'
 
 export default function MaterialInvite() {
   const { materialId } = useParams()
@@ -33,6 +34,20 @@ export default function MaterialInvite() {
     })()
     return () => { cancelled = true }
   }, [id])
+
+  useEffect(() => {
+    const material = info?.material
+    if (!material) return
+    const title = String(material.title || '').trim() || 'Material'
+    const instructor = String(material.instructor_name || '').trim()
+    setPageSeo({
+      title: `${title} — Material | Mentorix`,
+      description: instructor
+        ? `${instructor} müəllimindən material: ${title}. Mentorix ilə daxil olub bax.`
+        : `Tədris materialı: ${title}. Mentorix ilə daxil olub bax.`,
+      canonicalPath: `/library/material/${encodeURIComponent(id)}`,
+    })
+  }, [info?.material, id])
 
   const acceptInvite = useCallback(async () => {
     if (!id || user?.role !== 'student') return

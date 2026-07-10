@@ -1,11 +1,14 @@
 const db = require('../utils/db');
 const { resolveCatalogLang, localizedField } = require('../lib/catalogI18n');
+const { getTaskForStudentRequest } = require('../services/taskAccessRequestService');
+const { getMaterialForInvite } = require('../services/guestAccessService');
 
 function siteOrigin() {
   return String(process.env.FRONTEND_BASE_URL || process.env.FRONTEND_URL || 'https://mentorix.io').replace(/\/+$/, '');
 }
 
 const OG_CERT_IMAGE_PATH = '/og-certified.svg';
+const OG_DEFAULT_IMAGE_PATH = '/og.svg?v=5';
 
 async function getCertifiedCategoryOg(req, res) {
   try {
@@ -123,4 +126,60 @@ async function getCertifiedExamOg(req, res) {
   }
 }
 
-module.exports = { getCertifiedCategoryOg, getExamOg, getCertifiedExamOg };
+async function getTaskOg(req, res) {
+  try {
+    const task = await getTaskForStudentRequest(req.params.taskId);
+    if (!task) return res.status(404).json({ success: false, message: 'Tapşırıq tapılmadı' });
+
+    const taskTitle = String(task.title || '').trim() || 'Tapşırıq';
+    const instructor = String(task.instructor_name || '').trim();
+    const title = `${taskTitle} — Tapşırıq | Mentorix`;
+    const description = instructor
+      ? `${instructor} müəllimindən tapşırıq: ${taskTitle}. Mentorix ilə daxil olub başla.`
+      : `Tapşırıq: ${taskTitle}. Mentorix ilə daxil olub başla.`;
+    const canonicalPath = `/task/${encodeURIComponent(task.id)}`;
+
+    res.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');
+    res.json({
+      success: true,
+      title,
+      description,
+      url: `${siteOrigin()}${canonicalPath}`,
+      canonical_path: canonicalPath,
+      image: `${siteOrigin()}${OG_DEFAULT_IMAGE_PATH}`,
+      og_type: 'website',
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message || 'Xəta' });
+  }
+}
+
+async function getMaterialOg(req, res) {
+  try {
+    const material = await getMaterialForInvite(req.params.materialId);
+    if (!material) return res.status(404).json({ success: false, message: 'Material tapılmadı' });
+
+    const materialTitle = String(material.title || '').trim() || 'Material';
+    const instructor = String(material.instructor_name || '').trim();
+    const title = `${materialTitle} — Material | Mentorix`;
+    const description = instructor
+      ? `${instructor} müəllimindən material: ${materialTitle}. Mentorix ilə daxil olub bax.`
+      : `Tədris materialı: ${materialTitle}. Mentorix ilə daxil olub bax.`;
+    const canonicalPath = `/library/material/${encodeURIComponent(material.id)}`;
+
+    res.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');
+    res.json({
+      success: true,
+      title,
+      description,
+      url: `${siteOrigin()}${canonicalPath}`,
+      canonical_path: canonicalPath,
+      image: `${siteOrigin()}${OG_DEFAULT_IMAGE_PATH}`,
+      og_type: 'website',
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message || 'Xəta' });
+  }
+}
+
+module.exports = { getCertifiedCategoryOg, getExamOg, getCertifiedExamOg, getTaskOg, getMaterialOg };

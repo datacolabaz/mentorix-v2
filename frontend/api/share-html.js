@@ -1,7 +1,8 @@
 /**
  * Vercel serverless: inject Open Graph meta into index.html for shareable routes.
  * Rewritten from vercel.json for /sertifikatli-imtahanlar/:slug,
- * /sertifikatli-imtahanlar/:categorySlug/:examSlug, and /exam/:examId.
+ * /sertifikatli-imtahanlar/:categorySlug/:examSlug, /exam/:examId,
+ * /task/:taskId, and /library/material/:materialId.
  *
  * Optional MENTORIX_API_ORIGIN (Railway backend origin, no /api suffix).
  * Falls back to https://api.edupanel.co when unset.
@@ -73,6 +74,10 @@ async function fetchOgMeta(kind, params, base) {
     path = `/api/public/og/certified-exam/${encodeURIComponent(params.categorySlug)}/${encodeURIComponent(params.examSlug)}`
   } else if (kind === 'exam' && params.examId) {
     path = `/api/public/og/exam/${encodeURIComponent(params.examId)}`
+  } else if (kind === 'task' && params.taskId) {
+    path = `/api/public/og/task/${encodeURIComponent(params.taskId)}`
+  } else if (kind === 'material' && params.materialId) {
+    path = `/api/public/og/material/${encodeURIComponent(params.materialId)}`
   } else {
     return null
   }
@@ -141,6 +146,8 @@ export default async function handler(req, res) {
     const kind = String(req.query?.kind || '').trim()
     const slug = String(req.query?.slug || '').trim()
     const examId = String(req.query?.examId || '').trim()
+    const taskId = String(req.query?.taskId || '').trim()
+    const materialId = String(req.query?.materialId || '').trim()
 
     const categorySlug = String(req.query?.categorySlug || '').trim()
     const examSlug = String(req.query?.examSlug || '').trim()
@@ -149,7 +156,7 @@ export default async function handler(req, res) {
     const base = upstreamBase()
 
     try {
-      const meta = await fetchOgMeta(kind, { slug, examId, categorySlug, examSlug }, base)
+      const meta = await fetchOgMeta(kind, { slug, examId, taskId, materialId, categorySlug, examSlug }, base)
       if (meta) {
         const keepImage = kind === 'category' || kind === 'certified-exam'
         html = injectPageMeta(html, meta, { keepImage })

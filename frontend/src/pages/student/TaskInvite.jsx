@@ -6,6 +6,7 @@ import Button from '../../components/common/Button'
 import Card from '../../components/common/Card'
 import { useToast } from '../../components/common/Toast'
 import GoogleSignInButton from '../../components/auth/GoogleSignInButton'
+import { setPageSeo } from '../../lib/pageSeo'
 
 const RETURN_KEY = 'mx_return_after_login'
 
@@ -36,6 +37,20 @@ export default function TaskInvite() {
     })()
     return () => { cancelled = true }
   }, [id])
+
+  useEffect(() => {
+    const task = info?.task
+    if (!task) return
+    const title = String(task.title || '').trim() || 'Tapşırıq'
+    const instructor = String(task.instructor_name || '').trim()
+    setPageSeo({
+      title: `${title} — Tapşırıq | Mentorix`,
+      description: instructor
+        ? `${instructor} müəllimindən tapşırıq: ${title}. Mentorix ilə daxil olub başla.`
+        : `Tapşırıq: ${title}. Mentorix ilə daxil olub başla.`,
+      canonicalPath: `/task/${encodeURIComponent(id)}`,
+    })
+  }, [info?.task, id])
 
   const acceptInvite = useCallback(async () => {
     if (!id || user?.role !== 'student') return

@@ -29,6 +29,14 @@
       "destination": "/api/share-html?kind=exam&examId=:examId"
     },
     {
+      "source": "/task/:taskId",
+      "destination": "/api/share-html?kind=task&taskId=:taskId"
+    },
+    {
+      "source": "/library/material/:materialId",
+      "destination": "/api/share-html?kind=material&materialId=:materialId"
+    },
+    {
       "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
