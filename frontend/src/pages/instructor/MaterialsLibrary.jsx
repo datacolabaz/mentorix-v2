@@ -57,6 +57,10 @@ export default function InstructorMaterialsLibrary() {
   const [tagMaterial, setTagMaterial] = useState(null)
   const [tagInput, setTagInput] = useState('')
   const [tagSaving, setTagSaving] = useState(false)
+  const [openLinkMenuId, setOpenLinkMenuId] = useState(null)
+  const [renamingId, setRenamingId] = useState(null)
+  const [renameValue, setRenameValue] = useState('')
+  const [renameSaving, setRenameSaving] = useState(false)
 
   const localizedFileKind = useCallback(
     (fileType, fileUrl) => {
@@ -173,6 +177,43 @@ export default function InstructorMaterialsLibrary() {
     }
   }
 
+  const startRename = (material) => {
+    setRenamingId(material.id)
+    setRenameValue(material.title || '')
+  }
+
+  const cancelRename = () => {
+    if (renameSaving) return
+    setRenamingId(null)
+    setRenameValue('')
+  }
+
+  const saveRename = async (material) => {
+    if (!material || renameSaving) return
+    const title = renameValue.trim()
+    if (!title) {
+      toast(t('materials.toasts.titleRequired'), 'error')
+      return
+    }
+    if (title === material.title) {
+      cancelRename()
+      return
+    }
+    setRenameSaving(true)
+    try {
+      const res = await api.patch(`/materials/${material.id}`, { title })
+      if (res?.success) {
+        toast(t('materials.toasts.titleUpdated'))
+        setMaterials((prev) => prev.map((m) => (m.id === material.id ? { ...m, title } : m)))
+        cancelRename()
+      }
+    } catch (e) {
+      toast(e?.message || t('materials.toasts.saveFailed'), 'error')
+    } finally {
+      setRenameSaving(false)
+    }
+  }
+
   const onMaterialLinked = (updated) => {
     if (!updated?.id) {
       void load()
@@ -272,22 +313,71 @@ export default function InstructorMaterialsLibrary() {
           <p className="text-sm text-token-textMuted">{search.trim() ? t('materials.noResults') : t('materials.empty')}</p>
         </Card>
       ) : (
-        <div className="space-y-8">
-          {grouped.map(([subjectName, items]) => (
-            <section key={subjectName} className="space-y-3">
-              <h2 className="text-xs font-bold uppercase tracking-wider text-token-textMuted">{subjectName}</h2>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {items.map((m) => (
-                  <Card
-                    key={m.id}
-                    className={`p-4 border border-[color:var(--border-subtle)] hover:border-primary/30 transition-colors ${
-                      isDark ? 'bg-[#121212]/80' : ''
-                    }`}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="text-2xl shrink-0">{fileEmoji(m)}</div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-sm text-token-textMain truncate">{m.title}</h3>
+        <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+          {grouped.flatMap(([subjectName, items]) => [
+            <h2
+              key={`heading-${subjectName}`}
+              className="col-span-full text-xs font-bold uppercase tracking-wider text-token-textMuted pt-2 first:pt-0"
+            >
+              {subjectName}
+            </h2>,
+            ...items.map((m) => (
+              <Card
+                key={m.id}
+                className={`p-4 border border-[color:var(--border-subtle)] hover:border-primary/30 transition-colors overflow-visible ${
+                  openLinkMenuId === m.id ? 'relative z-[100]' : 'relative'
+                } ${isDark ? 'bg-[#121212]/80' : ''}`}
+              >
+                <div className="flex items-start gap-3">
+                  <div className="text-2xl shrink-0">{fileEmoji(m)}</div>
+                  <div className="flex-1 min-w-0">
+                    {renamingId === m.id ? (
+                      <div className="flex flex-wrap items-center gap-1.5 min-w-0">
+                        <input
+                          autoFocus
+                          value={renameValue}
+                          onChange={(e) => setRenameValue(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') void saveRename(m)
+                            if (e.key === 'Escape') cancelRename()
+                          }}
+                          disabled={renameSaving}
+                          className="flex-1 min-w-0 rounded-lg border border-primary/40 bg-token-surfaceCard/60 px-2 py-1 text-sm text-token-textMain outline-none focus:border-primary/60"
+                          aria-label={t('materials.renameTitle')}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => void saveRename(m)}
+                          disabled={renameSaving}
+                          className="shrink-0 px-2 py-1 rounded-lg text-[11px] font-semibold text-primary border border-primary/30 hover:bg-primary/10 disabled:opacity-50"
+                        >
+                          {t('materials.save')}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={cancelRename}
+                          disabled={renameSaving}
+                          className="shrink-0 px-2 py-1 rounded-lg text-[11px] text-token-textMuted border border-[color:var(--border-subtle)] hover:bg-white/5 disabled:opacity-50"
+                        >
+                          {t('materials.cancel')}
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="group/title flex items-start gap-1 min-w-0">
+                        <h3 className="font-semibold text-sm text-token-textMain truncate flex-1">{m.title}</h3>
+                        <button
+                          type="button"
+                          onClick={() => startRename(m)}
+                          className="shrink-0 p-1 rounded-md text-token-textMuted opacity-100 sm:opacity-0 sm:group-hover/title:opacity-100 hover:text-primary hover:bg-white/5 transition-opacity"
+                          title={t('materials.rename')}
+                          aria-label={t('materials.rename')}
+                        >
+                          <svg viewBox="0 0 20 20" className="h-3.5 w-3.5" fill="currentColor" aria-hidden>
+                            <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                          </svg>
+                        </button>
+                      </div>
+                    )}
                         <p className="text-[11px] text-token-textMuted mt-1">
                           {localizedFileKind(m.file_type, m.file_url)} · {formatMaterialsBytes(m.file_size)}
                         </p>
@@ -341,7 +431,11 @@ export default function InstructorMaterialsLibrary() {
                       >
                         {t('materials.qr')}
                       </button>
-                      <MaterialLinkMenu material={m} onLinked={onMaterialLinked} />
+                      <MaterialLinkMenu
+                        material={m}
+                        onLinked={onMaterialLinked}
+                        onOpenChange={(isOpen) => setOpenLinkMenuId(isOpen ? m.id : null)}
+                      />
                       <button
                         type="button"
                         onClick={() => setDeleteTarget(m)}
@@ -351,10 +445,8 @@ export default function InstructorMaterialsLibrary() {
                       </button>
                     </div>
                   </Card>
-                ))}
-              </div>
-            </section>
-          ))}
+            )),
+          ])}
         </div>
       )}
     </div>

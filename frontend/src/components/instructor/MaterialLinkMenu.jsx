@@ -25,7 +25,7 @@ function targetLabel(type, item) {
   return item.title || item.name || ''
 }
 
-export default function MaterialLinkMenu({ material, onLinked, className = '' }) {
+export default function MaterialLinkMenu({ material, onLinked, onOpenChange, className = '' }) {
   const toast = useToast()
   const rootRef = useRef(null)
   const [open, setOpen] = useState(false)
@@ -33,6 +33,10 @@ export default function MaterialLinkMenu({ material, onLinked, className = '' })
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(false)
   const [linking, setLinking] = useState(false)
+
+  useEffect(() => {
+    onOpenChange?.(open)
+  }, [open, onOpenChange])
 
   useEffect(() => {
     if (!open) return
@@ -106,7 +110,7 @@ export default function MaterialLinkMenu({ material, onLinked, className = '' })
           Bağla ▾
         </button>
         {open ? (
-          <div className="absolute right-0 top-full mt-1 z-50 min-w-[200px] rounded-xl border border-[color:var(--border-subtle)] bg-[#1a1a1a] shadow-xl py-1">
+          <div className="absolute right-0 top-full mt-1 z-[200] min-w-[200px] rounded-xl border border-[color:var(--border-subtle)] bg-[#1a1a1a] shadow-xl py-1">
             {LINK_ACTIONS.map((action) => (
               <button
                 key={action.type}

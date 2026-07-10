@@ -245,6 +245,7 @@ const patchMaterial = async (req, res) => {
   try {
     const row = await updateCourseMaterialMeta(req.user.id, req.params.id, {
       tags: req.body?.tags,
+      title: req.body?.title,
     });
     if (!row) return res.status(404).json({ success: false, message: 'Material tapılmadı' });
     const full = await listInstructorMaterials(req.user.id, {});

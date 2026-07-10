@@ -369,13 +369,33 @@ async function parentCanAccessMaterial(parentId, material) {
   return false;
 }
 
-async function updateCourseMaterialMeta(instructorId, materialId, { tags }) {
+async function updateCourseMaterialMeta(instructorId, materialId, { tags, title }) {
   const row = await getMaterialById(materialId);
   if (!row || String(row.instructor_id) !== String(instructorId)) return null;
-  const tagList = tags !== undefined ? normalizeTags(tags) : row.tags;
+
+  const updates = [];
+  const params = [materialId, instructorId];
+  let idx = 3;
+
+  if (tags !== undefined) {
+    updates.push(`tags = $${idx}`);
+    params.push(normalizeTags(tags));
+    idx += 1;
+  }
+  if (title !== undefined) {
+    const trimmed = String(title).trim();
+    if (!trimmed) throw new Error('Material adı boş ola bilməz');
+    if (trimmed.length > 200) throw new Error('Material adı çox uzundur');
+    updates.push(`title = $${idx}`);
+    params.push(trimmed);
+    idx += 1;
+  }
+
+  if (!updates.length) return row;
+
   const { rows } = await db.query(
-    `UPDATE course_materials SET tags = $3 WHERE id = $1 AND instructor_id = $2 RETURNING *`,
-    [materialId, instructorId, tagList],
+    `UPDATE course_materials SET ${updates.join(', ')} WHERE id = $1 AND instructor_id = $2 RETURNING *`,
+    params,
   );
   return rows[0] || null;
 }

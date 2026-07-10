@@ -1031,6 +1031,8 @@
     "general": "Ümumi",
     "group": "Qrup: {{name}}",
     "addTag": "+ tag",
+    "rename": "Adı dəyiş",
+    "renameTitle": "Material adı",
     "open": "Aç",
     "link": "Link",
     "linkTitle": "WhatsApp və s. üçün link",
@@ -1058,6 +1060,8 @@
       "deleted": "Material silindi",
       "deleteFailed": "Silinmədi",
       "tagsUpdated": "Tag-lar yeniləndi",
+      "titleUpdated": "Ad yeniləndi",
+      "titleRequired": "Ad boş ola bilməz",
       "saveFailed": "Saxlanmadı"
     }
   },
