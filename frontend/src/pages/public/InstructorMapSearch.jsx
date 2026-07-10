@@ -8,7 +8,6 @@ import {
   formatResultsLocationPhrase,
   instructorLocationBadge,
 } from '@shared/azerbaijanRegions.mjs'
-import PublicSeoFooter from '../../components/public/PublicSeoFooter'
 import PublicPageTopBar from '../../components/public/PublicPageTopBar'
 import DiscoverSearchFilters from '../../components/discover/DiscoverSearchFilters'
 import RegionSearchFilter from '../../components/discover/RegionSearchFilter'
@@ -86,10 +85,24 @@ export default function InstructorMapSearch() {
     [t],
   )
 
-  useLayoutEffect(() => {
+  const resetPageScroll = useCallback(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+    document.documentElement.scrollTop = 0
+    document.body.scrollTop = 0
     listScrollRef.current?.scrollTo({ top: 0, left: 0 })
-  }, [location.pathname, location.key])
+  }, [])
+
+  useLayoutEffect(() => {
+    if ('scrollRestoration' in window.history) {
+      window.history.scrollRestoration = 'manual'
+    }
+    resetPageScroll()
+  }, [location.pathname, location.key, resetPageScroll])
+
+  useEffect(() => {
+    if (!hasFetched || loading) return
+    listScrollRef.current?.scrollTo({ top: 0, left: 0 })
+  }, [instructors, hasFetched, loading])
 
   useEffect(() => {
     const slug = String(categoryFromUrl || '').trim()
@@ -289,7 +302,7 @@ export default function InstructorMapSearch() {
   )
 
   return (
-    <div className="min-h-[100svh] bg-[#0b0b0b] text-white flex flex-col">
+    <div className="h-[100dvh] overflow-hidden bg-[#0b0b0b] text-white flex flex-col">
       <PublicPageTopBar
         backTo="/"
         title={t('marketplace.title')}
@@ -303,8 +316,8 @@ export default function InstructorMapSearch() {
         </Link>
       </PublicPageTopBar>
 
-      <div className="flex-1 flex flex-col lg:flex-row min-h-0">
-        <main className="order-1 flex-1 flex flex-col min-h-0 lg:w-[58%] lg:border-r border-white/10 min-h-[50vh] lg:min-h-0">
+      <div className="flex-1 flex flex-col lg:flex-row min-h-0 overflow-hidden">
+        <main className="order-1 flex-1 flex flex-col min-h-0 lg:w-[58%] lg:border-r border-white/10">
           <div className="shrink-0 px-4 py-4 border-b border-white/10 space-y-1">
             {hasFetched && !fetchError ? (
               <>
@@ -368,8 +381,8 @@ export default function InstructorMapSearch() {
           </div>
         </main>
 
-        <aside className="order-2 lg:w-[42%] flex flex-col min-h-0 bg-[#0b0b0b] border-b lg:border-b-0 border-white/10 shrink-0 lg:shrink">
-          <div className="p-4 space-y-3 overflow-y-auto lg:max-h-none">
+        <aside className="order-2 flex-1 lg:flex-none lg:w-[42%] flex flex-col min-h-0 overflow-hidden bg-[#0b0b0b] border-t lg:border-t-0 border-white/10 shrink-0">
+          <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-3">
             <MarketplaceAiSearchPanel
               userLat={null}
               userLng={null}
@@ -429,8 +442,6 @@ export default function InstructorMapSearch() {
       />
 
       <DiscoverAuthModal open={authModalOpen} onClose={() => setAuthModalOpen(false)} />
-
-      <PublicSeoFooter className="shrink-0" />
     </div>
   )
 }

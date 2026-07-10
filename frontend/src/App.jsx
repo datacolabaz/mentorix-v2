@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useLayoutEffect } from 'react'
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import useAuthStore from './hooks/useAuth'
 
@@ -130,6 +130,19 @@ function postLoginPath(user) {
   return dashboardPathForRole(user.role)
 }
 
+function ScrollToTop() {
+  const { pathname, key } = useLocation()
+
+  useLayoutEffect(() => {
+    if ('scrollRestoration' in window.history) {
+      window.history.scrollRestoration = 'manual'
+    }
+    window.scrollTo(0, 0)
+  }, [pathname, key])
+
+  return null
+}
+
 export default function App() {
   const { user } = useAuthStore()
 
@@ -140,6 +153,7 @@ export default function App() {
 
   return (
     <>
+      <ScrollToTop />
       <AnalyticsPageTracker />
       <PresenceHeartbeat />
       <Routes>
