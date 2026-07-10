@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import api from '../../lib/api'
 import { setPageSeo } from '../../lib/pageSeo'
@@ -59,6 +59,7 @@ export default function InstructorMapSearch() {
   })
   const [inquiryTarget, setInquiryTarget] = useState(null)
   const [searchParams] = useSearchParams()
+  const location = useLocation()
   const categoryFromUrl = searchParams.get('category')
 
   const locationPhrase = useMemo(
@@ -84,6 +85,11 @@ export default function InstructorMapSearch() {
     },
     [t],
   )
+
+  useLayoutEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+    listScrollRef.current?.scrollTo({ top: 0, left: 0 })
+  }, [location.pathname, location.key])
 
   useEffect(() => {
     const slug = String(categoryFromUrl || '').trim()
@@ -298,7 +304,7 @@ export default function InstructorMapSearch() {
       </PublicPageTopBar>
 
       <div className="flex-1 flex flex-col lg:flex-row min-h-0">
-        <main className="order-2 lg:order-1 flex-1 flex flex-col min-h-0 lg:w-[58%] lg:border-r border-white/10 min-h-[50vh] lg:min-h-0">
+        <main className="order-1 flex-1 flex flex-col min-h-0 lg:w-[58%] lg:border-r border-white/10 min-h-[50vh] lg:min-h-0">
           <div className="shrink-0 px-4 py-4 border-b border-white/10 space-y-1">
             {hasFetched && !fetchError ? (
               <>
@@ -362,7 +368,7 @@ export default function InstructorMapSearch() {
           </div>
         </main>
 
-        <aside className="order-1 lg:order-2 lg:w-[42%] flex flex-col min-h-0 bg-[#0b0b0b] border-b lg:border-b-0 border-white/10 shrink-0 lg:shrink">
+        <aside className="order-2 lg:w-[42%] flex flex-col min-h-0 bg-[#0b0b0b] border-b lg:border-b-0 border-white/10 shrink-0 lg:shrink">
           <div className="p-4 space-y-3 overflow-y-auto lg:max-h-none">
             <MarketplaceAiSearchPanel
               userLat={null}
