@@ -57,6 +57,7 @@
       "exams": "İmtahanlar",
       "certificates": "Sertifikatlar",
       "tasks": "Tapşırıqlar",
+      "ai_generator": "AI Sual Generatoru",
       "materials_library": "Kitabxana",
       "analytics": "Analitika",
       "payments": "Ödənişlər",
@@ -1201,6 +1202,103 @@
       "shareFailed": "Paylaşım alınmadı",
       "createdWithLink": "İmtahan yaradıldı. Link kopyalandı — tələbə klik edəndə sorğu avtomatik gələcək",
       "created": "İmtahan yaradıldı"
+    }
+  },
+  "generation": {
+    "page": {
+      "title": "AI Sual Generatoru",
+      "subtitleDefault": "Claude ilə mövzuya uyğun suallar yaradın, redaktə edin və tapşırıq kimi dərc edin.",
+      "subtitleTopic": "Mövzu: {{topic}}",
+      "startOver": "Yenidən başla",
+      "loadingTitle": "Suallar yaradılır…",
+      "loadingHint": "Claude mövzunuza uyğun sualları hazırlayır. Bu, bir neçə saniyə çəkə bilər.",
+      "ready": "{{count}} sual hazırdır",
+      "regenerateAll": "Hamısını yenilə",
+      "publish": "Tapşırıq kimi dərc et"
+    },
+    "toasts": {
+      "questionUpdated": "Sual yeniləndi.",
+      "published": "Tapşırıq uğurla dərc edildi.",
+      "allRegenerated": "Bütün suallar yeniləndi."
+    },
+    "errors": {
+      "generateFailed": "Sual yaradıla bilmədi. Yenidən cəhd edin.",
+      "saveFailed": "Sual yadda saxlanmadı.",
+      "deleteFailed": "Sual silinmədi.",
+      "regenerateFailed": "Sual yenidən yaradıla bilmədi.",
+      "publishFailed": "Tapşırıq dərc edilmədi.",
+      "atLeastOne": "Ən azı bir sual qalmalıdır.",
+      "generic": "Xəta baş verdi. Yenidən cəhd edin."
+    },
+    "form": {
+      "topic": "Mövzu",
+      "topicPh": "Məs: Triqonometriya — sinüs və kosinus",
+      "level": "Səviyyə",
+      "questionCount": "Sual sayı",
+      "format": "Format",
+      "difficulty": "Çətinlik",
+      "submit": "Sual yarat",
+      "errors": {
+        "topicRequired": "Mövzu mütləqdir.",
+        "topicMin": "Mövzu ən azı {{min}} simvol olmalıdır.",
+        "topicMax": "Mövzu ən çox {{max}} simvol ola bilər.",
+        "levelInvalid": "Düzgün səviyyə seçin.",
+        "countInt": "Sual sayı tam ədəd olmalıdır.",
+        "countMin": "Sual sayı ən azı {{min}} olmalıdır.",
+        "countMax": "Sual sayı ən çoxu {{max}} ola bilər.",
+        "formatInvalid": "Düzgün format seçin.",
+        "difficultyInvalid": "Düzgün çətinlik seçin."
+      }
+    },
+    "level": { "beginner": "Başlanğıc", "intermediate": "Orta", "advanced": "Qabaqcıl" },
+    "format": { "mcq": "Çoxseçimli (MCQ)", "open": "Açıq sual", "essay": "Esse" },
+    "difficulty": { "easy": "Asan", "medium": "Orta", "hard": "Çətin" },
+    "card": {
+      "edit": "Düzəliş",
+      "regenerate": "Yenilə",
+      "delete": "Sil",
+      "save": "Yadda saxla",
+      "cancel": "Ləğv et",
+      "questionText": "Sual mətni",
+      "options": "Variantlar (düzgün cavabı seçin)",
+      "correctAnswer": "Nümunə / düzgün cavab",
+      "sampleAnswer": "Nümunə cavab",
+      "difficulty": "Çətinlik",
+      "correctBadge": "✓ Düzgün",
+      "regenerating": "Yenidən yaradılır…",
+      "mcq": "MCQ",
+      "selectCorrect": "Düzgün cavab olaraq seç",
+      "errors": {
+        "textMin": "Sual mətni ən azı 5 simvol olmalıdır.",
+        "options": "Variant sayı 2–6 arasında olmalıdır.",
+        "correctRequired": "Düzgün cavab mütləqdir.",
+        "difficulty": "Çətinlik seçin."
+      }
+    },
+    "publishModal": {
+      "title": "Tapşırıq kimi dərc et",
+      "description": "{{count}} sual seçdiyiniz qrupa tapşırıq kimi göndəriləcək.",
+      "group": "Qrup",
+      "groupSelect": "Qrup seçin",
+      "groupLoading": "Yüklənir…",
+      "noGroups": "Aktiv qrupunuz yoxdur. Əvvəlcə qrup yaradın.",
+      "taskTitle": "Tapşırığın adı",
+      "taskTitlePh": "Məs: Triqonometriya — qısa test",
+      "dueDate": "Son tarix",
+      "publish": "Dərc et",
+      "cancel": "Ləğv et",
+      "errGroup": "Qrup seçin.",
+      "errTitle": "Tapşırığın adı mütləqdir.",
+      "errDue": "Son tarix seçin."
+    },
+    "view": {
+      "heading": "Yaradılan suallar",
+      "count": "{{count}} sual",
+      "show": "Göstər ▼",
+      "hide": "Gizlət ▲",
+      "sampleAnswer": "Nümunə cavab",
+      "correctBadge": "✓ Düzgün",
+      "mcq": "MCQ"
     }
   },
   "tasks": {

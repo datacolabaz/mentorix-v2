@@ -17,6 +17,7 @@ const INSTRUCTOR_NAV_ITEM_DEFS = {
   attendance: { to: '/instructor/attendance', label: 'Davamiyyət', icon: 'attendance' },
   exams: { to: '/instructor/exams', label: 'İmtahanlar', icon: 'exams' },
   tasks: { to: '/instructor/tasks', label: 'Tapşırıqlar', icon: 'tasks' },
+  ai_generator: { to: '/instructor/ai-generator', label: 'AI Sual Generatoru', icon: 'ai' },
   materials_library: { to: '/instructor/materials', label: 'Kitabxana', icon: 'materials' },
   analytics: { to: '/instructor/analytics', label: 'Analitika', icon: 'analytics' },
   payments: { to: '/instructor/payments', label: 'Ödənişlər', icon: 'payments' },
@@ -85,6 +86,7 @@ function defaultInstructorNavPayload() {
           'attendance',
           'exams',
           'tasks',
+          'ai_generator',
         ],
       },
       {

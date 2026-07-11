@@ -9,6 +9,8 @@ import { useToast } from '../../components/common/Toast'
 import ErrorBoundary from '../../components/common/ErrorBoundary'
 import AssignmentAnswerEditor from '../../components/student/AssignmentAnswerEditor'
 import GroupSwitcher from '../../components/student/GroupSwitcher'
+import GeneratedQuestionsView from '../../components/generation/GeneratedQuestionsView'
+import { extractGeneratedQuestions } from '../../lib/aiAssignmentQuestions'
 import { useStudentGroups } from '../../contexts/StudentGroupContext'
 import { bumpStudentAlerts } from '../../hooks/useStudentAlerts'
 import { withEnrollmentQuery } from '../../lib/studentGroupQuery'
@@ -71,6 +73,7 @@ export default function StudentAssignments() {
   const navigate = useNavigate()
 
   const filteredTasks = useMemo(() => filterTasksByTab(tasks, tab), [tasks, tab])
+  const detailQuestions = useMemo(() => extractGeneratedQuestions(detail?.ai_metadata), [detail])
 
   const markTaskSeenLocally = useCallback((studentAssignmentId, seenAt) => {
     const when = seenAt || new Date().toISOString()
@@ -522,6 +525,10 @@ export default function StudentAssignments() {
                 </div>
               ) : null}
             </div>
+
+            {detailQuestions.length > 0 ? (
+              <GeneratedQuestionsView questions={detailQuestions} defaultOpen />
+            ) : null}
 
             {detail.question_file_url && isAssignmentPreviewable(detail.question_file_url) && (
               <div className="rounded-xl border border-indigo-500/15 bg-[#0f0c29]/40 p-3">

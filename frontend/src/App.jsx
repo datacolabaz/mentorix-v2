@@ -56,6 +56,7 @@ import InstructorTeachingGroups from './pages/instructor/TeachingGroups'
 import InstructorJoinRequests from './pages/instructor/JoinRequests'
 import StudentInquiries from './pages/instructor/StudentInquiries'
 import InstructorTasks from './pages/instructor/Tasks'
+import InstructorAIQuestionGenerator from './pages/instructor/AIQuestionGenerator'
 import InstructorMaterialsLibrary from './pages/instructor/MaterialsLibrary'
 import InstructorUniversityPrograms from './pages/instructor/InstructorUniversityPrograms'
 import PaymentSuccess from './pages/instructor/PaymentSuccess'
@@ -250,6 +251,7 @@ export default function App() {
         <Route path="attendance" element={<InstructorAttendance />} />
         <Route path="analytics" element={<InstructorAnalytics />} />
         <Route path="tasks" element={<InstructorTasks />} />
+        <Route path="ai-generator" element={<InstructorAIQuestionGenerator />} />
         <Route path="materials" element={<InstructorMaterialsLibrary />} />
         <Route path="live/history" element={<InstructorLiveHistory />} />
         <Route path="university-programs" element={<InstructorUniversityPrograms />} />

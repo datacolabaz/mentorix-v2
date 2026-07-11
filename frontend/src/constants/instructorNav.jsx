@@ -19,6 +19,7 @@ export const INSTRUCTOR_NAV_ITEM_DEFS = {
   exams: { to: '/instructor/exams', labelKey: 'nav.instructor.exams', label: 'İmtahanlar', icon: 'exams' },
   certificates: { to: '/instructor/certificates', labelKey: 'nav.instructor.certificates', label: 'Sertifikatlar', icon: 'exams' },
   tasks: { to: '/instructor/tasks', labelKey: 'nav.instructor.tasks', label: 'Tapşırıqlar', icon: 'tasks' },
+  ai_generator: { to: '/instructor/ai-generator', labelKey: 'nav.instructor.ai_generator', label: 'AI Sual Generatoru', icon: 'ai' },
   materials_library: { to: '/instructor/materials', labelKey: 'nav.instructor.materials_library', label: 'Kitabxana', icon: 'materials' },
   analytics: { to: '/instructor/analytics', labelKey: 'nav.instructor.analytics', label: 'Analitika', icon: 'analytics' },
   payments: { to: '/instructor/payments', labelKey: 'nav.instructor.payments', label: 'Ödənişlər', icon: 'payments' },
@@ -65,6 +66,31 @@ function dedupeNavSections(sections) {
   return list
 }
 
+/**
+ * Guarantees the AI generator link is present even when a server/admin nav
+ * config predates this feature and omits the `ai_generator` key.
+ */
+function ensureAiGeneratorItem(sections) {
+  const AI_KEY = 'ai_generator'
+  const AI_TO = '/instructor/ai-generator'
+  const exists = (sections || []).some((s) =>
+    (s.items || []).some((item) => item?.key === AI_KEY || item?.to === AI_TO),
+  )
+  if (exists) return sections
+
+  const built = itemFromKey(AI_KEY)
+  if (!built) return sections
+
+  const list = (sections || []).map((s) => ({ ...s, items: [...(s.items || [])] }))
+  const target = list.find((s) => s.id === 'management') || list[0]
+  if (!target) return sections
+
+  const tasksIdx = target.items.findIndex((item) => item?.key === 'tasks')
+  if (tasksIdx >= 0) target.items.splice(tasksIdx + 1, 0, built)
+  else target.items.push(built)
+  return list
+}
+
 function itemFromKey(key) {
   const def = INSTRUCTOR_NAV_ITEM_DEFS[key]
   if (!def) return null
@@ -97,6 +123,7 @@ export function defaultInstructorNavSections() {
         'exams',
         'certificates',
         'tasks',
+        'ai_generator',
       ],
     },
     {
@@ -124,29 +151,32 @@ export function defaultInstructorNavSections() {
 export function buildInstructorNavSections(navPayload) {
   const sections = Array.isArray(navPayload?.sections) ? navPayload.sections : defaultInstructorNavSections()
 
-  return dedupeNavSections(
-    sections
-      .filter((s) => s && s.enabled !== false)
-      .map((section) => {
-        const keys = Array.isArray(section.itemKeys) ? section.itemKeys : []
-        const items = keys
-          .filter((key) => key !== 'materials_upload')
-          .map(itemFromKey)
-          .filter(Boolean)
-        return {
-          id: section.id,
-          title: String(section.title || '').trim() || 'Bölmə',
-          items,
-        }
-      })
-      .filter((s) => s.items.length > 0),
-  ).filter((s) => s.items.length > 0)
+  return ensureAiGeneratorItem(
+    dedupeNavSections(
+      sections
+        .filter((s) => s && s.enabled !== false)
+        .map((section) => {
+          const keys = Array.isArray(section.itemKeys) ? section.itemKeys : []
+          const items = keys
+            .filter((key) => key !== 'materials_upload')
+            .map(itemFromKey)
+            .filter(Boolean)
+          return {
+            id: section.id,
+            title: String(section.title || '').trim() || 'Bölmə',
+            items,
+          }
+        })
+        .filter((s) => s.items.length > 0),
+    ).filter((s) => s.items.length > 0),
+  )
 }
 
 export function buildInstructorNavSectionsFromClient(nav) {
   if (!nav?.sections?.length) return buildInstructorNavSections({ sections: defaultInstructorNavSections() })
 
-  return dedupeNavSections(
+  return ensureAiGeneratorItem(
+    dedupeNavSections(
     nav.sections
       .map((section) => ({
         id: section.id,
@@ -169,5 +199,6 @@ export function buildInstructorNavSectionsFromClient(nav) {
           .filter(Boolean),
       }))
       .filter((s) => s.items.length > 0),
-  ).filter((s) => s.items.length > 0)
+    ).filter((s) => s.items.length > 0),
+  )
 }

@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useQueryClient } from '@tanstack/react-query'
 import { copyStudentTaskLink } from '../../lib/taskShare'
@@ -15,6 +15,8 @@ import { assignmentStatusClass } from '../../lib/assignmentHelpers'
 import { assignmentFileLabel, assignmentFileOpenUrl, isAssignmentPreviewable } from '../../lib/assignmentFileUrl'
 import { ASSIGNMENT_ACCEPT, ASSIGNMENT_FORMAT_CHIPS, validateAssignmentFile } from '../../lib/assignmentFileLimits'
 import LibraryMaterialPickerModal from '../../components/instructor/LibraryMaterialPickerModal'
+import GeneratedQuestionsView from '../../components/generation/GeneratedQuestionsView'
+import { extractGeneratedQuestions } from '../../lib/aiAssignmentQuestions'
 
 const BAKU_TZ = 'Asia/Baku'
 
@@ -95,6 +97,9 @@ export default function InstructorTasks() {
   const [analytics, setAnalytics] = useState(null)
   const toast = useToast()
   const navigate = useNavigate()
+  const location = useLocation()
+  const cardRefs = useRef({})
+  const [highlightId, setHighlightId] = useState(null)
   const queryClient = useQueryClient()
   const billingQ = useBillingStatus()
   const billing = billingQ.data || null
@@ -166,6 +171,28 @@ export default function InstructorTasks() {
     void loadGroups()
     void loadAnalytics()
   }, [load, loadStudents, loadGroups, loadAnalytics])
+
+  // Scroll to and highlight a freshly published assignment (e.g. from the AI generator).
+  useEffect(() => {
+    const targetId = location.state?.highlightAssignmentId
+    if (!targetId || loading) return
+    if (!tasks.some((tk) => String(tk.id) === String(targetId))) return
+    setHighlightId(String(targetId))
+    requestAnimationFrame(() => {
+      const el = cardRefs.current[String(targetId)]
+      if (el && typeof el.scrollIntoView === 'function') {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }
+    })
+    // Clear router state so the highlight does not retrigger on re-render.
+    navigate(location.pathname, { replace: true, state: {} })
+  }, [loading, tasks, location.state, location.pathname, navigate])
+
+  useEffect(() => {
+    if (!highlightId) return undefined
+    const timer = setTimeout(() => setHighlightId(null), 2600)
+    return () => clearTimeout(timer)
+  }, [highlightId])
 
   const stats = useMemo(() => {
     const total = tasks.reduce((s, t) => s + (t.assigned_count || 0), 0)
@@ -526,8 +553,22 @@ export default function InstructorTasks() {
         <div className="space-y-3">
           {tasks.map((task) => {
             const recipients = parseRecipients(task)
+            const genQuestions = extractGeneratedQuestions(task.ai_metadata)
+            const isHighlighted = highlightId && String(task.id) === String(highlightId)
             return (
-              <Card key={task.id} hover className="p-5">
+              <div
+                key={task.id}
+                ref={(el) => {
+                  if (el) cardRefs.current[String(task.id)] = el
+                  else delete cardRefs.current[String(task.id)]
+                }}
+              >
+              <Card
+                hover
+                className={`p-5 transition-all ${
+                  isHighlighted ? 'ring-2 ring-primary/70 shadow-[0_0_0_3px_rgba(34,224,136,0.22)] border-primary/40' : ''
+                }`}
+              >
                 <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <p className="text-token-textMain font-semibold break-words">{task.title}</p>
@@ -632,7 +673,13 @@ export default function InstructorTasks() {
                     </ul>
                   </div>
                 ) : null}
+                {genQuestions.length > 0 ? (
+                  <div className="mt-3">
+                    <GeneratedQuestionsView questions={genQuestions} showAnswers />
+                  </div>
+                ) : null}
               </Card>
+              </div>
             )
           })}
         </div>

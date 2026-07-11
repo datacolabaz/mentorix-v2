@@ -1,27 +1,15 @@
 import { useCallback, useId, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import Button from '../common/Button'
 
 export const GENERATION_LEVELS = ['beginner', 'intermediate', 'advanced']
 export const GENERATION_FORMATS = ['mcq', 'open', 'essay']
 export const GENERATION_DIFFICULTIES = ['easy', 'medium', 'hard']
 
-const LEVEL_LABELS = {
-  beginner: 'Başlanğıc',
-  intermediate: 'Orta',
-  advanced: 'Qabaqcıl',
-}
-
-const FORMAT_LABELS = {
-  mcq: 'Çoxseçimli (MCQ)',
-  open: 'Açıq sual',
-  essay: 'Esse',
-}
-
-const DIFFICULTY_LABELS = {
-  easy: 'Asan',
-  medium: 'Orta',
-  hard: 'Çətin',
-}
+const MIN_TOPIC_LENGTH = 3
+const MAX_TOPIC_LENGTH = 200
+const MIN_QUESTION_COUNT = 1
+const MAX_QUESTION_COUNT = 30
 
 export const CONTENT_GENERATOR_DEFAULT_VALUES = {
   topic: '',
@@ -40,45 +28,48 @@ const ERROR_CLS = 'text-[11px] text-red-400 mt-1'
 /** @typedef {{ topic: string, level: string, questionCount: number, format: string, difficulty: string }} ContentGeneratorFormValues */
 
 /**
+ * Validates the form, returning i18n error descriptors ({ key, params }) so the
+ * UI can render localized messages without hardcoded strings.
+ *
  * @param {Partial<ContentGeneratorFormValues>} values
- * @returns {{ valid: boolean, errors: Record<string, string> }}
+ * @returns {{ valid: boolean, errors: Record<string, { key: string, params?: Record<string, unknown> }> }}
  */
 export function validateContentGeneratorForm(values) {
-  /** @type {Record<string, string>} */
+  /** @type {Record<string, { key: string, params?: Record<string, unknown> }>} */
   const errors = {}
   const topic = String(values?.topic ?? '').trim()
 
   if (!topic) {
-    errors.topic = 'Mövzu mütləqdir.'
-  } else if (topic.length < 3) {
-    errors.topic = 'Mövzu ən azı 3 simvol olmalıdır.'
-  } else if (topic.length > 200) {
-    errors.topic = 'Mövzu ən çox 200 simvol ola bilər.'
+    errors.topic = { key: 'generation.form.errors.topicRequired' }
+  } else if (topic.length < MIN_TOPIC_LENGTH) {
+    errors.topic = { key: 'generation.form.errors.topicMin', params: { min: MIN_TOPIC_LENGTH } }
+  } else if (topic.length > MAX_TOPIC_LENGTH) {
+    errors.topic = { key: 'generation.form.errors.topicMax', params: { max: MAX_TOPIC_LENGTH } }
   }
 
   const level = String(values?.level ?? '')
   if (!GENERATION_LEVELS.includes(level)) {
-    errors.level = 'Düzgün səviyyə seçin.'
+    errors.level = { key: 'generation.form.errors.levelInvalid' }
   }
 
   const rawCount = values?.questionCount
   const count = rawCount === '' || rawCount == null ? NaN : Number(rawCount)
   if (!Number.isFinite(count) || !Number.isInteger(count)) {
-    errors.questionCount = 'Sual sayı tam ədəd olmalıdır.'
-  } else if (count < 1) {
-    errors.questionCount = 'Sual sayı ən azı 1 olmalıdır.'
-  } else if (count > 30) {
-    errors.questionCount = 'Sual sayı ən çoxu 30 ola bilər.'
+    errors.questionCount = { key: 'generation.form.errors.countInt' }
+  } else if (count < MIN_QUESTION_COUNT) {
+    errors.questionCount = { key: 'generation.form.errors.countMin', params: { min: MIN_QUESTION_COUNT } }
+  } else if (count > MAX_QUESTION_COUNT) {
+    errors.questionCount = { key: 'generation.form.errors.countMax', params: { max: MAX_QUESTION_COUNT } }
   }
 
   const format = String(values?.format ?? '')
   if (!GENERATION_FORMATS.includes(format)) {
-    errors.format = 'Düzgün format seçin.'
+    errors.format = { key: 'generation.form.errors.formatInvalid' }
   }
 
   const difficulty = String(values?.difficulty ?? '')
   if (!GENERATION_DIFFICULTIES.includes(difficulty)) {
-    errors.difficulty = 'Düzgün çətinlik seçin.'
+    errors.difficulty = { key: 'generation.form.errors.difficultyInvalid' }
   }
 
   return { valid: Object.keys(errors).length === 0, errors }
@@ -102,8 +93,9 @@ export default function ContentGeneratorForm({
   isSubmitting = false,
   initialValues = {},
   className = '',
-  submitLabel = 'Sual yarat',
+  submitLabel,
 }) {
+  const { t } = useTranslation()
   const formId = useId().replace(/:/g, '')
   const [values, setValues] = useState(() => ({
     ...CONTENT_GENERATOR_DEFAULT_VALUES,
@@ -118,6 +110,11 @@ export default function ContentGeneratorForm({
     (field) => (touched[field] || submitAttempted) && errors[field],
     [touched, submitAttempted, errors],
   )
+
+  const errorText = (field) => {
+    const e = errors[field]
+    return e ? t(e.key, e.params) : ''
+  }
 
   const markTouched = (field) => {
     setTouched((prev) => (prev[field] ? prev : { ...prev, [field]: true }))
@@ -143,7 +140,7 @@ export default function ContentGeneratorForm({
     <form onSubmit={handleSubmit} className={`space-y-4 ${className}`.trim()} noValidate>
       <div>
         <label htmlFor={`${formId}-topic`} className={LABEL_CLS}>
-          Mövzu
+          {t('generation.form.topic')}
         </label>
         <input
           id={`${formId}-topic`}
@@ -152,15 +149,15 @@ export default function ContentGeneratorForm({
           onChange={(e) => setValues((v) => ({ ...v, topic: e.target.value }))}
           onBlur={() => markTouched('topic')}
           disabled={isSubmitting}
-          maxLength={200}
-          placeholder="Məs: Triqonometriya — sinüs və kosinus"
+          maxLength={MAX_TOPIC_LENGTH}
+          placeholder={t('generation.form.topicPh')}
           className={`${INPUT_CLS} ${showError('topic') ? 'border-red-500/50 focus:border-red-500/60' : ''}`}
           aria-invalid={showError('topic') ? true : undefined}
           aria-describedby={fieldDescribedBy('topic', showError('topic') ? errors : {}, formId)}
         />
         {showError('topic') ? (
           <p id={`${formId}-topic-error`} className={ERROR_CLS} role="alert">
-            {errors.topic}
+            {errorText('topic')}
           </p>
         ) : null}
       </div>
@@ -168,7 +165,7 @@ export default function ContentGeneratorForm({
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <label htmlFor={`${formId}-level`} className={LABEL_CLS}>
-            Səviyyə
+            {t('generation.form.level')}
           </label>
           <select
             id={`${formId}-level`}
@@ -182,26 +179,26 @@ export default function ContentGeneratorForm({
           >
             {GENERATION_LEVELS.map((level) => (
               <option key={level} value={level}>
-                {LEVEL_LABELS[level]}
+                {t(`generation.level.${level}`)}
               </option>
             ))}
           </select>
           {showError('level') ? (
             <p id={`${formId}-level-error`} className={ERROR_CLS} role="alert">
-              {errors.level}
+              {errorText('level')}
             </p>
           ) : null}
         </div>
 
         <div>
           <label htmlFor={`${formId}-questionCount`} className={LABEL_CLS}>
-            Sual sayı
+            {t('generation.form.questionCount')}
           </label>
           <input
             id={`${formId}-questionCount`}
             type="number"
-            min={1}
-            max={30}
+            min={MIN_QUESTION_COUNT}
+            max={MAX_QUESTION_COUNT}
             step={1}
             inputMode="numeric"
             value={values.questionCount}
@@ -214,7 +211,7 @@ export default function ContentGeneratorForm({
           />
           {showError('questionCount') ? (
             <p id={`${formId}-questionCount-error`} className={ERROR_CLS} role="alert">
-              {errors.questionCount}
+              {errorText('questionCount')}
             </p>
           ) : null}
         </div>
@@ -223,7 +220,7 @@ export default function ContentGeneratorForm({
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <label htmlFor={`${formId}-format`} className={LABEL_CLS}>
-            Format
+            {t('generation.form.format')}
           </label>
           <select
             id={`${formId}-format`}
@@ -237,20 +234,20 @@ export default function ContentGeneratorForm({
           >
             {GENERATION_FORMATS.map((format) => (
               <option key={format} value={format}>
-                {FORMAT_LABELS[format]}
+                {t(`generation.format.${format}`)}
               </option>
             ))}
           </select>
           {showError('format') ? (
             <p id={`${formId}-format-error`} className={ERROR_CLS} role="alert">
-              {errors.format}
+              {errorText('format')}
             </p>
           ) : null}
         </div>
 
         <div>
           <label htmlFor={`${formId}-difficulty`} className={LABEL_CLS}>
-            Çətinlik
+            {t('generation.form.difficulty')}
           </label>
           <select
             id={`${formId}-difficulty`}
@@ -264,13 +261,13 @@ export default function ContentGeneratorForm({
           >
             {GENERATION_DIFFICULTIES.map((difficulty) => (
               <option key={difficulty} value={difficulty}>
-                {DIFFICULTY_LABELS[difficulty]}
+                {t(`generation.difficulty.${difficulty}`)}
               </option>
             ))}
           </select>
           {showError('difficulty') ? (
             <p id={`${formId}-difficulty-error`} className={ERROR_CLS} role="alert">
-              {errors.difficulty}
+              {errorText('difficulty')}
             </p>
           ) : null}
         </div>
@@ -278,7 +275,7 @@ export default function ContentGeneratorForm({
 
       <div className="pt-1">
         <Button type="submit" loading={isSubmitting} disabled={submitDisabled}>
-          {submitLabel}
+          {submitLabel || t('generation.form.submit')}
         </Button>
       </div>
     </form>

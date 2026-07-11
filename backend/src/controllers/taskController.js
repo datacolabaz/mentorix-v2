@@ -374,7 +374,7 @@ const getMyAssignment = async (req, res) => {
       `SELECT a.id AS assignment_id, a.status, a.answer_text, a.attachment_urls,
               a.submitted_at, a.score, a.feedback, a.reviewed_at, a.late_decision,
               t.title, t.topic, t.question_file_url, t.description, t.due_date, t.max_score,
-              t.created_at AS assignment_created_at,
+              t.created_at AS assignment_created_at, t.ai_metadata,
               u.full_name AS instructor_name
        FROM student_assignments a
        JOIN assignments t ON t.id = a.assignment_id
