@@ -1,6 +1,6 @@
 const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
-const { ClaudeProvider, buildGenerationUserPrompt } = require('./aiProviderService');
+const { ClaudeProvider, buildGenerationUserPrompt, buildGenerationSystemPrompt } = require('./aiProviderService');
 const { AIGenerationError } = require('./errors');
 
 const VALID_INPUT = {
@@ -41,6 +41,30 @@ describe('buildGenerationUserPrompt retry suffix', () => {
     const retryPrompt = buildGenerationUserPrompt(VALID_INPUT, { isRetry: true });
     assert.match(retryPrompt, /CORRECTION REQUIRED/);
     assert.match(retryPrompt, /valid JSON array/);
+  });
+
+  it('includes Azerbaijani output language when language is az', () => {
+    const prompt = buildGenerationUserPrompt({ ...VALID_INPUT, language: 'az' });
+    assert.match(prompt, /Output language: Azerbaijani only/);
+  });
+
+  it('includes Russian output language when language is ru', () => {
+    const prompt = buildGenerationUserPrompt({ ...VALID_INPUT, language: 'ru' });
+    assert.match(prompt, /Output language: Russian only/);
+  });
+});
+
+describe('buildGenerationSystemPrompt language block', () => {
+  it('requires Azerbaijani content for az', () => {
+    const prompt = buildGenerationSystemPrompt('az');
+    assert.match(prompt, /Return ALL content ONLY in the following language: Azerbaijani/);
+    assert.match(prompt, /Never answer in English unless the requested language is English/);
+  });
+
+  it('allows English for en', () => {
+    const prompt = buildGenerationSystemPrompt('en');
+    assert.match(prompt, /Return ALL content ONLY in the following language: English/);
+    assert.match(prompt, /Answer in English/);
   });
 });
 

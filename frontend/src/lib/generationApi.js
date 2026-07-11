@@ -42,6 +42,7 @@ export function newGenerationRequestId() {
  *   questionCount: number,
  *   format: string,
  *   difficulty: string,
+ *   language?: string,
  * }} payload
  * @returns {Promise<{ draftId: string, questions: any[] }>}
  */

@@ -9,6 +9,8 @@
 
 /** @typedef {'easy' | 'medium' | 'hard'} GenerationDifficulty */
 
+/** @typedef {'az' | 'ru' | 'en'} GenerationLanguage */
+
 /** @typedef {'draft' | 'published' | 'discarded'} DraftStatus */
 
 /**
@@ -20,6 +22,7 @@
  * @property {number} questionCount - Integer count of questions to generate (1–30).
  * @property {GenerationFormat} format
  * @property {GenerationDifficulty} difficulty
+ * @property {GenerationLanguage=} language - UI locale for generated question text (az, ru, en). Defaults to az.
  */
 
 /**
@@ -30,6 +33,7 @@
  * @property {string[]=} options - MCQ answer choices (2–6 items when format is mcq).
  * @property {string} correctAnswer - Expected or keyed correct answer.
  * @property {GenerationDifficulty} difficulty
+ * @property {string=} explanation - Optional teacher-facing explanation in the requested language.
  */
 
 /**
@@ -68,9 +72,13 @@ const GENERATION_DIFFICULTIES = Object.freeze(['easy', 'medium', 'hard']);
 /** @type {readonly DraftStatus[]} */
 const DRAFT_STATUSES = Object.freeze(['draft', 'published', 'discarded']);
 
+/** @type {readonly GenerationLanguage[]} */
+const GENERATION_LANGUAGES = Object.freeze(['az', 'ru', 'en']);
+
 module.exports = {
   GENERATION_LEVELS,
   GENERATION_FORMATS,
   GENERATION_DIFFICULTIES,
+  GENERATION_LANGUAGES,
   DRAFT_STATUSES,
 };

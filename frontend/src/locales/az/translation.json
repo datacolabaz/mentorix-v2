@@ -1207,12 +1207,13 @@
   "generation": {
     "page": {
       "title": "AI Sual Generatoru",
-      "subtitleDefault": "Claude ilə mövzuya uyğun suallar yaradın, redaktə edin və tapşırıq kimi dərc edin.",
+      "subtitleDefault": "Mövzuya uyğun suallar yaradın, redaktə edin və tapşırıq kimi dərc edin.",
       "subtitleTopic": "Mövzu: {{topic}}",
       "startOver": "Yenidən başla",
       "loadingTitle": "Suallar yaradılır…",
-      "loadingHint": "Claude mövzunuza uyğun sualları hazırlayır. Bu, bir neçə saniyə çəkə bilər.",
+      "loadingHint": "Sualar hazırlanır. Bu, bir neçə saniyə çəkə bilər.",
       "ready": "{{count}} sual hazırdır",
+      "aiPreparedBy": "✨ AI tərəfindən hazırlanıb",
       "regenerateAll": "Hamısını yenilə",
       "publish": "Tapşırıq kimi dərc et"
     },
@@ -1297,6 +1298,7 @@
       "show": "Göstər ▼",
       "hide": "Gizlət ▲",
       "sampleAnswer": "Nümunə cavab",
+      "explanation": "İzah",
       "correctBadge": "✓ Düzgün",
       "mcq": "MCQ"
     }

@@ -2,6 +2,7 @@ const {
   GENERATION_LEVELS,
   GENERATION_FORMATS,
   GENERATION_DIFFICULTIES,
+  GENERATION_LANGUAGES,
   DRAFT_STATUSES,
 } = require('./generation.types');
 
@@ -20,6 +21,22 @@ const MIN_GENERATED_SET_LENGTH = 1;
 
 function isUuid(value) {
   return typeof value === 'string' && UUID_RE.test(value.trim());
+}
+
+/**
+ * Normalises a client/UI locale to a supported generation language code.
+ * Backward compatible: missing or unknown values default to az (never English).
+ *
+ * @param {unknown} value
+ * @returns {import('./generation.types').GenerationLanguage}
+ */
+function normalizeGenerationLanguage(value) {
+  const code = String(value ?? '')
+    .trim()
+    .toLowerCase()
+    .split('-')[0];
+  if (GENERATION_LANGUAGES.includes(code)) return code;
+  return 'az';
 }
 
 /**
@@ -78,6 +95,13 @@ function validateGenerateQuestionsInput(input) {
     errors.difficulty = 'Düzgün çətinlik seçin (easy, medium, hard).';
   }
 
+  if (body.language != null && String(body.language).trim() !== '') {
+    const rawLang = String(body.language).trim().toLowerCase().split('-')[0];
+    if (!GENERATION_LANGUAGES.includes(rawLang)) {
+      errors.language = 'Düzgün dil seçin (az, ru, en).';
+    }
+  }
+
   return { valid: Object.keys(errors).length === 0, errors };
 }
 
@@ -103,6 +127,7 @@ function parseGenerateQuestionsInput(input) {
     questionCount: Number(body.questionCount),
     format: String(body.format),
     difficulty: String(body.difficulty),
+    language: normalizeGenerationLanguage(body.language),
   };
 }
 
@@ -156,6 +181,10 @@ function validateGeneratedQuestion(question, index = 0) {
     errors[`${prefix}.difficulty`] = 'Düzgün çətinlik seçin (easy, medium, hard).';
   }
 
+  if (item.explanation != null && String(item.explanation).trim() === '') {
+    errors[`${prefix}.explanation`] = 'İzah boş ola bilməz.';
+  }
+
   return { valid: Object.keys(errors).length === 0, errors };
 }
 
@@ -195,6 +224,7 @@ function validateGeneratedQuestionSet(input) {
  * @property {string[]=} options
  * @property {string} correctAnswer
  * @property {import('./generation.types').GenerationDifficulty} difficulty
+ * @property {string=} explanation
  */
 
 /**
@@ -223,6 +253,8 @@ function parseGeneratedQuestionSet(input) {
         .map((opt) => String(opt ?? '').trim())
         .filter(Boolean);
     }
+    const explanation = item.explanation != null ? String(item.explanation).trim() : '';
+    if (explanation) parsed.explanation = explanation;
     return parsed;
   });
 }
@@ -317,6 +349,8 @@ function parsePersistedQuestionSet(input) {
         .map((opt) => String(opt ?? '').trim())
         .filter(Boolean);
     }
+    const explanation = item.explanation != null ? String(item.explanation).trim() : '';
+    if (explanation) parsed.explanation = explanation;
     return parsed;
   });
 }
@@ -465,6 +499,7 @@ module.exports = {
   MAX_GENERATED_OPTIONS,
   MIN_GENERATED_SET_LENGTH,
   isUuid,
+  normalizeGenerationLanguage,
   validateGenerateQuestionsInput,
   parseGenerateQuestionsInput,
   GenerateQuestionsSchema,

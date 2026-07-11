@@ -108,6 +108,14 @@ export default function GeneratedQuestionsView({
                         <p className="text-sm text-emerald-100 whitespace-pre-wrap break-words">{q.correctAnswer}</p>
                       </div>
                     ) : null}
+                    {showAnswers && q.explanation ? (
+                      <div className="mt-2 rounded-lg border border-indigo-500/20 bg-indigo-500/[0.06] px-3 py-2">
+                        <div className="text-[10px] font-semibold uppercase tracking-wide text-indigo-300/80 mb-1">
+                          {t('generation.view.explanation')}
+                        </div>
+                        <p className="text-sm text-indigo-100 whitespace-pre-wrap break-words">{q.explanation}</p>
+                      </div>
+                    ) : null}
                   </div>
                 </div>
               </li>

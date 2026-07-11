@@ -42,6 +42,22 @@ describe('validateGenerateQuestionsInput', () => {
     assert.ok(result.errors.questionCount);
   });
 
+  it('defaults language to az when omitted', () => {
+    const parsed = parseGenerateQuestionsInput(VALID_INPUT);
+    assert.equal(parsed.language, 'az');
+  });
+
+  it('accepts ru language', () => {
+    const parsed = parseGenerateQuestionsInput({ ...VALID_INPUT, language: 'ru' });
+    assert.equal(parsed.language, 'ru');
+  });
+
+  it('rejects invalid language', () => {
+    const result = validateGenerateQuestionsInput({ ...VALID_INPUT, language: 'fr' });
+    assert.equal(result.valid, false);
+    assert.ok(result.errors.language);
+  });
+
   it('rejects questionCount of 31', () => {
     const result = validateGenerateQuestionsInput({ ...VALID_INPUT, questionCount: 31 });
     assert.equal(result.valid, false);

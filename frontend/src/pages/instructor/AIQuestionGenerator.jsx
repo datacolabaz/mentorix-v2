@@ -17,6 +17,7 @@ import {
   newGenerationRequestId,
   generationErrorMessage,
 } from '../../lib/generationApi'
+import { normalizeGenerationLanguage } from '../../lib/generationLanguage'
 
 /** Reduce a question object to the persisted shape the PATCH endpoint accepts. */
 function toPersisted(q) {
@@ -30,6 +31,7 @@ function toPersisted(q) {
     const cleaned = q.options.map((o) => String(o ?? '').trim()).filter(Boolean)
     if (cleaned.length) payload.options = cleaned
   }
+  if (q.explanation) payload.explanation = String(q.explanation).trim()
   return payload
 }
 
@@ -38,7 +40,7 @@ const PHASES = { FORM: 'form', LOADING: 'loading', PREVIEW: 'preview' }
 export default function AIQuestionGenerator() {
   const navigate = useNavigate()
   const toast = useToast()
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
 
   const [phase, setPhase] = useState(PHASES.FORM)
   const [draftId, setDraftId] = useState(null)
@@ -88,6 +90,7 @@ export default function AIQuestionGenerator() {
           questionCount: values.questionCount,
           format: values.format,
           difficulty: values.difficulty,
+          language: normalizeGenerationLanguage(i18n.language),
         })
         const list = Array.isArray(result.questions) ? result.questions : []
         if (!result.draftId || list.length === 0) {
@@ -101,7 +104,7 @@ export default function AIQuestionGenerator() {
         setPhase(PHASES.FORM)
       }
     },
-    [toast, t],
+    [toast, t, i18n.language],
   )
 
   const handleSaveQuestion = useCallback(
@@ -274,7 +277,10 @@ export default function AIQuestionGenerator() {
       {phase === PHASES.PREVIEW ? (
         <div className="space-y-4 max-w-3xl">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="text-sm text-token-textMuted">{t('generation.page.ready', { count: questionCount })}</div>
+            <div className="space-y-1">
+              <div className="text-sm text-token-textMuted">{t('generation.page.ready', { count: questionCount })}</div>
+              <div className="text-xs text-violet-300/90">{t('generation.page.aiPreparedBy')}</div>
+            </div>
             <div className="flex items-center gap-2">
               <Button
                 type="button"

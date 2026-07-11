@@ -27,6 +27,7 @@ export function extractGeneratedQuestions(aiMetadata) {
       ...(Array.isArray(q.options) && q.options.length
         ? { options: q.options.map((o) => String(o ?? '').trim()).filter(Boolean) }
         : {}),
+      ...(q.explanation ? { explanation: String(q.explanation).trim() } : {}),
     }))
 }
 

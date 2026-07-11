@@ -189,13 +189,23 @@ export default function GenerationQuestionCard({
               })}
             </ul>
           ) : (
-            <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/[0.06] px-3 py-2">
-              <div className="text-[11px] font-semibold uppercase tracking-wide text-emerald-300/80 mb-1">
-                {t('generation.card.sampleAnswer')}
+            <div className="space-y-2">
+              <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/[0.06] px-3 py-2">
+                <div className="text-[11px] font-semibold uppercase tracking-wide text-emerald-300/80 mb-1">
+                  {t('generation.card.sampleAnswer')}
+                </div>
+                <p className="text-sm text-emerald-100 whitespace-pre-wrap break-words">
+                  {question.correctAnswer}
+                </p>
               </div>
-              <p className="text-sm text-emerald-100 whitespace-pre-wrap break-words">
-                {question.correctAnswer}
-              </p>
+              {question.explanation ? (
+                <div className="rounded-xl border border-indigo-500/20 bg-indigo-500/[0.06] px-3 py-2">
+                  <div className="text-[11px] font-semibold uppercase tracking-wide text-indigo-300/80 mb-1">
+                    {t('generation.view.explanation')}
+                  </div>
+                  <p className="text-sm text-indigo-100 whitespace-pre-wrap break-words">{question.explanation}</p>
+                </div>
+              ) : null}
             </div>
           )}
         </div>

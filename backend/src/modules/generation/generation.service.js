@@ -71,6 +71,7 @@ function assignQuestionIds(questions) {
     correctAnswer: question.correctAnswer,
     difficulty: question.difficulty,
     ...(question.options != null ? { options: question.options } : {}),
+    ...(question.explanation ? { explanation: question.explanation } : {}),
   }));
 }
 
@@ -156,6 +157,7 @@ function mergeRegeneratedQuestion(existingQuestion, generated) {
     correctAnswer: generated.correctAnswer,
     difficulty: generated.difficulty,
     ...(generated.options != null ? { options: generated.options } : {}),
+    ...(generated.explanation ? { explanation: generated.explanation } : {}),
   };
 }
 
