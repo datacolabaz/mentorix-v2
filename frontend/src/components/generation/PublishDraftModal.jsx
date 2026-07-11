@@ -136,7 +136,7 @@ export default function PublishDraftModal({
             value={dueDate}
             onChange={(e) => setDueDate(e.target.value)}
             disabled={publishing}
-            className={`${INPUT_CLS} [color-scheme:dark]`}
+            className={`${INPUT_CLS} block appearance-none [-webkit-appearance:none] leading-tight [color-scheme:dark]`}
           />
           {attempted && errors.dueDate ? (
             <p className="text-[11px] text-red-400 mt-1">{t(errors.dueDate)}</p>
