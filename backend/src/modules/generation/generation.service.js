@@ -22,6 +22,28 @@ class GenerationServiceError extends Error {
   }
 }
 
+class GenerationForbiddenError extends Error {
+  /**
+   * @param {string} [message]
+   */
+  constructor(message = 'Bu draft üzərində icazəniz yoxdur') {
+    super(message);
+    this.name = 'GenerationForbiddenError';
+    this.code = 'FORBIDDEN';
+  }
+}
+
+class GenerationNotFoundError extends Error {
+  /**
+   * @param {string} [message]
+   */
+  constructor(message = 'Tapılmadı') {
+    super(message);
+    this.name = 'GenerationNotFoundError';
+    this.code = 'NOT_FOUND';
+  }
+}
+
 /**
  * @param {import('./generation.schema').ClaudeGeneratedQuestion[]} questions
  * @returns {import('./generation.types').GeneratedQuestion[]}
@@ -106,8 +128,86 @@ async function generateQuestions(
   }
 }
 
+/**
+ * @param {import('./generation.types').GeneratedQuestion} existingQuestion
+ * @param {import('./generation.schema').ClaudeGeneratedQuestion} generated
+ * @returns {import('./generation.types').GeneratedQuestion}
+ */
+function mergeRegeneratedQuestion(existingQuestion, generated) {
+  return {
+    id: existingQuestion.id,
+    text: generated.text,
+    correctAnswer: generated.correctAnswer,
+    difficulty: generated.difficulty,
+    ...(generated.options != null ? { options: generated.options } : {}),
+  };
+}
+
+/**
+ * @param {string} teacherId
+ * @param {string} draftId
+ * @param {string} questionId
+ * @param {string} [instructions]
+ * @param {Object} [deps]
+ * @param {typeof repository} [deps.repository]
+ * @param {import('../../providers/aiProviderService').ClaudeProvider} [deps.aiProvider]
+ * @param {import('../../utils/db')} [deps.client]
+ * @returns {Promise<import('./generation.types').GeneratedQuestion>}
+ */
+async function regenerateQuestionItem(
+  teacherId,
+  draftId,
+  questionId,
+  instructions = '',
+  { repository: repo = repository, aiProvider = defaultClaudeProvider, client } = {},
+) {
+  const draft = await repo.getDraftById(draftId, client);
+  if (!draft) {
+    throw new GenerationNotFoundError('Draft tapılmadı');
+  }
+  if (draft.teacher_id !== teacherId) {
+    throw new GenerationForbiddenError();
+  }
+
+  const questions = Array.isArray(draft.questions) ? draft.questions : [];
+  const questionIndex = questions.findIndex((question) => question.id === questionId);
+  if (questionIndex < 0) {
+    throw new GenerationNotFoundError('Sual tapılmadı');
+  }
+
+  const requestRow = await repo.getGenerationRequestById(draft.request_id, client);
+  const baseInput = requestRow?.request_payload;
+  if (!baseInput || typeof baseInput !== 'object') {
+    throw new GenerationServiceError('Generation konteksti tapılmadı');
+  }
+
+  const existingQuestion = questions[questionIndex];
+  const generatedQuestions = await aiProvider.regenerateQuestion({
+    baseInput: /** @type {GenerationInput} */ (baseInput),
+    existingQuestion,
+    instructions,
+  });
+
+  const generated = generatedQuestions[0];
+  if (!generated) {
+    throw new GenerationServiceError('AI replacement question missing from provider response');
+  }
+
+  const updatedQuestion = mergeRegeneratedQuestion(existingQuestion, generated);
+  const nextQuestions = [...questions];
+  nextQuestions[questionIndex] = updatedQuestion;
+
+  await repo.updateDraft(draftId, { questions: nextQuestions }, client);
+
+  return updatedQuestion;
+}
+
 module.exports = {
   GenerationServiceError,
+  GenerationForbiddenError,
+  GenerationNotFoundError,
   assignQuestionIds,
+  mergeRegeneratedQuestion,
   generateQuestions,
+  regenerateQuestionItem,
 };

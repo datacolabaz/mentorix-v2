@@ -77,6 +77,22 @@ function mapGenerationDraftRow(row) {
 }
 
 /**
+ * @param {string} id
+ * @param {typeof db} [client]
+ * @returns {Promise<GenerationRequestRow | null>}
+ */
+async function getGenerationRequestById(id, client = db) {
+  const { rows } = await client.query(
+    `SELECT *
+     FROM generation_requests
+     WHERE id = $1::uuid
+     LIMIT 1`,
+    [id],
+  );
+  return mapGenerationRequestRow(rows[0]);
+}
+
+/**
  * @param {CreateGenerationRequestData} data
  * @param {typeof db} [client]
  * @returns {Promise<GenerationRequestRow>}
@@ -229,6 +245,7 @@ async function updateDraftStatus(id, status, client = db) {
 
 module.exports = {
   createGenerationRequest,
+  getGenerationRequestById,
   updateGenerationRequestStatus,
   createDraft,
   getDraftById,

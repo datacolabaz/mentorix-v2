@@ -2,6 +2,7 @@ const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
 const {
   createGenerationRequest,
+  getGenerationRequestById,
   updateGenerationRequestStatus,
   createDraft,
   getDraftById,
@@ -139,5 +140,15 @@ describe('generation.repository', () => {
     assert.match(client.calls[0].sql, /status = \$2/i);
     assert.equal(client.calls[0].params?.[1], 'published');
     assert.equal(row?.status, 'published');
+  });
+
+  it('getGenerationRequestById selects by request id', async () => {
+    const client = createMockClient([[{ id: REQUEST_ID }]]);
+
+    const row = await getGenerationRequestById(REQUEST_ID, client);
+
+    assert.match(client.calls[0].sql, /FROM generation_requests/i);
+    assert.equal(client.calls[0].params?.[0], REQUEST_ID);
+    assert.equal(row?.id, REQUEST_ID);
   });
 });
