@@ -6,6 +6,9 @@ const {
   validateGeneratedQuestion,
   validateGeneratedQuestionSet,
   parseGeneratedQuestionSet,
+  validatePersistedQuestion,
+  validatePersistedQuestionSet,
+  parsePersistedQuestionSet,
 } = require('./generation.schema');
 
 const VALID_INPUT = {
@@ -197,6 +200,64 @@ describe('parseGeneratedQuestionSet', () => {
     assert.throws(() => parseGeneratedQuestionSet([]), (err) => {
       assert.equal(err.code, 'VALIDATION_ERROR');
       assert.ok(err.details?.questions);
+      return true;
+    });
+  });
+});
+
+const PERSISTED_QUESTION_ID = '550e8400-e29b-41d4-a716-446655440000';
+
+const VALID_PERSISTED_SET = [
+  {
+    id: PERSISTED_QUESTION_ID,
+    ...VALID_CLAUDE_QUESTION,
+  },
+];
+
+describe('validatePersistedQuestionSet', () => {
+  it('accepts valid persisted questions with ids', () => {
+    const result = validatePersistedQuestionSet(VALID_PERSISTED_SET);
+    assert.equal(result.valid, true);
+    assert.deepEqual(result.errors, {});
+  });
+
+  it('rejects questions missing id', () => {
+    const result = validatePersistedQuestionSet([{ ...VALID_CLAUDE_QUESTION }]);
+    assert.equal(result.valid, false);
+    assert.ok(result.errors['questions[0].id']);
+  });
+
+  it('rejects invalid question id format', () => {
+    const result = validatePersistedQuestionSet([
+      { ...VALID_PERSISTED_SET[0], id: 'not-a-uuid' },
+    ]);
+    assert.equal(result.valid, false);
+    assert.ok(result.errors['questions[0].id']);
+  });
+
+  it('rejects more than 30 questions', () => {
+    const oversized = Array.from({ length: 31 }, (_, index) => ({
+      id: `550e8400-e29b-41d4-a716-44665544${String(index).padStart(4, '0')}`,
+      ...VALID_CLAUDE_QUESTION,
+      text: `Question number ${index + 1} for validation`,
+    }));
+    const result = validatePersistedQuestionSet(oversized);
+    assert.equal(result.valid, false);
+    assert.ok(result.errors.questions);
+  });
+});
+
+describe('parsePersistedQuestionSet', () => {
+  it('returns coerced persisted questions on success', () => {
+    const parsed = parsePersistedQuestionSet(VALID_PERSISTED_SET);
+    assert.equal(parsed.length, 1);
+    assert.equal(parsed[0].id, PERSISTED_QUESTION_ID);
+    assert.equal(parsed[0].text, VALID_CLAUDE_QUESTION.text);
+  });
+
+  it('throws VALIDATION_ERROR when questions is not an array', () => {
+    assert.throws(() => parsePersistedQuestionSet(null), (err) => {
+      assert.equal(err.code, 'VALIDATION_ERROR');
       return true;
     });
   });

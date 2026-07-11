@@ -226,6 +226,100 @@ function parseGeneratedQuestionSet(input) {
   });
 }
 
+/**
+ * Validate a persisted draft question (includes stable `id` per Technical Spec §5–6).
+ *
+ * @param {unknown} question
+ * @param {number} [index=0]
+ * @returns {{ valid: boolean, errors: Record<string, string> }}
+ */
+function validatePersistedQuestion(question, index = 0) {
+  /** @type {Record<string, string>} */
+  const errors = {};
+  const prefix = `questions[${index}]`;
+  const item = question && typeof question === 'object' ? question : null;
+
+  const id = item ? String(item.id ?? '').trim() : '';
+  if (!id) {
+    errors[`${prefix}.id`] = 'Sual id mütləqdir.';
+  } else if (!isUuid(id)) {
+    errors[`${prefix}.id`] = 'Sual id etibarlı UUID olmalıdır.';
+  }
+
+  const base = validateGeneratedQuestion(question, index);
+  if (!base.valid) {
+    Object.assign(errors, base.errors);
+  }
+
+  return { valid: Object.keys(errors).length === 0, errors };
+}
+
+/**
+ * Validate a full questions array for PATCH draft content updates.
+ *
+ * @param {unknown} input
+ * @returns {{ valid: boolean, errors: Record<string, string> }}
+ */
+function validatePersistedQuestionSet(input) {
+  /** @type {Record<string, string>} */
+  const errors = {};
+
+  if (!Array.isArray(input)) {
+    errors.questions = 'Sual siyahısı massiv olmalıdır.';
+    return { valid: false, errors };
+  }
+
+  if (input.length < MIN_GENERATED_SET_LENGTH) {
+    errors.questions = 'Ən azı bir sual tələb olunur.';
+    return { valid: false, errors };
+  }
+
+  if (input.length > MAX_QUESTION_COUNT) {
+    errors.questions = `Sual sayı ən çoxu ${MAX_QUESTION_COUNT} ola bilər.`;
+    return { valid: false, errors };
+  }
+
+  for (let i = 0; i < input.length; i += 1) {
+    const result = validatePersistedQuestion(input[i], i);
+    if (!result.valid) {
+      Object.assign(errors, result.errors);
+    }
+  }
+
+  return { valid: Object.keys(errors).length === 0, errors };
+}
+
+/**
+ * @param {unknown} input
+ * @returns {import('./generation.types').GeneratedQuestion[]}
+ */
+function parsePersistedQuestionSet(input) {
+  const { valid, errors } = validatePersistedQuestionSet(input);
+  if (!valid) {
+    const message = Object.values(errors).join(' ');
+    const err = new Error(message);
+    err.code = 'VALIDATION_ERROR';
+    err.details = errors;
+    throw err;
+  }
+
+  return input.map((question) => {
+    const item = /** @type {Record<string, unknown>} */ (question);
+    const parsed = {
+      id: String(item.id).trim(),
+      text: String(item.text).trim(),
+      correctAnswer: String(item.correctAnswer).trim(),
+      difficulty: String(item.difficulty),
+    };
+    if (item.options != null) {
+      parsed.options = item.options
+        .map((opt) => String(opt ?? '').trim())
+        .filter(Boolean);
+    }
+    return parsed;
+  });
+}
+
 /** Zod-style alias for controller use in BE-08+. */
 const GenerateQuestionsSchema = {
   validate: validateGenerateQuestionsInput,
@@ -240,6 +334,15 @@ const GeneratedQuestionSchema = {
 const GeneratedQuestionSetSchema = {
   validate: validateGeneratedQuestionSet,
   parse: parseGeneratedQuestionSet,
+};
+
+const PersistedQuestionSchema = {
+  validate: validatePersistedQuestion,
+};
+
+const PersistedQuestionSetSchema = {
+  validate: validatePersistedQuestionSet,
+  parse: parsePersistedQuestionSet,
 };
 
 module.exports = {
@@ -261,4 +364,9 @@ module.exports = {
   parseGeneratedQuestionSet,
   GeneratedQuestionSchema,
   GeneratedQuestionSetSchema,
+  validatePersistedQuestion,
+  validatePersistedQuestionSet,
+  parsePersistedQuestionSet,
+  PersistedQuestionSchema,
+  PersistedQuestionSetSchema,
 };

@@ -4,9 +4,11 @@ const { AIGenerationError } = require('../../providers/errors');
 const {
   generateQuestions,
   regenerateQuestionItem,
+  updateDraftContent,
   GenerationServiceError,
   GenerationForbiddenError,
   GenerationNotFoundError,
+  GenerationConflictError,
   assignQuestionIds,
   mergeRegeneratedQuestion,
 } = require('./generation.service');
@@ -280,5 +282,120 @@ describe('mergeRegeneratedQuestion', () => {
     assert.equal(merged.id, QUESTION_ID);
     assert.equal(merged.text, 'New');
     assert.deepEqual(merged.options, ['B', 'C']);
+  });
+});
+
+function createUpdateDraftRepositoryMock(status = 'draft') {
+  const existingQuestions = [
+    {
+      id: QUESTION_ID,
+      text: 'Existing question text here?',
+      options: ['A', 'B', 'C', 'D'],
+      correctAnswer: 'B',
+      difficulty: 'medium',
+    },
+  ];
+
+  return {
+    calls: {
+      getDraftById: [],
+      updateDraft: [],
+    },
+    async getDraftById(id) {
+      this.calls.getDraftById.push(id);
+      return {
+        id: DRAFT_ID,
+        request_id: REQUEST_ID,
+        teacher_id: TEACHER_ID,
+        status,
+        questions: existingQuestions,
+      };
+    },
+    async updateDraft(id, updates) {
+      this.calls.updateDraft.push({ id, updates });
+      return {
+        id,
+        request_id: REQUEST_ID,
+        teacher_id: TEACHER_ID,
+        status,
+        questions: updates.questions,
+        updated_at: '2026-07-11T12:00:00.000Z',
+      };
+    },
+  };
+}
+
+const UPDATED_QUESTIONS = [
+  {
+    id: QUESTION_ID,
+    text: 'Manually edited question text here?',
+    options: ['One', 'Two', 'Three', 'Four'],
+    correctAnswer: 'Two',
+    difficulty: 'hard',
+  },
+];
+
+describe('updateDraftContent', () => {
+  it('updates draft questions for owner when status is draft', async () => {
+    const repo = createUpdateDraftRepositoryMock('draft');
+
+    const draft = await updateDraftContent(TEACHER_ID, DRAFT_ID, UPDATED_QUESTIONS, {
+      repository: repo,
+    });
+
+    assert.equal(repo.calls.getDraftById.length, 1);
+    assert.equal(repo.calls.updateDraft.length, 1);
+    assert.equal(repo.calls.updateDraft[0].id, DRAFT_ID);
+    assert.deepEqual(repo.calls.updateDraft[0].updates.questions, UPDATED_QUESTIONS);
+    assert.equal(draft.id, DRAFT_ID);
+    assert.deepEqual(draft.questions, UPDATED_QUESTIONS);
+  });
+
+  it('throws GenerationForbiddenError for non-owner', async () => {
+    const repo = createUpdateDraftRepositoryMock('draft');
+
+    await assert.rejects(
+      () => updateDraftContent(OTHER_TEACHER_ID, DRAFT_ID, UPDATED_QUESTIONS, {
+        repository: repo,
+      }),
+      (err) => err instanceof GenerationForbiddenError,
+    );
+    assert.equal(repo.calls.updateDraft.length, 0);
+  });
+
+  it('throws GenerationNotFoundError when draft is missing', async () => {
+    const repo = {
+      async getDraftById() {
+        return null;
+      },
+      async updateDraft() {
+        throw new Error('should not be called');
+      },
+    };
+
+    await assert.rejects(
+      () => updateDraftContent(TEACHER_ID, DRAFT_ID, UPDATED_QUESTIONS, { repository: repo }),
+      (err) => err instanceof GenerationNotFoundError,
+    );
+  });
+
+  it('throws GenerationConflictError when draft is published', async () => {
+    const repo = createUpdateDraftRepositoryMock('published');
+
+    await assert.rejects(
+      () => updateDraftContent(TEACHER_ID, DRAFT_ID, UPDATED_QUESTIONS, { repository: repo }),
+      (err) => err instanceof GenerationConflictError,
+    );
+    assert.equal(repo.calls.updateDraft.length, 0);
+  });
+
+  it('throws GenerationConflictError when draft is discarded', async () => {
+    const repo = createUpdateDraftRepositoryMock('discarded');
+
+    await assert.rejects(
+      () => updateDraftContent(TEACHER_ID, DRAFT_ID, UPDATED_QUESTIONS, { repository: repo }),
+      (err) => err instanceof GenerationConflictError,
+    );
+    assert.equal(repo.calls.updateDraft.length, 0);
   });
 });

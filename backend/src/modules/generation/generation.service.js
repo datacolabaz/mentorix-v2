@@ -44,6 +44,17 @@ class GenerationNotFoundError extends Error {
   }
 }
 
+class GenerationConflictError extends Error {
+  /**
+   * @param {string} [message]
+   */
+  constructor(message = 'Bu draft artıq redaktə oluna bilməz') {
+    super(message);
+    this.name = 'GenerationConflictError';
+    this.code = 'CONFLICT';
+  }
+}
+
 /**
  * @param {import('./generation.schema').ClaudeGeneratedQuestion[]} questions
  * @returns {import('./generation.types').GeneratedQuestion[]}
@@ -202,12 +213,48 @@ async function regenerateQuestionItem(
   return updatedQuestion;
 }
 
+/**
+ * @param {string} teacherId
+ * @param {string} draftId
+ * @param {import('./generation.types').GeneratedQuestion[]} updatedQuestions
+ * @param {Object} [deps]
+ * @param {typeof repository} [deps.repository]
+ * @param {import('../../utils/db')} [deps.client]
+ * @returns {Promise<GenerationDraftRow>}
+ */
+async function updateDraftContent(
+  teacherId,
+  draftId,
+  updatedQuestions,
+  { repository: repo = repository, client } = {},
+) {
+  const draft = await repo.getDraftById(draftId, client);
+  if (!draft) {
+    throw new GenerationNotFoundError('Draft tapılmadı');
+  }
+  if (draft.teacher_id !== teacherId) {
+    throw new GenerationForbiddenError();
+  }
+  if (draft.status !== 'draft') {
+    throw new GenerationConflictError();
+  }
+
+  const updatedDraft = await repo.updateDraft(draftId, { questions: updatedQuestions }, client);
+  if (!updatedDraft) {
+    throw new GenerationNotFoundError('Draft tapılmadı');
+  }
+
+  return updatedDraft;
+}
+
 module.exports = {
   GenerationServiceError,
   GenerationForbiddenError,
   GenerationNotFoundError,
+  GenerationConflictError,
   assignQuestionIds,
   mergeRegeneratedQuestion,
   generateQuestions,
   regenerateQuestionItem,
+  updateDraftContent,
 };

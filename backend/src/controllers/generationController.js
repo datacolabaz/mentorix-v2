@@ -1,10 +1,16 @@
-const { parseGenerateQuestionsInput, isUuid } = require('../modules/generation/generation.schema');
+const {
+  parseGenerateQuestionsInput,
+  parsePersistedQuestionSet,
+  isUuid,
+} = require('../modules/generation/generation.schema');
 const {
   generateQuestions,
   regenerateQuestionItem,
+  updateDraftContent,
   GenerationServiceError,
   GenerationForbiddenError,
   GenerationNotFoundError,
+  GenerationConflictError,
 } = require('../modules/generation/generation.service');
 const { AIGenerationError } = require('../providers/errors');
 const { defaultClaudeProvider } = require('../providers/aiProviderService');
@@ -38,6 +44,20 @@ function parseRegenerateItemBody(body) {
   return { questionId, instructions };
 }
 
+/**
+ * @param {unknown} body
+ * @returns {import('../modules/generation/generation.types').GeneratedQuestion[]}
+ */
+function parseUpdateDraftBody(body) {
+  const record = body && typeof body === 'object' ? body : {};
+  if (!Array.isArray(record.questions)) {
+    const err = new Error('questions massiv olmalıdır.');
+    err.code = 'VALIDATION_ERROR';
+    throw err;
+  }
+  return parsePersistedQuestionSet(record.questions);
+}
+
 function mapGenerationError(err, res, correlationId) {
   if (/** @type {{ code?: string }} */ (err).code === 'VALIDATION_ERROR') {
     return res.status(400).json({
@@ -63,6 +83,17 @@ function mapGenerationError(err, res, correlationId) {
 
   if (err instanceof GenerationNotFoundError) {
     return res.status(404).json({
+      success: false,
+      error: {
+        code: err.code,
+        message: err.message,
+        correlationId,
+      },
+    });
+  }
+
+  if (err instanceof GenerationConflictError) {
+    return res.status(409).json({
       success: false,
       error: {
         code: err.code,
@@ -181,7 +212,40 @@ async function postRegenerateQuestionItem(req, res) {
   }
 }
 
+/**
+ * PATCH /api/generation/drafts/:draftId
+ */
+async function patchDraftContent(req, res) {
+  const correlationId = resolveCorrelationId(req);
+
+  let questions;
+  try {
+    questions = parseUpdateDraftBody(req.body);
+  } catch (err) {
+    return mapGenerationError(err, res, correlationId);
+  }
+
+  try {
+    const draft = await updateDraftContent(req.user.id, req.params.draftId, questions);
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        draftId: draft.id,
+        questions: draft.questions,
+        status: draft.status,
+      },
+      meta: {
+        updatedAt: draft.updated_at || new Date().toISOString(),
+      },
+    });
+  } catch (err) {
+    return mapGenerationError(err, res, correlationId);
+  }
+}
+
 module.exports = {
   postGenerateQuestions,
   postRegenerateQuestionItem,
+  patchDraftContent,
 };
