@@ -12,6 +12,11 @@ const MAX_TOPIC_LENGTH = 200;
 const MIN_QUESTION_COUNT = 1;
 const MAX_QUESTION_COUNT = 30;
 
+const MIN_GENERATED_TEXT_LENGTH = 5;
+const MIN_GENERATED_OPTIONS = 2;
+const MAX_GENERATED_OPTIONS = 6;
+const MIN_GENERATED_SET_LENGTH = 1;
+
 function isUuid(value) {
   return typeof value === 'string' && UUID_RE.test(value.trim());
 }
@@ -100,10 +105,141 @@ function parseGenerateQuestionsInput(input) {
   };
 }
 
+/**
+ * Validate a single Claude-generated question object (Technical Spec §6.2).
+ * Does not require `id` — assigned when persisted to a draft.
+ *
+ * @param {unknown} question
+ * @param {number} [index=0]
+ * @returns {{ valid: boolean, errors: Record<string, string> }}
+ */
+function validateGeneratedQuestion(question, index = 0) {
+  /** @type {Record<string, string>} */
+  const errors = {};
+  const prefix = `questions[${index}]`;
+  const item = question && typeof question === 'object' ? question : null;
+
+  if (!item) {
+    errors[prefix] = 'Sual obyekti düzgün formatda deyil.';
+    return { valid: false, errors };
+  }
+
+  const text = String(item.text ?? '').trim();
+  if (!text) {
+    errors[`${prefix}.text`] = 'Sual mətni mütləqdir.';
+  } else if (text.length < MIN_GENERATED_TEXT_LENGTH) {
+    errors[`${prefix}.text`] = `Sual mətni ən azı ${MIN_GENERATED_TEXT_LENGTH} simvol olmalıdır.`;
+  }
+
+  if (item.options != null) {
+    if (!Array.isArray(item.options)) {
+      errors[`${prefix}.options`] = 'Variantlar massiv olmalıdır.';
+    } else {
+      const options = item.options.map((opt) => String(opt ?? '').trim()).filter(Boolean);
+      if (options.length < MIN_GENERATED_OPTIONS || options.length > MAX_GENERATED_OPTIONS) {
+        errors[`${prefix}.options`] =
+          `Variant sayı ${MIN_GENERATED_OPTIONS}–${MAX_GENERATED_OPTIONS} arasında olmalıdır.`;
+      }
+    }
+  }
+
+  const correctAnswer = String(item.correctAnswer ?? '').trim();
+  if (!correctAnswer) {
+    errors[`${prefix}.correctAnswer`] = 'Düzgün cavab mütləqdir.';
+  }
+
+  const difficulty = String(item.difficulty ?? '');
+  if (!difficulty) {
+    errors[`${prefix}.difficulty`] = 'Çətinlik mütləqdir.';
+  } else if (!GENERATION_DIFFICULTIES.includes(difficulty)) {
+    errors[`${prefix}.difficulty`] = 'Düzgün çətinlik seçin (easy, medium, hard).';
+  }
+
+  return { valid: Object.keys(errors).length === 0, errors };
+}
+
+/**
+ * Validate Claude output: a non-empty array of generated questions.
+ *
+ * @param {unknown} input
+ * @returns {{ valid: boolean, errors: Record<string, string> }}
+ */
+function validateGeneratedQuestionSet(input) {
+  /** @type {Record<string, string>} */
+  const errors = {};
+
+  if (!Array.isArray(input)) {
+    errors.questions = 'Sual siyahısı massiv olmalıdır.';
+    return { valid: false, errors };
+  }
+
+  if (input.length < MIN_GENERATED_SET_LENGTH) {
+    errors.questions = 'Ən azı bir sual tələb olunur.';
+    return { valid: false, errors };
+  }
+
+  for (let i = 0; i < input.length; i += 1) {
+    const result = validateGeneratedQuestion(input[i], i);
+    if (!result.valid) {
+      Object.assign(errors, result.errors);
+    }
+  }
+
+  return { valid: Object.keys(errors).length === 0, errors };
+}
+
+/**
+ * @typedef {Object} ClaudeGeneratedQuestion
+ * @property {string} text
+ * @property {string[]=} options
+ * @property {string} correctAnswer
+ * @property {import('./generation.types').GenerationDifficulty} difficulty
+ */
+
+/**
+ * @param {unknown} input
+ * @returns {ClaudeGeneratedQuestion[]}
+ */
+function parseGeneratedQuestionSet(input) {
+  const { valid, errors } = validateGeneratedQuestionSet(input);
+  if (!valid) {
+    const message = Object.values(errors).join(' ');
+    const err = new Error(message);
+    err.code = 'VALIDATION_ERROR';
+    err.details = errors;
+    throw err;
+  }
+
+  return input.map((question) => {
+    const item = /** @type {Record<string, unknown>} */ (question);
+    const parsed = {
+      text: String(item.text).trim(),
+      correctAnswer: String(item.correctAnswer).trim(),
+      difficulty: String(item.difficulty),
+    };
+    if (item.options != null) {
+      parsed.options = item.options
+        .map((opt) => String(opt ?? '').trim())
+        .filter(Boolean);
+    }
+    return parsed;
+  });
+}
+
 /** Zod-style alias for controller use in BE-08+. */
 const GenerateQuestionsSchema = {
   validate: validateGenerateQuestionsInput,
   parse: parseGenerateQuestionsInput,
+};
+
+/** Zod-style alias for Claude output validation in BE-05+. */
+const GeneratedQuestionSchema = {
+  validate: validateGeneratedQuestion,
+};
+
+const GeneratedQuestionSetSchema = {
+  validate: validateGeneratedQuestionSet,
+  parse: parseGeneratedQuestionSet,
 };
 
 module.exports = {
@@ -112,8 +248,17 @@ module.exports = {
   MAX_TOPIC_LENGTH,
   MIN_QUESTION_COUNT,
   MAX_QUESTION_COUNT,
+  MIN_GENERATED_TEXT_LENGTH,
+  MIN_GENERATED_OPTIONS,
+  MAX_GENERATED_OPTIONS,
+  MIN_GENERATED_SET_LENGTH,
   isUuid,
   validateGenerateQuestionsInput,
   parseGenerateQuestionsInput,
   GenerateQuestionsSchema,
+  validateGeneratedQuestion,
+  validateGeneratedQuestionSet,
+  parseGeneratedQuestionSet,
+  GeneratedQuestionSchema,
+  GeneratedQuestionSetSchema,
 };
