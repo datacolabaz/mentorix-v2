@@ -6,6 +6,8 @@ const {
   regenerateQuestionItem,
   updateDraftContent,
   publishDraft,
+  discardDraft,
+  listDrafts,
   GenerationServiceError,
   GenerationForbiddenError,
   GenerationNotFoundError,
@@ -549,5 +551,144 @@ describe('publishDraft', () => {
       }),
       (err) => err instanceof GenerationServiceError,
     );
+  });
+});
+
+function createDiscardRepositoryMock(status = 'draft') {
+  const existingQuestion = {
+    id: QUESTION_ID,
+    text: 'Existing question text here?',
+    options: ['A', 'B', 'C', 'D'],
+    correctAnswer: 'B',
+    difficulty: 'medium',
+  };
+
+  return {
+    calls: {
+      getDraftById: [],
+      updateDraftStatus: [],
+    },
+    async getDraftById(id) {
+      this.calls.getDraftById.push(id);
+      return {
+        id: DRAFT_ID,
+        request_id: REQUEST_ID,
+        teacher_id: TEACHER_ID,
+        status,
+        questions: [existingQuestion],
+        updated_at: '2026-07-11T14:00:00.000Z',
+      };
+    },
+    async updateDraftStatus(id, nextStatus) {
+      this.calls.updateDraftStatus.push({ id, nextStatus });
+      return {
+        id,
+        request_id: REQUEST_ID,
+        teacher_id: TEACHER_ID,
+        status: nextStatus,
+        questions: [existingQuestion],
+        updated_at: '2026-07-11T14:00:00.000Z',
+      };
+    },
+  };
+}
+
+describe('discardDraft', () => {
+  it('sets draft status to discarded for owner', async () => {
+    const repo = createDiscardRepositoryMock('draft');
+
+    const draft = await discardDraft(TEACHER_ID, DRAFT_ID, { repository: repo });
+
+    assert.equal(repo.calls.updateDraftStatus.length, 1);
+    assert.equal(repo.calls.updateDraftStatus[0].nextStatus, 'discarded');
+    assert.equal(draft.status, 'discarded');
+  });
+
+  it('is idempotent when draft is already discarded', async () => {
+    const repo = createDiscardRepositoryMock('discarded');
+
+    const draft = await discardDraft(TEACHER_ID, DRAFT_ID, { repository: repo });
+
+    assert.equal(repo.calls.updateDraftStatus.length, 0);
+    assert.equal(draft.status, 'discarded');
+  });
+
+  it('throws GenerationForbiddenError for non-owner', async () => {
+    const repo = createDiscardRepositoryMock('draft');
+
+    await assert.rejects(
+      () => discardDraft(OTHER_TEACHER_ID, DRAFT_ID, { repository: repo }),
+      (err) => err instanceof GenerationForbiddenError,
+    );
+    assert.equal(repo.calls.updateDraftStatus.length, 0);
+  });
+
+  it('throws GenerationConflictError for published draft', async () => {
+    const repo = createDiscardRepositoryMock('published');
+
+    await assert.rejects(
+      () => discardDraft(TEACHER_ID, DRAFT_ID, { repository: repo }),
+      (err) => err instanceof GenerationConflictError,
+    );
+    assert.equal(repo.calls.updateDraftStatus.length, 0);
+  });
+
+  it('throws GenerationNotFoundError when draft is missing', async () => {
+    const repo = {
+      async getDraftById() {
+        return null;
+      },
+    };
+
+    await assert.rejects(
+      () => discardDraft(TEACHER_ID, DRAFT_ID, { repository: repo }),
+      (err) => err instanceof GenerationNotFoundError,
+    );
+  });
+});
+
+describe('listDrafts', () => {
+  it('returns drafts for teacher with optional status filter', async () => {
+    const repo = {
+      calls: {
+        listDraftsByTeacher: [],
+      },
+      async listDraftsByTeacher(teacherId, status) {
+        this.calls.listDraftsByTeacher.push({ teacherId, status });
+        return [
+          {
+            id: DRAFT_ID,
+            teacher_id: teacherId,
+            status: 'draft',
+            questions: [],
+            group_id: null,
+            published_assignment_id: null,
+            created_at: '2026-07-11T10:00:00.000Z',
+            updated_at: '2026-07-11T10:00:00.000Z',
+          },
+        ];
+      },
+    };
+
+    const drafts = await listDrafts(TEACHER_ID, 'draft', { repository: repo });
+
+    assert.equal(repo.calls.listDraftsByTeacher.length, 1);
+    assert.equal(repo.calls.listDraftsByTeacher[0].teacherId, TEACHER_ID);
+    assert.equal(repo.calls.listDraftsByTeacher[0].status, 'draft');
+    assert.equal(drafts.length, 1);
+    assert.equal(drafts[0].id, DRAFT_ID);
+  });
+
+  it('passes null status to repository when filter omitted', async () => {
+    const repo = {
+      async listDraftsByTeacher(teacherId, status) {
+        assert.equal(teacherId, TEACHER_ID);
+        assert.equal(status, null);
+        return [];
+      },
+    };
+
+    const drafts = await listDrafts(TEACHER_ID, null, { repository: repo });
+    assert.deepEqual(drafts, []);
   });
 });

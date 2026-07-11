@@ -337,6 +337,57 @@ async function publishDraft(
   return database.transaction(runPublish);
 }
 
+/**
+ * @param {string} teacherId
+ * @param {string} draftId
+ * @param {Object} [deps]
+ * @param {typeof repository} [deps.repository]
+ * @param {import('../../utils/db')} [deps.client]
+ * @returns {Promise<GenerationDraftRow>}
+ */
+async function discardDraft(
+  teacherId,
+  draftId,
+  { repository: repo = repository, client } = {},
+) {
+  const draft = await repo.getDraftById(draftId, client);
+  if (!draft) {
+    throw new GenerationNotFoundError('Draft tapılmadı');
+  }
+  if (draft.teacher_id !== teacherId) {
+    throw new GenerationForbiddenError();
+  }
+  if (draft.status === 'discarded') {
+    return draft;
+  }
+  if (draft.status !== 'draft') {
+    throw new GenerationConflictError('Yalnız draft statusunda olan draft ləğv edilə bilər');
+  }
+
+  const updatedDraft = await repo.updateDraftStatus(draftId, 'discarded', client);
+  if (!updatedDraft) {
+    throw new GenerationNotFoundError('Draft tapılmadı');
+  }
+
+  return updatedDraft;
+}
+
+/**
+ * @param {string} teacherId
+ * @param {import('./generation.types').DraftStatus | null | undefined} [statusFilter]
+ * @param {Object} [deps]
+ * @param {typeof repository} [deps.repository]
+ * @param {import('../../utils/db')} [deps.client]
+ * @returns {Promise<GenerationDraftRow[]>}
+ */
+async function listDrafts(
+  teacherId,
+  statusFilter,
+  { repository: repo = repository, client } = {},
+) {
+  return repo.listDraftsByTeacher(teacherId, statusFilter ?? null, client);
+}
+
 module.exports = {
   GenerationServiceError,
   GenerationForbiddenError,
@@ -349,4 +400,6 @@ module.exports = {
   regenerateQuestionItem,
   updateDraftContent,
   publishDraft,
+  discardDraft,
+  listDrafts,
 };

@@ -2,6 +2,7 @@ const {
   GENERATION_LEVELS,
   GENERATION_FORMATS,
   GENERATION_DIFFICULTIES,
+  DRAFT_STATUSES,
 } = require('./generation.types');
 
 const UUID_RE =
@@ -398,6 +399,27 @@ function parsePublishDraftInput(input) {
   };
 }
 
+/**
+ * @param {unknown} query
+ * @returns {import('./generation.types').DraftStatus | null}
+ */
+function parseListDraftsStatusFilter(query) {
+  const record = query && typeof query === 'object' ? query : {};
+  const rawStatus = record.status;
+  if (rawStatus == null || String(rawStatus).trim() === '') {
+    return null;
+  }
+
+  const status = String(rawStatus).trim();
+  if (!DRAFT_STATUSES.includes(status)) {
+    const err = new Error('Düzgün status seçin (draft, published, discarded).');
+    err.code = 'VALIDATION_ERROR';
+    throw err;
+  }
+
+  return /** @type {import('./generation.types').DraftStatus} */ (status);
+}
+
 /** Zod-style alias for controller use in BE-08+. */
 const GenerateQuestionsSchema = {
   validate: validateGenerateQuestionsInput,
@@ -426,6 +448,10 @@ const PersistedQuestionSetSchema = {
 const PublishDraftSchema = {
   validate: validatePublishDraftInput,
   parse: parsePublishDraftInput,
+};
+
+const ListDraftsQuerySchema = {
+  parse: parseListDraftsStatusFilter,
 };
 
 module.exports = {
@@ -458,4 +484,6 @@ module.exports = {
   validatePublishDraftInput,
   parsePublishDraftInput,
   PublishDraftSchema,
+  parseListDraftsStatusFilter,
+  ListDraftsQuerySchema,
 };

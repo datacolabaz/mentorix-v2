@@ -2,6 +2,7 @@ const {
   parseGenerateQuestionsInput,
   parsePersistedQuestionSet,
   parsePublishDraftInput,
+  parseListDraftsStatusFilter,
   isUuid,
 } = require('../modules/generation/generation.schema');
 const {
@@ -9,6 +10,8 @@ const {
   regenerateQuestionItem,
   updateDraftContent,
   publishDraft,
+  discardDraft,
+  listDrafts,
   GenerationServiceError,
   GenerationForbiddenError,
   GenerationNotFoundError,
@@ -59,6 +62,21 @@ function parseUpdateDraftBody(body) {
     throw err;
   }
   return parsePersistedQuestionSet(record.questions);
+}
+
+/**
+ * @param {import('../modules/generation/generation.repository').GenerationDraftRow} draft
+ */
+function mapDraftSummary(draft) {
+  return {
+    draftId: draft.id,
+    status: draft.status,
+    questions: draft.questions,
+    groupId: draft.group_id,
+    publishedAssignmentId: draft.published_assignment_id ?? null,
+    createdAt: draft.created_at,
+    updatedAt: draft.updated_at,
+  };
 }
 
 function mapGenerationError(err, res, correlationId) {
@@ -282,9 +300,66 @@ async function postPublishDraft(req, res) {
   }
 }
 
+/**
+ * GET /api/generation/drafts
+ */
+async function getListDrafts(req, res) {
+  const correlationId = resolveCorrelationId(req);
+
+  let statusFilter;
+  try {
+    statusFilter = parseListDraftsStatusFilter(req.query);
+  } catch (err) {
+    return mapGenerationError(err, res, correlationId);
+  }
+
+  try {
+    const drafts = await listDrafts(req.user.id, statusFilter);
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        drafts: drafts.map(mapDraftSummary),
+      },
+      meta: {
+        count: drafts.length,
+        status: statusFilter,
+      },
+    });
+  } catch (err) {
+    return mapGenerationError(err, res, correlationId);
+  }
+}
+
+/**
+ * DELETE /api/generation/drafts/:draftId
+ */
+async function deleteDiscardDraft(req, res) {
+  const correlationId = resolveCorrelationId(req);
+
+  try {
+    const draft = await discardDraft(req.user.id, req.params.draftId);
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        draftId: draft.id,
+        status: draft.status,
+      },
+      meta: {
+        discardedAt: draft.updated_at || new Date().toISOString(),
+      },
+    });
+  } catch (err) {
+    return mapGenerationError(err, res, correlationId);
+  }
+}
+
 module.exports = {
   postGenerateQuestions,
   postRegenerateQuestionItem,
   patchDraftContent,
   postPublishDraft,
+  getListDrafts,
+  deleteDiscardDraft,
 };

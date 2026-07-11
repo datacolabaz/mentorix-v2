@@ -11,6 +11,7 @@ const {
   parsePersistedQuestionSet,
   validatePublishDraftInput,
   parsePublishDraftInput,
+  parseListDraftsStatusFilter,
 } = require('./generation.schema');
 
 const VALID_INPUT = {
@@ -306,5 +307,24 @@ describe('parsePublishDraftInput', () => {
     assert.equal(parsed.groupId, VALID_PUBLISH_INPUT.groupId);
     assert.equal(parsed.title, 'Trimmed title');
     assert.equal(parsed.dueDate, '2026-08-15');
+  });
+});
+
+describe('parseListDraftsStatusFilter', () => {
+  it('returns null when status is omitted', () => {
+    assert.equal(parseListDraftsStatusFilter({}), null);
+    assert.equal(parseListDraftsStatusFilter({ status: '' }), null);
+  });
+
+  it('returns valid draft status values', () => {
+    assert.equal(parseListDraftsStatusFilter({ status: 'draft' }), 'draft');
+    assert.equal(parseListDraftsStatusFilter({ status: ' published ' }), 'published');
+  });
+
+  it('throws VALIDATION_ERROR for invalid status', () => {
+    assert.throws(() => parseListDraftsStatusFilter({ status: 'archived' }), (err) => {
+      assert.equal(err.code, 'VALIDATION_ERROR');
+      return true;
+    });
   });
 });
