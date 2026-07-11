@@ -98,7 +98,19 @@
     --primary-accent: 0 230 118; /* #00E676 */
     --border-subtle: rgba(15, 23, 42, 0.08);
     --text-main: 11 18 32; /* #0B1220 */
-    --text-muted: 100 116 139; /* slate-500 */
+
+    /* Semantic typography + surface tokens (light defaults).
+       WCAG AA on white (#FFF) / surfaceSecondary (#F4F7FA):
+       heading ≥ 15:1, primary ≥ 12:1, secondary ≥ 8:1, muted ≥ 6:1, disabled ≥ 4.5:1 */
+    --heading-primary: 11 18 32; /* #0B1220 — ~18.8:1 */
+    --heading-secondary: 30 41 59; /* slate-800 — ~13.9:1 */
+    --text-primary: 15 23 42; /* slate-900 — ~16.7:1 */
+    --text-secondary: 51 65 85; /* slate-700 — ~10.4:1 */
+    --text-muted: 71 85 105; /* slate-600 — ~7.4:1 */
+    --text-disabled: 100 116 139; /* slate-500 — ~4.9:1 */
+    --surface-primary: 255 255 255; /* #FFFFFF */
+    --surface-secondary: 244 247 250; /* #F4F7FA */
+    --border-color: rgba(15, 23, 42, 0.1);
   }
 
   html, body, #root {
@@ -116,9 +128,19 @@
 
   body {
     @apply font-body;
+    color: rgb(var(--text-primary));
   }
   h1, h2, h3, h4 {
     @apply font-display;
+  }
+  /* Headings inherit high-contrast heading token by default so pages that do
+     not set an explicit color are always readable in Light Mode. Elements that
+     opt into an explicit color (utility class / inline) still override this. */
+  h1, h2, h3 {
+    color: rgb(var(--heading-primary));
+  }
+  h4, h5, h6 {
+    color: rgb(var(--heading-secondary));
   }
 }
 
@@ -210,16 +232,27 @@
   .theme-light .recharts-tooltip-label {
     color: #0f172a !important;
   }
-  /* Müəllim paneli — gündüz rejimində solğun boz mətnləri tündləşdir */
-  .theme-light .instructor-panel-main .text-gray-200 {
-    color: rgb(30 41 59) !important;
+  /* ------------------------------------------------------------------ *
+   * Light Mode readability safety net (global — no per-page patching)   *
+   * Applies to every app content region tagged `.mx-app-content`.       *
+   * Remaps hardcoded dark-theme text utilities to accessible semantic   *
+   * tokens so headings/body never render white-on-white. The            *
+   * `:not([class*="bg-"])` guard protects text that intentionally sits  *
+   * on a coloured background (buttons, badges, chips, pills).           *
+   * ------------------------------------------------------------------ */
+  .theme-light .mx-app-content .text-white:not([class*="bg-"]) {
+    color: rgb(var(--text-primary)) !important;
+    -webkit-text-fill-color: rgb(var(--text-primary)) !important;
   }
-  .theme-light .instructor-panel-main .text-gray-300 {
-    color: rgb(51 65 85) !important;
+  .theme-light .mx-app-content :is(h1, h2, h3, h4, h5, h6).text-white:not([class*="bg-"]) {
+    color: rgb(var(--heading-primary)) !important;
+    -webkit-text-fill-color: rgb(var(--heading-primary)) !important;
   }
-  .theme-light .instructor-panel-main .text-gray-400,
-  .theme-light .instructor-panel-main .text-gray-500 {
-    color: rgb(71 85 105) !important;
+  .theme-light .mx-app-content :is(.text-gray-100, .text-gray-200, .text-gray-300, .text-slate-100, .text-slate-200, .text-slate-300) {
+    color: rgb(var(--text-secondary)) !important;
+  }
+  .theme-light .mx-app-content :is(.text-gray-400, .text-gray-500, .text-slate-400, .text-slate-500) {
+    color: rgb(var(--text-muted)) !important;
   }
   /* Recharts mobil overflow — KPI sparkline */
   .instructor-panel-main .recharts-responsive-container,
@@ -321,6 +354,17 @@
   --field-text: 255 255 255;
   --field-border: rgba(99, 102, 241, 0.28);
   --field-placeholder: 148 163 184;
+
+  /* Semantic tokens — Dark Mode (contrast preserved / unchanged from prior look) */
+  --heading-primary: 255 255 255; /* #FFFFFF */
+  --heading-secondary: 226 232 240; /* slate-200 */
+  --text-primary: 248 250 252; /* #F8FAFC */
+  --text-secondary: 203 213 225; /* slate-300 */
+  --text-muted: 148 163 184; /* slate-400 */
+  --text-disabled: 100 116 139; /* slate-500 */
+  --surface-primary: 26 29 37; /* #1A1D25 */
+  --surface-secondary: 11 11 15; /* #0B0B0F */
+  --border-color: rgba(255, 255, 255, 0.08);
 }
 
 .theme-light {
@@ -335,6 +379,17 @@
   --field-text: 11 18 32;
   --field-border: rgba(15, 23, 42, 0.14);
   --field-placeholder: 100 116 139;
+
+  /* Semantic tokens — Light Mode (WCAG AA verified on white / #F4F7FA) */
+  --heading-primary: 11 18 32; /* #0B1220 — ~18.8:1 */
+  --heading-secondary: 30 41 59; /* slate-800 — ~13.9:1 */
+  --text-primary: 15 23 42; /* slate-900 — ~16.7:1 */
+  --text-secondary: 51 65 85; /* slate-700 — ~10.4:1 */
+  --text-muted: 71 85 105; /* slate-600 — ~7.4:1 */
+  --text-disabled: 100 116 139; /* slate-500 — ~4.9:1 */
+  --surface-primary: 255 255 255;
+  --surface-secondary: 244 247 250;
+  --border-color: rgba(15, 23, 42, 0.1);
 }
 
 /* Form controls: gündüz = ağ fon + tünd mətn (bütün panel) */

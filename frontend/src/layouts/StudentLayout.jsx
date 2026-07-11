@@ -293,7 +293,7 @@ function StudentLayoutInner() {
             {/* Outlet həmişə eyni yerdə qalmalıdır — focusMode dəyişəndə remount olmasın (imtahan state itir) */}
             <div
               className={[
-                'student-panel-main flex-1 flex flex-col min-w-0 w-full max-w-full',
+                'student-panel-main mx-app-content flex-1 flex flex-col min-w-0 w-full max-w-full',
                 focusMode ? 'min-h-0 overflow-hidden' : 'min-h-0 overflow-x-hidden',
                 !focusMode && isChatPage ? 'h-full' : '',
               ].join(' ')}

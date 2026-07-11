@@ -166,7 +166,7 @@ export default function GenerationQuestionCard({
 
       {!editing ? (
         <div className="space-y-3">
-          <p className="text-sm text-white whitespace-pre-wrap break-words">{question.text}</p>
+          <p className="text-sm text-token-textMain whitespace-pre-wrap break-words">{question.text}</p>
 
           {isMcq ? (
             <ul className="space-y-1.5">

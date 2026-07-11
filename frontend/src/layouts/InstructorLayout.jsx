@@ -574,7 +574,7 @@ export default function InstructorLayout() {
             </div>
           ) : null}
 
-          <div className={['instructor-panel-main flex-1 min-h-0 min-w-0 w-full max-w-full overflow-x-hidden', isChatPage ? 'flex flex-col' : ''].join(' ')}>
+          <div className={['instructor-panel-main mx-app-content flex-1 min-h-0 min-w-0 w-full max-w-full overflow-x-hidden', isChatPage ? 'flex flex-col' : ''].join(' ')}>
             <Outlet />
           </div>
 

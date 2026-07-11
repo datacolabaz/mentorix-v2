@@ -241,7 +241,7 @@ export default function AIQuestionGenerator() {
     <div className="p-1 sm:p-2 min-w-0">
       <div className="flex flex-wrap items-start justify-between gap-3 mb-5">
         <div className="min-w-0">
-          <h1 className="font-display font-bold text-xl sm:text-2xl text-white break-words flex items-center gap-2">
+          <h1 className="font-display font-bold text-xl sm:text-2xl text-token-headingPrimary break-words flex items-center gap-2">
             <span aria-hidden>🤖</span>
             {t('generation.page.title')}
           </h1>
@@ -269,7 +269,7 @@ export default function AIQuestionGenerator() {
               🤖
             </span>
           </div>
-          <h2 className="font-display font-bold text-lg text-white">{t('generation.page.loadingTitle')}</h2>
+          <h2 className="font-display font-bold text-lg text-token-headingPrimary">{t('generation.page.loadingTitle')}</h2>
           <p className="text-sm text-token-textMuted mt-1.5 max-w-sm">{t('generation.page.loadingHint')}</p>
         </Card>
       ) : null}

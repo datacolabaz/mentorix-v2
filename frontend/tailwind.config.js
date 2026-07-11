@@ -25,6 +25,15 @@ export default {
           textMain: 'rgb(var(--text-main) / <alpha-value>)',
           textMuted: 'rgb(var(--text-muted) / <alpha-value>)',
           borderSubtle: 'var(--border-subtle)',
+          // Semantic design tokens (theme-aware, WCAG AA in Light Mode)
+          textPrimary: 'rgb(var(--text-primary) / <alpha-value>)',
+          textSecondary: 'rgb(var(--text-secondary) / <alpha-value>)',
+          textDisabled: 'rgb(var(--text-disabled) / <alpha-value>)',
+          headingPrimary: 'rgb(var(--heading-primary) / <alpha-value>)',
+          headingSecondary: 'rgb(var(--heading-secondary) / <alpha-value>)',
+          surfacePrimary: 'rgb(var(--surface-primary) / <alpha-value>)',
+          surfaceSecondary: 'rgb(var(--surface-secondary) / <alpha-value>)',
+          borderColor: 'var(--border-color)',
         },
         surface: {
           1: '#121212',
