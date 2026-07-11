@@ -9,6 +9,8 @@ const {
   validatePersistedQuestion,
   validatePersistedQuestionSet,
   parsePersistedQuestionSet,
+  validatePublishDraftInput,
+  parsePublishDraftInput,
 } = require('./generation.schema');
 
 const VALID_INPUT = {
@@ -260,5 +262,49 @@ describe('parsePersistedQuestionSet', () => {
       assert.equal(err.code, 'VALIDATION_ERROR');
       return true;
     });
+  });
+});
+
+const VALID_PUBLISH_INPUT = {
+  groupId: '660e8400-e29b-41d4-a716-446655440000',
+  title: 'Data Analytics Quiz',
+  dueDate: '2026-08-15',
+};
+
+describe('validatePublishDraftInput', () => {
+  it('accepts valid publish input', () => {
+    const result = validatePublishDraftInput(VALID_PUBLISH_INPUT);
+    assert.equal(result.valid, true);
+    assert.deepEqual(result.errors, {});
+  });
+
+  it('rejects missing groupId', () => {
+    const result = validatePublishDraftInput({ ...VALID_PUBLISH_INPUT, groupId: '' });
+    assert.equal(result.valid, false);
+    assert.ok(result.errors.groupId);
+  });
+
+  it('rejects invalid dueDate format', () => {
+    const result = validatePublishDraftInput({ ...VALID_PUBLISH_INPUT, dueDate: '15-08-2026' });
+    assert.equal(result.valid, false);
+    assert.ok(result.errors.dueDate);
+  });
+
+  it('rejects empty title', () => {
+    const result = validatePublishDraftInput({ ...VALID_PUBLISH_INPUT, title: '   ' });
+    assert.equal(result.valid, false);
+    assert.ok(result.errors.title);
+  });
+});
+
+describe('parsePublishDraftInput', () => {
+  it('returns coerced publish input on success', () => {
+    const parsed = parsePublishDraftInput({
+      ...VALID_PUBLISH_INPUT,
+      title: '  Trimmed title  ',
+    });
+    assert.equal(parsed.groupId, VALID_PUBLISH_INPUT.groupId);
+    assert.equal(parsed.title, 'Trimmed title');
+    assert.equal(parsed.dueDate, '2026-08-15');
   });
 });

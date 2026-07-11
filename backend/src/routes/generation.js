@@ -5,6 +5,7 @@ const {
   postGenerateQuestions,
   postRegenerateQuestionItem,
   patchDraftContent,
+  postPublishDraft,
 } = require('../controllers/generationController');
 
 const router = express.Router();
@@ -16,5 +17,6 @@ router.use(generationRateLimit);
 router.post('/questions', postGenerateQuestions);
 router.post('/questions/:draftId/regenerate-item', postRegenerateQuestionItem);
 router.patch('/drafts/:draftId', patchDraftContent);
+router.post('/drafts/:draftId/publish', postPublishDraft);
 
 module.exports = router;

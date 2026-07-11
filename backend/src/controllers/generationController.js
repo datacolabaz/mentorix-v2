@@ -1,16 +1,19 @@
 const {
   parseGenerateQuestionsInput,
   parsePersistedQuestionSet,
+  parsePublishDraftInput,
   isUuid,
 } = require('../modules/generation/generation.schema');
 const {
   generateQuestions,
   regenerateQuestionItem,
   updateDraftContent,
+  publishDraft,
   GenerationServiceError,
   GenerationForbiddenError,
   GenerationNotFoundError,
   GenerationConflictError,
+  AssignmentPublishNotFoundError,
 } = require('../modules/generation/generation.service');
 const { AIGenerationError } = require('../providers/errors');
 const { defaultClaudeProvider } = require('../providers/aiProviderService');
@@ -81,7 +84,7 @@ function mapGenerationError(err, res, correlationId) {
     });
   }
 
-  if (err instanceof GenerationNotFoundError) {
+  if (err instanceof GenerationNotFoundError || err instanceof AssignmentPublishNotFoundError) {
     return res.status(404).json({
       success: false,
       error: {
@@ -244,8 +247,44 @@ async function patchDraftContent(req, res) {
   }
 }
 
+/**
+ * POST /api/generation/drafts/:draftId/publish
+ */
+async function postPublishDraft(req, res) {
+  const correlationId = resolveCorrelationId(req);
+
+  let publishInput;
+  try {
+    publishInput = parsePublishDraftInput(req.body);
+  } catch (err) {
+    return mapGenerationError(err, res, correlationId);
+  }
+
+  try {
+    const result = await publishDraft(req.user.id, req.params.draftId, publishInput);
+
+    return res.status(201).json({
+      success: true,
+      data: {
+        draftId: result.draft.id,
+        assignmentId: result.assignment.assignmentId,
+        title: result.assignment.title,
+        dueDate: result.assignment.dueDate,
+        groupId: result.assignment.groupId,
+        status: result.draft.status,
+      },
+      meta: {
+        publishedAt: result.draft.updated_at || new Date().toISOString(),
+      },
+    });
+  } catch (err) {
+    return mapGenerationError(err, res, correlationId);
+  }
+}
+
 module.exports = {
   postGenerateQuestions,
   postRegenerateQuestionItem,
   patchDraftContent,
+  postPublishDraft,
 };

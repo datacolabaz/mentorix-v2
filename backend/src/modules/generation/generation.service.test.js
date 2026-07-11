@@ -5,10 +5,12 @@ const {
   generateQuestions,
   regenerateQuestionItem,
   updateDraftContent,
+  publishDraft,
   GenerationServiceError,
   GenerationForbiddenError,
   GenerationNotFoundError,
   GenerationConflictError,
+  AssignmentPublishNotFoundError,
   assignQuestionIds,
   mergeRegeneratedQuestion,
 } = require('./generation.service');
@@ -18,6 +20,14 @@ const REQUEST_ID = '22222222-2222-4222-8222-222222222222';
 const DRAFT_ID = '33333333-3333-4333-8333-333333333333';
 const QUESTION_ID = '44444444-4444-4444-8444-444444444444';
 const OTHER_TEACHER_ID = '99999999-9999-4999-8999-999999999999';
+const GROUP_ID = '660e8400-e29b-41d4-a716-446655440000';
+const ASSIGNMENT_ID = '770e8400-e29b-41d4-a716-446655440000';
+
+const PUBLISH_INPUT = {
+  groupId: GROUP_ID,
+  title: 'Published assignment title',
+  dueDate: '2026-08-15',
+};
 
 const INPUT = {
   requestId: '550e8400-e29b-41d4-a716-446655440000',
@@ -397,5 +407,147 @@ describe('updateDraftContent', () => {
       (err) => err instanceof GenerationConflictError,
     );
     assert.equal(repo.calls.updateDraft.length, 0);
+  });
+});
+
+function createPublishRepositoryMock(status = 'draft') {
+  const existingQuestion = {
+    id: QUESTION_ID,
+    text: 'Existing question text here?',
+    options: ['A', 'B', 'C', 'D'],
+    correctAnswer: 'B',
+    difficulty: 'medium',
+  };
+
+  return {
+    calls: {
+      getDraftById: [],
+      getGenerationRequestById: [],
+      updateDraft: [],
+    },
+    async getDraftById(id) {
+      this.calls.getDraftById.push(id);
+      return {
+        id: DRAFT_ID,
+        request_id: REQUEST_ID,
+        teacher_id: TEACHER_ID,
+        status,
+        questions: [existingQuestion],
+      };
+    },
+    async getGenerationRequestById(id) {
+      this.calls.getGenerationRequestById.push(id);
+      return {
+        id,
+        request_payload: INPUT,
+      };
+    },
+    async updateDraft(id, updates) {
+      this.calls.updateDraft.push({ id, updates });
+      return {
+        id,
+        request_id: REQUEST_ID,
+        teacher_id: TEACHER_ID,
+        status: updates.status,
+        group_id: updates.groupId,
+        published_assignment_id: updates.publishedAssignmentId,
+        questions: [existingQuestion],
+        updated_at: '2026-07-11T13:00:00.000Z',
+      };
+    },
+  };
+}
+
+describe('publishDraft', () => {
+  it('creates assignment and marks draft published', async () => {
+    const repo = createPublishRepositoryMock('draft');
+    const createAssignmentFromQuestions = async (input, client) => {
+      assert.equal(input.instructorId, TEACHER_ID);
+      assert.equal(input.groupId, GROUP_ID);
+      assert.equal(input.title, PUBLISH_INPUT.title);
+      assert.equal(input.dueDate, PUBLISH_INPUT.dueDate);
+      assert.equal(client, repo);
+      return {
+        assignmentId: ASSIGNMENT_ID,
+        title: input.title,
+        dueDate: input.dueDate,
+        groupId: input.groupId,
+      };
+    };
+
+    const result = await publishDraft(TEACHER_ID, DRAFT_ID, PUBLISH_INPUT, {
+      repository: repo,
+      createAssignmentFromQuestions,
+      client: repo,
+    });
+
+    assert.equal(repo.calls.updateDraft.length, 1);
+    assert.equal(repo.calls.updateDraft[0].updates.status, 'published');
+    assert.equal(repo.calls.updateDraft[0].updates.publishedAssignmentId, ASSIGNMENT_ID);
+    assert.equal(result.assignment.assignmentId, ASSIGNMENT_ID);
+    assert.equal(result.draft.status, 'published');
+  });
+
+  it('throws GenerationForbiddenError for non-owner', async () => {
+    const repo = createPublishRepositoryMock('draft');
+
+    await assert.rejects(
+      () => publishDraft(OTHER_TEACHER_ID, DRAFT_ID, PUBLISH_INPUT, {
+        repository: repo,
+        createAssignmentFromQuestions: async () => ({ assignmentId: ASSIGNMENT_ID }),
+        client: repo,
+      }),
+      (err) => err instanceof GenerationForbiddenError,
+    );
+    assert.equal(repo.calls.updateDraft.length, 0);
+  });
+
+  it('throws GenerationConflictError when draft is already published', async () => {
+    const repo = createPublishRepositoryMock('published');
+
+    await assert.rejects(
+      () => publishDraft(TEACHER_ID, DRAFT_ID, PUBLISH_INPUT, {
+        repository: repo,
+        createAssignmentFromQuestions: async () => ({ assignmentId: ASSIGNMENT_ID }),
+        client: repo,
+      }),
+      (err) => err instanceof GenerationConflictError,
+    );
+    assert.equal(repo.calls.updateDraft.length, 0);
+  });
+
+  it('throws GenerationNotFoundError when draft is missing', async () => {
+    const repo = {
+      async getDraftById() {
+        return null;
+      },
+    };
+
+    await assert.rejects(
+      () => publishDraft(TEACHER_ID, DRAFT_ID, PUBLISH_INPUT, {
+        repository: repo,
+        createAssignmentFromQuestions: async () => ({ assignmentId: ASSIGNMENT_ID }),
+        client: repo,
+      }),
+      (err) => err instanceof GenerationNotFoundError,
+    );
+  });
+
+  it('throws GenerationServiceError when draft has no questions', async () => {
+    const repo = createPublishRepositoryMock('draft');
+    const originalGetDraftById = repo.getDraftById.bind(repo);
+    repo.getDraftById = async (id) => {
+      const draft = await originalGetDraftById(id);
+      return { ...draft, questions: [] };
+    };
+
+    await assert.rejects(
+      () => publishDraft(TEACHER_ID, DRAFT_ID, PUBLISH_INPUT, {
+        repository: repo,
+        createAssignmentFromQuestions: async () => ({ assignmentId: ASSIGNMENT_ID }),
+        client: repo,
+      }),
+      (err) => err instanceof GenerationServiceError,
+    );
   });
 });

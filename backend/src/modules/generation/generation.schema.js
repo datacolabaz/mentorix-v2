@@ -320,6 +320,84 @@ function parsePersistedQuestionSet(input) {
   });
 }
 
+const MIN_PUBLISH_TITLE_LENGTH = 1;
+const MAX_PUBLISH_TITLE_LENGTH = 255;
+
+/**
+ * @param {unknown} value
+ * @returns {string | null}
+ */
+function parsePublishDueDate(value) {
+  if (value === undefined || value === null || value === '') return null;
+  const dueDate = String(value).trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dueDate)) return null;
+  const [year, month, day] = dueDate.split('-').map(Number);
+  const parsed = new Date(Date.UTC(year, month - 1, day));
+  if (
+    parsed.getUTCFullYear() !== year
+    || parsed.getUTCMonth() !== month - 1
+    || parsed.getUTCDate() !== day
+  ) {
+    return null;
+  }
+  return dueDate;
+}
+
+/**
+ * @param {unknown} input
+ * @returns {{ valid: boolean, errors: Record<string, string> }}
+ */
+function validatePublishDraftInput(input) {
+  /** @type {Record<string, string>} */
+  const errors = {};
+  const body = input && typeof input === 'object' ? input : {};
+
+  const groupId = String(body.groupId ?? '').trim();
+  if (!groupId) {
+    errors.groupId = 'groupId mütləqdir.';
+  } else if (!isUuid(groupId)) {
+    errors.groupId = 'groupId etibarlı UUID olmalıdır.';
+  }
+
+  const title = String(body.title ?? '').trim();
+  if (!title) {
+    errors.title = 'Tapşırığın adı mütləqdir.';
+  } else if (title.length < MIN_PUBLISH_TITLE_LENGTH) {
+    errors.title = `Tapşırığın adı ən azı ${MIN_PUBLISH_TITLE_LENGTH} simvol olmalıdır.`;
+  } else if (title.length > MAX_PUBLISH_TITLE_LENGTH) {
+    errors.title = `Tapşırığın adı ən çoxu ${MAX_PUBLISH_TITLE_LENGTH} simvol ola bilər.`;
+  }
+
+  const dueDate = parsePublishDueDate(body.dueDate);
+  if (!dueDate) {
+    errors.dueDate = 'dueDate YYYY-MM-DD formatında olmalıdır.';
+  }
+
+  return { valid: Object.keys(errors).length === 0, errors };
+}
+
+/**
+ * @param {unknown} input
+ * @returns {import('./generation.types').PublishDraftInput}
+ */
+function parsePublishDraftInput(input) {
+  const { valid, errors } = validatePublishDraftInput(input);
+  if (!valid) {
+    const message = Object.values(errors).join(' ');
+    const err = new Error(message);
+    err.code = 'VALIDATION_ERROR';
+    err.details = errors;
+    throw err;
+  }
+
+  const body = /** @type {Record<string, unknown>} */ (input);
+  return {
+    groupId: String(body.groupId).trim(),
+    title: String(body.title).trim(),
+    dueDate: parsePublishDueDate(body.dueDate),
+  };
+}
+
 /** Zod-style alias for controller use in BE-08+. */
 const GenerateQuestionsSchema = {
   validate: validateGenerateQuestionsInput,
@@ -343,6 +421,11 @@ const PersistedQuestionSchema = {
 const PersistedQuestionSetSchema = {
   validate: validatePersistedQuestionSet,
   parse: parsePersistedQuestionSet,
+};
+
+const PublishDraftSchema = {
+  validate: validatePublishDraftInput,
+  parse: parsePublishDraftInput,
 };
 
 module.exports = {
@@ -369,4 +452,10 @@ module.exports = {
   parsePersistedQuestionSet,
   PersistedQuestionSchema,
   PersistedQuestionSetSchema,
+  MIN_PUBLISH_TITLE_LENGTH,
+  MAX_PUBLISH_TITLE_LENGTH,
+  parsePublishDueDate,
+  validatePublishDraftInput,
+  parsePublishDraftInput,
+  PublishDraftSchema,
 };

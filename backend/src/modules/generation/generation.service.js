@@ -1,6 +1,11 @@
 const { randomUUID } = require('crypto');
+const db = require('../../utils/db');
 const { defaultClaudeProvider } = require('../../providers/aiProviderService');
 const { AIGenerationError } = require('../../providers/errors');
+const {
+  createAssignmentFromQuestions,
+  AssignmentPublishNotFoundError,
+} = require('./createAssignmentFromQuestions');
 const repository = require('./generation.repository');
 
 /**
@@ -247,14 +252,101 @@ async function updateDraftContent(
   return updatedDraft;
 }
 
+/**
+ * @typedef {Object} PublishDraftResult
+ * @property {GenerationDraftRow} draft
+ * @property {import('./generation.types').PublishedAssignmentReference} assignment
+ */
+
+/**
+ * @param {string} teacherId
+ * @param {string} draftId
+ * @param {import('./generation.types').PublishDraftInput} publishInput
+ * @param {Object} [deps]
+ * @param {typeof repository} [deps.repository]
+ * @param {typeof createAssignmentFromQuestions} [deps.createAssignmentFromQuestions]
+ * @param {typeof db} [deps.db]
+ * @param {import('../../utils/db')} [deps.client]
+ * @returns {Promise<PublishDraftResult>}
+ */
+async function publishDraft(
+  teacherId,
+  draftId,
+  publishInput,
+  {
+    repository: repo = repository,
+    createAssignmentFromQuestions: createAssignment = createAssignmentFromQuestions,
+    db: database = db,
+    client,
+  } = {},
+) {
+  const draft = await repo.getDraftById(draftId, client);
+  if (!draft) {
+    throw new GenerationNotFoundError('Draft tapılmadı');
+  }
+  if (draft.teacher_id !== teacherId) {
+    throw new GenerationForbiddenError();
+  }
+  if (draft.status !== 'draft') {
+    throw new GenerationConflictError();
+  }
+
+  const questions = Array.isArray(draft.questions) ? draft.questions : [];
+  if (questions.length === 0) {
+    throw new GenerationServiceError('Draft sualları boşdur');
+  }
+
+  const requestRow = await repo.getGenerationRequestById(draft.request_id, client);
+  const topic = requestRow?.request_payload && typeof requestRow.request_payload === 'object'
+    ? String(requestRow.request_payload.topic ?? '').trim()
+    : '';
+
+  const runPublish = async (trx) => {
+    const assignment = await createAssignment(
+      {
+        instructorId: teacherId,
+        groupId: publishInput.groupId,
+        title: publishInput.title,
+        dueDate: publishInput.dueDate,
+        questions: /** @type {import('./generation.types').GeneratedQuestion[]} */ (questions),
+        topic,
+      },
+      trx,
+    );
+
+    const updatedDraft = await repo.updateDraft(
+      draftId,
+      {
+        status: 'published',
+        groupId: publishInput.groupId,
+        publishedAssignmentId: assignment.assignmentId,
+      },
+      trx,
+    );
+    if (!updatedDraft) {
+      throw new GenerationNotFoundError('Draft tapılmadı');
+    }
+
+    return { draft: updatedDraft, assignment };
+  };
+
+  if (client) {
+    return runPublish(client);
+  }
+
+  return database.transaction(runPublish);
+}
+
 module.exports = {
   GenerationServiceError,
   GenerationForbiddenError,
   GenerationNotFoundError,
   GenerationConflictError,
+  AssignmentPublishNotFoundError,
   assignQuestionIds,
   mergeRegeneratedQuestion,
   generateQuestions,
   regenerateQuestionItem,
   updateDraftContent,
+  publishDraft,
 };

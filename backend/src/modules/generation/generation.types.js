@@ -39,6 +39,23 @@
  * @property {GeneratedQuestion[]} questions
  */
 
+/**
+ * Request body for POST /api/generation/drafts/:draftId/publish (Technical Spec §5.4).
+ * @typedef {Object} PublishDraftInput
+ * @property {string} groupId - Target instructor_groups.id UUID.
+ * @property {string} title - Assignment title shown to students.
+ * @property {string} dueDate - Due date in YYYY-MM-DD format.
+ */
+
+/**
+ * Assignment reference returned after a successful publish.
+ * @typedef {Object} PublishedAssignmentReference
+ * @property {string} assignmentId - `assignments.id` UUID.
+ * @property {string} title
+ * @property {string | null} dueDate
+ * @property {string | null} groupId
+ */
+
 /** @type {readonly GenerationLevel[]} */
 const GENERATION_LEVELS = Object.freeze(['beginner', 'intermediate', 'advanced']);
 

@@ -23,6 +23,7 @@ const db = require('../../utils/db');
  * @property {string | null} group_id
  * @property {import('./generation.types').GeneratedQuestion[] | Record<string, unknown>[]} questions
  * @property {import('./generation.types').DraftStatus} status
+ * @property {string | null} published_assignment_id
  * @property {string} created_at
  * @property {string} updated_at
  */
@@ -56,6 +57,7 @@ const db = require('../../utils/db');
  * @property {import('./generation.types').GeneratedQuestion[] | Record<string, unknown>[]=} questions
  * @property {string | null=} groupId
  * @property {import('./generation.types').DraftStatus=} status
+ * @property {string | null=} publishedAssignmentId
  */
 
 /**
@@ -199,6 +201,10 @@ async function updateDraft(id, updates, client = db) {
   if (updates.status !== undefined) {
     fields.push(`status = $${idx++}`);
     params.push(updates.status);
+  }
+  if (updates.publishedAssignmentId !== undefined) {
+    fields.push(`published_assignment_id = $${idx++}::uuid`);
+    params.push(updates.publishedAssignmentId);
   }
 
   if (fields.length === 0) {
