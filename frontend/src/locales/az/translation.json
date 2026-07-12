@@ -1215,7 +1215,10 @@
       "ready": "{{count}} sual hazırdır",
       "aiPreparedBy": "✨ AI tərəfindən hazırlanıb",
       "regenerateAll": "Hamısını yenilə",
-      "publish": "Tapşırıq kimi dərc et"
+      "publish": "Tapşırıq kimi dərc et",
+      "previewTeacher": "👨‍🏫 Müəllim",
+      "previewStudent": "👨‍🎓 Tələbə",
+      "previewStudentHint": "Tələbə tapşırığı belə görəcək — düzgün cavablar göstərilmir."
     },
     "toasts": {
       "questionUpdated": "Sual yeniləndi.",

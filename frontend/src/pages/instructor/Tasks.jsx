@@ -675,7 +675,7 @@ export default function InstructorTasks() {
                 ) : null}
                 {genQuestions.length > 0 ? (
                   <div className="mt-3">
-                    <GeneratedQuestionsView questions={genQuestions} showAnswers />
+                    <GeneratedQuestionsView questions={genQuestions} showCorrectAnswers />
                   </div>
                 ) : null}
               </Card>

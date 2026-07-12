@@ -1864,7 +1864,10 @@
       "ready": "Готово вопросов: {{count}}",
       "aiPreparedBy": "✨ Подготовлено ИИ",
       "regenerateAll": "Обновить все",
-      "publish": "Опубликовать как задание"
+      "publish": "Опубликовать как задание",
+      "previewTeacher": "👨‍🏫 Учитель",
+      "previewStudent": "👨‍🎓 Ученик",
+      "previewStudentHint": "Так задание увидит ученик — правильные ответы скрыты."
     },
     "toasts": {
       "questionUpdated": "Вопрос обновлён.",

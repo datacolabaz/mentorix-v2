@@ -15,14 +15,14 @@ function difficultyBadgeClass(difficulty) {
  *
  * @param {{
  *   questions: Array<{ id?: string, text: string, correctAnswer?: string, difficulty?: string, options?: string[] }>,
- *   showAnswers?: boolean,
+ *   showCorrectAnswers?: boolean,
  *   defaultOpen?: boolean,
  *   className?: string,
  * }} props
  */
 export default function GeneratedQuestionsView({
   questions,
-  showAnswers = false,
+  showCorrectAnswers = false,
   defaultOpen = false,
   className = '',
 }) {
@@ -81,7 +81,7 @@ export default function GeneratedQuestionsView({
                       <ul className="mt-2 space-y-1.5">
                         {q.options.map((opt, oi) => {
                           const correct =
-                            showAnswers && String(opt).trim() === String(q.correctAnswer || '').trim()
+                            showCorrectAnswers && String(opt).trim() === String(q.correctAnswer || '').trim()
                           return (
                             <li
                               key={`${q.id || i}-o-${oi}`}
@@ -100,7 +100,7 @@ export default function GeneratedQuestionsView({
                           )
                         })}
                       </ul>
-                    ) : showAnswers && q.correctAnswer ? (
+                    ) : showCorrectAnswers && q.correctAnswer ? (
                       <div className="mt-2 rounded-lg border border-emerald-500/25 bg-emerald-500/[0.06] px-3 py-2">
                         <div className="text-[10px] font-semibold uppercase tracking-wide text-emerald-300/80 mb-1">
                           {t('generation.view.sampleAnswer')}
@@ -108,7 +108,7 @@ export default function GeneratedQuestionsView({
                         <p className="text-sm text-emerald-100 whitespace-pre-wrap break-words">{q.correctAnswer}</p>
                       </div>
                     ) : null}
-                    {showAnswers && q.explanation ? (
+                    {showCorrectAnswers && q.explanation ? (
                       <div className="mt-2 rounded-lg border border-indigo-500/20 bg-indigo-500/[0.06] px-3 py-2">
                         <div className="text-[10px] font-semibold uppercase tracking-wide text-indigo-300/80 mb-1">
                           {t('generation.view.explanation')}

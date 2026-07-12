@@ -11,6 +11,7 @@ const { upsertStudentContactPhone } = require('../utils/studentPhone');
 const { autoGrantTaskAccessForStudent } = require('../services/guestAccessService');
 const { withBakuDisplayTimes } = require('../utils/azDatetime');
 const { resolveEntitlements } = require('../services/billingEntitlements');
+const { sanitizeAiMetadataForStudent } = require('../modules/generation/sanitizeAiMetadataForStudent');
 
 function subscriptionInactiveError(ent) {
   const err = new Error(
@@ -413,6 +414,7 @@ const getMyAssignment = async (req, res) => {
       ...withBakuDisplayTimes(rows[0], ['assignment_created_at', 'submitted_at', 'reviewed_at']),
       seen_at: seenRows[0]?.seen_at || rows[0].seen_at,
       display_status: normalizeStatus(rows[0]),
+      ai_metadata: sanitizeAiMetadataForStudent(rows[0].ai_metadata),
     };
     res.json({ success: true, assignment });
   } catch (err) {

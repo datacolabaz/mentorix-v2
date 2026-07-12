@@ -7,6 +7,7 @@ import Button from '../../components/common/Button'
 import { useToast } from '../../components/common/Toast'
 import ContentGeneratorForm from '../../components/generation/ContentGeneratorForm'
 import GenerationQuestionCard from '../../components/generation/GenerationQuestionCard'
+import GeneratedQuestionsView from '../../components/generation/GeneratedQuestionsView'
 import PublishDraftModal from '../../components/generation/PublishDraftModal'
 import {
   generateQuestions,
@@ -53,6 +54,7 @@ export default function AIQuestionGenerator() {
   const [rowBusy, setRowBusy] = useState(false)
   const [publishOpen, setPublishOpen] = useState(false)
   const [publishing, setPublishing] = useState(false)
+  const [previewMode, setPreviewMode] = useState('teacher')
 
   const [groups, setGroups] = useState([])
   const [groupsLoading, setGroupsLoading] = useState(true)
@@ -98,6 +100,7 @@ export default function AIQuestionGenerator() {
         }
         setDraftId(result.draftId)
         setQuestions(list)
+        setPreviewMode('teacher')
         setPhase(PHASES.PREVIEW)
       } catch (err) {
         toast(generationErrorMessage(err, t('generation.errors.generateFailed')), 'error')
@@ -222,6 +225,7 @@ export default function AIQuestionGenerator() {
     setPhase(PHASES.FORM)
     setQuestions([])
     setDraftId(null)
+    setPreviewMode('teacher')
     if (currentDraft) {
       // Best-effort cleanup; ignore failures.
       discardDraft(currentDraft).catch(() => {})
@@ -298,20 +302,54 @@ export default function AIQuestionGenerator() {
             </div>
           </div>
 
-          <div className="space-y-3">
-            {questions.map((q, i) => (
-              <GenerationQuestionCard
-                key={q.id}
-                question={q}
-                index={i}
-                busy={rowBusy || regeneratingAll}
-                regenerating={regeneratingId === q.id}
-                onSave={handleSaveQuestion}
-                onDelete={() => handleDeleteQuestion(q.id)}
-                onRegenerate={(instructions) => handleRegenerateQuestion(q.id, instructions)}
-              />
-            ))}
+          <div className="inline-flex rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard/40 p-1 gap-1">
+            <button
+              type="button"
+              onClick={() => setPreviewMode('teacher')}
+              className={[
+                'px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors',
+                previewMode === 'teacher'
+                  ? 'bg-primary text-[#041018]'
+                  : 'text-token-textMuted hover:text-token-textMain hover:bg-white/5',
+              ].join(' ')}
+            >
+              {t('generation.page.previewTeacher')}
+            </button>
+            <button
+              type="button"
+              onClick={() => setPreviewMode('student')}
+              className={[
+                'px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors',
+                previewMode === 'student'
+                  ? 'bg-primary text-[#041018]'
+                  : 'text-token-textMuted hover:text-token-textMain hover:bg-white/5',
+              ].join(' ')}
+            >
+              {t('generation.page.previewStudent')}
+            </button>
           </div>
+
+          {previewMode === 'teacher' ? (
+            <div className="space-y-3">
+              {questions.map((q, i) => (
+                <GenerationQuestionCard
+                  key={q.id}
+                  question={q}
+                  index={i}
+                  busy={rowBusy || regeneratingAll}
+                  regenerating={regeneratingId === q.id}
+                  onSave={handleSaveQuestion}
+                  onDelete={() => handleDeleteQuestion(q.id)}
+                  onRegenerate={(instructions) => handleRegenerateQuestion(q.id, instructions)}
+                />
+              ))}
+            </div>
+          ) : (
+            <Card className="p-4">
+              <p className="text-xs text-token-textMuted mb-3">{t('generation.page.previewStudentHint')}</p>
+              <GeneratedQuestionsView questions={questions} showCorrectAnswers={false} defaultOpen />
+            </Card>
+          )}
 
           <div className="flex justify-end pt-2 pb-6">
             <Button type="button" onClick={() => setPublishOpen(true)} disabled={publishDisabled}>
