@@ -323,7 +323,7 @@ export default function InstructorMaterialsLibrary() {
             ...items.map((m) => (
               <Card
                 key={m.id}
-                className={`p-4 border border-[color:var(--border-subtle)] hover:border-primary/30 transition-colors ${
+                className={`flex flex-col h-full p-4 border border-[color:var(--border-subtle)] hover:border-primary/30 transition-colors ${
                   isDark ? 'bg-[#121212]/80' : ''
                 }`}
               >
@@ -363,7 +363,7 @@ export default function InstructorMaterialsLibrary() {
                       </div>
                     ) : (
                       <div className="group/title flex items-start gap-1 min-w-0">
-                        <h3 className="font-semibold text-sm text-token-textMain truncate flex-1">{m.title}</h3>
+                        <h3 className="font-semibold text-sm text-token-textMain line-clamp-2 flex-1 break-words">{m.title}</h3>
                         <button
                           type="button"
                           onClick={() => startRename(m)}
@@ -386,7 +386,7 @@ export default function InstructorMaterialsLibrary() {
                         {usageLine(m) ? (
                           <p className="text-[10px] text-token-textMuted mt-1">{usageLine(m)}</p>
                         ) : null}
-                        <div className="flex flex-wrap gap-1 mt-2">
+                        <div className="flex flex-wrap items-start content-start gap-1 mt-2 min-h-[32px]">
                           {(m.tags || []).map((tag) => (
                             <span
                               key={tag}
@@ -405,7 +405,7 @@ export default function InstructorMaterialsLibrary() {
                         </div>
                       </div>
                     </div>
-                    <div className="flex flex-wrap gap-2 mt-4">
+                    <div className="flex flex-wrap gap-2 mt-auto pt-4">
                       <a
                         href={materialFileOpenUrl(m.file_url)}
                         target="_blank"
