@@ -21,5 +21,12 @@ module.exports = {
   signOTP: (payload) =>
     jwt.sign(payload, SECRET, { expiresIn: '30d' }),
 
+  /**
+   * Uzunmüddətli sessiya — qonaq/tələbə linklə qoşulanda təkrar-təkrar login
+   * istənməsin deyə. Yalnız autentifikasiya qatına aiddir (90 gün).
+   */
+  signSession: (payload, expiresIn = '90d') =>
+    jwt.sign(payload, SECRET, { expiresIn }),
+
   verify: (token) => jwt.verify(token, SECRET),
 };

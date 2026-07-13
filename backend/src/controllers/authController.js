@@ -1,6 +1,17 @@
 const bcrypt = require('bcryptjs');
 const db = require('../utils/db');
-const { sign, signOTP } = require('../utils/jwt');
+const { sign, signOTP, signSession } = require('../utils/jwt');
+
+/**
+ * Sessiya tokeni: tələbələr üçün uzunmüddətli (90 gün) — linklə qoşulan qonaq
+ * tələbə yeni link açanda təkrar login/qeydiyyatdan keçməsin. Digər rollar
+ * mövcud davranışı saxlayır (7 gün).
+ */
+function signRoleSession(payload) {
+  return String(payload?.role || '').toLowerCase() === 'student'
+    ? signSession(payload)
+    : sign(payload);
+}
 const { OAuth2Client } = require('google-auth-library');
 const { sendSms, sendOtpSms } = require('../services/smsService');
 const { checkSmsQuota } = require('../services/smsQuotaService');
@@ -1844,7 +1855,7 @@ const googleLogin = async (req, res) => {
 
     if (!guardEmailVerifiedBeforeToken(res, user)) return;
 
-    const token = sign({ id: user.id, role: user.role });
+    const token = signRoleSession({ id: user.id, role: user.role });
     logAuthLogin(req, user, user.role);
     const sessionUser = {
       ...user,
@@ -2034,7 +2045,7 @@ const googleLinkVerify = async (req, res) => {
     );
     const u = fresh[0];
     if (!u || !guardEmailVerifiedBeforeToken(res, u)) return;
-    const token = sign({ id: u.id, role: u.role });
+    const token = signRoleSession({ id: u.id, role: u.role });
     logAuthLogin(req, u, u.role);
     return res.json({
       success: true,
@@ -2162,7 +2173,7 @@ const googleComplete = async (req, res) => {
 
     if (!guardEmailVerifiedBeforeToken(res, user)) return;
 
-    const token = sign({ id: user.id, role: user.role });
+    const token = signRoleSession({ id: user.id, role: user.role });
     logAuthLogin(req, user, user.role);
     const sessionUser = {
       ...user,

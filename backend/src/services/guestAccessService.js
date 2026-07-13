@@ -1,5 +1,5 @@
 const db = require('../utils/db');
-const { sign } = require('../utils/jwt');
+const { signSession } = require('../utils/jwt');
 const {
   canonicalStudentPhone,
   normalizePhoneDigits,
@@ -166,7 +166,8 @@ async function loadStudentSessionUser(studentId) {
 
 async function buildGuestSessionPayload(studentId) {
   const user = await loadStudentSessionUser(studentId);
-  const token = sign({ id: user.id, role: user.role });
+  // Uzunmüddətli sessiya: qonaq tələbə yeni link açanda təkrar login istənməsin.
+  const token = signSession({ id: user.id, role: user.role });
   return { token, user };
 }
 
