@@ -110,7 +110,7 @@ async function getPendingActions() {
       label: 'Təsdiq gözləyən müəllim profilləri',
       description: 'Axtarışda görünmək üçün verify gözləyən müəllimlər',
       count: instructorDiscover,
-      href: '/admin/instructors',
+      href: '/admin/instructors?discover=pending',
       severity: instructorDiscover > 0 ? 'warning' : 'info',
     },
     {

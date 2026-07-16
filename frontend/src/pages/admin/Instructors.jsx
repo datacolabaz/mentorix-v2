@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
+import { useSearchParams } from "react-router-dom"
 import api from "../../lib/api"
 import Card from "../../components/common/Card"
 import Button from "../../components/common/Button"
@@ -13,11 +14,14 @@ const selectClass =
   "border border-[color:var(--border-subtle)] rounded-lg px-2 py-1.5 text-token-textMain text-xs outline-none focus:border-primary/40 bg-token-surfaceCard disabled:opacity-50"
 
 export default function AdminInstructors() {
+  const [searchParams, setSearchParams] = useSearchParams()
+  const discoverFilter = searchParams.get("discover") === "pending" ? "pending" : "all"
   const [instructors, setInstructors] = useState([])
   const [addModal, setAddModal] = useState(false)
   const [editModal, setEditModal] = useState(false)
   const [selected, setSelected] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [verifyBusy, setVerifyBusy] = useState({})
   const [form, setForm] = useState({ full_name: "", email: "", phone: "", subject: "", billing_type: "8_lessons" })
   const [editForm, setEditForm] = useState({ full_name: "", email: "", phone: "", subject: "", new_password: "" })
   const [planBusy, setPlanBusy] = useState({})
@@ -25,6 +29,21 @@ export default function AdminInstructors() {
 
   const load = () => api.get("/admin/instructors").then(d => setInstructors(d.instructors || []))
   useEffect(() => { load() }, [])
+
+  const pendingCount = useMemo(
+    () => instructors.filter((i) => i.discover_pending).length,
+    [instructors],
+  )
+
+  const visible = useMemo(() => {
+    if (discoverFilter === "pending") return instructors.filter((i) => i.discover_pending)
+    return instructors
+  }, [instructors, discoverFilter])
+
+  const setDiscoverFilter = (next) => {
+    if (next === "pending") setSearchParams({ discover: "pending" })
+    else setSearchParams({})
+  }
 
   const addInstructor = async () => {
     if (!form.full_name || !form.phone) { toast("Ad ve telefon teleb olunur", "error"); return }
@@ -93,12 +112,58 @@ export default function AdminInstructors() {
     load()
   }
 
+  const setDiscoverVerified = async (i, discover_verified) => {
+    setVerifyBusy((p) => ({ ...p, [i.id]: true }))
+    try {
+      await api.patch(`/admin/instructors/${i.id}/discover-verify`, { discover_verified })
+      toast(discover_verified ? "Marketplace profili təsdiqləndi" : "Təsdiq geri alındı")
+      load()
+    } catch (e) {
+      toast(e?.message || "Xəta", "error")
+    } finally {
+      setVerifyBusy((p) => ({ ...p, [i.id]: false }))
+    }
+  }
+
   return (
     <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="font-display font-bold text-2xl text-token-textMain">Muellimler</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+        <div>
+          <h1 className="font-display font-bold text-2xl text-token-textMain">Muellimler</h1>
+          {discoverFilter === "pending" ? (
+            <p className="text-sm text-amber-300/90 mt-1">
+              Təsdiq gözləyən marketplace profilləri ({pendingCount})
+            </p>
+          ) : null}
+        </div>
         <Button onClick={() => setAddModal(true)}>+ Muellim Elave Et</Button>
       </div>
+
+      <div className="flex flex-wrap gap-2 mb-4">
+        <button
+          type="button"
+          onClick={() => setDiscoverFilter("all")}
+          className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+            discoverFilter === "all"
+              ? "border-primary/40 bg-primary/15 text-primary"
+              : "border-[color:var(--border-subtle)] text-token-textMuted hover:text-token-textMain"
+          }`}
+        >
+          Hamısı ({instructors.length})
+        </button>
+        <button
+          type="button"
+          onClick={() => setDiscoverFilter("pending")}
+          className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+            discoverFilter === "pending"
+              ? "border-amber-400/50 bg-amber-500/15 text-amber-300"
+              : "border-[color:var(--border-subtle)] text-token-textMuted hover:text-token-textMain"
+          }`}
+        >
+          Təsdiq gözləyən ({pendingCount})
+        </button>
+      </div>
+
       <Card className="overflow-hidden">
         <table className="w-full text-sm text-token-textMain">
           <thead>
@@ -109,9 +174,22 @@ export default function AdminInstructors() {
             </tr>
           </thead>
           <tbody>
-            {instructors.map(i => (
-              <tr key={i.id} className="border-b border-[color:var(--border-subtle)] hover:bg-black/[0.03] dark:hover:bg-white/[0.04]">
-                <td className="py-3 px-4"><div className="font-semibold text-token-textMain flex items-center gap-2"><PresenceDot user={i} />{i.full_name}</div></td>
+            {visible.map(i => (
+              <tr
+                key={i.id}
+                className={`border-b border-[color:var(--border-subtle)] hover:bg-black/[0.03] dark:hover:bg-white/[0.04] ${
+                  i.discover_pending ? "bg-amber-500/[0.04]" : ""
+                }`}
+              >
+                <td className="py-3 px-4">
+                  <div className="font-semibold text-token-textMain flex items-center gap-2">
+                    <PresenceDot user={i} />
+                    {i.full_name}
+                  </div>
+                  {i.discover_bio ? (
+                    <p className="text-[10px] text-token-textMuted mt-1 line-clamp-2 max-w-[14rem]">{i.discover_bio}</p>
+                  ) : null}
+                </td>
                 <td className="py-3 px-4 text-token-textMuted text-xs">{i.email || "-"}</td>
                 <td className="py-3 px-4 text-token-textMuted">{i.subject || "-"}</td>
                 <td className="py-3 px-4 text-token-textMuted text-xs">{i.phone || "-"}</td>
@@ -134,12 +212,41 @@ export default function AdminInstructors() {
                   <span className="text-token-textMuted">/{i.sms_limit_monthly ?? "∞"}</span>
                 </td>
                 <td className="py-3 px-4">
-                  <span className={"px-2 py-1 rounded-lg text-xs font-semibold " + (i.is_active ? "bg-emerald-500/20 text-emerald-400" : "bg-red-500/20 text-red-400")}>
-                    {i.is_active ? "Aktiv" : "Deaktiv"}
-                  </span>
+                  <div className="flex flex-col gap-1 items-start">
+                    <span className={"px-2 py-1 rounded-lg text-xs font-semibold " + (i.is_active ? "bg-emerald-500/20 text-emerald-400" : "bg-red-500/20 text-red-400")}>
+                      {i.is_active ? "Aktiv" : "Deaktiv"}
+                    </span>
+                    {i.discover_verified ? (
+                      <span className="px-2 py-1 rounded-lg text-[10px] font-semibold bg-sky-500/15 text-sky-300">
+                        Marketplace təsdiqli
+                      </span>
+                    ) : i.discover_pending ? (
+                      <span className="px-2 py-1 rounded-lg text-[10px] font-semibold bg-amber-500/20 text-amber-300">
+                        Təsdiq gözləyir
+                      </span>
+                    ) : null}
+                  </div>
                 </td>
                 <td className="py-3 px-4">
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
+                    {i.discover_pending ? (
+                      <Button
+                        size="sm"
+                        loading={!!verifyBusy[i.id]}
+                        onClick={() => void setDiscoverVerified(i, true)}
+                      >
+                        Təsdiqlə
+                      </Button>
+                    ) : i.discover_verified ? (
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        loading={!!verifyBusy[i.id]}
+                        onClick={() => void setDiscoverVerified(i, false)}
+                      >
+                        Təsdiqi geri al
+                      </Button>
+                    ) : null}
                     <Button size="sm" variant="secondary" onClick={() => openEdit(i)}>Redakte</Button>
                     <Button size="sm" variant={i.is_active ? "danger" : "ghost"} onClick={() => toggle(i)}>
                       {i.is_active ? "Deaktiv" : "Aktiv"}
@@ -150,7 +257,11 @@ export default function AdminInstructors() {
             ))}
           </tbody>
         </table>
-        {!instructors.length && <div className="text-center py-12 text-token-textMuted">Muellim tapilmadi</div>}
+        {!visible.length && (
+          <div className="text-center py-12 text-token-textMuted">
+            {discoverFilter === "pending" ? "Təsdiq gözləyən müəllim yoxdur" : "Muellim tapilmadi"}
+          </div>
+        )}
       </Card>
 
       <Modal open={addModal} onClose={() => setAddModal(false)} title="Yeni Muellim">

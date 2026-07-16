@@ -27,6 +27,16 @@ const getInstructors = async (req, res) => {
               (u.password_hash IS NOT NULL) AS has_password,
               (COALESCE(TRIM(u.google_sub::text), '') <> '') AS has_google,
               ip.subject, ip.billing_type,
+              COALESCE(ip.discover_verified, FALSE) AS discover_verified,
+              COALESCE(ip.map_visible, FALSE) AS map_visible,
+              NULLIF(TRIM(COALESCE(ip.discover_bio, '')), '') AS discover_bio,
+              (
+                COALESCE(ip.discover_verified, FALSE) = FALSE
+                AND (
+                  COALESCE(ip.map_visible, FALSE) = TRUE
+                  OR NULLIF(TRIM(COALESCE(ip.discover_bio, '')), '') IS NOT NULL
+                )
+              ) AS discover_pending,
               COALESCE(s.plan, 'basic') AS plan,
               GREATEST(
                 COALESCE(uc.sms_used_monthly, 0),
@@ -50,16 +60,78 @@ const getInstructors = async (req, res) => {
        LEFT JOIN usage_counters uc ON uc.user_id = u.id
        LEFT JOIN subscription_plans sp ON sp.slug = COALESCE(s.plan, 'basic') AND sp.is_active = TRUE
        WHERE u.role = 'instructor' AND u.is_active = TRUE AND u.deleted_at IS NULL
-       ORDER BY u.created_at DESC NULLS LAST, u.full_name`
+       ORDER BY
+         CASE
+           WHEN COALESCE(ip.discover_verified, FALSE) = FALSE
+            AND (
+              COALESCE(ip.map_visible, FALSE) = TRUE
+              OR NULLIF(TRIM(COALESCE(ip.discover_bio, '')), '') IS NOT NULL
+            )
+           THEN 0 ELSE 1
+         END,
+         u.created_at DESC NULLS LAST,
+         u.full_name`
     );
     const instructors = mapRowsWithPresence(
       (rows || []).map((r) => ({
         ...r,
         sms_used: Number(r.sms_used_monthly) || 0,
         sms_limit: r.sms_limit_monthly,
+        discover_verified: Boolean(r.discover_verified),
+        map_visible: Boolean(r.map_visible),
+        discover_pending: Boolean(r.discover_pending),
       })),
     );
     res.json({ success: true, instructors });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/** Admin: marketplace/axtarış profilini təsdiqlə və ya təsdiqi geri al. */
+const patchInstructorDiscoverVerify = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const raw = req.body?.discover_verified;
+    const verified =
+      raw === true || raw === 'true' || raw === 1 || raw === '1';
+    const unverify =
+      raw === false || raw === 'false' || raw === 0 || raw === '0';
+    if (!verified && !unverify) {
+      return res.status(400).json({
+        success: false,
+        message: 'discover_verified true|false tələb olunur',
+      });
+    }
+
+    const { rows: u } = await db.query(
+      `SELECT id FROM users
+       WHERE id = $1 AND role = 'instructor' AND deleted_at IS NULL
+       LIMIT 1`,
+      [id],
+    );
+    if (!u[0]) return res.status(404).json({ success: false, message: 'Müəllim tapılmadı' });
+
+    const { rows } = await db.query(
+      `UPDATE instructor_profiles
+       SET discover_verified = $2
+       WHERE user_id = $1
+       RETURNING user_id, discover_verified, map_visible, discover_bio`,
+      [id, verified],
+    );
+    if (!rows[0]) {
+      await db.query(
+        `INSERT INTO instructor_profiles (user_id, discover_verified)
+         VALUES ($1, $2)`,
+        [id, verified],
+      );
+    }
+
+    return res.json({
+      success: true,
+      discover_verified: verified,
+      message: verified ? 'Marketplace profili təsdiqləndi' : 'Təsdiq geri alındı',
+    });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -637,6 +709,7 @@ module.exports = {
   getCeoDashboardHandler,
   getInstructors,
   patchInstructorProfile,
+  patchInstructorDiscoverVerify,
   updateInstructorLimits,
   updateInstructorPlan,
   getDashboardStats,
