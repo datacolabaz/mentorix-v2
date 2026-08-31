@@ -10,6 +10,11 @@ const {
   isReservedSystemSubjectName,
 } = require('../services/systemGroupGuards');
 const { promoteParticipantToCrmGroup, listParticipantCohorts } = require('../services/participantGroupService');
+const {
+  countOccupyingGroupEnrollments,
+  listOccupyingGroupEnrollments,
+  groupNotEmptyMessage,
+} = require('../services/groupOccupancyService');
 
 function parsePublicLabel(v) {
   const s = String(v || '').trim().toLowerCase();
@@ -151,7 +156,7 @@ const getTeaching = async (req, res) => {
          WHERE ${instructorIdWhere('e.instructor_id', 1)}
            AND e.deleted_at IS NULL
            AND COALESCE(ig.subject_id, e.subject_id) IS NOT NULL
-           AND COALESCE(LOWER(TRIM(e.status)), 'active') IN ('active', 'pending_setup', 'pending_approval')
+           AND COALESCE(LOWER(TRIM(e.status)), 'active') IN ('active', 'pending_setup', 'pending_approval', 'paused')
          GROUP BY COALESCE(ig.subject_id, e.subject_id)
        ),
        income_by_subject AS (
@@ -186,7 +191,7 @@ const getTeaching = async (req, res) => {
        WHERE ${instructorIdWhere('e.instructor_id', 1)}
          AND e.deleted_at IS NULL
          AND e.group_id IS NOT NULL
-         AND COALESCE(LOWER(TRIM(e.status)), 'active') IN ('active', 'pending_setup', 'pending_approval')
+         AND COALESCE(LOWER(TRIM(e.status)), 'active') IN ('active', 'pending_setup', 'pending_approval', 'paused')
        GROUP BY e.group_id`,
       [iidNorm],
     );
@@ -591,20 +596,18 @@ const deleteGroup = async (req, res) => {
     if (!looksUuid(id)) return res.status(400).json({ success: false, message: 'ID düzgün deyil' });
     await assertGroupMutable(id, req.user.id, 'delete');
 
-    const { rows: cntRows } = await db.query(
-      `SELECT COUNT(*)::int AS n
-       FROM enrollments e
-       WHERE e.group_id = $1::uuid
-         AND e.instructor_id = $2::uuid
-         AND e.deleted_at IS NULL
-         AND COALESCE(LOWER(TRIM(e.status)), 'active') NOT IN ('rejected', 'left', 'archived')`,
-      [id, req.user.id],
-    );
-    const activeCount = Number(cntRows[0]?.n) || 0;
+    const activeCount = await countOccupyingGroupEnrollments(db, id, req.user.id);
     if (activeCount > 0) {
+      const occupying = await listOccupyingGroupEnrollments(db, id, req.user.id, 8);
       return res.status(400).json({
         success: false,
-        message: 'Qrupda hələ tələbə var — əvvəlcə tələbələri başqa qrupa köçürün və ya silin',
+        code: 'GROUP_NOT_EMPTY',
+        occupying_count: activeCount,
+        occupying_students: occupying.map((r) => ({
+          full_name: r.full_name || null,
+          status: r.status || null,
+        })),
+        message: groupNotEmptyMessage(occupying, activeCount),
       });
     }
 

@@ -11,6 +11,7 @@ const {
   generateLessonStarts,
   appendPackageHistory,
 } = require('./enrollmentActivationService');
+const { countOccupyingGroupEnrollments } = require('./groupOccupancyService');
 
 const normUuid = (id) => String(id || '').trim().toLowerCase().replace(/-/g, '');
 
@@ -158,17 +159,7 @@ async function syncGroupMembership(client, { instructorId, studentId, sourceGrou
 }
 
 async function countGroupEnrollments(client, groupId, instructorId) {
-  if (!groupId) return 0;
-  const { rows } = await client.query(
-    `SELECT COUNT(*)::int AS n
-     FROM enrollments e
-     WHERE e.group_id = $1::uuid
-       AND e.instructor_id = $2::uuid
-       AND e.deleted_at IS NULL
-       AND COALESCE(LOWER(TRIM(e.status)), 'active') NOT IN ('rejected', 'left', 'archived')`,
-    [groupId, instructorId],
-  );
-  return Number(rows[0]?.n) || 0;
+  return countOccupyingGroupEnrollments(client, groupId, instructorId);
 }
 
 async function getTransferPreview(instructorId, targetGroupId) {

@@ -1071,7 +1071,12 @@ export default function InstructorStudents() {
 
   const isTerminalEnrollmentStatus = (s) => {
     const st = String(s?.enrollment_status || '').toLowerCase()
-    return st === 'rejected' || st === 'left' || st === 'archived'
+    return st === 'rejected' || st === 'left' || st === 'archived' || st === 'deleted'
+  }
+
+  const occupiesGroup = (s, groupId) => {
+    if (!groupId || String(s?.group_id || '') !== String(groupId)) return false
+    return !isTerminalEnrollmentStatus(s)
   }
 
   /** Qrup/sahə (CRM) — cədvəl/paket tamamlanmayıb. İmtahan/tapşırıq: Sorğular bölməsi. */
@@ -1511,7 +1516,7 @@ export default function InstructorStudents() {
           group: String(gr.name || '').trim() || t('students.defaultGroup'),
           group_id: gid,
           subject_id: subj.id || null,
-          is_system_group: false,
+          is_system_group: Boolean(gr.is_system),
           students: [],
           nextDistMin: Number.POSITIVE_INFINITY,
           avgScore: null,
@@ -1521,7 +1526,7 @@ export default function InstructorStudents() {
     }
 
     for (const s of audienceStudents) {
-      if (needsSetup(s)) continue
+      if (isTerminalEnrollmentStatus(s)) continue
       const subject = resolveStudentSubjectLabel(s)
       const group = resolveStudentGroupLabel(s)
       const gid = s.group_id ? String(s.group_id) : ''
@@ -1801,11 +1806,14 @@ export default function InstructorStudents() {
     }
   }
 
-  const canManageEmptyGroup = (g) =>
-    Boolean(g?.group_id) &&
-    !g?.is_system_group &&
-    (g.students?.length || 0) === 0 &&
-    (audienceFilter === 'all' || audienceFilter === 'group')
+  const canManageEmptyGroup = (g) => {
+    if (!g?.group_id || g?.is_system_group) return false
+    if (!(audienceFilter === 'all' || audienceFilter === 'group')) return false
+    const occupyingListed = (Array.isArray(g.students) ? g.students : []).filter((s) => occupiesGroup(s, g.group_id))
+      .length
+    const teachingCount = Number(findTeachingGroupMeta(teachingSubjects, g.group_id)?.group?.student_count) || 0
+    return occupyingListed === 0 && teachingCount === 0
+  }
 
   const openRenameGroup = (g) => {
     if (!g?.group_id) return
@@ -2032,11 +2040,7 @@ export default function InstructorStudents() {
       const isSystem = Boolean(deleted?.is_system_group)
       if (gid && !isSystem) {
         const remaining = (Array.isArray(nextStudents) ? nextStudents : [])
-          .filter((s) => String(s?.group_id || '') === gid)
-          .filter((s) => {
-            const st = String(s?.enrollment_status || '').toLowerCase()
-            return st !== 'rejected' && st !== 'left' && st !== 'archived'
-          }).length
+          .filter((s) => occupiesGroup(s, gid)).length
         if (remaining === 0) {
           const meta = findTeachingGroupMeta(teachingSubjects, gid)
           setEmptyGroupPrompt({
@@ -2292,7 +2296,19 @@ export default function InstructorStudents() {
             const groupStatus = isOpen
               ? { variant: 'paid', label: t('students.groupOpen') }
               : { variant: 'neutral', label: t('students.groupClosed') }
-            const total = g.students.length
+            const occupyingStudents = g.group_id
+              ? (Array.isArray(g.students) ? g.students : []).filter((s) => occupiesGroup(s, g.group_id))
+              : Array.isArray(g.students)
+                ? g.students
+                : []
+            const total = occupyingStudents.length
+            const pendingInGroup = occupyingStudents.filter((s) => needsSetup(s) || isPendingApproval(s)).length
+            const groupCountLabel =
+              pendingInGroup > 0 && pendingInGroup === total
+                ? t('students.groupStudentsPending', { count: pendingInGroup })
+                : pendingInGroup > 0
+                  ? t('students.groupStudentsAndPending', { count: total - pendingInGroup, pending: pendingInGroup })
+                  : t('students.groupStudents', { count: total })
             const payTop =
               g.payMix.installment
                 ? { variant: 'due', label: t('students.payInstallmentGroup', { n: g.payMix.installment, total }) }
@@ -2346,15 +2362,15 @@ export default function InstructorStudents() {
                       <div className="col-span-12 sm:col-span-7 min-w-0">
                         <div
                           className="text-[15px] sm:text-base font-semibold text-token-textMain truncate cursor-default"
-                          title={studentNamesLabel(g.students) || undefined}
+                          title={studentNamesLabel(occupyingStudents) || undefined}
                         >
                           <GroupColumnLabel group={g} students={g.students} />
                         </div>
                         <div
                           className="text-xs text-token-textMuted truncate cursor-default"
-                          title={studentNamesLabel(g.students) || undefined}
+                          title={studentNamesLabel(occupyingStudents) || undefined}
                         >
-                          {g.subject} · {t('students.groupStudents', { count: g.students.length })}
+                          {g.subject} · {groupCountLabel}
                         </div>
                       </div>
 

@@ -327,6 +327,8 @@
     "emptyTitle": "Нет учеников",
     "emptyHint": "Добавьте ученика сверху",
     "groupStudents": "{{count}} ученик(ов)",
+    "groupStudentsPending": "{{count}} ученик(ов) в ожидании",
+    "groupStudentsAndPending": "{{count}} ученик(ов) · {{pending}} ожидает",
     "nextLesson": "Следующий урок:",
     "avgScore": "Ср. балл:",
     "groupOpen": "Открыта",

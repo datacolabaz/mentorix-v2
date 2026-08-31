@@ -327,6 +327,8 @@
     "emptyTitle": "Tələbə yoxdur",
     "emptyHint": "Yuxarıdan tələbə əlavə edin",
     "groupStudents": "{{count}} tələbə",
+    "groupStudentsPending": "{{count}} tələbə gözləmədə",
+    "groupStudentsAndPending": "{{count}} tələbə · {{pending}} gözləmə",
     "nextLesson": "Növbəti dərs:",
     "avgScore": "Avg bal:",
     "groupOpen": "Aktiv",
