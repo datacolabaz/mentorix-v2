@@ -286,6 +286,18 @@
   .theme-light .mx-app-content :is(.text-emerald-100, .text-emerald-200) {
     color: #065f46 !important; /* emerald-800 */
   }
+  /* Semantic token classes — force correct light surfaces/text (admin KPI cards, etc.) */
+  .theme-light .mx-app-content [class*="bg-token-surfaceCard"]:not(input):not(textarea):not(select) {
+    background-color: rgb(var(--surface-card) / 1) !important;
+  }
+  .theme-light .mx-app-content .text-token-textMain {
+    color: rgb(var(--text-main)) !important;
+    -webkit-text-fill-color: rgb(var(--text-main)) !important;
+  }
+  .theme-light .mx-app-content .text-token-headingPrimary {
+    color: rgb(var(--heading-primary)) !important;
+    -webkit-text-fill-color: rgb(var(--heading-primary)) !important;
+  }
   /* Recharts mobil overflow — KPI sparkline */
   .instructor-panel-main .recharts-responsive-container,
   .instructor-panel-main .recharts-wrapper,
