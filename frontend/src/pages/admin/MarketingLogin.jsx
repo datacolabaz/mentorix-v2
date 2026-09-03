@@ -6,12 +6,12 @@ import api from '../../lib/api'
 import { ACCENT_OPTIONS, deepClone, defaultLoginMarketingPayload } from '../../constants/defaultLoginMarketing'
 
 const inp =
-  'w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500'
+  'w-full bg-token-surfaceCard border border-[color:var(--border-subtle)] rounded-xl px-4 py-2.5 text-token-textMain text-sm outline-none focus:border-blue-500'
 const lbl = 'block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2'
 
 function LandingSectionToggle({ checked, onChange, hint }) {
   return (
-    <label className="flex items-start gap-3 cursor-pointer select-none rounded-xl border border-indigo-500/20 bg-[#13112e]/80 px-3 py-2.5">
+    <label className="flex items-start gap-3 cursor-pointer select-none rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard px-3 py-2.5">
       <input
         type="checkbox"
         className="mt-0.5 rounded border-indigo-500/40 text-primary focus:ring-primary/40"
@@ -19,7 +19,7 @@ function LandingSectionToggle({ checked, onChange, hint }) {
         onChange={(e) => onChange(e.target.checked)}
       />
       <span className="text-sm text-gray-200 leading-snug">
-        <span className="font-semibold text-white">Login landingində göstər</span>
+        <span className="font-semibold text-token-textMain">Login landingində göstər</span>
         <span className="block text-xs text-gray-500 mt-0.5">
           {hint || 'Söndürülsə, bölmə tam gizlənir; məzmun admin-də saxlanılır.'}
         </span>
@@ -30,7 +30,7 @@ function LandingSectionToggle({ checked, onChange, hint }) {
 
 function LandingItemToggle({ checked, onChange }) {
   return (
-    <label className="flex items-start gap-2.5 cursor-pointer select-none rounded-lg border border-indigo-500/15 bg-[#13112e]/60 px-2.5 py-2">
+    <label className="flex items-start gap-2.5 cursor-pointer select-none rounded-lg border border-[color:var(--border-subtle)] bg-token-surfaceCard px-2.5 py-2">
       <input
         type="checkbox"
         className="mt-0.5 rounded border-indigo-500/40 text-primary focus:ring-primary/40 shrink-0"
@@ -38,7 +38,7 @@ function LandingItemToggle({ checked, onChange }) {
         onChange={(e) => onChange(e.target.checked)}
       />
       <span className="text-xs text-gray-300 leading-snug">
-        <span className="font-semibold text-white">Landingdə göstər</span>
+        <span className="font-semibold text-token-textMain">Landingdə göstər</span>
       </span>
     </label>
   )
@@ -268,7 +268,7 @@ export default function MarketingLogin() {
 
       <Card className="p-4 sm:p-6 space-y-4">
         <h2 className="font-display font-bold text-base">İnam bloku</h2>
-        <label className="flex items-start gap-3 cursor-pointer select-none rounded-xl border border-indigo-500/20 bg-[#13112e]/80 px-3 py-2.5">
+        <label className="flex items-start gap-3 cursor-pointer select-none rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard px-3 py-2.5">
           <input
             type="checkbox"
             className="mt-0.5 rounded border-indigo-500/40 text-primary focus:ring-primary/40"
@@ -281,7 +281,7 @@ export default function MarketingLogin() {
             }
           />
           <span className="text-sm text-gray-200 leading-snug">
-            <span className="font-semibold text-white">Login landingində göstər</span>
+            <span className="font-semibold text-token-textMain">Login landingində göstər</span>
             <span className="block text-xs text-gray-500 mt-0.5">
               Söndürülsə, İnam bloku tam gizlənir; mətnlər admin-də saxlanılır.
             </span>
@@ -373,7 +373,7 @@ export default function MarketingLogin() {
                 Sil
               </button>
             </div>
-            <label className="flex items-start gap-2.5 cursor-pointer select-none rounded-lg border border-indigo-500/15 bg-[#13112e]/60 px-2.5 py-2">
+            <label className="flex items-start gap-2.5 cursor-pointer select-none rounded-lg border border-[color:var(--border-subtle)] bg-token-surfaceCard px-2.5 py-2">
               <input
                 type="checkbox"
                 className="mt-0.5 rounded border-indigo-500/40 text-primary focus:ring-primary/40 shrink-0"
@@ -391,7 +391,7 @@ export default function MarketingLogin() {
                 }
               />
               <span className="text-xs text-gray-300 leading-snug">
-                <span className="font-semibold text-white">Login landingində göstər</span>
+                <span className="font-semibold text-token-textMain">Login landingində göstər</span>
                 <span className="block text-[11px] text-gray-500 mt-0.5">
                   Söndürülsə, bu kart yalnız admin paneldə qalır.
                 </span>
@@ -765,7 +765,7 @@ export default function MarketingLogin() {
             </Button>
           </div>
         </div>
-        <label className="flex items-start gap-3 cursor-pointer select-none rounded-xl border border-indigo-500/20 bg-[#13112e]/80 px-3 py-2.5">
+        <label className="flex items-start gap-3 cursor-pointer select-none rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard px-3 py-2.5">
           <input
             type="checkbox"
             className="mt-0.5 rounded border-indigo-500/40 text-primary focus:ring-primary/40"
@@ -778,7 +778,7 @@ export default function MarketingLogin() {
             }
           />
           <span className="text-sm text-gray-200 leading-snug">
-            <span className="font-semibold text-white">Login landingində göstər</span>
+            <span className="font-semibold text-token-textMain">Login landingində göstər</span>
             <span className="block text-xs text-gray-500 mt-0.5">
               Söndürülsə, «Real ssenari» kartı tam çıxarılır (məzmunu saxlayırıq — yenidən yandıra bilərsiniz).
             </span>

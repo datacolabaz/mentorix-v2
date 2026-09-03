@@ -345,7 +345,7 @@ export default function AdminCertifiedExamVerifications() {
         ) : (
           <div className="space-y-4">
             {previewExam ? (
-              <div className="rounded-lg border border-white/10 bg-black/20 p-3 text-sm text-gray-300 space-y-1">
+              <div className="rounded-lg border border-[color:var(--border-subtle)] bg-token-surfaceCard p-3 text-sm text-token-textSecondary space-y-1">
                 <p>
                   <span className="text-gray-500">Müəllim:</span> {previewExam.instructor_name}
                 </p>
@@ -366,8 +366,8 @@ export default function AdminCertifiedExamVerifications() {
             ) : (
               <ol className="space-y-4 list-none">
                 {previewQuestions.map((q) => (
-                  <li key={q.id} className="rounded-lg border border-white/10 bg-black/20 p-4 space-y-2">
-                    <p className="text-sm font-medium text-white">
+                  <li key={q.id} className="rounded-lg border border-[color:var(--border-subtle)] bg-token-surfaceCard p-4 space-y-2">
+                    <p className="text-sm font-medium text-token-textMain">
                       {q.order}. {q.question_text}
                     </p>
                     {Array.isArray(q.options) && q.options.length > 0 ? (
@@ -429,7 +429,7 @@ export default function AdminCertifiedExamVerifications() {
           <label className="block text-sm">
             <span className="text-gray-400 text-xs uppercase">Rədd səbəbi (məcburi)</span>
             <textarea
-              className="mt-1 w-full min-h-[100px] rounded-xl bg-[#13112e] border border-red-500/20 px-3 py-2 text-white text-sm resize-y"
+              className="mt-1 w-full min-h-[100px] rounded-xl bg-token-surfaceCard border border-red-500/20 px-3 py-2 text-token-textMain text-sm resize-y"
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
               placeholder="Məs: suallar kateqoriya səviyyəsinə uyğun deyil, minimum 10 simvol…"

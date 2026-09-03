@@ -254,6 +254,38 @@
   .theme-light .mx-app-content :is(.text-gray-400, .text-gray-500, .text-slate-400, .text-slate-500) {
     color: rgb(var(--text-muted)) !important;
   }
+  /* Leftover dark-theme hex surfaces → light card so remapped text is readable.
+     Matches bg-[#…], !bg-[#…], hover:bg-[#…], and opacity suffixes (/60, /80). */
+  .theme-light .mx-app-content :is(
+    [class*="bg-[#0f1218]"],
+    [class*="bg-[#12151c]"],
+    [class*="bg-[#13112e]"],
+    [class*="bg-[#0f0c29]"],
+    [class*="bg-black/20"]
+  ):not(input):not(textarea):not(select) {
+    background-color: rgb(var(--surface-card)) !important;
+  }
+  .theme-light .mx-app-content :is(
+    [class*="from-[#141820]"],
+    [class*="to-[#0d1016]"],
+    [class*="from-[#141820]"][class*="to-[#0d1016]"]
+  ) {
+    background-image: none !important;
+    background-color: rgb(var(--surface-card)) !important;
+  }
+  /* Pale dark-theme banner/chip text on wash backgrounds (amber/sky/rose/10). */
+  .theme-light .mx-app-content :is(.text-amber-100, .text-amber-200, .text-amber-100\/95, .text-amber-100\/80, .text-amber-200\/90) {
+    color: #92400e !important; /* amber-800 */
+  }
+  .theme-light .mx-app-content :is(.text-sky-100, .text-sky-200) {
+    color: #075985 !important; /* sky-800 */
+  }
+  .theme-light .mx-app-content :is(.text-rose-100, .text-rose-200) {
+    color: #9f1239 !important; /* rose-800 */
+  }
+  .theme-light .mx-app-content :is(.text-emerald-100, .text-emerald-200) {
+    color: #065f46 !important; /* emerald-800 */
+  }
   /* Recharts mobil overflow — KPI sparkline */
   .instructor-panel-main .recharts-responsive-container,
   .instructor-panel-main .recharts-wrapper,

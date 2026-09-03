@@ -58,14 +58,14 @@ export default function AdminUniversityPrograms() {
     <div className="p-4 sm:p-6 space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="font-display font-bold text-xl sm:text-2xl text-white">Mentorix Apply — Admin</h1>
+          <h1 className="font-display font-bold text-xl sm:text-2xl text-token-headingPrimary">Mentorix Apply — Admin</h1>
           <p className="text-sm text-gray-400 mt-1">AI skrayp və mentor proqram təsdiqi</p>
         </div>
         <Button onClick={() => void runScraper()} loading={scraping}>AI skrayp işə sal</Button>
       </div>
 
       <Card className="p-5 space-y-3">
-        <h2 className="text-sm font-semibold text-white">Skrayp hədəfləri ({targets.length})</h2>
+        <h2 className="text-sm font-semibold text-token-textMain">Skrayp hədəfləri ({targets.length})</h2>
         <ul className="text-xs text-gray-400 space-y-1 max-h-40 overflow-y-auto">
           {targets.map((t) => (
             <li key={t.id}>{t.country} · {t.university_name} — {t.last_error ? `xəta: ${t.last_error}` : 'OK'}</li>
@@ -74,14 +74,14 @@ export default function AdminUniversityPrograms() {
       </Card>
 
       <Card className="p-5 space-y-3">
-        <h2 className="text-sm font-semibold text-white">Təsdiq gözləyən proqramlar</h2>
+        <h2 className="text-sm font-semibold text-token-textMain">Təsdiq gözləyən proqramlar</h2>
         {loading ? <p className="text-sm text-gray-500">Yüklənir…</p> : null}
         {!loading && !pending.length ? <p className="text-sm text-gray-500">Pending yoxdur</p> : null}
         <ul className="space-y-3">
           {pending.map((p) => (
             <li key={p.id} className="rounded-xl border border-white/10 p-3 flex flex-wrap justify-between gap-3">
               <div>
-                <p className="text-white font-medium">{p.uni_name} — {p.name}</p>
+                <p className="text-token-textMain font-medium">{p.uni_name} — {p.name}</p>
                 <p className="text-xs text-gray-400">{p.source_type} · {p.mentor_display_name || '—'} · {p.field}</p>
               </div>
               <div className="flex gap-2">

@@ -118,20 +118,20 @@ function OverviewCard({ label, value, sub, note, warn }) {
   return (
     <div
       className={[
-        'rounded-2xl border bg-gradient-to-br from-[#141820] to-[#0d1016] p-5',
-        warn ? 'border-amber-500/35' : 'border-white/10',
+        'rounded-2xl border bg-token-surfaceCard p-5',
+        warn ? 'border-amber-500/35' : 'border-[color:var(--border-subtle)]',
       ].join(' ')}
     >
-      <div className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">{label}</div>
+      <div className="text-[11px] font-semibold uppercase tracking-wider text-token-textMuted">{label}</div>
       <div
         className={[
-          'mt-2 font-display font-bold text-white tabular-nums',
+          'mt-2 font-display font-bold text-token-textMain tabular-nums',
           warn && typeof value === 'string' && value.length > 8 ? 'text-lg leading-snug' : 'text-3xl',
         ].join(' ')}
       >
         {value}
       </div>
-      {sub ? <div className="mt-1 text-xs text-gray-500">{sub}</div> : null}
+      {sub ? <div className="mt-1 text-xs text-token-textMuted">{sub}</div> : null}
       {note ? (
         <div className="mt-2 text-[11px] leading-snug text-amber-200/90 border-t border-amber-500/20 pt-2">
           {note}
@@ -144,10 +144,10 @@ function OverviewCard({ label, value, sub, note, warn }) {
 function ChartTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null
   return (
-    <div className="rounded-lg border border-white/15 bg-[#0f1218] px-3 py-2 text-xs shadow-xl">
-      <div className="text-gray-400 mb-1">{label}</div>
+    <div className="rounded-lg border border-[color:var(--border-subtle)] bg-token-surfaceCard px-3 py-2 text-xs shadow-xl">
+      <div className="text-token-textMuted mb-1">{label}</div>
       {payload.map((p) => (
-        <div key={p.name} className="text-white font-medium">
+        <div key={p.name} className="text-token-textMain font-medium">
           {p.name}: {fmt(p.value)}
         </div>
       ))}
@@ -230,13 +230,13 @@ export default function AdminAnalytics() {
     <div className="p-4 sm:p-6 max-w-[1400px] mx-auto space-y-6">
       <div className="space-y-4">
         <div>
-          <h1 className="font-display font-bold text-2xl text-white">Analitika</h1>
+          <h1 className="font-display font-bold text-2xl text-token-headingPrimary">Analitika</h1>
           <p className="text-sm text-gray-500 mt-1">
             Ziyarətçilər, konversiya, trafik mənbələri və funnel — Mentorix.io
           </p>
         </div>
         <div
-          className="grid grid-cols-2 sm:grid-cols-5 gap-1.5 w-full rounded-xl border border-white/10 bg-[#0f1218] p-1.5"
+          className="grid grid-cols-2 sm:grid-cols-5 gap-1.5 w-full rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard p-1.5"
           role="tablist"
           aria-label="Analitika dövrü"
         >
@@ -250,7 +250,7 @@ export default function AdminAnalytics() {
               onClick={() => setPeriod(p.id)}
               className={[
                 'min-w-0 px-2 py-2.5 rounded-lg text-xs sm:text-sm font-semibold transition-colors text-center leading-tight',
-                period === p.id ? 'bg-primary text-[#041018]' : 'text-gray-400 hover:text-white',
+                period === p.id ? 'bg-primary text-[#041018]' : 'text-token-textMuted hover:text-token-textMain',
               ].join(' ')}
             >
               {p.label}
@@ -324,10 +324,10 @@ export default function AdminAnalytics() {
               ].map(([label, val]) => (
                 <div
                   key={label}
-                  className="rounded-xl border border-white/8 bg-[#12151c] px-3 py-3 text-center"
+                  className="rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard px-3 py-3 text-center"
                 >
-                  <div className="text-[10px] text-gray-500 uppercase tracking-wide">{label}</div>
-                  <div className="text-lg font-bold text-white tabular-nums mt-1">{typeof val === 'string' ? val : fmt(val)}</div>
+                  <div className="text-[10px] text-token-textMuted uppercase tracking-wide">{label}</div>
+                  <div className="text-lg font-bold text-token-textMain tabular-nums mt-1">{typeof val === 'string' ? val : fmt(val)}</div>
                 </div>
               ))}
             </div>
@@ -408,7 +408,7 @@ export default function AdminAnalytics() {
                 Müəllimlər →
               </Link>
             </div>
-            <Card className="p-0 !bg-[#0f1218] border-white/10 overflow-hidden">
+            <Card className="p-0 overflow-hidden">
               {hotLeads.length ? (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
@@ -425,7 +425,7 @@ export default function AdminAnalytics() {
                       {hotLeads.map((row) => (
                         <tr key={row.id} className="border-b border-white/5 last:border-0">
                           <td className="px-4 py-3">
-                            <div className="font-semibold text-white">{row.full_name}</div>
+                            <div className="font-semibold text-token-textMain">{row.full_name}</div>
                             <div className="text-[11px] text-gray-500">{row.email || row.phone || '—'}</div>
                           </td>
                           <td className="px-4 py-3 capitalize text-gray-300">{row.plan || '—'}</td>
@@ -477,8 +477,8 @@ export default function AdminAnalytics() {
           </section>
 
           {trend.length > 0 ? (
-            <Card className="p-5 !bg-[#0f1218] border-white/10">
-              <h2 className="text-sm font-semibold text-white mb-1">Trend</h2>
+            <Card className="p-5">
+              <h2 className="text-sm font-semibold text-token-textMain mb-1">Trend</h2>
               {periodRangeLabel ? (
                 <p className="text-[11px] text-gray-500 mb-4">{periodLabel(activePeriod)} · {periodRangeLabel}</p>
               ) : (
@@ -513,8 +513,8 @@ export default function AdminAnalytics() {
           ) : null}
 
           <div className="grid lg:grid-cols-2 gap-4">
-            <Card className="p-5 !bg-[#0f1218] border-white/10">
-              <h2 className="text-sm font-semibold text-white mb-1">Trafik mənbələri</h2>
+            <Card className="p-5">
+              <h2 className="text-sm font-semibold text-token-textMain mb-1">Trafik mənbələri</h2>
               <p className="text-xs text-gray-500 mb-4">Reklam və axtarış kanalları</p>
               {sourcesBar.length ? (
                 <div className="h-52">
@@ -543,8 +543,8 @@ export default function AdminAnalytics() {
               </ul>
             </Card>
 
-            <Card className="p-5 !bg-[#0f1218] border-white/10">
-              <h2 className="text-sm font-semibold text-white mb-1">Cihazlar</h2>
+            <Card className="p-5">
+              <h2 className="text-sm font-semibold text-token-textMain mb-1">Cihazlar</h2>
               <p className="text-xs text-gray-500 mb-2">Ziyarət və girişlər üzrə</p>
               {devicePie.length ? (
                 <div className="h-52 flex items-center">
@@ -586,8 +586,8 @@ export default function AdminAnalytics() {
           </div>
 
           <div className="grid lg:grid-cols-2 gap-4">
-            <Card className="p-5 !bg-[#0f1218] border-white/10">
-              <h2 className="text-sm font-semibold text-white mb-4">Ən çox baxılan səhifələr</h2>
+            <Card className="p-5">
+              <h2 className="text-sm font-semibold text-token-textMain mb-4">Ən çox baxılan səhifələr</h2>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
@@ -611,8 +611,8 @@ export default function AdminAnalytics() {
               </div>
             </Card>
 
-            <Card className="p-5 !bg-[#0f1218] border-white/10">
-              <h2 className="text-sm font-semibold text-white mb-4">Konversiya funnel</h2>
+            <Card className="p-5">
+              <h2 className="text-sm font-semibold text-token-textMain mb-4">Konversiya funnel</h2>
               <div className="space-y-3">
                 {(data.funnel || []).map((step, i) => {
                   const widthPct = Math.max(8, step.pct_of_top || 0)
@@ -641,8 +641,8 @@ export default function AdminAnalytics() {
             </Card>
           </div>
 
-          <Card className="p-5 !bg-[#0f1218] border-white/10">
-            <h2 className="text-sm font-semibold text-white mb-4">Son qeydiyyatlar</h2>
+          <Card className="p-5">
+            <h2 className="text-sm font-semibold text-token-textMain mb-4">Son qeydiyyatlar</h2>
             <div className="space-y-3">
               {(data.recent_registrations || []).map((u) => (
                 <div
@@ -650,7 +650,7 @@ export default function AdminAnalytics() {
                   className="flex flex-wrap items-center justify-between gap-2 py-3 border-b border-white/5 last:border-0"
                 >
                   <div>
-                    <div className="text-sm font-semibold text-white">{u.full_name}</div>
+                    <div className="text-sm font-semibold text-token-textMain">{u.full_name}</div>
                     <div className="text-xs text-gray-500 capitalize">{u.role || '—'}</div>
                   </div>
                   <div className="text-right text-xs">

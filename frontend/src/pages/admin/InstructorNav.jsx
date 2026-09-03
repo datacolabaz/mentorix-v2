@@ -10,7 +10,7 @@ import {
 import { notifyInstructorNavUpdated } from '../../hooks/useInstructorNavSections'
 
 const inp =
-  'w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500'
+  'w-full bg-token-surfaceCard border border-[color:var(--border-subtle)] rounded-xl px-4 py-2.5 text-token-textMain text-sm outline-none focus:border-blue-500'
 
 function cloneSections(sections) {
   return JSON.parse(JSON.stringify(sections || []))
@@ -156,7 +156,7 @@ export default function AdminInstructorNav() {
   return (
     <div className="p-4 sm:p-6 space-y-6 max-w-4xl">
       <div>
-        <h1 className="font-display font-bold text-xl sm:text-2xl text-white">Müəllim sidebar menyusu</h1>
+        <h1 className="font-display font-bold text-xl sm:text-2xl text-token-headingPrimary">Müəllim sidebar menyusu</h1>
         <p className="text-sm text-gray-400 mt-2 max-w-2xl">
           MANAGEMENT, ANALYTICS, SYSTEM kimi bölmə başlıqlarını azərbaycanca dəyişin. Linklər və səhifələr kodda
           qalır — buradan yalnız qrup adları və hansı linkin hansı qrupda görünəcəyini idarə edirsiniz.
@@ -228,10 +228,10 @@ export default function AdminInstructorNav() {
                       className={[
                         'flex items-center gap-2 rounded-xl border px-3 py-2 text-sm cursor-pointer',
                         checked
-                          ? 'border-indigo-400/40 bg-indigo-500/10 text-indigo-100'
+                          ? 'border-primary/40 bg-primary/10 text-token-textMain'
                           : inOther
-                            ? 'border-white/5 bg-black/10 text-gray-500 cursor-not-allowed'
-                            : 'border-white/10 bg-black/20 text-gray-300 hover:border-white/20',
+                            ? 'border-[color:var(--border-subtle)] bg-token-surfaceSecondary text-token-textMuted cursor-not-allowed'
+                            : 'border-[color:var(--border-subtle)] bg-token-surfaceCard text-token-textMain hover:border-primary/30',
                       ].join(' ')}
                     >
                       <input

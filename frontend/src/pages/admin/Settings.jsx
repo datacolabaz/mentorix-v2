@@ -5,7 +5,7 @@ import { useToast } from '../../components/common/Toast'
 import api from '../../lib/api'
 
 const inp =
-  'w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500 disabled:opacity-45 disabled:cursor-not-allowed'
+  'w-full bg-token-surfaceCard border border-[color:var(--border-subtle)] rounded-xl px-4 py-2.5 text-token-textMain text-sm outline-none focus:border-blue-500 disabled:opacity-45 disabled:cursor-not-allowed'
 
 /** Serverdəki `buildPlanFeaturesFromLimits` ilə eyni məntiqi önizləmə üçün */
 function previewFeatures(p) {
@@ -255,7 +255,7 @@ const PRESETS = {
 
 function Toggle({ label, checked, onChange, id }) {
   return (
-    <label htmlFor={id} className="flex items-center justify-between gap-3 rounded-xl border border-indigo-500/20 bg-[#13112e]/80 px-3 py-2">
+    <label htmlFor={id} className="flex items-center justify-between gap-3 rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard px-3 py-2">
       <span className="text-xs font-semibold text-gray-300">{label}</span>
       <input id={id} type="checkbox" className="accent-indigo-500 h-4 w-4 shrink-0" checked={checked} onChange={(e) => onChange(e.target.checked)} />
     </label>
@@ -387,7 +387,7 @@ export default function AdminSettings() {
             {plans.map((p, idx) => {
               const prevLines = previewFeatures(p)
               return (
-                <div key={p.slug} className="rounded-2xl border border-indigo-500/20 bg-[#0f0c29]/70 p-4 space-y-4">
+                <div key={p.slug} className="rounded-2xl border border-[color:var(--border-subtle)] bg-token-surfaceCard p-4 space-y-4">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="text-xs font-mono uppercase tracking-wider text-indigo-300">{p.slug}</div>
                     <label className="text-xs text-gray-300 flex items-center gap-2">
@@ -590,7 +590,7 @@ export default function AdminSettings() {
                       </div>
                     </div>
 
-                    <div className="sm:col-span-2 rounded-xl border border-white/10 bg-black/20 p-3 space-y-3">
+                    <div className="sm:col-span-2 rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceSecondary p-3 space-y-3">
                       <div className="text-[11px] font-bold uppercase tracking-wider text-indigo-200">
                         Kart imkanları (landing)
                       </div>
@@ -670,7 +670,7 @@ export default function AdminSettings() {
                       </label>
                     </div>
 
-                    <div className="sm:col-span-2 rounded-xl border border-white/10 bg-black/20 px-3 py-2">
+                    <div className="sm:col-span-2 rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceSecondary px-3 py-2">
                       <div className="text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">Avtomatik limit sətirləri</div>
                       <ul className="text-xs text-gray-300 space-y-0.5 list-disc list-inside mb-3">
                         {prevLines.map((line, li) => (
