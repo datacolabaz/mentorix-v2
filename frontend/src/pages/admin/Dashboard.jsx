@@ -41,7 +41,7 @@ function PulseCard({ label, value, sub, accent = 'primary' }) {
       className={`rounded-2xl border bg-gradient-to-br p-5 ${accentClass}`}
     >
       <div className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">{label}</div>
-      <div className="mt-2 font-display font-bold text-3xl text-white tabular-nums">{value}</div>
+      <div className="mt-2 font-display font-bold text-3xl text-token-textMain tabular-nums">{value}</div>
       {sub ? <div className="mt-1 text-xs text-gray-500">{sub}</div> : null}
     </div>
   )
@@ -110,7 +110,7 @@ export default function AdminDashboard() {
     <div className="p-4 sm:p-6 max-w-[1400px] mx-auto space-y-6">
       <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
         <div>
-          <h1 className="font-display font-bold text-2xl text-white">CEO Dashboard</h1>
+          <h1 className="font-display font-bold text-2xl text-token-headingPrimary">CEO Dashboard</h1>
           <p className="text-sm text-gray-500 mt-1">
             {new Date().toLocaleDateString('az-AZ', {
               weekday: 'long',
@@ -122,7 +122,7 @@ export default function AdminDashboard() {
           <p className="text-xs text-gray-600 mt-1">Biznesin nəbzi — trafik analitikası ayrıca bölmədədir</p>
         </div>
 
-        <Card className="p-4 !bg-[#0f1218] border-emerald-500/30 min-w-[240px] shrink-0">
+        <Card className="p-4 border-emerald-500/30 min-w-[240px] shrink-0">
           <div className="flex items-center gap-2 mb-3">
             <span className="relative flex h-2.5 w-2.5">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60" />
@@ -130,7 +130,7 @@ export default function AdminDashboard() {
             </span>
             <span className="text-xs font-bold uppercase tracking-wider text-emerald-300">Hazırda onlayn</span>
           </div>
-          <div className="font-display font-bold text-4xl text-white tabular-nums">{fmt(live.users)}</div>
+          <div className="font-display font-bold text-4xl text-token-textMain tabular-nums">{fmt(live.users)}</div>
           <p className="text-xs text-gray-500 mt-1">
             Son {live.window_minutes || 1} dəq · cəmi {fmt(live.total)} (qonaq {fmt(live.guests)})
           </p>
@@ -139,7 +139,7 @@ export default function AdminDashboard() {
               roleLines.map(({ role, n, label }) => (
                 <div key={role} className="flex justify-between text-sm">
                   <span className="text-gray-400 capitalize">{label}</span>
-                  <span className="font-semibold text-white tabular-nums">{fmt(n)}</span>
+                  <span className="font-semibold text-token-textMain tabular-nums">{fmt(n)}</span>
                 </div>
               ))
             ) : (
@@ -245,7 +245,7 @@ export default function AdminDashboard() {
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <div className="font-semibold text-white text-sm">{item.label}</div>
+                      <div className="font-semibold text-token-textMain text-sm">{item.label}</div>
                       <p className="text-xs text-gray-500 mt-1 leading-relaxed">{item.description}</p>
                     </div>
                     <span
@@ -260,8 +260,8 @@ export default function AdminDashboard() {
           </section>
 
           {dashboard.recent_today?.length ? (
-            <Card className="p-5 !bg-[#0f1218] border-white/10">
-              <h2 className="text-sm font-semibold text-white mb-1">Bu günün qeydiyyatları</h2>
+            <Card className="p-5">
+              <h2 className="text-sm font-semibold text-token-textMain mb-1">Bu günün qeydiyyatları</h2>
               <p className="text-xs text-gray-500 mb-4">Son fəaliyyət axını</p>
               <div className="space-y-3">
                 {dashboard.recent_today.map((u) => (
@@ -270,7 +270,7 @@ export default function AdminDashboard() {
                     className="flex flex-wrap items-center justify-between gap-2 py-2 border-b border-white/5 last:border-0"
                   >
                     <div>
-                      <div className="text-sm font-medium text-white">{u.full_name}</div>
+                      <div className="text-sm font-medium text-token-textMain">{u.full_name}</div>
                       <div className="text-xs text-gray-500 capitalize">{ROLE_LABELS[u.role] || u.role}</div>
                     </div>
                     <div className="text-xs text-gray-500">
@@ -287,9 +287,9 @@ export default function AdminDashboard() {
           <div className="grid sm:grid-cols-2 gap-3 pt-2">
             <Link
               to="/admin/analytics"
-              className="block rounded-2xl border border-white/10 bg-[#0f1218] p-5 hover:border-primary/40 transition-colors"
+              className="block rounded-2xl border border-[color:var(--border-subtle)] bg-token-surfaceCard p-5 hover:border-primary/40 transition-colors"
             >
-              <h2 className="font-display font-bold text-base text-white">Analitika paneli</h2>
+              <h2 className="font-display font-bold text-base text-token-textMain">Analitika paneli</h2>
               <p className="text-sm text-gray-500 mt-1">
                 Trafik, funnel, cihaz payı və detallı konversiya — ikinci plan
               </p>
@@ -297,9 +297,9 @@ export default function AdminDashboard() {
             </Link>
             <Link
               to="/admin/inventory"
-              className="block rounded-2xl border border-white/10 bg-[#0f1218] p-5 hover:border-primary/40 transition-colors"
+              className="block rounded-2xl border border-[color:var(--border-subtle)] bg-token-surfaceCard p-5 hover:border-primary/40 transition-colors"
             >
-              <h2 className="font-display font-bold text-base text-white">SMS & Ehtiyat</h2>
+              <h2 className="font-display font-bold text-base text-token-textMain">SMS & Ehtiyat</h2>
               <p className="text-sm text-gray-500 mt-1">Provayder balansı və infrastruktur monitorinqi</p>
               <span className="inline-block mt-3 text-sm font-semibold text-primary">Aç →</span>
             </Link>

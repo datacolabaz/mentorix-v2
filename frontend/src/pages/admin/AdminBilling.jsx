@@ -388,7 +388,7 @@ export default function AdminBilling() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className={`rounded-xl border p-4 ${stockCardCls(op?.sms_low)}`}>
                 <div className="text-xs text-gray-400 uppercase tracking-wide mb-1">SMS ehtiyatı</div>
-                <div className="font-display font-bold text-2xl text-white">
+                <div className="font-display font-bold text-2xl text-token-textMain">
                   {(op?.operator_sms_stock_remaining ?? 0).toLocaleString('az-AZ')} ədəd
                 </div>
                 <div className="text-xs text-gray-500 mt-1">
@@ -398,7 +398,7 @@ export default function AdminBilling() {
               </div>
               <div className={`rounded-xl border p-4 ${stockCardCls(op?.storage_low)}`}>
                 <div className="text-xs text-gray-400 uppercase tracking-wide mb-1">Yaddaş ehtiyatı</div>
-                <div className="font-display font-bold text-2xl text-white">
+                <div className="font-display font-bold text-2xl text-token-textMain">
                   {(op?.operator_storage_mb_remaining ?? 0).toLocaleString('az-AZ')} MB
                 </div>
                 <div className="text-xs text-gray-500 mt-1">
@@ -418,9 +418,9 @@ export default function AdminBilling() {
                   ['Satılmış əlavə yaddaş', `${usage.extra_storage_sold_mb} MB`],
                   ['Gözləyən yaddaş top-up', `${usage.pending_storage_topup_mb} MB`],
                 ].map(([label, val]) => (
-                  <div key={label} className="rounded-lg bg-[#13112e] border border-indigo-500/15 px-3 py-2">
-                    <div className="text-[10px] text-gray-500 uppercase">{label}</div>
-                    <div className="font-semibold text-white mt-0.5">
+                  <div key={label} className="rounded-lg bg-token-surfaceCard border border-[color:var(--border-subtle)] px-3 py-2">
+                    <div className="text-[10px] text-token-textMuted uppercase">{label}</div>
+                    <div className="font-semibold text-token-textMain mt-0.5">
                       {typeof val === 'number' ? val.toLocaleString('az-AZ') : val}
                     </div>
                   </div>
@@ -436,7 +436,7 @@ export default function AdminBilling() {
                   <input
                     type="number"
                     min={0}
-                    className="mt-1 w-full bg-[#13112e] border border-indigo-500/20 rounded-lg px-3 py-2 text-white text-sm"
+                    className="mt-1 w-full bg-token-surfaceCard border border-[color:var(--border-subtle)] rounded-lg px-3 py-2 text-token-textMain text-sm"
                     value={operatorDraft.operator_sms_stock_remaining}
                     onChange={(e) =>
                       setOperatorDraft((d) => ({ ...d, operator_sms_stock_remaining: e.target.value }))
@@ -448,7 +448,7 @@ export default function AdminBilling() {
                   <input
                     type="number"
                     min={0}
-                    className="mt-1 w-full bg-[#13112e] border border-indigo-500/20 rounded-lg px-3 py-2 text-white text-sm"
+                    className="mt-1 w-full bg-token-surfaceCard border border-[color:var(--border-subtle)] rounded-lg px-3 py-2 text-token-textMain text-sm"
                     value={operatorDraft.operator_sms_low_alert}
                     onChange={(e) => setOperatorDraft((d) => ({ ...d, operator_sms_low_alert: e.target.value }))}
                   />
@@ -461,7 +461,7 @@ export default function AdminBilling() {
                   <input
                     type="number"
                     min={0}
-                    className="mt-1 w-full bg-[#13112e] border border-indigo-500/20 rounded-lg px-3 py-2 text-white text-sm"
+                    className="mt-1 w-full bg-token-surfaceCard border border-[color:var(--border-subtle)] rounded-lg px-3 py-2 text-token-textMain text-sm"
                     value={operatorDraft.operator_storage_mb_remaining}
                     onChange={(e) =>
                       setOperatorDraft((d) => ({ ...d, operator_storage_mb_remaining: e.target.value }))
@@ -473,7 +473,7 @@ export default function AdminBilling() {
                   <input
                     type="number"
                     min={0}
-                    className="mt-1 w-full bg-[#13112e] border border-indigo-500/20 rounded-lg px-3 py-2 text-white text-sm"
+                    className="mt-1 w-full bg-token-surfaceCard border border-[color:var(--border-subtle)] rounded-lg px-3 py-2 text-token-textMain text-sm"
                     value={operatorDraft.operator_storage_mb_low_alert}
                     onChange={(e) =>
                       setOperatorDraft((d) => ({ ...d, operator_storage_mb_low_alert: e.target.value }))
@@ -506,7 +506,7 @@ export default function AdminBilling() {
                     <tbody>
                       {nearLimit.map((row) => (
                         <tr key={row.id} className="border-b border-indigo-500/10">
-                          <td className="py-2 px-3 text-white">{row.full_name || row.email}</td>
+                          <td className="py-2 px-3 text-token-textMain">{row.full_name || row.email}</td>
                           <td className="py-2 px-3 text-gray-400">{String(row.plan || '').toUpperCase()}</td>
                           <td className="py-2 px-3 text-gray-300">
                             {row.sms_cap != null
@@ -533,7 +533,7 @@ export default function AdminBilling() {
         <div>
           <h2 className="font-display font-bold text-sm mb-3">Bank kartı nömrəsi (16 rəqəm)</h2>
           <input
-            className="w-full max-w-md bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white text-sm font-mono tracking-wider"
+            className="w-full max-w-md bg-token-surfaceCard border border-[color:var(--border-subtle)] rounded-xl px-4 py-2.5 text-token-textMain text-sm font-mono tracking-wider"
             value={accountDraft}
             maxLength={BANK_CARD_DIGITS}
             inputMode="numeric"
@@ -566,7 +566,7 @@ export default function AdminBilling() {
                   <input
                     type="number"
                     min={1}
-                    className="mt-1 w-full bg-[#13112e] border border-indigo-500/20 rounded-lg px-3 py-2 text-white text-sm"
+                    className="mt-1 w-full bg-token-surfaceCard border border-[color:var(--border-subtle)] rounded-lg px-3 py-2 text-token-textMain text-sm"
                     value={p.quantity}
                     onChange={(e) => patchPack(idx, 'quantity', e.target.value)}
                   />
@@ -577,7 +577,7 @@ export default function AdminBilling() {
                     type="number"
                     min={0}
                     step={0.01}
-                    className="mt-1 w-full bg-[#13112e] border border-indigo-500/20 rounded-lg px-3 py-2 text-white text-sm"
+                    className="mt-1 w-full bg-token-surfaceCard border border-[color:var(--border-subtle)] rounded-lg px-3 py-2 text-token-textMain text-sm"
                     value={p.price_azn}
                     onChange={(e) => patchPack(idx, 'price_azn', e.target.value)}
                   />
@@ -586,7 +586,7 @@ export default function AdminBilling() {
                   Başlıq (boşsa avtomatik)
                   <input
                     type="text"
-                    className="mt-1 w-full bg-[#13112e] border border-indigo-500/20 rounded-lg px-3 py-2 text-white text-sm"
+                    className="mt-1 w-full bg-token-surfaceCard border border-[color:var(--border-subtle)] rounded-lg px-3 py-2 text-token-textMain text-sm"
                     value={p.label}
                     placeholder="50 SMS"
                     onChange={(e) => patchPack(idx, 'label', e.target.value)}
@@ -630,7 +630,7 @@ export default function AdminBilling() {
                     type="number"
                     min={0.1}
                     step={0.1}
-                    className="mt-1 w-full bg-[#13112e] border border-indigo-500/20 rounded-lg px-3 py-2 text-white text-sm"
+                    className="mt-1 w-full bg-token-surfaceCard border border-[color:var(--border-subtle)] rounded-lg px-3 py-2 text-token-textMain text-sm"
                     value={p.quantity_gb}
                     onChange={(e) => patchStoragePack(idx, 'quantity_gb', e.target.value)}
                   />
@@ -644,7 +644,7 @@ export default function AdminBilling() {
                     type="number"
                     min={0}
                     step={0.01}
-                    className="mt-1 w-full bg-[#13112e] border border-indigo-500/20 rounded-lg px-3 py-2 text-white text-sm"
+                    className="mt-1 w-full bg-token-surfaceCard border border-[color:var(--border-subtle)] rounded-lg px-3 py-2 text-token-textMain text-sm"
                     value={p.price_azn}
                     onChange={(e) => patchStoragePack(idx, 'price_azn', e.target.value)}
                   />
@@ -652,7 +652,7 @@ export default function AdminBilling() {
                 <label className="block text-xs text-gray-400">
                   Dövr
                   <select
-                    className="mt-1 w-full bg-[#13112e] border border-indigo-500/20 rounded-lg px-3 py-2 text-white text-sm"
+                    className="mt-1 w-full bg-token-surfaceCard border border-[color:var(--border-subtle)] rounded-lg px-3 py-2 text-token-textMain text-sm"
                     value={p.billing_period}
                     onChange={(e) => patchStoragePack(idx, 'billing_period', e.target.value)}
                   >
@@ -664,7 +664,7 @@ export default function AdminBilling() {
                   Başlıq (UI)
                   <input
                     type="text"
-                    className="mt-1 w-full bg-[#13112e] border border-indigo-500/20 rounded-lg px-3 py-2 text-white text-sm"
+                    className="mt-1 w-full bg-token-surfaceCard border border-[color:var(--border-subtle)] rounded-lg px-3 py-2 text-token-textMain text-sm"
                     value={p.label}
                     placeholder="+1 GB Sənəd Yaddaşı"
                     onChange={(e) => patchStoragePack(idx, 'label', e.target.value)}
@@ -701,8 +701,8 @@ export default function AdminBilling() {
             className={[
               'px-4 py-2 rounded-xl text-sm font-semibold border transition-colors',
               tab === k
-                ? 'border-primary/40 bg-primary/10 text-white'
-                : 'border-indigo-500/20 text-gray-400 hover:text-white',
+                ? 'border-primary/40 bg-primary/10 text-token-textMain'
+                : 'border-[color:var(--border-subtle)] text-token-textMuted hover:text-token-textMain',
             ].join(' ')}
           >
             {label}
@@ -731,7 +731,7 @@ export default function AdminBilling() {
                 {payments.map((p) => (
                   <tr key={p.id} className="border-b border-indigo-500/10 hover:bg-indigo-500/5">
                     <td className="py-3 px-4">
-                      <div className="font-semibold text-white">{p.full_name || '—'}</div>
+                      <div className="font-semibold text-token-textMain">{p.full_name || '—'}</div>
                       <div className="text-xs text-gray-500">{p.email}</div>
                     </td>
                     <td className="py-3 px-4 text-gray-300">
@@ -744,7 +744,7 @@ export default function AdminBilling() {
                         <span className="text-gray-500 text-xs ml-1">({p.billing_interval})</span>
                       ) : null}
                     </td>
-                    <td className="py-3 px-4 font-semibold text-white">
+                    <td className="py-3 px-4 font-semibold text-token-textMain">
                       {(Number(p.amount_cents || 0) / 100).toFixed(2)} ₼
                     </td>
                     <td className="py-3 px-4 text-gray-400 text-xs">

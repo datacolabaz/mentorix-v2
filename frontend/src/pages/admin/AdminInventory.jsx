@@ -34,9 +34,9 @@ function sourceBadge(source) {
 
 function StatBig({ label, value, sub }) {
   return (
-    <div className="rounded-2xl border border-indigo-500/20 bg-[#13112e] p-5">
-      <div className="text-[11px] uppercase tracking-wider text-gray-500">{label}</div>
-      <div className="font-display font-bold text-3xl text-white mt-2">{value}</div>
+    <div className="rounded-2xl border border-[color:var(--border-subtle)] bg-token-surfaceCard p-5">
+      <div className="text-[11px] uppercase tracking-wider text-token-textMuted">{label}</div>
+      <div className="font-display font-bold text-3xl text-token-textMain mt-2">{value}</div>
       {sub ? <div className="text-xs text-gray-500 mt-2">{sub}</div> : null}
     </div>
   )
@@ -204,7 +204,7 @@ export default function AdminInventory() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <div className="text-[10px] text-gray-500 uppercase">Ümumi (təxmini)</div>
-                  <div className="font-display font-bold text-2xl text-white mt-1">
+                  <div className="font-display font-bold text-2xl text-token-textMain mt-1">
                     {smsHasBalance || smsHasEstimate || smsTotal > 0
                       ? smsTotal.toLocaleString('az-AZ')
                       : '—'}{' '}
@@ -215,7 +215,7 @@ export default function AdminInventory() {
                   <div className="text-[10px] text-gray-500 uppercase">
                     {smsHasEstimate ? 'Qalan (təxmini)' : 'Qalan balans'}
                   </div>
-                  <div className="font-display font-bold text-2xl text-white mt-1">
+                  <div className="font-display font-bold text-2xl text-token-textMain mt-1">
                     {smsHasBalance || smsHasEstimate ? smsRem.toLocaleString('az-AZ') : '—'}{' '}
                     <span className="text-sm font-normal text-gray-500">ədəd</span>
                   </div>
@@ -269,14 +269,14 @@ export default function AdminInventory() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <div className="text-[10px] text-gray-500 uppercase">Ümumi limit</div>
-                  <div className="font-display font-bold text-2xl text-white mt-1">
+                  <div className="font-display font-bold text-2xl text-token-textMain mt-1">
                     {stHas && stTotal > 0 ? stTotal.toLocaleString('az-AZ') : '—'}{' '}
                     <span className="text-sm font-normal text-gray-500">MB</span>
                   </div>
                 </div>
                 <div>
                   <div className="text-[10px] text-gray-500 uppercase">Boş qalan (disk)</div>
-                  <div className="font-display font-bold text-2xl text-white mt-1">
+                  <div className="font-display font-bold text-2xl text-token-textMain mt-1">
                     {stHasLimit && stRem != null ? stRem.toLocaleString('az-AZ') : '—'}{' '}
                     <span className="text-sm font-normal text-gray-500">MB</span>
                   </div>
@@ -341,7 +341,7 @@ export default function AdminInventory() {
                     <input
                       type="number"
                       min={0}
-                      className="mt-1 w-full bg-[#13112e] border border-indigo-500/20 rounded-lg px-3 py-2 text-white text-sm"
+                      className="mt-1 w-full bg-token-surfaceCard border border-[color:var(--border-subtle)] rounded-lg px-3 py-2 text-token-textMain text-sm"
                       value={draft[key]}
                       onChange={(e) => setDraft((d) => ({ ...d, [key]: e.target.value }))}
                     />
@@ -360,7 +360,7 @@ export default function AdminInventory() {
                     <input
                       type="number"
                       min={0}
-                      className="mt-1 w-full bg-[#13112e] border border-indigo-500/20 rounded-lg px-3 py-2 text-white text-sm"
+                      className="mt-1 w-full bg-token-surfaceCard border border-[color:var(--border-subtle)] rounded-lg px-3 py-2 text-token-textMain text-sm"
                       value={draft[key]}
                       onChange={(e) => setDraft((d) => ({ ...d, [key]: e.target.value }))}
                     />
@@ -389,7 +389,7 @@ export default function AdminInventory() {
                 <tbody>
                   {inventory.instructors_near_limit.map((row) => (
                     <tr key={row.id} className="border-b border-indigo-500/10">
-                      <td className="py-2 px-2 text-white">{row.full_name}</td>
+                      <td className="py-2 px-2 text-token-textMain">{row.full_name}</td>
                       <td className="py-2 px-2 text-gray-400">{String(row.plan || '').toUpperCase()}</td>
                       <td className="py-2 px-2 text-gray-300">
                         {row.sms_cap != null ? `${row.sms_used}/${row.sms_cap} (${row.sms_pct}%)` : '—'}
