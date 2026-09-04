@@ -259,6 +259,30 @@
       "whatsappPartial": "WhatsApp: {{sent}} göndərildi, {{failed}} uğursuz"
     }
   },
+  "billing": {
+    "planName": {
+      "basic": "SADƏ",
+      "pro": "STANDART",
+      "growth": "PROFESSIONAL",
+      "premium": "PREMİUM"
+    },
+    "higherPlanOrAbove": "{{plan}} və ya daha yüksək paket",
+    "banner": {
+      "titleWarning": "Diqqət",
+      "titleGrace": "Ödəniş gecikib",
+      "titleBlocked": "Limit",
+      "titleExpired": "Abunəlik",
+      "titlePending": "Ödəniş gözləmədədir",
+      "basicTrialExpired": "14 günlük SADƏ sınaq müddəti bitib. Davam etmək üçün {{higherPlan}} seçin.",
+      "basicTrialIpDenied": "Bu cihazdan artıq pulsuz SADƏ sınaq istifadə olunub. Davam etmək üçün {{higherPlan}} seçin.",
+      "subscriptionExpired": "Abunəlik aktiv deyil və ya ödəniş müddəti keçib. Davam etmək üçün paket seçin."
+    },
+    "cta": {
+      "viewPlans": "Paketlərə bax",
+      "smsTopup": "SMS Balansı Artır",
+      "storageTopup": "Yaddaş al"
+    }
+  },
   "live": {
     "historyTitle": "Canlı dərslər",
     "historySubtitle": "Keçmiş Mentorix Live sessiyaları və yazılar",
@@ -2369,6 +2393,16 @@
       "registerLogin": "Qeydiyyat / Giriş",
       "later": "Sonra",
       "footer": "Valideyn və ya tələbə kimi qeydiyyatdan keçə bilərsiniz."
+    },
+    "opportunity": {
+      "title": "🔥 Yeni tələbə fürsəti",
+      "body": "🔥 Yeni tələbə fürsəti: {{location}} {{subject}} axtarılır. Profilinizi {{plans}} paketə yüksəldin və axtarış nəticələrində həmişə ən yuxarıda görünün.",
+      "locationNamed": "{{area}} rayonunda",
+      "locationFallback": "seçilmiş ərazidə",
+      "subjectFallback": "müəllim",
+      "upgradePlans": "PROFESSIONAL və ya PREMİUM",
+      "currentPlan": "Cari paketiniz: {{feature}}",
+      "cta": "Paketi yüksəlt"
     }
   },
   "studentInquiries": {

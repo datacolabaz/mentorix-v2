@@ -505,6 +505,8 @@ export default function InstructorLayout() {
           <div className="mt-3 sm:mt-4 min-w-0 max-w-full box-border">
             <BillingBanner
               status={billing?.status}
+              plan={billing?.plan}
+              basicTrialIpDenied={Boolean(billing?.basic_trial_ip_denied)}
               tone={billing?.messages?.tone || null}
               banner={billing?.messages?.banner || null}
               cta={billing?.messages?.cta || null}

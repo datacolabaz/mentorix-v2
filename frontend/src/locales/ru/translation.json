@@ -259,6 +259,30 @@
       "whatsappPartial": "WhatsApp: отправлено {{sent}}, не удалось {{failed}}"
     }
   },
+  "billing": {
+    "planName": {
+      "basic": "BASIC",
+      "pro": "STANDART",
+      "growth": "PROFESSIONAL",
+      "premium": "PREMIUM"
+    },
+    "higherPlanOrAbove": "{{plan}} или выше",
+    "banner": {
+      "titleWarning": "Внимание",
+      "titleGrace": "Оплата просрочена",
+      "titleBlocked": "Лимит",
+      "titleExpired": "Подписка",
+      "titlePending": "Ожидается оплата",
+      "basicTrialExpired": "14-дневный пробный период BASIC истёк. Чтобы продолжить, выберите {{higherPlan}}.",
+      "basicTrialIpDenied": "Бесплатный пробный период BASIC с этого устройства уже использован. Чтобы продолжить, выберите {{higherPlan}}.",
+      "subscriptionExpired": "Подписка неактивна или срок оплаты истёк. Чтобы продолжить, выберите пакет."
+    },
+    "cta": {
+      "viewPlans": "Смотреть пакеты",
+      "smsTopup": "Пополнить SMS",
+      "storageTopup": "Купить память"
+    }
+  },
   "live": {
     "historyTitle": "Онлайн-уроки",
     "historySubtitle": "Прошлые сессии Mentorix Live и записи",
@@ -2543,6 +2567,16 @@
       "registerLogin": "Регистрация / Вход",
       "later": "Позже",
       "footer": "Вы можете зарегистрироваться как родитель или ученик."
+    },
+    "opportunity": {
+      "title": "🔥 Новая возможность: ученик",
+      "body": "🔥 Новая возможность: {{location}} ищут {{subject}}. Повысьте профиль до пакета {{plans}} и всегда будьте наверху результатов поиска.",
+      "locationNamed": "в районе {{area}}",
+      "locationFallback": "в выбранном районе",
+      "subjectFallback": "учитель",
+      "upgradePlans": "PROFESSIONAL или PREMIUM",
+      "currentPlan": "Ваш текущий пакет: {{feature}}",
+      "cta": "Повысить пакет"
     }
   },
   "studentInquiries": {
