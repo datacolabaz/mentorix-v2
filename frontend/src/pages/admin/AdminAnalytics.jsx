@@ -227,7 +227,7 @@ export default function AdminAnalytics() {
   const registrationsUi = formatRegistrations(ov)
 
   return (
-    <div className="p-4 sm:p-6 max-w-[1400px] mx-auto space-y-6">
+    <div className="p-4 sm:p-6 max-w-[1400px] mx-auto space-y-6" data-mentor-id="page:admin-analytics">
       <div className="space-y-4">
         <div>
           <h1 className="font-display font-bold text-2xl text-token-headingPrimary">Analitika</h1>

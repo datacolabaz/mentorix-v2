@@ -215,7 +215,7 @@ export default function InstructorSchedule() {
   }
 
   return (
-    <div className="p-4 sm:p-6 min-w-0 max-w-[1200px] mx-auto w-full">
+    <div className="p-4 sm:p-6 min-w-0 max-w-[1200px] mx-auto w-full" data-mentor-id="page:instructor-schedule">
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-3">
         <div>
           <h1 className="font-display font-bold text-xl sm:text-2xl text-token-textMain tracking-tight">{t('schedule.title')}</h1>

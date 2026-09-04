@@ -56,7 +56,7 @@ export default function MyGroups() {
   }
 
   return (
-    <div className="p-4 sm:p-6 w-full min-w-0 max-w-4xl mx-auto">
+    <div className="p-4 sm:p-6 w-full min-w-0 max-w-4xl mx-auto" data-mentor-id="page:student-groups">
       <ConfirmDialog
         open={Boolean(leaveConfirm)}
         onClose={() => !leaveBusy && setLeaveConfirm(null)}

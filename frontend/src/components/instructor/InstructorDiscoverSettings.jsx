@@ -187,7 +187,7 @@ export default function InstructorDiscoverSettings({ mapVisible, theme, inp }) {
   }
 
   return (
-    <Card id="discover-profile" className="p-4 sm:p-5 space-y-4 border border-indigo-500/20">
+    <Card id="discover-profile" data-mentor-id="page:discover-profile" className="p-4 sm:p-5 space-y-4 border border-indigo-500/20">
       <div>
         <h2
           className={[
