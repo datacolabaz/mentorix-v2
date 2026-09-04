@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import useUiStore from '../hooks/useUi'
 
-/** AZ | RU dil keçidi — auth, sidebar və landing navbar. */
+/** AZ | RU | EN dil keçidi — auth, sidebar və landing navbar. */
 export default function LanguageSwitcher({ className = '', tone = 'auto' }) {
   const { i18n, t } = useTranslation()
   const { locale, setLocale, theme } = useUiStore()
@@ -49,6 +49,7 @@ export default function LanguageSwitcher({ className = '', tone = 'auto' }) {
     >
       {btn('az', 'AZ')}
       {btn('ru', 'RU')}
+      {btn('en', 'EN')}
     </div>
   )
 }

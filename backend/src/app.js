@@ -21,6 +21,7 @@ const { runUniversityProgramScraper } = require('./jobs/universityProgramScraper
 const { ensureStarted: ensureCertificateIssueWorker } = require('./jobs/certificateIssueWorker');
 const { ensureStarted: ensureOpenExamGradingWorker } = require('./jobs/openExamGradingWorker');
 const { runOpenGradingInstructorNotifications } = require('./jobs/openGradingInstructorNotifications');
+const { runInstructorCompleteProfileReminders } = require('./jobs/instructorCompleteProfileReminders');
 const { ensureCertificateFontsReady } = require('./services/certificatePdfFonts');
 
 const { ensureAssignmentsUploadDir } = require('./services/assignmentFileStorage');
@@ -128,6 +129,12 @@ async function boot() {
     setTimeout(() => {
       runPackReminders().catch((e) => console.error('pack reminders startup', e.message));
     }, 45000);
+
+    setTimeout(() => {
+      runInstructorCompleteProfileReminders().catch((e) =>
+        console.error('instructor complete-profile reminders startup', e.message),
+      );
+    }, 60000);
   });
 }
 
@@ -193,6 +200,13 @@ cron.schedule('0 4 * * 0', () => {
 cron.schedule('0 5 * * *', () => {
   runOpenGradingInstructorNotifications().catch((e) =>
     console.error('open grading instructor notifications cron', e.message),
+  );
+});
+
+// Incomplete instructor profile emails: every 2 hours
+cron.schedule('10 */2 * * *', () => {
+  runInstructorCompleteProfileReminders().catch((e) =>
+    console.error('instructor complete-profile reminders cron', e.message),
   );
 });
 

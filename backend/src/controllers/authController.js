@@ -13,6 +13,7 @@ function signRoleSession(payload) {
     : sign(payload);
 }
 const { OAuth2Client } = require('google-auth-library');
+const { localeFromReq, persistUserLocale } = require('../lib/userLocale');
 const { sendSms, sendOtpSms } = require('../services/smsService');
 const { checkSmsQuota } = require('../services/smsQuotaService');
 const {
@@ -1855,6 +1856,8 @@ const googleLogin = async (req, res) => {
 
     if (!guardEmailVerifiedBeforeToken(res, user)) return;
 
+    await persistUserLocale(db, user.id, localeFromReq(req)).catch(() => {});
+
     const token = signRoleSession({ id: user.id, role: user.role });
     logAuthLogin(req, user, user.role);
     const sessionUser = {
@@ -2128,10 +2131,10 @@ const googleComplete = async (req, res) => {
         10
       );
       const { rows: created } = await db.query(
-        `INSERT INTO users (full_name, email, role, auth_provider, google_sub, phone_verified, password_hash, account_status, is_verified)
-         VALUES ($1, $2, $3, 'google', $4, FALSE, $5, 'active', TRUE)
+        `INSERT INTO users (full_name, email, role, auth_provider, google_sub, phone_verified, password_hash, account_status, is_verified, locale)
+         VALUES ($1, $2, $3, 'google', $4, FALSE, $5, 'active', TRUE, $6)
          RETURNING id, full_name, email, role, phone, phone_verified, is_verified`,
-        [fullName, g.email, r, g.sub, oauthPasswordPlaceholder]
+        [fullName, g.email, r, g.sub, oauthPasswordPlaceholder, localeFromReq(req)]
       );
       user = created[0];
       if (r === 'instructor') {
@@ -2172,6 +2175,8 @@ const googleComplete = async (req, res) => {
     }
 
     if (!guardEmailVerifiedBeforeToken(res, user)) return;
+
+    await persistUserLocale(db, user.id, localeFromReq(req)).catch(() => {});
 
     const token = signRoleSession({ id: user.id, role: user.role });
     logAuthLogin(req, user, user.role);

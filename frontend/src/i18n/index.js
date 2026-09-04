@@ -27,7 +27,7 @@ export function readStoredLocale() {
       String(localStorage.getItem(LOCALE_KEY) || localStorage.getItem(LEGACY_LOCALE_KEY) || '')
         .trim()
         .toLowerCase()
-    return v === 'ru' ? 'ru' : 'az'
+    return v === 'ru' ? 'ru' : v === 'en' ? 'en' : 'az'
   } catch {
     return 'az'
   }
@@ -35,7 +35,7 @@ export function readStoredLocale() {
 
 export function writeStoredLocale(locale) {
   try {
-    const next = locale === 'ru' ? 'ru' : 'az'
+    const next = locale === 'ru' ? 'ru' : locale === 'en' ? 'en' : 'az'
     localStorage.setItem(LOCALE_KEY, next)
     localStorage.removeItem(LEGACY_LOCALE_KEY)
   } catch {
@@ -45,7 +45,7 @@ export function writeStoredLocale(locale) {
 
 export function applyDocumentLocale(locale) {
   if (typeof document === 'undefined') return
-  const lang = locale === 'ru' ? 'ru' : 'az'
+  const lang = locale === 'ru' ? 'ru' : locale === 'en' ? 'en' : 'az'
   document.documentElement.lang = lang
 }
 
@@ -66,10 +66,11 @@ i18n
     resources: {
       az: { translation: azResources },
       ru: { translation: ruResources },
+      en: { translation: {} },
     },
     lng: initialLocale,
     fallbackLng: 'az',
-    supportedLngs: ['az', 'ru'],
+    supportedLngs: ['az', 'ru', 'en'],
     interpolation: { escapeValue: false },
     returnEmptyString: false,
   })
