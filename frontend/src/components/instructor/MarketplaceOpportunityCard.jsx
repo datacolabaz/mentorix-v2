@@ -22,12 +22,13 @@ function isGenericSubject(subject) {
  * SADƏ/PRO müəllimlər üçün: ictimai axtarışda fürsət bildirişi kartı.
  */
 export default function MarketplaceOpportunityCard({ theme = 'dark' }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState(null)
 
   useEffect(() => {
     let cancelled = false
+    setLoading(true)
     api
       .get('/instructor/marketplace-opportunity')
       .then((res) => {
@@ -42,7 +43,7 @@ export default function MarketplaceOpportunityCard({ theme = 'dark' }) {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [i18n.language])
 
   if (loading) return null
   if (!data?.eligible || !data?.opportunity) return null

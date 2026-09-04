@@ -1,4 +1,13 @@
 const { normalizePlanSlug, planRank, highestPlanSlug } = require('../config/plans');
+const {
+  lang,
+  planDisplayName,
+  joinOr,
+  higherPlanOrAbove,
+  ctaViewPlans,
+  ctaSmsTopup,
+  ctaStorageTopup,
+} = require('../lib/localeCopy');
 
 function isHighestTierPlan(planSlug, plansMap) {
   return planRank(planSlug) >= planRank(highestPlanSlug(plansMap));
@@ -25,12 +34,14 @@ function sortedActivePlans(plansMap) {
 }
 
 /** Axtarışda ön sıralama üçün tövsiyə olunan paketlər (cari səviyyədən yuxarı). */
-function mapSearchUpgradePlansLabel(plansMap, aboveSlug = 'pro') {
+function mapSearchUpgradePlansLabel(plansMap, aboveSlug = 'pro', locale = 'az') {
   const minRank = planRank(aboveSlug);
   const names = sortedActivePlans(plansMap)
     .filter(({ slug }) => planRank(slug) > minRank)
-    .map(({ slug, plan }) => planTitleOrSlug(plan, slug));
-  return joinAzOr(names);
+    .map(({ slug, plan }) =>
+      lang(locale) === 'az' ? planTitleOrSlug(plan, slug) : planDisplayName(slug, locale),
+    );
+  return joinOr(names, locale);
 }
 
 function allActivePlanTitlesList(plansMap) {
@@ -58,10 +69,15 @@ function nextPlanInMap(plansMap, currentSlug) {
   return best;
 }
 
-function higherPaidPlansLabel(plansMap, currentSlug = 'basic') {
+function higherPaidPlansLabel(plansMap, currentSlug = 'basic', locale = 'az') {
   const next = nextPlanInMap(plansMap, currentSlug);
-  const name = next ? planTitleOrSlug(next, next.slug) : 'ödənişli';
-  return `${name} və ya daha yüksək paket`;
+  const unpaid = lang(locale) === 'ru' ? 'платный' : lang(locale) === 'en' ? 'paid' : 'ödənişli';
+  const name = next
+    ? lang(locale) === 'az'
+      ? planTitleOrSlug(next, next.slug)
+      : planDisplayName(next.slug, locale)
+    : unpaid;
+  return higherPlanOrAbove(name, locale);
 }
 
 function higherPaidPlansSuffix(plansMap, currentSlug = 'basic') {
@@ -182,23 +198,23 @@ async function fetchPendingTopups(dbConn, userId) {
   };
 }
 
-function pickLimitCta({ plan, plansMap, reachedSms, reachedStorage, reachedStudents }) {
+function pickLimitCta({ plan, plansMap, reachedSms, reachedStorage, reachedStudents, locale = 'az' }) {
   const planSlug = normalizePlanSlug(plan);
   const onBasic = planSlug === 'basic';
   const highest = isHighestTierPlan(plan, plansMap);
   if (reachedStudents) {
-    return { label: 'Paketlərə bax', action: 'OPEN_SETTINGS_PLANS' };
+    return { label: ctaViewPlans(locale), action: 'OPEN_SETTINGS_PLANS' };
   }
   if (reachedSms && highest && !onBasic) {
-    return { label: 'SMS Balansı Artır', action: 'OPEN_SMS_TOPUP' };
+    return { label: ctaSmsTopup(locale), action: 'OPEN_SMS_TOPUP' };
   }
   if (reachedStorage && highest && !onBasic) {
-    return { label: 'Yaddaş al', action: 'OPEN_STORAGE_TOPUP' };
+    return { label: ctaStorageTopup(locale), action: 'OPEN_STORAGE_TOPUP' };
   }
   if (reachedSms || reachedStorage) {
-    return { label: 'Paketlərə bax', action: 'OPEN_SETTINGS_PLANS' };
+    return { label: ctaViewPlans(locale), action: 'OPEN_SETTINGS_PLANS' };
   }
-  return { label: 'Paketlərə bax', action: 'OPEN_SETTINGS_PLANS' };
+  return { label: ctaViewPlans(locale), action: 'OPEN_SETTINGS_PLANS' };
 }
 
 module.exports = {

@@ -1,4 +1,5 @@
 import { useEffect, useId, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { smsUsageDisplay, storageUsageFromBilling } from '../../lib/billingUsageDisplay'
 import { basicTrialCountdownText } from '../../lib/basicTrialCopy'
 
@@ -22,29 +23,33 @@ function fmtStorageMbPair(billing) {
   return `${Math.round(usedMb)} MB / ${Math.round(Number(limMb))} MB`
 }
 
-function fmtStudentsLine(billing) {
+function fmtStudentsLine(billing, t) {
   const used = Math.max(0, Number(billing?.usage?.students) || 0)
   const lim = billing?.limits?.students
-  if (lim == null || lim === '') return `${used} / ∞ istifadə olunur`
+  if (lim == null || lim === '') return t('billing.usage.usedUnlimited', { used })
   const cap = Math.max(0, Number(lim) || 0)
-  return `${used} / ${cap} istifadə olunur`
+  return t('billing.usage.usedOf', { used, limit: cap })
 }
 
-function fmtSmsRemainingLine(billing) {
+function fmtSmsRemainingLine(billing, t) {
   const sms = smsUsageDisplay(billing)
   const used = Math.max(0, Number(billing?.usage?.sms_monthly) || 0)
   const effective = sms.effective
-  if (effective == null || effective === '') return `${used} / ∞ qalıb`
+  if (effective == null || effective === '') return t('billing.usage.smsUnlimited', { used })
   const remaining = Math.max(0, Math.round(effective - used))
   const cap = Math.max(0, Math.round(effective))
-  return `${remaining} / ${cap} qalıb`
+  return t('billing.usage.smsLeft', { used: remaining, limit: cap })
 }
 
 function compactSummary(billing) {
   const students = Math.max(0, Number(billing?.usage?.students) || 0)
   const storage = fmtStorageMbPair(billing).split(' / ')[0]
-  const sms = fmtSmsRemainingLine(billing).split(' / ')[0]
-  return `👥 ${students} · 💾 ${storage} · 📱 ${sms}`
+  const sms = smsUsageDisplay(billing)
+  const used = Math.max(0, Number(billing?.usage?.sms_monthly) || 0)
+  const effective = sms.effective
+  const smsLeft =
+    effective == null || effective === '' ? used : Math.max(0, Math.round(effective - used))
+  return `👥 ${students} · 💾 ${storage} · 📱 ${smsLeft}`
 }
 
 function UsageRow({ icon, label, value, warn }) {
@@ -68,6 +73,7 @@ function UsageRow({ icon, label, value, warn }) {
 const STORAGE_KEY = 'mx_billing_pills_expanded_v1'
 
 export default function BillingUsagePills({ billing, planTitle = '', collapsible = true }) {
+  const { t } = useTranslation()
   const panelId = useId()
   const [expanded, setExpanded] = useState(false)
 
@@ -110,13 +116,17 @@ export default function BillingUsagePills({ billing, planTitle = '', collapsible
   const storageWarn = storage.limit != null && storage.pct >= 90
   const smsWarn = sms.overEffective
 
-  const planLabel = String(planTitle || '').trim() || 'Paket'
+  const planSlug = String(billing?.plan || '').toLowerCase()
+  const planName = t(`billing.planName.${planSlug}`, {
+    defaultValue: String(planTitle || '').trim() || 'Paket',
+  })
+  const planChip = t('billing.planChip', { plan: planName })
   const summary = compactSummary(billing)
-  const trialLine = basicTrialCountdownText(billing)
+  const trialLine = basicTrialCountdownText(billing, t)
 
   const header = (
     <>
-      <span className="text-sm font-bold text-token-textMain leading-snug truncate">📦 {planLabel} Paket</span>
+      <span className="text-sm font-bold text-token-textMain leading-snug truncate">📦 {planChip}</span>
       {collapsible ? (
         <span
           aria-hidden
@@ -152,9 +162,9 @@ export default function BillingUsagePills({ billing, planTitle = '', collapsible
           {trialLine ? (
             <p className="text-[11px] font-medium text-amber-600 dark:text-amber-200/90 leading-snug">{trialLine}</p>
           ) : null}
-          <UsageRow icon="👥" label="Tələbələr" value={fmtStudentsLine(billing)} warn={studentsWarn} />
-          <UsageRow icon="💾" label="Sənəd yaddaşı" value={fmtStorageMbPair(billing)} warn={storageWarn} />
-          <UsageRow icon="📱" label="SMS" value={fmtSmsRemainingLine(billing)} warn={smsWarn} />
+          <UsageRow icon="👥" label={t('billing.usage.students')} value={fmtStudentsLine(billing, t)} warn={studentsWarn} />
+          <UsageRow icon="💾" label={t('billing.usage.storage')} value={fmtStorageMbPair(billing)} warn={storageWarn} />
+          <UsageRow icon="📱" label={t('billing.usage.sms')} value={fmtSmsRemainingLine(billing, t)} warn={smsWarn} />
         </div>
       ) : (
         <p className="px-3 pb-2.5 text-[10px] text-token-textMuted leading-snug truncate">

@@ -281,6 +281,24 @@
       "viewPlans": "Paketlərə bax",
       "smsTopup": "SMS Balansı Artır",
       "storageTopup": "Yaddaş al"
+    },
+    "planChip": "{{plan}} Paket",
+    "trial": {
+      "ipDenied": "Bu cihazdan pulsuz sınaq artıq istifadə olunub",
+      "expired": "Pulsuz SADƏ paketin müddəti bitib",
+      "endsToday": "Pulsuz paket bu gün bitir",
+      "endsInOneDay": "Pulsuz paketin bitməsinə 1 gün qalıb",
+      "endsInDays": "Pulsuz paketin bitməsinə {{days}} gün qalıb",
+      "endDate": "Bitmə tarixi: {{date}}"
+    },
+    "usage": {
+      "students": "Tələbələr",
+      "storage": "Sənəd yaddaşı",
+      "sms": "SMS",
+      "usedOf": "{{used}} / {{limit}} istifadə olunur",
+      "usedUnlimited": "{{used}} / ∞ istifadə olunur",
+      "smsLeft": "{{used}} / {{limit}} qalıb",
+      "smsUnlimited": "{{used}} / ∞ qalıb"
     }
   },
   "live": {

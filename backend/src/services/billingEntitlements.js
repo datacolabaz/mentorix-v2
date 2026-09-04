@@ -18,6 +18,8 @@ const {
 const { countBillableSmsForPeriod } = require('../utils/smsBillableLog');
 const { countInstructorExamsThisMonth, countInstructorHomeworksThisMonth } = require('./examLimitService');
 const { syncUsageStudentsCount } = require('./usageStudentsSync');
+const { expiredBanner, expiredCode, ctaViewPlans } = require('../lib/localeCopy');
+const { normalizeLocale } = require('../lib/userLocale');
 
 const TZ = 'Asia/Baku';
 /** Aşağı paketə keçid: cari abunəlik dövrü ən azı 30 gün aktiv olmalıdır */
@@ -249,7 +251,9 @@ function buildMessages(status, ctx) {
     plan,
     plansMap,
     pendingTopup,
+    locale: localeRaw,
   } = ctx || {};
+  const locale = normalizeLocale(localeRaw);
 
   const highest = isHighestTierPlan(plan, plansMap);
   const onlySms =
@@ -325,13 +329,14 @@ function buildMessages(status, ctx) {
       reachedSms: Boolean(smsLine && smsLine.pct >= 80),
       reachedStorage: Boolean(stLine && stLine.pct >= 80),
       reachedStudents: false,
+      locale,
     });
     return { banner, cta };
   }
   if (status === 'grace') {
     return {
       banner: 'Ödəniş gecikib. Davam üçün paket vəziyyətini yeniləyin.',
-      cta: { label: 'Paketlərə bax', action: 'OPEN_SETTINGS_PLANS' },
+      cta: { label: ctaViewPlans(locale), action: 'OPEN_SETTINGS_PLANS' },
     };
   }
   if (status === 'blocked') {
@@ -352,8 +357,8 @@ function buildMessages(status, ctx) {
     }
     if (onBasic && (details?.reachedSms || details?.reachedStorage)) {
       return {
-        banner: `SADƏ sınaq limitinə çatdınız. Əlavə SMS/yaddaş bu paketdə mövcud deyil — ${higherPaidPlansLabel(plansMap, plan)} seçin.`,
-        cta: { label: 'Paketlərə bax', action: 'OPEN_SETTINGS_PLANS' },
+        banner: `SADƏ sınaq limitinə çatdınız. Əlavə SMS/yaddaş bu paketdə mövcud deyil — ${higherPaidPlansLabel(plansMap, plan, locale)} seçin.`,
+        cta: { label: ctaViewPlans(locale), action: 'OPEN_SETTINGS_PLANS' },
       };
     }
     const reasons = [];
@@ -369,19 +374,18 @@ function buildMessages(status, ctx) {
         reachedSms: details?.reachedSms,
         reachedStorage: details?.reachedStorage,
         reachedStudents: details?.reachedStudents,
+        locale,
       }),
     };
   }
   if (status === 'expired') {
     const onBasic = normalizePlanSlug(plan) === 'basic';
     const ipDenied = Boolean(ctx?.basic_trial_ip_denied);
+    const higherPlan = higherPaidPlansLabel(plansMap, plan, locale);
     return {
-      banner: onBasic
-        ? ipDenied
-          ? `Bu cihazdan artıq pulsuz SADƏ sınaq istifadə olunub. Davam etmək üçün ${higherPaidPlansLabel(plansMap, plan)} seçin.`
-          : `14 günlük SADƏ sınaq müddəti bitib. Davam etmək üçün ${higherPaidPlansLabel(plansMap, plan)} seçin.`
-        : 'Abunəlik aktiv deyil və ya ödəniş müddəti keçib. Davam etmək üçün paket seçin.',
-      cta: { label: 'Paketlərə bax', action: 'OPEN_SETTINGS_PLANS' },
+      code: expiredCode({ onBasic, ipDenied }),
+      banner: expiredBanner({ onBasic, ipDenied, higherPlan, locale }),
+      cta: { label: ctaViewPlans(locale), action: 'OPEN_SETTINGS_PLANS' },
     };
   }
   return { banner: null, cta: null };
@@ -422,7 +426,8 @@ async function reconcileSubscriptionPlanFromLastPaidPlan(dbConn, userId) {
   }
 }
 
-async function resolveEntitlements(userId) {
+async function resolveEntitlements(userId, opts = {}) {
+  const locale = normalizeLocale(opts.locale);
   const basics = await getUserBasics(db, userId);
   if (!basics || !basics.is_active) throw httpError('USER_NOT_FOUND', 404, 'USER_NOT_FOUND');
   if (basics.role !== 'instructor') throw httpError('FORBIDDEN', 403, 'FORBIDDEN');
@@ -557,6 +562,7 @@ async function resolveEntitlements(userId) {
     plansMap,
     pendingTopup,
     basic_trial_ip_denied,
+    locale,
   });
 
   const can_buy_addons = planSlug !== 'basic' && subscription_active;

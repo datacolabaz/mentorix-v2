@@ -72,11 +72,27 @@ function nextPlanName(t, plan) {
   return t(`billing.planName.${next}`)
 }
 
-function localizedExpiredBanner(t, plan, basicTrialIpDenied) {
+const BANNER_CODE_KEYS = {
+  BASIC_TRIAL_EXPIRED: 'billing.banner.basicTrialExpired',
+  BASIC_TRIAL_IP_DENIED: 'billing.banner.basicTrialIpDenied',
+  SUBSCRIPTION_EXPIRED: 'billing.banner.subscriptionExpired',
+}
+
+function looksLikeExpiredTrial(banner) {
+  const s = String(banner || '')
+  return /sınaq müddəti bitib|пробный период BASIC истёк/i.test(s)
+}
+
+function localizedExpiredBanner(t, plan, basicTrialIpDenied, messageCode) {
   const planSlug = String(plan || '').toLowerCase()
-  if (planSlug === 'basic') {
+  const onBasic = planSlug === 'basic' || messageCode === 'BASIC_TRIAL_EXPIRED' || messageCode === 'BASIC_TRIAL_IP_DENIED'
+  if (messageCode && BANNER_CODE_KEYS[messageCode]) {
+    const higherPlan = t('billing.higherPlanOrAbove', { plan: nextPlanName(t, onBasic ? 'basic' : planSlug) })
+    return t(BANNER_CODE_KEYS[messageCode], { higherPlan })
+  }
+  if (onBasic) {
     const higherPlan = t('billing.higherPlanOrAbove', { plan: nextPlanName(t, 'basic') })
-    if (basicTrialIpDenied) {
+    if (basicTrialIpDenied || messageCode === 'BASIC_TRIAL_IP_DENIED') {
       return t('billing.banner.basicTrialIpDenied', { higherPlan })
     }
     return t('billing.banner.basicTrialExpired', { higherPlan })
@@ -92,6 +108,7 @@ export default function BillingBanner({
   tone,
   plan,
   basicTrialIpDenied,
+  messageCode,
 }) {
   const { t } = useTranslation()
   const { theme } = useUiStore()
@@ -101,8 +118,11 @@ export default function BillingBanner({
   if (!banner && !cta && s !== 'expired') return null
 
   const title = TITLE_KEYS[s] ? t(TITLE_KEYS[s]) : ''
-  const displayBanner =
-    s === 'expired' ? localizedExpiredBanner(t, plan, basicTrialIpDenied) : banner || '—'
+  const useExpiredCopy =
+    s === 'expired' || Boolean(BANNER_CODE_KEYS[messageCode]) || looksLikeExpiredTrial(banner)
+  const displayBanner = useExpiredCopy
+    ? localizedExpiredBanner(t, plan, basicTrialIpDenied, messageCode)
+    : banner || '—'
 
   const action = cta && typeof cta === 'object' ? cta.action : null
   const apiLabel = cta && typeof cta === 'object' ? cta.label : cta

@@ -507,6 +507,7 @@ export default function InstructorLayout() {
               status={billing?.status}
               plan={billing?.plan}
               basicTrialIpDenied={Boolean(billing?.basic_trial_ip_denied)}
+              messageCode={billing?.messages?.code || null}
               tone={billing?.messages?.tone || null}
               banner={billing?.messages?.banner || null}
               cta={billing?.messages?.cta || null}

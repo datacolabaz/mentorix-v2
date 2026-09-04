@@ -34,6 +34,7 @@ function callbackUrlFromReq(req) {
 }
 
 const { clientIp } = require('../utils/clientIp');
+const { localeFromReq } = require('../lib/userLocale');
 
 function ipAllowed(req) {
   const list = String(process.env.PAYRIFF_CALLBACK_IPS || '').trim();
@@ -52,7 +53,7 @@ function callbackTokenOk(req) {
 
 router.get('/status', authenticate, authorize('instructor'), async (req, res) => {
   try {
-    const out = await resolveEntitlements(req.user.id);
+    const out = await resolveEntitlements(req.user.id, { locale: localeFromReq(req) });
     res.json({
       plan: out.plan,
       can_buy_addons: out.can_buy_addons,
