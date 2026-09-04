@@ -11,7 +11,9 @@ function frontendBaseUrl() {
 }
 
 const RESEND_API_KEY = String(process.env.RESEND_API_KEY || '').trim();
-const EMAIL_FROM = String(process.env.VERIFY_EMAIL_FROM || process.env.EMAIL_FROM || '').trim();
+const EMAIL_FROM = String(
+  process.env.INSTRUCTOR_COMPLETE_PROFILE_FROM || 'Mentorix <info@mentorix.az>',
+).trim();
 
 function escapeHtml(s) {
   return String(s || '')

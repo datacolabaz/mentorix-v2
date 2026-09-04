@@ -17,9 +17,9 @@ function transport() {
   return cachedTransport;
 }
 
-async function sendEmail({ to, subject, text, html, attachments }) {
+async function sendEmail({ to, subject, text, html, attachments, from: fromOverride }) {
   if (!smtpEnabled()) return { skipped: true };
-  const from = process.env.SMTP_FROM || process.env.SMTP_USER;
+  const from = fromOverride || process.env.SMTP_FROM || process.env.SMTP_USER;
   const info = await transport().sendMail({
     from,
     to,
