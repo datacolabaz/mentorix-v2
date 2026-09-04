@@ -1,5 +1,6 @@
 const db = require('../utils/db');
 const { upsertStudentContactPhone } = require('../utils/studentPhone');
+const { normalizeLocale } = require('../lib/userLocale');
 
 /**
  * PATCH /api/auth/profile — öz adını yeniləmək (müəllim / kurs / tələbə).
@@ -9,7 +10,8 @@ const patchMyProfile = async (req, res) => {
   try {
     const hasName = req.body?.full_name != null;
     const hasPhone = req.body?.phone_number != null;
-    if (!hasName && !hasPhone) {
+    const hasLocale = req.body?.locale != null;
+    if (!hasName && !hasPhone && !hasLocale) {
       return res.status(400).json({ success: false, message: 'Yenilənəcək məlumat göndərin' });
     }
 
@@ -36,6 +38,12 @@ const patchMyProfile = async (req, res) => {
         await client.query(
           `UPDATE users SET full_name = $1 WHERE id = $2 AND deleted_at IS NULL`,
           [fullName, req.user.id],
+        );
+      }
+      if (hasLocale) {
+        await client.query(
+          `UPDATE users SET locale = $1 WHERE id = $2 AND deleted_at IS NULL`,
+          [normalizeLocale(req.body.locale), req.user.id],
         );
       }
       const { rows } = await client.query(

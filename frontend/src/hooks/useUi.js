@@ -51,11 +51,20 @@ const useUiStore = create((set, get) => ({
 
   locale: readStoredLocale(), // az | ru
   setLocale: (locale) => {
-    const next = locale === 'ru' ? 'ru' : 'az'
+    const next = locale === 'ru' ? 'ru' : locale === 'en' ? 'en' : 'az'
     writeStoredLocale(next)
     applyDocumentLocale(next)
     void i18n.changeLanguage(next)
     set({ locale: next })
+    try {
+      if (localStorage.getItem('mx_token')) {
+        void import('../lib/api').then(({ default: api }) =>
+          api.patch('/auth/profile', { locale: next }).catch(() => {}),
+        )
+      }
+    } catch {
+      /* ignore */
+    }
   },
 }))
 
