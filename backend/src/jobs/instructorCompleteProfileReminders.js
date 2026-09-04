@@ -2,7 +2,6 @@ const db = require('../utils/db');
 const { normalizeLocale } = require('../lib/userLocale');
 const { sendCompleteProfileEmail } = require('../services/instructorCompleteProfileEmail');
 
-const MIN_AGE = "INTERVAL '2 hours'";
 const RESEND_AFTER = "INTERVAL '7 days'";
 const MAX_SENDS = 2;
 
@@ -40,7 +39,6 @@ async function runInstructorCompleteProfileReminders() {
        AND u.deleted_at IS NULL
        AND u.email IS NOT NULL
        AND TRIM(u.email) <> ''
-       AND u.created_at < NOW() - ${MIN_AGE}
        AND COALESCE(ip.complete_profile_email_count, 0) < $1
        AND (
          ip.complete_profile_email_sent_at IS NULL

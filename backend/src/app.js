@@ -134,7 +134,7 @@ async function boot() {
       runInstructorCompleteProfileReminders().catch((e) =>
         console.error('instructor complete-profile reminders startup', e.message),
       );
-    }, 60000);
+    }, 15000);
   });
 }
 
