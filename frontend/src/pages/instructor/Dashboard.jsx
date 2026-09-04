@@ -357,7 +357,7 @@ export default function InstructorDashboard() {
           </Button>
         </div>
       </Modal>
-      <div className="py-3 sm:py-6 min-w-0 w-full max-w-full box-border overflow-x-hidden">
+      <div className="py-3 sm:py-6 min-w-0 w-full max-w-full box-border overflow-x-hidden" data-mentor-id="page:instructor-home">
       <div className="mb-4 sm:mb-6">
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 min-w-0">
           <div className="min-w-0">

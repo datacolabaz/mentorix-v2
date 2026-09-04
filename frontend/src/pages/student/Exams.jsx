@@ -1240,7 +1240,7 @@ export default function StudentExams() {
   }
 
   return (
-    <div className="p-4 sm:p-6 w-full min-w-0 max-w-3xl mx-auto">
+    <div className="p-4 sm:p-6 w-full min-w-0 max-w-3xl mx-auto" data-mentor-id="page:student-exams">
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-6 pl-20 sm:pl-0">
         <div>
           <h1 className="font-display font-bold text-2xl break-words text-token-textMain">İmtahanlarım</h1>

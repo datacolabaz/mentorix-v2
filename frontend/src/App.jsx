@@ -42,6 +42,8 @@ import AdminAnalytics from './pages/admin/AdminAnalytics'
 import AdminCertifiedExamVerifications from './pages/admin/AdminCertifiedExamVerifications'
 import AnalyticsPageTracker from './components/analytics/AnalyticsPageTracker'
 import PresenceHeartbeat from './components/analytics/PresenceHeartbeat'
+import { DigitalMentorProvider } from './mentor/DigitalMentorProvider'
+import DigitalMentorHost from './mentor/DigitalMentorHost'
 
 import InstructorDashboard from './pages/instructor/Dashboard'
 import InstructorStudents from './pages/instructor/Students'
@@ -153,7 +155,7 @@ export default function App() {
   }, [])
 
   return (
-    <>
+    <DigitalMentorProvider>
       <ScrollToTop />
       <AnalyticsPageTracker />
       <PresenceHeartbeat />
@@ -309,6 +311,7 @@ export default function App() {
 
       <Route path="*" element={<Placeholder title="404 — Tapılmadı" />} />
     </Routes>
-    </>
+      <DigitalMentorHost />
+    </DigitalMentorProvider>
   )
 }

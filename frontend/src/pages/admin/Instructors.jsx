@@ -126,7 +126,7 @@ export default function AdminInstructors() {
   }
 
   return (
-    <div className="p-6">
+    <div className="p-6" data-mentor-id="page:admin-instructors">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <div>
           <h1 className="font-display font-bold text-2xl text-token-textMain">Muellimler</h1>

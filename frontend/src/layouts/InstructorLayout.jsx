@@ -86,6 +86,12 @@ export default function InstructorLayout() {
   }, [location.pathname])
 
   useEffect(() => {
+    const openNav = () => setNavOpen(true)
+    window.addEventListener('mx:mentor-open-nav', openNav)
+    return () => window.removeEventListener('mx:mentor-open-nav', openNav)
+  }, [])
+
+  useEffect(() => {
     const el = mainRef.current
     if (!el) return
     el.scrollLeft = 0
@@ -322,7 +328,10 @@ export default function InstructorLayout() {
           type="button"
           aria-label="Menyunu bağla"
           className="lg:hidden fixed inset-0 z-[1090] bg-black/60"
-          onClick={() => setNavOpen(false)}
+          onClick={() => {
+            if (document.body.dataset.mentorTour) return
+            setNavOpen(false)
+          }}
         />
       )}
 
@@ -447,6 +456,7 @@ export default function InstructorLayout() {
                       key={item.to}
                       to={item.to}
                       end={item.end}
+                      data-mentor-id={`nav:${item.to}`}
                       onClick={() => setNavOpen(false)}
                       className={({ isActive }) => sidebarNavClass(isActive, theme)}
                     >

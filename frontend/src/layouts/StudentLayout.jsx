@@ -96,6 +96,12 @@ function StudentLayoutInner() {
   }, [location.pathname])
 
   useEffect(() => {
+    const openNav = () => setNavOpen(true)
+    window.addEventListener('mx:mentor-open-nav', openNav)
+    return () => window.removeEventListener('mx:mentor-open-nav', openNav)
+  }, [])
+
+  useEffect(() => {
     if (focusMode) setNavOpen(false)
   }, [focusMode])
 
@@ -161,7 +167,10 @@ function StudentLayoutInner() {
             type="button"
             className="md:hidden fixed inset-0 z-[1090] bg-black/60"
             aria-label="Menyunu bağla"
-            onClick={closeNav}
+            onClick={() => {
+              if (document.body.dataset.mentorTour) return
+              closeNav()
+            }}
           />
         )}
 
@@ -251,6 +260,7 @@ function StudentLayoutInner() {
                         key={item.to}
                         to={item.to}
                         end={item.end}
+                        data-mentor-id={`nav:${item.to}`}
                         onClick={closeNav}
                         className={({ isActive }) => sidebarNavClass(isActive, theme)}
                       >

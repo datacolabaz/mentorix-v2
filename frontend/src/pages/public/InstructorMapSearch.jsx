@@ -302,7 +302,7 @@ export default function InstructorMapSearch() {
   )
 
   return (
-    <div className="h-[100dvh] overflow-hidden bg-[#0b0b0b] text-white flex flex-col">
+    <div className="h-[100dvh] overflow-hidden bg-[#0b0b0b] text-white flex flex-col" data-mentor-id="page:mentor-search">
       <PublicPageTopBar
         backTo="/"
         title={t('marketplace.title')}

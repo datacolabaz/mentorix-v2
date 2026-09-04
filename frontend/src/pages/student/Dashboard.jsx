@@ -133,7 +133,7 @@ export default function StudentDashboard() {
   }, [exams])
 
   return (
-    <div className="p-4 sm:p-6 w-full min-w-0 max-w-full box-border overflow-x-hidden">
+    <div className="p-4 sm:p-6 w-full min-w-0 max-w-full box-border overflow-x-hidden" data-mentor-id="page:student-home">
       <div className="mb-6 min-w-0">
         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 min-w-0">
           <div>

@@ -16,6 +16,19 @@
     "menu": "Menyu",
     "closeMenu": "Menyunu bağla"
   },
+  "mentor": {
+    "title": "Rəqəmsal mentor",
+    "stepOf": "Addım {{current}} / {{total}}",
+    "next": "Növbəti",
+    "skip": "Keç",
+    "askAi": "AI-dən soruş",
+    "finish": "Bitir",
+    "send": "Göndər",
+    "askPlaceholder": "Sual yazın…",
+    "askHint": "Mentorix səhifələri, axtarış və cədvəl haqqında soruşun. Mövcud olmayan funksiya uydurulmur.",
+    "backToTour": "← Tura qayıt",
+    "ready": "Rəqəmsal mentor hazırdır."
+  },
   "layout": {
     "theme": "Tema",
     "themeDark": "Gecə",

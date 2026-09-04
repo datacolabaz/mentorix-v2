@@ -273,7 +273,7 @@ export default function StudentSchedule() {
   }
 
   return (
-    <div className="p-4 sm:p-6 w-full min-w-0 max-w-4xl mx-auto">
+    <div className="p-4 sm:p-6 w-full min-w-0 max-w-4xl mx-auto" data-mentor-id="page:student-schedule">
       <ConfirmDialog
         open={Boolean(deleteSlotId)}
         onClose={() => setDeleteSlotId(null)}
