@@ -5,15 +5,23 @@ const { normalizePlanSlug } = require('../config/plans');
 const { shouldReceiveSearchOpportunityAlerts } = require('./mapListingPlanService');
 const { getActivePlansMap } = require('./subscriptionPlansService');
 const { mapSearchUpgradePlansLabel } = require('./billingAlertHelpers');
+const {
+  opportunityTitle,
+  opportunityBody,
+  ctaUpgrade,
+} = require('../lib/localeCopy');
 
 const NOTIFY_TYPE = 'marketplace_opportunity';
 const DEDUPE_HOURS = 24;
 
-function buildOpportunityBody(areaLabel, subjectLabel, plansMap) {
-  const area = areaLabel || 'seçilmiş ərazidə';
-  const subject = subjectLabel || 'müəllim';
-  const upgradeLabel = mapSearchUpgradePlansLabel(plansMap, 'pro');
-  return `🔥 Yeni tələbə fürsəti: ${area} rayonunda ${subject} axtarılır. Profilinizi ${upgradeLabel} paketə yüksəldin və axtarış nəticələrində həmişə ən yuxarıda görünün.`;
+function buildOpportunityBody(areaLabel, subjectLabel, plansMap, locale = 'az') {
+  const upgradeLabel = mapSearchUpgradePlansLabel(plansMap, 'pro', locale);
+  return opportunityBody({
+    areaLabel,
+    subjectLabel,
+    plansLabel: upgradeLabel,
+    locale,
+  });
 }
 
 async function resolveAreaName(areaId) {
@@ -135,8 +143,8 @@ async function notifyMarketplaceSearchOpportunity({
     fmt,
   ].join('|');
 
-  const title = '🔥 Yeni tələbə fürsəti';
-  const body = buildOpportunityBody(areaLabel, subjectLabel, plansMap);
+  const title = opportunityTitle('az');
+  const body = buildOpportunityBody(areaLabel, subjectLabel, plansMap, 'az');
   let notified = 0;
 
   for (const row of instructors) {
@@ -176,7 +184,7 @@ async function notifyMarketplaceSearchOpportunity({
   return { notified, search_key: searchKey };
 }
 
-async function getLatestMarketplaceOpportunity(userId) {
+async function getLatestMarketplaceOpportunity(userId, locale = 'az') {
   const { rows: planRows } = await db.query(
     `SELECT COALESCE(s.plan, 'basic') AS plan
      FROM users u
@@ -203,19 +211,19 @@ async function getLatestMarketplaceOpportunity(userId) {
 
   const plansMap = await getActivePlansMap();
   const meta = row.meta && typeof row.meta === 'object' ? row.meta : {};
-  const body = buildOpportunityBody(meta.area_name, meta.category_name, plansMap);
+  const body = buildOpportunityBody(meta.area_name, meta.category_name, plansMap, locale);
 
   return {
     eligible: true,
     plan,
     opportunity: {
       id: row.id,
-      title: row.title,
+      title: opportunityTitle(locale),
       body,
       is_read: row.is_read,
       created_at: row.created_at,
       meta: row.meta,
-      cta_label: 'Paketi yüksəlt',
+      cta_label: ctaUpgrade(locale),
       cta_path: '/instructor/settings',
     },
   };

@@ -1,4 +1,5 @@
 const { normalizePlanSlug, planRank } = require('../config/plans');
+const { mapFeatureLine } = require('../lib/localeCopy');
 
 /** SQL: premium → growth → pro → basic (ASC = yuxarıda) */
 function sqlPlanListingPriority(planColumn = "COALESCE(s.plan, 'basic')") {
@@ -64,8 +65,8 @@ const MAP_FEATURE_BY_PLAN = {
   premium: '🔥 Axtarışda həmişə ən yuxarıda (TOP)',
 };
 
-function mapFeatureLineForPlan(planSlug) {
-  return MAP_FEATURE_BY_PLAN[normalizePlanSlug(planSlug)] || MAP_FEATURE_BY_PLAN.basic;
+function mapFeatureLineForPlan(planSlug, locale = 'az') {
+  return mapFeatureLine(planSlug, locale);
 }
 
 function shouldReceiveSearchOpportunityAlerts(planSlug) {

@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { basicTrialCountdownText, basicTrialEndDateLabel } from '../../lib/basicTrialCopy'
 import { isBasicPlan, isBasicTrialExpired } from '../../lib/subscriptionPlanGuards'
 
@@ -8,14 +9,15 @@ export default function BasicTrialCountdownBanner({
   compact = false,
   className = '',
 }) {
-  const text = basicTrialCountdownText(billing)
+  const { t, i18n } = useTranslation()
+  const text = basicTrialCountdownText(billing, t)
   if (!isBasicPlan(billing) || !text) return null
 
   const expired = isBasicTrialExpired(billing) || billing?.basic_trial_ip_denied
   // Expired / blocked trial is already shown in the global billing header — avoid duplicate banner.
   if (expired) return null
 
-  const endLabel = basicTrialEndDateLabel(billing)
+  const endLabel = basicTrialEndDateLabel(billing, i18n.language)
 
   return (
     <div
@@ -45,7 +47,7 @@ export default function BasicTrialCountdownBanner({
               theme === 'dark' ? 'text-emerald-200/75' : 'text-emerald-900/70',
             ].join(' ')}
           >
-            Bitmə tarixi: {endLabel}
+            {t('billing.trial.endDate', { date: endLabel })}
           </div>
         ) : null}
       </div>
@@ -57,7 +59,7 @@ export default function BasicTrialCountdownBanner({
           theme === 'dark' ? 'text-emerald-200' : 'text-emerald-800',
         ].join(' ')}
       >
-        Paketlərə bax →
+        {t('billing.cta.viewPlans')} →
       </Link>
     </div>
   )
