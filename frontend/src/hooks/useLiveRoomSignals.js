@@ -83,6 +83,15 @@ export default function useLiveRoomSignals() {
     [publish],
   )
 
+  const hydrateChat = useCallback((incoming) => {
+    const rows = Array.isArray(incoming) ? incoming : []
+    setMessages((prev) => {
+      const seen = new Set(rows.map((m) => m.id))
+      const extra = prev.filter((m) => m.id && !seen.has(m.id))
+      return [...rows, ...extra].sort((a, b) => (a.at || 0) - (b.at || 0)).slice(-200)
+    })
+  }, [])
+
   const sendChat = useCallback(
     async (text, fileMeta) => {
       const clean = String(text || '').trim().slice(0, 240)
@@ -96,7 +105,7 @@ export default function useLiveRoomSignals() {
         local: true,
         at: Date.now(),
       }
-      setMessages((prev) => [...prev.slice(-79), msg])
+      setMessages((prev) => [...prev.slice(-199), msg])
       try {
         await publish(LIVE_CHAT_TOPIC, { t: 'chat', m: clean, f: file || undefined }, true)
       } catch {
@@ -123,7 +132,7 @@ export default function useLiveRoomSignals() {
         const file = sanitizeLiveChatFile(data.f)
         if (!text && !file) return
         setMessages((prev) => [
-          ...prev.slice(-79),
+          ...prev.slice(-199),
           {
             id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
             text,
@@ -159,5 +168,5 @@ export default function useLiveRoomSignals() {
     }
   }, [room, pushReaction])
 
-  return { reactions, messages, sendReaction, sendChat, sendMediaCommand }
+  return { reactions, messages, sendReaction, sendChat, sendMediaCommand, hydrateChat }
 }

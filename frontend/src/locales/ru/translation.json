@@ -389,7 +389,7 @@
     "participant": "Участник",
     "chatAttach": "Прикрепить файл",
     "chatFileTooLarge": "Файл не больше 5 МБ",
-    "chatFileType": "Можно отправить только JPEG, PNG, WebP и PDF",
+    "chatFileType": "Можно PDF, изображения, Office, текст и код (xlsx, txt, py, js…). exe нельзя.",
     "chatFileFailed": "Не удалось отправить файл",
     "chatUploading": "Загрузка…",
     "scheduleWhen": "Запланированное время (необязательно)",

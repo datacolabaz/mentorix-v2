@@ -6,9 +6,11 @@ import {
   useLocalParticipant,
   useTracks,
 } from '@livekit/components-react'
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import useLiveRoomSignals from '../../hooks/useLiveRoomSignals'
 import api from '../../lib/api'
+import useAuthStore from '../../hooks/useAuth'
+import { mapLiveChatHistory } from '../../lib/liveChatFile'
 import useLiveAdmissions from '../../hooks/useLiveAdmissions'
 import { liveGridCountAttr, liveTileKey } from '../../lib/liveGrid'
 import LiveInCallChat from './LiveInCallChat'
@@ -64,9 +66,67 @@ function MentorixParticipantTile({
 /** LiveKit konfrans — bərabər pəncərələr, qəbul paneli, mikrofon/kamera. */
 export default function GuestAwareVideoConference({ roomCode, isInstructor = false, guestAuth = null }) {
   const { t } = useTranslation()
+  const { user } = useAuthStore()
   const [chatOpen, setChatOpen] = useState(false)
   const { localParticipant } = useLocalParticipant()
-  const { reactions, messages, sendReaction, sendChat, sendMediaCommand } = useLiveRoomSignals()
+  const { reactions, messages, sendReaction, sendChat, sendMediaCommand, hydrateChat } = useLiveRoomSignals()
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = guestAuth?.inviteToken
+          ? await api.get(
+              `/public/live-guest/${encodeURIComponent(guestAuth.inviteToken)}/chat-messages`,
+              { params: { participantId: guestAuth.participantId } },
+            )
+          : roomCode
+            ? await api.get(`/live/${encodeURIComponent(roomCode)}/chat-messages`)
+            : null
+        if (cancelled || !res?.messages) return
+        hydrateChat(
+          mapLiveChatHistory(res.messages, {
+            userId: user?.id,
+            guestParticipantId: guestAuth?.participantId,
+          }),
+        )
+      } catch {
+        /* history is best-effort */
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [roomCode, guestAuth?.inviteToken, guestAuth?.participantId, hydrateChat, user?.id])
+
+  const persistChat = useCallback(
+    async (text, fileMeta) => {
+      const payload = { text, fileUrl: fileMeta?.url }
+      if (guestAuth?.inviteToken) {
+        await api.post(`/public/live-guest/${encodeURIComponent(guestAuth.inviteToken)}/chat-messages`, {
+          ...payload,
+          participantId: guestAuth.participantId,
+        })
+        return
+      }
+      if (!roomCode) return
+      await api.post(`/live/${encodeURIComponent(roomCode)}/chat-messages`, payload)
+    },
+    [guestAuth, roomCode],
+  )
+
+  const sendChatAndStore = useCallback(
+    async (text, fileMeta) => {
+      try {
+        await persistChat(text, fileMeta)
+      } catch {
+        /* still fan-out over LiveKit for people already in the room */
+      }
+      return sendChat(text, fileMeta)
+    },
+    [persistChat, sendChat],
+  )
+
   const uploadChatFile = useCallback(
     async (file) => {
       const form = new FormData()
@@ -124,7 +184,7 @@ export default function GuestAwareVideoConference({ roomCode, isInstructor = fal
           open={chatOpen}
           onClose={() => setChatOpen(false)}
           messages={messages}
-          onSend={sendChat}
+          onSend={sendChatAndStore}
           onUploadFile={uploadChatFile}
           guestAuth={guestAuth}
         />

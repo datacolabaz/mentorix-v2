@@ -2,6 +2,7 @@ const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
 const db = require('../utils/db');
+const { isAllowedLiveChatFilename, shouldInlineLiveChatFile } = require('../lib/liveChatFileTypes');
 
 const LIVE_CHAT_UPLOAD_DIR = path.join(__dirname, '../../uploads/live-chat');
 fs.mkdirSync(LIVE_CHAT_UPLOAD_DIR, { recursive: true });
@@ -17,17 +18,8 @@ const storage = multer.diskStorage({
 });
 
 function liveChatFileFilter(_req, file, cb) {
-  const mime = String(file.mimetype || '').toLowerCase();
-  const blocked = new Set(['image/svg+xml', 'text/html', 'application/javascript']);
-  if (blocked.has(mime)) {
-    const err = new Error('Bu fayl tipi qəbul olunmur');
-    err.statusCode = 400;
-    return cb(err);
-  }
-  const ok =
-    mime === 'image/jpeg' || mime === 'image/png' || mime === 'image/webp' || mime === 'application/pdf';
-  if (!ok) {
-    const err = new Error('Yalnız JPEG, PNG, WebP və PDF faylları qəbul olunur (maks. 5 MB)');
+  if (!isAllowedLiveChatFilename(file.originalname, file.mimetype)) {
+    const err = new Error('Bu fayl tipi qəbul olunmur (məs. exe). PDF, şəkil, Office, mətn və kod faylları olar.');
     err.statusCode = 400;
     return cb(err);
   }
@@ -100,10 +92,16 @@ function sendLiveChatFile(res, row) {
     res.status(404).json({ success: false, message: 'Fayl tapılmadı' });
     return;
   }
-  res.setHeader('Content-Type', row.content_type || 'application/octet-stream');
+  const original = row.original_name || row.filename;
+  const inline = shouldInlineLiveChatFile(original);
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader(
+    'Content-Type',
+    inline ? row.content_type || 'application/octet-stream' : 'application/octet-stream',
+  );
   res.setHeader(
     'Content-Disposition',
-    `inline; filename="${encodeURIComponent(row.original_name || row.filename)}"`,
+    `${inline ? 'inline' : 'attachment'}; filename="${encodeURIComponent(original)}"`,
   );
   fs.createReadStream(filePath).pipe(res);
 }
