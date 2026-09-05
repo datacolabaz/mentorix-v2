@@ -389,7 +389,7 @@
     "participant": "İştirakçı",
     "chatAttach": "Fayl əlavə et",
     "chatFileTooLarge": "Fayl 5 MB-dan böyük ola bilməz",
-    "chatFileType": "Yalnız JPEG, PNG, WebP və PDF göndərmək olar",
+    "chatFileType": "PDF, şəkil, Office, mətn və kod faylları olar (xlsx, txt, py, js…). Exe göndərmək olmaz.",
     "chatFileFailed": "Fayl göndərilmədi",
     "chatUploading": "Yüklənir…",
     "scheduleWhen": "Təyin olunmuş vaxt (istəyə bağlı)",

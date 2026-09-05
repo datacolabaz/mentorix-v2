@@ -30,6 +30,8 @@ const { uploadLiveChatAttachment } = require('../services/liveChatAttachmentStor
 const {
   multerFail,
   postAuthedChatAttachment,
+  postAuthedChatMessage,
+  getAuthedChatHistory,
   serveLiveChatAttachment,
 } = require('../controllers/liveChatAttachmentController');
 
@@ -61,6 +63,30 @@ router.post(
   authorize('instructor', 'student'),
   liveChatUpload,
   postAuthedChatAttachment,
+);
+router.get(
+  '/rooms/:roomCode/chat-messages',
+  authenticate,
+  authorize('instructor', 'student'),
+  getAuthedChatHistory,
+);
+router.get(
+  '/:roomCode/chat-messages',
+  authenticate,
+  authorize('instructor', 'student'),
+  getAuthedChatHistory,
+);
+router.post(
+  '/rooms/:roomCode/chat-messages',
+  authenticate,
+  authorize('instructor', 'student'),
+  postAuthedChatMessage,
+);
+router.post(
+  '/:roomCode/chat-messages',
+  authenticate,
+  authorize('instructor', 'student'),
+  postAuthedChatMessage,
 );
 
 router.get('/history', authenticate, authorize('instructor'), getHistory);

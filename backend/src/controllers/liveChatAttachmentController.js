@@ -10,6 +10,7 @@ const {
   getLiveChatAttachmentByFilename,
   sendLiveChatFile,
 } = require('../services/liveChatAttachmentStorage');
+const { insertLiveChatMessage, listLiveChatHistory } = require('../services/liveChatMessageService');
 
 function multerFail(err, res) {
   if (!err) return false;
@@ -81,6 +82,77 @@ async function postGuestChatAttachment(req, res) {
   }
 }
 
+async function postAuthedChatMessage(req, res) {
+  try {
+    const room = await getLiveRoomForUser(req.params.roomCode, req.user);
+    const text = String(req.body?.text || req.body?.body || '').trim().slice(0, 240);
+    const fileUrl = req.body?.file_url || req.body?.fileUrl || req.body?.file?.url;
+    if (!text && !fileUrl) {
+      return res.status(400).json({ success: false, message: 'Mesaj və ya fayl lazımdır' });
+    }
+    const { rows: nameRows } = await db.query(`SELECT full_name FROM users WHERE id = $1 LIMIT 1`, [req.user.id]);
+    const row = await insertLiveChatMessage({
+      roomId: room.id,
+      body: text,
+      senderName: nameRows[0]?.full_name || req.user.full_name || 'İştirakçı',
+      userId: req.user.id,
+      attachmentUrl: fileUrl,
+    });
+    res.status(201).json({ success: true, id: row.id, created_at: row.created_at });
+  } catch (e) {
+    res.status(e.status || 500).json({ success: false, message: e.message || 'Xəta' });
+  }
+}
+
+async function postGuestChatMessage(req, res) {
+  try {
+    const participantId = String(req.body?.participantId || req.body?.participant_id || '').trim();
+    if (!participantId) {
+      return res.status(400).json({ success: false, message: 'participantId tələb olunur' });
+    }
+    const { participant, roomId } = await assertActiveGuest(req.params.token, participantId);
+    const text = String(req.body?.text || req.body?.body || '').trim().slice(0, 240);
+    const fileUrl = req.body?.file_url || req.body?.fileUrl || req.body?.file?.url;
+    if (!text && !fileUrl) {
+      return res.status(400).json({ success: false, message: 'Mesaj və ya fayl lazımdır' });
+    }
+    const row = await insertLiveChatMessage({
+      roomId,
+      body: text,
+      senderName: participant.full_name || 'Qonaq',
+      guestParticipantId: participant.id,
+      attachmentUrl: fileUrl,
+    });
+    res.status(201).json({ success: true, id: row.id, created_at: row.created_at });
+  } catch (e) {
+    res.status(e.status || 500).json({ success: false, message: e.message || 'Xəta', code: e.code });
+  }
+}
+
+async function getAuthedChatHistory(req, res) {
+  try {
+    const room = await getLiveRoomForUser(req.params.roomCode, req.user);
+    const messages = await listLiveChatHistory(room.id);
+    res.json({ success: true, messages });
+  } catch (e) {
+    res.status(e.status || 500).json({ success: false, message: e.message || 'Xəta' });
+  }
+}
+
+async function getGuestChatHistory(req, res) {
+  try {
+    const participantId = String(req.query.participantId || req.query.participant_id || '').trim();
+    if (!participantId) {
+      return res.status(400).json({ success: false, message: 'participantId tələb olunur' });
+    }
+    const { roomId } = await assertActiveGuest(req.params.token, participantId);
+    const messages = await listLiveChatHistory(roomId);
+    res.json({ success: true, messages });
+  } catch (e) {
+    res.status(e.status || 500).json({ success: false, message: e.message || 'Xəta', code: e.code });
+  }
+}
+
 async function serveLiveChatAttachment(req, res) {
   try {
     const row = await getLiveChatAttachmentByFilename(req.params.filename);
@@ -109,5 +181,9 @@ module.exports = {
   multerFail,
   postAuthedChatAttachment,
   postGuestChatAttachment,
+  postAuthedChatMessage,
+  postGuestChatMessage,
+  getAuthedChatHistory,
+  getGuestChatHistory,
   serveLiveChatAttachment,
 };

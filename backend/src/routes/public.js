@@ -30,6 +30,8 @@ const { uploadLiveChatAttachment } = require('../services/liveChatAttachmentStor
 const {
   multerFail,
   postGuestChatAttachment,
+  postGuestChatMessage,
+  getGuestChatHistory,
 } = require('../controllers/liveChatAttachmentController');
 const { publicGuestJoinRateLimit } = require('../middleware/publicGuestJoinRateLimit');
 const { postAccessEvent } = require('../controllers/accessAnalyticsController');
@@ -82,6 +84,8 @@ router.post(
   },
   postGuestChatAttachment,
 );
+router.get('/live-guest/:token/chat-messages', getGuestChatHistory);
+router.post('/live-guest/:token/chat-messages', publicGuestJoinRateLimit, postGuestChatMessage);
 
 router.post('/analytics/event', postAccessEvent);
 router.get('/landing-stats', getLandingStats);

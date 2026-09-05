@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import {
   LIVE_CHAT_FILE_ACCEPT,
   LIVE_CHAT_FILE_MAX_BYTES,
+  isAllowedLiveChatFilename,
   isLiveChatImage,
   liveChatFileOpenUrl,
 } from '../../lib/liveChatFile'
@@ -59,7 +60,7 @@ export default function LiveInCallChat({ open, onClose, messages, onSend, onUplo
       window.alert(t('live.chatFileTooLarge'))
       return
     }
-    const ok = /^(image\/(jpeg|png|webp)|application\/pdf)$/i.test(file.type)
+    const ok = isAllowedLiveChatFilename(file.name, file.type)
     if (!ok) {
       window.alert(t('live.chatFileType'))
       return
