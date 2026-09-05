@@ -369,7 +369,9 @@
     "copyFailed": "Kopyalanmadı",
     "guestLinkCreated": "Paylaşım linki hazırdır",
     "roomCreateFailed": "Otaq yaradılmadı",
-    "startFailed": "Dərs başlamadı"
+    "startFailed": "Dərs başlamadı",
+    "openLive": "Dərsə keç",
+    "shareGuest": "Link / QR"
   },
   "students": {
     "title": "Tələbələrim",

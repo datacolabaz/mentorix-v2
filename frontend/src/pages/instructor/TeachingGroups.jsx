@@ -17,6 +17,7 @@ import GroupPackageFields, {
 } from '../../components/instructor/GroupPackageFields'
 import { formatAzn } from '../../lib/pricing'
 import { normalizeTeachingSubjects } from '../../lib/teachingSubjects'
+import { liveGuestJoinUrl } from '../../lib/absolutePublicUrl'
 import { useBillingStatus } from '../../hooks/useBillingStatus'
 import { useSubscriptionPlans } from '../../hooks/useSubscriptionPlans'
 import { basicTrialExpiredMessage } from '../../lib/subscriptionPlanGuards'
@@ -294,9 +295,7 @@ export default function InstructorTeachingGroups() {
       const code = res?.room?.room_code
       if (!code) throw new Error(t('teachingGroups.toasts.roomCreateFailed'))
       const inviteRes = await api.post(`/live/rooms/${encodeURIComponent(code)}/guest-invite`)
-      const joinUrl =
-        inviteRes?.invite?.join_url ||
-        `${window.location.origin}${inviteRes?.invite?.join_path || `/live/join/${inviteRes?.invite?.token}`}`
+      const joinUrl = liveGuestJoinUrl(inviteRes?.invite)
       setLiveNotifyModal(null)
       setGuestLinkModal({
         groupId: group.id,
