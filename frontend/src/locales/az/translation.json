@@ -342,7 +342,14 @@
     "confirmDeleteOne": "«{{title}}» dərsini silmək istəyirsiniz? Yazı da silinəcək.",
     "confirmDeleteMany": "{{n}} dərsi silmək istəyirsiniz? Yazılar da silinəcək.",
     "guestLabel": "Qonaq",
-    "guestParticipants": "Qonaq iştirakçılar"
+    "guestParticipants": "Qonaq iştirakçılar",
+    "reactions": "Reaksiya",
+    "reactionsAria": "Emoji reaksiya göndər",
+    "chatTitle": "Çat",
+    "chatPlaceholder": "Mesaj yazın…",
+    "chatEmpty": "Hələ mesaj yoxdur",
+    "chatSend": "Göndər",
+    "chatYou": "Siz"
   },
   "students": {
     "title": "Tələbələrim",
