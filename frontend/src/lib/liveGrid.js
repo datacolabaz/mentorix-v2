@@ -13,3 +13,40 @@ export function liveTileKey(trackRef) {
   const source = trackRef?.source || 'camera'
   return `${id}:${source}`
 }
+
+function sourceName(trackRef) {
+  return String(trackRef?.source || '')
+}
+
+export function isScreenShareTrack(trackRef) {
+  const source = sourceName(trackRef)
+  return source === 'screen_share' || source === 'ScreenShare'
+}
+
+export function isCameraTrack(trackRef) {
+  const source = sourceName(trackRef)
+  return source === 'camera' || source === 'Camera' || source === ''
+}
+
+/**
+ * When someone shares a tab/desktop, the share becomes the stage and that
+ * presenter's camera/placeholder tile is omitted so it does not sit beside
+ * the share at equal size (Google Meet-style).
+ */
+export function splitLiveConferenceTracks(tracks) {
+  const list = Array.isArray(tracks) ? tracks : []
+  const screenTracks = list.filter((t) => isScreenShareTrack(t))
+  const cameraTracks = list.filter((t) => !isScreenShareTrack(t) && isCameraTrack(t))
+  const presentingIdentities = [
+    ...new Set(screenTracks.map((t) => t?.participant?.identity).filter(Boolean)),
+  ]
+  const presenting = new Set(presentingIdentities)
+  const galleryTracks = cameraTracks.filter((t) => !presenting.has(t?.participant?.identity))
+  return {
+    screenTracks,
+    cameraTracks,
+    galleryTracks,
+    presentingIdentities,
+    hasScreenShare: screenTracks.length > 0,
+  }
+}
