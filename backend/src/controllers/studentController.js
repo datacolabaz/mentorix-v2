@@ -22,6 +22,8 @@ const { mapRowsWithPresence } = require('../services/userPresenceService');
 const { expandStudentsWithParticipantGroups } = require('../services/participantGroupService');
 const { displayGroupLabel } = require('../lib/participantGroupLabels');
 const { resolveEnrollmentId } = require('../lib/enrollmentRef');
+const { instructorVisibleStudentsWhereSql } = require('../lib/instructorVisibleStudents');
+const { syncUsageStudentsCount } = require('../services/usageStudentsSync');
 
 function normInstructorHex(id) {
   return id == null ? '' : String(id).trim().toLowerCase().replace(/-/g, '');
@@ -155,13 +157,7 @@ const listStudents = async (req, res) => {
       const { rows } = await db.query(
         `${select}
          ${joins}
-         WHERE u.role = 'student' AND u.is_active = TRUE
-           AND e.id IS NOT NULL
-           AND REPLACE(LOWER(TRIM(e.instructor_id::text)), '-', '') = $1
-           AND NOT (
-             COALESCE(LOWER(TRIM(e.status)), '') = 'pending_setup'
-             AND COALESCE(LOWER(TRIM(e.enrollment_source)), '') IN ('exam', 'task')
-           )
+         WHERE ${instructorVisibleStudentsWhereSql({ instructorParam: 1, hexParamAlreadyNormalized: true })}
          ${group}`,
         [instructorId]
       );
@@ -441,25 +437,7 @@ const deleteStudent = async (req, res) => {
     });
 
     if (instructorIdForUsage) {
-      const { rows: cntRows } = await db.query(
-        `SELECT COUNT(DISTINCT u.id)::int AS n
-         FROM enrollments e
-         JOIN users u ON u.id = e.student_id
-         WHERE e.instructor_id = $1
-           AND e.deleted_at IS NULL
-           AND COALESCE(NULLIF(LOWER(TRIM(e.status)), ''), 'active') = 'active'
-           AND u.is_active = TRUE`,
-        [instructorIdForUsage],
-      );
-      const n = Number(cntRows[0]?.n ?? 0) || 0;
-      await db
-        .query(
-          `INSERT INTO usage_counters (user_id, students_count)
-           VALUES ($1, $2)
-           ON CONFLICT (user_id) DO UPDATE SET students_count = $2, updated_at = NOW()`,
-          [instructorIdForUsage, n],
-        )
-        .catch(() => {});
+      await syncUsageStudentsCount(instructorIdForUsage);
     }
 
     res.json({ success: true });

@@ -1,10 +1,18 @@
 const db = require('../utils/db');
+const { instructorVisibleStudentsWhereSql } = require('../lib/instructorVisibleStudents');
 
+/**
+ * Paket kartındakı 👥 sayı — Tələbələrim siyahısı ilə eyni dəst:
+ * silinməmiş, aktiv hesab + görünən enrollment.
+ * instructor_students cədvəli lifetime unikal linkdir (imtahan qonağı, silinmiş tələbə)
+ * və sidebar «cari tələbə» kimi oxunmamalıdır.
+ */
 async function countDistinctStudents(instructorId, dbConn = db) {
   const { rows } = await dbConn.query(
-    `SELECT COUNT(DISTINCT student_id)::int AS n
-     FROM instructor_students
-     WHERE instructor_id = $1::uuid`,
+    `SELECT COUNT(DISTINCT e.student_id)::int AS n
+     FROM enrollments e
+     JOIN users u ON u.id = e.student_id
+     WHERE ${instructorVisibleStudentsWhereSql({ instructorParam: 1 })}`,
     [instructorId],
   );
   return Number(rows[0]?.n ?? 0) || 0;
