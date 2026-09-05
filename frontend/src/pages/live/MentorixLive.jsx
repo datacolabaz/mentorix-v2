@@ -27,28 +27,6 @@ function LiveMediaRestore() {
   return null
 }
 
-function LiveMediaEnsure({ onMicError }) {
-  const room = useRoomContext()
-
-  useEffect(() => {
-    if (!room) return undefined
-    let cancelled = false
-    ;(async () => {
-      try {
-        await room.localParticipant.setMicrophoneEnabled(true)
-        await room.localParticipant.setCameraEnabled(true)
-      } catch {
-        if (!cancelled) onMicError?.()
-      }
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [room, onMicError])
-
-  return null
-}
-
 export default function MentorixLive() {
   const { roomCode } = useParams()
   const navigate = useNavigate()
@@ -61,8 +39,6 @@ export default function MentorixLive() {
   const [room, setRoom] = useState(null)
   const [token, setToken] = useState(null)
   const [wsUrl, setWsUrl] = useState(null)
-  const [mediaReady, setMediaReady] = useState(false)
-  const [mediaPreparing, setMediaPreparing] = useState(false)
   const [connectLiveKit, setConnectLiveKit] = useState(true)
   const [recordModalOpen, setRecordModalOpen] = useState(false)
   const [afterEndNavigate, setAfterEndNavigate] = useState(false)
@@ -115,26 +91,6 @@ export default function MentorixLive() {
     },
     [code, recording.durationSec],
   )
-
-  const prepareMedia = useCallback(async () => {
-    setMediaPreparing(true)
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-        video: true,
-      })
-      stream.getTracks().forEach((track) => track.stop())
-      setMediaReady(true)
-    } catch {
-      toast('Kamera və mikrofon icazəsi lazımdır — brauzerdə «İcazə ver» seçin', 'error')
-    } finally {
-      setMediaPreparing(false)
-    }
-  }, [toast])
-
-  const handleMicError = useCallback(() => {
-    toast('Mikrofon aktivləşdirilmədi — LiveKit panelində mikrofon düyməsinə basın', 'error')
-  }, [toast])
 
   const finishRecording = useCallback(
     async (blob) => {
@@ -345,23 +301,6 @@ export default function MentorixLive() {
     )
   }
 
-  if (!mediaReady) {
-    return (
-      <div className="min-h-[100svh] bg-[#0b0b0b] text-white flex flex-col items-center justify-center gap-5 p-6 text-center">
-        <div>
-          <p className="text-xs uppercase tracking-wider text-red-400 font-bold">Mentorix Live</p>
-          <h1 className="font-display font-bold text-xl mt-2">{room?.title}</h1>
-          <p className="text-sm text-gray-400 mt-2 max-w-md">
-            Dərsə qoşulmaq üçün kamera və mikrofon icazəsi lazımdır. Brauzer soruşanda «İcazə ver» seçin.
-          </p>
-        </div>
-        <Button onClick={() => void prepareMedia()} loading={mediaPreparing} className="min-w-[220px] justify-center">
-          Kamera və mikrofonu aktiv et
-        </Button>
-      </div>
-    )
-  }
-
   return (
     <div className="min-h-[100svh] bg-[#0b0b0b] text-white flex flex-col">
       <header className="shrink-0 border-b border-white/10 bg-[#0f0f0f]/95 px-4 py-3 flex flex-wrap items-center justify-between gap-3">
@@ -420,8 +359,8 @@ export default function MentorixLive() {
           token={token}
           serverUrl={wsUrl}
           connect={connectLiveKit}
-          video
-          audio
+          video={false}
+          audio={false}
           options={roomOptions}
           data-lk-theme="default"
           className="flex-1 min-h-0 flex flex-col"
@@ -429,7 +368,6 @@ export default function MentorixLive() {
             void leaveRoom()
           }}
         >
-          <LiveMediaEnsure onMicError={handleMicError} />
           <LiveMediaRestore />
           <GuestAwareVideoConference roomCode={code} isInstructor={isInstructor} />
           <RoomAudioRenderer />

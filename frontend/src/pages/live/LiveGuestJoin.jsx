@@ -14,10 +14,7 @@ const inp =
   'w-full border border-white/15 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-primary/40 bg-white/[0.04] placeholder:text-gray-500'
 
 function LiveGuestRoom({ session, onLeave }) {
-  const [mediaReady, setMediaReady] = useState(false)
-  const [mediaPreparing, setMediaPreparing] = useState(false)
   const [connectLiveKit, setConnectLiveKit] = useState(true)
-  const toast = useToast()
   const leftRef = useRef(false)
 
   const leave = useCallback(async () => {
@@ -40,36 +37,6 @@ function LiveGuestRoom({ session, onLeave }) {
     }
   }, [leave])
 
-  const prepareMedia = async () => {
-    setMediaPreparing(true)
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true })
-      stream.getTracks().forEach((t) => t.stop())
-      setMediaReady(true)
-    } catch {
-      toast('Kamera və mikrofon icazəsi lazımdır', 'error')
-    } finally {
-      setMediaPreparing(false)
-    }
-  }
-
-  if (!mediaReady) {
-    return (
-      <div className="min-h-[100svh] bg-[#0b0b0b] text-white flex flex-col items-center justify-center gap-5 p-6 text-center">
-        <div>
-          <p className="text-xs uppercase tracking-wider text-primary font-bold">Mentorix Live — Qonaq</p>
-          <h1 className="font-display font-bold text-xl mt-2">{session.room?.title}</h1>
-          <p className="text-sm text-gray-400 mt-2 max-w-md">
-            Dərsə qoşulmaq üçün kamera və mikrofon icazəsi lazımdır.
-          </p>
-        </div>
-        <Button onClick={() => void prepareMedia()} loading={mediaPreparing} className="min-w-[220px] justify-center">
-          Kamera və mikrofonu aktiv et
-        </Button>
-      </div>
-    )
-  }
-
   return (
     <div className="min-h-[100svh] bg-[#0b0b0b] text-white flex flex-col">
       <header className="shrink-0 border-b border-white/10 bg-[#0f0f0f]/95 px-4 py-3 flex items-center justify-between gap-3">
@@ -86,8 +53,8 @@ function LiveGuestRoom({ session, onLeave }) {
           token={session.token}
           serverUrl={session.wsUrl}
           connect={connectLiveKit}
-          video
-          audio
+          video={false}
+          audio={false}
           data-lk-theme="default"
           className="flex-1 min-h-0 flex flex-col"
           onDisconnected={() => void leave()}
