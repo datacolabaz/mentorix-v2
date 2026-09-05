@@ -342,7 +342,14 @@
     "confirmDeleteOne": "Удалить урок «{{title}}»? Запись тоже будет удалена.",
     "confirmDeleteMany": "Удалить {{n}} урок(ов)? Записи тоже будут удалены.",
     "guestLabel": "Гость",
-    "guestParticipants": "Гостевые участники"
+    "guestParticipants": "Гостевые участники",
+    "reactions": "Реакция",
+    "reactionsAria": "Отправить эмодзи",
+    "chatTitle": "Чат",
+    "chatPlaceholder": "Напишите сообщение…",
+    "chatEmpty": "Сообщений пока нет",
+    "chatSend": "Отправить",
+    "chatYou": "Вы"
   },
   "students": {
     "title": "Мои ученики",
