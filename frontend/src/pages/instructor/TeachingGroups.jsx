@@ -9,6 +9,7 @@ import { useToast } from '../../components/common/Toast'
 import { groupInvitationLink } from '../../lib/joinInvite'
 import useUiStore from '../../hooks/useUi'
 import { QRCodeCanvas } from 'qrcode.react'
+import LiveGuestShareModal from '../../components/live/LiveGuestShareModal'
 import GroupPackageFields, {
   emptyGroupPackage,
   groupPackageFromApi,
@@ -848,82 +849,16 @@ export default function InstructorTeachingGroups() {
         ) : null}
       </Modal>
 
-      <Modal
+      <LiveGuestShareModal
         open={Boolean(guestLinkModal)}
+        session={guestLinkModal}
         onClose={() => setGuestLinkModal(null)}
-        title={t('teachingGroups.guestLinkModal.title')}
-        size="sm"
-        zIndex={10056}
-        footer={
-          <div className="flex flex-wrap justify-center gap-2">
-            <Button type="button" variant="secondary" onClick={() => void revokeGuestLink()} disabled={guestLinkModal?.revoked}>
-              {t('teachingGroups.guestLinkModal.revoke')}
-            </Button>
-            <Button
-              type="button"
-              onClick={() => {
-                if (!guestLinkModal?.roomCode) return
-                navigate(`/live/${encodeURIComponent(guestLinkModal.roomCode)}`)
-              }}
-            >
-              {t('teachingGroups.guestLinkModal.enterLive')}
-            </Button>
-          </div>
-        }
-      >
-        {guestLinkModal ? (
-          <div className="space-y-4">
-            <p className="text-sm text-token-textMuted">{guestLinkModal.title}</p>
-            {guestLinkModal.revoked ? (
-              <p className="text-xs text-amber-400">{t('teachingGroups.guestLinkModal.revokedHint')}</p>
-            ) : (
-              <p className="text-xs text-token-textMuted">{t('teachingGroups.guestLinkModal.validHint')}</p>
-            )}
-            <div className="rounded-xl border border-[color:var(--border-subtle)] p-3 bg-black/20">
-              <p className="text-[11px] font-mono text-primary break-all">{guestLinkModal.joinUrl}</p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                className={[groupActionBtnCls, 'text-primary font-semibold'].join(' ')}
-                onClick={async () => {
-                  try {
-                    await navigator.clipboard.writeText(guestLinkModal.joinUrl)
-                    toast(t('teachingGroups.toasts.guestLinkCopied'), 'success')
-                  } catch {
-                    toast(t('teachingGroups.toasts.copyFailed'), 'error')
-                  }
-                }}
-              >
-                {t('teachingGroups.copyLink')}
-              </button>
-              <button
-                type="button"
-                className={[groupActionBtnCls, theme === 'dark' ? 'text-emerald-300' : 'text-emerald-700'].join(' ')}
-                onClick={async () => {
-                  const text = `${guestLinkModal.title}\n${guestLinkModal.joinUrl}`
-                  if (navigator.share) {
-                    try {
-                      await navigator.share({ title: guestLinkModal.title, text, url: guestLinkModal.joinUrl })
-                      return
-                    } catch {
-                      /* fallback copy */
-                    }
-                  }
-                  try {
-                    await navigator.clipboard.writeText(text)
-                    toast(t('teachingGroups.toasts.guestLinkCopied'), 'success')
-                  } catch {
-                    toast(t('teachingGroups.toasts.copyFailed'), 'error')
-                  }
-                }}
-              >
-                {t('teachingGroups.share')}
-              </button>
-            </div>
-          </div>
-        ) : null}
-      </Modal>
+        onEnterLive={() => {
+          if (!guestLinkModal?.roomCode) return
+          navigate(`/live/${encodeURIComponent(guestLinkModal.roomCode)}`)
+        }}
+        onRevoke={revokeGuestLink}
+      />
 
       <Modal
         open={Boolean(confirmDelete)}

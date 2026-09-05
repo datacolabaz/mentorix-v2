@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import api, { AUTH_REQUEST_TIMEOUT_MS } from '../../lib/api'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
+import Modal from '../../components/common/Modal'
+import LiveGuestShareModal from '../../components/live/LiveGuestShareModal'
 import { useToast } from '../../components/common/Toast'
 import { fmtAzBakuField } from '../../lib/azDatetime'
 
@@ -40,7 +42,12 @@ async function downloadRecording(url, filename) {
 export default function InstructorLiveHistory() {
   const { t } = useTranslation()
   const toast = useToast()
+  const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
+  const [startOpen, setStartOpen] = useState(false)
+  const [startTitle, setStartTitle] = useState('')
+  const [starting, setStarting] = useState(false)
+  const [shareSession, setShareSession] = useState(null)
   const [sessions, setSessions] = useState([])
   const [downloadingId, setDownloadingId] = useState(null)
   const [deletingId, setDeletingId] = useState(null)
@@ -172,6 +179,51 @@ export default function InstructorLiveHistory() {
     }
   }
 
+  const startOpenLesson = async () => {
+    if (starting) return
+    setStarting(true)
+    try {
+      const title = String(startTitle || '').trim()
+      const res = await api.post('/live/create', {
+        title: title || undefined,
+        notifySms: false,
+        notifyEmail: false,
+      })
+      const code = res?.room?.room_code
+      if (!code) throw new Error(t('live.roomCreateFailed'))
+      const inviteRes = await api.post(`/live/rooms/${encodeURIComponent(code)}/guest-invite`)
+      const joinUrl =
+        inviteRes?.invite?.join_url ||
+        `${window.location.origin}${inviteRes?.invite?.join_path || `/live/join/${inviteRes?.invite?.token}`}`
+      const session = {
+        roomCode: code,
+        joinUrl,
+        title: title || res?.room?.title || t('live.historyTitle'),
+        expiresAt: inviteRes?.invite?.expires_at,
+      }
+      setStartOpen(false)
+      setStartTitle('')
+      setShareSession(session)
+      toast(t('live.guestLinkCreated'), 'success')
+      void load()
+    } catch (e) {
+      toast(e?.message || t('live.startFailed'), 'error')
+    } finally {
+      setStarting(false)
+    }
+  }
+
+  const revokeShareLink = async () => {
+    if (!shareSession?.roomCode) return
+    try {
+      await api.delete(`/live/rooms/${encodeURIComponent(shareSession.roomCode)}/guest-invite`)
+      setShareSession((m) => (m ? { ...m, revoked: true } : m))
+      toast(t('live.linkRevokedHint'), 'success')
+    } catch (e) {
+      toast(e?.message || t('live.startFailed'), 'error')
+    }
+  }
+
   return (
     <div className="p-4 sm:p-6 max-w-4xl mx-auto space-y-5">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -179,9 +231,12 @@ export default function InstructorLiveHistory() {
           <h1 className="font-display font-bold text-xl sm:text-2xl text-token-textMain">{t('live.historyTitle')}</h1>
           <p className="text-xs text-token-textMuted mt-1">{t('live.historySubtitle')}</p>
         </div>
-        <Link to="/instructor/teaching-groups">
-          <Button variant="secondary">{t('live.startFromGroup')}</Button>
-        </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button onClick={() => setStartOpen(true)}>{t('live.startOpen')}</Button>
+          <Link to="/instructor/teaching-groups">
+            <Button variant="secondary">{t('live.startFromGroup')}</Button>
+          </Link>
+        </div>
       </div>
 
       {loading ? (
@@ -190,6 +245,12 @@ export default function InstructorLiveHistory() {
         <Card className="p-10 text-center border border-dashed border-[color:var(--border-subtle)]">
           <div className="text-4xl mb-3">🔴</div>
           <p className="text-sm text-token-textMuted">{t('live.noSessions')}</p>
+          <div className="mt-4 flex flex-wrap justify-center gap-2">
+            <Button onClick={() => setStartOpen(true)}>{t('live.startOpen')}</Button>
+            <Link to="/instructor/teaching-groups">
+              <Button variant="secondary">{t('live.startFromGroup')}</Button>
+            </Link>
+          </div>
         </Card>
       ) : (
         <div className="space-y-3">
@@ -306,6 +367,48 @@ export default function InstructorLiveHistory() {
           ))}
         </div>
       )}
+
+      <Modal
+        open={startOpen}
+        onClose={() => !starting && setStartOpen(false)}
+        title={t('live.startOpenTitle')}
+        size="sm"
+        footer={
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button type="button" variant="secondary" onClick={() => setStartOpen(false)} disabled={starting}>
+              {t('common.cancel')}
+            </Button>
+            <Button type="button" loading={starting} onClick={() => void startOpenLesson()}>
+              {t('live.createAndShare')}
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-3">
+          <p className="text-sm text-token-textMuted">{t('live.startOpenHint')}</p>
+          <label className="block space-y-1">
+            <span className="text-xs font-medium text-token-textMuted">{t('live.lessonTitle')}</span>
+            <input
+              value={startTitle}
+              onChange={(e) => setStartTitle(e.target.value)}
+              placeholder={t('live.lessonTitlePlaceholder')}
+              maxLength={120}
+              className="w-full rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceMain px-3 py-2.5 text-sm text-token-textMain outline-none focus:border-primary/50"
+            />
+          </label>
+        </div>
+      </Modal>
+
+      <LiveGuestShareModal
+        open={Boolean(shareSession)}
+        session={shareSession}
+        onClose={() => setShareSession(null)}
+        onEnterLive={() => {
+          if (!shareSession?.roomCode) return
+          navigate(`/live/${encodeURIComponent(shareSession.roomCode)}`)
+        }}
+        onRevoke={revokeShareLink}
+      />
     </div>
   )
 }
