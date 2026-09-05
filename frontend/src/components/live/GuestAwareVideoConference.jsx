@@ -1,12 +1,14 @@
-import { Track } from 'livekit-client'
+import { RoomEvent, Track } from 'livekit-client'
 import { useTranslation } from 'react-i18next'
 import {
   ControlBar,
   ParticipantTile,
   useLocalParticipant,
+  useRoomContext,
   useTracks,
 } from '@livekit/components-react'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { playLiveJoinChime } from '../../lib/liveJoinChime'
 import useLiveRoomSignals from '../../hooks/useLiveRoomSignals'
 import api from '../../lib/api'
 import useAuthStore from '../../hooks/useAuth'
@@ -76,6 +78,40 @@ function MentorixParticipantTile({
 }
 
 /** LiveKit konfrans — bərabər pəncərələr, qəbul paneli, mikrofon/kamera. */
+function LiveJoinChimeListener({ enabled }) {
+  const room = useRoomContext()
+  const heardRef = useRef(new Set())
+
+  useEffect(() => {
+    if (!enabled || !room) return undefined
+    const remotes = room.remoteParticipants
+    if (remotes && typeof remotes.values === 'function') {
+      for (const p of remotes.values()) {
+        if (p?.identity) heardRef.current.add(p.identity)
+      }
+    }
+    const onJoin = (participant) => {
+      if (!participant || participant.isLocal) return
+      const id = participant.identity
+      if (!id || heardRef.current.has(id)) return
+      heardRef.current.add(id)
+      playLiveJoinChime()
+    }
+    const onLeave = (participant) => {
+      const id = participant?.identity
+      if (id) heardRef.current.delete(id)
+    }
+    room.on(RoomEvent.ParticipantConnected, onJoin)
+    room.on(RoomEvent.ParticipantDisconnected, onLeave)
+    return () => {
+      room.off(RoomEvent.ParticipantConnected, onJoin)
+      room.off(RoomEvent.ParticipantDisconnected, onLeave)
+    }
+  }, [enabled, room])
+
+  return null
+}
+
 export default function GuestAwareVideoConference({ roomCode, isInstructor = false, guestAuth = null }) {
   const { t } = useTranslation()
   const { user } = useAuthStore()
@@ -199,6 +235,7 @@ export default function GuestAwareVideoConference({ roomCode, isInstructor = fal
             </div>
           )}
         </div>
+        {isInstructor ? <LiveJoinChimeListener enabled /> : null}
         {isInstructor ? (
           <LiveAdmissionPanel
             pending={admissions.pending}

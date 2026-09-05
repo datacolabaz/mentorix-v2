@@ -15,4 +15,9 @@ function canEnterLiveRoom({ isInstructor, status }) {
   return String(status || '') === 'approved';
 }
 
-module.exports = { mapAdmission, canEnterLiveRoom };
+/** Guest who left (or dropped) should be reopened instead of creating a second row. */
+function shouldReopenGuestParticipant(row) {
+  return Boolean(row && row.id && row.left_at);
+}
+
+module.exports = { mapAdmission, canEnterLiveRoom, shouldReopenGuestParticipant };

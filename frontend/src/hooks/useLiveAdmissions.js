@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import api from '../lib/api'
+import { newPendingAdmissionIds, playLiveJoinChime } from '../lib/liveJoinChime'
 
 export default function useLiveAdmissions(roomCode, enabled) {
   const [pending, setPending] = useState([])
   const [busyId, setBusyId] = useState(null)
   const seenRef = useRef(new Set())
+  const primedRef = useRef(false)
 
   const load = useCallback(async () => {
     if (!roomCode || !enabled) return []
@@ -17,6 +19,8 @@ export default function useLiveAdmissions(roomCode, enabled) {
   useEffect(() => {
     if (!roomCode || !enabled) {
       setPending([])
+      primedRef.current = false
+      seenRef.current = new Set()
       return undefined
     }
     let cancelled = false
@@ -24,9 +28,12 @@ export default function useLiveAdmissions(roomCode, enabled) {
       try {
         const rows = await load()
         if (cancelled) return
+        const fresh = newPendingAdmissionIds(seenRef.current, rows, primedRef.current)
+        if (fresh.length) playLiveJoinChime()
         rows.forEach((row) => {
           if (row?.id) seenRef.current.add(row.id)
         })
+        primedRef.current = true
       } catch {
         /* instructor may briefly lose the room */
       }

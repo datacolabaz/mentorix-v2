@@ -397,7 +397,12 @@
     "scheduleWhen": "Təyin olunmuş vaxt (istəyə bağlı)",
     "scheduleWhenHint": "Boş buraxsanız dərs indi açılır. Gələcək tarix seçsəniz, linki indi paylaşa bilərsiniz.",
     "scheduledAt": "Təyin olunub:",
-    "scheduledBadge": "Planlaşdırılıb — link hazırdır"
+    "scheduledBadge": "Planlaşdırılıb — link hazırdır",
+    "connectionLost": "Bağlantı kəsildi",
+    "connectionLostHint": "İnternet zəif ola bilər. Dərs açıq qalır — eyni linkdən yenidən qoşula bilərsiniz.",
+    "rejoinLive": "Yenidən qoşul",
+    "rejoinFailed": "Yenidən qoşulmaq alınmadı",
+    "leaveLiveKeepOpen": "Dərsdən çıx"
   },
   "students": {
     "title": "Tələbələrim",

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { LiveKitRoom, RoomAudioRenderer, useRoomContext } from '@livekit/components-react'
 import '@livekit/components-styles'
@@ -28,6 +29,7 @@ function LiveMediaRestore() {
 }
 
 export default function MentorixLive() {
+  const { t } = useTranslation()
   const { roomCode } = useParams()
   const navigate = useNavigate()
   const toast = useToast()
@@ -45,6 +47,9 @@ export default function MentorixLive() {
   const [ending, setEnding] = useState(false)
   const [waitingAdmission, setWaitingAdmission] = useState(false)
   const [admissionDenied, setAdmissionDenied] = useState(false)
+  const [connectionLost, setConnectionLost] = useState(false)
+  const [rejoining, setRejoining] = useState(false)
+  const intentionalLeaveRef = useRef(false)
 
   const recording = useLocalRecording()
   const canRecord = recording.supported
@@ -76,6 +81,35 @@ export default function MentorixLive() {
 
   const disconnectLiveKit = useCallback(() => {
     setConnectLiveKit(false)
+  }, [])
+
+  const connectToRoom = useCallback(async () => {
+    const joinRes = await api.post(`/live/${encodeURIComponent(code)}/join`)
+    if (joinRes?.room) setRoom(joinRes.room)
+    if (joinRes?.pending) {
+      setWaitingAdmission(true)
+      setToken(null)
+      setWsUrl(null)
+      return { pending: true }
+    }
+    joinedRef.current = true
+    const [roomRes, tokenRes] = await Promise.all([
+      api.get(`/live/${encodeURIComponent(code)}`),
+      api.get(`/live/${encodeURIComponent(code)}/token`),
+    ])
+    setRoom(roomRes.room)
+    setToken(tokenRes.token)
+    setWsUrl(tokenRes.wsUrl)
+    setWaitingAdmission(false)
+    setAdmissionDenied(false)
+    setConnectionLost(false)
+    setConnectLiveKit(true)
+    return { pending: false }
+  }, [code])
+
+  const markIntentionalLeave = useCallback(() => {
+    intentionalLeaveRef.current = true
+    setConnectionLost(false)
   }, [])
 
   const uploadRecording = useCallback(
@@ -120,6 +154,7 @@ export default function MentorixLive() {
 
       if (blob) await finishRecording(blob)
 
+      markIntentionalLeave()
       disconnectLiveKit()
       await api.post(`/live/${encodeURIComponent(code)}/end`)
       await leaveRoom()
@@ -133,7 +168,7 @@ export default function MentorixLive() {
     } finally {
       setEnding(false)
     }
-  }, [code, isInstructor, canRecord, recording, finishRecording, disconnectLiveKit, leaveRoom, navigate, toast])
+  }, [code, isInstructor, canRecord, recording, finishRecording, disconnectLiveKit, leaveRoom, navigate, toast, markIntentionalLeave])
 
   const exitRoom = useCallback(async () => {
     let blob = null
@@ -142,13 +177,39 @@ export default function MentorixLive() {
 
     if (blob) await finishRecording(blob)
 
+    markIntentionalLeave()
     disconnectLiveKit()
     await leaveRoom()
 
     if (!blob) {
-      navigate(user?.role === 'student' ? '/student' : '/instructor', { replace: true })
+      navigate(
+        user?.role === 'student' ? '/student' : '/instructor/live/history',
+        { replace: true },
+      )
     }
-  }, [canRecord, recording, finishRecording, disconnectLiveKit, leaveRoom, navigate, user?.role])
+  }, [canRecord, recording, finishRecording, disconnectLiveKit, leaveRoom, navigate, user?.role, markIntentionalLeave])
+
+  const rejoinRoom = useCallback(async () => {
+    if (!code) return
+    setRejoining(true)
+    setError('')
+    try {
+      intentionalLeaveRef.current = false
+      await connectToRoom()
+    } catch (e) {
+      if (e?.code === 'ADMISSION_DENIED') {
+        setAdmissionDenied(true)
+        setWaitingAdmission(true)
+        setConnectionLost(false)
+      } else {
+        const message = e?.message || t('live.rejoinFailed')
+        setError(message)
+        toast(message, 'error')
+      }
+    } finally {
+      setRejoining(false)
+    }
+  }, [code, connectToRoom, toast, t])
 
   useEffect(() => {
     if (!code) {
@@ -162,26 +223,8 @@ export default function MentorixLive() {
       setLoading(true)
       setError('')
       try {
-        const joinRes = await api.post(`/live/${encodeURIComponent(code)}/join`)
+        await connectToRoom()
         if (cancelled) return
-        if (joinRes?.room) setRoom(joinRes.room)
-
-        if (joinRes?.pending) {
-          setWaitingAdmission(true)
-          setLoading(false)
-          return
-        }
-
-        joinedRef.current = true
-        const [roomRes, tokenRes] = await Promise.all([
-          api.get(`/live/${encodeURIComponent(code)}`),
-          api.get(`/live/${encodeURIComponent(code)}/token`),
-        ])
-
-        if (cancelled) return
-        setRoom(roomRes.room)
-        setToken(tokenRes.token)
-        setWsUrl(tokenRes.wsUrl)
       } catch (e) {
         if (cancelled) return
         if (e?.code === 'ADMISSION_DENIED') {
@@ -200,7 +243,7 @@ export default function MentorixLive() {
       disconnectLiveKit()
       void leaveRoom()
     }
-  }, [code, leaveRoom, disconnectLiveKit])
+  }, [code, leaveRoom, disconnectLiveKit, connectToRoom])
 
   useEffect(() => {
     if (!waitingAdmission || admissionDenied || !code || token) return undefined
@@ -214,19 +257,7 @@ export default function MentorixLive() {
           return
         }
         if (res?.status !== 'approved') return
-        const joinRes = await api.post(`/live/${encodeURIComponent(code)}/join`)
-        if (cancelled) return
-        if (joinRes?.pending) return
-        joinedRef.current = true
-        const [roomRes, tokenRes] = await Promise.all([
-          api.get(`/live/${encodeURIComponent(code)}`),
-          api.get(`/live/${encodeURIComponent(code)}/token`),
-        ])
-        if (cancelled) return
-        setRoom(roomRes.room)
-        setToken(tokenRes.token)
-        setWsUrl(tokenRes.wsUrl)
-        setWaitingAdmission(false)
+        await connectToRoom()
       } catch (e) {
         if (cancelled) return
         if (e?.code === 'ADMISSION_DENIED') setAdmissionDenied(true)
@@ -238,7 +269,7 @@ export default function MentorixLive() {
       cancelled = true
       window.clearInterval(id)
     }
-  }, [waitingAdmission, admissionDenied, code, token])
+  }, [waitingAdmission, admissionDenied, code, token, connectToRoom])
 
   const toggleRecording = async () => {
     if (!canRecord) return
@@ -286,6 +317,9 @@ export default function MentorixLive() {
     return (
       <div className="min-h-[100svh] bg-[#0b0b0b] text-white flex flex-col items-center justify-center gap-4 p-6">
         <p className="text-amber-300 text-center">{error}</p>
+        <Button onClick={() => void rejoinRoom()} loading={rejoining}>
+          {t('live.rejoinLive')}
+        </Button>
         <Link to="/" className="text-primary hover:underline text-sm">
           Ana səhifə
         </Link>
@@ -337,9 +371,14 @@ export default function MentorixLive() {
             </button>
           ) : null}
           {isInstructor ? (
-            <Button size="sm" variant="danger" onClick={() => void endRoom()} loading={ending}>
-              Bitir
-            </Button>
+            <>
+              <Button size="sm" variant="secondary" onClick={() => void exitRoom()}>
+                {t('live.leaveLiveKeepOpen')}
+              </Button>
+              <Button size="sm" variant="danger" onClick={() => void endRoom()} loading={ending}>
+                Bitir
+              </Button>
+            </>
           ) : (
             <Button size="sm" variant="secondary" onClick={() => void exitRoom()}>
               Çıx
@@ -354,7 +393,21 @@ export default function MentorixLive() {
         </div>
       ) : null}
 
-      <div className="flex-1 min-h-0 flex flex-col">
+      <div className="relative flex-1 min-h-0 flex flex-col">
+        {connectionLost ? (
+          <div className="absolute inset-0 z-40 flex flex-col items-center justify-center gap-3 bg-black/80 px-6 text-center">
+            <p className="text-base font-semibold text-white">{t('live.connectionLost')}</p>
+            <p className="text-sm text-gray-400 max-w-md">{t('live.connectionLostHint')}</p>
+            <div className="flex flex-wrap items-center justify-center gap-2 mt-2">
+              <Button onClick={() => void rejoinRoom()} loading={rejoining}>
+                {t('live.rejoinLive')}
+              </Button>
+              <Button variant="secondary" onClick={() => void exitRoom()}>
+                {t('live.leaveLiveKeepOpen')}
+              </Button>
+            </div>
+          </div>
+        ) : null}
         <LiveKitRoom
           token={token}
           serverUrl={wsUrl}
@@ -366,6 +419,9 @@ export default function MentorixLive() {
           className="flex-1 min-h-0 flex flex-col"
           onDisconnected={() => {
             void leaveRoom()
+            if (intentionalLeaveRef.current) return
+            setConnectLiveKit(false)
+            setConnectionLost(true)
           }}
         >
           <LiveMediaRestore />
