@@ -8,6 +8,7 @@ import {
   isAllowedReaction,
   parseLiveDataPayload,
 } from '../lib/liveRoomSignals'
+import { sanitizeLiveChatFile } from '../lib/liveChatFile'
 
 const encoder = new TextEncoder()
 
@@ -83,19 +84,21 @@ export default function useLiveRoomSignals() {
   )
 
   const sendChat = useCallback(
-    async (text) => {
+    async (text, fileMeta) => {
       const clean = String(text || '').trim().slice(0, 240)
-      if (!clean) return false
+      const file = sanitizeLiveChatFile(fileMeta)
+      if (!clean && !file) return false
       const msg = {
         id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
         text: clean,
+        file,
         name: localName,
         local: true,
         at: Date.now(),
       }
       setMessages((prev) => [...prev.slice(-79), msg])
       try {
-        await publish(LIVE_CHAT_TOPIC, { t: 'chat', m: clean }, true)
+        await publish(LIVE_CHAT_TOPIC, { t: 'chat', m: clean, f: file || undefined }, true)
       } catch {
         /* ignore */
       }
@@ -117,12 +120,14 @@ export default function useLiveRoomSignals() {
       }
       if (topic === LIVE_CHAT_TOPIC || data.t === 'chat') {
         const text = String(data.m || '').trim().slice(0, 240)
-        if (!text) return
+        const file = sanitizeLiveChatFile(data.f)
+        if (!text && !file) return
         setMessages((prev) => [
           ...prev.slice(-79),
           {
             id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
             text,
+            file,
             name,
             local: false,
             at: Date.now(),

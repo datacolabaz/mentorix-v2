@@ -5,7 +5,7 @@ const { canonicalStudentPhone } = require('../utils/studentPhone');
 const { getLiveRoomRowByCode, getInstructorLiveParticipantLimit } = require('./liveRoomService');
 const { LIVE_PARTICIPANT_LIMIT_MESSAGE } = require('../constants/livePlanLimits');
 
-const DEFAULT_INVITE_HOURS = 24;
+const { DEFAULT_INVITE_HOURS, clampInviteHours } = require('../lib/liveInviteHours');
 const TOKEN_BYTES = 24;
 
 function generateInviteToken() {
@@ -42,7 +42,7 @@ async function getInviteByToken(token) {
   const t = String(token || '').trim();
   if (!t) return null;
   const { rows } = await db.query(
-    `SELECT gi.*, lr.room_code, lr.title, lr.status, lr.instructor_id, lr.group_id, lr.ended_at,
+    `SELECT gi.*, lr.room_code, lr.title, lr.status, lr.instructor_id, lr.group_id, lr.ended_at, lr.scheduled_at,
             u.full_name AS instructor_name
      FROM live_guest_invites gi
      JOIN live_rooms lr ON lr.id = gi.room_id
@@ -116,7 +116,7 @@ async function createGuestInvite(instructorId, roomCode, { expiresHours = DEFAUL
   );
 
   const token = generateInviteToken();
-  const hours = Math.min(Math.max(Number(expiresHours) || DEFAULT_INVITE_HOURS, 1), 72);
+  const hours = clampInviteHours(expiresHours);
   const { rows } = await db.query(
     `INSERT INTO live_guest_invites (room_id, token, expires_at, created_by)
      VALUES ($1, $2, NOW() + ($3::text || ' hours')::interval, $4)
@@ -303,6 +303,8 @@ async function getPublicInviteInfo(token) {
       title: invite.title,
       room_code: invite.room_code,
       instructor_name: invite.instructor_name,
+      status: invite.status,
+      scheduled_at: invite.scheduled_at || null,
     },
     expires_at: invite.expires_at,
   };

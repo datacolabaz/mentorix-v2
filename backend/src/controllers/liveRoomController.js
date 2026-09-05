@@ -58,6 +58,7 @@ async function mapRoom(row, user) {
     max_participants: maxParticipants,
     live_recording_local: true,
     started_at: row.started_at,
+    scheduled_at: row.scheduled_at || null,
     ended_at: row.ended_at,
     jitsi_room: jitsiRoomName(row.room_code),
     is_instructor: isInstructor,
@@ -81,6 +82,7 @@ const postCreateRoom = async (req, res) => {
       title: req.body?.title || null,
       notifySms,
       notifyEmail,
+      scheduledAt: req.body?.scheduled_at || req.body?.scheduledAt || null,
     });
     const full = await getLiveRoomForUser(room.room_code, req.user).catch(() => room);
     res.status(201).json({
@@ -227,6 +229,7 @@ const getHistory = async (req, res) => {
           group_name: r.group_name,
           status: r.status,
           started_at: r.started_at,
+          scheduled_at: r.scheduled_at || null,
           ended_at: r.ended_at,
           participant_count: r.total_participants || r.participant_count || 0,
           guest_count: guests.length,

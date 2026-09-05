@@ -358,7 +358,7 @@
     "createAndShare": "Link və QR yarat",
     "creating": "Hazırlanır…",
     "shareJoinTitle": "Dərsə qoşul",
-    "shareJoinHint": "Link və QR 24 saat etibarlıdır. Qonaqlar qeydiyyatsız qoşula bilər.",
+    "shareJoinHint": "Link dərs saatına qədər və ondan 1 gün sonra etibarlıdır (ən çox 14 gün). Qonaqlar qeydiyyatsız qoşula bilər.",
     "copyLink": "Linki kopyala",
     "shareNative": "Paylaş",
     "downloadQr": "QR yüklə",
@@ -386,7 +386,16 @@
     "cameraOn": "Kamera açıq",
     "cameraOff": "Kamera bağlı",
     "youLabel": "Siz",
-    "participant": "İştirakçı"
+    "participant": "İştirakçı",
+    "chatAttach": "Fayl əlavə et",
+    "chatFileTooLarge": "Fayl 5 MB-dan böyük ola bilməz",
+    "chatFileType": "Yalnız JPEG, PNG, WebP və PDF göndərmək olar",
+    "chatFileFailed": "Fayl göndərilmədi",
+    "chatUploading": "Yüklənir…",
+    "scheduleWhen": "Təyin olunmuş vaxt (istəyə bağlı)",
+    "scheduleWhenHint": "Boş buraxsanız dərs indi açılır. Gələcək tarix seçsəniz, linki indi paylaşa bilərsiniz.",
+    "scheduledAt": "Təyin olunub:",
+    "scheduledBadge": "Planlaşdırılıb — link hazırdır"
   },
   "students": {
     "title": "Tələbələrim",
