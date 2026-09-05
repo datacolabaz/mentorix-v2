@@ -2,6 +2,7 @@ const db = require('../utils/db');
 const { bakuTodayYmd } = require('../controllers/monthlyAttendanceController');
 const { ensurePackLessonsUpTo } = require('./packLessons');
 const { computeFinalPackageFee } = require('../utils/groupPaymentTerms');
+const { syncUsageStudentsCount } = require('./usageStudentsSync');
 
 function normUuid(id) {
   return String(id).trim().toLowerCase().replace(/-/g, '');
@@ -267,23 +268,7 @@ async function activateEnrollmentFromGroupDefaults(client, opts) {
 
   await ensurePackLessonsUpTo(client, updated[0], { horizonDays: 30 }).catch(() => {});
 
-  const { rows: cntRows } = await client.query(
-    `SELECT COUNT(DISTINCT u.id)::int AS n
-     FROM enrollments e
-     JOIN users u ON u.id = e.student_id
-     WHERE e.instructor_id = $1
-       AND e.deleted_at IS NULL
-       AND COALESCE(LOWER(TRIM(e.status)), 'active') = 'active'
-       AND u.is_active = TRUE`,
-    [instructorId],
-  );
-  const n = Number(cntRows[0]?.n ?? 0) || 0;
-  await client.query(
-    `INSERT INTO usage_counters (user_id, students_count)
-     VALUES ($1, $2)
-     ON CONFLICT (user_id) DO UPDATE SET students_count = $2, updated_at = NOW()`,
-    [instructorId, n],
-  );
+  await syncUsageStudentsCount(instructorId, client);
 
   return updated[0];
 }

@@ -15,6 +15,7 @@ const {
 const { authenticate, authorize } = require('../middleware/auth');
 const { normalizeEnrollmentParam } = require('../lib/enrollmentRef');
 const db = require('../utils/db');
+const { syncUsageStudentsCount } = require('../services/usageStudentsSync');
 const { patchStudentEmail } = require('../controllers/studentEmailController');
 const { deliverPermanentPinSms } = require('../controllers/authController');
 const { requireInstructorPhoneVerified } = require('../middleware/trial');
@@ -747,23 +748,7 @@ router.post(
       }
 
       if (req.user?.role === 'instructor') {
-        const { rows: cntRows } = await client.query(
-          `SELECT COUNT(DISTINCT u.id)::int AS n
-           FROM enrollments e
-           JOIN users u ON u.id = e.student_id
-           WHERE e.instructor_id = $1
-             AND e.deleted_at IS NULL
-             AND COALESCE(NULLIF(LOWER(TRIM(e.status)), ''), 'active') = 'active'
-             AND u.is_active = TRUE`,
-          [instructor_id],
-        )
-        const n = Number(cntRows[0]?.n ?? 0) || 0
-        await client.query(
-          `INSERT INTO usage_counters (user_id, students_count)
-           VALUES ($1, $2)
-           ON CONFLICT (user_id) DO UPDATE SET students_count = $2, updated_at = NOW()`,
-          [instructor_id, n],
-        )
+        await syncUsageStudentsCount(instructor_id, client)
       }
       return enr;
     });
