@@ -26,6 +26,11 @@ const {
   postPublicLiveGuestLeave,
 } = require('../controllers/publicLiveGuestController');
 const { getPublicGuestAdmission } = require('../controllers/liveAdmissionController');
+const { uploadLiveChatAttachment } = require('../services/liveChatAttachmentStorage');
+const {
+  multerFail,
+  postGuestChatAttachment,
+} = require('../controllers/liveChatAttachmentController');
 const { publicGuestJoinRateLimit } = require('../middleware/publicGuestJoinRateLimit');
 const { postAccessEvent } = require('../controllers/accessAnalyticsController');
 const { postMarketplaceAiSearch } = require('../controllers/marketplaceAiSearchController');
@@ -66,6 +71,17 @@ router.get('/live-guest/:token', getPublicLiveGuestInvite);
 router.post('/live-guest/:token/join', publicGuestJoinRateLimit, postPublicLiveGuestJoin);
 router.get('/live-guest/:token/admission/:admissionId', getPublicGuestAdmission);
 router.post('/live-guest/:token/leave', postPublicLiveGuestLeave);
+router.post(
+  '/live-guest/:token/chat-attachments',
+  publicGuestJoinRateLimit,
+  (req, res, next) => {
+    uploadLiveChatAttachment.single('file')(req, res, (err) => {
+      if (multerFail(err, res)) return;
+      next();
+    });
+  },
+  postGuestChatAttachment,
+);
 
 router.post('/analytics/event', postAccessEvent);
 router.get('/landing-stats', getLandingStats);

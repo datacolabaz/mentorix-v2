@@ -9,6 +9,7 @@ import { canonicalAzPhoneE164 } from '../../lib/azPhone'
 import GuestAwareVideoConference from '../../components/live/GuestAwareVideoConference'
 import LiveWaitingRoom from '../../components/live/LiveWaitingRoom'
 import { useToast } from '../../components/common/Toast'
+import { fmtAzBakuYmdHm } from '../../lib/azDatetime'
 
 const inp =
   'w-full border border-white/15 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-primary/40 bg-white/[0.04] placeholder:text-gray-500'
@@ -59,7 +60,11 @@ function LiveGuestRoom({ session, onLeave }) {
           className="flex-1 min-h-0 flex flex-col"
           onDisconnected={() => void leave()}
         >
-          <GuestAwareVideoConference roomCode={session.room?.room_code} isInstructor={false} />
+          <GuestAwareVideoConference
+            roomCode={session.room?.room_code}
+            isInstructor={false}
+            guestAuth={{ inviteToken: session.inviteToken, participantId: session.participantId }}
+          />
           <RoomAudioRenderer />
         </LiveKitRoom>
       </div>
@@ -242,6 +247,9 @@ export default function LiveGuestJoin() {
           {info?.room?.title ? <p className="text-sm text-gray-400">{info.room.title}</p> : null}
           {info?.room?.instructor_name ? (
             <p className="text-xs text-gray-500">Müəllim: {info.room.instructor_name}</p>
+          ) : null}
+          {info?.room?.scheduled_at ? (
+            <p className="text-xs text-primary">Təyin olunub: {fmtAzBakuYmdHm(info.room.scheduled_at)}</p>
           ) : null}
         </div>
 

@@ -1,5 +1,5 @@
 const router = require('express').Router();
-const { authenticate, authorize } = require('../middleware/auth');
+const { authenticate, authorize, optionalAuthenticate } = require('../middleware/auth');
 const { enforceActiveSubscription } = require('../middleware/entitlements');
 const {
   postCreateRoom,
@@ -26,6 +26,42 @@ const {
   denyAdmission,
   postParticipantMedia,
 } = require('../controllers/liveAdmissionController');
+const { uploadLiveChatAttachment } = require('../services/liveChatAttachmentStorage');
+const {
+  multerFail,
+  postAuthedChatAttachment,
+  serveLiveChatAttachment,
+} = require('../controllers/liveChatAttachmentController');
+
+function liveChatUpload(req, res, next) {
+  uploadLiveChatAttachment.single('file')(req, res, (err) => {
+    if (multerFail(err, res)) return;
+    next();
+  });
+}
+
+function liveChatDownloadAuth(req, res, next) {
+  if (!req.headers.authorization?.split(' ')[1] && req.query?.token && !req.query?.invite) {
+    req.headers.authorization = `Bearer ${String(req.query.token).trim()}`;
+  }
+  return optionalAuthenticate(req, res, next);
+}
+
+router.get('/chat-attachments/:filename', liveChatDownloadAuth, serveLiveChatAttachment);
+router.post(
+  '/rooms/:roomCode/chat-attachments',
+  authenticate,
+  authorize('instructor', 'student'),
+  liveChatUpload,
+  postAuthedChatAttachment,
+);
+router.post(
+  '/:roomCode/chat-attachments',
+  authenticate,
+  authorize('instructor', 'student'),
+  liveChatUpload,
+  postAuthedChatAttachment,
+);
 
 router.get('/history', authenticate, authorize('instructor'), getHistory);
 router.delete('/history/:roomCode', authenticate, authorize('instructor'), deleteRoom);

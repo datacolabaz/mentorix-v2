@@ -6,8 +6,9 @@ import {
   useLocalParticipant,
   useTracks,
 } from '@livekit/components-react'
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import useLiveRoomSignals from '../../hooks/useLiveRoomSignals'
+import api from '../../lib/api'
 import useLiveAdmissions from '../../hooks/useLiveAdmissions'
 import { liveGridCountAttr, liveTileKey } from '../../lib/liveGrid'
 import LiveInCallChat from './LiveInCallChat'
@@ -61,11 +62,29 @@ function MentorixParticipantTile({
 }
 
 /** LiveKit konfrans — bərabər pəncərələr, qəbul paneli, mikrofon/kamera. */
-export default function GuestAwareVideoConference({ roomCode, isInstructor = false }) {
+export default function GuestAwareVideoConference({ roomCode, isInstructor = false, guestAuth = null }) {
   const { t } = useTranslation()
   const [chatOpen, setChatOpen] = useState(false)
   const { localParticipant } = useLocalParticipant()
   const { reactions, messages, sendReaction, sendChat, sendMediaCommand } = useLiveRoomSignals()
+  const uploadChatFile = useCallback(
+    async (file) => {
+      const form = new FormData()
+      form.append('file', file)
+      if (guestAuth?.inviteToken) {
+        form.append('participantId', guestAuth.participantId || '')
+        const res = await api.post(
+          `/public/live-guest/${encodeURIComponent(guestAuth.inviteToken)}/chat-attachments`,
+          form,
+        )
+        return res?.attachment
+      }
+      if (!roomCode) throw new Error(t('live.chatFileFailed'))
+      const res = await api.post(`/live/${encodeURIComponent(roomCode)}/chat-attachments`, form)
+      return res?.attachment
+    },
+    [guestAuth, roomCode, t],
+  )
   const admissions = useLiveAdmissions(roomCode, Boolean(isInstructor && roomCode))
   const tracks = useTracks(
     [
@@ -106,6 +125,8 @@ export default function GuestAwareVideoConference({ roomCode, isInstructor = fal
           onClose={() => setChatOpen(false)}
           messages={messages}
           onSend={sendChat}
+          onUploadFile={uploadChatFile}
+          guestAuth={guestAuth}
         />
       </div>
       <div className="shrink-0 flex flex-wrap items-center justify-center gap-2 px-3 py-2 border-t border-white/10 bg-[#111]">

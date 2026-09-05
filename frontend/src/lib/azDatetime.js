@@ -52,3 +52,12 @@ export function fmtAzBakuField(row, key) {
   if (az) return az
   return fmtAzBakuYmdHm(row?.[key])
 }
+
+/** `datetime-local` value in Asia/Baku → ISO UTC. Azerbaijan is UTC+4 year-round. */
+export function bakuDateTimeLocalToIso(value) {
+  const s = String(value || '').trim()
+  if (!s) return null
+  const withSeconds = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(s) ? `${s}:00` : s
+  const d = new Date(`${withSeconds}+04:00`)
+  return Number.isNaN(d.getTime()) ? null : d.toISOString()
+}

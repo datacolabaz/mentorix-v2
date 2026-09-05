@@ -5,6 +5,7 @@ import Modal from '../common/Modal'
 import Button from '../common/Button'
 import { useToast } from '../common/Toast'
 import { absolutePublicUrl } from '../../lib/absolutePublicUrl'
+import { fmtAzBakuYmdHm } from '../../lib/azDatetime'
 
 export default function LiveGuestShareModal({
   open,
@@ -76,6 +77,11 @@ export default function LiveGuestShareModal({
       {session ? (
         <div className="space-y-4">
           <p className="text-sm text-token-textMuted text-center">{title}</p>
+          {session.scheduledAt ? (
+            <p className="text-center text-xs text-primary">
+              {t('live.scheduledAt')} {fmtAzBakuYmdHm(session.scheduledAt)}
+            </p>
+          ) : null}
           {session.roomCode ? (
             <p className="text-center text-xs font-mono text-gray-400">{session.roomCode}</p>
           ) : null}

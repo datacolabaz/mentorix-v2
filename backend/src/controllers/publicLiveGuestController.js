@@ -42,7 +42,9 @@ async function postPublicLiveGuestLeave(req, res) {
 
 async function postGuestInvite(req, res) {
   try {
-    const result = await createGuestInvite(req.user.id, req.params.roomCode);
+    const result = await createGuestInvite(req.user.id, req.params.roomCode, {
+      expiresHours: req.body?.expires_hours ?? req.body?.expiresHours,
+    });
     res.status(201).json({
       success: true,
       invite: {

@@ -7,7 +7,7 @@ import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
 import LiveGuestShareModal from '../../components/live/LiveGuestShareModal'
 import { useToast } from '../../components/common/Toast'
-import { fmtAzBakuField } from '../../lib/azDatetime'
+import { bakuDateTimeLocalToIso, fmtAzBakuField } from '../../lib/azDatetime'
 import { liveGuestJoinUrl } from '../../lib/absolutePublicUrl'
 
 function fmtDuration(minutes, t) {
@@ -47,6 +47,7 @@ export default function InstructorLiveHistory() {
   const [loading, setLoading] = useState(true)
   const [startOpen, setStartOpen] = useState(false)
   const [startTitle, setStartTitle] = useState('')
+  const [startWhen, setStartWhen] = useState('')
   const [starting, setStarting] = useState(false)
   const [shareSession, setShareSession] = useState(null)
   const [sessions, setSessions] = useState([])
@@ -185,14 +186,21 @@ export default function InstructorLiveHistory() {
     setStarting(true)
     try {
       const title = String(startTitle || '').trim()
+      const scheduledAt = bakuDateTimeLocalToIso(startWhen)
       const res = await api.post('/live/create', {
         title: title || undefined,
         notifySms: false,
         notifyEmail: false,
+        scheduledAt: scheduledAt || undefined,
       })
       const code = res?.room?.room_code
       if (!code) throw new Error(t('live.roomCreateFailed'))
-      const inviteRes = await api.post(`/live/rooms/${encodeURIComponent(code)}/guest-invite`)
+      const hoursUntil = scheduledAt
+        ? Math.min(336, Math.max(24, Math.ceil((new Date(scheduledAt).getTime() - Date.now()) / 3600000) + 24))
+        : 24
+      const inviteRes = await api.post(`/live/rooms/${encodeURIComponent(code)}/guest-invite`, {
+        expiresHours: hoursUntil,
+      })
       const joinUrl = liveGuestJoinUrl(inviteRes?.invite)
       if (!joinUrl || !/^https?:\/\//i.test(joinUrl)) {
         throw new Error(t('live.startFailed'))
@@ -202,9 +210,11 @@ export default function InstructorLiveHistory() {
         joinUrl,
         title: title || res?.room?.title || t('live.historyTitle'),
         expiresAt: inviteRes?.invite?.expires_at,
+        scheduledAt: scheduledAt || res?.room?.scheduled_at,
       }
       setStartOpen(false)
       setStartTitle('')
+      setStartWhen('')
       setShareSession(session)
       toast(t('live.guestLinkCreated'), 'success')
       void load()
@@ -228,7 +238,15 @@ export default function InstructorLiveHistory() {
     try {
       let inviteRes = await api.get(`/live/rooms/${encodeURIComponent(session.room_code)}/guest-invite`)
       if (!inviteRes?.invite) {
-        inviteRes = await api.post(`/live/rooms/${encodeURIComponent(session.room_code)}/guest-invite`)
+        const hoursUntil = session.scheduled_at
+          ? Math.min(
+              336,
+              Math.max(24, Math.ceil((new Date(session.scheduled_at).getTime() - Date.now()) / 3600000) + 24),
+            )
+          : 24
+        inviteRes = await api.post(`/live/rooms/${encodeURIComponent(session.room_code)}/guest-invite`, {
+          expiresHours: hoursUntil,
+        })
       }
       const invite = inviteRes?.invite
       const joinUrl = liveGuestJoinUrl(invite)
@@ -241,6 +259,7 @@ export default function InstructorLiveHistory() {
         joinUrl,
         title: session.title || t('live.historyTitle'),
         expiresAt: invite?.expires_at,
+        scheduledAt: session.scheduled_at,
       })
     } catch (e) {
       toast(e?.message || t('live.shareFailed'), 'error')
@@ -338,8 +357,15 @@ export default function InstructorLiveHistory() {
                 <h2 className="font-semibold text-sm text-token-textMain truncate">{s.title}</h2>
                 <p className="text-[11px] text-token-textMuted mt-1">
                   {s.group_name || t('live.general')}
-                  {s.started_at ? ` · ${fmtAzBakuField(s, 'started_at')}` : ''}
+                  {s.scheduled_at
+                    ? ` · ${t('live.scheduledAt')} ${fmtAzBakuField(s, 'scheduled_at')}`
+                    : s.started_at
+                      ? ` · ${fmtAzBakuField(s, 'started_at')}`
+                      : ''}
                 </p>
+                {s.status === 'waiting' && s.scheduled_at ? (
+                  <p className="text-[10px] text-amber-500 mt-1">{t('live.scheduledBadge')}</p>
+                ) : null}
                 {s.recorded_by_name ? (
                   <p className="text-[10px] text-primary/80 mt-1">{t('live.recordingBy')} {s.recorded_by_name}</p>
                 ) : null}
@@ -447,6 +473,16 @@ export default function InstructorLiveHistory() {
               maxLength={120}
               className="w-full rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceMain px-3 py-2.5 text-sm text-token-textMain outline-none focus:border-primary/50"
             />
+          </label>
+          <label className="block space-y-1">
+            <span className="text-xs font-medium text-token-textMuted">{t('live.scheduleWhen')}</span>
+            <input
+              type="datetime-local"
+              value={startWhen}
+              onChange={(e) => setStartWhen(e.target.value)}
+              className="w-full rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceMain px-3 py-2.5 text-sm text-token-textMain outline-none focus:border-primary/50"
+            />
+            <span className="text-[11px] text-token-textMuted">{t('live.scheduleWhenHint')}</span>
           </label>
         </div>
       </Modal>

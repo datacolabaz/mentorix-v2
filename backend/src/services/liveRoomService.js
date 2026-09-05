@@ -100,7 +100,17 @@ async function getLiveRoomRowByCode(roomCode) {
   return rows[0] || null;
 }
 
-async function createLiveRoom(instructorId, { groupId, title, notifySms = false, notifyEmail = false }) {
+function parseScheduledAt(raw) {
+  if (!raw) return null;
+  const d = new Date(raw);
+  if (Number.isNaN(d.getTime())) return null;
+  return d;
+}
+
+async function createLiveRoom(
+  instructorId,
+  { groupId, title, notifySms = false, notifyEmail = false, scheduledAt = null } = {},
+) {
   const group = groupId ? await assertGroupOwnedByInstructor(instructorId, groupId) : null;
   if (groupId && !group) {
     const err = new Error('Qrup tapılmadı');
@@ -110,16 +120,24 @@ async function createLiveRoom(instructorId, { groupId, title, notifySms = false,
 
   const roomCode = await uniqueRoomCode();
   const roomTitle = String(title || '').trim() || (group ? `${group.name} — canlı dərs` : 'Mentorix Live');
+  const scheduled = parseScheduledAt(scheduledAt);
+  const isFuture = scheduled && scheduled.getTime() > Date.now() + 60 * 1000;
 
   const { rows } = await db.query(
-    `INSERT INTO live_rooms (room_code, instructor_id, group_id, title, status, started_at)
-     VALUES ($1, $2, $3, $4, 'live', NOW())
-     RETURNING *`,
-    [roomCode, instructorId, groupId || null, roomTitle.slice(0, 255)],
+    isFuture
+      ? `INSERT INTO live_rooms (room_code, instructor_id, group_id, title, status, started_at, scheduled_at)
+         VALUES ($1, $2, $3, $4, 'waiting', NULL, $5)
+         RETURNING *`
+      : `INSERT INTO live_rooms (room_code, instructor_id, group_id, title, status, started_at, scheduled_at)
+         VALUES ($1, $2, $3, $4, 'live', NOW(), NULL)
+         RETURNING *`,
+    isFuture
+      ? [roomCode, instructorId, groupId || null, roomTitle.slice(0, 255), scheduled.toISOString()]
+      : [roomCode, instructorId, groupId || null, roomTitle.slice(0, 255)],
   );
   const room = rows[0];
 
-  const wantsNotify = Boolean(notifySms || notifyEmail);
+  const wantsNotify = Boolean(notifySms || notifyEmail) && !isFuture;
   const notifications = wantsNotify
     ? await notifyGroupForLiveClass(instructorId, room, { notifySms, notifyEmail })
     : { sms: 0, email: 0 };
@@ -333,6 +351,8 @@ async function deleteLiveRoomForInstructor(instructorId, roomCode) {
   const { getLiveRecordingForRoom, deleteLiveRecordingFile } = require('./liveRecordingStorage');
   const recording = await getLiveRecordingForRoom(room.id);
   if (recording) await deleteLiveRecordingFile(recording);
+  const { deleteLiveChatFilesForRoom } = require('./liveChatAttachmentStorage');
+  await deleteLiveChatFilesForRoom(room.id);
   await db.query(`DELETE FROM live_rooms WHERE id = $1`, [room.id]);
   return { room_code: room.room_code };
 }
@@ -340,7 +360,7 @@ async function deleteLiveRoomForInstructor(instructorId, roomCode) {
 async function listInstructorLiveHistory(instructorId, { limit = 50 } = {}) {
   const cap = Math.min(Math.max(Number(limit) || 50, 1), 100);
   const { rows } = await db.query(
-    `SELECT lr.id, lr.room_code, lr.title, lr.status, lr.started_at, lr.ended_at, lr.participant_count, lr.created_at,
+    `SELECT lr.id, lr.room_code, lr.title, lr.status, lr.started_at, lr.ended_at, lr.scheduled_at, lr.participant_count, lr.created_at,
             ig.name AS group_name,
             lrec.filename AS recording_filename,
             lrec.duration_sec AS recording_duration_sec,
@@ -353,7 +373,7 @@ async function listInstructorLiveHistory(instructorId, { limit = 50 } = {}) {
      LEFT JOIN live_recordings lrec ON lrec.room_id = lr.id
      LEFT JOIN users uploader ON uploader.id = lrec.uploaded_by_user_id
      WHERE lr.instructor_id = $1
-     ORDER BY COALESCE(lr.started_at, lr.created_at) DESC
+     ORDER BY COALESCE(lr.scheduled_at, lr.started_at, lr.created_at) DESC
      LIMIT $2`,
     [instructorId, cap],
   );
