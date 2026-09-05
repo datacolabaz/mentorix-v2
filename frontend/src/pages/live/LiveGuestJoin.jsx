@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router-dom'
 import { LiveKitRoom, RoomAudioRenderer } from '@livekit/components-react'
 import '@livekit/components-styles'
@@ -14,14 +15,15 @@ import { fmtAzBakuYmdHm } from '../../lib/azDatetime'
 const inp =
   'w-full border border-white/15 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-primary/40 bg-white/[0.04] placeholder:text-gray-500'
 
-function LiveGuestRoom({ session, onLeave }) {
+function LiveGuestRoom({ session, onLeave, onSessionUpdate }) {
+  const { t } = useTranslation()
   const [connectLiveKit, setConnectLiveKit] = useState(true)
+  const [connectionLost, setConnectionLost] = useState(false)
+  const [rejoining, setRejoining] = useState(false)
   const leftRef = useRef(false)
+  const intentionalLeaveRef = useRef(false)
 
-  const leave = useCallback(async () => {
-    if (leftRef.current) return
-    leftRef.current = true
-    setConnectLiveKit(false)
+  const markLeftOnServer = useCallback(async () => {
     try {
       await api.post(`/public/live-guest/${encodeURIComponent(session.inviteToken)}/leave`, {
         participantId: session.participantId,
@@ -29,14 +31,54 @@ function LiveGuestRoom({ session, onLeave }) {
     } catch {
       /* ignore */
     }
+  }, [session.inviteToken, session.participantId])
+
+  const leave = useCallback(async () => {
+    if (leftRef.current) return
+    leftRef.current = true
+    intentionalLeaveRef.current = true
+    setConnectLiveKit(false)
+    await markLeftOnServer()
     onLeave?.()
-  }, [session.inviteToken, session.participantId, onLeave])
+  }, [markLeftOnServer, onLeave])
+
+  const rejoin = useCallback(async () => {
+    if (!session.admissionId) {
+      onLeave?.()
+      return
+    }
+    setRejoining(true)
+    try {
+      const res = await api.get(
+        `/public/live-guest/${encodeURIComponent(session.inviteToken)}/admission/${encodeURIComponent(session.admissionId)}`,
+      )
+      if (res?.pending || !res?.token) return
+      leftRef.current = false
+      intentionalLeaveRef.current = false
+      onSessionUpdate?.({
+        ...session,
+        token: res.token,
+        wsUrl: res.wsUrl,
+        participantId: res.participant?.id || session.participantId,
+        participantName: res.participant?.full_name || session.participantName,
+        room: res.room || session.room,
+      })
+      setConnectionLost(false)
+      setConnectLiveKit(true)
+    } catch {
+      onLeave?.()
+    } finally {
+      setRejoining(false)
+    }
+  }, [session, onLeave, onSessionUpdate])
 
   useEffect(() => {
     return () => {
-      void leave()
+      if (!intentionalLeaveRef.current && !leftRef.current) {
+        void markLeftOnServer()
+      }
     }
-  }, [leave])
+  }, [markLeftOnServer])
 
   return (
     <div className="min-h-[100svh] bg-[#0b0b0b] text-white flex flex-col">
@@ -49,7 +91,21 @@ function LiveGuestRoom({ session, onLeave }) {
           Çıx
         </Button>
       </header>
-      <div className="flex-1 min-h-0 flex flex-col">
+      <div className="relative flex-1 min-h-0 flex flex-col">
+        {connectionLost ? (
+          <div className="absolute inset-0 z-40 flex flex-col items-center justify-center gap-3 bg-black/80 px-6 text-center">
+            <p className="text-base font-semibold text-white">{t('live.connectionLost')}</p>
+            <p className="text-sm text-gray-400 max-w-md">{t('live.connectionLostHint')}</p>
+            <div className="flex flex-wrap items-center justify-center gap-2 mt-2">
+              <Button onClick={() => void rejoin()} loading={rejoining}>
+                {t('live.rejoinLive')}
+              </Button>
+              <Button variant="secondary" onClick={() => void leave()}>
+                Çıx
+              </Button>
+            </div>
+          </div>
+        ) : null}
         <LiveKitRoom
           token={session.token}
           serverUrl={session.wsUrl}
@@ -58,7 +114,12 @@ function LiveGuestRoom({ session, onLeave }) {
           audio={false}
           data-lk-theme="default"
           className="flex-1 min-h-0 flex flex-col"
-          onDisconnected={() => void leave()}
+          onDisconnected={() => {
+            void markLeftOnServer()
+            if (intentionalLeaveRef.current) return
+            setConnectLiveKit(false)
+            setConnectionLost(true)
+          }}
         >
           <GuestAwareVideoConference
             roomCode={session.room?.room_code}
@@ -149,6 +210,7 @@ export default function LiveGuestJoin() {
       }
       setLiveSession({
         inviteToken,
+        admissionId: res.admission_id || res.admission?.id || null,
         token: res.token,
         wsUrl: res.wsUrl,
         participantId: res.participant?.id,
@@ -182,6 +244,7 @@ export default function LiveGuestJoin() {
         if (res?.pending || !res?.token) return
         setLiveSession({
           inviteToken,
+          admissionId: res.admission_id || res.admission?.id || pendingAdmissionId,
           token: res.token,
           wsUrl: res.wsUrl,
           participantId: res.participant?.id,
@@ -203,7 +266,13 @@ export default function LiveGuestJoin() {
   }, [pendingAdmissionId, inviteToken, liveSession, admissionDenied, fullName])
 
   if (liveSession) {
-    return <LiveGuestRoom session={liveSession} onLeave={() => setLiveSession(null)} />
+    return (
+      <LiveGuestRoom
+        session={liveSession}
+        onLeave={() => setLiveSession(null)}
+        onSessionUpdate={setLiveSession}
+      />
+    )
   }
 
   if (pendingAdmissionId || admissionDenied) {

@@ -5,7 +5,7 @@ const { clientIp: clientIpFromReq } = require('../utils/clientIp');
 const { getLiveRoomForUser, getLiveRoomRowByCode } = require('./liveRoomService');
 const { getInviteByToken, assertInviteActive, assertParticipantCapacity } = require('./liveGuestService');
 const { getLiveKitConfig } = require('../lib/livekitConfig');
-const { mapAdmission } = require('../lib/liveAdmissionMap');
+const { mapAdmission, shouldReopenGuestParticipant } = require('../lib/liveAdmissionMap');
 
 function httpError(message, status, code) {
   const err = new Error(message);
@@ -156,18 +156,7 @@ async function issueGuestToken(roomCode, participant) {
   return { token: await at.toJwt(), wsUrl, identity };
 }
 
-async function ensureApprovedGuestParticipant(admission, req) {
-  if (admission.guest_participant_id) {
-    const { rows } = await db.query(`SELECT * FROM live_guest_participants WHERE id = $1 LIMIT 1`, [
-      admission.guest_participant_id,
-    ]);
-    if (rows[0]) return rows[0];
-  }
-  const participant = await createGuestParticipant(admission, req);
-  await db.query(
-    `UPDATE live_admission_requests SET guest_participant_id = $2 WHERE id = $1`,
-    [admission.id, participant.id],
-  );
+async function refreshGuestRoomPresence(roomId) {
   await db.query(
     `UPDATE live_rooms SET
        participant_count = (
@@ -178,8 +167,36 @@ async function ensureApprovedGuestParticipant(admission, req) {
        status = 'live',
        started_at = COALESCE(started_at, NOW())
      WHERE id = $1`,
-    [admission.room_id],
+    [roomId],
   );
+}
+
+async function ensureApprovedGuestParticipant(admission, req) {
+  if (admission.guest_participant_id) {
+    const { rows } = await db.query(`SELECT * FROM live_guest_participants WHERE id = $1 LIMIT 1`, [
+      admission.guest_participant_id,
+    ]);
+    if (rows[0]) {
+      if (shouldReopenGuestParticipant(rows[0])) {
+        const { rows: reopened } = await db.query(
+          `UPDATE live_guest_participants
+           SET left_at = NULL, joined_at = NOW()
+           WHERE id = $1
+           RETURNING *`,
+          [rows[0].id],
+        );
+        await refreshGuestRoomPresence(admission.room_id);
+        return reopened[0] || rows[0];
+      }
+      return rows[0];
+    }
+  }
+  const participant = await createGuestParticipant(admission, req);
+  await db.query(
+    `UPDATE live_admission_requests SET guest_participant_id = $2 WHERE id = $1`,
+    [admission.id, participant.id],
+  );
+  await refreshGuestRoomPresence(admission.room_id);
   return participant;
 }
 
@@ -253,6 +270,7 @@ async function getGuestAdmissionStatus(token, admissionId, req) {
     pending: false,
     status: 'approved',
     admission: mapAdmission(row),
+    admission_id: row.id,
     participant: { id: participant.id, full_name: participant.full_name, is_guest: true },
     room: { room_code: invite.room_code, title: invite.title, instructor_name: invite.instructor_name },
     token: lk.token,

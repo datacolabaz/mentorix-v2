@@ -1,6 +1,6 @@
 const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
-const { mapAdmission, canEnterLiveRoom } = require('./liveAdmissionMap');
+const { mapAdmission, canEnterLiveRoom, shouldReopenGuestParticipant } = require('./liveAdmissionMap');
 
 describe('mapAdmission', () => {
   it('returns null for empty row', () => {
@@ -33,5 +33,16 @@ describe('canEnterLiveRoom', () => {
     assert.equal(canEnterLiveRoom({ isInstructor: false, status: 'pending' }), false);
     assert.equal(canEnterLiveRoom({ isInstructor: false, status: 'denied' }), false);
     assert.equal(canEnterLiveRoom({ isInstructor: false, status: 'approved' }), true);
+  });
+});
+
+describe('shouldReopenGuestParticipant', () => {
+  it('reopens a guest who already left', () => {
+    assert.equal(shouldReopenGuestParticipant({ id: 'g1', left_at: '2026-09-05T12:00:00Z' }), true);
+  });
+
+  it('leaves an active guest row alone', () => {
+    assert.equal(shouldReopenGuestParticipant({ id: 'g1', left_at: null }), false);
+    assert.equal(shouldReopenGuestParticipant(null), false);
   });
 });
