@@ -1,16 +1,20 @@
-import { useState } from 'react'
 import { Track } from 'livekit-client'
 import { useTranslation } from 'react-i18next'
 import {
   ControlBar,
-  GridLayout,
   ParticipantTile,
+  useLocalParticipant,
   useTracks,
 } from '@livekit/components-react'
+import { useState } from 'react'
 import useLiveRoomSignals from '../../hooks/useLiveRoomSignals'
+import useLiveAdmissions from '../../hooks/useLiveAdmissions'
+import { liveGridCountAttr, liveTileKey } from '../../lib/liveGrid'
 import LiveInCallChat from './LiveInCallChat'
 import LiveReactionPicker from './LiveReactionPicker'
 import LiveReactionsOverlay from './LiveReactionsOverlay'
+import LiveAdmissionPanel from './LiveAdmissionPanel'
+import LiveTileMediaControls from './LiveTileMediaControls'
 
 function isGuestParticipant(participant) {
   if (!participant?.metadata) return false
@@ -21,27 +25,48 @@ function isGuestParticipant(participant) {
   }
 }
 
-function MentorixParticipantTile({ trackRef, ...props }) {
+function MentorixParticipantTile({
+  trackRef,
+  isInstructor,
+  roomCode,
+  localParticipant,
+  sendMediaCommand,
+}) {
   const { t } = useTranslation()
   const participant = trackRef?.participant
   const guest = isGuestParticipant(participant)
+  const isScreenShare = trackRef?.source === Track.Source.ScreenShare
+  const label = participant?.name || participant?.identity || t('live.participant')
   return (
-    <div className="relative h-full w-full min-h-0">
-      <ParticipantTile trackRef={trackRef} {...props} />
+    <div className={`mx-live-tile${isScreenShare ? ' mx-live-tile--screen' : ''}`}>
+      <ParticipantTile trackRef={trackRef} />
       {guest ? (
         <span className="absolute top-2 left-2 z-20 rounded-md bg-gray-600/90 px-1.5 py-0.5 text-[10px] font-bold text-gray-100 border border-gray-500/50 pointer-events-none">
           {t('live.guestLabel')}
         </span>
       ) : null}
+      <span className="absolute bottom-2 left-2 z-20 max-w-[60%] truncate rounded-md bg-black/65 px-1.5 py-0.5 text-[11px] font-medium text-white pointer-events-none">
+        {participant?.isLocal ? t('live.youLabel') : label}
+      </span>
+      <LiveTileMediaControls
+        participant={participant}
+        localParticipant={localParticipant}
+        isInstructor={isInstructor}
+        roomCode={roomCode}
+        sendMediaCommand={sendMediaCommand}
+        isScreenShare={isScreenShare}
+      />
     </div>
   )
 }
 
-/** LiveKit konfrans — qonaq badge, reaksiya və otaq çatı. */
-export default function GuestAwareVideoConference() {
+/** LiveKit konfrans — bərabər pəncərələr, qəbul paneli, mikrofon/kamera. */
+export default function GuestAwareVideoConference({ roomCode, isInstructor = false }) {
   const { t } = useTranslation()
   const [chatOpen, setChatOpen] = useState(false)
-  const { reactions, messages, sendReaction, sendChat } = useLiveRoomSignals()
+  const { localParticipant } = useLocalParticipant()
+  const { reactions, messages, sendReaction, sendChat, sendMediaCommand } = useLiveRoomSignals()
+  const admissions = useLiveAdmissions(roomCode, Boolean(isInstructor && roomCode))
   const tracks = useTracks(
     [
       { source: Track.Source.Camera, withPlaceholder: true },
@@ -53,9 +78,28 @@ export default function GuestAwareVideoConference() {
   return (
     <div className="lk-video-conference flex flex-col flex-1 min-h-0">
       <div className="relative flex-1 min-h-0">
-        <GridLayout tracks={tracks} className="h-full min-h-0">
-          <MentorixParticipantTile />
-        </GridLayout>
+        <div className="mx-live-stage">
+          <div className="mx-live-grid" data-count={liveGridCountAttr(tracks.length)}>
+            {tracks.map((trackRef) => (
+              <MentorixParticipantTile
+                key={liveTileKey(trackRef)}
+                trackRef={trackRef}
+                isInstructor={isInstructor}
+                roomCode={roomCode}
+                localParticipant={localParticipant}
+                sendMediaCommand={sendMediaCommand}
+              />
+            ))}
+          </div>
+        </div>
+        {isInstructor ? (
+          <LiveAdmissionPanel
+            pending={admissions.pending}
+            busyId={admissions.busyId}
+            onApprove={admissions.approve}
+            onDeny={admissions.deny}
+          />
+        ) : null}
         <LiveReactionsOverlay reactions={reactions} />
         <LiveInCallChat
           open={chatOpen}
@@ -80,7 +124,7 @@ export default function GuestAwareVideoConference() {
           {t('live.chatTitle')}
         </button>
       </div>
-      <ControlBar />
+      <ControlBar controls={{ chat: false, leave: false }} />
     </div>
   )
 }

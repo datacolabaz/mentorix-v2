@@ -25,6 +25,7 @@ const {
   postPublicLiveGuestJoin,
   postPublicLiveGuestLeave,
 } = require('../controllers/publicLiveGuestController');
+const { getPublicGuestAdmission } = require('../controllers/liveAdmissionController');
 const { publicGuestJoinRateLimit } = require('../middleware/publicGuestJoinRateLimit');
 const { postAccessEvent } = require('../controllers/accessAnalyticsController');
 const { postMarketplaceAiSearch } = require('../controllers/marketplaceAiSearchController');
@@ -63,6 +64,7 @@ router.get('/live-recording/:shareToken/info', getPublicRecordingInfo);
 router.get('/live-recording/:shareToken', getPublicRecording);
 router.get('/live-guest/:token', getPublicLiveGuestInvite);
 router.post('/live-guest/:token/join', publicGuestJoinRateLimit, postPublicLiveGuestJoin);
+router.get('/live-guest/:token/admission/:admissionId', getPublicGuestAdmission);
 router.post('/live-guest/:token/leave', postPublicLiveGuestLeave);
 
 router.post('/analytics/event', postAccessEvent);

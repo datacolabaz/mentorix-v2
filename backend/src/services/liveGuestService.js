@@ -1,7 +1,6 @@
 const crypto = require('crypto');
 const { AccessToken } = require('livekit-server-sdk');
 const db = require('../utils/db');
-const { clientIp: clientIpFromReq } = require('../utils/clientIp');
 const { canonicalStudentPhone } = require('../utils/studentPhone');
 const { getLiveRoomRowByCode, getInstructorLiveParticipantLimit } = require('./liveRoomService');
 const { LIVE_PARTICIPANT_LIMIT_MESSAGE } = require('../constants/livePlanLimits');
@@ -233,62 +232,21 @@ async function joinAsGuest(token, body, req) {
     throw err;
   }
 
-  await assertParticipantCapacity({ id: invite.room_id, instructor_id: invite.instructor_id });
-
-  const guestId = crypto.randomUUID();
-  const joinIp = req ? clientIpFromReq(req) : null;
-
-  const { rows } = await db.query(
-    `INSERT INTO live_guest_participants
-       (id, invite_id, room_id, full_name, email, phone_number, livekit_identity, join_ip, joined_at, left_at)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NULL)
-     RETURNING *`,
-    [
-      guestId,
-      invite.id,
-      invite.room_id,
-      fullName.slice(0, 255),
-      email.slice(0, 254),
-      phone,
-      `guest-${guestId}`,
-      joinIp,
-    ],
-  );
-  const participant = rows[0];
-
-  await db.query(
-    `UPDATE live_rooms SET
-       participant_count = (
-         SELECT COUNT(DISTINCT user_id)::int FROM live_sessions WHERE room_id = $1 AND left_at IS NULL
-       ) + (
-         SELECT COUNT(*)::int FROM live_guest_participants WHERE room_id = $1 AND left_at IS NULL
-       ),
-       status = 'live',
-       started_at = COALESCE(started_at, NOW())
-     WHERE id = $1`,
-    [invite.room_id],
-  );
-
-  const lk = await issueGuestLiveKitToken({
-    roomCode: invite.room_code,
-    guestParticipantId: participant.id,
-    fullName,
-  });
-
+  const { requestGuestAdmission, getGuestAdmissionStatus, mapAdmission } = require('./liveAdmissionService');
+  const admission = await requestGuestAdmission(invite, { fullName, email, phone });
+  const roomInfo = {
+    room_code: invite.room_code,
+    title: invite.title,
+    instructor_name: invite.instructor_name,
+  };
+  if (admission.status === 'approved') {
+    return getGuestAdmissionStatus(token, admission.id, req);
+  }
   return {
-    participant: {
-      id: participant.id,
-      full_name: participant.full_name,
-      is_guest: true,
-    },
-    room: {
-      room_code: invite.room_code,
-      title: invite.title,
-      instructor_name: invite.instructor_name,
-    },
-    token: lk.token,
-    wsUrl: lk.wsUrl,
-    identity: lk.identity,
+    pending: true,
+    admission_id: admission.id,
+    admission: mapAdmission(admission),
+    room: roomInfo,
   };
 }
 
@@ -361,4 +319,6 @@ module.exports = {
   countActiveGuestParticipants,
   countActiveLiveParticipants,
   getInviteByToken,
+  assertInviteActive,
+  assertParticipantCapacity,
 };

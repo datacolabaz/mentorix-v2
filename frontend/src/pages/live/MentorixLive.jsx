@@ -7,6 +7,7 @@ import useAuthStore from '../../hooks/useAuth'
 import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
 import GuestAwareVideoConference from '../../components/live/GuestAwareVideoConference'
+import LiveWaitingRoom from '../../components/live/LiveWaitingRoom'
 import { useToast } from '../../components/common/Toast'
 import { formatRecordingDuration, useLocalRecording, LIVE_MEDIA_RESTORE_EVENT } from '../../hooks/useLocalRecording'
 
@@ -66,6 +67,8 @@ export default function MentorixLive() {
   const [recordModalOpen, setRecordModalOpen] = useState(false)
   const [afterEndNavigate, setAfterEndNavigate] = useState(false)
   const [ending, setEnding] = useState(false)
+  const [waitingAdmission, setWaitingAdmission] = useState(false)
+  const [admissionDenied, setAdmissionDenied] = useState(false)
 
   const recording = useLocalRecording()
   const canRecord = recording.supported
@@ -203,9 +206,17 @@ export default function MentorixLive() {
       setLoading(true)
       setError('')
       try {
-        await api.post(`/live/${encodeURIComponent(code)}/join`)
-        joinedRef.current = true
+        const joinRes = await api.post(`/live/${encodeURIComponent(code)}/join`)
+        if (cancelled) return
+        if (joinRes?.room) setRoom(joinRes.room)
 
+        if (joinRes?.pending) {
+          setWaitingAdmission(true)
+          setLoading(false)
+          return
+        }
+
+        joinedRef.current = true
         const [roomRes, tokenRes] = await Promise.all([
           api.get(`/live/${encodeURIComponent(code)}`),
           api.get(`/live/${encodeURIComponent(code)}/token`),
@@ -216,7 +227,13 @@ export default function MentorixLive() {
         setToken(tokenRes.token)
         setWsUrl(tokenRes.wsUrl)
       } catch (e) {
-        if (!cancelled) setError(e?.message || 'Otağa qoşulmaq alınmadı')
+        if (cancelled) return
+        if (e?.code === 'ADMISSION_DENIED') {
+          setAdmissionDenied(true)
+          setWaitingAdmission(true)
+        } else {
+          setError(e?.message || 'Otağa qoşulmaq alınmadı')
+        }
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -228,6 +245,44 @@ export default function MentorixLive() {
       void leaveRoom()
     }
   }, [code, leaveRoom, disconnectLiveKit])
+
+  useEffect(() => {
+    if (!waitingAdmission || admissionDenied || !code || token) return undefined
+    let cancelled = false
+    const poll = async () => {
+      try {
+        const res = await api.get(`/live/${encodeURIComponent(code)}/admission`)
+        if (cancelled) return
+        if (res?.status === 'denied') {
+          setAdmissionDenied(true)
+          return
+        }
+        if (res?.status !== 'approved') return
+        const joinRes = await api.post(`/live/${encodeURIComponent(code)}/join`)
+        if (cancelled) return
+        if (joinRes?.pending) return
+        joinedRef.current = true
+        const [roomRes, tokenRes] = await Promise.all([
+          api.get(`/live/${encodeURIComponent(code)}`),
+          api.get(`/live/${encodeURIComponent(code)}/token`),
+        ])
+        if (cancelled) return
+        setRoom(roomRes.room)
+        setToken(tokenRes.token)
+        setWsUrl(tokenRes.wsUrl)
+        setWaitingAdmission(false)
+      } catch (e) {
+        if (cancelled) return
+        if (e?.code === 'ADMISSION_DENIED') setAdmissionDenied(true)
+      }
+    }
+    void poll()
+    const id = window.setInterval(() => void poll(), 2500)
+    return () => {
+      cancelled = true
+      window.clearInterval(id)
+    }
+  }, [waitingAdmission, admissionDenied, code, token])
 
   const toggleRecording = async () => {
     if (!canRecord) return
@@ -258,6 +313,16 @@ export default function MentorixLive() {
       <div className="min-h-[100svh] bg-[#0b0b0b] text-white flex items-center justify-center">
         <p className="text-gray-500">Mentorix Live yüklənir…</p>
       </div>
+    )
+  }
+
+  if (waitingAdmission && !token) {
+    return (
+      <LiveWaitingRoom
+        title={room?.title}
+        denied={admissionDenied}
+        onLeave={() => navigate(user?.role === 'student' ? '/student' : '/instructor', { replace: true })}
+      />
     )
   }
 
@@ -366,7 +431,7 @@ export default function MentorixLive() {
         >
           <LiveMediaEnsure onMicError={handleMicError} />
           <LiveMediaRestore />
-          <GuestAwareVideoConference />
+          <GuestAwareVideoConference roomCode={code} isInstructor={isInstructor} />
           <RoomAudioRenderer />
         </LiveKitRoom>
       </div>
