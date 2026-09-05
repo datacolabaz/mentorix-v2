@@ -13,6 +13,7 @@ const {
   deleteMyPrepSlot,
 } = require('../controllers/studentController');
 const { authenticate, authorize } = require('../middleware/auth');
+const { normalizeEnrollmentParam } = require('../lib/enrollmentRef');
 const db = require('../utils/db');
 const { patchStudentEmail } = require('../controllers/studentEmailController');
 const { deliverPermanentPinSms } = require('../controllers/authController');
@@ -437,6 +438,8 @@ async function replaceCycleOneScheduledLessons(client, params) {
     );
   }
 }
+
+router.param('enrollmentId', normalizeEnrollmentParam('enrollmentId'));
 
 router.get('/referral-breakdown', authenticate, authorize('admin', 'instructor'), getReferralBreakdown);
 

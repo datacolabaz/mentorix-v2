@@ -13,6 +13,9 @@ const {
   deletePayment,
 } = require('../controllers/paymentController');
 const { authenticate, authorize } = require('../middleware/auth');
+const { normalizeEnrollmentParam } = require('../lib/enrollmentRef');
+
+router.param('enrollment_id', normalizeEnrollmentParam('enrollment_id'));
 
 router.get('/my', authenticate, authorize('student'), listMyPayments);
 router.get('/instructor-board', authenticate, authorize('instructor'), getInstructorPaymentBoard);
