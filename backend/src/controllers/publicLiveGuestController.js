@@ -6,6 +6,7 @@ const {
   leaveGuestParticipant,
   getPublicInviteInfo,
 } = require('../services/liveGuestService');
+const { publicJoinUrl } = require('../lib/frontendBaseUrl');
 
 async function getPublicLiveGuestInvite(req, res) {
   try {
@@ -41,13 +42,12 @@ async function postPublicLiveGuestLeave(req, res) {
 async function postGuestInvite(req, res) {
   try {
     const result = await createGuestInvite(req.user.id, req.params.roomCode);
-    const appBase = String(process.env.APP_URL || process.env.FRONTEND_URL || '').replace(/\/$/, '');
     res.status(201).json({
       success: true,
       invite: {
         token: result.invite.token,
         expires_at: result.invite.expires_at,
-        join_url: appBase ? `${appBase}${result.join_path}` : result.join_path,
+        join_url: publicJoinUrl(result.join_path, req),
         join_path: result.join_path,
       },
       room_code: result.room.room_code,
@@ -69,13 +69,12 @@ async function deleteGuestInvite(req, res) {
 async function getGuestInvite(req, res) {
   try {
     const invite = await getActiveGuestInviteForRoom(req.user.id, req.params.roomCode);
-    const appBase = String(process.env.APP_URL || process.env.FRONTEND_URL || '').replace(/\/$/, '');
     res.json({
       success: true,
       invite: invite
         ? {
             ...invite,
-            join_url: appBase ? `${appBase}${invite.join_path}` : invite.join_path,
+            join_url: publicJoinUrl(invite.join_path, req),
           }
         : null,
     });

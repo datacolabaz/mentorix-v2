@@ -4,6 +4,7 @@ import { QRCodeCanvas } from 'qrcode.react'
 import Modal from '../common/Modal'
 import Button from '../common/Button'
 import { useToast } from '../common/Toast'
+import { absolutePublicUrl } from '../../lib/absolutePublicUrl'
 
 export default function LiveGuestShareModal({
   open,
@@ -15,7 +16,7 @@ export default function LiveGuestShareModal({
   const { t } = useTranslation()
   const toast = useToast()
   const qrWrapRef = useRef(null)
-  const joinUrl = session?.joinUrl || ''
+  const joinUrl = absolutePublicUrl(session?.joinUrl || '')
   const title = session?.title || t('live.historyTitle')
   const revoked = Boolean(session?.revoked)
 

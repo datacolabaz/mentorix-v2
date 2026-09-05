@@ -8,6 +8,7 @@ import Modal from '../../components/common/Modal'
 import LiveGuestShareModal from '../../components/live/LiveGuestShareModal'
 import { useToast } from '../../components/common/Toast'
 import { fmtAzBakuField } from '../../lib/azDatetime'
+import { liveGuestJoinUrl } from '../../lib/absolutePublicUrl'
 
 function fmtDuration(minutes, t) {
   const m = Number(minutes) || 0
@@ -192,9 +193,10 @@ export default function InstructorLiveHistory() {
       const code = res?.room?.room_code
       if (!code) throw new Error(t('live.roomCreateFailed'))
       const inviteRes = await api.post(`/live/rooms/${encodeURIComponent(code)}/guest-invite`)
-      const joinUrl =
-        inviteRes?.invite?.join_url ||
-        `${window.location.origin}${inviteRes?.invite?.join_path || `/live/join/${inviteRes?.invite?.token}`}`
+      const joinUrl = liveGuestJoinUrl(inviteRes?.invite)
+      if (!joinUrl || !/^https?:\/\//i.test(joinUrl)) {
+        throw new Error(t('live.startFailed'))
+      }
       const session = {
         roomCode: code,
         joinUrl,
@@ -210,6 +212,40 @@ export default function InstructorLiveHistory() {
       toast(e?.message || t('live.startFailed'), 'error')
     } finally {
       setStarting(false)
+    }
+  }
+
+  const canEnterLive = (s) => String(s?.status || '') !== 'ended' && !s?.ended_at
+
+  const enterLive = (session) => {
+    if (!session?.room_code) return
+    navigate(`/live/${encodeURIComponent(session.room_code)}`)
+  }
+
+  const openGuestShare = async (session) => {
+    if (!session?.room_code) return
+    setSharingId(session.id)
+    try {
+      let inviteRes = await api.get(`/live/rooms/${encodeURIComponent(session.room_code)}/guest-invite`)
+      if (!inviteRes?.invite) {
+        inviteRes = await api.post(`/live/rooms/${encodeURIComponent(session.room_code)}/guest-invite`)
+      }
+      const invite = inviteRes?.invite
+      const joinUrl = liveGuestJoinUrl(invite)
+      if (!joinUrl || joinUrl.startsWith('/') || !/^https?:\/\//i.test(joinUrl)) {
+        toast(t('live.startFailed'), 'error')
+        return
+      }
+      setShareSession({
+        roomCode: session.room_code,
+        joinUrl,
+        title: session.title || t('live.historyTitle'),
+        expiresAt: invite?.expires_at,
+      })
+    } catch (e) {
+      toast(e?.message || t('live.shareFailed'), 'error')
+    } finally {
+      setSharingId(null)
     }
   }
 
@@ -331,6 +367,11 @@ export default function InstructorLiveHistory() {
                   <span className="font-mono text-primary/80">{s.room_code}</span>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                  {canEnterLive(s) ? (
+                    <Button size="sm" onClick={() => enterLive(s)}>
+                      {t('live.openLive')}
+                    </Button>
+                  ) : null}
                   {s.has_recording ? (
                     <Button
                       size="sm"
@@ -341,18 +382,29 @@ export default function InstructorLiveHistory() {
                       ⬇ {t('live.downloadRecording')}
                       {s.recording_duration_sec ? ` (${fmtRecordingDuration(s.recording_duration_sec)})` : ''}
                     </Button>
-                  ) : (
+                  ) : !canEnterLive(s) ? (
                     <span className="text-[10px] text-token-textMuted/80 px-1">{t('live.noRecording')}</span>
+                  ) : null}
+                  {canEnterLive(s) ? (
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      loading={sharingId === s.id}
+                      onClick={() => void openGuestShare(s)}
+                    >
+                      🔗 {t('live.shareGuest')}
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      disabled={!s.has_recording}
+                      loading={sharingId === s.id}
+                      onClick={() => void handleShare(s)}
+                    >
+                      🔗 {t('live.share')}
+                    </Button>
                   )}
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    disabled={!s.has_recording}
-                    loading={sharingId === s.id}
-                    onClick={() => void handleShare(s)}
-                  >
-                    🔗 {t('live.share')}
-                  </Button>
                   <Button
                     size="sm"
                     variant="danger"
