@@ -20,7 +20,8 @@ async function getPublicLiveGuestInvite(req, res) {
 async function postPublicLiveGuestJoin(req, res) {
   try {
     const result = await joinAsGuest(req.params.token, req.body || {}, req);
-    res.status(201).json({ success: true, ...result });
+    const status = result?.pending ? 200 : 201;
+    res.status(status).json({ success: true, ...result });
   } catch (e) {
     res.status(e.status || 500).json({ success: false, message: e.message || 'Xəta', code: e.code });
   }

@@ -371,7 +371,22 @@
     "roomCreateFailed": "Otaq yaradılmadı",
     "startFailed": "Dərs başlamadı",
     "openLive": "Dərsə keç",
-    "shareGuest": "Link / QR"
+    "shareGuest": "Link / QR",
+    "waitingForTeacher": "Müəllim təsdiqini gözləyirsiniz…",
+    "waitingForTeacherHint": "Dərsə qoşulmaq üçün müəllim sizi təsdiqləməlidir.",
+    "joinDenied": "Qoşulma rədd edildi",
+    "joinDeniedHint": "Müəllim bu dəfə sizi dərsə buraxmadı.",
+    "leaveWaiting": "Geri qayıt",
+    "approveJoin": "Təsdiqlə",
+    "denyJoin": "Rədd et",
+    "admissionPendingTitle": "Yeni qoşulma",
+    "studentJoin": "Tələbə",
+    "micOn": "Mikrofon açıq",
+    "micOff": "Mikrofon bağlı",
+    "cameraOn": "Kamera açıq",
+    "cameraOff": "Kamera bağlı",
+    "youLabel": "Siz",
+    "participant": "İştirakçı"
   },
   "students": {
     "title": "Tələbələrim",

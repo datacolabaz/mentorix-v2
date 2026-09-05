@@ -3,6 +3,7 @@ import { RoomEvent } from 'livekit-client'
 import { useRoomContext } from '@livekit/components-react'
 import {
   LIVE_CHAT_TOPIC,
+  LIVE_MEDIA_TOPIC,
   LIVE_REACTION_TOPIC,
   isAllowedReaction,
   parseLiveDataPayload,
@@ -64,6 +65,23 @@ export default function useLiveRoomSignals() {
     [localName, publish, pushReaction],
   )
 
+  const sendMediaCommand = useCallback(
+    async ({ identity, microphone, camera }) => {
+      const target = String(identity || '').trim()
+      if (!target) return
+      try {
+        await publish(
+          LIVE_MEDIA_TOPIC,
+          { t: 'media', identity: target, microphone, camera },
+          true,
+        )
+      } catch {
+        /* ignore */
+      }
+    },
+    [publish],
+  )
+
   const sendChat = useCallback(
     async (text) => {
       const clean = String(text || '').trim().slice(0, 240)
@@ -110,6 +128,24 @@ export default function useLiveRoomSignals() {
             at: Date.now(),
           },
         ])
+        return
+      }
+      if (topic === LIVE_MEDIA_TOPIC || data.t === 'media') {
+        const local = room.localParticipant
+        if (!local || String(data.identity || '') !== String(local.identity || '')) return
+        let fromInstructor = false
+        try {
+          fromInstructor = JSON.parse(participant?.metadata || '{}')?.role === 'instructor'
+        } catch {
+          fromInstructor = false
+        }
+        if (!fromInstructor && !participant?.permissions?.roomAdmin) return
+        if (typeof data.microphone === 'boolean') {
+          void local.setMicrophoneEnabled(data.microphone)
+        }
+        if (typeof data.camera === 'boolean') {
+          void local.setCameraEnabled(data.camera)
+        }
       }
     }
     room.on(RoomEvent.DataReceived, onData)
@@ -118,5 +154,5 @@ export default function useLiveRoomSignals() {
     }
   }, [room, pushReaction])
 
-  return { reactions, messages, sendReaction, sendChat }
+  return { reactions, messages, sendReaction, sendChat, sendMediaCommand }
 }

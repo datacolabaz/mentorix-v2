@@ -7,6 +7,7 @@ import Button from '../../components/common/Button'
 import PhoneInput from '../../components/auth/PhoneInput'
 import { canonicalAzPhoneE164 } from '../../lib/azPhone'
 import GuestAwareVideoConference from '../../components/live/GuestAwareVideoConference'
+import LiveWaitingRoom from '../../components/live/LiveWaitingRoom'
 import { useToast } from '../../components/common/Toast'
 
 const inp =
@@ -91,7 +92,7 @@ function LiveGuestRoom({ session, onLeave }) {
           className="flex-1 min-h-0 flex flex-col"
           onDisconnected={() => void leave()}
         >
-          <GuestAwareVideoConference />
+          <GuestAwareVideoConference roomCode={session.room?.room_code} isInstructor={false} />
           <RoomAudioRenderer />
         </LiveKitRoom>
       </div>
@@ -112,6 +113,8 @@ export default function LiveGuestJoin() {
   const [phone, setPhone] = useState('')
   const [joinBusy, setJoinBusy] = useState(false)
   const [liveSession, setLiveSession] = useState(null)
+  const [pendingAdmissionId, setPendingAdmissionId] = useState(null)
+  const [admissionDenied, setAdmissionDenied] = useState(false)
 
   useEffect(() => {
     if (!inviteToken) {
@@ -167,6 +170,11 @@ export default function LiveGuestJoin() {
         email: email.trim(),
         phoneNumber: phoneCanon,
       })
+      if (res?.pending) {
+        setPendingAdmissionId(res.admission_id || res.admission?.id)
+        if (res.room) setInfo((prev) => ({ ...prev, room: res.room }))
+        return
+      }
       setLiveSession({
         inviteToken,
         token: res.token,
@@ -176,14 +184,67 @@ export default function LiveGuestJoin() {
         room: res.room,
       })
     } catch (e) {
-      toast(e?.message || 'Qoşulma alınmadı', 'error')
+      if (e?.code === 'ADMISSION_DENIED') {
+        setAdmissionDenied(true)
+      } else {
+        toast(e?.message || 'Qoşulma alınmadı', 'error')
+      }
     } finally {
       setJoinBusy(false)
     }
   }
 
+  useEffect(() => {
+    if (!pendingAdmissionId || !inviteToken || liveSession || admissionDenied) return undefined
+    let cancelled = false
+    const poll = async () => {
+      try {
+        const res = await api.get(
+          `/public/live-guest/${encodeURIComponent(inviteToken)}/admission/${encodeURIComponent(pendingAdmissionId)}`,
+        )
+        if (cancelled) return
+        if (res?.status === 'denied') {
+          setAdmissionDenied(true)
+          return
+        }
+        if (res?.pending || !res?.token) return
+        setLiveSession({
+          inviteToken,
+          token: res.token,
+          wsUrl: res.wsUrl,
+          participantId: res.participant?.id,
+          participantName: res.participant?.full_name || fullName,
+          room: res.room,
+        })
+        setPendingAdmissionId(null)
+      } catch (e) {
+        if (cancelled) return
+        if (e?.code === 'ADMISSION_DENIED') setAdmissionDenied(true)
+      }
+    }
+    void poll()
+    const id = window.setInterval(() => void poll(), 2500)
+    return () => {
+      cancelled = true
+      window.clearInterval(id)
+    }
+  }, [pendingAdmissionId, inviteToken, liveSession, admissionDenied, fullName])
+
   if (liveSession) {
     return <LiveGuestRoom session={liveSession} onLeave={() => setLiveSession(null)} />
+  }
+
+  if (pendingAdmissionId || admissionDenied) {
+    return (
+      <LiveWaitingRoom
+        title={info?.room?.title}
+        denied={admissionDenied}
+        onLeave={() => {
+          setPendingAdmissionId(null)
+          setAdmissionDenied(false)
+        }}
+      />
+    )
   }
 
   if (loading) {

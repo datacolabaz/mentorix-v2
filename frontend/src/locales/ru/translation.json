@@ -371,7 +371,22 @@
     "roomCreateFailed": "Не удалось создать комнату",
     "startFailed": "Не удалось начать урок",
     "openLive": "Перейти к уроку",
-    "shareGuest": "Ссылка / QR"
+    "shareGuest": "Ссылка / QR",
+    "waitingForTeacher": "Ожидаем подтверждение преподавателя…",
+    "waitingForTeacherHint": "Чтобы войти в урок, преподаватель должен вас подтвердить.",
+    "joinDenied": "Вход отклонён",
+    "joinDeniedHint": "Преподаватель не пустил вас на этот урок.",
+    "leaveWaiting": "Назад",
+    "approveJoin": "Принять",
+    "denyJoin": "Отклонить",
+    "admissionPendingTitle": "Новый вход",
+    "studentJoin": "Ученик",
+    "micOn": "Микрофон включён",
+    "micOff": "Микрофон выключен",
+    "cameraOn": "Камера включена",
+    "cameraOff": "Камера выключена",
+    "youLabel": "Вы",
+    "participant": "Участник"
   },
   "students": {
     "title": "Мои ученики",

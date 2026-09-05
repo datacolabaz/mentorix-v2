@@ -1,5 +1,6 @@
 export const LIVE_REACTION_TOPIC = 'mx-reaction'
 export const LIVE_CHAT_TOPIC = 'mx-chat'
+export const LIVE_MEDIA_TOPIC = 'mx-media'
 
 export const LIVE_REACTION_EMOJIS = ['👍', '👏', '❤️', '😂', '😍', '😮', '🎉', '🔥', '💯', '🙌', '✨', '😎']
 

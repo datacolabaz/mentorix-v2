@@ -24,6 +24,7 @@ const {
   ensureRecordingShareTokenByRoomId,
 } = require('../services/liveRecordingStorage');
 const { listGuestsForRoom } = require('../services/liveGuestService');
+const { requestUserAdmission, assertUserMayEnter, mapAdmission } = require('../services/liveAdmissionService');
 
 const liveRecordingsDir = ensureLiveRecordingsUploadDir();
 const uploadLiveRecording = multer({
@@ -104,10 +105,34 @@ const getRoom = async (req, res) => {
 const postJoin = async (req, res) => {
   try {
     const room = await getLiveRoomForUser(req.params.roomCode, req.user);
-    const role = req.user.role === 'instructor' ? 'instructor' : 'student';
+    const isInstructor =
+      req.user.role === 'instructor' && String(room.instructor_id) === String(req.user.id);
+    if (!isInstructor) {
+      const admission = await requestUserAdmission(room, req.user);
+      if (admission.status === 'pending') {
+        return res.json({
+          success: true,
+          pending: true,
+          admission: mapAdmission(admission),
+          room: await mapRoom(room, req.user),
+        });
+      }
+      if (admission.status === 'denied') {
+        return res.status(403).json({
+          success: false,
+          pending: false,
+          denied: true,
+          code: 'ADMISSION_DENIED',
+          message: 'Müəllim qoşulmanı rədd etdi',
+          admission: mapAdmission(admission),
+        });
+      }
+    }
+    const role = isInstructor ? 'instructor' : 'student';
     const session = await joinLiveSession(room.id, req.user.id, role);
     res.json({
       success: true,
+      pending: false,
       session: { id: session.id, joined_at: session.joined_at, role: session.role },
       room: await mapRoom(room, req.user),
     });
@@ -160,10 +185,12 @@ const getToken = async (req, res) => {
     const room = await getLiveRoomForUser(req.params.roomCode, req.user);
     const isInstructor =
       req.user.role === 'instructor' && String(room.instructor_id) === String(req.user.id);
+    await assertUserMayEnter(room, req.user);
 
     const at = new AccessToken(apiKey, apiSecret, {
       identity: String(req.user.id),
       name: req.user.full_name || 'İştirakçı',
+      metadata: JSON.stringify({ role: isInstructor ? 'instructor' : 'student' }),
       ttl: '4h',
     });
 

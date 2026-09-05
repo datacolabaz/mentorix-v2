@@ -19,6 +19,13 @@ const {
   deleteGuestInvite,
   getGuestInvite,
 } = require('../controllers/publicLiveGuestController');
+const {
+  listAdmissions,
+  getMyAdmission,
+  approveAdmission,
+  denyAdmission,
+  postParticipantMedia,
+} = require('../controllers/liveAdmissionController');
 
 router.get('/history', authenticate, authorize('instructor'), getHistory);
 router.delete('/history/:roomCode', authenticate, authorize('instructor'), deleteRoom);
@@ -62,6 +69,26 @@ router.post(
 );
 
 router.get('/rooms/:roomCode/token', authenticate, authorize('instructor', 'student'), getToken);
+router.get('/rooms/:roomCode/admissions', authenticate, authorize('instructor'), listAdmissions);
+router.get('/rooms/:roomCode/admission', authenticate, authorize('instructor', 'student'), getMyAdmission);
+router.post(
+  '/rooms/:roomCode/admissions/:admissionId/approve',
+  authenticate,
+  authorize('instructor'),
+  approveAdmission,
+);
+router.post(
+  '/rooms/:roomCode/admissions/:admissionId/deny',
+  authenticate,
+  authorize('instructor'),
+  denyAdmission,
+);
+router.post(
+  '/rooms/:roomCode/participants/:identity/media',
+  authenticate,
+  authorize('instructor'),
+  postParticipantMedia,
+);
 router.get('/rooms/:roomCode', authenticate, authorize('instructor', 'student'), getRoom);
 router.post('/rooms/:roomCode/join', authenticate, authorize('instructor', 'student'), postJoin);
 router.post('/rooms/:roomCode/leave', authenticate, authorize('instructor', 'student'), postLeave);
@@ -87,6 +114,26 @@ router.post(
 );
 
 router.get('/:roomCode/token', authenticate, authorize('instructor', 'student'), getToken);
+router.get('/:roomCode/admissions', authenticate, authorize('instructor'), listAdmissions);
+router.get('/:roomCode/admission', authenticate, authorize('instructor', 'student'), getMyAdmission);
+router.post(
+  '/:roomCode/admissions/:admissionId/approve',
+  authenticate,
+  authorize('instructor'),
+  approveAdmission,
+);
+router.post(
+  '/:roomCode/admissions/:admissionId/deny',
+  authenticate,
+  authorize('instructor'),
+  denyAdmission,
+);
+router.post(
+  '/:roomCode/participants/:identity/media',
+  authenticate,
+  authorize('instructor'),
+  postParticipantMedia,
+);
 router.get('/:roomCode', authenticate, authorize('instructor', 'student'), getRoom);
 router.post('/:roomCode/join', authenticate, authorize('instructor', 'student'), postJoin);
 router.post('/:roomCode/leave', authenticate, authorize('instructor', 'student'), postLeave);
