@@ -21,6 +21,7 @@ const {
 const { mapRowsWithPresence } = require('../services/userPresenceService');
 const { expandStudentsWithParticipantGroups } = require('../services/participantGroupService');
 const { displayGroupLabel } = require('../lib/participantGroupLabels');
+const { resolveEnrollmentId } = require('../lib/enrollmentRef');
 
 function normInstructorHex(id) {
   return id == null ? '' : String(id).trim().toLowerCase().replace(/-/g, '');
@@ -355,7 +356,8 @@ const patchStudentPhone = async (req, res) => {
 
 const deleteStudent = async (req, res) => {
   try {
-    const enrId = req.params.enrollmentId;
+    const enrId = resolveEnrollmentId(req.params.enrollmentId);
+    if (!enrId) return res.status(400).json({ success: false, message: 'Etibarsız enrollment' });
     const { rows: enr } = await db.query(
       'SELECT id, student_id, instructor_id FROM enrollments WHERE id = $1',
       [enrId],

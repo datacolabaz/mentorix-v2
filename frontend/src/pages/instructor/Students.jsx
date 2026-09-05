@@ -28,6 +28,7 @@ import {
 } from '../../lib/teachingSubjects'
 import { BILLING_STATUS_QUERY_KEY, useBillingStatus } from '../../hooks/useBillingStatus'
 import { canUseDirectChat } from '../../lib/subscriptionPlanGuards'
+import { resolveEnrollmentId } from '../../lib/enrollmentRef'
 
 function studentNamesLabel(students) {
   return (Array.isArray(students) ? students : [])
@@ -1278,7 +1279,7 @@ export default function InstructorStudents() {
         notifications_enabled: setupForm.notifications_enabled,
       }
       if (setupPhone && !setupPhoneLocked) body.phone = setupPhone
-      await api.post(`/students/enrollment/${encodeURIComponent(setupEnrollmentId)}/complete-setup`, body)
+      await api.post(`/students/enrollment/${encodeURIComponent(resolveEnrollmentId(setupEnrollmentId))}/complete-setup`, body)
       toast(t('students.toasts.setupComplete'))
       setSetupModal(false)
       setSetupEnrollmentId(null)
@@ -1301,7 +1302,7 @@ export default function InstructorStudents() {
     setSendProfileEmailBusy(true)
     try {
       const r = await api.post(
-        `/students/enrollment/${encodeURIComponent(setupEnrollmentId)}/send-profile-completion-email`,
+        `/students/enrollment/${encodeURIComponent(resolveEnrollmentId(setupEnrollmentId))}/send-profile-completion-email`,
       )
       toast(r?.message || t('students.toasts.emailSent'), 'success')
       try {
@@ -1974,7 +1975,7 @@ export default function InstructorStudents() {
         setEditStudentId(null)
         return
       }
-      await api.patch('/students/enrollment/' + encodeURIComponent(editId), patchBody)
+      await api.patch('/students/enrollment/' + encodeURIComponent(resolveEnrollmentId(editId)), patchBody)
       toast(t('students.toasts.updated'))
       setEditModal(false)
       setEditStudentId(null)
@@ -1992,7 +1993,7 @@ export default function InstructorStudents() {
     setLessonsModal({ studentName: name, enrollmentId: eid, lessons: [], loading: true, error: null })
     void (async () => {
       try {
-        const d = await api.get(`/students/enrollment/${encodeURIComponent(eid)}/lessons`)
+        const d = await api.get(`/students/enrollment/${encodeURIComponent(resolveEnrollmentId(eid))}/lessons`)
         setLessonsModal((prev) =>
           prev?.enrollmentId === eid
             ? { ...prev, lessons: Array.isArray(d.lessons) ? d.lessons : [], loading: false, error: null }
@@ -2021,7 +2022,7 @@ export default function InstructorStudents() {
     setDeleteBusy(true)
     try {
       const deleted = students.find((s) => String(s?.enrollment_id) === String(deleteConfirm.enrollmentId)) || null
-      await api.delete('/students/enrollment/' + deleteConfirm.enrollmentId)
+      await api.delete('/students/enrollment/' + encodeURIComponent(resolveEnrollmentId(deleteConfirm.enrollmentId)))
       toast(t('students.toasts.studentDeleted'), 'success')
       setDeleteConfirm(null)
       // Refresh list immediately so we can decide whether the group is now empty.
@@ -2069,7 +2070,7 @@ export default function InstructorStudents() {
     })
     void (async () => {
       try {
-        const d = await api.get(`/payments/enrollment/${encodeURIComponent(eid)}/restore-preview`)
+        const d = await api.get(`/payments/enrollment/${encodeURIComponent(resolveEnrollmentId(eid))}/restore-preview`)
         const items = Array.isArray(d.items) ? d.items : []
         setRestoreModal((prev) =>
           prev?.enrollmentId === eid ? { ...prev, items, loading: false, error: null } : prev
@@ -2089,7 +2090,7 @@ export default function InstructorStudents() {
     setRestoreModal((p) => (p ? { ...p, loading: true, error: null } : p))
     try {
       const d = await api.post(
-        `/payments/enrollment/${encodeURIComponent(restoreModal.enrollmentId)}/restore-confirm`,
+        `/payments/enrollment/${encodeURIComponent(resolveEnrollmentId(restoreModal.enrollmentId))}/restore-confirm`,
         { ids }
       )
       toast(t('students.toasts.paymentsAdded', { count: d?.count || 0 }), 'success')
@@ -2757,7 +2758,7 @@ export default function InstructorStudents() {
                 if (!id) return
                 setCancelPendingBusyId(String(id))
                 try {
-                  const r = await api.post(`/students/enrollment/${encodeURIComponent(id)}/cancel-pending-setup`, {})
+                  const r = await api.post(`/students/enrollment/${encodeURIComponent(resolveEnrollmentId(id))}/cancel-pending-setup`, {})
                   toast(r?.message || t('students.cancelPendingSuccess'), 'success')
                   setStudents((prev) => (Array.isArray(prev) ? prev.filter((x) => String(x.enrollment_id) !== String(id)) : prev))
                   setCancelPendingModal(null)
