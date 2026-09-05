@@ -387,6 +387,8 @@
     "cameraOff": "Kamera bağlı",
     "youLabel": "Siz",
     "participant": "İştirakçı",
+    "presenting": "Paylaşılır",
+    "youPresenting": "Siz paylaşır",
     "chatAttach": "Fayl əlavə et",
     "chatFileTooLarge": "Fayl 5 MB-dan böyük ola bilməz",
     "chatFileType": "PDF, şəkil, Office, mətn və kod faylları olar (xlsx, txt, py, js…). Exe göndərmək olmaz.",

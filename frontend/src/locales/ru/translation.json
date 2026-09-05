@@ -387,6 +387,8 @@
     "cameraOff": "Камера выключена",
     "youLabel": "Вы",
     "participant": "Участник",
+    "presenting": "Демонстрация",
+    "youPresenting": "Вы демонстрируете",
     "chatAttach": "Прикрепить файл",
     "chatFileTooLarge": "Файл не больше 5 МБ",
     "chatFileType": "Можно PDF, изображения, Office, текст и код (xlsx, txt, py, js…). exe нельзя.",

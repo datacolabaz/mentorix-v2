@@ -12,7 +12,7 @@ import api from '../../lib/api'
 import useAuthStore from '../../hooks/useAuth'
 import { mapLiveChatHistory } from '../../lib/liveChatFile'
 import useLiveAdmissions from '../../hooks/useLiveAdmissions'
-import { liveGridCountAttr, liveTileKey } from '../../lib/liveGrid'
+import { liveGridCountAttr, liveTileKey, splitLiveConferenceTracks } from '../../lib/liveGrid'
 import LiveInCallChat from './LiveInCallChat'
 import LiveReactionPicker from './LiveReactionPicker'
 import LiveReactionsOverlay from './LiveReactionsOverlay'
@@ -40,6 +40,13 @@ function MentorixParticipantTile({
   const guest = isGuestParticipant(participant)
   const isScreenShare = trackRef?.source === Track.Source.ScreenShare
   const label = participant?.name || participant?.identity || t('live.participant')
+  const nameTag = isScreenShare
+    ? participant?.isLocal
+      ? t('live.youPresenting')
+      : `${label} · ${t('live.presenting')}`
+    : participant?.isLocal
+      ? t('live.youLabel')
+      : label
   return (
     <div className={`mx-live-tile${isScreenShare ? ' mx-live-tile--screen' : ''}`}>
       <ParticipantTile trackRef={trackRef} />
@@ -48,8 +55,13 @@ function MentorixParticipantTile({
           {t('live.guestLabel')}
         </span>
       ) : null}
-      <span className="absolute bottom-2 left-2 z-20 max-w-[60%] truncate rounded-md bg-black/65 px-1.5 py-0.5 text-[11px] font-medium text-white pointer-events-none">
-        {participant?.isLocal ? t('live.youLabel') : label}
+      {isScreenShare ? (
+        <span className="absolute top-2 right-2 z-20 rounded-md bg-primary/90 px-1.5 py-0.5 text-[10px] font-bold text-black pointer-events-none">
+          {t('live.presenting')}
+        </span>
+      ) : null}
+      <span className="absolute bottom-2 left-2 z-20 max-w-[70%] truncate rounded-md bg-black/65 px-1.5 py-0.5 text-[11px] font-medium text-white pointer-events-none">
+        {nameTag}
       </span>
       <LiveTileMediaControls
         participant={participant}
@@ -153,23 +165,39 @@ export default function GuestAwareVideoConference({ roomCode, isInstructor = fal
     ],
     { onlySubscribed: false },
   )
+  const { screenTracks, galleryTracks, cameraTracks, hasScreenShare } = splitLiveConferenceTracks(tracks)
+
+  const renderTile = (trackRef) => (
+    <MentorixParticipantTile
+      key={liveTileKey(trackRef)}
+      trackRef={trackRef}
+      isInstructor={isInstructor}
+      roomCode={roomCode}
+      localParticipant={localParticipant}
+      sendMediaCommand={sendMediaCommand}
+    />
+  )
 
   return (
-    <div className="lk-video-conference flex flex-col flex-1 min-h-0">
+    <div className={`lk-video-conference flex flex-col flex-1 min-h-0${hasScreenShare ? ' mx-live-focus' : ''}`}>
       <div className="relative flex-1 min-h-0">
-        <div className="mx-live-stage">
-          <div className="mx-live-grid" data-count={liveGridCountAttr(tracks.length)}>
-            {tracks.map((trackRef) => (
-              <MentorixParticipantTile
-                key={liveTileKey(trackRef)}
-                trackRef={trackRef}
-                isInstructor={isInstructor}
-                roomCode={roomCode}
-                localParticipant={localParticipant}
-                sendMediaCommand={sendMediaCommand}
-              />
-            ))}
-          </div>
+        <div className={`mx-live-stage${hasScreenShare ? ' mx-live-stage--focus' : ''}`}>
+          {hasScreenShare ? (
+            <div className="mx-live-focus-layout">
+              <div
+                className={`mx-live-focus-stage${screenTracks.length > 1 ? ' mx-live-focus-stage--multi' : ''}`}
+              >
+                {screenTracks.map(renderTile)}
+              </div>
+              {galleryTracks.length > 0 ? (
+                <div className="mx-live-focus-strip">{galleryTracks.map(renderTile)}</div>
+              ) : null}
+            </div>
+          ) : (
+            <div className="mx-live-grid" data-count={liveGridCountAttr(cameraTracks.length)}>
+              {cameraTracks.map(renderTile)}
+            </div>
+          )}
         </div>
         {isInstructor ? (
           <LiveAdmissionPanel
