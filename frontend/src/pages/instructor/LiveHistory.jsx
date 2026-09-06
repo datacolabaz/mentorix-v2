@@ -121,7 +121,7 @@ export default function InstructorLiveHistory() {
         shareUrl = fresh?.share_url || null
       }
       if (!shareUrl) {
-        toast('Paylaşım linki yaradıla bilmədi', 'error')
+        toast(t('live.shareLinkCreateFailed'), 'error')
         return
       }
       const url = `${window.location.origin}${shareUrl}`
@@ -129,7 +129,7 @@ export default function InstructorLiveHistory() {
         await navigator.clipboard.writeText(url)
         toast(t('live.shareCopied'))
       } catch {
-        window.prompt('Paylaşım linkini kopyalayın:', url)
+        window.prompt(t('live.copySharePrompt'), url)
       }
     } catch (e) {
       toast(e?.message || t('live.shareFailed'), 'error')

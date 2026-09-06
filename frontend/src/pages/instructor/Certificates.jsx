@@ -6,6 +6,7 @@ import Button from '../../components/common/Button'
 import { useToast } from '../../components/common/Toast'
 import { useBillingStatus } from '../../hooks/useBillingStatus'
 import { planRank } from '../../lib/subscriptionPlanGuards'
+import { intlLocale } from '../../lib/uiLocale'
 
 const TEMPLATE_KEYS = [
   { id: 'classic', label: 'Classic' },
@@ -14,7 +15,7 @@ const TEMPLATE_KEYS = [
 ]
 
 export default function InstructorCertificates() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const toast = useToast()
   const { data: billing } = useBillingStatus()
   const proPlus = planRank(billing?.plan) >= planRank('pro')
@@ -206,7 +207,7 @@ export default function InstructorCertificates() {
                     <td className="py-2 pr-3">{c.student_name}</td>
                     <td className="py-2 pr-3">{c.title}</td>
                     <td className="py-2 pr-3">{Number(c.score_pct || 0).toFixed(0)}%</td>
-                    <td className="py-2">{c.issued_at ? new Date(c.issued_at).toLocaleDateString('az-AZ') : '—'}</td>
+                    <td className="py-2">{c.issued_at ? new Date(c.issued_at).toLocaleDateString(intlLocale(i18n.language)) : '—'}</td>
                   </tr>
                 ))}
               </tbody>

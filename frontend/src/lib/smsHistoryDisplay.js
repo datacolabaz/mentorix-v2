@@ -1,4 +1,5 @@
 import i18n from '../i18n'
+import { intlLocale } from './uiLocale'
 
 export const SMS_STATUS_UI = {
   sent: { icon: '✓', badge: 'paid' },
@@ -58,7 +59,7 @@ export function formatSmsDateTime(iso, now = new Date()) {
   const today = startOfDay(now)
   const that = startOfDay(d)
   const diffDays = Math.round((today - that) / 86400000)
-  const locale = i18n.language === 'ru' ? 'ru-RU' : 'az-AZ'
+  const locale = intlLocale(i18n.language)
   const time = d.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })
   if (diffDays === 0) return i18n.t('notifications.dateToday', { time })
   if (diffDays === 1) return i18n.t('notifications.dateYesterday', { time })
@@ -71,7 +72,7 @@ export function formatSmsDateTime(iso, now = new Date()) {
 export function formatSmsDateTimeLong(iso) {
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return '—'
-  const locale = i18n.language === 'ru' ? 'ru-RU' : 'az-AZ'
+  const locale = intlLocale(i18n.language)
   const day = d.getDate()
   const month = monthName(d.getMonth())
   const year = d.getFullYear()

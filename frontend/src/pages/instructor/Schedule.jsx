@@ -20,6 +20,7 @@ import {
 } from '../../lib/lessonWeekGrid'
 import { readCache, writeCache } from '../../lib/cache'
 import { getWeekdays } from '../../lib/weekdays'
+import { intlLocale } from '../../lib/uiLocale'
 
 /** @deprecated Use getWeekdays(t) from ../../lib/weekdays */
 export const WEEKDAYS = [
@@ -87,7 +88,7 @@ function fmtLocaleLessonRow(l, locale) {
 
 export default function InstructorSchedule() {
   const { t, i18n } = useTranslation()
-  const dateLocale = i18n.language.startsWith('ru') ? 'ru-RU' : 'az-AZ'
+  const dateLocale = intlLocale(i18n.language)
   const weekdays = useMemo(() => getWeekdays(t), [t])
   const [loading, setLoading] = useState(true)
   const [datedLessons, setDatedLessons] = useState([])

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import api from '../../lib/api'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
@@ -10,6 +11,7 @@ function fmtDate(d) {
 }
 
 export default function AssignmentAnalytics() {
+  const { t } = useTranslation()
   const [loading, setLoading] = useState(true)
   const [err, setErr] = useState(null)
   const [analytics, setAnalytics] = useState(null)
@@ -21,12 +23,12 @@ export default function AssignmentAnalytics() {
       const d = await api.get('/tasks/analytics')
       setAnalytics(d.analytics || null)
     } catch (e) {
-      setErr(e?.message || 'Yüklənmədi')
+      setErr(e?.message || t('assignmentAnalytics.loadFailed'))
       setAnalytics(null)
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [t])
 
   useEffect(() => {
     void load()
@@ -38,15 +40,15 @@ export default function AssignmentAnalytics() {
     <div className="p-4 sm:p-6 max-w-5xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-4">
         <div>
-          <h1 className="font-display font-bold text-xl sm:text-2xl">Tapşırıq analitikası</h1>
-          <p className="text-token-textMuted text-sm mt-1">Təslim nisbəti, orta bal və ən yaxşı tələbələr.</p>
+          <h1 className="font-display font-bold text-xl sm:text-2xl">{t('assignmentAnalytics.title')}</h1>
+          <p className="text-token-textMuted text-sm mt-1">{t('assignmentAnalytics.subtitle')}</p>
         </div>
         <div className="flex gap-2 shrink-0">
           <Button variant="secondary" size="sm" onClick={() => void load()} disabled={loading}>
-            Yenilə
+            {t('assignmentAnalytics.refresh')}
           </Button>
           <Link to="/instructor/tasks" className="text-sm text-primary hover:underline self-center">
-            ← Tapşırıqlar
+            {t('assignmentAnalytics.backToTasks')}
           </Link>
         </div>
       </div>
@@ -56,26 +58,26 @@ export default function AssignmentAnalytics() {
       )}
 
       {loading ? (
-        <Card className="p-5 text-sm text-token-textMuted">Yüklənir…</Card>
+        <Card className="p-5 text-sm text-token-textMuted">{t('assignmentAnalytics.loading')}</Card>
       ) : !a ? (
-        <Card className="p-5 text-sm text-token-textMuted">Məlumat yoxdur.</Card>
+        <Card className="p-5 text-sm text-token-textMuted">{t('assignmentAnalytics.empty')}</Card>
       ) : (
         <>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
             <Card className="p-4">
-              <p className="text-xs text-token-textMuted">Təslim nisbəti</p>
+              <p className="text-xs text-token-textMuted">{t('assignmentAnalytics.submissionRate')}</p>
               <p className="text-2xl font-bold mt-1">{a.submission_rate}%</p>
             </Card>
             <Card className="p-4">
-              <p className="text-xs text-token-textMuted">Orta bal</p>
+              <p className="text-xs text-token-textMuted">{t('assignmentAnalytics.avgScore')}</p>
               <p className="text-2xl font-bold mt-1">{a.average_score != null ? a.average_score : '—'}</p>
             </Card>
             <Card className="p-4">
-              <p className="text-xs text-token-textMuted">Gecikmiş təslim</p>
+              <p className="text-xs text-token-textMuted">{t('assignmentAnalytics.late')}</p>
               <p className="text-2xl font-bold mt-1 text-amber-300">{a.late_submissions}</p>
             </Card>
             <Card className="p-4">
-              <p className="text-xs text-token-textMuted">Təslim / təyin</p>
+              <p className="text-xs text-token-textMuted">{t('assignmentAnalytics.submittedAssigned')}</p>
               <p className="text-2xl font-bold mt-1">
                 {a.total_submissions ?? 0} / {a.total_student_slots ?? 0}
               </p>
@@ -83,9 +85,9 @@ export default function AssignmentAnalytics() {
           </div>
 
           <Card className="p-4 mb-6">
-            <h2 className="text-sm font-semibold text-token-textMain mb-3">Ən yüksək bal (top 5)</h2>
+            <h2 className="text-sm font-semibold text-token-textMain mb-3">{t('assignmentAnalytics.topScores')}</h2>
             {!a.top_students?.length ? (
-              <p className="text-sm text-token-textMuted">Hələ qiymətləndirilmiş tapşırıq yoxdur.</p>
+              <p className="text-sm text-token-textMuted">{t('assignmentAnalytics.noGraded')}</p>
             ) : (
               <ul className="space-y-2">
                 {a.top_students.map((s, i) => (
@@ -94,7 +96,7 @@ export default function AssignmentAnalytics() {
                       {i + 1}. {s.full_name}
                     </span>
                     <span className="text-emerald-300 font-semibold tabular-nums">
-                      {s.average_score != null ? s.average_score : '—'} ({s.reviewed_count} tap.)
+                      {s.average_score != null ? s.average_score : '—'} ({t('assignmentAnalytics.reviewedCount', { count: s.reviewed_count })})
                     </span>
                   </li>
                 ))}
@@ -103,20 +105,20 @@ export default function AssignmentAnalytics() {
           </Card>
 
           <Card className="p-4 overflow-x-auto">
-            <h2 className="text-sm font-semibold text-token-textMain mb-3">Tapşırıqlar üzrə</h2>
+            <h2 className="text-sm font-semibold text-token-textMain mb-3">{t('assignmentAnalytics.byAssignment')}</h2>
             {!a.by_assignment?.length ? (
-              <p className="text-sm text-token-textMuted">Tapşırıq yoxdur.</p>
+              <p className="text-sm text-token-textMuted">{t('assignmentAnalytics.noAssignments')}</p>
             ) : (
               <table className="w-full text-sm text-left min-w-[520px]">
                 <thead>
                   <tr className="text-token-textMuted text-xs border-b border-[color:var(--border-subtle)]">
-                    <th className="py-2 pr-3">Başlıq</th>
-                    <th className="py-2 pr-3">Qrup</th>
-                    <th className="py-2 pr-3">Təyin</th>
-                    <th className="py-2 pr-3">Təslim</th>
-                    <th className="py-2 pr-3">Gözləyir</th>
+                    <th className="py-2 pr-3">{t('assignmentAnalytics.colTitle')}</th>
+                    <th className="py-2 pr-3">{t('assignmentAnalytics.colGroup')}</th>
+                    <th className="py-2 pr-3">{t('assignmentAnalytics.colAssigned')}</th>
+                    <th className="py-2 pr-3">{t('assignmentAnalytics.colSubmitted')}</th>
+                    <th className="py-2 pr-3">{t('assignmentAnalytics.colPending')}</th>
                     <th className="py-2 pr-3">%</th>
-                    <th className="py-2">Orta bal</th>
+                    <th className="py-2">{t('assignmentAnalytics.avgScore')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -140,7 +142,7 @@ export default function AssignmentAnalytics() {
           </Card>
 
           <p className="text-xs text-token-textMuted mt-4">
-            Gələcək AI modulları (avtomatik rəy, plagiat yoxlaması) bu analitika ilə inteqrasiya olunacaq.
+            {t('assignmentAnalytics.aiHint')}
           </p>
         </>
       )}

@@ -20,6 +20,7 @@ import ExamBreakdownList from '../../components/exam/ExamBreakdownList'
 import OpenQuestionGradingPanel from '../../components/exam/OpenQuestionGradingPanel'
 import { useToast } from '../../components/common/Toast'
 import useUiStore from '../../hooks/useUi'
+import { intlLocale } from '../../lib/uiLocale'
 
 const COLORS = ['#e1306c', '#1877f2', '#000', '#3b82f6', '#6366f1']
 
@@ -392,7 +393,7 @@ export default function InstructorAnalytics() {
     [t],
   )
 
-  const dateLocale = i18n.language === 'ru' ? 'ru-RU' : 'az-AZ'
+  const dateLocale = intlLocale(i18n.language)
 
   return (
     <div className="p-6 min-w-0">
@@ -984,7 +985,7 @@ export default function InstructorAnalytics() {
                 )}
                 {studentReviewModal.grading_pending ? (
                   <p className="text-xs text-amber-300 mt-2">
-                    Qiymətləndirmə gözlənilir — açıq suallar təsdiqlənənə qədər sertifikat verilməyəcək.
+                    {t('analytics.gradingPending')}
                   </p>
                 ) : null}
               </div>

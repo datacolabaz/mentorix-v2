@@ -79,6 +79,7 @@ function buildDiscoverProfileAlert(completeness) {
   return {
     type: 'discover_profile',
     level: completeness.missing.includes('categories') ? 'warning' : 'warning',
+    missing: completeness.missing,
     message: detail,
     cta: {
       label: completeness.missing.includes('categories') ? 'Fənn əlavə et' : 'Axtarış profilini tamamla',

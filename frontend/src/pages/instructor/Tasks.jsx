@@ -17,6 +17,7 @@ import { ASSIGNMENT_ACCEPT, ASSIGNMENT_FORMAT_CHIPS, validateAssignmentFile } fr
 import LibraryMaterialPickerModal from '../../components/instructor/LibraryMaterialPickerModal'
 import GeneratedQuestionsView from '../../components/generation/GeneratedQuestionsView'
 import { extractGeneratedQuestions } from '../../lib/aiAssignmentQuestions'
+import { intlLocale } from '../../lib/uiLocale'
 
 const BAKU_TZ = 'Asia/Baku'
 
@@ -24,7 +25,7 @@ function fmtLocaleField(row, key, locale) {
   const iso = row?.[key]
   if (!iso) return ''
   try {
-    return new Date(iso).toLocaleString(locale === 'ru' ? 'ru-RU' : 'az-AZ', {
+    return new Date(iso).toLocaleString(intlLocale(locale), {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
@@ -42,7 +43,7 @@ function fmtDue(d, locale) {
   const s = String(d).slice(0, 10)
   if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return s
   try {
-    return new Date(`${s}T12:00:00`).toLocaleDateString(locale === 'ru' ? 'ru-RU' : 'az-AZ', {
+    return new Date(`${s}T12:00:00`).toLocaleDateString(intlLocale(locale), {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',

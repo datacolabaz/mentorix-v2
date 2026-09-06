@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import api from '../../lib/api'
 import { resolveApiAssetUrl } from '../../lib/apiAssetUrl'
 import Button from '../common/Button'
@@ -14,6 +15,7 @@ export default function InstructorAvatarUpload({
   mapKind = 'teacher',
   theme = 'dark',
 }) {
+  const { t } = useTranslation()
   const fileRef = useRef(null)
   const [preview, setPreview] = useState(null)
   const [uploading, setUploading] = useState(false)
@@ -34,11 +36,11 @@ export default function InstructorAvatarUpload({
     if (!file) return
     setError(null)
     if (!ALLOWED.includes(file.type)) {
-      setError('Yalnız JPEG, PNG və ya WebP formatı qəbul olunur')
+      setError(t('settings.avatarUpload.errType'))
       return
     }
     if (file.size > MAX_BYTES) {
-      setError('Fayl çox böyükdür — maksimum 5 MB')
+      setError(t('settings.avatarUpload.errSize'))
       return
     }
     setPreview(URL.createObjectURL(file))
@@ -55,7 +57,7 @@ export default function InstructorAvatarUpload({
       onAvatarChange?.(res.avatar_url || null)
       setPreview(null)
     } catch (err) {
-      setError(err?.message || 'Şəkil yüklənmədi')
+      setError(err?.message || t('settings.avatarUpload.errUpload'))
       setPreview(null)
     } finally {
       setUploading(false)
@@ -70,7 +72,7 @@ export default function InstructorAvatarUpload({
       onAvatarChange?.(null)
       setPreview(null)
     } catch (err) {
-      setError(err?.message || 'Silinmədi')
+      setError(err?.message || t('settings.avatarUpload.errRemove'))
     } finally {
       setRemoving(false)
     }
@@ -84,7 +86,7 @@ export default function InstructorAvatarUpload({
       <div className="flex flex-col sm:flex-row gap-5 items-start">
         <div
           className="relative shrink-0 h-28 w-28 rounded-full overflow-hidden ring-4 ring-primary/30 shadow-lg bg-[#1a1a1a]"
-          aria-label={showPhoto ? 'Profil şəkli' : 'Profil şəkli yoxdur'}
+          aria-label={showPhoto ? t('settings.avatarUpload.hasPhoto') : t('settings.avatarUpload.noPhoto')}
         >
           {showPhoto ? (
             <img
@@ -105,17 +107,16 @@ export default function InstructorAvatarUpload({
           )}
           {uploading ? (
             <span className="absolute inset-0 z-10 rounded-full bg-black/50 flex items-center justify-center text-xs text-white font-semibold">
-              Yüklənir…
+              {t('settings.avatarUpload.uploading')}
             </span>
           ) : null}
         </div>
 
         <div className="flex-1 min-w-0 space-y-3">
           <p className={`text-sm rounded-xl border px-3 py-2.5 leading-relaxed ${hintCls}`}>
-            Zəhmət olmasa, aydın, peşəkar və üzünüzün tam göründüyü bir şəkil seçin. Bu, valideynlərin sizə olan
-            güvənini artıracaq.
+            {t('settings.avatarUpload.hint')}
           </p>
-          <p className="text-xs text-token-textMuted">JPEG, PNG və ya WebP · maksimum 5 MB</p>
+          <p className="text-xs text-token-textMuted">{t('settings.avatarUpload.formats')}</p>
           <div className="flex flex-wrap gap-2">
             <input
               ref={fileRef}
@@ -130,7 +131,7 @@ export default function InstructorAvatarUpload({
               onClick={() => fileRef.current?.click()}
               className="justify-center"
             >
-              {avatarUrl || preview ? 'Şəkli dəyiş' : 'Şəkil yüklə'}
+              {avatarUrl || preview ? t('settings.avatarUpload.change') : t('settings.avatarUpload.upload')}
             </Button>
             {avatarUrl ? (
               <Button
@@ -141,7 +142,7 @@ export default function InstructorAvatarUpload({
                 onClick={() => void remove()}
                 className="justify-center"
               >
-                Şəkli sil
+                {t('settings.avatarUpload.remove')}
               </Button>
             ) : null}
           </div>

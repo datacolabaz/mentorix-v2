@@ -16,6 +16,7 @@ import { BILLING_STATUS_QUERY_KEY, useBillingStatus } from '../../hooks/useBilli
 import MarketplaceOpportunityCard from '../../components/instructor/MarketplaceOpportunityCard'
 import BasicTrialCountdownBanner from '../../components/instructor/BasicTrialCountdownBanner'
 import PresenceDot from '../../components/common/PresenceDot'
+import { moneyLocale as moneyLocaleTag } from '../../lib/uiLocale'
 
 const DEFAULT_DASH = {
   income_this_month: 0,
@@ -241,7 +242,7 @@ export default function InstructorDashboard() {
   const hrs = new Date().getHours()
   const greeting =
     hrs < 12 ? t('dashboard.greetingMorning') : hrs < 18 ? t('dashboard.greetingAfternoon') : t('dashboard.greetingEvening')
-  const moneyLocale = i18n.language === 'ru' ? 'ru-RU' : 'az-Latn-AZ'
+  const moneyLocale = moneyLocaleTag(i18n.language)
   const moneyFmt = new Intl.NumberFormat(moneyLocale)
   const incomeThisMonthAz = `₼ ${moneyFmt.format(Math.round(Number(dash.income_this_month || 0)))}`
   const totalEarningsAz = `₼ ${moneyFmt.format(Math.round(Number(dash.total_earnings_all || 0)))}`

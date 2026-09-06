@@ -5,6 +5,7 @@ import api from '../../lib/api'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
 import { useToast } from '../../components/common/Toast'
+import { intlLocale } from '../../lib/uiLocale'
 
 function EmptyInboxIcon() {
   return (
@@ -29,7 +30,7 @@ export default function StudentInquiries() {
     student_place: t('studentInquiries.format.studentPlace'),
   }
 
-  const dateLocale = i18n.language?.startsWith('ru') ? 'ru-RU' : 'az-AZ'
+  const dateLocale = intlLocale(i18n.language)
 
   const load = useCallback(async () => {
     setLoading(true)

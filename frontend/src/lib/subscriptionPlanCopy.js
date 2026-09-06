@@ -9,7 +9,10 @@ function pickT(opts) {
 
 function numLocale(opts) {
   const lang = opts?.lang || opts?.i18n?.language || 'az'
-  return String(lang).toLowerCase().startsWith('ru') ? 'ru-RU' : 'az-AZ'
+  const l = String(lang).toLowerCase()
+  if (l.startsWith('ru')) return 'ru-RU'
+  if (l.startsWith('en')) return 'en-GB'
+  return 'az-AZ'
 }
 
 function fmtNum(n, opts) {

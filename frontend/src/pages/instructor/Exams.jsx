@@ -15,11 +15,12 @@ import useUiStore from '../../hooks/useUi'
 import { BILLING_STATUS_QUERY_KEY, useBillingStatus } from '../../hooks/useBillingStatus'
 import { copyStudentExamLink, studentExamShareUrl } from '../../lib/examShare'
 import { EXAM_MONTHLY_LIMIT_MESSAGE, isExamsMonthlyLimitReached } from '../../lib/subscriptionPlanGuards'
+import { intlCollatorLang, intlLocale } from '../../lib/uiLocale'
 
 function fmtDateLocale(iso, locale) {
   if (!iso) return ''
   try {
-    return new Date(iso).toLocaleString(locale === 'ru' ? 'ru-RU' : 'az-AZ', {
+    return new Date(iso).toLocaleString(intlLocale(locale), {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
@@ -329,11 +330,11 @@ export default function InstructorExams() {
           .filter(Boolean)
       }
       if (!entries.length) {
-        toast('Format: JSON array və ya hər sətirdə `1; cavab mətni`', 'error')
+        toast(t('exams.questions.bulkModelFormatError'), 'error')
         return
       }
       const d = await api.patch(`/exams/${encodeURIComponent(editExam.id)}/open-model-answers`, { entries })
-      toast(`${d.updated || 0} model cavab yükləndi`)
+      toast(t('exams.questions.bulkModelLoaded', { count: d.updated || 0 }))
       setBulkModelImportText('')
       const qs = await api.get(`/exams/${encodeURIComponent(editExam.id)}/questions`)
       setEditQuestions((qs.questions || qs || []).map(initEditQuestion))
@@ -560,7 +561,7 @@ export default function InstructorExams() {
           (qDigits.startsWith('0') && phoneDigits.endsWith(qDigits.slice(1)))
         )
       })
-      .sort((a, b) => String(a.full_name || '').localeCompare(String(b.full_name || ''), i18n.language === 'ru' ? 'ru' : 'az'))
+      .sort((a, b) => String(a.full_name || '').localeCompare(String(b.full_name || ''), intlCollatorLang(i18n.language)))
   }, [students, studentPickerQuery, showAllStudentsInPicker, baselineAssignedSet])
 
   const toggleStudent = (id, checked) => {
@@ -943,14 +944,13 @@ export default function InstructorExams() {
               </div>
               {editQuestions.some((q) => q.question_type === 'open') ? (
                 <div className="rounded-lg border border-violet-500/25 bg-violet-500/5 p-3 space-y-2">
-                  <p className="text-xs font-semibold text-violet-200">Toplu model cavab import</p>
+                  <p className="text-xs font-semibold text-violet-200">{t('exams.questions.bulkModelTitle')}</p>
                   <p className="text-[11px] text-gray-500 leading-relaxed">
-                    JSON: <code className="text-violet-300">[{`{"order_num":1,"model_answer":"..."}`}, …]</code>
-                    {' '}və ya hər sətirdə: <code className="text-violet-300">1; cavab mətni</code>
+                    {t('exams.questions.bulkModelHint')}
                   </p>
                   <textarea
                     className={inp + ' min-h-[88px] resize-y font-mono text-xs'}
-                    placeholder={'1; temp = A, A = B, B = temp\n2; ikinci sualın cavabı'}
+                    placeholder={t('exams.questions.bulkModelPh')}
                     value={bulkModelImportText}
                     onChange={(e) => setBulkModelImportText(e.target.value)}
                   />
@@ -961,7 +961,7 @@ export default function InstructorExams() {
                     disabled={!bulkModelImportText.trim()}
                     onClick={() => void applyBulkModelAnswers()}
                   >
-                    Model cavabları yüklə
+                    {t('exams.questions.bulkModelUpload')}
                   </Button>
                 </div>
               ) : null}
@@ -1196,13 +1196,13 @@ export default function InstructorExams() {
                               placeholder={t('exams.questions.openTemplatePh')}
                             />
                             <label className="text-[11px] text-gray-500 block pt-1">
-                              Model cavab (AI qiymətləndirməsi üçün)
+                              {t('exams.questions.modelAnswer')}
                             </label>
                             <textarea
                               className={inp + ' min-h-[72px] resize-y text-sm'}
                               value={String(q.model_answer ?? '')}
                               onChange={(e) => patchEditQuestion(idx, { model_answer: e.target.value })}
-                              placeholder="Tam düzgün cavab — tələbəyə göstərilmir"
+                              placeholder={t('exams.questions.modelAnswerPh')}
                             />
                           </div>
                         )}

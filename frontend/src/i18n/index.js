@@ -3,7 +3,8 @@ import LanguageDetector from 'i18next-browser-languagedetector'
 import { initReactI18next } from 'react-i18next'
 import az from '../locales/az/translation.json'
 import ru from '../locales/ru/translation.json'
-import { universityCatalogAz, universityCatalogRu } from '../locales/universityCatalog'
+import en from '../locales/en/translation.json'
+import { universityCatalogAz, universityCatalogEn, universityCatalogRu } from '../locales/universityCatalog'
 
 function withUniversityCatalog(base, catalog) {
   return {
@@ -17,6 +18,7 @@ function withUniversityCatalog(base, catalog) {
 
 const azResources = withUniversityCatalog(az, universityCatalogAz)
 const ruResources = withUniversityCatalog(ru, universityCatalogRu)
+const enResources = withUniversityCatalog(en, universityCatalogEn)
 
 export const LOCALE_KEY = 'mentorix_lang'
 const LEGACY_LOCALE_KEY = 'mentorix_locale_v1'
@@ -66,7 +68,7 @@ i18n
     resources: {
       az: { translation: azResources },
       ru: { translation: ruResources },
-      en: { translation: {} },
+      en: { translation: enResources },
     },
     lng: initialLocale,
     fallbackLng: 'az',
@@ -77,6 +79,7 @@ i18n
   .then(() => {
     i18n.addResourceBundle('az', 'translation', { universitySearch: { catalog: universityCatalogAz } }, true, true)
     i18n.addResourceBundle('ru', 'translation', { universitySearch: { catalog: universityCatalogRu } }, true, true)
+    i18n.addResourceBundle('en', 'translation', { universitySearch: { catalog: universityCatalogEn } }, true, true)
   })
 
 export default i18n
