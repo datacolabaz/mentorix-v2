@@ -17,12 +17,9 @@ import PricingBillingIntervalToggle from '../../components/instructor/PricingBil
 import RegionProfileFields from '../../components/instructor/RegionProfileFields'
 import InstructorDiscoverSettings from '../../components/instructor/InstructorDiscoverSettings'
 import DiscoverSubjectPicker from '../../components/instructor/DiscoverSubjectPicker'
-import GoogleMapPinPicker from '../../components/instructor/GoogleMapPinPicker'
 import InstructorAvatarUpload from '../../components/instructor/InstructorAvatarUpload'
-import { isGoogleMapsConfigured } from '../../lib/googleMapsLoader'
 import { formatLocationLabel, isBakuRegion } from '@shared/azerbaijanRegions.mjs'
 import { BAKU_METRO_STATIONS, bakuMetroBySlug } from '@shared/bakuMetroStations.mjs'
-import { mapsDirectionsUrls } from '../../lib/mapsDirections'
 import { formatAzn, yearlyTotalAzn, YEARLY_DISCOUNT } from '../../lib/pricing'
 import { planDetailLines, planLimitsHeadline } from '../../lib/subscriptionPlanCopy'
 import { normalizePlanId } from '../../lib/subscriptionPlanMarketing'
@@ -176,8 +173,6 @@ export default function InstructorSettings() {
   const [mapLat, setMapLat] = useState('')
   const [mapLng, setMapLng] = useState('')
   const [nearestMetro, setNearestMetro] = useState('')
-  const [placeAddress, setPlaceAddress] = useState('')
-  const [mapFlyKey, setMapFlyKey] = useState(0)
   const [mapCategoryIds, setMapCategoryIds] = useState([])
   const [mapPickedCats, setMapPickedCats] = useState([])
   const [mapCatLimit, setMapCatLimit] = useState(5)
@@ -274,7 +269,6 @@ export default function InstructorSettings() {
       setMapLat(latStr)
       setMapLng(lngStr)
       setNearestMetro(m.nearest_metro || '')
-      setPlaceAddress(String(m.teacher_place_address || disc?.profile?.teacher_place_address || '').trim())
       const discCats = Array.isArray(disc?.categories) ? disc.categories : []
       setMapPickedCats(discCats)
       setMapCategoryIds(discCats.map((c) => c.id))
@@ -289,7 +283,6 @@ export default function InstructorSettings() {
         lat: m.latitude != null ? String(m.latitude) : '',
         lng: m.longitude != null ? String(m.longitude) : '',
         metro: m.nearest_metro || '',
-        address: String(m.teacher_place_address || disc?.profile?.teacher_place_address || '').trim(),
         categoryIds: discCats.map((c) => c.id).join(','),
       }
       setMapJustSaved(false)
@@ -338,7 +331,6 @@ export default function InstructorSettings() {
       s.lat !== mapLat ||
       s.lng !== mapLng ||
       s.metro !== nearestMetro ||
-      s.address !== placeAddress ||
       s.categoryIds !== mapCategoryIds.join(',')
     )
   }, [
@@ -349,7 +341,6 @@ export default function InstructorSettings() {
     mapLat,
     mapLng,
     nearestMetro,
-    placeAddress,
     mapCategoryIds,
     hasMapRegion,
   ])
@@ -376,31 +367,31 @@ export default function InstructorSettings() {
         toast(t('settings.toasts.regionRequired'), 'error')
         return
       }
-      const latN = mapLat === '' || mapLat == null ? null : Number.parseFloat(String(mapLat).replace(',', '.'))
-      const lngN = mapLng === '' || mapLng == null ? null : Number.parseFloat(String(mapLng).replace(',', '.'))
+      const metro = isBakuRegion(region) ? bakuMetroBySlug(nearestMetro) : null
+      const latN = metro ? metro.lat : null
+      const lngN = metro ? metro.lng : null
+      setMapLat(latN != null ? String(latN) : '')
+      setMapLng(lngN != null ? String(lngN) : '')
       await api.patch('/instructor/map-profile', {
         region: region || null,
         baku_district: isBakuRegion(region) ? bakuDistrict || null : null,
         map_profile_kind: mapKind,
         map_visible: mapVisible,
-        latitude: Number.isFinite(latN) ? latN : null,
-        longitude: Number.isFinite(lngN) ? lngN : null,
-        nearest_metro: isBakuRegion(region) ? nearestMetro || null : null,
-        teacher_place_address: placeAddress.trim() || null,
+        latitude: latN,
+        longitude: lngN,
+        nearest_metro: metro ? metro.slug : null,
       })
       await api.patch('/instructor/discover-profile', {
         category_ids: mapCategoryIds,
-        teacher_place_address: placeAddress.trim() || null,
       })
       savedMapRef.current = {
         region,
         bakuDistrict,
         kind: mapKind,
         visible: mapVisible,
-        lat: Number.isFinite(latN) ? String(latN) : '',
-        lng: Number.isFinite(lngN) ? String(lngN) : '',
-        metro: isBakuRegion(region) ? nearestMetro : '',
-        address: placeAddress.trim(),
+        lat: latN != null ? String(latN) : '',
+        lng: lngN != null ? String(lngN) : '',
+        metro: metro ? metro.slug : '',
         categoryIds: mapCategoryIds.join(','),
       }
       setMapJustSaved(true)
@@ -1342,7 +1333,9 @@ export default function InstructorSettings() {
                   setMapLat(String(st.lat))
                   setMapLng(String(st.lng))
                   if (st.district) setMapBakuDistrict(st.district)
-                  setMapFlyKey((k) => k + 1)
+                } else {
+                  setMapLat('')
+                  setMapLng('')
                 }
                 setMapJustSaved(false)
               }}
@@ -1359,109 +1352,6 @@ export default function InstructorSettings() {
             </p>
           </div>
         ) : null}
-
-        <div>
-          <p
-            className={[
-              'text-[11px] font-bold uppercase tracking-wider mb-2',
-              theme === 'dark' ? 'text-gray-400' : 'text-token-textMuted',
-            ].join(' ')}
-          >
-            {t('settings.pinMapTitle')}
-          </p>
-          <p className={['text-xs leading-relaxed mb-2', theme === 'dark' ? 'text-gray-500' : 'text-token-textMuted'].join(' ')}>
-            {t('settings.pinNoMapHint')}
-          </p>
-          {isGoogleMapsConfigured() ? (
-            <GoogleMapPinPicker
-              latitude={mapLat}
-              longitude={mapLng}
-              mapKind={mapKind}
-              flyKey={mapFlyKey}
-              radiusKm={10}
-              onChange={(lat, lng) => {
-                setMapLat(lat)
-                setMapLng(lng)
-                setMapJustSaved(false)
-              }}
-            />
-          ) : (
-            <p className={['text-xs rounded-xl border px-3 py-2', theme === 'dark' ? 'border-white/10 text-gray-400' : 'border-slate-200 text-token-textMuted'].join(' ')}>
-              {t('settings.pinGoogleMissing')}
-            </p>
-          )}
-          <label className={['text-xs block mt-3 mb-1.5', theme === 'dark' ? 'text-gray-400' : 'text-token-textMuted'].join(' ')}>
-            {t('settings.placeAddressLabel')}
-          </label>
-          <input
-            className={inp}
-            value={placeAddress}
-            onChange={(e) => {
-              setPlaceAddress(e.target.value)
-              setMapJustSaved(false)
-            }}
-            placeholder={t('settings.placeAddressPh')}
-            autoComplete="street-address"
-          />
-          <p className={['text-xs mt-1.5 leading-relaxed', theme === 'dark' ? 'text-gray-500' : 'text-token-textMuted'].join(' ')}>
-            {t('settings.placeAddressHint')}
-          </p>
-          {mapsDirectionsUrls(mapLat, mapLng, placeAddress) ? (
-            <div className="flex flex-wrap gap-2 mt-2">
-              <a
-                href={mapsDirectionsUrls(mapLat, mapLng, placeAddress).google}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs font-semibold text-primary hover:underline"
-              >
-                {t('marketplace.profile.googleMaps')}
-              </a>
-              <span className="text-gray-600">·</span>
-              <a
-                href={mapsDirectionsUrls(mapLat, mapLng, placeAddress).waze}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs font-semibold text-primary hover:underline"
-              >
-                {t('marketplace.profile.waze')}
-              </a>
-            </div>
-          ) : (
-            <p className={['text-xs mt-2', theme === 'dark' ? 'text-gray-500' : 'text-token-textMuted'].join(' ')}>
-              {t('settings.noPin')}
-            </p>
-          )}
-        </div>
-
-        <div className="flex flex-wrap items-center gap-3 text-sm">
-          <span className="text-xs text-token-textMuted">{t('settings.pinType')}</span>
-          <label className={['flex items-center gap-2 cursor-pointer', theme === 'dark' ? 'text-gray-200' : 'text-token-textMain'].join(' ')}>
-            <input
-              type="radio"
-              name="map_kind"
-              checked={mapKind === 'teacher'}
-              onChange={() => {
-                setMapKind('teacher')
-                setMapJustSaved(false)
-              }}
-              className="accent-indigo-500"
-            />
-            {t('settings.pinTeacher')}
-          </label>
-          <label className={['flex items-center gap-2 cursor-pointer', theme === 'dark' ? 'text-gray-200' : 'text-token-textMain'].join(' ')}>
-            <input
-              type="radio"
-              name="map_kind"
-              checked={mapKind === 'trainer'}
-              onChange={() => {
-                setMapKind('trainer')
-                setMapJustSaved(false)
-              }}
-              className="accent-indigo-500"
-            />
-            {t('settings.pinTrainer')}
-          </label>
-        </div>
 
         <div className="flex flex-col sm:flex-row gap-2">
           <Button type="button" loading={savingMap} onClick={() => void saveMapProfile()} className="flex-1 justify-center">

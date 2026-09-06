@@ -35,7 +35,6 @@ export default function InstructorDiscoverSettings({ mapVisible, theme, inp }) {
   const [bio, setBio] = useState('')
   const [education, setEducation] = useState('')
   const [certifications, setCertifications] = useState('')
-  const [address, setAddress] = useState('')
   const [areas, setAreas] = useState([])
   const [catSearch, setCatSearch] = useState('')
   const [catSuggestions, setCatSuggestions] = useState([])
@@ -69,7 +68,6 @@ export default function InstructorDiscoverSettings({ mapVisible, theme, inp }) {
       setBio(disc?.profile?.discover_bio || '')
       setEducation(disc?.profile?.discover_education || '')
       setCertifications(disc?.profile?.discover_certifications || '')
-      setAddress(disc?.profile?.teacher_place_address || '')
       if (areaRes?.success) setAreas(Array.isArray(areaRes.areas) ? areaRes.areas : [])
     } catch (e) {
       toast(e?.message || t('settings.discover.toastLoadFailed'), 'error')
@@ -149,7 +147,6 @@ export default function InstructorDiscoverSettings({ mapVisible, theme, inp }) {
         discover_bio: bio,
         discover_education: education,
         discover_certifications: certifications,
-        teacher_place_address: address,
         category_ids: categoryIds,
         delivery_formats: formats.map((f) => ({
           format: f,
@@ -392,13 +389,6 @@ export default function InstructorDiscoverSettings({ mapVisible, theme, inp }) {
                 )
               })}
             </div>
-          </section>
-        ) : null}
-
-        {formats.includes('teacher_place') ? (
-          <section>
-            <label className={fieldLabelCls}>{t('settings.discover.addressLabel')}</label>
-            <input value={address} onChange={(e) => setAddress(e.target.value)} className={inp} />
           </section>
         ) : null}
 
