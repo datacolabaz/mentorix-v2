@@ -785,6 +785,14 @@
       "desc": "Filter bachelor's, master's, and PhD programs by country, scholarship, and application deadline — no sign-in required.",
       "cta": "Search programs"
     },
+    "seo": {
+      "title": "Mentorix — Education Ecosystem: Teacher, Student, and Parent",
+      "description": "Mentorix is an education platform that brings teachers, students, and parents together: assignments and exams, chat, payment tracking, parent notifications, and a teacher marketplace — all in one place.",
+      "keywords": "education platform, education ecosystem, teacher dashboard, student portal, parent portal, exam system, assignment management, find a teacher, payment tracking, SMS notifications, teaching groups, Mentorix"
+    },
+    "certificate": {
+      "instructorName": "Mentorix Official"
+    },
     "plansHeading": "Plans",
     "why": {
       "heading": "Why Mentorix?",

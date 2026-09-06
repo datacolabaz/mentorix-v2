@@ -785,6 +785,14 @@
       "desc": "Bakalavr, magistr və doktorantura proqramlarını ölkə, təqaüd və son müraciət tarixinə görə filtrləyin — giriş tələb olunmur.",
       "cta": "Proqramları axtar"
     },
+    "seo": {
+      "title": "Mentorix — Təhsil Ekosistemi: Müəllim, Tələbə və Valideyn",
+      "description": "Mentorix müəllim, tələbə və valideynləri birləşdirən təhsil platformasıdır: tapşırıq və imtahan, çat, ödəniş izləmə, valideyn bildirişləri və müəllim marketplace — hamısı bir yerdə.",
+      "keywords": "təhsil platforması, təhsil ekosistemi, müəllim paneli, tələbə kabineti, valideyn kabineti, imtahan sistemi, tapşırıq idarəetməsi, müəllim axtarışı, ödəniş izləmə, SMS bildirişləri, tədris qrupları, Mentorix"
+    },
+    "certificate": {
+      "instructorName": "Mentorix Rəsmi"
+    },
     "plansHeading": "Planlar",
     "demo": {
       "title": "Demo — idarə paneli",

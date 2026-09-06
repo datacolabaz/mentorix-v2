@@ -57,6 +57,13 @@ function absoluteHref(path) {
 /**
  * SPA səhifələri üçün title, description, canonical, OG/Twitter və breadcrumb schema.
  */
+function ogLocale(locale) {
+  const l = String(locale || '').toLowerCase()
+  if (l.startsWith('ru')) return 'ru_RU'
+  if (l.startsWith('en')) return 'en_GB'
+  return 'az_AZ'
+}
+
 export function setPageSeo({
   title,
   description,
@@ -67,6 +74,7 @@ export function setPageSeo({
   breadcrumbs,
   person,
   pricingProduct = false,
+  locale,
 }) {
   if (typeof document === 'undefined') return
 
@@ -99,7 +107,7 @@ export function setPageSeo({
   upsertOg('og:image:type', 'image/svg+xml')
   upsertOg('og:image:width', '1200')
   upsertOg('og:image:height', '630')
-  upsertOg('og:locale', 'az_AZ')
+  upsertOg('og:locale', ogLocale(locale))
 
   upsertMeta('twitter:card', 'summary_large_image')
   upsertMeta('twitter:title', nextTitle)

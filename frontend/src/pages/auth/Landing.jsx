@@ -8,11 +8,7 @@ import { trackEvent, trackRegisterClick, trackPricingView } from '../../lib/anal
 import { defaultLoginMarketingPayload } from '../../constants/defaultLoginMarketing'
 import { setPageSeo } from '../../lib/pageSeo'
 import PublicSeoFooter from '../../components/public/PublicSeoFooter'
-import {
-  MENTORIX_SEO_DESCRIPTION,
-  MENTORIX_SEO_KEYWORDS,
-  MENTORIX_SEO_TITLE,
-} from '../../lib/mentorixPublicMarketing'
+import { resolveUiLocale } from '../../lib/uiLocale'
 import LandingDemoActivityChart from '../../components/landing/LandingDemoActivityChart'
 import LandingHeroSocialProof from '../../components/landing/LandingHeroSocialProof'
 import CertifiedExamsSection from '../../components/landing/CertifiedExamsSection'
@@ -101,15 +97,16 @@ export default function Landing() {
 
   useEffect(() => {
     setPageSeo({
-      title: MENTORIX_SEO_TITLE,
-      description: MENTORIX_SEO_DESCRIPTION,
+      title: t('landing.seo.title'),
+      description: t('landing.seo.description'),
       canonicalPath: '/',
-      keywords: MENTORIX_SEO_KEYWORDS,
+      keywords: t('landing.seo.keywords'),
+      locale: resolveUiLocale(i18n.language),
       breadcrumbs: [
         { name: 'Mentorix', path: '/' },
       ],
     })
-  }, [])
+  }, [t, i18n.language])
 
   useEffect(() => {
     const mq = window.matchMedia('(min-width: 640px)')
