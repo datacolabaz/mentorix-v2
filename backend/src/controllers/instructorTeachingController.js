@@ -120,6 +120,7 @@ const getTeaching = async (req, res) => {
               COALESCE(NULLIF(TRIM(map_profile_kind), ''), 'teacher') AS map_profile_kind,
               COALESCE(map_visible, TRUE) AS map_visible,
               COALESCE(map_search_radius_km, 10) AS map_search_radius_km,
+              nearest_metro,
               avatar_url
        FROM instructor_profiles WHERE user_id = $1`,
       [iid]
@@ -322,6 +323,7 @@ const getTeaching = async (req, res) => {
         map_visible: p?.map_visible !== false,
         map_search_radius_km:
           p?.map_search_radius_km != null ? Number(p.map_search_radius_km) : 10,
+        nearest_metro: p?.nearest_metro || null,
       },
       subjects: teachingSubjects,
       participant_cohorts,

@@ -128,6 +128,7 @@ const getInstructorsInMapView = async (req, res) => {
          ip.region_user_set,
          ip.map_profile_kind,
          ip.avatar_url,
+         ip.nearest_metro,
          COALESCE(s.plan, 'basic') AS plan,
          ${PUBLIC_DISCOVER_LISTING_SQL}
        FROM users u

@@ -16,6 +16,8 @@ import { ratingStarsLine, formatStudentCount, deliveryFormatBadges, showTopBadge
 import { localizeTeachingCategoryList } from '../../lib/teachingCategoryI18n'
 import { instructorRoleLabel, localizeNextSlotLabel } from '../../lib/marketplaceLocale'
 import { localizeInstructorWrittenText } from '../../lib/instructorWrittenTextI18n'
+import { mapsDirectionsUrls } from '../../lib/mapsDirections'
+import { bakuMetroBySlug } from '@shared/bakuMetroStations.mjs'
 import { locationPhrases } from '../../lib/azerbaijanRegionI18n'
 import { replaceAzPhrases } from '../../lib/azPhraseMatch'
 import { resolveUiLocale } from '../../lib/uiLocale'
@@ -169,6 +171,10 @@ export default function PublicInstructorProfile() {
     locationPhrases(),
     locale,
   )
+  const directions = mapsDirectionsUrls(instructor?.latitude, instructor?.longitude)
+  const metroLabel = instructor?.nearest_metro
+    ? bakuMetroBySlug(instructor.nearest_metro)?.name_az || instructor.nearest_metro
+    : ''
   const experienceYears =
     instructor?.experience_years != null && Number.isFinite(Number(instructor.experience_years))
       ? Number(instructor.experience_years)
@@ -365,9 +371,37 @@ export default function PublicInstructorProfile() {
               </ProfileSection>
             ) : null}
 
-            {teacherAddress ? (
-              <ProfileSection title={t('marketplace.profile.address')}>
-                <p className="text-sm text-gray-300 leading-relaxed">{teacherAddress}</p>
+            {teacherAddress || metroLabel || directions ? (
+              <ProfileSection title={t('marketplace.profile.meetingPoint')}>
+                <div className="space-y-2 text-sm text-gray-300 leading-relaxed">
+                  {metroLabel ? (
+                    <p>
+                      {t('marketplace.profile.metro')}:{' '}
+                      <span className="font-semibold text-white">{metroLabel}</span>
+                    </p>
+                  ) : null}
+                  {teacherAddress ? <p className="whitespace-pre-wrap">{teacherAddress}</p> : null}
+                  {directions ? (
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      <a
+                        href={directions.google}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center rounded-xl border border-primary/35 bg-primary/10 px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/20"
+                      >
+                        {t('marketplace.profile.googleMaps')}
+                      </a>
+                      <a
+                        href={directions.waze}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center rounded-xl border border-sky-500/35 bg-sky-500/10 px-3 py-2 text-xs font-semibold text-sky-300 hover:bg-sky-500/20"
+                      >
+                        {t('marketplace.profile.waze')}
+                      </a>
+                    </div>
+                  ) : null}
+                </div>
               </ProfileSection>
             ) : null}
           </article>

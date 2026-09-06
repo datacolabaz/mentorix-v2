@@ -16,8 +16,12 @@ import { SUBSCRIPTION_PLANS_QUERY_KEY } from '../../hooks/useSubscriptionPlans'
 import PricingBillingIntervalToggle from '../../components/instructor/PricingBillingIntervalToggle'
 import RegionProfileFields from '../../components/instructor/RegionProfileFields'
 import InstructorDiscoverSettings from '../../components/instructor/InstructorDiscoverSettings'
+import DiscoverSubjectPicker from '../../components/instructor/DiscoverSubjectPicker'
+import InstructorMapPinPicker from '../../components/instructor/InstructorMapPinPicker'
 import InstructorAvatarUpload from '../../components/instructor/InstructorAvatarUpload'
-import { formatLocationLabel } from '@shared/azerbaijanRegions.mjs'
+import { formatLocationLabel, isBakuRegion } from '@shared/azerbaijanRegions.mjs'
+import { BAKU_METRO_STATIONS, bakuMetroBySlug } from '@shared/bakuMetroStations.mjs'
+import { mapsDirectionsUrls } from '../../lib/mapsDirections'
 import { formatAzn, yearlyTotalAzn, YEARLY_DISCOUNT } from '../../lib/pricing'
 import { planDetailLines, planLimitsHeadline } from '../../lib/subscriptionPlanCopy'
 import { normalizePlanId } from '../../lib/subscriptionPlanMarketing'
@@ -168,6 +172,13 @@ export default function InstructorSettings() {
   const [mapBakuDistrict, setMapBakuDistrict] = useState('')
   const [mapKind, setMapKind] = useState('teacher')
   const [mapVisible, setMapVisible] = useState(true)
+  const [mapLat, setMapLat] = useState('')
+  const [mapLng, setMapLng] = useState('')
+  const [nearestMetro, setNearestMetro] = useState('')
+  const [mapFlyKey, setMapFlyKey] = useState(0)
+  const [mapCategoryIds, setMapCategoryIds] = useState([])
+  const [mapPickedCats, setMapPickedCats] = useState([])
+  const [mapCatLimit, setMapCatLimit] = useState(5)
   const [savingMap, setSavingMap] = useState(false)
   const [mapJustSaved, setMapJustSaved] = useState(false)
   const savedMapRef = useRef(null)
@@ -236,9 +247,10 @@ export default function InstructorSettings() {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const [d, prof] = await Promise.all([
+      const [d, prof, disc] = await Promise.all([
         api.get('/instructor/teaching'),
         api.get('/instructor/professional-details').catch(() => ({})),
+        api.get('/instructor/discover-profile').catch(() => ({})),
       ])
       setPublicLabel(d.public_label === 'trainer' ? 'trainer' : 'instructor')
       setProfEducation(prof?.education || '')
@@ -255,13 +267,24 @@ export default function InstructorSettings() {
       setMapBakuDistrict(m.baku_district || '')
       setMapKind(m.map_profile_kind === 'trainer' ? 'trainer' : 'teacher')
       setMapVisible(m.map_visible !== false)
+      setMapLat(m.latitude != null ? String(m.latitude) : '')
+      setMapLng(m.longitude != null ? String(m.longitude) : '')
+      setNearestMetro(m.nearest_metro || '')
+      const discCats = Array.isArray(disc?.categories) ? disc.categories : []
+      setMapPickedCats(discCats)
+      setMapCategoryIds(discCats.map((c) => c.id))
+      setMapCatLimit(Number(disc?.limits?.max_categories) || (disc?.premium ? 50 : 5))
       const subs = Array.isArray(d.subjects) ? d.subjects : []
-      setPrimarySubjectName(subs[0]?.name || '')
+      setPrimarySubjectName(subs[0]?.name || discCats[0]?.name_az || '')
       savedMapRef.current = {
         region: m.region || '',
         bakuDistrict: m.baku_district || '',
         kind: m.map_profile_kind === 'trainer' ? 'trainer' : 'teacher',
         visible: m.map_visible !== false,
+        lat: m.latitude != null ? String(m.latitude) : '',
+        lng: m.longitude != null ? String(m.longitude) : '',
+        metro: m.nearest_metro || '',
+        categoryIds: discCats.map((c) => c.id).join(','),
       }
       setMapJustSaved(false)
     } catch (e) {
@@ -305,9 +328,23 @@ export default function InstructorSettings() {
       s.region !== mapRegion ||
       s.bakuDistrict !== mapBakuDistrict ||
       s.kind !== mapKind ||
-      s.visible !== mapVisible
+      s.visible !== mapVisible ||
+      s.lat !== mapLat ||
+      s.lng !== mapLng ||
+      s.metro !== nearestMetro ||
+      s.categoryIds !== mapCategoryIds.join(',')
     )
-  }, [mapRegion, mapBakuDistrict, mapKind, mapVisible, hasMapRegion])
+  }, [
+    mapRegion,
+    mapBakuDistrict,
+    mapKind,
+    mapVisible,
+    mapLat,
+    mapLng,
+    nearestMetro,
+    mapCategoryIds,
+    hasMapRegion,
+  ])
 
   const saveLabel = async () => {
     setSavingLabel(true)
@@ -331,17 +368,29 @@ export default function InstructorSettings() {
         toast(t('settings.toasts.regionRequired'), 'error')
         return
       }
+      const latN = mapLat === '' ? null : Number.parseFloat(String(mapLat).replace(',', '.'))
+      const lngN = mapLng === '' ? null : Number.parseFloat(String(mapLng).replace(',', '.'))
       await api.patch('/instructor/map-profile', {
         region: region || null,
-        baku_district: region === 'Bakı' ? bakuDistrict || null : null,
+        baku_district: isBakuRegion(region) ? bakuDistrict || null : null,
         map_profile_kind: mapKind,
         map_visible: mapVisible,
+        latitude: Number.isFinite(latN) ? latN : null,
+        longitude: Number.isFinite(lngN) ? lngN : null,
+        nearest_metro: isBakuRegion(region) ? nearestMetro || null : null,
+      })
+      await api.patch('/instructor/discover-profile', {
+        category_ids: mapCategoryIds,
       })
       savedMapRef.current = {
         region,
         bakuDistrict,
         kind: mapKind,
         visible: mapVisible,
+        lat: mapLat,
+        lng: mapLng,
+        metro: isBakuRegion(region) ? nearestMetro : '',
+        categoryIds: mapCategoryIds.join(','),
       }
       setMapJustSaved(true)
       window.dispatchEvent(new CustomEvent('mx:discover-profile-updated'))
@@ -1227,6 +1276,32 @@ export default function InstructorSettings() {
           </div>
         )}
 
+        <DiscoverSubjectPicker
+          categoryIds={mapCategoryIds}
+          pickedCats={mapPickedCats}
+          inp={inp}
+          theme={theme}
+          sectionTitleCls={[
+            'text-[11px] font-bold uppercase tracking-wider mb-2.5',
+            theme === 'dark' ? 'text-gray-400' : 'text-token-textMuted',
+          ].join(' ')}
+          onAdd={(cat) => {
+            if (mapCategoryIds.includes(cat.id)) return
+            if (mapCategoryIds.length >= mapCatLimit) {
+              toast(t('settings.discover.toastMaxSubjects', { max: mapCatLimit }), 'error')
+              return
+            }
+            setMapCategoryIds((ids) => [...ids, cat.id])
+            setMapPickedCats((list) => [...list, cat])
+            setMapJustSaved(false)
+          }}
+          onRemove={(id) => {
+            setMapCategoryIds((ids) => ids.filter((x) => x !== id))
+            setMapPickedCats((list) => list.filter((x) => x.id !== id))
+            setMapJustSaved(false)
+          }}
+        />
+
         <RegionProfileFields
           region={mapRegion}
           bakuDistrict={mapBakuDistrict}
@@ -1235,9 +1310,89 @@ export default function InstructorSettings() {
           onChange={({ region, bakuDistrict }) => {
             setMapRegion(region || '')
             setMapBakuDistrict(bakuDistrict || '')
+            if (!isBakuRegion(region || '')) setNearestMetro('')
             setMapJustSaved(false)
           }}
         />
+
+        {isBakuRegion(mapRegion) ? (
+          <div>
+            <label className={['text-xs block mb-1.5', theme === 'dark' ? 'text-gray-400' : 'text-token-textMuted'].join(' ')}>
+              {t('settings.metroTitle')}
+            </label>
+            <select
+              className={inp}
+              value={nearestMetro}
+              onChange={(e) => {
+                const slug = e.target.value
+                setNearestMetro(slug)
+                const st = bakuMetroBySlug(slug)
+                if (st) {
+                  setMapLat(String(st.lat))
+                  setMapLng(String(st.lng))
+                  if (st.district) setMapBakuDistrict(st.district)
+                  setMapFlyKey((k) => k + 1)
+                }
+                setMapJustSaved(false)
+              }}
+            >
+              <option value="">{t('settings.metroPlaceholder')}</option>
+              {BAKU_METRO_STATIONS.map((st) => (
+                <option key={st.slug} value={st.slug}>
+                  {st.name_az}
+                </option>
+              ))}
+            </select>
+            <p className={['text-xs mt-1.5 leading-relaxed', theme === 'dark' ? 'text-gray-500' : 'text-token-textMuted'].join(' ')}>
+              {t('settings.metroHint')}
+            </p>
+          </div>
+        ) : null}
+
+        <div>
+          <p
+            className={[
+              'text-[11px] font-bold uppercase tracking-wider mb-2',
+              theme === 'dark' ? 'text-gray-400' : 'text-token-textMuted',
+            ].join(' ')}
+          >
+            {t('settings.pinMapTitle')}
+          </p>
+          <InstructorMapPinPicker
+            latitude={mapLat}
+            longitude={mapLng}
+            mapKind={mapKind}
+            flyKey={mapFlyKey}
+            displayName={user?.full_name || 'M'}
+            radiusKm={10}
+            onChange={(lat, lng) => {
+              setMapLat(lat)
+              setMapLng(lng)
+              setMapJustSaved(false)
+            }}
+          />
+          {mapsDirectionsUrls(mapLat, mapLng) ? (
+            <div className="flex flex-wrap gap-2 mt-2">
+              <a
+                href={mapsDirectionsUrls(mapLat, mapLng).google}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs font-semibold text-primary hover:underline"
+              >
+                {t('marketplace.profile.googleMaps')}
+              </a>
+              <span className="text-gray-600">·</span>
+              <a
+                href={mapsDirectionsUrls(mapLat, mapLng).waze}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs font-semibold text-primary hover:underline"
+              >
+                {t('marketplace.profile.waze')}
+              </a>
+            </div>
+          ) : null}
+        </div>
 
         <div className="flex flex-wrap items-center gap-3 text-sm">
           <span className="text-xs text-token-textMuted">{t('settings.pinType')}</span>

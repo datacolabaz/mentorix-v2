@@ -30,6 +30,7 @@ const getPublicInstructorProfile = async (req, res) => {
          ip.discover_certifications,
          ip.discover_verified,
          ip.teacher_place_address,
+         ip.nearest_metro,
          COALESCE(s.plan, 'basic') AS plan,
          (
            SELECT COALESCE(json_agg(json_build_object('format', df.format, 'travel_radius_km', df.travel_radius_km) ORDER BY df.format), '[]'::json)

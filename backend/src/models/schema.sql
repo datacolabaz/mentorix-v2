@@ -46,7 +46,8 @@ CREATE TABLE instructor_profiles (
   latitude NUMERIC(10, 7),
   longitude NUMERIC(10, 7),
   map_profile_kind VARCHAR(20) NOT NULL DEFAULT 'teacher' CHECK (map_profile_kind IN ('teacher', 'trainer')),
-  map_visible BOOLEAN NOT NULL DEFAULT TRUE
+  map_visible BOOLEAN NOT NULL DEFAULT TRUE,
+  nearest_metro VARCHAR(80)
 );
 
 CREATE TABLE student_profiles (

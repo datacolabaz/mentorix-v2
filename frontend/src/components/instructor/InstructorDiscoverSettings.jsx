@@ -83,6 +83,14 @@ export default function InstructorDiscoverSettings({ mapVisible, theme, inp }) {
   }, [load])
 
   useEffect(() => {
+    const onUpdated = () => {
+      void load()
+    }
+    window.addEventListener('mx:discover-profile-updated', onUpdated)
+    return () => window.removeEventListener('mx:discover-profile-updated', onUpdated)
+  }, [load])
+
+  useEffect(() => {
     const q = catSearch.trim()
     if (q.length < 2) {
       setCatSuggestions([])

@@ -5,6 +5,7 @@ const {
   isValidBakuDistrict,
   normalizeRegionName,
 } = require('../lib/azerbaijanRegions');
+const { isValidBakuMetro, bakuMetroBySlug } = require('../lib/bakuMetroStations');
 
 function parseCoord(v) {
   if (v === null || v === '') return null;
@@ -108,6 +109,16 @@ const patchInstructorMapProfile = async (req, res) => {
       vals.push(district);
     }
 
+    if (req.body?.nearest_metro !== undefined) {
+      const raw = req.body.nearest_metro == null ? '' : String(req.body.nearest_metro).trim().toLowerCase();
+      if (raw && !isValidBakuMetro(raw)) {
+        return res.status(400).json({ success: false, message: 'Düzgün olmayan metro stansiyası' });
+      }
+      const metro = raw ? bakuMetroBySlug(raw) : null;
+      sets.push(`nearest_metro = $${i++}`);
+      vals.push(metro ? metro.slug : null);
+    }
+
     if (!sets.length) {
       return res.status(400).json({ success: false, message: 'Yenilənən sahə yoxdur' });
     }
@@ -115,7 +126,7 @@ const patchInstructorMapProfile = async (req, res) => {
     vals.push(uid);
     const { rows } = await db.query(
       `UPDATE instructor_profiles SET ${sets.join(', ')} WHERE user_id = $${i}
-       RETURNING latitude, longitude, map_profile_kind, map_visible, map_search_radius_km, region, baku_district, region_user_set`,
+       RETURNING latitude, longitude, map_profile_kind, map_visible, map_search_radius_km, region, baku_district, region_user_set, nearest_metro`,
       vals
     );
 

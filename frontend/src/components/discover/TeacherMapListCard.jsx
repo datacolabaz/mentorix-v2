@@ -9,6 +9,7 @@ import {
 import { instructorDisplaySubject } from '../../lib/instructorDisplay'
 import { localizeNextSlotLabel } from '../../lib/marketplaceLocale'
 import useActiveLocale from '../../hooks/useActiveLocale'
+import { bakuMetroBySlug } from '@shared/bakuMetroStations.mjs'
 
 export default function TeacherMapListCard({
   instructor: p,
@@ -113,6 +114,12 @@ export default function TeacherMapListCard({
           {p.discover_hourly_rate != null ? (
             <div className="text-[11px] text-emerald-400/90 mt-1">
               {t('marketplace.card.ratePerHour', { rate: p.discover_hourly_rate })}
+            </div>
+          ) : null}
+
+          {p.nearest_metro ? (
+            <div className="text-[10px] text-sky-300/90 mt-1 truncate">
+              🚇 {bakuMetroBySlug(p.nearest_metro)?.name_az || p.nearest_metro}
             </div>
           ) : null}
 
