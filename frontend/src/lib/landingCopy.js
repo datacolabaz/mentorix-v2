@@ -7,9 +7,12 @@ import {
   landingPlanPriceLabel,
   normalizePlanId,
 } from './subscriptionPlanMarketing'
+import { resolveUiLocale } from './uiLocale'
 
-function isRuLang(i18n) {
-  return String(i18n?.language || 'az').toLowerCase().startsWith('ru')
+/** AZ: admin/API marketing; RU/EN: translation.json landing.* */
+function usesI18nLandingCopy(i18n) {
+  const locale = resolveUiLocale(i18n?.language)
+  return locale === 'ru' || locale === 'en'
 }
 
 function arrayFromT(t, key) {
@@ -23,13 +26,13 @@ function translateOptional(t, key) {
   return value
 }
 
-/** AZ: admin/API marketing; RU: translation.json landing.hero */
+/** AZ: admin/API marketing; RU/EN: translation.json landing.hero */
 export function useLandingHero(marketing, t, i18n) {
-  const isRu = isRuLang(i18n)
+  const useI18n = usesI18nLandingCopy(i18n)
   const apiHero = marketing?.hero || {}
 
   return useMemo(() => {
-    if (isRu) {
+    if (useI18n) {
       return {
         pill: t('landing.hero.pill'),
         headline: t('landing.hero.title'),
@@ -51,13 +54,13 @@ export function useLandingHero(marketing, t, i18n) {
       existing_account: apiHero.existing_account || t('landing.hero.haveAccount'),
       marketplace_cta_label: apiHero.marketplace_cta_label || t('landing.hero.marketplaceCta'),
     }
-  }, [isRu, apiHero, t])
+  }, [useI18n, apiHero, t])
 }
 
 export function useLandingWhy(marketing, t, i18n) {
-  const isRu = isRuLang(i18n)
+  const useI18n = usesI18nLandingCopy(i18n)
   return useMemo(() => {
-    if (isRu) {
+    if (useI18n) {
       return {
         heading: t('landing.why.heading'),
         cards: arrayFromT(t, 'landing.why.cards').map((c) => ({ ...c, card_enabled: true })),
@@ -67,13 +70,13 @@ export function useLandingWhy(marketing, t, i18n) {
       heading: marketing?.why?.heading || '',
       cards: visibleWhyCards(marketing?.why?.cards),
     }
-  }, [isRu, marketing, t, i18n.language])
+  }, [useI18n, marketing, t, i18n.language])
 }
 
 export function useLandingSteps(marketing, t, i18n) {
-  const isRu = isRuLang(i18n)
+  const useI18n = usesI18nLandingCopy(i18n)
   return useMemo(() => {
-    if (isRu) {
+    if (useI18n) {
       return {
         heading: t('landing.steps.heading'),
         items: arrayFromT(t, 'landing.steps.items').map((x, i) => ({
@@ -90,13 +93,13 @@ export function useLandingSteps(marketing, t, i18n) {
       heading: marketing?.steps?.heading || '',
       items: visibleMarketingItems(base),
     }
-  }, [isRu, marketing, t, i18n.language])
+  }, [useI18n, marketing, t, i18n.language])
 }
 
 export function useLandingFeatures(marketing, t, i18n) {
-  const isRu = isRuLang(i18n)
+  const useI18n = usesI18nLandingCopy(i18n)
   return useMemo(() => {
-    if (isRu) {
+    if (useI18n) {
       return {
         heading: t('landing.features.heading'),
         items: arrayFromT(t, 'landing.features.items').map((item, i) => ({
@@ -110,13 +113,13 @@ export function useLandingFeatures(marketing, t, i18n) {
       heading: marketing?.features?.heading || '',
       items: visibleMarketingItems(marketing?.features?.items || []),
     }
-  }, [isRu, marketing, t, i18n.language])
+  }, [useI18n, marketing, t, i18n.language])
 }
 
 export function useLandingFaq(marketing, t, i18n) {
-  const isRu = isRuLang(i18n)
+  const useI18n = usesI18nLandingCopy(i18n)
   return useMemo(() => {
-    if (isRu) {
+    if (useI18n) {
       return {
         heading: t('landing.faq.heading'),
         items: arrayFromT(t, 'landing.faq.items').map((x) => ({ ...x, item_enabled: true })),
@@ -126,13 +129,13 @@ export function useLandingFaq(marketing, t, i18n) {
       heading: marketing?.faq?.heading || '',
       items: visibleMarketingItems(marketing?.faq?.items || []),
     }
-  }, [isRu, marketing, t, i18n.language])
+  }, [useI18n, marketing, t, i18n.language])
 }
 
 export function useLandingUseCase(marketing, t, i18n) {
-  const isRu = isRuLang(i18n)
+  const useI18n = usesI18nLandingCopy(i18n)
   return useMemo(() => {
-    if (isRu) {
+    if (useI18n) {
       return {
         section_enabled: marketing?.use_case?.section_enabled !== false,
         heading: t('landing.useCase.heading'),
@@ -142,13 +145,13 @@ export function useLandingUseCase(marketing, t, i18n) {
       }
     }
     return marketing?.use_case || {}
-  }, [isRu, marketing, t, i18n.language])
+  }, [useI18n, marketing, t, i18n.language])
 }
 
 export function useLandingCtaBand(marketing, t, i18n) {
-  const isRu = isRuLang(i18n)
+  const useI18n = usesI18nLandingCopy(i18n)
   return useMemo(() => {
-    if (isRu) {
+    if (useI18n) {
       return {
         ...marketing?.cta_band,
         section_enabled: marketing?.cta_band?.section_enabled !== false,
@@ -157,13 +160,13 @@ export function useLandingCtaBand(marketing, t, i18n) {
       }
     }
     return marketing?.cta_band || {}
-  }, [isRu, marketing, t, i18n.language])
+  }, [useI18n, marketing, t, i18n.language])
 }
 
 export function useLandingPlanDisplay(p, t, i18n) {
   return useMemo(() => {
     const id = normalizePlanId(p)
-    if (!isRuLang(i18n)) {
+    if (!usesI18nLandingCopy(i18n)) {
       return {
         title: p.title,
         meta: getPlanMarketingMeta(p),

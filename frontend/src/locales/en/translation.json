@@ -786,6 +786,179 @@
       "cta": "Search programs"
     },
     "plansHeading": "Plans",
+    "why": {
+      "heading": "Why Mentorix?",
+      "cards": [
+        {
+          "title": "Faster than Excel",
+          "body": "A ready workflow instead of page after page of spreadsheets: lessons, payments, and messages in one dashboard."
+        },
+        {
+          "title": "More structured than WhatsApp",
+          "body": "Assignments, exams, and important alerts do not get lost in chat. Everything has a place and stays trackable."
+        },
+        {
+          "title": "Automates the busywork",
+          "body": "Package expiry, payment confirmations, and SMS reminders run automatically instead of by hand."
+        }
+      ]
+    },
+    "steps": {
+      "heading": "How it works",
+      "items": [
+        {
+          "step": "1",
+          "title": "Connect and set your schedule",
+          "body": "Start with Google, then add students and weekly lesson slots in a few minutes."
+        },
+        {
+          "step": "2",
+          "title": "Track payments and attendance",
+          "body": "Leave notebooks and spreadsheets behind. See who paid and when on one screen."
+        },
+        {
+          "step": "3",
+          "title": "Automatic reminders",
+          "body": "Notify parents and students by SMS about package expiry and key events — less manual follow-up."
+        },
+        {
+          "step": "4",
+          "title": "Attract new students",
+          "body": "Turn on your profile — parents and students will find you on the map, online or in person."
+        }
+      ]
+    },
+    "features": {
+      "heading": "With Mentorix.io",
+      "items": [
+        {
+          "title": "Students and groups",
+          "body": "Manage students and groups — everything on one dashboard.",
+          "accent": "from-sky-500/15"
+        },
+        {
+          "title": "Exams and analytics",
+          "body": "Share exams via QR or link; grade results automatically and track them with charts.",
+          "accent": "from-emerald-500/15"
+        },
+        {
+          "title": "Payments and SMS",
+          "body": "Manage payment dates; send automatic reminders and exam-result SMS.",
+          "accent": "from-amber-500/15"
+        },
+        {
+          "title": "Parent communication",
+          "body": "Share student results with parents; see attendance and weak topics in one place.",
+          "accent": "from-purple-500/15"
+        }
+      ]
+    },
+    "useCase": {
+      "heading": "A real scenario",
+      "titleLine": "Private tutor — 25 students a week",
+      "faqLink": "Go to FAQ →",
+      "bullets": [
+        {
+          "lead": "5 minutes in the morning:",
+          "rest": "today's lessons, overdue payments, and “package ending soon” SMS are already waiting."
+        },
+        {
+          "lead": "After lessons:",
+          "rest": "mark attendance and send parents a reminder for next week — less WhatsApp chaos."
+        },
+        {
+          "lead": "At month end:",
+          "rest": "history makes it easy to show whose payment status changed."
+        }
+      ]
+    },
+    "faq": {
+      "heading": "FAQ",
+      "items": [
+        {
+          "q": "Is Mentorix suitable for schools?",
+          "a": "It is built mainly for private teachers and small groups: calendar, payment history, and attendance in one place. For larger organisations we can adapt the setup via “contact us”."
+        },
+        {
+          "q": "Does it work well on a phone?",
+          "a": "Most teachers work from their phone: they check lessons, confirm bookings, and keep SMS reminders active."
+        },
+        {
+          "q": "How do payments and seasonal packages work?",
+          "a": "Package or monthly billing with dates and statuses — less “who paid, when, paid / pending” confusion."
+        }
+      ]
+    },
+    "ctaBand": {
+      "heading": "Let education run as an ecosystem.",
+      "subtitle": "The teacher manages, the student learns, the parent follows — see the value first, then start a 14-day trial."
+    },
+    "plans": {
+      "free": "Free",
+      "pricePerMonth": "{{price}} AZN / mo.",
+      "basic": {
+        "title": "BASIC",
+        "subtitle": "14-day free trial",
+        "cta": "Start 14-day trial",
+        "trialLines": [
+          "Full access to all features for 14 days",
+          "No credit card required",
+          "Cancel anytime"
+        ]
+      },
+      "pro": {
+        "title": "STANDARD",
+        "subtitle": "For private teachers",
+        "popular": "⭐ Most popular",
+        "cta": "Choose Standard",
+        "bullets": [
+          "20 students",
+          "1,250 documents",
+          "20 SMS / mo.",
+          "20 exams / mo.",
+          "40 assignments / mo.",
+          "Payment tracking",
+          "Parent notifications",
+          "Map visibility",
+          "Live lesson — 20 participants · Recording: ✓ (local)"
+        ]
+      },
+      "growth": {
+        "title": "PROFESSIONAL",
+        "subtitle": "For growing teachers",
+        "cta": "Choose Professional",
+        "bullets": [
+          "50 students",
+          "5,000 documents",
+          "50 SMS / mo.",
+          "50 exams / mo.",
+          "120 assignments / mo.",
+          "Payment tracking",
+          "Parent notifications",
+          "Map visibility",
+          "Detailed reports",
+          "Live lesson — 50 participants · Recording: ✓ (local)"
+        ]
+      },
+      "premium": {
+        "title": "PREMIUM",
+        "subtitle": "For active teachers",
+        "cta": "Choose Premium",
+        "bullets": [
+          "Unlimited students",
+          "Unlimited documents",
+          "200 SMS / mo.",
+          "Unlimited exams",
+          "Unlimited assignments",
+          "Payment tracking",
+          "Parent notifications",
+          "Map visibility",
+          "Detailed reports",
+          "Priority support",
+          "Live lesson — unlimited participants · Recording: ✓ (local)"
+        ]
+      }
+    },
     "demo": {
       "title": "Demo — dashboard",
       "subtitle": "Sample visuals, not a real account",

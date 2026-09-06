@@ -1,11 +1,12 @@
 import { useTranslation } from 'react-i18next'
 import CertificateCard from '../certificate/CertificateCard'
 import { SAMPLE_CERTIFICATE } from '@shared/certificateLayout.mjs'
+import { resolveUiLocale } from '../../lib/uiLocale'
 
 /** Landing/kataloq sertifikat mockup — real PDF ilə eyni shared layout. */
 export default function CertificatePreviewMockup({ className = '' }) {
   const { i18n } = useTranslation()
-  const locale = i18n.language?.startsWith('ru') ? 'ru' : 'az'
+  const locale = resolveUiLocale(i18n.language)
 
   return (
     <div className={`relative ${className}`}>

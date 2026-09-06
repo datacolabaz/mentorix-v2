@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { readStoredLocale } from '../i18n'
+import { resolveUiLocale } from '../lib/uiLocale'
 import useUiStore from './useUi'
 
 /** Aktiv UI dili — t(), localStorage və <html lang> ilə uyğun. */
@@ -15,5 +16,5 @@ export default function useActiveLocale() {
     storeLocale ||
     readStoredLocale() ||
     'az'
-  return String(resolved).toLowerCase().startsWith('ru') ? 'ru' : 'az'
+  return resolveUiLocale(resolved)
 }

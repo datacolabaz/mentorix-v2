@@ -1,6 +1,7 @@
 import { FIELD_GROUPS } from './universityFieldCatalog'
-import { universityCatalogAz, universityCatalogRu } from '../locales/universityCatalog'
+import { universityCatalogAz, universityCatalogEn, universityCatalogRu } from '../locales/universityCatalog'
 import { readStoredLocale } from '../i18n'
+import { resolveUiLocale } from './uiLocale'
 
 const GROUP_FALLBACK = new Map()
 const FIELD_FALLBACK = new Map()
@@ -13,11 +14,14 @@ for (const group of FIELD_GROUPS) {
 }
 
 export function resolveCatalogLocale(lang) {
-  return String(lang || 'az').toLowerCase().startsWith('ru') ? 'ru' : 'az'
+  return resolveUiLocale(lang)
 }
 
 function catalogFor(lang) {
-  return resolveCatalogLocale(lang) === 'ru' ? universityCatalogRu : universityCatalogAz
+  const locale = resolveCatalogLocale(lang)
+  if (locale === 'ru') return universityCatalogRu
+  if (locale === 'en') return universityCatalogEn
+  return universityCatalogAz
 }
 
 export function fieldGroupLabel(groupId, lang = 'az') {

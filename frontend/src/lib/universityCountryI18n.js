@@ -1,5 +1,8 @@
 import { COUNTRY_SEARCH_ALIASES, UNIVERSITY_COUNTRIES } from './universityCountries'
 import { COUNTRY_NAMES_RU } from '../locales/universityCountryNames.ru'
+import { resolveUiLocale } from './uiLocale'
+
+export { resolveUiLocale }
 
 /** Canonical filter/API country keys (AZ) → ISO 3166-1 alpha-2 */
 export const COUNTRY_ISO_CODES = {
@@ -57,10 +60,6 @@ function getDisplayNames(locale) {
   return displayNamesCache.get(locale)
 }
 
-export function resolveUiLocale(lang) {
-  return String(lang || 'az').toLowerCase().startsWith('ru') ? 'ru' : 'az'
-}
-
 function ruCountryName(key) {
   return (
     COUNTRY_NAMES_RU_LOOKUP.get(key) ||
@@ -81,6 +80,19 @@ export function countryDisplayName(countryKey, lang = 'az') {
 
     const iso = COUNTRY_ISO_CODES[key]
     const dn = getDisplayNames('ru')
+    if (iso && dn) {
+      try {
+        const name = dn.of(iso)
+        if (name) return name
+      } catch {
+        /* ignore */
+      }
+    }
+  }
+
+  if (locale === 'en') {
+    const iso = COUNTRY_ISO_CODES[key]
+    const dn = getDisplayNames('en')
     if (iso && dn) {
       try {
         const name = dn.of(iso)
