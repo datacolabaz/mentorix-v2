@@ -68,16 +68,22 @@ export default function CertifiedExamsSection({ onHowItWorks }) {
             ))}
           </div>
 
-          <div className="grid grid-cols-2 gap-2 max-w-md">
-            <div className="rounded-xl border border-white/10 bg-black/35 px-3 py-2.5">
-              <div className="text-lg font-semibold text-white tabular-nums">{stats.certificates_issued}+</div>
-              <div className="text-[10px] text-gray-500">{t('certifiedExams.statsCertificates')}</div>
+          {stats.certificates_issued > 0 || stats.verified_exam_types > 0 ? (
+            <div className="grid grid-cols-2 gap-2 max-w-md">
+              {stats.certificates_issued > 0 ? (
+                <div className="rounded-xl border border-white/10 bg-black/35 px-3 py-2.5">
+                  <div className="text-lg font-semibold text-white tabular-nums">{stats.certificates_issued}</div>
+                  <div className="text-[10px] text-gray-500">{t('certifiedExams.statsCertificates')}</div>
+                </div>
+              ) : null}
+              {stats.verified_exam_types > 0 ? (
+                <div className="rounded-xl border border-white/10 bg-black/35 px-3 py-2.5">
+                  <div className="text-lg font-semibold text-primary tabular-nums">{stats.verified_exam_types}</div>
+                  <div className="text-[10px] text-gray-500">{t('certifiedExams.statsActive')}</div>
+                </div>
+              ) : null}
             </div>
-            <div className="rounded-xl border border-white/10 bg-black/35 px-3 py-2.5">
-              <div className="text-lg font-semibold text-primary tabular-nums">{stats.verified_exam_types}+</div>
-              <div className="text-[10px] text-gray-500">{t('certifiedExams.statsActive')}</div>
-            </div>
-          </div>
+          ) : null}
 
           <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-1">
             <Link

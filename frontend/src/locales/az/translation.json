@@ -699,85 +699,45 @@
       "features": "Xüsusiyyətlər",
       "plans": "Planlar",
       "login": "Daxil ol",
+      "startFree": "Pulsuz başla",
       "openMenu": "Menyunu aç",
       "closeMenu": "Menyunu bağla",
       "mainNav": "Əsas naviqasiya"
     },
     "hero": {
-      "pill": "Təhsil ekosistemi — Mentorix",
-      "title": "Müəllim, tələbə və valideyn — bir təhsil platformasında",
-      "subtitle": "Tapşırıq və imtahan, çat, ödəniş izləmə, valideyn bildirişləri və müəllim axtarışı — hamısı bir yerdə.",
-      "startFree": "Pulsuz başla (14 günlük sınaq)",
+      "pill": "Müəllimlər üçün idarəetmə platforması",
+      "title": "Tələbələrinizə vaxt ayırın, idarəetməni Mentorix-ə buraxın",
+      "subtitle": "İmtahanlar yaradın, tapşırıqlar göndərin, ödənişləri izləyin və valideynlərlə əlaqəni bir platformadan idarə edin.",
+      "startFree": "Pulsuz başla",
       "howItWorks": "Necə işləyir?",
-      "demo": "Demo bax",
+      "demo": "Panelə bax",
       "haveAccount": "Artıq hesabım var — girişə keç",
-      "marketplaceCta": "Müəllim / Təlimçi tap"
+      "marketplaceCta": "Müəllim tap"
     },
-    "activity": {
-      "title": "Canlı fəaliyyət",
-      "now": "indi",
-      "events": [
-        {
-          "actor": "Telman müəllim",
-          "action": "imtahan yaratdı",
-          "time": "indi"
-        },
-        {
-          "actor": "Arzu tələbə",
-          "action": "ödəniş etdi (45 AZN)",
-          "time": "2 dəq əvvəl"
-        },
-        {
-          "actor": "Valideyni",
-          "action": "SMS aldı: \"Qiymət: 8/10\"",
-          "time": "5 dəq əvvəl"
-        },
-        {
-          "actor": "Leyla müəllim",
-          "action": "tapşırıq təyin etdi",
-          "time": "1 dəq əvvəl"
-        },
-        {
-          "actor": "Rəşad tələbə",
-          "action": "imtahana qoşuldu",
-          "time": "3 dəq əvvəl"
-        },
-        {
-          "actor": "Valideyni",
-          "action": "davamiyyət bildirişi aldı",
-          "time": "7 dəq əvvəl"
-        },
-        {
-          "actor": "Nərgiz müəllim",
-          "action": "yeni tələbə qəbul etdi",
-          "time": "4 dəq əvvəl"
-        },
-        {
-          "actor": "Kamran tələbə",
-          "action": "tapşırıq təslim etdi",
-          "time": "6 dəq əvvəl"
-        }
-      ]
-    },
-    "stats": {
-      "teachersCount": "340+",
-      "teachers": "müəllim",
-      "thisMonth": "bu ay",
-      "timeSavedValue": "6 saat",
-      "weekly": "həftəlik",
-      "timeSaved": "vaxt qənaəti",
-      "ratingValue": "4.8",
-      "avgRating": "orta reytinq",
-      "startFreeShort": "Pulsuz başla"
-    },
-    "testimonial": {
-      "quote": "Mentorix olmadan bu qədər tələbəni idarə edə bilməzdim.",
-      "author": "— Telman A., riyaziyyat müəllimi · Bakı"
+    "preview": {
+      "badge": "Nümunə panel",
+      "appTitle": "Müəllim paneli",
+      "ariaLabel": "Mentorix müəllim panelinin nümunə görünüşü",
+      "tabs": {
+        "students": "Tələbələr",
+        "exams": "İmtahanlar",
+        "payments": "Ödənişlər"
+      },
+      "groupLabel": "Qrup",
+      "groupName": "Riyaziyyat · 10-cu sinif",
+      "studentCount": "8 tələbə",
+      "examLabel": "İmtahan",
+      "examName": "Həftəlik yoxlama",
+      "examStatus": "Aktiv",
+      "paymentLabel": "Ödənişlər",
+      "paymentStatus": "2 gözləyən",
+      "assignmentStatus": "Tapşırıq izləmə",
+      "sampleNote": "Nümunə interfeys — real hesab deyil"
     },
     "marketplace": {
       "badge": "Valideynlər və tələbələr üçün",
       "title": "Müəllim və təlimçi tapın",
-      "desc": "Rayonunuza uyğun müəllim tapın, universitet proqramlarını müqayisə edin — tələbə və valideynlər üçün qeydiyyat pulsuzdur."
+      "desc": "Rayonunuza uyğun müəllim tapın, universitet proqramlarını müqayisə edin — tələbə və valideyn qeydiyyatı pulsuzdur."
     },
     "universities": {
       "badge": "Xaricdə təhsil",
@@ -786,25 +746,298 @@
       "cta": "Proqramları axtar"
     },
     "seo": {
-      "title": "Mentorix — Təhsil Ekosistemi: Müəllim, Tələbə və Valideyn",
-      "description": "Mentorix müəllim, tələbə və valideynləri birləşdirən təhsil platformasıdır: tapşırıq və imtahan, çat, ödəniş izləmə, valideyn bildirişləri və müəllim marketplace — hamısı bir yerdə.",
-      "keywords": "təhsil platforması, təhsil ekosistemi, müəllim paneli, tələbə kabineti, valideyn kabineti, imtahan sistemi, tapşırıq idarəetməsi, müəllim axtarışı, ödəniş izləmə, SMS bildirişləri, tədris qrupları, Mentorix"
+      "title": "Mentorix — müəllimlər üçün tələbə, imtahan və ödəniş idarəetməsi",
+      "description": "Mentorix müəllimlərə tələbələri, imtahanları, tapşırıqları, ödənişləri və valideyn əlaqəsini bir platformadan idarə etməyə kömək edir. 14 günlük pulsuz sınaq.",
+      "keywords": "müəllim platforması, tələbə idarəetməsi, imtahan, tapşırıq, ödəniş izləmə, valideyn bildirişi, Mentorix"
     },
     "certificate": {
-      "instructorName": "Mentorix Rəsmi"
+      "instructorName": "Mentorix",
+      "sampleLabel": "Sertifikat nümunəsi",
+      "studentName": "Ad Soyad"
+    },
+    "why": {
+      "heading": "Niyə Mentorix?",
+      "cards": [
+        {
+          "title": "İdarəetməyə az, dərsə çox vaxt",
+          "body": "İmtahan, tapşırıq, ödəniş və mesajları bir paneldə toplayın — dəftər və dağınıq söhbətlər əvəzinə."
+        },
+        {
+          "title": "Tələbələriniz bir yerdə",
+          "body": "Qruplar, davamiyyət və nəticələr eyni axındadır. Kimdə nə qaldığını axtarmağa ehtiyac qalmır."
+        },
+        {
+          "title": "Valideynlər məlumatlı qalır",
+          "body": "Vacib nəticə və ödəniş bildirişlərini platformadan göndərin — statusu itirmədən."
+        }
+      ]
+    },
+    "steps": {
+      "heading": "Necə işləyir?",
+      "items": [
+        {
+          "step": "01",
+          "title": "Hesabınızı yaradın",
+          "body": "Müəllim hesabınızı yaradın və tələbələrinizi əlavə edin."
+        },
+        {
+          "step": "02",
+          "title": "Dərslərinizi idarə edin",
+          "body": "İmtahanlar, tapşırıqlar, ödənişlər və kommunikasiya bir platformada."
+        },
+        {
+          "step": "03",
+          "title": "Vaxtınıza qənaət edin",
+          "body": "Rutin idarəetmə işlərini azaldın və tələbələrinizə daha çox vaxt ayırın."
+        }
+      ]
+    },
+    "features": {
+      "heading": "Müəllimlərin gündəlik işini sadələşdirin",
+      "items": [
+        {
+          "title": "İmtahanlar",
+          "body": "İmtahan yaradın, link və ya QR ilə paylaşın, nəticələri izləyin.",
+          "accent": "from-emerald-500/15"
+        },
+        {
+          "title": "Tapşırıqlar",
+          "body": "Tapşırıq göndərin və tələbə təslimlərini bir yerdən izləyin.",
+          "accent": "from-sky-500/15"
+        },
+        {
+          "title": "Ödənişlər",
+          "body": "Tələbə ödənişlərini və gözləyən məbləğləri eyni paneldə görün.",
+          "accent": "from-amber-500/15"
+        },
+        {
+          "title": "Valideyn əlaqəsi",
+          "body": "Vacib nəticə və bildirişləri valideyn kabinetinə çatdırın.",
+          "accent": "from-purple-500/15"
+        },
+        {
+          "title": "Tələbə idarəetməsi",
+          "body": "Tələbələri və qrupları bir yerdə saxlayın, dəvət linki ilə qoşun.",
+          "accent": "from-cyan-500/15"
+        },
+        {
+          "title": "Hesabatlar",
+          "body": "Nəticə və aktivliyə baxın — hansı mövzuda zəiflik olduğunu görün.",
+          "accent": "from-rose-500/15"
+        },
+        {
+          "title": "Canlı dərslər",
+          "body": "Onlayn dərs başladın, qrupu dəvət edin və dərs tarixçəsini saxlayın.",
+          "accent": "from-teal-500/15"
+        },
+        {
+          "title": "Ünsiyyət",
+          "body": "Qrup və fərdi çat — müəllim, tələbə və valideyn arasında.",
+          "accent": "from-indigo-500/15"
+        }
+      ]
+    },
+    "faq": {
+      "heading": "Tez-tez verilən suallar",
+      "items": [
+        {
+          "q": "Mentorix kimlər üçündür?",
+          "a": "Əsasən fərdi müəllimlər və kiçik tədris qrupları üçündür. Tələbə və valideyn kabinetləri dəvət ilə açılır və pulsuzdur."
+        },
+        {
+          "q": "Pulsuz sınaq necə işləyir?",
+          "a": "SADƏ plan 14 gün ərzində platformanı sınamaq üçündür. Sınaq bitəndən sonra ödənişli plana keçə və ya dayandıra bilərsiniz."
+        },
+        {
+          "q": "Kredit kartı tələb olunur?",
+          "a": "Sınağa başlamaq üçün kredit kartı tələb olunmur."
+        },
+        {
+          "q": "Planımı istənilən vaxt dəyişə bilərəm?",
+          "a": "Bəli. Ayarlardan planı yüksəldə və ya dəyişə bilərsiniz — məcburi illik öhdəlik yoxdur."
+        },
+        {
+          "q": "Tələbələrimi necə idarə edə bilərəm?",
+          "a": "Tələbə və qrup siyahısından əlavə edir, dəvət linki və ya kod ilə qoşur, davamiyyət və nəticələri eyni yerdə görürsünüz."
+        },
+        {
+          "q": "Mentorix-də hansı funksiyalar mövcuddur?",
+          "a": "İmtahan, tapşırıq, ödəniş izləmə, valideyn bildirişləri, qrup və fərdi çat, canlı dərs, hesabatlar və müəllim axtarışı."
+        },
+        {
+          "q": "Ödənişləri necə izləyə bilərəm?",
+          "a": "Ödənişlər bölməsində tələbə üzrə məbləğ və statusu (ödənilib, gözləyir, gecikir) izləyə bilərsiniz."
+        }
+      ]
+    },
+    "ctaBand": {
+      "heading": "İdarəetməyə daha az, tələbələrinizə daha çox vaxt ayırın.",
+      "subtitle": "Mentorix ilə müəllimlik fəaliyyətinizi bir platformadan idarə edin."
     },
     "plansHeading": "Planlar",
+    "plansIntro": "Müəllimlər üçün şəffaf abunəlik. Tələbə və valideyn kabineti pulsuzdur.",
+    "plansCompare": "Bütün limitləri müqayisə et",
+    "plans": {
+      "free": "Pulsuz",
+      "pricePerMonth": "{{price}} AZN / ay",
+      "unlimited": "Limitsiz",
+      "basic": {
+        "title": "SADƏ",
+        "subtitle": "14 günlük pulsuz sınaq",
+        "cta": "Pulsuz başla",
+        "trialLines": [
+          "14 gün ərzində platformanı sınayın",
+          "Kredit kartı tələb olunmur",
+          "İstənilən vaxt dayandıra bilərsiniz"
+        ]
+      },
+      "pro": {
+        "title": "STANDART",
+        "subtitle": "Fərdi müəllimlər üçün",
+        "cta": "Pulsuz başla",
+        "bullets": [
+          "20 tələbə",
+          "1 250 sənəd",
+          "20 SMS / ay",
+          "20 imtahan / ay",
+          "40 tapşırıq / ay",
+          "Ödəniş izləmə",
+          "Valideyn bildirişləri",
+          "Qrup və fərdi çat",
+          "Canlı dərs — 20 iştirakçı"
+        ]
+      },
+      "growth": {
+        "title": "PROFESSİONAL",
+        "subtitle": "Böyüyən qruplar üçün",
+        "cta": "Pulsuz başla",
+        "bullets": [
+          "50 tələbə",
+          "5 000 sənəd",
+          "50 SMS / ay",
+          "50 imtahan / ay",
+          "120 tapşırıq / ay",
+          "Ödəniş izləmə",
+          "Valideyn bildirişləri",
+          "Ətraflı hesabatlar",
+          "Qrup və fərdi çat",
+          "Canlı dərs — 50 iştirakçı"
+        ]
+      },
+      "premium": {
+        "title": "PREMİUM",
+        "subtitle": "Aktiv müəllimlər üçün",
+        "cta": "Pulsuz başla",
+        "bullets": [
+          "Limitsiz tələbə",
+          "Limitsiz sənəd",
+          "200 SMS / ay",
+          "Limitsiz imtahan",
+          "Limitsiz tapşırıq",
+          "Ödəniş izləmə",
+          "Valideyn bildirişləri",
+          "Ətraflı hesabatlar",
+          "Prioritet dəstək",
+          "Canlı dərs — limitsiz iştirakçı"
+        ]
+      }
+    },
+    "pricingPage": {
+      "heading": "Planlar",
+      "intro": "Müəllimlər və təhsil xidməti təminatçıları üçün. Tələbə və valideyn hesabları pulsuzdur.",
+      "compareHeading": "Limitləri müqayisə edin",
+      "trialNote": "SADƏ plan 14 günlük sınaqdır. Kredit kartı tələb olunmur.",
+      "yearlyNote": "İllik ödəniş seçəndə aylıq məbləğin 12 qatı üzrə 20% endirim tətbiq olunur.",
+      "cta": "Pulsuz başla",
+      "rows": {
+        "price": "Qiymət",
+        "students": "Tələbə limiti",
+        "documents": "Sənəd limiti",
+        "exams": "İmtahan / ay",
+        "assignments": "Tapşırıq / ay",
+        "sms": "SMS / ay",
+        "live": "Canlı dərs iştirakçısı"
+      }
+    },
     "demo": {
-      "title": "Demo — idarə paneli",
-      "subtitle": "Nümunə vizual, real hesab deyil",
+      "title": "Nümunə — müəllim paneli",
+      "subtitle": "Nümunə interfeys, real hesab deyil",
       "close": "Bağla",
-      "dialogLabel": "İnteraktiv demo paneli",
+      "dialogLabel": "Nümunə müəllim paneli",
+      "chartTitle": "Həftəlik dərs ritmi",
+      "chartCaption": "Nümunə qrafik",
+      "sampleData": "nümunə data",
       "tabs": {
-        "overview": "Bülgə",
-        "schedule": "Təqvim",
+        "overview": "Ümumi",
+        "schedule": "Cədvəl",
         "payments": "Ödənişlər",
         "attendance": "Davamiyyət"
-      }
+      },
+      "kpis": {
+        "students": "Aktiv tələbə",
+        "lessons": "Bu həftə dərs",
+        "pendingPay": "Gözləyən ödəniş",
+        "sms": "SMS (ay)"
+      },
+      "schedule": [
+        {
+          "time": "17:30",
+          "title": "Riyaziyyat · qrup",
+          "status": "Təsdiqlənib",
+          "ok": true
+        },
+        {
+          "time": "19:00",
+          "title": "İngilis · fərdi",
+          "status": "Gözləyir",
+          "ok": false
+        },
+        {
+          "time": "20:15",
+          "title": "Fizika · qrup",
+          "status": "Təsdiqlənib",
+          "ok": true
+        }
+      ],
+      "paymentsTable": {
+        "student": "Tələbə",
+        "amount": "Məbləğ",
+        "status": "Status"
+      },
+      "payments": [
+        {
+          "name": "Tələbə A",
+          "amount": "120 ₼",
+          "status": "Ödənildi",
+          "tone": "paid"
+        },
+        {
+          "name": "Tələbə B",
+          "amount": "80 ₼",
+          "status": "Gözləyir",
+          "tone": "pending"
+        },
+        {
+          "name": "Tələbə C",
+          "amount": "200 ₼",
+          "status": "Gecikir",
+          "tone": "late"
+        }
+      ],
+      "attendance": [
+        {
+          "label": "Bu həftə",
+          "pct": 82
+        },
+        {
+          "label": "Keçən həftə",
+          "pct": 76
+        },
+        {
+          "label": "Ay ortalaması",
+          "pct": 88
+        }
+      ]
     }
   },
   "publicFooter": {
@@ -1406,9 +1639,21 @@
         "difficultyInvalid": "Düzgün çətinlik seçin."
       }
     },
-    "level": { "beginner": "Başlanğıc", "intermediate": "Orta", "advanced": "Qabaqcıl" },
-    "format": { "mcq": "Çoxseçimli (MCQ)", "open": "Açıq sual", "essay": "Esse" },
-    "difficulty": { "easy": "Asan", "medium": "Orta", "hard": "Çətin" },
+    "level": {
+      "beginner": "Başlanğıc",
+      "intermediate": "Orta",
+      "advanced": "Qabaqcıl"
+    },
+    "format": {
+      "mcq": "Çoxseçimli (MCQ)",
+      "open": "Açıq sual",
+      "essay": "Esse"
+    },
+    "difficulty": {
+      "easy": "Asan",
+      "medium": "Orta",
+      "hard": "Çətin"
+    },
     "card": {
       "edit": "Düzəliş",
       "regenerate": "Yenilə",
@@ -2118,13 +2363,34 @@
     "backToStudents": "← Tələbələr",
     "close": "Bağla",
     "weekdays": {
-      "1": { "short": "B.e.", "full": "Bazar ertəsi" },
-      "2": { "short": "Ç.a.", "full": "Çərşənbə axşamı" },
-      "3": { "short": "Çər.", "full": "Çərşənbə" },
-      "4": { "short": "C.a.", "full": "Cümə axşamı" },
-      "5": { "short": "Cümə", "full": "Cümə" },
-      "6": { "short": "Şən.", "full": "Şənbə" },
-      "7": { "short": "Baz.", "full": "Bazar" }
+      "1": {
+        "short": "B.e.",
+        "full": "Bazar ertəsi"
+      },
+      "2": {
+        "short": "Ç.a.",
+        "full": "Çərşənbə axşamı"
+      },
+      "3": {
+        "short": "Çər.",
+        "full": "Çərşənbə"
+      },
+      "4": {
+        "short": "C.a.",
+        "full": "Cümə axşamı"
+      },
+      "5": {
+        "short": "Cümə",
+        "full": "Cümə"
+      },
+      "6": {
+        "short": "Şən.",
+        "full": "Şənbə"
+      },
+      "7": {
+        "short": "Baz.",
+        "full": "Bazar"
+      }
     }
   },
   "attendance": {

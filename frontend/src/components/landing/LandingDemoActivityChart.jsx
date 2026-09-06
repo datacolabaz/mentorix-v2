@@ -1,20 +1,22 @@
+import { useTranslation } from 'react-i18next'
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from 'recharts'
 
 const DATA = [
-  { week: 'H1', lessons: 8 },
-  { week: 'H2', lessons: 13 },
-  { week: 'H3', lessons: 7 },
-  { week: 'H4', lessons: 16 },
-  { week: 'H5', lessons: 11 },
-  { week: 'H6', lessons: 18 },
-  { week: 'H7', lessons: 10 },
+  { week: '1', lessons: 8 },
+  { week: '2', lessons: 13 },
+  { week: '3', lessons: 7 },
+  { week: '4', lessons: 16 },
+  { week: '5', lessons: 11 },
+  { week: '6', lessons: 18 },
+  { week: '7', lessons: 10 },
 ]
 
-export default function LandingDemoActivityChart() {
+export default function LandingDemoActivityChart({ compact = false }) {
+  const { t } = useTranslation()
   return (
-    <div className="rounded-xl border border-white/10 bg-[#151515] p-3 space-y-2">
-      <div className="text-xs font-semibold text-gray-200">Bu ay — yüklənmə ritmi</div>
-      <div className="h-28 w-full min-h-[7rem]">
+    <div className={`rounded-xl border border-white/10 bg-[#151515] ${compact ? 'p-2.5 space-y-1.5' : 'p-3 space-y-2'}`}>
+      <div className="text-[11px] font-semibold text-gray-200">{t('landing.demo.chartTitle')}</div>
+      <div className={`w-full ${compact ? 'h-24 min-h-[6rem]' : 'h-28 min-h-[7rem]'}`}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={DATA} margin={{ top: 4, right: 4, left: -18, bottom: 0 }}>
             <XAxis
@@ -29,8 +31,8 @@ export default function LandingDemoActivityChart() {
         </ResponsiveContainer>
       </div>
       <div className="flex justify-between text-[10px] text-gray-500">
-        <span>Həftəlik dərs sayı</span>
-        <span className="text-primary/80">nümunə data</span>
+        <span>{t('landing.demo.chartCaption')}</span>
+        <span className="text-primary/80">{t('landing.demo.sampleData')}</span>
       </div>
     </div>
   )

@@ -1,19 +1,10 @@
 import { useMemo } from 'react'
-import { ACCENT_OPTIONS, defaultLoginMarketingPayload } from '../constants/defaultLoginMarketing'
-import { visibleMarketingItems, visibleWhyCards } from './loginMarketingVisibility'
+import { ACCENT_OPTIONS } from '../constants/defaultLoginMarketing'
 import {
-  getPlanMarketingMeta,
   landingPlanFeatureLines,
   landingPlanPriceLabel,
   normalizePlanId,
 } from './subscriptionPlanMarketing'
-import { resolveUiLocale } from './uiLocale'
-
-/** AZ: admin/API marketing; RU/EN: translation.json landing.* */
-function usesI18nLandingCopy(i18n) {
-  const locale = resolveUiLocale(i18n?.language)
-  return locale === 'ru' || locale === 'en'
-}
 
 function arrayFromT(t, key) {
   const v = t(key, { returnObjects: true })
@@ -26,154 +17,86 @@ function translateOptional(t, key) {
   return value
 }
 
-/** AZ: admin/API marketing; RU/EN: translation.json landing.hero */
+/** Homepage copy comes from translation.json (AZ / RU / EN). CMS only toggles section visibility. */
 export function useLandingHero(marketing, t, i18n) {
-  const useI18n = usesI18nLandingCopy(i18n)
-  const apiHero = marketing?.hero || {}
-
-  return useMemo(() => {
-    if (useI18n) {
-      return {
-        pill: t('landing.hero.pill'),
-        headline: t('landing.hero.title'),
-        subheadline: t('landing.hero.subtitle'),
-        primary_cta_label: t('landing.hero.startFree'),
-        secondary_how: t('landing.hero.howItWorks'),
-        secondary_demo: t('landing.hero.demo'),
-        existing_account: t('landing.hero.haveAccount'),
-        marketplace_cta_label: t('landing.hero.marketplaceCta'),
-      }
-    }
-    return {
-      pill: apiHero.pill || t('landing.hero.pill'),
-      headline: apiHero.headline || t('landing.hero.title'),
-      subheadline: apiHero.subheadline || t('landing.hero.subtitle'),
-      primary_cta_label: apiHero.primary_cta_label || t('landing.hero.startFree'),
-      secondary_how: apiHero.secondary_how || t('landing.hero.howItWorks'),
-      secondary_demo: apiHero.secondary_demo || t('landing.hero.demo'),
-      existing_account: apiHero.existing_account || t('landing.hero.haveAccount'),
-      marketplace_cta_label: apiHero.marketplace_cta_label || t('landing.hero.marketplaceCta'),
-    }
-  }, [useI18n, apiHero, t, i18n.language])
+  return useMemo(
+    () => ({
+      pill: t('landing.hero.pill'),
+      headline: t('landing.hero.title'),
+      subheadline: t('landing.hero.subtitle'),
+      primary_cta_label: t('landing.hero.startFree'),
+      secondary_how: t('landing.hero.howItWorks'),
+      secondary_demo: t('landing.hero.demo'),
+      existing_account: t('landing.hero.haveAccount'),
+      marketplace_cta_label: t('landing.hero.marketplaceCta'),
+    }),
+    [t, i18n.language],
+  )
 }
 
 export function useLandingWhy(marketing, t, i18n) {
-  const useI18n = usesI18nLandingCopy(i18n)
-  return useMemo(() => {
-    if (useI18n) {
-      return {
-        heading: t('landing.why.heading'),
-        cards: arrayFromT(t, 'landing.why.cards').map((c) => ({ ...c, card_enabled: true })),
-      }
-    }
-    return {
-      heading: marketing?.why?.heading || '',
-      cards: visibleWhyCards(marketing?.why?.cards),
-    }
-  }, [useI18n, marketing, t, i18n.language])
+  return useMemo(
+    () => ({
+      heading: t('landing.why.heading'),
+      cards: arrayFromT(t, 'landing.why.cards').map((c) => ({ ...c, card_enabled: true })),
+    }),
+    [t, i18n.language],
+  )
 }
 
 export function useLandingSteps(marketing, t, i18n) {
-  const useI18n = usesI18nLandingCopy(i18n)
-  return useMemo(() => {
-    if (useI18n) {
-      return {
-        heading: t('landing.steps.heading'),
-        items: arrayFromT(t, 'landing.steps.items').map((x, i) => ({
-          ...x,
-          step: x.step || String(i + 1),
-          item_enabled: true,
-        })),
-      }
-    }
-    const items = Array.isArray(marketing.steps?.items) ? marketing.steps.items : []
-    const def = defaultLoginMarketingPayload().steps.items || []
-    const base = items.length ? items : def
-    return {
-      heading: marketing?.steps?.heading || '',
-      items: visibleMarketingItems(base),
-    }
-  }, [useI18n, marketing, t, i18n.language])
+  return useMemo(
+    () => ({
+      heading: t('landing.steps.heading'),
+      items: arrayFromT(t, 'landing.steps.items').map((x, i) => ({
+        ...x,
+        step: x.step || String(i + 1).padStart(2, '0'),
+        item_enabled: true,
+      })),
+    }),
+    [t, i18n.language],
+  )
 }
 
 export function useLandingFeatures(marketing, t, i18n) {
-  const useI18n = usesI18nLandingCopy(i18n)
-  return useMemo(() => {
-    if (useI18n) {
-      return {
-        heading: t('landing.features.heading'),
-        items: arrayFromT(t, 'landing.features.items').map((item, i) => ({
-          ...item,
-          item_enabled: true,
-          accent: item.accent || ACCENT_OPTIONS[i % ACCENT_OPTIONS.length],
-        })),
-      }
-    }
-    return {
-      heading: marketing?.features?.heading || '',
-      items: visibleMarketingItems(marketing?.features?.items || []),
-    }
-  }, [useI18n, marketing, t, i18n.language])
+  return useMemo(
+    () => ({
+      heading: t('landing.features.heading'),
+      items: arrayFromT(t, 'landing.features.items').map((item, i) => ({
+        ...item,
+        item_enabled: true,
+        accent: item.accent || ACCENT_OPTIONS[i % ACCENT_OPTIONS.length],
+      })),
+    }),
+    [t, i18n.language],
+  )
 }
 
 export function useLandingFaq(marketing, t, i18n) {
-  const useI18n = usesI18nLandingCopy(i18n)
-  return useMemo(() => {
-    if (useI18n) {
-      return {
-        heading: t('landing.faq.heading'),
-        items: arrayFromT(t, 'landing.faq.items').map((x) => ({ ...x, item_enabled: true })),
-      }
-    }
-    return {
-      heading: marketing?.faq?.heading || '',
-      items: visibleMarketingItems(marketing?.faq?.items || []),
-    }
-  }, [useI18n, marketing, t, i18n.language])
-}
-
-export function useLandingUseCase(marketing, t, i18n) {
-  const useI18n = usesI18nLandingCopy(i18n)
-  return useMemo(() => {
-    if (useI18n) {
-      return {
-        section_enabled: marketing?.use_case?.section_enabled !== false,
-        heading: t('landing.useCase.heading'),
-        title_line: t('landing.useCase.titleLine'),
-        faq_link: t('landing.useCase.faqLink'),
-        bullets: arrayFromT(t, 'landing.useCase.bullets'),
-      }
-    }
-    return marketing?.use_case || {}
-  }, [useI18n, marketing, t, i18n.language])
+  return useMemo(
+    () => ({
+      heading: t('landing.faq.heading'),
+      items: arrayFromT(t, 'landing.faq.items').map((x) => ({ ...x, item_enabled: true })),
+    }),
+    [t, i18n.language],
+  )
 }
 
 export function useLandingCtaBand(marketing, t, i18n) {
-  const useI18n = usesI18nLandingCopy(i18n)
-  return useMemo(() => {
-    if (useI18n) {
-      return {
-        ...marketing?.cta_band,
-        section_enabled: marketing?.cta_band?.section_enabled !== false,
-        heading: t('landing.ctaBand.heading'),
-        subtitle: t('landing.ctaBand.subtitle'),
-      }
-    }
-    return marketing?.cta_band || {}
-  }, [useI18n, marketing, t, i18n.language])
+  return useMemo(
+    () => ({
+      ...marketing?.cta_band,
+      section_enabled: marketing?.cta_band?.section_enabled !== false,
+      heading: t('landing.ctaBand.heading'),
+      subtitle: t('landing.ctaBand.subtitle'),
+    }),
+    [marketing?.cta_band, t, i18n.language],
+  )
 }
 
 export function useLandingPlanDisplay(p, t, i18n) {
   return useMemo(() => {
     const id = normalizePlanId(p)
-    if (!usesI18nLandingCopy(i18n)) {
-      return {
-        title: p.title,
-        meta: getPlanMarketingMeta(p),
-        bullets: landingPlanFeatureLines(p),
-        priceLabel: landingPlanPriceLabel(p),
-      }
-    }
     const prefix = `landing.plans.${id}`
     const trialLines = id === 'basic' ? arrayFromT(t, `${prefix}.trialLines`) : []
     const bullets = trialLines.length ? trialLines : arrayFromT(t, `${prefix}.bullets`)
@@ -183,16 +106,15 @@ export function useLandingPlanDisplay(p, t, i18n) {
         ? t('landing.plans.free')
         : t('landing.plans.pricePerMonth', { price: v })
     const subtitle = translateOptional(t, `${prefix}.subtitle`)
-    const popular = translateOptional(t, `${prefix}.popular`)
     return {
       title: t(`${prefix}.title`),
       meta: {
         subtitle: subtitle || null,
-        popularLabel: popular || null,
+        popularLabel: null,
         cta: t(`${prefix}.cta`),
       },
-      bullets,
-      priceLabel,
+      bullets: bullets.length ? bullets : landingPlanFeatureLines(p),
+      priceLabel: priceLabel || landingPlanPriceLabel(p),
     }
   }, [p, t, i18n.language])
 }

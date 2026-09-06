@@ -9,13 +9,19 @@ export default function CertificatePreviewMockup({ className = '' }) {
   const locale = resolveUiLocale(i18n.language)
   const data = {
     ...SAMPLE_CERTIFICATE,
+    studentName: t('landing.certificate.studentName'),
     instructorName: t('landing.certificate.instructorName'),
   }
 
   return (
     <div className={`relative ${className}`}>
       <div className="absolute -inset-3 rounded-2xl bg-primary/20 blur-2xl opacity-60" aria-hidden />
-      <CertificateCard data={data} locale={locale} />
+      <div className="relative">
+        <p className="mb-2 text-center text-[10px] font-semibold uppercase tracking-wider text-gray-400">
+          {t('landing.certificate.sampleLabel')}
+        </p>
+        <CertificateCard data={data} locale={locale} />
+      </div>
     </div>
   )
 }

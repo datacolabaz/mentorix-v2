@@ -13,14 +13,14 @@ export function defaultLoginMarketingPayload() {
   return {
     version: 1,
     hero: {
-      pill: 'Təhsil ekosistemi — Mentorix',
-      headline: 'Müəllim, tələbə və valideyn — bir təhsil platformasında',
+      pill: 'Müəllimlər üçün idarəetmə platforması',
+      headline: 'Tələbələrinizə vaxt ayırın, idarəetməni Mentorix-ə buraxın',
       subheadline:
-        'Tapşırıq və imtahan, çat, ödəniş izləmə, valideyn bildirişləri və müəllim axtarışı — hamısı bir yerdə.',
-      primary_cta_label: 'Pulsuz başla (14 günlük sınaq)',
-      marketplace_cta_label: 'Müəllim / Təlimçi tap (Xəritə ilə)',
+        'İmtahanlar yaradın, tapşırıqlar göndərin, ödənişləri izləyin və valideynlərlə əlaqəni bir platformadan idarə edin.',
+      primary_cta_label: 'Pulsuz başla',
+      marketplace_cta_label: 'Müəllim tap',
       secondary_how: 'Necə işləyir?',
-      secondary_demo: 'Demo bax',
+      secondary_demo: 'Panelə bax',
       existing_account: 'Artıq hesabım var — girişə keç',
     },
     mini_preview: {

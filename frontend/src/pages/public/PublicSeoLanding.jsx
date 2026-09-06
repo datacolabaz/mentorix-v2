@@ -1,24 +1,25 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, useLocation } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import Brand from '../../components/common/Brand'
+import LanguageSwitcher from '../../components/LanguageSwitcher'
 import PublicSeoFooter from '../../components/public/PublicSeoFooter'
 import PricingAudienceExplainer from '../../components/public/PricingAudienceExplainer'
+import PublicPricingCompare from '../../components/public/PublicPricingCompare'
 import { landingByPath, ctaHrefForLanding, MENTORIX_PLATFORM_FEATURES } from '../../lib/publicSeoLandings'
-import {
-  MENTORIX_ANNUAL_DISCOUNT,
-  MENTORIX_PLATFORM_BENEFITS,
-  MENTORIX_PRICING_PLANS,
-} from '../../lib/mentorixPublicMarketing'
+import { MENTORIX_PLATFORM_BENEFITS } from '../../lib/mentorixPublicMarketing'
 import { setPageSeo } from '../../lib/pageSeo'
 import { useSubscriptionPlans } from '../../hooks/useSubscriptionPlans'
 import { allActivePlanTitlesList } from '../../lib/subscriptionPlanGuards'
 import api from '../../lib/api'
 
 export default function PublicSeoLanding() {
+  const { t } = useTranslation()
   const { pathname } = useLocation()
   const landing = landingByPath(pathname)
   const plansQ = useSubscriptionPlans()
   const plans = Array.isArray(plansQ.data) ? plansQ.data : []
+  const isPricingPage = landing?.path === '/qiymetler'
   const planTitlesLabel = useMemo(() => allActivePlanTitlesList(plans), [plans])
   const [showPricingAudience, setShowPricingAudience] = useState(false)
 
@@ -66,16 +67,19 @@ export default function PublicSeoLanding() {
   return (
     <div className="min-h-[100svh] bg-[#0b0b0b] text-white flex flex-col">
       <header className="border-b border-white/10 bg-[#0f0f0f]/95">
-        <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
-          <Link to="/" className="shrink-0" aria-label="Mentorix ana səhifə">
+        <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between gap-3 min-w-0">
+          <Link to="/" className="shrink-0" aria-label="Mentorix">
             <Brand className="h-7 w-auto" />
           </Link>
-          <Link
-            to="/search"
-            className="text-sm font-semibold text-primary hover:brightness-110 px-3 py-2 rounded-lg border border-primary/30"
-          >
-            Xəritə axtarışı
-          </Link>
+          <div className="flex items-center gap-2 shrink-0">
+            <LanguageSwitcher tone="dark" className="h-8" />
+            <Link
+              to="/search"
+              className="text-sm font-semibold text-primary hover:brightness-110 px-3 py-2 rounded-lg border border-primary/30 whitespace-nowrap"
+            >
+              {t('landing.nav.findTeacher')}
+            </Link>
+          </div>
         </div>
       </header>
 
@@ -84,12 +88,18 @@ export default function PublicSeoLanding() {
           <p className="text-[11px] font-bold uppercase tracking-wider text-primary">
             Mentorix · {isPanel ? 'təhsil ekosistemi' : 'ictimai axtarış'}
           </p>
-          <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight leading-tight">{landing.h1}</h1>
-          {landing.intro.map((p) => (
-            <p key={p.slice(0, 24)} className="text-gray-400 text-sm sm:text-base leading-relaxed">
-              {p}
-            </p>
-          ))}
+          <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight leading-tight">
+            {isPricingPage ? t('landing.pricingPage.heading') : landing.h1}
+          </h1>
+          {isPricingPage ? (
+            <p className="text-gray-400 text-sm sm:text-base leading-relaxed">{t('landing.pricingPage.intro')}</p>
+          ) : (
+            landing.intro.map((p) => (
+              <p key={p.slice(0, 24)} className="text-gray-400 text-sm sm:text-base leading-relaxed">
+                {p}
+              </p>
+            ))
+          )}
         </div>
 
         {landing.bullets?.length ? (
@@ -108,39 +118,7 @@ export default function PublicSeoLanding() {
         {landing.showPricingPlans ? (
           <section className="space-y-4">
             {showPricingAudience ? <PricingAudienceExplainer variant="faq" /> : null}
-            <h2 className="text-lg font-semibold text-white">Paketlərimiz</h2>
-            <div className="grid gap-3 sm:grid-cols-2">
-              {MENTORIX_PRICING_PLANS.map((plan) => (
-                <article
-                  key={plan.id}
-                  className={`rounded-2xl border p-4 sm:p-5 space-y-3 ${
-                    plan.highlight
-                      ? 'border-primary/45 bg-primary/5 shadow-[0_0_24px_rgba(0,229,176,0.08)]'
-                      : 'border-white/10 bg-white/[0.03]'
-                  }`}
-                >
-                  <div className="flex items-baseline justify-between gap-2">
-                    <h3 className="text-sm font-bold text-white">{plan.title}</h3>
-                    <span className="text-xs font-semibold text-primary tabular-nums">{plan.priceLabel}</span>
-                  </div>
-                  <ul className="space-y-1.5 text-xs sm:text-sm text-gray-400">
-                    {plan.items.map((item) => (
-                      <li key={item} className="flex gap-2">
-                        <span className="text-primary shrink-0">•</span>
-                        <span>{item}</span>
-                      </li>
-                    ))}
-                    {plan.mapNote ? (
-                      <li className="flex gap-2 text-gray-300">
-                        <span className="text-primary shrink-0">•</span>
-                        <span>{plan.mapNote}</span>
-                      </li>
-                    ) : null}
-                  </ul>
-                </article>
-              ))}
-            </div>
-            <p className="text-xs text-gray-500">{MENTORIX_ANNUAL_DISCOUNT}</p>
+            <PublicPricingCompare plans={plans} hideIntro={isPricingPage} />
           </section>
         ) : null}
 
@@ -181,14 +159,14 @@ export default function PublicSeoLanding() {
             rel="noreferrer"
             className="inline-flex w-full sm:w-auto justify-center items-center rounded-xl bg-primary px-6 py-4 min-h-[52px] text-sm sm:text-base font-bold text-[#041018] shadow-lg shadow-primary/25 hover:brightness-95"
           >
-            {landing.ctaLabel}
+            {isPricingPage ? t('landing.pricingPage.cta') : landing.ctaLabel}
           </a>
         ) : (
           <Link
             to={ctaHref}
             className="inline-flex w-full sm:w-auto justify-center items-center rounded-xl bg-primary px-6 py-4 min-h-[52px] text-sm sm:text-base font-bold text-[#041018] shadow-lg shadow-primary/25 hover:brightness-95"
           >
-            {landing.ctaLabel}
+            {isPricingPage ? t('landing.pricingPage.cta') : landing.ctaLabel}
           </Link>
         )}
 

@@ -699,115 +699,76 @@
       "features": "Features",
       "plans": "Plans",
       "login": "Sign in",
+      "startFree": "Start free",
       "openMenu": "Open menu",
       "closeMenu": "Close menu",
       "mainNav": "Main navigation"
     },
     "hero": {
-      "pill": "Teachers' digital assistant",
-      "title": "Spend time with your students, leave management to Mentorix",
-      "subtitle": "Create exams, send assignments, track payments, and manage parent communication from one platform.",
+      "pill": "Operations platform for teachers",
+      "title": "Spend time with your students. Leave the admin to Mentorix.",
+      "subtitle": "Create exams, send assignments, track payments, and keep parents informed — from one platform.",
       "startFree": "Start free",
       "howItWorks": "How it works?",
-      "demo": "View demo",
-      "haveAccount": "I already have an account — go to sign in",
-      "marketplaceCta": "Find a teacher / trainer (with map)"
+      "demo": "See the panel",
+      "haveAccount": "I already have an account — sign in",
+      "marketplaceCta": "Find a teacher"
     },
-    "activity": {
-      "title": "Live activity",
-      "now": "now",
-      "events": [
-        {
-          "actor": "Teacher Telman",
-          "action": "created an exam",
-          "time": "now"
-        },
-        {
-          "actor": "Student Arzu",
-          "action": "made a payment (45 AZN)",
-          "time": "2 min ago"
-        },
-        {
-          "actor": "A parent",
-          "action": "received an SMS: \"Score: 8/10\"",
-          "time": "5 min ago"
-        },
-        {
-          "actor": "Teacher Leyla",
-          "action": "assigned homework",
-          "time": "1 min ago"
-        },
-        {
-          "actor": "Student Rashad",
-          "action": "joined an exam",
-          "time": "3 min ago"
-        },
-        {
-          "actor": "A parent",
-          "action": "received an attendance notification",
-          "time": "7 min ago"
-        },
-        {
-          "actor": "Teacher Nargiz",
-          "action": "accepted a new student",
-          "time": "4 min ago"
-        },
-        {
-          "actor": "Student Kamran",
-          "action": "submitted an assignment",
-          "time": "6 min ago"
-        }
-      ]
-    },
-    "stats": {
-      "teachersCount": "340+",
-      "teachers": "teachers",
-      "thisMonth": "this month",
-      "timeSavedValue": "6 hours",
-      "weekly": "weekly",
-      "timeSaved": "time saved",
-      "ratingValue": "4.8",
-      "avgRating": "average rating",
-      "startFreeShort": "Start free"
-    },
-    "testimonial": {
-      "quote": "I could not manage this many students without Mentorix.",
-      "author": "— Telman A., math teacher · Baku"
+    "preview": {
+      "badge": "Sample panel",
+      "appTitle": "Teacher dashboard",
+      "ariaLabel": "Sample Mentorix teacher dashboard",
+      "tabs": {
+        "students": "Students",
+        "exams": "Exams",
+        "payments": "Payments"
+      },
+      "groupLabel": "Group",
+      "groupName": "Math · Grade 10",
+      "studentCount": "8 students",
+      "examLabel": "Exam",
+      "examName": "Weekly check",
+      "examStatus": "Active",
+      "paymentLabel": "Payments",
+      "paymentStatus": "2 pending",
+      "assignmentStatus": "Assignment tracking",
+      "sampleNote": "Sample interface — not a live account"
     },
     "marketplace": {
       "badge": "For parents and students",
       "title": "Find a teacher or trainer",
-      "desc": "Find a teacher in your district and compare university programs — sign-up is free for students and parents."
+      "desc": "Browse teachers by area and compare university programs — student and parent sign-up is free."
     },
     "universities": {
       "badge": "Study abroad",
       "title": "University and program search",
-      "desc": "Filter bachelor's, master's, and PhD programs by country, scholarship, and application deadline — no sign-in required.",
+      "desc": "Filter bachelor's, master's, and PhD programs by country, scholarship, and deadline — no sign-in required.",
       "cta": "Search programs"
     },
     "seo": {
-      "title": "Mentorix — Education Ecosystem: Teacher, Student, and Parent",
-      "description": "Mentorix is an education platform that brings teachers, students, and parents together: assignments and exams, chat, payment tracking, parent notifications, and a teacher marketplace — all in one place.",
-      "keywords": "education platform, education ecosystem, teacher dashboard, student portal, parent portal, exam system, assignment management, find a teacher, payment tracking, SMS notifications, teaching groups, Mentorix"
+      "title": "Mentorix — student, exam, and payment management for teachers",
+      "description": "Mentorix helps teachers manage students, exams, assignments, payments, and parent communication in one place. Start a 14-day free trial.",
+      "keywords": "teacher platform, student management, exams, assignments, payment tracking, parent notifications, Mentorix"
     },
     "certificate": {
-      "instructorName": "Mentorix Official"
+      "instructorName": "Mentorix",
+      "sampleLabel": "Sample certificate",
+      "studentName": "Full name"
     },
-    "plansHeading": "Plans",
     "why": {
       "heading": "Why Mentorix?",
       "cards": [
         {
-          "title": "Faster than Excel",
-          "body": "A ready workflow instead of page after page of spreadsheets: lessons, payments, and messages in one dashboard."
+          "title": "Less admin, more teaching",
+          "body": "Keep exams, assignments, payments, and messages in one dashboard instead of notebooks and scattered chats."
         },
         {
-          "title": "More structured than WhatsApp",
-          "body": "Assignments, exams, and important alerts do not get lost in chat. Everything has its place and stays trackable."
+          "title": "Students in one place",
+          "body": "Groups, attendance, and results stay in the same workflow — no hunting for who still owes what."
         },
         {
-          "title": "Automates manual work",
-          "body": "Recurring tasks for package expiry, payment confirmation, and SMS reminders run automatically."
+          "title": "Parents stay informed",
+          "body": "Send important results and payment notices from the platform without losing the status trail."
         }
       ]
     },
@@ -815,68 +776,64 @@
       "heading": "How it works",
       "items": [
         {
-          "step": "1",
-          "title": "Connect and set your schedule",
-          "body": "Start with Google, then add students and weekly lesson slots in a few minutes."
+          "step": "01",
+          "title": "Create your account",
+          "body": "Open a teacher account and add your students."
         },
         {
-          "step": "2",
-          "title": "Track payments and attendance",
-          "body": "Leave notebooks and spreadsheets behind. See who paid and when on one screen."
+          "step": "02",
+          "title": "Run your classes",
+          "body": "Exams, assignments, payments, and messaging live on one platform."
         },
         {
-          "step": "3",
-          "title": "Automatic reminders",
-          "body": "Notify parents and students by SMS about package expiry and key events — less manual follow-up."
-        },
-        {
-          "step": "4",
-          "title": "Attract new students",
-          "body": "Turn on your profile — parents and students will find you on the map, online or in person."
+          "step": "03",
+          "title": "Save your time",
+          "body": "Cut routine admin and spend more time with your students."
         }
       ]
     },
     "features": {
-      "heading": "With Mentorix.io",
+      "heading": "Simplify a teacher’s daily work",
       "items": [
         {
-          "title": "Students and groups",
-          "body": "Manage students and groups — everything on one dashboard.",
-          "accent": "from-sky-500/15"
-        },
-        {
-          "title": "Exams and analytics",
-          "body": "Share exams via QR or link; grade results automatically and track them with charts.",
+          "title": "Exams",
+          "body": "Create exams, share them by link or QR, and follow the results.",
           "accent": "from-emerald-500/15"
         },
         {
-          "title": "Payments and SMS",
-          "body": "Manage payment dates; send automatic reminders and exam-result SMS.",
+          "title": "Assignments",
+          "body": "Send homework and track submissions from one place.",
+          "accent": "from-sky-500/15"
+        },
+        {
+          "title": "Payments",
+          "body": "See who paid and what is still outstanding on one screen.",
           "accent": "from-amber-500/15"
         },
         {
-          "title": "Parent communication",
-          "body": "Share student results with parents; see attendance and weak topics in one place.",
+          "title": "Parent updates",
+          "body": "Share important results and notices in the parent workspace.",
           "accent": "from-purple-500/15"
-        }
-      ]
-    },
-    "useCase": {
-      "heading": "A real scenario",
-      "titleLine": "Private tutor — 25 students a week",
-      "faqLink": "Go to FAQ →",
-      "bullets": [
-        {
-          "lead": "5 minutes in the morning:",
-          "rest": "today's lessons, overdue payments, and “package ending soon” SMS are already waiting."
         },
         {
-          "lead": "After lessons:",
-          "rest": "mark attendance and send parents a reminder for next week — less WhatsApp chaos."
+          "title": "Student management",
+          "body": "Keep students and groups together; invite them with a link.",
+          "accent": "from-cyan-500/15"
         },
         {
-          "lead": "At month end:",
-          "rest": "history makes it easy to show whose payment status changed."
+          "title": "Reports",
+          "body": "Review results and activity to see where students struggle.",
+          "accent": "from-rose-500/15"
+        },
+        {
+          "title": "Live classes",
+          "body": "Start an online lesson, invite the group, and keep a class history.",
+          "accent": "from-teal-500/15"
+        },
+        {
+          "title": "Messaging",
+          "body": "Group and private chat between teacher, student, and parent.",
+          "accent": "from-indigo-500/15"
         }
       ]
     },
@@ -884,41 +841,60 @@
       "heading": "FAQ",
       "items": [
         {
-          "q": "Is Mentorix suitable for schools?",
-          "a": "It is built mainly for private teachers and small groups: calendar, payment history, and attendance in one place. For larger organisations we can adapt the setup via “contact us”."
+          "q": "Who is Mentorix for?",
+          "a": "It is built for private teachers and small teaching groups. Student and parent workspaces open by invitation and stay free."
         },
         {
-          "q": "Does it work well on a phone?",
-          "a": "Most teachers work from their phone: they check lessons, confirm bookings, and keep SMS reminders active."
+          "q": "How does the free trial work?",
+          "a": "The Simple plan lets you try the platform for 14 days. When the trial ends you can move to a paid plan or stop."
         },
         {
-          "q": "How do payments and seasonal packages work?",
-          "a": "Package or monthly billing with dates and statuses — less “who paid, when, paid / pending” confusion."
+          "q": "Do I need a credit card?",
+          "a": "No credit card is required to start the trial."
+        },
+        {
+          "q": "Can I change plans later?",
+          "a": "Yes. You can upgrade or switch from settings — there is no forced annual commitment."
+        },
+        {
+          "q": "How do I manage students?",
+          "a": "Add them from the student and group lists, invite with a link or code, and see attendance and results in the same place."
+        },
+        {
+          "q": "What can I do in Mentorix?",
+          "a": "Exams, assignments, payment tracking, parent notifications, group and private chat, live lessons, reports, and teacher search."
+        },
+        {
+          "q": "How do I track payments?",
+          "a": "In Payments you can follow each student’s amount and status — paid, pending, or overdue."
         }
       ]
     },
     "ctaBand": {
-      "heading": "Let education run as an ecosystem.",
-      "subtitle": "The teacher manages, the student learns, the parent follows — see the value first, then start a 14-day trial."
+      "heading": "Spend less time on admin. Spend more time with your students.",
+      "subtitle": "Run your teaching work from one platform with Mentorix."
     },
+    "plansHeading": "Plans",
+    "plansIntro": "Transparent teacher subscriptions. Student and parent workspaces are free.",
+    "plansCompare": "Compare all limits",
     "plans": {
       "free": "Free",
       "pricePerMonth": "{{price}} AZN / mo.",
+      "unlimited": "Unlimited",
       "basic": {
-        "title": "BASIC",
+        "title": "SIMPLE",
         "subtitle": "14-day free trial",
-        "cta": "Start 14-day trial",
+        "cta": "Start free",
         "trialLines": [
-          "Full access to all features for 14 days",
+          "Try the platform for 14 days",
           "No credit card required",
-          "Cancel anytime"
+          "Stop whenever you want"
         ]
       },
       "pro": {
         "title": "STANDARD",
         "subtitle": "For private teachers",
-        "popular": "⭐ Most popular",
-        "cta": "Choose Standard",
+        "cta": "Start free",
         "bullets": [
           "20 students",
           "1,250 documents",
@@ -927,16 +903,14 @@
           "40 assignments / mo.",
           "Payment tracking",
           "Parent notifications",
-          "Map visibility",
-          "Group chat",
-          "Private chat",
-          "Live lesson — 20 participants · Recording: ✓ (local)"
+          "Group and private chat",
+          "Live class — 20 participants"
         ]
       },
       "growth": {
         "title": "PROFESSIONAL",
-        "subtitle": "For growing teachers",
-        "cta": "Choose Professional",
+        "subtitle": "For growing groups",
+        "cta": "Start free",
         "bullets": [
           "50 students",
           "5,000 documents",
@@ -945,17 +919,15 @@
           "120 assignments / mo.",
           "Payment tracking",
           "Parent notifications",
-          "Map visibility",
           "Detailed reports",
-          "Group chat",
-          "Private chat",
-          "Live lesson — 50 participants · Recording: ✓ (local)"
+          "Group and private chat",
+          "Live class — 50 participants"
         ]
       },
       "premium": {
         "title": "PREMIUM",
         "subtitle": "For active teachers",
-        "cta": "Choose Premium",
+        "cta": "Start free",
         "bullets": [
           "Unlimited students",
           "Unlimited documents",
@@ -964,26 +936,108 @@
           "Unlimited assignments",
           "Payment tracking",
           "Parent notifications",
-          "Map visibility",
           "Detailed reports",
           "Priority support",
-          "Group chat",
-          "Private chat",
-          "Live lesson — unlimited participants · Recording: ✓ (local)"
+          "Live class — unlimited participants"
         ]
       }
     },
+    "pricingPage": {
+      "heading": "Plans",
+      "intro": "For teachers and education providers. Student and parent accounts are free.",
+      "compareHeading": "Compare limits",
+      "trialNote": "Simple is a 14-day trial. No credit card required.",
+      "yearlyNote": "Yearly billing applies a 20% discount on twelve monthly payments.",
+      "cta": "Start free",
+      "rows": {
+        "price": "Price",
+        "students": "Student limit",
+        "documents": "Document limit",
+        "exams": "Exams / month",
+        "assignments": "Assignments / month",
+        "sms": "SMS / month",
+        "live": "Live class participants"
+      }
+    },
     "demo": {
-      "title": "Demo — dashboard",
-      "subtitle": "Sample visuals, not a real account",
+      "title": "Sample — teacher dashboard",
+      "subtitle": "Sample interface, not a live account",
       "close": "Close",
-      "dialogLabel": "Interactive demo panel",
+      "dialogLabel": "Sample teacher dashboard",
+      "chartTitle": "Weekly lesson rhythm",
+      "chartCaption": "Sample chart",
+      "sampleData": "sample data",
       "tabs": {
         "overview": "Overview",
-        "schedule": "Calendar",
+        "schedule": "Schedule",
         "payments": "Payments",
         "attendance": "Attendance"
-      }
+      },
+      "kpis": {
+        "students": "Active students",
+        "lessons": "Lessons this week",
+        "pendingPay": "Pending payments",
+        "sms": "SMS (month)"
+      },
+      "schedule": [
+        {
+          "time": "17:30",
+          "title": "Math · group",
+          "status": "Confirmed",
+          "ok": true
+        },
+        {
+          "time": "19:00",
+          "title": "English · private",
+          "status": "Pending",
+          "ok": false
+        },
+        {
+          "time": "20:15",
+          "title": "Physics · group",
+          "status": "Confirmed",
+          "ok": true
+        }
+      ],
+      "paymentsTable": {
+        "student": "Student",
+        "amount": "Amount",
+        "status": "Status"
+      },
+      "payments": [
+        {
+          "name": "Student A",
+          "amount": "120 ₼",
+          "status": "Paid",
+          "tone": "paid"
+        },
+        {
+          "name": "Student B",
+          "amount": "80 ₼",
+          "status": "Pending",
+          "tone": "pending"
+        },
+        {
+          "name": "Student C",
+          "amount": "200 ₼",
+          "status": "Overdue",
+          "tone": "late"
+        }
+      ],
+      "attendance": [
+        {
+          "label": "This week",
+          "pct": 82
+        },
+        {
+          "label": "Last week",
+          "pct": 76
+        },
+        {
+          "label": "Month average",
+          "pct": 88
+        }
+      ]
     }
   },
   "publicFooter": {
@@ -1585,9 +1639,21 @@
         "difficultyInvalid": "Select a valid difficulty."
       }
     },
-    "level": { "beginner": "Beginner", "intermediate": "Intermediate", "advanced": "Advanced" },
-    "format": { "mcq": "Multiple choice (MCQ)", "open": "Open question", "essay": "Essay" },
-    "difficulty": { "easy": "Easy", "medium": "Medium", "hard": "Hard" },
+    "level": {
+      "beginner": "Beginner",
+      "intermediate": "Intermediate",
+      "advanced": "Advanced"
+    },
+    "format": {
+      "mcq": "Multiple choice (MCQ)",
+      "open": "Open question",
+      "essay": "Essay"
+    },
+    "difficulty": {
+      "easy": "Easy",
+      "medium": "Medium",
+      "hard": "Hard"
+    },
     "card": {
       "edit": "Edit",
       "regenerate": "Regenerate",
@@ -2297,13 +2363,34 @@
     "backToStudents": "← Students",
     "close": "Close",
     "weekdays": {
-      "1": { "short": "Mon", "full": "Monday" },
-      "2": { "short": "Tue", "full": "Tuesday" },
-      "3": { "short": "Wed", "full": "Wednesday" },
-      "4": { "short": "Thu", "full": "Thursday" },
-      "5": { "short": "Fri", "full": "Friday" },
-      "6": { "short": "Sat", "full": "Saturday" },
-      "7": { "short": "Sun", "full": "Sunday" }
+      "1": {
+        "short": "Mon",
+        "full": "Monday"
+      },
+      "2": {
+        "short": "Tue",
+        "full": "Tuesday"
+      },
+      "3": {
+        "short": "Wed",
+        "full": "Wednesday"
+      },
+      "4": {
+        "short": "Thu",
+        "full": "Thursday"
+      },
+      "5": {
+        "short": "Fri",
+        "full": "Friday"
+      },
+      "6": {
+        "short": "Sat",
+        "full": "Saturday"
+      },
+      "7": {
+        "short": "Sun",
+        "full": "Sunday"
+      }
     }
   },
   "attendance": {
