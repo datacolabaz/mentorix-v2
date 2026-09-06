@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import api from '../../lib/api'
 import Card from '../common/Card'
 import Button from '../common/Button'
@@ -8,14 +9,14 @@ import { groupServiceAreas } from '../../lib/serviceAreaGroups'
 import { useSubscriptionPlans } from '../../hooks/useSubscriptionPlans'
 import { higherPaidPlansSuffix, planTitleOrSlug } from '../../lib/subscriptionPlanGuards'
 
-const FORMAT_OPTS = [
-  { id: 'online', label: '💻 Onlayn' },
-  { id: 'teacher_place', label: '🏢 Canlı — Müəllimin yanında' },
-  { id: 'student_place', label: '🏡 Canlı — Tələbənin evində' },
-]
-
 export default function InstructorDiscoverSettings({ mapVisible, theme, inp }) {
+  const { t } = useTranslation()
   const toast = useToast()
+  const formatOpts = [
+    { id: 'online', label: t('settings.discover.formatOnline') },
+    { id: 'teacher_place', label: t('settings.discover.formatTeacherPlace') },
+    { id: 'student_place', label: t('settings.discover.formatStudentPlace') },
+  ]
   const plansQ = useSubscriptionPlans()
   const plans = Array.isArray(plansQ.data) ? plansQ.data : []
   const proPlanTitle = useMemo(() => {
@@ -71,11 +72,11 @@ export default function InstructorDiscoverSettings({ mapVisible, theme, inp }) {
       setAddress(disc?.profile?.teacher_place_address || '')
       if (areaRes?.success) setAreas(Array.isArray(areaRes.areas) ? areaRes.areas : [])
     } catch (e) {
-      toast(e?.message || 'Yüklənmədi', 'error')
+      toast(e?.message || t('settings.discover.toastLoadFailed'), 'error')
     } finally {
       setLoading(false)
     }
-  }, [toast])
+  }, [toast, t])
 
   useEffect(() => {
     void load()
@@ -100,7 +101,7 @@ export default function InstructorDiscoverSettings({ mapVisible, theme, inp }) {
     setFormats((prev) => {
       if (prev.includes(id)) return prev.filter((f) => f !== id)
       if (prev.length >= max) {
-        toast(premium ? 'Ən çox 3 format' : 'Pulsuz paketdə yalnız 1 format seçə bilərsiniz', 'error')
+        toast(premium ? t('settings.discover.toastMaxFormatsPremium') : t('settings.discover.toastMaxFormatsFree'), 'error')
         return prev
       }
       return [...prev, id]
@@ -111,7 +112,7 @@ export default function InstructorDiscoverSettings({ mapVisible, theme, inp }) {
     const max = premium ? 50 : limits?.max_categories || 5
     if (categoryIds.includes(cat.id)) return
     if (categoryIds.length >= max) {
-      toast(`Ən çox ${max} fənn seçə bilərsiniz`, 'error')
+      toast(t('settings.discover.toastMaxSubjects', { max }), 'error')
       return
     }
     setCategoryIds((ids) => [...ids, cat.id])
@@ -125,7 +126,7 @@ export default function InstructorDiscoverSettings({ mapVisible, theme, inp }) {
     setAreaIds((prev) => {
       if (prev.includes(id)) return prev.filter((a) => a !== id)
       if (prev.length >= max) {
-        toast('Pulsuz paketdə yalnız 1 rayon/metro', 'error')
+        toast(t('settings.discover.toastMaxAreas'), 'error')
         return prev
       }
       return [...prev, id]
@@ -148,11 +149,11 @@ export default function InstructorDiscoverSettings({ mapVisible, theme, inp }) {
         })),
         service_area_ids: areaIds,
       })
-      toast('Axtarış profili saxlanıldı')
+      toast(t('settings.discover.toastSaved'))
       window.dispatchEvent(new CustomEvent('mx:discover-profile-updated'))
       await load()
     } catch (e) {
-      toast(e?.message || 'Xəta', 'error')
+      toast(e?.message || t('settings.discover.toastError'), 'error')
     } finally {
       setSaving(false)
     }
@@ -195,45 +196,44 @@ export default function InstructorDiscoverSettings({ mapVisible, theme, inp }) {
             theme === 'dark' ? 'text-indigo-200/90' : 'text-token-textMain',
           ].join(' ')}
         >
-          Axtarışda ixtisas (fənn)
+          {t('settings.discover.title')}
         </h2>
       </div>
           <p className={['text-sm', theme === 'dark' ? 'text-gray-400' : 'text-token-textMuted'].join(' ')}>
-        Valideynlər «Müəllim tap»-da sizi bu fənnlər üzrə axtarır. Fizika, riyaziyyat və s. yazıb əlavə edin, sonra saxlayın.
+        {t('settings.discover.desc')}
         {!mapVisible ? (
-          <span className="block text-amber-400/90 mt-1 text-xs">Axtarış görünürlüyü hal-hazırda bağlıdır.</span>
+          <span className="block text-amber-400/90 mt-1 text-xs">{t('settings.discover.visibilityOff')}</span>
         ) : null}
       </p>
 
       {categoryIds.length === 0 ? (
         <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-3 text-sm text-amber-100/95 space-y-1">
-          <p className="font-semibold text-amber-200">Fənn əlavə edin — sizi axtarışda tapa bilmirlər</p>
+          <p className="font-semibold text-amber-200">{t('settings.discover.emptyTitle')}</p>
           <p className="text-xs text-amber-100/80 leading-relaxed">
-            Valideynlər &quot;fizika&quot;, &quot;riyaziyyat&quot; və s. axtardıqda profiliniz çıxması üçün ən azı bir
-            fənn seçin və saxlayın.
+            {t('settings.discover.emptyDesc')}
           </p>
         </div>
       ) : null}
 
       {!premium ? (
         <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs text-amber-200/90 mb-4">
-          Pulsuz: 1 format, 1 rayon, ayda 2 sorğu nömrəsi.{' '}
+          {t('settings.discover.freeHint')}{' '}
           <Link to="/instructor/settings#billing" className="text-primary font-semibold hover:underline">
-            {proPlanTitle} paket
+            {t('settings.discover.proLink', { plan: proPlanTitle })}
           </Link>{' '}
-          — limitsiz format, rayon və sorğular + TOP sıralama.
+          {t('settings.discover.paidHint')}
         </div>
       ) : (
         <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 px-3 py-2 text-xs text-emerald-300/90 mb-4">
-          ✓ {paidDiscoverLabel} aktiv axtarış imkanları
+          {t('settings.discover.premiumActive', { plans: paidDiscoverLabel })}
         </div>
       )}
 
       <div className="space-y-5">
         <section>
-          <p className={sectionTitleCls}>Dərs formatları</p>
+          <p className={sectionTitleCls}>{t('settings.discover.formatsTitle')}</p>
           <div className="grid gap-2">
-            {FORMAT_OPTS.map((opt) => {
+            {formatOpts.map((opt) => {
               const active = formats.includes(opt.id)
               return (
                 <button
@@ -268,12 +268,12 @@ export default function InstructorDiscoverSettings({ mapVisible, theme, inp }) {
         </section>
 
         <section>
-          <p className={sectionTitleCls}>Hansı ixtisas üzrə axtarılsın</p>
+          <p className={sectionTitleCls}>{t('settings.discover.subjectsTitle')}</p>
           <input
             type="search"
             value={catSearch}
             onChange={(e) => setCatSearch(e.target.value)}
-            placeholder="Məs: fizika, riyaziyyat, ingilis…"
+            placeholder={t('settings.discover.subjectsPh')}
             className={inp}
           />
           {catSuggestions.length > 0 ? (
@@ -315,7 +315,7 @@ export default function InstructorDiscoverSettings({ mapVisible, theme, inp }) {
                   <button
                     type="button"
                     className="shrink-0 w-5 h-5 rounded-md opacity-70 hover:opacity-100 leading-none"
-                    aria-label={`${c.name_az} sil`}
+                    aria-label={t('settings.discover.removeSubject', { name: c.name_az })}
                     onClick={() => {
                       setCategoryIds((ids) => ids.filter((id) => id !== c.id))
                       setPickedCats((list) => list.filter((x) => x.id !== c.id))
@@ -328,7 +328,7 @@ export default function InstructorDiscoverSettings({ mapVisible, theme, inp }) {
             </div>
           ) : (
             <p className={['text-xs mt-2', theme === 'dark' ? 'text-gray-500' : 'text-token-textMuted'].join(' ')}>
-              Ən azı bir fənn əlavə edin.
+              {t('settings.discover.needOneSubject')}
             </p>
           )}
         </section>
@@ -336,16 +336,16 @@ export default function InstructorDiscoverSettings({ mapVisible, theme, inp }) {
         {formats.includes('student_place') || formats.includes('teacher_place') ? (
           <section>
             <div className="flex items-center justify-between gap-2 mb-2.5">
-              <p className={[sectionTitleCls, 'mb-0'].join(' ')}>Rayon / şəhər / metro (canlı dərs)</p>
+              <p className={[sectionTitleCls, 'mb-0'].join(' ')}>{t('settings.discover.areasTitle')}</p>
               {areaIds.length > 0 ? (
-                <span className="text-[10px] font-semibold text-primary shrink-0">{areaIds.length} seçilib</span>
+                <span className="text-[10px] font-semibold text-primary shrink-0">{t('settings.discover.areasSelected', { count: areaIds.length })}</span>
               ) : null}
             </div>
             <input
               type="search"
               value={areaFilter}
               onChange={(e) => setAreaFilter(e.target.value)}
-              placeholder="Rayon axtar… (məs. Gəncə, Lənkəran)"
+              placeholder={t('settings.discover.areasPh')}
               className={inp}
             />
             <div
@@ -355,10 +355,10 @@ export default function InstructorDiscoverSettings({ mapVisible, theme, inp }) {
               ].join(' ')}
             >
               {[
-                ['Populyar', areaGroups.popular],
-                ['Bakı rayonları', areaGroups.bakuDistricts],
-                ['Metro', areaGroups.metros],
-                ['Azərbaycan rayonları', areaGroups.regions],
+                [t('settings.discover.groupPopular'), areaGroups.popular],
+                [t('settings.discover.groupBaku'), areaGroups.bakuDistricts],
+                [t('settings.discover.groupMetro'), areaGroups.metros],
+                [t('settings.discover.groupRegions'), areaGroups.regions],
               ].map(([label, list]) => {
                 const shown = filterAreaList(list)
                 if (!shown.length) return null
@@ -389,13 +389,13 @@ export default function InstructorDiscoverSettings({ mapVisible, theme, inp }) {
 
         {formats.includes('teacher_place') ? (
           <section>
-            <label className={fieldLabelCls}>Dərs keçdiyiniz ünvan (qısa)</label>
+            <label className={fieldLabelCls}>{t('settings.discover.addressLabel')}</label>
             <input value={address} onChange={(e) => setAddress(e.target.value)} className={inp} />
           </section>
         ) : null}
 
         <section>
-          <label className={fieldLabelCls}>Saatlıq qiymət (AZN)</label>
+          <label className={fieldLabelCls}>{t('settings.discover.rateLabel')}</label>
           <input
             type="number"
             min="0"
@@ -406,45 +406,45 @@ export default function InstructorDiscoverSettings({ mapVisible, theme, inp }) {
           />
         </section>
         <section>
-          <label className={fieldLabelCls}>Haqqımda (ictimai profil)</label>
+          <label className={fieldLabelCls}>{t('settings.discover.bioLabel')}</label>
           <textarea
             value={bio}
             onChange={(e) => setBio(e.target.value)}
             rows={4}
-            placeholder="10 illik təcrübəyə malik… Python, SQL və Tableau dərsləri keçirəm."
+            placeholder={t('settings.discover.bioPh')}
             className={`${inp} resize-y min-h-[5rem]`}
           />
         </section>
         <section>
-          <label className={fieldLabelCls}>Təhsil</label>
+          <label className={fieldLabelCls}>{t('settings.discover.educationLabel')}</label>
           <textarea
             value={education}
             onChange={(e) => setEducation(e.target.value)}
             rows={2}
-            placeholder="Məs: BDU — Tətbiqi riyaziyyat"
+            placeholder={t('settings.discover.educationPh')}
             className={`${inp} resize-y`}
           />
         </section>
         <section>
-          <label className={fieldLabelCls}>Sertifikatlar</label>
+          <label className={fieldLabelCls}>{t('settings.discover.certsLabel')}</label>
           <textarea
             value={certifications}
             onChange={(e) => setCertifications(e.target.value)}
             rows={2}
-            placeholder="Məs: Microsoft Certified Data Analyst"
+            placeholder={t('settings.discover.certsPh')}
             className={`${inp} resize-y`}
           />
         </section>
 
         <div className="flex flex-col sm:flex-row gap-3 pt-1">
           <Button type="button" loading={saving} onClick={() => void save()} className="w-full sm:w-auto justify-center">
-            Axtarış profilini saxla
+            {t('settings.discover.save')}
           </Button>
           <Link
             to="/instructor/inquiries"
             className="text-sm font-semibold text-primary hover:underline self-center text-center px-2 py-2"
           >
-            Axtarış müraciətləri →
+            {t('settings.discover.inquiriesLink')}
           </Link>
         </div>
       </div>

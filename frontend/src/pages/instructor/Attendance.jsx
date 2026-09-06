@@ -6,6 +6,7 @@ import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
 import { useToast } from '../../components/common/Toast'
 import useUiStore from '../../hooks/useUi'
+import { intlLocale } from '../../lib/uiLocale'
 
 function billingLabel(type, t) {
   if (type === '8_lessons') return t('attendance.pack8')
@@ -127,7 +128,7 @@ function fmtDdMmFromYmd(ymd) {
 
 export default function InstructorAttendance() {
   const { t, i18n } = useTranslation()
-  const dateLocale = i18n.language.startsWith('ru') ? 'ru-RU' : 'az-AZ'
+  const dateLocale = intlLocale(i18n.language)
   const [students, setStudents] = useState([])
   const [enrollmentId, setEnrollmentId] = useState('')
   const [date, setDate] = useState(() => ymdTodayBaku())

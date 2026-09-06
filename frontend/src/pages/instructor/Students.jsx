@@ -17,6 +17,7 @@ import { alignFirstLessonYmd } from '../../lib/firstLessonDate'
 import { readCache, writeCache } from '../../lib/cache'
 import useUiStore from '../../hooks/useUi'
 import i18n from '../../i18n'
+import { intlLocale } from '../../lib/uiLocale'
 import PortalMenu from '../../components/common/PortalMenu'
 import PhoneInput from '../../components/auth/PhoneInput'
 import {
@@ -2235,7 +2236,7 @@ export default function InstructorStudents() {
                     )}{' '}
                     •{' '}
                     {s.enrolled_at
-                      ? new Date(s.enrolled_at).toLocaleDateString(i18n.language === 'ru' ? 'ru-RU' : 'az-AZ')
+                      ? new Date(s.enrolled_at).toLocaleDateString(intlLocale(i18n.language))
                       : '—'}
                   </div>
                   {studentHasContactPhone(s) ? (

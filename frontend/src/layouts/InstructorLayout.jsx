@@ -23,11 +23,14 @@ import ConfirmDialog from '../components/common/ConfirmDialog'
 import SidebarPreferences from '../components/common/SidebarPreferences'
 import { useInstructorNavSections } from '../hooks/useInstructorNavSections'
 import InstructorAvatar from '../components/common/InstructorAvatar'
+import { localizeDiscoverProfileAlert } from '../lib/discoverProfileAlert'
 
 const DISCOVER_MODAL_SESSION_PREFIX = 'mx_discover_modal_v1_'
 
 export default function InstructorLayout() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const viewPlansLabel = t('billing.cta.viewPlans')
+  const smsTopupLabel = t('billing.cta.smsTopup')
   const { user, logout, updateUser } = useAuthStore()
   const navigate = useNavigate()
   const location = useLocation()
@@ -60,7 +63,7 @@ export default function InstructorLayout() {
   const [limitModal, setLimitModal] = useState({
     open: false,
     message: '',
-    primaryLabel: 'Paketlərə bax',
+    primaryLabel: '',
     action: 'OPEN_SETTINGS_PLANS',
   })
   const toast = useToast()
@@ -158,7 +161,7 @@ export default function InstructorLayout() {
           setHasAlerts(Array.isArray(alerts) && alerts.length > 0)
           setNotifFetchAt(Date.now())
           const discoverAlert = alerts.find((a) => a.type === 'discover_profile') || null
-          setDiscoverProfileAlert(discoverAlert)
+          setDiscoverProfileAlert(localizeDiscoverProfileAlert(discoverAlert, t, i18n.language))
           if (!discoverAlert) setDiscoverModalOpen(false)
           if (d.billing_messages?.suppress_limit_bar) {
             setLimitStatus({ level: null, message: null })
@@ -182,7 +185,7 @@ export default function InstructorLayout() {
       cancelled = true
       window.removeEventListener('mx:discover-profile-updated', onDiscoverUpdated)
     }
-  }, [billing?.messages?.suppress_limit_bar])
+  }, [billing?.messages?.suppress_limit_bar, t, i18n.language])
 
   useEffect(() => {
     if (!user?.id || !discoverProfileAlert) {
@@ -260,13 +263,13 @@ export default function InstructorLayout() {
       setLimitModal({
         open: true,
         message,
-        primaryLabel: code === 'SMS_LIMIT' ? 'SMS Balansı Artır' : 'Paketlərə bax',
+        primaryLabel: code === 'SMS_LIMIT' ? smsTopupLabel : viewPlansLabel,
         action: code === 'SMS_LIMIT' ? 'OPEN_SMS_TOPUP' : 'OPEN_SETTINGS_PLANS',
       })
     }
     window.addEventListener('mx:usage-limit', onUsageLimit)
     return () => window.removeEventListener('mx:usage-limit', onUsageLimit)
-  }, [billing?.is_highest_tier])
+  }, [billing?.is_highest_tier, smsTopupLabel, viewPlansLabel])
 
   useEffect(() => {
     const onSubscriptionInactive = (ev) => {
@@ -274,7 +277,7 @@ export default function InstructorLayout() {
       setLimitModal({
         open: true,
         message,
-        primaryLabel: 'Paketlərə bax',
+        primaryLabel: '',
         action: 'OPEN_SETTINGS_PLANS',
       })
     }
@@ -291,7 +294,7 @@ export default function InstructorLayout() {
       {focusMode && (
         <button
           type="button"
-          aria-label="Menyunu aç"
+          aria-label={t('layout.openMenu')}
           className="fixed top-4 left-4 z-[260] w-12 h-12 rounded-2xl bg-surface-2 border border-white/10 text-xl flex items-center justify-center shadow-lg"
           onClick={() => setNavOpen(true)}
         >
@@ -307,7 +310,7 @@ export default function InstructorLayout() {
       >
         <button
           type="button"
-          aria-label="Menyu"
+          aria-label={t('layout.menu')}
           className={[
             'w-11 h-11 rounded-2xl shrink-0 flex items-center justify-center text-xl font-bold border-2 shadow-md justify-self-start',
             theme === 'dark'
@@ -327,7 +330,7 @@ export default function InstructorLayout() {
       {navOpen && (
         <button
           type="button"
-          aria-label="Menyunu bağla"
+          aria-label={t('layout.closeMenu')}
           className="lg:hidden fixed inset-0 z-[1090] bg-black/60"
           onClick={() => {
             if (document.body.dataset.mentorTour) return
@@ -422,7 +425,7 @@ export default function InstructorLayout() {
                 theme === 'dark' ? 'text-gray-300 hover:bg-white/5' : 'text-gray-600 hover:bg-gray-100',
               ].join(' ')}
               onClick={() => setNavOpen(false)}
-              aria-label="Bağla"
+              aria-label={t('layout.close')}
             >
               ×
             </button>
@@ -545,7 +548,7 @@ export default function InstructorLayout() {
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className="font-semibold">
-                    {limitStatus.level === 'critical' ? 'Limit dolub' : 'Diqqət'}
+                    {limitStatus.level === 'critical' ? t('layout.limitFull') : t('billing.banner.titleWarning')}
                   </div>
                   <div
                     className={[
@@ -567,7 +570,7 @@ export default function InstructorLayout() {
                       ? 'shrink-0 text-white/70 hover:text-white transition-colors'
                       : 'shrink-0 text-amber-900/55 hover:text-amber-950 transition-colors'
                   }
-                  aria-label="Bağla"
+                  aria-label={t('layout.close')}
                 >
                   ×
                 </button>
@@ -584,14 +587,14 @@ export default function InstructorLayout() {
               }`}
             >
               <div className="min-w-0">
-                <div className="font-semibold">Sizi axtarışda daha asan tapmaq üçün fənninizi daxil edin</div>
+                <div className="font-semibold">{t('layout.discover.bannerTitle')}</div>
                 <div className="break-words mt-0.5 opacity-90">{discoverProfileAlert.message}</div>
                 <button
                   type="button"
                   onClick={() => runBillingAction('OPEN_DISCOVER_PROFILE')}
                   className="mt-2 text-xs font-bold text-primary hover:underline"
                 >
-                  {discoverProfileAlert.cta?.label || 'Fənn əlavə et'} →
+                  {discoverProfileAlert.cta?.label || t('layout.discover.addSubject')} →
                 </button>
               </div>
             </div>
@@ -623,12 +626,12 @@ export default function InstructorLayout() {
       />
       <LimitReachedModal
         open={limitModal.open}
-        onClose={() => setLimitModal({ open: false, message: '', primaryLabel: 'Paketlərə bax', action: 'OPEN_SETTINGS_PLANS' })}
+        onClose={() => setLimitModal({ open: false, message: '', primaryLabel: viewPlansLabel, action: 'OPEN_SETTINGS_PLANS' })}
         serverMessage={limitModal.message}
-        primaryLabel={limitModal.primaryLabel}
+        primaryLabel={limitModal.primaryLabel || viewPlansLabel}
         onPrimary={() => {
           const action = limitModal.action || 'OPEN_SETTINGS_PLANS'
-          setLimitModal({ open: false, message: '', primaryLabel: 'Paketlərə bax', action: 'OPEN_SETTINGS_PLANS' })
+          setLimitModal({ open: false, message: '', primaryLabel: viewPlansLabel, action: 'OPEN_SETTINGS_PLANS' })
           runBillingAction(action)
         }}
       />
@@ -650,12 +653,10 @@ export default function InstructorLayout() {
           closeDiscoverModal(true)
           runBillingAction('OPEN_DISCOVER_PROFILE')
         }}
-        title="Fənninizi daxil edin"
-        message={
-          'Valideynlər və tələbələr axtarışda sizi tapsın deyə, tədris etdiyiniz fənnləri (məs. Fizika, Riyaziyyat) profilinizə əlavə edin.\n\nBu addımı tamamlayana qədər hər girişdə xatırladacağıq.'
-        }
-        confirmLabel="Fənn əlavə et"
-        cancelLabel="Sonra"
+        title={t('layout.discover.modalTitle')}
+        message={t('layout.discover.modalMessage')}
+        confirmLabel={t('layout.discover.addSubject')}
+        cancelLabel={t('layout.discover.later')}
       />
     </>
   )

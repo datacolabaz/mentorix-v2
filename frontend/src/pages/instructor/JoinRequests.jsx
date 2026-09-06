@@ -8,11 +8,12 @@ import ListSkeleton from '../../components/common/ListSkeleton'
 import { useToast } from '../../components/common/Toast'
 import { useQueryClient } from '@tanstack/react-query'
 import { BILLING_STATUS_QUERY_KEY } from '../../hooks/useBillingStatus'
+import { intlLocale } from '../../lib/uiLocale'
 
 function fmtDate(iso, locale) {
   if (!iso) return '—'
   try {
-    return new Date(iso).toLocaleString(locale === 'ru' ? 'ru-RU' : 'az-AZ', {
+    return new Date(iso).toLocaleString(intlLocale(locale), {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
