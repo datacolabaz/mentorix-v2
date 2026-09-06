@@ -877,6 +877,7 @@
     "plansHeading": "Plans",
     "plansIntro": "Transparent teacher subscriptions. Student and parent workspaces are free.",
     "plansCompare": "Compare all limits",
+    "plansShowCards": "Back to plan cards",
     "plans": {
       "free": "Free",
       "pricePerMonth": "{{price}} AZN / mo.",
@@ -949,6 +950,7 @@
       "trialNote": "Simple is a 14-day trial. No credit card required.",
       "yearlyNote": "Yearly billing applies a 20% discount on twelve monthly payments.",
       "cta": "Start free",
+      "backHome": "Back to homepage",
       "rows": {
         "price": "Price",
         "students": "Student limit",

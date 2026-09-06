@@ -12,6 +12,7 @@ import { resolveUiLocale } from '../../lib/uiLocale'
 import LandingDemoActivityChart from '../../components/landing/LandingDemoActivityChart'
 import LandingHeroProductPreview from '../../components/landing/LandingHeroProductPreview'
 import CertifiedExamsSection from '../../components/landing/CertifiedExamsSection'
+import PublicPricingCompare from '../../components/public/PublicPricingCompare'
 import PricingFeatureListItem from '../../components/landing/PricingFeatureListItem'
 import {
   LandingFeatureTabs,
@@ -94,6 +95,7 @@ export default function Landing() {
   const [demoPaneBusy, setDemoPaneBusy] = useState(false)
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const [marketing, setMarketing] = useState(() => defaultLoginMarketingPayload())
+  const [plansCompareOpen, setPlansCompareOpen] = useState(false)
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -117,6 +119,13 @@ export default function Landing() {
   }, [])
 
   const closeMobileNav = () => setMobileNavOpen(false)
+
+  useEffect(() => {
+    const hash = typeof window !== 'undefined' ? window.location.hash.replace('#', '') : ''
+    if (hash === 'mx-planlar') {
+      window.requestAnimationFrame(() => scrollToId('mx-planlar'))
+    }
+  }, [])
 
   const why = useLandingWhy(marketing, t, i18n)
   const steps = useLandingSteps(marketing, t, i18n)
@@ -486,18 +495,30 @@ export default function Landing() {
                 <h2 className="text-xs uppercase tracking-wider text-gray-500 font-semibold">{t('landing.plansHeading')}</h2>
                 <p className="text-sm text-gray-400 max-w-xl">{t('landing.plansIntro')}</p>
               </div>
-              <Link
-                to="/qiymetler"
-                className="text-sm font-semibold text-primary hover:brightness-110 shrink-0"
+              <button
+                type="button"
+                onClick={() => {
+                  setPlansCompareOpen((open) => {
+                    const next = !open
+                    trackEvent('mx_landing_plans_compare_toggle', { open: next })
+                    return next
+                  })
+                }}
+                className="text-sm font-semibold text-primary hover:brightness-110 shrink-0 text-left"
+                aria-expanded={plansCompareOpen}
               >
-                {t('landing.plansCompare')} →
-              </Link>
+                {plansCompareOpen ? `← ${t('landing.plansShowCards')}` : `${t('landing.plansCompare')} →`}
+              </button>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              {publicPlans.map((p) => (
-                <LandingPlanCard key={p.id} plan={p} onCta={() => goRegister('pricing')} />
-              ))}
-            </div>
+            {plansCompareOpen ? (
+              <PublicPricingCompare plans={publicPlans} tableOnly hideIntro />
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                {publicPlans.map((p) => (
+                  <LandingPlanCard key={p.id} plan={p} onCta={() => goRegister('pricing')} />
+                ))}
+              </div>
+            )}
           </section>
         ) : null}
 

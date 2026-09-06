@@ -48,7 +48,7 @@ function PlanCard({ plan, onCta }) {
   )
 }
 
-export default function PublicPricingCompare({ plans, onCta, hideIntro = false }) {
+export default function PublicPricingCompare({ plans, onCta, hideIntro = false, tableOnly = false }) {
   const { t } = useTranslation()
   const list = Array.isArray(plans) && plans.length ? plans : DEFAULT_SUBSCRIPTION_PLANS
   const unlimited = t('landing.plans.unlimited')
@@ -89,11 +89,13 @@ export default function PublicPricingCompare({ plans, onCta, hideIntro = false }
         </div>
       )}
 
-      <div className="grid gap-3 sm:grid-cols-2">
-        {list.map((plan) => (
-          <PlanCard key={plan.id} plan={plan} onCta={onCta} />
-        ))}
-      </div>
+      {tableOnly ? null : (
+        <div className="grid gap-3 sm:grid-cols-2">
+          {list.map((plan) => (
+            <PlanCard key={plan.id} plan={plan} onCta={onCta} />
+          ))}
+        </div>
+      )}
 
       <div className="space-y-3">
         <h3 className="text-base font-semibold text-white">{t('landing.pricingPage.compareHeading')}</h3>

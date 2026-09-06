@@ -85,6 +85,12 @@ export default function PublicSeoLanding() {
 
       <main className="flex-1 max-w-3xl mx-auto px-4 py-10 sm:py-14 w-full space-y-8">
         <div className="space-y-4">
+          <Link
+            to={isPricingPage ? '/#mx-planlar' : '/'}
+            className="inline-flex items-center text-sm font-semibold text-primary hover:brightness-110"
+          >
+            ← {t('landing.pricingPage.backHome')}
+          </Link>
           <p className="text-[11px] font-bold uppercase tracking-wider text-primary">
             Mentorix · {isPanel ? 'təhsil ekosistemi' : 'ictimai axtarış'}
           </p>

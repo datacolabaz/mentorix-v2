@@ -877,6 +877,7 @@
     "plansHeading": "Planlar",
     "plansIntro": "Müəllimlər üçün şəffaf abunəlik. Tələbə və valideyn kabineti pulsuzdur.",
     "plansCompare": "Bütün limitləri müqayisə et",
+    "plansShowCards": "Kartlara qayıt",
     "plans": {
       "free": "Pulsuz",
       "pricePerMonth": "{{price}} AZN / ay",
@@ -949,6 +950,7 @@
       "trialNote": "SADƏ plan 14 günlük sınaqdır. Kredit kartı tələb olunmur.",
       "yearlyNote": "İllik ödəniş seçəndə aylıq məbləğin 12 qatı üzrə 20% endirim tətbiq olunur.",
       "cta": "Pulsuz başla",
+      "backHome": "Ana səhifəyə qayıt",
       "rows": {
         "price": "Qiymət",
         "students": "Tələbə limiti",
