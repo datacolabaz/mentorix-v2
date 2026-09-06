@@ -17,8 +17,9 @@ import PricingBillingIntervalToggle from '../../components/instructor/PricingBil
 import RegionProfileFields from '../../components/instructor/RegionProfileFields'
 import InstructorDiscoverSettings from '../../components/instructor/InstructorDiscoverSettings'
 import DiscoverSubjectPicker from '../../components/instructor/DiscoverSubjectPicker'
-import InstructorMapPinPicker from '../../components/instructor/InstructorMapPinPicker'
+import GoogleMapPinPicker from '../../components/instructor/GoogleMapPinPicker'
 import InstructorAvatarUpload from '../../components/instructor/InstructorAvatarUpload'
+import { isGoogleMapsConfigured } from '../../lib/googleMapsLoader'
 import { formatLocationLabel, isBakuRegion } from '@shared/azerbaijanRegions.mjs'
 import { BAKU_METRO_STATIONS, bakuMetroBySlug } from '@shared/bakuMetroStations.mjs'
 import { mapsDirectionsUrls } from '../../lib/mapsDirections'
@@ -1368,19 +1369,27 @@ export default function InstructorSettings() {
           >
             {t('settings.pinMapTitle')}
           </p>
-          <InstructorMapPinPicker
-            latitude={mapLat}
-            longitude={mapLng}
-            mapKind={mapKind}
-            flyKey={mapFlyKey}
-            displayName={user?.full_name || 'M'}
-            radiusKm={10}
-            onChange={(lat, lng) => {
-              setMapLat(lat)
-              setMapLng(lng)
-              setMapJustSaved(false)
-            }}
-          />
+          <p className={['text-xs leading-relaxed mb-2', theme === 'dark' ? 'text-gray-500' : 'text-token-textMuted'].join(' ')}>
+            {t('settings.pinNoMapHint')}
+          </p>
+          {isGoogleMapsConfigured() ? (
+            <GoogleMapPinPicker
+              latitude={mapLat}
+              longitude={mapLng}
+              mapKind={mapKind}
+              flyKey={mapFlyKey}
+              radiusKm={10}
+              onChange={(lat, lng) => {
+                setMapLat(lat)
+                setMapLng(lng)
+                setMapJustSaved(false)
+              }}
+            />
+          ) : (
+            <p className={['text-xs rounded-xl border px-3 py-2', theme === 'dark' ? 'border-white/10 text-gray-400' : 'border-slate-200 text-token-textMuted'].join(' ')}>
+              {t('settings.pinGoogleMissing')}
+            </p>
+          )}
           <label className={['text-xs block mt-3 mb-1.5', theme === 'dark' ? 'text-gray-400' : 'text-token-textMuted'].join(' ')}>
             {t('settings.placeAddressLabel')}
           </label>

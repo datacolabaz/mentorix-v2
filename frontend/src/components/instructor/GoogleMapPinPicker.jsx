@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { loadGoogleMaps } from '../../lib/googleMapsLoader'
 
 const BAKU = { lat: 40.4093, lng: 49.8671 }
@@ -35,6 +36,7 @@ export default function GoogleMapPinPicker({
   const circleRef = useRef(null)
   const clickListenerRef = useRef(null)
   const dragListenerRef = useRef(null)
+  const { t } = useTranslation()
   const [loadErr, setLoadErr] = useState(null)
   const [ready, setReady] = useState(false)
 
@@ -65,6 +67,7 @@ export default function GoogleMapPinPicker({
           zoom: hasPin ? 14 : 11,
           gestureHandling: 'cooperative',
           scrollwheel: false,
+          mapTypeId: 'roadmap',
           mapTypeControl: false,
           streetViewControl: false,
           fullscreenControl: true,
@@ -175,12 +178,12 @@ export default function GoogleMapPinPicker({
       {!hasPin ? (
         <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/80 to-transparent pointer-events-none">
           <p className="text-xs text-amber-200 text-center font-medium">
-            Xəritəyə klik edin — pin yerləşəcək (səhifəni scroll etmək üçün xəritə xaricində süpürün)
+            {t('settings.pinTapHint')}
           </p>
         </div>
       ) : (
         <p className="absolute top-2 left-2 right-2 text-[10px] text-center text-white/90 bg-black/50 rounded-lg px-2 py-1 pointer-events-none">
-          Ctrl + scroll ilə zoom · Pin sürüşdürülə bilər
+          {t('settings.pinGoogleHint')}
         </p>
       )}
     </div>
