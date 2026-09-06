@@ -57,6 +57,9 @@ export default function GoogleMapPinPicker({
       .then((maps) => {
         if (cancelled || !containerRef.current) return
         const center = hasPin ? { lat, lng } : BAKU
+        if (typeof maps.Map !== 'function') {
+          throw new Error('Google Maps Map yüklənmədi')
+        }
         const map = new maps.Map(containerRef.current, {
           center,
           zoom: hasPin ? 14 : 11,
