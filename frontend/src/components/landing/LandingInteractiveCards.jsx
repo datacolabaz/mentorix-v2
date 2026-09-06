@@ -9,22 +9,22 @@ export function LandingHoverCard({ className = '', children }) {
 
 /** Niyə Mentorix — yalnız başlıq; klikdə bir kart açılır. */
 export function LandingWhyAccordion({ heading, cards }) {
-  const [open, setOpen] = useState(0)
+  const [open, setOpen] = useState(-1)
 
   useEffect(() => {
-    setOpen(0)
+    setOpen(-1)
   }, [cards])
 
   return (
     <section id="mx-why" className="space-y-4 scroll-mt-8">
       <h2 className="text-xs uppercase tracking-wider text-gray-500 font-semibold">{heading}</h2>
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 items-start">
         {cards.map((x, i) => {
           const isOpen = open === i
           return (
             <div
               key={`why-${i}-${String(x.title).slice(0, 24)}`}
-              className={`rounded-2xl border bg-[#121212]/90 ${isOpen ? 'border-primary/35' : 'border-white/10'} ${HOVER_LIFT}`}
+              className={`h-fit rounded-2xl border bg-[#121212]/90 ${isOpen ? 'border-primary/35' : 'border-white/10'} ${HOVER_LIFT}`}
             >
               <button
                 type="button"
