@@ -22,6 +22,7 @@ import PhoneVerificationGate from '../components/auth/PhoneVerificationGate'
 import ConfirmDialog from '../components/common/ConfirmDialog'
 import SidebarPreferences from '../components/common/SidebarPreferences'
 import { useInstructorNavSections } from '../hooks/useInstructorNavSections'
+import InstructorAvatar from '../components/common/InstructorAvatar'
 
 const DISCOVER_MODAL_SESSION_PREFIX = 'mx_discover_modal_v1_'
 
@@ -376,16 +377,16 @@ export default function InstructorLayout() {
                   : 'bg-white/70 border-black/[0.06]',
               ].join(' ')}
             >
-              <div
-                className={[
-                  'w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold mb-2 border',
-                  theme === 'dark'
-                    ? 'bg-white/5 border-white/10 text-white'
-                    : 'bg-slate-900/5 border-black/[0.06] text-slate-900',
-                ].join(' ')}
-              >
-                {user?.full_name?.split(' ').map((n) => n[0]).join('').slice(0, 2)}
-              </div>
+              <InstructorAvatar
+                fullName={user?.full_name}
+                avatarUrl={user?.avatar_url}
+                size="sm"
+                kind={user?.public_label === 'trainer' ? 'trainer' : 'teacher'}
+                className="mb-2"
+                ringClassName={
+                  theme === 'dark' ? 'ring-2 ring-white/15' : 'ring-2 ring-black/10'
+                }
+              />
               <div className={`text-sm font-semibold break-words ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
                 {user?.full_name}
               </div>
@@ -426,12 +427,21 @@ export default function InstructorLayout() {
               ×
             </button>
           </div>
-          <div className="mt-4 min-w-0">
+          <div className="mt-4 min-w-0 flex items-center gap-3">
+            <InstructorAvatar
+              fullName={user?.full_name}
+              avatarUrl={user?.avatar_url}
+              size="sm"
+              kind={user?.public_label === 'trainer' ? 'trainer' : 'teacher'}
+              ringClassName={theme === 'dark' ? 'ring-2 ring-white/15' : 'ring-2 ring-black/10'}
+            />
+            <div className="min-w-0">
             <div className={`text-sm font-semibold truncate ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
               {user?.full_name}
             </div>
             <div className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
               {instructorRoleLabel}
+            </div>
             </div>
           </div>
           {billing ? (

@@ -195,11 +195,11 @@ export default function InstructorDiscoverSettings({ mapVisible, theme, inp }) {
             theme === 'dark' ? 'text-indigo-200/90' : 'text-token-textMain',
           ].join(' ')}
         >
-          Valideynlər / Tələbələr məni tapa bilsin
+          Axtarışda ixtisas (fənn)
         </h2>
       </div>
           <p className={['text-sm', theme === 'dark' ? 'text-gray-400' : 'text-token-textMuted'].join(' ')}>
-        Axtarışda görünmək üçün profili aktiv edin, şəhər/rayonunuzu və fənn, format seçimlərini doldurun.
+        Valideynlər «Müəllim tap»-da sizi bu fənnlər üzrə axtarır. Fizika, riyaziyyat və s. yazıb əlavə edin, sonra saxlayın.
         {!mapVisible ? (
           <span className="block text-amber-400/90 mt-1 text-xs">Axtarış görünürlüyü hal-hazırda bağlıdır.</span>
         ) : null}
@@ -268,12 +268,12 @@ export default function InstructorDiscoverSettings({ mapVisible, theme, inp }) {
         </section>
 
         <section>
-          <p className={sectionTitleCls}>Tədris etdiyiniz fənlər</p>
+          <p className={sectionTitleCls}>Hansı ixtisas üzrə axtarılsın</p>
           <input
             type="search"
             value={catSearch}
             onChange={(e) => setCatSearch(e.target.value)}
-            placeholder="Fənn axtar…"
+            placeholder="Məs: fizika, riyaziyyat, ingilis…"
             className={inp}
           />
           {catSuggestions.length > 0 ? (

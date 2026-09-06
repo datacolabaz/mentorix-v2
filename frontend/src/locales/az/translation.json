@@ -1767,6 +1767,10 @@
   "settings": {
     "title": "Tənzimləmələr",
     "subtitle": "İnterfeysdə və tələbə tərəfində sizin rolunuz {{role}} kimi görünəcək.",
+    "jumpNavAria": "Tənzimləmə bölmələri",
+    "jumpDiscover": "Axtarışda fənn / ixtisas",
+    "jumpAvatar": "Profil şəkli",
+    "jumpPlan": "Paket",
     "changePlan": "Paketini dəyiş",
     "activePlan": "Aktiv paket:",
     "downgradeNote": "Aşağı paketə keçid yalnız cari paket dövrü ən azı 1 ay tamamlandıqdan sonra mümkündür və yalnız tələbə sayı, SMS və yaddaş hər üçü hədəf paket limitinə uyğun olduqda icazə verilir. Limit dolubsa cari paketdə əlavə SMS alın və ya yaddaşı idarə edin.",

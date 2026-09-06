@@ -213,13 +213,14 @@ async function provisionInstructorBasicTrial(client, userId, req) {
 async function attachInstructorPublicLabel(userLite) {
   if (!userLite || userLite.role !== 'instructor') return userLite;
   const { rows } = await db.query(
-    `SELECT COALESCE(NULLIF(TRIM(public_label), ''), 'instructor') AS public_label
+    `SELECT COALESCE(NULLIF(TRIM(public_label), ''), 'instructor') AS public_label,
+            avatar_url
      FROM instructor_profiles WHERE user_id = $1`,
     [userLite.id]
   );
   const raw = String(rows[0]?.public_label || 'instructor').toLowerCase();
   const public_label = raw === 'trainer' ? 'trainer' : 'instructor';
-  return { ...userLite, public_label };
+  return { ...userLite, public_label, avatar_url: rows[0]?.avatar_url || null };
 }
 
 async function attachCourseProfile(userLite) {

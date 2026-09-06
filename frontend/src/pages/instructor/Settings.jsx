@@ -249,6 +249,7 @@ export default function InstructorSettings() {
       )
       setProfBio(prof?.bio || '')
       setAvatarUrl(d.avatar_url || null)
+      if (d.avatar_url) updateUser({ avatar_url: d.avatar_url })
       const m = d.map || {}
       setMapRegion(m.region || '')
       setMapBakuDistrict(m.baku_district || '')
@@ -268,7 +269,7 @@ export default function InstructorSettings() {
     } finally {
       setLoading(false)
     }
-  }, [toast])
+  }, [toast, updateUser, t])
 
   useEffect(() => {
     void load()
@@ -282,13 +283,14 @@ export default function InstructorSettings() {
   }, [location.state?.openStorageAddon, location.pathname, navigate])
 
   useEffect(() => {
-    const scrollTo = location.state?.scrollTo
+    const hash = String(location.hash || '').replace(/^#/, '')
+    const scrollTo = location.state?.scrollTo || hash
     if (!scrollTo) return
     const t = window.setTimeout(() => {
       document.getElementById(String(scrollTo))?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    }, 200)
+    }, 250)
     return () => window.clearTimeout(t)
-  }, [location.state?.scrollTo])
+  }, [location.hash, location.state?.scrollTo])
 
   const hasMapRegion = Boolean(String(mapRegion || '').trim())
   const locationLabel = useMemo(
@@ -584,7 +586,29 @@ export default function InstructorSettings() {
         <p className="text-token-textMuted text-sm mt-1">
           {t('settings.subtitle', { role: roleWord })}
         </p>
+        <nav className="mt-4 flex flex-wrap gap-2" aria-label={t('settings.jumpNavAria')}>
+          <a
+            href="#discover-profile"
+            className="text-xs font-semibold rounded-lg border border-primary/40 bg-primary/10 text-primary px-3 py-1.5 hover:bg-primary/15"
+          >
+            {t('settings.jumpDiscover')}
+          </a>
+          <a
+            href="#settings-avatar"
+            className="text-xs font-semibold rounded-lg border border-white/15 text-token-textMuted px-3 py-1.5 hover:bg-white/5"
+          >
+            {t('settings.jumpAvatar')}
+          </a>
+          <a
+            href="#billing-plans"
+            className="text-xs font-semibold rounded-lg border border-white/15 text-token-textMuted px-3 py-1.5 hover:bg-white/5"
+          >
+            {t('settings.jumpPlan')}
+          </a>
+        </nav>
       </div>
+
+      <InstructorDiscoverSettings mapVisible={mapVisible} theme={theme} inp={inp} />
 
       <Card id="billing-plans" className={settingsCardCls}>
         <h2 className={cardTitleCls}>{t('settings.changePlan')}</h2>
@@ -1041,7 +1065,7 @@ export default function InstructorSettings() {
         </div>
       </Card>
 
-      <Card className={settingsCardCls}>
+      <Card id="settings-avatar" className={settingsCardCls}>
         <h2 className={cardTitleCls}>{t('settings.avatarTitle')}</h2>
         <p className={cardTextCls}>
           {t('settings.avatarDesc')}
@@ -1051,7 +1075,10 @@ export default function InstructorSettings() {
           avatarUrl={avatarUrl}
           mapKind={mapKind}
           theme={theme}
-          onAvatarChange={setAvatarUrl}
+          onAvatarChange={(url) => {
+            setAvatarUrl(url)
+            updateUser({ avatar_url: url || null })
+          }}
         />
       </Card>
 
@@ -1262,8 +1289,6 @@ export default function InstructorSettings() {
           </Link>
         ) : null}
       </Card>
-
-      <InstructorDiscoverSettings mapVisible={mapVisible} theme={theme} inp={inp} />
 
       <Modal
         open={Boolean(limitChoice?.open)}
