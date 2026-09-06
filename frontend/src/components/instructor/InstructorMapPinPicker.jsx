@@ -1,10 +1,25 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import L from 'leaflet'
 import { MapContainer, TileLayer, Marker, Circle, useMap, useMapEvents } from 'react-leaflet'
+import { ESRI_STREET_TILE, OSM_STREET_ATTR, OSM_STREET_TILE } from '../../lib/osmStreetTiles'
 
 const BAKU_CENTER = [40.4093, 49.8671]
-const DARK_TILE = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+
+function StreetTileLayer() {
+  const [url, setUrl] = useState(OSM_STREET_TILE)
+  return (
+    <TileLayer
+      url={url}
+      attribution={OSM_STREET_ATTR}
+      eventHandlers={{
+        tileerror() {
+          setUrl((current) => (current === OSM_STREET_TILE ? ESRI_STREET_TILE : current))
+        },
+      }}
+    />
+  )
+}
 
 function parseCoord(v) {
   if (v === '' || v == null) return null
@@ -128,9 +143,9 @@ export default function InstructorMapPinPicker({
           zoom={zoom}
           className="h-full w-full"
           scrollWheelZoom={false}
-          attributionControl={false}
+          attributionControl
         >
-          <TileLayer url={DARK_TILE} attribution="" />
+          <StreetTileLayer />
           <MapClickPick onPick={handlePick} />
           <MapFlyTo center={hasPin ? center : null} flyKey={flyKey} />
           {hasPin ? (
@@ -151,8 +166,8 @@ export default function InstructorMapPinPicker({
           ) : null}
         </MapContainer>
         {!hasPin ? (
-          <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/90 to-transparent pointer-events-none">
-            <p className="text-xs text-amber-300 text-center font-medium">{t('settings.pinTapHint')}</p>
+          <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/70 to-transparent pointer-events-none">
+            <p className="text-xs text-white text-center font-medium drop-shadow">{t('settings.pinTapHint')}</p>
           </div>
         ) : null}
       </div>

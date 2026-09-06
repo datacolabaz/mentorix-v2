@@ -30,7 +30,7 @@ export default function TeacherMapQuickCard({
   const studentLine = formatStudentCount(p.active_student_count, t)
   const formats = deliveryFormatBadges(p, locale)
   const topBadge = showTopBadge(p)
-  const directions = mapsDirectionsUrls(p.latitude, p.longitude)
+  const directions = mapsDirectionsUrls(p.latitude, p.longitude, p.teacher_place_address)
 
   return (
     <div className="rounded-2xl border-2 border-emerald-500/50 bg-gradient-to-br from-emerald-500/10 via-[#121212] to-[#121212] p-4 shadow-[0_0_24px_rgba(52,211,153,0.12)]">

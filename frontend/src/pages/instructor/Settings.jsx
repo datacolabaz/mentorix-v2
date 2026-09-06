@@ -175,6 +175,7 @@ export default function InstructorSettings() {
   const [mapLat, setMapLat] = useState('')
   const [mapLng, setMapLng] = useState('')
   const [nearestMetro, setNearestMetro] = useState('')
+  const [placeAddress, setPlaceAddress] = useState('')
   const [mapFlyKey, setMapFlyKey] = useState(0)
   const [mapCategoryIds, setMapCategoryIds] = useState([])
   const [mapPickedCats, setMapPickedCats] = useState([])
@@ -272,6 +273,7 @@ export default function InstructorSettings() {
       setMapLat(latStr)
       setMapLng(lngStr)
       setNearestMetro(m.nearest_metro || '')
+      setPlaceAddress(String(m.teacher_place_address || disc?.profile?.teacher_place_address || '').trim())
       const discCats = Array.isArray(disc?.categories) ? disc.categories : []
       setMapPickedCats(discCats)
       setMapCategoryIds(discCats.map((c) => c.id))
@@ -286,6 +288,7 @@ export default function InstructorSettings() {
         lat: m.latitude != null ? String(m.latitude) : '',
         lng: m.longitude != null ? String(m.longitude) : '',
         metro: m.nearest_metro || '',
+        address: String(m.teacher_place_address || disc?.profile?.teacher_place_address || '').trim(),
         categoryIds: discCats.map((c) => c.id).join(','),
       }
       setMapJustSaved(false)
@@ -334,6 +337,7 @@ export default function InstructorSettings() {
       s.lat !== mapLat ||
       s.lng !== mapLng ||
       s.metro !== nearestMetro ||
+      s.address !== placeAddress ||
       s.categoryIds !== mapCategoryIds.join(',')
     )
   }, [
@@ -344,6 +348,7 @@ export default function InstructorSettings() {
     mapLat,
     mapLng,
     nearestMetro,
+    placeAddress,
     mapCategoryIds,
     hasMapRegion,
   ])
@@ -380,9 +385,11 @@ export default function InstructorSettings() {
         latitude: Number.isFinite(latN) ? latN : null,
         longitude: Number.isFinite(lngN) ? lngN : null,
         nearest_metro: isBakuRegion(region) ? nearestMetro || null : null,
+        teacher_place_address: placeAddress.trim() || null,
       })
       await api.patch('/instructor/discover-profile', {
         category_ids: mapCategoryIds,
+        teacher_place_address: placeAddress.trim() || null,
       })
       savedMapRef.current = {
         region,
@@ -392,6 +399,7 @@ export default function InstructorSettings() {
         lat: Number.isFinite(latN) ? String(latN) : '',
         lng: Number.isFinite(lngN) ? String(lngN) : '',
         metro: isBakuRegion(region) ? nearestMetro : '',
+        address: placeAddress.trim(),
         categoryIds: mapCategoryIds.join(','),
       }
       setMapJustSaved(true)
@@ -1373,10 +1381,26 @@ export default function InstructorSettings() {
               setMapJustSaved(false)
             }}
           />
-          {mapsDirectionsUrls(mapLat, mapLng) ? (
+          <label className={['text-xs block mt-3 mb-1.5', theme === 'dark' ? 'text-gray-400' : 'text-token-textMuted'].join(' ')}>
+            {t('settings.placeAddressLabel')}
+          </label>
+          <input
+            className={inp}
+            value={placeAddress}
+            onChange={(e) => {
+              setPlaceAddress(e.target.value)
+              setMapJustSaved(false)
+            }}
+            placeholder={t('settings.placeAddressPh')}
+            autoComplete="street-address"
+          />
+          <p className={['text-xs mt-1.5 leading-relaxed', theme === 'dark' ? 'text-gray-500' : 'text-token-textMuted'].join(' ')}>
+            {t('settings.placeAddressHint')}
+          </p>
+          {mapsDirectionsUrls(mapLat, mapLng, placeAddress) ? (
             <div className="flex flex-wrap gap-2 mt-2">
               <a
-                href={mapsDirectionsUrls(mapLat, mapLng).google}
+                href={mapsDirectionsUrls(mapLat, mapLng, placeAddress).google}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-xs font-semibold text-primary hover:underline"
@@ -1385,7 +1409,7 @@ export default function InstructorSettings() {
               </a>
               <span className="text-gray-600">·</span>
               <a
-                href={mapsDirectionsUrls(mapLat, mapLng).waze}
+                href={mapsDirectionsUrls(mapLat, mapLng, placeAddress).waze}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-xs font-semibold text-primary hover:underline"

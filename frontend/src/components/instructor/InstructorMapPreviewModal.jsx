@@ -5,8 +5,7 @@ import { formatDistanceKm } from '../../lib/geo'
 import { isGoogleMapsConfigured } from '../../lib/googleMapsLoader'
 import GoogleMapPreview from './GoogleMapPreview'
 import InstructorAvatar from '../common/InstructorAvatar'
-
-const DARK_TILE = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+import { OSM_STREET_ATTR, OSM_STREET_TILE } from '../../lib/osmStreetTiles'
 
 function kindLabel(k) {
   return k === 'trainer' ? 'Təlimçi' : 'Müəllim'
@@ -72,7 +71,7 @@ export default function InstructorMapPreviewModal({
                 scrollWheelZoom={false}
                 attributionControl={false}
               >
-                <TileLayer url={DARK_TILE} attribution="" />
+                <TileLayer url={OSM_STREET_TILE} attribution={OSM_STREET_ATTR} />
                 <CircleMarker
                   center={[lat, lng]}
                   radius={11}

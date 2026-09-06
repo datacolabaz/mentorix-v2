@@ -164,7 +164,11 @@ export default function PublicInstructorProfile() {
     String(instructor?.discover_certifications || '').trim(),
     locale,
   )
-  const directions = mapsDirectionsUrls(instructor?.latitude, instructor?.longitude)
+  const directions = mapsDirectionsUrls(
+    instructor?.latitude,
+    instructor?.longitude,
+    instructor?.teacher_place_address,
+  )
   const metroLabel = instructor?.nearest_metro
     ? bakuMetroBySlug(instructor.nearest_metro)?.name_az || instructor.nearest_metro
     : ''

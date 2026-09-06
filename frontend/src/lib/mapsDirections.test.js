@@ -14,6 +14,14 @@ describe('mapsDirectionsUrls', () => {
   it('returns null for invalid coords', () => {
     assert.equal(mapsDirectionsUrls(null, 49), null)
   })
+
+  it('uses a typed address when there is no pin', () => {
+    const urls = mapsDirectionsUrls(null, null, 'Dəstəkçi İcma Mərkəzi, Bakı')
+    assert.ok(urls.google.includes('destination='))
+    assert.ok(urls.google.includes(encodeURIComponent('Dəstəkçi İcma Mərkəzi, Bakı')))
+    assert.ok(urls.waze.includes('q='))
+    assert.ok(urls.waze.includes('navigate=yes'))
+  })
 })
 
 describe('mapsPlaceUrls', () => {

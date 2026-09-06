@@ -39,7 +39,7 @@ export default function TeacherMapListCard({
     rating && rating.count > 0
       ? t('marketplace.card.ratingLabel', { avg: rating.avg, count: rating.count })
       : rating?.label
-  const directions = mapsDirectionsUrls(p.latitude, p.longitude)
+  const directions = mapsDirectionsUrls(p.latitude, p.longitude, p.teacher_place_address)
 
   return (
     <div
