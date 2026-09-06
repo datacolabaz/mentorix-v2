@@ -48,3 +48,12 @@ export function formatCoordPair(lat, lng) {
   if (!parsed) return ''
   return `${parsed.lat}, ${parsed.lng}`
 }
+
+/** Koordinat, Waze/Google linki və ya yer adı (məs. Dəstəkçi İcma Mərkəzi). */
+export function splitPlaceOrCoords(input) {
+  const label = String(input ?? '').trim()
+  if (!label) return { coords: null, label: '' }
+  const coords = parseMapCoords(label)
+  if (coords) return { coords, label: '' }
+  return { coords: null, label }
+}

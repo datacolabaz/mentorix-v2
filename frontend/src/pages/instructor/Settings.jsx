@@ -21,7 +21,7 @@ import InstructorAvatarUpload from '../../components/instructor/InstructorAvatar
 import { formatLocationLabel, isBakuRegion } from '@shared/azerbaijanRegions.mjs'
 import { BAKU_METRO_STATIONS, bakuMetroBySlug } from '@shared/bakuMetroStations.mjs'
 import { mapsPlaceUrls, WAZE_LIVE_MAP_URL } from '../../lib/mapsDirections'
-import { formatCoordPair, parseMapCoords } from '../../lib/parseMapCoords'
+import { formatCoordPair, parseMapCoords, splitPlaceOrCoords } from '../../lib/parseMapCoords'
 import { formatAzn, yearlyTotalAzn, YEARLY_DISCOUNT } from '../../lib/pricing'
 import { planDetailLines, planLimitsHeadline } from '../../lib/subscriptionPlanCopy'
 import { normalizePlanId } from '../../lib/subscriptionPlanMarketing'
@@ -176,6 +176,7 @@ export default function InstructorSettings() {
   const [mapLng, setMapLng] = useState('')
   const [nearestMetro, setNearestMetro] = useState('')
   const [coordDraft, setCoordDraft] = useState('')
+  const [placeAddress, setPlaceAddress] = useState('')
   const [mapCategoryIds, setMapCategoryIds] = useState([])
   const [mapPickedCats, setMapPickedCats] = useState([])
   const [mapCatLimit, setMapCatLimit] = useState(5)
@@ -272,6 +273,7 @@ export default function InstructorSettings() {
       setMapLat(latStr)
       setMapLng(lngStr)
       setCoordDraft(formatCoordPair(latStr, lngStr))
+      setPlaceAddress(String(m.teacher_place_address || disc?.profile?.teacher_place_address || '').trim())
       setNearestMetro(m.nearest_metro || '')
       const discCats = Array.isArray(disc?.categories) ? disc.categories : []
       setMapPickedCats(discCats)
@@ -287,6 +289,7 @@ export default function InstructorSettings() {
         lat: m.latitude != null ? String(m.latitude) : '',
         lng: m.longitude != null ? String(m.longitude) : '',
         metro: m.nearest_metro || '',
+        address: String(m.teacher_place_address || disc?.profile?.teacher_place_address || '').trim(),
         categoryIds: discCats.map((c) => c.id).join(','),
       }
       setMapJustSaved(false)
@@ -335,6 +338,7 @@ export default function InstructorSettings() {
       s.lat !== mapLat ||
       s.lng !== mapLng ||
       s.metro !== nearestMetro ||
+      s.address !== placeAddress ||
       s.categoryIds !== mapCategoryIds.join(',')
     )
   }, [
@@ -345,6 +349,7 @@ export default function InstructorSettings() {
     mapLat,
     mapLng,
     nearestMetro,
+    placeAddress,
     mapCategoryIds,
     hasMapRegion,
   ])
@@ -371,8 +376,13 @@ export default function InstructorSettings() {
         toast(t('settings.toasts.regionRequired'), 'error')
         return
       }
-      const fromDraft = parseMapCoords(coordDraft)
-      if (coordDraft.trim() && !fromDraft) {
+      const split = splitPlaceOrCoords(coordDraft)
+      if (split.label && !placeAddress.trim()) {
+        setPlaceAddress(split.label)
+      }
+      const address = (placeAddress.trim() || split.label || '').slice(0, 500)
+      const fromDraft = split.coords
+      if (coordDraft.trim() && !fromDraft && !split.label && !address) {
         toast(t('settings.pinCoordsInvalid'), 'error')
         return
       }
@@ -384,6 +394,8 @@ export default function InstructorSettings() {
         setMapLat(fromDraft.lat)
         setMapLng(fromDraft.lng)
         setCoordDraft(formatCoordPair(fromDraft.lat, fromDraft.lng))
+      } else if (split.label) {
+        setCoordDraft('')
       }
       await api.patch('/instructor/map-profile', {
         region: region || null,
@@ -393,9 +405,11 @@ export default function InstructorSettings() {
         latitude: Number.isFinite(latN) ? latN : null,
         longitude: Number.isFinite(lngN) ? lngN : null,
         nearest_metro: isBakuRegion(region) ? nearestMetro || null : null,
+        teacher_place_address: address || null,
       })
       await api.patch('/instructor/discover-profile', {
         category_ids: mapCategoryIds,
+        teacher_place_address: address || null,
       })
       savedMapRef.current = {
         region,
@@ -405,6 +419,7 @@ export default function InstructorSettings() {
         lat: Number.isFinite(latN) ? String(latN) : '',
         lng: Number.isFinite(lngN) ? String(lngN) : '',
         metro: isBakuRegion(region) ? nearestMetro : '',
+        address,
         categoryIds: mapCategoryIds.join(','),
       }
       setMapJustSaved(true)
@@ -1377,6 +1392,22 @@ export default function InstructorSettings() {
             {t('settings.pinNoMapHint')}
           </p>
           <label className={['text-xs block mb-1.5', theme === 'dark' ? 'text-gray-400' : 'text-token-textMuted'].join(' ')}>
+            {t('settings.placeAddressLabel')}
+          </label>
+          <input
+            className={inp}
+            value={placeAddress}
+            onChange={(e) => {
+              setPlaceAddress(e.target.value)
+              setMapJustSaved(false)
+            }}
+            placeholder={t('settings.placeAddressPh')}
+            autoComplete="street-address"
+          />
+          <p className={['text-xs mt-1.5 mb-3 leading-relaxed', theme === 'dark' ? 'text-gray-500' : 'text-token-textMuted'].join(' ')}>
+            {t('settings.placeAddressHint')}
+          </p>
+          <label className={['text-xs block mb-1.5', theme === 'dark' ? 'text-gray-400' : 'text-token-textMuted'].join(' ')}>
             {t('settings.pinCoordsLabel')}
           </label>
           <input
@@ -1405,7 +1436,7 @@ export default function InstructorSettings() {
           <p className={['text-xs mt-1.5 leading-relaxed', theme === 'dark' ? 'text-gray-500' : 'text-token-textMuted'].join(' ')}>
             {t('settings.pinCoordsHint')}
           </p>
-          {coordDraft.trim() && !parseMapCoords(coordDraft) ? (
+          {coordDraft.trim() && !parseMapCoords(coordDraft) && !splitPlaceOrCoords(coordDraft).label ? (
             <p className="text-xs mt-1 text-amber-400">{t('settings.pinCoordsInvalid')}</p>
           ) : null}
           <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2">

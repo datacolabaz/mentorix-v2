@@ -109,6 +109,13 @@ const patchInstructorMapProfile = async (req, res) => {
       vals.push(district);
     }
 
+    if (req.body?.teacher_place_address !== undefined) {
+      const raw = req.body.teacher_place_address;
+      const address = raw == null ? null : String(raw).trim().slice(0, 500);
+      sets.push(`teacher_place_address = $${i++}`);
+      vals.push(address || null);
+    }
+
     if (req.body?.nearest_metro !== undefined) {
       const raw = req.body.nearest_metro == null ? '' : String(req.body.nearest_metro).trim().toLowerCase();
       if (raw && !isValidBakuMetro(raw)) {
@@ -126,7 +133,7 @@ const patchInstructorMapProfile = async (req, res) => {
     vals.push(uid);
     const { rows } = await db.query(
       `UPDATE instructor_profiles SET ${sets.join(', ')} WHERE user_id = $${i}
-       RETURNING latitude, longitude, map_profile_kind, map_visible, map_search_radius_km, region, baku_district, region_user_set, nearest_metro`,
+       RETURNING latitude, longitude, map_profile_kind, map_visible, map_search_radius_km, region, baku_district, region_user_set, nearest_metro, teacher_place_address`,
       vals
     );
 

@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
-import { formatCoordPair, parseMapCoords } from './parseMapCoords.js'
+import { formatCoordPair, parseMapCoords, splitPlaceOrCoords } from './parseMapCoords.js'
 
 describe('parseMapCoords', () => {
   it('reads a Waze dropped-pin pair', () => {
@@ -25,6 +25,22 @@ describe('parseMapCoords', () => {
   it('rejects empty and out-of-range values', () => {
     assert.equal(parseMapCoords(''), null)
     assert.equal(parseMapCoords('99.1, 49.8'), null)
+  })
+})
+
+describe('splitPlaceOrCoords', () => {
+  it('keeps a place name so it can be saved', () => {
+    assert.deepEqual(splitPlaceOrCoords('dəstəkçi icma mərkəzi'), {
+      coords: null,
+      label: 'dəstəkçi icma mərkəzi',
+    })
+  })
+
+  it('still reads a coordinate pair', () => {
+    assert.deepEqual(splitPlaceOrCoords('40.4028, 49.8715'), {
+      coords: { lat: '40.4028', lng: '49.8715' },
+      label: '',
+    })
   })
 })
 
