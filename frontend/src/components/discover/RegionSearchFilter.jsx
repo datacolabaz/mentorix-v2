@@ -4,6 +4,8 @@ import {
   BAKU_DISTRICTS,
   isBakuRegion,
 } from '@shared/azerbaijanRegions.mjs'
+import { districtDisplayName, regionDisplayName } from '../../lib/azerbaijanRegionI18n'
+import useActiveLocale from '../../hooks/useActiveLocale'
 
 export default function RegionSearchFilter({
   region,
@@ -12,6 +14,7 @@ export default function RegionSearchFilter({
   onChange,
 }) {
   const { t } = useTranslation()
+  const locale = useActiveLocale()
   const showBakuDistricts = isBakuRegion(region)
 
   const patch = (partial) => onChange?.({ region, bakuDistrict, includeNeighbors, ...partial })
@@ -36,7 +39,7 @@ export default function RegionSearchFilter({
           <option value="">{t('marketplace.filters.regionPlaceholder')}</option>
           {AZ_REGIONS.map((r) => (
             <option key={r} value={r}>
-              {r}
+              {regionDisplayName(r, locale)}
             </option>
           ))}
         </select>
@@ -55,7 +58,7 @@ export default function RegionSearchFilter({
             <option value="">{t('marketplace.filters.bakuDistrictPlaceholder')}</option>
             {BAKU_DISTRICTS.map((d) => (
               <option key={d} value={d}>
-                {d}
+                {districtDisplayName(d, locale)}
               </option>
             ))}
           </select>

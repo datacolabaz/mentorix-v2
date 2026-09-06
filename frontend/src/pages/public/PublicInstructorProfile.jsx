@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import api from '../../lib/api'
 import Brand from '../../components/common/Brand'
 import InstructorAvatar from '../../components/common/InstructorAvatar'
@@ -12,18 +13,9 @@ import TeacherReviewPanel from '../../components/discover/TeacherReviewPanel'
 import useAuthStore from '../../hooks/useAuth'
 import { useToast } from '../../components/common/Toast'
 import { ratingStarsLine, formatStudentCount, deliveryFormatBadges, showTopBadge } from '../../lib/teacherMapCard'
-
-function kindLabel(k) {
-  if (k === 'trainer') return 'Təlimçi'
-  return 'Müəllim'
-}
-
-function formatDelivery(f) {
-  if (f === 'online') return 'Onlayn'
-  if (f === 'teacher_place') return 'Müəllimin ünvanında'
-  if (f === 'student_place') return 'Tələbənin ünvanında'
-  return f
-}
+import { localizeTeachingCategoryList } from '../../lib/teachingCategoryI18n'
+import { instructorRoleLabel, localizeNextSlotLabel } from '../../lib/marketplaceLocale'
+import { resolveUiLocale } from '../../lib/uiLocale'
 
 function ProfileSection({ title, children, className = '' }) {
   return (
@@ -53,6 +45,8 @@ function expertiseTags(instructor) {
 
 export default function PublicInstructorProfile() {
   const { id } = useParams()
+  const { t, i18n } = useTranslation()
+  const locale = resolveUiLocale(i18n.language)
   const { user, token } = useAuthStore()
   const isAuthenticated = Boolean(token && user)
   const toast = useToast()
@@ -75,36 +69,38 @@ export default function PublicInstructorProfile() {
         if (res?.success && res.instructor) {
           const inst = res.instructor
           const profilePath = `/teachers/${id}`
+          const subject = instructorDisplaySubject(inst, locale) || inst.subject || ''
           const bio =
             inst.discover_bio?.slice(0, 160) ||
-            `${inst.full_name} — ${inst.subject}. Mentorix üzərində müəllim profili.`
+            t('marketplace.profile.seoDescription', { name: inst.full_name, subject })
           setInstructor(inst)
           setPageSeo({
-            title: `${inst.full_name} — Mentorix müəllim profili`,
+            title: t('marketplace.profile.seoTitle', { name: inst.full_name }),
             description: bio,
             canonicalPath: profilePath,
+            locale,
             breadcrumbs: [
-              { name: 'Ana səhifə', path: '/' },
-              { name: 'Müəllimlər', path: '/search' },
+              { name: t('marketplace.profile.breadcrumbHome'), path: '/' },
+              { name: t('marketplace.profile.breadcrumbTeachers'), path: '/search' },
               { name: inst.full_name, path: profilePath },
             ],
             person: {
               name: inst.full_name,
-              description: inst.discover_bio || `${inst.full_name} — ${inst.subject}`,
+              description: inst.discover_bio || `${inst.full_name} — ${subject}`,
               url: profilePath,
               image: inst.avatar_url ? resolveApiAssetUrl(inst.avatar_url) : undefined,
-              jobTitle: inst.subject || kindLabel(inst.kind),
+              jobTitle: subject || instructorRoleLabel(inst.kind, locale),
             },
           })
         } else {
           setInstructor(null)
-          setError(res?.message || 'Profil tapılmadı')
+          setError(res?.message || t('marketplace.profile.notFound'))
         }
       })
       .catch((e) => {
         if (!cancelled) {
           setInstructor(null)
-          setError(e?.message || 'Xəta')
+          setError(e?.message || t('marketplace.errors.fetchFailed'))
         }
       })
       .finally(() => {
@@ -113,7 +109,7 @@ export default function PublicInstructorProfile() {
     return () => {
       cancelled = true
     }
-  }, [id])
+  }, [id, locale, t])
 
   const onInquiry = () => {
     if (isAuthenticated) setInquiryOpen(true)
@@ -132,11 +128,11 @@ export default function PublicInstructorProfile() {
       if (d?.whatsapp_available && d.whatsapp_url) {
         window.open(d.whatsapp_url, '_blank', 'noopener,noreferrer')
       } else {
-        toast('Müəllimin WhatsApp nömrəsi yoxdur — müraciət formunu doldurun.', 'info')
+        toast(t('marketplace.profile.noWhatsapp'), 'info')
         setInquiryOpen(true)
       }
     } catch (e) {
-      toast(e?.message || 'WhatsApp açılmadı', 'error')
+      toast(e?.message || t('marketplace.profile.whatsappFailed'), 'error')
     } finally {
       setWhatsappBusy(false)
     }
@@ -144,10 +140,13 @@ export default function PublicInstructorProfile() {
 
   const ratingLine = instructor ? ratingStarsLine(instructor) : null
   const studentLine = instructor ? formatStudentCount(instructor.active_student_count) : null
-  const formatBadges = instructor ? deliveryFormatBadges(instructor) : []
+  const formatBadges = instructor ? deliveryFormatBadges(instructor, locale) : []
 
-  const subjectLine = instructor ? instructorDisplaySubject(instructor) : null
-  const tags = useMemo(() => (instructor ? expertiseTags(instructor) : []), [instructor])
+  const subjectLine = instructor ? instructorDisplaySubject(instructor, locale) : null
+  const tags = useMemo(
+    () => (instructor ? localizeTeachingCategoryList(expertiseTags(instructor), locale) : []),
+    [instructor, locale],
+  )
   const bio = String(instructor?.bio || instructor?.discover_bio || '').trim()
   const education = String(instructor?.education || instructor?.discover_education || '').trim()
   const certifications = String(instructor?.discover_certifications || '').trim()
@@ -162,7 +161,7 @@ export default function PublicInstructorProfile() {
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between gap-3">
           <Brand className="h-7 w-auto" />
           <Link to="/search" className="text-sm font-semibold text-primary hover:underline shrink-0">
-            ← Axtarışa qayıt
+            {t('marketplace.profile.backToSearch')}
           </Link>
         </div>
       </header>
@@ -181,7 +180,7 @@ export default function PublicInstructorProfile() {
           <div className="rounded-2xl border border-white/10 bg-[#121212] p-8 text-center max-w-lg mx-auto">
             <p className="text-white font-semibold">{error}</p>
             <Link to="/search" className="inline-block mt-4 text-sm text-primary font-semibold hover:underline">
-              Xəritə axtarışına keç
+              {t('marketplace.profile.backToMap')}
             </Link>
           </div>
         ) : null}
@@ -202,25 +201,25 @@ export default function PublicInstructorProfile() {
                   <div className="flex flex-wrap justify-center gap-1.5 mb-2">
                     {showTopBadge(instructor) ? (
                       <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-violet-500/20 text-violet-300">
-                        🔥 TOP müəllim
+                        {t('marketplace.profile.topTeacher')}
                       </span>
                     ) : null}
                     {instructor.is_featured_listing && !showTopBadge(instructor) ? (
                       <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300">
-                        ⭐ Önə çıxır
+                        {t('marketplace.profile.featured')}
                       </span>
                     ) : null}
                     {instructor.discover_verified ? (
                       <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-400">
-                        Təsdiqlənmiş
+                        {t('marketplace.profile.verified')}
                       </span>
                     ) : null}
                   </div>
                   <h1 className="font-display font-bold text-2xl sm:text-3xl text-white">{instructor.full_name}</h1>
                   <p className="text-sm sm:text-base text-gray-300 mt-2 font-medium">
-                    {subjectLine || 'Fənn göstərilməyib'}
+                    {subjectLine || t('marketplace.card.noSubject')}
                   </p>
-                  <p className="text-xs text-gray-500 mt-1">{kindLabel(instructor.map_profile_kind)}</p>
+                  <p className="text-xs text-gray-500 mt-1">{instructorRoleLabel(instructor.map_profile_kind, locale)}</p>
                   {(ratingLine || studentLine) && (
                     <div className="flex flex-wrap justify-center gap-2 mt-3">
                       {ratingLine ? (
@@ -238,12 +237,12 @@ export default function PublicInstructorProfile() {
                   <div className="flex flex-wrap justify-center gap-2 mt-3">
                     {experienceYears != null && experienceYears > 0 ? (
                       <span className="text-sm font-semibold text-sky-300/95 px-3 py-1 rounded-full border border-sky-500/30 bg-sky-500/10">
-                        {experienceYears} il təcrübə
+                        {t('marketplace.profile.experienceYears', { count: experienceYears })}
                       </span>
                     ) : null}
                     {instructor.discover_hourly_rate != null ? (
                       <p className="text-emerald-400 font-bold text-lg">
-                        {instructor.discover_hourly_rate} AZN / saat
+                        {t('marketplace.profile.ratePerHour', { rate: instructor.discover_hourly_rate })}
                       </p>
                     ) : null}
                   </div>
@@ -254,7 +253,7 @@ export default function PublicInstructorProfile() {
                     onClick={onInquiry}
                     className="w-full rounded-xl bg-primary text-[#0b0b0b] font-bold py-3.5 px-4 hover:brightness-110 transition shadow-lg shadow-primary/20"
                   >
-                    ⚡ Sınaq dərsi — müraciət
+                    {t('marketplace.profile.trialCta')}
                   </button>
                   <button
                     type="button"
@@ -265,15 +264,14 @@ export default function PublicInstructorProfile() {
                     💬 WhatsApp
                   </button>
                   <p className="text-[11px] sm:text-xs text-gray-500 mt-1 leading-relaxed px-1 sm:col-span-2">
-                    WhatsApp və müraciət üçün qeydiyyat tələb olunur. Müraciət SMS və panel bildirişi ilə
-                    çatdırılır.
+                    {t('marketplace.profile.whatsappDisclaimer')}
                   </p>
                 </div>
               </div>
             </section>
 
             {formatBadges.length > 0 ? (
-              <ProfileSection title="Dərs formatı">
+              <ProfileSection title={t('marketplace.profile.lessonFormat')}>
                 <ul className="flex flex-wrap gap-2">
                   {formatBadges.map((lab) => (
                     <li
@@ -286,8 +284,10 @@ export default function PublicInstructorProfile() {
                 </ul>
                 {instructor.next_available_slot ? (
                   <p className="text-sm text-gray-300 mt-3">
-                    📅 Növbəti boş vaxt:{' '}
-                    <span className="font-semibold text-white">{instructor.next_available_slot}</span>
+                    📅 {t('marketplace.profile.nextSlot')}{' '}
+                    <span className="font-semibold text-white">
+                      {localizeNextSlotLabel(instructor.next_available_slot, locale)}
+                    </span>
                   </p>
                 ) : null}
               </ProfileSection>
@@ -300,16 +300,16 @@ export default function PublicInstructorProfile() {
               onNeedAuth={() => setAuthModalOpen(true)}
             />
 
-            <ProfileSection title="Haqqımda">
+            <ProfileSection title={t('marketplace.profile.about')}>
               {bio ? (
                 <p className="text-sm sm:text-[15px] text-gray-200 leading-relaxed whitespace-pre-wrap">{bio}</p>
               ) : (
-                <p className="text-sm text-gray-500 italic">Müəllim hələ bio əlavə etməyib.</p>
+                <p className="text-sm text-gray-500 italic">{t('marketplace.profile.noBio')}</p>
               )}
             </ProfileSection>
 
             {tags.length > 0 ? (
-              <ProfileSection title="Ekspertizalar">
+              <ProfileSection title={t('marketplace.profile.expertise')}>
                 <div className="flex flex-wrap gap-2">
                   {tags.map((tag) => (
                     <span
@@ -324,18 +324,20 @@ export default function PublicInstructorProfile() {
             ) : null}
 
             {education || certifications ? (
-              <ProfileSection title="Təhsil və sertifikatlar">
+              <ProfileSection title={t('marketplace.profile.educationCerts')}>
                 <div className="space-y-4 text-sm text-gray-200 leading-relaxed">
                   {education ? (
                     <div>
-                      <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Təhsil</p>
+                      <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">
+                        {t('marketplace.profile.education')}
+                      </p>
                       <p className="whitespace-pre-wrap">{education}</p>
                     </div>
                   ) : null}
                   {certifications ? (
                     <div>
                       <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">
-                        Sertifikatlar
+                        {t('marketplace.profile.certificates')}
                       </p>
                       <p className="whitespace-pre-wrap">{certifications}</p>
                     </div>
@@ -345,7 +347,7 @@ export default function PublicInstructorProfile() {
             ) : null}
 
             {instructor.teacher_place_address ? (
-              <ProfileSection title="Ünvan">
+              <ProfileSection title={t('marketplace.profile.address')}>
                 <p className="text-sm text-gray-300 leading-relaxed">{instructor.teacher_place_address}</p>
               </ProfileSection>
             ) : null}

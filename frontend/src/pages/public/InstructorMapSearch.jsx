@@ -3,11 +3,12 @@ import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import api from '../../lib/api'
 import { setPageSeo } from '../../lib/pageSeo'
+import { BAKU } from '@shared/azerbaijanRegions.mjs'
 import {
-  BAKU,
-  formatResultsLocationPhrase,
-  instructorLocationBadge,
-} from '@shared/azerbaijanRegions.mjs'
+  formatResultsLocationPhraseI18n,
+  instructorLocationBadgeI18n,
+} from '../../lib/azerbaijanRegionI18n'
+import useActiveLocale from '../../hooks/useActiveLocale'
 import PublicPageTopBar from '../../components/public/PublicPageTopBar'
 import DiscoverSearchFilters from '../../components/discover/DiscoverSearchFilters'
 import RegionSearchFilter from '../../components/discover/RegionSearchFilter'
@@ -30,6 +31,7 @@ function mapFilterParams(filters) {
 
 export default function InstructorMapSearch() {
   const { t } = useTranslation()
+  const locale = useActiveLocale()
   const { user, token } = useAuthStore()
   const isAuthenticated = Boolean(token && user)
   const toast = useToast()
@@ -62,8 +64,8 @@ export default function InstructorMapSearch() {
   const categoryFromUrl = searchParams.get('category')
 
   const locationPhrase = useMemo(
-    () => formatResultsLocationPhrase(region, bakuDistrict),
-    [region, bakuDistrict],
+    () => formatResultsLocationPhraseI18n(region, bakuDistrict, locale),
+    [region, bakuDistrict, locale],
   )
 
   const resultCountLabel = useCallback(
@@ -363,7 +365,7 @@ export default function InstructorMapSearch() {
                     highlighted={highlightId === p.id}
                     locationBadge={
                       p.region_user_set
-                        ? instructorLocationBadge(p.region, p.baku_district)
+                        ? instructorLocationBadgeI18n(p.region, p.baku_district, locale)
                         : null
                     }
                     cardRef={(el) => {

@@ -1,3 +1,5 @@
+import { localizeFormatBadges } from './marketplaceLocale'
+
 export const TOP_BADGE_MIN_RATING = 4.8
 export const TOP_BADGE_MIN_COMPLETED_LESSONS = 10
 export const TOP_BADGE_MIN_ACTIVE_STUDENTS = 10
@@ -43,13 +45,13 @@ export function formatStudentCount(count) {
   return `${n} aktiv tələbə`
 }
 
-export function deliveryFormatBadges(instructor) {
-  const labels = Array.isArray(instructor?.format_labels)
+export function deliveryFormatBadges(instructor, lang = 'az') {
+  const raw = Array.isArray(instructor?.format_labels)
     ? instructor.format_labels
     : Array.isArray(instructor?.delivery_formats)
-      ? instructor.delivery_formats.map((f) => f.label || f.format).filter(Boolean)
+      ? instructor.delivery_formats.map((f) => f.format || f.label).filter(Boolean)
       : []
-  return [...new Set(labels.map(String))].filter(Boolean)
+  return localizeFormatBadges(raw, lang)
 }
 
 export function ratingStarsLine(instructor) {

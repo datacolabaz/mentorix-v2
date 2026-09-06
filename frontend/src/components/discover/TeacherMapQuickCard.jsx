@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import InstructorAvatar from '../common/InstructorAvatar'
 import { formatDistanceKm } from '../../lib/geo'
 import {
@@ -7,11 +8,9 @@ import {
   showTopBadge,
   teacherRatingParts,
 } from '../../lib/teacherMapCard'
-
-function kindLabel(k) {
-  if (k === 'trainer') return 'Təlimçi'
-  return 'Müəllim'
-}
+import { instructorDisplaySubject } from '../../lib/instructorDisplay'
+import { instructorRoleLabel } from '../../lib/marketplaceLocale'
+import useActiveLocale from '../../hooks/useActiveLocale'
 
 export default function TeacherMapQuickCard({
   instructor: p,
@@ -22,14 +21,13 @@ export default function TeacherMapQuickCard({
   onClose,
   whatsappBusy,
 }) {
+  const { t } = useTranslation()
+  const locale = useActiveLocale()
   if (!p) return null
-  const subjectLine =
-    p.display_subject ||
-    (Array.isArray(p.category_names) && p.category_names.length ? p.category_names.join(', ') : null) ||
-    p.subject
+  const subjectLine = instructorDisplaySubject(p, locale) || p.subject
   const rating = teacherRatingParts(p)
   const studentLine = formatStudentCount(p.active_student_count)
-  const formats = deliveryFormatBadges(p)
+  const formats = deliveryFormatBadges(p, locale)
   const topBadge = showTopBadge(p)
 
   return (
@@ -145,7 +143,7 @@ export default function TeacherMapQuickCard({
             </blockquote>
           ) : null}
 
-          <p className="text-[10px] text-gray-600 mt-2">{kindLabel(p.map_profile_kind)}</p>
+          <p className="text-[10px] text-gray-600 mt-2">{instructorRoleLabel(p.map_profile_kind, locale)}</p>
         </div>
       </div>
 
@@ -155,7 +153,7 @@ export default function TeacherMapQuickCard({
           onClick={() => onInquiry?.(p)}
           className="w-full rounded-xl bg-primary text-black font-bold text-sm py-2.5 hover:brightness-110 transition-all shadow-lg shadow-primary/20"
         >
-          ⚡ Sınaq dərsi — müraciət
+          {t('marketplace.profile.trialCta')}
         </button>
         <button
           type="button"
@@ -168,7 +166,7 @@ export default function TeacherMapQuickCard({
             'active:scale-[0.99]',
           ].join(' ')}
         >
-          💬 WhatsApp-da yaz
+          {t('marketplace.card.whatsapp')}
         </button>
       </div>
 
@@ -176,7 +174,7 @@ export default function TeacherMapQuickCard({
         to={`/teachers/${p.id}`}
         className="inline-block mt-3 text-[11px] font-semibold text-primary hover:underline"
       >
-        Tam profilə bax →
+        {t('marketplace.card.viewProfile')}
       </Link>
     </div>
   )

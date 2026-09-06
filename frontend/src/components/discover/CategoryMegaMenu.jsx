@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import api from '../../lib/api'
+import { categoryNodeLabel } from '../../lib/teachingCategoryI18n'
+import useActiveLocale from '../../hooks/useActiveLocale'
 
 function GoldStar({ className = '' }) {
   return (
@@ -30,7 +32,7 @@ function sortByPopular(nodes) {
     }))
 }
 
-function CategoryList({ nodes, activeId, onHover, onPick, emptyLabel }) {
+function CategoryList({ nodes, activeId, onHover, onPick, emptyLabel, locale }) {
   const sorted = useMemo(() => sortByPopular(nodes), [nodes])
   if (!sorted.length) {
     return <p className="px-3 py-4 text-xs text-gray-500">{emptyLabel || '—'}</p>
@@ -65,7 +67,7 @@ function CategoryList({ nodes, activeId, onHover, onPick, emptyLabel }) {
                 } else if (hasChildren) onHover?.(node)
               }}
             >
-              <span className="truncate">{node.name_az}</span>
+              <span className="truncate">{categoryNodeLabel(node, locale)}</span>
               {node.is_popular ? <GoldStar className="text-amber-400" /> : null}
             </button>
           </li>
@@ -77,6 +79,7 @@ function CategoryList({ nodes, activeId, onHover, onPick, emptyLabel }) {
 
 export default function CategoryMegaMenu({ onPick, activeCategoryId }) {
   const { t } = useTranslation()
+  const locale = useActiveLocale()
   const [open, setOpen] = useState(false)
   const [tree, setTree] = useState([])
   const [popular, setPopular] = useState([])
@@ -153,7 +156,7 @@ export default function CategoryMegaMenu({ onPick, activeCategoryId }) {
               ].join(' ')}
             >
               {p.is_popular ? <GoldStar className="text-amber-400 w-3 h-3" /> : null}
-              {p.name_az}
+              {categoryNodeLabel(p, locale)}
             </button>
           )
         })}
@@ -181,6 +184,7 @@ export default function CategoryMegaMenu({ onPick, activeCategoryId }) {
               </p>
               <CategoryList
                 nodes={tree}
+                locale={locale}
                 activeId={hoverRoot}
                 onHover={(n) => {
                   setHoverRoot(n.id)
@@ -192,10 +196,11 @@ export default function CategoryMegaMenu({ onPick, activeCategoryId }) {
             </div>
             <div className="border-r border-white/10 min-w-[200px]">
               <p className="px-3 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider truncate">
-                {rootNode?.name_az || t('marketplace.categories.subgroup')}
+                {rootNode ? categoryNodeLabel(rootNode, locale) : t('marketplace.categories.subgroup')}
               </p>
               <CategoryList
                 nodes={rootNode?.subcategories || []}
+                locale={locale}
                 activeId={hoverChild}
                 onHover={(n) => setHoverChild(n.id)}
                 onPick={handlePick}
@@ -205,9 +210,9 @@ export default function CategoryMegaMenu({ onPick, activeCategoryId }) {
             {grandChildren.length > 0 ? (
               <div className="min-w-[200px]">
                 <p className="px-3 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider truncate">
-                  {childNode?.name_az}
+                  {childNode ? categoryNodeLabel(childNode, locale) : ''}
                 </p>
-                <CategoryList nodes={grandChildren} onPick={handlePick} emptyLabel="—" />
+                <CategoryList nodes={grandChildren} locale={locale} onPick={handlePick} emptyLabel="—" />
               </div>
             ) : null}
           </div>

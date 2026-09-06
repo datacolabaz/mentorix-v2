@@ -2,11 +2,14 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import api from '../../lib/api'
 import { groupServiceAreas } from '../../lib/serviceAreaGroups'
+import { categoryNodeLabel, localizeTeachingCategoryName } from '../../lib/teachingCategoryI18n'
+import useActiveLocale from '../../hooks/useActiveLocale'
 
 const FORMAT_VALUES = ['any', 'online', 'teacher_place', 'student_place']
 
 export default function DiscoverSearchFilters({ value, onChange }) {
   const { t } = useTranslation()
+  const locale = useActiveLocale()
   const [categoryQuery, setCategoryQuery] = useState('')
   const [suggestions, setSuggestions] = useState([])
   const [areas, setAreas] = useState([])
@@ -73,10 +76,10 @@ export default function DiscoverSearchFilters({ value, onChange }) {
   const areaGroups = useMemo(() => groupServiceAreas(areas), [areas])
 
   const selectedLabel = useMemo(() => {
-    if (v.category_name) return v.category_name
+    if (v.category_name) return localizeTeachingCategoryName(v.category_name, locale)
     if (v.category_id) return v.category_id
     return ''
-  }, [v.category_id, v.category_name])
+  }, [v.category_id, v.category_name, locale])
 
   const patch = (partial) => onChange?.({ ...v, ...partial })
 
@@ -117,7 +120,7 @@ export default function DiscoverSearchFilters({ value, onChange }) {
                       setSuggestions([])
                     }}
                   >
-                    {s.name_az}
+                    {categoryNodeLabel(s, locale)}
                     {s.is_popular ? (
                       <span className="ml-2 text-[10px] text-amber-400">{t('marketplace.filters.popular')}</span>
                     ) : null}

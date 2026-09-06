@@ -4,11 +4,9 @@ import { Marker, Popup } from 'react-leaflet'
 import { formatDistanceKm } from '../../lib/geo'
 import { resolveApiAssetUrl } from '../../lib/apiAssetUrl'
 import { instructorInitials } from '../../lib/instructorInitials'
-
-function kindLabel(k) {
-  if (k === 'trainer') return 'Təlimçi'
-  return 'Müəllim'
-}
+import { instructorRoleLabel } from '../../lib/marketplaceLocale'
+import { instructorDisplaySubject } from '../../lib/instructorDisplay'
+import useActiveLocale from '../../hooks/useActiveLocale'
 
 function createPinIcon({ initial, avatarSrc, distanceLabel, isNearest, kind, selected }) {
   const color = kind === 'trainer' ? '#f97316' : '#22c55e'
@@ -40,6 +38,7 @@ function createPinIcon({ initial, avatarSrc, distanceLabel, isNearest, kind, sel
 }
 
 export default function InstructorMapMarker({ instructor, isNearest, selected, onSelect }) {
+  const locale = useActiveLocale()
   const initial = instructorInitials(instructor.full_name).replace(/\./g, '') || 'M'
   const avatarSrc = instructor.avatar_url ? resolveApiAssetUrl(instructor.avatar_url) : ''
   const distanceLabel = formatDistanceKm(instructor.distanceKm)
@@ -73,10 +72,10 @@ export default function InstructorMapMarker({ instructor, isNearest, selected, o
           ) : null}
           <div className="font-bold">{instructor.full_name}</div>
           <div className="text-gray-600 text-xs mt-1">
-            {instructor.display_subject || instructor.subject || '—'}
+            {instructorDisplaySubject(instructor, locale) || instructor.subject || '—'}
           </div>
-          <div className="text-[11px] mt-1 font-semibold text-emerald-700">{distanceLabel} · sizdən</div>
-          <div className="text-[11px] text-gray-500">{kindLabel(instructor.map_profile_kind)}</div>
+          <div className="text-[11px] mt-1 font-semibold text-emerald-700">{distanceLabel}</div>
+          <div className="text-[11px] text-gray-500">{instructorRoleLabel(instructor.map_profile_kind, locale)}</div>
         </div>
       </Popup>
     </Marker>

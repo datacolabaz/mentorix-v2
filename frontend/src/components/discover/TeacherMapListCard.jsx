@@ -6,6 +6,9 @@ import {
   showTopBadge,
   teacherRatingParts,
 } from '../../lib/teacherMapCard'
+import { instructorDisplaySubject } from '../../lib/instructorDisplay'
+import { localizeNextSlotLabel } from '../../lib/marketplaceLocale'
+import useActiveLocale from '../../hooks/useActiveLocale'
 
 export default function TeacherMapListCard({
   instructor: p,
@@ -20,12 +23,10 @@ export default function TeacherMapListCard({
   whatsappBusy,
 }) {
   const { t } = useTranslation()
-  const subjectLine =
-    p.display_subject ||
-    (Array.isArray(p.category_names) && p.category_names.length ? p.category_names.join(', ') : null) ||
-    p.subject
+  const locale = useActiveLocale()
+  const subjectLine = instructorDisplaySubject(p, locale) || p.subject
   const rating = teacherRatingParts(p)
-  const formats = deliveryFormatBadges(p)
+  const formats = deliveryFormatBadges(p, locale)
   const topBadge = showTopBadge(p)
   const districtLabel =
     p.region_user_set && (locationBadge || p.baku_district || p.region)
@@ -116,7 +117,9 @@ export default function TeacherMapListCard({
           ) : null}
 
           {p.next_available_slot ? (
-            <div className="text-[10px] text-gray-500 mt-1 truncate">📅 {p.next_available_slot}</div>
+            <div className="text-[10px] text-gray-500 mt-1 truncate">
+              📅 {localizeNextSlotLabel(p.next_available_slot, locale)}
+            </div>
           ) : null}
 
           <Link
