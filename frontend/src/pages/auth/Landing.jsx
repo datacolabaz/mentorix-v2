@@ -13,6 +13,11 @@ import LandingDemoActivityChart from '../../components/landing/LandingDemoActivi
 import LandingHeroProductPreview from '../../components/landing/LandingHeroProductPreview'
 import CertifiedExamsSection from '../../components/landing/CertifiedExamsSection'
 import PricingFeatureListItem from '../../components/landing/PricingFeatureListItem'
+import {
+  LandingFeatureTabs,
+  LandingHoverCard,
+  LandingWhyAccordion,
+} from '../../components/landing/LandingInteractiveCards'
 import { DEFAULT_SUBSCRIPTION_PLANS } from '../../constants/subscriptionPlans'
 import { normalizePlanId } from '../../lib/subscriptionPlanMarketing'
 import { isMarketingSectionVisible } from '../../lib/loginMarketingVisibility'
@@ -46,7 +51,7 @@ function LandingPlanCard({ plan, onCta }) {
   const display = useLandingPlanDisplay(plan, t, i18n)
   const isBasicTrial = normalizePlanId(plan) === 'basic'
   return (
-    <div className="rounded-2xl border border-white/10 bg-[#121212]/90 p-4 space-y-3 flex flex-col">
+    <div className="rounded-2xl border border-white/10 bg-[#121212]/90 p-4 space-y-3 flex flex-col motion-safe:transition motion-safe:duration-300 motion-safe:hover:-translate-y-1 hover:border-primary/35 hover:shadow-[0_16px_40px_-20px_rgba(0,229,176,0.45)]">
       <div>
         <div className="text-sm font-bold text-white">{display.title}</div>
         {display.meta.subtitle ? (
@@ -403,34 +408,11 @@ export default function Landing() {
         </header>
 
         {isMarketingSectionVisible(marketing?.why) && why.cards.length > 0 ? (
-          <section id="mx-why" className="space-y-4 scroll-mt-8">
-            <h2 className="text-xs uppercase tracking-wider text-gray-500 font-semibold">{why.heading}</h2>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {why.cards.map((x, i) => (
-                <div key={`why-${i}-${String(x.title).slice(0, 24)}`} className="rounded-2xl border border-white/10 bg-[#121212]/90 p-4 space-y-2">
-                  <div className="text-sm font-semibold text-white">{x.title}</div>
-                  <p className="text-xs text-gray-400 leading-relaxed">{x.body}</p>
-                </div>
-              ))}
-            </div>
-          </section>
+          <LandingWhyAccordion heading={why.heading} cards={why.cards} />
         ) : null}
 
         {isMarketingSectionVisible(marketing.features) && features.items.length > 0 ? (
-          <section id="mx-features" className="space-y-4 scroll-mt-24">
-            <h2 className="text-xs uppercase tracking-wider text-gray-500 font-semibold">{features.heading}</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              {features.items.map((x, i) => (
-                <div
-                  key={`feat-${i}`}
-                  className={`rounded-2xl border border-white/10 bg-gradient-to-br ${x.accent || 'from-sky-500/15'} to-[#101010] p-4 space-y-2 min-w-0`}
-                >
-                  <div className="text-sm font-semibold text-white leading-snug">{x.title}</div>
-                  <p className="text-xs text-gray-400 leading-relaxed">{x.body}</p>
-                </div>
-              ))}
-            </div>
-          </section>
+          <LandingFeatureTabs heading={features.heading} items={features.items} />
         ) : null}
 
         {isMarketingSectionVisible(marketing.steps) && steps.items.length > 0 ? (
@@ -438,14 +420,14 @@ export default function Landing() {
             <h2 className="text-xs uppercase tracking-wider text-gray-500 font-semibold">{steps.heading}</h2>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {steps.items.map((x, i) => (
-                <div
+                <LandingHoverCard
                   key={`step-${i}-${String(x.step)}`}
                   className="rounded-2xl border border-white/10 bg-[#121212]/90 p-4 space-y-2"
                 >
                   <div className="text-[11px] font-bold tabular-nums text-primary">{x.step}</div>
                   <div className="text-sm font-semibold text-white">{x.title}</div>
                   <p className="text-xs text-gray-400 leading-relaxed">{x.body}</p>
-                </div>
+                </LandingHoverCard>
               ))}
             </div>
           </section>
@@ -456,7 +438,7 @@ export default function Landing() {
         {showMarketplace ? (
           <section
             id="mx-marketplace"
-            className="scroll-mt-24 rounded-2xl border border-white/10 bg-[#121212]/90 p-6 sm:p-8 space-y-4"
+            className="scroll-mt-24 rounded-2xl border border-white/10 bg-[#121212]/90 p-6 sm:p-8 space-y-4 motion-safe:transition motion-safe:duration-300 motion-safe:hover:-translate-y-1 hover:border-primary/35 hover:shadow-[0_16px_40px_-20px_rgba(0,229,176,0.45)]"
           >
             <div className="text-xs uppercase tracking-wider text-gray-500 font-semibold">
               {t('landing.marketplace.badge')}
@@ -478,7 +460,7 @@ export default function Landing() {
         {showUniversities ? (
           <section
             id="mx-universities"
-            className="scroll-mt-24 rounded-2xl border border-white/10 bg-[#121212]/90 p-6 sm:p-8 space-y-4"
+            className="scroll-mt-24 rounded-2xl border border-white/10 bg-[#121212]/90 p-6 sm:p-8 space-y-4 motion-safe:transition motion-safe:duration-300 motion-safe:hover:-translate-y-1 hover:border-white/25 hover:shadow-[0_16px_40px_-20px_rgba(255,255,255,0.12)]"
           >
             <div className="text-xs uppercase tracking-wider text-gray-500 font-semibold">
               {t('landing.universities.badge')}
