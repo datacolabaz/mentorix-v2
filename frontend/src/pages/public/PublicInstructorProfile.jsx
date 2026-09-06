@@ -18,8 +18,6 @@ import { instructorRoleLabel, localizeNextSlotLabel } from '../../lib/marketplac
 import { localizeInstructorWrittenText } from '../../lib/instructorWrittenTextI18n'
 import { mapsDirectionsUrls } from '../../lib/mapsDirections'
 import { bakuMetroBySlug } from '@shared/bakuMetroStations.mjs'
-import { locationPhrases } from '../../lib/azerbaijanRegionI18n'
-import { replaceAzPhrases } from '../../lib/azPhraseMatch'
 import { resolveUiLocale } from '../../lib/uiLocale'
 
 function ProfileSection({ title, children, className = '' }) {
@@ -164,11 +162,6 @@ export default function PublicInstructorProfile() {
   )
   const certifications = localizeInstructorWrittenText(
     String(instructor?.discover_certifications || '').trim(),
-    locale,
-  )
-  const teacherAddress = replaceAzPhrases(
-    localizeInstructorWrittenText(String(instructor?.teacher_place_address || '').trim(), locale),
-    locationPhrases(),
     locale,
   )
   const directions = mapsDirectionsUrls(instructor?.latitude, instructor?.longitude)
@@ -371,7 +364,7 @@ export default function PublicInstructorProfile() {
               </ProfileSection>
             ) : null}
 
-            {teacherAddress || metroLabel || directions ? (
+            {metroLabel || directions ? (
               <ProfileSection title={t('marketplace.profile.meetingPoint')}>
                 <div className="space-y-2 text-sm text-gray-300 leading-relaxed">
                   {metroLabel ? (
@@ -380,7 +373,6 @@ export default function PublicInstructorProfile() {
                       <span className="font-semibold text-white">{metroLabel}</span>
                     </p>
                   ) : null}
-                  {teacherAddress ? <p className="whitespace-pre-wrap">{teacherAddress}</p> : null}
                   {directions ? (
                     <div className="flex flex-wrap gap-2 pt-1">
                       <a

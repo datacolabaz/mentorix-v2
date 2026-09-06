@@ -11,6 +11,7 @@ import {
 import { instructorDisplaySubject } from '../../lib/instructorDisplay'
 import { instructorRoleLabel, localizeNextSlotLabel } from '../../lib/marketplaceLocale'
 import useActiveLocale from '../../hooks/useActiveLocale'
+import { mapsDirectionsUrls } from '../../lib/mapsDirections'
 
 export default function TeacherMapQuickCard({
   instructor: p,
@@ -29,6 +30,7 @@ export default function TeacherMapQuickCard({
   const studentLine = formatStudentCount(p.active_student_count, t)
   const formats = deliveryFormatBadges(p, locale)
   const topBadge = showTopBadge(p)
+  const directions = mapsDirectionsUrls(p.latitude, p.longitude)
 
   return (
     <div className="rounded-2xl border-2 border-emerald-500/50 bg-gradient-to-br from-emerald-500/10 via-[#121212] to-[#121212] p-4 shadow-[0_0_24px_rgba(52,211,153,0.12)]">
@@ -139,8 +141,25 @@ export default function TeacherMapQuickCard({
             <p className="text-[11px] text-gray-500 mt-2">📅 {t('marketplace.card.applyForSlot')}</p>
           )}
 
-          {p.teacher_place_address_short ? (
-            <p className="text-[11px] text-gray-400 mt-1 truncate">📍 {p.teacher_place_address_short}</p>
+          {directions ? (
+            <div className="flex flex-wrap gap-2 mt-2">
+              <a
+                href={directions.google}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[11px] font-semibold text-primary hover:underline"
+              >
+                {t('marketplace.profile.googleMaps')}
+              </a>
+              <a
+                href={directions.waze}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[11px] font-semibold text-sky-300 hover:underline"
+              >
+                {t('marketplace.profile.waze')}
+              </a>
+            </div>
           ) : null}
 
           {p.latest_review_snippet ? (

@@ -10,6 +10,7 @@ import { instructorDisplaySubject } from '../../lib/instructorDisplay'
 import { localizeNextSlotLabel } from '../../lib/marketplaceLocale'
 import useActiveLocale from '../../hooks/useActiveLocale'
 import { bakuMetroBySlug } from '@shared/bakuMetroStations.mjs'
+import { mapsDirectionsUrls } from '../../lib/mapsDirections'
 
 export default function TeacherMapListCard({
   instructor: p,
@@ -38,6 +39,7 @@ export default function TeacherMapListCard({
     rating && rating.count > 0
       ? t('marketplace.card.ratingLabel', { avg: rating.avg, count: rating.count })
       : rating?.label
+  const directions = mapsDirectionsUrls(p.latitude, p.longitude)
 
   return (
     <div
@@ -158,6 +160,26 @@ export default function TeacherMapListCard({
         >
           {t('marketplace.card.whatsapp')}
         </button>
+        {directions ? (
+          <>
+            <a
+              href={directions.google}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[10px] font-bold px-2.5 py-2 rounded-lg whitespace-nowrap text-center border border-primary/40 bg-primary/10 text-primary hover:bg-primary/20"
+            >
+              {t('marketplace.profile.googleMaps')}
+            </a>
+            <a
+              href={directions.waze}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[10px] font-bold px-2.5 py-2 rounded-lg whitespace-nowrap text-center border border-sky-500/40 bg-sky-500/10 text-sky-300 hover:bg-sky-500/20"
+            >
+              {t('marketplace.profile.waze')}
+            </a>
+          </>
+        ) : null}
       </div>
     </div>
   )
