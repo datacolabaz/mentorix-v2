@@ -2563,7 +2563,26 @@
       "ratePerHour": "{{rate}} AZN/saat",
       "viewProfile": "Profilə bax →",
       "trialLesson": "⚡ Sınaq dərsi",
-      "whatsapp": "💬 WhatsApp"
+      "whatsapp": "💬 WhatsApp",
+      "reviewCount": "{{count}} rəy",
+      "activeStudents": "{{count}} aktiv tələbə",
+      "activeStudentsMany": "100+ aktiv tələbə",
+      "quickView": "Tez baxış"
+    },
+    "reviews": {
+      "title": "Tələbə rəyləri",
+      "empty": "Hələ rəy yoxdur.",
+      "loginToWrite": "Rəy yazmaq üçün daxil olun.",
+      "checking": "Yoxlanılır…",
+      "rating": "Reytinq",
+      "yourReview": "Rəyiniz (min. 10 simvol)",
+      "placeholder": "Dərs təcrübənizi qısaca yazın…",
+      "sending": "Göndərilir…",
+      "update": "Rəyi yenilə",
+      "submit": "Rəy göndər",
+      "saved": "Rəyiniz yadda saxlanıldı. Təşəkkürlər!",
+      "sendFailed": "Göndərilmədi",
+      "crmOnly": "Rəy yalnız təsdiqlənmiş CRM tələbələr üçündür — bu müəllimlə qrupda dərs almış və ya ödəniş etmiş olmalısınız. Qonaq imtahan iştirakçıları rəy yaza bilməz."
     },
     "profile": {
       "backToSearch": "← Axtarışa qayıt",

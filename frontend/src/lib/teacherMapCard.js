@@ -32,15 +32,21 @@ export function formatReviewAvg(avg) {
   return n.toFixed(1)
 }
 
-export function formatReviewCount(count) {
+export function formatReviewCount(count, t) {
   const n = Number(count) || 0
   if (n <= 0) return null
+  if (typeof t === 'function') return t('marketplace.card.reviewCount', { count: n })
   return `${n} rəy`
 }
 
-export function formatStudentCount(count) {
+export function formatStudentCount(count, t) {
   const n = Number(count) || 0
   if (n <= 0) return null
+  if (typeof t === 'function') {
+    return n >= 100
+      ? t('marketplace.card.activeStudentsMany')
+      : t('marketplace.card.activeStudents', { count: n })
+  }
   if (n >= 100) return '100+ aktiv tələbə'
   return `${n} aktiv tələbə`
 }
@@ -54,9 +60,9 @@ export function deliveryFormatBadges(instructor, lang = 'az') {
   return localizeFormatBadges(raw, lang)
 }
 
-export function ratingStarsLine(instructor) {
+export function ratingStarsLine(instructor, t) {
   const avg = formatReviewAvg(instructor?.review_avg)
-  const count = formatReviewCount(instructor?.review_count)
+  const count = formatReviewCount(instructor?.review_count, t)
   if (!avg && !count) return null
   if (avg && count) return `⭐ ${avg} (${count})`
   if (avg) return `⭐ ${avg}`
@@ -64,11 +70,15 @@ export function ratingStarsLine(instructor) {
 }
 
 /** Tez baxış kartı: fənn altında qızıl ulduz sətri */
-export function teacherRatingParts(instructor) {
+export function teacherRatingParts(instructor, t) {
   const avg = formatReviewAvg(instructor?.review_avg)
   const count = Number(instructor?.review_count) || 0
   if (avg && count > 0) {
-    return { avg, count, label: `${avg} (${count} rəy)` }
+    const label =
+      typeof t === 'function'
+        ? `${avg} (${t('marketplace.card.reviewCount', { count })})`
+        : `${avg} (${count} rəy)`
+    return { avg, count, label }
   }
   if (avg) {
     return { avg, count: 0, label: avg }

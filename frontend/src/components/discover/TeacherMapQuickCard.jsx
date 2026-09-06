@@ -25,8 +25,8 @@ export default function TeacherMapQuickCard({
   const locale = useActiveLocale()
   if (!p) return null
   const subjectLine = instructorDisplaySubject(p, locale) || p.subject
-  const rating = teacherRatingParts(p)
-  const studentLine = formatStudentCount(p.active_student_count)
+  const rating = teacherRatingParts(p, t)
+  const studentLine = formatStudentCount(p.active_student_count, t)
   const formats = deliveryFormatBadges(p, locale)
   const topBadge = showTopBadge(p)
 
@@ -34,7 +34,9 @@ export default function TeacherMapQuickCard({
     <div className="rounded-2xl border-2 border-emerald-500/50 bg-gradient-to-br from-emerald-500/10 via-[#121212] to-[#121212] p-4 shadow-[0_0_24px_rgba(52,211,153,0.12)]">
       <div className="flex items-center justify-between gap-2 mb-3">
         <div className="flex items-center gap-2 min-w-0">
-          <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">Tez baxış</p>
+          <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">
+            {t('marketplace.card.quickView')}
+          </p>
           {topBadge ? (
             <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-violet-500/20 text-violet-300">
               🔥 TOP
@@ -74,7 +76,7 @@ export default function TeacherMapQuickCard({
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
               <h3 className="font-display font-bold text-base text-white truncate">{p.full_name}</h3>
-              <p className="text-xs text-gray-400 mt-0.5 truncate">{subjectLine || 'Fənn göstərilməyib'}</p>
+              <p className="text-xs text-gray-400 mt-0.5 truncate">{subjectLine || t('marketplace.card.noSubject')}</p>
               {rating ? (
                 <div className="mt-1.5 flex items-center gap-1.5">
                   <span className="text-amber-400 text-sm leading-none" aria-hidden>
@@ -83,13 +85,13 @@ export default function TeacherMapQuickCard({
                   <span className="text-sm font-bold text-amber-300 tabular-nums">{rating.label}</span>
                 </div>
               ) : (
-                <p className="mt-1.5 text-xs text-gray-500">Hələ rəy yoxdur</p>
+                <p className="mt-1.5 text-xs text-gray-500">{t('marketplace.card.noReviews')}</p>
               )}
             </div>
             <span className="text-xs font-bold text-primary shrink-0 text-right">
               {formatDistanceKm(p.distanceKm ?? p.distance_km)}
               <span className="block text-[10px] font-normal text-gray-500">
-                {distanceOrigin === 'user' ? 'sizdən' : 'təxmini'}
+                {distanceOrigin === 'user' ? t('marketplace.card.fromYou') : t('marketplace.card.approximate')}
               </span>
             </span>
           </div>

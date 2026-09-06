@@ -25,7 +25,7 @@ export default function TeacherMapListCard({
   const { t } = useTranslation()
   const locale = useActiveLocale()
   const subjectLine = instructorDisplaySubject(p, locale) || p.subject
-  const rating = teacherRatingParts(p)
+  const rating = teacherRatingParts(p, t)
   const formats = deliveryFormatBadges(p, locale)
   const topBadge = showTopBadge(p)
   const districtLabel =

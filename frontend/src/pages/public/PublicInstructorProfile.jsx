@@ -138,8 +138,8 @@ export default function PublicInstructorProfile() {
     }
   }
 
-  const ratingLine = instructor ? ratingStarsLine(instructor) : null
-  const studentLine = instructor ? formatStudentCount(instructor.active_student_count) : null
+  const ratingLine = instructor ? ratingStarsLine(instructor, t) : null
+  const studentLine = instructor ? formatStudentCount(instructor.active_student_count, t) : null
   const formatBadges = instructor ? deliveryFormatBadges(instructor, locale) : []
 
   const subjectLine = instructor ? instructorDisplaySubject(instructor, locale) : null

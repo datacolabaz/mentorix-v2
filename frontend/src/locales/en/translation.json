@@ -2742,7 +2742,26 @@
       "ratePerHour": "{{rate}} AZN/hour",
       "viewProfile": "View profile →",
       "trialLesson": "⚡ Trial lesson",
-      "whatsapp": "💬 WhatsApp"
+      "whatsapp": "💬 WhatsApp",
+      "reviewCount": "{{count}} reviews",
+      "activeStudents": "{{count}} active students",
+      "activeStudentsMany": "100+ active students",
+      "quickView": "Quick view"
+    },
+    "reviews": {
+      "title": "Student reviews",
+      "empty": "No reviews yet.",
+      "loginToWrite": "Log in to write a review.",
+      "checking": "Checking…",
+      "rating": "Rating",
+      "yourReview": "Your review (min. 10 characters)",
+      "placeholder": "Briefly describe your lesson experience…",
+      "sending": "Sending…",
+      "update": "Update review",
+      "submit": "Submit review",
+      "saved": "Your review was saved. Thank you!",
+      "sendFailed": "Could not send",
+      "crmOnly": "Reviews are only for confirmed CRM students — you must have taken group lessons or paid this teacher. Guest exam participants cannot write a review."
     },
     "profile": {
       "backToSearch": "← Back to search",
