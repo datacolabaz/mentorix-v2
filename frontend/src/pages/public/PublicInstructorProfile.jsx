@@ -218,6 +218,9 @@ export default function PublicInstructorProfile() {
                   size="xl"
                   kind={instructor.map_profile_kind}
                   ringClassName="ring-4 ring-primary/40"
+                  showPresence
+                  isOnline={instructor.is_online}
+                  lastActivityAt={instructor.last_activity_at}
                 />
                 <div className="w-full">
                   <div className="flex flex-wrap justify-center gap-1.5 mb-2">
@@ -234,6 +237,11 @@ export default function PublicInstructorProfile() {
                     {instructor.discover_verified ? (
                       <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-400">
                         {t('marketplace.profile.verified')}
+                      </span>
+                    ) : null}
+                    {instructor.is_online ? (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-400/40">
+                        ● {t('marketplace.card.onlineNow')}
                       </span>
                     ) : null}
                   </div>

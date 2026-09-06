@@ -2762,6 +2762,7 @@
       "approximate": "approx.",
       "noSubject": "No subject listed",
       "noReviews": "No reviews yet",
+      "onlineNow": "On the platform now",
       "ratingLabel": "{{avg}} ({{count}} reviews)",
       "ratePerHour": "{{rate}} AZN/hour",
       "viewProfile": "View profile →",

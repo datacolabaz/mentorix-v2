@@ -129,6 +129,7 @@ const getInstructorsInMapView = async (req, res) => {
          ip.map_profile_kind,
          ip.avatar_url,
          ip.nearest_metro,
+         u.last_activity_at,
          COALESCE(s.plan, 'basic') AS plan,
          ${PUBLIC_DISCOVER_LISTING_SQL}
        FROM users u

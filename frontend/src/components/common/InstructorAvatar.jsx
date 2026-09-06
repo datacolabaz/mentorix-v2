@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { resolveApiAssetUrl } from '../../lib/apiAssetUrl'
 import { instructorInitials } from '../../lib/instructorInitials'
+import { resolveOnlineStatus } from '../../lib/userPresence'
+import PresenceDot from './PresenceDot'
 
 const SIZE = {
   xs: 'h-8 w-8 text-[10px]',
@@ -20,6 +22,9 @@ export default function InstructorAvatar({
   className = '',
   ringClassName = 'ring-2 ring-white/20',
   kind,
+  isOnline,
+  lastActivityAt,
+  showPresence = false,
 }) {
   const sz = SIZE[size] || SIZE.md
   const src = avatarUrl ? resolveApiAssetUrl(avatarUrl) : ''
@@ -35,18 +40,15 @@ export default function InstructorAvatar({
     setImgError(false)
   }, [src])
 
-  if (showPhoto) {
-    return (
-      <img
-        src={src}
-        alt=""
-        className={[sz, 'rounded-full object-cover shrink-0', ringClassName, className].join(' ')}
-        onError={() => setImgError(true)}
-      />
-    )
-  }
-
-  return (
+  const online = resolveOnlineStatus({ is_online: isOnline, last_activity_at: lastActivityAt })
+  const face = showPhoto ? (
+    <img
+      src={src}
+      alt=""
+      className={[sz, 'rounded-full object-cover shrink-0', ringClassName, className].join(' ')}
+      onError={() => setImgError(true)}
+    />
+  ) : (
     <span
       className={[
         sz,
@@ -58,6 +60,20 @@ export default function InstructorAvatar({
       aria-hidden
     >
       {initials}
+    </span>
+  )
+
+  if (!showPresence || !online) return face
+
+  return (
+    <span className="relative inline-block shrink-0">
+      {face}
+      <PresenceDot
+        isOnline
+        lastActivityAt={lastActivityAt}
+        size="md"
+        className="absolute -bottom-0.5 -right-0.5 ring-2 ring-[#0b0b0b]"
+      />
     </span>
   )
 }

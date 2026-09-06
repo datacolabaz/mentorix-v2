@@ -61,12 +61,20 @@ export default function TeacherMapListCard({
           size="sm"
           kind={p.map_profile_kind}
           className="mt-0.5 shrink-0"
+          showPresence
+          isOnline={p.is_online}
+          lastActivityAt={p.last_activity_at}
         />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap gap-1 mb-1">
             {topBadge ? (
               <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-violet-500/20 text-violet-300">
                 {t('marketplace.card.topBadge')}
+              </span>
+            ) : null}
+            {p.is_online ? (
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-400/40">
+                ● {t('marketplace.card.onlineNow')}
               </span>
             ) : null}
             {districtLabel ? (

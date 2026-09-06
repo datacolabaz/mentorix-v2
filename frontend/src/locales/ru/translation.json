@@ -2757,6 +2757,7 @@
       "approximate": "приблизит.",
       "noSubject": "Предмет не указан",
       "noReviews": "Пока нет отзывов",
+      "onlineNow": "Сейчас на платформе",
       "ratingLabel": "{{avg}} ({{count}} отз.)",
       "ratePerHour": "{{rate}} AZN/час",
       "viewProfile": "Смотреть профиль →",

@@ -73,11 +73,21 @@ export default function TeacherMapQuickCard({
           size="md"
           kind={p.map_profile_kind}
           className="shrink-0"
+          showPresence
+          isOnline={p.is_online}
+          lastActivityAt={p.last_activity_at}
         />
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <h3 className="font-display font-bold text-base text-white truncate">{p.full_name}</h3>
+              <div className="flex flex-wrap items-center gap-1.5">
+                <h3 className="font-display font-bold text-base text-white truncate">{p.full_name}</h3>
+                {p.is_online ? (
+                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-400/40">
+                    ● {t('marketplace.card.onlineNow')}
+                  </span>
+                ) : null}
+              </div>
               <p className="text-xs text-gray-400 mt-0.5 truncate">{subjectLine || t('marketplace.card.noSubject')}</p>
               {rating ? (
                 <div className="mt-1.5 flex items-center gap-1.5">
