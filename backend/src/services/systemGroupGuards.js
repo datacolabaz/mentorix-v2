@@ -1,6 +1,6 @@
 /**
  * Sistem iştirakçı qrupları: analitika bütövlüyü və ödəniş/bildiriş istisnaları.
- * Paket limiti (Variant A): instructor_students üzrə sayılır — ayrıca burada deyil.
+ * Paket limiti: Tələbələrim-də görünən enrollment-lar (usageStudentsSync).
  */
 
 const SYSTEM_GROUP_IMMUTABLE_MSG =
