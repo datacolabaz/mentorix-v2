@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
-import { mapsDirectionsUrls } from './mapsDirections.js'
+import { mapsDirectionsUrls, mapsPlaceUrls, WAZE_LIVE_MAP_URL } from './mapsDirections.js'
 
 describe('mapsDirectionsUrls', () => {
   it('builds Google and Waze links', () => {
@@ -13,5 +13,14 @@ describe('mapsDirectionsUrls', () => {
 
   it('returns null for invalid coords', () => {
     assert.equal(mapsDirectionsUrls(null, 49), null)
+  })
+})
+
+describe('mapsPlaceUrls', () => {
+  it('opens Waze live-map without navigate=yes', () => {
+    const urls = mapsPlaceUrls(40.4028, 49.8715)
+    assert.ok(urls.waze.includes('live-map'))
+    assert.ok(!urls.waze.includes('navigate=yes'))
+    assert.equal(urls.wazePick, WAZE_LIVE_MAP_URL)
   })
 })
