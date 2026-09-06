@@ -54,7 +54,7 @@ export function useLandingHero(marketing, t, i18n) {
       existing_account: apiHero.existing_account || t('landing.hero.haveAccount'),
       marketplace_cta_label: apiHero.marketplace_cta_label || t('landing.hero.marketplaceCta'),
     }
-  }, [useI18n, apiHero, t])
+  }, [useI18n, apiHero, t, i18n.language])
 }
 
 export function useLandingWhy(marketing, t, i18n) {

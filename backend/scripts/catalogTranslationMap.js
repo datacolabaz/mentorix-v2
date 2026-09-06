@@ -3,36 +3,37 @@ const CATEGORY_TRANSLATIONS = {
   'beynelxalq-imtahanlar': {
     az: 'Beynəlxalq İmtahanlara Hazırlıq',
     ru: 'Подготовка к международным экзаменам',
+    en: 'International exam prep',
   },
-  'dil-imtahanlari': { az: 'Dil İmtahanları', ru: 'Языковые экзамены' },
-  'universitet-qebulu': { az: 'Universitet Qəbulu', ru: 'Поступление в университет' },
-  'alman-dili': { az: 'Alman Dili', ru: 'Немецкий язык' },
-  'fransiz-dili': { az: 'Fransız Dili', ru: 'Французский язык' },
-  'it-proqramlasdirma': { az: 'İT və Proqramlaşdırma', ru: 'IT и программирование' },
-  python: { az: 'Python', ru: 'Python' },
-  'sql-it': { az: 'SQL', ru: 'SQL' },
-  'web-development': { az: 'Web Development', ru: 'Веб-разработка' },
-  'ai-it': { az: 'AI', ru: 'Искусственный интеллект' },
-  'data-analytics': { az: 'Data Analytics', ru: 'Аналитика данных' },
-  'data-analytics-core': { az: 'Data & Analytics', ru: 'Данные и аналитика' },
-  'cloud-devops': { az: 'Cloud & DevOps', ru: 'Cloud и DevOps' },
-  'cloud-platforms': { az: 'Cloud Platforms', ru: 'Облачные платформы' },
-  'devops-tools': { az: 'DevOps Tools', ru: 'Инструменты DevOps' },
-  'cyber-security': { az: 'Cyber Security', ru: 'Кибербезопасность' },
-  'cyber-security-core': { az: 'Security', ru: 'Безопасность' },
-  'biznes-idareetme': { az: 'Biznes və Layihə İdarəetməsi', ru: 'Бизнес и управление проектами' },
-  'biznes-core': { az: 'Management', ru: 'Менеджмент' },
-  'ofis-bacariqlari': { az: 'Ofis Bacarıqları', ru: 'Офисные навыки' },
-  'microsoft-office': { az: 'Microsoft Office', ru: 'Microsoft Office' },
-  'google-workspace': { az: 'Google Workspace', ru: 'Google Workspace' },
-  dizayn: { az: 'Dizayn', ru: 'Дизайн' },
-  'design-tools': { az: 'Design Tools', ru: 'Инструменты дизайна' },
-  'reqemsal-marketinq': { az: 'Rəqəmsal Marketinq', ru: 'Цифровой маркетинг' },
-  'marketing-core': { az: 'Marketing', ru: 'Маркетинг' },
-  'maliyye-muhasibat': { az: 'Maliyyə və Mühasibat', ru: 'Финансы и бухгалтерия' },
-  'finance-core': { az: 'Finance', ru: 'Финансы' },
-  'diger-bacariqlar': { az: 'Digər Bacarıqlar', ru: 'Другие навыки' },
-  'other-core': { az: 'Professional Skills', ru: 'Профессиональные навыки' },
+  'dil-imtahanlari': { az: 'Dil İmtahanları', ru: 'Языковые экзамены', en: 'Language exams' },
+  'universitet-qebulu': { az: 'Universitet Qəbulu', ru: 'Поступление в университет', en: 'University admission' },
+  'alman-dili': { az: 'Alman Dili', ru: 'Немецкий язык', en: 'German' },
+  'fransiz-dili': { az: 'Fransız Dili', ru: 'Французский язык', en: 'French' },
+  'it-proqramlasdirma': { az: 'İT və Proqramlaşdırma', ru: 'IT и программирование', en: 'IT and Programming' },
+  python: { az: 'Python', ru: 'Python', en: 'Python' },
+  'sql-it': { az: 'SQL', ru: 'SQL', en: 'SQL' },
+  'web-development': { az: 'Web Development', ru: 'Веб-разработка', en: 'Web Development' },
+  'ai-it': { az: 'AI', ru: 'Искусственный интеллект', en: 'AI' },
+  'data-analytics': { az: 'Data Analytics', ru: 'Аналитика данных', en: 'Data Analytics' },
+  'data-analytics-core': { az: 'Data & Analytics', ru: 'Данные и аналитика', en: 'Data & Analytics' },
+  'cloud-devops': { az: 'Cloud & DevOps', ru: 'Cloud и DevOps', en: 'Cloud & DevOps' },
+  'cloud-platforms': { az: 'Cloud Platforms', ru: 'Облачные платформы', en: 'Cloud Platforms' },
+  'devops-tools': { az: 'DevOps Tools', ru: 'Инструменты DevOps', en: 'DevOps Tools' },
+  'cyber-security': { az: 'Cyber Security', ru: 'Кибербезопасность', en: 'Cyber Security' },
+  'cyber-security-core': { az: 'Security', ru: 'Безопасность', en: 'Security' },
+  'biznes-idareetme': { az: 'Biznes və Layihə İdarəetməsi', ru: 'Бизнес и управление проектами', en: 'Business and Project Management' },
+  'biznes-core': { az: 'Management', ru: 'Менеджмент', en: 'Management' },
+  'ofis-bacariqlari': { az: 'Ofis Bacarıqları', ru: 'Офисные навыки', en: 'Office Skills' },
+  'microsoft-office': { az: 'Microsoft Office', ru: 'Microsoft Office', en: 'Microsoft Office' },
+  'google-workspace': { az: 'Google Workspace', ru: 'Google Workspace', en: 'Google Workspace' },
+  dizayn: { az: 'Dizayn', ru: 'Дизайн', en: 'Design' },
+  'design-tools': { az: 'Design Tools', ru: 'Инструменты дизайна', en: 'Design Tools' },
+  'reqemsal-marketinq': { az: 'Rəqəmsal Marketinq', ru: 'Цифровой маркетинг', en: 'Digital Marketing' },
+  'marketing-core': { az: 'Marketing', ru: 'Маркетинг', en: 'Marketing' },
+  'maliyye-muhasibat': { az: 'Maliyyə və Mühasibat', ru: 'Финансы и бухгалтерия', en: 'Finance and Accounting' },
+  'finance-core': { az: 'Finance', ru: 'Финансы', en: 'Finance' },
+  'diger-bacariqlar': { az: 'Digər Bacarıqlar', ru: 'Другие навыки', en: 'Other skills' },
+  'other-core': { az: 'Professional Skills', ru: 'Профессиональные навыки', en: 'Professional Skills' },
 };
 
 const CAREER_PATH_TRANSLATIONS = {
@@ -105,8 +106,8 @@ function ruTitleForExam(title) {
 
 function translationsJsonForCategory(slug, fallbackName) {
   const m = CATEGORY_TRANSLATIONS[slug];
-  if (!m) return JSON.stringify({ az: fallbackName, ru: fallbackName });
-  return JSON.stringify({ az: m.az || fallbackName, ru: m.ru || fallbackName });
+  if (!m) return JSON.stringify({ az: fallbackName, ru: fallbackName, en: fallbackName });
+  return JSON.stringify({ az: m.az || fallbackName, ru: m.ru || fallbackName, en: m.en || fallbackName });
 }
 
 function translationsJsonForCareerPath(slug, fallbackName, fallbackDesc) {

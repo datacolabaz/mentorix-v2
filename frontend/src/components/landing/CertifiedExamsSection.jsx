@@ -60,7 +60,9 @@ export default function CertifiedExamsSection({ onHowItWorks }) {
                 <div className="text-2xl mb-2" aria-hidden>
                   {cat.icon}
                 </div>
-                <p className="text-sm font-semibold text-white">{cat.name}</p>
+                <p className="text-sm font-semibold text-white">
+                  {t(`certifiedExams.categories.${cat.slug}`, { defaultValue: cat.name })}
+                </p>
                 <p className="text-[11px] text-primary/90 mt-1 tabular-nums">{assessmentLabel(cat.assessment_count)}</p>
               </Link>
             ))}

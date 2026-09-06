@@ -704,14 +704,14 @@
       "mainNav": "Main navigation"
     },
     "hero": {
-      "pill": "Education ecosystem — Mentorix",
-      "title": "Teacher, student, and parent — one education platform",
-      "subtitle": "Assignments and exams, chat, payment tracking, parent notifications, and teacher search — all in one place.",
-      "startFree": "Start free (14-day trial)",
-      "howItWorks": "How it works",
+      "pill": "Teachers' digital assistant",
+      "title": "Spend time with your students, leave management to Mentorix",
+      "subtitle": "Create exams, send assignments, track payments, and manage parent communication from one platform.",
+      "startFree": "Start free",
+      "howItWorks": "How it works?",
       "demo": "View demo",
       "haveAccount": "I already have an account — go to sign in",
-      "marketplaceCta": "Find a teacher / trainer"
+      "marketplaceCta": "Find a teacher / trainer (with map)"
     },
     "activity": {
       "title": "Live activity",
@@ -803,11 +803,11 @@
         },
         {
           "title": "More structured than WhatsApp",
-          "body": "Assignments, exams, and important alerts do not get lost in chat. Everything has a place and stays trackable."
+          "body": "Assignments, exams, and important alerts do not get lost in chat. Everything has its place and stays trackable."
         },
         {
-          "title": "Automates the busywork",
-          "body": "Package expiry, payment confirmations, and SMS reminders run automatically instead of by hand."
+          "title": "Automates manual work",
+          "body": "Recurring tasks for package expiry, payment confirmation, and SMS reminders run automatically."
         }
       ]
     },
@@ -928,6 +928,8 @@
           "Payment tracking",
           "Parent notifications",
           "Map visibility",
+          "Group chat",
+          "Private chat",
           "Live lesson — 20 participants · Recording: ✓ (local)"
         ]
       },
@@ -945,6 +947,8 @@
           "Parent notifications",
           "Map visibility",
           "Detailed reports",
+          "Group chat",
+          "Private chat",
           "Live lesson — 50 participants · Recording: ✓ (local)"
         ]
       },
@@ -963,6 +967,8 @@
           "Map visibility",
           "Detailed reports",
           "Priority support",
+          "Group chat",
+          "Private chat",
           "Live lesson — unlimited participants · Recording: ✓ (local)"
         ]
       }
@@ -2869,6 +2875,19 @@
     "description": "From international exams to IT, Data Analytics, Cloud, and other professional skills — pick a field, take the exam, and earn a certificate that verifies with QR.",
     "assessmentOne": "{{count}} Assessment",
     "assessmentOther": "{{count}} Assessments",
+    "categories": {
+      "beynelxalq-imtahanlar": "International exam prep",
+      "it-proqramlasdirma": "IT and Programming",
+      "data-analytics": "Data Analytics",
+      "cloud-devops": "Cloud & DevOps",
+      "cyber-security": "Cyber Security",
+      "biznes-idareetme": "Business and Project Management",
+      "ofis-bacariqlari": "Office Skills",
+      "dizayn": "Design",
+      "reqemsal-marketinq": "Digital Marketing",
+      "maliyye-muhasibat": "Finance and Accounting",
+      "diger-bacariqlar": "Other skills"
+    },
     "statsCertificates": "certificates issued",
     "statsActive": "active assessments",
     "statsLine": "{{certificates}} certificates issued · {{exams}} active assessments",

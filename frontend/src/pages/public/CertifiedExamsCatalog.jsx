@@ -99,7 +99,7 @@ export default function CertifiedExamsCatalog() {
                   {cat.icon || '📚'}
                 </div>
                 <h2 className="text-base font-semibold text-white group-hover:text-primary transition-colors">
-                  {cat.name}
+                  {t(`certifiedExams.categories.${cat.slug}`, { defaultValue: cat.name })}
                 </h2>
                 <p className="text-sm text-primary/90 mt-2 tabular-nums">{assessmentLabel(cat.assessment_count)}</p>
                 {cat.description ? (

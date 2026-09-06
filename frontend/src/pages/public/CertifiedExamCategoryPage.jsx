@@ -260,7 +260,9 @@ export default function CertifiedExamCategoryPage() {
               <div className="text-3xl" aria-hidden>
                 {category.icon || '📚'}
               </div>
-              <h1 className="text-2xl font-semibold text-white">{category.name}</h1>
+              <h1 className="text-2xl font-semibold text-white">
+                {t(`certifiedExams.categories.${category.slug}`, { defaultValue: category.name })}
+              </h1>
               {category.description ? <p className="text-sm text-gray-400">{category.description}</p> : null}
             </div>
 
