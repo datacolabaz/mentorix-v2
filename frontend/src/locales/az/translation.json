@@ -2567,7 +2567,10 @@
       "reviewCount": "{{count}} rəy",
       "activeStudents": "{{count}} aktiv tələbə",
       "activeStudentsMany": "100+ aktiv tələbə",
-      "quickView": "Tez baxış"
+      "quickView": "Tez baxış",
+      "showOnMap": "Xəritədə göstər →",
+      "close": "Bağla",
+      "applyForSlot": "Boş vaxt üçün müraciət göndərin"
     },
     "reviews": {
       "title": "Tələbə rəyləri",

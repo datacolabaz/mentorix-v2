@@ -1,4 +1,4 @@
-import { resolveUiLocale } from './uiLocale'
+import { resolveUiLocale } from './uiLocale.js'
 
 /** Canonical AZ category name → { en, ru }. Unlisted names stay as-is (already English). */
 const BY_AZ = {
@@ -89,4 +89,9 @@ export function localizeTeachingCategoryList(names, lang) {
 
 export function categoryNodeLabel(node, lang) {
   return localizeTeachingCategoryName(node?.name_az || node?.name || '', lang)
+}
+
+/** Longest-first AZ category names for replacing inside free-text (bio, education). */
+export function teachingCategoryPhrases() {
+  return Object.entries(BY_AZ).map(([az, tr]) => ({ az, en: tr.en, ru: tr.ru, wholeWord: true }))
 }

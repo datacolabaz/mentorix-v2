@@ -2741,7 +2741,10 @@
       "reviewCount": "{{count}} отзывов",
       "activeStudents": "{{count}} активных учеников",
       "activeStudentsMany": "100+ активных учеников",
-      "quickView": "Быстрый просмотр"
+      "quickView": "Быстрый просмотр",
+      "showOnMap": "Показать на карте →",
+      "close": "Закрыть",
+      "applyForSlot": "Отправьте заявку на свободное время"
     },
     "reviews": {
       "title": "Отзывы учеников",

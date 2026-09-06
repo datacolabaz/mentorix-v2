@@ -205,3 +205,15 @@ export function instructorLocationBadgeI18n(region, bakuDistrict, lang) {
   if (r) return regionDisplayName(r, locale)
   return null
 }
+
+/** Region + Baku district names for replacing inside address / free-text. */
+export function locationPhrases() {
+  const rows = []
+  for (const [az, en] of Object.entries(REGION_EN)) {
+    rows.push({ az, en, ru: REGION_RU[az], wholeWord: true })
+  }
+  for (const [az, ru] of Object.entries(DISTRICT_RU)) {
+    rows.push({ az, en: az, ru, wholeWord: true })
+  }
+  return rows
+}

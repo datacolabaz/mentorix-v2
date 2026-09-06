@@ -15,6 +15,9 @@ import { useToast } from '../../components/common/Toast'
 import { ratingStarsLine, formatStudentCount, deliveryFormatBadges, showTopBadge } from '../../lib/teacherMapCard'
 import { localizeTeachingCategoryList } from '../../lib/teachingCategoryI18n'
 import { instructorRoleLabel, localizeNextSlotLabel } from '../../lib/marketplaceLocale'
+import { localizeInstructorWrittenText } from '../../lib/instructorWrittenTextI18n'
+import { locationPhrases } from '../../lib/azerbaijanRegionI18n'
+import { replaceAzPhrases } from '../../lib/azPhraseMatch'
 import { resolveUiLocale } from '../../lib/uiLocale'
 
 function ProfileSection({ title, children, className = '' }) {
@@ -71,7 +74,7 @@ export default function PublicInstructorProfile() {
           const profilePath = `/teachers/${id}`
           const subject = instructorDisplaySubject(inst, locale) || inst.subject || ''
           const bio =
-            inst.discover_bio?.slice(0, 160) ||
+            localizeInstructorWrittenText(inst.discover_bio || '', locale).slice(0, 160) ||
             t('marketplace.profile.seoDescription', { name: inst.full_name, subject })
           setInstructor(inst)
           setPageSeo({
@@ -86,7 +89,9 @@ export default function PublicInstructorProfile() {
             ],
             person: {
               name: inst.full_name,
-              description: inst.discover_bio || `${inst.full_name} — ${subject}`,
+              description:
+                localizeInstructorWrittenText(inst.discover_bio || '', locale) ||
+                `${inst.full_name} — ${subject}`,
               url: profilePath,
               image: inst.avatar_url ? resolveApiAssetUrl(inst.avatar_url) : undefined,
               jobTitle: subject || instructorRoleLabel(inst.kind, locale),
@@ -147,9 +152,23 @@ export default function PublicInstructorProfile() {
     () => (instructor ? localizeTeachingCategoryList(expertiseTags(instructor), locale) : []),
     [instructor, locale],
   )
-  const bio = String(instructor?.bio || instructor?.discover_bio || '').trim()
-  const education = String(instructor?.education || instructor?.discover_education || '').trim()
-  const certifications = String(instructor?.discover_certifications || '').trim()
+  const bio = localizeInstructorWrittenText(
+    String(instructor?.bio || instructor?.discover_bio || '').trim(),
+    locale,
+  )
+  const education = localizeInstructorWrittenText(
+    String(instructor?.education || instructor?.discover_education || '').trim(),
+    locale,
+  )
+  const certifications = localizeInstructorWrittenText(
+    String(instructor?.discover_certifications || '').trim(),
+    locale,
+  )
+  const teacherAddress = replaceAzPhrases(
+    localizeInstructorWrittenText(String(instructor?.teacher_place_address || '').trim(), locale),
+    locationPhrases(),
+    locale,
+  )
   const experienceYears =
     instructor?.experience_years != null && Number.isFinite(Number(instructor.experience_years))
       ? Number(instructor.experience_years)
@@ -346,9 +365,9 @@ export default function PublicInstructorProfile() {
               </ProfileSection>
             ) : null}
 
-            {instructor.teacher_place_address ? (
+            {teacherAddress ? (
               <ProfileSection title={t('marketplace.profile.address')}>
-                <p className="text-sm text-gray-300 leading-relaxed">{instructor.teacher_place_address}</p>
+                <p className="text-sm text-gray-300 leading-relaxed">{teacherAddress}</p>
               </ProfileSection>
             ) : null}
           </article>

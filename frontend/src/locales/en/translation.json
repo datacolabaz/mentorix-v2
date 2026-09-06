@@ -2746,7 +2746,10 @@
       "reviewCount": "{{count}} reviews",
       "activeStudents": "{{count}} active students",
       "activeStudentsMany": "100+ active students",
-      "quickView": "Quick view"
+      "quickView": "Quick view",
+      "showOnMap": "Show on map →",
+      "close": "Close",
+      "applyForSlot": "Send an inquiry for an available time"
     },
     "reviews": {
       "title": "Student reviews",

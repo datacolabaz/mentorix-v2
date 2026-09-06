@@ -9,7 +9,7 @@ import {
   teacherRatingParts,
 } from '../../lib/teacherMapCard'
 import { instructorDisplaySubject } from '../../lib/instructorDisplay'
-import { instructorRoleLabel } from '../../lib/marketplaceLocale'
+import { instructorRoleLabel, localizeNextSlotLabel } from '../../lib/marketplaceLocale'
 import useActiveLocale from '../../hooks/useActiveLocale'
 
 export default function TeacherMapQuickCard({
@@ -39,7 +39,7 @@ export default function TeacherMapQuickCard({
           </p>
           {topBadge ? (
             <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-violet-500/20 text-violet-300">
-              🔥 TOP
+              {t('marketplace.card.topBadge')}
             </span>
           ) : null}
         </div>
@@ -49,13 +49,13 @@ export default function TeacherMapQuickCard({
             onClick={() => onFocusMap?.(p)}
             className="text-[11px] font-semibold text-primary hover:underline"
           >
-            Xəritədə göstər →
+            {t('marketplace.card.showOnMap')}
           </button>
           {onClose ? (
             <button
               type="button"
               onClick={onClose}
-              aria-label="Bağla"
+              aria-label={t('marketplace.card.close')}
               className="w-7 h-7 rounded-lg border border-white/15 text-gray-400 hover:text-white hover:bg-white/10 text-sm leading-none"
             >
               ×
@@ -97,7 +97,9 @@ export default function TeacherMapQuickCard({
           </div>
 
           {p.discover_hourly_rate != null ? (
-            <p className="text-sm font-semibold text-emerald-400 mt-2">{p.discover_hourly_rate} AZN/saat</p>
+            <p className="text-sm font-semibold text-emerald-400 mt-2">
+              {t('marketplace.card.ratePerHour', { rate: p.discover_hourly_rate })}
+            </p>
           ) : null}
 
           <div className="mt-2 flex flex-wrap gap-1.5">
@@ -108,7 +110,7 @@ export default function TeacherMapQuickCard({
             ) : null}
             {p.discover_verified ? (
               <span className="text-[11px] font-bold px-2 py-0.5 rounded-lg bg-emerald-500/15 text-emerald-300 border border-emerald-500/25">
-                Təsdiqlənmiş
+                {t('marketplace.profile.verified')}
               </span>
             ) : null}
           </div>
@@ -128,11 +130,13 @@ export default function TeacherMapQuickCard({
 
           {p.next_available_slot ? (
             <p className="text-[11px] text-gray-300 mt-2">
-              📅 Növbəti boş vaxt:{' '}
-              <span className="font-semibold text-white">{p.next_available_slot}</span>
+              📅 {t('marketplace.profile.nextSlot')}{' '}
+              <span className="font-semibold text-white">
+                {localizeNextSlotLabel(p.next_available_slot, locale)}
+              </span>
             </p>
           ) : (
-            <p className="text-[11px] text-gray-500 mt-2">📅 Boş vaxt üçün müraciət göndərin</p>
+            <p className="text-[11px] text-gray-500 mt-2">📅 {t('marketplace.card.applyForSlot')}</p>
           )}
 
           {p.teacher_place_address_short ? (

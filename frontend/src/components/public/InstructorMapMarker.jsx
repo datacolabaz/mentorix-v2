@@ -7,8 +7,9 @@ import { instructorInitials } from '../../lib/instructorInitials'
 import { instructorRoleLabel } from '../../lib/marketplaceLocale'
 import { instructorDisplaySubject } from '../../lib/instructorDisplay'
 import useActiveLocale from '../../hooks/useActiveLocale'
+import { useTranslation } from 'react-i18next'
 
-function createPinIcon({ initial, avatarSrc, distanceLabel, isNearest, kind, selected }) {
+function createPinIcon({ initial, avatarSrc, distanceLabel, isNearest, kind, selected, nearestLabel }) {
   const color = kind === 'trainer' ? '#f97316' : '#22c55e'
   const ring = isNearest ? '#fbbf24' : '#ffffff'
   const size = selected ? 40 : isNearest ? 38 : 34
@@ -25,7 +26,7 @@ function createPinIcon({ initial, avatarSrc, distanceLabel, isNearest, kind, sel
       <div style="display:flex;flex-direction:column;align-items:center;transform:translate(-50%,-100%);pointer-events:none;">
         ${
           isNearest
-            ? '<div style="font-size:9px;font-weight:800;color:#fbbf24;letter-spacing:.02em;margin-bottom:3px;white-space:nowrap;text-shadow:0 1px 4px rgba(0,0,0,.8);">⭐ Ən yaxın</div>'
+            ? `<div style="font-size:9px;font-weight:800;color:#fbbf24;letter-spacing:.02em;margin-bottom:3px;white-space:nowrap;text-shadow:0 1px 4px rgba(0,0,0,.8);">${String(nearestLabel || '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))}</div>`
             : ''
         }
         <div style="width:${size}px;height:${size}px;border-radius:50%;background:linear-gradient(145deg,${color},#0f172a);border:3px solid ${ring};box-shadow:${glow};display:flex;align-items:center;justify-content:center;font-weight:800;font-size:${selected ? 15 : 13}px;color:#fff;font-family:system-ui,sans-serif;overflow:hidden;">${inner}</div>
@@ -38,7 +39,9 @@ function createPinIcon({ initial, avatarSrc, distanceLabel, isNearest, kind, sel
 }
 
 export default function InstructorMapMarker({ instructor, isNearest, selected, onSelect }) {
+  const { t } = useTranslation()
   const locale = useActiveLocale()
+  const nearestLabel = t('marketplace.card.nearest')
   const initial = instructorInitials(instructor.full_name).replace(/\./g, '') || 'M'
   const avatarSrc = instructor.avatar_url ? resolveApiAssetUrl(instructor.avatar_url) : ''
   const distanceLabel = formatDistanceKm(instructor.distanceKm)
@@ -52,8 +55,9 @@ export default function InstructorMapMarker({ instructor, isNearest, selected, o
         isNearest,
         kind: instructor.map_profile_kind,
         selected,
+        nearestLabel,
       }),
-    [initial, avatarSrc, distanceLabel, isNearest, instructor.map_profile_kind, selected],
+    [initial, avatarSrc, distanceLabel, isNearest, instructor.map_profile_kind, selected, nearestLabel],
   )
 
   return (
@@ -68,7 +72,7 @@ export default function InstructorMapMarker({ instructor, isNearest, selected, o
       <Popup>
         <div className="text-gray-900 text-sm min-w-[200px]">
           {isNearest ? (
-            <div className="text-[10px] font-bold text-amber-600 mb-1">⭐ Ən yaxın</div>
+            <div className="text-[10px] font-bold text-amber-600 mb-1">{nearestLabel}</div>
           ) : null}
           <div className="font-bold">{instructor.full_name}</div>
           <div className="text-gray-600 text-xs mt-1">
