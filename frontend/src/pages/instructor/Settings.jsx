@@ -17,7 +17,6 @@ import PricingBillingIntervalToggle from '../../components/instructor/PricingBil
 import RegionProfileFields from '../../components/instructor/RegionProfileFields'
 import InstructorDiscoverSettings from '../../components/instructor/InstructorDiscoverSettings'
 import DiscoverSubjectPicker from '../../components/instructor/DiscoverSubjectPicker'
-import InstructorMapPinPicker from '../../components/instructor/InstructorMapPinPicker'
 import InstructorAvatarUpload from '../../components/instructor/InstructorAvatarUpload'
 import { formatLocationLabel, isBakuRegion } from '@shared/azerbaijanRegions.mjs'
 import { BAKU_METRO_STATIONS, bakuMetroBySlug } from '@shared/bakuMetroStations.mjs'
@@ -175,7 +174,6 @@ export default function InstructorSettings() {
   const [mapLat, setMapLat] = useState('')
   const [mapLng, setMapLng] = useState('')
   const [nearestMetro, setNearestMetro] = useState('')
-  const [mapFlyKey, setMapFlyKey] = useState(0)
   const [mapCategoryIds, setMapCategoryIds] = useState([])
   const [mapPickedCats, setMapPickedCats] = useState([])
   const [mapCatLimit, setMapCatLimit] = useState(5)
@@ -1331,7 +1329,6 @@ export default function InstructorSettings() {
                   setMapLat(String(st.lat))
                   setMapLng(String(st.lng))
                   if (st.district) setMapBakuDistrict(st.district)
-                  setMapFlyKey((k) => k + 1)
                 }
                 setMapJustSaved(false)
               }}
@@ -1358,19 +1355,9 @@ export default function InstructorSettings() {
           >
             {t('settings.pinMapTitle')}
           </p>
-          <InstructorMapPinPicker
-            latitude={mapLat}
-            longitude={mapLng}
-            mapKind={mapKind}
-            flyKey={mapFlyKey}
-            displayName={user?.full_name || 'M'}
-            radiusKm={10}
-            onChange={(lat, lng) => {
-              setMapLat(lat)
-              setMapLng(lng)
-              setMapJustSaved(false)
-            }}
-          />
+          <p className={['text-xs leading-relaxed', theme === 'dark' ? 'text-gray-500' : 'text-token-textMuted'].join(' ')}>
+            {t('settings.pinNoMapHint')}
+          </p>
           {mapsDirectionsUrls(mapLat, mapLng) ? (
             <div className="flex flex-wrap gap-2 mt-2">
               <a
@@ -1391,7 +1378,11 @@ export default function InstructorSettings() {
                 {t('marketplace.profile.waze')}
               </a>
             </div>
-          ) : null}
+          ) : (
+            <p className={['text-xs mt-2', theme === 'dark' ? 'text-gray-500' : 'text-token-textMuted'].join(' ')}>
+              {t('settings.noPin')}
+            </p>
+          )}
         </div>
 
         <div className="flex flex-wrap items-center gap-3 text-sm">
