@@ -1,3 +1,5 @@
+import { ONBOARDING_PATH, userNeedsOnboarding } from '../constants/personas'
+
 const ROLE_HOME = {
   admin: '/admin',
   instructor: '/instructor',
@@ -10,14 +12,16 @@ export function dashboardPathForRole(role) {
   return ROLE_HOME[role] || '/login'
 }
 
+export { userNeedsOnboarding, ONBOARDING_PATH }
+
 /** Lazy OTP: girişdə yox, ciddi əməliyyat API 403 → PhoneVerificationGate modal. */
 export function userNeedsPhoneVerificationPage(_user) {
   return false
 }
 
 export function postAuthNavigate(user, navigate) {
-  if (!user?.role) {
-    navigate('/onboarding/role', { replace: true })
+  if (userNeedsOnboarding(user)) {
+    navigate(ONBOARDING_PATH, { replace: true })
     return
   }
   try {

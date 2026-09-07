@@ -7,8 +7,8 @@ import Landing from './pages/auth/Landing'
 import VerifyEmail from './pages/auth/VerifyEmail'
 import VerifyPhone from './pages/auth/VerifyPhone'
 import ResetPassword from './pages/auth/ResetPassword'
-import RoleOnboarding from './pages/auth/RoleOnboarding'
-import { dashboardPathForRole } from './lib/postAuth'
+import PersonaOnboarding from './pages/auth/PersonaOnboarding'
+import { dashboardPathForRole, userNeedsOnboarding, ONBOARDING_PATH } from './lib/postAuth'
 import InstructorMapSearch from './pages/public/InstructorMapSearch'
 import UniversityProgramSearch from './pages/public/UniversityProgramSearch'
 import PublicSeoLanding from './pages/public/PublicSeoLanding'
@@ -126,13 +126,19 @@ const ProtectedRoute = ({ children, roles }) => {
     }
     return <Navigate to="/login" replace />
   }
-  if (!user.role) return <Navigate to="/onboarding/role" replace />
+  if (userNeedsOnboarding(user)) return <Navigate to={ONBOARDING_PATH} replace />
   if (roles && !roles.includes(user.role)) return <Navigate to="/login" replace />
   return children
 }
 
+function AuthedRoute({ children }) {
+  const { user } = useAuthStore()
+  if (!user) return <Navigate to="/login" replace />
+  return children
+}
+
 function postLoginPath(user) {
-  if (!user?.role) return '/onboarding/role'
+  if (userNeedsOnboarding(user)) return ONBOARDING_PATH
   return dashboardPathForRole(user.role)
 }
 
@@ -183,13 +189,18 @@ export default function App() {
       />
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route
-        path="/onboarding/role"
+        path="/onboarding"
         element={
-          <ProtectedRoute>
-            {user?.role ? <Navigate to={`/${user.role}`} replace /> : <RoleOnboarding />}
-          </ProtectedRoute>
+          <AuthedRoute>
+            {userNeedsOnboarding(user) ? (
+              <PersonaOnboarding />
+            ) : (
+              <Navigate to={dashboardPathForRole(user?.role)} replace />
+            )}
+          </AuthedRoute>
         }
       />
+      <Route path="/onboarding/role" element={<Navigate to={ONBOARDING_PATH} replace />} />
       <Route path="/" element={user ? <Navigate to={postLoginPath(user)} replace /> : <Landing />} />
 
       <Route

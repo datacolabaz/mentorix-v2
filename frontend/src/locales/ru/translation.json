@@ -164,6 +164,7 @@
     "fullName": "Имя и фамилия",
     "forgotPassword": "Забыли пароль?",
     "accountType": "Тип аккаунта",
+    "signupLead": "Сначала создайте аккаунт. Цель использования вы выберете после регистрации.",
     "whoAreYou": "Кто вы?",
     "chooseRole": "Выберите роль",
     "googleLogin": "Войти через Google",
@@ -201,7 +202,8 @@
       "enterPassword": "Введите пароль",
       "verifyEmailFirst": "Сначала подтвердите email (код или ссылка)",
       "loginError": "Ошибка входа",
-      "emailVerifiedChooseRole": "Email подтверждён! Теперь выберите роль.",
+      "emailVerifiedChooseRole": "Email подтверждён! Теперь выберите, как будете использовать Mentorix.",
+      "emailVerifiedChooseUse": "Email подтверждён! Теперь выберите, как будете использовать Mentorix.",
       "emailVerifiedLoggedIn": "Email подтверждён! Вы вошли.",
       "emailVerifiedCanLogin": "Email подтверждён! Теперь можно войти.",
       "invalidCode": "Неверный код или срок истёк",
@@ -209,6 +211,173 @@
       "sendFailed": "Не удалось отправить",
       "recoverySent": "Ссылка для восстановления отправлена (проверьте email)"
     }
+  },
+  "onboarding": {
+    "title": "Как вы будете использовать Mentorix?",
+    "subtitle": "Выберите цель использования, чтобы мы подготовили подходящий опыт.",
+    "forAccount": "Для {{email}}",
+    "continue": "Продолжить",
+    "detailsHint": "Несколько деталей помогут настроить нужную панель.",
+    "unauthorizedTitle": "Войдите",
+    "unauthorizedBody": "Чтобы продолжить, сначала войдите в аккаунт.",
+    "toasts": {
+      "ready": "Готово. Открываем панель.",
+      "failed": "Не удалось завершить онбординг"
+    },
+    "personas": {
+      "teacher": {
+        "title": "Учитель / Репетитор",
+        "desc": "Вести занятия, готовить тесты и экзамены и управлять учениками."
+      },
+      "education_center": {
+        "title": "Учебный центр / Руководитель курса",
+        "desc": "Централизованно управлять группами, преподавателями, учениками и экзаменами."
+      },
+      "student": {
+        "title": "Ученик",
+        "desc": "Присоединяться к тестам и экзаменам и следить за результатами."
+      },
+      "parent": {
+        "title": "Родитель",
+        "desc": "Следить за тестами и результатами ребёнка."
+      },
+      "hr_company": {
+        "title": "Компания / HR",
+        "desc": "Найм, оценка кандидатов, проверка знаний сотрудников и корпоративные экзамены."
+      },
+      "other": {
+        "title": "Другое",
+        "desc": "Я использую Mentorix для другой цели."
+      }
+    },
+    "fields": {
+      "select": "Выберите",
+      "subject": "Предмет / направление",
+      "subjectPlaceholder": "Например: математика, SAT, английский",
+      "teachingFormat": "Формат обучения",
+      "studentCount": "Примерное число учеников",
+      "centerName": "Название центра",
+      "centerNamePlaceholder": "Название учебного центра",
+      "teacherCount": "Примерное число преподавателей",
+      "centerStudentCount": "Примерное число учеников",
+      "centerExamPurpose": "Зачем нужны экзамены и тесты",
+      "centerExamPurposePlaceholder": "Например: внутренние экзамены, набор, сертификация",
+      "educationLevel": "Уровень образования",
+      "subjectInterest": "Интересующий предмет / направление",
+      "subjectInterestPlaceholder": "Например: физика, IELTS",
+      "childCount": "Число детей",
+      "followFocus": "Что вы будете отслеживать в первую очередь?",
+      "companyName": "Название компании",
+      "companyNamePlaceholder": "Название вашей компании",
+      "companySize": "Размер компании",
+      "hrExamPurpose": "Цель экзамена",
+      "otherPurpose": "Кратко опишите цель использования",
+      "otherPurposePlaceholder": "Как вы хотите использовать Mentorix"
+    },
+    "options": {
+      "teachingFormat": {
+        "individual": "Индивидуально",
+        "group": "Группа",
+        "online": "Онлайн",
+        "hybrid": "Гибрид"
+      },
+      "studentCount": {
+        "1-5": "1–5",
+        "6-15": "6–15",
+        "16-40": "16–40",
+        "40+": "40+"
+      },
+      "teacherCount": {
+        "1-3": "1–3",
+        "4-10": "4–10",
+        "11-30": "11–30",
+        "30+": "30+"
+      },
+      "centerStudentCount": {
+        "1-20": "1–20",
+        "21-80": "21–80",
+        "81-200": "81–200",
+        "200+": "200+"
+      },
+      "educationLevel": {
+        "school": "Школа",
+        "college": "Колледж",
+        "university": "Университет",
+        "other": "Другое"
+      },
+      "childCount": {
+        "1": "1",
+        "2": "2",
+        "3+": "3+"
+      },
+      "followFocus": {
+        "exams": "Результаты экзаменов",
+        "progress": "Общий прогресс",
+        "both": "И то и другое"
+      },
+      "companySize": {
+        "1-10": "1–10",
+        "11-50": "11–50",
+        "51-200": "51–200",
+        "201-1000": "201–1000",
+        "1000+": "1000+"
+      },
+      "hrExamPurpose": {
+        "hiring": "Найм",
+        "candidate_assessment": "Оценка кандидатов",
+        "employee_assessment": "Оценка сотрудников",
+        "training_certification": "Обучение и сертификация",
+        "other": "Другое"
+      }
+    }
+  },
+  "personaHome": {
+    "title": "Быстрые ссылки",
+    "teacher": {
+      "createExam": "Создать экзамен",
+      "tests": "Тесты",
+      "students": "Ученики",
+      "groups": "Группы",
+      "results": "Результаты"
+    },
+    "education_center": {
+      "teachers": "Преподаватели",
+      "groups": "Группы",
+      "students": "Ученики",
+      "exams": "Экзамены",
+      "reports": "Отчёты"
+    },
+    "student": {
+      "exams": "Мои экзамены",
+      "tests": "Мои тесты",
+      "results": "Мои результаты"
+    },
+    "parent": {
+      "children": "Мои дети",
+      "results": "Результаты",
+      "exams": "Экзамены"
+    },
+    "hr_company": {
+      "candidates": "Кандидаты",
+      "exams": "Экзамены",
+      "tests": "Тесты",
+      "evaluations": "Оценки",
+      "results": "Результаты",
+      "reports": "Отчёты"
+    },
+    "other": {
+      "exams": "Экзамены",
+      "tests": "Тесты",
+      "results": "Результаты"
+    }
+  },
+  "personaSettings": {
+    "title": "Цель использования",
+    "subtitle": "Сейчас: {{current}}",
+    "keepNote": "При смене предыдущие данные не удаляются.",
+    "save": "Сохранить",
+    "saved": "Цель использования обновлена",
+    "failed": "Не удалось обновить"
   },
   "dashboard": {
     "greetingMorning": "Доброе утро",

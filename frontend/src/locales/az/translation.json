@@ -164,6 +164,7 @@
     "fullName": "Ad Soyad",
     "forgotPassword": "Şifrəmi unutmuşam",
     "accountType": "Hesab növü",
+    "signupLead": "Əvvəlcə hesabınızı yaradın. İstifadə məqsədinizi qeydiyyatdan sonra seçəcəksiniz.",
     "whoAreYou": "Siz kimsiniz?",
     "chooseRole": "Rolunuzu seçin",
     "googleLogin": "Google ilə daxil ol",
@@ -201,7 +202,8 @@
       "enterPassword": "Şifrə daxil edin",
       "verifyEmailFirst": "Əvvəlcə emaili təsdiqləyin (kod və ya link)",
       "loginError": "Giriş xətası",
-      "emailVerifiedChooseRole": "Email təsdiqləndi! İndi rol seçin.",
+      "emailVerifiedChooseRole": "Email təsdiqləndi! İndi istifadə məqsədinizi seçin.",
+      "emailVerifiedChooseUse": "Email təsdiqləndi! İndi Mentorix-dən necə istifadə edəcəyinizi seçin.",
       "emailVerifiedLoggedIn": "Email təsdiqləndi! Daxil oldunuz.",
       "emailVerifiedCanLogin": "Email təsdiqləndi! İndi daxil ola bilərsiniz.",
       "invalidCode": "Kod yanlışdır və ya müddəti bitib",
@@ -209,6 +211,173 @@
       "sendFailed": "Göndərilmədi",
       "recoverySent": "Bərpa linki göndərildi (emaili yoxlayın)"
     }
+  },
+  "onboarding": {
+    "title": "Mentorix-dən necə istifadə edəcəksiniz?",
+    "subtitle": "Sizə uyğun təcrübəni hazırlamaq üçün istifadə məqsədinizi seçin.",
+    "forAccount": "{{email}} hesabı üçün",
+    "continue": "Davam et",
+    "detailsHint": "Sizə uyğun paneli hazırlamaq üçün qısa məlumatları doldurun.",
+    "unauthorizedTitle": "Daxil olun",
+    "unauthorizedBody": "Davam etmək üçün əvvəlcə hesabınıza daxil olun.",
+    "toasts": {
+      "ready": "Hazırdır. Paneliniz açılır.",
+      "failed": "Onboarding tamamlanmadı"
+    },
+    "personas": {
+      "teacher": {
+        "title": "Müəllim / Repetitor",
+        "desc": "Dərs keçmək, test və imtahanlar hazırlamaq və tələbələri idarə etmək üçün."
+      },
+      "education_center": {
+        "title": "Təhsil mərkəzi / Kurs rəhbəri",
+        "desc": "Qrupları, müəllimləri, tələbələri və imtahanları mərkəzləşdirilmiş şəkildə idarə etmək üçün."
+      },
+      "student": {
+        "title": "Tələbə",
+        "desc": "Testlərə və imtahanlara qoşulmaq və nəticələrimi izləmək üçün."
+      },
+      "parent": {
+        "title": "Valideyn",
+        "desc": "Övladımın test və imtahan nəticələrini izləmək üçün."
+      },
+      "hr_company": {
+        "title": "Şirkət / HR",
+        "desc": "İşə qəbul, namizəd qiymətləndirməsi, əməkdaşların bilik yoxlaması və korporativ imtahanlar üçün."
+      },
+      "other": {
+        "title": "Digər",
+        "desc": "Mentorix-dən başqa məqsədlə istifadə edirəm."
+      }
+    },
+    "fields": {
+      "select": "Seçin",
+      "subject": "Fənn / istiqamət",
+      "subjectPlaceholder": "Məsələn: Riyaziyyat, SAT, İngilis dili",
+      "teachingFormat": "Tədris formatı",
+      "studentCount": "Təxmini tələbə sayı",
+      "centerName": "Mərkəzin adı",
+      "centerNamePlaceholder": "Təhsil mərkəzinizin adı",
+      "teacherCount": "Təxmini müəllim sayı",
+      "centerStudentCount": "Təxmini tələbə sayı",
+      "centerExamPurpose": "İmtahan və test istifadəsi məqsədi",
+      "centerExamPurposePlaceholder": "Məsələn: daxili imtahanlar, qəbul, sertifikasiya",
+      "educationLevel": "Təhsil səviyyəsi",
+      "subjectInterest": "Maraqlı olduğu fənn / istiqamət",
+      "subjectInterestPlaceholder": "Məsələn: Fizika, IELTS",
+      "childCount": "Övlad sayı",
+      "followFocus": "Əsasən nəyi izləyəcəksiniz?",
+      "companyName": "Şirkət adı",
+      "companyNamePlaceholder": "Şirkətinizin adı",
+      "companySize": "Şirkət ölçüsü",
+      "hrExamPurpose": "İmtahan məqsədi",
+      "otherPurpose": "İstifadə məqsədinizi qısa yazın",
+      "otherPurposePlaceholder": "Mentorix-dən necə istifadə etmək istədiyinizi yazın"
+    },
+    "options": {
+      "teachingFormat": {
+        "individual": "Fərdi",
+        "group": "Qrup",
+        "online": "Onlayn",
+        "hybrid": "Hibrid"
+      },
+      "studentCount": {
+        "1-5": "1–5",
+        "6-15": "6–15",
+        "16-40": "16–40",
+        "40+": "40+"
+      },
+      "teacherCount": {
+        "1-3": "1–3",
+        "4-10": "4–10",
+        "11-30": "11–30",
+        "30+": "30+"
+      },
+      "centerStudentCount": {
+        "1-20": "1–20",
+        "21-80": "21–80",
+        "81-200": "81–200",
+        "200+": "200+"
+      },
+      "educationLevel": {
+        "school": "Məktəb",
+        "college": "Kollec",
+        "university": "Universitet",
+        "other": "Digər"
+      },
+      "childCount": {
+        "1": "1",
+        "2": "2",
+        "3+": "3+"
+      },
+      "followFocus": {
+        "exams": "İmtahan nəticələri",
+        "progress": "Ümumi proqres",
+        "both": "Hər ikisi"
+      },
+      "companySize": {
+        "1-10": "1–10",
+        "11-50": "11–50",
+        "51-200": "51–200",
+        "201-1000": "201–1000",
+        "1000+": "1000+"
+      },
+      "hrExamPurpose": {
+        "hiring": "İşə qəbul",
+        "candidate_assessment": "Namizəd qiymətləndirməsi",
+        "employee_assessment": "Əməkdaşların qiymətləndirilməsi",
+        "training_certification": "Təlim və sertifikasiya",
+        "other": "Digər"
+      }
+    }
+  },
+  "personaHome": {
+    "title": "Sürətli keçidlər",
+    "teacher": {
+      "createExam": "İmtahan yarat",
+      "tests": "Testlər",
+      "students": "Tələbələr",
+      "groups": "Qruplar",
+      "results": "Nəticələr"
+    },
+    "education_center": {
+      "teachers": "Müəllimlər",
+      "groups": "Qruplar",
+      "students": "Tələbələr",
+      "exams": "İmtahanlar",
+      "reports": "Hesabatlar"
+    },
+    "student": {
+      "exams": "İmtahanlarım",
+      "tests": "Testlərim",
+      "results": "Nəticələrim"
+    },
+    "parent": {
+      "children": "Övladlarım",
+      "results": "Nəticələr",
+      "exams": "İmtahanlar"
+    },
+    "hr_company": {
+      "candidates": "Namizədlər",
+      "exams": "İmtahanlar",
+      "tests": "Testlər",
+      "evaluations": "Qiymətləndirmələr",
+      "results": "Nəticələr",
+      "reports": "Hesabatlar"
+    },
+    "other": {
+      "exams": "İmtahanlar",
+      "tests": "Testlər",
+      "results": "Nəticələr"
+    }
+  },
+  "personaSettings": {
+    "title": "İstifadə məqsədi",
+    "subtitle": "Hazırda: {{current}}",
+    "keepNote": "Dəyişəndə əvvəlki məlumatlarınız silinmir.",
+    "save": "Yadda saxla",
+    "saved": "İstifadə məqsədi yeniləndi",
+    "failed": "Yenilənmədi"
   },
   "dashboard": {
     "greetingMorning": "Sabahınız xeyir",

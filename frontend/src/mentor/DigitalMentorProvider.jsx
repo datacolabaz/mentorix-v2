@@ -8,7 +8,7 @@ import { fetchOnboarding, saveOnboarding, askMentor } from './mentorApi'
 
 const DigitalMentorContext = createContext(null)
 
-const HIDE_PATHS = new Set(['/login', '/register', '/', '/onboarding/role', '/verify-phone', '/verify-email', '/reset-password'])
+const HIDE_PATHS = new Set(['/login', '/register', '/', '/onboarding', '/onboarding/role', '/verify-phone', '/verify-email', '/reset-password'])
 
 function shouldHidePath(pathname) {
   if (HIDE_PATHS.has(pathname)) return true

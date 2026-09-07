@@ -8,14 +8,13 @@ import useAuthStore from '../../hooks/useAuth'
 import { useToast } from '../common/Toast'
 import api, { AUTH_REQUEST_TIMEOUT_MS } from '../../lib/api'
 import { getAttributionPayload } from '../../lib/analytics'
-import { postAuthNavigate } from '../../lib/postAuth'
+import { postAuthNavigate, ONBOARDING_PATH } from '../../lib/postAuth'
 import i18n from '../../i18n'
 
 const inputClass =
   'mx-auth-input w-full bg-surface-1 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none'
 
 const AUTH_ROLE_KEYS = ['instructor', 'student', 'course', 'parent']
-const SIGNUP_ROLE_KEYS = ['instructor', 'student', 'parent', 'course']
 const LOGIN_ROLE_TRY_ORDER = ['instructor', 'course', 'student', 'parent']
 
 function useAuthRoles(keys) {
@@ -47,12 +46,25 @@ async function loginEmailWithAutoRole(email, password, forcedRole) {
 }
 
 async function googleAuthWithAutoRole(credential, forcedRole) {
+  if (!forcedRole) {
+    try {
+      let r = await api.post('/auth/google/login', { credential, intent: 'signin' })
+      if (r?.token && r?.user) return r
+      if (r?.needs_onboarding || r?.needs_role) {
+        r = await api.post('/auth/google/complete', { credential, intent: 'signin' })
+        if (r?.token && r?.user) return r
+      }
+    } catch (err) {
+      if (err?.status === 401 || err?.status === 409) throw err
+    }
+  }
+
   const roles = forcedRole ? [forcedRole] : LOGIN_ROLE_TRY_ORDER
   let lastRoleError = null
   for (const role of roles) {
     try {
       let r = await api.post('/auth/google/login', { credential, role, intent: 'signin' })
-      if (r?.needs_role || r?.needs_phone_link) {
+      if (r?.needs_role || r?.needs_onboarding || r?.needs_phone_link) {
         r = await api.post('/auth/google/complete', { credential, role, intent: 'signin' })
       }
       if (r?.token && r?.user) return r
@@ -229,7 +241,6 @@ function RolePills({ roles, role, onRole, label, variant = 'grid' }) {
 export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab = 'login' }) {
   const { t } = useTranslation()
   const authRoleOptions = useAuthRoles(AUTH_ROLE_KEYS)
-  const signupRoleOptions = useAuthRoles(SIGNUP_ROLE_KEYS)
   const toast = useToast()
   const { signupWithEmail, verifyEmailCode, resendVerificationEmail, requestPasswordReset, setSession } = useAuthStore()
   const navigate = useNavigate()
@@ -255,7 +266,6 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
   const [signupFullName, setSignupFullName] = useState('')
   const [signupEmail, setSignupEmail] = useState('')
   const [signupPassword, setSignupPassword] = useState('')
-  const [signupRole, setSignupRole] = useState('instructor')
   const [verifyCode, setVerifyCode] = useState('')
   const [accountExistsOpen, setAccountExistsOpen] = useState(false)
   const [accountExistsMessage, setAccountExistsMessage] = useState('')
@@ -278,7 +288,6 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
               '/auth/google/complete',
               {
                 credential,
-                role: signupRole,
                 intent: 'signup',
               },
               { timeout: AUTH_REQUEST_TIMEOUT_MS },
@@ -322,7 +331,6 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
         full_name: signupFullName,
         email: signupEmail,
         password: signupPassword,
-        role: signupRole,
         ...getAttributionPayload(),
       })
       setPhase('verify')
@@ -339,9 +347,9 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
   }
 
   const finishEmailLogin = (data) => {
-    if (data?.needs_role && data?.token && data?.user) {
+    if ((data?.needs_onboarding || data?.needs_role) && data?.token && data?.user) {
       setSession(data.token, data.user)
-      navigate('/onboarding/role', { replace: true })
+      navigate(ONBOARDING_PATH, { replace: true })
       return
     }
     if (!data?.token || !data?.user) throw new Error(data?.message || t('auth.errors.invalidServer'))
@@ -396,9 +404,9 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
       const r = await verifyEmailCode({ email: signupEmail, code: verifyCode })
       if (r?.token && r?.user) {
         setSession(r.token, r.user)
-        if (r?.needs_role) {
-          toast(t('auth.toasts.emailVerifiedChooseRole'), 'success')
-          navigate('/onboarding/role', { replace: true })
+        if (r?.needs_onboarding || r?.needs_role) {
+          toast(t('auth.toasts.emailVerifiedChooseUse'), 'success')
+          navigate(ONBOARDING_PATH, { replace: true })
           return
         }
         toast(t('auth.toasts.emailVerifiedLoggedIn'), 'success')
@@ -575,13 +583,7 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
       </div>
       ) : (
       <div className="space-y-4">
-          <RolePills
-            roles={signupRoleOptions}
-            role={signupRole}
-            onRole={setSignupRole}
-            label={t('auth.whoAreYou')}
-            variant="pill"
-          />
+          <p className="text-sm text-gray-400 text-center leading-relaxed">{t('auth.signupLead')}</p>
 
           <GoogleSignInButton
             key="signup-google"

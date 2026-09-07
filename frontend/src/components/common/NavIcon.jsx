@@ -161,6 +161,26 @@ export default function NavIcon({ name, className = 'w-5 h-5' }) {
           <path d="M9 18v2M15 18v2M3 12h2M19 12h2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
         </IconBase>
       )
+    case 'building':
+      return (
+        <IconBase className={className}>
+          <path d="M4 20V8l8-4 8 4v12" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+          <path d="M9 20v-6h6v6M9 10h.01M15 10h.01M12 10h.01M9 14h.01M15 14h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        </IconBase>
+      )
+    case 'briefcase':
+      return (
+        <IconBase className={className}>
+          <path d="M4 8h16v11H4V8Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+          <path d="M9 8V6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M4 13h16" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+        </IconBase>
+      )
+    case 'dots':
+      return (
+        <IconBase className={className}>
+          <path d="M6 12h.01M12 12h.01M18 12h.01" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+        </IconBase>
+      )
     default:
       return <span className={className} aria-hidden />
   }
