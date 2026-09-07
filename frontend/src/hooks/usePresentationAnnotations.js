@@ -11,7 +11,7 @@ function cloneStrokes(strokes) {
   return Array.isArray(strokes) ? strokes.map((s) => ({ ...s, points: [...(s.points || [])] })) : []
 }
 
-export default function usePresentationAnnotations(presentationId, initialMap) {
+export default function usePresentationAnnotations(presentationId, initialMap, { persist = true } = {}) {
   const [bySlide, setBySlide] = useState(() => initialMap && typeof initialMap === 'object' ? { ...initialMap } : {})
   const [tool, setTool] = useState('pen')
   const historyRef = useRef({})
@@ -26,7 +26,7 @@ export default function usePresentationAnnotations(presentationId, initialMap) {
 
   const persistSlide = useCallback(
     async (slideIndex, strokes) => {
-      if (!presentationId) return
+      if (!persist || !presentationId) return
       try {
         await api.put(`/presentations/${presentationId}/annotations`, {
           slide_index: slideIndex,
@@ -36,7 +36,7 @@ export default function usePresentationAnnotations(presentationId, initialMap) {
         /* keep local strokes; next edit retries */
       }
     },
-    [presentationId],
+    [presentationId, persist],
   )
 
   const flushDirty = useCallback(() => {
@@ -85,30 +85,37 @@ export default function usePresentationAnnotations(presentationId, initialMap) {
   const undo = useCallback((slideIndex) => {
     const key = String(slideIndex)
     const hist = historyRef.current[key]
-    if (!hist?.past?.length) return
+    if (!hist?.past?.length) return null
     const previous = hist.past.pop()
     setBySlide((prev) => {
       hist.future.push(cloneStrokes(prev[key] || []))
       dirtyRef.current.add(slideIndex)
       return { ...prev, [key]: previous }
     })
+    return previous
   }, [])
 
   const redo = useCallback((slideIndex) => {
     const key = String(slideIndex)
     const hist = historyRef.current[key]
-    if (!hist?.future?.length) return
+    if (!hist?.future?.length) return null
     const next = hist.future.pop()
     setBySlide((prev) => {
       hist.past.push(cloneStrokes(prev[key] || []))
       dirtyRef.current.add(slideIndex)
       return { ...prev, [key]: next }
     })
+    return next
   }, [])
 
   const clearSlide = useCallback((slideIndex) => {
     setSlideStrokes(slideIndex, [])
   }, [setSlideStrokes])
+
+  const applyRemote = useCallback((slideIndex, strokes) => {
+    const key = String(slideIndex)
+    setBySlide((prev) => ({ ...prev, [key]: Array.isArray(strokes) ? strokes : [] }))
+  }, [])
 
   const defaults = useMemo(() => TOOL_DEFAULTS[tool] || TOOL_DEFAULTS.pen, [tool])
 
@@ -123,6 +130,7 @@ export default function usePresentationAnnotations(presentationId, initialMap) {
     canUndo,
     canRedo,
     clearSlide,
+    applyRemote,
     flushDirty,
   }
 }

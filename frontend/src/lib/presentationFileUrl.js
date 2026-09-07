@@ -16,6 +16,17 @@ export function presentationStoredFilename(url) {
   return m ? decodeURIComponent(m[1]) : null
 }
 
+export function livePresentationFileUrl(roomCode) {
+  const code = String(roomCode || '').trim()
+  if (!code) return ''
+  const token = typeof localStorage !== 'undefined' ? localStorage.getItem('mx_token') : ''
+  const path = `/live/${encodeURIComponent(code)}/presentation/file`
+  const params = new URLSearchParams()
+  if (token) params.set('token', token)
+  const qs = params.toString()
+  return apiAbsoluteUrl(qs ? `${path}?${qs}` : path)
+}
+
 export function presentationFileOpenUrl(url) {
   const fn = presentationStoredFilename(url)
   if (!fn) return url || ''
