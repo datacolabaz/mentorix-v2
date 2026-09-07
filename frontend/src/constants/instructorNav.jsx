@@ -20,6 +20,7 @@ export const INSTRUCTOR_NAV_ITEM_DEFS = {
   certificates: { to: '/instructor/certificates', labelKey: 'nav.instructor.certificates', label: 'Sertifikatlar', icon: 'exams' },
   tasks: { to: '/instructor/tasks', labelKey: 'nav.instructor.tasks', label: 'Tapşırıqlar', icon: 'tasks' },
   ai_generator: { to: '/instructor/ai-generator', labelKey: 'nav.instructor.ai_generator', label: 'AI Sual Generatoru', icon: 'ai' },
+  presentations: { to: '/instructor/presentations', labelKey: 'nav.instructor.presentations', label: 'Təqdimatlar', icon: 'presentations' },
   materials_library: { to: '/instructor/materials', labelKey: 'nav.instructor.materials_library', label: 'Kitabxana', icon: 'materials' },
   analytics: { to: '/instructor/analytics', labelKey: 'nav.instructor.analytics', label: 'Analitika', icon: 'analytics' },
   payments: { to: '/instructor/payments', labelKey: 'nav.instructor.payments', label: 'Ödənişlər', icon: 'payments' },
@@ -29,6 +30,7 @@ export const INSTRUCTOR_NAV_ITEM_DEFS = {
 
 /** Sidebar linkləri yalnız bu bölmədə görünsün. */
 const ITEM_CANONICAL_SECTION = {
+  presentations: 'materials',
   materials_library: 'materials',
 }
 
@@ -53,17 +55,47 @@ function dedupeNavSections(sections) {
     const target = list.find((s) => s.id === sectionId)
     if (!target) continue
 
-    if (target.itemKeys && !target.itemKeys.includes(key)) target.itemKeys.push(key)
+    if (target.itemKeys && !target.itemKeys.includes(key)) {
+      insertMaterialsSectionKey(target.itemKeys, key)
+    }
     if (!(target.items || []).some((item) => item?.key === key)) {
       const built = itemFromKey(key)
       if (built) {
         if (!target.items) target.items = []
-        target.items.push(built)
+        insertMaterialsSectionItem(target.items, built)
       }
     }
   }
 
   return list
+}
+
+function insertMaterialsSectionKey(keys, key) {
+  if (keys.includes(key)) return
+  if (key === 'presentations') {
+    keys.unshift(key)
+    return
+  }
+  const presentationsIdx = keys.indexOf('presentations')
+  if (key === 'materials_library' && presentationsIdx >= 0) {
+    keys.splice(presentationsIdx + 1, 0, key)
+    return
+  }
+  keys.push(key)
+}
+
+function insertMaterialsSectionItem(items, built) {
+  if (items.some((item) => item?.key === built.key)) return
+  if (built.key === 'presentations') {
+    items.unshift(built)
+    return
+  }
+  const presentationsIdx = items.findIndex((item) => item?.key === 'presentations')
+  if (built.key === 'materials_library' && presentationsIdx >= 0) {
+    items.splice(presentationsIdx + 1, 0, built)
+    return
+  }
+  items.push(built)
 }
 
 /**
@@ -88,6 +120,29 @@ function ensureAiGeneratorItem(sections) {
   const tasksIdx = target.items.findIndex((item) => item?.key === 'tasks')
   if (tasksIdx >= 0) target.items.splice(tasksIdx + 1, 0, built)
   else target.items.push(built)
+  return list
+}
+
+function ensurePresentationsItem(sections) {
+  const KEY = 'presentations'
+  const TO = '/instructor/presentations'
+  const exists = (sections || []).some((s) =>
+    (s.items || []).some((item) => item?.key === KEY || item?.to === TO),
+  )
+  if (exists) return sections
+
+  const built = itemFromKey(KEY)
+  if (!built) return sections
+
+  const list = (sections || []).map((s) => ({ ...s, items: [...(s.items || [])] }))
+  let target = list.find((s) => s.id === 'materials')
+  if (!target) {
+    target = { id: 'materials', title: 'MATERİALLAR', items: [] }
+    const mgmtIdx = list.findIndex((s) => s.id === 'management')
+    if (mgmtIdx >= 0) list.splice(mgmtIdx + 1, 0, target)
+    else list.push(target)
+  }
+  target.items.unshift(built)
   return list
 }
 
@@ -130,7 +185,7 @@ export function defaultInstructorNavSections() {
       id: 'materials',
       title: 'MATERİALLAR',
       enabled: true,
-      itemKeys: ['materials_library'],
+      itemKeys: ['presentations', 'materials_library'],
     },
     {
       id: 'analytics',
@@ -151,31 +206,34 @@ export function defaultInstructorNavSections() {
 export function buildInstructorNavSections(navPayload) {
   const sections = Array.isArray(navPayload?.sections) ? navPayload.sections : defaultInstructorNavSections()
 
-  return ensureAiGeneratorItem(
-    dedupeNavSections(
-      sections
-        .filter((s) => s && s.enabled !== false)
-        .map((section) => {
-          const keys = Array.isArray(section.itemKeys) ? section.itemKeys : []
-          const items = keys
-            .filter((key) => key !== 'materials_upload')
-            .map(itemFromKey)
-            .filter(Boolean)
-          return {
-            id: section.id,
-            title: String(section.title || '').trim() || 'Bölmə',
-            items,
-          }
-        })
-        .filter((s) => s.items.length > 0),
-    ).filter((s) => s.items.length > 0),
+  return ensurePresentationsItem(
+    ensureAiGeneratorItem(
+      dedupeNavSections(
+        sections
+          .filter((s) => s && s.enabled !== false)
+          .map((section) => {
+            const keys = Array.isArray(section.itemKeys) ? section.itemKeys : []
+            const items = keys
+              .filter((key) => key !== 'materials_upload')
+              .map(itemFromKey)
+              .filter(Boolean)
+            return {
+              id: section.id,
+              title: String(section.title || '').trim() || 'Bölmə',
+              items,
+            }
+          })
+          .filter((s) => s.items.length > 0),
+      ).filter((s) => s.items.length > 0),
+    ),
   )
 }
 
 export function buildInstructorNavSectionsFromClient(nav) {
   if (!nav?.sections?.length) return buildInstructorNavSections({ sections: defaultInstructorNavSections() })
 
-  return ensureAiGeneratorItem(
+  return ensurePresentationsItem(
+    ensureAiGeneratorItem(
     dedupeNavSections(
     nav.sections
       .map((section) => ({
@@ -200,5 +258,6 @@ export function buildInstructorNavSectionsFromClient(nav) {
       }))
       .filter((s) => s.items.length > 0),
     ).filter((s) => s.items.length > 0),
+    ),
   )
 }

@@ -119,6 +119,13 @@ export default function NavIcon({ name, className = 'w-5 h-5' }) {
           <path d="M8 8h8M8 12h8M8 16h5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
         </IconBase>
       )
+    case 'presentations':
+      return (
+        <IconBase className={className}>
+          <path d="M5 5h14v10H5V5Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+          <path d="M8 19h8M10 15v4M14 15v4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        </IconBase>
+      )
     case 'materials':
       return (
         <IconBase className={className}>

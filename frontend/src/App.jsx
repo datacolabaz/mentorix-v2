@@ -60,6 +60,9 @@ import StudentInquiries from './pages/instructor/StudentInquiries'
 import InstructorTasks from './pages/instructor/Tasks'
 import InstructorAIQuestionGenerator from './pages/instructor/AIQuestionGenerator'
 import InstructorMaterialsLibrary from './pages/instructor/MaterialsLibrary'
+import InstructorPresentations from './pages/instructor/Presentations'
+import InstructorPresentationViewer from './pages/instructor/PresentationViewer'
+import InstructorPresentationPresent from './pages/instructor/PresentationPresent'
 import InstructorUniversityPrograms from './pages/instructor/InstructorUniversityPrograms'
 import PaymentSuccess from './pages/instructor/PaymentSuccess'
 import PaymentFail from './pages/instructor/PaymentFail'
@@ -215,6 +218,14 @@ export default function App() {
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/instructor/presentations/:id/present"
+        element={
+          <ProtectedRoute roles={['instructor']}>
+            <InstructorPresentationPresent />
+          </ProtectedRoute>
+        }
+      />
       <Route path="/library/:groupId" element={<LibraryInvite />} />
 
       <Route path="/admin" element={<ProtectedRoute roles={['admin']}><AdminLayout /></ProtectedRoute>}>
@@ -255,6 +266,8 @@ export default function App() {
         <Route path="tasks" element={<InstructorTasks />} />
         <Route path="ai-generator" element={<InstructorAIQuestionGenerator />} />
         <Route path="materials" element={<InstructorMaterialsLibrary />} />
+        <Route path="presentations" element={<InstructorPresentations />} />
+        <Route path="presentations/:id" element={<InstructorPresentationViewer />} />
         <Route path="live/history" element={<InstructorLiveHistory />} />
         <Route path="university-programs" element={<InstructorUniversityPrograms />} />
         <Route path="materials/upload" element={<Navigate to="/instructor/materials" replace />} />

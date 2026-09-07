@@ -81,6 +81,7 @@ app.use('/api/course', require('./routes/course'));
 app.use('/api/groups', require('./routes/groups'));
 app.use('/api/chat', require('./routes/chat'));
 app.use('/api/materials', require('./routes/materials'));
+app.use('/api/presentations', require('./routes/presentations'));
 app.use('/api/programs', require('./routes/programs'));
 app.use('/api/applications', require('./routes/applications'));
 app.use('/api/live', require('./routes/live'));

@@ -20,17 +20,36 @@ const {
 } = require('../constants/materialsPlanLimits');
 
 async function getInstructorMaterialsUsage(instructorId) {
-  const { rows } = await db.query(
-    `SELECT COALESCE(SUM(file_size), 0)::bigint AS used_bytes,
-            COUNT(*)::int AS file_count
-     FROM course_materials
-     WHERE instructor_id = $1`,
-    [instructorId],
-  );
-  return {
-    used_bytes: Number(rows[0]?.used_bytes) || 0,
-    file_count: Number(rows[0]?.file_count) || 0,
-  };
+  try {
+    const { rows } = await db.query(
+      `SELECT
+         (
+           COALESCE((SELECT SUM(file_size) FROM course_materials WHERE instructor_id = $1), 0)
+           + COALESCE((SELECT SUM(file_size) FROM presentations WHERE instructor_id = $1), 0)
+         )::bigint AS used_bytes,
+         (
+           COALESCE((SELECT COUNT(*) FROM course_materials WHERE instructor_id = $1), 0)
+           + COALESCE((SELECT COUNT(*) FROM presentations WHERE instructor_id = $1), 0)
+         )::int AS file_count`,
+      [instructorId],
+    );
+    return {
+      used_bytes: Number(rows[0]?.used_bytes) || 0,
+      file_count: Number(rows[0]?.file_count) || 0,
+    };
+  } catch {
+    const { rows } = await db.query(
+      `SELECT COALESCE(SUM(file_size), 0)::bigint AS used_bytes,
+              COUNT(*)::int AS file_count
+       FROM course_materials
+       WHERE instructor_id = $1`,
+      [instructorId],
+    );
+    return {
+      used_bytes: Number(rows[0]?.used_bytes) || 0,
+      file_count: Number(rows[0]?.file_count) || 0,
+    };
+  }
 }
 
 async function getMaterialsQuota(instructorId) {
