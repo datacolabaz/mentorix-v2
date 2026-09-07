@@ -29,14 +29,20 @@ const {
   getActiveRoles,
   getLoginEligibleRoles,
   ensureLoginRoleGranted,
-  grantUserRole,
-  grantCourseRoleToUser,
 } = require('../services/userRolesService');
 const { grantBasicTrialForInstructor } = require('../services/basicTrialIpService');
 const { BASIC_TRIAL_DAYS } = require('../config/billingTrial');
 const { clientIp } = require('../utils/clientIp');
 const { sendPasswordResetEmail } = require('../services/passwordResetEmailService');
 const { scheduleAccessEvent } = require('../services/accessEventService');
+const {
+  userNeedsOnboarding,
+  attachPersonaFields,
+  applyPersonaSelection,
+  resolvePersonaInput,
+  fetchPersonaState,
+  rowNeedsOnboarding,
+} = require('../services/personaOnboardingService');
 
 function logAuthLogin(req, user, role) {
   if (!user?.id) return;
@@ -71,9 +77,6 @@ function googleRoleMismatchResponse(existingRole, requestedRole) {
     requested_role: requestedRole,
   };
 }
-
-const SIGNUP_ROLES = new Set(['instructor', 'course']);
-const ONBOARDING_ROLES = new Set(['instructor', 'student', 'course']);
 
 function normalizeEmailInput(email) {
   const e = String(email || '').trim().toLowerCase();
@@ -269,10 +272,17 @@ async function enrichUserForClient(userLite, sessionRole = null) {
       phone_verified_at: userLite.phone_verified_at ?? g.phone_verified_at,
     });
   }
+  const personaRow = userLite.persona !== undefined ? userLite : await fetchPersonaState(userLite.id);
+  out = attachPersonaFields(out, personaRow);
   return out;
 }
 
 async function userNeedsRoleSelection(userId, fallbackRole = null) {
+  try {
+    if (await userNeedsOnboarding(userId)) return true;
+  } catch {
+    // column may be missing on a stale DB — fall through to legacy checks
+  }
   try {
     const { rows } = await db.query('SELECT role_selected FROM users WHERE id = $1 LIMIT 1', [userId]);
     if (rows[0]?.role_selected === false) return true;
@@ -287,11 +297,21 @@ async function userNeedsRoleSelection(userId, fallbackRole = null) {
 }
 
 async function loadUserLiteById(userId) {
-  const { rows } = await db.query(
-    'SELECT id, full_name, email, phone, role, phone_verified, is_active, is_verified, role_selected FROM users WHERE id = $1 LIMIT 1',
-    [userId],
-  );
-  return rows[0] || null;
+  try {
+    const { rows } = await db.query(
+      `SELECT id, full_name, email, phone, role, phone_verified, is_active, is_verified,
+              role_selected, persona, persona_profile, onboarding_completed
+       FROM users WHERE id = $1 LIMIT 1`,
+      [userId],
+    );
+    return rows[0] || null;
+  } catch {
+    const { rows } = await db.query(
+      'SELECT id, full_name, email, phone, role, phone_verified, is_active, is_verified, role_selected FROM users WHERE id = $1 LIMIT 1',
+      [userId],
+    );
+    return rows[0] || null;
+  }
 }
 
 function normalizePhone(phone) {
@@ -1056,96 +1076,133 @@ const verifyEmail = async (req, res) => {
 
     await clearVerificationFields(user.id);
     const u = await loadUserLiteById(user.id);
-    const needsRole = await userNeedsRoleSelection(user.id, u?.role);
-    const sessionRole = needsRole ? null : (u?.role || null);
+    const needsOnboarding = await userNeedsRoleSelection(user.id, u?.role);
+    const sessionRole = needsOnboarding ? null : (u?.role || null);
     const sessionToken = sign({ id: user.id, role: sessionRole });
     const userOut = u ? await enrichUserForClient(u, sessionRole) : null;
 
     return res.json({
       success: true,
       message: 'Email təsdiqləndi',
-      needs_role: needsRole,
+      needs_role: needsOnboarding,
+      needs_onboarding: needsOnboarding,
       token: sessionToken,
       user:
         userOut
-          ? { ...userOut, role: needsRole ? null : userOut.role }
-          : { id: user.id, email: u?.email || null, role: sessionRole },
+          ? { ...userOut, role: needsOnboarding ? null : userOut.role, onboarding_completed: !needsOnboarding && userOut.onboarding_completed }
+          : { id: user.id, email: u?.email || null, role: sessionRole, onboarding_completed: !needsOnboarding },
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
 };
 
-/** Email OTP verifikasiyasından sonra rol seçimi (müəllim / tələbə / kurs) */
+async function finishPersonaSession(req, userId) {
+  const fresh = await loadUserLiteById(userId);
+  const role = String(fresh?.role || '').trim().toLowerCase();
+  const token = signRoleSession({ id: userId, role });
+  const userOut = await enrichUserForClient(fresh, role);
+  logAuthLogin(req, fresh, role);
+  return { token, user: userOut };
+}
+
+/** Email OTP sonrası / köhnə client: role və ya persona qəbul edir. */
 const selectOnboardingRole = async (req, res) => {
   try {
-    const picked = String(req.body?.role || '').trim().toLowerCase();
-    if (!picked || !ONBOARDING_ROLES.has(picked)) {
-      return res.status(400).json({ success: false, message: 'Rol seçin: müəllim, tələbə və ya kurs' });
-    }
-
     const me = await loadUserLiteById(req.user.id);
     if (!me || me.is_active === false) return res.status(404).json({ success: false, message: 'Tapılmadı' });
     if (!guardEmailVerifiedBeforeToken(res, me)) return;
 
-    const needsRole = await userNeedsRoleSelection(me.id, me.role);
-    const effectiveRole = needsRole ? picked : (me.role || (await getActiveRoles(me.id))[0] || picked);
-
-    if (needsRole) {
-      await db.transaction(async (client) => {
-        await client.query(
-          `UPDATE users
-           SET role = $2,
-               role_selected = TRUE
-           WHERE id = $1`,
-          [me.id, picked],
-        );
-        await grantUserRole(me.id, picked, client);
-
-        if (picked === 'instructor') {
-          await client.query(
-            `INSERT INTO instructor_profiles (user_id, subject, billing_type)
-             VALUES ($1, NULL, '8_lessons')
-             ON CONFLICT (user_id) DO NOTHING`,
-            [me.id],
-          );
-          // Instructor hesabı üçün kurs paneli də açıq olsun.
-          await grantCourseRoleToUser(me.id, me.full_name || 'Kurs');
-          await provisionInstructorBasicTrial(client, me.id, req);
-        } else if (picked === 'course') {
-          await client.query(
-            `INSERT INTO course_profiles (user_id, course_name)
-             VALUES ($1, $2)
-             ON CONFLICT (user_id) DO NOTHING`,
-            [me.id, me.full_name || 'Kurs'],
-          );
-        } else if (picked === 'student') {
-          const up = await client.query('UPDATE student_profiles SET updated_at = NOW() WHERE user_id = $1', [me.id]);
-          if (up.rowCount === 0) {
-            await client.query('INSERT INTO student_profiles (user_id) VALUES ($1)', [me.id]).catch(() => {});
-          }
-        }
+    const persona = resolvePersonaInput(req.body);
+    if (!persona) {
+      return res.status(400).json({
+        success: false,
+        message: 'İstifadə məqsədini seçin',
+        code: 'INVALID_PERSONA',
       });
     }
 
-    const fresh = await loadUserLiteById(me.id);
-    const role = String(effectiveRole || fresh?.role || picked).trim().toLowerCase();
-    const token = sign({ id: me.id, role });
-    const userOut = await enrichUserForClient(fresh || me, role);
-    logAuthLogin(req, fresh || me, role);
-    return res.json({ success: true, token, user: userOut });
+    const needsOnboarding = await userNeedsRoleSelection(me.id, me.role);
+    await applyPersonaSelection({
+      userId: me.id,
+      persona,
+      profile: req.body?.profile || req.body || {},
+      req,
+      requireComplete: !needsOnboarding ? false : Boolean(req.body?.profile),
+      merge: true,
+    });
+
+    const session = await finishPersonaSession(req, me.id);
+    return res.json({ success: true, ...session });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    const st = err.statusCode || 500;
+    res.status(st).json({ success: false, message: err.message, code: err.code });
   }
 };
 
-/** İctimai qeydiyyat — müəllim / kurs (öz Gmail ilə) */
+/** Yeni onboarding: persona + seqment profili. */
+const selectOnboardingPersona = async (req, res) => {
+  try {
+    const me = await loadUserLiteById(req.user.id);
+    if (!me || me.is_active === false) return res.status(404).json({ success: false, message: 'Tapılmadı' });
+    if (!guardEmailVerifiedBeforeToken(res, me)) return;
+
+    const persona = resolvePersonaInput(req.body);
+    await applyPersonaSelection({
+      userId: me.id,
+      persona,
+      profile: req.body?.profile || {},
+      req,
+      requireComplete: true,
+      merge: true,
+    });
+
+    const session = await finishPersonaSession(req, me.id);
+    return res.json({ success: true, ...session });
+  } catch (err) {
+    const st = err.statusCode || 500;
+    res.status(st).json({ success: false, message: err.message, code: err.code });
+  }
+};
+
+/** Settings: persona dəyiş — köhnə persona_profile silinmir. */
+const updatePersona = async (req, res) => {
+  try {
+    const me = await loadUserLiteById(req.user.id);
+    if (!me || me.is_active === false) return res.status(404).json({ success: false, message: 'Tapılmadı' });
+    if (!guardEmailVerifiedBeforeToken(res, me)) return;
+    if (rowNeedsOnboarding(me)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Əvvəlcə onboarding-i tamamlayın',
+        code: 'ONBOARDING_REQUIRED',
+      });
+    }
+
+    const persona = resolvePersonaInput(req.body);
+    await applyPersonaSelection({
+      userId: me.id,
+      persona,
+      profile: req.body?.profile || {},
+      req,
+      requireComplete: false,
+      merge: true,
+    });
+
+    const session = await finishPersonaSession(req, me.id);
+    return res.json({ success: true, ...session });
+  } catch (err) {
+    const st = err.statusCode || 500;
+    res.status(st).json({ success: false, message: err.message, code: err.code });
+  }
+};
+
+/** İctimai qeydiyyat — rol soruşulmur; onboarding sonra tamamlanır. */
 const signup = async (req, res) => {
   try {
-    const { full_name, email, password, role: roleRaw } = req.body || {};
-    const role = String(roleRaw || '').trim().toLowerCase();
-    const roleSelected = Boolean(role) && ONBOARDING_ROLES.has(role);
-    const initialRole = roleSelected ? role : 'student';
+    const { full_name, email, password } = req.body || {};
+    const initialRole = 'student';
+    const roleSelected = false;
 
     const emailCanon = normalizeEmailInput(email);
     if (!emailCanon) return res.status(400).json({ success: false, message: 'Düzgün email daxil edin' });
@@ -1156,14 +1213,6 @@ const signup = async (req, res) => {
     const pass = String(password || '');
     if (pass.length < 8) {
       return res.status(400).json({ success: false, message: 'Şifrə ən azı 8 simvol olmalıdır' });
-    }
-
-    if (initialRole === 'instructor') {
-      return res.status(400).json({
-        success: false,
-        message: 'Müəllim qeydiyyatı yalnız Google ilə mümkündür.',
-        code: 'INSTRUCTOR_GOOGLE_ONLY',
-      });
     }
 
     const hash = await bcrypt.hash(pass, 12);
@@ -1182,47 +1231,12 @@ const signup = async (req, res) => {
 
     const user = await db.transaction(async (client) => {
       const { rows } = await client.query(
-        `INSERT INTO users (full_name, email, phone, password_hash, role, is_verified, account_status, role_selected, phone_verified)
-         VALUES ($1, $2, NULL, $3, $4, FALSE, 'active', $5, FALSE)
-         RETURNING id, full_name, email, role, phone, phone_verified, role_selected`,
+        `INSERT INTO users (full_name, email, phone, password_hash, role, is_verified, account_status, role_selected, phone_verified, onboarding_completed, persona)
+         VALUES ($1, $2, NULL, $3, $4, FALSE, 'active', $5, FALSE, FALSE, NULL)
+         RETURNING id, full_name, email, role, phone, phone_verified, role_selected, onboarding_completed, persona`,
         [name, emailCanon, hash, initialRole, roleSelected],
       );
-      const created = rows[0];
-
-      if (roleSelected) {
-        await client.query(
-          `INSERT INTO user_roles (user_id, role, is_active) VALUES ($1, $2, TRUE)
-           ON CONFLICT (user_id, role) DO UPDATE SET is_active = TRUE`,
-          [created.id, initialRole],
-        );
-      }
-
-      if (initialRole === 'instructor') {
-        await client.query(
-          'INSERT INTO instructor_profiles (user_id, subject, billing_type) VALUES ($1, NULL, $2)',
-          [created.id, '8_lessons'],
-        );
-        await client.query(
-          `INSERT INTO user_roles (user_id, role, is_active) VALUES ($1, 'course', TRUE)
-           ON CONFLICT (user_id, role) DO UPDATE SET is_active = TRUE`,
-          [created.id],
-        );
-        await client.query(
-          `INSERT INTO course_profiles (user_id, course_name) VALUES ($1, $2) ON CONFLICT (user_id) DO NOTHING`,
-          [created.id, name],
-        );
-        await provisionInstructorBasicTrial(client, created.id, req);
-      } else if (initialRole === 'course') {
-        await client.query(
-          `INSERT INTO course_profiles (user_id, course_name) VALUES ($1, $2) ON CONFLICT (user_id) DO NOTHING`,
-          [created.id, name],
-        );
-      } else if (initialRole === 'student') {
-        // Ensure student profile exists (optional fields later)
-        await client.query('INSERT INTO student_profiles (user_id) VALUES ($1) ON CONFLICT DO NOTHING', [created.id]).catch(() => {});
-      }
-
-      return created;
+      return rows[0];
     });
 
     queueEmailVerification(user.id, emailCanon);
@@ -1230,7 +1244,7 @@ const signup = async (req, res) => {
     scheduleAccessEvent(req, {
       event_type: 'signup_complete',
       user_id: user.id,
-      role: user.role_selected ? user.role : initialRole,
+      role: null,
       path: '/auth/signup',
       device_type: req.body?.device_type,
       session_key: req.body?.session_key,
@@ -1242,7 +1256,15 @@ const signup = async (req, res) => {
     return res.status(201).json({
       success: true,
       message: 'Qeydiyyat uğurludur. Email ünvanınıza təsdiq kodu və link göndərildi.',
-      user: { id: user.id, full_name: user.full_name, email: user.email, role: user.role_selected ? user.role : null },
+      user: {
+        id: user.id,
+        full_name: user.full_name,
+        email: user.email,
+        role: null,
+        persona: null,
+        onboarding_completed: false,
+      },
+      needs_onboarding: true,
       email_verification_sent: true,
     });
   } catch (err) {
@@ -1284,10 +1306,31 @@ const loginWithEmail = async (req, res) => {
 
     if (!guardEmailVerifiedBeforeToken(res, user)) return;
 
+    if (rowNeedsOnboarding(user) || (await userNeedsOnboarding(user.id))) {
+      const token = sign({ id: user.id, role: null });
+      const lite = {
+        id: user.id,
+        full_name: user.full_name,
+        email: user.email,
+        role: null,
+        phone: user.phone,
+        persona: user.persona || null,
+        persona_profile: user.persona_profile || {},
+        onboarding_completed: false,
+      };
+      return res.json({
+        success: true,
+        needs_role: true,
+        needs_onboarding: true,
+        token,
+        user: lite,
+      });
+    }
+
     if (!requestedRole || !LOGIN_ROLES.has(requestedRole)) {
       return res.status(400).json({
         success: false,
-        message: 'Giriş üçün rol seçin: müəllim, tələbə, kurs və ya valideyn',
+        message: 'Giriş üçün hesab növünü seçin',
       });
     }
 
@@ -1371,18 +1414,13 @@ const resendVerificationEmail = async (req, res) => {
 
 const me = async (req, res) => {
   try {
-    const { rows } = await db.query(
-      `SELECT id, full_name, email, phone, role, phone_verified, phone_verified_at,
-              google_sub, auth_provider, is_active, is_verified, role_selected, last_activity_at
-       FROM users WHERE id = $1`,
-      [req.user.id],
-    );
-    const u = rows[0];
+    const u = await loadUserLiteById(req.user.id);
     if (!u || u.is_active === false) return res.status(404).json({ success: false, message: 'Tapılmadı' });
     if (!guardEmailVerifiedBeforeToken(res, u)) return;
-    const sessionRole = u.role_selected === false ? null : req.user.role;
+    const needsOnboarding = rowNeedsOnboarding(u) || (await userNeedsOnboarding(u.id));
+    const sessionRole = needsOnboarding ? null : req.user.role;
     const userOut = await enrichUserForClient(u, sessionRole);
-    if (u.role_selected === false) userOut.role = null;
+    if (needsOnboarding) userOut.role = null;
     const { withPresence } = require('../services/userPresenceService');
     res.json({ success: true, user: withPresence({ ...userOut, last_activity_at: u.last_activity_at }) });
   } catch (err) {
@@ -1775,7 +1813,8 @@ const googleLogin = async (req, res) => {
     const g = await verifyGoogleIdTokenOrThrow(credential);
 
     const bySub = await db.query(
-      `SELECT id, full_name, email, role, phone, phone_verified, auth_provider, google_sub, account_status, is_active, is_verified
+      `SELECT id, full_name, email, role, phone, phone_verified, auth_provider, google_sub, account_status, is_active, is_verified,
+              role_selected, persona, persona_profile, onboarding_completed
        FROM users
        WHERE is_active = TRUE
          AND google_sub = $1
@@ -1790,7 +1829,8 @@ const googleLogin = async (req, res) => {
 
     if (!user && g.email) {
       const byEmail = await db.query(
-        `SELECT id, full_name, email, role, phone, phone_verified, auth_provider, google_sub, account_status, is_active, is_verified
+        `SELECT id, full_name, email, role, phone, phone_verified, auth_provider, google_sub, account_status, is_active, is_verified,
+                role_selected, persona, persona_profile, onboarding_completed
          FROM users
          WHERE email IS NOT NULL
            AND LOWER(TRIM(email)) = LOWER(TRIM($1))
@@ -1832,22 +1872,46 @@ const googleLogin = async (req, res) => {
                END
            WHERE id = $1
            RETURNING id, full_name, email, role, phone, phone_verified, phone_verified_at,
-                     auth_provider, google_sub, account_status, is_active, is_verified`,
+                     auth_provider, google_sub, account_status, is_active, is_verified,
+                     role_selected, persona, persona_profile, onboarding_completed`,
           [user.id, g.sub, g.name || null],
         );
         if (linkedByEmail[0]) user = linkedByEmail[0];
       }
     }
 
-    if (!user || !user.role) {
+    if (!user) {
       return res.json({
         success: true,
         needs_role: true,
+        needs_onboarding: true,
         profile: {
-          email: g.email || user?.email || null,
-          full_name: user?.full_name || g.name || null,
+          email: g.email || null,
+          full_name: g.name || null,
           google_sub: g.sub,
         },
+      });
+    }
+
+    if (rowNeedsOnboarding(user) || (await userNeedsOnboarding(user.id))) {
+      if (!guardEmailVerifiedBeforeToken(res, user)) return;
+      const token = sign({ id: user.id, role: null });
+      const userOut = attachPersonaFields(
+        {
+          id: user.id,
+          full_name: user.full_name,
+          email: user.email,
+          role: null,
+          phone: user.phone,
+        },
+        { ...user, onboarding_completed: false },
+      );
+      return res.json({
+        success: true,
+        needs_role: true,
+        needs_onboarding: true,
+        token,
+        user: userOut,
       });
     }
 
@@ -1866,7 +1930,17 @@ const googleLogin = async (req, res) => {
       google_sub: user.google_sub || g.sub,
       auth_provider: user.auth_provider || 'google',
     };
-    const payload = attachPhoneVerificationFlags(buildAuthUserPayload(sessionUser));
+    const payload = attachPhoneVerificationFlags(
+      await enrichUserForClient(
+        {
+          ...buildAuthUserPayload(sessionUser),
+          persona: user.persona,
+          persona_profile: user.persona_profile,
+          onboarding_completed: user.onboarding_completed,
+        },
+        user.role,
+      ),
+    );
     return res.json({
       success: true,
       token,
@@ -2071,16 +2145,14 @@ const googleLinkVerify = async (req, res) => {
 
 const googleComplete = async (req, res) => {
   try {
-    const { credential, role } = req.body;
+    const { credential } = req.body;
     const isSignupIntent = parseGoogleAuthIntent(req.body);
     const g = await verifyGoogleIdTokenOrThrow(credential);
-    const r = String(role || '').trim().toLowerCase();
-    if (!r || !LOGIN_ROLES.has(r)) {
-      return res.status(400).json({ success: false, message: 'Rol seçin: müəllim, tələbə və ya kurs' });
-    }
+    const requestedRole = String(req.body?.role || '').trim().toLowerCase();
 
     const { rows: existingBySub } = await db.query(
-      `SELECT id, full_name, email, role, phone, phone_verified, google_sub, account_status, is_active, is_verified
+      `SELECT id, full_name, email, role, phone, phone_verified, google_sub, account_status, is_active, is_verified,
+              role_selected, persona, persona_profile, onboarding_completed
        FROM users
        WHERE is_active = TRUE
          AND google_sub = $1
@@ -2089,13 +2161,14 @@ const googleComplete = async (req, res) => {
     );
     let user = existingBySub[0] || null;
 
-    if (isSignupIntent && isActiveGoogleUser(user)) {
+    if (isSignupIntent && isActiveGoogleUser(user) && !rowNeedsOnboarding(user)) {
       return res.status(409).json(googleAccountExistsSignupResponse());
     }
 
     if (!user && g.email) {
       const { rows: byEmail } = await db.query(
-        `SELECT id, full_name, email, role, phone, phone_verified, google_sub, account_status, is_active, is_verified
+        `SELECT id, full_name, email, role, phone, phone_verified, google_sub, account_status, is_active, is_verified,
+                role_selected, persona, persona_profile, onboarding_completed
          FROM users
          WHERE email IS NOT NULL
            AND LOWER(TRIM(email)) = LOWER(TRIM($1))
@@ -2107,14 +2180,20 @@ const googleComplete = async (req, res) => {
       );
       user = byEmail[0] || null;
       if (user) {
-        if (isSignupIntent && isActiveGoogleUser(user)) {
+        if (isSignupIntent && isActiveGoogleUser(user) && !rowNeedsOnboarding(user)) {
           return res.status(409).json(googleAccountExistsSignupResponse());
         }
         if (!g.email_verified) {
           return res.status(409).json({ success: false, message: 'Google email təsdiqlənməyib' });
         }
-        if (user.role && user.role !== r) {
-          return res.status(409).json(googleRoleMismatchResponse(user.role, r));
+        if (
+          requestedRole &&
+          LOGIN_ROLES.has(requestedRole) &&
+          user.role &&
+          user.role !== requestedRole &&
+          !rowNeedsOnboarding(user)
+        ) {
+          return res.status(409).json(googleRoleMismatchResponse(user.role, requestedRole));
         }
         if (user.google_sub && String(user.google_sub) !== String(g.sub)) {
           return res.status(409).json({ success: false, message: 'Bu email artıq başqa Google hesabına bağlıdır' });
@@ -2125,74 +2204,57 @@ const googleComplete = async (req, res) => {
 
     if (!user) {
       const fullName = g.name || (g.email ? g.email.split('@')[0] : 'User');
-      // Some production DBs still enforce NOT NULL on password_hash. Google users don't have a password,
-      // but password-based login paths must still fail safely (bcrypt compare against a random hash).
       const oauthPasswordPlaceholder = await bcrypt.hash(
         `google_oauth:${g.sub}:${Date.now()}:${Math.random()}`,
         10
       );
       const { rows: created } = await db.query(
-        `INSERT INTO users (full_name, email, role, auth_provider, google_sub, phone_verified, password_hash, account_status, is_verified, locale)
-         VALUES ($1, $2, $3, 'google', $4, FALSE, $5, 'active', TRUE, $6)
-         RETURNING id, full_name, email, role, phone, phone_verified, is_verified`,
-        [fullName, g.email, r, g.sub, oauthPasswordPlaceholder, localeFromReq(req)]
+        `INSERT INTO users (
+           full_name, email, role, auth_provider, google_sub, phone_verified, password_hash,
+           account_status, is_verified, locale, role_selected, onboarding_completed, persona
+         )
+         VALUES ($1, $2, 'student', 'google', $3, FALSE, $4, 'active', TRUE, $5, FALSE, FALSE, NULL)
+         RETURNING id, full_name, email, role, phone, phone_verified, is_verified,
+                   role_selected, persona, persona_profile, onboarding_completed`,
+        [fullName, g.email, g.sub, oauthPasswordPlaceholder, localeFromReq(req)]
       );
       user = created[0];
-      if (r === 'instructor') {
-        await db.query(
-          `INSERT INTO instructor_profiles (user_id, subject, billing_type) VALUES ($1, NULL, '8_lessons')`,
-          [user.id],
-        );
-        await grantCourseRoleToUser(user.id, user.full_name || 'Kurs');
-        await provisionInstructorBasicTrial(db, user.id, req);
-      } else if (r === 'student') {
-        await db.query('INSERT INTO student_profiles (user_id) VALUES ($1) ON CONFLICT DO NOTHING', [user.id]).catch(() => {});
-      }
-    } else if (!user.role) {
-      const { rows: updated } = await db.query(
-        `UPDATE users
-         SET role = $2,
-             auth_provider = 'google',
-             google_sub = COALESCE(google_sub, $3),
-             is_active = TRUE,
-             account_status = 'active'
-         WHERE id = $1
-         RETURNING id, full_name, email, role, phone, phone_verified, is_verified`,
-        [user.id, r, g.sub]
-      );
-      user = updated[0] || user;
     } else {
       const { rows: linked } = await db.query(
         `UPDATE users
          SET google_sub = COALESCE(google_sub, $2),
-             auth_provider = 'google',
+             auth_provider = COALESCE(NULLIF(TRIM(auth_provider), ''), 'google'),
              is_active = TRUE,
-             account_status = 'active'
+             account_status = 'active',
+             is_verified = TRUE
          WHERE id = $1
-         RETURNING id, full_name, email, role, phone, phone_verified, is_verified`,
+         RETURNING id, full_name, email, role, phone, phone_verified, is_verified,
+                   role_selected, persona, persona_profile, onboarding_completed`,
         [user.id, g.sub]
       );
-      if (linked[0]) user = linked[0];
+      if (linked[0]) user = { ...user, ...linked[0] };
     }
 
     if (!guardEmailVerifiedBeforeToken(res, user)) return;
 
     await persistUserLocale(db, user.id, localeFromReq(req)).catch(() => {});
 
-    const token = signRoleSession({ id: user.id, role: user.role });
-    logAuthLogin(req, user, user.role);
-    const sessionUser = {
-      ...user,
-      google_sub: user.google_sub || g.sub,
-      auth_provider: user.auth_provider || 'google',
-    };
-    const payload = attachPhoneVerificationFlags(buildAuthUserPayload(sessionUser));
+    const needsOnboarding = rowNeedsOnboarding(user) || (await userNeedsOnboarding(user.id));
+    const sessionRole = needsOnboarding ? null : user.role;
+    const token = signRoleSession({ id: user.id, role: sessionRole });
+    if (!needsOnboarding) logAuthLogin(req, user, sessionRole);
+    const fresh = await loadUserLiteById(user.id);
+    const userOut = await enrichUserForClient(fresh || user, sessionRole);
+    if (needsOnboarding) userOut.role = null;
+
     return res.json({
       success: true,
       token,
-      user: payload,
-      needs_phone_verification: Boolean(payload.needs_phone_verification),
-      needs_instructor_phone: Boolean(payload.needs_instructor_phone),
+      user: attachPhoneVerificationFlags(userOut),
+      needs_role: needsOnboarding,
+      needs_onboarding: needsOnboarding,
+      needs_phone_verification: false,
+      needs_instructor_phone: false,
     });
   } catch (err) {
     const st = err.statusCode || 500;
@@ -2211,6 +2273,8 @@ module.exports = {
   register,
   verifyEmail,
   selectOnboardingRole,
+  selectOnboardingPersona,
+  updatePersona,
   signup,
   loginWithEmail,
   resendVerificationEmail,

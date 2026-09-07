@@ -53,6 +53,7 @@ import { formatStorageBytesHuman } from '../../lib/storageAddonDisplay'
 import { useBillingConfig } from '../../hooks/useBillingConfig'
 import { openBillingReceiptWhatsApp } from '../../lib/billingPaymentLabels'
 import Modal from '../../components/common/Modal'
+import PersonaSettingsCard from '../../components/onboarding/PersonaSettingsCard'
 
 function billingPaymentTitleLocalized(p, t) {
   if (p?.product_type === 'sms') return t('settings.billingTitle.sms', { count: p.sms_quantity || 0 })
@@ -658,6 +659,8 @@ export default function InstructorSettings() {
           </a>
         </nav>
       </div>
+
+      <PersonaSettingsCard />
 
       <InstructorDiscoverSettings mapVisible={mapVisible} theme={theme} inp={inp} />
 

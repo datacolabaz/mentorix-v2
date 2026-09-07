@@ -164,6 +164,7 @@
     "fullName": "Full name",
     "forgotPassword": "Forgot password",
     "accountType": "Account type",
+    "signupLead": "Create your account first. You will choose how you use Mentorix after sign-up.",
     "whoAreYou": "Who are you?",
     "chooseRole": "Choose your role",
     "googleLogin": "Sign in with Google",
@@ -201,7 +202,8 @@
       "enterPassword": "Enter your password",
       "verifyEmailFirst": "Verify your email first (code or link)",
       "loginError": "Sign-in error",
-      "emailVerifiedChooseRole": "Email verified! Now choose your role.",
+      "emailVerifiedChooseRole": "Email verified! Now choose how you will use Mentorix.",
+      "emailVerifiedChooseUse": "Email verified! Now choose how you will use Mentorix.",
       "emailVerifiedLoggedIn": "Email verified! You are signed in.",
       "emailVerifiedCanLogin": "Email verified! You can sign in now.",
       "invalidCode": "The code is incorrect or has expired",
@@ -209,6 +211,173 @@
       "sendFailed": "Could not send",
       "recoverySent": "Recovery link sent (check your email)"
     }
+  },
+  "onboarding": {
+    "title": "How will you use Mentorix?",
+    "subtitle": "Choose your use case so we can prepare the right experience.",
+    "forAccount": "For {{email}}",
+    "continue": "Continue",
+    "detailsHint": "A few details help us set up the right workspace.",
+    "unauthorizedTitle": "Sign in",
+    "unauthorizedBody": "Please sign in first to continue.",
+    "toasts": {
+      "ready": "You’re set. Opening your workspace.",
+      "failed": "Could not finish onboarding"
+    },
+    "personas": {
+      "teacher": {
+        "title": "Teacher / Tutor",
+        "desc": "Teach, create tests and exams, and manage students."
+      },
+      "education_center": {
+        "title": "Education center / Course manager",
+        "desc": "Manage groups, teachers, students, and exams in one place."
+      },
+      "student": {
+        "title": "Student",
+        "desc": "Join tests and exams and track my results."
+      },
+      "parent": {
+        "title": "Parent",
+        "desc": "Follow my child’s test and exam results."
+      },
+      "hr_company": {
+        "title": "Company / HR",
+        "desc": "Hiring, candidate assessment, employee knowledge checks, and corporate exams."
+      },
+      "other": {
+        "title": "Other",
+        "desc": "I use Mentorix for a different purpose."
+      }
+    },
+    "fields": {
+      "select": "Select",
+      "subject": "Subject / focus",
+      "subjectPlaceholder": "e.g. Math, SAT, English",
+      "teachingFormat": "Teaching format",
+      "studentCount": "Approximate student count",
+      "centerName": "Center name",
+      "centerNamePlaceholder": "Your education center name",
+      "teacherCount": "Approximate teacher count",
+      "centerStudentCount": "Approximate student count",
+      "centerExamPurpose": "How you will use exams and tests",
+      "centerExamPurposePlaceholder": "e.g. internal exams, admissions, certification",
+      "educationLevel": "Education level",
+      "subjectInterest": "Subject / focus of interest",
+      "subjectInterestPlaceholder": "e.g. Physics, IELTS",
+      "childCount": "Number of children",
+      "followFocus": "What will you follow most?",
+      "companyName": "Company name",
+      "companyNamePlaceholder": "Your company name",
+      "companySize": "Company size",
+      "hrExamPurpose": "Exam purpose",
+      "otherPurpose": "Briefly describe your use case",
+      "otherPurposePlaceholder": "Tell us how you want to use Mentorix"
+    },
+    "options": {
+      "teachingFormat": {
+        "individual": "Individual",
+        "group": "Group",
+        "online": "Online",
+        "hybrid": "Hybrid"
+      },
+      "studentCount": {
+        "1-5": "1–5",
+        "6-15": "6–15",
+        "16-40": "16–40",
+        "40+": "40+"
+      },
+      "teacherCount": {
+        "1-3": "1–3",
+        "4-10": "4–10",
+        "11-30": "11–30",
+        "30+": "30+"
+      },
+      "centerStudentCount": {
+        "1-20": "1–20",
+        "21-80": "21–80",
+        "81-200": "81–200",
+        "200+": "200+"
+      },
+      "educationLevel": {
+        "school": "School",
+        "college": "College",
+        "university": "University",
+        "other": "Other"
+      },
+      "childCount": {
+        "1": "1",
+        "2": "2",
+        "3+": "3+"
+      },
+      "followFocus": {
+        "exams": "Exam results",
+        "progress": "Overall progress",
+        "both": "Both"
+      },
+      "companySize": {
+        "1-10": "1–10",
+        "11-50": "11–50",
+        "51-200": "51–200",
+        "201-1000": "201–1000",
+        "1000+": "1000+"
+      },
+      "hrExamPurpose": {
+        "hiring": "Hiring",
+        "candidate_assessment": "Candidate assessment",
+        "employee_assessment": "Employee assessment",
+        "training_certification": "Training and certification",
+        "other": "Other"
+      }
+    }
+  },
+  "personaHome": {
+    "title": "Quick links",
+    "teacher": {
+      "createExam": "Create exam",
+      "tests": "Tests",
+      "students": "Students",
+      "groups": "Groups",
+      "results": "Results"
+    },
+    "education_center": {
+      "teachers": "Teachers",
+      "groups": "Groups",
+      "students": "Students",
+      "exams": "Exams",
+      "reports": "Reports"
+    },
+    "student": {
+      "exams": "My exams",
+      "tests": "My tests",
+      "results": "My results"
+    },
+    "parent": {
+      "children": "My children",
+      "results": "Results",
+      "exams": "Exams"
+    },
+    "hr_company": {
+      "candidates": "Candidates",
+      "exams": "Exams",
+      "tests": "Tests",
+      "evaluations": "Evaluations",
+      "results": "Results",
+      "reports": "Reports"
+    },
+    "other": {
+      "exams": "Exams",
+      "tests": "Tests",
+      "results": "Results"
+    }
+  },
+  "personaSettings": {
+    "title": "How you use Mentorix",
+    "subtitle": "Current: {{current}}",
+    "keepNote": "Changing this does not delete your existing data.",
+    "save": "Save",
+    "saved": "Use case updated",
+    "failed": "Could not update"
   },
   "dashboard": {
     "greetingMorning": "Good morning",

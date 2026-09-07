@@ -5,6 +5,8 @@ const {
   me,
   verifyEmail,
   selectOnboardingRole,
+  selectOnboardingPersona,
+  updatePersona,
   signup,
   loginWithEmail,
   resendVerificationEmail,
@@ -43,6 +45,8 @@ router.post('/password/reset', resetPassword);
 router.post('/resend-verification', resendVerificationEmail);
 router.post('/verify-email', verifyEmail);
 router.post('/onboarding/role', authenticate, selectOnboardingRole);
+router.post('/onboarding/persona', authenticate, selectOnboardingPersona);
+router.patch('/persona', authenticate, updatePersona);
 router.get('/me', authenticate, me);
 router.patch('/profile', authenticate, patchMyProfile);
 router.get('/instructor/phone-status', authenticate, instructorPhoneStatus);

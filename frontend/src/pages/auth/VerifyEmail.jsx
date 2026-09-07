@@ -41,11 +41,11 @@ export default function VerifyEmail() {
         const r = await api.post('/auth/verify-email', { token })
         if (r?.token && r?.user) {
           setSession(r.token, r.user)
-          if (r?.needs_role) {
+          if (r?.needs_onboarding || r?.needs_role) {
             setKind('success')
-            setMessage('Email təsdiqləndi. İndi rol seçin.')
-            toast('Email təsdiqləndi. Rol seçin.', 'success')
-            setTimeout(() => navigate('/onboarding/role', { replace: true }), 400)
+            setMessage('Email təsdiqləndi. İndi istifadə məqsədinizi seçin.')
+            toast('Email təsdiqləndi. İstifadə məqsədinizi seçin.', 'success')
+            setTimeout(() => navigate('/onboarding', { replace: true }), 400)
           } else {
             setKind('success')
             setMessage(r?.message || 'Email təsdiqləndi')

@@ -22,14 +22,25 @@ function respondEmailNotVerified(res) {
 
 /** DB-dən cari verification status (hər sessiya yoxlaması üçün). */
 async function fetchUserAuthState(userId) {
-  const { rows } = await db.query(
-    `SELECT id, role, is_active, is_verified, role_selected
-     FROM users
-     WHERE id = $1
-     LIMIT 1`,
-    [userId],
-  );
-  return rows[0] || null;
+  try {
+    const { rows } = await db.query(
+      `SELECT id, role, is_active, is_verified, role_selected, onboarding_completed
+       FROM users
+       WHERE id = $1
+       LIMIT 1`,
+      [userId],
+    );
+    return rows[0] || null;
+  } catch {
+    const { rows } = await db.query(
+      `SELECT id, role, is_active, is_verified, role_selected
+       FROM users
+       WHERE id = $1
+       LIMIT 1`,
+      [userId],
+    );
+    return rows[0] || null;
+  }
 }
 
 /**

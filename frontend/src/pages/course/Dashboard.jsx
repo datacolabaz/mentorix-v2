@@ -5,6 +5,7 @@ import Card from '../../components/common/Card'
 import KpiCard from '../../components/common/KpiCard'
 import useAuthStore from '../../hooks/useAuth'
 import CourseSetupModal from '../../components/course/CourseSetupModal'
+import PersonaHomeLinks from '../../components/onboarding/PersonaHomeLinks'
 
 const QUICK_LINKS = [
   { to: '/course/leads', label: 'Lidlər', desc: 'Qəbul və sınaq dərs izləmə' },
@@ -102,6 +103,8 @@ export default function CourseDashboard() {
           </p>
         ) : null}
       </div>
+
+      <PersonaHomeLinks />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard

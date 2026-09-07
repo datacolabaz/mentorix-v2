@@ -17,6 +17,7 @@ import MarketplaceOpportunityCard from '../../components/instructor/MarketplaceO
 import BasicTrialCountdownBanner from '../../components/instructor/BasicTrialCountdownBanner'
 import PresenceDot from '../../components/common/PresenceDot'
 import { moneyLocale as moneyLocaleTag } from '../../lib/uiLocale'
+import PersonaHomeLinks from '../../components/onboarding/PersonaHomeLinks'
 
 const DEFAULT_DASH = {
   income_this_month: 0,
@@ -375,6 +376,7 @@ export default function InstructorDashboard() {
           </div>
         </div>
       </div>
+      <PersonaHomeLinks className="mb-4 sm:mb-6" />
 
       <BasicTrialCountdownBanner
         billing={billing}

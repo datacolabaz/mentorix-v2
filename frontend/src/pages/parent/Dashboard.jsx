@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom'
 import api from '../../lib/api'
 import Card from '../../components/common/Card'
 import useAuthStore from '../../hooks/useAuth'
+import PersonaHomeLinks from '../../components/onboarding/PersonaHomeLinks'
+import PersonaSettingsCard from '../../components/onboarding/PersonaSettingsCard'
 
 export default function ParentDashboard() {
   const { user } = useAuthStore()
@@ -36,6 +38,8 @@ export default function ParentDashboard() {
           Ev tapşırıqları →
         </Link>
       </div>
+      <PersonaHomeLinks className="mb-6" />
+      <PersonaSettingsCard className="mb-6" />
 
       {hwSummary && hwSummary.assigned > 0 && (
         <Card className="p-4 mb-6 border border-indigo-500/20">
