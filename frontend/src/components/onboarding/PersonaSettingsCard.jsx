@@ -7,7 +7,7 @@ import NavIcon from '../common/NavIcon'
 import { useToast } from '../common/Toast'
 import useAuthStore from '../../hooks/useAuth'
 import api from '../../lib/api'
-import { dashboardPathForRole } from '../../lib/postAuth'
+import { dashboardPathForUser } from '../../lib/postAuth'
 import {
   PERSONA_ORDER,
   PERSONA_UI,
@@ -24,7 +24,10 @@ export default function PersonaSettingsCard({ className = '' }) {
   const [busy, setBusy] = useState(false)
 
   const changed = picked && picked !== current
-  const currentTitle = useMemo(() => t(PERSONA_UI[current]?.titleKey || ''), [current, t])
+  const currentTitle = useMemo(
+    () => (current ? t(PERSONA_UI[current]?.titleKey || '') : t('personaSettings.noneSelected')),
+    [current, t],
+  )
 
   const save = async () => {
     if (!changed) return
@@ -35,7 +38,7 @@ export default function PersonaSettingsCard({ className = '' }) {
       if (!r?.token || !r?.user) throw new Error(r?.message || t('auth.errors.invalidServer'))
       setSession(r.token, r.user)
       toast(t('personaSettings.saved'), 'success')
-      const nextPath = dashboardPathForRole(r.user.role)
+      const nextPath = dashboardPathForUser(r.user)
       if (nextPath && nextPath !== window.location.pathname.replace(/\/settings$/, '')) {
         navigate(nextPath, { replace: true })
       }

@@ -202,6 +202,19 @@ async function applyPersonaSelection({ userId, persona, profile, req, requireCom
   return { persona: personaId, authRole };
 }
 
+/** Complete onboarding without a use-case. Does not assign a persona or wipe history. */
+async function skipOnboarding(userId) {
+  await db.query(
+    `UPDATE users
+     SET onboarding_completed = TRUE,
+         role_selected = TRUE,
+         persona = NULL
+     WHERE id = $1`,
+    [userId],
+  );
+  return { persona: null, authRole: null, skipped: true };
+}
+
 function resolvePersonaInput(body) {
   const direct = String(body?.persona || '').trim();
   if (isPersonaId(direct)) return direct;
@@ -214,6 +227,7 @@ module.exports = {
   userNeedsOnboarding,
   attachPersonaFields,
   applyPersonaSelection,
+  skipOnboarding,
   resolvePersonaInput,
   rowNeedsOnboarding,
 };

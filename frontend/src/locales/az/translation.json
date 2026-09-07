@@ -217,6 +217,8 @@
     "subtitle": "Sizə uyğun təcrübəni hazırlamaq üçün istifadə məqsədinizi seçin.",
     "forAccount": "{{email}} hesabı üçün",
     "continue": "Davam et",
+    "continueHintSkip": "Seçim məcburi deyil. Sonra Tənzimləmələrdən də seçə bilərsiniz.",
+    "continueHintSelected": "Davam et — qısa məlumatları doldurmaq üçün.",
     "detailsHint": "Sizə uyğun paneli hazırlamaq üçün qısa məlumatları doldurun.",
     "unauthorizedTitle": "Daxil olun",
     "unauthorizedBody": "Davam etmək üçün əvvəlcə hesabınıza daxil olun.",
@@ -371,9 +373,15 @@
       "results": "Nəticələr"
     }
   },
+  "appHome": {
+    "title": "Mentorix",
+    "greeting": "Salam, {{name}}",
+    "subtitle": "İstifadə məqsədinizi indi və ya sonra seçə bilərsiniz. Seçəndə sizə uyğun panel açılacaq."
+  },
   "personaSettings": {
     "title": "İstifadə məqsədi",
     "subtitle": "Hazırda: {{current}}",
+    "noneSelected": "Hələ seçilməyib",
     "keepNote": "Dəyişəndə əvvəlki məlumatlarınız silinmir.",
     "save": "Yadda saxla",
     "saved": "İstifadə məqsədi yeniləndi",

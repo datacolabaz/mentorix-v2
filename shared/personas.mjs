@@ -50,3 +50,4 @@ export function defaultPersonaForAuthRole(role) {
 }
 
 export const ONBOARDING_PATH = '/onboarding'
+export const DEFAULT_APP_PATH = '/app'

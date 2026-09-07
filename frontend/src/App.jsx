@@ -8,7 +8,8 @@ import VerifyEmail from './pages/auth/VerifyEmail'
 import VerifyPhone from './pages/auth/VerifyPhone'
 import ResetPassword from './pages/auth/ResetPassword'
 import PersonaOnboarding from './pages/auth/PersonaOnboarding'
-import { dashboardPathForRole, userNeedsOnboarding, ONBOARDING_PATH } from './lib/postAuth'
+import GenericAppHome from './pages/app/Home'
+import { dashboardPathForUser, userNeedsOnboarding, ONBOARDING_PATH } from './lib/postAuth'
 import InstructorMapSearch from './pages/public/InstructorMapSearch'
 import UniversityProgramSearch from './pages/public/UniversityProgramSearch'
 import PublicSeoLanding from './pages/public/PublicSeoLanding'
@@ -137,11 +138,6 @@ function AuthedRoute({ children }) {
   return children
 }
 
-function postLoginPath(user) {
-  if (userNeedsOnboarding(user)) return ONBOARDING_PATH
-  return dashboardPathForRole(user.role)
-}
-
 function ScrollToTop() {
   const { pathname, key } = useLocation()
 
@@ -176,8 +172,34 @@ export default function App() {
       ))}
       <Route path="/muellim-paneli" element={<Navigate to="/muellimler-ucun" replace />} />
       <Route path="/teachers/:id" element={<PublicInstructorProfile />} />
-      <Route path="/login" element={user ? <Navigate to={postLoginPath(user)} replace /> : <AuthPage />} />
-      <Route path="/register" element={user ? <Navigate to={postLoginPath(user)} replace /> : <AuthPage />} />
+      <Route
+        path="/login"
+        element={
+          user ? (
+            userNeedsOnboarding(user) ? (
+              <Navigate to={ONBOARDING_PATH} replace />
+            ) : (
+              <Navigate to={dashboardPathForUser(user)} replace />
+            )
+          ) : (
+            <AuthPage />
+          )
+        }
+      />
+      <Route
+        path="/register"
+        element={
+          user ? (
+            userNeedsOnboarding(user) ? (
+              <Navigate to={ONBOARDING_PATH} replace />
+            ) : (
+              <Navigate to={dashboardPathForUser(user)} replace />
+            )
+          ) : (
+            <AuthPage />
+          )
+        }
+      />
       <Route path="/verify-email" element={<VerifyEmail />} />
       <Route
         path="/verify-phone"
@@ -195,13 +217,21 @@ export default function App() {
             {userNeedsOnboarding(user) ? (
               <PersonaOnboarding />
             ) : (
-              <Navigate to={dashboardPathForRole(user?.role)} replace />
+              <Navigate to={dashboardPathForUser(user)} replace />
             )}
           </AuthedRoute>
         }
       />
       <Route path="/onboarding/role" element={<Navigate to={ONBOARDING_PATH} replace />} />
-      <Route path="/" element={user ? <Navigate to={postLoginPath(user)} replace /> : <Landing />} />
+      <Route
+        path="/app"
+        element={
+          <AuthedRoute>
+            {userNeedsOnboarding(user) ? <Navigate to={ONBOARDING_PATH} replace /> : <GenericAppHome />}
+          </AuthedRoute>
+        }
+      />
+      <Route path="/" element={<Landing />} />
 
       <Route
         path="/join/:code"

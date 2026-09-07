@@ -217,6 +217,8 @@
     "subtitle": "Choose your use case so we can prepare the right experience.",
     "forAccount": "For {{email}}",
     "continue": "Continue",
+    "continueHintSkip": "A choice is optional. You can also pick this later in Settings.",
+    "continueHintSelected": "Continue to add a few details.",
     "detailsHint": "A few details help us set up the right workspace.",
     "unauthorizedTitle": "Sign in",
     "unauthorizedBody": "Please sign in first to continue.",
@@ -371,9 +373,15 @@
       "results": "Results"
     }
   },
+  "appHome": {
+    "title": "Mentorix",
+    "greeting": "Hello, {{name}}",
+    "subtitle": "You can choose how you use Mentorix now or later. Once you pick, we open the matching workspace."
+  },
   "personaSettings": {
     "title": "How you use Mentorix",
     "subtitle": "Current: {{current}}",
+    "noneSelected": "Not selected yet",
     "keepNote": "Changing this does not delete your existing data.",
     "save": "Save",
     "saved": "Use case updated",
