@@ -296,7 +296,7 @@ export default function PersonaOnboarding() {
         <header className="pt-3 sm:pt-5 pb-4">
           <div className="mx-auto w-full max-w-md">
             <Link
-              to="/"
+              to="/login"
               className="inline-flex items-center gap-1 text-xs sm:text-sm font-medium text-gray-400 hover:text-white transition-colors"
             >
               {t('auth.backHome')}
@@ -363,7 +363,8 @@ export default function PersonaOnboarding() {
       <header className="pt-3 sm:pt-5 pb-4">
         <div className="mx-auto w-full max-w-3xl flex items-center justify-between gap-3">
           <Link
-            to="/"
+            to="/login"
+            onClick={() => logout()}
             className="inline-flex items-center gap-1 text-xs sm:text-sm font-medium text-gray-400 hover:text-white transition-colors whitespace-nowrap"
           >
             {t('auth.backHome')}

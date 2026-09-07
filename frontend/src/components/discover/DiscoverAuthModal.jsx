@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import Modal from '../common/Modal'
+import PublicGoogleSignIn from '../auth/PublicGoogleSignIn'
 
 export default function DiscoverAuthModal({ open, onClose }) {
   const { t } = useTranslation()
@@ -27,6 +28,7 @@ export default function DiscoverAuthModal({ open, onClose }) {
             {t('marketplace.authModal.desc')}
           </p>
         </div>
+        <PublicGoogleSignIn className="w-full max-w-sm mx-auto" />
         <div className="flex flex-col sm:flex-row gap-2.5 justify-center">
           <Link
             to="/login"

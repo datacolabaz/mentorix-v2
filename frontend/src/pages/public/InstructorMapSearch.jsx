@@ -10,6 +10,7 @@ import {
 } from '../../lib/azerbaijanRegionI18n'
 import useActiveLocale from '../../hooks/useActiveLocale'
 import PublicPageTopBar from '../../components/public/PublicPageTopBar'
+import PublicGoogleSignIn from '../../components/auth/PublicGoogleSignIn'
 import DiscoverSearchFilters from '../../components/discover/DiscoverSearchFilters'
 import RegionSearchFilter from '../../components/discover/RegionSearchFilter'
 import CategoryMegaMenu from '../../components/discover/CategoryMegaMenu'
@@ -310,6 +311,11 @@ export default function InstructorMapSearch() {
         title={t('marketplace.title')}
         subtitle={t('marketplace.subtitle')}
       >
+        {isAuthenticated ? null : (
+          <div className="w-full sm:w-[min(100%,18rem)]">
+            <PublicGoogleSignIn />
+          </div>
+        )}
         <Link
           to="/login"
           className="flex-1 sm:flex-initial text-center text-sm font-medium text-primary hover:brightness-110 px-3 py-2 rounded-lg border border-primary/30 min-h-[40px] inline-flex items-center justify-center"

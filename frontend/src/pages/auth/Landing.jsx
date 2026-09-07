@@ -31,6 +31,8 @@ import {
   useLandingCtaBand,
   useLandingPlanDisplay,
 } from '../../lib/landingCopy'
+import PublicGoogleSignIn from '../../components/auth/PublicGoogleSignIn'
+import useAuthStore from '../../hooks/useAuth'
 
 function scrollToId(id) {
   const el = document.getElementById(id)
@@ -97,6 +99,7 @@ export default function Landing() {
   const [marketing, setMarketing] = useState(() => defaultLoginMarketingPayload())
   const [plansCompareOpen, setPlansCompareOpen] = useState(false)
   const navigate = useNavigate()
+  const { user } = useAuthStore()
 
   useEffect(() => {
     setPageSeo({
@@ -388,6 +391,7 @@ export default function Landing() {
               >
                 {hero.primary_cta_label}
               </button>
+              {user ? null : <PublicGoogleSignIn className="w-full" />}
               <button
                 type="button"
                 onClick={() => {

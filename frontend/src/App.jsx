@@ -175,12 +175,8 @@ export default function App() {
       <Route
         path="/login"
         element={
-          user ? (
-            userNeedsOnboarding(user) ? (
-              <Navigate to={ONBOARDING_PATH} replace />
-            ) : (
-              <Navigate to={dashboardPathForUser(user)} replace />
-            )
+          user && !userNeedsOnboarding(user) ? (
+            <Navigate to={dashboardPathForUser(user)} replace />
           ) : (
             <AuthPage />
           )
@@ -189,12 +185,8 @@ export default function App() {
       <Route
         path="/register"
         element={
-          user ? (
-            userNeedsOnboarding(user) ? (
-              <Navigate to={ONBOARDING_PATH} replace />
-            ) : (
-              <Navigate to={dashboardPathForUser(user)} replace />
-            )
+          user && !userNeedsOnboarding(user) ? (
+            <Navigate to={dashboardPathForUser(user)} replace />
           ) : (
             <AuthPage />
           )
