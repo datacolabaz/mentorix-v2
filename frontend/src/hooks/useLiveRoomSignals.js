@@ -4,6 +4,7 @@ import { useRoomContext } from '@livekit/components-react'
 import {
   LIVE_CHAT_TOPIC,
   LIVE_MEDIA_TOPIC,
+  LIVE_PRESENTATION_TOPIC,
   LIVE_REACTION_TOPIC,
   isAllowedReaction,
   parseLiveDataPayload,
@@ -20,6 +21,7 @@ export default function useLiveRoomSignals() {
   const room = useRoomContext()
   const [reactions, setReactions] = useState([])
   const [messages, setMessages] = useState([])
+  const [presentationEvent, setPresentationEvent] = useState(null)
   const lastReactionAt = useRef(0)
 
   const localName = participantLabel(room?.localParticipant)
@@ -64,6 +66,18 @@ export default function useLiveRoomSignals() {
       }
     },
     [localName, publish, pushReaction],
+  )
+
+  const sendPresentationEvent = useCallback(
+    async (payload) => {
+      if (!payload || typeof payload !== 'object') return
+      try {
+        await publish(LIVE_PRESENTATION_TOPIC, { ...payload, t: payload.t || 'pres' }, true)
+      } catch {
+        /* ignore */
+      }
+    },
+    [publish],
   )
 
   const sendMediaCommand = useCallback(
@@ -160,6 +174,10 @@ export default function useLiveRoomSignals() {
         if (typeof data.camera === 'boolean') {
           void local.setCameraEnabled(data.camera)
         }
+        return
+      }
+      if (topic === LIVE_PRESENTATION_TOPIC || String(data.t || '').startsWith('pres')) {
+        setPresentationEvent({ ...data, at: Date.now() })
       }
     }
     room.on(RoomEvent.DataReceived, onData)
@@ -168,5 +186,14 @@ export default function useLiveRoomSignals() {
     }
   }, [room, pushReaction])
 
-  return { reactions, messages, sendReaction, sendChat, sendMediaCommand, hydrateChat }
+  return {
+    reactions,
+    messages,
+    sendReaction,
+    sendChat,
+    sendMediaCommand,
+    hydrateChat,
+    presentationEvent,
+    sendPresentationEvent,
+  }
 }

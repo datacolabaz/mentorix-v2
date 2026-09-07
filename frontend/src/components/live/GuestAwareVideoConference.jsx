@@ -20,6 +20,9 @@ import LiveReactionPicker from './LiveReactionPicker'
 import LiveReactionsOverlay from './LiveReactionsOverlay'
 import LiveAdmissionPanel from './LiveAdmissionPanel'
 import LiveTileMediaControls from './LiveTileMediaControls'
+import LivePresentationPicker from './LivePresentationPicker'
+import LivePresentationDock from './LivePresentationDock'
+import useLivePresentation from '../../hooks/useLivePresentation'
 
 function isGuestParticipant(participant) {
   if (!participant?.metadata) return false
@@ -117,7 +120,16 @@ export default function GuestAwareVideoConference({ roomCode, isInstructor = fal
   const { user } = useAuthStore()
   const [chatOpen, setChatOpen] = useState(false)
   const { localParticipant } = useLocalParticipant()
-  const { reactions, messages, sendReaction, sendChat, sendMediaCommand, hydrateChat } = useLiveRoomSignals()
+  const { reactions, messages, sendReaction, sendChat, sendMediaCommand, hydrateChat, presentationEvent, sendPresentationEvent } =
+    useLiveRoomSignals()
+  const livePresentation = useLivePresentation({
+    roomCode,
+    isInstructor,
+    presentationEvent,
+    sendPresentationEvent,
+  })
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const presenting = Boolean(livePresentation.presentation)
 
   useEffect(() => {
     let cancelled = false
@@ -215,10 +227,19 @@ export default function GuestAwareVideoConference({ roomCode, isInstructor = fal
   )
 
   return (
-    <div className={`lk-video-conference flex flex-col flex-1 min-h-0${hasScreenShare ? ' mx-live-focus' : ''}`}>
+    <div className={`lk-video-conference flex flex-col flex-1 min-h-0${hasScreenShare || presenting ? ' mx-live-focus' : ''}`}>
       <div className="relative flex-1 min-h-0">
-        <div className={`mx-live-stage${hasScreenShare ? ' mx-live-stage--focus' : ''}`}>
-          {hasScreenShare ? (
+        <div className={`mx-live-stage${hasScreenShare || presenting ? ' mx-live-stage--focus' : ''}`}>
+          {presenting ? (
+            <div className="mx-live-focus-layout">
+              <div className="mx-live-focus-stage min-h-0">
+                <LivePresentationDock live={livePresentation} isInstructor={isInstructor} />
+              </div>
+              {cameraTracks.length > 0 ? (
+                <div className="mx-live-focus-strip">{cameraTracks.slice(0, 6).map(renderTile)}</div>
+              ) : null}
+            </div>
+          ) : hasScreenShare ? (
             <div className="mx-live-focus-layout">
               <div
                 className={`mx-live-focus-stage${screenTracks.length > 1 ? ' mx-live-focus-stage--multi' : ''}`}
@@ -256,6 +277,21 @@ export default function GuestAwareVideoConference({ roomCode, isInstructor = fal
       </div>
       <div className="shrink-0 flex flex-wrap items-center justify-center gap-2 px-3 py-2 border-t border-white/10 bg-[#111]">
         <LiveReactionPicker onSend={sendReaction} />
+        {isInstructor ? (
+          <button
+            type="button"
+            aria-pressed={presenting}
+            onClick={() => (presenting ? void livePresentation.closePresentation() : setPickerOpen(true))}
+            className={[
+              'h-10 px-3 rounded-xl border text-sm font-semibold',
+              presenting
+                ? 'border-primary/40 bg-primary/15 text-primary'
+                : 'border-white/15 bg-[#1a1a1a] text-gray-100 hover:bg-white/10',
+            ].join(' ')}
+          >
+            {t('live.presentation.button')}
+          </button>
+        ) : null}
         <button
           type="button"
           aria-pressed={chatOpen}
@@ -271,6 +307,16 @@ export default function GuestAwareVideoConference({ roomCode, isInstructor = fal
         </button>
       </div>
       <ControlBar controls={{ chat: false, leave: false }} />
+      {isInstructor ? (
+        <LivePresentationPicker
+          open={pickerOpen}
+          onClose={() => setPickerOpen(false)}
+          onPick={(row) => {
+            setPickerOpen(false)
+            void livePresentation.openPresentation(row)
+          }}
+        />
+      ) : null}
     </div>
   )
 }

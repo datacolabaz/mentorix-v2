@@ -11,6 +11,7 @@ export default function PresentationStage({
   tool,
   defaults,
   onCommit,
+  enabled = true,
   className = '',
 }) {
   const boxRef = useRef(null)
@@ -63,6 +64,7 @@ export default function PresentationStage({
             tool={tool}
             defaults={defaults}
             onCommit={onCommit}
+            enabled={enabled}
           />
         </div>
       ) : null}

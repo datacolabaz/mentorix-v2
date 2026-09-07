@@ -27,6 +27,28 @@ const {
   postParticipantMedia,
 } = require('../controllers/liveAdmissionController');
 const { uploadLiveChatAttachment } = require('../services/liveChatAttachmentStorage');
+const { verify } = require('../utils/jwt');
+const {
+  getState: getLivePresentationState,
+  putState: putLivePresentationState,
+  postPoll,
+  postPollRespond,
+  postPollClose,
+  serveOpenFile,
+} = require('../controllers/livePresentationController');
+
+function authenticateLiveFile(req, res, next) {
+  const headerToken = req.headers.authorization?.split(' ')[1];
+  const q = req.query.token;
+  const token = headerToken || (typeof q === 'string' && q.trim() ? q.trim() : null);
+  if (!token) return res.status(401).json({ success: false, message: 'Token yoxdur' });
+  try {
+    req.user = verify(token);
+    next();
+  } catch {
+    return res.status(401).json({ success: false, message: 'Token etibarsızdır' });
+  }
+}
 const {
   multerFail,
   postAuthedChatAttachment,
@@ -88,6 +110,19 @@ router.post(
   authorize('instructor', 'student'),
   postAuthedChatMessage,
 );
+
+router.get('/:roomCode/presentation/file', authenticateLiveFile, serveOpenFile);
+router.get('/rooms/:roomCode/presentation/file', authenticateLiveFile, serveOpenFile);
+router.get('/:roomCode/presentation', authenticate, authorize('instructor', 'student'), getLivePresentationState);
+router.get('/rooms/:roomCode/presentation', authenticate, authorize('instructor', 'student'), getLivePresentationState);
+router.put('/:roomCode/presentation', authenticate, authorize('instructor'), putLivePresentationState);
+router.put('/rooms/:roomCode/presentation', authenticate, authorize('instructor'), putLivePresentationState);
+router.post('/:roomCode/polls', authenticate, authorize('instructor'), postPoll);
+router.post('/rooms/:roomCode/polls', authenticate, authorize('instructor'), postPoll);
+router.post('/:roomCode/polls/:pollId/respond', authenticate, authorize('instructor', 'student'), postPollRespond);
+router.post('/rooms/:roomCode/polls/:pollId/respond', authenticate, authorize('instructor', 'student'), postPollRespond);
+router.post('/:roomCode/polls/:pollId/close', authenticate, authorize('instructor'), postPollClose);
+router.post('/rooms/:roomCode/polls/:pollId/close', authenticate, authorize('instructor'), postPollClose);
 
 router.get('/history', authenticate, authorize('instructor'), getHistory);
 router.delete('/history/:roomCode', authenticate, authorize('instructor'), deleteRoom);
