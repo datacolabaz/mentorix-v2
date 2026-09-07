@@ -6,9 +6,10 @@ import AuthAccountExistsModal from './AuthAccountExistsModal'
 import Button from '../common/Button'
 import useAuthStore from '../../hooks/useAuth'
 import { useToast } from '../common/Toast'
-import api, { AUTH_REQUEST_TIMEOUT_MS } from '../../lib/api'
+import api from '../../lib/api'
 import { getAttributionPayload } from '../../lib/analytics'
 import { postAuthNavigate, ONBOARDING_PATH } from '../../lib/postAuth'
+import { googleAuthWithAutoRole, googleSignup } from '../../lib/googleAuth'
 import i18n from '../../i18n'
 
 const inputClass =
@@ -43,43 +44,6 @@ async function loginEmailWithAutoRole(email, password, forcedRole) {
     }
   }
   throw lastRoleError || new Error(i18n.t('auth.errors.selectAccountType'))
-}
-
-async function googleAuthWithAutoRole(credential, forcedRole) {
-  if (!forcedRole) {
-    try {
-      let r = await api.post('/auth/google/login', { credential, intent: 'signin' })
-      if (r?.token && r?.user) return r
-      if (r?.needs_onboarding || r?.needs_role) {
-        r = await api.post('/auth/google/complete', { credential, intent: 'signin' })
-        if (r?.token && r?.user) return r
-      }
-    } catch (err) {
-      if (err?.status === 401 || err?.status === 409) throw err
-    }
-  }
-
-  const roles = forcedRole ? [forcedRole] : LOGIN_ROLE_TRY_ORDER
-  let lastRoleError = null
-  for (const role of roles) {
-    try {
-      let r = await api.post('/auth/google/login', { credential, role, intent: 'signin' })
-      if (r?.needs_role || r?.needs_onboarding || r?.needs_phone_link) {
-        r = await api.post('/auth/google/complete', { credential, role, intent: 'signin' })
-      }
-      if (r?.token && r?.user) return r
-      lastRoleError = new Error(r?.message || i18n.t('auth.errors.googleIncomplete'))
-    } catch (err) {
-      const status = err?.status
-      if (status === 401) throw err
-      if (status === 403) {
-        lastRoleError = err
-        continue
-      }
-      throw err
-    }
-  }
-  throw lastRoleError || new Error(i18n.t('auth.errors.googleSelectRole'))
 }
 
 function AuthDivider() {
@@ -284,14 +248,7 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
       const r =
         tab === 'login'
           ? await googleAuthWithAutoRole(credential, loginRoleFallback ? loginRole : null)
-          : await api.post(
-              '/auth/google/complete',
-              {
-                credential,
-                intent: 'signup',
-              },
-              { timeout: AUTH_REQUEST_TIMEOUT_MS },
-            )
+          : await googleSignup(credential)
       if (!r?.token || !r?.user) {
         toast(r?.message || t('auth.errors.googleIncomplete'), 'error')
         return
