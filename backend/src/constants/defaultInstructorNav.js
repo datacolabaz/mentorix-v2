@@ -18,6 +18,7 @@ const INSTRUCTOR_NAV_ITEM_DEFS = {
   exams: { to: '/instructor/exams', label: 'İmtahanlar', icon: 'exams' },
   tasks: { to: '/instructor/tasks', label: 'Tapşırıqlar', icon: 'tasks' },
   ai_generator: { to: '/instructor/ai-generator', label: 'AI Sual Generatoru', icon: 'ai' },
+  presentations: { to: '/instructor/presentations', label: 'Təqdimatlar', icon: 'presentations' },
   materials_library: { to: '/instructor/materials', label: 'Kitabxana', icon: 'materials' },
   analytics: { to: '/instructor/analytics', label: 'Analitika', icon: 'analytics' },
   payments: { to: '/instructor/payments', label: 'Ödənişlər', icon: 'payments' },
@@ -29,8 +30,23 @@ const ALL_ITEM_KEYS = Object.keys(INSTRUCTOR_NAV_ITEM_DEFS);
 
 /** Sidebar linkləri yalnız bu bölmədə görünsün (təkrarların qarşısını alır). */
 const ITEM_CANONICAL_SECTION = {
+  presentations: 'materials',
   materials_library: 'materials',
 };
+
+function insertMaterialsSectionKey(keys, key) {
+  if (keys.includes(key)) return;
+  if (key === 'presentations') {
+    keys.unshift(key);
+    return;
+  }
+  const presentationsIdx = keys.indexOf('presentations');
+  if (key === 'materials_library' && presentationsIdx >= 0) {
+    keys.splice(presentationsIdx + 1, 0, key);
+    return;
+  }
+  keys.push(key);
+}
 
 function enforceItemSectionPlacement(sections) {
   const list = Array.isArray(sections) ? sections : [];
@@ -57,7 +73,7 @@ function enforceItemSectionPlacement(sections) {
       if (mgmtIdx >= 0) list.splice(mgmtIdx + 1, 0, target);
       else list.push(target);
     }
-    if (!target.itemKeys.includes(key)) target.itemKeys.push(key);
+    insertMaterialsSectionKey(target.itemKeys, key);
   }
 
   return list;
@@ -93,7 +109,7 @@ function defaultInstructorNavPayload() {
         id: 'materials',
         title: 'MATERİALLAR',
         enabled: true,
-        itemKeys: ['materials_library'],
+        itemKeys: ['presentations', 'materials_library'],
       },
       {
         id: 'analytics',
@@ -160,7 +176,7 @@ function normalizePutPayload(raw) {
     const preferredSectionId = ITEM_CANONICAL_SECTION[key] || 'management';
     const target = sections.find((s) => s.id === preferredSectionId) || sections[0];
     if (!target) break;
-    target.itemKeys.push(key);
+    insertMaterialsSectionKey(target.itemKeys, key);
     usedKeys.add(key);
   }
 
