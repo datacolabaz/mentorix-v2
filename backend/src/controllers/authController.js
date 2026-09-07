@@ -39,6 +39,7 @@ const {
   userNeedsOnboarding,
   attachPersonaFields,
   applyPersonaSelection,
+  skipOnboarding,
   resolvePersonaInput,
   fetchPersonaState,
   rowNeedsOnboarding,
@@ -1148,6 +1149,12 @@ const selectOnboardingPersona = async (req, res) => {
     if (!guardEmailVerifiedBeforeToken(res, me)) return;
 
     const persona = resolvePersonaInput(req.body);
+    if (!persona) {
+      await skipOnboarding(me.id);
+      const session = await finishPersonaSession(req, me.id);
+      return res.json({ success: true, skipped: true, ...session });
+    }
+
     await applyPersonaSelection({
       userId: me.id,
       persona,

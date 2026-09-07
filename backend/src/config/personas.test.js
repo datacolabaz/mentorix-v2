@@ -66,5 +66,14 @@ describe('personas config', () => {
       rowNeedsOnboarding({ role: 'instructor', role_selected: true, onboarding_completed: true }),
       false,
     );
+    assert.equal(
+      rowNeedsOnboarding({
+        role: 'student',
+        role_selected: true,
+        onboarding_completed: true,
+        persona: null,
+      }),
+      false,
+    );
   });
 });

@@ -7,6 +7,7 @@ import {
   authRoleForPersona,
   defaultPersonaForAuthRole,
   ONBOARDING_PATH,
+  DEFAULT_APP_PATH,
 } from '@shared/personas.mjs'
 
 export {
@@ -18,6 +19,7 @@ export {
   authRoleForPersona,
   defaultPersonaForAuthRole,
   ONBOARDING_PATH,
+  DEFAULT_APP_PATH,
 }
 
 export const PERSONA_UI = Object.freeze({
@@ -96,12 +98,14 @@ export const PERSONA_HOME_LINKS = Object.freeze({
 export function resolveUserPersona(user) {
   const direct = String(user?.persona || '').trim()
   if (isPersonaId(direct)) return direct
-  return defaultPersonaForAuthRole(user?.role) || PERSONAS.TEACHER
+  if (user?.onboarding_completed && !direct) return null
+  return defaultPersonaForAuthRole(user?.role) || null
 }
 
 export function userNeedsOnboarding(user) {
   if (!user) return false
   if (String(user.role || '').toLowerCase() === 'admin') return false
+  if (user.onboarding_completed === true) return false
   if (user.onboarding_completed === false) return true
   if (!user.role) return true
   return false

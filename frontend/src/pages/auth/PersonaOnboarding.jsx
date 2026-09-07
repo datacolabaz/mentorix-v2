@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import useAuthStore from '../../hooks/useAuth'
 import api from '../../lib/api'
@@ -7,7 +7,7 @@ import Button from '../../components/common/Button'
 import Brand from '../../components/common/Brand'
 import NavIcon from '../../components/common/NavIcon'
 import { useToast } from '../../components/common/Toast'
-import { dashboardPathForRole } from '../../lib/postAuth'
+import { dashboardPathForUser } from '../../lib/postAuth'
 import {
   PERSONA_ORDER,
   PERSONA_UI,
@@ -292,29 +292,40 @@ export default function PersonaOnboarding() {
 
   if (!token) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-4 bg-[#07090c]">
-        <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#10141b] p-6 text-center">
-          <Brand size="md" tone="dark" centered />
-          <h1 className="mt-5 text-white font-display font-bold text-xl">{t('onboarding.unauthorizedTitle')}</h1>
-          <p className="mt-2 text-sm text-gray-400">{t('onboarding.unauthorizedBody')}</p>
-          <Button className="w-full justify-center mt-5" onClick={() => navigate('/login')}>
-            {t('auth.login')}
-          </Button>
+      <div className="min-h-screen px-4 bg-[#07090c]">
+        <header className="pt-3 sm:pt-5 pb-4">
+          <div className="mx-auto w-full max-w-md">
+            <Link
+              to="/"
+              className="inline-flex items-center gap-1 text-xs sm:text-sm font-medium text-gray-400 hover:text-white transition-colors"
+            >
+              {t('auth.backHome')}
+            </Link>
+          </div>
+        </header>
+        <div className="flex items-center justify-center px-0 pb-8">
+          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#10141b] p-6 text-center">
+            <Brand size="md" tone="dark" centered />
+            <h1 className="mt-5 text-white font-display font-bold text-xl">{t('onboarding.unauthorizedTitle')}</h1>
+            <p className="mt-2 text-sm text-gray-400">{t('onboarding.unauthorizedBody')}</p>
+            <Button className="w-full justify-center mt-5" onClick={() => navigate('/login')}>
+              {t('auth.login')}
+            </Button>
+          </div>
         </div>
       </div>
     )
   }
 
-  const submit = async () => {
-    if (!picked || !canFinish) return
+  const finishSession = async (payload) => {
     setBusy(true)
     setError(null)
     try {
-      const r = await api.post('/auth/onboarding/persona', { persona: picked, profile })
+      const r = await api.post('/auth/onboarding/persona', payload)
       if (!r?.token || !r?.user) throw new Error(r?.message || t('auth.errors.invalidServer'))
       setSession(r.token, r.user)
       toast(t('onboarding.toasts.ready'), 'success')
-      navigate(dashboardPathForRole(r.user.role), { replace: true })
+      navigate(dashboardPathForUser(r.user), { replace: true })
     } catch (e) {
       const msg = e?.message || e?.response?.data?.message || t('onboarding.toasts.failed')
       setError(msg)
@@ -329,10 +340,38 @@ export default function PersonaOnboarding() {
     }
   }
 
+  const submitPicked = async () => {
+    if (!picked || !canFinish) return
+    await finishSession({ persona: picked, profile })
+  }
+
+  const continueFromPick = async () => {
+    if (picked) {
+      setStep('details')
+      return
+    }
+    await finishSession({ persona: null, profile: {} })
+  }
+
+  const togglePersona = (id) => {
+    setPicked((prev) => (prev === id ? null : id))
+    setProfile(emptyProfile())
+  }
+
   return (
-    <div className="min-h-screen bg-[#07090c] px-4 py-8 sm:py-12">
+    <div className="min-h-screen bg-[#07090c] px-4 pb-8 sm:pb-12">
+      <header className="pt-3 sm:pt-5 pb-4">
+        <div className="mx-auto w-full max-w-3xl flex items-center justify-between gap-3">
+          <Link
+            to="/"
+            className="inline-flex items-center gap-1 text-xs sm:text-sm font-medium text-gray-400 hover:text-white transition-colors whitespace-nowrap"
+          >
+            {t('auth.backHome')}
+          </Link>
+        </div>
+      </header>
       <div className="mx-auto w-full max-w-3xl">
-        <div className="flex justify-center mb-8">
+        <div className="flex justify-center mb-6 sm:mb-8">
           <Brand size="login" tone="dark" />
         </div>
 
@@ -359,7 +398,8 @@ export default function PersonaOnboarding() {
                     <button
                       key={id}
                       type="button"
-                      onClick={() => setPicked(id)}
+                      aria-pressed={selected}
+                      onClick={() => togglePersona(id)}
                       className={[
                         'text-left rounded-2xl border p-4 transition-all duration-200 min-h-[112px]',
                         'hover:-translate-y-0.5 hover:border-primary/40 hover:bg-primary/[0.06]',
@@ -391,13 +431,22 @@ export default function PersonaOnboarding() {
                 })}
               </div>
 
+              {error ? (
+                <p className="mt-4 text-sm text-red-300" role="alert">
+                  {error}
+                </p>
+              ) : null}
+
               <Button
                 className="w-full justify-center mt-6"
-                disabled={!picked}
-                onClick={() => picked && setStep('details')}
+                loading={busy}
+                onClick={() => void continueFromPick()}
               >
                 {t('onboarding.continue')}
               </Button>
+              <p className="mt-3 text-center text-xs text-gray-500 leading-relaxed">
+                {picked ? t('onboarding.continueHintSelected') : t('onboarding.continueHintSkip')}
+              </p>
             </>
           ) : (
             <>
@@ -430,7 +479,7 @@ export default function PersonaOnboarding() {
                 className="w-full justify-center mt-6"
                 loading={busy}
                 disabled={!canFinish}
-                onClick={() => void submit()}
+                onClick={() => void submitPicked()}
               >
                 {t('onboarding.continue')}
               </Button>

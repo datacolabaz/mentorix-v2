@@ -8,7 +8,7 @@ export default function PersonaHomeLinks({ className = '' }) {
   const { t } = useTranslation()
   const { user } = useAuthStore()
   const persona = resolveUserPersona(user)
-  const links = PERSONA_HOME_LINKS[persona] || []
+  const links = persona ? PERSONA_HOME_LINKS[persona] || [] : []
   if (!links.length) return null
 
   return (
