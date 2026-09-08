@@ -58,7 +58,7 @@ export default function JoinGroupTermsOverview({ joinInfo, showCtaHint = false }
           Qrupa qoşulmazdan əvvəl — qrup şərtləri
         </p>
         <p className="text-sm text-token-textMuted leading-relaxed">
-          Bu məlumatları oxuyub razı qalsanız, aşağıda məlumatlarınızı doldurub «Qoşul» düyməsinə basın.
+          Təlimatı oxuyun. Razı qalsanız, aşağıda şəxsi məlumatlarınızı doldurub «Qoşul» düyməsinə basın.
         </p>
       </div>
 

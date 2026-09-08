@@ -22,6 +22,44 @@ function splitFullName(full) {
   return { first_name: t.slice(0, i), last_name: t.slice(i + 1).trim() }
 }
 
+function JoinFlowSteps({ current }) {
+  const stepClass = (n) =>
+    n === current
+      ? 'bg-primary text-white'
+      : n < current
+        ? 'bg-emerald-600 text-white'
+        : 'bg-token-textMuted/20 text-token-textMuted'
+
+  const labelClass = (n) =>
+    n === current
+      ? 'text-token-textMain'
+      : n < current
+        ? 'text-emerald-700 dark:text-emerald-300'
+        : 'text-token-textMuted'
+
+  return (
+    <ol className="flex items-center gap-3 mb-5" aria-label="Qoşulma addımları">
+      <li className={`flex items-center gap-2 text-xs font-semibold ${labelClass(1)}`}>
+        <span
+          className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-[11px] ${stepClass(1)}`}
+        >
+          {current > 1 ? '✓' : '1'}
+        </span>
+        Qeydiyyat
+      </li>
+      <span className="h-px flex-1 max-w-[2.5rem] bg-[color:var(--border-subtle)]" aria-hidden />
+      <li className={`flex items-center gap-2 text-xs font-semibold ${labelClass(2)}`}>
+        <span
+          className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-[11px] ${stepClass(2)}`}
+        >
+          2
+        </span>
+        Təlimat və qoşul
+      </li>
+    </ol>
+  )
+}
+
 export default function JoinClass() {
   const toast = useToast()
   const navigate = useNavigate()
@@ -213,8 +251,8 @@ export default function JoinClass() {
       } catch {
         /* ignore */
       }
-      toast('Daxil oldunuz', 'success')
-      scrollToJoinActions()
+      toast('Daxil oldunuz — indi təlimatı oxuyub qoşulun', 'success')
+      window.scrollTo({ top: 0, behavior: 'smooth' })
     } catch (err) {
       toast(err?.message || 'Google girişi uğursuz', 'error')
     } finally {
@@ -270,9 +308,12 @@ export default function JoinClass() {
     !submitted &&
     !showMemberStatus &&
     !blockedAsOtherRole
+  const isStudentSession = user?.role === 'student'
+  const needsAuthStep = showJoinForm && !isStudentSession
+  const showTermsAndForm = showJoinForm && isStudentSession
 
   const canSubmitJoin =
-    Boolean(user?.role === 'student') &&
+    Boolean(isStudentSession) &&
     Boolean(joinInfo?.package_offer) &&
     termsAccepted &&
     !busy &&
@@ -280,7 +321,11 @@ export default function JoinClass() {
     !joinStateLoading
 
   return (
-    <div className="p-4 sm:p-6 pb-[max(7.5rem,env(safe-area-inset-bottom))] max-w-lg mx-auto w-full min-h-[100dvh]">
+    <div
+      className={`p-4 sm:p-6 max-w-lg mx-auto w-full min-h-[100dvh] ${
+        showTermsAndForm ? 'pb-[max(7.5rem,env(safe-area-inset-bottom))]' : 'pb-8'
+      }`}
+    >
       <div className="mb-4">
         <Link
           to={backHref}
@@ -312,12 +357,25 @@ export default function JoinClass() {
         </Card>
       )}
 
-      {showJoinForm && (!user || user.role !== 'student') ? (
-        <div ref={joinActionsRef} id="join-actions" className="mb-4">
+      {showJoinForm ? <JoinFlowSteps current={needsAuthStep ? 1 : 2} /> : null}
+
+      {needsAuthStep ? (
+        <div id="join-actions" className="mb-4 space-y-4">
+          {joinInfo ? (
+            <Card className="p-4 border border-[color:var(--border-subtle)]">
+              <p className="text-[10px] uppercase tracking-wider text-token-textMuted font-semibold mb-1">
+                Qrup
+              </p>
+              <p className="font-semibold text-token-textMain">{joinInfo.group_name}</p>
+              <p className="text-xs text-token-textMuted mt-0.5">
+                {joinInfo.subject_name} · {joinInfo.instructor_name}
+              </p>
+            </Card>
+          ) : null}
           <Card className="p-5 border border-primary/30 bg-primary/5 space-y-4">
-            <p className="text-sm font-medium text-token-textMain">Davam etmək üçün daxil olun</p>
+            <p className="text-sm font-medium text-token-textMain">1. Əvvəlcə qeydiyyatdan keçin</p>
             <p className="text-sm text-token-textMuted">
-              Google ilə daxil olun. Ad və soyadınız avtomatik doldurulur — yoxlayıb «Qoşul» düyməsinə basın. Telefon
+              Google və ya email ilə daxil olun. Qrup təlimatı və şəxsi məlumatlar növbəti addımda açılacaq. Telefon
               tələb olunmur.
             </p>
             <GoogleSignInButton onCredential={handleGoogleCredential} disabled={authBusy} />
@@ -331,7 +389,7 @@ export default function JoinClass() {
         </div>
       ) : null}
 
-      {joinInfo && !submitted && <JoinGroupTermsOverview joinInfo={joinInfo} />}
+      {showTermsAndForm ? <JoinGroupTermsOverview joinInfo={joinInfo} /> : null}
 
       {submitted ? (
         <Card className="p-5 border border-emerald-500/25 bg-emerald-500/10">
@@ -384,16 +442,14 @@ export default function JoinClass() {
             Başqa hesabla daxil ol
           </Button>
         </Card>
-      ) : showJoinForm ? (
-        <div id="join-form" className="space-y-4">
+      ) : showTermsAndForm ? (
+        <div ref={joinActionsRef} id="join-form" className="space-y-4">
           {joinStateLoading ? (
             <p className="text-sm text-token-textMuted">Hesabınız yoxlanılır…</p>
           ) : null}
-          {user?.role === 'student' ? (
-            <p className="text-xs text-emerald-700 dark:text-emerald-300/90">
-              Daxil: <span className="font-medium">{user.email || user.full_name}</span>
-            </p>
-          ) : null}
+          <p className="text-xs text-emerald-700 dark:text-emerald-300/90">
+            Daxil: <span className="font-medium">{user.email || user.full_name}</span>
+          </p>
 
           <Card className="p-5 border border-[color:var(--border-subtle)]">
             <p className="text-xs font-semibold uppercase tracking-wider text-token-textMuted mb-3">
@@ -481,36 +537,25 @@ export default function JoinClass() {
         </div>
       ) : null}
 
-      {showJoinForm ? (
+      {showTermsAndForm ? (
         <div className="fixed inset-x-0 bottom-0 z-30 border-t border-[color:var(--border-subtle)] bg-token-surfaceCard/95 backdrop-blur-md">
           <div className="max-w-lg mx-auto px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-            {!user || user.role !== 'student' ? (
-              <Button
-                className="w-full justify-center"
-                type="button"
-                loading={authBusy}
-                onClick={scrollToJoinActions}
-              >
-                Google ilə davam et
-              </Button>
-            ) : (
-              <Button
-                className="w-full justify-center"
-                type="button"
-                loading={busy}
-                disabled={busy || joinStateLoading}
-                onClick={() => {
-                  if (!termsAccepted) {
-                    toast('Ödəniş şərtləri ilə razılaşın', 'error')
-                    scrollToJoinActions()
-                    return
-                  }
-                  formRef.current?.requestSubmit()
-                }}
-              >
-                Qoşul
-              </Button>
-            )}
+            <Button
+              className="w-full justify-center"
+              type="button"
+              loading={busy}
+              disabled={busy || joinStateLoading}
+              onClick={() => {
+                if (!termsAccepted) {
+                  toast('Ödəniş şərtləri ilə razılaşın', 'error')
+                  scrollToJoinActions()
+                  return
+                }
+                formRef.current?.requestSubmit()
+              }}
+            >
+              Qoşul
+            </Button>
           </div>
         </div>
       ) : null}
