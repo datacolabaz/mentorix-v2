@@ -6,6 +6,7 @@ import Button from "../../components/common/Button"
 import Modal from "../../components/common/Modal"
 import { useToast } from "../../components/common/Toast"
 import PresenceDot from "../../components/common/PresenceDot"
+import { AZ_REGIONS, BAKU } from "@shared/azerbaijanRegions.mjs"
 
 const inputClass =
   "w-full border border-[color:var(--border-subtle)] rounded-xl px-4 py-2.5 text-token-textMain text-sm outline-none focus:border-primary/40 bg-token-surfaceCard/60"
@@ -22,6 +23,7 @@ export default function AdminInstructors() {
   const [selected, setSelected] = useState(null)
   const [loading, setLoading] = useState(false)
   const [verifyBusy, setVerifyBusy] = useState({})
+  const [searchBusy, setSearchBusy] = useState({})
   const [form, setForm] = useState({ full_name: "", email: "", phone: "", subject: "", billing_type: "8_lessons" })
   const [editForm, setEditForm] = useState({ full_name: "", email: "", phone: "", subject: "", new_password: "" })
   const [planBusy, setPlanBusy] = useState({})
@@ -72,6 +74,7 @@ export default function AdminInstructors() {
       email: i.email || "",
       phone: i.phone || "",
       subject: i.subject || "",
+      region: i.region || BAKU,
       new_password: "",
     })
     setEditModal(true)
@@ -110,6 +113,21 @@ export default function AdminInstructors() {
     await api.patch("/admin/instructors/" + i.id + "/toggle", { is_active: !i.is_active })
     toast(i.is_active ? "Deaktiv edildi" : "Aktiv edildi")
     load()
+  }
+
+  const publishToSearch = async (i, regionOverride) => {
+    const region = String(regionOverride || i.region || BAKU).trim() || BAKU
+    setSearchBusy((p) => ({ ...p, [i.id]: true }))
+    try {
+      const d = await api.patch(`/admin/instructors/${i.id}/search-listing`, { region })
+      toast(d?.message || `${region} axtarışında görünəcək`)
+      setEditModal(false)
+      load()
+    } catch (e) {
+      toast(e?.message || "Xəta", "error")
+    } finally {
+      setSearchBusy((p) => ({ ...p, [i.id]: false }))
+    }
   }
 
   const setDiscoverVerified = async (i, discover_verified) => {
@@ -225,10 +243,28 @@ export default function AdminInstructors() {
                         Təsdiq gözləyir
                       </span>
                     ) : null}
+                    {i.search_listed ? (
+                      <span className="px-2 py-1 rounded-lg text-[10px] font-semibold bg-emerald-500/15 text-emerald-300">
+                        Axtarışda{i.region ? ` · ${i.region}` : ""}
+                      </span>
+                    ) : (
+                      <span className="px-2 py-1 rounded-lg text-[10px] font-semibold bg-rose-500/15 text-rose-300">
+                        Axtarışda yoxdur
+                      </span>
+                    )}
                   </div>
                 </td>
                 <td className="py-3 px-4">
                   <div className="flex flex-wrap gap-2">
+                    {!i.search_listed ? (
+                      <Button
+                        size="sm"
+                        loading={!!searchBusy[i.id]}
+                        onClick={() => void publishToSearch(i, BAKU)}
+                      >
+                        Axtarışda göstər
+                      </Button>
+                    ) : null}
                     {i.discover_pending ? (
                       <Button
                         size="sm"
@@ -343,6 +379,32 @@ export default function AdminInstructors() {
             <label className="block text-xs font-semibold text-token-textMuted uppercase tracking-wider mb-2">Fenn</label>
             <input className={inputClass}
               value={editForm.subject} onChange={e => setEditForm(p => ({ ...p, subject: e.target.value }))} />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-token-textMuted uppercase tracking-wider mb-2">Axtarış şəhəri</label>
+            <select
+              className={inputClass}
+              value={editForm.region || BAKU}
+              onChange={(e) => setEditForm((p) => ({ ...p, region: e.target.value }))}
+            >
+              {AZ_REGIONS.map((r) => (
+                <option key={r} value={r}>{r}</option>
+              ))}
+            </select>
+            <p className="text-[10px] text-token-textMuted mt-1">
+              Marketplace təsdiqi kifayət etmir — axtarış üçün şəhər lazımdır. Defolt: Bakı.
+            </p>
+            {selected && !selected.search_listed ? (
+              <Button
+                className="w-full justify-center mt-2"
+                loading={!!searchBusy[selected.id]}
+                onClick={() => void publishToSearch(selected, editForm.region || BAKU)}
+              >
+                Axtarışda göstər
+              </Button>
+            ) : (
+              <p className="text-xs text-emerald-300 mt-2">Bu müəllim axtarışda görünür{selected?.region ? ` (${selected.region})` : ""}.</p>
+            )}
           </div>
           <div className="flex gap-3 pt-2">
             <Button onClick={saveEdit} className="flex-1 justify-center">Yadda Saxla</Button>
