@@ -5,6 +5,7 @@ import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
 import ListSkeleton from '../../components/common/ListSkeleton'
 import Modal from '../../components/common/Modal'
+import StatusBadge from '../../components/common/StatusBadge'
 import { useToast } from '../../components/common/Toast'
 import useUiStore from '../../hooks/useUi'
 
@@ -100,6 +101,39 @@ function SearchIcon({ className = 'w-4 h-4' }) {
   )
 }
 
+function resolveStatusLight(student) {
+  const k = String(student?.status_light || '').toLowerCase()
+  if (k === 'paid' || k === 'due_soon' || k === 'overdue') return k
+  const debt = Number(student?.pending_debt)
+  if (Number.isFinite(debt) && debt > 0.005) return 'due_soon'
+  return 'paid'
+}
+
+function statusBadgeVariant(light) {
+  if (light === 'paid') return 'paid'
+  if (light === 'overdue') return 'danger'
+  return 'due'
+}
+
+function statusBadgeTone(light, theme) {
+  if (theme === 'dark') return ''
+  if (light === 'paid') return 'bg-emerald-500/12 text-emerald-700 border-emerald-600/20'
+  if (light === 'overdue') return 'bg-red-500/12 text-red-700 border-red-600/20'
+  return 'bg-amber-500/12 text-amber-800 border-amber-600/20'
+}
+
+function statusRowBorder(light) {
+  if (light === 'paid') return 'border-l-4 border-l-emerald-500'
+  if (light === 'overdue') return 'border-l-4 border-l-rose-500'
+  return 'border-l-4 border-l-amber-400'
+}
+
+const EMPTY_STATUS_SUMMARY = {
+  paid: { count: 0, amount: 0 },
+  due_soon: { count: 0, amount: 0 },
+  overdue: { count: 0, amount: 0 },
+}
+
 export default function InstructorPayments() {
   const { t } = useTranslation()
   const [loading, setLoading] = useState(true)
@@ -107,6 +141,8 @@ export default function InstructorPayments() {
   const [totalEarnings, setTotalEarnings] = useState(0)
   const [pendingCount, setPendingCount] = useState(0)
   const [pendingAmount, setPendingAmount] = useState(0)
+  const [statusSummary, setStatusSummary] = useState(EMPTY_STATUS_SUMMARY)
+  const [statusFilter, setStatusFilter] = useState('all')
   const [students, setStudents] = useState([])
   const [dueConfirmations, setDueConfirmations] = useState([])
   const [packConfirmations, setPackConfirmations] = useState([])
@@ -148,6 +184,20 @@ export default function InstructorPayments() {
       setTotalEarnings(d.totalEarnings ?? 0)
       setPendingCount(d.pendingCount ?? 0)
       setPendingAmount(d.pendingAmount ?? 0)
+      setStatusSummary({
+        paid: {
+          count: Number(d.status_summary?.paid?.count) || 0,
+          amount: Number(d.status_summary?.paid?.amount) || 0,
+        },
+        due_soon: {
+          count: Number(d.status_summary?.due_soon?.count) || 0,
+          amount: Number(d.status_summary?.due_soon?.amount) || 0,
+        },
+        overdue: {
+          count: Number(d.status_summary?.overdue?.count) || 0,
+          amount: Number(d.status_summary?.overdue?.amount) || 0,
+        },
+      })
       if (d.today_baku && /^\d{4}-\d{2}-\d{2}$/.test(String(d.today_baku))) {
         setTodayBaku(String(d.today_baku).slice(0, 10))
       }
@@ -236,14 +286,72 @@ export default function InstructorPayments() {
     return cats
       .map((c) => {
         const allItems = list.filter(c.match)
+        const statusItems =
+          statusFilter === 'all'
+            ? allItems
+            : allItems.filter((s) => resolveStatusLight(s) === statusFilter)
         const items =
           c.key === '8' && searchTerm.trim()
-            ? allItems.filter((s) => matchesStudentSearch(s, searchTerm))
-            : allItems
+            ? statusItems.filter((s) => matchesStudentSearch(s, searchTerm))
+            : statusItems
         return { ...c, items, totalCount: allItems.length }
       })
-      .filter((c) => (c.key === '8' ? c.totalCount > 0 : c.items.length > 0))
-  }, [students, searchTerm, t])
+      .filter((c) => (c.key === '8' ? c.totalCount > 0 : c.items.length > 0 || (statusFilter === 'all' && c.totalCount > 0)))
+  }, [students, searchTerm, statusFilter, t])
+
+  useEffect(() => {
+    if (statusFilter === 'all') return
+    setOpenCats((prev) => {
+      const next = new Set(prev)
+      categorized.forEach((c) => {
+        if (c.items.length > 0) next.add(c.key)
+      })
+      return next
+    })
+  }, [statusFilter, categorized])
+
+  const toggleStatusFilter = (key) => {
+    setStatusFilter((prev) => (prev === key ? 'all' : key))
+  }
+
+  const statusTiles = [
+    {
+      key: 'paid',
+      label: t('payments.statusPaid'),
+      hint: t('payments.statusPaidHint'),
+      dot: '🟢',
+      count: statusSummary.paid.count,
+      amount: statusSummary.paid.amount,
+      showAmount: false,
+      idle: 'border-emerald-500/25 bg-emerald-500/5',
+      active: 'ring-2 ring-emerald-500/50 border-emerald-500/45 bg-emerald-500/10',
+      amountClass: 'text-emerald-700 dark:text-emerald-200',
+    },
+    {
+      key: 'due_soon',
+      label: t('payments.statusDueSoon'),
+      hint: t('payments.statusDueSoonHint'),
+      dot: '🟡',
+      count: statusSummary.due_soon.count,
+      amount: statusSummary.due_soon.amount,
+      showAmount: true,
+      idle: 'border-amber-500/25 bg-amber-500/5',
+      active: 'ring-2 ring-amber-500/50 border-amber-500/45 bg-amber-500/10',
+      amountClass: 'text-amber-800 dark:text-amber-200',
+    },
+    {
+      key: 'overdue',
+      label: t('payments.statusOverdue'),
+      hint: t('payments.statusOverdueHint'),
+      dot: '🔴',
+      count: statusSummary.overdue.count,
+      amount: statusSummary.overdue.amount,
+      showAmount: true,
+      idle: 'border-rose-500/25 bg-rose-500/5',
+      active: 'ring-2 ring-rose-500/50 border-rose-500/45 bg-rose-500/10',
+      amountClass: 'text-rose-700 dark:text-rose-200',
+    },
+  ]
 
   const submitQuickPay = async (keepOpen = false) => {
     void keepOpen
@@ -572,7 +680,7 @@ export default function InstructorPayments() {
         </Card>
       ) : null}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
         <Card hover className="p-5">
           <div className="text-[11px] font-semibold text-token-textMuted uppercase tracking-widest mb-2">
             {t('payments.totalEarnings')}
@@ -586,14 +694,67 @@ export default function InstructorPayments() {
           <div className="text-[11px] font-semibold text-token-textMuted uppercase tracking-widest mb-2">
             {t('payments.pendingPayments')}
           </div>
-          <div className="font-display font-extrabold text-2xl sm:text-3xl text-amber-600 dark:text-amber-200/95 tabular-nums">
+          <div className="font-display font-extrabold text-2xl sm:text-3xl text-amber-700 dark:text-amber-200/95 tabular-nums">
             {loading ? '…' : formatAzn(pendingAmount)}
           </div>
           <p className="text-xs text-token-textMuted mt-2">
-            {loading ? '…' : t('payments.pendingDesc', { count: pendingCount })}
+            {loading
+              ? '…'
+              : t('payments.pendingDesc', {
+                  count: pendingCount || statusSummary.due_soon.count + statusSummary.overdue.count,
+                })}
           </p>
         </Card>
       </div>
+
+      <Card className="p-4 sm:p-5 mb-6 border border-[color:var(--border-subtle)]">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-3">
+          <div>
+            <h2 className="font-display font-bold text-sm text-token-textMain tracking-wide">
+              {t('payments.statusPanelTitle')}
+            </h2>
+            <p className="text-xs text-token-textMuted mt-1 leading-relaxed">{t('payments.statusPanelHint')}</p>
+          </div>
+          {statusFilter !== 'all' ? (
+            <Button type="button" variant="secondary" size="sm" onClick={() => setStatusFilter('all')}>
+              {t('payments.filterAll')}
+            </Button>
+          ) : null}
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {statusTiles.map((tile) => {
+            const active = statusFilter === tile.key
+            return (
+              <button
+                key={tile.key}
+                type="button"
+                onClick={() => toggleStatusFilter(tile.key)}
+                aria-pressed={active}
+                className={[
+                  'text-left rounded-2xl border px-4 py-3.5 transition-all',
+                  'focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+                  active ? tile.active : tile.idle,
+                ].join(' ')}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-sm font-semibold text-token-textMain">
+                    <span className="mr-1.5" aria-hidden>
+                      {tile.dot}
+                    </span>
+                    {tile.label}
+                  </span>
+                </div>
+                <div className={`font-display font-extrabold text-xl sm:text-2xl tabular-nums mt-2 ${tile.amountClass}`}>
+                  {loading ? '…' : tile.showAmount ? formatAzn(tile.amount) : tile.count}
+                </div>
+                <p className="text-xs text-token-textMuted mt-1">
+                  {loading ? '…' : `${t('payments.statusCount', { count: tile.count })} · ${tile.hint}`}
+                </p>
+              </button>
+            )
+          })}
+        </div>
+      </Card>
 
       <Card hover className="overflow-hidden border border-[color:var(--border-subtle)] mb-3">
         <div className="px-4 py-3 border-b border-[color:var(--border-subtle)] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-token-surfaceCard/45">
@@ -621,6 +782,9 @@ export default function InstructorPayments() {
 
       {!loading && !err && (
         <div className="space-y-3">
+          {statusFilter !== 'all' && categorized.every((c) => c.items.length === 0) ? (
+            <Card className="p-6 text-center text-sm text-token-textMuted">{t('payments.noStatusMatch')}</Card>
+          ) : null}
           {categorized.map((c) => {
             const isOpen = openCats.has(c.key)
             return (
@@ -687,21 +851,37 @@ export default function InstructorPayments() {
                     ) : null}
                     {c.items.map((s) => {
                       const isPartial = s.payment_plan === 'partial'
-                      const debt = s.pending_debt != null ? Number(s.pending_debt) : 0
+                      const debt =
+                        s.pending_debt != null
+                          ? Number(s.pending_debt)
+                          : s.status_amount != null
+                            ? Number(s.status_amount)
+                            : 0
                       const showDebtRed = isPartial && Number.isFinite(debt) && debt > 0.005
                       const showDebt = Number.isFinite(debt) && debt > 0.005
+                      const light = resolveStatusLight(s)
                       return (
                         <div
                           key={s.enrollment_id}
                           className={[
                             'flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between rounded-xl px-3 py-2',
                             'border border-[color:var(--border-subtle)]',
+                            statusRowBorder(light),
                             'bg-token-surfaceCard/40 hover:bg-token-surfaceCard/55 transition-colors',
                           ].join(' ')}
                         >
                           <div className="min-w-0">
-                            <div className="font-semibold text-token-textMain truncate">
-                              {s.first_name} {s.last_name}
+                            <div className="flex flex-wrap items-center gap-2">
+                              <div className="font-semibold text-token-textMain truncate">
+                                {s.first_name} {s.last_name}
+                              </div>
+                              <StatusBadge variant={statusBadgeVariant(light)} className={statusBadgeTone(light, theme)}>
+                                {light === 'paid'
+                                  ? t('payments.statusPaid')
+                                  : light === 'overdue'
+                                    ? t('payments.statusOverdue')
+                                    : t('payments.statusDueSoon')}
+                              </StatusBadge>
                             </div>
                             <div className="text-xs text-token-textMuted flex flex-wrap gap-x-3 gap-y-1 mt-0.5">
                               <span className="font-mono text-[11px] tabular-nums truncate">{s.phone || '—'}</span>
@@ -709,6 +889,11 @@ export default function InstructorPayments() {
                               <span className="font-mono text-token-textMain tabular-nums">
                                 {formatDdMmYyyy(s.lesson_start_date || s.payment_start_date)}
                               </span>
+                              {light !== 'paid' && s.due_ymd ? (
+                                <span className={light === 'overdue' ? 'text-rose-600 dark:text-rose-300' : 'text-amber-700 dark:text-amber-200'}>
+                                  {t('payments.dueOn', { date: formatDdMmYyyy(s.due_ymd) })}
+                                </span>
+                              ) : null}
                             </div>
                             <div className="text-[11px] text-token-textMuted mt-1 truncate">
                               {t('payments.subject')} <span className="text-token-textMain">{s.track_subject_name || '—'}</span>
@@ -724,10 +909,12 @@ export default function InstructorPayments() {
                               {showDebt ? (
                                 <span
                                   className={`text-xs font-semibold tabular-nums ${
-                                    showDebtRed ? 'text-rose-300' : 'text-amber-200/90'
+                                    light === 'overdue' || showDebtRed
+                                      ? 'text-rose-600 dark:text-rose-300'
+                                      : 'text-amber-700 dark:text-amber-200/90'
                                   }`}
                                 >
-                                  {t('payments.remainingDebt', { amount: formatAzn(s.pending_debt) })}
+                                  {t('payments.remainingDebt', { amount: formatAzn(debt) })}
                                 </span>
                               ) : null}
                             </div>
