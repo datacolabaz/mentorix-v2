@@ -231,6 +231,8 @@
       "enterEmail": "Email daxil edin",
       "enterPassword": "Şifrə daxil edin",
       "verifyEmailFirst": "Əvvəlcə emaili təsdiqləyin (kod və ya link)",
+      "signupReadyLogin": "Qeydiyyat hazırdır. İndi email və şifrə ilə daxil olun — kod lazım deyil.",
+      "googleLoginRequired": "Bu hesab Google ilə yaradılıb. Email kodu lazım deyil — «Google ilə davam et» düyməsini basın.",
       "loginError": "Giriş xətası",
       "emailVerifiedChooseRole": "Email təsdiqləndi! İndi istifadə məqsədinizi seçin.",
       "emailVerifiedChooseUse": "Email təsdiqləndi! İndi Mentorix-dən necə istifadə edəcəyinizi seçin.",

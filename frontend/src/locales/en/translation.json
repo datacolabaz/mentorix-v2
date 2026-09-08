@@ -231,6 +231,8 @@
       "enterEmail": "Enter your email",
       "enterPassword": "Enter your password",
       "verifyEmailFirst": "Verify your email first (code or link)",
+      "signupReadyLogin": "Account created. Sign in with your email and password — no code needed.",
+      "googleLoginRequired": "This account was created with Google. No email code — tap Continue with Google.",
       "loginError": "Sign-in error",
       "emailVerifiedChooseRole": "Email verified! Now choose how you will use Mentorix.",
       "emailVerifiedChooseUse": "Email verified! Now choose how you will use Mentorix.",

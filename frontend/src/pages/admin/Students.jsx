@@ -283,9 +283,9 @@ export default function AdminStudents() {
               </div>
             </div>
 
-            {detail.student.is_verified === false ? (
+            {detail.student.is_verified === false && !detail.student.google_sub ? (
               <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-200 text-sm">
-                Email təsdiqlənməyib. Şifrə ilə giriş işləməz — tələbə poçtdakı kodu/linki təsdiqləməli və ya eyni Gmail ilə «Google ilə davam et» seçməlidir.
+                Email təsdiqi gözləyir. Google ilə qeydiyyatdan keçənlər kod yazmır — «Google ilə davam et» ilə daxil olurlar.
               </div>
             ) : null}
 

@@ -35,7 +35,7 @@ async function loginEmailWithAutoRole(email, password, forcedRole) {
       return data
     } catch (err) {
       const status = err?.status
-      if (status === 401 || err?.code === 'EMAIL_NOT_VERIFIED') throw err
+      if (status === 401 || err?.code === 'EMAIL_NOT_VERIFIED' || err?.code === 'GOOGLE_LOGIN_REQUIRED') throw err
       if (status === 403) {
         lastRoleError = err
         continue
@@ -270,6 +270,8 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
     } catch (err) {
       if (tab === 'signup' && isAccountExistsError(err)) {
         openAccountExistsModal(err?.message)
+      } else if (tab === 'login' && err?.code === 'GOOGLE_LOGIN_REQUIRED') {
+        toast(err?.message || t('auth.toasts.googleLoginRequired'), 'error')
       } else if (tab === 'login' && err?.code === 'EMAIL_NOT_VERIFIED') {
         const em = String(loginEmail || '').trim()
         if (em) setVerifyEmail(em)
@@ -296,9 +298,10 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
         password: signupPassword,
         ...getAttributionPayload(),
       })
-      setVerifyEmail(String(signupEmail || '').trim())
-      setPhase('verify')
-      toast(t('auth.toasts.verifySent'), 'success')
+      const em = String(signupEmail || '').trim()
+      setLoginEmail(em)
+      pickTab('login')
+      toast(t('auth.toasts.signupReadyLogin'), 'success')
     } catch (err) {
       if (isAccountExistsError(err)) {
         openAccountExistsModal(err?.message)
@@ -354,7 +357,9 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
       finishEmailLogin(data)
     } catch (err) {
       const code = err?.code || err?.response?.data?.code
-      if (code === 'EMAIL_NOT_VERIFIED') {
+      if (code === 'GOOGLE_LOGIN_REQUIRED') {
+        toast(err.message || t('auth.toasts.googleLoginRequired'), 'error')
+      } else if (code === 'EMAIL_NOT_VERIFIED') {
         setVerifyEmail(email)
         setPhase('verify')
         toast(t('auth.toasts.verifyEmailFirst'), 'error')

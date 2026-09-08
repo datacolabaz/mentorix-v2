@@ -569,7 +569,7 @@ const getStudentById = async (req, res) => {
   try {
     const id = req.params.id;
     const { rows: users } = await db.query(
-      `SELECT id, full_name, email, phone, is_active, is_verified, created_at
+      `SELECT id, full_name, email, phone, is_active, is_verified, created_at, google_sub, auth_provider
        FROM users
        WHERE id = $1 AND role = 'student' AND deleted_at IS NULL
        LIMIT 1`,

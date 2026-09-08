@@ -24,7 +24,11 @@ const {
   isVerificationExpired,
 } = require('../services/emailVerificationIssue');
 const { resolveLoginUserOrError, resolveSmsBillingInstructorId: resolveSmsBillingForLogin } = require('../services/authService');
-const { guardEmailVerifiedBeforeToken } = require('../services/emailVerificationGuard');
+const {
+  guardEmailVerifiedBeforeToken,
+  isGoogleAuthUser,
+  googleLoginRequiredBody,
+} = require('../services/emailVerificationGuard');
 const {
   getActiveRoles,
   getLoginEligibleRoles,
@@ -1272,14 +1276,12 @@ const signup = async (req, res) => {
     const user = await db.transaction(async (client) => {
       const { rows } = await client.query(
         `INSERT INTO users (full_name, email, phone, password_hash, role, is_verified, account_status, role_selected, phone_verified, onboarding_completed, persona)
-         VALUES ($1, $2, NULL, $3, $4, FALSE, 'active', $5, FALSE, FALSE, NULL)
+         VALUES ($1, $2, NULL, $3, $4, TRUE, 'active', $5, FALSE, FALSE, NULL)
          RETURNING id, full_name, email, role, phone, phone_verified, role_selected, onboarding_completed, persona`,
         [name, emailCanon, hash, initialRole, roleSelected],
       );
       return rows[0];
     });
-
-    queueEmailVerification(user.id, emailCanon);
 
     scheduleAccessEvent(req, {
       event_type: 'signup_complete',
@@ -1295,7 +1297,7 @@ const signup = async (req, res) => {
 
     return res.status(201).json({
       success: true,
-      message: 'Qeydiyyat uğurludur. Email ünvanınıza təsdiq kodu və link göndərildi.',
+      message: 'Qeydiyyat uğurludur. İndi «Daxil ol» bölməsindən email və şifrə ilə giriş edin.',
       user: {
         id: user.id,
         full_name: user.full_name,
@@ -1305,7 +1307,7 @@ const signup = async (req, res) => {
         onboarding_completed: false,
       },
       needs_onboarding: true,
-      email_verification_sent: true,
+      email_verification_sent: false,
     });
   } catch (err) {
     if (err.code === '23505') {
@@ -1340,11 +1342,16 @@ const loginWithEmail = async (req, res) => {
       [emailCanon],
     );
     const user = rows[0];
-    if (!user || !user.password_hash || !(await bcrypt.compare(pass, user.password_hash))) {
+    if (!user) {
       return res.status(401).json({ success: false, message: 'Email və ya şifrə yanlışdır' });
     }
-
-    if (!guardEmailVerifiedBeforeToken(res, user)) return;
+    const passOk = Boolean(user.password_hash) && (await bcrypt.compare(pass, user.password_hash));
+    if (!passOk) {
+      if (isGoogleAuthUser(user)) {
+        return res.status(403).json(googleLoginRequiredBody());
+      }
+      return res.status(401).json({ success: false, message: 'Email və ya şifrə yanlışdır' });
+    }
 
     if (isAdminRole(user)) {
       await respondAdminSession(req, res, user);
@@ -1461,7 +1468,6 @@ const me = async (req, res) => {
   try {
     const u = await loadUserLiteById(req.user.id);
     if (!u || u.is_active === false) return res.status(404).json({ success: false, message: 'Tapılmadı' });
-    if (!guardEmailVerifiedBeforeToken(res, u)) return;
     if (isAdminRole(u) || isAdminRole(req.user)) {
       const userOut = await enrichUserForClient(u, 'admin');
       userOut.role = 'admin';

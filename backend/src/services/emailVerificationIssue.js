@@ -24,8 +24,7 @@ async function issueEmailVerification(userId, email) {
     `UPDATE users
      SET verification_token = $1,
          verification_code = $2,
-         verification_expiry = $3,
-         is_verified = FALSE
+         verification_expiry = $3
      WHERE id = $4`,
     [token, code, expiry, userId],
   );

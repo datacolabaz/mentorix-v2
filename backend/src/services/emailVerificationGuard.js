@@ -1,20 +1,12 @@
 const db = require('../utils/db');
-
-const EMAIL_NOT_VERIFIED_MESSAGE =
-  'E-poçt təsdiqlənməyib. Zəhmət olmasa e-poçtunuzdakı təsdiq linkinə klik edin və ya təsdiq kodunu daxil edin.';
-
-function isUserEmailVerified(user) {
-  if (!user) return false;
-  return user.is_verified !== false;
-}
-
-function emailNotVerifiedBody() {
-  return {
-    success: false,
-    code: 'EMAIL_NOT_VERIFIED',
-    message: EMAIL_NOT_VERIFIED_MESSAGE,
-  };
-}
+const {
+  EMAIL_NOT_VERIFIED_MESSAGE,
+  GOOGLE_LOGIN_REQUIRED_MESSAGE,
+  isGoogleAuthUser,
+  isUserEmailVerified,
+  emailNotVerifiedBody,
+  googleLoginRequiredBody,
+} = require('../lib/emailAuthKind');
 
 function respondEmailNotVerified(res) {
   return res.status(403).json(emailNotVerifiedBody());
@@ -24,7 +16,7 @@ function respondEmailNotVerified(res) {
 async function fetchUserAuthState(userId) {
   try {
     const { rows } = await db.query(
-      `SELECT id, role, is_active, is_verified, role_selected, onboarding_completed
+      `SELECT id, role, is_active, is_verified, role_selected, onboarding_completed, google_sub, auth_provider
        FROM users
        WHERE id = $1
        LIMIT 1`,
@@ -44,7 +36,8 @@ async function fetchUserAuthState(userId) {
 }
 
 /**
- * JWT sonrası və ya token verməzdən əvvəl: hesab aktiv və email təsdiqlənib.
+ * JWT sonrası: hesab aktivdir.
+ * Google və ya şifrə ilə giriş email kodu tələb etmir.
  * @returns {Promise<object|null>} user row və ya null (cavab artıq göndərilib)
  */
 async function ensureUserCanUseSession(userId, res) {
@@ -53,14 +46,10 @@ async function ensureUserCanUseSession(userId, res) {
     res.status(401).json({ success: false, message: 'Hesab tapılmadı və ya deaktivdir' });
     return null;
   }
-  if (!isUserEmailVerified(u)) {
-    respondEmailNotVerified(res);
-    return null;
-  }
   return u;
 }
 
-/** Token verməzdən əvvəl (login callback-ləri). */
+/** Token verməzdən əvvəl. Google hesabı email kodu tələb etmir. */
 function guardEmailVerifiedBeforeToken(res, user) {
   if (isUserEmailVerified(user)) return true;
   respondEmailNotVerified(res);
@@ -69,8 +58,11 @@ function guardEmailVerifiedBeforeToken(res, user) {
 
 module.exports = {
   EMAIL_NOT_VERIFIED_MESSAGE,
+  GOOGLE_LOGIN_REQUIRED_MESSAGE,
+  isGoogleAuthUser,
   isUserEmailVerified,
   emailNotVerifiedBody,
+  googleLoginRequiredBody,
   respondEmailNotVerified,
   fetchUserAuthState,
   ensureUserCanUseSession,
