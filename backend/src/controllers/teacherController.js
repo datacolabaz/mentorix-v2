@@ -121,7 +121,7 @@ const getTeacherDashboardStats = async (req, res) => {
          ) AS m
        )
        SELECT COALESCE(
-         json_agg(amt ORDER BY ym) FILTER (WHERE true),
+         json_agg(json_build_object('ym', ym, 'amt', amt) ORDER BY ym) FILTER (WHERE true),
          '[]'::json
        )::text AS series
        FROM (
@@ -248,13 +248,38 @@ const getTeacherDashboardStats = async (req, res) => {
     function parseJsonSeries(raw, fallbackLen = 6) {
       try {
         const arr = JSON.parse(String(raw || '[]'));
-        return Array.isArray(arr) ? arr.map((v) => Number(v) || 0) : Array(fallbackLen).fill(0);
+        if (!Array.isArray(arr)) return Array(fallbackLen).fill(0);
+        return arr.map((v) => {
+          if (v && typeof v === 'object') return Number(v.amt ?? v.amount ?? v.v) || 0;
+          return Number(v) || 0;
+        });
       } catch {
         return Array(fallbackLen).fill(0);
       }
     }
 
+    function parseIncomeMonths(raw) {
+      try {
+        const arr = JSON.parse(String(raw || '[]'));
+        if (!Array.isArray(arr)) return [];
+        return arr.map((v, i, list) => {
+          if (v && typeof v === 'object') {
+            return { ym: String(v.ym || v.month || ''), amount: Number(v.amt ?? v.amount) || 0 };
+          }
+          const offset = list.length - 1 - i;
+          const d = new Date();
+          d.setDate(1);
+          d.setMonth(d.getMonth() - offset);
+          const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+          return { ym, amount: Number(v) || 0 };
+        });
+      } catch {
+        return [];
+      }
+    }
+
     const spark_income_months = parseJsonSeries(sparkInc[0]?.series);
+    const income_months = parseIncomeMonths(sparkInc[0]?.series);
     const spark_enrollment_months = parseJsonSeries(sparkEnr[0]?.series);
     const spark_exam_months = parseJsonSeries(sparkEx[0]?.series);
 
@@ -274,6 +299,7 @@ const getTeacherDashboardStats = async (req, res) => {
             ? pctChange(exam30, examPrev30)
             : 0,
         spark_income_months,
+        income_months,
         spark_enrollment_months,
         spark_exam_months,
       },
