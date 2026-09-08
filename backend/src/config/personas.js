@@ -186,9 +186,15 @@ function mergePersonaProfile(existing, persona, nextSlice) {
   };
 }
 
+function isAdminRole(roleOrUser) {
+  const role =
+    roleOrUser && typeof roleOrUser === 'object' ? roleOrUser.role : roleOrUser;
+  return String(role || '').toLowerCase() === 'admin';
+}
+
 function rowNeedsOnboarding(row) {
   if (!row) return true;
-  if (String(row.role || '').toLowerCase() === 'admin') return false;
+  if (isAdminRole(row)) return false;
   if (row.onboarding_completed === false) return true;
   if (row.role_selected === false) return true;
   return false;
@@ -218,5 +224,6 @@ module.exports = {
   requiredProfileComplete,
   parseStoredProfile,
   mergePersonaProfile,
+  isAdminRole,
   rowNeedsOnboarding,
 };

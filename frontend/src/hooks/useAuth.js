@@ -27,8 +27,10 @@ const useAuthStore = create((set) => ({
     try {
       const data = await api.get('/auth/me')
       if (data?.user) {
+        const nextToken = data.token || token
+        if (data.token) localStorage.setItem('mx_token', data.token)
         localStorage.setItem('mx_user', JSON.stringify(data.user))
-        set({ user: data.user, token })
+        set({ user: data.user, token: nextToken })
       } else {
         throw new Error('no user')
       }
