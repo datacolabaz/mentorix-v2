@@ -9,7 +9,7 @@ import GoogleSignInButton from '../../components/auth/GoogleSignInButton'
 import { useStudentGroupsOptional } from '../../contexts/StudentGroupContext'
 import { formatAzn } from '../../lib/groupPaymentTerms'
 import JoinGroupTermsOverview from '../../components/student/JoinGroupTermsOverview'
-import { parseJoinInviteInput } from '../../lib/joinInvite'
+import { consumeReturnAfterLogin, rememberReturnAfterLogin } from '../../lib/inviteReturn'
 
 const inp =
   'w-full border border-[color:var(--border-subtle)] rounded-xl px-4 py-3 text-token-textMain text-sm outline-none focus:border-primary/40 bg-token-surfaceCard/55'
@@ -122,6 +122,11 @@ export default function JoinClass() {
     return () => {
       cancelled = true
     }
+  }, [initialCode])
+
+  useEffect(() => {
+    if (!initialCode) return
+    rememberReturnAfterLogin(`/join/${encodeURIComponent(initialCode)}`)
   }, [initialCode])
 
   const persistAuth = useCallback(
@@ -246,7 +251,7 @@ export default function JoinClass() {
       if (!authUser) return
       try {
         if (initialCode) {
-          sessionStorage.setItem('mx_return_after_login', `/join/${encodeURIComponent(initialCode)}`)
+          rememberReturnAfterLogin(`/join/${encodeURIComponent(initialCode)}`)
         }
       } catch {
         /* ignore */
@@ -311,6 +316,10 @@ export default function JoinClass() {
   const isStudentSession = user?.role === 'student'
   const needsAuthStep = showJoinForm && !isStudentSession
   const showTermsAndForm = showJoinForm && isStudentSession
+
+  useEffect(() => {
+    if (submitted || showMemberStatus || infoError) consumeReturnAfterLogin()
+  }, [submitted, showMemberStatus, infoError])
 
   const canSubmitJoin =
     Boolean(isStudentSession) &&

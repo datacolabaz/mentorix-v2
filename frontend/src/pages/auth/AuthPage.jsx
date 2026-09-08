@@ -8,7 +8,7 @@ import InstructorEmailAuth from '../../components/auth/InstructorEmailAuth'
 import Brand from '../../components/common/Brand'
 import LanguageSwitcher from '../../components/LanguageSwitcher'
 import { setPageSeo } from '../../lib/pageSeo'
-import { postAuthNavigate } from '../../lib/postAuth'
+import { postAuthNavigate, rememberReturnAfterLogin } from '../../lib/postAuth'
 
 /** Tam səhifə giriş / qeydiyyat (/login, /register) */
 export default function AuthPage() {
@@ -31,11 +31,7 @@ export default function AuthPage() {
   useEffect(() => {
     const next = String(searchParams.get('next') || '').trim()
     if (next.startsWith('/') && next !== '/login' && next !== '/register') {
-      try {
-        sessionStorage.setItem('mx_return_after_login', next)
-      } catch {
-        /* ignore */
-      }
+      rememberReturnAfterLogin(next)
     }
   }, [searchParams])
 

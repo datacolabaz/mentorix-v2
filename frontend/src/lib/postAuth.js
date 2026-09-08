@@ -1,4 +1,17 @@
 import { DEFAULT_APP_PATH, ONBOARDING_PATH, isPersonaId, userNeedsOnboarding } from '../constants/personas'
+import {
+  consumeReturnAfterLogin,
+  isInviteResumePath,
+  peekReturnAfterLogin,
+} from './inviteReturn'
+
+export {
+  RETURN_AFTER_LOGIN_KEY,
+  consumeReturnAfterLogin,
+  isInviteResumePath,
+  peekReturnAfterLogin,
+  rememberReturnAfterLogin,
+} from './inviteReturn'
 
 const ROLE_HOME = {
   admin: '/admin',
@@ -23,25 +36,24 @@ export function dashboardPathForUser(user) {
 
 export { userNeedsOnboarding, ONBOARDING_PATH, DEFAULT_APP_PATH }
 
+export function resolvePostAuthPath(user, { nextQuery = '', stored = peekReturnAfterLogin() } = {}) {
+  const q = String(nextQuery || '').trim()
+  const fromQuery = q.startsWith('/') && !q.startsWith('//') ? q : ''
+  const ret = fromQuery && fromQuery !== '/login' && fromQuery !== '/register' ? fromQuery : stored
+  if (isInviteResumePath(ret)) return ret
+  if (userNeedsOnboarding(user)) return ONBOARDING_PATH
+  if (ret && ret !== ONBOARDING_PATH) return ret
+  return dashboardPathForUser(user)
+}
+
 /** Lazy OTP: girişdə yox, ciddi əməliyyat API 403 → PhoneVerificationGate modal. */
 export function userNeedsPhoneVerificationPage(_user) {
   return false
 }
 
-export function postAuthNavigate(user, navigate) {
-  if (userNeedsOnboarding(user)) {
-    navigate(ONBOARDING_PATH, { replace: true })
-    return
-  }
-  try {
-    const ret = sessionStorage.getItem('mx_return_after_login')
-    if (ret && ret.startsWith('/') && ret !== '/login' && ret !== '/register' && ret !== '/verify-phone' && ret !== ONBOARDING_PATH) {
-      sessionStorage.removeItem('mx_return_after_login')
-      navigate(ret, { replace: true })
-      return
-    }
-  } catch {
-    /* ignore */
-  }
-  navigate(dashboardPathForUser(user), { replace: true })
+export function postAuthNavigate(user, navigate, nextQuery) {
+  const stored = peekReturnAfterLogin()
+  const path = resolvePostAuthPath(user, { nextQuery, stored })
+  if (path !== ONBOARDING_PATH && path === stored) consumeReturnAfterLogin()
+  navigate(path, { replace: true })
 }

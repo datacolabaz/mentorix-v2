@@ -385,6 +385,7 @@
     "keepNote": "Dəyişəndə əvvəlki məlumatlarınız silinmir.",
     "save": "Yadda saxla",
     "saved": "İstifadə məqsədi yeniləndi",
+    "alreadySaved": "Bu seçim artıq yadda saxlanılıb",
     "failed": "Yenilənmədi"
   },
   "dashboard": {

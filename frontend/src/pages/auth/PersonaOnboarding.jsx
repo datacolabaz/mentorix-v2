@@ -7,7 +7,7 @@ import Button from '../../components/common/Button'
 import Brand from '../../components/common/Brand'
 import NavIcon from '../../components/common/NavIcon'
 import { useToast } from '../../components/common/Toast'
-import { dashboardPathForUser } from '../../lib/postAuth'
+import { postAuthNavigate } from '../../lib/postAuth'
 import {
   PERSONA_ORDER,
   PERSONA_UI,
@@ -325,7 +325,7 @@ export default function PersonaOnboarding() {
       if (!r?.token || !r?.user) throw new Error(r?.message || t('auth.errors.invalidServer'))
       setSession(r.token, r.user)
       toast(t('onboarding.toasts.ready'), 'success')
-      navigate(dashboardPathForUser(r.user), { replace: true })
+      postAuthNavigate(r.user, navigate)
     } catch (e) {
       const msg = e?.message || e?.response?.data?.message || t('onboarding.toasts.failed')
       setError(msg)

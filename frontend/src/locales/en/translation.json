@@ -385,6 +385,7 @@
     "keepNote": "Changing this does not delete your existing data.",
     "save": "Save",
     "saved": "Use case updated",
+    "alreadySaved": "This choice is already saved",
     "failed": "Could not update"
   },
   "dashboard": {

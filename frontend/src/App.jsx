@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect } from 'react'
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { Routes, Route, Navigate, useLocation, useSearchParams } from 'react-router-dom'
 import useAuthStore from './hooks/useAuth'
 
 import AuthPage from './pages/auth/AuthPage'
@@ -9,7 +9,15 @@ import VerifyPhone from './pages/auth/VerifyPhone'
 import ResetPassword from './pages/auth/ResetPassword'
 import PersonaOnboarding from './pages/auth/PersonaOnboarding'
 import GenericAppHome from './pages/app/Home'
-import { dashboardPathForUser, userNeedsOnboarding, ONBOARDING_PATH } from './lib/postAuth'
+import {
+  consumeReturnAfterLogin,
+  isInviteResumePath,
+  peekReturnAfterLogin,
+  rememberReturnAfterLogin,
+  resolvePostAuthPath,
+  userNeedsOnboarding,
+  ONBOARDING_PATH,
+} from './lib/postAuth'
 import InstructorMapSearch from './pages/public/InstructorMapSearch'
 import UniversityProgramSearch from './pages/public/UniversityProgramSearch'
 import PublicSeoLanding from './pages/public/PublicSeoLanding'
@@ -113,23 +121,40 @@ const Placeholder = ({ title }) => (
   </div>
 )
 
-const RETURN_AFTER_LOGIN_KEY = 'mx_return_after_login'
+function ResumeAfterAuth() {
+  const { user } = useAuthStore()
+  const [searchParams] = useSearchParams()
+  const stored = peekReturnAfterLogin()
+  const dest = resolvePostAuthPath(user, { nextQuery: searchParams.get('next'), stored })
+  if (dest && dest === stored) consumeReturnAfterLogin()
+  return <Navigate to={dest} replace />
+}
 
 const ProtectedRoute = ({ children, roles }) => {
   const { user } = useAuthStore()
   const location = useLocation()
   if (!user) {
-    try {
-      const path = `${location.pathname || ''}${location.search || ''}`
-      if (path && path !== '/login' && path !== '/register') sessionStorage.setItem(RETURN_AFTER_LOGIN_KEY, path)
-    } catch {
-      /* ignore */
+    const path = `${location.pathname || ''}${location.search || ''}`
+    if (path && path !== '/login' && path !== '/register' && !isInviteResumePath(peekReturnAfterLogin())) {
+      rememberReturnAfterLogin(path)
     }
     return <Navigate to="/login" replace />
+  }
+  const invite = peekReturnAfterLogin()
+  if (userNeedsOnboarding(user) && isInviteResumePath(invite)) {
+    return <Navigate to={invite} replace />
   }
   if (userNeedsOnboarding(user)) return <Navigate to={ONBOARDING_PATH} replace />
   if (roles && !roles.includes(user.role)) return <Navigate to="/login" replace />
   return children
+}
+
+function OnboardingOrInvite() {
+  const { user } = useAuthStore()
+  const invite = peekReturnAfterLogin()
+  if (isInviteResumePath(invite)) return <Navigate to={invite} replace />
+  if (userNeedsOnboarding(user)) return <PersonaOnboarding />
+  return <ResumeAfterAuth />
 }
 
 function AuthedRoute({ children }) {
@@ -174,23 +199,11 @@ export default function App() {
       <Route path="/teachers/:id" element={<PublicInstructorProfile />} />
       <Route
         path="/login"
-        element={
-          user && !userNeedsOnboarding(user) ? (
-            <Navigate to={dashboardPathForUser(user)} replace />
-          ) : (
-            <AuthPage />
-          )
-        }
+        element={user ? <ResumeAfterAuth /> : <AuthPage />}
       />
       <Route
         path="/register"
-        element={
-          user && !userNeedsOnboarding(user) ? (
-            <Navigate to={dashboardPathForUser(user)} replace />
-          ) : (
-            <AuthPage />
-          )
-        }
+        element={user ? <ResumeAfterAuth /> : <AuthPage />}
       />
       <Route path="/verify-email" element={<VerifyEmail />} />
       <Route
@@ -206,11 +219,7 @@ export default function App() {
         path="/onboarding"
         element={
           <AuthedRoute>
-            {userNeedsOnboarding(user) ? (
-              <PersonaOnboarding />
-            ) : (
-              <Navigate to={dashboardPathForUser(user)} replace />
-            )}
+            <OnboardingOrInvite />
           </AuthedRoute>
         }
       />
@@ -219,7 +228,13 @@ export default function App() {
         path="/app"
         element={
           <AuthedRoute>
-            {userNeedsOnboarding(user) ? <Navigate to={ONBOARDING_PATH} replace /> : <GenericAppHome />}
+            {isInviteResumePath(peekReturnAfterLogin()) ? (
+              <Navigate to={peekReturnAfterLogin()} replace />
+            ) : userNeedsOnboarding(user) ? (
+              <Navigate to={ONBOARDING_PATH} replace />
+            ) : (
+              <GenericAppHome />
+            )}
           </AuthedRoute>
         }
       />

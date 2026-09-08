@@ -8,7 +8,7 @@ import useAuthStore from '../../hooks/useAuth'
 import { useToast } from '../common/Toast'
 import api from '../../lib/api'
 import { getAttributionPayload } from '../../lib/analytics'
-import { postAuthNavigate, ONBOARDING_PATH } from '../../lib/postAuth'
+import { postAuthNavigate } from '../../lib/postAuth'
 import { googleAuthWithAutoRole, googleSignup } from '../../lib/googleAuth'
 import i18n from '../../i18n'
 
@@ -312,7 +312,8 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
     }
     if ((data?.needs_onboarding || data?.needs_role) && data?.token && data?.user) {
       setSession(data.token, data.user)
-      navigate(ONBOARDING_PATH, { replace: true })
+      if (onSuccess) onSuccess(data.user)
+      else postAuthNavigate(data.user, navigate)
       return
     }
     if (!data?.token || !data?.user) throw new Error(data?.message || t('auth.errors.invalidServer'))
@@ -375,7 +376,8 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
       }
       if (r?.needs_onboarding || r?.needs_role) {
         toast(t('auth.toasts.emailVerifiedChooseUse'), 'success')
-        navigate(ONBOARDING_PATH, { replace: true })
+        if (onSuccess) onSuccess(r.user)
+        else postAuthNavigate(r.user, navigate)
         return
       }
         toast(t('auth.toasts.emailVerifiedLoggedIn'), 'success')

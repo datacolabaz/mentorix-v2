@@ -7,7 +7,7 @@ import NavIcon from '../common/NavIcon'
 import { useToast } from '../common/Toast'
 import useAuthStore from '../../hooks/useAuth'
 import api from '../../lib/api'
-import { dashboardPathForUser } from '../../lib/postAuth'
+import { dashboardPathForUser, consumeReturnAfterLogin, isInviteResumePath, peekReturnAfterLogin } from '../../lib/postAuth'
 import {
   PERSONA_ORDER,
   PERSONA_UI,
@@ -30,7 +30,18 @@ export default function PersonaSettingsCard({ className = '' }) {
   )
 
   const save = async () => {
-    if (!changed) return
+    if (!picked) return
+    const pendingInvite = peekReturnAfterLogin()
+    const resumeInvite = isInviteResumePath(pendingInvite)
+    if (!changed) {
+      if (resumeInvite) {
+        consumeReturnAfterLogin()
+        navigate(pendingInvite, { replace: true })
+        return
+      }
+      toast(t('personaSettings.alreadySaved'), 'success')
+      return
+    }
     setBusy(true)
     try {
       const existing = user?.persona_profile?.[picked] || {}
@@ -38,6 +49,12 @@ export default function PersonaSettingsCard({ className = '' }) {
       if (!r?.token || !r?.user) throw new Error(r?.message || t('auth.errors.invalidServer'))
       setSession(r.token, r.user)
       toast(t('personaSettings.saved'), 'success')
+      const invite = peekReturnAfterLogin()
+      if (isInviteResumePath(invite)) {
+        consumeReturnAfterLogin()
+        navigate(invite, { replace: true })
+        return
+      }
       const nextPath = dashboardPathForUser(r.user)
       if (nextPath && nextPath !== window.location.pathname.replace(/\/settings$/, '')) {
         navigate(nextPath, { replace: true })
@@ -82,7 +99,7 @@ export default function PersonaSettingsCard({ className = '' }) {
           )
         })}
       </div>
-      <Button disabled={!changed} loading={busy} onClick={() => void save()}>
+      <Button disabled={!picked} loading={busy} onClick={() => void save()}>
         {t('personaSettings.save')}
       </Button>
     </Card>

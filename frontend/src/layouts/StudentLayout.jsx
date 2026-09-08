@@ -9,7 +9,7 @@ import { sidebarNavClass } from '../lib/sidebarNavClass'
 import NavIcon from '../components/common/NavIcon'
 import SidebarPreferences from '../components/common/SidebarPreferences'
 import { StudentGroupProvider, useStudentGroups } from '../contexts/StudentGroupContext'
-import { useStudentAlerts } from '../hooks/useStudentAlerts'
+import { isInviteResumePath, peekReturnAfterLogin } from '../lib/inviteReturn'
 import StudentAssignmentAlertModal from '../components/student/StudentAssignmentAlertModal'
 
 function NavBadge({ count }) {
@@ -94,6 +94,13 @@ function StudentLayoutInner() {
   useEffect(() => {
     setNavOpen(false)
   }, [location.pathname])
+
+  useEffect(() => {
+    const invite = peekReturnAfterLogin()
+    if (!isInviteResumePath(invite)) return
+    if (location.pathname.startsWith('/join')) return
+    navigate(invite, { replace: true })
+  }, [location.pathname, navigate])
 
   useEffect(() => {
     const openNav = () => setNavOpen(true)
