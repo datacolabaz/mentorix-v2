@@ -34,7 +34,7 @@ export function LandingAudienceGrid({ heading, items }) {
   return (
     <section id="mx-audiences" className="space-y-4 scroll-mt-24">
       <h2 className="text-xs uppercase tracking-wider text-gray-500 font-semibold">{heading}</h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-3xl">
         {(items || []).map((item, i) => (
           <LandingHoverCard
             key={`audience-${i}-${String(item.title).slice(0, 24)}`}

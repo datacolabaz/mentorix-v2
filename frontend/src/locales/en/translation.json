@@ -1078,16 +1078,6 @@
           "body": "Create lessons, tests, and exams, and manage participants and results."
         },
         {
-          "emoji": "🏢",
-          "title": "Organization",
-          "body": "Run teams, participants, and assessment from one platform."
-        },
-        {
-          "emoji": "💼",
-          "title": "Company / HR",
-          "body": "Hiring, employee assessment, and corporate tests."
-        },
-        {
           "emoji": "👤",
           "title": "Participant",
           "body": "Join exams, complete tests, and follow your results."
@@ -1103,7 +1093,7 @@
         },
         {
           "q": "Who is it for?",
-          "a": "Teachers and trainers, organizations, company/HR teams, and participants. The participant workspace opens by invitation and stays free."
+          "a": "Teachers and trainers, and participants. The participant workspace opens by invitation and stays free."
         },
         {
           "q": "How do I start?",
@@ -1111,15 +1101,11 @@
         },
         {
           "q": "Where are the prices?",
-          "a": "Packages and limits live on the Pricing page: teacher / trainer, organization, and corporate."
-        },
-        {
-          "q": "Can HR and companies use it?",
-          "a": "Yes. Candidate and team assessment run on the same platform. For corporate needs, get in touch."
+          "a": "Packages and limits are on the Pricing page."
         },
         {
           "q": "How do participants join?",
-          "a": "A teacher, organization, or HR team invites them with a link or QR. The participant workspace is free."
+          "a": "A teacher or trainer invites them with a link or QR. The participant workspace is free."
         }
       ]
     },

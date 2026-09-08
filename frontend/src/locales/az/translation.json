@@ -1078,16 +1078,6 @@
           "body": "Dərs, test və imtahanlarınızı yaradın, iştirakçıları və nəticələri idarə edin."
         },
         {
-          "emoji": "🏢",
-          "title": "Təşkilat",
-          "body": "Komandaları, iştirakçıları və qiymətləndirmə proseslərini vahid platformadan idarə edin."
-        },
-        {
-          "emoji": "💼",
-          "title": "Şirkət / HR",
-          "body": "Namizəd seçimi, əməkdaş qiymətləndirməsi və korporativ testlər üçün."
-        },
-        {
           "emoji": "👤",
           "title": "İştirakçı",
           "body": "İmtahanlara qoşulun, testləri tamamlayın və nəticələrinizi izləyin."
@@ -1103,7 +1093,7 @@
         },
         {
           "q": "Kimlər üçündür?",
-          "a": "Müəllim və təlimçilər, təşkilatlar, şirkət/HR komandaları və iştirakçılar. İştirakçı kabineti dəvət ilə açılır və pulsuzdur."
+          "a": "Müəllim və təlimçilər, həmçinin iştirakçılar. İştirakçı kabineti dəvət ilə açılır və pulsuzdur."
         },
         {
           "q": "Necə başlaya bilərəm?",
@@ -1111,15 +1101,11 @@
         },
         {
           "q": "Qiymətlər haradadır?",
-          "a": "Paketlər və limitlər Qiymətlər səhifəsindədir: müəllim / təlimçi, təşkilat və korporativ."
-        },
-        {
-          "q": "HR və şirkətlər də istifadə edə bilər?",
-          "a": "Bəli. Namizəd və komanda qiymətləndirməsi eyni platformadadır. Korporativ ehtiyac üçün əlaqə saxlayın."
+          "a": "Paketlər və limitlər Qiymətlər səhifəsindədir."
         },
         {
           "q": "İştirakçılar necə qoşulur?",
-          "a": "Müəllim, təşkilat və ya HR dəvət linki və ya QR ilə qoşur. İştirakçı kabineti pulsuzdur."
+          "a": "Müəllim və ya təlimçi dəvət linki və ya QR ilə qoşur. İştirakçı kabineti pulsuzdur."
         }
       ]
     },
