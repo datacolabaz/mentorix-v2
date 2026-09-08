@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import api from '../../lib/api'
 import useAuthStore from '../../hooks/useAuth'
@@ -58,6 +58,8 @@ export default function JoinClass() {
   const [referralNotes, setReferralNotes] = useState('')
   const [joinState, setJoinState] = useState(null)
   const [joinStateLoading, setJoinStateLoading] = useState(false)
+  const formRef = useRef(null)
+  const joinActionsRef = useRef(null)
 
   useEffect(() => {
     if (!initialCode) {
@@ -84,6 +86,19 @@ export default function JoinClass() {
     }
   }, [initialCode])
 
+  const persistAuth = useCallback(
+    (token, authUser) => {
+      setSession(token, authUser)
+    },
+    [setSession],
+  )
+
+  const applyNameFromUser = useCallback((authUser) => {
+    const parts = splitFullName(authUser?.full_name)
+    setFirstName((prev) => (String(prev || '').trim() ? prev : parts.first_name))
+    setLastName((prev) => (String(prev || '').trim() ? prev : parts.last_name))
+  }, [])
+
   useEffect(() => {
     if (!user?.id || user.role !== 'student' || !initialCode || !joinInfo) {
       setJoinState(null)
@@ -107,34 +122,90 @@ export default function JoinClass() {
     }
   }, [user?.id, user?.role, initialCode, joinInfo])
 
-  const persistAuth = useCallback(
-    (token, authUser) => {
-      setSession(token, authUser)
+  useEffect(() => {
+    if (!user) return
+    applyNameFromUser(user)
+  }, [user, applyNameFromUser])
+
+  useEffect(() => {
+    if (!joinInfo || !user?.id) return
+    if (user.role === 'student') return
+    if (user.role && user.role !== 'student') return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const subject = String(joinInfo.subject_name || '').trim() || 'Dərs'
+        const done = await api.post('/auth/onboarding/persona', {
+          persona: 'student',
+          profile: { education_level: 'other', subject_interest: subject.slice(0, 120) },
+        })
+        if (cancelled || !done?.token || !done?.user) return
+        persistAuth(done.token, { ...done.user, needs_phone_verification: false })
+        applyNameFromUser(done.user)
+      } catch {
+        /* forma görünsün — Qoşul zamanı yenidən cəhd olunacaq */
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [applyNameFromUser, joinInfo, persistAuth, user?.id, user?.role])
+
+  const scrollToJoinActions = useCallback(() => {
+    window.requestAnimationFrame(() => {
+      const el =
+        joinActionsRef.current ||
+        document.getElementById('join-form') ||
+        document.getElementById('join-actions')
+      el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    })
+  }, [])
+
+  /** QR/WhatsApp join: Google yeni hesabı onboarding-də rol=null saxlayır — tələbə sessiyasını burada bağla. */
+  const ensureStudentJoinSession = useCallback(
+    async (authResult) => {
+      if (authResult?.needs_phone_link) {
+        toast('Bu Google hesabı mövcud telefon hesabına bağlanmalıdır — dəstək ilə əlaqə saxlayın.', 'error')
+        return null
+      }
+      if (!authResult?.token || !authResult?.user) {
+        toast(authResult?.message || 'Google girişi tamamlanmadı', 'error')
+        return null
+      }
+      if (authResult.user.role && authResult.user.role !== 'student') {
+        toast('Bu hesab tələbə deyil — müəllim panelinə daxil olun.', 'error')
+        return null
+      }
+      persistAuth(authResult.token, { ...authResult.user, needs_phone_verification: false })
+      let authUser = authResult.user
+      if (authUser.role !== 'student') {
+        const subject = String(joinInfo?.subject_name || '').trim() || 'Dərs'
+        const done = await api.post('/auth/onboarding/persona', {
+          persona: 'student',
+          profile: { education_level: 'other', subject_interest: subject.slice(0, 120) },
+        })
+        if (!done?.token || !done?.user) {
+          toast(done?.message || 'Tələbə sessiyası tamamlanmadı', 'error')
+        } else {
+          persistAuth(done.token, { ...done.user, needs_phone_verification: false })
+          authUser = done.user
+        }
+      }
+      applyNameFromUser(authUser)
+      return authUser
     },
-    [setSession],
+    [applyNameFromUser, joinInfo?.subject_name, persistAuth, toast],
   )
 
   const handleGoogleCredential = async (credential) => {
     setAuthBusy(true)
     try {
       let r = await api.post('/auth/google/login', { credential })
-      if (r?.needs_role || r?.needs_phone_link) {
+      if (r?.needs_role || r?.needs_onboarding || r?.needs_phone_link) {
         r = await api.post('/auth/google/complete', { credential, role: 'student' })
       }
-      if (r?.needs_phone_link) {
-        toast('Bu Google hesabı mövcud telefon hesabına bağlanmalıdır — dəstək ilə əlaqə saxlayın.', 'error')
-        return
-      }
-      if (!r?.token || !r?.user) {
-        toast(r?.message || 'Google girişi tamamlanmadı', 'error')
-        return
-      }
-      if (r.user.role && r.user.role !== 'student') {
-        toast('Bu hesab tələbə deyil — müəllim panelinə daxil olun.', 'error')
-        return
-      }
-      const u = { ...r.user, needs_phone_verification: false }
-      persistAuth(r.token, u)
+      const authUser = await ensureStudentJoinSession(r)
+      if (!authUser) return
       try {
         if (initialCode) {
           sessionStorage.setItem('mx_return_after_login', `/join/${encodeURIComponent(initialCode)}`)
@@ -143,6 +214,7 @@ export default function JoinClass() {
         /* ignore */
       }
       toast('Daxil oldunuz', 'success')
+      scrollToJoinActions()
     } catch (err) {
       toast(err?.message || 'Google girişi uğursuz', 'error')
     } finally {
@@ -154,6 +226,9 @@ export default function JoinClass() {
     e?.preventDefault?.()
     if (!initialCode) return toast('Dəvət linki düzgün deyil', 'error')
     if (!user) return toast('Əvvəlcə Google ilə daxil olun', 'error')
+    if (user.role !== 'student') {
+      return toast('Sessiya hazırlanır. Bir az sonra yenidən «Qoşul» basın.', 'error')
+    }
     const fn = String(firstName).trim()
     const ln = String(lastName).trim()
     if (!fn || !ln) return toast('Ad və soyad tələb olunur', 'error')
@@ -189,15 +264,23 @@ export default function JoinClass() {
   const loginHref = `/login?next=${encodeURIComponent(initialCode ? `/join/${initialCode}` : '/student/groups')}`
   const memberState = joinState?.state
   const showMemberStatus = ['active', 'pending_approval', 'pending_setup'].includes(memberState)
+  const blockedAsOtherRole = Boolean(user?.role && user.role !== 'student')
   const showJoinForm =
     Boolean(initialCode && joinInfo && !infoError) &&
     !submitted &&
     !showMemberStatus &&
-    !(joinStateLoading && user?.role === 'student') &&
-    (!user || user?.role === 'student')
+    !blockedAsOtherRole
+
+  const canSubmitJoin =
+    Boolean(user?.role === 'student') &&
+    Boolean(joinInfo?.package_offer) &&
+    termsAccepted &&
+    !busy &&
+    !authBusy &&
+    !joinStateLoading
 
   return (
-    <div className="p-4 sm:p-6 pb-[max(2rem,env(safe-area-inset-bottom))] max-w-lg mx-auto w-full min-h-[100dvh]">
+    <div className="p-4 sm:p-6 pb-[max(7.5rem,env(safe-area-inset-bottom))] max-w-lg mx-auto w-full min-h-[100dvh]">
       <div className="mb-4">
         <Link
           to={backHref}
@@ -228,6 +311,25 @@ export default function JoinClass() {
           </Button>
         </Card>
       )}
+
+      {showJoinForm && (!user || user.role !== 'student') ? (
+        <div ref={joinActionsRef} id="join-actions" className="mb-4">
+          <Card className="p-5 border border-primary/30 bg-primary/5 space-y-4">
+            <p className="text-sm font-medium text-token-textMain">Davam etmək üçün daxil olun</p>
+            <p className="text-sm text-token-textMuted">
+              Google ilə daxil olun. Ad və soyadınız avtomatik doldurulur — yoxlayıb «Qoşul» düyməsinə basın. Telefon
+              tələb olunmur.
+            </p>
+            <GoogleSignInButton onCredential={handleGoogleCredential} disabled={authBusy} />
+            <p className="text-center text-xs text-token-textMuted">
+              və ya{' '}
+              <a href={loginHref} className="text-primary font-semibold hover:underline">
+                email ilə daxil ol
+              </a>
+            </p>
+          </Card>
+        </div>
+      ) : null}
 
       {joinInfo && !submitted && <JoinGroupTermsOverview joinInfo={joinInfo} />}
 
@@ -272,35 +374,32 @@ export default function JoinClass() {
             Panelə get
           </Button>
         </Card>
-      ) : joinStateLoading && user?.role === 'student' ? (
-        <p className="text-sm text-token-textMuted mb-4">Hesabınız yoxlanılır…</p>
+      ) : blockedAsOtherRole ? (
+        <Card className="p-5 border border-amber-500/25 bg-amber-500/10">
+          <p className="text-token-textMain font-semibold">Bu hesab tələbə deyil</p>
+          <p className="text-sm text-token-textMuted mt-2">
+            Qrupa tələbə kimi qoşulmaq üçün tələbə Google hesabı ilə daxil olun.
+          </p>
+          <Button className="w-full justify-center mt-4" variant="secondary" onClick={() => navigate('/login')}>
+            Başqa hesabla daxil ol
+          </Button>
+        </Card>
       ) : showJoinForm ? (
-        <>
-          {!user ? (
-            <Card className="p-5 mb-4 border border-primary/30 bg-primary/5 space-y-4">
-              <p className="text-sm font-medium text-token-textMain">Davam etmək üçün daxil olun</p>
-              <p className="text-sm text-token-textMuted">
-                Qrupa qoşulmaq üçün Google ilə daxil olun — ad və soyadınızı yoxlayıb «Qoşul» düyməsinə basın. Telefon tələb olunmur.
-              </p>
-              <GoogleSignInButton onCredential={handleGoogleCredential} disabled={authBusy} />
-              <p className="text-center text-xs text-token-textMuted">
-                və ya{' '}
-                <a href={loginHref} className="text-primary font-semibold hover:underline">
-                  email ilə daxil ol
-                </a>
-              </p>
-            </Card>
-          ) : (
-            <p className="text-xs text-emerald-300/90 mb-3">
+        <div id="join-form" className="space-y-4">
+          {joinStateLoading ? (
+            <p className="text-sm text-token-textMuted">Hesabınız yoxlanılır…</p>
+          ) : null}
+          {user?.role === 'student' ? (
+            <p className="text-xs text-emerald-700 dark:text-emerald-300/90">
               Daxil: <span className="font-medium">{user.email || user.full_name}</span>
             </p>
-          )}
+          ) : null}
 
           <Card className="p-5 border border-[color:var(--border-subtle)]">
             <p className="text-xs font-semibold uppercase tracking-wider text-token-textMuted mb-3">
               Şəxsi məlumatlar
             </p>
-            <form className="space-y-3" onSubmit={submitRequest}>
+            <form ref={formRef} className="space-y-3" onSubmit={submitRequest}>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-token-textMuted uppercase mb-1.5">Ad *</label>
@@ -373,13 +472,47 @@ export default function JoinClass() {
                 className="w-full justify-center"
                 loading={busy}
                 type="submit"
-                disabled={!user || !joinInfo?.package_offer || !termsAccepted}
+                disabled={!canSubmitJoin}
               >
                 Qoşul
               </Button>
             </form>
           </Card>
-        </>
+        </div>
+      ) : null}
+
+      {showJoinForm ? (
+        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-[color:var(--border-subtle)] bg-token-surfaceCard/95 backdrop-blur-md">
+          <div className="max-w-lg mx-auto px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+            {!user || user.role !== 'student' ? (
+              <Button
+                className="w-full justify-center"
+                type="button"
+                loading={authBusy}
+                onClick={scrollToJoinActions}
+              >
+                Google ilə davam et
+              </Button>
+            ) : (
+              <Button
+                className="w-full justify-center"
+                type="button"
+                loading={busy}
+                disabled={busy || joinStateLoading}
+                onClick={() => {
+                  if (!termsAccepted) {
+                    toast('Ödəniş şərtləri ilə razılaşın', 'error')
+                    scrollToJoinActions()
+                    return
+                  }
+                  formRef.current?.requestSubmit()
+                }}
+              >
+                Qoşul
+              </Button>
+            )}
+          </div>
+        </div>
       ) : null}
     </div>
   )

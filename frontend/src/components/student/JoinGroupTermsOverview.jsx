@@ -14,7 +14,7 @@ function formatDeliveryList(formats) {
   return list.map((f) => DELIVERY_LABELS[f] || f).join(' · ')
 }
 
-export default function JoinGroupTermsOverview({ joinInfo }) {
+export default function JoinGroupTermsOverview({ joinInfo, showCtaHint = false }) {
   if (!joinInfo) return null
 
   const preview = joinInfo.group_terms_preview
@@ -116,9 +116,11 @@ export default function JoinGroupTermsOverview({ joinInfo }) {
         ) : null}
       </div>
 
-      <p className="text-xs text-center text-token-textMuted pt-1">
-        Aşağı sürüşdürün — giriş və «Qoşul» düyməsi aşağıdadır
-      </p>
+      {showCtaHint ? (
+        <p className="text-xs text-center text-token-textMuted pt-1">
+          Davam etmək üçün aşağıdakı Google və «Qoşul» düyməsindən istifadə edin
+        </p>
+      ) : null}
 
       {showIncomplete ? (
         <p className="text-xs text-amber-200/95 leading-relaxed border border-amber-500/30 bg-amber-500/10 rounded-xl px-3 py-2">
