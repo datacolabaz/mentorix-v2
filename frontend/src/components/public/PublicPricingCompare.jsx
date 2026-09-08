@@ -19,7 +19,7 @@ function liveLimit(plan) {
   return Object.prototype.hasOwnProperty.call(LIVE_FALLBACK, id) ? LIVE_FALLBACK[id] : null
 }
 
-function PlanCard({ plan, onCta }) {
+export function PricingPlanCard({ plan, onCta }) {
   const { t, i18n } = useTranslation()
   const display = useLandingPlanDisplay(plan, t, i18n)
   const isBasicTrial = normalizePlanId(plan) === 'basic'
@@ -92,7 +92,7 @@ export default function PublicPricingCompare({ plans, onCta, hideIntro = false, 
       {tableOnly ? null : (
         <div className="grid gap-3 sm:grid-cols-2">
           {list.map((plan) => (
-            <PlanCard key={plan.id} plan={plan} onCta={onCta} />
+            <PricingPlanCard key={plan.id} plan={plan} onCta={onCta} />
           ))}
         </div>
       )}

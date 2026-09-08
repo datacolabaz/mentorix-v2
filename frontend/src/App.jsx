@@ -204,6 +204,7 @@ export default function App() {
       {PUBLIC_SEO_LANDINGS.map((l) => (
         <Route key={l.path} path={l.path} element={<PublicSeoLanding />} />
       ))}
+      <Route path="/pricing" element={<Navigate to="/qiymetler" replace />} />
       <Route path="/muellim-paneli" element={<Navigate to="/muellimler-ucun" replace />} />
       <Route path="/teachers/:id" element={<PublicInstructorProfile />} />
       <Route

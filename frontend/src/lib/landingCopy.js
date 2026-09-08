@@ -25,6 +25,7 @@ export function useLandingHero(marketing, t, i18n) {
       headline: t('landing.hero.title'),
       subheadline: t('landing.hero.subtitle'),
       primary_cta_label: t('landing.hero.startFree'),
+      secondary_explore: t('landing.hero.explore'),
       secondary_how: t('landing.hero.howItWorks'),
       secondary_demo: t('landing.hero.demo'),
       existing_account: t('landing.hero.haveAccount'),
@@ -38,7 +39,21 @@ export function useLandingWhy(marketing, t, i18n) {
   return useMemo(
     () => ({
       heading: t('landing.why.heading'),
+      lead: t('landing.why.lead'),
       cards: arrayFromT(t, 'landing.why.cards').map((c) => ({ ...c, card_enabled: true })),
+    }),
+    [t, i18n.language],
+  )
+}
+
+export function useLandingAudiences(marketing, t, i18n) {
+  return useMemo(
+    () => ({
+      heading: t('landing.audiences.heading'),
+      items: arrayFromT(t, 'landing.audiences.items').map((item) => ({
+        ...item,
+        item_enabled: true,
+      })),
     }),
     [t, i18n.language],
   )
@@ -117,4 +132,16 @@ export function useLandingPlanDisplay(p, t, i18n) {
       priceLabel: priceLabel || landingPlanPriceLabel(p),
     }
   }, [p, t, i18n.language])
+}
+
+/** SADƏ + STANDART → fərdi müəllim; PROFESSIONAL + PREMIUM → təhsil mərkəzi. */
+export const PLAN_AUDIENCE = {
+  basic: 'teacher',
+  pro: 'teacher',
+  growth: 'center',
+  premium: 'center',
+}
+
+export function plansForAudience(plans, audience) {
+  return (Array.isArray(plans) ? plans : []).filter((p) => PLAN_AUDIENCE[normalizePlanId(p)] === audience)
 }

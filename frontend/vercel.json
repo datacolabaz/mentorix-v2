@@ -1,6 +1,11 @@
 {
   "redirects": [
     {
+      "source": "/pricing",
+      "destination": "/qiymetler",
+      "permanent": true
+    },
+    {
       "source": "/cert/:slug",
       "destination": "/sertifikatli-imtahanlar/:slug",
       "permanent": true

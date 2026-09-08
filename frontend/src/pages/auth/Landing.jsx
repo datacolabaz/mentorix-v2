@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, Link, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import Brand from '../../components/common/Brand'
 import LanguageSwitcher from '../../components/LanguageSwitcher'
@@ -12,24 +12,21 @@ import { resolveUiLocale } from '../../lib/uiLocale'
 import LandingDemoActivityChart from '../../components/landing/LandingDemoActivityChart'
 import LandingHeroProductPreview from '../../components/landing/LandingHeroProductPreview'
 import CertifiedExamsSection from '../../components/landing/CertifiedExamsSection'
-import PublicPricingCompare from '../../components/public/PublicPricingCompare'
-import PricingFeatureListItem from '../../components/landing/PricingFeatureListItem'
 import {
   LandingFeatureTabs,
   LandingHoverCard,
-  LandingWhyAccordion,
+  LandingProblemSolution,
+  LandingAudienceGrid,
 } from '../../components/landing/LandingInteractiveCards'
-import { DEFAULT_SUBSCRIPTION_PLANS } from '../../constants/subscriptionPlans'
-import { normalizePlanId } from '../../lib/subscriptionPlanMarketing'
 import { isMarketingSectionVisible } from '../../lib/loginMarketingVisibility'
 import {
   useLandingHero,
   useLandingWhy,
+  useLandingAudiences,
   useLandingSteps,
   useLandingFeatures,
   useLandingFaq,
   useLandingCtaBand,
-  useLandingPlanDisplay,
 } from '../../lib/landingCopy'
 import PublicGoogleSignIn from '../../components/auth/PublicGoogleSignIn'
 import useAuthStore from '../../hooks/useAuth'
@@ -49,39 +46,6 @@ const LANDING_LOGIN_BTN =
 const LANDING_NAV_CTA =
   'shrink-0 whitespace-nowrap rounded-lg bg-primary px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm font-bold text-[#041018] hover:brightness-95'
 
-function LandingPlanCard({ plan, onCta }) {
-  const { t, i18n } = useTranslation()
-  const display = useLandingPlanDisplay(plan, t, i18n)
-  const isBasicTrial = normalizePlanId(plan) === 'basic'
-  return (
-    <div className="rounded-2xl border border-white/10 bg-[#121212]/90 p-4 space-y-3 flex flex-col motion-safe:transition motion-safe:duration-300 motion-safe:hover:-translate-y-1 hover:border-primary/35 hover:shadow-[0_16px_40px_-20px_rgba(0,229,176,0.45)]">
-      <div>
-        <div className="text-sm font-bold text-white">{display.title}</div>
-        {display.meta.subtitle ? (
-          <p className="text-[11px] text-gray-400 mt-0.5">{display.meta.subtitle}</p>
-        ) : null}
-      </div>
-      <div className="text-lg font-semibold text-primary tabular-nums">{display.priceLabel}</div>
-      <ul className="pricing-feature text-[11px] text-gray-400 space-y-1 flex-1">
-        {display.bullets.slice(0, isBasicTrial ? 3 : 5).map((line) => (
-          <PricingFeatureListItem
-            key={`${plan.id}-${line}`}
-            line={line}
-            isBasicTrial={isBasicTrial}
-          />
-        ))}
-      </ul>
-      <button
-        type="button"
-        onClick={onCta}
-        className="w-full rounded-xl px-4 py-2.5 text-xs font-bold bg-primary text-[#041018] hover:brightness-95"
-      >
-        {display.meta.cta}
-      </button>
-    </div>
-  )
-}
-
 function arrayFromT(t, key) {
   const v = t(key, { returnObjects: true })
   return Array.isArray(v) ? v : []
@@ -91,14 +55,13 @@ function arrayFromT(t, key) {
 export default function Landing() {
   const { t, i18n } = useTranslation()
   const landingSectionSeenRef = useRef(new Set())
-  const [publicPlans, setPublicPlans] = useState(DEFAULT_SUBSCRIPTION_PLANS)
   const [demoOpen, setDemoOpen] = useState(false)
   const [demoTab, setDemoTab] = useState('overview')
   const [demoPaneBusy, setDemoPaneBusy] = useState(false)
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const [marketing, setMarketing] = useState(() => defaultLoginMarketingPayload())
-  const [plansCompareOpen, setPlansCompareOpen] = useState(false)
   const navigate = useNavigate()
+  const location = useLocation()
   const { user } = useAuthStore()
 
   useEffect(() => {
@@ -124,13 +87,13 @@ export default function Landing() {
   const closeMobileNav = () => setMobileNavOpen(false)
 
   useEffect(() => {
-    const hash = typeof window !== 'undefined' ? window.location.hash.replace('#', '') : ''
-    if (hash === 'mx-planlar') {
-      window.requestAnimationFrame(() => scrollToId('mx-planlar'))
+    if (location.hash === '#mx-planlar') {
+      navigate('/qiymetler', { replace: true })
     }
-  }, [])
+  }, [location.hash, navigate])
 
   const why = useLandingWhy(marketing, t, i18n)
+  const audiences = useLandingAudiences(marketing, t, i18n)
   const steps = useLandingSteps(marketing, t, i18n)
   const features = useLandingFeatures(marketing, t, i18n)
   const faq = useLandingFaq(marketing, t, i18n)
@@ -138,7 +101,6 @@ export default function Landing() {
 
   const showMarketplace = isMarketingSectionVisible(marketing.marketplace)
   const showUniversities = isMarketingSectionVisible(marketing.universities)
-  const showPricing = isMarketingSectionVisible(marketing.pricing)
 
   const goRegister = (surface) => {
     trackEvent('mx_landing_cta_primary', { surface, event_type: 'register_click' })
@@ -152,22 +114,6 @@ export default function Landing() {
     setDemoOpen(false)
     navigate('/login')
   }
-
-  useEffect(() => {
-    let cancelled = false
-    ;(async () => {
-      try {
-        const d = await api.get('/public/subscription-plans')
-        const plans = (Array.isArray(d?.plans) ? d.plans : []).filter(Boolean)
-        if (!cancelled && plans.length) setPublicPlans(plans)
-      } catch {
-        /* default plans */
-      }
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -215,8 +161,9 @@ export default function Landing() {
 
     const ids = ['mx-hero-preview']
     if (isMarketingSectionVisible(marketing?.why) && why.cards.length > 0) ids.push('mx-why')
-    if (isMarketingSectionVisible(marketing.steps) && steps.items.length > 0) ids.push('mx-steps')
     if (isMarketingSectionVisible(marketing.features) && features.items.length > 0) ids.push('mx-features')
+    if (audiences.items.length > 0) ids.push('mx-audiences')
+    if (isMarketingSectionVisible(marketing.steps) && steps.items.length > 0) ids.push('mx-steps')
     if (isMarketingSectionVisible(marketing.faq) && faq.items.length > 0) ids.push('mx-faq')
     if (isMarketingSectionVisible(ctaBand)) ids.push('mx-cta')
     for (const id of ids) {
@@ -244,6 +191,7 @@ export default function Landing() {
     marketing.faq,
     ctaBand,
     why.cards.length,
+    audiences.items.length,
     steps.items.length,
     features.items.length,
     faq.items.length,
@@ -395,12 +343,12 @@ export default function Landing() {
               <button
                 type="button"
                 onClick={() => {
-                  trackEvent('mx_landing_secondary_click', { action: 'how_it_works' })
-                  scrollToId('mx-steps')
+                  trackEvent('mx_landing_secondary_click', { action: 'explore_platform' })
+                  scrollToId('mx-why')
                 }}
                 className="w-full inline-flex justify-center items-center rounded-xl border border-white/15 bg-transparent px-4 py-3 min-h-[44px] text-sm font-semibold text-gray-300 hover:bg-white/5 hover:text-white"
               >
-                {hero.secondary_how}
+                {hero.secondary_explore}
               </button>
             </div>
             <div className="pt-1 w-full">
@@ -421,17 +369,21 @@ export default function Landing() {
         </header>
 
         {isMarketingSectionVisible(marketing?.why) && why.cards.length > 0 ? (
-          <LandingWhyAccordion heading={why.heading} cards={why.cards} />
+          <LandingProblemSolution heading={why.heading} lead={why.lead} cards={why.cards} />
         ) : null}
 
         {isMarketingSectionVisible(marketing.features) && features.items.length > 0 ? (
           <LandingFeatureTabs heading={features.heading} items={features.items} />
         ) : null}
 
+        {audiences.items.length > 0 ? (
+          <LandingAudienceGrid heading={audiences.heading} items={audiences.items} />
+        ) : null}
+
         {isMarketingSectionVisible(marketing.steps) && steps.items.length > 0 ? (
           <section id="mx-steps" className="space-y-4 scroll-mt-24">
             <h2 className="text-xs uppercase tracking-wider text-gray-500 font-semibold">{steps.heading}</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               {steps.items.map((x, i) => (
                 <LandingHoverCard
                   key={`step-${i}-${String(x.step)}`}
@@ -492,39 +444,18 @@ export default function Landing() {
           </section>
         ) : null}
 
-        {showPricing ? (
-          <section id="mx-planlar" className="space-y-4 scroll-mt-24">
-            <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
-              <div className="space-y-1 min-w-0">
-                <h2 className="text-xs uppercase tracking-wider text-gray-500 font-semibold">{t('landing.plansHeading')}</h2>
-                <p className="text-sm text-gray-400 max-w-xl">{t('landing.plansIntro')}</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setPlansCompareOpen((open) => {
-                    const next = !open
-                    trackEvent('mx_landing_plans_compare_toggle', { open: next })
-                    return next
-                  })
-                }}
-                className="text-sm font-semibold text-primary hover:brightness-110 shrink-0 text-left"
-                aria-expanded={plansCompareOpen}
-              >
-                {plansCompareOpen ? `← ${t('landing.plansShowCards')}` : `${t('landing.plansCompare')} →`}
-              </button>
-            </div>
-            {plansCompareOpen ? (
-              <PublicPricingCompare plans={publicPlans} tableOnly hideIntro />
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                {publicPlans.map((p) => (
-                  <LandingPlanCard key={p.id} plan={p} onCta={() => goRegister('pricing')} />
-                ))}
-              </div>
-            )}
-          </section>
-        ) : null}
+        <section id="mx-pricing-teaser" className="scroll-mt-24">
+          <p className="text-sm text-gray-400">
+            {t('landing.pricingTeaser.hint')}{' '}
+            <Link
+              to="/qiymetler"
+              onClick={() => trackEvent('mx_landing_pricing_teaser', { surface: 'landing' })}
+              className="font-semibold text-primary hover:brightness-110"
+            >
+              {t('landing.pricingTeaser.label')} →
+            </Link>
+          </p>
+        </section>
 
         {isMarketingSectionVisible(marketing.faq) && faq.items.length > 0 ? (
           <section id="mx-faq" className="space-y-4 scroll-mt-8">

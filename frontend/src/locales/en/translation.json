@@ -901,7 +901,7 @@
       "findTeacher": "Find a teacher",
       "universities": "Universities",
       "features": "Features",
-      "plans": "Plans",
+      "plans": "Pricing",
       "login": "Sign in",
       "startFree": "Start free",
       "openMenu": "Open menu",
@@ -909,10 +909,11 @@
       "mainNav": "Main navigation"
     },
     "hero": {
-      "pill": "Operations platform for teachers",
-      "title": "Spend time with your students. Leave the admin to Mentorix.",
-      "subtitle": "Create exams, send assignments, track payments, and keep parents informed — from one platform.",
+      "pill": "Online exams and assessment",
+      "title": "Online exams and assessment — made simpler.",
+      "subtitle": "Create your tests, run exams, and follow results from one platform.",
       "startFree": "Start free",
+      "explore": "Explore the platform",
       "howItWorks": "How it works?",
       "demo": "See the panel",
       "haveAccount": "I already have an account — sign in",
@@ -950,9 +951,9 @@
       "cta": "Search programs"
     },
     "seo": {
-      "title": "Mentorix — student, exam, and payment management for teachers",
-      "description": "Mentorix helps teachers manage students, exams, assignments, payments, and parent communication in one place. Start a 14-day free trial.",
-      "keywords": "teacher platform, student management, exams, assignments, payment tracking, parent notifications, Mentorix"
+      "title": "Mentorix — online exams and assessment",
+      "description": "Create tests, run exams, and follow results from one platform. For teachers, education centers, HR teams, and students. Start free.",
+      "keywords": "online exams, assessment, question bank, teacher platform, HR testing, Mentorix"
     },
     "certificate": {
       "instructorName": "Mentorix",
@@ -960,19 +961,16 @@
       "studentName": "Full name"
     },
     "why": {
-      "heading": "Why Mentorix?",
+      "heading": "Problem → Solution",
+      "lead": "No more hopping between Zoom, Forms, Excel, and PowerPoint.",
       "cards": [
         {
-          "title": "Less admin, more teaching",
-          "body": "Keep exams, assignments, payments, and messages in one dashboard instead of notebooks and scattered chats."
+          "title": "Problem",
+          "body": "Exams, tests, results, and materials live in separate tools. Time goes to switching apps instead of seeing the full picture."
         },
         {
-          "title": "Students in one place",
-          "body": "Groups, attendance, and results stay in the same workflow — no hunting for who still owes what."
-        },
-        {
-          "title": "Parents stay informed",
-          "body": "Send important results and payment notices from the platform without losing the status trail."
+          "title": "Solution",
+          "body": "Create your tests, run exams, and follow results from one platform — Mentorix keeps it all together."
         }
       ]
     },
@@ -981,63 +979,89 @@
       "items": [
         {
           "step": "01",
-          "title": "Create your account",
-          "body": "Open a teacher account and add your students."
+          "title": "Create an account",
+          "body": "Sign up — no credit card required."
         },
         {
           "step": "02",
-          "title": "Run your classes",
-          "body": "Exams, assignments, payments, and messaging live on one platform."
+          "title": "Choose how you’ll use it",
+          "body": "Start as a teacher, education center, HR team, or student."
         },
         {
           "step": "03",
-          "title": "Save your time",
-          "body": "Cut routine admin and spend more time with your students."
+          "title": "Create your exam",
+          "body": "Pick questions from the bank and share the exam."
+        },
+        {
+          "step": "04",
+          "title": "Analyze the results",
+          "body": "See answers, scores, and weak topics on one dashboard."
         }
       ]
     },
     "features": {
-      "heading": "Simplify a teacher’s daily work",
+      "heading": "Core features",
       "items": [
         {
-          "title": "Exams",
-          "body": "Create exams, share them by link or QR, and follow the results.",
+          "title": "Create an exam",
+          "body": "Build a test in minutes and share it by link or QR.",
           "accent": "from-emerald-500/15"
         },
         {
-          "title": "Assignments",
-          "body": "Send homework and track submissions from one place.",
+          "title": "Question bank",
+          "body": "Write questions once and reuse them in the next exam.",
           "accent": "from-sky-500/15"
         },
         {
-          "title": "Payments",
-          "body": "See who paid and what is still outstanding on one screen.",
+          "title": "Time control",
+          "body": "Set duration, open time, and close time from the same place.",
           "accent": "from-amber-500/15"
         },
         {
-          "title": "Parent updates",
-          "body": "Share important results and notices in the parent workspace.",
+          "title": "Results",
+          "body": "See scores as answers come in — without exporting to Excel.",
           "accent": "from-purple-500/15"
         },
         {
-          "title": "Student management",
-          "body": "Keep students and groups together; invite them with a link.",
-          "accent": "from-cyan-500/15"
-        },
-        {
-          "title": "Reports",
-          "body": "Review results and activity to see where students struggle.",
+          "title": "Analytics",
+          "body": "Spot which questions and topics are weak, with charts.",
           "accent": "from-rose-500/15"
         },
         {
-          "title": "Live classes",
-          "body": "Start an online lesson, invite the group, and keep a class history.",
-          "accent": "from-teal-500/15"
+          "title": "Students and groups",
+          "body": "Groups, invite links, and participant lists live on one dashboard.",
+          "accent": "from-cyan-500/15"
         },
         {
-          "title": "Messaging",
-          "body": "Group and private chat between teacher, student, and parent.",
-          "accent": "from-indigo-500/15"
+          "title": "Present materials",
+          "body": "Share lesson materials and presentations in the same flow as exams.",
+          "accent": "from-teal-500/15"
+        }
+      ]
+    },
+    "audiences": {
+      "heading": "Who is it for?",
+      "items": [
+        {
+          "emoji": "👨‍🏫",
+          "title": "Teachers and tutors",
+          "body": "Exams, results, and student management for one-to-one or group lessons."
+        },
+        {
+          "emoji": "🏫",
+          "title": "Education centers",
+          "body": "Run several teachers and groups to the same standard."
+        },
+        {
+          "emoji": "🏢",
+          "title": "Companies / HR",
+          "body": "Candidate and team assessment — not only an education tool.",
+          "highlight": true
+        },
+        {
+          "emoji": "👨‍🎓",
+          "title": "Students",
+          "body": "Join exams and see your results — the student workspace is free."
         }
       ]
     },
@@ -1045,38 +1069,38 @@
       "heading": "FAQ",
       "items": [
         {
-          "q": "Who is Mentorix for?",
-          "a": "It is built for private teachers and small teaching groups. Student and parent workspaces open by invitation and stay free."
-        },
-        {
-          "q": "How does the free trial work?",
-          "a": "The Simple plan lets you try the platform for 14 days. When the trial ends you can move to a paid plan or stop."
-        },
-        {
-          "q": "Do I need a credit card?",
-          "a": "No credit card is required to start the trial."
-        },
-        {
-          "q": "Can I change plans later?",
-          "a": "Yes. You can upgrade or switch from settings — there is no forced annual commitment."
-        },
-        {
-          "q": "How do I manage students?",
-          "a": "Add them from the student and group lists, invite with a link or code, and see attendance and results in the same place."
-        },
-        {
           "q": "What can I do in Mentorix?",
-          "a": "Exams, assignments, payment tracking, parent notifications, group and private chat, live lessons, reports, and teacher search."
+          "a": "Create tests and exams, control timing, follow results, manage groups, and present materials — without hopping between Zoom, Forms, Excel, and PowerPoint."
         },
         {
-          "q": "How do I track payments?",
-          "a": "In Payments you can follow each student’s amount and status — paid, pending, or overdue."
+          "q": "Who is it for?",
+          "a": "Teachers and tutors, education centers, company/HR teams, and students. The student workspace opens by invitation and stays free."
+        },
+        {
+          "q": "How do I start?",
+          "a": "Sign up for free, choose how you will use the platform, and create your first exam. No credit card required."
+        },
+        {
+          "q": "Where are the prices?",
+          "a": "Packages and limits live on the Pricing page: individual teacher, education center, and corporate."
+        },
+        {
+          "q": "Can HR and companies use it?",
+          "a": "Yes. Candidate and team assessment run on the same platform. For corporate needs, get in touch."
+        },
+        {
+          "q": "How do students join?",
+          "a": "A teacher or center invites them with a link or QR. The student workspace is free."
         }
       ]
     },
     "ctaBand": {
-      "heading": "Spend less time on admin. Spend more time with your students.",
-      "subtitle": "Run your teaching work from one platform with Mentorix."
+      "heading": "Create your first exam today.",
+      "subtitle": "Try Mentorix for free."
+    },
+    "pricingTeaser": {
+      "label": "Pricing",
+      "hint": "Packages and limits"
     },
     "plansHeading": "Plans",
     "plansIntro": "Transparent teacher subscriptions. Student and parent workspaces are free.",
@@ -1148,13 +1172,29 @@
       }
     },
     "pricingPage": {
-      "heading": "Plans",
-      "intro": "For teachers and education providers. Student and parent accounts are free.",
+      "heading": "Pricing",
+      "intro": "Learn what you can do first, then pick the package that fits. Plans are grouped by audience.",
       "compareHeading": "Compare limits",
       "trialNote": "Simple is a 14-day trial. No credit card required.",
       "yearlyNote": "Yearly billing applies a 20% discount on twelve monthly payments.",
       "cta": "Start free",
       "backHome": "Back to homepage",
+      "groups": {
+        "teacher": {
+          "title": "Individual teacher",
+          "intro": "For tutors and solo teachers — from the trial to everyday work."
+        },
+        "center": {
+          "title": "Education center",
+          "intro": "For running several groups and teachers on one platform."
+        },
+        "corporate": {
+          "title": "Corporate",
+          "headline": "Built around your team’s needs",
+          "body": "Candidate assessment, team exams, and internal tests for HR and companies. Limits are not “500 candidates a month” — contact us for terms that match your process.",
+          "cta": "Contact us"
+        }
+      },
       "rows": {
         "price": "Price",
         "students": "Student limit",
@@ -1263,7 +1303,7 @@
       "imtahanlar": "Exams",
       "tapshiriqlar": "Assignments",
       "kurslar-ve-qruplar": "Groups and packages",
-      "qiymetler": "Plans",
+      "qiymetler": "Pricing",
       "muellimler-ucun": "For teachers",
       "telebeler-ucun": "For students",
       "haqqimizda": "About us",

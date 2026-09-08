@@ -158,12 +158,12 @@ export const PUBLIC_SEO_LANDINGS = [
   {
     kind: 'panel',
     path: '/qiymetler',
-    title: 'Planlar və paketlər — Mentorix',
+    title: 'Qiymətlər — Mentorix paketləri',
     description:
-      `Mentorix paketləri: ${PLAN_TITLES_SEO_FALLBACK}. Müəllimlər və təhsil xidməti təminatçıları üçün — tələbə limiti, SMS və xəritədə görünmə.`,
-    h1: 'Planlar və abunəlik paketləri',
+      `Mentorix qiymətləri: ${PLAN_TITLES_SEO_FALLBACK}. Fərdi müəllim, təhsil mərkəzi və korporativ paketlər — tələbə limiti, SMS və xəritədə görünmə.`,
+    h1: 'Qiymətlər',
     intro: [
-      'Paketlər müəllimlər və təhsil xidməti təminatçıları üçündür. Tələbə və valideyn hesabları pulsuzdur.',
+      'Paketlər auditoriyaya görə qruplaşdırılıb: fərdi müəllim, təhsil mərkəzi və korporativ. Tələbə və valideyn hesabları pulsuzdur.',
       MENTORIX_SEO_DESCRIPTION,
     ],
     bullets: [],
@@ -172,7 +172,7 @@ export const PUBLIC_SEO_LANDINGS = [
     showBenefitsList: false,
     searchCategorySlug: null,
     ctaHref: '/login',
-    ctaLabel: '14 günlük pulsuz sınaq',
+    ctaLabel: 'Pulsuz başla',
     keywords: `${MENTORIX_SEO_KEYWORDS}, qiymətlər, abunəlik paketləri`,
   },
   {
@@ -293,7 +293,7 @@ export function searchHrefForLanding(landing) {
 
 export function footerLabelForLanding(landing) {
   if (landing.kind === 'panel' && landing.path === '/muellimler-ucun') return 'Müəllimlər üçün'
-  if (landing.kind === 'panel' && landing.path === '/qiymetler') return 'Planlar'
+  if (landing.kind === 'panel' && landing.path === '/qiymetler') return 'Qiymətlər'
   if (landing.kind === 'feature') return landing.h1.split(' ').slice(0, 2).join(' ')
   if (landing.kind === 'info') return landing.h1.replace(' üçün Mentorix', '').replace('Mentorix haqqında', 'Haqqımızda')
   return landing.h1.replace(' tap', '')

@@ -6,6 +6,7 @@ import LanguageSwitcher from '../../components/LanguageSwitcher'
 import PublicSeoFooter from '../../components/public/PublicSeoFooter'
 import PricingAudienceExplainer from '../../components/public/PricingAudienceExplainer'
 import PublicPricingCompare from '../../components/public/PublicPricingCompare'
+import PublicPricingAudienceGroups from '../../components/public/PublicPricingAudienceGroups'
 import { landingByPath, ctaHrefForLanding, MENTORIX_PLATFORM_FEATURES } from '../../lib/publicSeoLandings'
 import { MENTORIX_PLATFORM_BENEFITS } from '../../lib/mentorixPublicMarketing'
 import { setPageSeo } from '../../lib/pageSeo'
@@ -44,7 +45,7 @@ export default function PublicSeoLanding() {
     if (!landing) return
     const description =
       landing.showPricingPlans && plans.length
-        ? `Mentorix paketləri: ${planTitlesLabel}. Müəllimlər və təhsil xidməti təminatçıları üçün — tələbə limiti, SMS və xəritədə görünmə.`
+        ? `Mentorix qiymətləri: ${planTitlesLabel}. Fərdi müəllim, təhsil mərkəzi və korporativ paketlər.`
         : landing.description
     setPageSeo({
       title: landing.title,
@@ -67,7 +68,7 @@ export default function PublicSeoLanding() {
   return (
     <div className="min-h-[100svh] bg-[#0b0b0b] text-white flex flex-col">
       <header className="border-b border-white/10 bg-[#0f0f0f]/95">
-        <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between gap-3 min-w-0">
+        <div className={`${isPricingPage ? 'max-w-5xl' : 'max-w-3xl'} mx-auto px-4 py-4 flex items-center justify-between gap-3 min-w-0`}>
           <Link to="/" className="shrink-0" aria-label="Mentorix">
             <Brand className="h-7 w-auto" />
           </Link>
@@ -83,10 +84,10 @@ export default function PublicSeoLanding() {
         </div>
       </header>
 
-      <main className="flex-1 max-w-3xl mx-auto px-4 py-10 sm:py-14 w-full space-y-8">
+      <main className={`flex-1 ${isPricingPage ? 'max-w-5xl' : 'max-w-3xl'} mx-auto px-4 py-10 sm:py-14 w-full space-y-8`}>
         <div className="space-y-4">
           <Link
-            to={isPricingPage ? '/#mx-planlar' : '/'}
+            to="/"
             className="inline-flex items-center text-sm font-semibold text-primary hover:brightness-110"
           >
             ← {t('landing.pricingPage.backHome')}
@@ -122,9 +123,10 @@ export default function PublicSeoLanding() {
         ) : null}
 
         {landing.showPricingPlans ? (
-          <section className="space-y-4">
+          <section className="space-y-8">
             {showPricingAudience ? <PricingAudienceExplainer variant="faq" /> : null}
-            <PublicPricingCompare plans={plans} hideIntro={isPricingPage} />
+            {isPricingPage ? <PublicPricingAudienceGroups plans={plans} /> : null}
+            <PublicPricingCompare plans={plans} hideIntro={isPricingPage} tableOnly={isPricingPage} />
           </section>
         ) : null}
 

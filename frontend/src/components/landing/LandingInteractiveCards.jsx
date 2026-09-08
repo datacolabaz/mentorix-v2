@@ -7,55 +7,52 @@ export function LandingHoverCard({ className = '', children }) {
   return <div className={`${HOVER_LIFT} ${className}`}>{children}</div>
 }
 
-/** Niyə Mentorix — yalnız başlıq; klikdə bir kart açılır. */
-export function LandingWhyAccordion({ heading, cards }) {
-  const [open, setOpen] = useState(-1)
-
-  useEffect(() => {
-    setOpen(-1)
-  }, [cards])
-
+/** Problem → həll — hər iki tərəf açıq qalır, klik tələb olunmur. */
+export function LandingProblemSolution({ heading, lead, cards }) {
   return (
-    <section id="mx-why" className="space-y-4 scroll-mt-8">
+    <section id="mx-why" className="space-y-4 scroll-mt-24">
       <h2 className="text-xs uppercase tracking-wider text-gray-500 font-semibold">{heading}</h2>
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 items-start">
-        {cards.map((x, i) => {
-          const isOpen = open === i
-          return (
-            <div
-              key={`why-${i}-${String(x.title).slice(0, 24)}`}
-              className={`h-fit rounded-2xl border bg-[#121212]/90 ${isOpen ? 'border-primary/35' : 'border-white/10'} ${HOVER_LIFT}`}
-            >
-              <button
-                type="button"
-                aria-expanded={isOpen}
-                onClick={() => setOpen(isOpen ? -1 : i)}
-                className="w-full text-left px-4 py-3.5 min-h-[48px] flex items-start justify-between gap-3"
-              >
-                <span className="text-sm font-semibold text-white leading-snug">{x.title}</span>
-                <span
-                  className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-xs font-bold leading-none transition-transform ${
-                    isOpen
-                      ? 'rotate-45 border-primary/45 bg-primary/15 text-primary'
-                      : 'border-white/15 text-gray-400'
-                  }`}
-                  aria-hidden
-                >
-                  +
-                </span>
-              </button>
-              <div
-                className={`grid transition-[grid-template-rows] duration-300 ease-out ${
-                  isOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
-                }`}
-              >
-                <div className="overflow-hidden">
-                  <p className="px-4 pb-4 text-xs text-gray-400 leading-relaxed">{x.body}</p>
-                </div>
+      {lead ? <p className="text-sm sm:text-base text-gray-300 leading-relaxed max-w-2xl">{lead}</p> : null}
+      <div className="grid sm:grid-cols-2 gap-3">
+        {(cards || []).map((x, i) => (
+          <div
+            key={`why-${i}-${String(x.title).slice(0, 24)}`}
+            className={`rounded-2xl border bg-[#121212]/90 p-4 sm:p-5 space-y-2 ${
+              i === 1 ? 'border-primary/35' : 'border-white/10'
+            } ${HOVER_LIFT}`}
+          >
+            <div className="text-[11px] font-bold uppercase tracking-wider text-primary">{x.title}</div>
+            <p className="text-sm text-gray-300 leading-relaxed">{x.body}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+export function LandingAudienceGrid({ heading, items }) {
+  return (
+    <section id="mx-audiences" className="space-y-4 scroll-mt-24">
+      <h2 className="text-xs uppercase tracking-wider text-gray-500 font-semibold">{heading}</h2>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        {(items || []).map((item, i) => (
+          <LandingHoverCard
+            key={`audience-${i}-${String(item.title).slice(0, 24)}`}
+            className={`rounded-2xl border p-4 sm:p-5 space-y-2 ${
+              item.highlight
+                ? 'border-primary/40 bg-primary/5'
+                : 'border-white/10 bg-[#121212]/90'
+            }`}
+          >
+            {item.emoji ? (
+              <div className="text-2xl leading-none" aria-hidden>
+                {item.emoji}
               </div>
-            </div>
-          )
-        })}
+            ) : null}
+            <div className="text-sm font-semibold text-white leading-snug">{item.title}</div>
+            <p className="text-xs text-gray-400 leading-relaxed">{item.body}</p>
+          </LandingHoverCard>
+        ))}
       </div>
     </section>
   )

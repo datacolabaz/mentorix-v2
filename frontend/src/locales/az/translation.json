@@ -901,7 +901,7 @@
       "findTeacher": "Müəllim tap",
       "universities": "Universitetlər",
       "features": "Xüsusiyyətlər",
-      "plans": "Planlar",
+      "plans": "Qiymətlər",
       "login": "Daxil ol",
       "startFree": "Pulsuz başla",
       "openMenu": "Menyunu aç",
@@ -909,10 +909,11 @@
       "mainNav": "Əsas naviqasiya"
     },
     "hero": {
-      "pill": "Müəllimlər üçün idarəetmə platforması",
-      "title": "Tələbələrinizə vaxt ayırın, idarəetməni Mentorix-ə buraxın",
-      "subtitle": "İmtahanlar yaradın, tapşırıqlar göndərin, ödənişləri izləyin və valideynlərlə əlaqəni bir platformadan idarə edin.",
+      "pill": "Onlayn imtahan və qiymətləndirmə",
+      "title": "Online imtahan və qiymətləndirmə — daha sadə.",
+      "subtitle": "Testlərinizi yaradın, imtahanları idarə edin və nəticələri bir platformadan izləyin.",
       "startFree": "Pulsuz başla",
+      "explore": "Platformanı kəşf et",
       "howItWorks": "Necə işləyir?",
       "demo": "Panelə bax",
       "haveAccount": "Artıq hesabım var — girişə keç",
@@ -950,9 +951,9 @@
       "cta": "Proqramları axtar"
     },
     "seo": {
-      "title": "Mentorix — müəllimlər üçün tələbə, imtahan və ödəniş idarəetməsi",
-      "description": "Mentorix müəllimlərə tələbələri, imtahanları, tapşırıqları, ödənişləri və valideyn əlaqəsini bir platformadan idarə etməyə kömək edir. 14 günlük pulsuz sınaq.",
-      "keywords": "müəllim platforması, tələbə idarəetməsi, imtahan, tapşırıq, ödəniş izləmə, valideyn bildirişi, Mentorix"
+      "title": "Mentorix — onlayn imtahan və qiymətləndirmə",
+      "description": "Testlərinizi yaradın, imtahanları idarə edin və nəticələri bir platformadan izləyin. Müəllim, təhsil mərkəzi, HR və tələbələr üçün. Pulsuz başlayın.",
+      "keywords": "onlayn imtahan, qiymətləndirmə, test bankı, müəllim platforması, HR imtahan, Mentorix"
     },
     "certificate": {
       "instructorName": "Mentorix",
@@ -960,19 +961,16 @@
       "studentName": "Ad Soyad"
     },
     "why": {
-      "heading": "Niyə Mentorix?",
+      "heading": "Problem → Həll",
+      "lead": "Zoom + Forms + Excel + PowerPoint arasında keçid etməyə ehtiyac yoxdur.",
       "cards": [
         {
-          "title": "İdarəetməyə az, dərsə çox vaxt",
-          "body": "İmtahan, tapşırıq, ödəniş və mesajları bir paneldə toplayın — dəftər və dağınıq söhbətlər əvəzinə."
+          "title": "Problem",
+          "body": "İmtahan, test, nəticə və materiallar ayrı alətlərdə qalır. Vaxt alətlər arasında keçidə gedir, vahid mənzərə yoxdur."
         },
         {
-          "title": "Tələbələriniz bir yerdə",
-          "body": "Qruplar, davamiyyət və nəticələr eyni axındadır. Kimdə nə qaldığını axtarmağa ehtiyac qalmır."
-        },
-        {
-          "title": "Valideynlər məlumatlı qalır",
-          "body": "Vacib nəticə və ödəniş bildirişlərini platformadan göndərin — statusu itirmədən."
+          "title": "Həll",
+          "body": "Testlərinizi yaradın, imtahanları idarə edin və nəticələri bir platformadan izləyin — Mentorix hamısını bir yerdə toplayır."
         }
       ]
     },
@@ -981,63 +979,89 @@
       "items": [
         {
           "step": "01",
-          "title": "Hesabınızı yaradın",
-          "body": "Müəllim hesabınızı yaradın və tələbələrinizi əlavə edin."
+          "title": "Qeydiyyatdan keç",
+          "body": "Hesab açın — kredit kartı tələb olunmur."
         },
         {
           "step": "02",
-          "title": "Dərslərinizi idarə edin",
-          "body": "İmtahanlar, tapşırıqlar, ödənişlər və kommunikasiya bir platformada."
+          "title": "İstifadə məqsədini seç",
+          "body": "Müəllim, təhsil mərkəzi, HR və ya tələbə kimi başlayın."
         },
         {
           "step": "03",
-          "title": "Vaxtınıza qənaət edin",
-          "body": "Rutin idarəetmə işlərini azaldın və tələbələrinizə daha çox vaxt ayırın."
+          "title": "İmtahanını yarat",
+          "body": "Test bankından suallar seçin və imtahanı paylaşın."
+        },
+        {
+          "step": "04",
+          "title": "Nəticələri analiz et",
+          "body": "Cavabları, balları və zəif mövzuları bir paneldə görün."
         }
       ]
     },
     "features": {
-      "heading": "Müəllimlərin gündəlik işini sadələşdirin",
+      "heading": "Əsas funksiyalar",
       "items": [
         {
-          "title": "İmtahanlar",
-          "body": "İmtahan yaradın, link və ya QR ilə paylaşın, nəticələri izləyin.",
+          "title": "İmtahan yarat",
+          "body": "Test və imtahanı dəqiqələrlə qurun, link və ya QR ilə paylaşın.",
           "accent": "from-emerald-500/15"
         },
         {
-          "title": "Tapşırıqlar",
-          "body": "Tapşırıq göndərin və tələbə təslimlərini bir yerdən izləyin.",
+          "title": "Test bankı",
+          "body": "Sualları bir dəfə yığın, növbəti imtahanlarda yenidən istifadə edin.",
           "accent": "from-sky-500/15"
         },
         {
-          "title": "Ödənişlər",
-          "body": "Tələbə ödənişlərini və gözləyən məbləğləri eyni paneldə görün.",
+          "title": "Vaxt idarəetməsi",
+          "body": "İmtahan müddətini, açılış və bağlanış saatını eyni yerdən təyin edin.",
           "accent": "from-amber-500/15"
         },
         {
-          "title": "Valideyn əlaqəsi",
-          "body": "Vacib nəticə və bildirişləri valideyn kabinetinə çatdırın.",
+          "title": "Nəticələr",
+          "body": "Cavablar daxil olan kimi nəticələri görün — Excel-ə köçürmədən.",
           "accent": "from-purple-500/15"
         },
         {
-          "title": "Tələbə idarəetməsi",
-          "body": "Tələbələri və qrupları bir yerdə saxlayın, dəvət linki ilə qoşun.",
-          "accent": "from-cyan-500/15"
-        },
-        {
-          "title": "Hesabatlar",
-          "body": "Nəticə və aktivliyə baxın — hansı mövzuda zəiflik olduğunu görün.",
+          "title": "Analitika",
+          "body": "Hansı sual və mövzuda zəiflik olduğunu qrafiklə izləyin.",
           "accent": "from-rose-500/15"
         },
         {
-          "title": "Canlı dərslər",
-          "body": "Onlayn dərs başladın, qrupu dəvət edin və dərs tarixçəsini saxlayın.",
-          "accent": "from-teal-500/15"
+          "title": "Tələbə və qrupların idarə edilməsi",
+          "body": "Qruplar, dəvət linki və iştirakçı siyahısı bir paneldədir.",
+          "accent": "from-cyan-500/15"
         },
         {
-          "title": "Ünsiyyət",
-          "body": "Qrup və fərdi çat — müəllim, tələbə və valideyn arasında.",
-          "accent": "from-indigo-500/15"
+          "title": "Materialların təqdimatı",
+          "body": "Dərs materiallarını və təqdimatları imtahan axını ilə eyni platformada paylaşın.",
+          "accent": "from-teal-500/15"
+        }
+      ]
+    },
+    "audiences": {
+      "heading": "Kimlər üçün?",
+      "items": [
+        {
+          "emoji": "👨‍🏫",
+          "title": "Müəllim və repetitor",
+          "body": "Fərdi və qrup dərsləri üçün imtahan, nəticə və tələbə idarəetməsi."
+        },
+        {
+          "emoji": "🏫",
+          "title": "Təhsil mərkəzi",
+          "body": "Bir neçə müəllim və qrupu eyni standartla idarə edin."
+        },
+        {
+          "emoji": "🏢",
+          "title": "Şirkət / HR",
+          "body": "Namizəd və komanda qiymətləndirməsi — yalnız təhsil aləti deyil.",
+          "highlight": true
+        },
+        {
+          "emoji": "👨‍🎓",
+          "title": "Tələbə",
+          "body": "İmtahana qoşulun, nəticələrinizi görün — kabinet pulsuzdur."
         }
       ]
     },
@@ -1045,38 +1069,38 @@
       "heading": "Tez-tez verilən suallar",
       "items": [
         {
-          "q": "Mentorix kimlər üçündür?",
-          "a": "Əsasən fərdi müəllimlər və kiçik tədris qrupları üçündür. Tələbə və valideyn kabinetləri dəvət ilə açılır və pulsuzdur."
+          "q": "Mentorix-də nə edə bilərəm?",
+          "a": "Test və imtahan yarada, vaxtı idarə edə, nəticələri izləyə, qrupları idarə edə və materialları təqdim edə bilərsiniz — Zoom, Forms, Excel və PowerPoint arasında keçid etmədən."
         },
         {
-          "q": "Pulsuz sınaq necə işləyir?",
-          "a": "SADƏ plan 14 gün ərzində platformanı sınamaq üçündür. Sınaq bitəndən sonra ödənişli plana keçə və ya dayandıra bilərsiniz."
+          "q": "Kimlər üçündür?",
+          "a": "Müəllim və repetitorlar, təhsil mərkəzləri, şirkət/HR komandaları və tələbələr. Tələbə kabineti dəvət ilə açılır və pulsuzdur."
         },
         {
-          "q": "Kredit kartı tələb olunur?",
-          "a": "Sınağa başlamaq üçün kredit kartı tələb olunmur."
+          "q": "Necə başlaya bilərəm?",
+          "a": "Pulsuz qeydiyyatdan keçin, istifadə məqsədinizi seçin və ilk imtahanınızı yaradın. Kredit kartı tələb olunmur."
         },
         {
-          "q": "Planımı istənilən vaxt dəyişə bilərəm?",
-          "a": "Bəli. Ayarlardan planı yüksəldə və ya dəyişə bilərsiniz — məcburi illik öhdəlik yoxdur."
+          "q": "Qiymətlər haradadır?",
+          "a": "Paketlər və limitlər Qiymətlər səhifəsindədir: fərdi müəllim, təhsil mərkəzi və korporativ."
         },
         {
-          "q": "Tələbələrimi necə idarə edə bilərəm?",
-          "a": "Tələbə və qrup siyahısından əlavə edir, dəvət linki və ya kod ilə qoşur, davamiyyət və nəticələri eyni yerdə görürsünüz."
+          "q": "HR və şirkətlər də istifadə edə bilər?",
+          "a": "Bəli. Namizəd və komanda qiymətləndirməsi eyni platformadadır. Korporativ ehtiyac üçün əlaqə saxlayın."
         },
         {
-          "q": "Mentorix-də hansı funksiyalar mövcuddur?",
-          "a": "İmtahan, tapşırıq, ödəniş izləmə, valideyn bildirişləri, qrup və fərdi çat, canlı dərs, hesabatlar və müəllim axtarışı."
-        },
-        {
-          "q": "Ödənişləri necə izləyə bilərəm?",
-          "a": "Ödənişlər bölməsində tələbə üzrə məbləğ və statusu (ödənilib, gözləyir, gecikir) izləyə bilərsiniz."
+          "q": "Tələbələr necə qoşulur?",
+          "a": "Müəllim və ya mərkəz dəvət linki və ya QR ilə qoşur. Tələbə kabineti pulsuzdur."
         }
       ]
     },
     "ctaBand": {
-      "heading": "İdarəetməyə daha az, tələbələrinizə daha çox vaxt ayırın.",
-      "subtitle": "Mentorix ilə müəllimlik fəaliyyətinizi bir platformadan idarə edin."
+      "heading": "İlk imtahanınızı bu gün yaradın.",
+      "subtitle": "Mentorix-i pulsuz sınayın."
+    },
+    "pricingTeaser": {
+      "label": "Qiymətlər",
+      "hint": "Paketlər və limitlər"
     },
     "plansHeading": "Planlar",
     "plansIntro": "Müəllimlər üçün şəffaf abunəlik. Tələbə və valideyn kabineti pulsuzdur.",
@@ -1148,13 +1172,29 @@
       }
     },
     "pricingPage": {
-      "heading": "Planlar",
-      "intro": "Müəllimlər və təhsil xidməti təminatçıları üçün. Tələbə və valideyn hesabları pulsuzdur.",
+      "heading": "Qiymətlər",
+      "intro": "Əvvəlcə məhsulu tanıyın, sonra sizə uyğun paketi seçin. Paketlər auditoriyaya görə qruplaşdırılıb.",
       "compareHeading": "Limitləri müqayisə edin",
       "trialNote": "SADƏ plan 14 günlük sınaqdır. Kredit kartı tələb olunmur.",
       "yearlyNote": "İllik ödəniş seçəndə aylıq məbləğin 12 qatı üzrə 20% endirim tətbiq olunur.",
       "cta": "Pulsuz başla",
       "backHome": "Ana səhifəyə qayıt",
+      "groups": {
+        "teacher": {
+          "title": "Fərdi müəllim",
+          "intro": "Tək müəllim və repetitorlar üçün — sınaqdan gündəlik işə."
+        },
+        "center": {
+          "title": "Təhsil mərkəzi",
+          "intro": "Bir neçə qrup və müəllimi eyni platformada idarə etmək üçün."
+        },
+        "corporate": {
+          "title": "Korporativ",
+          "headline": "Komandanızın ehtiyacına uyğun",
+          "body": "HR və şirkətlər üçün namizəd qiymətləndirməsi, komanda imtahanları və daxili testlər. Limitlər «ayda N namizəd» deyil — prosesinizə uyğun şərtlər üçün əlaqə saxlayın.",
+          "cta": "Əlaqə saxlayın"
+        }
+      },
       "rows": {
         "price": "Qiymət",
         "students": "Tələbə limiti",
@@ -1263,7 +1303,7 @@
       "imtahanlar": "İmtahanlar",
       "tapshiriqlar": "Tapşırıqlar",
       "kurslar-ve-qruplar": "Qruplar və paketlər",
-      "qiymetler": "Planlar",
+      "qiymetler": "Qiymətlər",
       "muellimler-ucun": "Müəllimlər üçün",
       "telebeler-ucun": "Tələbələr üçün",
       "haqqimizda": "Haqqımızda",
