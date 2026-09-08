@@ -986,8 +986,8 @@
     },
     "seo": {
       "title": "Mentorix — onlayn imtahan və qiymətləndirmə",
-      "description": "Testlərinizi yaradın, imtahanları idarə edin və nəticələri bir platformadan izləyin. Müəllim, təşkilat, HR və iştirakçılar üçün. Pulsuz başlayın.",
-      "keywords": "onlayn imtahan, qiymətləndirmə, test bankı, müəllim platforması, HR imtahan, Mentorix"
+      "description": "Testlərinizi yaradın, imtahanları idarə edin və nəticələri bir platformadan izləyin. Müəllim, təşkilat və iştirakçılar üçün. Pulsuz başlayın.",
+      "keywords": "onlayn imtahan, qiymətləndirmə, test bankı, müəllim platforması, Mentorix"
     },
     "certificate": {
       "instructorName": "Mentorix",
@@ -1019,7 +1019,7 @@
         {
           "step": "02",
           "title": "İstifadə məqsədini seç",
-          "body": "Müəllim, təşkilat, HR və ya iştirakçı kimi başlayın."
+          "body": "Müəllim, təşkilat və ya iştirakçı kimi başlayın."
         },
         {
           "step": "03",

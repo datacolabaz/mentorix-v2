@@ -986,8 +986,8 @@
     },
     "seo": {
       "title": "Mentorix — online exams and assessment",
-      "description": "Create tests, run exams, and follow results from one platform. For teachers, organizations, HR teams, and participants. Start free.",
-      "keywords": "online exams, assessment, question bank, teacher platform, HR testing, Mentorix"
+      "description": "Create tests, run exams, and follow results from one platform. For teachers, organizations, and participants. Start free.",
+      "keywords": "online exams, assessment, question bank, teacher platform, Mentorix"
     },
     "certificate": {
       "instructorName": "Mentorix",
@@ -1019,7 +1019,7 @@
         {
           "step": "02",
           "title": "Choose how you’ll use it",
-          "body": "Start as a teacher, organization, HR team, or participant."
+          "body": "Start as a teacher, organization, or participant."
         },
         {
           "step": "03",
