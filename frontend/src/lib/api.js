@@ -110,6 +110,7 @@ function isAuthAttemptConfig(config) {
     path.includes('/auth/resend-verification') ||
     path.includes('/auth/google/login') ||
     path.includes('/auth/google/complete') ||
+    path.includes('/auth/onboarding') ||
     path.includes('/public/') ||
     path.includes('/programs') ||
     path.includes('/auth/me') ||
