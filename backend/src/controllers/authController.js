@@ -24,16 +24,13 @@ const {
   isVerificationExpired,
 } = require('../services/emailVerificationIssue');
 const { resolveLoginUserOrError, resolveSmsBillingInstructorId: resolveSmsBillingForLogin } = require('../services/authService');
-const {
-  guardEmailVerifiedBeforeToken,
-  isGoogleAuthUser,
-  googleLoginRequiredBody,
-} = require('../services/emailVerificationGuard');
+const { guardEmailVerifiedBeforeToken } = require('../services/emailVerificationGuard');
 const {
   getActiveRoles,
   getLoginEligibleRoles,
   ensureLoginRoleGranted,
 } = require('../services/userRolesService');
+const { pickEmailLoginRole } = require('../lib/pickEmailLoginRole');
 const { grantBasicTrialForInstructor } = require('../services/basicTrialIpService');
 const { BASIC_TRIAL_DAYS } = require('../config/billingTrial');
 const { clientIp } = require('../utils/clientIp');
@@ -1322,7 +1319,7 @@ const signup = async (req, res) => {
   }
 };
 
-/** Email + şifrə ilə giriş (müəllim / kurs) */
+/** Email + şifrə ilə giriş (müəllim və iştirakçı eyni qaydada). */
 const loginWithEmail = async (req, res) => {
   try {
     const { email, password, role: roleRaw } = req.body || {};
@@ -1347,9 +1344,6 @@ const loginWithEmail = async (req, res) => {
     }
     const passOk = Boolean(user.password_hash) && (await bcrypt.compare(pass, user.password_hash));
     if (!passOk) {
-      if (isGoogleAuthUser(user)) {
-        return res.status(403).json(googleLoginRequiredBody());
-      }
       return res.status(401).json({ success: false, message: 'Email və ya şifrə yanlışdır' });
     }
 
@@ -1379,13 +1373,6 @@ const loginWithEmail = async (req, res) => {
       });
     }
 
-    if (!requestedRole || !LOGIN_ROLES.has(requestedRole)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Giriş üçün hesab növünü seçin',
-      });
-    }
-
     const loginAllowed = await getLoginEligibleRoles(user.id);
 
     if (loginAllowed.length === 0) {
@@ -1398,13 +1385,14 @@ const loginWithEmail = async (req, res) => {
       });
     }
 
-    const role = requestedRole;
-    if (!loginAllowed.includes(role)) {
-      const wanted = ROLE_LABEL_AZ[role] || role;
-      const actualLabels = loginAllowed.map((r) => ROLE_LABEL_AZ[r] || r).join(', ');
-      return res.status(403).json({
-        success: false,
-        message: `Bu email «${actualLabels}» hesabıdır. «${wanted}» kimi daxil ola bilməzsiniz — düzgün rolu seçin.`,
+    const role = pickEmailLoginRole(requestedRole, loginAllowed);
+    if (!role) {
+      const token = sign({ id: user.id, role: null });
+      return res.json({
+        success: true,
+        needs_role: true,
+        token,
+        user: { id: user.id, full_name: user.full_name, email: user.email, role: null, phone: user.phone },
       });
     }
 

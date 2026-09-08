@@ -10,13 +10,12 @@ import api from '../../lib/api'
 import { getAttributionPayload } from '../../lib/analytics'
 import { postAuthNavigate } from '../../lib/postAuth'
 import { googleAuthWithAutoRole, googleSignup } from '../../lib/googleAuth'
-import i18n from '../../i18n'
+import { loginWithEmailPassword } from '../../lib/emailLogin'
 
 const inputClass =
   'mx-auth-input w-full bg-surface-1 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none'
 
 const AUTH_ROLE_KEYS = ['instructor', 'student', 'course', 'parent']
-const LOGIN_ROLE_TRY_ORDER = ['instructor', 'course', 'student', 'parent']
 
 function useAuthRoles(keys) {
   const { t } = useTranslation()
@@ -24,26 +23,6 @@ function useAuthRoles(keys) {
     () => keys.map((key) => ({ key, label: t(`auth.roles.${key}`) })),
     [keys, t],
   )
-}
-
-async function loginEmailWithAutoRole(email, password, forcedRole) {
-  const roles = forcedRole ? [forcedRole] : LOGIN_ROLE_TRY_ORDER
-  let lastRoleError = null
-  for (const role of roles) {
-    try {
-      const data = await api.post('/auth/login/email', { email, password, role })
-      return data
-    } catch (err) {
-      const status = err?.status
-      if (status === 401 || err?.code === 'EMAIL_NOT_VERIFIED' || err?.code === 'GOOGLE_LOGIN_REQUIRED') throw err
-      if (status === 403) {
-        lastRoleError = err
-        continue
-      }
-      throw err
-    }
-  }
-  throw lastRoleError || new Error(i18n.t('auth.errors.selectAccountType'))
 }
 
 function AuthDivider() {
@@ -270,13 +249,6 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
     } catch (err) {
       if (tab === 'signup' && isAccountExistsError(err)) {
         openAccountExistsModal(err?.message)
-      } else if (tab === 'login' && err?.code === 'GOOGLE_LOGIN_REQUIRED') {
-        toast(err?.message || t('auth.toasts.googleLoginRequired'), 'error')
-      } else if (tab === 'login' && err?.code === 'EMAIL_NOT_VERIFIED') {
-        const em = String(loginEmail || '').trim()
-        if (em) setVerifyEmail(em)
-        setPhase('verify')
-        toast(t('auth.toasts.verifyEmailFirst'), 'error')
       } else if (tab === 'login' && !loginRoleFallback && err?.status === 403) {
         setLoginRoleFallback(true)
         toast(t('auth.toasts.selectRoleRetry'), 'error')
@@ -348,7 +320,8 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
     }
     setLoading(true)
     try {
-      const data = await loginEmailWithAutoRole(
+      const data = await loginWithEmailPassword(
+        api.post.bind(api),
         email,
         password,
         loginRoleFallback ? loginRole : null,
@@ -356,15 +329,7 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
       setLoginRoleFallback(false)
       finishEmailLogin(data)
     } catch (err) {
-      const code = err?.code || err?.response?.data?.code
-      if (code === 'GOOGLE_LOGIN_REQUIRED') {
-        toast(err.message || t('auth.toasts.googleLoginRequired'), 'error')
-      } else if (code === 'EMAIL_NOT_VERIFIED') {
-        setVerifyEmail(email)
-        setPhase('verify')
-        toast(t('auth.toasts.verifyEmailFirst'), 'error')
-        void resendVerificationEmail(email).catch(() => {})
-      } else if (!loginRoleFallback && err?.status === 403) {
+      if (!loginRoleFallback && err?.status === 403) {
         setLoginRoleFallback(true)
         toast(t('auth.toasts.selectRoleRetry'), 'error')
       } else {

@@ -59,8 +59,10 @@ const useAuthStore = create((set) => ({
   signupWithEmail: async (body) =>
     api.post('/auth/signup', body, { timeout: AUTH_REQUEST_TIMEOUT_MS }),
 
-  loginWithEmail: async ({ email, password, role = 'instructor' }) => {
-    const data = await api.post('/auth/login/email', { email, password, role }, { timeout: AUTH_REQUEST_TIMEOUT_MS })
+  loginWithEmail: async ({ email, password, role } = {}) => {
+    const body = { email, password }
+    if (role) body.role = role
+    const data = await api.post('/auth/login/email', body, { timeout: AUTH_REQUEST_TIMEOUT_MS })
     if (!data?.token || !data?.user) {
       const err = new Error(data?.message || 'Server cavabı etibarsızdır')
       err.code = data?.code
