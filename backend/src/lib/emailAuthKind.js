@@ -32,6 +32,21 @@ function googleLoginRequiredBody() {
   };
 }
 
+const ROLES_WITH_OWN_PASSWORD = new Set(['instructor', 'admin', 'course', 'parent']);
+
+/**
+ * Google ilə yaranmış iştirakçının Mentorix şifrəsi olmur (random hash).
+ * Email+parol yazanda həmin parolu saxlayıb daxil etmək olar — müəllim qeydiyyatı kimi.
+ */
+function canAdoptLoginPassword(user, password, passOk) {
+  if (passOk || !user) return false;
+  if (String(password || '').length < 8) return false;
+  const role = String(user.role || '').toLowerCase();
+  if (ROLES_WITH_OWN_PASSWORD.has(role)) return false;
+  if (!user.password_hash) return true;
+  return isGoogleAuthUser(user);
+}
+
 module.exports = {
   EMAIL_NOT_VERIFIED_MESSAGE,
   GOOGLE_LOGIN_REQUIRED_MESSAGE,
@@ -39,4 +54,5 @@ module.exports = {
   isUserEmailVerified,
   emailNotVerifiedBody,
   googleLoginRequiredBody,
+  canAdoptLoginPassword,
 };

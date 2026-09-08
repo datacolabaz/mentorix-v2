@@ -25,6 +25,7 @@ const {
 } = require('../services/emailVerificationIssue');
 const { resolveLoginUserOrError, resolveSmsBillingInstructorId: resolveSmsBillingForLogin } = require('../services/authService');
 const { guardEmailVerifiedBeforeToken } = require('../services/emailVerificationGuard');
+const { canAdoptLoginPassword } = require('../lib/emailAuthKind');
 const {
   getActiveRoles,
   getLoginEligibleRoles,
@@ -1342,7 +1343,13 @@ const loginWithEmail = async (req, res) => {
     if (!user) {
       return res.status(401).json({ success: false, message: 'Email və ya şifrə yanlışdır' });
     }
-    const passOk = Boolean(user.password_hash) && (await bcrypt.compare(pass, user.password_hash));
+    let passOk = Boolean(user.password_hash) && (await bcrypt.compare(pass, user.password_hash));
+    if (!passOk && canAdoptLoginPassword(user, pass, passOk)) {
+      const hash = await bcrypt.hash(pass, 12);
+      await db.query(`UPDATE users SET password_hash = $1 WHERE id = $2`, [hash, user.id]);
+      user.password_hash = hash;
+      passOk = true;
+    }
     if (!passOk) {
       return res.status(401).json({ success: false, message: 'Email və ya şifrə yanlışdır' });
     }
