@@ -73,7 +73,9 @@
       "system": "SİSTEM",
       "billing": "MALİYYƏ",
       "communication": "ƏLAQƏ",
-      "default": "Bölmə"
+      "default": "Bölmə",
+      "content": "MƏZMUN",
+      "organization": "TƏŞKİLAT"
     },
     "instructor": {
       "dashboard": "Dashboard",
@@ -139,6 +141,34 @@
       "marketingLogin": "Landing məzmunu",
       "instructorNav": "Müəllim menyusu",
       "categories": "Axtarış kateqoriyaları",
+      "settings": "Tənzimləmələr"
+    },
+    "org": {
+      "orgBadge": "Təşkilat",
+      "dashboard": "Dashboard",
+      "participants": "İştirakçılar",
+      "teams": "Komandalar",
+      "groups": "Qruplar",
+      "trainers": "Müəllimlər / Təlimçilər",
+      "exams": "İmtahanlar",
+      "assessments": "Qiymətləndirmələr",
+      "questionBank": "Sual bankı",
+      "tests": "Testlər",
+      "templates": "İmtahan şablonları",
+      "materials": "Materiallar",
+      "library": "Kitabxana",
+      "analytics": "Ümumi analitika",
+      "examResults": "İmtahan nəticələri",
+      "participantPerformance": "İştirakçı performansı",
+      "teamResults": "Komanda nəticələri",
+      "reports": "Hesabatlar",
+      "members": "Üzvlər",
+      "roles": "Rollar və icazələr",
+      "profile": "Təşkilat profili",
+      "branding": "Brendinq",
+      "integrations": "İnteqrasiyalar",
+      "notifications": "Bildirişlər",
+      "audit": "Audit jurnalı",
       "settings": "Tənzimləmələr"
     }
   },

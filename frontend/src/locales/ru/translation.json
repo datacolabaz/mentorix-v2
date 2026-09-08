@@ -73,7 +73,9 @@
       "system": "СИСТЕМА",
       "billing": "ФИНАНСЫ",
       "communication": "СВЯЗЬ",
-      "default": "Раздел"
+      "default": "Раздел",
+      "content": "КОНТЕНТ",
+      "organization": "ОРГАНИЗАЦИЯ"
     },
     "instructor": {
       "dashboard": "Дашборд",
@@ -139,6 +141,34 @@
       "marketingLogin": "Контент лендинга",
       "instructorNav": "Меню преподавателя",
       "categories": "Категории поиска",
+      "settings": "Настройки"
+    },
+    "org": {
+      "orgBadge": "Организация",
+      "dashboard": "Дашборд",
+      "participants": "Участники",
+      "teams": "Команды",
+      "groups": "Группы",
+      "trainers": "Преподаватели / Тренеры",
+      "exams": "Экзамены",
+      "assessments": "Оценки",
+      "questionBank": "Банк вопросов",
+      "tests": "Тесты",
+      "templates": "Шаблоны экзаменов",
+      "materials": "Материалы",
+      "library": "Библиотека",
+      "analytics": "Общая аналитика",
+      "examResults": "Результаты экзаменов",
+      "participantPerformance": "Результаты участников",
+      "teamResults": "Результаты команд",
+      "reports": "Отчёты",
+      "members": "Участники штата",
+      "roles": "Роли и права",
+      "profile": "Профиль организации",
+      "branding": "Брендинг",
+      "integrations": "Интеграции",
+      "notifications": "Уведомления",
+      "audit": "Журнал аудита",
       "settings": "Настройки"
     }
   },

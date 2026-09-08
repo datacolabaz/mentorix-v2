@@ -18,7 +18,7 @@ const ROLE_HOME = {
   instructor: '/instructor',
   student: '/student',
   parent: '/parent',
-  course: '/course',
+  course: '/org',
 }
 
 export function dashboardPathForRole(role) {

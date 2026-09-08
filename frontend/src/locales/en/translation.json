@@ -73,7 +73,9 @@
       "system": "SYSTEM",
       "billing": "BILLING",
       "communication": "COMMUNICATION",
-      "default": "Section"
+      "default": "Section",
+      "content": "CONTENT",
+      "organization": "ORGANIZATION"
     },
     "instructor": {
       "dashboard": "Dashboard",
@@ -139,6 +141,34 @@
       "marketingLogin": "Landing content",
       "instructorNav": "Teacher menu",
       "categories": "Search categories",
+      "settings": "Settings"
+    },
+    "org": {
+      "orgBadge": "Organization",
+      "dashboard": "Dashboard",
+      "participants": "Participants",
+      "teams": "Teams",
+      "groups": "Groups",
+      "trainers": "Teachers / Trainers",
+      "exams": "Exams",
+      "assessments": "Assessments",
+      "questionBank": "Question bank",
+      "tests": "Tests",
+      "templates": "Exam templates",
+      "materials": "Materials",
+      "library": "Library",
+      "analytics": "Overview analytics",
+      "examResults": "Exam results",
+      "participantPerformance": "Participant performance",
+      "teamResults": "Team results",
+      "reports": "Reports",
+      "members": "Members",
+      "roles": "Roles & permissions",
+      "profile": "Organization profile",
+      "branding": "Branding",
+      "integrations": "Integrations",
+      "notifications": "Notifications",
+      "audit": "Audit log",
       "settings": "Settings"
     }
   },

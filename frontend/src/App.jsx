@@ -34,7 +34,7 @@ import AdminLayout from './layouts/AdminLayout'
 import InstructorLayout from './layouts/InstructorLayout'
 import StudentLayout from './layouts/StudentLayout'
 import ParentLayout from './layouts/ParentLayout'
-import CourseLayout from './layouts/CourseLayout'
+import OrgLayout from './layouts/OrgLayout'
 
 import AdminDashboard from './pages/admin/Dashboard'
 import AdminInstructors from './pages/admin/Instructors'
@@ -106,15 +106,24 @@ import { parseJoinInviteInput } from './lib/joinInvite'
 import ParentDashboard from './pages/parent/Dashboard'
 import ParentAssignments from './pages/parent/Assignments'
 import AssignmentAnalytics from './pages/instructor/AssignmentAnalytics'
-import CourseDashboard from './pages/course/Dashboard'
-import CourseTeachers from './pages/course/Teachers'
-import CourseLeads from './pages/course/Leads'
-import CourseStudents from './pages/course/Students'
-import CourseGroups from './pages/course/Groups'
-import CourseSchedule from './pages/course/Schedule'
-import CourseFinance from './pages/course/Finance'
-import CourseNotifications from './pages/course/Notifications'
-import CourseSettings from './pages/course/Settings'
+import OrgDashboard from './pages/org/Dashboard'
+import OrgParticipants from './pages/org/Participants'
+import OrgTeams, { OrgTeamDetail } from './pages/org/Teams'
+import OrgGroups from './pages/org/Groups'
+import OrgTrainers from './pages/org/Trainers'
+import OrgExams from './pages/org/Exams'
+import { OrgQuestionBank, OrgTests, OrgTemplates, OrgMaterials } from './pages/org/Content'
+import OrgAnalytics from './pages/org/Analytics'
+import {
+  OrgMembers,
+  OrgRoles,
+  OrgProfile,
+  OrgBranding,
+  OrgIntegrations,
+  OrgNotifications,
+  OrgAudit,
+  OrgSettings,
+} from './pages/org/Admin'
 const Placeholder = ({ title }) => (
   <div className="p-4 sm:p-6 min-w-0">
     <h1 className="font-display font-bold text-xl sm:text-2xl text-white break-words">{title}</h1>
@@ -371,17 +380,45 @@ export default function App() {
         <Route path="notifications" element={<ParentNotifications />} />
       </Route>
 
-      <Route path="/course" element={<ProtectedRoute roles={['course']}><CourseLayout /></ProtectedRoute>}>
-        <Route index element={<CourseDashboard />} />
-        <Route path="leads" element={<CourseLeads />} />
-        <Route path="teachers" element={<CourseTeachers />} />
-        <Route path="students" element={<CourseStudents />} />
-        <Route path="groups" element={<CourseGroups />} />
-        <Route path="schedule" element={<CourseSchedule />} />
-        <Route path="finance" element={<CourseFinance />} />
-        <Route path="notifications" element={<CourseNotifications />} />
-        <Route path="settings" element={<CourseSettings />} />
+      <Route path="/org" element={<ProtectedRoute roles={['course']}><OrgLayout /></ProtectedRoute>}>
+        <Route index element={<OrgDashboard />} />
+        <Route path="participants" element={<OrgParticipants />} />
+        <Route path="teams" element={<OrgTeams />} />
+        <Route path="teams/:id" element={<OrgTeamDetail />} />
+        <Route path="groups" element={<OrgGroups />} />
+        <Route path="trainers" element={<OrgTrainers />} />
+        <Route path="exams" element={<OrgExams />} />
+        <Route path="assessments" element={<OrgExams assessmentView />} />
+        <Route path="question-bank" element={<OrgQuestionBank />} />
+        <Route path="tests" element={<OrgTests />} />
+        <Route path="templates" element={<OrgTemplates />} />
+        <Route path="materials" element={<OrgMaterials />} />
+        <Route path="library" element={<OrgMaterials library />} />
+        <Route path="analytics" element={<OrgAnalytics />} />
+        <Route path="analytics/exams" element={<OrgAnalytics focus="exams" />} />
+        <Route path="analytics/participants" element={<OrgAnalytics focus="participants" />} />
+        <Route path="analytics/teams" element={<OrgAnalytics focus="teams" />} />
+        <Route path="reports" element={<OrgAnalytics focus="reports" />} />
+        <Route path="members" element={<OrgMembers />} />
+        <Route path="roles" element={<OrgRoles />} />
+        <Route path="profile" element={<OrgProfile />} />
+        <Route path="branding" element={<OrgBranding />} />
+        <Route path="integrations" element={<OrgIntegrations />} />
+        <Route path="notifications" element={<OrgNotifications />} />
+        <Route path="audit" element={<OrgAudit />} />
+        <Route path="settings" element={<OrgSettings />} />
       </Route>
+
+      <Route path="/course" element={<ProtectedRoute roles={['course']}><Navigate to="/org" replace /></ProtectedRoute>} />
+      <Route path="/course/students" element={<Navigate to="/org/participants" replace />} />
+      <Route path="/course/teachers" element={<Navigate to="/org/trainers" replace />} />
+      <Route path="/course/groups" element={<Navigate to="/org/groups" replace />} />
+      <Route path="/course/settings" element={<Navigate to="/org/settings" replace />} />
+      <Route path="/course/notifications" element={<Navigate to="/org/notifications" replace />} />
+      <Route path="/course/finance" element={<Navigate to="/org/reports" replace />} />
+      <Route path="/course/schedule" element={<Navigate to="/org" replace />} />
+      <Route path="/course/leads" element={<Navigate to="/org/participants" replace />} />
+      <Route path="/course/*" element={<Navigate to="/org" replace />} />
 
       <Route path="*" element={<Placeholder title="404 — Tapılmadı" />} />
     </Routes>

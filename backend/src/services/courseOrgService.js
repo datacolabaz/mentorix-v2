@@ -8,6 +8,14 @@ const { bakuTodayYmd } = require('../controllers/monthlyAttendanceController');
 const { roundMoney } = require('./subscriptionBilling');
 const { normalizePhone } = require('./authService');
 const { findUserByPhone, userHasRole, isInstructorAccount } = require('./userRolesService');
+const {
+  ensureOwnerMembership,
+  ensureStaffMembership,
+  removeMembership,
+  writeOrgAudit,
+  permissionsForRole,
+  ORG_ROLE_KEYS,
+} = require('./orgRbacService');
 
 const TEACHER_STATUSES = ['INVITED', 'ACTIVE'];
 const INSTRUCTOR_NOT_FOUND_MSG =
@@ -38,6 +46,7 @@ async function ensureOrgCourseForOwner(ownerUserId) {
        WHERE id = $1 RETURNING id, owner_user_id, name`,
       [existing[0].id, name],
     );
+    await ensureOwnerMembership(updated[0].id, ownerUserId);
     return updated[0];
   }
 
@@ -46,7 +55,69 @@ async function ensureOrgCourseForOwner(ownerUserId) {
      VALUES ($1, $2, TRUE) RETURNING id, owner_user_id, name`,
     [ownerUserId, name],
   );
+  await ensureOwnerMembership(inserted[0].id, ownerUserId);
   return inserted[0];
+}
+
+async function getOrgWorkspace(userId) {
+  const { rows: owned } = await db.query(
+    `SELECT id, owner_user_id, name FROM courses
+     WHERE owner_user_id = $1 AND COALESCE(is_organization, FALSE) = TRUE
+     ORDER BY created_at ASC LIMIT 1`,
+    [userId],
+  );
+  if (owned[0]) {
+    await ensureOwnerMembership(owned[0].id, userId);
+    const { rows: teachers } = await db.query(
+      `SELECT instructor_user_id FROM course_teachers WHERE course_id = $1 AND is_active = TRUE`,
+      [owned[0].id],
+    );
+    for (const row of teachers) {
+      if (String(row.instructor_user_id) === String(userId)) continue;
+      await ensureStaffMembership(owned[0].id, row.instructor_user_id, ORG_ROLE_KEYS.INSTRUCTOR);
+    }
+    const { rows: mem } = await db.query(
+      `SELECT role_key FROM org_memberships WHERE course_id = $1 AND user_id = $2 LIMIT 1`,
+      [owned[0].id, userId],
+    );
+    const roleKey = mem[0]?.role_key || ORG_ROLE_KEYS.OWNER;
+    return {
+      course: owned[0],
+      roleKey,
+      permissions: permissionsForRole(roleKey),
+      isOwner: true,
+    };
+  }
+
+  const { rows: membership } = await db.query(
+    `SELECT m.course_id, m.role_key, c.owner_user_id, c.name
+     FROM org_memberships m
+     JOIN courses c ON c.id = m.course_id
+     WHERE m.user_id = $1 AND COALESCE(c.is_organization, FALSE) = TRUE
+     ORDER BY CASE WHEN m.role_key = 'owner' THEN 0 ELSE 1 END, m.created_at ASC
+     LIMIT 1`,
+    [userId],
+  );
+  if (membership[0]) {
+    return {
+      course: {
+        id: membership[0].course_id,
+        owner_user_id: membership[0].owner_user_id,
+        name: membership[0].name,
+      },
+      roleKey: membership[0].role_key,
+      permissions: permissionsForRole(membership[0].role_key),
+      isOwner: String(membership[0].owner_user_id) === String(userId),
+    };
+  }
+
+  const course = await ensureOrgCourseForOwner(userId);
+  return {
+    course,
+    roleKey: ORG_ROLE_KEYS.OWNER,
+    permissions: permissionsForRole(ORG_ROLE_KEYS.OWNER),
+    isOwner: true,
+  };
 }
 
 async function assertOrgCourseOwner(courseId, ownerUserId) {
@@ -63,7 +134,7 @@ async function countCourseStudents(courseId) {
     `SELECT COUNT(DISTINCT cs.student_id)::int AS c
      FROM course_students cs
      INNER JOIN users u ON u.id = cs.student_id
-     WHERE cs.course_id = $1 AND COALESCE(u.is_active, TRUE) = TRUE`,
+     WHERE cs.course_id = $1 AND cs.archived_at IS NULL AND COALESCE(u.is_active, TRUE) = TRUE`,
     [courseId],
   );
   return rows[0]?.c ?? 0;
@@ -131,6 +202,16 @@ async function addOrgTeacher(ownerUserId, phone) {
     [course.id, instructor.id],
   );
 
+  await ensureStaffMembership(course.id, instructor.id, ORG_ROLE_KEYS.INSTRUCTOR);
+  await writeOrgAudit({
+    courseId: course.id,
+    actorUserId: ownerUserId,
+    action: 'user.invited',
+    targetType: 'trainer',
+    targetId: instructor.id,
+    metadata: { phone: instructor.phone, name: instructor.full_name },
+  });
+
   return {
     id: instructor.id,
     full_name: instructor.full_name,
@@ -138,6 +219,31 @@ async function addOrgTeacher(ownerUserId, phone) {
     status: rows[0].status,
     is_owner: false,
     course_students_count: 0,
+  };
+}
+
+async function getOrgSettingsByCourse(course) {
+  const ownerUserId = course.owner_user_id;
+  const { rows: prof } = await db.query(
+    `SELECT course_name, logo_url, branch_address FROM course_profiles WHERE user_id = $1`,
+    [ownerUserId],
+  );
+  const { rows: userRows } = await db.query(`SELECT full_name FROM users WHERE id = $1`, [ownerUserId]);
+  const fullName = (userRows[0]?.full_name || '').trim();
+  const p = prof[0] || {};
+  const courseName = (p.course_name || course.name || '').trim();
+  const needsBranding =
+    !courseName ||
+    courseName === fullName ||
+    courseName === 'Kursum' ||
+    courseName.toLowerCase() === 'kursum';
+
+  return {
+    course_id: course.id,
+    course_name: courseName,
+    logo_url: p.logo_url || null,
+    branch_address: p.branch_address || null,
+    needs_branding: needsBranding,
   };
 }
 
@@ -167,27 +273,7 @@ async function countLeadsByStatus(courseId) {
 
 async function getOrgSettings(ownerUserId) {
   const course = await ensureOrgCourseForOwner(ownerUserId);
-  const { rows: prof } = await db.query(
-    `SELECT course_name, logo_url, branch_address FROM course_profiles WHERE user_id = $1`,
-    [ownerUserId],
-  );
-  const { rows: userRows } = await db.query(`SELECT full_name FROM users WHERE id = $1`, [ownerUserId]);
-  const fullName = (userRows[0]?.full_name || '').trim();
-  const p = prof[0] || {};
-  const courseName = (p.course_name || course.name || '').trim();
-  const needsBranding =
-    !courseName ||
-    courseName === fullName ||
-    courseName === 'Kursum' ||
-    courseName.toLowerCase() === 'kursum';
-
-  return {
-    course_id: course.id,
-    course_name: courseName,
-    logo_url: p.logo_url || null,
-    branch_address: p.branch_address || null,
-    needs_branding: needsBranding,
-  };
+  return getOrgSettingsByCourse(course);
 }
 
 async function updateOrgSettings(ownerUserId, body) {
@@ -210,6 +296,14 @@ async function updateOrgSettings(ownerUserId, body) {
     [ownerUserId, courseName, branch || null],
   );
   await db.query(`UPDATE courses SET name = $1, updated_at = NOW() WHERE id = $2`, [courseName, course.id]);
+  await writeOrgAudit({
+    courseId: course.id,
+    actorUserId: ownerUserId,
+    action: 'organization.settings_changed',
+    targetType: 'organization',
+    targetId: course.id,
+    metadata: { course_name: courseName },
+  });
 
   return getOrgSettings(ownerUserId);
 }
@@ -222,6 +316,13 @@ async function updateOrgLogo(ownerUserId, logoUrl) {
      ON CONFLICT (user_id) DO UPDATE SET logo_url = EXCLUDED.logo_url, updated_at = NOW()`,
     [ownerUserId, logoUrl],
   );
+  await writeOrgAudit({
+    courseId: (await ensureOrgCourseForOwner(ownerUserId)).id,
+    actorUserId: ownerUserId,
+    action: 'organization.settings_changed',
+    targetType: 'organization',
+    metadata: { field: 'logo' },
+  });
   return getOrgSettings(ownerUserId);
 }
 
@@ -360,7 +461,7 @@ async function listOrgStudents(courseId) {
        ORDER BY g.name
        LIMIT 1
      ) cg ON TRUE
-     WHERE cs.course_id = $1 AND COALESCE(u.is_active, TRUE) = TRUE
+     WHERE cs.course_id = $1 AND cs.archived_at IS NULL AND COALESCE(u.is_active, TRUE) = TRUE
      ORDER BY u.full_name`,
     [courseId],
   );
@@ -379,54 +480,69 @@ async function addOrgStudent(ownerUserId, phone) {
   const student = await findStudentUserByPhone(clean);
   if (!student) {
     const err = new Error(
-      'Tələbə tapılmadı, zəhmət olmasa əvvəlcə onun platformada qeydiyyatdan keçdiyinə əmin olun',
+      'İştirakçı tapılmadı, zəhmət olmasa əvvəlcə onun platformada qeydiyyatdan keçdiyinə əmin olun',
     );
     err.statusCode = 404;
     throw err;
   }
 
   const { rows: existing } = await db.query(
-    `SELECT 1 FROM course_students WHERE course_id = $1 AND student_id = $2`,
+    `SELECT archived_at FROM course_students WHERE course_id = $1 AND student_id = $2`,
     [course.id, student.id],
   );
-  if (existing.length) {
-    const err = new Error('Bu tələbə artıq kursda qeydiyyatlıdır');
+  if (existing.length && !existing[0].archived_at) {
+    const err = new Error('Bu iştirakçı artıq təşkilatdadır');
     err.statusCode = 409;
     throw err;
   }
+  if (existing.length && existing[0].archived_at) {
+    await db.query(
+      `UPDATE course_students SET archived_at = NULL WHERE course_id = $1 AND student_id = $2`,
+      [course.id, student.id],
+    );
+  } else {
+    const { rows: enr } = await db.query(
+      `SELECT e.id FROM enrollments e
+       INNER JOIN course_teachers ct ON ct.instructor_user_id = e.instructor_id AND ct.course_id = $1 AND ct.is_active = TRUE AND ct.status = 'ACTIVE'
+       WHERE e.student_id = $2 AND e.deleted_at IS NULL
+       ORDER BY e.enrolled_at DESC NULLS LAST
+       LIMIT 1`,
+      [course.id, student.id],
+    );
+    const enrollmentId = enr[0]?.id || null;
+    await db.query(
+      `INSERT INTO course_students (course_id, student_id, enrollment_id)
+       VALUES ($1, $2, $3)`,
+      [course.id, student.id, enrollmentId],
+    );
+  }
 
-  const { rows: enr } = await db.query(
-    `SELECT e.id FROM enrollments e
-     INNER JOIN course_teachers ct ON ct.instructor_user_id = e.instructor_id AND ct.course_id = $1 AND ct.is_active = TRUE AND ct.status = 'ACTIVE'
-     WHERE e.student_id = $2 AND e.deleted_at IS NULL
-     ORDER BY e.enrolled_at DESC NULLS LAST
-     LIMIT 1`,
-    [course.id, student.id],
-  );
-  const enrollmentId = enr[0]?.id || null;
-
-  await db.query(
-    `INSERT INTO course_students (course_id, student_id, enrollment_id)
-     VALUES ($1, $2, $3)`,
-    [course.id, student.id, enrollmentId],
-  );
+  await writeOrgAudit({
+    courseId: course.id,
+    actorUserId: ownerUserId,
+    action: 'user.invited',
+    targetType: 'participant',
+    targetId: student.id,
+    metadata: { name: student.full_name },
+  });
 
   const list = await listOrgStudents(course.id);
   return list.find((s) => String(s.id) === String(student.id)) || {
     id: student.id,
     full_name: student.full_name,
     phone: student.phone,
-    enrollment_id: enrollmentId,
   };
 }
 
 async function listOrgGroups(courseId) {
   const { rows } = await db.query(
-    `SELECT cg.id, cg.name, cg.instructor_user_id, cg.sort_order, cg.created_at,
+    `SELECT cg.id, cg.name, cg.instructor_user_id, cg.sort_order, cg.created_at, cg.team_id,
             u.full_name AS instructor_name,
+            t.name AS team_name,
             (SELECT COUNT(*)::int FROM course_group_members cgm WHERE cgm.group_id = cg.id) AS member_count
      FROM course_groups cg
      LEFT JOIN users u ON u.id = cg.instructor_user_id
+     LEFT JOIN org_teams t ON t.id = cg.team_id AND t.course_id = cg.course_id
      WHERE cg.course_id = $1 AND cg.is_active = TRUE AND cg.instructor_group_id IS NULL
      ORDER BY cg.sort_order ASC, cg.name ASC`,
     [courseId],
@@ -456,20 +572,46 @@ async function createOrgGroup(courseId, ownerUserId, body) {
     }
   }
 
+  let teamId = body?.team_id || null;
+  if (teamId) {
+    const { rows: team } = await db.query(
+      `SELECT id FROM org_teams WHERE id = $1 AND course_id = $2 AND is_active = TRUE`,
+      [teamId, courseId],
+    );
+    if (!team[0]) {
+      const err = new Error('Komanda tapılmadı');
+      err.statusCode = 400;
+      throw err;
+    }
+    teamId = team[0].id;
+  }
+
   const { rows } = await db.query(
-    `INSERT INTO course_groups (course_id, name, instructor_user_id, instructor_group_id, sort_order)
-     VALUES ($1, $2, $3, NULL, COALESCE($4::int, 0))
+    `INSERT INTO course_groups (course_id, name, instructor_user_id, instructor_group_id, sort_order, team_id)
+     VALUES ($1, $2, $3, NULL, COALESCE($4::int, 0), $5)
      RETURNING id`,
-    [courseId, name, instructorUserId, body?.sort_order != null ? Number(body.sort_order) : 0],
+    [courseId, name, instructorUserId, body?.sort_order != null ? Number(body.sort_order) : 0, teamId],
   );
+  await writeOrgAudit({
+    courseId,
+    actorUserId: ownerUserId,
+    action: 'group.created',
+    targetType: 'group',
+    targetId: rows[0].id,
+    metadata: { name },
+  });
   const groups = await listOrgGroups(courseId);
   return groups.find((g) => String(g.id) === String(rows[0].id)) || rows[0];
 }
 
 async function listOrgTeachers(courseId, ownerUserId) {
   const { rows } = await db.query(
-    `SELECT ct.instructor_user_id AS id, u.full_name, u.phone, ct.status,
+    `SELECT ct.instructor_user_id AS id, u.full_name, u.phone, u.email, u.last_activity_at,
+            ct.status, ct.is_active,
             (ct.instructor_user_id = $2) AS is_owner,
+            m.role_key,
+            t.id AS team_id,
+            t.name AS team_name,
             (
               SELECT COUNT(DISTINCT cs.student_id)::int
               FROM course_students cs
@@ -478,14 +620,82 @@ async function listOrgTeachers(courseId, ownerUserId) {
                   SELECT e.id FROM enrollments e
                   WHERE e.instructor_id = ct.instructor_user_id AND e.deleted_at IS NULL
                 )
-            ) AS course_students_count
+            ) AS course_students_count,
+            (
+              SELECT COUNT(*)::int FROM exams e
+              WHERE e.instructor_id = ct.instructor_user_id AND COALESCE(e.is_deleted, FALSE) = FALSE
+            ) AS created_assessments_count
      FROM course_teachers ct
      INNER JOIN users u ON u.id = ct.instructor_user_id
-     WHERE ct.course_id = $1 AND ct.status = 'ACTIVE' AND ct.is_active = TRUE
-     ORDER BY u.full_name`,
+     LEFT JOIN org_memberships m ON m.course_id = ct.course_id AND m.user_id = ct.instructor_user_id
+     LEFT JOIN LATERAL (
+       SELECT ot.id, ot.name
+       FROM org_team_members otm
+       JOIN org_teams ot ON ot.id = otm.team_id AND ot.course_id = ct.course_id AND ot.is_active = TRUE
+       WHERE otm.user_id = ct.instructor_user_id AND otm.member_kind = 'trainer'
+       ORDER BY ot.name
+       LIMIT 1
+     ) t ON TRUE
+     WHERE ct.course_id = $1
+     ORDER BY ct.is_active DESC, u.full_name`,
     [courseId, ownerUserId],
   );
   return rows;
+}
+
+async function setOrgTeacherActive(courseId, trainerUserId, isActive, actorUserId) {
+  if (String(trainerUserId) === String(actorUserId)) {
+    const err = new Error('Öz hesabınızı dayandıra bilməzsiniz');
+    err.statusCode = 400;
+    throw err;
+  }
+  const { rows } = await db.query(
+    `UPDATE course_teachers
+     SET is_active = $3
+     WHERE course_id = $1 AND instructor_user_id = $2
+     RETURNING instructor_user_id`,
+    [courseId, trainerUserId, Boolean(isActive)],
+  );
+  if (!rows[0]) {
+    const err = new Error('Müəllim tapılmadı');
+    err.statusCode = 404;
+    throw err;
+  }
+  await writeOrgAudit({
+    courseId,
+    actorUserId,
+    action: isActive ? 'trainer.activated' : 'trainer.suspended',
+    targetType: 'trainer',
+    targetId: trainerUserId,
+  });
+  return listOrgTeachers(courseId, actorUserId);
+}
+
+async function removeOrgTeacher(courseId, trainerUserId, actorUserId) {
+  if (String(trainerUserId) === String(actorUserId)) {
+    const err = new Error('Öz hesabınızı silə bilməzsiniz');
+    err.statusCode = 400;
+    throw err;
+  }
+  const { rows } = await db.query(
+    `DELETE FROM course_teachers
+     WHERE course_id = $1 AND instructor_user_id = $2
+     RETURNING instructor_user_id`,
+    [courseId, trainerUserId],
+  );
+  if (!rows[0]) {
+    const err = new Error('Müəllim tapılmadı');
+    err.statusCode = 404;
+    throw err;
+  }
+  await removeMembership(courseId, trainerUserId);
+  await writeOrgAudit({
+    courseId,
+    actorUserId,
+    action: 'user.removed',
+    targetType: 'trainer',
+    targetId: trainerUserId,
+  });
 }
 
 module.exports = {
@@ -493,8 +703,10 @@ module.exports = {
   TEACHER_STATUSES,
   INSTRUCTOR_NOT_FOUND_MSG,
   ensureOrgCourseForOwner,
+  getOrgWorkspace,
   assertOrgCourseOwner,
   getOrgSettings,
+  getOrgSettingsByCourse,
   updateOrgSettings,
   updateOrgLogo,
   getOrgDashboardStats,
@@ -503,8 +715,11 @@ module.exports = {
   updateLead,
   listOrgTeachers,
   addOrgTeacher,
+  setOrgTeacherActive,
+  removeOrgTeacher,
   listOrgStudents,
   addOrgStudent,
   listOrgGroups,
   createOrgGroup,
 };
+

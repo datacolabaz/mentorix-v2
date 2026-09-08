@@ -78,11 +78,11 @@ export const PERSONA_HOME_LINKS = Object.freeze({
     { to: '/instructor/analytics', labelKey: 'personaHome.teacher.results', icon: 'analytics' },
   ],
   [PERSONAS.EDUCATION_CENTER]: [
-    { to: '/course/teachers', labelKey: 'personaHome.education_center.teachers', icon: 'instructors' },
-    { to: '/course/groups', labelKey: 'personaHome.education_center.groups', icon: 'groups' },
-    { to: '/course/students', labelKey: 'personaHome.education_center.students', icon: 'students' },
-    { to: '/course', labelKey: 'personaHome.education_center.exams', icon: 'exams' },
-    { to: '/course/finance', labelKey: 'personaHome.education_center.reports', icon: 'analytics' },
+    { to: '/org/trainers', labelKey: 'personaHome.education_center.teachers', icon: 'instructors' },
+    { to: '/org/groups', labelKey: 'personaHome.education_center.groups', icon: 'groups' },
+    { to: '/org/participants', labelKey: 'personaHome.education_center.students', icon: 'students' },
+    { to: '/org/exams', labelKey: 'personaHome.education_center.exams', icon: 'exams' },
+    { to: '/org/reports', labelKey: 'personaHome.education_center.reports', icon: 'analytics' },
   ],
   [PERSONAS.STUDENT]: [
     { to: '/student/exams', labelKey: 'personaHome.student.exams', icon: 'exams' },
