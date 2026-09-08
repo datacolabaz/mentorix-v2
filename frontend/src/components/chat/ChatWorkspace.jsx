@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import Button from '../common/Button'
 import useAuthStore from '../../hooks/useAuth'
 import {
@@ -27,11 +28,10 @@ const EMOJI_QUICK = ['👍', '😊', '🙏', '✅', '❤️', '🎉']
 
 const MODE_COPY = {
   group: {
-    sidebarTitle: 'Çat',
+    sidebarTitle: 'Qrup çatı',
     sidebarSubtitle: 'Qrup söhbətləri',
     emptyList: 'Hələ aktiv qrup çatınız yoxdur.',
     listError: 'Qruplar yüklənmədi',
-    headerFallback: 'Qrup çatı',
     peerLabel: (item) => item?.group_name || 'Qrup',
     peerMeta: (item) => (
       <>
@@ -68,7 +68,6 @@ const MODE_COPY = {
     sidebarSubtitle: 'Təkbətək söhbətlər',
     emptyList: 'Hələ fərdi çatınız yoxdur.',
     listError: 'Söhbətlər yüklənmədi',
-    headerFallback: 'Fərdi çat',
     peerLabel: (item) => item?.peer_name || 'İstifadəçi',
     peerMeta: (item) =>
       item?.is_online ? (
@@ -99,7 +98,6 @@ const MODE_COPY = {
     sidebarSubtitle: 'Tapşırıq söhbətləri',
     emptyList: 'Hələ tapşırıq çatınız yoxdur.',
     listError: 'Tapşırıqlar yüklənmədi',
-    headerFallback: 'Tapşırıq çatı',
     peerLabel: (item) => item?.assignment_title || 'Tapşırıq',
     peerMeta: (item) => (
       <>
@@ -246,6 +244,7 @@ function MessageGroup({ group, currentUserId }) {
  * Full-panel chat workspace (group or direct) — sidebar + conversation.
  */
 export default function ChatWorkspace({ role, mode = 'group', enrollmentId = null }) {
+  const { t } = useTranslation()
   const copy = MODE_COPY[mode] || MODE_COPY.group
   const isDirect = mode === 'direct'
   const isAssignment = mode === 'assignment'
@@ -728,12 +727,18 @@ export default function ChatWorkspace({ role, mode = 'group', enrollmentId = nul
       <section className="flex-1 flex flex-col min-w-0 min-h-0">
         <header className="shrink-0 px-4 py-3 border-b border-[color:var(--border-subtle)] bg-token-surfaceCard/30 flex items-center gap-3">
           <div className="min-w-0 flex-1">
-            <h2 className="text-base font-bold truncate">
-              {activeItem ? copy.peerLabel(activeItem) : copy.headerFallback}
-            </h2>
-            <div className="text-xs text-token-textMuted flex items-center gap-2 mt-0.5">
-              {activeItem ? copy.headerMeta(activeItem) : null}
-            </div>
+            {activeItem ? (
+              <>
+                <h2 className="text-base font-bold truncate">{copy.peerLabel(activeItem)}</h2>
+                <div className="text-xs text-token-textMuted flex items-center gap-2 mt-0.5">
+                  {copy.headerMeta(activeItem)}
+                </div>
+              </>
+            ) : (
+              <h2 className="text-sm font-medium text-token-textMuted truncate">
+                {t('chatWorkspace.selectConversation')}
+              </h2>
+            )}
           </div>
         </header>
 

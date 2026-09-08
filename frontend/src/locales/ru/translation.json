@@ -3445,5 +3445,8 @@
       "examDescription": "Сертифицированный экзамен — Mentorix",
       "breadcrumb": "Сертифицированные экзамены"
     }
+  },
+  "chatWorkspace": {
+    "selectConversation": "Выберите беседу"
   }
 }

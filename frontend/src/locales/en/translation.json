@@ -3445,5 +3445,8 @@
       "examDescription": "Certified exam — Mentorix",
       "breadcrumb": "Certified exams"
     }
+  },
+  "chatWorkspace": {
+    "selectConversation": "Select a conversation"
   }
 }
