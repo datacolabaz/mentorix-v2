@@ -767,18 +767,37 @@ function buildStudentExamUrl(examId) {
   return `${base}/student/exams?exam=${encodeURIComponent(String(examId))}`;
 }
 
+function formatBakuDateTimeNumeric(d) {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Baku',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(d);
+  const get = (t) => parts.find((p) => p.type === t)?.value;
+  const day = get('day');
+  const month = get('month');
+  const year = get('year');
+  const hour = get('hour');
+  const minute = get('minute');
+  if (!day || !month || !year) return '';
+  return `${day}.${month}.${year}, ${hour || '00'}:${minute || '00'}`;
+}
+
 function formatExamScheduleAz(exam) {
   const fromRaw = exam?.available_from || exam?.start_time;
   const untilRaw = exam?.available_until;
-  const opts = { timeZone: 'Asia/Baku', dateStyle: 'short', timeStyle: 'short' };
   const fromD = fromRaw ? new Date(fromRaw) : null;
   const untilD = untilRaw ? new Date(untilRaw) : null;
   if (fromD && !Number.isNaN(fromD.getTime())) {
-    let s = fromD.toLocaleString('az-AZ', opts);
+    let s = formatBakuDateTimeNumeric(fromD);
     if (untilD && !Number.isNaN(untilD.getTime())) {
-      s += ` – ${untilD.toLocaleString('az-AZ', opts)}`;
+      s += ` – ${formatBakuDateTimeNumeric(untilD)}`;
     }
-    return s;
+    return s || '—';
   }
   return '—';
 }

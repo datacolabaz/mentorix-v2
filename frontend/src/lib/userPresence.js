@@ -1,3 +1,5 @@
+import { formatNumericDateTime } from './azMonths'
+
 /** Online / active status helpers (1 minute window, matches backend). */
 
 export const ONLINE_WINDOW_MS = 60 * 1000
@@ -13,7 +15,7 @@ export function presenceTitle(isOnline, lastActivityAt) {
   if (isOnline) return 'Onlayn'
   if (!lastActivityAt) return 'Son aktivlik məlum deyil'
   try {
-    return `Son aktivlik: ${new Date(lastActivityAt).toLocaleString('az-AZ')}`
+    return `Son aktivlik: ${formatNumericDateTime(lastActivityAt) || '—'}`
   } catch {
     return 'Oflayn'
   }

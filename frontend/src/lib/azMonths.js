@@ -132,3 +132,20 @@ export function formatNamedDate(value, lang, opts = {}) {
   }
   return out
 }
+
+export function formatNumericDate(value, opts = {}) {
+  const p = bakuDateParts(value, opts.timeZone)
+  if (!p) return ''
+  const dd = String(p.day).padStart(2, '0')
+  const mm = String(p.monthIndex + 1).padStart(2, '0')
+  return `${dd}.${mm}.${p.year}`
+}
+
+/** `15.01.2026, 12:00` — rəqəmli ay, heç vaxt M01/MO1. */
+export function formatNumericDateTime(value, opts = {}) {
+  const p = bakuDateParts(value, opts.timeZone)
+  if (!p) return ''
+  const date = `${String(p.day).padStart(2, '0')}.${String(p.monthIndex + 1).padStart(2, '0')}.${p.year}`
+  if (p.hour == null || p.minute == null) return date
+  return `${date}${opts.sep || ', '}${p.hour}:${p.minute}`
+}

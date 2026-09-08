@@ -9,17 +9,17 @@ import { useToast } from '../../components/common/Toast'
 import PresentationUploadModal from '../../components/instructor/PresentationUploadModal'
 import MaterialsStorageBanner from '../../components/instructor/MaterialsStorageBanner'
 import useUiStore from '../../hooks/useUi'
-import { intlLocale } from '../../lib/uiLocale'
+import { formatNumericDateTime } from '../../lib/azMonths'
 
-function formatUpdated(value, locale) {
+function formatUpdated(value) {
   if (!value) return '—'
   const d = new Date(value)
   if (Number.isNaN(d.getTime())) return '—'
-  return d.toLocaleString(intlLocale(locale), { dateStyle: 'medium', timeStyle: 'short' })
+  return formatNumericDateTime(d) || '—'
 }
 
 export default function InstructorPresentations() {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const toast = useToast()
   const navigate = useNavigate()
   const { theme } = useUiStore()
@@ -150,7 +150,7 @@ export default function InstructorPresentations() {
                     {t('presentations.slides', { count: p.slide_count || 0 })}
                   </p>
                   <p className="text-[11px] text-token-textMuted mt-1">
-                    {t('presentations.updated', { date: formatUpdated(p.updated_at || p.created_at, i18n.language) })}
+                    {t('presentations.updated', { date: formatUpdated(p.updated_at || p.created_at) })}
                   </p>
                 </div>
               </div>
