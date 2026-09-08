@@ -22,6 +22,20 @@ export {
   DEFAULT_APP_PATH,
 }
 
+/** Public picker: teacher, organization, company/HR, participant. Parent/other stay valid for existing accounts. */
+export const PRIMARY_PERSONA_ORDER = Object.freeze([
+  PERSONAS.TEACHER,
+  PERSONAS.EDUCATION_CENTER,
+  PERSONAS.HR_COMPANY,
+  PERSONAS.STUDENT,
+])
+
+export function pickerPersonaIds(current) {
+  const ids = [...PRIMARY_PERSONA_ORDER]
+  if (current && isPersonaId(current) && !ids.includes(current)) ids.push(current)
+  return ids
+}
+
 export const PERSONA_UI = Object.freeze({
   [PERSONAS.TEACHER]: {
     icon: 'instructors',

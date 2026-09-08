@@ -10,7 +10,7 @@ import { useToast } from '../../components/common/Toast'
 import { postAuthNavigate } from '../../lib/postAuth'
 import { isInviteResumePath, peekReturnAfterLogin } from '../../lib/inviteReturn'
 import {
-  PERSONA_ORDER,
+  PRIMARY_PERSONA_ORDER,
   PERSONA_UI,
   PERSONAS,
   userNeedsOnboarding,
@@ -405,7 +405,7 @@ export default function PersonaOnboarding() {
               </div>
 
               <div className="mt-7 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {PERSONA_ORDER.map((id) => {
+                {PRIMARY_PERSONA_ORDER.map((id) => {
                   const meta = PERSONA_UI[id]
                   const selected = picked === id
                   return (

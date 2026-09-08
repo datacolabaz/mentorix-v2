@@ -45,7 +45,7 @@ export default function PublicSeoLanding() {
     if (!landing) return
     const description =
       landing.showPricingPlans && plans.length
-        ? `Mentorix qiymətləri: ${planTitlesLabel}. Fərdi müəllim, təhsil mərkəzi və korporativ paketlər.`
+        ? `Mentorix qiymətləri: ${planTitlesLabel}. Müəllim / təlimçi, təşkilat və korporativ paketlər.`
         : landing.description
     setPageSeo({
       title: landing.title,

@@ -228,16 +228,16 @@
     },
     "personas": {
       "teacher": {
-        "title": "Teacher / Tutor",
-        "desc": "Teach, create tests and exams, and manage students."
+        "title": "Teacher / Trainer",
+        "desc": "Create tests and exams, and manage participants and results."
       },
       "education_center": {
-        "title": "Education center / Course manager",
-        "desc": "Manage groups, teachers, students, and exams in one place."
+        "title": "Organization",
+        "desc": "Run assessment across teams and groups from one place."
       },
       "student": {
-        "title": "Student",
-        "desc": "Join tests and exams and track my results."
+        "title": "Participant",
+        "desc": "Join exams and follow your results."
       },
       "parent": {
         "title": "Parent",
@@ -245,7 +245,7 @@
       },
       "hr_company": {
         "title": "Company / HR",
-        "desc": "Hiring, candidate assessment, employee knowledge checks, and corporate exams."
+        "desc": "Assess candidates and employees."
       },
       "other": {
         "title": "Other",
@@ -257,11 +257,11 @@
       "subject": "Subject / focus",
       "subjectPlaceholder": "e.g. Math, SAT, English",
       "teachingFormat": "Teaching format",
-      "studentCount": "Approximate student count",
-      "centerName": "Center name",
-      "centerNamePlaceholder": "Your education center name",
-      "teacherCount": "Approximate teacher count",
-      "centerStudentCount": "Approximate student count",
+      "studentCount": "Approximate participant count",
+      "centerName": "Organization name",
+      "centerNamePlaceholder": "Your organization name",
+      "teacherCount": "Approximate trainer count",
+      "centerStudentCount": "Approximate participant count",
       "centerExamPurpose": "How you will use exams and tests",
       "centerExamPurposePlaceholder": "e.g. internal exams, admissions, certification",
       "educationLevel": "Education level",
@@ -338,14 +338,14 @@
     "teacher": {
       "createExam": "Create exam",
       "tests": "Tests",
-      "students": "Students",
+      "students": "Participants",
       "groups": "Groups",
       "results": "Results"
     },
     "education_center": {
-      "teachers": "Teachers",
+      "teachers": "Trainers",
       "groups": "Groups",
-      "students": "Students",
+      "students": "Participants",
       "exams": "Exams",
       "reports": "Reports"
     },
@@ -952,7 +952,7 @@
     },
     "seo": {
       "title": "Mentorix — online exams and assessment",
-      "description": "Create tests, run exams, and follow results from one platform. For teachers, education centers, HR teams, and students. Start free.",
+      "description": "Create tests, run exams, and follow results from one platform. For teachers, organizations, HR teams, and participants. Start free.",
       "keywords": "online exams, assessment, question bank, teacher platform, HR testing, Mentorix"
     },
     "certificate": {
@@ -985,7 +985,7 @@
         {
           "step": "02",
           "title": "Choose how you’ll use it",
-          "body": "Start as a teacher, education center, HR team, or student."
+          "body": "Start as a teacher, organization, HR team, or participant."
         },
         {
           "step": "03",
@@ -1028,7 +1028,7 @@
           "accent": "from-rose-500/15"
         },
         {
-          "title": "Students and groups",
+          "title": "Participants and groups",
           "body": "Groups, invite links, and participant lists live on one dashboard.",
           "accent": "from-cyan-500/15"
         },
@@ -1044,24 +1044,23 @@
       "items": [
         {
           "emoji": "👨‍🏫",
-          "title": "Teachers and tutors",
-          "body": "Exams, results, and student management for one-to-one or group lessons."
-        },
-        {
-          "emoji": "🏫",
-          "title": "Education centers",
-          "body": "Run several teachers and groups to the same standard."
+          "title": "Teacher / Trainer",
+          "body": "Create lessons, tests, and exams, and manage participants and results."
         },
         {
           "emoji": "🏢",
-          "title": "Companies / HR",
-          "body": "Candidate and team assessment — not only an education tool.",
-          "highlight": true
+          "title": "Organization",
+          "body": "Run teams, participants, and assessment from one platform."
         },
         {
-          "emoji": "👨‍🎓",
-          "title": "Students",
-          "body": "Join exams and see your results — the student workspace is free."
+          "emoji": "💼",
+          "title": "Company / HR",
+          "body": "Hiring, employee assessment, and corporate tests."
+        },
+        {
+          "emoji": "👤",
+          "title": "Participant",
+          "body": "Join exams, complete tests, and follow your results."
         }
       ]
     },
@@ -1074,7 +1073,7 @@
         },
         {
           "q": "Who is it for?",
-          "a": "Teachers and tutors, education centers, company/HR teams, and students. The student workspace opens by invitation and stays free."
+          "a": "Teachers and trainers, organizations, company/HR teams, and participants. The participant workspace opens by invitation and stays free."
         },
         {
           "q": "How do I start?",
@@ -1082,15 +1081,15 @@
         },
         {
           "q": "Where are the prices?",
-          "a": "Packages and limits live on the Pricing page: individual teacher, education center, and corporate."
+          "a": "Packages and limits live on the Pricing page: teacher / trainer, organization, and corporate."
         },
         {
           "q": "Can HR and companies use it?",
           "a": "Yes. Candidate and team assessment run on the same platform. For corporate needs, get in touch."
         },
         {
-          "q": "How do students join?",
-          "a": "A teacher or center invites them with a link or QR. The student workspace is free."
+          "q": "How do participants join?",
+          "a": "A teacher, organization, or HR team invites them with a link or QR. The participant workspace is free."
         }
       ]
     },
@@ -1181,12 +1180,12 @@
       "backHome": "Back to homepage",
       "groups": {
         "teacher": {
-          "title": "Individual teacher",
-          "intro": "For tutors and solo teachers — from the trial to everyday work."
+          "title": "Teacher / Trainer",
+          "intro": "For solo teachers and trainers — from the trial to everyday work."
         },
         "center": {
-          "title": "Education center",
-          "intro": "For running several groups and teachers on one platform."
+          "title": "Organization",
+          "intro": "For running teams and groups on one platform."
         },
         "corporate": {
           "title": "Corporate",

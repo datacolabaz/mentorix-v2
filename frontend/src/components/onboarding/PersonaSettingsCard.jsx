@@ -9,8 +9,8 @@ import useAuthStore from '../../hooks/useAuth'
 import api from '../../lib/api'
 import { dashboardPathForUser, consumeReturnAfterLogin, isInviteResumePath, peekReturnAfterLogin } from '../../lib/postAuth'
 import {
-  PERSONA_ORDER,
   PERSONA_UI,
+  pickerPersonaIds,
   resolveUserPersona,
 } from '../../constants/personas'
 
@@ -76,7 +76,7 @@ export default function PersonaSettingsCard({ className = '' }) {
         <p className="text-xs text-token-textMuted mt-1">{t('personaSettings.keepNote')}</p>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-        {PERSONA_ORDER.map((id) => {
+        {pickerPersonaIds(current).map((id) => {
           const meta = PERSONA_UI[id]
           const selected = picked === id
           return (

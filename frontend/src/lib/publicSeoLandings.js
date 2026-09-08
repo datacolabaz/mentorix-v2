@@ -160,10 +160,10 @@ export const PUBLIC_SEO_LANDINGS = [
     path: '/qiymetler',
     title: 'Qiymətlər — Mentorix paketləri',
     description:
-      `Mentorix qiymətləri: ${PLAN_TITLES_SEO_FALLBACK}. Fərdi müəllim, təhsil mərkəzi və korporativ paketlər — tələbə limiti, SMS və xəritədə görünmə.`,
+      `Mentorix qiymətləri: ${PLAN_TITLES_SEO_FALLBACK}. Müəllim / təlimçi, təşkilat və korporativ paketlər — iştirakçı limiti, SMS və xəritədə görünmə.`,
     h1: 'Qiymətlər',
     intro: [
-      'Paketlər auditoriyaya görə qruplaşdırılıb: fərdi müəllim, təhsil mərkəzi və korporativ. Tələbə və valideyn hesabları pulsuzdur.',
+      'Paketlər auditoriyaya görə qruplaşdırılıb: müəllim / təlimçi, təşkilat və korporativ. İştirakçı hesabları pulsuzdur.',
       MENTORIX_SEO_DESCRIPTION,
     ],
     bullets: [],

@@ -228,16 +228,16 @@
     },
     "personas": {
       "teacher": {
-        "title": "Müəllim / Repetitor",
-        "desc": "Dərs keçmək, test və imtahanlar hazırlamaq və tələbələri idarə etmək üçün."
+        "title": "Müəllim / Təlimçi",
+        "desc": "Testlər və imtahanlar yaradın, iştirakçıları və nəticələri idarə edin."
       },
       "education_center": {
-        "title": "Təhsil mərkəzi / Kurs rəhbəri",
-        "desc": "Qrupları, müəllimləri, tələbələri və imtahanları mərkəzləşdirilmiş şəkildə idarə etmək üçün."
+        "title": "Təşkilat",
+        "desc": "Qiymətləndirmə proseslərini komanda və qruplar üzrə idarə edin."
       },
       "student": {
-        "title": "Tələbə",
-        "desc": "Testlərə və imtahanlara qoşulmaq və nəticələrimi izləmək üçün."
+        "title": "İştirakçı",
+        "desc": "İmtahanlara qoşulun və nəticələrinizi izləyin."
       },
       "parent": {
         "title": "Valideyn",
@@ -245,7 +245,7 @@
       },
       "hr_company": {
         "title": "Şirkət / HR",
-        "desc": "İşə qəbul, namizəd qiymətləndirməsi, əməkdaşların bilik yoxlaması və korporativ imtahanlar üçün."
+        "desc": "Namizədləri və əməkdaşları qiymətləndirin."
       },
       "other": {
         "title": "Digər",
@@ -257,11 +257,11 @@
       "subject": "Fənn / istiqamət",
       "subjectPlaceholder": "Məsələn: Riyaziyyat, SAT, İngilis dili",
       "teachingFormat": "Tədris formatı",
-      "studentCount": "Təxmini tələbə sayı",
-      "centerName": "Mərkəzin adı",
-      "centerNamePlaceholder": "Təhsil mərkəzinizin adı",
-      "teacherCount": "Təxmini müəllim sayı",
-      "centerStudentCount": "Təxmini tələbə sayı",
+      "studentCount": "Təxmini iştirakçı sayı",
+      "centerName": "Təşkilatın adı",
+      "centerNamePlaceholder": "Təşkilatınızın adı",
+      "teacherCount": "Təxmini təlimçi sayı",
+      "centerStudentCount": "Təxmini iştirakçı sayı",
       "centerExamPurpose": "İmtahan və test istifadəsi məqsədi",
       "centerExamPurposePlaceholder": "Məsələn: daxili imtahanlar, qəbul, sertifikasiya",
       "educationLevel": "Təhsil səviyyəsi",
@@ -338,14 +338,14 @@
     "teacher": {
       "createExam": "İmtahan yarat",
       "tests": "Testlər",
-      "students": "Tələbələr",
+      "students": "İştirakçılar",
       "groups": "Qruplar",
       "results": "Nəticələr"
     },
     "education_center": {
-      "teachers": "Müəllimlər",
+      "teachers": "Təlimçilər",
       "groups": "Qruplar",
-      "students": "Tələbələr",
+      "students": "İştirakçılar",
       "exams": "İmtahanlar",
       "reports": "Hesabatlar"
     },
@@ -952,7 +952,7 @@
     },
     "seo": {
       "title": "Mentorix — onlayn imtahan və qiymətləndirmə",
-      "description": "Testlərinizi yaradın, imtahanları idarə edin və nəticələri bir platformadan izləyin. Müəllim, təhsil mərkəzi, HR və tələbələr üçün. Pulsuz başlayın.",
+      "description": "Testlərinizi yaradın, imtahanları idarə edin və nəticələri bir platformadan izləyin. Müəllim, təşkilat, HR və iştirakçılar üçün. Pulsuz başlayın.",
       "keywords": "onlayn imtahan, qiymətləndirmə, test bankı, müəllim platforması, HR imtahan, Mentorix"
     },
     "certificate": {
@@ -985,7 +985,7 @@
         {
           "step": "02",
           "title": "İstifadə məqsədini seç",
-          "body": "Müəllim, təhsil mərkəzi, HR və ya tələbə kimi başlayın."
+          "body": "Müəllim, təşkilat, HR və ya iştirakçı kimi başlayın."
         },
         {
           "step": "03",
@@ -1028,7 +1028,7 @@
           "accent": "from-rose-500/15"
         },
         {
-          "title": "Tələbə və qrupların idarə edilməsi",
+          "title": "İştirakçı və qrupların idarə edilməsi",
           "body": "Qruplar, dəvət linki və iştirakçı siyahısı bir paneldədir.",
           "accent": "from-cyan-500/15"
         },
@@ -1044,24 +1044,23 @@
       "items": [
         {
           "emoji": "👨‍🏫",
-          "title": "Müəllim və repetitor",
-          "body": "Fərdi və qrup dərsləri üçün imtahan, nəticə və tələbə idarəetməsi."
-        },
-        {
-          "emoji": "🏫",
-          "title": "Təhsil mərkəzi",
-          "body": "Bir neçə müəllim və qrupu eyni standartla idarə edin."
+          "title": "Müəllim / Təlimçi",
+          "body": "Dərs, test və imtahanlarınızı yaradın, iştirakçıları və nəticələri idarə edin."
         },
         {
           "emoji": "🏢",
-          "title": "Şirkət / HR",
-          "body": "Namizəd və komanda qiymətləndirməsi — yalnız təhsil aləti deyil.",
-          "highlight": true
+          "title": "Təşkilat",
+          "body": "Komandaları, iştirakçıları və qiymətləndirmə proseslərini vahid platformadan idarə edin."
         },
         {
-          "emoji": "👨‍🎓",
-          "title": "Tələbə",
-          "body": "İmtahana qoşulun, nəticələrinizi görün — kabinet pulsuzdur."
+          "emoji": "💼",
+          "title": "Şirkət / HR",
+          "body": "Namizəd seçimi, əməkdaş qiymətləndirməsi və korporativ testlər üçün."
+        },
+        {
+          "emoji": "👤",
+          "title": "İştirakçı",
+          "body": "İmtahanlara qoşulun, testləri tamamlayın və nəticələrinizi izləyin."
         }
       ]
     },
@@ -1074,7 +1073,7 @@
         },
         {
           "q": "Kimlər üçündür?",
-          "a": "Müəllim və repetitorlar, təhsil mərkəzləri, şirkət/HR komandaları və tələbələr. Tələbə kabineti dəvət ilə açılır və pulsuzdur."
+          "a": "Müəllim və təlimçilər, təşkilatlar, şirkət/HR komandaları və iştirakçılar. İştirakçı kabineti dəvət ilə açılır və pulsuzdur."
         },
         {
           "q": "Necə başlaya bilərəm?",
@@ -1082,15 +1081,15 @@
         },
         {
           "q": "Qiymətlər haradadır?",
-          "a": "Paketlər və limitlər Qiymətlər səhifəsindədir: fərdi müəllim, təhsil mərkəzi və korporativ."
+          "a": "Paketlər və limitlər Qiymətlər səhifəsindədir: müəllim / təlimçi, təşkilat və korporativ."
         },
         {
           "q": "HR və şirkətlər də istifadə edə bilər?",
           "a": "Bəli. Namizəd və komanda qiymətləndirməsi eyni platformadadır. Korporativ ehtiyac üçün əlaqə saxlayın."
         },
         {
-          "q": "Tələbələr necə qoşulur?",
-          "a": "Müəllim və ya mərkəz dəvət linki və ya QR ilə qoşur. Tələbə kabineti pulsuzdur."
+          "q": "İştirakçılar necə qoşulur?",
+          "a": "Müəllim, təşkilat və ya HR dəvət linki və ya QR ilə qoşur. İştirakçı kabineti pulsuzdur."
         }
       ]
     },
@@ -1181,12 +1180,12 @@
       "backHome": "Ana səhifəyə qayıt",
       "groups": {
         "teacher": {
-          "title": "Fərdi müəllim",
-          "intro": "Tək müəllim və repetitorlar üçün — sınaqdan gündəlik işə."
+          "title": "Müəllim / Təlimçi",
+          "intro": "Tək müəllim və təlimçilər üçün — sınaqdan gündəlik işə."
         },
         "center": {
-          "title": "Təhsil mərkəzi",
-          "intro": "Bir neçə qrup və müəllimi eyni platformada idarə etmək üçün."
+          "title": "Təşkilat",
+          "intro": "Komanda və qrupları eyni platformada idarə etmək üçün."
         },
         "corporate": {
           "title": "Korporativ",
