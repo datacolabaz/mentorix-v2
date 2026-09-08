@@ -5,6 +5,7 @@ import api from '../../lib/api'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
 import PublicPageTopBar from '../../components/public/PublicPageTopBar'
+import { formatNamedDate } from '../../lib/azMonths'
 
 function statusBadge(cert, t) {
   if (cert?.valid) {
@@ -37,7 +38,7 @@ function statusBadge(cert, t) {
 
 export default function CertificateVerify() {
   const { token } = useParams()
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const [loading, setLoading] = useState(true)
   const [cert, setCert] = useState(null)
   const [error, setError] = useState('')
@@ -132,10 +133,9 @@ export default function CertificateVerify() {
                   <p className="text-gray-500 text-xs">{t('certificates.verify.date', 'Tarix')}</p>
                   <p className="font-semibold text-gray-900">
                     {cert.issued_at
-                      ? new Date(cert.issued_at).toLocaleDateString('az-AZ', {
-                          day: '2-digit',
+                      ? formatNamedDate(cert.issued_at, i18n.language, {
                           month: 'long',
-                          year: 'numeric',
+                          padDay: true,
                         })
                       : '—'}
                   </p>

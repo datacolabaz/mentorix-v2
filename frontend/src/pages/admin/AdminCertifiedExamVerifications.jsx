@@ -3,6 +3,7 @@ import api from '../../lib/api'
 import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
 import { useToast } from '../../components/common/Toast'
+import { formatNamedDate } from '../../lib/azMonths'
 
 function categoryLabel(exam) {
   if (exam.parent_category_name && exam.category_name) {
@@ -13,26 +14,14 @@ function categoryLabel(exam) {
 
 function formatWhen(iso) {
   if (!iso) return '—'
-  try {
-    return new Date(iso).toLocaleString('az-AZ', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
-  } catch {
-    return '—'
-  }
+  return (
+    formatNamedDate(iso, 'az', { month: 'short', padDay: true, time: true }) || '—'
+  )
 }
 
 function formatCreated(iso) {
   if (!iso) return '—'
-  try {
-    return new Date(iso).toLocaleDateString('az-AZ', { day: '2-digit', month: 'long', year: 'numeric' })
-  } catch {
-    return '—'
-  }
+  return formatNamedDate(iso, 'az', { month: 'long', padDay: true }) || '—'
 }
 
 function optionLabel(options, key) {

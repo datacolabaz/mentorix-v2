@@ -1,5 +1,6 @@
 import i18n from '../i18n'
 import { intlLocale } from './uiLocale'
+import { monthLong } from './azMonths'
 
 export const SMS_STATUS_UI = {
   sent: { icon: '✓', badge: 'paid' },
@@ -49,10 +50,6 @@ function startOfDay(d) {
   return x
 }
 
-function monthName(monthIndex) {
-  return i18n.t(`notifications.months.${monthIndex}`, { defaultValue: '' })
-}
-
 export function formatSmsDateTime(iso, now = new Date()) {
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return '—'
@@ -64,7 +61,7 @@ export function formatSmsDateTime(iso, now = new Date()) {
   if (diffDays === 0) return i18n.t('notifications.dateToday', { time })
   if (diffDays === 1) return i18n.t('notifications.dateYesterday', { time })
   const day = d.getDate()
-  const month = monthName(d.getMonth())
+  const month = monthLong(d.getMonth(), i18n.language)
   const year = d.getFullYear()
   return `${day} ${month} ${year} • ${time}`
 }
@@ -74,7 +71,7 @@ export function formatSmsDateTimeLong(iso) {
   if (Number.isNaN(d.getTime())) return '—'
   const locale = intlLocale(i18n.language)
   const day = d.getDate()
-  const month = monthName(d.getMonth())
+  const month = monthLong(d.getMonth(), i18n.language)
   const year = d.getFullYear()
   const time = d.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })
   return `${day} ${month} ${year}, ${time}`
@@ -112,7 +109,7 @@ export function countSmsByStatus(rows, status) {
 }
 
 export function currentMonthLabelAz(now = new Date()) {
-  return monthName(now.getMonth())
+  return monthLong(now.getMonth(), i18n.language)
 }
 
 export function exportSmsHistoryCsv(rows, filename = 'sms-tarixcesi.csv') {

@@ -6,7 +6,7 @@ import Button from '../../components/common/Button'
 import { useToast } from '../../components/common/Toast'
 import { useBillingStatus } from '../../hooks/useBillingStatus'
 import { planRank } from '../../lib/subscriptionPlanGuards'
-import { intlLocale } from '../../lib/uiLocale'
+import { formatNamedDate } from '../../lib/azMonths'
 
 const TEMPLATE_KEYS = [
   { id: 'classic', label: 'Classic' },
@@ -207,7 +207,7 @@ export default function InstructorCertificates() {
                     <td className="py-2 pr-3">{c.student_name}</td>
                     <td className="py-2 pr-3">{c.title}</td>
                     <td className="py-2 pr-3">{Number(c.score_pct || 0).toFixed(0)}%</td>
-                    <td className="py-2">{c.issued_at ? new Date(c.issued_at).toLocaleDateString(intlLocale(i18n.language)) : '—'}</td>
+                    <td className="py-2">{c.issued_at ? formatNamedDate(c.issued_at, i18n.language, { month: 'short', padDay: true }) : '—'}</td>
                   </tr>
                 ))}
               </tbody>

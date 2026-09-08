@@ -6,6 +6,7 @@ import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
 import { useToast } from '../../components/common/Toast'
 import UserSkillProgressPanel from '../../components/student/UserSkillProgressPanel'
+import { formatNamedDate } from '../../lib/azMonths'
 
 function linkedInShareUrl({ courseTitle, verifyUrl, certNo }) {
   const params = new URLSearchParams({
@@ -209,10 +210,9 @@ export default function StudentCertificates() {
                           </span>
                           {' · '}
                           {c.issued_at
-                            ? new Date(c.issued_at).toLocaleDateString('az-AZ', {
-                                day: '2-digit',
+                            ? formatNamedDate(c.issued_at, 'az', {
                                 month: 'short',
-                                year: 'numeric',
+                                padDay: true,
                               })
                             : ''}
                         </p>

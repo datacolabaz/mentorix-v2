@@ -1,17 +1,4 @@
-const AZ_MONTHS = [
-  'yanvar',
-  'fevral',
-  'mart',
-  'aprel',
-  'may',
-  'iyun',
-  'iyul',
-  'avqust',
-  'sentyabr',
-  'oktyabr',
-  'noyabr',
-  'dekabr',
-]
+import { monthLong } from './azMonths'
 
 function startOfDay(d) {
   const x = new Date(d)
@@ -51,7 +38,7 @@ export function formatChatDateSeparator(iso, now = new Date()) {
   if (diffDays === 0) return 'Bu gün'
   if (diffDays === 1) return 'Dünən'
   const date = new Date(iso)
-  return `${date.getDate()} ${AZ_MONTHS[date.getMonth()]}`
+  return `${date.getDate()} ${monthLong(date.getMonth(), 'az', { lower: true })}`
 }
 
 export function dayKey(iso) {

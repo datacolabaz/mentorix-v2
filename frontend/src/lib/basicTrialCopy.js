@@ -3,6 +3,7 @@ import {
   isBasicTrialActive,
   isBasicTrialExpired,
 } from './subscriptionPlanGuards'
+import { formatNamedDate } from './azMonths'
 
 /** SADƏ pulsuz sınaq üçün geri sayım mətni (null = göstərmə). */
 export function basicTrialCountdownText(billing, t) {
@@ -37,11 +38,5 @@ export function basicTrialEndDateLabel(billing, locale = 'az') {
   if (!end) return null
   const d = new Date(end)
   if (Number.isNaN(d.getTime())) return null
-  const loc = locale === 'ru' ? 'ru-RU' : locale === 'en' ? 'en-GB' : 'az-AZ'
-  return d.toLocaleDateString(loc, {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-    timeZone: 'Asia/Baku',
-  })
+  return formatNamedDate(d, locale, { month: 'long' }) || null
 }

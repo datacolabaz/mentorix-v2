@@ -18,6 +18,7 @@ import {
 } from 'recharts'
 import api from '../../lib/api'
 import Card from '../../components/common/Card'
+import { MONTHS_SHORT } from '../../lib/azMonths'
 
 const PERIODS = [
   { id: 'today', label: 'Bu gün' },
@@ -51,7 +52,7 @@ function fmtMoney(n) {
   return `₼${new Intl.NumberFormat('az-Latn-AZ', { maximumFractionDigits: 0 }).format(Number(n))}`
 }
 
-const AZ_MONTHS_SHORT = ['yan', 'fev', 'mar', 'apr', 'may', 'iyn', 'iyl', 'avq', 'sen', 'okt', 'noy', 'dek']
+const AZ_MONTHS_SHORT = MONTHS_SHORT.az
 
 function parseYmd(ymd) {
   if (!ymd) return null

@@ -53,14 +53,69 @@ export function getCertificateLabels(locale) {
   };
 }
 
+const CERT_MONTHS_LONG = {
+  az: [
+    'yanvar',
+    'fevral',
+    'mart',
+    'aprel',
+    'may',
+    'iyun',
+    'iyul',
+    'avqust',
+    'sentyabr',
+    'oktyabr',
+    'noyabr',
+    'dekabr',
+  ],
+  en: [
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
+  ],
+  ru: [
+    'января',
+    'февраля',
+    'марта',
+    'апреля',
+    'мая',
+    'июня',
+    'июля',
+    'августа',
+    'сентября',
+    'октября',
+    'ноября',
+    'декабря',
+  ],
+};
+
 export function formatCertificateDate(iso, locale = 'az') {
-  const loc = locale === 'ru' ? 'ru-RU' : locale === 'en' ? 'en-GB' : 'az-AZ';
+  const lang = locale === 'ru' ? 'ru' : locale === 'en' ? 'en' : 'az';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return String(iso || '').slice(0, 10);
   try {
-    return new Date(iso).toLocaleDateString(loc, {
+    const parts = new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Asia/Baku',
       day: '2-digit',
-      month: 'long',
+      month: 'numeric',
       year: 'numeric',
-    });
+    }).formatToParts(d);
+    const get = (t) => parts.find((p) => p.type === t)?.value;
+    const monthIdx = Number(get('month')) - 1;
+    const day = get('day');
+    const year = get('year');
+    const month = CERT_MONTHS_LONG[lang][monthIdx];
+    if (!day || !year || !month) return String(iso || '').slice(0, 10);
+    return `${day} ${month} ${year}`;
   } catch {
     return String(iso || '').slice(0, 10);
   }

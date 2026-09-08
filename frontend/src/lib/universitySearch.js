@@ -12,6 +12,8 @@
  * @property {number | ''} durationYears
  */
 
+import { MONTHS_SHORT } from './azMonths'
+
 export { FIELD_GROUPS, fieldSearchTerms } from './universityFieldCatalog'
 export { localizedFieldLabel as fieldLabel } from './universityFieldI18n'
 export {
@@ -231,9 +233,9 @@ export function formatTuition(fee) {
 export function formatDeadline(dateStr) {
   if (!dateStr) return '—'
   const raw = String(dateStr).trim()
+  const months = MONTHS_SHORT.az
   const iso = raw.match(/^(\d{4})-(\d{2})-(\d{2})/)
   if (iso) {
-    const months = ['yan', 'fev', 'mar', 'apr', 'may', 'iyn', 'iyul', 'avq', 'sen', 'okt', 'noy', 'dek']
     const year = iso[1]
     const month = months[Number(iso[2]) - 1] || iso[2]
     const day = Number(iso[3])
@@ -242,7 +244,6 @@ export function formatDeadline(dateStr) {
   try {
     const d = new Date(raw)
     if (Number.isNaN(d.getTime())) return raw
-    const months = ['yan', 'fev', 'mar', 'apr', 'may', 'iyn', 'iyul', 'avq', 'sen', 'okt', 'noy', 'dek']
     return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`
   } catch {
     return raw

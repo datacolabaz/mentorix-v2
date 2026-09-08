@@ -4,6 +4,7 @@ import { formatDistanceToNow } from 'date-fns'
 import { az } from 'date-fns/locale'
 import api from '../../lib/api'
 import Card from '../../components/common/Card'
+import { formatNamedDate } from '../../lib/azMonths'
 
 const ROLE_LABELS = {
   instructor: 'müəllim',
@@ -112,12 +113,7 @@ export default function AdminDashboard() {
         <div>
           <h1 className="font-display font-bold text-2xl text-token-headingPrimary">CEO Dashboard</h1>
           <p className="text-sm text-gray-500 mt-1">
-            {new Date().toLocaleDateString('az-AZ', {
-              weekday: 'long',
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric',
-            })}
+            {formatNamedDate(new Date(), 'az', { month: 'long', weekday: true })}
           </p>
           <p className="text-xs text-gray-600 mt-1">Biznesin nəbzi — trafik analitikası ayrıca bölmədədir</p>
         </div>

@@ -17,6 +17,7 @@ import MarketplaceOpportunityCard from '../../components/instructor/MarketplaceO
 import BasicTrialCountdownBanner from '../../components/instructor/BasicTrialCountdownBanner'
 import PresenceDot from '../../components/common/PresenceDot'
 import { moneyLocale as moneyLocaleTag } from '../../lib/uiLocale'
+import { formatYmMonthShort } from '../../lib/azMonths'
 import PersonaHomeLinks from '../../components/onboarding/PersonaHomeLinks'
 
 const DEFAULT_DASH = {
@@ -297,11 +298,7 @@ export default function InstructorDashboard() {
   })()
 
   const incomeMonthChart = incomeMonths.map((row) => {
-    const [y, m] = String(row.ym).split('-').map(Number)
-    const d = Number.isFinite(y) && Number.isFinite(m) ? new Date(y, m - 1, 1) : null
-    const label = d
-      ? d.toLocaleDateString(moneyLocale, { month: 'short' }).replace('.', '')
-      : row.ym
+    const label = formatYmMonthShort(row.ym, i18n.language) || row.ym
     return { ...row, label, amount: Math.round(row.amount) }
   })
 
