@@ -37,7 +37,7 @@ const NAV_GROUP_DEFS = [
       { to: '/student/certificates', key: 'certificates', labelKey: 'nav.student.certificates', label: 'Sertifikatlarım', icon: 'exams' },
       { to: '/student/assignments', key: 'assignments', labelKey: 'nav.student.assignments', label: 'Tapşırıqlarım', icon: 'tasks', badgeKey: 'tasks' },
       { to: '/student/materials', key: 'materials', labelKey: 'nav.student.materials', label: 'Materiallar', icon: 'materials' },
-      { to: '/universities', key: 'universities', labelKey: 'nav.student.universities', label: 'Universitetlər', icon: 'courses' },
+      { to: '/student/universities', key: 'universities', labelKey: 'nav.student.universities', label: 'Universitetlər', icon: 'courses' },
     ],
   },
   {

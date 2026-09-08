@@ -366,6 +366,7 @@ export default function App() {
         <Route path="certificates" element={<StudentCertificates />} />
         <Route path="assignments" element={<StudentTasks />} />
         <Route path="materials" element={<StudentMaterials />} />
+        <Route path="universities" element={<UniversityProgramSearch embedded />} />
         <Route path="tasks" element={<Navigate to="/student/assignments" replace />} />
         <Route path="payments" element={<StudentPayments />} />
         {/* backward-compatible alias */}

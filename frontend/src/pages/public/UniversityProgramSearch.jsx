@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, Navigate, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import api from '../../lib/api'
 import Button from '../../components/common/Button'
@@ -109,10 +109,9 @@ function translateCoverageMessage(t, meta) {
   return null
 }
 
-export default function UniversityProgramSearch() {
+export default function UniversityProgramSearch({ embedded = false }) {
   const { t } = useTranslation()
   const toast = useToast()
-  const navigate = useNavigate()
   const { user } = useAuthStore()
   const [searchParams, setSearchParams] = useSearchParams()
 
@@ -314,29 +313,13 @@ export default function UniversityProgramSearch() {
   const showCountryBreakdown = filters.countries.length > 0 && !loading
   const useGroupedResults = countryResultsMeta.groups.length > 1
 
-  return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white flex flex-col">
-      <PublicPageTopBar
-        backTo="/"
-        title={t('universitySearch.page.title')}
-        subtitle={t('universitySearch.page.subtitle')}
-      >
-        {view === 'results' ? (
-          <Button type="button" variant="secondary" className="text-xs" onClick={() => syncUrl('wizard', filters)}>
-            {t('universitySearch.actions.newSearch')}
-          </Button>
-        ) : null}
-        {!user ? (
-          <Link
-            to="/login"
-            className="inline-flex items-center justify-center min-h-[40px] px-3 text-sm font-semibold text-gray-300 hover:text-white rounded-lg hover:bg-white/5 transition-colors"
-          >
-            {t('universitySearch.actions.login')}
-          </Link>
-        ) : null}
-      </PublicPageTopBar>
+  if (!embedded && String(user?.role || '').toLowerCase() === 'student') {
+    const q = searchParams.toString()
+    return <Navigate to={`/student/universities${q ? `?${q}` : ''}`} replace />
+  }
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10 space-y-8 w-full flex-1">
+  const searchBody = (
+        <>
         {view === 'wizard' ? (
           <div className="space-y-2 text-center max-w-2xl mx-auto">
             <p className="text-xs font-semibold uppercase tracking-widest text-primary">
@@ -467,7 +450,7 @@ export default function UniversityProgramSearch() {
                     type="button"
                     variant={displaySuggestDegree ? 'ghost' : 'primary'}
                     className={displaySuggestDegree ? 'mt-3' : 'mt-4'}
-                    onClick={() => navigate('/universities?view=wizard')}
+                    onClick={() => syncUrl('wizard', filters)}
                   >
                     {t('universitySearch.actions.changeFilters')}
                   </Button>
@@ -476,8 +459,10 @@ export default function UniversityProgramSearch() {
             </section>
           </div>
         )}
-      </main>
+        </>
+  )
 
+  const detailModal = (
       <ProgramDetailModal
         program={selectedProgram}
         open={Boolean(selectedProgram)}
@@ -487,6 +472,57 @@ export default function UniversityProgramSearch() {
           setSelectedProgram(null)
         }}
       />
+  )
+
+  if (embedded) {
+    return (
+      <div className="p-4 sm:p-6 space-y-6 min-w-0 w-full max-w-full">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="font-display font-bold text-xl sm:text-2xl text-token-textMain tracking-tight">
+              {t('universitySearch.page.title')}
+            </h1>
+            <p className="text-sm text-token-textMuted mt-1">{t('universitySearch.page.subtitle')}</p>
+          </div>
+          {view === 'results' ? (
+            <Button type="button" variant="secondary" className="text-xs" onClick={() => syncUrl('wizard', filters)}>
+              {t('universitySearch.actions.newSearch')}
+            </Button>
+          ) : null}
+        </div>
+        {searchBody}
+        {detailModal}
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-[#0a0a0a] text-white flex flex-col">
+      <PublicPageTopBar
+        backTo="/"
+        title={t('universitySearch.page.title')}
+        subtitle={t('universitySearch.page.subtitle')}
+      >
+        {view === 'results' ? (
+          <Button type="button" variant="secondary" className="text-xs" onClick={() => syncUrl('wizard', filters)}>
+            {t('universitySearch.actions.newSearch')}
+          </Button>
+        ) : null}
+        {!user ? (
+          <Link
+            to="/login"
+            className="inline-flex items-center justify-center min-h-[40px] px-3 text-sm font-semibold text-gray-300 hover:text-white rounded-lg hover:bg-white/5 transition-colors"
+          >
+            {t('universitySearch.actions.login')}
+          </Link>
+        ) : null}
+      </PublicPageTopBar>
+
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10 space-y-8 w-full flex-1">
+        {searchBody}
+      </main>
+
+      {detailModal}
     </div>
   )
 }
