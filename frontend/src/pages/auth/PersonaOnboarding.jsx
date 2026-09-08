@@ -8,6 +8,7 @@ import Brand from '../../components/common/Brand'
 import NavIcon from '../../components/common/NavIcon'
 import { useToast } from '../../components/common/Toast'
 import { postAuthNavigate } from '../../lib/postAuth'
+import { isInviteResumePath, peekReturnAfterLogin } from '../../lib/inviteReturn'
 import {
   PERSONA_ORDER,
   PERSONA_UI,
@@ -282,7 +283,8 @@ export default function PersonaOnboarding() {
   const navigate = useNavigate()
   const { user, token, setSession, logout } = useAuthStore()
   const [step, setStep] = useState('pick')
-  const [picked, setPicked] = useState(null)
+  const fromJoinInvite = isInviteResumePath(peekReturnAfterLogin())
+  const [picked, setPicked] = useState(fromJoinInvite ? PERSONAS.STUDENT : null)
   const [profile, setProfile] = useState(emptyProfile)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
@@ -346,6 +348,13 @@ export default function PersonaOnboarding() {
   }
 
   const continueFromPick = async () => {
+    if (fromJoinInvite) {
+      await finishSession({
+        persona: PERSONAS.STUDENT,
+        profile: { education_level: 'other', subject_interest: 'Dərs' },
+      })
+      return
+    }
     if (picked) {
       setStep('details')
       return
@@ -354,6 +363,10 @@ export default function PersonaOnboarding() {
   }
 
   const togglePersona = (id) => {
+    if (fromJoinInvite) {
+      setPicked(PERSONAS.STUDENT)
+      return
+    }
     setPicked((prev) => (prev === id ? null : id))
     setProfile(emptyProfile())
   }
@@ -400,7 +413,13 @@ export default function PersonaOnboarding() {
                       key={id}
                       type="button"
                       aria-pressed={selected}
-                      onClick={() => togglePersona(id)}
+                      onClick={() => {
+                        if (fromJoinInvite && id === PERSONAS.STUDENT) {
+                          void continueFromPick()
+                          return
+                        }
+                        togglePersona(id)
+                      }}
                       className={[
                         'text-left rounded-2xl border p-4 transition-all duration-200 min-h-[112px]',
                         'hover:-translate-y-0.5 hover:border-primary/40 hover:bg-primary/[0.06]',

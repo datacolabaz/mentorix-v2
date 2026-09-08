@@ -9,6 +9,7 @@ import { sidebarNavClass } from '../lib/sidebarNavClass'
 import NavIcon from '../components/common/NavIcon'
 import SidebarPreferences from '../components/common/SidebarPreferences'
 import { StudentGroupProvider, useStudentGroups } from '../contexts/StudentGroupContext'
+import { useStudentAlerts } from '../hooks/useStudentAlerts'
 import { isInviteResumePath, peekReturnAfterLogin } from '../lib/inviteReturn'
 import StudentAssignmentAlertModal from '../components/student/StudentAssignmentAlertModal'
 

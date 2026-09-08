@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect } from 'react'
-import { Routes, Route, Navigate, useLocation, useSearchParams } from 'react-router-dom'
+import { Routes, Route, Navigate, useLocation, useParams, useSearchParams } from 'react-router-dom'
 import useAuthStore from './hooks/useAuth'
 
 import AuthPage from './pages/auth/AuthPage'
@@ -102,6 +102,7 @@ import GroupChatPage from './pages/chat/GroupChatPage'
 import DirectChatPage from './pages/chat/DirectChatPage'
 import AssignmentChatPage from './pages/chat/AssignmentChatPage'
 import { StudentGroupProvider } from './contexts/StudentGroupContext'
+import { parseJoinInviteInput } from './lib/joinInvite'
 import ParentDashboard from './pages/parent/Dashboard'
 import ParentAssignments from './pages/parent/Assignments'
 import AssignmentAnalytics from './pages/instructor/AssignmentAnalytics'
@@ -155,6 +156,14 @@ function OnboardingOrInvite() {
   if (isInviteResumePath(invite)) return <Navigate to={invite} replace />
   if (userNeedsOnboarding(user)) return <PersonaOnboarding />
   return <ResumeAfterAuth />
+}
+
+/** JoinClass render xətası olsa belə dəvət linki yadda qalsın (qeydiyyatdan sonra qayıtmaq üçün). */
+function RememberJoinInvite() {
+  const { code } = useParams()
+  const parsed = parseJoinInviteInput(code || '')
+  if (parsed) rememberReturnAfterLogin(`/join/${encodeURIComponent(parsed)}`)
+  return null
 }
 
 function AuthedRoute({ children }) {
@@ -243,9 +252,12 @@ export default function App() {
       <Route
         path="/join/:code"
         element={
-          <StudentGroupProvider>
-            <StudentJoinClass />
-          </StudentGroupProvider>
+          <>
+            <RememberJoinInvite />
+            <StudentGroupProvider>
+              <StudentJoinClass />
+            </StudentGroupProvider>
+          </>
         }
       />
       <Route path="/exam/:examId" element={<StudentExamInvite />} />
