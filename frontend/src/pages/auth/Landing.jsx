@@ -1,13 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, Link, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import Brand from '../../components/common/Brand'
-import LanguageSwitcher from '../../components/LanguageSwitcher'
 import api from '../../lib/api'
 import { trackEvent, trackRegisterClick, trackPricingView } from '../../lib/analytics'
 import { defaultLoginMarketingPayload } from '../../constants/defaultLoginMarketing'
 import { setPageSeo } from '../../lib/pageSeo'
 import PublicSeoFooter from '../../components/public/PublicSeoFooter'
+import PublicMarketingNav from '../../components/public/PublicMarketingNav'
 import { resolveUiLocale } from '../../lib/uiLocale'
 import LandingDemoActivityChart from '../../components/landing/LandingDemoActivityChart'
 import LandingHeroProductPreview from '../../components/landing/LandingHeroProductPreview'
@@ -37,15 +36,6 @@ function scrollToId(id) {
   el.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
-const LANDING_NAV_LINK =
-  'mx-landing-nav-link text-gray-300 hover:text-white px-2 py-1.5 rounded-lg'
-
-const LANDING_LOGIN_BTN =
-  'shrink-0 whitespace-nowrap rounded-lg bg-primary/15 border border-primary/35 text-primary px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm font-semibold hover:bg-primary/25'
-
-const LANDING_NAV_CTA =
-  'shrink-0 whitespace-nowrap rounded-lg bg-primary px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm font-bold text-[#041018] hover:brightness-95'
-
 function arrayFromT(t, key) {
   const v = t(key, { returnObjects: true })
   return Array.isArray(v) ? v : []
@@ -58,7 +48,6 @@ export default function Landing() {
   const [demoOpen, setDemoOpen] = useState(false)
   const [demoTab, setDemoTab] = useState('overview')
   const [demoPaneBusy, setDemoPaneBusy] = useState(false)
-  const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const [marketing, setMarketing] = useState(() => defaultLoginMarketingPayload())
   const navigate = useNavigate()
   const location = useLocation()
@@ -76,19 +65,13 @@ export default function Landing() {
   }, [t, i18n.language])
 
   useEffect(() => {
-    const mq = window.matchMedia('(min-width: 640px)')
-    const onChange = () => {
-      if (mq.matches) setMobileNavOpen(false)
-    }
-    mq.addEventListener('change', onChange)
-    return () => mq.removeEventListener('change', onChange)
-  }, [])
-
-  const closeMobileNav = () => setMobileNavOpen(false)
-
-  useEffect(() => {
     if (location.hash === '#mx-planlar') {
       navigate('/qiymetler', { replace: true })
+      return
+    }
+    if (location.hash === '#mx-features' || location.hash === '#mx-steps') {
+      const id = location.hash.slice(1)
+      window.requestAnimationFrame(() => scrollToId(id))
     }
   }, [location.hash, navigate])
 
@@ -222,101 +205,7 @@ export default function Landing() {
 
   return (
     <div className="min-h-[100svh] w-full min-w-0 max-w-full overflow-x-hidden bg-[#0b0b0b]">
-      <nav
-        className="sticky top-0 z-50 border-b border-white/10 bg-[#0b0b0b]/92 backdrop-blur-md supports-[backdrop-filter]:bg-[#0b0b0b]/80"
-        aria-label={t('landing.nav.mainNav')}
-      >
-        <div className="max-w-5xl mx-auto pl-2 sm:pl-3 pr-3 sm:pr-4 py-3 flex items-center justify-between gap-2 min-w-0">
-          <button
-            type="button"
-            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-            className="shrink-0 min-w-0 rounded-lg transition-opacity duration-200 hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-          >
-            <Brand size="nav" />
-          </button>
-          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 min-w-0">
-            <div className="hidden md:flex items-center gap-1 lg:gap-2 text-xs lg:text-sm font-semibold">
-              <Link to="/search" className={LANDING_NAV_LINK}>
-                {t('landing.nav.findTeacher')}
-              </Link>
-              <Link to="/universities" className={LANDING_NAV_LINK}>
-                {t('landing.nav.universities')}
-              </Link>
-              <button
-                type="button"
-                onClick={() => scrollToId(features.items.length ? 'mx-features' : 'mx-steps')}
-                className={LANDING_NAV_LINK}
-              >
-                {t('landing.nav.features')}
-              </button>
-              <Link to="/qiymetler" className={LANDING_NAV_LINK}>
-                {t('landing.nav.plans')}
-              </Link>
-            </div>
-            <LanguageSwitcher tone="dark" className="h-8 sm:h-auto" />
-            <button
-              type="button"
-              className="md:hidden inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 text-gray-300 hover:bg-white/5 hover:text-white"
-              aria-expanded={mobileNavOpen}
-              aria-controls="mx-landing-mobile-nav"
-              aria-label={mobileNavOpen ? t('landing.nav.closeMenu') : t('landing.nav.openMenu')}
-              onClick={() => setMobileNavOpen((open) => !open)}
-            >
-              {mobileNavOpen ? (
-                <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-                  <path strokeLinecap="round" d="M6 6l12 12M18 6L6 18" />
-                </svg>
-              ) : (
-                <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-                  <path strokeLinecap="round" d="M4 7h16M4 12h16M4 17h16" />
-                </svg>
-              )}
-            </button>
-            <button type="button" onClick={() => goLogin('nav')} className={LANDING_LOGIN_BTN}>
-              {t('landing.nav.login')}
-            </button>
-            <button type="button" onClick={() => goRegister('nav')} className={`hidden sm:inline-flex ${LANDING_NAV_CTA}`}>
-              {t('landing.nav.startFree')}
-            </button>
-          </div>
-        </div>
-        {mobileNavOpen ? (
-          <div
-            id="mx-landing-mobile-nav"
-            className="md:hidden border-t border-white/10 bg-[#0b0b0b]/98 px-3 py-2 space-y-0.5"
-          >
-            <Link to="/search" onClick={closeMobileNav} className={`block w-full ${LANDING_NAV_LINK}`}>
-              {t('landing.nav.findTeacher')}
-            </Link>
-            <Link to="/universities" onClick={closeMobileNav} className={`block w-full ${LANDING_NAV_LINK}`}>
-              {t('landing.nav.universities')}
-            </Link>
-            <button
-              type="button"
-              onClick={() => {
-                closeMobileNav()
-                scrollToId(features.items.length ? 'mx-features' : 'mx-steps')
-              }}
-              className={`block w-full text-left ${LANDING_NAV_LINK}`}
-            >
-              {t('landing.nav.features')}
-            </button>
-            <Link to="/qiymetler" onClick={closeMobileNav} className={`block w-full ${LANDING_NAV_LINK}`}>
-              {t('landing.nav.plans')}
-            </Link>
-            <button
-              type="button"
-              onClick={() => {
-                closeMobileNav()
-                goRegister('nav_mobile')
-              }}
-              className="mt-2 w-full inline-flex justify-center items-center rounded-xl bg-primary px-4 py-3 min-h-[44px] text-sm font-bold text-[#041018]"
-            >
-              {t('landing.nav.startFree')}
-            </button>
-          </div>
-        ) : null}
-      </nav>
+      <PublicMarketingNav onLogin={() => goLogin('nav')} onStart={() => goRegister('nav')} />
 
       <div className="w-full max-w-5xl mx-auto px-4 pt-8 sm:pt-10 pb-8 space-y-12 sm:space-y-16 min-w-0 box-border overflow-x-hidden">
         <header className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)] xl:grid-cols-[minmax(0,1fr)_minmax(0,26rem)] gap-8 lg:gap-10 lg:items-center">

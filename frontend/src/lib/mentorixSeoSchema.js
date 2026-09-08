@@ -147,7 +147,7 @@ export function buildBreadcrumbSchema(items) {
   }
 }
 
-/** Ana naviqasiya — Google sitelink ipucları üçün (/, /search, /login, /qiymetler) */
+/** Ana naviqasiya — Google sitelink ipucları üçün */
 export function buildPrimarySiteNavigationSchema() {
   return {
     '@context': 'https://schema.org',
@@ -155,10 +155,12 @@ export function buildPrimarySiteNavigationSchema() {
     name: 'Mentorix əsas naviqasiya',
     hasPart: [
       { '@type': 'WebPage', name: 'Ana səhifə', url: absoluteUrl('/') },
-      { '@type': 'WebPage', name: 'Müəllim Tap', url: absoluteUrl('/search') },
+      { '@type': 'WebPage', name: 'Müəllimlər üçün', url: absoluteUrl('/muellimler-ucun') },
+      { '@type': 'WebPage', name: 'İmtahanlar / Testlər', url: absoluteUrl('/imtahanlar') },
       { '@type': 'WebPage', name: 'Giriş', url: absoluteUrl('/login') },
-      { '@type': 'WebPage', name: 'Qiymətlər', url: absoluteUrl('/qiymetler') },
-      ...MENTORIX_SITE_NAV.filter((item) => !['/search', '/qiymetler'].includes(item.path)).map((item) => ({
+      ...MENTORIX_SITE_NAV.filter(
+        (item) => !['/search', '/universities', '/muellimler-ucun', '/imtahanlar'].includes(item.path),
+      ).map((item) => ({
         '@type': 'WebPage',
         name: item.name,
         url: absoluteUrl(item.path),

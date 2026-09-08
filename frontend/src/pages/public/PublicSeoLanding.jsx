@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import Brand from '../../components/common/Brand'
-import LanguageSwitcher from '../../components/LanguageSwitcher'
 import PublicSeoFooter from '../../components/public/PublicSeoFooter'
+import PublicMarketingNav from '../../components/public/PublicMarketingNav'
 import PricingAudienceExplainer from '../../components/public/PricingAudienceExplainer'
 import PublicPricingCompare from '../../components/public/PublicPricingCompare'
 import PublicPricingAudienceGroups from '../../components/public/PublicPricingAudienceGroups'
@@ -67,22 +66,7 @@ export default function PublicSeoLanding() {
 
   return (
     <div className="min-h-[100svh] bg-[#0b0b0b] text-white flex flex-col">
-      <header className="border-b border-white/10 bg-[#0f0f0f]/95">
-        <div className={`${isPricingPage ? 'max-w-5xl' : 'max-w-3xl'} mx-auto px-4 py-4 flex items-center justify-between gap-3 min-w-0`}>
-          <Link to="/" className="shrink-0" aria-label="Mentorix">
-            <Brand className="h-7 w-auto" />
-          </Link>
-          <div className="flex items-center gap-2 shrink-0">
-            <LanguageSwitcher tone="dark" className="h-8" />
-            <Link
-              to="/search"
-              className="text-sm font-semibold text-primary hover:brightness-110 px-3 py-2 rounded-lg border border-primary/30 whitespace-nowrap"
-            >
-              {t('landing.nav.findTeacher')}
-            </Link>
-          </div>
-        </div>
-      </header>
+      <PublicMarketingNav />
 
       <main className={`flex-1 ${isPricingPage ? 'max-w-5xl' : 'max-w-3xl'} mx-auto px-4 py-10 sm:py-14 w-full space-y-8`}>
         <div className="space-y-4">
