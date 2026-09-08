@@ -9,6 +9,7 @@ import GoogleSignInButton from '../../components/auth/GoogleSignInButton'
 import { useStudentGroupsOptional } from '../../contexts/StudentGroupContext'
 import { formatAzn } from '../../lib/groupPaymentTerms'
 import JoinGroupTermsOverview from '../../components/student/JoinGroupTermsOverview'
+import { parseJoinInviteInput } from '../../lib/joinInvite'
 import { consumeReturnAfterLogin, rememberReturnAfterLogin } from '../../lib/inviteReturn'
 
 const inp =
