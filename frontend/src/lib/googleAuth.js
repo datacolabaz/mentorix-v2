@@ -14,7 +14,7 @@ export async function googleAuthWithAutoRole(credential, forcedRole) {
         if (r?.token && r?.user) return r
       }
     } catch (err) {
-      if (err?.status === 401 || err?.status === 409) throw err
+      if (err?.status === 401 || err?.status === 409 || err?.code === 'EMAIL_NOT_VERIFIED') throw err
     }
   }
 
@@ -30,7 +30,7 @@ export async function googleAuthWithAutoRole(credential, forcedRole) {
       lastRoleError = new Error(r?.message || i18n.t('auth.errors.googleIncomplete'))
     } catch (err) {
       const status = err?.status
-      if (status === 401) throw err
+      if (status === 401 || err?.code === 'EMAIL_NOT_VERIFIED') throw err
       if (status === 403) {
         lastRoleError = err
         continue

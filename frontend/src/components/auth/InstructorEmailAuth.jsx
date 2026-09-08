@@ -230,6 +230,7 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
   const [signupFullName, setSignupFullName] = useState('')
   const [signupEmail, setSignupEmail] = useState('')
   const [signupPassword, setSignupPassword] = useState('')
+  const [verifyEmail, setVerifyEmail] = useState('')
   const [verifyCode, setVerifyCode] = useState('')
   const [accountExistsOpen, setAccountExistsOpen] = useState(false)
   const [accountExistsMessage, setAccountExistsMessage] = useState('')
@@ -269,6 +270,11 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
     } catch (err) {
       if (tab === 'signup' && isAccountExistsError(err)) {
         openAccountExistsModal(err?.message)
+      } else if (tab === 'login' && err?.code === 'EMAIL_NOT_VERIFIED') {
+        const em = String(loginEmail || '').trim()
+        if (em) setVerifyEmail(em)
+        setPhase('verify')
+        toast(t('auth.toasts.verifyEmailFirst'), 'error')
       } else if (tab === 'login' && !loginRoleFallback && err?.status === 403) {
         setLoginRoleFallback(true)
         toast(t('auth.toasts.selectRoleRetry'), 'error')
@@ -290,6 +296,7 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
         password: signupPassword,
         ...getAttributionPayload(),
       })
+      setVerifyEmail(String(signupEmail || '').trim())
       setPhase('verify')
       toast(t('auth.toasts.verifySent'), 'success')
     } catch (err) {
@@ -348,8 +355,10 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
     } catch (err) {
       const code = err?.code || err?.response?.data?.code
       if (code === 'EMAIL_NOT_VERIFIED') {
+        setVerifyEmail(email)
         setPhase('verify')
         toast(t('auth.toasts.verifyEmailFirst'), 'error')
+        void resendVerificationEmail(email).catch(() => {})
       } else if (!loginRoleFallback && err?.status === 403) {
         setLoginRoleFallback(true)
         toast(t('auth.toasts.selectRoleRetry'), 'error')
@@ -365,7 +374,7 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
     e.preventDefault()
     setLoading(true)
     try {
-      const r = await verifyEmailCode({ email: signupEmail, code: verifyCode })
+      const r = await verifyEmailCode({ email: verifyEmail || signupEmail, code: verifyCode })
       if (r?.token && r?.user) {
         setSession(r.token, r.user)
       if (String(r.user?.role || '').toLowerCase() === 'admin') {
@@ -397,13 +406,14 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
   }
 
   const handleResend = async () => {
-    if (!signupEmail.trim()) {
+    const em = String(verifyEmail || signupEmail || loginEmail || '').trim()
+    if (!em) {
       toast(t('auth.toasts.enterEmail'), 'error')
       return
     }
     setLoading(true)
     try {
-      const r = await resendVerificationEmail(signupEmail)
+      const r = await resendVerificationEmail(em)
       toast(r?.message || t('auth.toasts.resendOk'), 'success')
     } catch (err) {
       toast(err.message || t('auth.toasts.sendFailed'), 'error')
@@ -433,7 +443,7 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
     return (
       <div className="space-y-4">
         <p className="text-sm text-gray-300 text-center leading-relaxed">
-          {t('auth.verifySent', { email: signupEmail })}
+          {t('auth.verifySent', { email: verifyEmail || signupEmail })}
         </p>
         <form onSubmit={handleVerifyCode} className="space-y-3" autoComplete="off">
           <input

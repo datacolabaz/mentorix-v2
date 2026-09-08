@@ -195,6 +195,11 @@ export default function AdminStudents() {
                     {s.full_name}
                   </div>
                   <div className="text-xs text-token-textMuted">{s.email || '—'}</div>
+                  {s.is_verified === false && (
+                    <span className="inline-block mt-1 text-[10px] uppercase tracking-wide text-amber-600 dark:text-amber-400 font-semibold">
+                      Email təsdiqlənməyib
+                    </span>
+                  )}
                   {s.is_unassigned && (
                     <span className="inline-block mt-1 text-[10px] uppercase tracking-wide text-amber-600 dark:text-amber-400 font-semibold">
                       Təyin olunmamış
@@ -277,6 +282,12 @@ export default function AdminStudents() {
                 <div className="text-token-textMain">{detail.student.is_verified ? 'Bəli' : 'Xeyr'}</div>
               </div>
             </div>
+
+            {detail.student.is_verified === false ? (
+              <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-200 text-sm">
+                Email təsdiqlənməyib. Şifrə ilə giriş işləməz — tələbə poçtdakı kodu/linki təsdiqləməli və ya eyni Gmail ilə «Google ilə davam et» seçməlidir.
+              </div>
+            ) : null}
 
             {detail.is_unassigned ? (
               <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-200 space-y-2 text-sm">
