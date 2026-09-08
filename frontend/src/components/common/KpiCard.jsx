@@ -62,10 +62,12 @@ export default function KpiCard({
   value,
   icon,
   secondary,
+  compareHint,
   deltaPct,
   sparkline = [],
   className = '',
   to,
+  onClick,
   ariaLabel,
 }) {
   const theme = useUiStore((s) => s.theme)
@@ -76,7 +78,7 @@ export default function KpiCard({
 
   const label =
     ariaLabel ||
-    (to ? `${title}: ətraflı baxış üçün keçid` : undefined)
+    (to || onClick ? `${title}: ətraflı baxış üçün keçid` : undefined)
 
   const inner = (
     <>
@@ -91,7 +93,16 @@ export default function KpiCard({
         </div>
 
         <div className="shrink-0 flex items-center gap-2">
-          {deltaPct != null ? <DeltaBadge deltaPct={deltaPct} theme={theme} /> : null}
+          {deltaPct != null ? (
+            <div className="flex flex-col items-end gap-1">
+              <DeltaBadge deltaPct={deltaPct} theme={theme} />
+              {compareHint ? (
+                <span className="text-[10px] leading-tight text-token-textMuted max-w-[7.5rem] text-right">
+                  {compareHint}
+                </span>
+              ) : null}
+            </div>
+          ) : null}
           {icon ? (
             <div className="w-11 h-11 rounded-2xl bg-token-surfaceCard/55 border border-[color:var(--border-subtle)] flex items-center justify-center text-xl">
               {icon}
@@ -137,6 +148,21 @@ export default function KpiCard({
   )
 
   const cardClass = ['p-4 sm:p-5 min-w-0 w-full max-w-full overflow-hidden box-border', className].join(' ')
+
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        aria-label={label}
+        className="block w-full min-w-0 max-w-full text-left no-underline text-inherit focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/55 rounded-2xl"
+      >
+        <Card hover className={`${cardClass} h-full`}>
+          {inner}
+        </Card>
+      </button>
+    )
+  }
 
   if (to) {
     return (

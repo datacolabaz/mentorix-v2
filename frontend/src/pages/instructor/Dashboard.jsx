@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate, Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts'
 import api from '../../lib/api'
 import Card from '../../components/common/Card'
 import Modal from '../../components/common/Modal'
@@ -30,6 +30,7 @@ const DEFAULT_DASH = {
   enrollment_growth_delta_pct: 0,
   exam_trend_delta_pct: 0,
   spark_income_months: [],
+  income_months: [],
   spark_enrollment_months: [],
   spark_exam_months: [],
 }
@@ -59,6 +60,7 @@ export default function InstructorDashboard() {
   const blocked = Boolean(billing?.should_block)
 
   const [onboardOpen, setOnboardOpen] = useState(false)
+  const [incomeOpen, setIncomeOpen] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -278,6 +280,40 @@ export default function InstructorDashboard() {
       ? dash.spark_income_months
       : [Number(dash.income_this_month || 0), Number(dash.total_earnings_all || 0)]
 
+  const incomeMonths = (() => {
+    if (Array.isArray(dash.income_months) && dash.income_months.length) {
+      return dash.income_months.map((row) => ({
+        ym: String(row?.ym || ''),
+        amount: Number(row?.amount ?? row?.amt) || 0,
+      }))
+    }
+    const spark = Array.isArray(dash.spark_income_months) ? dash.spark_income_months : []
+    const now = new Date()
+    return spark.map((amount, i) => {
+      const d = new Date(now.getFullYear(), now.getMonth() - (spark.length - 1 - i), 1)
+      const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+      return { ym, amount: Number(amount) || 0 }
+    })
+  })()
+
+  const incomeMonthChart = incomeMonths.map((row) => {
+    const [y, m] = String(row.ym).split('-').map(Number)
+    const d = Number.isFinite(y) && Number.isFinite(m) ? new Date(y, m - 1, 1) : null
+    const label = d
+      ? d.toLocaleDateString(moneyLocale, { month: 'short' }).replace('.', '')
+      : row.ym
+    return { ...row, label, amount: Math.round(row.amount) }
+  })
+
+  const incomeMomPct = Number(dash.income_delta_pct ?? 0)
+  const incomeVsLastMonth = !Number.isFinite(incomeMomPct) || incomeMomPct === 0
+    ? t('dashboard.kpiIncomeVsLastMonthFlat')
+    : incomeMomPct > 0
+      ? t('dashboard.kpiIncomeVsLastMonthUp', { pct: Math.abs(Math.round(incomeMomPct)) })
+      : t('dashboard.kpiIncomeVsLastMonthDown', { pct: Math.abs(Math.round(incomeMomPct)) })
+
+  const lastMonthAz = `₼ ${moneyFmt.format(Math.round(Number(dash.income_last_month || 0)))}`
+
   const chartRows = students.slice(0, 10).map((s) => {
     const first = s.full_name?.split(' ')?.[0] || '—'
     const row = examById[String(s.id)]
@@ -341,6 +377,76 @@ export default function InstructorDashboard() {
 
   return (
     <>
+      <Modal open={incomeOpen} onClose={() => setIncomeOpen(false)} title={t('dashboard.kpiIncomeMonthlyTitle')} size="lg">
+        <div className="space-y-4">
+          <p className="text-xs text-gray-400 leading-relaxed">{t('dashboard.kpiIncomeMonthlyHint')}</p>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+              <div className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold">{t('dashboard.kpiMonthCash')}</div>
+              <div className="mt-1 text-lg font-bold text-white tabular-nums">{incomeThisMonthAz}</div>
+            </div>
+            <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+              <div className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold">{t('dashboard.kpiIncomeLastMonth')}</div>
+              <div className="mt-1 text-lg font-bold text-white tabular-nums">{lastMonthAz}</div>
+            </div>
+          </div>
+          <p className={`text-sm font-medium ${incomeMomPct < 0 ? 'text-red-300' : 'text-emerald-300'}`}>{incomeVsLastMonth}</p>
+          {incomeMonthChart.length >= 2 ? (
+            <div className="h-[220px] w-full min-w-0">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                <AreaChart data={incomeMonthChart} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="mxIncomeMonthFill" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="rgba(34,224,136,0.35)" />
+                      <stop offset="100%" stopColor="rgba(34,224,136,0.02)" />
+                    </linearGradient>
+                  </defs>
+                  <XAxis dataKey="label" tick={{ fill: '#E5E7EB', fontSize: 11, fontWeight: 600 }} interval={0} />
+                  <YAxis
+                    tick={{ fill: '#9CA3AF', fontSize: 10 }}
+                    width={44}
+                    tickFormatter={(v) => moneyFmt.format(Math.round(Number(v) || 0))}
+                  />
+                  <Tooltip
+                    content={({ active, payload }) => {
+                      if (!active || !payload?.length) return null
+                      const p = payload[0]?.payload
+                      if (!p) return null
+                      return (
+                        <div className="rounded-xl border border-white/10 bg-[#0b0b0b] px-3 py-2 text-xs shadow-lg">
+                          <div className="font-semibold text-white mb-1">{p.label}</div>
+                          <div className="text-emerald-300 tabular-nums">₼ {moneyFmt.format(p.amount)}</div>
+                        </div>
+                      )
+                    }}
+                    cursor={{ stroke: 'rgba(34,224,136,0.35)' }}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="amount"
+                    stroke="#22e088"
+                    strokeWidth={2.5}
+                    fill="url(#mxIncomeMonthFill)"
+                    dot={{ r: 3, fill: '#22e088', stroke: '#041018', strokeWidth: 1 }}
+                    isAnimationActive={false}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <div className="h-40 flex items-center justify-center text-gray-500 text-sm">{t('dashboard.noData')}</div>
+          )}
+          <Button
+            className="w-full justify-center"
+            onClick={() => {
+              setIncomeOpen(false)
+              navigate('/instructor/payments')
+            }}
+          >
+            {t('dashboard.kpiIncomeOpenPayments')}
+          </Button>
+        </div>
+      </Modal>
       <Modal open={onboardOpen} onClose={closeOnboard} title={t('dashboard.onboardTitle')} size="sm">
         <div className="space-y-3">
           <div className="text-sm text-gray-200 font-semibold">{t('dashboard.onboardHeading')}</div>
@@ -411,12 +517,18 @@ export default function InstructorDashboard() {
         />
         <KpiCard
           title={t('dashboard.kpiTotalIncome')}
-          to="/instructor/payments"
+          onClick={() => setIncomeOpen(true)}
           ariaLabel={t('dashboard.kpiTotalIncomeAria')}
           value={loading ? '—' : totalEarningsAz}
           icon="💰"
-          secondary={t('dashboard.kpiTotalIncomeSecondary')}
-          deltaPct={dash.total_income_flow_delta_pct ?? 0}
+          secondary={
+            <>
+              <div>{t('dashboard.kpiTotalIncomeSecondary')}</div>
+              <div className="mt-1 font-semibold text-token-textMain/85">{incomeVsLastMonth}</div>
+            </>
+          }
+          compareHint={t('dashboard.kpiIncomeDeltaHint')}
+          deltaPct={dash.income_delta_pct ?? 0}
           sparkline={sparkIncome}
         />
       </div>
