@@ -2,6 +2,7 @@ const router = require('express').Router();
 const {
   getInstructors,
   patchInstructorDiscoverVerify,
+  patchInstructorSearchListing,
   patchInstructorProfile,
   updateInstructorLimits,
   getDashboardStats,
@@ -73,6 +74,7 @@ router.get('/categories', authenticate, authorize('admin'), listCategories);
 router.patch('/categories/:id', authenticate, authorize('admin'), patchCategory);
 router.get('/instructors', authenticate, authorize('admin'), getInstructors);
 router.patch('/instructors/:id/discover-verify', authenticate, authorize('admin'), patchInstructorDiscoverVerify);
+router.patch('/instructors/:id/search-listing', authenticate, authorize('admin'), patchInstructorSearchListing);
 router.patch('/instructors/:id/limits', authenticate, authorize('admin'), updateInstructorLimits);
 router.patch('/instructors/:id/plan', authenticate, authorize('admin'), updateInstructorPlan);
 router.patch('/instructors/:id/toggle', authenticate, authorize('admin'), toggleInstructor);

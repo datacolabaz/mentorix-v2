@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
 const db = require('../utils/db');
 const { normalizePlanSlug } = require('../config/plans');
+const { BAKU, isValidRegion, isValidBakuDistrict, isBakuRegion, normalizeRegionName } = require('../lib/azerbaijanRegions');
 
 function normalizeAdminEmail(email) {
   const e = String(email || '').trim().toLowerCase();
@@ -27,9 +28,14 @@ const getInstructors = async (req, res) => {
               (u.password_hash IS NOT NULL) AS has_password,
               (COALESCE(TRIM(u.google_sub::text), '') <> '') AS has_google,
               ip.subject, ip.billing_type,
+              ip.region, ip.baku_district,
+              COALESCE(ip.region_user_set, FALSE) AS region_user_set,
               COALESCE(ip.discover_verified, FALSE) AS discover_verified,
               COALESCE(ip.map_visible, FALSE) AS map_visible,
               NULLIF(TRIM(COALESCE(ip.discover_bio, '')), '') AS discover_bio,
+              (
+                SELECT COUNT(*)::int FROM instructor_categories ic WHERE ic.user_id = u.id
+              ) AS categories_count,
               (
                 COALESCE(ip.discover_verified, FALSE) = FALSE
                 AND (
@@ -79,6 +85,9 @@ const getInstructors = async (req, res) => {
         sms_limit: r.sms_limit_monthly,
         discover_verified: Boolean(r.discover_verified),
         map_visible: Boolean(r.map_visible),
+        region_user_set: Boolean(r.region_user_set),
+        categories_count: Number(r.categories_count) || 0,
+        search_listed: Boolean(r.map_visible) && Boolean(r.region_user_set) && Boolean(r.region),
         discover_pending: Boolean(r.discover_pending),
       })),
     );
@@ -133,6 +142,88 @@ const patchInstructorDiscoverVerify = async (req, res) => {
       message: verified ? 'Marketplace profili təsdiqləndi' : 'Təsdiq geri alındı',
     });
   } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+async function matchCategoryIdFromSubject(subject) {
+  const raw = String(subject || '').trim();
+  if (!raw) return null;
+  const { rows } = await db.query(
+    `SELECT id FROM categories
+     WHERE LOWER(TRIM(name_az)) = LOWER(TRIM($1))
+        OR LOWER(TRIM(COALESCE(slug, ''))) = LOWER(TRIM($1))
+        OR LOWER(TRIM(id)) = LOWER(TRIM($1))
+     ORDER BY CASE WHEN parent_id IS NULL THEN 1 ELSE 0 END
+     LIMIT 1`,
+    [raw],
+  );
+  return rows[0]?.id || null;
+}
+
+/** Admin: müəllimi ictimai axtarış siyahısına çıxar (şəhər + görünürlük). */
+const patchInstructorSearchListing = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const region = normalizeRegionName(req.body?.region || BAKU);
+    if (!region || !isValidRegion(region)) {
+      return res.status(400).json({ success: false, message: 'Düzgün şəhər/region seçin' });
+    }
+    let district = req.body?.baku_district == null ? null : normalizeRegionName(req.body.baku_district);
+    if (district && !isValidBakuDistrict(district)) {
+      return res.status(400).json({ success: false, message: 'Düzgün Bakı rayonu seçin' });
+    }
+    if (!isBakuRegion(region)) district = null;
+
+    const { rows: u } = await db.query(
+      `SELECT u.id, ip.subject
+       FROM users u
+       LEFT JOIN instructor_profiles ip ON ip.user_id = u.id
+       WHERE u.id = $1 AND u.role = 'instructor' AND u.deleted_at IS NULL
+       LIMIT 1`,
+      [id],
+    );
+    if (!u[0]) return res.status(404).json({ success: false, message: 'Müəllim tapılmadı' });
+
+    const { rowCount } = await db.query(
+      `UPDATE instructor_profiles
+       SET map_visible = TRUE,
+           region = $2,
+           region_user_set = TRUE,
+           baku_district = $3
+       WHERE user_id = $1`,
+      [id, region, district],
+    );
+    if (!rowCount) {
+      await db.query(
+        `INSERT INTO instructor_profiles (user_id, subject, map_visible, region, region_user_set, baku_district)
+         VALUES ($1, $2, TRUE, $3, TRUE, $4)`,
+        [id, u[0].subject || null, region, district],
+      );
+    }
+
+    const categoryId = await matchCategoryIdFromSubject(u[0].subject);
+    if (categoryId) {
+      await db.query(
+        `INSERT INTO instructor_categories (user_id, category_id)
+         VALUES ($1, $2)
+         ON CONFLICT DO NOTHING`,
+        [id, categoryId],
+      );
+    }
+
+    return res.json({
+      success: true,
+      search_listed: true,
+      region,
+      baku_district: district,
+      category_id: categoryId,
+      message: `${region} axtarışında görünəcək`,
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
     res.status(500).json({ success: false, message: err.message });
   }
 };
@@ -710,6 +801,7 @@ module.exports = {
   getInstructors,
   patchInstructorProfile,
   patchInstructorDiscoverVerify,
+  patchInstructorSearchListing,
   updateInstructorLimits,
   updateInstructorPlan,
   getDashboardStats,
