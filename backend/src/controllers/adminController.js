@@ -224,9 +224,6 @@ const patchInstructorSearchListing = async (req, res) => {
     return res.status(500).json({ success: false, message: err.message });
   }
 };
-    res.status(500).json({ success: false, message: err.message });
-  }
-};
 
 /** Admin: müəllim email + şifrə təyin et (email boş hesablar üçün giriş bərpası). */
 const patchInstructorProfile = async (req, res) => {
