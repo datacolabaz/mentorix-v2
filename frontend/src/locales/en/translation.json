@@ -1364,6 +1364,7 @@
       "payPostpaid": "Full postpaid — full amount after the package ends",
       "payInstallment": "Installments — pay in parts during the package",
       "weekdays": "Lesson days and times *",
+      "weekdaysEmpty": "Pick the days. None are selected automatically.",
       "startTime": "Start",
       "endTime": "End",
       "timingPrepaid": "Payment before the package starts (full amount)",

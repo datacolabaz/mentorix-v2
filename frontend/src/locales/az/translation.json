@@ -1364,6 +1364,7 @@
       "payPostpaid": "Sonradan tam — paket bitdikdən sonra tam məbləğ",
       "payInstallment": "Hissəli — paket müddətində hissə-hissə ödəniş",
       "weekdays": "Dərs günləri və saatları *",
+      "weekdaysEmpty": "Gün seçin. Heç bir gün avtomatik işarələnmir.",
       "startTime": "Başlanğıc",
       "endTime": "Bitmə",
       "timingPrepaid": "Ödəniş paket başlamazdan əvvəl (tam məbləğ)",

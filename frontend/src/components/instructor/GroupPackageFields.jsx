@@ -17,17 +17,15 @@ const inp =
   'w-full rounded-xl px-3 py-2 text-sm outline-none focus:border-primary/40 border border-[color:var(--border-subtle)] bg-token-surfaceCard/55 text-token-textMain'
 
 export function emptyGroupPackage() {
-  const today = new Date()
-  const dow = ((today.getDay() + 6) % 7) + 1
   return {
     default_billing_type: '8_lessons',
     default_package_fee: '',
     default_discount_percent: '',
     default_billing_timing: 'postpaid',
     default_payment_plan: 'full',
-    default_lesson_weekdays: [dow],
-    default_lesson_times: { [String(dow)]: DEFAULT_LESSON_TIME },
-    default_lesson_end_times: { [String(dow)]: addMinutesToHm(DEFAULT_LESSON_TIME, 60) },
+    default_lesson_weekdays: [],
+    default_lesson_times: {},
+    default_lesson_end_times: {},
     default_notifications_enabled: true,
     default_initial_payment_status: 'unpaid',
   }
@@ -197,6 +195,9 @@ export default function GroupPackageFields({ value, onChange, compact }) {
             )
           })}
         </div>
+        {!(v.default_lesson_weekdays || []).length ? (
+          <p className="text-xs text-gray-500 mb-2">{t('teachingGroups.packageFields.weekdaysEmpty')}</p>
+        ) : null}
         <div className="space-y-2">
           {localizedWeekdays.filter((d) => (v.default_lesson_weekdays || []).includes(d.v)).map((d) => (
             <div key={d.v} className="flex items-center justify-between gap-2 text-sm flex-wrap">
