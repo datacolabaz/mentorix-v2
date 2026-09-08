@@ -1,4 +1,3 @@
-import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { DEFAULT_SUBSCRIPTION_PLANS } from '../../constants/subscriptionPlans'
 import { plansForAudience } from '../../lib/landingCopy'
@@ -26,9 +25,6 @@ export default function PublicPricingAudienceGroups({ plans, onCta }) {
   const list = Array.isArray(plans) && plans.length ? plans : DEFAULT_SUBSCRIPTION_PLANS
   const teacher = plansForAudience(list, 'teacher')
   const center = plansForAudience(list, 'center')
-  const corporateRaw = t('landing.pricingPage.groups.corporate', { returnObjects: true })
-  const corporate =
-    corporateRaw && typeof corporateRaw === 'object' && !Array.isArray(corporateRaw) ? corporateRaw : {}
 
   return (
     <div className="space-y-10">
@@ -44,19 +40,6 @@ export default function PublicPricingAudienceGroups({ plans, onCta }) {
         plans={center}
         onCta={onCta}
       />
-      <section className="rounded-2xl border border-primary/35 bg-primary/5 p-5 sm:p-6 space-y-3">
-        <p className="text-[11px] font-bold uppercase tracking-wider text-primary">
-          {corporate.title}
-        </p>
-        <h2 className="text-lg sm:text-xl font-semibold text-white">{corporate.headline}</h2>
-        <p className="text-sm text-gray-300 leading-relaxed max-w-2xl">{corporate.body}</p>
-        <Link
-          to="/elaqe"
-          className="inline-flex justify-center items-center rounded-xl bg-primary px-5 py-3 min-h-[44px] text-sm font-bold text-[#041018] hover:brightness-95"
-        >
-          {corporate.cta}
-        </Link>
-      </section>
     </div>
   )
 }
