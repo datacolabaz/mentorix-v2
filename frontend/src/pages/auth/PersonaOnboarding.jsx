@@ -10,9 +10,10 @@ import { useToast } from '../../components/common/Toast'
 import { postAuthNavigate } from '../../lib/postAuth'
 import { isInviteResumePath, peekReturnAfterLogin } from '../../lib/inviteReturn'
 import {
-  PRIMARY_PERSONA_ORDER,
+  pickerPersonaIds,
   PERSONA_UI,
   PERSONAS,
+  resolveUserPersona,
   userNeedsOnboarding,
 } from '../../constants/personas'
 
@@ -291,6 +292,7 @@ export default function PersonaOnboarding() {
 
   const selectedUi = picked ? PERSONA_UI[picked] : null
   const canFinish = useMemo(() => profileComplete(picked, profile), [picked, profile])
+  const pickerIds = useMemo(() => pickerPersonaIds(resolveUserPersona(user)), [user])
 
   if (!token) {
     return (
@@ -405,7 +407,7 @@ export default function PersonaOnboarding() {
               </div>
 
               <div className="mt-7 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {PRIMARY_PERSONA_ORDER.map((id) => {
+                {pickerIds.map((id) => {
                   const meta = PERSONA_UI[id]
                   const selected = picked === id
                   return (
