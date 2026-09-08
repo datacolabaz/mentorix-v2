@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import Card from '../common/Card'
 
 export default function OrgPage({ title, description, actions, children, dense = false }) {
@@ -39,8 +40,9 @@ export function OrgEmpty({ children }) {
 }
 
 export function OrgTable({ columns, rows, rowKey = 'id', empty }) {
+  const { t } = useTranslation()
   if (!rows?.length) {
-    return empty || <OrgEmpty>Məlumat yoxdur.</OrgEmpty>
+    return empty || <OrgEmpty>{t('org.common.noData')}</OrgEmpty>
   }
   return (
     <div className="overflow-x-auto -mx-4 sm:mx-0">

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import api from '../../lib/api'
 import ListSkeleton from '../../components/common/ListSkeleton'
 import { useToast } from '../../components/common/Toast'
@@ -6,17 +7,10 @@ import { useOrgWorkspace } from '../../hooks/useOrgWorkspace'
 import OrgPage, { OrgPanel, OrgEmpty, OrgTable } from '../../components/org/OrgPage'
 import CourseBrandingForm from '../../components/course/CourseBrandingForm'
 import PersonaSettingsCard from '../../components/onboarding/PersonaSettingsCard'
-
-function fmtWhen(iso) {
-  if (!iso) return '—'
-  try {
-    return new Date(iso).toLocaleString('az-AZ', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
-  } catch {
-    return iso
-  }
-}
+import { formatOrgDateTime, orgAuditAction, orgRoleName } from '../../lib/orgI18n'
 
 export function OrgMembers() {
+  const { t } = useTranslation()
   const toast = useToast()
   const { can } = useOrgWorkspace()
   const [members, setMembers] = useState([])
@@ -37,21 +31,25 @@ export function OrgMembers() {
       const res = await api.patch(`/course/members/${userId}/role`, { role_key: roleKey })
       setMembers(res.members || [])
     } catch (err) {
-      toast(err?.message || 'Rol dəyişmədi', 'error')
+      toast(err?.message || t('org.members.roleFailed'), 'error')
     }
   }
 
   return (
-    <OrgPage title="Üzvlər" description="Təşkilat heyəti və rolları.">
+    <OrgPage title={t('org.members.title')} description={t('org.members.desc')}>
       {loading ? (
         <ListSkeleton />
       ) : (
         <OrgPanel>
           <OrgTable
             columns={[
-              { key: 'full_name', label: 'Ad' },
-              { key: 'email', label: 'E-poçt', render: (r) => r.email || '—' },
-              { key: 'role_name', label: 'Rol' },
+              { key: 'full_name', label: t('org.members.name') },
+              { key: 'email', label: t('org.members.email'), render: (r) => r.email || '—' },
+              {
+                key: 'role_name',
+                label: t('org.members.role'),
+                render: (r) => orgRoleName(t, r.role_key, r.role_name),
+              },
               {
                 key: 'role_key',
                 label: '',
@@ -64,7 +62,7 @@ export function OrgMembers() {
                     >
                       {roles.filter((x) => x.key !== 'owner').map((x) => (
                         <option key={x.key} value={x.key}>
-                          {x.name_az}
+                          {orgRoleName(t, x.key, x.name_az)}
                         </option>
                       ))}
                     </select>
@@ -72,7 +70,7 @@ export function OrgMembers() {
               },
             ]}
             rows={members}
-            empty={<OrgEmpty>Üzv yoxdur.</OrgEmpty>}
+            empty={<OrgEmpty>{t('org.members.empty')}</OrgEmpty>}
           />
         </OrgPanel>
       )}
@@ -81,6 +79,7 @@ export function OrgMembers() {
 }
 
 export function OrgRoles() {
+  const { t } = useTranslation()
   const [roles, setRoles] = useState([])
   const [permissions, setPermissions] = useState([])
   useEffect(() => {
@@ -90,12 +89,9 @@ export function OrgRoles() {
     })
   }, [])
   return (
-    <OrgPage
-      title="Rollar və icazələr"
-      description="RBAC kataloqu verilənlər bazasındadır. Yeni permission əlavə etmək üçün orgPermissions.js-ə açar yazılır."
-    >
+    <OrgPage title={t('org.roles.title')} description={t('org.roles.desc')}>
       {roles.map((role) => (
-        <OrgPanel key={role.key} title={`${role.name_az} (${role.key})`} className="mb-3">
+        <OrgPanel key={role.key} title={`${orgRoleName(t, role.key, role.name_az)} (${role.key})`} className="mb-3">
           <div className="flex flex-wrap gap-1.5">
             {(role.permissions || []).map((p) => (
               <span key={p} className="text-[11px] px-2 py-1 rounded-md border border-white/10 bg-white/[0.03] font-mono">
@@ -105,7 +101,7 @@ export function OrgRoles() {
           </div>
         </OrgPanel>
       ))}
-      <OrgPanel title="Kataloq">
+      <OrgPanel title={t('org.roles.catalog')}>
         <div className="flex flex-wrap gap-1.5">
           {permissions.map((p) => (
             <span key={p.key} className="text-[11px] px-2 py-1 rounded-md border border-emerald-500/20 text-emerald-200 font-mono">
@@ -119,32 +115,36 @@ export function OrgRoles() {
 }
 
 export function OrgProfile() {
+  const { t } = useTranslation()
   return (
-    <OrgPage title="Təşkilat profili" description="Təşkilat adı, loqo və filial.">
+    <OrgPage title={t('org.profile.title')} description={t('org.profile.desc')}>
       <CourseBrandingForm />
     </OrgPage>
   )
 }
 
 export function OrgBranding() {
+  const { t } = useTranslation()
   return (
-    <OrgPage title="Brendinq" description="Loqo və təşkilat adı.">
+    <OrgPage title={t('org.branding.title')} description={t('org.branding.desc')}>
       <CourseBrandingForm />
     </OrgPage>
   )
 }
 
 export function OrgIntegrations() {
+  const { t } = useTranslation()
   return (
-    <OrgPage title="İnteqrasiyalar" description="SSO, HRIS və digər B2B bağları.">
+    <OrgPage title={t('org.integrations.title')} description={t('org.integrations.desc')}>
       <OrgPanel>
-        <OrgEmpty>İnteqrasiya API-si hələ yoxdur. Bu səhifə gələcək bağlar üçün rezervdir.</OrgEmpty>
+        <OrgEmpty>{t('org.integrations.empty')}</OrgEmpty>
       </OrgPanel>
     </OrgPage>
   )
 }
 
 export function OrgNotifications() {
+  const { t, i18n } = useTranslation()
   const [rows, setRows] = useState([])
   useEffect(() => {
     api
@@ -153,16 +153,20 @@ export function OrgNotifications() {
       .catch(() => setRows([]))
   }, [])
   return (
-    <OrgPage title="Bildirişlər" description="Təşkilat hesabına gələn daxili bildirişlər. Kütləvi SMS kampaniyası üçün ayrıca API yoxdur.">
+    <OrgPage title={t('org.notifications.title')} description={t('org.notifications.desc')}>
       <OrgPanel>
         <OrgTable
           columns={[
-            { key: 'title', label: 'Başlıq' },
-            { key: 'body', label: 'Mətn', render: (r) => String(r.body || '').slice(0, 120) },
-            { key: 'created_at', label: 'Vaxt', render: (r) => fmtWhen(r.created_at) },
+            { key: 'title', label: t('org.notifications.heading') },
+            { key: 'body', label: t('org.notifications.body'), render: (r) => String(r.body || '').slice(0, 120) },
+            {
+              key: 'created_at',
+              label: t('org.notifications.time'),
+              render: (r) => formatOrgDateTime(r.created_at, i18n.language),
+            },
           ]}
           rows={rows}
-          empty={<OrgEmpty>Bildiriş yoxdur.</OrgEmpty>}
+          empty={<OrgEmpty>{t('org.notifications.empty')}</OrgEmpty>}
         />
       </OrgPanel>
     </OrgPage>
@@ -170,6 +174,7 @@ export function OrgNotifications() {
 }
 
 export function OrgAudit() {
+  const { t, i18n } = useTranslation()
   const [rows, setRows] = useState([])
   useEffect(() => {
     api
@@ -178,17 +183,25 @@ export function OrgAudit() {
       .catch(() => setRows([]))
   }, [])
   return (
-    <OrgPage title="Audit jurnalı" description="Actor, action, target, timestamp və metadata.">
+    <OrgPage title={t('org.audit.title')} description={t('org.audit.desc')}>
       <OrgPanel>
         <OrgTable
           columns={[
-            { key: 'created_at', label: 'Vaxt', render: (r) => fmtWhen(r.created_at) },
-            { key: 'actor_name', label: 'Actor', render: (r) => r.actor_name || '—' },
-            { key: 'action', label: 'Action' },
-            { key: 'target_type', label: 'Target', render: (r) => `${r.target_type || '—'} ${r.target_id || ''}` },
+            {
+              key: 'created_at',
+              label: t('org.audit.time'),
+              render: (r) => formatOrgDateTime(r.created_at, i18n.language),
+            },
+            { key: 'actor_name', label: t('org.audit.actor'), render: (r) => r.actor_name || '—' },
+            { key: 'action', label: t('org.audit.action'), render: (r) => orgAuditAction(t, r.action) },
+            {
+              key: 'target_type',
+              label: t('org.audit.target'),
+              render: (r) => `${r.target_type || '—'} ${r.target_id || ''}`,
+            },
             {
               key: 'metadata',
-              label: 'Metadata',
+              label: t('org.audit.metadata'),
               render: (r) => (
                 <span className="font-mono text-[11px] text-token-textMuted">
                   {r.metadata ? JSON.stringify(r.metadata) : '—'}
@@ -197,7 +210,7 @@ export function OrgAudit() {
             },
           ]}
           rows={rows}
-          empty={<OrgEmpty>Audit qeydi yoxdur.</OrgEmpty>}
+          empty={<OrgEmpty>{t('org.audit.empty')}</OrgEmpty>}
         />
       </OrgPanel>
     </OrgPage>
@@ -205,8 +218,9 @@ export function OrgAudit() {
 }
 
 export function OrgSettings() {
+  const { t } = useTranslation()
   return (
-    <OrgPage title="Tənzimləmələr" description="Təşkilat profili və hesab.">
+    <OrgPage title={t('org.settings.title')} description={t('org.settings.desc')}>
       <PersonaSettingsCard />
       <CourseBrandingForm />
     </OrgPage>

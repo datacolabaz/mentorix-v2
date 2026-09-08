@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import api from '../../lib/api'
 import { resolveApiAssetUrl } from '../../lib/apiAssetUrl'
 import useAuthStore from '../../hooks/useAuth'
@@ -10,7 +11,8 @@ async function refreshAuthUser(updateUser) {
   if (d?.user) updateUser(d.user)
 }
 
-export default function CourseBrandingForm({ onSaved, showHint = true, submitLabel = 'Yadda saxla' }) {
+export default function CourseBrandingForm({ onSaved, showHint = true, submitLabel }) {
+  const { t } = useTranslation()
   const { updateUser } = useAuthStore()
   const fileRef = useRef(null)
   const [loading, setLoading] = useState(true)
@@ -21,6 +23,7 @@ export default function CourseBrandingForm({ onSaved, showHint = true, submitLab
   const [branchAddress, setBranchAddress] = useState('')
   const [logoUrl, setLogoUrl] = useState(null)
   const [logoPreview, setLogoPreview] = useState(null)
+  const resolvedSubmit = submitLabel || t('org.common.save')
 
   useEffect(() => {
     let cancelled = false
@@ -35,7 +38,7 @@ export default function CourseBrandingForm({ onSaved, showHint = true, submitLab
         setLogoUrl(s.logo_url || null)
       })
       .catch((err) => {
-        if (!cancelled) setError(err?.response?.data?.message || 'Parametrlər yüklənmədi')
+        if (!cancelled) setError(err?.response?.data?.message || t('org.branding.loadFailed'))
       })
       .finally(() => {
         if (!cancelled) setLoading(false)
@@ -43,7 +46,7 @@ export default function CourseBrandingForm({ onSaved, showHint = true, submitLab
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [t])
 
   const displayLogo = logoPreview || (logoUrl ? resolveApiAssetUrl(logoUrl) : null)
   const initials = (courseName || 'K')
@@ -57,7 +60,7 @@ export default function CourseBrandingForm({ onSaved, showHint = true, submitLab
     const file = e.target.files?.[0]
     if (!file) return
     if (!file.type.startsWith('image/')) {
-      setError('Yalnız şəkil faylı seçin (PNG, JPG)')
+      setError(t('org.branding.imageOnly'))
       return
     }
     setError(null)
@@ -76,7 +79,7 @@ export default function CourseBrandingForm({ onSaved, showHint = true, submitLab
       setLogoPreview(null)
       await refreshAuthUser(updateUser)
     } catch (err) {
-      setError(err?.response?.data?.message || 'Loqo yüklənmədi')
+      setError(err?.response?.data?.message || t('org.branding.logoFailed'))
       setLogoPreview(null)
     } finally {
       setUploadingLogo(false)
@@ -87,7 +90,7 @@ export default function CourseBrandingForm({ onSaved, showHint = true, submitLab
     e?.preventDefault?.()
     const name = courseName.trim()
     if (!name) {
-      setError('Kurs adını daxil edin (məs: Telman Abdullayev Tədris Mərkəzi)')
+      setError(t('org.branding.needName'))
       return
     }
     setSaving(true)
@@ -100,24 +103,19 @@ export default function CourseBrandingForm({ onSaved, showHint = true, submitLab
       await refreshAuthUser(updateUser)
       onSaved?.()
     } catch (err) {
-      setError(err?.response?.data?.message || 'Yadda saxlanmadı')
+      setError(err?.response?.data?.message || t('org.branding.saveFailed'))
     } finally {
       setSaving(false)
     }
   }
 
   if (loading) {
-    return <p className="text-sm text-token-textMuted">Yüklənir…</p>
+    return <p className="text-sm text-token-textMuted">{t('common.loading')}</p>
   }
 
   return (
     <form onSubmit={(e) => void save(e)} className="space-y-5">
-      {showHint ? (
-        <p className="text-sm text-token-textMuted leading-relaxed">
-          Kurs panelində görünəcək ad və loqonu təyin edin. Məsələn:{' '}
-          <span className="text-white/90">Telman Abdullayev Tədris Mərkəzi</span>.
-        </p>
-      ) : null}
+      {showHint ? <p className="text-sm text-token-textMuted leading-relaxed">{t('org.branding.pageHint')}</p> : null}
 
       {error ? (
         <p className="text-sm text-red-300/90" role="alert">
@@ -140,8 +138,8 @@ export default function CourseBrandingForm({ onSaved, showHint = true, submitLab
             ) : null}
           </div>
           <div className="flex-1 space-y-2 min-w-0">
-            <p className="text-sm font-medium text-white">Kurs loqosu</p>
-            <p className="text-xs text-token-textMuted">PNG və ya JPG, maksimum 2 MB</p>
+            <p className="text-sm font-medium text-white">{t('org.branding.logo')}</p>
+            <p className="text-xs text-token-textMuted">{t('org.branding.logoHint')}</p>
             <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onPickLogo} />
             <Button
               type="button"
@@ -150,37 +148,37 @@ export default function CourseBrandingForm({ onSaved, showHint = true, submitLab
               onClick={() => fileRef.current?.click()}
               className="justify-center"
             >
-              {uploadingLogo ? 'Yüklənir…' : 'Loqo seç'}
+              {uploadingLogo ? t('org.branding.uploading') : t('org.branding.pickLogo')}
             </Button>
           </div>
         </div>
       </Card>
 
       <label className="block space-y-1.5">
-        <span className="text-xs font-medium uppercase tracking-wider text-token-textMuted">Kurs adı</span>
+        <span className="text-xs font-medium uppercase tracking-wider text-token-textMuted">{t('org.branding.name')}</span>
         <input
           type="text"
           value={courseName}
           onChange={(e) => setCourseName(e.target.value)}
-          placeholder="Telman Abdullayev Tədris Mərkəzi"
+          placeholder={t('org.branding.namePlaceholder')}
           className="w-full rounded-xl px-3 py-2.5 text-sm border border-white/10 bg-white/[0.04] text-white placeholder:text-token-textMuted focus:border-emerald-500/40 outline-none"
           maxLength={120}
         />
       </label>
 
       <label className="block space-y-1.5">
-        <span className="text-xs font-medium uppercase tracking-wider text-token-textMuted">Filial ünvanı (istəyə bağlı)</span>
+        <span className="text-xs font-medium uppercase tracking-wider text-token-textMuted">{t('org.branding.branch')}</span>
         <input
           type="text"
           value={branchAddress}
           onChange={(e) => setBranchAddress(e.target.value)}
-          placeholder="Bakı, Nərimanov rayonu…"
+          placeholder={t('org.branding.branchPlaceholder')}
           className="w-full rounded-xl px-3 py-2.5 text-sm border border-white/10 bg-white/[0.04] text-white placeholder:text-token-textMuted focus:border-emerald-500/40 outline-none"
         />
       </label>
 
       <Button type="submit" loading={saving} className="w-full sm:w-auto justify-center">
-        {submitLabel}
+        {resolvedSubmit}
       </Button>
     </form>
   )

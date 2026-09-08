@@ -9,6 +9,7 @@ import { useToast } from '../../components/common/Toast'
 import { useOrgWorkspace } from '../../hooks/useOrgWorkspace'
 import OrgPage, { OrgPanel, OrgEmpty, OrgTable } from '../../components/org/OrgPage'
 import KpiCard from '../../components/common/KpiCard'
+import { orgMemberKind } from '../../lib/orgI18n'
 
 export function OrgTeams() {
   const { t } = useTranslation()
@@ -38,12 +39,12 @@ export function OrgTeams() {
     setBusy(true)
     try {
       await api.post('/course/teams', form)
-      toast('Komanda yaradıldı')
+      toast(t('org.teams.created'))
       setOpen(false)
       setForm({ name: '', description: '' })
       load()
     } catch (err) {
-      toast(err?.message || 'Yaradılmadı', 'error')
+      toast(err?.message || t('org.common.createFailed'), 'error')
     } finally {
       setBusy(false)
     }
@@ -51,11 +52,9 @@ export function OrgTeams() {
 
   return (
     <OrgPage
-      title={t('org.teams.title', { defaultValue: 'Komandalar' })}
-      description={t('org.teams.desc', {
-        defaultValue: 'Təşkilati struktur (məs. Sales, Marketing). Qruplar komandanın altındakı cohort / assessment toplusudur.',
-      })}
-      actions={can('teams.create') ? <Button onClick={() => setOpen(true)}>+ Komanda yarat</Button> : null}
+      title={t('org.teams.title')}
+      description={t('org.teams.desc')}
+      actions={can('teams.create') ? <Button onClick={() => setOpen(true)}>+ {t('org.teams.create')}</Button> : null}
     >
       {loading ? (
         <ListSkeleton />
@@ -65,24 +64,24 @@ export function OrgTeams() {
             columns={[
               {
                 key: 'name',
-                label: 'Komanda',
+                label: t('org.teams.name'),
                 render: (r) => (
                   <Link to={`/org/teams/${r.id}`} className="text-emerald-300 hover:underline font-medium">
                     {r.name}
                   </Link>
                 ),
               },
-              { key: 'member_count', label: 'İştirakçılar' },
-              { key: 'trainer_count', label: 'Təlimçilər' },
-              { key: 'average_score', label: 'Orta', render: (r) => (r.average_score == null ? '—' : `${r.average_score}%`) },
-              { key: 'completion_rate', label: 'Tamamlanma', render: (r) => `${r.completion_rate ?? 0}%` },
+              { key: 'member_count', label: t('org.teams.participantsKpi') },
+              { key: 'trainer_count', label: t('org.teams.trainers') },
+              { key: 'average_score', label: t('org.teams.avg'), render: (r) => (r.average_score == null ? '—' : `${r.average_score}%`) },
+              { key: 'completion_rate', label: t('org.teams.completion'), render: (r) => `${r.completion_rate ?? 0}%` },
             ]}
             rows={teams}
-            empty={<OrgEmpty>Hələ komanda yoxdur.</OrgEmpty>}
+            empty={<OrgEmpty>{t('org.teams.empty')}</OrgEmpty>}
           />
         </OrgPanel>
       )}
-      <Modal open={open} onClose={() => !busy && setOpen(false)} title="Yeni komanda" size="md">
+      <Modal open={open} onClose={() => !busy && setOpen(false)} title={t('org.teams.newTitle')} size="md">
         <form onSubmit={(e) => void create(e)} className="space-y-4">
           <input
             required
@@ -93,16 +92,16 @@ export function OrgTeams() {
           />
           <textarea
             className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm min-h-[88px]"
-            placeholder="Təsvir (istəyə bağlı)"
+            placeholder={t('org.teams.descPlaceholder')}
             value={form.description}
             onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
           />
           <div className="flex justify-end gap-2">
             <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
-              Ləğv
+              {t('org.common.cancel')}
             </Button>
             <Button type="submit" loading={busy}>
-              Saxla
+              {t('org.common.save')}
             </Button>
           </div>
         </form>
@@ -112,6 +111,7 @@ export function OrgTeams() {
 }
 
 export function OrgTeamDetail() {
+  const { t } = useTranslation()
   const { id } = useParams()
   const navigate = useNavigate()
   const [team, setTeam] = useState(null)
@@ -121,19 +121,19 @@ export function OrgTeamDetail() {
     api
       .get(`/course/teams/${id}`)
       .then((res) => setTeam(res.team))
-      .catch((err) => setError(err?.message || 'Tapılmadı'))
-  }, [id])
+      .catch((err) => setError(err?.message || t('org.common.notFound')))
+  }, [id, t])
 
   if (error) {
     return (
-      <OrgPage title="Komanda">
+      <OrgPage title={t('org.teams.title')}>
         <OrgEmpty>{error}</OrgEmpty>
       </OrgPage>
     )
   }
   if (!team) {
     return (
-      <OrgPage title="Komanda">
+      <OrgPage title={t('org.teams.title')}>
         <ListSkeleton />
       </OrgPage>
     )
@@ -142,35 +142,35 @@ export function OrgTeamDetail() {
   return (
     <OrgPage
       title={team.name}
-      description={team.description || 'Komanda detalları'}
+      description={team.description || t('org.teams.detailFallback')}
       actions={
         <Button variant="secondary" onClick={() => navigate('/org/teams')}>
-          Geri
+          {t('org.common.back')}
         </Button>
       }
     >
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <KpiCard title="İştirakçılar" value={String(team.participant_count ?? team.members?.length ?? 0)} />
-        <KpiCard title="Orta nəticə" value={team.average_score == null ? '—' : `${team.average_score}%`} />
-        <KpiCard title="Tamamlanma" value={`${team.completion_rate ?? 0}%`} />
-        <KpiCard title="Qruplar" value={String(team.groups?.length ?? 0)} />
+        <KpiCard title={t('org.teams.participantsKpi')} value={String(team.participant_count ?? team.members?.length ?? 0)} />
+        <KpiCard title={t('org.teams.avgKpi')} value={team.average_score == null ? '—' : `${team.average_score}%`} />
+        <KpiCard title={t('org.teams.completionKpi')} value={`${team.completion_rate ?? 0}%`} />
+        <KpiCard title={t('org.teams.groupsKpi')} value={String(team.groups?.length ?? 0)} />
       </div>
-      <OrgPanel title="Üzvlər">
+      <OrgPanel title={t('org.teams.membersPanel')}>
         <OrgTable
           columns={[
-            { key: 'full_name', label: 'Ad' },
-            { key: 'member_kind', label: 'Növ' },
-            { key: 'phone', label: 'Telefon', render: (r) => r.phone || '—' },
+            { key: 'full_name', label: t('org.participants.name') },
+            { key: 'member_kind', label: t('org.trainers.role'), render: (r) => orgMemberKind(t, r.member_kind) },
+            { key: 'phone', label: t('org.trainers.phone'), render: (r) => r.phone || '—' },
           ]}
           rows={team.members || []}
-          empty={<OrgEmpty>Üzv yoxdur.</OrgEmpty>}
+          empty={<OrgEmpty>{t('org.teams.noMembers')}</OrgEmpty>}
         />
       </OrgPanel>
-      <OrgPanel title="Qruplar">
+      <OrgPanel title={t('org.teams.groupsPanel')}>
         <OrgTable
-          columns={[{ key: 'name', label: 'Qrup' }]}
+          columns={[{ key: 'name', label: t('org.groups.name') }]}
           rows={team.groups || []}
-          empty={<OrgEmpty>Bu komandaya bağlı qrup yoxdur.</OrgEmpty>}
+          empty={<OrgEmpty>{t('org.teams.noGroups')}</OrgEmpty>}
         />
       </OrgPanel>
     </OrgPage>

@@ -9,25 +9,10 @@ import { useToast } from '../../components/common/Toast'
 import { useOrgWorkspace } from '../../hooks/useOrgWorkspace'
 import OrgPage, { OrgPanel, OrgEmpty, OrgTable } from '../../components/org/OrgPage'
 import StatusBadge from '../../components/common/StatusBadge'
-
-function fmtWhen(iso) {
-  if (!iso) return '—'
-  try {
-    return new Date(iso).toLocaleString('az-AZ', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
-  } catch {
-    return iso
-  }
-}
-
-const ASSESSMENT_LABEL = {
-  none: 'Təyin olunmayıb',
-  assigned: 'Təyin edilib',
-  in_progress: 'Davam edir',
-  completed: 'Tamamlanıb',
-}
+import { formatOrgDateTime, orgAssessmentStatus } from '../../lib/orgI18n'
 
 export default function OrgParticipants() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const toast = useToast()
   const { can } = useOrgWorkspace()
   const [rows, setRows] = useState([])
@@ -70,11 +55,11 @@ export default function OrgParticipants() {
         setError(null)
       })
       .catch((err) => {
-        setError(err?.message || 'Yüklənmədi')
+        setError(err?.message || t('org.common.loadFailed'))
         setRows([])
       })
       .finally(() => setLoading(false))
-  }, [filters, can])
+  }, [filters, can, t])
 
   useEffect(() => {
     load()
@@ -90,18 +75,18 @@ export default function OrgParticipants() {
     e.preventDefault()
     const digits = String(phone || '').replace(/\D/g, '')
     if (digits.length < 9) {
-      toast('Telefon nömrəsini düzgün daxil edin', 'error')
+      toast(t('org.common.phoneInvalid'), 'error')
       return
     }
     setBusy(true)
     try {
       await api.post('/course/students', { phone: digits })
-      toast(t('org.participants.added', { defaultValue: 'İştirakçı əlavə edildi' }))
+      toast(t('org.participants.added'))
       setAddOpen(false)
       setPhone('')
       load()
     } catch (err) {
-      toast(err?.message || 'Əlavə edilmədi', 'error')
+      toast(err?.message || t('org.participants.addFailed'), 'error')
     } finally {
       setBusy(false)
     }
@@ -109,17 +94,17 @@ export default function OrgParticipants() {
 
   async function bulk(action, extra = {}) {
     if (!selected.length) {
-      toast('İştirakçı seçin', 'error')
+      toast(t('org.participants.select'), 'error')
       return
     }
     setBusy(true)
     try {
       await api.post('/course/participants/bulk', { action, participant_ids: selected, ...extra })
-      toast('Əməliyyat tamamlandı')
+      toast(t('org.common.done'))
       setSelected([])
       load()
     } catch (err) {
-      toast(err?.message || 'Alınmadı', 'error')
+      toast(err?.message || t('org.common.failed'), 'error')
     } finally {
       setBusy(false)
     }
@@ -145,22 +130,23 @@ export default function OrgParticipants() {
       })
   }
 
-  const filteredHint = useMemo(() => `${rows.length} iştirakçı`, [rows.length])
+  const filteredHint = useMemo(
+    () => t('org.participants.count', { count: rows.length }),
+    [rows.length, t],
+  )
 
   return (
     <OrgPage
-      title={t('org.participants.title', { defaultValue: 'İştirakçılar' })}
-      description={t('org.participants.desc', {
-        defaultValue: 'Təşkilat üzrə bütün iştirakçılar. Tələbə, namizəd və ya əməkdaş eyni siyahıda idarə olunur.',
-      })}
+      title={t('org.participants.title')}
+      description={t('org.participants.desc')}
       actions={
         <>
           {can('reports.export') ? (
             <Button variant="secondary" onClick={exportCsv}>
-              Export
+              {t('org.common.export')}
             </Button>
           ) : null}
-          {can('users.create') ? <Button onClick={() => setAddOpen(true)}>+ İştirakçı əlavə et</Button> : null}
+          {can('users.create') ? <Button onClick={() => setAddOpen(true)}>+ {t('org.participants.add')}</Button> : null}
         </>
       }
     >
@@ -170,7 +156,7 @@ export default function OrgParticipants() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2 mb-4">
           <input
             className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
-            placeholder="Axtarış"
+            placeholder={t('org.common.search')}
             value={filters.q}
             onChange={(e) => setFilters((f) => ({ ...f, q: e.target.value }))}
           />
@@ -179,7 +165,7 @@ export default function OrgParticipants() {
             value={filters.team_id}
             onChange={(e) => setFilters((f) => ({ ...f, team_id: e.target.value }))}
           >
-            <option value="">Komanda</option>
+            <option value="">{t('org.participants.allTeams')}</option>
             {teams.map((x) => (
               <option key={x.id} value={x.id}>
                 {x.name}
@@ -191,7 +177,7 @@ export default function OrgParticipants() {
             value={filters.group_id}
             onChange={(e) => setFilters((f) => ({ ...f, group_id: e.target.value }))}
           >
-            <option value="">Qrup</option>
+            <option value="">{t('org.participants.allGroups')}</option>
             {groups.map((x) => (
               <option key={x.id} value={x.id}>
                 {x.name}
@@ -203,20 +189,20 @@ export default function OrgParticipants() {
             value={filters.status}
             onChange={(e) => setFilters((f) => ({ ...f, status: e.target.value }))}
           >
-            <option value="">Status</option>
-            <option value="active">Aktiv</option>
-            <option value="inactive">Deaktiv</option>
+            <option value="">{t('org.participants.allStatuses')}</option>
+            <option value="active">{t('org.participants.active')}</option>
+            <option value="inactive">{t('org.participants.inactive')}</option>
           </select>
           <select
             className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
             value={filters.assessment_status}
             onChange={(e) => setFilters((f) => ({ ...f, assessment_status: e.target.value }))}
           >
-            <option value="">Qiymətləndirmə</option>
-            <option value="none">Təyin olunmayıb</option>
-            <option value="assigned">Təyin edilib</option>
-            <option value="in_progress">Davam edir</option>
-            <option value="completed">Tamamlanıb</option>
+            <option value="">{t('org.participants.allAssessments')}</option>
+            <option value="none">{t('org.assessmentStatus.none')}</option>
+            <option value="assigned">{t('org.assessmentStatus.assigned')}</option>
+            <option value="in_progress">{t('org.assessmentStatus.in_progress')}</option>
+            <option value="completed">{t('org.assessmentStatus.completed')}</option>
           </select>
         </div>
         <p className="text-[11px] text-token-textMuted mb-3">{filteredHint}</p>
@@ -228,7 +214,7 @@ export default function OrgParticipants() {
               value={bulkTeam}
               onChange={(e) => setBulkTeam(e.target.value)}
             >
-              <option value="">Komandaya əlavə et</option>
+              <option value="">{t('org.participants.addToTeam')}</option>
               {teams.map((x) => (
                 <option key={x.id} value={x.id}>
                   {x.name}
@@ -240,14 +226,14 @@ export default function OrgParticipants() {
               disabled={!bulkTeam || busy}
               onClick={() => bulk('add_to_team', { team_id: bulkTeam })}
             >
-              Komandaya əlavə et
+              {t('org.participants.addToTeam')}
             </Button>
             <select
               className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
               value={bulkExam}
               onChange={(e) => setBulkExam(e.target.value)}
             >
-              <option value="">Assessment təyin et</option>
+              <option value="">{t('org.participants.assignAssessment')}</option>
               {exams.map((x) => (
                 <option key={x.id} value={x.id}>
                   {x.title}
@@ -259,11 +245,11 @@ export default function OrgParticipants() {
               disabled={!bulkExam || busy}
               onClick={() => bulk('assign_assessment', { exam_id: bulkExam })}
             >
-              Təyin et
+              {t('org.participants.assign')}
             </Button>
             {can('users.delete') ? (
               <Button variant="ghost" disabled={busy} onClick={() => bulk('archive')}>
-                Archive
+                {t('org.participants.archive')}
               </Button>
             ) : null}
           </div>
@@ -289,44 +275,48 @@ export default function OrgParticipants() {
                   />
                 ),
               },
-              { key: 'full_name', label: 'Ad' },
-              { key: 'team_name', label: 'Komanda', render: (r) => r.team_name || '—' },
-              { key: 'group_name', label: 'Qrup', render: (r) => r.group_name || '—' },
+              { key: 'full_name', label: t('org.participants.name') },
+              { key: 'team_name', label: t('org.participants.team'), render: (r) => r.team_name || '—' },
+              { key: 'group_name', label: t('org.participants.group'), render: (r) => r.group_name || '—' },
               {
                 key: 'is_active',
-                label: 'Status',
+                label: t('org.participants.status'),
                 render: (r) => (
-                  <StatusBadge variant={r.is_active ? 'paid' : 'neutral'}>{r.is_active ? 'Aktiv' : 'Deaktiv'}</StatusBadge>
+                  <StatusBadge variant={r.is_active ? 'paid' : 'neutral'}>
+                    {r.is_active ? t('org.participants.active') : t('org.participants.inactive')}
+                  </StatusBadge>
                 ),
               },
               {
                 key: 'assessment_status',
-                label: 'Qiymətləndirmə',
-                render: (r) => ASSESSMENT_LABEL[r.assessment_status] || r.assessment_status,
+                label: t('org.participants.assessment'),
+                render: (r) => orgAssessmentStatus(t, r.assessment_status),
               },
-              { key: 'avg_score', label: 'Nəticə', render: (r) => (r.avg_score == null ? '—' : `${r.avg_score}%`) },
-              { key: 'last_activity_at', label: 'Son aktivlik', render: (r) => fmtWhen(r.last_activity_at) },
+              { key: 'avg_score', label: t('org.participants.score'), render: (r) => (r.avg_score == null ? '—' : `${r.avg_score}%`) },
+              {
+                key: 'last_activity_at',
+                label: t('org.participants.lastActivity'),
+                render: (r) => formatOrgDateTime(r.last_activity_at, i18n.language),
+              },
             ]}
             rows={rows}
-            empty={<OrgEmpty>Hələ iştirakçı yoxdur. Platformada qeydiyyatlı şəxsi telefon ilə əlavə edin.</OrgEmpty>}
+            empty={<OrgEmpty>{t('org.participants.empty')}</OrgEmpty>}
           />
         )}
       </OrgPanel>
 
-      <p className="text-xs text-token-textMuted">
-        Dəvət e-poçtu ayrıca göndərilmir — iştirakçı artıq platformada qeydiyyatda olmalıdır.
-      </p>
+      <p className="text-xs text-token-textMuted">{t('org.participants.inviteHint')}</p>
 
-      <Modal open={addOpen} onClose={() => !busy && setAddOpen(false)} title="İştirakçı əlavə et" size="md">
+      <Modal open={addOpen} onClose={() => !busy && setAddOpen(false)} title={t('org.participants.add')} size="md">
         <form onSubmit={(e) => void addParticipant(e)} className="space-y-5">
-          <p className="text-sm text-token-textMuted">İştirakçının platformada qeydiyyatdan keçdiyi telefon nömrəsini daxil edin.</p>
+          <p className="text-sm text-token-textMuted">{t('org.participants.modalHint')}</p>
           <PhoneInput value={phone} onChange={setPhone} required autoFocus />
           <div className="flex justify-end gap-2">
             <Button type="button" variant="ghost" disabled={busy} onClick={() => setAddOpen(false)}>
-              Ləğv
+              {t('org.common.cancel')}
             </Button>
             <Button type="submit" loading={busy}>
-              Axtar və əlavə et
+              {t('org.participants.searchAdd')}
             </Button>
           </div>
         </form>

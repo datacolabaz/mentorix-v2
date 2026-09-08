@@ -21,7 +21,7 @@ function OrgSidebarChrome() {
   const navigate = useNavigate()
   const location = useLocation()
   const { theme } = useUiStore()
-  const { workspace, permissions, loading } = useOrgWorkspace()
+  const { workspace, permissions, loading, error } = useOrgWorkspace()
   const [navOpen, setNavOpen] = useState(false)
   const [collapsed, setCollapsed] = useState(() => {
     try {
@@ -42,7 +42,7 @@ function OrgSidebarChrome() {
     }))
   }, [t, i18n.language, permissions])
 
-  const orgName = workspace?.course_name || user?.course_name || user?.full_name || 'Təşkilat'
+  const orgName = workspace?.course_name || user?.course_name || user?.full_name || t('org.common.fallbackName')
   const orgLogo = workspace?.logo_url || user?.course_logo_url
   const logoSrc = orgLogo ? resolveApiAssetUrl(orgLogo) : null
 
@@ -90,7 +90,7 @@ function OrgSidebarChrome() {
       >
         <button
           type="button"
-          aria-label="Menyu"
+          aria-label={t('layout.menu')}
           className={[
             'w-11 h-11 rounded-2xl shrink-0 flex items-center justify-center text-xl border',
             theme === 'dark'
@@ -110,7 +110,7 @@ function OrgSidebarChrome() {
       {navOpen ? (
         <button
           type="button"
-          aria-label="Menyunu bağla"
+          aria-label={t('layout.closeMenu')}
           className="lg:hidden fixed inset-0 z-[70] bg-black/60"
           onClick={() => setNavOpen(false)}
         />
@@ -140,8 +140,8 @@ function OrgSidebarChrome() {
               <button
                 type="button"
                 className="hidden lg:inline-flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 text-token-textMuted hover:text-token-textMain hover:bg-white/5"
-                aria-label={collapsed ? 'Sidebar-ı aç' : 'Sidebar-ı yığ'}
-                title={collapsed ? 'Aç' : 'Yığ'}
+                aria-label={collapsed ? t('org.common.expandSidebar') : t('org.common.collapseSidebar')}
+                title={collapsed ? t('org.common.expand') : t('org.common.collapse')}
                 onClick={toggleCollapsed}
               >
                 {collapsed ? '›' : '‹'}
@@ -265,6 +265,9 @@ function OrgSidebarChrome() {
         >
           <div className="min-h-full flex flex-col">
             <div className="flex-1 min-h-0">
+              {error ? (
+                <p className="px-4 sm:px-6 pt-4 text-sm text-red-300/90">{error}</p>
+              ) : null}
               <Outlet />
             </div>
             <Footer />

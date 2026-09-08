@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import api from '../../lib/api'
 import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
@@ -8,17 +9,10 @@ import { useToast } from '../../components/common/Toast'
 import { useOrgWorkspace } from '../../hooks/useOrgWorkspace'
 import OrgPage, { OrgPanel, OrgEmpty, OrgTable } from '../../components/org/OrgPage'
 import StatusBadge from '../../components/common/StatusBadge'
-
-function fmtWhen(iso) {
-  if (!iso) return '—'
-  try {
-    return new Date(iso).toLocaleString('az-AZ', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
-  } catch {
-    return iso
-  }
-}
+import { formatOrgDateTime, orgLifecycleLabel, orgRoleName } from '../../lib/orgI18n'
 
 export default function OrgTrainers() {
+  const { t, i18n } = useTranslation()
   const toast = useToast()
   const { can } = useOrgWorkspace()
   const [rows, setRows] = useState([])
@@ -37,8 +31,8 @@ export default function OrgTrainers() {
       can('teams.view') ? api.get('/course/teams') : Promise.resolve({ teams: [] }),
       can('roles.manage') ? api.get('/course/roles') : Promise.resolve({ roles: [] }),
     ])
-      .then(([t, tm, r]) => {
-        setRows(t.teachers || [])
+      .then(([te, tm, r]) => {
+        setRows(te.teachers || [])
         setTeams(tm.teams || [])
         setRoles(r.roles || [])
       })
@@ -53,18 +47,18 @@ export default function OrgTrainers() {
     e.preventDefault()
     const digits = String(phone || '').replace(/\D/g, '')
     if (digits.length < 9) {
-      toast('Telefon nömrəsini düzgün daxil edin', 'error')
+      toast(t('org.common.phoneInvalid'), 'error')
       return
     }
     setBusy(true)
     try {
       await api.post('/course/teachers', { phone: digits })
-      toast('Müəllim heyətə əlavə edildi')
+      toast(t('org.trainers.invited'))
       setOpen(false)
       setPhone('')
       load()
     } catch (err) {
-      toast(err?.message || 'Əlavə edilmədi', 'error')
+      toast(err?.message || t('org.trainers.addFailed'), 'error')
     } finally {
       setBusy(false)
     }
@@ -75,17 +69,17 @@ export default function OrgTrainers() {
       await api.patch(`/course/teachers/${id}`, body)
       load()
     } catch (err) {
-      toast(err?.message || 'Alınmadı', 'error')
+      toast(err?.message || t('org.common.failed'), 'error')
     }
   }
 
   async function remove(id) {
-    if (!window.confirm('Müəllimi təşkilat heyətindən silmək?')) return
+    if (!window.confirm(t('org.trainers.removeConfirm'))) return
     try {
       await api.delete(`/course/teachers/${id}`)
       load()
     } catch (err) {
-      toast(err?.message || 'Silinmədi', 'error')
+      toast(err?.message || t('org.trainers.deleted'), 'error')
     }
   }
 
@@ -94,15 +88,15 @@ export default function OrgTrainers() {
       const res = await api.get(`/course/teachers/${id}/activity`)
       setActivity(res)
     } catch (err) {
-      toast(err?.message || 'Yüklənmədi', 'error')
+      toast(err?.message || t('org.common.loadFailed'), 'error')
     }
   }
 
   return (
     <OrgPage
-      title="Müəllimlər / Təlimçilər"
-      description="Təşkilat heyətindəki instructor və trainer-lər. Onların şəxsi dərs paneli ayrı qalır — burada yalnız təşkilat idarəetməsi var."
-      actions={can('trainers.invite') ? <Button onClick={() => setOpen(true)}>+ Müəllim dəvət et</Button> : null}
+      title={t('org.trainers.title')}
+      description={t('org.trainers.desc')}
+      actions={can('trainers.invite') ? <Button onClick={() => setOpen(true)}>+ {t('org.trainers.invite')}</Button> : null}
     >
       {loading ? (
         <ListSkeleton />
@@ -110,21 +104,29 @@ export default function OrgTrainers() {
         <OrgPanel>
           <OrgTable
             columns={[
-              { key: 'full_name', label: 'Ad' },
-              { key: 'phone', label: 'Telefon', render: (r) => r.phone || '—' },
+              { key: 'full_name', label: t('org.trainers.name') },
+              { key: 'phone', label: t('org.trainers.phone'), render: (r) => r.phone || '—' },
               {
                 key: 'is_active',
-                label: 'Status',
+                label: t('org.trainers.status'),
                 render: (r) => (
                   <StatusBadge variant={r.is_active ? 'paid' : 'neutral'}>
-                    {r.is_active ? 'Aktiv' : 'Dayandırılıb'}
+                    {r.is_active ? t('org.trainers.active') : t('org.trainers.suspended')}
                   </StatusBadge>
                 ),
               },
-              { key: 'team_name', label: 'Komanda', render: (r) => r.team_name || '—' },
-              { key: 'role_key', label: 'Rol', render: (r) => r.role_key || 'instructor' },
-              { key: 'created_assessments_count', label: 'Qiymətləndirmələr' },
-              { key: 'last_activity_at', label: 'Aktivlik', render: (r) => fmtWhen(r.last_activity_at) },
+              { key: 'team_name', label: t('org.trainers.team'), render: (r) => r.team_name || '—' },
+              {
+                key: 'role_key',
+                label: t('org.trainers.role'),
+                render: (r) => orgRoleName(t, r.role_key, r.role_key || 'instructor'),
+              },
+              { key: 'created_assessments_count', label: t('org.trainers.assessments') },
+              {
+                key: 'last_activity_at',
+                label: t('org.trainers.activity'),
+                render: (r) => formatOrgDateTime(r.last_activity_at, i18n.language),
+              },
               {
                 key: 'actions',
                 label: '',
@@ -132,7 +134,7 @@ export default function OrgTrainers() {
                   can('trainers.manage') ? (
                     <div className="flex flex-wrap gap-1">
                       <Button variant="ghost" onClick={() => viewActivity(r.id)}>
-                        Aktivlik
+                        {t('org.trainers.viewActivity')}
                       </Button>
                       {can('teams.edit') ? (
                         <select
@@ -140,7 +142,7 @@ export default function OrgTrainers() {
                           value={r.team_id || ''}
                           onChange={(e) => act(r.id, { team_id: e.target.value || null })}
                         >
-                          <option value="">Komanda</option>
+                          <option value="">{t('org.trainers.team')}</option>
                           {teams.map((x) => (
                             <option key={x.id} value={x.id}>
                               {x.name}
@@ -156,7 +158,7 @@ export default function OrgTrainers() {
                         >
                           {roles.filter((x) => x.key !== 'owner').map((x) => (
                             <option key={x.key} value={x.key}>
-                              {x.name_az}
+                              {orgRoleName(t, x.key, x.name_az)}
                             </option>
                           ))}
                         </select>
@@ -165,44 +167,46 @@ export default function OrgTrainers() {
                         variant="ghost"
                         onClick={() => act(r.id, { action: r.is_active ? 'suspend' : 'activate' })}
                       >
-                        {r.is_active ? 'Dayandır' : 'Aktiv et'}
+                        {r.is_active ? t('org.trainers.suspend') : t('org.trainers.activate')}
                       </Button>
                       <Button variant="ghost" onClick={() => remove(r.id)}>
-                        Sil
+                        {t('org.trainers.remove')}
                       </Button>
                     </div>
                   ) : null,
               },
             ]}
             rows={rows}
-            empty={<OrgEmpty>Hələ təşkilat müəllimi yoxdur. Platformada qeydiyyatlı təlimçini telefon ilə dəvət edin.</OrgEmpty>}
+            empty={<OrgEmpty>{t('org.trainers.empty')}</OrgEmpty>}
           />
         </OrgPanel>
       )}
 
-      <Modal open={!!activity} onClose={() => setActivity(null)} title="Yaradılan qiymətləndirmələr" size="lg">
+      <Modal open={!!activity} onClose={() => setActivity(null)} title={t('org.trainers.activityTitle')} size="lg">
         <OrgTable
           columns={[
-            { key: 'title', label: 'İmtahan' },
-            { key: 'lifecycle', label: 'Status' },
+            { key: 'title', label: t('org.trainers.exam') },
+            {
+              key: 'lifecycle',
+              label: t('org.trainers.status'),
+              render: (r) => orgLifecycleLabel(t, r.lifecycle),
+            },
           ]}
           rows={activity?.created_assessments || []}
-          empty={<OrgEmpty>Bu təlimçinin təşkilat imtahanı yoxdur.</OrgEmpty>}
+          empty={<OrgEmpty>{t('org.trainers.noExams')}</OrgEmpty>}
         />
       </Modal>
 
-      <Modal open={open} onClose={() => !busy && setOpen(false)} title="Müəllim dəvət et" size="md">
+      <Modal open={open} onClose={() => !busy && setOpen(false)} title={t('org.trainers.invite')} size="md">
         <form onSubmit={(e) => void invite(e)} className="space-y-5">
-          <p className="text-sm text-token-textMuted">
-            Müəllimin platformada qeydiyyatdan keçdiyi telefon nömrəsini daxil edin.
-          </p>
+          <p className="text-sm text-token-textMuted">{t('org.trainers.modalHint')}</p>
           <PhoneInput value={phone} onChange={setPhone} required autoFocus />
           <div className="flex justify-end gap-2">
             <Button type="button" variant="ghost" disabled={busy} onClick={() => setOpen(false)}>
-              Ləğv
+              {t('org.common.cancel')}
             </Button>
             <Button type="submit" loading={busy}>
-              Axtar və əlavə et
+              {t('org.trainers.searchAdd')}
             </Button>
           </div>
         </form>

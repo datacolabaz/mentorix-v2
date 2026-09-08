@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import api from '../lib/api'
+import i18n from '../i18n'
 
 const OrgWorkspaceContext = createContext(null)
 
@@ -17,7 +18,7 @@ export function OrgWorkspaceProvider({ children }) {
         setError(null)
       })
       .catch((err) => {
-        setError(err?.message || 'Təşkilat yüklənmədi')
+        setError(err?.message || i18n.t('org.common.workspaceFailed'))
         setWorkspace(null)
       })
       .finally(() => setLoading(false))

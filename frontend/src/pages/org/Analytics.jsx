@@ -1,12 +1,15 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import api from '../../lib/api'
 import Button from '../../components/common/Button'
 import KpiCard from '../../components/common/KpiCard'
 import { useOrgWorkspace } from '../../hooks/useOrgWorkspace'
 import OrgPage, { OrgPanel, OrgEmpty, OrgTable } from '../../components/org/OrgPage'
+import { orgAssessmentStatus } from '../../lib/orgI18n'
 
 export default function OrgAnalytics({ focus = 'overview' }) {
+  const { t } = useTranslation()
   const { can } = useOrgWorkspace()
   const [data, setData] = useState(null)
   const [filters, setFilters] = useState({ from: '', to: '', team_id: '', instructor_id: '' })
@@ -32,14 +35,14 @@ export default function OrgAnalytics({ focus = 'overview' }) {
   const summary = data?.summary || {}
   const title =
     focus === 'exams'
-      ? 'İmtahan nəticələri'
+      ? t('org.analytics.exams')
       : focus === 'participants'
-        ? 'İştirakçı performansı'
+        ? t('org.analytics.participants')
         : focus === 'teams'
-          ? 'Komanda nəticələri'
+          ? t('org.analytics.teams')
           : focus === 'reports'
-            ? 'Hesabatlar'
-            : 'Ümumi analitika'
+            ? t('org.analytics.reports')
+            : t('org.analytics.overview')
 
   function exportCsv() {
     const token = localStorage.getItem('mx_token')
@@ -64,11 +67,11 @@ export default function OrgAnalytics({ focus = 'overview' }) {
   return (
     <OrgPage
       title={title}
-      description="Təşkilat analitikası fərdi müəllim statistikasından ayrıdır: participation, completion, komanda müqayisəsi."
+      description={t('org.analytics.desc')}
       actions={
         can('reports.export') ? (
           <Button variant="secondary" onClick={exportCsv}>
-            Export
+            {t('org.common.export')}
           </Button>
         ) : null
       }
@@ -91,7 +94,7 @@ export default function OrgAnalytics({ focus = 'overview' }) {
           value={filters.team_id}
           onChange={(e) => setFilters((f) => ({ ...f, team_id: e.target.value }))}
         >
-          <option value="">Komanda</option>
+          <option value="">{t('org.analytics.allTeams')}</option>
           {teams.map((x) => (
             <option key={x.id} value={x.id}>
               {x.name}
@@ -103,7 +106,7 @@ export default function OrgAnalytics({ focus = 'overview' }) {
           value={filters.instructor_id}
           onChange={(e) => setFilters((f) => ({ ...f, instructor_id: e.target.value }))}
         >
-          <option value="">Müəllim</option>
+          <option value="">{t('org.analytics.allTeachers')}</option>
           {trainers.map((x) => (
             <option key={x.id} value={x.id}>
               {x.full_name}
@@ -114,14 +117,14 @@ export default function OrgAnalytics({ focus = 'overview' }) {
 
       {focus === 'overview' || focus === 'reports' ? (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <KpiCard title="Participation" value={String(summary.participation ?? 0)} />
-          <KpiCard title="Completion" value={String(summary.completion ?? 0)} />
-          <KpiCard title="Orta nəticə" value={summary.average_score == null ? '—' : `${summary.average_score}%`} />
+          <KpiCard title={t('org.analytics.participation')} value={String(summary.participation ?? 0)} />
+          <KpiCard title={t('org.analytics.completion')} value={String(summary.completion ?? 0)} />
+          <KpiCard title={t('org.analytics.avgScore')} value={summary.average_score == null ? '—' : `${summary.average_score}%`} />
         </div>
       ) : null}
 
       {focus === 'overview' ? (
-        <OrgPanel title="Nəticə paylanması">
+        <OrgPanel title={t('org.analytics.distribution')}>
           {data?.score_distribution?.some((x) => x.count > 0) ? (
             <div className="h-56">
               <ResponsiveContainer width="100%" height="100%">
@@ -134,54 +137,58 @@ export default function OrgAnalytics({ focus = 'overview' }) {
               </ResponsiveContainer>
             </div>
           ) : (
-            <OrgEmpty>Paylanma üçün nəticə yoxdur.</OrgEmpty>
+            <OrgEmpty>{t('org.analytics.noDistribution')}</OrgEmpty>
           )}
         </OrgPanel>
       ) : null}
 
       {(focus === 'exams' || focus === 'overview' || focus === 'reports') && (
-        <OrgPanel title="Qiymətləndirmə performansı">
+        <OrgPanel title={t('org.analytics.assessmentPerf')}>
           <OrgTable
             columns={[
-              { key: 'name', label: 'İmtahan' },
-              { key: 'created_by', label: 'Müəllim' },
-              { key: 'participants', label: 'İştirak' },
+              { key: 'name', label: t('org.analytics.exam') },
+              { key: 'created_by', label: t('org.analytics.teacher') },
+              { key: 'participants', label: t('org.analytics.participationCol') },
               { key: 'completion', label: '%' },
-              { key: 'average_score', label: 'Orta', render: (r) => (r.average_score == null ? '—' : `${r.average_score}%`) },
+              { key: 'average_score', label: t('org.exams.avg'), render: (r) => (r.average_score == null ? '—' : `${r.average_score}%`) },
             ]}
             rows={data?.assessments || []}
-            empty={<OrgEmpty>İmtahan nəticəsi yoxdur.</OrgEmpty>}
+            empty={<OrgEmpty>{t('org.analytics.noExamResults')}</OrgEmpty>}
           />
         </OrgPanel>
       )}
 
       {(focus === 'participants' || focus === 'overview' || focus === 'reports') && (
-        <OrgPanel title="İştirakçı performansı">
+        <OrgPanel title={t('org.analytics.participants')}>
           <OrgTable
             columns={[
-              { key: 'name', label: 'İştirakçı' },
-              { key: 'team_name', label: 'Komanda', render: (r) => r.team_name || '—' },
-              { key: 'group_name', label: 'Qrup', render: (r) => r.group_name || '—' },
-              { key: 'avg_score', label: 'Nəticə', render: (r) => (r.avg_score == null ? '—' : `${r.avg_score}%`) },
-              { key: 'assessment_status', label: 'Status' },
+              { key: 'name', label: t('org.analytics.participant') },
+              { key: 'team_name', label: t('org.analytics.team'), render: (r) => r.team_name || '—' },
+              { key: 'group_name', label: t('org.analytics.group'), render: (r) => r.group_name || '—' },
+              { key: 'avg_score', label: t('org.analytics.score'), render: (r) => (r.avg_score == null ? '—' : `${r.avg_score}%`) },
+              {
+                key: 'assessment_status',
+                label: t('org.analytics.status'),
+                render: (r) => orgAssessmentStatus(t, r.assessment_status),
+              },
             ]}
             rows={data?.participants || []}
-            empty={<OrgEmpty>İştirakçı nəticəsi yoxdur.</OrgEmpty>}
+            empty={<OrgEmpty>{t('org.analytics.noParticipantResults')}</OrgEmpty>}
           />
         </OrgPanel>
       )}
 
       {(focus === 'teams' || focus === 'overview' || focus === 'reports') && (
-        <OrgPanel title="Komanda müqayisəsi">
+        <OrgPanel title={t('org.analytics.teamCompare')}>
           <OrgTable
             columns={[
-              { key: 'name', label: 'Komanda' },
-              { key: 'member_count', label: 'Üzvlər' },
-              { key: 'average_score', label: 'Orta', render: (r) => (r.average_score == null ? '—' : `${r.average_score}%`) },
-              { key: 'completion_rate', label: 'Tamamlanma', render: (r) => `${r.completion_rate ?? 0}%` },
+              { key: 'name', label: t('org.analytics.team') },
+              { key: 'member_count', label: t('org.analytics.members') },
+              { key: 'average_score', label: t('org.exams.avg'), render: (r) => (r.average_score == null ? '—' : `${r.average_score}%`) },
+              { key: 'completion_rate', label: t('org.teams.completion'), render: (r) => `${r.completion_rate ?? 0}%` },
             ]}
             rows={data?.teams || []}
-            empty={<OrgEmpty>Komanda nəticəsi yoxdur.</OrgEmpty>}
+            empty={<OrgEmpty>{t('org.analytics.noTeamResults')}</OrgEmpty>}
           />
         </OrgPanel>
       )}

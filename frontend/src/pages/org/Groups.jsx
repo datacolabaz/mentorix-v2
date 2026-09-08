@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import api from '../../lib/api'
 import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
@@ -8,6 +9,7 @@ import { useOrgWorkspace } from '../../hooks/useOrgWorkspace'
 import OrgPage, { OrgPanel, OrgEmpty, OrgTable } from '../../components/org/OrgPage'
 
 export default function OrgGroups() {
+  const { t } = useTranslation()
   const toast = useToast()
   const { can } = useOrgWorkspace()
   const [groups, setGroups] = useState([])
@@ -25,9 +27,9 @@ export default function OrgGroups() {
       api.get('/course/teachers').catch(() => ({ teachers: [] })),
       api.get('/course/teams').catch(() => ({ teams: [] })),
     ])
-      .then(([g, t, tm]) => {
+      .then(([g, te, tm]) => {
         setGroups(g.groups || [])
-        setTeachers(t.teachers || [])
+        setTeachers(te.teachers || [])
         setTeams(tm.teams || [])
       })
       .finally(() => setLoading(false))
@@ -46,12 +48,12 @@ export default function OrgGroups() {
         instructor_user_id: form.instructor_user_id || null,
         team_id: form.team_id || null,
       })
-      toast('Qrup yaradıldı')
+      toast(t('org.groups.created'))
       setOpen(false)
       setForm({ name: '', instructor_user_id: '', team_id: '' })
       load()
     } catch (err) {
-      toast(err?.message || 'Yaradılmadı', 'error')
+      toast(err?.message || t('org.common.createFailed'), 'error')
     } finally {
       setBusy(false)
     }
@@ -59,9 +61,9 @@ export default function OrgGroups() {
 
   return (
     <OrgPage
-      title="Qruplar"
-      description="Qrup — assessment, cohort və ya müəyyən iştirakçı toplusu. Komanda isə daha böyük təşkilati strukturdur."
-      actions={can('groups.create') ? <Button onClick={() => setOpen(true)}>+ Qrup yarat</Button> : null}
+      title={t('org.groups.title')}
+      description={t('org.groups.desc')}
+      actions={can('groups.create') ? <Button onClick={() => setOpen(true)}>+ {t('org.groups.create')}</Button> : null}
     >
       {loading ? (
         <ListSkeleton />
@@ -69,17 +71,17 @@ export default function OrgGroups() {
         <OrgPanel>
           <OrgTable
             columns={[
-              { key: 'name', label: 'Qrup' },
-              { key: 'team_name', label: 'Komanda', render: (r) => r.team_name || '—' },
-              { key: 'instructor_name', label: 'Təlimçi', render: (r) => r.instructor_name || '—' },
-              { key: 'member_count', label: 'İştirakçılar' },
+              { key: 'name', label: t('org.groups.name') },
+              { key: 'team_name', label: t('org.groups.team'), render: (r) => r.team_name || '—' },
+              { key: 'instructor_name', label: t('org.groups.trainer'), render: (r) => r.instructor_name || '—' },
+              { key: 'member_count', label: t('org.groups.participants') },
             ]}
             rows={groups}
-            empty={<OrgEmpty>Hələ qrup yoxdur. Məsələn: “New Employees” və ya “Assessment Group”.</OrgEmpty>}
+            empty={<OrgEmpty>{t('org.groups.empty')}</OrgEmpty>}
           />
         </OrgPanel>
       )}
-      <Modal open={open} onClose={() => !busy && setOpen(false)} title="Yeni qrup" size="md">
+      <Modal open={open} onClose={() => !busy && setOpen(false)} title={t('org.groups.newTitle')} size="md">
         <form onSubmit={(e) => void create(e)} className="space-y-4">
           <input
             required
@@ -93,7 +95,7 @@ export default function OrgGroups() {
             value={form.team_id}
             onChange={(e) => setForm((f) => ({ ...f, team_id: e.target.value }))}
           >
-            <option value="">Komanda (istəyə bağlı)</option>
+            <option value="">{t('org.groups.teamOptional')}</option>
             {teams.map((x) => (
               <option key={x.id} value={x.id}>
                 {x.name}
@@ -105,7 +107,7 @@ export default function OrgGroups() {
             value={form.instructor_user_id}
             onChange={(e) => setForm((f) => ({ ...f, instructor_user_id: e.target.value }))}
           >
-            <option value="">Təlimçi (istəyə bağlı)</option>
+            <option value="">{t('org.groups.trainerOptional')}</option>
             {teachers.filter((x) => x.is_active !== false).map((x) => (
               <option key={x.id} value={x.id}>
                 {x.full_name}
@@ -114,10 +116,10 @@ export default function OrgGroups() {
           </select>
           <div className="flex justify-end gap-2">
             <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
-              Ləğv
+              {t('org.common.cancel')}
             </Button>
             <Button type="submit" loading={busy}>
-              Saxla
+              {t('org.common.save')}
             </Button>
           </div>
         </form>

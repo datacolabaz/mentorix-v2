@@ -6,23 +6,15 @@ import KpiCard from '../../components/common/KpiCard'
 import CourseSetupModal from '../../components/course/CourseSetupModal'
 import { useOrgWorkspace } from '../../hooks/useOrgWorkspace'
 import OrgPage, { OrgPanel, OrgEmpty, OrgTable } from '../../components/org/OrgPage'
+import { formatOrgDateTime, orgAuditAction } from '../../lib/orgI18n'
 
 function fmtScore(v) {
   if (v == null || v === '') return '—'
   return `${v}%`
 }
 
-function fmtWhen(iso) {
-  if (!iso) return '—'
-  try {
-    return new Date(iso).toLocaleString('az-AZ', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
-  } catch {
-    return iso
-  }
-}
-
 export default function OrgDashboard() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const { can, reload } = useOrgWorkspace()
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -36,9 +28,10 @@ export default function OrgDashboard() {
       .then((res) => {
         const next = res.overview || {}
         setData(next)
+        setError(null)
         if (next.needs_branding) setSetupOpen(true)
       })
-      .catch((err) => setError(err?.message || 'Yüklənmədi'))
+      .catch((err) => setError(err?.message || t('org.common.loadFailed')))
       .finally(() => setLoading(false))
   }
 
@@ -52,48 +45,43 @@ export default function OrgDashboard() {
   const quick = [
     {
       to: instructorExams ? '/instructor/exams' : '/org/trainers',
-      label: t('org.quick.createExam', { defaultValue: 'İmtahan yarat' }),
-      hint: instructorExams
-        ? t('org.quick.createExamHint', { defaultValue: 'Müəllim panelində imtahan yaradılır' })
-        : t('org.quick.createExamNeedTrainer', { defaultValue: 'İmtahanı təşkilat müəllimi yaradır' }),
+      label: t('org.quick.createExam'),
+      hint: instructorExams ? t('org.quick.createExamHint') : t('org.quick.createExamNeedTrainer'),
       show: can('assessments.view'),
     },
     {
       to: '/org/participants',
-      label: t('org.quick.addParticipant', { defaultValue: 'İştirakçı əlavə et' }),
-      hint: t('org.quick.addParticipantHint', { defaultValue: 'Qeydiyyatlı iştirakçını telefona görə əlavə edin' }),
+      label: t('org.quick.addParticipant'),
+      hint: t('org.quick.addParticipantHint'),
       show: can('users.create'),
     },
     {
       to: '/org/trainers',
-      label: t('org.quick.inviteTrainer', { defaultValue: 'Müəllim dəvət et' }),
-      hint: t('org.quick.inviteTrainerHint', { defaultValue: 'Platformada qeydiyyatlı təlimçini heyətə əlavə edin' }),
+      label: t('org.quick.inviteTrainer'),
+      hint: t('org.quick.inviteTrainerHint'),
       show: can('trainers.invite'),
     },
     {
       to: '/org/teams',
-      label: t('org.quick.createTeam', { defaultValue: 'Komanda yarat' }),
-      hint: t('org.quick.createTeamHint', { defaultValue: 'Sales, Engineering və s.' }),
+      label: t('org.quick.createTeam'),
+      hint: t('org.quick.createTeamHint'),
       show: can('teams.create'),
     },
     {
       to: instructorExams ? '/instructor/exams' : '/org/tests',
-      label: t('org.quick.createTest', { defaultValue: 'Test yarat' }),
-      hint: instructorExams
-        ? t('org.quick.createTestHint', { defaultValue: 'Testlər müəllim panelindən yaradılır' })
-        : t('org.quick.createTestNeedTrainer', { defaultValue: 'Test yaratmaq üçün müəllim paneli lazımdır' }),
+      label: t('org.quick.createTest'),
+      hint: instructorExams ? t('org.quick.createTestHint') : t('org.quick.createTestNeedTrainer'),
       show: can('content.view'),
     },
   ].filter((x) => x.show)
 
   return (
     <OrgPage
-      title={t('org.dashboard.title', { defaultValue: 'Təşkilat icmalı' })}
+      title={t('org.dashboard.title')}
       description={
         loading
           ? '…'
           : t('org.dashboard.subtitle', {
-              defaultValue: '{{name}} — bütün təşkilatın vəziyyəti',
               name: data?.course_name || '',
             })
       }
@@ -110,45 +98,53 @@ export default function OrgDashboard() {
 
       <div className="grid grid-cols-2 xl:grid-cols-5 gap-3">
         <KpiCard
-          title={t('org.kpi.participants', { defaultValue: 'Aktiv iştirakçılar' })}
+          title={t('org.kpi.participants')}
           value={loading ? '…' : String(kpis.active_participants ?? 0)}
           to="/org/participants"
         />
         <KpiCard
-          title={t('org.kpi.trainers', { defaultValue: 'Aktiv müəllim / təlimçilər' })}
+          title={t('org.kpi.trainers')}
           value={loading ? '…' : String(kpis.active_trainers ?? 0)}
           to="/org/trainers"
         />
         <KpiCard
-          title={t('org.kpi.activeExams', { defaultValue: 'Aktiv imtahanlar' })}
+          title={t('org.kpi.activeExams')}
           value={loading ? '…' : String(kpis.active_exams ?? 0)}
           to="/org/exams"
         />
         <KpiCard
-          title={t('org.kpi.completed', { defaultValue: 'Tamamlanmış qiymətləndirmələr' })}
+          title={t('org.kpi.completed')}
           value={loading ? '…' : String(kpis.completed_assessments ?? 0)}
           to="/org/assessments"
         />
         <KpiCard
-          title={t('org.kpi.avgScore', { defaultValue: 'Orta nəticə' })}
+          title={t('org.kpi.avgScore')}
           value={loading ? '…' : fmtScore(kpis.average_score)}
           to="/org/analytics"
         />
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-        <OrgPanel title={t('org.dashboard.activity', { defaultValue: 'Son fəaliyyətlər' })}>
+        <OrgPanel title={t('org.dashboard.activity')}>
           <OrgTable
             columns={[
-              { key: 'actor_name', label: t('org.audit.actor', { defaultValue: 'Actor' }), render: (r) => r.actor_name || '—' },
-              { key: 'action', label: t('org.audit.action', { defaultValue: 'Action' }) },
-              { key: 'created_at', label: t('org.audit.time', { defaultValue: 'Vaxt' }), render: (r) => fmtWhen(r.created_at) },
+              { key: 'actor_name', label: t('org.audit.actor'), render: (r) => r.actor_name || '—' },
+              {
+                key: 'action',
+                label: t('org.audit.action'),
+                render: (r) => orgAuditAction(t, r.action),
+              },
+              {
+                key: 'created_at',
+                label: t('org.audit.time'),
+                render: (r) => formatOrgDateTime(r.created_at, i18n.language),
+              },
             ]}
             rows={data?.recent_activity || []}
-            empty={<OrgEmpty>{t('org.dashboard.noActivity', { defaultValue: 'Hələ audit qeydi yoxdur.' })}</OrgEmpty>}
+            empty={<OrgEmpty>{t('org.dashboard.noActivity')}</OrgEmpty>}
           />
         </OrgPanel>
-        <OrgPanel title={t('org.dashboard.quick', { defaultValue: 'Quick Actions' })}>
+        <OrgPanel title={t('org.dashboard.quick')}>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {quick.map((item) => (
               <Link
@@ -165,75 +161,81 @@ export default function OrgDashboard() {
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-        <OrgPanel title={t('org.dashboard.activeExams', { defaultValue: 'Aktiv imtahanlar' })}>
+        <OrgPanel title={t('org.dashboard.activeExams')}>
           <OrgTable
             columns={[
-              { key: 'title', label: t('org.exams.name', { defaultValue: 'Ad' }) },
-              { key: 'created_by', label: t('org.exams.createdBy', { defaultValue: 'Müəllif' }) },
-              { key: 'participants', label: t('org.exams.participants', { defaultValue: 'İştirakçılar' }) },
-              { key: 'average_score', label: t('org.exams.avg', { defaultValue: 'Orta' }), render: (r) => fmtScore(r.average_score) },
+              { key: 'title', label: t('org.exams.name') },
+              { key: 'created_by', label: t('org.exams.createdBy') },
+              { key: 'participants', label: t('org.exams.participants') },
+              { key: 'average_score', label: t('org.exams.avg'), render: (r) => fmtScore(r.average_score) },
             ]}
             rows={data?.active_exams || []}
-            empty={<OrgEmpty>{t('org.dashboard.noActiveExams', { defaultValue: 'Hazırda aktiv təşkilat imtahanı yoxdur.' })}</OrgEmpty>}
+            empty={<OrgEmpty>{t('org.dashboard.noActiveExams')}</OrgEmpty>}
           />
         </OrgPanel>
-        <OrgPanel title={t('org.dashboard.upcomingExams', { defaultValue: 'Yaxınlaşan imtahanlar' })}>
+        <OrgPanel title={t('org.dashboard.upcomingExams')}>
           <OrgTable
             columns={[
-              { key: 'title', label: t('org.exams.name', { defaultValue: 'Ad' }) },
-              { key: 'created_by', label: t('org.exams.createdBy', { defaultValue: 'Müəllif' }) },
-              { key: 'available_from', label: t('org.exams.date', { defaultValue: 'Tarix' }), render: (r) => fmtWhen(r.available_from || r.start_time) },
+              { key: 'title', label: t('org.exams.name') },
+              { key: 'created_by', label: t('org.exams.createdBy') },
+              {
+                key: 'available_from',
+                label: t('org.exams.date'),
+                render: (r) => formatOrgDateTime(r.available_from || r.start_time, i18n.language),
+              },
             ]}
             rows={data?.upcoming_exams || []}
-            empty={<OrgEmpty>{t('org.dashboard.noUpcoming', { defaultValue: 'Planlaşdırılmış imtahan yoxdur.' })}</OrgEmpty>}
+            empty={<OrgEmpty>{t('org.dashboard.noUpcoming')}</OrgEmpty>}
           />
         </OrgPanel>
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-        <OrgPanel title={t('org.dashboard.teamPerf', { defaultValue: 'Komandalar üzrə performans' })}>
+        <OrgPanel title={t('org.dashboard.teamPerf')}>
           <OrgTable
             columns={[
-              { key: 'name', label: t('org.teams.name', { defaultValue: 'Komanda' }) },
-              { key: 'member_count', label: t('org.teams.members', { defaultValue: 'Üzvlər' }) },
-              { key: 'average_score', label: t('org.exams.avg', { defaultValue: 'Orta' }), render: (r) => fmtScore(r.average_score) },
-              { key: 'completion_rate', label: t('org.teams.completion', { defaultValue: 'Tamamlanma' }), render: (r) => `${r.completion_rate ?? 0}%` },
+              { key: 'name', label: t('org.teams.name') },
+              { key: 'member_count', label: t('org.teams.members') },
+              { key: 'average_score', label: t('org.exams.avg'), render: (r) => fmtScore(r.average_score) },
+              {
+                key: 'completion_rate',
+                label: t('org.teams.completion'),
+                render: (r) => `${r.completion_rate ?? 0}%`,
+              },
             ]}
             rows={data?.team_performance || []}
-            empty={<OrgEmpty>{t('org.dashboard.noTeams', { defaultValue: 'Hələ komanda yoxdur. Sales, Marketing kimi struktur yaradın.' })}</OrgEmpty>}
+            empty={<OrgEmpty>{t('org.dashboard.noTeams')}</OrgEmpty>}
           />
         </OrgPanel>
-        <OrgPanel title={t('org.dashboard.examResults', { defaultValue: 'İmtahan nəticələri' })}>
+        <OrgPanel title={t('org.dashboard.examResults')}>
           <OrgTable
             columns={[
-              { key: 'name', label: t('org.exams.name', { defaultValue: 'Ad' }) },
-              { key: 'created_by', label: t('org.exams.createdBy', { defaultValue: 'Müəllif' }) },
-              { key: 'average_score', label: t('org.exams.avg', { defaultValue: 'Orta' }), render: (r) => fmtScore(r.average_score) },
+              { key: 'name', label: t('org.exams.name') },
+              { key: 'created_by', label: t('org.exams.createdBy') },
+              { key: 'average_score', label: t('org.exams.avg'), render: (r) => fmtScore(r.average_score) },
               { key: 'completion', label: '%', render: (r) => `${r.completion ?? 0}%` },
             ]}
             rows={data?.exam_results || []}
-            empty={<OrgEmpty>{t('org.dashboard.noResults', { defaultValue: 'Nəticə hələ yoxdur — təşkilat müəllimlərinin imtahanları burada toplanır.' })}</OrgEmpty>}
+            empty={<OrgEmpty>{t('org.dashboard.noResults')}</OrgEmpty>}
           />
         </OrgPanel>
       </div>
 
-      <OrgPanel
-        title={t('org.dashboard.recentParticipants', { defaultValue: 'Son əlavə edilən iştirakçılar' })}
-      >
+      <OrgPanel title={t('org.dashboard.recentParticipants')}>
         <OrgTable
           columns={[
-            { key: 'full_name', label: t('org.participants.name', { defaultValue: 'Ad' }) },
-            { key: 'team_name', label: t('org.participants.team', { defaultValue: 'Komanda' }), render: (r) => r.team_name || '—' },
-            { key: 'group_name', label: t('org.participants.group', { defaultValue: 'Qrup' }), render: (r) => r.group_name || '—' },
-            { key: 'avg_score', label: t('org.participants.score', { defaultValue: 'Nəticə' }), render: (r) => fmtScore(r.avg_score) },
+            { key: 'full_name', label: t('org.participants.name') },
+            { key: 'team_name', label: t('org.participants.team'), render: (r) => r.team_name || '—' },
+            { key: 'group_name', label: t('org.participants.group'), render: (r) => r.group_name || '—' },
+            { key: 'avg_score', label: t('org.participants.score'), render: (r) => fmtScore(r.avg_score) },
           ]}
           rows={data?.recent_participants || []}
-          empty={<OrgEmpty>{t('org.dashboard.noParticipants', { defaultValue: 'Hələ iştirakçı yoxdur.' })}</OrgEmpty>}
+          empty={<OrgEmpty>{t('org.dashboard.noParticipants')}</OrgEmpty>}
         />
         {can('users.view') ? (
           <div className="mt-3">
             <Link to="/org/participants" className="text-sm text-emerald-300 hover:underline">
-              {t('org.dashboard.seeAll', { defaultValue: 'Hamısına bax' })}
+              {t('org.dashboard.seeAll')}
             </Link>
           </div>
         ) : null}
