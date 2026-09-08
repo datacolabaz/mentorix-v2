@@ -304,6 +304,12 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
   }
 
   const finishEmailLogin = (data) => {
+    if (String(data?.user?.role || '').toLowerCase() === 'admin' && data?.token) {
+      setSession(data.token, data.user)
+      if (onSuccess) onSuccess(data.user)
+      else postAuthNavigate(data.user, navigate)
+      return
+    }
     if ((data?.needs_onboarding || data?.needs_role) && data?.token && data?.user) {
       setSession(data.token, data.user)
       navigate(ONBOARDING_PATH, { replace: true })
@@ -361,11 +367,17 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
       const r = await verifyEmailCode({ email: signupEmail, code: verifyCode })
       if (r?.token && r?.user) {
         setSession(r.token, r.user)
-        if (r?.needs_onboarding || r?.needs_role) {
-          toast(t('auth.toasts.emailVerifiedChooseUse'), 'success')
-          navigate(ONBOARDING_PATH, { replace: true })
-          return
-        }
+      if (String(r.user?.role || '').toLowerCase() === 'admin') {
+        toast(t('auth.toasts.loggedIn'), 'success')
+        if (onSuccess) onSuccess(r.user)
+        else postAuthNavigate(r.user, navigate)
+        return
+      }
+      if (r?.needs_onboarding || r?.needs_role) {
+        toast(t('auth.toasts.emailVerifiedChooseUse'), 'success')
+        navigate(ONBOARDING_PATH, { replace: true })
+        return
+      }
         toast(t('auth.toasts.emailVerifiedLoggedIn'), 'success')
         if (onSuccess) onSuccess(r.user)
         else postAuthNavigate(r.user, navigate)

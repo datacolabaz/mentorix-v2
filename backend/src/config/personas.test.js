@@ -9,6 +9,7 @@ const {
   sanitizePersonaProfile,
   requiredProfileComplete,
   mergePersonaProfile,
+  isAdminRole,
   rowNeedsOnboarding,
 } = require('./personas');
 
@@ -58,8 +59,17 @@ describe('personas config', () => {
     assert.equal(merged.current, PERSONAS.HR_COMPANY);
   });
 
+  it('never sends admin through persona onboarding', () => {
+    assert.equal(isAdminRole('admin'), true);
+    assert.equal(isAdminRole({ role: 'ADMIN' }), true);
+    assert.equal(isAdminRole({ role: 'student' }), false);
+    assert.equal(
+      rowNeedsOnboarding({ role: 'admin', onboarding_completed: false, role_selected: false }),
+      false,
+    );
+  });
+
   it('gates onboarding from row flags without using admin', () => {
-    assert.equal(rowNeedsOnboarding({ role: 'admin', onboarding_completed: false }), false);
     assert.equal(rowNeedsOnboarding({ role: 'student', onboarding_completed: false }), true);
     assert.equal(rowNeedsOnboarding({ role: 'instructor', role_selected: false }), true);
     assert.equal(

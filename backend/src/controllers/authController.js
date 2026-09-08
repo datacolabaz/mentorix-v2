@@ -43,6 +43,7 @@ const {
   resolvePersonaInput,
   fetchPersonaState,
   rowNeedsOnboarding,
+  isAdminRole,
 } = require('../services/personaOnboardingService');
 
 function logAuthLogin(req, user, role) {
@@ -279,6 +280,13 @@ async function enrichUserForClient(userLite, sessionRole = null) {
 }
 
 async function userNeedsRoleSelection(userId, fallbackRole = null) {
+  if (isAdminRole(fallbackRole)) return false;
+  try {
+    const lite = await loadUserLiteById(userId);
+    if (isAdminRole(lite)) return false;
+  } catch {
+    /* ignore */
+  }
   try {
     if (await userNeedsOnboarding(userId)) return true;
   } catch {
@@ -601,6 +609,31 @@ const forgotPinSms = async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   }
 };
+
+/** Admin heç vaxt persona onboarding-ə düşməsin — birbaşa /admin sessiyası. */
+async function respondAdminSession(req, res, user) {
+  if (!guardEmailVerifiedBeforeToken(res, user)) return true;
+  const token = sign({ id: user.id, role: 'admin' });
+  const userOut = await enrichUserForClient(
+    {
+      id: user.id,
+      full_name: user.full_name,
+      email: user.email,
+      phone: user.phone,
+      phone_verified: user.phone_verified,
+      role: 'admin',
+      persona: user.persona || null,
+      persona_profile: user.persona_profile,
+      onboarding_completed: true,
+    },
+    'admin',
+  );
+  userOut.role = 'admin';
+  userOut.onboarding_completed = true;
+  logAuthLogin(req, user, 'admin');
+  res.json({ success: true, token, user: userOut, needs_onboarding: false, needs_role: false });
+  return true;
+}
 
 const login = async (req, res) => {
   try {
@@ -1313,6 +1346,11 @@ const loginWithEmail = async (req, res) => {
 
     if (!guardEmailVerifiedBeforeToken(res, user)) return;
 
+    if (isAdminRole(user)) {
+      await respondAdminSession(req, res, user);
+      return;
+    }
+
     if (rowNeedsOnboarding(user) || (await userNeedsOnboarding(user.id))) {
       const token = sign({ id: user.id, role: null });
       const lite = {
@@ -1424,6 +1462,17 @@ const me = async (req, res) => {
     const u = await loadUserLiteById(req.user.id);
     if (!u || u.is_active === false) return res.status(404).json({ success: false, message: 'Tapılmadı' });
     if (!guardEmailVerifiedBeforeToken(res, u)) return;
+    if (isAdminRole(u) || isAdminRole(req.user)) {
+      const userOut = await enrichUserForClient(u, 'admin');
+      userOut.role = 'admin';
+      userOut.onboarding_completed = true;
+      const { withPresence } = require('../services/userPresenceService');
+      const body = { success: true, user: withPresence({ ...userOut, last_activity_at: u.last_activity_at }) };
+      if (!isAdminRole(req.user)) {
+        body.token = sign({ id: u.id, role: 'admin' });
+      }
+      return res.json(body);
+    }
     const needsOnboarding = rowNeedsOnboarding(u) || (await userNeedsOnboarding(u.id));
     const sessionRole = needsOnboarding ? null : req.user.role;
     const userOut = await enrichUserForClient(u, sessionRole);
@@ -1900,6 +1949,11 @@ const googleLogin = async (req, res) => {
       });
     }
 
+    if (isAdminRole(user)) {
+      await respondAdminSession(req, res, user);
+      return;
+    }
+
     if (rowNeedsOnboarding(user) || (await userNeedsOnboarding(user.id))) {
       if (!guardEmailVerifiedBeforeToken(res, user)) return;
       const token = sign({ id: user.id, role: null });
@@ -2243,6 +2297,11 @@ const googleComplete = async (req, res) => {
     }
 
     if (!guardEmailVerifiedBeforeToken(res, user)) return;
+
+    if (isAdminRole(user)) {
+      await respondAdminSession(req, res, user);
+      return;
+    }
 
     await persistUserLocale(db, user.id, localeFromReq(req)).catch(() => {});
 

@@ -7,6 +7,7 @@ const {
   requiredProfileComplete,
   parseStoredProfile,
   mergePersonaProfile,
+  isAdminRole,
   rowNeedsOnboarding,
   PERSONAS,
 } = require('../config/personas');
@@ -229,5 +230,6 @@ module.exports = {
   applyPersonaSelection,
   skipOnboarding,
   resolvePersonaInput,
+  isAdminRole,
   rowNeedsOnboarding,
 };
