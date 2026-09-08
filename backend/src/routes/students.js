@@ -1541,6 +1541,7 @@ const {
   applyGroupScheduleToEnrollment,
   getGroupLessonSchedule,
 } = require('../services/studentEnrollmentsService');
+const { leaveEnrollmentForStudent } = require('../services/studentLeaveService');
 
 // Student: all active groups / enrollments.
 router.get('/my/enrollments', authenticate, authorize('student'), async (req, res) => {
@@ -1781,26 +1782,15 @@ router.get('/my/overview', authenticate, authorize('student'), async (req, res) 
   }
 });
 
-// Student: leave a group (sets enrollment inactive — optional).
+// Student: leave a listed group (active, pending approval/setup, or paused).
 router.post('/my/leave/:enrollmentId', authenticate, authorize('student'), async (req, res) => {
   try {
-    const { rows } = await db.query(
-      `UPDATE enrollments
-       SET status = 'left'
-       WHERE id = $1
-         AND student_id = $2
-         AND (deleted_at IS NULL)
-         AND COALESCE(LOWER(TRIM(status)), 'active') = 'active'
-       RETURNING id`,
-      [req.params.enrollmentId, req.user.id],
-    );
-    if (!rows[0]) {
-      return res.status(404).json({ success: false, message: 'Aktiv qeydiyyat tapılmadı' });
-    }
+    await leaveEnrollmentForStudent(req.user.id, req.params.enrollmentId);
     const enrollments = await listActiveEnrollmentsForStudent(req.user.id);
     res.json({ success: true, message: 'Qrupdan ayrıldınız', enrollments });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    const status = Number(err.statusCode) || 500;
+    res.status(status).json({ success: false, message: err.message });
   }
 });
 

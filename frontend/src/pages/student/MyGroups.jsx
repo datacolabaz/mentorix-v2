@@ -33,8 +33,8 @@ export default function MyGroups() {
     navigate('/student')
   }
 
-  const confirmLeaveGroup = (enrollmentId, name) => {
-    setLeaveConfirm({ enrollmentId, name })
+  const confirmLeaveGroup = (enrollmentId, name, status) => {
+    setLeaveConfirm({ enrollmentId, name, status })
   }
 
   const leaveGroup = async () => {
@@ -64,7 +64,9 @@ export default function MyGroups() {
         title="Qrupdan ayrıl"
         message={
           leaveConfirm
-            ? `«${leaveConfirm.name}» qrupundan ayrılmaq istəyirsiniz? Bu qrup siyahınızdan silinəcək.`
+            ? String(leaveConfirm.status || '').toLowerCase() === 'pending_approval'
+              ? `«${leaveConfirm.name}» qrupuna göndərdiyiniz sorğunu ləğv etmək istəyirsiniz? Qrup siyahınızdan silinəcək.`
+              : `«${leaveConfirm.name}» qrupundan ayrılmaq istəyirsiniz? Bu qrup siyahınızdan silinəcək.`
             : ''
         }
         confirmLabel="Ayrıl"
@@ -199,7 +201,7 @@ export default function MyGroups() {
                   size="sm"
                   variant="ghost"
                   loading={leaveBusy === g.enrollment_id}
-                  onClick={() => confirmLeaveGroup(g.enrollment_id, display.title)}
+                  onClick={() => confirmLeaveGroup(g.enrollment_id, display.title, g.status)}
                 >
                   Qrupdan ayrıl
                 </Button>
