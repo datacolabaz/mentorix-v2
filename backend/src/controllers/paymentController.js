@@ -17,6 +17,7 @@ const {
 const { ensurePackLessonsUpTo, normalizePackBillingType } = require('../services/packLessons');
 const { buildEnrollmentPackageHistoryView } = require('../services/enrollmentPackagePayments');
 const { sumInstructorExpectedPayments } = require('../services/instructorExpectedPayments');
+const { attachPaymentTrafficLights } = require('../services/paymentTrafficLight');
 const { SQL_INSTRUCTOR_REVENUE_FROM } = require('../services/instructorRevenue');
 const { loadActiveEnrollmentForPayments } = require('../services/enrollmentGuards');
 const { getGroupLessonSchedule } = require('../services/studentEnrollmentsService');
@@ -2026,17 +2027,25 @@ const getInstructorPaymentBoard = async (req, res) => {
 
     const due_confirmations = await buildDueConfirmationsForInstructor(db, req.user.id, todayBaku);
     const pack_confirmations = await buildPackDueConfirmationsForInstructor(db, req.user.id, todayBaku);
+    const { students: studentsWithLights, status_summary } = attachPaymentTrafficLights(students, {
+      dueConfirmations: due_confirmations,
+      packConfirmations: pack_confirmations,
+      todayYmd: todayBaku,
+    });
+    const outstandingCount =
+      (status_summary?.due_soon?.count || 0) + (status_summary?.overdue?.count || 0);
 
     res.json({
       success: true,
       totalEarnings: Number(sumRows[0].total) || 0,
-      pendingCount,
+      pendingCount: outstandingCount || pendingCount,
       pendingAmount,
+      status_summary,
       today_baku: todayBaku || null,
       payment_confirmation_cutoff: paymentConfirmationCutoffYmd(todayBaku),
       due_confirmations,
       pack_confirmations,
-      students,
+      students: studentsWithLights,
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
