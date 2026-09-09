@@ -971,6 +971,8 @@
       "paymentLabel": "Оплаты",
       "paymentStatus": "2 ожидают",
       "assignmentStatus": "Контроль заданий",
+      "paymentsHint": "Оплаты и график — в полной панели",
+      "openPanel": "Открыть панель",
       "sampleNote": "Пример интерфейса — не живой аккаунт"
     },
     "marketplace": {

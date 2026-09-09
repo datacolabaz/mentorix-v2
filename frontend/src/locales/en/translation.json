@@ -971,6 +971,8 @@
       "paymentLabel": "Payments",
       "paymentStatus": "2 pending",
       "assignmentStatus": "Assignment tracking",
+      "paymentsHint": "Payments and the chart live in the full panel",
+      "openPanel": "Open panel",
       "sampleNote": "Sample interface — not a live account"
     },
     "marketplace": {
