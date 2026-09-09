@@ -6,7 +6,7 @@ import PublicSeoFooter from '../../components/public/PublicSeoFooter'
 import LevelBadge from '../../components/public/LevelBadge'
 import CertifiedExamAuthGate from '../../components/public/CertifiedExamAuthGate'
 import api from '../../lib/api'
-import { setPageSeo, SITE_ORIGIN } from '../../lib/pageSeo'
+import { CERTIFIED_OG_IMAGE, setPageSeo } from '../../lib/pageSeo'
 import { buildCertifiedExamSharePath, copyCertifiedExamShareUrl } from '../../lib/certifiedExamShareUrl'
 import useAuthStore from '../../hooks/useAuth'
 import { useToast } from '../../components/common/Toast'
@@ -169,7 +169,7 @@ export default function CertifiedExamCategoryPage() {
           ? `${d.category.name} sahəsində biliyini sərtifikatla təsdiqlə. QR kodu ilə doğrulanan Mentorix sertifikatı qazan.`
           : t('certifiedExams.seo.categoryDescription'),
         canonicalPath: `/sertifikatli-imtahanlar/${slug}`,
-        ogImage: `${SITE_ORIGIN}/og-certified.svg`,
+        ogImage: CERTIFIED_OG_IMAGE,
       })
     } catch {
       setData(null)

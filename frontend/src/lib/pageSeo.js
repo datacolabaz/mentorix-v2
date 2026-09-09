@@ -5,7 +5,17 @@ import {
 } from './mentorixPublicMarketing'
 import { SITE_ORIGIN, buildBreadcrumbSchema, buildPersonSchema, buildPricingProductSchema } from './mentorixSeoSchema'
 
-const DEFAULT_OG_IMAGE = `${SITE_ORIGIN}/og.svg?v=5`
+export const OG_IMAGE_PATH = '/og.png?v=6'
+export const OG_CERTIFIED_IMAGE_PATH = '/og-certified.png?v=1'
+export const DEFAULT_OG_IMAGE = `${SITE_ORIGIN}${OG_IMAGE_PATH}`
+export const CERTIFIED_OG_IMAGE = `${SITE_ORIGIN}${OG_CERTIFIED_IMAGE_PATH}`
+
+function ogImageMime(url) {
+  const path = String(url || '').split('?')[0].toLowerCase()
+  if (path.endsWith('.svg')) return 'image/svg+xml'
+  if (path.endsWith('.jpg') || path.endsWith('.jpeg')) return 'image/jpeg'
+  return 'image/png'
+}
 
 const DEFAULT_TITLE = MENTORIX_SEO_TITLE
 const DEFAULT_DESCRIPTION = MENTORIX_SEO_DESCRIPTION
@@ -104,15 +114,18 @@ export function setPageSeo({
   upsertOg('og:url', href)
   upsertOg('og:type', ogType)
   upsertOg('og:image', image)
-  upsertOg('og:image:type', 'image/svg+xml')
+  upsertOg('og:image:secure_url', image)
+  upsertOg('og:image:type', ogImageMime(image))
   upsertOg('og:image:width', '1200')
   upsertOg('og:image:height', '630')
+  upsertOg('og:image:alt', nextTitle)
   upsertOg('og:locale', ogLocale(locale))
 
   upsertMeta('twitter:card', 'summary_large_image')
   upsertMeta('twitter:title', nextTitle)
   upsertMeta('twitter:description', nextDescription)
   upsertMeta('twitter:image', image)
+  upsertMeta('twitter:image:alt', nextTitle)
 
   upsertJsonLd('mx-breadcrumb-ld', buildBreadcrumbSchema(breadcrumbs))
   upsertJsonLd('mx-person-ld', person ? buildPersonSchema(person) : null)

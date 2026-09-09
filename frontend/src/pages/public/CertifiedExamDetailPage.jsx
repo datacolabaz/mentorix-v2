@@ -6,7 +6,7 @@ import PublicSeoFooter from '../../components/public/PublicSeoFooter'
 import LevelBadge from '../../components/public/LevelBadge'
 import CertifiedExamAuthGate from '../../components/public/CertifiedExamAuthGate'
 import api from '../../lib/api'
-import { setPageSeo, SITE_ORIGIN } from '../../lib/pageSeo'
+import { CERTIFIED_OG_IMAGE, setPageSeo } from '../../lib/pageSeo'
 import { buildCertifiedExamShareUrl, copyCertifiedExamShareUrl } from '../../lib/certifiedExamShareUrl'
 import useAuthStore from '../../hooks/useAuth'
 import { useToast } from '../../components/common/Toast'
@@ -37,7 +37,7 @@ export default function CertifiedExamDetailPage() {
           ? `${exam.title} imtahanını ver, keçid balını topla, QR kodu ilə doğrulanan sertifikat qazan. Keçid balı: ${pass}%`
           : t('certifiedExams.seo.examDescription'),
         canonicalPath: exam?.share_path || `/sertifikatli-imtahanlar/${categorySlug}/${examSlug}`,
-        ogImage: `${SITE_ORIGIN}/og.svg?v=5`,
+        ogImage: CERTIFIED_OG_IMAGE,
       })
     } catch {
       setData(null)

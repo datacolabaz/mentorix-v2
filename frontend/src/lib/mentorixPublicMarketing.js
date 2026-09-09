@@ -2,10 +2,10 @@
 
 import { defaultPlatformContact } from './platformContact'
 
-export const MENTORIX_SEO_TITLE = 'Mentorix — Təhsil Ekosistemi: Müəllim, Tələbə və Valideyn'
+export const MENTORIX_SEO_TITLE = 'Mentorix — onlayn imtahan və qiymətləndirmə'
 
 export const MENTORIX_SEO_DESCRIPTION =
-  'Mentorix müəllim, tələbə və valideynləri birləşdirən təhsil platformasıdır: tapşırıq və imtahan, çat, ödəniş izləmə, valideyn bildirişləri və müəllim marketplace — hamısı bir yerdə.'
+  'Testlərinizi yaradın, imtahanları idarə edin və nəticələri bir platformadan izləyin. Müəllim, tələbə və valideyn — hamısı bir yerdə. Pulsuz başlayın.'
 
 export const MENTORIX_SEO_KEYWORDS =
   'təhsil platforması, təhsil ekosistemi, müəllim paneli, tələbə kabineti, valideyn kabineti, imtahan sistemi, tapşırıq idarəetməsi, müəllim axtarışı, ödəniş izləmə, SMS bildirişləri, tədris qrupları, Mentorix'

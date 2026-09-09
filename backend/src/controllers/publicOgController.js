@@ -7,8 +7,8 @@ function siteOrigin() {
   return String(process.env.FRONTEND_BASE_URL || process.env.FRONTEND_URL || 'https://mentorix.io').replace(/\/+$/, '');
 }
 
-const OG_CERT_IMAGE_PATH = '/og-certified.svg';
-const OG_DEFAULT_IMAGE_PATH = '/og.svg?v=5';
+const OG_CERT_IMAGE_PATH = '/og-certified.png?v=1';
+const OG_DEFAULT_IMAGE_PATH = '/og.png?v=6';
 
 async function getCertifiedCategoryOg(req, res) {
   try {

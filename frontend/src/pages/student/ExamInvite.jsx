@@ -6,7 +6,7 @@ import Button from '../../components/common/Button'
 import Card from '../../components/common/Card'
 import { useToast } from '../../components/common/Toast'
 import GoogleSignInButton from '../../components/auth/GoogleSignInButton'
-import { setPageSeo, SITE_ORIGIN } from '../../lib/pageSeo'
+import { CERTIFIED_OG_IMAGE, setPageSeo } from '../../lib/pageSeo'
 
 const RETURN_KEY = 'mx_return_after_login'
 
@@ -39,7 +39,7 @@ export default function ExamInvite() {
               title: `${examTitle} — Sertifikatlı İmtahan | Mentorix`,
               description: `${examTitle} imtahanını ver, keçid balını topla, QR kodu ilə doğrulanan sertifikat qazan. Keçid balı: ${pass}%`,
               canonicalPath: `/exam/${encodeURIComponent(id)}`,
-              ogImage: `${SITE_ORIGIN}/og-certified.svg`,
+              ogImage: CERTIFIED_OG_IMAGE,
             })
           }
         }
