@@ -101,17 +101,11 @@ export default function LandingHeroProductPreview({ onOpenDemo }) {
                     <span className="truncate">{section.title}</span>
                     <Chevron open={open} />
                   </button>
-                  {open ? (
+                  {open && section.id === 'payments' ? (
                     <div className="sm:hidden px-2.5 pb-2.5 pt-1 space-y-0.5">
                       <p className="text-[10px] uppercase tracking-wider text-slate-400">{section.kicker}</p>
                       <p className="text-xs font-semibold text-slate-800 leading-snug">{section.summary}</p>
-                      <p
-                        className={`text-[11px] font-semibold ${
-                          section.detailTone === 'ok' ? 'text-emerald-600' : 'text-slate-500'
-                        }`}
-                      >
-                        {section.detail}
-                      </p>
+                      <p className="text-[11px] font-semibold text-slate-500">{section.detail}</p>
                     </div>
                   ) : null}
                 </div>
