@@ -112,21 +112,23 @@ export default function UniversitySearchWizard({ initialState, onSubmit, onCance
       </div>
 
       {step === 1 ? (
-        <div className="grid grid-cols-3 gap-3 max-w-md mx-auto">
+        <div className="grid grid-cols-3 gap-2 sm:gap-3 max-w-md mx-auto w-full min-w-0">
           {DEGREE_OPTIONS.map((deg) => (
             <button
               key={deg}
               type="button"
               onClick={() => setState((p) => ({ ...p, degreeLevel: deg }))}
               className={[
-                'rounded-2xl border px-4 py-6 text-center transition-all',
+                'min-w-0 overflow-hidden rounded-2xl border px-1.5 sm:px-4 py-5 sm:py-6 text-center transition-all',
                 state.degreeLevel === deg
                   ? 'border-primary bg-primary/15 text-white shadow-[0_0_0_1px_rgba(34,224,136,0.35)]'
                   : 'border-white/10 bg-[#1c1c1c] text-gray-300 hover:border-white/25',
               ].join(' ')}
             >
-              <div className="text-2xl font-bold">{deg}</div>
-              <div className="text-[10px] uppercase tracking-wide text-gray-500 mt-1">{degreeLabel(deg)}</div>
+              <div className="text-xl sm:text-2xl font-bold">{deg}</div>
+              <div className="mt-1 px-0.5 text-[9px] sm:text-[10px] font-semibold uppercase leading-tight tracking-normal text-gray-500 [overflow-wrap:anywhere]">
+                {degreeLabel(deg)}
+              </div>
             </button>
           ))}
         </div>
@@ -295,16 +297,20 @@ export default function UniversitySearchWizard({ initialState, onSubmit, onCance
 
       <div className="flex flex-wrap gap-2 justify-between pt-2">
         <div className="flex gap-2">
-          {onCancel ? (
-            <Button type="button" variant="ghost" onClick={onCancel}>
-              {t('universitySearch.actions.close')}
-            </Button>
-          ) : null}
-          {step > 1 ? (
-            <Button type="button" variant="secondary" onClick={back}>
-              {t('universitySearch.actions.back')}
-            </Button>
-          ) : null}
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => {
+              if (step > 1) {
+                back()
+                return
+              }
+              onCancel?.()
+            }}
+            disabled={step === 1 && !onCancel}
+          >
+            {t('universitySearch.actions.back')}
+          </Button>
         </div>
         <div className="flex gap-2">
           {step < 5 ? (

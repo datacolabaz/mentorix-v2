@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link, Navigate, useSearchParams } from 'react-router-dom'
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import api from '../../lib/api'
 import Button from '../../components/common/Button'
@@ -112,6 +112,7 @@ function translateCoverageMessage(t, meta) {
 export default function UniversityProgramSearch({ embedded = false }) {
   const { t } = useTranslation()
   const toast = useToast()
+  const navigate = useNavigate()
   const { user } = useAuthStore()
   const [searchParams, setSearchParams] = useSearchParams()
 
@@ -332,6 +333,7 @@ export default function UniversityProgramSearch({ embedded = false }) {
           <UniversitySearchWizard
             initialState={wizardState || emptyWizardState()}
             onSubmit={handleWizardSubmit}
+            onCancel={() => navigate(embedded ? '/student' : '/')}
           />
         ) : (
           <div className="grid lg:grid-cols-[280px_1fr] gap-6 items-start">
