@@ -1,5 +1,6 @@
 const db = require('../utils/db');
 const { enrichInstructorListingRow } = require('./mapListingPlanService');
+const { mapRowsWithPresence } = require('./userPresenceService');
 const { getReviewStatsBatch } = require('./teacherReviewService');
 const { computeNextLessonSlot, shortAddress } = require('../utils/nextLessonSlot');
 
@@ -165,7 +166,7 @@ async function enrichMapInstructorRows(rows) {
     getCompletedLessonsCountBatch(ids),
   ]);
 
-  return rows.map((row) => {
+  return mapRowsWithPresence(rows.map((row) => {
     const id = String(row.id);
     const stats = reviewStats[id] || {};
     const base = enrichInstructorListingRow(row);
@@ -182,6 +183,7 @@ async function enrichMapInstructorRows(rows) {
     });
     return {
       ...base,
+      last_activity_at: row.last_activity_at,
       delivery_formats,
       format_labels: delivery_formats.map((f) => f.label),
       teacher_place_address_short: addresses[id] || null,
@@ -195,7 +197,7 @@ async function enrichMapInstructorRows(rows) {
       show_top_badge,
       is_top_listing: show_top_badge,
     };
-  });
+  }));
 }
 
 module.exports = {

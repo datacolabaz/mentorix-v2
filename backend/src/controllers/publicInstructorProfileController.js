@@ -31,6 +31,7 @@ const getPublicInstructorProfile = async (req, res) => {
          ip.discover_verified,
          ip.teacher_place_address,
          ip.nearest_metro,
+         u.last_activity_at,
          COALESCE(s.plan, 'basic') AS plan,
          (
            SELECT COALESCE(json_agg(json_build_object('format', df.format, 'travel_radius_km', df.travel_radius_km) ORDER BY df.format), '[]'::json)
@@ -62,7 +63,7 @@ const getPublicInstructorProfile = async (req, res) => {
 
     const [enriched] = await enrichMapInstructorRows([row]);
 
-    res.set('Cache-Control', 'public, max-age=60');
+    res.set('Cache-Control', 'public, max-age=15');
     res.json({
       success: true,
       instructor: enriched,

@@ -12,6 +12,7 @@ const {
   normalizeCategoryNames,
 } = require('./mapListingPlanService');
 const { getCategorySubtreeIds } = require('./categoryService');
+const { mapRowsWithPresence } = require('./userPresenceService');
 
 const FREE_MAX_FORMATS = 1;
 const FREE_MAX_AREAS = 1;
@@ -176,6 +177,7 @@ async function searchDiscoverInstructors({
        ip.discover_bio,
        ip.discover_verified,
        ip.teacher_place_address,
+       u.last_activity_at,
        COALESCE(s.plan, 'basic') AS plan,
        ${sqlPlanListingPriority()} AS listing_sort,
        ${distanceSql},
@@ -203,12 +205,14 @@ async function searchDiscoverInstructors({
     params,
   );
 
-  return rows.map((r) =>
-    enrichInstructorListingRow({
-      ...r,
-      delivery_formats: Array.isArray(r.delivery_formats) ? r.delivery_formats : [],
-      category_names: normalizeCategoryNames(r.category_names),
-    }),
+  return mapRowsWithPresence(
+    rows.map((r) =>
+      enrichInstructorListingRow({
+        ...r,
+        delivery_formats: Array.isArray(r.delivery_formats) ? r.delivery_formats : [],
+        category_names: normalizeCategoryNames(r.category_names),
+      }),
+    ),
   );
 }
 

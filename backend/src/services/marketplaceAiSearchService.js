@@ -251,6 +251,8 @@ function publicInstructorCard(row) {
     map_profile_kind: row.map_profile_kind,
     is_featured_listing: row.is_featured_listing,
     plan: row.plan,
+    is_online: row.is_online === true,
+    last_activity_at: row.last_activity_at || null,
   };
 }
 

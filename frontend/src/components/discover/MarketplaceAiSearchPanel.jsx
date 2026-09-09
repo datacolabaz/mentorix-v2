@@ -30,9 +30,19 @@ function TutorMiniCard({ tutor, onInquiry, onWhatsApp, onFocus, whatsappBusy, t 
           size="sm"
           kind={tutor.map_profile_kind}
           className="shrink-0"
+          showPresence
+          isOnline={tutor.is_online}
+          lastActivityAt={tutor.last_activity_at}
         />
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold text-white truncate">{tutor.full_name}</p>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <p className="text-sm font-semibold text-white truncate">{tutor.full_name}</p>
+            {tutor.is_online ? (
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-400/40">
+                ● {t('marketplace.card.onlineNow')}
+              </span>
+            ) : null}
+          </div>
           <p className="text-[11px] text-gray-400 truncate">
             {tutor.category_names?.join(', ') || tutor.subject}
             {rate ? ` · ${rate}` : ''}
