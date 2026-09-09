@@ -971,8 +971,14 @@
       "paymentLabel": "Ödənişlər",
       "paymentStatus": "2 gözləyən",
       "assignmentStatus": "Tapşırıq izləmə",
-      "paymentsHint": "Ödənişlər və qrafik tam paneldədir",
+      "paymentsHint": "2 gözləyən sorğu",
       "openPanel": "Paneli aç",
+      "lessonsThisWeek": "Bu həftə 5 dərs · davamiyyət izlənilir",
+      "avgScore": "Orta nəticə: 82%",
+      "materialsHint": "Təqdimat və kitabxana materialları paneldədir",
+      "joinHint": "3 yeni sorğu",
+      "kpiStudentsValue": "8",
+      "kpiAvgValue": "82%",
       "sampleNote": "Nümunə interfeys — real hesab deyil"
     },
     "marketplace": {

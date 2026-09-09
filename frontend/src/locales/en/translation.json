@@ -971,8 +971,14 @@
       "paymentLabel": "Payments",
       "paymentStatus": "2 pending",
       "assignmentStatus": "Assignment tracking",
-      "paymentsHint": "Payments and the chart live in the full panel",
+      "paymentsHint": "2 pending requests",
       "openPanel": "Open panel",
+      "lessonsThisWeek": "5 lessons this week · attendance is tracked",
+      "avgScore": "Average score: 82%",
+      "materialsHint": "Presentations and library files live in the panel",
+      "joinHint": "3 new requests",
+      "kpiStudentsValue": "8",
+      "kpiAvgValue": "82%",
       "sampleNote": "Sample interface — not a live account"
     },
     "marketplace": {

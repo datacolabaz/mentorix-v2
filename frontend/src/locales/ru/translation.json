@@ -971,8 +971,14 @@
       "paymentLabel": "Оплаты",
       "paymentStatus": "2 ожидают",
       "assignmentStatus": "Контроль заданий",
-      "paymentsHint": "Оплаты и график — в полной панели",
+      "paymentsHint": "2 ожидающих запроса",
       "openPanel": "Открыть панель",
+      "lessonsThisWeek": "5 уроков на этой неделе · посещаемость отслеживается",
+      "avgScore": "Средний результат: 82%",
+      "materialsHint": "Презентации и библиотека — в панели",
+      "joinHint": "3 новых запроса",
+      "kpiStudentsValue": "8",
+      "kpiAvgValue": "82%",
       "sampleNote": "Пример интерфейса — не живой аккаунт"
     },
     "marketplace": {
