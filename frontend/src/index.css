@@ -254,6 +254,23 @@
   .theme-light .mx-app-content :is(.text-gray-400, .text-gray-500, .text-slate-400, .text-slate-500) {
     color: rgb(var(--text-muted)) !important;
   }
+  /* Charcoal leftover panels (bg-[#1c1c1c]) stay dark — restore pale text so
+     light-theme remaps above do not leave slate-700 on charcoal (ixtisas list). */
+  .theme-light .mx-app-content [class*="bg-[#1c1c1c]"].text-white,
+  .theme-light .mx-app-content [class*="bg-[#1c1c1c]"] .text-white {
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+  }
+  .theme-light .mx-app-content [class*="bg-[#1c1c1c]"] :is(.text-gray-100, .text-gray-200, .text-gray-300, .text-slate-100, .text-slate-200, .text-slate-300),
+  .theme-light .mx-app-content [class*="bg-[#1c1c1c]"]:is(.text-gray-100, .text-gray-200, .text-gray-300, .text-slate-100, .text-slate-200, .text-slate-300) {
+    color: #e5e7eb !important;
+    -webkit-text-fill-color: #e5e7eb !important;
+  }
+  .theme-light .mx-app-content [class*="bg-[#1c1c1c]"] :is(.text-gray-400, .text-gray-500, .text-slate-400, .text-slate-500),
+  .theme-light .mx-app-content [class*="bg-[#1c1c1c]"]:is(.text-gray-400, .text-gray-500, .text-slate-400, .text-slate-500) {
+    color: #9ca3af !important;
+    -webkit-text-fill-color: #9ca3af !important;
+  }
   /* Leftover dark-theme hex surfaces → light card so remapped text is readable.
      Matches bg-[#…], !bg-[#…], hover:bg-[#…], and opacity suffixes (/60, /80). */
   .theme-light .mx-app-content :is(
@@ -357,9 +374,11 @@
     max-width: 100%;
   }
   /* Bu kod bütün mobil brauzerlərdəki o xətalı daşmanı kəsir */
-  .date-input-class {
+  .date-input-class,
+  .time-input-class {
     width: 100% !important;
     max-width: 100% !important;
+    min-width: 0 !important;
     box-sizing: border-box !important; /* Padding-i daxilə çəkir */
     display: block;
     -webkit-appearance: none; /* Safari/Chrome mobil xüsusiyyətlərini sıfırlayır */

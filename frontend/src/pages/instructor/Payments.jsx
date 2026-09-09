@@ -5,6 +5,7 @@ import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
 import ListSkeleton from '../../components/common/ListSkeleton'
 import Modal from '../../components/common/Modal'
+import ConfirmDialog from '../../components/common/ConfirmDialog'
 import StatusBadge from '../../components/common/StatusBadge'
 import { useToast } from '../../components/common/Toast'
 import useUiStore from '../../hooks/useUi'
@@ -164,6 +165,7 @@ export default function InstructorPayments() {
   const [openHistoryPackages, setOpenHistoryPackages] = useState(() => new Set())
   const [historyLoading, setHistoryLoading] = useState(false)
   const [deletingPaymentId, setDeletingPaymentId] = useState(null)
+  const [pendingDeletePaymentId, setPendingDeletePaymentId] = useState(null)
   /** Sistemdən əvvəl qeydiyyat: keçmiş paket ödənişlərini toplu qeydə alma təklifi */
   const [legacyRestorePrompt, setLegacyRestorePrompt] = useState(null)
   const [legacyRestoreBusy, setLegacyRestoreBusy] = useState(false)
@@ -543,17 +545,16 @@ export default function InstructorPayments() {
     }
   }
 
-  const deleteHistoryPayment = async (paymentId) => {
-    if (
-      !window.confirm(t('payments.confirmDelete'))
-    )
-      return
+  const deleteHistoryPayment = async () => {
+    const paymentId = pendingDeletePaymentId
+    if (!paymentId) return
     const eid = historyRow?.enrollment_id
     if (!eid) return
     setDeletingPaymentId(paymentId)
     try {
       await api.delete('/payments/' + encodeURIComponent(paymentId))
       toast(t('payments.toasts.deleted'))
+      setPendingDeletePaymentId(null)
       await fetchHistoryForEnrollment(eid, historyRow?.billing_type, '8', historyRow)
       await load()
     } catch (e) {
@@ -565,6 +566,17 @@ export default function InstructorPayments() {
 
   return (
     <div className="p-4 sm:p-6 min-w-0 max-w-6xl mx-auto w-full">
+      <ConfirmDialog
+        open={Boolean(pendingDeletePaymentId)}
+        onClose={() => !deletingPaymentId && setPendingDeletePaymentId(null)}
+        onConfirm={() => void deleteHistoryPayment()}
+        title={t('common.delete')}
+        message={t('payments.confirmDelete')}
+        confirmLabel={t('common.delete')}
+        cancelLabel={t('common.cancel')}
+        loading={Boolean(deletingPaymentId)}
+        danger
+      />
       <div className="mb-6">
         <h1 className="font-display font-bold text-xl sm:text-2xl text-token-textMain tracking-tight">{t('payments.title')}</h1>
         <p className="text-token-textMuted text-sm mt-1">
@@ -1358,7 +1370,7 @@ export default function InstructorPayments() {
                                         type="button"
                                         title={t('payments.delete')}
                                         disabled={!!deletingPaymentId || !!confirmingKey}
-                                        onClick={() => void deleteHistoryPayment(p.id)}
+                                        onClick={() => setPendingDeletePaymentId(p.id)}
                                         className="p-1 text-gray-500 hover:text-rose-300"
                                       >
                                         ×
@@ -1515,7 +1527,7 @@ export default function InstructorPayments() {
                             type="button"
                             title={t('payments.deletePayment')}
                             disabled={busy}
-                            onClick={() => void deleteHistoryPayment(p.id)}
+                            onClick={() => setPendingDeletePaymentId(p.id)}
                             className="ml-auto p-1.5 rounded-lg text-gray-500 hover:text-rose-300 hover:bg-rose-500/15 disabled:opacity-40 shrink-0 transition-colors"
                           >
                             {deletingPaymentId === p.id ? (

@@ -7,6 +7,7 @@ import api from '../../lib/api'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
+import ConfirmDialog from '../../components/common/ConfirmDialog'
 import { useToast } from '../../components/common/Toast'
 import { BILLING_STATUS_QUERY_KEY, useBillingStatus } from '../../hooks/useBillingStatus'
 import { isInstructorBillingBlocked, HOMEWORK_MONTHLY_LIMIT_MESSAGE, isHomeworksMonthlyLimitReached, basicTrialExpiredMessage } from '../../lib/subscriptionPlanGuards'
@@ -85,6 +86,7 @@ export default function InstructorTasks() {
   const [libraryPickerOpen, setLibraryPickerOpen] = useState(false)
   const [linkedLibraryIds, setLinkedLibraryIds] = useState([])
   const [deletingId, setDeletingId] = useState(null)
+  const [deleteTarget, setDeleteTarget] = useState(null)
   const [reviewOpen, setReviewOpen] = useState(false)
   const [reviewLoading, setReviewLoading] = useState(false)
   const [reviewErr, setReviewErr] = useState(null)
@@ -371,16 +373,22 @@ export default function InstructorTasks() {
     })
   }
 
-  const removeTask = async (id, title) => {
+  const requestRemoveTask = (id, title) => {
     if (blocked) {
       toast(blockMessage, 'error')
       return
     }
-    if (!window.confirm(t('tasks.deleteConfirm', { title }))) return
-    setDeletingId(id)
+    setDeleteTarget({ id, title })
+  }
+
+  const removeTask = async () => {
+    const target = deleteTarget
+    if (!target?.id) return
+    setDeletingId(target.id)
     try {
-      await api.delete('/tasks/' + encodeURIComponent(id))
+      await api.delete('/tasks/' + encodeURIComponent(target.id))
       toast(t('tasks.toasts.deleted'), 'success')
+      setDeleteTarget(null)
       await load()
     } catch (e) {
       toast(e?.message || t('tasks.toasts.error'), 'error')
@@ -490,6 +498,17 @@ export default function InstructorTasks() {
 
   return (
     <div className="p-4 sm:p-6 w-full min-w-0 max-w-5xl mx-auto">
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        onClose={() => !deletingId && setDeleteTarget(null)}
+        onConfirm={() => void removeTask()}
+        title={t('common.delete')}
+        message={deleteTarget ? t('tasks.deleteConfirm', { title: deleteTarget.title }) : ''}
+        confirmLabel={t('common.delete')}
+        cancelLabel={t('common.cancel')}
+        loading={Boolean(deletingId)}
+        danger
+      />
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-4">
         <div className="min-w-0">
           <h1 className="font-display font-bold text-xl sm:text-2xl text-token-textMain">{t('tasks.title')}</h1>
@@ -638,7 +657,7 @@ export default function InstructorTasks() {
                       variant="danger"
                       disabled={blocked}
                       loading={deletingId === task.id}
-                      onClick={() => void removeTask(task.id, task.title)}
+                      onClick={() => requestRemoveTask(task.id, task.title)}
                     >
                       {t('tasks.delete')}
                     </Button>

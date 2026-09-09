@@ -6,6 +6,7 @@ import api from '../../lib/api'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
+import ConfirmDialog from '../../components/common/ConfirmDialog'
 import ExamForm, { deriveMatchingKey } from '../../components/instructor/ExamForm'
 import CertificateExamFields from '../../components/instructor/CertificateExamFields'
 import ListSkeleton from '../../components/common/ListSkeleton'
@@ -185,6 +186,7 @@ export default function InstructorExams() {
   const [loading, setLoading] = useState(false)
   const [deletingId, setDeletingId] = useState(null)
   const [bulkDeleting, setBulkDeleting] = useState(false)
+  const [deleteConfirm, setDeleteConfirm] = useState(null)
   const [selectedIds, setSelectedIds] = useState(() => new Set())
   const [examsLoading, setExamsLoading] = useState(true)
   const [examsError, setExamsError] = useState(null)
@@ -406,9 +408,9 @@ export default function InstructorExams() {
     }
   }
 
-  const deleteExam = async (exam) => {
-    const ok = window.confirm(t('exams.deleteConfirm', { title: exam?.title || t('exams.defaultTitle') }))
-    if (!ok) return
+  const deleteExam = async () => {
+    const exam = deleteConfirm?.type === 'one' ? deleteConfirm.exam : null
+    if (!exam?.id) return
     setDeletingId(exam.id)
     try {
       await api.delete('/exams/' + exam.id)
@@ -418,6 +420,7 @@ export default function InstructorExams() {
         next.delete(exam.id)
         return next
       })
+      setDeleteConfirm(null)
       await loadExams()
     } catch (err) {
       toast(err?.message || t('exams.toasts.deleteFailed'), 'error')
@@ -443,15 +446,15 @@ export default function InstructorExams() {
   }
 
   const bulkDelete = async () => {
+    if (deleteConfirm?.type !== 'bulk') return
     const ids = [...selectedIds]
     if (ids.length === 0) return
-    const ok = window.confirm(t('exams.bulkDeleteConfirm', { count: ids.length }))
-    if (!ok) return
     setBulkDeleting(true)
     try {
       await api.post('/exams/bulk-delete', { exam_ids: ids })
       toast(t('exams.toasts.bulkDeleted', { count: ids.length }))
       setSelectedIds(new Set())
+      setDeleteConfirm(null)
       await loadExams()
     } catch (err) {
       toast(err?.message || t('exams.toasts.bulkDeleteFailed'), 'error')
@@ -594,6 +597,23 @@ export default function InstructorExams() {
  
   return (
     <div className="p-4 sm:p-6 min-w-0">
+      <ConfirmDialog
+        open={Boolean(deleteConfirm)}
+        onClose={() => !deletingId && !bulkDeleting && setDeleteConfirm(null)}
+        onConfirm={() => void (deleteConfirm?.type === 'bulk' ? bulkDelete() : deleteExam())}
+        title={t('common.delete')}
+        message={
+          deleteConfirm?.type === 'bulk'
+            ? t('exams.bulkDeleteConfirm', { count: selectedIds.size })
+            : t('exams.deleteConfirm', {
+                title: deleteConfirm?.exam?.title || t('exams.defaultTitle'),
+              })
+        }
+        confirmLabel={t('common.delete')}
+        cancelLabel={t('common.cancel')}
+        loading={Boolean(deletingId) || bulkDeleting}
+        danger
+      />
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="font-display font-bold text-xl sm:text-2xl">{t('exams.title')}</h1>
@@ -634,7 +654,7 @@ export default function InstructorExams() {
           </div>
           <Button
             variant="secondary"
-            onClick={bulkDelete}
+            onClick={() => setDeleteConfirm({ type: 'bulk' })}
             loading={bulkDeleting}
             disabled={selectedIds.size === 0}
             className={[
@@ -782,7 +802,7 @@ export default function InstructorExams() {
                         : '!border-slate-200 !text-slate-700 hover:!text-rose-700 hover:!border-rose-300 hover:bg-rose-500/10',
                     ].join(' ')}
                     loading={deletingId === exam.id}
-                    onClick={() => deleteExam(exam)}
+                    onClick={() => setDeleteConfirm({ type: 'one', exam })}
                   >
                     {t('exams.delete')}
                   </Button>

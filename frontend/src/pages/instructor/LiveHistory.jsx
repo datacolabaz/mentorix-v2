@@ -5,6 +5,7 @@ import api, { AUTH_REQUEST_TIMEOUT_MS } from '../../lib/api'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
+import ConfirmDialog from '../../components/common/ConfirmDialog'
 import LiveGuestShareModal from '../../components/live/LiveGuestShareModal'
 import { useToast } from '../../components/common/Toast'
 import { bakuDateTimeLocalToIso, fmtAzBakuField } from '../../lib/azDatetime'
@@ -56,6 +57,7 @@ export default function InstructorLiveHistory() {
   const [sharingId, setSharingId] = useState(null)
   const [selectedIds, setSelectedIds] = useState([])
   const [bulkDeleting, setBulkDeleting] = useState(false)
+  const [deleteConfirm, setDeleteConfirm] = useState(null)
   const selectAllRef = useRef(null)
 
   const selectedCount = selectedIds.length
@@ -138,15 +140,15 @@ export default function InstructorLiveHistory() {
     }
   }
 
-  const handleDelete = async (session) => {
+  const handleDelete = async () => {
+    const session = deleteConfirm?.type === 'one' ? deleteConfirm.session : null
     if (!session?.room_code) return
-    const ok = window.confirm(t('live.confirmDeleteOne', { title: session.title }))
-    if (!ok) return
     setDeletingId(session.id)
     try {
       await api.delete(`/live/history/${encodeURIComponent(session.room_code)}`)
       setSessions((prev) => prev.filter((s) => s.id !== session.id))
       setSelectedIds((prev) => prev.filter((id) => id !== session.id))
+      setDeleteConfirm(null)
       toast(t('live.deletedOne'))
     } catch (e) {
       toast(e?.message || t('live.deleteFailed'), 'error')
@@ -156,10 +158,9 @@ export default function InstructorLiveHistory() {
   }
 
   const handleBulkDelete = async () => {
-    if (!selectedCount) return
+    if (deleteConfirm?.type !== 'many') return
     const selected = sessions.filter((s) => selectedIds.includes(s.id))
-    const ok = window.confirm(t('live.confirmDeleteMany', { n: selected.length }))
-    if (!ok) return
+    if (!selected.length) return
     setBulkDeleting(true)
     try {
       const results = await Promise.allSettled(
@@ -173,6 +174,7 @@ export default function InstructorLiveHistory() {
       })
       setSessions((prev) => prev.filter((s) => !deletedIds.includes(s.id)))
       setSelectedIds((prev) => prev.filter((id) => !deletedIds.includes(id)))
+      setDeleteConfirm(null)
       if (failed === 0) toast(t('live.bulkDeleted', { n: deletedIds.length }))
       else if (deletedIds.length === 0) toast(t('live.bulkNone'), 'error')
       else toast(t('live.bulkPartial', { ok: deletedIds.length, fail: failed }), 'info')
@@ -281,6 +283,21 @@ export default function InstructorLiveHistory() {
 
   return (
     <div className="p-4 sm:p-6 max-w-4xl mx-auto space-y-5">
+      <ConfirmDialog
+        open={Boolean(deleteConfirm)}
+        onClose={() => !deletingId && !bulkDeleting && setDeleteConfirm(null)}
+        onConfirm={() => void (deleteConfirm?.type === 'many' ? handleBulkDelete() : handleDelete())}
+        title={t('common.delete')}
+        message={
+          deleteConfirm?.type === 'many'
+            ? t('live.confirmDeleteMany', { n: selectedCount })
+            : t('live.confirmDeleteOne', { title: deleteConfirm?.session?.title || '' })
+        }
+        confirmLabel={t('common.delete')}
+        cancelLabel={t('common.cancel')}
+        loading={Boolean(deletingId) || bulkDeleting}
+        danger
+      />
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="font-display font-bold text-xl sm:text-2xl text-token-textMain">{t('live.historyTitle')}</h1>
@@ -328,7 +345,7 @@ export default function InstructorLiveHistory() {
                 size="sm"
                 variant="danger"
                 loading={bulkDeleting}
-                onClick={() => void handleBulkDelete()}
+                onClick={() => setDeleteConfirm({ type: 'many' })}
               >
                 {t('live.deleteSelected')} ({selectedCount})
               </Button>
@@ -435,7 +452,7 @@ export default function InstructorLiveHistory() {
                     size="sm"
                     variant="danger"
                     loading={deletingId === s.id}
-                    onClick={() => void handleDelete(s)}
+                    onClick={() => setDeleteConfirm({ type: 'one', session: s })}
                   >
                     🗑 {t('common.delete')}
                   </Button>

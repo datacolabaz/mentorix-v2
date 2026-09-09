@@ -349,22 +349,22 @@ export default function StudentSchedule() {
           </div>
 
           <div className="grid grid-cols-2 gap-3 mt-3">
-            <div>
+            <div className="min-w-0">
               <label className="block text-xs text-token-textMuted mb-1">Başla</label>
               <input
                 type="time"
                 value={newStart}
                 onChange={(e) => setNewStart(e.target.value)}
-                className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-3 py-2 text-white text-sm outline-none focus:border-indigo-400"
+                className="time-input-class w-full min-w-0 max-w-full box-border bg-[#13112e] border border-indigo-500/20 rounded-xl px-3 py-2 text-white text-sm outline-none focus:border-indigo-400"
               />
             </div>
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">Bitir</label>
+            <div className="min-w-0">
+              <label className="block text-xs text-token-textMuted mb-1">Bitir</label>
               <input
                 type="time"
                 value={newEnd}
                 onChange={(e) => setNewEnd(e.target.value)}
-                className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-3 py-2 text-white text-sm outline-none focus:border-indigo-400"
+                className="time-input-class w-full min-w-0 max-w-full box-border bg-[#13112e] border border-indigo-500/20 rounded-xl px-3 py-2 text-white text-sm outline-none focus:border-indigo-400"
               />
             </div>
           </div>
