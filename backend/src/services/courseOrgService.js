@@ -23,6 +23,26 @@ const INSTRUCTOR_NOT_FOUND_MSG =
 
 const LEAD_STATUSES = ['new', 'contacted', 'trial_scheduled', 'trial_done', 'thinking', 'won', 'lost'];
 
+async function selectOrgCourseForOwner(ownerUserId) {
+  const { rows } = await db.query(
+    `SELECT id, owner_user_id, name FROM courses
+     WHERE owner_user_id = $1 AND COALESCE(is_organization, FALSE) = TRUE
+     ORDER BY created_at ASC LIMIT 1`,
+    [ownerUserId],
+  );
+  return rows[0] || null;
+}
+
+async function adoptOrgCourse(row, ownerUserId, name) {
+  const { rows: updated } = await db.query(
+    `UPDATE courses SET name = COALESCE(NULLIF(TRIM($2), ''), name), updated_at = NOW()
+     WHERE id = $1 RETURNING id, owner_user_id, name`,
+    [row.id, name],
+  );
+  await ensureOwnerMembership(updated[0].id, ownerUserId);
+  return updated[0];
+}
+
 async function ensureOrgCourseForOwner(ownerUserId) {
   const { rows: prof } = await db.query(
     `SELECT course_name FROM course_profiles WHERE user_id = $1`,
@@ -33,30 +53,32 @@ async function ensureOrgCourseForOwner(ownerUserId) {
   const fullName = userRows[0]?.full_name || '';
   const name = profileName || fullName || 'Kursum';
 
-  const { rows: existing } = await db.query(
-    `SELECT id, owner_user_id, name FROM courses
-     WHERE owner_user_id = $1 AND COALESCE(is_organization, FALSE) = TRUE
-     ORDER BY created_at ASC LIMIT 1`,
-    [ownerUserId],
-  );
+  const existing = await selectOrgCourseForOwner(ownerUserId);
+  if (existing) return adoptOrgCourse(existing, ownerUserId, name);
 
-  if (existing.length) {
-    const { rows: updated } = await db.query(
-      `UPDATE courses SET name = COALESCE(NULLIF(TRIM($2), ''), name), updated_at = NOW()
-       WHERE id = $1 RETURNING id, owner_user_id, name`,
-      [existing[0].id, name],
+  try {
+    const { rows: inserted } = await db.query(
+      `INSERT INTO courses (owner_user_id, name, is_organization)
+       VALUES ($1, $2, TRUE)
+       ON CONFLICT (owner_user_id)
+         WHERE (COALESCE(is_organization, FALSE) = TRUE AND owner_user_id IS NOT NULL)
+       DO UPDATE SET
+         name = COALESCE(NULLIF(TRIM(EXCLUDED.name), ''), courses.name),
+         updated_at = NOW()
+       RETURNING id, owner_user_id, name`,
+      [ownerUserId, name],
     );
-    await ensureOwnerMembership(updated[0].id, ownerUserId);
-    return updated[0];
+    if (inserted[0]) {
+      await ensureOwnerMembership(inserted[0].id, ownerUserId);
+      return inserted[0];
+    }
+  } catch (err) {
+    if (err?.code !== '23505') throw err;
   }
 
-  const { rows: inserted } = await db.query(
-    `INSERT INTO courses (owner_user_id, name, is_organization)
-     VALUES ($1, $2, TRUE) RETURNING id, owner_user_id, name`,
-    [ownerUserId, name],
-  );
-  await ensureOwnerMembership(inserted[0].id, ownerUserId);
-  return inserted[0];
+  const afterRace = await selectOrgCourseForOwner(ownerUserId);
+  if (afterRace) return adoptOrgCourse(afterRace, ownerUserId, name);
+  throw new Error('Təşkilat kursu yaradıla bilmədi');
 }
 
 async function getOrgWorkspace(userId) {

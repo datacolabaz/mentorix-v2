@@ -1,6 +1,8 @@
+import { useTranslation } from 'react-i18next'
 import CourseBrandingForm from './CourseBrandingForm'
 
 export default function CourseSetupModal({ open, onComplete }) {
+  const { t } = useTranslation()
   if (!open) return null
 
   return (
@@ -12,16 +14,10 @@ export default function CourseSetupModal({ open, onComplete }) {
         aria-labelledby="course-setup-title"
       >
         <h2 id="course-setup-title" className="font-display font-bold text-lg text-white mb-1">
-          Kursunuzu təyin edin
+          {t('org.setup.title')}
         </h2>
-        <p className="text-sm text-token-textMuted mb-5">
-          Panelə daxil olmazdan əvvəl kurs adını və loqonu qeyd edin. Bu məlumat sidebar və dashboardda görünəcək.
-        </p>
-        <CourseBrandingForm
-          showHint={false}
-          submitLabel="Davam et"
-          onSaved={() => onComplete?.()}
-        />
+        <p className="text-sm text-token-textMuted mb-5">{t('org.setup.desc')}</p>
+        <CourseBrandingForm showHint={false} submitLabel={t('org.branding.continue')} onSaved={() => onComplete?.()} />
       </div>
     </div>
   )

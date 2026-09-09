@@ -1,16 +1,19 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import api from '../../lib/api'
 import ListSkeleton from '../../components/common/ListSkeleton'
 import OrgPage, { OrgPanel, OrgEmpty, OrgTable } from '../../components/org/OrgPage'
+import { orgLifecycleLabel } from '../../lib/orgI18n'
 
 export function OrgQuestionBank() {
+  const { t } = useTranslation()
   const [rows, setRows] = useState([])
   const [q, setQ] = useState('')
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const t = setTimeout(() => {
+    const timer = setTimeout(() => {
       setLoading(true)
       const params = q ? `?q=${encodeURIComponent(q)}` : ''
       api
@@ -19,17 +22,14 @@ export function OrgQuestionBank() {
         .catch(() => setRows([]))
         .finally(() => setLoading(false))
     }, 250)
-    return () => clearTimeout(t)
+    return () => clearTimeout(timer)
   }, [q])
 
   return (
-    <OrgPage
-      title="Sual bankı"
-      description="Təşkilat müəllimlərinin imtahanlarındakı təkrar istifadə olunan suallar. Şəxsi müəllim materialları ilə qarışmır."
-    >
+    <OrgPage title={t('org.content.questionBank')} description={t('org.content.questionBankDesc')}>
       <input
         className="max-w-sm rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
-        placeholder="Axtarış"
+        placeholder={t('org.common.search')}
         value={q}
         onChange={(e) => setQ(e.target.value)}
       />
@@ -39,14 +39,14 @@ export function OrgQuestionBank() {
         ) : (
           <OrgTable
             columns={[
-              { key: 'question_text', label: 'Sual', render: (r) => String(r.question_text || '').slice(0, 140) },
-              { key: 'question_type', label: 'Tip' },
-              { key: 'subject', label: 'Fənn', render: (r) => r.subject || '—' },
-              { key: 'exam_title', label: 'Mənbə imtahan' },
-              { key: 'owner_name', label: 'Sahib' },
+              { key: 'question_text', label: t('org.content.question'), render: (r) => String(r.question_text || '').slice(0, 140) },
+              { key: 'question_type', label: t('org.content.type') },
+              { key: 'subject', label: t('org.content.subject'), render: (r) => r.subject || '—' },
+              { key: 'exam_title', label: t('org.content.sourceExam') },
+              { key: 'owner_name', label: t('org.content.owner') },
             ]}
             rows={rows}
-            empty={<OrgEmpty>Sual bankı boşdur. Suallar təşkilat imtahanlarından toplanır.</OrgEmpty>}
+            empty={<OrgEmpty>{t('org.content.questionEmpty')}</OrgEmpty>}
           />
         )}
       </OrgPanel>
@@ -55,6 +55,7 @@ export function OrgQuestionBank() {
 }
 
 export function OrgTests() {
+  const { t } = useTranslation()
   const [rows, setRows] = useState([])
   useEffect(() => {
     api
@@ -63,20 +64,21 @@ export function OrgTests() {
       .catch(() => setRows([]))
   }, [])
   return (
-    <OrgPage
-      title="Testlər"
-      description="Təşkilat səviyyəsində testlər mövcud imtahan resurslarından gəlir. Yeni test müəllim panelində yaradılır."
-    >
+    <OrgPage title={t('org.content.tests')} description={t('org.content.testsDesc')}>
       <OrgPanel>
         <OrgTable
           columns={[
-            { key: 'title', label: 'Test' },
-            { key: 'created_by', label: 'Sahib' },
-            { key: 'lifecycle', label: 'Status' },
-            { key: 'participants', label: 'Təyinat' },
+            { key: 'title', label: t('org.content.test') },
+            { key: 'created_by', label: t('org.content.owner') },
+            {
+              key: 'lifecycle',
+              label: t('org.exams.status'),
+              render: (r) => orgLifecycleLabel(t, r.lifecycle),
+            },
+            { key: 'participants', label: t('org.content.assignment') },
           ]}
           rows={rows}
-          empty={<OrgEmpty>Test yoxdur.</OrgEmpty>}
+          empty={<OrgEmpty>{t('org.content.testsEmpty')}</OrgEmpty>}
         />
       </OrgPanel>
     </OrgPage>
@@ -84,15 +86,16 @@ export function OrgTests() {
 }
 
 export function OrgTemplates() {
+  const { t } = useTranslation()
   return (
-    <OrgPage title="İmtahan şablonları" description="Təkrar istifadə olunan assessment şablonları.">
+    <OrgPage title={t('org.content.templates')} description={t('org.content.templatesDesc')}>
       <OrgPanel>
         <OrgEmpty>
-          İmtahan şablonları üçün ayrıca API hələ yoxdur. Mövcud imtahanları{' '}
+          {t('org.content.templatesEmptyBefore')}{' '}
           <Link className="text-emerald-300 hover:underline" to="/org/exams">
-            təşkilat imtahanları
+            {t('org.content.templatesLink')}
           </Link>{' '}
-          siyahısından istifadə edin.
+          {t('org.content.templatesEmptyAfter')}
         </OrgEmpty>
       </OrgPanel>
     </OrgPage>
@@ -100,6 +103,7 @@ export function OrgTemplates() {
 }
 
 export function OrgMaterials({ library = false }) {
+  const { t } = useTranslation()
   const [rows, setRows] = useState([])
   useEffect(() => {
     api
@@ -109,19 +113,19 @@ export function OrgMaterials({ library = false }) {
   }, [])
   return (
     <OrgPage
-      title={library ? 'Təşkilat kitabxanası' : 'Materiallar'}
-      description="Təşkilat müəllimlərinin paylaşdığı fayllar. Müəllimin şəxsi kitabxanası ayrıca qalır."
+      title={library ? t('org.content.library') : t('org.content.materials')}
+      description={t('org.content.materialsDesc')}
     >
       <OrgPanel>
         <OrgTable
           columns={[
-            { key: 'title', label: 'Material' },
-            { key: 'owner_name', label: 'Sahib' },
-            { key: 'file_type', label: 'Tip' },
-            { key: 'original_filename', label: 'Fayl', render: (r) => r.original_filename || '—' },
+            { key: 'title', label: t('org.content.material') },
+            { key: 'owner_name', label: t('org.content.owner') },
+            { key: 'file_type', label: t('org.content.type') },
+            { key: 'original_filename', label: t('org.content.file'), render: (r) => r.original_filename || '—' },
           ]}
           rows={rows}
-          empty={<OrgEmpty>Təşkilat kitabxanası boşdur.</OrgEmpty>}
+          empty={<OrgEmpty>{t('org.content.materialsEmpty')}</OrgEmpty>}
         />
       </OrgPanel>
     </OrgPage>

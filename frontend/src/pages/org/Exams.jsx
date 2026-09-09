@@ -1,19 +1,12 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import api from '../../lib/api'
 import Button from '../../components/common/Button'
 import ListSkeleton from '../../components/common/ListSkeleton'
 import { useOrgWorkspace } from '../../hooks/useOrgWorkspace'
 import OrgPage, { OrgPanel, OrgEmpty, OrgTable } from '../../components/org/OrgPage'
 import StatusBadge from '../../components/common/StatusBadge'
-
-const FILTERS = [
-  { id: 'all', label: 'Hamısı' },
-  { id: 'draft', label: 'Draft' },
-  { id: 'scheduled', label: 'Scheduled' },
-  { id: 'active', label: 'Active' },
-  { id: 'completed', label: 'Completed' },
-  { id: 'archived', label: 'Archived' },
-]
+import { formatOrgDateTime, orgLifecycleLabel } from '../../lib/orgI18n'
 
 function badge(lifecycle) {
   if (lifecycle === 'active') return 'paid'
@@ -23,21 +16,25 @@ function badge(lifecycle) {
   return 'due'
 }
 
-function fmtWhen(iso) {
-  if (!iso) return '—'
-  try {
-    return new Date(iso).toLocaleString('az-AZ', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
-  } catch {
-    return iso
-  }
-}
-
 export default function OrgExams({ assessmentView = false }) {
+  const { t, i18n } = useTranslation()
   const { can } = useOrgWorkspace()
   const [status, setStatus] = useState('all')
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState([])
+
+  const filters = useMemo(
+    () => [
+      { id: 'all', label: t('org.exams.filterAll') },
+      { id: 'draft', label: t('org.lifecycle.draft') },
+      { id: 'scheduled', label: t('org.lifecycle.scheduled') },
+      { id: 'active', label: t('org.lifecycle.active') },
+      { id: 'completed', label: t('org.lifecycle.completed') },
+      { id: 'archived', label: t('org.lifecycle.archived') },
+    ],
+    [t],
+  )
 
   const load = useCallback(() => {
     setLoading(true)
@@ -70,22 +67,18 @@ export default function OrgExams({ assessmentView = false }) {
 
   return (
     <OrgPage
-      title={assessmentView ? 'Qiymətləndirmələr' : 'İmtahanlar'}
-      description={
-        assessmentView
-          ? 'Assessment: test, suallar, vaxt, scoring və iştirakçı təyinatı. Təşkilat müəllimlərinin imtahanları burada birləşir.'
-          : 'Təşkilat imtahanları — bütün heyət təlimçilərinin imtahanları. “Mənim imtahanlarım” deyil.'
-      }
+      title={assessmentView ? t('org.exams.assessmentsTitle') : t('org.exams.title')}
+      description={assessmentView ? t('org.exams.assessmentsDesc') : t('org.exams.desc')}
       actions={
         can('reports.export') ? (
           <Button variant="secondary" onClick={exportCsv}>
-            Export
+            {t('org.common.export')}
           </Button>
         ) : null
       }
     >
       <div className="flex flex-wrap gap-2">
-        {FILTERS.map((f) => (
+        {filters.map((f) => (
           <button
             key={f.id}
             type="button"
@@ -117,24 +110,24 @@ export default function OrgExams({ assessmentView = false }) {
                   />
                 ),
               },
-              { key: 'title', label: 'Ad' },
-              { key: 'created_by', label: 'Müəllif' },
-              { key: 'participants', label: 'İştirakçılar' },
-              { key: 'completion', label: 'Tamamlanma', render: (r) => `${r.completion ?? 0}%` },
-              { key: 'average_score', label: 'Orta', render: (r) => (r.average_score == null ? '—' : `${r.average_score}%`) },
-              { key: 'available_from', label: 'Tarix', render: (r) => fmtWhen(r.available_from || r.start_time) },
+              { key: 'title', label: t('org.exams.name') },
+              { key: 'created_by', label: t('org.exams.createdBy') },
+              { key: 'participants', label: t('org.exams.participants') },
+              { key: 'completion', label: t('org.exams.completion'), render: (r) => `${r.completion ?? 0}%` },
+              { key: 'average_score', label: t('org.exams.avg'), render: (r) => (r.average_score == null ? '—' : `${r.average_score}%`) },
+              {
+                key: 'available_from',
+                label: t('org.exams.date'),
+                render: (r) => formatOrgDateTime(r.available_from || r.start_time, i18n.language),
+              },
               {
                 key: 'lifecycle',
-                label: 'Status',
-                render: (r) => <StatusBadge variant={badge(r.lifecycle)}>{r.lifecycle}</StatusBadge>,
+                label: t('org.exams.status'),
+                render: (r) => <StatusBadge variant={badge(r.lifecycle)}>{orgLifecycleLabel(t, r.lifecycle)}</StatusBadge>,
               },
             ]}
             rows={rows}
-            empty={
-              <OrgEmpty>
-                Təşkilat müəllimlərinin imtahanları burada görünür. Yeni imtahanı müəllim öz panelindən yaradır.
-              </OrgEmpty>
-            }
+            empty={<OrgEmpty>{t('org.exams.empty')}</OrgEmpty>}
           />
         )}
       </OrgPanel>

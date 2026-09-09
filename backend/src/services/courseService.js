@@ -56,13 +56,33 @@ async function ensureCourseForOwner(ownerUserId) {
     );
     course = updated[0];
   } else {
-    const { rows: inserted } = await db.query(
-      `INSERT INTO courses (owner_user_id, name, instructor_id, is_organization)
-       VALUES ($1, $2, $1, TRUE)
-       RETURNING id, owner_user_id, name`,
-      [ownerUserId, name],
-    );
-    course = inserted[0];
+    try {
+      const { rows: inserted } = await db.query(
+        `INSERT INTO courses (owner_user_id, name, instructor_id, is_organization)
+         VALUES ($1, $2, $1, TRUE)
+         ON CONFLICT (owner_user_id)
+           WHERE (COALESCE(is_organization, FALSE) = TRUE AND owner_user_id IS NOT NULL)
+         DO UPDATE SET
+           name = COALESCE(NULLIF(TRIM(EXCLUDED.name), ''), courses.name),
+           updated_at = NOW()
+         RETURNING id, owner_user_id, name`,
+        [ownerUserId, name],
+      );
+      course = inserted[0];
+    } catch (err) {
+      if (err?.code !== '23505') throw err;
+      const { rows: raced } = await db.query(
+        `SELECT id, owner_user_id, name FROM courses
+         WHERE owner_user_id = $1 AND COALESCE(is_organization, FALSE) = TRUE
+         ORDER BY created_at ASC
+         LIMIT 1`,
+        [ownerUserId],
+      );
+      course = raced[0];
+    }
+    if (!course) {
+      throw new Error('Could not ensure course');
+    }
   }
 
   const { rows: isInstructor } = await db.query(

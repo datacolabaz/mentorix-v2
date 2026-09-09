@@ -3455,5 +3455,357 @@
   },
   "chatWorkspace": {
     "selectConversation": "Select a conversation"
+  },
+  "org": {
+    "common": {
+      "loadFailed": "Could not load",
+      "noData": "No data yet.",
+      "cancel": "Cancel",
+      "save": "Save",
+      "export": "Export",
+      "search": "Search",
+      "phoneInvalid": "Enter a valid phone number",
+      "failed": "Could not complete",
+      "createFailed": "Could not create",
+      "notFound": "Not found",
+      "workspaceFailed": "Could not load the organization",
+      "fallbackName": "Organization",
+      "expandSidebar": "Expand sidebar",
+      "collapseSidebar": "Collapse sidebar",
+      "expand": "Expand",
+      "collapse": "Collapse",
+      "done": "Done",
+      "back": "Back"
+    },
+    "dashboard": {
+      "title": "Organization overview",
+      "subtitle": "{{name}} — status of the whole organization",
+      "activity": "Recent activity",
+      "quick": "Quick actions",
+      "noActivity": "No audit records yet.",
+      "activeExams": "Active exams",
+      "upcomingExams": "Upcoming exams",
+      "noActiveExams": "There is no active organization exam right now.",
+      "noUpcoming": "No exam is scheduled.",
+      "teamPerf": "Performance by team",
+      "examResults": "Exam results",
+      "noTeams": "No teams yet. Create a structure such as Sales or Marketing.",
+      "noResults": "No results yet — exams created by organization teachers appear here.",
+      "recentParticipants": "Recently added participants",
+      "noParticipants": "No participants yet.",
+      "seeAll": "See all"
+    },
+    "kpi": {
+      "participants": "Active participants",
+      "trainers": "Active teachers / trainers",
+      "activeExams": "Active exams",
+      "completed": "Completed assessments",
+      "avgScore": "Average score"
+    },
+    "quick": {
+      "createExam": "Create exam",
+      "createExamHint": "Exams are created in the teacher workspace",
+      "createExamNeedTrainer": "An organization teacher creates the exam",
+      "addParticipant": "Add participant",
+      "addParticipantHint": "Add a registered participant by phone",
+      "inviteTrainer": "Invite teacher",
+      "inviteTrainerHint": "Add a registered trainer to the staff",
+      "createTeam": "Create team",
+      "createTeamHint": "Sales, Engineering, and so on",
+      "createTest": "Create test",
+      "createTestHint": "Tests are created from the teacher workspace",
+      "createTestNeedTrainer": "A teacher workspace is required to create a test"
+    },
+    "audit": {
+      "actor": "Actor",
+      "action": "Action",
+      "time": "Time",
+      "target": "Target",
+      "metadata": "Metadata",
+      "title": "Audit log",
+      "desc": "Actor, action, target, time, and extra details.",
+      "empty": "No audit records."
+    },
+    "auditActions": {
+      "user": {
+        "invited": "User invited",
+        "removed": "User removed",
+        "archived": "User archived"
+      },
+      "organization": {
+        "settings_changed": "Organization settings changed"
+      },
+      "group": {
+        "created": "Group created",
+        "members_added": "Members added to group"
+      },
+      "team": {
+        "created": "Team created",
+        "updated": "Team updated",
+        "members_added": "Members added to team"
+      },
+      "trainer": {
+        "activated": "Teacher activated",
+        "suspended": "Teacher suspended",
+        "team_assigned": "Teacher assigned to a team"
+      },
+      "assessment": {
+        "assigned": "Assessment assigned"
+      },
+      "role": {
+        "changed": "Role changed"
+      },
+      "report": {
+        "exported": "Report exported"
+      }
+    },
+    "exams": {
+      "title": "Exams",
+      "assessmentsTitle": "Assessments",
+      "desc": "Organization exams — exams from all staff trainers, not “my exams”.",
+      "assessmentsDesc": "Assessments: tests, questions, timing, scoring, and assignments. Exams from organization teachers are collected here.",
+      "name": "Name",
+      "createdBy": "Author",
+      "participants": "Participants",
+      "avg": "Average",
+      "date": "Date",
+      "empty": "Exams created by organization teachers appear here. New exams are created from the teacher workspace.",
+      "completion": "Completion",
+      "status": "Status",
+      "filterAll": "All"
+    },
+    "participants": {
+      "title": "Participants",
+      "desc": "All organization participants. Students, candidates, and staff are managed in one list.",
+      "added": "Participant added",
+      "addFailed": "Could not add",
+      "select": "Select a participant",
+      "name": "Name",
+      "team": "Team",
+      "group": "Group",
+      "score": "Score",
+      "status": "Status",
+      "assessment": "Assessment",
+      "lastActivity": "Last activity",
+      "count": "{{count}} participants",
+      "add": "Add participant",
+      "addToTeam": "Add to team",
+      "assignAssessment": "Assign assessment",
+      "assign": "Assign",
+      "archive": "Archive",
+      "empty": "No participants yet. Add someone already registered on the platform by phone.",
+      "inviteHint": "No separate invite email is sent — the participant must already have an account.",
+      "modalHint": "Enter the phone number the participant used to register.",
+      "searchAdd": "Find and add",
+      "active": "Active",
+      "inactive": "Inactive",
+      "allTeams": "Team",
+      "allGroups": "Group",
+      "allStatuses": "Status",
+      "allAssessments": "Assessment"
+    },
+    "assessmentStatus": {
+      "none": "Not assigned",
+      "assigned": "Assigned",
+      "in_progress": "In progress",
+      "completed": "Completed"
+    },
+    "lifecycle": {
+      "draft": "Draft",
+      "scheduled": "Scheduled",
+      "active": "Active",
+      "completed": "Completed",
+      "archived": "Archived"
+    },
+    "teams": {
+      "title": "Teams",
+      "desc": "Organization structure (for example Sales, Marketing). Groups are cohorts or assessment sets under a team.",
+      "name": "Team",
+      "members": "Members",
+      "completion": "Completion",
+      "create": "Create team",
+      "created": "Team created",
+      "empty": "No teams yet.",
+      "newTitle": "New team",
+      "descPlaceholder": "Description (optional)",
+      "detailFallback": "Team details",
+      "participantsKpi": "Participants",
+      "avgKpi": "Average score",
+      "completionKpi": "Completion",
+      "groupsKpi": "Groups",
+      "membersPanel": "Members",
+      "groupsPanel": "Groups",
+      "noMembers": "No members.",
+      "noGroups": "No groups are linked to this team.",
+      "trainers": "Trainers",
+      "avg": "Average"
+    },
+    "memberKind": {
+      "participant": "Participant",
+      "trainer": "Trainer"
+    },
+    "groups": {
+      "title": "Groups",
+      "desc": "A group is an assessment, cohort, or set of participants. A team is the larger organization structure.",
+      "create": "Create group",
+      "created": "Group created",
+      "name": "Group",
+      "team": "Team",
+      "trainer": "Trainer",
+      "participants": "Participants",
+      "empty": "No groups yet. For example: “New Employees” or “Assessment Group”.",
+      "newTitle": "New group",
+      "teamOptional": "Team (optional)",
+      "trainerOptional": "Trainer (optional)"
+    },
+    "trainers": {
+      "title": "Teachers / Trainers",
+      "desc": "Teachers and trainers on the organization staff. Their personal teaching workspace stays separate — this page is organization management only.",
+      "invite": "Invite teacher",
+      "invited": "Teacher added to the staff",
+      "addFailed": "Could not add",
+      "removeConfirm": "Remove this teacher from the organization staff?",
+      "deleted": "Could not delete",
+      "name": "Name",
+      "phone": "Phone",
+      "status": "Status",
+      "team": "Team",
+      "role": "Role",
+      "assessments": "Assessments",
+      "activity": "Activity",
+      "viewActivity": "Activity",
+      "suspend": "Suspend",
+      "activate": "Activate",
+      "remove": "Remove",
+      "active": "Active",
+      "suspended": "Suspended",
+      "empty": "No organization teachers yet. Invite a registered trainer by phone.",
+      "activityTitle": "Created assessments",
+      "exam": "Exam",
+      "noExams": "This trainer has no organization exams.",
+      "modalHint": "Enter the phone number the teacher used to register.",
+      "searchAdd": "Find and add"
+    },
+    "analytics": {
+      "overview": "Overview analytics",
+      "exams": "Exam results",
+      "participants": "Participant performance",
+      "teams": "Team results",
+      "reports": "Reports",
+      "desc": "Organization analytics are separate from individual teacher stats: participation, completion, and team comparison.",
+      "participation": "Participation",
+      "completion": "Completion",
+      "avgScore": "Average score",
+      "distribution": "Score distribution",
+      "noDistribution": "No results to chart yet.",
+      "assessmentPerf": "Assessment performance",
+      "exam": "Exam",
+      "teacher": "Teacher",
+      "participationCol": "Participation",
+      "noExamResults": "No exam results.",
+      "participant": "Participant",
+      "team": "Team",
+      "group": "Group",
+      "score": "Score",
+      "status": "Status",
+      "noParticipantResults": "No participant results.",
+      "teamCompare": "Team comparison",
+      "members": "Members",
+      "noTeamResults": "No team results.",
+      "allTeams": "Team",
+      "allTeachers": "Teacher"
+    },
+    "members": {
+      "title": "Members",
+      "desc": "Organization staff and roles.",
+      "name": "Name",
+      "email": "Email",
+      "role": "Role",
+      "empty": "No members.",
+      "roleFailed": "Could not change role"
+    },
+    "roles": {
+      "title": "Roles and permissions",
+      "desc": "Role and permission catalog. This shows which actions each role can perform.",
+      "catalog": "Catalog"
+    },
+    "roleNames": {
+      "owner": "Owner",
+      "org_admin": "Organization admin",
+      "manager": "Manager",
+      "instructor": "Teacher / Trainer",
+      "evaluator": "Evaluator",
+      "viewer": "Viewer"
+    },
+    "profile": {
+      "title": "Organization profile",
+      "desc": "Organization name, logo, and branch."
+    },
+    "branding": {
+      "title": "Branding",
+      "desc": "Logo and organization name.",
+      "pageHint": "Set the name and logo shown in the organization workspace. For example: Destekci Ictimai Birliyi.",
+      "logo": "Organization logo",
+      "logoHint": "PNG or JPG, 2 MB max",
+      "pickLogo": "Choose logo",
+      "uploading": "Uploading…",
+      "name": "Organization name",
+      "namePlaceholder": "Organization name",
+      "branch": "Branch address (optional)",
+      "branchPlaceholder": "Baku, Narimanov district…",
+      "needName": "Enter the organization name",
+      "loadFailed": "Could not load settings",
+      "saveFailed": "Could not save",
+      "logoFailed": "Could not upload logo",
+      "imageOnly": "Choose an image file (PNG, JPG)",
+      "continue": "Continue"
+    },
+    "setup": {
+      "title": "Set up your organization",
+      "desc": "Enter the organization name and logo before using the workspace. This appears in the sidebar and overview."
+    },
+    "integrations": {
+      "title": "Integrations",
+      "desc": "SSO, HRIS, and other B2B connections.",
+      "empty": "No integration API yet. This page is reserved for future connections."
+    },
+    "notifications": {
+      "title": "Notifications",
+      "desc": "Internal notifications for the organization account.",
+      "heading": "Title",
+      "body": "Message",
+      "time": "Time",
+      "empty": "No notifications."
+    },
+    "settings": {
+      "title": "Settings",
+      "desc": "Organization profile and account."
+    },
+    "content": {
+      "questionBank": "Question bank",
+      "questionBankDesc": "Reusable questions from organization teachers’ exams. Personal teacher materials are not mixed in.",
+      "question": "Question",
+      "type": "Type",
+      "subject": "Subject",
+      "sourceExam": "Source exam",
+      "owner": "Owner",
+      "questionEmpty": "The question bank is empty. Questions are collected from organization exams.",
+      "tests": "Tests",
+      "testsDesc": "Organization-level tests come from existing exam resources. New tests are created in the teacher workspace.",
+      "test": "Test",
+      "assignment": "Assignment",
+      "testsEmpty": "No tests.",
+      "templates": "Exam templates",
+      "templatesDesc": "Reusable assessment templates.",
+      "templatesEmptyBefore": "There is no separate templates API yet. Use existing exams from the",
+      "templatesLink": "organization exams",
+      "templatesEmptyAfter": "list.",
+      "materials": "Materials",
+      "library": "Organization library",
+      "materialsDesc": "Files shared by organization teachers. A teacher’s personal library stays separate.",
+      "material": "Material",
+      "file": "File",
+      "materialsEmpty": "The organization library is empty."
+    }
   }
 }

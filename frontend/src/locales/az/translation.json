@@ -3455,5 +3455,357 @@
   },
   "chatWorkspace": {
     "selectConversation": "Söhbət seçin"
+  },
+  "org": {
+    "common": {
+      "loadFailed": "Yüklənmədi",
+      "noData": "Məlumat yoxdur.",
+      "cancel": "Ləğv et",
+      "save": "Yadda saxla",
+      "export": "İxrac",
+      "search": "Axtarış",
+      "phoneInvalid": "Telefon nömrəsini düzgün daxil edin",
+      "failed": "Alınmadı",
+      "createFailed": "Yaradılmadı",
+      "notFound": "Tapılmadı",
+      "workspaceFailed": "Təşkilat yüklənmədi",
+      "fallbackName": "Təşkilat",
+      "expandSidebar": "Yan paneli aç",
+      "collapseSidebar": "Yan paneli yığ",
+      "expand": "Aç",
+      "collapse": "Yığ",
+      "done": "Əməliyyat tamamlandı",
+      "back": "Geri"
+    },
+    "dashboard": {
+      "title": "Təşkilat icmalı",
+      "subtitle": "{{name}} — bütün təşkilatın vəziyyəti",
+      "activity": "Son fəaliyyətlər",
+      "quick": "Sürətli əməliyyatlar",
+      "noActivity": "Hələ audit qeydi yoxdur.",
+      "activeExams": "Aktiv imtahanlar",
+      "upcomingExams": "Yaxınlaşan imtahanlar",
+      "noActiveExams": "Hazırda aktiv təşkilat imtahanı yoxdur.",
+      "noUpcoming": "Planlaşdırılmış imtahan yoxdur.",
+      "teamPerf": "Komandalar üzrə performans",
+      "examResults": "İmtahan nəticələri",
+      "noTeams": "Hələ komanda yoxdur. Sales, Marketing kimi struktur yaradın.",
+      "noResults": "Nəticə hələ yoxdur — təşkilat müəllimlərinin imtahanları burada toplanır.",
+      "recentParticipants": "Son əlavə edilən iştirakçılar",
+      "noParticipants": "Hələ iştirakçı yoxdur.",
+      "seeAll": "Hamısına bax"
+    },
+    "kpi": {
+      "participants": "Aktiv iştirakçılar",
+      "trainers": "Aktiv müəllim / təlimçilər",
+      "activeExams": "Aktiv imtahanlar",
+      "completed": "Tamamlanmış qiymətləndirmələr",
+      "avgScore": "Orta nəticə"
+    },
+    "quick": {
+      "createExam": "İmtahan yarat",
+      "createExamHint": "Müəllim panelində imtahan yaradılır",
+      "createExamNeedTrainer": "İmtahanı təşkilat müəllimi yaradır",
+      "addParticipant": "İştirakçı əlavə et",
+      "addParticipantHint": "Qeydiyyatlı iştirakçını telefona görə əlavə edin",
+      "inviteTrainer": "Müəllim dəvət et",
+      "inviteTrainerHint": "Platformada qeydiyyatlı təlimçini heyətə əlavə edin",
+      "createTeam": "Komanda yarat",
+      "createTeamHint": "Sales, Engineering və s.",
+      "createTest": "Test yarat",
+      "createTestHint": "Testlər müəllim panelindən yaradılır",
+      "createTestNeedTrainer": "Test yaratmaq üçün müəllim paneli lazımdır"
+    },
+    "audit": {
+      "actor": "İcraçı",
+      "action": "Əməliyyat",
+      "time": "Vaxt",
+      "target": "Hədəf",
+      "metadata": "Metadata",
+      "title": "Audit jurnalı",
+      "desc": "İcraçı, əməliyyat, hədəf, vaxt və əlavə məlumat.",
+      "empty": "Audit qeydi yoxdur."
+    },
+    "auditActions": {
+      "user": {
+        "invited": "İstifadəçi dəvət edildi",
+        "removed": "İstifadəçi silindi",
+        "archived": "İstifadəçi arxivləndi"
+      },
+      "organization": {
+        "settings_changed": "Təşkilat tənzimləmələri dəyişdirildi"
+      },
+      "group": {
+        "created": "Qrup yaradıldı",
+        "members_added": "Qrupa üzvlər əlavə edildi"
+      },
+      "team": {
+        "created": "Komanda yaradıldı",
+        "updated": "Komanda yeniləndi",
+        "members_added": "Komandaya üzvlər əlavə edildi"
+      },
+      "trainer": {
+        "activated": "Müəllim aktiv edildi",
+        "suspended": "Müəllim dayandırıldı",
+        "team_assigned": "Müəllim komandaya təyin edildi"
+      },
+      "assessment": {
+        "assigned": "Qiymətləndirmə təyin edildi"
+      },
+      "role": {
+        "changed": "Rol dəyişdirildi"
+      },
+      "report": {
+        "exported": "Hesabat ixrac edildi"
+      }
+    },
+    "exams": {
+      "title": "İmtahanlar",
+      "assessmentsTitle": "Qiymətləndirmələr",
+      "desc": "Təşkilat imtahanları — bütün heyət təlimçilərinin imtahanları. “Mənim imtahanlarım” deyil.",
+      "assessmentsDesc": "Qiymətləndirmə: test, suallar, vaxt, ballar və iştirakçı təyinatı. Təşkilat müəllimlərinin imtahanları burada birləşir.",
+      "name": "Ad",
+      "createdBy": "Müəllif",
+      "participants": "İştirakçılar",
+      "avg": "Orta",
+      "date": "Tarix",
+      "empty": "Təşkilat müəllimlərinin imtahanları burada görünür. Yeni imtahanı müəllim öz panelindən yaradır.",
+      "completion": "Tamamlanma",
+      "status": "Status",
+      "filterAll": "Hamısı"
+    },
+    "participants": {
+      "title": "İştirakçılar",
+      "desc": "Təşkilat üzrə bütün iştirakçılar. Tələbə, namizəd və ya əməkdaş eyni siyahıda idarə olunur.",
+      "added": "İştirakçı əlavə edildi",
+      "addFailed": "Əlavə edilmədi",
+      "select": "İştirakçı seçin",
+      "name": "Ad",
+      "team": "Komanda",
+      "group": "Qrup",
+      "score": "Nəticə",
+      "status": "Status",
+      "assessment": "Qiymətləndirmə",
+      "lastActivity": "Son aktivlik",
+      "count": "{{count}} iştirakçı",
+      "add": "İştirakçı əlavə et",
+      "addToTeam": "Komandaya əlavə et",
+      "assignAssessment": "Qiymətləndirmə təyin et",
+      "assign": "Təyin et",
+      "archive": "Arxivlə",
+      "empty": "Hələ iştirakçı yoxdur. Platformada qeydiyyatlı şəxsi telefon ilə əlavə edin.",
+      "inviteHint": "Dəvət e-poçtu ayrıca göndərilmir — iştirakçı artıq platformada qeydiyyatda olmalıdır.",
+      "modalHint": "İştirakçının platformada qeydiyyatdan keçdiyi telefon nömrəsini daxil edin.",
+      "searchAdd": "Axtar və əlavə et",
+      "active": "Aktiv",
+      "inactive": "Deaktiv",
+      "allTeams": "Komanda",
+      "allGroups": "Qrup",
+      "allStatuses": "Status",
+      "allAssessments": "Qiymətləndirmə"
+    },
+    "assessmentStatus": {
+      "none": "Təyin olunmayıb",
+      "assigned": "Təyin edilib",
+      "in_progress": "Davam edir",
+      "completed": "Tamamlanıb"
+    },
+    "lifecycle": {
+      "draft": "Qaralama",
+      "scheduled": "Planlaşdırılıb",
+      "active": "Aktiv",
+      "completed": "Tamamlanıb",
+      "archived": "Arxiv"
+    },
+    "teams": {
+      "title": "Komandalar",
+      "desc": "Təşkilati struktur (məs. Sales, Marketing). Qruplar komandanın altındakı cohort / qiymətləndirmə toplusudur.",
+      "name": "Komanda",
+      "members": "Üzvlər",
+      "completion": "Tamamlanma",
+      "create": "Komanda yarat",
+      "created": "Komanda yaradıldı",
+      "empty": "Hələ komanda yoxdur.",
+      "newTitle": "Yeni komanda",
+      "descPlaceholder": "Təsvir (istəyə bağlı)",
+      "detailFallback": "Komanda detalları",
+      "participantsKpi": "İştirakçılar",
+      "avgKpi": "Orta nəticə",
+      "completionKpi": "Tamamlanma",
+      "groupsKpi": "Qruplar",
+      "membersPanel": "Üzvlər",
+      "groupsPanel": "Qruplar",
+      "noMembers": "Üzv yoxdur.",
+      "noGroups": "Bu komandaya bağlı qrup yoxdur.",
+      "trainers": "Təlimçilər",
+      "avg": "Orta"
+    },
+    "memberKind": {
+      "participant": "İştirakçı",
+      "trainer": "Təlimçi"
+    },
+    "groups": {
+      "title": "Qruplar",
+      "desc": "Qrup — qiymətləndirmə, cohort və ya müəyyən iştirakçı toplusu. Komanda isə daha böyük təşkilati strukturdur.",
+      "create": "Qrup yarat",
+      "created": "Qrup yaradıldı",
+      "name": "Qrup",
+      "team": "Komanda",
+      "trainer": "Təlimçi",
+      "participants": "İştirakçılar",
+      "empty": "Hələ qrup yoxdur. Məsələn: “New Employees” və ya “Assessment Group”.",
+      "newTitle": "Yeni qrup",
+      "teamOptional": "Komanda (istəyə bağlı)",
+      "trainerOptional": "Təlimçi (istəyə bağlı)"
+    },
+    "trainers": {
+      "title": "Müəllimlər / Təlimçilər",
+      "desc": "Təşkilat heyətindəki müəllim və təlimçilər. Onların şəxsi dərs paneli ayrı qalır — burada yalnız təşkilat idarəetməsi var.",
+      "invite": "Müəllim dəvət et",
+      "invited": "Müəllim heyətə əlavə edildi",
+      "addFailed": "Əlavə edilmədi",
+      "removeConfirm": "Müəllimi təşkilat heyətindən silmək?",
+      "deleted": "Silinmədi",
+      "name": "Ad",
+      "phone": "Telefon",
+      "status": "Status",
+      "team": "Komanda",
+      "role": "Rol",
+      "assessments": "Qiymətləndirmələr",
+      "activity": "Aktivlik",
+      "viewActivity": "Aktivlik",
+      "suspend": "Dayandır",
+      "activate": "Aktiv et",
+      "remove": "Sil",
+      "active": "Aktiv",
+      "suspended": "Dayandırılıb",
+      "empty": "Hələ təşkilat müəllimi yoxdur. Platformada qeydiyyatlı təlimçini telefon ilə dəvət edin.",
+      "activityTitle": "Yaradılan qiymətləndirmələr",
+      "exam": "İmtahan",
+      "noExams": "Bu təlimçinin təşkilat imtahanı yoxdur.",
+      "modalHint": "Müəllimin platformada qeydiyyatdan keçdiyi telefon nömrəsini daxil edin.",
+      "searchAdd": "Axtar və əlavə et"
+    },
+    "analytics": {
+      "overview": "Ümumi analitika",
+      "exams": "İmtahan nəticələri",
+      "participants": "İştirakçı performansı",
+      "teams": "Komanda nəticələri",
+      "reports": "Hesabatlar",
+      "desc": "Təşkilat analitikası fərdi müəllim statistikasından ayrıdır: iştirak, tamamlanma, komanda müqayisəsi.",
+      "participation": "İştirak",
+      "completion": "Tamamlanma",
+      "avgScore": "Orta nəticə",
+      "distribution": "Nəticə paylanması",
+      "noDistribution": "Paylanma üçün nəticə yoxdur.",
+      "assessmentPerf": "Qiymətləndirmə performansı",
+      "exam": "İmtahan",
+      "teacher": "Müəllim",
+      "participationCol": "İştirak",
+      "noExamResults": "İmtahan nəticəsi yoxdur.",
+      "participant": "İştirakçı",
+      "team": "Komanda",
+      "group": "Qrup",
+      "score": "Nəticə",
+      "status": "Status",
+      "noParticipantResults": "İştirakçı nəticəsi yoxdur.",
+      "teamCompare": "Komanda müqayisəsi",
+      "members": "Üzvlər",
+      "noTeamResults": "Komanda nəticəsi yoxdur.",
+      "allTeams": "Komanda",
+      "allTeachers": "Müəllim"
+    },
+    "members": {
+      "title": "Üzvlər",
+      "desc": "Təşkilat heyəti və rolları.",
+      "name": "Ad",
+      "email": "E-poçt",
+      "role": "Rol",
+      "empty": "Üzv yoxdur.",
+      "roleFailed": "Rol dəyişmədi"
+    },
+    "roles": {
+      "title": "Rollar və icazələr",
+      "desc": "Rollar və icazələr kataloqu. Hər rolun hansı əməliyyatlara çıxışı olduğu burada görünür.",
+      "catalog": "Kataloq"
+    },
+    "roleNames": {
+      "owner": "Sahib",
+      "org_admin": "Təşkilat admini",
+      "manager": "Menecer",
+      "instructor": "Müəllim / Təlimçi",
+      "evaluator": "Qiymətləndirici",
+      "viewer": "İzləyici"
+    },
+    "profile": {
+      "title": "Təşkilat profili",
+      "desc": "Təşkilat adı, loqo və filial."
+    },
+    "branding": {
+      "title": "Brendinq",
+      "desc": "Loqo və təşkilat adı.",
+      "pageHint": "Təşkilat panelində görünəcək ad və loqonu təyin edin. Məsələn: Destekci Ictimai Birliyi.",
+      "logo": "Təşkilat loqosu",
+      "logoHint": "PNG və ya JPG, maksimum 2 MB",
+      "pickLogo": "Loqo seç",
+      "uploading": "Yüklənir…",
+      "name": "Təşkilat adı",
+      "namePlaceholder": "Təşkilatın adı",
+      "branch": "Filial ünvanı (istəyə bağlı)",
+      "branchPlaceholder": "Bakı, Nərimanov rayonu…",
+      "needName": "Təşkilat adını daxil edin",
+      "loadFailed": "Parametrlər yüklənmədi",
+      "saveFailed": "Yadda saxlanmadı",
+      "logoFailed": "Loqo yüklənmədi",
+      "imageOnly": "Yalnız şəkil faylı seçin (PNG, JPG)",
+      "continue": "Davam et"
+    },
+    "setup": {
+      "title": "Təşkilatınızı təyin edin",
+      "desc": "Panelə daxil olmazdan əvvəl təşkilat adını və loqonu qeyd edin. Bu məlumat yan panel və icmalda görünəcək."
+    },
+    "integrations": {
+      "title": "İnteqrasiyalar",
+      "desc": "SSO, HRIS və digər B2B bağları.",
+      "empty": "İnteqrasiya API-si hələ yoxdur. Bu səhifə gələcək bağlar üçün rezervdir."
+    },
+    "notifications": {
+      "title": "Bildirişlər",
+      "desc": "Təşkilat hesabına gələn daxili bildirişlər.",
+      "heading": "Başlıq",
+      "body": "Mətn",
+      "time": "Vaxt",
+      "empty": "Bildiriş yoxdur."
+    },
+    "settings": {
+      "title": "Tənzimləmələr",
+      "desc": "Təşkilat profili və hesab."
+    },
+    "content": {
+      "questionBank": "Sual bankı",
+      "questionBankDesc": "Təşkilat müəllimlərinin imtahanlarındakı təkrar istifadə olunan suallar. Şəxsi müəllim materialları ilə qarışmır.",
+      "question": "Sual",
+      "type": "Tip",
+      "subject": "Fənn",
+      "sourceExam": "Mənbə imtahan",
+      "owner": "Sahib",
+      "questionEmpty": "Sual bankı boşdur. Suallar təşkilat imtahanlarından toplanır.",
+      "tests": "Testlər",
+      "testsDesc": "Təşkilat səviyyəsində testlər mövcud imtahan resurslarından gəlir. Yeni test müəllim panelində yaradılır.",
+      "test": "Test",
+      "assignment": "Təyinat",
+      "testsEmpty": "Test yoxdur.",
+      "templates": "İmtahan şablonları",
+      "templatesDesc": "Təkrar istifadə olunan qiymətləndirmə şablonları.",
+      "templatesEmptyBefore": "İmtahan şablonları üçün ayrıca API hələ yoxdur. Mövcud imtahanları",
+      "templatesLink": "təşkilat imtahanları",
+      "templatesEmptyAfter": "siyahısından istifadə edin.",
+      "materials": "Materiallar",
+      "library": "Təşkilat kitabxanası",
+      "materialsDesc": "Təşkilat müəllimlərinin paylaşdığı fayllar. Müəllimin şəxsi kitabxanası ayrıca qalır.",
+      "material": "Material",
+      "file": "Fayl",
+      "materialsEmpty": "Təşkilat kitabxanası boşdur."
+    }
   }
 }
