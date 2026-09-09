@@ -971,6 +971,8 @@
       "paymentLabel": "Ödənişlər",
       "paymentStatus": "2 gözləyən",
       "assignmentStatus": "Tapşırıq izləmə",
+      "paymentsHint": "Ödənişlər və qrafik tam paneldədir",
+      "openPanel": "Paneli aç",
       "sampleNote": "Nümunə interfeys — real hesab deyil"
     },
     "marketplace": {

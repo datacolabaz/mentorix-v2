@@ -208,8 +208,8 @@ export default function Landing() {
       <PublicMarketingNav onLogin={() => goLogin('nav')} onStart={() => goRegister('nav')} />
 
       <div className="w-full max-w-5xl mx-auto px-4 pt-8 sm:pt-10 pb-8 space-y-12 sm:space-y-16 min-w-0 box-border overflow-x-hidden">
-        <header className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)] xl:grid-cols-[minmax(0,1fr)_minmax(0,26rem)] gap-8 lg:gap-10 lg:items-center">
-          <div className="w-full min-w-0 space-y-4 flex flex-col items-center text-center lg:items-start lg:text-left">
+        <header className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-8 lg:items-stretch">
+          <div className="w-full min-w-0 space-y-4 flex flex-col items-center text-center lg:items-start lg:text-left lg:justify-center">
             <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] text-gray-300">
               <span className="mx-nav-live-dot h-1.5 w-1.5 rounded-full bg-primary shadow-[0_0_12px_rgba(0,229,176,0.9)]" />
               {hero.pill}
