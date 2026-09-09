@@ -19,6 +19,7 @@ export default function ConfirmDialog({
       onClose={() => !loading && onClose()}
       title={title}
       size="sm"
+      zIndex={11000}
       footer={
         <div className="flex flex-wrap gap-2 justify-end">
           <Button variant="secondary" size="sm" onClick={onClose} disabled={loading}>

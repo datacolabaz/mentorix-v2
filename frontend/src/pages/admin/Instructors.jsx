@@ -4,6 +4,7 @@ import api from "../../lib/api"
 import Card from "../../components/common/Card"
 import Button from "../../components/common/Button"
 import Modal from "../../components/common/Modal"
+import ConfirmDialog from "../../components/common/ConfirmDialog"
 import { useToast } from "../../components/common/Toast"
 import PresenceDot from "../../components/common/PresenceDot"
 import { AZ_REGIONS, BAKU } from "@shared/azerbaijanRegions.mjs"
@@ -27,6 +28,8 @@ export default function AdminInstructors() {
   const [form, setForm] = useState({ full_name: "", email: "", phone: "", subject: "", billing_type: "8_lessons" })
   const [editForm, setEditForm] = useState({ full_name: "", email: "", phone: "", subject: "", new_password: "" })
   const [planBusy, setPlanBusy] = useState({})
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [deleteBusy, setDeleteBusy] = useState(false)
   const toast = useToast()
 
   const load = () => api.get("/admin/instructors").then(d => setInstructors(d.instructors || []))
@@ -411,20 +414,36 @@ export default function AdminInstructors() {
             <Button variant="secondary" onClick={() => setEditModal(false)} className="flex-1 justify-center">Legv et</Button>
           </div>
           <div className="pt-2 border-t border-red-500/20 mt-2">
-            <Button variant="danger" className="w-full justify-center" onClick={async () => {
-              if (!window.confirm(selected.full_name + " silinsin?")) return
-              try {
-                await api.patch("/admin/instructors/" + selected.id + "/toggle", { is_active: false })
-                await api.delete("/admin/instructors/" + selected.id)
-                setEditModal(false)
-                load()
-              } catch(e) {
-                toast("Xeta: " + e.message, "error")
-              }
-            }}>Muellimi Sil</Button>
+            <Button variant="danger" className="w-full justify-center" onClick={() => setDeleteOpen(true)}>Muellimi Sil</Button>
           </div>
         </div>
       </Modal>
+
+      <ConfirmDialog
+        open={deleteOpen && Boolean(selected)}
+        onClose={() => !deleteBusy && setDeleteOpen(false)}
+        onConfirm={async () => {
+          if (!selected?.id) return
+          setDeleteBusy(true)
+          try {
+            await api.patch("/admin/instructors/" + selected.id + "/toggle", { is_active: false })
+            await api.delete("/admin/instructors/" + selected.id)
+            setDeleteOpen(false)
+            setEditModal(false)
+            load()
+          } catch (e) {
+            toast("Xeta: " + e.message, "error")
+          } finally {
+            setDeleteBusy(false)
+          }
+        }}
+        title="Müəllimi sil"
+        message={`${selected?.full_name || "Müəllim"} silinsin?`}
+        confirmLabel="Sil"
+        cancelLabel="Ləğv et"
+        loading={deleteBusy}
+        danger
+      />
 
     </div>
   )

@@ -53,6 +53,7 @@ import { formatStorageBytesHuman } from '../../lib/storageAddonDisplay'
 import { useBillingConfig } from '../../hooks/useBillingConfig'
 import { openBillingReceiptWhatsApp } from '../../lib/billingPaymentLabels'
 import Modal from '../../components/common/Modal'
+import ConfirmDialog from '../../components/common/ConfirmDialog'
 import PersonaSettingsCard from '../../components/onboarding/PersonaSettingsCard'
 
 function billingPaymentTitleLocalized(p, t) {
@@ -162,6 +163,7 @@ export default function InstructorSettings() {
     : []
   const [checkout, setCheckout] = useState(null)
   const [limitChoice, setLimitChoice] = useState(null) // null | { open: true }
+  const [planSwitchConfirm, setPlanSwitchConfirm] = useState(null)
   const [storageAddonOpen, setStorageAddonOpen] = useState(false)
   const [billingPayments, setBillingPayments] = useState([])
   const plans = Array.isArray(plansQ.data) ? plansQ.data : []
@@ -847,14 +849,8 @@ export default function InstructorSettings() {
                 return
               }
               const title = p?.title || pid.toUpperCase()
-              if (
-                !window.confirm(
-                  t('settings.confirmPlanSwitch', { title }),
-                )
-              ) {
-                return
-              }
-              return openPlanCheckout(p.id)
+              setPlanSwitchConfirm({ planId: p.id, title })
+              return
             }
 
             const btnDisabled =
@@ -1477,6 +1473,24 @@ export default function InstructorSettings() {
         product={checkout?.type === 'sms' ? 'sms' : checkout?.type === 'storage' ? 'storage' : 'plan'}
         busy={planBusy}
         onConfirm={confirmCheckout}
+      />
+
+      <ConfirmDialog
+        open={Boolean(planSwitchConfirm)}
+        onClose={() => setPlanSwitchConfirm(null)}
+        onConfirm={() => {
+          const planId = planSwitchConfirm?.planId
+          setPlanSwitchConfirm(null)
+          if (planId) return openPlanCheckout(planId)
+        }}
+        title={t('settings.btnSwitchPlan')}
+        message={
+          planSwitchConfirm
+            ? t('settings.confirmPlanSwitch', { title: planSwitchConfirm.title })
+            : ''
+        }
+        confirmLabel={t('common.confirm')}
+        cancelLabel={t('common.cancel')}
       />
 
     </div>

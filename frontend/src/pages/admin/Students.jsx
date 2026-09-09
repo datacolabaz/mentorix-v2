@@ -4,6 +4,7 @@ import api from '../../lib/api'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
+import ConfirmDialog from '../../components/common/ConfirmDialog'
 import { useToast } from '../../components/common/Toast'
 import PresenceDot from '../../components/common/PresenceDot'
 
@@ -18,6 +19,7 @@ export default function AdminStudents() {
   const [detailOpen, setDetailOpen] = useState(false)
   const [detailLoading, setDetailLoading] = useState(false)
   const [deleteBusy, setDeleteBusy] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState(null)
   const toast = useToast()
 
   const filters = {
@@ -88,14 +90,14 @@ export default function AdminStudents() {
     }
   }
 
-  const deleteStudent = async (student) => {
+  const deleteStudent = async () => {
+    const student = deleteTarget
     if (!student?.id) return
-    const name = student.full_name || 'Tələbə'
-    if (!window.confirm(`${name} silinsin? Bu əməliyyat geri qaytarılmır.`)) return
     setDeleteBusy(true)
     try {
       await api.delete(`/admin/students/${student.id}`)
       toast('Silindi')
+      setDeleteTarget(null)
       setDetailOpen(false)
       setDetail(null)
       load()
@@ -235,8 +237,8 @@ export default function AdminStudents() {
                     <Button
                       size="sm"
                       variant="danger"
-                      loading={deleteBusy}
-                      onClick={() => deleteStudent(s)}
+                      loading={deleteBusy && deleteTarget?.id === s.id}
+                      onClick={() => setDeleteTarget(s)}
                     >
                       Sil
                     </Button>
@@ -359,6 +361,18 @@ export default function AdminStudents() {
           </div>
         )}
       </Modal>
+
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        onClose={() => !deleteBusy && setDeleteTarget(null)}
+        onConfirm={() => void deleteStudent()}
+        title="Tələbəni sil"
+        message={`${deleteTarget?.full_name || 'Tələbə'} silinsin? Bu əməliyyat geri qaytarılmır.`}
+        confirmLabel="Sil"
+        cancelLabel="Ləğv et"
+        loading={deleteBusy}
+        danger
+      />
     </div>
   )
 }

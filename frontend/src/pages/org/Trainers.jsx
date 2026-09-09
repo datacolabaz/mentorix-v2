@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import api from '../../lib/api'
 import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
+import ConfirmDialog from '../../components/common/ConfirmDialog'
 import ListSkeleton from '../../components/common/ListSkeleton'
 import PhoneInput from '../../components/auth/PhoneInput'
 import { useToast } from '../../components/common/Toast'
@@ -29,6 +30,8 @@ export default function OrgTrainers() {
   const [phone, setPhone] = useState('')
   const [busy, setBusy] = useState(false)
   const [activity, setActivity] = useState(null)
+  const [removeTarget, setRemoveTarget] = useState(null)
+  const [removeBusy, setRemoveBusy] = useState(false)
 
   const load = useCallback(() => {
     setLoading(true)
@@ -79,13 +82,18 @@ export default function OrgTrainers() {
     }
   }
 
-  async function remove(id) {
-    if (!window.confirm('Müəllimi təşkilat heyətindən silmək?')) return
+  async function remove() {
+    const id = removeTarget
+    if (!id) return
+    setRemoveBusy(true)
     try {
       await api.delete(`/course/teachers/${id}`)
+      setRemoveTarget(null)
       load()
     } catch (err) {
       toast(err?.message || 'Silinmədi', 'error')
+    } finally {
+      setRemoveBusy(false)
     }
   }
 
@@ -167,7 +175,7 @@ export default function OrgTrainers() {
                       >
                         {r.is_active ? 'Dayandır' : 'Aktiv et'}
                       </Button>
-                      <Button variant="ghost" onClick={() => remove(r.id)}>
+                      <Button variant="ghost" onClick={() => setRemoveTarget(r.id)}>
                         Sil
                       </Button>
                     </div>
@@ -207,6 +215,18 @@ export default function OrgTrainers() {
           </div>
         </form>
       </Modal>
+
+      <ConfirmDialog
+        open={Boolean(removeTarget)}
+        onClose={() => !removeBusy && setRemoveTarget(null)}
+        onConfirm={() => void remove()}
+        title="Müəllimi sil"
+        message="Müəllimi təşkilat heyətindən silmək?"
+        confirmLabel="Sil"
+        cancelLabel="Ləğv et"
+        loading={removeBusy}
+        danger
+      />
     </OrgPage>
   )
 }

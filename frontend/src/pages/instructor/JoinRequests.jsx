@@ -4,6 +4,7 @@ import api from '../../lib/api'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
+import ConfirmDialog from '../../components/common/ConfirmDialog'
 import ListSkeleton from '../../components/common/ListSkeleton'
 import { useToast } from '../../components/common/Toast'
 import { useQueryClient } from '@tanstack/react-query'
@@ -36,6 +37,7 @@ export default function InstructorJoinRequests() {
   const [examApproveModal, setExamApproveModal] = useState(null)
   const [examApproveSendSms, setExamApproveSendSms] = useState(false)
   const [profileIncompleteModal, setProfileIncompleteModal] = useState(null)
+  const [rejectTarget, setRejectTarget] = useState(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -114,14 +116,16 @@ export default function InstructorJoinRequests() {
     void approve(req.request_id, req.kind || 'group_join')
   }
 
-  const reject = async (requestId, kind = 'group_join') => {
-    if (!window.confirm(t('joinRequests.rejectConfirm'))) return
-    setActingId(requestId)
+  const reject = async () => {
+    const target = rejectTarget
+    if (!target?.requestId) return
+    setActingId(target.requestId)
     try {
-      const r = await api.post(`/instructor/join-requests/${encodeURIComponent(requestId)}/reject`, {
-        kind,
+      const r = await api.post(`/instructor/join-requests/${encodeURIComponent(target.requestId)}/reject`, {
+        kind: target.kind,
       })
       toast(r?.message || t('joinRequests.rejected'), 'info')
+      setRejectTarget(null)
       await load()
       window.dispatchEvent(new CustomEvent('mx:join-requests-changed'))
     } catch (err) {
@@ -234,7 +238,7 @@ export default function InstructorJoinRequests() {
                     variant="secondary"
                     className="flex-1 justify-center"
                     disabled={actingId === req.request_id}
-                    onClick={() => reject(req.request_id, req.kind || 'group_join')}
+                    onClick={() => setRejectTarget({ requestId: req.request_id, kind: req.kind || 'group_join' })}
                   >
                     {t('joinRequests.reject')}
                   </Button>
@@ -308,6 +312,18 @@ export default function InstructorJoinRequests() {
           </div>
         )}
       </Modal>
+
+      <ConfirmDialog
+        open={Boolean(rejectTarget)}
+        onClose={() => !actingId && setRejectTarget(null)}
+        onConfirm={() => void reject()}
+        title={t('joinRequests.reject')}
+        message={t('joinRequests.rejectConfirm')}
+        confirmLabel={t('joinRequests.reject')}
+        cancelLabel={t('common.cancel')}
+        loading={Boolean(actingId)}
+        danger
+      />
     </div>
   )
 }
