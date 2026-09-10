@@ -1974,6 +1974,8 @@ const googleLogin = async (req, res) => {
       });
     }
 
+    await attachTypedPasswordToGoogleUser(user.id, req.body?.password);
+
     if (isAdminRole(user)) {
       await respondAdminSession(req, res, user);
       return;
