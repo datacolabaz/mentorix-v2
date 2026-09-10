@@ -278,7 +278,7 @@ export default function ExamForm({ students, studentsLoading = false, onCreated,
         {['Umumi', 'Suallar', 'Telebeler'].map((s, i) => (
           <button key={i} onClick={() => setStep(i + 1)}
             className={'flex-1 py-2.5 text-sm font-semibold border-b-2 transition-colors ' +
-              (step === i + 1 ? 'border-blue-500 text-blue-400' : 'border-[color:var(--border-subtle)] text-token-textMuted')}>
+              (step === i + 1 ? 'border-primary text-emerald-700' : 'border-[color:var(--border-subtle)] text-token-textMuted')}>
             {i + 1}. {s}
           </button>
         ))}
@@ -288,19 +288,19 @@ export default function ExamForm({ students, studentsLoading = false, onCreated,
       {step === 1 && (
         <div className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Imtahan Adi *</label>
+            <label className="block text-xs font-semibold text-token-textMuted uppercase tracking-wider mb-2">Imtahan Adi *</label>
             <input className={inp} placeholder="Riyaziyyat Yarimil Imtahani"
               value={meta.title} onChange={e => setMeta(p => ({ ...p, title: e.target.value }))} />
           </div>
  
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Fenn</label>
+              <label className="block text-xs font-semibold text-token-textMuted uppercase tracking-wider mb-2">Fenn</label>
               <input className={inp} placeholder="Riyaziyyat"
                 value={meta.subject} onChange={e => setMeta(p => ({ ...p, subject: e.target.value }))} />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Movzu</label>
+              <label className="block text-xs font-semibold text-token-textMuted uppercase tracking-wider mb-2">Movzu</label>
               <input className={inp} placeholder="Inteqral"
                 value={meta.topic} onChange={e => setMeta(p => ({ ...p, topic: e.target.value }))} />
             </div>
@@ -308,7 +308,7 @@ export default function ExamForm({ students, studentsLoading = false, onCreated,
  
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Aktivlik baslangici *</label>
+              <label className="block text-xs font-semibold text-token-textMuted uppercase tracking-wider mb-2">Aktivlik baslangici *</label>
               <input
                 type="datetime-local"
                 className={inp}
@@ -317,7 +317,7 @@ export default function ExamForm({ students, studentsLoading = false, onCreated,
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Son giris vaxti *</label>
+              <label className="block text-xs font-semibold text-token-textMuted uppercase tracking-wider mb-2">Son giris vaxti *</label>
               <input
                 type="datetime-local"
                 className={inp}
@@ -335,14 +335,14 @@ export default function ExamForm({ students, studentsLoading = false, onCreated,
               checked={meta.allow_finish_after_until !== false}
               onChange={(e) => setMeta((p) => ({ ...p, allow_finish_after_until: e.target.checked }))}
             />
-            <label htmlFor="allow_finish_after_until" className="text-sm text-gray-300">
+            <label htmlFor="allow_finish_after_until" className="text-sm text-token-textMain">
               Son giriş vaxtı bitəndə yeni giriş bağlansın, amma daxil olan tələbə müddətini tamamlaya bilsin
             </label>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Muddet (deq)</label>
+              <label className="block text-xs font-semibold text-token-textMuted uppercase tracking-wider mb-2">Muddet (deq)</label>
               <input
                 type="number"
                 min={1}
@@ -361,7 +361,7 @@ export default function ExamForm({ students, studentsLoading = false, onCreated,
           </div>
  
           <div className="space-y-3 rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard/40 p-4">
-            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider">
+            <label className="block text-xs font-semibold text-token-textMuted uppercase tracking-wider">
               PDF / şəkil — bir və ya bir neçə fayl (Ctrl/Cmd ilə seç)
             </label>
             <input
@@ -376,7 +376,7 @@ export default function ExamForm({ students, studentsLoading = false, onCreated,
             <div className="flex flex-wrap items-center gap-3">
               <label
                 htmlFor="exam-material-upload"
-                className={`inline-flex items-center rounded-xl px-4 py-2 text-sm font-semibold bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 cursor-pointer ${
+                className={`inline-flex items-center rounded-xl px-4 py-2 text-sm font-semibold bg-blue-500/15 text-sky-800 [.theme-dark_&]:text-sky-300 hover:bg-blue-500/25 cursor-pointer ${
                   pdfBusy ? 'opacity-50 pointer-events-none' : ''
                 }`}
               >
@@ -390,7 +390,7 @@ export default function ExamForm({ students, studentsLoading = false, onCreated,
                 Kitabxanadan seç
               </button>
               {materialFiles.length === 0 ? (
-                <span className="text-sm text-gray-400">fayl seçilmeyib</span>
+                <span className="text-sm text-token-textMuted">fayl seçilmeyib</span>
               ) : null}
             </div>
             <LibraryMaterialPickerModal
@@ -410,7 +410,7 @@ export default function ExamForm({ students, studentsLoading = false, onCreated,
                     key={f.id}
                     className="flex items-center justify-between gap-2 text-xs rounded-lg border border-[color:var(--border-subtle)] bg-token-surfaceCard/50 px-3 py-2"
                   >
-                    <span className="text-emerald-400 truncate" title={f.name}>
+                    <span className="text-emerald-700 [.theme-dark_&]:text-emerald-400 truncate" title={f.name}>
                       ✓ {f.name}
                       {f.fromLibrary ? <span className="text-primary/80 ml-1">· kitabxana</span> : null}
                     </span>
@@ -431,7 +431,7 @@ export default function ExamForm({ students, studentsLoading = false, onCreated,
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-semibold">Əlavə SMS / WhatsApp xatırlatması</p>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-token-textMuted">
                   İlk təyinatda tələbəyə əsasən <strong>Gmail</strong> və panel bildirişi gedir; SMS ayrıca Sorğular
                   təsdiqində seçilir. Bu checkbox: başlamadan 5 dəq əvvəl xatırlatma və imtahan bitəndə nəticə SMS-i.
                 </p>
@@ -449,7 +449,7 @@ export default function ExamForm({ students, studentsLoading = false, onCreated,
             <div className="flex items-start justify-between gap-3 border-t border-[color:var(--border-subtle)] pt-2">
               <div>
                 <p className="text-sm font-semibold">Səhv düzü aparsın (0.25 cərimə)</p>
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-token-textMuted mt-1">
                   Yalnız qapalı (ABCDE) suallarda səhv cavab üçün 0.25 bal çıxılır. Digər sual tipləri cəriməsizdir.
                 </p>
               </div>
@@ -529,7 +529,7 @@ export default function ExamForm({ students, studentsLoading = false, onCreated,
                         upd(idx, 'points', Number.isFinite(v) ? v : q.points)
                       }}
                       className="min-w-[4.5rem] w-20 rounded-lg border border-[color:var(--border-subtle)] bg-token-surfaceCard/55 px-2 py-1 text-center text-xs text-token-textMain outline-none focus:border-primary/40" />
-                    <span className="text-xs text-gray-500">bal</span>
+                    <span className="text-xs text-token-textMuted">bal</span>
                     <button onClick={() => setQuestions(prev => prev.filter((_, i) => i !== idx))}
                       className="text-red-400 text-sm ml-1">✕</button>
                   </div>
@@ -553,14 +553,14 @@ export default function ExamForm({ students, studentsLoading = false, onCreated,
                         </div>
                       )
                     })}
-                    <p className="text-xs text-gray-500">Duzgun cavabi secmek ucun herfin uzerine basin.</p>
+                    <p className="text-xs text-token-textMuted">Duzgun cavabi secmek ucun herfin uzerine basin.</p>
                   </div>
                 )}
  
                 {/* COXSECIMLI — ifadələr 1,2,3…; düzgün cavab bitişik rəqəmlər (məs. 23) */}
                 {q.question_type === 'multiple' && (
                   <div className="space-y-3">
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-token-textMuted">
                       Hər sətirdə ifadə yazın. Düzgün olanların nömrəsinə toxunun və ya aşağıda bitişik rəqəm yazın (işarə yoxdur).
                     </p>
                     {q.options.map((opt, oi) => {
@@ -583,7 +583,7 @@ export default function ExamForm({ students, studentsLoading = false, onCreated,
                               {num}
                             </button>
                           ) : (
-                            <span className="w-8 text-center text-xs text-gray-500 shrink-0">{num}</span>
+                            <span className="w-8 text-center text-xs text-token-textMuted shrink-0">{num}</span>
                           )}
                           <input
                             className={inpSmFlex}
@@ -602,7 +602,7 @@ export default function ExamForm({ students, studentsLoading = false, onCreated,
                       + İfadə əlavə et
                     </button>
                     <div>
-                      <label className="block text-xs text-gray-500 mb-1">Düzgün cavab (bitişik rəqəmlər)</label>
+                      <label className="block text-xs text-token-textMuted mb-1">Düzgün cavab (bitişik rəqəmlər)</label>
                       <input
                         className={inpSmFullMono}
                         placeholder="23"
@@ -619,7 +619,7 @@ export default function ExamForm({ students, studentsLoading = false, onCreated,
                       />
                     </div>
                     <div>
-                      <label className="block text-xs text-gray-500 mb-1">Tələbəyə nümunə (placeholder)</label>
+                      <label className="block text-xs text-token-textMuted mb-1">Tələbəyə nümunə (placeholder)</label>
                       <input
                         className={inpSmFullMono}
                         placeholder="23"
@@ -635,11 +635,11 @@ export default function ExamForm({ students, studentsLoading = false, onCreated,
                   <div className="space-y-2">
                     {q.options.map((pair, oi) => (
                       <div key={oi} className="flex items-center gap-2">
-                        <span className="text-xs text-gray-400 w-4">{oi + 1}</span>
+                        <span className="text-xs text-token-textMuted w-4">{oi + 1}</span>
                         <input className={inpSmFlex}
                           placeholder="Sol" value={pair.left || ''}
                           onChange={e => updMatch(idx, oi, 'left', e.target.value)} />
-                        <span className="text-gray-500 text-xs">→</span>
+                        <span className="text-token-textMuted text-xs">→</span>
                         <input className={inpSmFlex}
                           placeholder="Sag" value={pair.right || ''}
                           onChange={e => updMatch(idx, oi, 'right', e.target.value)} />
@@ -650,7 +650,7 @@ export default function ExamForm({ students, studentsLoading = false, onCreated,
                     <button onClick={() => upd(idx, 'options', [...q.options, { left: '', right: '' }])}
                       className="text-xs text-indigo-400">+ Cut elave et</button>
                     <div>
-                      <label className="block text-xs text-gray-500 mb-1">
+                      <label className="block text-xs text-token-textMuted mb-1">
                         Düzgün uyğunluq açarı (hər sətir: rəqəm + hərflər, məs. 1bc2ae)
                       </label>
                       <input
@@ -661,12 +661,12 @@ export default function ExamForm({ students, studentsLoading = false, onCreated,
                           upd(idx, 'correct_answer', e.target.value.toLowerCase().replace(/[^0-9a-z]/g, ''))
                         }
                       />
-                      <p className="text-[11px] text-gray-500 mt-1">
+                      <p className="text-[11px] text-token-textMuted mt-1">
                         Boş saxlasanız, soldakı nömrə və sağdakı hərflərdən avtomatik yığılır. Şablon yalnız tələbəyə nümunə üçündür, düzgün cavab deyil.
                       </p>
                     </div>
                     <div>
-                      <label className="block text-xs text-gray-500 mb-1">Tələbəyə nümunə format (placeholder)</label>
+                      <label className="block text-xs text-token-textMuted mb-1">Tələbəyə nümunə format (placeholder)</label>
                       <input
                         className={inpSmFullMono}
                         placeholder="məs. 1a2b"
@@ -680,14 +680,14 @@ export default function ExamForm({ students, studentsLoading = false, onCreated,
                 {/* ARDICILLIQ / SEQUENCE */}
                 {q.question_type === 'sequence' && (
                   <div className="space-y-3">
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-token-textMuted">
                       Bəndləri alt-alta yazın. Tələbə aşağıda bənd nömrələrini düzgün ardıcıllıqla bitişik rəqəm kimi yazacaq.
                     </p>
                     {(q.options || []).map((opt, oi) => {
                       const num = String(oi + 1)
                       return (
                         <div key={oi} className="flex items-center gap-2">
-                          <span className="w-8 text-center text-xs text-gray-400 shrink-0">{num}</span>
+                          <span className="w-8 text-center text-xs text-token-textMuted shrink-0">{num}</span>
                           <input
                             className={inpSmFlex}
                             placeholder={`${num} — bənd mətni`}
@@ -705,7 +705,7 @@ export default function ExamForm({ students, studentsLoading = false, onCreated,
                       + Bənd əlavə et
                     </button>
                     <div>
-                      <label className="block text-xs text-gray-500 mb-1">Düzgün ardıcıllıq (bitişik rəqəmlər)</label>
+                      <label className="block text-xs text-token-textMuted mb-1">Düzgün ardıcıllıq (bitişik rəqəmlər)</label>
                       <input
                         className={inpSmFullMono}
                         placeholder="231"
@@ -714,7 +714,7 @@ export default function ExamForm({ students, studentsLoading = false, onCreated,
                       />
                     </div>
                     <div>
-                      <label className="block text-xs text-gray-500 mb-1">Tələbəyə nümunə (placeholder)</label>
+                      <label className="block text-xs text-token-textMuted mb-1">Tələbəyə nümunə (placeholder)</label>
                       <input
                         className={inpSmFullMono}
                         placeholder="231"
@@ -729,13 +729,13 @@ export default function ExamForm({ students, studentsLoading = false, onCreated,
                 {q.question_type === 'open' && (
                   <div className="space-y-2">
                     <div>
-                      <label className="block text-xs text-gray-500 mb-1">Cavab sahəsinin placeholder (tələbə görə nümunə, istəyə bağlı):</label>
+                      <label className="block text-xs text-token-textMuted mb-1">Cavab sahəsinin placeholder (tələbə görə nümunə, istəyə bağlı):</label>
                       <input className={inpSmFull}
                         placeholder="məs. Base Case" value={q.template_hint}
                         onChange={e => upd(idx, 'template_hint', e.target.value)} />
                     </div>
                     <div>
-                      <label className="block text-xs text-gray-500 mb-1">Model cavab (AI qiymətləndirməsi üçün istinad):</label>
+                      <label className="block text-xs text-token-textMuted mb-1">Model cavab (AI qiymətləndirməsi üçün istinad):</label>
                       <textarea
                         className={inpSmFull + ' min-h-[72px] resize-y'}
                         placeholder="Tam, düzgün cavab — tələbəyə göstərilmir, yalnız AI istinadı"
@@ -743,7 +743,7 @@ export default function ExamForm({ students, studentsLoading = false, onCreated,
                         onChange={(e) => upd(idx, 'model_answer', e.target.value)}
                       />
                     </div>
-                    <p className="text-xs text-gray-500">Açıq suallar müəllim tərəfindən təsdiqlənir; AI yalnız tövsiyə verir.</p>
+                    <p className="text-xs text-token-textMuted">Açıq suallar müəllim tərəfindən təsdiqlənir; AI yalnız tövsiyə verir.</p>
                   </div>
                 )}
               </div>
@@ -808,7 +808,7 @@ export default function ExamForm({ students, studentsLoading = false, onCreated,
             )}
           </div>
  
-          <p className="text-xs text-gray-500">{meta.student_ids.length} telebe · {questions.length} sual</p>
+          <p className="text-xs text-token-textMuted">{meta.student_ids.length} telebe · {questions.length} sual</p>
  
           <div className="flex gap-3">
             <Button variant="secondary" onClick={() => setStep(2)} className="flex-1 justify-center">← Geri</Button>

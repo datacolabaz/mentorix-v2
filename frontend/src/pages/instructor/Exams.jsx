@@ -463,7 +463,10 @@ export default function InstructorExams() {
     }
   }
  
-  const inp = 'w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500'
+  const inp =
+    theme === 'dark'
+      ? 'w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500'
+      : 'w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 text-sm outline-none placeholder:text-slate-400 focus:border-emerald-500'
 
   const patchEditQuestion = (idx, partial) => {
     setEditQuestions((prev) => prev.map((q, i) => (i === idx ? { ...q, ...partial } : q)))
