@@ -14,6 +14,9 @@ const NAV_LINK_ACTIVE = 'text-white bg-white/5'
 const LOGIN_BTN =
   'shrink-0 whitespace-nowrap rounded-lg bg-primary/15 border border-primary/35 text-primary px-3 py-2 min-h-11 lg:min-h-[36px] lg:px-3 lg:py-1.5 text-sm font-semibold hover:bg-primary/25'
 
+const MENU_BTN =
+  'lg:hidden shrink-0 inline-flex h-11 w-11 items-center justify-center rounded-lg border border-primary/35 bg-primary/15 text-primary hover:bg-primary/25 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/80'
+
 const CTA_BTN =
   'shrink-0 whitespace-nowrap rounded-lg bg-primary px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm font-bold text-[#041018] hover:brightness-95'
 
@@ -40,8 +43,8 @@ function useCompactPublicNav() {
 
 /**
  * İctimai naviqasiya: loqo, Müəllimlər üçün, İmtahanlar / Testlər, dil, CTA.
- * Mobil: yuxarı sağda yalnız «Daxil ol»; dil burger menyudadır; menyu düyməsi
- * sağ yuxarıda FAB-dır və compact rejimdə heç vaxt gizlədilmir.
+ * Mobil: yuxarı sağda «Daxil ol» və kvadrat menyu düyməsi; dil burgerdədir;
+ * düymə compact rejimdə heç vaxt gizlədilmir.
  */
 export default function PublicMarketingNav({ onLogin, onStart }) {
   const { t } = useTranslation()
@@ -107,7 +110,7 @@ export default function PublicMarketingNav({ onLogin, onStart }) {
             {mobileNavOpen ? (
               <div
                 id="mx-landing-mobile-nav"
-                className="fixed inset-x-0 bottom-0 z-[2010] border-t border-white/10 bg-[#111]/98 backdrop-blur-md rounded-t-2xl px-4 pt-4 pb-[calc(5.75rem+env(safe-area-inset-bottom,0px))] shadow-[0_-12px_40px_rgba(0,0,0,0.45)]"
+                className="fixed inset-x-0 bottom-0 z-[2010] border-t border-white/10 bg-[#111]/98 backdrop-blur-md rounded-t-2xl px-4 pt-4 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] shadow-[0_-12px_40px_rgba(0,0,0,0.45)]"
                 role="dialog"
                 aria-modal="true"
                 aria-label={t('landing.nav.mainNav')}
@@ -138,33 +141,6 @@ export default function PublicMarketingNav({ onLogin, onStart }) {
                 </button>
               </div>
             ) : null}
-            <button
-              type="button"
-              data-landing-menu-fab=""
-              className={[
-                'fixed z-[2020] inline-flex h-14 w-14 items-center justify-center rounded-full',
-                'right-[max(1rem,env(safe-area-inset-right,0px))]',
-                'top-[max(1rem,env(safe-area-inset-top,0px))]',
-                'border-2 border-primary bg-[#041018] text-primary',
-                'shadow-[0_10px_28px_rgba(0,229,176,0.35)]',
-                'hover:bg-primary hover:text-[#041018]',
-                'focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/80',
-              ].join(' ')}
-              aria-expanded={mobileNavOpen}
-              aria-controls="mx-landing-mobile-nav"
-              aria-label={mobileNavOpen ? t('landing.nav.closeMenu') : t('landing.nav.openMenu')}
-              onClick={() => setMobileNavOpen((open) => !open)}
-            >
-              {mobileNavOpen ? (
-                <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-                  <path strokeLinecap="round" d="M6 6l12 12M18 6L6 18" />
-                </svg>
-              ) : (
-                <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-                  <path strokeLinecap="round" d="M4 7h16M4 12h16M4 17h16" />
-                </svg>
-              )}
-            </button>
           </>,
           document.body,
         )
@@ -173,10 +149,10 @@ export default function PublicMarketingNav({ onLogin, onStart }) {
   return (
     <>
       <nav
-        className="sticky top-0 z-50 border-b border-white/10 bg-[#0b0b0b]/92 backdrop-blur-md supports-[backdrop-filter]:bg-[#0b0b0b]/80"
+        className="sticky top-0 z-[2020] border-b border-white/10 bg-[#0b0b0b]/92 backdrop-blur-md supports-[backdrop-filter]:bg-[#0b0b0b]/80"
         aria-label={t('landing.nav.mainNav')}
       >
-        <div className="max-w-5xl mx-auto pl-2 sm:pl-3 pr-16 lg:pr-4 py-3 flex items-center justify-between gap-2 min-w-0">
+        <div className="max-w-5xl mx-auto pl-2 sm:pl-3 pr-3 sm:pr-4 py-3 flex items-center justify-between gap-2 min-w-0">
           <button
             type="button"
             onClick={goHome}
@@ -199,6 +175,25 @@ export default function PublicMarketingNav({ onLogin, onStart }) {
             </div>
             <button type="button" onClick={goLogin} className={LOGIN_BTN}>
               {t('landing.nav.login')}
+            </button>
+            <button
+              type="button"
+              data-landing-menu-fab=""
+              className={MENU_BTN}
+              aria-expanded={mobileNavOpen}
+              aria-controls="mx-landing-mobile-nav"
+              aria-label={mobileNavOpen ? t('landing.nav.closeMenu') : t('landing.nav.openMenu')}
+              onClick={() => setMobileNavOpen((open) => !open)}
+            >
+              {mobileNavOpen ? (
+                <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                  <path strokeLinecap="round" d="M6 6l12 12M18 6L6 18" />
+                </svg>
+              ) : (
+                <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                  <path strokeLinecap="round" d="M4 7h16M4 12h16M4 17h16" />
+                </svg>
+              )}
             </button>
             <button type="button" onClick={goStart} className={`hidden lg:inline-flex ${CTA_BTN}`}>
               {t('landing.nav.startFree')}
