@@ -42,6 +42,7 @@ export default function AuthPage() {
   const [adminIdentifier, setAdminIdentifier] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   const { login } = useAuthStore()
   const navigate = useNavigate()
@@ -94,7 +95,7 @@ export default function AuthPage() {
 
   return (
     <div className="login-wrapper flex min-h-[100svh] w-full min-w-0 max-w-full flex-col overflow-x-hidden">
-      <header className="relative shrink-0 w-full px-4 py-3 sm:pt-6 sm:pb-4">
+      <header className="relative shrink-0 w-full px-4 pr-16 sm:pr-4 py-3 sm:pt-6 sm:pb-4">
         <div className="flex w-full items-center justify-between gap-3">
           <Link
             to="/"
@@ -102,8 +103,32 @@ export default function AuthPage() {
           >
             {t('auth.backHome')}
           </Link>
-          <LanguageSwitcher className="h-8 shrink-0" />
+          <div className="hidden sm:block">
+            <LanguageSwitcher className="h-8 shrink-0" />
+          </div>
+          <button
+            type="button"
+            className="sm:hidden fixed top-4 right-4 z-[60] h-12 w-12 items-center justify-center rounded-full border border-white/10 bg-primary/20 text-white shadow-lg hover:bg-primary/30 transition-all"
+            aria-expanded={mobileMenuOpen}
+            aria-label={mobileMenuOpen ? 'Menyunu bağla' : 'Menyunu aç'}
+            onClick={() => setMobileMenuOpen((open) => !open)}
+          >
+            {mobileMenuOpen ? (
+              <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                <path strokeLinecap="round" d="M6 6l12 12M18 6L6 18" />
+              </svg>
+            ) : (
+              <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                <path strokeLinecap="round" d="M4 7h16M4 12h16M4 17h16" />
+              </svg>
+            )}
+          </button>
         </div>
+        {mobileMenuOpen && (
+          <div className="sm:hidden fixed top-16 right-4 z-[60] bg-[#0b0b0b]/98 border border-white/20 rounded-xl p-4 shadow-xl backdrop-blur-md">
+            <LanguageSwitcher tone="dark" className="h-8" />
+          </div>
+        )}
       </header>
       <main className="flex flex-1 items-start sm:items-center justify-center px-4 pb-8 sm:pb-10 min-h-0 overflow-y-auto">
       <div id="mx-login" className="w-full max-w-sm scroll-mt-6">
