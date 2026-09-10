@@ -162,6 +162,57 @@ function isValidBakuDistrict(district) {
   return BAKU_DISTRICTS.includes(d);
 }
 
+/**
+ * Single baku_district value for UPDATE SET.
+ * Settings always sends region + baku_district together; if region is not Bakı
+ * we clear the district once instead of emitting two assignments (Postgres 42601).
+ */
+function resolveBakuDistrictUpdate({ regionSpecified, region, districtSpecified, district }) {
+  if (regionSpecified && !isBakuRegion(region)) {
+    return { value: null };
+  }
+  if (!districtSpecified) return { skip: true };
+  const normalized = district == null ? null : normalizeRegionName(district);
+  if (normalized && !isValidBakuDistrict(normalized)) {
+    return { error: 'Düzgün olmayan Bakı rayonu' };
+  }
+  return { value: normalized };
+}
+
+function applyInstructorRegionDistrictFields(sets, vals, startIndex, body = {}) {
+  let i = startIndex;
+  const regionSpecified = body.region !== undefined;
+  const districtSpecified = body.baku_district !== undefined;
+  let region;
+
+  if (regionSpecified) {
+    region = body.region == null ? null : normalizeRegionName(body.region);
+    if (region && !isValidRegion(region)) {
+      return { nextIndex: i, error: 'Düzgün olmayan region' };
+    }
+    sets.push(`region = $${i++}`);
+    vals.push(region);
+    sets.push(`region_user_set = $${i++}`);
+    vals.push(Boolean(region));
+  }
+
+  const districtResult = resolveBakuDistrictUpdate({
+    regionSpecified,
+    region,
+    districtSpecified,
+    district: body.baku_district,
+  });
+  if (districtResult.error) {
+    return { nextIndex: i, error: districtResult.error };
+  }
+  if (!districtResult.skip) {
+    sets.push(`baku_district = $${i++}`);
+    vals.push(districtResult.value);
+  }
+
+  return { nextIndex: i, error: null };
+}
+
 module.exports = {
   BAKU,
   AZ_REGIONS,
@@ -175,4 +226,6 @@ module.exports = {
   instructorLocationBadge,
   isValidRegion,
   isValidBakuDistrict,
+  resolveBakuDistrictUpdate,
+  applyInstructorRegionDistrictFields,
 };

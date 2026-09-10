@@ -1,10 +1,5 @@
 const db = require('../utils/db');
-const {
-  isBakuRegion,
-  isValidRegion,
-  isValidBakuDistrict,
-  normalizeRegionName,
-} = require('../lib/azerbaijanRegions');
+const { applyInstructorRegionDistrictFields } = require('../lib/azerbaijanRegions');
 const { isValidBakuMetro, bakuMetroBySlug } = require('../lib/bakuMetroStations');
 
 function parseCoord(v) {
@@ -85,29 +80,11 @@ const patchInstructorMapProfile = async (req, res) => {
       vals.push(mapSearchRadius);
     }
 
-    if (req.body?.region !== undefined) {
-      const region = req.body.region == null ? null : normalizeRegionName(req.body.region);
-      if (region && !isValidRegion(region)) {
-        return res.status(400).json({ success: false, message: 'Düzgün olmayan region' });
-      }
-      sets.push(`region = $${i++}`);
-      vals.push(region);
-      sets.push(`region_user_set = $${i++}`);
-      vals.push(Boolean(region));
-      if (!isBakuRegion(region)) {
-        sets.push(`baku_district = $${i++}`);
-        vals.push(null);
-      }
+    const regionFields = applyInstructorRegionDistrictFields(sets, vals, i, req.body || {});
+    if (regionFields.error) {
+      return res.status(400).json({ success: false, message: regionFields.error });
     }
-    if (req.body?.baku_district !== undefined) {
-      const district =
-        req.body.baku_district == null ? null : normalizeRegionName(req.body.baku_district);
-      if (district && !isValidBakuDistrict(district)) {
-        return res.status(400).json({ success: false, message: 'Düzgün olmayan Bakı rayonu' });
-      }
-      sets.push(`baku_district = $${i++}`);
-      vals.push(district);
-    }
+    i = regionFields.nextIndex;
 
     if (req.body?.teacher_place_address !== undefined) {
       const raw = req.body.teacher_place_address;
