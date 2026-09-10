@@ -410,7 +410,7 @@ export default function ExamForm({ students, studentsLoading = false, onCreated,
                     key={f.id}
                     className="flex items-center justify-between gap-2 text-xs rounded-lg border border-[color:var(--border-subtle)] bg-token-surfaceCard/50 px-3 py-2"
                   >
-                    <span className="text-emerald-700 truncate" title={f.name}>
+                    <span className="text-emerald-700 [.theme-dark_&]:text-emerald-400 truncate" title={f.name}>
                       ✓ {f.name}
                       {f.fromLibrary ? <span className="text-primary/80 ml-1">· kitabxana</span> : null}
                     </span>
