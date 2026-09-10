@@ -276,7 +276,7 @@ export default function Landing() {
             className="sticky top-0 z-50 border-b border-white/10 bg-[#0b0b0b]/92 backdrop-blur-md supports-[backdrop-filter]:bg-[#0b0b0b]/80"
             aria-label={t('landing.nav.mainNav')}
           >
-            <div className="max-w-5xl mx-auto pl-2 sm:pl-3 pr-3 sm:pr-4 py-3 flex items-center justify-between gap-2 min-w-0">
+            <div className="max-w-5xl mx-auto pl-2 sm:pl-3 pr-16 sm:pr-4 py-3 flex items-center justify-between gap-2 min-w-0">
               <button
                 type="button"
                 onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
@@ -309,35 +309,41 @@ export default function Landing() {
                     </button>
                   ) : null}
                 </div>
-                <LanguageSwitcher tone="dark" className="h-8 sm:h-auto" />
-                <button
-                  type="button"
-                  className="sm:hidden inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 text-gray-300 hover:bg-white/5 hover:text-white"
-                  aria-expanded={mobileNavOpen}
-                  aria-controls="mx-landing-mobile-nav"
-                  aria-label={mobileNavOpen ? t('landing.nav.closeMenu') : t('landing.nav.openMenu')}
-                  onClick={() => setMobileNavOpen((open) => !open)}
-                >
-                  {mobileNavOpen ? (
-                    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-                      <path strokeLinecap="round" d="M6 6l12 12M18 6L6 18" />
-                    </svg>
-                  ) : (
-                    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-                      <path strokeLinecap="round" d="M4 7h16M4 12h16M4 17h16" />
-                    </svg>
-                  )}
-                </button>
+                <div className="hidden sm:block">
+                  <LanguageSwitcher tone="dark" className="h-8 sm:h-auto" />
+                </div>
                 <button type="button" onClick={() => goLogin('nav')} className={LANDING_LOGIN_BTN}>
                   {t('landing.nav.login')}
                 </button>
               </div>
             </div>
+            <button
+              type="button"
+              className="sm:hidden fixed top-4 right-4 z-[60] inline-flex h-12 w-12 items-center justify-center rounded-full border border-white/10 bg-primary/20 text-white shadow-lg hover:bg-primary/30 transition-all"
+              aria-expanded={mobileNavOpen}
+              aria-controls="mx-landing-mobile-nav"
+              aria-label={mobileNavOpen ? t('landing.nav.closeMenu') : t('landing.nav.openMenu')}
+              onClick={() => setMobileNavOpen((open) => !open)}
+            >
+              {mobileNavOpen ? (
+                <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                  <path strokeLinecap="round" d="M6 6l12 12M18 6L6 18" />
+                </svg>
+              ) : (
+                <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                  <path strokeLinecap="round" d="M4 7h16M4 12h16M4 17h16" />
+                </svg>
+              )}
+            </button>
             {mobileNavOpen ? (
               <div
                 id="mx-landing-mobile-nav"
-                className="sm:hidden border-t border-white/10 bg-[#0b0b0b]/98 px-3 py-2 space-y-0.5"
+                className="sm:hidden fixed top-16 right-4 z-[60] w-[min(18rem,calc(100vw-2rem))] rounded-xl border border-white/20 bg-[#0b0b0b]/98 p-4 shadow-xl backdrop-blur-md space-y-2"
               >
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">
+                  {t('layout.language')}
+                </p>
+                <LanguageSwitcher tone="dark" className="h-8" />
                 <Link to="/search" onClick={closeMobileNav} className={`block w-full ${LANDING_NAV_LINK}`}>
                   {t('landing.nav.findTeacher')}
                 </Link>
