@@ -940,7 +940,8 @@
       "startFree": "Start free",
       "openMenu": "Open menu",
       "closeMenu": "Close menu",
-      "mainNav": "Main navigation"
+      "mainNav": "Main navigation",
+      "language": "Language"
     },
     "hero": {
       "pill": "Online exams and assessment",
