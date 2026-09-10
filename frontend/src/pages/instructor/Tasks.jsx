@@ -1053,7 +1053,7 @@ export default function InstructorTasks() {
                     {aiMeta.suggested_score != null ? (
                       <p>
                         <span className="text-gray-500">{t('tasks.review.suggestedScore')}</span>{' '}
-                        <span className="font-semibold text-white">
+                        <span className="font-semibold text-token-textMain">
                           {aiMeta.suggested_score}
                           {review.max_score != null ? ` / ${review.max_score}` : ''}
                         </span>
