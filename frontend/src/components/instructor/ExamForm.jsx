@@ -331,7 +331,7 @@ export default function ExamForm({ students, studentsLoading = false, onCreated,
             <input
               id="allow_finish_after_until"
               type="checkbox"
-              className="h-4 w-4 rounded border-[color:var(--border-subtle)] bg-token-surfaceCard/40"
+              className="h-4 w-4 rounded border-[color:var(--border-subtle)] bg-token-surfaceCard"
               checked={meta.allow_finish_after_until !== false}
               onChange={(e) => setMeta((p) => ({ ...p, allow_finish_after_until: e.target.checked }))}
             />
@@ -360,7 +360,7 @@ export default function ExamForm({ students, studentsLoading = false, onCreated,
             <div />
           </div>
  
-          <div className="space-y-3 rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard/40 p-4">
+          <div className="space-y-3 rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard p-4">
             <label className="block text-xs font-semibold text-token-textMuted uppercase tracking-wider">
               PDF / şəkil — bir və ya bir neçə fayl (Ctrl/Cmd ilə seç)
             </label>
@@ -427,7 +427,7 @@ export default function ExamForm({ students, studentsLoading = false, onCreated,
             )}
           </div>
  
-          <div className="space-y-3 rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard/40 p-4">
+          <div className="space-y-3 rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-semibold">Əlavə SMS / WhatsApp xatırlatması</p>
@@ -476,7 +476,7 @@ export default function ExamForm({ students, studentsLoading = false, onCreated,
       {/* STEP 2 */}
       {step === 2 && (
         <div className="space-y-4">
-          <p className="rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard/40 p-3 text-xs text-token-textMuted">
+          <p className="rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard p-3 text-xs text-token-textMuted">
             PDF-deki her sual ucun tipini secin ve duzgun cavabi teyin edin.
           </p>
  
@@ -491,12 +491,12 @@ export default function ExamForm({ students, studentsLoading = false, onCreated,
  
           <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1">
             {questions.length === 0 && (
-              <div className="rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard/40 py-10 text-center text-sm text-token-textMuted">
+              <div className="rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard py-10 text-center text-sm text-token-textMuted">
                 Yuxaridan sual tipi secin
               </div>
             )}
             {questions.map((q, idx) => (
-              <div key={q.id} className="rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard/40 p-4">
+              <div key={q.id} className="rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard p-4">
                 {/* Sual basligi */}
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
@@ -773,7 +773,7 @@ export default function ExamForm({ students, studentsLoading = false, onCreated,
             paylaşın: qonaqlar ad, soyad və telefonla qeydiyyatsız qoşula bilər.
           </p>
  
-          <div className="max-h-64 overflow-y-auto space-y-1 rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard/40 p-3">
+          <div className="max-h-64 overflow-y-auto space-y-1 rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard p-3">
             {studentsLoading ? (
               <p className="text-token-textMuted text-sm text-center py-8">Tələbələr yüklənir…</p>
             ) : !students.length ? (
