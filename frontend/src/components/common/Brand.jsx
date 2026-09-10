@@ -74,7 +74,7 @@ export default function Brand({
   if (size === 'login') {
     return (
       <BrandWordmark
-        tone="dark"
+        tone={tone}
         textSizeClass={SIZE_CLASSES.login}
         className={className}
         textClassName={textClassName}

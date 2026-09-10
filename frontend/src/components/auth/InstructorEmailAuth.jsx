@@ -13,7 +13,7 @@ import { googleAuthWithAutoRole, googleSignup } from '../../lib/googleAuth'
 import { loginWithEmailPassword } from '../../lib/emailLogin'
 
 const inputClass =
-  'mx-auth-input w-full bg-surface-1 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none'
+  'mx-auth-input w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-slate-900 placeholder:text-slate-400 text-sm outline-none'
 
 const AUTH_ROLE_KEYS = ['instructor', 'student', 'course', 'parent']
 
@@ -29,9 +29,9 @@ function AuthDivider() {
   const { t } = useTranslation()
   return (
     <div className="flex items-center gap-3">
-      <div className="flex-1 border-t border-white/10" aria-hidden />
-      <span className="text-[11px] text-gray-500 shrink-0">{t('auth.or')}</span>
-      <div className="flex-1 border-t border-white/10" aria-hidden />
+      <div className="flex-1 border-t border-slate-200" aria-hidden />
+      <span className="text-[11px] text-slate-500 shrink-0">{t('auth.or')}</span>
+      <div className="flex-1 border-t border-slate-200" aria-hidden />
     </div>
   )
 }
@@ -39,11 +39,11 @@ function AuthDivider() {
 function AuthModeTabs({ tab, onTab }) {
   const { t } = useTranslation()
   return (
-    <div className="flex rounded-xl border border-white/10 overflow-hidden text-sm font-semibold">
+    <div className="flex rounded-xl border border-slate-200 overflow-hidden text-sm font-semibold">
       <button
         type="button"
         className={`flex-1 py-2.5 transition-colors ${
-          tab === 'login' ? 'bg-primary/15 text-primary' : 'text-gray-400 hover:bg-white/5 hover:text-gray-200'
+          tab === 'login' ? 'bg-primary/15 text-primary' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
         }`}
         onClick={() => onTab('login')}
       >
@@ -52,7 +52,7 @@ function AuthModeTabs({ tab, onTab }) {
       <button
         type="button"
         className={`flex-1 py-2.5 transition-colors ${
-          tab === 'signup' ? 'bg-primary/15 text-primary' : 'text-gray-400 hover:bg-white/5 hover:text-gray-200'
+          tab === 'signup' ? 'bg-primary/15 text-primary' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
         }`}
         onClick={() => onTab('signup')}
       >
@@ -96,7 +96,7 @@ function RolePills({ roles, role, onRole, label, variant = 'grid' }) {
   if (variant === 'pill') {
     return (
       <div className="space-y-2">
-        <p className="text-sm text-gray-400">{label}</p>
+        <p className="text-sm text-slate-500">{label}</p>
         <div className="mx-role-selector" role="radiogroup" aria-label={t('auth.chooseRole')}>
           {roles.map((r) => {
             const selected = role === r.key
@@ -120,7 +120,7 @@ function RolePills({ roles, role, onRole, label, variant = 'grid' }) {
 
   return (
     <div className="space-y-2">
-      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{label}</p>
+      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{label}</p>
       <div
         className={`grid gap-2 ${roles.length > 3 ? 'grid-cols-2' : 'grid-cols-3'}`}
         role="radiogroup"
@@ -139,7 +139,7 @@ function RolePills({ roles, role, onRole, label, variant = 'grid' }) {
                 'rounded-xl border px-2 py-2.5 text-xs font-semibold transition-colors text-center min-h-[44px]',
                 selected
                   ? 'border-primary/50 bg-primary/10 text-primary'
-                  : 'border-white/10 bg-white/[0.03] text-gray-400 hover:border-white/20',
+                  : 'border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300',
               ].join(' ')}
             >
               {r.label}
@@ -394,7 +394,7 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
   if (phase === 'verify') {
     return (
       <div className="space-y-4">
-        <p className="text-sm text-gray-300 text-center leading-relaxed">
+        <p className="text-sm text-slate-600 text-center leading-relaxed">
           {t('auth.verifySent', { email: verifyEmail || signupEmail })}
         </p>
         <form onSubmit={handleVerifyCode} className="space-y-3" autoComplete="off">
@@ -426,7 +426,7 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
             setPhase('form')
             pickTab('login')
           }}
-          className="w-full text-center text-xs text-gray-500 hover:text-white"
+          className="w-full text-center text-xs text-slate-500 hover:text-slate-900"
         >
           {t('auth.afterVerifyLogin')}
         </button>
@@ -479,7 +479,7 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
 
           {loginRoleFallback ? (
             <div className="space-y-1.5">
-              <label htmlFor="mx-login-role-fallback" className="text-xs font-medium text-gray-400">
+              <label htmlFor="mx-login-role-fallback" className="text-xs font-medium text-slate-500">
                 {t('auth.accountType')}
               </label>
               <select
@@ -507,7 +507,7 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
             context="signin"
           />
 
-          <p className="text-xs text-center text-gray-500">
+          <p className="text-xs text-center text-slate-500">
             {t('auth.noAccount')}{' '}
             <button type="button" className="font-semibold text-primary hover:brightness-110" onClick={() => pickTab('signup')}>
               {t('auth.signupLink')}
@@ -516,7 +516,7 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
       </div>
       ) : (
       <div className="space-y-4">
-          <p className="text-sm text-gray-400 text-center leading-relaxed">{t('auth.signupLead')}</p>
+          <p className="text-sm text-slate-500 text-center leading-relaxed">{t('auth.signupLead')}</p>
 
           <GoogleSignInButton
             key="signup-google"
@@ -581,7 +581,7 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
             </Button>
           </form>
 
-          <p className="text-xs text-center text-gray-500">
+          <p className="text-xs text-center text-slate-500">
             {t('auth.hasAccount')}{' '}
             <button type="button" className="font-semibold text-primary hover:brightness-110" onClick={() => pickTab('login')}>
               {t('auth.loginLink')}
