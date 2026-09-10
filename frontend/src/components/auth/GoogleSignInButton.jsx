@@ -162,14 +162,14 @@ export default function GoogleSignInButton({
 
   if (!CLIENT_ID) {
     return (
-      <p className="text-xs text-amber-200/90 rounded-lg border border-amber-500/25 bg-amber-500/10 px-3 py-2">
+      <p className="text-xs text-amber-800 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
         Google girişi üçün VITE_GOOGLE_CLIENT_ID təyin edilməlidir.
       </p>
     )
   }
 
   if (err) {
-    return <p className="text-xs text-red-300">{err}</p>
+    return <p className="text-xs text-red-600">{err}</p>
   }
 
   return (

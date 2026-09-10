@@ -90,17 +90,17 @@ export default function AuthPage() {
   const authGreeting = authTab === 'signup' ? t('auth.createAccount') : t('auth.welcome')
 
   return (
-    <div className="login-wrapper flex min-h-[100svh] w-full min-w-0 max-w-full flex-col overflow-x-hidden">
+    <div className="login-wrapper theme-light flex min-h-[100svh] w-full min-w-0 max-w-full flex-col overflow-x-hidden">
       <header className="relative shrink-0 w-full px-4 py-3 sm:pt-6 sm:pb-4">
         <div className="flex w-full items-center justify-between gap-3">
           <Link
             to="/"
-            className="inline-flex items-center gap-1 text-xs sm:text-sm font-medium text-gray-400 hover:text-white transition-colors whitespace-nowrap min-w-0"
+            className="inline-flex items-center gap-1 text-xs sm:text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors whitespace-nowrap min-w-0"
           >
             {t('auth.backHome')}
           </Link>
           <div className="hidden sm:block">
-            <LanguageSwitcher className="h-8 shrink-0" />
+            <LanguageSwitcher tone="light" className="h-8 shrink-0" />
           </div>
           <button
             type="button"
@@ -121,40 +121,40 @@ export default function AuthPage() {
           </button>
         </div>
         {mobileMenuOpen ? (
-          <div className="sm:hidden mt-3 ml-auto w-fit rounded-xl border border-white/20 bg-[#0b0b0b]/98 p-3 shadow-xl">
-            <LanguageSwitcher tone="dark" className="h-8" />
+          <div className="sm:hidden mt-3 ml-auto w-fit rounded-xl border border-slate-200 bg-white p-3 shadow-xl">
+            <LanguageSwitcher tone="light" className="h-8" />
           </div>
         ) : null}
       </header>
       <main className="flex flex-1 items-start sm:items-center justify-center px-4 pb-8 sm:pb-10 min-h-0 overflow-y-auto">
       <div id="mx-login" className="w-full max-w-sm scroll-mt-6">
-        <div className="mx-login-card rounded-2xl border border-white/20 bg-surface-2 p-5 sm:p-6">
+        <div className="mx-login-card rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm">
           {!isAdmin ? (
             <div className="mb-3 text-center space-y-2">
               <div className="flex justify-center">
-                <Brand size="login" />
+                <Brand size="login" tone="light" />
               </div>
               <div className="h-0.5 w-10 mx-auto rounded-full bg-primary" aria-hidden />
-              <h1 className="text-sm font-semibold text-gray-200">{authGreeting}</h1>
+              <h1 className="text-sm font-semibold text-slate-800">{authGreeting}</h1>
             </div>
           ) : (
             <div className="text-center mb-6 sm:mb-8">
               <div className="flex justify-center pt-1 pb-2 bg-transparent">
-                <Brand size="login" />
+                <Brand size="login" tone="light" />
               </div>
               <div className="h-0.5 w-10 mx-auto rounded-full bg-primary mb-3" aria-hidden />
-              <div className="text-gray-400 text-sm">{t('auth.loginToAccount')}</div>
+              <div className="text-slate-500 text-sm">{t('auth.loginToAccount')}</div>
             </div>
           )}
 
           {isAdmin ? (
             <form onSubmit={handleEmailLogin} className="space-y-4" autoComplete="on">
-              <div className="text-center text-red-400 text-xs py-2 px-3 bg-red-500/10 border border-red-500/20 rounded-xl mb-4">
+              <div className="text-center text-red-700 text-xs py-2 px-3 bg-red-50 border border-red-200 rounded-xl mb-4">
                 {t('auth.adminPanel')}
               </div>
               <div>
                 <label
-                  className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2"
+                  className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2"
                   htmlFor="admin-username"
                 >
                   {t('auth.phoneOrEmail')}
@@ -162,7 +162,7 @@ export default function AuthPage() {
                 <input
                   id="admin-username"
                   name="username"
-                  className="mx-auth-input w-full bg-surface-1 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none"
+                  className="mx-auth-input w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-slate-900 placeholder:text-slate-400 text-sm outline-none"
                   type="text"
                   inputMode="email"
                   autoComplete="username"
@@ -174,7 +174,7 @@ export default function AuthPage() {
               </div>
               <div>
                 <label
-                  className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2"
+                  className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2"
                   htmlFor="admin-password"
                 >
                   {t('auth.password')}
@@ -182,7 +182,7 @@ export default function AuthPage() {
                 <input
                   id="admin-password"
                   name="password"
-                  className="mx-auth-input w-full bg-surface-1 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none"
+                  className="mx-auth-input w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-slate-900 placeholder:text-slate-400 text-sm outline-none"
                   type="password"
                   autoComplete="current-password"
                   value={password}

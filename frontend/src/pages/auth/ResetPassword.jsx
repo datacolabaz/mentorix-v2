@@ -51,40 +51,40 @@ export default function ResetPassword() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-surface-1 p-4">
-      <div className="w-full max-w-lg rounded-2xl border border-white/10 bg-white/5 p-6">
+    <div className="login-wrapper theme-light min-h-screen flex items-center justify-center p-4">
+      <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="flex items-center justify-center mb-4">
-          <Brand />
+          <Brand size="login" tone="light" />
         </div>
-        <h1 className="text-center font-display font-extrabold text-xl text-white mb-2">
+        <h1 className="text-center font-display font-extrabold text-xl text-slate-900 mb-2">
           Parol bərpası
         </h1>
-        <p className="text-center text-sm text-gray-300 leading-relaxed">
+        <p className="text-center text-sm text-slate-600 leading-relaxed">
           Yeni şifrənizi daxil edin.
         </p>
 
         <form onSubmit={submit} className="mt-6 space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
               Yeni şifrə
             </label>
             <input
               type="password"
               autoComplete="new-password"
-              className="w-full bg-surface-1 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-primary/40"
+              className="mx-auth-input w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-slate-900 placeholder:text-slate-400 text-sm outline-none"
               value={pass1}
               onChange={(e) => setPass1(e.target.value)}
               placeholder="ən azı 8 simvol"
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
               Yeni şifrə (təkrar)
             </label>
             <input
               type="password"
               autoComplete="new-password"
-              className="w-full bg-surface-1 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-primary/40"
+              className="mx-auth-input w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-slate-900 placeholder:text-slate-400 text-sm outline-none"
               value={pass2}
               onChange={(e) => setPass2(e.target.value)}
               placeholder="şifrəni yenidən yazın"
