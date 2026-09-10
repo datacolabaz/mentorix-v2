@@ -187,7 +187,7 @@ export default function GoogleSignInButton({
       }}
     >
       <div
-        className="mx-google-signin__decor flex w-full min-h-[52px] items-center justify-center gap-3 rounded-xl border border-white/12 bg-[#141414] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-colors"
+        className="mx-google-signin__decor flex w-full min-h-[52px] items-center justify-center gap-3 rounded-xl border border-slate-200 bg-[#111827] px-4 py-3 transition-colors"
         aria-hidden
       >
         <GoogleGIcon />

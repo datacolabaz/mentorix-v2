@@ -305,8 +305,9 @@ export default function InstructorMapSearch() {
   )
 
   return (
-    <div className="h-[100dvh] overflow-hidden bg-[#0b0b0b] text-white flex flex-col" data-mentor-id="page:mentor-search">
+    <div className="h-[100dvh] overflow-hidden bg-[#f4f6fb] text-slate-800 flex flex-col" data-mentor-id="page:mentor-search">
       <PublicPageTopBar
+        tone="light"
         backTo="/"
         title={t('marketplace.title')}
         subtitle={t('marketplace.subtitle')}
@@ -318,45 +319,45 @@ export default function InstructorMapSearch() {
         )}
         <Link
           to="/login"
-          className="flex-1 sm:flex-initial text-center text-sm font-medium text-primary hover:brightness-110 px-3 py-2 rounded-lg border border-primary/30 min-h-[40px] inline-flex items-center justify-center"
+          className="flex-1 sm:flex-initial text-center text-sm font-semibold text-emerald-800 hover:bg-emerald-50 px-3 py-2 rounded-lg border border-emerald-200 min-h-[40px] inline-flex items-center justify-center bg-white"
         >
           {t('marketplace.backToLogin')}
         </Link>
       </PublicPageTopBar>
 
       <div className="flex-1 flex flex-col lg:flex-row min-h-0 overflow-hidden">
-        <main className="order-1 flex-1 flex flex-col min-h-0 lg:w-[58%] lg:border-r border-white/10">
-          <div className="shrink-0 px-4 py-4 border-b border-white/10 space-y-1">
+        <main className="order-1 flex-1 flex flex-col min-h-0 lg:w-[58%] lg:border-r border-slate-200">
+          <div className="shrink-0 px-4 py-4 border-b border-slate-200 space-y-1 bg-[#f4f6fb]">
             {hasFetched && !fetchError ? (
               <>
-                <p className="text-base sm:text-lg font-semibold text-white leading-snug">
+                <p className="text-base sm:text-lg font-semibold text-slate-900 leading-snug">
                   {regionResultsHeadline(count, kind, locationPhrase)}
                 </p>
                 {loading ? (
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-slate-500">
                     {t('marketplace.distance.refreshing')}
                   </p>
                 ) : null}
               </>
             ) : loading ? (
-              <p className="text-sm text-gray-400">{t('marketplace.searching')}</p>
+              <p className="text-sm text-slate-500">{t('marketplace.searching')}</p>
             ) : null}
-            {fetchError ? <p className="text-xs text-red-400 mt-1">{fetchError}</p> : null}
+            {fetchError ? <p className="text-xs text-red-600 mt-1">{fetchError}</p> : null}
           </div>
 
           <div ref={listScrollRef} className="flex-1 overflow-y-auto p-4">
             {loading && !count ? (
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
                 {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="h-28 rounded-xl bg-white/5 animate-pulse border border-white/5" />
+                  <div key={i} className="h-28 rounded-2xl bg-white animate-pulse border border-slate-200" />
                 ))}
               </div>
             ) : null}
 
             {isEmpty ? (
-              <div className="rounded-xl border border-white/10 bg-[#121212]/80 p-6 text-center space-y-2 max-w-lg mx-auto">
-                <p className="text-sm font-semibold text-white">{t('marketplace.empty.title')}</p>
-                <p className="text-xs text-gray-400 leading-relaxed">{t('marketplace.empty.hint')}</p>
+              <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center space-y-2 max-w-lg mx-auto shadow-sm">
+                <p className="text-sm font-semibold text-slate-900">{t('marketplace.empty.title')}</p>
+                <p className="text-xs text-slate-500 leading-relaxed">{t('marketplace.empty.hint')}</p>
               </div>
             ) : null}
 
@@ -389,7 +390,7 @@ export default function InstructorMapSearch() {
           </div>
         </main>
 
-        <aside className="order-2 flex-1 lg:flex-none lg:w-[42%] flex flex-col min-h-0 overflow-hidden bg-[#0b0b0b] border-t lg:border-t-0 border-white/10 shrink-0">
+        <aside className="order-2 flex-1 lg:flex-none lg:w-[42%] flex flex-col min-h-0 overflow-hidden bg-white border-t lg:border-t-0 border-slate-200 shrink-0">
           <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-3">
             <MarketplaceAiSearchPanel
               userLat={null}
@@ -424,8 +425,8 @@ export default function InstructorMapSearch() {
                   onClick={() => setKind(k)}
                   className={`text-xs font-bold px-3 py-1.5 rounded-lg border transition-colors ${
                     kind === k
-                      ? 'bg-primary/20 border-primary/50 text-primary'
-                      : 'border-white/15 text-gray-400 hover:border-white/25'
+                      ? 'bg-emerald-50 border-emerald-300 text-emerald-800'
+                      : 'border-slate-200 text-slate-600 hover:border-slate-300 bg-white'
                   }`}
                 >
                   {lab}
@@ -433,7 +434,7 @@ export default function InstructorMapSearch() {
               ))}
             </div>
             {hasFetched && !fetchError && count > 0 ? (
-              <p className="text-[11px] text-gray-500 pt-1 border-t border-white/10">
+              <p className="text-[11px] text-slate-500 pt-1 border-t border-slate-200">
                 {resultCountLabel(count, kind)} · {locationPhrase}
               </p>
             ) : null}

@@ -48,7 +48,7 @@ function CategoryList({ nodes, activeId, onHover, onPick, emptyLabel, locale }) 
               type="button"
               className={[
                 'w-full text-left px-3 py-2 text-sm flex items-center justify-between gap-2 transition-colors',
-                isActive ? 'bg-primary/20 text-primary' : 'text-gray-200 hover:bg-white/5',
+                isActive ? 'bg-emerald-50 text-emerald-800' : 'text-slate-700 hover:bg-slate-50',
               ].join(' ')}
               onMouseEnter={() => onHover?.(node)}
               onFocus={() => onHover?.(node)}
@@ -151,8 +151,8 @@ export default function CategoryMegaMenu({ onPick, activeCategoryId }) {
               className={[
                 'text-[11px] font-semibold px-2.5 py-1 rounded-lg border inline-flex items-center gap-1 transition-colors',
                 active
-                  ? 'border-amber-400/60 bg-amber-500/15 text-amber-200'
-                  : 'border-white/10 bg-white/5 text-gray-300 hover:border-primary/40 hover:text-primary',
+                  ? 'border-amber-300 bg-amber-50 text-amber-800'
+                  : 'border-slate-200 bg-white text-slate-700 hover:border-emerald-300 hover:text-emerald-800',
               ].join(' ')}
             >
               {p.is_popular ? <GoldStar className="text-amber-400 w-3 h-3" /> : null}
@@ -177,9 +177,9 @@ export default function CategoryMegaMenu({ onPick, activeCategoryId }) {
             aria-label={t('marketplace.categories.close')}
             onClick={() => setOpen(false)}
           />
-          <div className="absolute left-0 right-0 sm:right-auto z-[700] mt-2 flex rounded-xl border border-white/15 bg-[#12121f] shadow-2xl overflow-hidden max-w-[min(100vw-1rem,860px)]">
-            <div className="border-r border-white/10 bg-[#0f0f18]">
-              <p className="px-3 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider">
+          <div className="absolute left-0 right-0 sm:right-auto z-[700] mt-2 flex rounded-xl border border-slate-200 bg-white shadow-2xl overflow-hidden max-w-[min(100vw-1rem,860px)]">
+            <div className="border-r border-slate-200 bg-slate-50">
+              <p className="px-3 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                 {t('marketplace.categories.category')}
               </p>
               <CategoryList
@@ -194,8 +194,8 @@ export default function CategoryMegaMenu({ onPick, activeCategoryId }) {
                 onPick={handlePick}
               />
             </div>
-            <div className="border-r border-white/10 min-w-[200px]">
-              <p className="px-3 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider truncate">
+            <div className="border-r border-slate-200 min-w-[200px]">
+              <p className="px-3 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">
                 {rootNode ? categoryNodeLabel(rootNode, locale) : t('marketplace.categories.subgroup')}
               </p>
               <CategoryList
@@ -209,7 +209,7 @@ export default function CategoryMegaMenu({ onPick, activeCategoryId }) {
             </div>
             {grandChildren.length > 0 ? (
               <div className="min-w-[200px]">
-                <p className="px-3 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider truncate">
+                <p className="px-3 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">
                   {childNode ? categoryNodeLabel(childNode, locale) : ''}
                 </p>
                 <CategoryList nodes={grandChildren} locale={locale} onPick={handlePick} emptyLabel="—" />

@@ -98,18 +98,18 @@ export default function DiscoverSearchFilters({ value, onChange }) {
               if (!e.target.value.trim()) patch({ category_id: null, category_slug: null, category_name: null })
             }}
             placeholder={t('marketplace.filters.categoryPlaceholder')}
-            className="w-full rounded-xl border border-white/15 bg-[#13112e] px-3 py-2.5 text-sm text-white placeholder:text-gray-500 focus:border-primary/50 focus:outline-none"
+            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-emerald-400 focus:outline-none"
           />
           {searching ? (
             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-gray-500">…</span>
           ) : null}
           {suggestions.length > 0 && categoryQuery.trim().length >= 2 ? (
-            <ul className="absolute z-50 left-0 right-0 mt-1 max-h-48 overflow-y-auto rounded-xl border border-white/15 bg-[#1a1a2e] shadow-xl">
+            <ul className="absolute z-50 left-0 right-0 mt-1 max-h-48 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-xl">
               {suggestions.map((s) => (
                 <li key={s.id}>
                   <button
                     type="button"
-                    className="w-full text-left px-3 py-2 text-sm text-gray-200 hover:bg-primary/15"
+                    className="w-full text-left px-3 py-2 text-sm text-slate-800 hover:bg-emerald-50"
                     onClick={() => {
                       patch({
                         category_id: s.id,
@@ -158,8 +158,8 @@ export default function DiscoverSearchFilters({ value, onChange }) {
               }
               className={`text-xs font-semibold px-2.5 py-1.5 rounded-lg border transition-colors ${
                 (v.format || 'any') === opt.value
-                  ? 'bg-primary/20 border-primary/50 text-primary'
-                  : 'border-white/15 text-gray-400 hover:border-white/25'
+                  ? 'bg-emerald-50 border-emerald-300 text-emerald-800'
+                  : 'border-slate-200 text-slate-600 hover:border-slate-300 bg-white'
               }`}
             >
               {opt.label}
@@ -174,7 +174,7 @@ export default function DiscoverSearchFilters({ value, onChange }) {
             {t('marketplace.filters.locationTitle')}
           </label>
           <select
-            className="w-full rounded-xl border border-white/15 bg-[#13112e] px-3 py-2 text-sm text-white"
+            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900"
             value={v.area_id || ''}
             onChange={(e) => patch({ area_id: e.target.value || null })}
           >

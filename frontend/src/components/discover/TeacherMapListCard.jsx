@@ -1,16 +1,11 @@
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import InstructorAvatar from '../common/InstructorAvatar'
-import {
-  deliveryFormatBadges,
-  showTopBadge,
-  teacherRatingParts,
-} from '../../lib/teacherMapCard'
+import { deliveryFormatBadges, showTopBadge, teacherRatingParts } from '../../lib/teacherMapCard'
 import { instructorDisplaySubject } from '../../lib/instructorDisplay'
 import { localizeNextSlotLabel } from '../../lib/marketplaceLocale'
 import useActiveLocale from '../../hooks/useActiveLocale'
 import { bakuMetroBySlug } from '@shared/bakuMetroStations.mjs'
-import { mapsDirectionsUrls } from '../../lib/mapsDirections'
 
 export default function TeacherMapListCard({
   instructor: p,
@@ -34,27 +29,32 @@ export default function TeacherMapListCard({
     p.region_user_set && (locationBadge || p.baku_district || p.region)
       ? locationBadge || p.baku_district || p.region
       : null
-
+  const metroLabel = p.nearest_metro
+    ? bakuMetroBySlug(p.nearest_metro)?.name_az || p.nearest_metro
+    : null
+  const slotLabel = p.next_available_slot ? localizeNextSlotLabel(p.next_available_slot, locale) : null
   const ratingLabel =
     rating && rating.count > 0
       ? t('marketplace.card.ratingLabel', { avg: rating.avg, count: rating.count })
       : rating?.label
-  const directions = mapsDirectionsUrls(p.latitude, p.longitude, p.teacher_place_address)
+  const hasHoverDetails = Boolean(
+    rating || districtLabel || metroLabel || slotLabel || formats.length || p.teacher_place_address,
+  )
 
   return (
     <div
       ref={cardRef}
       className={[
-        'w-full rounded-xl border flex gap-2 md:gap-3 items-start transition-all duration-500',
+        'group relative w-full rounded-2xl border bg-white shadow-sm flex gap-3 items-start transition-all duration-300',
         comfortable ? 'p-4' : 'p-3',
         highlighted
-          ? 'border-emerald-400/70 bg-emerald-500/10 ring-2 ring-emerald-400/50 shadow-[0_0_18px_rgba(52,211,153,0.35)]'
+          ? 'border-emerald-400 ring-2 ring-emerald-300/70 shadow-md'
           : selected
-            ? 'border-primary/60 bg-primary/10 ring-1 ring-primary/30'
-            : 'border-white/10 bg-[#121212]/90',
+            ? 'border-primary/50 ring-1 ring-primary/25 shadow-md'
+            : 'border-slate-200 hover:border-slate-300 hover:shadow-md',
       ].join(' ')}
     >
-      <button type="button" onClick={() => onFocus?.(p)} className="flex gap-2 flex-1 min-w-0 text-left">
+      <button type="button" onClick={() => onFocus?.(p)} className="flex gap-3 flex-1 min-w-0 text-left">
         <InstructorAvatar
           fullName={p.full_name}
           avatarUrl={p.avatar_url}
@@ -66,93 +66,48 @@ export default function TeacherMapListCard({
           lastActivityAt={p.last_activity_at}
         />
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap gap-1 mb-1">
-            {topBadge ? (
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-violet-500/20 text-violet-300">
-                {t('marketplace.card.topBadge')}
-              </span>
-            ) : null}
-            {p.is_online ? (
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-400/40">
-                ● {t('marketplace.card.onlineNow')}
-              </span>
-            ) : null}
-            {districtLabel ? (
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-sky-500/15 text-sky-300 border border-sky-500/25">
-                📍 {districtLabel}
-              </span>
-            ) : null}
-            {p.is_featured_listing && !topBadge ? (
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-amber-500/15 text-amber-300">
-                {t('marketplace.card.featured')}
-              </span>
-            ) : null}
-          </div>
-
-          <div className="flex items-baseline justify-between gap-2">
-            <span className={`font-semibold text-white truncate ${comfortable ? 'text-base' : 'text-sm'}`}>
-              {p.full_name}
-            </span>
-          </div>
-
-          <div className={`text-gray-400 mt-0.5 truncate ${comfortable ? 'text-sm' : 'text-xs'}`}>
-            {subjectLine || t('marketplace.card.noSubject')}
-          </div>
-
-          {rating ? (
-            <div className="mt-1 flex items-center gap-1">
-              <span className="text-amber-400 text-xs">⭐</span>
-              <span className="text-[11px] text-amber-200/90 font-semibold tabular-nums">{ratingLabel}</span>
-            </div>
-          ) : (
-            <p className="text-[11px] text-gray-500 mt-1">{t('marketplace.card.noReviews')}</p>
-          )}
-
-          {formats.length ? (
-            <div className="flex flex-wrap gap-1 mt-1.5">
-              {formats.slice(0, 3).map((lab) => (
-                <span
-                  key={lab}
-                  className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-white/5 text-gray-400 border border-white/10"
-                >
-                  {lab}
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              {topBadge ? (
+                <span className="mb-1 inline-block text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-violet-50 text-violet-700">
+                  {t('marketplace.card.topBadge')}
                 </span>
-              ))}
+              ) : p.is_featured_listing ? (
+                <span className="mb-1 inline-block text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-700">
+                  {t('marketplace.card.featured')}
+                </span>
+              ) : null}
+              <h3
+                className={`font-display font-bold text-slate-900 truncate ${comfortable ? 'text-base' : 'text-sm'}`}
+              >
+                {p.full_name}
+              </h3>
+              <p className={`mt-0.5 font-semibold text-slate-600 truncate ${comfortable ? 'text-sm' : 'text-xs'}`}>
+                {subjectLine || t('marketplace.card.noSubject')}
+              </p>
             </div>
-          ) : null}
-
-          {p.discover_hourly_rate != null ? (
-            <div className="text-[11px] text-emerald-400/90 mt-1">
-              {t('marketplace.card.ratePerHour', { rate: p.discover_hourly_rate })}
-            </div>
-          ) : null}
-
-          {p.nearest_metro ? (
-            <div className="text-[10px] text-sky-300/90 mt-1 truncate">
-              🚇 {bakuMetroBySlug(p.nearest_metro)?.name_az || p.nearest_metro}
-            </div>
-          ) : null}
-
-          {p.next_available_slot ? (
-            <div className="text-[10px] text-gray-500 mt-1 truncate">
-              📅 {localizeNextSlotLabel(p.next_available_slot, locale)}
-            </div>
-          ) : null}
+            {p.discover_hourly_rate != null ? (
+              <p className="shrink-0 text-right text-sm font-medium tabular-nums text-slate-700 leading-tight">
+                {t('marketplace.card.ratePerHour', { rate: p.discover_hourly_rate })}
+              </p>
+            ) : null}
+          </div>
 
           <Link
             to={`/teachers/${p.id}`}
             onClick={(e) => e.stopPropagation()}
-            className="inline-block text-[11px] font-semibold text-primary hover:underline mt-1.5"
+            className="inline-block text-[12px] font-semibold text-emerald-700 hover:underline mt-2"
           >
             {t('marketplace.card.viewProfile')}
           </Link>
         </div>
       </button>
+
       <div className="flex flex-col gap-1.5 shrink-0 self-center min-w-[6.5rem] sm:min-w-[7.5rem]">
         <button
           type="button"
           onClick={() => onInquiry?.(p)}
-          className="text-[10px] font-bold px-2.5 py-2 rounded-lg bg-primary text-black hover:brightness-110 whitespace-nowrap"
+          className="text-[11px] font-bold px-2.5 py-2 rounded-lg bg-primary text-[#041018] hover:brightness-95 whitespace-nowrap"
         >
           {t('marketplace.card.trialLesson')}
         </button>
@@ -160,35 +115,32 @@ export default function TeacherMapListCard({
           type="button"
           disabled={whatsappBusy}
           onClick={() => onWhatsApp?.(p)}
-          className={[
-            'text-[10px] font-bold px-2.5 py-2 rounded-lg whitespace-nowrap disabled:opacity-50',
-            'border border-[#25D366]/60 bg-[#075E54]/30 text-[#DCF8C6]',
-            'hover:bg-[#128C7E]/40 hover:border-[#25D366]',
-          ].join(' ')}
+          className="text-[11px] font-bold px-2.5 py-2 rounded-lg whitespace-nowrap disabled:opacity-50 border border-[#25D366]/50 bg-[#25D366]/10 text-[#128C7E] hover:bg-[#25D366]/20"
         >
           {t('marketplace.card.whatsapp')}
         </button>
-        {directions ? (
-          <>
-            <a
-              href={directions.google}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[10px] font-bold px-2.5 py-2 rounded-lg whitespace-nowrap text-center border border-primary/40 bg-primary/10 text-primary hover:bg-primary/20"
-            >
-              {t('marketplace.profile.googleMaps')}
-            </a>
-            <a
-              href={directions.waze}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[10px] font-bold px-2.5 py-2 rounded-lg whitespace-nowrap text-center border border-sky-500/40 bg-sky-500/10 text-sky-300 hover:bg-sky-500/20"
-            >
-              {t('marketplace.profile.waze')}
-            </a>
-          </>
-        ) : null}
       </div>
+
+      {hasHoverDetails ? (
+        <div
+          className="pointer-events-none absolute left-3 right-3 bottom-full z-30 mb-1 hidden rounded-xl border border-slate-200 bg-white p-3 text-[11px] text-slate-600 shadow-lg group-hover:block"
+          role="tooltip"
+        >
+          {rating ? (
+            <p className="font-semibold text-slate-800">⭐ {ratingLabel}</p>
+          ) : (
+            <p>{t('marketplace.card.noReviews')}</p>
+          )}
+          {districtLabel ? <p className="mt-1 truncate">📍 {districtLabel}</p> : null}
+          {metroLabel ? <p className="mt-1 truncate">🚇 {metroLabel}</p> : null}
+          {p.teacher_place_address ? (
+            <p className="mt-1 truncate">{p.teacher_place_address}</p>
+          ) : null}
+          {slotLabel ? <p className="mt-1 truncate">📅 {slotLabel}</p> : null}
+          {formats.length ? <p className="mt-1 truncate">{formats.join(' · ')}</p> : null}
+          <p className="mt-1.5 text-[10px] text-slate-400">{t('marketplace.card.viewProfile')}</p>
+        </div>
+      ) : null}
     </div>
   )
 }
