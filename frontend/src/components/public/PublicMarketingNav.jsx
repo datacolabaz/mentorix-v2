@@ -41,7 +41,7 @@ function useCompactPublicNav() {
 /**
  * İctimai naviqasiya: loqo, Müəllimlər üçün, İmtahanlar / Testlər, dil, CTA.
  * Mobil: yuxarı sağda yalnız «Daxil ol»; dil burger menyudadır; menyu düyməsi
- * sağ aşağıda FAB-dır və compact rejimdə heç vaxt gizlədilmir.
+ * sağ yuxarıda FAB-dır və compact rejimdə heç vaxt gizlədilmir.
  */
 export default function PublicMarketingNav({ onLogin, onStart }) {
   const { t } = useTranslation()
@@ -144,7 +144,7 @@ export default function PublicMarketingNav({ onLogin, onStart }) {
               className={[
                 'fixed z-[2020] inline-flex h-14 w-14 items-center justify-center rounded-full',
                 'right-[max(1rem,env(safe-area-inset-right,0px))]',
-                'bottom-[max(1.25rem,calc(env(safe-area-inset-bottom,0px)+0.75rem))]',
+                'top-[max(1rem,env(safe-area-inset-top,0px))]',
                 'border-2 border-primary bg-[#041018] text-primary',
                 'shadow-[0_10px_28px_rgba(0,229,176,0.35)]',
                 'hover:bg-primary hover:text-[#041018]',
@@ -176,7 +176,7 @@ export default function PublicMarketingNav({ onLogin, onStart }) {
         className="sticky top-0 z-50 border-b border-white/10 bg-[#0b0b0b]/92 backdrop-blur-md supports-[backdrop-filter]:bg-[#0b0b0b]/80"
         aria-label={t('landing.nav.mainNav')}
       >
-        <div className="max-w-5xl mx-auto pl-2 sm:pl-3 pr-3 sm:pr-4 py-3 flex items-center justify-between gap-2 min-w-0">
+        <div className="max-w-5xl mx-auto pl-2 sm:pl-3 pr-16 lg:pr-4 py-3 flex items-center justify-between gap-2 min-w-0">
           <button
             type="button"
             onClick={goHome}
