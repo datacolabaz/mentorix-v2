@@ -13,7 +13,8 @@ CREATE TABLE users (
   verification_code VARCHAR(10),
   verification_expiry TIMESTAMPTZ,
   is_verified BOOLEAN NOT NULL DEFAULT TRUE,
-  created_at TIMESTAMP DEFAULT NOW()
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS users_email_lower_unique_not_null
@@ -72,8 +73,9 @@ CREATE TABLE teacher_schedules (
   is_occupied BOOLEAN NOT NULL DEFAULT FALSE,
   enrollment_id UUID,
   student_id UUID REFERENCES users(id) ON DELETE SET NULL,
-  subject_id UUID REFERENCES instructor_subjects(id) ON DELETE SET NULL,
-  group_id UUID REFERENCES instructor_groups(id) ON DELETE SET NULL,
+  -- subject_id and group_id are added by migration 047 (after migration 044
+  -- creates instructor_subjects/instructor_groups); keeping them here would
+  -- make a fresh schema.sql bootstrap fail with an unknown-relation error.
   created_at TIMESTAMPTZ DEFAULT NOW(),
   CONSTRAINT teacher_schedules_time_order CHECK (start_time < end_time),
   CONSTRAINT teacher_schedules_unique_slot UNIQUE (instructor_id, day_of_week, start_time, end_time)
@@ -302,13 +304,17 @@ CREATE TABLE notifications (
 CREATE TABLE sms_logs (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   instructor_id UUID REFERENCES users(id),
+  student_id UUID REFERENCES users(id),
   phone VARCHAR(20),
+  type VARCHAR(32),
   message TEXT,
   status TEXT,
+  package_type VARCHAR(32),
   http_status INTEGER,
   msisdn TEXT,
   provider JSONB,
-  sent_at TIMESTAMP DEFAULT NOW()
+  sent_at TIMESTAMP DEFAULT NOW(),
+  created_at TIMESTAMP DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_enrollments_instructor_id ON enrollments (instructor_id);
