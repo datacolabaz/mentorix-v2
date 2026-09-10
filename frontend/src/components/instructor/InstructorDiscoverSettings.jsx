@@ -8,6 +8,7 @@ import { useToast } from '../common/Toast'
 import { groupServiceAreas } from '../../lib/serviceAreaGroups'
 import { useSubscriptionPlans } from '../../hooks/useSubscriptionPlans'
 import { higherPaidPlansSuffix, planTitleOrSlug } from '../../lib/subscriptionPlanGuards'
+import { DISCOVER_PROFILE_SECTION_ID } from '../../lib/scrollIntoAppView'
 
 export default function InstructorDiscoverSettings({ mapVisible, theme, inp }) {
   const { t } = useTranslation()
@@ -186,14 +187,14 @@ export default function InstructorDiscoverSettings({ mapVisible, theme, inp }) {
 
   if (loading) {
     return (
-      <Card className="animate-pulse h-32 p-5">
+      <Card id={DISCOVER_PROFILE_SECTION_ID} className="animate-pulse h-32 p-5">
         <div className="h-20 bg-black/5 dark:bg-white/5 rounded-lg" />
       </Card>
     )
   }
 
   return (
-    <Card id="discover-profile" data-mentor-id="page:discover-profile" className="p-4 sm:p-5 space-y-4 border border-indigo-500/20">
+    <Card id={DISCOVER_PROFILE_SECTION_ID} data-mentor-id="page:discover-profile" className="p-4 sm:p-5 space-y-4 border border-indigo-500/20">
       <div>
         <h2
           className={[
@@ -279,7 +280,8 @@ export default function InstructorDiscoverSettings({ mapVisible, theme, inp }) {
             value={catSearch}
             onChange={(e) => setCatSearch(e.target.value)}
             placeholder={t('settings.discover.subjectsPh')}
-            className={inp}
+            autoComplete="off"
+            className={`${inp} scroll-mt-24`}
           />
           {catSuggestions.length > 0 ? (
             <ul

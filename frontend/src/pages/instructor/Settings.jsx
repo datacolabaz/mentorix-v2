@@ -55,6 +55,7 @@ import { openBillingReceiptWhatsApp } from '../../lib/billingPaymentLabels'
 import Modal from '../../components/common/Modal'
 import ConfirmDialog from '../../components/common/ConfirmDialog'
 import PersonaSettingsCard from '../../components/onboarding/PersonaSettingsCard'
+import { DISCOVER_SUBJECT_INPUT_ID, scheduleScrollToId } from '../../lib/scrollIntoAppView'
 
 function billingPaymentTitleLocalized(p, t) {
   if (p?.product_type === 'sms') return t('settings.billingTitle.sms', { count: p.sms_quantity || 0 })
@@ -311,11 +312,8 @@ export default function InstructorSettings() {
     const hash = String(location.hash || '').replace(/^#/, '')
     const scrollTo = location.state?.scrollTo || hash
     if (!scrollTo) return
-    const t = window.setTimeout(() => {
-      document.getElementById(String(scrollTo))?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    }, 250)
-    return () => window.clearTimeout(t)
-  }, [location.hash, location.state?.scrollTo])
+    return scheduleScrollToId(scrollTo, { focus: true, offset: 20 })
+  }, [location.hash, location.state?.scrollTo, location.state?.at])
 
   const hasMapRegion = Boolean(String(mapRegion || '').trim())
   const locationLabel = useMemo(
@@ -1278,6 +1276,7 @@ export default function InstructorSettings() {
         )}
 
         <DiscoverSubjectPicker
+          inputId={DISCOVER_SUBJECT_INPUT_ID}
           categoryIds={mapCategoryIds}
           pickedCats={mapPickedCats}
           inp={inp}

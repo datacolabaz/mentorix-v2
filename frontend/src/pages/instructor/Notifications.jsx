@@ -25,6 +25,7 @@ import {
 } from '../../lib/smsHistoryDisplay'
 import { useNavigate } from 'react-router-dom'
 import useUiStore from '../../hooks/useUi'
+import { DISCOVER_SUBJECT_INPUT_ID } from '../../lib/scrollIntoAppView'
 
 const SEEN_KEY = 'mx_instructor_notifications_seen_at_v1'
 
@@ -921,7 +922,9 @@ export default function InstructorNotifications() {
                           return
                         }
                         if (act === 'OPEN_DISCOVER_PROFILE') {
-                          navigate('/instructor/settings', { state: { scrollTo: 'discover-profile' } })
+                          navigate('/instructor/settings', {
+                            state: { scrollTo: DISCOVER_SUBJECT_INPUT_ID, at: Date.now() },
+                          })
                           return
                         }
                         navigate('/instructor/settings')

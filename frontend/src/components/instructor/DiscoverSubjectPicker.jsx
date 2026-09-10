@@ -10,6 +10,7 @@ export default function DiscoverSubjectPicker({
   inp,
   theme,
   sectionTitleCls,
+  inputId,
 }) {
   const { t } = useTranslation()
   const [catSearch, setCatSearch] = useState('')
@@ -36,7 +37,7 @@ export default function DiscoverSubjectPicker({
   }
 
   return (
-    <section>
+    <section id={inputId} className="scroll-mt-24">
       <p className={sectionTitleCls}>{t('settings.discover.subjectsTitle')}</p>
       <p className={['text-xs mb-2 leading-relaxed', theme === 'dark' ? 'text-gray-500' : 'text-token-textMuted'].join(' ')}>
         {t('settings.mapSubjectsHint')}
@@ -46,6 +47,7 @@ export default function DiscoverSubjectPicker({
         value={catSearch}
         onChange={(e) => setCatSearch(e.target.value)}
         placeholder={t('settings.discover.subjectsPh')}
+        autoComplete="off"
         className={inp}
       />
       {catSuggestions.length > 0 ? (

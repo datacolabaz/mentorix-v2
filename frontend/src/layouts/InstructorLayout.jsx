@@ -24,6 +24,7 @@ import SidebarPreferences from '../components/common/SidebarPreferences'
 import { useInstructorNavSections } from '../hooks/useInstructorNavSections'
 import InstructorAvatar from '../components/common/InstructorAvatar'
 import { localizeDiscoverProfileAlert } from '../lib/discoverProfileAlert'
+import { DISCOVER_SUBJECT_INPUT_ID } from '../lib/scrollIntoAppView'
 
 const DISCOVER_MODAL_SESSION_PREFIX = 'mx_discover_modal_v1_'
 
@@ -99,8 +100,9 @@ export default function InstructorLayout() {
     const el = mainRef.current
     if (!el) return
     el.scrollLeft = 0
+    if (location.state?.scrollTo) return
     el.scrollTop = 0
-  }, [location.pathname])
+  }, [location.pathname, location.state?.scrollTo])
 
   useEffect(() => {
     if (focusMode || overlayLock) setNavOpen(false)
@@ -140,7 +142,9 @@ export default function InstructorLayout() {
       return
     }
     if (act === 'OPEN_DISCOVER_PROFILE') {
-      navigate('/instructor/settings', { state: { scrollTo: 'discover-profile' } })
+      navigate('/instructor/settings', {
+        state: { scrollTo: DISCOVER_SUBJECT_INPUT_ID, at: Date.now() },
+      })
       return
     }
     if (act === 'OPEN_SETTINGS_STORAGE') {
