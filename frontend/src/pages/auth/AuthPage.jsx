@@ -23,6 +23,7 @@ export default function AuthPage() {
   )
 
   const [authTab, setAuthTab] = useState(initialTab)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   useEffect(() => {
     setAuthTab(initialTab)
@@ -98,8 +99,32 @@ export default function AuthPage() {
           >
             {t('auth.backHome')}
           </Link>
-          <LanguageSwitcher className="h-8 shrink-0" />
+          <div className="hidden sm:block">
+            <LanguageSwitcher className="h-8 shrink-0" />
+          </div>
+          <button
+            type="button"
+            className="sm:hidden shrink-0 inline-flex h-11 w-11 items-center justify-center rounded-lg border border-primary/35 bg-primary/15 text-primary hover:bg-primary/25"
+            aria-expanded={mobileMenuOpen}
+            aria-label={mobileMenuOpen ? t('common.closeMenu') : t('common.menu')}
+            onClick={() => setMobileMenuOpen((open) => !open)}
+          >
+            {mobileMenuOpen ? (
+              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                <path strokeLinecap="round" d="M6 6l12 12M18 6L6 18" />
+              </svg>
+            ) : (
+              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                <path strokeLinecap="round" d="M4 7h16M4 12h16M4 17h16" />
+              </svg>
+            )}
+          </button>
         </div>
+        {mobileMenuOpen ? (
+          <div className="sm:hidden mt-3 ml-auto w-fit rounded-xl border border-white/20 bg-[#0b0b0b]/98 p-3 shadow-xl">
+            <LanguageSwitcher tone="dark" className="h-8" />
+          </div>
+        ) : null}
       </header>
       <main className="flex flex-1 items-start sm:items-center justify-center px-4 pb-8 sm:pb-10 min-h-0 overflow-y-auto">
       <div id="mx-login" className="w-full max-w-sm scroll-mt-6">
