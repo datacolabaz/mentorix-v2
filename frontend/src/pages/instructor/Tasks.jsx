@@ -873,9 +873,9 @@ export default function InstructorTasks() {
                   {studentsLoading ? (
                     <p className="text-sm text-gray-500">{t('tasks.form.studentsLoading')}</p>
                   ) : !students.length ? (
-                    <p className="text-sm text-amber-200/90">{t('tasks.form.noCrmStudents')}</p>
+                    <p className="text-sm text-token-textMuted">{t('tasks.form.noCrmStudents')}</p>
                   ) : !students.filter((s) => (s.enrollment_status || 'active') === 'active').length ? (
-                    <p className="text-sm text-amber-200/90">{t('tasks.form.noActiveStudents')}</p>
+                    <p className="text-sm text-token-textMuted">{t('tasks.form.noActiveStudents')}</p>
                   ) : (
                     <ul className="max-h-48 overflow-y-auto overscroll-contain space-y-2 rounded-xl border border-[color:var(--border-subtle)] p-2 bg-token-surfaceCard">
                       {students
