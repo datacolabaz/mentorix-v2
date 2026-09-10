@@ -62,10 +62,10 @@ function isPreviewable(url) {
 function renderPreview(url) {
   const s = String(url || '').toLowerCase()
   if (s.endsWith('.pdf')) {
-    return <iframe title="pdf" src={url} className="w-full h-[60vh] rounded-xl border border-indigo-500/15" />
+    return <iframe title="pdf" src={url} className="w-full h-[60vh] rounded-xl border border-[color:var(--border-subtle)]" />
   }
   if (s.endsWith('.png') || s.endsWith('.jpg') || s.endsWith('.jpeg') || s.endsWith('.webp') || s.endsWith('.gif')) {
-    return <img src={url} alt="preview" className="w-full max-h-[60vh] object-contain rounded-xl border border-indigo-500/15 bg-black/20" />
+    return <img src={url} alt="preview" className="w-full max-h-[60vh] object-contain rounded-xl border border-[color:var(--border-subtle)] bg-black/20" />
   }
   return null
 }
@@ -670,7 +670,7 @@ export default function InstructorTasks() {
                   </div>
                 ) : null}
                 {recipients.length > 0 ? (
-                  <div className="mt-3 rounded-xl border border-indigo-500/15 bg-[#0f0c29]/50 p-3">
+                  <div className="mt-3 rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard p-3">
                     <p className="text-[10px] font-semibold text-token-textMuted uppercase tracking-wider mb-2">{t('tasks.card.studentsStatus')}</p>
                     <ul className="space-y-1.5">
                       {recipients.map((r) => (
@@ -727,36 +727,36 @@ export default function InstructorTasks() {
           onFocusCapture={focusFieldNearest}
         >
           <div>
-            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">{t('tasks.form.title')}</label>
+            <label className="block text-xs font-semibold text-token-textMuted uppercase tracking-wider mb-2">{t('tasks.form.title')}</label>
             <input
-              className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500"
+              className="w-full bg-token-surfaceCard border border-[color:var(--border-subtle)] rounded-xl px-4 py-2.5 text-token-textMain text-sm outline-none focus:border-blue-500"
               value={form.title}
               onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))}
               placeholder={t('tasks.form.titlePh')}
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">{t('tasks.form.topic')}</label>
+            <label className="block text-xs font-semibold text-token-textMuted uppercase tracking-wider mb-2">{t('tasks.form.topic')}</label>
             <input
-              className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500"
+              className="w-full bg-token-surfaceCard border border-[color:var(--border-subtle)] rounded-xl px-4 py-2.5 text-token-textMain text-sm outline-none focus:border-blue-500"
               value={form.topic}
               onChange={(e) => setForm((p) => ({ ...p, topic: e.target.value }))}
               placeholder={t('tasks.form.topicPh')}
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">{t('tasks.form.description')}</label>
+            <label className="block text-xs font-semibold text-token-textMuted uppercase tracking-wider mb-2">{t('tasks.form.description')}</label>
             <textarea
               rows={4}
-              className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-blue-500 resize-none"
+              className="w-full bg-token-surfaceCard border border-[color:var(--border-subtle)] rounded-xl px-4 py-3 text-token-textMain text-sm outline-none focus:border-blue-500 resize-none"
               value={form.description}
               onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
               placeholder={t('tasks.form.descriptionPh')}
             />
           </div>
-          <div className="rounded-xl border border-indigo-500/15 bg-[#0f0c29]/40 p-3">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">{t('tasks.form.fileSection')}</p>
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mb-2 text-[11px] text-gray-400">
+          <div className="rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard p-3">
+            <p className="text-xs font-semibold text-token-textMuted uppercase tracking-wider mb-2">{t('tasks.form.fileSection')}</p>
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mb-2 text-[11px] text-token-textMuted">
               {ASSIGNMENT_FORMAT_CHIPS.map((chip, i) => (
                 <span key={chip.key} className="inline-flex items-center gap-0.5">
                   {i > 0 ? <span className="text-gray-600 mr-1">•</span> : null}
@@ -776,7 +776,7 @@ export default function InstructorTasks() {
                 <span aria-hidden>📚</span>
                 {t('tasks.pickFromLibrary')}
               </button>
-              <label className="inline-flex items-center gap-1.5 rounded-lg border border-blue-500/30 bg-blue-500/10 px-3 py-1.5 text-xs font-semibold text-blue-300 hover:bg-blue-500/15 cursor-pointer disabled:opacity-50">
+              <label className="inline-flex items-center gap-1.5 rounded-lg border border-blue-500/30 bg-blue-500/10 px-3 py-1.5 text-xs font-semibold text-sky-800 [.theme-dark_&]:text-sky-300 hover:bg-blue-500/15 cursor-pointer disabled:opacity-50">
                 <span aria-hidden>📤</span>
                 {t('tasks.uploadFromComputer')}
                 <input
@@ -807,7 +807,7 @@ export default function InstructorTasks() {
               <p className="text-sm text-gray-500">{t('tasks.form.fileUploading')}</p>
             ) : form.question_file_url ? (
               <a
-                className="text-sm text-blue-300 hover:text-blue-200 break-all"
+                className="text-sm text-sky-800 [.theme-dark_&]:text-sky-300 hover:text-sky-900 break-all"
                 href={assignmentFileOpenUrl(form.question_file_url)}
                 target="_blank"
                 rel="noreferrer"
@@ -820,20 +820,20 @@ export default function InstructorTasks() {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">{t('tasks.form.dueDate')}</label>
+              <label className="block text-xs font-semibold text-token-textMuted uppercase tracking-wider mb-2">{t('tasks.form.dueDate')}</label>
               <input
                 type="date"
-                className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500"
+                className="w-full bg-token-surfaceCard border border-[color:var(--border-subtle)] rounded-xl px-4 py-2.5 text-token-textMain text-sm outline-none focus:border-blue-500"
                 value={form.due_date}
                 onChange={(e) => setForm((p) => ({ ...p, due_date: e.target.value }))}
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">{t('tasks.form.maxScore')}</label>
+              <label className="block text-xs font-semibold text-token-textMuted uppercase tracking-wider mb-2">{t('tasks.form.maxScore')}</label>
               <input
                 type="number"
                 min={1}
-                className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500"
+                className="w-full bg-token-surfaceCard border border-[color:var(--border-subtle)] rounded-xl px-4 py-2.5 text-token-textMain text-sm outline-none focus:border-blue-500"
                 value={form.max_score}
                 onChange={(e) => setForm((p) => ({ ...p, max_score: e.target.value }))}
                 placeholder="100"
@@ -848,9 +848,9 @@ export default function InstructorTasks() {
             ) : (
               <>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">{t('tasks.form.group')}</label>
+                  <label className="block text-xs font-semibold text-token-textMuted uppercase tracking-wider mb-2">{t('tasks.form.group')}</label>
                   <select
-                    className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500"
+                    className="w-full bg-token-surfaceCard border border-[color:var(--border-subtle)] rounded-xl px-4 py-2.5 text-token-textMain text-sm outline-none focus:border-blue-500"
                     value={form.group_id}
                     onChange={(e) => setForm((p) => ({ ...p, group_id: e.target.value }))}
                   >
@@ -864,7 +864,7 @@ export default function InstructorTasks() {
                   </select>
                 </div>
                 <div className="border-t border-indigo-500/20 pt-3 mt-4">
-                  <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                  <label className="block text-xs font-semibold text-token-textMuted uppercase tracking-wider mb-2">
                     {t('tasks.form.crmStudents')}
                   </label>
                   <p className="text-xs text-gray-500 mb-2 leading-relaxed">
@@ -877,7 +877,7 @@ export default function InstructorTasks() {
                   ) : !students.filter((s) => (s.enrollment_status || 'active') === 'active').length ? (
                     <p className="text-sm text-amber-200/90">{t('tasks.form.noActiveStudents')}</p>
                   ) : (
-                    <ul className="max-h-48 overflow-y-auto overscroll-contain space-y-2 rounded-xl border border-indigo-500/15 p-2 bg-[#0f0c29]/40">
+                    <ul className="max-h-48 overflow-y-auto overscroll-contain space-y-2 rounded-xl border border-[color:var(--border-subtle)] p-2 bg-token-surfaceCard">
                       {students
                         .filter((s) => (s.enrollment_status || 'active') === 'active')
                         .map((s) => {
@@ -893,7 +893,7 @@ export default function InstructorTasks() {
                                   onChange={() => sid && toggleStudent(sid)}
                                   disabled={!sid}
                                 />
-                                <span className="text-sm text-white truncate">{s.full_name}</span>
+                                <span className="text-sm text-token-textMain truncate">{s.full_name}</span>
                               </label>
                             </li>
                           )
@@ -923,14 +923,14 @@ export default function InstructorTasks() {
           <p className="text-sm text-amber-200/90">{reviewErr}</p>
         ) : review ? (
           <div className="space-y-4">
-            <div className="rounded-xl border border-indigo-500/15 bg-[#0f0c29]/50 p-3">
-              <p className="text-sm text-white font-semibold break-words">{review.title}</p>
+            <div className="rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard p-3">
+              <p className="text-sm text-token-textMain font-semibold break-words">{review.title}</p>
               {review.topic ? <p className="text-sm text-indigo-200/90 mt-1">{t('tasks.review.topic', { topic: review.topic })}</p> : null}
               {review.question_file_url ? (
                 <p className="text-xs text-gray-500 mt-1">
                   {t('tasks.review.taskFile')}{' '}
                   <a
-                    className="text-blue-300 hover:text-blue-200 font-semibold"
+                    className="text-sky-800 [.theme-dark_&]:text-sky-300 hover:text-sky-900 font-semibold"
                     href={assignmentFileOpenUrl(review.question_file_url)}
                     target="_blank"
                     rel="noreferrer"
@@ -944,7 +944,7 @@ export default function InstructorTasks() {
               </p>
             </div>
 
-            <div className="rounded-xl border border-indigo-500/15 bg-[#0f0c29]/40 p-3">
+            <div className="rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard p-3">
               <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-2">{t('tasks.review.studentAnswer')}</p>
               {review.answer_text ? (
                 <div
@@ -956,14 +956,14 @@ export default function InstructorTasks() {
               )}
             </div>
 
-            <div className="rounded-xl border border-indigo-500/15 bg-[#0f0c29]/40 p-3">
+            <div className="rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard p-3">
               <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-2">{t('tasks.review.files')}</p>
               {Array.isArray(review.attachment_urls) && review.attachment_urls.length ? (
                 <ul className="space-y-2">
                   {review.attachment_urls.map((u) => (
                     <li key={u}>
                       <a
-                        className="text-sm text-blue-300 hover:text-blue-200 break-all"
+                        className="text-sm text-sky-800 [.theme-dark_&]:text-sky-300 hover:text-sky-900 break-all"
                         href={assignmentFileOpenUrl(u)}
                         target="_blank"
                         rel="noreferrer"
@@ -979,7 +979,7 @@ export default function InstructorTasks() {
             </div>
 
             {Array.isArray(review.attachment_urls) && review.attachment_urls.some(isPreviewable) && (
-              <div className="rounded-xl border border-indigo-500/15 bg-[#0f0c29]/40 p-3">
+              <div className="rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard p-3">
                 <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-2">{t('tasks.review.preview')}</p>
                 <div className="space-y-4">
                   {review.attachment_urls
@@ -987,7 +987,7 @@ export default function InstructorTasks() {
                     .map((u) => (
                       <div key={`pv-${u}`} className="space-y-2">
                         <a
-                          className="text-xs text-blue-300 break-all"
+                          className="text-xs text-sky-800 [.theme-dark_&]:text-sky-300 break-all"
                           href={assignmentFileOpenUrl(u)}
                           target="_blank"
                           rel="noreferrer"
@@ -1002,7 +1002,7 @@ export default function InstructorTasks() {
             )}
 
             {review.question_file_url && isAssignmentPreviewable(review.question_file_url) && (
-              <div className="rounded-xl border border-indigo-500/15 bg-[#0f0c29]/40 p-3">
+              <div className="rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard p-3">
                 <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-2">
                   {t('tasks.review.taskFilePreview')}
                 </p>
@@ -1053,7 +1053,7 @@ export default function InstructorTasks() {
                     {aiMeta.suggested_score != null ? (
                       <p>
                         <span className="text-gray-500">{t('tasks.review.suggestedScore')}</span>{' '}
-                        <span className="font-semibold text-white">
+                        <span className="font-semibold text-token-textMain">
                           {aiMeta.suggested_score}
                           {review.max_score != null ? ` / ${review.max_score}` : ''}
                         </span>
@@ -1091,25 +1091,25 @@ export default function InstructorTasks() {
               </div>
             ) : null}
 
-            <div className="rounded-xl border border-indigo-500/15 bg-[#0f0c29]/40 p-3 space-y-3">
+            <div className="rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard p-3 space-y-3">
               <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">{t('tasks.review.gradeTitle')}</p>
               <div className="flex items-center gap-2">
                 <input
                   type="number"
                   min={0}
                   max={review.max_score || undefined}
-                  className="w-28 bg-[#13112e] border border-indigo-500/20 rounded-lg px-3 py-2 text-white text-sm"
+                  className="w-28 bg-token-surfaceCard border border-[color:var(--border-subtle)] rounded-lg px-3 py-2 text-token-textMain text-sm"
                   value={reviewScore}
                   onChange={(e) => setReviewScore(e.target.value)}
                   placeholder={review.max_score ? t('tasks.review.scoreRange', { max: review.max_score }) : t('tasks.review.scorePlaceholder')}
                 />
                 {review.max_score ? (
-                  <span className="text-sm text-gray-400">/ {review.max_score}</span>
+                  <span className="text-sm text-token-textMuted">/ {review.max_score}</span>
                 ) : null}
               </div>
               <textarea
                 rows={4}
-                className="w-full bg-[#13112e] border border-indigo-500/20 rounded-xl px-3 py-2 text-white text-sm resize-none"
+                className="w-full bg-token-surfaceCard border border-[color:var(--border-subtle)] rounded-xl px-3 py-2 text-token-textMain text-sm resize-none"
                 value={reviewFeedback}
                 onChange={(e) => setReviewFeedback(e.target.value)}
                 placeholder={t('tasks.review.feedbackPh')}
