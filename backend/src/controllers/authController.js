@@ -27,6 +27,7 @@ const { resolveLoginUserOrError, resolveSmsBillingInstructorId: resolveSmsBillin
 const { guardEmailVerifiedBeforeToken } = require('../services/emailVerificationGuard');
 const {
   canAdoptLoginPassword,
+  hasUserChosenPassword,
   normalizePasswordInput,
   passwordLoginFailureBody,
 } = require('../lib/emailAuthKind');
@@ -90,6 +91,19 @@ function normalizeEmailInput(email) {
   const e = String(email || '').trim().toLowerCase();
   if (!e || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) return null;
   return e;
+}
+
+async function attachTypedPasswordToGoogleUser(userId, rawPassword) {
+  const pass = normalizePasswordInput(rawPassword);
+  if (pass.length < 8 || !userId) return;
+  const { rows } = await db.query(
+    `SELECT password_hash, google_sub, auth_provider FROM users WHERE id = $1 LIMIT 1`,
+    [userId],
+  );
+  const row = rows[0];
+  if (!row || hasUserChosenPassword(row)) return;
+  const hash = await bcrypt.hash(pass, 12);
+  await db.query(`UPDATE users SET password_hash = $1 WHERE id = $2`, [hash, userId]);
 }
 
 const PASSWORD_RESET_TTL_MINUTES = Number(process.env.PASSWORD_RESET_TTL_MINUTES || 30);
@@ -1960,6 +1974,8 @@ const googleLogin = async (req, res) => {
       });
     }
 
+    await attachTypedPasswordToGoogleUser(user.id, req.body?.password);
+
     if (isAdminRole(user)) {
       await respondAdminSession(req, res, user);
       return;
@@ -2221,6 +2237,7 @@ const googleComplete = async (req, res) => {
     const isSignupIntent = parseGoogleAuthIntent(req.body);
     const g = await verifyGoogleIdTokenOrThrow(credential);
     const requestedRole = String(req.body?.role || '').trim().toLowerCase();
+    const typedPassword = normalizePasswordInput(req.body?.password);
 
     const { rows: existingBySub } = await db.query(
       `SELECT id, full_name, email, role, phone, phone_verified, google_sub, account_status, is_active, is_verified,
@@ -2276,10 +2293,10 @@ const googleComplete = async (req, res) => {
 
     if (!user) {
       const fullName = g.name || (g.email ? g.email.split('@')[0] : 'User');
-      const oauthPasswordPlaceholder = await bcrypt.hash(
-        `google_oauth:${g.sub}:${Date.now()}:${Math.random()}`,
-        10
-      );
+      const passwordHash =
+        typedPassword.length >= 8
+          ? await bcrypt.hash(typedPassword, 12)
+          : await bcrypt.hash(`google_oauth:${g.sub}:${Date.now()}:${Math.random()}`, 10);
       const { rows: created } = await db.query(
         `INSERT INTO users (
            full_name, email, role, auth_provider, google_sub, phone_verified, password_hash,
@@ -2288,7 +2305,7 @@ const googleComplete = async (req, res) => {
          VALUES ($1, $2, 'student', 'google', $3, FALSE, $4, 'active', TRUE, $5, FALSE, FALSE, NULL)
          RETURNING id, full_name, email, role, phone, phone_verified, is_verified,
                    role_selected, persona, persona_profile, onboarding_completed`,
-        [fullName, g.email, g.sub, oauthPasswordPlaceholder, localeFromReq(req)]
+        [fullName, g.email, g.sub, passwordHash, localeFromReq(req)]
       );
       user = created[0];
     } else {
@@ -2306,6 +2323,8 @@ const googleComplete = async (req, res) => {
       );
       if (linked[0]) user = { ...user, ...linked[0] };
     }
+
+    if (user?.id) await attachTypedPasswordToGoogleUser(user.id, typedPassword);
 
     if (!guardEmailVerifiedBeforeToken(res, user)) return;
 

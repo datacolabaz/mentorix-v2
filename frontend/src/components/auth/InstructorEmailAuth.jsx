@@ -200,8 +200,12 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
     try {
       const r =
         tab === 'login'
-          ? await googleAuthWithAutoRole(credential, loginRoleFallback ? loginRole : null)
-          : await googleSignup(credential)
+          ? await googleAuthWithAutoRole(
+              credential,
+              loginRoleFallback ? loginRole : null,
+              loginPassword,
+            )
+          : await googleSignup(credential, signupPassword)
       if (!r?.token || !r?.user) {
         toast(r?.message || t('auth.errors.googleIncomplete'), 'error')
         return

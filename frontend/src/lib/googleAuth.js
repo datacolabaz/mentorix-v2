@@ -3,14 +3,20 @@ import i18n from '../i18n'
 
 const LOGIN_ROLE_TRY_ORDER = ['instructor', 'course', 'student', 'parent']
 
+function passwordPayload(password) {
+  const p = String(password || '').trim()
+  return p.length >= 8 ? { password: p } : {}
+}
+
 /** Mövcud Google hesabı — rol soruşmadan daxil olur; yalnız uğursuzluqda rol cəhdi. */
-export async function googleAuthWithAutoRole(credential, forcedRole) {
+export async function googleAuthWithAutoRole(credential, forcedRole, password) {
+  const extra = passwordPayload(password)
   if (!forcedRole) {
     try {
-      let r = await api.post('/auth/google/login', { credential, intent: 'signin' })
+      let r = await api.post('/auth/google/login', { credential, intent: 'signin', ...extra })
       if (r?.token && r?.user) return r
       if (r?.needs_onboarding || r?.needs_role) {
-        r = await api.post('/auth/google/complete', { credential, intent: 'signin' })
+        r = await api.post('/auth/google/complete', { credential, intent: 'signin', ...extra })
         if (r?.token && r?.user) return r
       }
     } catch (err) {
@@ -22,9 +28,9 @@ export async function googleAuthWithAutoRole(credential, forcedRole) {
   let lastRoleError = null
   for (const role of roles) {
     try {
-      let r = await api.post('/auth/google/login', { credential, role, intent: 'signin' })
+      let r = await api.post('/auth/google/login', { credential, role, intent: 'signin', ...extra })
       if (r?.needs_role || r?.needs_onboarding || r?.needs_phone_link) {
-        r = await api.post('/auth/google/complete', { credential, role, intent: 'signin' })
+        r = await api.post('/auth/google/complete', { credential, role, intent: 'signin', ...extra })
       }
       if (r?.token && r?.user) return r
       lastRoleError = new Error(r?.message || i18n.t('auth.errors.googleIncomplete'))
@@ -41,10 +47,10 @@ export async function googleAuthWithAutoRole(credential, forcedRole) {
   throw lastRoleError || new Error(i18n.t('auth.errors.googleSelectRole'))
 }
 
-export async function googleSignup(credential) {
+export async function googleSignup(credential, password) {
   return api.post(
     '/auth/google/complete',
-    { credential, intent: 'signup' },
+    { credential, intent: 'signup', ...passwordPayload(password) },
     { timeout: AUTH_REQUEST_TIMEOUT_MS },
   )
 }

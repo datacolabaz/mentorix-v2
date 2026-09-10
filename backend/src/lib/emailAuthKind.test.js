@@ -36,7 +36,7 @@ describe('emailAuthKind', () => {
     assert.equal(canAdoptLoginPassword(student, 'Parol1234', true), false);
     assert.equal(
       canAdoptLoginPassword({ role: 'instructor', google_sub: 'abc', password_hash: GOOGLE_PLACEHOLDER }, 'Parol1234', false),
-      false,
+      true,
     );
     assert.equal(
       canAdoptLoginPassword({ role: 'student', password_hash: 'real' }, 'Parol1234', false),
@@ -54,13 +54,15 @@ describe('emailAuthKind', () => {
     assert.equal(hasUserChosenPassword({ password_hash: EMAIL_HASH }), true);
   });
 
-  it('tells Google-only teachers to use Google instead of "wrong password"', () => {
-    const body = passwordLoginFailureBody({
-      role: 'instructor',
-      google_sub: 'abc',
-      password_hash: GOOGLE_PLACEHOLDER,
-    });
-    assert.equal(body.code, 'GOOGLE_LOGIN_REQUIRED');
+  it('lets a Google-only teacher adopt the password they type on email login', () => {
+    assert.equal(
+      canAdoptLoginPassword(
+        { role: 'instructor', google_sub: 'abc', password_hash: GOOGLE_PLACEHOLDER },
+        'Parol1234',
+        false,
+      ),
+      true,
+    );
   });
 
   it('trims passwords so mobile autofill spaces do not fail login', () => {

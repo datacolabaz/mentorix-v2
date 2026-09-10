@@ -36,8 +36,6 @@ function googleLoginRequiredBody() {
   };
 }
 
-const ROLES_WITH_OWN_PASSWORD = new Set(['instructor', 'admin', 'course', 'parent']);
-
 function looksLikeGooglePlaceholderHash(hash) {
   return /\$2[aby]?\$10\$/.test(String(hash || ''));
 }
@@ -54,16 +52,13 @@ function normalizePasswordInput(password) {
 }
 
 /**
- * Google ilə yaranmış iştirakçının Mentorix şifrəsi olmur (random hash).
- * Email+parol yazanda həmin parolu saxlayıb daxil etmək olar — müəllim qeydiyyatı kimi.
+ * Google ilə yaranmış hesabda (placeholder hash) ilk email+şifrə girişi
+ * həmin şifrəni saxlayır — müəllim də daxil olmaqla.
  */
 function canAdoptLoginPassword(user, password, passOk) {
   if (passOk || !user) return false;
   if (normalizePasswordInput(password).length < 8) return false;
-  const role = String(user.role || '').toLowerCase();
-  if (ROLES_WITH_OWN_PASSWORD.has(role)) return false;
-  if (!user.password_hash) return true;
-  return isGoogleAuthUser(user) && looksLikeGooglePlaceholderHash(user.password_hash);
+  return !hasUserChosenPassword(user);
 }
 
 function passwordLoginFailureBody(user) {
