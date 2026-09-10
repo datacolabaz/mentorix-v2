@@ -231,7 +231,7 @@
       "enterEmail": "Email daxil edin",
       "enterPassword": "Şifrə daxil edin",
       "verifyEmailFirst": "Əvvəlcə emaili təsdiqləyin (kod və ya link)",
-      "signupReadyLogin": "Qeydiyyat hazırdır. İndi email və şifrə ilə daxil olun — kod lazım deyil.",
+      "signupReadyLogin": "Qeydiyyat uğurludur. İndi istifadə məqsədinizi seçin.",
       "googleLoginRequired": "Bu hesab Google ilə yaradılıb. Email kodu lazım deyil — «Google ilə davam et» düyməsini basın.",
       "loginError": "Giriş xətası",
       "emailVerifiedChooseRole": "Email təsdiqləndi! İndi istifadə məqsədinizi seçin.",

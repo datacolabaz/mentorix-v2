@@ -25,7 +25,11 @@ const {
 } = require('../services/emailVerificationIssue');
 const { resolveLoginUserOrError, resolveSmsBillingInstructorId: resolveSmsBillingForLogin } = require('../services/authService');
 const { guardEmailVerifiedBeforeToken } = require('../services/emailVerificationGuard');
-const { canAdoptLoginPassword } = require('../lib/emailAuthKind');
+const {
+  canAdoptLoginPassword,
+  normalizePasswordInput,
+  passwordLoginFailureBody,
+} = require('../lib/emailAuthKind');
 const {
   getActiveRoles,
   getLoginEligibleRoles,
@@ -111,7 +115,7 @@ const requestPasswordReset = async (req, res) => {
     );
     const user = rows[0] || null;
     // Always respond success to avoid email enumeration.
-    if (!user || !user.password_hash) {
+    if (!user) {
       return res.json({ success: true, message: 'Əgər bu email hesabınıza bağlıdırsa, bərpa linki göndərildi.' });
     }
 
@@ -1252,7 +1256,7 @@ const signup = async (req, res) => {
     const name = String(full_name || '').trim();
     if (!name) return res.status(400).json({ success: false, message: 'Ad soyad tələb olunur' });
 
-    const pass = String(password || '');
+    const pass = normalizePasswordInput(password);
     if (pass.length < 8) {
       return res.status(400).json({ success: false, message: 'Şifrə ən azı 8 simvol olmalıdır' });
     }
@@ -1271,11 +1275,11 @@ const signup = async (req, res) => {
       });
     }
 
-    const user = await db.transaction(async (client) => {
+    const created = await db.transaction(async (client) => {
       const { rows } = await client.query(
         `INSERT INTO users (full_name, email, phone, password_hash, role, is_verified, account_status, role_selected, phone_verified, onboarding_completed, persona)
          VALUES ($1, $2, NULL, $3, $4, TRUE, 'active', $5, FALSE, FALSE, NULL)
-         RETURNING id, full_name, email, role, phone, phone_verified, role_selected, onboarding_completed, persona`,
+         RETURNING *`,
         [name, emailCanon, hash, initialRole, roleSelected],
       );
       return rows[0];
@@ -1283,7 +1287,7 @@ const signup = async (req, res) => {
 
     scheduleAccessEvent(req, {
       event_type: 'signup_complete',
-      user_id: user.id,
+      user_id: created.id,
       role: null,
       path: '/auth/signup',
       device_type: req.body?.device_type,
@@ -1293,18 +1297,24 @@ const signup = async (req, res) => {
       referrer_url: req.body?.referrer_url,
     });
 
+    const token = sign({ id: created.id, role: null });
+    const lite = {
+      id: created.id,
+      full_name: created.full_name,
+      email: created.email,
+      role: null,
+      phone: created.phone,
+      persona: created.persona || null,
+      persona_profile: created.persona_profile || {},
+      onboarding_completed: false,
+    };
     return res.status(201).json({
       success: true,
-      message: 'Qeydiyyat uğurludur. İndi «Daxil ol» bölməsindən email və şifrə ilə giriş edin.',
-      user: {
-        id: user.id,
-        full_name: user.full_name,
-        email: user.email,
-        role: null,
-        persona: null,
-        onboarding_completed: false,
-      },
+      message: 'Qeydiyyat uğurludur.',
+      needs_role: true,
       needs_onboarding: true,
+      token,
+      user: lite,
       email_verification_sent: false,
     });
   } catch (err) {
@@ -1326,7 +1336,7 @@ const loginWithEmail = async (req, res) => {
     const { email, password, role: roleRaw } = req.body || {};
     const emailCanon = normalizeEmailInput(email);
     if (!emailCanon) return res.status(400).json({ success: false, message: 'Düzgün email daxil edin' });
-    const pass = String(password || '');
+    const pass = normalizePasswordInput(password);
     if (!pass) return res.status(400).json({ success: false, message: 'Şifrə tələb olunur' });
 
     const requestedRole = String(roleRaw || '').trim().toLowerCase();
@@ -1341,7 +1351,7 @@ const loginWithEmail = async (req, res) => {
     );
     const user = rows[0];
     if (!user) {
-      return res.status(401).json({ success: false, message: 'Email və ya şifrə yanlışdır' });
+      return res.status(401).json(passwordLoginFailureBody(null));
     }
     let passOk = Boolean(user.password_hash) && (await bcrypt.compare(pass, user.password_hash));
     if (!passOk && canAdoptLoginPassword(user, pass, passOk)) {
@@ -1351,7 +1361,7 @@ const loginWithEmail = async (req, res) => {
       passOk = true;
     }
     if (!passOk) {
-      return res.status(401).json({ success: false, message: 'Email və ya şifrə yanlışdır' });
+      return res.status(401).json(passwordLoginFailureBody(user));
     }
 
     if (isAdminRole(user)) {

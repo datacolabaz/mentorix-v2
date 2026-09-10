@@ -231,7 +231,7 @@
       "enterEmail": "Введите email",
       "enterPassword": "Введите пароль",
       "verifyEmailFirst": "Сначала подтвердите email (код или ссылка)",
-      "signupReadyLogin": "Регистрация готова. Войдите с email и паролем — код не нужен.",
+      "signupReadyLogin": "Регистрация успешна. Теперь выберите, как будете пользоваться Mentorix.",
       "googleLoginRequired": "Этот аккаунт создан через Google. Код не нужен — нажмите «Продолжить с Google».",
       "loginError": "Ошибка входа",
       "emailVerifiedChooseRole": "Email подтверждён! Теперь выберите, как будете использовать Mentorix.",

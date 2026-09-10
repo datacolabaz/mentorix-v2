@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import GoogleSignInButton from './GoogleSignInButton'
@@ -62,58 +62,31 @@ function AuthModeTabs({ tab, onTab }) {
   )
 }
 
-function isIosLike() {
-  if (typeof navigator === 'undefined') return false
-  const ua = navigator.userAgent || ''
-  if (/iPad|iPhone|iPod/i.test(ua)) return true
-  return navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1
-}
-
-/**
- * Desktop: type=password + standart id/name — Chrome/Edge autofill cütü tanıyır.
- * iOS Safari: type=text + mask — Keychain overlay hər hərfdə bloklamasın.
- */
-function LoginPasswordInput({ inputRef }) {
+function LoginPasswordInput({ value, onChange }) {
   const { t } = useTranslation()
-  const ios = isIosLike()
-  const shared = {
-    ref: inputRef,
-    id: 'password',
-    name: 'password',
-    placeholder: t('auth.passwordPlaceholder'),
-    autoComplete: 'current-password',
-    autoCapitalize: 'off',
-    autoCorrect: 'off',
-    spellCheck: false,
-    enterKeyHint: 'go',
-    defaultValue: '',
-    onFocus: (e) => {
-      window.setTimeout(() => {
-        try {
-          e.target.scrollIntoView({ block: 'center', behavior: 'smooth' })
-        } catch {
-          /* ignore */
-        }
-      }, 400)
-    },
-  }
-
-  if (ios) {
-    return (
-      <input
-        {...shared}
-        type="text"
-        inputMode="text"
-        className={`${inputClass} mx-login-password-mask touch-manipulation`}
-      />
-    )
-  }
-
   return (
     <input
-      {...shared}
+      id="password"
+      name="password"
       type="password"
+      placeholder={t('auth.passwordPlaceholder')}
+      autoComplete="current-password"
+      autoCapitalize="off"
+      autoCorrect="off"
+      spellCheck={false}
+      enterKeyHint="go"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
       className={`${inputClass} touch-manipulation`}
+      onFocus={(e) => {
+        window.setTimeout(() => {
+          try {
+            e.target.scrollIntoView({ block: 'center', behavior: 'smooth' })
+          } catch {
+            /* ignore */
+          }
+        }, 400)
+      }}
     />
   )
 }
@@ -202,9 +175,9 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
   const [loading, setLoading] = useState(false)
 
   const [loginEmail, setLoginEmail] = useState('')
+  const [loginPassword, setLoginPassword] = useState('')
   const [loginRole, setLoginRole] = useState('instructor')
   const [loginRoleFallback, setLoginRoleFallback] = useState(false)
-  const loginPasswordRef = useRef(null)
 
   const [signupFullName, setSignupFullName] = useState('')
   const [signupEmail, setSignupEmail] = useState('')
@@ -264,12 +237,17 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
     e.preventDefault()
     setLoading(true)
     try {
-      await signupWithEmail({
+      const data = await signupWithEmail({
         full_name: signupFullName,
         email: signupEmail,
         password: signupPassword,
         ...getAttributionPayload(),
       })
+      if (data?.token && data?.user) {
+        toast(t('auth.toasts.signupReadyLogin'), 'success')
+        finishEmailLogin(data)
+        return
+      }
       const em = String(signupEmail || '').trim()
       setLoginEmail(em)
       pickTab('login')
@@ -309,7 +287,7 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
     const form = e.currentTarget
     const fd = new FormData(form)
     const email = String(fd.get('email') || loginEmail || '').trim()
-    const password = String(fd.get('password') || loginPasswordRef.current?.value || '')
+    const password = String(fd.get('password') || loginPassword || '').trim()
     if (!email) {
       toast(t('auth.toasts.enterEmail'), 'error')
       return
@@ -481,7 +459,7 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
               onChange={(e) => setLoginEmail(e.target.value)}
               required
             />
-            <LoginPasswordInput inputRef={loginPasswordRef} />
+            <LoginPasswordInput value={loginPassword} onChange={setLoginPassword} />
             <Button type="submit" loading={loading} className="w-full justify-center">
               {t('auth.login')}
             </Button>

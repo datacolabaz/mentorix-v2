@@ -5,7 +5,13 @@ const {
   isUserEmailVerified,
   googleLoginRequiredBody,
   canAdoptLoginPassword,
+  hasUserChosenPassword,
+  passwordLoginFailureBody,
+  normalizePasswordInput,
 } = require('../lib/emailAuthKind');
+
+const GOOGLE_PLACEHOLDER = '$2a$10$googleplaceholderhashxxxx';
+const EMAIL_HASH = '$2b$12$realuserpasswordhashxxxxxxx';
 
 describe('emailAuthKind', () => {
   it('treats Google-linked accounts as verified without an email code', () => {
@@ -24,12 +30,12 @@ describe('emailAuthKind', () => {
   });
 
   it('lets a Google participant adopt the password they type on login', () => {
-    const student = { role: 'student', google_sub: 'abc', password_hash: 'placeholder' };
+    const student = { role: 'student', google_sub: 'abc', password_hash: GOOGLE_PLACEHOLDER };
     assert.equal(canAdoptLoginPassword(student, 'Parol1234', false), true);
     assert.equal(canAdoptLoginPassword(student, 'short', false), false);
     assert.equal(canAdoptLoginPassword(student, 'Parol1234', true), false);
     assert.equal(
-      canAdoptLoginPassword({ role: 'instructor', google_sub: 'abc' }, 'Parol1234', false),
+      canAdoptLoginPassword({ role: 'instructor', google_sub: 'abc', password_hash: GOOGLE_PLACEHOLDER }, 'Parol1234', false),
       false,
     );
     assert.equal(
@@ -40,5 +46,24 @@ describe('emailAuthKind', () => {
       canAdoptLoginPassword({ role: 'student', password_hash: null }, 'Parol1234', false),
       true,
     );
+  });
+
+  it('treats Google cost-10 hashes as not user-chosen', () => {
+    assert.equal(hasUserChosenPassword({ google_sub: 'x', password_hash: GOOGLE_PLACEHOLDER }), false);
+    assert.equal(hasUserChosenPassword({ google_sub: 'x', password_hash: EMAIL_HASH }), true);
+    assert.equal(hasUserChosenPassword({ password_hash: EMAIL_HASH }), true);
+  });
+
+  it('tells Google-only teachers to use Google instead of "wrong password"', () => {
+    const body = passwordLoginFailureBody({
+      role: 'instructor',
+      google_sub: 'abc',
+      password_hash: GOOGLE_PLACEHOLDER,
+    });
+    assert.equal(body.code, 'GOOGLE_LOGIN_REQUIRED');
+  });
+
+  it('trims passwords so mobile autofill spaces do not fail login', () => {
+    assert.equal(normalizePasswordInput('  Secret123  '), 'Secret123');
   });
 });
