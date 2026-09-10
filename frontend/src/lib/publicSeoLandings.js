@@ -260,6 +260,39 @@ export const PUBLIC_SEO_LANDINGS = [
 
 export { MENTORIX_PLATFORM_FEATURES } from './mentorixPublicMarketing'
 
+export function landingI18nKey(path) {
+  return String(path || '')
+    .replace(/^\//, '')
+    .replace(/-/g, '_')
+}
+
+export function localizePublicLanding(landing, t) {
+  if (!landing || !t) return landing
+  const key = landingI18nKey(landing.path)
+  const ns = `publicLandings.pages.${key}`
+  const intro = t(`${ns}.intro`, { returnObjects: true })
+  const bullets = t(`${ns}.bullets`, { returnObjects: true })
+  return {
+    ...landing,
+    title: t(`${ns}.title`, { defaultValue: landing.title }),
+    description: t(`${ns}.description`, { defaultValue: landing.description }),
+    h1: t(`${ns}.h1`, { defaultValue: landing.h1 }),
+    ctaLabel: t(`${ns}.ctaLabel`, { defaultValue: landing.ctaLabel }),
+    intro: Array.isArray(intro) ? intro : landing.intro,
+    bullets: Array.isArray(bullets) ? bullets : landing.bullets || [],
+  }
+}
+
+export function localizePlatformFeatures(t, fallback) {
+  const items = t('publicLandings.features', { returnObjects: true })
+  return Array.isArray(items) && items.length ? items : fallback
+}
+
+export function localizePlatformBenefits(t, fallback) {
+  const items = t('publicLandings.benefits', { returnObjects: true })
+  return Array.isArray(items) && items.length ? items : fallback
+}
+
 export function landingByPath(path) {
   const p = String(path || '').replace(/\/+$/, '') || '/'
   return PUBLIC_SEO_LANDINGS.find((l) => l.path === p) || null

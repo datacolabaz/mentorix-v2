@@ -24,7 +24,7 @@ export default function LanguageSwitcher({ className = '', tone = 'auto', size =
         className={[
           'font-bold transition-colors rounded-full whitespace-nowrap',
           comfortable
-            ? 'flex-1 min-h-[44px] px-3 text-sm'
+            ? 'flex-1 min-h-[48px] px-4 text-base'
             : 'px-2.5 py-1 sm:px-3 sm:py-1.5 text-[11px] sm:text-xs',
           on
             ? isDark

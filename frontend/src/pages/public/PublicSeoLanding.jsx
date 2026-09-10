@@ -6,7 +6,14 @@ import PublicMarketingNav from '../../components/public/PublicMarketingNav'
 import PricingAudienceExplainer from '../../components/public/PricingAudienceExplainer'
 import PublicPricingCompare from '../../components/public/PublicPricingCompare'
 import PublicPricingAudienceGroups from '../../components/public/PublicPricingAudienceGroups'
-import { landingByPath, ctaHrefForLanding, MENTORIX_PLATFORM_FEATURES } from '../../lib/publicSeoLandings'
+import {
+  landingByPath,
+  ctaHrefForLanding,
+  MENTORIX_PLATFORM_FEATURES,
+  localizePublicLanding,
+  localizePlatformFeatures,
+  localizePlatformBenefits,
+} from '../../lib/publicSeoLandings'
 import { MENTORIX_PLATFORM_BENEFITS } from '../../lib/mentorixPublicMarketing'
 import { setPageSeo } from '../../lib/pageSeo'
 import { useSubscriptionPlans } from '../../hooks/useSubscriptionPlans'
@@ -14,9 +21,12 @@ import { allActivePlanTitlesList } from '../../lib/subscriptionPlanGuards'
 import api from '../../lib/api'
 
 export default function PublicSeoLanding() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const { pathname } = useLocation()
-  const landing = landingByPath(pathname)
+  const rawLanding = landingByPath(pathname)
+  const landing = useMemo(() => localizePublicLanding(rawLanding, t), [rawLanding, t, i18n.language])
+  const platformFeatures = localizePlatformFeatures(t, MENTORIX_PLATFORM_FEATURES)
+  const platformBenefits = localizePlatformBenefits(t, MENTORIX_PLATFORM_BENEFITS)
   const plansQ = useSubscriptionPlans()
   const plans = Array.isArray(plansQ.data) ? plansQ.data : []
   const isPricingPage = landing?.path === '/qiymetler'
@@ -57,7 +67,7 @@ export default function PublicSeoLanding() {
       ],
       pricingProduct: Boolean(landing.showPricingPlans),
     })
-  }, [landing, planTitlesLabel, plans.length])
+  }, [landing, planTitlesLabel, plans.length, t])
 
   if (!landing) return <Navigate to="/search" replace />
 
@@ -79,7 +89,7 @@ export default function PublicSeoLanding() {
             ← {t('landing.pricingPage.backHome')}
           </Link>
           <p className="text-xs font-bold uppercase tracking-[0.14em] text-emerald-700">
-            Mentorix · {isPanel ? 'təhsil ekosistemi' : 'ictimai axtarış'}
+            Mentorix · {isPanel ? t('publicLandings.ecosystem') : t('publicLandings.searchEyebrow')}
           </p>
           <h1 className="text-[1.85rem] sm:text-4xl font-bold tracking-tight leading-tight text-slate-900">
             {isPricingPage ? t('landing.pricingPage.heading') : landing.h1}
@@ -123,10 +133,10 @@ export default function PublicSeoLanding() {
 
         {landing.showPlatformFeatures ? (
           <section className="space-y-4">
-            <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">Əsas imkanlar</p>
-            <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 leading-tight">Platformada nə edə bilərsiniz</h2>
+            <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">{t('publicLandings.featuresKicker')}</p>
+            <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 leading-tight">{t('publicLandings.featuresTitle')}</h2>
             <div className="grid gap-3">
-              {MENTORIX_PLATFORM_FEATURES.map((f) => (
+              {platformFeatures.map((f) => (
                 <article key={f.title} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-2">
                   <h3 className="text-lg font-bold text-slate-900">{f.title}</h3>
                   <p className="text-base text-slate-600 leading-relaxed">{f.text}</p>
@@ -138,10 +148,10 @@ export default function PublicSeoLanding() {
 
         {landing.showBenefitsList ? (
           <section className="space-y-4">
-            <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">Necə işləyir</p>
-            <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 leading-tight">Boş paneldən nəticəyə</h2>
+            <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">{t('publicLandings.howKicker')}</p>
+            <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 leading-tight">{t('publicLandings.howTitle')}</h2>
             <div className="space-y-3">
-              {MENTORIX_PLATFORM_BENEFITS.map((b, i) => (
+              {platformBenefits.map((b, i) => (
                 <article key={b} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm flex gap-4">
                   <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-sm font-bold text-emerald-700">
                     {i + 1}
@@ -164,19 +174,19 @@ export default function PublicSeoLanding() {
         <p className="text-sm text-slate-500 leading-relaxed">
           {isPanel ? (
             <>
-              Fərdi müəllim və ya təhsil xidməti təminatçısı — sizə uyğun paketi seçin.{' '}
+              {t('publicLandings.panelFoot')}{' '}
               <Link to="/search" className="text-emerald-700 font-semibold hover:underline">
-                İctimai müəllim axtarışı
+                {t('publicLandings.teacherSearch')}
               </Link>
               .
             </>
           ) : (
             <>
-              Mentorix müəllim, tələbə və valideynləri birləşdirən təhsil ekosistemidir.{' '}
+              {t('publicLandings.infoFoot')}{' '}
               <Link to="/login" className="text-emerald-700 font-semibold hover:underline">
-                Pulsuz qeydiyyat
+                {t('publicLandings.freeSignup')}
               </Link>{' '}
-              ilə müəllim profilinizi yarada bilərsiniz.
+              {t('publicLandings.infoFootAfter')}
             </>
           )}
         </p>

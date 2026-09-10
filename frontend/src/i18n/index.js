@@ -5,6 +5,7 @@ import az from '../locales/az/translation.json'
 import ru from '../locales/ru/translation.json'
 import en from '../locales/en/translation.json'
 import { universityCatalogAz, universityCatalogEn, universityCatalogRu } from '../locales/universityCatalog'
+import { publicLandingsAz, publicLandingsEn, publicLandingsRu } from '../locales/publicLandings'
 
 function withUniversityCatalog(base, catalog) {
   return {
@@ -16,9 +17,9 @@ function withUniversityCatalog(base, catalog) {
   }
 }
 
-const azResources = withUniversityCatalog(az, universityCatalogAz)
-const ruResources = withUniversityCatalog(ru, universityCatalogRu)
-const enResources = withUniversityCatalog(en, universityCatalogEn)
+const azResources = { ...withUniversityCatalog(az, universityCatalogAz), ...publicLandingsAz }
+const ruResources = { ...withUniversityCatalog(ru, universityCatalogRu), ...publicLandingsRu }
+const enResources = { ...withUniversityCatalog(en, universityCatalogEn), ...publicLandingsEn }
 
 export const LOCALE_KEY = 'mentorix_lang'
 const LEGACY_LOCALE_KEY = 'mentorix_locale_v1'
