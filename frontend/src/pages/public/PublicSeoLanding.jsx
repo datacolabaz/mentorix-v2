@@ -63,47 +63,94 @@ export default function PublicSeoLanding() {
 
   const ctaHref = ctaHrefForLanding(landing)
   const isPanel = landing.kind === 'panel' || landing.kind === 'feature'
+  const ctaClass =
+    'inline-flex w-full justify-center items-center rounded-xl bg-primary px-6 py-4 min-h-[52px] text-base font-bold text-[#041018] shadow-lg shadow-primary/20 hover:brightness-95'
 
   return (
-    <div className="min-h-[100svh] bg-[#0b0b0b] text-white flex flex-col">
+    <div className="min-h-[100svh] bg-[#f4f6fb] text-slate-800 flex flex-col">
       <PublicMarketingNav />
 
-      <main className={`flex-1 ${isPricingPage ? 'max-w-5xl' : 'max-w-3xl'} mx-auto px-4 py-10 sm:py-14 w-full space-y-8`}>
+      <main className={`flex-1 ${isPricingPage ? 'max-w-5xl' : 'max-w-3xl'} mx-auto px-4 py-8 sm:py-12 w-full space-y-8`}>
         <div className="space-y-4">
           <Link
             to="/"
-            className="inline-flex items-center text-sm font-semibold text-primary hover:brightness-110"
+            className="inline-flex items-center text-sm font-semibold text-emerald-700 hover:text-emerald-800"
           >
             ← {t('landing.pricingPage.backHome')}
           </Link>
-          <p className="text-[11px] font-bold uppercase tracking-wider text-primary">
+          <p className="text-xs font-bold uppercase tracking-[0.14em] text-emerald-700">
             Mentorix · {isPanel ? 'təhsil ekosistemi' : 'ictimai axtarış'}
           </p>
-          <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight leading-tight">
+          <h1 className="text-[1.85rem] sm:text-4xl font-bold tracking-tight leading-tight text-slate-900">
             {isPricingPage ? t('landing.pricingPage.heading') : landing.h1}
           </h1>
           {isPricingPage ? (
-            <p className="text-gray-400 text-sm sm:text-base leading-relaxed">{t('landing.pricingPage.intro')}</p>
+            <p className="text-base sm:text-lg text-slate-600 leading-relaxed">{t('landing.pricingPage.intro')}</p>
           ) : (
             landing.intro.map((p) => (
-              <p key={p.slice(0, 24)} className="text-gray-400 text-sm sm:text-base leading-relaxed">
+              <p key={p.slice(0, 24)} className="text-base sm:text-lg text-slate-600 leading-relaxed">
                 {p}
               </p>
             ))
           )}
         </div>
 
+        {landing.ctaExternal ? (
+          <a href={ctaHref} target="_blank" rel="noreferrer" className={ctaClass}>
+            {isPricingPage ? t('landing.pricingPage.cta') : landing.ctaLabel}
+          </a>
+        ) : (
+          <Link to={ctaHref} className={ctaClass}>
+            {isPricingPage ? t('landing.pricingPage.cta') : landing.ctaLabel}
+          </Link>
+        )}
+
         {landing.bullets?.length ? (
-          <ul className="space-y-2 text-sm text-gray-300">
+          <ul className="space-y-3">
             {landing.bullets.map((b) => (
-              <li key={b} className="flex gap-2">
-                <span className="text-primary shrink-0" aria-hidden>
+              <li
+                key={b}
+                className="flex gap-3 rounded-2xl border border-slate-200 bg-white p-4 text-base text-slate-700 shadow-sm"
+              >
+                <span className="text-emerald-600 shrink-0 text-lg" aria-hidden>
                   ✓
                 </span>
                 <span>{b}</span>
               </li>
             ))}
           </ul>
+        ) : null}
+
+        {landing.showPlatformFeatures ? (
+          <section className="space-y-4">
+            <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">Əsas imkanlar</p>
+            <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 leading-tight">Platformada nə edə bilərsiniz</h2>
+            <div className="grid gap-3">
+              {MENTORIX_PLATFORM_FEATURES.map((f) => (
+                <article key={f.title} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-2">
+                  <h3 className="text-lg font-bold text-slate-900">{f.title}</h3>
+                  <p className="text-base text-slate-600 leading-relaxed">{f.text}</p>
+                </article>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
+        {landing.showBenefitsList ? (
+          <section className="space-y-4">
+            <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">Necə işləyir</p>
+            <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 leading-tight">Boş paneldən nəticəyə</h2>
+            <div className="space-y-3">
+              {MENTORIX_PLATFORM_BENEFITS.map((b, i) => (
+                <article key={b} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm flex gap-4">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-sm font-bold text-emerald-700">
+                    {i + 1}
+                  </span>
+                  <p className="text-base text-slate-700 leading-relaxed pt-1">{b}</p>
+                </article>
+              ))}
+            </div>
+          </section>
         ) : null}
 
         {landing.showPricingPlans ? (
@@ -114,59 +161,11 @@ export default function PublicSeoLanding() {
           </section>
         ) : null}
 
-        {landing.showBenefitsList ? (
-          <section className="space-y-3">
-            <h2 className="text-lg font-semibold text-white">Mentorix.io ilə</h2>
-            <ul className="space-y-2 text-sm text-gray-300">
-              {MENTORIX_PLATFORM_BENEFITS.map((b) => (
-                <li key={b} className="flex gap-2">
-                  <span className="text-primary shrink-0" aria-hidden>
-                    ✓
-                  </span>
-                  <span>{b}</span>
-                </li>
-              ))}
-            </ul>
-          </section>
-        ) : null}
-
-        {landing.showPlatformFeatures ? (
-          <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 sm:p-6 space-y-4">
-            <h2 className="text-base font-semibold text-white">Əsas imkanlar</h2>
-            <div className="grid gap-4 sm:grid-cols-2">
-              {MENTORIX_PLATFORM_FEATURES.map((f) => (
-                <div key={f.title} className="space-y-1">
-                  <h3 className="text-sm font-semibold text-primary">{f.title}</h3>
-                  <p className="text-xs sm:text-sm text-gray-400 leading-relaxed">{f.text}</p>
-                </div>
-              ))}
-            </div>
-          </section>
-        ) : null}
-
-        {landing.ctaExternal ? (
-          <a
-            href={ctaHref}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex w-full sm:w-auto justify-center items-center rounded-xl bg-primary px-6 py-4 min-h-[52px] text-sm sm:text-base font-bold text-[#041018] shadow-lg shadow-primary/25 hover:brightness-95"
-          >
-            {isPricingPage ? t('landing.pricingPage.cta') : landing.ctaLabel}
-          </a>
-        ) : (
-          <Link
-            to={ctaHref}
-            className="inline-flex w-full sm:w-auto justify-center items-center rounded-xl bg-primary px-6 py-4 min-h-[52px] text-sm sm:text-base font-bold text-[#041018] shadow-lg shadow-primary/25 hover:brightness-95"
-          >
-            {isPricingPage ? t('landing.pricingPage.cta') : landing.ctaLabel}
-          </Link>
-        )}
-
-        <p className="text-xs text-gray-500 leading-relaxed">
+        <p className="text-sm text-slate-500 leading-relaxed">
           {isPanel ? (
             <>
               Fərdi müəllim və ya təhsil xidməti təminatçısı — sizə uyğun paketi seçin.{' '}
-              <Link to="/search" className="text-primary hover:underline">
+              <Link to="/search" className="text-emerald-700 font-semibold hover:underline">
                 İctimai müəllim axtarışı
               </Link>
               .
@@ -174,7 +173,7 @@ export default function PublicSeoLanding() {
           ) : (
             <>
               Mentorix müəllim, tələbə və valideynləri birləşdirən təhsil ekosistemidir.{' '}
-              <Link to="/login" className="text-primary hover:underline">
+              <Link to="/login" className="text-emerald-700 font-semibold hover:underline">
                 Pulsuz qeydiyyat
               </Link>{' '}
               ilə müəllim profilinizi yarada bilərsiniz.

@@ -204,20 +204,20 @@ export default function Landing() {
   const demoAttendance = arrayFromT(t, 'landing.demo.attendance')
 
   return (
-    <div className="min-h-[100svh] w-full min-w-0 max-w-full overflow-x-hidden bg-[#0b0b0b]">
+    <div className="min-h-[100svh] w-full min-w-0 max-w-full overflow-x-hidden bg-[#f4f6fb]">
       <PublicMarketingNav onLogin={() => goLogin('nav')} onStart={() => goRegister('nav')} />
 
       <div className="w-full max-w-5xl mx-auto px-4 pt-8 sm:pt-10 pb-8 space-y-12 sm:space-y-16 min-w-0 box-border overflow-x-hidden">
         <header className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-8 lg:items-stretch">
           <div className="w-full min-w-0 space-y-4 flex flex-col items-center text-center lg:items-start lg:text-left lg:justify-center">
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] text-gray-300">
+            <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-600">
               <span className="mx-nav-live-dot h-1.5 w-1.5 rounded-full bg-primary shadow-[0_0_12px_rgba(0,229,176,0.9)]" />
               {hero.pill}
             </div>
-            <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight text-white leading-tight w-full max-w-xl">
+            <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-slate-900 leading-tight w-full max-w-xl">
               {hero.headline}
             </h1>
-            <p className="text-gray-400 text-sm sm:text-base leading-relaxed w-full max-w-md lg:max-w-xl">
+            <p className="text-base sm:text-lg text-slate-600 leading-relaxed w-full max-w-md lg:max-w-xl">
               {hero.subheadline}
             </p>
             <div className="flex flex-col w-full max-w-md lg:max-w-xl gap-3">
@@ -235,7 +235,7 @@ export default function Landing() {
                   trackEvent('mx_landing_secondary_click', { action: 'explore_platform' })
                   scrollToId('mx-why')
                 }}
-                className="w-full inline-flex justify-center items-center rounded-xl border border-white/15 bg-transparent px-4 py-3 min-h-[44px] text-sm font-semibold text-gray-300 hover:bg-white/5 hover:text-white"
+                className="w-full inline-flex justify-center items-center rounded-xl border border-slate-200 bg-white px-4 py-3 min-h-[44px] text-sm font-semibold text-slate-700 hover:bg-slate-50"
               >
                 {hero.secondary_explore}
               </button>
@@ -247,7 +247,7 @@ export default function Landing() {
                   trackEvent('mx_landing_secondary_click', { action: 'existing_account_login' })
                   goLogin('hero_existing_account')
                 }}
-                className="text-xs text-gray-500 hover:text-gray-300 underline underline-offset-4"
+                className="text-sm text-slate-500 hover:text-slate-700 underline underline-offset-4"
               >
                 {hero.existing_account}
               </button>
@@ -271,16 +271,16 @@ export default function Landing() {
 
         {isMarketingSectionVisible(marketing.steps) && steps.items.length > 0 ? (
           <section id="mx-steps" className="space-y-4 scroll-mt-24">
-            <h2 className="text-xs uppercase tracking-wider text-gray-500 font-semibold">{steps.heading}</h2>
+            <h2 className="text-xs uppercase tracking-wider text-slate-500 font-semibold">{steps.heading}</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               {steps.items.map((x, i) => (
                 <LandingHoverCard
                   key={`step-${i}-${String(x.step)}`}
-                  className="rounded-2xl border border-white/10 bg-[#121212]/90 p-4 space-y-2"
+                  className="rounded-2xl border border-slate-200 bg-white p-5 space-y-2 shadow-sm"
                 >
-                  <div className="text-[11px] font-bold tabular-nums text-primary">{x.step}</div>
-                  <div className="text-sm font-semibold text-white">{x.title}</div>
-                  <p className="text-xs text-gray-400 leading-relaxed">{x.body}</p>
+                  <div className="text-sm font-bold tabular-nums text-emerald-700">{x.step}</div>
+                  <div className="text-base font-semibold text-slate-900">{x.title}</div>
+                  <p className="text-sm text-slate-600 leading-relaxed">{x.body}</p>
                 </LandingHoverCard>
               ))}
             </div>
@@ -292,13 +292,13 @@ export default function Landing() {
         {showMarketplace ? (
           <section
             id="mx-marketplace"
-            className="scroll-mt-24 rounded-2xl border border-white/10 bg-[#121212]/90 p-6 sm:p-8 space-y-4 motion-safe:transition motion-safe:duration-300 motion-safe:hover:-translate-y-1 hover:border-primary/35 hover:shadow-[0_16px_40px_-20px_rgba(0,229,176,0.45)]"
+            className="scroll-mt-24 rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 space-y-4 shadow-sm motion-safe:transition motion-safe:duration-300 motion-safe:hover:-translate-y-1 hover:border-emerald-200 hover:shadow-[0_16px_40px_-20px_rgba(0,229,176,0.45)]"
           >
-            <div className="text-xs uppercase tracking-wider text-gray-500 font-semibold">
+            <div className="text-xs uppercase tracking-wider text-slate-500 font-semibold">
               {t('landing.marketplace.badge')}
             </div>
-            <h2 className="text-lg sm:text-xl font-semibold text-white">{t('landing.marketplace.title')}</h2>
-            <p className="text-sm text-gray-400 leading-relaxed max-w-2xl">{t('landing.marketplace.desc')}</p>
+            <h2 className="text-xl sm:text-2xl font-bold text-slate-900">{t('landing.marketplace.title')}</h2>
+            <p className="text-base text-slate-600 leading-relaxed max-w-2xl">{t('landing.marketplace.desc')}</p>
             <Link
               to="/search"
               onClick={() =>
@@ -314,19 +314,19 @@ export default function Landing() {
         {showUniversities ? (
           <section
             id="mx-universities"
-            className="scroll-mt-24 rounded-2xl border border-white/10 bg-[#121212]/90 p-6 sm:p-8 space-y-4 motion-safe:transition motion-safe:duration-300 motion-safe:hover:-translate-y-1 hover:border-white/25 hover:shadow-[0_16px_40px_-20px_rgba(255,255,255,0.12)]"
+            className="scroll-mt-24 rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 space-y-4 shadow-sm motion-safe:transition motion-safe:duration-300 motion-safe:hover:-translate-y-1 hover:border-slate-300"
           >
-            <div className="text-xs uppercase tracking-wider text-gray-500 font-semibold">
+            <div className="text-xs uppercase tracking-wider text-slate-500 font-semibold">
               {t('landing.universities.badge')}
             </div>
-            <h2 className="text-lg sm:text-xl font-semibold text-white">{t('landing.universities.title')}</h2>
-            <p className="text-sm text-gray-400 leading-relaxed max-w-2xl">{t('landing.universities.desc')}</p>
+            <h2 className="text-xl sm:text-2xl font-bold text-slate-900">{t('landing.universities.title')}</h2>
+            <p className="text-base text-slate-600 leading-relaxed max-w-2xl">{t('landing.universities.desc')}</p>
             <Link
               to="/universities"
               onClick={() =>
                 trackEvent('mx_landing_universities_cta', { surface: 'universities_section', action: 'open_search' })
               }
-              className="inline-flex w-full sm:w-auto justify-center items-center gap-2 rounded-xl border border-white/15 px-5 py-3.5 min-h-[48px] text-sm font-semibold text-gray-100 hover:bg-white/5 transition-colors"
+              className="inline-flex w-full sm:w-auto justify-center items-center gap-2 rounded-xl border border-slate-200 px-5 py-3.5 min-h-[48px] text-sm font-semibold text-slate-800 hover:bg-slate-50 transition-colors"
             >
               {t('landing.universities.cta')}
             </Link>
@@ -334,7 +334,7 @@ export default function Landing() {
         ) : null}
 
         <section id="mx-pricing-teaser" className="scroll-mt-24">
-          <p className="text-sm text-gray-400">
+          <p className="text-base text-slate-600">
             {t('landing.pricingTeaser.hint')}{' '}
             <Link
               to="/qiymetler"
@@ -348,17 +348,17 @@ export default function Landing() {
 
         {isMarketingSectionVisible(marketing.faq) && faq.items.length > 0 ? (
           <section id="mx-faq" className="space-y-4 scroll-mt-8">
-            <h2 className="text-xs uppercase tracking-wider text-gray-500 font-semibold">{faq.heading}</h2>
-            <div className="rounded-2xl border border-white/10 bg-surface-2/70 divide-y divide-white/10">
+            <h2 className="text-xs uppercase tracking-wider text-slate-500 font-semibold">{faq.heading}</h2>
+            <div className="rounded-2xl border border-slate-200 bg-white divide-y divide-slate-100 shadow-sm">
               {faq.items.map((it, i) => (
                 <details key={`faq-${i}`} className="group p-4 sm:p-5">
-                  <summary className="cursor-pointer text-sm font-semibold text-gray-100 list-none flex items-center justify-between gap-3 [&::-webkit-details-marker]:hidden">
+                  <summary className="cursor-pointer text-base font-semibold text-slate-900 list-none flex items-center justify-between gap-3 [&::-webkit-details-marker]:hidden">
                     <span>{it.q}</span>
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-primary/45 bg-primary/15 text-primary text-xl font-bold leading-none group-open:rotate-45 transition-transform">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 text-xl font-bold leading-none group-open:rotate-45 transition-transform">
                       +
                     </span>
                   </summary>
-                  <p className="mt-3 text-xs sm:text-sm text-gray-400 leading-relaxed">{it.a}</p>
+                  <p className="mt-3 text-sm sm:text-base text-slate-600 leading-relaxed">{it.a}</p>
                 </details>
               ))}
             </div>
@@ -366,10 +366,10 @@ export default function Landing() {
         ) : null}
 
         {isMarketingSectionVisible(ctaBand) ? (
-          <section id="mx-cta" className="rounded-2xl border border-primary/25 bg-gradient-to-br from-primary/15 via-[#0e1412] to-[#0b0b0b] p-6 sm:p-8 scroll-mt-8">
+          <section id="mx-cta" className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6 sm:p-8 scroll-mt-8">
             <div className="space-y-2 max-w-xl">
-              <h2 className="text-lg sm:text-xl font-semibold text-white">{ctaBand.heading}</h2>
-              <p className="text-sm text-gray-300 leading-relaxed">{ctaBand.subtitle}</p>
+              <h2 className="text-xl sm:text-2xl font-bold text-slate-900">{ctaBand.heading}</h2>
+              <p className="text-base text-slate-600 leading-relaxed">{ctaBand.subtitle}</p>
             </div>
             <div className="mt-5 max-w-md">
               <button

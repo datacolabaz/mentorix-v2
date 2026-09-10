@@ -24,15 +24,15 @@ export function PricingPlanCard({ plan, onCta }) {
   const display = useLandingPlanDisplay(plan, t, i18n)
   const isBasicTrial = normalizePlanId(plan) === 'basic'
   return (
-    <article className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:p-5 space-y-3 flex flex-col">
+    <article className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 space-y-3 flex flex-col shadow-sm">
       <div>
-        <h3 className="text-sm font-bold text-white">{display.title}</h3>
+        <h3 className="text-base font-bold text-slate-900">{display.title}</h3>
         {display.meta.subtitle ? (
-          <p className="text-[11px] text-gray-400 mt-0.5">{display.meta.subtitle}</p>
+          <p className="text-sm text-slate-500 mt-0.5">{display.meta.subtitle}</p>
         ) : null}
       </div>
-      <div className="text-lg font-semibold text-primary tabular-nums">{display.priceLabel}</div>
-      <ul className="space-y-1.5 text-xs sm:text-sm text-gray-400 flex-1">
+      <div className="text-2xl font-bold text-emerald-700 tabular-nums">{display.priceLabel}</div>
+      <ul className="space-y-1.5 text-sm sm:text-base text-slate-600 flex-1">
         {display.bullets.map((line) => (
           <PricingFeatureListItem key={`${plan.id}-${line}`} line={line} isBasicTrial={isBasicTrial} />
         ))}
@@ -84,8 +84,8 @@ export default function PublicPricingCompare({ plans, onCta, hideIntro = false, 
     <section className="space-y-6">
       {hideIntro ? null : (
         <div className="space-y-2">
-          <h2 className="text-lg font-semibold text-white">{t('landing.pricingPage.heading')}</h2>
-          <p className="text-sm text-gray-400 leading-relaxed">{t('landing.pricingPage.intro')}</p>
+          <h2 className="text-2xl font-bold text-slate-900">{t('landing.pricingPage.heading')}</h2>
+          <p className="text-base text-slate-600 leading-relaxed">{t('landing.pricingPage.intro')}</p>
         </div>
       )}
 
@@ -98,27 +98,27 @@ export default function PublicPricingCompare({ plans, onCta, hideIntro = false, 
       )}
 
       <div className="space-y-3">
-        <h3 className="text-base font-semibold text-white">{t('landing.pricingPage.compareHeading')}</h3>
-        <div className="overflow-x-auto rounded-2xl border border-white/10">
-          <table className="w-full min-w-[36rem] text-left text-xs sm:text-sm">
-            <thead className="bg-[#161616] text-gray-400">
+        <h3 className="text-lg font-bold text-slate-900">{t('landing.pricingPage.compareHeading')}</h3>
+        <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <table className="w-full min-w-[36rem] text-left text-sm">
+            <thead className="bg-slate-50 text-slate-500">
               <tr>
-                <th className="px-3 py-2.5 font-semibold sticky left-0 bg-[#161616] z-10">{t('landing.pricingPage.compareHeading')}</th>
+                <th className="px-3 py-3 font-semibold sticky left-0 bg-slate-50 z-10">{t('landing.pricingPage.compareHeading')}</th>
                 {list.map((plan) => (
-                  <th key={plan.id} className="px-3 py-2.5 font-semibold text-white whitespace-nowrap">
+                  <th key={plan.id} className="px-3 py-3 font-semibold text-slate-900 whitespace-nowrap">
                     {t(`landing.plans.${normalizePlanId(plan)}.title`)}
                   </th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/10">
+            <tbody className="divide-y divide-slate-100">
               {rows.map((row) => (
-                <tr key={row.key} className="bg-[#101010]">
-                  <th className="px-3 py-2.5 font-medium text-gray-400 sticky left-0 bg-[#101010] z-10 whitespace-nowrap">
+                <tr key={row.key} className="bg-white">
+                  <th className="px-3 py-3 font-medium text-slate-500 sticky left-0 bg-white z-10 whitespace-nowrap">
                     {row.label}
                   </th>
                   {list.map((plan) => (
-                    <td key={`${plan.id}-${row.key}`} className="px-3 py-2.5 text-gray-200 tabular-nums whitespace-nowrap">
+                    <td key={`${plan.id}-${row.key}`} className="px-3 py-3 text-slate-800 tabular-nums whitespace-nowrap">
                       {cell(plan, row.key)}
                     </td>
                   ))}
@@ -129,8 +129,8 @@ export default function PublicPricingCompare({ plans, onCta, hideIntro = false, 
         </div>
       </div>
 
-      <p className="text-xs text-gray-500 leading-relaxed">{t('landing.pricingPage.trialNote')}</p>
-      <p className="text-xs text-gray-500 leading-relaxed">{t('landing.pricingPage.yearlyNote')}</p>
+      <p className="text-sm text-slate-500 leading-relaxed">{t('landing.pricingPage.trialNote')}</p>
+      <p className="text-sm text-slate-500 leading-relaxed">{t('landing.pricingPage.yearlyNote')}</p>
     </section>
   )
 }

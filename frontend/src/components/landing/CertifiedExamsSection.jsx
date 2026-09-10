@@ -15,7 +15,7 @@ const FEATURED_CATEGORY_SLUGS = [
 const FEATURED_LIMIT = 4
 
 const CARD_CLASS =
-  'group flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-3.5 py-3 text-left hover:border-primary/35 hover:bg-primary/[0.06] transition'
+  'group flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-left hover:border-emerald-300 hover:bg-emerald-50/60 transition'
 
 export function splitLandingCategories(categories, featuredSlugs = FEATURED_CATEGORY_SLUGS, limit = FEATURED_LIMIT) {
   const list = Array.isArray(categories) ? categories : []
@@ -56,10 +56,10 @@ function CategoryRow({ cat, t, assessmentLabel, onNavigate }) {
         {cat.icon || '📚'}
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block text-sm font-medium text-white leading-snug group-hover:text-primary transition-colors">
+        <span className="block text-sm font-medium text-slate-900 leading-snug group-hover:text-emerald-700 transition-colors">
           {t(`certifiedExams.categories.${cat.slug}`, { defaultValue: cat.name })}
         </span>
-        <span className="block text-[11px] text-gray-500 mt-0.5 tabular-nums">{assessmentLabel(cat.assessment_count)}</span>
+        <span className="block text-[11px] text-slate-500 mt-0.5 tabular-nums">{assessmentLabel(cat.assessment_count)}</span>
       </span>
     </Link>
   )
@@ -160,7 +160,7 @@ export default function CertifiedExamsSection({ onHowItWorks }) {
   return (
     <section
       id="mx-certified-exams"
-      className="scroll-mt-24 rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/[0.07] via-[#0e1412] to-[#0b0b0b] px-6 py-8 sm:px-10 sm:py-10"
+      className="scroll-mt-24 rounded-2xl border border-slate-200 bg-white px-6 py-8 sm:px-10 sm:py-10 shadow-sm"
     >
       <div className="flex items-center justify-between gap-4">
         <div className="inline-flex items-center gap-2 rounded-full border border-primary/35 bg-primary/10 px-3 py-1 text-[11px] font-semibold text-primary">
@@ -170,7 +170,7 @@ export default function CertifiedExamsSection({ onHowItWorks }) {
         <button
           type="button"
           onClick={openSample}
-          className="inline-flex items-center gap-2 shrink-0 max-w-[70%] sm:max-w-none rounded-xl border border-white/15 bg-white/5 px-3 py-2 min-h-[40px] text-xs sm:text-sm font-semibold text-gray-100 hover:bg-white/10"
+          className="inline-flex items-center gap-2 shrink-0 max-w-[70%] sm:max-w-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 min-h-[40px] text-xs sm:text-sm font-semibold text-slate-800 hover:bg-white"
           aria-haspopup="dialog"
           aria-expanded={sampleOpen}
         >
@@ -183,8 +183,8 @@ export default function CertifiedExamsSection({ onHowItWorks }) {
       </div>
 
       <div className="mt-8 max-w-2xl space-y-3">
-        <h2 className="text-xl sm:text-2xl font-semibold text-white leading-tight">{t('certifiedExams.title')}</h2>
-        <p className="text-sm text-gray-400 leading-relaxed">{t('certifiedExams.description')}</p>
+        <h2 className="text-xl sm:text-2xl font-bold text-slate-900 leading-tight">{t('certifiedExams.title')}</h2>
+        <p className="text-base text-slate-600 leading-relaxed">{t('certifiedExams.description')}</p>
       </div>
 
       {featured.length > 0 ? (
@@ -232,7 +232,7 @@ export default function CertifiedExamsSection({ onHowItWorks }) {
             if (onHowItWorks) onHowItWorks()
             else navigate('/sertifikatli-imtahanlar')
           }}
-          className="inline-flex justify-center items-center rounded-xl border border-white/15 bg-white/5 px-5 py-3 min-h-[48px] text-sm font-semibold text-gray-100 hover:bg-white/10"
+          className="inline-flex justify-center items-center rounded-xl border border-slate-200 bg-white px-5 py-3 min-h-[48px] text-sm font-semibold text-slate-800 hover:bg-slate-50"
         >
           {t('certifiedExams.ctaHowItWorks')}
         </button>
