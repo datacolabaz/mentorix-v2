@@ -1,0 +1,21 @@
+{
+  "name": "Mentorix",
+  "install": "bash .cursor/install.sh",
+  "start": "bash .cursor/start.sh",
+  "terminals": [
+    {
+      "name": "backend",
+      "command": "cd backend && npm run dev",
+      "description": "Mentorix Express API (nodemon) on http://localhost:3001"
+    },
+    {
+      "name": "frontend",
+      "command": "cd frontend && npm run dev -- --host 0.0.0.0",
+      "description": "Mentorix React + Vite dev server on http://localhost:5173 (proxies /api to the backend)"
+    }
+  ],
+  "ports": [
+    { "name": "frontend", "port": 5173 },
+    { "name": "backend", "port": 3001 }
+  ]
+}
