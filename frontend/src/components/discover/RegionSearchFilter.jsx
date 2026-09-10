@@ -26,7 +26,7 @@ export default function RegionSearchFilter({
           {t('marketplace.filters.regionTitle')}
         </label>
         <select
-          className="w-full rounded-xl border border-white/15 bg-[#13112e] px-3 py-2 text-sm text-white"
+          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900"
           value={region || ''}
           onChange={(e) => {
             const next = e.target.value
@@ -51,7 +51,7 @@ export default function RegionSearchFilter({
             {t('marketplace.filters.bakuDistrictTitle')}
           </label>
           <select
-            className="w-full rounded-xl border border-white/15 bg-[#13112e] px-3 py-2 text-sm text-white"
+            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900"
             value={bakuDistrict || ''}
             onChange={(e) => patch({ bakuDistrict: e.target.value || null })}
           >
@@ -66,7 +66,7 @@ export default function RegionSearchFilter({
       ) : null}
 
       {showBakuDistricts && bakuDistrict ? (
-        <label className="flex items-center gap-2 cursor-pointer text-xs text-gray-300">
+        <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-700">
           <input
             type="checkbox"
             checked={Boolean(includeNeighbors)}

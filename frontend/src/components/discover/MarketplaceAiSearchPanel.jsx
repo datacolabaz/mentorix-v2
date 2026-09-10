@@ -11,7 +11,7 @@ function StepBadge({ n, label }) {
       <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/20 text-[11px] font-bold text-primary">
         {n}
       </span>
-      <span className="text-xs font-bold text-gray-300 uppercase tracking-wide">{label}</span>
+      <span className="text-xs font-bold text-slate-500 uppercase tracking-wide">{label}</span>
     </div>
   )
 }
@@ -22,7 +22,7 @@ function TutorMiniCard({ tutor, onInquiry, onWhatsApp, onFocus, whatsappBusy, t 
       ? t('marketplace.ai.ratePerHour', { rate: tutor.discover_hourly_rate })
       : null
   return (
-    <div className="rounded-xl border border-white/10 bg-[#121212]/90 p-3 space-y-2">
+    <div className="rounded-xl border border-slate-200 bg-white p-3 space-y-2 shadow-sm">
       <button type="button" onClick={() => onFocus?.(tutor)} className="flex w-full gap-2.5 text-left min-w-0">
         <InstructorAvatar
           fullName={tutor.full_name}
@@ -36,14 +36,14 @@ function TutorMiniCard({ tutor, onInquiry, onWhatsApp, onFocus, whatsappBusy, t 
         />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-1.5">
-            <p className="text-sm font-semibold text-white truncate">{tutor.full_name}</p>
+            <p className="text-sm font-semibold text-slate-900 truncate">{tutor.full_name}</p>
             {tutor.is_online ? (
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-400/40">
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">
                 ● {t('marketplace.card.onlineNow')}
               </span>
             ) : null}
           </div>
-          <p className="text-[11px] text-gray-400 truncate">
+          <p className="text-[11px] text-slate-500 truncate">
             {tutor.category_names?.join(', ') || tutor.subject}
             {rate ? ` · ${rate}` : ''}
             {tutor.distance_km != null ? ` · ${formatDistanceKm(tutor.distance_km)}` : ''}
@@ -54,14 +54,14 @@ function TutorMiniCard({ tutor, onInquiry, onWhatsApp, onFocus, whatsappBusy, t 
         <button
           type="button"
           onClick={() => onInquiry?.(tutor)}
-          className="text-[11px] font-bold px-2.5 py-1.5 rounded-lg bg-primary/20 border border-primary/40 text-primary hover:bg-primary/30"
+          className="text-[11px] font-bold px-2.5 py-1.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 hover:bg-emerald-100"
         >
           {t('marketplace.ai.trialLesson')}
         </button>
         <button
           type="button"
           onClick={() => onInquiry?.(tutor)}
-          className="text-[11px] font-bold px-2.5 py-1.5 rounded-lg border border-white/15 text-gray-300 hover:border-white/30"
+          className="text-[11px] font-bold px-2.5 py-1.5 rounded-lg border border-slate-200 text-slate-700 hover:border-slate-300"
         >
           {t('marketplace.ai.message')}
         </button>
@@ -69,7 +69,7 @@ function TutorMiniCard({ tutor, onInquiry, onWhatsApp, onFocus, whatsappBusy, t 
           type="button"
           disabled={whatsappBusy}
           onClick={() => onWhatsApp?.(tutor)}
-          className="text-[11px] font-bold px-2.5 py-1.5 rounded-lg border border-emerald-500/35 text-emerald-400 hover:bg-emerald-500/10 disabled:opacity-50"
+          className="text-[11px] font-bold px-2.5 py-1.5 rounded-lg border border-emerald-200 text-emerald-700 hover:bg-emerald-50 disabled:opacity-50"
         >
           {t('marketplace.ai.whatsapp')}
         </button>
@@ -142,29 +142,29 @@ export default function MarketplaceAiSearchPanel({
   const cta = !isEmptyResult ? result?.step4_cta : null
 
   return (
-    <section className="rounded-2xl border border-violet-500/25 bg-gradient-to-br from-violet-500/10 via-[#14101f] to-[#0f0f0f] overflow-hidden">
+    <section className="rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-50 via-white to-slate-50 overflow-hidden">
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}
-        className="w-full flex items-center justify-between gap-2 px-4 py-3 text-left hover:bg-white/[0.03]"
+        className="w-full flex items-center justify-between gap-2 px-4 py-3 text-left hover:bg-violet-50/60"
       >
         <div>
-          <p className="text-sm font-bold text-white">{t('marketplace.ai.title')}</p>
-          <p className="text-[11px] text-gray-400 mt-0.5">{t('marketplace.ai.subtitle')}</p>
+          <p className="text-sm font-bold text-slate-900">{t('marketplace.ai.title')}</p>
+          <p className="text-[11px] text-slate-500 mt-0.5">{t('marketplace.ai.subtitle')}</p>
         </div>
-        <span className="text-gray-500 text-xs shrink-0">{expanded ? '▲' : '▼'}</span>
+        <span className="text-slate-400 text-xs shrink-0">{expanded ? '▲' : '▼'}</span>
       </button>
 
       {expanded ? (
-        <div className="px-4 pb-4 space-y-3 border-t border-white/5">
+        <div className="px-4 pb-4 space-y-3 border-t border-slate-200">
           <label className="flex items-center gap-2 cursor-pointer select-none">
             <input
               type="checkbox"
               checked={forChild}
               onChange={(e) => setForChild(e.target.checked)}
-              className="rounded border-white/20 bg-[#1a1a1a] text-primary focus:ring-primary/40"
+              className="rounded border-slate-300 bg-white text-primary focus:ring-primary/40"
             />
-            <span className="text-xs text-gray-300">{t('marketplace.ai.forChild')}</span>
+            <span className="text-xs text-slate-700">{t('marketplace.ai.forChild')}</span>
           </label>
 
           <textarea
@@ -172,7 +172,7 @@ export default function MarketplaceAiSearchPanel({
             onChange={(e) => setQuery(e.target.value)}
             placeholder={t('marketplace.ai.examplePlaceholder')}
             rows={3}
-            className="w-full rounded-xl border border-white/15 bg-[#0b0b0b]/80 px-3 py-2.5 text-sm text-white placeholder:text-gray-600 focus:border-primary/50 focus:outline-none resize-none"
+            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-emerald-400 focus:outline-none resize-none"
           />
 
           <button
@@ -189,22 +189,22 @@ export default function MarketplaceAiSearchPanel({
           {extracted ? (
             <div className="flex flex-wrap gap-1.5">
               {extracted.subject ? (
-                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-white/10 text-gray-300">
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
                   {extracted.subject}
                 </span>
               ) : null}
               {extracted.grade ? (
-                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-white/10 text-gray-300">
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
                   {extracted.grade}
                 </span>
               ) : null}
               {extracted.location ? (
-                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-white/10 text-gray-300">
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
                   {extracted.location}
                 </span>
               ) : null}
               {extracted.student_level ? (
-                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300">
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800">
                   {extracted.student_level}
                 </span>
               ) : null}
@@ -217,10 +217,10 @@ export default function MarketplaceAiSearchPanel({
                 <StepBadge n={1} label={t('marketplace.ai.steps.tutors')} />
                 {isEmptyResult ? (
                   <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 space-y-2">
-                    <p className="text-sm font-semibold text-white">
+                    <p className="text-sm font-semibold text-slate-900">
                       {tutors?.empty_state?.title || t('marketplace.ai.emptyTitle')}
                     </p>
-                    <p className="text-xs text-gray-400 leading-relaxed">
+                    <p className="text-xs text-slate-500 leading-relaxed">
                       {tutors?.empty_state?.message || t('marketplace.ai.emptyMessage')}
                     </p>
                     <p className="text-xs text-primary/90 font-medium pt-1">{t('marketplace.ai.emptyHint')}</p>
@@ -236,9 +236,9 @@ export default function MarketplaceAiSearchPanel({
                 ) : (
                   <div className="space-y-2">
                     {tutors?.match_note ? (
-                      <p className="text-[11px] text-amber-300/90 leading-relaxed">{tutors.match_note}</p>
+                      <p className="text-[11px] text-amber-800 leading-relaxed">{tutors.match_note}</p>
                     ) : null}
-                    <p className="text-[11px] text-gray-500">
+                    <p className="text-[11px] text-slate-500">
                       {t('marketplace.ai.resultsSummary', {
                         total: tutors?.count ?? 0,
                         top: tutors?.matches?.length ?? 0,
@@ -262,30 +262,30 @@ export default function MarketplaceAiSearchPanel({
               {pricing ? (
                 <div className="space-y-2">
                   <StepBadge n={2} label={t('marketplace.ai.steps.pricing')} />
-                  <div className="rounded-xl border border-white/10 bg-[#121212]/80 p-3 text-xs space-y-2">
-                    <p className="text-[10px] text-emerald-400/90 font-semibold">
+                  <div className="rounded-xl border border-slate-200 bg-white p-3 text-xs space-y-2">
+                    <p className="text-[10px] text-emerald-700 font-semibold">
                       {tutorMatches.length === 1
                         ? t('marketplace.ai.pricingBasedOnOne', { name: tutorMatches[0].full_name })
                         : t('marketplace.ai.pricingBasedOnMany', { count: tutorMatches.length })}
                     </p>
-                    <p className="text-white font-semibold">
+                    <p className="text-slate-900 font-semibold">
                       {t('marketplace.ai.perLesson')}{' '}
-                      <span className="text-primary">{pricing.per_lesson_azn_range} ₼</span>
+                      <span className="text-emerald-700">{pricing.per_lesson_azn_range} ₼</span>
                       {pricing.per_lesson_typical_azn ? (
-                        <span className="text-gray-400 font-normal">
+                        <span className="text-slate-500 font-normal">
                           {' '}
                           {t('marketplace.ai.typical', { amount: pricing.per_lesson_typical_azn })}
                         </span>
                       ) : null}
                     </p>
-                    <ul className="space-y-1 text-gray-400">
+                    <ul className="space-y-1 text-slate-600">
                       {(pricing.packages || []).map((pkg) => (
                         <li key={pkg.type}>
-                          {pkg.label}: <span className="text-gray-200">{pkg.total_azn} ₼</span>
+                          {pkg.label}: <span className="text-slate-800">{pkg.total_azn} ₼</span>
                         </li>
                       ))}
                     </ul>
-                    <p className="text-[10px] text-gray-500 leading-relaxed">{pricing.marketplace_note}</p>
+                    <p className="text-[10px] text-slate-500 leading-relaxed">{pricing.marketplace_note}</p>
                   </div>
                 </div>
               ) : null}
@@ -293,8 +293,8 @@ export default function MarketplaceAiSearchPanel({
               {curriculum ? (
                 <div className="space-y-2">
                   <StepBadge n={3} label={t('marketplace.ai.steps.curriculum')} />
-                  <div className="rounded-xl border border-white/10 bg-[#121212]/80 p-3 space-y-3">
-                    <p className="text-xs font-semibold text-white">{curriculum.title}</p>
+                  <div className="rounded-xl border border-slate-200 bg-white p-3 space-y-3">
+                    <p className="text-xs font-semibold text-slate-900">{curriculum.title}</p>
                     {(curriculum.weeks || []).map((w) => (
                       <div key={w.week}>
                         <p className="text-[11px] font-bold text-primary">
@@ -304,7 +304,7 @@ export default function MarketplaceAiSearchPanel({
                           {(w.topics || []).map((topic) => (
                             <li
                               key={topic}
-                              className="text-[11px] text-gray-400 pl-3 relative before:content-['•'] before:absolute before:left-0 before:text-gray-600"
+                              className="text-[11px] text-slate-600 pl-3 relative before:content-['•'] before:absolute before:left-0 before:text-slate-400"
                             >
                               {topic}
                             </li>
@@ -323,7 +323,7 @@ export default function MarketplaceAiSearchPanel({
                     <button
                       type="button"
                       onClick={() => onInquiry?.(tutorMatches[0])}
-                      className="text-xs font-bold px-3 py-2 rounded-xl bg-primary/20 border border-primary/40 text-primary"
+                      className="text-xs font-bold px-3 py-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800"
                     >
                       {cta.trial_lesson?.label || t('marketplace.ai.scheduleTrial')}
                     </button>
@@ -331,7 +331,7 @@ export default function MarketplaceAiSearchPanel({
                       type="button"
                       disabled={whatsappBusy}
                       onClick={() => onWhatsApp?.(tutorMatches[0])}
-                      className="text-xs font-bold px-3 py-2 rounded-xl border border-emerald-500/35 text-emerald-400 hover:bg-emerald-500/10 disabled:opacity-50"
+                      className="text-xs font-bold px-3 py-2 rounded-xl border border-emerald-200 text-emerald-700 hover:bg-emerald-50 disabled:opacity-50"
                     >
                       {cta.whatsapp?.label || t('marketplace.ai.contactWhatsapp')}
                     </button>

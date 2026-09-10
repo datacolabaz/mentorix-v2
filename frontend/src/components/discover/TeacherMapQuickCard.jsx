@@ -2,16 +2,9 @@ import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import InstructorAvatar from '../common/InstructorAvatar'
 import { formatDistanceKm } from '../../lib/geo'
-import {
-  deliveryFormatBadges,
-  formatStudentCount,
-  showTopBadge,
-  teacherRatingParts,
-} from '../../lib/teacherMapCard'
+import { showTopBadge } from '../../lib/teacherMapCard'
 import { instructorDisplaySubject } from '../../lib/instructorDisplay'
-import { instructorRoleLabel, localizeNextSlotLabel } from '../../lib/marketplaceLocale'
 import useActiveLocale from '../../hooks/useActiveLocale'
-import { mapsDirectionsUrls } from '../../lib/mapsDirections'
 
 export default function TeacherMapQuickCard({
   instructor: p,
@@ -26,21 +19,17 @@ export default function TeacherMapQuickCard({
   const locale = useActiveLocale()
   if (!p) return null
   const subjectLine = instructorDisplaySubject(p, locale) || p.subject
-  const rating = teacherRatingParts(p, t)
-  const studentLine = formatStudentCount(p.active_student_count, t)
-  const formats = deliveryFormatBadges(p, locale)
   const topBadge = showTopBadge(p)
-  const directions = mapsDirectionsUrls(p.latitude, p.longitude, p.teacher_place_address)
 
   return (
-    <div className="rounded-2xl border-2 border-emerald-500/50 bg-gradient-to-br from-emerald-500/10 via-[#121212] to-[#121212] p-4 shadow-[0_0_24px_rgba(52,211,153,0.12)]">
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-md">
       <div className="flex items-center justify-between gap-2 mb-3">
         <div className="flex items-center gap-2 min-w-0">
-          <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">
+          <p className="text-[10px] font-bold text-emerald-700 uppercase tracking-widest">
             {t('marketplace.card.quickView')}
           </p>
           {topBadge ? (
-            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-violet-500/20 text-violet-300">
+            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-violet-50 text-violet-700">
               {t('marketplace.card.topBadge')}
             </span>
           ) : null}
@@ -49,7 +38,7 @@ export default function TeacherMapQuickCard({
           <button
             type="button"
             onClick={() => onFocusMap?.(p)}
-            className="text-[11px] font-semibold text-primary hover:underline"
+            className="text-[11px] font-semibold text-emerald-700 hover:underline"
           >
             {t('marketplace.card.showOnMap')}
           </button>
@@ -58,7 +47,7 @@ export default function TeacherMapQuickCard({
               type="button"
               onClick={onClose}
               aria-label={t('marketplace.card.close')}
-              className="w-7 h-7 rounded-lg border border-white/15 text-gray-400 hover:text-white hover:bg-white/10 text-sm leading-none"
+              className="w-7 h-7 rounded-lg border border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-50 text-sm leading-none"
             >
               ×
             </button>
@@ -80,105 +69,25 @@ export default function TeacherMapQuickCard({
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-1.5">
-                <h3 className="font-display font-bold text-base text-white truncate">{p.full_name}</h3>
-                {p.is_online ? (
-                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-400/40">
-                    ● {t('marketplace.card.onlineNow')}
-                  </span>
-                ) : null}
-              </div>
-              <p className="text-xs text-gray-400 mt-0.5 truncate">{subjectLine || t('marketplace.card.noSubject')}</p>
-              {rating ? (
-                <div className="mt-1.5 flex items-center gap-1.5">
-                  <span className="text-amber-400 text-sm leading-none" aria-hidden>
-                    ⭐
-                  </span>
-                  <span className="text-sm font-bold text-amber-300 tabular-nums">{rating.label}</span>
-                </div>
-              ) : (
-                <p className="mt-1.5 text-xs text-gray-500">{t('marketplace.card.noReviews')}</p>
-              )}
+              <h3 className="font-display font-bold text-base text-slate-900 truncate">{p.full_name}</h3>
+              <p className="text-sm font-semibold text-slate-600 mt-0.5 truncate">
+                {subjectLine || t('marketplace.card.noSubject')}
+              </p>
             </div>
-            <span className="text-xs font-bold text-primary shrink-0 text-right">
-              {formatDistanceKm(p.distanceKm ?? p.distance_km)}
-              <span className="block text-[10px] font-normal text-gray-500">
-                {distanceOrigin === 'user' ? t('marketplace.card.fromYou') : t('marketplace.card.approximate')}
-              </span>
-            </span>
-          </div>
-
-          {p.discover_hourly_rate != null ? (
-            <p className="text-sm font-semibold text-emerald-400 mt-2">
-              {t('marketplace.card.ratePerHour', { rate: p.discover_hourly_rate })}
-            </p>
-          ) : null}
-
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            {studentLine ? (
-              <span className="text-[11px] font-medium px-2 py-0.5 rounded-lg bg-white/5 text-gray-300 border border-white/10">
-                👥 {studentLine}
-              </span>
-            ) : null}
-            {p.discover_verified ? (
-              <span className="text-[11px] font-bold px-2 py-0.5 rounded-lg bg-emerald-500/15 text-emerald-300 border border-emerald-500/25">
-                {t('marketplace.profile.verified')}
-              </span>
-            ) : null}
-          </div>
-
-          {formats.length ? (
-            <div className="mt-2 flex flex-wrap gap-1">
-              {formats.map((lab) => (
-                <span
-                  key={lab}
-                  className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-blue-500/15 text-blue-200 border border-blue-500/20"
-                >
-                  {lab}
+            <div className="shrink-0 text-right">
+              {p.discover_hourly_rate != null ? (
+                <p className="text-sm font-medium tabular-nums text-slate-700">
+                  {t('marketplace.card.ratePerHour', { rate: p.discover_hourly_rate })}
+                </p>
+              ) : null}
+              {p.distanceKm != null || p.distance_km != null ? (
+                <span className="block text-[10px] font-normal text-slate-400">
+                  {formatDistanceKm(p.distanceKm ?? p.distance_km)}{' '}
+                  {distanceOrigin === 'user' ? t('marketplace.card.fromYou') : t('marketplace.card.approximate')}
                 </span>
-              ))}
+              ) : null}
             </div>
-          ) : null}
-
-          {p.next_available_slot ? (
-            <p className="text-[11px] text-gray-300 mt-2">
-              📅 {t('marketplace.profile.nextSlot')}{' '}
-              <span className="font-semibold text-white">
-                {localizeNextSlotLabel(p.next_available_slot, locale)}
-              </span>
-            </p>
-          ) : (
-            <p className="text-[11px] text-gray-500 mt-2">📅 {t('marketplace.card.applyForSlot')}</p>
-          )}
-
-          {directions ? (
-            <div className="flex flex-wrap gap-2 mt-2">
-              <a
-                href={directions.google}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-[11px] font-semibold text-primary hover:underline"
-              >
-                {t('marketplace.profile.googleMaps')}
-              </a>
-              <a
-                href={directions.waze}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-[11px] font-semibold text-sky-300 hover:underline"
-              >
-                {t('marketplace.profile.waze')}
-              </a>
-            </div>
-          ) : null}
-
-          {p.latest_review_snippet ? (
-            <blockquote className="mt-3 text-[11px] text-gray-400 border-l-2 border-white/15 pl-2 italic leading-relaxed line-clamp-2">
-              “{p.latest_review_snippet}”
-            </blockquote>
-          ) : null}
-
-          <p className="text-[10px] text-gray-600 mt-2">{instructorRoleLabel(p.map_profile_kind, locale)}</p>
+          </div>
         </div>
       </div>
 
@@ -186,7 +95,7 @@ export default function TeacherMapQuickCard({
         <button
           type="button"
           onClick={() => onInquiry?.(p)}
-          className="w-full rounded-xl bg-primary text-black font-bold text-sm py-2.5 hover:brightness-110 transition-all shadow-lg shadow-primary/20"
+          className="w-full rounded-xl bg-primary text-[#041018] font-bold text-sm py-2.5 hover:brightness-95"
         >
           {t('marketplace.profile.trialCta')}
         </button>
@@ -194,21 +103,13 @@ export default function TeacherMapQuickCard({
           type="button"
           disabled={whatsappBusy}
           onClick={() => onWhatsApp?.(p)}
-          className={[
-            'w-full rounded-xl font-bold text-sm py-2.5 transition-all disabled:opacity-50',
-            'border-2 border-[#25D366]/70 bg-[#075E54]/35 text-[#DCF8C6]',
-            'hover:bg-[#128C7E]/45 hover:border-[#25D366] hover:shadow-[0_0_16px_rgba(37,211,102,0.25)]',
-            'active:scale-[0.99]',
-          ].join(' ')}
+          className="w-full rounded-xl font-bold text-sm py-2.5 transition-all disabled:opacity-50 border border-[#25D366]/50 bg-[#25D366]/10 text-[#128C7E] hover:bg-[#25D366]/20"
         >
           {t('marketplace.card.whatsapp')}
         </button>
       </div>
 
-      <Link
-        to={`/teachers/${p.id}`}
-        className="inline-block mt-3 text-[11px] font-semibold text-primary hover:underline"
-      >
+      <Link to={`/teachers/${p.id}`} className="inline-block mt-3 text-[12px] font-semibold text-emerald-700 hover:underline">
         {t('marketplace.card.viewProfile')}
       </Link>
     </div>
